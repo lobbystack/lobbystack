@@ -149,55 +149,55 @@ const tradePage = ({
 
 export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
   "/about/": spanishPage("/about/", {
-    title: "Acerca de LobbyStack, recepcionista con IA de código abierto",
+    title: "Acerca de LobbyStack | Recepcionista con IA de código abierto",
     description:
-      "Conozca LobbyStack, la recepcionista con IA de código abierto para pequeños negocios que necesitan atender llamadas, reservar citas y transferir llamadas.",
+      "LobbyStack es una recepcionista con IA de código abierto para pequeños negocios. Contesta llamadas, reserva citas y pasa las llamadas a su equipo.",
     eyebrow: "Acerca de",
-    h1: "Acerca de LobbyStack",
+    h1: "LobbyStack es una recepcionista con IA de código abierto para pequeños negocios",
     intro:
-      "LobbyStack existe para ayudar a los pequeños negocios a atender llamadas y reservar citas sin perder el control de su flujo telefónico ni de los datos de sus clientes.",
+      "Contesta su teléfono, reserva citas y pasa la llamada a su equipo cuando el cliente necesita a una persona. El código es público con licencia MIT: use LobbyStack Cloud o instálelo en su propio servidor.",
     imageAlt:
-      "La recepcionista con IA de código abierto de LobbyStack conecta a quienes llaman, a los equipos y los flujos de trabajo del negocio",
+      "El código de LobbyStack en GitHub, que funciona en LobbyStack Cloud o en su propio servidor",
     proofPoints: [
-      "Recepcionista con IA de código abierto para pequeños negocios",
-      "Pensada para atender llamadas, reservar citas, transferir llamadas y resumirlas",
-      "Disponible en la nube gestionada o con ayuda para el autoalojamiento",
+      "Código con licencia MIT en GitHub",
+      "Funciona en LobbyStack Cloud o en su propio servidor",
+      "Llamadas, citas, transferencias y resúmenes en un solo panel",
     ],
     sections: [
       {
         title: "Por qué existe LobbyStack",
-        body: "La mayoría de los pequeños negocios no pierden clientes por falta de interés. Los pierden porque el teléfono suena mientras el equipo ya está atendiendo a otra persona.",
+        body: "Un negocio pequeño pierde clientes cuando el teléfono suena durante un corte, una limpieza dental o un trabajo al otro lado de la ciudad. El buzón de voz no reserva a nadie. Creamos LobbyStack para contestar esas llamadas, reservar lo que pueda y enviarle el resto con los datos por escrito.",
         points: [
-          "Hacer visible cada llamada importante",
-          "Convertir las preguntas de rutina en procesos resueltos",
-          "Mantener a una persona al mando en las llamadas delicadas o de alto valor",
+          "Contesta mientras su equipo está ocupado, fuera de horario o en un trabajo",
+          "Reserva en Google Calendar y confirma la cita por SMS",
+          "Transfiere las llamadas urgentes y toma un mensaje en las demás",
         ],
       },
       {
-        title: "Por qué lo creamos de código abierto",
-        body: "Los flujos telefónicos trabajan con datos de clientes, reglas de reserva y políticas de escalamiento. Los equipos deberían poder revisar cómo se toman esas decisiones en lugar de confiar en una caja negra.",
+        title: "Por qué el código es abierto",
+        body: "Su recepcionista habla con sus clientes, lee su calendario y decide cuándo despertarlo. Usted debería poder ver cómo toma esas decisiones. Todo el producto está en GitHub con licencia MIT, y cualquiera puede leerlo, ejecutarlo o modificarlo.",
         points: [
-          "Revise en GitHub el código con licencia MIT, el modelo de despliegue y los límites de los datos",
-          "Empiece en LobbyStack Cloud y pase al autoalojamiento cuando su equipo necesite más control",
-          "Evite depender de un proveedor en la capa que atiende a cada persona que llama",
+          "Lea usted mismo las instrucciones, las herramientas y el manejo de las llamadas",
+          "Empiece en LobbyStack Cloud y pase a su propio servidor más adelante",
+          "Haga una copia del proyecto y adáptela a su forma de trabajar",
         ],
       },
       {
         title: "Para quién es LobbyStack",
-        body: "LobbyStack está pensado para dueños que trabajan en su propio negocio y para equipos pequeños que viven de las llamadas entrantes: servicios del hogar, oficios, clínicas, salones y negocios locales que no pueden perder a clientes listos para reservar.",
+        body: "Creamos LobbyStack para dueños y equipos pequeños que viven de las llamadas entrantes: salones y spas, consultorios dentales, plomeros y otros oficios, administradores de inmuebles. Las agencias también pueden venderlo a sus clientes con su propia marca.",
         points: [
-          "Equipos que pierden llamadas mientras están en un trabajo, en una cita o fuera de horario",
-          "Negocios que quieren reservas por teléfono sin construir un menú telefónico ni un IVR",
-          "Negocios que necesitan atención fuera de horario sin contratar a otra recepcionista a tiempo completo",
+          "Equipos que pierden llamadas durante una cita o en una obra",
+          "Negocios que quieren reservas por teléfono sin armar un menú telefónico",
+          "Agencias que quieren ofrecer una recepcionista con IA a sus clientes",
         ],
       },
       {
-        title: "Cómo funcionan el soporte y la seguridad",
-        body: "LobbyStack Cloud se encarga del alojamiento, la supervisión y las actualizaciones del producto. Quienes eligen el autoalojamiento ejecutan el mismo código abierto en la infraestructura que controlan. En ambos casos, usted define qué puede decir, reservar y escalar la recepcionista.",
+        title: "Cómo funcionan el soporte y el control",
+        body: "En LobbyStack Cloud, nosotros nos encargamos del alojamiento, la supervisión y las actualizaciones. En su propio servidor, usted ejecuta el mismo código. En ambos casos, usted decide qué puede decir, reservar y transferir la recepcionista, con reglas escritas en lenguaje sencillo.",
         points: [
-          "Configure en lenguaje sencillo las respuestas permitidas, las reglas de reserva y las rutas de transferencia",
-          "Revise los resúmenes, las transcripciones y los resultados de las llamadas en un solo panel",
-          "Consulte la documentación pública o escriba a support@lobbystack.com si necesita ayuda con la implementación",
+          "Agregue su sitio web, documentos, servicios y horario como conocimiento",
+          "Revise el resumen, la transcripción y el resultado de cada llamada en el panel",
+          "Lea la documentación o escriba a support@lobbystack.com",
         ],
       },
     ],
@@ -207,130 +207,137 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
       { label: "Documentación pública", href: "/docs/api/" },
       { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
     ],
-    ctaHeading: "Responda cada llamada sin sobrecargar a su equipo",
+    ctaHeading: "Pruebe LobbyStack con sus propias llamadas",
     ctaBody:
-      "Pruebe LobbyStack con los minutos de voz incluidos y configure las respuestas, las reservas y las transferencias según su negocio.",
+      "Empiece con el plan gratuito y sus 30 minutos de voz, o lea primero el código en GitHub.",
   }),
 
   "/solutions/after-hours-answering-service/": spanishPage(
     "/solutions/after-hours-answering-service/",
     {
-      title: "Servicio de atención fuera de horario con IA | LobbyStack",
+      title:
+        "Servicio de atención telefónica fuera de horario con IA | LobbyStack",
       description:
-        "LobbyStack atiende las llamadas de su negocio fuera de horario, reserva citas en su calendario y transfiere las urgencias a su número de guardia. Plan gratuito y luego $30 al mes.",
+        "Un servicio de atención telefónica fuera de horario que reserva las llamadas de rutina en Google Calendar y transfiere las urgencias a su teléfono de guardia. Plan gratuito y luego $30 al mes.",
       eyebrow: "Atención fuera de horario",
-      h1: "Servicio de atención telefónica fuera de horario con IA para pequeños negocios",
+      h1: "Un servicio de atención telefónica fuera de horario con IA para noches, fines de semana y días festivos",
       intro:
-        "LobbyStack contesta el teléfono de su negocio por la noche, los fines de semana y los días festivos. Reserva los trabajos de rutina en su calendario y transfiere las urgencias a su número de guardia. Por la mañana, encontrará en el panel un resumen de cada llamada.",
+        "Cuando usted cierra, LobbyStack contesta el número de su negocio. Reserva las llamadas de rutina en Google Calendar, transfiere a su teléfono de guardia las urgencias que definen sus reglas y deja cada llamada por escrito para la mañana.",
       imageAlt:
-        "LobbyStack atiende llamadas fuera de horario y deriva las solicitudes urgentes",
+        "LobbyStack atiende llamadas fuera de horario y transfiere una urgencia al teléfono de guardia",
       proofPoints: [
-        "Atiende por la noche, los fines de semana y los festivos en su número actual",
+        "Contesta en su número actual cuando usted cierra",
         "Transfiere las urgencias a su teléfono de guardia",
         "Plan Free con 30 minutos y luego $30 al mes por 150",
       ],
       sections: [
         {
           title: "Las urgencias llegan a su teléfono de guardia",
-          body: "Usted define qué es urgente: sin calefacción por debajo de cierta temperatura, agua que no deja de salir, un inquilino que se quedó fuera. LobbyStack hace las preguntas que su regla necesita y transfiere la llamada a su número de guardia. La dirección y el problema que registró quedan en la transcripción de la llamada. Lo que puede esperar queda resumido en el panel para la mañana.",
+          body: "Usted escribe qué cuenta como urgente, por ejemplo, sin calefacción por debajo de cierta temperatura, agua que no deja de salir o un inquilino que se quedó afuera. LobbyStack hace las preguntas que su regla necesita y luego transfiere la llamada a su número de guardia. La dirección y el problema quedan en la transcripción de la llamada.",
           points: [
-            "Transfiere al número de guardia que usted elija",
-            "Puede compartir sus pasos de seguridad, como dónde cerrar la llave de paso del agua",
-            "Si una transferencia no se completa, ofrece tomar un mensaje y puede avisar a su equipo",
+            "Puede leer en voz alta sus pasos de seguridad, como dónde cerrar la llave de paso del agua",
+            "Si la transferencia no se completa, ofrece tomar un mensaje y puede avisar a su equipo",
           ],
         },
         {
-          title: "Los clientes habituales reservan sus propias citas",
-          body: "Cuando alguien quiere un presupuesto o una visita normal, LobbyStack ofrece horarios libres de su Google Calendar y reserva el que elija. La persona recibe una confirmación por SMS y usted ve la reserva al abrir su calendario.",
+          title: "Los clientes de rutina reservan sus propias citas",
+          body: "Quien llama para un mantenimiento o un presupuesto escucha los horarios libres de su Google Calendar y elige uno. Recibe una confirmación por SMS, y usted ve la reserva cuando abre su calendario por la mañana.",
           points: [
-            "Reserva en Google Calendar durante la llamada",
-            "Cambia o cancela citas después de verificar quién llama",
-            "Responde sobre horarios, zona de servicio y precios con los datos de su negocio",
+            "Cambia o cancela citas, si usted activa los cambios de citas",
+            "Responde preguntas sobre horarios, zona de servicio y precios con los datos de su negocio",
           ],
         },
         {
-          title: "Empiece la mañana con cada llamada documentada",
-          body: "Cada llamada tiene un resumen, una transcripción y una grabación en el panel, así que puede ver quién llamó durante la noche y qué necesita antes de devolver una sola llamada. LobbyStack cuelga las llamadas de spam, y esas llamadas no consumen sus minutos.",
+          title: "Cada llamada de la noche queda por escrito para la mañana",
+          body: "Cada llamada tiene un resumen de una línea, una transcripción y una grabación en el panel. Puede ver quién llamó y qué necesita antes de devolver una sola llamada.",
           points: [
-            "Un resumen con el nombre, el número y el motivo de la llamada",
-            "La grabación y la transcripción completa de cada llamada",
-            "Sin consumo de minutos por spam ni por llamadas de menos de 10 segundos",
+            "El nombre, el número y el motivo de la llamada",
+            "Las llamadas de spam y las de menos de 10 segundos no consumen minutos",
+          ],
+        },
+        {
+          title: "Cuánto cuesta un servicio de atención telefónica fuera de horario",
+          body: "Los servicios de atención con personas suelen cobrar por minuto o por llamada, y algunos agregan recargos por días festivos. LobbyStack cobra un plan mensual con minutos incluidos, y un minuto a las 3 a. m. de un día festivo cuesta lo mismo que cualquier otro. Supongamos que recibe 40 llamadas fuera de horario al mes, de unos 3 minutos cada una. Son 120 minutos, que caben en Starter por $30.",
+          points: [
+            "Free: 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta",
+            "Starter: $30 al mes por 150 minutos, y después $0.20 por minuto",
+            "Pro: $100 al mes por 500 minutos, y después $0.18 por minuto",
           ],
         },
       ],
       faqs: [
         {
-          question: "¿Qué es un servicio de atención fuera de horario con IA?",
+          question: "¿Qué es un servicio de atención telefónica fuera de horario?",
           answer:
-            "Un servicio de atención fuera de horario con IA contesta las llamadas de su negocio fuera del horario habitual, responde preguntas, reserva citas, registra los datos de quien llama y transfiere las llamadas urgentes a su número de guardia. Funciona por la noche, los fines de semana, los festivos y en cualquier momento en que su equipo no esté disponible.",
+            "Contesta el teléfono de su negocio cuando está cerrado: por la noche, los fines de semana y los días festivos. En un servicio con personas, alguien toma un mensaje. LobbyStack es un servicio de atención fuera de horario con IA, así que además responde preguntas con los datos de su negocio, reserva citas en Google Calendar y transfiere las urgencias a su número de guardia durante la llamada.",
         },
         {
-          question: "¿De verdad puede reservar citas fuera de horario?",
+          question: "¿Puede reservar citas fuera de horario?",
           answer:
-            "Sí. LobbyStack consulta la disponibilidad de su calendario, ofrece horarios libres, reserva la cita y envía una confirmación por SMS. Su equipo ve los detalles de la reserva a la mañana siguiente.",
+            "Sí. LobbyStack ofrece horarios libres de su Google Calendar dentro de su horario de atención, reserva el que elige quien llama y, si la persona acepta, le envía una confirmación por SMS. Usted ve la reserva en su calendario por la mañana.",
         },
         {
-          question: "¿Cómo sabe qué es urgente?",
+          question: "¿Cómo decide qué es una urgencia?",
           answer:
-            "Usted define las reglas. LobbyStack puede preguntar por la situación de quien llama, detectar palabras como emergencia, urgente o roto, y transferir la llamada a su persona de guardia. Todo lo demás queda resumido para revisarlo por la mañana.",
-        },
-        {
-          question: "¿Va a despertar a mi personal de guardia?",
-          answer:
-            "Solo cuando usted lo decida. Usted fija los criterios para las transferencias y las alertas. Los mensajes de rutina, las solicitudes de presupuesto y las reservas quedan resumidos para la mañana. Las llamadas que cumplen sus reglas de urgencia se transfieren durante la llamada.",
-        },
-        {
-          question: "¿Funciona con el número actual de mi negocio?",
-          answer:
-            "Sí. Desvíe a LobbyStack las llamadas de su número actual fuera de horario o use una línea dedicada. Para quien llama no hay diferencia: simplemente habla con alguien que puede ayudarle.",
+            "Usted escribe las reglas, como “Sin calefacción por debajo de 40 °F” o “Agua que no deja de salir”. LobbyStack hace las preguntas que necesita cada regla y transfiere las llamadas que coinciden. Todo lo demás se reserva, se responde o queda por escrito para la mañana.",
         },
         {
           question:
-            "¿Qué sectores sacan más provecho de la atención fuera de horario?",
+            "¿Va a despertar a mi personal de guardia por cosas menores?",
           answer:
-            "Cualquier negocio que recibe llamadas fuera del horario habitual: servicios del hogar, clínicas dentales, consultorios médicos, salones, talleres de reparación, administradores de propiedades, despachos de abogados y oficinas profesionales. Si sus clientes llaman por la noche y los fines de semana, la atención fuera de horario evita perder oportunidades.",
+            "Solo las llamadas que cumplen sus reglas de transferencia hacen sonar su número de guardia. Usted elige cuándo transfiere: en llamadas urgentes, cuando quien llama lo pide, siempre, solo en horario de atención o nunca. Las solicitudes de presupuesto y las visitas de rutina esperan hasta la mañana.",
+        },
+        {
+          question: "¿Puedo conservar el número de mi negocio?",
+          answer:
+            "Sí. Active el desvío de llamadas con su operador cuando cierre, o desvíe también durante el día las llamadas ocupadas y sin respuesta. Starter y Pro también incluyen un número propio en Estados Unidos, Canadá, Reino Unido, Australia o Nueva Zelanda.",
+        },
+        {
+          question: "¿Qué veo a la mañana siguiente?",
+          answer:
+            "Cada llamada aparece en el panel con un resumen de una línea, la transcripción, la grabación, el número de quien llamó y el nombre que dio. Cuando la recepcionista toma un mensaje, su equipo recibe una alerta por correo electrónico, o por SMS si activa esas alertas.",
+        },
+        {
+          question:
+            "¿Qué negocios usan un servicio de atención fuera de horario?",
+          answer:
+            "Cualquier negocio que recibe llamadas después del cierre. Plomeros, empresas de climatización, equipos de restauración, cerrajeros y administradores de propiedades reciben urgencias por la noche. Las clínicas dentales y los salones reciben llamadas para reservar al final de la tarde y los fines de semana.",
+        },
+        {
+          question:
+            "¿Cuánto cuesta un servicio de atención telefónica fuera de horario?",
+          answer:
+            "El plan Free de LobbyStack incluye 30 minutos de voz. Starter cuesta $30 al mes por 150 minutos, y después $0.20 por minuto. Pro cuesta $100 al mes por 500 minutos, y después $0.18 por minuto. Las noches y los días festivos cuestan lo mismo que cualquier otro minuto, y las llamadas de spam y las de menos de 10 segundos no cuentan.",
         },
         {
           question: "¿En qué se diferencia de un buzón de voz?",
           answer:
-            "El buzón de voz pide a quien llama que deje un mensaje y espere. La mayoría cuelga. LobbyStack contesta la llamada, hace preguntas, registra los datos y reserva citas. La persona recibe ayuda en el momento y su equipo encuentra un resumen y la transcripción en el panel.",
-        },
-        {
-          question: "¿Es más barato que un servicio de atención con personas?",
-          answer:
-            "El total depende del volumen de llamadas, la duración, la configuración y la cantidad de atención humana incluida. Compare los precios publicados de LobbyStack por minuto de voz con los cargos por llamada, por minuto, de personal y por excedente de cada servicio de atención.",
-        },
-        {
-          question:
-            "¿Puedo revisar lo que pasó en las llamadas fuera de horario?",
-          answer:
-            "Sí. Cada llamada genera un resumen, una transcripción, una grabación y los detalles de la reserva. Puede revisarlos en el panel de LobbyStack, y su equipo recibe una alerta por correo electrónico o SMS cuando la recepcionista toma un mensaje. Nada se pierde durante la noche.",
-        },
-        {
-          question: "¿Cuánto cuesta la atención fuera de horario?",
-          answer:
-            "El plan gratuito de LobbyStack incluye minutos de voz para probar la atención fuera de horario. Los planes de pago crecen con el uso. Consulte la página de precios para ver los minutos incluidos, las tarifas de SMS y el costo de los minutos adicionales.",
+            "El buzón de voz graba un mensaje y deja a quien llama esperando. LobbyStack habla con la persona, reserva lo que se puede reservar y transfiere lo que no puede esperar. Quien llama termina la llamada con una respuesta, una reserva o un mensaje para su equipo.",
         },
       ],
-      faqHeading: "Preguntas sobre la atención fuera de horario con IA",
+      faqHeading: "Preguntas sobre los servicios de atención fuera de horario",
       relatedLinks: [
         {
-          label: "Atención telefónica con IA",
+          label: "Servicio de atención telefónica con IA",
           href: "/solutions/ai-phone-answering/",
+        },
+        {
+          label: "Atención fuera de horario para contratistas",
+          href: "/solutions/after-hours-answering-service-for-contractors/",
         },
         {
           label: "Cuánto cuesta un servicio de atención telefónica",
           href: "/blog/how-much-does-an-answering-service-cost/",
         },
-        pricingLink,
         {
           label: "Calculadora de llamadas perdidas",
           href: "/missed-call-revenue-calculator/",
         },
+        pricingLink,
       ],
-      ctaHeading: "Deje de enviar las llamadas nocturnas al buzón de voz",
+      ctaHeading: "Deje que LobbyStack atienda las llamadas de esta noche",
       ctaBody:
-        "Defina sus reglas de urgencia, desvíe su número al cerrar y haga una llamada de prueba esta noche. El plan gratuito incluye 30 minutos.",
+        "Escriba sus reglas de urgencia, desvíe su número cuando cierre y llámelo usted mismo. El plan gratuito incluye 30 minutos.",
       ...ctaLabels,
     }
   ),
@@ -338,73 +345,71 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
   "/solutions/ai-receptionist-for-dental-offices/": spanishPage(
     "/solutions/ai-receptionist-for-dental-offices/",
     {
-      title: "Recepcionista dental con IA para su clínica | LobbyStack",
+      title:
+        "Recepcionista dental con IA y servicio de atención telefónica | LobbyStack",
       description:
-        "LobbyStack, recepcionista dental con IA, contesta si la recepción está ocupada o cerrada, reserva en Google Calendar y transfiere urgencias. Desde $30 al mes.",
+        "LobbyStack es una recepcionista dental con IA que contesta cuando su recepción está ocupada o cerrada, reserva pacientes en Google Calendar y transfiere urgencias. Desde $30 al mes.",
       eyebrow: "Clínicas dentales",
-      h1: "Recepcionista con IA y atención telefónica para clínicas dentales",
+      h1: "Una recepcionista dental con IA que reserva pacientes mientras su recepción está ocupada",
       intro:
-        "Una recepcionista dental con IA contesta el teléfono de su clínica cuando la recepción está ocupada, a la hora del almuerzo o fuera de horario. LobbyStack reserva en Google Calendar las citas de pacientes nuevos y las limpiezas, responde preguntas sobre los seguros aceptados y las políticas de la clínica con la información que usted carga, y transfiere las urgencias a su número de guardia. Los planes de pago empiezan en $30 al mes, sin tarifa de configuración.",
-      imageAlt: "LobbyStack reserva la cita de un paciente y resume la llamada",
+        "LobbyStack contesta el teléfono de su clínica durante el registro de pacientes, a la hora del almuerzo y después del cierre. Reserva pacientes nuevos y limpiezas en Google Calendar, responde preguntas sobre seguros y estacionamiento con la información que usted ingresa, y transfiere las urgencias dentales a su número de guardia. Los planes de pago empiezan en $30 al mes, sin tarifa de configuración.",
+      imageAlt:
+        "LobbyStack reserva la consulta de un paciente nuevo y le envía una confirmación por SMS",
       proofPoints: [
-        "Reserva en Google Calendar y puede enviar por SMS una confirmación y un recordatorio el día anterior",
+        "Reserva en Google Calendar y envía por SMS un recordatorio el día anterior",
         "Transfiere las urgencias fuera de horario a su número de guardia",
-        "Empieza en uno de 8 idiomas a elegir y luego habla con los pacientes en más de 70 idiomas, entre ellos el español y el serbio",
+        "Habla con los pacientes en más de 70 idiomas, entre ellos el español",
       ],
       sections: [
         {
           title: "Su recepción se queda con el paciente que tiene delante",
-          body: "El teléfono suena mientras registran a un paciente, y LobbyStack atiende las llamadas de pacientes nuevos, de seguros y de citas. Reserva las visitas de rutina y responde sobre los seguros aceptados y el estacionamiento con la información que usted cargó. Deja por escrito todo lo demás para que su equipo lo resuelva entre un paciente y otro.",
+          body: "El teléfono suena durante el registro de un paciente, y LobbyStack atiende las llamadas de pacientes nuevos, de seguros y de citas. Reserva las visitas de rutina, responde preguntas sobre los seguros aceptados, el estacionamiento y los formularios, y deja por escrito todo lo demás para que su equipo lo resuelva entre un paciente y otro.",
           points: [
-            "Contesta cuando su línea está ocupada, después del cierre o en todas las llamadas, según cómo desvíe su número",
-            "Responde sobre horarios, estacionamiento, formularios y seguros aceptados",
-            "Guarda la grabación, la transcripción y un resumen de una línea de cada llamada",
+            "Contesta cuando la línea está ocupada, después del cierre o en todas las llamadas, según cómo desvíe su número",
+            "Guarda una grabación, una transcripción y un resumen de una línea de cada llamada",
           ],
         },
         {
           title: "Los pacientes nuevos reservan en la primera llamada",
-          body: "Los pacientes nuevos también llaman a la hora del almuerzo y después del trabajo. LobbyStack registra su seguro y el motivo de la visita, ofrece los horarios libres de su Google Calendar dentro de su horario de atención y reserva la consulta. Si prefiere confirmar cada visita usted mismo, configúrelo para que guarde el horario que prefiere el paciente como una solicitud para su equipo, o para que tome un mensaje. Los pacientes que aceptan reciben un SMS de confirmación y un recordatorio el día anterior. En LobbyStack Cloud, los SMS solo llegan a números de Estados Unidos y Canadá.",
+          body: "LobbyStack registra la aseguradora del paciente y el motivo de la visita, ofrece horarios libres dentro de su horario de atención y reserva la consulta en Google Calendar. Si prefiere confirmar cada visita usted mismo, configúrelo para que guarde el horario preferido como una solicitud para su equipo. Los pacientes que aceptan reciben un SMS de confirmación y un recordatorio el día anterior. En LobbyStack Cloud, los SMS llegan a números de Estados Unidos y Canadá.",
           points: [
-            "Reserva en Google Calendar durante la llamada, para la clínica o para cada dentista e higienista",
-            "Envía por SMS una confirmación y un recordatorio 24 horas antes, si el paciente lo acepta",
+            "Reserva para la clínica o para cada dentista e higienista",
             "Si activa los cambios de citas, los pacientes pueden mover o cancelar desde el número con el que reservaron",
           ],
         },
         {
-          title: "Usted define las reglas para las urgencias dentales",
-          body: "Usted decide qué es una urgencia: inflamación, fiebre, un diente que se cayó por un golpe o un sangrado que no se detiene. LobbyStack hace esas preguntas y luego reserva el primer horario libre o transfiere la llamada a su número de guardia, según las reglas que usted defina. Escriba en sus reglas, con sus propias palabras, las indicaciones de cuidado que quiere que escuchen los pacientes. Las transferencias van a un solo número por clínica. Cuando cambie el dentista de guardia, actualice ese número o desvíelo a quien esté de guardia.",
+          title: "Las urgencias dentales siguen sus reglas",
+          body: "Usted decide qué cuenta como urgencia, por ejemplo, inflamación, fiebre, un diente que se cayó por un golpe o un sangrado que no se detiene. LobbyStack hace esas preguntas y luego reserva el primer horario libre o transfiere la llamada a su número de guardia. Escriba en sus reglas, con sus propias palabras, las indicaciones de cuidado que quiere que escuchen los pacientes.",
           points: [
-            "Hace las preguntas de triaje que usted aprueba",
-            "Transfiere las llamadas urgentes a su número de guardia según la regla de transferencia que elija",
+            "Las transferencias van a un solo número por clínica, así que desvíelo a quien esté de guardia",
             "Si una transferencia no se completa, ofrece tomar un mensaje y puede avisar a su equipo",
           ],
         },
         {
           title: "Los pacientes hablan en su propio idioma",
-          body: "Cada llamada empieza en el idioma predeterminado de su clínica: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. A partir de ahí, la recepcionista contesta en el idioma del paciente. Funciona con OpenAI GPT-Live, que maneja más de 70 idiomas, entre ellos el español y el serbio. Si un paciente empieza en español o pide hablar en serbio, escucha el resto de la llamada en ese idioma. Su panel y sus correos están disponibles en inglés, francés, español o serbio. Los SMS de confirmación y recordatorio salen en su idioma predeterminado, o en español o serbio para un paciente cuyo idioma guarde a través de la API.",
+          body: "Cada llamada empieza en el idioma predeterminado de su clínica: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. Cuando un paciente habla otro idioma o lo pide, la recepcionista cambia de idioma. Funciona con OpenAI GPT-Live, que maneja más de 70 idiomas.",
           points: [
-            "Empieza cada llamada en su idioma predeterminado",
-            "Cambia de idioma cuando un paciente lo pide o empieza a hablar otro",
-            "Envía los SMS de confirmación y recordatorio en su idioma predeterminado",
+            "Su panel y sus correos están disponibles en inglés, francés, español o serbio",
+            "Los SMS de confirmación y recordatorio salen en su idioma predeterminado",
           ],
         },
         {
           title: "Lo que cuesta una recepcionista dental con IA",
-          body: "LobbyStack no cobra tarifa de configuración en ningún plan, y sus precios están en dólares estadounidenses. La facturación anual cuesta un 20% menos, así que Starter queda en $24 al mes y Pro en $80. LobbyStack cuenta el uso por segundo. Las llamadas de menos de 10 segundos y las que la recepcionista termina como spam no cuentan. El excedente no tiene tope hasta que un propietario o administrador fije uno. Para comparar, el 9 de octubre de 2026 revisamos en sus propios sitios web las recepcionistas con IA especializadas en odontología. Las que publican precios iban de $299 a $1,199 al mes. Dentina empieza en $299 al mes por sede, con facturación anual y llamadas ilimitadas. Viva AI va de $349 a $1,199 al mes, con el uso contado en créditos. Peerlogic Premium cuesta $699 al mes e incluye su sistema telefónico.",
+          body: "Ningún plan tiene tarifa de configuración, y los precios están en dólares estadounidenses. LobbyStack cuenta el uso por segundo, y las llamadas de menos de 10 segundos o terminadas como spam no cuentan. La facturación anual cuesta un 20% menos, así que Starter queda en $24 al mes y Pro en $80. Las recepcionistas especializadas en odontología que publican precios iban de $299 a $1,199 al mes cuando revisamos sus sitios web el 9 de octubre de 2026.",
           points: [
-            "Starter: $30 al mes por 150 minutos y un número de teléfono, y después $0.20 por minuto",
-            "Pro: $100 al mes por 500 minutos, y después $0.18 por minuto. Con 1,000 minutos al mes, paga $190 ($100 más 500 minutos adicionales a $0.18)",
-            "Free: 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta",
+            "Free: 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta",
+            "Starter: $30 al mes por 150 minutos y un número, y después $0.20 por minuto",
+            "Pro: $100 al mes por 500 minutos, y después $0.18 por minuto",
           ],
         },
         {
           title:
             "Cuándo conviene más una recepcionista especializada en odontología",
-          body: "LobbyStack solo reserva en Google Calendar, así que su equipo copia las citas nuevas en Dentrix, Open Dental o Eaglesoft. La API REST y los webhooks firmados para seis eventos, como cita reservada y mensaje tomado, pueden enviar los datos de las llamadas a Zapier y otras herramientas. LobbyStack no afirma cumplir con HIPAA, no verifica la elegibilidad del seguro y no hace campañas de reactivación de pacientes. Le sirve a la clínica que reserva en Google Calendar o no tiene problema en volver a capturar las citas, y que quiere que alguien conteste cuando la recepción está ocupada, a la hora del almuerzo y después del cierre. Transfiere las urgencias y habla con los pacientes en su idioma. Si necesita que las citas se escriban en su software de gestión o campañas de reactivación, elija un proveedor dental. Leímos cada dato de la lista en el sitio web del proveedor el 9 de octubre de 2026.",
+          body: "LobbyStack solo reserva en Google Calendar, así que su equipo copia las citas nuevas en Dentrix, Open Dental o Eaglesoft. No afirma cumplir con HIPAA, no verifica la elegibilidad del seguro y no hace campañas de reactivación de pacientes. Si necesita algo de eso, elija un proveedor dental. Leímos cada dato de la lista en el sitio web del propio proveedor el 9 de octubre de 2026.",
           points: [
-            "Necesita que las citas se escriban en Dentrix, Open Dental o Eaglesoft: Dentina menciona 11 sistemas de gestión clínica en los que escribe las reservas",
-            "Quiere una recepcionista conectada a su software de gestión: Peerlogic menciona 8 sistemas con los que se integra",
-            "Necesita reactivar pacientes de forma automática: Dentina vende campañas salientes de reactivación (precio bajo consulta), y Viva AI incluye contacto de reactivación desde su plan Platinum de $899",
+            "Citas escritas en su software de gestión: Dentina menciona 11 sistemas en los que escribe las reservas",
+            "Una recepcionista conectada a su software de gestión: Peerlogic menciona 8 sistemas con los que se integra",
+            "Reactivación automática de pacientes: Dentina vende campañas salientes de reactivación, y Viva AI incluye contacto de reactivación desde su plan Platinum de $899",
           ],
         },
       ],
@@ -412,77 +417,70 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "¿Qué es una recepcionista dental con IA?",
           answer:
-            "Una recepcionista dental con IA es una IA de voz que contesta el teléfono de una clínica. Reserva citas, responde preguntas sobre horarios y seguros aceptados, toma mensajes y transfiere las urgencias a una persona. Las clínicas la usan para el exceso de llamadas, la hora del almuerzo y la atención fuera de horario, o para contestar todas las llamadas. Algunos productos especializados en odontología también escriben las citas en el software de gestión de la clínica. LobbyStack, en cambio, reserva en Google Calendar.",
+            "Una recepcionista dental con IA es una IA de voz que contesta el teléfono de una clínica. Reserva citas, responde preguntas sobre horarios y seguros aceptados, toma mensajes y transfiere las urgencias a una persona. Las clínicas la usan para el exceso de llamadas, la hora del almuerzo y la atención fuera de horario, o para todas las llamadas. LobbyStack reserva en Google Calendar. Algunos productos especializados en odontología, en cambio, escriben las citas en el software de gestión de la clínica.",
         },
         {
-          question:
-            "¿Cuánto cuesta una recepcionista con IA para una clínica dental?",
+          question: "¿Cuánto cuesta una recepcionista dental con IA?",
           answer:
-            "LobbyStack cuesta $30 al mes en Starter o $100 al mes en Pro, sin tarifa de configuración. Starter incluye 150 minutos y después cobra $0.20 por minuto. Pro incluye 500 minutos y después cobra $0.18 por minuto, así que 1,000 minutos al mes en Pro cuestan $190 ($100 más 500 minutos adicionales a $0.18). Las llamadas de menos de 10 segundos y las que la recepcionista termina como spam no cuentan. Las recepcionistas especializadas en odontología que publicaban precios iban de $299 al mes por sede, con facturación anual (Dentina), a $1,199 al mes (Viva AI) cuando las revisamos el 9 de octubre de 2026.",
+            "LobbyStack cuesta $30 al mes en Starter o $100 al mes en Pro, sin tarifa de configuración. Starter incluye 150 minutos y después cobra $0.20 por minuto. Pro incluye 500 minutos y después cobra $0.18 por minuto, así que 1,000 minutos al mes en Pro cuestan $190. Las llamadas de menos de 10 segundos y las que se terminan como spam no cuentan. Las recepcionistas especializadas en odontología que publicaban precios iban de $299 al mes por sede, con facturación anual (Dentina), a $1,199 al mes (Viva AI) cuando las revisamos el 9 de octubre de 2026.",
         },
         {
           question: "¿LobbyStack cumple con HIPAA?",
           answer:
-            "LobbyStack no afirma cumplir con HIPAA. En cada llamada guarda la grabación, una transcripción, un resumen de una línea, el número de quien llama y el nombre que da, y la cita que haya reservado. Los planes de pago conservan las grabaciones y transcripciones 90 días y los mensajes 365 días. El plan Free los conserva 30 días. Si autoaloja LobbyStack, la copia de esos datos que guarda LobbyStack queda en sus propios servidores. Twilio y OpenAI siguen procesando el audio de la llamada, y LobbyStack copia cada grabación desde OpenAI, así que consulte con su responsable de cumplimiento antes de que llamen los pacientes.",
+            "LobbyStack no afirma cumplir con HIPAA. En cada llamada guarda la grabación, una transcripción, un resumen de una línea, el número de quien llama y el nombre que da, y la cita que haya reservado. Los planes de pago conservan las grabaciones y transcripciones 90 días y los mensajes 365 días. El plan Free los conserva 30 días. Si autoaloja LobbyStack, la copia de esos datos que guarda LobbyStack queda en sus propios servidores, pero Twilio y OpenAI siguen procesando el audio de la llamada. Consulte con su responsable de cumplimiento antes de que llamen los pacientes.",
         },
         {
           question: "¿Puede reservar directamente en Dentrix u Open Dental?",
           answer:
-            "No directamente. LobbyStack reserva en Google Calendar y no se conecta con Dentrix, Open Dental, Eaglesoft ni otro software de gestión de clínicas. Su equipo copia las citas nuevas en su sistema. Los webhooks firmados y la API REST pueden enviar los datos de reservas y llamadas a Zapier o a sus propias herramientas. Si necesita que las citas se escriban en su software de gestión, Dentina menciona 11 sistemas en los que escribe las reservas, y Peerlogic menciona 8 con los que se integra (revisado el 9 de octubre de 2026).",
+            "No. LobbyStack reserva en Google Calendar y no se conecta con Dentrix, Open Dental, Eaglesoft ni otro software de gestión de clínicas, así que su equipo copia las citas nuevas en su sistema. Los webhooks firmados y la API REST pueden enviar los datos de reservas y llamadas a Zapier o a sus propias herramientas. Si necesita que las citas se escriban en su software de gestión, Dentina menciona 11 sistemas en los que escribe las reservas, y Peerlogic menciona 8 con los que se integra (revisado el 9 de octubre de 2026).",
         },
         {
           question: "¿Cómo atiende una llamada por una urgencia dental?",
           answer:
-            "LobbyStack hace las preguntas de triaje que usted aprueba, como el nivel de dolor, la inflamación, un golpe o un sangrado, y luego sigue su regla de transferencia. Usted elige cuándo transfiere: en llamadas urgentes, cuando quien llama lo pide, siempre, solo en horario de atención o nunca. Transfiere a un solo número de guardia. Si no configuró uno, toma un mensaje. Si la transferencia no se completa, la recepcionista se lo dice al paciente y ofrece tomar un mensaje. Su equipo también puede recibir la alerta “Falló la transferencia de una llamada en vivo”.",
+            "Hace las preguntas de triaje que usted aprueba, como el nivel de dolor, la inflamación, un golpe o un sangrado, y luego sigue su regla de transferencia. Usted elige cuándo transfiere: en llamadas urgentes, cuando quien llama lo pide, siempre, solo en horario de atención o nunca. Transfiere a un solo número de guardia. Si la transferencia no se completa, se lo dice al paciente y ofrece tomar un mensaje, y su equipo puede recibir la alerta “Falló la transferencia de una llamada en vivo”.",
         },
         {
           question: "¿Puede verificar el seguro dental?",
           answer:
-            "No. LobbyStack registra la aseguradora y el plan del paciente, y responde preguntas con los seguros aceptados y las políticas que usted agrega a su base de conocimiento. No consulta la elegibilidad ni los beneficios con la aseguradora, así que su equipo verifica la cobertura antes de la visita.",
-        },
-        {
-          question: "¿En qué idiomas pueden hablar los pacientes?",
-          answer:
-            "Los pacientes pueden hablar con la recepcionista en más de 70 idiomas, entre ellos el español y el serbio. Cada llamada empieza en el idioma predeterminado de su clínica: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. Después, la recepcionista contesta en el idioma del paciente. Funciona con OpenAI GPT-Live y cambia de idioma cuando un paciente lo pide o empieza a hablar otro. La lista de precios de LobbyStack no incluye ningún cargo adicional por idioma. El panel y los correos están disponibles en inglés, francés, español o serbio. Los SMS de confirmación y recordatorio salen en su idioma predeterminado, o en español o serbio para un paciente cuyo idioma guarde a través de la API.",
+            "No. Registra la aseguradora y el plan del paciente, y responde preguntas con los seguros aceptados que usted agrega a su base de conocimiento. No consulta la elegibilidad ni los beneficios con la aseguradora, así que su equipo verifica la cobertura antes de la visita.",
         },
         {
           question: "¿Puede reservar citas de pacientes nuevos?",
           answer:
-            "Sí. LobbyStack registra el nombre del paciente nuevo, su número de teléfono, su aseguradora, el motivo de la visita y el horario que prefiere, y luego reserva un horario libre en Google Calendar dentro de su horario de atención. También puede configurarlo para que guarde el horario preferido como una solicitud que su equipo confirma, o para que tome un mensaje. Si el paciente acepta, le envía por SMS una confirmación y un recordatorio 24 horas antes de la visita. En LobbyStack Cloud, los SMS solo llegan a números de Estados Unidos y Canadá.",
+            "Sí. Registra el nombre del paciente nuevo, su número de teléfono, su aseguradora, el motivo de la visita y el horario que prefiere, y luego reserva un horario libre en Google Calendar dentro de su horario de atención. También puede configurarlo para que guarde el horario preferido como una solicitud que su equipo confirma. Si el paciente acepta, le envía por SMS una confirmación y un recordatorio 24 horas antes. En LobbyStack Cloud, los SMS llegan a números de Estados Unidos y Canadá.",
+        },
+        {
+          question: "¿En qué idiomas pueden hablar los pacientes?",
+          answer:
+            "Cada llamada empieza en el idioma predeterminado de su clínica: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. La recepcionista cambia de idioma cuando un paciente habla otro o lo pide. Funciona con OpenAI GPT-Live, que maneja más de 70 idiomas, y la lista de precios de LobbyStack no incluye ningún cargo adicional por idioma.",
         },
         {
           question:
-            "¿Contesta fuera de horario, a la hora del almuerzo y los fines de semana?",
+            "¿Contesta a la hora del almuerzo, fuera de horario y los fines de semana?",
           answer:
-            "Sí, en las llamadas que usted le desvía. Configure con su operador el desvío de las llamadas ocupadas o sin respuesta para cubrir el exceso y el almuerzo, de las llamadas después del cierre para las noches y los fines de semana, o de todas las llamadas. Conserva el número de su clínica cuando lo desvía. Si prefiere portar el número, contacte al equipo de LobbyStack. Starter y Pro incluyen un número en Estados Unidos, Canadá, Reino Unido, Australia o Nueva Zelanda.",
+            "Sí, en las llamadas que usted le desvía. Configure con su operador el desvío de las llamadas ocupadas o sin respuesta para cubrir el exceso y el almuerzo, de las llamadas después del cierre para las noches y los fines de semana, o de todas las llamadas. Conserva el número de su clínica. Starter y Pro también incluyen un número en Estados Unidos, Canadá, Reino Unido, Australia o Nueva Zelanda.",
         },
         {
           question:
             "¿Los pacientes pueden cambiar o cancelar su cita por teléfono?",
           answer:
-            "Sí, si activa los cambios de citas. Entonces, los pacientes pueden mover o cancelar una cita llamando desde el número con el que reservaron, y usted puede pedir antes un código de un solo uso por SMS. Los cambios de citas vienen desactivados de forma predeterminada. Si siguen desactivados, o si el paciente llama desde otro número, la recepcionista registra una solicitud y la cita sigue reservada hasta que su equipo la cambie.",
+            "Sí, una vez que activa los cambios de citas, que vienen desactivados de forma predeterminada. Los pacientes llaman desde el número con el que reservaron, y usted puede pedir antes un código de un solo uso por SMS. Si los cambios están desactivados, o si el paciente llama desde otro número, la recepcionista registra una solicitud y la cita sigue en pie hasta que su equipo la cambie.",
         },
         {
           question:
-            "¿Puede enviar recordatorios o hacer campañas de reactivación?",
+            "¿Una recepcionista con IA reemplaza a la recepcionista de mi clínica dental?",
           answer:
-            "LobbyStack envía recordatorios de las citas que reserva, pero no hace campañas de reactivación. Si el paciente acepta durante la llamada, le envía por SMS una confirmación y un recordatorio 24 horas antes de la visita, solo a números de Estados Unidos y Canadá. No contacta a los pacientes a los que les toca una limpieza, y las únicas llamadas salientes que hace son transferencias. Dentina vende campañas salientes de reactivación, y Viva AI incluye contacto de reactivación desde su plan Platinum de $899 (revisado el 9 de octubre de 2026).",
-        },
-        {
-          question:
-            "¿Una recepcionista con IA reemplaza a la recepción de mi clínica dental?",
-          answer:
-            "No. LobbyStack cubre el teléfono: contesta, reserva, resuelve preguntas de rutina, toma mensajes y transfiere las llamadas urgentes. El registro de llegada, los cobros, la verificación de seguros, la captura de citas en su software de gestión y las respuestas a los SMS de los pacientes siguen en manos de su equipo. LobbyStack guarda los SMS de los pacientes y avisa a su equipo, pero la IA no los contesta. Desvíe las llamadas que su recepción no alcanza a atender, o desvíelas todas.",
+            "No. LobbyStack cubre el teléfono: contesta, reserva, resuelve preguntas de rutina, toma mensajes y transfiere las llamadas urgentes. El registro de llegada, los cobros, la verificación de seguros, la captura de citas en su software de gestión y las respuestas a los SMS de los pacientes siguen en manos de su equipo. No hace campañas de reactivación, y las únicas llamadas salientes que hace son transferencias.",
         },
       ],
-      faqHeading: "Preguntas sobre la recepcionista dental con IA",
+      faqHeading: "Preguntas sobre las recepcionistas dentales con IA",
       relatedLinks: [
         {
-          label: "Atención fuera de horario",
+          label: "Servicio de atención fuera de horario",
           href: "/solutions/after-hours-answering-service/",
         },
         {
-          label: "Programación de citas con IA",
+          label: "Agendador de citas con IA",
           href: "/solutions/ai-appointment-scheduler/",
         },
         {
@@ -499,9 +497,9 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         },
         pricingLink,
       ],
-      ctaHeading: "Deje de enviar pacientes nuevos al buzón de voz",
+      ctaHeading: "Atienda a los pacientes que llaman a la hora del almuerzo",
       ctaBody:
-        "Agregue los seguros que acepta, su horario y sus reglas de urgencia, y haga una llamada de prueba. El plan gratuito incluye 30 minutos.",
+        "Agregue los seguros que acepta, su horario y sus reglas de urgencia, y luego llame a su número para probarlo. El plan gratuito incluye 30 minutos.",
       ...ctaLabels,
     }
   ),
@@ -509,118 +507,108 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
   "/solutions/ai-receptionist-for-salons-and-spas/": spanishPage(
     "/solutions/ai-receptionist-for-salons-and-spas/",
     {
-      title: "Atención telefónica con IA para salones y spas | LobbyStack",
+      title: "Recepcionista con IA para salones y spas | LobbyStack",
       description:
-        "LobbyStack es un servicio de atención telefónica con IA para salones y spas que contesta llamadas de reserva, agenda citas, gestiona cambios y responde sobre servicios.",
+        "LobbyStack es una recepcionista con IA para salones y spas. Contesta sus llamadas, reserva con la persona que pide cada cliente y responde con su menú de servicios.",
       eyebrow: "Salones y spas",
-      h1: "Atención telefónica para salones y spas que sigue reservando",
+      h1: "Una recepcionista con IA para salones que reserva mientras usted trabaja",
       intro:
-        "LobbyStack contesta las llamadas de salones, spas, barberías y estudios de bienestar para que los clientes puedan reservar, cambiar su cita y obtener respuestas sin esperar a la recepción.",
-      imageAlt: "LobbyStack agenda una cita de salón o spa desde una llamada",
+        "En pleno color o en pleno masaje, usted no puede contestar. LobbyStack contesta, reserva con la persona que pide el cliente, mueve citas según sus reglas y responde con su menú de servicios.",
+      imageAlt:
+        "El día de una estilista en LobbyStack, con un balayage reservado por teléfono en un horario libre",
       proofPoints: [
-        "Reserva citas mientras estilistas y profesionales están ocupados",
-        "Responde preguntas sobre servicios, precios y disponibilidad",
-        "Gestiona cancelaciones y cambios después de verificar quién llama",
+        "Reserva en Google Calendar según la duración del servicio y el horario de cada estilista",
+        "Envía por SMS una confirmación y un recordatorio 24 horas antes a quien lo acepte",
+        "Cancela y cambia citas después de encontrar la reserva",
       ],
       sections: [
         {
-          title: "Siga reservando cuando tiene las manos ocupadas",
-          body: "Los estilistas y masajistas no deberían pausar un tratamiento, lavarse el tinte de las manos ni perder la concentración para contestar llamadas de reserva. LobbyStack contesta al primer tono y consulta la disponibilidad exacta de cada estilista.",
+          title: "Reserve con la persona que pide su cliente",
+          body: "Agregue a cada estilista, colorista y masajista con los servicios que hace y el horario en que trabaja. Si un cliente pide a alguien por su nombre, escucha los horarios libres de esa persona. Si esa persona tiene el día libre, LobbyStack dice cuándo vuelve y ofrece a alguien disponible antes.",
           points: [
-            "Evita reservas duplicadas y citas superpuestas",
-            "Confirma el estilista preferido, la duración del servicio y los datos de contacto del cliente",
-            "Mantiene a su equipo concentrado en los tratamientos y peinados",
+            "Busca un hueco con el tiempo que pide el servicio: un balayage de 150 minutos recibe 150 minutos",
+            "Respeta los días libres y el horario de cada persona",
+            "Pasa la llamada al teléfono de un estilista cuando el cliente quiere hablar con esa persona",
           ],
         },
         {
-          title: "Aplique con amabilidad sus políticas de cancelación",
-          body: "Las ausencias y cancelaciones de último momento reducen directamente el margen de su salón. LobbyStack explica sus normas de reserva y gestiona los cambios de la misma manera en cada llamada.",
+          title: "Cambie y cancele citas durante la llamada",
+          body: "Una clienta llama para pasar su corte del sábado al jueves. LobbyStack encuentra la cita con su número, su nombre y la hora reservada, le repite el cambio y actualiza su calendario. También puede pedir antes un código por SMS o un PIN en el teclado.",
           points: [
-            "Explica las políticas de cancelación y cambio durante la llamada",
-            "Permite que los clientes gestionen sus cambios dentro de los plazos permitidos",
+            "Explica su política de cancelación antes de hacer un cambio",
+            "Pasa la solicitud a su equipo cuando no encuentra la cita",
+            "Envía una confirmación de cancelación por SMS a quien aceptó los mensajes",
           ],
         },
         {
-          title: "Respuestas coherentes y precisas sobre sus servicios",
-          body: "Ya sea que un cliente pregunte cuánto dura un color de un solo proceso, cuánto cuesta un balayage o si necesita una prueba de alergia, LobbyStack toma la respuesta exacta de sus propias indicaciones y la recepción deja de improvisar.",
+          title: "Atención telefónica para salones que conoce su menú",
+          body: "Asigne a cada servicio una duración y un precio: fijo, desde, un rango o a definir en persona. LobbyStack da el precio que usted escribió y no inventa uno si lo dejó en blanco. Agregue también su sitio web y sus políticas en PDF, y podrá responder sobre pruebas de alergia, estacionamiento o tarjetas de regalo.",
           points: [
-            "Responde preguntas complejas sobre servicios, paquetes y estilistas",
-            "Deriva las solicitudes de servicios especializados al profesional adecuado",
-            "Mantiene los mensajes de la recepción alineados con su marca",
+            "Da las mismas respuestas por teléfono, en el chat de su sitio web y en los mensajes de Instagram",
+            "Toma un mensaje para su equipo cuando sus notas no cubren una pregunta",
+            "Da los precios en la moneda que usted elige en la configuración",
           ],
         },
         {
-          title: "Proteja el tiempo en el sillón sin ignorar el teléfono",
-          body: "Cada llamada compite con el cliente que ya está en el sillón. LobbyStack se encarga de las reservas y las preguntas de rutina para que estilistas, esteticistas, masajistas y barberos puedan dedicarse a sus citas.",
+          title: "Reserve a los clientes que llaman después del cierre",
+          body: "Muchos clientes piensan en su próxima cita a las 9 de la noche. LobbyStack contesta a esa hora igual que al mediodía y reserva en los horarios que usted abrió. A la mañana siguiente, usted encuentra cada llamada en el panel con un resumen, la transcripción y lo que pasó.",
           points: [
-            "Recoge el tipo de servicio, el profesional preferido, el horario y los datos de contacto",
-            "Confirma el horario de la cita antes de que la persona cuelgue",
-            "Toma un mensaje para su equipo con las preguntas delicadas sobre servicios",
-          ],
-        },
-        {
-          title: "Aplique siempre igual las políticas que afectan sus ingresos",
-          body: "Depósitos, plazos de cancelación, reglas de paquetes y cambios para el mismo día son fáciles de explicar de forma distinta cuando la recepción va con prisa. LobbyStack repite la misma política aprobada cada vez.",
-          points: [
-            "Explica las políticas de cancelación y de ausencias antes de confirmar cambios",
-            "Usa su menú de servicios, duraciones, reglas por profesional y límites de reserva",
-            "Guarda un resumen de cada llamada para que su equipo sepa qué se prometió",
+            "Alertas por correo o SMS de las llamadas que su equipo debe devolver",
+            "Las llamadas de spam y las de menos de 10 segundos no cuentan en sus minutos",
+            "Cambia al idioma de quien llama, entre más de 70",
           ],
         },
       ],
       faqs: [
         {
-          question:
-            "¿Qué es un servicio de atención telefónica con IA para salones y spas?",
+          question: "¿Qué hace una recepcionista con IA para un salón?",
           answer:
-            "Un servicio de atención telefónica con IA para salones y spas contesta llamadas de reserva, agenda citas, gestiona cambios, responde preguntas sobre servicios y envía confirmaciones. Funciona cuando su recepción está ocupada o cerrada, o cuando los clientes llaman fuera de horario.",
+            "Contesta el teléfono de su salón cuando nadie en la recepción puede. LobbyStack reserva citas en Google Calendar, las cambia y las cancela, responde preguntas con su menú de servicios y sus políticas, y transfiere la llamada a una persona cuando el cliente lo pide o sus reglas lo indican. Cada llamada aparece en su panel con un resumen y la transcripción.",
         },
         {
-          question:
-            "¿Puede reservar citas mientras los estilistas atienden a clientes?",
+          question: "¿Los clientes pueden reservar con un estilista en particular?",
           answer:
-            "Sí. Cuando su equipo está cortando, aplicando color o en una cabina de tratamiento, LobbyStack contesta el teléfono, consulta la disponibilidad, ofrece horarios libres y reserva la cita. El cliente recibe de inmediato una confirmación por SMS.",
+            "Sí. Agregue a sus estilistas en la página Empleados con sus servicios, su horario y sus días libres. LobbyStack pregunta si el cliente quiere a alguien en particular, ofrece los horarios libres de esa persona y le dice con quién quedó la cita. Si no hay preferencia, reserva con la primera persona libre que hace el servicio.",
         },
         {
-          question: "¿Gestiona cancelaciones y cambios de cita?",
+          question: "¿Funciona con mi software de reservas para salones?",
           answer:
-            "Sí. LobbyStack puede procesar cancelaciones y cambios sencillos según sus reglas. Las solicitudes complejas o los cambios para el mismo día pueden pasar a su recepción con los datos del cliente ya adjuntos.",
+            "LobbyStack reserva en Google Calendar y no se conecta con plataformas de reservas para salones. Si su salón reserva en otra aplicación, configure LobbyStack para que tome solicitudes: anota el servicio, la persona y la hora que quiere el cliente, y su equipo confirma la cita.",
         },
         {
-          question: "¿Puede responder preguntas sobre servicios y precios?",
+          question: "¿Los clientes pueden cancelar o cambiar su cita por teléfono?",
           answer:
-            "Sí. Agregue su menú de servicios, precios, duraciones y paquetes a la base de conocimiento de LobbyStack. Responde preguntas de rutina sobre cortes, color, masajes, faciales y promociones sin interrumpir a su equipo.",
+            "Sí, cuando activa los cambios de citas. LobbyStack relaciona la cita con el número de quien llama, su nombre y la hora reservada, repite el cambio y luego actualiza su calendario. También puede pedir un código por SMS o un PIN en el teclado. Si no encuentra la cita, pasa la solicitud a su equipo.",
         },
         {
-          question: "¿Funciona con mi sistema de reservas en línea?",
+          question: "¿Envía recordatorios de citas?",
           answer:
-            "LobbyStack reserva citas en Google Calendar. No se conecta con plataformas de reservas para salones, así que muchos salones usan LobbyStack para las reservas por teléfono y mantienen su sistema en línea para quienes reservan por su cuenta.",
+            "Sí. Los clientes que aceptan los SMS durante la llamada reciben una confirmación de la reserva, un recordatorio 24 horas antes de la cita y una confirmación si cancelan. En LobbyStack Cloud, estos mensajes solo llegan a números de Estados Unidos y Canadá, y usted no puede cambiar el momento ni el texto.",
         },
         {
-          question: "¿Puede enviar recordatorios de citas?",
+          question: "¿Puede responder preguntas sobre precios y servicios?",
           answer:
-            "Sí, en los planes de pago. LobbyStack envía al cliente una confirmación por SMS después de reservar y, si el cliente lo acepta, un recordatorio 24 horas antes de la cita. No se puede cambiar el momento ni el texto.",
+            "Sí. Da el precio que usted fijó para cada servicio: un precio fijo, un precio desde, un rango o un precio a definir en persona. Responde otras preguntas, como las pruebas de alergia o el estacionamiento, con su sitio web, sus documentos y sus notas. Si deja un precio en blanco, no inventa uno.",
         },
         {
-          question: "¿Qué pasa con los clientes sin cita?",
+          question: "¿Funciona para spas, barberías y estudios de uñas?",
           answer:
-            "LobbyStack puede explicar su política para clientes sin cita y consultar la disponibilidad para una cita el mismo día.",
+            "Sí. Usted configura los servicios, las personas, el horario y las reglas de su propio negocio, ya sea una barbería, un spa, un spa médico, un estudio de uñas o un centro de masajes.",
         },
         {
-          question:
-            "¿Puede atender consultas sobre tarjetas de regalo y paquetes?",
+          question: "¿Qué pasa cuando un cliente quiere hablar con una persona?",
           answer:
-            "Sí. Puede agregar a LobbyStack sus políticas de tarjetas de regalo, los detalles de sus paquetes y las reglas de canje. Responde con esa información y toma un mensaje para su equipo cuando un cliente quiere comprar uno.",
+            "LobbyStack transfiere la llamada. Si el cliente pide a un estilista por su nombre, la llamada va al teléfono de esa persona, si usted lo agregó, y las demás van a su número de transferencia predeterminado. También puede escribir reglas para que tome un mensaje en su lugar.",
         },
         {
-          question: "¿También funciona para spas médicos y barberías?",
+          question: "¿Puedo conservar el número de mi salón?",
           answer:
-            "Sí. LobbyStack funciona para peluquerías, estudios de uñas, centros de masajes, spas médicos, barberías y centros de bienestar. Usted personaliza los servicios, las preguntas y las reglas de reserva para su negocio.",
+            "Sí. Desvíe su número actual a LobbyStack, con todas las llamadas o solo las que no contesta. Sus clientes siguen marcando el número que conocen.",
         },
         {
-          question: "¿Cuánto cuesta para un salón o spa?",
+          question: "¿Cuánto cuesta una recepcionista con IA para un salón?",
           answer:
-            "LobbyStack tiene un plan gratuito con minutos de voz incluidos y planes de pago para un mayor volumen de llamadas. La mayoría de los salones pequeños empiezan gratis y cambian de plan a medida que crecen. Consulte la página de precios para ver las tarifas y funciones actuales.",
+            "El plan Free incluye 30 minutos de voz y un número de teléfono gratis durante 14 días. Starter cuesta $30 al mes por 150 minutos y Pro cuesta $100 al mes por 500 minutos. Las llamadas de spam y las de menos de 10 segundos no cuentan. La página de precios muestra las tarifas por uso adicional.",
         },
       ],
       faqHeading: "Preguntas sobre la recepcionista con IA para salones y spas",
@@ -635,9 +623,9 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         },
         pricingLink,
       ],
-      ctaHeading: "Reserve clientes sin soltar las tijeras",
+      ctaHeading: "Siga reservando mientras atiende a un cliente",
       ctaBody:
-        "LobbyStack contesta las llamadas de reserva, gestiona los cambios y responde sobre sus servicios para que sus estilistas nunca tengan que pausar un tratamiento para contestar el teléfono.",
+        "Empiece gratis con 30 minutos de voz. Agregue sus servicios, sus estilistas y su horario, y resérvese una cita de prueba desde el navegador.",
       ...ctaLabels,
     }
   ),
@@ -648,44 +636,53 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
       title:
         "Recepcionista con IA autoalojada y de código abierto | LobbyStack",
       description:
-        "Ejecute LobbyStack, una recepcionista con IA de código abierto, en sus propios servidores con Docker Compose. Guarde grabaciones, transcripciones y datos de clientes en su PostgreSQL.",
+        "Ejecute LobbyStack, una recepcionista con IA autoalojada y de código abierto, en su propio servidor con Docker Compose o Railway. Las llamadas usan sus cuentas de Twilio y OpenAI.",
       eyebrow: "Autoalojamiento",
-      h1: "Recepcionista con IA autoalojada que funciona en sus propios servidores",
+      h1: "Una recepcionista con IA autoalojada que funciona en su propio servidor",
       intro:
-        "Con licencia MIT y lista para ejecutarse con Docker Compose. Las grabaciones, las transcripciones y los registros de clientes se quedan en su propia base de datos, y las llamadas usan sus propias cuentas de Twilio y OpenAI.",
+        "LobbyStack contesta sus llamadas, reserva citas y toma mensajes desde un servidor que usted controla. Las llamadas pasan por sus propias cuentas de Twilio y OpenAI. Las grabaciones, las transcripciones y los contactos se quedan en su base de datos PostgreSQL.",
       imageAlt:
-        "Controles de LobbyStack para desplegar una recepcionista con IA autoalojada",
+        "LobbyStack funcionando como recepcionista con IA autoalojada en su propio servidor",
       proofPoints: [
-        "Licencia MIT sin costo de licencia",
-        "Se despliega con Docker Compose o con la plantilla de Railway",
-        "Ejecuta el mismo código que LobbyStack Cloud",
+        "Licencia MIT, sin costo de licencia",
+        "Docker Compose o la plantilla de Railway",
+        "Sus propias cuentas de Twilio y OpenAI",
       ],
       sections: [
         {
-          title: "Elija dónde se guardan los datos de las llamadas",
-          body: "Las grabaciones, transcripciones, contactos y configuraciones se quedan en la base de datos PostgreSQL y el almacenamiento que usted administra. Usted define las reglas de retención, copias de seguridad y eliminación. Twilio y OpenAI siguen procesando el audio de las llamadas en vivo con sus cuentas, así que revise sus condiciones para su caso de uso.",
+          title: "Docker Compose en un solo servidor",
+          body: "La instalación oficial ejecuta el panel, el worker, PostgreSQL, Redis y Caddy en una sola máquina. Un script completa cada contraseña y cada secreto, y las migraciones se ejecutan antes de que arranque la aplicación.",
+          points: [
+            "Docker Engine 24 o posterior, con Compose v2",
+            "2 vCPU, 4 GB de RAM y disco persistente",
+            "Un dominio con HTTPS para el panel",
+          ],
+        },
+        {
+          title: "La plantilla de Railway",
+          body: "Railway crea los servicios, las bases de datos y un bucket de almacenamiento, y genera los secretos. Usted pega su clave de OpenAI y sus credenciales de Twilio, y luego crea su cuenta en su nuevo panel.",
+          points: [
+            "Contraseñas y secretos generados por Railway",
+            "Llamadas de prueba en el navegador apenas termina el despliegue",
+            "Correo, llamadas telefónicas y Google Calendar se configuran después",
+          ],
+        },
+        {
+          title: "Los registros de sus llamadas se quedan en su servidor",
+          body: "Las grabaciones, las transcripciones, los contactos y la configuración se guardan en la base de datos PostgreSQL y el almacenamiento que usted administra. Usted decide cuánto tiempo conservarlos y cómo respaldarlos. Twilio y OpenAI siguen procesando el audio de las llamadas en vivo con sus cuentas, así que lea sus condiciones para su caso.",
           points: [
             "Roles de base de datos separados y seguridad a nivel de fila para cada servicio",
             "Grabaciones en un volumen local o en cualquier bucket compatible con S3",
-            "Copias de seguridad y restauraciones según su propio calendario",
+            "Trazas, métricas y registros enviados a cualquier servicio compatible con OTLP",
           ],
         },
         {
-          title: "Adapte el código a su forma de trabajar",
-          body: "Recibe el monorepo de TypeScript que ejecuta LobbyStack Cloud. Edite los prompts, las preguntas iniciales y las reglas de llamada, o conecte LobbyStack con los sistemas internos que su equipo ya usa.",
+          title: "Adapte el código a sus llamadas",
+          body: "Recibe el monorepo de TypeScript que ejecuta LobbyStack Cloud. Edite las instrucciones y las herramientas en packages/agent-core, o conecte la recepcionista con los sistemas que su equipo ya usa.",
           points: [
-            "Los prompts del sistema están en el espacio de trabajo packages/agent-core",
-            "Dirija el chat y los embeddings a cualquier endpoint compatible con OpenAI",
+            "Chat y embeddings hacia cualquier endpoint compatible con OpenAI",
+            "Llamadas de voz con OpenAI GPT-Live y su clave",
             "Fije una versión y actualice cuando la haya probado",
-          ],
-        },
-        {
-          title: "Sepa cuánto pagará antes de desplegar",
-          body: "LobbyStack no cobra licencia por el autoalojamiento. Usted paga a su proveedor de alojamiento, a Twilio por los números y los minutos de llamada, y a OpenAI por el uso de Realtime, cada uno en su propia cuenta. Calcule las horas que su equipo dedicará a actualizaciones, copias de seguridad y supervisión antes de compararlo con un plan de Cloud.",
-          points: [
-            "Twilio y OpenAI le facturan directamente",
-            "LobbyStack no cobra por usuario ni por minuto",
-            "Los planes de Cloud empiezan gratis si prefiere no administrar servidores",
           ],
         },
       ],
@@ -693,66 +690,65 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "¿Qué es una recepcionista con IA autoalojada?",
           answer:
-            "Una recepcionista con IA autoalojada funciona en sus propios servidores o en su infraestructura en la nube en lugar de una plataforma SaaS de terceros. Usted controla los datos, el modelo, el entorno de despliegue y las integraciones. LobbyStack es de código abierto y admite despliegues autoalojados para equipos que necesitan control total.",
+            "Es una recepcionista con IA que funciona en un servidor que usted controla y no en el del proveedor. Sigue contestando sus llamadas, reservando citas y tomando mensajes, pero el panel, la base de datos y las grabaciones viven en su máquina. LobbyStack es de código abierto con licencia MIT, así que puede instalarla usted mismo.",
         },
         {
           question: "¿LobbyStack es de código abierto?",
           answer:
-            "Sí. LobbyStack usa la licencia MIT. Puede revisar, bifurcar, modificar, distribuir y desplegar el código fuente según esa licencia. Conserve los avisos de copyright y de permiso en las copias o partes sustanciales del software.",
+            "Sí. LobbyStack usa la licencia MIT. Puede leer, bifurcar, modificar, compartir y desplegar el código. Conserve el aviso de copyright y de permiso en las copias o en las partes sustanciales del software.",
         },
         {
-          question: "¿Qué requisitos tiene el autoalojamiento?",
+          question: "¿Qué necesito para autoalojarla?",
           answer:
-            "La guía de Docker Compose pide Docker Engine 24 o posterior con Compose v2, Node.js 22 o posterior para generar los secretos, y un servidor con al menos 2 vCPU, 4 GB de RAM y disco persistente. Las llamadas reales también necesitan un dominio con HTTPS para el panel, además de cuentas de Twilio y OpenAI. La plantilla de Railway configura los servicios y las bases de datos por usted.",
+            "La guía de Docker Compose pide Docker Engine 24 o posterior con Compose v2, Node.js 22 o posterior para generar los secretos, y un servidor con al menos 2 vCPU, 4 GB de RAM y disco persistente. Las llamadas reales también necesitan un dominio con HTTPS para el panel y sus propias cuentas de Twilio y OpenAI. Las llamadas telefónicas suman un trunk SIP Elastic de Twilio. La plantilla de Railway configura los servicios y las bases de datos por usted.",
         },
         {
           question: "¿Puedo usar mi propio LLM o mi propia clave de API?",
           answer:
-            "Usted usa sus propias claves de API. Las llamadas de voz funcionan con OpenAI GPT-Live en su cuenta de OpenAI. La generación de texto y los embeddings del conocimiento aceptan cualquier endpoint compatible con OpenAI, así que puede dirigirlos a otro proveedor o a un modelo que usted aloje.",
+            "Siempre usa sus propias claves. Las llamadas de voz funcionan con OpenAI GPT-Live en su cuenta de OpenAI. El chat del sitio web y los embeddings del conocimiento aceptan cualquier endpoint compatible con OpenAI, así que puede dirigirlos a otro proveedor o a un modelo que usted aloje. El modelo debe admitir llamadas a herramientas, y el modelo de embeddings debe devolver 1536 dimensiones.",
         },
         {
-          question: "¿El autoalojamiento sirve para agencias y revendedores?",
+          question: "¿Cuánto cuesta el autoalojamiento?",
           answer:
-            "Sí. La licencia MIT permite que las agencias modifiquen y distribuyan LobbyStack para trabajos con clientes. El nombre, los logotipos y la marca LobbyStack siguen sujetos a derechos de marca independientes.",
+            "LobbyStack no cobra licencia por el autoalojamiento. Usted le paga a su proveedor de alojamiento, a Twilio por los números y los minutos de llamada, y a OpenAI por las llamadas, cada uno en su propia cuenta. Calcule las horas que su equipo dedicará a actualizaciones, copias de seguridad y supervisión antes de compararlo con un plan de Cloud.",
         },
         {
-          question:
-            "¿Cómo funcionan las actualizaciones en un despliegue autoalojado?",
+          question: "¿Cómo funcionan las actualizaciones?",
           answer:
-            "Usted descarga los cambios del repositorio de GitHub, revisa el registro de cambios y las notas de migración, y vuelve a desplegar con su propio proceso de publicación. Fije la versión que ya probó en lugar de desplegar automáticamente cada cambio del proyecto original.",
+            "Respalde PostgreSQL y su almacenamiento, descargue la nueva versión de GitHub, revise sus migraciones y sus nuevas variables, y luego reconstruya y reinicie. El migrador aplica los cambios de la base de datos antes de que arranquen el panel y el worker. Fije la versión que ya probó en lugar de desplegar cada cambio del proyecto original.",
         },
         {
-          question:
-            "¿Qué pasa con la privacidad de los datos y el cumplimiento?",
+          question: "¿Qué pasa con la privacidad de los datos y el cumplimiento?",
           answer:
-            "El autoalojamiento le da control sobre el despliegue de la aplicación LobbyStack y los datos del negocio que guarda. Las llamadas pueden seguir pasando por los proveedores de telefonía, IA, alojamiento e integraciones que configure, así que revise cómo maneja los datos cada proveedor y haga su propia evaluación de privacidad y cumplimiento.",
+            "El autoalojamiento pone la aplicación y los datos del negocio que guarda en una infraestructura que usted controla. Twilio, OpenAI, su proveedor de alojamiento y cada integración que conecte siguen procesando partes de cada llamada. Revise cómo maneja los datos cada uno y haga su propia evaluación de privacidad y cumplimiento.",
+        },
+        {
+          question: "¿Una agencia puede autoalojar LobbyStack para sus clientes?",
+          answer:
+            "Sí. La licencia MIT permite que las agencias modifiquen y distribuyan LobbyStack para trabajos con clientes, y las funciones de socio de marca blanca funcionan en una instalación autoalojada. El nombre, los logotipos y la marca LobbyStack siguen sujetos a derechos de marca independientes.",
         },
         {
           question: "¿Ofrecen soporte para instalaciones autoalojadas?",
           answer:
-            "Empiece por la documentación del repositorio y el registro público de incidencias en GitHub. Para preguntas que no corresponden a una incidencia pública, contacte al equipo de LobbyStack en la dirección de soporte que aparece en el sitio.",
-        },
-        {
-          question:
-            "¿Puedo personalizar la voz, los prompts y el comportamiento?",
-          answer:
-            "Sí. Los despliegues autoalojados le dan acceso completo a las plantillas de prompts, la configuración de voz, los saludos y las reglas de enrutamiento. Puede adaptar cada aspecto de la experiencia de quien llama.",
-        },
-        {
-          question: "¿Cómo funciona el precio del autoalojamiento?",
-          answer:
-            "El código fuente con licencia MIT no tiene un costo de licencia aparte. Usted se encarga de la infraestructura y de los cargos de telefonía, IA, almacenamiento, supervisión e integraciones que use su despliegue.",
+            "Empiece por las guías de autoalojamiento en docs.lobbystack.com y el registro público de incidencias en GitHub. El plan Enterprise cubre despliegues autoalojados con ayuda dedicada para la implementación. Para lo que no corresponde a una incidencia pública, escriba a support@lobbystack.com.",
         },
       ],
-      faqHeading: "Preguntas sobre la recepcionista con IA autoalojada",
+      faqHeading: "Preguntas sobre recepcionistas con IA autoalojadas",
       relatedLinks: [
+        {
+          label: "Recepcionista con IA de código abierto",
+          href: "/solutions/open-source-ai-receptionist/",
+        },
+        {
+          label: "Guía de autoalojamiento",
+          href: "https://docs.lobbystack.com/self-hosting/overview",
+        },
         { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
-        { label: "Documentación de la API", href: "/docs/api/" },
         pricingLink,
       ],
-      ctaHeading: "Despliegue LobbyStack en sus propios servidores",
+      ctaHeading: "Ejecute LobbyStack en su propio servidor",
       ctaBody:
-        "La guía de autoalojamiento explica los servicios, las cuentas de proveedores y las copias de seguridad que tendrá que administrar. La guía de Docker Compose describe un despliegue en un solo servidor.",
+        "La guía de autoalojamiento enumera los servicios, las cuentas de proveedores y las copias de seguridad que tendrá a su cargo. La guía de Docker Compose lo acompaña en una instalación en un solo servidor.",
       ctaPrimaryLabel: "Leer la guía de autoalojamiento",
       ctaPrimaryHref: "https://docs.lobbystack.com/self-hosting/overview",
       ctaSecondaryLabel: "Ver en GitHub",
@@ -1739,55 +1735,55 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
   "/solutions/open-source-ai-receptionist/": spanishPage(
     "/solutions/open-source-ai-receptionist/",
     {
-      title: "Recepcionista con IA de código abierto | LobbyStack",
+      title: "Recepcionista con IA de código abierto, licencia MIT | LobbyStack",
       description:
-        "LobbyStack es una recepcionista con IA de código abierto que puede auditar, personalizar y autoalojar. Revise cómo gestiona las llamadas, modifique los prompts y úsela en sus servidores.",
+        "LobbyStack es una recepcionista con IA de código abierto con licencia MIT. Lea cómo atiende las llamadas, cambie sus prompts y reglas, y alójela usted mismo o en LobbyStack Cloud.",
       eyebrow: "Código abierto",
-      h1: "Recepcionista con IA de código abierto que puede auditar, personalizar y autoalojar",
+      h1: "Una recepcionista con IA de código abierto que puede auditar, modificar y alojar usted mismo",
       intro:
-        "LobbyStack es de código abierto para que su equipo pueda revisar cómo se gestionan las llamadas, modificar los prompts y el enrutamiento, y desplegarla en la infraestructura que controla. Sin lógica de llamadas opaca. Sin dependencia de un proveedor.",
+        "LobbyStack contesta sus llamadas, reserva citas y transfiere a quien llama con su equipo. Todo su código está en GitHub con licencia MIT, así que puede revisar qué hace en una llamada antes de darle su número de teléfono.",
       imageAlt:
-        "Código y controles de despliegue de la recepcionista con IA de código abierto de LobbyStack",
+        "El repositorio de LobbyStack en GitHub con licencia MIT",
       proofPoints: [
-        "Código fuente público para auditarlo y modificarlo",
-        "Personalice los prompts, las reglas de recepción y el escalamiento",
-        "Autoalójela en sus servidores o use la nube gestionada",
+        "Licencia MIT, con todo el código en GitHub",
+        "Alójela usted mismo o en LobbyStack Cloud",
+        "Las llamadas autoalojadas usan sus cuentas de Twilio y OpenAI",
       ],
       sections: [
         {
-          title: "Audite usted mismo la lógica de las llamadas",
-          body: "Las plataformas de recepcionista con IA de código cerrado mantienen en privado sus decisiones de enrutamiento, la estructura de sus prompts y sus flujos de datos. No puede verificar cómo se gestionan las llamadas ni qué datos se conservan. LobbyStack publica el código fuente para que pueda revisar cada punto de decisión antes de confiarle a sus clientes.",
+          title: "Lea cómo atiende una llamada",
+          body: "Las instrucciones y las herramientas de la recepcionista están en packages/agent-core. Ábralas en GitHub para ver cómo busca horarios libres, reserva una cita, toma un mensaje y decide transferir a quien llama.",
           points: [
-            "Revise cómo funcionan las preguntas iniciales, el enrutamiento y el escalamiento",
-            "Verifique el manejo de datos, la retención y los controles de privacidad",
-            "Entienda exactamente qué ocurre en cada tipo de llamada",
+            "Las instrucciones y las herramientas en packages/agent-core",
+            "El código que se ejecuta en LobbyStack Cloud",
+            "Cada cambio en el historial público de Git",
           ],
         },
         {
-          title:
-            "Modifique prompts y reglas sin esperar la hoja de ruta de un proveedor",
-          body: "Cuando cambia su forma de gestionar las llamadas, no debería tener que abrir un ticket de soporte y esperar. Como el código es abierto, usted mismo puede modificar los saludos, las preguntas iniciales, la lógica de reservas y las rutas de escalamiento.",
+          title: "Cambie los prompts y las reglas",
+          body: "Haga un fork del repositorio y edite el saludo, las preguntas iniciales o las reglas de transferencia. Despliegue su versión cuando pase sus pruebas. La licencia MIT le permite mantener sus cambios en privado o compartirlos.",
           points: [
-            "Cambie prompts y flujos de llamada a su propio ritmo",
-            "Haga un fork del código para agencias o despliegues con varios clientes",
+            "Saludo, preguntas iniciales y reglas de transferencia",
+            "Un fork privado o compartido, como prefiera",
+            "Su versión en línea cuando esté listo",
           ],
         },
         {
-          title: "Despliegue en la infraestructura que controla",
-          body: "El autoalojamiento pone bajo su control el almacenamiento de la aplicación, los accesos, los registros y la retención. Los proveedores de telefonía e IA que configure pueden seguir procesando datos de llamadas según sus propias condiciones.",
+          title: "Ejecútela en su propio servidor",
+          body: "La instalación con Docker Compose ejecuta el panel, el worker, PostgreSQL y Redis en una sola máquina. Las llamadas pasan por sus propias cuentas de Twilio y OpenAI, y las grabaciones, las transcripciones y los contactos se quedan en su base de datos.",
           points: [
-            "Ejecútela en contenedores en su nube preferida o en un entorno privado",
-            "Configure los proveedores de telefonía e IA compatibles con el repositorio",
-            "Decida cuándo actualizar y defina las políticas de acceso, los registros y los plazos de retención",
+            "Docker Compose en un servidor, o la plantilla de Railway",
+            "Cualquier endpoint compatible con OpenAI para el chat y los embeddings",
+            "Usted decide cuándo actualizar",
           ],
         },
         {
-          title: "Use la nube gestionada o autoalójela a su manera",
-          body: "Código abierto no significa que tenga que administrar la infraestructura usted mismo. LobbyStack ofrece una nube gestionada con minutos de voz incluidos y soporte. Cuando necesite más control, el mismo código abierto está listo para un despliegue autoalojado.",
+          title: "O deje que LobbyStack la aloje",
+          body: "LobbyStack Cloud ejecuta el mismo código abierto por usted, con minutos de voz en cada plan. Empiece con el plan gratuito y pruebe la recepcionista en su navegador antes de desviar un número.",
           points: [
-            "Empiece en la nube gestionada y autoalójela cuando cambien sus requisitos",
-            "Migre entre la nube y el autoalojamiento sin perder su configuración",
-            "Use ambos: la nube para las líneas estándar y el autoalojamiento para los procesos regulados",
+            "Plan gratuito con 30 minutos de voz",
+            "Alojamiento, actualizaciones y copias de seguridad a cargo de LobbyStack",
+            "El código que puede leer en GitHub",
           ],
         },
       ],
@@ -1795,65 +1791,64 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "¿Qué es una recepcionista con IA de código abierto?",
           answer:
-            "Una recepcionista con IA de código abierto es una plataforma de atención telefónica cuyo código fuente es público y se puede revisar, modificar y autoalojar. LobbyStack es de código abierto para que los equipos puedan auditar la lógica de las llamadas, personalizar los prompts y ejecutar el sistema en su propia infraestructura.",
+            "Una recepcionista con IA contesta las llamadas de su negocio. Responde preguntas, reserva citas, toma mensajes y transfiere a quien llama con una persona. Una de código abierto publica su código, así que cualquiera puede leerlo, modificarlo y ejecutarlo en su propio servidor. LobbyStack es una recepcionista con IA de código abierto con licencia MIT.",
         },
         {
-          question:
-            "¿Por qué importa el código abierto en una recepcionista con IA?",
+          question: "¿Por qué importa el código abierto en una recepcionista con IA?",
           answer:
-            "El código abierto le permite ver cómo se procesan las llamadas, qué datos se guardan y cómo decide la IA el enrutamiento. Para sectores regulados, agencias y equipos con requisitos de control de datos, esa visibilidad es un requisito, no un extra.",
+            "Su recepcionista habla con sus clientes y guarda sus nombres, sus números y las grabaciones. Con el código público, usted o su desarrollador pueden revisar qué dice, qué guarda y adónde van los datos antes de enviarle llamadas reales. Esa revisión importa más si trabaja con normas de privacidad o atiende llamadas para clientes.",
         },
         {
           question: "¿Puedo autoalojar LobbyStack?",
           answer:
-            "Sí. LobbyStack puede funcionar en sus propios servidores o en su infraestructura en la nube. Usted controla los datos de las llamadas, las grabaciones, las transcripciones y la elección del modelo. Consulte la página de la recepcionista con IA autoalojada para ver los detalles del despliegue.",
+            "Sí. La guía de Docker Compose la instala en un servidor con 2 vCPU y 4 GB de RAM, y la plantilla de Railway configura los servicios y las bases de datos por usted. Usted usa sus propias cuentas de Twilio y OpenAI. La página de la recepcionista con IA autoalojada explica la instalación.",
         },
         {
           question: "¿Puedo cambiar los prompts y los flujos de llamada?",
           answer:
-            "Sí. Como el código es abierto, puede modificar los saludos, las preguntas iniciales, las reglas de escalamiento y la lógica de reservas sin esperar la hoja de ruta de un proveedor.",
+            "Sí. Las instrucciones y las herramientas están en el espacio de trabajo packages/agent-core. Edite el saludo, las preguntas iniciales, los pasos de reserva o las reglas de transferencia en su fork y luego despliéguelo. En LobbyStack Cloud usted cambia el mismo comportamiento desde la configuración de IA y las reglas del panel.",
         },
         {
           question: "¿Código abierto significa menos soporte?",
           answer:
-            "No necesariamente. LobbyStack ofrece planes en la nube gestionada con soporte, y quienes autoalojan tienen acceso a documentación, recursos de la comunidad y servicios profesionales de implementación. Código abierto significa más control, no menos ayuda.",
+            "No. En LobbyStack Cloud, el plan Starter incluye soporte por correo y Pro tiene correo prioritario. Si la aloja usted mismo, tiene las guías de docs.lobbystack.com y el registro de incidencias en GitHub. El plan Enterprise cubre despliegues autoalojados con ayuda dedicada para la implementación.",
         },
         {
-          question:
-            "¿Mis datos de llamadas están seguros en un proyecto de código abierto?",
+          question: "¿Mis datos de llamadas están seguros en un proyecto de código abierto?",
           answer:
-            "Si autoaloja LobbyStack, los datos de sus llamadas se quedan en su infraestructura. Si usa la nube gestionada, LobbyStack sigue prácticas estándar de manejo de datos. Con el código abierto, usted mismo puede verificar el manejo de los datos en lugar de confiar en una caja negra.",
+            "Si la autoaloja, las grabaciones, las transcripciones y los contactos se quedan en su propia base de datos PostgreSQL y su almacenamiento, y usted define las copias de seguridad y la retención. Twilio y OpenAI siguen procesando el audio de las llamadas en vivo con sus cuentas. En LobbyStack Cloud, LobbyStack guarda esos datos por usted. En ambos casos puede leer el código para ver qué guarda.",
         },
         {
-          question:
-            "¿En qué se diferencia de una recepcionista con IA de código cerrado?",
+          question: "¿En qué se diferencia de una recepcionista con IA de código cerrado?",
           answer:
-            "Las plataformas de recepcionista con IA de código cerrado mantienen en privado la lógica de las llamadas, la estructura de los prompts y los flujos de datos. No puede auditar cómo se toman las decisiones ni personalizar el sistema más allá de lo que permite la configuración del proveedor. LobbyStack le permite revisar, bifurcar y modificar todo el sistema.",
+            "Un proveedor de código cerrado mantiene en privado sus prompts, su enrutamiento y su manejo de datos, así que solo puede cambiar lo que permite su página de configuración. Con LobbyStack puede leer todo el sistema, hacer un fork y modificar cualquier parte.",
         },
         {
           question: "¿Dónde encuentro el código fuente?",
           answer:
-            "El código fuente de LobbyStack está en GitHub, en github.com/lobbystack/lobbystack. Puede revisarlo, abrir incidencias y contribuir cambios.",
+            "En GitHub, en github.com/lobbystack/lobbystack. Puede leerlo, abrir incidencias y enviar pull requests. El archivo CONTRIBUTING.md del repositorio explica cómo enviar un cambio.",
         },
       ],
-      faqHeading: "Preguntas sobre la recepcionista con IA de código abierto",
+      faqHeading: "Preguntas sobre recepcionistas con IA de código abierto",
       relatedLinks: [
         {
-          label: "Despliegue autoalojado",
+          label: "Recepcionista con IA autoalojada",
           href: "/solutions/self-hosted-ai-receptionist/",
         },
+        {
+          label: "Cómo se arma el stack de código abierto",
+          href: "/blog/open-source-ai-receptionist-stack/",
+        },
         { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
-        { label: "Documentación de la API", href: "/docs/api/" },
         pricingLink,
       ],
-      ctaHeading:
-        "Revise, personalice y despliegue una recepcionista con IA que puede verificar",
+      ctaHeading: "Lea el código y luego elija dónde se ejecuta",
       ctaBody:
-        "LobbyStack es de código abierto para que pueda auditar la lógica de las llamadas, modificar el flujo de trabajo y desplegarla en su propia infraestructura. Sin cajas negras. Sin dependencia de un proveedor.",
+        "Empiece por el repositorio en GitHub. Aloje LobbyStack en su propio servidor o pruébela gratis en LobbyStack Cloud.",
       ctaPrimaryLabel: "Ver en GitHub",
       ctaPrimaryHref: "https://github.com/lobbystack/lobbystack",
-      ctaSecondaryLabel: "Leer la documentación de despliegue",
-      ctaSecondaryHref: "/docs/api/",
+      ctaSecondaryLabel: "Leer la guía de autoalojamiento",
+      ctaSecondaryHref: "https://docs.lobbystack.com/self-hosting/overview",
     }
   ),
 }
@@ -1881,154 +1876,418 @@ const bespokeSolutionPagesEs: Record<string, SeoLandingPage> = {
     group: "solution",
     slug: "ai-phone-answering",
     path: "/solutions/ai-phone-answering/",
-    title: "Atención telefónica con IA para pequeños negocios | LobbyStack",
+    title:
+      "Servicio de atención telefónica con IA para pequeños negocios | LobbyStack",
     description:
-      "LobbyStack atiende las llamadas de su negocio 24/7, reserva citas, registra los datos de quien llama y deriva las llamadas urgentes a su equipo.",
+      "El servicio de atención telefónica con IA de LobbyStack contesta las llamadas de su negocio, reserva citas en Google Calendar y transfiere las llamadas urgentes. Pruébelo gratis.",
     eyebrow: "Atención telefónica con IA",
-    h1: "Atención telefónica con IA que convierte llamadas en trabajos reservados",
+    h1: "Un servicio de atención telefónica con IA para las llamadas que usted no puede tomar",
     intro:
-      "LobbyStack contesta cuando su equipo no puede. Responde las preguntas habituales, registra los datos de quien llama, reserva citas, envía confirmaciones por SMS y transfiere las llamadas urgentes al número que usted elija.",
+      "LobbyStack contesta la línea de su negocio cuando usted está en un trabajo, con un cliente o ya cerró por hoy. Responde preguntas con los datos que usted le da, reserva citas en Google Calendar y envía las llamadas urgentes a su teléfono.",
     image: "/illustrations/call-capture.webp",
     imageAlt:
-      "Servicio de atención telefónica con IA de LobbyStack registrando los datos de quien llama",
+      "El servicio de atención telefónica con IA de LobbyStack contesta una llamada mientras el equipo está ocupado",
     proofPoints: [
-      "Atiende llamadas 24/7",
-      "Reserva citas y guarda un resumen de cada llamada",
-      "Transfiere las llamadas urgentes al número que usted elija",
+      "Funciona con el número que su negocio ya tiene",
+      "Reserva en Google Calendar durante la llamada",
+      "Transfiere las llamadas urgentes al número que usted defina",
+      "El spam y las llamadas de menos de 10 segundos no consumen minutos",
     ],
     sections: [
       {
-        title: "Los clientes llaman cuando están listos para actuar",
-        body: "La mayoría de las personas ya no deja mensajes de voz. Llaman, esperan unos tonos y prueban con el siguiente negocio. Si usted está en otro trabajo, con un cliente, al volante o ya cerró, esa llamada puede perderse sin que se entere.",
+        title:
+          "Qué hace nuestro servicio de atención telefónica con IA en una llamada",
+        body: "Quienes llaman hablan como lo harían con su recepción. LobbyStack responde preguntas con los servicios, precios, horarios y políticas que usted agrega, y reserva la visita antes de que la persona cuelgue.",
         points: [
-          "Saludo y tono personalizados",
-          "Preguntas iniciales adaptadas a su negocio",
-          "Resumen, transcripción y resultado de cada llamada en un mismo lugar",
+          "Responde con texto, PDF o páginas de su sitio web",
+          "Ofrece horarios libres de su Google Calendar y, si la persona acepta, le envía por SMS una confirmación y un recordatorio",
         ],
       },
       {
-        title: "Deje a su equipo las conversaciones que importan",
-        body: "Las llamadas de rutina se pueden resolver automáticamente, mientras que las urgencias, los clientes molestos o los clientes potenciales importantes pasan a su equipo mediante una transferencia o un mensaje.",
+        title: "Las llamadas urgentes llegan a una persona",
+        body: "Escriba con palabras sencillas qué cuenta como urgente, por ejemplo, agua que se filtra por el techo o un cliente que pide hablar con el dueño. LobbyStack hace las preguntas que su regla necesita y luego transfiere la llamada a su número de guardia o al empleado que pide quien llama.",
         points: [
-          "Reglas de transferencia configurables",
-          "Mensajes para el equipo sobre las solicitudes no urgentes",
-          "Historial centralizado para revisar qué pasó",
+          "Si nadie contesta, se lo dice a quien llama y ofrece tomar un mensaje",
+          "Su equipo puede recibir una alerta cuando una transferencia no se completa",
+        ],
+      },
+      {
+        title: "Cada llamada queda por escrito en su panel",
+        body: "Cada llamada tiene un resumen de una línea, una transcripción y una grabación, junto al nombre y el número de quien llamó. Puede leer lo que alguien necesitaba antes de devolverle la llamada.",
+        points: [
+          "Los mensajes y los seguimientos esperan a su equipo en una sola lista",
+          "Una alerta por SMS o correo electrónico cuando la recepcionista toma un mensaje",
+        ],
+      },
+      {
+        title: "Configure la atención telefónica con IA en su propio número",
+        body: "Puede escucharla contestar en su navegador antes de que llame un solo cliente.",
+        points: [
+          "Desvíe su línea cuando está ocupada, cuando nadie contesta, después del cierre o todo el tiempo",
+          "Agregue sus horarios, precios y políticas como texto, documentos o páginas de su sitio web",
+          "Escriba reglas en oraciones sencillas, como “Transfiera al teléfono de guardia a cualquiera que no tenga calefacción”",
+          "Pruébela en el navegador. El plan gratuito incluye 30 minutos de voz y un número de EE. UU. o Canadá durante 14 días",
+        ],
+      },
+      {
+        title: "Lea el código que contesta su teléfono",
+        body: "LobbyStack es de código abierto con licencia MIT. Use LobbyStack Cloud o ejecútelo en su propio servidor con sus propias cuentas de Twilio y OpenAI.",
+        points: [
+          "Starter y Pro incluyen un número en Estados Unidos, Canadá, Reino Unido, Australia o Nueva Zelanda",
+          "Una llamada a las 2 a. m. cuesta lo mismo que una al mediodía",
         ],
       },
     ],
-    faqs: commonFaqs,
-    faqHeading: "Preguntas sobre la atención telefónica con IA",
+    faqs: [
+      {
+        question: "¿Qué es un servicio de atención telefónica con IA?",
+        answer:
+          "Un servicio de atención telefónica con IA contesta las llamadas de su negocio con una IA de voz en lugar de una persona. LobbyStack habla con quien llama, responde preguntas con los datos que usted agrega, reserva citas en Google Calendar, toma mensajes y transfiere las llamadas urgentes a su equipo, según las reglas que usted escribe.",
+      },
+      {
+        question:
+          "¿Es un buen servicio de atención con IA para un pequeño negocio?",
+        answer:
+          "Está hecho para eso: negocios atendidos por sus dueños, oficios, clínicas y salones cuyo teléfono suena mientras todos están ocupados. Los planes empiezan con un nivel gratuito de 30 minutos de voz, y luego $30 al mes por 150 minutos en Starter o $100 al mes por 500 minutos en Pro. Ningún plan tiene tarifa de configuración.",
+      },
+      {
+        question: "¿Puedo conservar el número de mi negocio?",
+        answer:
+          "Sí. Desvíe su número actual a LobbyStack a través de su operador telefónico, y sus clientes marcan el número que ya conocen. Starter y Pro también incluyen un número propio en Estados Unidos, Canadá, Reino Unido, Australia o Nueva Zelanda.",
+      },
+      {
+        question: "¿Puede contestar solo cuando estamos ocupados o cerrados?",
+        answer:
+          "Sí. La configuración de desvío de su operador decide qué llamadas llegan a LobbyStack: las llamadas cuando la línea está ocupada, las que nadie contesta, las que llegan después del cierre o todas. Puede cambiarla cuando quiera, para un día festivo o una semana tranquila.",
+      },
+      {
+        question: "¿Puede reservar citas durante la llamada?",
+        answer:
+          "Sí. Conecte Google Calendar y agregue sus servicios. LobbyStack ofrece horarios libres dentro de su horario de atención, reserva el que elige quien llama y, si la persona acepta, le envía por SMS una confirmación y un recordatorio 24 horas antes. En LobbyStack Cloud, los SMS llegan a números de Estados Unidos y Canadá.",
+      },
+      {
+        question: "¿Qué pasa cuando quien llama necesita hablar con una persona?",
+        answer:
+          "Usted elige cuándo transfiere: en llamadas urgentes, cuando quien llama lo pide, siempre, solo en horario de atención o nunca. Transfiere a su número de transferencia predeterminado o al empleado que quien llama pide por su nombre. Si nadie contesta, la recepcionista se lo dice a la persona y ofrece tomar un mensaje.",
+      },
+      {
+        question: "¿Cómo controlo lo que dice?",
+        answer:
+          "Usted define el saludo, agrega la información de su negocio y escribe reglas en oraciones sencillas, como “Si el precio depende del trabajo, ofrezca devolver la llamada con un presupuesto”. La recepcionista lee sus reglas en el orden en que usted las pone, así que las más importantes van primero.",
+      },
+      {
+        question: "¿Qué veo después de cada llamada?",
+        answer:
+          "El panel muestra cada llamada con un resumen de una línea, la transcripción, la grabación cuando se guarda, el número de quien llamó y el nombre que dio, y lo que pasó: una reserva, un mensaje, una transferencia o una pregunta respondida.",
+      },
+      {
+        question: "¿Contesta las llamadas de spam?",
+        answer:
+          "Las contesta y luego cuelga las llamadas automáticas y las ofertas de venta. Las llamadas que la recepcionista termina como spam no cuentan para sus minutos, y tampoco las de menos de 10 segundos.",
+      },
+      {
+        question: "¿Cuánto cuesta la atención telefónica con IA?",
+        answer:
+          "Free incluye 30 minutos de voz al mes. Starter cuesta $30 al mes con 150 minutos, y después $0.20 por minuto. Pro cuesta $100 al mes con 500 minutos, y después $0.18 por minuto. La facturación anual cuesta un 20% menos. Puede fijar un tope mensual para el excedente en su configuración de facturación.",
+      },
+    ],
+    faqHeading: "Preguntas sobre los servicios de atención telefónica con IA",
     relatedLinks: [
-      pricingLink,
-      { label: "Funciones", href: "/features/" },
+      {
+        label: "Agendador de citas con IA",
+        href: "/solutions/ai-appointment-scheduler/",
+      },
+      {
+        label: "Servicio de atención fuera de horario",
+        href: "/solutions/after-hours-answering-service/",
+      },
+      {
+        label: "Recepcionista con IA para servicios del hogar",
+        href: "/solutions/ai-receptionist-for-home-services/",
+      },
       {
         label: "Calculadora de llamadas perdidas",
         href: "/missed-call-revenue-calculator/",
       },
+      pricingLink,
     ],
+    ctaHeading: "Deje que LobbyStack conteste su próxima llamada",
+    ctaBody:
+      "Agregue sus datos, desvíe su número y llámelo usted mismo. El plan gratuito incluye 30 minutos de voz.",
   },
   "/solutions/ai-appointment-scheduler/": {
     group: "solution",
     slug: "ai-appointment-scheduler",
     path: "/solutions/ai-appointment-scheduler/",
-    title: "Programador de citas con IA y atención telefónica | LobbyStack",
+    title: "Agendador de citas con IA para llamadas entrantes | LobbyStack",
     description:
-      "LobbyStack es un servicio de atención telefónica con programación de citas integrada. Reserva durante la llamada, registra los datos, envía confirmaciones y deriva las urgencias.",
-    eyebrow: "Programación de citas con IA",
-    h1: "Programación de citas con IA para quienes llaman listos para reservar",
+      "LobbyStack es un agendador y programador de citas con IA para las llamadas que usted recibe. Ofrece horarios libres de Google Calendar, reserva la visita y envía una confirmación por SMS.",
+    eyebrow: "Agendador de citas con IA",
+    h1: "Un agendador de citas con IA que reserva a quien llama antes de que cuelgue",
     intro:
-      "LobbyStack contesta las llamadas, registra los datos que su equipo necesita, ofrece horarios disponibles, reserva citas y envía confirmaciones antes de que la persona busque otra opción.",
+      "Cuando alguien llama para reservar, LobbyStack contesta, ofrece horarios libres de su Google Calendar, reserva el que la persona elige y le envía una confirmación por SMS. Su equipo encuentra la visita en el calendario.",
     image: "/illustrations/booking-flow.webp",
     imageAlt:
-      "Programador de citas con IA de LobbyStack reservando una cita para quien llama",
+      "El agendador de citas con IA de LobbyStack reserva a quien llama en un horario libre",
     proofPoints: [
-      "Reserva durante la llamada en lugar de esperar a devolverla",
-      "Respeta sus horarios, tipos de cita e instrucciones",
-      "Envía confirmaciones y resúmenes a su equipo",
+      "Reserva en Google Calendar durante la llamada",
+      "Solo ofrece horarios dentro de su horario de atención",
+      "Envía por SMS una confirmación y un recordatorio",
+      "Mueve o cancela reservas si usted lo permite",
     ],
     sections: [
       {
-        title: "Menos idas y vueltas para agendar",
-        body: "Cuando alguien está listo para reservar, LobbyStack ofrece los horarios adecuados, confirma la cita y registra los datos necesarios para prepararla.",
+        title: "Cómo reserva una llamada el agendador de citas con IA",
+        body: "Identifica el servicio que necesita quien llama, busca un horario con el tiempo suficiente y ofrece un par de opciones. La persona elige una y la cita aparece en su calendario.",
         points: [
-          "Disponibilidad tomada de Google Calendar",
-          "Preguntas de calificación antes de reservar",
-          "Confirmaciones y próximos pasos enviados automáticamente",
+          "Si la persona acepta, le envía por SMS una confirmación en el momento y un recordatorio 24 horas antes",
+          "En LobbyStack Cloud, los SMS llegan a números de Estados Unidos y Canadá",
         ],
       },
       {
-        title: "Mantenga el control de los casos especiales",
-        body: "Si una solicitud no encaja en sus reglas, LobbyStack anota las preferencias, explica los próximos pasos y deja un mensaje a su equipo.",
+        title: "Quienes llaman mueven o cancelan sus propias citas",
+        body: "Active los cambios de citas y quien llama podrá encontrar su reserva, elegir otro horario o cancelar. La recepcionista confirma el cambio antes de tocar su calendario. Para más seguridad, pida primero un código de un solo uso por SMS o un PIN en el teclado.",
         points: [
-          "Reglas por servicio, zona o tipo de cita",
-          "Mensaje para el equipo cuando haga falta",
-          "Transferencia de urgencias según sus instrucciones",
+          "Los cambios están desactivados hasta que usted los active",
+          "Cuando no puede confirmar la reserva, pasa la solicitud a su equipo",
+        ],
+      },
+      {
+        title: "Reserva con la persona que pide quien llama",
+        body: "Agregue a las personas que atienden citas, con los servicios que hacen, su horario y sus días libres. Quien llama puede pedir a alguien por su nombre. Si no tiene preferencia, la recepcionista reserva con la primera persona libre para ese servicio.",
+        points: [
+          "Nadie recibe reservas durante sus días libres",
+          "La recepcionista puede transferir a quien pide a alguien al teléfono de esa persona",
+        ],
+      },
+      {
+        title: "Lo que revisa antes de ofrecer un horario",
+        body: "Su recepcionista ofrece un horario solo cuando todos estos puntos indican que está libre.",
+        points: [
+          "El servicio y su duración",
+          "Su horario de atención y el horario de trabajo de cada empleado",
+          "El tiempo ocupado en su Google Calendar",
+          "Los días libres que agregue para un empleado",
+        ],
+      },
+      {
+        title: "Dónde encaja LobbyStack como agendador de citas con IA",
+        body: "LobbyStack reserva las llamadas que le llegan a usted. No llama a listas de prospectos ni da seguimiento a prospectos fríos. Las únicas llamadas salientes que hace son transferencias.",
+        points: [
+          "Los clientes nuevos, los habituales y quienes llaman fuera de horario pueden reservar en la primera llamada",
+          "¿Prefiere aprobar cada visita? Haga que guarde el horario preferido de quien llama como una solicitud para su equipo",
+          "Cada llamada empieza en su idioma predeterminado y cambia cuando quien llama habla otro",
         ],
       },
     ],
-    faqs: commonFaqs,
-    faqHeading: "Preguntas sobre la programación de citas con IA",
-    relatedLinks: [
-      pricingLink,
-      { label: "Funciones", href: "/features/" },
+    faqs: [
       {
-        label: "Atención telefónica con IA",
+        question: "¿Qué es un agendador de citas con IA?",
+        answer:
+          "Un agendador de citas con IA es una IA de voz que reserva citas por teléfono. LobbyStack contesta sus llamadas entrantes, pregunta qué necesita la persona, ofrece horarios libres de su Google Calendar y reserva el que elige. No hace llamadas salientes de ventas.",
+      },
+      {
+        question:
+          "¿Qué diferencia hay entre un agendador de citas con IA y un programador de citas con IA?",
+        answer:
+          "La gente usa los dos nombres. Un agendador de citas suele referirse a llamadas salientes para reservar reuniones de ventas. LobbyStack funciona como programador de citas con IA para las llamadas que le llegan a usted: reserva, mueve y cancela citas mientras la persona sigue en la línea.",
+      },
+      {
+        question: "¿En qué calendario reserva?",
+        answer:
+          "En Google Calendar. Usted conecta una cuenta de Google y elige el calendario que recibe las reservas. LobbyStack lee el tiempo ocupado de ese calendario, así que no ofrece un horario que ya está tomado.",
+      },
+      {
+        question: "¿Puedo elegir qué pregunta antes de reservar?",
+        answer:
+          "Sí. Agregue sus servicios con una duración y una descripción, y escriba reglas sobre los datos que debe registrar, como la dirección, el problema o el seguro de quien llama. Las respuestas aparecen en el resumen y la transcripción de la llamada.",
+      },
+      {
+        question:
+          "¿Quienes llaman pueden cambiar o cancelar su cita por teléfono?",
+        answer:
+          "Sí, una vez que activa los cambios de citas. De forma predeterminada, la persona debe llamar desde el número con el que reservó e indicar la hora o el servicio de la cita. También puede pedir un código de un solo uso por SMS o un PIN en el teclado. La recepcionista confirma antes de cambiar algo.",
+      },
+      {
+        question: "¿Envía confirmaciones y recordatorios?",
+        answer:
+          "Sí, cuando quien llama lo acepta durante la llamada. LobbyStack envía por SMS una confirmación de la reserva, un recordatorio 24 horas antes de la cita y una confirmación de cancelación. En LobbyStack Cloud, los SMS llegan a números de Estados Unidos y Canadá.",
+      },
+      {
+        question: "¿Puede reservar citas fuera de horario?",
+        answer:
+          "Sí. Contesta las llamadas que usted le desvía por la noche, los fines de semana y los días festivos, y ofrece horarios dentro de su horario de atención, así que alguien que llama a las 9 p. m. puede reservar para la mañana siguiente.",
+      },
+      {
+        question: "¿Y si quiero aprobar cada reserva yo mismo?",
+        answer:
+          "Configúrelo para que guarde el horario preferido de quien llama como una solicitud para su equipo, o para que tome un mensaje. Su equipo confirma la visita y luego usted le responde a la persona.",
+      },
+      {
+        question: "¿Puede reservar con un empleado en particular?",
+        answer:
+          "Sí. Agregue empleados con los servicios que hacen, su horario de trabajo y sus días libres. Quien llama puede pedir a alguien por su nombre. Si no tiene preferencia, la recepcionista reserva con el primer empleado libre para ese servicio.",
+      },
+      {
+        question: "¿Cuánto cuesta un programador de citas con IA?",
+        answer:
+          "Free incluye 30 minutos de voz al mes. Starter cuesta $30 al mes por 150 minutos, y después $0.20 por minuto. Pro cuesta $100 al mes por 500 minutos, y después $0.18 por minuto. La facturación anual cuesta un 20% menos, y ningún plan tiene tarifa de configuración.",
+      },
+    ],
+    faqHeading: "Preguntas sobre los agendadores de citas con IA",
+    relatedLinks: [
+      {
+        label: "Servicio de atención telefónica con IA",
         href: "/solutions/ai-phone-answering/",
       },
+      {
+        label: "Recepcionista dental con IA",
+        href: "/solutions/ai-receptionist-for-dental-offices/",
+      },
+      {
+        label: "Recepcionista con IA para salones",
+        href: "/solutions/ai-receptionist-for-salons-and-spas/",
+      },
+      {
+        label: "Servicio de atención fuera de horario",
+        href: "/solutions/after-hours-answering-service/",
+      },
+      pricingLink,
     ],
+    ctaHeading: "Reserve a quien llama mientras sigue en la línea",
+    ctaBody:
+      "Agregue sus servicios, conecte Google Calendar y llame a su número para reservar una cita de prueba. El plan gratuito incluye 30 minutos de voz.",
   },
   "/solutions/ai-receptionist-for-home-services/": {
     group: "solution",
     slug: "ai-receptionist-for-home-services",
     path: "/solutions/ai-receptionist-for-home-services/",
-    title: "Atención telefónica con IA para servicios del hogar | LobbyStack",
+    title:
+      "Recepcionista con IA para negocios de servicios del hogar | LobbyStack",
     description:
-      "LobbyStack es un servicio de atención telefónica con IA para servicios del hogar. Atiende llamadas de climatización, plomería, electricidad, techos y jardinería mientras su equipo trabaja.",
+      "Una recepcionista con IA para servicios del hogar que contesta mientras su equipo trabaja. LobbyStack reserva trabajos en Google Calendar y transfiere las urgencias a su técnico de guardia.",
     eyebrow: "Servicios del hogar",
-    h1: "Atención telefónica para servicios del hogar que reserva trabajos mientras su equipo está en obra",
+    h1: "Una recepcionista con IA para servicios del hogar que reserva trabajos mientras usted trabaja",
     intro:
-      "LobbyStack contesta las llamadas de negocios de climatización, plomería, electricidad, techos y jardinería. Atiende las urgencias, reserva citas y deriva los trabajos urgentes a su equipo mientras usted está ocupado trabajando.",
+      "No puede contestar desde debajo de un fregadero o desde un techo. LobbyStack contesta, registra la dirección y el problema, reserva la visita en Google Calendar y transfiere las urgencias reales a su teléfono de guardia.",
     image: "/illustrations/industry-bookings.webp",
     imageAlt:
-      "Recepcionista con IA de LobbyStack reservando trabajos de servicios del hogar desde llamadas telefónicas",
+      "La recepcionista con IA para servicios del hogar de LobbyStack reserva un trabajo desde una llamada",
     proofPoints: [
-      "Califica la urgencia, la zona de servicio y el tipo de trabajo",
-      "Ayuda a quien llama a reservar o dejar un mensaje",
-      "Transfiere las situaciones críticas a su número de guardia",
+      "Contesta mientras su equipo está en un trabajo",
+      "Transfiere las urgencias a su teléfono de guardia",
+      "Reserva visitas de presupuesto y de servicio",
+      "Cuelga las llamadas de spam, que no consumen minutos",
     ],
     sections: [
       {
-        title: "Cubra el teléfono mientras su equipo está en obra",
-        body: "Los técnicos no siempre pueden contestar sin interrumpir el trabajo. LobbyStack registra la información esencial y mantiene visibles las solicitudes.",
+        title:
+          "Qué debe hacer con cada llamada la atención telefónica de un negocio de servicios del hogar",
+        body: "Usted decide qué llamadas son urgencias. Todo lo demás se reserva o queda por escrito para usted.",
         points: [
-          "Preguntas adaptadas a los servicios del hogar",
-          "Notas del trabajo y resumen después de cada llamada",
-          "Cobertura para llamadas fuera de horario y picos de temporada",
+          "Las urgencias, como una tubería rota o la falta de calefacción en invierno, van a su técnico de guardia, con la dirección y el problema en la transcripción",
+          "Los trabajos que pueden esperar reciben un horario libre de su Google Calendar y un resumen por escrito de la llamada",
         ],
       },
       {
-        title: "Priorice antes las llamadas correctas",
-        body: "Las urgencias, los proyectos grandes y las solicitudes delicadas se transfieren a su equipo, mientras que las llamadas de rutina avanzan hacia una cita o un mensaje.",
+        title: "Una solicitud de presupuesto se convierte en una visita",
+        body: "LobbyStack solo cotiza los precios que usted indica. Cuando un precio depende del trabajo, lo dice y reserva una visita.",
         points: [
-          "Transferencia según la urgencia o el tipo de solicitud",
-          "Reservas y confirmaciones según sus reglas",
-          "Historial centralizado para dueños, equipos y oficina",
+          "Registra la dirección y los detalles que piden sus reglas",
+          "Quien llama recibe por SMS una confirmación de la visita",
+        ],
+      },
+      {
+        title: "Conserve el número que lleva en su camioneta",
+        body: "Desvíe la línea de su negocio a LobbyStack a través de su operador telefónico. Elija cuándo contesta: cuando la línea está ocupada, cuando nadie contesta, después del cierre o en todas las llamadas. Cámbielo cuando quiera, por ejemplo, para un fin de semana largo.",
+        points: [
+          "Starter y Pro también incluyen un número propio",
+          "Sus clientes marcan el número que ya tienen",
+        ],
+      },
+      {
+        title: "Configure su recepcionista con IA para servicios del hogar",
+        body: "Agregue estas cuatro cosas antes de desviar su primera llamada.",
+        points: [
+          "Su zona de servicio, para que pueda responder “¿Van hasta Brookline?”",
+          "Sus servicios y precios, para que reserve una visita de presupuesto cuando un trabajo necesita una revisión antes",
+          "Sus reglas de urgencia, con los problemas que justifican una llamada de noche",
+          "Límites como “Nunca prometa una visita el mismo día”, escritos como reglas",
         ],
       },
     ],
-    faqs: commonFaqs,
-    faqHeading: "Preguntas sobre la atención para servicios del hogar",
+    faqs: [
+      {
+        question: "¿Qué es una recepcionista con IA para servicios del hogar?",
+        answer:
+          "Es una IA de voz que contesta el teléfono de un negocio de plomería, climatización, electricidad, techos u otro oficio. LobbyStack contesta cuando su equipo no puede, registra la dirección y el problema, reserva visitas en Google Calendar, responde preguntas con los datos de su negocio y transfiere las urgencias a su número de guardia.",
+      },
+      {
+        question:
+          "¿En qué se diferencia de un servicio de atención telefónica para servicios del hogar?",
+        answer:
+          "En un servicio de atención con personas, alguien lee su guion y toma un mensaje. LobbyStack reserva la visita por su cuenta, transfiere las urgencias durante la llamada y guarda un resumen, una transcripción y una grabación de cada llamada. Usted paga por los minutos que usa, y una llamada de noche cuesta lo mismo que una al mediodía.",
+      },
+      {
+        question: "¿Puede atender llamadas de urgencia por la noche?",
+        answer:
+          "Sí. Usted escribe qué cuenta como urgencia, por ejemplo, la falta de calefacción, una fuga activa o aguas negras que se devuelven por el drenaje. LobbyStack hace las preguntas que su regla necesita y luego transfiere la llamada a su número de guardia. Si la transferencia no se completa, ofrece tomar un mensaje y su equipo puede recibir una alerta.",
+      },
+      {
+        question: "¿Reserva trabajos mientras estoy en una obra?",
+        answer:
+          "Sí. Ofrece horarios libres de su Google Calendar dentro de su horario de atención, reserva el que elige quien llama y, si la persona acepta, le envía por SMS una confirmación y un recordatorio el día anterior.",
+      },
+      {
+        question: "¿Qué dice cuando alguien pregunta un precio?",
+        answer:
+          "Cotiza los precios que usted agrega a sus servicios. Cuando el precio depende del trabajo, dice que un técnico necesita verlo primero y reserva una visita de presupuesto o toma un mensaje, según sus reglas.",
+      },
+      {
+        question: "¿Puedo elegir qué les pregunta a quienes llaman?",
+        answer:
+          "Sí. Escriba reglas sobre los datos que debe registrar, como la dirección, la antigüedad del equipo, si el agua sigue saliendo o cómo llegar a la propiedad. Las respuestas aparecen en el resumen y la transcripción de la llamada.",
+      },
+      {
+        question: "¿Funciona con el número actual de mi negocio?",
+        answer:
+          "Sí. Desvíe el número al que ya llaman sus clientes. Elija las llamadas ocupadas y sin respuesta para el exceso de llamadas, las llamadas después del cierre para las noches y los fines de semana, o todas las llamadas. Starter y Pro también incluyen un número propio.",
+      },
+      {
+        question: "¿Mi equipo verá lo que se reservó?",
+        answer:
+          "Sí. Las reservas aparecen en su Google Calendar y en el panel, junto al resumen, la transcripción y la grabación de cada llamada. Cuando la recepcionista toma un mensaje, su equipo recibe una alerta por correo electrónico, o por SMS si activa esas alertas.",
+      },
+      {
+        question: "¿Cuánto cuesta para un negocio de servicios del hogar?",
+        answer:
+          "Free incluye 30 minutos de voz para probarlo. Starter cuesta $30 al mes por 150 minutos, y después $0.20 por minuto. Pro cuesta $100 al mes por 500 minutos, y después $0.18 por minuto. Las llamadas de spam y las de menos de 10 segundos no cuentan.",
+      },
+    ],
+    faqHeading:
+      "Preguntas sobre las recepcionistas con IA para servicios del hogar",
     relatedLinks: [
-      pricingLink,
+      {
+        label: "Servicio de atención fuera de horario",
+        href: "/solutions/after-hours-answering-service/",
+      },
+      {
+        label: "Servicio de atención telefónica con IA",
+        href: "/solutions/ai-phone-answering/",
+      },
+      {
+        label: "Agendador de citas con IA",
+        href: "/solutions/ai-appointment-scheduler/",
+      },
       {
         label: "Calculadora de llamadas perdidas",
         href: "/missed-call-revenue-calculator/",
       },
-      {
-        label: "Atención fuera de horario",
-        href: "/solutions/after-hours-answering-service/",
-      },
+      pricingLink,
     ],
+    ctaHeading: "Conteste la próxima llamada de trabajo desde la obra en la que está",
+    ctaBody:
+      "Agregue sus servicios, sus reglas de urgencia y su zona de servicio, desvíe su número y llámelo para probarlo. El plan gratuito incluye 30 minutos de voz.",
   },
 }
 

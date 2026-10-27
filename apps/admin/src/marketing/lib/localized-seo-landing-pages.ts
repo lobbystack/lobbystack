@@ -32,102 +32,290 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
     group: "solution",
     slug: "ai-phone-answering",
     path: "/solutions/ai-phone-answering/",
-    title: "Réponse téléphonique IA pour petites entreprises",
+    title: "Service de réponse téléphonique IA pour petites entreprises | LobbyStack",
     description:
-      "LobbyStack répond aux appels 24/7, qualifie les demandes, recueille les coordonnées, planifie les rendez-vous et transfère les urgences selon vos règles.",
+      "Le service de réponse téléphonique IA de LobbyStack prend les appels de votre entreprise, réserve les rendez-vous dans Google Calendar et transfère les appels urgents. Essayez-le gratuitement.",
     eyebrow: "Réponse téléphonique IA",
-    h1: "Une réponse téléphonique IA qui décroche quand votre équipe ne peut pas.",
+    h1: "Un service de réponse téléphonique IA pour les appels que vous ne pouvez pas prendre",
     intro:
-      "LobbyStack répond dès la première sonnerie, comprend le besoin du client, collecte les détails et décide de planifier, prendre un message ou transférer selon vos règles.",
+      "LobbyStack répond à la ligne de votre entreprise quand vous êtes sur un chantier, avec un client ou fermé pour la journée. Il répond aux questions à partir des renseignements que vous lui donnez, réserve les rendez-vous dans Google Calendar et envoie les appels urgents sur votre téléphone.",
     image: "/illustrations/call-capture.webp",
     imageAlt:
-      "Réceptionniste IA LobbyStack collectant les détails d’un appelant",
+      "Le service de réponse téléphonique IA de LobbyStack prend un appel pendant que l’équipe est occupée",
     proofPoints: [
-      "Répond aux appels en direct, hors horaires et pendant les pics",
-      "Collecte coordonnées, besoin, urgence et prochaine étape",
-      "Planifie, prend un message ou transfère selon vos règles",
+      "Fonctionne sur le numéro d’entreprise que vous avez déjà",
+      "Réserve dans Google Calendar pendant l’appel",
+      "Transfère les appels urgents au numéro que vous choisissez",
+      "Les appels indésirables et ceux de moins de 10 secondes ne consomment aucune minute",
     ],
     sections: [
       {
         title:
-          "Transformez les appels sans réponse en prochaines étapes claires",
-        body: "Les appelants n’attendent pas toujours un rappel. LobbyStack répond rapidement, pose les bonnes questions et donne à votre équipe un résumé exploitable.",
+          "Ce que notre service de réponse téléphonique IA fait pendant un appel",
+        body: "Les appelants parlent comme ils le feraient à votre réception. LobbyStack répond aux questions à partir des services, des prix, des heures et des politiques que vous ajoutez, et réserve la visite avant que l’appelant raccroche.",
         points: [
-          "Accueil et ton personnalisés",
-          "Questions d’accueil adaptées à votre entreprise",
-          "Résumé d’appel, transcription et résultat visibles au même endroit",
+          "Répond à partir de texte, de PDF ou de pages de votre site web",
+          "Propose les plages libres de votre Google Calendar et, si l’appelant accepte, envoie par texto une confirmation et un rappel",
         ],
       },
       {
-        title: "Gardez les humains pour les conversations qui comptent",
-        body: "Les appels courants peuvent être traités automatiquement, tandis que les urgences, clients sensibles ou prospects importants reviennent à votre équipe par un transfert ou un message.",
+        title: "Les appels urgents arrivent à une personne",
+        body: "Écrivez en mots simples ce qui compte comme urgent, par exemple de l’eau qui coule du plafond ou un client qui demande à parler au propriétaire. LobbyStack pose les questions dont votre règle a besoin, puis transfère l’appel à votre numéro de garde ou à l’employé que l’appelant demande.",
         points: [
-          "Règles de transfert configurables",
-          "Messages pour l’équipe sur les demandes non urgentes",
-          "Historique centralisé pour vérifier ce qui s’est passé",
+          "Si personne ne répond, il le dit à l’appelant et propose de prendre un message",
+          "Votre équipe peut recevoir une alerte quand un transfert ne passe pas",
+        ],
+      },
+      {
+        title: "Chaque appel est résumé dans votre tableau de bord",
+        body: "Chaque appel reçoit un résumé d’une ligne, une transcription et un enregistrement, à côté du nom et du numéro de l’appelant. Vous pouvez lire ce dont la personne avait besoin avant de la rappeler.",
+        points: [
+          "Les messages et les suivis attendent votre équipe dans une seule liste",
+          "Une alerte par texto ou par courriel quand le réceptionniste prend un message",
+        ],
+      },
+      {
+        title: "Configurez la réponse téléphonique IA sur votre propre numéro",
+        body: "Vous pouvez l’entendre répondre dans votre navigateur avant qu’un seul client appelle.",
+        points: [
+          "Renvoyez votre ligne quand elle est occupée, quand personne ne répond, après la fermeture ou en tout temps",
+          "Ajoutez vos heures, vos prix et vos politiques sous forme de texte, de documents ou de pages de votre site web",
+          "Écrivez vos règles en phrases simples, comme « Transfère au téléphone de garde toute personne qui n’a plus de chauffage »",
+          "Testez-le dans le navigateur. Le forfait gratuit inclut 30 minutes vocales et un numéro américain ou canadien pendant 14 jours",
+        ],
+      },
+      {
+        title: "Lisez le code qui répond à votre téléphone",
+        body: "LobbyStack est open source sous licence MIT. Utilisez LobbyStack Cloud, ou installez-le sur votre propre serveur avec vos propres comptes Twilio et OpenAI.",
+        points: [
+          "Starter et Pro incluent un numéro aux États-Unis, au Canada, au Royaume-Uni, en Australie ou en Nouvelle-Zélande",
+          "Un appel à 2 h du matin coûte le même prix qu’un appel à midi",
         ],
       },
     ],
-    faqs: commonFaqsFr,
-    faqHeading: "Questions sur la réponse téléphonique IA",
+    faqs: [
+      {
+        question: "Qu’est-ce qu’un service de réponse téléphonique IA ?",
+        answer:
+          "Un service de réponse téléphonique IA prend les appels de votre entreprise avec une IA vocale plutôt qu’avec une personne. LobbyStack parle avec l’appelant, répond aux questions à partir des renseignements que vous ajoutez, réserve les rendez-vous dans Google Calendar, prend des messages et transfère les appels urgents à votre équipe, en suivant les règles que vous écrivez.",
+      },
+      {
+        question:
+          "Est-ce un bon service de réponse IA pour une petite entreprise ?",
+        answer:
+          "Il est conçu pour elles : commerces tenus par leur propriétaire, gens de métier, cliniques et salons dont le téléphone sonne pendant que tout le monde est occupé. Les forfaits commencent par un forfait gratuit de 30 minutes vocales, puis 30 $ par mois pour 150 minutes avec Starter ou 100 $ par mois pour 500 minutes avec Pro. Aucun forfait n’a de frais de mise en service.",
+      },
+      {
+        question: "Puis-je garder mon numéro d’entreprise ?",
+        answer:
+          "Oui. Renvoyez votre numéro actuel vers LobbyStack chez votre opérateur, et les appelants composent le numéro qu’ils connaissent déjà. Starter et Pro incluent aussi un numéro à vous aux États-Unis, au Canada, au Royaume-Uni, en Australie ou en Nouvelle-Zélande.",
+      },
+      {
+        question:
+          "Peut-il répondre seulement quand nous sommes occupés ou fermés ?",
+        answer:
+          "Oui. Les réglages de renvoi de votre opérateur décident quels appels arrivent à LobbyStack : les appels quand la ligne est occupée, ceux auxquels personne ne répond, ceux après la fermeture, ou tous les appels. Vous pouvez changer ce réglage quand vous voulez, pour un jour férié ou une semaine tranquille.",
+      },
+      {
+        question: "Peut-il réserver des rendez-vous pendant l’appel ?",
+        answer:
+          "Oui. Connectez Google Calendar et ajoutez vos services. LobbyStack propose les plages libres pendant vos heures d’ouverture, réserve celle que l’appelant choisit et, si l’appelant accepte, envoie par texto une confirmation et un rappel 24 heures avant. Sur LobbyStack Cloud, les textos vont aux numéros américains et canadiens.",
+      },
+      {
+        question:
+          "Que se passe-t-il quand un appelant a besoin d’une vraie personne ?",
+        answer:
+          "Vous choisissez quand il transfère : pour les appels urgents, quand l’appelant le demande, toujours, seulement pendant les heures d’ouverture, ou jamais. Il transfère à votre numéro de transfert par défaut, ou à l’employé que l’appelant demande par son nom. Si personne ne répond, le réceptionniste le dit à l’appelant et propose de prendre un message.",
+      },
+      {
+        question: "Comment contrôler ce qu’il dit ?",
+        answer:
+          "Vous réglez le message d’accueil, ajoutez les connaissances de votre entreprise et écrivez des règles en phrases simples, comme « Si le prix dépend du travail, propose un rappel avec une soumission ». Le réceptionniste lit vos règles dans l’ordre où vous les placez, alors mettez les plus importantes en premier.",
+      },
+      {
+        question: "Que vois-je après chaque appel ?",
+        answer:
+          "Le tableau de bord montre chaque appel avec un résumé d’une ligne, la transcription, l’enregistrement quand il y en a un, le numéro de l’appelant et le nom qu’il a donné, ainsi que le résultat : un rendez-vous, un message, un transfert ou une réponse à une question.",
+      },
+      {
+        question: "Répond-il aux appels indésirables ?",
+        answer:
+          "Il y répond, puis raccroche sur les appels automatisés et les sollicitations commerciales. Les appels que le réceptionniste termine comme indésirables ne comptent pas dans vos minutes, pas plus que les appels de moins de 10 secondes.",
+      },
+      {
+        question: "Combien coûte la réponse téléphonique IA ?",
+        answer:
+          "Le forfait gratuit inclut 30 minutes vocales par mois. Starter coûte 30 $ par mois avec 150 minutes, puis 0,20 $ la minute. Pro coûte 100 $ par mois avec 500 minutes, puis 0,18 $ la minute. La facturation annuelle coûte 20 % de moins. Vous pouvez fixer un plafond mensuel de dépassement dans vos paramètres de facturation.",
+      },
+    ],
+    faqHeading: "Questions sur les services de réponse téléphonique IA",
     relatedLinks: [
-      { label: "Tarifs", href: "/pricing/" },
-      { label: "Fonctionnalités", href: "/features/" },
+      {
+        label: "Prise de rendez-vous par IA",
+        href: "/solutions/ai-appointment-scheduler/",
+      },
+      {
+        label: "Service de réponse téléphonique hors heures",
+        href: "/solutions/after-hours-answering-service/",
+      },
+      {
+        label: "Réceptionniste IA pour services à domicile",
+        href: "/solutions/ai-receptionist-for-home-services/",
+      },
       {
         label: "Calculateur d’appels manqués",
         href: "/missed-call-revenue-calculator/",
       },
+      { label: "Tarifs", href: "/pricing/" },
     ],
+    ctaHeading: "Laissez LobbyStack répondre à votre prochain appel",
+    ctaBody:
+      "Ajoutez vos renseignements, renvoyez votre numéro et appelez-le vous-même. Le forfait gratuit inclut 30 minutes vocales.",
   },
   "/solutions/ai-appointment-scheduler/": {
     group: "solution",
     slug: "ai-appointment-scheduler",
     path: "/solutions/ai-appointment-scheduler/",
-    title: "Planificateur de rendez‑vous IA pour petites entreprises",
+    title: "Agent de prise de rendez-vous IA pour appels entrants | LobbyStack",
     description:
-      "LobbyStack planifie les rendez-vous pendant les appels, vérifie les disponibilités, recueille les détails, confirme la réservation et traite les exceptions.",
-    eyebrow: "Planification de rendez‑vous IA",
-    h1: "Un planificateur IA qui réserve pendant que le client est encore prêt.",
+      "LobbyStack est un agent de prise de rendez-vous IA pour les appels que vous recevez. Il propose les plages libres de Google Calendar, réserve la visite et envoie une confirmation par texto.",
+    eyebrow: "Prise de rendez-vous par IA",
+    h1: "Un agent de prise de rendez-vous IA qui réserve les appelants avant qu’ils raccrochent",
     intro:
-      "LobbyStack vérifie les disponibilités, propose des créneaux, confirme les rendez‑vous et envoie une confirmation par texto sans aller-retour manuel.",
+      "Quand quelqu’un appelle pour prendre rendez-vous, LobbyStack répond, propose les plages libres de votre Google Calendar, réserve celle que la personne choisit et lui envoie une confirmation par texto. Votre équipe trouve la visite dans le calendrier.",
     image: "/illustrations/booking-flow.webp",
     imageAlt:
-      "Planificateur de rendez‑vous IA LobbyStack confirmant une réservation",
+      "L’agent de prise de rendez-vous IA de LobbyStack réserve une plage libre pour un appelant",
     proofPoints: [
-      "Réserve pendant l’appel au lieu d’attendre un rappel",
-      "Respecte vos horaires, types de rendez‑vous et consignes",
-      "Envoie une confirmation par SMS au client et enregistre un résumé pour votre équipe",
+      "Réserve dans Google Calendar pendant l’appel",
+      "Propose seulement des heures comprises dans vos heures d’ouverture",
+      "Envoie par texto une confirmation et un rappel",
+      "Déplace ou annule les rendez-vous si vous le permettez",
     ],
     sections: [
       {
-        title: "Réduisez les allers-retours de planification",
-        body: "Quand un appelant est prêt, LobbyStack peut proposer les bons créneaux, confirmer le rendez‑vous et recueillir les détails nécessaires à la préparation.",
+        title: "Comment l’agent de prise de rendez-vous IA réserve un appel",
+        body: "Il repère le service dont l’appelant a besoin, trouve une plage assez longue pour ce service et propose quelques choix. L’appelant en choisit un et l’événement s’inscrit dans votre calendrier.",
         points: [
-          "Disponibilités lues dans Google Calendar",
-          "Questions de qualification avant la réservation",
-          "Confirmations et prochaines étapes partagées automatiquement",
+          "Si l’appelant accepte, il envoie tout de suite une confirmation par texto et un rappel 24 heures avant",
+          "Sur LobbyStack Cloud, les textos vont aux numéros américains et canadiens",
         ],
       },
       {
-        title: "Gardez le contrôle des cas particuliers",
-        body: "Si une demande sort de vos règles, LobbyStack prend les préférences, explique la suite et laisse un message à votre équipe.",
+        title: "Les appelants déplacent ou annulent eux-mêmes leurs rendez-vous",
+        body: "Activez les modifications de rendez-vous, et un appelant peut retrouver sa réservation, choisir une nouvelle heure ou annuler. Le réceptionniste confirme le changement avant de toucher à votre calendrier. Pour plus de prudence, exigez d’abord un code à usage unique envoyé par texto ou un NIP au clavier.",
         points: [
-          "Règles par service, zone ou type de rendez‑vous",
-          "Message pour l’équipe si besoin",
-          "Transfert des urgences selon vos consignes",
+          "Les modifications restent désactivées tant que vous ne les activez pas",
+          "Quand il ne peut pas confirmer la réservation, il transmet la demande à votre équipe",
+        ],
+      },
+      {
+        title: "Il réserve avec la personne que l’appelant demande",
+        body: "Ajoutez les personnes qui prennent des rendez-vous, avec leurs services, leurs heures et leurs congés. Un appelant peut demander quelqu’un par son nom. Sans préférence, le réceptionniste réserve la première personne libre pour ce service.",
+        points: [
+          "Personne ne reçoit de rendez-vous pendant ses congés",
+          "Les appelants qui demandent quelqu’un peuvent être transférés au téléphone de cette personne",
+        ],
+      },
+      {
+        title: "Ce qu’il vérifie avant de proposer une heure",
+        body: "Votre réceptionniste propose une plage seulement quand chacun de ces éléments indique qu’elle est libre.",
+        points: [
+          "Le service et sa durée",
+          "Vos heures d’ouverture et les heures de travail de chaque employé",
+          "Les périodes occupées dans votre Google Calendar",
+          "Les congés que vous ajoutez pour un employé",
+        ],
+      },
+      {
+        title: "La place de LobbyStack comme agent de prise de rendez-vous IA",
+        body: "LobbyStack réserve les appels qui vous arrivent. Il ne compose pas de listes de prospects et ne relance pas de prospects froids. Les seuls appels sortants qu’il passe sont des transferts.",
+        points: [
+          "Les nouveaux clients, les clients réguliers et les appelants hors heures peuvent réserver dès le premier appel",
+          "Vous préférez approuver chaque visite ? Faites-lui enregistrer l’heure souhaitée par l’appelant comme une demande pour votre équipe",
+          "Chaque appel commence dans votre langue par défaut et change de langue quand l’appelant en parle une autre",
         ],
       },
     ],
-    faqs: commonFaqsFr,
-    faqHeading: "Questions sur la planification IA",
-    relatedLinks: [
-      { label: "Tarifs", href: "/pricing/" },
-      { label: "Fonctionnalites", href: "/features/" },
+    faqs: [
       {
-        label: "Réponse téléphonique IA",
+        question: "Qu’est-ce qu’un agent de prise de rendez-vous IA ?",
+        answer:
+          "Un agent de prise de rendez-vous IA est une IA vocale qui réserve des rendez-vous par téléphone. LobbyStack répond à vos appels entrants, demande ce dont l’appelant a besoin, propose les plages libres de votre Google Calendar et réserve celle qu’il choisit. Il ne fait pas d’appels de vente sortants.",
+      },
+      {
+        question:
+          "Quelle est la différence entre un agent de prise de rendez-vous IA et un planificateur de rendez-vous IA ?",
+        answer:
+          "Les gens utilisent les deux noms. Un agent de prise de rendez-vous désigne souvent des appels sortants pour réserver des rencontres de vente. LobbyStack fonctionne comme un planificateur de rendez-vous IA pour les appels qui vous arrivent : il réserve, déplace et annule les rendez-vous pendant que l’appelant est en ligne.",
+      },
+      {
+        question: "Dans quel calendrier réserve-t-il ?",
+        answer:
+          "Google Calendar. Vous connectez un compte Google et choisissez le calendrier qui reçoit les réservations. LobbyStack y lit vos périodes occupées, donc il ne propose pas une plage déjà prise.",
+      },
+      {
+        question:
+          "Puis-je choisir les questions qu’il pose avant de réserver ?",
+        answer:
+          "Oui. Ajoutez vos services avec une durée et une description, et écrivez des règles sur ce qu’il doit recueillir, comme l’adresse, le problème ou l’assurance de l’appelant. Les réponses apparaissent dans le résumé et la transcription de l’appel.",
+      },
+      {
+        question:
+          "Les appelants peuvent-ils déplacer ou annuler un rendez-vous par téléphone ?",
+        answer:
+          "Oui, une fois que vous activez les modifications de rendez-vous. Par défaut, l’appelant doit appeler depuis le numéro qui a servi à réserver et nommer l’heure ou le service du rendez-vous. Vous pouvez aussi exiger un code à usage unique envoyé par texto ou un NIP au clavier. Le réceptionniste confirme avant de modifier quoi que ce soit.",
+      },
+      {
+        question: "Envoie-t-il des confirmations et des rappels ?",
+        answer:
+          "Oui, quand l’appelant accepte pendant l’appel. LobbyStack envoie par texto une confirmation de réservation, un rappel 24 heures avant le rendez-vous et une confirmation d’annulation. Sur LobbyStack Cloud, les textos vont aux numéros américains et canadiens.",
+      },
+      {
+        question: "Peut-il réserver des rendez-vous hors heures ?",
+        answer:
+          "Oui. Il répond aux appels que vous lui renvoyez la nuit, la fin de semaine et les jours fériés, et propose des heures comprises dans vos heures d’ouverture. Une personne qui appelle à 21 h peut donc réserver pour le lendemain matin.",
+      },
+      {
+        question: "Et si je veux approuver chaque réservation moi-même ?",
+        answer:
+          "Réglez-le pour qu’il enregistre l’heure souhaitée par l’appelant comme une demande pour votre équipe, ou pour qu’il prenne un message. Votre équipe confirme la visite et l’appelant a de vos nouvelles.",
+      },
+      {
+        question: "Peut-il réserver avec un employé précis ?",
+        answer:
+          "Oui. Ajoutez les employés avec leurs services, leurs heures de travail et leurs congés. Les appelants peuvent demander quelqu’un par son nom. S’ils n’ont pas de préférence, le réceptionniste réserve le premier employé libre pour ce service.",
+      },
+      {
+        question: "Combien coûte un planificateur de rendez-vous IA ?",
+        answer:
+          "Le forfait gratuit inclut 30 minutes vocales par mois. Starter coûte 30 $ par mois pour 150 minutes, puis 0,20 $ la minute. Pro coûte 100 $ par mois pour 500 minutes, puis 0,18 $ la minute. La facturation annuelle coûte 20 % de moins, et aucun forfait n’a de frais de mise en service.",
+      },
+    ],
+    faqHeading: "Questions sur les agents de prise de rendez-vous IA",
+    relatedLinks: [
+      {
+        label: "Service de réponse téléphonique IA",
         href: "/solutions/ai-phone-answering/",
       },
+      {
+        label: "Réceptionniste dentaire IA",
+        href: "/solutions/ai-receptionist-for-dental-offices/",
+      },
+      {
+        label: "Réceptionniste IA pour salons",
+        href: "/solutions/ai-receptionist-for-salons-and-spas/",
+      },
+      {
+        label: "Service de réponse téléphonique hors heures",
+        href: "/solutions/after-hours-answering-service/",
+      },
+      { label: "Tarifs", href: "/pricing/" },
     ],
+    ctaHeading:
+      "Réservez votre prochain appelant pendant qu’il est encore en ligne",
+    ctaBody:
+      "Ajoutez vos services, connectez Google Calendar et appelez votre numéro pour réserver un rendez-vous test. Le forfait gratuit inclut 30 minutes vocales.",
   },
   "/solutions/ai-receptionist-for-home-services/": {
     group: "solution",
@@ -135,52 +323,132 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
     path: "/solutions/ai-receptionist-for-home-services/",
     title: "Réceptionniste IA pour services à domicile | LobbyStack",
     description:
-      "LobbyStack répond et qualifie les appels de CVC, plomberie, électricité, toiture et autres services pendant que les équipes travaillent sur le terrain.",
+      "Un réceptionniste IA pour services à domicile qui répond pendant que votre équipe travaille. LobbyStack réserve les interventions dans Google Calendar et transfère les urgences à votre technicien de garde.",
     eyebrow: "Services à domicile",
-    h1: "Un réceptionniste IA pour les équipes de services à domicile.",
+    h1: "Un réceptionniste IA pour services à domicile qui réserve vos interventions pendant que vous travaillez",
     intro:
-      "Recueillez les détails du chantier, la zone de service, l’urgence et le besoin de planification pendant que vos équipes restent sur le terrain.",
+      "Vous ne pouvez pas répondre quand vous êtes sous un évier ou sur un toit. LobbyStack décroche, recueille l’adresse et le problème, réserve la visite dans Google Calendar et transfère les vraies urgences à votre téléphone de garde.",
     image: "/illustrations/industry-bookings.webp",
     imageAlt:
-      "Réceptionniste IA LobbyStack planifiant des travaux de services à domicile",
+      "Le réceptionniste IA pour services à domicile de LobbyStack réserve une intervention à partir d’un appel",
     proofPoints: [
-      "Qualifie urgence, zone de service et type de travail",
-      "Aide les appelants à réserver ou à laisser un message",
-      "Transfère les situations critiques à votre numéro de garde",
+      "Répond pendant que votre équipe est sur un chantier",
+      "Transfère les urgences à votre téléphone de garde",
+      "Réserve les visites d’estimation et de service",
+      "Raccroche sur les appels indésirables, qui ne consomment aucune minute",
     ],
     sections: [
       {
-        title: "Couvrez le téléphone pendant que l’équipe est sur le terrain",
-        body: "Les techniciens ne peuvent pas toujours répondre sans interrompre le travail. LobbyStack collecte les informations essentielles et garde les demandes visibles.",
+        title:
+          "Ce qu’un service de réponse pour services à domicile doit faire de chaque appel",
+        body: "Vous décidez quels appels sont des urgences. Tout le reste est réservé ou résumé pour vous.",
         points: [
-          "Questions adaptées aux services à domicile",
-          "Notes de travail et résumé après chaque appel",
-          "Support pour les appels hors horaires et les pics saisonniers",
+          "Les urgences, comme un tuyau éclaté ou une panne de chauffage en hiver, vont à votre technicien de garde, avec l’adresse et le problème dans la transcription",
+          "Les travaux qui peuvent attendre reçoivent une plage libre de votre Google Calendar et un résumé d’appel",
         ],
       },
       {
-        title: "Priorisez les bons appels plus vite",
-        body: "Les urgences, gros projets et demandes sensibles peuvent être transférés à votre équipe, tandis que les appels courants avancent vers un rendez‑vous ou un message.",
+        title: "Une demande de prix devient une visite d’estimation",
+        body: "LobbyStack donne seulement les prix que vous inscrivez. Quand un prix dépend du travail, il le dit et réserve une visite.",
         points: [
-          "Transfert par urgence ou type de demande",
-          "Réservation et confirmations selon vos règles",
-          "Historique centralisé pour propriétaires, équipes et bureau",
+          "Il recueille l’adresse et les détails que vos règles demandent",
+          "L’appelant reçoit une confirmation de la visite par texto",
+        ],
+      },
+      {
+        title: "Gardez le numéro inscrit sur votre camion",
+        body: "Renvoyez la ligne de votre entreprise vers LobbyStack chez votre opérateur. Choisissez quand il répond : quand la ligne est occupée, quand personne ne décroche, après la fermeture ou à chaque appel. Changez ce réglage quand vous voulez, par exemple pour une longue fin de semaine.",
+        points: [
+          "Starter et Pro incluent aussi un numéro à vous",
+          "Les appelants composent le numéro qu’ils ont déjà",
+        ],
+      },
+      {
+        title: "Configurez votre réceptionniste IA pour services à domicile",
+        body: "Ajoutez ces quatre éléments avant de renvoyer votre premier appel.",
+        points: [
+          "Votre zone desservie, pour qu’il puisse répondre à « Vous vous déplacez à Brookline ? »",
+          "Vos services et vos prix, pour qu’il réserve une estimation quand un travail doit d’abord être vu",
+          "Vos règles d’urgence, qui nomment les problèmes qui justifient un appel la nuit",
+          "Des limites comme « Ne jamais promettre une visite le jour même », écrites sous forme de règles",
         ],
       },
     ],
-    faqs: commonFaqsFr,
-    faqHeading: "Questions sur les services à domicile",
+    faqs: [
+      {
+        question:
+          "Qu’est-ce qu’un réceptionniste IA pour services à domicile ?",
+        answer:
+          "C’est une IA vocale qui répond au téléphone d’une entreprise de plomberie, de CVC, d’électricité, de toiture ou d’un autre métier. LobbyStack décroche quand votre équipe ne peut pas, recueille l’adresse et le problème, réserve les visites dans Google Calendar, répond aux questions à partir de vos renseignements et transfère les urgences à votre numéro de garde.",
+      },
+      {
+        question:
+          "En quoi est-ce différent d’un service de réponse pour services à domicile ?",
+        answer:
+          "Avec un service de réponse traditionnel, une personne lit votre script et prend un message. LobbyStack réserve lui-même la visite, transfère les urgences pendant l’appel et conserve un résumé, une transcription et un enregistrement de chaque appel. Vous payez les minutes que vous utilisez, et un appel la nuit coûte le même prix qu’un appel à midi.",
+      },
+      {
+        question: "Peut-il gérer les appels d’urgence la nuit ?",
+        answer:
+          "Oui. Vous écrivez ce qui compte comme une urgence, comme une panne de chauffage, une fuite active ou un refoulement d’égout. LobbyStack pose les questions dont votre règle a besoin, puis transfère l’appel à votre numéro de garde. Si le transfert ne passe pas, il propose de prendre un message et votre équipe peut recevoir une alerte.",
+      },
+      {
+        question:
+          "Va-t-il réserver des interventions pendant que je suis sur un chantier ?",
+        answer:
+          "Oui. Il propose les plages libres de votre Google Calendar pendant vos heures d’ouverture, réserve celle que l’appelant choisit et, si la personne accepte, envoie par texto une confirmation et un rappel la veille.",
+      },
+      {
+        question: "Que dit-il quand un appelant demande un prix ?",
+        answer:
+          "Il donne les prix que vous ajoutez à vos services. Quand le prix dépend du travail, il explique qu’un technicien doit d’abord voir le travail et réserve une visite d’estimation ou prend un message, selon vos règles.",
+      },
+      {
+        question: "Puis-je choisir ce qu’il demande aux appelants ?",
+        answer:
+          "Oui. Écrivez des règles sur ce qu’il doit recueillir, comme l’adresse, l’âge de l’équipement, si l’eau coule encore ou comment accéder à la propriété. Les réponses apparaissent dans le résumé et la transcription de l’appel.",
+      },
+      {
+        question: "Fonctionne-t-il avec mon numéro d’entreprise actuel ?",
+        answer:
+          "Oui. Renvoyez le numéro que vos clients appellent déjà. Choisissez les appels occupés et sans réponse pour le débordement, les appels après la fermeture pour les soirs et les fins de semaine, ou tous les appels. Starter et Pro incluent aussi un numéro à vous.",
+      },
+      {
+        question: "Mon équipe verra-t-elle ce qui a été réservé ?",
+        answer:
+          "Oui. Les réservations apparaissent dans votre Google Calendar et dans le tableau de bord, à côté du résumé, de la transcription et de l’enregistrement de chaque appel. Quand le réceptionniste prend un message, votre équipe reçoit une alerte par courriel, ou par texto si vous activez ces alertes.",
+      },
+      {
+        question:
+          "Combien coûte-t-il pour une entreprise de services à domicile ?",
+        answer:
+          "Le forfait gratuit inclut 30 minutes vocales pour le tester. Starter coûte 30 $ par mois pour 150 minutes, puis 0,20 $ la minute. Pro coûte 100 $ par mois pour 500 minutes, puis 0,18 $ la minute. Les appels indésirables et les appels de moins de 10 secondes ne comptent pas.",
+      },
+    ],
+    faqHeading: "Questions sur les réceptionnistes IA pour services à domicile",
     relatedLinks: [
-      { label: "Tarifs", href: "/pricing/" },
+      {
+        label: "Service de réponse téléphonique hors heures",
+        href: "/solutions/after-hours-answering-service/",
+      },
+      {
+        label: "Service de réponse téléphonique IA",
+        href: "/solutions/ai-phone-answering/",
+      },
+      {
+        label: "Agent de prise de rendez-vous IA",
+        href: "/solutions/ai-appointment-scheduler/",
+      },
       {
         label: "Calculateur d’appels manqués",
         href: "/missed-call-revenue-calculator/",
       },
-      {
-        label: "Réponse hors horaires",
-        href: "/solutions/after-hours-answering-service/",
-      },
+      { label: "Tarifs", href: "/pricing/" },
     ],
+    ctaHeading:
+      "Répondez au prochain appel de service depuis le chantier où vous êtes",
+    ctaBody:
+      "Ajoutez vos services, vos règles d’urgence et votre zone desservie, renvoyez votre numéro et appelez-le pour tester. Le forfait gratuit inclut 30 minutes vocales.",
   },
 }
 
