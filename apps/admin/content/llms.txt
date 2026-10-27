@@ -14,11 +14,13 @@ The product combines AI voice, appointment scheduling, business knowledge, and h
 - [Pricing](https://lobbystack.com/pricing/): Free, Starter, Pro, and Enterprise pricing for AI receptionist coverage, voice minutes, annual billing, SMS alerts, knowledge base, and support.
 - [Affiliate Program](https://lobbystack.com/affiliate-program/): Refer businesses to hosted LobbyStack plans and earn 20% of their payments for 12 months. Referrals save 5% at signup.
 - [White-Label Partner Program](https://lobbystack.com/white-label/): Resell LobbyStack's AI receptionist under your own brand and domain, bill clients on your own Stripe, and share one pool of minutes and chats across every business.
+- [MCP Server](https://lobbystack.com/features/mcp/): Connect Claude, ChatGPT, Cursor, VS Code or any Streamable HTTP MCP client to a LobbyStack business at https://app.lobbystack.com/api/mcp to read calls, messages, contacts and appointments, book and change appointments, update opening hours and add FAQs.
 - [Missed Call Revenue Calculator](https://lobbystack.com/missed-call-revenue-calculator/): Interactive calculator for estimating revenue at risk from unanswered contractor calls.
 - [Features markdown](https://lobbystack.com/features.md): AI-readable markdown summary of LobbyStack features.
 - [Pricing markdown](https://lobbystack.com/pricing.md): AI-readable markdown summary of plans, included limits, plan features, and overage rates.
 - [Affiliate program markdown](https://lobbystack.com/affiliate-program.md): AI-readable markdown summary of the LobbyStack Affiliate Program terms and onboarding.
 - [White-label program markdown](https://lobbystack.com/white-label.md): AI-readable markdown summary of the LobbyStack partner program and partner tiers.
+- [MCP server markdown](https://lobbystack.com/features/mcp.md): AI-readable markdown summary of the MCP server, its tools and scopes, and how to connect assistants.
 - [Blog](https://lobbystack.com/blog/): Product updates, research, resources and articles about AI agents, and business knowledge systems.
 - [Sitemap](https://lobbystack.com/sitemap-index.xml): Canonical sitemap for search engines and crawlers.
 - [Schema map](https://lobbystack.com/schemamap.xml): Structured-data endpoint map for agents.

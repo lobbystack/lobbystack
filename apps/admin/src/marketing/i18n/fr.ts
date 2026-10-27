@@ -97,6 +97,11 @@ export const fr = {
       description:
         "Recherchez dans les pages LobbyStack, les articles, les ressources produit, les tarifs et la documentation publique.",
     },
+    "/features/mcp/": {
+      title: "Serveur MCP de réceptionniste IA pour Claude et ChatGPT | LobbyStack",
+      description:
+        "Connectez Claude, ChatGPT ou un autre client MCP à votre réceptionniste IA LobbyStack. Consultez vos appels, réservez des rendez-vous, changez vos heures.",
+    },
     "/white-label/": {
       title: "Réceptionniste IA en marque blanche pour agences | LobbyStack",
       description:

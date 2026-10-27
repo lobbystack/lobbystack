@@ -97,6 +97,11 @@ export const sr = {
       description:
         "Pretražite LobbyStack stranice, članke sa bloga, resurse o proizvodu, cene i javnu dokumentaciju za AI agente.",
     },
+    "/features/mcp/": {
+      title: "MCP server za AI recepcionera za Claude i ChatGPT | LobbyStack",
+      description:
+        "Povežite Claude, ChatGPT ili drugi MCP klijent sa Vašim LobbyStack AI recepcionerom. Čitajte pozive, zakazujte termine i menjajte radno vreme iz četa.",
+    },
     "/white-label/": {
       title: "AI recepcioner pod belom etiketom za agencije | LobbyStack",
       description:

@@ -24,6 +24,7 @@ LobbyStack je AI recepcioner otvorenog koda za male firme koje zavise od poziva,
 ## Javni resursi
 
 - Funkcije: ${absoluteUrl("/sr/features/")}
+- MCP server za AI asistente: ${absoluteUrl("/sr/features/mcp/")}
 - Cene: ${absoluteUrl("/sr/pricing/")}
 - Program preporuka: ${absoluteUrl("/sr/affiliate-program/")}
 - Bela etiketa: ${absoluteUrl("/sr/white-label/")}

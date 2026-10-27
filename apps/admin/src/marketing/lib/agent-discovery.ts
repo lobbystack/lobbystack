@@ -25,6 +25,7 @@ export const markdownAlternatePath = (pathname: string) => {
   const localizedMarkdownBasePaths = new Set([
     "/",
     "/features/",
+    "/features/mcp/",
     "/pricing/",
     "/affiliate-program/",
     "/white-label/",
@@ -37,6 +38,7 @@ export const markdownAlternatePath = (pathname: string) => {
   const alternates: Record<string, string> = {
     "/": "/index.md",
     "/features/": "/features.md",
+    "/features/mcp/": "/features/mcp.md",
     "/pricing/": "/pricing.md",
     "/affiliate-program/": "/affiliate-program.md",
     "/white-label/": "/white-label.md",
@@ -128,6 +130,11 @@ export const apiCatalog = {
           href: absoluteUrl("/white-label.md"),
           type: "text/markdown",
           title: "LobbyStack white-label partner program markdown summary",
+        },
+        {
+          href: absoluteUrl("/features/mcp.md"),
+          type: "text/markdown",
+          title: "LobbyStack MCP server markdown summary",
         },
         {
           href: absoluteUrl("/missed-call-revenue-calculator/index.md"),
@@ -367,6 +374,23 @@ export const openApiDocument = {
         },
       },
     },
+    "/features/mcp.md": {
+      get: {
+        summary: "Get the MCP server markdown summary",
+        operationId: "getMcpServerMarkdown",
+        responses: {
+          "200": {
+            description:
+              "Markdown summary of the LobbyStack MCP server: the server URL, sign-in and consent, the tools and the scopes they need, and how to connect Claude, ChatGPT and other MCP clients.",
+            content: {
+              "text/markdown": {
+                schema: { type: "string" },
+              },
+            },
+          },
+        },
+      },
+    },
     "/affiliate-program.md": {
       get: {
         summary: "Get the affiliate program markdown summary",
@@ -509,6 +533,11 @@ export const mcpServerCard = {
         mimeType: "text/markdown",
       },
       {
+        uri: absoluteUrl("/features/mcp.md"),
+        name: "LobbyStack MCP server markdown summary",
+        mimeType: "text/markdown",
+      },
+      {
         uri: absoluteUrl("/openapi.json"),
         name: "LobbyStack public OpenAPI description",
         mimeType: "application/vnd.oai.openapi+json",
@@ -538,6 +567,7 @@ Use this skill when an agent needs a concise, machine-readable orientation to Lo
 - Pricing markdown: ${absoluteUrl("/pricing.md")}
 - Affiliate program markdown: ${absoluteUrl("/affiliate-program.md")}
 - White-label program markdown: ${absoluteUrl("/white-label.md")}
+- MCP server markdown: ${absoluteUrl("/features/mcp.md")}
 - Calculator markdown: ${absoluteUrl("/missed-call-revenue-calculator/index.md")}
 - GitHub repository: https://github.com/lobbystack/lobbystack
 
@@ -591,11 +621,13 @@ ${DEFAULT_DESCRIPTION}
 - Pricing: ${absoluteUrl("/pricing/")}
 - Affiliate program: ${absoluteUrl("/affiliate-program/")}
 - White-label partner program: ${absoluteUrl("/white-label/")}
+- MCP server for AI assistants: ${absoluteUrl("/features/mcp/")}
 - Calculator: ${absoluteUrl("/missed-call-revenue-calculator/")}
 - Features markdown: ${absoluteUrl("/features.md")}
 - Pricing markdown: ${absoluteUrl("/pricing.md")}
 - Affiliate program markdown: ${absoluteUrl("/affiliate-program.md")}
 - White-label program markdown: ${absoluteUrl("/white-label.md")}
+- MCP server markdown: ${absoluteUrl("/features/mcp.md")}
 - Calculator markdown: ${absoluteUrl("/missed-call-revenue-calculator/index.md")}
 - Documentation: https://docs.lobbystack.com/introduction
 - API catalog: ${absoluteUrl("/.well-known/api-catalog")}

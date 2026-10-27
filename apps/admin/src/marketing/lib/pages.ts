@@ -42,6 +42,13 @@ export const publicPages: PublicPage[] = [
     markdown: "/white-label.md",
   },
   {
+    path: "/features/mcp/",
+    title: "AI Receptionist MCP Server for Claude and ChatGPT",
+    description:
+      "Connect Claude, ChatGPT or any MCP client to your LobbyStack AI receptionist. Read calls and messages, book appointments and change your hours from the chat.",
+    markdown: "/features/mcp.md",
+  },
+  {
     path: "/blog/",
     title: "AI Receptionist Blog and Product Updates",
     description:

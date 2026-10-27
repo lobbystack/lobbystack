@@ -24,6 +24,7 @@ LobbyStack es una recepcionista con IA de código abierto para pequeñas empresa
 ## Recursos públicos
 
 - Funciones: ${absoluteUrl("/es/features/")}
+- Servidor MCP para asistentes de IA: ${absoluteUrl("/es/features/mcp/")}
 - Precios: ${absoluteUrl("/es/pricing/")}
 - Programa de afiliados: ${absoluteUrl("/es/affiliate-program/")}
 - Marca blanca: ${absoluteUrl("/es/white-label/")}

@@ -12,6 +12,8 @@
     pricing: `${siteUrl}/pricing/`,
     featuresMarkdown: `${siteUrl}/features.md`,
     pricingMarkdown: `${siteUrl}/pricing.md`,
+    mcpServer: `${siteUrl}/features/mcp/`,
+    mcpServerMarkdown: `${siteUrl}/features/mcp.md`,
     docs: "https://docs.lobbystack.com/introduction",
     apiCatalog: `${siteUrl}/.well-known/api-catalog`,
     openApi: `${siteUrl}/openapi.json`,
@@ -58,6 +60,8 @@
           features: [
             { label: "Features", url: urls.features },
             { label: "Features markdown", url: urls.featuresMarkdown },
+            { label: "MCP server", url: urls.mcpServer },
+            { label: "MCP server markdown", url: urls.mcpServerMarkdown },
           ],
           pricing: [
             { label: "Pricing", url: urls.pricing },
