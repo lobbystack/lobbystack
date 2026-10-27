@@ -159,7 +159,7 @@ export function RevenueTieIn() {
               <div className="mb-6 inline-flex size-11 items-center justify-center rounded-lg border border-border/80 bg-background shadow-[0_1px_2px_oklch(0_0_0/6%)]">
                 <Calculator className="size-6 text-foreground" />
               </div>
-              <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+              <h2 className="feature-heading">
                 Find out what missed calls are costing you
               </h2>
               <p className="mt-4 leading-relaxed text-muted-foreground">
@@ -177,7 +177,7 @@ export function RevenueTieIn() {
                 </a>
               </div>
             </div>
-            <div className="flex flex-col justify-center rounded-2xl bg-muted p-8">
+            <div className="flex flex-col justify-center rounded-2xl bg-beige-strong/60 p-8">
               <p className="text-sm leading-relaxed font-medium text-muted-foreground">
                 The calculator uses your missed calls, booking rate, opportunity
                 rate, and average job value to estimate weekly, monthly, and

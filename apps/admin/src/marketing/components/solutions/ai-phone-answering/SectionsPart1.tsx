@@ -178,10 +178,10 @@ export function Solution() {
               ))}
             </ul>
           </div>
-          <div className="overflow-hidden rounded-2xl border border-border/70 bg-muted">
+          <div className="overflow-hidden rounded-2xl border border-border/60 bg-beige-strong/60">
             {/* Using an illustration concept that matches the existing site, assuming we have one or just a nice UI block */}
-            <div className="flex h-[400px] items-center justify-center bg-background/50 p-8">
-              <div className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-background p-6 shadow-sm">
+            <div className="flex h-[400px] items-center justify-center p-8">
+              <div className="w-full max-w-sm space-y-4 rounded-2xl border border-border/60 bg-background p-6 shadow-[0_1px_2px_oklch(0_0_0/6%)]">
                 <div className="flex items-center justify-between border-b pb-4">
                   <div className="flex items-center gap-3">
                     <div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
@@ -199,7 +199,7 @@ export function Solution() {
                   </span>
                 </div>
                 <div className="space-y-3 pt-2">
-                  <div className="mr-8 rounded-2xl rounded-tl-sm bg-muted p-3 text-sm text-foreground/80">
+                  <div className="mr-8 rounded-2xl rounded-tl-sm bg-beige p-3 text-sm text-foreground/80">
                     Hello! You've reached Apex Home Services. How can I help you
                     today?
                   </div>
@@ -207,7 +207,7 @@ export function Solution() {
                     Hi, I need someone to look at my AC unit. It stopped blowing
                     cold air.
                   </div>
-                  <div className="mr-8 rounded-2xl rounded-tl-sm bg-muted p-3 text-sm text-foreground/80">
+                  <div className="mr-8 rounded-2xl rounded-tl-sm bg-beige p-3 text-sm text-foreground/80">
                     I can definitely help with that. We have technicians
                     available tomorrow afternoon. Would you like me to book a
                     time?
@@ -271,7 +271,7 @@ export function UseCases() {
           {cases.map((c, i) => (
             <div
               key={i}
-              className="flex flex-col rounded-2xl border border-border/70 bg-muted/30 p-6 transition-colors hover:bg-beige"
+              className="flex flex-col rounded-2xl border border-border/60 bg-beige p-6 transition-colors hover:bg-beige-strong/60"
             >
               <h3 className="text-lg font-medium tracking-tight text-foreground">
                 {c.title}

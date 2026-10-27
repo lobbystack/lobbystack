@@ -73,10 +73,10 @@ const textOverlay = (entry: OgEntry) => {
   ).slice(0, 2)
 
   return Buffer.from(`<svg width="${OG_IMAGE_WIDTH}" height="${OG_IMAGE_HEIGHT}" viewBox="0 0 ${OG_IMAGE_WIDTH} ${OG_IMAGE_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
-  <rect width="100%" height="100%" fill="${light ? "#050a14" : "#f1f5f9"}" fill-opacity="${light ? 0.78 : 1}"/>
-  <rect x="70" y="70" width="46" height="46" rx="12" fill="${light ? "#fafafa" : "#111827"}"/>
-  <text x="134" y="103" fill="${light ? "#fafafa" : "#111827"}" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700">LobbyStack</text>
-  <text x="70" y="382" fill="${light ? "#fafafa" : "#111827"}" font-family="Arial, Helvetica, sans-serif" font-size="${titleSize}" font-weight="700">
+  <rect width="100%" height="100%" fill="${light ? "#0a0a0a" : "#f8f5f4"}" fill-opacity="${light ? 0.74 : 1}"/>
+  <rect x="70" y="70" width="46" height="46" rx="12" fill="${light ? "#fafafa" : "#171717"}"/>
+  <text x="134" y="103" fill="${light ? "#fafafa" : "#0a0a0a"}" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700">LobbyStack</text>
+  <text x="70" y="382" fill="${light ? "#fafafa" : "#0a0a0a"}" font-family="Arial, Helvetica, sans-serif" font-size="${titleSize}" font-weight="700">
     ${titleLines
       .map(
         (line, index) =>
@@ -84,7 +84,7 @@ const textOverlay = (entry: OgEntry) => {
       )
       .join("")}
   </text>
-  <text x="70" y="${408 + titleLines.length * titleSize * 1.05}" fill="${light ? "rgba(250,250,250,0.82)" : "#475569"}" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700">
+  <text x="70" y="${408 + titleLines.length * titleSize * 1.05}" fill="${light ? "rgba(250,250,250,0.82)" : "#6e6058"}" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="400">
     ${descriptionLines
       .map(
         (line, index) =>
@@ -107,7 +107,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ loc
           .resize(OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT, { fit: "cover" })
           .jpeg({ quality: 90 })
       : sharp({
-          create: { width: OG_IMAGE_WIDTH, height: OG_IMAGE_HEIGHT, channels: 3, background: "#f8fafc" },
+          create: { width: OG_IMAGE_WIDTH, height: OG_IMAGE_HEIGHT, channels: 3, background: "#f8f5f4" },
         }).jpeg({ quality: 90 });
 
   const image = await base.composite([{ input: text, top: 0, left: 0 }]).jpeg({ quality: 90 }).toBuffer();

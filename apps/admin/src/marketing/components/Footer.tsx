@@ -212,7 +212,7 @@ export function Footer({ locale = "en", path }: FooterProps) {
         <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
           {footerSections(locale).map((section) => (
             <div key={section.title}>
-              <p className="mb-4 text-xs font-semibold text-muted-foreground">
+              <p className="mb-4 font-mono text-xs leading-tight font-semibold tracking-[-0.02em] text-beige-foreground uppercase">
                 {section.title}
               </p>
               <ul className="space-y-2.5">
@@ -236,7 +236,7 @@ export function Footer({ locale = "en", path }: FooterProps) {
         </div>
       </div>
 
-      <Separator className="my-8" />
+      <Separator className="my-8 bg-border/60" />
 
       <div className="mx-auto max-w-site px-6 pb-8">
         <div className="flex flex-col items-center justify-between gap-4 text-xs text-muted-foreground md:flex-row">
