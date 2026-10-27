@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "./ui/field";
 import { Input } from "./ui/input";
 import { PageHeader } from "./page-header";
+import { Surface } from "@/components/ui/surface";
 import { PageSurface } from "./page-surface";
 import { Textarea } from "./ui/textarea";
 
@@ -199,10 +200,10 @@ export function LiveDemosSurface({ partner }: { partner?: PartnerDemosOptions } 
         {actionError ? <p role="alert" className="text-sm text-destructive">{actionError}</p> : null}
         {loading ? <Card><CardContent className="py-16 text-center text-sm text-muted-foreground">{t("operator.loading")}</CardContent></Card> : null}
         {!loading && demos.length === 0 ? partnerId ? (
-          <Card><CardContent className="flex flex-col items-center gap-3 px-6 py-16 text-center">
+          <Surface className="flex flex-col items-center gap-3 px-6 py-16 text-center">
             <h2 className="text-base font-medium">{t("operator.partner.emptyTitle")}</h2>
             <p className="max-w-sm text-sm leading-6 text-muted-foreground">{t("operator.partner.empty")}</p>
-          </CardContent></Card>
+          </Surface>
         ) : <Card><CardContent className="py-16 text-center text-sm text-muted-foreground">{t("operator.empty")}</CardContent></Card> : null}
         {demos.map((demo) => {
           const ingestionReady = demo.websiteIngestionStatus === "completed" || demo.websiteIngestionStatus === "unavailable";
