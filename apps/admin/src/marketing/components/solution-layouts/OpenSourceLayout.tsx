@@ -2,7 +2,7 @@ import { GitPullRequest, KeyRound, Scale, Sparkles } from "lucide-react"
 
 import { FaqSection } from "@/marketing/components/FaqSection"
 import { ProductScene } from "@/marketing/components/scenes/ProductScenes"
-import type { SeoLandingPageProps } from "@/marketing/components/solution-layouts/LegacySolutionBody"
+import type { SeoLandingPageProps } from "@/marketing/components/solution-layouts/types"
 import { getOpenSourceLayoutCopy } from "@/marketing/components/solution-layouts/self-hosting/open-source-copy"
 import {
   container,

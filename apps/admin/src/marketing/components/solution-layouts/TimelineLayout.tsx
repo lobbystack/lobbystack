@@ -1,6 +1,6 @@
 import { Ban, CalendarCheck, Clock, Database, MessageCircleQuestion, MessageSquareText, Moon, PhoneForwarded, PhoneIncoming, RefreshCw, ShieldCheck, type LucideIcon } from "lucide-react"
 
-import type { SeoLandingPageProps } from "@/marketing/components/solution-layouts/LegacySolutionBody"
+import type { SeoLandingPageProps } from "@/marketing/components/solution-layouts/types"
 import {
   container,
   FaqAndRelated,

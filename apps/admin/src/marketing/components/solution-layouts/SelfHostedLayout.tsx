@@ -1,7 +1,7 @@
 import { DatabaseBackup, KeyRound, LockKeyhole, RefreshCw } from "lucide-react"
 
 import { FaqSection } from "@/marketing/components/FaqSection"
-import type { SeoLandingPageProps } from "@/marketing/components/solution-layouts/LegacySolutionBody"
+import type { SeoLandingPageProps } from "@/marketing/components/solution-layouts/types"
 import {
   container,
   githubUrl,

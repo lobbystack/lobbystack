@@ -1,5 +1,5 @@
 import { FaqSection } from "@/marketing/components/FaqSection"
-import type { SeoLandingPageProps } from "@/marketing/components/solution-layouts/LegacySolutionBody"
+import type { SeoLandingPageProps } from "@/marketing/components/solution-layouts/types"
 import { TradeMomentScene } from "@/marketing/components/solution-layouts/trade/TradeScenes"
 import {
   container,
