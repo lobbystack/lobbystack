@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { MoreHorizontal, Package, Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -226,7 +226,6 @@ export function PartnerPackagesSurface() {
       ) : null}
       {data.packages.length === 0 ? (
         <Surface className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-          <span className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground"><Package className="size-5" /></span>
           <h2 className="text-base font-medium">{t("packages.empty.title")}</h2>
           <p className="max-w-sm text-sm leading-6 text-muted-foreground">{t(data.stripe.configured ? "packages.empty.description" : "packages.empty.noStripe")}</p>
         </Surface>

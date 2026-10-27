@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LayoutTemplate, MoreHorizontal, Trash2 } from "lucide-react";
+import { MoreHorizontal, Trash2 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -191,9 +191,6 @@ export function PartnerTemplatesSurface() {
         <Surface className="px-6 py-8"><p className="text-sm text-muted-foreground" role="alert">{t("templates.loadFailed")}</p></Surface>
       ) : rows.length === 0 ? (
         <Surface className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-          <span className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
-            <LayoutTemplate className="size-5" />
-          </span>
           <h2 className="text-base font-medium">{t("templates.empty.title")}</h2>
           <p className="max-w-sm text-sm leading-6 text-muted-foreground">{t(canManage ? "templates.empty.description" : "templates.empty.memberDescription")}</p>
         </Surface>

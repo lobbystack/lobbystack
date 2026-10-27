@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, KeyRound, LogIn, Plus, Presentation, RefreshCw, Rocket, ShieldX, Trash2 } from "lucide-react";
+import { ExternalLink, KeyRound, LogIn, Plus, RefreshCw, Rocket, ShieldX, Trash2 } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { useTranslation } from "react-i18next";
@@ -200,7 +200,6 @@ export function LiveDemosSurface({ partner }: { partner?: PartnerDemosOptions } 
         {loading ? <Card><CardContent className="py-16 text-center text-sm text-muted-foreground">{t("operator.loading")}</CardContent></Card> : null}
         {!loading && demos.length === 0 ? partnerId ? (
           <Card><CardContent className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-            <span className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground"><Presentation className="size-5" /></span>
             <h2 className="text-base font-medium">{t("operator.partner.emptyTitle")}</h2>
             <p className="max-w-sm text-sm leading-6 text-muted-foreground">{t("operator.partner.empty")}</p>
           </CardContent></Card>
