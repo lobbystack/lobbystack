@@ -1,71 +1,16 @@
-"use client"
-
-import { BillingIntervalSwitch, type BillingInterval } from "@/marketing/components/BillingIntervalSwitch"
-import { buttonVariants } from "@/marketing/components/ui/button"
-import { appSignupUrl } from "@/marketing/lib/app-links"
-import type { Locale } from "@/marketing/i18n"
-import { cn } from "@/marketing/lib/utils"
-import { planCards } from "@lobbystack/shared/plan-cards"
 import { planComparison, type ComparisonValue } from "@lobbystack/shared/plan-comparison"
-import { Check, Minus, ArrowRight } from "lucide-react"
-import { Fragment, useState } from "react"
+import { Check, Minus } from "lucide-react"
+import { Fragment } from "react"
 
-/* ─────────────────────────── Data ─────────────────────────── */
-
-type Tier = {
-  name: string
-  price: {
-    monthly: string
-    annual: string
-  }
-  period: string
-  description: {
-    monthly: string
-    annual: string
-  }
-  cta: {
-    monthly: string
-    annual: string
-  }
-  ctaHref?: string
-  // Carried to signup, so the dashboard offers this plan first.
-  plan?: "starter" | "pro"
-  ctaVariant: "default" | "outline"
-  highlight: boolean
-  highlights: Array<
-    | string
-    | {
-        label: string
-        sublabel: string
-      }
-  >
-}
-
-
-const enterpriseContactHref =
-  "mailto:support@lobbystack.com?subject=LobbyStack%20enterprise%20inquiry"
-
-// The cards' words and numbers come from the shared plan cards, which the dashboard uses too.
-function tiersFor(locale: Locale): Tier[] {
-  return planCards(locale).map((card) => ({
-    name: card.name,
-    price: card.price,
-    period: card.period,
-    description: card.description,
-    cta: { monthly: card.cta, annual: card.cta },
-    ...(card.slug === "starter" || card.slug === "pro" ? { plan: card.slug } : {}),
-    ...(card.slug === "enterprise" ? { ctaHref: enterpriseContactHref } : {}),
-    ctaVariant: card.featured ? "default" : "outline",
-    highlight: card.featured,
-    highlights: card.lines.map((line) => line.sublabel ? { label: line.label, sublabel: line.sublabel } : line.label),
-  }))
-}
-
-/* ─── Comparison table data ─── */
+import { PlanCards } from "@/marketing/components/system/PlanCards"
+import { SectionTitle } from "@/marketing/components/system/SectionTitle"
+import type { Locale } from "@/marketing/i18n"
+import { eyebrow } from "@/marketing/lib/eyebrows"
+import { billingSwitchLabels, pricingSectionCopy } from "@/marketing/lib/pricing-copy"
+import { pricingPlanCards } from "@/marketing/lib/pricing-plan-cards"
+import { cn } from "@/marketing/lib/utils"
 
 // The table's rows come from the shared plan comparison, which onboarding uses too.
-
-/* ─────────────────────────── Components ─────────────────────────── */
 
 function ComparisonCell({
   includedLabel,
@@ -79,341 +24,96 @@ function ComparisonCell({
   if (typeof value === "boolean") {
     return value ? (
       <span className="inline-flex items-center justify-center">
-        <Check
-          className="mx-auto size-4 text-foreground/60"
-          aria-hidden="true"
-        />
+        <Check className="mx-auto size-4 text-beige-foreground" aria-hidden="true" />
         <span className="sr-only">{includedLabel}</span>
       </span>
     ) : (
       <span className="inline-flex items-center justify-center">
-        <Minus
-          className="mx-auto size-4 text-muted-foreground/30"
-          aria-hidden="true"
-        />
+        <Minus className="mx-auto size-4 text-muted-foreground/30" aria-hidden="true" />
         <span className="sr-only">{notIncludedLabel}</span>
       </span>
     )
   }
 
   if (typeof value === "string") {
-    return (
-      <span
-        className={
-          value === "-" ? "text-muted-foreground/40" : "text-muted-foreground"
-        }
-      >
-        {value}
-      </span>
-    )
+    return <span className={value === "-" ? "text-muted-foreground/40" : "text-muted-foreground"}>{value}</span>
   }
 
   return (
     <span className="inline-flex flex-col gap-0.5 leading-tight">
       <span className="font-medium text-foreground">{value.included}</span>
-      {value.then && (
-        <span className="text-xs text-muted-foreground">{value.then}</span>
-      )}
+      {value.then && <span className="text-xs text-muted-foreground">{value.then}</span>}
     </span>
   )
 }
 
-type PricingSectionProps = {
-  locale?: Locale
-}
+const planColumns = ["Free", "Starter", "Pro", "Enterprise"] as const
 
-const pricingSectionCopy = {
-  en: {
-    heading: "Plans for businesses of every size",
-    intro:
-      "Start free, then upgrade to Starter or Pro for more included minutes and transparent overages.",
-    monthly: "Monthly",
-    annual: "Annual",
-    save: "Save 20%",
-    compareHeading: "Compare plans in detail",
-    compareIntro:
-      "Free includes 30 voice minutes and a phone number free for 14 days. Starter and Pro include a dedicated number, monthly usage allowances, and usage-based overages.",
-    billingLabel: "Billing interval",
-    tableLabel: "Plan comparison table",
-    caption:
-      "Feature comparison across Free, Starter, Pro, and Enterprise plans.",
-    feature: "Feature",
-    included: "Included",
-    notIncluded: "Not included",
-  },
-  fr: {
-    heading: "Des forfaits pour entreprises de toute taille",
-    intro:
-      "Commencez gratuitement, puis passez à Starter ou Pro pour plus de minutes incluses et des dépassements transparents.",
-    monthly: "Mensuel",
-    annual: "Annuel",
-    save: "Économisez 20 %",
-    compareHeading: "Comparer les forfaits en détail",
-    compareIntro:
-      "Free comprend 30 minutes vocales et un numéro de téléphone gratuit pendant 14 jours. Starter et Pro comprennent un numéro dédié, des volumes mensuels et des dépassements facturés à l’usage.",
-    billingLabel: "Intervalle de facturation",
-    tableLabel: "Tableau de comparaison des forfaits",
-    caption:
-      "Comparaison des fonctionnalités entre les forfaits Free, Starter, Pro et Enterprise.",
-    feature: "Fonctionnalité",
-    included: "Inclus",
-    notIncluded: "Non inclus",
-  },
-  es: {
-    heading: "Planes para negocios de todos los tamaños",
-    intro:
-      "Empiece gratis y luego cambie a Starter o Pro para tener más minutos incluidos y excedentes transparentes.",
-    monthly: "Mensual",
-    annual: "Anual",
-    save: "Ahorre 20%",
-    compareHeading: "Compare los planes en detalle",
-    compareIntro:
-      "Free incluye 30 minutos de voz y un número de teléfono gratis durante 14 días. Starter y Pro incluyen un número dedicado, minutos mensuales incluidos y excedentes según el uso.",
-    billingLabel: "Periodo de facturación",
-    tableLabel: "Tabla comparativa de planes",
-    caption:
-      "Comparación de funciones entre los planes Free, Starter, Pro y Enterprise.",
-    feature: "Función",
-    included: "Incluido",
-    notIncluded: "No incluido",
-  },
-  sr: {
-    heading: "Paketi za firme svih veličina",
-    intro:
-      "Počnite besplatno, a zatim pređite na Starter ili Pro za više uključenih minuta i jasne cene prekoračenja.",
-    monthly: "Mesečno",
-    annual: "Godišnje",
-    save: "Uštedite 20%",
-    compareHeading: "Detaljno uporedite pakete",
-    compareIntro:
-      "Free uključuje 30 minuta razgovora i broj telefona besplatno na 14 dana. Starter i Pro uključuju namenski broj, mesečnu kvotu minuta i prekoračenja koja se naplaćuju prema potrošnji.",
-    billingLabel: "Period naplate",
-    tableLabel: "Tabela poređenja paketa",
-    caption: "Poređenje funkcija paketa Free, Starter, Pro i Enterprise.",
-    feature: "Funkcija",
-    included: "Uključeno",
-    notIncluded: "Nije uključeno",
-  },
-} satisfies Record<Locale, Record<string, string>>
-
-export function PricingSection({ locale = "en" }: PricingSectionProps) {
-  const [billingInterval, setBillingInterval] =
-    useState<BillingInterval>("annual")
+export function PricingSection({ locale = "en" }: { locale?: Locale }) {
   const copy = pricingSectionCopy[locale]
-  const localizedTiers = tiersFor(locale)
-  const localizedComparisonGroups = planComparison(locale)
+  const comparisonGroups = planComparison(locale)
 
   return (
     <>
-      {/* ── Hero ── */}
-      <section className="relative overflow-hidden">
-        <div className="mx-auto max-w-4xl px-6 pt-16 pb-8 text-center md:pt-20 md:pb-10 lg:pb-12">
-          <h1 className="animate-fade-up display-heading-compact stagger-1">
+      <section className="pt-10 md:pt-11" id="plans">
+        <div className="mx-auto max-w-site px-6">
+          <SectionTitle as="h1" centered eyebrow={eyebrow(locale, "pricing.hero")} intro={copy.intro} className="max-w-[44rem]">
             {copy.heading}
-          </h1>
-          <p className="animate-fade-up body-copy mx-auto mt-5 max-w-[60ch] stagger-2 md:text-lg">
-            {copy.intro}
-          </p>
+          </SectionTitle>
+          <PlanCards className="mt-8" cards={pricingPlanCards(locale, "pricing_plan")} labels={billingSwitchLabels(locale)} />
         </div>
       </section>
 
-      {/* ── Tier cards ── */}
-      <section className="mx-auto max-w-site px-6 pt-8 pb-8 md:pt-10 md:pb-10 lg:pt-12 lg:pb-12">
-        <div className="animate-fade-up mb-8 flex justify-center stagger-3">
-          <BillingIntervalSwitch
-            labels={copy}
-            onChange={setBillingInterval}
-            value={billingInterval}
-          />
-        </div>
-
-        <div className="animate-fade-up grid gap-6 stagger-3 md:grid-cols-2 xl:grid-cols-4">
-          {localizedTiers.map((tier) => (
-            <div
-              key={tier.name}
-              className={`relative flex min-w-0 flex-col rounded-2xl border bg-background p-6 ${
-                tier.highlight
-                  ? "border-foreground/20 ring-1 ring-foreground/10"
-                  : "border-border/60"
-              }`}
-            >
-              {/* Tier header */}
-              <div className="mb-6">
-                <h2 className="font-heading text-lg font-medium tracking-[-0.03em]">
-                  {tier.name}
-                </h2>
-                <div className="mt-3 flex items-baseline gap-1">
-                  <span
-                    key={tier.price[billingInterval]}
-                    className="swap-in font-heading text-4xl font-medium tracking-[-0.05em] tabular-nums"
-                  >
-                    {tier.price[billingInterval]}
-                  </span>
-                  {tier.period && (
-                    <span className="text-sm text-muted-foreground">
-                      {tier.period}
-                    </span>
-                  )}
-                </div>
-                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                  {tier.description[billingInterval]}
-                </p>
-              </div>
-
-              {/* Action */}
-              <a
-                href={tier.ctaHref ?? appSignupUrl(locale, tier.plan ? { plan: tier.plan } : undefined)}
-                className={cn(
-                  buttonVariants({ variant: tier.ctaVariant }),
-                  "mb-6 h-11 w-full min-w-0 rounded-full px-4 text-[0.8125rem] sm:text-sm"
-                )}
-                data-ph-signup-cta={tier.ctaHref ? undefined : true}
-                data-ph-capture-attribute-section="pricing_plan"
-                data-ph-capture-attribute-action="pricing_cta"
-                data-ph-capture-attribute-destination={
-                  tier.ctaHref ?? appSignupUrl(locale, tier.plan ? { plan: tier.plan } : undefined)
-                }
-                data-ph-capture-attribute-plan={tier.name}
-                data-ph-capture-attribute-billing-interval={billingInterval}
-                data-ph-capture-attribute-label={tier.cta[billingInterval]}
-              >
-                <span className="min-w-0">{tier.cta[billingInterval]}</span>
-                <ArrowRight className="size-4 shrink-0 transition-transform duration-200 ease-(--ease-out) group-hover/button:translate-x-0.5" />
-              </a>
-
-              {/* Key highlights only */}
-              <div className="flex-1 border-t border-border/50 pt-5">
-                <ul className="flex flex-col gap-2.5">
-                  {tier.highlights.map((item) => {
-                    const label = typeof item === "string" ? item : item.label
-                    const sublabel =
-                      typeof item === "string" ? null : item.sublabel
-                    return (
-                      <li
-                        key={label}
-                        className="flex items-start gap-2.5 text-sm"
-                      >
-                        <Check
-                          className="mt-0.5 size-3.5 shrink-0 text-foreground/60"
-                          aria-hidden="true"
-                        />
-                        <span>
-                          {label}
-                          {sublabel ? (
-                            <span className="block text-muted-foreground">
-                              {sublabel}
-                            </span>
-                          ) : null}
-                        </span>
-                      </li>
-                    )
-                  })}
-                </ul>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Feature comparison table ── */}
-      <section className="bg-background" id="compare">
-        <div className="mx-auto max-w-5xl px-6 pt-10 pb-12 md:pt-12 md:pb-14 lg:pt-14 lg:pb-16">
-          <h2 className="mb-4 text-center font-heading text-2xl leading-tight font-medium tracking-[-0.04em] md:text-3xl">
+      <section className="section-spacing" id="compare">
+        <div className="mx-auto max-w-site px-6">
+          <SectionTitle centered eyebrow={eyebrow(locale, "pricing.compare")} intro={copy.compareIntro} className="max-w-[44rem]">
             {copy.compareHeading}
-          </h2>
-          <p className="mx-auto mb-12 max-w-lg text-center text-sm leading-relaxed text-muted-foreground">
-            {copy.compareIntro}
-          </p>
+          </SectionTitle>
 
           <div
-            className="overflow-x-auto"
+            className="relative mt-12 overflow-x-auto rounded-2xl border border-border/60"
             role="region"
             aria-label={copy.tableLabel}
             tabIndex={0}
           >
             <table className="w-full min-w-[860px] text-sm">
               <caption className="sr-only">{copy.caption}</caption>
-              {/* Sticky header */}
               <thead>
-                <tr className="border-b border-border/60">
-                  <th
-                    scope="col"
-                    className="py-4 pr-8 text-left text-xs font-medium text-muted-foreground"
-                  >
+                <tr className="bg-beige">
+                  <th scope="col" className="py-4 pr-8 pl-6 text-left text-xs font-medium text-muted-foreground">
                     {copy.feature}
                   </th>
-                  <th
-                    scope="col"
-                    className="w-[150px] px-4 py-4 text-center font-heading text-base font-medium tracking-[-0.03em] text-foreground"
-                  >
-                    Free
-                  </th>
-                  <th
-                    scope="col"
-                    className="w-[150px] px-4 py-4 text-center font-heading text-base font-medium tracking-[-0.03em] text-foreground"
-                  >
-                    Starter
-                  </th>
-                  <th
-                    scope="col"
-                    className="w-[150px] rounded-t-xl bg-muted/60 px-4 py-4 text-center font-heading text-base font-medium tracking-[-0.03em] text-foreground"
-                  >
-                    Pro
-                  </th>
-                  <th
-                    scope="col"
-                    className="w-[150px] px-4 py-4 text-center font-heading text-base font-medium tracking-[-0.03em] text-foreground"
-                  >
-                    Enterprise
-                  </th>
+                  {planColumns.map((plan) => (
+                    <th
+                      key={plan}
+                      scope="col"
+                      className={cn(
+                        "w-[150px] px-4 py-4 text-center font-heading text-base font-medium tracking-[-0.03em] text-foreground",
+                        plan === "Pro" && "bg-beige-strong/60"
+                      )}
+                    >
+                      {plan}
+                    </th>
+                  ))}
                 </tr>
               </thead>
 
               <tbody>
-                {localizedComparisonGroups.map((group) => (
+                {comparisonGroups.map((group) => (
                   <Fragment key={group.category}>
-                    {/* Category header row */}
                     <tr>
-                      <td
-                        colSpan={5}
-                        className="pt-8 pb-3 text-xs font-medium tracking-wide text-muted-foreground"
-                      >
+                      <td colSpan={5} className="pt-8 pb-3 pl-6 font-mono text-xs font-semibold tracking-[-0.02em] text-beige-foreground uppercase">
                         {group.category}
                       </td>
                     </tr>
-
-                    {/* Feature rows */}
                     {group.rows.map((row) => (
-                      <tr
-                        key={row.feature}
-                        className="border-b border-border/40 last:border-0"
-                      >
-                        <th
-                          scope="row"
-                          className="py-3 pr-8 text-left font-medium text-foreground"
-                        >
+                      <tr key={row.feature} className="border-t border-border/50">
+                        <th scope="row" className="py-3 pr-8 pl-6 text-left font-medium text-foreground">
                           {row.feature}
                         </th>
-                        {(
-                          [
-                            row.free,
-                            row.starter ?? row.pro,
-                            row.pro,
-                            row.enterprise,
-                          ] as ComparisonValue[]
-                        ).map((value, i) => (
-                          <td
-                            key={i}
-                            className={cn(
-                              "px-4 py-3 text-center",
-                              i === 2 && "bg-muted/60"
-                            )}
-                          >
-                            <ComparisonCell
-                              includedLabel={copy.included}
-                              notIncludedLabel={copy.notIncluded}
-                              value={value}
-                            />
+                        {([row.free, row.starter ?? row.pro, row.pro, row.enterprise] as ComparisonValue[]).map((value, i) => (
+                          <td key={i} className={cn("px-4 py-3 text-center", i === 2 && "bg-beige/70")}>
+                            <ComparisonCell includedLabel={copy.included} notIncludedLabel={copy.notIncluded} value={value} />
                           </td>
                         ))}
                       </tr>
