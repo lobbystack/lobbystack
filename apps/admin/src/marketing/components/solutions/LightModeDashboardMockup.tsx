@@ -3,7 +3,9 @@ interface Props {
 }
 
 /* ───────────────────────────────────────────
-   Schematic feature illustrations
+   Schematic feature illustrations, kept only for the reference
+   LegacySolutionBody. The salons page draws scenes instead
+   (solution-layouts/general/GeneralScenes.tsx).
    Light theme · abstract UI representations
    ─────────────────────────────────────────── */
 
@@ -13,7 +15,6 @@ export function LightModeDashboardMockup({ slug }: Props) {
       <div className="flex min-h-0 flex-1 flex-col p-5">
         {slug === "after-hours-answering-service" && <AfterHoursSchematic />}
         {slug === "ai-receptionist-for-dental-offices" && <DentalSchematic />}
-        {slug === "ai-receptionist-for-salons-and-spas" && <SalonsSchematic />}
         {slug === "self-hosted-ai-receptionist" && <SelfHostedSchematic />}
       </div>
     </div>
@@ -155,106 +156,6 @@ function DentalSchematic() {
           <div className="h-1.5 w-5 rounded-full bg-foreground/10" />
           <span className="text-[11px] text-foreground/65">2 overflow</span>
         </div>
-      </div>
-    </div>
-  )
-}
-
-/* ── Salons: rule card with instruction ── */
-function SalonsSchematic() {
-  return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      {/* Rule card */}
-      <div className="rounded-lg border border-foreground/10 bg-foreground/[0.03] p-4">
-        <div className="flex items-center gap-2">
-          <div className="flex size-5 items-center justify-center rounded bg-foreground/10 text-[11px] font-bold text-foreground/70">
-            R
-          </div>
-          <span className="text-[10px] font-semibold text-foreground/80">
-            Color services
-          </span>
-          <span className="ml-auto rounded-full bg-muted px-1.5 py-px text-[10px] font-medium text-foreground/70">
-            Active
-          </span>
-        </div>
-
-        <div className="mt-3 rounded border border-border/40 bg-background p-2.5">
-          <p className="text-[10px] leading-relaxed text-foreground/75">
-            If a client wants{" "}
-            <span className="rounded bg-foreground/5 px-1 py-px font-medium text-foreground/80">
-              color
-            </span>
-            , ask about{" "}
-            <span className="rounded bg-foreground/5 px-1 py-px font-medium text-foreground/80">
-              single-process
-            </span>
-            ,{" "}
-            <span className="rounded bg-foreground/5 px-1 py-px font-medium text-foreground/80">
-              highlights
-            </span>
-            , or{" "}
-            <span className="rounded bg-foreground/5 px-1 py-px font-medium text-foreground/80">
-              balayage
-            </span>
-            . Require{" "}
-            <span className="rounded bg-foreground/5 px-1 py-px font-medium text-foreground/80">
-              48-hour notice
-            </span>{" "}
-            for cancellations.
-          </p>
-        </div>
-      </div>
-
-      {/* Toggle row */}
-      <div className="mt-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-[10px] font-medium text-foreground/80">
-              AI cancellations
-            </div>
-            <div className="text-[11px] text-foreground/65">
-              Verified appointments only
-            </div>
-          </div>
-          <div className="h-4 w-7 rounded-full bg-foreground p-0.5">
-            <div className="size-3 translate-x-3 rounded-full bg-background" />
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-[10px] font-medium text-foreground/80">
-              AI rescheduling
-            </div>
-            <div className="text-[11px] text-foreground/65">
-              After availability check
-            </div>
-          </div>
-          <div className="h-4 w-7 rounded-full bg-foreground p-0.5">
-            <div className="size-3 translate-x-3 rounded-full bg-background" />
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-[10px] font-medium text-foreground/80">
-              Require one-time code
-            </div>
-            <div className="text-[11px] text-foreground/65">
-              For cancellations and reschedules
-            </div>
-          </div>
-          <div className="h-4 w-7 rounded-full border border-border bg-muted p-0.5">
-            <div className="size-3 rounded-full bg-background" />
-          </div>
-        </div>
-      </div>
-
-      {/* Trigger count */}
-      <div className="mt-auto pt-3 text-center">
-        <span className="text-[11px] text-foreground/65">
-          Triggered 12 times this week
-        </span>
       </div>
     </div>
   )
