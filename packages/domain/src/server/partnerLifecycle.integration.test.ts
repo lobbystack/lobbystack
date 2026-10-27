@@ -664,6 +664,10 @@ describe.skipIf(!client)("deleting a partner's businesses 90 days after its tier
       expect(queued.released).toHaveLength(releases.length);
       expect(queued.released).toEqual(expect.arrayContaining(releases.map((number) => ({ aggregateId: number.id, businessId: null, payload: { providerPhoneId: number.providerPhoneId, e164: number.e164 } }))));
       expect(queued.stored).toEqual([{ businessId: null, payload: { objectKeys: [objectKey] } }]);
+      // Each owner hears their business is gone, from the partner, as when the partner deletes it.
+      const notices = await asMigrator(tx, async () => await tx.select({ businessId: outboxMessages.businessId, payload: outboxMessages.payload }).from(outboxMessages).where(and(eq(outboxMessages.topic, "email.send"), inArray(outboxMessages.dedupeKey, [harbor, maple].map((deleted) => `partner-business-deleted:${deleted.businessId}:${deleted.owner.email}`)))));
+      expect(notices).toHaveLength(2);
+      for (const notice of notices) expect(notice).toEqual({ businessId: null, payload: expect.objectContaining({ template: "business_deleted", brand: { kind: "partner", partnerId: acme.partnerId } }) });
 
       // The businesses' audit logs went with them, and the partner's record keeps the step and each deletion with the numbers it released.
       expect(await asMigrator(tx, async () => await tx.select({ id: auditLogs.id }).from(auditLogs).where(inArray(auditLogs.businessId, [harbor.businessId, maple.businessId])))).toEqual([]);

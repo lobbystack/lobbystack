@@ -892,6 +892,16 @@ const FREE_PLAN_ACCOUNT = {
 };
 
 /**
+ * The owners of one of the partner's businesses, whose own rows in users only
+ * they can read: the database answers the partner's owners and admins, and
+ * the worker in the business's own transaction.
+ */
+async function partnerBusinessOwnerEmails(tx: DatabaseTransaction, businessId: string): Promise<string[]> {
+  const rows = await tx.execute<{ email: string }>(sql`select email from app.partner_business_owner_emails(${businessId}::uuid)`);
+  return rows.rows.map((row) => row.email);
+}
+
+/**
  * Releases one of the partner's businesses to its owner, who keeps it as a
  * direct business on the host's Free plan and pays the host from then on. It
  * needs an owner who accepted the invitation. The business leaves the console
@@ -903,12 +913,6 @@ const FREE_PLAN_ACCOUNT = {
  * waits while its subscription is live and the deployment would hear it end:
  * the partner cancels it in Stripe first. Only owners and admins can.
  */
-/** The owners of one of the partner's businesses, whose own rows in users only they can read. */
-async function partnerBusinessOwnerEmails(tx: DatabaseTransaction, partnerId: string, businessId: string): Promise<string[]> {
-  const rows = await tx.execute<{ email: string }>(sql`select email from app.partner_business_owner_emails(${partnerId}::uuid, ${businessId}::uuid)`);
-  return rows.rows.map((row) => row.email);
-}
-
 export async function releaseBusiness(context: DomainContext, actor: PartnerActor, input: { businessId: string }): Promise<{ ownerUserId: string }> {
   const member = businessesActor(actor);
   // The business's own rows show only to the system actor, since the partner's people aren't on its team.
@@ -926,7 +930,7 @@ export async function releaseBusiness(context: DomainContext, actor: PartnerActo
       .limit(1);
     if (!owner) throw failure("The business's owner has to accept their invitation before you can release it.", 409, "owner_required");
     // Read who to tell while the business is still the partner's.
-    const ownerEmails = await partnerBusinessOwnerEmails(tx, partnerId, input.businessId);
+    const ownerEmails = await partnerBusinessOwnerEmails(tx, input.businessId);
     // A direct business pays the host, so it keeps none of its partner's packages.
     const closes = await dropBusinessPackageInTransaction(tx, { businessId: input.businessId, partnerId, stripeConnect: Boolean(context.stripeConnect) });
     // A direct business ignores the access level; it goes back to the default.
@@ -973,8 +977,8 @@ export type PartnerBusinessDeleted = { checkout: OpenCheckout | null; releasedNu
 /**
  * Deletes one of the partner's businesses with everything in it, its audit
  * log included, and queues the release of each phone number it held and the
- * deletion of the files it stored. Its emails and jobs that haven't gone out
- * are dropped. While a number is still being bought for it, it's refused,
+ * deletion of the files it stored, and emails its owners that it's gone.
+ * Its other emails and jobs that haven't gone out are dropped. While a number is still being bought for it, it's refused,
  * since the purchase would finish for a business that's gone. Returns the
  * checkout nobody should pay any more, for the caller to close once this
  * commits, and the numbers it queued for release. The caller checks who may
@@ -999,6 +1003,9 @@ export async function deletePartnerBusinessInTransaction(tx: DatabaseTransaction
   // A number being released already is released again, in case that release fails once the business is gone.
   const held = await tx.select({ id: phoneNumbers.id, e164: phoneNumbers.e164, providerPhoneId: phoneNumbers.providerPhoneId }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), inArray(phoneNumbers.status, ["active", "reclaiming"])));
   const stored = await tx.select({ objectKey: storageObjects.objectKey }).from(storageObjects).where(and(eq(storageObjects.businessId, businessId), ne(storageObjects.status, "deleted")));
+  // Read who to tell before the business and its team go, whoever deletes it.
+  const ownerEmails = await partnerBusinessOwnerEmails(tx, businessId);
+  const [about] = await tx.select({ businessName: businesses.name }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
   // An invitation or alert sent after the business is gone would go out under the host's brand.
   // The pool's alerts to the partner's owners and admins only went out through this business, and still go, since the pool's month counts them sent.
   await tx.delete(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), isNull(outboxMessages.publishedAt), ne(outboxMessages.aggregateType, POOL_ALERT_AGGREGATE)));
@@ -1027,6 +1034,17 @@ export async function deletePartnerBusinessInTransaction(tx: DatabaseTransaction
       payload: { objectKeys: stored.slice(start, start + STORED_OBJECTS_PER_JOB).map((object) => object.objectKey) },
     });
   }
+  // Queued in the business like the jobs above, so the worker may queue it too; the business's delete leaves it belonging to none, and it goes out under the partner's brand.
+  for (const email of ownerEmails) {
+    await enqueueOutbox(tx, {
+      topic: "email.send",
+      businessId,
+      aggregateType: "business",
+      aggregateId: businessId,
+      dedupeKey: `partner-business-deleted:${businessId}:${email}`,
+      payload: { email, template: "business_deleted", variables: { businessName: about?.businessName ?? "" }, brand: { kind: "partner", partnerId } satisfies EmailBrandReference, replyTo: null },
+    });
+  }
   await tx.delete(businesses).where(eq(businesses.id, businessId));
   return { checkout, releasedNumbers };
 }
@@ -1046,20 +1064,7 @@ export async function deletePartnerBusiness(context: DomainContext, actor: Partn
   const member = businessesActor(actor);
   const closes = await withBusinessTransaction(context.db, { userId: member.userId, businessId: input.businessId, actorType: "system" }, async (tx) => {
     if (await currentRole(tx, member) === "member") throw new AuthorizationError("Only owners and admins can delete the partner's businesses.");
-    // Read who to tell before the business and its team go.
-    const ownerEmails = await partnerBusinessOwnerEmails(tx, member.partnerId, input.businessId);
-    const [about] = await tx.select({ businessName: businesses.name }).from(businesses).where(and(eq(businesses.id, input.businessId), eq(businesses.partnerId, member.partnerId))).limit(1);
     const { checkout } = await deletePartnerBusinessInTransaction(tx, { businessId: input.businessId, partnerId: member.partnerId, stripeConnect: Boolean(context.stripeConnect), by: "partner" });
-    // The business is gone, so the note rides in no business's outbox, under the partner's brand.
-    for (const email of ownerEmails) {
-      await enqueueOutbox(tx, {
-        topic: "email.send",
-        aggregateType: "partner",
-        aggregateId: member.partnerId,
-        dedupeKey: `partner-business-deleted:${input.businessId}:${email}`,
-        payload: { email, template: "business_deleted", variables: { businessName: about?.businessName ?? "" }, brand: { kind: "partner", partnerId: member.partnerId } satisfies EmailBrandReference, replyTo: null },
-      });
-    }
     return checkout;
   });
   await closeCheckoutQuietly(context, closes);

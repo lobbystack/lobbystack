@@ -37,9 +37,11 @@ GRANT EXECUTE ON FUNCTION app.partner_brand(uuid) TO lobbystack_app, lobbystack_
 
 -- The addresses of a partner's business's owners, for the email that tells
 -- them their partner released or deleted it. People see only their own row in
--- users, so this reads past that, for the partner's owners and admins and
--- only while the business is still the partner's.
-CREATE OR REPLACE FUNCTION app.partner_business_owner_emails(p_partner_id uuid, p_business_id uuid)
+-- users, so this reads past that: for the partner's owners and admins while
+-- the business is still the partner's, and for the worker in a transaction
+-- scoped to that business, when the host deletes a lapsed partner's
+-- businesses.
+CREATE OR REPLACE FUNCTION app.partner_business_owner_emails(p_business_id uuid)
 RETURNS TABLE (email text)
 LANGUAGE sql
 STABLE
@@ -53,11 +55,13 @@ AS $$
   WHERE membership.business_id = p_business_id
     AND membership.role = 'business_owner'
     AND membership.status = 'active'
-    AND business.partner_id = p_partner_id
+    AND business.partner_id IS NOT NULL
     -- Inside SECURITY DEFINER current_user is the owner, so app.current_actor_type()
-    -- would read 'none'; only lobbystack_app can execute this, so read the setting.
-    AND current_setting('app.actor_type', true) IN ('operator', 'system')
-    AND app.partner_role(p_partner_id) IN ('owner', 'admin')
+    -- would read 'none'; read the settings the transaction set instead.
+    AND (
+      (current_setting('app.actor_type', true) IN ('operator', 'system') AND app.partner_role(business.partner_id) IN ('owner', 'admin'))
+      OR (current_setting('app.actor_type', true) = 'worker' AND NULLIF(current_setting('app.business_id', true), '')::uuid = p_business_id)
+    )
 $$;
-REVOKE ALL ON FUNCTION app.partner_business_owner_emails(uuid, uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION app.partner_business_owner_emails(uuid, uuid) TO lobbystack_app;
+REVOKE ALL ON FUNCTION app.partner_business_owner_emails(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION app.partner_business_owner_emails(uuid) TO lobbystack_app, lobbystack_worker;
