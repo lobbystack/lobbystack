@@ -235,7 +235,7 @@ export function McpTools({ locale }: SectionProps) {
   )
 }
 
-const clientDocs = { claude: "connect-claude", chatgpt: "connect-chatgpt", cursor: "connect-other-clients", other: "connect-other-clients" } as const
+const clientDocs = { claude: "connect-claude", chatgpt: "connect-chatgpt", codex: "connect-chatgpt", cursor: "connect-other-clients", other: "connect-other-clients" } as const
 
 export function McpConnect({ locale }: SectionProps) {
   const copy = getMcpCopy(locale)

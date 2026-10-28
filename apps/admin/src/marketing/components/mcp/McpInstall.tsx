@@ -37,7 +37,7 @@ export function McpInstall({ url, urlLabel, copyLabel, copiedLabel, clients }: M
   return (
     <div className="mx-auto flex w-full max-w-[46rem] flex-col items-center gap-5">
       <div
-        className="grid w-full grid-cols-2 gap-1 rounded-3xl border border-border bg-input/30 p-1 sm:grid-cols-4 sm:rounded-full"
+        className="grid w-full grid-cols-3 gap-1 rounded-3xl border border-border bg-input/30 p-1 sm:grid-cols-5 sm:rounded-full"
         role="tablist"
       >
         {clients.map((client) => (
@@ -45,7 +45,7 @@ export function McpInstall({ url, urlLabel, copyLabel, copiedLabel, clients }: M
             aria-controls={`mcp-install-${client.key}`}
             aria-selected={selected === client.key}
             className={cn(
-              "h-10 rounded-full px-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+              "min-h-10 rounded-full px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
               selected === client.key
                 ? "bg-foreground text-background"
                 : "text-muted-foreground hover:bg-background hover:text-foreground"

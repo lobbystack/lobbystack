@@ -38,9 +38,9 @@ export const mcpToolGroups: Record<McpToolGroupKey, { name: string; scope: strin
   ],
 }
 
-export type McpClientKey = "claude" | "chatgpt" | "cursor" | "other"
+export type McpClientKey = "claude" | "chatgpt" | "codex" | "cursor" | "other"
 
-export const mcpClientOrder: McpClientKey[] = ["claude", "chatgpt", "cursor", "other"]
+export const mcpClientOrder: McpClientKey[] = ["claude", "chatgpt", "codex", "cursor", "other"]
 
 export const mcpToolGroupOrder: McpToolGroupKey[] = ["calls", "contacts", "appointments", "business"]
 
@@ -205,9 +205,17 @@ const en: McpCopy = {
       chatgpt: {
         label: "ChatGPT",
         steps: [
-          "Copy the server URL above.",
-          "In ChatGPT, turn on developer mode, then create an app with the URL and OAuth sign-in.",
+          "In ChatGPT, turn on Developer mode under Settings > Security and login. ChatGPT only adds custom MCP servers in developer mode.",
+          "Open Plugins, click +, and create an app with the server URL and OAuth sign-in.",
           "Sign in to LobbyStack, pick your business and click Allow access.",
+        ],
+      },
+      codex: {
+        label: "Codex",
+        steps: [
+          "Create an API key in LobbyStack under Settings > API keys and export it as `LOBBYSTACK_API_KEY`.",
+          "Run `codex mcp add lobbystack --url https://app.lobbystack.com/api/mcp --bearer-token-env-var LOBBYSTACK_API_KEY`.",
+          "Start Codex and ask it to call `get_business` to check the connection.",
         ],
       },
       cursor: {
@@ -351,9 +359,17 @@ const fr: McpCopy = {
       chatgpt: {
         label: "ChatGPT",
         steps: [
-          "Copiez l'URL du serveur ci-dessus.",
-          "Dans ChatGPT, activez le mode développeur, puis créez une application avec l'URL et la connexion OAuth.",
+          "Dans ChatGPT, activez le mode développeur sous Settings > Security and login. ChatGPT n'ajoute des serveurs MCP personnalisés qu'en mode développeur.",
+          "Ouvrez Plugins, cliquez sur + et créez une application avec l'URL du serveur et la connexion OAuth.",
           "Connectez-vous à LobbyStack, choisissez votre entreprise et cliquez sur Autoriser l'accès.",
+        ],
+      },
+      codex: {
+        label: "Codex",
+        steps: [
+          "Créez une clé API dans LobbyStack, sous Réglages > Clés API, et exportez-la dans `LOBBYSTACK_API_KEY`.",
+          "Lancez `codex mcp add lobbystack --url https://app.lobbystack.com/api/mcp --bearer-token-env-var LOBBYSTACK_API_KEY`.",
+          "Démarrez Codex et demandez-lui d'appeler `get_business` pour vérifier la connexion.",
         ],
       },
       cursor: {
@@ -497,9 +513,17 @@ const es: McpCopy = {
       chatgpt: {
         label: "ChatGPT",
         steps: [
-          "Copie la URL del servidor de arriba.",
-          "En ChatGPT, active el modo de desarrollador y cree una app con la URL e inicio de sesión OAuth.",
+          "En ChatGPT, active el modo de desarrollador en Settings > Security and login. ChatGPT solo agrega servidores MCP personalizados en ese modo.",
+          "Abra Plugins, haga clic en + y cree una app con la URL del servidor e inicio de sesión OAuth.",
           "Inicie sesión en LobbyStack, elija su negocio y haga clic en Permitir acceso.",
+        ],
+      },
+      codex: {
+        label: "Codex",
+        steps: [
+          "Cree una clave de API en LobbyStack, en Configuración > Claves de API, y expórtela como `LOBBYSTACK_API_KEY`.",
+          "Ejecute `codex mcp add lobbystack --url https://app.lobbystack.com/api/mcp --bearer-token-env-var LOBBYSTACK_API_KEY`.",
+          "Inicie Codex y pídale que llame a `get_business` para comprobar la conexión.",
         ],
       },
       cursor: {
@@ -643,9 +667,17 @@ const sr: McpCopy = {
       chatgpt: {
         label: "ChatGPT",
         steps: [
-          "Kopirajte URL servera iznad.",
-          "U ChatGPT-ju uključite režim za programere i napravite aplikaciju sa URL-om i OAuth prijavom.",
+          "U ChatGPT-ju uključite režim za programere u Settings > Security and login. ChatGPT dodaje prilagođene MCP servere samo u tom režimu.",
+          "Otvorite Plugins, kliknite na + i napravite aplikaciju sa URL-om servera i OAuth prijavom.",
           "Prijavite se na LobbyStack, izaberite firmu i kliknite na Dozvoli pristup.",
+        ],
+      },
+      codex: {
+        label: "Codex",
+        steps: [
+          "Napravite API ključ u LobbyStack-u, u Podešavanja > API ključevi, i izvezite ga kao `LOBBYSTACK_API_KEY`.",
+          "Pokrenite `codex mcp add lobbystack --url https://app.lobbystack.com/api/mcp --bearer-token-env-var LOBBYSTACK_API_KEY`.",
+          "Pokrenite Codex i zamolite ga da pozove `get_business` da proveri vezu.",
         ],
       },
       cursor: {
