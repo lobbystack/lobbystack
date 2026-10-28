@@ -32,6 +32,7 @@ references/shadcn-admin
 !.agents/skills/ai-sdk/
 !.agents/skills/copywriting/
 !.agents/skills/next-dev-loop/
+!.agents/skills/seo-blog-post/
 !.agents/skills/shadcn/
 !.agents/skills/stop-slop/
 !.agents/skills/vercel-react-best-practices/
@@ -42,6 +43,7 @@ references/shadcn-admin
 !.claude/skills/ai-sdk
 !.claude/skills/copywriting
 !.claude/skills/next-dev-loop
+!.claude/skills/seo-blog-post
 !.claude/skills/shadcn
 !.claude/skills/stop-slop
 !.claude/skills/vercel-react-best-practices
