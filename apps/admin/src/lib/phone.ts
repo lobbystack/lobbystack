@@ -15,7 +15,7 @@ import { isTransferCountry, normalizeInterfaceLocale } from "@lobbystack/shared"
 import type { SupportedLocale } from "./locale";
 
 const DEFAULT_PHONE_COUNTRY = "US" satisfies CountryCode;
-const SUPPORTED_ONBOARDING_PHONE_COUNTRIES = ["US", "CA", "GB", "AU", "NZ"] as const;
+const SUPPORTED_ONBOARDING_PHONE_COUNTRIES = ["US", "CA", "PR", "GB", "AU", "NZ"] as const;
 
 export type SupportedOnboardingPhoneCountry =
   (typeof SUPPORTED_ONBOARDING_PHONE_COUNTRIES)[number];
@@ -46,7 +46,7 @@ const PHONE_LABELS_BY_LOCALE: Record<Exclude<SupportedLocale, "sr">, Labels> = {
   fr: frLabels,
   es: esLabels,
 };
-const NORTH_AMERICAN_PHONE_COUNTRIES = new Set<CountryCode>(["US", "CA"]);
+const NORTH_AMERICAN_PHONE_COUNTRIES = new Set<CountryCode>(["US", "CA", "PR"]);
 const SUPPORTED_ONBOARDING_PHONE_COUNTRY_SET = new Set<string>(
   SUPPORTED_ONBOARDING_PHONE_COUNTRIES,
 );
@@ -215,6 +215,8 @@ export function getPhonePlaceholder(
     case "CA":
     case "US":
       return "(555) 123-4567";
+    case "PR":
+      return "(787) 555-0123";
     case "FR":
       return "06 12 34 56 78";
     case "GB":
@@ -232,6 +234,7 @@ export function getPhoneNationalDigitLimit(
 ): number | undefined {
   switch (country) {
     case "CA":
+    case "PR":
     case "US":
       return 10;
     case "GB":
@@ -251,6 +254,7 @@ export function getPhoneNationalDigits(
 
   switch (country) {
     case "CA":
+    case "PR":
     case "US":
       return stripNorthAmericanCallingCode(digits);
     default:
@@ -274,6 +278,7 @@ export function formatPhoneNationalInput(
 
   switch (country) {
     case "CA":
+    case "PR":
     case "US":
       return formatNorthAmericanPhoneInput(nationalDigits);
     case "AU":
@@ -339,9 +344,9 @@ export function normalizeOnboardingPhoneCountry(
 
 export function supportsOnboardingAreaCodeSearch(
   value: string | null | undefined,
-): value is "US" | "CA" {
+): value is "US" | "CA" | "PR" {
   const normalized = normalizePhoneText(value).toUpperCase();
-  return normalized === "US" || normalized === "CA";
+  return normalized === "US" || normalized === "CA" || normalized === "PR";
 }
 
 export type PhoneCountryOption = {

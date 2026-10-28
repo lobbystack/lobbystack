@@ -210,7 +210,7 @@ export const apiManagedPlanCreateSchema = z.strictObject({
   plan: z.literal("enterprise"),
 });
 
-const phoneNumberCountries = ["US", "CA", "GB", "AU", "NZ"] as const;
+const phoneNumberCountries = ["US", "CA", "PR", "GB", "AU", "NZ"] as const;
 const phoneNumberKinds = ["local", "mobile", "toll_free"] as const;
 
 export const apiPhoneNumberSchema = z.object({
@@ -223,7 +223,7 @@ export const apiPhoneNumberSchema = z.object({
 }).describe("A phone number the business has or had.");
 
 export const apiPhoneNumberSearchSchema = z.strictObject({
-  country: z.enum(phoneNumberCountries).optional().describe("Defaults to the country of the business's time zone, or US. When the account the key acts as verified a mobile number for this business, that number's country decides. A deployment offers US and CA, and GB, AU and NZ once its carrier is set up for them."),
+  country: z.enum(phoneNumberCountries).optional().describe("Defaults to the country of the business's time zone, or US. When the account the key acts as verified a mobile number for this business, that number's country decides. A deployment offers US, CA and PR, and GB, AU and NZ once its carrier is set up for them."),
   kind: z.enum(phoneNumberKinds).optional().describe("Defaults to local. GB and AU numbers are always mobile, and NZ numbers local."),
   area_code: z.string().trim().regex(/^\d{1,6}$/, "Use digits only.").optional(),
   city: z.string().trim().min(1).max(100).optional(),

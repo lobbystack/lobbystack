@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import { canTextNumber, permanentSmsErrorCode } from "./smsReach";
 
 describe("canTextNumber", () => {
-  it("lets toll-free numbers text only US and Canadian numbers", () => {
+  it("lets toll-free numbers text only US, Canadian and Puerto Rican numbers", () => {
     expect(canTextNumber("+18445550100", "+14165550134")).toBe(true);
+    expect(canTextNumber("+18445550100", "+17875550134")).toBe(true);
+    expect(canTextNumber("+18445550100", "+18765550134")).toBe(false);
     expect(canTextNumber("+18445550100", "+381695021111")).toBe(false);
     expect(canTextNumber("+18005550100", "+447700900123")).toBe(false);
   });

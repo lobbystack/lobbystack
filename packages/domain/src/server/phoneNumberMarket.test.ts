@@ -16,6 +16,7 @@ describe("resolveBusinessNumberMarket", () => {
     expect(resolveBusinessNumberMarket({ timezone: "America/Los_Angeles" })).toEqual({ countryCode: "US", source: "business_location" });
     expect(resolveBusinessNumberMarket({ timezone: "Europe/London" })).toEqual({ countryCode: "GB", source: "business_location" });
     expect(resolveBusinessNumberMarket({ timezone: "Australia/Sydney" })).toEqual({ countryCode: "AU", source: "business_location" });
+    expect(resolveBusinessNumberMarket({ timezone: "America/Puerto_Rico" })).toEqual({ countryCode: "PR", source: "business_location" });
   });
 
   it("falls back to the default supported country without a personal phone or mapped location", () => {

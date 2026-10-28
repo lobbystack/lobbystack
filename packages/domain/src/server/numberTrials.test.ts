@@ -22,14 +22,14 @@ describe("number trial clock", () => {
 });
 
 describe("number countries", () => {
-  it("sells US and Canadian numbers with no registration, and the others once their bundle is set", () => {
-    expect(numberCountries({})).toEqual(["US", "CA"]);
-    expect(numberCountries({ TWILIO_GB_BUNDLE_SID: "BU1", TWILIO_AU_BUNDLE_SID: "BU2", TWILIO_NZ_BUNDLE_SID: "BU3", TWILIO_NZ_ADDRESS_SID: "AD3" })).toEqual(["US", "CA", "GB", "NZ"]);
-    expect(numberCountries({ TWILIO_AU_BUNDLE_SID: "BU2", TWILIO_AU_ADDRESS_SID: "AD2" })).toEqual(["US", "CA", "AU"]);
+  it("sells US, Canadian and Puerto Rican numbers with no registration, and the others once their bundle is set", () => {
+    expect(numberCountries({})).toEqual(["US", "CA", "PR"]);
+    expect(numberCountries({ TWILIO_GB_BUNDLE_SID: "BU1", TWILIO_AU_BUNDLE_SID: "BU2", TWILIO_NZ_BUNDLE_SID: "BU3", TWILIO_NZ_ADDRESS_SID: "AD3" })).toEqual(["US", "CA", "PR", "GB", "NZ"]);
+    expect(numberCountries({ TWILIO_AU_BUNDLE_SID: "BU2", TWILIO_AU_ADDRESS_SID: "AD2" })).toEqual(["US", "CA", "PR", "AU"]);
   });
 
   it("gives no free trial in Australia, where a number costs $8.25 a month", () => {
-    expect(trialCountries({ TWILIO_GB_BUNDLE_SID: "BU1", TWILIO_AU_BUNDLE_SID: "BU2", TWILIO_AU_ADDRESS_SID: "AD2" })).toEqual(["US", "CA", "GB"]);
+    expect(trialCountries({ TWILIO_GB_BUNDLE_SID: "BU1", TWILIO_AU_BUNDLE_SID: "BU2", TWILIO_AU_ADDRESS_SID: "AD2" })).toEqual(["US", "CA", "PR", "GB"]);
   });
 });
 

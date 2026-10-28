@@ -12,20 +12,21 @@ import { loadPartnerNumberStanding } from "./partnerNumbers";
 import { sharedSmsSender } from "./smsSender";
 import { getVoiceSecondsLeftInTransaction, readEndedVoiceSecondsLeftInTransaction } from "./usage";
 
-export type NumberCountry = "US" | "CA" | "GB" | "AU" | "NZ";
+export type NumberCountry = "US" | "CA" | "PR" | "GB" | "AU" | "NZ";
 
 export const NUMBER_TRIAL_DAYS = 14;
 
 /**
- * Countries we sell numbers in. The US and Canada need no registration; the
- * others need the regulatory bundle Twilio approved for LobbyStack (and, where
- * the number needs one, its address). See docs/voice/runtime.md.
+ * Countries we sell numbers in. The US, Canada and Puerto Rico need no
+ * registration; the others need the regulatory bundle Twilio approved for
+ * LobbyStack (and, where the number needs one, its address). See docs/voice/runtime.md.
  */
 export function numberCountries(env: NodeJS.ProcessEnv = process.env): NumberCountry[] {
   const set = (name: string) => Boolean(env[name]?.trim());
   return [
     "US",
     "CA",
+    "PR",
     ...(set("TWILIO_GB_BUNDLE_SID") ? ["GB" as const] : []),
     ...(set("TWILIO_AU_BUNDLE_SID") && set("TWILIO_AU_ADDRESS_SID") ? ["AU" as const] : []),
     ...(set("TWILIO_NZ_BUNDLE_SID") && set("TWILIO_NZ_ADDRESS_SID") ? ["NZ" as const] : []),

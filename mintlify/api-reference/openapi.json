@@ -14753,11 +14753,12 @@
         "type": "object",
         "properties": {
           "country": {
-            "description": "Defaults to the country of the business's time zone, or US. When the account the key acts as verified a mobile number for this business, that number's country decides. A deployment offers US and CA, and GB, AU and NZ once its carrier is set up for them.",
+            "description": "Defaults to the country of the business's time zone, or US. When the account the key acts as verified a mobile number for this business, that number's country decides. A deployment offers US, CA and PR, and GB, AU and NZ once its carrier is set up for them.",
             "type": "string",
             "enum": [
               "US",
               "CA",
+              "PR",
               "GB",
               "AU",
               "NZ"
@@ -14819,6 +14820,7 @@
             "enum": [
               "US",
               "CA",
+              "PR",
               "GB",
               "AU",
               "NZ"

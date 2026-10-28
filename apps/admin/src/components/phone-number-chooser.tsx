@@ -161,6 +161,7 @@ const COUNTRY_OPTIONS: Array<{
 }> = [
   { code: "US", label: "US", flag: "🇺🇸" },
   { code: "CA", label: "CA", flag: "🇨🇦" },
+  { code: "PR", label: "PR", flag: "🇵🇷" },
   { code: "GB", label: "UK", flag: "🇬🇧" },
   { code: "AU", label: "AU", flag: "🇦🇺" },
   { code: "NZ", label: "NZ", flag: "🇳🇿" },

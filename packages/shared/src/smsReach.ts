@@ -1,10 +1,12 @@
-// Twilio toll-free numbers can only text numbers in the US and Canada.
+import { isUsCanadaOrPuertoRicoPhone } from "./transferCountries";
+
+// Twilio toll-free numbers can only text numbers in the US, Canada and Puerto Rico.
 const TOLL_FREE = /^\+18(?:00|33|44|55|66|77|88)\d{7}$/;
 
 /** Whether a sender can text this number. False without a sender. */
 export function canTextNumber(from: string | null | undefined, to: string | null | undefined): boolean {
   if (!from || !to) return false;
-  return !TOLL_FREE.test(from) || to.startsWith("+1");
+  return !TOLL_FREE.test(from) || isUsCanadaOrPuertoRicoPhone(to);
 }
 
 // Twilio errors that fail the same way on every retry: an invalid number (21211),

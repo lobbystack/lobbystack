@@ -289,6 +289,8 @@ To take calls and texts on a local stack while a deployment keeps its numbers, s
 
 ### Sell numbers in the UK, Australia and New Zealand
 
+Puerto Rico needs no bundle, like the US and Canada. Its local numbers take calls and texts, and the shared toll-free sender can text Puerto Rican numbers. Twilio voice dialing permissions and Messaging geo permissions must both allow Puerto Rico.
+
 Twilio sells numbers in these countries only under a regulatory bundle it has approved. Create one bundle per country with LobbyStack as the business, and the worker buys every number in that country under it. UK and Australian businesses get mobile numbers, because local numbers there need a local address. New Zealand businesses get local numbers, which take calls but not texts.
 
 The shared sender is toll-free and can text only +1 numbers. A hosted business with its own SMS number outside +1, such as a UK or Australian mobile, texts from that number instead, so its callers and team get texts (`resolveSmsSender` in `packages/domain/src/server/smsSender.ts`). A New Zealand business has no SMS number, so its New Zealand callers and team get no texts. Messaging geo permissions in Twilio must allow the UK, Australia and New Zealand.
