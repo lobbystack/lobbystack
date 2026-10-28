@@ -22,12 +22,12 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@ai-sdk/openai-compatible": "^3.0.62",
+    "@ai-sdk/openai-compatible": "^3.0.78",
     "@aws-sdk/client-s3": "^3.1146.0",
     "@aws-sdk/s3-request-presigner": "^3.1146.0",
     "@lobbystack/shared": "workspace:*",
     "@lobbystack/telemetry": "workspace:*",
-    "ai": "^7.0.127",
+    "ai": "^7.0.153",
     "luxon": "^3.7.2",
     "nodemailer": "^10.1.4",
     "standardwebhooks": "^1.1.1",
