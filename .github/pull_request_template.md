@@ -18,6 +18,7 @@ Steps to reproduce:
 - [ ] `pnpm typecheck`
 - [ ] `pnpm lint`
 - [ ] `pnpm test`
+- [ ] `pnpm build`
 
 ## Docs
 
