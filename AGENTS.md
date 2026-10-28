@@ -69,6 +69,14 @@
 - The interface languages are `en`, `fr`, `es`, and `sr`. Serbian uses Latin script only. Pass a locale through `intlLocale()` from `@lobbystack/shared` before you hand it to `Intl`, Luxon, `lang`, or `hreflang`, so `sr` becomes `sr-Latn`. A bare `sr` formats in Cyrillic.
 - A business's default caller language (`RuntimeLocale`) is `en`, `fr`, `es`, `sr` (Latin script), `de`, `pt` (Brazilian Portuguese), `it`, or `nl`, and calls open in it. GPT-Live then switches to the caller's language when they ask or clearly speak another one. Keep business default languages and voice prompts on the `RuntimeLocale` list; name a language for a model with `runtimeLocaleName()`.
 
+## Writing
+
+Load the matching skill before you write text people read, including text inside code such as UI strings and locale files:
+
+- `copywriting`: copy for the marketing site, the dashboard, emails, and other product surfaces.
+- `writing-guidelines`: docs, such as `docs/`, `mintlify/`, READMEs, ADRs, and specs.
+- `stop-slop`: all of the above, plus blog posts, commit messages, PR descriptions, and any other prose.
+
 ## Testing
 
 - Vitest is the default test runner; keep `*.test.ts` and `*.test.tsx` near their source.
