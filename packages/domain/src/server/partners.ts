@@ -339,7 +339,8 @@ export async function changePartnerMemberRole(context: DomainContext, actor: Par
 /**
  * Takes a member off the partner's team, with the pending invitations they
  * sent (they hold the links) or received, either of which would let them back
- * in. Only an owner removes an owner, and never the last one.
+ * in, and their agency connections to the partner, which stay ended if they
+ * join again. Only an owner removes an owner, and never the last one.
  */
 export async function removePartnerMember(context: DomainContext, actor: PartnerActor, input: { memberId: string }): Promise<void> {
   const member = memberActor(actor);
@@ -356,6 +357,8 @@ export async function removePartnerMember(context: DomainContext, actor: Partner
     const email = (await tx.execute<{ email: string }>(sql`select email from app.list_partner_members(${member.partnerId}::uuid) where member_id = ${input.memberId}::uuid`)).rows[0]?.email;
     requireChanged(await tx.update(partnerMembers).set({ status: "removed", updatedAt: new Date() }).where(and(eq(partnerMembers.id, input.memberId), eq(partnerMembers.partnerId, member.partnerId), eq(partnerMembers.status, "active"))).returning({ id: partnerMembers.id }));
     await tx.update(partnerInvitations).set({ status: "revoked", updatedAt: new Date() }).where(and(eq(partnerInvitations.partnerId, member.partnerId), eq(partnerInvitations.status, "pending"), or(eq(partnerInvitations.invitedByUserId, target.userId), email ? eq(partnerInvitations.normalizedEmail, normalizeAuthEmail(email)) : undefined)));
+    // Each grant goes in the partner's audit log as oauth_grant.revoked (migration 0165).
+    await tx.execute(sql`select app.revoke_removed_partner_member_oauth_grants(${member.partnerId}::uuid, ${target.userId}::uuid)`);
   });
 }
 

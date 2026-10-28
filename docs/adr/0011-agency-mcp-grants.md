@@ -23,6 +23,8 @@ The per-business tools take a `business_id`. A key reaches a business as it does
 
 The console's API keys page lists the partner's agency connections. Owners and admins see and disconnect every one, and anyone else sees and disconnects their own. Approving and disconnecting one write `oauth_grant.approved` and `oauth_grant.revoked` to `partner_audit_logs`, which keeps what happens to the partner itself rather than to one of its businesses.
 
+Removing someone from the team ends their agency grants to the partner in the same transaction, and writes `oauth_grant.revoked` with the reason `member_removed` for each. If the partner adds them back, they connect again. A role change keeps the grant and changes what its next request may do.
+
 ## Rationale
 
 An agency works across dozens of businesses. A grant per business would mean one consent per client, and an assistant juggling a connection for each. A partner's business also never gets MCP of its own, so its owner couldn't grant it anyway.

@@ -1,7 +1,7 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 // Agency connections end to end against PostgreSQL with RLS: Better Auth's
@@ -44,8 +44,8 @@ vi.mock("../domain-context", async () => {
   return { createDomainContext: () => ({ db: getDatabase("lobbystack_app").db }), createWorkerDomainContext: () => ({ db: getDatabase("lobbystack_worker").db }) };
 });
 
-import { accounts, auditLogs, businesses, createDatabaseClient, oauthAccessTokens, outboxMessages, partnerAuditLogs, partnerMembers, partners, users } from "@lobbystack/db";
-import { acceptPartnerInvitation, createPartnerBusiness, createPartnerPlatformKey, hashPartnerToken, invitePartnerMember, listGrantablePartners, listPartnerOAuthGrants, openPartnerBusiness, removePartnerMember, revokePartnerOAuthGrant, signUpPartner, type DomainContext, type PartnerMemberActor } from "@lobbystack/domain";
+import { accounts, auditLogs, businesses, createDatabaseClient, oauthAccessTokens, oauthConsents, oauthRefreshTokens, outboxMessages, partnerAuditLogs, partnerMembers, partners, users } from "@lobbystack/db";
+import { acceptPartnerInvitation, changePartnerMemberRole, createPartnerBusiness, createPartnerPlatformKey, hashPartnerToken, invitePartnerMember, listGrantablePartners, listPartnerOAuthGrants, openPartnerBusiness, removePartnerMember, revokePartnerOAuthGrant, signUpPartner, type DomainContext, type PartnerMemberActor } from "@lobbystack/domain";
 import type { ApiKeyScope } from "@lobbystack/shared";
 
 import { getAuth } from "../auth";
@@ -238,7 +238,6 @@ describe.skipIf(!setup.testUrl)("agency connections to the MCP server against Po
     await admin!.db.update(partnerMembers).set({ status: "removed" }).where(and(eq(partnerMembers.partnerId, northwind.partnerId), eq(partnerMembers.userId, northwind.member.userId)));
     expect(await mcpStatus(token)).toBe(401);
     await admin!.db.update(partnerMembers).set({ status: "active" }).where(and(eq(partnerMembers.partnerId, northwind.partnerId), eq(partnerMembers.userId, northwind.member.userId)));
-    expect(await mcpStatus(token)).toBe(200);
   });
 
   it("reaches only the partner's own businesses, through an open the business's audit log records", async () => {
@@ -322,6 +321,38 @@ describe.skipIf(!setup.testUrl)("agency connections to the MCP server against Po
     // The person disconnects their own.
     expect(await revokePartnerOAuthGrant(app(), northwind.actor(northwind.admin), { grantId: adminsGrant.id })).toBe(true);
     expect(await mcpStatus(adminToken)).toBe(401);
+  });
+
+  it("ends a person's agency connections when they're removed from the team, so re-adding them doesn't bring them back", async () => {
+    const person = await signedInPerson();
+    const id = await join(northwind, person, "admin");
+    const token = await agencyGrant(person, northwind.partnerId, ["partner:read"]);
+    // Their connection to another partner stays.
+    await join(bright, person, "member");
+    const brightToken = await agencyGrant(person, bright.partnerId, ["partner:read"]);
+    expect(await mcpStatus(token)).toBe(200);
+
+    // A role change changes what they may do, and keeps the connection.
+    await changePartnerMemberRole(app(), { ...northwind.actor(northwind.owner), role: "owner" }, { memberId: id, role: "member" });
+    expect(await mcpStatus(token)).toBe(200);
+
+    await removePartnerMember(app(), { ...northwind.actor(northwind.owner), role: "owner" }, { memberId: id });
+    expect(await mcpStatus(token)).toBe(401);
+    const reference = `partner:${northwind.partnerId}`;
+    expect(await admin!.db.select({ id: oauthConsents.id }).from(oauthConsents).where(and(eq(oauthConsents.userId, person.userId), eq(oauthConsents.referenceId, reference)))).toEqual([]);
+    const live = (table: typeof oauthAccessTokens | typeof oauthRefreshTokens) => admin!.db.select({ id: table.id, revoked: table.revoked }).from(table).where(and(eq(table.userId, person.userId), eq(table.referenceId, reference)));
+    expect((await live(oauthAccessTokens)).length).toBeGreaterThan(0);
+    expect((await live(oauthAccessTokens)).every((row) => row.revoked !== null)).toBe(true);
+    expect((await live(oauthRefreshTokens)).length).toBeGreaterThan(0);
+    expect((await live(oauthRefreshTokens)).every((row) => row.revoked !== null)).toBe(true);
+    const [revoked] = await admin!.db.select({ actorUserId: partnerAuditLogs.actorUserId, payload: partnerAuditLogs.payload }).from(partnerAuditLogs).where(and(eq(partnerAuditLogs.partnerId, northwind.partnerId), eq(partnerAuditLogs.eventType, "oauth_grant.revoked"), sql`${partnerAuditLogs.payload}->>'grantedByUserId' = ${person.userId}`));
+    expect(revoked).toMatchObject({ actorUserId: northwind.owner.userId, payload: { reason: "member_removed", clientId } });
+    expect(await mcpStatus(brightToken)).toBe(200);
+
+    // Back on the team, the old connection stays ended until they connect again.
+    await join(northwind, person, "member");
+    expect(await mcpStatus(token)).toBe(401);
+    expect(await mcpStatus(await agencyGrant(person, northwind.partnerId, ["partner:read"]))).toBe(200);
   });
 
   it("refuses another partner's business even while the person holds a fresh open of it from that partner's console", async () => {
