@@ -394,7 +394,8 @@ describe.skipIf(!client)("a business's overage on its package", () => {
 
       const input = { businessId: acme.cedar, enabled: false, voiceMinuteRateMinor: 25, chatRateMinor: 5, capMinor: null };
       expect(await refusal(setOverage(tx, acme.member, input))).toMatchObject({ status: 403 });
-      expect(await refusal(setOverage(tx, { kind: "key", partnerId: acme.partnerId, platformKeyId: randomUUID() }, input))).toMatchObject({ status: 403 });
+      // A key the partner never made answers as an invalid one. partnerKeyApi.integration.test.ts covers real keys.
+      expect(await refusal(setOverage(tx, { kind: "key", partnerId: acme.partnerId, platformKeyId: randomUUID() }, input))).toMatchObject({ status: 401 });
       // Another partner's admin can't reach the business, and a business billed outside LobbyStack has nothing to bill overage on.
       expect(await refusal(setOverage(tx, other.admin, input))).toMatchObject({ status: 404, code: "business_not_found" });
       expect(await refusal(setOverage(tx, acme.admin, { ...input, businessId: acme.harbor }))).toMatchObject({ status: 409, code: "billed_outside" });

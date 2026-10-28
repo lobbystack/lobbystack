@@ -1435,7 +1435,8 @@ describe("a partner's platform keys on v1 routes", () => {
       const response = await post({ name: "Harbor Dental", timezone: "America/Halifax", owner_email: "owner@harbor.example", access_level: "activity" });
       expect(response.status).toBe(201);
       expect(await response.json()).toEqual({ data: created });
-      expect(domain.createPartnerBusinessForApi).toHaveBeenCalledWith(appContext, {
+      // The app role's context, with the partner's Stripe client for a package_id.
+      expect(domain.createPartnerBusinessForApi).toHaveBeenCalledWith(expect.objectContaining(appContext), {
         key: expect.objectContaining({ kind: "platform_key", platformKeyId, partnerId }),
         idempotencyKey: "onboard-harbor",
         requestHash: expect.stringMatching(/^[0-9a-f]{64}$/),
