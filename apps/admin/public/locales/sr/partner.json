@@ -831,5 +831,30 @@
     "signIn": "Prijavi se",
     "createAccount": "Napravi nalog",
     "switchAccount": "Koristi drugi nalog"
+  },
+  "agencyConnections": {
+    "title": "Veze agencije",
+    "description": "AI asistenti i drugi MCP klijenti koje je Vaš tim povezao sa agencijom prijavom, kao što su Claude, ChatGPT ili Cursor. Svaki radi sa ulogom osobe koja ga je povezala.",
+    "descriptionOwn": "AI asistenti i drugi MCP klijenti koje ste povezali sa agencijom prijavom, kao što su Claude, ChatGPT ili Cursor. Rade sa Vašom ulogom.",
+    "empty": "Još nema veza. Povežite asistenta sa LobbyStack MCP serverom i izaberite ovu agenciju pri prijavi.",
+    "unnamed": "Aplikacija bez imena",
+    "neverUsed": "Nikad",
+    "connectedBy": "{{date}}, {{name}}",
+    "columns": {
+      "app": "Aplikacija",
+      "access": "Pristup",
+      "connected": "Povezana",
+      "lastUsed": "Poslednja upotreba",
+      "actions": "Radnje"
+    },
+    "revoke": {
+      "action": "Isključi",
+      "title": "Isključiti {{name}}?",
+      "description": "{{name}} odmah gubi pristup agenciji i njenim firmama. Povežite je ponovo da biste je koristili.",
+      "confirm": "Isključi",
+      "cancel": "Otkaži",
+      "done": "Veza je uklonjena",
+      "failed": "Nismo uspeli da isključimo aplikaciju. Pokušajte ponovo."
+    }
   }
 }

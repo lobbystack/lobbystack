@@ -15,11 +15,13 @@ import { MCP_OAUTH_SCOPES, mcpResourceUrl } from "./mcp/oauth-config";
 // (the cimd plugin) or dynamic client registration; every flow uses PKCE;
 // access tokens are opaque and short-lived, refresh tokens rotate.
 //
-// A grant is tied to one business. The consent page asks the owner to pick
-// it, and the consent handler runs Better Auth's consent endpoint inside
-// `withSelectedBusiness`, which is how consentReferenceId learns the choice.
-// Outside that call no business is selected, so an authorize request never
-// matches an earlier consent and always shows the consent page.
+// A grant is tied to one business, or for an agency connection to one
+// partner (ADR 0011). The consent page asks the person to pick it, and the
+// consent handler runs Better Auth's consent endpoint inside
+// `withSelectedReference`, which is how consentReferenceId learns the choice:
+// the business id, or `partner:<id>`. Outside that call nothing is selected,
+// so an authorize request never matches an earlier consent and always shows
+// the consent page.
 
 export const OAUTH_LOGIN_PATH = "/oauth/sign-in";
 export const OAUTH_CONSENT_PATH = "/oauth/consent";
@@ -27,16 +29,21 @@ export const OAUTH_CONSENT_PATH = "/oauth/consent";
 const ACCESS_TOKEN_SECONDS = 60 * 60;
 const REFRESH_TOKEN_SECONDS = 30 * 24 * 60 * 60;
 
-const selectedBusiness = new AsyncLocalStorage<{ businessId: string }>();
+const selectedReference = new AsyncLocalStorage<{ referenceId: string }>();
+
+/** Runs Better Auth's consent endpoint with what the person picked on the consent page: a business id, or partnerOAuthReference(partnerId). */
+export async function withSelectedReference<T>(referenceId: string, run: () => Promise<T>): Promise<T> {
+  return await selectedReference.run({ referenceId }, run);
+}
 
 /** Runs Better Auth's consent endpoint with the business the owner picked on the consent page. */
 export async function withSelectedBusiness<T>(businessId: string, run: () => Promise<T>): Promise<T> {
-  return await selectedBusiness.run({ businessId }, run);
+  return await withSelectedReference(businessId, run);
 }
 
 export function consentReferenceId(): string {
   // A value no stored consent has, so the plugin asks for consent again.
-  return selectedBusiness.getStore()?.businessId ?? `unselected:${randomUUID()}`;
+  return selectedReference.getStore()?.referenceId ?? `unselected:${randomUUID()}`;
 }
 
 /** Drizzle tables for the plugin models, keyed by model name for the Better Auth adapter. */

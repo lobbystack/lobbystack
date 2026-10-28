@@ -819,5 +819,30 @@
     "signIn": "Sign in",
     "createAccount": "Create account",
     "switchAccount": "Use another account"
+  },
+  "agencyConnections": {
+    "title": "Agency connections",
+    "description": "AI assistants and other MCP clients your team connected to the agency with sign-in, such as Claude, ChatGPT or Cursor. Each one acts with the role of the person who connected it.",
+    "descriptionOwn": "AI assistants and other MCP clients you connected to the agency with sign-in, such as Claude, ChatGPT or Cursor. They act with your role.",
+    "empty": "No connections yet. Connect an assistant to the LobbyStack MCP server and choose this agency when you sign in.",
+    "unnamed": "Unnamed app",
+    "neverUsed": "Never",
+    "connectedBy": "{{date}} by {{name}}",
+    "columns": {
+      "app": "App",
+      "access": "Access",
+      "connected": "Connected",
+      "lastUsed": "Last used",
+      "actions": "Actions"
+    },
+    "revoke": {
+      "action": "Disconnect",
+      "title": "Disconnect {{name}}?",
+      "description": "{{name}} loses access to the agency and its businesses at once. Connect it again to use it.",
+      "confirm": "Disconnect",
+      "cancel": "Cancel",
+      "done": "Connection removed",
+      "failed": "We couldn't disconnect the app. Try again."
+    }
   }
 }

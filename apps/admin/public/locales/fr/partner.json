@@ -831,5 +831,30 @@
     "signIn": "Se connecter",
     "createAccount": "Créer un compte",
     "switchAccount": "Utiliser un autre compte"
+  },
+  "agencyConnections": {
+    "title": "Connexions de l'agence",
+    "description": "Les assistants IA et autres clients MCP que votre équipe a connectés à l'agence en se connectant, comme Claude, ChatGPT ou Cursor. Chacun agit avec le rôle de la personne qui l'a connecté.",
+    "descriptionOwn": "Les assistants IA et autres clients MCP que vous avez connectés à l'agence en vous connectant, comme Claude, ChatGPT ou Cursor. Ils agissent avec votre rôle.",
+    "empty": "Aucune connexion pour l'instant. Connectez un assistant au serveur MCP de LobbyStack et choisissez cette agence à la connexion.",
+    "unnamed": "Application sans nom",
+    "neverUsed": "Jamais",
+    "connectedBy": "{{date}} par {{name}}",
+    "columns": {
+      "app": "Application",
+      "access": "Accès",
+      "connected": "Connectée",
+      "lastUsed": "Dernière utilisation",
+      "actions": "Actions"
+    },
+    "revoke": {
+      "action": "Déconnecter",
+      "title": "Déconnecter {{name}} ?",
+      "description": "{{name}} perd aussitôt l'accès à l'agence et à ses entreprises. Connectez-la de nouveau pour l'utiliser.",
+      "confirm": "Déconnecter",
+      "cancel": "Annuler",
+      "done": "Connexion retirée",
+      "failed": "Nous n'avons pas pu déconnecter l'application. Réessayez."
+    }
   }
 }

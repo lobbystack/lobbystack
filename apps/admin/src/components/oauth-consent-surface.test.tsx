@@ -57,6 +57,37 @@ describe("OAuth consent screen", () => {
   });
 });
 
+describe("OAuth consent screen for an agency", () => {
+  const agencyProps = { ...consentProps, partners: [{ partnerId: "p1", name: "Northwind Agency", scopes: ["partner:read", "partner.demos:write", "calls:read"] }] };
+
+  it("offers the person's agencies, with the partner permissions, and posts the partner", async () => {
+    const user = userEvent.setup();
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign });
+    const fetchMock = vi.fn(async () => Response.json({ url: "https://claude.ai/api/mcp/auth_callback?code=abc" }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<OAuthConsentSurface {...agencyProps} />);
+    const select = screen.getByLabelText("oauthConsent.connectToLabel") as HTMLSelectElement;
+    expect(select.value).toBe("b2");
+    expect(screen.queryByRole("checkbox", { name: /partner:read/ })).toBeNull();
+    await user.selectOptions(select, "partner:p1");
+    expect(screen.getByText(/oauthConsent.agencyHint/)).toBeTruthy();
+    expect(screen.getByRole("checkbox", { name: /oauthConsent.scopes.partner_read/ })).toBeTruthy();
+    expect(screen.queryByRole("checkbox", { name: /appointments:write/ })).toBeNull();
+    await user.click(screen.getByRole("checkbox", { name: /oauthConsent.scopes.partner_demos_write/ }));
+    await user.click(screen.getByRole("button", { name: "oauthConsent.allow" }));
+    await waitFor(() => expect(assign).toHaveBeenCalled());
+    expect(JSON.parse(String((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body))).toEqual({ oauth_query: consentProps.oauthQuery, accept: true, partner_id: "p1", scopes: ["partner:read", "calls:read"] });
+  });
+
+  it("lets someone with no business of their own connect an agency", () => {
+    render(<OAuthConsentSurface {...agencyProps} businesses={[]} />);
+    expect(screen.queryByText("oauthConsent.noBusinesses.title")).toBeNull();
+    expect((screen.getByLabelText("oauthConsent.connectToLabel") as HTMLSelectElement).value).toBe("partner:p1");
+    expect(screen.getByRole("button", { name: "oauthConsent.allow" })).toBeTruthy();
+  });
+});
+
 describe("Connected apps settings", () => {
   it("lists grants and disconnects one", async () => {
     const user = userEvent.setup();

@@ -9,7 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { NativeSelect, NativeSelectOptGroup, NativeSelectOption } from "@/components/ui/native-select";
 
 export type OAuthConsentProps =
   | { kind: "invalid" }
@@ -22,21 +22,41 @@ export type OAuthConsentProps =
     businesses: Array<{ businessId: string; name: string; active: boolean }>;
     /** Tool scopes the client asked for, in display order. */
     scopes: string[];
+    /**
+     * Agencies (partners) the person is on the team of, each with the scopes an
+     * agency connection to it can have: the partner's and the per-business ones.
+     */
+    partners?: Array<{ partnerId: string; name: string; scopes: string[] }>;
   };
 
-const scopeKey = (scope: string) => scope.replace(":", "_");
+/** The select's value for an agency. Business ids are UUIDs, so they never start with this. */
+const agencyValue = (partnerId: string) => `partner:${partnerId}`;
+
+const scopeKey = (scope: string) => scope.replace(/[:.]/g, "_");
 
 /**
- * The consent screen for MCP clients: the owner picks the business the app
- * may use and which of the requested permissions it gets.
+ * The consent screen for MCP clients: the person picks the business the app
+ * may use, or an agency they're on the team of, and which of the requested
+ * permissions it gets.
  */
 export function OAuthConsentSurface(props: OAuthConsentProps) {
   const { t } = useTranslation("auth");
-  const initialBusiness = props.kind === "consent" ? (props.businesses.find((business) => business.active) ?? props.businesses[0])?.businessId ?? "" : "";
-  const [businessId, setBusinessId] = useState(initialBusiness);
-  const [scopes, setScopes] = useState<string[]>(props.kind === "consent" ? props.scopes : []);
+  const partners = props.kind === "consent" ? props.partners ?? [] : [];
+  const initialBusiness = props.kind === "consent" ? (props.businesses.find((business) => business.active) ?? props.businesses[0])?.businessId ?? (partners[0] ? agencyValue(partners[0].partnerId) : "") : "";
+  const [target, setTarget] = useState(initialBusiness);
+  const agency = partners.find((partner) => agencyValue(partner.partnerId) === target) ?? null;
+  const offered = props.kind === "consent" ? agency?.scopes ?? props.scopes : [];
+  const [scopes, setScopes] = useState<string[]>(offered);
   const [pending, setPending] = useState<"allow" | "deny" | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  function choose(value: string) {
+    setTarget(value);
+    // A business and an agency offer different permissions, so the choice starts over with all of them.
+    if (props.kind !== "consent") return;
+    const chosenAgency = partners.find((partner) => agencyValue(partner.partnerId) === value);
+    setScopes(chosenAgency?.scopes ?? props.scopes);
+  }
 
   if (props.kind === "invalid") {
     return (
@@ -60,7 +80,7 @@ export function OAuthConsentSurface(props: OAuthConsentProps) {
       const response = await fetch("/api/oauth/consent", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ oauth_query: props.kind === "consent" ? props.oauthQuery : "", accept, business_id: businessId, scopes }),
+        body: JSON.stringify({ oauth_query: props.kind === "consent" ? props.oauthQuery : "", accept, ...(agency ? { partner_id: agency.partnerId } : { business_id: target }), scopes }),
       });
       const result = await response.json().catch(() => null) as { url?: string } | null;
       if (!response.ok || !result?.url) throw new Error("consent failed");
@@ -71,7 +91,7 @@ export function OAuthConsentSurface(props: OAuthConsentProps) {
     }
   }
 
-  if (props.businesses.length === 0) {
+  if (props.businesses.length === 0 && partners.length === 0) {
     return (
       <ReplacementOnboardingShell description={t("oauthConsent.subtitle", { client })} title={t("oauthConsent.title", { client })} width="sm">
         <div className="flex flex-col gap-6">
@@ -90,14 +110,26 @@ export function OAuthConsentSurface(props: OAuthConsentProps) {
       <div className="flex w-full flex-col gap-6 text-left">
         <FieldGroup className="gap-6">
           <Field>
-            <FieldLabel htmlFor="oauth-business">{t("oauthConsent.businessLabel")}</FieldLabel>
-            <NativeSelect className="w-full" disabled={props.businesses.length === 1} id="oauth-business" onChange={(event) => setBusinessId(event.target.value)} value={businessId}>
-              {props.businesses.map((business) => <NativeSelectOption key={business.businessId} value={business.businessId}>{business.name}</NativeSelectOption>)}
+            <FieldLabel htmlFor="oauth-business">{partners.length ? t("oauthConsent.connectToLabel") : t("oauthConsent.businessLabel")}</FieldLabel>
+            <NativeSelect className="w-full" disabled={props.businesses.length + partners.length === 1} id="oauth-business" onChange={(event) => choose(event.target.value)} value={target}>
+              {partners.length ? (
+                <>
+                  {props.businesses.length ? (
+                    <NativeSelectOptGroup label={t("oauthConsent.groups.businesses")}>
+                      {props.businesses.map((business) => <NativeSelectOption key={business.businessId} value={business.businessId}>{business.name}</NativeSelectOption>)}
+                    </NativeSelectOptGroup>
+                  ) : null}
+                  <NativeSelectOptGroup label={t("oauthConsent.groups.agencies")}>
+                    {partners.map((partner) => <NativeSelectOption key={partner.partnerId} value={agencyValue(partner.partnerId)}>{partner.name}</NativeSelectOption>)}
+                  </NativeSelectOptGroup>
+                </>
+              ) : props.businesses.map((business) => <NativeSelectOption key={business.businessId} value={business.businessId}>{business.name}</NativeSelectOption>)}
             </NativeSelect>
+            {agency ? <p className="text-sm text-muted-foreground">{t("oauthConsent.agencyHint", { client, agency: agency.name })}</p> : null}
           </Field>
           <fieldset className="flex flex-col gap-3">
             <legend className="mb-2 text-sm font-medium">{t("oauthConsent.scopesLabel", { client })}</legend>
-            {props.scopes.map((scope) => (
+            {offered.map((scope) => (
               <div className="flex items-start gap-3 text-sm" key={scope}>
                 <Checkbox
                   checked={scopes.includes(scope)}
@@ -116,7 +148,7 @@ export function OAuthConsentSurface(props: OAuthConsentProps) {
         <div className="flex items-start gap-3 rounded-xl bg-muted/60 p-4 text-sm text-muted-foreground">
           <ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
           <div className="flex flex-col gap-1">
-            <p>{t("oauthConsent.staysConnected", { client })}</p>
+            <p>{agency ? t("oauthConsent.agencyStaysConnected", { client }) : t("oauthConsent.staysConnected", { client })}</p>
             <p>{t("oauthConsent.warning", { client })}</p>
           </div>
         </div>
@@ -124,7 +156,7 @@ export function OAuthConsentSurface(props: OAuthConsentProps) {
         {error ? <p className="text-sm text-destructive" role="alert">{error}</p> : null}
 
         <div className="flex flex-col gap-3">
-          <Button disabled={pending !== null || !businessId} onClick={() => void decide(true)}>{pending === "allow" ? t("oauthConsent.allowing") : t("oauthConsent.allow")}</Button>
+          <Button disabled={pending !== null || !target} onClick={() => void decide(true)}>{pending === "allow" ? t("oauthConsent.allowing") : t("oauthConsent.allow")}</Button>
           <Button disabled={pending !== null} onClick={() => void decide(false)} variant="outline">{t("oauthConsent.deny")}</Button>
         </div>
         <p className="text-center text-xs text-muted-foreground">

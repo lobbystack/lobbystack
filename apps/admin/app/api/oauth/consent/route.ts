@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   try {
     const session = await requireApiSession(request);
-    const body = await readJson(request) as { oauth_query?: unknown; accept?: unknown; business_id?: unknown; scopes?: unknown };
+    const body = await readJson(request) as { oauth_query?: unknown; accept?: unknown; business_id?: unknown; partner_id?: unknown; scopes?: unknown };
     if (typeof body.oauth_query !== "string" || !body.oauth_query) return NextResponse.json({ error: "The authorization request is missing.", code: "invalid_request" }, { status: 400 });
     const url = await decideConsent({
       userId: session.user.id,
@@ -18,7 +18,8 @@ export async function POST(request: Request) {
       decision: {
         oauthQuery: body.oauth_query,
         accept: body.accept === true,
-        businessId: typeof body.business_id === "string" ? body.business_id : undefined,
+        businessId: typeof body.business_id === "string" && body.business_id ? body.business_id : undefined,
+        partnerId: typeof body.partner_id === "string" && body.partner_id ? body.partner_id : undefined,
         scopes: Array.isArray(body.scopes) ? body.scopes.filter((scope): scope is string => typeof scope === "string") : undefined,
       },
     });

@@ -1,12 +1,13 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { listGrantableBusinesses } from "@lobbystack/domain";
-import { oauthGrantableScopes } from "@lobbystack/shared";
+import { listGrantableBusinesses, listGrantablePartners } from "@lobbystack/domain";
 
 import { OAuthConsentSurface, type OAuthConsentProps } from "@/components/oauth-consent-surface";
 import { getAppDatabase } from "@/lib/api-helpers";
 import { getAuth, getSession } from "@/lib/auth";
+import { createDomainContext } from "@/lib/domain-context";
+import { agencyConsentScopes, businessConsentScopes } from "@/lib/oauth-consent";
 
 export const dynamic = "force-dynamic";
 
@@ -57,13 +58,18 @@ async function loadConsent(params: Record<string, string | string[] | undefined>
   }
   const requested = (query.get("scope") ?? "").split(" ");
   const businesses = await listGrantableBusinesses(getAppDatabase().db, session.user.id);
+  // An agency connection is offered only when the client asked for a partner scope.
+  const partners = (await listGrantablePartners(createDomainContext(), session.user.id))
+    .map((partner) => ({ partnerId: partner.partnerId, name: partner.name, scopes: agencyConsentScopes(requested, partner.role) }))
+    .filter((partner) => partner.scopes.some((scope) => !businessConsentScopes(requested).includes(scope)));
   return {
     kind: "consent",
     oauthQuery,
     client: { name: clientName, host: verifiedClientHost(clientId), redirectHost: redirectHost(query.get("redirect_uri")) },
     email: session.user.email ?? "",
     businesses: businesses.map(({ businessId, name, active }) => ({ businessId, name, active })),
-    scopes: oauthGrantableScopes.filter((scope) => requested.includes(scope)),
+    scopes: businessConsentScopes(requested),
+    partners,
   };
 }
 
