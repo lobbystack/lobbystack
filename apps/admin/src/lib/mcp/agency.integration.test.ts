@@ -45,7 +45,7 @@ vi.mock("../domain-context", async () => {
 });
 
 import { accounts, auditLogs, businesses, createDatabaseClient, oauthAccessTokens, outboxMessages, partnerAuditLogs, partnerMembers, partners, users } from "@lobbystack/db";
-import { acceptPartnerInvitation, createPartnerBusiness, createPartnerPlatformKey, hashPartnerToken, invitePartnerMember, listGrantablePartners, listPartnerOAuthGrants, revokePartnerOAuthGrant, signUpPartner, type DomainContext, type PartnerMemberActor } from "@lobbystack/domain";
+import { acceptPartnerInvitation, createPartnerBusiness, createPartnerPlatformKey, hashPartnerToken, invitePartnerMember, listGrantablePartners, listPartnerOAuthGrants, openPartnerBusiness, removePartnerMember, revokePartnerOAuthGrant, signUpPartner, type DomainContext, type PartnerMemberActor } from "@lobbystack/domain";
 import type { ApiKeyScope } from "@lobbystack/shared";
 
 import { getAuth } from "../auth";
@@ -153,6 +153,20 @@ async function call(client: Client, name: string, args: Record<string, unknown> 
   if (result.isError) return { error: (JSON.parse((result.content as Array<{ text: string }>)[0]!.text) as { error: { code: string; message: string } }).error };
   return { data: result.structuredContent as Record<string, unknown> & { data?: Array<Record<string, unknown>> } };
 }
+
+/** Puts the person on the team with this role, as accepting an invitation does, and returns their member id. */
+async function join(owner: Team, person: Person, role: "admin" | "member"): Promise<string> {
+  const { invitationId } = await invitePartnerMember(app(), { ...owner.actor(owner.owner), role: "owner" }, { email: person.email, role });
+  await acceptPartnerInvitation(app(), { userId: person.userId, tokenHash: hashPartnerToken(await invitationToken(invitationId)), email: person.email, emailVerified: true });
+  return await memberId(owner, person);
+}
+
+async function memberId(owner: Team, person: Person): Promise<string> {
+  const [row] = await admin!.db.select({ id: partnerMembers.id }).from(partnerMembers).where(and(eq(partnerMembers.partnerId, owner.partnerId), eq(partnerMembers.userId, person.userId)));
+  return row!.id;
+}
+
+const opensOf = async (businessId: string, person: Person) => await admin!.db.select({ id: auditLogs.id }).from(auditLogs).where(and(eq(auditLogs.businessId, businessId), eq(auditLogs.eventType, "partner.business_opened"), eq(auditLogs.actorUserId, person.userId)));
 
 const setRole = async (partnerId: string, person: Person, role: "owner" | "admin" | "member") => { await admin!.db.update(partnerMembers).set({ role }).where(and(eq(partnerMembers.partnerId, partnerId), eq(partnerMembers.userId, person.userId))); };
 
@@ -308,5 +322,46 @@ describe.skipIf(!setup.testUrl)("agency connections to the MCP server against Po
     // The person disconnects their own.
     expect(await revokePartnerOAuthGrant(app(), northwind.actor(northwind.admin), { grantId: adminsGrant.id })).toBe(true);
     expect(await mcpStatus(adminToken)).toBe(401);
+  });
+
+  it("refuses another partner's business even while the person holds a fresh open of it from that partner's console", async () => {
+    const person = await signedInPerson();
+    await join(northwind, person, "admin");
+    const brightId = await join(bright, person, "admin");
+    const theirs = await partnerBusiness(bright, "Bright Other");
+    await openPartnerBusiness(app(), { userId: person.userId, businessId: theirs, partnerId: bright.partnerId });
+    const token = await agencyGrant(person, northwind.partnerId, ["partner:read", "business:read", "calls:read"]);
+    const client = await mcp(token);
+    expect((await call(client, "get_business", { business_id: theirs })).error).toMatchObject({ code: "not_found" });
+    expect((await call(client, "list_calls", { business_id: theirs })).error).toMatchObject({ code: "not_found" });
+    // Off Bright's team, the open still running reaches nothing either.
+    await removePartnerMember(app(), { ...bright.actor(bright.owner), role: "owner" }, { memberId: brightId });
+    expect((await call(client, "get_business", { business_id: theirs })).error).toMatchObject({ code: "not_found" });
+    // Only the console's open is in the business's audit log.
+    expect(await opensOf(theirs, person)).toHaveLength(1);
+    await client.close();
+  });
+
+  it("refuses a business that's no longer active, even with a fresh open of it", async () => {
+    const person = await signedInPerson();
+    await join(northwind, person, "admin");
+    const suspended = await partnerBusiness(northwind, "Paused Plumbing");
+    await openPartnerBusiness(app(), { userId: person.userId, businessId: suspended, partnerId: northwind.partnerId });
+    await admin!.db.update(businesses).set({ status: "suspended" }).where(eq(businesses.id, suspended));
+    const client = await mcp(await agencyGrant(person, northwind.partnerId, ["partner:read", "business:read"]));
+    expect((await call(client, "get_business", { business_id: suspended })).error).toMatchObject({ code: "not_found" });
+    await client.close();
+  });
+
+  it("reuses a fresh open the person made in the console, without another audit row", async () => {
+    const person = await signedInPerson();
+    await join(northwind, person, "admin");
+    const business = await partnerBusiness(northwind, "Fresh Furnaces");
+    await openPartnerBusiness(app(), { userId: person.userId, businessId: business, partnerId: northwind.partnerId });
+    const client = await mcp(await agencyGrant(person, northwind.partnerId, ["partner:read", "business:read"]));
+    expect((await call(client, "get_business", { business_id: business })).data).toMatchObject({ id: business });
+    expect((await call(client, "get_business", { business_id: business })).data).toMatchObject({ id: business });
+    expect(await opensOf(business, person)).toHaveLength(1);
+    await client.close();
   });
 });

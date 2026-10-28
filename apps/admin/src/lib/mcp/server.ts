@@ -4,7 +4,6 @@ import { z } from "zod";
 
 import {
   callerPrincipalId,
-  currentPartnerOpen,
   idempotencyRequestHash,
   isPartnerMemberSubject,
   openPartnerBusiness,
@@ -154,16 +153,17 @@ const PARTNER_OPEN_REFRESH_MS = PARTNER_OPEN_LIFETIME_MS / 2;
  * The caller a partner connection's per-business tools run as. A platform key
  * reaches a business as REST does with the LobbyStack-Business header. A
  * person reaches it as the console does: through an audited open of the
- * business, which refuses a business of another partner, a direct one, and
- * anyone off the team, each as not found. The open lasts 8 hours, so it's
- * opened again once half of that has passed.
+ * business. Every call checks the business is the grant's partner's and
+ * active and the person is on that partner's team, and refuses anything else
+ * as not found, so an open the person made for another partner reaches
+ * nothing here. The open lasts 8 hours, so a call reuses one of the grant's
+ * partner made in the last half of that, and opens it again after.
  */
 async function defaultPartnerBusinessCaller(dependencies: McpServerDependencies, principal: McpPartnerPrincipal, businessId: string): Promise<ApiCaller> {
   const { subject } = principal;
   if (isPartnerMemberSubject(subject)) {
     const appContext = (dependencies.partnerContext ?? createDomainContext)();
-    const open = await currentPartnerOpen(appContext, { userId: subject.userId, businessId });
-    if (!open || open.openedAt.getTime() < Date.now() - PARTNER_OPEN_REFRESH_MS) await openPartnerBusiness(appContext, { userId: subject.userId, businessId, partnerId: subject.partnerId });
+    await openPartnerBusiness(appContext, { userId: subject.userId, businessId, partnerId: subject.partnerId, reuseOpenedSince: new Date(Date.now() - PARTNER_OPEN_REFRESH_MS) });
     return { businessId, partnerId: subject.partnerId, userId: subject.userId, actor: "partner_member", mcpGrantId: subject.grantId };
   }
   await requirePlatformBusinessAccess(dependencies.context(), { businessId, ...platformKeyReach(subject) });

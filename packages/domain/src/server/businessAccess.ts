@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, sql } from "drizzle-orm";
 
 import type { AuthzRole } from "@lobbystack/contracts";
 import { auditLogs, businesses, businessMemberships, partnerBusinessOpens, partnerMembers, partners, userActiveBusinesses, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
@@ -162,8 +162,11 @@ function businessNotFound(): Error {
  * the partner's domains. A business of another partner, a direct business, or
  * one that's no longer active answers as one that doesn't exist. When the
  * console names its partner, a business of any other partner is refused too.
+ * With `reuseOpenedSince`, an open of the same partner still running that
+ * began at or after then is kept as it is, with no new audit row; the checks
+ * run either way.
  */
-export async function openPartnerBusiness(context: DomainContext, input: { userId: string; businessId: string; partnerId?: string | undefined; openedBy?: { name: string | null } | undefined }): Promise<{ expiresAt: Date }> {
+export async function openPartnerBusiness(context: DomainContext, input: { userId: string; businessId: string; partnerId?: string | undefined; openedBy?: { name: string | null } | undefined; reuseOpenedSince?: Date | undefined }): Promise<{ expiresAt: Date }> {
   // The person isn't on the business's team, so its rows show only to the system actor until the open exists.
   return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "system" }, async (tx) => {
     const [business] = await tx.select({ partnerId: businesses.partnerId, status: businesses.status }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
@@ -171,6 +174,11 @@ export async function openPartnerBusiness(context: DomainContext, input: { userI
     if (!partnerId || (input.partnerId && input.partnerId.toLowerCase() !== partnerId)) throw businessNotFound();
     const [member] = await tx.select({ role: partnerMembers.role, partnerName: partners.name }).from(partnerMembers).innerJoin(partners, eq(partners.id, partnerMembers.partnerId)).where(and(eq(partnerMembers.partnerId, partnerId), eq(partnerMembers.userId, input.userId), eq(partnerMembers.status, "active"))).limit(1);
     if (!member) throw businessNotFound();
+    if (input.reuseOpenedSince) {
+      const [open] = await tx.select({ expiresAt: partnerBusinessOpens.expiresAt }).from(partnerBusinessOpens)
+        .where(and(eq(partnerBusinessOpens.businessId, input.businessId), eq(partnerBusinessOpens.userId, input.userId), eq(partnerBusinessOpens.partnerId, partnerId), gt(partnerBusinessOpens.expiresAt, sql`now()`), gte(partnerBusinessOpens.openedAt, input.reuseOpenedSince))).limit(1);
+      if (open) return { expiresAt: open.expiresAt };
+    }
     const openedAt = new Date();
     const expiresAt = new Date(openedAt.getTime() + PARTNER_OPEN_LIFETIME_MS);
     await tx.insert(partnerBusinessOpens).values({ businessId: input.businessId, userId: input.userId, partnerId, openedAt, expiresAt }).onConflictDoUpdate({
