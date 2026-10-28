@@ -2,7 +2,7 @@ import { createHmac } from "node:crypto";
 
 import { sql } from "drizzle-orm";
 
-import { isApiKeyScope, type ApiKeyScope } from "@lobbystack/shared";
+import { isApiKeyScope, type ApiKeyScope, type PartnerRole } from "@lobbystack/shared";
 
 import type { DomainContext } from "../context";
 import { derivePepper } from "../publicApi/apiKeys";
@@ -67,4 +67,52 @@ export async function resolveOAuthAccessToken(context: DomainContext, token: str
 /** Records use of a grant, at most once a minute, for the connected apps list. */
 export async function touchOAuthGrant(context: DomainContext, grantId: string): Promise<void> {
   await context.db.execute(sql`select app.touch_oauth_grant(${grantId})`);
+}
+
+/**
+ * An agency grant: one person on a partner's team connected an MCP client to
+ * the partner rather than to one business (ADR 0011). `role` is their role on
+ * the team as the database has it on this request.
+ */
+export type ResolvedPartnerOAuthGrant = {
+  partnerId: string;
+  grantId: string;
+  userId: string;
+  role: PartnerRole;
+  clientId: string;
+  clientName: string | null;
+  scopes: ApiKeyScope[];
+  resources: string[];
+  expiresAt: Date;
+};
+
+/** The reference_id an agency grant and its tokens carry: the partner, prefixed so it never reads as a business id. */
+export function partnerOAuthReference(partnerId: string): string {
+  return `partner:${partnerId.toLowerCase()}`;
+}
+
+/**
+ * Maps an access token to its agency grant. Returns null for anything that is
+ * not a live token of an active grant whose person is still on the partner's
+ * team, which covers every business grant too.
+ */
+export async function resolvePartnerOAuthAccessToken(context: DomainContext, token: string): Promise<ResolvedPartnerOAuthGrant | null> {
+  if (!isOAuthAccessToken(token)) return null;
+  const hash = hashOAuthToken(token.slice(OAUTH_ACCESS_TOKEN_PREFIX.length), "access_token");
+  const result = await context.db.execute<{ partner_id: string; grant_id: string; user_id: string; partner_role: PartnerRole; client_id: string; client_name: string | null; scopes: string[] | null; resources: string[] | null; expires_at: Date | string }>(
+    sql`select partner_id, grant_id, user_id, partner_role, client_id, client_name, scopes, resources, expires_at from app.resolve_partner_oauth_access_token(${hash})`,
+  );
+  const row = result.rows[0];
+  if (!row) return null;
+  return {
+    partnerId: row.partner_id,
+    grantId: row.grant_id,
+    userId: row.user_id,
+    role: row.partner_role,
+    clientId: row.client_id,
+    clientName: row.client_name,
+    scopes: (row.scopes ?? []).filter(isApiKeyScope),
+    resources: row.resources ?? [],
+    expiresAt: new Date(row.expires_at),
+  };
 }

@@ -9,6 +9,7 @@ import type {
   ApiPartnerBusinessBilling,
   ApiPartnerBusinessBillingUpdate,
   ApiPartnerBusinessReleased,
+  ApiPartnerBusinessSummary,
   ApiPartnerDemo,
   ApiPartnerDemoCreate,
   ApiPartnerDemoCreated,
@@ -30,17 +31,17 @@ import type {
   ApiPartnerTierCheckout,
   ApiPartnerTierCheckoutCreate,
 } from "@lobbystack/shared";
-import { keyHasScope, PUBLIC_API_IDEMPOTENCY_TTL_HOURS, type ApiErrorCode } from "@lobbystack/shared";
+import { keyHasScope, PUBLIC_API_IDEMPOTENCY_TTL_HOURS, type ApiErrorCode, type ApiKeyScope } from "@lobbystack/shared";
 
 import { brandForHostReference } from "../brands";
 import { deleteBusinessTemplate, listBusinessTemplates, saveBusinessTemplate, type BusinessSetupDependencies, type PartnerTemplate } from "../businessTemplates";
 import type { DomainContext } from "../context";
 import { createPartnerDemo, deletePartnerDemo, listPartnerDemos, publishPartnerDemo, revokePartnerDemo, rotatePartnerDemoToken, type PartnerDemo } from "../demos";
 import { listPartnerBusinessBillingIn, setPartnerBusinessBilling, setPartnerBusinessOverage, type PartnerBusinessBilling } from "../packageBilling";
-import { partnerRls, type PartnerKeyActor } from "../partnerActors";
+import { partnerActorRole, partnerRls, type PartnerKeyActor } from "../partnerActors";
 import { createPartnerTierCheckout, getPartnerBilling, getPartnerTierCheckout, loadPartnerTierInTransaction, setPartnerPoolOverage, type PartnerBilling, type PartnerTierCheckout } from "../partnerBilling";
 import { addPartnerCustomDomain, getPartnerDomains, removePartnerCustomDomain, type PartnerDomains } from "../partnerDomains";
-import { changePartnerMemberRole, deletePartnerBusiness, getPartnerBrandSettings, invitePartnerMember, listPartnerTeam, releaseBusiness, removePartnerMember, revokePartnerInvitation, savePartnerBrand, type PartnerBrandSettings, type PartnerTeam } from "../partners";
+import { changePartnerMemberRole, deletePartnerBusiness, getPartnerBrandSettings, invitePartnerMember, listPartnerBusinesses, listPartnerTeam, releaseBusiness, removePartnerMember, revokePartnerInvitation, savePartnerBrand, type PartnerActor, type PartnerBrandSettings, type PartnerBusiness, type PartnerTeam } from "../partners";
 import { archivePartnerPackage, createPartnerPackage, getPartnerStripeConnection, listPartnerPackages, renamePartnerPackage, startPartnerStripeOnboarding, type PartnerPackage, type PartnerStripeConnection } from "../partnerStripe";
 import { periodKeyFor } from "../usage";
 import { PublicApiError } from "./errors";
@@ -56,6 +57,28 @@ import type { PartnerPlatformKey } from "./platformKeys";
 /** The key as the actor of a partner operation. */
 export function partnerKeyActor(key: PartnerPlatformKey): PartnerKeyActor {
   return { kind: "key", partnerId: key.partnerId, platformKeyId: key.platformKeyId, scopes: key.scopes };
+}
+
+/**
+ * Someone on the partner's team acting through an agency connection, an MCP
+ * client's OAuth grant for them and the partner (ADR 0011). Partner
+ * operations read their role on every call, so the console's rules apply.
+ * `scopes` are the ones they consented to, which keep billing to the grants
+ * that carry partner.billing scopes, as a key's do.
+ */
+export type PartnerMemberSubject = { kind: "member"; partnerId: string; userId: string; grantId: string; scopes: readonly ApiKeyScope[] };
+
+/** Who calls a Partner operation: one of the partner's platform keys, or one of its people through an agency connection. */
+export type PartnerSubject = PartnerPlatformKey | PartnerMemberSubject;
+
+export function isPartnerMemberSubject(subject: PartnerSubject): subject is PartnerMemberSubject {
+  return (subject as { kind?: unknown }).kind === "member";
+}
+
+/** The partner operation's actor for a subject. A person's role is read again by each operation. */
+export function partnerSubjectActor(subject: PartnerSubject): PartnerActor {
+  if (isPartnerMemberSubject(subject)) return { kind: "member", partnerId: subject.partnerId, userId: subject.userId, role: "member" };
+  return partnerKeyActor(subject);
 }
 
 const ERROR_CODES: Record<number, "invalid_request" | "unauthorized" | "forbidden" | "not_found" | "conflict" | "rate_limited"> = {
@@ -92,8 +115,8 @@ const iso = (value: Date | string | null): string | null => (value === null ? nu
 
 // The partner
 
-export async function getPartnerForApi(context: DomainContext, key: PartnerPlatformKey): Promise<ApiPartner> {
-  const actor = partnerKeyActor(key);
+export async function getPartnerForApi(context: DomainContext, subject: PartnerSubject): Promise<ApiPartner> {
+  const actor = partnerSubjectActor(subject);
   return await partnerOperation(async () => {
     const brand = await getPartnerBrandSettings(context, actor);
     const domains = await getPartnerDomains(context, actor);
@@ -101,9 +124,9 @@ export async function getPartnerForApi(context: DomainContext, key: PartnerPlatf
       const [row] = await tx.select({ slug: partners.slug }).from(partners).where(eq(partners.id, actor.partnerId)).limit(1);
       return { slug: row?.slug ?? "", tier: await loadPartnerTierInTransaction(tx, actor.partnerId) };
     });
-    // A key whose owner is no longer one reads the partner without its pool, as a key without the scope does.
-    const billing = keyHasScope(key.scopes, "partner.billing:read")
-      ? await getPartnerBilling(context, actor).catch((error: unknown) => { if ((error as { code?: unknown } | null)?.code === "key_owner_inactive") return null; throw error; })
+    // A key whose owner is no longer one, or a person who isn't an owner, reads the partner without its pool, as a subject without the scope does.
+    const billing = keyHasScope(subject.scopes, "partner.billing:read")
+      ? await getPartnerBilling(context, actor).catch((error: unknown) => { if (["key_owner_inactive", "owner_only"].includes((error as { code?: string } | null)?.code ?? "")) return null; throw error; })
       : null;
     const custom = domains.custom?.status === "active" ? domains.custom : null;
     return {
@@ -133,13 +156,28 @@ function poolOf(billing: PartnerBilling): ApiPartner["pool"] {
 
 // Businesses
 
-export async function releasePartnerBusinessForApi(context: DomainContext, key: PartnerPlatformKey, businessId: string): Promise<ApiPartnerBusinessReleased> {
-  const { ownerUserId } = await partnerOperation(async () => await releaseBusiness(context, partnerKeyActor(key), { businessId }));
+/** The partner's businesses, by name, as the console lists them. A prospect demo nobody claimed is on the demos list instead. */
+export async function listPartnerBusinessesForApi(context: DomainContext, subject: PartnerSubject): Promise<ApiPartnerBusinessSummary[]> {
+  const rows: PartnerBusiness[] = await partnerOperation(async () => await listPartnerBusinesses(context, partnerSubjectActor(subject)));
+  return rows.map((row) => ({
+    id: row.businessId,
+    name: row.name,
+    access_level: row.accessLevel,
+    onboarding_stage: row.onboardingStage,
+    created_at: new Date(row.createdAt).toISOString(),
+    owner: row.owner ? { email: row.owner.email, status: row.owner.status, invitation_expires_at: row.owner.status === "invited" ? new Date(row.owner.expiresAt).toISOString() : null } : null,
+    usage: { period: row.usage.periodKey, voice_seconds: row.usage.voiceSeconds, chats: row.usage.chats },
+    billing: row.billing ? toApiBusinessBilling(row.businessId, row.billing) : null,
+  }));
+}
+
+export async function releasePartnerBusinessForApi(context: DomainContext, subject: PartnerSubject, businessId: string): Promise<ApiPartnerBusinessReleased> {
+  const { ownerUserId } = await partnerOperation(async () => await releaseBusiness(context, partnerSubjectActor(subject), { businessId }));
   return { id: businessId, released: true, owner_user_id: ownerUserId };
 }
 
-export async function deletePartnerBusinessForApi(context: DomainContext, key: PartnerPlatformKey, businessId: string): Promise<{ id: string; deleted: true }> {
-  await partnerOperation(async () => await deletePartnerBusiness(context, partnerKeyActor(key), { businessId }));
+export async function deletePartnerBusinessForApi(context: DomainContext, subject: PartnerSubject, businessId: string): Promise<{ id: string; deleted: true }> {
+  await partnerOperation(async () => await deletePartnerBusiness(context, partnerSubjectActor(subject), { businessId }));
   return { id: businessId, deleted: true };
 }
 
@@ -157,19 +195,21 @@ function toApiBusinessBilling(businessId: string, billing: PartnerBusinessBillin
 }
 
 /** How one of the partner's businesses is billed. Another partner's business, or one that's gone, is a 404. */
-export async function getPartnerBusinessBillingForApi(context: DomainContext, key: PartnerPlatformKey, businessId: string): Promise<ApiPartnerBusinessBilling> {
-  const actor = partnerKeyActor(key);
+export async function getPartnerBusinessBillingForApi(context: DomainContext, subject: PartnerSubject, businessId: string): Promise<ApiPartnerBusinessBilling> {
+  const actor = partnerSubjectActor(subject);
   const billing = await withBusinessTransaction(context.db, { ...partnerRls(actor), actorType: "operator" }, async (tx) => {
     // The partner's keys aren't on its businesses' teams, so the database lists them.
     const listed = await tx.execute<{ business_id: string }>(sql`select business_id from app.list_partner_businesses(${actor.partnerId}::uuid) where business_id = ${businessId}::uuid`);
     if (!listed.rows.length) throw new PublicApiError(404, "not_found", "Business not found.");
+    // Members never see a business's billing, as on the console's Businesses page. A key acts as an admin.
+    if (await partnerActorRole(tx, actor) === "member") throw new PublicApiError(403, "forbidden", "Only the partner's owners and admins see how its businesses are billed.");
     return context.stripeConnect ? (await listPartnerBusinessBillingIn(tx, actor.partnerId)).get(businessId) : undefined;
   });
   return toApiBusinessBilling(businessId, billing ?? { kind: "outside" });
 }
 
-export async function updatePartnerBusinessBillingForApi(context: DomainContext, key: PartnerPlatformKey, businessId: string, body: ApiPartnerBusinessBillingUpdate): Promise<ApiPartnerBusinessBilling> {
-  const actor = partnerKeyActor(key);
+export async function updatePartnerBusinessBillingForApi(context: DomainContext, subject: PartnerSubject, businessId: string, body: ApiPartnerBusinessBillingUpdate): Promise<ApiPartnerBusinessBilling> {
+  const actor = partnerSubjectActor(subject);
   return await partnerOperation(async () => {
     let billing: PartnerBusinessBilling | null = null;
     if (body.package_id !== undefined) billing = await setPartnerBusinessBilling(context, actor, { businessId, packageId: body.package_id });
@@ -204,8 +244,8 @@ function toApiDemo(demo: PartnerDemo): ApiPartnerDemo {
   };
 }
 
-export async function createPartnerDemoForApi(context: DomainContext, key: PartnerPlatformKey, body: ApiPartnerDemoCreate): Promise<ApiPartnerDemoCreated> {
-  const created = await partnerOperation(async () => await createPartnerDemo(context, partnerKeyActor(key), {
+export async function createPartnerDemoForApi(context: DomainContext, subject: PartnerSubject, body: ApiPartnerDemoCreate): Promise<ApiPartnerDemoCreated> {
+  const created = await partnerOperation(async () => await createPartnerDemo(context, partnerSubjectActor(subject), {
     name: body.name,
     websiteUrl: body.website_url,
     ...(body.access_level ? { accessLevel: body.access_level } : {}),
@@ -217,33 +257,33 @@ export async function createPartnerDemoForApi(context: DomainContext, key: Partn
   return { id: created.demoId, business_id: created.businessId, status: created.status, access_level: created.accessLevel, token: created.token, url: created.url };
 }
 
-export async function listPartnerDemosForApi(context: DomainContext, key: PartnerPlatformKey): Promise<ApiPartnerDemo[]> {
-  return (await partnerOperation(async () => await listPartnerDemos(context, partnerKeyActor(key)))).map(toApiDemo);
+export async function listPartnerDemosForApi(context: DomainContext, subject: PartnerSubject): Promise<ApiPartnerDemo[]> {
+  return (await partnerOperation(async () => await listPartnerDemos(context, partnerSubjectActor(subject)))).map(toApiDemo);
 }
 
-export async function getPartnerDemoForApi(context: DomainContext, key: PartnerPlatformKey, demoId: string): Promise<ApiPartnerDemo> {
-  const demo = (await partnerOperation(async () => await listPartnerDemos(context, partnerKeyActor(key)))).find((candidate) => candidate.demoId === demoId);
+export async function getPartnerDemoForApi(context: DomainContext, subject: PartnerSubject, demoId: string): Promise<ApiPartnerDemo> {
+  const demo = (await partnerOperation(async () => await listPartnerDemos(context, partnerSubjectActor(subject)))).find((candidate) => candidate.demoId === demoId);
   if (!demo) throw new PublicApiError(404, "not_found", "Prospect demo not found.");
   return toApiDemo(demo);
 }
 
-export async function publishPartnerDemoForApi(context: DomainContext, key: PartnerPlatformKey, demoId: string, body: ApiPartnerDemoPublish): Promise<ApiPartnerDemoState> {
-  const published = await partnerOperation(async () => await publishPartnerDemo(context, partnerKeyActor(key), { demoId, token: body.token, ...(body.suggested_prompts ? { suggestedPrompts: body.suggested_prompts } : {}) }));
+export async function publishPartnerDemoForApi(context: DomainContext, subject: PartnerSubject, demoId: string, body: ApiPartnerDemoPublish): Promise<ApiPartnerDemoState> {
+  const published = await partnerOperation(async () => await publishPartnerDemo(context, partnerSubjectActor(subject), { demoId, token: body.token, ...(body.suggested_prompts ? { suggestedPrompts: body.suggested_prompts } : {}) }));
   return { id: demoId, status: published.status, expires_at: published.expiresAt.toISOString() };
 }
 
-export async function rotatePartnerDemoLinkForApi(context: DomainContext, key: PartnerPlatformKey, demoId: string): Promise<ApiPartnerDemoLink> {
-  const rotated = await partnerOperation(async () => await rotatePartnerDemoToken(context, partnerKeyActor(key), { demoId }));
+export async function rotatePartnerDemoLinkForApi(context: DomainContext, subject: PartnerSubject, demoId: string): Promise<ApiPartnerDemoLink> {
+  const rotated = await partnerOperation(async () => await rotatePartnerDemoToken(context, partnerSubjectActor(subject), { demoId }));
   return { id: demoId, token: rotated.token, url: rotated.url };
 }
 
-export async function revokePartnerDemoForApi(context: DomainContext, key: PartnerPlatformKey, demoId: string): Promise<ApiPartnerDemoState> {
-  await partnerOperation(async () => await revokePartnerDemo(context, partnerKeyActor(key), { demoId }));
+export async function revokePartnerDemoForApi(context: DomainContext, subject: PartnerSubject, demoId: string): Promise<ApiPartnerDemoState> {
+  await partnerOperation(async () => await revokePartnerDemo(context, partnerSubjectActor(subject), { demoId }));
   return { id: demoId, status: "revoked", expires_at: null };
 }
 
-export async function deletePartnerDemoForApi(context: DomainContext, key: PartnerPlatformKey, demoId: string): Promise<{ id: string; deleted: true }> {
-  await partnerOperation(async () => await deletePartnerDemo(context, partnerKeyActor(key), { demoId }));
+export async function deletePartnerDemoForApi(context: DomainContext, subject: PartnerSubject, demoId: string): Promise<{ id: string; deleted: true }> {
+  await partnerOperation(async () => await deletePartnerDemo(context, partnerSubjectActor(subject), { demoId }));
   return { id: demoId, deleted: true };
 }
 
@@ -262,20 +302,20 @@ function toApiPackage(pkg: PartnerPackage): ApiPartnerPackage {
   };
 }
 
-export async function listPartnerPackagesForApi(context: DomainContext, key: PartnerPlatformKey): Promise<ApiPartnerPackage[]> {
-  return (await partnerOperation(async () => await listPartnerPackages(context, partnerKeyActor(key)))).packages.map(toApiPackage);
+export async function listPartnerPackagesForApi(context: DomainContext, subject: PartnerSubject): Promise<ApiPartnerPackage[]> {
+  return (await partnerOperation(async () => await listPartnerPackages(context, partnerSubjectActor(subject)))).packages.map(toApiPackage);
 }
 
-export async function createPartnerPackageForApi(context: DomainContext, key: PartnerPlatformKey, body: ApiPartnerPackageCreate): Promise<ApiPartnerPackage> {
-  return toApiPackage(await partnerOperation(async () => await createPartnerPackage(context, partnerKeyActor(key), { name: body.name, monthlyPriceMinor: body.monthly_price_minor, setupFeeMinor: body.setup_fee_minor ?? null, voiceMinutes: body.voice_minutes, chats: body.chats })));
+export async function createPartnerPackageForApi(context: DomainContext, subject: PartnerSubject, body: ApiPartnerPackageCreate): Promise<ApiPartnerPackage> {
+  return toApiPackage(await partnerOperation(async () => await createPartnerPackage(context, partnerSubjectActor(subject), { name: body.name, monthlyPriceMinor: body.monthly_price_minor, setupFeeMinor: body.setup_fee_minor ?? null, voiceMinutes: body.voice_minutes, chats: body.chats })));
 }
 
-export async function renamePartnerPackageForApi(context: DomainContext, key: PartnerPlatformKey, packageId: string, name: string): Promise<ApiPartnerPackage> {
-  return toApiPackage(await partnerOperation(async () => await renamePartnerPackage(context, partnerKeyActor(key), { packageId, name })));
+export async function renamePartnerPackageForApi(context: DomainContext, subject: PartnerSubject, packageId: string, name: string): Promise<ApiPartnerPackage> {
+  return toApiPackage(await partnerOperation(async () => await renamePartnerPackage(context, partnerSubjectActor(subject), { packageId, name })));
 }
 
-export async function archivePartnerPackageForApi(context: DomainContext, key: PartnerPlatformKey, packageId: string): Promise<{ id: string; deleted: true }> {
-  await partnerOperation(async () => await archivePartnerPackage(context, partnerKeyActor(key), { packageId }));
+export async function archivePartnerPackageForApi(context: DomainContext, subject: PartnerSubject, packageId: string): Promise<{ id: string; deleted: true }> {
+  await partnerOperation(async () => await archivePartnerPackage(context, partnerSubjectActor(subject), { packageId }));
   return { id: packageId, deleted: true };
 }
 
@@ -296,13 +336,13 @@ function toApiBrand(brand: PartnerBrandSettings): ApiPartnerBrand {
   };
 }
 
-export async function getPartnerBrandForApi(context: DomainContext, key: PartnerPlatformKey): Promise<ApiPartnerBrand> {
-  return toApiBrand(await partnerOperation(async () => await getPartnerBrandSettings(context, partnerKeyActor(key))));
+export async function getPartnerBrandForApi(context: DomainContext, subject: PartnerSubject): Promise<ApiPartnerBrand> {
+  return toApiBrand(await partnerOperation(async () => await getPartnerBrandSettings(context, partnerSubjectActor(subject))));
 }
 
 /** Saves the fields sent over the brand as it is. An image left out stays, and null removes it. */
-export async function updatePartnerBrandForApi(context: DomainContext, key: PartnerPlatformKey, body: ApiPartnerBrandUpdate): Promise<ApiPartnerBrand> {
-  const actor = partnerKeyActor(key);
+export async function updatePartnerBrandForApi(context: DomainContext, subject: PartnerSubject, body: ApiPartnerBrandUpdate): Promise<ApiPartnerBrand> {
+  const actor = partnerSubjectActor(subject);
   return toApiBrand(await partnerOperation(async () => {
     const current = await getPartnerBrandSettings(context, actor);
     const image = (value: string | null | undefined) => (value === undefined ? undefined : value === null ? null : Buffer.from(value, "base64"));
@@ -331,16 +371,16 @@ function toApiDomains(domains: PartnerDomains): ApiPartnerDomains {
   };
 }
 
-export async function getPartnerDomainsForApi(context: DomainContext, key: PartnerPlatformKey): Promise<ApiPartnerDomains> {
-  return toApiDomains(await partnerOperation(async () => await getPartnerDomains(context, partnerKeyActor(key))));
+export async function getPartnerDomainsForApi(context: DomainContext, subject: PartnerSubject): Promise<ApiPartnerDomains> {
+  return toApiDomains(await partnerOperation(async () => await getPartnerDomains(context, partnerSubjectActor(subject))));
 }
 
-export async function addPartnerDomainForApi(context: DomainContext, key: PartnerPlatformKey, hostname: string): Promise<ApiPartnerDomains> {
-  return toApiDomains(await partnerOperation(async () => await addPartnerCustomDomain(context, partnerKeyActor(key), { hostname })));
+export async function addPartnerDomainForApi(context: DomainContext, subject: PartnerSubject, hostname: string): Promise<ApiPartnerDomains> {
+  return toApiDomains(await partnerOperation(async () => await addPartnerCustomDomain(context, partnerSubjectActor(subject), { hostname })));
 }
 
-export async function removePartnerDomainForApi(context: DomainContext, key: PartnerPlatformKey): Promise<ApiPartnerDomains> {
-  return toApiDomains(await partnerOperation(async () => await removePartnerCustomDomain(context, partnerKeyActor(key))));
+export async function removePartnerDomainForApi(context: DomainContext, subject: PartnerSubject): Promise<ApiPartnerDomains> {
+  return toApiDomains(await partnerOperation(async () => await removePartnerCustomDomain(context, partnerSubjectActor(subject))));
 }
 
 // Templates
@@ -349,16 +389,16 @@ function toApiTemplate(template: PartnerTemplate): ApiPartnerTemplate {
   return { id: template.templateId, name: template.name, created_at: template.createdAt, manifest: template.template as unknown as Record<string, unknown> };
 }
 
-export async function listPartnerTemplatesForApi(context: DomainContext, key: PartnerPlatformKey): Promise<ApiPartnerTemplate[]> {
-  return (await partnerOperation(async () => await listBusinessTemplates(context, partnerKeyActor(key)))).map(toApiTemplate);
+export async function listPartnerTemplatesForApi(context: DomainContext, subject: PartnerSubject): Promise<ApiPartnerTemplate[]> {
+  return (await partnerOperation(async () => await listBusinessTemplates(context, partnerSubjectActor(subject)))).map(toApiTemplate);
 }
 
-export async function createPartnerTemplateForApi(context: DomainContext, key: PartnerPlatformKey, body: { business_id: string; name: string }, dependencies: Pick<BusinessSetupDependencies, "storage">): Promise<ApiPartnerTemplate> {
-  return toApiTemplate(await partnerOperation(async () => await saveBusinessTemplate(context, partnerKeyActor(key), { businessId: body.business_id, name: body.name }, dependencies)));
+export async function createPartnerTemplateForApi(context: DomainContext, subject: PartnerSubject, body: { business_id: string; name: string }, dependencies: Pick<BusinessSetupDependencies, "storage">): Promise<ApiPartnerTemplate> {
+  return toApiTemplate(await partnerOperation(async () => await saveBusinessTemplate(context, partnerSubjectActor(subject), { businessId: body.business_id, name: body.name }, dependencies)));
 }
 
-export async function deletePartnerTemplateForApi(context: DomainContext, key: PartnerPlatformKey, templateId: string): Promise<{ id: string; deleted: true }> {
-  await partnerOperation(async () => await deleteBusinessTemplate(context, partnerKeyActor(key), { templateId }));
+export async function deletePartnerTemplateForApi(context: DomainContext, subject: PartnerSubject, templateId: string): Promise<{ id: string; deleted: true }> {
+  await partnerOperation(async () => await deleteBusinessTemplate(context, partnerSubjectActor(subject), { templateId }));
   return { id: templateId, deleted: true };
 }
 
@@ -371,12 +411,12 @@ function toApiTeam(team: PartnerTeam): ApiPartnerTeam {
   };
 }
 
-export async function getPartnerTeamForApi(context: DomainContext, key: PartnerPlatformKey): Promise<ApiPartnerTeam> {
-  return toApiTeam(await partnerOperation(async () => await listPartnerTeam(context, partnerKeyActor(key))));
+export async function getPartnerTeamForApi(context: DomainContext, subject: PartnerSubject): Promise<ApiPartnerTeam> {
+  return toApiTeam(await partnerOperation(async () => await listPartnerTeam(context, partnerSubjectActor(subject))));
 }
 
-export async function createPartnerTeamInvitationForApi(context: DomainContext, key: PartnerPlatformKey, body: ApiPartnerTeamInvitationCreate): Promise<ApiPartnerTeamInvitation> {
-  const actor = partnerKeyActor(key);
+export async function createPartnerTeamInvitationForApi(context: DomainContext, subject: PartnerSubject, body: ApiPartnerTeamInvitationCreate): Promise<ApiPartnerTeamInvitation> {
+  const actor = partnerSubjectActor(subject);
   return await partnerOperation(async () => {
     const invited = await invitePartnerMember(context, actor, { email: body.email, role: body.role });
     const invitation = (await listPartnerTeam(context, actor)).invitations.find((candidate) => candidate.invitationId === invited.invitationId);
@@ -385,13 +425,13 @@ export async function createPartnerTeamInvitationForApi(context: DomainContext, 
   });
 }
 
-export async function revokePartnerTeamInvitationForApi(context: DomainContext, key: PartnerPlatformKey, invitationId: string): Promise<{ id: string; deleted: true }> {
-  await partnerOperation(async () => await revokePartnerInvitation(context, partnerKeyActor(key), { invitationId }));
+export async function revokePartnerTeamInvitationForApi(context: DomainContext, subject: PartnerSubject, invitationId: string): Promise<{ id: string; deleted: true }> {
+  await partnerOperation(async () => await revokePartnerInvitation(context, partnerSubjectActor(subject), { invitationId }));
   return { id: invitationId, deleted: true };
 }
 
-export async function updatePartnerTeamMemberForApi(context: DomainContext, key: PartnerPlatformKey, memberId: string, role: "admin" | "member"): Promise<ApiPartnerTeamMember> {
-  const actor = partnerKeyActor(key);
+export async function updatePartnerTeamMemberForApi(context: DomainContext, subject: PartnerSubject, memberId: string, role: "admin" | "member"): Promise<ApiPartnerTeamMember> {
+  const actor = partnerSubjectActor(subject);
   return await partnerOperation(async () => {
     await changePartnerMemberRole(context, actor, { memberId, role });
     const member = toApiTeam(await listPartnerTeam(context, actor)).members.find((candidate) => candidate.id === memberId);
@@ -400,8 +440,8 @@ export async function updatePartnerTeamMemberForApi(context: DomainContext, key:
   });
 }
 
-export async function removePartnerTeamMemberForApi(context: DomainContext, key: PartnerPlatformKey, memberId: string): Promise<{ id: string; deleted: true }> {
-  await partnerOperation(async () => await removePartnerMember(context, partnerKeyActor(key), { memberId }));
+export async function removePartnerTeamMemberForApi(context: DomainContext, subject: PartnerSubject, memberId: string): Promise<{ id: string; deleted: true }> {
+  await partnerOperation(async () => await removePartnerMember(context, partnerSubjectActor(subject), { memberId }));
   return { id: memberId, deleted: true };
 }
 
@@ -428,19 +468,19 @@ function toApiStripe(connection: PartnerStripeConnection): ApiPartnerStripeConne
   };
 }
 
-export async function getPartnerStripeForApi(context: DomainContext, key: PartnerPlatformKey, options: { refresh?: boolean } = {}): Promise<ApiPartnerStripeConnection> {
-  return toApiStripe(await partnerOperation(async () => await getPartnerStripeConnection(context, partnerKeyActor(key), options)));
+export async function getPartnerStripeForApi(context: DomainContext, subject: PartnerSubject, options: { refresh?: boolean } = {}): Promise<ApiPartnerStripeConnection> {
+  return toApiStripe(await partnerOperation(async () => await getPartnerStripeConnection(context, partnerSubjectActor(subject), options)));
 }
 
 /** Stripe brings the owner back to the console's Payments page, on the partner's domain. */
-export async function createPartnerStripeOnboardingLinkForApi(context: DomainContext, key: PartnerPlatformKey, body: { country?: string | undefined }): Promise<ApiPartnerLink> {
-  const page = `${await partnerConsoleOrigin(context, key.partnerId)}/partner/${key.partnerId.toLowerCase()}/payments`;
-  const { url } = await partnerOperation(async () => await startPartnerStripeOnboarding(context, partnerKeyActor(key), { country: body.country ?? null, returnUrl: `${page}?onboarding=return`, refreshUrl: `${page}?onboarding=refresh` }));
+export async function createPartnerStripeOnboardingLinkForApi(context: DomainContext, subject: PartnerSubject, body: { country?: string | undefined }): Promise<ApiPartnerLink> {
+  const page = `${await partnerConsoleOrigin(context, subject.partnerId)}/partner/${subject.partnerId.toLowerCase()}/payments`;
+  const { url } = await partnerOperation(async () => await startPartnerStripeOnboarding(context, partnerSubjectActor(subject), { country: body.country ?? null, returnUrl: `${page}?onboarding=return`, refreshUrl: `${page}?onboarding=refresh` }));
   return { url };
 }
 
-export async function getPartnerBillingForApi(context: DomainContext, key: PartnerPlatformKey): Promise<ApiPartnerBilling> {
-  const billing = await partnerOperation(async () => await getPartnerBilling(context, partnerKeyActor(key)));
+export async function getPartnerBillingForApi(context: DomainContext, subject: PartnerSubject): Promise<ApiPartnerBilling> {
+  const billing = await partnerOperation(async () => await getPartnerBilling(context, partnerSubjectActor(subject)));
   return {
     billed: billing.billed,
     tier: billing.tier,
@@ -456,8 +496,8 @@ export async function getPartnerBillingForApi(context: DomainContext, key: Partn
   };
 }
 
-export async function updatePartnerPoolOverageForApi(context: DomainContext, key: PartnerPlatformKey, body: ApiPartnerPoolOverageUpdate): Promise<ApiPartnerPoolOverage> {
-  const overage = await partnerOperation(async () => await setPartnerPoolOverage(context, partnerKeyActor(key), { enabled: body.enabled, capCents: body.cap_cents ?? null }));
+export async function updatePartnerPoolOverageForApi(context: DomainContext, subject: PartnerSubject, body: ApiPartnerPoolOverageUpdate): Promise<ApiPartnerPoolOverage> {
+  const overage = await partnerOperation(async () => await setPartnerPoolOverage(context, partnerSubjectActor(subject), { enabled: body.enabled, capCents: body.cap_cents ?? null }));
   return { enabled: overage.enabled, cap_cents: overage.capCents, billed: overage.billed };
 }
 
@@ -466,17 +506,17 @@ function toApiTierCheckout(checkout: PartnerTierCheckout): ApiPartnerTierCheckou
 }
 
 /** Polar brings the owner back to the console they'd start a checkout from: the partner's own domain. */
-export async function createPartnerTierCheckoutForApi(context: DomainContext, key: PartnerPlatformKey, body: ApiPartnerTierCheckoutCreate): Promise<ApiPartnerTierCheckout> {
-  const actor = partnerKeyActor(key);
-  const returnOrigin = await partnerConsoleOrigin(context, key.partnerId);
+export async function createPartnerTierCheckoutForApi(context: DomainContext, subject: PartnerSubject, body: ApiPartnerTierCheckoutCreate): Promise<ApiPartnerTierCheckout> {
+  const actor = partnerSubjectActor(subject);
+  const returnOrigin = await partnerConsoleOrigin(context, subject.partnerId);
   return await partnerOperation(async () => {
     const { requestId } = await createPartnerTierCheckout(context, actor, { tier: body.tier, billingInterval: body.interval, returnOrigin });
     return toApiTierCheckout(await getPartnerTierCheckout(context, actor, { requestId }));
   });
 }
 
-export async function getPartnerTierCheckoutForApi(context: DomainContext, key: PartnerPlatformKey, checkoutId: string): Promise<ApiPartnerTierCheckout> {
-  return toApiTierCheckout(await partnerOperation(async () => await getPartnerTierCheckout(context, partnerKeyActor(key), { requestId: checkoutId })));
+export async function getPartnerTierCheckoutForApi(context: DomainContext, subject: PartnerSubject, checkoutId: string): Promise<ApiPartnerTierCheckout> {
+  return toApiTierCheckout(await partnerOperation(async () => await getPartnerTierCheckout(context, partnerSubjectActor(subject), { requestId: checkoutId })));
 }
 
 // Idempotency

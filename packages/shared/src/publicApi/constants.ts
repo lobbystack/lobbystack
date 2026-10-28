@@ -104,6 +104,14 @@ export type OAuthGrantableScope = (typeof mcpToolScopes)[number];
 /** Scopes an MCP client can be granted with OAuth. Scopes without MCP tools, such as webhooks:manage, are never offered. */
 export const oauthGrantableScopes = apiKeyScopes.filter((scope): scope is OAuthGrantableScope => (mcpToolScopes as readonly string[]).includes(scope));
 
+/**
+ * Scopes an agency connection can be granted with OAuth on top of the
+ * per-business ones: the partner scopes, and creating businesses. The billing
+ * scopes are offered to owners only, as for a partner's platform keys.
+ */
+export const oauthPartnerGrantableScopes = ["businesses:create", ...partnerScopes] as const satisfies readonly ApiKeyScope[];
+export type OAuthPartnerGrantableScope = (typeof oauthPartnerGrantableScopes)[number];
+
 export function isApiKeyScope(value: unknown): value is ApiKeyScope {
   return typeof value === "string" && (apiKeyScopes as readonly string[]).includes(value);
 }

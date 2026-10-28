@@ -121,7 +121,8 @@ import { deleteAgentRuleInTransaction, insertAgentRuleInTransaction, listAgentRu
 import { insertWidgetKeyInTransaction, updateWidgetKeyInTransaction, type WidgetKeyPatch } from "../widgetKeys";
 import { ianaTimeZone, insertBusinessInTransaction, insertInvitationInTransaction, invitationUrl, isSingleEmailAddress, lockBusinessTeam, partnerBusinessNotClaimable, removeMemberInTransaction, revokeInvitationInTransaction, updateBusinessInTransaction, updateMemberRoleInTransaction } from "../tenancy";
 import { conflict, invalidRequest, notFound, PublicApiError } from "./errors";
-import { lockActivePartnerPlatformKey, refusePartnerPlatformKey, type HostPlatformKey, type PartnerPlatformKey, type ResolvedPlatformKey } from "./platformKeys";
+import { isPartnerMemberSubject, partnerSubjectActor, type PartnerSubject } from "./partner";
+import { lockActivePartnerPlatformKey, refusePartnerPlatformKey, type HostPlatformKey, type ResolvedPlatformKey } from "./platformKeys";
 import {
   clockToMinutes,
   decodeCursor,
@@ -191,7 +192,7 @@ export type PlatformKeyCaller = { businessId: string; platformKeyId: string; gro
  * Unlike a partner's platform key, they act as themself. Like one, they act
  * for the partner, so what only the host's keys may do refuses them too.
  */
-export type PartnerMemberCaller = { businessId: string; partnerId: string; userId: string; apiKeyId?: undefined; grantId?: undefined; platformKeyId?: undefined; actor: "partner_member" };
+export type PartnerMemberCaller = { businessId: string; partnerId: string; userId: string; apiKeyId?: undefined; grantId?: undefined; platformKeyId?: undefined; actor: "partner_member"; mcpGrantId?: string | undefined };
 export type ApiCaller = ApiKeyCaller | OAuthGrantCaller | PlatformKeyCaller | PartnerMemberCaller;
 
 /**
@@ -216,7 +217,8 @@ export function callerPrincipalId(caller: ApiCaller): string {
  * groupId and partnerId.
  */
 export function callerAudit(caller: ApiCaller): ApiAudit {
-  if (caller.actor === "partner_member") return { actorUserId: caller.userId, payload: { actor: "partner_member", partnerId: caller.partnerId } };
+  // Through an agency connection, the MCP client's grant is recorded too.
+  if (caller.actor === "partner_member") return { actorUserId: caller.userId, payload: { actor: "partner_member", partnerId: caller.partnerId, ...(caller.mcpGrantId ? { via: "mcp", grantId: caller.mcpGrantId } : {}) } };
   if (caller.grantId !== undefined) return { actorUserId: caller.userId, payload: { actor: "mcp", grantId: caller.grantId } };
   if (caller.platformKeyId !== undefined && caller.partnerId !== undefined) return { actorUserId: null, payload: { actor: "platform_key", platformKeyId: caller.platformKeyId, groupId: caller.groupId, partnerId: caller.partnerId } };
   if (caller.platformKeyId !== undefined) return { actorUserId: null, payload: { actor: "platform_key", platformKeyId: caller.platformKeyId, groupId: caller.groupId, actingUserId: caller.actingUserId } };
@@ -1360,17 +1362,19 @@ const partnerBusinessFields: Record<string, string> = { invalid_name: "name", in
  */
 export async function createPartnerBusinessForApi(
   context: DomainContext,
-  input: { key: PartnerPlatformKey; idempotencyKey: string; requestHash: string; body: ApiBusinessCreate },
+  input: { key: PartnerSubject; idempotencyKey: string; requestHash: string; body: ApiBusinessCreate },
   options: { beforeCreate?: (() => Promise<void>) | undefined; setup?: BusinessSetupDependencies | undefined } = {},
 ): Promise<{ business: ApiBusiness; replayed: boolean }> {
   const { body, key } = input;
+  const what = isPartnerMemberSubject(key) ? "This connection" : "This API key";
   // Selling a package and reading a template are the partner's own work, so they take its scopes on top of businesses:create.
-  if (body.package_id !== undefined && !keyHasScope(key.scopes, "partner.businesses:write")) throw new PublicApiError(403, "insufficient_scope", "This API key needs the partner.businesses:write scope to send package_id.");
-  if (body.template_id !== undefined && !keyHasScope(key.scopes, "partner:read")) throw new PublicApiError(403, "insufficient_scope", "This API key needs the partner:read scope to send template_id.");
-  if (body.owner_email === undefined) throw invalidRequest("A partner's platform key invites the business's owner as it creates the business, so send owner_email.", [{ path: "owner_email", message: "Required with a partner's platform key." }]);
+  if (body.package_id !== undefined && !keyHasScope(key.scopes, "partner.businesses:write")) throw new PublicApiError(403, "insufficient_scope", `${what} needs the partner.businesses:write scope to send package_id.`);
+  if (body.template_id !== undefined && !keyHasScope(key.scopes, "partner:read")) throw new PublicApiError(403, "insufficient_scope", `${what} needs the partner:read scope to send template_id.`);
+  if (body.owner_email === undefined) throw invalidRequest("A partner invites the business's owner as it creates the business, so send owner_email.", [{ path: "owner_email", message: "Required for a partner's business." }]);
   const timezone = ianaTimeZone(body.timezone);
   if (!timezone) throw invalidRequest("timezone is not a valid IANA time zone.", [{ path: "timezone", message: "Use an IANA time zone such as America/Toronto." }]);
-  const businessId = platformBusinessId(key.platformKeyId, input.idempotencyKey);
+  // The Idempotency-Key decides the id within its key, or within a person's agency connection.
+  const businessId = platformBusinessId(isPartnerMemberSubject(key) ? `grant:${key.grantId}` : key.platformKeyId, input.idempotencyKey);
   const inBusinessAsSystem = async <T>(run: (tx: DatabaseTransaction) => Promise<T>) => await withBusinessTransaction(context.db, { businessId, actorType: "system" }, run);
   const created = async (): Promise<ApiBusiness | null> => await inBusinessAsSystem(async (tx) => {
     const [row] = await tx.select({ payload: auditLogs.payload }).from(auditLogs).where(and(eq(auditLogs.businessId, businessId), eq(auditLogs.eventType, "partner.business_created"))).limit(1);
@@ -1388,7 +1392,7 @@ export async function createPartnerBusinessForApi(
   await options.beforeCreate?.();
   try {
     if (body.template_id !== undefined && !options.setup) throw new Error("Applying a template needs the worker's context and storage.");
-    await createPartnerBusiness(context, { kind: "key", partnerId: key.partnerId, platformKeyId: key.platformKeyId, scopes: key.scopes }, {
+    await createPartnerBusiness(context, partnerSubjectActor(key), {
       businessId,
       name: body.name,
       timezone,

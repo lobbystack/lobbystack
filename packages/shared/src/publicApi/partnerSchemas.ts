@@ -77,6 +77,22 @@ export const apiPartnerBusinessBillingUpdateSchema = z.strictObject({
   }).optional().describe("The business's overage on its package. Applied after package_id. A business billed outside LobbyStack has none, so sending it is a 409."),
 }).refine((body) => body.package_id !== undefined || body.overage !== undefined, { message: "Send package_id, overage or both." });
 
+/** One of the partner's businesses as its console's Businesses page lists it. The MCP server's list_businesses answers with it. */
+export const apiPartnerBusinessSummarySchema = z.object({
+  id,
+  name: z.string(),
+  access_level: z.enum(partnerAccessLevels),
+  onboarding_stage: z.string(),
+  created_at: timestamp,
+  owner: z.object({
+    email: z.string(),
+    status: z.enum(["joined", "invited"]).describe("joined once the owner accepted, invited while the invitation waits."),
+    invitation_expires_at: nullableTimestamp,
+  }).nullable().describe("The business's owner, or the person invited to own it. Null for neither, such as a claimed demo's."),
+  usage,
+  billing: apiPartnerBusinessBillingSchema.nullable().describe("How the business is billed. Null for members of the partner's team, who never see billing."),
+});
+
 export const apiPartnerDemoCreateSchema = z.strictObject({
   name: z.string().trim().min(1).max(120).describe("The prospect's business name."),
   website_url: z.url().max(2_000).describe("The prospect's website, which the demo reads."),
@@ -318,6 +334,7 @@ export const apiPartnerTierCheckoutSchema = z.object({
 
 export type ApiPartner = z.infer<typeof apiPartnerSchema>;
 export type ApiPartnerBusinessReleased = z.infer<typeof apiPartnerBusinessReleasedSchema>;
+export type ApiPartnerBusinessSummary = z.infer<typeof apiPartnerBusinessSummarySchema>;
 export type ApiPartnerBusinessBilling = z.infer<typeof apiPartnerBusinessBillingSchema>;
 export type ApiPartnerBusinessBillingUpdate = z.infer<typeof apiPartnerBusinessBillingUpdateSchema>;
 export type ApiPartnerDemoCreate = z.infer<typeof apiPartnerDemoCreateSchema>;

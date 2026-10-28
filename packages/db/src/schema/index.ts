@@ -1447,6 +1447,22 @@ export const partnerLifecycleEvents = pgTable(
   (table) => [index("partner_lifecycle_events_partner_idx").on(table.partnerId, table.createdAt)],
 );
 
+// What happened to the partner itself rather than to one of its businesses, such as an agency connection approved or revoked (migration 0164).
+export const partnerAuditLogs = pgTable(
+  "partner_audit_logs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    partnerId: uuid("partner_id").notNull().references(() => partners.id, { onDelete: "cascade" }),
+    actorUserId: uuid("actor_user_id").references(() => users.id, { onDelete: "set null" }),
+    eventType: varchar("event_type", { length: 64 }).notNull(),
+    entityType: varchar("entity_type", { length: 64 }).notNull(),
+    entityId: text("entity_id"),
+    payload: jsonb("payload").$type<Record<string, unknown>>().default({}).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("partner_audit_logs_partner_idx").on(table.partnerId, table.createdAt)],
+);
+
 // Whether this deployment bills partners for tiers, as the worker last recorded it from the environment. At most one row (migration 0147).
 export const partnerTierBilling = pgTable("partner_tier_billing", {
   id: smallint("id").default(1).primaryKey(),
@@ -2305,6 +2321,7 @@ export const schema = {
   partnerCheckoutRequests,
   partnerLifecycles,
   partnerLifecycleEvents,
+  partnerAuditLogs,
   partnerTierBilling,
   partnerNumberCharges,
   billingTransactions,
