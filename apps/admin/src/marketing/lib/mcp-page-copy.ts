@@ -118,7 +118,7 @@ const en: McpCopy = {
     eyebrow: "MCP server",
     title: "Manage your AI receptionist from the AI tools your team already uses",
     intro:
-      "Ask Claude or ChatGPT who called yesterday, then have it book the caller and update their contact. You can change your opening hours and add an answer for your receptionist from the same chat. Add one server URL, sign in to LobbyStack and approve what the assistant can do.",
+      "Check calls, book appointments and update your hours from Claude, ChatGPT or Cursor. You approve what each assistant can do.",
     primaryCta: "Try for free",
     secondaryCta: "Read the setup guide",
     urlLabel: "Server URL",
@@ -131,9 +131,9 @@ const en: McpCopy = {
   ],
   ask: {
     eyebrow: "What it does",
-    titleLines: ["Run your receptionist from the chat", "with the AI receptionist MCP server"],
+    titleLines: ["What you can ask", "the AI receptionist MCP server"],
     intro:
-      "Ask in plain words. Your assistant reads the calls, contacts, appointments and hours your dashboard shows. It changes contacts, appointments and hours on request and adds answers your receptionist gives callers.",
+      "Ask in plain words. The assistant answers from the same calls, contacts and appointments as your dashboard.",
     calls: {
       eyebrow: "Calls and messages",
       title: "Ask who called and what they needed",
@@ -241,7 +241,7 @@ const fr: McpCopy = {
     eyebrow: "Serveur MCP",
     title: "Gérez votre réceptionniste IA depuis les outils d'IA que votre équipe utilise déjà",
     intro:
-      "Demandez à Claude ou à ChatGPT qui a appelé hier, puis faites-lui réserver le client et mettre à jour sa fiche. Depuis la même conversation, changez vos heures d'ouverture et ajoutez une réponse pour votre réceptionniste. Ajoutez l'URL du serveur, connectez-vous à LobbyStack et approuvez ce que l'assistant peut faire.",
+      "Consultez vos appels, réservez des rendez-vous et modifiez vos heures depuis Claude, ChatGPT ou Cursor. Vous approuvez ce que chaque assistant peut faire.",
     primaryCta: "Essayer gratuitement",
     secondaryCta: "Lire le guide de configuration",
     urlLabel: "URL du serveur",
@@ -254,9 +254,9 @@ const fr: McpCopy = {
   ],
   ask: {
     eyebrow: "Ce qu'il fait",
-    titleLines: ["Gérez votre réceptionniste depuis la conversation", "avec le serveur MCP de réceptionniste IA"],
+    titleLines: ["Ce que vous pouvez demander", "au serveur MCP de réceptionniste IA"],
     intro:
-      "Posez vos questions en langage courant. Votre assistant lit les appels, les contacts, les rendez-vous et les heures que montre votre tableau de bord. Sur demande, il modifie les contacts, les rendez-vous et les heures, et ajoute les réponses que votre réceptionniste donne aux appelants.",
+      "Posez vos questions en langage courant. L'assistant répond à partir des mêmes appels, contacts et rendez-vous que votre tableau de bord.",
     calls: {
       eyebrow: "Appels et messages",
       title: "Demandez qui a appelé et pourquoi",
@@ -364,7 +364,7 @@ const es: McpCopy = {
     eyebrow: "Servidor MCP",
     title: "Gestione su recepcionista con IA desde las herramientas de IA que su equipo ya usa",
     intro:
-      "Pregúntele a Claude o ChatGPT quién llamó ayer y luego pídale que reserve al cliente y actualice su contacto. Desde el mismo chat puede cambiar su horario de atención y agregar una respuesta para su recepcionista. Agregue la URL del servidor, inicie sesión en LobbyStack y apruebe lo que el asistente puede hacer.",
+      "Revise llamadas, reserve citas y cambie su horario desde Claude, ChatGPT o Cursor. Usted aprueba lo que puede hacer cada asistente.",
     primaryCta: "Pruébelo gratis",
     secondaryCta: "Leer la guía de configuración",
     urlLabel: "URL del servidor",
@@ -377,9 +377,9 @@ const es: McpCopy = {
   ],
   ask: {
     eyebrow: "Lo que hace",
-    titleLines: ["Gestione su recepcionista desde el chat", "con el servidor MCP de recepcionista con IA"],
+    titleLines: ["Lo que puede pedirle", "al servidor MCP de recepcionista con IA"],
     intro:
-      "Pregunte con sus propias palabras. Su asistente lee las llamadas, los contactos, las citas y los horarios que muestra su panel. Si se lo pide, cambia contactos, citas y horarios, y agrega las respuestas que su recepcionista da a quienes llaman.",
+      "Pregunte con sus propias palabras. El asistente responde con las mismas llamadas, contactos y citas que muestra su panel.",
     calls: {
       eyebrow: "Llamadas y mensajes",
       title: "Pregunte quién llamó y qué necesitaba",
@@ -487,7 +487,7 @@ const sr: McpCopy = {
     eyebrow: "MCP server",
     title: "Upravljajte AI recepcionerom iz AI alata koje Vaš tim već koristi",
     intro:
-      "Pitajte Claude ili ChatGPT ko je juče zvao, pa neka zakaže termin klijentu i ažurira njegov kontakt. Iz istog četa možete da promenite radno vreme i dodate odgovor za recepcionera. Dodajte URL servera, prijavite se na LobbyStack i odobrite šta asistent sme da radi.",
+      "Pregledajte pozive, zakazujte termine i menjajte radno vreme iz Claude-a, ChatGPT-ja ili Cursor-a. Vi odobravate šta svaki asistent sme da radi.",
     primaryCta: "Isprobajte besplatno",
     secondaryCta: "Pročitajte uputstvo za podešavanje",
     urlLabel: "URL servera",
@@ -500,9 +500,9 @@ const sr: McpCopy = {
   ],
   ask: {
     eyebrow: "Šta radi",
-    titleLines: ["Upravljajte recepcionerom iz četa", "uz MCP server za AI recepcionera"],
+    titleLines: ["Šta možete da tražite", "od MCP servera za AI recepcionera"],
     intro:
-      "Pitajte običnim rečima. Asistent čita pozive, kontakte, termine i radno vreme koje prikazuje Vaša kontrolna tabla. Na Vaš zahtev menja kontakte, termine i radno vreme i dodaje odgovore koje recepcioner daje pozivaocima.",
+      "Pitajte običnim rečima. Asistent odgovara na osnovu istih poziva, kontakata i termina koje prikazuje Vaša kontrolna tabla.",
     calls: {
       eyebrow: "Pozivi i poruke",
       title: "Pitajte ko je zvao i šta mu je trebalo",
