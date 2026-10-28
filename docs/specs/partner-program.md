@@ -129,11 +129,14 @@ A partner signs up, puts its own brand on the product, and resells LobbyStack to
 79. As a self-hoster, I want each partner feature to turn on when I configure its provider account, so that I can adopt the program piece by piece.
 80. As a self-hoster, I want my Caddy proxy to issue certificates for my partners' custom domains on demand, so that I don't manage certificates by hand.
 81. As a host, I want my host keys to keep reaching every business when they're set to do so, so that my own operations keep working.
+82. As a partner member, I want to connect Claude, Cursor or another MCP client to my agency by signing in, so that I can make demos and set up clients from chat with my own role.
+83. As a partner owner or admin, I want to see and disconnect every MCP client my team connected to the agency, so that someone who leaves can't keep working through one.
+84. As a partner's developer, I want my partner's platform key to work on the MCP server, so that a coding assistant can run the console's work without a person's sign-in.
 
 ### Telemetry
 
-82. As a partner admin, I want to turn the console's telemetry off for my whole team, so that the host doesn't see how we use the console.
-83. As a host, I want a new partner's signup to reach my analytics while its telemetry is on, so that I can count partner signups that have no business yet.
+85. As a partner admin, I want to turn the console's telemetry off for my whole team, so that the host doesn't see how we use the console.
+86. As a host, I want a new partner's signup to reach my analytics while its telemetry is on, so that I can count partner signups that have no business yet.
 
 ## Implementation Decisions
 
@@ -193,6 +196,7 @@ The product decisions are settled in "How partners resell LobbyStack", the billi
 - Better Auth trusts an origin only when the proxy resolved it, and builds every link from that origin.
 - Partner hosts have no Google sign-in.
 - MCP, OAuth, the OpenAPI document, and provider webhooks stay on the host's domain.
+- An agency connects an MCP client to the partner with a partner platform key, or with an OAuth grant one person on its team approves for the partner. The grant works only while they're on the team, with their role at each request. Each per-business tool then names the business, which must be the partner's, and a person's call opens it as the console does. [ADR 0011](../adr/0011-agency-mcp-grants.md) records the design.
 - Public pages that are prerendered today render per partner host and refresh when the partner's brand changes.
 - Browser analytics and uploads never send a partner's visitors to a host-named domain.
 - On the host's domain, the console's pages take telemetry consent from the partner's own setting, which starts on like a business's. A business's pages keep taking it from the business's setting, even while a partner member has the business open. Partner signup and invitation pages belong to no partner yet and send nothing, so signup's event waits for the new partner's console.
@@ -283,7 +287,7 @@ The program won't do these at all:
 - Neutral Google and Meta apps (Calendar and Instagram connect through the host's apps, so their consent screens name the host)
 - A dedicated text sender per business (texts stay on the host's verified number)
 - Concurrent-call limits sold by tier
-- Branded mobile or desktop apps, a website builder for partners, white-labeled help docs, MCP or API keys for operators at partner businesses, and an AI disclosure or call recording notice
+- Branded mobile or desktop apps, a website builder for partners, white-labeled help docs, MCP or API keys for a partner business's own operators, and an AI disclosure or call recording notice. The partner's own team reaches its businesses over MCP through agency connections, as [MCP for agencies](../architecture/partners.md#mcp-for-agencies) describes
 
 ## Further Notes
 

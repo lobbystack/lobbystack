@@ -71,6 +71,7 @@ flowchart LR
 | Usage metering | `packages/domain` | `reserveUsage`, `extendUsage`, `correctUsage` | Allowances, pools, caps, lock order, sync jobs |
 | Partner lifecycle | `packages/domain` | `nextPartnerState`, `applyPartnerTransition`, `advancePartnerLifecycles`, `getPartnerLifecycle` | The 30-day and 90-day steps, and what each step does to businesses and numbers |
 | Platform keys | `packages/domain` | `resolvePlatformKey` | Environment and database key sources, groups, what each key may do |
+| Agency connections | `packages/domain` and `apps/admin` | `resolvePartnerOAuthAccessToken`, `listPartnerOAuthGrants`, `revokePartnerOAuthGrant`, the MCP server's partner tools | Grants that name a partner, the role read on each request, and the opens that reach a business |
 | Business templates | `packages/shared` and `packages/domain` | `applyBusinessTemplate`, `exportBusinessTemplate`, `saveBusinessTemplate` | Reading a setup, comparing, changing only what differs, and the copies of a template's documents |
 | Prospect demos | `packages/domain` | `createPartnerDemo`, `listPartnerDemos`, `claimProspectDemo` | The host's demos and a partner's, the brand a demo names and opens on, and what claiming one keeps |
 | Billing reconcile | `packages/domain` | `reconcilePartnerTier`, `reconcilePackageSubscription` | Ordering, stale snapshots, and mapping provider states |
@@ -143,7 +144,7 @@ openPartnerBusiness(context, input: { userId: string; businessId: string; partne
 - `requireBusinessAccess` refuses a business whose brand differs from the request's brand, so a business never shows on another brand's domain. A business of another brand gets the same refusal as one the person isn't on. It replaces `requireBusinessMembership` in `forBusiness`.
 - An operator of a partner business gets `activity` at the activity-only level, and `activity`, `setup`, and `team` at full access. They never get `billing`, `api_keys`, or `mcp`.
 - Each operator route in the admin needs one capability, from the table in `apps/admin/src/lib/business-capabilities.ts`. `forBusiness` checks the brand and the capability before the handler runs, matching the decoded path, and a route missing from the table needs `setup`.
-- The functions behind Polar checkout, managed plans, the overage cap, operator API keys, webhooks managed from the dashboard, and MCP tokens refuse a partner business too, whatever brand the request came from. MCP's consent screen lists only direct businesses.
+- The functions behind Polar checkout, managed plans, the overage cap, operator API keys, webhooks managed from the dashboard, and MCP tokens refuse a partner business too, whatever brand the request came from. MCP's consent screen lists only direct businesses among the businesses, and the partner's own people reach its businesses over MCP through an agency connection instead, as [MCP for agencies](#mcp-for-agencies) describes.
 - The dashboard remembers, per brand, the business a person last opened on that brand's domains.
 - The dashboard hides each page the business doesn't give the person, from the table in `apps/admin/src/lib/dashboard-pages.ts`. The workspace list carries each business's capabilities for it.
 - On a partner's domain, a signed-in person with no business there gets a "no businesses" page instead of onboarding, since that domain makes no direct business.
@@ -358,6 +359,29 @@ type ResolvedPlatformKey = { platformKeyId: string; prefix: string; name: string
 - The Partner endpoints act on no one business, so their Idempotency-Key records live in `partner_api_idempotency_keys`, one partner's each, readable only in a transaction for one of its keys. A partner operation runs several transactions and may call Stripe, so `runPartnerIdempotent` holds the key in one transaction and stores the answer in another; a request that dies leaves its key in progress for 15 minutes. The worker's hourly `api.partnerRetention` job deletes records older than 24 hours for every partner, through `app.prune_partner_api_idempotency_keys` (migration 0163).
 - Links in API responses point at the business's own dashboard: the widget's script tag and the calendar connect link use the partner's origin for a partner's business, and `APP_BASE_URL` for a direct one. The connect route keeps a signed-out visitor's sign-in, its errors and the finished connection on the domain it was opened on, as [A Calendar or Instagram connection on a partner's domain](#a-calendar-or-instagram-connection-on-a-partners-domain) describes.
 
+## MCP for agencies
+
+A partner's people run the console's work from an AI assistant through the MCP server at `/api/mcp` on the host's domain. [ADR 0011](../adr/0011-agency-mcp-grants.md) records the design.
+
+```ts
+resolvePartnerOAuthAccessToken(context, token: string): Promise<ResolvedPartnerOAuthGrant | null>
+listPartnerOAuthGrants(context, actor: PartnerMemberActor): Promise<OAuthGrantRecord[]>
+revokePartnerOAuthGrant(context, actor: PartnerMemberActor, input: { grantId: string }): Promise<boolean>
+
+type PartnerSubject = PartnerPlatformKey | { kind: "member"; partnerId: string; userId: string; grantId: string; scopes: readonly ApiKeyScope[] };
+```
+
+- Two credentials open a partner connection: a partner's platform key, and an agency grant. The host's keys from `PLATFORM_API_KEYS` get a 403.
+- An agency grant is an OAuth grant whose `oauth_consents.reference_id`, and its tokens', is `partner:<partner id>` (migration 0164). The consent page lists the person's partners under "Your agencies" beside their businesses, offers the partner scopes and `businesses:create` with the per-business ones, and offers the `partner.billing` scopes to owners only. `decideConsent` refuses a partner the person isn't on with a 403, and billing scopes from anyone but an owner with `owner_only`.
+- `app.resolve_partner_oauth_access_token` answers a token only while the client, the grant and the token are live, the partner is active, and the person is an active member of its team, and returns their role then. Removing someone from the team, or changing their role, applies to their next request.
+- The partner tools, in `apps/admin/src/lib/mcp/partner-tools.ts`, are one per v1 Partner operation, and call the same `*ForApi` functions in `packages/domain/src/server/publicApi/partner.ts`. Those functions take a `PartnerSubject`, and turn it into a `PartnerActor`: a key, or a member whose role each operation reads. No tool makes or revokes a platform key. `list_businesses` runs `listPartnerBusinesses`, as the console's Businesses page does, and `create_business` runs `createPartnerBusinessForApi`, whose id an agency grant derives from the grant and the idempotency key.
+- A tool needs the scope of its v1 operation. `list_businesses` needs `partner:read` and `create_business` needs `businesses:create`. Tools that delete, release, revoke or remove carry `destructiveHint: true`, and reads carry `readOnlyHint: true`.
+- The per-business tools gain a required `business_id` on a partner connection. A key reaches the business through `requirePlatformBusinessAccess`, as on REST. A person reaches it through `openPartnerBusiness`, which the server calls when they hold no open of the business, or one opened more than 4 hours ago, so the business's audit log gets `partner.business_opened` and its Partner access tab shows the visit. A business of another partner answers `not_found`. The v1 operations then run as a `PartnerMemberCaller` with `mcpGrantId`, so each change's audit row names the person, the partner and the grant.
+- `getPartnerBusinessBillingForApi` refuses a member with a 403, since members never see a business's billing, and `getPartnerForApi` leaves out the pool for anyone who can't read billing.
+- Tool calls count against the key's rate limit, shared with its REST requests, or the grant's. Demos, templates, invitations and new businesses count against the partner's key limits for a key, and the person's console limits for a grant.
+- The console's API keys page lists agency connections through `GET /api/partner/oauth-grants` and disconnects one through `DELETE /api/partner/oauth-grants/{grantId}`. Owners and admins see every one of the partner's, and anyone else their own, as the RLS policies on the OAuth tables decide through `app.can_manage_partner_oauth_reference`. Disconnecting revokes the grant's tokens at once.
+- `partner_audit_logs` keeps what happens to the partner itself: `oauth_grant.approved` and `oauth_grant.revoked`. The partner's owners and admins read it, and someone on the team writes only their own rows.
+
 ## Business templates
 
 Templates reuse the `lobbystack onboard` file format. A template is a manifest without the parts that belong to one business.
@@ -520,7 +544,7 @@ A queued event waits for its own partner's console and expires after a day, like
 
 The partner program uses three test seams, from highest to lowest:
 
-- **Domain functions against PostgreSQL**, with the real runtime roles and RLS: business access and audited opens, brands, partner operations, entitlement, usage metering and pools, platform keys, templates, prospect demos, number claims, and lifecycle transitions. The existing `*.integration.test.ts` files are prior art.
+- **Domain functions against PostgreSQL**, with the real runtime roles and RLS: business access and audited opens, brands, partner operations, entitlement, usage metering and pools, platform keys, templates, prospect demos, number claims, and lifecycle transitions. `apps/admin/src/lib/mcp/agency.integration.test.ts` runs agency connections end to end, from consent to tool calls. The existing `*.integration.test.ts` files are prior art.
 - **The admin's request pipeline**: host resolution in the proxy, sign-in and CSRF on partner domains, branded pages, refused hosts, the TLS ask route, and Calendar and Instagram callbacks handed on to a partner's domain. The existing route handler and proxy tests are prior art.
 - **Provider interfaces with fakes**: the worker's billing sync, Polar and Stripe webhooks and reconcile, and custom hostname provisioning. The worker's `handleJob` tests, which pass a fake Polar, are prior art.
 
