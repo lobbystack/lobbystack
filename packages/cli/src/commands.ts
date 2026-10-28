@@ -303,4 +303,56 @@ export const groups: Record<string, Group> = Object.fromEntries([
   group("messages", "Messages the receptionist took for the team.", {
     list: { operation: "listMessages", columns: columns("id", "created_at", "status", "urgency", "caller_name", "title") },
   }),
+  // The partner itself, with a key a partner made in its console.
+  group("partner", "The partner your key acts as, and handing over or deleting its businesses.", {
+    get: { operation: "getPartner" },
+    release: { operation: "releasePartnerBusiness" },
+    "delete-business": { operation: "deletePartnerBusiness" },
+    "business-billing": { operation: "getPartnerBusinessBilling" },
+    "set-business-billing": { operation: "updatePartnerBusinessBilling" },
+  }),
+  group("demos", "Prospect demos under the partner's brand.", {
+    list: { operation: "listPartnerDemos", columns: columns("id", "business_name", "status", "expires_at", "website_url") },
+    get: { operation: "getPartnerDemo" },
+    create: { operation: "createPartnerDemo", args: ["name", "website_url"], show: (data) => `${showRecord(data)}\n\nThe token and link aren't shown again. Publish the demo with lobbystack demos publish ${String(data.id)} --token <token> once lobbystack demos get ${String(data.id)} says it's ready.` },
+    publish: { operation: "publishPartnerDemo" },
+    rotate: { operation: "rotatePartnerDemoLink" },
+    revoke: { operation: "revokePartnerDemo" },
+    delete: { operation: "deletePartnerDemo" },
+  }),
+  group("packages", "What the partner sells its businesses through its Stripe account.", {
+    list: { operation: "listPartnerPackages", columns: columns("id", "name", "currency", "monthly_price_minor", "setup_fee_minor") },
+    create: { operation: "createPartnerPackage", args: ["name"] },
+    rename: { operation: "updatePartnerPackage", args: ["name"] },
+    archive: { operation: "archivePartnerPackage" },
+  }),
+  group("brand", "The partner's name, colors and links.", {
+    get: { operation: "getPartnerBrand" },
+    set: { operation: "updatePartnerBrand" },
+  }),
+  group("domain", "The partner's subdomain and its own domain.", {
+    get: { operation: "getPartnerDomains" },
+    add: { operation: "addPartnerDomain", args: ["hostname"] },
+    remove: { operation: "removePartnerDomain" },
+  }),
+  group("templates", "Setups saved from the partner's businesses, which new businesses can start from.", {
+    list: { operation: "listPartnerTemplates", columns: columns("id", "name", "created_at") },
+    save: { operation: "createPartnerTemplate", args: ["business_id", "name"] },
+    delete: { operation: "deletePartnerTemplate" },
+  }),
+  group("partner-team", "Who works in the partner's console.", {
+    list: { operation: "getPartnerTeam", show: (data) => [`Members\n${formatTable(data.members as Row[], columns("id", "name", "email", "role", "joined_at"))}`, `Invitations\n${formatTable(data.invitations as Row[], columns("id", "email", "role", "expires_at"))}`].join("\n\n") },
+    invite: { operation: "createPartnerTeamInvitation", args: ["email", "role"] },
+    role: { operation: "updatePartnerTeamMember", args: ["role"] },
+    remove: { operation: "removePartnerTeamMember" },
+    revoke: { operation: "revokePartnerTeamInvitation" },
+  }),
+  group("payments", "The partner's Stripe account, its tier and the pool its businesses share.", {
+    stripe: { operation: "getPartnerStripe" },
+    "stripe-onboarding": { operation: "createPartnerStripeOnboardingLink", show: (data) => `Send whoever completes Stripe's onboarding to this page. It works once:\n${String(data.url)}` },
+    billing: { operation: "getPartnerBilling" },
+    overage: { operation: "updatePartnerPoolOverage", args: ["enabled"] },
+    checkout: { operation: "createPartnerTierCheckout", args: ["tier", "interval"], show: (data) => data.checkout_url ? `Open this page to pay: ${String(data.checkout_url)}` : `${showRecord(data)}\n\nThe page isn't ready yet. Check with lobbystack payments checkout-status ${String(data.id)}.` },
+    "checkout-status": { operation: "getPartnerTierCheckout" },
+  }),
 ]);

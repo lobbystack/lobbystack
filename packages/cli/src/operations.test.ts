@@ -88,6 +88,26 @@ describe("one command per endpoint", () => {
     expect(given.sent[0]!.headers["idempotency-key"]).toBe("acme-1");
   });
 
+  it("runs the Partner endpoints with no business header, from positionals and flags", async () => {
+    const release = fakeApi({ [`POST /api/v1/partner/businesses/${otherId}/release`]: { body: { data: { id: otherId, released: true, owner_user_id: ruleId } } } });
+    expect((await runCli(["partner", "release", otherId], { fetch: release.fetch })).code).toBe(exitCodes.ok);
+    expect(release.sent[0]!.headers).not.toHaveProperty("LobbyStack-Business");
+
+    const invite = fakeApi({ "POST /api/v1/partner/team/invitations": { status: 201, body: { data: { id: otherId, email: "sam@example.com", role: "member" } } } });
+    await runCli(["partner-team", "invite", "sam@example.com", "member"], { fetch: invite.fetch });
+    expect(invite.sent[0]).toMatchObject({ body: { email: "sam@example.com", role: "member" } });
+    expect(invite.sent[0]!.headers["idempotency-key"]).toMatch(/^[0-9a-f-]{36}$/);
+
+    const overage = fakeApi({ "PATCH /api/v1/partner/billing/overage": { body: { data: { enabled: false, cap_cents: 5000, billed: true } } } });
+    await runCli(["payments", "overage", "false", "--cap-cents", "5000"], { fetch: overage.fetch });
+    expect(overage.sent[0]!.body).toEqual({ enabled: false, cap_cents: 5000 });
+
+    const demo = fakeApi({ "POST /api/v1/partner/demos": { status: 201, body: { data: { id: otherId, token: "harbor-abc", url: "https://acme.portal.example/demo#t" } } } });
+    const made = await runCli(["demos", "create", "Harbor Dental", "https://harbor.example"], { fetch: demo.fetch });
+    expect(demo.sent[0]!.body).toEqual({ name: "Harbor Dental", website_url: "https://harbor.example" });
+    expect(made.out).toContain("aren't shown again");
+  });
+
   it("waits for a claim with --wait, checking until it's done", async () => {
     const claim = (status: string) => ({ body: { data: { id: otherId, status, phone_number: "+14165550123" } } });
     const api = fakeApi({ "POST /api/v1/phone-numbers/claims": { status: 202, ...claim("pending") }, [`GET /api/v1/phone-numbers/claims/${otherId}`]: [claim("provisioning"), claim("claimed")] });
