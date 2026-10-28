@@ -131,9 +131,9 @@ const en: McpCopy = {
   ],
   ask: {
     eyebrow: "What it does",
-    titleLines: ["What you can ask", "the AI receptionist MCP server"],
+    titleLines: ["Give Claude and ChatGPT access", "to your calls and appointments"],
     intro:
-      "Ask in plain words. The assistant answers from the same calls, contacts and appointments as your dashboard.",
+      "With the AI receptionist MCP server, your assistant works from the same calls, contacts and appointments as your dashboard.",
     calls: {
       eyebrow: "Calls and messages",
       title: "Ask who called and what they needed",
@@ -254,9 +254,9 @@ const fr: McpCopy = {
   ],
   ask: {
     eyebrow: "Ce qu'il fait",
-    titleLines: ["Ce que vous pouvez demander", "au serveur MCP de réceptionniste IA"],
+    titleLines: ["Donnez à Claude et ChatGPT l'accès", "à vos appels et rendez-vous"],
     intro:
-      "Posez vos questions en langage courant. L'assistant répond à partir des mêmes appels, contacts et rendez-vous que votre tableau de bord.",
+      "Avec le serveur MCP de réceptionniste IA, votre assistant travaille à partir des mêmes appels, contacts et rendez-vous que votre tableau de bord.",
     calls: {
       eyebrow: "Appels et messages",
       title: "Demandez qui a appelé et pourquoi",
@@ -377,9 +377,9 @@ const es: McpCopy = {
   ],
   ask: {
     eyebrow: "Lo que hace",
-    titleLines: ["Lo que puede pedirle", "al servidor MCP de recepcionista con IA"],
+    titleLines: ["Dé a Claude y ChatGPT acceso", "a sus llamadas y citas"],
     intro:
-      "Pregunte con sus propias palabras. El asistente responde con las mismas llamadas, contactos y citas que muestra su panel.",
+      "Con el servidor MCP de recepcionista con IA, su asistente trabaja con las mismas llamadas, contactos y citas que muestra su panel.",
     calls: {
       eyebrow: "Llamadas y mensajes",
       title: "Pregunte quién llamó y qué necesitaba",
@@ -500,9 +500,9 @@ const sr: McpCopy = {
   ],
   ask: {
     eyebrow: "Šta radi",
-    titleLines: ["Šta možete da tražite", "od MCP servera za AI recepcionera"],
+    titleLines: ["Dajte Claude-u i ChatGPT-ju pristup", "pozivima i terminima"],
     intro:
-      "Pitajte običnim rečima. Asistent odgovara na osnovu istih poziva, kontakata i termina koje prikazuje Vaša kontrolna tabla.",
+      "Uz MCP server za AI recepcionera, asistent radi sa istim pozivima, kontaktima i terminima koje prikazuje Vaša kontrolna tabla.",
     calls: {
       eyebrow: "Pozivi i poruke",
       title: "Pitajte ko je zvao i šta mu je trebalo",

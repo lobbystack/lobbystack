@@ -35,11 +35,11 @@ describe("MCP server page", () => {
     expect(html).toContain(MCP_SERVER_URL)
   })
 
-  it("puts the main keyword in the English title and an H2", () => {
+  it("puts the main keyword in the English title and the page text", () => {
     const html = render("en")
     const keyword = /AI receptionist MCP server/i
     expect(mcpPageSeo("en").title).toMatch(keyword)
-    expect([...html.matchAll(/<h2[^>]*>.*?<\/h2>/gs)].some(([h2]) => keyword.test(text(h2)))).toBe(true)
+    expect(text(html.match(/<main[^>]*>.*<\/main>/s)?.[0] ?? "")).toMatch(keyword)
   })
 
   it.each(SUPPORTED_LOCALES)("sends the %s hero and closing sign-ups to that language's dashboard", (locale) => {
