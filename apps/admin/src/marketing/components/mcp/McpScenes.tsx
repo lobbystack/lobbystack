@@ -330,44 +330,6 @@ export function ConnectedAppsScene({ locale, art }: SceneProps) {
   )
 }
 
-/** Setting up: the three values a client needs, and the first get_business answer. */
-export function ConnectScene({ art }: SceneProps) {
-  const rows = [
-    { label: art.serverUrl, value: "app.lobbystack.com/api/mcp", mono: true },
-    { label: art.transport, value: "Streamable HTTP" },
-    { label: art.signIn, value: art.signInValue },
-  ]
-  return (
-    <Scene width={352} height={276} tilt="flat">
-      <Place x={0} y={0}>
-        <Tile className="w-[22rem]" innerClassName="divide-y divide-black/[0.06] px-4 py-1.5">
-          {rows.map(({ label, value, mono }) => (
-            <span key={label} className="flex items-baseline justify-between gap-4 py-2.5">
-              <span className="shrink-0 text-xs text-muted-foreground">{label}</span>
-              <span className={mono ? "truncate font-mono text-[0.75rem]" : "truncate text-[0.8125rem] font-medium"}>{value}</span>
-            </span>
-          ))}
-        </Tile>
-      </Place>
-      <Connector x={60} y={166} length={36} vertical />
-      <Place x={34} y={202}>
-        <div className="relative">
-          <Tile accent className="w-[18rem] rounded-[1.4rem] p-1.5" innerClassName="space-y-1.5 rounded-[1rem] px-3.5 py-3">
-            <span className="flex items-center justify-between gap-3">
-              <span className="font-mono text-[0.75rem] text-foreground/80">get_business</span>
-              <Chip strong className="text-[0.6875rem]">
-                <Check className="size-3" />
-                {art.connected}
-              </Chip>
-            </span>
-            <span className="block truncate text-sm font-medium">Northside Dental · America/Toronto</span>
-          </Tile>
-        </div>
-      </Place>
-    </Scene>
-  )
-}
-
 // How much each panel scales its scene's plane, as ProductScene's fits do.
 const fits = {
   hero: "[--scene-scale:0.54] sm:[--scene-scale:0.86] lg:[--scene-scale:0.95]",

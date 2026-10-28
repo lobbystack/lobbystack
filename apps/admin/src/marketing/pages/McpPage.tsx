@@ -55,10 +55,10 @@ export function McpPage({ locale }: { locale: Locale }) {
       <Navbar locale={locale} />
       <main id="main-content">
         <McpHero locale={locale} />
+        <McpConnect locale={locale} />
         <McpAsk locale={locale} />
         <McpControl locale={locale} />
         <McpTools locale={locale} />
-        <McpConnect locale={locale} />
         <McpFaq locale={locale} />
         <McpClosing locale={locale} />
       </main>

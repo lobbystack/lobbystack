@@ -38,6 +38,10 @@ export const mcpToolGroups: Record<McpToolGroupKey, { name: string; scope: strin
   ],
 }
 
+export type McpClientKey = "claude" | "chatgpt" | "cursor" | "other"
+
+export const mcpClientOrder: McpClientKey[] = ["claude", "chatgpt", "cursor", "other"]
+
 export const mcpToolGroupOrder: McpToolGroupKey[] = ["calls", "contacts", "appointments", "business"]
 
 type Card = { eyebrow: string; title: string; body: string }
@@ -69,13 +73,13 @@ export type McpCopy = {
     intro: string
     groups: Record<McpToolGroupKey, { title: string; body: string }>
   }
+  /** The install block under the hero. Text between backticks renders as code. */
   connect: {
-    eyebrow: string
     title: string
-    body: string
-    /** Text between backticks renders as code. */
-    steps: string[]
-    guides: { claude: string; chatgpt: string; other: string }
+    copy: string
+    copied: string
+    guide: string
+    clients: Record<McpClientKey, { label: string; steps: string[] }>
   }
   faqTitle: string
   closing: {
@@ -104,11 +108,6 @@ export type McpCopy = {
     connectedBy: string
     disconnect: string
     disconnected: string
-    serverUrl: string
-    transport: string
-    signIn: string
-    signInValue: string
-    connected: string
   }
 }
 
@@ -118,13 +117,13 @@ const en: McpCopy = {
     eyebrow: "MCP server",
     title: "Manage your AI receptionist from the AI tools your team already uses",
     intro:
-      "Check calls, book appointments and update your hours from Claude, ChatGPT or Cursor. You approve what each assistant can do.",
+      "Check calls, book appointments and update your hours from Claude, ChatGPT or any MCP client. You approve what each assistant can do.",
     primaryCta: "Try for free",
     secondaryCta: "Read the setup guide",
     urlLabel: "Server URL",
   },
   facts: [
-    "Works in Claude, ChatGPT, Cursor and VS Code",
+    "Works in Claude, ChatGPT, Cursor, VS Code and any MCP client",
     "Sign in with LobbyStack or use an API key",
     "One business per connection, with the permissions you approve",
     "Every change it makes goes in your audit log",
@@ -190,16 +189,44 @@ const en: McpCopy = {
     },
   },
   connect: {
-    eyebrow: "Set up",
-    title: "Connect Claude, ChatGPT, Cursor or VS Code",
-    body: "Claude and ChatGPT sign in with LobbyStack. Cursor, VS Code and scripts take an API key from Settings > API keys.",
-    steps: [
-      `Copy the server URL, \`${MCP_SERVER_URL}\`.`,
-      "In Claude, open Customize > Connectors and add a custom connector. In ChatGPT, turn on developer mode and create an app that uses OAuth.",
-      "Sign in to LobbyStack, pick the business and click Allow access.",
-      "Ask the assistant to call `get_business`. It answers with your business name, time zone and booking mode.",
-    ],
-    guides: { claude: "Claude guide", chatgpt: "ChatGPT guide", other: "Cursor and VS Code guide" },
+    title: "Install",
+    copy: "Copy",
+    copied: "Copied",
+    guide: "Read the full setup guide",
+    clients: {
+      claude: {
+        label: "Claude",
+        steps: [
+          "Copy the server URL above.",
+          "In Claude, open Customize > Connectors, click Add custom connector and paste the URL.",
+          "Sign in to LobbyStack, pick your business and click Allow access.",
+        ],
+      },
+      chatgpt: {
+        label: "ChatGPT",
+        steps: [
+          "Copy the server URL above.",
+          "In ChatGPT, turn on developer mode, then create an app with the URL and OAuth sign-in.",
+          "Sign in to LobbyStack, pick your business and click Allow access.",
+        ],
+      },
+      cursor: {
+        label: "Cursor",
+        steps: [
+          "Create an API key in LobbyStack under Settings > API keys.",
+          "Add the server URL to `~/.cursor/mcp.json`, with the key in an `Authorization: Bearer` header.",
+          "Ask Cursor to call `get_business` to check the connection.",
+        ],
+      },
+      other: {
+        label: "Any MCP client",
+        steps: [
+          "Copy the server URL above.",
+          "Add it to your client as a remote MCP server over Streamable HTTP.",
+          "Sign in to LobbyStack if your client supports OAuth. If it doesn't, send an API key from Settings > API keys as a Bearer token.",
+        ],
+      },
+    },
   },
   faqTitle: "Questions about the MCP server",
   closing: {
@@ -227,11 +254,6 @@ const en: McpCopy = {
     connectedBy: "By Dana W.",
     disconnect: "Disconnect",
     disconnected: "ChatGPT disconnected",
-    serverUrl: "Server URL",
-    transport: "Transport",
-    signIn: "Sign-in",
-    signInValue: "OAuth or API key",
-    connected: "Connected",
   },
 }
 
@@ -241,13 +263,13 @@ const fr: McpCopy = {
     eyebrow: "Serveur MCP",
     title: "Gérez votre réceptionniste IA depuis les outils d'IA que votre équipe utilise déjà",
     intro:
-      "Consultez vos appels, réservez des rendez-vous et modifiez vos heures depuis Claude, ChatGPT ou Cursor. Vous approuvez ce que chaque assistant peut faire.",
+      "Consultez vos appels, réservez des rendez-vous et modifiez vos heures depuis Claude, ChatGPT ou tout client MCP. Vous approuvez ce que chaque assistant peut faire.",
     primaryCta: "Essayer gratuitement",
     secondaryCta: "Lire le guide de configuration",
     urlLabel: "URL du serveur",
   },
   facts: [
-    "Fonctionne dans Claude, ChatGPT, Cursor et VS Code",
+    "Fonctionne dans Claude, ChatGPT, Cursor, VS Code et tout client MCP",
     "Connexion avec LobbyStack ou par clé API",
     "Une entreprise par connexion, avec les autorisations que vous approuvez",
     "Chaque modification est inscrite au journal d'audit",
@@ -313,16 +335,44 @@ const fr: McpCopy = {
     },
   },
   connect: {
-    eyebrow: "Configuration",
-    title: "Connectez Claude, ChatGPT, Cursor ou VS Code",
-    body: "Claude et ChatGPT se connectent avec LobbyStack. Cursor, VS Code et les scripts utilisent une clé API créée dans Réglages > Clés API.",
-    steps: [
-      `Copiez l'URL du serveur, \`${MCP_SERVER_URL}\`.`,
-      "Dans Claude, ouvrez Customize > Connectors et ajoutez un connecteur personnalisé. Dans ChatGPT, activez le mode développeur et créez une application qui utilise OAuth.",
-      "Connectez-vous à LobbyStack, choisissez l'entreprise et cliquez sur Autoriser l'accès.",
-      "Demandez à l'assistant d'appeler `get_business`. Il répond avec le nom de votre entreprise, son fuseau horaire et son mode de réservation.",
-    ],
-    guides: { claude: "Guide Claude", chatgpt: "Guide ChatGPT", other: "Guide Cursor et VS Code" },
+    title: "Installation",
+    copy: "Copier",
+    copied: "Copié",
+    guide: "Lire le guide complet",
+    clients: {
+      claude: {
+        label: "Claude",
+        steps: [
+          "Copiez l'URL du serveur ci-dessus.",
+          "Dans Claude, ouvrez Customize > Connectors, cliquez sur Add custom connector et collez l'URL.",
+          "Connectez-vous à LobbyStack, choisissez votre entreprise et cliquez sur Autoriser l'accès.",
+        ],
+      },
+      chatgpt: {
+        label: "ChatGPT",
+        steps: [
+          "Copiez l'URL du serveur ci-dessus.",
+          "Dans ChatGPT, activez le mode développeur, puis créez une application avec l'URL et la connexion OAuth.",
+          "Connectez-vous à LobbyStack, choisissez votre entreprise et cliquez sur Autoriser l'accès.",
+        ],
+      },
+      cursor: {
+        label: "Cursor",
+        steps: [
+          "Créez une clé API dans LobbyStack, sous Réglages > Clés API.",
+          "Ajoutez l'URL du serveur à `~/.cursor/mcp.json`, avec la clé dans un en-tête `Authorization: Bearer`.",
+          "Demandez à Cursor d'appeler `get_business` pour vérifier la connexion.",
+        ],
+      },
+      other: {
+        label: "Tout client MCP",
+        steps: [
+          "Copiez l'URL du serveur ci-dessus.",
+          "Ajoutez-la à votre client comme serveur MCP distant en Streamable HTTP.",
+          "Connectez-vous à LobbyStack si votre client prend en charge OAuth. Sinon, envoyez une clé API de Réglages > Clés API comme jeton Bearer.",
+        ],
+      },
+    },
   },
   faqTitle: "Questions sur le serveur MCP",
   closing: {
@@ -350,11 +400,6 @@ const fr: McpCopy = {
     connectedBy: "Par Dana W.",
     disconnect: "Déconnecter",
     disconnected: "ChatGPT déconnecté",
-    serverUrl: "URL du serveur",
-    transport: "Transport",
-    signIn: "Connexion",
-    signInValue: "OAuth ou clé API",
-    connected: "Connecté",
   },
 }
 
@@ -364,13 +409,13 @@ const es: McpCopy = {
     eyebrow: "Servidor MCP",
     title: "Gestione su recepcionista con IA desde las herramientas de IA que su equipo ya usa",
     intro:
-      "Revise llamadas, reserve citas y cambie su horario desde Claude, ChatGPT o Cursor. Usted aprueba lo que puede hacer cada asistente.",
+      "Revise llamadas, reserve citas y cambie su horario desde Claude, ChatGPT o cualquier cliente MCP. Usted aprueba lo que puede hacer cada asistente.",
     primaryCta: "Pruébelo gratis",
     secondaryCta: "Leer la guía de configuración",
     urlLabel: "URL del servidor",
   },
   facts: [
-    "Funciona en Claude, ChatGPT, Cursor y VS Code",
+    "Funciona en Claude, ChatGPT, Cursor, VS Code y cualquier cliente MCP",
     "Inicio de sesión con LobbyStack o clave de API",
     "Un negocio por conexión, con los permisos que usted aprueba",
     "Cada cambio queda en su registro de auditoría",
@@ -436,16 +481,44 @@ const es: McpCopy = {
     },
   },
   connect: {
-    eyebrow: "Configuración",
-    title: "Conecte Claude, ChatGPT, Cursor o VS Code",
-    body: "Claude y ChatGPT inician sesión con LobbyStack. Cursor, VS Code y los scripts usan una clave de API de Configuración > Claves de API.",
-    steps: [
-      `Copie la URL del servidor, \`${MCP_SERVER_URL}\`.`,
-      "En Claude, abra Customize > Connectors y agregue un conector personalizado. En ChatGPT, active el modo de desarrollador y cree una app que use OAuth.",
-      "Inicie sesión en LobbyStack, elija el negocio y haga clic en Permitir acceso.",
-      "Pídale al asistente que llame a `get_business`. Responde con el nombre de su negocio, su zona horaria y su modo de reserva.",
-    ],
-    guides: { claude: "Guía de Claude", chatgpt: "Guía de ChatGPT", other: "Guía de Cursor y VS Code" },
+    title: "Instalación",
+    copy: "Copiar",
+    copied: "Copiado",
+    guide: "Leer la guía completa",
+    clients: {
+      claude: {
+        label: "Claude",
+        steps: [
+          "Copie la URL del servidor de arriba.",
+          "En Claude, abra Customize > Connectors, haga clic en Add custom connector y pegue la URL.",
+          "Inicie sesión en LobbyStack, elija su negocio y haga clic en Permitir acceso.",
+        ],
+      },
+      chatgpt: {
+        label: "ChatGPT",
+        steps: [
+          "Copie la URL del servidor de arriba.",
+          "En ChatGPT, active el modo de desarrollador y cree una app con la URL e inicio de sesión OAuth.",
+          "Inicie sesión en LobbyStack, elija su negocio y haga clic en Permitir acceso.",
+        ],
+      },
+      cursor: {
+        label: "Cursor",
+        steps: [
+          "Cree una clave de API en LobbyStack, en Configuración > Claves de API.",
+          "Agregue la URL del servidor a `~/.cursor/mcp.json`, con la clave en un encabezado `Authorization: Bearer`.",
+          "Pídale a Cursor que llame a `get_business` para comprobar la conexión.",
+        ],
+      },
+      other: {
+        label: "Cualquier cliente MCP",
+        steps: [
+          "Copie la URL del servidor de arriba.",
+          "Agréguela a su cliente como servidor MCP remoto con Streamable HTTP.",
+          "Inicie sesión en LobbyStack si su cliente admite OAuth. Si no, envíe una clave de API de Configuración > Claves de API como token Bearer.",
+        ],
+      },
+    },
   },
   faqTitle: "Preguntas sobre el servidor MCP",
   closing: {
@@ -473,11 +546,6 @@ const es: McpCopy = {
     connectedBy: "Por Dana W.",
     disconnect: "Desconectar",
     disconnected: "ChatGPT desconectado",
-    serverUrl: "URL del servidor",
-    transport: "Transporte",
-    signIn: "Inicio de sesión",
-    signInValue: "OAuth o clave de API",
-    connected: "Conectado",
   },
 }
 
@@ -487,13 +555,13 @@ const sr: McpCopy = {
     eyebrow: "MCP server",
     title: "Upravljajte AI recepcionerom iz AI alata koje Vaš tim već koristi",
     intro:
-      "Pregledajte pozive, zakazujte termine i menjajte radno vreme iz Claude-a, ChatGPT-ja ili Cursor-a. Vi odobravate šta svaki asistent sme da radi.",
+      "Pregledajte pozive, zakazujte termine i menjajte radno vreme iz Claude-a, ChatGPT-ja ili bilo kog MCP klijenta. Vi odobravate šta svaki asistent sme da radi.",
     primaryCta: "Isprobajte besplatno",
     secondaryCta: "Pročitajte uputstvo za podešavanje",
     urlLabel: "URL servera",
   },
   facts: [
-    "Radi u Claude-u, ChatGPT-ju, Cursor-u i VS Code-u",
+    "Radi u Claude-u, ChatGPT-ju, Cursor-u, VS Code-u i bilo kom MCP klijentu",
     "Prijava preko LobbyStack-a ili API ključem",
     "Jedna firma po vezi, sa dozvolama koje Vi odobrite",
     "Svaka izmena se upisuje u dnevnik revizije",
@@ -559,16 +627,44 @@ const sr: McpCopy = {
     },
   },
   connect: {
-    eyebrow: "Podešavanje",
-    title: "Povežite Claude, ChatGPT, Cursor ili VS Code",
-    body: "Claude i ChatGPT se prijavljuju preko LobbyStack-a. Cursor, VS Code i skripte koriste API ključ iz Podešavanja > API ključevi.",
-    steps: [
-      `Kopirajte URL servera, \`${MCP_SERVER_URL}\`.`,
-      "U Claude-u otvorite Customize > Connectors i dodajte prilagođeni konektor. U ChatGPT-ju uključite režim za programere i napravite aplikaciju koja koristi OAuth.",
-      "Prijavite se na LobbyStack, izaberite firmu i kliknite na Dozvoli pristup.",
-      "Zamolite asistenta da pozove `get_business`. Odgovoriće nazivom Vaše firme, vremenskom zonom i načinom zakazivanja.",
-    ],
-    guides: { claude: "Uputstvo za Claude", chatgpt: "Uputstvo za ChatGPT", other: "Uputstvo za Cursor i VS Code" },
+    title: "Instalacija",
+    copy: "Kopiraj",
+    copied: "Kopirano",
+    guide: "Pročitajte celo uputstvo",
+    clients: {
+      claude: {
+        label: "Claude",
+        steps: [
+          "Kopirajte URL servera iznad.",
+          "U Claude-u otvorite Customize > Connectors, kliknite na Add custom connector i nalepite URL.",
+          "Prijavite se na LobbyStack, izaberite firmu i kliknite na Dozvoli pristup.",
+        ],
+      },
+      chatgpt: {
+        label: "ChatGPT",
+        steps: [
+          "Kopirajte URL servera iznad.",
+          "U ChatGPT-ju uključite režim za programere i napravite aplikaciju sa URL-om i OAuth prijavom.",
+          "Prijavite se na LobbyStack, izaberite firmu i kliknite na Dozvoli pristup.",
+        ],
+      },
+      cursor: {
+        label: "Cursor",
+        steps: [
+          "Napravite API ključ u LobbyStack-u, u Podešavanja > API ključevi.",
+          "Dodajte URL servera u `~/.cursor/mcp.json`, sa ključem u zaglavlju `Authorization: Bearer`.",
+          "Zamolite Cursor da pozove `get_business` da proveri vezu.",
+        ],
+      },
+      other: {
+        label: "Bilo koji MCP klijent",
+        steps: [
+          "Kopirajte URL servera iznad.",
+          "Dodajte ga u klijent kao udaljeni MCP server preko Streamable HTTP-a.",
+          "Prijavite se na LobbyStack ako klijent podržava OAuth. Ako ne podržava, pošaljite API ključ iz Podešavanja > API ključevi kao Bearer token.",
+        ],
+      },
+    },
   },
   faqTitle: "Pitanja o MCP serveru",
   closing: {
@@ -596,11 +692,6 @@ const sr: McpCopy = {
     connectedBy: "Povezala Dana W.",
     disconnect: "Prekini vezu",
     disconnected: "Veza sa ChatGPT-jem prekinuta",
-    serverUrl: "URL servera",
-    transport: "Transport",
-    signIn: "Prijava",
-    signInValue: "OAuth ili API ključ",
-    connected: "Povezano",
   },
 }
 

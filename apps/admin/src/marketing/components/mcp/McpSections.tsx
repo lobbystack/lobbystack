@@ -6,11 +6,11 @@ import {
   BookingAskScene,
   CallsAskScene,
   ConnectedAppsScene,
-  ConnectScene,
   ConsentChainScene,
   HubScene,
   McpScene,
 } from "@/marketing/components/mcp/McpScenes"
+import { McpInstall } from "@/marketing/components/mcp/McpInstall"
 import { ButtonLink } from "@/marketing/components/system/ButtonLink"
 import { ClosingCta } from "@/marketing/components/system/ClosingCta"
 import { FactStrip } from "@/marketing/components/system/FactStrip"
@@ -24,6 +24,7 @@ import { appSignupUrl } from "@/marketing/lib/app-links"
 import {
   getMcpCopy,
   MCP_SERVER_URL,
+  mcpClientOrder,
   mcpDocsUrl,
   mcpToolGroupOrder,
   mcpToolGroups,
@@ -109,11 +110,6 @@ export function McpHero({ locale }: SectionProps) {
             <ButtonLink href={mcpDocsUrl(locale, "mcp")} variant="secondary">
               {t.secondaryCta}
             </ButtonLink>
-          </>
-        }
-        footnote={
-          <>
-            {t.urlLabel}: <Code>{MCP_SERVER_URL}</Code>
           </>
         }
         art={
@@ -239,51 +235,46 @@ export function McpTools({ locale }: SectionProps) {
   )
 }
 
+const clientDocs = { claude: "connect-claude", chatgpt: "connect-chatgpt", cursor: "connect-other-clients", other: "connect-other-clients" } as const
+
 export function McpConnect({ locale }: SectionProps) {
   const copy = getMcpCopy(locale)
   const t = copy.connect
   return (
-    <section className="pt-20 md:pt-30" id="connect">
+    <section className="pt-16 md:pt-24" id="install">
       <div className={container}>
-        <SplitCard
-          headingLevel="h2"
-          columns="md:grid-cols-[1fr_1.1fr]"
-          mediaClassName="min-h-[20rem] md:min-h-[30rem]"
-          media={
-            <McpScene fit="panel">
-              <ConnectScene locale={locale} art={copy.art} />
-            </McpScene>
-          }
-          eyebrow={t.eyebrow}
-          title={t.title}
-          body={t.body}
-          action={
-            <>
-              <ButtonLink href={mcpDocsUrl(locale, "connect-claude")} variant="secondary" size="sm">
-                {t.guides.claude}
-              </ButtonLink>
-              <ButtonLink href={mcpDocsUrl(locale, "connect-chatgpt")} variant="secondary" size="sm">
-                {t.guides.chatgpt}
-              </ButtonLink>
-              <ButtonLink href={mcpDocsUrl(locale, "connect-other-clients")} variant="secondary" size="sm">
-                {t.guides.other}
-              </ButtonLink>
-            </>
-          }
-        >
-          <ol className="mt-6 space-y-3">
-            {t.steps.map((step, index) => (
-              <li key={step} className="flex items-start gap-3 text-base leading-6 text-foreground/85">
-                <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[0.6875rem] font-semibold text-primary-foreground tabular-nums">
-                  {index + 1}
-                </span>
-                <span className="min-w-0">
-                  <WithCode text={step} />
-                </span>
-              </li>
-            ))}
-          </ol>
-        </SplitCard>
+        <h2 className="text-center text-3xl font-semibold tracking-tight md:text-4xl">{t.title}</h2>
+        <div className="mt-8">
+          <McpInstall
+            url={MCP_SERVER_URL}
+            urlLabel={copy.hero.urlLabel}
+            copyLabel={t.copy}
+            copiedLabel={t.copied}
+            clients={mcpClientOrder.map((key) => ({
+              key,
+              label: t.clients[key].label,
+              panel: (
+                <div className="rounded-2xl border border-border bg-background p-6">
+                  <ol className="space-y-3">
+                    {t.clients[key].steps.map((step, index) => (
+                      <li key={step} className="flex items-start gap-3 text-base leading-6 text-foreground/85">
+                        <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[0.6875rem] font-semibold text-primary-foreground tabular-nums">
+                          {index + 1}
+                        </span>
+                        <span className="min-w-0">
+                          <WithCode text={step} />
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                  <ButtonLink className="mt-6" href={mcpDocsUrl(locale, clientDocs[key])} variant="secondary" size="sm">
+                    {t.guide}
+                  </ButtonLink>
+                </div>
+              ),
+            }))}
+          />
+        </div>
       </div>
     </section>
   )

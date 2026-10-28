@@ -1,6 +1,6 @@
 import { localizePath, type Locale } from "@/marketing/i18n"
 import { appSignupUrl } from "@/marketing/lib/app-links"
-import { getMcpCopy, MCP_SERVER_URL, mcpDocsUrl, mcpToolGroupOrder, mcpToolGroups } from "@/marketing/lib/mcp-page-copy"
+import { getMcpCopy, mcpClientOrder, MCP_SERVER_URL, mcpDocsUrl, mcpToolGroupOrder, mcpToolGroups } from "@/marketing/lib/mcp-page-copy"
 import { getMcpFaqs } from "@/marketing/lib/mcp-page-faqs"
 import { absoluteUrl } from "@/marketing/lib/seo"
 
@@ -22,7 +22,12 @@ export function mcpMarkdown(locale: Locale) {
       return `### ${group.title}\n\n${group.body}\n\n| ${toolHeading} | ${scopeHeading} |\n| --- | --- |\n${rows}`
     })
     .join("\n\n")
-  const steps = copy.connect.steps.map((step, index) => `${index + 1}. ${step}`).join("\n")
+  const install = mcpClientOrder
+    .map((key) => {
+      const client = copy.connect.clients[key]
+      return `### ${client.label}\n\n${client.steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`
+    })
+    .join("\n\n")
   const points = (list: string[]) => list.map((point) => `- ${point}`).join("\n")
   const faqs = getMcpFaqs(locale)
     .map((faq) => `### ${faq.question}\n\n${faq.answer}`)
@@ -65,13 +70,11 @@ ${tools}
 
 ## ${copy.connect.title}
 
-${copy.connect.body}
+${copy.hero.urlLabel}: ${MCP_SERVER_URL}
 
-${steps}
+${install}
 
-- ${copy.connect.guides.claude}: ${mcpDocsUrl(locale, "connect-claude")}
-- ${copy.connect.guides.chatgpt}: ${mcpDocsUrl(locale, "connect-chatgpt")}
-- ${copy.connect.guides.other}: ${mcpDocsUrl(locale, "connect-other-clients")}
+- ${copy.connect.guide}: ${mcpDocsUrl(locale, "mcp")}
 
 ## ${copy.faqTitle}
 
