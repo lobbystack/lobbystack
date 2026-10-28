@@ -432,7 +432,7 @@ export function AgentBasicSettingsPage({
                 </Button>
               </ItemActions>
               <Dialog onOpenChange={(open) => { if (!open && !isGreetingSaving) setIsGreetingOpen(false); }} open={isGreetingOpen}>
-                <DialogContent className="flex flex-col gap-4 sm:max-w-lg">
+                <DialogContent className="flex flex-col gap-4">
                   <DialogHeader><DialogTitle>{t("agent:fields.greeting.label")}</DialogTitle></DialogHeader>
                   <Textarea
                     autoFocus
@@ -488,7 +488,7 @@ export function AgentBasicSettingsPage({
                   toast.success(t("agent:fields.summary.rewriteCompleted"));
                 }
               }} open={isSummaryOpen}>
-                <DialogContent className="flex flex-col gap-4 sm:max-w-lg">
+                <DialogContent className="flex flex-col gap-4">
                   <DialogHeader><DialogTitle>{t("agent:fields.summary.label")}</DialogTitle></DialogHeader>
                   <div className="relative overflow-hidden rounded-xl">
                     <Textarea

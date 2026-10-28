@@ -234,7 +234,7 @@ export function LiveWebhooksSurface() {
       )}
 
       <Dialog onOpenChange={(open) => { if (!open) setDialog(null); }} open={dialog !== null}>
-        <DialogContent className={dialog?.mode === "secret" ? "sm:max-w-lg" : "max-h-[calc(100svh-2rem)] grid-rows-[auto_minmax(0,1fr)] sm:max-w-lg"}>
+        <DialogContent className={dialog?.mode === "secret" ? undefined : "max-h-[calc(100svh-2rem)] grid-rows-[auto_minmax(0,1fr)]"}>
           {dialog?.mode === "secret" ? (
             <>
               <DialogHeader><DialogTitle>{dialog.title}</DialogTitle><DialogDescription>{t("webhooks.secret.description")}</DialogDescription></DialogHeader>

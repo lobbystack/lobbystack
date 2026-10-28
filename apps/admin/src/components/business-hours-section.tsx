@@ -242,7 +242,7 @@ export function BusinessHoursSection({ businessId, canManage }: { businessId: st
         </Item>
       </Surface>
       <Dialog onOpenChange={(open) => { if (!open && !saving) close(); }} open={editing}>
-        <DialogContent className="flex max-h-[85vh] flex-col gap-4 sm:max-w-lg">
+        <DialogContent className="flex max-h-[85vh] flex-col gap-4">
           <DialogHeader><DialogTitle>{t("hours.title")}</DialogTitle></DialogHeader>
           <div className="-mx-1 flex flex-col overflow-x-hidden overflow-y-auto px-1">
             <WeeklyHoursEditor days={days} disabled={disabled} onChange={update} />

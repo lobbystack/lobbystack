@@ -29,7 +29,7 @@ export function CancelPlanDialog({ businessId, plan, periodEnd, onCanceled }: { 
   return (
     <Dialog onOpenChange={(next) => { if (!cancel.isPending) setOpen(next); }} open={open}>
       <DialogTrigger render={<Button className="w-full sm:w-auto" size="sm" variant="outline" />}>{t("billing.actions.cancelPlan")}</DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{t("billing.cancel.title", { plan })}</DialogTitle>
           <DialogDescription>{endDate ? t("billing.cancel.description", { date: endDate }) : t("billing.cancel.descriptionNoDate")}</DialogDescription>

@@ -203,7 +203,7 @@ export function LiveWidgetSettingsSurface() {
       <LiveNotificationSettingsSurface widgetOnly />
 
       <Dialog open={editing !== null} onOpenChange={(open) => { if (!open) closeDialog(); }}>
-        <DialogContent className={cn("flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden p-0", createdKey ? "sm:max-w-lg" : "sm:max-w-5xl")}>
+        <DialogContent className={cn("flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden p-0", createdKey ? "sm:max-w-xl" : "sm:max-w-5xl")}>
           {createdKey ? (
             <CreatedKeyView createdKey={createdKey} embedOrigin={embedOrigin} onDone={closeDialog} t={t} />
           ) : editing ? (

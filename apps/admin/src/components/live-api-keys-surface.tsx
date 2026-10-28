@@ -191,7 +191,7 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
 
       <Dialog onOpenChange={closeDialog} open={dialog !== null}>
         {/* The scope list is taller than a laptop's screen, so the dialog scrolls. */}
-        <DialogContent className="max-h-[calc(100svh-2rem)] overflow-y-auto sm:max-w-lg">
+        <DialogContent className="max-h-[calc(100svh-2rem)] overflow-y-auto">
           {created ? (
             <>
               <DialogHeader>
