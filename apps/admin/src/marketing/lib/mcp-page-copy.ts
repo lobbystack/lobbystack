@@ -198,8 +198,8 @@ const en: McpCopy = {
         label: "Claude",
         steps: [
           "Copy the server URL above.",
-          "In Claude, open Customize > Connectors, click Add custom connector and paste the URL.",
-          "Sign in to LobbyStack, pick your business and click Allow access.",
+          "In Claude, open Customize > Connectors, click + Add, then Add custom connector. Name it LobbyStack, paste the URL and click Continue.",
+          "Sign in to LobbyStack, pick your business and click Allow access. On Team and Enterprise, an owner adds the connector first under Organization settings > Connectors.",
         ],
       },
       chatgpt: {
@@ -213,17 +213,17 @@ const en: McpCopy = {
       codex: {
         label: "Codex",
         steps: [
-          "Create an API key in LobbyStack under Settings > API keys and export it as `LOBBYSTACK_API_KEY`.",
-          "Run `codex mcp add lobbystack --url https://app.lobbystack.com/api/mcp --bearer-token-env-var LOBBYSTACK_API_KEY`.",
-          "Start Codex and ask it to call `get_business` to check the connection.",
+          "Run `codex mcp add lobbystack --url https://app.lobbystack.com/api/mcp`.",
+          "Run `codex mcp login lobbystack`. Codex opens LobbyStack in your browser.",
+          "Sign in, pick your business and click Allow access. The ChatGPT desktop app and the Codex IDE extension use the same connection.",
         ],
       },
       cursor: {
         label: "Cursor",
         steps: [
-          "Create an API key in LobbyStack under Settings > API keys.",
-          "Add the server URL to `~/.cursor/mcp.json`, with the key in an `Authorization: Bearer` header.",
-          "Ask Cursor to call `get_business` to check the connection.",
+          "Add LobbyStack to `~/.cursor/mcp.json` as `\"lobbystack\": { \"url\": \"https://app.lobbystack.com/api/mcp\" }` under `mcpServers`.",
+          "Open Cursor's MCP settings under Customize. Cursor asks you to sign in.",
+          "Sign in to LobbyStack, pick your business and click Allow access.",
         ],
       },
       other: {
@@ -352,8 +352,8 @@ const fr: McpCopy = {
         label: "Claude",
         steps: [
           "Copiez l'URL du serveur ci-dessus.",
-          "Dans Claude, ouvrez Customize > Connectors, cliquez sur Add custom connector et collez l'URL.",
-          "Connectez-vous à LobbyStack, choisissez votre entreprise et cliquez sur Autoriser l'accès.",
+          "Dans Claude, ouvrez Customize > Connectors, cliquez sur + Add, puis Add custom connector. Nommez-le LobbyStack, collez l'URL et cliquez sur Continue.",
+          "Connectez-vous à LobbyStack, choisissez votre entreprise et cliquez sur Autoriser l'accès. Sur Team et Enterprise, un propriétaire ajoute d'abord le connecteur dans Organization settings > Connectors.",
         ],
       },
       chatgpt: {
@@ -367,17 +367,17 @@ const fr: McpCopy = {
       codex: {
         label: "Codex",
         steps: [
-          "Créez une clé API dans LobbyStack, sous Réglages > Clés API, et exportez-la dans `LOBBYSTACK_API_KEY`.",
-          "Lancez `codex mcp add lobbystack --url https://app.lobbystack.com/api/mcp --bearer-token-env-var LOBBYSTACK_API_KEY`.",
-          "Démarrez Codex et demandez-lui d'appeler `get_business` pour vérifier la connexion.",
+          "Lancez `codex mcp add lobbystack --url https://app.lobbystack.com/api/mcp`.",
+          "Lancez `codex mcp login lobbystack`. Codex ouvre LobbyStack dans votre navigateur.",
+          "Connectez-vous, choisissez votre entreprise et cliquez sur Autoriser l'accès. L'application de bureau ChatGPT et l'extension Codex pour IDE utilisent la même connexion.",
         ],
       },
       cursor: {
         label: "Cursor",
         steps: [
-          "Créez une clé API dans LobbyStack, sous Réglages > Clés API.",
-          "Ajoutez l'URL du serveur à `~/.cursor/mcp.json`, avec la clé dans un en-tête `Authorization: Bearer`.",
-          "Demandez à Cursor d'appeler `get_business` pour vérifier la connexion.",
+          "Ajoutez LobbyStack à `~/.cursor/mcp.json` sous `mcpServers` : `\"lobbystack\": { \"url\": \"https://app.lobbystack.com/api/mcp\" }`.",
+          "Ouvrez les réglages MCP de Cursor sous Customize. Cursor vous demande de vous connecter.",
+          "Connectez-vous à LobbyStack, choisissez votre entreprise et cliquez sur Autoriser l'accès.",
         ],
       },
       other: {
@@ -506,8 +506,8 @@ const es: McpCopy = {
         label: "Claude",
         steps: [
           "Copie la URL del servidor de arriba.",
-          "En Claude, abra Customize > Connectors, haga clic en Add custom connector y pegue la URL.",
-          "Inicie sesión en LobbyStack, elija su negocio y haga clic en Permitir acceso.",
+          "En Claude, abra Customize > Connectors, haga clic en + Add y luego en Add custom connector. Llámelo LobbyStack, pegue la URL y haga clic en Continue.",
+          "Inicie sesión en LobbyStack, elija su negocio y haga clic en Permitir acceso. En Team y Enterprise, un propietario agrega primero el conector en Organization settings > Connectors.",
         ],
       },
       chatgpt: {
@@ -521,17 +521,17 @@ const es: McpCopy = {
       codex: {
         label: "Codex",
         steps: [
-          "Cree una clave de API en LobbyStack, en Configuración > Claves de API, y expórtela como `LOBBYSTACK_API_KEY`.",
-          "Ejecute `codex mcp add lobbystack --url https://app.lobbystack.com/api/mcp --bearer-token-env-var LOBBYSTACK_API_KEY`.",
-          "Inicie Codex y pídale que llame a `get_business` para comprobar la conexión.",
+          "Ejecute `codex mcp add lobbystack --url https://app.lobbystack.com/api/mcp`.",
+          "Ejecute `codex mcp login lobbystack`. Codex abre LobbyStack en su navegador.",
+          "Inicie sesión, elija su negocio y haga clic en Permitir acceso. La app de escritorio de ChatGPT y la extensión de Codex para IDE usan la misma conexión.",
         ],
       },
       cursor: {
         label: "Cursor",
         steps: [
-          "Cree una clave de API en LobbyStack, en Configuración > Claves de API.",
-          "Agregue la URL del servidor a `~/.cursor/mcp.json`, con la clave en un encabezado `Authorization: Bearer`.",
-          "Pídale a Cursor que llame a `get_business` para comprobar la conexión.",
+          "Agregue LobbyStack a `~/.cursor/mcp.json` dentro de `mcpServers`: `\"lobbystack\": { \"url\": \"https://app.lobbystack.com/api/mcp\" }`.",
+          "Abra la configuración de MCP de Cursor en Customize. Cursor le pide iniciar sesión.",
+          "Inicie sesión en LobbyStack, elija su negocio y haga clic en Permitir acceso.",
         ],
       },
       other: {
@@ -660,8 +660,8 @@ const sr: McpCopy = {
         label: "Claude",
         steps: [
           "Kopirajte URL servera iznad.",
-          "U Claude-u otvorite Customize > Connectors, kliknite na Add custom connector i nalepite URL.",
-          "Prijavite se na LobbyStack, izaberite firmu i kliknite na Dozvoli pristup.",
+          "U Claude-u otvorite Customize > Connectors, kliknite na + Add, pa na Add custom connector. Nazovite ga LobbyStack, nalepite URL i kliknite na Continue.",
+          "Prijavite se na LobbyStack, izaberite firmu i kliknite na Dozvoli pristup. Na Team i Enterprise planovima vlasnik prvo dodaje konektor u Organization settings > Connectors.",
         ],
       },
       chatgpt: {
@@ -675,17 +675,17 @@ const sr: McpCopy = {
       codex: {
         label: "Codex",
         steps: [
-          "Napravite API ključ u LobbyStack-u, u Podešavanja > API ključevi, i izvezite ga kao `LOBBYSTACK_API_KEY`.",
-          "Pokrenite `codex mcp add lobbystack --url https://app.lobbystack.com/api/mcp --bearer-token-env-var LOBBYSTACK_API_KEY`.",
-          "Pokrenite Codex i zamolite ga da pozove `get_business` da proveri vezu.",
+          "Pokrenite `codex mcp add lobbystack --url https://app.lobbystack.com/api/mcp`.",
+          "Pokrenite `codex mcp login lobbystack`. Codex otvara LobbyStack u pregledaču.",
+          "Prijavite se, izaberite firmu i kliknite na Dozvoli pristup. ChatGPT aplikacija za računar i Codex dodatak za IDE koriste istu vezu.",
         ],
       },
       cursor: {
         label: "Cursor",
         steps: [
-          "Napravite API ključ u LobbyStack-u, u Podešavanja > API ključevi.",
-          "Dodajte URL servera u `~/.cursor/mcp.json`, sa ključem u zaglavlju `Authorization: Bearer`.",
-          "Zamolite Cursor da pozove `get_business` da proveri vezu.",
+          "Dodajte LobbyStack u `~/.cursor/mcp.json` pod `mcpServers`: `\"lobbystack\": { \"url\": \"https://app.lobbystack.com/api/mcp\" }`.",
+          "Otvorite MCP podešavanja u Cursor-u, pod Customize. Cursor traži da se prijavite.",
+          "Prijavite se na LobbyStack, izaberite firmu i kliknite na Dozvoli pristup.",
         ],
       },
       other: {
