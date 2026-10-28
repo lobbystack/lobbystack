@@ -24,7 +24,7 @@
 - `pnpm install`: install workspace dependencies.
 - `docker compose up -d postgres redis`: start local infrastructure. Add `--profile minio` when testing the optional MinIO storage backend.
 - `pnpm db:migrate`: apply PostgreSQL migrations.
-- `pnpm dev`: run the admin and worker apps. Browser calls need `LIVE_PROTOTYPE_ENABLED=true` and `OPENAI_API_KEY` on admin and worker.
+- `pnpm dev`: run the admin and worker apps. Browser calls need `LIVE_PROTOTYPE_ENABLED=true` and `OPENAI_API_KEY` on admin and worker. The admin dev server reads `@lobbystack/telemetry` from `packages/telemetry/dist` through a Turbopack alias in `next.config.ts`, so run `pnpm --filter @lobbystack/telemetry build` in a fresh checkout and after you change that package.
 - `pnpm typecheck`: typecheck all active workspaces and scripts.
 - `pnpm lint`: ESLint in `apps/admin`; the other workspaces run `tsc` as their lint.
 - `pnpm test`: run all Vitest suites.
@@ -33,16 +33,26 @@
 - `pnpm widget:embed:build`: rebuild `packages/embed` and copy the loader into `apps/admin/public/embed/`. Commit the rebuilt `apps/admin/public/embed/embed.js`; CI fails when it differs from the build.
 - `pnpm lobbystack <command>`: run the CLI from source. `pnpm lobbystack login --url <dashboard URL> --key <API key>` saves a profile in `~/.config/lobbystack/config.json`. For a platform key, `pnpm platform-key:create --name <name> --group <group> --owner-email <email>` writes the key to `.platform-keys/<prefix>.json` and prints its `PLATFORM_API_KEYS` entry. The key gets an API key's scopes; add `--create-businesses` or `--create-users` for the platform-only ones.
 
-## Next.js MCP server
+## Next.js
 
-`.mcp.json` registers `next-devtools`, a Model Context Protocol (MCP) server from the `next-devtools-mcp` package. It works with `apps/admin`, the only Next.js app, marketing site included. Use it like this:
+`apps/admin` is the only Next.js app, marketing site included. It runs Next.js 16.4 on Turbopack.
 
-- Call `nextjs_docs` before you write Next.js code or answer a Next.js question, then read the guide it points to in `apps/admin/node_modules/next/dist/docs/`. Those docs match the installed Next.js version, so use them over memory or web results.
-- Start the admin dev server with `pnpm dev:admin` or `pnpm dev`. It listens on `ADMIN_PORT`, which defaults to 3000.
-- Call `nextjs_index` to find the running server and list its tools. Then run a tool with `nextjs_call`: `get_errors`, `get_routes`, `get_page_metadata`, `get_logs`, `get_compilation_issues`, or `compile_route`.
-- Before you change admin pages, layouts, route handlers, or Server Actions, check `get_routes` and `get_errors`. Call `get_errors` again after the change.
-- If `nextjs_index` finds no server, start the admin dev server and call it again. Pass `port` when the server runs on a port other than 3000.
-- `get_errors` reports build errors and errors from open browser sessions. It doesn't replace the checks under "Testing".
+- Read the guide for what you're changing in `apps/admin/node_modules/next/dist/docs/` before you write Next.js code or answer a Next.js question. Those docs match the installed version, so use them over memory or web results.
+- Start the dev server with `pnpm dev:admin` or `pnpm dev`. It listens on `ADMIN_PORT`, which defaults to 3000.
+- The running dev server answers MCP requests at `/_next/mcp`, so you can query it with `curl` and no MCP client. Call `tools/list` for the current tools. Keep both `Accept` types; without them the server answers 406.
+
+  ```bash
+  curl -s http://localhost:3000/_next/mcp \
+    -H 'Content-Type: application/json' \
+    -H 'Accept: application/json, text/event-stream' \
+    -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_errors","arguments":{}}}' \
+    | sed -n 's/^data: //p'
+  ```
+
+- Before you change pages, layouts, route handlers, or Server Actions, call `get_routes` and `get_errors`. After the change, call `get_compilation_issues` and `get_errors` again. `get_errors` needs at least one page open in a browser first.
+- To check a change in a real browser, follow `.agents/skills/next-dev-loop`. It needs the `agent-browser` CLI, version 0.31.1 or later, on your `PATH`.
+- `.mcp.json` registers `next-devtools-mcp` for MCP clients that read that file. It calls the same endpoint and adds `nextjs_docs` for searching the bundled docs.
+- None of these replace the checks under "Testing".
 
 ## Coding style
 

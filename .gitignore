@@ -24,18 +24,20 @@ node_modules
 test-results/
 playwright-report/
 references/shadcn-admin
-# Agent folders stay local, except the writing skills AGENTS.md names.
+# Agent folders stay local, except the skills AGENTS.md names.
 # .agents/skills holds them; .claude/skills links to it for Claude Code.
 .agents/*
 !.agents/skills/
 .agents/skills/*
 !.agents/skills/copywriting/
+!.agents/skills/next-dev-loop/
 !.agents/skills/stop-slop/
 !.agents/skills/writing-guidelines/
 .claude/*
 !.claude/skills/
 .claude/skills/*
 !.claude/skills/copywriting
+!.claude/skills/next-dev-loop
 !.claude/skills/stop-slop
 !.claude/skills/writing-guidelines
 .codex/
