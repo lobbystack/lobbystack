@@ -14,6 +14,7 @@ import {
   apiNotificationEvents,
   isContactPasscode,
   isGuessableContactPasscode,
+  keyHasScope,
   randomContactPasscode,
   RULES_MAX,
   isApiKeyScope,
@@ -1363,6 +1364,9 @@ export async function createPartnerBusinessForApi(
   options: { beforeCreate?: (() => Promise<void>) | undefined; setup?: BusinessSetupDependencies | undefined } = {},
 ): Promise<{ business: ApiBusiness; replayed: boolean }> {
   const { body, key } = input;
+  // Selling a package and reading a template are the partner's own work, so they take its scopes on top of businesses:create.
+  if (body.package_id !== undefined && !keyHasScope(key.scopes, "partner.businesses:write")) throw new PublicApiError(403, "insufficient_scope", "This API key needs the partner.businesses:write scope to send package_id.");
+  if (body.template_id !== undefined && !keyHasScope(key.scopes, "partner:read")) throw new PublicApiError(403, "insufficient_scope", "This API key needs the partner:read scope to send template_id.");
   if (body.owner_email === undefined) throw invalidRequest("A partner's platform key invites the business's owner as it creates the business, so send owner_email.", [{ path: "owner_email", message: "Required with a partner's platform key." }]);
   const timezone = ianaTimeZone(body.timezone);
   if (!timezone) throw invalidRequest("timezone is not a valid IANA time zone.", [{ path: "timezone", message: "Use an IANA time zone such as America/Toronto." }]);

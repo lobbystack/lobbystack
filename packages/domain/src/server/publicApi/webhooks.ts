@@ -409,3 +409,16 @@ export async function pruneApiHistory(context: DomainContext, input: { businessI
   });
 }
 
+
+/**
+ * Deletes the v1 Partner endpoints' Idempotency-Key records past the window,
+ * for every partner. They belong to no business, so pruneApiHistory never
+ * reaches them, and the worker runs this on its own schedule.
+ */
+export async function prunePartnerApiIdempotencyKeys(context: DomainContext, input: { now?: Date } = {}): Promise<{ deleted: number }> {
+  const cutoff = new Date((input.now ?? new Date()).getTime() - PUBLIC_API_IDEMPOTENCY_TTL_HOURS * 3_600_000);
+  return await withBusinessTransaction(context.db, { actorType: "worker" }, async (tx) => {
+    const [row] = (await tx.execute<{ deleted: number }>(sql`select app.prune_partner_api_idempotency_keys(${cutoff.toISOString()}::timestamptz) as deleted`)).rows;
+    return { deleted: Number(row?.deleted ?? 0) };
+  });
+}

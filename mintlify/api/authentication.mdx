@@ -94,9 +94,9 @@ A platform key (`lsp_...`) onboards and manages many businesses, where an API ke
   </Step>
 </Steps>
 
-A partner's key acts as the partner, so it keeps working when the person who made it leaves the team. It reaches the partner's active businesses, including the ones the console created, and no others. With the partner scopes, it also runs the partner itself through the [Partner endpoints](#partner-endpoints). It can't start a Polar checkout for a business, set a managed plan or create a claim link. It can't search for or claim phone numbers, or read or change alert preferences, because those act as a person.
+A partner's key acts as the partner, so it keeps working when the person who made it leaves the team. Its billing scopes are the exception: see [Partner endpoints](#partner-endpoints). It reaches the partner's active businesses, including the ones the console created, and no others. With the partner scopes, it also runs the partner itself through the [Partner endpoints](#partner-endpoints). It can't start a Polar checkout for a business, set a managed plan or create a claim link. It can't search for or claim phone numbers, or read or change alert preferences, because those act as a person.
 
-`POST /businesses` with a partner's key creates a business of the partner, with no owner yet. Name the owner in `owner_email`, and the partner emails them an invitation to sign in on its dashboard. `access_level` sets what the business's own team can use: `full`, the default, or `activity`. `template_id` starts the business from one of the partner's templates, and `package_id` sells it one of the partner's packages. A partner's platform keys can create 30 businesses an hour between them. The invitations it sends through `POST /team/invitations` and `POST /users` come from the partner and link to its dashboard.
+`POST /businesses` with a partner's key creates a business of the partner, with no owner yet. Name the owner in `owner_email`, and the partner emails them an invitation to sign in on its dashboard. `access_level` sets what the business's own team can use: `full`, the default, or `activity`. `template_id` starts the business from one of the partner's templates and needs `partner:read` too. `package_id` sells it one of the partner's packages and needs `partner.businesses:write` too. Without the scope, the request returns `403` with the code `insufficient_scope`. A partner's platform keys can create 30 businesses an hour between them. The invitations it sends through `POST /team/invitations` and `POST /users` come from the partner and link to its dashboard.
 
 The links the API returns for a partner's business, such as a widget's script tag or a calendar connect link, point at the partner's dashboard too.
 
@@ -104,7 +104,7 @@ The links the API returns for a partner's business, such as a widget's script ta
 
 The endpoints under `/partner` do what the partner console does. They read the partner, run its demos, packages, brand, domain, templates and team, and manage its Stripe account and tier. Only a partner's key can call them, and it sends no `LobbyStack-Business` header. An API key or a host's key gets `403` with the code `forbidden`.
 
-A key acts with an admin's rights, so it never changes an owner. Inviting an owner, changing an owner's role or removing one returns `403`: do those in the console. Only owners can grant `partner.billing:read` and `partner.billing:write`, since those reach what only owners see in the console. `POST /partner/billing/checkout` makes the tier checkout out to the owner who made the key.
+A key acts with an admin's rights, so it never changes an owner. Inviting an owner, changing an owner's role or removing one returns `403`: do those in the console. Only owners can grant `partner.billing:read` and `partner.billing:write`, since those reach what only owners see in the console. `partner.billing:write` includes what `partner.billing:read` allows. The billing scopes work only while the owner who made the key is still an owner. Once that person becomes an admin or leaves the team, the key's billing requests return `409` with the code `key_owner_inactive`, and its other scopes keep working. `POST /partner/billing/checkout` makes the tier checkout out to the owner who made the key.
 
 | Scope | Allows |
 | --- | --- |
@@ -115,7 +115,7 @@ A key acts with an admin's rights, so it never changes an owner. Inviting an own
 | `partner.branding:write` | `PATCH /partner/brand`, `POST` and `DELETE` on `/partner/domain` |
 | `partner.templates:write` | `POST /partner/templates`, `DELETE /partner/templates/{template_id}` |
 | `partner.team:write` | `POST /partner/team/invitations`, `DELETE /partner/team/invitations/{invitation_id}`, `PATCH` and `DELETE` on `/partner/team/members/{member_id}` |
-| `partner.billing:read` | `GET /partner/stripe`, `GET /partner/billing`, `GET /partner/billing/checkout/{checkout_id}`, and `pool` in `GET /partner` |
+| `partner.billing:read` | `GET /partner/stripe`, `GET /partner/billing`, `GET /partner/billing/checkout/{checkout_id}`, and `pool` in `GET /partner`. `partner.billing:write` allows these too. |
 | `partner.billing:write` | `POST /partner/stripe/onboarding-link`, `PATCH /partner/billing/overage`, `POST /partner/billing/checkout` |
 
 `POST /partner/team/invitations` requires an `Idempotency-Key`, and `POST /partner/packages`, `POST /partner/templates` and `POST /partner/billing/checkout` take one. `POST /partner/demos` and `POST /partner/demos/{demo_id}/rotate` ignore it, so LobbyStack never stores a copy of a demo's link. After a network error, check `GET /partner/demos` before you retry. `PATCH /partner/brand` takes a logo or favicon in base64, as the console uploads it.

@@ -1,12 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { JobEnvelope } from "@lobbystack/contracts";
-import { processWebhookDelivery, pruneApiHistory, recordProductEvent } from "@lobbystack/domain";
+import { processWebhookDelivery, pruneApiHistory, prunePartnerApiIdempotencyKeys, recordProductEvent } from "@lobbystack/domain";
 
 vi.mock("@lobbystack/domain", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@lobbystack/domain")>()),
   processWebhookDelivery: vi.fn(),
   pruneApiHistory: vi.fn(),
+  prunePartnerApiIdempotencyKeys: vi.fn(),
   recordProductEvent: vi.fn(),
 }));
 
@@ -39,5 +40,14 @@ describe("webhook jobs", () => {
   it("prunes webhook history and idempotency keys", async () => {
     vi.mocked(pruneApiHistory).mockResolvedValue({ events: 2, idempotencyKeys: 1 });
     expect(await handleJob({ ...envelope("api.retention", {}), recurring: true }, { domain: { db: {} as never } })).toEqual({ status: "completed", entityId: `${businessId}:2:1` });
+  });
+
+  it("prunes the Partner endpoints' idempotency records for every partner at once", async () => {
+    vi.mocked(prunePartnerApiIdempotencyKeys).mockResolvedValueOnce({ deleted: 3 }).mockResolvedValueOnce({ deleted: 0 });
+    const job = { ...envelope("api.partnerRetention", {}), businessId: null, queue: "maintenance" as const, recurring: true };
+    const domain = { db: {} as never };
+    expect(await handleJob(job, { domain })).toEqual({ status: "completed", entityId: "3" });
+    expect(prunePartnerApiIdempotencyKeys).toHaveBeenCalledWith(domain);
+    expect(await handleJob(job, { domain })).toEqual({ status: "skipped", entityId: "0" });
   });
 });

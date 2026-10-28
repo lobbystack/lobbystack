@@ -66,6 +66,17 @@ export type PartnerScope = (typeof partnerScopes)[number];
  */
 export const partnerOwnerScopes = ["partner.billing:read", "partner.billing:write"] as const satisfies readonly PartnerScope[];
 
+// A scope a key holds by holding another. partner.billing:write reads billing
+// too, so a key that starts a tier checkout can read it back.
+const scopesImplying: Partial<Record<ApiKeyScope, readonly ApiKeyScope[]>> = {
+  "partner.billing:read": ["partner.billing:write"],
+};
+
+/** Whether a key's scopes grant `scope`, itself or through a scope that implies it. */
+export function keyHasScope(scopes: readonly string[], scope: ApiKeyScope): boolean {
+  return scopes.includes(scope) || (scopesImplying[scope] ?? []).some((implying) => scopes.includes(implying));
+}
+
 export function isPartnerScope(value: unknown): value is PartnerScope {
   return typeof value === "string" && (partnerScopes as readonly string[]).includes(value);
 }

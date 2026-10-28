@@ -33,7 +33,7 @@ La clé d'un partenaire agit au nom de votre partenaire plutôt qu'au nom d'une 
 - Toutes les autres requêtes nomment leur entreprise dans l'en-tête `LobbyStack-Business`.
 - Les liens que l'API renvoie, comme la balise de script d'un widget ou un lien de connexion d'agenda, mènent à votre adresse.
 
-Vos clés peuvent créer 30 entreprises par heure au total. `POST /businesses` accepte `template_id` pour partir d'un de vos modèles et `package_id` pour vendre une de vos formules. Une clé ne peut pas rechercher ou réserver de numéros de téléphone, ni modifier les préférences d'alertes : faites-le dans la console.
+Vos clés peuvent créer 30 entreprises par heure au total. `POST /businesses` accepte `template_id` pour partir d'un de vos modèles, avec la portée `partner:read`, et `package_id` pour vendre une de vos formules, avec la portée `partner.businesses:write`. Une clé ne peut pas rechercher ou réserver de numéros de téléphone, ni modifier les préférences d'alertes : faites-le dans la console.
 
 [Clés de plateforme](/fr/api/authentication#clés-de-plateforme) liste les portées, les en-têtes et les réponses.
 
@@ -47,7 +47,7 @@ lobbystack packages list
 lobbystack partner-team invite sam@youragency.example member
 ```
 
-La clé agit comme un administrateur : elle ne peut pas inviter de propriétaire ni changer le rôle d'un propriétaire. Seuls les propriétaires peuvent donner à une clé l'accès à la facturation, et un paiement de palier lancé par la clé est établi au nom du propriétaire qui l'a créée. [Points de terminaison partenaire](/fr/api/authentication#points-de-terminaison-partenaire) liste ce que permet chaque accès.
+La clé agit comme un administrateur : elle ne peut pas inviter de propriétaire ni changer le rôle d'un propriétaire. Seuls les propriétaires peuvent donner à une clé l'accès à la facturation, et un paiement de palier lancé par la clé est établi au nom du propriétaire qui l'a créée. L'accès à la facturation dure tant que cette personne reste propriétaire. Si elle devient administrateur ou quitte votre équipe, la clé perd l'accès à la facturation et garde le reste. L'écriture de la facturation comprend sa lecture. [Points de terminaison partenaire](/fr/api/authentication#points-de-terminaison-partenaire) liste ce que permet chaque accès.
 
 ## Intégrer une entreprise à partir d'un fichier
 

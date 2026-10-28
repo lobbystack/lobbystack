@@ -428,6 +428,18 @@ describe("a partner's platform keys in the v1 request pipeline", () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
+  it("lets partner.billing:write call the endpoints that read billing", async () => {
+    const handler = vi.fn(async (_input: unknown) => ({ body: { data: { ok: true } } }));
+    const writer = { ...partner(), resolvePlatformKey: vi.fn(async () => ({ ...partnerPlatformKey, scopes: ["partner.billing:write" as const] })) };
+    expect((await handleApiRequest(request("/partner/billing", { headers: { authorization: `Bearer ${token}` } }), "getPartnerBilling", handler, writer)).status).toBe(200);
+    expect((await handleApiRequest(request("/partner/billing/checkout/x", { headers: { authorization: `Bearer ${token}` } }), "getPartnerTierCheckout", handler, writer)).status).toBe(200);
+    // partner.billing:read doesn't grant partner.billing:write.
+    const reader = { ...partner(), resolvePlatformKey: vi.fn(async () => ({ ...partnerPlatformKey, scopes: ["partner.billing:read" as const] })) };
+    const refused = await handleApiRequest(request("/partner/billing/overage", { method: "PATCH", headers: { authorization: `Bearer ${token}` }, body: "{}" }), "updatePartnerPoolOverage", handler, reader);
+    expect(refused.status).toBe(403);
+    expect(await refused.json()).toMatchObject({ error: { code: "insufficient_scope", message: expect.stringContaining("partner.billing:write") } });
+  });
+
   it("refuses a missing Idempotency-Key on a Partner endpoint that requires one, before the handler runs", async () => {
     const handler = vi.fn();
     const dependencies = { ...partner(), resolvePlatformKey: vi.fn(async () => ({ ...partnerPlatformKey, scopes: ["partner.team:write" as const] })) };

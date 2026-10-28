@@ -30,7 +30,7 @@ import type {
   ApiPartnerTierCheckout,
   ApiPartnerTierCheckoutCreate,
 } from "@lobbystack/shared";
-import { PUBLIC_API_IDEMPOTENCY_TTL_HOURS } from "@lobbystack/shared";
+import { keyHasScope, PUBLIC_API_IDEMPOTENCY_TTL_HOURS, type ApiErrorCode } from "@lobbystack/shared";
 
 import { brandForHostReference } from "../brands";
 import { deleteBusinessTemplate, listBusinessTemplates, saveBusinessTemplate, type BusinessSetupDependencies, type PartnerTemplate } from "../businessTemplates";
@@ -69,6 +69,9 @@ const ERROR_CODES: Record<number, "invalid_request" | "unauthorized" | "forbidde
   429: "rate_limited",
 };
 
+/** The console's codes that the v1 API answers as they are. */
+const PASSED_THROUGH = new Set<string>(["key_owner_inactive"] satisfies ApiErrorCode[]);
+
 /**
  * Runs a partner operation and turns its errors, which carry a status and
  * the console's own code, into v1 errors with the same message.
@@ -79,7 +82,7 @@ async function partnerOperation<T>(run: () => Promise<T>): Promise<T> {
   } catch (error) {
     if (error instanceof PublicApiError) throw error;
     const status = typeof error === "object" && error !== null && "status" in error && typeof error.status === "number" ? error.status : 500;
-    const code = ERROR_CODES[status];
+    const code = PASSED_THROUGH.has((error as { code?: unknown }).code as string) ? (error as { code: ApiErrorCode }).code : ERROR_CODES[status];
     if (!code || !(error instanceof Error)) throw error;
     throw new PublicApiError(status === 413 ? 400 : status, code, error.message);
   }
@@ -98,7 +101,10 @@ export async function getPartnerForApi(context: DomainContext, key: PartnerPlatf
       const [row] = await tx.select({ slug: partners.slug }).from(partners).where(eq(partners.id, actor.partnerId)).limit(1);
       return { slug: row?.slug ?? "", tier: await loadPartnerTierInTransaction(tx, actor.partnerId) };
     });
-    const billing = key.scopes.includes("partner.billing:read") ? await getPartnerBilling(context, actor) : null;
+    // A key whose owner is no longer one reads the partner without its pool, as a key without the scope does.
+    const billing = keyHasScope(key.scopes, "partner.billing:read")
+      ? await getPartnerBilling(context, actor).catch((error: unknown) => { if ((error as { code?: unknown } | null)?.code === "key_owner_inactive") return null; throw error; })
+      : null;
     const custom = domains.custom?.status === "active" ? domains.custom : null;
     return {
       id: actor.partnerId,

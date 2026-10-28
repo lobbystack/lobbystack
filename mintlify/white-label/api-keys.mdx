@@ -33,7 +33,7 @@ A partner's key acts as your partner rather than as a person, so it keeps workin
 - Every other request names its business in the `LobbyStack-Business` header.
 - Links the API returns, such as a widget's script tag or a calendar connect link, point at your address.
 
-Your keys can create 30 businesses an hour between them. `POST /businesses` takes `template_id` to start from one of your templates and `package_id` to sell one of your packages. A key can't search for or claim phone numbers, or change alert preferences, so do those in the console.
+Your keys can create 30 businesses an hour between them. `POST /businesses` takes `template_id` to start from one of your templates, which needs `partner:read`, and `package_id` to sell one of your packages, which needs `partner.businesses:write`. A key can't search for or claim phone numbers, or change alert preferences, so do those in the console.
 
 [Platform keys](/api/authentication#platform-keys) lists the scopes, headers and responses.
 
@@ -47,7 +47,7 @@ lobbystack packages list
 lobbystack partner-team invite sam@youragency.example member
 ```
 
-The key acts as an admin, so it can't invite an owner or change an owner's role. Only owners can give a key billing access, and a tier checkout the key starts goes to the owner who made it. [Partner endpoints](/api/authentication#partner-endpoints) lists what each access allows.
+The key acts as an admin, so it can't invite an owner or change an owner's role. Only owners can give a key billing access, and a tier checkout the key starts goes to the owner who made it. Billing access lasts while that person is still an owner. If they become an admin or leave your team, the key loses billing access and keeps the rest. Write access to billing includes read access. [Partner endpoints](/api/authentication#partner-endpoints) lists what each access allows.
 
 ## Onboard a business from a file
 

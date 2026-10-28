@@ -9,13 +9,14 @@ import type { ApiKeyScope } from "@lobbystack/shared";
 import { forgetCachedBrands } from "./brands";
 import type { TemplateStorage } from "./businessTemplates";
 import type { DomainContext } from "./context";
-import { createPartnerBusiness, hashPartnerToken, acceptPartnerInvitation, invitePartnerMember, signUpPartner, type PartnerMemberActor } from "./partners";
+import { createPartnerBusiness, hashPartnerToken, acceptPartnerInvitation, invitePartnerMember, releaseBusiness, signUpPartner, type PartnerMemberActor } from "./partners";
 import { recordStripeConnectEvent, startPartnerStripeOnboarding } from "./partnerStripe";
 import { createPartnerPlatformKey, revokePartnerPlatformKey } from "./partnerPlatformKeys";
 import {
   archivePartnerPackageForApi,
   createPartnerDemoForApi,
   createPartnerPackageForApi,
+  createPartnerStripeOnboardingLinkForApi,
   createPartnerTeamInvitationForApi,
   createPartnerTemplateForApi,
   createPartnerTierCheckoutForApi,
@@ -47,6 +48,7 @@ import {
   updatePartnerTeamMemberForApi,
 } from "./publicApi/partner";
 import { createPartnerBusinessForApi } from "./publicApi/operations";
+import { prunePartnerApiIdempotencyKeys } from "./publicApi/webhooks";
 import type { PartnerPlatformKey } from "./publicApi/platformKeys";
 import { acceptInvitation } from "./tenancy";
 
@@ -119,6 +121,19 @@ function workerContext(tx: DatabaseTransaction): DomainContext {
     },
   };
   return { db: db as unknown as Database };
+}
+
+/** A context whose transactions run on tx, calling `before` ahead of the nth one, as a request racing the operation would. */
+function contextRacing(tx: DatabaseTransaction, nth: number, before: () => Promise<void>): DomainContext {
+  let count = 0;
+  const db = {
+    async transaction<T>(callback: (inner: DatabaseTransaction) => Promise<T>): Promise<T> {
+      count += 1;
+      if (count === nth) await before();
+      return await tx.transaction(callback);
+    },
+  };
+  return { db: db as unknown as Database, stripeConnect: new FakeStripeConnect() };
 }
 
 async function refusal(promise: Promise<unknown>): Promise<{ status?: number; code?: string; message?: string }> {
@@ -249,7 +264,7 @@ describe.skipIf(!testUrl)("the v1 Partner endpoints with a partner's own keys, a
       await asMigrator(tx, async () => { await tx.update(partnerMembers).set({ role: "owner" }).where(eq(partnerMembers.id, acme.memberIds.admin)); });
       const key = await acme.key(["partner.billing:read", "partner.billing:write"], { ...acme.adminActor, role: "owner" });
       await asMigrator(tx, async () => { await tx.update(partnerMembers).set({ role: "admin" }).where(eq(partnerMembers.id, acme.memberIds.admin)); });
-      expect(await refusal(createPartnerTierCheckoutForApi(acme.context, key, { tier: "growth", interval: "annual" }))).toMatchObject({ status: 409 });
+      expect(await refusal(createPartnerTierCheckoutForApi(acme.context, key, { tier: "growth", interval: "annual" }))).toMatchObject({ status: 409, code: "key_owner_inactive" });
     });
   });
 
@@ -478,6 +493,140 @@ describe.skipIf(!testUrl)("the v1 Partner endpoints with a partner's own keys, a
       await tx.execute(sql`select set_config('app.platform_key_id', '', true), set_config('app.user_id', ${acme.owner.userId}, true), set_config('app.actor_type', 'operator', true)`);
       const visible = await tx.select({ id: partnerApiIdempotencyKeys.id }).from(partnerApiIdempotencyKeys);
       expect(visible).toEqual([]);
+    });
+  });
+  it("lets a key with only partner.billing:write read billing and the checkout it starts", async () => {
+    await rollbackTest(async (tx) => {
+      for (const [name, value] of Object.entries(TIER_PRODUCTS)) vi.stubEnv(name, value);
+      const acme = await partner(tx, "Acme Agency");
+      const writeOnly = await acme.key(["partner:read", "partner.billing:write"]);
+      expect(await getPartnerBillingForApi(acme.context, writeOnly)).toMatchObject({ billed: true, tier: "free" });
+      expect(await getPartnerStripeForApi(acme.context, writeOnly)).toMatchObject({ configured: true, status: "not_connected" });
+      expect((await getPartnerForApi(acme.context, writeOnly)).pool).toMatchObject({ voice_seconds_used: 0 });
+      const checkout = await createPartnerTierCheckoutForApi(acme.context, writeOnly, { tier: "starter", interval: "monthly" });
+      expect(checkout).toMatchObject({ id: expect.any(String), tier: "starter", interval: "monthly", status: "pending", checkout_url: null });
+      expect(await getPartnerTierCheckoutForApi(acme.context, writeOnly, checkout.id)).toMatchObject({ id: checkout.id, status: "pending" });
+      // A retry finds the same checkout.
+      expect((await createPartnerTierCheckoutForApi(acme.context, writeOnly, { tier: "starter", interval: "monthly" })).id).toBe(checkout.id);
+    });
+  });
+
+  it("stops counting a key's billing scopes once the owner who made it isn't an owner, and keeps its other scopes", async () => {
+    for (const change of ["demoted", "removed"] as const) {
+      await rollbackTest(async (tx) => {
+        for (const [name, value] of Object.entries(TIER_PRODUCTS)) vi.stubEnv(name, value);
+        const acme = await partner(tx, "Acme Agency");
+        // The admin becomes an owner and makes a key with every scope.
+        await asMigrator(tx, async () => { await tx.update(partnerMembers).set({ role: "owner" }).where(eq(partnerMembers.id, acme.memberIds.admin)); });
+        const key = await acme.key(ALL_PARTNER_SCOPES, { ...acme.adminActor, role: "owner" });
+        expect(await getPartnerBillingForApi(acme.context, key)).toMatchObject({ tier: "free" });
+        const hasScope = async (scope: string) => (await tx.execute<{ has: boolean }>(sql`select set_config('app.user_id', '', true), set_config('app.platform_key_id', ${key.platformKeyId}, true), set_config('app.actor_type', 'operator', true), app.partner_key_has_scope(${acme.partnerId}::uuid, ${scope}) as has`)).rows[0]?.has;
+        expect(await hasScope("partner.billing:write")).toBe(true);
+
+        await asMigrator(tx, async () => { await tx.update(partnerMembers).set(change === "demoted" ? { role: "admin" } : { status: "removed" }).where(eq(partnerMembers.id, acme.memberIds.admin)); });
+        const inactive = { status: 409, code: "key_owner_inactive" };
+        expect(await refusal(getPartnerBillingForApi(acme.context, key))).toMatchObject(inactive);
+        expect(await refusal(updatePartnerPoolOverageForApi(acme.context, key, { enabled: false }))).toMatchObject(inactive);
+        expect(await refusal(getPartnerStripeForApi(acme.context, key))).toMatchObject(inactive);
+        expect(await refusal(createPartnerStripeOnboardingLinkForApi(acme.context, key, { country: "CA" }))).toMatchObject(inactive);
+        expect(await refusal(createPartnerTierCheckoutForApi(acme.context, key, { tier: "starter", interval: "monthly" }))).toMatchObject(inactive);
+        // The database stops counting them too.
+        expect(await hasScope("partner.billing:read")).toBe(false);
+        expect(await hasScope("partner.billing:write")).toBe(false);
+        expect(await hasScope("partner:read")).toBe(true);
+        await tx.execute(sql`select set_config('app.platform_key_id', '', true)`);
+
+        // What the key does as an admin still works, and the partner reads without its pool.
+        expect(await getPartnerForApi(acme.context, key)).toMatchObject({ id: acme.partnerId, pool: null });
+        expect(await getPartnerBrandForApi(acme.context, key)).toMatchObject({ name: "Acme Agency" });
+        expect((await getPartnerTeamForApi(acme.context, key)).members.length).toBeGreaterThan(0);
+      });
+    }
+  });
+
+  it("checks the key and the business again in the transaction that changes a business's billing", async () => {
+    await rollbackTest(async (tx) => {
+      const acme = await partner(tx, "Acme Agency");
+      await connectStripe(acme);
+      const pkgKey = await acme.key(["partner:read", "partner.packages:write"]);
+      const made = await createPartnerPackageForApi(acme.context, pkgKey, { name: "Front desk", monthly_price_minor: 9_900, voice_minutes: 300, chats: 500 });
+      const readPackage = async (businessId: string) => (await asMigrator(tx, async () => await tx.execute<{ package_id: string | null }>(sql`select package_id from public.billing_accounts where business_id = ${businessId}::uuid`))).rows[0]?.package_id ?? null;
+
+      // The key is revoked after the first check and before the change.
+      const harbor = await acme.business("Harbor Dental");
+      const revoked = await acme.key(["partner.businesses:write"]);
+      const revoking = contextRacing(tx, 2, async () => { await revokePartnerPlatformKey(acme.context, acme.ownerActor, { platformKeyId: revoked.platformKeyId }); });
+      expect(await refusal(updatePartnerBusinessBillingForApi(revoking, revoked, harbor, { package_id: made.id }))).toMatchObject({ status: 401 });
+      expect(await readPackage(harbor)).toBeNull();
+
+      // The business is released after the first check and before the change.
+      const [client] = await people(tx, 1);
+      const pier = await acme.business("Pier Dental", client);
+      const key = await acme.key(["partner.businesses:write"]);
+      const releasing = contextRacing(tx, 2, async () => { await releaseBusiness(acme.context, acme.ownerActor, { businessId: pier }); });
+      expect(await refusal(updatePartnerBusinessBillingForApi(releasing, key, pier, { package_id: made.id }))).toMatchObject({ status: 404 });
+      expect(await readPackage(pier)).toBeNull();
+
+      // Overage: the key is revoked between the two transactions.
+      const cove = await acme.business("Cove Dental");
+      const seller = await acme.key(["partner.businesses:write"]);
+      await updatePartnerBusinessBillingForApi(acme.context, seller, cove, { package_id: made.id });
+      const revokingOverage = contextRacing(tx, 2, async () => { await revokePartnerPlatformKey(acme.context, acme.ownerActor, { platformKeyId: seller.platformKeyId }); });
+      expect(await refusal(updatePartnerBusinessBillingForApi(revokingOverage, seller, cove, { overage: { enabled: true, voice_minute_rate_minor: 25, chat_rate_minor: 5, cap_minor: null } }))).toMatchObject({ status: 401 });
+      const [overage] = (await asMigrator(tx, async () => await tx.execute<{ overage_voice_minute_rate_minor: number | null }>(sql`select overage_voice_minute_rate_minor from public.billing_accounts where business_id = ${cove}::uuid`))).rows;
+      expect(overage?.overage_voice_minute_rate_minor ?? null).not.toBe(25);
+    });
+  });
+
+  it("deletes Idempotency-Key records older than the window, for every partner", async () => {
+    await rollbackTest(async (tx) => {
+      const acme = await partner(tx, "Acme Agency");
+      const bright = await partner(tx, "Bright Desk");
+      const acmeKey = await acme.key(["partner.packages:write"]);
+      const brightKey = await bright.key(["partner.packages:write"]);
+      const run = async () => ({ status: 201, body: { data: {} } });
+      for (const [team, key, idempotencyKey] of [[acme, acmeKey, "old"], [acme, acmeKey, "fresh"], [bright, brightKey, "old"]] as const) {
+        await runPartnerIdempotent(team.context, { key, operation: "createPartnerPackage", idempotencyKey, requestHash: "a" }, run);
+      }
+      await asMigrator(tx, async () => { await tx.update(partnerApiIdempotencyKeys).set({ createdAt: new Date(Date.now() - 25 * 3_600_000) }).where(eq(partnerApiIdempotencyKeys.key, "old")); });
+      expect(await prunePartnerApiIdempotencyKeys(workerContext(tx))).toEqual({ deleted: 2 });
+      const left = await asMigrator(tx, async () => await tx.select({ key: partnerApiIdempotencyKeys.key, partnerId: partnerApiIdempotencyKeys.partnerId }).from(partnerApiIdempotencyKeys).where(sql`${partnerApiIdempotencyKeys.partnerId} in (${acme.partnerId}::uuid, ${bright.partnerId}::uuid)`));
+      expect(left).toEqual([{ key: "fresh", partnerId: acme.partnerId }]);
+      expect(await prunePartnerApiIdempotencyKeys(workerContext(tx))).toEqual({ deleted: 0 });
+    });
+  });
+
+  it("needs partner.businesses:write to send package_id and partner:read to send template_id to POST /businesses", async () => {
+    await rollbackTest(async (tx) => {
+      const acme = await partner(tx, "Acme Agency");
+      const creator = await acme.key(["businesses:create"]);
+      const body = { name: "Pier Dental", timezone: "America/Toronto", owner_email: `${randomUUID()}@example.invalid` };
+      expect(await refusal(createPartnerBusinessForApi(acme.context, { key: creator, idempotencyKey: randomUUID(), requestHash: "hash", body: { ...body, package_id: randomUUID() } }))).toMatchObject({ status: 403, code: "insufficient_scope" });
+      expect(await refusal(createPartnerBusinessForApi(acme.context, { key: creator, idempotencyKey: randomUUID(), requestHash: "hash", body: { ...body, template_id: randomUUID() } }, { setup: { worker: workerContext(tx), storage: memoryStorage() } }))).toMatchObject({ status: 403, code: "insufficient_scope" });
+      // With the scopes, the request goes on to look for the package and the template, which aren't the partner's.
+      const seller = await acme.key(["businesses:create", "partner.businesses:write"]);
+      expect(await refusal(createPartnerBusinessForApi(acme.context, { key: seller, idempotencyKey: randomUUID(), requestHash: "hash", body: { ...body, package_id: randomUUID() } }))).not.toMatchObject({ code: "insufficient_scope" });
+      const reader = await acme.key(["businesses:create", "partner:read"]);
+      expect(await refusal(createPartnerBusinessForApi(acme.context, { key: reader, idempotencyKey: randomUUID(), requestHash: "hash", body: { ...body, template_id: randomUUID() } }, { setup: { worker: workerContext(tx), storage: memoryStorage() } }))).toMatchObject({ status: 404 });
+      // Neither field needs more than businesses:create.
+      expect((await createPartnerBusinessForApi(acme.context, { key: creator, idempotencyKey: randomUUID(), requestHash: "hash", body })).business).toMatchObject({ name: "Pier Dental" });
+    });
+  });
+
+  it("deletes a partner whose key made a demo, and keeps the demo", async () => {
+    await rollbackTest(async (tx) => {
+      const acme = await partner(tx, "Acme Agency");
+      const key = await acme.key(["partner:read", "partner.demos:write"]);
+      const created = await createPartnerDemoForApi(acme.context, key, { name: "Harbor Dental", website_url: "https://harbor.example" });
+      const [demo] = await asMigrator(tx, async () => await tx.select({ businessId: prospectDemos.businessId }).from(prospectDemos).where(eq(prospectDemos.id, created.id)));
+      // The demo's business left the partner, as a claimed one released to its owner does, so the demo stays when the partner goes.
+      // In a savepoint, so a refused delete surfaces as itself.
+      await asMigrator(tx, async () => {
+        await tx.update(businesses).set({ partnerId: null }).where(eq(businesses.id, demo!.businessId));
+        await tx.transaction(async (inner) => { await inner.execute(sql`delete from public.partners where id = ${acme.partnerId}::uuid`); });
+      });
+      const [row] = await asMigrator(tx, async () => await tx.select({ partnerId: prospectDemos.partnerId, byKey: prospectDemos.createdByPlatformKeyId }).from(prospectDemos).where(eq(prospectDemos.id, created.id)));
+      expect(row).toEqual({ partnerId: null, byKey: key.platformKeyId });
     });
   });
 });

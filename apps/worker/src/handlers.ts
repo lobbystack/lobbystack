@@ -10,7 +10,7 @@ import { enqueueKnowledgeDerivedRefresh, finishBusinessSummaryRegenerate, loadBu
 import { billingCheckoutLeaseEndsAt, checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteStoredObjects, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
 import { deliverOutbound, markFeedbackEmailFailed, markFeedbackEmailSent, queueDailyOperatorSummaries, refreshUnitEconomicsMonth } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, desiredNumberRouting, failNumberProvisioning, isSharedSmsSender, loadNumberReleaseEmail, loadNumberTrialEmail, numberProvisioningLeaseEndsAt, sharedSmsSender, sweepNumberReleases, sweepNumberTrial } from "@lobbystack/domain";
-import { createWebhookSender, processWebhookDelivery, pruneApiHistory, type WebhookSender } from "@lobbystack/domain";
+import { createWebhookSender, processWebhookDelivery, pruneApiHistory, prunePartnerApiIdempotencyKeys, type WebhookSender } from "@lobbystack/domain";
 import { LIVE_RECORDING_ATTEMPTS, listBusinessesWithOpenLiveCalls, listOpenLiveCalls, liveCallHasRecording, persistCallRecording, retryLiveCallRecording, type OpenLiveCall } from "@lobbystack/domain";
 import { expireTeamRequest } from "@lobbystack/domain";
 import { syncBusinessOverage } from "@lobbystack/domain";
@@ -1130,6 +1130,10 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const businessId = businessIdOrThrow(job);
       const result = await pruneApiHistory(dependencies.domain, { businessId });
       return { status: result.events + result.idempotencyKeys > 0 ? "completed" : "skipped", entityId: `${businessId}:${result.events}:${result.idempotencyKeys}` };
+    }
+    case "api.partnerRetention": {
+      const { deleted } = await prunePartnerApiIdempotencyKeys(dependencies.domain);
+      return { status: deleted > 0 ? "completed" : "skipped", entityId: String(deleted) };
     }
     case "realtime.publish": {
       if (!dependencies.realtime) return { status: "skipped" };

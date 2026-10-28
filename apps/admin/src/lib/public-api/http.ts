@@ -21,7 +21,7 @@ import {
   type ResolvedApiKey,
   type ResolvedPlatformKey,
 } from "@lobbystack/domain";
-import { BUSINESS_HEADER, apiOperations, isUuid, parseApiInput, type ApiErrorCode, type ApiOperation, type ApiOperationId } from "@lobbystack/shared";
+import { BUSINESS_HEADER, apiOperations, isUuid, keyHasScope, parseApiInput, type ApiErrorCode, type ApiOperation, type ApiOperationId } from "@lobbystack/shared";
 
 import { runAfterResponse } from "../after-response";
 import { createWorkerDomainContext } from "../domain-context";
@@ -177,7 +177,7 @@ export async function handleApiRequest<Id extends ApiOperationId>(request: Reque
     }
     // The Partner endpoints act on the partner itself, which only a key the partner made acts as.
     if (operation.tag === "Partner" && (credential.kind !== "platform_key" || credential.partnerId === undefined)) return (status = 403, apiError(403, "forbidden", "Only a partner's platform keys, made on its console's API keys page, can call the Partner endpoints."));
-    if (operation.scope && !credential.scopes.includes(operation.scope)) return (status = 403, apiError(403, "insufficient_scope", `This API key needs the ${operation.scope} scope.`));
+    if (operation.scope && !keyHasScope(credential.scopes, operation.scope)) return (status = 403, apiError(403, "insufficient_scope", `This API key needs the ${operation.scope} scope.`));
     const businessless = operation.business === "none";
     if (businessless && credential.kind !== "platform_key") return (status = 403, apiError(403, "forbidden", "Only platform keys can call this endpoint."));
 

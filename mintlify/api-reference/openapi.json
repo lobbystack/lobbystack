@@ -404,7 +404,7 @@
       "post": {
         "operationId": "createBusiness",
         "summary": "Create a business",
-        "description": "Platform keys only. A host's key creates a business owned by the account in the key's owner_email, and lets every key in the same group act on it. A partner's key creates a business of the partner with no owner yet, at the access_level you pick, and the partner emails owner_email an invitation to own it. Idempotency-Key is required: a retry with the same value returns the business it created, however much later, and a different body with that value is a 422.",
+        "description": "Platform keys only. A host's key creates a business owned by the account in the key's owner_email, and lets every key in the same group act on it. A partner's key creates a business of the partner with no owner yet, at the access_level you pick, and the partner emails owner_email an invitation to own it. With a partner's key, template_id also needs partner:read and package_id also needs partner.businesses:write. Idempotency-Key is required: a retry with the same value returns the business it created, however much later, and a different body with that value is a 422.",
         "tags": [
           "Platform"
         ],
@@ -14183,7 +14183,17 @@
             }
           },
           "403": {
-            "description": "Refused. insufficient_scope: the key lacks the partner.billing:read scope. forbidden: only a partner's platform keys can call this endpoint, or what only the partner's owners may do. key_owner_inactive: the person the key acts for can't any more: a per-business key's creator is no longer an owner or admin, or a platform key's owner_email has no verified LobbyStack account.",
+            "description": "Refused. insufficient_scope: the key lacks the partner.billing:read scope, which partner.billing:write also grants. forbidden: only a partner's platform keys can call this endpoint, or what only the partner's owners may do. key_owner_inactive: the person the key acts for can't any more: a per-business key's creator is no longer an owner or admin, or a platform key's owner_email has no verified LobbyStack account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with the current state. key_owner_inactive: the owner who made the key is no longer an owner of the partner, so its billing scopes no longer apply.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14287,7 +14297,7 @@
             }
           },
           "409": {
-            "description": "The request conflicts with the current state.",
+            "description": "The request conflicts with the current state. key_owner_inactive: the owner who made the key is no longer an owner of the partner, so its billing scopes no longer apply.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14371,7 +14381,17 @@
             }
           },
           "403": {
-            "description": "Refused. insufficient_scope: the key lacks the partner.billing:read scope. forbidden: only a partner's platform keys can call this endpoint, or what only the partner's owners may do. key_owner_inactive: the person the key acts for can't any more: a per-business key's creator is no longer an owner or admin, or a platform key's owner_email has no verified LobbyStack account.",
+            "description": "Refused. insufficient_scope: the key lacks the partner.billing:read scope, which partner.billing:write also grants. forbidden: only a partner's platform keys can call this endpoint, or what only the partner's owners may do. key_owner_inactive: the person the key acts for can't any more: a per-business key's creator is no longer an owner or admin, or a platform key's owner_email has no verified LobbyStack account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with the current state. key_owner_inactive: the owner who made the key is no longer an owner of the partner, so its billing scopes no longer apply.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14475,7 +14495,7 @@
             }
           },
           "409": {
-            "description": "The request conflicts with the current state.",
+            "description": "The request conflicts with the current state. key_owner_inactive: the owner who made the key is no longer an owner of the partner, so its billing scopes no longer apply.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14590,7 +14610,7 @@
             }
           },
           "409": {
-            "description": "The request conflicts with the current state.",
+            "description": "The request conflicts with the current state. key_owner_inactive: the owner who made the key is no longer an owner of the partner, so its billing scopes no longer apply.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14695,7 +14715,7 @@
             }
           },
           "403": {
-            "description": "Refused. insufficient_scope: the key lacks the partner.billing:read scope. forbidden: only a partner's platform keys can call this endpoint, or what only the partner's owners may do. key_owner_inactive: the person the key acts for can't any more: a per-business key's creator is no longer an owner or admin, or a platform key's owner_email has no verified LobbyStack account.",
+            "description": "Refused. insufficient_scope: the key lacks the partner.billing:read scope, which partner.billing:write also grants. forbidden: only a partner's platform keys can call this endpoint, or what only the partner's owners may do. key_owner_inactive: the person the key acts for can't any more: a per-business key's creator is no longer an owner or admin, or a platform key's owner_email has no verified LobbyStack account.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14706,6 +14726,16 @@
           },
           "404": {
             "description": "Not found (not_found), including a business a platform key cannot act on.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with the current state. key_owner_inactive: the owner who made the key is no longer an owner of the partner, so its billing scopes no longer apply.",
             "content": {
               "application/json": {
                 "schema": {
@@ -15565,12 +15595,12 @@
             ]
           },
           "template_id": {
-            "description": "Only with a partner's platform key: one of the partner's templates, from GET /partner/templates, to start the business from. The business takes its setup and documents, apart from the name and time zone sent here, before the owner's invitation goes out. A template that can't be applied leaves no business behind and is a 409.",
+            "description": "Only with a partner's platform key: one of the partner's templates, from GET /partner/templates, to start the business from. The key needs partner:read too. The business takes its setup and documents, apart from the name and time zone sent here, before the owner's invitation goes out. A template that can't be applied leaves no business behind and is a 409.",
             "type": "string",
             "format": "uuid"
           },
           "package_id": {
-            "description": "Only with a partner's platform key: one of the partner's packages, from GET /partner/packages, to sell the business. The owner's invitation then opens a checkout on the partner's Stripe account. Left out, the business is billed outside LobbyStack.",
+            "description": "Only with a partner's platform key: one of the partner's packages, from GET /partner/packages, to sell the business. The key needs partner.businesses:write too. The owner's invitation then opens a checkout on the partner's Stripe account. Left out, the business is billed outside LobbyStack.",
             "type": "string",
             "format": "uuid"
           }

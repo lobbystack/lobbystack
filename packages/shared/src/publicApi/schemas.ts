@@ -461,8 +461,8 @@ export const apiBusinessCreateSchema = z.strictObject({
   website_url: z.url().max(2_000).optional(),
   owner_email: teamEmail.optional().describe("Required with a partner's platform key, and refused with the host's. The partner emails this address an invitation to own the business and sign in on the partner's dashboard."),
   access_level: z.enum(partnerAccessLevels).optional().describe("Only with a partner's platform key: what the business's own team can use. full, the default, lets them run the receptionist, its knowledge, hours, services and team, without billing, API keys or MCP. activity shows them calls, chats, appointments, contacts and messages, and the partner sets up the receptionist."),
-  template_id: id.optional().describe("Only with a partner's platform key: one of the partner's templates, from GET /partner/templates, to start the business from. The business takes its setup and documents, apart from the name and time zone sent here, before the owner's invitation goes out. A template that can't be applied leaves no business behind and is a 409."),
-  package_id: id.optional().describe("Only with a partner's platform key: one of the partner's packages, from GET /partner/packages, to sell the business. The owner's invitation then opens a checkout on the partner's Stripe account. Left out, the business is billed outside LobbyStack."),
+  template_id: id.optional().describe("Only with a partner's platform key: one of the partner's templates, from GET /partner/templates, to start the business from. The key needs partner:read too. The business takes its setup and documents, apart from the name and time zone sent here, before the owner's invitation goes out. A template that can't be applied leaves no business behind and is a 409."),
+  package_id: id.optional().describe("Only with a partner's platform key: one of the partner's packages, from GET /partner/packages, to sell the business. The key needs partner.businesses:write too. The owner's invitation then opens a checkout on the partner's Stripe account. Left out, the business is billed outside LobbyStack."),
 });
 
 export const apiBusinessSummarySchema = z.object({

@@ -263,6 +263,8 @@ export const queueForJobType = {
   "realtime.publish": "default",
   "webhook.deliver": "webhooks",
   "api.retention": "maintenance",
+  // The v1 Partner endpoints' Idempotency-Key records, which belong to no business, pruned for every partner at once.
+  "api.partnerRetention": "maintenance",
 } as const satisfies Record<string, JobQueue>;
 export type JobType = keyof typeof queueForJobType;
 export const jobTypes = Object.keys(queueForJobType) as [JobType, ...JobType[]];
