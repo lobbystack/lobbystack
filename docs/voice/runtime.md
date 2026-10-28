@@ -299,8 +299,9 @@ LobbyStack submitted these bundles on 2026-10-28:
 | --- | --- | --- |
 | United Kingdom, mobile | `BU74328517f3a6170e1a0ac4a5cecb047d` | `AD9faf799d6caddd21d27040c33613a4a4` |
 | New Zealand, local | `BU69eeaed691e5186b22e2f50ba78f2076` | `AD9faf799d6caddd21d27040c33613a4a4` |
+| Australia, mobile | `BU7b949cb26f8e59f3737347cf2e5bc03a` | `AD9faf799d6caddd21d27040c33613a4a4` |
 
-Australia still needs a bundle. Its registry document must show the corporation number, 1787776-5. The Corporations Canada profile of Lobbystack Inc. shows it, and the incorporation forms don't.
+The UK bundle uses the registered office address only. The New Zealand bundle uses the Form 2 filing, which shows the company's name and address. The Australian bundle uses a printout of the Corporations Canada profile, because Australia also needs the corporation number, 1787776-5, and only the profile shows it. Once Twilio approves a bundle, set its SID on the admin and the worker. For Australia and New Zealand, also set the address SID.
 
 To set up a country:
 
