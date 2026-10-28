@@ -16,9 +16,8 @@ export type OAuthConsentProps =
   | {
     kind: "consent";
     oauthQuery: string;
-    /** host: verified from a CIMD client_id. redirectHost: where the approval is sent. */
-    client: { name: string | null; host: string | null; redirectHost: string | null };
-    email: string;
+    /** host: verified from a CIMD client_id. */
+    client: { name: string | null; host: string | null };
     businesses: Array<{ businessId: string; name: string; active: boolean }>;
     /** Tool scopes the client asked for, in display order. */
     scopes: string[];
@@ -125,7 +124,6 @@ export function OAuthConsentSurface(props: OAuthConsentProps) {
                 </>
               ) : props.businesses.map((business) => <NativeSelectOption key={business.businessId} value={business.businessId}>{business.name}</NativeSelectOption>)}
             </NativeSelect>
-            {agency ? <p className="text-sm text-muted-foreground">{t("oauthConsent.agencyHint", { client, agency: agency.name })}</p> : null}
           </Field>
           <fieldset className="flex flex-col gap-3">
             <legend className="mb-2 text-sm font-medium">{t("oauthConsent.scopesLabel", { client })}</legend>
@@ -159,10 +157,6 @@ export function OAuthConsentSurface(props: OAuthConsentProps) {
           <Button disabled={pending !== null || !target} onClick={() => void decide(true)}>{pending === "allow" ? t("oauthConsent.allowing") : t("oauthConsent.allow")}</Button>
           <Button disabled={pending !== null} onClick={() => void decide(false)} variant="outline">{t("oauthConsent.deny")}</Button>
         </div>
-        <p className="text-center text-xs text-muted-foreground">
-          {props.client.redirectHost ? <>{t("oauthConsent.returnsTo", { host: props.client.redirectHost })}<br /></> : null}
-          {t("oauthConsent.signedInAs", { email: props.email })}
-        </p>
       </div>
     </ReplacementOnboardingShell>
   );

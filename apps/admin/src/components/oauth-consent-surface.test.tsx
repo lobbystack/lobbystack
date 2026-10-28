@@ -16,8 +16,7 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 const consentProps = {
   kind: "consent" as const,
   oauthQuery: "client_id=abc&scope=calls%3Aread+appointments%3Awrite+offline_access&sig=s",
-  client: { name: "Claude", host: "claude.ai", redirectHost: "claude.ai" },
-  email: "owner@example.com",
+  client: { name: "Claude", host: "claude.ai" },
   businesses: [{ businessId: "b1", name: "Maple Dental", active: false }, { businessId: "b2", name: "Harbour Physio", active: true }],
   scopes: ["calls:read", "appointments:write"],
 };
@@ -71,7 +70,6 @@ describe("OAuth consent screen for an agency", () => {
     expect(select.value).toBe("b2");
     expect(screen.queryByRole("checkbox", { name: /partner:read/ })).toBeNull();
     await user.selectOptions(select, "partner:p1");
-    expect(screen.getByText(/oauthConsent.agencyHint/)).toBeTruthy();
     expect(screen.getByRole("checkbox", { name: /oauthConsent.scopes.partner_read/ })).toBeTruthy();
     expect(screen.queryByRole("checkbox", { name: /appointments:write/ })).toBeNull();
     await user.click(screen.getByRole("checkbox", { name: /oauthConsent.scopes.partner_demos_write/ }));
