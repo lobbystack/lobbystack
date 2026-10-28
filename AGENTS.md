@@ -4,14 +4,20 @@
 
 - `apps/admin/`: Next.js operator dashboard, authentication, and HTTP API. Hosts the embeddable widget API (`/api/widget/*`), the loader (`/embed.js`), and the widget iframe app (`/embed/[key]`) in addition to the dashboard. On the hosts in `MARKETING_HOSTS` it serves the marketing site instead, from `app/(marketing)`, `src/marketing` and `content/`; read `docs/deployment/marketing-site.md` before you change its proxy, routes or build steps.
 - `apps/worker/`: asynchronous jobs, transactional outbox dispatch, and GPT-Live calls. The admin asks it to attach to each session at `/internal/live/attach`; it answers delegated requests, saves transcripts, and finishes the call. Phone calls reach GPT-Live through a Twilio Elastic SIP trunk; see `docs/voice/runtime.md`.
-- `packages/db/`: Drizzle schema, PostgreSQL migrations, role-specific clients, and RLS helpers.
+- `packages/db/`: Drizzle schema, PostgreSQL migrations, role-specific clients, and RLS helpers. See "Database" below.
 - `packages/domain/`: durable business logic shared by admin and worker runtimes. Widget conversations use the `web_chat` channel and key on `widget_visitor_id` (no phone required).
 - `packages/agent-core/`: the receptionist agent (AI SDK `ToolLoopAgent`) shared by website chat and calls, its tools, and the GPT-Live session config and call controller.
-- `packages/providers/`: provider adapters (Twilio, embeddings, calendars, email). Text AI goes through the agent core: set `AI_CHAT_*` (`API_KEY`, `BASE_URL`, `MODEL`, `PROVIDER_NAME`, `REASONING_EFFORT`). On OpenAI the default is `gpt-6-luna` on high reasoning through the Responses API, except that GPT-Live delegation runs on low reasoning (`AI_DELEGATION_MODEL`, `AI_DELEGATION_REASONING_EFFORT`); other OpenAI-compatible endpoints use chat completions. `AI_EMBEDDING_*` configures embeddings. The key falls back to `OPENAI_API_KEY`.
+- `packages/providers/`: provider adapters (Twilio, embeddings, calendars, email). Text AI goes through the agent core: set `AI_CHAT_*` (`API_KEY`, `BASE_URL`, `MODEL`, `PROVIDER_NAME`, `REASONING_EFFORT`, `SERVICE_TIER`). On OpenAI the default is `gpt-6-luna` on high reasoning through the Responses API, except that GPT-Live delegation runs on low reasoning (`AI_DELEGATION_MODEL`, `AI_DELEGATION_REASONING_EFFORT`); other OpenAI-compatible endpoints use chat completions. `AI_EMBEDDING_*` configures embeddings. The key falls back to `OPENAI_API_KEY`.
 - `packages/embed/`: Vite bundle producing the IIFE widget loader (`dist/embed.js`, served at `/embed.js`, copied into `apps/admin/public/embed/` by `scripts/copy-widget-embed.mjs`).
+- `packages/web-voice/`: the React hook and voice orb behind the dashboard's browser test calls.
 - `packages/cli/`: the `lobbystack` command. It works only through the v1 HTTP API, never the database, and takes its request and response types from the operation registry in `packages/shared/src/publicApi/operations.ts`. `mintlify/api/cli.mdx`, with its `fr/` and `es/` copies, documents `lobbystack onboard` and its manifest, so change them along with `packages/cli/src/onboard.ts` and `manifest.ts`. The manifest schema and the steps that apply it live in `packages/shared/src/businessSetup.ts`, which partner templates use too.
-- `packages/`: shared contracts, jobs, providers, telemetry, and test helpers.
+- `packages/contracts/`, `jobs/`, `shared/`, and `telemetry/`: contracts, queue jobs, utilities, and the telemetry event registry shared across runtimes.
+- `integrations/zapier/`: the Zapier integration. It sits outside the pnpm workspace with its own `package-lock.json`; run `npm ci` and `npm test` inside it.
+- `mintlify/`: the public Help Center at docs.lobbystack.com. Follow `mintlify/AGENTS.md` when you edit it.
+- `docs/`: ADRs in `docs/adr/`, plus architecture, voice, deployment, operations, and telemetry notes. Specs go in `docs/specs/` and tickets in the gitignored `.scratch/`; `docs/agents/issue-tracker.md` gives the format.
 - `docker/`, `docker-compose.yml`, and `scripts/`: local infrastructure, operations, and certification tooling.
+
+`GLOSSARY.md` defines the domain language: business, partner, partner member, host, operator, affiliate, plan, tier, pool, package, allowance, and platform key. Use its terms, and skip the ones it lists under _Avoid_, in code, docs, and copy.
 
 ## Development commands
 
@@ -20,9 +26,11 @@
 - `pnpm db:migrate`: apply PostgreSQL migrations.
 - `pnpm dev`: run the admin and worker apps. Browser calls need `LIVE_PROTOTYPE_ENABLED=true` and `OPENAI_API_KEY` on admin and worker.
 - `pnpm typecheck`: typecheck all active workspaces and scripts.
+- `pnpm lint`: ESLint in `apps/admin`; the other workspaces run `tsc` as their lint.
 - `pnpm test`: run all Vitest suites.
+- `pnpm --filter @lobbystack/<workspace> exec vitest run <path>`: run one test file. Workspaces import each other's `src` through tsconfig paths and Vitest aliases, so tests need no build first.
 - `pnpm build`: build every workspace package and app (also copies the embed loader into the admin standalone output).
-- `pnpm widget:embed:build`: rebuild `packages/embed` and copy the loader into `apps/admin/public/embed/`.
+- `pnpm widget:embed:build`: rebuild `packages/embed` and copy the loader into `apps/admin/public/embed/`. Commit the rebuilt `apps/admin/public/embed/embed.js`; CI fails when it differs from the build.
 - `pnpm lobbystack <command>`: run the CLI from source. `pnpm lobbystack login --url <dashboard URL> --key <API key>` saves a profile in `~/.config/lobbystack/config.json`. For a platform key, `pnpm platform-key:create --name <name> --group <group> --owner-email <email>` writes the key to `.platform-keys/<prefix>.json` and prints its `PLATFORM_API_KEYS` entry. The key gets an API key's scopes; add `--create-businesses` or `--create-users` for the platform-only ones.
 
 ## Next.js MCP server
@@ -34,7 +42,7 @@
 - Call `nextjs_index` to find the running server and list its tools. Then run a tool with `nextjs_call`: `get_errors`, `get_routes`, `get_page_metadata`, `get_logs`, `get_compilation_issues`, or `compile_route`.
 - Before you change admin pages, layouts, route handlers, or Server Actions, check `get_routes` and `get_errors`. Call `get_errors` again after the change.
 - If `nextjs_index` finds no server, start the admin dev server and call it again. Pass `port` when the server runs on a port other than 3000.
-- `get_errors` reports build errors and errors from open browser sessions. You still need to run `pnpm typecheck`, `pnpm test`, and `pnpm build` before you open a PR.
+- `get_errors` reports build errors and errors from open browser sessions. It doesn't replace the checks under "Testing".
 
 ## Coding style
 
@@ -65,13 +73,16 @@
 
 - Vitest is the default test runner; keep `*.test.ts` and `*.test.tsx` near their source.
 - Test database behavior against PostgreSQL with the correct runtime role and RLS context.
+- `*.integration.test.ts` files skip unless `LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL` points at a dedicated test database; they never read `DATABASE_URL`. A green `pnpm test` without it hasn't run them. `pnpm test:reliability` runs the main set, and the `database` job in `.github/workflows/ci.yml` lists the role URLs and other variables the rest need.
 - Prioritize booking, authz, webhook, outbox, snapshot, privacy, and telemetry regressions.
-- Every new telemetry event must include a test that asserts it fires from its real production code path.
-- Run `pnpm typecheck`, `pnpm test`, and `pnpm build` before opening a PR.
+- Every new telemetry event must include a test that asserts it fires from its real production code path. `pnpm telemetry:coverage` fails when an event in the registry has no producer.
+- Run `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm build` before opening a PR.
 - When changing migrations or RLS, also run `pnpm db:check` and `pnpm db:verify-rls` against the test database.
 - When changing GPT-Live instructions, the call controller, or how calls end, run `pnpm voice:eval` before you open a PR and `pnpm voice:call` against staging before you merge. See `docs/voice/testing.md`.
 
-## Datastore
+## Database
 
 - PostgreSQL is the canonical runtime datastore.
+- Runtimes connect through `createDatabaseClient` as one of four roles: `lobbystack_app`, `lobbystack_auth`, `lobbystack_worker`, or `lobbystack_dispatcher`. Run tenant queries inside `withBusinessTransaction`, which sets the RLS context before your callback runs.
+- Write each migration by hand as `packages/db/migrations/NNNN_name.sql` and add it to `SCHEMA_MIGRATIONS` in `packages/db/src/migrations/raw-migrations.ts`; a test fails when the two disagree. A new table's migration enables and forces row-level security and adds a policy, or `pnpm db:verify-rls` fails. Update the Drizzle schema in `packages/db/src/schema/` when tables change. `migrations/generated/` holds only the initial Drizzle baseline.
 - `legacy_convex_id` columns hold IDs from the previous Convex platform. The Polar webhook business lookup, the finance export, and call and contact ID display still read them.
