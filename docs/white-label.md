@@ -96,6 +96,7 @@ A business stays with its partner:
 Partners make their own platform keys in the console ([ADR 0010](adr/0010-partners-make-their-own-platform-keys.md)):
 
 - A partner's keys reach only its businesses, through today's Platform endpoints and `lobbystack onboard`.
+- With the partner scopes, a partner's key also does what the console does through the v1 Partner endpoints: demos, packages, brand, domain, templates, team, Stripe and tier billing. It acts as an admin, and only an owner grants the billing scopes.
 - Keys in `PLATFORM_API_KEYS` belong to the host.
 - Each entry's `partner` field becomes `group`, and `platform_partner_businesses` becomes `platform_key_businesses`. Entries keep accepting `partner`, so existing self-hosted keys keep working.
 - Webhooks stay per business, as today. Partner-wide webhooks come after v1.

@@ -94,11 +94,31 @@ Une clé de plateforme (`lsp_...`) intègre et gère de nombreuses entreprises, 
   </Step>
 </Steps>
 
-La clé de plateforme d'un partenaire agit au nom du partenaire : elle continue de fonctionner quand la personne qui l'a créée quitte l'équipe. Elle atteint les entreprises actives du partenaire, y compris celles créées depuis la console, et aucune autre. Elle ne peut pas lancer de paiement Polar, définir un forfait géré ni créer de lien de réclamation. Elle ne peut pas non plus rechercher ou réserver de numéros de téléphone, ni consulter ou modifier les préférences d'alertes, parce que ces actions se font au nom d'une personne.
+La clé de plateforme d'un partenaire agit au nom du partenaire : elle continue de fonctionner quand la personne qui l'a créée quitte l'équipe. Elle atteint les entreprises actives du partenaire, y compris celles créées depuis la console, et aucune autre. Avec les portées partenaire, elle gère aussi le partenaire lui-même par les [points de terminaison partenaire](#points-de-terminaison-partenaire). Elle ne peut pas lancer de paiement Polar pour une entreprise, définir un forfait géré ni créer de lien de réclamation. Elle ne peut pas non plus rechercher ou réserver de numéros de téléphone, ni consulter ou modifier les préférences d'alertes, parce que ces actions se font au nom d'une personne.
 
-Avec la clé de plateforme d'un partenaire, `POST /businesses` crée une entreprise du partenaire, encore sans propriétaire. Indiquez le propriétaire dans `owner_email` : le partenaire lui envoie par courriel une invitation à se connecter sur son tableau de bord. `access_level` définit ce que l'équipe de l'entreprise peut utiliser : `full`, la valeur par défaut, ou `activity`. Les clés de plateforme d'un partenaire peuvent créer 30 entreprises par heure au total. Les invitations qu'elle envoie par `POST /team/invitations` et `POST /users` viennent du partenaire et mènent à son tableau de bord.
+Avec la clé de plateforme d'un partenaire, `POST /businesses` crée une entreprise du partenaire, encore sans propriétaire. Indiquez le propriétaire dans `owner_email` : le partenaire lui envoie par courriel une invitation à se connecter sur son tableau de bord. `access_level` définit ce que l'équipe de l'entreprise peut utiliser : `full`, la valeur par défaut, ou `activity`. `template_id` part d'un des modèles du partenaire, et `package_id` vend à l'entreprise une des formules du partenaire. Les clés de plateforme d'un partenaire peuvent créer 30 entreprises par heure au total. Les invitations qu'elle envoie par `POST /team/invitations` et `POST /users` viennent du partenaire et mènent à son tableau de bord.
 
 Les liens que l'API renvoie pour l'entreprise d'un partenaire, comme la balise de script d'un widget ou un lien de connexion d'agenda, mènent eux aussi au tableau de bord du partenaire.
+
+### Points de terminaison partenaire
+
+Les points de terminaison sous `/partner` font ce que fait la console partenaire. Ils lisent le partenaire, gèrent ses démos, ses formules, son image de marque, son domaine, ses modèles et son équipe, ainsi que son compte Stripe et son palier. Seule la clé d'un partenaire peut les appeler, sans en-tête `LobbyStack-Business`. Une clé API ou une clé de l'hôte reçoit `403` avec le code `forbidden`.
+
+Une clé agit avec les droits d'un administrateur, elle ne touche donc jamais à un propriétaire. Inviter un propriétaire, changer le rôle d'un propriétaire ou en retirer un renvoie `403` : faites-le dans la console. Seuls les propriétaires peuvent accorder `partner.billing:read` et `partner.billing:write`, qui donnent accès à ce que seuls les propriétaires voient dans la console. `POST /partner/billing/checkout` établit le paiement du palier au nom du propriétaire qui a créé la clé.
+
+| Portée | Permet |
+| --- | --- |
+| `partner:read` | `GET /partner`, `GET /partner/brand`, `GET /partner/domain`, `GET /partner/demos`, `GET /partner/demos/{demo_id}`, `GET /partner/packages`, `GET /partner/templates`, `GET /partner/team`, `GET /partner/businesses/{business_id}/billing` |
+| `partner.businesses:write` | `POST /partner/businesses/{business_id}/release`, `DELETE /partner/businesses/{business_id}`, `PATCH /partner/businesses/{business_id}/billing` |
+| `partner.demos:write` | `POST /partner/demos`, `POST /partner/demos/{demo_id}/publish`, `/rotate` et `/revoke`, `DELETE /partner/demos/{demo_id}` |
+| `partner.packages:write` | `POST /partner/packages`, `PATCH` et `DELETE` sur `/partner/packages/{package_id}` |
+| `partner.branding:write` | `PATCH /partner/brand`, `POST` et `DELETE` sur `/partner/domain` |
+| `partner.templates:write` | `POST /partner/templates`, `DELETE /partner/templates/{template_id}` |
+| `partner.team:write` | `POST /partner/team/invitations`, `DELETE /partner/team/invitations/{invitation_id}`, `PATCH` et `DELETE` sur `/partner/team/members/{member_id}` |
+| `partner.billing:read` | `GET /partner/stripe`, `GET /partner/billing`, `GET /partner/billing/checkout/{checkout_id}`, et `pool` dans `GET /partner` |
+| `partner.billing:write` | `POST /partner/stripe/onboarding-link`, `PATCH /partner/billing/overage`, `POST /partner/billing/checkout` |
+
+`POST /partner/team/invitations` exige un `Idempotency-Key`, et `POST /partner/packages`, `POST /partner/templates` et `POST /partner/billing/checkout` en acceptent un. `POST /partner/demos` et `POST /partner/demos/{demo_id}/rotate` l'ignorent : LobbyStack ne garde ainsi aucune copie du lien d'une démo. Après une erreur réseau, consultez `GET /partner/demos` avant de réessayer. `PATCH /partner/brand` accepte un logo ou un favicon en base64, comme la console les téléverse.
 
 ### Créer une clé de l'hôte
 
@@ -107,7 +127,7 @@ Le tableau de bord n'a pas de page pour les clés de l'hôte. Sur un déploiemen
 - Le groupe auquel appartient la clé (`group` ; passez `--group`). Les clés d'un même groupe atteignent les mêmes entreprises.
 - Le compte LobbyStack vérifié au nom duquel la clé agit (`owner_email`), qui possède les entreprises qu'elle crée.
 - Si la clé atteint toutes les entreprises (`"access": "all"` ; passez `--access all`) ou, par défaut, seulement celles que les clés de son groupe ont intégrées (`"access": "group"`).
-- Ses portées. Sauf si vous en nommez certaines, une nouvelle clé reçoit les portées qu'une clé API peut détenir. `POST /businesses` nécessite `businesses:create` et `POST /users` nécessite `users:create`. Seules les clés de plateforme peuvent détenir ces deux portées, et une nouvelle clé les reçoit seulement si vous passez `--create-businesses` ou `--create-users`. `GET /businesses` nécessite `business:read`.
+- Ses portées. Sauf si vous en nommez certaines, une nouvelle clé reçoit les portées qu'une clé API peut détenir. `POST /businesses` nécessite `businesses:create` et `POST /users` nécessite `users:create`. Seules les clés de plateforme peuvent détenir ces deux portées, et une nouvelle clé les reçoit seulement si vous passez `--create-businesses` ou `--create-users`. `GET /businesses` nécessite `business:read`. La commande refuse les portées partenaire, car une clé de l'hôte n'a pas de partenaire au nom duquel agir.
 
 Les entrées plus anciennes appellent le groupe `partner` et peuvent indiquer `"access": "partner"`. Les deux fonctionnent toujours, et la clé atteint les mêmes entreprises. Pour en mettre une à jour, remplacez `partner` par `group` et `"access": "partner"` par `"access": "group"`. Mettez d'abord l'admin à jour : les versions précédentes refusent `group`. L'admin refuse une entrée qui définit à la fois `partner` et `group`, et avec elle toutes les clés de `PLATFORM_API_KEYS`.
 
@@ -139,7 +159,7 @@ Dans **Réglages** > **Clés API**, cliquez sur **Révoquer** à côté de la cl
 
 LobbyStack désactive aussi les points de terminaison webhook que la clé a créés. Pour en garder un, réactivez-le depuis la carte **Webhooks** dans **Intégrations**.
 
-Pour révoquer une clé de plateforme d'un partenaire, cliquez sur **Révoquer** à côté d'elle dans la page **Clés API** de la console partenaire. Les requêtes qui l'utilisent échouent immédiatement. LobbyStack désactive les points de terminaison webhook qu'elle a créés sur toutes les entreprises, et révoque les invitations d'équipe qu'elle a envoyées et que personne n'a encore acceptées. Les propriétaires qu'elle a invités en créant leur entreprise peuvent toujours accepter.
+Pour révoquer une clé de plateforme d'un partenaire, cliquez sur **Révoquer** à côté d'elle dans la page **Clés API** de la console partenaire. Les requêtes qui l'utilisent échouent immédiatement. LobbyStack désactive les points de terminaison webhook qu'elle a créés sur toutes les entreprises, et révoque les invitations qu'elle a envoyées, à l'équipe d'une entreprise ou à celle du partenaire, et que personne n'a encore acceptées. Les propriétaires qu'elle a invités en créant leur entreprise peuvent toujours accepter.
 
 ## Limites de débit
 

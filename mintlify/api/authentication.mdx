@@ -94,11 +94,31 @@ A platform key (`lsp_...`) onboards and manages many businesses, where an API ke
   </Step>
 </Steps>
 
-A partner's key acts as the partner, so it keeps working when the person who made it leaves the team. It reaches the partner's active businesses, including the ones the console created, and no others. It can't start a Polar checkout, set a managed plan or create a claim link. It can't search for or claim phone numbers, or read or change alert preferences, because those act as a person.
+A partner's key acts as the partner, so it keeps working when the person who made it leaves the team. It reaches the partner's active businesses, including the ones the console created, and no others. With the partner scopes, it also runs the partner itself through the [Partner endpoints](#partner-endpoints). It can't start a Polar checkout for a business, set a managed plan or create a claim link. It can't search for or claim phone numbers, or read or change alert preferences, because those act as a person.
 
-`POST /businesses` with a partner's key creates a business of the partner, with no owner yet. Name the owner in `owner_email`, and the partner emails them an invitation to sign in on its dashboard. `access_level` sets what the business's own team can use: `full`, the default, or `activity`. A partner's platform keys can create 30 businesses an hour between them. The invitations it sends through `POST /team/invitations` and `POST /users` come from the partner and link to its dashboard.
+`POST /businesses` with a partner's key creates a business of the partner, with no owner yet. Name the owner in `owner_email`, and the partner emails them an invitation to sign in on its dashboard. `access_level` sets what the business's own team can use: `full`, the default, or `activity`. `template_id` starts the business from one of the partner's templates, and `package_id` sells it one of the partner's packages. A partner's platform keys can create 30 businesses an hour between them. The invitations it sends through `POST /team/invitations` and `POST /users` come from the partner and link to its dashboard.
 
 The links the API returns for a partner's business, such as a widget's script tag or a calendar connect link, point at the partner's dashboard too.
+
+### Partner endpoints
+
+The endpoints under `/partner` do what the partner console does. They read the partner, run its demos, packages, brand, domain, templates and team, and manage its Stripe account and tier. Only a partner's key can call them, and it sends no `LobbyStack-Business` header. An API key or a host's key gets `403` with the code `forbidden`.
+
+A key acts with an admin's rights, so it never changes an owner. Inviting an owner, changing an owner's role or removing one returns `403`: do those in the console. Only owners can grant `partner.billing:read` and `partner.billing:write`, since those reach what only owners see in the console. `POST /partner/billing/checkout` makes the tier checkout out to the owner who made the key.
+
+| Scope | Allows |
+| --- | --- |
+| `partner:read` | `GET /partner`, `GET /partner/brand`, `GET /partner/domain`, `GET /partner/demos`, `GET /partner/demos/{demo_id}`, `GET /partner/packages`, `GET /partner/templates`, `GET /partner/team`, `GET /partner/businesses/{business_id}/billing` |
+| `partner.businesses:write` | `POST /partner/businesses/{business_id}/release`, `DELETE /partner/businesses/{business_id}`, `PATCH /partner/businesses/{business_id}/billing` |
+| `partner.demos:write` | `POST /partner/demos`, `POST /partner/demos/{demo_id}/publish`, `/rotate` and `/revoke`, `DELETE /partner/demos/{demo_id}` |
+| `partner.packages:write` | `POST /partner/packages`, `PATCH` and `DELETE` on `/partner/packages/{package_id}` |
+| `partner.branding:write` | `PATCH /partner/brand`, `POST` and `DELETE` on `/partner/domain` |
+| `partner.templates:write` | `POST /partner/templates`, `DELETE /partner/templates/{template_id}` |
+| `partner.team:write` | `POST /partner/team/invitations`, `DELETE /partner/team/invitations/{invitation_id}`, `PATCH` and `DELETE` on `/partner/team/members/{member_id}` |
+| `partner.billing:read` | `GET /partner/stripe`, `GET /partner/billing`, `GET /partner/billing/checkout/{checkout_id}`, and `pool` in `GET /partner` |
+| `partner.billing:write` | `POST /partner/stripe/onboarding-link`, `PATCH /partner/billing/overage`, `POST /partner/billing/checkout` |
+
+`POST /partner/team/invitations` requires an `Idempotency-Key`, and `POST /partner/packages`, `POST /partner/templates` and `POST /partner/billing/checkout` take one. `POST /partner/demos` and `POST /partner/demos/{demo_id}/rotate` ignore it, so LobbyStack never stores a copy of a demo's link. After a network error, check `GET /partner/demos` before you retry. `PATCH /partner/brand` takes a logo or favicon in base64, as the console uploads it.
 
 ### Make a host's key
 
@@ -107,7 +127,7 @@ The dashboard has no page for the host's keys. On a self-hosted deployment, `pnp
 - The group the key belongs to (`group`; pass `--group`). Keys in the same group reach the same businesses.
 - The verified LobbyStack account the key acts as (`owner_email`), which owns the businesses the key creates.
 - Whether the key reaches every business (`"access": "all"`; pass `--access all`) or, by default, only the ones its group's keys onboarded (`"access": "group"`).
-- Its scopes. Unless you name some, a new key gets the scopes an API key can hold. `POST /businesses` needs `businesses:create` and `POST /users` needs `users:create`. Only platform keys can hold these two, and a new key gets them only when you pass `--create-businesses` or `--create-users`. `GET /businesses` needs `business:read`.
+- Its scopes. Unless you name some, a new key gets the scopes an API key can hold. `POST /businesses` needs `businesses:create` and `POST /users` needs `users:create`. Only platform keys can hold these two, and a new key gets them only when you pass `--create-businesses` or `--create-users`. `GET /businesses` needs `business:read`. The command refuses the partner scopes, because a host's key has no partner to act on.
 
 Older entries call the group `partner` and may set `"access": "partner"`. Both still work, and the key reaches the same businesses. To update one, change `partner` to `group` and `"access": "partner"` to `"access": "group"`. Update the admin first: older versions refuse `group`. The admin refuses an entry that sets both `partner` and `group`, and with it every key in `PLATFORM_API_KEYS`.
 
@@ -139,7 +159,7 @@ On **Settings** > **API keys**, click **Revoke** next to the key. Requests with 
 
 LobbyStack also turns off the webhook endpoints the key created. To keep one, turn it back on from the **Webhooks** card in **Integrations**.
 
-To revoke a partner's platform key, click **Revoke** next to it on the partner console's **API keys** page. Requests with it fail right away. LobbyStack turns off the webhook endpoints the key created on every business, and revokes the team invitations the key sent that nobody has accepted. Owners the key invited when it created their business can still accept.
+To revoke a partner's platform key, click **Revoke** next to it on the partner console's **API keys** page. Requests with it fail right away. LobbyStack turns off the webhook endpoints the key created on every business, and revokes the invitations the key sent, to a business's team or to the partner's, that nobody has accepted. Owners the key invited when it created their business can still accept.
 
 ## Rate limits
 

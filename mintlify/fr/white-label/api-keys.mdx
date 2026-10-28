@@ -16,7 +16,7 @@ Donnez à chaque outil sa propre clé, pour pouvoir en révoquer une sans briser
     Sur **Clés API**, cliquez sur **Créer une clé de plateforme**.
   </Step>
   <Step title="Nommer la clé et choisir son accès">
-    Entrez un **Nom** que vous reconnaîtrez, comme `Intégration des clients`. Sous **Accès**, sélectionnez seulement ce dont l'outil a besoin. Pour créer des entreprises, sélectionnez **Créer des entreprises et inviter leurs propriétaires**.
+    Entrez un **Nom** que vous reconnaîtrez, comme `Intégration des clients`. Sous **Accès**, sélectionnez seulement ce dont l'outil a besoin. Pour créer des entreprises, sélectionnez **Créer des entreprises et inviter leurs propriétaires**. Pour gérer votre partenaire depuis du code, sélectionnez les accès partenaire dont l'outil a besoin. Seuls les propriétaires voient les accès à la facturation.
   </Step>
   <Step title="Copier la clé">
     Cliquez sur **Créer la clé**, puis copiez la clé et conservez-la dans un gestionnaire de mots de passe ou dans les réglages de votre outil. La console ne l'affiche qu'une fois.
@@ -33,9 +33,21 @@ La clé d'un partenaire agit au nom de votre partenaire plutôt qu'au nom d'une 
 - Toutes les autres requêtes nomment leur entreprise dans l'en-tête `LobbyStack-Business`.
 - Les liens que l'API renvoie, comme la balise de script d'un widget ou un lien de connexion d'agenda, mènent à votre adresse.
 
-Vos clés peuvent créer 30 entreprises par heure au total. Une clé ne peut pas appliquer de modèle, changer la formule ou le dépassement d'une entreprise, rechercher ou réserver de numéros de téléphone, ni modifier les préférences d'alertes : faites-le dans la console.
+Vos clés peuvent créer 30 entreprises par heure au total. `POST /businesses` accepte `template_id` pour partir d'un de vos modèles et `package_id` pour vendre une de vos formules. Une clé ne peut pas rechercher ou réserver de numéros de téléphone, ni modifier les préférences d'alertes : faites-le dans la console.
 
 [Clés de plateforme](/fr/api/authentication#clés-de-plateforme) liste les portées, les en-têtes et les réponses.
+
+## Gérer votre partenaire depuis du code
+
+Avec les accès partenaire, une clé fait ce que fait la console. Elle crée et publie des démos, gère les formules, modifie votre image de marque et votre domaine, enregistre des modèles, invite votre équipe, cède ou supprime des entreprises, et affiche votre palier et votre compte Stripe. Un assistant de programmation ou vos propres scripts peuvent alors faire votre travail en marque blanche par l'API ou la commande `lobbystack` :
+
+```bash
+lobbystack demos create "Harbor Dental" https://harbordental.example
+lobbystack packages list
+lobbystack partner-team invite sam@youragency.example member
+```
+
+La clé agit comme un administrateur : elle ne peut pas inviter de propriétaire ni changer le rôle d'un propriétaire. Seuls les propriétaires peuvent donner à une clé l'accès à la facturation, et un paiement de palier lancé par la clé est établi au nom du propriétaire qui l'a créée. [Points de terminaison partenaire](/fr/api/authentication#points-de-terminaison-partenaire) liste ce que permet chaque accès.
 
 ## Intégrer une entreprise à partir d'un fichier
 
@@ -74,5 +86,5 @@ Relancez la commande chaque fois que le fichier change : elle ne change que ce 
 Cliquez sur **Révoquer** à côté de la clé, puis sur **Révoquer la clé**. Tout ce qui l'utilise cesse immédiatement de fonctionner, et vous ne pouvez pas annuler l'opération :
 
 - les points de terminaison webhook que la clé a créés se désactivent, sur toutes les entreprises
-- personne ne peut accepter les invitations d'équipe qu'elle a envoyées
+- personne ne peut accepter les invitations qu'elle a envoyées, à l'équipe d'une entreprise ou à la vôtre
 - les propriétaires qu'elle a invités en créant leur entreprise peuvent toujours rejoindre leur entreprise

@@ -16,7 +16,7 @@ Give each tool its own key, so you can revoke one without breaking the others:
     On **API keys**, click **Create platform key**.
   </Step>
   <Step title="Name the key and pick its access">
-    Enter a **Name** you'll recognize, such as `Client onboarding`. Under **Access**, select only what the tool needs. To create businesses, select **Create businesses and invite their owners**.
+    Enter a **Name** you'll recognize, such as `Client onboarding`. Under **Access**, select only what the tool needs. To create businesses, select **Create businesses and invite their owners**. To run your partner from code, select the partner access the tool needs. Only owners see the billing access.
   </Step>
   <Step title="Copy the key">
     Click **Create key**, then copy the key and store it in a password manager or your tool's settings. The console shows it once.
@@ -33,9 +33,21 @@ A partner's key acts as your partner rather than as a person, so it keeps workin
 - Every other request names its business in the `LobbyStack-Business` header.
 - Links the API returns, such as a widget's script tag or a calendar connect link, point at your address.
 
-Your keys can create 30 businesses an hour between them. A key can't apply a template, change a business's package or overage, search for or claim phone numbers, or change alert preferences, so do those in the console.
+Your keys can create 30 businesses an hour between them. `POST /businesses` takes `template_id` to start from one of your templates and `package_id` to sell one of your packages. A key can't search for or claim phone numbers, or change alert preferences, so do those in the console.
 
 [Platform keys](/api/authentication#platform-keys) lists the scopes, headers and responses.
+
+## Run your partner from code
+
+With the partner access, a key does what the console does. It makes and publishes demos, manages packages, changes your brand and domain, saves templates, invites your team, releases or deletes businesses, and shows your tier and Stripe account. A coding assistant or your own scripts can then do your White Label work through the API or the `lobbystack` command:
+
+```bash
+lobbystack demos create "Harbor Dental" https://harbordental.example
+lobbystack packages list
+lobbystack partner-team invite sam@youragency.example member
+```
+
+The key acts as an admin, so it can't invite an owner or change an owner's role. Only owners can give a key billing access, and a tier checkout the key starts goes to the owner who made it. [Partner endpoints](/api/authentication#partner-endpoints) lists what each access allows.
 
 ## Onboard a business from a file
 
@@ -74,5 +86,5 @@ Run the command again whenever the file changes, and it changes only what differ
 Click **Revoke** beside the key, then **Revoke key**. Anything that uses it stops working right away, and you can't undo it:
 
 - the webhook endpoints the key created turn off, on every business
-- nobody can accept the team invitations it sent
+- nobody can accept the invitations it sent, to a business's team or to yours
 - owners it invited when it created their business can still join

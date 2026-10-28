@@ -94,11 +94,31 @@ Una clave de plataforma (`lsp_...`) incorpora y gestiona muchos negocios, mientr
   </Step>
 </Steps>
 
-La clave de plataforma de un socio actúa en nombre del socio, así que sigue funcionando cuando la persona que la creó deja el equipo. Llega a los negocios activos del socio, incluidos los que se crearon desde la consola, y a ningún otro. No puede iniciar un pago de Polar, fijar un plan gestionado ni crear un enlace de reclamación. Tampoco puede buscar ni reservar números de teléfono, ni consultar o cambiar las preferencias de alertas, porque esas acciones se hacen en nombre de una persona.
+La clave de plataforma de un socio actúa en nombre del socio, así que sigue funcionando cuando la persona que la creó deja el equipo. Llega a los negocios activos del socio, incluidos los que se crearon desde la consola, y a ningún otro. Con los permisos de socio, también gestiona al socio mismo con los [endpoints de socio](#endpoints-de-socio). No puede iniciar un pago de Polar para un negocio, fijar un plan gestionado ni crear un enlace de reclamación. Tampoco puede buscar ni reservar números de teléfono, ni consultar o cambiar las preferencias de alertas, porque esas acciones se hacen en nombre de una persona.
 
-Con la clave de plataforma de un socio, `POST /businesses` crea un negocio del socio, todavía sin propietario. Indique el propietario en `owner_email`, y el socio le envía por correo una invitación para iniciar sesión en su panel. `access_level` define lo que puede usar el equipo del negocio: `full`, el valor predeterminado, o `activity`. Las claves de plataforma de un socio pueden crear 30 negocios por hora en total. Las invitaciones que envía con `POST /team/invitations` y `POST /users` llegan del socio y llevan a su panel.
+Con la clave de plataforma de un socio, `POST /businesses` crea un negocio del socio, todavía sin propietario. Indique el propietario en `owner_email`, y el socio le envía por correo una invitación para iniciar sesión en su panel. `access_level` define lo que puede usar el equipo del negocio: `full`, el valor predeterminado, o `activity`. `template_id` parte de una de las plantillas del socio, y `package_id` le vende al negocio uno de los paquetes del socio. Las claves de plataforma de un socio pueden crear 30 negocios por hora en total. Las invitaciones que envía con `POST /team/invitations` y `POST /users` llegan del socio y llevan a su panel.
 
 Los enlaces que devuelve la API para el negocio de un socio, como la etiqueta de script de un widget o un enlace para conectar un calendario, también llevan al panel del socio.
+
+### Endpoints de socio
+
+Los endpoints bajo `/partner` hacen lo que hace la consola de socios. Leen al socio, gestionan sus demos, paquetes, marca, dominio, plantillas y equipo, y también su cuenta de Stripe y su nivel. Solo la clave de un socio puede llamarlos, sin el encabezado `LobbyStack-Business`. Una clave API o una clave del anfitrión recibe `403` con el código `forbidden`.
+
+Una clave actúa con los derechos de un administrador, así que nunca cambia a un propietario. Invitar a un propietario, cambiar el rol de un propietario o quitar a uno devuelve `403`: hágalo en la consola. Solo los propietarios pueden conceder `partner.billing:read` y `partner.billing:write`, porque dan acceso a lo que solo los propietarios ven en la consola. `POST /partner/billing/checkout` emite el pago del nivel a nombre del propietario que creó la clave.
+
+| Permiso | Permite |
+| --- | --- |
+| `partner:read` | `GET /partner`, `GET /partner/brand`, `GET /partner/domain`, `GET /partner/demos`, `GET /partner/demos/{demo_id}`, `GET /partner/packages`, `GET /partner/templates`, `GET /partner/team`, `GET /partner/businesses/{business_id}/billing` |
+| `partner.businesses:write` | `POST /partner/businesses/{business_id}/release`, `DELETE /partner/businesses/{business_id}`, `PATCH /partner/businesses/{business_id}/billing` |
+| `partner.demos:write` | `POST /partner/demos`, `POST /partner/demos/{demo_id}/publish`, `/rotate` y `/revoke`, `DELETE /partner/demos/{demo_id}` |
+| `partner.packages:write` | `POST /partner/packages`, `PATCH` y `DELETE` en `/partner/packages/{package_id}` |
+| `partner.branding:write` | `PATCH /partner/brand`, `POST` y `DELETE` en `/partner/domain` |
+| `partner.templates:write` | `POST /partner/templates`, `DELETE /partner/templates/{template_id}` |
+| `partner.team:write` | `POST /partner/team/invitations`, `DELETE /partner/team/invitations/{invitation_id}`, `PATCH` y `DELETE` en `/partner/team/members/{member_id}` |
+| `partner.billing:read` | `GET /partner/stripe`, `GET /partner/billing`, `GET /partner/billing/checkout/{checkout_id}`, y `pool` en `GET /partner` |
+| `partner.billing:write` | `POST /partner/stripe/onboarding-link`, `PATCH /partner/billing/overage`, `POST /partner/billing/checkout` |
+
+`POST /partner/team/invitations` exige un `Idempotency-Key`, y `POST /partner/packages`, `POST /partner/templates` y `POST /partner/billing/checkout` aceptan uno. `POST /partner/demos` y `POST /partner/demos/{demo_id}/rotate` lo ignoran, así LobbyStack nunca guarda una copia del enlace de una demo. Tras un error de red, consulte `GET /partner/demos` antes de reintentar. `PATCH /partner/brand` acepta un logotipo o un favicon en base64, como los sube la consola.
 
 ### Cree una clave del anfitrión
 
@@ -107,7 +127,7 @@ El panel no tiene una página para las claves del anfitrión. En un despliegue a
 - El grupo al que pertenece la clave (`group`; pase `--group`). Las claves de un mismo grupo llegan a los mismos negocios.
 - La cuenta verificada de LobbyStack en cuyo nombre actúa la clave (`owner_email`), que es la propietaria de los negocios que crea.
 - Si la clave llega a todos los negocios (`"access": "all"`; pase `--access all`) o, de forma predeterminada, solo a los que incorporaron las claves de su grupo (`"access": "group"`).
-- Sus permisos. Salvo que usted indique algunos, una clave nueva recibe los permisos que puede tener una clave API. `POST /businesses` necesita `businesses:create` y `POST /users` necesita `users:create`. Solo las claves de plataforma pueden tener estos dos, y una clave nueva los recibe solo si usted pasa `--create-businesses` o `--create-users`. `GET /businesses` necesita `business:read`.
+- Sus permisos. Salvo que usted indique algunos, una clave nueva recibe los permisos que puede tener una clave API. `POST /businesses` necesita `businesses:create` y `POST /users` necesita `users:create`. Solo las claves de plataforma pueden tener estos dos, y una clave nueva los recibe solo si usted pasa `--create-businesses` o `--create-users`. `GET /businesses` necesita `business:read`. El comando rechaza los permisos de socio, porque una clave del anfitrión no tiene un socio en cuyo nombre actuar.
 
 Las entradas más antiguas llaman `partner` al grupo y pueden indicar `"access": "partner"`. Ambos siguen funcionando, y la clave llega a los mismos negocios. Para actualizar una, cambie `partner` por `group` y `"access": "partner"` por `"access": "group"`. Actualice primero el admin: las versiones anteriores rechazan `group`. El admin rechaza una entrada que define a la vez `partner` y `group`, y con ella todas las claves de `PLATFORM_API_KEYS`.
 
@@ -139,7 +159,7 @@ En **Configuración** > **Claves de API**, haga clic en **Revocar** junto a la c
 
 LobbyStack también desactiva los endpoints de webhook que creó la clave. Para conservar uno, vuelva a activarlo desde la tarjeta **Webhooks** en **Integraciones**.
 
-Para revocar una clave de plataforma de un socio, haga clic en **Revocar** junto a ella en la página **Claves de API** de la consola de socios. Las solicitudes que la usen fallan de inmediato. LobbyStack desactiva los endpoints de webhook que creó en todos los negocios, y revoca las invitaciones de equipo que envió y que nadie ha aceptado todavía. Los propietarios a los que invitó al crear su negocio aún pueden aceptar.
+Para revocar una clave de plataforma de un socio, haga clic en **Revocar** junto a ella en la página **Claves de API** de la consola de socios. Las solicitudes que la usen fallan de inmediato. LobbyStack desactiva los endpoints de webhook que creó en todos los negocios, y revoca las invitaciones que envió, al equipo de un negocio o al del socio, y que nadie ha aceptado todavía. Los propietarios a los que invitó al crear su negocio aún pueden aceptar.
 
 ## Límites de frecuencia
 

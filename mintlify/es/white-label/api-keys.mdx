@@ -16,7 +16,7 @@ Dé a cada herramienta su propia clave, para poder revocar una sin afectar a las
     En **Claves de API**, haga clic en **Crear clave de plataforma**.
   </Step>
   <Step title="Ponga nombre a la clave y elija su acceso">
-    Escriba un **Nombre** que pueda reconocer, como `Alta de clientes`. En **Acceso**, seleccione solo lo que necesita la herramienta. Para crear negocios, seleccione **Crear negocios e invitar a sus propietarios**.
+    Escriba un **Nombre** que pueda reconocer, como `Alta de clientes`. En **Acceso**, seleccione solo lo que necesita la herramienta. Para crear negocios, seleccione **Crear negocios e invitar a sus propietarios**. Para gestionar su socio desde código, seleccione los accesos de socio que necesita la herramienta. Solo los propietarios ven los accesos a la facturación.
   </Step>
   <Step title="Copie la clave">
     Haga clic en **Crear clave**, y luego copie la clave y guárdela en un gestor de contraseñas o en la configuración de su herramienta. La consola la muestra una sola vez.
@@ -33,9 +33,21 @@ La clave de un socio actúa en nombre de su cuenta de socio y no de una persona,
 - Todas las demás solicitudes indican su negocio en el encabezado `LobbyStack-Business`.
 - Los enlaces que devuelve la API, como la etiqueta de script de un widget o un enlace para conectar un calendario, apuntan a su dirección.
 
-Entre todas, sus claves pueden crear 30 negocios por hora. Una clave no puede aplicar una plantilla, cambiar el paquete o el excedente de un negocio, buscar ni reservar números de teléfono, ni cambiar las preferencias de alertas, así que haga esas tareas en la consola.
+Entre todas, sus claves pueden crear 30 negocios por hora. `POST /businesses` acepta `template_id` para partir de una de sus plantillas y `package_id` para vender uno de sus paquetes. Una clave no puede buscar ni reservar números de teléfono, ni cambiar las preferencias de alertas, así que haga esas tareas en la consola.
 
 [Claves de plataforma](/es/api/authentication#claves-de-plataforma) enumera los permisos, los encabezados y las respuestas.
+
+## Gestione su socio desde código
+
+Con los accesos de socio, una clave hace lo que hace la consola. Crea y publica demos, gestiona paquetes, cambia su marca y su dominio, guarda plantillas, invita a su equipo, cede o elimina negocios, y muestra su nivel y su cuenta de Stripe. Un asistente de programación o sus propios scripts pueden hacer entonces su trabajo de marca blanca con la API o el comando `lobbystack`:
+
+```bash
+lobbystack demos create "Harbor Dental" https://harbordental.example
+lobbystack packages list
+lobbystack partner-team invite sam@youragency.example member
+```
+
+La clave actúa como un administrador, así que no puede invitar a un propietario ni cambiar el rol de un propietario. Solo los propietarios pueden dar a una clave acceso a la facturación, y un pago de nivel que inicie la clave se emite a nombre del propietario que la creó. [Endpoints de socio](/es/api/authentication#endpoints-de-socio) enumera lo que permite cada acceso.
 
 ## Incorpore un negocio desde un archivo
 
@@ -74,5 +86,5 @@ Ejecute el comando de nuevo cada vez que cambie el archivo, y solo cambia lo que
 Haga clic en **Revocar** junto a la clave, y luego en **Revocar clave**. Todo lo que la usa deja de funcionar de inmediato, y no puede deshacerlo:
 
 - los endpoints de webhook que creó la clave se desactivan, en todos los negocios
-- nadie puede aceptar las invitaciones de equipo que envió
+- nadie puede aceptar las invitaciones que envió, al equipo de un negocio o al suyo
 - los propietarios a los que invitó al crear su negocio aún pueden unirse
