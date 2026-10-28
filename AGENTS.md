@@ -71,7 +71,7 @@
 
 ## Writing
 
-Load the matching skill before you write text people read, including text inside code such as UI strings and locale files:
+Load the matching skill from `.agents/skills/` before you write text people read, including text inside code such as UI strings and locale files:
 
 - `copywriting`: copy for the marketing site, the dashboard, emails, and other product surfaces.
 - `writing-guidelines`: docs, such as `docs/`, `mintlify/`, READMEs, ADRs, and specs.
@@ -93,4 +93,4 @@ Load the matching skill before you write text people read, including text inside
 - PostgreSQL is the canonical runtime datastore.
 - Runtimes connect through `createDatabaseClient` as one of four roles: `lobbystack_app`, `lobbystack_auth`, `lobbystack_worker`, or `lobbystack_dispatcher`. Run tenant queries inside `withBusinessTransaction`, which sets the RLS context before your callback runs.
 - Write each migration by hand as `packages/db/migrations/NNNN_name.sql` and add it to `SCHEMA_MIGRATIONS` in `packages/db/src/migrations/raw-migrations.ts`; a test fails when the two disagree. A new table's migration enables and forces row-level security and adds a policy, or `pnpm db:verify-rls` fails. Update the Drizzle schema in `packages/db/src/schema/` when tables change. `migrations/generated/` holds only the initial Drizzle baseline.
-- `legacy_convex_id` columns hold IDs from the previous Convex platform. The Polar webhook business lookup, the finance export, and call and contact ID display still read them.
+- `legacy_convex_id` columns hold IDs from the previous Convex platform, which appears otherwise only in historical ADRs and blog posts. The Polar webhook business lookup, the finance export, and call and contact ID display still read them.
