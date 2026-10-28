@@ -29,7 +29,7 @@ We considered two alternatives:
 - **Billing outside the product.** The deployment would send businesses no bill, and partners would invoice from their own tools. echowin and RingReady work this way, and Synthflow has since September 2026. We rejected it: a small partner without billing tools would have to set some up before it could sell LobbyStack.
 - **The host collects and pays partners out.** The host would charge businesses and send partners their share. That makes the host responsible for each business's tax, refunds, and failed payments, and for partner payouts.
 
-Six of the full white-label products we studied bill through the partner's Stripe: GoHighLevel, Autocalls, Famulor, Vapify, VoiceAI Connect, and Assistable. The comparison is in [the white-label research](../../research/white-label-reseller-programs.md#billing).
+Six of the full white-label products we studied bill through the partner's Stripe: GoHighLevel, Autocalls, Famulor, Vapify, VoiceAI Connect, and Assistable.
 
 ## Consequences
 

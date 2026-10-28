@@ -22,7 +22,7 @@ export function recordingState(input: {
 export function recordingListState(input: Parameters<typeof recordingState>[0] & { startedAt: Date; endedAt: Date | null }): RecordingState {
   const storedState = recordingState(input);
   if (input.recordingObjectId || storedState === "expired") return storedState;
-  // Legacy voice-gateway browser calls were never recorded, and some were never closed.
+  // Legacy `webrtc` browser calls were never recorded, and some were never closed.
   if (input.transport === "webrtc") return "missing";
   const disposition = input.disposition?.trim().toLowerCase() ?? "";
   if (["blocked_contact", "busy", "no_answer", "missed", "canceled", "cancelled"].some(value => disposition.includes(value))) return "missing";

@@ -1,6 +1,6 @@
 # How partners resell LobbyStack
 
-A partner resells LobbyStack to businesses under its own brand, domain, and bills. This page records what v1 of the partner program does, as decided on 2026-10-24. The code builds it, except where a line below says otherwise, and the Help Center's [white label pages](../mintlify/white-label/overview.mdx) describe it for partners. [`GLOSSARY.md`](../GLOSSARY.md) defines the terms, and [the white-label research](../research/white-label-reseller-programs.md) compares 30 competitors. [Build the partner program](white-label-build-plan.md) lays out the work in phases, and [the partner architecture](architecture/partners.md) defines its modules.
+A partner resells LobbyStack to businesses under its own brand, domain, and bills. This page records what v1 of the partner program does, as decided on 2026-10-24. The code builds it, except where a line below says otherwise, and the Help Center's [white label pages](../mintlify/white-label/overview.mdx) describe it for partners. [`GLOSSARY.md`](../GLOSSARY.md) defines the terms. [Build the partner program](white-label-build-plan.md) lays out the work in phases, and [the partner architecture](architecture/partners.md) defines its modules.
 
 ## Terms
 
@@ -125,7 +125,7 @@ A partner's businesses never get the host's marketing, onboarding, or founder em
 
 ## Texts
 
-Every business, direct or partner, texts from the host's verified toll-free number. Carriers expect that number's verified brand in the first text and in HELP and STOP replies. [The research's SMS section](../research/white-label-reseller-programs.md#sms-sender-rules) has the sources. A toll-free number can text only US, Canadian and Puerto Rican numbers, so a business with its own UK or Australian mobile number texts from that number instead.
+Every business, direct or partner, texts from the host's verified toll-free number. Carriers expect that number's verified brand in the first text and in HELP and STOP replies. A toll-free number can text only US, Canadian and Puerto Rican numbers, so a business with its own UK or Australian mobile number texts from that number instead.
 
 - The first text to each customer of each business confirms the opt-in and names the host and the business.
 - HELP and START replies name the host and the business. STOP gets Twilio's own reply, because Twilio blocks every text to a phone once it sends STOP.

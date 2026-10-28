@@ -294,7 +294,6 @@ The decisions behind this spec, all in the repository:
 - "Understand the partner program's architecture" (`docs/architecture/partners.md`)
 - ADR 0009 and ADR 0010 (`docs/adr/`)
 - The glossary (`GLOSSARY.md`)
-- The competitor research (`research/white-label-reseller-programs.md`)
 
 The host sets up a few things outside the code, and the build waits on them with test doubles:
 
