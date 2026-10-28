@@ -10,6 +10,7 @@ import { forgetCachedBrands } from "./brands";
 import type { TemplateStorage } from "./businessTemplates";
 import type { DomainContext } from "./context";
 import { createPartnerBusiness, hashPartnerToken, acceptPartnerInvitation, invitePartnerMember, releaseBusiness, signUpPartner, type PartnerMemberActor } from "./partners";
+import { setPartnerBusinessBilling, setPartnerBusinessOverage } from "./packageBilling";
 import { recordStripeConnectEvent, startPartnerStripeOnboarding } from "./partnerStripe";
 import { createPartnerPlatformKey, revokePartnerPlatformKey } from "./partnerPlatformKeys";
 import {
@@ -575,6 +576,42 @@ describe.skipIf(!testUrl)("the v1 Partner endpoints with a partner's own keys, a
       expect(await refusal(updatePartnerBusinessBillingForApi(revokingOverage, seller, cove, { overage: { enabled: true, voice_minute_rate_minor: 25, chat_rate_minor: 5, cap_minor: null } }))).toMatchObject({ status: 401 });
       const [overage] = (await asMigrator(tx, async () => await tx.execute<{ overage_voice_minute_rate_minor: number | null }>(sql`select overage_voice_minute_rate_minor from public.billing_accounts where business_id = ${cove}::uuid`))).rows;
       expect(overage?.overage_voice_minute_rate_minor ?? null).not.toBe(25);
+    });
+  });
+
+  it("checks the person's role again in the transaction that writes for them", async () => {
+    await rollbackTest(async (tx) => {
+      const acme = await partner(tx, "Acme Agency");
+      await connectStripe(acme);
+      const pkgKey = await acme.key(["partner:read", "partner.packages:write", "partner.templates:write"]);
+      const made = await createPartnerPackageForApi(acme.context, pkgKey, { name: "Front desk", monthly_price_minor: 9_900, voice_minutes: 300, chats: 500 });
+      const readAccount = async (businessId: string) => (await asMigrator(tx, async () => await tx.execute<{ package_id: string | null; overage_voice_minute_rate_minor: number | null }>(sql`select package_id, overage_voice_minute_rate_minor from public.billing_accounts where business_id = ${businessId}::uuid`))).rows[0];
+      const setAdmin = (change: { role?: "member" | "admin"; status?: "removed" | "active" }) => async () => { await asMigrator(tx, async () => { await tx.update(partnerMembers).set(change).where(eq(partnerMembers.id, acme.memberIds.admin)); }); };
+      const restore = setAdmin({ role: "admin", status: "active" });
+
+      // Billing: the admin is made a member, or removed, after the first check and before the change.
+      for (const change of [{ role: "member" as const }, { status: "removed" as const }]) {
+        const harbor = await acme.business(`Harbor ${change.role ?? change.status}`);
+        expect(await refusal(setPartnerBusinessBilling(contextRacing(tx, 2, setAdmin(change)), acme.adminActor, { businessId: harbor, packageId: made.id }))).toMatchObject({ status: 403 });
+        expect((await readAccount(harbor))?.package_id ?? null).toBeNull();
+        await restore();
+
+        // Overage, on a business that has the package.
+        await setPartnerBusinessBilling(acme.context, acme.adminActor, { businessId: harbor, packageId: made.id });
+        expect(await refusal(setPartnerBusinessOverage(contextRacing(tx, 2, setAdmin(change)), acme.adminActor, { businessId: harbor, enabled: true, voiceMinuteRateMinor: 25, chatRateMinor: 5, capMinor: null }))).toMatchObject({ status: 403 });
+        expect((await readAccount(harbor))?.overage_voice_minute_rate_minor ?? null).not.toBe(25);
+        await restore();
+      }
+
+      // A business from a template: the admin is made a member while the template is applied, so nobody is invited and the business goes.
+      const storage = memoryStorage();
+      const source = await acme.business("Template source");
+      const template = await createPartnerTemplateForApi(acme.context, pkgKey, { business_id: source, name: "Dental clinic" }, { storage });
+      const businessId = randomUUID();
+      const demoting = contextRacing(tx, 2, setAdmin({ role: "member" }));
+      expect(await refusal(createPartnerBusiness(demoting, acme.adminActor, { businessId, name: "Pier Dental", timezone: "America/Toronto", businessType: "dental", accessLevel: "full", ownerEmail: `${randomUUID()}@example.invalid`, templateId: template.id }, { worker: workerContext(tx), storage }))).toMatchObject({ status: 403 });
+      expect(await asMigrator(tx, async () => await tx.select({ id: businesses.id }).from(businesses).where(eq(businesses.id, businessId)))).toEqual([]);
+      await restore();
     });
   });
 

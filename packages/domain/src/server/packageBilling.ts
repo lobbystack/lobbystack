@@ -265,10 +265,12 @@ async function readRole(tx: DatabaseTransaction, actor: PartnerActor): Promise<P
 /**
  * Checks again, in the transaction that makes a change, what an earlier
  * transaction checked: a key is still active, holding it until the change
- * commits so a revoke waits, and the business is still the partner's.
+ * commits so a revoke waits, a person is still an owner or admin on the
+ * team, and the business is still the partner's.
  */
-async function recheckActor(tx: DatabaseTransaction, actor: PartnerActor, businessId: string): Promise<void> {
+async function recheckActor(tx: DatabaseTransaction, actor: PartnerActor, businessId: string, message: string): Promise<void> {
   if (actor.kind === "key") await lockPartnerKey(tx, actor);
+  else if (await readRole(tx, actor) === "member") throw new AuthorizationError(message);
   if (await businessPartner(tx, businessId) !== actor.partnerId.toLowerCase()) throw businessNotFound();
 }
 
@@ -286,7 +288,7 @@ export async function setPartnerBusinessBilling(context: DomainContext, actor: P
   const outcome = await withBusinessTransaction(context.db, { ...partnerRls(actor), businessId: input.businessId, actorType: "system" }, async (tx) => {
     // Releasing the business takes this lock too. The key and the business may have changed since the check above.
     await lockBusinessBillingAccount(tx, input.businessId);
-    await recheckActor(tx, actor, input.businessId);
+    await recheckActor(tx, actor, input.businessId, "Only owners and admins can change how a business is billed.");
     const changed = await setBusinessPackageInTransaction(tx, { businessId: input.businessId, partnerId: actor.partnerId, packageId: input.packageId, stripeConnect: Boolean(context.stripeConnect) });
     if (changed.changed) await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: actorUserId(actor), eventType: "partner.business_billing_changed", entityType: "business", entityId: input.businessId, payload: { partnerId: actor.partnerId, packageId: input.packageId, ...keyAuditFields(actor) } });
     return changed;
@@ -329,7 +331,7 @@ export async function setPartnerBusinessOverage(context: DomainContext, actor: P
   await withBusinessTransaction(context.db, { ...partnerRls(actor), businessId: input.businessId, actorType: "system" }, async (tx) => {
     // Releasing the business and changing its package take this lock too, so neither moves under the change.
     await lockBusinessBillingAccount(tx, input.businessId);
-    await recheckActor(tx, actor, input.businessId);
+    await recheckActor(tx, actor, input.businessId, "Only owners and admins can change a business's overage.");
     const account = await readAccount(tx, input.businessId);
     const [pkg] = account?.packageId ? await tx.select({ currency: partnerPackages.currency }).from(partnerPackages).where(eq(partnerPackages.id, account.packageId)).limit(1) : [];
     if (!account || !pkg) throw billedOutside();

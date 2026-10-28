@@ -828,8 +828,9 @@ export async function createPartnerBusiness(
     await applyStoredBusinessTemplate(setup!, { partnerId, businessId, template, keep: { name, timezone }, ...(member.kind === "member" ? { userId: member.userId } : { platformKeyId: member.platformKeyId }) });
     applied = true;
     const invitation = await withBusinessTransaction(context.db, { ...partnerRls(member), businessId, actorType: "system" }, async (tx) => {
-      // Someone on the team may have deleted it while the template was applied.
+      // Someone on the team may have deleted it while the template was applied, and the person or key may have lost the right to create it.
       await lockPartnerBusiness(tx, member.partnerId, businessId, "no key update");
+      if (await currentRole(tx, member) === "member") throw new AuthorizationError("Only owners and admins can create the partner's businesses.");
       return await invite(tx, template.templateId);
     });
     return { businessId, ...invitation };
