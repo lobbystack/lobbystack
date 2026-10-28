@@ -836,7 +836,7 @@
     "title": "Connexions de l'agence",
     "description": "Les assistants IA et autres clients MCP que votre équipe a connectés à l'agence en se connectant, comme Claude, ChatGPT ou Cursor. Chacun agit avec le rôle de la personne qui l'a connecté.",
     "descriptionOwn": "Les assistants IA et autres clients MCP que vous avez connectés à l'agence en vous connectant, comme Claude, ChatGPT ou Cursor. Ils agissent avec votre rôle.",
-    "empty": "Aucune connexion pour l'instant. Connectez un assistant au serveur MCP de LobbyStack et choisissez cette agence à la connexion.",
+    "empty": "Aucune connexion pour l'instant. Connectez un assistant au serveur MCP de {{appName}} et choisissez cette agence à la connexion.",
     "unnamed": "Application sans nom",
     "neverUsed": "Jamais",
     "connectedBy": "{{date}} par {{name}}",

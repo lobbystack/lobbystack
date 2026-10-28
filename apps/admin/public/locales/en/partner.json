@@ -824,7 +824,7 @@
     "title": "Agency connections",
     "description": "AI assistants and other MCP clients your team connected to the agency with sign-in, such as Claude, ChatGPT or Cursor. Each one acts with the role of the person who connected it.",
     "descriptionOwn": "AI assistants and other MCP clients you connected to the agency with sign-in, such as Claude, ChatGPT or Cursor. They act with your role.",
-    "empty": "No connections yet. Connect an assistant to the LobbyStack MCP server and choose this agency when you sign in.",
+    "empty": "No connections yet. Connect an assistant to the {{appName}} MCP server and choose this agency when you sign in.",
     "unnamed": "Unnamed app",
     "neverUsed": "Never",
     "connectedBy": "{{date}} by {{name}}",

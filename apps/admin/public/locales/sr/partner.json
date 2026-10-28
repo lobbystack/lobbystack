@@ -836,7 +836,7 @@
     "title": "Veze agencije",
     "description": "AI asistenti i drugi MCP klijenti koje je Vaš tim povezao sa agencijom prijavom, kao što su Claude, ChatGPT ili Cursor. Svaki radi sa ulogom osobe koja ga je povezala.",
     "descriptionOwn": "AI asistenti i drugi MCP klijenti koje ste povezali sa agencijom prijavom, kao što su Claude, ChatGPT ili Cursor. Rade sa Vašom ulogom.",
-    "empty": "Još nema veza. Povežite asistenta sa LobbyStack MCP serverom i izaberite ovu agenciju pri prijavi.",
+    "empty": "Još nema veza. Povežite asistenta sa {{appName}} MCP serverom i izaberite ovu agenciju pri prijavi.",
     "unnamed": "Aplikacija bez imena",
     "neverUsed": "Nikad",
     "connectedBy": "{{date}}, {{name}}",
