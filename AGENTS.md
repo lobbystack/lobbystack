@@ -52,6 +52,7 @@
 - Before you change pages, layouts, route handlers, or Server Actions, call `get_routes` and `get_errors`. After the change, call `get_compilation_issues` and `get_errors` again. `get_errors` needs at least one page open in a browser first.
 - To check a change in a real browser, follow `.agents/skills/next-dev-loop`. It needs the `agent-browser` CLI, version 0.31.1 or later, on your `PATH`.
 - `.mcp.json` registers `next-devtools-mcp` for MCP clients that read that file. It calls the same endpoint and adds `nextjs_docs` for searching the bundled docs.
+- None of these replace the checks under "Testing".
 
 ## Coding style
 
@@ -93,7 +94,7 @@ Load the matching skill from `.agents/skills/` before you write text people read
 - `*.integration.test.ts` files skip unless `LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL` points at a dedicated test database; they never read `DATABASE_URL`. A green `pnpm test` without it hasn't run them. `pnpm test:reliability` runs the main set, and the `database` job in `.github/workflows/ci.yml` lists the role URLs and other variables the rest need.
 - Prioritize booking, authz, webhook, outbox, snapshot, privacy, and telemetry regressions.
 - Every new telemetry event must include a test that asserts it fires from its real production code path. `pnpm telemetry:coverage` fails when an event in the registry has no producer.
-- CI runs `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, and the database and browser tests on every pull request.
+- Run `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm build` before opening a PR.
 - When changing migrations or RLS, also run `pnpm db:check` and `pnpm db:verify-rls` against the test database.
 - When changing GPT-Live instructions, the call controller, or how calls end, run `pnpm voice:eval` before you open a PR and `pnpm voice:call` against staging before you merge. See `docs/voice/testing.md`.
 
