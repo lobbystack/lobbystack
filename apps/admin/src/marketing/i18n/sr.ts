@@ -105,7 +105,7 @@ export const sr = {
     "/features/mcp/": {
       title: "MCP server za AI recepcionera za Claude i ChatGPT | LobbyStack",
       description:
-        "Povežite Claude ili ChatGPT sa LobbyStack MCP serverom za AI recepcionera. Pitajte ko je zvao, zakazujte termine i menjajte radno vreme iz četa.",
+        "Povežite Claude, ChatGPT, Cursor ili VS Code sa LobbyStack MCP serverom za AI recepcionera. Pregledajte pozive, zakazujte i menjajte kontakte i radno vreme.",
     },
     "/white-label/": {
       title: "White-label AI recepcioner otvorenog koda | LobbyStack",

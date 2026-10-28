@@ -228,11 +228,6 @@ const resourceLinks = (locale: Locale) =>
       icon: BookOpen,
     },
     {
-      label: labels[locale].mcpServer,
-      href: "/features/mcp/",
-      icon: Plug,
-    },
-    {
       label: labels[locale].calculator,
       href: "/missed-call-revenue-calculator/",
       icon: Calculator,
@@ -270,6 +265,11 @@ const solutionLinks = (locale: Locale) =>
       label: solutionLabelMap[locale].whiteLabel,
       href: "/white-label/",
       icon: Tag,
+    },
+    {
+      label: labels[locale].mcpServer,
+      href: "/features/mcp/",
+      icon: Plug,
     },
   ] satisfies NavChildLink[]
 

@@ -160,7 +160,6 @@ export function McpAsk({ locale }: SectionProps) {
             body={t.booking.body}
           />
         </div>
-        <p className="fine-print mt-4 text-center">{t.madeUp}</p>
       </div>
     </section>
   )
