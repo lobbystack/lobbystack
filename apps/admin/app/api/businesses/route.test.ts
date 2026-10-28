@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const fixture = vi.hoisted(() => ({ update: vi.fn(), list: vi.fn(), create: vi.fn(), switchWorkspace: vi.fn() }));
+const fixture = vi.hoisted(() => ({ update: vi.fn(), list: vi.fn(), create: vi.fn(), switchWorkspace: vi.fn(), remove: vi.fn(), revoke: vi.fn() }));
 vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
-vi.mock("@lobbystack/domain", () => ({ updateBusiness: fixture.update, listUserBusinesses: fixture.list, createBusiness: fixture.create, switchWorkspace: fixture.switchWorkspace, attributeBusiness: vi.fn(), ianaTimeZone: (zone: string) => zone }));
+vi.mock("@lobbystack/domain", () => ({ updateBusiness: fixture.update, listUserBusinesses: fixture.list, createBusiness: fixture.create, switchWorkspace: fixture.switchWorkspace, deleteBusiness: fixture.remove, attributeBusiness: vi.fn(), ianaTimeZone: (zone: string) => zone }));
+
+vi.mock("@lobbystack/providers", () => ({ PolarBillingProvider: class { revokeSubscription = fixture.revoke; } }));
 
 import { fakeOperator, resetFakeOperator } from "@/lib/operator-request.fake";
 import { setBrandHeaders } from "@/lib/request-brand";
-import { GET, PATCH, POST } from "./route";
+import { DELETE, GET, PATCH, POST } from "./route";
 import { POST as SWITCH } from "./switch/route";
 
 const partnerId = "5a0f6c7e-1d2b-4c3a-9e8f-7a6b5c4d3e2f";
@@ -54,5 +56,30 @@ describe("businesses on each brand's domain", () => {
     fixture.create.mockResolvedValue({ businessId: "business_2", membershipId: "membership" });
     expect((await POST(new Request("https://desk.example.test/api/businesses", { method: "POST", headers: hostDomain(), body }))).status).toBe(201);
     expect(fixture.create).toHaveBeenCalledOnce();
+  });
+});
+
+describe("deleting a business", () => {
+  const remove = (body: unknown) => DELETE(new Request("http://localhost:3000/api/businesses?businessId=business_1", { method: "DELETE", body: JSON.stringify(body) }));
+
+  it("needs the typed name, and acts as the signed-in operator on the business the request names", async () => {
+    expect((await remove({})).status).toBe(400);
+    expect(fixture.remove).not.toHaveBeenCalled();
+    const response = await remove({ userId: "owner", businessId: "business_2", confirmName: "Studio" });
+    expect(response.status).toBe(200);
+    expect(fixture.remove).toHaveBeenCalledWith({ db: "app" }, expect.objectContaining({ userId: "user_1", businessId: "business_1", confirmName: "Studio" }));
+  });
+
+  it("ends the plan with Polar when the domain asks, and refuses to delete when billing isn't configured", async () => {
+    fixture.remove.mockImplementation(async (_domain, input: { revokeSubscription: (id: string) => Promise<void> }) => { await input.revokeSubscription("sub_1"); });
+    vi.stubEnv("POLAR_ACCESS_TOKEN", "token");
+    vi.stubEnv("POLAR_ORGANIZATION_ID", "org");
+    expect((await remove({ confirmName: "Studio" })).status).toBe(200);
+    expect(fixture.revoke).toHaveBeenCalledWith({ subscriptionId: "sub_1" });
+    vi.stubEnv("POLAR_ACCESS_TOKEN", "");
+    const unconfigured = await remove({ confirmName: "Studio" });
+    expect(unconfigured.status).toBe(503);
+    expect(await unconfigured.json()).toMatchObject({ code: "billing_unconfigured" });
+    vi.unstubAllEnvs();
   });
 });

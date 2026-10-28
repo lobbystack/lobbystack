@@ -7,6 +7,7 @@ export * from "./branding";
 export * from "./brands";
 export * from "./businessAccess";
 export * from "./businessOverageSync";
+export * from "./businessDeletion";
 export * from "./businessTemplates";
 export * from "./analytics";
 export * from "./booking";

@@ -5,6 +5,8 @@ import { z } from "zod";
 const fixture = vi.hoisted(() => ({
   session: null as unknown,
   activeBusinessId: null as string | null,
+  /** The businesses the person is on the team of, as the database lists them. Unset, just the active business. */
+  ownBusinessIds: null as string[] | null,
   /** The active business on the partner's domains. */
   partnerActiveBusinessId: null as string | null,
   memberships: [] as Array<{ role: string; partnerId: string | null; accessLevel: "full" | "activity" }>,
@@ -21,7 +23,8 @@ vi.mock("@lobbystack/db", async (original) => {
   // Each transaction here reads the user's active business on a brand, or their membership and the business's partner and access level, and without
   // a membership the business with the person's partner open of it.
   const rows = async (table: unknown) => table === db.users ? [{ activeBusinessId: fixture.activeBusinessId }] : table === db.userActiveBusinesses ? (fixture.partnerActiveBusinessId ? [{ businessId: fixture.partnerActiveBusinessId }] : []) : table === db.businesses ? fixture.opened : fixture.memberships;
-  const tx = { select: () => ({ from: (table: unknown) => ({ where: () => ({ limit: () => rows(table) }), innerJoin: () => ({ where: () => ({ limit: () => rows(table) }) }) }) }) };
+  const own = () => (fixture.ownBusinessIds ?? (fixture.activeBusinessId ? [fixture.activeBusinessId] : [])).map((business_id) => ({ business_id, role: "business_owner", partner_id: null, access_via: "membership" }));
+  const tx = { execute: async () => ({ rows: own() }), select: () => ({ from: (table: unknown) => ({ where: () => ({ limit: () => rows(table) }), innerJoin: () => ({ where: () => ({ limit: () => rows(table) }) }) }) }) };
   return { ...db, withBusinessTransaction: async (_db: unknown, context: unknown, callback: (tx: unknown) => unknown) => { fixture.transactions.push(context); return await callback(tx); } };
 });
 
@@ -39,6 +42,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   fixture.session = { user: { id: "user-1" }, session: { id: "session-1", userId: "user-1", expiresAt: new Date(0) } };
   fixture.activeBusinessId = null;
+  fixture.ownBusinessIds = null;
   fixture.partnerActiveBusinessId = null;
   fixture.memberships = [{ role: "viewer", partnerId: null, accessLevel: "full" }];
   fixture.opened = [];
@@ -92,6 +96,12 @@ describe("operatorRoute", () => {
 
   it("acts on the user's active business when the request names none", async () => {
     fixture.activeBusinessId = businessId;
+    await expect((await call(echo)).json()).resolves.toEqual({ businessId });
+  });
+
+  it("acts on one of the user's own businesses when the remembered one is gone", async () => {
+    fixture.activeBusinessId = otherBusinessId;
+    fixture.ownBusinessIds = [businessId];
     await expect((await call(echo)).json()).resolves.toEqual({ businessId });
   });
 

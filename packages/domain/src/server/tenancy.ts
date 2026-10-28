@@ -216,12 +216,21 @@ async function insertBusinessRowsInTransaction(tx: DatabaseTransaction, input: N
 /**
  * The business the person last worked in on this brand's domains, or null
  * for none: on the host's domain users.active_business_id, and on a
- * partner's its own row. Whether they may still open it is for the caller to
- * check. The transaction acts as the person.
+ * partner's its own row. On the host's domain, a remembered business the
+ * person can no longer open gives way to one of their own. Whether they may
+ * open a partner's is for the caller to check. The transaction acts as the person.
  */
 export async function readActiveBusinessIdInTransaction(tx: DatabaseTransaction, input: { userId: string; brand: BrandScope }): Promise<string | null> {
   const partnerId = brandPartnerId(input.brand);
-  if (!partnerId) return (await tx.select({ activeBusinessId: users.activeBusinessId }).from(users).where(eq(users.id, input.userId)).limit(1))[0]?.activeBusinessId ?? null;
+  if (!partnerId) {
+    const remembered = (await tx.select({ activeBusinessId: users.activeBusinessId }).from(users).where(eq(users.id, input.userId)).limit(1))[0]?.activeBusinessId ?? null;
+    if (!remembered) return null;
+    // users.active_business_id has no foreign key, so it outlives a deleted business and one the person left. Pointing at it would fail every request that names no business, so the person's own businesses answer instead.
+    const own = (await tx.execute<{ business_id: string; role: string; partner_id: string | null; access_via: string }>(sql`select business_id, role, partner_id, access_via from app.list_user_businesses(${input.userId})`)).rows.filter((row) => businessShowsOnBrand(row.partner_id, input.brand));
+    if (own.some((row) => row.business_id === remembered)) return remembered;
+    const members = own.filter((row) => row.access_via === "membership");
+    return (members.find((row) => row.role !== "viewer") ?? members[0])?.business_id ?? null;
+  }
   return (await tx.select({ businessId: userActiveBusinesses.businessId }).from(userActiveBusinesses).where(and(eq(userActiveBusinesses.userId, input.userId), eq(userActiveBusinesses.partnerId, partnerId))).limit(1))[0]?.businessId ?? null;
 }
 

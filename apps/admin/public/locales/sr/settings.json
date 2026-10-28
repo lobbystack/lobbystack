@@ -755,6 +755,22 @@
       "resendFailed": "Nismo uspeli da ponovo pošaljemo poziv.",
       "revokeSuccess": "Poziv je opozvan.",
       "revokeFailed": "Nismo uspeli da opozovemo poziv."
+    },
+    "delete": {
+      "title": "Obriši firmu",
+      "description": "Trajno briše ovu firmu zajedno sa pozivima, razgovorima, kontaktima, terminima, podešavanjima i pristupom tima. Njen broj telefona se oslobađa, a plaćeni plan se završava. Ovo se ne može poništiti.",
+      "action": "Obriši firmu",
+      "dialogTitle": "Obrisati {{name}}?",
+      "dialogDescription": "Sve u ovoj firmi se trajno briše, njen broj telefona se vraća provajderu, a recepcionar prestaje da se javlja. Tim gubi pristup i niko ne može da je vrati.",
+      "confirmLabel": "Upišite <name>{{name}}</name> za potvrdu",
+      "submit": "Obriši",
+      "deleting": "Brisanje...",
+      "errors": {
+        "failed": "Firma nije mogla da se obriše. Pokušajte ponovo.",
+        "numberInProgress": "Broj telefona za ovu firmu se još podešava. Pokušajte ponovo za nekoliko minuta.",
+        "billing": "Naplata trenutno nije dostupna, pa plaćeni plan nije mogao da se završi. Pokušajte kasnije."
+      },
+      "cancel": "Otkaži"
     }
   },
   "hours": {

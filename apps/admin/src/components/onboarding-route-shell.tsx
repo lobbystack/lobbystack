@@ -42,6 +42,7 @@ export function OnboardingRouteShell({ children }: { children: React.ReactNode }
   return (
     <ReplacementOnboardingShell
       description={showDescription ? t(`${route.key}.description`) : ""}
+      legalAgreement="business"
       onSignOut={() => void signOut()}
       progress={business?.partnerAccessLevel ? partnerProgress(pathname, stage, business.partnerAccessLevel) : { current: route.step, ...(navigableUntil === undefined ? {} : { navigableUntil }), total: 9 }}
       title={t(selectedNumber ? "number.selectedTitle" : `${route.key}.title`)}

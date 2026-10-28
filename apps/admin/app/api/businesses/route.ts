@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
-import { attributeBusiness, createBusiness, ianaTimeZone, listUserBusinesses, updateBusiness } from "@lobbystack/domain";
+import { attributeBusiness, createBusiness, deleteBusiness, ianaTimeZone, listUserBusinesses, updateBusiness } from "@lobbystack/domain";
+import { PolarBillingProvider } from "@lobbystack/providers";
 import { jsonError } from "@/lib/api-helpers";
 import { operatorRoute, signedInRoute } from "@/lib/operator-request";
 import { requestBrandScope } from "@/lib/request-brand";
@@ -28,6 +29,25 @@ export const POST = signedInRoute(async ({ request, userId, body: input, domain 
     await attributeBusiness(domain, { businessId: created.businessId, referredUserId: userId, referralCode: body.referralCode, source: "referral_link" });
   }
   return NextResponse.json(created, { status: 201 });
+});
+
+// Deletes the business and all its data. Only its owner can, and only by typing its name.
+export const DELETE = operatorRoute(async ({ userId, businessId, body, domain }) => {
+  if (typeof body.confirmName !== "string") return jsonError("confirmName is required.", 400, "confirmation_mismatch");
+  const token = process.env.POLAR_ACCESS_TOKEN;
+  const organizationId = process.env.POLAR_ORGANIZATION_ID;
+  const provider = token && organizationId ? new PolarBillingProvider({ accessToken: token, organizationId, ...(process.env.POLAR_API_BASE_URL ? { baseUrl: process.env.POLAR_API_BASE_URL } : {}) }) : null;
+  await deleteBusiness(domain, {
+    userId,
+    businessId,
+    confirmName: body.confirmName,
+    // A deployment without Polar has no subscription to end, and one with it ends the plan before anything is deleted.
+    revokeSubscription: async (subscriptionId) => {
+      if (!provider) throw jsonError("Billing is not configured.", 503, "billing_unconfigured");
+      await provider.revokeSubscription({ subscriptionId });
+    },
+  });
+  return NextResponse.json({ ok: true });
 });
 
 export const PATCH = operatorRoute(async ({ userId, businessId, body, domain }) => {

@@ -21,6 +21,8 @@ type OnboardingShellProps = {
   width?: "sm" | "md" | "lg" | "xl" | "wide";
   children: React.ReactNode;
   legalFooter?: React.ReactNode;
+  /** The agreement line login and signup show, for the action the person is taking. Left out when the partner has no terms or privacy page. */
+  legalAgreement?: "login" | "signup" | "business";
   onSignOut?: () => void;
 };
 
@@ -45,10 +47,20 @@ const progressRoutes: Record<number, string> = Object.fromEntries(Object.entries
 
 const widths = { sm: "max-w-sm", md: "max-w-md", lg: "max-w-lg", xl: "max-w-xl", wide: "max-w-7xl" } as const;
 
-export function ReplacementOnboardingShell({ icon, eyebrow, title, description, progress, width = "md", children, legalFooter, onSignOut }: OnboardingShellProps) {
+export function ReplacementOnboardingShell({ icon, eyebrow, title, description, progress, width = "md", children, legalFooter: customLegalFooter, legalAgreement, onSignOut }: OnboardingShellProps) {
   const { t, i18n } = useTranslation("onboarding");
+  const { t: tAuth } = useTranslation("auth");
   const links = useBrandLinks(resolveLocale(i18n.resolvedLanguage, i18n.language));
   const { partner } = useBranding();
+  const legalFooter = customLegalFooter ?? (legalAgreement && links.terms && links.privacy ? (
+    <p className="max-w-full text-center text-xs leading-5 text-muted-foreground sm:whitespace-nowrap">
+      {tAuth(legalAgreement === "login" ? "login.legalPrefix" : legalAgreement === "business" ? "signup.legal.businessPrefix" : "signup.legal.prefix")} {" "}
+      <a className="underline underline-offset-4 hover:text-foreground" href={links.terms} rel="noreferrer" target="_blank">{tAuth("signup.legal.terms")}</a>{" "}
+      {tAuth("signup.legal.and")} {" "}
+      <a className="underline underline-offset-4 hover:text-foreground" href={links.privacy} rel="noreferrer" target="_blank">{tAuth("signup.legal.privacy")}</a>
+      {tAuth("signup.legal.suffix")}
+    </p>
+  ) : undefined);
   // Terms and privacy, unless the page's own legal line names them, and on a
   // partner's pages its support too. Each link the partner left out stays out.
   const footerLinks = [

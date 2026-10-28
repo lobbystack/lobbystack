@@ -42,6 +42,17 @@ export class PolarBillingProvider {
     const result = await this.request<{ ends_at?: string | null; current_period_end?: string | null }>(`/v1/subscriptions/${encodeURIComponent(input.subscriptionId)}`, { method: "PATCH", body: JSON.stringify({ cancel_at_period_end: true, ...(input.reason ? { customer_cancellation_reason: input.reason } : {}), ...(input.comment ? { customer_cancellation_comment: input.comment } : {}) }) });
     return { endsAt: result.ends_at ?? result.current_period_end ?? null };
   }
+
+  /** Ends the subscription now, with no further charge. A subscription that already ended, or that Polar no longer has, counts as done. */
+  async revokeSubscription(input: { subscriptionId: string }): Promise<void> {
+    assertCertificationBillingSandbox(this.config.baseUrl ?? "https://api.polar.sh");
+    const response = await fetch(`${this.config.baseUrl ?? "https://api.polar.sh"}/v1/subscriptions/${encodeURIComponent(input.subscriptionId)}`, { method: "DELETE", signal: AbortSignal.timeout(15_000), headers: { authorization: `Bearer ${this.config.accessToken}` } });
+    if (response.ok || response.status === 404) return;
+    // Polar answers an ended subscription with 403, as it does a token that may not revoke, so only its own error type counts.
+    const problem = response.status === 403 ? (await response.json().catch(() => null)) as { error?: unknown } | null : null;
+    if (problem?.error === "AlreadyCanceledSubscription") return;
+    throw new Error(`Polar request failed with status ${response.status}.`);
+  }
 }
 
 /** Polar's customer_cancellation_reason values. */

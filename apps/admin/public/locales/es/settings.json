@@ -755,6 +755,22 @@
       "resendFailed": "No pudimos reenviar esa invitación.",
       "revokeSuccess": "Invitación revocada.",
       "revokeFailed": "No pudimos revocar esa invitación."
+    },
+    "delete": {
+      "title": "Eliminar negocio",
+      "description": "Borra de forma permanente este negocio con sus llamadas, chats, contactos, citas, ajustes y accesos del equipo. Su número de teléfono se libera y su plan de pago termina. No se puede deshacer.",
+      "action": "Eliminar negocio",
+      "dialogTitle": "¿Eliminar {{name}}?",
+      "dialogDescription": "Todo lo que hay en este negocio se borra para siempre, su número de teléfono vuelve al proveedor y la recepcionista deja de responder. Su equipo pierde el acceso y nadie puede restaurarlo.",
+      "confirmLabel": "Escribe <name>{{name}}</name> para confirmar",
+      "submit": "Eliminar",
+      "deleting": "Eliminando...",
+      "errors": {
+        "failed": "No se pudo eliminar el negocio. Inténtalo de nuevo.",
+        "numberInProgress": "Todavía se está configurando un número de teléfono para este negocio. Inténtalo de nuevo en unos minutos.",
+        "billing": "La facturación no está disponible ahora, así que no se pudo terminar el plan de pago. Inténtalo más tarde."
+      },
+      "cancel": "Cancelar"
     }
   },
   "hours": {

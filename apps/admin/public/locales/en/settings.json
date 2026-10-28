@@ -748,6 +748,22 @@
       "resendFailed": "We couldn't resend that invitation.",
       "revokeSuccess": "Invitation revoked.",
       "revokeFailed": "We couldn't revoke that invitation."
+    },
+    "delete": {
+      "title": "Delete business",
+      "description": "Permanently erase this business with its calls, chats, contacts, appointments, settings and team access. Its phone number is released and its paid plan ends. You can't undo this.",
+      "action": "Delete business",
+      "dialogTitle": "Delete {{name}}?",
+      "dialogDescription": "Everything in this business is erased for good, its phone number goes back to the provider, and the receptionist stops answering. Its team loses access, and nobody can restore it.",
+      "confirmLabel": "Type <name>{{name}}</name> to confirm",
+      "submit": "Delete",
+      "deleting": "Deleting...",
+      "errors": {
+        "failed": "The business couldn't be deleted. Try again.",
+        "numberInProgress": "A phone number is still being set up for this business. Try again in a few minutes.",
+        "billing": "Billing isn't available right now, so the paid plan couldn't be ended. Try again later."
+      },
+      "cancel": "Cancel"
     }
   },
   "hours": {

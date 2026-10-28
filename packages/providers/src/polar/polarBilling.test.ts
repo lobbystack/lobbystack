@@ -65,4 +65,27 @@ describe("PolarBillingProvider", () => {
     await expect(provider.cancelSubscriptionAtPeriodEnd({ subscriptionId: "sub-1" })).resolves.toEqual({ endsAt: "2026-11-12T00:00:00Z" });
     expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1].body))).toEqual({ cancel_at_period_end: true });
   });
+  describe("revokeSubscription", () => {
+    const provider = () => new PolarBillingProvider({ accessToken: "token", organizationId: "organization", baseUrl: "https://polar.example" });
+    const answer = (status: number, body: unknown = {}) => vi.fn().mockResolvedValue({ ok: status >= 200 && status < 300, status, json: async () => body });
+
+    it("ends the subscription now", async () => {
+      const fetchMock = answer(200);
+      vi.stubGlobal("fetch", fetchMock);
+      await provider().revokeSubscription({ subscriptionId: "sub 1" });
+      expect(fetchMock).toHaveBeenCalledWith("https://polar.example/v1/subscriptions/sub%201", expect.objectContaining({ method: "DELETE" }));
+    });
+    it("counts a subscription Polar no longer has, or that already ended, as done", async () => {
+      vi.stubGlobal("fetch", answer(404));
+      await expect(provider().revokeSubscription({ subscriptionId: "sub_1" })).resolves.toBeUndefined();
+      vi.stubGlobal("fetch", answer(403, { error: "AlreadyCanceledSubscription" }));
+      await expect(provider().revokeSubscription({ subscriptionId: "sub_1" })).resolves.toBeUndefined();
+    });
+    it("fails for anything else, so a token that may not revoke never passes for an ended plan", async () => {
+      vi.stubGlobal("fetch", answer(403, { error: "NotPermitted" }));
+      await expect(provider().revokeSubscription({ subscriptionId: "sub_1" })).rejects.toThrow("status 403");
+      vi.stubGlobal("fetch", answer(500));
+      await expect(provider().revokeSubscription({ subscriptionId: "sub_1" })).rejects.toThrow("status 500");
+    });
+  });
 });
