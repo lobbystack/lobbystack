@@ -24,7 +24,7 @@
 - `pnpm install`: install workspace dependencies.
 - `docker compose up -d postgres redis`: start local infrastructure. Add `--profile minio` when testing the optional MinIO storage backend.
 - `pnpm db:migrate`: apply PostgreSQL migrations.
-- `pnpm dev`: run the admin and worker apps. Browser calls need `LIVE_PROTOTYPE_ENABLED=true` and `OPENAI_API_KEY` on admin and worker. The admin dev server reads `@lobbystack/telemetry` from `packages/telemetry/dist` through a Turbopack alias in `next.config.ts`, so run `pnpm --filter @lobbystack/telemetry build` in a fresh checkout and after you change that package.
+- `pnpm dev`: run the admin and worker apps. Browser calls need `LIVE_PROTOTYPE_ENABLED=true` and `OPENAI_API_KEY` on admin and worker. The admin dev server reads `@lobbystack/telemetry` from its build through a Turbopack alias in `next.config.ts`. `pnpm dev:admin` rebuilds it on start, so restart the server after you change that package.
 - `pnpm typecheck`: typecheck all active workspaces and scripts.
 - `pnpm lint`: ESLint in `apps/admin`; the other workspaces run `tsc` as their lint.
 - `pnpm test`: run all Vitest suites.

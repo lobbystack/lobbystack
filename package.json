@@ -13,7 +13,7 @@
   },
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "dev:admin": "pnpm --filter @lobbystack/admin dev",
+    "dev:admin": "pnpm --filter @lobbystack/telemetry build && pnpm --filter @lobbystack/admin dev",
     "dev:worker": "pnpm --filter @lobbystack/worker dev",
     "docs:dev": "pnpm --filter @lobbystack/docs dev",
     "docs:dev:no-open": "pnpm --filter @lobbystack/docs dev:no-open",
