@@ -1,4 +1,4 @@
-import { brandLinks, oauthGrantableScopes } from "@lobbystack/shared";
+import { brandLinks, oauthGrantableScopes, oauthPartnerGrantableScopes } from "@lobbystack/shared";
 
 // Where the MCP resource and its authorization server live. Everything is
 // derived from APP_BASE_URL, the public URL of the admin app, so metadata,
@@ -7,8 +7,12 @@ import { brandLinks, oauthGrantableScopes } from "@lobbystack/shared";
 export const MCP_PATH = "/api/mcp";
 export const AUTH_BASE_PATH = "/api/auth";
 
-/** Scopes MCP clients can request: every tool scope, plus offline_access for refresh tokens. */
-export const MCP_OAUTH_SCOPES = [...oauthGrantableScopes, "offline_access"] as const;
+/**
+ * Scopes MCP clients can request: every tool scope, plus offline_access for
+ * refresh tokens. A business connection gets only the per-business ones; an
+ * agency connection can also get the partner scopes.
+ */
+export const MCP_OAUTH_SCOPES = [...oauthGrantableScopes, ...oauthPartnerGrantableScopes, "offline_access"] as const;
 
 export function publicBaseUrl(environment: Readonly<Record<string, string | undefined>> = process.env): string {
   const configured = environment.APP_BASE_URL?.trim().replace(/\/+$/, "");

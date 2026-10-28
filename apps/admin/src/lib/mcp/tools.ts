@@ -117,14 +117,14 @@ function tool<Input extends ToolInput>(definition: ToolDefinition<Input>): McpTo
 }
 
 /** Validates a request body against a v1 contract schema, exactly as the REST API does. */
-function contractBody<T>(schema: Parameters<typeof parseApiInput<T>>[0], value: unknown): T {
+export function contractBody<T>(schema: Parameters<typeof parseApiInput<T>>[0], value: unknown): T {
   const parsed = parseApiInput(schema, value);
   if (!parsed.ok) throw new PublicApiError(400, "invalid_request", `The input is invalid: ${parsed.details.map((detail) => `${detail.path}: ${detail.message}`).join("; ")}`, parsed.details);
   return parsed.data;
 }
 
 /** Drops keys whose value is undefined so strict contract schemas see only what the model sent. */
-function defined<T extends Record<string, unknown>>(value: T): Partial<T> {
+export function defined<T extends Record<string, unknown>>(value: T): Partial<T> {
   return Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined)) as Partial<T>;
 }
 

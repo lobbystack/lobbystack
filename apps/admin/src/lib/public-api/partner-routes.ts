@@ -60,7 +60,7 @@ import {
 } from "@lobbystack/shared";
 
 import { createDomainContext } from "../domain-context";
-import { enforceFixedWindow, fixedWindowLimit } from "../fixed-window-limit";
+import { requirePartnerActionAllowed } from "../partner-limits";
 import { partnerSitePages } from "../partner-site";
 import { getStorageProvider } from "../storage";
 import { withStripeConnect } from "../stripe-connect";
@@ -87,18 +87,9 @@ function list(items: unknown[]): { data: unknown[]; next_cursor: null; has_more:
   return { data: items, next_cursor: null, has_more: false };
 }
 
-/**
- * A partner's keys share one allowance per kind of change that costs the
- * host, as one person's console requests do, since a partner can make as many
- * keys as it likes.
- */
+/** A partner's keys share one allowance per kind of change that costs the host, as one person's console requests do. */
 async function requirePartnerLimit(input: { name: string; partnerId: string; limit: number; what: string }): Promise<void> {
-  const result = await enforceFixedWindow([fixedWindowLimit(input.name, "partner-hour", input.partnerId, input.limit, 60 * 60, "rate_limit_partner_hour")]);
-  if (result.allowed) return;
-  if (result.status === 503) throw new PublicApiError(503, "rate_limit_unavailable", "This is unavailable for a moment. Retry shortly.", undefined, { "Retry-After": "5" });
-  // The limit counts in fixed one-hour windows.
-  const retryAfter = 3_600 - (Math.floor(Date.now() / 1_000) % 3_600);
-  throw new PublicApiError(429, "rate_limited", `Too many ${input.what}. A partner's platform keys can make ${input.limit} an hour between them. Retry in ${retryAfter} seconds.`, undefined, { "Retry-After": String(retryAfter) });
+  await requirePartnerActionAllowed({ partnerId: input.partnerId }, input);
 }
 
 /** Runs a Partner endpoint once per Idempotency-Key, when the request sends one. */

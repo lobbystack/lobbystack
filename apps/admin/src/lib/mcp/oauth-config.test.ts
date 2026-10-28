@@ -1,7 +1,8 @@
-import { oauthGrantableScopes } from "@lobbystack/shared";
+import { oauthGrantableScopes, oauthPartnerGrantableScopes } from "@lobbystack/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { MCP_OAUTH_SCOPES, mcpBearerChallenge, mcpResourceUrl, oauthIssuer, protectedResourceMetadata, protectedResourceMetadataUrl, tokenAudienceMatches } from "./oauth-config";
+import { partnerMcpTools } from "./partner-tools";
 import { mcpTools } from "./tools";
 
 const env = { APP_BASE_URL: "https://app.example.com/" };
@@ -36,6 +37,11 @@ describe("MCP OAuth configuration", () => {
 
   it("offers OAuth clients exactly the scopes the MCP tools use", () => {
     expect(new Set(oauthGrantableScopes)).toEqual(new Set(mcpTools.map((tool) => tool.scope)));
+  });
+
+  it("offers agency connections exactly the scopes the partner tools use, on top of the per-business ones", () => {
+    expect(new Set(oauthPartnerGrantableScopes)).toEqual(new Set(partnerMcpTools.map((tool) => tool.scope)));
+    expect(MCP_OAUTH_SCOPES).toEqual(expect.arrayContaining([...oauthPartnerGrantableScopes]));
   });
 
   it("points 401 challenges at the metadata", () => {

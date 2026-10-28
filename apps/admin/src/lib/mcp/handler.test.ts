@@ -36,12 +36,14 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
 
 import { randomUUID } from "node:crypto";
 
-import { PublicApiError, type ResolvedApiKey, type ResolvedOAuthGrant } from "@lobbystack/domain";
+import { PublicApiError, type ApiCaller, type PartnerPlatformKey, type ResolvedApiKey, type ResolvedOAuthGrant, type ResolvedPartnerOAuthGrant } from "@lobbystack/domain";
 import { apiKeyScopes, apiOperations, type ApiKeyScope } from "@lobbystack/shared";
 
 import type { RateLimitDecision } from "../public-api/rate-limit";
 import { v1 } from "../public-api/routes";
 import { createLobbyStackMcpHttpHandler } from "./handler";
+import { partnerMcpOperations, partnerMcpTools, type PartnerMcpOperations } from "./partner-tools";
+import type { McpPartnerPrincipal } from "./server";
 import { mcpTools, type McpOperations } from "./tools";
 
 const businessA = "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f";
@@ -108,9 +110,42 @@ function fakeOperations(): McpOperations {
   } as unknown as McpOperations;
 }
 
+// A partner, its platform keys and its people's agency grants.
+const partnerId = "3a4b5c6d-7e8f-4a9b-8c0d-1e2f3a4b5c6d";
+const platformKeyId = "4b5c6d7e-8f9a-4b0c-9d1e-2f3a4b5c6d7e";
+const agencyGrantId = "5c6d7e8f-9a0b-4c1d-8e2f-3a4b5c6d7e8f";
+const agencyUser = "6d7e8f9a-0b1c-4d2e-9f3a-4b5c6d7e8f9a";
+const platformKeys: Record<string, PartnerPlatformKey> = {};
+const partnerGrants: Record<string, ResolvedPartnerOAuthGrant> = {};
+
+function partnerKeyWith(scopes: ApiKeyScope[]): string {
+  const secret = `lsp_${randomUUID().replace(/-/g, "").slice(0, 8)}_${randomUUID().replace(/-/g, "")}`;
+  platformKeys[secret] = { platformKeyId, prefix: secret.slice(0, 12), name: "Coding assistant", group: partnerId, scopes, createdAt: at, partnerId, access: "group" };
+  return secret;
+}
+
+function agencyToken(scopes: ApiKeyScope[], role: "owner" | "admin" | "member" = "admin"): string {
+  const token = `lsa_${randomUUID().replace(/-/g, "")}`;
+  partnerGrants[token] = { partnerId, grantId: agencyGrantId, userId: agencyUser, role, clientId: "https://claude.ai/oauth/mcp-oauth-client-metadata", clientName: "Claude", scopes, resources: ["http://localhost:3000/api/mcp"], expiresAt: new Date(Date.now() + 3_600_000) };
+  return token;
+}
+
+const partnerView = { id: partnerId, name: "Northwind", slug: "northwind", subdomain: "northwind.portal.example.test", custom_domain: null, dashboard_url: "https://northwind.portal.example.test", tier: { billed: false, slug: "free", interval: null }, pool: null };
+
+function fakePartnerOperations(): PartnerMcpOperations {
+  const fakes = Object.fromEntries(Object.keys(partnerMcpOperations).map((name) => [name, vi.fn(async () => { throw new Error(`${name} has no fake`); })])) as unknown as Record<keyof PartnerMcpOperations, ReturnType<typeof vi.fn>>;
+  fakes.getPartnerForApi.mockImplementation(async () => partnerView);
+  fakes.listPartnerBusinessesForApi.mockImplementation(async () => []);
+  fakes.deletePartnerBusinessForApi.mockImplementation(async (_context: unknown, _subject: unknown, businessId: string) => ({ id: businessId, deleted: true }));
+  fakes.createPartnerBusinessForApi.mockImplementation(async () => ({ business, replayed: false }));
+  return fakes as unknown as PartnerMcpOperations;
+}
+
 const allow = async (): Promise<RateLimitDecision> => ({ allowed: true, limit: 120, remaining: 119, resetAt: 1_800_000_060 });
 
 let operations: McpOperations;
+let partnerOperations: PartnerMcpOperations;
+let partnerBusinessCaller: ReturnType<typeof vi.fn<(principal: McpPartnerPrincipal, businessId: string) => Promise<ApiCaller>>>;
 let rateLimit: ReturnType<typeof vi.fn<(apiKeyId: string) => Promise<RateLimitDecision>>>;
 let logs: Array<Record<string, unknown>>;
 let handler: (request: Request) => Promise<Response>;
@@ -119,6 +154,14 @@ const clients: Client[] = [];
 beforeEach(() => {
   idempotency.store.clear();
   operations = fakeOperations();
+  partnerOperations = fakePartnerOperations();
+  partnerBusinessCaller = vi.fn(async (principal: McpPartnerPrincipal, businessId: string): Promise<ApiCaller> => {
+    if (businessId === businessB) throw new PublicApiError(404, "not_found", "Business not found.");
+    const { subject } = principal;
+    return "userId" in subject
+      ? { businessId, partnerId: subject.partnerId, userId: subject.userId, actor: "partner_member", mcpGrantId: subject.grantId }
+      : { businessId, platformKeyId: subject.platformKeyId, groupId: subject.group, partnerId: subject.partnerId, actor: "platform_key" };
+  });
   rateLimit = vi.fn(allow);
   logs = [];
   touchedGrants = [];
@@ -126,7 +169,14 @@ beforeEach(() => {
     resolveKey: async (secret) => secrets[secret] ?? null,
     touchKey: async () => undefined,
     resolveGrant: async (token) => grants[token] ?? null,
+    resolvePartnerGrant: async (token) => partnerGrants[token] ?? null,
     touchGrant: async (grantId) => { touchedGrants.push(grantId); },
+    resolvePlatformKey: async (secret) => platformKeys[secret] ?? null,
+    touchPlatformKey: async () => undefined,
+    partnerOperations,
+    partnerBusinessCaller,
+    partnerLimit: async () => undefined,
+    partnerContext: () => ({ db: {} }) as never,
     rateLimit,
     operations,
     log: (line) => { logs.push(line); },
@@ -176,17 +226,17 @@ describe("MCP authentication", () => {
     expect(response.headers.get("www-authenticate")).toContain('error="invalid_token"');
   });
 
-  it("refuses platform keys, which have no MCP access", async () => {
+  it("refuses the host's platform keys, which act as an account on many businesses", async () => {
     const { generatePlatformKey } = await import("../../../../../packages/domain/src/server/publicApi/platformKeys");
     const { resolveApiKey } = await import("../../../../../packages/domain/src/server/publicApi/apiKeys");
     const { key, entry } = generatePlatformKey({ name: "AlloPlace CLI", group: "alloplace", ownerEmail: "ops@alloplace.example", access: "all" });
     vi.stubEnv("PLATFORM_API_KEYS", JSON.stringify([entry]));
     try {
-      // The real resolver: a platform key never matches the per-business key format, so no database lookup happens.
+      // The real resolvers: PLATFORM_API_KEYS answers first, so no database lookup happens.
       const realHandler = createLobbyStackMcpHttpHandler({ resolveKey: async (value) => await resolveApiKey({ db: {} } as never, value), touchKey: async () => undefined, rateLimit, operations });
       const response = await realHandler(post({ authorization: `Bearer ${key}` }));
-      expect(response.status).toBe(401);
-      expect(response.headers.get("www-authenticate")).toContain('error="invalid_token"');
+      expect(response.status).toBe(403);
+      expect(await response.json()).toMatchObject({ error: { code: "forbidden" } });
     } finally {
       vi.unstubAllEnvs();
     }
@@ -569,8 +619,120 @@ describe("MCP with OAuth access tokens", () => {
 
   it("never sends an lsa_ token to the API key resolver", async () => {
     const resolveKey = vi.fn(async () => null);
-    const oauthOnly = createLobbyStackMcpHttpHandler({ resolveKey, resolveGrant: async () => null, rateLimit, operations });
+    const oauthOnly = createLobbyStackMcpHttpHandler({ resolveKey, resolveGrant: async () => null, resolvePartnerGrant: async () => null, rateLimit, operations });
     await oauthOnly(post({ authorization: "Bearer lsa_abc" }));
     expect(resolveKey).not.toHaveBeenCalled();
+  });
+});
+
+describe("MCP for partner connections", () => {
+  const everyScope = [...apiKeyScopes];
+
+  it("accepts a partner's platform key and lists the partner tools with the per-business ones, each taking business_id", async () => {
+    const client = await connect(partnerKeyWith(everyScope));
+    const { tools } = await client.listTools();
+    const names = tools.map((entry) => entry.name);
+    expect(names).toEqual(expect.arrayContaining([...partnerMcpTools.map((entry) => entry.name), ...mcpTools.map((entry) => entry.name)]));
+    expect(names.some((name) => name.includes("platform_key") || name.includes("api_key"))).toBe(false);
+    const byName = Object.fromEntries(tools.map((entry) => [entry.name, entry]));
+    for (const entry of mcpTools) {
+      expect(byName[entry.name]!.inputSchema.properties).toHaveProperty("business_id");
+      expect(byName[entry.name]!.inputSchema.required).toContain("business_id");
+    }
+    expect(client.getInstructions()).toContain("business_id");
+    expect(client.getInstructions()).toContain("destructive");
+  });
+
+  it("marks the tools that delete, release, revoke or remove as destructive, and the reads as read-only", async () => {
+    const client = await connect(partnerKeyWith(everyScope));
+    const byName = Object.fromEntries((await client.listTools()).tools.map((entry) => [entry.name, entry]));
+    for (const name of ["delete_business", "release_business", "revoke_demo", "delete_demo", "rotate_demo_link", "archive_package", "remove_domain", "delete_template", "remove_team_member", "revoke_team_invitation"]) {
+      expect(byName[name]!.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true });
+    }
+    for (const entry of partnerMcpTools.filter((tool) => /^(get|list)_/.test(tool.name))) expect(byName[entry.name]!.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false });
+    expect(byName.create_demo!.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false });
+  });
+
+  it("lists only the partner tools a key's scopes allow, and the billing reads with partner.billing:write", async () => {
+    const client = await connect(partnerKeyWith(["partner:read"]));
+    const names = (await client.listTools()).tools.map((entry) => entry.name);
+    expect(names).toContain("get_partner");
+    expect(names).not.toContain("create_demo");
+    expect(names).not.toContain("get_business");
+    const billing = await connect(partnerKeyWith(["partner.billing:write"]));
+    expect((await billing.listTools()).tools.map((entry) => entry.name)).toEqual(expect.arrayContaining(["get_billing", "set_pool_overage", "get_stripe_status"]));
+  });
+
+  it("runs a partner tool as the key, counting against the key's rate limit", async () => {
+    const client = await connect(partnerKeyWith(["partner:read"]));
+    const result = await client.callTool({ name: "get_partner", arguments: {} });
+    expect(result.structuredContent).toEqual(partnerView);
+    const [, subject] = (partnerOperations.getPartnerForApi as unknown as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(subject).toMatchObject({ platformKeyId, partnerId });
+    expect(rateLimit).toHaveBeenCalledWith(`platform:${platformKeyId}`);
+    expect(logs).toContainEqual(expect.objectContaining({ tool: "get_partner", outcome: "ok", platform_key_id: platformKeyId, partner_id: partnerId }));
+    expect(JSON.stringify(logs)).not.toContain("lsp_");
+  });
+
+  it("runs a per-business tool on the business_id the partner reaches, and nowhere else", async () => {
+    const client = await connect(partnerKeyWith(["contacts:read"]));
+    const result = await client.callTool({ name: "get_contact", arguments: { business_id: businessA, contact_id: id } });
+    expect(result.isError ?? false).toBe(false);
+    expect(partnerBusinessCaller).toHaveBeenCalledWith(expect.objectContaining({ kind: "partner" }), businessA);
+    const [, caller, contactId] = (operations.getContactForApi as unknown as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(caller).toEqual({ businessId: businessA, platformKeyId, groupId: partnerId, partnerId, actor: "platform_key" });
+    expect(contactId).toBe(id);
+    // Another partner's business, or one that doesn't exist, is not found.
+    expect(errorOf(await client.callTool({ name: "get_contact", arguments: { business_id: businessB, contact_id: id } })).code).toBe("not_found");
+    expect(operations.getContactForApi).toHaveBeenCalledTimes(1);
+    // Without a business_id the call fails before reaching anything.
+    const missing = await client.callTool({ name: "get_contact", arguments: { contact_id: id } });
+    expect(missing.isError).toBe(true);
+    expect(partnerBusinessCaller).toHaveBeenCalledTimes(2);
+  });
+
+  it("scopes a partner's idempotency keys to the business, as REST does for a platform key", async () => {
+    const client = await connect(partnerKeyWith(["contacts:write"]));
+    await client.callTool({ name: "create_contact", arguments: { business_id: businessA, name: "Ana", phone: "+14165550134", idempotency_key: "k-1" } });
+    expect([...idempotency.store.keys()]).toContain(`platform:${platformKeyId}:${businessA}:createContact:k-1`);
+  });
+
+  it("accepts an agency grant, acting as the person with their grant on every partner and business tool", async () => {
+    const client = await connect(agencyToken(["partner:read", "partner.businesses:write", "calls:read"], "admin"));
+    const names = (await client.listTools()).tools.map((entry) => entry.name);
+    expect(names).toEqual(expect.arrayContaining(["get_partner", "list_businesses", "delete_business", "list_calls", "get_call"]));
+    expect(names).not.toContain("create_demo");
+    await client.callTool({ name: "get_partner", arguments: {} });
+    const [, subject] = (partnerOperations.getPartnerForApi as unknown as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(subject).toEqual({ kind: "member", partnerId, userId: agencyUser, grantId: agencyGrantId, scopes: ["partner:read", "partner.businesses:write", "calls:read"] });
+    expect(rateLimit).toHaveBeenCalledWith(`grant:${agencyGrantId}`);
+    await client.callTool({ name: "list_calls", arguments: { business_id: businessA } });
+    const [, caller] = (operations.listCallsForApi as unknown as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(caller).toEqual({ businessId: businessA, partnerId, userId: agencyUser, actor: "partner_member", mcpGrantId: agencyGrantId });
+    expect(touchedGrants).toContain(agencyGrantId);
+  });
+
+  it("creates a business from a template and package, counting against the person's limit", async () => {
+    const limit = vi.fn(async () => undefined);
+    handler = createLobbyStackMcpHttpHandler({ resolveKey: async () => null, resolveGrant: async () => null, resolvePartnerGrant: async (token) => partnerGrants[token] ?? null, touchGrant: async () => undefined, rateLimit, operations, partnerOperations, partnerBusinessCaller, partnerLimit: limit, partnerContext: () => ({ db: {} }) as never, storage: () => ({}) as never, log: () => undefined });
+    const client = await connect(agencyToken(["businesses:create", "partner:read", "partner.businesses:write"]));
+    const templateId = randomUUID();
+    const packageId = randomUUID();
+    const result = await client.callTool({ name: "create_business", arguments: { name: "Joe's Plumbing", owner_email: "joe@joesplumbing.test", timezone: "America/Chicago", template_id: templateId, package_id: packageId, idempotency_key: "joe" } });
+    expect(result.structuredContent).toMatchObject({ id: businessA });
+    const [, input, options] = (partnerOperations.createPartnerBusinessForApi as unknown as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(input).toMatchObject({ key: { kind: "member", userId: agencyUser }, idempotencyKey: "joe", body: { name: "Joe's Plumbing", owner_email: "joe@joesplumbing.test", timezone: "America/Chicago", template_id: templateId, package_id: packageId } });
+    expect(options.setup).toBeDefined();
+    await options.beforeCreate();
+    expect(limit).toHaveBeenCalledWith({ partnerId, userId: agencyUser }, expect.objectContaining({ name: "partner-business-create", limit: 30 }));
+  });
+
+  it("refuses a connection whose scopes cover no tool, and tells a business connection nothing about partners", async () => {
+    const response = await handler(post({ authorization: `Bearer ${partnerKeyWith(["webhooks:manage"])}` }));
+    expect(response.status).toBe(403);
+    const client = await connect("lsk_aaaaaaaa_full");
+    const names = (await client.listTools()).tools.map((entry) => entry.name);
+    expect(names).not.toContain("get_partner");
+    expect(client.getInstructions()).not.toContain("agency");
   });
 });
