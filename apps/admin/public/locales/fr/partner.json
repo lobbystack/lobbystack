@@ -624,7 +624,16 @@
       "team_manage": "Inviter et retirer des membres de l'équipe et changer les rôles",
       "webhooks_manage": "Créer et supprimer des points de terminaison webhook",
       "businesses_create": "Créer des entreprises et inviter leurs propriétaires",
-      "users_create": "Inviter des propriétaires à créer un compte"
+      "users_create": "Inviter des propriétaires à créer un compte",
+      "partner_read": "Lire votre compte partenaire : démos, forfaits, image de marque, domaines, modèles et équipe",
+      "partner_businesses_write": "Céder et supprimer des entreprises, et choisir leur forfait et leur dépassement",
+      "partner_demos_write": "Créer, publier, désactiver et supprimer des démos pour prospects",
+      "partner_packages_write": "Créer, renommer et archiver des forfaits",
+      "partner_branding_write": "Modifier votre image de marque et connecter votre propre domaine",
+      "partner_templates_write": "Enregistrer et supprimer des modèles",
+      "partner_team_write": "Inviter et retirer des administrateurs et des membres, et changer leur rôle",
+      "partner_billing_read": "Voir la connexion Stripe, votre palier et l'utilisation du forfait partagé. Seuls les propriétaires peuvent l'accorder",
+      "partner_billing_write": "Lancer l'inscription Stripe et les paiements de palier, et régler le dépassement du forfait partagé. Seuls les propriétaires peuvent l'accorder"
     },
     "emptyDescription": "Créez-en une pour configurer vos entreprises depuis votre propre code."
   },

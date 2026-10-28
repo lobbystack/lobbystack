@@ -38,7 +38,7 @@ export type ApiKeyRecord = {
   revokedAt: string | null;
 };
 
-const scopeKey = (scope: ApiKeyScope) => scope.replace(":", "_");
+const scopeKey = (scope: ApiKeyScope) => scope.replace(/[.:]/g, "_");
 
 const DEFAULT_SCOPES: ApiKeyScope[] = ["calls:read", "contacts:read", "appointments:read", "messages:read", "business:read"];
 

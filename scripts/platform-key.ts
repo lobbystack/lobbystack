@@ -22,6 +22,8 @@ function printUsage(): void {
   --create-users       Also grant users:create, so the key can email sign-up invitations with POST /users.
   --scope              Repeat for each scope, platform-only ones included. Leave it out for every scope a business's own key can hold today,
                        plus those the two flags above add. Scopes added later must be added to the entry by hand.
+                       The partner scopes, such as partner:read, are refused: only a key a partner makes on its
+                       console's API keys page acts as a partner and can hold them.
 
 Writes the key to .platform-keys/<prefix>.json and prints the PLATFORM_API_KEYS
 value with the new entry added. Run it with the admin's current PLATFORM_API_KEYS

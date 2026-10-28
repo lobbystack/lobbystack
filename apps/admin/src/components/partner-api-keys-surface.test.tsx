@@ -65,6 +65,21 @@ describe("the partner console's API keys page", () => {
     expect(await screen.findByText("lsp_1a2b3c4d…")).toBeTruthy();
   });
 
+  it("offers the partner scopes, and the billing ones to owners only", async () => {
+    const user = userEvent.setup();
+    renderAs("admin");
+    await user.click(await screen.findByRole("button", { name: /apiKeys.create.action/ }));
+    expect(screen.getByText("apiKeys.scopes.partner_read")).toBeTruthy();
+    expect(screen.getByText("apiKeys.scopes.partner_team_write")).toBeTruthy();
+    expect(screen.queryByText("apiKeys.scopes.partner_billing_read")).toBeNull();
+    expect(screen.queryByText("apiKeys.scopes.partner_billing_write")).toBeNull();
+    cleanup();
+    renderAs("owner");
+    await user.click(await screen.findByRole("button", { name: /apiKeys.create.action/ }));
+    expect(screen.getByText("apiKeys.scopes.partner_billing_read")).toBeTruthy();
+    expect(screen.getByText("apiKeys.scopes.partner_billing_write")).toBeTruthy();
+  });
+
   it("revokes a key after the owner confirms", async () => {
     const user = userEvent.setup();
     const fetchMock = renderAs("owner");

@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { isAllowedUploadContentType } from "@lobbystack/contracts";
-import { apiKeyScopes, apiOperations, apiScopesInUse, buildOpenApiDocument, businessApiKeyScopes, knowledgeUploadContentTypes, oauthGrantableScopes, offeredApiKeyScopes, platformOnlyScopes, webhookEventTypes, type ApiOperation } from "@lobbystack/shared";
+import { apiKeyScopes, apiOperations, apiScopesInUse, buildOpenApiDocument, businessApiKeyScopes, knowledgeUploadContentTypes, oauthGrantableScopes, offeredApiKeyScopes, offeredPartnerPlatformKeyScopes, partnerOwnerScopes, partnerScopes, platformOnlyScopes, webhookEventTypes, type ApiOperation } from "@lobbystack/shared";
 import { describe, expect, it } from "vitest";
 
 const adminRoot = fileURLToPath(new URL("../../../", import.meta.url));
@@ -51,8 +51,25 @@ describe("v1 contract", () => {
   it("puts platform-only scopes only on platform operations, which act on no one business", () => {
     for (const [operationId, operation] of Object.entries(apiOperations) as Array<[string, ApiOperation]>) {
       if (operation.scope && platformOnlyScopes.includes(operation.scope as never)) expect(operation.business, operationId).toBe("none");
-      if (operation.business === "none") expect(operation.tag, operationId).toBe("Platform");
+      if (operation.business === "none") expect(["Platform", "Partner"], operationId).toContain(operation.tag);
     }
+  });
+
+  it("puts every Partner endpoint behind a partner scope, with no business header", () => {
+    const partnerOperations = Object.entries(apiOperations).filter(([, operation]) => operation.tag === "Partner") as Array<[string, ApiOperation]>;
+    expect(partnerOperations.length).toBeGreaterThan(30);
+    for (const [operationId, operation] of partnerOperations) {
+      expect(operation.business, operationId).toBe("none");
+      expect(partnerScopes, operationId).toContain(operation.scope);
+    }
+    // Every partner scope guards at least one endpoint, and no other endpoint takes one.
+    for (const scope of partnerScopes) expect(partnerOperations.some(([, operation]) => operation.scope === scope), scope).toBe(true);
+    for (const operation of Object.values(apiOperations) as ApiOperation[]) if (operation.tag !== "Partner") expect(partnerScopes).not.toContain(operation.scope);
+    // The partner console offers them all, and only owners grant the billing ones.
+    for (const scope of partnerScopes) expect(offeredPartnerPlatformKeyScopes).toContain(scope);
+    expect([...partnerOwnerScopes]).toEqual(["partner.billing:read", "partner.billing:write"]);
+    const partner = JSON.parse(readFileSync(`${adminRoot}public/locales/en/partner.json`, "utf8")) as { apiKeys: { scopes: Record<string, string> } };
+    for (const scope of offeredPartnerPlatformKeyScopes) expect(partner.apiKeys.scopes[scope.replace(/[.:]/g, "_")], scope).toEqual(expect.any(String));
   });
 
   it("accepts for API uploads only file types the storage layer accepts for knowledge", () => {
@@ -72,7 +89,7 @@ describe("v1 contract", () => {
   });
 
   it("keeps platform-only scopes off per-business keys, OAuth grants and Settings", () => {
-    expect([...platformOnlyScopes]).toEqual(["businesses:create", "users:create"]);
+    expect([...platformOnlyScopes]).toEqual(["businesses:create", "users:create", ...partnerScopes]);
     for (const scope of platformOnlyScopes) {
       expect(apiKeyScopes).toContain(scope);
       expect(businessApiKeyScopes).not.toContain(scope);

@@ -145,15 +145,17 @@ import {
 
 import { getAuthDatabase } from "../auth";
 import { getDatabase } from "../databases";
-import { createDomainContext } from "../domain-context";
+import { createDomainContext, createWorkerDomainContext } from "../domain-context";
 import { enforceFixedWindow, fixedWindowLimit } from "../fixed-window-limit";
 import { calendarSigningConfigured, createCalendarConnectLink } from "../google-calendar-oauth";
 import { googleCalendarProvider } from "../google-calendar-provider";
 import { checkPhoneNumberSearchLimit } from "../phone-number-search-limit";
 import { getStorageProvider } from "../storage";
+import { withStripeConnect } from "../stripe-connect";
 import { getNumberClaimTokenSecret, getTwilioProvider, twilioConfigured } from "../twilio-provider";
 import { hasVerifiedPhone } from "../verified-phone";
 import { data, handleApiRequest, pageQuery, queryParam, readApiBody, uuidParam, type ApiCredential, type RestApiCaller } from "./http";
+import { partnerV1 } from "./partner-routes";
 
 // One function per v1 operation. The route files under app/api/v1 only bind
 // these to HTTP methods, so tests can call the same functions.
@@ -350,8 +352,12 @@ export const v1 = {
     const body = await readApiBody(request, apiBusinessCreateSchema);
     const requestHash = idempotencyRequestHash(body);
     // A partner's key creates a business of the partner through the console's own operation, which acts as the system: only the app role can.
+    // A package bills it through the partner's Stripe account, and a template sets it up as the worker, as in the console.
     const result = credential.partnerId !== undefined
-      ? await createPartnerBusinessForApi(createDomainContext(), { key: credential, idempotencyKey, requestHash, body }, { beforeCreate: () => requirePartnerBusinessCreationAllowed(credential.partnerId) })
+      ? await createPartnerBusinessForApi(withStripeConnect(createDomainContext()), { key: credential, idempotencyKey, requestHash, body }, {
+        beforeCreate: () => requirePartnerBusinessCreationAllowed(credential.partnerId),
+        ...(body.template_id !== undefined ? { setup: { worker: createWorkerDomainContext(), storage: getStorageProvider() } } : {}),
+      })
       : await createBusinessForApi(context, { key: credential, actingUserId: requireActingUser(actingUserId), idempotencyKey, requestHash, body });
     return { body: data(result.business), ...(result.replayed ? { headers: { "Idempotent-Replayed": "true" } } : {}) };
   }),
@@ -609,4 +615,5 @@ export const v1 = {
     return { body: data({ id: endpointId, deleted: true }) };
   }),
   testWebhook: (request: Request, { params }: Params<"webhook_id">) => handleApiRequest(request, "testWebhook", async ({ context, caller }) => ({ body: data(await sendWebhookTestEvent(context, { businessId: caller.businessId, manager: webhookManager(caller), endpointId: uuidParam((await params).webhook_id, "webhook_id") })) })),
+  ...partnerV1,
 };

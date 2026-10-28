@@ -400,4 +400,40 @@ describe("a partner's platform keys in the v1 request pipeline", () => {
     expect(handler).not.toHaveBeenCalled();
     expect(dependencies.touchPlatformKey).not.toHaveBeenCalled();
   });
+
+  it("lets a partner's key call the Partner endpoints with the operation's scope, and nothing else does", async () => {
+    const handler = vi.fn(async (_input: unknown) => ({ body: { data: { ok: true } } }));
+    // The scope each Partner endpoint declares: partner:read here.
+    const withScope = { ...partner(), resolvePlatformKey: vi.fn(async () => ({ ...partnerPlatformKey, scopes: [...partnerPlatformKey.scopes, "partner:read" as const] })) };
+    const allowed = await handleApiRequest(request("/partner", { headers: { authorization: `Bearer ${token}` } }), "getPartner", handler, withScope);
+    expect(allowed.status).toBe(200);
+    expect(handler).toHaveBeenCalledWith(expect.objectContaining({ credential: expect.objectContaining({ partnerId }), actingUserId: null }));
+    handler.mockClear();
+
+    // The same key without it.
+    const missing = await handleApiRequest(request("/partner", { headers: { authorization: `Bearer ${token}` } }), "getPartner", handler, partner());
+    expect(missing.status).toBe(403);
+    expect(await missing.json()).toMatchObject({ error: { code: "insufficient_scope", message: expect.stringContaining("partner:read") } });
+
+    // A business's own key, even one that somehow lists the scope.
+    const businessKey = await handleApiRequest(request("/partner", { headers: { authorization: "Bearer lsk_x" } }), "getPartner", handler, { resolveKey: async () => ({ ...key, scopes: ["partner:read" as never] }), rateLimit: allow });
+    expect(businessKey.status).toBe(403);
+    expect(await businessKey.json()).toMatchObject({ error: { code: "forbidden", message: expect.stringContaining("partner's platform keys") } });
+
+    // A host's key from PLATFORM_API_KEYS, which has no partner to act as.
+    const hostKey: ResolvedPlatformKey = { platformKeyId: "7e6d5c4b-3a29-4f8e-9d7c-6b5a4a392817", prefix: "lsp_0a0b0c0d", name: "Host", group: "host", ownerEmail: "ops@host.example", access: "group", scopes: ["partner:read" as never], createdAt: "2026-10-26T12:00:00.000Z" };
+    const host = await handleApiRequest(request("/partner", { headers: { authorization: `Bearer lsp_0a0b0c0d_${"z".repeat(32)}` } }), "getPartner", handler, { ...partner(), resolvePlatformKey: vi.fn(async () => hostKey) });
+    expect(host.status).toBe(403);
+    expect(await host.json()).toMatchObject({ error: { code: "forbidden" } });
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it("refuses a missing Idempotency-Key on a Partner endpoint that requires one, before the handler runs", async () => {
+    const handler = vi.fn();
+    const dependencies = { ...partner(), resolvePlatformKey: vi.fn(async () => ({ ...partnerPlatformKey, scopes: ["partner.team:write" as const] })) };
+    const response = await handleApiRequest(request("/partner/team/invitations", { method: "POST", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ email: "a@example.com", role: "member" }) }), "createPartnerTeamInvitation", handler, dependencies);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: { code: "invalid_request", details: [{ path: "Idempotency-Key" }] } });
+    expect(handler).not.toHaveBeenCalled();
+  });
 });

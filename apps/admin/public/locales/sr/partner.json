@@ -624,7 +624,16 @@
       "team_manage": "Pozivanje i uklanjanje članova tima i promena uloga",
       "webhooks_manage": "Kreiranje i brisanje webhook endpointa",
       "businesses_create": "Kreiranje firmi i pozivanje njihovih vlasnika",
-      "users_create": "Pozivanje vlasnika da otvore nalog"
+      "users_create": "Pozivanje vlasnika da otvore nalog",
+      "partner_read": "Čitanje partnerskog naloga: demo verzije, paketi, brend, domeni, šabloni i tim",
+      "partner_businesses_write": "Predaja i brisanje firmi, i podešavanje njihovog paketa i prekoračenja",
+      "partner_demos_write": "Pravljenje, objavljivanje, isključivanje i brisanje demo verzija za potencijalne klijente",
+      "partner_packages_write": "Pravljenje, preimenovanje i arhiviranje paketa",
+      "partner_branding_write": "Izmena brenda i povezivanje sopstvenog domena",
+      "partner_templates_write": "Čuvanje i brisanje šablona",
+      "partner_team_write": "Pozivanje i uklanjanje administratora i članova, i promena njihovih uloga",
+      "partner_billing_read": "Pregled Stripe veze, nivoa i potrošnje zajedničkog paketa. Samo vlasnici mogu da ga dodele",
+      "partner_billing_write": "Pokretanje Stripe registracije i plaćanja nivoa, i podešavanje prekoračenja zajedničkog paketa. Samo vlasnici mogu da ga dodele"
     },
     "emptyDescription": "Napravite ključ da biste podešavali firme iz svog koda."
   },

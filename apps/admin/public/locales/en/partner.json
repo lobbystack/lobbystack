@@ -616,7 +616,16 @@
       "team_manage": "Invite and remove team members and change roles",
       "webhooks_manage": "Create and delete webhook endpoints",
       "businesses_create": "Create businesses and invite their owners",
-      "users_create": "Invite owners to create an account"
+      "users_create": "Invite owners to create an account",
+      "partner_read": "Read your partner account: demos, packages, brand, domains, templates and team",
+      "partner_businesses_write": "Release and delete businesses, and set their package and overage",
+      "partner_demos_write": "Make, publish, turn off and delete prospect demos",
+      "partner_packages_write": "Make, rename and archive packages",
+      "partner_branding_write": "Change your brand and connect your own domain",
+      "partner_templates_write": "Save and delete templates",
+      "partner_team_write": "Invite and remove admins and members, and change their roles",
+      "partner_billing_read": "See the Stripe connection, your tier and pool usage. Only owners can grant it",
+      "partner_billing_write": "Start Stripe onboarding and tier checkouts, and set the pool's overage. Only owners can grant it"
     },
     "emptyDescription": "Create one to set up businesses from your own code."
   },

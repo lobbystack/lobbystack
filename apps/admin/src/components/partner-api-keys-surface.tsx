@@ -1,6 +1,6 @@
 "use client";
 
-import { offeredPartnerPlatformKeyScopes } from "@lobbystack/shared";
+import { offeredPartnerPlatformKeyScopes, partnerOwnerScopes } from "@lobbystack/shared";
 import { ApiKeysSurface, type ApiKeyRecord } from "@/components/live-api-keys-surface";
 import { useConsolePartner } from "@/components/partner-shell";
 import { requestJson } from "@/lib/request-json";
@@ -8,7 +8,8 @@ import { requestJson } from "@/lib/request-json";
 /**
  * The console's API keys page: the partner's platform keys, which act as the
  * partner on its businesses. Owners and admins make and revoke them, and see
- * each new key once; members see why they can't. The server enforces the same.
+ * each new key once; members see why they can't. Only owners grant the
+ * billing scopes, so admins aren't offered them. The server enforces the same.
  */
 export function PartnerApiKeysSurface() {
   const partner = useConsolePartner();
@@ -19,7 +20,7 @@ export function PartnerApiKeysSurface() {
       layout="page"
       loading={false}
       namespace="partner"
-      scopes={offeredPartnerPlatformKeyScopes}
+      scopes={partner.role === "owner" ? offeredPartnerPlatformKeyScopes : offeredPartnerPlatformKeyScopes.filter((scope) => !(partnerOwnerScopes as readonly string[]).includes(scope))}
       source={{
         queryKey: ["partner-platform-keys", partner.partnerId],
         list: async () => (await requestJson<{ keys: ApiKeyRecord[] }>(`/api/partner/platform-keys?partnerId=${partnerId}`)).keys,

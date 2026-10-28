@@ -175,6 +175,8 @@ export async function handleApiRequest<Id extends ApiOperationId>(request: Reque
       credential = { kind: "api_key", ...key };
       logFields = { api_key_id: key.apiKeyId, business_id: key.businessId };
     }
+    // The Partner endpoints act on the partner itself, which only a key the partner made acts as.
+    if (operation.tag === "Partner" && (credential.kind !== "platform_key" || credential.partnerId === undefined)) return (status = 403, apiError(403, "forbidden", "Only a partner's platform keys, made on its console's API keys page, can call the Partner endpoints."));
     if (operation.scope && !credential.scopes.includes(operation.scope)) return (status = 403, apiError(403, "insufficient_scope", `This API key needs the ${operation.scope} scope.`));
     const businessless = operation.business === "none";
     if (businessless && credential.kind !== "platform_key") return (status = 403, apiError(403, "forbidden", "Only platform keys can call this endpoint."));

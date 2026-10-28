@@ -624,7 +624,16 @@
       "team_manage": "Invitar y quitar miembros del equipo y cambiar roles",
       "webhooks_manage": "Crear y eliminar endpoints de webhook",
       "businesses_create": "Crear negocios e invitar a sus propietarios",
-      "users_create": "Invitar a propietarios a crear una cuenta"
+      "users_create": "Invitar a propietarios a crear una cuenta",
+      "partner_read": "Leer tu cuenta de partner: demos, paquetes, marca, dominios, plantillas y equipo",
+      "partner_businesses_write": "Ceder y eliminar negocios, y elegir su paquete y su excedente",
+      "partner_demos_write": "Crear, publicar, desactivar y eliminar demos para prospectos",
+      "partner_packages_write": "Crear, renombrar y archivar paquetes",
+      "partner_branding_write": "Cambiar tu marca y conectar tu propio dominio",
+      "partner_templates_write": "Guardar y eliminar plantillas",
+      "partner_team_write": "Invitar y quitar administradores y miembros, y cambiar sus roles",
+      "partner_billing_read": "Ver la conexión con Stripe, tu nivel y el uso del bolsón compartido. Solo los propietarios pueden concederlo",
+      "partner_billing_write": "Iniciar el registro en Stripe y los pagos de nivel, y ajustar el excedente del bolsón compartido. Solo los propietarios pueden concederlo"
     },
     "emptyDescription": "Cree una para configurar sus negocios desde su propio código."
   },
