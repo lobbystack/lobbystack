@@ -288,7 +288,7 @@ export function ConsentChainScene({ art }: SceneProps) {
   )
 }
 
-/** Connected apps: the assistants on the business, one just cut off. */
+/** MCP connections: the assistants on the business, one just cut off. */
 export function ConnectedAppsScene({ locale, art }: SceneProps) {
   const apps = [
     { name: "Claude", used: ago(locale, 2, "minute") },

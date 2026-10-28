@@ -26,6 +26,13 @@ describe("the console's agency connections", () => {
     render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><PartnerAgencyConnectionsSurface /></QueryClientProvider>);
     expect(await screen.findByText("Claude")).toBeTruthy();
     expect(screen.getByText("agencyConnections.descriptionOwn")).toBeTruthy();
+    // One line about the connection, without its permissions or client id, and no Update.
+    expect(screen.getByText("agencyConnections.connectedBy")).toBeTruthy();
+    expect(screen.getByText("agencyConnections.neverUsed")).toBeTruthy();
+    expect(screen.queryByText("partner:read")).toBeNull();
+    expect(screen.queryByText("https://claude.ai/oauth/metadata")).toBeNull();
+    expect(screen.queryByRole("button", { name: /update/ })).toBeNull();
+    expect(screen.getByRole("button", { name: "agencyConnections.revoke.action" }).className).toContain("text-destructive");
     expect(fetchMock).toHaveBeenCalledWith("/api/partner/oauth-grants?partnerId=partner", expect.anything());
     await user.click(screen.getByRole("button", { name: "agencyConnections.revoke.action" }));
     await user.click(screen.getByRole("button", { name: "agencyConnections.revoke.confirm" }));

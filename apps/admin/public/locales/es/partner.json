@@ -566,25 +566,19 @@
   },
   "apiKeys": {
     "title": "Claves de API",
-    "empty": "Aún no hay claves de plataforma.",
-    "neverUsed": "Nunca",
-    "createdBy": "{{date}} por {{name}}",
+    "empty": "Aún no hay claves de API.",
+    "createdOn": "Creada el {{date}}",
+    "lastUsed": "Último uso el {{date}}",
+    "neverUsed": "Nunca usada",
+    "createdBy": "Creada el {{date}} por {{name}}",
     "revoked": "Revocada el {{date}}",
     "restricted": {
-      "title": "Solo los propietarios y administradores pueden gestionar las claves de plataforma",
+      "title": "Solo los propietarios y administradores pueden gestionar las claves de API",
       "description": "Pida a un propietario o administrador que cree una clave para usted."
     },
-    "columns": {
-      "name": "Nombre",
-      "key": "Clave",
-      "scopes": "Acceso",
-      "created": "Creada",
-      "lastUsed": "Último uso",
-      "actions": "Acciones"
-    },
     "create": {
-      "action": "Crear clave de plataforma",
-      "title": "Crear una clave de plataforma",
+      "action": "Crear clave de API",
+      "title": "Crear una clave de API",
       "description": "Póngale un nombre que reconozca y dele solo el acceso que necesita.",
       "nameLabel": "Nombre",
       "namePlaceholder": "Alta de clientes",
@@ -601,12 +595,22 @@
     },
     "revoke": {
       "action": "Revocar",
-      "title": "¿Revocar esta clave de plataforma?",
+      "title": "¿Revocar esta clave de API?",
       "description": "Todo lo que use {{name}} dejará de funcionar y sus webhooks se desactivarán. No podrá deshacerlo.",
       "confirm": "Revocar clave",
       "cancel": "Cancelar",
-      "done": "Clave de plataforma revocada",
+      "done": "Clave de API revocada",
       "failed": "No pudimos revocar la clave. Inténtelo de nuevo."
+    },
+    "update": {
+      "action": "Actualizar",
+      "title": "Actualizar {{name}}",
+      "description": "Cambie su nombre o su acceso. Conserva la misma clave, y las aplicaciones que la usan reciben el nuevo acceso en su próxima solicitud.",
+      "submit": "Guardar",
+      "saving": "Guardando…",
+      "cancel": "Cancelar",
+      "done": "Clave de API actualizada",
+      "ownerOnly": "Solo un propietario puede actualizar una clave con acceso a la facturación."
     },
     "scopes": {
       "business_read": "Leer el negocio, su horario, sus servicios y su recepcionista",
@@ -833,20 +837,15 @@
     "switchAccount": "Usar otra cuenta"
   },
   "agencyConnections": {
-    "title": "Conexiones de la agencia",
-    "description": "Los asistentes de IA y otros clientes MCP que tu equipo conectó a la agencia al iniciar sesión, como Claude, ChatGPT o Cursor. Cada uno actúa con el rol de la persona que lo conectó.",
-    "descriptionOwn": "Los asistentes de IA y otros clientes MCP que conectaste a la agencia al iniciar sesión, como Claude, ChatGPT o Cursor. Actúan con tu rol.",
-    "empty": "Aún no hay conexiones. Conecta un asistente al servidor MCP de {{appName}} y elige esta agencia al iniciar sesión.",
+    "title": "Conexiones MCP",
+    "description": "Asistentes de IA y otros clientes MCP que su equipo conectó al iniciar sesión.",
+    "descriptionOwn": "Asistentes de IA y otros clientes MCP que usted conectó al iniciar sesión.",
+    "empty": "Aún no hay conexiones MCP. Conecte un asistente al servidor MCP de {{appName}} y elija esta agencia al iniciar sesión.",
     "unnamed": "Aplicación sin nombre",
-    "neverUsed": "Nunca",
-    "connectedBy": "{{date}} por {{name}}",
-    "columns": {
-      "app": "Aplicación",
-      "access": "Acceso",
-      "connected": "Conectada",
-      "lastUsed": "Último uso",
-      "actions": "Acciones"
-    },
+    "connectedOn": "Conectada el {{date}}",
+    "lastUsed": "Último uso el {{date}}",
+    "neverUsed": "Nunca usada",
+    "connectedBy": "Conectada el {{date}} por {{name}}",
     "revoke": {
       "action": "Desconectar",
       "title": "¿Desconectar {{name}}?",

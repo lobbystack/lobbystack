@@ -38,7 +38,7 @@ const EN_FAQS: FaqItem[] = [
   {
     question: "How do I disconnect an assistant?",
     answer:
-      "Go to Settings > Connected apps in LobbyStack and click Disconnect next to it. It loses access right away. For an assistant that uses an API key, revoke the key in Settings > API keys.",
+      "Go to Settings > API keys in LobbyStack and click Disconnect next to it under MCP connections. It loses access right away. For an assistant that uses an API key, revoke the key on the same page.",
   },
   {
     question: "Can an agency connect to all of its clients at once?",
@@ -95,7 +95,7 @@ const FR_FAQS: FaqItem[] = [
   {
     question: "Comment déconnecter un assistant?",
     answer:
-      "Allez dans Réglages > Applications connectées dans LobbyStack et cliquez sur Déconnecter à côté de l'assistant. Il perd l'accès immédiatement. Pour un assistant qui utilise une clé API, révoquez la clé dans Réglages > Clés API.",
+      "Allez dans Réglages > Clés API dans LobbyStack et cliquez sur Déconnecter à côté de l'assistant, sous Connexions MCP. Il perd l'accès immédiatement. Pour un assistant qui utilise une clé API, révoquez la clé sur la même page.",
   },
   {
     question: "Une agence peut-elle connecter tous ses clients en même temps?",
@@ -152,7 +152,7 @@ const ES_FAQS: FaqItem[] = [
   {
     question: "¿Cómo desconecto un asistente?",
     answer:
-      "Vaya a Configuración > Aplicaciones conectadas en LobbyStack y haga clic en Desconectar junto al asistente. Pierde el acceso de inmediato. Si el asistente usa una clave de API, revóquela en Configuración > Claves de API.",
+      "Vaya a Configuración > Claves de API en LobbyStack y haga clic en Desconectar junto al asistente, en Conexiones MCP. Pierde el acceso de inmediato. Si el asistente usa una clave de API, revóquela en la misma página.",
   },
   {
     question: "¿Puede una agencia conectar a todos sus clientes a la vez?",
@@ -209,7 +209,7 @@ const SR_FAQS: FaqItem[] = [
   {
     question: "Kako da prekinem vezu sa asistentom?",
     answer:
-      "U LobbyStack-u otvorite Podešavanja > Povezane aplikacije i kliknite na Prekini vezu pored asistenta. Asistent odmah gubi pristup. Za asistenta koji koristi API ključ, opozovite ključ u Podešavanja > API ključevi.",
+      "U LobbyStack-u otvorite Podešavanja > API ključevi i kliknite na Prekini vezu pored asistenta u odeljku MCP veze. Asistent odmah gubi pristup. Za asistenta koji koristi API ključ, opozovite ključ na istoj stranici.",
   },
   {
     question: "Može li agencija da poveže sve svoje klijente odjednom?",

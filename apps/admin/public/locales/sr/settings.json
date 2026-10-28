@@ -20,7 +20,6 @@
     "notifications": "Obaveštenja",
     "widget": "Vidžet za sajt",
     "apiKeys": "API ključevi",
-    "connectedApps": "Povezane aplikacije",
     "partnerAccess": "Pristup partnera"
   },
   "widget": {
@@ -986,20 +985,14 @@
     "title": "API ključevi",
     "description": "Koristite ključ da povežete sopstveni kod ili drugu aplikaciju sa {{appName}} API-jem.",
     "empty": "Još nema API ključeva.",
-    "neverUsed": "Nikad",
-    "createdBy": "{{date}}, korisnik {{name}}",
+    "createdOn": "Kreiran {{date}}",
+    "lastUsed": "Poslednji put korišćen {{date}}",
+    "neverUsed": "Nikad korišćen",
+    "createdBy": "Kreiran {{date}}, korisnik {{name}}",
     "revoked": "Opozvan {{date}}",
     "restricted": {
       "title": "Samo vlasnici i administratori mogu da upravljaju API ključevima",
       "description": "Zamolite vlasnika ili administratora ove firme da kreira ključ za Vas."
-    },
-    "columns": {
-      "name": "Naziv",
-      "key": "Ključ",
-      "scopes": "Pristup",
-      "created": "Kreiran",
-      "lastUsed": "Poslednja upotreba",
-      "actions": "Radnje"
     },
     "create": {
       "action": "Kreiraj API ključ",
@@ -1026,6 +1019,15 @@
       "cancel": "Otkaži",
       "done": "API ključ je opozvan",
       "failed": "Nismo uspeli da opozovemo ključ. Pokušajte ponovo."
+    },
+    "update": {
+      "action": "Ažuriraj",
+      "title": "Ažurirajte {{name}}",
+      "description": "Promenite naziv ili pristup. Ključ ostaje isti, a aplikacije koje ga koriste dobijaju novi pristup od sledećeg zahteva.",
+      "submit": "Sačuvaj",
+      "saving": "Čuvanje…",
+      "cancel": "Otkaži",
+      "done": "API ključ je ažuriran"
     },
     "scopes": {
       "business_read": "Čitanje podataka o firmi, radnog vremena, usluga, kao i podešavanja i pravila recepcionera",
@@ -1138,23 +1140,14 @@
     }
   },
   "connectedApps": {
-    "title": "Povezane aplikacije",
-    "description": "AI asistenti kao što su Claude ili ChatGPT koje je neko povezao sa {{appName}} nalogom. Svaki radi samo za ovu firmu, sa pristupom koji je odobren pri povezivanju.",
-    "empty": "Još nema povezanih aplikacija. Da biste povezali aplikaciju, dodajte {{appName}} u podešavanjima asistenta i prijavite se.",
-    "neverUsed": "Nikad",
+    "title": "MCP veze",
+    "description": "AI asistenti, kao što su Claude ili ChatGPT, koje je neko povezao prijavom.",
+    "empty": "Još nema MCP veza. Da biste dodali vezu, dodajte {{appName}} u podešavanjima asistenta i prijavite se.",
+    "neverUsed": "Nikad korišćena",
     "unnamed": "Aplikacija bez naziva",
-    "grantedBy": "{{date}}, korisnik {{name}}",
-    "restricted": {
-      "title": "Samo vlasnici i administratori mogu da upravljaju povezanim aplikacijama",
-      "description": "Zamolite vlasnika ili administratora ove firme da ih pregleda."
-    },
-    "columns": {
-      "app": "Aplikacija",
-      "access": "Pristup",
-      "granted": "Povezano",
-      "lastUsed": "Poslednja upotreba",
-      "actions": "Radnje"
-    },
+    "connectedOn": "Povezana {{date}}",
+    "connectedBy": "Povezana {{date}}, korisnik {{name}}",
+    "lastUsed": "Poslednji put korišćena {{date}}",
     "revoke": {
       "action": "Prekini vezu",
       "title": "Prekinuti vezu sa aplikacijom {{name}}?",

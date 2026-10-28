@@ -40,7 +40,7 @@ Al conectarse, LobbyStack le pide que:
 
 El asistente obtiene entonces acceso a ese único negocio. Los tokens de acceso duran una hora, y el asistente los renueva durante un máximo de 30 días de inactividad sin volver a preguntarle. Cada renovación reemplaza el token de actualización anterior, y reutilizar uno antiguo termina la conexión.
 
-Los propietarios y administradores ven todos los asistentes conectados al negocio en **Configuración** > **Aplicaciones conectadas**, con quién los conectó, sus permisos y cuándo hicieron su última solicitud. Haga clic en **Desconectar** para cortar el acceso de inmediato. Si la persona que conectó el asistente deja de ser propietaria o administradora, la conexión también deja de funcionar.
+Los propietarios y administradores ven todos los asistentes conectados al negocio en **Conexiones MCP**, dentro de **Configuración** > **Claves de API**, con quién los conectó y cuándo hicieron su última solicitud. Haga clic en **Desconectar** para cortar el acceso de inmediato. Si la persona que conectó el asistente deja de ser propietaria o administradora, la conexión también deja de funcionar.
 
 <Accordion title="Detalles para desarrolladores de clientes MCP">
   | Elemento | Valor |
@@ -113,7 +113,7 @@ Cada llamada a una herramienta cuenta para un límite de 120 solicitudes por min
 
 ## Registro de auditoría
 
-LobbyStack registra cada cambio hecho a través del servidor MCP en el registro de auditoría del negocio, con el actor `mcp` y el ID de la clave de API o, con OAuth, el ID de la conexión y la persona que la aprobó. Nunca registra claves ni tokens. Para cortar el acceso de un asistente, desconéctelo en **Configuración** > **Aplicaciones conectadas** o revoque su clave en **Configuración** > **Claves de API**.
+LobbyStack registra cada cambio hecho a través del servidor MCP en el registro de auditoría del negocio, con el actor `mcp` y el ID de la clave de API o, con OAuth, el ID de la conexión y la persona que la aprobó. Nunca registra claves ni tokens. Para cortar el acceso de un asistente, desconéctelo en **Conexiones MCP**, dentro de **Configuración** > **Claves de API**, o revoque su clave en la misma página.
 
 ## Guía para agentes de IA
 

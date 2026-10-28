@@ -21,7 +21,7 @@ Every request needs a key. An API key from the dashboard works on one business, 
   </Step>
 </Steps>
 
-Keys look like `lsk_1a2b3c4d_` followed by 32 random characters. The dashboard lists each key by its prefix, `lsk_1a2b3c4d`, with its scopes, who created it, and when it was last used.
+Keys look like `lsk_1a2b3c4d_` followed by 32 random characters. The dashboard lists each key by name, with who created it and when it was last used.
 
 ## Send the key
 
@@ -104,7 +104,7 @@ The links the API returns for a partner's business, such as a widget's script ta
 
 The endpoints under `/partner` do what the partner console does. They read the partner, run its demos, packages, brand, domain, templates and team, and manage its Stripe account and tier. Only a partner's key can call them, and it sends no `LobbyStack-Business` header. An API key or a host's key gets `403` with the code `forbidden`.
 
-A key acts with an admin's rights, so it never changes an owner. Inviting an owner, changing an owner's role or removing one returns `403`: do those in the console. Only owners can grant `partner.billing:read` and `partner.billing:write`, since those reach what only owners see in the console. `partner.billing:write` includes what `partner.billing:read` allows. The billing scopes work only while the owner who made the key is still an owner. Once that person becomes an admin or leaves the team, the key's billing requests return `409` with the code `key_owner_inactive`, and its other scopes keep working. `POST /partner/billing/checkout` makes the tier checkout out to the owner who made the key.
+A key acts with an admin's rights, so it never changes an owner. Inviting an owner, changing an owner's role or removing one returns `403`: do those in the console. Only owners can grant `partner.billing:read` and `partner.billing:write`, since those reach what only owners see in the console. `partner.billing:write` includes what `partner.billing:read` allows. The billing scopes work only while the owner who granted them is still an owner: the owner who created the key with them, or the owner who last updated the key with them. Once that person becomes an admin or leaves the team, the key's billing requests return `409` with the code `key_owner_inactive`, and its other scopes keep working. `POST /partner/billing/checkout` makes the tier checkout out to that owner.
 
 | Scope | Allows |
 | --- | --- |
@@ -152,6 +152,10 @@ Without the header, the request returns `400` with the code `business_required`.
 `POST /team/claim-link` hands a business to its owner. Once they accept, a key with group access no longer reaches it, and a key with access to every business still does. Either way, `GET /businesses` stops listing it. LobbyStack also turns off the business's webhook endpoints that a platform key, the account that sent the link, or that account's API keys created. A partner's business stays with the partner, so `POST /team/claim-link` returns `409` for one. Only the partner can release it to its owner.
 
 Only a verified LobbyStack account can accept a claim link, and the link's page lets an owner without an account sign up first. To invite them ahead of it, `POST /users` emails the address a sign-up link, or a sign-in link if the address already has an account. It never makes an account, so the owner signs up with their own password or with Google, and it answers the same either way, so you can't tell who has an account. A platform key can invite 50 addresses a day.
+
+## Update a key
+
+On **Settings** > **API keys**, click **Update** next to the key to change its name or scopes, then **Save**. The key stays the same, and requests with it get the new scopes right away. You can't update a revoked key. On the partner console's **API keys** page, only owners can update a platform key that has billing access.
 
 ## Revoke a key
 

@@ -21,7 +21,6 @@ describe("dashboard pages", () => {
     expect(pageCapability("/settings/plan")).toBe("billing");
     expect(pageCapability("/settings/api-keys")).toBe("api_keys");
     expect(pageCapability("/integrations/webhooks")).toBe("api_keys");
-    expect(pageCapability("/settings/connected-apps")).toBe("mcp");
     expect(pageCapability("/settings/team")).toBe("team");
     for (const path of ["/agent", "/agent/knowledge", "/analytics", "/integrations", "/widget", "/setup-guide", "/settings/phone-number"]) {
       expect(pageCapability(path), path).toBe("setup");

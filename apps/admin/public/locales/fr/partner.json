@@ -566,25 +566,19 @@
   },
   "apiKeys": {
     "title": "Clés API",
-    "empty": "Aucune clé de plateforme pour l'instant.",
-    "neverUsed": "Jamais",
-    "createdBy": "{{date}} par {{name}}",
+    "empty": "Aucune clé API pour l'instant.",
+    "createdOn": "Créée le {{date}}",
+    "lastUsed": "Dernière utilisation le {{date}}",
+    "neverUsed": "Jamais utilisée",
+    "createdBy": "Créée le {{date}} par {{name}}",
     "revoked": "Révoquée le {{date}}",
     "restricted": {
-      "title": "Seuls les propriétaires et les administrateurs gèrent les clés de plateforme",
+      "title": "Seuls les propriétaires et les administrateurs gèrent les clés API",
       "description": "Demandez à un propriétaire ou à un administrateur de créer une clé pour vous."
     },
-    "columns": {
-      "name": "Nom",
-      "key": "Clé",
-      "scopes": "Accès",
-      "created": "Créée",
-      "lastUsed": "Dernière utilisation",
-      "actions": "Actions"
-    },
     "create": {
-      "action": "Créer une clé de plateforme",
-      "title": "Créer une clé de plateforme",
+      "action": "Créer une clé API",
+      "title": "Créer une clé API",
       "description": "Donnez-lui un nom facile à reconnaître, et seulement l'accès dont elle a besoin.",
       "nameLabel": "Nom",
       "namePlaceholder": "Intégration des clients",
@@ -601,12 +595,22 @@
     },
     "revoke": {
       "action": "Révoquer",
-      "title": "Révoquer cette clé de plateforme ?",
+      "title": "Révoquer cette clé API ?",
       "description": "Tout ce qui utilise {{name}} cesse de fonctionner, et ses webhooks se désactivent. Cette action est définitive.",
       "confirm": "Révoquer la clé",
       "cancel": "Annuler",
-      "done": "Clé de plateforme révoquée",
+      "done": "Clé API révoquée",
       "failed": "Impossible de révoquer la clé. Réessayez."
+    },
+    "update": {
+      "action": "Modifier",
+      "title": "Modifier {{name}}",
+      "description": "Changez son nom ou son accès. Vous gardez la même clé, et les applications qui l'utilisent obtiennent le nouvel accès dès leur prochaine requête.",
+      "submit": "Enregistrer",
+      "saving": "Enregistrement…",
+      "cancel": "Annuler",
+      "done": "Clé API modifiée",
+      "ownerOnly": "Seul un propriétaire peut modifier une clé qui a accès à la facturation."
     },
     "scopes": {
       "business_read": "Lire les informations de l'entreprise, ses heures, ses services et sa réceptionniste",
@@ -833,20 +837,15 @@
     "switchAccount": "Utiliser un autre compte"
   },
   "agencyConnections": {
-    "title": "Connexions de l'agence",
-    "description": "Les assistants IA et autres clients MCP que votre équipe a connectés à l'agence en se connectant, comme Claude, ChatGPT ou Cursor. Chacun agit avec le rôle de la personne qui l'a connecté.",
-    "descriptionOwn": "Les assistants IA et autres clients MCP que vous avez connectés à l'agence en vous connectant, comme Claude, ChatGPT ou Cursor. Ils agissent avec votre rôle.",
-    "empty": "Aucune connexion pour l'instant. Connectez un assistant au serveur MCP de {{appName}} et choisissez cette agence à la connexion.",
+    "title": "Connexions MCP",
+    "description": "Les assistants IA et autres clients MCP que votre équipe a connectés en ouvrant une session.",
+    "descriptionOwn": "Les assistants IA et autres clients MCP que vous avez connectés en ouvrant une session.",
+    "empty": "Aucune connexion MCP pour l'instant. Connectez un assistant au serveur MCP de {{appName}} et choisissez cette agence à la connexion.",
     "unnamed": "Application sans nom",
-    "neverUsed": "Jamais",
-    "connectedBy": "{{date}} par {{name}}",
-    "columns": {
-      "app": "Application",
-      "access": "Accès",
-      "connected": "Connectée",
-      "lastUsed": "Dernière utilisation",
-      "actions": "Actions"
-    },
+    "connectedOn": "Connectée le {{date}}",
+    "lastUsed": "Dernière utilisation le {{date}}",
+    "neverUsed": "Jamais utilisée",
+    "connectedBy": "Connectée le {{date}} par {{name}}",
     "revoke": {
       "action": "Déconnecter",
       "title": "Déconnecter {{name}} ?",

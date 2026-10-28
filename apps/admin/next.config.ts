@@ -123,8 +123,10 @@ const nextConfig: NextConfig = {
   async redirects() {
     // The widget page moved out of Settings; keep old bookmarks and alert links working.
     // The partner console's Stripe page is Payments now; Stripe's onboarding links may still return to the old address.
+    // Connected apps moved to the bottom of API keys as MCP connections; the consent page and docs used to link the old tab.
     return [
       { source: "/settings/widget", destination: "/widget", permanent: true },
+      { source: "/settings/connected-apps", destination: "/settings/api-keys", permanent: true },
       { source: "/partner/:partnerId/stripe", destination: "/partner/:partnerId/payments", permanent: true },
     ];
   },

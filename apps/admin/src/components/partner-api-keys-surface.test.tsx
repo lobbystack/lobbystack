@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -15,10 +15,15 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); fixture.namespaces = []; });
 
 const record = (overrides: Record<string, unknown> = {}) => ({ id: "k1", name: "Client onboarding", prefix: "lsp_1a2b3c4d", scopes: ["business:read", "businesses:create"], createdAt: "2026-10-26T12:00:00.000Z", createdBy: { userId: "owner", name: "Olive", email: "olive@example.test" }, lastUsedAt: null, revokedAt: null, ...overrides });
 
-function renderAs(role: "owner" | "admin" | "member") {
+function renderAs(role: "owner" | "admin" | "member", initialKeys: Array<Record<string, unknown>> = []) {
   fixture.partner = { ...fixture.partner, role };
-  let keys: unknown[] = [];
+  let keys: Array<Record<string, unknown>> = initialKeys;
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+    if (init?.method === "PATCH") {
+      const { partnerId: _partnerId, ...body } = JSON.parse(String(init.body)) as { partnerId: string; name: string; scopes: string[] };
+      keys = keys.map((key) => ({ ...key, ...body }));
+      return Response.json({ platformKey: keys[0] });
+    }
     if (init?.method === "POST") {
       const body = JSON.parse(String(init.body)) as { name: string; scopes: string[] };
       const platformKey = record({ name: body.name, scopes: body.scopes });
@@ -62,7 +67,8 @@ describe("the partner console's API keys page", () => {
     expect(JSON.parse(String(post?.[1]?.body))).toEqual({ partnerId: "partner", name: "Client onboarding", scopes: ["calls:read", "contacts:read", "appointments:read", "messages:read", "business:read", "businesses:create"] });
     await user.click(screen.getByRole("button", { name: "apiKeys.created.done" }));
     await waitFor(() => expect(screen.queryByTestId("secret-value")).toBeNull());
-    expect(await screen.findByText("lsp_1a2b3c4d…")).toBeTruthy();
+    expect(await screen.findByText("Client onboarding")).toBeTruthy();
+    expect(screen.queryByText(/lsp_1a2b3c4d/)).toBeNull();
   });
 
   it("offers the partner scopes, and the billing ones to owners only", async () => {
@@ -88,8 +94,43 @@ describe("the partner console's API keys page", () => {
     await user.click(screen.getByRole("button", { name: "apiKeys.create.submit" }));
     await user.click(await screen.findByRole("button", { name: "apiKeys.created.done" }));
     await user.click(await screen.findByRole("button", { name: "apiKeys.revoke.action" }));
-    await user.click(await screen.findByRole("button", { name: "apiKeys.revoke.confirm" }));
+    const confirm = await screen.findByRole("button", { name: "apiKeys.revoke.confirm" });
+    expect(confirm.className).toContain("text-destructive");
+    await user.click(confirm);
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/partner/platform-keys/k1?partnerId=partner", expect.objectContaining({ method: "DELETE" })));
     expect(await screen.findByText("apiKeys.revoked")).toBeTruthy();
+  });
+
+  it("updates a key's name and scopes as the partner, with the dialog filled in", async () => {
+    const user = userEvent.setup();
+    const fetchMock = renderAs("admin", [record()]);
+    const row = within(await screen.findByRole("list", { name: "apiKeys.title" })).getByRole("listitem");
+    expect(row.textContent).not.toContain("businesses:create");
+    expect(within(row).getByRole("button", { name: "apiKeys.revoke.action" }).className).toContain("text-destructive");
+    await user.click(within(row).getByRole("button", { name: "apiKeys.update.action" }));
+    const dialog = await screen.findByRole("dialog");
+    expect((within(dialog).getByLabelText("apiKeys.create.nameLabel") as HTMLInputElement).value).toBe("Client onboarding");
+    expect(within(dialog).getByRole("checkbox", { name: /businesses:create/ }).getAttribute("aria-checked")).toBe("true");
+    await user.click(within(dialog).getByRole("checkbox", { name: /contacts:read/ }));
+    await user.click(within(dialog).getByRole("button", { name: "apiKeys.update.submit" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/partner/platform-keys/k1", expect.objectContaining({ method: "PATCH" })));
+    const patch = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");
+    expect(JSON.parse(String(patch?.[1]?.body))).toEqual({ partnerId: "partner", name: "Client onboarding", scopes: ["business:read", "businesses:create", "contacts:read"] });
+  });
+
+  it("lets only an owner update a key with billing scopes", async () => {
+    renderAs("admin", [record({ scopes: ["partner:read", "partner.billing:read"] })]);
+    const update = await screen.findByRole("button", { name: "apiKeys.update.action" });
+    expect((update as HTMLButtonElement).disabled).toBe(true);
+    expect(update.getAttribute("title")).toBe("apiKeys.update.ownerOnly");
+    cleanup();
+    renderAs("owner", [record({ scopes: ["partner:read", "partner.billing:read"] })]);
+    expect(((await screen.findByRole("button", { name: "apiKeys.update.action" })) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("has no icon on its create button", async () => {
+    renderAs("owner");
+    const create = await screen.findByRole("button", { name: "apiKeys.create.action" });
+    expect(create.querySelector("svg")).toBeNull();
   });
 });

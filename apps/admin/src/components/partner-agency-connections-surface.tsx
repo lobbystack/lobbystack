@@ -6,21 +6,18 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
-import type { ConnectedAppRecord } from "@/components/live-connected-apps-surface";
+import { CredentialList, CredentialRow } from "@/components/credential-list";
+import { connectionMeta, type ConnectedAppRecord } from "@/components/live-connected-apps-surface";
 import { useConsolePartner } from "@/components/partner-shell";
 import { SectionBlock } from "@/components/section-block";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { intlLocale } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
 
-const scopeKey = (scope: string) => scope.replace(/[:.]/g, "_");
-
 /**
- * The console's agency connections: MCP clients such as Claude or Cursor
+ * The console's MCP connections, under its API keys: MCP clients such as Claude or Cursor
  * that someone on the team connected to the partner with OAuth (ADR 0011).
  * Owners and admins see and disconnect every one; anyone else sees and
  * disconnects their own. The server enforces the same.
@@ -51,43 +48,16 @@ export function PartnerAgencyConnectionsSurface() {
           {grants.isLoading ? <div className="p-6"><Skeleton className="h-24 w-full rounded-xl" /></div> : rows.length === 0 ? (
             <p className="type-body-muted p-6 text-center">{t("agencyConnections.empty")}</p>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="px-6">{t("agencyConnections.columns.app")}</TableHead>
-                    <TableHead>{t("agencyConnections.columns.access")}</TableHead>
-                    <TableHead>{t("agencyConnections.columns.connected")}</TableHead>
-                    <TableHead>{t("agencyConnections.columns.lastUsed")}</TableHead>
-                    <TableHead className="px-6 text-right"><span className="sr-only">{t("agencyConnections.columns.actions")}</span></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rows.map((grant) => (
-                    <TableRow key={grant.id}>
-                      <TableCell className="px-6">
-                        <div className="flex flex-col gap-0.5">
-                          <span className="font-medium">{appName(grant)}</span>
-                          <span className="max-w-64 truncate font-mono text-xs text-muted-foreground" title={grant.clientId}>{grant.clientId}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex max-w-80 flex-wrap gap-1">{grant.scopes.map((scope) => <Badge key={scope} title={t(`apiKeys.scopes.${scopeKey(scope)}`)} variant="secondary">{scope}</Badge>)}</div>
-                      </TableCell>
-                      <TableCell className="ph-mask text-muted-foreground">
-                        {grant.createdAt && (grant.grantedBy?.name || grant.grantedBy?.email)
-                          ? t("agencyConnections.connectedBy", { date: formatDate(grant.createdAt), name: grant.grantedBy.name || grant.grantedBy.email })
-                          : grant.createdAt ? formatDate(grant.createdAt) : null}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{grant.lastUsedAt ? formatDate(grant.lastUsedAt) : t("agencyConnections.neverUsed")}</TableCell>
-                      <TableCell className="px-6 text-right">
-                        <Button onClick={() => setRevoking(grant)} size="sm" variant="outline">{t("agencyConnections.revoke.action")}</Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <CredentialList label={t("agencyConnections.title")}>
+              {rows.map((grant) => (
+                <CredentialRow
+                  actions={<Button onClick={() => setRevoking(grant)} size="sm" variant="destructive">{t("agencyConnections.revoke.action")}</Button>}
+                  key={grant.id}
+                  meta={connectionMeta(grant, t, formatDate, "agencyConnections")}
+                  name={appName(grant)}
+                />
+              ))}
+            </CredentialList>
           )}
         </Surface>
       </SectionBlock>

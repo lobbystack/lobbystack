@@ -40,7 +40,7 @@ When you connect, LobbyStack asks you to:
 
 The assistant then gets access to that one business. Access tokens last an hour, and the assistant renews them for up to 30 days of inactivity without asking you again. Each renewal replaces the previous refresh token, and reusing an old one ends the connection.
 
-Owners and admins see every connected assistant for the business in **Settings** > **Connected apps**, with who connected it, its permissions, and when it last made a request. Click **Disconnect** to cut it off right away. If the person who connected it stops being an owner or admin, the connection stops working too.
+Owners and admins see every connected assistant for the business under **MCP connections** in **Settings** > **API keys**, with who connected it and when it last made a request. Click **Disconnect** to cut it off right away. If the person who connected it stops being an owner or admin, the connection stops working too.
 
 <Accordion title="Details for MCP client developers">
   | Item | Value |
@@ -113,7 +113,7 @@ Each tool call counts against a limit of 120 requests per minute. An API key sha
 
 ## Audit log
 
-LobbyStack records each change made through the MCP server in the business's audit log with the actor `mcp` and the API key's ID, or for OAuth, the connection's ID and the person who approved it. It never logs keys or tokens. To cut off an assistant, disconnect it in **Settings** > **Connected apps**, or revoke its key in **Settings** > **API keys**.
+LobbyStack records each change made through the MCP server in the business's audit log with the actor `mcp` and the API key's ID, or for OAuth, the connection's ID and the person who approved it. It never logs keys or tokens. To cut off an assistant, disconnect it under **MCP connections** in **Settings** > **API keys**, or revoke its key on the same page.
 
 ## Guide for AI agents
 

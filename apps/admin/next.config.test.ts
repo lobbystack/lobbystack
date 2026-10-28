@@ -119,4 +119,9 @@ describe("moved routes", () => {
     const config = await loadConfig({}) as NextConfig;
     expect(await config.redirects?.()).toContainEqual({ source: "/partner/:partnerId/stripe", destination: "/partner/:partnerId/payments", permanent: true });
   });
+
+  it("sends the old Connected apps tab to API keys, where MCP connections are now", async () => {
+    const config = await loadConfig({}) as NextConfig;
+    expect(await config.redirects?.()).toContainEqual({ source: "/settings/connected-apps", destination: "/settings/api-keys", permanent: true });
+  });
 });

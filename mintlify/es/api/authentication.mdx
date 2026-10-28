@@ -21,7 +21,7 @@ Cada solicitud necesita una clave. Una clave de API del panel actúa sobre un so
   </Step>
 </Steps>
 
-Las claves tienen la forma `lsk_1a2b3c4d_` seguido de 32 caracteres aleatorios. El panel muestra cada clave por su prefijo, `lsk_1a2b3c4d`, junto con sus permisos, quién la creó y cuándo se usó por última vez.
+Las claves tienen la forma `lsk_1a2b3c4d_` seguido de 32 caracteres aleatorios. El panel muestra cada clave por su nombre, con quién la creó y cuándo se usó por última vez.
 
 ## Envíe la clave
 
@@ -104,7 +104,7 @@ Los enlaces que devuelve la API para el negocio de un socio, como la etiqueta de
 
 Los endpoints bajo `/partner` hacen lo que hace la consola de socios. Leen al socio, gestionan sus demos, paquetes, marca, dominio, plantillas y equipo, y también su cuenta de Stripe y su nivel. Solo la clave de un socio puede llamarlos, sin el encabezado `LobbyStack-Business`. Una clave API o una clave del anfitrión recibe `403` con el código `forbidden`.
 
-Una clave actúa con los derechos de un administrador, así que nunca cambia a un propietario. Invitar a un propietario, cambiar el rol de un propietario o quitar a uno devuelve `403`: hágalo en la consola. Solo los propietarios pueden conceder `partner.billing:read` y `partner.billing:write`, porque dan acceso a lo que solo los propietarios ven en la consola. `partner.billing:write` incluye lo que permite `partner.billing:read`. Los alcances de facturación funcionan mientras el propietario que creó la clave siga siendo propietario. Cuando esa persona pasa a administrador o deja el equipo, las solicitudes de facturación de la clave devuelven `409` con el código `key_owner_inactive`, y sus demás alcances siguen funcionando. `POST /partner/billing/checkout` emite el pago del nivel a nombre del propietario que creó la clave.
+Una clave actúa con los derechos de un administrador, así que nunca cambia a un propietario. Invitar a un propietario, cambiar el rol de un propietario o quitar a uno devuelve `403`: hágalo en la consola. Solo los propietarios pueden conceder `partner.billing:read` y `partner.billing:write`, porque dan acceso a lo que solo los propietarios ven en la consola. `partner.billing:write` incluye lo que permite `partner.billing:read`. Los alcances de facturación funcionan mientras el propietario que los concedió siga siendo propietario: el que creó la clave con ellos, o el que la actualizó por última vez con ellos. Cuando esa persona pasa a administrador o deja el equipo, las solicitudes de facturación de la clave devuelven `409` con el código `key_owner_inactive`, y sus demás alcances siguen funcionando. `POST /partner/billing/checkout` emite el pago del nivel a nombre de ese propietario.
 
 | Permiso | Permite |
 | --- | --- |
@@ -152,6 +152,10 @@ Sin ese encabezado, la solicitud devuelve `400` con el código `business_require
 `POST /team/claim-link` entrega un negocio a su propietario. Cuando lo acepta, una clave con acceso de grupo ya no llega al negocio, mientras que una clave con acceso a todos los negocios sigue llegando. En ambos casos, `GET /businesses` deja de listarlo. LobbyStack también desactiva los endpoints de webhook del negocio que creó una clave de plataforma, la cuenta que envió el enlace o las claves API de esa cuenta. El negocio de un socio se queda con ese socio, así que `POST /team/claim-link` devuelve `409` para él. Solo el socio puede cedérselo a su propietario.
 
 Solo una cuenta de LobbyStack verificada puede aceptar un enlace de reclamación, y la página del enlace permite que un propietario sin cuenta se registre primero. Para invitarlo antes, `POST /users` envía a la dirección un enlace de registro, o un enlace para iniciar sesión si la dirección ya tiene una cuenta. Nunca crea una cuenta: el propietario se registra con su propia contraseña o con Google. La respuesta es la misma en los dos casos, así que usted no puede saber quién tiene una cuenta. Una clave de plataforma puede invitar a 50 direcciones al día.
+
+## Actualice una clave
+
+En **Configuración** > **Claves de API**, haga clic en **Actualizar** junto a la clave para cambiar su nombre o sus permisos, y luego en **Guardar**. La clave sigue siendo la misma, y las solicitudes que la usen reciben los nuevos permisos de inmediato. No puede actualizar una clave revocada. En la página **Claves de API** de la consola de socios, solo los propietarios pueden actualizar una clave de plataforma con acceso a la facturación.
 
 ## Revoque una clave
 

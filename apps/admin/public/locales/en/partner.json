@@ -558,25 +558,19 @@
   },
   "apiKeys": {
     "title": "API keys",
-    "empty": "No platform keys yet.",
-    "neverUsed": "Never",
-    "createdBy": "{{date}} by {{name}}",
+    "empty": "No API keys yet.",
+    "createdOn": "Created {{date}}",
+    "lastUsed": "Last used {{date}}",
+    "neverUsed": "Never used",
+    "createdBy": "Created {{date}} by {{name}}",
     "revoked": "Revoked {{date}}",
     "restricted": {
-      "title": "Only owners and admins can manage platform keys",
+      "title": "Only owners and admins can manage API keys",
       "description": "Ask an owner or admin to create a key for you."
     },
-    "columns": {
-      "name": "Name",
-      "key": "Key",
-      "scopes": "Access",
-      "created": "Created",
-      "lastUsed": "Last used",
-      "actions": "Actions"
-    },
     "create": {
-      "action": "Create platform key",
-      "title": "Create a platform key",
+      "action": "Create API key",
+      "title": "Create an API key",
       "description": "Name it so you'll recognize it, and give it only the access it needs.",
       "nameLabel": "Name",
       "namePlaceholder": "Client onboarding",
@@ -593,12 +587,22 @@
     },
     "revoke": {
       "action": "Revoke",
-      "title": "Revoke this platform key?",
+      "title": "Revoke this API key?",
       "description": "Anything using {{name}} stops working, and its webhooks turn off. You can't undo this.",
       "confirm": "Revoke key",
       "cancel": "Cancel",
-      "done": "Platform key revoked",
+      "done": "API key revoked",
       "failed": "We couldn't revoke the key. Try again."
+    },
+    "update": {
+      "action": "Update",
+      "title": "Update {{name}}",
+      "description": "Change its name or access. You keep the same key, and apps using it get the new access on their next request.",
+      "submit": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "done": "API key updated",
+      "ownerOnly": "Only an owner can update a key with billing access."
     },
     "scopes": {
       "business_read": "Read the business, its hours, services and receptionist",
@@ -821,20 +825,15 @@
     "switchAccount": "Use another account"
   },
   "agencyConnections": {
-    "title": "Agency connections",
-    "description": "AI assistants and other MCP clients your team connected to the agency with sign-in, such as Claude, ChatGPT or Cursor. Each one acts with the role of the person who connected it.",
-    "descriptionOwn": "AI assistants and other MCP clients you connected to the agency with sign-in, such as Claude, ChatGPT or Cursor. They act with your role.",
-    "empty": "No connections yet. Connect an assistant to the {{appName}} MCP server and choose this agency when you sign in.",
+    "title": "MCP connections",
+    "description": "AI assistants and other MCP clients your team connected by signing in.",
+    "descriptionOwn": "AI assistants and other MCP clients you connected by signing in.",
+    "empty": "No MCP connections yet. Connect an assistant to the {{appName}} MCP server and choose this agency when you sign in.",
     "unnamed": "Unnamed app",
-    "neverUsed": "Never",
-    "connectedBy": "{{date}} by {{name}}",
-    "columns": {
-      "app": "App",
-      "access": "Access",
-      "connected": "Connected",
-      "lastUsed": "Last used",
-      "actions": "Actions"
-    },
+    "connectedOn": "Connected {{date}}",
+    "lastUsed": "Last used {{date}}",
+    "neverUsed": "Never used",
+    "connectedBy": "Connected {{date}} by {{name}}",
     "revoke": {
       "action": "Disconnect",
       "title": "Disconnect {{name}}?",

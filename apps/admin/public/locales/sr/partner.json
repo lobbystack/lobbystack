@@ -566,25 +566,19 @@
   },
   "apiKeys": {
     "title": "API ključevi",
-    "empty": "Još nema ključeva platforme.",
-    "neverUsed": "Nikad",
-    "createdBy": "{{date}}, korisnik {{name}}",
+    "empty": "Još nema API ključeva.",
+    "createdOn": "Kreiran {{date}}",
+    "lastUsed": "Poslednji put korišćen {{date}}",
+    "neverUsed": "Nikad korišćen",
+    "createdBy": "Kreiran {{date}}, korisnik {{name}}",
     "revoked": "Opozvan {{date}}",
     "restricted": {
-      "title": "Samo vlasnici i administratori mogu da upravljaju ključevima platforme",
+      "title": "Samo vlasnici i administratori mogu da upravljaju API ključevima",
       "description": "Zamolite vlasnika ili administratora da kreira ključ za Vas."
     },
-    "columns": {
-      "name": "Naziv",
-      "key": "Ključ",
-      "scopes": "Pristup",
-      "created": "Kreiran",
-      "lastUsed": "Poslednja upotreba",
-      "actions": "Radnje"
-    },
     "create": {
-      "action": "Kreiraj ključ platforme",
-      "title": "Kreirajte ključ platforme",
+      "action": "Kreiraj API ključ",
+      "title": "Kreirajte API ključ",
       "description": "Dajte ključu naziv koji ćete prepoznati i samo onaj pristup koji mu treba.",
       "nameLabel": "Naziv",
       "namePlaceholder": "Uvođenje klijenata",
@@ -601,12 +595,22 @@
     },
     "revoke": {
       "action": "Opozovi",
-      "title": "Opozvati ovaj ključ platforme?",
+      "title": "Opozvati ovaj API ključ?",
       "description": "Sve što koristi {{name}} prestaje da radi, a njegovi webhookovi se isključuju. Ovo ne možete da poništite.",
       "confirm": "Opozovi ključ",
       "cancel": "Otkaži",
-      "done": "Ključ platforme je opozvan",
+      "done": "API ključ je opozvan",
       "failed": "Nismo uspeli da opozovemo ključ. Pokušajte ponovo."
+    },
+    "update": {
+      "action": "Ažuriraj",
+      "title": "Ažurirajte {{name}}",
+      "description": "Promenite naziv ili pristup. Ključ ostaje isti, a aplikacije koje ga koriste dobijaju novi pristup od sledećeg zahteva.",
+      "submit": "Sačuvaj",
+      "saving": "Čuvanje…",
+      "cancel": "Otkaži",
+      "done": "API ključ je ažuriran",
+      "ownerOnly": "Samo vlasnik može da ažurira ključ sa pristupom naplati."
     },
     "scopes": {
       "business_read": "Čitanje podataka o firmi, radnog vremena, usluga i recepcionera",
@@ -833,20 +837,15 @@
     "switchAccount": "Koristi drugi nalog"
   },
   "agencyConnections": {
-    "title": "Veze agencije",
-    "description": "AI asistenti i drugi MCP klijenti koje je Vaš tim povezao sa agencijom prijavom, kao što su Claude, ChatGPT ili Cursor. Svaki radi sa ulogom osobe koja ga je povezala.",
-    "descriptionOwn": "AI asistenti i drugi MCP klijenti koje ste povezali sa agencijom prijavom, kao što su Claude, ChatGPT ili Cursor. Rade sa Vašom ulogom.",
-    "empty": "Još nema veza. Povežite asistenta sa {{appName}} MCP serverom i izaberite ovu agenciju pri prijavi.",
+    "title": "MCP veze",
+    "description": "AI asistenti i drugi MCP klijenti koje je Vaš tim povezao prijavom.",
+    "descriptionOwn": "AI asistenti i drugi MCP klijenti koje ste povezali prijavom.",
+    "empty": "Još nema MCP veza. Povežite asistenta sa {{appName}} MCP serverom i izaberite ovu agenciju pri prijavi.",
     "unnamed": "Aplikacija bez imena",
-    "neverUsed": "Nikad",
-    "connectedBy": "{{date}}, {{name}}",
-    "columns": {
-      "app": "Aplikacija",
-      "access": "Pristup",
-      "connected": "Povezana",
-      "lastUsed": "Poslednja upotreba",
-      "actions": "Radnje"
-    },
+    "connectedOn": "Povezana {{date}}",
+    "lastUsed": "Poslednji put korišćena {{date}}",
+    "neverUsed": "Nikad korišćena",
+    "connectedBy": "Povezana {{date}}, korisnik {{name}}",
     "revoke": {
       "action": "Isključi",
       "title": "Isključiti {{name}}?",

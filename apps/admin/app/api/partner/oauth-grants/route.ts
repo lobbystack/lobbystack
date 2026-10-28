@@ -5,7 +5,7 @@ import { partnerRoute } from "@/lib/partner-request";
 
 export const dynamic = "force-dynamic";
 
-// The console's agency connections: MCP clients a person on the team
+// The console's MCP connections, under its API keys: MCP clients a person on the team
 // connected to the partner with OAuth. Owners and admins see every one;
 // anyone else sees their own.
 

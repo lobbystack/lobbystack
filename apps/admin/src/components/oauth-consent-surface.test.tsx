@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { ALL_CAPABILITIES, BusinessCapabilitiesProvider } from "./business-capabilities-provider";
 import { LiveConnectedAppsSurface } from "./live-connected-apps-surface";
 import { OAuthConsentSurface } from "./oauth-consent-surface";
 
@@ -86,7 +87,7 @@ describe("OAuth consent screen for an agency", () => {
   });
 });
 
-describe("Connected apps settings", () => {
+describe("the MCP connections under Settings > API keys", () => {
   it("lists grants and disconnects one", async () => {
     const user = userEvent.setup();
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
@@ -100,9 +101,27 @@ describe("Connected apps settings", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<QueryClientProvider client={client}><LiveConnectedAppsSurface /></QueryClientProvider>);
     expect(await screen.findByText("Claude")).toBeTruthy();
+    expect(screen.queryByText("calls:read")).toBeNull();
+    expect(screen.getByText(/^connectedApps.connectedBy .*"name":"Ada"/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "connectedApps.revoke.action" }).className).toContain("text-destructive");
     await user.click(screen.getByRole("button", { name: "connectedApps.revoke.action" }));
     await user.click(screen.getByRole("button", { name: "connectedApps.revoke.confirm" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/oauth-grants/g1?businessId=business-1", expect.objectContaining({ method: "DELETE" })));
     expect(await screen.findByText("connectedApps.empty")).toBeTruthy();
+  });
+});
+
+describe("the MCP connections section for someone who can't manage them", () => {
+  it("shows nothing to a viewer, or in a business without MCP, and reads no connections", async () => {
+    for (const [role, capabilities] of [["viewer", ALL_CAPABILITIES], ["business_owner", ALL_CAPABILITIES.filter((capability) => capability !== "mcp")]] as const) {
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+      client.setQueryData(["businesses"], { businesses: [{ businessId: "business-1", name: "Salon", active: true, role, capabilities }] });
+      const fetchMock = vi.fn(async () => Response.json({ grants: [] }));
+      vi.stubGlobal("fetch", fetchMock);
+      const view = render(<QueryClientProvider client={client}><BusinessCapabilitiesProvider initial={capabilities}><LiveConnectedAppsSurface /></BusinessCapabilitiesProvider></QueryClientProvider>);
+      expect(view.container.textContent).toBe("");
+      expect(fetchMock).not.toHaveBeenCalled();
+      view.unmount();
+    }
   });
 });

@@ -40,7 +40,7 @@ Lors de la connexion, LobbyStack vous demande de :
 
 L'assistant obtient alors l'accès à cette seule entreprise. Les jetons d'accès durent une heure, et l'assistant les renouvelle sans vous redemander votre accord tant que la période d'inactivité ne dépasse pas 30 jours. Chaque renouvellement remplace le jeton d'actualisation précédent, et la réutilisation d'un ancien jeton met fin à la connexion.
 
-Les propriétaires et les administrateurs voient tous les assistants connectés à l'entreprise dans **Réglages** > **Applications connectées**, avec la personne qui les a connectés, leurs autorisations et la date de leur dernière requête. Cliquez sur **Déconnecter** pour couper l'accès immédiatement. Si la personne qui a connecté l'assistant n'est plus propriétaire ou administrateur, la connexion cesse aussi de fonctionner.
+Les propriétaires et les administrateurs voient tous les assistants connectés à l'entreprise sous **Connexions MCP**, dans **Réglages** > **Clés API**, avec la personne qui les a connectés et la date de leur dernière requête. Cliquez sur **Déconnecter** pour couper l'accès immédiatement. Si la personne qui a connecté l'assistant n'est plus propriétaire ou administrateur, la connexion cesse aussi de fonctionner.
 
 <Accordion title="Détails pour les développeurs de clients MCP">
   | Élément | Valeur |
@@ -113,7 +113,7 @@ Chaque appel d'outil compte dans une limite de 120 requêtes par minute. Une cl�
 
 ## Journal d'audit
 
-LobbyStack inscrit chaque modification faite par le serveur MCP dans le journal d'audit de l'entreprise, avec l'acteur `mcp` et l'identifiant de la clé API ou, pour OAuth, l'identifiant de la connexion et la personne qui l'a approuvée. Il n'enregistre jamais les clés ni les jetons. Pour couper l'accès d'un assistant, déconnectez-le dans **Réglages** > **Applications connectées** ou révoquez sa clé dans **Réglages** > **Clés API**.
+LobbyStack inscrit chaque modification faite par le serveur MCP dans le journal d'audit de l'entreprise, avec l'acteur `mcp` et l'identifiant de la clé API ou, pour OAuth, l'identifiant de la connexion et la personne qui l'a approuvée. Il n'enregistre jamais les clés ni les jetons. Pour couper l'accès d'un assistant, déconnectez-le sous **Connexions MCP**, dans **Réglages** > **Clés API**, ou révoquez sa clé sur la même page.
 
 ## Guide pour les agents IA
 

@@ -25,7 +25,6 @@
     "/settings/plan/ai-sms-compliance",
     "/settings/api-keys",
     "/integrations/webhooks",
-    "/settings/connected-apps",
     "/oauth/consent",
     "/onboarding/brand"
   ],
@@ -1479,7 +1478,7 @@
       "fixtureState": "operator",
       "state": "default",
       "comparison": "excluded",
-      "reason": "New public API key management"
+      "reason": "New public API key and MCP connection management"
     },
     {
       "path": "/integrations/webhooks",
@@ -1487,13 +1486,6 @@
       "state": "default",
       "comparison": "excluded",
       "reason": "New outbound webhook management"
-    },
-    {
-      "path": "/settings/connected-apps",
-      "fixtureState": "operator",
-      "state": "default",
-      "comparison": "excluded",
-      "reason": "New OAuth connected apps management"
     },
     {
       "path": "/oauth/consent",

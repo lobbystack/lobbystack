@@ -159,7 +159,7 @@ const en: McpCopy = {
   control: {
     eyebrow: "Control",
     title: "See every connected assistant and cut one off",
-    body: "Settings > Connected apps lists each assistant with who connected it, what it can do and when it last made a request. Click Disconnect and it loses access right away.",
+    body: "MCP connections, under Settings > API keys, lists each assistant with who connected it, what it can do and when it last made a request. Click Disconnect and it loses access right away.",
     points: [
       "Each change goes in the audit log with the connection and the person who approved it",
       "LobbyStack tells the assistant to check with you before it books, cancels, reschedules or replaces your hours",
@@ -271,7 +271,7 @@ const en: McpCopy = {
     scopeBook: "Book, cancel and reschedule appointments",
     scopeHours: "Update business details and hours",
     allowAccess: "Allow access",
-    connectedApps: "Connected apps",
+    connectedApps: "MCP connections",
     connectedBy: "By Dana W.",
     disconnect: "Disconnect",
     disconnected: "ChatGPT disconnected",
@@ -324,7 +324,7 @@ const fr: McpCopy = {
   control: {
     eyebrow: "Contrôle",
     title: "Voyez chaque assistant connecté et coupez-en un au besoin",
-    body: "Réglages > Applications connectées liste chaque assistant avec la personne qui l'a connecté, ce qu'il peut faire et sa dernière requête. Cliquez sur Déconnecter et il perd l'accès immédiatement.",
+    body: "Connexions MCP, sous Réglages > Clés API, liste chaque assistant avec la personne qui l'a connecté, ce qu'il peut faire et sa dernière requête. Cliquez sur Déconnecter et il perd l'accès immédiatement.",
     points: [
       "Chaque modification est inscrite au journal d'audit avec la connexion et la personne qui l'a approuvée",
       "LobbyStack demande à l'assistant de vérifier avec vous avant de réserver, d'annuler, de déplacer un rendez-vous ou de remplacer vos heures",
@@ -436,7 +436,7 @@ const fr: McpCopy = {
     scopeBook: "Réserver, annuler et déplacer des rendez-vous",
     scopeHours: "Modifier les informations et les heures",
     allowAccess: "Autoriser l'accès",
-    connectedApps: "Applications connectées",
+    connectedApps: "Connexions MCP",
     connectedBy: "Par Dana W.",
     disconnect: "Déconnecter",
     disconnected: "ChatGPT déconnecté",
@@ -489,7 +489,7 @@ const es: McpCopy = {
   control: {
     eyebrow: "Control",
     title: "Vea cada asistente conectado y desconecte el que quiera",
-    body: "Configuración > Aplicaciones conectadas muestra cada asistente con quién lo conectó, lo que puede hacer y cuándo hizo su última solicitud. Haga clic en Desconectar y pierde el acceso de inmediato.",
+    body: "Conexiones MCP, en Configuración > Claves de API, muestra cada asistente con quién lo conectó, lo que puede hacer y cuándo hizo su última solicitud. Haga clic en Desconectar y pierde el acceso de inmediato.",
     points: [
       "Cada cambio queda en el registro de auditoría con la conexión y la persona que la aprobó",
       "LobbyStack le indica al asistente que confirme con usted antes de reservar, cancelar, reprogramar o reemplazar su horario",
@@ -601,7 +601,7 @@ const es: McpCopy = {
     scopeBook: "Reservar, cancelar y reprogramar citas",
     scopeHours: "Actualizar los datos y el horario",
     allowAccess: "Permitir acceso",
-    connectedApps: "Aplicaciones conectadas",
+    connectedApps: "Conexiones MCP",
     connectedBy: "Por Dana W.",
     disconnect: "Desconectar",
     disconnected: "ChatGPT desconectado",
@@ -654,7 +654,7 @@ const sr: McpCopy = {
   control: {
     eyebrow: "Kontrola",
     title: "Vidite svakog povezanog asistenta i prekinite vezu kad želite",
-    body: "Podešavanja > Povezane aplikacije prikazuju svakog asistenta, ko ga je povezao, šta sme da radi i kada je poslednji put poslao zahtev. Kliknite na Prekini vezu i asistent odmah gubi pristup.",
+    body: "Odeljak MCP veze, u Podešavanja > API ključevi, prikazuje svakog asistenta, ko ga je povezao, šta sme da radi i kada je poslednji put poslao zahtev. Kliknite na Prekini vezu i asistent odmah gubi pristup.",
     points: [
       "Svaka izmena se upisuje u dnevnik revizije, sa vezom i osobom koja ju je odobrila",
       "LobbyStack nalaže asistentu da proveri sa Vama pre nego što zakaže, otkaže ili pomeri termin ili zameni radno vreme",
@@ -766,7 +766,7 @@ const sr: McpCopy = {
     scopeBook: "Zakazivanje, otkazivanje i pomeranje termina",
     scopeHours: "Izmena podataka o firmi i radnog vremena",
     allowAccess: "Dozvoli pristup",
-    connectedApps: "Povezane aplikacije",
+    connectedApps: "MCP veze",
     connectedBy: "Povezala Dana W.",
     disconnect: "Prekini vezu",
     disconnected: "Veza sa ChatGPT-jem prekinuta",

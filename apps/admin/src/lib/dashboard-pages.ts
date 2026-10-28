@@ -34,8 +34,8 @@ const pageCapabilities: ReadonlyArray<readonly [prefix: string, capability: Capa
   ["/settings/subscription", "activity"],
   // Who on the partner's team opened the business, from its audit log. The Settings menu shows it only on a partner's business, and only its owners and admins can read it.
   ["/settings/partner-access", "activity"],
+  // API keys, with the business's MCP connections under them, which need mcp too.
   ["/settings/api-keys", "api_keys"],
-  ["/settings/connected-apps", "mcp"],
 ];
 
 // Pages that match only their own path, not the pages under it.
@@ -61,7 +61,7 @@ export function pageCapability(pathname: string): Capability {
 }
 
 /** The Settings tabs, in the order the dashboard shows them. */
-export const SETTINGS_PAGES = ["/settings/usage", "/settings/plan", "/settings/team", "/settings/phone-number", "/settings/appearance", "/settings/notifications", "/settings/api-keys", "/settings/connected-apps"] as const;
+export const SETTINGS_PAGES = ["/settings/usage", "/settings/plan", "/settings/team", "/settings/phone-number", "/settings/appearance", "/settings/notifications", "/settings/api-keys"] as const;
 
 /** The first Settings tab the business lets the person open, where the menu's Settings link goes. */
 export function firstSettingsPage(can: (capability: Capability) => boolean): string {

@@ -20,7 +20,6 @@
     "notifications": "Notificaciones",
     "widget": "Widget del sitio web",
     "apiKeys": "Claves de API",
-    "connectedApps": "Aplicaciones conectadas",
     "partnerAccess": "Acceso del socio"
   },
   "widget": {
@@ -986,20 +985,14 @@
     "title": "Claves de API",
     "description": "Use una clave para conectar su propio código u otra aplicación a la API de {{appName}}.",
     "empty": "Aún no hay claves de API.",
-    "neverUsed": "Nunca",
-    "createdBy": "{{date}} por {{name}}",
+    "createdOn": "Creada el {{date}}",
+    "lastUsed": "Último uso el {{date}}",
+    "neverUsed": "Nunca usada",
+    "createdBy": "Creada el {{date}} por {{name}}",
     "revoked": "Revocada el {{date}}",
     "restricted": {
       "title": "Solo los propietarios y administradores pueden gestionar las claves de API",
       "description": "Pida a un propietario o administrador de este negocio que cree una clave para usted."
-    },
-    "columns": {
-      "name": "Nombre",
-      "key": "Clave",
-      "scopes": "Acceso",
-      "created": "Creada",
-      "lastUsed": "Último uso",
-      "actions": "Acciones"
     },
     "create": {
       "action": "Crear clave de API",
@@ -1026,6 +1019,15 @@
       "cancel": "Cancelar",
       "done": "Clave de API revocada",
       "failed": "No pudimos revocar la clave. Inténtelo de nuevo."
+    },
+    "update": {
+      "action": "Actualizar",
+      "title": "Actualizar {{name}}",
+      "description": "Cambie su nombre o su acceso. Conserva la misma clave, y las aplicaciones que la usan reciben el nuevo acceso en su próxima solicitud.",
+      "submit": "Guardar",
+      "saving": "Guardando…",
+      "cancel": "Cancelar",
+      "done": "Clave de API actualizada"
     },
     "scopes": {
       "business_read": "Leer los datos, el horario, los servicios, y la configuración y las reglas de la recepcionista del negocio",
@@ -1138,23 +1140,14 @@
     }
   },
   "connectedApps": {
-    "title": "Aplicaciones conectadas",
-    "description": "Asistentes de IA como Claude o ChatGPT con los que alguien inició sesión en {{appName}}. Cada uno funciona solo para este negocio, con el acceso que se aprobó.",
-    "empty": "Aún no hay aplicaciones conectadas. Para conectar una, agregue {{appName}} en la configuración del asistente e inicie sesión.",
-    "neverUsed": "Nunca",
+    "title": "Conexiones MCP",
+    "description": "Asistentes de IA, como Claude o ChatGPT, que alguien conectó al iniciar sesión.",
+    "empty": "Aún no hay conexiones MCP. Para agregar una, agregue {{appName}} en la configuración del asistente e inicie sesión.",
+    "neverUsed": "Nunca usada",
     "unnamed": "Aplicación sin nombre",
-    "grantedBy": "{{date}} por {{name}}",
-    "restricted": {
-      "title": "Solo los propietarios y administradores pueden gestionar las aplicaciones conectadas",
-      "description": "Pida a un propietario o administrador de este negocio que las revise."
-    },
-    "columns": {
-      "app": "Aplicación",
-      "access": "Acceso",
-      "granted": "Conectada",
-      "lastUsed": "Último uso",
-      "actions": "Acciones"
-    },
+    "connectedOn": "Conectada el {{date}}",
+    "connectedBy": "Conectada el {{date}} por {{name}}",
+    "lastUsed": "Último uso el {{date}}",
     "revoke": {
       "action": "Desconectar",
       "title": "¿Desconectar {{name}}?",

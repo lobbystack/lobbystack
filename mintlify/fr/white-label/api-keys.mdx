@@ -13,7 +13,7 @@ Donnez à chaque outil sa propre clé, pour pouvoir en révoquer une sans briser
 
 <Steps>
   <Step title="Ouvrir le formulaire">
-    Sur **Clés API**, cliquez sur **Créer une clé de plateforme**.
+    Sur **Clés API**, cliquez sur **Créer une clé API**.
   </Step>
   <Step title="Nommer la clé et choisir son accès">
     Entrez un **Nom** que vous reconnaîtrez, comme `Intégration des clients`. Sous **Accès**, sélectionnez seulement ce dont l'outil a besoin. Pour créer des entreprises, sélectionnez **Créer des entreprises et inviter leurs propriétaires**. Pour gérer votre partenaire depuis du code, sélectionnez les accès partenaire dont l'outil a besoin. Seuls les propriétaires voient les accès à la facturation.
@@ -23,7 +23,7 @@ Donnez à chaque outil sa propre clé, pour pouvoir en révoquer une sans briser
   </Step>
 </Steps>
 
-La page liste chaque clé avec son préfixe, son accès, la personne qui l'a créée et la date de sa dernière utilisation. Les membres voient la page, mais ne peuvent ni créer ni révoquer de clés.
+La page liste chaque clé par son nom, avec la personne qui l'a créée, sa date de création et la date de sa dernière utilisation. Les membres voient la page, mais ne peuvent ni créer, ni modifier, ni révoquer de clés.
 
 ## Ce que peut faire la clé d'un partenaire
 
@@ -47,7 +47,7 @@ lobbystack packages list
 lobbystack partner-team invite sam@youragency.example member
 ```
 
-La clé agit comme un administrateur : elle ne peut pas inviter de propriétaire ni changer le rôle d'un propriétaire. Seuls les propriétaires peuvent donner à une clé l'accès à la facturation, et un paiement de palier lancé par la clé est établi au nom du propriétaire qui l'a créée. L'accès à la facturation dure tant que cette personne reste propriétaire. Si elle devient administrateur ou quitte votre équipe, la clé perd l'accès à la facturation et garde le reste. L'écriture de la facturation comprend sa lecture. [Points de terminaison partenaire](/fr/api/authentication#points-de-terminaison-partenaire) liste ce que permet chaque accès.
+La clé agit comme un administrateur : elle ne peut pas inviter de propriétaire ni changer le rôle d'un propriétaire. Seuls les propriétaires peuvent donner à une clé l'accès à la facturation, et un paiement de palier lancé par la clé est établi au nom du propriétaire qui lui a donné cet accès, en créant la clé ou en la modifiant en dernier. L'accès à la facturation dure tant que cette personne reste propriétaire. Si elle devient administrateur ou quitte votre équipe, la clé perd l'accès à la facturation et garde le reste. L'écriture de la facturation comprend sa lecture. [Points de terminaison partenaire](/fr/api/authentication#points-de-terminaison-partenaire) liste ce que permet chaque accès.
 
 ## Intégrer une entreprise à partir d'un fichier
 
@@ -80,6 +80,12 @@ lobbystack onboard harbor-dental.yaml
 ```
 
 Relancez la commande chaque fois que le fichier change : elle ne change que ce qui diffère. Votre clé continue d'atteindre l'entreprise après l'arrivée de son propriétaire. [Intégrer une entreprise en ligne de commande](/fr/api/cli) couvre chaque section du fichier.
+
+## Modifier une clé
+
+Cliquez sur **Modifier** à côté de la clé pour changer son nom ou son accès, puis sur **Enregistrer**. La clé reste la même : vos outils continuent de l'utiliser et obtiennent le nouvel accès dès leur prochaine requête. Vous ne pouvez pas modifier une clé révoquée.
+
+Seuls les propriétaires peuvent modifier une clé qui a accès à la facturation : les administrateurs voient **Modifier** désactivé sur ces clés. Le propriétaire qui enregistre une clé avec l'accès à la facturation devient celui dont cet accès dépend.
 
 ## Révoquer une clé
 

@@ -20,7 +20,6 @@
     "notifications": "Notifications",
     "widget": "Website widget",
     "apiKeys": "API keys",
-    "connectedApps": "Connected apps",
     "partnerAccess": "Partner access"
   },
   "widget": {
@@ -979,20 +978,14 @@
     "title": "API keys",
     "description": "Use a key to connect your own code or another app to the {{appName}} API.",
     "empty": "No API keys yet.",
-    "neverUsed": "Never",
-    "createdBy": "{{date}} by {{name}}",
+    "createdOn": "Created {{date}}",
+    "lastUsed": "Last used {{date}}",
+    "neverUsed": "Never used",
+    "createdBy": "Created {{date}} by {{name}}",
     "revoked": "Revoked {{date}}",
     "restricted": {
       "title": "Only owners and admins can manage API keys",
       "description": "Ask an owner or admin of this business to create a key for you."
-    },
-    "columns": {
-      "name": "Name",
-      "key": "Key",
-      "scopes": "Access",
-      "created": "Created",
-      "lastUsed": "Last used",
-      "actions": "Actions"
     },
     "create": {
       "action": "Create API key",
@@ -1019,6 +1012,15 @@
       "cancel": "Cancel",
       "done": "API key revoked",
       "failed": "We couldn't revoke the key. Try again."
+    },
+    "update": {
+      "action": "Update",
+      "title": "Update {{name}}",
+      "description": "Change its name or access. You keep the same key, and apps using it get the new access on their next request.",
+      "submit": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "done": "API key updated"
     },
     "scopes": {
       "business_read": "Read business details, hours, services, and receptionist settings and rules",
@@ -1131,23 +1133,14 @@
     }
   },
   "connectedApps": {
-    "title": "Connected apps",
-    "description": "AI assistants such as Claude or ChatGPT that someone signed in to {{appName}}. Each one works for this business only, with the access they approved.",
-    "empty": "No connected apps yet. To connect one, add {{appName}} in the assistant's settings and sign in.",
-    "neverUsed": "Never",
+    "title": "MCP connections",
+    "description": "AI assistants such as Claude or ChatGPT that someone connected by signing in.",
+    "empty": "No MCP connections yet. To add one, add {{appName}} in the assistant's settings and sign in.",
+    "neverUsed": "Never used",
     "unnamed": "Unnamed app",
-    "grantedBy": "{{date}} by {{name}}",
-    "restricted": {
-      "title": "Only owners and admins can manage connected apps",
-      "description": "Ask an owner or admin of this business to review them."
-    },
-    "columns": {
-      "app": "App",
-      "access": "Access",
-      "granted": "Connected",
-      "lastUsed": "Last used",
-      "actions": "Actions"
-    },
+    "connectedOn": "Connected {{date}}",
+    "connectedBy": "Connected {{date}} by {{name}}",
+    "lastUsed": "Last used {{date}}",
     "revoke": {
       "action": "Disconnect",
       "title": "Disconnect {{name}}?",

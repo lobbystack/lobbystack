@@ -27,7 +27,6 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
     { label: t("sections.appearance"), href: "/settings/appearance" },
     { label: t("sections.notifications"), href: "/settings/notifications" },
     { label: t("sections.apiKeys"), href: "/settings/api-keys" },
-    { label: t("sections.connectedApps"), href: "/settings/connected-apps" },
     ...(opensPartnerBilling ? [{ label: t("sections.partnerAccess"), href: "/settings/partner-access" }] : []),
   ].filter((item) => can(pageCapability(item.href)));
   return (

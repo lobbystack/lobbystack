@@ -20,7 +20,6 @@
     "notifications": "Notifications",
     "widget": "Widget de site web",
     "apiKeys": "Clés API",
-    "connectedApps": "Applications connectées",
     "partnerAccess": "Accès du partenaire"
   },
   "widget": {
@@ -986,20 +985,14 @@
     "title": "Clés API",
     "description": "Utilisez une clé pour connecter votre propre code ou une autre application à l'API {{appName}}.",
     "empty": "Aucune clé API pour l'instant.",
-    "neverUsed": "Jamais",
-    "createdBy": "{{date}} par {{name}}",
+    "createdOn": "Créée le {{date}}",
+    "lastUsed": "Dernière utilisation le {{date}}",
+    "neverUsed": "Jamais utilisée",
+    "createdBy": "Créée le {{date}} par {{name}}",
     "revoked": "Révoquée le {{date}}",
     "restricted": {
       "title": "Seuls les propriétaires et les administrateurs gèrent les clés API",
       "description": "Demandez à un propriétaire ou à un administrateur de cette entreprise de créer une clé pour vous."
-    },
-    "columns": {
-      "name": "Nom",
-      "key": "Clé",
-      "scopes": "Accès",
-      "created": "Créée",
-      "lastUsed": "Dernière utilisation",
-      "actions": "Actions"
     },
     "create": {
       "action": "Créer une clé API",
@@ -1026,6 +1019,15 @@
       "cancel": "Annuler",
       "done": "Clé API révoquée",
       "failed": "Impossible de révoquer la clé. Réessayez."
+    },
+    "update": {
+      "action": "Modifier",
+      "title": "Modifier {{name}}",
+      "description": "Changez son nom ou son accès. Vous gardez la même clé, et les applications qui l'utilisent obtiennent le nouvel accès dès leur prochaine requête.",
+      "submit": "Enregistrer",
+      "saving": "Enregistrement…",
+      "cancel": "Annuler",
+      "done": "Clé API modifiée"
     },
     "scopes": {
       "business_read": "Lire les informations, les heures, les services, ainsi que les réglages et les règles de la réceptionniste de l'entreprise",
@@ -1138,23 +1140,14 @@
     }
   },
   "connectedApps": {
-    "title": "Applications connectées",
-    "description": "Les assistants IA comme Claude ou ChatGPT connectés à {{appName}}. Chacun ne fonctionne que pour cette entreprise, avec l'accès approuvé lors de la connexion.",
-    "empty": "Aucune application connectée pour l'instant. Pour en connecter une, ajoutez {{appName}} dans les réglages de l'assistant et connectez-vous.",
-    "neverUsed": "Jamais",
+    "title": "Connexions MCP",
+    "description": "Les assistants IA, comme Claude ou ChatGPT, que quelqu'un a connectés en ouvrant une session.",
+    "empty": "Aucune connexion MCP pour l'instant. Pour en ajouter une, ajoutez {{appName}} dans les réglages de l'assistant et connectez-vous.",
+    "neverUsed": "Jamais utilisée",
     "unnamed": "Application sans nom",
-    "grantedBy": "{{date}} par {{name}}",
-    "restricted": {
-      "title": "Seuls les propriétaires et les administrateurs gèrent les applications connectées",
-      "description": "Demandez à un propriétaire ou à un administrateur de cette entreprise de les vérifier."
-    },
-    "columns": {
-      "app": "Application",
-      "access": "Accès",
-      "granted": "Connectée",
-      "lastUsed": "Dernière utilisation",
-      "actions": "Actions"
-    },
+    "connectedOn": "Connectée le {{date}}",
+    "connectedBy": "Connectée le {{date}} par {{name}}",
+    "lastUsed": "Dernière utilisation le {{date}}",
     "revoke": {
       "action": "Déconnecter",
       "title": "Déconnecter {{name}}?",

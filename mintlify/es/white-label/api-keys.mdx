@@ -13,7 +13,7 @@ Dé a cada herramienta su propia clave, para poder revocar una sin afectar a las
 
 <Steps>
   <Step title="Abra el formulario">
-    En **Claves de API**, haga clic en **Crear clave de plataforma**.
+    En **Claves de API**, haga clic en **Crear clave de API**.
   </Step>
   <Step title="Ponga nombre a la clave y elija su acceso">
     Escriba un **Nombre** que pueda reconocer, como `Alta de clientes`. En **Acceso**, seleccione solo lo que necesita la herramienta. Para crear negocios, seleccione **Crear negocios e invitar a sus propietarios**. Para gestionar su socio desde código, seleccione los accesos de socio que necesita la herramienta. Solo los propietarios ven los accesos a la facturación.
@@ -23,7 +23,7 @@ Dé a cada herramienta su propia clave, para poder revocar una sin afectar a las
   </Step>
 </Steps>
 
-La página muestra cada clave con su prefijo, su acceso, quién la creó y cuándo se usó por última vez. Los miembros ven la página, pero no pueden crear ni revocar claves.
+La página muestra cada clave por su nombre, con quién la creó, cuándo y cuándo se usó por última vez. Los miembros ven la página, pero no pueden crear, actualizar ni revocar claves.
 
 ## Lo que puede hacer la clave de un socio
 
@@ -47,7 +47,7 @@ lobbystack packages list
 lobbystack partner-team invite sam@youragency.example member
 ```
 
-La clave actúa como un administrador, así que no puede invitar a un propietario ni cambiar el rol de un propietario. Solo los propietarios pueden dar a una clave acceso a la facturación, y un pago de nivel que inicie la clave se emite a nombre del propietario que la creó. El acceso a la facturación dura mientras esa persona siga siendo propietaria. Si pasa a administrador o deja su equipo, la clave pierde el acceso a la facturación y conserva lo demás. La escritura de la facturación incluye su lectura. [Endpoints de socio](/es/api/authentication#endpoints-de-socio) enumera lo que permite cada acceso.
+La clave actúa como un administrador, así que no puede invitar a un propietario ni cambiar el rol de un propietario. Solo los propietarios pueden dar a una clave acceso a la facturación, y un pago de nivel que inicie la clave se emite a nombre del propietario que le dio ese acceso, al crear la clave o al actualizarla por última vez. El acceso a la facturación dura mientras esa persona siga siendo propietaria. Si pasa a administrador o deja su equipo, la clave pierde el acceso a la facturación y conserva lo demás. La escritura de la facturación incluye su lectura. [Endpoints de socio](/es/api/authentication#endpoints-de-socio) enumera lo que permite cada acceso.
 
 ## Incorpore un negocio desde un archivo
 
@@ -80,6 +80,12 @@ lobbystack onboard harbor-dental.yaml
 ```
 
 Ejecute el comando de nuevo cada vez que cambie el archivo, y solo cambia lo que difiere. Su clave sigue llegando al negocio después de que su propietario se une. [Incorpore un negocio desde la línea de comandos](/es/api/cli) cubre cada sección del archivo.
+
+## Actualice una clave
+
+Haga clic en **Actualizar** junto a la clave para cambiar su nombre o su acceso, y luego en **Guardar**. La clave sigue siendo la misma: sus herramientas siguen usándola y reciben el nuevo acceso en su próxima solicitud. No puede actualizar una clave revocada.
+
+Solo los propietarios pueden actualizar una clave con acceso a la facturación, así que los administradores ven **Actualizar** desactivado en esas claves. El propietario que guarda una clave con acceso a la facturación pasa a ser el propietario del que depende ese acceso.
 
 ## Revoque una clave
 

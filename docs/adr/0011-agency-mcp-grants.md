@@ -38,7 +38,7 @@ Opening the business as the console does keeps one rule for how a partner's peop
 ## Consequences
 
 - Reversing this means migrating grants whose `reference_id` names a partner, and the tokens under them.
-- Every code path that reads `oauth_consents.reference_id` must treat a `partner:` value as a partner, never as a business. The business listing and revocation in Settings > Connected apps filter on the business id, so they never see one.
+- Every code path that reads `oauth_consents.reference_id` must treat a `partner:` value as a partner, never as a business. The business listing and revocation under MCP connections in Settings > API keys filter on the business id, so they never see one.
 - `scopes_supported` now lists the partner scopes and `businesses:create`. A client that registered before 2026-10-28 with dynamic registration keeps the scopes it registered with, so it registers again to ask for partner scopes.
 - The MCP server lists more tools for a partner connection, and each per-business tool requires `business_id` there. A business connection sees no change.
 - Agency tool calls count against the grant's rate limit, and a key's against the key's, shared with its REST requests. Work that costs the host, such as a demo or an email, counts against the person's console limits or the partner's key limits.
