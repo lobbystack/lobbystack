@@ -55,11 +55,11 @@ async function asOwner(tx: DatabaseTransaction) { await tx.execute(sql`reset rol
  * SMS alerts, and callers who verify changes with a texted code. Cloud runs on
  * a Starter plan, self-hosted on the self-hosted plan.
  */
-async function seed(tx: DatabaseTransaction, options: { selfHosted: boolean }) {
+async function seed(tx: DatabaseTransaction, options: { selfHosted: boolean; ownNumber?: string }) {
   await asOwner(tx);
   const businessId = randomUUID();
   const userId = randomUUID();
-  const ownNumber = `+1416555${String(randomInt(0, 10_000)).padStart(4, "0")}`;
+  const ownNumber = options.ownNumber ?? `+1416555${String(randomInt(0, 10_000)).padStart(4, "0")}`;
   const ownerPhone = phone();
   await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Javor", timezone: "UTC", businessType: "test", telemetryEnabled: false, deploymentMode: options.selfHosted ? "self_hosted_standard" : "cloud" });
   await tx.insert(billingAccounts).values({ businessId, billingKey: `business:${businessId}`, plan: options.selfHosted ? "self_hosted_standard" : "starter", subscriptionState: "active" });
@@ -193,6 +193,19 @@ describe.skipIf(!client)("the number a business texts from", () => {
       // A self-hosted business's local number can.
       const selfHosted = await seed(tx, { selfHosted: true });
       expect(await selfHosted.deliver(await selfHosted.book(abroad, "agreed"), "booking_confirmation")).toMatchObject({ kind: "ready", delivery: { to: abroad, from: selfHosted.ownNumber } });
+    });
+  });
+
+  it("is the business's own number on cloud when that number is outside North America, such as a UK mobile", async () => {
+    vi.stubEnv("TWILIO_ALERT_SMS_FROM", SHARED);
+    await rollbackTest(async (tx) => {
+      const business = await seed(tx, { selfHosted: false, ownNumber: `+447700${String(randomInt(0, 1_000_000)).padStart(6, "0")}` });
+      const customer = `+447911${String(randomInt(0, 1_000_000)).padStart(6, "0")}`;
+      const appointmentId = await business.book(customer, "agreed");
+      expect(await business.deliver(appointmentId, "booking_confirmation")).toMatchObject({ kind: "ready", delivery: { to: customer, from: business.ownNumber } });
+      expect(await business.changeCode(await business.book(customer), customer)).toMatchObject({ issued: { ok: true }, from: business.ownNumber });
+      expect(await business.operatorAlertSender()).toBe(business.ownNumber);
+      expect(await business.snapshotSmsNumber()).toBe(business.ownNumber);
     });
   });
 

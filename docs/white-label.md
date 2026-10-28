@@ -125,7 +125,7 @@ A partner's businesses never get the host's marketing, onboarding, or founder em
 
 ## Texts
 
-Every business, direct or partner, texts from the host's verified toll-free number. Carriers expect that number's verified brand in the first text and in HELP and STOP replies. [The research's SMS section](../research/white-label-reseller-programs.md#sms-sender-rules) has the sources.
+Every business, direct or partner, texts from the host's verified toll-free number. Carriers expect that number's verified brand in the first text and in HELP and STOP replies. [The research's SMS section](../research/white-label-reseller-programs.md#sms-sender-rules) has the sources. A toll-free number can text only US, Canadian and Puerto Rican numbers, so a business with its own UK or Australian mobile number texts from that number instead.
 
 - The first text to each customer of each business confirms the opt-in and names the host and the business.
 - HELP and START replies name the host and the business. STOP gets Twilio's own reply, because Twilio blocks every text to a phone once it sends STOP.

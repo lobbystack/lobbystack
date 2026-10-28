@@ -289,7 +289,18 @@ To take calls and texts on a local stack while a deployment keeps its numbers, s
 
 ### Sell numbers in the UK, Australia and New Zealand
 
-Twilio sells numbers in these countries only under a regulatory bundle it has approved. Create one bundle per country with LobbyStack as the business, and the worker buys every number in that country under it. UK and Australian businesses get mobile numbers, because local numbers there need a local address. New Zealand businesses get local numbers, which take calls but not texts. That's fine, because hosted businesses text from the shared sender.
+Twilio sells numbers in these countries only under a regulatory bundle it has approved. Create one bundle per country with LobbyStack as the business, and the worker buys every number in that country under it. UK and Australian businesses get mobile numbers, because local numbers there need a local address. New Zealand businesses get local numbers, which take calls but not texts.
+
+The shared sender is toll-free and can text only +1 numbers. A hosted business with its own SMS number outside +1, such as a UK or Australian mobile, texts from that number instead, so its callers and team get texts (`resolveSmsSender` in `packages/domain/src/server/smsSender.ts`). A New Zealand business has no SMS number, so its New Zealand callers and team get no texts. Messaging geo permissions in Twilio must allow the UK, Australia and New Zealand.
+
+LobbyStack submitted these bundles on 2026-10-28:
+
+| Country | Bundle | Address |
+| --- | --- | --- |
+| United Kingdom, mobile | `BU74328517f3a6170e1a0ac4a5cecb047d` | `AD9faf799d6caddd21d27040c33613a4a4` |
+| New Zealand, local | `BU69eeaed691e5186b22e2f50ba78f2076` | `AD9faf799d6caddd21d27040c33613a4a4` |
+
+Australia still needs a bundle. Its registry document must show the corporation number, 1787776-5. The Corporations Canada profile of Lobbystack Inc. shows it, and the incorporation forms don't.
 
 To set up a country:
 

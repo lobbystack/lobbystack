@@ -19,7 +19,10 @@ export function isSharedSmsSender(phone: string | null | undefined): boolean {
 /**
  * The number a business texts from, for operator alerts and customer texts
  * alike (confirmations, reminders, cancellations and change codes). A cloud
- * business texts from the shared sender, TWILIO_ALERT_SMS_FROM. A self-hosted
+ * business texts from the shared sender, TWILIO_ALERT_SMS_FROM, which is
+ * toll-free and reaches only +1 numbers. A cloud business with its own SMS
+ * number outside +1, such as a UK or Australian mobile, texts from that
+ * number instead, so its local callers and team get texts. A self-hosted
  * business texts from its own active SMS-enabled number, which the operator
  * registers for texting. Self-hosted means the self-hosted plan, or, without
  * a billing account, a deployment mode other than cloud. Null when there's no
@@ -29,8 +32,9 @@ export async function resolveSmsSender(tx: DatabaseTransaction, businessId: stri
   const account = (await tx.select({ plan: billingAccounts.plan }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId)).limit(1))[0];
   const business = (await tx.select({ deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
   const selfHosted = account?.plan ? account.plan === "self_hosted_standard" : business?.deploymentMode !== "cloud";
-  if (!selfHosted) return sharedSmsSender();
-  return await businessSmsNumber(tx, businessId);
+  if (selfHosted) return await businessSmsNumber(tx, businessId);
+  const own = await businessSmsNumber(tx, businessId);
+  return own && !own.startsWith("+1") ? own : sharedSmsSender();
 }
 
 /**
