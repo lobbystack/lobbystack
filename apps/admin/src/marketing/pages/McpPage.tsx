@@ -1,5 +1,6 @@
 import { Footer } from "@/marketing/components/Footer"
 import {
+  McpAgencies,
   McpAsk,
   McpClosing,
   McpConnect,
@@ -59,6 +60,7 @@ export function McpPage({ locale }: { locale: Locale }) {
         <McpAsk locale={locale} />
         <McpControl locale={locale} />
         <McpTools locale={locale} />
+        <McpAgencies locale={locale} />
         <McpFaq locale={locale} />
         <McpClosing locale={locale} />
       </main>

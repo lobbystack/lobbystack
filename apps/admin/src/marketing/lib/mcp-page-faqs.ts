@@ -41,6 +41,11 @@ const EN_FAQS: FaqItem[] = [
       "Go to Settings > Connected apps in LobbyStack and click Disconnect next to it. It loses access right away. For an assistant that uses an API key, revoke the key in Settings > API keys.",
   },
   {
+    question: "Can an agency connect to all of its clients at once?",
+    answer:
+      "Yes. If you resell LobbyStack under your own brand, sign in and pick your agency on the consent page, or use a platform key from the partner console. The assistant then makes demos, sets up client businesses from your templates and packages, and manages your team, with your role on the team. Each client tool takes the business to work on, and it reaches only your own clients.",
+  },
+  {
     question: "Does it work with a self-hosted LobbyStack?",
     answer:
       "Yes. A self-hosted install serves the same path on its own domain, such as https://lobbystack.example.com/api/mcp. Claude and ChatGPT connect from the internet, so the install needs a public HTTPS address.",
@@ -91,6 +96,11 @@ const FR_FAQS: FaqItem[] = [
     question: "Comment déconnecter un assistant?",
     answer:
       "Allez dans Réglages > Applications connectées dans LobbyStack et cliquez sur Déconnecter à côté de l'assistant. Il perd l'accès immédiatement. Pour un assistant qui utilise une clé API, révoquez la clé dans Réglages > Clés API.",
+  },
+  {
+    question: "Une agence peut-elle connecter tous ses clients en même temps?",
+    answer:
+      "Oui. Si vous revendez LobbyStack sous votre propre marque, connectez-vous et choisissez votre agence sur la page de consentement, ou utilisez une clé de plateforme de la console partenaire. L'assistant crée alors des démos, configure des entreprises clientes à partir de vos modèles et de vos formules, et gère votre équipe, avec votre rôle dans l'équipe. Chaque outil client prend l'entreprise visée, et il n'atteint que vos propres clients.",
   },
   {
     question: "Fonctionne-t-il avec un LobbyStack auto-hébergé?",
@@ -145,6 +155,11 @@ const ES_FAQS: FaqItem[] = [
       "Vaya a Configuración > Aplicaciones conectadas en LobbyStack y haga clic en Desconectar junto al asistente. Pierde el acceso de inmediato. Si el asistente usa una clave de API, revóquela en Configuración > Claves de API.",
   },
   {
+    question: "¿Puede una agencia conectar a todos sus clientes a la vez?",
+    answer:
+      "Sí. Si revende LobbyStack con su propia marca, inicie sesión y elija su agencia en la página de consentimiento, o use una clave de plataforma de la consola de socios. El asistente crea demos, configura negocios clientes con sus plantillas y paquetes, y gestiona su equipo, con su rol en el equipo. Cada herramienta de cliente recibe el negocio con el que trabajar y solo llega a sus propios clientes.",
+  },
+  {
     question: "¿Funciona con un LobbyStack autoalojado?",
     answer:
       "Sí. Una instalación autoalojada sirve la misma ruta en su propio dominio, por ejemplo https://lobbystack.example.com/api/mcp. Claude y ChatGPT se conectan desde internet, así que la instalación necesita una dirección HTTPS pública.",
@@ -195,6 +210,11 @@ const SR_FAQS: FaqItem[] = [
     question: "Kako da prekinem vezu sa asistentom?",
     answer:
       "U LobbyStack-u otvorite Podešavanja > Povezane aplikacije i kliknite na Prekini vezu pored asistenta. Asistent odmah gubi pristup. Za asistenta koji koristi API ključ, opozovite ključ u Podešavanja > API ključevi.",
+  },
+  {
+    question: "Može li agencija da poveže sve svoje klijente odjednom?",
+    answer:
+      "Da. Ako prodajete LobbyStack pod svojim brendom, prijavite se i izaberite svoju agenciju na stranici za saglasnost, ili koristite platformski ključ iz partnerske konzole. Asistent onda pravi demo verzije, podešava firme klijenata iz Vaših šablona i paketa i upravlja Vašim timom, sa Vašom ulogom u timu. Svaki alat za klijente prima firmu sa kojom radi i dopire samo do Vaših klijenata.",
   },
   {
     question: "Da li radi sa samostalno hostovanim LobbyStack-om?",

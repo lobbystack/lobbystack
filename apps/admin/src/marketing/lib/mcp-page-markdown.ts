@@ -1,6 +1,6 @@
 import { localizePath, type Locale } from "@/marketing/i18n"
 import { appSignupUrl } from "@/marketing/lib/app-links"
-import { getMcpCopy, mcpClientOrder, MCP_SERVER_URL, mcpDocsUrl, mcpToolGroupOrder, mcpToolGroups } from "@/marketing/lib/mcp-page-copy"
+import { getMcpCopy, mcpAgencyDocsUrl, mcpClientOrder, MCP_SERVER_URL, mcpDocsUrl, mcpToolGroupOrder, mcpToolGroups } from "@/marketing/lib/mcp-page-copy"
 import { getMcpFaqs } from "@/marketing/lib/mcp-page-faqs"
 import { absoluteUrl } from "@/marketing/lib/seo"
 
@@ -67,6 +67,14 @@ ${points(copy.control.points)}
 ${copy.tools.intro}
 
 ${tools}
+
+## ${copy.agencies.title}
+
+${copy.agencies.body}
+
+${points(copy.agencies.points)}
+
+- ${copy.agencies.cta}: ${mcpAgencyDocsUrl(locale)}
 
 ## ${copy.connect.title}
 

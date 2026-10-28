@@ -23,6 +23,7 @@ import { getCopy, type Locale } from "@/marketing/i18n"
 import { appSignupUrl } from "@/marketing/lib/app-links"
 import {
   getMcpCopy,
+  mcpAgencyDocsUrl,
   MCP_SERVER_URL,
   mcpClientOrder,
   mcpDocsUrl,
@@ -230,6 +231,23 @@ export function McpTools({ locale }: SectionProps) {
             ),
           }))}
         />
+      </div>
+    </section>
+  )
+}
+
+export function McpAgencies({ locale }: SectionProps) {
+  const t = getMcpCopy(locale).agencies
+  return (
+    <section className="pt-20 md:pt-30" id="agencies">
+      <div className={container}>
+        <div className="mx-auto max-w-[44rem]">
+          <SectionTitle eyebrow={t.eyebrow} lines={[t.title]} intro={t.body} />
+          <Points points={t.points} />
+          <ButtonLink className="mt-8" href={mcpAgencyDocsUrl(locale)} variant="secondary">
+            {t.cta}
+          </ButtonLink>
+        </div>
       </div>
     </section>
   )

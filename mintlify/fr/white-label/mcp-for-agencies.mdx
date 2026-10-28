@@ -1,0 +1,163 @@
+---
+title: "Gérer la console partenaire depuis un assistant IA"
+description: "Connectez Claude, ChatGPT, Codex, Cursor ou un autre client MCP à votre partenaire, puis créez des démos, configurez des entreprises et gérez votre équipe depuis le clavardage."
+sidebarTitle: "Assistants IA"
+contentType: "How-to"
+---
+
+Connectez un assistant IA au [serveur MCP](/fr/ai/mcp) de LobbyStack au nom de votre partenaire, et il fait le travail de la console à votre place. Demandez-lui de « créer une démo pour joesplumbing.com, puis de configurer l'entreprise de Joe à partir du modèle CVC avec la formule Pro » : il appelle les mêmes opérations que la console, avec les mêmes règles.
+
+Une connexion partenaire atteint toutes les entreprises que vous gérez. Chaque outil qui travaille dans une entreprise demande donc son identifiant. Elle n'atteint aucune entreprise d'un autre partenaire.
+
+## Se connecter
+
+Utilisez la même URL de serveur que pour une connexion d'entreprise :
+
+| Réglage | Valeur |
+| --- | --- |
+| URL du serveur | `https://app.lobbystack.com/api/mcp` |
+| Transport | Streamable HTTP |
+| Authentification | Connexion avec LobbyStack (OAuth), ou `Authorization: Bearer <clé de plateforme>` |
+
+Les déploiements autohébergés servent le même chemin sur leur propre domaine.
+
+### Se connecter avec LobbyStack
+
+Utilisez cette méthode pour Claude, ChatGPT, Claude Code, Codex, Cursor et VS Code. Pour ajouter le serveur, suivez les mêmes étapes que pour [Claude](/fr/ai/connect-claude), [ChatGPT](/fr/ai/connect-chatgpt) et les [autres clients](/fr/ai/connect-other-clients).
+
+<Steps>
+  <Step title="Ajouter le serveur">
+    Ajoutez `https://app.lobbystack.com/api/mcp` à votre assistant. Il ouvre une page LobbyStack dans votre navigateur.
+  </Step>
+  <Step title="Choisir votre partenaire">
+    Connectez-vous avec le compte que vous utilisez pour la console partenaire. Sous **Connecter à**, choisissez votre partenaire dans **Vos agences**. Un partenaire n'apparaît qu'aux personnes de son équipe.
+  </Step>
+  <Step title="Choisir ce que l'assistant peut faire">
+    Toutes les autorisations demandées par l'assistant sont cochées au départ. Décochez celles que vous ne voulez pas, puis cliquez sur **Autoriser l'accès**. Seuls les propriétaires voient les autorisations de facturation.
+  </Step>
+</Steps>
+
+La connexion vous appartient, à vous et à votre partenaire. Elle agit avec votre rôle dans l'équipe au moment de chaque requête : un changement de rôle s'applique dès la requête suivante de l'assistant.
+
+### Utiliser une clé de plateforme
+
+Utilisez cette méthode pour les scripts, l'intégration continue et les clients qui permettent de définir des en-têtes de requête sans pouvoir se connecter avec OAuth. Créez une clé sur la page **Clés API** de la console, comme le décrit [Automatiser la configuration avec des clés de plateforme](/fr/white-label/api-keys), et envoyez-la comme `Authorization: Bearer lsp_...`. Une clé agit au nom de votre partenaire avec les droits d'un administrateur, et son accès décide des outils qu'elle reçoit.
+
+Les clés de plateforme de l'hôte ne peuvent pas utiliser le serveur MCP, et le serveur MCP ne peut ni créer ni révoquer de clés de plateforme.
+
+## Ce que l'assistant peut faire
+
+L'assistant reçoit les outils que ses autorisations permettent, et votre rôle décide du reste, comme dans la console :
+
+| Qui | Ce que les outils permettent |
+| --- | --- |
+| Membre | Lire le partenaire et ses entreprises, travailler dans les entreprises, et créer, publier et désactiver des démos |
+| Administrateur | Tout ce que fait un membre, plus créer, céder et supprimer des entreprises, et gérer les formules, les modèles, l'image de marque, le domaine et l'équipe |
+| Propriétaire | Tout ce que fait un administrateur, plus Stripe, le palier et le dépassement de la réserve |
+| Clé de plateforme | Ce que fait un administrateur. Elle atteint Stripe et la facturation seulement avec l'accès à la facturation qu'un propriétaire lui a donné, tant que cette personne reste propriétaire. |
+
+Un outil que votre rôle ne permet pas renvoie `forbidden`. Une clé ne peut ni inviter un propriétaire ni changer le rôle d'un propriétaire, et l'assistant non plus : faites-le dans la console.
+
+## Travailler dans une entreprise
+
+Les [outils d'entreprise](/fr/ai/mcp#outils), comme `get_business`, `list_calls` et `book_appointment`, prennent un `business_id` sur une connexion partenaire. Demandez à l'assistant d'appeler `list_businesses` d'abord, ou donnez-lui le nom de l'entreprise. Une entreprise d'un autre partenaire, ou un identifiant qui n'existe pas, renvoie `not_found`.
+
+Quand vous vous connectez avec OAuth, l'assistant ouvre l'entreprise comme le fait la console, et le journal d'audit de l'entreprise consigne l'ouverture avec votre nom et votre rôle. Ses propriétaires et ses administrateurs voient la visite dans **Réglages** > **Accès du partenaire**. Votre accès dure 8 heures, et l'assistant rouvre l'entreprise au besoin. Vous avez un accès complet quel que soit le niveau d'accès de l'entreprise, mais la facturation, les clés API et MCP restent fermés à votre équipe, comme le décrit [Créer et gérer les entreprises de vos clients](/fr/white-label/businesses).
+
+Une clé de plateforme atteint une entreprise sans l'ouvrir, comme par l'API.
+
+## Déconnecter
+
+Les connexions de votre partenaire figurent sur la page **Clés API** de la console, sous **Connexions de l'agence**, avec la personne qui a connecté chacune, ses autorisations et la date de sa dernière requête. Les propriétaires et les administrateurs les voient toutes. Les autres personnes voient les leurs.
+
+Cliquez sur **Déconnecter**, puis de nouveau sur **Déconnecter** pour confirmer. L'assistant perd l'accès aussitôt. Retirer quelqu'un de votre équipe met fin à ses connexions, et une personne qui part ne peut plus se reconnecter à votre partenaire. Pour arrêter une clé de plateforme, révoquez-la sur la même page.
+
+## Exemple
+
+> Crée une démo pour joesplumbing.com, puis configure l'entreprise de Joe à partir du modèle CVC avec la formule Pro. Envoie l'invitation à joe@joesplumbing.com.
+
+L'assistant appelle `create_demo`, attend avec `get_demo` que la démo soit prête, puis la publie avec `publish_demo`. Il trouve ensuite le modèle avec `list_templates` et la formule avec `list_packages`, puis appelle `create_business` avec les deux. Il vous demande votre accord avant de créer l'entreprise, puisque la création envoie un courriel à Joe.
+
+## Outils
+
+En plus des outils d'entreprise, une connexion partenaire reçoit ceux-ci. Les outils marqués destructifs suppriment, cèdent, révoquent ou retirent quelque chose. Ils portent l'annotation `destructiveHint`, pour que votre assistant vous demande votre accord avant de les lancer.
+
+### Votre partenaire et ses entreprises
+
+| Outil | Portée | Ce qu'il fait |
+| --- | --- | --- |
+| `get_partner` | `partner:read` | Le nom, les adresses et le palier de votre partenaire, et la réserve du mois avec l'accès à la facturation |
+| `list_businesses` | `partner:read` | Vos entreprises avec leurs propriétaires, leurs niveaux d'accès et leur utilisation, et leur facturation pour les propriétaires et les administrateurs |
+| `create_business` | `businesses:create` | Crée une entreprise et invite son propriétaire. `template_id` demande aussi `partner:read`, et `package_id` demande `partner.businesses:write`. |
+| `release_business` | `partner.businesses:write` | Cède une entreprise à son propriétaire. Destructif. |
+| `delete_business` | `partner.businesses:write` | Supprime une entreprise et tout son contenu. Destructif. |
+| `get_business_billing` | `partner:read` | La formule d'une entreprise, l'état de son abonnement et son dépassement |
+| `set_business_billing` | `partner.businesses:write` | Choisit la formule et le dépassement d'une entreprise |
+
+### Démos
+
+| Outil | Portée | Ce qu'il fait |
+| --- | --- | --- |
+| `create_demo` | `partner.demos:write` | Crée une démo à partir du site Web d'un prospect |
+| `list_demos` | `partner:read` | Vos démos avec leur état et leur utilisation |
+| `get_demo` | `partner:read` | Une démo, avec ce que la publication attend |
+| `publish_demo` | `partner.demos:write` | Ouvre une démo prête au prospect |
+| `rotate_demo_link` | `partner.demos:write` | Donne un nouveau lien à une démo. L'ancien cesse de fonctionner. Destructif. |
+| `revoke_demo` | `partner.demos:write` | Désactive une démo. Destructif. |
+| `delete_demo` | `partner.demos:write` | Supprime une démo que personne n'a réclamée, une fois désactivée ou expirée. Destructif. |
+
+### Formules
+
+| Outil | Portée | Ce qu'il fait |
+| --- | --- | --- |
+| `list_packages` | `partner:read` | Vos formules avec leurs prix et leurs allocations |
+| `create_package` | `partner.packages:write` | Crée une formule |
+| `rename_package` | `partner.packages:write` | Renomme une formule |
+| `archive_package` | `partner.packages:write` | Arrête la vente d'une formule. Destructif. |
+
+### Image de marque et domaine
+
+| Outil | Portée | Ce qu'il fait |
+| --- | --- | --- |
+| `get_brand` | `partner:read` | Votre nom, votre logo, votre couleur, vos liens et votre courriel de soutien |
+| `update_brand` | `partner.branding:write` | Change les champs envoyés. Le logo et le favicon s'envoient en base64. |
+| `get_domains` | `partner:read` | Votre sous-domaine et votre propre domaine, avec ses enregistrements DNS |
+| `add_domain` | `partner.branding:write` | Connecte votre propre domaine |
+| `remove_domain` | `partner.branding:write` | Retire votre propre domaine. Destructif. |
+
+### Modèles
+
+| Outil | Portée | Ce qu'il fait |
+| --- | --- | --- |
+| `save_template` | `partner.templates:write` | Enregistre la configuration d'une entreprise comme modèle |
+| `list_templates` | `partner:read` | Vos modèles |
+| `delete_template` | `partner.templates:write` | Supprime un modèle. Destructif. |
+
+### Équipe
+
+| Outil | Portée | Ce qu'il fait |
+| --- | --- | --- |
+| `get_team` | `partner:read` | Votre équipe et ses invitations en attente |
+| `invite_team_member` | `partner.team:write` | Invite un administrateur ou un membre |
+| `change_team_member_role` | `partner.team:write` | Nomme quelqu'un administrateur ou membre |
+| `remove_team_member` | `partner.team:write` | Retire quelqu'un de votre équipe. Destructif. |
+| `revoke_team_invitation` | `partner.team:write` | Révoque une invitation que personne n'a acceptée. Destructif. |
+
+### Paiements et facturation
+
+Seuls les propriétaires les atteignent, et une clé de plateforme seulement avec l'accès à la facturation. `partner.billing:write` inclut `partner.billing:read`.
+
+| Outil | Portée | Ce qu'il fait |
+| --- | --- | --- |
+| `get_stripe_status` | `partner.billing:read` | Si votre compte Stripe est connecté et accepte les paiements |
+| `create_stripe_onboarding_link` | `partner.billing:write` | Une page Stripe pour connecter ou terminer votre compte |
+| `get_billing` | `partner.billing:read` | Votre palier, vos numéros, la réserve et son dépassement |
+| `set_pool_overage` | `partner.billing:write` | Active ou désactive le dépassement de la réserve et fixe son plafond |
+| `create_tier_checkout` | `partner.billing:write` | Lance un paiement pour un palier |
+| `get_tier_checkout` | `partner.billing:read` | L'état d'un paiement de palier et, une fois prêt, sa page |
+
+L'assistant vous montre les liens, comme une page d'inscription Stripe, un paiement de palier ou une page de démo. Ouvrez-les vous-même dans votre navigateur.
+
+## Limites
+
+Chaque appel d'outil compte dans une limite de 120 requêtes par minute. Une clé de plateforme partage sa limite avec ses requêtes API, et chaque connexion OAuth a la sienne. Les nouvelles entreprises, démos, modèles et invitations d'équipe comptent aussi dans les limites horaires de la console et de l'API : par personne pour une connexion OAuth, et partagées par vos clés pour une clé de plateforme.

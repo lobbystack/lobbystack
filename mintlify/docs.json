@@ -152,6 +152,7 @@
               "white-label/packages",
               "white-label/tiers",
               "white-label/api-keys",
+              "white-label/mcp-for-agencies",
               "white-label/settings",
               "white-label/business-owners"
             ]
@@ -299,6 +300,7 @@
               "fr/white-label/packages",
               "fr/white-label/tiers",
               "fr/white-label/api-keys",
+              "fr/white-label/mcp-for-agencies",
               "fr/white-label/settings",
               "fr/white-label/business-owners"
             ]
@@ -449,6 +451,7 @@
               "es/white-label/packages",
               "es/white-label/tiers",
               "es/white-label/api-keys",
+              "es/white-label/mcp-for-agencies",
               "es/white-label/settings",
               "es/white-label/business-owners"
             ]

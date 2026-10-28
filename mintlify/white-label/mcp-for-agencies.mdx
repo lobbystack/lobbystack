@@ -1,0 +1,163 @@
+---
+title: "Run the partner console from an AI assistant"
+description: "Connect Claude, ChatGPT, Codex, Cursor or another MCP client to your partner, then make demos, set up businesses and manage your team from chat."
+sidebarTitle: "AI assistants"
+contentType: "How-to"
+---
+
+Connect an AI assistant to LobbyStack's [MCP server](/ai/mcp) as your partner, and it does the console's work for you in chat. Ask it to "make a demo for joesplumbing.com, then set up Joe's business from the HVAC template on the Pro package", and it calls the same operations the console does, with the same rules.
+
+A partner connection reaches every business you run, so each tool that works inside one business asks for its ID. It reaches none of another partner's businesses.
+
+## Connect
+
+Use the same server URL as a business connection:
+
+| Setting | Value |
+| --- | --- |
+| Server URL | `https://app.lobbystack.com/api/mcp` |
+| Transport | Streamable HTTP |
+| Authentication | Sign in with LobbyStack (OAuth), or `Authorization: Bearer <platform key>` |
+
+Self-hosted deployments serve the same path on their own domain.
+
+### Sign in with LobbyStack
+
+Use this for Claude, ChatGPT, Claude Code, Codex, Cursor and VS Code. The steps to add the server are the same as for [Claude](/ai/connect-claude), [ChatGPT](/ai/connect-chatgpt) and [other clients](/ai/connect-other-clients).
+
+<Steps>
+  <Step title="Add the server">
+    Add `https://app.lobbystack.com/api/mcp` to your assistant. It opens a LobbyStack page in your browser.
+  </Step>
+  <Step title="Pick your partner">
+    Sign in with the account you use for the partner console. Under **Connect to**, pick your partner from **Your agencies**. Partners show only for people on their team.
+  </Step>
+  <Step title="Choose what the assistant can do">
+    Every permission the assistant asked for starts checked. Uncheck the ones you don't want, then click **Allow access**. Only owners see the billing permissions.
+  </Step>
+</Steps>
+
+The connection belongs to you and your partner. It acts with your role on the team at the time of each request, so a change to your role applies to the assistant's next request.
+
+### Use a platform key
+
+Use this for scripts, CI, and clients that let you set request headers but can't sign in with OAuth. Make a key on the console's **API keys** page, as [Automate setup with platform keys](/white-label/api-keys) describes, and send it as `Authorization: Bearer lsp_...`. A key acts as your partner with an admin's rights, and its access decides which tools it gets.
+
+The host's own platform keys can't use the MCP server, and the MCP server can't make or revoke platform keys.
+
+## What the assistant can do
+
+The assistant gets the tools its permissions allow, and your role decides the rest, as in the console:
+
+| Who | What the tools let them do |
+| --- | --- |
+| Member | Read the partner and its businesses, work inside businesses, and make, publish and turn off demos |
+| Admin | Everything a member does, plus create, release and delete businesses, and manage packages, templates, brand, domain and the team |
+| Owner | Everything an admin does, plus Stripe, the tier and the pool's overage |
+| Platform key | What an admin does. It reaches Stripe and billing only with the billing access an owner gave it, while that owner is still an owner. |
+
+A tool your role doesn't allow returns `forbidden`. A key can't invite an owner or change an owner's role, and neither can the assistant: do those in the console.
+
+## Work inside a business
+
+The [per-business tools](/ai/mcp#tools), such as `get_business`, `list_calls` and `book_appointment`, take a `business_id` on a partner connection. Ask the assistant to call `list_businesses` first, or give it the business by name. A business of another partner, or an ID that doesn't exist, returns `not_found`.
+
+When you sign in with OAuth, the assistant opens the business the way the console does, and the business's audit log records it with your name and role. Its owners and admins see the visit in **Settings** > **Partner access**. Your access lasts 8 hours, and the assistant opens the business again when it needs to. You get full access whatever the business's access level, but billing, API keys and MCP stay closed to your team, as [Create and run your clients' businesses](/white-label/businesses) describes.
+
+A platform key reaches a business without an open, as it does through the API.
+
+## Disconnect
+
+Your partner's connections show on the console's **API keys** page, under **Agency connections**, with who connected each one, its permissions and when it last made a request. Owners and admins see every one. Everyone else sees their own.
+
+Click **Disconnect**, then **Disconnect** again to confirm. The assistant loses access at once. Removing someone from your team ends their connections too, and a person who leaves can't reconnect to your partner. To stop a platform key, revoke it on the same page.
+
+## Example
+
+> Make a demo for joesplumbing.com, then set up Joe's business from the HVAC template on the Pro package. Send the invitation to joe@joesplumbing.com.
+
+The assistant calls `create_demo`, waits with `get_demo` until the demo is ready, and publishes it with `publish_demo`. It then finds the template with `list_templates` and the package with `list_packages`, and calls `create_business` with both. It asks you before it creates the business, since that emails Joe.
+
+## Tools
+
+On top of the per-business tools, a partner connection gets these. Tools marked destructive delete, release, revoke or remove something. They carry the `destructiveHint` annotation, so your assistant asks you before it runs them.
+
+### Your partner and its businesses
+
+| Tool | Scope | What it does |
+| --- | --- | --- |
+| `get_partner` | `partner:read` | Your partner's name, addresses and tier, and this month's pool with billing access |
+| `list_businesses` | `partner:read` | Your businesses with their owners, access levels and usage, and their billing for owners and admins |
+| `create_business` | `businesses:create` | Creates a business and invites its owner. `template_id` also needs `partner:read`, and `package_id` needs `partner.businesses:write`. |
+| `release_business` | `partner.businesses:write` | Hands a business over to its owner. Destructive. |
+| `delete_business` | `partner.businesses:write` | Deletes a business and everything in it. Destructive. |
+| `get_business_billing` | `partner:read` | A business's package, subscription status and overage |
+| `set_business_billing` | `partner.businesses:write` | Sets a business's package and overage |
+
+### Demos
+
+| Tool | Scope | What it does |
+| --- | --- | --- |
+| `create_demo` | `partner.demos:write` | Makes a demo from a prospect's website |
+| `list_demos` | `partner:read` | Your demos with their status and usage |
+| `get_demo` | `partner:read` | One demo, with what publishing waits for |
+| `publish_demo` | `partner.demos:write` | Opens a ready demo to the prospect |
+| `rotate_demo_link` | `partner.demos:write` | Gives a demo a new link. The old one stops working. Destructive. |
+| `revoke_demo` | `partner.demos:write` | Turns a demo off. Destructive. |
+| `delete_demo` | `partner.demos:write` | Deletes a demo nobody claimed, once it's off or expired. Destructive. |
+
+### Packages
+
+| Tool | Scope | What it does |
+| --- | --- | --- |
+| `list_packages` | `partner:read` | Your packages with their prices and allowances |
+| `create_package` | `partner.packages:write` | Makes a package |
+| `rename_package` | `partner.packages:write` | Renames a package |
+| `archive_package` | `partner.packages:write` | Stops selling a package. Destructive. |
+
+### Brand and domain
+
+| Tool | Scope | What it does |
+| --- | --- | --- |
+| `get_brand` | `partner:read` | Your name, logo, color, links and support email |
+| `update_brand` | `partner.branding:write` | Changes the fields you send. The logo and favicon go in base64. |
+| `get_domains` | `partner:read` | Your subdomain and your own domain, with its DNS records |
+| `add_domain` | `partner.branding:write` | Connects your own domain |
+| `remove_domain` | `partner.branding:write` | Removes your own domain. Destructive. |
+
+### Templates
+
+| Tool | Scope | What it does |
+| --- | --- | --- |
+| `save_template` | `partner.templates:write` | Saves a business's setup as a template |
+| `list_templates` | `partner:read` | Your templates |
+| `delete_template` | `partner.templates:write` | Deletes a template. Destructive. |
+
+### Team
+
+| Tool | Scope | What it does |
+| --- | --- | --- |
+| `get_team` | `partner:read` | Your team and its open invitations |
+| `invite_team_member` | `partner.team:write` | Invites an admin or a member |
+| `change_team_member_role` | `partner.team:write` | Makes someone an admin or a member |
+| `remove_team_member` | `partner.team:write` | Removes someone from your team. Destructive. |
+| `revoke_team_invitation` | `partner.team:write` | Revokes an invitation nobody accepted. Destructive. |
+
+### Payments and billing
+
+Only owners reach these, and a platform key only with billing access. `partner.billing:write` includes `partner.billing:read`.
+
+| Tool | Scope | What it does |
+| --- | --- | --- |
+| `get_stripe_status` | `partner.billing:read` | Whether your Stripe account is connected and takes payments |
+| `create_stripe_onboarding_link` | `partner.billing:write` | A Stripe page to connect or finish your account |
+| `get_billing` | `partner.billing:read` | Your tier, numbers, pool and the pool's overage |
+| `set_pool_overage` | `partner.billing:write` | Turns the pool's overage on or off and sets its cap |
+| `create_tier_checkout` | `partner.billing:write` | Starts a checkout for a tier |
+| `get_tier_checkout` | `partner.billing:read` | A tier checkout's status and, once ready, its page |
+
+The assistant shows you links such as a Stripe onboarding page, a tier checkout or a demo page. Open them yourself in your browser.
+
+## Limits
+
+Each tool call counts against 120 requests a minute. A platform key shares its limit with its API requests, and each OAuth connection has its own. New businesses, demos, templates and team invitations also count against the hourly limits the console and the API use: per person for an OAuth connection, and shared by your keys for a platform key.

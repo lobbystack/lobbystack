@@ -9,6 +9,8 @@ LobbyStack exploite un serveur Model Context Protocol (MCP). Connectez-y un assi
 
 L'assistant suit les mêmes règles que l'[API REST](/fr/api/overview). Il voit une seule entreprise, il ne peut faire que ce que sa clé API autorise, et chaque modification qu'il fait est inscrite dans le journal d'audit de l'entreprise.
 
+Les partenaires en marque blanche peuvent connecter un assistant à leur partenaire plutôt qu'à une seule entreprise. L'assistant reçoit alors aussi les outils de la console partenaire, et passe un `business_id` à chaque outil ci-dessous. Consultez [Gérer la console partenaire depuis un assistant IA](/fr/white-label/mcp-for-agencies).
+
 ## Se connecter
 
 | Paramètre | Valeur |
@@ -33,7 +35,7 @@ LobbyStack exploite un serveur d'autorisation OAuth 2.1 pour les clients MCP, co
 Lors de la connexion, LobbyStack vous demande de :
 
 1. Vous connecter, si ce n'est pas déjà fait.
-2. Choisir l'entreprise. Vous ne voyez que les entreprises dont vous êtes propriétaire ou administrateur.
+2. Choisir l'entreprise. Vous ne voyez que les entreprises dont vous êtes propriétaire ou administrateur. Si vous faites partie de l'équipe d'un partenaire en marque blanche, vous pouvez plutôt choisir ce partenaire sous **Vos agences**.
 3. Choisir ce que l'assistant peut faire. Chaque autorisation qu'il a demandée est cochée au départ ; décochez celles que vous ne voulez pas accorder.
 
 L'assistant obtient alors l'accès à cette seule entreprise. Les jetons d'accès durent une heure, et l'assistant les renouvelle sans vous redemander votre accord tant que la période d'inactivité ne dépasse pas 30 jours. Chaque renouvellement remplace le jeton d'actualisation précédent, et la réutilisation d'un ancien jeton met fin à la connexion.
@@ -78,7 +80,7 @@ Les propriétaires et les administrateurs voient tous les assistants connectés 
 | `list_messages` | `messages:read` | Messages que le réceptionniste a pris pour votre équipe |
 | `add_knowledge` | `knowledge:write` | Ajoute une FAQ ou un texte que le réceptionniste peut utiliser |
 
-Les portées sont les mêmes pour OAuth et pour les clés API. Les outils renvoient les mêmes objets que l'API REST, avec les heures en UTC. Les outils en lecture seule portent l'annotation `readOnlyHint`, et les outils qui annulent, déplacent ou remplacent des données portent `destructiveHint`, pour que votre assistant puisse vous demander votre accord avant de les exécuter.
+Sur une connexion partenaire, chacun de ces outils prend aussi un `business_id`, et les outils partenaire de [Gérer la console partenaire depuis un assistant IA](/fr/white-label/mcp-for-agencies#outils) s'y ajoutent. Les portées sont les mêmes pour OAuth et pour les clés API. Les outils renvoient les mêmes objets que l'API REST, avec les heures en UTC. Les outils en lecture seule portent l'annotation `readOnlyHint`, et les outils qui annulent, déplacent ou remplacent des données portent `destructiveHint`, pour que votre assistant puisse vous demander votre accord avant de les exécuter.
 
 La portée `webhooks:manage` n'a aucun outil MCP. Une clé qui n'a que cette portée ne peut pas se connecter.
 

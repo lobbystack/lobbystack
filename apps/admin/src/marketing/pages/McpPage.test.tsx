@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest"
 import { mcpTools } from "@/lib/mcp/tools"
 import { getRouteSeo, SUPPORTED_LOCALES, translatedBasePaths, type Locale } from "@/marketing/i18n"
 import { markdownAlternatePath } from "@/marketing/lib/agent-discovery"
-import { getMcpCopy, MCP_SERVER_URL, mcpToolGroups } from "@/marketing/lib/mcp-page-copy"
+import { getMcpCopy, mcpAgencyDocsUrl, MCP_SERVER_URL, mcpToolGroups } from "@/marketing/lib/mcp-page-copy"
 import { getMcpFaqs } from "@/marketing/lib/mcp-page-faqs"
 import { mcpMarkdown } from "@/marketing/lib/mcp-page-markdown"
 import { publicPages } from "@/marketing/lib/pages"
@@ -33,6 +33,17 @@ describe("MCP server page", () => {
     const html = render(locale)
     for (const tool of mcpTools) expect(html).toContain(tool.name)
     expect(html).toContain(MCP_SERVER_URL)
+  })
+
+  it.each(SUPPORTED_LOCALES)("shows the section for agencies in %s, linking to their guide", async (locale) => {
+    const copy = getMcpCopy(locale).agencies
+    const html = render(locale)
+    expect(html).toContain('id="agencies"')
+    expect(text(html)).toContain(copy.title)
+    expect(html).toContain(`href="${mcpAgencyDocsUrl(locale)}"`)
+    const body = await (await markdownTwin(locale, "features/mcp"))?.text()
+    expect(body).toContain(copy.title)
+    expect(body).toContain(mcpAgencyDocsUrl(locale))
   })
 
   it("puts the main keyword in the English title and the page text", () => {

@@ -9,6 +9,8 @@ LobbyStack ejecuta un servidor de Model Context Protocol (MCP). Conecte un asist
 
 El asistente sigue las mismas reglas que la [API REST](/es/api/overview). Ve un solo negocio, solo puede hacer lo que permite su clave de API y cada cambio que hace queda en el registro de auditoría del negocio.
 
+Los socios de marca blanca pueden conectar un asistente a su cuenta de socio en lugar de a un solo negocio. El asistente recibe entonces también las herramientas de la consola de socios, y pasa un `business_id` a cada herramienta de abajo. Consulte [Gestione la consola de socios desde un asistente de IA](/es/white-label/mcp-for-agencies).
+
 ## Conexión
 
 | Ajuste | Valor |
@@ -33,7 +35,7 @@ LobbyStack ejecuta un servidor de autorización OAuth 2.1 para clientes MCP, com
 Al conectarse, LobbyStack le pide que:
 
 1. Inicie sesión, si aún no lo ha hecho.
-2. Elija el negocio. Solo ve los negocios en los que es propietario o administrador.
+2. Elija el negocio. Solo ve los negocios en los que es propietario o administrador. Si forma parte del equipo de un socio de marca blanca, puede elegir ese socio en **Sus agencias**.
 3. Elija qué puede hacer el asistente. Todos los permisos que solicitó aparecen marcados; desmarque los que no quiera conceder.
 
 El asistente obtiene entonces acceso a ese único negocio. Los tokens de acceso duran una hora, y el asistente los renueva durante un máximo de 30 días de inactividad sin volver a preguntarle. Cada renovación reemplaza el token de actualización anterior, y reutilizar uno antiguo termina la conexión.
@@ -78,7 +80,7 @@ Los propietarios y administradores ven todos los asistentes conectados al negoci
 | `list_messages` | `messages:read` | Mensajes que la recepcionista tomó para su equipo |
 | `add_knowledge` | `knowledge:write` | Agrega una pregunta frecuente o un texto que la recepcionista puede usar |
 
-Los permisos (scopes) son los mismos para OAuth y para las claves de API. Las herramientas devuelven los mismos objetos que la API REST, con las horas en UTC. Las herramientas de solo lectura llevan la anotación `readOnlyHint`, y las que cancelan, mueven o reemplazan datos llevan `destructiveHint`, para que su asistente pueda pedirle confirmación antes de ejecutarlas.
+En una conexión de socio, cada una de estas herramientas también recibe un `business_id`, y se suman las herramientas de socio de [Gestione la consola de socios desde un asistente de IA](/es/white-label/mcp-for-agencies#herramientas). Los permisos (scopes) son los mismos para OAuth y para las claves de API. Las herramientas devuelven los mismos objetos que la API REST, con las horas en UTC. Las herramientas de solo lectura llevan la anotación `readOnlyHint`, y las que cancelan, mueven o reemplazan datos llevan `destructiveHint`, para que su asistente pueda pedirle confirmación antes de ejecutarlas.
 
 El permiso `webhooks:manage` no tiene herramientas MCP. Una clave que solo tiene ese permiso no puede conectarse.
 

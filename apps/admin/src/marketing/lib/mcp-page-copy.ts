@@ -73,6 +73,8 @@ export type McpCopy = {
     intro: string
     groups: Record<McpToolGroupKey, { title: string; body: string }>
   }
+  /** White label partners, who connect an assistant to their partner instead of one business. */
+  agencies: Split & { cta: string }
   /** The install block under the hero. Text between backticks renders as code. */
   connect: {
     title: string
@@ -187,6 +189,17 @@ const en: McpCopy = {
         body: "Read your hours, services, staff and booking mode, replace the week's opening hours, and add an FAQ or text entry your receptionist answers from.",
       },
     },
+  },
+  agencies: {
+    eyebrow: "For agencies",
+    title: "Run your white label clients from chat",
+    body: "If you resell LobbyStack under your own brand, connect the assistant to your partner instead of one business. Ask it to make a demo from a prospect's website, set up a client from a template on one of your packages, or invite a teammate. It acts with your role on the team.",
+    points: [
+      "Sign in and pick your agency on the consent page, or use a partner platform key",
+      "Tools for demos, client businesses, packages, templates, branding and your team, with billing for owners",
+      "Each client tool takes the business to work on, and reaches only your own clients",
+    ],
+    cta: "Read the agency guide",
   },
   connect: {
     title: "Install",
@@ -342,6 +355,17 @@ const fr: McpCopy = {
       },
     },
   },
+  agencies: {
+    eyebrow: "Pour les agences",
+    title: "Gérez vos clients en marque blanche depuis le clavardage",
+    body: "Si vous revendez LobbyStack sous votre propre marque, connectez l'assistant à votre partenaire plutôt qu'à une seule entreprise. Demandez-lui de créer une démo à partir du site d'un prospect, de configurer un client à partir d'un modèle avec l'une de vos formules, ou d'inviter un collègue. Il agit avec votre rôle dans l'équipe.",
+    points: [
+      "Connectez-vous et choisissez votre agence sur la page de consentement, ou utilisez une clé de plateforme partenaire",
+      "Des outils pour les démos, les entreprises clientes, les formules, les modèles, l'image de marque et votre équipe, et la facturation pour les propriétaires",
+      "Chaque outil client prend l'entreprise visée et n'atteint que vos propres clients",
+    ],
+    cta: "Lire le guide des agences",
+  },
   connect: {
     title: "Installation",
     copy: "Copier",
@@ -495,6 +519,17 @@ const es: McpCopy = {
         body: "Lea su horario, servicios, personal y modo de reserva, reemplace el horario de la semana y agregue una pregunta frecuente o un texto con el que responde su recepcionista.",
       },
     },
+  },
+  agencies: {
+    eyebrow: "Para agencias",
+    title: "Gestione sus clientes de marca blanca desde el chat",
+    body: "Si revende LobbyStack con su propia marca, conecte el asistente a su cuenta de socio en lugar de a un solo negocio. Pídale que cree una demo a partir del sitio web de un cliente potencial, que configure un cliente con una plantilla y uno de sus paquetes, o que invite a un compañero. Actúa con su rol en el equipo.",
+    points: [
+      "Inicie sesión y elija su agencia en la página de consentimiento, o use una clave de plataforma de socio",
+      "Herramientas para demos, negocios clientes, paquetes, plantillas, marca y su equipo, y la facturación para los propietarios",
+      "Cada herramienta de cliente recibe el negocio con el que trabajar y solo llega a sus propios clientes",
+    ],
+    cta: "Leer la guía para agencias",
   },
   connect: {
     title: "Instalación",
@@ -650,6 +685,17 @@ const sr: McpCopy = {
       },
     },
   },
+  agencies: {
+    eyebrow: "Za agencije",
+    title: "Vodite svoje white-label klijente iz četa",
+    body: "Ako prodajete LobbyStack pod svojim brendom, povežite asistenta sa partnerskim nalogom umesto sa jednom firmom. Zamolite ga da napravi demo od sajta potencijalnog klijenta, da podesi klijenta iz šablona na jednom od Vaših paketa ili da pozove kolegu. Radi sa Vašom ulogom u timu.",
+    points: [
+      "Prijavite se i izaberite svoju agenciju na stranici za saglasnost, ili koristite partnerski platformski ključ",
+      "Alati za demo verzije, firme klijenata, pakete, šablone, brend i Vaš tim, uz naplatu za vlasnike",
+      "Svaki alat za klijente prima firmu sa kojom radi i dopire samo do Vaših klijenata",
+    ],
+    cta: "Pročitajte vodič za agencije",
+  },
   connect: {
     title: "Instalacija",
     copy: "Kopiraj",
@@ -734,6 +780,12 @@ export function getMcpCopy(locale: Locale): McpCopy {
 }
 
 /** The docs guide for a page, in the docs' language when it has one. Serbian readers get English docs. */
+/** The Help Center guide for agencies, which lives with the white label pages. */
+export function mcpAgencyDocsUrl(locale: Locale) {
+  const prefix = locale === "fr" || locale === "es" ? `/${locale}` : ""
+  return `https://docs.lobbystack.com${prefix}/white-label/mcp-for-agencies`
+}
+
 export function mcpDocsUrl(locale: Locale, page: "mcp" | "connect-claude" | "connect-chatgpt" | "connect-other-clients") {
   const prefix = locale === "fr" || locale === "es" ? `/${locale}` : ""
   return `https://docs.lobbystack.com${prefix}/ai/${page}`
