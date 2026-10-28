@@ -55,7 +55,7 @@ Klijenti retko imaju ista pravila zakazivanja, usmeravanja ili eskalacije. Ordin
 
 ### Vodite sopstveni hostovani proizvod
 
-MIT licenca dozvoljava firmi da vodi posebnu hostovanu izvedenu verziju i prodaje pristup pod sopstvenim uslovima. Na tom putu je Vaš tim odgovoran za pakovanje ponude, podršku klijentima, naplatu provajdera, bezbednost i rad sistema. Kod daje osnovu proizvoda za recepciju, a Vaš tim daje komercijalnu uslugu oko nje. Da biste preprodavali bez sopstvenih servera, pridružite se [white-label partnerskom programu](/sr/white-label/). Vaši klijenti vide Vaš brend na svojoj kontrolnoj tabli, a Vi im naplaćujete preko svog Stripe naloga.
+MIT licenca dozvoljava firmi da vodi posebnu hostovanu izvedenu verziju i prodaje pristup pod sopstvenim uslovima. Na tom putu je Vaš tim odgovoran za pakovanje ponude, podršku klijentima, naplatu provajdera, bezbednost i rad sistema. Kod daje osnovu proizvoda za recepciju, a Vaš tim daje komercijalnu uslugu oko nje. Da biste preprodavali bez sopstvenih servera, pridružite se [white-label partnerskom programu](/sr/white-label/). Vaši klijenti vide Vaš brend na svojoj kontrolnoj tabli, a Vi im naplaćujete preko svog Stripe naloga. Tekst [kako smo napravili white-label AI recepcionera](/sr/blog/white-label-ai-receptionist/) objašnjava zajednički fond, naplatu klijentima i predaju firme, a [vodič za pokretanje AI agencije](/sr/blog/start-ai-receptionist-business/) pokriva nišu, cene i uvođenje klijenata.
 
 ## Na kodu možete da izgradite svoj brend
 

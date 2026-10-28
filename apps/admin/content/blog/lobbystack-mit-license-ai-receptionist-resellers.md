@@ -55,7 +55,7 @@ Clients rarely share the same booking, routing, or escalation rules. A clinic an
 
 ### Operate your own hosted product
 
-The MIT License permits a company to run a separate hosted derivative and sell access under its own terms. On that route, your team owns packaging, customer support, provider billing, security, and operations. The code supplies the receptionist product base, and your team supplies the commercial service around it. To resell without running your own servers, join the [white-label partner program](/white-label/). Your clients see your brand on their dashboard, and you bill them on your own Stripe account.
+The MIT License permits a company to run a separate hosted derivative and sell access under its own terms. On that route, your team owns packaging, customer support, provider billing, security, and operations. The code supplies the receptionist product base, and your team supplies the commercial service around it. To resell without running your own servers, join the [white-label partner program](/white-label/). Your clients see your brand on their dashboard, and you bill them on your own Stripe account. [How we built White Label](/blog/white-label-ai-receptionist/) explains the shared pool, client billing and handover, and the [guide to starting an AI receptionist business](/blog/start-ai-receptionist-business/) covers niches, pricing and onboarding.
 
 ## You can build your brand on the code
 

@@ -91,7 +91,7 @@ Agencija pravi sajtove i plaćene kampanje na pretraživačima za deset klijenat
 
 Frontdesk agenciji daje hostovani višekanalni proizvod i white-label partnerske pakete od $500 mesečno. To može skratiti vreme do pokretanja kada agencija želi da platformu vodi dobavljač.
 
-LobbyStack agenciji daje jeftiniji proizvod za recepciju, kod koji može da pregleda i stek koji može sama da postavi. Agencija može da kontroliše naloge kod provajdera, infrastrukturu, čuvanje podataka i logiku poziva za svakog klijenta, umesto da te usluge gradi oko zatvorene platforme. Ako agencija ne želi da vodi servere, može da preprodaje LobbyStack kroz [white-label partnerski program](/sr/white-label/). Klijenti tada vide brend agencije na svojoj kontrolnoj tabli, a agencija im naplaćuje preko svog Stripe naloga.
+LobbyStack agenciji daje jeftiniji proizvod za recepciju, kod koji može da pregleda i stek koji može sama da postavi. Agencija može da kontroliše naloge kod provajdera, infrastrukturu, čuvanje podataka i logiku poziva za svakog klijenta, umesto da te usluge gradi oko zatvorene platforme. Ako agencija ne želi da vodi servere, može da preprodaje LobbyStack kroz [white-label partnerski program](/sr/white-label/). Klijenti tada vide brend agencije na svojoj kontrolnoj tabli, a agencija im naplaćuje preko svog Stripe naloga. Naše [poređenje platformi za white-label AI glasovne agente](/sr/blog/white-label-ai-voice-agent-platforms/) stavlja Frontdesk partnerske planove pored pet drugih.
 
 Pre izbora, agencija treba da testira razdvajanje klijenata, pristup za klijente, naplatu provajdera, pregled poziva, greške kalendara i izvoz. Sam white-label logo ne rešava ta operativna pitanja.
 

@@ -55,7 +55,7 @@ Les clients partagent rarement les mêmes règles de réservation, de routage ou
 
 ### Exploiter votre propre produit hébergé
 
-La licence MIT permet à une entreprise d'exploiter une version hébergée distincte et d'en vendre l'accès selon ses conditions. Dans ce cas, votre équipe reste responsable de l'offre, du soutien client, de la facturation des fournisseurs, de la sécurité et de l'exploitation. Le code fournit le produit de réception, et votre équipe fournit le service commercial qui l'entoure. Pour revendre sans gérer vos propres serveurs, rejoignez le [programme partenaire en marque blanche](/fr/white-label/). Vos clients voient votre marque sur leur tableau de bord, et vous les facturez sur votre propre compte Stripe.
+La licence MIT permet à une entreprise d'exploiter une version hébergée distincte et d'en vendre l'accès selon ses conditions. Dans ce cas, votre équipe reste responsable de l'offre, du soutien client, de la facturation des fournisseurs, de la sécurité et de l'exploitation. Le code fournit le produit de réception, et votre équipe fournit le service commercial qui l'entoure. Pour revendre sans gérer vos propres serveurs, rejoignez le [programme partenaire en marque blanche](/fr/white-label/). Vos clients voient votre marque sur leur tableau de bord, et vous les facturez sur votre propre compte Stripe. [Comment nous avons construit la marque blanche](/fr/blog/white-label-ai-receptionist/) explique la réserve commune, la facturation des clients et la cession, et le [guide pour créer une agence IA de réceptionnistes](/fr/blog/start-ai-receptionist-business/) couvre les créneaux, les prix et l'intégration des clients.
 
 ## Vous pouvez bâtir votre marque sur le code
 

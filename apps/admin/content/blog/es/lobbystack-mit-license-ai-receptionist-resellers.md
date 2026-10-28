@@ -55,7 +55,7 @@ Los clientes rara vez comparten las mismas reglas de reserva, enrutamiento o esc
 
 ### Opere su propio producto alojado
 
-La licencia MIT permite a una empresa operar un derivado alojado independiente y vender el acceso con sus propias condiciones. En ese caso, su equipo sigue a cargo del empaquetado, la atención al cliente, la facturación de proveedores, la seguridad y la operación. El código aporta la base del producto de recepción, y su equipo aporta el servicio comercial que lo rodea. Para revender sin administrar sus propios servidores, únase al [programa de socios de marca blanca](/es/white-label/). Sus clientes ven su marca en el panel, y usted les cobra en su propia cuenta de Stripe.
+La licencia MIT permite a una empresa operar un derivado alojado independiente y vender el acceso con sus propias condiciones. En ese caso, su equipo sigue a cargo del empaquetado, la atención al cliente, la facturación de proveedores, la seguridad y la operación. El código aporta la base del producto de recepción, y su equipo aporta el servicio comercial que lo rodea. Para revender sin administrar sus propios servidores, únase al [programa de socios de marca blanca](/es/white-label/). Sus clientes ven su marca en el panel, y usted les cobra en su propia cuenta de Stripe. [Cómo creamos la marca blanca](/es/blog/white-label-ai-receptionist/) explica la bolsa compartida, el cobro a clientes y la cesión, y la [guía para crear una agencia de IA de recepcionistas](/es/blog/start-ai-receptionist-business/) trata los nichos, los precios y la incorporación de clientes.
 
 ## Puede construir su marca sobre el código
 
