@@ -77,7 +77,7 @@ export function BillingIntervalSwitch({ value, onChange, labels }: BillingInterv
         >
           {interval === "monthly" ? labels.monthly : labels.annual}
           {interval === "annual" ? (
-            <span className="ml-1 rounded-full bg-beige-strong px-2 py-0.5 text-xs font-medium text-foreground/80">
+            <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
               {labels.save}
             </span>
           ) : null}
