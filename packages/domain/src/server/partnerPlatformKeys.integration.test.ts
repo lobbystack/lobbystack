@@ -2,13 +2,13 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { auditLogs, businesses, businessInvitations, businessMemberships, createDatabaseClient, outboxMessages, partnerMembers, partnerPlatformKeys, partners, platformKeyBusinesses, users, webhookEndpoints, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { auditLogs, businesses, businessInvitations, businessMemberships, createDatabaseClient, outboxMessages, partnerAuditLogs, partnerMembers, partnerPlatformKeys, partners, platformKeyBusinesses, users, webhookEndpoints, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { businessApiKeyScopes } from "@lobbystack/shared";
 
 import { AuthorizationError } from "../authz";
 import { forgetCachedBrands } from "./brands";
 import { createPartnerBusiness, hashPartnerToken, acceptPartnerInvitation, invitePartnerMember, signUpPartner, type PartnerMemberActor } from "./partners";
-import { createPartnerPlatformKey, listPartnerPlatformKeys, revokePartnerPlatformKey } from "./partnerPlatformKeys";
+import { createPartnerPlatformKey, listPartnerPlatformKeys, revokePartnerPlatformKey, updatePartnerPlatformKey } from "./partnerPlatformKeys";
 import { createBusinessForApi, createCheckoutForApi, createClaimLinkForApi, createKnowledgeEntryForApi, createPartnerBusinessForApi, createTeamInvitationForApi, endManagedPlanForApi, getPlatformMeForApi, listBusinessesForApi, platformBusinessId, resolveActingUserId, setManagedPlanForApi, type PlatformKeyCaller } from "./publicApi/operations";
 import { generatePlatformKey, platformKeyReach, PlatformKeyConfigError, requirePlatformBusinessAccess, resolvePlatformKey, touchPlatformKeyLastUsed, type PartnerPlatformKey } from "./publicApi/platformKeys";
 import { createWebhookEndpoint, disableRemovedPlatformKeyWebhooks } from "./publicApi/webhooks";
@@ -195,7 +195,7 @@ describe.skipIf(!testUrl)("platform keys partners make, against PostgreSQL with 
       // Nobody makes a key in someone else's name.
       expect(await refusal(asOperator(acme.adminActor.userId, async (inner) => await inner.insert(partnerPlatformKeys).values(row(acme.ownerActor.userId))))).toMatchObject({ code: "42501" });
       expect(await asOperator(acme.memberActor.userId, async (inner) => await inner.select({ id: partnerPlatformKeys.id }).from(partnerPlatformKeys))).toEqual([]);
-      // A key can only be revoked: its name, scopes and partner never change.
+      // A direct change of a key's name must name who made it.
       expect(await refusal(asOperator(acme.ownerActor.userId, async (inner) => await inner.update(partnerPlatformKeys).set({ name: "Renamed" }).where(eq(partnerPlatformKeys.id, made.platformKey.id))))).toMatchObject({ code: "42501" });
 
       expect(await refusal(createPartnerPlatformKey(acme.context, acme.ownerActor, { name: " ", scopes: ["business:read"] }))).toMatchObject({ status: 400, code: "invalid_name" });
@@ -439,6 +439,119 @@ describe.skipIf(!testUrl)("platform keys partners make, against PostgreSQL with 
       expect(await refusal(revokePartnerPlatformKey(acme.context, acme.ownerActor, { platformKeyId: randomUUID() }))).toMatchObject({ status: 404 });
     });
   });
+  describe("changing a key", () => {
+    /** Whether the key, as the v1 pipeline sets it on a transaction, holds a scope by the database's reckoning. */
+    const hasScope = async (tx: DatabaseTransaction, partnerId: string, platformKeyId: string, scope: string) => {
+      const has = (await tx.execute<{ has: boolean }>(sql`select set_config('app.user_id', '', true), set_config('app.platform_key_id', ${platformKeyId}, true), set_config('app.actor_type', 'operator', true), app.partner_key_has_scope(${partnerId}::uuid, ${scope}) as has`)).rows[0]?.has;
+      await tx.execute(sql`select set_config('app.platform_key_id', '', true)`);
+      return has;
+    };
+    const keyRow = async (tx: DatabaseTransaction, platformKeyId: string) => (await asMigrator(tx, async () => await tx.select().from(partnerPlatformKeys).where(eq(partnerPlatformKeys.id, platformKeyId))))[0]!;
+
+    it("changes a key's name and scopes, keeps the key working with them, and audits the change", async () => {
+      await rollbackTest(async (tx) => {
+        const acme = await partner(tx, "Acme Agency");
+        const { key, platformKey } = await createPartnerPlatformKey(acme.context, acme.ownerActor, { name: "Zapier", scopes: ["business:read"] });
+        const { platformKey: changed } = await updatePartnerPlatformKey(acme.context, acme.adminActor, { platformKeyId: platformKey.id, name: "  Zapier   sync ", scopes: ["contacts:read", "business:read", "businesses:create"] });
+        expect(changed).toEqual({ ...platformKey, name: "Zapier sync", scopes: ["business:read", "contacts:read", "businesses:create"] });
+
+        // The same key now resolves with the new scopes.
+        expect(await asWorker(tx, async () => await resolvePlatformKey(acme.context, key, {}))).toMatchObject({ platformKeyId: platformKey.id, name: "Zapier sync", scopes: ["business:read", "contacts:read", "businesses:create"] });
+        const row = await keyRow(tx, platformKey.id);
+        expect(row).toMatchObject({ createdByUserId: acme.owner.userId, updatedByUserId: acme.adminActor.userId, billingScopesGrantedByUserId: null, keyHash: sha256(key) });
+
+        const audit = await asMigrator(tx, async () => await tx.select().from(partnerAuditLogs).where(and(eq(partnerAuditLogs.partnerId, acme.partnerId), eq(partnerAuditLogs.eventType, "platform_key.updated"))));
+        expect(audit).toEqual([expect.objectContaining({ actorUserId: acme.adminActor.userId, entityType: "platform_key", entityId: platformKey.id, payload: { prefix: platformKey.prefix, before: { name: "Zapier", scopes: ["business:read"] }, after: { name: "Zapier sync", scopes: ["business:read", "contacts:read", "businesses:create"] } } })]);
+      });
+    });
+
+    it("lets only the partner's owners and admins change a live key of the partner, with a valid name and scopes", async () => {
+      await rollbackTest(async (tx) => {
+        const acme = await partner(tx, "Acme Agency");
+        const other = await partner(tx, "Other Agency");
+        const { platformKey } = await createPartnerPlatformKey(acme.context, acme.ownerActor, { name: "Zapier", scopes: ["business:read"] });
+        const change = { platformKeyId: platformKey.id, name: "Changed", scopes: ["contacts:read"] };
+
+        expect(await refusal(updatePartnerPlatformKey(acme.context, acme.memberActor, change))).toBeInstanceOf(AuthorizationError);
+        expect(await refusal(updatePartnerPlatformKey(acme.context, { kind: "key", partnerId: acme.partnerId, platformKeyId: platformKey.id }, change))).toBeInstanceOf(AuthorizationError);
+        // Another partner's owner finds no such key in their partner, and isn't on this one's team.
+        expect(await refusal(updatePartnerPlatformKey(acme.context, other.ownerActor, change))).toMatchObject({ status: 404, code: "not_found" });
+        expect(await refusal(updatePartnerPlatformKey(acme.context, { ...other.ownerActor, partnerId: acme.partnerId }, change))).toBeInstanceOf(AuthorizationError);
+        expect(await refusal(updatePartnerPlatformKey(acme.context, acme.ownerActor, { ...change, platformKeyId: randomUUID() }))).toMatchObject({ status: 404, code: "not_found" });
+
+        expect(await refusal(updatePartnerPlatformKey(acme.context, acme.ownerActor, { ...change, name: " " }))).toMatchObject({ status: 400, code: "invalid_name" });
+        expect(await refusal(updatePartnerPlatformKey(acme.context, acme.ownerActor, { ...change, scopes: [] }))).toMatchObject({ status: 400, code: "invalid_scopes" });
+        expect(await refusal(updatePartnerPlatformKey(acme.context, acme.ownerActor, { ...change, scopes: ["everything"] }))).toMatchObject({ status: 400, code: "invalid_scopes" });
+
+        await revokePartnerPlatformKey(acme.context, acme.ownerActor, { platformKeyId: platformKey.id });
+        expect(await refusal(updatePartnerPlatformKey(acme.context, acme.ownerActor, change))).toMatchObject({ status: 409, code: "revoked" });
+        expect(await keyRow(tx, platformKey.id)).toMatchObject({ name: "Zapier", scopes: ["business:read"], updatedByUserId: null });
+        expect(await asMigrator(tx, async () => await tx.select({ id: partnerAuditLogs.id }).from(partnerAuditLogs).where(and(inArray(partnerAuditLogs.partnerId, [acme.partnerId, other.partnerId]), eq(partnerAuditLogs.eventType, "platform_key.updated"))))).toEqual([]);
+      });
+    });
+
+    it("keeps the billing scopes in owners' hands, and counts them on the owner who last granted them", async () => {
+      await rollbackTest(async (tx) => {
+        const acme = await partner(tx, "Acme Agency");
+        const adminKey = (await createPartnerPlatformKey(acme.context, acme.adminActor, { name: "Admin's key", scopes: ["partner:read"] })).platformKey;
+        // An admin can't add them.
+        expect(await refusal(updatePartnerPlatformKey(acme.context, acme.adminActor, { platformKeyId: adminKey.id, name: "Admin's key", scopes: ["partner:read", "partner.billing:read"] }))).toMatchObject({ status: 403, code: "owner_only" });
+
+        // An owner adds them to the admin's key, and the key counts them on that owner, not on the admin who made it.
+        await updatePartnerPlatformKey(acme.context, acme.ownerActor, { platformKeyId: adminKey.id, name: "Admin's key", scopes: ["partner:read", "partner.billing:write"] });
+        expect(await keyRow(tx, adminKey.id)).toMatchObject({ createdByUserId: acme.adminActor.userId, billingScopesGrantedByUserId: acme.owner.userId });
+        expect(await hasScope(tx, acme.partnerId, adminKey.id, "partner.billing:write")).toBe(true);
+
+        // Once it holds them, an admin can't change the key at all: not take them off, not rename it with them on.
+        expect(await refusal(updatePartnerPlatformKey(acme.context, acme.adminActor, { platformKeyId: adminKey.id, name: "Admin's key", scopes: ["partner:read"] }))).toMatchObject({ status: 403, code: "owner_only" });
+        expect(await refusal(updatePartnerPlatformKey(acme.context, acme.adminActor, { platformKeyId: adminKey.id, name: "Renamed", scopes: ["partner:read", "partner.billing:write"] }))).toMatchObject({ status: 403, code: "owner_only" });
+        // The database holds the same rule for a direct write, which a policy alone can't, since it sees only the new row.
+        const asOperator = async <T>(userId: string, run: (inner: DatabaseTransaction) => Promise<T>) => await savepoint(tx, async (inner) => {
+          await inner.execute(sql`select set_config('app.user_id', ${userId}, true), set_config('app.business_id', '', true), set_config('app.actor_type', 'operator', true)`);
+          return await run(inner);
+        });
+        expect(await refusal(asOperator(acme.adminActor.userId, async (inner) => await inner.update(partnerPlatformKeys).set({ scopes: ["partner:read"], updatedByUserId: acme.adminActor.userId, billingScopesGrantedByUserId: null }).where(eq(partnerPlatformKeys.id, adminKey.id))))).toMatchObject({ code: "42501" });
+        // An admin can't name themselves or an owner the granter of a key they write with billing scopes either.
+        const plain = (await createPartnerPlatformKey(acme.context, acme.adminActor, { name: "Plain", scopes: ["partner:read"] })).platformKey;
+        for (const granter of [acme.adminActor.userId, acme.owner.userId]) {
+          expect(await refusal(asOperator(acme.adminActor.userId, async (inner) => await inner.update(partnerPlatformKeys).set({ scopes: ["partner.billing:read"], updatedByUserId: acme.adminActor.userId, billingScopesGrantedByUserId: granter }).where(eq(partnerPlatformKeys.id, plain.id))))).toMatchObject({ code: "42501" });
+        }
+        // An admin still revokes any key, this one included.
+        expect((await revokePartnerPlatformKey(acme.context, acme.adminActor, { platformKeyId: plain.id })).platformKey.revokedAt).not.toBeNull();
+
+        // The admin becomes an owner and saves the key: the billing scopes now count on them.
+        await asMigrator(tx, async () => { await tx.update(partnerMembers).set({ role: "owner" }).where(and(eq(partnerMembers.partnerId, acme.partnerId), eq(partnerMembers.userId, acme.adminActor.userId))); });
+        const secondOwner: PartnerMemberActor = { ...acme.adminActor, role: "owner" };
+        await updatePartnerPlatformKey(acme.context, secondOwner, { platformKeyId: adminKey.id, name: "Billing", scopes: ["partner:read", "partner.billing:write"] });
+        expect(await keyRow(tx, adminKey.id)).toMatchObject({ billingScopesGrantedByUserId: acme.adminActor.userId, updatedByUserId: acme.adminActor.userId });
+        // When they stop being an owner, the key keeps its other scopes but its billing scopes stop counting, though the first owner still is one.
+        await asMigrator(tx, async () => { await tx.update(partnerMembers).set({ role: "admin" }).where(and(eq(partnerMembers.partnerId, acme.partnerId), eq(partnerMembers.userId, acme.adminActor.userId))); });
+        expect(await hasScope(tx, acme.partnerId, adminKey.id, "partner.billing:write")).toBe(false);
+        expect(await hasScope(tx, acme.partnerId, adminKey.id, "partner:read")).toBe(true);
+        const owner = await tx.execute<{ owner: string | null }>(sql`select app.partner_platform_key_owner(${acme.partnerId}::uuid, ${adminKey.id}::uuid) as owner`);
+        expect(owner.rows[0]?.owner).toBeNull();
+
+        // An owner who saves it again with them makes them count again, and one who takes them off leaves no granter.
+        await updatePartnerPlatformKey(acme.context, acme.ownerActor, { platformKeyId: adminKey.id, name: "Billing", scopes: ["partner:read", "partner.billing:write"] });
+        expect(await hasScope(tx, acme.partnerId, adminKey.id, "partner.billing:write")).toBe(true);
+        await updatePartnerPlatformKey(acme.context, acme.ownerActor, { platformKeyId: adminKey.id, name: "Billing", scopes: ["partner:read"] });
+        expect(await keyRow(tx, adminKey.id)).toMatchObject({ scopes: ["partner:read"], billingScopesGrantedByUserId: null });
+        // So the admin can change it again.
+        await updatePartnerPlatformKey(acme.context, acme.adminActor, { platformKeyId: adminKey.id, name: "Read only", scopes: ["partner:read"] });
+      });
+    });
+
+    it("names the owner who makes a key with billing scopes as their granter", async () => {
+      await rollbackTest(async (tx) => {
+        const acme = await partner(tx, "Acme Agency");
+        const { platformKey } = await createPartnerPlatformKey(acme.context, acme.ownerActor, { name: "Billing", scopes: ["partner.billing:read"] });
+        expect(await keyRow(tx, platformKey.id)).toMatchObject({ createdByUserId: acme.owner.userId, billingScopesGrantedByUserId: acme.owner.userId });
+        const plain = (await createPartnerPlatformKey(acme.context, acme.ownerActor, { name: "Plain", scopes: ["partner:read"] })).platformKey;
+        expect(await keyRow(tx, plain.id)).toMatchObject({ billingScopesGrantedByUserId: null });
+      });
+    });
+  });
+
   it("waits for a request still writing with the key, then turns off what it wrote", async () => {
     // Two sessions have to see the same rows here, so this one commits its fixtures and removes them after.
     const userId = randomUUID();

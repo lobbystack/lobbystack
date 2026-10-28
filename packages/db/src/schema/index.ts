@@ -352,6 +352,10 @@ export const partnerPlatformKeys = pgTable(
     scopes: jsonb("scopes").$type<string[]>().notNull(),
     createdByUserId: uuid("created_by_user_id").references(() => users.id, { onDelete: "set null" }),
     revokedByUserId: uuid("revoked_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    // Who last changed the key's name or scopes (migration 0166).
+    updatedByUserId: uuid("updated_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    // The owner who granted its partner.billing scopes, which count only while they're an active owner. Null when it has none.
+    billingScopesGrantedByUserId: uuid("billing_scopes_granted_by_user_id").references(() => users.id, { onDelete: "set null" }),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
     ...timestamps,

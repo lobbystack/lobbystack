@@ -129,13 +129,13 @@ async function requireOwner(tx: DatabaseTransaction, member: PartnerActor, scope
 
 /**
  * The owner a checkout is made out to: the owner asking, or for a key, the
- * owner who made it while they still are one, since Polar's checkout fills in
- * a person's email.
+ * owner who granted its billing scopes while they still are one, since
+ * Polar's checkout fills in a person's email.
  */
 async function checkoutRequester(tx: DatabaseTransaction, actor: PartnerActor): Promise<string> {
   if (actor.kind === "member") return actor.userId;
   const owner = (await tx.execute<{ owner: string | null }>(sql`select app.partner_platform_key_owner(${actor.partnerId}::uuid, ${actor.platformKeyId}::uuid) as owner`)).rows[0]?.owner;
-  if (!owner) throw failure("A key's checkout is made out to the owner who made it, who is no longer an owner. Start the checkout from the console, or use a key an owner made.", 409, "key_owner_inactive");
+  if (!owner) throw failure("A key's checkout is made out to the owner who gave it its billing scopes, who is no longer an owner. Start the checkout from the console, or ask an owner to save the key again with them.", 409, "key_owner_inactive");
   return owner;
 }
 

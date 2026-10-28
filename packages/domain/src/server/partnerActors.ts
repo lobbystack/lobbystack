@@ -13,7 +13,7 @@ import { PublicApiError } from "./publicApi/errors";
 // migration 0162), so what only an owner may do stays with people, apart from
 // billing: a key reaches the partner's Stripe account and tier only with the
 // partner.billing scopes, which only an owner grants, and only while the
-// owner who made it is still one (migration 0163).
+// owner who granted them is still one (migrations 0163 and 0166).
 
 export type PartnerKeyActor = Extract<PartnerActor, { kind: "key" }>;
 
@@ -60,15 +60,15 @@ export async function partnerActorRole(tx: DatabaseTransaction, actor: PartnerAc
  * Refuses anyone but an owner, or a key an owner granted the scope, with the
  * same 403 the console's owner-only pages answer. partner.billing:write
  * grants partner.billing:read too. A key's billing scopes count only while
- * the owner who made it is still one of the partner's active owners, and a
- * key whose owner isn't is refused with key_owner_inactive.
+ * the owner who granted them is still one of the partner's active owners,
+ * and a key whose owner isn't is refused with key_owner_inactive.
  */
 export async function requirePartnerOwner(tx: DatabaseTransaction, actor: PartnerActor, input: { scope: (typeof partnerOwnerScopes)[number]; message: string }): Promise<void> {
   if (actor.kind === "key") {
     await lockPartnerKey(tx, actor);
     if (!keyHasScope(actor.scopes ?? [], input.scope)) throw Object.assign(new Error(input.message), { status: 403, code: "owner_only" });
     const owner = (await tx.execute<{ owner: string | null }>(sql`select app.partner_platform_key_owner(${actor.partnerId}::uuid, ${actor.platformKeyId}::uuid) as owner`)).rows[0]?.owner;
-    if (!owner) throw Object.assign(new Error("The owner who made this key is no longer an owner of the partner, so its billing scopes no longer apply. Ask an owner to make a new key."), { status: 409, code: "key_owner_inactive" });
+    if (!owner) throw Object.assign(new Error("The owner who gave this key its billing scopes is no longer an owner of the partner, so they no longer apply. Ask an owner to save the key again with them, or to make a new key."), { status: 409, code: "key_owner_inactive" });
     return;
   }
   if (await partnerActorRole(tx, actor) !== "owner") throw Object.assign(new Error(input.message), { status: 403, code: "owner_only" });

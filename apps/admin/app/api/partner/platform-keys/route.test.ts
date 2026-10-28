@@ -1,11 +1,11 @@
 import { beforeEach, expect, it, vi } from "vitest";
 
-const fixture = vi.hoisted(() => ({ resolve: vi.fn(), list: vi.fn(), create: vi.fn(), revoke: vi.fn() }));
+const fixture = vi.hoisted(() => ({ resolve: vi.fn(), list: vi.fn(), create: vi.fn(), revoke: vi.fn(), update: vi.fn() }));
 vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
-vi.mock("@lobbystack/domain", () => ({ resolvePartnerActor: fixture.resolve, listPartnerPlatformKeys: fixture.list, createPartnerPlatformKey: fixture.create, revokePartnerPlatformKey: fixture.revoke }));
+vi.mock("@lobbystack/domain", () => ({ resolvePartnerActor: fixture.resolve, listPartnerPlatformKeys: fixture.list, createPartnerPlatformKey: fixture.create, revokePartnerPlatformKey: fixture.revoke, updatePartnerPlatformKey: fixture.update }));
 
 import { resetFakeOperator } from "@/lib/operator-request.fake";
-import { DELETE } from "./[platformKeyId]/route";
+import { DELETE, PATCH } from "./[platformKeyId]/route";
 import { GET, POST } from "./route";
 
 const partnerId = "5b1f6c43-34a5-4a8e-9a43-6c1f8d5f1c11";
@@ -67,4 +67,24 @@ it("answers someone off the partner's team with 404, and a request naming no par
   expect((await GET(new Request(url()))).status).toBe(404);
   expect((await GET(new Request(url("", "")))).status).toBe(400);
   expect(fixture.list).not.toHaveBeenCalled();
+});
+
+it("changes a key's name and scopes by its id", async () => {
+  fixture.update.mockResolvedValue({ platformKey: { ...record, name: "Zapier sync", scopes: ["business:read"] } });
+  const response = await PATCH(new Request(url(`/${platformKeyId}`, ""), { method: "PATCH", body: JSON.stringify({ partnerId, name: "Zapier sync", scopes: ["business:read"] }) }), { params: Promise.resolve({ platformKeyId }) });
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ platformKey: { ...record, name: "Zapier sync", scopes: ["business:read"] } });
+  expect(fixture.update).toHaveBeenCalledWith(expect.anything(), actor, { platformKeyId, name: "Zapier sync", scopes: ["business:read"] });
+});
+
+it("refuses a change with a bad id, and passes the domain's refusals through: an admin and the billing scopes, a revoked key", async () => {
+  expect((await PATCH(new Request(url("/abc"), { method: "PATCH", body: JSON.stringify({ name: "x", scopes: ["business:read"] }) }), { params: Promise.resolve({ platformKeyId: "abc" }) })).status).toBe(400);
+  expect(fixture.update).not.toHaveBeenCalled();
+  for (const [status, code] of [[403, "owner_only"], [409, "revoked"], [404, "not_found"]] as const) {
+    fixture.update.mockRejectedValueOnce(Object.assign(new Error("Refused."), { status, code }));
+    const response = await PATCH(new Request(url(`/${platformKeyId}`), { method: "PATCH", body: JSON.stringify({ name: 7, scopes: ["partner.billing:read"] }) }), { params: Promise.resolve({ platformKeyId }) });
+    expect(response.status).toBe(status);
+    expect(await response.json()).toMatchObject({ code });
+  }
+  expect(fixture.update).toHaveBeenLastCalledWith(expect.anything(), actor, { platformKeyId, name: "", scopes: ["partner.billing:read"] });
 });

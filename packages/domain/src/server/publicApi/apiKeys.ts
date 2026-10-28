@@ -8,7 +8,7 @@ import { API_KEY_PREFIX, businessApiKeyScopes, isApiKeyScope, isBusinessApiKeySc
 import { requireBusinessAdmin } from "../../authz";
 import { requireBusinessCapability } from "../businessAccess";
 import type { DomainContext } from "../context";
-import { invalidRequest } from "./errors";
+import { conflict, invalidRequest } from "./errors";
 import { disableWebhookEndpointsInTransaction } from "./webhooks";
 
 // Keys look like lsk_<8 hex id>_<32 url-safe characters>. The first part is
@@ -150,6 +150,34 @@ export async function revokeApiKey(context: DomainContext, input: { userId: stri
     const disabled = await disableWebhookEndpointsInTransaction(tx, { businessId: input.businessId, createdByApiKeyIds: [existing.id], now });
     await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.userId, eventType: "api_key.revoked", entityType: "api_key", entityId: existing.id, payload: { prefix: existing.prefix, disabledWebhookEndpointIds: disabled } });
     return true;
+  });
+}
+
+/**
+ * Changes a key's name and scopes. The key itself stays the same, so
+ * whatever uses it keeps working with the new access. The same rules as
+ * making a key apply: owners and admins only, in a business that has API
+ * keys. A revoked key can't change. Returns null when the business has no
+ * such key.
+ */
+export async function updateApiKey(
+  context: DomainContext,
+  input: { userId: string; businessId: string; apiKeyId: string; name: string; scopes: unknown },
+): Promise<ApiKeyRecord | null> {
+  const name = input.name.trim();
+  if (!name || name.length > 120) throw invalidRequest("Name the key in 1 to 120 characters.");
+  const scopes = normalizeScopes(input.scopes);
+  return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
+    await requireBusinessAdmin(tx, input);
+    await requireBusinessCapability(tx, { businessId: input.businessId, capability: "api_keys" });
+    const [existing] = await tx.select({ id: apiKeys.id, name: apiKeys.name, prefix: apiKeys.prefix, scopes: apiKeys.scopes, revokedAt: apiKeys.revokedAt }).from(apiKeys).where(and(eq(apiKeys.id, input.apiKeyId), eq(apiKeys.businessId, input.businessId))).limit(1).for("update");
+    if (!existing) return null;
+    if (existing.revokedAt) throw conflict("A revoked key can't be changed.");
+    await tx.update(apiKeys).set({ name, scopes, updatedAt: new Date() }).where(eq(apiKeys.id, existing.id));
+    await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.userId, eventType: "api_key.updated", entityType: "api_key", entityId: existing.id, payload: { prefix: existing.prefix, before: { name: existing.name, scopes: existing.scopes }, after: { name, scopes } } });
+    const [record] = await tx.select(apiKeyColumns).from(apiKeys).leftJoin(users, eq(users.id, apiKeys.createdByUserId)).where(eq(apiKeys.id, existing.id)).limit(1);
+    if (!record) throw new Error("The API key could not be read back.");
+    return serializeApiKey(record);
   });
 }
 
