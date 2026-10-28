@@ -205,9 +205,9 @@ const en: McpCopy = {
       chatgpt: {
         label: "ChatGPT",
         steps: [
-          "In ChatGPT, turn on Developer mode under Settings > Security and login. ChatGPT only adds custom MCP servers in developer mode.",
-          "Open Plugins, click +, and create an app with the server URL and OAuth sign-in.",
-          "Sign in to LobbyStack, pick your business and click Allow access.",
+          "Copy the server URL above.",
+          "In ChatGPT, open Plugins, click +, then Add custom MCP server. Name it LobbyStack, paste the URL, choose OAuth and click Create as a plugin.",
+          "Sign in to LobbyStack, pick your business and click Allow access. In a Business workspace, an admin or owner adds the server.",
         ],
       },
       codex: {
@@ -359,9 +359,9 @@ const fr: McpCopy = {
       chatgpt: {
         label: "ChatGPT",
         steps: [
-          "Dans ChatGPT, activez le mode développeur sous Settings > Security and login. ChatGPT n'ajoute des serveurs MCP personnalisés qu'en mode développeur.",
-          "Ouvrez Plugins, cliquez sur + et créez une application avec l'URL du serveur et la connexion OAuth.",
-          "Connectez-vous à LobbyStack, choisissez votre entreprise et cliquez sur Autoriser l'accès.",
+          "Copiez l'URL du serveur ci-dessus.",
+          "Dans ChatGPT, ouvrez Plugins, cliquez sur +, puis sur Add custom MCP server. Nommez-le LobbyStack, collez l'URL, choisissez OAuth et cliquez sur Create as a plugin.",
+          "Connectez-vous à LobbyStack, choisissez votre entreprise et cliquez sur Autoriser l'accès. Dans un espace Business, un administrateur ou un propriétaire ajoute le serveur.",
         ],
       },
       codex: {
@@ -513,9 +513,9 @@ const es: McpCopy = {
       chatgpt: {
         label: "ChatGPT",
         steps: [
-          "En ChatGPT, active el modo de desarrollador en Settings > Security and login. ChatGPT solo agrega servidores MCP personalizados en ese modo.",
-          "Abra Plugins, haga clic en + y cree una app con la URL del servidor e inicio de sesión OAuth.",
-          "Inicie sesión en LobbyStack, elija su negocio y haga clic en Permitir acceso.",
+          "Copie la URL del servidor de arriba.",
+          "En ChatGPT, abra Plugins, haga clic en + y luego en Add custom MCP server. Llámelo LobbyStack, pegue la URL, elija OAuth y haga clic en Create as a plugin.",
+          "Inicie sesión en LobbyStack, elija su negocio y haga clic en Permitir acceso. En un espacio Business, un administrador o propietario agrega el servidor.",
         ],
       },
       codex: {
@@ -667,9 +667,9 @@ const sr: McpCopy = {
       chatgpt: {
         label: "ChatGPT",
         steps: [
-          "U ChatGPT-ju uključite režim za programere u Settings > Security and login. ChatGPT dodaje prilagođene MCP servere samo u tom režimu.",
-          "Otvorite Plugins, kliknite na + i napravite aplikaciju sa URL-om servera i OAuth prijavom.",
-          "Prijavite se na LobbyStack, izaberite firmu i kliknite na Dozvoli pristup.",
+          "Kopirajte URL servera iznad.",
+          "U ChatGPT-ju otvorite Plugins, kliknite na +, pa na Add custom MCP server. Nazovite ga LobbyStack, nalepite URL, izaberite OAuth i kliknite na Create as a plugin.",
+          "Prijavite se na LobbyStack, izaberite firmu i kliknite na Dozvoli pristup. U Business prostoru server dodaje administrator ili vlasnik.",
         ],
       },
       codex: {

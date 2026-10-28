@@ -13,7 +13,7 @@ const EN_FAQS: FaqItem[] = [
   {
     question: "Which AI assistants work with it?",
     answer:
-      "Claude (the web and Desktop connectors, Claude Code and the Claude API), ChatGPT in developer mode, the OpenAI Responses API, Codex, Cursor and VS Code. Any client that supports Streamable HTTP can connect. Clients that only offer the older HTTP+SSE transport can't.",
+      "Claude (the web and Desktop connectors, Claude Code and the Claude API), ChatGPT, the OpenAI Responses API, Codex, Cursor and VS Code. Any client that supports Streamable HTTP can connect. Clients that only offer the older HTTP+SSE transport can't.",
   },
   {
     question: "Is the MCP server included in my plan?",
@@ -23,7 +23,7 @@ const EN_FAQS: FaqItem[] = [
   {
     question: "Do I need a developer to set it up?",
     answer:
-      "Not for Claude or ChatGPT. You paste the server URL, sign in to LobbyStack and allow access. ChatGPT needs developer mode, which OpenAI offers on Plus, Pro, Business, Enterprise and Education accounts on the web. Cursor, VS Code and scripts take an API key in a config file.",
+      "Not for Claude or ChatGPT. You paste the server URL, sign in to LobbyStack and allow access. ChatGPT supports custom MCP servers on Business, Enterprise and Education plans, and on Pro for read-only tools. Codex and Cursor sign in the same way after one command or config line.",
   },
   {
     question: "Can the assistant do more than I allowed?",
@@ -65,7 +65,7 @@ const FR_FAQS: FaqItem[] = [
   {
     question: "Quels assistants IA fonctionnent avec lui?",
     answer:
-      "Claude (les connecteurs web et Desktop, Claude Code et l'API Claude), ChatGPT en mode développeur, l'API Responses d'OpenAI, Codex, Cursor et VS Code. Tout client qui prend en charge Streamable HTTP peut se connecter. Les clients qui n'offrent que l'ancien transport HTTP+SSE ne le peuvent pas.",
+      "Claude (les connecteurs web et Desktop, Claude Code et l'API Claude), ChatGPT, l'API Responses d'OpenAI, Codex, Cursor et VS Code. Tout client qui prend en charge Streamable HTTP peut se connecter. Les clients qui n'offrent que l'ancien transport HTTP+SSE ne le peuvent pas.",
   },
   {
     question: "Le serveur MCP est-il inclus dans mon forfait?",
@@ -75,7 +75,7 @@ const FR_FAQS: FaqItem[] = [
   {
     question: "Faut-il un développeur pour le configurer?",
     answer:
-      "Pas pour Claude ni pour ChatGPT. Vous collez l'URL du serveur, vous vous connectez à LobbyStack et vous autorisez l'accès. ChatGPT demande le mode développeur, qu'OpenAI offre sur le web aux comptes Plus, Pro, Business, Enterprise et Education. Cursor, VS Code et les scripts prennent une clé API dans un fichier de configuration.",
+      "Pas pour Claude ni pour ChatGPT. Vous collez l'URL du serveur, vous vous connectez à LobbyStack et vous autorisez l'accès. ChatGPT accepte les serveurs MCP personnalisés sur les forfaits Business, Enterprise et Education, et sur Pro pour les outils en lecture seule. Codex et Cursor se connectent de la même façon après une commande ou une ligne de configuration.",
   },
   {
     question: "L'assistant peut-il faire plus que ce que j'ai permis?",
@@ -117,7 +117,7 @@ const ES_FAQS: FaqItem[] = [
   {
     question: "¿Qué asistentes de IA funcionan con él?",
     answer:
-      "Claude (los conectores web y de Desktop, Claude Code y la API de Claude), ChatGPT en modo de desarrollador, la API Responses de OpenAI, Codex, Cursor y VS Code. Cualquier cliente compatible con Streamable HTTP puede conectarse. Los clientes que solo ofrecen el antiguo transporte HTTP+SSE no pueden.",
+      "Claude (los conectores web y de Desktop, Claude Code y la API de Claude), ChatGPT, la API Responses de OpenAI, Codex, Cursor y VS Code. Cualquier cliente compatible con Streamable HTTP puede conectarse. Los clientes que solo ofrecen el antiguo transporte HTTP+SSE no pueden.",
   },
   {
     question: "¿El servidor MCP está incluido en mi plan?",
@@ -127,7 +127,7 @@ const ES_FAQS: FaqItem[] = [
   {
     question: "¿Necesito un desarrollador para configurarlo?",
     answer:
-      "No para Claude ni ChatGPT. Usted pega la URL del servidor, inicia sesión en LobbyStack y permite el acceso. ChatGPT necesita el modo de desarrollador, que OpenAI ofrece en la web para cuentas Plus, Pro, Business, Enterprise y Education. Cursor, VS Code y los scripts usan una clave de API en un archivo de configuración.",
+      "No para Claude ni ChatGPT. Usted pega la URL del servidor, inicia sesión en LobbyStack y permite el acceso. ChatGPT admite servidores MCP personalizados en los planes Business, Enterprise y Education, y en Pro para herramientas de solo lectura. Codex y Cursor inician sesión igual después de un comando o una línea de configuración.",
   },
   {
     question: "¿Puede el asistente hacer más de lo que permití?",
@@ -169,7 +169,7 @@ const SR_FAQS: FaqItem[] = [
   {
     question: "Koji AI asistenti rade sa njim?",
     answer:
-      "Claude (konektori za veb i Desktop, Claude Code i Claude API), ChatGPT u režimu za programere, OpenAI Responses API, Codex, Cursor i VS Code. Može da se poveže svaki klijent koji podržava Streamable HTTP. Klijenti koji nude samo stariji HTTP+SSE transport ne mogu.",
+      "Claude (konektori za veb i Desktop, Claude Code i Claude API), ChatGPT, OpenAI Responses API, Codex, Cursor i VS Code. Može da se poveže svaki klijent koji podržava Streamable HTTP. Klijenti koji nude samo stariji HTTP+SSE transport ne mogu.",
   },
   {
     question: "Da li je MCP server uključen u moj paket?",
@@ -179,7 +179,7 @@ const SR_FAQS: FaqItem[] = [
   {
     question: "Da li mi treba programer za podešavanje?",
     answer:
-      "Ne za Claude ni za ChatGPT. Nalepite URL servera, prijavite se na LobbyStack i dozvolite pristup. ChatGPT traži režim za programere, koji OpenAI nudi na vebu za Plus, Pro, Business, Enterprise i Education naloge. Cursor, VS Code i skripte koriste API ključ u konfiguracionoj datoteci.",
+      "Ne za Claude ni za ChatGPT. Nalepite URL servera, prijavite se na LobbyStack i dozvolite pristup. ChatGPT podržava prilagođene MCP servere na Business, Enterprise i Education planovima, a na Pro planu samo alate za čitanje. Codex i Cursor se prijavljuju isto, posle jedne komande ili linije u konfiguraciji.",
   },
   {
     question: "Može li asistent da uradi više nego što sam dozvolio?",
