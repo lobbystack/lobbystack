@@ -392,7 +392,8 @@ describe.skipIf(!client)("a partner's pool", () => {
         expect(await asApp(tx, async (db) => await refusal(setPartnerPoolOverage({ db }, owner, { enabled: true, capCents })))).toMatchObject({ status: 400, code: "invalid_pool_overage" });
       }
       expect(await asApp(tx, async (db) => await refusal(setPartnerPoolOverage({ db }, owner, { enabled: "yes", capCents: null })))).toMatchObject({ status: 400, code: "invalid_pool_overage" });
-      expect(await asApp(tx, async (db) => await refusal(setPartnerPoolOverage({ db }, { kind: "key", partnerId: acme.partnerId, platformKeyId: randomUUID() }, { enabled: false, capCents: null })))).toMatchObject({ status: 403 });
+      // A key the partner never made answers as an invalid one. partnerKeyApi.integration.test.ts covers real keys.
+      expect(await asApp(tx, async (db) => await refusal(setPartnerPoolOverage({ db }, { kind: "key", partnerId: acme.partnerId, platformKeyId: randomUUID() }, { enabled: false, capCents: null })))).toMatchObject({ status: 401 });
     });
   });
 

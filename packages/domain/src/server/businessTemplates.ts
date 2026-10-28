@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { and, asc, desc, eq, ne } from "drizzle-orm";
 
-import { auditLogs, businessTemplateFiles, businessTemplates, businesses, enqueueOutbox, knowledgeDocuments, partnerMembers, receptionistProfiles, storageObjects, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { auditLogs, businessTemplateFiles, businessTemplates, businesses, enqueueOutbox, knowledgeDocuments, receptionistProfiles, storageObjects, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import {
   applyBusinessTemplate,
   businessTemplateSchema,
@@ -21,7 +21,8 @@ import {
 
 import { AuthorizationError } from "../authz";
 import type { DomainContext } from "./context";
-import type { PartnerActor, PartnerMemberActor } from "./partners";
+import { actorUserId, keyAuditFields, partnerActorRole, partnerRls } from "./partnerActors";
+import type { PartnerActor } from "./partners";
 import { prospectDemoSettingsIn } from "./prospectDemoSettings";
 import {
   completeKnowledgeUploadForApi,
@@ -42,6 +43,7 @@ import {
   updateRuleForApi,
   updateServiceForApi,
   type PartnerMemberCaller,
+  type PlatformKeyCaller,
 } from "./publicApi/operations";
 import { listKnowledgeEntryResources, listKnowledgeSourceResources, listServiceResources, loadBusinessResource, serializeReceptionist, serializeRule, type Page } from "./publicApi/resources";
 import { listAgentRulesInTransaction } from "./rules";
@@ -90,19 +92,17 @@ function failure(message: string, status: number, code: string): Error {
 const templateNotFound = () => failure("Template not found.", 404, "template_not_found");
 const businessNotFound = () => failure("Business not found.", 404, "business_not_found");
 
-function templatesActor(actor: PartnerActor): PartnerMemberActor {
-  if (actor.kind !== "member") throw new AuthorizationError("Platform keys can't manage a partner's templates.");
+/** Who works with templates: anyone on the team reads them, and a key acts as an admin. */
+function templatesActor(actor: PartnerActor): PartnerActor {
   return actor;
 }
 
 /** The actor's role on the partner as the database has it now. */
-async function currentRole(tx: DatabaseTransaction, member: PartnerMemberActor): Promise<PartnerRole> {
-  const [row] = await tx.select({ role: partnerMembers.role }).from(partnerMembers).where(and(eq(partnerMembers.partnerId, member.partnerId), eq(partnerMembers.userId, member.userId), eq(partnerMembers.status, "active"))).limit(1);
-  if (!row) throw new AuthorizationError("You aren't on this partner's team.");
-  return row.role;
+async function currentRole(tx: DatabaseTransaction, member: PartnerActor): Promise<PartnerRole> {
+  return await partnerActorRole(tx, member);
 }
 
-async function requireTemplateManager(tx: DatabaseTransaction, member: PartnerMemberActor): Promise<PartnerRole> {
+async function requireTemplateManager(tx: DatabaseTransaction, member: PartnerActor): Promise<PartnerRole> {
   const role = await currentRole(tx, member);
   if (role === "member") throw new AuthorizationError("Only owners and admins can manage the partner's templates.");
   return role;
@@ -231,15 +231,15 @@ async function readBusinessSetup(tx: DatabaseTransaction, businessId: string): P
  * without opening the business, so its audit log records who read it, and
  * for which template, in the same transaction, as it records an open.
  */
-async function exportSetup(context: DomainContext, member: PartnerMemberActor, businessId: string, template?: { templateId: string; name: string }): Promise<{ template: BusinessTemplate; files: SourceDocument[] }> {
+async function exportSetup(context: DomainContext, member: PartnerActor, businessId: string, template?: { templateId: string; name: string }): Promise<{ template: BusinessTemplate; files: SourceDocument[] }> {
   // The partner's people aren't on its businesses' teams, so the business's rows show only to the system actor.
-  return await withBusinessTransaction(context.db, { userId: member.userId, businessId, actorType: "system" }, async (tx) => {
+  return await withBusinessTransaction(context.db, { ...partnerRls(member), businessId, actorType: "system" }, async (tx) => {
     const partnerRole = await requireTemplateManager(tx, member);
     const [business] = await tx.select({ partnerId: businesses.partnerId, status: businesses.status }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
     // Another partner's business, a direct one, or one no longer active answers as one that doesn't exist.
     if (business?.status !== "active" || business.partnerId !== member.partnerId.toLowerCase()) throw businessNotFound();
     const setup = await readBusinessSetup(tx, businessId);
-    await tx.insert(auditLogs).values({ businessId, actorUserId: member.userId, eventType: "partner.business_setup_exported", entityType: "business", entityId: businessId, payload: { partnerId: member.partnerId, partnerRole, ...(template ? { templateId: template.templateId, templateName: template.name } : {}) } });
+    await tx.insert(auditLogs).values({ businessId, actorUserId: actorUserId(member), eventType: "partner.business_setup_exported", entityType: "business", entityId: businessId, payload: { partnerId: member.partnerId, partnerRole, ...keyAuditFields(member), ...(template ? { templateId: template.templateId, templateName: template.name } : {}) } });
     return setup;
   });
 }
@@ -285,9 +285,9 @@ export async function saveBusinessTemplate(context: DomainContext, actor: Partne
       await dependencies.storage.putObject({ key: objectKey, body, contentType: file.contentType, checksum });
       copies.push({ id, path: file.path, objectKey, contentType: file.contentType, length: body.byteLength, checksum });
     }
-    const createdAt = await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
+    const createdAt = await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "operator" }, async (tx) => {
       await requireTemplateManager(tx, member);
-      const [saved] = await tx.insert(businessTemplates).values({ id: templateId, partnerId: member.partnerId, name, manifest: template as Record<string, unknown>, createdByUserId: member.userId }).returning({ createdAt: businessTemplates.createdAt });
+      const [saved] = await tx.insert(businessTemplates).values({ id: templateId, partnerId: member.partnerId, name, manifest: template as Record<string, unknown>, createdByUserId: actorUserId(member) }).returning({ createdAt: businessTemplates.createdAt });
       if (copies.length) await tx.insert(businessTemplateFiles).values(copies.map((copy) => ({ id: copy.id, templateId, partnerId: member.partnerId, path: copy.path, objectKey: copy.objectKey, contentType: copy.contentType, contentLength: copy.length, checksum: copy.checksum })));
       return saved!.createdAt;
     });
@@ -302,7 +302,7 @@ export async function saveBusinessTemplate(context: DomainContext, actor: Partne
 /** The partner's templates, newest first. Anyone on the team can read them. */
 export async function listBusinessTemplates(context: DomainContext, actor: PartnerActor): Promise<PartnerTemplate[]> {
   const member = templatesActor(actor);
-  return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
+  return await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "operator" }, async (tx) => {
     await currentRole(tx, member);
     const rows = await tx.select({ templateId: businessTemplates.id, name: businessTemplates.name, manifest: businessTemplates.manifest, createdAt: businessTemplates.createdAt }).from(businessTemplates).where(eq(businessTemplates.partnerId, member.partnerId)).orderBy(desc(businessTemplates.createdAt), desc(businessTemplates.id));
     return rows.map((row) => ({ templateId: row.templateId, name: row.name, createdAt: row.createdAt.toISOString(), template: businessTemplateSchema.parse(row.manifest) }));
@@ -317,7 +317,7 @@ export async function listBusinessTemplates(context: DomainContext, actor: Partn
 export async function deleteBusinessTemplate(context: DomainContext, actor: PartnerActor, input: { templateId: string }): Promise<void> {
   const member = templatesActor(actor);
   // The job that deletes the copies belongs to no business, which only the system actor can queue.
-  await withBusinessTransaction(context.db, { userId: member.userId, actorType: "system" }, async (tx) => {
+  await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "system" }, async (tx) => {
     await requireTemplateManager(tx, member);
     const files = await tx.select({ objectKey: businessTemplateFiles.objectKey }).from(businessTemplateFiles).where(and(eq(businessTemplateFiles.templateId, input.templateId), eq(businessTemplateFiles.partnerId, member.partnerId)));
     const deleted = await tx.delete(businessTemplates).where(and(eq(businessTemplates.id, input.templateId), eq(businessTemplates.partnerId, member.partnerId))).returning({ id: businessTemplates.id });
@@ -351,7 +351,7 @@ export async function loadBusinessTemplateInTransaction(tx: DatabaseTransaction,
  * operations in-process, on one of the partner's businesses, as the partner
  * member. The template's documents upload from its stored copies.
  */
-export function inProcessSetupPort(dependencies: BusinessSetupDependencies, caller: PartnerMemberCaller, files: readonly TemplateFileCopy[]): BusinessSetupPort {
+export function inProcessSetupPort(dependencies: BusinessSetupDependencies, caller: PartnerMemberCaller | PlatformKeyCaller, files: readonly TemplateFileCopy[]): BusinessSetupPort {
   const { worker, storage } = dependencies;
   const page = { limit: PUBLIC_API_MAX_PAGE_SIZE };
   return {
@@ -421,8 +421,11 @@ function renameBusinessIn(template: BusinessTemplate, from: string, to: string):
  * name the new business instead, and so do its services, rules, FAQs and
  * texts, so callers don't hear the wrong one.
  */
-export async function applyStoredBusinessTemplate(dependencies: BusinessSetupDependencies, input: { partnerId: string; userId: string; businessId: string; template: StoredBusinessTemplate; keep: { name: string; timezone: string } }): Promise<ApplyResult> {
-  const caller: PartnerMemberCaller = { businessId: input.businessId, partnerId: input.partnerId, userId: input.userId, actor: "partner_member" };
+export async function applyStoredBusinessTemplate(dependencies: BusinessSetupDependencies, input: { partnerId: string; businessId: string; template: StoredBusinessTemplate; keep: { name: string; timezone: string } } & ({ userId: string } | { platformKeyId: string })): Promise<ApplyResult> {
+  // A key sets the business up as itself, as its own v1 requests would.
+  const caller: PartnerMemberCaller | PlatformKeyCaller = "userId" in input
+    ? { businessId: input.businessId, partnerId: input.partnerId, userId: input.userId, actor: "partner_member" }
+    : { businessId: input.businessId, partnerId: input.partnerId, platformKeyId: input.platformKeyId, groupId: input.partnerId, actor: "platform_key" };
   const saved = renameBusinessIn(input.template.template, input.template.template.business.name, input.keep.name);
   const template: BusinessTemplate = { ...saved, business: { ...saved.business, ...input.keep } };
   // Only documents the template lists and holds a copy of are uploaded.

@@ -8,3 +8,4 @@ export * from "./webhookNetwork";
 export * from "./webhookTransport";
 export * from "./webhooks";
 export * from "./users";
+export * from "./partner";

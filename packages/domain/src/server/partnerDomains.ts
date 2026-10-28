@@ -1,6 +1,6 @@
 import { and, asc, eq, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 
-import { enqueueOutbox, partnerDomains, partnerMembers, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { enqueueOutbox, partnerDomains, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import type { CustomHostnameProvider, TxtLookup } from "@lobbystack/providers";
 import {
   currentPartnerSubdomain,
@@ -19,7 +19,8 @@ import { AuthorizationError } from "../authz";
 import { announceBrandChange } from "./brands";
 import type { DomainContext } from "./context";
 import { loadPartnerTierInTransaction } from "./partnerBilling";
-import { reservePartnerSubdomain, type PartnerActor, type PartnerMemberActor } from "./partners";
+import { partnerActorRole, partnerRls, actorUserId } from "./partnerActors";
+import { reservePartnerSubdomain, type PartnerActor } from "./partners";
 
 // A partner's own domain, such as app.acmeagency.com, beside its subdomain of
 // the partner base domain. Owners and admins add one on the console's
@@ -75,16 +76,14 @@ function failure(message: string, status: number, code: string): Error {
   return Object.assign(new Error(message), { status, code });
 }
 
-function domainActor(actor: PartnerActor): PartnerMemberActor {
-  if (actor.kind !== "member") throw new AuthorizationError("Platform keys can't change a partner's domains.");
+/** A key acts on the partner too, with an admin's rights. */
+function domainActor(actor: PartnerActor): PartnerActor {
   return actor;
 }
 
 /** The actor's role as the database has it now, which may differ from the one it arrived with. */
-async function currentRole(tx: DatabaseTransaction, member: PartnerMemberActor): Promise<PartnerRole> {
-  const [row] = await tx.select({ role: partnerMembers.role }).from(partnerMembers).where(and(eq(partnerMembers.partnerId, member.partnerId), eq(partnerMembers.userId, member.userId), eq(partnerMembers.status, "active"))).limit(1);
-  if (!row) throw new AuthorizationError("You aren't on this partner's team.");
-  return row.role;
+async function currentRole(tx: DatabaseTransaction, member: PartnerActor): Promise<PartnerRole> {
+  return await partnerActorRole(tx, member);
 }
 
 /** The lock adding and removing a partner's own domain take, so two people can't each add one. */
@@ -154,7 +153,7 @@ async function verifiedForAnotherPartner(tx: DatabaseTransaction, partnerId: str
   return owners.rows.some((row) => row.partner_id !== partnerId);
 }
 
-async function readPartnerDomains(tx: DatabaseTransaction, member: PartnerMemberActor): Promise<PartnerDomains> {
+async function readPartnerDomains(tx: DatabaseTransaction, member: PartnerActor): Promise<PartnerDomains> {
   const role = await currentRole(tx, member);
   const rows = await tx.select({ kind: partnerDomains.kind, ...customColumns }).from(partnerDomains).where(eq(partnerDomains.partnerId, member.partnerId));
   const subdomain = currentPartnerSubdomain(rows.find((row) => row.kind === "subdomain")?.hostname ?? null, process.env);
@@ -175,7 +174,7 @@ async function readPartnerDomains(tx: DatabaseTransaction, member: PartnerMember
  */
 export async function getPartnerDomains(context: DomainContext, actor: PartnerActor): Promise<PartnerDomains> {
   const member = domainActor(actor);
-  const read = async () => await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => await readPartnerDomains(tx, member));
+  const read = async () => await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "operator" }, async (tx) => await readPartnerDomains(tx, member));
   const domains = await read();
   if (domains.subdomain || !partnerFeatures(process.env).baseDomain) return domains;
   return await reservePartnerSubdomain(context, member.partnerId) ? await read() : domains;
@@ -200,7 +199,7 @@ export async function addPartnerCustomDomain(context: DomainContext, actor: Part
   if (belongsToHost(hostname)) throw failure("That domain belongs to this deployment. Enter a subdomain of your own domain.", 409, "domain_reserved");
 
   // The provisioning job belongs to no business, so the domain is added as the system actor once the role and tier are checked.
-  await withBusinessTransaction(context.db, { userId: member.userId, actorType: "system" }, async (tx) => {
+  await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "system" }, async (tx) => {
     await lockPartnerDomains(tx, member.partnerId);
     if (await currentRole(tx, member) === "member") throw new AuthorizationError("Only owners and admins can change the partner's domains.");
     if (await customDomainsFor(tx, member.partnerId) === "paid_tier_required") throw failure("Your own domain comes with a paid tier. An owner can choose one on the Billing page.", 403, "paid_tier_required");
@@ -209,7 +208,7 @@ export async function addPartnerCustomDomain(context: DomainContext, actor: Part
     const [held] = await tx.select({ id: partnerDomains.id }).from(partnerDomains).where(and(eq(partnerDomains.hostname, hostname), or(isNotNull(partnerDomains.verifiedAt), eq(partnerDomains.kind, "subdomain")))).limit(1);
     if (held) throw failure("That domain is already connected to a dashboard.", 409, "domain_taken");
     const [added] = await tx.insert(partnerDomains)
-      .values({ partnerId: member.partnerId, hostname, kind: "custom", provider, addedByUserId: member.userId })
+      .values({ partnerId: member.partnerId, hostname, kind: "custom", provider, addedByUserId: actorUserId(member) })
       .returning({ id: partnerDomains.id });
     await enqueueOutbox(tx, {
       topic: "partnerDomain.provision",
@@ -229,7 +228,7 @@ export async function addPartnerCustomDomain(context: DomainContext, actor: Part
  */
 export async function removePartnerCustomDomain(context: DomainContext, actor: PartnerActor): Promise<PartnerDomains> {
   const member = domainActor(actor);
-  await withBusinessTransaction(context.db, { userId: member.userId, actorType: "system" }, async (tx) => {
+  await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "system" }, async (tx) => {
     await lockPartnerDomains(tx, member.partnerId);
     if (await currentRole(tx, member) === "member") throw new AuthorizationError("Only owners and admins can change the partner's domains.");
     const [removed] = await tx.delete(partnerDomains)

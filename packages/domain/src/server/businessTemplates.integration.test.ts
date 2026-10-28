@@ -479,9 +479,9 @@ describe.skipIf(!client)("business templates", () => {
       const left = await asMigrator(tx, async () => await tx.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.partnerId, acme.partnerId), eq(businesses.name, "Harbor Dental"))));
       expect(left).toEqual([]);
 
-      // Only someone on the partner's team reads its templates, so a key is refused before anything is made.
+      // A key the partner never made is refused before anything is made. partnerKeyApi.integration.test.ts covers real keys.
       const key = { kind: "key" as const, partnerId: acme.partnerId, platformKeyId: randomUUID() };
-      expect(await refusal(createPartnerBusiness(context, key, { ...pierInput, name: "Beacon Dental", ownerEmail: "owner@beacon.invalid", templateId: rulesOnly }, setup))).toMatchObject({ status: 403 });
+      expect(await refusal(createPartnerBusiness(context, key, { ...pierInput, name: "Beacon Dental", ownerEmail: "owner@beacon.invalid", templateId: rulesOnly }, setup))).toMatchObject({ status: 401 });
       const beacon = await asMigrator(tx, async () => await tx.select({ id: businesses.id }).from(businesses).where(eq(businesses.name, "Beacon Dental")));
       expect(beacon).toEqual([]);
     });

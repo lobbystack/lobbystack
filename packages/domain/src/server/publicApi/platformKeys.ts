@@ -4,7 +4,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { businesses, platformKeyBusinesses, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { PLATFORM_API_KEY_PREFIX, apiKeyScopes, businessApiKeyScopes, isApiKeyScope, type ApiKeyScope, type PlatformOnlyScope } from "@lobbystack/shared";
+import { PLATFORM_API_KEY_PREFIX, apiKeyScopes, businessApiKeyScopes, isApiKeyScope, isPartnerScope, type ApiKeyScope, type PlatformOnlyScope } from "@lobbystack/shared";
 
 import type { DomainContext } from "../context";
 import { notFound, PublicApiError } from "./errors";
@@ -46,8 +46,9 @@ const entrySchema = z.strictObject({
   owner_email: z.email(),
   // "partner" is the old name for "group".
   access: z.enum(["group", "all", "partner"]).default("group"),
-  // Required, so a key never gains a scope added after it was made.
-  scopes: z.array(z.enum(apiKeyScopes)).min(1),
+  // Required, so a key never gains a scope added after it was made. A host's
+  // key has no partner to act on, so the partner scopes are refused.
+  scopes: z.array(z.enum(apiKeyScopes)).min(1).refine((scopes) => !scopes.some(isPartnerScope), { message: "The partner scopes are only for keys a partner makes in its console." }),
   created_at: z.iso.datetime({ offset: true }),
 });
 
@@ -261,6 +262,8 @@ export function normalizePlatformKeyScopes(value: unknown): ApiKeyScope[] | null
  * granted only on purpose.
  */
 export function generatePlatformKey(input: { name: string; group: string; ownerEmail: string; access?: PlatformKeyAccess; scopes?: readonly string[]; platformScopes?: readonly PlatformOnlyScope[]; now?: Date }): { key: string; entry: PlatformKeyEntry } {
+  const partnerOnly = [...(input.scopes ?? []), ...(input.platformScopes ?? [])].filter(isPartnerScope);
+  if (partnerOnly.length) throw new PlatformKeyConfigError(`${partnerOnly.join(", ")} ${partnerOnly.length > 1 ? "are" : "is"} only for keys a partner makes on its console's API keys page, which act as the partner. A key in PLATFORM_API_KEYS acts as its owner_email account and has no partner.`);
   const { key, prefix, hash } = newPlatformKeySecret();
   const candidate = {
     id: randomUUID(),

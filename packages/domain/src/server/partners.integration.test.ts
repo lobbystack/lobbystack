@@ -479,8 +479,9 @@ describe.skipIf(!client)("partner brand", () => {
       expect(await getPartnerBrandSettings(context, member!)).toMatchObject({ role: "member", name: expect.stringMatching(/^Partner /), subdomain: null, subdomainUrl: null, logoUrl: null });
       // The role it was resolved with doesn't matter: the database's does.
       await expect(savePartnerBrand(context, { ...member!, role: "admin" }, brandInput)).rejects.toMatchObject({ status: 403 });
-      await expect(savePartnerBrand(context, { kind: "key", partnerId, platformKeyId: randomUUID() }, brandInput)).rejects.toMatchObject({ status: 403 });
-      await expect(getPartnerBrandSettings(context, { kind: "key", partnerId, platformKeyId: randomUUID() })).rejects.toMatchObject({ status: 403 });
+      // A key the partner never made answers as an invalid one. partnerKeyApi.integration.test.ts covers real keys.
+      await expect(savePartnerBrand(context, { kind: "key", partnerId, platformKeyId: randomUUID() }, brandInput)).rejects.toMatchObject({ status: 401 });
+      await expect(getPartnerBrandSettings(context, { kind: "key", partnerId, platformKeyId: randomUUID() })).rejects.toMatchObject({ status: 401 });
       const direct = await withBusinessTransaction(context.db, { userId: member!.userId, actorType: "operator" }, async (inner) => await inner.execute(sql`update public.partners set name = 'Taken Over', brand_color = '#000000' where id = ${partnerId}::uuid returning id`));
       expect(direct.rows).toEqual([]);
       // Not even an owner can change the slug, and so the subdomain, through SQL.

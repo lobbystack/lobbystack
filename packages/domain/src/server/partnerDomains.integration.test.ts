@@ -181,7 +181,8 @@ describe.skipIf(!testUrl)("adding a partner's own domain", () => {
       const rival = await partner(tx, "Rival Desk");
       const hostname = ownHostname();
       expect(await refusal(addPartnerCustomDomain(team.context, team.memberActor, { hostname }))).toMatchObject({ status: 403, code: "forbidden" });
-      expect(await refusal(addPartnerCustomDomain(team.context, { kind: "key", partnerId: team.partnerId, platformKeyId: randomUUID() }, { hostname }))).toMatchObject({ status: 403 });
+      // A key the partner never made answers as an invalid one. partnerKeyApi.integration.test.ts covers real keys.
+      expect(await refusal(addPartnerCustomDomain(team.context, { kind: "key", partnerId: team.partnerId, platformKeyId: randomUUID() }, { hostname }))).toMatchObject({ status: 401 });
       await addPartnerCustomDomain(team.context, team.ownerActor, { hostname });
       expect(await refusal(addPartnerCustomDomain(team.context, team.ownerActor, { hostname: ownHostname() }))).toMatchObject({ status: 409, code: "custom_domain_exists" });
       const { hostnames, dns, providers, worker } = worldOf(tx);

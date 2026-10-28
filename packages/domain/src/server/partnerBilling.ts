@@ -1,6 +1,6 @@
 import { and, desc, eq, gt, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
 
-import { enqueueOutbox, partnerBillingAccounts, partnerCheckoutRequests, partnerDomains, partnerMembers, partners, providerEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { enqueueOutbox, partnerBillingAccounts, partnerCheckoutRequests, partnerDomains, partners, providerEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import {
   billingErrorCodes,
   isBillingInterval,
@@ -15,13 +15,13 @@ import {
   type PartnerTierSlug,
 } from "@lobbystack/shared";
 
-import { AuthorizationError } from "../authz";
 import type { DomainContext } from "./context";
 import { advancePartnerInTransaction, partnerTierEventKind } from "./partnerLifecycle";
 import { loadPartnerNumberStanding } from "./partnerNumbers";
 import { poolSpendCents, readPartnerPoolInTransaction, setPartnerPoolOverageInTransaction } from "./partnerPool";
 import { isLivePolarSubscriptionState, subscriptionEventEffect } from "./polarSubscriptions";
-import type { PartnerActor, PartnerMemberActor } from "./partners";
+import { partnerRls, requirePartnerOwner } from "./partnerActors";
+import type { PartnerActor } from "./partners";
 import { periodKeyFor } from "./usage";
 
 // A partner's tier: what it buys from the host through Polar. Only the
@@ -117,16 +117,26 @@ function failure(message: string, status: number, code: string): Error {
   return Object.assign(new Error(message), { status, code });
 }
 
-function billingActor(actor: PartnerActor): PartnerMemberActor {
-  if (actor.kind !== "member") throw new AuthorizationError("Platform keys can't manage a partner's billing.");
+/** A key reaches the partner's billing only with the scopes an owner grants. */
+function billingActor(actor: PartnerActor): PartnerActor {
   return actor;
 }
 
-/** Refuses anyone who isn't an owner of the partner now, whatever role they arrived with. */
-async function requireOwner(tx: DatabaseTransaction, member: PartnerMemberActor): Promise<void> {
-  const [row] = await tx.select({ role: partnerMembers.role }).from(partnerMembers).where(and(eq(partnerMembers.partnerId, member.partnerId), eq(partnerMembers.userId, member.userId), eq(partnerMembers.status, "active"))).limit(1);
-  if (!row) throw new AuthorizationError("You aren't on this partner's team.");
-  if (row.role !== "owner") throw failure("Only owners manage the partner's billing.", 403, "owner_only");
+/** Refuses anyone who isn't an owner of the partner now, whatever role they arrived with, and keys no owner granted the scope. */
+async function requireOwner(tx: DatabaseTransaction, member: PartnerActor, scope: "partner.billing:read" | "partner.billing:write" = "partner.billing:read"): Promise<void> {
+  await requirePartnerOwner(tx, member, { scope, message: "Only owners manage the partner's billing." });
+}
+
+/**
+ * The owner a checkout is made out to: the owner asking, or for a key, the
+ * owner who made it while they still are one, since Polar's checkout fills in
+ * a person's email.
+ */
+async function checkoutRequester(tx: DatabaseTransaction, actor: PartnerActor): Promise<string> {
+  if (actor.kind === "member") return actor.userId;
+  const owner = (await tx.execute<{ owner: string | null }>(sql`select app.partner_platform_key_owner(${actor.partnerId}::uuid, ${actor.platformKeyId}::uuid) as owner`)).rows[0]?.owner;
+  if (!owner) throw failure("A key's checkout is made out to the owner who made it, who is no longer an owner. Start the checkout from the console, or use a key an owner made.", 409, "key_owner_inactive");
+  return owner;
 }
 
 /** The lock every change to a partner's billing takes: checkouts and reconciling Polar's events. */
@@ -177,7 +187,7 @@ function poolOverageOf(account: Awaited<ReturnType<typeof readAccount>>, tier: P
 
 export async function getPartnerBilling(context: DomainContext, actor: PartnerActor): Promise<PartnerBilling> {
   const member = billingActor(actor);
-  return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
+  return await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "operator" }, async (tx) => {
     await requireOwner(tx, member);
     const account = await readAccount(tx, member.partnerId);
     const tier = tierOf(account);
@@ -220,9 +230,9 @@ export async function setPartnerPoolOverage(context: DomainContext, actor: Partn
     throw failure("capCents must be a whole number of cents, or null for no cap.", 400, "invalid_pool_overage");
   }
   if (!partnerFeatures(process.env).tierBilling) throw failure("This deployment doesn't bill partners for tiers.", 409, "tier_billing_unavailable");
-  return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
+  return await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "operator" }, async (tx) => {
     await lockPartnerBilling(tx, member.partnerId);
-    await requireOwner(tx, member);
+    await requireOwner(tx, member, "partner.billing:write");
     await setPartnerPoolOverageInTransaction(tx, { partnerId: member.partnerId, enabled, capCents });
     const account = await readAccount(tx, member.partnerId);
     return poolOverageOf(account, tierOf(account));
@@ -316,7 +326,7 @@ export async function setPartnerHostPool(context: DomainContext, input: { partne
 /** Polar's customer for the partner, whose portal changes, cancels or pays for its tier. Only owners open it. */
 export async function partnerBillingPortalCustomer(context: DomainContext, actor: PartnerActor): Promise<{ customerId: string }> {
   const member = billingActor(actor);
-  return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
+  return await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "operator" }, async (tx) => {
     await requireOwner(tx, member);
     const account = await readAccount(tx, member.partnerId);
     if (!account?.customerId || !account.subscriptionId) throw failure("Your partner has no tier in Polar to manage yet.", 409, "no_billing_customer");
@@ -361,9 +371,10 @@ export async function createPartnerTierCheckout(
   if (!partnerFeatures(process.env).tierBilling) throw failure("This deployment doesn't bill partners for tiers.", 409, "tier_billing_unavailable");
 
   // The job belongs to no business, so it's queued as the system actor; the owner check comes first.
-  return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "system" }, async (tx) => {
+  return await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "system" }, async (tx) => {
     await lockPartnerBilling(tx, member.partnerId);
-    await requireOwner(tx, member);
+    await requireOwner(tx, member, "partner.billing:write");
+    const requester = await checkoutRequester(tx, member);
     if (tierOf(await readAccount(tx, member.partnerId)).tier !== "free") {
       throw failure("Your partner already pays for a tier. Change it from Manage subscription.", 409, billingErrorCodes.subscriptionActive);
     }
@@ -373,12 +384,12 @@ export async function createPartnerTierCheckout(
       .orderBy(desc(partnerCheckoutRequests.createdAt))
       .limit(1);
     if (open) {
-      if (open.requestedByUserId !== member.userId) throw failure("Another owner's checkout is already open.", 409, billingErrorCodes.checkoutInProgress);
+      if (open.requestedByUserId !== requester) throw failure("Another owner's checkout is already open.", 409, billingErrorCodes.checkoutInProgress);
       if (open.tier === tier && open.billingInterval === billingInterval && open.returnOrigin === origin) return { requestId: open.id };
       // Polar allows one active subscription per customer, so paying in both tabs can't start two.
       await tx.update(partnerCheckoutRequests).set({ status: "superseded", updatedAt: new Date() }).where(eq(partnerCheckoutRequests.id, open.id));
     }
-    const [request] = await tx.insert(partnerCheckoutRequests).values({ partnerId: member.partnerId, requestedByUserId: member.userId, tier, billingInterval, returnOrigin: origin }).returning({ id: partnerCheckoutRequests.id });
+    const [request] = await tx.insert(partnerCheckoutRequests).values({ partnerId: member.partnerId, requestedByUserId: requester, tier, billingInterval, returnOrigin: origin }).returning({ id: partnerCheckoutRequests.id });
     if (!request) throw new Error("Partner checkout request could not be created.");
     await enqueueOutbox(tx, {
       topic: "billing.createPartnerCheckout",
@@ -404,7 +415,7 @@ export type PartnerTierCheckout = {
 
 export async function getPartnerTierCheckout(context: DomainContext, actor: PartnerActor, input: { requestId: string }): Promise<PartnerTierCheckout> {
   const member = billingActor(actor);
-  return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
+  return await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "operator" }, async (tx) => {
     await requireOwner(tx, member);
     const [row] = await tx.select({ requestId: partnerCheckoutRequests.id, tier: partnerCheckoutRequests.tier, billingInterval: partnerCheckoutRequests.billingInterval, status: partnerCheckoutRequests.status, checkoutUrl: partnerCheckoutRequests.checkoutUrl })
       .from(partnerCheckoutRequests)

@@ -13,7 +13,8 @@ import type { DomainContext } from "./context";
 import { normalizeWebsiteSourceUrl } from "./knowledgeUrl";
 import { firstOnboardingStage } from "./onboarding";
 import { closeCheckoutQuietly } from "./packageBilling";
-import { deletePartnerBusinessInTransaction, reserveSubdomainIn, type PartnerActor, type PartnerMemberActor } from "./partners";
+import { actorUserId, partnerActorRole, partnerRls } from "./partnerActors";
+import { deletePartnerBusinessInTransaction, reserveSubdomainIn, type PartnerActor } from "./partners";
 import { recordProductEventBestEffort } from "./productEvents";
 import { PROSPECT_DEMO_BOOKING_POLICY, PROSPECT_DEMO_SMS_INSTRUCTIONS, prospectDemoSettingsIn, prospectDemoVoiceInstructions, type ProspectDemoSetting } from "./prospectDemoSettings";
 import { saveReceptionistProfileInTransaction } from "./receptionistProfile";
@@ -79,7 +80,12 @@ export type CreatedProspectDemo = { demoId: string; businessId: string; slug: st
  * they made, or someone on a partner's team, who manages every demo of the
  * partner. Whoever made a demo is its operator either way.
  */
-type DemoManager = { kind: "operator"; userId: string } | { kind: "partner"; userId: string; partnerId: string };
+type DemoManager = { kind: "operator"; userId: string } | { kind: "partner"; actor: PartnerActor; partnerId: string };
+
+/** The RLS settings a manager's transactions run with: the host's operator, or the partner's person or key. */
+function managerRls(manager: DemoManager): { userId?: string | undefined; platformKeyId?: string | undefined } {
+  return manager.kind === "operator" ? { userId: manager.userId } : partnerRls(manager.actor);
+}
 
 function failure(message: string, status: number, code: string): Error {
   return Object.assign(new Error(message), { status, code });
@@ -263,7 +269,7 @@ function prepareDemo(input: ProspectDemoInput) {
 async function insertDemoInTransaction(
   tx: DatabaseTransaction,
   demo: ReturnType<typeof prepareDemo>,
-  owner: { operatorUserId: string; brandName: string; partner: { partnerId: string; accessLevel: PartnerAccessLevel } | null },
+  owner: { operatorUserId: string | null; createdByPlatformKeyId?: string; brandName: string; partner: { partnerId: string; accessLevel: PartnerAccessLevel } | null },
 ): Promise<CreatedProspectDemo> {
   const { input, name, businessId, demoId, ingestionJobId, slug, token, locale, timezone, suggestedPrompts } = demo;
   const { partner } = owner;
@@ -280,7 +286,10 @@ async function insertDemoInTransaction(
     // Whoever claims a partner's demo starts its onboarding where an owner the partner invited would.
     ...(partner ? { partnerId: partner.partnerId, partnerAccessLevel: partner.accessLevel, onboardingStage: firstOnboardingStage(partner) } : {}),
   });
-  if (!partner) await tx.insert(businessMemberships).values({ businessId, userId: owner.operatorUserId, role: "business_owner", status: "active" });
+  if (!partner) {
+    if (!owner.operatorUserId) throw new Error("The host's demo needs its operator.");
+    await tx.insert(businessMemberships).values({ businessId, userId: owner.operatorUserId, role: "business_owner", status: "active" });
+  }
   await tx.insert(receptionistProfiles).values({
     businessId,
     greeting: input.greeting?.trim() || defaultGreeting(name, locale),
@@ -298,7 +307,7 @@ async function insertDemoInTransaction(
     if (service) await tx.insert(staffServiceAssignments).values({ businessId, staffId: defaultStaff.id, serviceId: service.id });
   }
   await tx.insert(websiteIngestionJobs).values({ id: ingestionJobId, businessId, websiteUrl: demo.websiteUrl, provider: "firecrawl", status: "queued" });
-  await tx.insert(prospectDemos).values({ id: demoId, businessId, tokenHash: tokenHash(token), status: "preparing", locale, suggestedPrompts, recipientEmail: input.recipientEmail?.trim().toLowerCase() || null, recipientName: input.recipientName?.trim() || null, campaignId: input.campaignId?.trim() || null, websiteUrl: demo.websiteUrl, businessName: name, operatorUserId: owner.operatorUserId, partnerId: partner?.partnerId ?? null, websiteIngestionJobId: ingestionJobId, expiresAt: new Date(Date.now() + PROSPECT_DEMO_MAX_AGE_MS) });
+  await tx.insert(prospectDemos).values({ id: demoId, businessId, tokenHash: tokenHash(token), status: "preparing", locale, suggestedPrompts, recipientEmail: input.recipientEmail?.trim().toLowerCase() || null, recipientName: input.recipientName?.trim() || null, campaignId: input.campaignId?.trim() || null, websiteUrl: demo.websiteUrl, businessName: name, operatorUserId: owner.operatorUserId, createdByPlatformKeyId: owner.createdByPlatformKeyId ?? null, partnerId: partner?.partnerId ?? null, websiteIngestionJobId: ingestionJobId, expiresAt: new Date(Date.now() + PROSPECT_DEMO_MAX_AGE_MS) });
   await enqueueOutbox(tx, { topic: "knowledge.crawlWebsite", businessId, aggregateType: "website_ingestion_job", aggregateId: ingestionJobId, dedupeKey: `prospect-demo:${demoId}:crawl`, payload: { url: demo.websiteUrl, websiteIngestionJobId: ingestionJobId } });
   await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId, aggregateType: "prospect_demo", aggregateId: demoId, dedupeKey: `prospect-demo:${demoId}:snapshot:initial`, payload: { businessId, reason: "prospect_demo_created" } });
   return { demoId, businessId, slug, token, status: "preparing", websiteIngestionJobId: ingestionJobId };
@@ -316,7 +325,7 @@ export async function createProspectDemo(
 
 /** The demo's status in a system transaction scoped to its business, or a 404 when the manager can't act on it. */
 async function readDemoStatus(context: DomainContext, manager: DemoManager, input: { demoId: string; businessId: string }): Promise<ProspectDemoStatus & { accessLevel: PartnerAccessLevel }> {
-  return await withBusinessTransaction(context.db, { userId: manager.userId, businessId: input.businessId, actorType: "system" }, async (tx) => {
+  return await withBusinessTransaction(context.db, { ...managerRls(manager), businessId: input.businessId, actorType: "system" }, async (tx) => {
     const row = (await tx.select({ demo: prospectDemos, slug: businesses.slug, accessLevel: businesses.partnerAccessLevel, ingestionStatus: websiteIngestionJobs.status, ingestionError: websiteIngestionJobs.lastError, greeting: receptionistProfiles.greeting })
       .from(prospectDemos)
       .innerJoin(businesses, eq(businesses.id, prospectDemos.businessId))
@@ -357,7 +366,7 @@ export async function setProspectDemoPrompts(context: DomainContext, input: { op
 
 async function publishDemo(context: DomainContext, manager: DemoManager, input: { demoId: string; token: string; suggestedPrompts?: string[] | undefined }): Promise<{ status: "active"; expiresAt: Date }> {
   const businessId = await resolveDemoBusiness(context, manager, input.demoId);
-  return await withBusinessTransaction(context.db, { userId: manager.userId, businessId, actorType: "system" }, async (tx) => {
+  return await withBusinessTransaction(context.db, { ...managerRls(manager), businessId, actorType: "system" }, async (tx) => {
     await requireManager(tx, manager);
     // A claim holds this row while it runs, so publishing waits for it and then sees the demo claimed.
     const demo = (await tx.select().from(prospectDemos).where(and(eq(prospectDemos.id, input.demoId), managedBy(manager))).limit(1).for("update"))[0];
@@ -387,7 +396,7 @@ export async function publishProspectDemo(context: DomainContext, input: { opera
 
 async function rotateDemoToken(context: DomainContext, manager: DemoManager, demoId: string): Promise<{ token: string }> {
   const businessId = await resolveDemoBusiness(context, manager, demoId);
-  return await withBusinessTransaction(context.db, { userId: manager.userId, businessId, actorType: "system" }, async (tx) => {
+  return await withBusinessTransaction(context.db, { ...managerRls(manager), businessId, actorType: "system" }, async (tx) => {
     await requireManager(tx, manager);
     const demo = (await tx.select({ id: prospectDemos.id, businessName: prospectDemos.businessName, status: prospectDemos.status }).from(prospectDemos).where(and(eq(prospectDemos.id, demoId), managedBy(manager))).limit(1).for("update"))[0];
     if (!demo) throw demoNotFound();
@@ -404,7 +413,7 @@ export async function rotateProspectDemoToken(context: DomainContext, input: { o
 
 async function revokeDemo(context: DomainContext, manager: DemoManager, demoId: string): Promise<void> {
   const businessId = await resolveDemoBusiness(context, manager, demoId);
-  await withBusinessTransaction(context.db, { userId: manager.userId, businessId, actorType: "system" }, async (tx) => {
+  await withBusinessTransaction(context.db, { ...managerRls(manager), businessId, actorType: "system" }, async (tx) => {
     await requireManager(tx, manager);
     // A claim holds this row while it runs, so turning the demo off waits for it and never writes over a claim.
     const demo = (await tx.select({ id: prospectDemos.id, status: prospectDemos.status }).from(prospectDemos).where(and(eq(prospectDemos.id, demoId), managedBy(manager))).limit(1).for("update"))[0];
@@ -442,8 +451,8 @@ export async function expireProspectDemos(context: DomainContext): Promise<numbe
 async function resolveDemoBusiness(context: DomainContext, manager: DemoManager, demoId: string): Promise<string> {
   if (!isUuid(demoId)) throw demoNotFound();
   const result = manager.kind === "operator"
-    ? await withBusinessTransaction(context.db, { userId: manager.userId, actorType: "system" }, async (tx) => await tx.execute<{ business_id: string }>(sql`select business_id from app.resolve_operator_prospect_demo(${demoId})`))
-    : await withBusinessTransaction(context.db, { userId: manager.userId, actorType: "operator" }, async (tx) => await tx.execute<{ business_id: string }>(sql`select business_id from app.list_partner_prospect_demos(${manager.partnerId}::uuid) where demo_id = ${demoId}::uuid`));
+    ? await withBusinessTransaction(context.db, { ...managerRls(manager), actorType: "system" }, async (tx) => await tx.execute<{ business_id: string }>(sql`select business_id from app.resolve_operator_prospect_demo(${demoId})`))
+    : await withBusinessTransaction(context.db, { ...managerRls(manager), actorType: "operator" }, async (tx) => await tx.execute<{ business_id: string }>(sql`select business_id from app.list_partner_prospect_demos(${manager.partnerId}::uuid) where demo_id = ${demoId}::uuid`));
   const businessId = result.rows[0]?.business_id;
   if (!businessId) throw demoNotFound();
   return businessId;
@@ -456,18 +465,16 @@ async function resolveDemoBusiness(context: DomainContext, manager: DemoManager,
  */
 async function requireManager(tx: DatabaseTransaction, manager: DemoManager): Promise<PartnerRole | null> {
   if (manager.kind === "operator") return null;
-  const [member] = await tx.select({ role: partnerMembers.role }).from(partnerMembers).where(and(eq(partnerMembers.partnerId, manager.partnerId), eq(partnerMembers.userId, manager.userId), eq(partnerMembers.status, "active"))).limit(1);
-  if (!member) throw new AuthorizationError("You aren't on this partner's team.");
-  return member.role;
+  return await partnerActorRole(tx, manager.actor);
 }
 
-function demosActor(actor: PartnerActor): PartnerMemberActor {
-  if (actor.kind !== "member") throw new AuthorizationError("Platform keys can't manage a partner's demos.");
+/** Anyone on the partner's team manages its demos, and so do its keys, which act as an admin. */
+function demosActor(actor: PartnerActor): PartnerActor {
   return actor;
 }
 
-function partnerManager(member: PartnerMemberActor): DemoManager {
-  return { kind: "partner", userId: member.userId, partnerId: member.partnerId };
+function partnerManager(member: PartnerActor): DemoManager {
+  return { kind: "partner", actor: member, partnerId: member.partnerId };
 }
 
 /** Where the partner's demos open: the origin of its brand, on its own domain. */
@@ -501,13 +508,14 @@ export async function createPartnerDemo(
   const brand = await brandForHostReference(context, { kind: "partner", partnerId: member.partnerId });
   if (!brand) throw failure("Partner not found.", 404, "partner_not_found");
   const { baseDomain } = partnerFeatures(process.env);
-  const created = await withBusinessTransaction(context.db, { userId: member.userId, businessId: demo.businessId, actorType: "system" }, async (tx) => {
+  const created = await withBusinessTransaction(context.db, { ...partnerRls(member), businessId: demo.businessId, actorType: "system" }, async (tx) => {
     const role = await requireManager(tx, partnerManager(member));
     if (role === "member" && accessLevel !== "full") throw new AuthorizationError("Only owners and admins can choose a demo's access level.");
     // A partner that signed up while the deployment had no base domain gets its subdomain now, if it can.
     const domain = baseDomain ? await reserveSubdomainIn(tx, member.partnerId, baseDomain) : { subdomain: null, changed: false };
     if (!domain.subdomain) throw failure("You need your own domain before you can make a demo.", 409, "partner_domain_required");
-    const inserted = await insertDemoInTransaction(tx, demo, { operatorUserId: member.userId, brandName: brand.name, partner: { partnerId: member.partnerId, accessLevel } });
+    // A key's demo names the key, since no person made it.
+    const inserted = await insertDemoInTransaction(tx, demo, { operatorUserId: actorUserId(member), ...(member.kind === "key" ? { createdByPlatformKeyId: member.platformKeyId } : {}), brandName: brand.name, partner: { partnerId: member.partnerId, accessLevel } });
     return { inserted, subdomain: domain.subdomain, subdomainReserved: domain.changed };
   });
   if (created.subdomainReserved) await announceBrandChange(context, { kind: "partner", partnerId: member.partnerId });
@@ -524,7 +532,7 @@ export async function listPartnerDemos(context: DomainContext, actor: PartnerAct
   const member = demosActor(actor);
   const manager = partnerManager(member);
   const periodKey = periodKeyFor();
-  const listed = await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
+  const listed = await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "operator" }, async (tx) => {
     await requireManager(tx, manager);
     // The partner's members aren't on its demos' teams, so RLS shows them none; these functions answer instead.
     const demos = await tx.execute<{ demoId: string; businessId: string }>(sql`select demo_id as "demoId", business_id as "businessId" from app.list_partner_prospect_demos(${member.partnerId}::uuid)`);
@@ -570,7 +578,7 @@ export async function deletePartnerDemo(context: DomainContext, actor: PartnerAc
   const member = demosActor(actor);
   const manager = partnerManager(member);
   const businessId = await resolveDemoBusiness(context, manager, input.demoId);
-  const closes = await withBusinessTransaction(context.db, { userId: member.userId, businessId, actorType: "system" }, async (tx) => {
+  const closes = await withBusinessTransaction(context.db, { ...partnerRls(member), businessId, actorType: "system" }, async (tx) => {
     if (await requireManager(tx, manager) === "member") throw new AuthorizationError("Only owners and admins can delete the partner's demos.");
     // A claim holds this row while it runs, so deleting waits for it and then sees the demo claimed.
     const demo = (await tx.select({ status: prospectDemos.status, expiresAt: prospectDemos.expiresAt }).from(prospectDemos).where(and(eq(prospectDemos.id, input.demoId), eq(prospectDemos.businessId, businessId), managedBy(manager))).limit(1).for("update"))[0];
@@ -671,7 +679,7 @@ export async function claimProspectDemo(
       });
       // The business now belongs to the prospect, so the operator leaves its
       // team entirely. prospect_demos keeps the operator and claimant lineage.
-      if (demo.operatorUserId !== input.userId) {
+      if (demo.operatorUserId && demo.operatorUserId !== input.userId) {
         await tx.delete(businessMemberships).where(and(eq(businessMemberships.businessId, businessId), eq(businessMemberships.userId, demo.operatorUserId)));
       }
       const onboardingStage = partnerId ? firstOnboardingStage({ partnerId, accessLevel: business.accessLevel }) : "create_business";

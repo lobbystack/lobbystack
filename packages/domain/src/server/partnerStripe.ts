@@ -2,14 +2,15 @@ import { randomUUID } from "node:crypto";
 
 import { and, asc, eq, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 
-import { partnerMembers, partnerPackages, partnerStripeAccounts, providerEvents, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { partnerPackages, partnerStripeAccounts, providerEvents, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import type { PackageTerms, StripeConnectAccount, StripeConnectEvent } from "@lobbystack/providers";
 import { isPackageAllowance, isPackageAmount, isStripeAccountCountry, normalizePackageName, partnerStripeStatus, type PartnerRole, type PartnerStripeStatus } from "@lobbystack/shared";
 
 import { AuthorizationError } from "../authz";
 import type { DomainContext } from "./context";
 import { isPackageSubscriptionEvent, reconcilePackageSubscription } from "./packageBilling";
-import type { PartnerActor, PartnerMemberActor } from "./partners";
+import { actorUserId, partnerActorRole, partnerRls, requirePartnerOwner } from "./partnerActors";
+import type { PartnerActor } from "./partners";
 
 // A partner's Stripe connection and the packages it sells (ADR 0009). The
 // partner connects its own Stripe account, and each package's product and
@@ -68,23 +69,22 @@ const notConfigured = () => failure("Stripe Connect isn't set up on this deploym
 const notConnected = () => failure("Connect your Stripe account before you sell packages.", 409, "stripe_not_connected");
 const packageNotFound = () => failure("Package not found.", 404, "package_not_found");
 
-function memberActor(actor: PartnerActor): PartnerMemberActor {
-  if (actor.kind !== "member") throw new AuthorizationError("Platform keys can't manage a partner's Stripe connection or packages.");
+/** A key acts on the partner too, with an admin's rights. */
+function memberActor(actor: PartnerActor): PartnerActor {
   return actor;
 }
 
 /** The actor's role as the database has it now, which may differ from the one it arrived with. */
-async function readRole(tx: DatabaseTransaction, actor: PartnerMemberActor): Promise<PartnerRole> {
-  const [member] = await tx.select({ role: partnerMembers.role }).from(partnerMembers).where(and(eq(partnerMembers.partnerId, actor.partnerId), eq(partnerMembers.userId, actor.userId), eq(partnerMembers.status, "active"))).limit(1);
-  if (!member) throw new AuthorizationError("You aren't on this partner's team.");
-  return member.role;
+async function readRole(tx: DatabaseTransaction, actor: PartnerActor): Promise<PartnerRole> {
+  return await partnerActorRole(tx, actor);
 }
 
-async function requireOwner(tx: DatabaseTransaction, actor: PartnerMemberActor): Promise<void> {
-  if (await readRole(tx, actor) !== "owner") throw failure("Only owners can manage the Stripe connection.", 403, "owner_only");
+/** Only owners manage the Stripe connection, and keys an owner granted the billing scope. */
+async function requireOwner(tx: DatabaseTransaction, actor: PartnerActor, scope: "partner.billing:read" | "partner.billing:write"): Promise<void> {
+  await requirePartnerOwner(tx, actor, { scope, message: "Only owners can manage the Stripe connection." });
 }
 
-async function requireManager(tx: DatabaseTransaction, actor: PartnerMemberActor): Promise<PartnerRole> {
+async function requireManager(tx: DatabaseTransaction, actor: PartnerActor): Promise<PartnerRole> {
   const role = await readRole(tx, actor);
   if (role === "member") throw new AuthorizationError("Only owners and admins can manage packages.");
   return role;
@@ -149,8 +149,8 @@ async function disconnectIn(tx: DatabaseTransaction, accountId: string, at: Date
  */
 export async function getPartnerStripeConnection(context: DomainContext, actor: PartnerActor, options: { refresh?: boolean } = {}): Promise<PartnerStripeConnection> {
   const member = memberActor(actor);
-  const read = async () => await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
-    await requireOwner(tx, member);
+  const read = async () => await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "operator" }, async (tx) => {
+    await requireOwner(tx, member, "partner.billing:read");
     return await readAccount(tx, member.partnerId);
   });
   const row = await read();
@@ -182,8 +182,8 @@ export async function startPartnerStripeOnboarding(
   const member = memberActor(actor);
   const stripe = context.stripeConnect;
   if (!stripe) throw notConfigured();
-  const existing = await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
-    await requireOwner(tx, member);
+  const existing = await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "operator" }, async (tx) => {
+    await requireOwner(tx, member, "partner.billing:write");
     return await readAccount(tx, member.partnerId);
   });
   const link = (accountId: string | null, country: string | null) => stripe.createOnboardingLink({
@@ -200,8 +200,8 @@ export async function startPartnerStripeOnboarding(
   const country = input.country;
   if (!isStripeAccountCountry(country)) throw failure("Choose the country your business is in.", 400, "invalid_country");
   const created = await link(null, country);
-  const recorded = await withBusinessTransaction(context.db, { userId: member.userId, actorType: "system" }, async (tx) => {
-    const fresh = { stripeAccountId: created.accountId, country, currency: null, detailsSubmitted: false, chargesEnabled: false, payoutsEnabled: false, disabledReason: null, disconnectedAt: null, syncedAt: null, connectedByUserId: member.userId };
+  const recorded = await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "system" }, async (tx) => {
+    const fresh = { stripeAccountId: created.accountId, country, currency: null, detailsSubmitted: false, chargesEnabled: false, payoutsEnabled: false, disabledReason: null, disconnectedAt: null, syncedAt: null, connectedByUserId: actorUserId(member) };
     const [saved] = existing
       // Only the disconnected account it read gives way, so two owners reconnecting at once keep one account.
       ? await tx.update(partnerStripeAccounts).set({ ...fresh, updatedAt: new Date() }).where(and(eq(partnerStripeAccounts.partnerId, member.partnerId), eq(partnerStripeAccounts.stripeAccountId, existing.stripeAccountId), isNotNull(partnerStripeAccounts.disconnectedAt))).returning({ accountId: partnerStripeAccounts.stripeAccountId })
@@ -285,7 +285,7 @@ function termsOf(row: PackageRow, change: { name: string; active: boolean }): Pa
 /** The partner's packages still for sale, oldest first, with whether new ones can be made. Owners and admins can read them. */
 export async function listPartnerPackages(context: DomainContext, actor: PartnerActor): Promise<PartnerPackages> {
   const member = memberActor(actor);
-  return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
+  return await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "operator" }, async (tx) => {
     const role = await requireManager(tx, member);
     const account = await readAccount(tx, member.partnerId);
     const rows = await tx.select().from(partnerPackages).where(and(eq(partnerPackages.partnerId, member.partnerId), isNull(partnerPackages.archivedAt))).orderBy(asc(partnerPackages.createdAt), asc(partnerPackages.id));
@@ -322,7 +322,7 @@ export async function createPartnerPackage(context: DomainContext, actor: Partne
   if (!isPackageAllowance(input.voiceMinutes) || !isPackageAllowance(input.chats)) throw failure("Enter the minutes and chats as whole numbers from 0 to 1,000,000.", 400, "invalid_allowance");
   const terms = { name, monthlyPriceMinor: input.monthlyPriceMinor, setupFeeMinor, voiceMinutes: input.voiceMinutes, chats: input.chats };
 
-  const account = await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
+  const account = await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "operator" }, async (tx) => {
     await requireManager(tx, member);
     return await readAccount(tx, member.partnerId);
   });
@@ -332,7 +332,7 @@ export async function createPartnerPackage(context: DomainContext, actor: Partne
   const packageId = randomUUID();
   const prices = await stripe.upsertPackagePrice(account.stripeAccountId, { packageId, name, currency: account.currency, monthlyPriceMinor: terms.monthlyPriceMinor, setupFeeMinor, active: true, prices: null });
   try {
-    return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
+    return await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "operator" }, async (tx) => {
       await requireManager(tx, member);
       const [row] = await tx.insert(partnerPackages).values({
         id: packageId,
@@ -343,7 +343,7 @@ export async function createPartnerPackage(context: DomainContext, actor: Partne
         stripeProductId: prices.productId,
         stripePriceId: prices.priceId,
         stripeSetupPriceId: prices.setupPriceId,
-        createdByUserId: member.userId,
+        createdByUserId: actorUserId(member),
       }).returning();
       return packageFrom(row!, account);
     });
@@ -355,8 +355,8 @@ export async function createPartnerPackage(context: DomainContext, actor: Partne
 }
 
 /** A package still for sale, with the partner's account, for an owner or admin. */
-async function readPackageForChange(context: DomainContext, member: PartnerMemberActor, packageId: string): Promise<{ row: PackageRow; account: AccountRow | null }> {
-  return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
+async function readPackageForChange(context: DomainContext, member: PartnerActor, packageId: string): Promise<{ row: PackageRow; account: AccountRow | null }> {
+  return await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "operator" }, async (tx) => {
     await requireManager(tx, member);
     const [row] = await tx.select().from(partnerPackages).where(and(eq(partnerPackages.id, packageId), eq(partnerPackages.partnerId, member.partnerId), isNull(partnerPackages.archivedAt))).limit(1);
     if (!row) throw packageNotFound();
@@ -364,8 +364,8 @@ async function readPackageForChange(context: DomainContext, member: PartnerMembe
   });
 }
 
-async function updatePackage(context: DomainContext, member: PartnerMemberActor, packageId: string, change: Partial<Pick<PackageRow, "name" | "archivedAt">>): Promise<PackageRow> {
-  return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
+async function updatePackage(context: DomainContext, member: PartnerActor, packageId: string, change: Partial<Pick<PackageRow, "name" | "archivedAt">>): Promise<PackageRow> {
+  return await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "operator" }, async (tx) => {
     await requireManager(tx, member);
     const [row] = await tx.update(partnerPackages).set({ ...change, updatedAt: new Date() }).where(and(eq(partnerPackages.id, packageId), eq(partnerPackages.partnerId, member.partnerId), isNull(partnerPackages.archivedAt))).returning();
     if (!row) throw packageNotFound();

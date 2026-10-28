@@ -187,8 +187,9 @@ describe.skipIf(!client)("a partner's prospect demos against PostgreSQL", () => 
       expect(await refusal(revokePartnerDemo(acme.context, { ...acme.ownerActor, partnerId: bright.partnerId }, { demoId: demo.demoId }))).toMatchObject(notFound);
 
       const key = { kind: "key", partnerId: bright.partnerId, platformKeyId: randomUUID() } as const;
-      expect(await refusal(createPartnerDemo(bright.context, key, demoInput("Harbor Dental")))).toMatchObject({ status: 403 });
-      expect(await refusal(listPartnerDemos(bright.context, key))).toMatchObject({ status: 403 });
+      // A key the partner never made answers as an invalid one. partnerKeyApi.integration.test.ts covers real keys.
+      expect(await refusal(createPartnerDemo(bright.context, key, demoInput("Harbor Dental")))).toMatchObject({ status: 401 });
+      expect(await refusal(listPartnerDemos(bright.context, key))).toMatchObject({ status: 401 });
       expect(await refusal(createPartnerDemo(bright.context, bright.memberActor, { ...demoInput("Harbor Dental"), accessLevel: "owner" }))).toMatchObject({ status: 400, code: "invalid_access_level" });
 
       vi.stubEnv("PARTNER_BASE_DOMAIN", "");

@@ -1,7 +1,7 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 
-import { partnerMembers, partnerPlatformKeys, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { apiKeyScopes, type ApiKeyScope } from "@lobbystack/shared";
+import { partnerInvitations, partnerMembers, partnerPlatformKeys, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { apiKeyScopes, partnerOwnerScopes, type ApiKeyScope, type PartnerRole } from "@lobbystack/shared";
 
 import { AuthorizationError } from "../authz";
 import type { DomainContext } from "./context";
@@ -12,7 +12,9 @@ import { newPlatformKeySecret, normalizePlatformKeyScopes } from "./publicApi/pl
 // same lsp_ keys as the host's, with the same Platform endpoints, but each
 // acts as the partner and reaches only its businesses, so a person leaving
 // the team doesn't stop the keys they made. Only owners and admins make,
-// list and revoke them, and a platform key can't manage keys.
+// list and revoke them, and a platform key can't manage keys. A key acts
+// with an admin's rights, so only an owner grants the partner.billing scopes,
+// which reach what only owners see in the console.
 
 /** A partner's platform key as the console's API keys page shows it. The key itself is shown once, when it's made. */
 export type PartnerPlatformKeyRecord = {
@@ -38,11 +40,12 @@ function keyManager(actor: PartnerActor): PartnerMemberActor {
   return actor;
 }
 
-/** Refuses anyone but an active owner or admin of the partner, by the role the database has now. */
-async function requireKeyManager(tx: DatabaseTransaction, member: PartnerMemberActor): Promise<void> {
+/** Refuses anyone but an active owner or admin of the partner, by the role the database has now, and returns it. */
+async function requireKeyManager(tx: DatabaseTransaction, member: PartnerMemberActor): Promise<PartnerRole> {
   const [row] = await tx.select({ role: partnerMembers.role }).from(partnerMembers).where(and(eq(partnerMembers.partnerId, member.partnerId), eq(partnerMembers.userId, member.userId), eq(partnerMembers.status, "active"))).limit(1);
   if (!row) throw new AuthorizationError("You aren't on this partner's team.");
   if (row.role === "member") throw new AuthorizationError("Only owners and admins can manage the partner's platform keys.");
+  return row.role;
 }
 
 const keyColumns = {
@@ -109,7 +112,8 @@ export async function createPartnerPlatformKey(context: DomainContext, actor: Pa
   const scopes = normalizePlatformKeyScopes(input.scopes);
   if (!scopes) throw failure("Choose at least one of the API's scopes.", 400, "invalid_scopes");
   return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
-    await requireKeyManager(tx, member);
+    const role = await requireKeyManager(tx, member);
+    if (role !== "owner" && scopes.some((scope) => (partnerOwnerScopes as readonly string[]).includes(scope))) throw failure("Only owners can grant partner.billing:read or partner.billing:write, which reach the partner's Stripe account and billing.", 403, "owner_only");
     // Prefixes are random, so a second try only runs if another key already has this one.
     for (let attempt = 0; attempt < 3; attempt += 1) {
       const secret = newPlatformKeySecret();
@@ -127,7 +131,7 @@ export async function createPartnerPlatformKey(context: DomainContext, actor: Pa
  * Revokes one of the partner's platform keys for good. Requests with it fail
  * from then on. In the same transaction, the webhook endpoints it set up on
  * any business turn off, and the invitations it sent to join a business's
- * team that nobody accepted yet are revoked. The invitation to own a business,
+ * team or the partner's that nobody accepted yet are revoked. The invitation to own a business,
  * which the key sent as it created the business, stays. A request that
  * resolved the key just before holds a lock on it while it writes, so the
  * revoke waits for it and catches what it wrote. Revoking a revoked key
@@ -151,6 +155,9 @@ export async function revokePartnerPlatformKey(context: DomainContext, actor: Pa
         disabledWebhookEndpointIds = disabled.rows.map((row) => row.endpoint_id);
         const invitations = await tx.execute<{ invitation_id: string }>(sql`select invitation_id from app.revoke_partner_platform_key_invitations(${input.platformKeyId}::uuid)`);
         revokedInvitationIds = invitations.rows.map((row) => row.invitation_id);
+        // An invitation to the partner's team works while its key does, and a leaked key must leave no way onto the team behind.
+        const team = await tx.update(partnerInvitations).set({ status: "revoked", updatedAt: now }).where(and(eq(partnerInvitations.partnerId, member.partnerId), eq(partnerInvitations.invitedByPlatformKeyId, input.platformKeyId), eq(partnerInvitations.status, "pending"))).returning({ id: partnerInvitations.id });
+        revokedInvitationIds.push(...team.map((row) => row.id));
       } else {
         // Nothing changed: someone revoked it at the same moment, or row-level security refused the change, which must not pass for success.
         const [current] = await tx.select({ revokedAt: partnerPlatformKeys.revokedAt }).from(partnerPlatformKeys).where(where).limit(1);

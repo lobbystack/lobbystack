@@ -102,6 +102,7 @@ import { assignCalendarStaffInTransaction, disconnectCalendarInTransaction, list
 import { deleteServiceInTransaction, insertServiceInTransaction, replaceBusinessHoursInTransaction, replaceServiceStaffInTransaction, updateServiceInTransaction } from "../catalog";
 import { NUMBER_BEING_REPLACED_MESSAGE, schedulePhoneNumberReleaseInTransaction } from "../compliance";
 import { ContactPasscodeHashesBusyError, hashContactPasscodes, removeContactPasscodesInTransaction, saveContactPasscodesInTransaction } from "../contactPasscodes";
+import type { BusinessSetupDependencies } from "../businessTemplates";
 import type { DomainContext } from "../context";
 import { loadEntitlement } from "../entitlement";
 import { cancelKnowledgeDocumentInTransaction, createKnowledgeDocumentInTransaction, createKnowledgeSnippetInTransaction, deleteKnowledgeDocumentInTransaction, deleteKnowledgeSnippetInTransaction, expandWebsiteCrawlInTransaction, KnowledgeStorageLimitError, ONBOARDING_CRAWL_PAGE_LIMIT, retryKnowledgeDocumentInTransaction, setKnowledgeDocumentActiveInTransaction, updateKnowledgeSnippetInTransaction } from "../knowledge";
@@ -1305,7 +1306,7 @@ export async function createBusinessForApi(
   context: DomainContext,
   input: { key: HostPlatformKey; actingUserId: string; idempotencyKey: string; requestHash: string; body: ApiBusinessCreate },
 ): Promise<{ business: ApiBusiness; replayed: boolean }> {
-  const partnerOnly = (["owner_email", "access_level"] as const).filter((field) => input.body[field] !== undefined);
+  const partnerOnly = (["owner_email", "access_level", "template_id", "package_id"] as const).filter((field) => input.body[field] !== undefined);
   if (partnerOnly.length) throw invalidRequest(`${partnerOnly.join(" and ")} ${partnerOnly.length > 1 ? "are" : "is"} only for a partner's platform key. The account in this key's owner_email owns the business it creates.`, partnerOnly.map((path) => ({ path, message: "Not accepted with the host's platform key." })));
   const timezone = ianaTimeZone(input.body.timezone);
   if (!timezone) throw invalidRequest("timezone is not a valid IANA time zone.", [{ path: "timezone", message: "Use an IANA time zone such as America/Toronto." }]);
@@ -1343,7 +1344,7 @@ export async function createBusinessForApi(
 }
 
 // What createPartnerBusiness refuses, by the field of POST /businesses at fault.
-const partnerBusinessFields: Record<string, string> = { invalid_name: "name", invalid_timezone: "timezone", invalid_business_type: "business_type", invalid_access_level: "access_level", invalid_email: "owner_email" };
+const partnerBusinessFields: Record<string, string> = { invalid_name: "name", invalid_timezone: "timezone", invalid_business_type: "business_type", invalid_access_level: "access_level", invalid_email: "owner_email", invalid_package: "package_id" };
 
 /**
  * Creates a business of the partner for one of its platform keys, through
@@ -1359,7 +1360,7 @@ const partnerBusinessFields: Record<string, string> = { invalid_name: "name", in
 export async function createPartnerBusinessForApi(
   context: DomainContext,
   input: { key: PartnerPlatformKey; idempotencyKey: string; requestHash: string; body: ApiBusinessCreate },
-  options: { beforeCreate?: (() => Promise<void>) | undefined } = {},
+  options: { beforeCreate?: (() => Promise<void>) | undefined; setup?: BusinessSetupDependencies | undefined } = {},
 ): Promise<{ business: ApiBusiness; replayed: boolean }> {
   const { body, key } = input;
   if (body.owner_email === undefined) throw invalidRequest("A partner's platform key invites the business's owner as it creates the business, so send owner_email.", [{ path: "owner_email", message: "Required with a partner's platform key." }]);
@@ -1382,7 +1383,8 @@ export async function createPartnerBusinessForApi(
   // A replay sends no email, so only a new business counts against the caller's limit.
   await options.beforeCreate?.();
   try {
-    await createPartnerBusiness(context, { kind: "key", partnerId: key.partnerId, platformKeyId: key.platformKeyId }, {
+    if (body.template_id !== undefined && !options.setup) throw new Error("Applying a template needs the worker's context and storage.");
+    await createPartnerBusiness(context, { kind: "key", partnerId: key.partnerId, platformKeyId: key.platformKeyId, scopes: key.scopes }, {
       businessId,
       name: body.name,
       timezone,
@@ -1393,7 +1395,9 @@ export async function createPartnerBusinessForApi(
       defaultLocale: body.locale,
       websiteUrl: body.website_url,
       requestHash: input.requestHash,
-    });
+      ...(body.template_id !== undefined ? { templateId: body.template_id } : {}),
+      ...(body.package_id !== undefined ? { packageId: body.package_id } : {}),
+    }, options.setup);
   } catch (error) {
     if (isUniqueViolation(error)) {
       // A retry that ran at the same time created it first.
@@ -1405,6 +1409,9 @@ export async function createPartnerBusinessForApi(
     if (code === "partner_domain_required") throw conflict("The partner needs a dashboard address of its own before it can create a business. Its businesses open only there.");
     const field = partnerBusinessFields[code];
     if (field && error instanceof Error) throw invalidRequest(error.message, [{ path: field, message: error.message }]);
+    // A template or package that isn't the partner's, or a template that couldn't set the business up, answers as the console does.
+    const status = typeof error === "object" && error !== null && "status" in error ? Number(error.status) : 500;
+    if (error instanceof Error && !(error instanceof PublicApiError) && (status === 404 || status === 409)) throw new PublicApiError(status, status === 404 ? "not_found" : "conflict", error.message);
     throw error;
   }
   const business = await inBusinessAsSystem(async (tx) => await loadBusinessResource(tx, businessId));

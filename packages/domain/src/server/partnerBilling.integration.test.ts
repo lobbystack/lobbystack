@@ -208,7 +208,8 @@ describe.skipIf(!client)("a partner's tier", () => {
       const outsider = { ...other.ownerActor, partnerId: acme.partnerId };
       expect(await refusal(getPartnerBilling(acme.context, outsider))).toMatchObject({ status: 403 });
       expect(await refusal(createPartnerTierCheckout(acme.context, outsider, checkout))).toMatchObject({ status: 403 });
-      expect(await refusal(createPartnerTierCheckout(acme.context, { kind: "key", partnerId: acme.partnerId, platformKeyId: randomUUID() }, checkout))).toMatchObject({ status: 403 });
+      // A key the partner never made answers as an invalid one. partnerKeyApi.integration.test.ts covers real keys.
+      expect(await refusal(createPartnerTierCheckout(acme.context, { kind: "key", partnerId: acme.partnerId, platformKeyId: randomUUID() }, checkout))).toMatchObject({ status: 401 });
       expect(await asMigrator(tx, async () => await tx.select({ id: partnerCheckoutRequests.id }).from(partnerCheckoutRequests).where(eq(partnerCheckoutRequests.partnerId, acme.partnerId)))).toEqual([]);
       // An owner with no tier in Polar yet has no portal to open.
       expect(await refusal(partnerBillingPortalCustomer(acme.context, acme.ownerActor))).toMatchObject({ status: 409, code: "no_billing_customer" });

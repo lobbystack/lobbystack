@@ -30,11 +30,48 @@ export const apiKeyScopes = [
   "team:manage",
   "businesses:create",
   "users:create",
+  "partner:read",
+  "partner.businesses:write",
+  "partner.demos:write",
+  "partner.packages:write",
+  "partner.branding:write",
+  "partner.templates:write",
+  "partner.team:write",
+  "partner.billing:read",
+  "partner.billing:write",
 ] as const;
 export type ApiKeyScope = (typeof apiKeyScopes)[number];
 
+/**
+ * Scopes for the Partner endpoints, which act on the partner itself: its
+ * demos, packages, brand, templates, team and billing. Only a key a partner
+ * made in its console can hold them; a host's key has no partner to act on.
+ */
+export const partnerScopes = [
+  "partner:read",
+  "partner.businesses:write",
+  "partner.demos:write",
+  "partner.packages:write",
+  "partner.branding:write",
+  "partner.templates:write",
+  "partner.team:write",
+  "partner.billing:read",
+  "partner.billing:write",
+] as const satisfies readonly ApiKeyScope[];
+export type PartnerScope = (typeof partnerScopes)[number];
+
+/**
+ * Partner scopes that reach the partner's Stripe account and its billing,
+ * which only owners open in the console, so only an owner grants them.
+ */
+export const partnerOwnerScopes = ["partner.billing:read", "partner.billing:write"] as const satisfies readonly PartnerScope[];
+
+export function isPartnerScope(value: unknown): value is PartnerScope {
+  return typeof value === "string" && (partnerScopes as readonly string[]).includes(value);
+}
+
 /** Scopes that act outside a single business, so only a platform key can hold them. */
-export const platformOnlyScopes = ["businesses:create", "users:create"] as const satisfies readonly ApiKeyScope[];
+export const platformOnlyScopes = ["businesses:create", "users:create", ...partnerScopes] as const satisfies readonly ApiKeyScope[];
 export type PlatformOnlyScope = (typeof platformOnlyScopes)[number];
 export type BusinessApiKeyScope = Exclude<ApiKeyScope, PlatformOnlyScope>;
 

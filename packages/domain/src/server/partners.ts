@@ -33,6 +33,7 @@ import {
 
 import { AuthorizationError } from "../authz";
 import { announceBrandChange } from "./brands";
+import { actorUserId, keyAuditFields, partnerActorRole, partnerRls } from "./partnerActors";
 import { applyStoredBusinessTemplate, loadBusinessTemplateInTransaction, type BusinessSetupDependencies } from "./businessTemplates";
 import type { DomainContext } from "./context";
 import { firstOnboardingStage } from "./onboarding";
@@ -48,13 +49,14 @@ import { periodKeyFor } from "./usage";
 // keys can do. Each function checks the actor's role itself, so every entry
 // point gets the same rules. A member works inside the partner's businesses,
 // an admin also creates businesses and runs the team, and only an owner grants
-// or takes away the owner role. A key acts as the partner: it creates
-// businesses, and manages nothing about the partner itself.
+// or takes away the owner role. A key acts as the partner with an admin's
+// rights (partnerActors.ts), so it never touches an owner, and the partner's
+// settings and keys stay with its people.
 
 /** Who acts on a partner: one of its members, or one of its platform keys. */
 export type PartnerActor =
   | { kind: "member"; partnerId: string; userId: string; role: PartnerRole }
-  | { kind: "key"; partnerId: string; platformKeyId: string };
+  | { kind: "key"; partnerId: string; platformKeyId: string; scopes?: readonly string[] | undefined };
 
 export type PartnerMemberActor = Extract<PartnerActor, { kind: "member" }>;
 
@@ -124,10 +126,7 @@ async function lockPartnerTeam(tx: DatabaseTransaction, partnerId: string): Prom
 
 /** The actor's role as the database has it now, which may differ from the one it arrived with. */
 async function currentRole(tx: DatabaseTransaction, actor: PartnerActor): Promise<PartnerRole> {
-  if (actor.kind !== "member") throw new AuthorizationError("Platform keys can't manage a partner's team.");
-  const [member] = await tx.select({ role: partnerMembers.role }).from(partnerMembers).where(and(eq(partnerMembers.partnerId, actor.partnerId), eq(partnerMembers.userId, actor.userId), eq(partnerMembers.status, "active"))).limit(1);
-  if (!member) throw new AuthorizationError("You aren't on this partner's team.");
-  return member.role;
+  return await partnerActorRole(tx, actor);
 }
 
 async function requireTeamManager(tx: DatabaseTransaction, actor: PartnerActor): Promise<PartnerRole> {
@@ -155,8 +154,8 @@ function requireChanged(rows: unknown[]): void {
   if (rows.length === 0) throw new AuthorizationError("You can't change this partner's team.");
 }
 
-function memberActor(actor: PartnerActor): PartnerMemberActor {
-  if (actor.kind !== "member") throw new AuthorizationError("Platform keys can't manage a partner's team.");
+/** Who runs the team: anyone on it, or one of the partner's keys, which acts as an admin. */
+function memberActor(actor: PartnerActor): PartnerActor {
   return actor;
 }
 
@@ -277,7 +276,7 @@ export async function createPartnerSignupInvitation(context: DomainContext, inpu
 /** The partner's active members and pending invitations. Anyone on the team can read it. */
 export async function listPartnerTeam(context: DomainContext, actor: PartnerActor): Promise<PartnerTeam> {
   const member = memberActor(actor);
-  return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
+  return await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "operator" }, async (tx) => {
     const role = await currentRole(tx, member);
     // RLS hides other people's users rows from the app role, so read members through this function.
     const members = await tx.execute<PartnerTeam["members"][number]>(sql`select member_id as "memberId", user_id as "userId", name, email, role, joined_at as "joinedAt" from app.list_partner_members(${member.partnerId}::uuid)`);
@@ -299,14 +298,15 @@ export async function invitePartnerMember(context: DomainContext, actor: Partner
   if (!isPartnerRole(role)) throw failure("role must be owner, admin or member.", 400, "invalid_role");
   const member = memberActor(actor);
   // The email belongs to no business, so it's queued as the system actor.
-  return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "system" }, async (tx) => {
+  return await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "system" }, async (tx) => {
     await lockPartnerTeam(tx, member.partnerId);
     const actorRole = await requireTeamManager(tx, member);
     if (role === "owner") requireOwner(actorRole, "Only owners can invite an owner.");
     const { token, tokenHash } = newToken();
     const invitationId = randomUUID();
     const expiresAt = new Date(Date.now() + INVITATION_LIFETIME_MS);
-    await tx.insert(partnerInvitations).values({ id: invitationId, partnerId: member.partnerId, invitedByUserId: member.userId, email: normalizedEmail, normalizedEmail, role, tokenHash, expiresAt });
+    // A key invites as the partner, so its invitation names the key, and works while the key does.
+    await tx.insert(partnerInvitations).values({ id: invitationId, partnerId: member.partnerId, ...(member.kind === "member" ? { invitedByUserId: member.userId } : { invitedByPlatformKeyId: member.platformKeyId }), email: normalizedEmail, normalizedEmail, role, tokenHash, expiresAt });
     await enqueueOutbox(tx, {
       topic: "email.send",
       aggregateType: "partner_invitation",
@@ -324,7 +324,7 @@ export async function changePartnerMemberRole(context: DomainContext, actor: Par
   const role = input.role;
   if (!isPartnerRole(role)) throw failure("role must be owner, admin or member.", 400, "invalid_role");
   const member = memberActor(actor);
-  await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
+  await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "operator" }, async (tx) => {
     await lockPartnerTeam(tx, member.partnerId);
     const actorRole = await requireTeamManager(tx, member);
     const [target] = await tx.select({ role: partnerMembers.role }).from(partnerMembers).where(and(eq(partnerMembers.id, input.memberId), eq(partnerMembers.partnerId, member.partnerId), eq(partnerMembers.status, "active"))).limit(1);
@@ -343,7 +343,7 @@ export async function changePartnerMemberRole(context: DomainContext, actor: Par
  */
 export async function removePartnerMember(context: DomainContext, actor: PartnerActor, input: { memberId: string }): Promise<void> {
   const member = memberActor(actor);
-  await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
+  await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "operator" }, async (tx) => {
     await lockPartnerTeam(tx, member.partnerId);
     const actorRole = await requireTeamManager(tx, member);
     const [target] = await tx.select({ role: partnerMembers.role, userId: partnerMembers.userId }).from(partnerMembers).where(and(eq(partnerMembers.id, input.memberId), eq(partnerMembers.partnerId, member.partnerId), eq(partnerMembers.status, "active"))).limit(1);
@@ -362,7 +362,7 @@ export async function removePartnerMember(context: DomainContext, actor: Partner
 /** Revokes a pending invitation to the team. Only an owner revokes an invitation to become an owner. */
 export async function revokePartnerInvitation(context: DomainContext, actor: PartnerActor, input: { invitationId: string }): Promise<void> {
   const member = memberActor(actor);
-  await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
+  await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "operator" }, async (tx) => {
     await lockPartnerTeam(tx, member.partnerId);
     const actorRole = await requireTeamManager(tx, member);
     const [invitation] = await tx.select({ role: partnerInvitations.role }).from(partnerInvitations).where(and(eq(partnerInvitations.id, input.invitationId), eq(partnerInvitations.partnerId, member.partnerId), eq(partnerInvitations.status, "pending"))).limit(1);
@@ -396,7 +396,12 @@ export async function acceptPartnerInvitation(
     const [invitation] = await tx.select().from(partnerInvitations).where(and(eq(partnerInvitations.tokenHash, input.tokenHash), eq(partnerInvitations.status, "pending"))).limit(1);
     if (!invitation || invitation.expiresAt <= new Date()) throw invitationInvalid();
     if (!input.emailVerified || !input.email || normalizeAuthEmail(input.email) !== invitation.normalizedEmail) throw wrongAccount();
-    const [sender] = await tx.select({ role: partnerMembers.role }).from(partnerMembers).where(and(eq(partnerMembers.partnerId, invitation.partnerId), eq(partnerMembers.userId, invitation.invitedByUserId), eq(partnerMembers.status, "active"))).limit(1);
+    // A key acts as an admin while it's active, so it never sends an owner's invitation.
+    const sender = invitation.invitedByUserId
+      ? (await tx.select({ role: partnerMembers.role }).from(partnerMembers).where(and(eq(partnerMembers.partnerId, invitation.partnerId), eq(partnerMembers.userId, invitation.invitedByUserId), eq(partnerMembers.status, "active"))).limit(1))[0]
+      : invitation.invitedByPlatformKeyId && (await tx.execute<{ active: boolean }>(sql`select app.lock_partner_platform_key(${invitation.partnerId}::uuid, ${invitation.invitedByPlatformKeyId}::uuid) as active`)).rows[0]?.active === true
+        ? { role: "admin" as const }
+        : undefined;
     if (!sender || sender.role === "member" || (invitation.role === "owner" && sender.role !== "owner")) {
       throw failure("This invitation no longer works. Ask whoever sent it for a new one.", 409, "invitation_stale");
     }
@@ -443,8 +448,8 @@ export type PartnerBrandInput = {
   favicon?: Uint8Array | null;
 };
 
-function brandActor(actor: PartnerActor): PartnerMemberActor {
-  if (actor.kind !== "member") throw new AuthorizationError("Platform keys can't change a partner's brand.");
+/** Who reads and saves the brand: anyone on the team reads it, and a key acts as an admin. */
+function brandActor(actor: PartnerActor): PartnerActor {
   return actor;
 }
 
@@ -531,7 +536,7 @@ export async function reserveMissingPartnerSubdomains(context: DomainContext): P
   return reserved;
 }
 
-async function readBrandSettings(tx: DatabaseTransaction, member: PartnerMemberActor): Promise<PartnerBrandSettings> {
+async function readBrandSettings(tx: DatabaseTransaction, member: PartnerActor): Promise<PartnerBrandSettings> {
   const role = await currentRole(tx, member);
   const [row] = await tx
     .select({
@@ -573,10 +578,10 @@ async function readBrandSettings(tx: DatabaseTransaction, member: PartnerMemberA
  */
 export async function getPartnerBrandSettings(context: DomainContext, actor: PartnerActor): Promise<PartnerBrandSettings> {
   const member = brandActor(actor);
-  const settings = await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => await readBrandSettings(tx, member));
+  const settings = await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "operator" }, async (tx) => await readBrandSettings(tx, member));
   if (settings.subdomain || !partnerFeatures(process.env).baseDomain) return settings;
   if (!await reservePartnerSubdomain(context, member.partnerId)) return settings;
-  return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => await readBrandSettings(tx, member));
+  return await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "operator" }, async (tx) => await readBrandSettings(tx, member));
 }
 
 /**
@@ -597,7 +602,7 @@ export async function savePartnerBrand(context: DomainContext, actor: PartnerAct
   const logo = input.logo === undefined ? undefined : brandImage(input.logo, "logo");
   const favicon = input.favicon === undefined ? undefined : brandImage(input.favicon, "favicon");
 
-  const settings = await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
+  const settings = await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "operator" }, async (tx) => {
     const role = await currentRole(tx, member);
     if (role === "member") throw new AuthorizationError("Only owners and admins can change the partner's brand.");
     const saved = await tx.update(partners).set({
@@ -644,7 +649,7 @@ async function readSettings(tx: DatabaseTransaction, member: PartnerMemberActor)
 /** The partner's settings for the console's Settings page and its telemetry consent. Anyone on the team can read them. */
 export async function getPartnerSettings(context: DomainContext, actor: PartnerActor): Promise<PartnerSettings> {
   const member = settingsActor(actor);
-  return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => await readSettings(tx, member));
+  return await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "operator" }, async (tx) => await readSettings(tx, member));
 }
 
 /**
@@ -653,7 +658,7 @@ export async function getPartnerSettings(context: DomainContext, actor: PartnerA
  */
 export async function savePartnerSettings(context: DomainContext, actor: PartnerActor, input: { telemetryEnabled: boolean }): Promise<PartnerSettings> {
   const member = settingsActor(actor);
-  return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
+  return await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "operator" }, async (tx) => {
     const role = await currentRole(tx, member);
     if (role === "member") throw new AuthorizationError("Only owners and admins can change the partner's settings.");
     const saved = await tx.update(partners).set({ telemetryEnabled: input.telemetryEnabled, updatedAt: new Date() }).where(eq(partners.id, member.partnerId)).returning({ id: partners.id });
@@ -680,8 +685,8 @@ export type PartnerBusiness = {
 
 export const PARTNER_BUSINESS_NAME_MAX_LENGTH = 120;
 
-function businessesActor(actor: PartnerActor): PartnerMemberActor {
-  if (actor.kind !== "member") throw new AuthorizationError("Platform keys can't manage a partner's businesses.");
+/** Who works with the partner's businesses: anyone on the team, or one of its keys, which acts as an admin. */
+function businessesActor(actor: PartnerActor): PartnerActor {
   return actor;
 }
 
@@ -694,7 +699,7 @@ function businessesActor(actor: PartnerActor): PartnerMemberActor {
 export async function listPartnerBusinesses(context: DomainContext, actor: PartnerActor): Promise<PartnerBusiness[]> {
   const member = businessesActor(actor);
   const periodKey = periodKeyFor();
-  return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
+  return await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "operator" }, async (tx) => {
     const role = await currentRole(tx, member);
     // Members never see billing. Without Stripe Connect, every business is billed outside LobbyStack.
     const billing = role === "member" ? null : context.stripeConnect ? await listPartnerBusinessBillingIn(tx, member.partnerId) : new Map<string, PartnerBusinessBilling>();
@@ -723,7 +728,7 @@ export async function listPartnerBusinesses(context: DomainContext, actor: Partn
   });
 }
 
-/** What creating a partner's business takes. The console sends the first five, the package and the template; the v1 API's POST /businesses can send the rest but the template. */
+/** What creating a partner's business takes. The console sends the first five, the package and the template; the v1 API's POST /businesses can send them all. */
 export type PartnerBusinessInput = {
   name: string;
   timezone: string;
@@ -761,8 +766,8 @@ export type PartnerBusinessInput = {
  * apart from the name and time zone given here. The invitation then waits
  * until the template is applied. A template that can't be applied, or an
  * invitation that then fails, leaves no business behind, so the owner never
- * hears of one that isn't set up. Only someone on the partner's team reads
- * its templates, so a platform key can't apply one.
+ * hears of one that isn't set up. Someone on the partner's team or one of
+ * its keys applies it, as they would set the business up themself.
  */
 export async function createPartnerBusiness(
   context: DomainContext,
@@ -796,7 +801,8 @@ export async function createPartnerBusiness(
     await tx.insert(auditLogs).values({ businessId, actorUserId: actor.kind === "member" ? actor.userId : null, eventType: "partner.business_created", entityType: "business", entityId: businessId, payload: { ...by, partnerId, accessLevel, packageId, ownerInvitationId: invitationId, ...(templateId ? { templateId } : {}), ...(input.requestHash ? { requestHash: input.requestHash } : {}) } });
     return { invitationId, expiresAt };
   };
-  const created = await withBusinessTransaction(context.db, { ...(actor.kind === "member" ? { userId: actor.userId } : {}), businessId, actorType: "system" }, async (tx) => {
+  // A key's transaction names the key, so the partner's templates, which only its team and keys read, show to it.
+  const created = await withBusinessTransaction(context.db, { ...partnerRls(actor), businessId, actorType: "system" }, async (tx) => {
     if (actor.kind === "member" && await currentRole(tx, actor) === "member") throw new AuthorizationError("Only owners and admins can create the partner's businesses.");
     // Revoking a key waits for a business it's creating, so the owner's invitation is never sent by a key revoked first.
     if (actor.kind === "key") await lockActivePartnerPlatformKey(tx, actor.platformKeyId);
@@ -815,14 +821,13 @@ export async function createPartnerBusiness(
   if (created.subdomainReserved) await announceBrandChange(context, { kind: "partner", partnerId });
   if (created.invitation) return { businessId, ...created.invitation };
 
-  // Only a member gets here: a key asking for a template was refused above.
   const template = created.template!;
   const member = applier!;
   let applied = false;
   try {
-    await applyStoredBusinessTemplate(setup!, { partnerId, userId: member.userId, businessId, template, keep: { name, timezone } });
+    await applyStoredBusinessTemplate(setup!, { partnerId, businessId, template, keep: { name, timezone }, ...(member.kind === "member" ? { userId: member.userId } : { platformKeyId: member.platformKeyId }) });
     applied = true;
-    const invitation = await withBusinessTransaction(context.db, { userId: member.userId, businessId, actorType: "system" }, async (tx) => {
+    const invitation = await withBusinessTransaction(context.db, { ...partnerRls(member), businessId, actorType: "system" }, async (tx) => {
       // Someone on the team may have deleted it while the template was applied.
       await lockPartnerBusiness(tx, member.partnerId, businessId, "no key update");
       return await invite(tx, template.templateId);
@@ -837,9 +842,8 @@ export async function createPartnerBusiness(
   }
 }
 
-/** Who applies a template to a new business: someone on the partner's team, since only they read its templates. */
-function templateApplier(actor: PartnerActor): PartnerMemberActor {
-  if (actor.kind !== "member") throw new AuthorizationError("Platform keys can't apply a partner's templates.");
+/** Who applies a template to a new business: someone on the partner's team, or one of its keys, since only they read its templates. */
+function templateApplier(actor: PartnerActor): PartnerActor {
   return actor;
 }
 
@@ -854,9 +858,9 @@ function errorStatus(error: unknown): number {
  * is logged, since the caller reports what went wrong first, and it stays on
  * the Businesses page with no owner, where an owner or admin can delete it.
  */
-async function removeUnfinishedBusiness(context: DomainContext, member: PartnerMemberActor, businessId: string): Promise<void> {
+async function removeUnfinishedBusiness(context: DomainContext, member: PartnerActor, businessId: string): Promise<void> {
   try {
-    const closes = await withBusinessTransaction(context.db, { userId: member.userId, businessId, actorType: "system" }, async (tx) => (await deletePartnerBusinessInTransaction(tx, { businessId, partnerId: member.partnerId, stripeConnect: Boolean(context.stripeConnect), by: "partner" })).checkout);
+    const closes = await withBusinessTransaction(context.db, { ...partnerRls(member), businessId, actorType: "system" }, async (tx) => (await deletePartnerBusinessInTransaction(tx, { businessId, partnerId: member.partnerId, stripeConnect: Boolean(context.stripeConnect), by: "partner" })).checkout);
     await closeCheckoutQuietly(context, closes);
   } catch (error) {
     if (errorStatus(error) === 404) return;
@@ -926,7 +930,7 @@ async function partnerBusinessOwnerEmails(tx: DatabaseTransaction, businessId: s
 export async function releaseBusiness(context: DomainContext, actor: PartnerActor, input: { businessId: string }): Promise<{ ownerUserId: string }> {
   const member = businessesActor(actor);
   // The business's own rows show only to the system actor, since the partner's people aren't on its team.
-  const released = await withBusinessTransaction(context.db, { userId: member.userId, businessId: input.businessId, actorType: "system" }, async (tx) => {
+  const released = await withBusinessTransaction(context.db, { ...partnerRls(member), businessId: input.businessId, actorType: "system" }, async (tx) => {
     if (await currentRole(tx, member) === "member") throw new AuthorizationError("Only owners and admins can release the partner's businesses.");
     // Team changes take this lock, so the owner can't leave while the business moves to them.
     await lockBusinessTeam(tx, input.businessId);
@@ -956,10 +960,10 @@ export async function releaseBusiness(context: DomainContext, actor: PartnerActo
       .where(and(eq(webhookEndpoints.businessId, input.businessId), eq(webhookEndpoints.status, "enabled"), or(isNotNull(webhookEndpoints.createdByPlatformKeyId), inArray(webhookEndpoints.createdByUserId, partnerPeople))))
       .returning({ id: webhookEndpoints.id });
     if (silenced.length) {
-      await tx.insert(auditLogs).values(silenced.map((endpoint) => ({ businessId: input.businessId, actorUserId: member.userId, eventType: "webhook_endpoint.disabled", entityType: "webhook_endpoint", entityId: endpoint.id, payload: { reason: "business_released", partnerId } })));
+      await tx.insert(auditLogs).values(silenced.map((endpoint) => ({ businessId: input.businessId, actorUserId: actorUserId(member), eventType: "webhook_endpoint.disabled", entityType: "webhook_endpoint", entityId: endpoint.id, payload: { reason: "business_released", partnerId, ...keyAuditFields(member) } })));
     }
     await tx.insert(billingAccounts).values({ businessId: input.businessId, billingKey: `business:${input.businessId}`, ...FREE_PLAN_ACCOUNT }).onConflictDoUpdate({ target: billingAccounts.businessId, set: { ...FREE_PLAN_ACCOUNT, updatedAt: new Date() } });
-    await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: member.userId, eventType: "partner.business_released", entityType: "business", entityId: input.businessId, payload: { partnerId, ownerUserId: owner.userId } });
+    await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: actorUserId(member), eventType: "partner.business_released", entityType: "business", entityId: input.businessId, payload: { partnerId, ownerUserId: owner.userId, ...keyAuditFields(member) } });
     // The owner signs in on the host's domain from now on, so the email under the host's brand says where.
     const [about] = await tx.select({ businessName: businesses.name, partnerName: partners.name }).from(businesses).innerJoin(partners, eq(partners.id, partnerId)).where(eq(businesses.id, input.businessId)).limit(1);
     for (const email of ownerEmails) {
@@ -1083,7 +1087,7 @@ export async function deletePartnerBusinessInTransaction(tx: DatabaseTransaction
  */
 export async function deletePartnerBusiness(context: DomainContext, actor: PartnerActor, input: { businessId: string }): Promise<void> {
   const member = businessesActor(actor);
-  const closes = await withBusinessTransaction(context.db, { userId: member.userId, businessId: input.businessId, actorType: "system" }, async (tx) => {
+  const closes = await withBusinessTransaction(context.db, { ...partnerRls(member), businessId: input.businessId, actorType: "system" }, async (tx) => {
     if (await currentRole(tx, member) === "member") throw new AuthorizationError("Only owners and admins can delete the partner's businesses.");
     const { checkout } = await deletePartnerBusinessInTransaction(tx, { businessId: input.businessId, partnerId: member.partnerId, stripeConnect: Boolean(context.stripeConnect), by: "partner" });
     return checkout;

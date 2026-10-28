@@ -2,14 +2,15 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { and, eq, sql } from "drizzle-orm";
 
-import { auditLogs, billingAccounts, businesses, businessInvitations, enqueueOutbox, partnerMembers, partnerPackages, partnerStripeAccounts, providerEvents, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { auditLogs, billingAccounts, businesses, businessInvitations, enqueueOutbox, partnerPackages, partnerStripeAccounts, providerEvents, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import type { StripeConnectEvent, StripeConnectProvider, StripeConnectSubscription } from "@lobbystack/providers";
 import { hasLivePackageSubscription, isPackageOverageAmount, isUuid, packageOverageIn, packageSubscriptionStatus, type PackageOverage, type PackageSubscriptionStatus, type PartnerRole } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import { AuthorizationError, requireTeamMembership } from "../authz";
 import type { DomainContext } from "./context";
-import type { PartnerActor, PartnerMemberActor } from "./partners";
+import { actorUserId, keyAuditFields, partnerActorRole, partnerRls } from "./partnerActors";
+import type { PartnerActor } from "./partners";
 import { recordProductEventInTransaction } from "./productEvents";
 
 // Selling a package to a partner's business (ADR 0009). The partner picks a
@@ -256,11 +257,9 @@ export async function endLifecycleBusinessBillingInTransaction(tx: DatabaseTrans
   return openCheckoutOf(account, partnerAccount);
 }
 
-/** The actor's role as the database has it now. */
-async function readRole(tx: DatabaseTransaction, actor: PartnerMemberActor): Promise<PartnerRole> {
-  const [member] = await tx.select({ role: partnerMembers.role }).from(partnerMembers).where(and(eq(partnerMembers.partnerId, actor.partnerId), eq(partnerMembers.userId, actor.userId), eq(partnerMembers.status, "active"))).limit(1);
-  if (!member) throw new AuthorizationError("You aren't on this partner's team.");
-  return member.role;
+/** The actor's role as the database has it now. A key acts as an admin. */
+async function readRole(tx: DatabaseTransaction, actor: PartnerActor): Promise<PartnerRole> {
+  return await partnerActorRole(tx, actor);
 }
 
 /**
@@ -270,18 +269,17 @@ async function readRole(tx: DatabaseTransaction, actor: PartnerMemberActor): Pro
  * pay closes.
  */
 export async function setPartnerBusinessBilling(context: DomainContext, actor: PartnerActor, input: { businessId: string; packageId: string | null }): Promise<PartnerBusinessBilling> {
-  if (actor.kind !== "member") throw new AuthorizationError("Platform keys can't change how a partner's businesses are billed.");
-  await withBusinessTransaction(context.db, { userId: actor.userId, actorType: "operator" }, async (tx) => {
+  await withBusinessTransaction(context.db, { ...partnerRls(actor), actorType: "operator" }, async (tx) => {
     if (await readRole(tx, actor) === "member") throw new AuthorizationError("Only owners and admins can change how a business is billed.");
     if (await businessPartner(tx, input.businessId) !== actor.partnerId.toLowerCase()) throw businessNotFound();
   });
-  const outcome = await withBusinessTransaction(context.db, { userId: actor.userId, businessId: input.businessId, actorType: "system" }, async (tx) => {
+  const outcome = await withBusinessTransaction(context.db, { ...partnerRls(actor), businessId: input.businessId, actorType: "system" }, async (tx) => {
     const changed = await setBusinessPackageInTransaction(tx, { businessId: input.businessId, partnerId: actor.partnerId, packageId: input.packageId, stripeConnect: Boolean(context.stripeConnect) });
-    if (changed.changed) await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: actor.userId, eventType: "partner.business_billing_changed", entityType: "business", entityId: input.businessId, payload: { partnerId: actor.partnerId, packageId: input.packageId } });
+    if (changed.changed) await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: actorUserId(actor), eventType: "partner.business_billing_changed", entityType: "business", entityId: input.businessId, payload: { partnerId: actor.partnerId, packageId: input.packageId, ...keyAuditFields(actor) } });
     return changed;
   });
   await expireQuietly(context.stripeConnect, outcome.closes);
-  const billing = (await withBusinessTransaction(context.db, { userId: actor.userId, actorType: "operator" }, async (tx) => await listPartnerBusinessBillingIn(tx, actor.partnerId))).get(input.businessId);
+  const billing = (await withBusinessTransaction(context.db, { ...partnerRls(actor), actorType: "operator" }, async (tx) => await listPartnerBusinessBillingIn(tx, actor.partnerId))).get(input.businessId);
   return billing ?? { kind: "outside" };
 }
 
@@ -302,7 +300,6 @@ export type PartnerBusinessOverageInput = { businessId: string; enabled: unknown
  * records each change.
  */
 export async function setPartnerBusinessOverage(context: DomainContext, actor: PartnerActor, input: PartnerBusinessOverageInput): Promise<PartnerBusinessBilling> {
-  if (actor.kind !== "member") throw new AuthorizationError("Platform keys can't change a business's overage.");
   if (typeof input.enabled !== "boolean") throw failure("enabled must be true or false.", 400, "invalid_overage");
   if (!isPackageOverageAmount(input.voiceMinuteRateMinor) || !isPackageOverageAmount(input.chatRateMinor)) {
     throw failure("Enter each rate as a whole number of the currency's smallest unit, from 0 to 99,999,999.", 400, "invalid_overage_rate");
@@ -312,11 +309,11 @@ export async function setPartnerBusinessOverage(context: DomainContext, actor: P
   }
   if (!context.stripeConnect) throw notConfigured();
   const terms = { enabled: input.enabled, voiceMinuteRateMinor: input.voiceMinuteRateMinor, chatRateMinor: input.chatRateMinor, capMinor: input.capMinor };
-  await withBusinessTransaction(context.db, { userId: actor.userId, actorType: "operator" }, async (tx) => {
+  await withBusinessTransaction(context.db, { ...partnerRls(actor), actorType: "operator" }, async (tx) => {
     if (await readRole(tx, actor) === "member") throw new AuthorizationError("Only owners and admins can change a business's overage.");
     if (await businessPartner(tx, input.businessId) !== actor.partnerId.toLowerCase()) throw businessNotFound();
   });
-  await withBusinessTransaction(context.db, { userId: actor.userId, businessId: input.businessId, actorType: "system" }, async (tx) => {
+  await withBusinessTransaction(context.db, { ...partnerRls(actor), businessId: input.businessId, actorType: "system" }, async (tx) => {
     // Releasing the business and changing its package take this lock too, so neither moves under the change.
     await lockBusinessBillingAccount(tx, input.businessId);
     if (await businessPartner(tx, input.businessId) !== actor.partnerId.toLowerCase()) throw businessNotFound();
@@ -335,11 +332,11 @@ export async function setPartnerBusinessOverage(context: DomainContext, actor: P
       overageCapMinor: terms.capMinor,
       updatedAt: new Date(),
     }).where(eq(billingAccounts.businessId, input.businessId));
-    await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: actor.userId, eventType: "partner.business_overage_changed", entityType: "business", entityId: input.businessId, payload: { partnerId: actor.partnerId, currency, ...terms } });
+    await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: actorUserId(actor), eventType: "partner.business_overage_changed", entityType: "business", entityId: input.businessId, payload: { partnerId: actor.partnerId, currency, ...terms, ...keyAuditFields(actor) } });
     // The business's usage page shows whether it can still answer, which this changes.
     await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "billing_account", aggregateId: input.businessId, dedupeKey: `billing:${input.businessId}:overage:${randomUUID()}`, payload: { type: "billing.updated", entityId: input.businessId } });
   });
-  const billing = (await withBusinessTransaction(context.db, { userId: actor.userId, actorType: "operator" }, async (tx) => await listPartnerBusinessBillingIn(tx, actor.partnerId))).get(input.businessId);
+  const billing = (await withBusinessTransaction(context.db, { ...partnerRls(actor), actorType: "operator" }, async (tx) => await listPartnerBusinessBillingIn(tx, actor.partnerId))).get(input.businessId);
   return billing ?? { kind: "outside" };
 }
 

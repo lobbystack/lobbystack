@@ -256,7 +256,9 @@ export const partnerInvitations = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     partnerId: uuid("partner_id").notNull().references(() => partners.id, { onDelete: "cascade" }),
-    invitedByUserId: uuid("invited_by_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    // A person, or a partner's platform key that invited as the partner (migration 0162).
+    invitedByUserId: uuid("invited_by_user_id").references(() => users.id, { onDelete: "cascade" }),
+    invitedByPlatformKeyId: uuid("invited_by_platform_key_id").references(() => partnerPlatformKeys.id, { onDelete: "cascade" }),
     email: text("email").notNull(),
     normalizedEmail: text("normalized_email").notNull(),
     role: varchar("role", { length: 16 }).$type<"owner" | "admin" | "member">().notNull(),
@@ -480,7 +482,9 @@ export const prospectDemos = pgTable(
     campaignId: text("campaign_id"),
     websiteUrl: text("website_url").notNull(),
     businessName: text("business_name").notNull(),
-    operatorUserId: uuid("operator_user_id").notNull().references(() => users.id),
+    // The host's operator, or the partner's member who made it. Null for a demo a partner's platform key made (migration 0162).
+    operatorUserId: uuid("operator_user_id").references(() => users.id),
+    createdByPlatformKeyId: uuid("created_by_platform_key_id"),
     websiteIngestionJobId: uuid("website_ingestion_job_id"),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     publishedAt: timestamp("published_at", { withTimezone: true }),
@@ -1381,6 +1385,22 @@ export const partnerUsageMonths = pgTable(
 );
 
 // An owner's request for a Polar checkout of a tier, which the worker turns into a checkout page.
+// Idempotency-Key records of the v1 Partner endpoints, which act on no one business (migration 0162).
+export const partnerApiIdempotencyKeys = pgTable(
+  "partner_api_idempotency_keys",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    partnerId: uuid("partner_id").notNull().references(() => partners.id, { onDelete: "cascade" }),
+    scope: varchar("scope", { length: 120 }).notNull(),
+    key: varchar("key", { length: 255 }).notNull(),
+    requestHash: text("request_hash").notNull(),
+    status: varchar("status", { length: 16 }).$type<"processing" | "completed">().default("processing").notNull(),
+    response: jsonb("response").$type<{ status: number; body: unknown }>(),
+    ...timestamps,
+  },
+  (table) => [uniqueIndex("partner_api_idempotency_keys_unique").on(table.partnerId, table.scope, table.key), index("partner_api_idempotency_keys_created_idx").on(table.createdAt)],
+);
+
 export const partnerCheckoutRequests = pgTable(
   "partner_checkout_requests",
   {
