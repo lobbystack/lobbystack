@@ -17,7 +17,25 @@ The server is stateless. It supports the 2026-07-28 protocol revision and falls 
 
 ## Cursor
 
-Add LobbyStack to `~/.cursor/mcp.json`, or to `.cursor/mcp.json` in a project:
+Add LobbyStack to `~/.cursor/mcp.json` to use it in every project, or to `.cursor/mcp.json` in one project:
+
+```json mcp.json
+{
+  "mcpServers": {
+    "lobbystack": {
+      "url": "https://app.lobbystack.com/api/mcp"
+    }
+  }
+}
+```
+
+Cursor signs in with OAuth. Open **Customize** in Cursor's sidebar, find `lobbystack` among the MCP servers, and connect it. Cursor opens LobbyStack in your browser: sign in, pick the business, uncheck anything Cursor shouldn't do, and click **Allow access**.
+
+If the server doesn't connect, open the Output panel (Cmd+Shift+U) and select **MCP Logs**.
+
+### Cursor with an API key
+
+To use an API key instead, add an `Authorization` header. Cursor reads the key from the `LOBBYSTACK_API_KEY` environment variable:
 
 ```json mcp.json
 {
@@ -34,22 +52,40 @@ Add LobbyStack to `~/.cursor/mcp.json`, or to `.cursor/mcp.json` in a project:
 
 ## VS Code
 
-Add LobbyStack to `.vscode/mcp.json`. VS Code asks for the key the first time it starts the server and stores it for you:
+VS Code adds remote servers through a guided flow. Open the Command Palette (Cmd+Shift+P), run **MCP: Add Server**, choose **HTTP (HTTP or Server-Sent Events)**, and paste the server URL. Enter `lobbystack` as the server ID, then choose **Global** > **Copilot Global** to use LobbyStack in every workspace. VS Code saves this entry in `~/.copilot/mcp-config.json`:
 
-```json .vscode/mcp.json
+```json ~/.copilot/mcp-config.json
 {
-  "inputs": [
-    { "type": "promptString", "id": "lobbystack-key", "description": "LobbyStack API key", "password": true }
-  ],
-  "servers": {
+  "mcpServers": {
     "lobbystack": {
       "type": "http",
-      "url": "https://app.lobbystack.com/api/mcp",
-      "headers": { "Authorization": "Bearer ${input:lobbystack-key}" }
+      "url": "https://app.lobbystack.com/api/mcp"
     }
   }
 }
 ```
+
+To share the server with your team, commit the same entry in a `.mcp.json` file at the root of your workspace.
+
+When VS Code asks you to sign in, LobbyStack opens in your browser. Sign in, pick the business, uncheck anything VS Code shouldn't do, and click **Allow access**. If the server doesn't start, run **MCP: List Servers**, select `lobbystack` and choose **Show Output**.
+
+### VS Code with an API key
+
+To use an API key instead, add an `Authorization` header that reads the key from an environment variable:
+
+```json ~/.copilot/mcp-config.json
+{
+  "mcpServers": {
+    "lobbystack": {
+      "type": "http",
+      "url": "https://app.lobbystack.com/api/mcp",
+      "headers": { "Authorization": "Bearer ${LOBBYSTACK_API_KEY}" }
+    }
+  }
+}
+```
+
+Set `LOBBYSTACK_API_KEY` in the environment VS Code runs in. In a remote window or a dev container, set it there.
 
 ## Clients without header support
 

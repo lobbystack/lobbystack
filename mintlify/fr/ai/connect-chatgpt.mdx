@@ -1,6 +1,6 @@
 ---
 title: "Connecter ChatGPT et les agents OpenAI"
-description: "Ajoutez LobbyStack à ChatGPT comme application, ou utilisez-le depuis l'API Responses d'OpenAI et Codex."
+description: "Ajoutez LobbyStack à ChatGPT comme plugin, ou utilisez-le depuis Codex et l'API Responses d'OpenAI."
 sidebarTitle: "ChatGPT"
 contentType: "How-to"
 ---
@@ -11,17 +11,20 @@ Consultez [Serveur MCP](/fr/ai/mcp) pour savoir quels outils chaque autorisation
 
 ## ChatGPT
 
-ChatGPT ajoute les serveurs MCP personnalisés comme applications en mode développeur, qu'OpenAI propose sur le Web pour les comptes Plus, Pro, Business, Enterprise et Education.
+ChatGPT connecte les serveurs MCP personnalisés depuis sa page **Plugins**, sur le Web. Avec les forfaits Business, Enterprise et Edu, ChatGPT peut utiliser tous les outils de LobbyStack, y compris ceux qui modifient des données. Avec Pro, il ne peut utiliser que les outils qui lisent des données. Dans un espace de travail Business, seuls les administrateurs et les propriétaires peuvent ajouter un serveur personnalisé. Avec Enterprise et Edu, les administrateurs peuvent accorder cette autorisation à d'autres membres.
 
 <Steps>
-  <Step title="Activer le mode développeur">
-    Dans ChatGPT, ouvrez **Settings** > **Security and login** et activez **Developer mode**.
+  <Step title="Ajouter le serveur">
+    Dans ChatGPT, allez dans **Plugins**, cliquez sur **+**, puis sur **Add custom MCP server**. Nommez-le `LobbyStack` et collez l'URL du serveur sous **Connection**. Vous n'avez pas besoin d'activer le mode développeur avant.
   </Step>
-  <Step title="Créer l'application">
-    Ouvrez les plugins de ChatGPT, cliquez sur **+** et créez une application en mode développeur. Nommez-la `LobbyStack`, collez l'URL du serveur et choisissez **OAuth** pour l'authentification. Laissez vides les champs d'identifiant et de secret client ; ChatGPT s'enregistre lui-même auprès de LobbyStack.
+  <Step title="Choisir OAuth">
+    Choisissez **OAuth** pour l'authentification et laissez vides les champs d'identifiant et de secret client : ChatGPT s'enregistre lui-même auprès de LobbyStack. Lisez l'avertissement sur les risques, cochez **I understand and want to continue** et cliquez sur **Create as a plugin**.
   </Step>
   <Step title="Se connecter et choisir l'accès">
     ChatGPT ouvre LobbyStack. Connectez-vous, choisissez l'entreprise, décochez ce que ChatGPT ne doit pas faire et cliquez sur **Autoriser l'accès**.
+  </Step>
+  <Step title="Installer le plugin">
+    Vérifiez les outils trouvés par ChatGPT, puis installez le plugin. Dans une nouvelle conversation, tapez `@` et sélectionnez LobbyStack.
   </Step>
 </Steps>
 
@@ -52,7 +55,18 @@ curl https://api.openai.com/v1/responses \
 
 ## Codex
 
-Ajoutez LobbyStack à `~/.codex/config.toml`. Codex lit la clé API dans la variable d'environnement que vous indiquez :
+L'application de bureau ChatGPT, la CLI Codex et l'extension Codex pour IDE partagent la même configuration MCP : vous n'ajoutez LobbyStack qu'une fois. Ajoutez le serveur, puis connectez-vous :
+
+```bash
+codex mcp add lobbystack --url https://app.lobbystack.com/api/mcp
+codex mcp login lobbystack
+```
+
+`codex mcp login` ouvre LobbyStack dans votre navigateur. Connectez-vous, choisissez l'entreprise, décochez ce que Codex ne doit pas faire et cliquez sur **Autoriser l'accès**. Codex s'enregistre lui-même auprès de LobbyStack : vous n'avez besoin ni d'identifiant ni de secret client. Demandez ensuite à Codex d'appeler `get_business` pour vérifier la connexion.
+
+### Codex avec une clé API
+
+Pour utiliser plutôt une clé API, ajoutez LobbyStack à `~/.codex/config.toml`. Codex lit la clé dans la variable d'environnement que vous indiquez :
 
 ```toml ~/.codex/config.toml
 [mcp_servers.lobbystack]
@@ -60,4 +74,4 @@ url = "https://app.lobbystack.com/api/mcp"
 bearer_token_env_var = "LOBBYSTACK_API_KEY"
 ```
 
-Exportez `LOBBYSTACK_API_KEY` dans votre terminal, lancez Codex et demandez-lui d'appeler `get_business` pour vérifier la connexion.
+Exportez `LOBBYSTACK_API_KEY` dans votre terminal avant de lancer Codex.

@@ -11,11 +11,16 @@ Consulte [Servidor MCP](/es/ai/mcp) para ver qué herramientas habilita cada per
 
 ## Conectores de Claude y Claude Desktop
 
+Los conectores personalizados están disponibles en los planes Free, Pro, Max, Team y Enterprise. El plan Free permite un solo conector personalizado.
+
 <Steps>
   <Step title="Agregue el conector">
-    En Claude, vaya a **Customize** > **Connectors**, haga clic en **+** y luego en **Add custom connector**. Llámelo `LobbyStack`, pegue la URL del servidor y haga clic en **Add**. Deje **Advanced settings** vacío.
+    En Claude, vaya a **Customize** > **Connectors**, haga clic en **+ Add** y luego en **Add custom connector**. Llámelo `LobbyStack`, pegue la URL del servidor y haga clic en **Continue**.
 
-    En los planes Team y Enterprise, un propietario lo agrega en **Organization settings** > **Connectors**, y cada miembro lo conecta desde **Customize** > **Connectors**.
+    En los planes Team y Enterprise, un propietario agrega el conector en **Organization settings** > **Connectors** > **Add** > **Custom** > **Web**. Luego, los miembros abren **Customize** > **Connectors** y hacen clic en **Connect**.
+  </Step>
+  <Step title="Revise los ajustes de inicio de sesión">
+    Claude detecta que LobbyStack usa OAuth. En **OAuth client**, mantenga **Use Claude's published identity (Recommended)**. Haga clic en **Continue** y luego en **Add**.
   </Step>
   <Step title="Conéctese e inicie sesión">
     Haga clic en **Connect**. Claude abre LobbyStack. Inicie sesión si aún no lo ha hecho.

@@ -11,11 +11,16 @@ Consultez [Serveur MCP](/fr/ai/mcp) pour savoir quels outils chaque autorisation
 
 ## Connecteurs Claude et Claude Desktop
 
+Les connecteurs personnalisés sont disponibles avec les forfaits Free, Pro, Max, Team et Enterprise. Le forfait Free permet un seul connecteur personnalisé.
+
 <Steps>
   <Step title="Ajouter le connecteur">
-    Dans Claude, allez dans **Customize** > **Connectors**, cliquez sur **+**, puis sur **Add custom connector**. Nommez-le `LobbyStack`, collez l'URL du serveur et cliquez sur **Add**. Laissez **Advanced settings** vide.
+    Dans Claude, allez dans **Customize** > **Connectors**, cliquez sur **+ Add**, puis sur **Add custom connector**. Nommez-le `LobbyStack`, collez l'URL du serveur et cliquez sur **Continue**.
 
-    Avec les forfaits Team et Enterprise, un propriétaire l'ajoute dans **Organization settings** > **Connectors**, puis chaque membre le connecte depuis **Customize** > **Connectors**.
+    Avec les forfaits Team et Enterprise, un propriétaire ajoute le connecteur dans **Organization settings** > **Connectors** > **Add** > **Custom** > **Web**. Les membres ouvrent ensuite **Customize** > **Connectors** et cliquent sur **Connect**.
+  </Step>
+  <Step title="Vérifier les paramètres de connexion">
+    Claude détecte que LobbyStack utilise OAuth. Sous **OAuth client**, gardez **Use Claude's published identity (Recommended)**. Cliquez sur **Continue**, puis sur **Add**.
   </Step>
   <Step title="Connecter et se connecter">
     Cliquez sur **Connect**. Claude ouvre LobbyStack. Connectez-vous si ce n'est pas déjà fait.
