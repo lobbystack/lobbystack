@@ -66,7 +66,9 @@
         "percentUp": "+{{value}}% u odnosu na prethodni period",
         "percentDown": "-{{value}}% u odnosu na prethodni period",
         "durationUp": "+{{value}} u odnosu na prethodni period",
-        "durationDown": "-{{value}} u odnosu na prethodni period"
+        "durationDown": "-{{value}} u odnosu na prethodni period",
+        "pointsUp": "+{{value}} p. p. u odnosu na prethodni period",
+        "pointsDown": "-{{value}} p. p. u odnosu na prethodni period"
       },
       "outcomes": {
         "title": "Ishodi poziva",
@@ -83,6 +85,22 @@
         "description": "Pozivi i poruke po kanalu za izabrane datume.",
         "labels": {
           "other": "Ostalo"
+        }
+      },
+      "results": {
+        "title": "Rezultati",
+        "description": "Šta je Vaš recepcioner zakazao i obradio u ovom periodu.",
+        "bookedValue": {
+          "title": "Procenjena vrednost zakazanih termina",
+          "hint": "Termini koje je Vaš recepcioner zakazao putem poziva, SMS-a ili četa, po trenutnim cenama usluga. Cena „od” se računa po najnižem iznosu, a raspon cena po donjoj granici. Otkazani termini i cene koje se određuju na licu mesta se ne računaju."
+        },
+        "timeSaved": {
+          "title": "Ušteđeno vreme",
+          "hint": "Trajanje razgovora u pozivima koje je Vaš recepcioner obradio. Kao i kod naplate, ne računaju se neželjeni pozivi i pozivi kraći od 10 sekundi."
+        },
+        "withoutTransfer": {
+          "title": "Pozivi obrađeni bez preusmeravanja",
+          "hint": "Udeo tih poziva koje je Vaš recepcioner završio bez preusmeravanja pozivaoca na Vaš tim."
         }
       }
     },

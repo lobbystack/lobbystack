@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNotNull, lt } from "drizzle-orm";
 
-import { calls, conversations, conversationSessions, enqueueOutbox, inboxItems, messages, operatorNotificationDeliveries, storageObjects, transcripts, withBusinessTransaction } from "@lobbystack/db";
+import { calls, conversations, conversationSessions, enqueueOutbox, inboxItems, messages, operatorNotificationDeliveries, storageObjects, transcripts, unansweredQuestions, withBusinessTransaction } from "@lobbystack/db";
 
 import { EXPIRED_FOLLOW_UP_BODY, EXPIRED_FOLLOW_UP_TITLE } from "./followUpRetention";
 import type { DomainContext } from "./context";
@@ -9,7 +9,7 @@ import { isContentRetentionEnabled } from "./contentRetentionPolicy";
 export async function runPrivacyRetentionSweep(
   context: DomainContext,
   input: { businessId: string; now?: Date },
-): Promise<{ scrubbedFollowUps: number; scrubbedMessages: number; scrubbedOperatorDeliveries: number; deletedTranscripts: number; queuedRecordings: number }> {
+): Promise<{ scrubbedFollowUps: number; scrubbedMessages: number; scrubbedOperatorDeliveries: number; deletedTranscripts: number; deletedUnansweredQuestions: number; queuedRecordings: number }> {
   const now = input.now ?? new Date();
   const contentRetentionEnabled = isContentRetentionEnabled();
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
@@ -24,6 +24,10 @@ export async function runPrivacyRetentionSweep(
     const deletedTranscripts = !contentRetentionEnabled ? [] : await tx.delete(transcripts)
       .where(and(eq(transcripts.businessId, input.businessId), isNotNull(transcripts.expiresAt), lt(transcripts.expiresAt, now)))
       .returning({ callId: transcripts.callId });
+    // A question repeats what a caller said; its text entry, once answered, is the business's own and stays.
+    const deletedUnansweredQuestions = !contentRetentionEnabled ? [] : await tx.delete(unansweredQuestions)
+      .where(and(eq(unansweredQuestions.businessId, input.businessId), isNotNull(unansweredQuestions.contentExpiresAt), lt(unansweredQuestions.contentExpiresAt, now)))
+      .returning({ id: unansweredQuestions.id });
     const expiredCallIds = [...new Set(deletedTranscripts.map((row) => row.callId))];
     // A call's summary often quotes the caller, so its text expires with the transcript.
     const quotingSessions = !expiredCallIds.length ? [] : await tx.select({ id: conversationSessions.id, conversationId: conversationSessions.conversationId, summary: conversationSessions.summary })
@@ -84,6 +88,7 @@ export async function runPrivacyRetentionSweep(
       scrubbedMessages: scrubbedMessages.length,
       scrubbedOperatorDeliveries: scrubbedOperatorDeliveries.length,
       deletedTranscripts: deletedTranscripts.length,
+      deletedUnansweredQuestions: deletedUnansweredQuestions.length,
       queuedRecordings: expiredRecordings.length,
     };
   });

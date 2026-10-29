@@ -7,6 +7,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import enCommon from "../../public/locales/en/common.json";
 import en from "../../public/locales/en/dashboard.json";
 import frCommon from "../../public/locales/fr/common.json";
+import enKnowledge from "../../public/locales/en/knowledge.json";
+import frKnowledge from "../../public/locales/fr/knowledge.json";
 import fr from "../../public/locales/fr/dashboard.json";
 import { LiveOverviewSurface } from "./live-overview-surface";
 vi.mock("next/dynamic", () => ({ default: () => () => null }));
@@ -14,18 +16,19 @@ vi.mock("next/dynamic", () => ({ default: () => () => null }));
 vi.mock("./dashboard-activation-card", () => ({ DashboardActivationCard: () => null }));
 const clients: QueryClient[] = [];
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); });
-type Overrides = { upcoming?: Array<Record<string, unknown>>; recentCalls?: Array<Record<string, unknown>>; actionRequired?: Array<Record<string, unknown>>; role?: string };
+type Overrides = { upcoming?: Array<Record<string, unknown>>; recentCalls?: Array<Record<string, unknown>>; actionRequired?: Array<Record<string, unknown>>; role?: string; unansweredCount?: number };
 async function setup(locale: "en" | "fr", callId: string | null, overrides: Overrides = {}) {
   vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn(), removeItem: vi.fn() });
   vi.stubGlobal("EventSource", class { addEventListener() {} removeEventListener() {} close() {} });
   const i18n = createInstance();
-  await i18n.init({ lng: locale, defaultNS: "dashboard", resources: { en: { dashboard: en, common: enCommon }, fr: { dashboard: fr, common: frCommon } } });
+  await i18n.init({ lng: locale, defaultNS: "dashboard", resources: { en: { dashboard: en, common: enCommon, knowledge: enKnowledge }, fr: { dashboard: fr, common: frCommon, knowledge: frKnowledge } } });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   client.setQueryData(["dashboard"], {
     businessId: "business", kpis: { calls: { total: 1, deltaPercent: 0 }, appointments: { total: 1, deltaPercent: 0 }, averageDuration: { totalSeconds: 20, deltaSeconds: 0 } }, monthlyCalls: [], recentCalls: overrides.recentCalls ?? [],
     actionRequired: overrides.actionRequired ?? [{ id: "follow-up", kind: "voice_message", title: "Voice message from Alex", body: "Please call back.\nCallback: +14165550199\nUrgency: high", callId, createdAt: "2026-09-04T14:30:00Z" }],
     upcoming: overrides.upcoming ?? [{ id: "appointment", startsAt: "2026-09-07T14:30:00Z", timezone: "UTC", status: "confirmed", sourceChannel: "voice", contactName: "Alex", serviceName: "Consultation" }],
   });
+  if (overrides.unansweredCount !== undefined) client.setQueryData(["unanswered-questions", "business"], { questions: [], openCount: overrides.unansweredCount });
   if (overrides.role) client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Clinic", role: overrides.role, active: true }] });
   render(<I18nextProvider i18n={i18n}><QueryClientProvider client={client}><LiveOverviewSurface /></QueryClientProvider></I18nextProvider>);
   return i18n;
@@ -45,6 +48,17 @@ describe("dashboard voice follow-up parity", () => {
     await setup("en", null);
     expect(screen.getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["/appointments"]);
     expect(screen.getByText(/Please call back.*Alex/)).toBeTruthy();
+  });
+});
+describe("dashboard unanswered questions", () => {
+  it.each(["en", "fr"] as const)("links open questions to the knowledge page in %s", async locale => {
+    const i18n = await setup(locale, null, { unansweredCount: 3 });
+    const link = screen.getByRole("link", { name: new RegExp(i18n.t("knowledge:unansweredQuestions.home.count", { count: 3 })) });
+    expect(link.getAttribute("href")).toBe("/agent/knowledge#unanswered-questions");
+  });
+  it("shows nothing when every question is handled", async () => {
+    await setup("en", null, { unansweredCount: 0 });
+    expect(screen.getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["/appointments"]);
   });
 });
 describe("dashboard upcoming appointments", () => {

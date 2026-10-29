@@ -13,6 +13,7 @@ import {
   isWebhookEventType,
   normalizeAppointmentChangePolicy,
   normalizeBookingMode,
+  normalizeReceptionistVoice,
   normalizeTransferMode,
   weekdays,
   type ApiAppointment,
@@ -663,9 +664,9 @@ export function serializeCalendarConnection(row: { id: string; provider: string;
 
 const summarySources = ["placeholder", "generated", "operator"] as const;
 
-type ReceptionistRow = Pick<typeof receptionistProfiles.$inferSelect, "greeting" | "tone" | "summary" | "summarySource" | "bookingPolicy" | "voiceInstructions" | "smsInstructions" | "chatInstructions" | "transferMode" | "transferNumber" | "appointmentChangePolicy" | "bookingMode" | "updatedAt">;
+type ReceptionistRow = Pick<typeof receptionistProfiles.$inferSelect, "greeting" | "tone" | "summary" | "summarySource" | "bookingPolicy" | "voiceInstructions" | "smsInstructions" | "chatInstructions" | "transferMode" | "transferNumber" | "appointmentChangePolicy" | "bookingMode" | "voice" | "updatedAt">;
 
-/** Shows the settings as calls use them: a transfer mode, booking mode or policy calls don't know reads as what they fall back to. */
+/** Shows the settings as calls use them: a transfer mode, booking mode, voice or policy calls don't know reads as what they fall back to. */
 export function serializeReceptionist(row: ReceptionistRow): ApiReceptionist {
   const policy = normalizeAppointmentChangePolicy(row.appointmentChangePolicy);
   return {
@@ -680,6 +681,7 @@ export function serializeReceptionist(row: ReceptionistRow): ApiReceptionist {
     transfer_mode: normalizeTransferMode(row.transferMode),
     transfer_number: row.transferNumber,
     booking_mode: normalizeBookingMode(row.bookingMode),
+    voice: normalizeReceptionistVoice(row.voice),
     appointment_change_policy: { enabled: policy.enabled, allow_cancel: policy.allowCancel, allow_reschedule: policy.allowReschedule, verification_mode: policy.verificationMode },
     updated_at: iso(row.updatedAt),
   };

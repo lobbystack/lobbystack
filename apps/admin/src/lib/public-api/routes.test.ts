@@ -1057,7 +1057,7 @@ describe("rules", () => {
 });
 
 describe("receptionist settings", () => {
-  const receptionist = { greeting: "Hi", tone: "warm", summary: "Maple", summary_source: "operator", booking_policy: "Book", voice_instructions: null, sms_instructions: null, chat_instructions: null, transfer_mode: "never", transfer_number: null, booking_mode: "instant", appointment_change_policy: { enabled: true, allow_cancel: true, allow_reschedule: true, verification_mode: "phone_match_and_facts" }, updated_at: "2026-10-11T12:00:00.000Z" };
+  const receptionist = { greeting: "Hi", tone: "warm", summary: "Maple", summary_source: "operator", booking_policy: "Book", voice_instructions: null, sms_instructions: null, chat_instructions: null, transfer_mode: "never", transfer_number: null, booking_mode: "instant", voice: "marin", appointment_change_policy: { enabled: true, allow_cancel: true, allow_reschedule: true, verification_mode: "phone_match_and_facts" }, updated_at: "2026-10-11T12:00:00.000Z" };
 
   it("reads the settings", async () => {
     domain.getReceptionistForApi.mockResolvedValue(receptionist);
@@ -1068,10 +1068,10 @@ describe("receptionist settings", () => {
 
   it("passes the checked fields through and refuses anything the dashboard would refuse", async () => {
     domain.updateReceptionistForApi.mockResolvedValue({ ...receptionist, greeting: "Hello." });
-    const response = await v1.updateReceptionist(call("/receptionist", { method: "PATCH", body: JSON.stringify({ greeting: " Hello. ", booking_mode: "request", transfer_number: "+14165550134" }) }));
+    const response = await v1.updateReceptionist(call("/receptionist", { method: "PATCH", body: JSON.stringify({ greeting: " Hello. ", booking_mode: "request", voice: "cedar", transfer_number: "+14165550134" }) }));
     expect(response.status).toBe(200);
-    expect(domain.updateReceptionistForApi).toHaveBeenCalledWith(expect.anything(), expect.anything(), { greeting: "Hello.", booking_mode: "request", transfer_number: "+14165550134" });
-    for (const bad of [{ transfer_mode: "sometimes" }, { summary: "Mine.", regenerate_summary: true }, { greeting: "" }, { appointment_change_policy: { enabled: false } }, { locale: "fr" }]) {
+    expect(domain.updateReceptionistForApi).toHaveBeenCalledWith(expect.anything(), expect.anything(), { greeting: "Hello.", booking_mode: "request", voice: "cedar", transfer_number: "+14165550134" });
+    for (const bad of [{ transfer_mode: "sometimes" }, { voice: "nova" }, { summary: "Mine.", regenerate_summary: true }, { greeting: "" }, { appointment_change_policy: { enabled: false } }, { locale: "fr" }]) {
       expect((await v1.updateReceptionist(call("/receptionist", { method: "PATCH", body: JSON.stringify(bad) }))).status).toBe(400);
     }
     expect(domain.updateReceptionistForApi).toHaveBeenCalledTimes(1);

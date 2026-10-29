@@ -323,6 +323,12 @@
       "placeholder": "Choisir une langue par défaut",
       "hint": "Choisissez la langue de repli que votre réceptionniste doit utiliser quand la préférence du client est inconnue."
     },
+    "voice": {
+      "label": "Voix",
+      "hint": "Votre réceptionniste parle avec cette voix à chaque appel.",
+      "hearIt": "L’écouter dans un appel test",
+      "defaultOption": "{{voice}} (par défaut)"
+    },
     "timezone": {
       "label": "Fuseau horaire de l’entreprise",
       "hint": "Votre réceptionniste utilise ce fuseau horaire pour vos heures d’ouverture et les créneaux qu’il propose aux clients.",

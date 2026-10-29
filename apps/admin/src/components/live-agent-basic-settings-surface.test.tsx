@@ -9,6 +9,7 @@ import {
   buildAppointmentChangePolicyForSave,
   resolveTransferNumberForSave,
 } from "./live-agent-basic-settings-surface";
+import { registerTestCallStarter } from "@/lib/test-call-launcher";
 
 vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => ({ track: vi.fn() }) }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string) => key }) }));
@@ -200,6 +201,55 @@ describe("AgentBasicSettingsPage saves", () => {
     await waitFor(() => expect(select.textContent).toContain("agent:appointmentChanges.verification.options.operator_only"));
     await userEvent.click(select);
     expect(await screen.findByRole("option", { name: "agent:appointmentChanges.verification.options.operator_only" })).toBeTruthy();
+    client.clear();
+  });
+});
+
+describe("AgentBasicSettingsPage voice", () => {
+  function renderWithVoice(voice: string | undefined) {
+    const patches: unknown[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === "PATCH") {
+        patches.push(JSON.parse(String(init.body)));
+        return Response.json({ profile: {} });
+      }
+      return Response.json({
+        business: { defaultLocale: "en" },
+        profile: { greeting: "Thanks for calling.", summary: "Clinic", summarySource: "operator", transferNumber: null, transferMode: "on_request", appointmentChangePolicy: null, bookingMode: "instant", ...(voice ? { voice } : {}) },
+      });
+    }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><AgentBasicSettingsPage businessId="business" canManageTenant /></QueryClientProvider>);
+    return { client, patches };
+  }
+
+  it("shows the saved voice and saves the one picked", async () => {
+    const { client, patches } = renderWithVoice("cedar");
+    const user = userEvent.setup();
+    const select = await screen.findByRole("combobox", { name: "agent:fields.voice.label" });
+    await waitFor(() => expect(select.textContent).toContain("Cedar"));
+    await waitFor(() => expect(select.hasAttribute("data-disabled")).toBe(false));
+    await user.click(select);
+    await user.click(await screen.findByRole("option", { name: "Shimmer" }));
+    await waitFor(() => expect(patches).toEqual([{ businessId: "business", voice: "shimmer" }]));
+    client.clear();
+  });
+
+  it("shows marin for a business that never picked a voice or has one calls no longer use", async () => {
+    const { client } = renderWithVoice("nova");
+    const select = await screen.findByRole("combobox", { name: "agent:fields.voice.label" });
+    await waitFor(() => expect(select.textContent).toContain("agent:fields.voice.defaultOption"));
+    client.clear();
+  });
+
+  it("starts a test call from the utility bar's widget so the owner can hear the voice", async () => {
+    const starter = vi.fn();
+    const unregister = registerTestCallStarter(starter);
+    const { client } = renderWithVoice(undefined);
+    await userEvent.click(await screen.findByRole("button", { name: "agent:fields.voice.hearIt" }));
+    expect(starter).toHaveBeenCalledTimes(1);
+    unregister();
+    await waitFor(() => expect(screen.queryByRole("button", { name: "agent:fields.voice.hearIt" })).toBeNull());
     client.clear();
   });
 });

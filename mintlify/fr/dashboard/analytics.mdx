@@ -1,6 +1,6 @@
 ---
 title: "Consulter l'analytique de la réceptionniste"
-description: "Suivez les tendances d'activité pour les appels, les messages, les rendez-vous, les résultats des appels et les canaux de communication."
+description: "Voyez ce que votre réceptionniste a réservé et le temps qu'elle vous a fait gagner, puis suivez les tendances des appels, des messages, des rendez-vous, des résultats des appels et des canaux."
 sidebarTitle: "Analytique"
 contentType: "How-to"
 ---
@@ -15,6 +15,7 @@ _L'analytique vous aide à repérer les variations de charge de travail et à d�
 
 | Section | À quoi elle sert |
 | --- | --- |
+| **Bilan** | Ce que votre réceptionniste a réservé, le temps de conversation qu'elle a pris en charge et la part des appels qu'elle a terminés sans transfert. |
 | **Vue d'ensemble de l'activité** | Les appels et les messages de la semaine dans un seul graphique. |
 | **Nombre d'appels** | Le nombre d'appels et l'écart par rapport à la semaine précédente. |
 | **Nombre de messages** | L'activité des conversations SMS et l'écart d'une semaine à l'autre. |
@@ -22,6 +23,26 @@ _L'analytique vous aide à repérer les variations de charge de travail et à d�
 | **Durée moyenne** | La durée habituelle des appels et l'écart d'une semaine à l'autre. |
 | **Résultats des appels** | Les appels terminés, transférés, en direct et manqués. |
 | **Canaux** | La part de l'activité qui provient de la voix, des SMS et des autres canaux. |
+
+## Voir ce que votre réceptionniste a réservé et fait gagner
+
+La carte **Bilan**, en haut de la page, couvre les dates que vous choisissez. Elle compare chaque chiffre à la période de même durée qui précède.
+
+| Chiffre | Comment LobbyStack le calcule |
+| --- | --- |
+| **Valeur réservée estimée** | Le prix de chaque rendez-vous que votre réceptionniste a pris par appel, SMS ou chat sur ces dates, après la remise éventuelle du service. Un prix fixe compte en entier, un prix « à partir de » pour son minimum et une fourchette pour son bas. |
+| **Temps gagné** | Le temps de conversation des appels traités par votre réceptionniste, en heures et en minutes. |
+| **Appels traités sans transfert** | La part de ces appels qui se sont terminés sans que votre réceptionniste transfère l'appelant à votre équipe. |
+
+La valeur réservée exclut :
+
+- Les rendez-vous annulés
+- Les rendez-vous que votre équipe a pris dans le tableau de bord ou par l'API
+- Les services dont le prix est fixé sur place ou qui n'ont pas de prix
+
+LobbyStack utilise le prix actuel de chaque service : si vous changez un prix, l'estimation change aussi pour les dates passées. Le montant s'affiche dans la devise de votre entreprise.
+
+Le temps gagné et la part sans transfert excluent les appels indésirables et les appels de moins de 10 secondes, soit les appels que votre forfait ne facture pas. Les chats du site web ne comptent pas dans le temps gagné, car ils n'ont pas de temps de conversation.
 
 ## Analyser les performances
 

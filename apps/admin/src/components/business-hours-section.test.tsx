@@ -16,7 +16,7 @@ vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetry
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string, options?: { day?: string; list?: string; number?: number }) => (options?.day ? `${key}:${options.day}` : options?.list ? `${key}:${options.list}` : options?.number ? `${key}:${options.number}` : key) }) }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
-vi.mock("@/lib/test-call-launcher", () => ({ startTestCall: vi.fn(), subscribeTestCallEnded: () => () => undefined }));
+vi.mock("@/lib/test-call-launcher", () => ({ startTestCall: vi.fn(), subscribeTestCallEnded: () => () => undefined, subscribeTestCallStarter: () => () => undefined, getTestCallStarter: () => null }));
 vi.mock("./upgrade-plan-dialog-context", () => ({ useOpenUpgradePlanDialog: () => vi.fn() }));
 
 type Closure = { startsAt: string; endsAt: string; reason: string };

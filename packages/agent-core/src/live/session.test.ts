@@ -13,6 +13,22 @@ describe("GPT-Live session config", () => {
     expect(buildBrowserSessionConfig(demoSnapshot).input).toEqual(opening);
   });
 
+  it("speaks in the voice the business picked, on the phone and in the browser", () => {
+    const snapshot = { ...demoSnapshot, voice: "cedar" as const };
+    expect(buildPhoneSessionConfig(snapshot).audio?.output?.voice).toBe("cedar");
+    expect(buildBrowserSessionConfig(snapshot).audio?.output?.voice).toBe("cedar");
+  });
+
+  // Snapshots built before businesses could pick a voice have none.
+  it("falls back to marin for a snapshot with no voice or one GPT-Live doesn't have", () => {
+    const { voice: _voice, ...withoutVoice } = demoSnapshot;
+    const retired = { ...demoSnapshot, voice: "nova" } as unknown as typeof demoSnapshot;
+    for (const snapshot of [withoutVoice, retired]) {
+      expect(buildPhoneSessionConfig(snapshot).audio?.output?.voice).toBe("marin");
+      expect(buildBrowserSessionConfig(snapshot).audio?.output?.voice).toBe("marin");
+    }
+  });
+
   it("leaves the history empty for a business with no greeting", () => {
     expect(buildPhoneSessionConfig({ ...demoSnapshot, greeting: " " })).not.toHaveProperty("input");
   });

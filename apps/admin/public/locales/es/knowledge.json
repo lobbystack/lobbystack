@@ -27,5 +27,32 @@
     "generating": "Generando...",
     "emptyResponse": "Las respuestas de la vista previa aparecerán aquí cuando ejecute la recepcionista.",
     "disabled": "Inicie sesión y cree un negocio para ejecutar la vista previa real."
+  },
+  "unansweredQuestions": {
+    "title": "Preguntas sin respuesta",
+    "description": "Personas que llamaron o visitaron su sitio hicieron estas preguntas, y su conocimiento no tenía la respuesta. Responda aquí para añadirla a su conocimiento para las próximas llamadas y chats.",
+    "timesAsked_one": "Preguntada {{count}} vez",
+    "timesAsked_many": "Preguntada {{count}} veces",
+    "timesAsked_other": "Preguntada {{count}} veces",
+    "lastAsked": "Última vez el {{date}}",
+    "answer": "Responder",
+    "answerLabel": "Respuesta a: {{question}}",
+    "answerPlaceholder": "Escriba lo que su recepcionista debe responder.",
+    "saveAnswer": "Guardar respuesta",
+    "cancel": "Cancelar",
+    "dismiss": "Descartar",
+    "toast": {
+      "answered": "Respuesta añadida a su conocimiento.",
+      "dismissed": "Pregunta descartada."
+    },
+    "emptyTitle": "No hay preguntas sin respuesta",
+    "emptyDescription": "Cuando su recepcionista no encuentre una respuesta en su conocimiento, verá la pregunta aquí.",
+    "loadFailed": "No pudimos cargar sus preguntas sin respuesta. Actualice la página para intentarlo de nuevo.",
+    "home": {
+      "count_one": "{{count}} pregunta que su recepcionista no supo responder",
+      "count_many": "{{count}} preguntas que su recepcionista no supo responder",
+      "count_other": "{{count}} preguntas que su recepcionista no supo responder",
+      "description": "Añada las respuestas en la página Conocimiento."
+    }
   }
 }

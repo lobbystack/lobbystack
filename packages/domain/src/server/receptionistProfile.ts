@@ -3,14 +3,17 @@ import {
   appointmentChangeVerificationModes,
   bookingModes,
   defaultAppointmentChangePolicy,
+  DEFAULT_RECEPTIONIST_VOICE,
   defaultGreeting,
   isCurrencyCode,
+  isReceptionistVoice,
   isRuntimeLocale,
   RECEPTIONIST_INSTRUCTIONS_MAX_LENGTH,
   RECEPTIONIST_TEXT_MAX_LENGTH,
   transferModes,
   type AppointmentChangePolicy,
   type BookingMode,
+  type ReceptionistVoice,
   type RuntimeLocale,
   type TransferPolicy,
 } from "@lobbystack/shared";
@@ -33,6 +36,7 @@ export type ReceptionistProfilePatch = {
   transferNumber?: string | null;
   appointmentChangePolicy?: AppointmentChangePolicy;
   bookingMode?: BookingMode;
+  voice?: ReceptionistVoice;
 };
 
 export type ReceptionistSettingsChange = {
@@ -89,7 +93,9 @@ export function readReceptionistSettingsChange(body: unknown): ReceptionistSetti
   const policy = appointmentPolicy(input.appointmentChangePolicy);
   const bookingMode = input.bookingMode;
   if (bookingMode !== undefined && !(bookingModes as readonly unknown[]).includes(bookingMode)) throw invalid("bookingMode is invalid.");
-  const patch = { ...fields, ...(policy !== undefined ? { appointmentChangePolicy: policy } : {}), ...(bookingMode !== undefined ? { bookingMode } : {}) } as ReceptionistProfilePatch;
+  const voice = input.voice;
+  if (voice !== undefined && !isReceptionistVoice(voice)) throw invalid("voice is invalid.");
+  const patch = { ...fields, ...(policy !== undefined ? { appointmentChangePolicy: policy } : {}), ...(bookingMode !== undefined ? { bookingMode } : {}), ...(voice !== undefined ? { voice } : {}) } as ReceptionistProfilePatch;
 
   const { locale, timezone, currency, regenerateSummary } = input;
   if (locale !== undefined && !isRuntimeLocale(locale)) throw invalid("locale is invalid.");
@@ -116,6 +122,7 @@ export function defaultReceptionistProfile(businessName: string, locale: Runtime
     transferNumber: null,
     appointmentChangePolicy: defaultAppointmentChangePolicy,
     bookingMode: "instant" as const,
+    voice: DEFAULT_RECEPTIONIST_VOICE,
   };
 }
 
@@ -151,6 +158,7 @@ export async function saveReceptionistProfileInTransaction(
     ...(patch.transferNumber !== undefined ? { transferNumber: patch.transferNumber } : {}),
     appointmentChangePolicy: patch.appointmentChangePolicy ?? defaults.appointmentChangePolicy,
     ...(patch.bookingMode !== undefined ? { bookingMode: patch.bookingMode } : {}),
+    ...(patch.voice !== undefined ? { voice: patch.voice } : {}),
   }).onConflictDoUpdate({
     target: receptionistProfiles.businessId,
     set: { ...patch, ...(patch.summary !== undefined ? { summarySource: "operator" as const, summaryRegenerateStatus: null } : {}), ...(input.regenerateSummary ? { summarySource: "generated" as const, summaryRegenerateStatus: "pending" as const } : {}), updatedAt: new Date() },

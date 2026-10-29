@@ -165,6 +165,45 @@ describe.skipIf(!client)("operator contact and channel data under operator RLS",
     });
   });
 
+  it("adds up booked value and time saved from the receptionist's own bookings and handled calls", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, userId, ids } = await seed(tx);
+      await tx.execute(sql`reset role`);
+      await tx.update(businesses).set({ currency: "EUR" }).where(eq(businesses.id, businessId));
+      const [employee] = await tx.select({ id: staff.id }).from(staff).where(eq(staff.businessId, businessId));
+      const priced = await tx.insert(services).values([
+        { businessId, name: "Cut", slug: "cut", durationMinutes: 30, priceType: "fixed", priceMinor: 5_000 },
+        { businessId, name: "Color", slug: "color", durationMinutes: 60, priceType: "range", priceMinor: 8_000, priceMaxMinor: 12_000, discountPercent: 25 },
+        { businessId, name: "Quote", slug: "quote", durationMinutes: 30, priceType: "in_person" },
+      ]).returning({ id: services.id });
+      // Each booking takes its own hour, so none overlap for the one staff member.
+      const booking = (hour: number, serviceId: string, sourceChannel: string, status = "confirmed") => {
+        const startsAt = new Date(Date.now() + 2 * 86_400_000 + hour * 3_600_000);
+        return { businessId, contactId: ids.named, staffId: employee!.id, serviceId, startsAt, endsAt: new Date(startsAt.getTime() + 30 * 60_000), timezone: "UTC", sourceChannel, status };
+      };
+      await tx.insert(appointments).values([
+        booking(0, priced[0]!.id, "voice"), booking(1, priced[1]!.id, "web_chat"), booking(2, priced[2]!.id, "voice"),
+        booking(3, priced[0]!.id, "voice", "canceled"), booking(4, priced[0]!.id, "api"),
+      ]);
+      const ended = (seconds: number | null, values: Partial<typeof calls.$inferInsert> = {}) => {
+        const startedAt = new Date(Date.now() - 30 * 60_000);
+        return { businessId, provider: "openai_live", providerCallId: `rtc_${randomUUID()}`, transport: "voice", status: "completed", startedAt, endedAt: new Date(startedAt.getTime() + (seconds ?? 95) * 1_000), providerDurationSeconds: seconds, ...values };
+      };
+      await tx.insert(calls).values([
+        ended(120), ended(null), ended(60, { status: "transferred" }),
+        ended(8), ended(300, { disposition: "spam_ended" }), ended(200, { billingExcluded: true }),
+      ]);
+      await tx.execute(sql`set local role lobbystack_app`);
+      const to = new Date(Date.now() + 60_000);
+      const from = new Date(to.getTime() - 86_400_000);
+      const result = await getAnalytics({ db: tx as unknown as Database }, { userId, businessId, from, to, previousFrom: new Date(from.getTime() - 86_400_000), granularity: "day" });
+      // The seeded web call booking has no price, so only the fixed price and the discounted low end count.
+      expect(result.bookedValue).toEqual({ currency: "EUR", current: 5_000 + 6_000, previous: 0 });
+      expect(result.timeSavedSeconds).toEqual({ current: 120 + 95 + 60, previous: 0 });
+      expect(result.callsWithoutTransferPercent).toEqual({ current: 66.7, previous: null });
+    });
+  });
+
   it("finds a call by the transcript text the call list shows", async () => {
     await rollbackTest(async (tx) => {
       const { db, businessId, userId } = await seed(tx);

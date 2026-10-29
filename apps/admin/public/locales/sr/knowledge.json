@@ -27,5 +27,32 @@
     "generating": "Generisanje...",
     "emptyResponse": "Odgovori iz pregleda pojaviće se ovde kada pokrenete recepcionera.",
     "disabled": "Prijavite se i kreirajte firmu da biste pokrenuli pravi pregled."
+  },
+  "unansweredQuestions": {
+    "title": "Pitanja bez odgovora",
+    "description": "Pozivaoci i posetioci sajta postavili su ova pitanja, a vaše znanje nije imalo odgovor. Odgovorite ovde da biste odgovor dodali u znanje za buduće pozive i četove.",
+    "timesAsked_one": "Postavljeno {{count}} put",
+    "timesAsked_few": "Postavljeno {{count}} puta",
+    "timesAsked_other": "Postavljeno {{count}} puta",
+    "lastAsked": "Poslednji put {{date}}",
+    "answer": "Odgovori",
+    "answerLabel": "Odgovor na: {{question}}",
+    "answerPlaceholder": "Napišite šta recepcioner treba da odgovori.",
+    "saveAnswer": "Sačuvaj odgovor",
+    "cancel": "Otkaži",
+    "dismiss": "Odbaci",
+    "toast": {
+      "answered": "Odgovor je dodat u znanje.",
+      "dismissed": "Pitanje je odbačeno."
+    },
+    "emptyTitle": "Nema pitanja bez odgovora",
+    "emptyDescription": "Kada recepcioner ne pronađe odgovor u vašem znanju, pitanje ćete videti ovde.",
+    "loadFailed": "Nismo mogli da učitamo pitanja bez odgovora. Osvežite stranicu i pokušajte ponovo.",
+    "home": {
+      "count_one": "{{count}} pitanje na koje recepcioner nije znao odgovor",
+      "count_few": "{{count}} pitanja na koja recepcioner nije znao odgovor",
+      "count_other": "{{count}} pitanja na koja recepcioner nije znao odgovor",
+      "description": "Dodajte odgovore na stranici Znanje."
+    }
   }
 }

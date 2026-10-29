@@ -9,7 +9,7 @@ vi.mock("@lobbystack/db", async (original) => ({
 }));
 vi.mock("./notifications", () => ({ queueOperatorAlertInTransaction: vi.fn() }));
 
-import { conversations, conversationSessions, inboxItems, messages, transcripts } from "@lobbystack/db";
+import { conversations, conversationSessions, inboxItems, messages, transcripts, unansweredQuestions } from "@lobbystack/db";
 import { appendMessage } from "./conversations";
 import { receiveInboundSms } from "./sms";
 import { upsertTranscript } from "./voice";
@@ -145,6 +145,13 @@ describe("approved content retention", () => {
     const query = new PgDialect().sqlToQuery(conversation.where!);
     expect(query.sql).toContain('"conversations"."summary" = $');
     expect(query.params).toContain(quote);
+  });
+  it("deletes unanswered questions whose content expired", async () => {
+    const result = await runPrivacyRetentionSweep(context, { businessId: "business", now });
+    expect(result.deletedUnansweredQuestions).toBe(1);
+    const query = new PgDialect().sqlToQuery(deletes.find((entry) => entry.table === unansweredQuestions)!.where!);
+    expect(query.sql).toContain('"unanswered_questions"."business_id"');
+    expect(query.sql).toContain('"unanswered_questions"."content_expires_at" <');
   });
   it("uses the same media scrub in the scheduled sweep", async () => {
     const result = await runPrivacyRetentionSweep(context, { businessId: "business", now });

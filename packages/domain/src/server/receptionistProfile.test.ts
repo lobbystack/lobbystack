@@ -26,6 +26,9 @@ describe("readReceptionistSettingsChange", () => {
     [{ voiceInstructions: "x".repeat(RECEPTIONIST_INSTRUCTIONS_MAX_LENGTH + 1) }, "voiceInstructions is invalid."],
     [{ transferMode: "sometimes" }, "transferMode is invalid."],
     [{ bookingMode: "later" }, "bookingMode is invalid."],
+    [{ voice: "nova" }, "voice is invalid."],
+    [{ voice: "Marin" }, "voice is invalid."],
+    [{ voice: null }, "voice is invalid."],
     [{ appointmentChangePolicy: {} }, "appointmentChangePolicy is invalid."],
     [{ appointmentChangePolicy: { enabled: true, allowCancel: true, allowReschedule: true, verificationMode: "email" } }, "appointmentChangePolicy is invalid."],
     [{ locale: "ja" }, "locale is invalid."],
@@ -54,6 +57,10 @@ describe("readReceptionistSettingsChange", () => {
     });
   });
 
+  it("keeps a voice from the shared list", () => {
+    expect(readReceptionistSettingsChange({ voice: "cedar" })).toEqual({ patch: { voice: "cedar" }, regenerateSummary: false });
+  });
+
   it("keeps only the policy's known fields, and the longest allowed text", () => {
     const policy = { enabled: true, allowCancel: false, allowReschedule: true, verificationMode: "otp_required" };
     const longest = "x".repeat(RECEPTIONIST_TEXT_MAX_LENGTH);
@@ -67,7 +74,7 @@ describe("readReceptionistSettingsChange", () => {
 
 describe("defaultReceptionistProfile", () => {
   it("greets callers with the business's name until someone writes a greeting", () => {
-    expect(defaultReceptionistProfile("Maple Clinic")).toMatchObject({ greeting: defaultGreeting("Maple Clinic"), summary: "Maple Clinic", summarySource: "placeholder", transferMode: "on_request", bookingMode: "instant" });
+    expect(defaultReceptionistProfile("Maple Clinic")).toMatchObject({ greeting: defaultGreeting("Maple Clinic"), summary: "Maple Clinic", summarySource: "placeholder", transferMode: "on_request", bookingMode: "instant", voice: "marin" });
   });
 });
 

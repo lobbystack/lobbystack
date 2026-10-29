@@ -323,6 +323,12 @@
       "placeholder": "Izaberite podrazumevani jezik",
       "hint": "Izaberite jezik koji recepcioner koristi kada ne znamo koji jezik pozivalac želi."
     },
+    "voice": {
+      "label": "Glas",
+      "hint": "Recepcioner govori ovim glasom u svim pozivima.",
+      "hearIt": "Poslušajte ga u probnom pozivu",
+      "defaultOption": "{{voice}} (podrazumevani)"
+    },
     "timezone": {
       "label": "Vremenska zona firme",
       "hint": "Recepcioner koristi ovu vremensku zonu za radno vreme i termine koje nudi klijentima.",

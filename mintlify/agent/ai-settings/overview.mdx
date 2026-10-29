@@ -1,6 +1,6 @@
 ---
 title: "Configure voice and behavior"
-description: "Configure the opening line, default customer language, opening hours, currency, appointment changes, and default transfer number for your AI receptionist."
+description: "Configure the opening line, default customer language, voice, opening hours, currency, appointment changes, and default transfer number for your AI receptionist."
 sidebarTitle: "AI settings"
 contentType: "How-to"
 ---
@@ -74,6 +74,14 @@ Choose the language most of your callers speak. If you haven't changed the greet
 <Note>
   Add greeting, knowledge, service, and rule content in the languages your callers are most likely to use.
 </Note>
+
+## Voice
+
+Pick the voice your receptionist speaks in from **Voice**. It uses that voice on phone calls and on calls from your browser, including test calls. Businesses start with Marin.
+
+To hear a voice, pick it and click **Hear it in a test call** below the setting. A call already in progress keeps the voice it started with.
+
+You can choose from Alloy, Ash, Ballad, Beacon, Bossa, Cedar, Cinder, Coral, Delta, Echo, Gleam, Marin, Meridian, Quartz, Ripple, Sage, Shimmer, Stone, Tempo, Verse, Vesper, and Willow. In the [API](/api/overview), set `voice` on `PATCH /receptionist` to the name in lowercase, such as `cedar`.
 
 ## Currency
 

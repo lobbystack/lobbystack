@@ -6,6 +6,26 @@ export const transferModes = ["never", "always", "on_request", "on_urgent", "dur
 /** How the receptionist handles appointment requests. */
 export const bookingModes = ["off", "request", "instant"] as const;
 
+/**
+ * The GPT-Live built-in voices a business can pick for its receptionist.
+ * agent-core checks this list against the OpenAI SDK's BuiltInVoice type.
+ */
+export const receptionistVoices = ["alloy", "ash", "ballad", "beacon", "bossa", "cedar", "cinder", "coral", "delta", "echo", "gleam", "marin", "meridian", "quartz", "ripple", "sage", "shimmer", "stone", "tempo", "verse", "vesper", "willow"] as const;
+
+export type ReceptionistVoice = (typeof receptionistVoices)[number];
+
+/** The voice calls used before businesses could pick one, and still the default. */
+export const DEFAULT_RECEPTIONIST_VOICE: ReceptionistVoice = "marin";
+
+export function isReceptionistVoice(value: unknown): value is ReceptionistVoice {
+  return (receptionistVoices as readonly unknown[]).includes(value);
+}
+
+/** Missing, unknown or retired voices fall back to the default, so a call always has a voice. */
+export function normalizeReceptionistVoice(value: unknown): ReceptionistVoice {
+  return isReceptionistVoice(value) ? value : DEFAULT_RECEPTIONIST_VOICE;
+}
+
 /** Longest greeting, tone, summary or booking policy. */
 export const RECEPTIONIST_TEXT_MAX_LENGTH = 2_000;
 

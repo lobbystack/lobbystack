@@ -1226,6 +1226,7 @@ const receptionistApiFields: Record<keyof ReceptionistProfilePatch, keyof ApiRec
   transferNumber: "transfer_number",
   appointmentChangePolicy: "appointment_change_policy",
   bookingMode: "booking_mode",
+  voice: "voice",
 };
 
 /** The business's receptionist row, or the defaults it would be saved with when it has none yet. */
@@ -1264,6 +1265,7 @@ export async function updateReceptionistForApi(context: DomainContext, caller: A
       ...(input.transfer_mode !== undefined ? { transferMode: input.transfer_mode } : {}),
       ...(input.transfer_number !== undefined ? { transferNumber: input.transfer_number } : {}),
       ...(input.booking_mode !== undefined ? { bookingMode: input.booking_mode } : {}),
+      ...(input.voice !== undefined ? { voice: input.voice } : {}),
       ...(policy ? { appointmentChangePolicy: { enabled: policy.enabled, allowCancel: policy.allow_cancel, allowReschedule: policy.allow_reschedule, verificationMode: policy.verification_mode } } : {}),
     };
     const unchanged = (field: keyof ReceptionistProfilePatch): boolean => {

@@ -121,6 +121,8 @@ export const snapshotSchema = z.object({
   businessType: z.string().min(1),
   telemetryEnabled: z.boolean().optional(),
   greeting: z.string(),
+  // Not an enum: a voice OpenAI retires falls back to the default when a call starts.
+  voice: z.string().optional(),
   voiceInstructions: z.string(),
   smsInstructions: z.string(),
   chatInstructions: z.string(),

@@ -1,6 +1,6 @@
 ---
 title: "Configurer la voix et le comportement"
-description: "Configurez la phrase d'ouverture, la langue client par défaut, les heures d'ouverture, la devise, les modifications de rendez-vous et le numéro de transfert par défaut de votre réceptionniste IA."
+description: "Configurez la phrase d'ouverture, la langue client par défaut, la voix, les heures d'ouverture, la devise, les modifications de rendez-vous et le numéro de transfert par défaut de votre réceptionniste IA."
 sidebarTitle: "Paramètres IA"
 contentType: "How-to"
 ---
@@ -74,6 +74,14 @@ Choisissez la langue que parlent la plupart de vos appelants. Si vous n'avez pas
 <Note>
   Rédigez votre message d'accueil, vos connaissances, vos services et vos règles dans les langues que vos appelants utilisent le plus.
 </Note>
+
+## Voix
+
+Choisissez dans **Voix** la voix de votre réceptionniste. Elle parle avec cette voix au téléphone et pendant les appels depuis votre navigateur, appels test compris. Les entreprises commencent avec Marin.
+
+Pour écouter une voix, choisissez-la, puis cliquez sur **L’écouter dans un appel test** sous le réglage. Un appel déjà en cours garde la voix avec laquelle il a commencé.
+
+Vous pouvez choisir parmi Alloy, Ash, Ballad, Beacon, Bossa, Cedar, Cinder, Coral, Delta, Echo, Gleam, Marin, Meridian, Quartz, Ripple, Sage, Shimmer, Stone, Tempo, Verse, Vesper et Willow. Dans l'[API](/fr/api/overview), indiquez `voice` dans `PATCH /receptionist` avec le nom en minuscules, par exemple `cedar`.
 
 ## Devise
 

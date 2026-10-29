@@ -18881,6 +18881,34 @@
             ],
             "description": "instant: appointments are booked directly. request: the receptionist takes a request and the team confirms it. off: no booking."
           },
+          "voice": {
+            "type": "string",
+            "enum": [
+              "alloy",
+              "ash",
+              "ballad",
+              "beacon",
+              "bossa",
+              "cedar",
+              "cinder",
+              "coral",
+              "delta",
+              "echo",
+              "gleam",
+              "marin",
+              "meridian",
+              "quartz",
+              "ripple",
+              "sage",
+              "shimmer",
+              "stone",
+              "tempo",
+              "verse",
+              "vesper",
+              "willow"
+            ],
+            "description": "The voice the receptionist speaks in on phone and browser calls. New businesses start with marin."
+          },
           "appointment_change_policy": {
             "type": "object",
             "properties": {
@@ -18932,6 +18960,7 @@
           "transfer_mode",
           "transfer_number",
           "booking_mode",
+          "voice",
           "appointment_change_policy",
           "updated_at"
         ],
@@ -19035,6 +19064,34 @@
               "off",
               "request",
               "instant"
+            ]
+          },
+          "voice": {
+            "description": "Calls that start after the business snapshot refreshes use it.",
+            "type": "string",
+            "enum": [
+              "alloy",
+              "ash",
+              "ballad",
+              "beacon",
+              "bossa",
+              "cedar",
+              "cinder",
+              "coral",
+              "delta",
+              "echo",
+              "gleam",
+              "marin",
+              "meridian",
+              "quartz",
+              "ripple",
+              "sage",
+              "shimmer",
+              "stone",
+              "tempo",
+              "verse",
+              "vesper",
+              "willow"
             ]
           },
           "appointment_change_policy": {

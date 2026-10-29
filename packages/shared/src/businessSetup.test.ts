@@ -10,7 +10,7 @@ function fakeBusiness(options: { files?: boolean } = {}) {
   const id = () => `00000000-0000-4000-8000-${String(next++).padStart(12, "0")}`;
   const state = {
     business: { id: id(), name: "Pier Dental", timezone: "America/Vancouver", locale: "en", website_url: null as string | null, business_type: "service_company", onboarding_stage: "website", booking_mode: "instant", hours: [] as Row[], created_at: "", updated_at: "" },
-    receptionist: { greeting: "Hi", tone: "warm", summary: "Pier Dental", summary_source: "placeholder", booking_policy: "Book", voice_instructions: null, sms_instructions: null, chat_instructions: null, transfer_mode: "on_request", transfer_number: null, booking_mode: "instant", appointment_change_policy: { enabled: true, allow_cancel: true, allow_reschedule: true, verification_mode: "phone_match_and_facts" }, updated_at: "" } as Row,
+    receptionist: { greeting: "Hi", tone: "warm", summary: "Pier Dental", summary_source: "placeholder", booking_policy: "Book", voice_instructions: null, sms_instructions: null, chat_instructions: null, transfer_mode: "on_request", transfer_number: null, booking_mode: "instant", voice: "marin", appointment_change_policy: { enabled: true, allow_cancel: true, allow_reschedule: true, verification_mode: "phone_match_and_facts" }, updated_at: "" } as Row,
     services: [] as Row[],
     rules: [] as Row[],
     entries: [] as Row[],

@@ -9,6 +9,7 @@ import type {
   TransferPolicy,
   AppointmentChangePolicy,
   BookingMode,
+  ReceptionistVoice,
 } from "@lobbystack/shared";
 import { RULE_CONTENT_CALL_MAX_LENGTH, RULE_TITLE_MAX_LENGTH, RULES_CALL_MAX } from "@lobbystack/shared";
 
@@ -23,6 +24,7 @@ type SnapshotBuilderInput = {
   businessType: BusinessContextSnapshot["businessType"];
   telemetryEnabled?: boolean;
   greeting: string;
+  voice?: ReceptionistVoice;
   tone: string;
   bookingPolicy: string;
   voiceInstructions?: string;
@@ -47,6 +49,8 @@ type SnapshotBuilderInput = {
 export const MAX_AGENT_RULES_PER_SNAPSHOT = RULES_CALL_MAX;
 export const MAX_AGENT_RULE_TITLE_CHARS = RULE_TITLE_MAX_LENGTH;
 export const MAX_AGENT_RULE_CONTENT_CHARS = RULE_CONTENT_CALL_MAX_LENGTH;
+// Knowledge search matches all of these; prompts list only the top few (agent-core's PROMPT_MAX_FAQS).
+export const MAX_KNOWLEDGE_SNIPPETS_PER_SNAPSHOT = 50;
 
 export function buildBusinessContextSnapshot(
   input: SnapshotBuilderInput,
@@ -69,6 +73,7 @@ export function buildBusinessContextSnapshot(
     businessType: input.businessType,
     ...(input.telemetryEnabled !== undefined ? { telemetryEnabled: input.telemetryEnabled } : {}),
     greeting: input.greeting,
+    ...(input.voice ? { voice: input.voice } : {}),
     voiceInstructions:
       input.voiceInstructions ??
       `${commonConstraints} Speak in a ${input.tone} tone. Keep answers concise and helpful.`,
@@ -100,7 +105,7 @@ export function buildBusinessContextSnapshot(
     knowledgeSnippets: input.snippets
       .slice()
       .sort((left, right) => right.priority - left.priority)
-      .slice(0, 8),
+      .slice(0, MAX_KNOWLEDGE_SNIPPETS_PER_SNAPSHOT),
     contactChannels: {
       ...(input.phoneNumber ? { phoneNumber: input.phoneNumber } : {}),
       ...(input.smsNumber ? { smsNumber: input.smsNumber } : {}),

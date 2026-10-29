@@ -1,10 +1,11 @@
-import { sql, type SQL, type SQLWrapper } from "drizzle-orm";
+import { eq, sql, type SQL, type SQLWrapper } from "drizzle-orm";
 
-import { appointments, calls, conversations, messages, withBusinessTransaction } from "@lobbystack/db";
-import { MAX_PHONE_CALL_MS } from "@lobbystack/shared";
+import { appointments, businesses, calls, conversations, messages, services, withBusinessTransaction } from "@lobbystack/db";
+import { discountedAmount, isNonBillableCallDisposition, MAX_PHONE_CALL_MS, MIN_BILLABLE_VOICE_DURATION_SECONDS, nonBillableCallDispositions, servicePriceFromColumns, type ServicePriceType } from "@lobbystack/shared";
 
 import { requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
+import type { ReceptionistChannel } from "./receptionistActions";
 
 export const analyticsGranularities = ["hour", "day", "week", "month", "year"] as const;
 export type AnalyticsGranularity = (typeof analyticsGranularities)[number];
@@ -46,6 +47,99 @@ export function analyticsMessageChannel(channel: string): AnalyticsChannel {
   if (value === "voice" || value === "phone") return "phone_call";
   if (value.includes("web")) return "web_call";
   return "other";
+}
+
+/**
+ * The channels the receptionist books on. Bookings from the public API, MCP,
+ * or the dashboard come from people, so they don't count toward booked value.
+ */
+export const analyticsReceptionistBookingChannels = ["voice", "web_voice", "web_chat", "instagram", "sms"] as const satisfies readonly ReceptionistChannel[];
+
+/**
+ * What one booking of a service adds to booked value, in the currency's
+ * smallest unit, after the service's discount: a fixed price at its price, a
+ * "from" price at its minimum, a range at its low end. A price set in person,
+ * or no price at all, adds nothing and returns null.
+ */
+export function analyticsBookedValueMinor(service: { priceType: ServicePriceType; priceMinor: number | null; priceMaxMinor: number | null; discountPercent?: number | null }): number | null {
+  // The currency only labels the price, and the amount is all this needs.
+  const price = servicePriceFromColumns({ ...service, discountPercent: Number(service.discountPercent ?? 0) }, "XXX");
+  if (!price || price.type === "in_person") return null;
+  return discountedAmount(price.amountMinor, price.discountPercent ?? 0);
+}
+
+/** Appointments with the same price, channel, status and period, counted together. */
+export type AnalyticsBookingGroup = {
+  current: boolean;
+  sourceChannel: string;
+  status: string;
+  priceType: ServicePriceType;
+  priceMinor: number | null;
+  priceMaxMinor: number | null;
+  discountPercent: number | null;
+  count: number;
+};
+
+/**
+ * Booked value for the current and previous periods: the receptionist's
+ * bookings that weren't cancelled, priced by analyticsBookedValueMinor.
+ * Appointments don't keep the price they were booked at, so this uses each
+ * service's current price.
+ */
+export function summarizeAnalyticsBookedValue(groups: AnalyticsBookingGroup[]): { current: number; previous: number } {
+  const total = { current: 0, previous: 0 };
+  for (const group of groups) {
+    if (group.status === "canceled") continue;
+    if (!(analyticsReceptionistBookingChannels as readonly string[]).includes(group.sourceChannel)) continue;
+    const value = analyticsBookedValueMinor(group);
+    if (value === null) continue;
+    total[group.current ? "current" : "previous"] += value * group.count;
+  }
+  return total;
+}
+
+/** Ended calls with the same exclusion inputs and period, added together. */
+export type AnalyticsCallGroup = {
+  current: boolean;
+  /** Only a disposition billing exempts; null for any other. */
+  disposition: string | null;
+  billingExcluded: boolean;
+  transferred: boolean;
+  /** The shorter of each call's provider and measured length, in whole seconds, capped at MIN_BILLABLE_VOICE_DURATION_SECONDS. */
+  shortestSeconds: number;
+  seconds: number;
+  calls: number;
+};
+
+/**
+ * Whether a call counts toward time saved. It follows the billing exemptions
+ * in billableVoiceSeconds: spam and calls under ten seconds don't count, and
+ * neither do calls that never bill, such as prospect demos.
+ */
+export function isAnalyticsHandledCall(call: { disposition: string | null; billingExcluded: boolean; shortestSeconds: number }): boolean {
+  return !call.billingExcluded && !isNonBillableCallDisposition(call.disposition) && call.shortestSeconds >= MIN_BILLABLE_VOICE_DURATION_SECONDS;
+}
+
+type HandledCallTotals = { seconds: number; calls: number; withoutTransfer: number };
+
+/** Talk time and call counts for the calls the receptionist handled, per period. */
+export function summarizeAnalyticsHandledCalls(groups: AnalyticsCallGroup[]): { current: HandledCallTotals; previous: HandledCallTotals } {
+  const totals = { current: { seconds: 0, calls: 0, withoutTransfer: 0 }, previous: { seconds: 0, calls: 0, withoutTransfer: 0 } };
+  for (const group of groups) {
+    if (!isAnalyticsHandledCall(group)) continue;
+    const period = totals[group.current ? "current" : "previous"];
+    period.seconds += Math.max(0, group.seconds);
+    period.calls += group.calls;
+    if (!group.transferred) period.withoutTransfer += group.calls;
+  }
+  totals.current.seconds = Math.round(totals.current.seconds);
+  totals.previous.seconds = Math.round(totals.previous.seconds);
+  return totals;
+}
+
+/** A share from 0 to 100 with one decimal, or null with nothing to share. */
+export function analyticsPercent(part: number, whole: number): number | null {
+  return whole > 0 ? Math.round((part / whole) * 1000) / 10 : null;
 }
 
 export type AnalyticsInput = {
@@ -172,6 +266,48 @@ export async function getAnalytics(context: DomainContext, input: AnalyticsInput
       where ${messages.businessId} = ${input.businessId}::uuid
         and ${messages.createdAt} >= ${input.previousFrom.toISOString()}::timestamptz and ${messages.createdAt} < ${input.to.toISOString()}::timestamptz
     `))).rows;
+    // Grouped, so the rules in summarizeAnalyticsBookedValue and summarizeAnalyticsHandledCalls run over a few rows.
+    // Booked value counts bookings made in the period, by when the receptionist made them.
+    const bookingGroups = (await tx.execute<Omit<AnalyticsBookingGroup, "priceMinor" | "priceMaxMinor" | "discountPercent" | "count"> & { priceMinor: string | number | null; priceMaxMinor: string | number | null; discountPercent: string | number | null; count: string }>(sql`
+      select ${appointments.createdAt} >= ${input.from.toISOString()}::timestamptz as current,
+        ${appointments.sourceChannel} as "sourceChannel", ${appointments.status} as status,
+        ${services.priceType} as "priceType", ${services.priceMinor} as "priceMinor", ${services.priceMaxMinor} as "priceMaxMinor",
+        ${services.discountPercent} as "discountPercent", count(*) as count
+      from ${appointments} inner join ${services} on ${services.id} = ${appointments.serviceId} and ${services.businessId} = ${input.businessId}::uuid
+      where ${appointments.businessId} = ${input.businessId}::uuid
+        and ${appointments.createdAt} >= ${input.previousFrom.toISOString()}::timestamptz and ${appointments.createdAt} < ${input.to.toISOString()}::timestamptz
+      group by 1, 2, 3, 4, 5, 6, 7
+    `)).rows;
+    const nullableNumber = (value: string | number | null) => value === null ? null : Number(value);
+    const bookedValue = summarizeAnalyticsBookedValue(bookingGroups.map((row) => ({
+      ...row,
+      priceMinor: nullableNumber(row.priceMinor),
+      priceMaxMinor: nullableNumber(row.priceMaxMinor),
+      discountPercent: nullableNumber(row.discountPercent),
+      count: Number(row.count),
+    })));
+    // Like billing, a call lasts the provider's duration, or the measured media time when the provider reported none.
+    const measuredSeconds = sql`extract(epoch from ${calls.endedAt} - coalesce(${calls.mediaStartedAt}, ${calls.startedAt}))`;
+    const callGroups = (await tx.execute<{ current: boolean; disposition: string | null; billingExcluded: boolean; transferred: boolean; shortestSeconds: string; seconds: string; calls: string }>(sql`
+      with ended as (
+        select ${calls.startedAt} >= ${input.from.toISOString()}::timestamptz as current,
+          case when ${calls.disposition} in (${sql.join(nonBillableCallDispositions.map((value) => sql`${value}`), sql`, `)}) then ${calls.disposition} end as disposition,
+          ${calls.billingExcluded} as billing_excluded,
+          (${calls.status} = 'transferred' or ${calls.transferState} in ('referred', 'completed')) as transferred,
+          coalesce(${calls.providerDurationSeconds}, ${measuredSeconds}) as duration,
+          ${measuredSeconds} as measured
+        from ${calls}
+        where ${calls.businessId} = ${input.businessId}::uuid and ${calls.endedAt} is not null
+          and ${calls.startedAt} >= ${input.previousFrom.toISOString()}::timestamptz and ${calls.startedAt} < ${input.to.toISOString()}::timestamptz
+      )
+      select current, disposition, billing_excluded as "billingExcluded", transferred,
+        floor(least(duration, measured, ${sql.raw(String(MIN_BILLABLE_VOICE_DURATION_SECONDS))})) as "shortestSeconds",
+        coalesce(sum(duration), 0) as seconds, count(*) as calls
+      from ended group by 1, 2, 3, 4, 5
+    `)).rows;
+    const handledCalls = summarizeAnalyticsHandledCalls(callGroups.map((row) => ({ ...row, shortestSeconds: Number(row.shortestSeconds), seconds: Number(row.seconds), calls: Number(row.calls) })));
+    const [business] = await tx.select({ currency: businesses.currency }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
+
     const callTotals = callRows.find(row => row.kind === "total");
     const appointmentTotals = appointmentRows.find(row => row.kind === "total");
     const messageTotals = messageRows.find(row => row.kind === "total");
@@ -227,6 +363,13 @@ export async function getAnalytics(context: DomainContext, input: AnalyticsInput
       series: [...buckets.values()].map((point) => ({ ...point, agentResponseSeconds: (responseBuckets.get(point.bucket) ?? 0) })).sort((left, right) => left.bucket.localeCompare(right.bucket)),
       outcomes: ["completed", "transferred", "live", "missed"].map((outcome) => ({ outcome, count: Number(outcomes.find((row) => row.outcome === outcome)?.count ?? 0) })),
       channels,
+      /** In the business currency's smallest unit. */
+      bookedValue: { currency: business?.currency ?? "USD", ...bookedValue },
+      timeSavedSeconds: { current: handledCalls.current.seconds, previous: handledCalls.previous.seconds },
+      callsWithoutTransferPercent: {
+        current: analyticsPercent(handledCalls.current.withoutTransfer, handledCalls.current.calls),
+        previous: analyticsPercent(handledCalls.previous.withoutTransfer, handledCalls.previous.calls),
+      },
     };
   });
 }

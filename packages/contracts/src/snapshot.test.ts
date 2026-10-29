@@ -17,6 +17,10 @@ describe("voice policy snapshot contract", () => {
   it("keeps the booking mode so browser calls don't offer bookings the backend won't make", () => {
     expect(snapshotSchema.parse({ ...snapshot, bookingMode: "request" }).bookingMode).toBe("request");
   });
+  it("keeps the voice so phone and browser calls speak in the one the business picked", () => {
+    expect(snapshotSchema.parse({ ...snapshot, voice: "cedar" }).voice).toBe("cedar");
+    expect(snapshotSchema.parse(snapshot)).not.toHaveProperty("voice");
+  });
   it("rejects unknown transfer and appointment verification modes", () => {
     expect(snapshotSchema.safeParse({ ...snapshot, transferPolicy: { mode: "unknown" } }).success).toBe(false);
     expect(snapshotSchema.safeParse({ ...snapshot, appointmentChangePolicy: { enabled: true, allowCancel: true, allowReschedule: true, verificationMode: "skip" } }).success).toBe(false);

@@ -66,7 +66,9 @@
         "percentUp": "+{{value}}% vs previous period",
         "percentDown": "-{{value}}% vs previous period",
         "durationUp": "+{{value}} vs previous period",
-        "durationDown": "-{{value}} vs previous period"
+        "durationDown": "-{{value}} vs previous period",
+        "pointsUp": "+{{value}} pts vs previous period",
+        "pointsDown": "-{{value}} pts vs previous period"
       },
       "outcomes": {
         "title": "Call Outcomes",
@@ -83,6 +85,22 @@
         "description": "Calls and messages by channel for the selected dates.",
         "labels": {
           "other": "Other"
+        }
+      },
+      "results": {
+        "title": "Results",
+        "description": "What your receptionist booked and handled in these dates.",
+        "bookedValue": {
+          "title": "Estimated booked value",
+          "hint": "Bookings your receptionist made by call, text, or chat, at current service prices. Starting prices count at the minimum and price ranges at the low end. Cancelled bookings and prices set in person don't count."
+        },
+        "timeSaved": {
+          "title": "Time saved",
+          "hint": "Talk time on calls your receptionist handled. Like billing, it leaves out spam and calls under 10 seconds."
+        },
+        "withoutTransfer": {
+          "title": "Calls handled without a transfer",
+          "hint": "The share of those calls your receptionist finished without transferring the caller to your team."
         }
       }
     },

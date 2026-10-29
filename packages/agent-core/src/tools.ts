@@ -11,6 +11,7 @@ import {
   lookupCallerAppointments,
   requestCancellationForCaller,
   recordTextConsentForCaller,
+  recordUnansweredQuestion,
   requestTeamForWidgetChat,
   rescheduleForCaller,
   resolveEmployee,
@@ -201,6 +202,22 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
     }
   }
 
+  // A lookup that found nothing goes on the business's list of questions to
+  // answer. In the background: the reply never waits for it, and a failed save
+  // only logs. Prospect demos aren't the business's callers, so they're skipped.
+  function recordKnowledgeMiss(query: string): void {
+    if (context.intakeOnly) return;
+    void Promise.resolve()
+      .then(() => recordUnansweredQuestion(domain, {
+        businessId,
+        question: query,
+        channel,
+        ...(context.callId ? { callId: context.callId } : {}),
+        ...(context.conversationId ? { conversationId: context.conversationId } : {}),
+      }))
+      .catch((error: unknown) => console.warn("[knowledge] couldn't save an unanswered question", error instanceof Error ? error.message : error));
+  }
+
   const tools: ToolSet = {
     getBusinessHours: tool({
       description: "Get the business's weekly opening hours, upcoming closures, and whether it is open right now.",
@@ -241,7 +258,12 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
     searchKnowledge: tool({
       description: "Look up any business-specific fact not in your instructions: prices, policies, parking, payment methods, what to bring, and so on. Never guess. Make the query self-contained.",
       inputSchema: z.object({ query: z.string() }),
-      execute: async ({ query }) => await searchKnowledge(query),
+      execute: async ({ query }) => {
+        const result = await searchKnowledge(query);
+        // "empty" means the search ran and found nothing; "unavailable" is our failure, not a gap in the knowledge.
+        if (result.outcome === "empty") recordKnowledgeMiss(query);
+        return result;
+      },
     }),
 
     takeMessage: tool({

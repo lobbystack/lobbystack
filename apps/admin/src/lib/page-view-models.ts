@@ -35,6 +35,11 @@ export type AnalyticsViewModel = {
   }>;
   channels: AnalyticsChannelCounts;
   outcomes: Array<{ outcome: string; count: number }>;
+  /** In the business currency's smallest unit. */
+  bookedValue: AnalyticsMetricViewModel & { currency: string };
+  timeSavedSeconds: AnalyticsMetricViewModel;
+  /** Null when no calls count yet. */
+  callsWithoutTransferPercent: { current: number | null; previous: number | null };
 };
 
 export type CalendarOptionViewModel = {

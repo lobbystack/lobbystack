@@ -28,6 +28,7 @@ export * from "./feedback";
 export * from "./hostEmails";
 export * from "./employees";
 export * from "./knowledge";
+export * from "./unansweredQuestions";
 export * from "./liveCalls";
 export * from "./notifications";
 export * from "./numberTrials";

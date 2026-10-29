@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Sparkles } from "lucide-react";
+import { Phone, Sparkles } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { requestJson } from "@/lib/request-json";
-import { appointmentChangeVerificationModes, intlLocale, isTransferCountry, normalizeBookingMode, runtimeLocales, type AppointmentChangePolicy, type AppointmentChangeVerificationMode, type BookingMode, type RuntimeLocale } from "@lobbystack/shared";
+import { appointmentChangeVerificationModes, DEFAULT_RECEPTIONIST_VOICE, intlLocale, isTransferCountry, normalizeBookingMode, normalizeReceptionistVoice, receptionistVoices, runtimeLocales, type AppointmentChangePolicy, type AppointmentChangeVerificationMode, type BookingMode, type ReceptionistVoice, type RuntimeLocale } from "@lobbystack/shared";
 import type { Country } from "react-phone-number-input/input";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -31,6 +31,7 @@ import { useTelemetry } from "@/components/product-analytics";
 import { BookingWithoutHoursAlert, BusinessHoursSection, needsHoursForBooking, useBusinessHours } from "@/components/business-hours-section";
 import { availableTimeZones, groupTimeZones, isTimeZoneRegion, type TimeZoneOption } from "@/lib/time-zones";
 import { errorCode } from "@/lib/checkout-errors";
+import { getTestCallStarter, startTestCall, subscribeTestCallStarter } from "@/lib/test-call-launcher";
 import { getDefaultTransferCountry, getPhoneCountryOptions, inferPhoneCountry } from "@/lib/phone";
 import { cn } from "@/lib/utils";
 
@@ -45,7 +46,7 @@ type CurrencyOption = { id: string; label: string };
 
 type AgentSettings = {
   business: { defaultLocale: RuntimeLocale; timezone: string; currency?: string } | null;
-  profile: { greeting: string; summary: string; summarySource: "placeholder" | "generated" | "operator"; summaryRegenerateStatus?: "pending" | "completed" | "empty" | "failed" | null; transferNumber: string | null; transferMode: string; appointmentChangePolicy: AppointmentChangePolicy | null; bookingMode: BookingMode } | null;
+  profile: { greeting: string; summary: string; summarySource: "placeholder" | "generated" | "operator"; summaryRegenerateStatus?: "pending" | "completed" | "empty" | "failed" | null; transferNumber: string | null; transferMode: string; appointmentChangePolicy: AppointmentChangePolicy | null; bookingMode: BookingMode; voice?: string } | null;
   hasKnowledgeSources?: boolean;
 };
 
@@ -98,6 +99,11 @@ export function buildAppointmentChangePolicyForSave({
 // that option in the select while it's the saved mode.
 const offeredVerificationModes: AppointmentChangeVerificationMode[] = ["phone_match_and_facts", "otp_required", "passcode_required"];
 
+// Voice names are proper nouns, shown the same in every language.
+function voiceName(voice: ReceptionistVoice): string {
+  return voice.charAt(0).toUpperCase() + voice.slice(1);
+}
+
 function savedVerificationMode(value: unknown): AppointmentChangeVerificationMode {
   return (appointmentChangeVerificationModes as readonly unknown[]).includes(value) ? value as AppointmentChangeVerificationMode : "phone_match_and_facts";
 }
@@ -117,7 +123,7 @@ export function AgentBasicSettingsPage({
   const configuration = query.data;
   const hours = useBusinessHours(businessId);
   const isLoadingConfiguration = !businessId || query.isLoading;
-  async function saveProfile({ defaultLocale: locale, ...patch }: { businessId: string; defaultLocale?: RuntimeLocale; timezone?: string; currency?: string; greeting?: string; summary?: string; regenerateSummary?: true; transferNumber?: string | null; transferMode?: string; appointmentChangePolicy?: AppointmentChangePolicy; bookingMode?: BookingMode }, refetchType: "active" | "none" = "active") {
+  async function saveProfile({ defaultLocale: locale, ...patch }: { businessId: string; defaultLocale?: RuntimeLocale; timezone?: string; currency?: string; greeting?: string; summary?: string; regenerateSummary?: true; transferNumber?: string | null; transferMode?: string; appointmentChangePolicy?: AppointmentChangePolicy; bookingMode?: BookingMode; voice?: ReceptionistVoice }, refetchType: "active" | "none" = "active") {
     await requestJson(`/api/agent?businessId=${encodeURIComponent(businessId)}`, { method: "PATCH", body: JSON.stringify({ ...patch, ...(locale ? { locale } : {}) }) });
     await queryClient.invalidateQueries({ queryKey: ["agent-settings", businessId], refetchType });
   }
@@ -209,6 +215,11 @@ export function AgentBasicSettingsPage({
   const [appointmentChangeVerification, setAppointmentChangeVerification] = useState<AppointmentChangeVerificationMode>("phone_match_and_facts");
   const [bookingMode, setBookingMode] = useState<BookingMode>("instant");
   const [isBookingModeSaving, setIsBookingModeSaving] = useState(false);
+  const [voice, setVoice] = useState<ReceptionistVoice>(DEFAULT_RECEPTIONIST_VOICE);
+  const [isVoiceSaving, setIsVoiceSaving] = useState(false);
+  // The utility bar's test call widget registers itself; this page only starts it.
+  const canStartTestCall = useSyncExternalStore(subscribeTestCallStarter, () => getTestCallStarter() !== null, () => false);
+  const voiceLabel = (option: ReceptionistVoice) => option === DEFAULT_RECEPTIONIST_VOICE ? t("agent:fields.voice.defaultOption", { voice: voiceName(option) }) : voiceName(option);
   const [transferStatus, setTransferStatus] = useState<string | null>(null);
   const [isGreetingSaving, setIsGreetingSaving] = useState(false);
   const [isGreetingOpen, setIsGreetingOpen] = useState(false);
@@ -229,6 +240,7 @@ export function AgentBasicSettingsPage({
     setTransferNumber(profile.transferNumber ?? "");
     setTransferNumberInputValue(profile.transferNumber ?? "");
     setBookingMode(normalizeBookingMode(profile.bookingMode));
+    setVoice(normalizeReceptionistVoice(profile.voice));
     const appointmentChangePolicy = profile.appointmentChangePolicy as AppointmentChangePolicy | null;
     setAllowAppointmentCancel(appointmentChangePolicy?.allowCancel ?? true);
     setAllowAppointmentReschedule(appointmentChangePolicy?.allowReschedule ?? true);
@@ -397,6 +409,23 @@ export function AgentBasicSettingsPage({
       toast.error(t("agent:actions.saveFailed"));
     } finally {
       setIsBookingModeSaving(false);
+    }
+  }
+
+  async function saveVoice(nextVoice: ReceptionistVoice): Promise<void> {
+    if (!canManageTenant || !persistedProfile) return;
+    const previous = voice;
+    setVoice(nextVoice);
+    setIsVoiceSaving(true);
+    try {
+      await saveProfile({ businessId, voice: nextVoice });
+      telemetry.track("web.agent.settings_saved", { businessId, setting: "voice" });
+      toast.success(t("agent:actions.saved"));
+    } catch {
+      setVoice(previous);
+      toast.error(t("agent:actions.saveFailed"));
+    } finally {
+      setIsVoiceSaving(false);
     }
   }
 
@@ -582,6 +611,46 @@ export function AgentBasicSettingsPage({
                     <SelectContent>
                       <SelectGroup>
                         {runtimeLocales.map((code) => <SelectItem key={code} value={code}>{t(`common:callerLanguage.${code}`)}</SelectItem>)}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                )}
+              </ItemActions>
+            </Item>
+
+            <Item
+              className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
+              variant="default"
+            >
+              <ItemContent>
+                <ItemTitle>{t("agent:fields.voice.label")}</ItemTitle>
+                <ItemDescription>{t("agent:fields.voice.hint")}</ItemDescription>
+                {canStartTestCall ? (
+                  <div>
+                    <Button className="h-auto px-0" disabled={isVoiceSaving} onClick={() => startTestCall()} size="sm" type="button" variant="link">
+                      <Phone data-icon="inline-start" />
+                      {t("agent:fields.voice.hearIt")}
+                    </Button>
+                  </div>
+                ) : null}
+              </ItemContent>
+              <ItemActions className="w-full sm:w-auto">
+                {isLoadingConfiguration ? (
+                  <Skeleton className="h-10 w-full rounded-md sm:w-52" />
+                ) : (
+                  <Select
+                    disabled={isVoiceSaving || !persistedProfile || !canManageTenant}
+                    items={receptionistVoices.map((option) => ({ value: option, label: voiceLabel(option) }))}
+                    onValueChange={(value) => {
+                      const nextVoice = normalizeReceptionistVoice(value);
+                      if (nextVoice !== voice) void saveVoice(nextVoice);
+                    }}
+                    value={voice}
+                  >
+                    <SelectTrigger aria-label={t("agent:fields.voice.label")} className="w-full sm:w-52" id="agent-voice" loading={isVoiceSaving}><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {receptionistVoices.map((option) => <SelectItem key={option} value={option}>{voiceLabel(option)}</SelectItem>)}
                       </SelectGroup>
                     </SelectContent>
                   </Select>

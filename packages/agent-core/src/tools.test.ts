@@ -6,12 +6,13 @@ vi.mock("@lobbystack/domain", async () => ({
   KNOWLEDGE_SEARCH_TOKEN_BUDGET: 3000,
   knowledgeQueryTerms: (await import("../../domain/src/knowledgeRanking")).knowledgeQueryTerms,
   searchKnowledgeEvidence: vi.fn(),
+  recordUnansweredQuestion: vi.fn(async () => null),
   bookForCaller: vi.fn(async () => ({ ok: true })),
   requestCancellationForCaller: vi.fn(async () => ({ ok: true, inboxItemId: "inbox_1" })),
   resolveEmployee: vi.fn(),
 }));
 
-import { bookForCaller, requestCancellationForCaller, resolveEmployee, searchKnowledgeEvidence } from "@lobbystack/domain";
+import { bookForCaller, recordUnansweredQuestion, requestCancellationForCaller, resolveEmployee, searchKnowledgeEvidence } from "@lobbystack/domain";
 import { receptionistCapabilities, type Conversation } from "./capabilities";
 import { createReceptionistTools, type AgentChannel } from "./tools";
 
@@ -242,6 +243,11 @@ describe("searchKnowledge", () => {
     await expect(search("What are the parking rates?", snippets, evidence(["Parking", "Rates", "Garage"]))).resolves.toEqual({ outcome: "found", titles: ["Parking", "Rates", "Garage"] });
   });
 
+  it("finds a text entry beyond the few the prompt lists", async () => {
+    const snippets = [...Array.from({ length: 12 }, (_, index) => chatter(`Topic ${index}`)), snippet("Do you offer valet parking?", "Yes, valet parking is free on weekends.", -5)];
+    await expect(search("valet parking", snippets, evidence([]))).resolves.toEqual({ outcome: "found", titles: ["Do you offer valet parking?"] });
+  });
+
   it("returns no snippets for a query of only common words", async () => {
     const snippets = ["Welcome", "Team", "History"].map(chatter);
     await expect(search("what are the", snippets, evidence([]))).resolves.toEqual({ outcome: "empty", titles: [] });
@@ -297,5 +303,65 @@ describe("searchKnowledge", () => {
     await expect(search("Quel est le numéro du cours de stratégie MNGT 10407 ?", snippets, evidence([]))).resolves.toEqual({ outcome: "found", titles: ["Stratégie"] });
     await expect(search("Où est le stationnement ?", snippets, evidence([]))).resolves.toEqual({ outcome: "found", titles: ["Stationnement"] });
     await expect(search("¿Cuál es el precio de la limpieza dental?", snippets, evidence([]))).resolves.toEqual({ outcome: "found", titles: ["Limpieza dental"] });
+  });
+});
+
+describe("unanswered questions", () => {
+  const evidence = (outcome: "found" | "empty" | "unavailable") => ({
+    matches: outcome === "found" ? [{ chunkId: "c", documentId: "d", title: "Parking", content: "Parking is free.", sourceUrl: null, sourceRevision: 1, sequence: 0 }] : [],
+    mode: "hybrid" as const,
+    outcome,
+    durationMs: 1,
+  });
+  const searchOn = async (conversation: Conversation, found: ReturnType<typeof evidence> | Error, query = "Do you validate parking?") => {
+    vi.mocked(recordUnansweredQuestion).mockClear();
+    if (found instanceof Error) vi.mocked(searchKnowledgeEvidence).mockRejectedValueOnce(found);
+    else vi.mocked(searchKnowledgeEvidence).mockResolvedValueOnce(found);
+    const tools = createReceptionistTools({ domain: { db: {} as never }, snapshot: { ...demoSnapshot, knowledgeSnippets: [] }, ...conversation });
+    const execute = tools.searchKnowledge!.execute! as (input: object, options: object) => Promise<{ outcome: string }>;
+    const result = await execute({ query }, { toolCallId: "1", messages: [] });
+    // The save runs after the reply; let it start.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    return result;
+  };
+
+  it("saves a question the knowledge base has no answer for, with the call or chat it came from", async () => {
+    await expect(searchOn({ channel: "voice", callId: "call_1", conversationId: "conversation_1", callerPhone: "+14165550100", callControl }, evidence("empty"))).resolves.toMatchObject({ outcome: "empty" });
+    expect(recordUnansweredQuestion).toHaveBeenCalledWith(expect.anything(), { businessId: demoSnapshot.businessId, question: "Do you validate parking?", channel: "voice", callId: "call_1", conversationId: "conversation_1" });
+
+    await searchOn({ channel: "web_chat", conversationId: "chat_1" }, evidence("empty"));
+    expect(recordUnansweredQuestion).toHaveBeenCalledWith(expect.anything(), { businessId: demoSnapshot.businessId, question: "Do you validate parking?", channel: "web_chat", conversationId: "chat_1" });
+  });
+
+  it("saves nothing when the knowledge base answers, the search fails, or the call is a prospect demo", async () => {
+    await expect(searchOn({ channel: "web_chat" }, evidence("found"))).resolves.toMatchObject({ outcome: "found" });
+    expect(recordUnansweredQuestion).not.toHaveBeenCalled();
+    await expect(searchOn({ channel: "web_chat" }, evidence("unavailable"))).resolves.toMatchObject({ outcome: "unavailable" });
+    expect(recordUnansweredQuestion).not.toHaveBeenCalled();
+    await expect(searchOn({ channel: "web_chat" }, new Error("search down"))).resolves.toMatchObject({ outcome: "unavailable" });
+    expect(recordUnansweredQuestion).not.toHaveBeenCalled();
+    await expect(searchOn({ channel: "web_voice", intakeOnly: true, callControl }, evidence("empty"))).resolves.toMatchObject({ outcome: "empty" });
+    expect(recordUnansweredQuestion).not.toHaveBeenCalled();
+  });
+
+  it("doesn't save the lookup getBusinessServices makes for itself", async () => {
+    vi.mocked(recordUnansweredQuestion).mockClear();
+    vi.mocked(searchKnowledgeEvidence).mockResolvedValueOnce(evidence("empty"));
+    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "voice", snapshot: { ...demoSnapshot, services: [], knowledgeSnippets: [] } });
+    const execute = tools.getBusinessServices!.execute! as (input: object, options: object) => Promise<unknown>;
+    await execute({}, { toolCallId: "1", messages: [] });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(recordUnansweredQuestion).not.toHaveBeenCalled();
+  });
+
+  it("answers without waiting for the save, and only logs when it fails", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    let finishSave: (() => void) | undefined;
+    vi.mocked(recordUnansweredQuestion).mockImplementationOnce(() => new Promise((_, reject) => { finishSave = () => reject(new Error("database down")); }));
+    await expect(searchOn({ channel: "web_chat" }, evidence("empty"))).resolves.toMatchObject({ outcome: "empty" });
+    finishSave?.();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(warn).toHaveBeenCalledWith("[knowledge] couldn't save an unanswered question", "database down");
+    warn.mockRestore();
   });
 });

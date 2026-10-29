@@ -13,12 +13,15 @@ const clients: QueryClient[] = [];
 beforeEach(() => { vi.stubGlobal("EventSource", class { addEventListener() {} close() {} }); });
 afterEach(() => { cleanup(); clients.forEach((client) => client.clear()); clients.length = 0; vi.unstubAllGlobals(); });
 
-function renderAnalytics(channels: AnalyticsViewModel["channels"]) {
+function renderAnalytics(channels: AnalyticsViewModel["channels"], overrides: Partial<AnalyticsViewModel> = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Test", active: true, role: "business_owner" }] });
   const metric = { current: 0, previous: 0 };
-  const analytics: AnalyticsViewModel = { periodDays: 30, from: "2026-09-01T00:00:00Z", to: "2026-10-01T00:00:00Z", granularity: "week", calls: metric, appointments: metric, messages: metric, averageCallDurationSeconds: 0, agentResponseSeconds: metric, series: [], channels, outcomes: [] };
+  const analytics: AnalyticsViewModel = {
+    periodDays: 30, from: "2026-09-01T00:00:00Z", to: "2026-10-01T00:00:00Z", granularity: "week", calls: metric, appointments: metric, messages: metric, averageCallDurationSeconds: 0, agentResponseSeconds: metric, series: [], channels, outcomes: [],
+    bookedValue: { currency: "USD", ...metric }, timeSavedSeconds: metric, callsWithoutTransferPercent: { current: null, previous: null }, ...overrides,
+  };
   vi.stubGlobal("fetch", vi.fn(async () => Response.json(analytics)));
   render(<QueryClientProvider client={client}><LiveAnalyticsSurface /></QueryClientProvider>);
 }
@@ -27,6 +30,31 @@ async function channelRows() {
   const card = (await screen.findByText("home.analytics.channels.title")).closest("[data-slot='card']")!;
   return [...card.querySelectorAll("li")].map((row) => row.textContent);
 }
+
+describe("analytics results card", () => {
+  async function results() {
+    const card = (await screen.findByText("home.analytics.results.title")).closest("[data-slot='card']")!;
+    return [...card.querySelectorAll("section")].map((section) => [...section.querySelectorAll("h2, p")].map((element) => element.textContent));
+  }
+
+  it("shows booked value in the business currency, time saved in hours and minutes, and the share without a transfer", async () => {
+    renderAnalytics({ phone_call: 0, web_call: 0, sms: 0, web_chat: 0, other: 0 }, {
+      bookedValue: { currency: "USD", current: 125_000, previous: 100_000 },
+      timeSavedSeconds: { current: 12 * 3_600 + 5 * 60, previous: 0 },
+      callsWithoutTransferPercent: { current: 82.5, previous: 80 },
+    });
+    expect(await results()).toEqual([
+      ["home.analytics.results.bookedValue.title", "$1,250", "home.analytics.metrics.percentUp", "home.analytics.results.bookedValue.hint"],
+      ["home.analytics.results.timeSaved.title", "12 hr 5 min", "home.analytics.metrics.percentUp", "home.analytics.results.timeSaved.hint"],
+      ["home.analytics.results.withoutTransfer.title", "82.5%", "home.analytics.metrics.pointsUp", "home.analytics.results.withoutTransfer.hint"],
+    ]);
+  });
+
+  it("shows a dash and no comparison while no calls count", async () => {
+    renderAnalytics({ phone_call: 0, web_call: 0, sms: 0, web_chat: 0, other: 0 });
+    expect((await results())[2]).toEqual(["home.analytics.results.withoutTransfer.title", "—", "home.analytics.results.withoutTransfer.hint"]);
+  });
+});
 
 describe("analytics channels card", () => {
   it("shows website chat and web calls with the shared channel labels and icons", async () => {

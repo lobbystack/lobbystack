@@ -4,7 +4,7 @@ export { isMaintenanceMode } from "./maintenance";
 export { interfaceLocaleTags, interfaceLocales, intlLocale, isInterfaceLocale, isRuntimeLocale, normalizeInterfaceLocale, normalizeRuntimeLocale, runtimeLocaleName, runtimeLocales } from "./locales";
 export type { InterfaceLocale, RuntimeLocale } from "./locales";
 import { interfaceLocales, runtimeLocales, type InterfaceLocale, type RuntimeLocale } from "./locales";
-import { appointmentChangeVerificationModes, bookingModes, transferModes } from "./receptionist";
+import { appointmentChangeVerificationModes, bookingModes, transferModes, type ReceptionistVoice } from "./receptionist";
 import { WIDGET_COLOR_PATTERN, widgetPositionSchema, type WidgetPosition } from "./widget";
 export * from "./receptionist";
 export * from "./chatChannels";
@@ -283,6 +283,11 @@ export type BusinessContextSnapshot = {
   /** Optional analytics consent captured at call start; absence is not consent. */
   telemetryEnabled?: boolean;
   greeting: string;
+  /**
+   * The GPT-Live voice calls speak in. Absent in snapshots built before
+   * businesses could pick one; read it through normalizeReceptionistVoice.
+   */
+  voice?: ReceptionistVoice;
   voiceInstructions: string;
   smsInstructions: string;
   chatInstructions: string;
@@ -345,6 +350,7 @@ export const demoSnapshot: BusinessContextSnapshot = {
   defaultLocale: "en",
   businessType: "clinic",
   greeting: "Thank you for calling Maple Family Clinic.",
+  voice: "marin",
   voiceInstructions:
     "Answer politely, keep medical responses administrative only, and transfer urgent issues.",
   smsInstructions:

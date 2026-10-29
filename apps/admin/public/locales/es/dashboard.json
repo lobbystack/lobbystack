@@ -66,7 +66,9 @@
         "percentUp": "+{{value}} % respecto al período anterior",
         "percentDown": "-{{value}} % respecto al período anterior",
         "durationUp": "+{{value}} respecto al período anterior",
-        "durationDown": "-{{value}} respecto al período anterior"
+        "durationDown": "-{{value}} respecto al período anterior",
+        "pointsUp": "+{{value}} pts respecto al período anterior",
+        "pointsDown": "-{{value}} pts respecto al período anterior"
       },
       "outcomes": {
         "title": "Resultados de llamadas",
@@ -83,6 +85,22 @@
         "description": "Llamadas y mensajes por canal en las fechas elegidas.",
         "labels": {
           "other": "Otro"
+        }
+      },
+      "results": {
+        "title": "Balance",
+        "description": "Lo que su recepcionista reservó y atendió en estas fechas.",
+        "bookedValue": {
+          "title": "Valor reservado estimado",
+          "hint": "Las citas que su recepcionista reservó por llamada, SMS o chat, al precio actual de cada servicio. Un precio «desde» cuenta por su mínimo y un rango de precios por su extremo inferior. No cuentan las citas canceladas ni los precios que se fijan en persona."
+        },
+        "timeSaved": {
+          "title": "Tiempo ahorrado",
+          "hint": "El tiempo de conversación de las llamadas que atendió su recepcionista. Igual que en la facturación, no cuentan el spam ni las llamadas de menos de 10 segundos."
+        },
+        "withoutTransfer": {
+          "title": "Llamadas atendidas sin transferir",
+          "hint": "La parte de esas llamadas que su recepcionista terminó sin transferir a la persona que llamó a su equipo."
         }
       }
     },

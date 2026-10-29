@@ -203,6 +203,7 @@ async function readBusinessSetup(tx: DatabaseTransaction, businessId: string): P
         chat_instructions: receptionist.chat_instructions,
         transfer_mode: receptionist.transfer_mode,
         booking_mode: receptionist.booking_mode,
+        voice: receptionist.voice,
         appointment_change_policy: receptionist.appointment_change_policy,
       },
     } : {}),
@@ -384,7 +385,7 @@ export function inProcessSetupPort(dependencies: BusinessSetupDependencies, call
 }
 
 // The receptionist's settings that take one of a few values rather than words.
-const RECEPTIONIST_CHOICES = new Set(["transfer_mode", "booking_mode", "appointment_change_policy"]);
+const RECEPTIONIST_CHOICES = new Set(["transfer_mode", "booking_mode", "voice", "appointment_change_policy"]);
 
 /**
  * The template's own words, with the business it was saved from renamed to

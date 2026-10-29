@@ -6,6 +6,11 @@ import { businessSummary, describeClosure, describeServices, serviceFacts, upcom
 import { receptionistCapabilities, type Conversation } from "./capabilities";
 import type { AgentChannel } from "./tools";
 
+// The highest-priority text entries. Knowledge search covers the rest of the snapshot's.
+function promptFaqs(snapshot: BusinessContextSnapshot) {
+  return (snapshot.knowledgeSnippets ?? []).slice().sort((left, right) => right.priority - left.priority).slice(0, PROMPT_MAX_FAQS);
+}
+
 function businessFacts(snapshot: BusinessContextSnapshot, channel: AgentChannel): string[] {
   const rules = (snapshot.rules ?? []).slice().sort((left, right) => left.order - right.order);
   return [
@@ -20,7 +25,7 @@ function businessFacts(snapshot: BusinessContextSnapshot, channel: AgentChannel)
       ? `Transfer rule: ${snapshot.transferPolicy.mode}${snapshot.transferPolicy.transferNumber ? "" : " (no transfer number set, so transfers are unavailable)"}.`
       : snapshot.contactChannels?.phoneNumber ? `Phone number: ${snapshot.contactChannels.phoneNumber}.` : "",
     rules.length ? `Customer rules, in priority order:\n${rules.map((rule, index) => `${index + 1}. ${rule.title}: ${rule.content}`).join("\n")}` : "",
-    snapshot.knowledgeSnippets?.length ? `FAQs:\n${snapshot.knowledgeSnippets.map((snippet) => `- ${snippet.title}: ${snippet.content}`).join("\n")}` : "",
+    snapshot.knowledgeSnippets?.length ? `FAQs:\n${promptFaqs(snapshot).map((snippet) => `- ${snippet.title}: ${snippet.content}`).join("\n")}` : "",
   ].filter(Boolean);
 }
 
@@ -100,6 +105,8 @@ const LIVE_MAX_EMPLOYEES = 20;
 const LIVE_SERVICES_MAX_CHARS = 3_000;
 const LIVE_MAX_CLOSURES = 5;
 const LIVE_FAQ_TOKENS = 3_000;
+// The snapshot carries more text entries for knowledge search; prompts list the top ones by priority.
+const PROMPT_MAX_FAQS = 8;
 const LIVE_RULES_TOKENS = 1_000;
 const LIVE_TOPICS_TOKENS = 600;
 
@@ -153,7 +160,7 @@ function liveBusinessFacts(snapshot: BusinessContextSnapshot, channel: Extract<A
   const employeesHeading = employees.length < allEmployees.length
     ? `Employees (the first ${employees.length} of ${allEmployees.length}; delegate questions about anyone not listed): `
     : "Employees: ";
-  const snippets = (snapshot.knowledgeSnippets ?? []).slice().sort((left, right) => right.priority - left.priority);
+  const snippets = promptFaqs(snapshot);
   const topics = knowledgeTopics(snapshot);
   const faqs = withinTokens(snippets, LIVE_FAQ_TOKENS, (snippet) => `- ${snippet.title}: ${snippet.content.trim().replace(/\s+/g, " ")}`);
   return [

@@ -204,6 +204,16 @@ describe("buildLiveInstructions", () => {
     expect(instructions).not.toContain("- Question 199: ");
   });
 
+  it("lists only the eight highest-priority FAQs in the prompts", () => {
+    const knowledgeSnippets = Array.from({ length: 12 }, (_, index) => ({ id: `k${index}`, title: `Question ${index}`, content: "Short answer.", tags: [], priority: index }));
+    const prompts = [buildLiveInstructions({ ...demoSnapshot, knowledgeSnippets }, "voice", callStart), buildAgentInstructions({ ...demoSnapshot, knowledgeSnippets }, { channel: "web_chat" })];
+    for (const prompt of prompts) {
+      expect(prompt).toContain("- Question 11: ");
+      expect(prompt).toContain("- Question 4: ");
+      expect(prompt).not.toContain("- Question 3: ");
+    }
+  });
+
   it("leaves out hours and services the business hasn't set, so GPT-Live delegates them", () => {
     const instructions = buildLiveInstructions({ ...demoSnapshot, hours: [], services: [] }, "voice", callStart);
     expect(instructions).not.toContain("Opening hours");

@@ -1,6 +1,6 @@
 ---
 title: "Review receptionist analytics"
-description: "Review engagement trends across calls, messages, appointments, call outcomes, and communication channels."
+description: "See what your receptionist booked and saved you, and review trends across calls, messages, appointments, call outcomes, and channels."
 sidebarTitle: "Analytics"
 contentType: "How-to"
 ---
@@ -15,6 +15,7 @@ _Analytics helps you spot workload changes and decide where to tune your agent o
 
 | Section | What it is for |
 | --- | --- |
+| **Results** | What your receptionist booked, the talk time it took off your team, and how many calls it finished without a transfer. |
 | **Engagement overview** | Weekly calls and messages in one chart. |
 | **Calls this week** | Call count and change compared with the previous week. |
 | **Messages this week** | SMS conversation activity and weekly change. |
@@ -22,6 +23,26 @@ _Analytics helps you spot workload changes and decide where to tune your agent o
 | **Average call duration** | Typical call length and week-over-week change. |
 | **Call outcomes** | Completed, transferred, live, and missed call outcomes. |
 | **Channels** | The share of activity coming from voice, SMS, and other channels. |
+
+## See what your receptionist booked and saved
+
+The **Results** card at the top of the page covers the dates you pick. It compares each figure with the period of the same length just before.
+
+| Figure | How LobbyStack counts it |
+| --- | --- |
+| **Estimated booked value** | The price of each appointment your receptionist booked by call, text, or chat in those dates, after any service discount. A fixed price counts in full, a starting price at its minimum, and a price range at its low end. |
+| **Time saved** | The talk time on calls your receptionist handled, shown in hours and minutes. |
+| **Calls handled without a transfer** | The share of those calls that ended without your receptionist transferring the caller to your team. |
+
+Booked value leaves out:
+
+- Cancelled appointments
+- Appointments your team booked in the dashboard or through the API
+- Services priced in person or without a price
+
+LobbyStack uses each service's current price, so changing a price also changes the estimate for earlier dates. The figure appears in the currency set for your business.
+
+Time saved and the transfer share leave out spam calls and calls shorter than 10 seconds, the same calls your plan doesn't bill. Website chats don't add to time saved, since they have no talk time.
 
 ## Review performance
 

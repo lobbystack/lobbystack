@@ -323,6 +323,12 @@
       "placeholder": "Select a default language",
       "hint": "Choose the fallback language your receptionist should use when a caller's preference is unknown."
     },
+    "voice": {
+      "label": "Voice",
+      "hint": "Your receptionist speaks in this voice on every call.",
+      "hearIt": "Hear it in a test call",
+      "defaultOption": "{{voice}} (default)"
+    },
     "timezone": {
       "label": "Business timezone",
       "hint": "Your receptionist uses this timezone for your opening hours and the appointment times it offers customers.",

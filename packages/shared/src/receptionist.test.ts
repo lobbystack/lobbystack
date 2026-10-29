@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { isContactPasscode, isGuessableContactPasscode, randomContactPasscode } from "./receptionist";
+import { DEFAULT_RECEPTIONIST_VOICE, isContactPasscode, isGuessableContactPasscode, isReceptionistVoice, normalizeReceptionistVoice, randomContactPasscode, receptionistVoices } from "./receptionist";
 
 describe("isContactPasscode", () => {
   it("takes 4 to 8 digits", () => {
@@ -57,5 +57,22 @@ describe("randomContactPasscode", () => {
 
   it("refuses a length a PIN can't have", () => {
     for (const length of [3, 9, 4.5]) expect(() => randomContactPasscode(length)).toThrow(RangeError);
+  });
+});
+
+describe("receptionist voices", () => {
+  it("defaults to marin, the voice every call used before businesses could pick one", () => {
+    expect(DEFAULT_RECEPTIONIST_VOICE).toBe("marin");
+    expect(receptionistVoices).toContain(DEFAULT_RECEPTIONIST_VOICE);
+  });
+
+  it("accepts only the listed voices", () => {
+    expect(receptionistVoices.every(isReceptionistVoice)).toBe(true);
+    for (const value of ["Marin", "nova", "", " cedar", null, undefined, 3]) expect(isReceptionistVoice(value)).toBe(false);
+  });
+
+  it("falls back to marin for a missing, unknown or retired voice", () => {
+    expect(normalizeReceptionistVoice("cedar")).toBe("cedar");
+    for (const value of [undefined, null, "", "nova", "MARIN", { voice: "cedar" }]) expect(normalizeReceptionistVoice(value)).toBe("marin");
   });
 });

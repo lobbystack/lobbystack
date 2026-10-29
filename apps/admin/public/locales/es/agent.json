@@ -323,6 +323,12 @@
       "placeholder": "Seleccione un idioma predeterminado",
       "hint": "Elija el idioma que su recepcionista debe usar cuando no se conoce la preferencia de la persona que llama."
     },
+    "voice": {
+      "label": "Voz",
+      "hint": "Su recepcionista habla con esta voz en todas las llamadas.",
+      "hearIt": "Escucharla en una llamada de prueba",
+      "defaultOption": "{{voice}} (predeterminada)"
+    },
     "timezone": {
       "label": "Zona horaria del negocio",
       "hint": "Su recepcionista usa esta zona horaria para su horario de atención y los horarios de citas que ofrece a los clientes.",

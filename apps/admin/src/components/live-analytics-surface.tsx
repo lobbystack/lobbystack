@@ -1,6 +1,7 @@
 "use client";
 
 import { useActiveBusiness } from "@/hooks/use-active-business";
+import { formatBookedValue, formatTimeSaved } from "@/lib/analytics-results";
 import { formatDuration } from "@/lib/duration";
 import { subscribeRealtimeQuery } from "@/lib/realtime-query";
 
@@ -113,6 +114,21 @@ export function LiveAnalyticsSurface() {
     { key: "appointments" as const, title: t("home.analytics.cards.appointments"), value: data.appointments.current.toLocaleString(intlLocale(i18n.language)), description: percentDelta(data.appointments.current, data.appointments.previous, t) },
     { key: "agentResponseSeconds" as const, title: t("home.analytics.cards.agentResponseTime"), value: formatDuration(data.agentResponseSeconds.current), description: data.agentResponseSeconds.current === data.agentResponseSeconds.previous ? t("home.analytics.metrics.flat") : t(data.agentResponseSeconds.current > data.agentResponseSeconds.previous ? "home.analytics.metrics.durationUp" : "home.analytics.metrics.durationDown", { value: formatDuration(Math.abs(data.agentResponseSeconds.current - data.agentResponseSeconds.previous)) }) },
   ] : [];
+  const withoutTransfer = data?.callsWithoutTransferPercent;
+  const percentFormat = new Intl.NumberFormat(intlLocale(i18n.language), { style: "percent", maximumFractionDigits: 1 });
+  const pointsFormat = new Intl.NumberFormat(intlLocale(i18n.language), { maximumFractionDigits: 1 });
+  const results = data ? [
+    { key: "bookedValue", value: formatBookedValue(data.bookedValue.current, data.bookedValue.currency, i18n.language), description: percentDelta(data.bookedValue.current, data.bookedValue.previous, t) },
+    { key: "timeSaved", value: formatTimeSaved(data.timeSavedSeconds.current, i18n.language), description: percentDelta(data.timeSavedSeconds.current, data.timeSavedSeconds.previous, t) },
+    {
+      key: "withoutTransfer",
+      value: withoutTransfer?.current == null ? "—" : percentFormat.format(withoutTransfer.current / 100),
+      // A share moves in percentage points, and there's nothing to compare while either period has no calls.
+      description: withoutTransfer?.current == null || withoutTransfer.previous == null ? null
+        : withoutTransfer.current === withoutTransfer.previous ? t("home.analytics.metrics.flat")
+          : t(withoutTransfer.current > withoutTransfer.previous ? "home.analytics.metrics.pointsUp" : "home.analytics.metrics.pointsDown", { value: pointsFormat.format(Math.abs(withoutTransfer.current - withoutTransfer.previous)) }),
+    },
+  ] as const : [];
   const channelShares = channelPercentages(data?.channels);
   // Other only holds channels the dashboard can't label, so it stays hidden while empty.
   const channelItems = ANALYTICS_CHANNELS.filter((channel) => channel !== "other" || (data?.channels.other ?? 0) > 0).map((channel) => ({
@@ -128,7 +144,8 @@ export function LiveAnalyticsSurface() {
     </div></div>
     {businesses.isError || analytics.isError ? <Surface className="p-8 text-center text-sm text-destructive">Analytics are unavailable.</Surface> : null}
     {businesses.isLoading || analytics.isLoading ? <AnalyticsSkeleton /> : null}
-    {data ? <><Card><CardHeader><CardTitle>{t("home.analytics.chart.title")}</CardTitle><CardDescription>{t("home.analytics.chart.description")}</CardDescription></CardHeader><CardContent className="px-6"><AnalyticsOverviewChart data={chartData} /></CardContent></Card>
+    {data ? <><Card><CardHeader><CardTitle>{t("home.analytics.results.title")}</CardTitle><CardDescription>{t("home.analytics.results.description")}</CardDescription></CardHeader><CardContent className="grid gap-6 md:grid-cols-3">{results.map((result) => <section className="flex min-w-0 flex-col gap-2" key={result.key}><h2 className="type-card-title text-foreground">{t(`home.analytics.results.${result.key}.title`)}</h2><p className="text-4xl font-normal tracking-normal break-words text-foreground tabular-nums">{result.value}</p>{result.description ? <p className="type-meta">{result.description}</p> : null}<p className="text-sm leading-5 text-muted-foreground">{t(`home.analytics.results.${result.key}.hint`)}</p></section>)}</CardContent></Card>
+      <Card><CardHeader><CardTitle>{t("home.analytics.chart.title")}</CardTitle><CardDescription>{t("home.analytics.chart.description")}</CardDescription></CardHeader><CardContent className="px-6"><AnalyticsOverviewChart data={chartData} /></CardContent></Card>
       <Surface className="grid sm:grid-cols-2">{metrics.map((metric) => <section className="border-b p-6 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0" key={metric.key}><div className="flex min-h-32 flex-col gap-6"><div className="flex flex-col gap-5"><h2 className="type-card-title text-foreground">{metric.title}</h2><div className="flex flex-col gap-3"><p className="text-5xl font-normal tracking-normal text-foreground tabular-nums">{metric.value}</p><div className="flex items-center gap-2 text-base text-muted-foreground"><span className="size-3 rounded-full border-2 border-primary" /><span>{rangeLabel}</span></div></div></div><AnalyticsMetricChart data={chartData} dataKey={metric.key} label={metric.title} {...(metric.key === "agentResponseSeconds" ? { formatValue: formatDuration } : {})} /><p className="type-meta">{metric.description}</p></div></section>)}</Surface>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-7"><Card className="lg:col-span-4"><CardHeader><CardTitle>{t("home.analytics.outcomes.title")}</CardTitle><CardDescription>{t("home.analytics.outcomes.description")}</CardDescription></CardHeader><CardContent><BarList items={data.outcomes.map((item) => ({ name: t(`home.analytics.outcomes.labels.${item.outcome}`), value: item.count }))} /></CardContent></Card><Card className="lg:col-span-3"><CardHeader><CardTitle>{t("home.analytics.channels.title")}</CardTitle><CardDescription>{t("home.analytics.channels.description")}</CardDescription></CardHeader><CardContent><BarList muted items={channelItems} suffix="%" /></CardContent></Card></div></> : null}
   </div>;
@@ -137,6 +154,7 @@ export function LiveAnalyticsSurface() {
 function AnalyticsSkeleton() {
   return (
 <>
+          <MetricCardGridSkeleton count={3} />
           <ChartBlockSkeleton />
           <MetricCardGridSkeleton />
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">

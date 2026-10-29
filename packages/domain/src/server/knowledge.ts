@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { and, asc, desc, eq, ilike, inArray, isNull, lt, ne, notInArray, sql } from "drizzle-orm";
 
 import { agentRules, businessContextSnapshots, businesses, businessHours, closures, enqueueOutbox, inOrder, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, phoneNumbers, receptionistProfiles, services, staffServiceAssignments, storageObjects, websiteIngestionJobs, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { defaultGreeting, FULL_CRAWL_PAGE_LIMIT, getKnowledgeStorageLimitBytes, normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeRuntimeLocale, normalizeTransferMode, ONBOARDING_CRAWL_PAGE_LIMIT, runtimeLocales, servicePriceFromColumns, type BusinessContextSnapshot } from "@lobbystack/shared";
+import { defaultGreeting, FULL_CRAWL_PAGE_LIMIT, getKnowledgeStorageLimitBytes, normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeReceptionistVoice, normalizeRuntimeLocale, normalizeTransferMode, ONBOARDING_CRAWL_PAGE_LIMIT, runtimeLocales, servicePriceFromColumns, type BusinessContextSnapshot } from "@lobbystack/shared";
 import { buildBusinessContextSnapshot } from "../snapshot";
 import { countKnowledgeTokens, fuseKnowledgeRanks, KNOWLEDGE_SEARCH_TOKEN_BUDGET, knowledgeLexicalQueries, knowledgeQueryTerms, withinKnowledgeBudget, type KnowledgePassage } from "../knowledgeRanking";
 
@@ -652,6 +652,7 @@ export async function refreshBusinessSnapshot(
       ...(phoneNumber ? { phoneNumber } : {}),
       ...(smsNumber ? { smsNumber } : {}),
       greeting: currentProfile?.greeting ?? defaultGreeting(business[0].name, defaultLocale),
+      voice: normalizeReceptionistVoice(currentProfile?.voice),
       tone: currentProfile?.tone ?? "professional",
       bookingPolicy: currentProfile?.bookingPolicy ?? "Confirm availability before booking.",
       ...(currentProfile?.voiceInstructions ? { voiceInstructions: currentProfile.voiceInstructions } : {}),
