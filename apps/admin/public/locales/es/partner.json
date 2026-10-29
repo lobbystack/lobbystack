@@ -404,7 +404,7 @@
     "domain": {
       "title": "Dirección del panel",
       "open": "Abrir",
-      "none": "Todavía no tiene un subdominio. Pida uno a {{appName}}.",
+      "none": "Todavía no tiene un subdominio. Necesita uno, o su propio dominio, para crear negocios y demos.",
       "subdomainLabel": "Su subdominio",
       "own": {
         "title": "Su propio dominio",

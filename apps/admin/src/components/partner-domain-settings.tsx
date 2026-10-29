@@ -191,7 +191,7 @@ export function PartnerDomainSettings() {
                 </a>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">{t("branding.domain.none", { appName })}</p>
+              <p className="text-sm text-muted-foreground">{t("branding.domain.none")}</p>
             )}
           </div>
 

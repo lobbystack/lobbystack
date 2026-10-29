@@ -404,7 +404,7 @@
     "domain": {
       "title": "Adresse du tableau de bord",
       "open": "Ouvrir",
-      "none": "Vous n'avez pas encore de sous-domaine. Demandez-en un à {{appName}}.",
+      "none": "Vous n'avez pas encore de sous-domaine. Il vous en faut un, ou votre propre domaine, pour créer des entreprises et des démos.",
       "subdomainLabel": "Votre sous-domaine",
       "own": {
         "title": "Votre propre domaine",

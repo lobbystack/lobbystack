@@ -396,7 +396,7 @@
     "domain": {
       "title": "Dashboard address",
       "open": "Open",
-      "none": "You don't have a subdomain yet. Ask {{appName}} for one.",
+      "none": "You don't have a subdomain yet. You need one, or your own domain, before you can create businesses and demos.",
       "subdomainLabel": "Your subdomain",
       "own": {
         "title": "Your own domain",

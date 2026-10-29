@@ -404,7 +404,7 @@
     "domain": {
       "title": "Adresa kontrolne table",
       "open": "Otvori",
-      "none": "Još nemate poddomen. Zatražite ga od servisa {{appName}}.",
+      "none": "Još nemate poddomen. Treba Vam on ili Vaš sopstveni domen da biste pravili preduzeća i demo verzije.",
       "subdomainLabel": "Vaš poddomen",
       "own": {
         "title": "Vaš sopstveni domen",
