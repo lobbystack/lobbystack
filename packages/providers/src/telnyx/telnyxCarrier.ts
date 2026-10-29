@@ -36,6 +36,7 @@ export type TelnyxCarrierOptions = {
 };
 
 const digits = (phone: string) => phone.replace(/\D/g, "");
+const E164 = /^\+[1-9]\d{7,14}$/;
 const detailRecordPageSize = 50;
 // 20 pages of 50 cover 1,000 calls on the account since the one being priced.
 const maxDetailRecordPages = 20;
@@ -127,7 +128,8 @@ export function createTelnyxCarrier(env: Env = process.env, options: TelnyxCarri
   const inventory: NumberInventory = {
     carrier: "telnyx",
     // Telnyx has no postal code filter, so a postal code search searches the whole country.
-    listAvailablePhoneNumbers: async (input) => (await search(input)).map((number) => availableNumber(number, input.countryCode)).filter((number) => number.capabilities.voice && (!input.sms || number.capabilities.sms)),
+    // An account Telnyx hasn't verified sees numbers with masked digits, such as +14353------, which can't be ordered.
+    listAvailablePhoneNumbers: async (input) => (await search(input)).filter((number) => E164.test(number.phone_number)).map((number) => availableNumber(number, input.countryCode)).filter((number) => number.capabilities.voice && (!input.sms || number.capabilities.sms)),
     /** Telnyx prices each number it offers; the first one on offer stands in for the kind. */
     getPhoneNumberMonthlyPrice: async ({ countryCode, kind }) => {
       const cost = (await search({ countryCode, kind, limit: 1 }))[0]?.cost_information;

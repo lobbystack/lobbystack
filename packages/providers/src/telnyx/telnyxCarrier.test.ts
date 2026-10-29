@@ -43,6 +43,14 @@ describe("Telnyx numbers", () => {
     expect(calls[0]!.url.origin).toBe("https://api.telnyx.com");
   });
 
+  it("leaves out numbers whose digits Telnyx masks for an account it hasn't verified", async () => {
+    const { client } = fakeTelnyx({ "GET /available_phone_numbers": () => ({ data: [
+      { phone_number: "+14353------", features: [{ name: "voice" }, { name: "sms" }] },
+      { phone_number: "+12125550100", features: [{ name: "voice" }] },
+    ] }) });
+    expect((await createTelnyxCarrier(env, { client })!.inventory!.listAvailablePhoneNumbers({ countryCode: "US", kind: "local", limit: 5 })).map((number) => number.phoneE164)).toEqual(["+12125550100"]);
+  });
+
   it("prices a kind of number from what Telnyx offers, in US cents", async () => {
     const { client } = fakeTelnyx({ "GET /available_phone_numbers": () => ({ data: [{ phone_number: "+12125550100", cost_information: { monthly_cost: "1.00", currency: "USD" } }] }) });
     expect(await createTelnyxCarrier(env, { client })!.inventory!.getPhoneNumberMonthlyPrice({ countryCode: "US", kind: "local" })).toEqual({ monthlyCents: 100 });
