@@ -234,6 +234,33 @@ describe("AgentBasicSettingsPage voice", () => {
     client.clear();
   });
 
+  it("keeps the saved voice in use while a save runs, and the pick when it fails", async () => {
+    let failSave: () => void = () => {};
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === "PATCH") return await new Promise<Response>((resolve) => { failSave = () => resolve(Response.json({ error: "down" }, { status: 500 })); });
+      return Response.json({
+        business: { defaultLocale: "en" },
+        profile: { greeting: "Thanks for calling.", summary: "Clinic", summarySource: "operator", transferNumber: null, transferMode: "on_request", appointmentChangePolicy: null, bookingMode: "instant", voice: "cedar" },
+      });
+    }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><AgentBasicSettingsPage businessId="business" canManageTenant /></QueryClientProvider>);
+    const user = userEvent.setup();
+    const change = await screen.findByRole("button", { name: "agent:fields.voice.change" });
+    await waitFor(() => expect((change as HTMLButtonElement).disabled).toBe(false));
+    await user.click(change);
+    await user.click(await screen.findByRole("button", { name: /^Shimmer/ }));
+    await user.click(screen.getByRole("button", { name: "fields.voice.dialog.use" }));
+
+    const current = () => screen.getByRole("heading", { name: "fields.voice.dialog.current" }).parentElement!;
+    expect(current().textContent).toContain("Cedar");
+    act(() => failSave());
+    await waitFor(() => expect((screen.getByRole("button", { name: "fields.voice.dialog.use" }) as HTMLButtonElement).disabled).toBe(false));
+    expect(current().textContent).toContain("Cedar");
+    expect(screen.getByRole("button", { name: /^Shimmer/ }).getAttribute("aria-pressed")).toBe("true");
+    client.clear();
+  });
+
   it("shows marin for a business that never picked a voice or has one calls no longer use", async () => {
     const { client } = renderWithVoice("nova");
     expect(await screen.findByText("voice=Marin traits=fields.voice.traits")).toBeTruthy();
@@ -330,6 +357,28 @@ describe("AgentBasicSettingsPage transfer number", () => {
     await user.click(screen.getByRole("button", { name: "agent:actions.save" }));
 
     await waitFor(() => expect(patches).toEqual([{ businessId: "business", transferNumber: "+15145550199" }]));
+    client.clear();
+  });
+
+  it("shows the next business's number, not one typed for the last, after switching business", async () => {
+    const settings = (transferNumber: string) => ({
+      business: { defaultLocale: "en" },
+      profile: { greeting: "Thanks for calling.", summary: "Clinic", summarySource: "operator", transferNumber, transferMode: "on_request", appointmentChangePolicy: null, bookingMode: "instant" },
+    });
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => Response.json(settings(url.includes("business-b") ? "+15145550222" : "+15145550111"))));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const page = (businessId: string) => <QueryClientProvider client={client}><AgentBasicSettingsPage businessId={businessId} canManageTenant /></QueryClientProvider>;
+    const { rerender } = render(page("business-a"));
+
+    const user = userEvent.setup();
+    const input = () => document.getElementById("agent-transfer-number") as HTMLInputElement;
+    await waitFor(() => expect(input()?.value.replace(/\D/g, "")).toBe("5145550111"));
+    await user.clear(input());
+    await user.type(input(), "+15145550199");
+    // The workspace switcher keeps the page mounted and only changes the business.
+    rerender(page("business-b"));
+
+    await waitFor(() => expect(input()?.value.replace(/\D/g, "")).toBe("5145550222"));
     client.clear();
   });
 });

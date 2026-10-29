@@ -228,11 +228,18 @@ export function AgentBasicSettingsPage({
   // settings, and a refetch that lands while someone is typing must not undo their edit,
   // so the greeting and summary only take the new value while they still hold the last
   // one, and the transfer number only while nobody has edited it since it was saved.
+  // Switching business keeps the page mounted, and none of it carries over to the next one.
+  const syncedBusinessId = useRef(businessId);
   const syncedProfile = useRef<NonNullable<AgentSettings["profile"]> | null>(null);
   const transferNumberRef = useRef(transferNumber);
   transferNumberRef.current = transferNumber;
   const transferNumberEdited = useRef(false);
   useEffect(() => {
+    if (syncedBusinessId.current !== businessId) {
+      syncedBusinessId.current = businessId;
+      syncedProfile.current = null;
+      transferNumberEdited.current = false;
+    }
     setTimezone(configuration?.business?.timezone ?? "");
     setCurrency(configuration?.business?.currency ?? "");
     const profile = configuration?.profile;
@@ -257,7 +264,7 @@ export function AgentBasicSettingsPage({
     setAllowAppointmentCancel(appointmentChangePolicy?.allowCancel ?? true);
     setAllowAppointmentReschedule(appointmentChangePolicy?.allowReschedule ?? true);
     setAppointmentChangeVerification(savedVerificationMode(appointmentChangePolicy?.verificationMode));
-  }, [configuration]);
+  }, [businessId, configuration]);
   const verificationChoices = offeredVerificationModes.includes(appointmentChangeVerification) ? offeredVerificationModes : [...offeredVerificationModes, appointmentChangeVerification];
 
   // The saved number's country, else the locale's.
@@ -428,16 +435,15 @@ export function AgentBasicSettingsPage({
 
   async function saveVoice(nextVoice: ReceptionistVoice): Promise<boolean> {
     if (!canManageTenant || !persistedProfile) return false;
-    const previous = voice;
-    setVoice(nextVoice);
     setIsVoiceSaving(true);
     try {
       await saveProfile({ businessId, voice: nextVoice });
+      // Only now: the dialog shows the current voice as in use, and a failed save keeps the pick.
+      setVoice(nextVoice);
       telemetry.track("web.agent.settings_saved", { businessId, setting: "voice" });
       toast.success(t("agent:actions.saved"));
       return true;
     } catch {
-      setVoice(previous);
       toast.error(t("agent:actions.saveFailed"));
       return false;
     } finally {
