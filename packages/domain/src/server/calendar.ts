@@ -19,11 +19,14 @@ export async function resolveCalendarAccessToken(context: DomainContext, input: 
   refreshAccessToken: (input: { refreshToken: string }) => Promise<{ accessToken: string; expiresIn: number; refreshToken?: string }>;
   now?: Date;
   forceRefresh?: boolean;
+  /** Also a disconnected connection that kept its tokens to remove its webhook. */
+  retired?: boolean;
 }): Promise<string> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     // Serializes concurrent scheduled/appointment refreshes for one account.
     const [connection] = await tx.select().from(calendarConnections).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId))).limit(1).for("update");
-    if (!connection || connection.businessId !== input.businessId || connection.status === "disconnected") throw new Error("Calendar connection is unavailable.");
+    const usable = connection && connection.businessId === input.businessId && (connection.status !== "disconnected" || (input.retired === true && connection.externalWebhookId !== null));
+    if (!connection || !usable) throw new Error("Calendar connection is unavailable.");
     const now = input.now ?? new Date();
     if (!input.forceRefresh && connection.encryptedAccessToken && connection.tokenExpiresAt && connection.tokenExpiresAt.getTime() > now.getTime() + 60_000) return input.decryptToken(connection.encryptedAccessToken);
     if (!connection.encryptedRefreshToken) throw Object.assign(new Error("Calendar authorization requires reconnection."), { reconnectRequired: true });
@@ -45,6 +48,7 @@ export async function connectCalendar(
 ): Promise<string> {
   const connectionId = await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
+    const writers = await writerSnapshot(tx, input.businessId);
     const [connection] = await tx.insert(calendarConnections).values({
       businessId: input.businessId,
       ownerUserId: input.userId,
@@ -63,6 +67,10 @@ export async function connectCalendar(
         encryptedAccessToken: input.encryptedAccessToken,
         encryptedRefreshToken: input.encryptedRefreshToken,
         ...(input.tokenExpiresAt !== undefined ? { tokenExpiresAt: new Date(input.tokenExpiresAt) } : {}),
+        // A disconnect forgot the webhook's secret, so a revived row registers a webhook again. registerWebhook
+        // replaces the old one, which posts to this same URL, so nothing is left in Cal.com. A connected row keeps its own.
+        externalWebhookId: sql`case when ${calendarConnections.status} = 'disconnected' then null else ${calendarConnections.externalWebhookId} end`,
+        encryptedWebhookSecret: sql`case when ${calendarConnections.status} = 'disconnected' then null else ${calendarConnections.encryptedWebhookSecret} end`,
         status: "connected",
         updatedAt: new Date(),
       },
@@ -77,10 +85,10 @@ export async function connectCalendar(
       if (replaced.length) {
         await tx.insert(auditLogs).values(replaced.map(({ id }) => ({ businessId: input.businessId, actorUserId: input.userId, eventType: "calendar_connection.disconnected", entityType: "calendar_connection", entityId: id, payload: { provider: input.provider, replacedBy: connection.id } })));
         await tx.delete(calendarBusyBlocks).where(and(eq(calendarBusyBlocks.businessId, input.businessId), inArray(calendarBusyBlocks.connectionId, replaced.map(({ id }) => id))));
-        // The replaced connection's tokens are gone, so its calendar keeps the old events.
-        await releaseCalendarAppointments(tx, { businessId: input.businessId, owner: null });
       }
     }
+    // Only the bookings whose writer changed move, so a Cal.com connection that keeps writing keeps its bookings.
+    await releaseMovedAppointments(tx, input.businessId, writers);
     await enqueueOutbox(tx, {
       topic: "calendar.reconcileBusiness",
       businessId: input.businessId,
@@ -216,11 +224,10 @@ export async function markCalendarConnectionSync(
  * when the business has no such connection or it was already disconnected.
  */
 export async function disconnectCalendarInTransaction(tx: DatabaseTransaction, input: { businessId: string; connectionId: string }): Promise<{ provider: string } | null> {
-  const [current] = await tx.select({ staffId: calendarConnections.staffId }).from(calendarConnections).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId), ne(calendarConnections.status, "disconnected"))).limit(1).for("update");
-  const writer = current ? await scopeWriter(tx, input.businessId, current.staffId) : undefined;
+  const writers = await writerSnapshot(tx, input.businessId);
   const [disconnected] = await retireConnections(tx, input.businessId, eq(calendarConnections.id, input.connectionId));
   // The bookings it held move to the connection that writes them now. The tokens are gone, so the calendar keeps its events.
-  if (disconnected && writer?.id === input.connectionId) await releaseCalendarAppointments(tx, { businessId: input.businessId, owner: disconnected.staffId });
+  if (disconnected) await releaseMovedAppointments(tx, input.businessId, writers);
   await tx.delete(calendarBusyBlocks).where(and(eq(calendarBusyBlocks.connectionId, input.connectionId), eq(calendarBusyBlocks.businessId, input.businessId)));
   return disconnected ? { provider: disconnected.provider } : null;
 }
@@ -275,10 +282,11 @@ export async function assignCalendarStaffInTransaction(tx: DatabaseTransaction, 
   // A disconnected connection stays disconnected.
   const [current] = await tx.select({ staffId: calendarConnections.staffId, selectedCalendarId: calendarConnections.selectedCalendarId }).from(calendarConnections).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId), ne(calendarConnections.status, "disconnected"))).limit(1).for("update");
   if (!current) return "not_found";
-  // Assigned to a staff member, the connection keeps only their bookings; the rest leave its calendar.
-  // Made business-wide, it keeps its staff member's bookings and the others' backfill into it.
-  if (input.staffId && input.staffId !== current.staffId) await releaseCalendarAppointments(tx, { businessId: input.businessId, owner: current.staffId, keepStaffId: input.staffId, calendar: current.selectedCalendarId ? { connectionId: input.connectionId, calendarId: current.selectedCalendarId } : undefined });
+  // Assigned to a staff member, the connection writes only their bookings; made business-wide, it can take over
+  // everyone's. Either way only the bookings whose writer changes move, each out of the calendar that held it.
+  const writers = await writerSnapshot(tx, input.businessId);
   await tx.update(calendarConnections).set({ staffId: input.staffId, updatedAt: new Date() }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId)));
+  await releaseMovedAppointments(tx, input.businessId, writers);
   await enqueueOutbox(tx, { topic: "calendar.reconcileBusiness", businessId: input.businessId, aggregateType: "calendar_connection", aggregateId: input.connectionId, dedupeKey: `calendar:${input.connectionId}:staff:${Date.now()}`, payload: { connectionId: input.connectionId } });
   return "assigned";
 }
@@ -306,12 +314,11 @@ export async function selectCalendarInTransaction(tx: DatabaseTransaction, input
   // A disconnected connection stays disconnected.
   const [current] = await tx.select({ staffId: calendarConnections.staffId, selectedCalendarId: calendarConnections.selectedCalendarId }).from(calendarConnections).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId), ne(calendarConnections.status, "disconnected"))).limit(1).for("update");
   if (!current) return false;
-  const before = await scopeWriter(tx, input.businessId, current.staffId);
+  const writers = await writerSnapshot(tx, input.businessId);
   await tx.update(calendarConnections).set({ selectedCalendarId: input.calendarId.trim(), status: "syncing", lastSyncedAt: null, lastSyncError: null, updatedAt: new Date() }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId)));
-  const after = await scopeWriter(tx, input.businessId, current.staffId);
-  // Bookings leave the calendar that held them only when the writer or its calendar changes. Picking a calendar
+  // Bookings leave the calendar that held them only when their writer or its calendar changes. Picking a calendar
   // can make this connection the writer, as when a Cal.com event type takes over from Google.
-  if (before?.id !== after?.id || before?.selectedCalendarId !== after?.selectedCalendarId) await releaseCalendarAppointments(tx, { businessId: input.businessId, owner: current.staffId, calendar: before?.selectedCalendarId ? { connectionId: before.id, calendarId: before.selectedCalendarId } : undefined });
+  await releaseMovedAppointments(tx, input.businessId, writers);
   await enqueueOutbox(tx, { topic: "calendar.reconcileBusiness", businessId: input.businessId, aggregateType: "calendar_connection", aggregateId: input.connectionId, dedupeKey: `calendar:${input.connectionId}:select:${Date.now()}`, payload: { connectionId: input.connectionId } });
   return true;
 }
@@ -326,25 +333,35 @@ export async function selectCalendar(
   });
 }
 
-// Upcoming appointments keep the event id of the calendar they were written to. When a connection
-// stops writing a booking to that calendar (another calendar, another owner, or no connection), clear
-// the id so the reconcile backfill writes the booking where it now belongs, and with `calendar`, delete
-// the old event so that calendar doesn't keep a stale appointment. `owner` is the connection's staff
-// member, or null for a business-wide one; a staff member's own calendar takes precedence over it.
-async function releaseCalendarAppointments(tx: DatabaseTransaction, input: { businessId: string; owner: string | null; keepStaffId?: string; calendar?: { connectionId: string; calendarId: string } | undefined }): Promise<void> {
-  const released = await tx.select({ id: appointments.id, eventId: appointments.calendarExternalId, revision: appointments.revision }).from(appointments).where(and(
-    eq(appointments.businessId, input.businessId),
-    eq(appointments.status, "confirmed"),
-    gt(appointments.endsAt, new Date()),
-    input.owner ? eq(appointments.staffId, input.owner) : notOwnedByStaffCalendar(tx, input.businessId),
-    input.keepStaffId ? ne(appointments.staffId, input.keepStaffId) : undefined,
-  )).for("update");
-  if (!released.length) return;
-  await tx.update(appointments).set({ calendarExternalId: null, calendarSyncState: "not_required", revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(and(eq(appointments.businessId, input.businessId), inArray(appointments.id, released.map(({ id }) => id))));
-  const calendar = input.calendar;
-  if (!calendar) return;
-  for (const { id, eventId, revision } of released) {
-    if (eventId) await enqueueOutbox(tx, { topic: "calendar.deleteEvent", businessId: input.businessId, aggregateType: "appointment", aggregateId: id, dedupeKey: `appointment:${id}:calendar:release:${calendar.connectionId}:${revision}`, payload: { appointmentId: id, ...calendar, eventId } });
+type WriterRow = { id: string; provider: string; staffId: string | null; selectedCalendarId: string | null; status: string };
+
+/** Every connection of the business, live or not, to compare who writes each booking before and after a change. */
+async function writerSnapshot(tx: DatabaseTransaction, businessId: string): Promise<WriterRow[]> {
+  return await tx.select({ id: calendarConnections.id, provider: calendarConnections.provider, staffId: calendarConnections.staffId, selectedCalendarId: calendarConnections.selectedCalendarId, status: calendarConnections.status }).from(calendarConnections).where(eq(calendarConnections.businessId, businessId));
+}
+
+/** The connection the sync job writes a staff member's bookings to, as pickCalendarWriter ranks the live ones covering them. */
+function writerFor(rows: WriterRow[], staffId: string): WriterRow | undefined {
+  return pickCalendarWriter(rows.filter((row) => row.status !== "disconnected" && (row.staffId === null || row.staffId === staffId)));
+}
+
+// Upcoming appointments keep the event id of the calendar they were written to. When a change moves an
+// appointment to another writer, or its writer to another calendar, clear the id so the reconcile backfill
+// writes it where it now belongs, and delete the old event, on the old writer, so that calendar doesn't keep
+// a stale appointment. A writer the change disconnected has no tokens, so its calendar keeps the event.
+async function releaseMovedAppointments(tx: DatabaseTransaction, businessId: string, before: WriterRow[]): Promise<void> {
+  const after = await writerSnapshot(tx, businessId);
+  const upcoming = await tx.select({ id: appointments.id, staffId: appointments.staffId, eventId: appointments.calendarExternalId, revision: appointments.revision }).from(appointments).where(and(eq(appointments.businessId, businessId), eq(appointments.status, "confirmed"), gt(appointments.endsAt, new Date()))).for("update");
+  const moved = upcoming.flatMap((appointment) => {
+    const was = writerFor(before, appointment.staffId);
+    const now = writerFor(after, appointment.staffId);
+    return was?.id === now?.id && was?.selectedCalendarId === now?.selectedCalendarId ? [] : [{ ...appointment, was }];
+  });
+  if (!moved.length) return;
+  await tx.update(appointments).set({ calendarExternalId: null, calendarSyncState: "not_required", revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(and(eq(appointments.businessId, businessId), inArray(appointments.id, moved.map(({ id }) => id))));
+  for (const { id, eventId, revision, was } of moved) {
+    const live = was && after.some((row) => row.id === was.id && row.status !== "disconnected");
+    if (eventId && was?.selectedCalendarId && live) await enqueueOutbox(tx, { topic: "calendar.deleteEvent", businessId, aggregateType: "appointment", aggregateId: id, dedupeKey: `appointment:${id}:calendar:release:${was.id}:${revision}`, payload: { appointmentId: id, connectionId: was.id, calendarId: was.selectedCalendarId, eventId } });
   }
 }
 
@@ -452,8 +469,3 @@ async function retireConnections(tx: DatabaseTransaction, businessId: string, wh
   return rows.map(({ id, provider, staffId }) => ({ id, provider, staffId }));
 }
 
-/** The connection that writes the bookings of a scope: a staff member's own connections, or the business's with null. */
-async function scopeWriter(tx: DatabaseTransaction, businessId: string, staffId: string | null) {
-  const rows = await tx.select({ id: calendarConnections.id, provider: calendarConnections.provider, staffId: calendarConnections.staffId, selectedCalendarId: calendarConnections.selectedCalendarId }).from(calendarConnections).where(and(eq(calendarConnections.businessId, businessId), ne(calendarConnections.status, "disconnected"), staffId ? eq(calendarConnections.staffId, staffId) : isNull(calendarConnections.staffId)));
-  return pickCalendarWriter(rows);
-}
