@@ -6,9 +6,9 @@ import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { planEntitlement } from "@lobbystack/shared";
 
-import { BusinessHoursSection, closuresForSave, HOURS_EDITOR_HREF, windowsForSave } from "./business-hours-section";
-import { AgentBasicSettingsPage } from "./live-agent-basic-settings-surface";
+import { BusinessHoursSection, closuresForSave, windowsForSave } from "./business-hours-section";
 import { LiveSetupGuideSurface } from "./live-setup-guide-surface";
+import { AgentBasicSettingsPage } from "./live-agent-basic-settings-surface";
 import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 
 const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
@@ -107,9 +107,8 @@ describe("opening hours editor", () => {
   it("asks for the hours when there are none", async () => {
     stubFetch({ hoursSource: "none", hours: [] });
     render(<QueryClientProvider client={client()}><BusinessHoursSection businessId="business" canManage /></QueryClientProvider>);
-    expect(await screen.findByText("hours.empty")).toBeTruthy();
-    await waitFor(() => expect(screen.getByTestId("hours-summary").textContent).toBe("hours.notSet"));
-    await userEvent.click(screen.getByRole("button", { name: "hours.edit" }));
+    expect(await screen.findByText("hours.neededForBooking")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "hours.add" }));
     expect(screen.getAllByText("hours.closed")).toHaveLength(7);
   });
 
@@ -190,43 +189,36 @@ describe("opening hours editor", () => {
 });
 
 describe("instant booking without opening hours", () => {
-  it("warns in the booking settings and links to the hours editor", async () => {
+  it("asks for hours in the hours row itself, with no second banner", async () => {
     stubFetch({ hoursSource: "none", hours: [] });
     render(<QueryClientProvider client={client()}><AgentBasicSettingsPage businessId="business" canManageTenant /></QueryClientProvider>);
-    const alert = (await screen.findByText("hours.noHoursAlert.title")).closest("[role=alert]") as HTMLElement;
-    expect(within(alert).getByText("hours.noHoursAlert.action").closest("a")?.getAttribute("href")).toBe(HOURS_EDITOR_HREF);
+    expect(await screen.findByText("hours.neededForBooking")).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
     expect(document.getElementById("opening-hours")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "hours.add" }));
+    expect(await screen.findAllByLabelText(/^hours.openOn:/)).toHaveLength(7);
   });
 
-  it("opens the hours editor when the warning's link is followed on the same page", async () => {
-    stubFetch({ hoursSource: "none", hours: [] });
+  it("doesn't ask for hours once the business has them, or when it doesn't book directly", async () => {
+    stubFetch({ hoursSource: "generated", hours: weekdays });
     render(<QueryClientProvider client={client()}><AgentBasicSettingsPage businessId="business" canManageTenant /></QueryClientProvider>);
-    const alert = (await screen.findByText("hours.noHoursAlert.title")).closest("[role=alert]") as HTMLElement;
-    expect(screen.queryAllByLabelText(/^hours.openOn:/)).toHaveLength(0);
-    within(alert).getByText("hours.noHoursAlert.action").closest("a")!.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
-    expect(await screen.findAllByLabelText(/^hours.openOn:/)).toHaveLength(7);
+    await screen.findByText("hours.generated");
+    expect(screen.queryByText("hours.neededForBooking")).toBeNull();
+    cleanup();
+
+    stubFetch({ hoursSource: "none", bookingMode: "request", hours: [] });
+    render(<QueryClientProvider client={client()}><AgentBasicSettingsPage businessId="business" canManageTenant /></QueryClientProvider>);
+    await screen.findByText("hours.notSet");
+    expect(screen.queryByText("hours.neededForBooking")).toBeNull();
   });
 
   it("doesn't open the hours editor from the link for someone who can't edit it", async () => {
     stubFetch({ hoursSource: "none", hours: [] });
     window.history.replaceState(null, "", "#opening-hours");
     render(<QueryClientProvider client={client()}><BusinessHoursSection businessId="business" canManage={false} /></QueryClientProvider>);
-    await screen.findByText("hours.empty");
+    await screen.findByText("hours.neededForBooking");
     expect(screen.queryAllByLabelText(/^hours.openOn:/)).toHaveLength(0);
     window.history.replaceState(null, "", "#");
-  });
-
-  it("doesn't warn once the business has hours, or when it doesn't book directly", async () => {
-    stubFetch({ hoursSource: "generated", hours: weekdays });
-    render(<QueryClientProvider client={client()}><AgentBasicSettingsPage businessId="business" canManageTenant /></QueryClientProvider>);
-    await screen.findByText("hours.generated");
-    expect(screen.queryByText("hours.noHoursAlert.title")).toBeNull();
-    cleanup();
-
-    stubFetch({ hoursSource: "none", bookingMode: "request", hours: [] });
-    render(<QueryClientProvider client={client()}><AgentBasicSettingsPage businessId="business" canManageTenant /></QueryClientProvider>);
-    await screen.findByText("hours.empty");
-    expect(screen.queryByText("hours.noHoursAlert.title")).toBeNull();
   });
 
   it("warns in the setup guide", async () => {
@@ -238,3 +230,4 @@ describe("instant booking without opening hours", () => {
     expect(await screen.findByText("hours.noHoursAlert.title")).toBeTruthy();
   });
 });
+

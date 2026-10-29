@@ -30,7 +30,6 @@
   },
   "unansweredQuestions": {
     "title": "Pitanja bez odgovora",
-    "description": "Pozivaoci i posetioci sajta postavili su ova pitanja, a vaše znanje nije imalo odgovor. Odgovorite ovde da biste odgovor dodali u znanje za buduće pozive i četove.",
     "timesAsked_one": "Postavljeno {{count}} put",
     "timesAsked_few": "Postavljeno {{count}} puta",
     "timesAsked_other": "Postavljeno {{count}} puta",

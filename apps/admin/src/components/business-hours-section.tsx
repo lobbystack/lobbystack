@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState } from "react";
 import Link from "next/link";
+import { useEffect, useId, useMemo, useState } from "react";
 import { CalendarClock, Plus, X } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -12,12 +12,12 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Item, ItemActions, ItemContent, ItemDescription } from "@/components/ui/item";
+import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Surface } from "@/components/ui/surface";
 import { Switch } from "@/components/ui/switch";
 import { TimePicker } from "@/components/ui/time-picker";
 import { useTimeFormatPreference } from "@/components/appearance-provider";
+import { cn } from "@/lib/utils";
 import { useTelemetry } from "@/components/product-analytics";
 import { intlLocale } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
@@ -127,20 +127,22 @@ export function closuresForSave(closures: Closure[], now: string): { ok: true } 
   return { ok: true };
 }
 
+/** Shown on the setup guide: instant booking offers nothing without hours. The AI settings page says it in the hours row instead. */
 export function BookingWithoutHoursAlert({ className }: { className?: string }) {
   const { t } = useTranslation("agent");
   return (
-    <Alert className={className}>
-      <AlertTitle className="flex items-center gap-2"><CalendarClock aria-hidden="true" className="size-4" />{t("hours.noHoursAlert.title")}</AlertTitle>
-      <AlertDescription>{t("hours.noHoursAlert.description")}</AlertDescription>
-      <div className="pt-2">
-        <Button nativeButton={false} render={<Link href={HOURS_EDITOR_HREF} onClick={() => window.dispatchEvent(new Event(OPEN_HOURS_EDITOR_EVENT))} />} size="sm" variant="outline">{t("hours.noHoursAlert.action")}</Button>
+    <Alert className={cn("flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6", className)}>
+      <div className="flex min-w-0 flex-col gap-1">
+        <AlertTitle className="flex items-center gap-2"><CalendarClock aria-hidden="true" className="size-4" />{t("hours.noHoursAlert.title")}</AlertTitle>
+        <AlertDescription>{t("hours.noHoursAlert.description")}</AlertDescription>
       </div>
+      <Button className="shrink-0 self-start sm:self-auto" nativeButton={false} render={<Link href={HOURS_EDITOR_HREF} onClick={() => window.dispatchEvent(new Event(OPEN_HOURS_EDITOR_EVENT))} />} size="sm" variant="outline">{t("hours.noHoursAlert.action")}</Button>
     </Alert>
   );
 }
 
-export function BusinessHoursSection({ businessId, canManage }: { businessId: string; canManage: boolean }) {
+/** `bookingMode` overrides the saved mode, so the row reacts as soon as the booking setting above it changes. */
+export function BusinessHoursSection({ businessId, canManage, bookingMode }: { businessId: string; canManage: boolean; bookingMode?: BusinessHoursState["bookingMode"] }) {
   const { i18n, t } = useTranslation("agent");
   const telemetry = useTelemetry();
   const queryClient = useQueryClient();
@@ -167,6 +169,8 @@ export function BusinessHoursSection({ businessId, canManage }: { businessId: st
   const closureFormat = useMemo(() => new Intl.DateTimeFormat(intlLocale(i18n.language), { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }), [i18n.language]);
   const describeClosure = (closure: Closure) => `${closureFormat.formatRange(new Date(`${closure.startsAt}:00Z`), new Date(`${closure.endsAt}:00Z`))}${closure.reason ? ` (${closure.reason})` : ""}`;
   const loading = !businessId || query.isLoading;
+  // Instant booking offers nothing without hours, so say so here instead of in a second banner.
+  const needsHours = needsHoursForBooking(state && bookingMode ? { ...state, bookingMode } : state);
   const disabled = !canManage || saving || !state;
 
   function update(dayOfWeek: number, windows: Window[]) {
@@ -215,7 +219,7 @@ export function BusinessHoursSection({ businessId, canManage }: { businessId: st
     }
   }
 
-  const note = state?.hoursSource === "generated" ? t("hours.generated") : state && !state.hours.length ? t("hours.empty") : null;
+  const note = state?.hoursSource === "generated" ? t("hours.generated") : null;
   const savedDays = useMemo(() => toDays(state?.hours ?? []), [state]);
   function close() {
     setEditing(false);
@@ -224,23 +228,18 @@ export function BusinessHoursSection({ businessId, canManage }: { businessId: st
     if (state) { setDays(toDays(state.hours)); setClosures(state.closures); }
   }
   return (
-    <section className="flex scroll-mt-6 flex-col gap-3" id="opening-hours">
-      <div className="flex flex-col gap-1">
-        <h2 className="font-heading text-sm leading-snug font-medium">{t("hours.title")}</h2>
-        <p className="text-sm text-muted-foreground">{t("hours.description")}</p>
-      </div>
-      {note ? <p className="text-sm text-muted-foreground" data-testid="hours-note">{note}</p> : null}
-      <Surface className="flex flex-col">
-        <Item variant="default">
-          <ItemContent>
-            {loading ? <Skeleton className="h-5 w-64 rounded-md" /> : <ItemDescription data-testid="hours-summary">{summarizeHours(savedDays, shortDayNames) || t("hours.notSet")}</ItemDescription>}
-            {state?.closures.length ? <ItemDescription data-testid="closures-summary">{t("hours.closures.summary", { list: state.closures.map(describeClosure).join("; ") })}</ItemDescription> : null}
-          </ItemContent>
-          <ItemActions>
-            <Button disabled={!canManage || loading} onClick={() => setEditing(true)} size="sm" type="button" variant="outline">{t("hours.edit")}</Button>
-          </ItemActions>
-        </Item>
-      </Surface>
+    <>
+      <Item className="scroll-mt-6 rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0" id="opening-hours" variant="default">
+        <ItemContent>
+          <ItemTitle>{t("hours.title")}</ItemTitle>
+          {loading ? <Skeleton className="h-5 w-64 rounded-md" /> : <ItemDescription data-testid="hours-summary">{summarizeHours(savedDays, shortDayNames) || t(needsHours ? "hours.neededForBooking" : "hours.notSet")}</ItemDescription>}
+          {state?.closures.length ? <ItemDescription data-testid="closures-summary">{t("hours.closures.summary", { list: state.closures.map(describeClosure).join("; ") })}</ItemDescription> : null}
+          {note ? <ItemDescription data-testid="hours-note">{note}</ItemDescription> : null}
+        </ItemContent>
+        <ItemActions>
+          <Button disabled={!canManage || loading} onClick={() => setEditing(true)} size="sm" type="button" variant={needsHours ? "default" : "outline"}>{t(needsHours ? "hours.add" : "hours.edit")}</Button>
+        </ItemActions>
+      </Item>
       <Dialog onOpenChange={(open) => { if (!open && !saving) close(); }} open={editing}>
         <DialogContent className="flex max-h-[85vh] flex-col gap-4">
           <DialogHeader><DialogTitle>{t("hours.title")}</DialogTitle></DialogHeader>
@@ -279,7 +278,7 @@ export function BusinessHoursSection({ businessId, canManage }: { businessId: st
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </section>
+    </>
   );
 }
 

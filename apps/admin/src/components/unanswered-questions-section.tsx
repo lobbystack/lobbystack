@@ -61,7 +61,6 @@ export function UnansweredQuestionsSection({ businessId, canManage }: { business
     <div className="flex items-start justify-between gap-4 px-1">
       <div className="flex min-w-0 flex-col gap-1">
         <h2 className="type-section-title" id={`${UNANSWERED_QUESTIONS_ANCHOR}-title`}>{t("unansweredQuestions.title")}</h2>
-        <p className="type-section-description">{t("unansweredQuestions.description")}</p>
       </div>
       {questions.isLoading ? <Skeleton className="h-6 w-12 rounded-full" /> : <Badge variant="outline">{(questions.data?.openCount ?? 0).toLocaleString(locale)}</Badge>}
     </div>

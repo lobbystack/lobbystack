@@ -325,7 +325,6 @@
     },
     "voice": {
       "label": "Voice",
-      "hint": "Your receptionist speaks in this voice on every call.",
       "change": "Change voice",
       "play": "Play {{voice}}",
       "stop": "Stop {{voice}}",
@@ -470,9 +469,7 @@
   },
   "hours": {
     "title": "Opening hours",
-    "description": "The agent offers appointments only inside these hours.",
     "generated": "We filled these in from your website and documents. Check them.",
-    "empty": "Add your hours so the agent can book appointments.",
     "closed": "Closed",
     "openOn": "Open on {{day}}",
     "opensAt": "{{day}} opening time",
@@ -482,14 +479,16 @@
     "picker": { "hours": "Hours", "minutes": "Minutes", "period": "AM or PM", "hoursTitle": "HH", "minutesTitle": "MM" },
     "save": "Save hours",
     "invalid": "Check {{day}}: each closing time must come after its opening time, with no overlaps.",
+    "edit": "Edit",
+    "cancel": "Cancel",
+    "notSet": "Not set",
     "noHoursAlert": {
       "title": "Add opening hours to book appointments",
       "description": "The agent offers times only inside your opening hours. Until you add them, it takes a message instead.",
       "action": "Add opening hours"
     },
-    "edit": "Edit",
-    "cancel": "Cancel",
-    "notSet": "Not set",
+    "neededForBooking": "Not set. Needed to book appointments.",
+    "add": "Add hours",
     "closures": {
       "title": "Closures",
       "description": "Add holidays and other times you're closed. The agent won't book appointments during them. Times are in {{timezone}}.",

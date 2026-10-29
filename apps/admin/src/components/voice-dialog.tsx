@@ -140,7 +140,7 @@ export function VoiceDialog({ open, onOpenChange, current, preview, saving, onSa
 
   return (
     <Dialog onOpenChange={close} open={open}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] sm:max-w-md">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto]">
         <DialogHeader>
           <DialogTitle>{t("fields.voice.dialog.title")}</DialogTitle>
           <DialogDescription>{t("fields.voice.dialog.description")}</DialogDescription>

@@ -30,7 +30,6 @@
   },
   "unansweredQuestions": {
     "title": "Questions sans réponse",
-    "description": "Des appelants et des visiteurs de votre site ont posé ces questions, et vos connaissances n'avaient pas la réponse. Répondez ici pour ajouter la réponse à vos connaissances pour les prochains appels et clavardages.",
     "timesAsked_one": "Posée {{count}} fois",
     "timesAsked_many": "Posée {{count}} fois",
     "timesAsked_other": "Posée {{count}} fois",

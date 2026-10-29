@@ -30,7 +30,6 @@
   },
   "unansweredQuestions": {
     "title": "Unanswered Questions",
-    "description": "Callers and website visitors asked these, and your knowledge had no answer. Answer one here to add it to your knowledge for future calls and chats.",
     "timesAsked_one": "Asked {{count}} time",
     "timesAsked_other": "Asked {{count}} times",
     "lastAsked": "Last asked {{date}}",

@@ -2,7 +2,7 @@
 
 import { useTable, type PaginationState } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, GripVertical, MoreHorizontal, Pause, Pencil, Play, Plus, Search, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, GripVertical, MoreHorizontal, Pause, Pencil, Play, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useSetupAction } from "@/lib/use-setup-action";
 import { requestJson } from "@/lib/request-json";
+import { HeaderActions, HeaderSearch } from "@/components/header-actions";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { DataTablePagination, paginationFeatures } from "./data-table/pagination";
 import { TableCardSkeleton } from "./loading-skeletons";
@@ -105,10 +106,10 @@ export function RulesSurface() {
   return (
     <PageSurface title={t("sections.rules.title")}>
       <div className="flex w-full flex-col gap-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative max-w-sm flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-10" onChange={(event) => setSearch(event.target.value)} placeholder={t("table.searchPlaceholder")} value={search} /></div>
-          {canManage ? <div className="flex shrink-0 flex-wrap items-center gap-2"><Button onClick={() => { setEditingRule(null); setDialogOpen(true); }}><Plus data-icon="inline-start" />{t("sections.rules.addKnowledge")}</Button></div> : null}
-        </div>
+        <HeaderActions>
+          <HeaderSearch onChange={setSearch} placeholder={t("table.searchPlaceholder")} value={search} />
+          {canManage ? <Button onClick={() => { setEditingRule(null); setDialogOpen(true); }}><Plus data-icon="inline-start" />{t("sections.rules.addKnowledge")}</Button> : null}
+        </HeaderActions>
         {rules.isLoading ? <TableCardSkeleton columns={5} /> : <><TableCard>
           <Table className="min-w-[60rem] w-full table-fixed">
             <colgroup>{canManage ? <col className="w-10" /> : null}<col className="w-[18%]" /><col className="w-[42%]" /><col className="w-[14%]" /><col className="w-[18%]" /><col className="w-12" /></colgroup>

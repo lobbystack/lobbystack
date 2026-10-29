@@ -28,8 +28,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import { Switch } from "@/components/ui/switch";
 import { useTelemetry } from "@/components/product-analytics";
-import { VoiceDialog, voiceName, VoicePlayButton, useVoicePreview, useVoiceTraits } from "@/components/voice-dialog";
-import { BookingWithoutHoursAlert, BusinessHoursSection, needsHoursForBooking, useBusinessHours } from "@/components/business-hours-section";
+import { VoiceDialog, voiceName, useVoicePreview, useVoiceTraits } from "@/components/voice-dialog";
+import { BusinessHoursSection } from "@/components/business-hours-section";
 import { availableTimeZones, groupTimeZones, isTimeZoneRegion, type TimeZoneOption } from "@/lib/time-zones";
 import { errorCode } from "@/lib/checkout-errors";
 import { getDefaultTransferCountry, getPhoneCountryOptions, inferPhoneCountry } from "@/lib/phone";
@@ -116,7 +116,6 @@ export function AgentBasicSettingsPage({
     enabled: Boolean(businessId),
   });
   const configuration = query.data;
-  const hours = useBusinessHours(businessId);
   const isLoadingConfiguration = !businessId || query.isLoading;
   async function saveProfile({ defaultLocale: locale, ...patch }: { businessId: string; defaultLocale?: RuntimeLocale; timezone?: string; currency?: string; greeting?: string; summary?: string; regenerateSummary?: true; transferNumber?: string | null; transferMode?: string; appointmentChangePolicy?: AppointmentChangePolicy; bookingMode?: BookingMode; voice?: ReceptionistVoice }, refetchType: "active" | "none" = "active") {
     await requestJson(`/api/agent?businessId=${encodeURIComponent(businessId)}`, { method: "PATCH", body: JSON.stringify({ ...patch, ...(locale ? { locale } : {}) }) });
@@ -213,8 +212,8 @@ export function AgentBasicSettingsPage({
   const [voice, setVoice] = useState<ReceptionistVoice>(DEFAULT_RECEPTIONIST_VOICE);
   const [isVoiceSaving, setIsVoiceSaving] = useState(false);
   const [voiceDialogOpen, setVoiceDialogOpen] = useState(false);
-  const voicePreview = useVoicePreview(configuration?.business?.defaultLocale ?? "en");
   const voiceTraits = useVoiceTraits();
+  const voicePreview = useVoicePreview(configuration?.business?.defaultLocale ?? "en");
   // The utility bar's test call widget registers itself; this page only starts it.
   const [transferStatus, setTransferStatus] = useState<string | null>(null);
   const [isGreetingSaving, setIsGreetingSaving] = useState(false);
@@ -622,20 +621,13 @@ export function AgentBasicSettingsPage({
             >
               <ItemContent>
                 <ItemTitle>{t("agent:fields.voice.label")}</ItemTitle>
-                <ItemDescription>{t("agent:fields.voice.hint")}</ItemDescription>
+                <ItemDescription>{voiceName(voice)} · {voiceTraits(voice)}</ItemDescription>
               </ItemContent>
               <ItemActions className="w-full sm:w-auto">
                 {isLoadingConfiguration ? (
                   <Skeleton className="h-10 w-full rounded-md sm:w-52" />
                 ) : (
-                  <div className="flex w-full items-center gap-3 sm:w-auto">
-                    <VoicePlayButton preview={voicePreview} voice={voice} />
-                    <div className="flex min-w-0 flex-1 flex-col sm:w-40 sm:flex-none">
-                      <span className="truncate text-sm font-medium">{voiceName(voice)}</span>
-                      <span className="truncate text-sm text-muted-foreground">{voiceTraits(voice)}</span>
-                    </div>
-                    <Button disabled={!persistedProfile || !canManageTenant} onClick={() => setVoiceDialogOpen(true)} type="button" variant="outline">{t("agent:fields.voice.change")}</Button>
-                  </div>
+                  <Button disabled={!persistedProfile || !canManageTenant} onClick={() => setVoiceDialogOpen(true)} type="button" variant="outline">{t("agent:fields.voice.change")}</Button>
                 )}
               </ItemActions>
             </Item>
@@ -819,11 +811,9 @@ export function AgentBasicSettingsPage({
                 )}
               </ItemActions>
             </Item>
+            <BusinessHoursSection bookingMode={bookingMode} businessId={businessId} canManage={canManageTenant} />
           </Surface>
-          {!isLoadingConfiguration && hours.data && needsHoursForBooking({ ...hours.data, bookingMode }) ? <BookingWithoutHoursAlert /> : null}
         </section>
-
-        <BusinessHoursSection businessId={businessId} canManage={canManageTenant} />
 
         <section className="flex flex-col gap-3">
           <h2 className="font-heading text-sm leading-snug font-medium">

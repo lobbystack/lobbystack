@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -38,6 +38,8 @@ function Harness({ onSave, onClose = () => {} }: { onSave: (voice: ReceptionistV
   return <VoiceDialog current="marin" onOpenChange={(next) => { setOpen(next); if (!next) onClose(); }} onSave={onSave} open={open} preview={preview} saving={false} />;
 }
 const row = (voice: string) => screen.getByRole("button", { name: new RegExp(`^${voice}`, "i") });
+// The dialog moves focus in as it opens, so wait until the row really has it.
+const focus = async (element: HTMLElement) => { await act(() => new Promise((resolve) => setTimeout(resolve, 100))); act(() => element.focus()); await waitFor(() => expect(document.activeElement).toBe(element)); };
 const useButton = () => screen.getByRole("button", { name: "fields.voice.dialog.use" }) as HTMLButtonElement;
 
 describe("VoiceDialog", () => {
@@ -97,10 +99,10 @@ describe("VoiceDialog", () => {
 
   it("picks the focused row with Enter and with Space", async () => {
     render(<Harness onSave={async () => true} />);
-    row("Cedar").focus();
+    await focus(row("Cedar"));
     await userEvent.keyboard("{Enter}");
     expect(row("Cedar").getAttribute("aria-pressed")).toBe("true");
-    row("Ash").focus();
+    await focus(row("Ash"));
     await userEvent.keyboard(" ");
     expect(row("Ash").getAttribute("aria-pressed")).toBe("true");
     expect(row("Cedar").getAttribute("aria-pressed")).toBe("false");

@@ -15,9 +15,6 @@ vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock("@/components/business-hours-section", () => ({
   BusinessHoursSection: () => null,
-  BookingWithoutHoursAlert: () => null,
-  needsHoursForBooking: () => false,
-  useBusinessHours: () => ({ data: undefined }),
 }));
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
@@ -225,7 +222,7 @@ describe("AgentBasicSettingsPage voice", () => {
   it("shows the saved voice and saves the one picked in the voice dialog", async () => {
     const { client, patches } = renderWithVoice("cedar");
     const user = userEvent.setup();
-    expect((await screen.findAllByText("Cedar")).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/^Cedar/)).length).toBeGreaterThan(0);
     const change = await screen.findByRole("button", { name: "agent:fields.voice.change" });
     await waitFor(() => expect((change as HTMLButtonElement).disabled).toBe(false));
     await user.click(change);
@@ -238,7 +235,7 @@ describe("AgentBasicSettingsPage voice", () => {
 
   it("shows marin for a business that never picked a voice or has one calls no longer use", async () => {
     const { client } = renderWithVoice("nova");
-    expect((await screen.findAllByText("Marin")).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/^Marin/)).length).toBeGreaterThan(0);
     client.clear();
   });
 });
