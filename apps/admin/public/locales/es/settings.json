@@ -592,7 +592,7 @@
       "refresh": "Actualizar",
       "syncNeedsAttention": "Requiere atención",
       "discoveryFailed": "Su recepcionista no pudo acceder a su cuenta de Cal.com. Actualice o vuelva a conectar la cuenta.",
-      "howItWorks": "Cada cita se convierte en una reserva de este tipo de evento. Cal.com recibe el nombre y el número de teléfono de quien llama. Su recepcionista guarda su correo y envía la confirmación ella misma.",
+      "howItWorks": "Cada cita se convierte en una reserva de este tipo de evento. Cal.com recibe el nombre, el teléfono y un correo sustituto de quien llama, para no escribirle. Su correo real queda en las notas de la reserva para su equipo, y su recepcionista envía la confirmación.",
       "warningsTitle": "Revise este tipo de evento en Cal.com",
       "warnings": {
         "missingLengths": "Agregue {{lengths}} minutos a las duraciones del tipo de evento. Mientras tanto, Cal.com reserva esos servicios con la duración predeterminada del tipo de evento.",

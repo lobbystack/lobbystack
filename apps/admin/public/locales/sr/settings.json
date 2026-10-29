@@ -592,7 +592,7 @@
       "refresh": "Osveži",
       "syncNeedsAttention": "Potrebna je pažnja",
       "discoveryFailed": "Vaša recepcionerka ne može da pristupi vašem Cal.com nalogu. Osvežite ili ponovo povežite nalog.",
-      "howItWorks": "Svaki termin postaje rezervacija ovog tipa događaja. Cal.com dobija ime i broj telefona pozivaoca. Vaša recepcionerka zadržava njegovu e-poštu i sama šalje potvrdu.",
+      "howItWorks": "Svaki termin postaje rezervacija ovog tipa događaja. Cal.com dobija ime, broj telefona i zamensku adresu e-pošte pozivaoca, pa mu ne piše. Prava adresa e-pošte stoji u beleškama rezervacije za vaš tim, a vaša recepcionerka šalje potvrdu.",
       "warningsTitle": "Proverite ovaj tip događaja u Cal.com",
       "warnings": {
         "missingLengths": "Dodajte {{lengths}} minuta trajanjima tipa događaja. Do tada Cal.com zakazuje te usluge u podrazumevanom trajanju tipa događaja.",
