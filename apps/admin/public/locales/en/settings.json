@@ -570,10 +570,37 @@
       "syncNeedsAttention": "Needs attention",
       "discoveryFailed": "Calendar access or synchronization could not be verified. Retry synchronization or reconnect your Google account."
     },
+    "calcom": {
+      "sheetTitle": "Cal.com",
+      "sheetDescription": "Connect your Cal.com account and pick the event type your receptionist books.",
+      "connect": "Connect Cal.com",
+      "reconnect": "Reconnect",
+      "disconnect": "Disconnect",
+      "connectedSuccess": "Cal.com connected. Pick the event type to book.",
+      "connectFailed": "Cal.com couldn't be connected. Please try again.",
+      "disconnectedSuccess": "Cal.com disconnected.",
+      "eventTypeLabel": "Event type",
+      "selectEventType": "Choose an event type",
+      "eventTypeSaved": "Event type saved.",
+      "refresh": "Refresh",
+      "syncNeedsAttention": "Needs attention",
+      "discoveryFailed": "Your receptionist couldn't reach your Cal.com account. Refresh, or reconnect the account.",
+      "howItWorks": "Each appointment becomes a booking of this event type. Cal.com gets the caller's name and phone number. Your receptionist keeps their email and sends the confirmation itself.",
+      "warningsTitle": "Check this event type in Cal.com",
+      "warnings": {
+        "missingLengths": "Add {{lengths}} minutes to the event type's durations. Your services run that long, and Cal.com books only the lengths the event type offers.",
+        "smsReminders": "Turn off the SMS workflow on this event type, or Cal.com texts callers on top of your receptionist's texts.",
+        "narrowerAvailability": "Widen the event type's schedule on {{days}} to match your opening hours. Cal.com turns down bookings outside its schedule."
+      }
+    },
     "cards": {
       "google": {
         "title": "Google Calendar",
         "description": "Sync bookings with a Google Calendar."
+      },
+      "calcom": {
+        "title": "Cal.com",
+        "description": "Book appointments into one of your Cal.com event types."
       },
       "webhooks": {
         "title": "Webhooks",

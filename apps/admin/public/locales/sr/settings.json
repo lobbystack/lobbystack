@@ -577,10 +577,37 @@
       "syncNeedsAttention": "Potrebna je pažnja",
       "discoveryFailed": "Nije bilo moguće proveriti pristup kalendaru ili sinhronizaciju. Pokušajte ponovo da sinhronizujete ili ponovo povežite Google nalog."
     },
+    "calcom": {
+      "sheetTitle": "Cal.com",
+      "sheetDescription": "Povežite Cal.com nalog i izaberite tip događaja koji vaša recepcionerka zakazuje.",
+      "connect": "Poveži Cal.com",
+      "reconnect": "Ponovo poveži",
+      "disconnect": "Prekini vezu",
+      "connectedSuccess": "Cal.com je povezan. Izaberite tip događaja za zakazivanje.",
+      "connectFailed": "Povezivanje sa Cal.com nije uspelo. Pokušajte ponovo.",
+      "disconnectedSuccess": "Veza sa Cal.com je prekinuta.",
+      "eventTypeLabel": "Tip događaja",
+      "selectEventType": "Izaberite tip događaja",
+      "eventTypeSaved": "Tip događaja je sačuvan.",
+      "refresh": "Osveži",
+      "syncNeedsAttention": "Potrebna je pažnja",
+      "discoveryFailed": "Vaša recepcionerka ne može da pristupi vašem Cal.com nalogu. Osvežite ili ponovo povežite nalog.",
+      "howItWorks": "Svaki termin postaje rezervacija ovog tipa događaja. Cal.com dobija ime i broj telefona pozivaoca. Vaša recepcionerka zadržava njegovu e-poštu i sama šalje potvrdu.",
+      "warningsTitle": "Proverite ovaj tip događaja u Cal.com",
+      "warnings": {
+        "missingLengths": "Dodajte {{lengths}} minuta trajanjima tipa događaja. Vaše usluge toliko traju, a Cal.com zakazuje samo trajanja koja tip događaja nudi.",
+        "smsReminders": "Isključite SMS tok rada za ovaj tip događaja, inače Cal.com šalje poruke pozivaocima pored poruka vaše recepcionerke.",
+        "narrowerAvailability": "Proširite raspored tipa događaja za {{days}} da odgovara vašem radnom vremenu. Cal.com odbija rezervacije van svog rasporeda."
+      }
+    },
     "cards": {
       "google": {
         "title": "Google Calendar",
         "description": "Sinhronizujte zakazivanja sa Google kalendarom."
+      },
+      "calcom": {
+        "title": "Cal.com",
+        "description": "Zakazujte termine u jednom od vaših Cal.com tipova događaja."
       },
       "webhooks": {
         "title": "Webhooks",

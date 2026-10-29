@@ -577,10 +577,37 @@
       "syncNeedsAttention": "Requiere atención",
       "discoveryFailed": "No se pudo verificar el acceso al calendario ni su sincronización. Vuelva a intentar la sincronización o vuelva a conectar su cuenta de Google."
     },
+    "calcom": {
+      "sheetTitle": "Cal.com",
+      "sheetDescription": "Conecte su cuenta de Cal.com y elija el tipo de evento que reserva su recepcionista.",
+      "connect": "Conectar Cal.com",
+      "reconnect": "Volver a conectar",
+      "disconnect": "Desconectar",
+      "connectedSuccess": "Cal.com está conectado. Elija el tipo de evento que se reservará.",
+      "connectFailed": "No se pudo conectar Cal.com. Inténtelo de nuevo.",
+      "disconnectedSuccess": "Cal.com desconectado.",
+      "eventTypeLabel": "Tipo de evento",
+      "selectEventType": "Elija un tipo de evento",
+      "eventTypeSaved": "Tipo de evento guardado.",
+      "refresh": "Actualizar",
+      "syncNeedsAttention": "Requiere atención",
+      "discoveryFailed": "Su recepcionista no pudo acceder a su cuenta de Cal.com. Actualice o vuelva a conectar la cuenta.",
+      "howItWorks": "Cada cita se convierte en una reserva de este tipo de evento. Cal.com recibe el nombre y el número de teléfono de quien llama. Su recepcionista guarda su correo y envía la confirmación ella misma.",
+      "warningsTitle": "Revise este tipo de evento en Cal.com",
+      "warnings": {
+        "missingLengths": "Agregue {{lengths}} minutos a las duraciones del tipo de evento. Sus servicios duran eso, y Cal.com solo reserva las duraciones que ofrece el tipo de evento.",
+        "smsReminders": "Desactive el flujo de SMS de este tipo de evento, o Cal.com enviará mensajes a quienes llaman además de los de su recepcionista.",
+        "narrowerAvailability": "Amplíe el horario del tipo de evento el {{days}} para que coincida con su horario de atención. Cal.com rechaza las reservas fuera de su horario."
+      }
+    },
     "cards": {
       "google": {
         "title": "Google Calendar",
         "description": "Sincronice las reservas con un Google Calendar."
+      },
+      "calcom": {
+        "title": "Cal.com",
+        "description": "Reserve las citas en uno de sus tipos de evento de Cal.com."
       },
       "webhooks": {
         "title": "Webhooks",

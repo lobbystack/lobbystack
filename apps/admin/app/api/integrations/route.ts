@@ -1,18 +1,20 @@
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
-import { billingAccounts, phoneNumbers } from "@lobbystack/db";
-import { assignCalendarStaff, discoverCalendars, disconnectCalendar, listCalendarConnections, listCalendarStaff, refreshCalendar, resolveCalendarAccessToken, selectCalendar, type DomainContext } from "@lobbystack/domain";
-import { SecretBox } from "@lobbystack/providers";
+import { billingAccounts, businessHours, businesses, phoneNumbers, services } from "@lobbystack/db";
+import { assignCalendarStaff, calcomEventTypeWarnings, discoverCalendars, disconnectCalendar, listCalendarConnections, listCalendarStaff, refreshCalendar, resolveCalendarAccessToken, selectCalendar, type CalcomEventTypeWarning, type DomainContext } from "@lobbystack/domain";
+import { SecretBox, type CalcomEventType } from "@lobbystack/providers";
 import { jsonError } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
-import { calendarProvider } from "@/lib/calendar-providers";
+import { calcomCalendarProvider, calendarProvider, calendarProviderConfigured } from "@/lib/calendar-providers";
 import { retireCalendarWebhook } from "@/lib/calendar-webhooks";
 import { operatorRoute } from "@/lib/operator-request";
 
 export const dynamic = "force-dynamic";
 
-async function calendarDiscovery(domain: DomainContext, userId: string, businessId: string, connectionId: string, providerName: string) {
+type CalendarOption = { id: string; summary: string; primary: boolean; accessRole?: string; selected: boolean };
+
+async function calendarDiscovery(domain: DomainContext, userId: string, businessId: string, connectionId: string, providerName: string, listCalendars?: (input: { accessToken: string }) => Promise<Array<Omit<CalendarOption, "selected">>>) {
   const encryptionKey = process.env.ENCRYPTION_KEY;
   if (!encryptionKey) throw new Error("Calendar discovery is not configured.");
   const provider = calendarProvider(providerName);
@@ -21,8 +23,30 @@ async function calendarDiscovery(domain: DomainContext, userId: string, business
     userId, businessId, connectionId,
     decryptAccessToken: (value) => box.decrypt(value),
     resolveAccessToken: (id) => resolveCalendarAccessToken(createWorkerDomainContext(), { businessId, connectionId: id, decryptToken: (value) => box.decrypt(value), encryptToken: (value) => box.encrypt(value), refreshAccessToken: (input) => provider.refreshAccessToken(input) }),
-    listCalendars: (input) => provider.listCalendars(input),
+    listCalendars: listCalendars ?? ((input) => provider.listCalendars(input)),
   });
+}
+
+/**
+ * A Cal.com connection's event types, and what to warn about the selected one:
+ * service lengths it can't book, an SMS workflow, and hours its schedule leaves out.
+ */
+async function calcomDiscovery(domain: DomainContext, userId: string, businessId: string, connectionId: string, readBusiness: () => Promise<{ serviceDurations: number[]; hours: Array<{ dayOfWeek: number; openMinutes: number; closeMinutes: number }>; timezone: string }>) {
+  const provider = calcomCalendarProvider();
+  let eventTypes: CalcomEventType[] = [];
+  let accessToken = "";
+  const options = await calendarDiscovery(domain, userId, businessId, connectionId, "calcom", async (input) => {
+    accessToken = input.accessToken;
+    eventTypes = await provider.listEventTypes(input);
+    return eventTypes.map((eventType) => ({ id: eventType.id, summary: eventType.title, primary: false, accessRole: "owner" }));
+  });
+  const selected = eventTypes.find((eventType) => options.some((option) => option.selected && option.id === eventType.id));
+  let warnings: CalcomEventTypeWarning[] = [];
+  if (selected) {
+    const [business, schedule] = await Promise.all([readBusiness(), provider.getSchedule({ accessToken, scheduleId: selected.scheduleId }).catch(() => null)]);
+    warnings = calcomEventTypeWarnings({ eventType: selected, ...business, schedule });
+  }
+  return { options, warnings };
 }
 
 export const GET = operatorRoute(async ({ userId, businessId, domain, transaction }) => {
@@ -36,7 +60,7 @@ export const GET = operatorRoute(async ({ userId, businessId, domain, transactio
     listCalendarStaff(domain, { userId, businessId }),
   ]);
   const googleConnection = calendar.find((connection) => connection.provider === "google");
-  let calendarOptions: Array<{ id: string; summary: string; primary: boolean; accessRole?: string; selected: boolean }> = [];
+  let calendarOptions: CalendarOption[] = [];
   let discoveryError: string | null = null;
   if (googleConnection) {
     try {
@@ -45,16 +69,31 @@ export const GET = operatorRoute(async ({ userId, businessId, domain, transactio
       discoveryError = error instanceof Error ? error.message : "Calendar discovery failed.";
     }
   }
+  const calcomConnection = calendar.find((connection) => connection.provider === "calcom");
+  const calcom = { configured: calendarProviderConfigured("calcom"), options: [] as CalendarOption[], discoveryError: null as string | null, warnings: [] as CalcomEventTypeWarning[] };
+  if (calcomConnection) {
+    try {
+      Object.assign(calcom, await calcomDiscovery(domain, userId, businessId, calcomConnection.id, () => transaction(async (tx) => {
+        const [business] = await tx.select({ timezone: businesses.timezone }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
+        const durations = await tx.select({ minutes: services.durationMinutes }).from(services).where(and(eq(services.businessId, businessId), eq(services.active, true)));
+        const hours = await tx.select({ dayOfWeek: businessHours.dayOfWeek, openMinutes: businessHours.openMinutes, closeMinutes: businessHours.closeMinutes }).from(businessHours).where(and(eq(businessHours.businessId, businessId), isNull(businessHours.staffId)));
+        return { serviceDurations: durations.map((row) => row.minutes), hours, timezone: business?.timezone ?? "UTC" };
+      })));
+    } catch (error) {
+      calcom.discoveryError = error instanceof Error ? error.message : "Calendar discovery failed.";
+    }
+  }
   return NextResponse.json({
     calendarConnections: calendar.map((connection) => ({
       ...connection,
-      selectedCalendarSummary: calendarOptions.find((option) => option.id === connection.selectedCalendarId)?.summary ?? null,
+      selectedCalendarSummary: (connection.provider === "calcom" ? calcom.options : calendarOptions).find((option) => option.id === connection.selectedCalendarId)?.summary ?? null,
     })),
     staff: staffRows,
     calendarOptions,
     discoveryError,
+    calcom,
     integrations: [
-      ...(calendar[0] ? [{ name: calendar[0].provider === "google" ? "Google Calendar" : calendar[0].provider, account: calendar[0].externalAccountId, status: calendar[0].status, updatedAt: calendar[0].updatedAt, connectionId: calendar[0].id, staffId: calendar[0].staffId, selectedCalendarId: calendar[0].selectedCalendarId, lastSyncError: calendar[0].lastSyncError, calendarOptions, discoveryError }] : [{ name: "Google Calendar", account: "Not connected", status: "disconnected", updatedAt: null, connectionId: null, staffId: null, selectedCalendarId: null, lastSyncError: null, calendarOptions: [], discoveryError: null }]),
+      ...(calendar[0] ? [{ name: calendar[0].provider === "google" ? "Google Calendar" : calendar[0].provider === "calcom" ? "Cal.com" : calendar[0].provider, account: calendar[0].externalAccountId, status: calendar[0].status, updatedAt: calendar[0].updatedAt, connectionId: calendar[0].id, staffId: calendar[0].staffId, selectedCalendarId: calendar[0].selectedCalendarId, lastSyncError: calendar[0].lastSyncError, calendarOptions: calendar[0].provider === "calcom" ? calcom.options : calendarOptions, discoveryError: calendar[0].provider === "calcom" ? calcom.discoveryError : discoveryError }] : [{ name: "Google Calendar", account: "Not connected", status: "disconnected", updatedAt: null, connectionId: null, staffId: null, selectedCalendarId: null, lastSyncError: null, calendarOptions: [], discoveryError: null }]),
       { name: "Twilio", account: `${Number(phones[0]?.count ?? 0)} active phone number${Number(phones[0]?.count ?? 0) === 1 ? "" : "s"}`, status: Number(phones[0]?.count ?? 0) > 0 ? "connected" : "disconnected", updatedAt: null },
       { name: "Polar billing", account: billing[0]?.plan ?? "Not configured", status: billing[0]?.state ?? "disconnected", updatedAt: billing[0]?.updatedAt ?? null },
     ],

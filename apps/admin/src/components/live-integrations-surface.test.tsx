@@ -65,6 +65,31 @@ describe("original integration permissions and setup navigation", () => {
     fireEvent.click(await screen.findByRole("button", { name: "integrations.google.refreshCalendars" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/api/integrations?businessId=business"), expect.objectContaining({ method: "POST" })));
   });
+  it("hides the Cal.com card where Cal.com isn't set up and nothing is connected", async () => {
+    setup("business_admin", { calcom: { configured: false, options: [], discoveryError: null, warnings: [] } });
+    await screen.findByText("integrations.cards.google.title");
+    expect(screen.queryByText("integrations.cards.calcom.title")).toBeNull();
+  });
+  it("lets an admin pick a Cal.com event type and shows what to fix in Cal.com", async () => {
+    const fetchMock = setup("business_admin", {
+      calendarConnections: [{ id: "calcom-connection", provider: "calcom", externalAccountId: "1234", status: "connected", staffId: null, selectedCalendarId: "42", lastSyncError: null }],
+      calcom: { configured: true, options: [{ id: "42", summary: "Haircut", primary: false, accessRole: "owner", selected: true }, { id: "43", summary: "Consultation", primary: false, accessRole: "owner", selected: false }], discoveryError: null, warnings: [{ code: "missing_lengths", lengths: [45] }, { code: "sms_reminders" }, { code: "narrower_availability", days: [6] }] },
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "integrations.actions.connected" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog.textContent).toContain("integrations.calcom.howItWorks");
+    for (const key of ["missingLengths", "smsReminders", "narrowerAvailability"]) expect(dialog.textContent).toContain(`integrations.calcom.warnings.${key}`);
+    fireEvent.click(screen.getByRole("button", { name: "integrations.calcom.disconnect" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("connectionId=calcom-connection"), expect.objectContaining({ method: "DELETE" })));
+    await waitFor(() => telemetryRef.current!.expectEvent("web.integration.calendar_disconnect_completed", { businessId: "business", provider: "calcom", scope: "business" }));
+  });
+  it("gives Cal.com callback feedback of its own", async () => {
+    route.search = new URLSearchParams("calendar=calcom&status=success");
+    setup("business_admin", { calcom: { configured: true, options: [], discoveryError: null, warnings: [] } });
+    await waitFor(() => expect(notify.success).toHaveBeenCalledWith("integrations.calcom.connectedSuccess"));
+    expect(notify.success).not.toHaveBeenCalledWith("integrations.google.connectedSuccess");
+    telemetryRef.current!.expectEvent("web.integration.calendar_connect_completed", { businessId: "business", provider: "calcom" });
+  });
   it("does not request administrator calendar connections for viewers", async () => {
     const fetchMock = setup("viewer");
     // Only the Instagram card asks, and only whether Instagram is set up.
