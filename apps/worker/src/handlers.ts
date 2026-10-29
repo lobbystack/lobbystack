@@ -25,7 +25,7 @@ import type { Telephony } from "@lobbystack/providers/telephony/registry";
 import type OpenAI from "openai";
 import { extractDocumentTextInThread, type OcrRecorder } from "./documentExtraction";
 import { isLivePrototypeEnabled, type LiveRecoveryOutcome } from "./liveCalls";
-import { deleteReleasedCalendarEvent, reconcileBusinessCalendar, syncAppointmentCalendar, type CalendarProviders } from "./calendarJobs";
+import { deleteReleasedCalendarEvent, reconcileBusinessCalendar, retireCalendarWebhook, syncAppointmentCalendar, type CalendarProviders } from "./calendarJobs";
 import { refreshInstagramToken, replyToInstagramMessage, sendInstagramMessage, type InstagramOperations } from "./instagramJobs";
 import { getMeter } from "@lobbystack/telemetry/node";
 import { bucketOutboxBacklog, getPostHogDistinctIdForBusinessSystem, redactTelemetryProperties, type TelemetryProperties } from "@lobbystack/telemetry";
@@ -509,7 +509,10 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
     case "calendar.syncAppointment":
       return await syncAppointmentCalendar(dependencies, { businessId: businessIdOrThrow(job), appointmentId: String(job.payload.appointmentId ?? "") });
     case "calendar.reconcileBusiness":
-      return await reconcileBusinessCalendar(dependencies, businessIdOrThrow(job));
+      // A webhook delivery names the one connection whose bookings changed; every other trigger syncs the whole business.
+      return await reconcileBusinessCalendar(dependencies, businessIdOrThrow(job), job.payload.scope === "connection" && typeof job.payload.connectionId === "string" ? job.payload.connectionId : undefined);
+    case "calendar.retireWebhook":
+      return await retireCalendarWebhook(dependencies, { businessId: businessIdOrThrow(job), connectionId: String(job.payload.connectionId ?? "") });
     case "calendar.deleteEvent":
       return await deleteReleasedCalendarEvent(dependencies, { businessId: businessIdOrThrow(job), appointmentId: String(job.payload.appointmentId ?? ""), connectionId: String(job.payload.connectionId ?? ""), calendarId: String(job.payload.calendarId ?? ""), eventId: String(job.payload.eventId ?? "") });
     case "email.send":

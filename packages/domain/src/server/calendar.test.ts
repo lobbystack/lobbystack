@@ -83,13 +83,33 @@ function recordWrites(reads: unknown[][]) {
 
 it("clears upcoming bookings' event ids only when the selected calendar changes, and deletes their old events", async () => {
   const select = () => selectCalendar(context, { userId: "user", businessId: "business", connectionId: "connection", calendarId: "new@group.calendar.google.com" });
-  let written = recordWrites([[{ staffId: "staff", selectedCalendarId: "old@group.calendar.google.com" }], [{ id: "appointment", eventId: "event-1", revision: 4 }]]);
+  const writer = (selectedCalendarId: string) => [{ id: "connection", provider: "google", staffId: "staff", selectedCalendarId }];
+  let written = recordWrites([[{ staffId: "staff", selectedCalendarId: "old@group.calendar.google.com" }], writer("old@group.calendar.google.com"), writer("new@group.calendar.google.com"), [{ id: "appointment", eventId: "event-1", revision: 4 }]]);
   await select();
   expect(written(appointments)).toEqual([expect.objectContaining({ calendarExternalId: null, calendarSyncState: "not_required", revision: expect.anything() })]);
   expect(mocks.enqueue).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ topic: "calendar.deleteEvent", payload: { appointmentId: "appointment", connectionId: "connection", calendarId: "old@group.calendar.google.com", eventId: "event-1" } }));
   mocks.enqueue.mockClear();
   written = recordWrites([[{ staffId: "staff", selectedCalendarId: "new@group.calendar.google.com" }]]);
   await select();
+  expect(written(appointments)).toEqual([]);
+  expect(mocks.enqueue).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ topic: "calendar.deleteEvent" }));
+});
+
+it("moves business-wide bookings from Google to Cal.com once a Cal.com event type is picked", async () => {
+  const google = { id: "a-google", provider: "google", staffId: null, selectedCalendarId: "team@group.calendar.google.com" };
+  const calcom = { id: "b-calcom", provider: "calcom", staffId: null, selectedCalendarId: null };
+  const pick = (calendarId: string) => selectCalendar(context, { userId: "user", businessId: "business", connectionId: "b-calcom", calendarId });
+  let written = recordWrites([[{ staffId: null, selectedCalendarId: null }], [google, calcom], [google, { ...calcom, selectedCalendarId: "42" }], [{ id: "appointment", eventId: "google-event", revision: 2 }]]);
+  await pick("42");
+  // Google held them, so their events leave Google's calendar, and the backfill books them in Cal.com.
+  expect(written(appointments)).toEqual([expect.objectContaining({ calendarExternalId: null, calendarSyncState: "not_required" })]);
+  expect(mocks.enqueue).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ topic: "calendar.deleteEvent", payload: { appointmentId: "appointment", connectionId: "a-google", calendarId: "team@group.calendar.google.com", eventId: "google-event" } }));
+
+  // Picking Google's calendar while Cal.com writes leaves the bookings where they are.
+  mocks.enqueue.mockClear();
+  const writing = { ...calcom, selectedCalendarId: "42" };
+  written = recordWrites([[{ staffId: null, selectedCalendarId: "team@group.calendar.google.com" }], [google, writing], [{ ...google, selectedCalendarId: "other@group.calendar.google.com" }, writing]]);
+  await selectCalendar(context, { userId: "user", businessId: "business", connectionId: "a-google", calendarId: "other@group.calendar.google.com" });
   expect(written(appointments)).toEqual([]);
   expect(mocks.enqueue).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ topic: "calendar.deleteEvent" }));
 });

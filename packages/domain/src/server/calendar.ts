@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto";
-import { and, asc, eq, gt, inArray, isNull, ne, notExists, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, ne, notExists, sql, type SQL } from "drizzle-orm";
 import { assertCertificationCalendar } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import { appointments, auditLogs, calendarBusyBlocks, calendarConnections, enqueueOutbox, staff, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
+import { pickCalendarWriter } from "../calendarWriter";
 import type { DomainContext } from "./context";
 import { queueOperatorAlertInTransaction } from "./notifications";
 import { recordProductEventBestEffort } from "./productEvents";
@@ -72,7 +73,7 @@ export async function connectCalendar(
     // Reconnecting with another Google account inserts a new row; retire the old business-wide one
     // so its dead token cannot block every booking.
     if (!connection.staffId) {
-      const replaced = await tx.update(calendarConnections).set({ status: "disconnected", encryptedAccessToken: null, encryptedRefreshToken: null, externalWebhookId: null, encryptedWebhookSecret: null, updatedAt: new Date() }).where(and(eq(calendarConnections.businessId, input.businessId), eq(calendarConnections.provider, input.provider), isNull(calendarConnections.staffId), ne(calendarConnections.id, connection.id), ne(calendarConnections.status, "disconnected"))).returning({ id: calendarConnections.id });
+      const replaced = await retireConnections(tx, input.businessId, and(eq(calendarConnections.provider, input.provider), isNull(calendarConnections.staffId), ne(calendarConnections.id, connection.id)));
       if (replaced.length) {
         await tx.insert(auditLogs).values(replaced.map(({ id }) => ({ businessId: input.businessId, actorUserId: input.userId, eventType: "calendar_connection.disconnected", entityType: "calendar_connection", entityId: id, payload: { provider: input.provider, replacedBy: connection.id } })));
         await tx.delete(calendarBusyBlocks).where(and(eq(calendarBusyBlocks.businessId, input.businessId), inArray(calendarBusyBlocks.connectionId, replaced.map(({ id }) => id))));
@@ -215,9 +216,11 @@ export async function markCalendarConnectionSync(
  * when the business has no such connection or it was already disconnected.
  */
 export async function disconnectCalendarInTransaction(tx: DatabaseTransaction, input: { businessId: string; connectionId: string }): Promise<{ provider: string } | null> {
-  const [disconnected] = await tx.update(calendarConnections).set({ status: "disconnected", encryptedAccessToken: null, encryptedRefreshToken: null, externalWebhookId: null, encryptedWebhookSecret: null, updatedAt: new Date() }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId), ne(calendarConnections.status, "disconnected"))).returning({ provider: calendarConnections.provider, staffId: calendarConnections.staffId });
-  // Its bookings move to the connection that now owns them. The tokens are gone, so the calendar keeps its events.
-  if (disconnected) await releaseCalendarAppointments(tx, { businessId: input.businessId, owner: disconnected.staffId });
+  const [current] = await tx.select({ staffId: calendarConnections.staffId }).from(calendarConnections).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId), ne(calendarConnections.status, "disconnected"))).limit(1).for("update");
+  const writer = current ? await scopeWriter(tx, input.businessId, current.staffId) : undefined;
+  const [disconnected] = await retireConnections(tx, input.businessId, eq(calendarConnections.id, input.connectionId));
+  // The bookings it held move to the connection that writes them now. The tokens are gone, so the calendar keeps its events.
+  if (disconnected && writer?.id === input.connectionId) await releaseCalendarAppointments(tx, { businessId: input.businessId, owner: disconnected.staffId });
   await tx.delete(calendarBusyBlocks).where(and(eq(calendarBusyBlocks.connectionId, input.connectionId), eq(calendarBusyBlocks.businessId, input.businessId)));
   return disconnected ? { provider: disconnected.provider } : null;
 }
@@ -303,8 +306,12 @@ export async function selectCalendarInTransaction(tx: DatabaseTransaction, input
   // A disconnected connection stays disconnected.
   const [current] = await tx.select({ staffId: calendarConnections.staffId, selectedCalendarId: calendarConnections.selectedCalendarId }).from(calendarConnections).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId), ne(calendarConnections.status, "disconnected"))).limit(1).for("update");
   if (!current) return false;
+  const before = await scopeWriter(tx, input.businessId, current.staffId);
   await tx.update(calendarConnections).set({ selectedCalendarId: input.calendarId.trim(), status: "syncing", lastSyncedAt: null, lastSyncError: null, updatedAt: new Date() }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId)));
-  if (current.selectedCalendarId !== input.calendarId.trim()) await releaseCalendarAppointments(tx, { businessId: input.businessId, owner: current.staffId, calendar: current.selectedCalendarId ? { connectionId: input.connectionId, calendarId: current.selectedCalendarId } : undefined });
+  const after = await scopeWriter(tx, input.businessId, current.staffId);
+  // Bookings leave the calendar that held them only when the writer or its calendar changes. Picking a calendar
+  // can make this connection the writer, as when a Cal.com event type takes over from Google.
+  if (before?.id !== after?.id || before?.selectedCalendarId !== after?.selectedCalendarId) await releaseCalendarAppointments(tx, { businessId: input.businessId, owner: current.staffId, calendar: before?.selectedCalendarId ? { connectionId: before.id, calendarId: before.selectedCalendarId } : undefined });
   await enqueueOutbox(tx, { topic: "calendar.reconcileBusiness", businessId: input.businessId, aggregateType: "calendar_connection", aggregateId: input.connectionId, dedupeKey: `calendar:${input.connectionId}:select:${Date.now()}`, payload: { connectionId: input.connectionId } });
   return true;
 }
@@ -392,14 +399,61 @@ export async function getCalendarWebhook(context: DomainContext, input: { busine
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => (await tx.select({ provider: calendarConnections.provider, externalWebhookId: calendarConnections.externalWebhookId, encryptedWebhookSecret: calendarConnections.encryptedWebhookSecret }).from(calendarConnections).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId), ne(calendarConnections.status, "disconnected"))).limit(1))[0] ?? null);
 }
 
-/** Stores the webhook the worker registered. Returns false when the connection was disconnected meanwhile. */
-export async function saveCalendarWebhook(context: DomainContext, input: { businessId: string; connectionId: string; externalWebhookId: string; encryptedWebhookSecret: string }): Promise<boolean> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => (await tx.update(calendarConnections).set({ externalWebhookId: input.externalWebhookId, encryptedWebhookSecret: input.encryptedWebhookSecret, updatedAt: new Date() }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId), ne(calendarConnections.status, "disconnected"))).returning({ id: calendarConnections.id })).length === 1);
+/**
+ * Registers the connection's webhook once. The connection row stays locked
+ * while `register` runs, so a concurrent sync waits and then finds the
+ * webhook, and a disconnect waits and then retires it.
+ */
+export async function registerCalendarWebhookOnce(context: DomainContext, input: { businessId: string; connectionId: string; register: () => Promise<{ externalWebhookId: string; encryptedWebhookSecret: string }> }): Promise<"registered" | "exists" | "disconnected"> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const [connection] = await tx.select({ status: calendarConnections.status, externalWebhookId: calendarConnections.externalWebhookId }).from(calendarConnections).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId))).limit(1).for("update");
+    if (!connection || connection.status === "disconnected") return "disconnected";
+    if (connection.externalWebhookId) return "exists";
+    const webhook = await input.register();
+    await tx.update(calendarConnections).set({ externalWebhookId: webhook.externalWebhookId, encryptedWebhookSecret: webhook.encryptedWebhookSecret, updatedAt: new Date() }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId)));
+    return "registered";
+  });
 }
 
-/** Syncs the business's calendars after a verified delivery. `deliveryKey` keeps a redelivery from queuing twice. */
+/** A disconnected connection's webhook and the tokens kept to remove it, or null when there's nothing left to remove. */
+export async function getRetiredCalendarWebhook(context: DomainContext, input: { businessId: string; connectionId: string }): Promise<{ provider: string; externalWebhookId: string; encryptedAccessToken: string | null; encryptedRefreshToken: string | null; tokenExpiresAt: Date | null } | null> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const [row] = await tx.select({ provider: calendarConnections.provider, externalWebhookId: calendarConnections.externalWebhookId, encryptedAccessToken: calendarConnections.encryptedAccessToken, encryptedRefreshToken: calendarConnections.encryptedRefreshToken, tokenExpiresAt: calendarConnections.tokenExpiresAt }).from(calendarConnections).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId), eq(calendarConnections.status, "disconnected"))).limit(1);
+    return row?.externalWebhookId ? { ...row, externalWebhookId: row.externalWebhookId } : null;
+  });
+}
+
+/** Forgets a disconnected connection's tokens and webhook once the webhook is gone. A reconnected connection keeps them. */
+export async function forgetRetiredCalendarWebhook(context: DomainContext, input: { businessId: string; connectionId: string }): Promise<void> {
+  await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    await tx.update(calendarConnections).set({ encryptedAccessToken: null, encryptedRefreshToken: null, externalWebhookId: null, encryptedWebhookSecret: null, updatedAt: new Date() }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId), eq(calendarConnections.status, "disconnected")));
+  });
+}
+
+/** Syncs the connection after a verified delivery. `deliveryKey` keeps a redelivery from queuing twice. */
 export async function queueCalendarWebhookSync(context: DomainContext, input: { businessId: string; connectionId: string; deliveryKey: string }): Promise<void> {
   await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    await enqueueOutbox(tx, { topic: "calendar.reconcileBusiness", businessId: input.businessId, aggregateType: "calendar_connection", aggregateId: input.connectionId, dedupeKey: `calendar:${input.connectionId}:webhook:${input.deliveryKey}`, payload: { connectionId: input.connectionId } });
+    await enqueueOutbox(tx, { topic: "calendar.reconcileBusiness", businessId: input.businessId, aggregateType: "calendar_connection", aggregateId: input.connectionId, dedupeKey: `calendar:${input.connectionId}:webhook:${input.deliveryKey}`, payload: { connectionId: input.connectionId, scope: "connection" } });
   });
+}
+
+/**
+ * Disconnects the connections `where` matches in the business and forgets their
+ * tokens. One with a Cal.com webhook keeps its tokens until a job removes the
+ * webhook from Cal.com, which needs them; the job runs only once this commits.
+ */
+async function retireConnections(tx: DatabaseTransaction, businessId: string, where: SQL | undefined): Promise<Array<{ id: string; provider: string; staffId: string | null }>> {
+  const rows = await tx.update(calendarConnections).set({ status: "disconnected", encryptedWebhookSecret: null, updatedAt: new Date() }).where(and(eq(calendarConnections.businessId, businessId), ne(calendarConnections.status, "disconnected"), where)).returning({ id: calendarConnections.id, provider: calendarConnections.provider, staffId: calendarConnections.staffId, externalWebhookId: calendarConnections.externalWebhookId });
+  const forget = rows.filter((row) => !row.externalWebhookId).map((row) => row.id);
+  if (forget.length) await tx.update(calendarConnections).set({ encryptedAccessToken: null, encryptedRefreshToken: null }).where(and(eq(calendarConnections.businessId, businessId), inArray(calendarConnections.id, forget)));
+  for (const row of rows) {
+    if (row.externalWebhookId) await enqueueOutbox(tx, { topic: "calendar.retireWebhook", businessId, aggregateType: "calendar_connection", aggregateId: row.id, dedupeKey: `calendar:${row.id}:retire-webhook:${row.externalWebhookId}:${Date.now()}`, payload: { connectionId: row.id } });
+  }
+  return rows.map(({ id, provider, staffId }) => ({ id, provider, staffId }));
+}
+
+/** The connection that writes the bookings of a scope: a staff member's own connections, or the business's with null. */
+async function scopeWriter(tx: DatabaseTransaction, businessId: string, staffId: string | null) {
+  const rows = await tx.select({ id: calendarConnections.id, provider: calendarConnections.provider, staffId: calendarConnections.staffId, selectedCalendarId: calendarConnections.selectedCalendarId }).from(calendarConnections).where(and(eq(calendarConnections.businessId, businessId), ne(calendarConnections.status, "disconnected"), staffId ? eq(calendarConnections.staffId, staffId) : isNull(calendarConnections.staffId)));
+  return pickCalendarWriter(rows);
 }

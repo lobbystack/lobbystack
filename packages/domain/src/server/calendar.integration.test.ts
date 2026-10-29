@@ -3,7 +3,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 import { appointments, auditLogs, businessHours, businessMemberships, businesses, calendarBusyBlocks, calendarConnections, contacts, createDatabaseClient, outboxMessages, services, staff, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { checkAvailability, rescheduleAppointmentInTransaction } from "./booking";
-import { assignCalendarStaff, connectCalendar, disconnectCalendar, disconnectCalendarInTransaction, getCalendarWebhook, queueUnsyncedAppointmentSyncs, resolveBusinessByCalendarWebhook, saveCalendarWebhook, selectCalendar } from "./calendar";
+import { assignCalendarStaff, connectCalendar, disconnectCalendar, disconnectCalendarInTransaction, getCalendarWebhook, getRetiredCalendarWebhook, queueUnsyncedAppointmentSyncs, registerCalendarWebhookOnce, resolveBusinessByCalendarWebhook, selectCalendar } from "./calendar";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -148,14 +148,20 @@ describe.skipIf(!testUrl)("calendar backfill against dedicated PostgreSQL roles"
       await asWorker(tx, async (db) => {
         expect(await resolveBusinessByCalendarWebhook({ db }, calcom!.id)).toBe(businessId);
         expect(await resolveBusinessByCalendarWebhook({ db }, google!.id)).toBeNull();
-        expect(await saveCalendarWebhook({ db }, { businessId, connectionId: calcom!.id, externalWebhookId: "11", encryptedWebhookSecret: "enc:secret" })).toBe(true);
+        const register = async () => ({ externalWebhookId: "11", encryptedWebhookSecret: "enc:secret" });
+        expect(await registerCalendarWebhookOnce({ db }, { businessId, connectionId: calcom!.id, register })).toBe("registered");
+        // A second sync finds the webhook and registers nothing.
+        expect(await registerCalendarWebhookOnce({ db }, { businessId, connectionId: calcom!.id, register: async () => { throw new Error("registered twice"); } })).toBe("exists");
         expect(await getCalendarWebhook({ db }, { businessId, connectionId: calcom!.id })).toEqual({ provider: "calcom", externalWebhookId: "11", encryptedWebhookSecret: "enc:secret" });
         await withBusinessTransaction(db, { businessId, actorType: "worker" }, (workerTx) => disconnectCalendarInTransaction(workerTx, { businessId, connectionId: calcom!.id }));
         expect(await resolveBusinessByCalendarWebhook({ db }, calcom!.id)).toBeNull();
         expect(await getCalendarWebhook({ db }, { businessId, connectionId: calcom!.id })).toBeNull();
+        // The disconnect keeps the tokens for the job that removes the webhook from Cal.com.
+        expect(await getRetiredCalendarWebhook({ db }, { businessId, connectionId: calcom!.id })).toMatchObject({ externalWebhookId: "11", encryptedAccessToken: "enc:access" });
       });
       const [row] = await tx.select().from(calendarConnections).where(eq(calendarConnections.id, calcom!.id));
-      expect(row).toMatchObject({ externalWebhookId: null, encryptedWebhookSecret: null, encryptedAccessToken: null });
+      expect(row).toMatchObject({ status: "disconnected", externalWebhookId: "11", encryptedWebhookSecret: null });
+      expect((await tx.select().from(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), eq(outboxMessages.topic, "calendar.retireWebhook")))).map((message) => message.aggregateId)).toEqual([calcom!.id]);
     });
   });
 

@@ -232,6 +232,8 @@ export const queueForJobType = {
   "calendar.syncAppointment": "default",
   "calendar.reconcileBusiness": "default",
   "calendar.deleteEvent": "default",
+  // Removes a disconnected Cal.com connection's webhook from Cal.com, then forgets the tokens it kept for that.
+  "calendar.retireWebhook": "default",
   "knowledge.extractDocument": "bulk",
   "knowledge.crawlWebsite": "bulk",
   "knowledge.reembedBusiness": "bulk",

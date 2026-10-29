@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { and, asc, eq, isNull, ne, or, sql } from "drizzle-orm";
 import { appointments, calendarConnections, contacts, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { CALENDAR_SYNC_HORIZON_MS, markCalendarConnectionSync, queueUnsyncedAppointmentSyncs, recordProductEvent, resolveCalendarAccessToken, saveCalendarWebhook, updateAppointmentSyncState, updateAppointmentSyncStateInTransaction, upsertBusyBlocks, type DomainContext } from "@lobbystack/domain";
+import { CALENDAR_SYNC_HORIZON_MS, forgetRetiredCalendarWebhook, getRetiredCalendarWebhook, markCalendarConnectionSync, pickCalendarWriter, queueUnsyncedAppointmentSyncs, recordProductEvent, registerCalendarWebhookOnce, resolveCalendarAccessToken, updateAppointmentSyncState, updateAppointmentSyncStateInTransaction, upsertBusyBlocks, type DomainContext } from "@lobbystack/domain";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 import { redactOtelExceptionText } from "@lobbystack/telemetry/node";
 import type { CalendarProvider } from "@lobbystack/providers/calendar";
@@ -10,6 +10,7 @@ import type { JobResult } from "./handlers";
 export type CalendarOperations = Pick<CalendarProvider, "getBusyBlocks" | "upsertEvent" | "deleteEvent" | "refreshAccessToken"> & {
   /** A provider that pushes changes, as Cal.com does, registers a webhook for each connection. */
   registerWebhook?: (input: { accessToken: string; subscriberUrl: string; secret: string }) => Promise<{ webhookId: string }>;
+  deleteWebhook?: (input: { accessToken: string; webhookId: string }) => Promise<void>;
 };
 /** The configured providers by name; a connection whose provider is missing here is left alone. */
 export type CalendarProviders = Partial<Record<string, CalendarOperations>>;
@@ -35,18 +36,19 @@ export async function syncAppointmentCalendar(dependencies: Dependencies, input:
   const { businessId, appointmentId } = input;
   if (!dependencies.calendars || !appointmentId) return { status: "skipped", entityId: appointmentId };
   // FOR SHARE makes a calendar switch wait for an event write already running, so its release comes after it.
-  const load = async (tx: DatabaseTransaction) => (await tx.select({
+  // Every connection covering the staff member is read and locked; pickCalendarWriter chooses the one that gets the appointment.
+  const load = async (tx: DatabaseTransaction) => pickCalendarWriter(await tx.select({
     id: appointments.id, status: appointments.status, startsAt: appointments.startsAt, endsAt: appointments.endsAt,
     timezone: appointments.timezone, externalEventId: appointments.calendarExternalId, serviceName: services.name,
     contactName: contacts.name, contactPhone: contacts.phone, contactEmail: contacts.email,
     connectionId: calendarConnections.id, calendarId: calendarConnections.selectedCalendarId, connectionStatus: calendarConnections.status,
-    provider: calendarConnections.provider,
+    provider: calendarConnections.provider, staffId: calendarConnections.staffId,
   }).from(appointments)
     .innerJoin(services, and(eq(services.id, appointments.serviceId), eq(services.businessId, businessId)))
     .leftJoin(contacts, and(eq(contacts.id, appointments.contactId), eq(contacts.businessId, businessId)))
     .innerJoin(calendarConnections, and(eq(calendarConnections.businessId, businessId), ne(calendarConnections.status, "disconnected"), or(isNull(calendarConnections.staffId), eq(calendarConnections.staffId, appointments.staffId))))
     .where(and(eq(appointments.id, appointmentId), eq(appointments.businessId, businessId)))
-    .orderBy(sql`(${calendarConnections.staffId} is not null) desc`, asc(calendarConnections.id)).limit(1).for("share", { of: calendarConnections }))[0];
+    .orderBy(asc(calendarConnections.id)).for("share", { of: calendarConnections }), (row) => ({ id: row.connectionId, provider: row.provider, staffId: row.staffId, selectedCalendarId: row.calendarId }));
   const initial = await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, load);
   if (!initial?.calendarId) {
     await updateAppointmentSyncState(dependencies.domain, { businessId, appointmentId, state: "not_required" });
@@ -120,9 +122,10 @@ export async function deleteReleasedCalendarEvent(dependencies: Dependencies, in
   return { status: "completed", entityId: appointmentId };
 }
 
-export async function reconcileBusinessCalendar(dependencies: Dependencies, businessId: string): Promise<JobResult> {
+/** Syncs the business's live connections, or only `connectionId`, as a webhook delivery asks. */
+export async function reconcileBusinessCalendar(dependencies: Dependencies, businessId: string, connectionId?: string): Promise<JobResult> {
   if (!dependencies.calendars) return { status: "skipped", entityId: businessId };
-  const connections = await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => tx.select({ id: calendarConnections.id, provider: calendarConnections.provider, calendarId: calendarConnections.selectedCalendarId, staffId: calendarConnections.staffId, status: calendarConnections.status, webhookId: calendarConnections.externalWebhookId }).from(calendarConnections).where(and(eq(calendarConnections.businessId, businessId), ne(calendarConnections.status, "disconnected"))));
+  const connections = await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => tx.select({ id: calendarConnections.id, provider: calendarConnections.provider, calendarId: calendarConnections.selectedCalendarId, staffId: calendarConnections.staffId, status: calendarConnections.status, webhookId: calendarConnections.externalWebhookId }).from(calendarConnections).where(and(eq(calendarConnections.businessId, businessId), ne(calendarConnections.status, "disconnected"), connectionId ? eq(calendarConnections.id, connectionId) : undefined)));
   let synced = 0;
   let failures = 0;
   for (const connection of connections) {
@@ -133,7 +136,7 @@ export async function reconcileBusinessCalendar(dependencies: Dependencies, busi
     try {
       const token = await accessToken(dependencies, businessId, connection.id, provider, connection.status === "error");
       // A push provider's busy time is only as fresh as its webhook, so the connection fails until one is registered.
-      if (provider.registerWebhook && !connection.webhookId) await registerWebhook(dependencies, (request) => provider.registerWebhook!(request), { businessId, connectionId: connection.id, accessToken: token });
+      if (provider.registerWebhook && !connection.webhookId) await registerWebhook(dependencies, provider, { businessId, connectionId: connection.id, accessToken: token });
       const startsAt = new Date();
       const endsAt = new Date(startsAt.getTime() + CALENDAR_SYNC_HORIZON_MS);
       const blocks = await provider.getBusyBlocks({ accessToken: token, calendarId: connection.calendarId, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() });
@@ -151,10 +154,41 @@ export async function reconcileBusinessCalendar(dependencies: Dependencies, busi
   return { status: synced ? "completed" : "skipped", entityId: `${businessId}:${synced}` };
 }
 
-async function registerWebhook(dependencies: Dependencies, register: NonNullable<CalendarOperations["registerWebhook"]>, input: { businessId: string; connectionId: string; accessToken: string }): Promise<void> {
+async function registerWebhook(dependencies: Dependencies, provider: CalendarOperations, input: { businessId: string; connectionId: string; accessToken: string }): Promise<void> {
   const box = await secretBox();
-  const secret = randomBytes(32).toString("hex");
   const baseUrl = (process.env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
-  const { webhookId } = await register({ accessToken: input.accessToken, subscriberUrl: `${baseUrl}/api/webhooks/calcom/${input.connectionId}`, secret });
-  await saveCalendarWebhook(dependencies.domain, { businessId: input.businessId, connectionId: input.connectionId, externalWebhookId: webhookId, encryptedWebhookSecret: box.encrypt(secret) });
+  // Under the connection's lock, so two syncs at once register one webhook between them.
+  await registerCalendarWebhookOnce(dependencies.domain, {
+    businessId: input.businessId, connectionId: input.connectionId,
+    register: async () => {
+      const secret = randomBytes(32).toString("hex");
+      const { webhookId } = await provider.registerWebhook!({ accessToken: input.accessToken, subscriberUrl: `${baseUrl}/api/webhooks/calcom/${input.connectionId}`, secret });
+      return { externalWebhookId: webhookId, encryptedWebhookSecret: box.encrypt(secret) };
+    },
+  });
+}
+
+/**
+ * Removes a disconnected connection's webhook from the provider with the tokens
+ * the disconnect kept for it, then forgets them. A connection reconnected in
+ * the meantime keeps its webhook and tokens.
+ */
+export async function retireCalendarWebhook(dependencies: Dependencies, input: { businessId: string; connectionId: string }): Promise<JobResult> {
+  const webhook = await getRetiredCalendarWebhook(dependencies.domain, input);
+  if (!webhook) return { status: "skipped", entityId: input.connectionId };
+  const provider = dependencies.calendars?.[webhook.provider];
+  if (provider?.deleteWebhook) {
+    const box = await secretBox();
+    try {
+      const fresh = webhook.encryptedAccessToken && webhook.tokenExpiresAt && webhook.tokenExpiresAt.getTime() > Date.now() + 60_000;
+      const token = fresh ? box.decrypt(webhook.encryptedAccessToken!) : webhook.encryptedRefreshToken ? (await provider.refreshAccessToken({ refreshToken: box.decrypt(webhook.encryptedRefreshToken) })).accessToken : null;
+      if (token) await provider.deleteWebhook({ accessToken: token, webhookId: webhook.externalWebhookId });
+    } catch (error) {
+      // A revoked grant can't remove the webhook. Its deliveries reach a disconnected connection, which the route ignores.
+      const failure = error as { reconnectRequired?: unknown; responseStatus?: unknown };
+      if (failure.reconnectRequired !== true && failure.responseStatus !== 401 && failure.responseStatus !== 403) throw error;
+    }
+  }
+  await forgetRetiredCalendarWebhook(dependencies.domain, input);
+  return { status: "completed", entityId: input.connectionId };
 }
