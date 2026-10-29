@@ -192,8 +192,16 @@ async function loadBusyTimes(tx: DatabaseTransaction, schedule: Schedule, input:
   const calcom = calcomIds.length ? await tx.select({ block: calendarBusyBlocks, appointmentId: appointments.id, ownStartsAt: appointments.startsAt, ownEndsAt: appointments.endsAt }).from(calendarBusyBlocks)
     .leftJoin(appointments, and(eq(appointments.businessId, calendarBusyBlocks.businessId), eq(appointments.calendarExternalId, calendarBusyBlocks.externalEventId)))
     .where(window(calcomIds)) : [];
+  // Cal.com copies its bookings into the calendars it checks, so an appointment being moved can come back as a
+  // block on another connection that carries no id of ours. One with exactly the appointment's span, or its
+  // Cal.com booking's, is that copy, and moving the appointment frees it.
+  const movingSpans = input.ignoreAppointmentId ? [
+    ...(await tx.select({ startsAt: appointments.startsAt, endsAt: appointments.endsAt }).from(appointments).where(and(eq(appointments.businessId, schedule.businessId), eq(appointments.id, input.ignoreAppointmentId))).limit(1)),
+    ...calcom.filter(({ appointmentId }) => appointmentId === input.ignoreAppointmentId).map(({ block }) => block),
+  ] : [];
+  const isMovingCopy = (block: { startsAt: Date; endsAt: Date }) => movingSpans.some((span) => span.startsAt.getTime() === block.startsAt.getTime() && span.endsAt.getTime() === block.endsAt.getTime());
   const busy = [
-    ...matched,
+    ...matched.filter((block) => !isMovingCopy(block)),
     ...calcom.flatMap(({ block, appointmentId, ownStartsAt, ownEndsAt }) => {
       // The appointment being moved gives up its whole booking, which moves with it.
       if (appointmentId && appointmentId === input.ignoreAppointmentId) return [];

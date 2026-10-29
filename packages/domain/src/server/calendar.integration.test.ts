@@ -144,6 +144,28 @@ describe.skipIf(!testUrl)("calendar backfill against dedicated PostgreSQL roles"
     });
   });
 
+  it("lets an appointment move when Cal.com's copy of its booking sits in a connected Google calendar", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, userId, firstStaffId, book } = await workspace(tx);
+      await tx.insert(businessHours).values(Array.from({ length: 7 }, (_, dayOfWeek) => ({ businessId, dayOfWeek, openMinutes: 0, closeMinutes: 1440 })));
+      const startsAt = new Date(Math.ceil(Date.now() / 86_400_000) * 86_400_000 + 12 * 3_600_000);
+      const endsAt = new Date(startsAt.getTime() + 30 * 60_000);
+      const booked = await book({ startsAt, endsAt, calendarSyncState: "synced", calendarExternalId: "calcom-uid" });
+      const [calcom] = await tx.insert(calendarConnections).values({ businessId, ownerUserId: userId, provider: "calcom", externalAccountId: "1234", selectedCalendarId: "42", status: "connected", lastSyncedAt: new Date() }).returning();
+      const [google] = await tx.insert(calendarConnections).values({ businessId, ownerUserId: userId, provider: "google", externalAccountId: "owner@example.invalid", selectedCalendarId: "team@group.calendar.google.com", status: "connected", lastSyncedAt: new Date() }).returning();
+      await tx.insert(calendarBusyBlocks).values([
+        { businessId, connectionId: calcom!.id, startsAt, endsAt, externalEventId: "calcom-uid" },
+        // Cal.com wrote the booking into Google too, under Google's own event id.
+        { businessId, connectionId: google!.id, startsAt, endsAt, externalEventId: "google-copy" },
+      ]);
+      const moved = await asWorker(tx, (db) => withBusinessTransaction(db, { businessId, actorType: "worker" }, (workerTx) => rescheduleAppointmentInTransaction(workerTx, { businessId, appointmentId: booked.id, startsAt: new Date(startsAt.getTime() + 15 * 60_000).toISOString(), change: { source: "caller" } })));
+      expect(moved?.appointmentId).toBe(booked.id);
+      // For anyone else the copy is busy time, as any outside event is.
+      const { slots } = await asWorker(tx, (db) => checkAvailability({ db }, { businessId, serviceId: booked.serviceId, startsAt: startsAt.toISOString() }));
+      expect(slots.map((slot) => slot.staffId)).not.toContain(firstStaffId);
+    });
+  });
+
   it("finds a Cal.com connection's business from its webhook URL until the connection is disconnected", async () => {
     await rollbackTest(async (tx) => {
       const { businessId, userId } = await workspace(tx);
