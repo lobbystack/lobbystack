@@ -153,9 +153,9 @@ describe.skipIf(!testUrl)("calendar backfill against dedicated PostgreSQL roles"
         expect(await resolveBusinessByCalendarWebhook({ db }, calcom!.id)).toBe(businessId);
         expect(await resolveBusinessByCalendarWebhook({ db }, google!.id)).toBeNull();
         const register = async () => ({ externalWebhookId: "11", encryptedWebhookSecret: "enc:secret" });
-        expect(await registerCalendarWebhookOnce({ db }, { businessId, connectionId: calcom!.id, register })).toBe("registered");
+        expect(await registerCalendarWebhookOnce({ db }, { businessId, connectionId: calcom!.id, register, discard: async () => undefined })).toBe("registered");
         // A second sync finds the webhook and registers nothing.
-        expect(await registerCalendarWebhookOnce({ db }, { businessId, connectionId: calcom!.id, register: async () => { throw new Error("registered twice"); } })).toBe("exists");
+        expect(await registerCalendarWebhookOnce({ db }, { businessId, connectionId: calcom!.id, register: async () => { throw new Error("registered twice"); }, discard: async () => undefined })).toBe("exists");
         expect(await getCalendarWebhook({ db }, { businessId, connectionId: calcom!.id })).toEqual({ provider: "calcom", externalWebhookId: "11", encryptedWebhookSecret: "enc:secret" });
         await withBusinessTransaction(db, { businessId, actorType: "worker" }, (workerTx) => disconnectCalendarInTransaction(workerTx, { businessId, connectionId: calcom!.id }));
         expect(await resolveBusinessByCalendarWebhook({ db }, calcom!.id)).toBeNull();

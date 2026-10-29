@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { and, asc, eq, gt, inArray, isNull, ne, notExists, sql, type SQL } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, lt, ne, notExists, or, sql, type SQL } from "drizzle-orm";
 import { assertCertificationCalendar } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
@@ -416,20 +416,47 @@ export async function getCalendarWebhook(context: DomainContext, input: { busine
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => (await tx.select({ provider: calendarConnections.provider, externalWebhookId: calendarConnections.externalWebhookId, encryptedWebhookSecret: calendarConnections.encryptedWebhookSecret }).from(calendarConnections).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId), ne(calendarConnections.status, "disconnected"))).limit(1))[0] ?? null);
 }
 
+/** How long a sync may take to register a webhook before another may try. */
+export const WEBHOOK_REGISTRATION_LEASE_MS = 2 * 60_000;
+
 /**
- * Registers the connection's webhook once. The connection row stays locked
- * while `register` runs, so a concurrent sync waits and then finds the
- * webhook, and a disconnect waits and then retires it.
+ * Registers the connection's webhook once. A sync first claims a short lease
+ * on the row, calls `register` outside any transaction, then saves the webhook
+ * only while it still holds the lease and the connection is live. Another sync
+ * that finds the lease taken gets "busy" and registers nothing. A webhook
+ * the save can't keep, because the connection was disconnected meanwhile or
+ * the lease ran out, goes to `discard`.
  */
-export async function registerCalendarWebhookOnce(context: DomainContext, input: { businessId: string; connectionId: string; register: () => Promise<{ externalWebhookId: string; encryptedWebhookSecret: string }> }): Promise<"registered" | "exists" | "disconnected"> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const [connection] = await tx.select({ status: calendarConnections.status, externalWebhookId: calendarConnections.externalWebhookId }).from(calendarConnections).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId))).limit(1).for("update");
-    if (!connection || connection.status === "disconnected") return "disconnected";
-    if (connection.externalWebhookId) return "exists";
-    const webhook = await input.register();
-    await tx.update(calendarConnections).set({ externalWebhookId: webhook.externalWebhookId, encryptedWebhookSecret: webhook.encryptedWebhookSecret, updatedAt: new Date() }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId)));
-    return "registered";
+export async function registerCalendarWebhookOnce(context: DomainContext, input: {
+  businessId: string;
+  connectionId: string;
+  register: () => Promise<{ externalWebhookId: string; encryptedWebhookSecret: string }>;
+  discard: (externalWebhookId: string) => Promise<void>;
+  now?: () => Date;
+}): Promise<"registered" | "exists" | "busy" | "disconnected"> {
+  const now = input.now ?? (() => new Date());
+  const scope = { businessId: input.businessId, actorType: "worker" as const };
+  const row = and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId));
+  const lease = new Date(now().getTime() + WEBHOOK_REGISTRATION_LEASE_MS);
+  const claimed = await withBusinessTransaction(context.db, scope, async (tx) => {
+    const won = await tx.update(calendarConnections).set({ webhookRegistrationUntil: lease }).where(and(row, ne(calendarConnections.status, "disconnected"), isNull(calendarConnections.externalWebhookId), or(isNull(calendarConnections.webhookRegistrationUntil), lt(calendarConnections.webhookRegistrationUntil, now())))).returning({ id: calendarConnections.id });
+    if (won.length) return "claimed" as const;
+    const [current] = await tx.select({ status: calendarConnections.status, externalWebhookId: calendarConnections.externalWebhookId }).from(calendarConnections).where(row).limit(1);
+    return !current || current.status === "disconnected" ? "disconnected" as const : current.externalWebhookId ? "exists" as const : "busy" as const;
   });
+  if (claimed !== "claimed") return claimed;
+  const holdsLease = and(row, eq(calendarConnections.webhookRegistrationUntil, lease));
+  let webhook: { externalWebhookId: string; encryptedWebhookSecret: string };
+  try {
+    webhook = await input.register();
+  } catch (error) {
+    await withBusinessTransaction(context.db, scope, async (tx) => { await tx.update(calendarConnections).set({ webhookRegistrationUntil: null }).where(holdsLease); });
+    throw error;
+  }
+  const saved = await withBusinessTransaction(context.db, scope, async (tx) => await tx.update(calendarConnections).set({ externalWebhookId: webhook.externalWebhookId, encryptedWebhookSecret: webhook.encryptedWebhookSecret, webhookRegistrationUntil: null, updatedAt: new Date() }).where(and(holdsLease, ne(calendarConnections.status, "disconnected"))).returning({ id: calendarConnections.id }));
+  if (saved.length) return "registered";
+  await input.discard(webhook.externalWebhookId).catch(() => undefined);
+  return "disconnected";
 }
 
 /** A disconnected connection's webhook, whose kept tokens resolveCalendarAccessToken reads with `retired`, or null when there's nothing left to remove. */

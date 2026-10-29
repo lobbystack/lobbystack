@@ -1235,6 +1235,8 @@ export const calendarConnections = pgTable(
     // The webhook a Cal.com connection registered, and the secret that signs its deliveries, encrypted with ENCRYPTION_KEY.
     externalWebhookId: text("external_webhook_id"),
     encryptedWebhookSecret: text("encrypted_webhook_secret"),
+    // Until when one sync holds the right to register the webhook, which it does outside any transaction.
+    webhookRegistrationUntil: timestamp("webhook_registration_until", { withTimezone: true }),
     ...timestamps,
   },
   (table) => [uniqueIndex("calendar_connections_business_provider_account_unique").on(table.businessId, table.provider, table.externalAccountId), index("calendar_connections_business_idx").on(table.businessId, table.status)],

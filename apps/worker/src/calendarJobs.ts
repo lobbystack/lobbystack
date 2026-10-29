@@ -161,9 +161,10 @@ export async function reconcileBusinessCalendar(dependencies: Dependencies, busi
 async function registerWebhook(dependencies: Dependencies, provider: CalendarOperations, input: { businessId: string; connectionId: string; accessToken: string }): Promise<void> {
   const box = await secretBox();
   const baseUrl = (process.env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
-  // Under the connection's lock, so two syncs at once register one webhook between them.
+  // Under a lease on the connection, so two syncs at once register one webhook between them.
   await registerCalendarWebhookOnce(dependencies.domain, {
     businessId: input.businessId, connectionId: input.connectionId,
+    discard: async (webhookId) => { await provider.deleteWebhook?.({ accessToken: input.accessToken, webhookId }); },
     register: async () => {
       const secret = randomBytes(32).toString("hex");
       const { webhookId } = await provider.registerWebhook!({ accessToken: input.accessToken, subscriberUrl: `${baseUrl}/api/webhooks/calcom/${input.connectionId}`, secret });

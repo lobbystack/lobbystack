@@ -4,6 +4,9 @@
 -- ENCRYPTION_KEY, like the connection's tokens.
 ALTER TABLE public.calendar_connections ADD COLUMN IF NOT EXISTS external_webhook_id text;
 ALTER TABLE public.calendar_connections ADD COLUMN IF NOT EXISTS encrypted_webhook_secret text;
+-- Until when one sync holds the right to register the webhook. Registration calls Cal.com outside any
+-- transaction, so this lease, not a row lock, keeps two syncs from registering two webhooks.
+ALTER TABLE public.calendar_connections ADD COLUMN IF NOT EXISTS webhook_registration_until timestamptz;
 
 -- The webhook URL names only the connection, so the route finds its
 -- business before any business context exists.
