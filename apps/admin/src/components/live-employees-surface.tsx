@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { HeaderActions, HeaderSearch } from "@/components/header-actions";
 import { toDays, useBusinessHours, useDayNames, WeeklyHoursEditor, windowsForSave, type HoursWindowInput } from "@/components/business-hours-section";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { DataTablePagination, paginationFeatures } from "@/components/data-table/pagination";
@@ -191,13 +192,10 @@ export function LiveEmployeesSurface() {
 
   return (
     <div className="flex flex-1 flex-col gap-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative max-w-sm flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input className="pl-10" onChange={(event) => { setSearch(event.target.value); setPagination((current) => ({ ...current, pageIndex: 0 })); }} placeholder={t("page.searchPlaceholder")} value={search} />
-        </div>
-        {canMutate ? <div className="flex shrink-0 flex-wrap items-center gap-2"><Button onClick={() => openEditor(null)}><Plus data-icon="inline-start" />{t("add.button")}</Button></div> : null}
-      </div>
+      <HeaderActions>
+        <HeaderSearch onChange={(value) => { setSearch(value); setPagination((current) => ({ ...current, pageIndex: 0 })); }} placeholder={t("page.searchPlaceholder")} value={search} />
+        {canMutate ? <Button onClick={() => openEditor(null)}><Plus data-icon="inline-start" />{t("add.button")}</Button> : null}
+      </HeaderActions>
       {businesses.isLoading || employees.isLoading ? <TableCardSkeleton columns={6} /> : (
         <>
           <TableCard>

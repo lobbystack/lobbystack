@@ -12,11 +12,12 @@ import {
   type ColumnDef,
   type PaginationState,
 } from "@tanstack/react-table";
-import { Ellipsis, Search, ShieldBan, ShieldCheck, Trash2 } from "lucide-react";
+import { Ellipsis, ShieldBan, ShieldCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { HeaderSearch } from "@/components/header-actions";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { DataTablePagination, paginationFeatures } from "@/components/data-table/pagination";
 import { PageHeader } from "@/components/page-header";
@@ -24,7 +25,6 @@ import { TableCardSkeleton } from "@/components/loading-skeletons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ContactChannelIcons } from "@/components/contact-channel-icons";
 import { getChannelLabel, getContactChannels, getContactDisplayName, getContactSecondaryDetails } from "@/lib/contact-display";
@@ -142,11 +142,7 @@ export function LiveContactsSurface() {
 
   return (
     <div className="flex flex-1 flex-col gap-6">
-      <PageHeader title={t("page.title")} />
-      <div className="relative max-w-sm">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input className="pl-10" onChange={(event) => { setSearch(event.target.value); setPagination((current) => ({ ...current, pageIndex: 0 })); }} placeholder={t("page.searchPlaceholder")} value={search} />
-      </div>
+      <PageHeader actions={<HeaderSearch onChange={(value) => { setSearch(value); setPagination((current) => ({ ...current, pageIndex: 0 })); }} placeholder={t("page.searchPlaceholder")} value={search} />} title={t("page.title")} />
       {businesses.isLoading || contacts.isLoading ? <TableCardSkeleton columns={6} /> : (
         <>
           <TableCard>

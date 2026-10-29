@@ -124,7 +124,7 @@ describe("original knowledge row interactions", () => {
     await userEvent.click(screen.getByRole("button", { name: "actions.moreOptions" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: active ? "actions.disable" : "actions.enable" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/knowledge/document?businessId=business", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ active: !active }) })));
-    expect(screen.queryByRole("textbox", { name: "" })).toBeTruthy();
+    expect(screen.queryByRole("textbox", { name: "table.searchPlaceholder" })).toBeTruthy();
     expect(fetchMock.mock.calls.some(([url, init]) => url.includes("/document?") && !init?.method)).toBe(false);
   });
   it("keeps document content readable during reindexing", async () => {

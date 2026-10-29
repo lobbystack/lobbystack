@@ -2,14 +2,13 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Badge } from "./ui/badge";
-import { Input } from "./ui/input";
 import { CancelAppointmentButton } from "./cancel-appointment-button";
 import { AppointmentDetailsSheet } from "./appointment-details-sheet";
 import { AppointmentsCalendar, type CalendarView } from "./appointments-calendar";
+import { HeaderSearch } from "./header-actions";
 import { PageSurface } from "./page-surface";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Surface } from "./ui/surface";
@@ -97,14 +96,8 @@ export function LiveAppointmentsSurface() {
     </TabsList>
   </Tabs> : null;
 
-  return <PageSurface title={t("appointments.title")}><div className="flex w-full flex-col gap-6">
-    {business ? <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="relative w-full sm:max-w-sm">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input className="pl-10" onChange={(event) => setSearch(event.target.value)} placeholder={t("appointments.searchPlaceholder")} value={search} />
-      </div>
-      <div className="flex w-full flex-wrap items-center gap-2 sm:ms-auto sm:w-auto">{whenTabs}{employeeFilter}{view === "list" ? viewTabs : null}</div>
-    </div> : <p className="type-section-description">{t("appointments.chooseWorkspace")}</p>}
+  return <PageSurface actions={business ? <HeaderSearch onChange={setSearch} placeholder={t("appointments.searchPlaceholder")} value={search} /> : undefined} title={t("appointments.title")}><div className="flex w-full flex-col gap-6">
+    {!business ? <p className="type-section-description">{t("appointments.chooseWorkspace")}</p> : whenTabs || employeeFilter || view === "list" ? <div className="flex flex-wrap items-center justify-end gap-2">{whenTabs}{employeeFilter}{view === "list" ? viewTabs : null}</div> : null}
     {view === "calendar" ? isClient ? <>
       <AppointmentsCalendar appointments={filtered} contactName={contactName} onSelectDay={setSelectedDay} onViewChange={(next) => setParam("range", next, "month")} selectedDay={day} timeZone={timeZone} today={today} trailing={viewTabs} view={range} />
       <section aria-live="polite" className="flex flex-col gap-3">
