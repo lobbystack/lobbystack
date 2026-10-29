@@ -2,11 +2,11 @@ import { createHmac } from "node:crypto";
 
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ resolve: vi.fn(), webhook: vi.fn(), queue: vi.fn(), report: vi.fn(), rate: vi.fn() }));
+const mocks = vi.hoisted(() => ({ resolve: vi.fn(), webhook: vi.fn(), queue: vi.fn(), report: vi.fn(), clientRate: vi.fn(), connectionRate: vi.fn() }));
 vi.mock("@lobbystack/domain", () => ({ resolveBusinessByCalendarWebhook: mocks.resolve, getCalendarWebhook: mocks.webhook, queueCalendarWebhookSync: mocks.queue }));
 vi.mock("@/lib/api-helpers", () => ({ asApiResponse: (error: unknown) => { mocks.report(error); return new Response("error", { status: 500 }); }, jsonError: (message: string, status = 400) => Response.json({ error: message }, { status }) }));
 vi.mock("@/lib/domain-context", () => ({ createWorkerDomainContext: () => ({}) }));
-vi.mock("@/lib/calendar-webhook-limit", () => ({ enforceCalendarWebhookRateLimits: mocks.rate }));
+vi.mock("@/lib/calendar-webhook-limit", () => ({ enforceCalendarWebhookClientLimit: mocks.clientRate, enforceCalendarWebhookConnectionLimit: mocks.connectionRate }));
 vi.mock("@/lib/trusted-client-ip", () => ({ trustedClientIp: () => "203.0.113.7" }));
 
 import { SecretBox } from "@lobbystack/providers";
@@ -25,7 +25,8 @@ beforeEach(() => {
   mocks.resolve.mockResolvedValue("business");
   mocks.webhook.mockResolvedValue({ provider: "calcom", externalWebhookId: "11", encryptedWebhookSecret: new SecretBox("encryption-secret").encrypt(secret) });
   mocks.queue.mockResolvedValue(undefined);
-  mocks.rate.mockResolvedValue({ allowed: true });
+  mocks.clientRate.mockResolvedValue({ allowed: true });
+  mocks.connectionRate.mockResolvedValue({ allowed: true });
 });
 afterEach(() => vi.unstubAllEnvs());
 
@@ -59,11 +60,20 @@ it("answers 5xx when the sync can't be queued, so Cal.com delivers again", async
   expect(mocks.report).toHaveBeenCalledOnce();
 });
 
-it("rate limits by client and connection before reading the body or the database", async () => {
-  mocks.rate.mockResolvedValueOnce({ allowed: false, status: 429, reason: "rate_limit_connection_minute" });
+it("rate limits each client before reading the body or the database", async () => {
+  mocks.clientRate.mockResolvedValueOnce({ allowed: false, status: 429, reason: "rate_limit_ip_minute" });
   expect((await deliver({ triggerEvent: "BOOKING_CREATED" })).status).toBe(429);
-  expect(mocks.rate).toHaveBeenCalledWith({ connectionId, ip: "203.0.113.7" });
+  expect(mocks.clientRate).toHaveBeenCalledWith({ ip: "203.0.113.7" });
   expect(mocks.resolve).not.toHaveBeenCalled();
+});
+
+it("counts a delivery against its connection only once the signature checks out", async () => {
+  expect((await deliver({ triggerEvent: "BOOKING_CREATED" }, "forged")).status).toBe(401);
+  expect(mocks.connectionRate).not.toHaveBeenCalled();
+  mocks.connectionRate.mockResolvedValueOnce({ allowed: false, status: 429, reason: "rate_limit_connection_minute" });
+  expect((await deliver({ triggerEvent: "BOOKING_CREATED" })).status).toBe(429);
+  expect(mocks.connectionRate).toHaveBeenCalledWith({ connectionId });
+  expect(mocks.queue).not.toHaveBeenCalled();
 });
 
 it("refuses a body over 256 KB from its declared length or as it streams, before any lookup", async () => {

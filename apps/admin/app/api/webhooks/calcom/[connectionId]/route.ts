@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import { getCalendarWebhook, queueCalendarWebhookSync, resolveBusinessByCalendarWebhook } from "@lobbystack/domain";
 import { CALCOM_WEBHOOK_TRIGGERS, SecretBox, verifyCalcomWebhookSignature } from "@lobbystack/providers";
 import { asApiResponse } from "@/lib/api-helpers";
-import { enforceCalendarWebhookRateLimits } from "@/lib/calendar-webhook-limit";
+import { enforceCalendarWebhookClientLimit, enforceCalendarWebhookConnectionLimit } from "@/lib/calendar-webhook-limit";
 import { createWorkerDomainContext } from "@/lib/domain-context";
 import { readTextWithin } from "@/lib/operator-request";
 import { trustedClientIp } from "@/lib/trusted-client-ip";
@@ -27,9 +27,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ con
   if (!encryptionKey) return new NextResponse("Cal.com isn't set up on this server.", { status: 503 });
   const { connectionId } = await params;
   if (!UUID.test(connectionId)) return new NextResponse("Not found", { status: 404 });
-  // Forged deliveries are cheap to send, so they're counted before the body is read or the database is asked.
-  const rate = await enforceCalendarWebhookRateLimits({ connectionId: connectionId.toLowerCase(), ip: trustedClientIp(request) });
-  if (!rate.allowed) return new NextResponse("Too many requests", { status: rate.status });
+  // Forged deliveries are cheap to send, so each client is counted before the body is read or the database is asked.
+  const client = await enforceCalendarWebhookClientLimit({ ip: trustedClientIp(request) });
+  if (!client.allowed) return new NextResponse("Too many requests", { status: client.status });
   let rawBody: string;
   try {
     rawBody = await readTextWithin(request, MAX_BODY_BYTES);
@@ -45,6 +45,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ con
     const webhook = await getCalendarWebhook(context, { businessId, connectionId });
     if (!webhook?.encryptedWebhookSecret) return NextResponse.json({ received: true });
     if (!verifyCalcomWebhookSignature(rawBody, request.headers.get("x-cal-signature-256"), new SecretBox(encryptionKey).decrypt(webhook.encryptedWebhookSecret))) return new NextResponse("Invalid signature", { status: 401 });
+    // Counted only once Cal.com's signature checks out, so a forger can't use up a real connection's budget.
+    const connection = await enforceCalendarWebhookConnectionLimit({ connectionId: connectionId.toLowerCase() });
+    if (!connection.allowed) return new NextResponse("Too many requests", { status: connection.status });
     let payload: { triggerEvent?: unknown };
     try {
       payload = JSON.parse(rawBody) as { triggerEvent?: unknown };
