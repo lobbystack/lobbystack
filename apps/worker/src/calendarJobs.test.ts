@@ -132,17 +132,26 @@ it("syncs only the connection a webhook names", async () => {
 it("removes a disconnected Cal.com connection's webhook with the tokens it kept, then forgets them", async () => {
   const calcom = { ...provider, deleteWebhook: vi.fn().mockResolvedValue(undefined) };
   const deps = { domain: dependencies.domain, calendars: { calcom } };
-  const { SecretBox } = await import("@lobbystack/providers/crypto/secretBox");
-  const box = new SecretBox("fixture-key");
-  mocks.retired.mockResolvedValueOnce({ provider: "calcom", externalWebhookId: "11", encryptedAccessToken: box.encrypt("kept-access"), encryptedRefreshToken: box.encrypt("kept-refresh"), tokenExpiresAt: new Date(Date.now() + 10 * 60_000) });
+  mocks.retired.mockResolvedValue({ provider: "calcom", externalWebhookId: "11" });
+  mocks.token.mockResolvedValueOnce("kept-access");
   await expect(retireCalendarWebhook(deps, { businessId: "business", connectionId: "cal" })).resolves.toMatchObject({ status: "completed" });
+  // The token comes through resolveCalendarAccessToken, which saves a rotated refresh token before the delete.
+  expect(mocks.token).toHaveBeenCalledWith(dependencies.domain, expect.objectContaining({ businessId: "business", connectionId: "cal", retired: true }));
   expect(calcom.deleteWebhook).toHaveBeenCalledWith({ accessToken: "kept-access", webhookId: "11" });
   expect(mocks.forget).toHaveBeenCalledWith(dependencies.domain, { businessId: "business", connectionId: "cal" });
 
+  // A failed delete keeps the tokens, and the retry gets its token the same way, with the rotated refresh token saved.
+  vi.clearAllMocks();
+  mocks.token.mockResolvedValueOnce("first").mockResolvedValueOnce("second");
+  calcom.deleteWebhook.mockRejectedValueOnce(Object.assign(new Error("Cal.com webhook removal failed with status 503."), { responseStatus: 503 })).mockResolvedValueOnce(undefined);
+  await expect(retireCalendarWebhook(deps, { businessId: "business", connectionId: "cal" })).rejects.toThrow("503");
+  expect(mocks.forget).not.toHaveBeenCalled();
+  await expect(retireCalendarWebhook(deps, { businessId: "business", connectionId: "cal" })).resolves.toMatchObject({ status: "completed" });
+  expect(calcom.deleteWebhook).toHaveBeenLastCalledWith({ accessToken: "second", webhookId: "11" });
+
   // A revoked grant can't remove anything, so the tokens go anyway.
   vi.clearAllMocks();
-  calcom.refreshAccessToken.mockRejectedValueOnce(Object.assign(new Error("Cal.com authorization requires reconnection."), { reconnectRequired: true }));
-  mocks.retired.mockResolvedValueOnce({ provider: "calcom", externalWebhookId: "11", encryptedAccessToken: null, encryptedRefreshToken: box.encrypt("dead"), tokenExpiresAt: null });
+  mocks.token.mockRejectedValueOnce(Object.assign(new Error("Cal.com authorization requires reconnection."), { reconnectRequired: true }));
   await expect(retireCalendarWebhook(deps, { businessId: "business", connectionId: "cal" })).resolves.toMatchObject({ status: "completed" });
   expect(calcom.deleteWebhook).not.toHaveBeenCalled();
   expect(mocks.forget).toHaveBeenCalledOnce();

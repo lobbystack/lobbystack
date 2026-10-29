@@ -53,6 +53,17 @@ it("requires reconnection when credentials are missing or disconnected", async (
   expect(refresh).not.toHaveBeenCalled();
 });
 
+it("refreshes a disconnected connection's kept tokens only to retire its webhook, saving the rotated refresh token", async () => {
+  const retired = { ...row, status: "disconnected", externalWebhookId: "11" };
+  useConnection(retired);
+  await expect(resolveCalendarAccessToken(context, input)).rejects.toThrow("unavailable");
+  refresh.mockResolvedValueOnce({ accessToken: "fresh", expiresIn: 1800, refreshToken: "rotated" });
+  await expect(resolveCalendarAccessToken(context, { ...input, retired: true })).resolves.toBe("fresh");
+  expect(update).toHaveBeenCalledWith(expect.objectContaining({ encryptedAccessToken: "enc:fresh", encryptedRefreshToken: "enc:rotated" }));
+  useConnection({ ...retired, externalWebhookId: null });
+  await expect(resolveCalendarAccessToken(context, { ...input, retired: true })).rejects.toThrow("unavailable");
+});
+
 it("alerts operators once per appointment time, not once per sync retry", async () => {
   // Each failed attempt bumps the appointment revision.
   let revision = 1;

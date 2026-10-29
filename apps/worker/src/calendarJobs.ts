@@ -180,9 +180,9 @@ export async function retireCalendarWebhook(dependencies: Dependencies, input: {
   if (provider?.deleteWebhook) {
     const box = await secretBox();
     try {
-      const fresh = webhook.encryptedAccessToken && webhook.tokenExpiresAt && webhook.tokenExpiresAt.getTime() > Date.now() + 60_000;
-      const token = fresh ? box.decrypt(webhook.encryptedAccessToken!) : webhook.encryptedRefreshToken ? (await provider.refreshAccessToken({ refreshToken: box.decrypt(webhook.encryptedRefreshToken) })).accessToken : null;
-      if (token) await provider.deleteWebhook({ accessToken: token, webhookId: webhook.externalWebhookId });
+      // A refresh rotates the refresh token, so the new one is saved before the delete: a retry after a failed delete uses it.
+      const token = await resolveCalendarAccessToken(dependencies.domain, { ...input, retired: true, decryptToken: (value) => box.decrypt(value), encryptToken: (value) => box.encrypt(value), refreshAccessToken: (refresh) => provider.refreshAccessToken(refresh) });
+      await provider.deleteWebhook({ accessToken: token, webhookId: webhook.externalWebhookId });
     } catch (error) {
       // A revoked grant can't remove the webhook. Its deliveries reach a disconnected connection, which the route ignores.
       const failure = error as { reconnectRequired?: unknown; responseStatus?: unknown };

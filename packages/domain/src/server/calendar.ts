@@ -432,11 +432,11 @@ export async function registerCalendarWebhookOnce(context: DomainContext, input:
   });
 }
 
-/** A disconnected connection's webhook and the tokens kept to remove it, or null when there's nothing left to remove. */
-export async function getRetiredCalendarWebhook(context: DomainContext, input: { businessId: string; connectionId: string }): Promise<{ provider: string; externalWebhookId: string; encryptedAccessToken: string | null; encryptedRefreshToken: string | null; tokenExpiresAt: Date | null } | null> {
+/** A disconnected connection's webhook, whose kept tokens resolveCalendarAccessToken reads with `retired`, or null when there's nothing left to remove. */
+export async function getRetiredCalendarWebhook(context: DomainContext, input: { businessId: string; connectionId: string }): Promise<{ provider: string; externalWebhookId: string } | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const [row] = await tx.select({ provider: calendarConnections.provider, externalWebhookId: calendarConnections.externalWebhookId, encryptedAccessToken: calendarConnections.encryptedAccessToken, encryptedRefreshToken: calendarConnections.encryptedRefreshToken, tokenExpiresAt: calendarConnections.tokenExpiresAt }).from(calendarConnections).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId), eq(calendarConnections.status, "disconnected"))).limit(1);
-    return row?.externalWebhookId ? { ...row, externalWebhookId: row.externalWebhookId } : null;
+    const [row] = await tx.select({ provider: calendarConnections.provider, externalWebhookId: calendarConnections.externalWebhookId }).from(calendarConnections).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId), eq(calendarConnections.status, "disconnected"))).limit(1);
+    return row?.externalWebhookId ? { provider: row.provider, externalWebhookId: row.externalWebhookId } : null;
   });
 }
 

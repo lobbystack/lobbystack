@@ -161,7 +161,7 @@ describe.skipIf(!testUrl)("calendar backfill against dedicated PostgreSQL roles"
         expect(await resolveBusinessByCalendarWebhook({ db }, calcom!.id)).toBeNull();
         expect(await getCalendarWebhook({ db }, { businessId, connectionId: calcom!.id })).toBeNull();
         // The disconnect keeps the tokens for the job that removes the webhook from Cal.com.
-        expect(await getRetiredCalendarWebhook({ db }, { businessId, connectionId: calcom!.id })).toMatchObject({ externalWebhookId: "11", encryptedAccessToken: "enc:access" });
+        expect(await getRetiredCalendarWebhook({ db }, { businessId, connectionId: calcom!.id })).toEqual({ provider: "calcom", externalWebhookId: "11" });
       });
       const [row] = await tx.select().from(calendarConnections).where(eq(calendarConnections.id, calcom!.id));
       expect(row).toMatchObject({ status: "disconnected", externalWebhookId: "11", encryptedWebhookSecret: null });
