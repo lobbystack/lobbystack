@@ -53,6 +53,12 @@ Con ambos valores configurados, las páginas de inicio de sesión y de registro 
 
 Los negocios de sus socios conectan su calendario en el dominio del socio con el mismo URI de redireccionamiento `/api/calendar/google/callback`. Google devuelve a la persona a su dominio de administración, que la redirige al dominio del socio para terminar.
 
+#### Conectar Cal.com (opcional)
+
+En Cal.com, abra **Settings**, luego **Developer**, luego **OAuth clients**, y cree un cliente confidencial. Agregue `https://su_dominio_admin/api/calendar/calcom/callback` como URI de redirección y seleccione todos los alcances que pide LobbyStack: `PROFILE_READ`, `EVENT_TYPE_READ`, `SCHEDULE_READ`, `BOOKING_READ`, `BOOKING_WRITE`, `APPS_READ`, `WEBHOOK_READ` y `WEBHOOK_WRITE`. Cal.com revisa un cliente nuevo antes de que otras cuentas puedan autorizarlo, y lo revisa otra vez cuando agrega un alcance. Defina `CALCOM_CLIENT_ID` y `CALCOM_CLIENT_SECRET` en el servicio `admin`. La plantilla completa `CALCOM_REDIRECT_URI`, y el worker lee las variables de Cal.com desde el admin.
+
+LobbyStack reserva con una dirección de asistente sustituta, `booking+appointment_id@` seguida de `CALCOM_PLACEHOLDER_EMAIL_DOMAIN`, que por defecto es `noreply.` más su dominio admin. Cal.com comprueba que el dominio tenga un registro MX, así que apúntelo a un servidor de correo que descarte los mensajes. Cal.com envía sus webhooks de reservas a `APP_BASE_URL`, por lo que el worker necesita ahí la dirección pública del admin.
+
 #### Use un dominio personalizado
 
 Agregue el dominio al servicio `admin` y luego configure `APP_BASE_URL` en el servicio `admin` con el valor `https://su_dominio`. Estas variables hacen referencia a ella y siguen el cambio:

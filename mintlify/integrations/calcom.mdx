@@ -1,0 +1,63 @@
+---
+title: "Connect Cal.com"
+description: "Connect a Cal.com account, pick the event type your AI receptionist books, and keep busy time in sync."
+sidebarTitle: "Cal.com"
+contentType: "How-to"
+---
+
+Connect Cal.com when your team already takes bookings there. Your AI receptionist books each appointment as a Cal.com booking of one event type, and it treats every booking on the account as busy time, so it doesn't offer times already booked through your Cal.com booking page.
+
+<Note>
+  Add the services callers can request before you connect Cal.com. LobbyStack compares their lengths with the event type you pick.
+</Note>
+
+## What Cal.com receives
+
+For each appointment, Cal.com receives:
+
+- **Attendee name and phone number**: the caller's, so you see who booked
+- **Attendee email**: a stand-in address unique to the appointment, so Cal.com doesn't email the caller
+- **Booking notes**: the caller's name, phone number and email, for your team
+
+The AI receptionist sends the caller's confirmation and reminders itself. Cal.com still sends your team its host notifications.
+
+## Connect Cal.com
+
+<Steps>
+  <Step title="Open Integrations">
+    In the dashboard, open **Integrations**.
+  </Step>
+  <Step title="Start the Cal.com connection">
+    Find **Cal.com** and click **Connect**.
+  </Step>
+  <Step title="Authorize LobbyStack">
+    Sign in to Cal.com and approve the requested permissions.
+  </Step>
+  <Step title="Pick an event type">
+    Back in the dashboard, choose an event type under **Event type**. LobbyStack saves your choice right away.
+  </Step>
+</Steps>
+
+LobbyStack starts reading your Cal.com bookings, and the calendars Cal.com checks for conflicts, within a few seconds.
+
+## Set up the event type in Cal.com
+
+After you pick an event type, the dialog lists anything to fix in Cal.com:
+
+- **Durations**: the event type must offer every length your services last. Add the missing lengths under the event type's duration settings, or Cal.com books its default length.
+- **SMS workflow**: turn off any SMS workflow on the event type. Otherwise callers get texts from Cal.com and from your AI receptionist.
+- **Schedule**: the event type's availability must cover your opening hours. Cal.com turns down bookings outside its schedule, and the dashboard alerts you when a booking fails to sync.
+
+## Change the event type
+
+1. Open **Integrations**.
+2. Click the Cal.com card.
+3. Choose another event type.
+
+New appointments use the new event type. Upcoming appointments move to it at the next sync.
+
+## Reconnect or disconnect
+
+If Cal.com stops accepting the connection, the card shows that reconnect is required. Open the Cal.com card and click **Reconnect**.
+
+To remove the integration, open the Cal.com card and click **Disconnect**. Bookings already in Cal.com stay there.

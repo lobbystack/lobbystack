@@ -53,6 +53,12 @@ With both values set, the sign-in and sign-up pages also offer **Continue with G
 
 Your partners' businesses connect their calendars on the partner's domain through the same `/api/calendar/google/callback` redirect URI. Google sends the person back to your admin domain, which passes them on to the partner's domain to finish.
 
+#### Connect Cal.com (optional)
+
+In Cal.com, open **Settings**, then **Developer**, then **OAuth clients**, and create a confidential client. Add `https://your_admin_domain/api/calendar/calcom/callback` as its redirect URI and select every scope LobbyStack requests: `PROFILE_READ`, `EVENT_TYPE_READ`, `SCHEDULE_READ`, `BOOKING_READ`, `BOOKING_WRITE`, `APPS_READ`, `WEBHOOK_READ` and `WEBHOOK_WRITE`. Cal.com reviews a new client before other accounts can authorize it, and reviews it again when you add a scope. Set `CALCOM_CLIENT_ID` and `CALCOM_CLIENT_SECRET` on the `admin` service. The template fills in `CALCOM_REDIRECT_URI`, and the worker reads the Cal.com variables from the admin.
+
+LobbyStack books under a stand-in attendee address, `booking+appointment_id@` followed by `CALCOM_PLACEHOLDER_EMAIL_DOMAIN`, which defaults to `noreply.` plus your admin domain. Cal.com checks that the domain has an MX record, so point the domain at a mail server that discards mail. Cal.com sends booking webhooks to `APP_BASE_URL`, so the worker needs the public admin address there.
+
 #### Use a custom domain
 
 Add the domain to the `admin` service, then set `APP_BASE_URL` on the `admin` service to `https://your_domain`. These variables reference it and follow the change:

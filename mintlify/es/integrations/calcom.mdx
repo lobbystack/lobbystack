@@ -1,0 +1,63 @@
+---
+title: "Conectar Cal.com"
+description: "Conecte una cuenta de Cal.com, elija el tipo de evento que reserva su recepcionista de IA y mantenga la disponibilidad sincronizada."
+sidebarTitle: "Cal.com"
+contentType: "How-to"
+---
+
+Conecte Cal.com si su equipo ya recibe reservas allí. Su recepcionista de IA reserva cada cita como una reserva de Cal.com de un tipo de evento, y cuenta cada reserva de la cuenta como tiempo ocupado. Así no ofrece horarios ya reservados en su página de reservas de Cal.com.
+
+<Note>
+  Agregue los servicios que pueden pedir quienes llaman antes de conectar Cal.com. LobbyStack compara su duración con el tipo de evento que elija.
+</Note>
+
+## Lo que recibe Cal.com
+
+Para cada cita, Cal.com recibe:
+
+- **Nombre y teléfono del asistente**: los de quien llama, para que sepa quién reservó
+- **Correo del asistente**: una dirección sustituta propia de la cita, para que Cal.com no le escriba a quien llama
+- **Notas de la reserva**: el nombre, el teléfono y el correo de quien llama, para su equipo
+
+La recepcionista de IA envía ella misma la confirmación y los recordatorios a quien llama. Cal.com sigue enviando a su equipo sus notificaciones de anfitrión.
+
+## Conectar Cal.com
+
+<Steps>
+  <Step title="Abrir Integraciones">
+    En el panel, abra **Integraciones**.
+  </Step>
+  <Step title="Iniciar la conexión con Cal.com">
+    Busque **Cal.com** y haga clic en **Conectar**.
+  </Step>
+  <Step title="Autorizar a LobbyStack">
+    Inicie sesión en Cal.com y apruebe los permisos solicitados.
+  </Step>
+  <Step title="Elegir un tipo de evento">
+    De vuelta en el panel, elija un tipo de evento en **Tipo de evento**. LobbyStack guarda su elección de inmediato.
+  </Step>
+</Steps>
+
+LobbyStack empieza a leer sus reservas de Cal.com, y los calendarios que Cal.com revisa para evitar conflictos, en pocos segundos.
+
+## Configurar el tipo de evento en Cal.com
+
+Después de elegir el tipo de evento, el diálogo indica lo que debe corregir en Cal.com:
+
+- **Duraciones**: el tipo de evento debe ofrecer cada duración de sus servicios. Agregue las duraciones que faltan en la configuración de duración del tipo de evento, o Cal.com reservará su duración predeterminada.
+- **Flujo de SMS**: desactive cualquier flujo de SMS del tipo de evento. Si no, quienes llaman reciben mensajes de Cal.com y de su recepcionista de IA.
+- **Horario**: la disponibilidad del tipo de evento debe cubrir su horario de atención. Cal.com rechaza las reservas fuera de su horario, y el panel le avisa cuando una reserva no se sincroniza.
+
+## Cambiar el tipo de evento
+
+1. Abra **Integraciones**.
+2. Haga clic en la tarjeta de Cal.com.
+3. Elija otro tipo de evento.
+
+Las citas nuevas usan el nuevo tipo de evento. Las citas próximas pasan a él en la siguiente sincronización.
+
+## Volver a conectar o desconectar
+
+Si Cal.com deja de aceptar la conexión, la tarjeta indica que debe volver a conectar. Abra la tarjeta de Cal.com y haga clic en **Volver a conectar**.
+
+Para quitar la integración, abra la tarjeta de Cal.com y haga clic en **Desconectar**. Las reservas que ya están en Cal.com se quedan allí.
