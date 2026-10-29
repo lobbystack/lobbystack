@@ -54,6 +54,14 @@ it("writes a business-wide appointment to Cal.com when Google is connected busin
   expect(mocks.updateTx).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ externalEventId: "booking-uid" }));
 });
 
+it("fails an appointment Cal.com should get when this worker has no Cal.com setup, so the operator hears about it", async () => {
+  const rows = [{ ...appointment, connectionId: "b-calcom", calendarId: "42", provider: "calcom", staffId: null }];
+  batches = [rows];
+  await expect(syncAppointmentCalendar(dependencies, { businessId: "business", appointmentId: "appointment" })).resolves.toMatchObject({ status: "skipped" });
+  expect(mocks.update).toHaveBeenCalledWith(dependencies.domain, { businessId: "business", appointmentId: "appointment", state: "failed", error: "Cal.com isn't set up on this server." });
+  expect(provider.upsertEvent).not.toHaveBeenCalled();
+});
+
 it("holds the connection row while it writes the event, so a calendar switch waits for it", async () => {
   await syncAppointmentCalendar(dependencies, { businessId: "business", appointmentId: "appointment" });
   expect(lock).toHaveBeenLastCalledWith("share", { of: calendarConnections });

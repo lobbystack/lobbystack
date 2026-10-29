@@ -4,7 +4,7 @@ import { appointments, calendarConnections, contacts, services, withBusinessTran
 import { CALENDAR_SYNC_HORIZON_MS, forgetRetiredCalendarWebhook, getRetiredCalendarWebhook, markCalendarConnectionSync, pickCalendarWriter, queueUnsyncedAppointmentSyncs, recordProductEvent, registerCalendarWebhookOnce, resolveCalendarAccessToken, updateAppointmentSyncState, updateAppointmentSyncStateInTransaction, upsertBusyBlocks, type DomainContext } from "@lobbystack/domain";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 import { redactOtelExceptionText } from "@lobbystack/telemetry/node";
-import type { CalendarProvider } from "@lobbystack/providers/calendar";
+import { calendarProviderLabel, type CalendarProvider } from "@lobbystack/providers/calendar";
 import type { JobResult } from "./handlers";
 
 export type CalendarOperations = Pick<CalendarProvider, "getBusyBlocks" | "upsertEvent" | "deleteEvent" | "refreshAccessToken"> & {
@@ -34,7 +34,7 @@ async function accessToken(dependencies: Dependencies, businessId: string, conne
 
 export async function syncAppointmentCalendar(dependencies: Dependencies, input: { businessId: string; appointmentId: string }): Promise<JobResult> {
   const { businessId, appointmentId } = input;
-  if (!dependencies.calendars || !appointmentId) return { status: "skipped", entityId: appointmentId };
+  if (!appointmentId) return { status: "skipped", entityId: appointmentId };
   // FOR SHARE makes a calendar switch wait for an event write already running, so its release comes after it.
   // Every connection covering the staff member is read and locked; pickCalendarWriter chooses the one that gets the appointment.
   const load = async (tx: DatabaseTransaction) => pickCalendarWriter(await tx.select({
@@ -54,8 +54,12 @@ export async function syncAppointmentCalendar(dependencies: Dependencies, input:
     await updateAppointmentSyncState(dependencies.domain, { businessId, appointmentId, state: "not_required" });
     return { status: "skipped", entityId: appointmentId };
   }
-  const provider = dependencies.calendars[initial.provider];
-  if (!provider) return { status: "skipped", entityId: appointmentId };
+  const provider = dependencies.calendars?.[initial.provider];
+  if (!provider) {
+    // The appointment belongs in a calendar this worker can't reach. Failing it alerts the operator, once per appointment time.
+    await updateAppointmentSyncState(dependencies.domain, { businessId, appointmentId, state: "failed", error: `${calendarProviderLabel(initial.provider)} isn't set up on this server.` });
+    return { status: "skipped", entityId: appointmentId };
+  }
   let tokenResolved = false;
   try {
     // Commit refreshed credentials independently before external event writes.
