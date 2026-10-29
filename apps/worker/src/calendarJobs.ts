@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { and, asc, eq, isNull, ne, or, sql } from "drizzle-orm";
 import { appointments, calendarConnections, contacts, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { CALENDAR_SYNC_HORIZON_MS, forgetRetiredCalendarWebhook, getRetiredCalendarWebhook, markCalendarConnectionSync, pickCalendarWriter, queueUnsyncedAppointmentSyncs, recordProductEvent, registerCalendarWebhookOnce, resolveCalendarAccessToken, updateAppointmentSyncState, updateAppointmentSyncStateInTransaction, upsertBusyBlocks, type DomainContext } from "@lobbystack/domain";
+import { CALENDAR_SYNC_HORIZON_MS, forgetRetiredCalendarWebhook, getRetiredCalendarConnection, markCalendarConnectionSync, pickCalendarWriter, queueUnsyncedAppointmentSyncs, recordProductEvent, registerCalendarWebhookOnce, resolveCalendarAccessToken, updateAppointmentSyncState, updateAppointmentSyncStateInTransaction, upsertBusyBlocks, type DomainContext } from "@lobbystack/domain";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 import { redactOtelExceptionText } from "@lobbystack/telemetry/node";
 import { calendarProviderLabel, type CalendarProvider } from "@lobbystack/providers/calendar";
@@ -174,22 +174,26 @@ async function registerWebhook(dependencies: Dependencies, provider: CalendarOpe
 }
 
 /**
- * Removes a disconnected connection's webhook from the provider with the tokens
- * the disconnect kept for it, then forgets them. A connection reconnected in
- * the meantime keeps its webhook and tokens.
+ * Retires a disconnected Cal.com connection with the tokens the disconnect kept:
+ * cancels the upcoming bookings it made, which its public booking page would
+ * otherwise still show as taken, removes its webhook, then forgets the tokens.
+ * A connection reconnected in the meantime keeps everything.
  */
-export async function retireCalendarWebhook(dependencies: Dependencies, input: { businessId: string; connectionId: string }): Promise<JobResult> {
-  const webhook = await getRetiredCalendarWebhook(dependencies.domain, input);
-  if (!webhook) return { status: "skipped", entityId: input.connectionId };
-  const provider = dependencies.calendars?.[webhook.provider];
-  if (provider?.deleteWebhook) {
+export async function retireCalendarWebhook(dependencies: Dependencies, input: { businessId: string; connectionId: string; cancel?: Array<{ appointmentId: string; calendarId: string; eventId: string }> }): Promise<JobResult> {
+  const { cancel = [], ...connection } = input;
+  const retired = await getRetiredCalendarConnection(dependencies.domain, connection);
+  if (!retired) return { status: "skipped", entityId: input.connectionId };
+  const provider = dependencies.calendars?.[retired.provider];
+  if (provider) {
     const box = await secretBox();
     try {
-      // A refresh rotates the refresh token, so the new one is saved before the delete: a retry after a failed delete uses it.
-      const token = await resolveCalendarAccessToken(dependencies.domain, { ...input, retired: true, decryptToken: (value) => box.decrypt(value), encryptToken: (value) => box.encrypt(value), refreshAccessToken: (refresh) => provider.refreshAccessToken(refresh) });
-      await provider.deleteWebhook({ accessToken: token, webhookId: webhook.externalWebhookId });
+      // A refresh rotates the refresh token, so the new one is saved before any call: a retry after a failure uses it.
+      const token = await resolveCalendarAccessToken(dependencies.domain, { ...connection, retired: true, decryptToken: (value) => box.decrypt(value), encryptToken: (value) => box.encrypt(value), refreshAccessToken: (refresh) => provider.refreshAccessToken(refresh) });
+      // Cancelling skips a booking that's already gone, so a retry repeats none of the finished ones.
+      for (const booking of cancel) await provider.deleteEvent({ accessToken: token, calendarId: booking.calendarId, eventId: booking.eventId, appointmentId: booking.appointmentId });
+      if (retired.externalWebhookId && provider.deleteWebhook) await provider.deleteWebhook({ accessToken: token, webhookId: retired.externalWebhookId });
     } catch (error) {
-      // A revoked grant can't remove the webhook. Its deliveries reach a disconnected connection, which the route ignores.
+      // A revoked grant can't cancel or remove anything. Its webhook's deliveries reach a disconnected connection, which the route ignores.
       const failure = error as { reconnectRequired?: unknown; responseStatus?: unknown };
       if (failure.reconnectRequired !== true && failure.responseStatus !== 401 && failure.responseStatus !== 403) throw error;
     }

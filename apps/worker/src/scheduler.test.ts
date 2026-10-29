@@ -18,9 +18,9 @@ describe("worker schedulers", () => {
 
     await configureSchedulers(queues, [{ id: "business-a", active: true }, { id: "business-b", active: true }]);
 
-    expect(upsertJobScheduler).toHaveBeenCalledTimes(31);
+    expect(upsertJobScheduler).toHaveBeenCalledTimes(30);
     const tenantCalls = upsertJobScheduler.mock.calls.filter((call) => call[2].data.businessId !== null);
-    expect(tenantCalls).toHaveLength(24);
+    expect(tenantCalls).toHaveLength(22);
     expect(tenantCalls.filter((call) => call[2].data.type === "api.retention")).toHaveLength(2);
     for (const call of tenantCalls) {
       expect(call[2].data.businessId).toMatch(/^business-[ab]$/);
@@ -63,9 +63,7 @@ describe("worker schedulers", () => {
       "outbox-backlog-sample:dormant",
     ]);
     const tenantTypes = upsertJobScheduler.mock.calls.filter((call) => call[2].data.businessId === "dormant").map((call) => call[2].data.type);
-    expect(tenantTypes).toHaveLength(10);
-    // A disconnected connection's kept tokens go even if nobody opens the workspace.
-    expect(tenantTypes).toContain("calendar.sweepRetired");
+    expect(tenantTypes).toHaveLength(9);
     expect(tenantTypes).toContain("privacy.scrubMessage");
     // A trial must still end, and its emails go out, when the owner stops calling.
     expect(tenantTypes).toContain("numberTrial.sweep");
@@ -96,7 +94,6 @@ describe("worker schedulers", () => {
     expect(removeJobScheduler.mock.calls.map((call) => call[0]).sort()).toEqual([
       "api-retention:b",
       "calendar-reconcile:b",
-      "calendar-retired-sweep:b",
       "instagram-token-refresh:b",
       "number-trial-sweep:b",
       "pending-upload-cleanup:b",
@@ -116,7 +113,7 @@ describe("worker schedulers", () => {
     upsertJobScheduler.mockClear();
 
     await configureSchedulers(queues, [], applied);
-    expect(upsertJobScheduler.mock.calls.map((call) => call[0])).toEqual(["prospect-demo-expiry", "affiliate-payout", "partner-number-charges", "partner-lifecycle", "partner-domain-check", "partner-api-retention", "live-orphan-recovery"]);
+    expect(upsertJobScheduler.mock.calls.map((call) => call[0])).toEqual(["prospect-demo-expiry", "affiliate-payout", "calendar-retired-sweep", "partner-number-charges", "partner-lifecycle", "partner-domain-check", "partner-api-retention", "live-orphan-recovery"]);
   });
 
   it("does not register tenant jobs when no businesses are available", async () => {
@@ -125,9 +122,11 @@ describe("worker schedulers", () => {
 
     await configureSchedulers(queues as never);
 
-    expect(upsertJobScheduler).toHaveBeenCalledTimes(6);
+    expect(upsertJobScheduler).toHaveBeenCalledTimes(7);
     expect(upsertJobScheduler.mock.calls.map((call) => call[2].data)).toEqual(expect.arrayContaining([
       expect.objectContaining({ type: "affiliate.generatePayoutRun", businessId: null }),
+      // Kept tokens go a week after a disconnect in any business, listed or not.
+      expect.objectContaining({ type: "calendar.sweepRetired", businessId: null }),
       expect.objectContaining({ type: "prospectDemo.expire", businessId: null }),
       expect.objectContaining({ type: "billing.chargePartnerNumbers", businessId: null }),
       expect.objectContaining({ type: "partnerLifecycle.advance", businessId: null }),

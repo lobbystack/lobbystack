@@ -5304,7 +5304,7 @@
       "delete": {
         "operationId": "deleteCalendarConnection",
         "summary": "Disconnect a calendar",
-        "description": "Forgets the account's authorization and its busy times. Appointments already added to the calendar stay there, as bookings do in Cal.com.",
+        "description": "Forgets the account's authorization and its busy times. Appointments already added to a Google calendar stay there. Upcoming bookings LobbyStack made in Cal.com are canceled there, and past ones stay.",
         "tags": [
           "Calendars"
         ],

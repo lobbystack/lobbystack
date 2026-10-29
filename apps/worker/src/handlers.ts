@@ -511,12 +511,16 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
     case "calendar.reconcileBusiness":
       // A webhook delivery names the one connection whose bookings changed; every other trigger syncs the whole business.
       return await reconcileBusinessCalendar(dependencies, businessIdOrThrow(job), job.payload.scope === "connection" && typeof job.payload.connectionId === "string" ? job.payload.connectionId : undefined);
-    case "calendar.sweepRetired": {
-      const businessId = businessIdOrThrow(job);
-      return { status: "completed", entityId: `${businessId}:${await forgetStaleRetiredCalendarTokens(dependencies.domain, { businessId })}` };
+    case "calendar.sweepRetired":
+      // One sweep covers every business, including ones the scheduler no longer lists.
+      return { status: "completed", entityId: `calendar-retired:${await forgetStaleRetiredCalendarTokens(dependencies.domain)}` };
+    case "calendar.retireWebhook": {
+      const cancel = Array.isArray(job.payload.cancel) ? job.payload.cancel.flatMap((item) => {
+        const booking = item as { appointmentId?: unknown; calendarId?: unknown; eventId?: unknown };
+        return typeof booking.appointmentId === "string" && typeof booking.calendarId === "string" && typeof booking.eventId === "string" ? [{ appointmentId: booking.appointmentId, calendarId: booking.calendarId, eventId: booking.eventId }] : [];
+      }) : [];
+      return await retireCalendarWebhook(dependencies, { businessId: businessIdOrThrow(job), connectionId: String(job.payload.connectionId ?? ""), cancel });
     }
-    case "calendar.retireWebhook":
-      return await retireCalendarWebhook(dependencies, { businessId: businessIdOrThrow(job), connectionId: String(job.payload.connectionId ?? "") });
     case "calendar.deleteEvent":
       return await deleteReleasedCalendarEvent(dependencies, { businessId: businessIdOrThrow(job), appointmentId: String(job.payload.appointmentId ?? ""), connectionId: String(job.payload.connectionId ?? ""), calendarId: String(job.payload.calendarId ?? ""), eventId: String(job.payload.eventId ?? "") });
     case "email.send":

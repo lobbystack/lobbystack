@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ transaction: vi.fn(), token: vi.fn(), update: vi.fn(), updateTx: vi.fn(), mark: vi.fn(), busy: vi.fn(), backfill: vi.fn(), record: vi.fn(), registerOnce: vi.fn(), retired: vi.fn(), forget: vi.fn() }));
 vi.mock("@lobbystack/db", async (original) => ({ ...await original<typeof import("@lobbystack/db")>(), withBusinessTransaction: mocks.transaction }));
-vi.mock("@lobbystack/domain", async () => ({ ...await vi.importActual<typeof import("../../../packages/domain/src/calendarWriter")>("../../../packages/domain/src/calendarWriter"), CALENDAR_SYNC_HORIZON_MS: 90 * 86400_000, resolveCalendarAccessToken: mocks.token, updateAppointmentSyncState: mocks.update, updateAppointmentSyncStateInTransaction: mocks.updateTx, markCalendarConnectionSync: mocks.mark, queueUnsyncedAppointmentSyncs: mocks.backfill, upsertBusyBlocks: mocks.busy, recordProductEvent: mocks.record, registerCalendarWebhookOnce: mocks.registerOnce, getRetiredCalendarWebhook: mocks.retired, forgetRetiredCalendarWebhook: mocks.forget }));
+vi.mock("@lobbystack/domain", async () => ({ ...await vi.importActual<typeof import("../../../packages/domain/src/calendarWriter")>("../../../packages/domain/src/calendarWriter"), CALENDAR_SYNC_HORIZON_MS: 90 * 86400_000, resolveCalendarAccessToken: mocks.token, updateAppointmentSyncState: mocks.update, updateAppointmentSyncStateInTransaction: mocks.updateTx, markCalendarConnectionSync: mocks.mark, queueUnsyncedAppointmentSyncs: mocks.backfill, upsertBusyBlocks: mocks.busy, recordProductEvent: mocks.record, registerCalendarWebhookOnce: mocks.registerOnce, getRetiredCalendarConnection: mocks.retired, forgetRetiredCalendarWebhook: mocks.forget }));
 import { calendarConnections } from "@lobbystack/db";
 import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
@@ -169,6 +169,29 @@ it("removes a disconnected Cal.com connection's webhook with the tokens it kept,
   mocks.retired.mockResolvedValueOnce(null);
   await expect(retireCalendarWebhook(deps, { businessId: "business", connectionId: "cal" })).resolves.toMatchObject({ status: "skipped" });
   expect(mocks.forget).not.toHaveBeenCalled();
+});
+
+it("cancels a retired Cal.com connection's bookings before removing its webhook and forgetting its tokens", async () => {
+  const order: string[] = [];
+  const calcom = { ...provider, deleteEvent: vi.fn(async (input: { eventId: string }) => { order.push(`cancel:${input.eventId}`); }), deleteWebhook: vi.fn(async () => { order.push("webhook"); }) };
+  const deps = { domain: dependencies.domain, calendars: { calcom } };
+  mocks.retired.mockResolvedValueOnce({ provider: "calcom", externalWebhookId: "11" });
+  mocks.token.mockResolvedValueOnce("kept-access");
+  mocks.forget.mockImplementationOnce(async () => { order.push("forget"); });
+  const cancel = [{ appointmentId: "a1", calendarId: "42", eventId: "uid-1" }, { appointmentId: "a2", calendarId: "42", eventId: "uid-2" }];
+  await expect(retireCalendarWebhook(deps, { businessId: "business", connectionId: "cal", cancel })).resolves.toMatchObject({ status: "completed" });
+  expect(calcom.deleteEvent).toHaveBeenCalledWith({ accessToken: "kept-access", calendarId: "42", eventId: "uid-1", appointmentId: "a1" });
+  expect(order).toEqual(["cancel:uid-1", "cancel:uid-2", "webhook", "forget"]);
+
+  // A connection with bookings to cancel but no webhook still gets its bookings cancelled.
+  vi.clearAllMocks();
+  order.length = 0;
+  mocks.retired.mockResolvedValueOnce({ provider: "calcom", externalWebhookId: null });
+  mocks.token.mockResolvedValueOnce("kept-access");
+  await retireCalendarWebhook(deps, { businessId: "business", connectionId: "cal", cancel: cancel.slice(0, 1) });
+  expect(order).toEqual(["cancel:uid-1"]);
+  expect(calcom.deleteWebhook).not.toHaveBeenCalled();
+  expect(mocks.forget).toHaveBeenCalledOnce();
 });
 
 it("leaves a connection alone when its provider isn't set up here", async () => {

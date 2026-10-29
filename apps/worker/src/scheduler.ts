@@ -10,8 +10,6 @@ const tenantSchedules: Array<{ queue: JobQueue; name: string; type: JobType; eve
   { queue: "maintenance", name: "privacy-retention-sweep", type: "privacy.scrubMessage", every: 60 * 60_000 },
   { queue: "maintenance", name: "pending-upload-cleanup", type: "privacy.cleanupPendingUpload", every: 15 * 60_000 },
   { queue: "default", name: "calendar-reconcile", type: "calendar.reconcileBusiness", every: 15 * 60_000 },
-  // A dead-lettered webhook removal must not keep a disconnected connection's tokens forever.
-  { queue: "maintenance", name: "calendar-retired-sweep", type: "calendar.sweepRetired", every: 24 * 60 * 60_000 },
   { queue: "maintenance", name: "phone-number-reclaim", type: "phoneNumber.reclaim", every: 60 * 60_000 },
   // A trial ends and sends its emails on time even when nobody uses the workspace.
   { queue: "maintenance", name: "number-trial-sweep", type: "numberTrial.sweep", every: 60 * 60_000 },
@@ -40,6 +38,8 @@ export async function configureSchedulers(
   const desired: Schedule[] = [
     { queue: "maintenance", name: "prospect-demo-expiry", type: "prospectDemo.expire", every: 60 * 60_000, businessId: null },
     { queue: "maintenance", name: "affiliate-payout", type: "affiliate.generatePayoutRun", every: 24 * 60 * 60_000, businessId: null },
+    // A dead-lettered retirement must not keep a disconnected connection's tokens forever, in any business.
+    { queue: "maintenance", name: "calendar-retired-sweep", type: "calendar.sweepRetired", every: 24 * 60 * 60_000, businessId: null },
     // A number a partner's business buys is charged within the hour, and again each month it's held.
     { queue: "maintenance", name: "partner-number-charges", type: "billing.chargePartnerNumbers", every: 60 * 60_000, businessId: null },
     // A partner's businesses pause within the hour once their 30 days after its tier ended are up, and the host deletes them within the hour at 90.
