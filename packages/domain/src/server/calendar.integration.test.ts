@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, sql } from "drizzle-orm";
-import { afterAll, describe, expect, it } from "vitest";
+import { and, eq, inArray, sql } from "drizzle-orm";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { appointments, auditLogs, businessHours, businessMemberships, businesses, calendarBusyBlocks, calendarConnections, contacts, createDatabaseClient, outboxMessages, services, staff, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { checkAvailability, rescheduleAppointmentInTransaction } from "./booking";
-import { assignCalendarStaff, connectCalendar, disconnectCalendar, disconnectCalendarInTransaction, getCalendarWebhook, getRetiredCalendarWebhook, queueUnsyncedAppointmentSyncs, registerCalendarWebhookOnce, resolveBusinessByCalendarWebhook, selectCalendar } from "./calendar";
+import { WEBHOOK_REGISTRATION_LEASE_MS, assignCalendarStaff, connectCalendar, disconnectCalendar, disconnectCalendarInTransaction, forgetStaleRetiredCalendarTokens, getCalendarWebhook, getRetiredCalendarConnection, queueUnsyncedAppointmentSyncs, registerCalendarWebhookOnce, resolveBusinessByCalendarWebhook, selectCalendar } from "./calendar";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -215,11 +215,117 @@ describe.skipIf(!testUrl)("calendar backfill against dedicated PostgreSQL roles"
         expect(await resolveBusinessByCalendarWebhook({ db }, calcom!.id)).toBeNull();
         expect(await getCalendarWebhook({ db }, { businessId, connectionId: calcom!.id })).toBeNull();
         // The disconnect keeps the tokens for the job that removes the webhook from Cal.com.
-        expect(await getRetiredCalendarWebhook({ db }, { businessId, connectionId: calcom!.id })).toEqual({ provider: "calcom", externalWebhookId: "11" });
+        expect(await getRetiredCalendarConnection({ db }, { businessId, connectionId: calcom!.id })).toEqual({ provider: "calcom", externalWebhookId: "11" });
       });
       const [row] = await tx.select().from(calendarConnections).where(eq(calendarConnections.id, calcom!.id));
       expect(row).toMatchObject({ status: "disconnected", externalWebhookId: "11", encryptedWebhookSecret: null });
       expect((await tx.select().from(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), eq(outboxMessages.topic, "calendar.retireWebhook")))).map((message) => message.aggregateId)).toEqual([calcom!.id]);
+    });
+  });
+
+  it("revives a disconnected Cal.com row without its webhook or event type, and leaves a connected row's alone", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, userId } = await workspace(tx);
+      const [revived] = await tx.insert(calendarConnections).values({ businessId, ownerUserId: userId, provider: "calcom", externalAccountId: "1234", selectedCalendarId: "42", status: "disconnected", disconnectedAt: new Date(), externalWebhookId: "11", encryptedAccessToken: "enc:kept" }).returning();
+      const [connected] = await tx.insert(calendarConnections).values({ businessId, ownerUserId: userId, provider: "calcom", externalAccountId: "5678", staffId: null, selectedCalendarId: "43", status: "connected", externalWebhookId: "12", encryptedWebhookSecret: "enc:secret" }).returning();
+      await tx.execute(sql`set local role lobbystack_app`);
+      const db = tx as unknown as Database;
+      await connectCalendar({ db }, { userId, businessId, provider: "calcom", externalAccountId: "1234", encryptedAccessToken: "enc:new" });
+      await tx.execute(sql`reset role`);
+      const [row] = await tx.select().from(calendarConnections).where(eq(calendarConnections.id, revived!.id));
+      // Without its old event type, the revived row doesn't outrank Google before an admin picks one again.
+      expect(row).toMatchObject({ status: "connected", externalWebhookId: null, encryptedWebhookSecret: null, selectedCalendarId: null, disconnectedAt: null, encryptedAccessToken: "enc:new" });
+      // Connecting 1234 business-wide replaced 5678, which kept its tokens for its retirement job.
+      const [replaced] = await tx.select().from(calendarConnections).where(eq(calendarConnections.id, connected!.id));
+      expect(replaced).toMatchObject({ status: "disconnected", externalWebhookId: "12", encryptedWebhookSecret: null });
+      expect(replaced!.disconnectedAt).toBeInstanceOf(Date);
+
+      // Re-authorizing a connected row keeps its webhook and event type.
+      await tx.update(calendarConnections).set({ selectedCalendarId: "42", externalWebhookId: "13", encryptedWebhookSecret: "enc:live" }).where(eq(calendarConnections.id, revived!.id));
+      await tx.execute(sql`set local role lobbystack_app`);
+      await connectCalendar({ db }, { userId, businessId, provider: "calcom", externalAccountId: "1234", encryptedAccessToken: "enc:again" });
+      await tx.execute(sql`reset role`);
+      const [again] = await tx.select().from(calendarConnections).where(eq(calendarConnections.id, revived!.id));
+      expect(again).toMatchObject({ status: "connected", selectedCalendarId: "42", externalWebhookId: "13", encryptedWebhookSecret: "enc:live" });
+    });
+  });
+
+  it("moves a booking from Google to Cal.com when an event type is picked, and back when Cal.com disconnects", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, userId, book } = await workspace(tx);
+      const [google] = await tx.insert(calendarConnections).values({ businessId, ownerUserId: userId, provider: "google", externalAccountId: "owner@example.invalid", selectedCalendarId: "team@group.calendar.google.com", status: "connected", encryptedRefreshToken: "enc:google" }).returning();
+      const [calcom] = await tx.insert(calendarConnections).values({ businessId, ownerUserId: userId, provider: "calcom", externalAccountId: "1234", status: "connected", encryptedAccessToken: "enc:access", encryptedRefreshToken: "enc:refresh" }).returning();
+      const booked = await book({ calendarSyncState: "synced", calendarExternalId: "google-event" });
+      const db = tx as unknown as Database;
+      const asApp = async (run: () => Promise<void>) => { await tx.execute(sql`set local role lobbystack_app`); await run(); await tx.execute(sql`reset role`); };
+      const topics = async (topic: string) => (await tx.select().from(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), eq(outboxMessages.topic, topic)))).map((message) => message.payload);
+
+      // Cal.com, once it has an event type, outranks Google: the booking leaves Google's calendar.
+      await asApp(() => selectCalendar({ db }, { userId, businessId, connectionId: calcom!.id, calendarId: "42" }));
+      expect((await tx.select().from(appointments).where(eq(appointments.id, booked.id)))[0]).toMatchObject({ calendarExternalId: null, calendarSyncState: "not_required" });
+      expect(await topics("calendar.deleteEvent")).toEqual([{ appointmentId: booked.id, connectionId: google!.id, calendarId: "team@group.calendar.google.com", eventId: "google-event" }]);
+
+      // The sync booked it in Cal.com. Disconnecting Cal.com hands it back to Google and cancels the Cal.com booking.
+      await tx.update(appointments).set({ calendarExternalId: "booking-uid", calendarSyncState: "synced" }).where(eq(appointments.id, booked.id));
+      await asApp(() => disconnectCalendar({ db }, { userId, businessId, connectionId: calcom!.id }));
+      expect((await tx.select().from(appointments).where(eq(appointments.id, booked.id)))[0]).toMatchObject({ calendarExternalId: null, calendarSyncState: "not_required" });
+      expect(await topics("calendar.retireWebhook")).toEqual([{ connectionId: calcom!.id, cancel: [{ appointmentId: booked.id, calendarId: "42", eventId: "booking-uid" }] }]);
+      // No delete went to the disconnected connection, and it kept the tokens its retirement job needs.
+      expect((await topics("calendar.deleteEvent")).filter((payload) => (payload as { connectionId?: string }).connectionId === calcom!.id)).toEqual([]);
+      expect((await tx.select().from(calendarConnections).where(eq(calendarConnections.id, calcom!.id)))[0]).toMatchObject({ status: "disconnected", encryptedRefreshToken: "enc:refresh" });
+      await asWorker(tx, async (workerDb) => expect(await getRetiredCalendarConnection({ db: workerDb }, { businessId, connectionId: calcom!.id })).toEqual({ provider: "calcom", externalWebhookId: null }));
+    });
+  });
+
+  it("lets one sync hold the webhook lease, and another take it once it lapses", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, userId } = await workspace(tx);
+      const [calcom] = await tx.insert(calendarConnections).values({ businessId, ownerUserId: userId, provider: "calcom", externalAccountId: "1234", selectedCalendarId: "42", status: "connected" }).returning();
+      const start = new Date("2030-01-01T12:00:00Z");
+      const at = (offsetMs: number) => () => new Date(start.getTime() + offsetMs);
+      await asWorker(tx, async (db) => {
+        const input = { businessId, connectionId: calcom!.id };
+        let finishSlow!: () => void;
+        const slowDiscard = vi.fn(async () => undefined);
+        const slow = registerCalendarWebhookOnce({ db }, { ...input, now: at(0), discard: slowDiscard, register: () => new Promise((resolve) => { finishSlow = () => resolve({ externalWebhookId: "slow", encryptedWebhookSecret: "enc:slow" }); }) });
+        await vi.waitFor(() => expect(finishSlow).toBeTypeOf("function"));
+        // While the lease holds, another sync registers nothing.
+        const unused = vi.fn(async () => ({ externalWebhookId: "never", encryptedWebhookSecret: "enc" }));
+        expect(await registerCalendarWebhookOnce({ db }, { ...input, now: at(60_000), discard: vi.fn(), register: unused })).toBe("busy");
+        expect(unused).not.toHaveBeenCalled();
+        // Once it lapses, the next sync takes it and saves its webhook.
+        expect(await registerCalendarWebhookOnce({ db }, { ...input, now: at(WEBHOOK_REGISTRATION_LEASE_MS + 1_000), discard: vi.fn(), register: async () => ({ externalWebhookId: "fresh", encryptedWebhookSecret: "enc:fresh" }) })).toBe("registered");
+        // The slow sync no longer holds the lease, so its webhook goes back to Cal.com instead of replacing the saved one.
+        finishSlow();
+        expect(await slow).toBe("disconnected");
+        expect(slowDiscard).toHaveBeenCalledWith("slow");
+        expect(await getCalendarWebhook({ db }, input)).toEqual({ provider: "calcom", externalWebhookId: "fresh", encryptedWebhookSecret: "enc:fresh" });
+      });
+    });
+  });
+
+  it("sweeps the tokens of connections disconnected over a week ago in every business, measured from the disconnect", async () => {
+    await rollbackTest(async (tx) => {
+      const first = await workspace(tx);
+      const second = await workspace(tx);
+      const now = new Date();
+      const daysAgo = (days: number) => new Date(now.getTime() - days * 86_400_000);
+      const kept = { encryptedAccessToken: "enc:access", encryptedRefreshToken: "enc:refresh", externalWebhookId: "11" };
+      const rows = await tx.insert(calendarConnections).values([
+        // A token refresh touched this one yesterday; it was disconnected eight days ago.
+        { businessId: first.businessId, ownerUserId: first.userId, provider: "calcom", externalAccountId: "stale-1", status: "disconnected", disconnectedAt: daysAgo(8), updatedAt: daysAgo(1), ...kept },
+        { businessId: second.businessId, ownerUserId: second.userId, provider: "calcom", externalAccountId: "stale-2", status: "disconnected", disconnectedAt: daysAgo(30), ...kept },
+        { businessId: first.businessId, ownerUserId: first.userId, provider: "calcom", externalAccountId: "recent", status: "disconnected", disconnectedAt: daysAgo(2), ...kept },
+        { businessId: first.businessId, ownerUserId: first.userId, provider: "calcom", externalAccountId: "live", status: "connected", ...kept },
+      ]).returning();
+      // The worker runs the sweep with no business context.
+      expect(await asWorker(tx, (db) => forgetStaleRetiredCalendarTokens({ db }, { now }))).toBeGreaterThanOrEqual(2);
+      const after = new Map((await tx.select().from(calendarConnections).where(inArray(calendarConnections.id, rows.map((row) => row.id)))).map((row) => [row.externalAccountId, row]));
+      for (const account of ["stale-1", "stale-2"]) expect(after.get(account)).toMatchObject({ encryptedAccessToken: null, encryptedRefreshToken: null, externalWebhookId: null });
+      for (const account of ["recent", "live"]) expect(after.get(account)).toMatchObject(kept);
+      // Another role can't run it.
+      await tx.execute(sql`set local role lobbystack_app`);
+      await expect(tx.execute(sql`select app.forget_stale_retired_calendar_tokens(now())`)).rejects.toThrow();
     });
   });
 
