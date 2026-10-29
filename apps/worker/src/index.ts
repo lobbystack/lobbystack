@@ -7,6 +7,7 @@ import { createEmbeddingProvider } from "@lobbystack/providers/ai/embeddingProvi
 import { FirecrawlProvider } from "@lobbystack/providers/crawling/firecrawl";
 import { createCustomHostnameProvider, systemTxtLookup } from "@lobbystack/providers/customHostnames/customHostnames";
 import { SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
+import { CalcomCalendarProvider, calcomCalendarConfigFromEnv } from "@lobbystack/providers/calcom/calendar";
 import { GoogleCalendarProvider } from "@lobbystack/providers/google/calendar";
 import { InstagramProvider } from "@lobbystack/providers/instagram/instagram";
 import { SecretBox } from "@lobbystack/providers/crypto/secretBox";
@@ -70,6 +71,8 @@ function createCalendarProviders(): CalendarProviders | undefined {
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   const redirectUri = process.env.GOOGLE_REDIRECT_URI;
   if (clientId && clientSecret && redirectUri) providers.google = new GoogleCalendarProvider({ clientId, clientSecret, redirectUri });
+  const calcom = calcomCalendarConfigFromEnv();
+  if (calcom) providers.calcom = new CalcomCalendarProvider(calcom);
   return Object.keys(providers).length ? providers : undefined;
 }
 

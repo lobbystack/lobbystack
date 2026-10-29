@@ -181,8 +181,11 @@ async function loadBusyTimes(tx: DatabaseTransaction, schedule: Schedule, input:
   // Events LobbyStack wrote for its own appointments come back as busy blocks. Skip them:
   // the appointment rows above already hold that time for the right staff member. An event
   // someone moved or stretched in the calendar no longer matches its row, so it still blocks.
+  // A Cal.com event type can fix the booking's length, so its bookings match on their uid alone.
+  const uidOnly = configured.filter((connection) => connection.provider === "calcom").map((connection) => connection.id);
+  const sameTime = and(eq(appointments.startsAt, calendarBusyBlocks.startsAt), eq(appointments.endsAt, calendarBusyBlocks.endsAt));
   const busy = connectionIds.length ? await tx.select().from(calendarBusyBlocks).where(and(eq(calendarBusyBlocks.businessId, schedule.businessId), inArray(calendarBusyBlocks.connectionId, connectionIds), lt(calendarBusyBlocks.startsAt, input.to), gt(calendarBusyBlocks.endsAt, input.from),
-    notExists(tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.businessId, calendarBusyBlocks.businessId), eq(appointments.calendarExternalId, calendarBusyBlocks.externalEventId), eq(appointments.startsAt, calendarBusyBlocks.startsAt), eq(appointments.endsAt, calendarBusyBlocks.endsAt)))))) : [];
+    notExists(tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.businessId, calendarBusyBlocks.businessId), eq(appointments.calendarExternalId, calendarBusyBlocks.externalEventId), uidOnly.length ? or(inArray(calendarBusyBlocks.connectionId, uidOnly), sameTime) : sameTime))))) : [];
   const staffByConnection = new Map(schedule.connections.map((connection) => [connection.id, connection.staffId]));
   return [
     ...existing.map((row) => ({ staffId: row.staffId, startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString() })),

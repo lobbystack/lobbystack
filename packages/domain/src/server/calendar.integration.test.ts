@@ -124,6 +124,22 @@ describe.skipIf(!testUrl)("calendar backfill against dedicated PostgreSQL roles"
     });
   });
 
+  it("recognizes LobbyStack's own Cal.com booking by its uid when the event type fixed a longer length", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, userId, serviceId, firstStaffId, secondStaffId, book } = await workspace(tx);
+      await tx.insert(businessHours).values(Array.from({ length: 7 }, (_, dayOfWeek) => ({ businessId, dayOfWeek, openMinutes: 0, closeMinutes: 1440 })));
+      const startsAt = new Date(Math.ceil(Date.now() / 86_400_000) * 86_400_000 + 12 * 3_600_000);
+      await book({ startsAt, endsAt: new Date(startsAt.getTime() + 30 * 60_000), calendarSyncState: "synced", calendarExternalId: "calcom-uid" });
+      const [connection] = await tx.insert(calendarConnections).values({ businessId, ownerUserId: userId, provider: "calcom", externalAccountId: "1234", selectedCalendarId: "42", status: "connected", lastSyncedAt: new Date() }).returning();
+      // The event type books an hour, so the booking runs past the 30-minute appointment.
+      await tx.insert(calendarBusyBlocks).values({ businessId, connectionId: connection!.id, startsAt, endsAt: new Date(startsAt.getTime() + 60 * 60_000), externalEventId: "calcom-uid" });
+
+      const halfPast = new Date(startsAt.getTime() + 30 * 60_000).toISOString();
+      const { slots } = await asWorker(tx, (db) => checkAvailability({ db }, { businessId, serviceId, startsAt: halfPast }));
+      expect(slots.map((slot) => slot.staffId).sort()).toEqual([firstStaffId, secondStaffId].sort());
+    });
+  });
+
   it("retires the old business-wide connection when the owner reconnects with another Google account", async () => {
     await rollbackTest(async (tx) => {
       const { businessId, userId } = await workspace(tx);
