@@ -107,7 +107,7 @@
       "deleteConfirm": "Supprimer la démo",
       "cancel": "Annuler",
       "errors": {
-        "domainRequired": "Il vous faut d'abord une adresse de tableau de bord. Demandez à {{appName}} d'en configurer une.",
+        "domainRequired": "Vos démos ont besoin d'une adresse de tableau de bord. Connectez un domaine dans Image de marque et domaine.",
         "rateLimited": "Trop de nouvelles démos en une heure. Réessayez plus tard.",
         "open": "Impossible d'ouvrir la démo. Réessayez.",
         "delete": "Impossible de supprimer la démo. Réessayez."

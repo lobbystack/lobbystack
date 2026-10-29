@@ -106,7 +106,7 @@
       "deleteConfirm": "Delete demo",
       "cancel": "Cancel",
       "errors": {
-        "domainRequired": "You need a dashboard address first. Ask {{appName}} to set one up.",
+        "domainRequired": "Your demos need a dashboard address to open on. Connect a domain under Branding & domain.",
         "rateLimited": "Too many new demos this hour. Try again later.",
         "open": "We couldn't open the demo. Try again.",
         "delete": "We couldn't delete the demo. Try again."

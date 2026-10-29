@@ -127,7 +127,7 @@
         "invalidName": "Escriba el nombre del negocio, de hasta 120 caracteres.",
         "invalidEmail": "Escriba el correo del propietario.",
         "invalidTimezone": "Elija una zona horaria.",
-        "domainRequired": "Primero necesita una dirección de panel. Pida a {{appName}} que configure una.",
+        "domainRequired": "Sus negocios necesitan una dirección de panel. Conecte un dominio en Marca y dominio.",
         "rateLimited": "Demasiados negocios nuevos en la última hora. Inténtelo de nuevo más tarde.",
         "ownerOnTeam": "Una persona de su equipo no puede ser propietaria de un negocio. Escriba el correo de su cliente.",
         "failed": "No pudimos crear el negocio. Inténtelo de nuevo.",

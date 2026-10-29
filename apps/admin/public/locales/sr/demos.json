@@ -107,7 +107,7 @@
       "deleteConfirm": "Obriši demo",
       "cancel": "Otkaži",
       "errors": {
-        "domainRequired": "Prvo Vam treba adresa kontrolne table. Zatražite od servisa {{appName}} da je podesi.",
+        "domainRequired": "Vašim demo verzijama treba adresa kontrolne table. Povežite domen u odeljku Brend i domen.",
         "rateLimited": "Napravili ste previše demoa u ovom satu. Pokušajte ponovo kasnije.",
         "open": "Nismo uspeli da otvorimo demo. Pokušajte ponovo.",
         "delete": "Nismo uspeli da obrišemo demo. Pokušajte ponovo."

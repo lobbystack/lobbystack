@@ -107,7 +107,7 @@
       "deleteConfirm": "Eliminar demo",
       "cancel": "Cancelar",
       "errors": {
-        "domainRequired": "Primero necesita una dirección de panel. Pida a {{appName}} que configure una.",
+        "domainRequired": "Sus demos necesitan una dirección de panel. Conecte un dominio en Marca y dominio.",
         "rateLimited": "Demasiadas demos nuevas en la última hora. Inténtelo de nuevo más tarde.",
         "open": "No pudimos abrir la demo. Inténtelo de nuevo.",
         "delete": "No pudimos eliminar la demo. Inténtelo de nuevo."

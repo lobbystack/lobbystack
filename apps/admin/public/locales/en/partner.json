@@ -127,7 +127,7 @@
         "invalidName": "Enter the business's name, up to 120 characters.",
         "invalidEmail": "Enter the owner's email address.",
         "invalidTimezone": "Pick a time zone.",
-        "domainRequired": "You need a dashboard address first. Ask {{appName}} to set one up.",
+        "domainRequired": "Your businesses need a dashboard address to open on. Connect a domain under Branding & domain.",
         "rateLimited": "Too many new businesses this hour. Try again later.",
         "ownerOnTeam": "Someone on your team can't own a business. Enter your client's email.",
         "failed": "We couldn't create the business. Try again.",
