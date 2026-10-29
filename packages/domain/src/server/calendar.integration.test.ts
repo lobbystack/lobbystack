@@ -166,6 +166,38 @@ describe.skipIf(!testUrl)("calendar backfill against dedicated PostgreSQL roles"
     });
   });
 
+  it("keeps another staff member's event busy when it shares the moving appointment's span", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, userId, firstStaffId, secondStaffId, book } = await workspace(tx);
+      await tx.insert(businessHours).values(Array.from({ length: 7 }, (_, dayOfWeek) => ({ businessId, dayOfWeek, openMinutes: 0, closeMinutes: 1440 })));
+      const startsAt = new Date(Math.ceil(Date.now() / 86_400_000) * 86_400_000 + 12 * 3_600_000);
+      const endsAt = new Date(startsAt.getTime() + 30 * 60_000);
+      // First's appointment is moving. Second has an outside meeting at the same time on their own calendar.
+      const booked = await book({ startsAt: new Date(startsAt.getTime() + 2 * 3_600_000), endsAt: new Date(endsAt.getTime() + 2 * 3_600_000), staffId: firstStaffId });
+      const [own] = await tx.insert(calendarConnections).values({ businessId, ownerUserId: userId, provider: "google", externalAccountId: "second@example.invalid", staffId: secondStaffId, selectedCalendarId: "second@group.calendar.google.com", status: "connected", lastSyncedAt: new Date() }).returning();
+      await tx.insert(calendarBusyBlocks).values({ businessId, connectionId: own!.id, staffId: secondStaffId, startsAt: booked.startsAt, endsAt: booked.endsAt, externalEventId: "second-meeting" });
+      await asWorker(tx, async (db) => {
+        // Moving the appointment to Second at that time would double-book them.
+        await expect(withBusinessTransaction(db, { businessId, actorType: "worker" }, (workerTx) => rescheduleAppointmentInTransaction(workerTx, { businessId, appointmentId: booked.id, startsAt: booked.startsAt.toISOString(), staffId: secondStaffId, change: { source: "caller" } }))).rejects.toThrow("no longer available");
+      });
+    });
+  });
+
+  it("keeps a canceled appointment's Cal.com booking busy until Cal.com drops it", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, userId, serviceId, book } = await workspace(tx);
+      await tx.insert(businessHours).values(Array.from({ length: 7 }, (_, dayOfWeek) => ({ businessId, dayOfWeek, openMinutes: 0, closeMinutes: 1440 })));
+      const startsAt = new Date(Math.ceil(Date.now() / 86_400_000) * 86_400_000 + 12 * 3_600_000);
+      const endsAt = new Date(startsAt.getTime() + 30 * 60_000);
+      // The cancel in Cal.com hasn't gone through, so the booking still holds the time there.
+      await book({ startsAt, endsAt, status: "canceled", calendarSyncState: "failed", calendarExternalId: "calcom-uid" });
+      const [calcom] = await tx.insert(calendarConnections).values({ businessId, ownerUserId: userId, provider: "calcom", externalAccountId: "1234", selectedCalendarId: "42", status: "connected", lastSyncedAt: new Date() }).returning();
+      await tx.insert(calendarBusyBlocks).values({ businessId, connectionId: calcom!.id, startsAt, endsAt, externalEventId: "calcom-uid" });
+      const { slots } = await asWorker(tx, (db) => checkAvailability({ db }, { businessId, serviceId, startsAt: startsAt.toISOString() }));
+      expect(slots).toEqual([]);
+    });
+  });
+
   it("finds a Cal.com connection's business from its webhook URL until the connection is disconnected", async () => {
     await rollbackTest(async (tx) => {
       const { businessId, userId } = await workspace(tx);

@@ -184,22 +184,26 @@ async function loadBusyTimes(tx: DatabaseTransaction, schedule: Schedule, input:
   const uidOnly = new Set(configured.filter((connection) => connection.provider === "calcom").map((connection) => connection.id));
   const timeMatched = connectionIds.filter((id) => !uidOnly.has(id));
   const window = (ids: string[]) => and(eq(calendarBusyBlocks.businessId, schedule.businessId), inArray(calendarBusyBlocks.connectionId, ids), lt(calendarBusyBlocks.startsAt, input.to), gt(calendarBusyBlocks.endsAt, input.from));
+  // Only an appointment that still holds its time, as the rows above count it, accounts for its event: a canceled
+  // one whose calendar delete hasn't gone through yet leaves the event busy until the next sync drops it.
+  const holdsTime = ne(appointments.status, "canceled");
   const matched = timeMatched.length ? await tx.select().from(calendarBusyBlocks).where(and(window(timeMatched),
-    notExists(tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.businessId, calendarBusyBlocks.businessId), eq(appointments.calendarExternalId, calendarBusyBlocks.externalEventId), eq(appointments.startsAt, calendarBusyBlocks.startsAt), eq(appointments.endsAt, calendarBusyBlocks.endsAt)))))) : [];
+    notExists(tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.businessId, calendarBusyBlocks.businessId), holdsTime, eq(appointments.calendarExternalId, calendarBusyBlocks.externalEventId), eq(appointments.startsAt, calendarBusyBlocks.startsAt), eq(appointments.endsAt, calendarBusyBlocks.endsAt)))))) : [];
   // A Cal.com event type can fix a booking's length, so its bookings match their appointment on the uid
   // alone, and only the appointment's own span leaves the block: time Cal.com holds past it stays busy.
   const calcomIds = connectionIds.filter((id) => uidOnly.has(id));
   const calcom = calcomIds.length ? await tx.select({ block: calendarBusyBlocks, appointmentId: appointments.id, ownStartsAt: appointments.startsAt, ownEndsAt: appointments.endsAt }).from(calendarBusyBlocks)
-    .leftJoin(appointments, and(eq(appointments.businessId, calendarBusyBlocks.businessId), eq(appointments.calendarExternalId, calendarBusyBlocks.externalEventId)))
+    .leftJoin(appointments, and(eq(appointments.businessId, calendarBusyBlocks.businessId), holdsTime, eq(appointments.calendarExternalId, calendarBusyBlocks.externalEventId)))
     .where(window(calcomIds)) : [];
   // Cal.com copies its bookings into the calendars it checks, so an appointment being moved can come back as a
   // block on another connection that carries no id of ours. One with exactly the appointment's span, or its
-  // Cal.com booking's, is that copy, and moving the appointment frees it.
-  const movingSpans = input.ignoreAppointmentId ? [
-    ...(await tx.select({ startsAt: appointments.startsAt, endsAt: appointments.endsAt }).from(appointments).where(and(eq(appointments.businessId, schedule.businessId), eq(appointments.id, input.ignoreAppointmentId))).limit(1)),
-    ...calcom.filter(({ appointmentId }) => appointmentId === input.ignoreAppointmentId).map(({ block }) => block),
-  ] : [];
-  const isMovingCopy = (block: { startsAt: Date; endsAt: Date }) => movingSpans.some((span) => span.startsAt.getTime() === block.startsAt.getTime() && span.endsAt.getTime() === block.endsAt.getTime());
+  // Cal.com booking's, on a calendar of the staff member's own or the business's, is that copy, and moving the
+  // appointment frees it. The same span on another staff member's calendar is theirs, and stays busy.
+  const [moving] = input.ignoreAppointmentId ? await tx.select({ staffId: appointments.staffId, startsAt: appointments.startsAt, endsAt: appointments.endsAt }).from(appointments).where(and(eq(appointments.businessId, schedule.businessId), eq(appointments.id, input.ignoreAppointmentId))).limit(1) : [];
+  const movingSpans = moving ? [moving, ...calcom.filter(({ appointmentId }) => appointmentId === input.ignoreAppointmentId).map(({ block }) => block)] : [];
+  const movingCalendars = new Set(moving ? schedule.connections.filter((connection) => connection.staffId === null || connection.staffId === moving.staffId).map((connection) => connection.id) : []);
+  const isMovingCopy = (block: { connectionId: string; staffId: string | null; startsAt: Date; endsAt: Date }) => movingCalendars.has(block.connectionId) && (block.staffId === null || block.staffId === moving?.staffId)
+    && movingSpans.some((span) => span.startsAt.getTime() === block.startsAt.getTime() && span.endsAt.getTime() === block.endsAt.getTime());
   const busy = [
     ...matched.filter((block) => !isMovingCopy(block)),
     ...calcom.flatMap(({ block, appointmentId, ownStartsAt, ownEndsAt }) => {
