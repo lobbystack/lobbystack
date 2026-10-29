@@ -56,6 +56,12 @@ describe("dashboard unanswered questions", () => {
     const link = screen.getByRole("link", { name: new RegExp(i18n.t("knowledge:unansweredQuestions.home.count", { count: 3 })) });
     expect(link.getAttribute("href")).toBe("/agent/knowledge#unanswered-questions");
   });
+  it("counts the open questions as an action and drops the empty state", async () => {
+    const i18n = await setup("en", null, { unansweredCount: 2, actionRequired: [] });
+    expect(screen.queryByText(i18n.t("dashboard:home.actionRequired.emptyTitle"))).toBeNull();
+    const heading = screen.getByRole("heading", { name: i18n.t("dashboard:home.actionRequired.title") });
+    expect(heading.parentElement?.textContent).toBe(`${i18n.t("dashboard:home.actionRequired.title")}1`);
+  });
   it("shows nothing when every question is handled", async () => {
     await setup("en", null, { unansweredCount: 0 });
     expect(screen.getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["/appointments"]);
