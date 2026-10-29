@@ -8,6 +8,7 @@ vi.mock("../authz", () => ({ requireBusinessAdmin: mocks.requireAdmin, requireBu
 vi.mock("./knowledge", () => ({ createKnowledgeSnippetInTransaction: mocks.createSnippet }));
 
 import { unansweredQuestions } from "@lobbystack/db";
+import { apiKnowledgeEntryCreateSchema } from "@lobbystack/shared";
 import { answerUnansweredQuestion, dismissUnansweredQuestion, normalizeUnansweredQuestion, recordUnansweredQuestion } from "./unansweredQuestions";
 
 type Values = Record<string, unknown>;
@@ -73,7 +74,10 @@ describe("recordUnansweredQuestion", () => {
     await expect(recordUnansweredQuestion(context, { businessId, question: " ... ", channel: "web_chat" })).resolves.toBeNull();
     expect(mocks.transaction).not.toHaveBeenCalled();
     await recordUnansweredQuestion(context, { businessId, question: "parking ".repeat(100), channel: "web_chat" });
-    expect((inserted.values!.question as string).length).toBeLessThanOrEqual(500);
+    // Short enough to become a text entry's title when it's answered, as templates and the API check.
+    const question = inserted.values!.question as string;
+    expect(apiKnowledgeEntryCreateSchema.safeParse({ type: "text", title: question, content: "Yes." }).success).toBe(true);
+    expect(apiKnowledgeEntryCreateSchema.safeParse({ type: "text", title: `${question}x`, content: "Yes." }).success).toBe(false);
   });
 });
 

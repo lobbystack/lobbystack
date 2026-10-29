@@ -7,8 +7,8 @@ import type { DomainContext } from "./context";
 import { contentExpiryForPlan, isContentRetentionEnabled, resolveBusinessBillingPlan } from "./contentRetentionPolicy";
 import { createKnowledgeSnippetInTransaction } from "./knowledge";
 
-/** The longest question kept, in characters. Longer lookups are cut. */
-export const MAX_UNANSWERED_QUESTION_LENGTH = 500;
+/** The longest question kept, in characters. Longer lookups are cut, so an answered question fits as a text entry's title. */
+export const MAX_UNANSWERED_QUESTION_LENGTH = 300;
 /** The longest answer saved as a text entry, in characters. */
 export const MAX_UNANSWERED_ANSWER_LENGTH = 5_000;
 /** The most open questions the dashboard lists at once. */

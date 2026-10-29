@@ -2,8 +2,10 @@ import { randomUUID } from "node:crypto";
 
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { conversations, createDatabaseClient, knowledgeSnippets, outboxMessages, unansweredQuestions, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { businessContextSnapshots, conversations, createDatabaseClient, knowledgeSnippets, outboxMessages, unansweredQuestions, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
+import { MAX_KNOWLEDGE_SNIPPETS_PER_SNAPSHOT } from "../snapshot";
+import { refreshBusinessSnapshot } from "./knowledge";
 import { runPrivacyRetentionSweep } from "./privacy";
 import { createBusiness } from "./tenancy";
 import { answerUnansweredQuestion, dismissUnansweredQuestion, listOpenUnansweredQuestions, recordUnansweredQuestion } from "./unansweredQuestions";
@@ -79,6 +81,28 @@ describe.skipIf(!testUrl)("unanswered questions against PostgreSQL under RLS", (
       // The receptionist's snapshot picks the new entry up like any other.
       const refreshes = await tx.select({ id: outboxMessages.id }).from(outboxMessages).where(and(eq(outboxMessages.topic, "snapshot.refresh"), eq(outboxMessages.aggregateId, snippetId)));
       expect(refreshes).toHaveLength(1);
+    });
+  });
+
+  it("puts an answer in the snapshot when the business already has a full snapshot of entries", async () => {
+    await rollbackTest(async (tx) => {
+      const { context, userId, businessId } = await seedBusiness(tx);
+      // Older entries at the same default priority as an answer, enough to fill the snapshot.
+      const lastWeek = new Date(Date.now() - 7 * 86_400_000);
+      await tx.insert(knowledgeSnippets).values(Array.from({ length: MAX_KNOWLEDGE_SNIPPETS_PER_SNAPSHOT }, (_, index) => ({ businessId, title: `Entry ${index}`, content: "Older text.", createdAt: lastWeek, updatedAt: lastWeek })));
+
+      await as(tx, "lobbystack_worker");
+      const question = await recordUnansweredQuestion(context, { businessId, question: "Do you have parking?", channel: "voice" });
+      await as(tx, "lobbystack_app");
+      const { snippetId } = await answerUnansweredQuestion(context, { userId, businessId, questionId: question!.id, answer: "Yes, behind the building." });
+      await as(tx, "lobbystack_worker");
+      await refreshBusinessSnapshot(context, { businessId });
+
+      await as(tx, null);
+      const [row] = await tx.select({ snapshot: businessContextSnapshots.snapshot }).from(businessContextSnapshots).where(eq(businessContextSnapshots.businessId, businessId));
+      const snippets = (row?.snapshot as { knowledgeSnippets: Array<{ id: string }> }).knowledgeSnippets;
+      expect(snippets).toHaveLength(MAX_KNOWLEDGE_SNIPPETS_PER_SNAPSHOT);
+      expect(snippets.map((snippet) => snippet.id)).toContain(snippetId);
     });
   });
 
