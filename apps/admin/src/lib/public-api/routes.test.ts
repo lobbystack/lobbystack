@@ -908,6 +908,28 @@ describe("calendars", () => {
     expect(verifyCalendarConnectLinkToken(url.searchParams.get("token")!)).toMatchObject({ businessId });
   });
 
+  it("hands out a Cal.com link signed for Cal.com only where Cal.com is set up", async () => {
+    const connectCalcom = () => v1.createCalcomConnectLink(call("/calendars/calcom/connect", { method: "POST" }));
+    vi.stubEnv("ENCRYPTION_KEY", "calendar-test-key");
+    expect(await (await connectCalcom()).json()).toMatchObject({ error: { code: "forbidden", message: "Cal.com isn't available on this deployment." } });
+    vi.stubEnv("CALCOM_CLIENT_ID", "client");
+    vi.stubEnv("CALCOM_CLIENT_SECRET", "secret");
+    vi.stubEnv("CALCOM_REDIRECT_URI", "https://app.lobbystack.example/api/calendar/calcom/callback");
+    vi.stubEnv("APP_BASE_URL", "https://app.lobbystack.example");
+    vi.stubEnv("BETTER_AUTH_SECRET", "link-test-secret");
+    domain.createCalendarConnectLinkForApi.mockImplementation(async (_context: unknown, _caller: unknown, options: { link: (input: { businessId: string }) => { url: string; expiresAt: Date } }) => {
+      const { url, expiresAt } = options.link({ businessId });
+      return { url, expires_at: expiresAt.toISOString() };
+    });
+    const response = await connectCalcom();
+    expect(response.status).toBe(201);
+    expect(domain.createCalendarConnectLinkForApi).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({ provider: "calcom" }));
+    const url = new URL(((await response.json()) as { data: { url: string } }).data.url);
+    expect(`${url.origin}${url.pathname}`).toBe("https://app.lobbystack.example/api/calendar/calcom/connect");
+    expect(verifyCalendarConnectLinkToken(url.searchParams.get("token")!, "calcom")).toMatchObject({ businessId });
+    expect(verifyCalendarConnectLinkToken(url.searchParams.get("token")!)).toBeNull();
+  });
+
   it("lists connections and an account's calendars, and checks changes before the domain sees them", async () => {
     domain.listCalendarConnectionsForApi.mockResolvedValue([connection]);
     expect(await (await v1.listCalendarConnections(call("/calendars"))).json()).toEqual({ data: [connection], next_cursor: null, has_more: false });

@@ -495,6 +495,12 @@ export const v1 = {
     const origin = await businessOrigin(context, caller.businessId);
     return { body: data(await createCalendarConnectLinkForApi(context, caller, { link: ({ businessId }) => createCalendarConnectLink({ origin, businessId }) })) };
   }),
+  createCalcomConnectLink: (request: Request) => handleApiRequest(request, "createCalcomConnectLink", async ({ context, caller }) => {
+    requireCalendarProvider("calcom");
+    if (!calendarSigningConfigured()) throw calendarUnavailable("calcom");
+    const origin = await businessOrigin(context, caller.businessId);
+    return { body: data(await createCalendarConnectLinkForApi(context, caller, { provider: "calcom", link: ({ businessId }) => createCalendarConnectLink({ origin, businessId, provider: "calcom" }) })) };
+  }),
   listCalendarConnections: (request: Request) => handleApiRequest(request, "listCalendarConnections", async ({ context, caller }) => ({ body: { data: await listCalendarConnectionsForApi(context, caller), next_cursor: null, has_more: false } })),
   listAccountCalendars: (request: Request, { params }: Params<"connection_id">) => handleApiRequest(request, "listAccountCalendars", async ({ context, caller }) => {
     const connectionId = uuidParam((await params).connection_id, "connection_id");
