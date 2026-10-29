@@ -5,7 +5,10 @@ import { NextResponse } from "next/server";
 import { getCalendarWebhook, queueCalendarWebhookSync, resolveBusinessByCalendarWebhook } from "@lobbystack/domain";
 import { CALCOM_WEBHOOK_TRIGGERS, SecretBox, verifyCalcomWebhookSignature } from "@lobbystack/providers";
 import { asApiResponse } from "@/lib/api-helpers";
+import { enforceCalendarWebhookRateLimits } from "@/lib/calendar-webhook-limit";
 import { createWorkerDomainContext } from "@/lib/domain-context";
+import { readTextWithin } from "@/lib/operator-request";
+import { trustedClientIp } from "@/lib/trusted-client-ip";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,9 +26,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ con
   const encryptionKey = process.env.ENCRYPTION_KEY;
   if (!encryptionKey) return new NextResponse("Cal.com isn't set up on this server.", { status: 503 });
   const { connectionId } = await params;
-  const rawBody = await request.text();
-  if (Buffer.byteLength(rawBody) > MAX_BODY_BYTES) return new NextResponse("Payload too large", { status: 413 });
   if (!UUID.test(connectionId)) return new NextResponse("Not found", { status: 404 });
+  // Forged deliveries are cheap to send, so they're counted before the body is read or the database is asked.
+  const rate = await enforceCalendarWebhookRateLimits({ connectionId: connectionId.toLowerCase(), ip: trustedClientIp(request) });
+  if (!rate.allowed) return new NextResponse("Too many requests", { status: rate.status });
+  let rawBody: string;
+  try {
+    rawBody = await readTextWithin(request, MAX_BODY_BYTES);
+  } catch (error) {
+    if (error instanceof Response) return new NextResponse("Payload too large", { status: 413 });
+    throw error;
+  }
   const context = createWorkerDomainContext();
   try {
     const businessId = await resolveBusinessByCalendarWebhook(context, connectionId);
