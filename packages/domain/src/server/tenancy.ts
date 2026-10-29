@@ -152,8 +152,11 @@ async function insertBusinessRowsInTransaction(tx: DatabaseTransaction, input: N
   const name = input.name.trim();
   const generatedSlug = name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 96).replace(/-$/, "") || "business";
   const baseSlug = input.slug === undefined ? generatedSlug : cleanSlug(input.slug);
+  // Inserting a slug that another open transaction has inserted waits for it to end, and two transactions that each
+  // hold a slug the other wants deadlock. A generated slug that another transaction is making gets a suffix instead.
+  const baseSlugFree = input.slug !== undefined || (await tx.execute<{ locked: boolean }>(sql`select pg_try_advisory_xact_lock(hashtextextended(${`business-slug:${baseSlug}`}, 0)) as locked`)).rows[0]?.locked === true;
   let business: { id: string } | undefined;
-  for (let attempt = 0; attempt < 5; attempt++) {
+  for (let attempt = baseSlugFree ? 0 : 1; attempt < 5; attempt++) {
     const insert = tx.insert(businesses).values({
       id: businessId,
       name,

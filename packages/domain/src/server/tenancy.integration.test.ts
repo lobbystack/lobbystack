@@ -227,6 +227,38 @@ describe.skipIf(!client)("businesses with no owner", () => {
       expect(await tx.select({ id: businesses.id }).from(businesses).where(eq(businesses.id, otherId))).toEqual([]);
     });
   });
+
+  it("gives a generated slug that another open transaction is making a suffix, so crossed creates don't deadlock", async () => {
+    // Each transaction makes its own business, then the other's: waiting on each other's slug would deadlock.
+    const names = [`Slug Race ${randomUUID()}`, `Slug Race ${randomUUID()}`] as const;
+    const baseSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const insert = async (tx: DatabaseTransaction, name: string) => {
+      const businessId = randomUUID();
+      await tx.execute(sql`set local role lobbystack_worker`);
+      await withBusinessTransaction(tx as unknown as Database, { businessId, actorType: "worker" }, async (inner) => await insertOwnerlessBusinessInTransaction(inner, { businessId, name, timezone: "UTC", businessType: "clinic" }));
+      await tx.execute(sql`reset role`);
+      const [row] = await tx.select({ slug: businesses.slug }).from(businesses).where(eq(businesses.id, businessId));
+      return row!.slug;
+    };
+    const firstMade: Array<() => void> = [];
+    const bothMade = Promise.all([0, 1].map((index) => new Promise<void>((resolve) => { firstMade[index] = resolve; })));
+    const make = async (index: 0 | 1) => {
+      let slugs: string[] = [];
+      await rollbackTest(async (tx) => {
+        const own = await insert(tx, names[index]);
+        firstMade[index]!();
+        await bothMade;
+        slugs = [own, await insert(tx, names[1 - index]!)];
+      });
+      return slugs;
+    };
+
+    const [first, second] = await Promise.all([make(0), make(1)]);
+    expect(first[0]).toBe(baseSlug(names[0]));
+    expect(second[0]).toBe(baseSlug(names[1]));
+    expect(first[1]).toMatch(new RegExp(`^${baseSlug(names[1])}-[0-9a-f]{12}$`));
+    expect(second[1]).toMatch(new RegExp(`^${baseSlug(names[0])}-[0-9a-f]{12}$`));
+  });
 });
 
 describe.skipIf(!client)("team membership", () => {
