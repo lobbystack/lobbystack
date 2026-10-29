@@ -223,10 +223,12 @@ export function AgentBasicSettingsPage({
   const [isAppointmentChangeSaving, setIsAppointmentChangeSaving] = useState(false);
   // The profile the text fields last took their values from. Every save refetches the
   // settings, and a refetch that lands while someone is typing must not undo their edit,
-  // so a text field only takes the new value while it still holds the last one.
+  // so the greeting and summary only take the new value while they still hold the last
+  // one, and the transfer number only while nobody has edited it since it was saved.
   const syncedProfile = useRef<NonNullable<AgentSettings["profile"]> | null>(null);
   const transferNumberRef = useRef(transferNumber);
   transferNumberRef.current = transferNumber;
+  const transferNumberEdited = useRef(false);
   useEffect(() => {
     setTimezone(configuration?.business?.timezone ?? "");
     setCurrency(configuration?.business?.currency ?? "");
@@ -241,7 +243,7 @@ export function AgentBasicSettingsPage({
     setGreeting((current) => !previous || current === previous.greeting ? profile.greeting : current);
     setSummary((current) => !previous || current === shownSummary(previous) ? shownSummary(profile) : current);
     setDefaultLocale(configuration.business?.defaultLocale ?? "en");
-    if (!previous || transferNumberRef.current === (previous.transferNumber ?? "")) {
+    if (!transferNumberEdited.current) {
       setTransferNumber(profile.transferNumber ?? "");
       setTransferNumberInputValue(profile.transferNumber ?? "");
     }
@@ -325,6 +327,8 @@ export function AgentBasicSettingsPage({
     setTransferStatus(null);
     try {
       await saveProfile({ businessId, transferNumber: transferNumberResolution.value });
+      // Typing that started during the save is still unsaved.
+      if (transferNumberRef.current === (transferNumberResolution.value ?? "")) transferNumberEdited.current = false;
       telemetry.track("web.agent.settings_saved", { businessId, setting: "transfer_number" });
       toast.success(t("agent:actions.saved"));
     } catch (error) {
@@ -731,7 +735,7 @@ export function AgentBasicSettingsPage({
                     <Skeleton className="h-10 w-full rounded-md sm:w-72" />
                   ) : (
                     <div className="flex w-full min-w-0 sm:w-fit">
-                      <Select disabled={!canManageTenant} onValueChange={(value) => { if (value && value !== transferCountry) { setTransferCountry(value as Country); setTransferNumber(""); setTransferNumberInputValue(""); setTransferStatus(null); } }} value={transferCountry}>
+                      <Select disabled={!canManageTenant} onValueChange={(value) => { if (value && value !== transferCountry) { transferNumberEdited.current = true; setTransferCountry(value as Country); setTransferNumber(""); setTransferNumberInputValue(""); setTransferStatus(null); } }} value={transferCountry}>
                         <SelectTrigger aria-label={t("agent:fields.transferNumber.country")} className="w-20 shrink-0 rounded-r-none px-4 font-medium text-muted-foreground" data-phone-country-prefix><span>{selectedTransferCountry?.callingCode ?? ""}</span></SelectTrigger>
                         <SelectContent className="min-w-72"><SelectGroup>{countries.filter((option) => isTransferCountry(option.code)).map((option) => <SelectItem key={option.code} value={option.code}><span>{option.label}</span><span className="text-muted-foreground">{option.callingCode}</span></SelectItem>)}</SelectGroup></SelectContent>
                       </Select>
@@ -749,6 +753,7 @@ export function AgentBasicSettingsPage({
                           setTransferStatus(null);
                         }}
                         onRawValueChange={(nextRawValue) => {
+                          transferNumberEdited.current = true;
                           setTransferNumberInputValue(nextRawValue);
                           setTransferStatus(null);
                           if (nextRawValue.trim().startsWith("+")) {
