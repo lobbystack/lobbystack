@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Phone, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { requestJson } from "@/lib/request-json";
@@ -31,7 +31,6 @@ import { useTelemetry } from "@/components/product-analytics";
 import { BookingWithoutHoursAlert, BusinessHoursSection, needsHoursForBooking, useBusinessHours } from "@/components/business-hours-section";
 import { availableTimeZones, groupTimeZones, isTimeZoneRegion, type TimeZoneOption } from "@/lib/time-zones";
 import { errorCode } from "@/lib/checkout-errors";
-import { getTestCallStarter, startTestCall, subscribeTestCallStarter } from "@/lib/test-call-launcher";
 import { getDefaultTransferCountry, getPhoneCountryOptions, inferPhoneCountry } from "@/lib/phone";
 import { cn } from "@/lib/utils";
 
@@ -218,7 +217,6 @@ export function AgentBasicSettingsPage({
   const [voice, setVoice] = useState<ReceptionistVoice>(DEFAULT_RECEPTIONIST_VOICE);
   const [isVoiceSaving, setIsVoiceSaving] = useState(false);
   // The utility bar's test call widget registers itself; this page only starts it.
-  const canStartTestCall = useSyncExternalStore(subscribeTestCallStarter, () => getTestCallStarter() !== null, () => false);
   const voiceLabel = (option: ReceptionistVoice) => option === DEFAULT_RECEPTIONIST_VOICE ? t("agent:fields.voice.defaultOption", { voice: voiceName(option) }) : voiceName(option);
   const [transferStatus, setTransferStatus] = useState<string | null>(null);
   const [isGreetingSaving, setIsGreetingSaving] = useState(false);
@@ -625,14 +623,6 @@ export function AgentBasicSettingsPage({
               <ItemContent>
                 <ItemTitle>{t("agent:fields.voice.label")}</ItemTitle>
                 <ItemDescription>{t("agent:fields.voice.hint")}</ItemDescription>
-                {canStartTestCall ? (
-                  <div>
-                    <Button className="h-auto px-0" disabled={isVoiceSaving} onClick={() => startTestCall()} size="sm" type="button" variant="link">
-                      <Phone data-icon="inline-start" />
-                      {t("agent:fields.voice.hearIt")}
-                    </Button>
-                  </div>
-                ) : null}
               </ItemContent>
               <ItemActions className="w-full sm:w-auto">
                 {isLoadingConfiguration ? (

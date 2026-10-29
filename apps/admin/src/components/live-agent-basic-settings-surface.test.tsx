@@ -9,7 +9,6 @@ import {
   buildAppointmentChangePolicyForSave,
   resolveTransferNumberForSave,
 } from "./live-agent-basic-settings-surface";
-import { registerTestCallStarter } from "@/lib/test-call-launcher";
 
 vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => ({ track: vi.fn() }) }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string) => key }) }));
@@ -239,17 +238,6 @@ describe("AgentBasicSettingsPage voice", () => {
     const { client } = renderWithVoice("nova");
     const select = await screen.findByRole("combobox", { name: "agent:fields.voice.label" });
     await waitFor(() => expect(select.textContent).toContain("agent:fields.voice.defaultOption"));
-    client.clear();
-  });
-
-  it("starts a test call from the utility bar's widget so the owner can hear the voice", async () => {
-    const starter = vi.fn();
-    const unregister = registerTestCallStarter(starter);
-    const { client } = renderWithVoice(undefined);
-    await userEvent.click(await screen.findByRole("button", { name: "agent:fields.voice.hearIt" }));
-    expect(starter).toHaveBeenCalledTimes(1);
-    unregister();
-    await waitFor(() => expect(screen.queryByRole("button", { name: "agent:fields.voice.hearIt" })).toBeNull());
     client.clear();
   });
 });

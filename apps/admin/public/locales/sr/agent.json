@@ -326,7 +326,6 @@
     "voice": {
       "label": "Glas",
       "hint": "Recepcioner govori ovim glasom u svim pozivima.",
-      "hearIt": "Poslušajte ga u probnom pozivu",
       "defaultOption": "{{voice}} (podrazumevani)"
     },
     "timezone": {

@@ -326,7 +326,6 @@
     "voice": {
       "label": "Voice",
       "hint": "Your receptionist speaks in this voice on every call.",
-      "hearIt": "Hear it in a test call",
       "defaultOption": "{{voice}} (default)"
     },
     "timezone": {
