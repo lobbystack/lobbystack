@@ -217,6 +217,21 @@ describe("CalcomCalendarProvider", () => {
     expect(calls.filter((call) => call.url.pathname === "/v2/bookings").every((call) => new Headers(call.init.headers).get("cal-api-version") === "2026-05-01")).toBe(true);
   });
 
+  it("fails closed when Cal.com says more bookings follow but gives no cursor", async () => {
+    routes(on("GET", "/v2/bookings", () => ok([booking("b1", "2026-11-02T15:00:00.000Z", "2026-11-02T15:45:00.000Z")], { pagination: { hasMore: true, nextCursor: null } })));
+    await expect(new CalcomCalendarProvider(config).getBusyBlocks({ accessToken: "access", calendarId: "42", startsAt: "2026-11-01T00:00:00.000Z", endsAt: "2027-01-30T00:00:00.000Z" })).rejects.toThrow("next page");
+  });
+
+  it("cancels by address when Cal.com refuses the stored uid with a 400", async () => {
+    const calls = routes(
+      on("GET", "/v2/bookings/a0123placeholder", () => new Response("{}", { status: 400 })),
+      on("GET", "/v2/bookings", (url) => ok(url.searchParams.get("status") === "upcoming" ? [{ ...booking("found", write.startsAt, write.endsAt), eventTypeId: 42 }] : [], { pagination: { hasMore: false, nextCursor: null } })),
+      on("POST", /\/cancel$/, () => ok({})),
+    );
+    await new CalcomCalendarProvider(config).deleteEvent({ accessToken: "access", calendarId: "42", eventId: "a0123placeholder", appointmentId: write.appointmentId });
+    expect(calls.filter((call) => call.init.method === "POST").map((call) => call.url.pathname)).toEqual(["/v2/bookings/found/cancel"]);
+  });
+
   it("fails closed when a booking page can't be read", async () => {
     routes(on("GET", "/v2/bookings", () => new Response("{}", { status: 500 })));
     await expect(new CalcomCalendarProvider(config).getBusyBlocks({ accessToken: "access", calendarId: "42", startsAt: "2026-11-01T00:00:00.000Z", endsAt: "2027-01-30T00:00:00.000Z" })).rejects.toThrow("status 500");

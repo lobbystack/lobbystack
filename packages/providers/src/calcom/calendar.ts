@@ -304,7 +304,9 @@ export class CalcomCalendarProvider implements CalendarProvider {
       const data = await this.request<Partial<Booking> | Partial<Booking>[]>(accessToken, `/v2/bookings/${encodeURIComponent(uid)}`, { version: API_VERSIONS.bookings, what: "booking lookup" });
       return Array.isArray(data) ? null : booking(data);
     } catch (error) {
-      if (error instanceof CalcomApiError && (error.responseStatus === 404 || error.responseStatus === 410)) return null;
+      // Cal.com documents only the 200 answer here. A uid it can't read, such as LobbyStack's own placeholder,
+      // may come back as a 400 rather than a 404; either way the booking isn't there, and the lookup by address runs.
+      if (error instanceof CalcomApiError && (error.responseStatus === 400 || error.responseStatus === 404 || error.responseStatus === 410)) return null;
       throw error;
     }
   }
@@ -335,8 +337,10 @@ export class CalcomCalendarProvider implements CalendarProvider {
         if (!parsed) throw new Error("Cal.com returned an invalid booking.");
         bookings.push(parsed);
       }
-      const next = payload.pagination?.hasMore ? payload.pagination.nextCursor : null;
-      if (!next) return bookings;
+      if (!payload.pagination?.hasMore) return bookings;
+      // More pages without a way to reach them would leave busy time out, so fail closed.
+      const next = payload.pagination.nextCursor;
+      if (!next) throw new Error("Cal.com booking pagination did not say where the next page is.");
       if (seenCursors.has(next)) throw new Error("Cal.com booking pagination did not advance.");
       seenCursors.add(next);
       cursor = next;
