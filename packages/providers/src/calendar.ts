@@ -6,6 +6,14 @@ export function isCalendarProviderName(value: unknown): value is CalendarProvide
   return typeof value === "string" && (CALENDAR_PROVIDERS as readonly string[]).includes(value);
 }
 
+/** How people see each provider named, in the API, the dashboard and errors. */
+export const CALENDAR_PROVIDER_LABELS: Record<CalendarProviderName, string> = { google: "Google Calendar", calcom: "Cal.com" };
+
+/** The provider's display name, or its stored name when it isn't one LobbyStack knows. */
+export function calendarProviderLabel(provider: string): string {
+  return isCalendarProviderName(provider) ? CALENDAR_PROVIDER_LABELS[provider] : provider;
+}
+
 /** A calendar a connection could write to. For Cal.com it's an event type. */
 export type CalendarListEntry = { id: string; summary: string; primary: boolean; accessRole?: string };
 

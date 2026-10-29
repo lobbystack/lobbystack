@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 import { billingAccounts, businessHours, businesses, phoneNumbers, services } from "@lobbystack/db";
 import { assignCalendarStaff, calcomEventTypeWarnings, discoverCalendars, disconnectCalendar, listCalendarConnections, listCalendarStaff, refreshCalendar, resolveCalendarAccessToken, selectCalendar, type CalcomEventTypeWarning, type DomainContext } from "@lobbystack/domain";
-import { SecretBox, type CalcomEventType } from "@lobbystack/providers";
+import { SecretBox, calendarProviderLabel, type CalcomEventType } from "@lobbystack/providers";
 import { jsonError } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
 import { calcomCalendarProvider, calendarProvider, calendarProviderConfigured } from "@/lib/calendar-providers";
@@ -93,7 +93,7 @@ export const GET = operatorRoute(async ({ userId, businessId, domain, transactio
     discoveryError,
     calcom,
     integrations: [
-      ...(calendar[0] ? [{ name: calendar[0].provider === "google" ? "Google Calendar" : calendar[0].provider === "calcom" ? "Cal.com" : calendar[0].provider, account: calendar[0].externalAccountId, status: calendar[0].status, updatedAt: calendar[0].updatedAt, connectionId: calendar[0].id, staffId: calendar[0].staffId, selectedCalendarId: calendar[0].selectedCalendarId, lastSyncError: calendar[0].lastSyncError, calendarOptions: calendar[0].provider === "calcom" ? calcom.options : calendarOptions, discoveryError: calendar[0].provider === "calcom" ? calcom.discoveryError : discoveryError }] : [{ name: "Google Calendar", account: "Not connected", status: "disconnected", updatedAt: null, connectionId: null, staffId: null, selectedCalendarId: null, lastSyncError: null, calendarOptions: [], discoveryError: null }]),
+      ...(calendar[0] ? [{ name: calendarProviderLabel(calendar[0].provider), account: calendar[0].externalAccountId, status: calendar[0].status, updatedAt: calendar[0].updatedAt, connectionId: calendar[0].id, staffId: calendar[0].staffId, selectedCalendarId: calendar[0].selectedCalendarId, lastSyncError: calendar[0].lastSyncError, calendarOptions: calendar[0].provider === "calcom" ? calcom.options : calendarOptions, discoveryError: calendar[0].provider === "calcom" ? calcom.discoveryError : discoveryError }] : [{ name: calendarProviderLabel("google"), account: "Not connected", status: "disconnected", updatedAt: null, connectionId: null, staffId: null, selectedCalendarId: null, lastSyncError: null, calendarOptions: [], discoveryError: null }]),
       { name: "Twilio", account: `${Number(phones[0]?.count ?? 0)} active phone number${Number(phones[0]?.count ?? 0) === 1 ? "" : "s"}`, status: Number(phones[0]?.count ?? 0) > 0 ? "connected" : "disconnected", updatedAt: null },
       { name: "Polar billing", account: billing[0]?.plan ?? "Not configured", status: billing[0]?.state ?? "disconnected", updatedAt: billing[0]?.updatedAt ?? null },
     ],

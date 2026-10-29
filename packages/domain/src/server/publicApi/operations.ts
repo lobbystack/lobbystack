@@ -1,3 +1,4 @@
+import { calendarProviderLabel } from "@lobbystack/providers/calendar";
 import { createHash, randomUUID } from "node:crypto";
 
 import { and, asc, count, desc, eq, inArray, isNotNull, isNull, ne, notExists, sql } from "drizzle-orm";
@@ -975,9 +976,7 @@ export type CalendarAccess = {
 
 type AccountCalendar = Awaited<ReturnType<CalendarAccess["listCalendars"]>>[number];
 
-/** How the API names a provider to the caller, and the path that connects it again. */
-const CALENDAR_PROVIDER_NAMES: Record<string, string> = { google: "Google Calendar", calcom: "Cal.com" };
-const providerName = (provider: string) => CALENDAR_PROVIDER_NAMES[provider] ?? provider;
+/** The path that connects a provider again. */
 const connectPath = (provider: string) => `POST /calendars/${provider === "calcom" ? "calcom" : "google"}/connect`;
 
 /** LobbyStack adds appointments to the calendar it reads, so it needs one it may write to, as in the dashboard. */
@@ -1006,11 +1005,11 @@ async function accountCalendars(context: DomainContext, caller: ApiCaller, conne
       throw error;
     });
   } catch (error) {
-    if (needsReconnect(error) || providerStatus(error) === 401) throw conflict(`${provider === "google" ? "Google" : providerName(provider)} no longer accepts this connection. Connect the calendar again with ${connectPath(provider)}.`);
+    if (needsReconnect(error) || providerStatus(error) === 401) throw conflict(`${calendarProviderLabel(provider)} no longer accepts this connection. Connect the calendar again with ${connectPath(provider)}.`);
     // Disconnected since it was read.
     if (error instanceof Error && error.message === "Calendar connection is unavailable.") throw notFound("Calendar connection");
     // The provider's own errors never reach the caller: its 401 would read as the caller's key.
-    throw new Error(`${providerName(provider)} couldn't list the account's calendars.`, { cause: error });
+    throw new Error(`${calendarProviderLabel(provider)} couldn't list the account's calendars.`, { cause: error });
   }
 }
 

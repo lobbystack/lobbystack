@@ -149,6 +149,7 @@ import { createDomainContext, createWorkerDomainContext } from "../domain-contex
 import { enforceFixedWindow, fixedWindowLimit } from "../fixed-window-limit";
 import { calendarSigningConfigured, createCalendarConnectLink } from "../google-calendar-oauth";
 import { calendarProvider, calendarProviderConfigured } from "../calendar-providers";
+import { calendarProviderLabel } from "@lobbystack/providers/calendar";
 import { retireCalendarWebhook } from "../calendar-webhooks";
 import { checkPhoneNumberSearchLimit } from "../phone-number-search-limit";
 import { getStorageProvider } from "../storage";
@@ -297,8 +298,7 @@ async function partnerOrigin(context: DomainContext, partnerId: string): Promise
   return brand.origin;
 }
 
-const CALENDAR_PROVIDER_LABELS: Record<string, string> = { google: "Google Calendar", calcom: "Cal.com" };
-const calendarUnavailable = (provider: string) => new PublicApiError(403, "forbidden", `${CALENDAR_PROVIDER_LABELS[provider] ?? provider} isn't available on this deployment.`);
+const calendarUnavailable = (provider: string) => new PublicApiError(403, "forbidden", `${calendarProviderLabel(provider)} isn't available on this deployment.`);
 
 /** Refuses where `provider` isn't set up: its OAuth client, and ENCRYPTION_KEY for the tokens the callback stores. Returns that key. */
 function requireCalendarProvider(provider: string): string {
