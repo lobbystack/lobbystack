@@ -124,7 +124,7 @@ describe.skipIf(!testUrl)("calendar backfill against dedicated PostgreSQL roles"
     });
   });
 
-  it("recognizes LobbyStack's own Cal.com booking by its uid when the event type fixed a longer length", async () => {
+  it("recognizes LobbyStack's own Cal.com booking by its uid and keeps the time it holds past the appointment busy", async () => {
     await rollbackTest(async (tx) => {
       const { businessId, userId, serviceId, firstStaffId, secondStaffId, book } = await workspace(tx);
       await tx.insert(businessHours).values(Array.from({ length: 7 }, (_, dayOfWeek) => ({ businessId, dayOfWeek, openMinutes: 0, closeMinutes: 1440 })));
@@ -134,9 +134,13 @@ describe.skipIf(!testUrl)("calendar backfill against dedicated PostgreSQL roles"
       // The event type books an hour, so the booking runs past the 30-minute appointment.
       await tx.insert(calendarBusyBlocks).values({ businessId, connectionId: connection!.id, startsAt, endsAt: new Date(startsAt.getTime() + 60 * 60_000), externalEventId: "calcom-uid" });
 
-      const halfPast = new Date(startsAt.getTime() + 30 * 60_000).toISOString();
-      const { slots } = await asWorker(tx, (db) => checkAvailability({ db }, { businessId, serviceId, startsAt: halfPast }));
-      expect(slots.map((slot) => slot.staffId).sort()).toEqual([firstStaffId, secondStaffId].sort());
+      await asWorker(tx, async (db) => {
+        // The appointment's own half hour is the appointment row's; the half hour Cal.com holds past it stays busy.
+        const halfPast = await checkAvailability({ db }, { businessId, serviceId, startsAt: new Date(startsAt.getTime() + 30 * 60_000).toISOString() });
+        expect(halfPast.slots).toEqual([]);
+        const after = await checkAvailability({ db }, { businessId, serviceId, startsAt: new Date(startsAt.getTime() + 60 * 60_000).toISOString() });
+        expect(after.slots.map((slot) => slot.staffId).sort()).toEqual([firstStaffId, secondStaffId].sort());
+      });
     });
   });
 

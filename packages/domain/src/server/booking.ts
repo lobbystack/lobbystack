@@ -181,16 +181,39 @@ async function loadBusyTimes(tx: DatabaseTransaction, schedule: Schedule, input:
   // Events LobbyStack wrote for its own appointments come back as busy blocks. Skip them:
   // the appointment rows above already hold that time for the right staff member. An event
   // someone moved or stretched in the calendar no longer matches its row, so it still blocks.
-  // A Cal.com event type can fix the booking's length, so its bookings match on their uid alone.
-  const uidOnly = configured.filter((connection) => connection.provider === "calcom").map((connection) => connection.id);
-  const sameTime = and(eq(appointments.startsAt, calendarBusyBlocks.startsAt), eq(appointments.endsAt, calendarBusyBlocks.endsAt));
-  const busy = connectionIds.length ? await tx.select().from(calendarBusyBlocks).where(and(eq(calendarBusyBlocks.businessId, schedule.businessId), inArray(calendarBusyBlocks.connectionId, connectionIds), lt(calendarBusyBlocks.startsAt, input.to), gt(calendarBusyBlocks.endsAt, input.from),
-    notExists(tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.businessId, calendarBusyBlocks.businessId), eq(appointments.calendarExternalId, calendarBusyBlocks.externalEventId), uidOnly.length ? or(inArray(calendarBusyBlocks.connectionId, uidOnly), sameTime) : sameTime))))) : [];
+  const uidOnly = new Set(configured.filter((connection) => connection.provider === "calcom").map((connection) => connection.id));
+  const timeMatched = connectionIds.filter((id) => !uidOnly.has(id));
+  const window = (ids: string[]) => and(eq(calendarBusyBlocks.businessId, schedule.businessId), inArray(calendarBusyBlocks.connectionId, ids), lt(calendarBusyBlocks.startsAt, input.to), gt(calendarBusyBlocks.endsAt, input.from));
+  const matched = timeMatched.length ? await tx.select().from(calendarBusyBlocks).where(and(window(timeMatched),
+    notExists(tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.businessId, calendarBusyBlocks.businessId), eq(appointments.calendarExternalId, calendarBusyBlocks.externalEventId), eq(appointments.startsAt, calendarBusyBlocks.startsAt), eq(appointments.endsAt, calendarBusyBlocks.endsAt)))))) : [];
+  // A Cal.com event type can fix a booking's length, so its bookings match their appointment on the uid
+  // alone, and only the appointment's own span leaves the block: time Cal.com holds past it stays busy.
+  const calcomIds = connectionIds.filter((id) => uidOnly.has(id));
+  const calcom = calcomIds.length ? await tx.select({ block: calendarBusyBlocks, appointmentId: appointments.id, ownStartsAt: appointments.startsAt, ownEndsAt: appointments.endsAt }).from(calendarBusyBlocks)
+    .leftJoin(appointments, and(eq(appointments.businessId, calendarBusyBlocks.businessId), eq(appointments.calendarExternalId, calendarBusyBlocks.externalEventId)))
+    .where(window(calcomIds)) : [];
+  const busy = [
+    ...matched,
+    ...calcom.flatMap(({ block, appointmentId, ownStartsAt, ownEndsAt }) => {
+      // The appointment being moved gives up its whole booking, which moves with it.
+      if (appointmentId && appointmentId === input.ignoreAppointmentId) return [];
+      return withoutOwnAppointment(block, ownStartsAt && ownEndsAt ? { startsAt: ownStartsAt, endsAt: ownEndsAt } : null);
+    }),
+  ];
   const staffByConnection = new Map(schedule.connections.map((connection) => [connection.id, connection.staffId]));
   return [
     ...existing.map((row) => ({ staffId: row.staffId, startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString() })),
     ...busy.flatMap((row) => { const owner = row.staffId ?? staffByConnection.get(row.connectionId); return (owner ? [owner] : input.staffIds.filter((id) => !schedule.employees.has(id))).map((staffId) => ({ staffId, startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString() })); }),
   ];
+}
+
+/** What's left of a calendar busy block once the span of the appointment it books is taken out. */
+export function withoutOwnAppointment<T extends { startsAt: Date; endsAt: Date }>(block: T, own: { startsAt: Date; endsAt: Date } | null): T[] {
+  if (!own || own.endsAt <= block.startsAt || own.startsAt >= block.endsAt) return [block];
+  const pieces: T[] = [];
+  if (own.startsAt > block.startsAt) pieces.push({ ...block, endsAt: own.startsAt });
+  if (own.endsAt < block.endsAt) pieces.push({ ...block, startsAt: own.endsAt });
+  return pieces;
 }
 
 /** The slots at a time: the staff who could take it and aren't busy then. staffForTime has checked the schedule. */
