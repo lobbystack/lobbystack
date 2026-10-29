@@ -2,7 +2,7 @@
 // voice saying one short line in each runtime language. Each clip is a real
 // GPT-Live session opened with the production phone config, so it sounds like
 // the start of a call. Run it once and commit the clips; it skips files that
-// already exist.
+// already exist, and lists any clip short enough to have cut the line off.
 //
 // OPENAI_API_KEY=... pnpm voice:previews [--voice <name>]... [--locale <code>]... [--concurrency <n>] [--force]
 
@@ -20,8 +20,15 @@ import { LiveWS } from "openai/resources/live/ws";
 const RATE = 24_000;
 const CHUNK_MS = 100;
 const CHUNK_BYTES = (RATE * 2 * CHUNK_MS) / 1000;
-// The clip ends once the voice has been quiet this long after speaking.
-const QUIET_MS = 1_200;
+// GPT-Live sends no event when the voice finishes its turn (output audio and
+// transcripts are open-ended deltas), so the clip ends on quiet. A pause
+// between sentences can last over a second, so the clip ends after this much
+// quiet once the transcript has the line's last word, and after the longer
+// wait otherwise.
+const LINE_DONE_QUIET_MS = 1_500;
+const QUIET_MS = 4_000;
+// A clip shorter than this probably cut the line off; the summary lists them.
+const MIN_CLIP_SECONDS = 2;
 // Quieter than this is silence, on a 16-bit scale.
 const VOICE_RMS = 300;
 const START_TIMEOUT_MS = 20_000;
@@ -63,6 +70,20 @@ function rms(pcm: Buffer): number {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const words = (text: string): string[] => text.normalize("NFKC").toLocaleLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+
+/** Whether the transcript so far reaches the end of the line: its last word, after most of the others. */
+function saidWholeLine(transcript: string, line: string): boolean {
+  const said = words(transcript);
+  const expected = words(line);
+  return expected.length > 0 && said.includes(expected.at(-1)!) && said.length >= Math.ceil(expected.length * 0.75);
+}
+
+/** How long the voice keeps quiet before the clip ends. */
+function quietLimitMs(transcript: string, line: string): number {
+  return saidWholeLine(transcript, line) ? LINE_DONE_QUIET_MS : QUIET_MS;
+}
+
 /** The opening line, spoken by GPT-Live as the greeting of a call in that voice and language. Returns 24 kHz mono PCM16. */
 async function record(voice: ReceptionistVoice, locale: RuntimeLocale): Promise<{ pcm: Buffer; transcript: string }> {
   const ws = new LiveWS(client);
@@ -87,7 +108,7 @@ async function record(voice: ReceptionistVoice, locale: RuntimeLocale): Promise<
     await Promise.race([started, sleep(START_TIMEOUT_MS).then(() => { throw failure ?? new Error("GPT-Live didn't start the session."); })]);
     pump = setInterval(() => ws.send({ type: "session.input_audio.append", audio: Buffer.alloc(CHUNK_BYTES).toString("base64") }), CHUNK_MS);
     const deadline = Date.now() + CLIP_TIMEOUT_MS;
-    while (Date.now() < deadline && !failure && !(lastAudioAt && Date.now() - lastAudioAt >= QUIET_MS)) await sleep(CHUNK_MS);
+    while (Date.now() < deadline && !failure && !(lastAudioAt && Date.now() - lastAudioAt >= quietLimitMs(transcript, LINES[locale]))) await sleep(CHUNK_MS);
     if (failure) throw failure;
     if (!lastAudioAt) throw new Error("GPT-Live didn't speak.");
     return { pcm: Buffer.concat(chunks), transcript: transcript.trim() };
@@ -111,6 +132,16 @@ function encode(pcm: Buffer, file: string): Promise<void> {
   });
 }
 
+function duration(file: string): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const ffprobe = spawn("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file]);
+    let stdout = "";
+    ffprobe.stdout.on("data", (data) => { stdout += String(data); });
+    ffprobe.on("error", reject);
+    ffprobe.on("close", (code) => (code === 0 ? resolve(Number(stdout.trim())) : reject(new Error(`ffprobe exited with ${code} for ${file}.`))));
+  });
+}
+
 const jobs = locales.flatMap((locale) => voices.map((voice) => ({ voice, locale, file: join(OUTPUT_DIR, locale, `${voice}.mp3`) }))).filter((job) => values.force || !existsSync(job.file));
 await Promise.all(locales.map((locale) => mkdir(join(OUTPUT_DIR, locale), { recursive: true })));
 console.log(`Recording ${jobs.length} clip${jobs.length === 1 ? "" : "s"}.`);
@@ -122,7 +153,8 @@ await Promise.all(Array.from({ length: Math.min(Number(values.concurrency), jobs
     try {
       const { pcm, transcript } = await record(job.voice, job.locale);
       await encode(pcm, job.file);
-      console.log(`ok   ${job.locale}/${job.voice} "${transcript}"`);
+      const seconds = await duration(job.file);
+      console.log(`${seconds < MIN_CLIP_SECONDS ? "SHORT" : "ok   "} ${job.locale}/${job.voice} ${seconds.toFixed(1)} s "${transcript}"`);
     } catch (error) {
       failed += 1;
       console.log(`FAIL ${job.locale}/${job.voice}: ${error instanceof Error ? error.message : String(error)}`);
@@ -132,8 +164,16 @@ await Promise.all(Array.from({ length: Math.min(Number(values.concurrency), jobs
 
 let bytes = 0;
 let count = 0;
+const short: string[] = [];
 for (const locale of runtimeLocales) {
-  for (const name of await readdir(join(OUTPUT_DIR, locale)).catch(() => [])) { bytes += (await stat(join(OUTPUT_DIR, locale, name))).size; count += 1; }
+  for (const name of await readdir(join(OUTPUT_DIR, locale)).catch(() => [])) {
+    const file = join(OUTPUT_DIR, locale, name);
+    bytes += (await stat(file)).size;
+    count += 1;
+    const seconds = await duration(file);
+    if (seconds < MIN_CLIP_SECONDS) short.push(`${locale}/${name} ${seconds.toFixed(1)} s`);
+  }
 }
 console.log(`${count} clips, ${(bytes / 1024 / 1024).toFixed(2)} MB in total.`);
+if (short.length) console.log(`Under ${MIN_CLIP_SECONDS} s, so check each says the whole line and re-record it with --force if not:\n  ${short.join("\n  ")}`);
 process.exit(failed ? 1 : 0);
