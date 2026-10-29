@@ -103,6 +103,15 @@ describe("contact names and channels", () => {
     expect(within(await rowFor("common:contactFallback.websiteVisitor")).getByRole("img", { name: "common:channels.webChat" })).toBeTruthy();
     expect(screen.queryByText("common:contactFallback.unknown")).toBeNull();
   });
+  it("draws channel icons bare, without a round background", async () => {
+    renderContacts([{ ...base, id: "named", name: "Marie Tremblay", phone: null, email: null, channels: ["voice", "web_chat"] }]);
+    const icons = within(await rowFor("Marie Tremblay")).getAllByRole("img");
+    expect(icons).toHaveLength(2);
+    for (const icon of icons) {
+      expect(icon.className).not.toMatch(/rounded-full|\bbg-/);
+      expect(icon.className).toContain("text-muted-foreground");
+    }
+  });
   it("keeps the phone number out of the channels column", async () => {
     renderContacts([{ ...base, id: "phone-only", name: "Sam", phone: "+14155550123", email: null, channels: ["voice"] }]);
     const cells = (await rowFor("Sam")).querySelectorAll("td");

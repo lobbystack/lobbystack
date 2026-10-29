@@ -29,7 +29,7 @@ export function ContactChannelIcons({ channels, className }: { channels: Readonl
           <li key={channel}>
             <Tooltip>
               <TooltipTrigger
-                render={<span aria-label={label} className="flex size-7 items-center justify-center rounded-full bg-muted text-muted-foreground" role="img" />}
+                render={<span aria-label={label} className="flex size-7 items-center justify-center text-muted-foreground" role="img" />}
               >
                 <Icon aria-hidden="true" className="size-3.5" />
               </TooltipTrigger>
