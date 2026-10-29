@@ -151,6 +151,35 @@ describe("POST /api/webhooks/openai/live", () => {
     expect(mocks.startLivePhoneCall).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ businessId: "biz_1", to: "+15815550100" }));
   });
 
+  it("finds a Telnyx call's number by its SIP connection when no header carries the dialled number", async () => {
+    // First the connection lookup, then the usual lookup by number.
+    mocks.execute.mockResolvedValueOnce({ rows: [{ phone: "+19302131887" }] }).mockResolvedValueOnce({ rows: [{ business_id: "biz_1", position: 1 }] });
+    mocks.snapshot.mockResolvedValue({ businessId: "biz_1", greeting: "Hi" });
+    mocks.startLivePhoneCall.mockResolvedValue({ callId: "call_1", conversationId: "conv_1", duplicate: false, blocked: false, maxDurationMs: 1_800_000 });
+    mocks.accept.mockResolvedValue(undefined);
+    mocks.attach.mockResolvedValue(undefined);
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    mocks.unwrap.mockResolvedValue({
+      type: "live.transport.incoming",
+      data: {
+        session_id: "live_1",
+        sip_headers: [
+          { name: "To", value: "<sip:proj_1@sip.api.openai.com:5061>;tag=abc" },
+          { name: "From", value: "<sip:+14165550134@sip.telnyx.com>" },
+          { name: "X-Telnyx-Connection-id", value: "3081653174382102176" },
+        ],
+      },
+    });
+
+    const response = await POST(new Request("https://admin.lobbystack.test/api/webhooks/openai/live", { method: "POST", body: "{}" }));
+
+    expect(response.status).toBe(200);
+    expect(new PgDialect().sqlToQuery(mocks.execute.mock.calls[0]![0] as SQL).params).toEqual(["3081653174382102176"]);
+    expect(mocks.startLivePhoneCall).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ businessId: "biz_1", to: "+19302131887", from: "+14165550134" }));
+    const logged = info.mock.calls.map(([line]) => JSON.parse(String(line)) as Record<string, unknown>).find((line) => line.event === "live.incoming");
+    expect(logged).toMatchObject({ routedBy: "X-Telnyx-Connection-id" });
+  });
+
   it("records a withheld caller ID without a number and without a limit on an unlimited plan", async () => {
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     mocks.execute.mockResolvedValue({ rows: [{ business_id: "biz_1", position: 1 }] });

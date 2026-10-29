@@ -931,15 +931,15 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         const monthlyCostCents = claim.countsForPartner ? (await inventory.getPhoneNumberMonthlyPrice({ countryCode, kind })).monthlyCents : undefined;
         // An order an earlier attempt left with the carrier is checked again, not placed twice.
         const owned = claim.providerOrderId ? null : await inventory.findOwnedPhoneNumber({ e164: claim.e164 });
-        let smsUrl: string | undefined;
+        let smsUrl: string | undefined; let boughtConnectionId: string | undefined;
         if (owned) providerPhoneId = owned.providerPhoneId;
         else {
           const result = await inventory.purchasePhoneNumber({ e164: claim.e164, countryCode, kind, label: `LobbyStack ${businessId}`, ...(claim.providerOrderId ? { pendingOrderId: claim.providerOrderId } : {}) });
-          providerPhoneId = result.providerPhoneId; smsUrl = result.smsUrl; purchased = true;
+          providerPhoneId = result.providerPhoneId; smsUrl = result.smsUrl; boughtConnectionId = result.carrierConnectionId; purchased = true;
         }
         // Calls reach GPT-Live only through the carrier's SIP path, so a number that can't join it is released.
-        const { target } = await routing.routeNumber({ providerPhoneId, mode: "receptionist" });
-        const phoneNumberId = await completeNumberProvisioning(dependencies.domain, { businessId, claimId, carrier, e164: claim.e164, providerPhoneId, voiceUrl: target, ...(smsUrl ? { smsUrl } : {}), ...(monthlyCostCents !== undefined ? { monthlyCostCents } : {}) });
+        const { target, carrierConnectionId } = await routing.routeNumber({ providerPhoneId, mode: "receptionist", carrierConnectionId: boughtConnectionId });
+        const phoneNumberId = await completeNumberProvisioning(dependencies.domain, { businessId, claimId, carrier, e164: claim.e164, providerPhoneId, carrierConnectionId, voiceUrl: target, ...(smsUrl ? { smsUrl } : {}), ...(monthlyCostCents !== undefined ? { monthlyCostCents } : {}) });
         // A carrier that forwards refused calls itself learns where to once the number belongs to the business.
         if (routing.forwardsRefusedCalls) await enqueueRouting(dependencies.domain, { businessId, phoneNumberId });
         return { status: "completed", entityId: phoneNumberId };
@@ -1028,9 +1028,9 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const routing = dependencies.telephony.forNumber(desired.carrier)?.routing;
       if (!routing) throw new Error(`${desired.carrier} can't route numbers on this deployment. Check its credentials.`);
       const refusedCallsForwardTo = routing.forwardsRefusedCalls ? await resolveRefusedCallForward(dependencies.domain, { businessId, e164: desired.e164 }) : undefined;
-      const { target } = await routing.routeNumber({ providerPhoneId: desired.providerPhoneId, mode: desired.mode, ...(refusedCallsForwardTo !== undefined ? { refusedCallsForwardTo } : {}) });
+      const { target, carrierConnectionId } = await routing.routeNumber({ providerPhoneId: desired.providerPhoneId, mode: desired.mode, carrierConnectionId: desired.carrierConnectionId, ...(refusedCallsForwardTo !== undefined ? { refusedCallsForwardTo } : {}) });
       await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
-        await tx.update(phoneNumbers).set({ voiceWebhookTargetUrl: target, voiceWebhookStatus: "synced", voiceWebhookLastSyncedAt: new Date(), ...(refusedCallsForwardTo !== undefined ? { refusedCallsForwardTo: desired.mode === "receptionist" ? refusedCallsForwardTo : null } : {}), updatedAt: new Date() }).where(and(eq(phoneNumbers.id, phoneNumberId), eq(phoneNumbers.businessId, businessId)));
+        await tx.update(phoneNumbers).set({ voiceWebhookTargetUrl: target, voiceWebhookStatus: "synced", voiceWebhookLastSyncedAt: new Date(), ...(refusedCallsForwardTo !== undefined ? { refusedCallsForwardTo: desired.mode === "receptionist" ? refusedCallsForwardTo : null } : {}), ...(carrierConnectionId ? { carrierConnectionId } : {}), updatedAt: new Date() }).where(and(eq(phoneNumbers.id, phoneNumberId), eq(phoneNumbers.businessId, businessId)));
       });
       return { status: "completed", entityId: `${phoneNumberId}:${desired.mode}` };
     }

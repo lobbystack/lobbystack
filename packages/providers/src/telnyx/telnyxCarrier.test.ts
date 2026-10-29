@@ -21,6 +21,14 @@ function fakeTelnyx(routes: Record<string, (call: Call) => unknown>) {
   return { client: new TelnyxClient({ apiKey: "KEY", fetch: fetch as typeof globalThis.fetch }), calls };
 }
 
+/** Telnyx's answers for making and deleting a number's own SIP connection. */
+const connectionRoutes = (id = "nc_1") => ({
+  "POST /fqdn_connections": () => ({ data: { id } }),
+  "POST /fqdns": () => ({ data: { id: "fq_1" } }),
+  [`GET /fqdn_connections/${id}`]: () => ({ data: { id, tags: ["lobbystack-number"] } }),
+  [`DELETE /fqdn_connections/${id}`]: () => ({ data: { id } }),
+});
+
 const env = { TELNYX_API_KEY: "KEY", APP_BASE_URL: "https://app.example.test", TELNYX_SIP_CONNECTION_ID: "conn_1", OPENAI_PROJECT_ID: "proj_abc", TELNYX_TEXML_APPLICATION_ID: "texml_1", TELNYX_MESSAGING_PROFILE_ID: "mp_1" };
 
 afterEach(() => vi.unstubAllEnvs());
@@ -58,32 +66,37 @@ describe("Telnyx numbers", () => {
     await expect(createTelnyxCarrier(env, { client: euro.client })!.inventory!.getPhoneNumberMonthlyPrice({ countryCode: "GB", kind: "mobile" })).rejects.toThrow("not US dollars");
   });
 
-  it("orders a number onto the SIP connection and messaging profile, waits for the order, then finds the number's id", async () => {
+  it("orders a number onto a SIP connection of its own and the messaging profile, waits for the order, then finds the number's id", async () => {
     let checks = 0;
     const { client, calls } = fakeTelnyx({
+      ...connectionRoutes(),
       "POST /number_orders": () => ({ data: { id: "ord_1", status: "pending" } }),
       "GET /number_orders/ord_1": () => ({ data: { id: "ord_1", status: ++checks < 2 ? "pending" : "success" } }),
-      "GET /phone_numbers": () => ({ data: [{ id: "pn_other", phone_number: "+122125550100" }, { id: "pn_1", phone_number: "+12125550100" }] }),
+      "GET /phone_numbers": () => ({ data: [{ id: "pn_other", phone_number: "+122125550100" }, { id: "pn_1", phone_number: "+12125550100", connection_id: "nc_1" }] }),
     });
     const carrier = createTelnyxCarrier({ ...env, TELNYX_GB_REQUIREMENT_GROUP_ID: "rg_gb" }, { client, sleep: async () => undefined, orderPoll: { intervalMs: 0, attempts: 5 } })!;
-    expect(await carrier.inventory!.purchasePhoneNumber({ e164: "+12125550100", countryCode: "US", kind: "local", label: "LobbyStack b1" })).toEqual({ providerPhoneId: "pn_1", e164: "+12125550100" });
-    expect(calls[0]!.body).toEqual({ phone_numbers: [{ phone_number: "+12125550100" }], connection_id: "conn_1", messaging_profile_id: "mp_1", customer_reference: "LobbyStack b1" });
+    expect(await carrier.inventory!.purchasePhoneNumber({ e164: "+12125550100", countryCode: "US", kind: "local", label: "LobbyStack b1" })).toEqual({ providerPhoneId: "pn_1", e164: "+12125550100", carrierConnectionId: "nc_1" });
+    expect(calls[0]!.body).toEqual({ connection_name: "LobbyStack +12125550100", transport_protocol: "TLS", encrypted_media: "SRTP", inbound: { codecs: ["OPUS", "G711U", "G711A"], sip_compact_headers_enabled: false }, tags: ["lobbystack-number"] });
+    expect(calls[1]!.body).toEqual({ connection_id: "nc_1", fqdn: "sip.api.openai.com", port: 5061, dns_record_type: "a" });
+    expect(calls[2]!.body).toEqual({ phone_numbers: [{ phone_number: "+12125550100" }], connection_id: "nc_1", messaging_profile_id: "mp_1", customer_reference: "LobbyStack b1" });
     expect(calls.at(-1)!.url.searchParams.get("filter[phone_number]")).toBe("12125550100");
     await carrier.inventory!.purchasePhoneNumber({ e164: "+447700900123", countryCode: "GB", kind: "mobile", label: "x" }).catch(() => undefined);
-    expect(calls.find((call) => call.method === "POST" && (call.body as { phone_numbers: Array<{ requirement_group_id?: string }> }).phone_numbers[0]!.requirement_group_id === "rg_gb")).toBeDefined();
+    expect(calls.find((call) => call.method === "POST" && (call.body as { phone_numbers?: Array<{ requirement_group_id?: string }> }).phone_numbers?.[0]!.requirement_group_id === "rg_gb")).toBeDefined();
   });
 
   it("refuses to order without the country's requirement group, and reports a failed order as unavailable", async () => {
-    const { client, calls } = fakeTelnyx({ "POST /number_orders": () => ({ data: { id: "ord_2", status: "failure", requirements_met: true, phone_numbers: [{ phone_number: "+12125550100", status: "failure", requirements_met: true }] } }) });
+    const { client, calls } = fakeTelnyx({ ...connectionRoutes(), "POST /number_orders": () => ({ data: { id: "ord_2", status: "failure", connection_id: "nc_1", requirements_met: true, phone_numbers: [{ phone_number: "+12125550100", status: "failure", requirements_met: true }] } }) });
     const inventory = createTelnyxCarrier(env, { client })!.inventory!;
     await expect(inventory.purchasePhoneNumber({ e164: "+61491570006", countryCode: "AU", kind: "mobile", label: "x" })).rejects.toThrow("TELNYX_AU_REQUIREMENT_GROUP_ID is required");
     expect(calls).toHaveLength(0);
     const failure = await inventory.purchasePhoneNumber({ e164: "+12125550100", countryCode: "US", kind: "local", label: "x" }).catch((error: unknown) => error);
     expect(inventory.isNumberUnavailableError(failure)).toBe(true);
+    // The connection made for a number that wasn't sold goes too.
+    expect(calls.some((call) => call.method === "DELETE" && call.url.pathname === "/v2/fqdn_connections/nc_1")).toBe(true);
   });
 
   it("gives up waiting on an order still pending, so the claim can be checked", async () => {
-    const { client } = fakeTelnyx({ "POST /number_orders": () => ({ data: { id: "ord_3", status: "pending" } }), "GET /number_orders/ord_3": () => ({ data: { id: "ord_3", status: "pending" } }) });
+    const { client } = fakeTelnyx({ ...connectionRoutes(), "POST /number_orders": () => ({ data: { id: "ord_3", status: "pending" } }), "GET /number_orders/ord_3": () => ({ data: { id: "ord_3", status: "pending" } }) });
     const inventory = createTelnyxCarrier(env, { client, sleep: async () => undefined, orderPoll: { intervalMs: 0, attempts: 2 } })!.inventory!;
     await expect(inventory.purchasePhoneNumber({ e164: "+12125550100", countryCode: "US", kind: "local", label: "x" })).rejects.toMatchObject({ name: "NumberOrderPendingError", orderId: "ord_3" });
   });
@@ -106,6 +119,21 @@ describe("Telnyx numbers", () => {
     await expect(createTelnyxCarrier(env, { client: notFound })!.inventory!.releasePhoneNumber({ providerPhoneId: "pn_gone" })).rejects.toMatchObject({ status: 404 });
   });
 
+  it("releases a number and the SIP connection it had to itself, but never a shared one", async () => {
+    const { client, calls } = fakeTelnyx({
+      ...connectionRoutes(),
+      "GET /phone_numbers/pn_1": () => ({ data: { id: "pn_1", phone_number: "+12125550100", connection_id: "nc_1" } }),
+      "DELETE /phone_numbers/pn_1": () => ({ data: {} }),
+      "GET /phone_numbers/pn_2": () => ({ data: { id: "pn_2", phone_number: "+12125550101", connection_id: "conn_1" } }),
+      "DELETE /phone_numbers/pn_2": () => ({ data: {} }),
+      "GET /fqdn_connections/conn_1": () => ({ data: { id: "conn_1", tags: [] } }),
+    });
+    const inventory = createTelnyxCarrier(env, { client })!.inventory!;
+    await inventory.releasePhoneNumber({ providerPhoneId: "pn_1" });
+    await inventory.releasePhoneNumber({ providerPhoneId: "pn_2" });
+    expect(calls.filter((call) => call.method === "DELETE").map((call) => call.url.pathname)).toEqual(["/v2/phone_numbers/pn_1", "/v2/fqdn_connections/nc_1", "/v2/phone_numbers/pn_2"]);
+  });
+
   it("answers a release of a number Telnyx no longer has with a 404", async () => {
     const { client } = fakeTelnyx({});
     await expect(createTelnyxCarrier(env, { client })!.inventory!.releasePhoneNumber({ providerPhoneId: "pn_gone" })).rejects.toMatchObject({ status: 404 });
@@ -113,15 +141,20 @@ describe("Telnyx numbers", () => {
 });
 
 describe("Telnyx routing", () => {
-  it("puts a number on the SIP connection with the project as its translated number and a forward for refused calls", async () => {
-    const { client, calls } = fakeTelnyx({ "PATCH /phone_numbers/pn_1": () => ({ data: {} }), "PATCH /phone_numbers/pn_1/voice": () => ({ data: {} }) });
+  it("puts a number on its own SIP connection with the project as its translated number and a forward for refused calls", async () => {
+    const { client, calls } = fakeTelnyx({ ...connectionRoutes(), "GET /phone_numbers/pn_1": () => ({ data: { id: "pn_1", phone_number: "+12125550100", connection_id: "conn_1" } }), "PATCH /phone_numbers/pn_1": () => ({ data: {} }), "PATCH /phone_numbers/pn_1/voice": () => ({ data: {} }) });
     const routing = createTelnyxCarrier(env, { client })!.routing!;
     expect(routing.forwardsRefusedCalls).toBe(true);
-    expect(await routing.routeNumber({ providerPhoneId: "pn_1", mode: "receptionist", refusedCallsForwardTo: "+14165550134" })).toEqual({ target: "sip-connection:conn_1" });
-    expect(calls.map((call) => [call.url.pathname, call.body])).toEqual([
-      ["/v2/phone_numbers/pn_1", { connection_id: "conn_1" }],
-      ["/v2/phone_numbers/pn_1/voice", { translated_number: "proj_abc", call_forwarding: { call_forwarding_enabled: true, forwards_to: "+14165550134", forwarding_type: "on-failure" } }],
+    // A number still on the shared connection gets one of its own.
+    expect(await routing.routeNumber({ providerPhoneId: "pn_1", mode: "receptionist", refusedCallsForwardTo: "+14165550134" })).toEqual({ target: "sip-connection:nc_1", carrierConnectionId: "nc_1" });
+    expect(calls.filter((call) => call.method === "PATCH").map((call) => [call.url.pathname, call.body])).toEqual([
+      ["/v2/phone_numbers/pn_1", { connection_id: "nc_1" }],
+      ["/v2/phone_numbers/pn_1/voice", { translated_number: "proj_abc", translated_number_config: "ignore_for_to_header", call_forwarding: { call_forwarding_enabled: true, forwards_to: "+14165550134", forwarding_type: "on-failure" } }],
     ]);
+    // One that has its connection keeps it.
+    calls.length = 0;
+    expect(await routing.routeNumber({ providerPhoneId: "pn_1", mode: "receptionist", carrierConnectionId: "nc_9" })).toEqual({ target: "sip-connection:nc_9", carrierConnectionId: "nc_9" });
+    expect(calls.some((call) => call.url.pathname === "/v2/fqdn_connections")).toBe(false);
   });
 
   it("moves a number to the TeXML application for the fallback, with forwarding off first", async () => {
@@ -134,8 +167,7 @@ describe("Telnyx routing", () => {
   });
 
   it("says what's missing before a number can reach GPT-Live", () => {
-    expect(createTelnyxCarrier({ TELNYX_API_KEY: "KEY" })!.routing!.missingSetup()).toMatch(/TELNYX_SIP_CONNECTION_ID/);
-    expect(createTelnyxCarrier({ TELNYX_API_KEY: "KEY", TELNYX_SIP_CONNECTION_ID: "conn_1" })!.routing!.missingSetup()).toMatch(/OPENAI_PROJECT_ID/);
+    expect(createTelnyxCarrier({ TELNYX_API_KEY: "KEY" })!.routing!.missingSetup()).toMatch(/OPENAI_PROJECT_ID/);
     expect(createTelnyxCarrier(env)!.routing!.missingSetup()).toBeUndefined();
   });
 });

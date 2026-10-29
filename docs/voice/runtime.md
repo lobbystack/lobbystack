@@ -262,7 +262,8 @@ The admin and worker read these variables:
 | `TWILIO_VERIFY_SERVICE_SID` | admin | The Twilio Verify service that texts the onboarding phone code. Onboarding can't verify a phone without it. |
 | `TELNYX_API_KEY` | admin, worker | The Telnyx API key. Without it, the deployment has no Telnyx carrier. |
 | `TELNYX_PUBLIC_KEY` | admin | The account's Ed25519 public key, from **Account settings > Keys & Credentials > Public Key**, which checks every Telnyx webhook. |
-| `TELNYX_SIP_CONNECTION_ID`, `OPENAI_PROJECT_ID` | worker | The FQDN connection that sends calls to OpenAI, and the OpenAI project ID (`proj_…`) each number translates to. The worker won't buy a Telnyx number without both. |
+| `OPENAI_PROJECT_ID` | worker | The OpenAI project ID (`proj_…`) each Telnyx number translates to. The worker won't buy a Telnyx number without it. |
+| `TELNYX_SIP_CONNECTION_ID` | worker | Optional. A shared FQDN connection numbers used before each got their own. The worker moves a number off it the next time it routes the number, and still prices calls on it. |
 | `TELNYX_TEXML_APPLICATION_ID` | worker | The TeXML application a Telnyx number moves to in fallback mode. |
 | `TELNYX_TEXML_WEBHOOK_SECRET` | admin | A secret the TeXML application's voice URL carries as `?key=`, in case Telnyx sends that request unsigned. |
 | `TELNYX_MESSAGING_PROFILE_ID` | worker | The messaging profile new Telnyx numbers join, so they can text. |
@@ -346,9 +347,9 @@ Countries outside the US, Canada and Puerto Rico appear in the number picker onl
 
 ## Use Telnyx
 
-A Telnyx number reaches GPT-Live through an FQDN connection, texts through a messaging profile, and falls back to a TeXML application. Telnyx's [GPT-Live configuration guide](https://developers.telnyx.com/docs/voice/sip-trunking/gpt-live-configuration-guide) covers the connection. To set it up:
+A Telnyx number reaches GPT-Live through an FQDN connection of its own, texts through a messaging profile, and falls back to a TeXML application. Telnyx's [GPT-Live configuration guide](https://developers.telnyx.com/docs/voice/sip-trunking/gpt-live-configuration-guide) covers the connection. To set it up:
 
-1. In the Telnyx portal, create an FQDN connection with TLS transport and SRTP set to mandatory. Add the FQDN `sip.api.openai.com`, port `5061`, DNS record type `A`, and enable Opus with PCMU and PCMA. Give it an outbound voice profile, which transfers need. Set its ID as `TELNYX_SIP_CONNECTION_ID` on the worker.
+1. You don't create the SIP connection. Telnyx replaces the dialled number with the OpenAI project ID in both the Request-URI and `To`, and sends no `Diversion`, so the admin can't tell numbers apart by header. The worker therefore creates an FQDN connection for each Telnyx number when it buys or routes it, named `LobbyStack <number>` and tagged `lobbystack-number`: TLS, mandatory SRTP, Opus with PCMU and PCMA, and the FQDN `sip.api.openai.com` on port `5061`. Every INVITE names its connection in `X-Telnyx-Connection-id`, and the admin finds the number from `phone_numbers.carrier_connection_id`. Releasing the number deletes its connection.
 2. Set your OpenAI project ID, with its `proj_` prefix, as `OPENAI_PROJECT_ID` on the worker. The worker sets it as each number's translated number, which puts the project in the SIP Request-URI.
 3. Create a TeXML application whose voice URL is `https://your_app_domain/api/webhooks/telnyx/voice?key=your_texml_secret` with `POST`. Set its ID as `TELNYX_TEXML_APPLICATION_ID` on the worker and the secret as `TELNYX_TEXML_WEBHOOK_SECRET` on the admin.
 4. Create a messaging profile whose webhook URL is `https://your_app_domain/api/webhooks/telnyx/sms`. Set its ID as `TELNYX_MESSAGING_PROFILE_ID` on the worker. Each text also carries its own status webhook, `/api/webhooks/telnyx/status`.
@@ -363,7 +364,7 @@ To sell UK, Australian or New Zealand numbers through Telnyx, create a requireme
 
 These parts of the Telnyx path haven't been tested against a live account, because Telnyx's docs leave them open:
 
-- **Dialled number**: the translated number replaces the dialled number in the Request-URI. Telnyx's docs don't say whether `To` keeps the dialled number or whether Telnyx sends `Diversion`, `P-Called-Party-ID` or `History-Info`. The admin tries those four headers in that order, so check `routedBy` on `live.incoming` after a first test call. A call with none of them logs "incoming call without a dialled number" with the names of the headers it had.
+- **Dialled number**: on 2026-10-29, Telnyx sent `To: sip:proj_…` with no `Diversion`, `P-Called-Party-ID` or `History-Info`, even with `translated_number_config` set to `ignore_for_to_header` and ISUP headers on. The admin falls back to `X-Telnyx-Connection-id`, which `routedBy` shows on `live.incoming`. The worker still sets `ignore_for_to_header`, in case Telnyx starts keeping the number in `To`.
 - **Transfers**: Telnyx documents blind transfer by REFER, but expects a `Diversion` header with the Telnyx number, which OpenAI's REFER may not send. Users report REFER failing with 603 until Telnyx support enables it on the account.
 - **Refused calls**: Telnyx forwards a call the receptionist refuses to one fixed number per Telnyx number, as [Calls the receptionist can't take](#calls-the-receptionist-cant-take) describes, and its retry of the 503 means OpenAI sends the webhook twice.
 - **Number orders**: Telnyx fills orders in the background, and a review of a requirement group can take days. The worker waits 30 seconds, then saves the order's ID on the claim (`onboarding_number_claim_events.provider_order_id`) and checks that order again every 10 minutes. After 5 days it fails the claim and releases the number if the order put it on the account.

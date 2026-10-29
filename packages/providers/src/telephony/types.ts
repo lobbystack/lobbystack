@@ -56,7 +56,7 @@ export interface NumberInventory {
    * order; passing its `orderId` back as `pendingOrderId` checks that order
    * instead of placing another.
    */
-  purchasePhoneNumber(input: { e164: string; countryCode: string; kind: NumberKind; label: string; pendingOrderId?: string }): Promise<{ providerPhoneId: string; e164: string; smsUrl?: string }>;
+  purchasePhoneNumber(input: { e164: string; countryCode: string; kind: NumberKind; label: string; pendingOrderId?: string }): Promise<{ providerPhoneId: string; e164: string; smsUrl?: string; carrierConnectionId?: string }>;
   releasePhoneNumber(input: { providerPhoneId: string }): Promise<void>;
   /** Whether a purchase failed because the number is no longer for sale. */
   isNumberUnavailableError(error: unknown): boolean;
@@ -90,8 +90,10 @@ export interface NumberRouting {
    * Returns where they now go, as the number's voice target. Throws when the
    * carrier's SIP path isn't configured. `refusedCallsForwardTo` is where a
    * call the receptionist refuses goes, or null to let it fail.
+   * `carrierConnectionId` is the connection only this number uses, for a
+   * carrier whose calls name it instead of the dialled number.
    */
-  routeNumber(input: { providerPhoneId: string; mode: NumberRoutingMode; refusedCallsForwardTo?: string | null }): Promise<{ target: string }>;
+  routeNumber(input: { providerPhoneId: string; mode: NumberRoutingMode; refusedCallsForwardTo?: string | null; carrierConnectionId?: string | null | undefined }): Promise<{ target: string; carrierConnectionId?: string }>;
 }
 
 /** The rows a status callback updates, carried in its URL. */

@@ -622,12 +622,15 @@ export const phoneNumbers = pgTable(
     smsWebhookLastError: text("sms_webhook_last_error"),
     // Where the carrier forwards refused calls, for carriers that store it (migration 0171).
     refusedCallsForwardTo: varchar("refused_calls_forward_to", { length: 32 }),
+    // The carrier connection that only this number uses, for carriers that route calls by it (migration 0172).
+    carrierConnectionId: varchar("carrier_connection_id", { length: 64 }),
     ...legacyId,
     ...timestamps,
   },
   (table) => [
     uniqueIndex("phone_numbers_e164_unreclaimed_unique").on(table.e164).where(sql`${table.status} <> 'reclaimed'`),
     uniqueIndex("phone_numbers_provider_id_unique").on(table.providerPhoneId),
+    uniqueIndex("phone_numbers_carrier_connection_unique").on(table.carrier, table.carrierConnectionId).where(sql`${table.carrierConnectionId} is not null and ${table.status} <> 'reclaimed'`),
     index("phone_numbers_business_idx").on(table.businessId),
   ],
 );

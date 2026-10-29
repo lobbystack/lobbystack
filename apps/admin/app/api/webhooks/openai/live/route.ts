@@ -44,6 +44,19 @@ export async function POST(request: Request) {
   // Request-URI. See docs/voice/runtime.md.
   const dialledHeaders = ["diversion", "to", "p-called-party-id", "history-info"];
   const candidates = dialledHeaders.flatMap((name) => event.data.sip_headers.filter((item) => item.name.toLowerCase() === name).flatMap((item) => phonesFromSipHeader(item.value).map((phone) => ({ header: item.name, phone }))));
+  // Telnyx sends neither: it replaces the dialled number with the project. Each
+  // Telnyx number has its own SIP connection, which X-Telnyx-Connection-id names.
+  const telnyxConnection = event.data.sip_headers.find((item) => item.name.toLowerCase() === "x-telnyx-connection-id")?.value.trim();
+  if (!candidates.length && telnyxConnection) {
+    try {
+      const phone = (await getAppDatabase().db.execute<{ phone: string | null }>(sql`select app.resolve_phone_by_carrier_connection('telnyx', ${telnyxConnection}) as phone`)).rows[0]?.phone;
+      if (phone) candidates.push({ header: "X-Telnyx-Connection-id", phone });
+    } catch (error) {
+      // As below: ownership is unknown, so a 503 makes OpenAI deliver the event again.
+      console.error("[live] couldn't look up the Telnyx connection", error instanceof Error ? error.message : error);
+      return new NextResponse(null, { status: 503 });
+    }
+  }
   // Undefined when the caller withheld their number.
   const from = phonesFromSipHeader(event.data.sip_headers.find((item) => item.name.toLowerCase() === "from")?.value)[0];
   // Only the dialled-number headers: "From" is the caller's own number.

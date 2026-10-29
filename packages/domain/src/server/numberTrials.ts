@@ -235,9 +235,9 @@ export type { NumberRoutingMode };
  * apply this instead of their own payload, so two jobs that run out of order
  * still leave the number where it belongs. Null when the number is gone.
  */
-export async function desiredNumberRouting(context: DomainContext, input: { businessId: string; phoneNumberId: string }): Promise<{ mode: NumberRoutingMode; providerPhoneId: string; e164: string; carrier: CarrierId } | null> {
+export async function desiredNumberRouting(context: DomainContext, input: { businessId: string; phoneNumberId: string }): Promise<{ mode: NumberRoutingMode; providerPhoneId: string; e164: string; carrier: CarrierId; carrierConnectionId: string | null } | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const row = (await tx.select({ providerPhoneId: phoneNumbers.providerPhoneId, e164: phoneNumbers.e164, carrier: phoneNumbers.carrier, trialStatus: numberTrials.status, minutesExhaustedAt: numberTrials.minutesExhaustedAt })
+    const row = (await tx.select({ providerPhoneId: phoneNumbers.providerPhoneId, e164: phoneNumbers.e164, carrier: phoneNumbers.carrier, carrierConnectionId: phoneNumbers.carrierConnectionId, trialStatus: numberTrials.status, minutesExhaustedAt: numberTrials.minutesExhaustedAt })
       .from(phoneNumbers)
       .leftJoin(numberTrials, and(eq(numberTrials.phoneNumberId, phoneNumbers.id), inArray(numberTrials.status, ["active", "ended"])))
       .where(and(eq(phoneNumbers.id, input.phoneNumberId), eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active")))
@@ -245,7 +245,7 @@ export async function desiredNumberRouting(context: DomainContext, input: { busi
     if (!row?.providerPhoneId) return null;
     const off = row.trialStatus === "ended" || (row.trialStatus === "active" && Boolean(row.minutesExhaustedAt));
     if (!isCarrierId(row.carrier)) throw new Error(`Phone number ${input.phoneNumberId} names an unknown carrier, ${row.carrier}.`);
-    return { mode: off ? "fallback" : "receptionist", providerPhoneId: row.providerPhoneId, e164: row.e164, carrier: row.carrier };
+    return { mode: off ? "fallback" : "receptionist", providerPhoneId: row.providerPhoneId, e164: row.e164, carrier: row.carrier, carrierConnectionId: row.carrierConnectionId };
   });
 }
 
