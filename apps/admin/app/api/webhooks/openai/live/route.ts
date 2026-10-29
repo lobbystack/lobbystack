@@ -131,8 +131,10 @@ async function answerCall(client: LiveClient, input: { sessionId: string; busine
       // 503 makes the Twilio trunk fail over to its disaster recovery URL,
       // /api/webhooks/twilio/voice, which forwards the call to the transfer
       // number or the owner's verified phone, and gives a busy signal only
-      // when there's neither. Twilio never fails over on 486 or 6xx. A trial
-      // number also moves off the trunk so later calls forward directly.
+      // when there's neither. Twilio never fails over on 486 or 6xx. Telnyx
+      // retries a 503 once, then forwards to the number stored on the Telnyx
+      // number. A trial number also moves off the receptionist so later
+      // calls forward directly.
       await markNumberTrialMinutesExhausted(domain, { businessId: input.businessId }).catch((cause: unknown) => console.error("[live] couldn't switch the trial number to forwarding", cause instanceof Error ? cause.message : cause));
       await client.live.sessions.reject(input.sessionId, { status_code: 503 });
       return new NextResponse(null, { status: 200 });
