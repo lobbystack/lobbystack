@@ -149,6 +149,7 @@ import { createDomainContext, createWorkerDomainContext } from "../domain-contex
 import { enforceFixedWindow, fixedWindowLimit } from "../fixed-window-limit";
 import { calendarSigningConfigured, createCalendarConnectLink } from "../google-calendar-oauth";
 import { calendarProvider, calendarProviderConfigured } from "../calendar-providers";
+import { retireCalendarWebhook } from "../calendar-webhooks";
 import { checkPhoneNumberSearchLimit } from "../phone-number-search-limit";
 import { getStorageProvider } from "../storage";
 import { withStripeConnect } from "../stripe-connect";
@@ -512,6 +513,8 @@ export const v1 = {
   }),
   deleteCalendarConnection: (request: Request, { params }: Params<"connection_id">) => handleApiRequest(request, "deleteCalendarConnection", async ({ context, caller }) => {
     const connectionId = uuidParam((await params).connection_id, "connection_id");
+    // The key's scope is checked by now. Cal.com's webhook goes while the connection's token still works.
+    await retireCalendarWebhook({ businessId: caller.businessId, connectionId });
     await deleteCalendarConnectionForApi(context, caller, connectionId);
     return { body: data({ id: connectionId, deleted: true }) };
   }),

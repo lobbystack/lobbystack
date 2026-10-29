@@ -1232,6 +1232,9 @@ export const calendarConnections = pgTable(
     lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
     status: varchar("status", { length: 32 }).default("connected").notNull(),
     lastSyncError: text("last_sync_error"),
+    // The webhook a Cal.com connection registered, and the secret that signs its deliveries, encrypted with ENCRYPTION_KEY.
+    externalWebhookId: text("external_webhook_id"),
+    encryptedWebhookSecret: text("encrypted_webhook_secret"),
     ...timestamps,
   },
   (table) => [uniqueIndex("calendar_connections_business_provider_account_unique").on(table.businessId, table.provider, table.externalAccountId), index("calendar_connections_business_idx").on(table.businessId, table.status)],

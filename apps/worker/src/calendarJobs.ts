@@ -1,22 +1,29 @@
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { and, asc, eq, isNull, ne, or, sql } from "drizzle-orm";
 import { appointments, calendarConnections, contacts, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { CALENDAR_SYNC_HORIZON_MS, markCalendarConnectionSync, queueUnsyncedAppointmentSyncs, recordProductEvent, resolveCalendarAccessToken, updateAppointmentSyncState, updateAppointmentSyncStateInTransaction, upsertBusyBlocks, type DomainContext } from "@lobbystack/domain";
+import { CALENDAR_SYNC_HORIZON_MS, markCalendarConnectionSync, queueUnsyncedAppointmentSyncs, recordProductEvent, resolveCalendarAccessToken, saveCalendarWebhook, updateAppointmentSyncState, updateAppointmentSyncStateInTransaction, upsertBusyBlocks, type DomainContext } from "@lobbystack/domain";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 import { redactOtelExceptionText } from "@lobbystack/telemetry/node";
 import type { CalendarProvider } from "@lobbystack/providers/calendar";
 import type { JobResult } from "./handlers";
 
-export type CalendarOperations = Pick<CalendarProvider, "getBusyBlocks" | "upsertEvent" | "deleteEvent" | "refreshAccessToken">;
+export type CalendarOperations = Pick<CalendarProvider, "getBusyBlocks" | "upsertEvent" | "deleteEvent" | "refreshAccessToken"> & {
+  /** A provider that pushes changes, as Cal.com does, registers a webhook for each connection. */
+  registerWebhook?: (input: { accessToken: string; subscriberUrl: string; secret: string }) => Promise<{ webhookId: string }>;
+};
 /** The configured providers by name; a connection whose provider is missing here is left alone. */
 export type CalendarProviders = Partial<Record<string, CalendarOperations>>;
 type Dependencies = { domain: DomainContext; calendars?: CalendarProviders };
 
-async function accessToken(dependencies: Dependencies, businessId: string, connectionId: string, calendar: CalendarOperations, forceRefresh = false): Promise<string> {
+async function secretBox() {
   const key = process.env.ENCRYPTION_KEY;
   if (!key) throw new Error("Calendar synchronization is not configured.");
   const { SecretBox } = await import("@lobbystack/providers/crypto/secretBox");
-  const box = new SecretBox(key);
+  return new SecretBox(key);
+}
+
+async function accessToken(dependencies: Dependencies, businessId: string, connectionId: string, calendar: CalendarOperations, forceRefresh = false): Promise<string> {
+  const box = await secretBox();
   return await resolveCalendarAccessToken(dependencies.domain, {
     businessId, connectionId, forceRefresh,
     decryptToken: (value) => box.decrypt(value), encryptToken: (value) => box.encrypt(value),
@@ -113,7 +120,7 @@ export async function deleteReleasedCalendarEvent(dependencies: Dependencies, in
 
 export async function reconcileBusinessCalendar(dependencies: Dependencies, businessId: string): Promise<JobResult> {
   if (!dependencies.calendars) return { status: "skipped", entityId: businessId };
-  const connections = await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => tx.select({ id: calendarConnections.id, provider: calendarConnections.provider, calendarId: calendarConnections.selectedCalendarId, staffId: calendarConnections.staffId, status: calendarConnections.status }).from(calendarConnections).where(and(eq(calendarConnections.businessId, businessId), ne(calendarConnections.status, "disconnected"))));
+  const connections = await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => tx.select({ id: calendarConnections.id, provider: calendarConnections.provider, calendarId: calendarConnections.selectedCalendarId, staffId: calendarConnections.staffId, status: calendarConnections.status, webhookId: calendarConnections.externalWebhookId }).from(calendarConnections).where(and(eq(calendarConnections.businessId, businessId), ne(calendarConnections.status, "disconnected"))));
   let synced = 0;
   let failures = 0;
   for (const connection of connections) {
@@ -123,6 +130,8 @@ export async function reconcileBusinessCalendar(dependencies: Dependencies, busi
     if (!provider) continue;
     try {
       const token = await accessToken(dependencies, businessId, connection.id, provider, connection.status === "error");
+      // A push provider's busy time is only as fresh as its webhook, so the connection fails until one is registered.
+      if (provider.registerWebhook && !connection.webhookId) await registerWebhook(dependencies, (request) => provider.registerWebhook!(request), { businessId, connectionId: connection.id, accessToken: token });
       const startsAt = new Date();
       const endsAt = new Date(startsAt.getTime() + CALENDAR_SYNC_HORIZON_MS);
       const blocks = await provider.getBusyBlocks({ accessToken: token, calendarId: connection.calendarId, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() });
@@ -138,4 +147,12 @@ export async function reconcileBusinessCalendar(dependencies: Dependencies, busi
   }
   if (failures) throw new Error(`Calendar synchronization failed for ${failures} connection(s).`);
   return { status: synced ? "completed" : "skipped", entityId: `${businessId}:${synced}` };
+}
+
+async function registerWebhook(dependencies: Dependencies, register: NonNullable<CalendarOperations["registerWebhook"]>, input: { businessId: string; connectionId: string; accessToken: string }): Promise<void> {
+  const box = await secretBox();
+  const secret = randomBytes(32).toString("hex");
+  const baseUrl = (process.env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  const { webhookId } = await register({ accessToken: input.accessToken, subscriberUrl: `${baseUrl}/api/webhooks/calcom/${input.connectionId}`, secret });
+  await saveCalendarWebhook(dependencies.domain, { businessId: input.businessId, connectionId: input.connectionId, externalWebhookId: webhookId, encryptedWebhookSecret: box.encrypt(secret) });
 }

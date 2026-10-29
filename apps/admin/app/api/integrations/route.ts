@@ -7,6 +7,7 @@ import { SecretBox } from "@lobbystack/providers";
 import { jsonError } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
 import { calendarProvider } from "@/lib/calendar-providers";
+import { retireCalendarWebhook } from "@/lib/calendar-webhooks";
 import { operatorRoute } from "@/lib/operator-request";
 
 export const dynamic = "force-dynamic";
@@ -82,9 +83,12 @@ export const POST = operatorRoute(async ({ userId, businessId, body, domain }) =
   return NextResponse.json({ ok: true });
 });
 
-export const DELETE = operatorRoute(async ({ request, userId, businessId, domain }) => {
+export const DELETE = operatorRoute(async ({ request, userId, businessId, domain, transaction }) => {
   const connectionId = new URL(request.url).searchParams.get("connectionId");
   if (!connectionId) return jsonError("connectionId is required.", 400);
+  // Cal.com's webhook goes while the token still works, so only an admin's request may remove it.
+  await transaction(async () => undefined, { minimumRole: "business_admin" });
+  await retireCalendarWebhook({ businessId, connectionId });
   await disconnectCalendar(domain, { userId, businessId, connectionId });
   return NextResponse.json({ ok: true });
 });

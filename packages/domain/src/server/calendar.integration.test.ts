@@ -3,7 +3,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 import { appointments, auditLogs, businessHours, businessMemberships, businesses, calendarBusyBlocks, calendarConnections, contacts, createDatabaseClient, outboxMessages, services, staff, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { checkAvailability, rescheduleAppointmentInTransaction } from "./booking";
-import { assignCalendarStaff, connectCalendar, disconnectCalendar, queueUnsyncedAppointmentSyncs, selectCalendar } from "./calendar";
+import { assignCalendarStaff, connectCalendar, disconnectCalendar, disconnectCalendarInTransaction, getCalendarWebhook, queueUnsyncedAppointmentSyncs, resolveBusinessByCalendarWebhook, saveCalendarWebhook, selectCalendar } from "./calendar";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -137,6 +137,25 @@ describe.skipIf(!testUrl)("calendar backfill against dedicated PostgreSQL roles"
       const halfPast = new Date(startsAt.getTime() + 30 * 60_000).toISOString();
       const { slots } = await asWorker(tx, (db) => checkAvailability({ db }, { businessId, serviceId, startsAt: halfPast }));
       expect(slots.map((slot) => slot.staffId).sort()).toEqual([firstStaffId, secondStaffId].sort());
+    });
+  });
+
+  it("finds a Cal.com connection's business from its webhook URL until the connection is disconnected", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, userId } = await workspace(tx);
+      const [calcom] = await tx.insert(calendarConnections).values({ businessId, ownerUserId: userId, provider: "calcom", externalAccountId: "1234", selectedCalendarId: "42", status: "connected", encryptedAccessToken: "enc:access" }).returning();
+      const [google] = await tx.insert(calendarConnections).values({ businessId, ownerUserId: userId, provider: "google", externalAccountId: "owner@example.invalid", status: "connected" }).returning();
+      await asWorker(tx, async (db) => {
+        expect(await resolveBusinessByCalendarWebhook({ db }, calcom!.id)).toBe(businessId);
+        expect(await resolveBusinessByCalendarWebhook({ db }, google!.id)).toBeNull();
+        expect(await saveCalendarWebhook({ db }, { businessId, connectionId: calcom!.id, externalWebhookId: "11", encryptedWebhookSecret: "enc:secret" })).toBe(true);
+        expect(await getCalendarWebhook({ db }, { businessId, connectionId: calcom!.id })).toEqual({ provider: "calcom", externalWebhookId: "11", encryptedWebhookSecret: "enc:secret" });
+        await withBusinessTransaction(db, { businessId, actorType: "worker" }, (workerTx) => disconnectCalendarInTransaction(workerTx, { businessId, connectionId: calcom!.id }));
+        expect(await resolveBusinessByCalendarWebhook({ db }, calcom!.id)).toBeNull();
+        expect(await getCalendarWebhook({ db }, { businessId, connectionId: calcom!.id })).toBeNull();
+      });
+      const [row] = await tx.select().from(calendarConnections).where(eq(calendarConnections.id, calcom!.id));
+      expect(row).toMatchObject({ externalWebhookId: null, encryptedWebhookSecret: null, encryptedAccessToken: null });
     });
   });
 

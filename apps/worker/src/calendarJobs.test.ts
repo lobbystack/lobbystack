@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ transaction: vi.fn(), token: vi.fn(), update: vi.fn(), updateTx: vi.fn(), mark: vi.fn(), busy: vi.fn(), backfill: vi.fn(), record: vi.fn() }));
+const mocks = vi.hoisted(() => ({ transaction: vi.fn(), token: vi.fn(), update: vi.fn(), updateTx: vi.fn(), mark: vi.fn(), busy: vi.fn(), backfill: vi.fn(), record: vi.fn(), saveWebhook: vi.fn() }));
 vi.mock("@lobbystack/db", async (original) => ({ ...await original<typeof import("@lobbystack/db")>(), withBusinessTransaction: mocks.transaction }));
-vi.mock("@lobbystack/domain", () => ({ CALENDAR_SYNC_HORIZON_MS: 90 * 86400_000, resolveCalendarAccessToken: mocks.token, updateAppointmentSyncState: mocks.update, updateAppointmentSyncStateInTransaction: mocks.updateTx, markCalendarConnectionSync: mocks.mark, queueUnsyncedAppointmentSyncs: mocks.backfill, upsertBusyBlocks: mocks.busy, recordProductEvent: mocks.record }));
+vi.mock("@lobbystack/domain", () => ({ CALENDAR_SYNC_HORIZON_MS: 90 * 86400_000, resolveCalendarAccessToken: mocks.token, updateAppointmentSyncState: mocks.update, updateAppointmentSyncStateInTransaction: mocks.updateTx, markCalendarConnectionSync: mocks.mark, queueUnsyncedAppointmentSyncs: mocks.backfill, upsertBusyBlocks: mocks.busy, recordProductEvent: mocks.record, saveCalendarWebhook: mocks.saveWebhook }));
 import { calendarConnections } from "@lobbystack/db";
 import { deleteReleasedCalendarEvent, reconcileBusinessCalendar, syncAppointmentCalendar } from "./calendarJobs";
 
@@ -53,6 +53,33 @@ it("preserves busy data on one calendar failure and still reconciles other conne
   expect(mocks.busy).toHaveBeenCalledOnce();
   expect(mocks.busy).toHaveBeenCalledWith(dependencies.domain, expect.objectContaining({ connectionId: "second", calendarId: "two" }));
   expect(mocks.mark).toHaveBeenCalledWith(dependencies.domain, expect.objectContaining({ connectionId: "first", error: "permission denied" }));
+});
+
+it("registers a Cal.com webhook before reading busy time, and fails the connection when it can't", async () => {
+  vi.stubEnv("APP_BASE_URL", "https://app.example/");
+  const calcom = { ...provider, registerWebhook: vi.fn().mockResolvedValue({ webhookId: "11" }) };
+  const both = { domain: dependencies.domain, calendars: { google: provider, calcom } };
+  batches = [[{ id: "cal", provider: "calcom", calendarId: "42", staffId: null, status: "connected", webhookId: null }, { id: "registered", provider: "calcom", calendarId: "42", staffId: "staff", status: "connected", webhookId: "9" }, { id: "first", provider: "google", calendarId: "one", staffId: null, status: "connected", webhookId: null }]];
+  await expect(reconcileBusinessCalendar(both, "business")).resolves.toMatchObject({ status: "completed" });
+  expect(calcom.registerWebhook).toHaveBeenCalledOnce();
+  expect(calcom.registerWebhook).toHaveBeenCalledWith({ accessToken: "access", subscriberUrl: "https://app.example/api/webhooks/calcom/cal", secret: expect.stringMatching(/^[a-f0-9]{64}$/) });
+  expect(mocks.saveWebhook).toHaveBeenCalledWith(dependencies.domain, { businessId: "business", connectionId: "cal", externalWebhookId: "11", encryptedWebhookSecret: expect.any(String) });
+  expect(mocks.saveWebhook.mock.calls[0]![1].encryptedWebhookSecret).not.toBe(calcom.registerWebhook.mock.calls[0]![0].secret);
+  expect(calcom.registerWebhook.mock.invocationCallOrder[0]).toBeLessThan(calcom.getBusyBlocks.mock.invocationCallOrder[0]!);
+
+  vi.clearAllMocks();
+  calcom.registerWebhook.mockRejectedValueOnce(new Error("Cal.com webhook registration failed with status 403."));
+  batches = [[{ id: "cal", provider: "calcom", calendarId: "42", staffId: null, status: "connected", webhookId: null }]];
+  await expect(reconcileBusinessCalendar(both, "business")).rejects.toThrow("1 connection");
+  expect(mocks.busy).not.toHaveBeenCalled();
+  expect(mocks.mark).toHaveBeenCalledWith(dependencies.domain, expect.objectContaining({ connectionId: "cal", error: "Cal.com webhook registration failed with status 403." }));
+});
+
+it("leaves a connection alone when its provider isn't set up here", async () => {
+  batches = [[{ id: "cal", provider: "calcom", calendarId: "42", staffId: null, status: "connected", webhookId: null }]];
+  await expect(reconcileBusinessCalendar(dependencies, "business")).resolves.toMatchObject({ status: "skipped" });
+  expect(mocks.token).not.toHaveBeenCalled();
+  expect(mocks.mark).not.toHaveBeenCalled();
 });
 
 it("queues missed bookings only for connections that synced", async () => {
