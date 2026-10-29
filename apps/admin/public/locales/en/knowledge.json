@@ -33,15 +33,18 @@
     "timesAsked_one": "Asked {{count}} time",
     "timesAsked_other": "Asked {{count}} times",
     "lastAsked": "Last asked {{date}}",
+    "askedSummary": "{{asked}} · {{lastAsked}}",
     "answer": "Answer",
     "answerLabel": "Answer to: {{question}}",
     "answerPlaceholder": "Write what your receptionist should say.",
+    "answerTooLong": "Shorten your answer to {{max}} characters or fewer.",
     "saveAnswer": "Save Answer",
     "cancel": "Cancel",
     "dismiss": "Dismiss",
     "toast": {
       "answered": "Answer added to your knowledge.",
-      "dismissed": "Question dismissed."
+      "dismissed": "Question dismissed.",
+      "alreadyHandled": "Someone already answered or dismissed this question."
     },
     "emptyTitle": "No unanswered questions",
     "emptyDescription": "When your receptionist can't find an answer in your knowledge, you'll see the question here.",

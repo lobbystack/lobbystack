@@ -29,6 +29,8 @@ import { intlLocale, formatDateTime } from "@/lib/locale";
 import { formatDuration } from "@/lib/duration";
 import { hasEnded, useAppointments } from "@/hooks/use-appointments";
 import { fetchUnansweredQuestions, UNANSWERED_QUESTIONS_ANCHOR, unansweredQuestionsQueryKey } from "@/components/unanswered-questions-section";
+import { useBusinessCan } from "@/components/business-capabilities-provider";
+import { useActiveBusiness } from "@/hooks/use-active-business";
 import { dayKey } from "@/lib/calendar-days";
 
 const OverviewCallChart = dynamic(() => import("./overview-call-chart").then((module) => module.OverviewCallChart), {
@@ -71,8 +73,12 @@ export function LiveOverviewSurface() {
   const businessId = summary.data?.businessId;
   const { appointments } = useAppointments();
   const { t: tKnowledge } = useTranslation("knowledge");
-  const unanswered = useQuery({ queryKey: unansweredQuestionsQueryKey(businessId), enabled: Boolean(businessId), queryFn: () => fetchUnansweredQuestions(businessId!) });
-  const unansweredCount = unanswered.data?.openCount ?? 0;
+  // Only owners and admins answer questions, and their routes need setup, which an activity-only business leaves to its partner.
+  const { business } = useActiveBusiness();
+  const canSetUp = useBusinessCan()("setup");
+  const canAnswerQuestions = canSetUp && (business?.role === "business_owner" || business?.role === "business_admin");
+  const unanswered = useQuery({ queryKey: unansweredQuestionsQueryKey(businessId), enabled: Boolean(businessId) && canAnswerQuestions, queryFn: () => fetchUnansweredQuestions(businessId!) });
+  const unansweredCount = canAnswerQuestions ? unanswered.data?.openCount ?? 0 : 0;
 
   useEffect(() => {
     if (!businessId) return;
@@ -194,7 +200,7 @@ export function LiveOverviewSurface() {
               </Card> : unansweredCount > 0 ? null : <div className="rounded-xl border border-dashed p-12 text-center xl:flex xl:flex-1 xl:flex-col xl:items-center xl:justify-center"><p className="type-empty-title">{t("home.actionRequired.emptyTitle")}</p><p className="type-empty-description mt-2">{t("home.actionRequired.emptyDescription")}</p></div>}
           </section>
           <section className="animate-in fade-in slide-in-from-bottom-2 duration-200 order-first flex flex-col gap-3 xl:h-full">
-            <div className="flex items-center justify-between gap-4 px-1"><div className="flex items-center gap-3"><h2 className="type-section-title">{t("home.upcoming.title")}</h2><Link className="text-sm text-muted-foreground transition-colors hover:text-foreground" href="/appointments">{t("home.upcoming.viewAll")}</Link></div>{summary.isLoading ? <Skeleton className="h-6 w-12 rounded-full" /> : <Badge variant="outline">{(summary.data?.upcoming.length ?? 0).toLocaleString(intlLocale(i18n.language))}</Badge>}</div>
+            <div className="flex items-center justify-between gap-4 px-1"><div className="flex items-center gap-3"><h2 className="type-section-title">{t("home.upcoming.title")}</h2><Link className="text-sm text-muted-foreground transition-colors hover:text-foreground" href="/appointments?view=list">{t("home.upcoming.viewAll")}</Link></div>{summary.isLoading ? <Skeleton className="h-6 w-12 rounded-full" /> : <Badge variant="outline">{(summary.data?.upcoming.length ?? 0).toLocaleString(intlLocale(i18n.language))}</Badge>}</div>
             {summary.isLoading ? <UpcomingSkeleton /> : summary.data?.upcoming.length ? (
               <Card className="ph-mask border-border/70"><CardContent className="flex flex-col gap-4">
                 {summary.data.upcoming.map((appointment, index) => {

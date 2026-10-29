@@ -34,15 +34,18 @@
     "timesAsked_few": "Postavljeno {{count}} puta",
     "timesAsked_other": "Postavljeno {{count}} puta",
     "lastAsked": "Poslednji put {{date}}",
+    "askedSummary": "{{asked}} · {{lastAsked}}",
     "answer": "Odgovori",
     "answerLabel": "Odgovor na: {{question}}",
     "answerPlaceholder": "Napišite šta recepcioner treba da odgovori.",
+    "answerTooLong": "Skratite odgovor na najviše {{max}} karaktera.",
     "saveAnswer": "Sačuvaj odgovor",
     "cancel": "Otkaži",
     "dismiss": "Odbaci",
     "toast": {
       "answered": "Odgovor je dodat u znanje.",
-      "dismissed": "Pitanje je odbačeno."
+      "dismissed": "Pitanje je odbačeno.",
+      "alreadyHandled": "Neko je već odgovorio na ovo pitanje ili ga je odbacio."
     },
     "emptyTitle": "Nema pitanja bez odgovora",
     "emptyDescription": "Kada recepcioner ne pronađe odgovor u vašem znanju, pitanje ćete videti ovde.",

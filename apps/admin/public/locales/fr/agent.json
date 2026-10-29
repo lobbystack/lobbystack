@@ -330,6 +330,7 @@
       "stop": "Arrêter {{voice}}",
       "inUse": "Utilisée",
       "traits": "{{pitch}}, {{pace}}",
+      "summary": "{{voice}} · {{traits}}",
       "pitch": {
         "low": "Grave",
         "mid": "Médium",

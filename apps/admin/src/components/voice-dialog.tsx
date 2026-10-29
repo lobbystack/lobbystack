@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Play, Square } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { receptionistVoices, receptionistVoiceTraits, type ReceptionistVoice, type RuntimeLocale } from "@lobbystack/shared";
@@ -30,53 +30,58 @@ export function useVoiceTraits() {
 export type VoicePreview = {
   playing: ReceptionistVoice | null;
   progress: number;
-  /** Voices whose clip failed to load; the dialog hides their play button. */
+  /** Voices whose clip failed to play; the dialog hides their play button. */
   missing: ReadonlySet<ReceptionistVoice>;
   play: (voice: ReceptionistVoice) => void;
+  /** Stops the clip playing and lets the browser free it. */
   stop: () => void;
-  /** Checks that each voice has a clip, so a missing one never shows a play button. */
-  probe: (voices: readonly ReceptionistVoice[]) => () => void;
 };
 
-/** One preview at a time: starting a voice stops the one before it. */
+type CurrentClip = { audio: HTMLAudioElement; listeners: AbortController };
+
+/** One preview at a time: starting a voice stops the one before it. Each play loads its own clip. */
 export function useVoicePreview(locale: RuntimeLocale): VoicePreview {
   const [playing, setPlaying] = useState<ReceptionistVoice | null>(null);
   const [progress, setProgress] = useState(0);
-  const [missing, setMissing] = useState<ReadonlySet<ReceptionistVoice>>(new Set());
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  // Clip URLs that failed, kept while the page is open so the voice doesn't offer a button that fails again.
+  const [failed, setFailed] = useState<ReadonlySet<string>>(new Set());
+  const clipRef = useRef<CurrentClip | null>(null);
 
-  const markMissing = useCallback((voice: ReceptionistVoice) => setMissing((current) => new Set(current).add(voice)), []);
   const stop = useCallback(() => {
-    const audio = audioRef.current;
-    audioRef.current = null;
-    audio?.pause();
+    const clip = clipRef.current;
+    clipRef.current = null;
+    if (clip) {
+      clip.listeners.abort();
+      clip.audio.pause();
+      clip.audio.removeAttribute("src");
+      clip.audio.load();
+    }
     setPlaying(null);
     setProgress(0);
   }, []);
   const play = useCallback((voice: ReceptionistVoice) => {
     stop();
-    const audio = new Audio(voicePreviewSrc(locale, voice));
-    audioRef.current = audio;
+    const src = voicePreviewSrc(locale, voice);
+    const clip: CurrentClip = { audio: new Audio(src), listeners: new AbortController() };
+    const { audio, listeners: { signal } } = clip;
+    clipRef.current = clip;
     setPlaying(voice);
-    audio.addEventListener("timeupdate", () => { if (audioRef.current === audio && audio.duration) setProgress(audio.currentTime / audio.duration); });
-    audio.addEventListener("ended", () => { if (audioRef.current === audio) stop(); });
-    audio.addEventListener("error", () => { if (audioRef.current === audio) stop(); markMissing(voice); });
-    audio.play().catch(() => { if (audioRef.current === audio) stop(); });
-  }, [locale, markMissing, stop]);
-  const probe = useCallback((voices: readonly ReceptionistVoice[]) => {
-    const probes = voices.map((voice) => {
-      const audio = new Audio();
-      audio.preload = "metadata";
-      audio.addEventListener("error", () => markMissing(voice));
-      audio.src = voicePreviewSrc(locale, voice);
-      return audio;
-    });
-    return () => probes.forEach((audio) => audio.removeAttribute("src"));
-  }, [locale, markMissing]);
+    // Stopping or starting another clip aborts this one's play(); only a failure of the clip playing counts.
+    const fail = () => {
+      if (clipRef.current !== clip) return;
+      stop();
+      setFailed((current) => new Set(current).add(src));
+    };
+    audio.addEventListener("timeupdate", () => { if (clipRef.current === clip && audio.duration) setProgress(audio.currentTime / audio.duration); }, { signal });
+    audio.addEventListener("ended", () => { if (clipRef.current === clip) stop(); }, { signal });
+    audio.addEventListener("error", fail, { signal });
+    audio.play().catch(fail);
+  }, [locale, stop]);
 
-  // Another language has its own clips, so what was missing may not be.
-  useEffect(() => { setMissing(new Set()); return stop; }, [locale, stop]);
-  return { playing, progress, missing, play, stop, probe };
+  const missing = useMemo(() => new Set(receptionistVoices.filter((voice) => failed.has(voicePreviewSrc(locale, voice)))), [failed, locale]);
+  // A new language plays its own clips, and leaving the page frees the one playing.
+  useEffect(() => stop, [locale, stop]);
+  return { playing, progress, missing, play, stop };
 }
 
 const RING_RADIUS = 18;
@@ -133,9 +138,10 @@ export function VoiceDialog({ open, onOpenChange, current, preview, saving, onSa
 }) {
   const { t } = useTranslation("agent");
   const [picked, setPicked] = useState(current);
-  const { probe, stop } = preview;
+  const { stop } = preview;
   useEffect(() => { if (open) setPicked(current); }, [open, current]);
-  useEffect(() => (open ? probe(receptionistVoices) : undefined), [open, probe]);
+  // However the dialog closes, the clip stops with it.
+  useEffect(() => { if (!open) stop(); }, [open, stop]);
   const close = (next: boolean) => { if (!next) stop(); onOpenChange(next); };
 
   return (

@@ -330,6 +330,7 @@
       "stop": "Zaustavi {{voice}}",
       "inUse": "U upotrebi",
       "traits": "{{pitch}}, {{pace}}",
+      "summary": "{{voice}} · {{traits}}",
       "pitch": {
         "low": "Dubok",
         "mid": "Srednji",

@@ -197,19 +197,17 @@ export function LiveCallsSurface() {
     <div className="flex flex-1 flex-col gap-6">
       <PageHeader
         actions={<HeaderSearch onChange={(value) => { setSearch(value); setPagination((current) => ({ ...current, pageIndex: 0 })); }} placeholder={t("filters.searchPlaceholder")} value={search} />}
-        title={
-          <span className="flex items-center gap-3">
-            {t("page.title")}
-            <div className="inline-flex shrink-0 items-center gap-2">
-              {activeCalls.isLoading ? <Skeleton className="h-6 w-8" /> : liveCalls === null
-                ? <span className="text-sm text-muted-foreground">{t("page.liveUnavailable")}</span>
-                : <span className="text-base font-semibold leading-none">{liveCalls.toLocaleString(intlLocale(i18n.language))}</span>}
-              {!activeCalls.isLoading && <span className="relative flex size-2.5 shrink-0" aria-hidden="true" data-testid="live-call-indicator">
-                {liveCalls !== null && liveCalls > 0 && <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500/45" />}
-                <span className={`relative inline-flex size-2.5 rounded-full ${liveCalls === null ? "bg-muted-foreground" : "bg-emerald-500"}`} />
-              </span>}
-            </div>
-          </span>
+        title={t("page.title")}
+        titleAside={
+          <div className="inline-flex shrink-0 items-center gap-2 font-heading leading-tight font-semibold tracking-tight text-foreground">
+            {!activeCalls.isLoading && <span className="relative flex size-2.5 shrink-0" aria-hidden="true" data-testid="live-call-indicator">
+              {liveCalls !== null && liveCalls > 0 && <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500/45" />}
+              <span className={`relative inline-flex size-2.5 rounded-full ${liveCalls === null ? "bg-muted-foreground" : "bg-emerald-500"}`} />
+            </span>}
+            {activeCalls.isLoading ? <Skeleton className="h-6 w-8" /> : liveCalls === null
+              ? <span className="text-sm text-muted-foreground">{t("page.liveUnavailable")}</span>
+              : <span className="text-base font-semibold leading-none">{liveCalls.toLocaleString(intlLocale(i18n.language))}</span>}
+          </div>
         }
       />
       <CallRecordingPlayer

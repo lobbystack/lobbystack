@@ -56,6 +56,12 @@ it("shows confirmed live sessions and updates via SSE instead of counting stale 
   for (const client of clients) render(<QueryClientProvider client={client}><LiveCallsSurface /></QueryClientProvider>);
 
   await waitFor(() => expect(screen.getAllByText("0")).toHaveLength(2));
+  // The count sits beside the page heading, so the heading stays just the title as the count changes.
+  for (const heading of screen.getAllByRole("heading", { level: 1 })) {
+    expect(heading.textContent).toBe("page.title");
+    expect(heading.querySelector("div, span")).toBeNull();
+    expect(heading.parentElement?.textContent).toBe("page.title0");
+  }
   expect(screen.getAllByTestId("live-call-indicator")).toHaveLength(2);
   for (const indicator of screen.getAllByTestId("live-call-indicator")) {
     expect(indicator.querySelector(".bg-emerald-500")).not.toBeNull();

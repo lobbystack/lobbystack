@@ -13,29 +13,43 @@ vi.mock("react-i18next", () => ({
 
 class FakeAudio {
   static all: FakeAudio[] = [];
+  /** Clips whose play() rejects, as a browser does when the file won't load. */
+  static rejects = new Set<string>();
   src = "";
-  preload = "";
   paused = true;
+  released = false;
   currentTime = 0;
   duration = 4;
   private listeners = new Map<string, Array<() => void>>();
   constructor(src?: string) { if (src) this.src = src; FakeAudio.all.push(this); }
-  addEventListener(type: string, listener: () => void) { this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]); }
-  removeAttribute() {}
+  addEventListener(type: string, listener: () => void, options?: { signal?: AbortSignal }) {
+    if (options?.signal?.aborted) return;
+    this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
+    options?.signal?.addEventListener("abort", () => this.listeners.set(type, (this.listeners.get(type) ?? []).filter((item) => item !== listener)));
+  }
+  removeAttribute(name: string) { if (name === "src") this.src = ""; }
+  load() { if (!this.src) this.released = true; }
   pause() { this.paused = true; }
-  play() { this.paused = false; return Promise.resolve(); }
+  play() {
+    if (FakeAudio.rejects.has(this.src)) return Promise.reject(new DOMException("The element has no supported sources.", "NotSupportedError"));
+    this.paused = false;
+    return Promise.resolve();
+  }
   emit(type: string) { act(() => this.listeners.get(type)?.forEach((listener) => listener())); }
 }
 const playing = () => FakeAudio.all.filter((audio) => !audio.paused);
-const clip = (voice: string) => FakeAudio.all.filter((audio) => audio.src === `/voice-previews/en/${voice}.mp3`);
 
-beforeEach(() => { FakeAudio.all = []; vi.stubGlobal("Audio", FakeAudio); });
+
+beforeEach(() => { FakeAudio.all = []; FakeAudio.rejects = new Set(); vi.stubGlobal("Audio", FakeAudio); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 function Harness({ onSave, onClose = () => {} }: { onSave: (voice: ReceptionistVoice) => Promise<boolean>; onClose?: () => void }) {
   const [open, setOpen] = useState(true);
   const preview = useVoicePreview("en");
-  return <VoiceDialog current="marin" onOpenChange={(next) => { setOpen(next); if (!next) onClose(); }} onSave={onSave} open={open} preview={preview} saving={false} />;
+  return <>
+    <button onClick={() => setOpen(true)} type="button">reopen</button>
+    <VoiceDialog current="marin" onOpenChange={(next) => { setOpen(next); if (!next) onClose(); }} onSave={onSave} open={open} preview={preview} saving={false} />
+  </>;
 }
 const row = (voice: string) => screen.getByRole("button", { name: new RegExp(`^${voice}`, "i") });
 // The dialog moves focus in as it opens, so wait until the row really has it.
@@ -65,7 +79,7 @@ describe("VoiceDialog", () => {
     await userEvent.click(row("Ash"));
     expect(row("Ash").getAttribute("aria-pressed")).toBe("true");
     expect(useButton().disabled).toBe(false);
-    expect(clip("ash").some((audio) => !audio.paused)).toBe(false);
+    expect(FakeAudio.all.filter((audio) => audio.src === "/voice-previews/en/ash.mp3")).toHaveLength(0);
   });
 
   it("saves the picked voice with Use this voice, then closes", async () => {
@@ -120,19 +134,50 @@ describe("VoiceDialog", () => {
     expect(playing()).toHaveLength(0);
   });
 
-  it("stops playing when the dialog closes", async () => {
+  it("stops and releases the clip when the dialog closes", async () => {
     render(<Harness onSave={async () => true} />);
     await userEvent.click(screen.getByRole("button", { name: "fields.voice.play:Cedar" }));
+    const [cedar] = FakeAudio.all;
     await userEvent.click(screen.getByRole("button", { name: "fields.voice.dialog.cancel" }));
     expect(playing()).toHaveLength(0);
+    expect(cedar!.released).toBe(true);
   });
 
-  it("hides the play button of a voice whose clip is missing", () => {
+  it("loads no clip until a voice plays, then one per play", async () => {
     render(<Harness onSave={async () => true} />);
-    expect(screen.getByRole("button", { name: "fields.voice.play:Ash" })).toBeTruthy();
-    clip("ash").find((audio) => audio.preload === "metadata")!.emit("error");
+    expect(FakeAudio.all).toHaveLength(0);
+    await userEvent.click(screen.getByRole("button", { name: "fields.voice.play:Cedar" }));
+    await userEvent.click(screen.getByRole("button", { name: "fields.voice.play:Ash" }));
+    expect(FakeAudio.all.map((audio) => audio.released)).toEqual([true, false]);
+  });
+
+  it("hides the play button of a voice whose clip fails to load, even after the dialog reopens", async () => {
+    render(<Harness onSave={async () => true} />);
+    await userEvent.click(screen.getByRole("button", { name: "fields.voice.play:Ash" }));
+    FakeAudio.all[0]!.emit("error");
     expect(screen.queryByRole("button", { name: "fields.voice.play:Ash" })).toBeNull();
     expect(row("Ash")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "fields.voice.play:Cedar" })).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "fields.voice.dialog.cancel" }));
+    await userEvent.click(screen.getByRole("button", { name: "reopen" }));
+    expect(await screen.findByRole("button", { name: "fields.voice.play:Cedar" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "fields.voice.play:Ash" })).toBeNull();
+  });
+
+  it("hides the play button of a voice whose clip won't play", async () => {
+    FakeAudio.rejects.add("/voice-previews/en/cedar.mp3");
+    render(<Harness onSave={async () => true} />);
+    await userEvent.click(screen.getByRole("button", { name: "fields.voice.play:Cedar" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "fields.voice.play:Cedar" })).toBeNull());
+    expect(screen.queryByTestId("voice-progress")).toBeNull();
+  });
+
+  it("keeps a voice's button when its clip errors after another voice started", async () => {
+    render(<Harness onSave={async () => true} />);
+    await userEvent.click(screen.getByRole("button", { name: "fields.voice.play:Cedar" }));
+    const [cedar] = FakeAudio.all;
+    await userEvent.click(screen.getByRole("button", { name: "fields.voice.play:Ash" }));
+    cedar!.emit("error");
     expect(screen.getByRole("button", { name: "fields.voice.play:Cedar" })).toBeTruthy();
   });
 });

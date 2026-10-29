@@ -621,7 +621,7 @@ export function AgentBasicSettingsPage({
             >
               <ItemContent>
                 <ItemTitle>{t("agent:fields.voice.label")}</ItemTitle>
-                <ItemDescription>{voiceName(voice)} · {voiceTraits(voice)}</ItemDescription>
+                <ItemDescription>{t("agent:fields.voice.summary", { voice: voiceName(voice), traits: voiceTraits(voice) })}</ItemDescription>
               </ItemContent>
               <ItemActions className="w-full sm:w-auto">
                 {isLoadingConfiguration ? (

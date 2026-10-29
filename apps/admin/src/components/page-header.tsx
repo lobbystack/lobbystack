@@ -4,6 +4,8 @@ import { cn } from "@/lib/utils"
 
 type PageHeaderProps = {
   title: ReactNode
+  /** Shown beside the title on the same row, outside the heading, for a live value such as a count. */
+  titleAside?: ReactNode
   description?: ReactNode
   actions?: ReactNode
   className?: string
@@ -11,6 +13,7 @@ type PageHeaderProps = {
 
 export function PageHeader({
   title,
+  titleAside,
   actions,
   className,
 }: PageHeaderProps) {
@@ -21,8 +24,9 @@ export function PageHeader({
         className
       )}
     >
-      <div className="flex min-w-0 flex-col">
+      <div className={cn("flex min-w-0", titleAside ? "items-center gap-3" : "flex-col")}>
         <h1 className="type-page-title">{title}</h1>
+        {titleAside}
       </div>
       {actions ? (
         <div className="flex shrink-0 flex-wrap items-center gap-2">

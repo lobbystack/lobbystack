@@ -34,15 +34,18 @@
     "timesAsked_many": "Posée {{count}} fois",
     "timesAsked_other": "Posée {{count}} fois",
     "lastAsked": "Dernière fois le {{date}}",
+    "askedSummary": "{{asked}} · {{lastAsked}}",
     "answer": "Répondre",
     "answerLabel": "Réponse à : {{question}}",
     "answerPlaceholder": "Écrivez ce que votre réceptionniste doit répondre.",
+    "answerTooLong": "Raccourcissez votre réponse à {{max}} caractères ou moins.",
     "saveAnswer": "Enregistrer la réponse",
     "cancel": "Annuler",
     "dismiss": "Ignorer",
     "toast": {
       "answered": "Réponse ajoutée à vos connaissances.",
-      "dismissed": "Question ignorée."
+      "dismissed": "Question ignorée.",
+      "alreadyHandled": "Quelqu'un a déjà répondu à cette question ou l'a ignorée."
     },
     "emptyTitle": "Aucune question sans réponse",
     "emptyDescription": "Quand votre réceptionniste ne trouve pas de réponse dans vos connaissances, la question apparaît ici.",
