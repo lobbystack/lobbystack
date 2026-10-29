@@ -326,7 +326,29 @@
     "voice": {
       "label": "Voice",
       "hint": "Your receptionist speaks in this voice on every call.",
-      "defaultOption": "{{voice}} (default)"
+      "change": "Change voice",
+      "play": "Play {{voice}}",
+      "stop": "Stop {{voice}}",
+      "inUse": "In use",
+      "traits": "{{pitch}}, {{pace}}",
+      "pitch": {
+        "low": "Deep",
+        "mid": "Mid-range",
+        "high": "Bright"
+      },
+      "pace": {
+        "slow": "unhurried",
+        "steady": "steady",
+        "quick": "quick"
+      },
+      "dialog": {
+        "title": "Voices",
+        "description": "Play a voice to hear it, then pick one.",
+        "current": "Current",
+        "all": "All voices",
+        "cancel": "Cancel",
+        "use": "Use this voice"
+      }
     },
     "timezone": {
       "label": "Business timezone",

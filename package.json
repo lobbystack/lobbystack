@@ -100,6 +100,7 @@
     "replacement:calendar": "tsx --tsconfig scripts/tsconfig.json scripts/replacement-calendar-check.ts",
     "replacement:contacts": "tsx --tsconfig scripts/tsconfig.json scripts/replacement-contact-pagination-check.ts",
     "voice:eval": "tsx --tsconfig scripts/tsconfig.json scripts/voice/live-call-eval.ts",
+    "voice:previews": "tsx --tsconfig scripts/tsconfig.json scripts/voice/record-voice-previews.ts",
     "voice:call": "tsx --tsconfig scripts/tsconfig.json scripts/voice/test-call.ts"
   },
   "devDependencies": {

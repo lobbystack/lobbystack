@@ -326,7 +326,29 @@
     "voice": {
       "label": "Glas",
       "hint": "Recepcioner govori ovim glasom u svim pozivima.",
-      "defaultOption": "{{voice}} (podrazumevani)"
+      "change": "Promeni glas",
+      "play": "Pusti {{voice}}",
+      "stop": "Zaustavi {{voice}}",
+      "inUse": "U upotrebi",
+      "traits": "{{pitch}}, {{pace}}",
+      "pitch": {
+        "low": "Dubok",
+        "mid": "Srednji",
+        "high": "Svetao"
+      },
+      "pace": {
+        "slow": "staložen",
+        "steady": "ujednačen",
+        "quick": "brz"
+      },
+      "dialog": {
+        "title": "Glasovi",
+        "description": "Pustite glas da ga čujete, pa ga izaberite.",
+        "current": "Trenutni",
+        "all": "Svi glasovi",
+        "cancel": "Otkaži",
+        "use": "Koristi ovaj glas"
+      }
     },
     "timezone": {
       "label": "Vremenska zona firme",

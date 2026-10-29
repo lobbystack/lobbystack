@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { DEFAULT_RECEPTIONIST_VOICE, isContactPasscode, isGuessableContactPasscode, isReceptionistVoice, normalizeReceptionistVoice, randomContactPasscode, receptionistVoices } from "./receptionist";
+import { DEFAULT_RECEPTIONIST_VOICE, receptionistVoiceTraits, isContactPasscode, isGuessableContactPasscode, isReceptionistVoice, normalizeReceptionistVoice, randomContactPasscode, receptionistVoices } from "./receptionist";
 
 describe("isContactPasscode", () => {
   it("takes 4 to 8 digits", () => {
@@ -74,5 +74,9 @@ describe("receptionist voices", () => {
   it("falls back to marin for a missing, unknown or retired voice", () => {
     expect(normalizeReceptionistVoice("cedar")).toBe("cedar");
     for (const value of [undefined, null, "", "nova", "MARIN", { voice: "cedar" }]) expect(normalizeReceptionistVoice(value)).toBe("marin");
+  });
+
+  it("describes every voice", () => {
+    expect(Object.keys(receptionistVoiceTraits).sort()).toEqual([...receptionistVoices].sort());
   });
 });

@@ -222,22 +222,23 @@ describe("AgentBasicSettingsPage voice", () => {
     return { client, patches };
   }
 
-  it("shows the saved voice and saves the one picked", async () => {
+  it("shows the saved voice and saves the one picked in the voice dialog", async () => {
     const { client, patches } = renderWithVoice("cedar");
     const user = userEvent.setup();
-    const select = await screen.findByRole("combobox", { name: "agent:fields.voice.label" });
-    await waitFor(() => expect(select.textContent).toContain("Cedar"));
-    await waitFor(() => expect(select.hasAttribute("data-disabled")).toBe(false));
-    await user.click(select);
-    await user.click(await screen.findByRole("option", { name: "Shimmer" }));
+    expect((await screen.findAllByText("Cedar")).length).toBeGreaterThan(0);
+    const change = await screen.findByRole("button", { name: "agent:fields.voice.change" });
+    await waitFor(() => expect((change as HTMLButtonElement).disabled).toBe(false));
+    await user.click(change);
+    await user.click(await screen.findByRole("button", { name: /^Shimmer/ }));
+    await user.click(screen.getByRole("button", { name: "fields.voice.dialog.use" }));
     await waitFor(() => expect(patches).toEqual([{ businessId: "business", voice: "shimmer" }]));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     client.clear();
   });
 
   it("shows marin for a business that never picked a voice or has one calls no longer use", async () => {
     const { client } = renderWithVoice("nova");
-    const select = await screen.findByRole("combobox", { name: "agent:fields.voice.label" });
-    await waitFor(() => expect(select.textContent).toContain("agent:fields.voice.defaultOption"));
+    expect((await screen.findAllByText("Marin")).length).toBeGreaterThan(0);
     client.clear();
   });
 });

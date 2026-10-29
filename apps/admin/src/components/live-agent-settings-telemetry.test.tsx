@@ -52,10 +52,11 @@ describe("agent settings telemetry", () => {
 
   it("saves the voice and records settings_saved for it", async () => {
     const fetchMock = setup();
-    const select = await screen.findByRole("combobox", { name: "agent:fields.voice.label" });
-    await waitFor(() => expect(select.hasAttribute("data-disabled")).toBe(false));
-    await userEvent.click(select);
-    await userEvent.click(await screen.findByRole("option", { name: "Cedar" }));
+    const change = await screen.findByRole("button", { name: "agent:fields.voice.change" });
+    await waitFor(() => expect((change as HTMLButtonElement).disabled).toBe(false));
+    await userEvent.click(change);
+    await userEvent.click(await screen.findByRole("button", { name: /^Cedar/ }));
+    await userEvent.click(screen.getByRole("button", { name: "fields.voice.dialog.use" }));
     await waitFor(() => telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "voice" }));
     const patch = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");
     expect(JSON.parse(String(patch?.[1]?.body))).toEqual({ businessId: "business", voice: "cedar" });

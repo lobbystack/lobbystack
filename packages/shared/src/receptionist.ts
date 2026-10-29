@@ -14,6 +14,39 @@ export const receptionistVoices = ["alloy", "ash", "ballad", "beacon", "bossa", 
 
 export type ReceptionistVoice = (typeof receptionistVoices)[number];
 
+export type ReceptionistVoicePitch = "low" | "mid" | "high";
+export type ReceptionistVoicePace = "slow" | "steady" | "quick";
+
+/**
+ * How each voice sounds, measured from the preview clips (scripts/voice/record-voice-previews.ts):
+ * pitch from the median fundamental frequency, pace from how long the same line takes.
+ * The dashboard shows these as each voice's description.
+ */
+export const receptionistVoiceTraits: Record<ReceptionistVoice, { pitch: ReceptionistVoicePitch; pace: ReceptionistVoicePace }> = {
+  alloy: { pitch: "mid", pace: "quick" },
+  ash: { pitch: "low", pace: "quick" },
+  ballad: { pitch: "high", pace: "steady" },
+  beacon: { pitch: "low", pace: "steady" },
+  bossa: { pitch: "high", pace: "steady" },
+  cedar: { pitch: "mid", pace: "quick" },
+  cinder: { pitch: "low", pace: "slow" },
+  coral: { pitch: "high", pace: "steady" },
+  delta: { pitch: "high", pace: "steady" },
+  echo: { pitch: "low", pace: "slow" },
+  gleam: { pitch: "high", pace: "slow" },
+  marin: { pitch: "high", pace: "quick" },
+  meridian: { pitch: "low", pace: "quick" },
+  quartz: { pitch: "mid", pace: "slow" },
+  ripple: { pitch: "low", pace: "slow" },
+  sage: { pitch: "mid", pace: "quick" },
+  shimmer: { pitch: "mid", pace: "steady" },
+  stone: { pitch: "low", pace: "quick" },
+  tempo: { pitch: "low", pace: "steady" },
+  verse: { pitch: "mid", pace: "quick" },
+  vesper: { pitch: "low", pace: "steady" },
+  willow: { pitch: "high", pace: "steady" },
+};
+
 /** The voice calls used before businesses could pick one, and still the default. */
 export const DEFAULT_RECEPTIONIST_VOICE: ReceptionistVoice = "marin";
 

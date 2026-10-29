@@ -326,7 +326,29 @@
     "voice": {
       "label": "Voz",
       "hint": "Su recepcionista habla con esta voz en todas las llamadas.",
-      "defaultOption": "{{voice}} (predeterminada)"
+      "change": "Cambiar voz",
+      "play": "Reproducir {{voice}}",
+      "stop": "Detener {{voice}}",
+      "inUse": "En uso",
+      "traits": "{{pitch}}, {{pace}}",
+      "pitch": {
+        "low": "Grave",
+        "mid": "Media",
+        "high": "Aguda"
+      },
+      "pace": {
+        "slow": "pausada",
+        "steady": "constante",
+        "quick": "rápida"
+      },
+      "dialog": {
+        "title": "Voces",
+        "description": "Escucha una voz y elígela.",
+        "current": "Actual",
+        "all": "Todas las voces",
+        "cancel": "Cancelar",
+        "use": "Usar esta voz"
+      }
     },
     "timezone": {
       "label": "Zona horaria del negocio",

@@ -6,7 +6,7 @@ import { Sparkles } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { requestJson } from "@/lib/request-json";
-import { appointmentChangeVerificationModes, DEFAULT_RECEPTIONIST_VOICE, intlLocale, isTransferCountry, normalizeBookingMode, normalizeReceptionistVoice, receptionistVoices, runtimeLocales, type AppointmentChangePolicy, type AppointmentChangeVerificationMode, type BookingMode, type ReceptionistVoice, type RuntimeLocale } from "@lobbystack/shared";
+import { appointmentChangeVerificationModes, DEFAULT_RECEPTIONIST_VOICE, intlLocale, isTransferCountry, normalizeBookingMode, normalizeReceptionistVoice, runtimeLocales, type AppointmentChangePolicy, type AppointmentChangeVerificationMode, type BookingMode, type ReceptionistVoice, type RuntimeLocale } from "@lobbystack/shared";
 import type { Country } from "react-phone-number-input/input";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -28,6 +28,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import { Switch } from "@/components/ui/switch";
 import { useTelemetry } from "@/components/product-analytics";
+import { VoiceDialog, voiceName, VoicePlayButton, useVoicePreview, useVoiceTraits } from "@/components/voice-dialog";
 import { BookingWithoutHoursAlert, BusinessHoursSection, needsHoursForBooking, useBusinessHours } from "@/components/business-hours-section";
 import { availableTimeZones, groupTimeZones, isTimeZoneRegion, type TimeZoneOption } from "@/lib/time-zones";
 import { errorCode } from "@/lib/checkout-errors";
@@ -97,11 +98,6 @@ export function buildAppointmentChangePolicyForSave({
 // The checks the dashboard offers. A business saved as operator_only keeps
 // that option in the select while it's the saved mode.
 const offeredVerificationModes: AppointmentChangeVerificationMode[] = ["phone_match_and_facts", "otp_required", "passcode_required"];
-
-// Voice names are proper nouns, shown the same in every language.
-function voiceName(voice: ReceptionistVoice): string {
-  return voice.charAt(0).toUpperCase() + voice.slice(1);
-}
 
 function savedVerificationMode(value: unknown): AppointmentChangeVerificationMode {
   return (appointmentChangeVerificationModes as readonly unknown[]).includes(value) ? value as AppointmentChangeVerificationMode : "phone_match_and_facts";
@@ -216,8 +212,10 @@ export function AgentBasicSettingsPage({
   const [isBookingModeSaving, setIsBookingModeSaving] = useState(false);
   const [voice, setVoice] = useState<ReceptionistVoice>(DEFAULT_RECEPTIONIST_VOICE);
   const [isVoiceSaving, setIsVoiceSaving] = useState(false);
+  const [voiceDialogOpen, setVoiceDialogOpen] = useState(false);
+  const voicePreview = useVoicePreview(configuration?.business?.defaultLocale ?? "en");
+  const voiceTraits = useVoiceTraits();
   // The utility bar's test call widget registers itself; this page only starts it.
-  const voiceLabel = (option: ReceptionistVoice) => option === DEFAULT_RECEPTIONIST_VOICE ? t("agent:fields.voice.defaultOption", { voice: voiceName(option) }) : voiceName(option);
   const [transferStatus, setTransferStatus] = useState<string | null>(null);
   const [isGreetingSaving, setIsGreetingSaving] = useState(false);
   const [isGreetingOpen, setIsGreetingOpen] = useState(false);
@@ -410,8 +408,8 @@ export function AgentBasicSettingsPage({
     }
   }
 
-  async function saveVoice(nextVoice: ReceptionistVoice): Promise<void> {
-    if (!canManageTenant || !persistedProfile) return;
+  async function saveVoice(nextVoice: ReceptionistVoice): Promise<boolean> {
+    if (!canManageTenant || !persistedProfile) return false;
     const previous = voice;
     setVoice(nextVoice);
     setIsVoiceSaving(true);
@@ -419,9 +417,11 @@ export function AgentBasicSettingsPage({
       await saveProfile({ businessId, voice: nextVoice });
       telemetry.track("web.agent.settings_saved", { businessId, setting: "voice" });
       toast.success(t("agent:actions.saved"));
+      return true;
     } catch {
       setVoice(previous);
       toast.error(t("agent:actions.saveFailed"));
+      return false;
     } finally {
       setIsVoiceSaving(false);
     }
@@ -628,25 +628,19 @@ export function AgentBasicSettingsPage({
                 {isLoadingConfiguration ? (
                   <Skeleton className="h-10 w-full rounded-md sm:w-52" />
                 ) : (
-                  <Select
-                    disabled={isVoiceSaving || !persistedProfile || !canManageTenant}
-                    items={receptionistVoices.map((option) => ({ value: option, label: voiceLabel(option) }))}
-                    onValueChange={(value) => {
-                      const nextVoice = normalizeReceptionistVoice(value);
-                      if (nextVoice !== voice) void saveVoice(nextVoice);
-                    }}
-                    value={voice}
-                  >
-                    <SelectTrigger aria-label={t("agent:fields.voice.label")} className="w-full sm:w-52" id="agent-voice" loading={isVoiceSaving}><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {receptionistVoices.map((option) => <SelectItem key={option} value={option}>{voiceLabel(option)}</SelectItem>)}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex w-full items-center gap-3 sm:w-auto">
+                    <VoicePlayButton preview={voicePreview} voice={voice} />
+                    <div className="flex min-w-0 flex-1 flex-col sm:w-40 sm:flex-none">
+                      <span className="truncate text-sm font-medium">{voiceName(voice)}</span>
+                      <span className="truncate text-sm text-muted-foreground">{voiceTraits(voice)}</span>
+                    </div>
+                    <Button disabled={!persistedProfile || !canManageTenant} onClick={() => setVoiceDialogOpen(true)} type="button" variant="outline">{t("agent:fields.voice.change")}</Button>
+                  </div>
                 )}
               </ItemActions>
             </Item>
+
+            <VoiceDialog current={voice} onOpenChange={setVoiceDialogOpen} onSave={saveVoice} open={voiceDialogOpen} preview={voicePreview} saving={isVoiceSaving} />
 
             <Item
               className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
