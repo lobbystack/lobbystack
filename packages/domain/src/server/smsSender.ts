@@ -2,7 +2,6 @@ import { and, desc, eq, ne, sql } from "drizzle-orm";
 
 import { billingAccounts, businesses, phoneNumbers, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { alertSmsFrom } from "@lobbystack/providers/telephony/config";
-import { isCarrierId, type CarrierId } from "@lobbystack/providers/telephony/types";
 
 import type { DomainContext } from "./context";
 
@@ -54,9 +53,10 @@ export async function businessSmsNumber(tx: DatabaseTransaction, businessId: str
 }
 
 /** The carrier that owns one of the business's numbers, which texts from it go through. Null for a number the business doesn't hold. */
-export async function businessNumberCarrier(context: DomainContext, businessId: string, e164: string): Promise<CarrierId | null> {
+export async function businessNumberCarrier(context: DomainContext, businessId: string, e164: string): Promise<string | null> {
   const carrier = await withBusinessTransaction(context.db, { businessId, actorType: "worker" }, async (tx) => (await tx.select({ carrier: phoneNumbers.carrier }).from(phoneNumbers)
     .where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.e164, e164), ne(phoneNumbers.status, "reclaimed")))
     .limit(1))[0]?.carrier);
-  return isCarrierId(carrier) ? carrier : null;
+  // A carrier this build doesn't know stays as written, so it isn't sent through Twilio by mistake.
+  return carrier ?? null;
 }

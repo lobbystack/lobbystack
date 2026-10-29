@@ -2,8 +2,8 @@ import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 
 import { createDatabaseClient, phoneNumbers, withBusinessTransaction } from "@lobbystack/db";
+import { resolveRefusedCallForward } from "@lobbystack/domain";
 import { createTelephony } from "@lobbystack/providers/telephony/registry";
-import { isCarrierId } from "@lobbystack/providers/telephony/types";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
@@ -32,18 +32,21 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
     const row = await withBusinessTransaction(database.db, { businessId: options.businessId, actorType: "worker" }, async (tx) =>
       (await tx.select({ id: phoneNumbers.id, providerPhoneId: phoneNumbers.providerPhoneId, carrier: phoneNumbers.carrier, voiceWebhookTargetUrl: phoneNumbers.voiceWebhookTargetUrl }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, options.businessId), eq(phoneNumbers.e164, options.number), eq(phoneNumbers.status, "active"))).limit(1))[0]);
     if (!row?.providerPhoneId) throw new Error("That business has no active number matching it.");
-    const routing = telephony.forNumber(isCarrierId(row.carrier) ? row.carrier : null)?.routing;
+    const routing = telephony.forNumber(row.carrier)?.routing;
     if (!routing) throw new Error(`The number's carrier, ${row.carrier}, has no credentials on this machine.`);
     const missing = routing.missingSetup();
     if (missing) throw new Error(missing);
     console.log(JSON.stringify({ number: options.number, phoneNumberId: row.id, carrier: row.carrier, current: row.voiceWebhookTargetUrl, target: "GPT-Live", apply: options.apply }));
     if (!options.apply) return;
 
-    const { target } = await routing.routeNumber({ providerPhoneId: row.providerPhoneId, mode: "receptionist" });
+    // A carrier that stores the refused-call forward needs it on every route, or refused calls fail.
+    const refusedCallsForwardTo = routing.forwardsRefusedCalls ? await resolveRefusedCallForward({ db: database.db }, { businessId: options.businessId, e164: options.number }) : undefined;
+    const { target } = await routing.routeNumber({ providerPhoneId: row.providerPhoneId, mode: "receptionist", ...(refusedCallsForwardTo !== undefined ? { refusedCallsForwardTo } : {}) });
     await withBusinessTransaction(database.db, { businessId: options.businessId, actorType: "worker" }, async (tx) => {
       await tx.update(phoneNumbers).set({
         voiceWebhookTargetUrl: target,
         voiceWebhookLastSyncedAt: new Date(),
+        ...(refusedCallsForwardTo !== undefined ? { refusedCallsForwardTo } : {}),
         updatedAt: new Date(),
       }).where(eq(phoneNumbers.id, row.id));
     });

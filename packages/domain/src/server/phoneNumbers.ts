@@ -301,14 +301,33 @@ const numberProvisioningLeaseMs = 10 * 60_000;
  * a partner's tier, so the worker reads what the host pays for it before
  * buying it.
  */
-export async function claimNumberProvisioning(context: DomainContext, input: { businessId: string; claimId: string }): Promise<{ id: string; e164: string; selection: Record<string, unknown>; carrier: CarrierId; countsForPartner: boolean } | null> {
+export async function claimNumberProvisioning(context: DomainContext, input: { businessId: string; claimId: string }): Promise<{ id: string; e164: string; selection: Record<string, unknown>; carrier: CarrierId; countsForPartner: boolean; reservedAt: Date; providerOrderId: string | null } | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     // The signed offer names the carrier that sells the number. An offer from before carriers were recorded is Twilio's, the column's default.
     const carrier = sql`CASE WHEN ${onboardingNumberClaimEvents.selectionContext}->>'carrier' ~ '^[a-z][a-z0-9_]{1,31}$' THEN ${onboardingNumberClaimEvents.selectionContext}->>'carrier' ELSE ${onboardingNumberClaimEvents.carrier} END`;
-    const claim = (await tx.update(onboardingNumberClaimEvents).set({ status: "provisioning", carrier, attemptCount: sql`${onboardingNumberClaimEvents.attemptCount} + 1`, updatedAt: new Date() }).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId), or(eq(onboardingNumberClaimEvents.status, "reserved"), and(eq(onboardingNumberClaimEvents.status, "provisioning"), lt(onboardingNumberClaimEvents.updatedAt, new Date(Date.now() - numberProvisioningLeaseMs)))))).returning({ id: onboardingNumberClaimEvents.id, e164: onboardingNumberClaimEvents.requestedE164, selection: onboardingNumberClaimEvents.selectionContext, carrier: onboardingNumberClaimEvents.carrier }))[0];
+    const claim = (await tx.update(onboardingNumberClaimEvents).set({ status: "provisioning", carrier, attemptCount: sql`${onboardingNumberClaimEvents.attemptCount} + 1`, updatedAt: new Date() }).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId), or(eq(onboardingNumberClaimEvents.status, "reserved"), and(eq(onboardingNumberClaimEvents.status, "provisioning"), lt(onboardingNumberClaimEvents.updatedAt, new Date(Date.now() - numberProvisioningLeaseMs)))))).returning({ id: onboardingNumberClaimEvents.id, e164: onboardingNumberClaimEvents.requestedE164, selection: onboardingNumberClaimEvents.selectionContext, carrier: onboardingNumberClaimEvents.carrier, reservedAt: onboardingNumberClaimEvents.reservedAt, providerOrderId: onboardingNumberClaimEvents.providerOrderId }))[0];
     if (!claim) return null;
     if (!isCarrierId(claim.carrier)) throw new Error(`Number claim ${claim.id} names an unknown carrier, ${claim.carrier}.`);
     return { ...claim, carrier: claim.carrier, countsForPartner: await numberCountsForPartnerInTransaction(tx, input.businessId) };
+  });
+}
+
+/**
+ * How long a claim waits on a carrier order before it fails. Telnyx can take
+ * days to review a regulated country's documents.
+ */
+export const NUMBER_ORDER_MAX_WAIT_MS = 5 * 86_400_000;
+
+/**
+ * Keeps a claim provisioning while the carrier finishes its order, with the
+ * order's id so the next attempt checks it instead of ordering again.
+ * Returns when that attempt can take the claim.
+ */
+export async function deferNumberProvisioning(context: DomainContext, input: { businessId: string; claimId: string; providerOrderId: string }): Promise<Date> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const now = new Date();
+    await tx.update(onboardingNumberClaimEvents).set({ providerOrderId: input.providerOrderId, lastError: "Waiting for the carrier to finish the number order.", updatedAt: now }).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId), eq(onboardingNumberClaimEvents.status, "provisioning")));
+    return new Date(now.getTime() + numberProvisioningLeaseMs);
   });
 }
 

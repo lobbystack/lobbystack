@@ -152,6 +152,7 @@ import { googleCalendarProvider } from "../google-calendar-provider";
 import { checkPhoneNumberSearchLimit } from "../phone-number-search-limit";
 import { getStorageProvider } from "../storage";
 import { withStripeConnect } from "../stripe-connect";
+import { guardedNumberSearch } from "@lobbystack/providers/telephony/registry";
 import { getNumberClaimTokenSecret, getTelephony, numbersConfigured } from "../telephony";
 import { hasVerifiedPhone } from "../verified-phone";
 import { data, handleApiRequest, pageQuery, queryParam, readApiBody, uuidParam, type ApiCredential, type RestApiCaller } from "./http";
@@ -406,7 +407,7 @@ export const v1 = {
     if (!numbersConfigured()) throw new PublicApiError(503, "phone_numbers_unavailable", "Phone numbers aren't set up on this deployment.");
     const body = await readApiBody(request, apiPhoneNumberSearchSchema);
     const userId = await resolveActingUserId(context, caller);
-    return { body: { data: await searchPhoneNumbersForApi(context, caller, body, { userId, provider: getTelephony().numbers, claimTokenSecret: getNumberClaimTokenSecret(), beforeSearch: () => requireNumberSearchAllowed(userId) }), next_cursor: null, has_more: false } };
+    return { body: { data: await searchPhoneNumbersForApi(context, caller, body, { userId, provider: guardedNumberSearch(getTelephony().numbers, () => requireNumberSearchAllowed(userId)), claimTokenSecret: getNumberClaimTokenSecret() }), next_cursor: null, has_more: false } };
   }),
   createPhoneNumberClaim: (request: Request) => handleApiRequest(request, "createPhoneNumberClaim", async ({ context, caller }) => {
     const body = await readApiBody(request, apiPhoneNumberClaimCreateSchema);

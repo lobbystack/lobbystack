@@ -3,7 +3,7 @@ import { and, desc, eq, gt, gte, inArray, isNull, lte, ne, sql } from "drizzle-o
 
 import { businesses, calls, enqueueOutbox, numberTrials, numberWaitlist, onboardingPhoneVerifications, phoneNumbers, receptionistProfiles, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { numberCountryReady } from "@lobbystack/providers/telephony/config";
-import { isCarrierId, type CarrierId, type NumberRoutingMode } from "@lobbystack/providers/telephony/types";
+import { CARRIERS_FORWARDING_REFUSED_CALLS, isCarrierId, type CarrierId, type NumberRoutingMode } from "@lobbystack/providers/telephony/types";
 import { isTransferPhone, normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
 
 import { hasMinimumRole, requireBusinessAdmin, requireBusinessMembership } from "../authz";
@@ -330,6 +330,51 @@ export async function resolveNumberFallback(context: DomainContext, input: { bus
     const to = [row.transferNumber?.trim(), ownerPhone].find((phone): phone is string => Boolean(phone && E164.test(phone) && isTransferPhone(phone) && phone !== input.e164));
     return to ? { action: "forward", to } : { action: "reject" };
   });
+}
+
+/**
+ * Re-routes the business's numbers on carriers that store the refused-call
+ * forward themselves, so they learn a new transfer number or owner phone.
+ * Other carriers ask our voice webhook on each call and need nothing.
+ */
+export async function enqueueRefusedCallForwardRefresh(tx: DatabaseTransaction, businessId: string): Promise<void> {
+  const numbers = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), inArray(phoneNumbers.carrier, [...CARRIERS_FORWARDING_REFUSED_CALLS])));
+  for (const number of numbers) await enqueueNumberRouting(tx, { businessId, phoneNumberId: number.id, mode: "receptionist" });
+}
+
+/**
+ * Re-routes each number whose carrier-stored forward no longer matches what
+ * the fallback answers now. The hourly number sweep runs it, which catches
+ * changes no write path queues a routing job for, such as a new owner.
+ * Returns how many numbers it queued.
+ */
+export async function refreshStaleRefusedCallForwards(context: DomainContext, input: { businessId: string }): Promise<number> {
+  const numbers = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) =>
+    await tx.select({ id: phoneNumbers.id, e164: phoneNumbers.e164, stored: phoneNumbers.refusedCallsForwardTo }).from(phoneNumbers)
+      .where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"), inArray(phoneNumbers.carrier, [...CARRIERS_FORWARDING_REFUSED_CALLS]))));
+  let queued = 0;
+  for (const number of numbers) {
+    const forward = await resolveRefusedCallForward(context, { businessId: input.businessId, e164: number.e164 });
+    if (forward === number.stored) continue;
+    await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+      await enqueueNumberRouting(tx, { businessId: input.businessId, phoneNumberId: number.id, mode: "receptionist" });
+    });
+    queued += 1;
+  }
+  return queued;
+}
+
+/**
+ * The number a refused call to this business's number forwards to, or null
+ * when it should fail. Never the dialled number or the line that forwarded
+ * the call here, which would loop. Both the carrier voice webhooks and
+ * carriers that store the forward themselves (CARRIERS_FORWARDING_REFUSED_CALLS)
+ * go by it.
+ */
+export async function resolveRefusedCallForward(context: DomainContext, input: { businessId: string; e164: string; forwardedFrom?: string | null | undefined }): Promise<string | null> {
+  const fallback = await resolveNumberFallback(context, { businessId: input.businessId, e164: input.e164 });
+  if (fallback.action !== "forward" || !E164.test(fallback.to) || fallback.to === input.e164 || fallback.to === input.forwardedFrom) return null;
+  return fallback.to;
 }
 
 /** Whether calls to this business's number must go unanswered because its trial ended. */

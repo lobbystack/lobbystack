@@ -65,8 +65,17 @@ export class TelnyxClient {
       ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
     });
     const text = await response.text();
-    const json = text ? (JSON.parse(text) as unknown) : {};
-    if (!response.ok) throw new TelnyxApiError(response.status, Array.isArray((json as { errors?: unknown }).errors) ? (json as { errors: TelnyxErrorDetail[] }).errors : [], path);
+    // An error from a proxy or an outage page may not be JSON, and it still has to keep its status.
+    let json: unknown = {};
+    if (text) {
+      try {
+        json = JSON.parse(text);
+      } catch (error) {
+        if (!response.ok) throw new TelnyxApiError(response.status, [], path);
+        throw new Error(`Telnyx ${path} answered ${response.status} with a body that isn't JSON.`, { cause: error });
+      }
+    }
+    if (!response.ok) throw new TelnyxApiError(response.status, Array.isArray((json as { errors?: unknown } | null)?.errors) ? (json as { errors: TelnyxErrorDetail[] }).errors : [], path);
     return json as T;
   }
 }

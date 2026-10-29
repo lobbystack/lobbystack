@@ -125,6 +125,32 @@ describe("POST /api/webhooks/openai/live", () => {
     expect(logged).toMatchObject({ routedBy: "Diversion" });
   });
 
+  it("routes a call whose only dialled number is in History-Info, as a translated Telnyx number can arrive", async () => {
+    mocks.execute.mockResolvedValue({ rows: [{ business_id: "biz_1", position: 1 }] });
+    mocks.snapshot.mockResolvedValue({ businessId: "biz_1", greeting: "Hi" });
+    mocks.startLivePhoneCall.mockResolvedValue({ callId: "call_1", conversationId: "conv_1", duplicate: false, blocked: false, maxDurationMs: 1_800_000 });
+    mocks.accept.mockResolvedValue(undefined);
+    mocks.attach.mockResolvedValue(undefined);
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+    mocks.unwrap.mockResolvedValue({
+      type: "live.transport.incoming",
+      data: {
+        session_id: "live_1",
+        sip_headers: [
+          { name: "To", value: "<sip:proj_1@sip.api.openai.com>" },
+          { name: "History-Info", value: "<sip:+15815550100@sip.telnyx.com>;index=1, <sip:proj_1@sip.api.openai.com>;index=1.1" },
+          { name: "From", value: "<sip:+14165550134@sip.telnyx.com>" },
+        ],
+      },
+    });
+
+    const response = await POST(new Request("https://admin.lobbystack.test/api/webhooks/openai/live", { method: "POST", body: "{}" }));
+
+    expect(response.status).toBe(200);
+    expect(new PgDialect().sqlToQuery(mocks.execute.mock.calls[0]![0] as SQL).params).toEqual(["+15815550100"]);
+    expect(mocks.startLivePhoneCall).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ businessId: "biz_1", to: "+15815550100" }));
+  });
+
   it("records a withheld caller ID without a number and without a limit on an unlimited plan", async () => {
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     mocks.execute.mockResolvedValue({ rows: [{ business_id: "biz_1", position: 1 }] });

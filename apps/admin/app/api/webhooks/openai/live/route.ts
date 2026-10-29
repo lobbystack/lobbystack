@@ -38,8 +38,11 @@ export async function POST(request: Request) {
   // Twilio trunks rewrite "To" to our OpenAI SIP URI and keep the dialled
   // number in "Diversion". A forwarded call can carry several Diversions, the
   // first of which may be the business's old line, so every number is a
-  // candidate, in this order.
-  const dialledHeaders = ["diversion", "to", "p-called-party-id"];
+  // candidate, in this order. A Telnyx number's translated number puts the
+  // project in the Request-URI, so its dialled number can only survive in
+  // these or in History-Info (RFC 7044), which records the original
+  // Request-URI. See docs/voice/runtime.md.
+  const dialledHeaders = ["diversion", "to", "p-called-party-id", "history-info"];
   const candidates = dialledHeaders.flatMap((name) => event.data.sip_headers.filter((item) => item.name.toLowerCase() === name).flatMap((item) => phonesFromSipHeader(item.value).map((phone) => ({ header: item.name, phone }))));
   // Undefined when the caller withheld their number.
   const from = phonesFromSipHeader(event.data.sip_headers.find((item) => item.name.toLowerCase() === "from")?.value)[0];
@@ -47,7 +50,8 @@ export async function POST(request: Request) {
   const routing = event.data.sip_headers.filter((item) => dialledHeaders.includes(item.name.toLowerCase()));
   if (!candidates.length) {
     // No deployment can route a call without a dialled number.
-    console.warn("[live] incoming call without a dialled number", JSON.stringify({ sessionId, routing }));
+    // The header names show which header a new carrier uses, without logging the caller's number.
+    console.warn("[live] incoming call without a dialled number", JSON.stringify({ sessionId, routing, headerNames: event.data.sip_headers.map((item) => item.name) }));
     await client.live.sessions.reject(sessionId, { status_code: 404 }).catch(() => undefined);
     return new NextResponse(null, { status: 200 });
   }

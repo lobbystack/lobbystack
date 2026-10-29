@@ -108,6 +108,7 @@ function rateLimitHeaders(decision: RateLimitDecision): Record<string, string> {
 function errorResponse(error: unknown, operationId: string): NextResponse {
   if (error instanceof PublicApiError) return apiError(error.status, error.code, error.message, { ...(error.details ? { details: error.details } : {}), ...(error.headers ? { headers: error.headers } : {}) });
   const status = typeof error === "object" && error !== null && "status" in error && typeof error.status === "number" ? error.status : 500;
+  if (status === 503 && typeof error === "object" && error !== null && "code" in error && error.code === "phone_numbers_unavailable") return apiError(503, "phone_numbers_unavailable", error instanceof Error ? error.message : "Phone numbers aren't set up on this deployment.");
   if (status === 403) return apiError(403, "forbidden", "This API key cannot do that.");
   if (status === 404) return apiError(404, "not_found", error instanceof Error ? error.message : "Not found.");
   if (status >= 400 && status < 500) return apiError(status, "invalid_request", error instanceof Error ? error.message : "The request is invalid.");

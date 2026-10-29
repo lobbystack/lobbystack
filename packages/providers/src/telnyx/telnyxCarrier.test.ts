@@ -77,7 +77,25 @@ describe("Telnyx numbers", () => {
   it("gives up waiting on an order still pending, so the claim can be checked", async () => {
     const { client } = fakeTelnyx({ "POST /number_orders": () => ({ data: { id: "ord_3", status: "pending" } }), "GET /number_orders/ord_3": () => ({ data: { id: "ord_3", status: "pending" } }) });
     const inventory = createTelnyxCarrier(env, { client, sleep: async () => undefined, orderPoll: { intervalMs: 0, attempts: 2 } })!.inventory!;
-    await expect(inventory.purchasePhoneNumber({ e164: "+12125550100", countryCode: "US", kind: "local", label: "x" })).rejects.toThrow("still pending");
+    await expect(inventory.purchasePhoneNumber({ e164: "+12125550100", countryCode: "US", kind: "local", label: "x" })).rejects.toMatchObject({ name: "NumberOrderPendingError", orderId: "ord_3" });
+  });
+
+  it("checks a pending order again instead of placing another", async () => {
+    const { client, calls } = fakeTelnyx({
+      "GET /number_orders/ord_3": () => ({ data: { id: "ord_3", status: "success" } }),
+      "GET /phone_numbers": () => ({ data: [{ id: "pn_3", phone_number: "+447700900123" }] }),
+    });
+    const inventory = createTelnyxCarrier(env, { client, sleep: async () => undefined })!.inventory!;
+    expect(await inventory.purchasePhoneNumber({ e164: "+447700900123", countryCode: "GB", kind: "local", label: "x", pendingOrderId: "ord_3" })).toEqual({ providerPhoneId: "pn_3", e164: "+447700900123" });
+    expect(calls.some((call) => call.method === "POST")).toBe(false);
+  });
+
+  it("keeps the status of an error whose body isn't JSON", async () => {
+    const fetch = vi.fn(async () => new Response("<html>Bad Gateway</html>", { status: 502 }));
+    const html = new TelnyxClient({ apiKey: "KEY", fetch: fetch as typeof globalThis.fetch });
+    await expect(createTelnyxCarrier(env, { client: html })!.inventory!.releasePhoneNumber({ providerPhoneId: "pn_1" })).rejects.toMatchObject({ name: "TelnyxApiError", status: 502 });
+    const notFound = new TelnyxClient({ apiKey: "KEY", fetch: (async () => new Response("Not Found", { status: 404 })) as typeof globalThis.fetch });
+    await expect(createTelnyxCarrier(env, { client: notFound })!.inventory!.releasePhoneNumber({ providerPhoneId: "pn_gone" })).rejects.toMatchObject({ status: 404 });
   });
 
   it("answers a release of a number Telnyx no longer has with a 404", async () => {
@@ -147,6 +165,19 @@ describe("Telnyx texts, Verify, Lookup and call cost", () => {
     expect(await createTelnyxCarrier(env, { client })!.lineTypes!.lookupLineType("+14165550134")).toBe("nonFixedVoip");
     expect(calls[0]!.url.searchParams.get("type")).toBe("carrier");
     expect(["mobile", "fixed line", "fixed line or mobile", "toll free", "personal number", "satellite"].map(telnyxLineType)).toEqual(["mobile", "landline", "unknown", "tollFree", "personal", null]);
+  });
+
+  it("pages back through a busy account's records until they start before the call", async () => {
+    const near = new Date("2026-10-29T12:00:00Z");
+    const later = (index: number) => ({ id: `cdr_later_${index}`, started_at: new Date(near.getTime() + 600_000 - index * 1_000).toISOString(), cost: "0.5", currency: "USD", cli: "15145550000", connection_id: "conn_1" });
+    const { client, calls } = fakeTelnyx({ "GET /detail_records": (call) => {
+      const page = Number(call.url.searchParams.get("page[number]"));
+      if (page === 1) return { data: Array.from({ length: 50 }, (_, index) => later(index)) };
+      if (page === 2) return { data: [{ id: "cdr_1", started_at: "2026-10-29T12:00:02Z", cost: "0.01", currency: "USD", cli: "14165550134", connection_id: "conn_1" }, { id: "cdr_old", started_at: "2026-10-29T11:00:00Z", cost: "0.5", currency: "USD", cli: "14165550134", connection_id: "conn_1" }] };
+      throw new Error("read past the call's window");
+    } });
+    expect(await createTelnyxCarrier(env, { client })!.callCost!.findLiveCallCost!({ from: "+14165550134", near })).toMatchObject({ providerCallId: "cdr_1" });
+    expect(calls).toHaveLength(2);
   });
 
   it("prices a GPT-Live call from the closest SIP trunking record for the caller on our connection", async () => {

@@ -9,7 +9,7 @@ import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledg
 import { enqueueKnowledgeDerivedRefresh, finishBusinessSummaryRegenerate, loadBusinessHoursInput, loadBusinessSummaryInput, markBusinessHoursChecked, resetGeneratedBusinessSummary, saveGeneratedBusinessHours, saveGeneratedBusinessSummary, type SummaryRegenerateOutcome } from "@lobbystack/domain";
 import { billingCheckoutLeaseEndsAt, checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteStoredObjects, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
 import { deliverOutbound, markFeedbackEmailFailed, markFeedbackEmailSent, queueDailyOperatorSummaries, refreshUnitEconomicsMonth } from "@lobbystack/domain";
-import { claimNumberProvisioning, completeNumberProvisioning, desiredNumberRouting, enqueueNumberRouting, resolveNumberFallback, failNumberProvisioning, isSharedSmsSender, loadNumberReleaseEmail, loadNumberTrialEmail, numberProvisioningLeaseEndsAt, sharedSmsSender, sweepNumberReleases, sweepNumberTrial } from "@lobbystack/domain";
+import { NUMBER_ORDER_MAX_WAIT_MS, claimNumberProvisioning, completeNumberProvisioning, deferNumberProvisioning, desiredNumberRouting, refreshStaleRefusedCallForwards, enqueueNumberRouting, resolveRefusedCallForward, failNumberProvisioning, isSharedSmsSender, loadNumberReleaseEmail, loadNumberTrialEmail, numberProvisioningLeaseEndsAt, sharedSmsSender, sweepNumberReleases, sweepNumberTrial } from "@lobbystack/domain";
 import { createWebhookSender, processWebhookDelivery, pruneApiHistory, prunePartnerApiIdempotencyKeys, type WebhookSender } from "@lobbystack/domain";
 import { LIVE_RECORDING_ATTEMPTS, listBusinessesWithOpenLiveCalls, listOpenLiveCalls, liveCallHasRecording, persistCallRecording, retryLiveCallRecording, type OpenLiveCall } from "@lobbystack/domain";
 import { expireTeamRequest } from "@lobbystack/domain";
@@ -20,7 +20,7 @@ import { brandForEmail, businessExists, businessGetsHostEmails, hostBrandFromEnv
 import type { DomainContext } from "@lobbystack/domain";
 import { numberReleaseEmailSubject, numberTrialEmailSubject, type SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
 import type { RuntimeStorageProvider } from "@lobbystack/providers/storage/provider";
-import { isCarrierId, type CarrierId } from "@lobbystack/providers/telephony/types";
+import { NumberOrderPendingError } from "@lobbystack/providers/telephony/types";
 import type { Telephony } from "@lobbystack/providers/telephony/registry";
 import type OpenAI from "openai";
 import { extractDocumentTextInThread, type OcrRecorder } from "./documentExtraction";
@@ -929,11 +929,12 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         if (typeof countryCode !== "string" || (kind !== "local" && kind !== "mobile" && kind !== "toll_free")) throw new Error("The number claim doesn't say which country and kind of number it buys.");
         // A number that counts against a partner's tier costs the partner what the host pays for it, so read that before buying it.
         const monthlyCostCents = claim.countsForPartner ? (await inventory.getPhoneNumberMonthlyPrice({ countryCode, kind })).monthlyCents : undefined;
-        const owned = await inventory.findOwnedPhoneNumber({ e164: claim.e164 });
+        // An order an earlier attempt left with the carrier is checked again, not placed twice.
+        const owned = claim.providerOrderId ? null : await inventory.findOwnedPhoneNumber({ e164: claim.e164 });
         let smsUrl: string | undefined;
         if (owned) providerPhoneId = owned.providerPhoneId;
         else {
-          const result = await inventory.purchasePhoneNumber({ e164: claim.e164, countryCode, kind, label: `LobbyStack ${businessId}` });
+          const result = await inventory.purchasePhoneNumber({ e164: claim.e164, countryCode, kind, label: `LobbyStack ${businessId}`, ...(claim.providerOrderId ? { pendingOrderId: claim.providerOrderId } : {}) });
           providerPhoneId = result.providerPhoneId; smsUrl = result.smsUrl; purchased = true;
         }
         // Calls reach GPT-Live only through the carrier's SIP path, so a number that can't join it is released.
@@ -943,6 +944,16 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         if (routing.forwardsRefusedCalls) await enqueueRouting(dependencies.domain, { businessId, phoneNumberId });
         return { status: "completed", entityId: phoneNumberId };
       } catch (error) {
+        if (error instanceof NumberOrderPendingError && inventory) {
+          // The carrier is still working on the order, such as a review of a country's documents. Check it again later.
+          if (Date.now() - claim.reservedAt.getTime() < NUMBER_ORDER_MAX_WAIT_MS) {
+            const retryAt = await deferNumberProvisioning(dependencies.domain, { businessId, claimId, providerOrderId: error.orderId });
+            return { status: "deferred", entityId: claimId, retryAt };
+          }
+          // Given up: a number the order already put on the account would be billed with no business, so release it.
+          const late = await inventory.findOwnedPhoneNumber({ e164: claim.e164 }).catch(() => null);
+          if (late) await inventory.releasePhoneNumber({ providerPhoneId: late.providerPhoneId }).catch(() => undefined);
+        }
         if (purchased && providerPhoneId && inventory) await inventory.releasePhoneNumber({ providerPhoneId }).catch(() => undefined);
         await failNumberProvisioning(dependencies.domain, { businessId, claimId, unavailable: inventory?.isNumberUnavailableError(error) ?? false });
         throw error;
@@ -974,7 +985,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       if (!claimed) return { status: "skipped", entityId: phoneNumberId };
       try {
         if (claimed.providerPhoneId) {
-          const inventory = dependencies.telephony?.forNumber(isCarrierId(claimed.carrier) ? claimed.carrier : null)?.inventory;
+          const inventory = dependencies.telephony?.forNumber(claimed.carrier)?.inventory;
           if (!inventory) throw new Error(`${claimed.carrier} phone-number release is not configured.`);
           await inventory.releasePhoneNumber({ providerPhoneId: claimed.providerPhoneId });
         }
@@ -1016,10 +1027,10 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       if (!desired) return { status: "skipped", entityId: phoneNumberId };
       const routing = dependencies.telephony.forNumber(desired.carrier)?.routing;
       if (!routing) throw new Error(`${desired.carrier} can't route numbers on this deployment. Check its credentials.`);
-      const refusedCallsForwardTo = routing.forwardsRefusedCalls ? await refusedCallForward(dependencies.domain, { businessId, e164: desired.e164 }) : undefined;
+      const refusedCallsForwardTo = routing.forwardsRefusedCalls ? await resolveRefusedCallForward(dependencies.domain, { businessId, e164: desired.e164 }) : undefined;
       const { target } = await routing.routeNumber({ providerPhoneId: desired.providerPhoneId, mode: desired.mode, ...(refusedCallsForwardTo !== undefined ? { refusedCallsForwardTo } : {}) });
       await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
-        await tx.update(phoneNumbers).set({ voiceWebhookTargetUrl: target, voiceWebhookStatus: "synced", voiceWebhookLastSyncedAt: new Date(), updatedAt: new Date() }).where(and(eq(phoneNumbers.id, phoneNumberId), eq(phoneNumbers.businessId, businessId)));
+        await tx.update(phoneNumbers).set({ voiceWebhookTargetUrl: target, voiceWebhookStatus: "synced", voiceWebhookLastSyncedAt: new Date(), ...(refusedCallsForwardTo !== undefined ? { refusedCallsForwardTo: desired.mode === "receptionist" ? refusedCallsForwardTo : null } : {}), updatedAt: new Date() }).where(and(eq(phoneNumbers.id, phoneNumberId), eq(phoneNumbers.businessId, businessId)));
       });
       return { status: "completed", entityId: `${phoneNumberId}:${desired.mode}` };
     }
@@ -1027,7 +1038,8 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const businessId = businessIdOrThrow(job);
       const swept = await sweepNumberTrial(dependencies.domain, { businessId });
       const reminders = await sweepNumberReleases(dependencies.domain, { businessId });
-      return { status: swept.ended || swept.emails.length || reminders ? "completed" : "skipped", entityId: businessId };
+      const rerouted = await refreshStaleRefusedCallForwards(dependencies.domain, { businessId });
+      return { status: swept.ended || swept.emails.length || reminders || rerouted ? "completed" : "skipped", entityId: businessId };
     }
     case "phoneNumber.releaseEmail": {
       const businessId = businessIdOrThrow(job);
@@ -1158,16 +1170,6 @@ async function updateWebsiteIngestion(db: Database, input: { businessId: string;
 const terminalSmsStatuses = new Set(["sent", "delivered", "undelivered", "failed", "canceled"]);
 const terminalCallStatuses = new Set(["busy", "canceled", "completed", "failed", "no-answer"]);
 
-/**
- * Where a carrier that forwards refused calls itself should send them: what
- * the fallback webhook would answer. Null when the call should fail, and
- * never the dialled number itself, which would loop.
- */
-async function refusedCallForward(domain: DomainContext, input: { businessId: string; e164: string }): Promise<string | null> {
-  const fallback = await resolveNumberFallback(domain, input);
-  return fallback.action === "forward" && /^\+[1-9]\d{7,14}$/.test(fallback.to) && fallback.to !== input.e164 ? fallback.to : null;
-}
-
 /** Queues a routing job for the number, which applies the trial's routing and the refused-call forward. */
 async function enqueueRouting(domain: DomainContext, input: { businessId: string; phoneNumberId: string }): Promise<void> {
   await withBusinessTransaction(domain.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
@@ -1175,9 +1177,13 @@ async function enqueueRouting(domain: DomainContext, input: { businessId: string
   });
 }
 
-/** The carrier a job names, or Twilio for a job queued before jobs named one. */
-function jobCarrier(job: JobEnvelope): CarrierId {
-  return isCarrierId(job.payload.carrier) ? job.payload.carrier : "twilio";
+/**
+ * The carrier a job names, or Twilio for a job queued before jobs named one.
+ * A carrier this build doesn't know stays as named, so the job fails instead
+ * of going to Twilio.
+ */
+function jobCarrier(job: JobEnvelope): string {
+  return typeof job.payload.carrier === "string" && job.payload.carrier ? job.payload.carrier : "twilio";
 }
 
 function isTerminalSmsStatus(status: string): boolean {

@@ -1,18 +1,19 @@
 import { beforeEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ execute: vi.fn(), fallback: vi.fn(), inbound: vi.fn(), shared: vi.fn(), smsStatus: vi.fn(), notificationStatus: vi.fn() }));
 vi.mock("server-only", () => ({}));
-vi.mock("@lobbystack/domain", () => ({ resolveNumberFallback: mocks.fallback, receiveInboundSms: mocks.inbound, receiveSharedSenderSms: mocks.shared, isSharedSmsSender: (phone: string) => phone === "+18885550100", updateSmsDeliveryStatus: mocks.smsStatus, updateNotificationDeliveryStatus: mocks.notificationStatus, updateOperatorNotificationDeliveryStatus: vi.fn() }));
+vi.mock("@lobbystack/domain", () => ({ resolveRefusedCallForward: mocks.fallback, receiveInboundSms: mocks.inbound, receiveSharedSenderSms: mocks.shared, isSharedSmsSender: (phone: string) => phone === "+18885550100", updateSmsDeliveryStatus: mocks.smsStatus, updateNotificationDeliveryStatus: mocks.notificationStatus, updateOperatorNotificationDeliveryStatus: vi.fn() }));
 vi.mock("./api-helpers", () => ({ getAppDatabase: () => ({ db: { execute: mocks.execute } }) }));
 vi.mock("./domain-context", () => ({ createWorkerDomainContext: () => ({}) }));
 import { applyCarrierSmsStatus, fallbackForCall, receiveCarrierSms } from "./carrier-webhooks";
 
 beforeEach(() => { vi.clearAllMocks(); mocks.execute.mockResolvedValue({ rows: [{ business_id: "biz_1" }] }); });
 
-it("forwards a refused call, but never back to the dialled number or the line that forwarded it", async () => {
-  mocks.fallback.mockResolvedValue({ action: "forward", to: "+14165550111" });
+it("forwards a refused call where the domain says, passing the line that forwarded it so the call can't loop", async () => {
+  mocks.fallback.mockResolvedValue("+14165550111");
   expect(await fallbackForCall({ dialled: ["+12125550100"] })).toEqual({ action: "forward", to: "+14165550111" });
-  expect(await fallbackForCall({ dialled: ["+12125550100"], forwardedFrom: "+14165550111" })).toEqual({ action: "reject" });
-  mocks.fallback.mockResolvedValue({ action: "forward", to: "+12125550100" });
+  await fallbackForCall({ dialled: ["+12125550100"], forwardedFrom: "+14165550122" });
+  expect(mocks.fallback).toHaveBeenLastCalledWith({}, { businessId: "biz_1", e164: "+12125550100", forwardedFrom: "+14165550122" });
+  mocks.fallback.mockResolvedValue(null);
   expect(await fallbackForCall({ dialled: ["+12125550100"] })).toEqual({ action: "reject" });
   mocks.execute.mockResolvedValue({ rows: [{ business_id: null }] });
   expect(await fallbackForCall({ dialled: ["+12125550100"] })).toEqual({ action: "reject" });

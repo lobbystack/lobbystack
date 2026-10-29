@@ -2,7 +2,6 @@ import { and, count, asc, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 
 import { appointments, billingUsageEvents, calls, contacts, conversations, conversationSessions, enqueueOutbox, inboxItems, inOrder, services, staff, storageObjects, transcripts, withBusinessTransaction, type DatabaseTransaction, type NewOutboxMessage } from "@lobbystack/db";
 import { billableVoiceSeconds, isNonBillableCallDisposition } from "@lobbystack/shared";
-import { isCarrierId, type CarrierId } from "@lobbystack/providers/telephony/types";
 import { getPostHogDistinctIdForBusinessSystem, type TelemetryEventName, type TelemetryProperties } from "@lobbystack/telemetry";
 
 import { requireBusinessMembership } from "../authz";
@@ -394,11 +393,11 @@ export async function setTransferState(
 export async function loadLiveCallForPricing(
   context: DomainContext,
   input: { businessId: string; callId: string },
-): Promise<{ startedAt: Date; callerPhone: string; carrier: CarrierId | null } | null> {
+): Promise<{ startedAt: Date; callerPhone: string; carrier: string | null } | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const [call] = await tx.select({ startedAt: calls.startedAt, callerPhone: contacts.phone, carrier: calls.carrier }).from(calls).leftJoin(contacts, eq(contacts.id, calls.contactId)).where(and(eq(calls.businessId, input.businessId), eq(calls.id, input.callId))).limit(1);
     if (!call?.callerPhone?.startsWith("+")) return null;
-    return { startedAt: call.startedAt, callerPhone: call.callerPhone, carrier: isCarrierId(call.carrier) ? call.carrier : null };
+    return { startedAt: call.startedAt, callerPhone: call.callerPhone, carrier: call.carrier };
   });
 }
 

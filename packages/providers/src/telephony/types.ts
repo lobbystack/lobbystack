@@ -10,6 +10,13 @@ export function isCarrierId(value: unknown): value is CarrierId {
   return typeof value === "string" && (CARRIER_IDS as readonly string[]).includes(value);
 }
 
+/**
+ * The carriers that forward a call the receptionist refuses to a number
+ * stored on the carrier (see NumberRouting.forwardsRefusedCalls). Domain code
+ * reads it to know which numbers to re-route when that number changes.
+ */
+export const CARRIERS_FORWARDING_REFUSED_CALLS: readonly CarrierId[] = ["telnyx"];
+
 export type NumberKind = "local" | "mobile" | "toll_free";
 
 export type NumberSearch = {
@@ -44,10 +51,25 @@ export interface NumberInventory {
   getPhoneNumberMonthlyPrice(input: { countryCode: string; kind: NumberKind }): Promise<{ monthlyCents: number }>;
   findOwnedPhoneNumber(input: { e164: string }): Promise<OwnedPhoneNumber | null>;
   /** Buys the number with the carrier's messaging webhooks and, where the country needs them, its regulatory documents. */
-  purchasePhoneNumber(input: { e164: string; countryCode: string; kind: NumberKind; label: string }): Promise<{ providerPhoneId: string; e164: string; smsUrl?: string }>;
+  /**
+   * Throws NumberOrderPendingError when the carrier is still working on the
+   * order; passing its `orderId` back as `pendingOrderId` checks that order
+   * instead of placing another.
+   */
+  purchasePhoneNumber(input: { e164: string; countryCode: string; kind: NumberKind; label: string; pendingOrderId?: string }): Promise<{ providerPhoneId: string; e164: string; smsUrl?: string }>;
   releasePhoneNumber(input: { providerPhoneId: string }): Promise<void>;
   /** Whether a purchase failed because the number is no longer for sale. */
   isNumberUnavailableError(error: unknown): boolean;
+}
+
+/** A number order the carrier accepted but hadn't finished when the purchase stopped waiting. */
+export class NumberOrderPendingError extends Error {
+  readonly orderId: string;
+  constructor(message: string, orderId: string) {
+    super(message);
+    this.name = "NumberOrderPendingError";
+    this.orderId = orderId;
+  }
 }
 
 /** receptionist: calls go to GPT-Live over SIP. fallback: the carrier asks our voice webhook, which forwards or rejects. */

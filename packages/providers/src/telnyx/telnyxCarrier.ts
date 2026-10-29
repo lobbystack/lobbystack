@@ -1,7 +1,7 @@
 import { assertCertificationOperationAllowed, assertCertificationRecipient } from "@lobbystack/shared";
 
 import { alertSmsFrom, appBaseUrl } from "../telephony/config";
-import type { AlertSmsSender, AvailablePhoneNumber, CallCostLookup, CarrierAdapters, LineType, LineTypeLookup, NumberInventory, NumberRouting, PhoneVerifier, SmsSender, SmsStatusCallbackIds } from "../telephony/types";
+import { CARRIERS_FORWARDING_REFUSED_CALLS, NumberOrderPendingError, type AlertSmsSender, type AvailablePhoneNumber, type CallCostLookup, type CarrierAdapters, type LineType, type LineTypeLookup, type NumberInventory, type NumberRouting, type PhoneVerifier, type SmsSender, type SmsStatusCallbackIds } from "../telephony/types";
 import { telnyxConfigured, telnyxRegistration, telnyxRequirementGroupId } from "./registration";
 import { TelnyxApiError, TelnyxClient, telnyxPathNumber } from "./telnyxClient";
 import { permanentTelnyxSmsErrorCode, telnyxMessagePricing, type TelnyxMessage } from "./webhooks";
@@ -30,12 +30,15 @@ export class TelnyxNumberOrderError extends Error {
 
 export type TelnyxCarrierOptions = {
   client?: TelnyxClient;
-  /** How long to wait between number order checks, and how many checks to make. */
+  /** How long to wait between number order checks, and how many checks to make. An order still pending after them is checked again on the claim's next attempt. */
   orderPoll?: { intervalMs: number; attempts: number };
   sleep?: (ms: number) => Promise<void>;
 };
 
 const digits = (phone: string) => phone.replace(/\D/g, "");
+const detailRecordPageSize = 50;
+// 20 pages of 50 cover 1,000 calls on the account since the one being priced.
+const maxDetailRecordPages = 20;
 
 /** Telnyx's Number Lookup carrier types, in the line types the onboarding phone step checks. */
 export function telnyxLineType(type: string | null | undefined): LineType | null {
@@ -98,7 +101,7 @@ export function createTelnyxCarrier(env: Env = process.env, options: TelnyxCarri
   if (!options.client && !telnyxConfigured(env)) return undefined;
   const client = options.client ?? new TelnyxClient({ apiKey: env.TELNYX_API_KEY!.trim() });
   const sleep = options.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
-  const orderPoll = options.orderPoll ?? { intervalMs: 3_000, attempts: 30 };
+  const orderPoll = options.orderPoll ?? { intervalMs: 3_000, attempts: 10 };
   const sipConnectionId = env.TELNYX_SIP_CONNECTION_ID?.trim();
   const openAiProjectId = env.OPENAI_PROJECT_ID?.trim();
   const texmlApplicationId = env.TELNYX_TEXML_APPLICATION_ID?.trim();
@@ -140,26 +143,32 @@ export function createTelnyxCarrier(env: Env = process.env, options: TelnyxCarri
     /**
      * Orders the number onto the SIP connection and messaging profile, under
      * the country's requirement group, and waits for the order to finish.
-     * Telnyx orders run in the background; one under review can outlast the
-     * wait, and the error says so.
+     * Telnyx orders run in the background, and one under requirement review
+     * can take days, so a pending order throws NumberOrderPendingError and
+     * the next attempt passes its id back to check it again.
      */
-    purchasePhoneNumber: async ({ e164, countryCode, label }) => {
+    purchasePhoneNumber: async ({ e164, countryCode, label, pendingOrderId }) => {
       assertCertificationOperationAllowed();
-      const missing = telnyxRegistration(countryCode, env)?.missing[0];
-      if (missing) throw new Error(`${missing} is required to buy a number in ${countryCode.toUpperCase()}. See docs/voice/runtime.md.`);
-      if (!sipConnectionId) throw new Error("TELNYX_SIP_CONNECTION_ID is required to provision a phone number. See docs/voice/runtime.md.");
-      const requirementGroupId = telnyxRequirementGroupId(countryCode, env);
-      let order = (await client.post<Data<TelnyxNumberOrder>>("/number_orders", {
-        phone_numbers: [{ phone_number: e164, ...(requirementGroupId ? { requirement_group_id: requirementGroupId } : {}) }],
-        connection_id: sipConnectionId,
-        ...(messagingProfileId ? { messaging_profile_id: messagingProfileId } : {}),
-        customer_reference: label,
-      })).data;
+      const fetchOrder = async (id: string) => (await client.get<Data<TelnyxNumberOrder>>(`/number_orders/${encodeURIComponent(id)}`)).data;
+      let order: TelnyxNumberOrder;
+      if (pendingOrderId) order = await fetchOrder(pendingOrderId);
+      else {
+        const missing = telnyxRegistration(countryCode, env)?.missing[0];
+        if (missing) throw new Error(`${missing} is required to buy a number in ${countryCode.toUpperCase()}. See docs/voice/runtime.md.`);
+        if (!sipConnectionId) throw new Error("TELNYX_SIP_CONNECTION_ID is required to provision a phone number. See docs/voice/runtime.md.");
+        const requirementGroupId = telnyxRequirementGroupId(countryCode, env);
+        order = (await client.post<Data<TelnyxNumberOrder>>("/number_orders", {
+          phone_numbers: [{ phone_number: e164, ...(requirementGroupId ? { requirement_group_id: requirementGroupId } : {}) }],
+          connection_id: sipConnectionId,
+          ...(messagingProfileId ? { messaging_profile_id: messagingProfileId } : {}),
+          customer_reference: label,
+        })).data;
+      }
       for (let attempt = 0; order.status === "pending" && attempt < orderPoll.attempts; attempt += 1) {
         await sleep(orderPoll.intervalMs);
-        order = (await client.get<Data<TelnyxNumberOrder>>(`/number_orders/${encodeURIComponent(order.id)}`)).data;
+        order = await fetchOrder(order.id);
       }
-      if (order.status === "pending") throw new Error(`Telnyx number order ${order.id} for ${e164} is still pending. Telnyx may still complete it; check the order in the portal.`);
+      if (order.status === "pending") throw new NumberOrderPendingError(`Telnyx number order ${order.id} for ${e164} is still pending.`, order.id);
       if (order.status !== "success") {
         const line = order.phone_numbers?.find((entry) => entry.phone_number === e164);
         throw new TelnyxNumberOrderError(`Telnyx number order ${order.id} for ${e164} ended as ${order.status ?? "unknown"}.`, line?.requirements_met !== false && order.requirements_met !== false);
@@ -179,7 +188,7 @@ export function createTelnyxCarrier(env: Env = process.env, options: TelnyxCarri
   const routing: NumberRouting = {
     carrier: "telnyx",
     // A refused call is retried, then forwarded to the number stored on the Telnyx number.
-    forwardsRefusedCalls: true,
+    forwardsRefusedCalls: CARRIERS_FORWARDING_REFUSED_CALLS.includes("telnyx"),
     missingSetup: () => !sipConnectionId ? "TELNYX_SIP_CONNECTION_ID is required to provision a phone number. See docs/voice/runtime.md."
       : !openAiProjectId ? "OPENAI_PROJECT_ID is required to route Telnyx numbers to GPT-Live. See docs/voice/runtime.md."
       : undefined,
@@ -230,12 +239,19 @@ export function createTelnyxCarrier(env: Env = process.env, options: TelnyxCarri
     ...(sipConnectionId ? {
       findLiveCallCost: async ({ from, near }: { from: string; near: Date }) => {
         const windowMs = 2 * 60_000;
-        const records = (await client.get<Data<Array<{ id?: string; started_at?: string; cost?: string | number; currency?: string; cli?: string; connection_id?: string | number }>>>("/detail_records", { "filter[record_type]": "sip-trunking", "filter[date_range]": "last_2_days", sort: "-started_at", "page[size]": 50 })).data ?? [];
-        let best: { record: (typeof records)[number]; distance: number } | undefined;
-        for (const record of records) {
-          if (!record.id || !record.started_at || String(record.connection_id ?? "") !== sipConnectionId || digits(record.cli ?? "") !== digits(from)) continue;
-          const distance = Math.abs(new Date(record.started_at).getTime() - near.getTime());
-          if (distance <= windowMs && (!best || distance < best.distance)) best = { record, distance };
+        const oldest = near.getTime() - windowMs;
+        type DetailRecord = { id?: string; started_at?: string; cost?: string | number; currency?: string; cli?: string; connection_id?: string | number };
+        let best: { record: DetailRecord; distance: number } | undefined;
+        // Records come newest first for the whole account, so page back until they start before the call's window.
+        for (let page = 1; page <= maxDetailRecordPages; page += 1) {
+          const records = (await client.get<Data<DetailRecord[]>>("/detail_records", { "filter[record_type]": "sip-trunking", "filter[date_range]": "last_2_days", sort: "-started_at", "page[size]": detailRecordPageSize, "page[number]": page })).data ?? [];
+          for (const record of records) {
+            if (!record.id || !record.started_at || String(record.connection_id ?? "") !== sipConnectionId || digits(record.cli ?? "") !== digits(from)) continue;
+            const distance = Math.abs(new Date(record.started_at).getTime() - near.getTime());
+            if (distance <= windowMs && (!best || distance < best.distance)) best = { record, distance };
+          }
+          const last = records.at(-1)?.started_at;
+          if (records.length < detailRecordPageSize || (last && new Date(last).getTime() < oldest)) break;
         }
         if (!best?.record.id) return undefined;
         const price = Number(best.record.cost);

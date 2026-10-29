@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createTelephony } from "./registry";
+import { createTelephony, guardedNumberSearch } from "./registry";
 import type { CarrierAdapters, CarrierId, NumberInventory } from "./types";
 
 function inventory(carrier: CarrierId): NumberInventory {
@@ -38,6 +38,19 @@ describe("createTelephony", () => {
     const telephony = createTelephony({}, { twilio: () => twilio, telnyx: () => telnyx });
     expect(telephony.forNumber("telnyx")).toBe(telnyx);
     expect(telephony.forNumber(null)).toBe(twilio);
+    // A carrier a newer build wrote isn't sent to Twilio.
+    expect(telephony.forNumber("vonage")).toBeUndefined();
+  });
+
+  it("runs the search limit once, and only when the country's carrier can search", async () => {
+    const telephony = createTelephony({ TELEPHONY_NUMBERS: "US:telnyx,*:twilio" }, { twilio: () => carrier("twilio"), telnyx: () => undefined });
+    const limit = vi.fn(async () => undefined);
+    const guarded = guardedNumberSearch(telephony.numbers, limit);
+    await expect(guarded.listAvailablePhoneNumbers({ countryCode: "US", kind: "local", limit: 1 })).rejects.toMatchObject({ code: "phone_numbers_unavailable" });
+    expect(limit).not.toHaveBeenCalled();
+    await guarded.listAvailablePhoneNumbers({ countryCode: "CA", kind: "local", limit: 1 });
+    await guarded.listAvailablePhoneNumbers({ countryCode: "CA", kind: "mobile", limit: 1 });
+    expect(limit).toHaveBeenCalledOnce();
   });
 
   it("takes Verify and Lookup from the carriers their settings name", () => {

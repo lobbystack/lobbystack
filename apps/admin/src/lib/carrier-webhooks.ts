@@ -2,7 +2,7 @@ import "server-only";
 
 import { sql } from "drizzle-orm";
 
-import { isSharedSmsSender, receiveInboundSms, receiveSharedSenderSms, resolveNumberFallback, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, updateSmsDeliveryStatus } from "@lobbystack/domain";
+import { isSharedSmsSender, receiveInboundSms, receiveSharedSenderSms, resolveRefusedCallForward, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, updateSmsDeliveryStatus } from "@lobbystack/domain";
 import type { FallbackCallEvent, InboundSmsEvent, SmsStatusEvent } from "@lobbystack/providers/telephony/events";
 import type { CarrierId } from "@lobbystack/providers/telephony/types";
 
@@ -15,7 +15,6 @@ import { createWorkerDomainContext } from "./domain-context";
  * routes only verify and parse.
  */
 
-const E164_PATTERN = /^\+[1-9]\d{7,14}$/;
 const UUID_PATTERN = /^[0-9a-f-]{36}$/i;
 
 async function businessByPhone(phone: string): Promise<string | undefined> {
@@ -24,7 +23,7 @@ async function businessByPhone(phone: string): Promise<string | undefined> {
 
 /**
  * Where a call the receptionist won't take goes: the first dialled number
- * that belongs to a business decides, and resolveNumberFallback picks the
+ * that belongs to a business decides, and resolveRefusedCallForward picks the
  * forward. A forward to the dialled number or the line that forwarded the
  * call here would loop, so those get a busy signal.
  */
@@ -32,9 +31,8 @@ export async function fallbackForCall(event: FallbackCallEvent): Promise<{ actio
   for (const to of event.dialled) {
     const businessId = await businessByPhone(to);
     if (!businessId) continue;
-    const fallback = await resolveNumberFallback(createWorkerDomainContext(), { businessId, e164: to });
-    if (fallback.action === "forward" && E164_PATTERN.test(fallback.to) && fallback.to !== event.forwardedFrom && fallback.to !== to) return fallback;
-    return { action: "reject" };
+    const forward = await resolveRefusedCallForward(createWorkerDomainContext(), { businessId, e164: to, forwardedFrom: event.forwardedFrom });
+    return forward ? { action: "forward", to: forward } : { action: "reject" };
   }
   return { action: "reject" };
 }

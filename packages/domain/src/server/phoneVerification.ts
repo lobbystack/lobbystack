@@ -8,7 +8,7 @@ import { enqueueOutbox, onboardingPhoneVerifications, withBusinessTransaction, t
 import { AuthorizationError, requireBusinessMembership, requireTeamMembership } from "../authz";
 import type { DomainContext } from "./context";
 import { enableOperatorSmsAlertsWithConsent } from "./notifications";
-import { isNumberCountry, trialCountries } from "./numberTrials";
+import { enqueueRefusedCallForwardRefresh, isNumberCountry, trialCountries } from "./numberTrials";
 import { partnerNumberAvailabilityInTransaction } from "./partnerNumbers";
 import { resolveSmsSender } from "./smsSender";
 import { VERIFICATION_CODE_TTL_MS, newVerificationCode, verificationCodeSecret } from "./verificationCode";
@@ -167,6 +167,8 @@ export async function checkOperatorPhoneVerificationCode(
       const completed = await tx.execute(sql`SELECT app.complete_phone_verification(${input.businessId}::uuid, ${input.userId}::uuid, ${input.attemptId}::uuid, ${"approved"}) AS approved`);
       const approved = (completed.rows[0] as { approved?: unknown } | undefined)?.approved === true;
       if (!approved) return { approved: false, status: "unavailable" };
+      // An owner's verified phone is where refused calls forward without a transfer number, so carriers that store the forward learn it.
+      await enqueueRefusedCallForwardRefresh(tx, input.businessId);
       await enableOperatorSmsAlertsWithConsent(tx, { businessId: input.businessId, userId: input.userId, phone: attempt.phoneE164, now });
       return { approved: true, status: "approved" };
     }
@@ -346,7 +348,9 @@ export async function checkOnboardingPhoneVerificationCode(
     if (status === "approved") {
       const completed = await tx.execute(sql`SELECT app.complete_phone_verification(${input.businessId}::uuid, ${input.userId}::uuid, ${input.attemptId}::uuid, ${"approved"}) AS approved`);
       const approved = (completed.rows[0] as { approved?: unknown } | undefined)?.approved === true;
-      return approved ? { approved: true, status: "approved" } : { approved: false, status: "unavailable" };
+      if (!approved) return { approved: false, status: "unavailable" };
+      await enqueueRefusedCallForwardRefresh(tx, input.businessId);
+      return { approved: true, status: "approved" };
     }
     const remainingAttempts = PHONE_VERIFICATION_MAX_CHECKS - attempt.used;
     if (remainingAttempts <= 0) {
