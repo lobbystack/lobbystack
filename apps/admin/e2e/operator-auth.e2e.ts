@@ -161,7 +161,7 @@ test("operator authentication, workspace access, isolation, and revocation", asy
 
   await page.goto("/agent/integrations");
   await expect(page).toHaveURL("/agent");
-  await page.goto("/appointments");
+  await page.goto("/appointments?view=list");
   await expect(page.getByRole("heading", { name: "Appointments", exact: true })).toBeVisible();
   await expect(page.getByText("No upcoming appointments.")).toBeVisible();
   await page.goto("/demos");
