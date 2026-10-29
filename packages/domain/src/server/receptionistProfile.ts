@@ -1,4 +1,6 @@
-import { enqueueOutbox, receptionistProfiles, type DatabaseTransaction } from "@lobbystack/db";
+import { and, eq } from "drizzle-orm";
+
+import { enqueueOutbox, phoneNumbers, receptionistProfiles, type DatabaseTransaction } from "@lobbystack/db";
 import {
   appointmentChangeVerificationModes,
   bookingModes,
@@ -18,7 +20,7 @@ import {
   type TransferPolicy,
 } from "@lobbystack/shared";
 
-import { assertTransferNumberAllowed } from "./numberTrials";
+import { assertTransferNumberAllowed, enqueueNumberRouting } from "./numberTrials";
 
 // Receptionist settings. The dashboard and the v1 API check and save them
 // here, so both follow one set of rules.
@@ -167,6 +169,11 @@ export async function saveReceptionistProfileInTransaction(
     set: { ...patch, ...(patch.summary !== undefined ? { summarySource: "operator" as const, summaryRegenerateStatus: null } : {}), ...(input.regenerateSummary ? { summarySource: "generated" as const, summaryRegenerateStatus: "pending" as const } : {}), updatedAt: new Date() },
   }).returning();
   if (!profile) return null;
+  // Some carriers forward a call the receptionist refuses to a number stored on the carrier, so they learn the new transfer number.
+  if (patch.transferNumber !== undefined) {
+    const numbers = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active")));
+    for (const number of numbers) await enqueueNumberRouting(tx, { businessId, phoneNumberId: number.id, mode: "receptionist" });
+  }
   await enqueueOutbox(tx, {
     topic: "snapshot.refresh",
     businessId,

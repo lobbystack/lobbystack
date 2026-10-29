@@ -58,11 +58,18 @@ export interface NumberRouting {
   /** What's missing before a number can reach the receptionist, such as the SIP trunk; undefined when nothing is. Checked before a purchase. */
   missingSetup(): string | undefined;
   /**
+   * Whether the carrier forwards a call the receptionist refuses to a number
+   * stored on the carrier, rather than asking our voice webhook. Such a
+   * carrier needs `refusedCallsForwardTo` each time the number is routed.
+   */
+  readonly forwardsRefusedCalls: boolean;
+  /**
    * Points the number's calls at the receptionist or the fallback webhook.
    * Returns where they now go, as the number's voice target. Throws when the
-   * carrier's SIP path isn't configured.
+   * carrier's SIP path isn't configured. `refusedCallsForwardTo` is where a
+   * call the receptionist refuses goes, or null to let it fail.
    */
-  routeNumber(input: { providerPhoneId: string; mode: NumberRoutingMode }): Promise<{ target: string }>;
+  routeNumber(input: { providerPhoneId: string; mode: NumberRoutingMode; refusedCallsForwardTo?: string | null }): Promise<{ target: string }>;
 }
 
 /** The rows a status callback updates, carried in its URL. */
@@ -82,6 +89,8 @@ export interface SmsSender {
   /** The status callback for one text, or undefined when the deployment has none and the estimate is final. */
   statusCallbackUrl(ids: SmsStatusCallbackIds): string | undefined;
   getMessagePricing(input: { providerMessageId: string }): Promise<MessagePricing>;
+  /** The carrier's error code when a send failed in a way a retry can't fix, such as an opted-out or invalid destination. */
+  permanentErrorCode(error: unknown): number | string | undefined;
 }
 
 /** The shared sender: one fixed number that texts for every cloud business. */

@@ -1,3 +1,5 @@
+import { permanentSmsErrorCode } from "@lobbystack/shared";
+
 import { alertSmsFrom, appBaseUrl } from "../telephony/config";
 import type { AlertSmsSender, CallCostLookup, CarrierAdapters, NumberInventory, NumberRouting, PhoneVerifier, LineTypeLookup, SmsSender, SmsStatusCallbackIds } from "../telephony/types";
 import { twilioConfigured, twilioRegistration, twilioRegulatoryDocuments } from "./registration";
@@ -31,6 +33,7 @@ function smsSender(provider: TwilioProvider, env: Env): SmsSender {
     sendSms: (input) => provider.sendSms(input),
     statusCallbackUrl: (ids) => twilioStatusCallbackUrl(ids, env),
     getMessagePricing: (input) => provider.getMessagePricing(input),
+    permanentErrorCode: permanentSmsErrorCode,
   };
 }
 
@@ -59,6 +62,8 @@ export function createTwilioCarrier(env: Env = process.env, provider?: TwilioPro
   };
   const routing: NumberRouting = {
     carrier: "twilio",
+    // A refused call fails over to the trunk's disaster recovery URL, /api/webhooks/twilio/voice.
+    forwardsRefusedCalls: false,
     missingSetup: () => env.TWILIO_SIP_TRUNK_SID?.trim() ? undefined : "TWILIO_SIP_TRUNK_SID is required to provision a phone number. See docs/voice/runtime.md.",
     routeNumber: async (input) => {
       const trunkSid = sipTrunkSid(env, input.mode === "receptionist" ? "route calls to the receptionist" : "route a phone number");

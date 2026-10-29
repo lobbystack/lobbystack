@@ -9,7 +9,7 @@ import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledg
 import { enqueueKnowledgeDerivedRefresh, finishBusinessSummaryRegenerate, loadBusinessHoursInput, loadBusinessSummaryInput, markBusinessHoursChecked, resetGeneratedBusinessSummary, saveGeneratedBusinessHours, saveGeneratedBusinessSummary, type SummaryRegenerateOutcome } from "@lobbystack/domain";
 import { billingCheckoutLeaseEndsAt, checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteStoredObjects, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
 import { deliverOutbound, markFeedbackEmailFailed, markFeedbackEmailSent, queueDailyOperatorSummaries, refreshUnitEconomicsMonth } from "@lobbystack/domain";
-import { claimNumberProvisioning, completeNumberProvisioning, desiredNumberRouting, failNumberProvisioning, isSharedSmsSender, loadNumberReleaseEmail, loadNumberTrialEmail, numberProvisioningLeaseEndsAt, sharedSmsSender, sweepNumberReleases, sweepNumberTrial } from "@lobbystack/domain";
+import { claimNumberProvisioning, completeNumberProvisioning, desiredNumberRouting, enqueueNumberRouting, resolveNumberFallback, failNumberProvisioning, isSharedSmsSender, loadNumberReleaseEmail, loadNumberTrialEmail, numberProvisioningLeaseEndsAt, sharedSmsSender, sweepNumberReleases, sweepNumberTrial } from "@lobbystack/domain";
 import { createWebhookSender, processWebhookDelivery, pruneApiHistory, prunePartnerApiIdempotencyKeys, type WebhookSender } from "@lobbystack/domain";
 import { LIVE_RECORDING_ATTEMPTS, listBusinessesWithOpenLiveCalls, listOpenLiveCalls, liveCallHasRecording, persistCallRecording, retryLiveCallRecording, type OpenLiveCall } from "@lobbystack/domain";
 import { expireTeamRequest } from "@lobbystack/domain";
@@ -939,6 +939,8 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         // Calls reach GPT-Live only through the carrier's SIP path, so a number that can't join it is released.
         const { target } = await routing.routeNumber({ providerPhoneId, mode: "receptionist" });
         const phoneNumberId = await completeNumberProvisioning(dependencies.domain, { businessId, claimId, carrier, e164: claim.e164, providerPhoneId, voiceUrl: target, ...(smsUrl ? { smsUrl } : {}), ...(monthlyCostCents !== undefined ? { monthlyCostCents } : {}) });
+        // A carrier that forwards refused calls itself learns where to once the number belongs to the business.
+        if (routing.forwardsRefusedCalls) await enqueueRouting(dependencies.domain, { businessId, phoneNumberId });
         return { status: "completed", entityId: phoneNumberId };
       } catch (error) {
         if (purchased && providerPhoneId && inventory) await inventory.releasePhoneNumber({ providerPhoneId }).catch(() => undefined);
@@ -1014,7 +1016,8 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       if (!desired) return { status: "skipped", entityId: phoneNumberId };
       const routing = dependencies.telephony.forNumber(desired.carrier)?.routing;
       if (!routing) throw new Error(`${desired.carrier} can't route numbers on this deployment. Check its credentials.`);
-      const { target } = await routing.routeNumber({ providerPhoneId: desired.providerPhoneId, mode: desired.mode });
+      const refusedCallsForwardTo = routing.forwardsRefusedCalls ? await refusedCallForward(dependencies.domain, { businessId, e164: desired.e164 }) : undefined;
+      const { target } = await routing.routeNumber({ providerPhoneId: desired.providerPhoneId, mode: desired.mode, ...(refusedCallsForwardTo !== undefined ? { refusedCallsForwardTo } : {}) });
       await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
         await tx.update(phoneNumbers).set({ voiceWebhookTargetUrl: target, voiceWebhookStatus: "synced", voiceWebhookLastSyncedAt: new Date(), updatedAt: new Date() }).where(and(eq(phoneNumbers.id, phoneNumberId), eq(phoneNumbers.businessId, businessId)));
       });
@@ -1154,6 +1157,23 @@ async function updateWebsiteIngestion(db: Database, input: { businessId: string;
 
 const terminalSmsStatuses = new Set(["sent", "delivered", "undelivered", "failed", "canceled"]);
 const terminalCallStatuses = new Set(["busy", "canceled", "completed", "failed", "no-answer"]);
+
+/**
+ * Where a carrier that forwards refused calls itself should send them: what
+ * the fallback webhook would answer. Null when the call should fail, and
+ * never the dialled number itself, which would loop.
+ */
+async function refusedCallForward(domain: DomainContext, input: { businessId: string; e164: string }): Promise<string | null> {
+  const fallback = await resolveNumberFallback(domain, input);
+  return fallback.action === "forward" && /^\+[1-9]\d{7,14}$/.test(fallback.to) && fallback.to !== input.e164 ? fallback.to : null;
+}
+
+/** Queues a routing job for the number, which applies the trial's routing and the refused-call forward. */
+async function enqueueRouting(domain: DomainContext, input: { businessId: string; phoneNumberId: string }): Promise<void> {
+  await withBusinessTransaction(domain.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    await enqueueNumberRouting(tx, { businessId: input.businessId, phoneNumberId: input.phoneNumberId, mode: "receptionist" });
+  });
+}
 
 /** The carrier a job names, or Twilio for a job queued before jobs named one. */
 function jobCarrier(job: JobEnvelope): CarrierId {

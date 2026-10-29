@@ -1,7 +1,7 @@
 import type { Telephony } from "@lobbystack/providers/telephony/registry";
 import type { CarrierId, SmsSender } from "@lobbystack/providers/telephony/types";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
-import { emailSender, normalizeInterfaceLocale, permanentSmsErrorCode, type EmailBrand } from "@lobbystack/shared";
+import { emailSender, normalizeInterfaceLocale, type EmailBrand } from "@lobbystack/shared";
 
 import { appointmentChangeOtpLeaseEndsAt, claimAppointmentChangeOtp, loadAppointmentChangeOtpTarget, markAppointmentChangeOtpSent, releaseAppointmentChangeOtp } from "./appointmentChanges";
 import { correctAlertSmsUsage, enqueueBillingUsageSync, reserveAlertSmsUsage } from "./billing";
@@ -123,7 +123,7 @@ export async function deliverOutbound(context: DomainContext, providers: Outboun
     if (optIn && !optIn.sent) await optIn.release().catch(() => undefined);
     if (optIn?.sent) await optIn.bill().catch(() => undefined);
     if (usageSourceKey && usageEventId) await correctAlertSmsUsage(context, { businessId, sourceKey: usageSourceKey, segments: 0 }).catch(() => undefined);
-    const permanentCode = outgoing.channel === "sms" ? permanentSmsErrorCode(error) : undefined;
+    const permanentCode = outgoing.channel === "sms" ? sms?.permanentErrorCode(error) : undefined;
     if (permanentCode) {
       // The carrier rejects this destination on every attempt, so don't retry.
       await lease.close("failed", `${carrierName(sms?.carrier)} error ${permanentCode}.`);

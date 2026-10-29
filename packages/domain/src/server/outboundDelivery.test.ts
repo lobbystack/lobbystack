@@ -24,6 +24,7 @@ vi.mock("./smsSender", () => rows.sender);
 vi.mock("./brands", async (importOriginal) => ({ ...await importOriginal<typeof import("./brands")>(), ...rows.brands }));
 
 import { twilioStatusCallbackUrl } from "@lobbystack/providers/twilio/twilioCarrier";
+import { permanentSmsErrorCode } from "@lobbystack/shared";
 
 import { deliverOutbound, type OutboundDelivery, type OutboundProviders } from "./outboundDelivery";
 
@@ -37,7 +38,7 @@ const { sms, changeCode, code, notifications, usage, optIn } = rows;
 /** Twilio texts every number; `alert` is the shared sender's account. */
 function providers(alert?: { from: string; sendSms: ReturnType<typeof vi.fn> }) {
   const twilio = { sendSms: vi.fn().mockResolvedValue({ providerMessageId: "SM1" }) };
-  const sms = (sendSms: ReturnType<typeof vi.fn>) => ({ carrier: "twilio" as const, sendSms, statusCallbackUrl: (ids: Record<string, string | undefined>) => twilioStatusCallbackUrl(ids), getMessagePricing: vi.fn() });
+  const sms = (sendSms: ReturnType<typeof vi.fn>) => ({ carrier: "twilio" as const, sendSms, statusCallbackUrl: (ids: Record<string, string | undefined>) => twilioStatusCallbackUrl(ids), getMessagePricing: vi.fn(), permanentErrorCode: permanentSmsErrorCode });
   const telephony = { forNumber: () => ({ carrier: "twilio" as const, sms: sms(twilio.sendSms) }), ...(alert ? { alertSms: { ...sms(alert.sendSms), from: alert.from } } : {}) } as unknown as NonNullable<OutboundProviders["telephony"]>;
   return { twilio, telephony, email: { sendTemplate: vi.fn().mockResolvedValue({ messageId: "email-1" }) } };
 }
