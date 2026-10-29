@@ -262,11 +262,13 @@ describe.skipIf(!testUrl)("platform keys against PostgreSQL with RLS", () => {
 
     it("creates one business when two retries run at once", async () => {
       const idempotencyKey = `race-${randomUUID()}`;
-      const results = await Promise.all([create(idempotencyKey, { name: "Race Clinic", timezone: "UTC" }), create(idempotencyKey, { name: "Race Clinic", timezone: "UTC" })]);
+      // A name no other test file uses: they run at once against the same database.
+      const name = `Race Clinic ${randomUUID()}`;
+      const results = await Promise.all([create(idempotencyKey, { name, timezone: "UTC" }), create(idempotencyKey, { name, timezone: "UTC" })]);
       createdBusinessIds.push(results[0].business.id);
       expect(results[1].business.id).toBe(results[0].business.id);
       expect(results.map((result) => result.replayed).sort()).toEqual([false, true]);
-      expect(await admin!.db.select({ id: businesses.id }).from(businesses).where(eq(businesses.name, "Race Clinic"))).toHaveLength(1);
+      expect(await admin!.db.select({ id: businesses.id }).from(businesses).where(eq(businesses.name, name))).toHaveLength(1);
     });
 
     it("replays a business whose audit row was written before the rename, with partnerId for its group", async () => {
