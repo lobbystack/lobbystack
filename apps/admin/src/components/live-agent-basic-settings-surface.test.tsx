@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -271,6 +271,35 @@ describe("AgentBasicSettingsPage transfer number", () => {
 
     expect(await screen.findByText("agent:fields.transferNumber.errors.countryUnsupported")).toBeTruthy();
     expect(patches).toEqual([{ businessId: "business", transferNumber: "+18769261234" }]);
+    client.clear();
+  });
+
+  it("keeps a number being typed when a refetch of the saved settings lands", async () => {
+    const patches: unknown[] = [];
+    const settings = (transferNumber = "+15145550123") => ({
+      business: { defaultLocale: "en" },
+      profile: { greeting: "Thanks for calling.", summary: "Clinic", summarySource: "operator", transferNumber, transferMode: "on_request", appointmentChangePolicy: null, bookingMode: "instant" },
+    });
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === "PATCH") {
+        patches.push(JSON.parse(String(init.body)));
+        return Response.json({ ok: true });
+      }
+      return Response.json(settings());
+    }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><AgentBasicSettingsPage businessId="business" canManageTenant /></QueryClientProvider>);
+
+    const user = userEvent.setup();
+    await screen.findByRole("combobox", { name: "agent:fields.transferNumber.country" });
+    const input = document.getElementById("agent-transfer-number") as HTMLInputElement;
+    await user.clear(input);
+    await user.type(input, "+15145550199");
+    // The refetch an earlier save started arrives late, with the number that save stored.
+    act(() => client.setQueryData(["agent-settings", "business"], settings("+15145550177")));
+    await user.click(screen.getByRole("button", { name: "agent:actions.save" }));
+
+    await waitFor(() => expect(patches).toEqual([{ businessId: "business", transferNumber: "+15145550199" }]));
     client.clear();
   });
 });

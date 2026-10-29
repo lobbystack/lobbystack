@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -221,6 +221,12 @@ export function AgentBasicSettingsPage({
   const [isLocaleSaving, setIsLocaleSaving] = useState(false);
   const [isTransferSaving, setIsTransferSaving] = useState(false);
   const [isAppointmentChangeSaving, setIsAppointmentChangeSaving] = useState(false);
+  // The profile the text fields last took their values from. Every save refetches the
+  // settings, and a refetch that lands while someone is typing must not undo their edit,
+  // so a text field only takes the new value while it still holds the last one.
+  const syncedProfile = useRef<NonNullable<AgentSettings["profile"]> | null>(null);
+  const transferNumberRef = useRef(transferNumber);
+  transferNumberRef.current = transferNumber;
   useEffect(() => {
     setTimezone(configuration?.business?.timezone ?? "");
     setCurrency(configuration?.business?.currency ?? "");
@@ -228,12 +234,17 @@ export function AgentBasicSettingsPage({
     if (!profile) {
       return;
     }
-    setGreeting(profile.greeting);
+    const previous = syncedProfile.current;
+    syncedProfile.current = profile;
     // The sign-up placeholder isn't a summary, so the field starts empty.
-    setSummary(profile.summarySource === "placeholder" ? "" : profile.summary);
+    const shownSummary = (value: NonNullable<AgentSettings["profile"]>) => value.summarySource === "placeholder" ? "" : value.summary;
+    setGreeting((current) => !previous || current === previous.greeting ? profile.greeting : current);
+    setSummary((current) => !previous || current === shownSummary(previous) ? shownSummary(profile) : current);
     setDefaultLocale(configuration.business?.defaultLocale ?? "en");
-    setTransferNumber(profile.transferNumber ?? "");
-    setTransferNumberInputValue(profile.transferNumber ?? "");
+    if (!previous || transferNumberRef.current === (previous.transferNumber ?? "")) {
+      setTransferNumber(profile.transferNumber ?? "");
+      setTransferNumberInputValue(profile.transferNumber ?? "");
+    }
     setBookingMode(normalizeBookingMode(profile.bookingMode));
     setVoice(normalizeReceptionistVoice(profile.voice));
     const appointmentChangePolicy = profile.appointmentChangePolicy as AppointmentChangePolicy | null;
