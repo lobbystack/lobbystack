@@ -135,6 +135,7 @@
   },
   "appointments": {
     "title": "Citas",
+    "searchPlaceholder": "Buscar citas...",
     "details": {
       "employee": "Empleado",
       "duration": "Duración",

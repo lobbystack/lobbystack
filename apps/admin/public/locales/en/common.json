@@ -134,6 +134,7 @@
   },
   "appointments": {
     "title": "Appointments",
+    "searchPlaceholder": "Search appointments...",
     "details": {
       "employee": "Employee",
       "duration": "Duration",

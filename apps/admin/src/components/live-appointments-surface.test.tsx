@@ -161,4 +161,14 @@ describe("new appointments locale baseline", () => {
     expect(within(ended).queryByRole("button", { name: /Cancel appointment/ })).toBeNull();
     expect(screen.queryByRole("row", { name: /3:00 PM/ })).toBeNull();
   });
+  it("searches by customer, service or staff", async () => {
+    route.search = "view=list";
+    await setup("en", false);
+    const booking = { startsAt: "2099-09-06T12:00:00Z", endsAt: "2099-09-06T12:45:00Z", timezone: "UTC", status: "confirmed", sourceChannel: "voice", calendarSyncState: "synced" };
+    clients[0]!.setQueryData(["appointments", "business"], { appointments: [{ ...booking, id: "a", contactName: "Rosa", serviceName: "Haircut", staffName: "Ana" }, { ...booking, id: "b", contactName: "Ivan", serviceName: "Massage", staffName: "Mila" }] });
+    expect(await screen.findByText("Rosa", { selector: "td" })).toBeTruthy();
+    await userEvent.type(screen.getByPlaceholderText(en.appointments.searchPlaceholder), "mass");
+    expect(screen.queryByText("Rosa", { selector: "td" })).toBeNull();
+    expect(screen.getByText("Ivan", { selector: "td" })).toBeTruthy();
+  });
 });

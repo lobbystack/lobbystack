@@ -141,6 +141,7 @@
   },
   "appointments": {
     "title": "Termini",
+    "searchPlaceholder": "Pretražite termine...",
     "details": {
       "employee": "Zaposleni",
       "duration": "Trajanje",

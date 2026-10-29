@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Badge } from "./ui/badge";
+import { Input } from "./ui/input";
 import { CancelAppointmentButton } from "./cancel-appointment-button";
 import { AppointmentDetailsSheet } from "./appointment-details-sheet";
 import { AppointmentsCalendar, type CalendarView } from "./appointments-calendar";
@@ -52,6 +54,7 @@ export function LiveAppointmentsSurface() {
   };
   // The calendar needs the browser's clock and time zone, so it isn't rendered on the server.
   const isClient = useSyncExternalStore(subscribeNothing, () => true, () => false);
+  const [search, setSearch] = useState("");
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [detailsId, setDetailsId] = useState<string | null>(null);
   const businessId = business?.businessId;
@@ -64,7 +67,9 @@ export function LiveAppointmentsSurface() {
   const requestedEmployee = searchParams.get("employee") ?? ALL_EMPLOYEES;
   // A link to someone with no upcoming bookings left shows everyone rather than an empty page.
   const employee = appointments.data && !staff.some(([key]) => key === requestedEmployee) ? ALL_EMPLOYEES : requestedEmployee;
-  const filtered = employee === ALL_EMPLOYEES ? rows : rows.filter((appointment) => staffKey(appointment) === employee);
+  const byEmployee = employee === ALL_EMPLOYEES ? rows : rows.filter((appointment) => staffKey(appointment) === employee);
+  const query = search.trim().toLowerCase();
+  const filtered = query ? byEmployee.filter((appointment) => [appointment.contactName, appointment.contactPhone, appointment.contactEmail, appointment.serviceName, appointment.staffName, appointment.employeeName].some((value) => value?.toLowerCase().includes(query))) : byEmployee;
   // Past appointments read newest first.
   const listRows = when === "past" ? filtered.filter((appointment) => hasEnded(appointment)).reverse() : filtered.filter((appointment) => !hasEnded(appointment));
   const contactName = (appointment: Appointment) => getContactDisplayName({ name: appointment.contactName, phone: appointment.contactPhone, email: appointment.contactEmail, channels: [appointment.sourceChannel] }, i18n.language, t);
@@ -94,10 +99,13 @@ export function LiveAppointmentsSurface() {
 
   // The title and the view switch share one row, including on phones.
   return <PageSurface actions={viewTabs} headerClassName="flex-row items-center justify-between gap-4 sm:items-center" title={t("appointments.title")}><div className="flex w-full flex-col gap-6">
-    {business && !whenTabs && !employeeFilter ? null : <div className="flex flex-wrap items-center justify-between gap-3">
-      {business ? whenTabs : <p className="type-section-description">{t("appointments.chooseWorkspace")}</p>}
-      {employeeFilter ? <div className="ms-auto w-full sm:w-auto">{employeeFilter}</div> : null}
-    </div>}
+    {business ? <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="relative w-full sm:max-w-sm">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input className="pl-10" onChange={(event) => setSearch(event.target.value)} placeholder={t("appointments.searchPlaceholder")} value={search} />
+      </div>
+      {whenTabs || employeeFilter ? <div className="flex w-full flex-wrap items-center gap-2 sm:ms-auto sm:w-auto">{whenTabs}{employeeFilter}</div> : null}
+    </div> : <p className="type-section-description">{t("appointments.chooseWorkspace")}</p>}
     {view === "calendar" ? isClient ? <>
       <AppointmentsCalendar appointments={filtered} contactName={contactName} onSelectDay={setSelectedDay} onViewChange={(next) => setParam("range", next, "month")} selectedDay={day} timeZone={timeZone} today={today} view={range} />
       <section aria-live="polite" className="flex flex-col gap-3">
