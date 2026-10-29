@@ -31,10 +31,10 @@ async function channelRows() {
   return [...card.querySelectorAll("li")].map((row) => row.textContent);
 }
 
-describe("analytics results card", () => {
+describe("analytics results row", () => {
   async function results() {
-    const card = (await screen.findByText("home.analytics.results.title")).closest("[data-slot='card']")!;
-    return [...card.querySelectorAll("section")].map((section) => [...section.querySelectorAll("h2, p")].map((element) => element.textContent));
+    const row = (await screen.findByText("home.analytics.results.bookedValue")).closest("section")!.parentElement!;
+    return [...row.querySelectorAll("section")].map((section) => [...section.querySelectorAll("h2, p")].map((element) => element.textContent));
   }
 
   it("shows booked value in the business currency, time saved in hours and minutes, and the share without a transfer", async () => {
@@ -44,15 +44,15 @@ describe("analytics results card", () => {
       callsWithoutTransferPercent: { current: 82.5, previous: 80 },
     });
     expect(await results()).toEqual([
-      ["home.analytics.results.bookedValue.title", "$1,250", "home.analytics.metrics.percentUp", "home.analytics.results.bookedValue.hint"],
-      ["home.analytics.results.timeSaved.title", "12 hr 5 min", "home.analytics.metrics.percentUp", "home.analytics.results.timeSaved.hint"],
-      ["home.analytics.results.withoutTransfer.title", "82.5%", "home.analytics.metrics.pointsUp", "home.analytics.results.withoutTransfer.hint"],
+      ["home.analytics.results.bookedValue", "$1,250", "home.analytics.metrics.percentUp"],
+      ["home.analytics.results.timeSaved", "12 hr 5 min", "home.analytics.metrics.percentUp"],
+      ["home.analytics.results.withoutTransfer", "82.5%", "home.analytics.metrics.pointsUp"],
     ]);
   });
 
   it("shows a dash and no comparison while no calls count", async () => {
     renderAnalytics({ phone_call: 0, web_call: 0, sms: 0, web_chat: 0, other: 0 });
-    expect((await results())[2]).toEqual(["home.analytics.results.withoutTransfer.title", "—", "home.analytics.results.withoutTransfer.hint"]);
+    expect((await results())[2]).toEqual(["home.analytics.results.withoutTransfer", "—"]);
   });
 });
 

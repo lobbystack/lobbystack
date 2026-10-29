@@ -88,20 +88,9 @@
         }
       },
       "results": {
-        "title": "Rezultati",
-        "description": "Šta je Vaš recepcioner zakazao i obradio u ovom periodu.",
-        "bookedValue": {
-          "title": "Procenjena vrednost zakazanih termina",
-          "hint": "Termini koje je Vaš recepcioner zakazao putem poziva, SMS-a ili četa, po trenutnim cenama usluga. Cena „od” se računa po najnižem iznosu, a raspon cena po donjoj granici. Otkazani termini i cene koje se određuju na licu mesta se ne računaju."
-        },
-        "timeSaved": {
-          "title": "Ušteđeno vreme",
-          "hint": "Trajanje razgovora u pozivima koje je Vaš recepcioner obradio. Kao i kod naplate, ne računaju se neželjeni pozivi i pozivi kraći od 10 sekundi."
-        },
-        "withoutTransfer": {
-          "title": "Pozivi obrađeni bez preusmeravanja",
-          "hint": "Udeo tih poziva koje je Vaš recepcioner završio bez preusmeravanja pozivaoca na Vaš tim."
-        }
+        "bookedValue": "Vrednost termina",
+        "timeSaved": "Ušteđeno vreme",
+        "withoutTransfer": "Pozivi bez preusmeravanja"
       }
     },
     "metrics": {

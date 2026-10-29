@@ -88,20 +88,9 @@
         }
       },
       "results": {
-        "title": "Bilan",
-        "description": "Ce que votre réceptionniste a réservé et traité sur ces dates.",
-        "bookedValue": {
-          "title": "Valeur réservée estimée",
-          "hint": "Les rendez-vous pris par votre réceptionniste par appel, SMS ou chat, au prix actuel des services. Un prix « à partir de » compte pour son minimum, et une fourchette pour son bas. Les rendez-vous annulés et les prix fixés sur place ne comptent pas."
-        },
-        "timeSaved": {
-          "title": "Temps gagné",
-          "hint": "Le temps de conversation des appels traités par votre réceptionniste. Comme pour la facturation, les appels indésirables et ceux de moins de 10 secondes ne comptent pas."
-        },
-        "withoutTransfer": {
-          "title": "Appels traités sans transfert",
-          "hint": "La part de ces appels que votre réceptionniste a terminés sans transférer l'appelant à votre équipe."
-        }
+        "bookedValue": "Valeur réservée",
+        "timeSaved": "Temps gagné",
+        "withoutTransfer": "Appels sans transfert"
       }
     },
     "metrics": {
