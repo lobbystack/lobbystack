@@ -11,12 +11,14 @@ const ok = (data: unknown, extra: Record<string, unknown> = {}) => Response.json
 const booking = (uid: string, start: string, end: string, status = "accepted") => ({ uid, start, end, status });
 
 type Route = (url: URL, init: RequestInit) => Response | undefined;
+// Haircut offers 30, 45 and 60 minutes, so the 45-minute appointment can pick its length.
+const eventTypeRoute = (lengths: number[] = [30, 45, 60]): Route => (url, init) => (init.method ?? "GET") === "GET" && url.pathname === "/v2/event-types/42" ? ok({ id: 42, lengthInMinutes: lengths[0], ...(lengths.length > 1 ? { lengthInMinutesOptions: lengths } : {}) }) : undefined;
 function routes(...handlers: Route[]) {
   const calls: Array<{ url: URL; init: RequestInit }> = [];
   const fetchMock = vi.fn(async (input: string | URL, init: RequestInit = {}) => {
     const url = new URL(String(input));
     calls.push({ url, init });
-    for (const handler of handlers) {
+    for (const handler of [...handlers, eventTypeRoute()]) {
       const response = handler(url, init);
       if (response) return response;
     }
@@ -125,6 +127,51 @@ describe("CalcomCalendarProvider", () => {
     );
     await expect(new CalcomCalendarProvider(config).upsertEvent({ ...write, eventId: "stored" })).resolves.toEqual({ externalEventId: "moved" });
     expect(calls.some((call) => call.init.method === "POST")).toBe(false);
+  });
+
+  it("leaves the length out on an event type with one length, or a length it doesn't offer", async () => {
+    for (const lengths of [[30], [30, 60]]) {
+      const calls = routes(
+        eventTypeRoute(lengths),
+        on("GET", "/v2/bookings", () => ok([], { pagination: { hasMore: false, nextCursor: null } })),
+        on("POST", "/v2/bookings", () => ok({ uid: "booked" })),
+      );
+      await new CalcomCalendarProvider(config).upsertEvent(write);
+      expect(body(calls.find((call) => call.init.method === "POST")!.init)).not.toHaveProperty("lengthInMinutes");
+    }
+  });
+
+  it("doesn't reschedule a fixed-length booking whose end differs from the appointment's, sync after sync", async () => {
+    // The event type books an hour; the appointment lasts 45 minutes.
+    const calls = routes(
+      eventTypeRoute([60]),
+      on("GET", "/v2/bookings/stored", () => ok({ ...booking("stored", write.startsAt, "2026-11-02T16:00:00.000Z"), eventTypeId: 42 })),
+    );
+    const provider = new CalcomCalendarProvider(config);
+    for (let sync = 0; sync < 3; sync++) await expect(provider.upsertEvent({ ...write, eventId: "stored" })).resolves.toEqual({ externalEventId: "stored" });
+    expect(calls.some((call) => call.init.method === "POST")).toBe(false);
+  });
+
+  it("moves a fixed-length booking to a new start without sending a length", async () => {
+    const calls = routes(
+      eventTypeRoute([60]),
+      on("GET", "/v2/bookings/stored", () => ok({ ...booking("stored", "2026-11-02T13:00:00.000Z", "2026-11-02T14:00:00.000Z"), eventTypeId: 42 })),
+      on("POST", "/v2/bookings/stored/reschedule", () => ok({ uid: "moved" })),
+    );
+    await expect(new CalcomCalendarProvider(config).upsertEvent({ ...write, eventId: "stored" })).resolves.toEqual({ externalEventId: "moved" });
+    const sent = body(calls.find((call) => call.init.method === "POST")!.init);
+    expect(sent).toMatchObject({ start: "2026-11-02T15:00:00Z" });
+    expect(sent).not.toHaveProperty("lengthInMinutes");
+  });
+
+  it("cancels the live booking a host rescheduled in Cal.com, found by address, when the stored uid is canceled", async () => {
+    const calls = routes(
+      on("GET", "/v2/bookings/stored", () => ok({ ...booking("stored", write.startsAt, write.endsAt, "cancelled"), eventTypeId: 42 })),
+      on("GET", "/v2/bookings", (url) => ok(url.searchParams.get("status") === "upcoming" ? [{ ...booking("host-moved", "2026-11-03T15:00:00.000Z", "2026-11-03T15:45:00.000Z"), eventTypeId: 42 }] : [], { pagination: { hasMore: false, nextCursor: null } })),
+      on("POST", /\/cancel$/, () => ok({})),
+    );
+    await new CalcomCalendarProvider(config).deleteEvent({ accessToken: "access", calendarId: "42", eventId: "stored", appointmentId: write.appointmentId });
+    expect(calls.filter((call) => call.init.method === "POST").map((call) => call.url.pathname)).toEqual(["/v2/bookings/host-moved/cancel"]);
   });
 
   it("books again when the stored booking was canceled in Cal.com", async () => {

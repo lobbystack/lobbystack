@@ -151,6 +151,13 @@ export class CalcomCalendarProvider implements CalendarProvider {
     }] : []);
   }
 
+  /** The lengths a booking of the event type may pick, its default included. */
+  async getEventType(accessToken: string, eventTypeId: number): Promise<{ lengths: number[] }> {
+    const data = await this.request<{ lengthInMinutes?: number; lengthInMinutesOptions?: number[] }>(accessToken, `/v2/event-types/${eventTypeId}`, { version: API_VERSIONS.eventTypes, what: "event type lookup" });
+    if (typeof data?.lengthInMinutes !== "number") throw new Error("Cal.com event type lookup returned an invalid response.");
+    return { lengths: [...new Set([data.lengthInMinutes, ...(data.lengthInMinutesOptions ?? [])])] };
+  }
+
   /** Event types stand in for calendars: appointments become bookings of the one a connection picks. */
   async listCalendars(input: { accessToken: string }): Promise<CalendarListEntry[]> {
     return (await this.listEventTypes(input)).map((eventType) => ({ id: eventType.id, summary: eventType.title, primary: false, accessRole: "owner" }));
@@ -190,6 +197,11 @@ export class CalcomCalendarProvider implements CalendarProvider {
     if (!key) throw new Error("Cal.com bookings need an appointment id.");
     const email = calcomPlaceholderEmail(key, this.config.placeholderEmailDomain);
     const lengthInMinutes = Math.round((Date.parse(input.endsAt) - Date.parse(input.startsAt)) / 60_000);
+    // Cal.com takes a length only from an event type that offers several, and only one of those. Otherwise the
+    // booking gets the event type's own length, which then never matches the appointment's end.
+    const { lengths } = await this.getEventType(input.accessToken, eventTypeId);
+    const pickable = lengths.length > 1 && lengths.includes(lengthInMinutes);
+    const length = pickable ? { lengthInMinutes } : {};
     // The stored uid can point at a booking that's gone: canceled in Cal.com, or replaced by a reschedule whose
     // new uid LobbyStack never saved. A booking of another event type belongs to a calendar the connection left.
     const stored = input.eventId ? await this.getBooking(input.accessToken, input.eventId) : null;
@@ -197,9 +209,10 @@ export class CalcomCalendarProvider implements CalendarProvider {
     // Cal.com has no idempotency key. The stand-in address is unique to the appointment, so a booking a failed attempt made is found again.
     const existing = usable(stored) ? stored : await this.findBookingByAttendee(input.accessToken, email, eventTypeId);
     if (existing) {
-      if (sameInstant(existing.start, input.startsAt) && sameInstant(existing.end, input.endsAt)) return { externalEventId: existing.uid };
+      // Without a length to send, a reschedule keeps the booking's length, so only the start can be brought in line.
+      if (sameInstant(existing.start, input.startsAt) && (!pickable || sameInstant(existing.end, input.endsAt))) return { externalEventId: existing.uid };
       // A reschedule cancels the old booking and returns a new one under a new uid.
-      const moved = await this.request<{ uid?: string }>(input.accessToken, `/v2/bookings/${encodeURIComponent(existing.uid)}/reschedule`, { method: "POST", version: API_VERSIONS.bookings, what: "booking reschedule", body: { start: toUtc(input.startsAt), lengthInMinutes, reschedulingReason: "Rescheduled in LobbyStack" } });
+      const moved = await this.request<{ uid?: string }>(input.accessToken, `/v2/bookings/${encodeURIComponent(existing.uid)}/reschedule`, { method: "POST", version: API_VERSIONS.bookings, what: "booking reschedule", body: { start: toUtc(input.startsAt), ...length, reschedulingReason: "Rescheduled in LobbyStack" } });
       if (!moved.uid) throw new Error("Cal.com booking reschedule did not return a booking.");
       return { externalEventId: moved.uid };
     }
@@ -212,7 +225,7 @@ export class CalcomCalendarProvider implements CalendarProvider {
       body: {
         eventTypeId,
         start: toUtc(input.startsAt),
-        lengthInMinutes,
+        ...length,
         attendee: { name, email, timeZone: input.timezone || "UTC", ...(attendee.phone ? { phoneNumber: attendee.phone } : {}) },
         bookingFieldsResponses: { notes: truncate(`Booked by LobbyStack. ${contact.join(", ")}${input.description ? `. ${input.description}` : ""}`, 500) },
         metadata: {
@@ -230,10 +243,12 @@ export class CalcomCalendarProvider implements CalendarProvider {
   async deleteEvent(input: { accessToken: string; calendarId: string; eventId: string; appointmentId?: string }): Promise<void> {
     assertCertificationCalendar(input.calendarId);
     // The event id is LobbyStack's own placeholder when no booking was stored, so fall back to the stand-in address.
-    // Only bookings of this connection's event type, the calendar being released, are looked up by address.
-    const booking = await this.getBooking(input.accessToken, input.eventId)
-      ?? (input.appointmentId ? await this.findBookingByAttendee(input.accessToken, calcomPlaceholderEmail(input.appointmentId, this.config.placeholderEmailDomain), Number(input.calendarId)) : null);
-    if (!booking || !BUSY_STATUSES.has(booking.status)) return;
+    // A stored uid that's gone, or was rescheduled in Cal.com, leaves the live booking to find by address,
+    // among bookings of this connection's event type, the calendar being released.
+    const stored = await this.getBooking(input.accessToken, input.eventId);
+    const booking = stored && BUSY_STATUSES.has(stored.status) ? stored
+      : input.appointmentId ? await this.findBookingByAttendee(input.accessToken, calcomPlaceholderEmail(input.appointmentId, this.config.placeholderEmailDomain), Number(input.calendarId)) : null;
+    if (!booking) return;
     try {
       await this.request(input.accessToken, `/v2/bookings/${encodeURIComponent(booking.uid)}/cancel`, { method: "POST", version: API_VERSIONS.bookings, what: "booking cancellation", body: { cancellationReason: "Canceled in LobbyStack" } });
     } catch (error) {

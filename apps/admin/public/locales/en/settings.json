@@ -588,7 +588,7 @@
       "howItWorks": "Each appointment becomes a booking of this event type. Cal.com gets the caller's name and phone number. Your receptionist keeps their email and sends the confirmation itself.",
       "warningsTitle": "Check this event type in Cal.com",
       "warnings": {
-        "missingLengths": "Add {{lengths}} minutes to the event type's durations. Your services run that long, and Cal.com books only the lengths the event type offers.",
+        "missingLengths": "Add {{lengths}} minutes to the event type's durations. Until you do, Cal.com books those services at the event type's default length.",
         "smsReminders": "Turn off the SMS workflow on this event type, or Cal.com texts callers on top of your receptionist's texts.",
         "narrowerAvailability": "Widen the event type's schedule on {{days}} to match your opening hours. Cal.com turns down bookings outside its schedule."
       }

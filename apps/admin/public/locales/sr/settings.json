@@ -595,7 +595,7 @@
       "howItWorks": "Svaki termin postaje rezervacija ovog tipa događaja. Cal.com dobija ime i broj telefona pozivaoca. Vaša recepcionerka zadržava njegovu e-poštu i sama šalje potvrdu.",
       "warningsTitle": "Proverite ovaj tip događaja u Cal.com",
       "warnings": {
-        "missingLengths": "Dodajte {{lengths}} minuta trajanjima tipa događaja. Vaše usluge toliko traju, a Cal.com zakazuje samo trajanja koja tip događaja nudi.",
+        "missingLengths": "Dodajte {{lengths}} minuta trajanjima tipa događaja. Do tada Cal.com zakazuje te usluge u podrazumevanom trajanju tipa događaja.",
         "smsReminders": "Isključite SMS tok rada za ovaj tip događaja, inače Cal.com šalje poruke pozivaocima pored poruka vaše recepcionerke.",
         "narrowerAvailability": "Proširite raspored tipa događaja za {{days}} da odgovara vašem radnom vremenu. Cal.com odbija rezervacije van svog rasporeda."
       }

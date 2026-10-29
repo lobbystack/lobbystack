@@ -2,7 +2,7 @@ import { DateTime } from "luxon";
 
 /** What the dashboard warns about once an operator picks a Cal.com event type. */
 export type CalcomEventTypeWarning =
-  /** Services last a length the event type can't book, so Cal.com books its own length instead. */
+  /** Services last a length the event type doesn't offer, so Cal.com books them at its default length. */
   | { code: "missing_lengths"; lengths: number[] }
   /** An SMS workflow is attached, so Cal.com texts callers on top of LobbyStack's messages. */
   | { code: "sms_reminders" }

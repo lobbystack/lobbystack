@@ -595,7 +595,7 @@
       "howItWorks": "Cada cita se convierte en una reserva de este tipo de evento. Cal.com recibe el nombre y el número de teléfono de quien llama. Su recepcionista guarda su correo y envía la confirmación ella misma.",
       "warningsTitle": "Revise este tipo de evento en Cal.com",
       "warnings": {
-        "missingLengths": "Agregue {{lengths}} minutos a las duraciones del tipo de evento. Sus servicios duran eso, y Cal.com solo reserva las duraciones que ofrece el tipo de evento.",
+        "missingLengths": "Agregue {{lengths}} minutos a las duraciones del tipo de evento. Mientras tanto, Cal.com reserva esos servicios con la duración predeterminada del tipo de evento.",
         "smsReminders": "Desactive el flujo de SMS de este tipo de evento, o Cal.com enviará mensajes a quienes llaman además de los de su recepcionista.",
         "narrowerAvailability": "Amplíe el horario del tipo de evento el {{days}} para que coincida con su horario de atención. Cal.com rechaza las reservas fuera de su horario."
       }
