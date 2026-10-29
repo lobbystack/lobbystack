@@ -25,6 +25,7 @@ export async function runPrivacyRetentionSweep(
       .where(and(eq(transcripts.businessId, input.businessId), isNotNull(transcripts.expiresAt), lt(transcripts.expiresAt, now)))
       .returning({ callId: transcripts.callId });
     // A question repeats what a caller said; its text entry, once answered, is the business's own and stays.
+    // Dismissed questions expire too, so one asked again after that opens a new row.
     const deletedUnansweredQuestions = !contentRetentionEnabled ? [] : await tx.delete(unansweredQuestions)
       .where(and(eq(unansweredQuestions.businessId, input.businessId), isNotNull(unansweredQuestions.contentExpiresAt), lt(unansweredQuestions.contentExpiresAt, now)))
       .returning({ id: unansweredQuestions.id });

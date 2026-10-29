@@ -3,8 +3,9 @@
 -- on the knowledge page, answers each once, which saves the answer as a text
 -- entry, or dismisses it. The same question, compared by normalized_question,
 -- counts again on its open or dismissed row instead of adding one, so a
--- dismissed question stays dismissed. An answered one that is asked again
--- opens a new row: the answer didn't reach the receptionist.
+-- dismissed question stays dismissed until it expires with other caller
+-- content; asked after that, it opens a new row. An answered one that is
+-- asked again opens a new row: the answer didn't reach the receptionist.
 --
 -- The question comes from what a caller or visitor said, so it expires like a
 -- follow-up: content_expires_at moves with each ask, and the privacy sweep

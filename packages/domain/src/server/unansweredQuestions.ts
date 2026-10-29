@@ -49,7 +49,8 @@ export function normalizeUnansweredQuestion(question: string): string {
 /**
  * Saves a question the receptionist found no knowledge for. Asked again while
  * its row is open or dismissed, it counts there instead of adding a row, so a
- * dismissed question stays dismissed. The call and conversation it came from
+ * dismissed question stays dismissed until it expires with other caller
+ * content; asked after that, it opens a new row. The call and conversation it came from
  * are kept only while they belong to the business. Null when the question has
  * no words to save. Calls and chats record these as the worker.
  */
@@ -158,7 +159,7 @@ export async function answerUnansweredQuestion(
   });
 }
 
-/** Takes an open question off the list. Asked again, it counts on its dismissed row and stays off. Owners and admins dismiss. */
+/** Takes an open question off the list. Asked again, it counts on its dismissed row and stays off until it expires with other caller content. Owners and admins dismiss. */
 export async function dismissUnansweredQuestion(
   context: DomainContext,
   input: { userId: string; businessId: string; questionId: string },

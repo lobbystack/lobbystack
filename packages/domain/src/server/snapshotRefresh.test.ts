@@ -60,16 +60,16 @@ function makeTx(selectRows: Record<string, unknown>) {
   function fromChain(rows: (table: unknown) => unknown) {
     return {
       from: (table: unknown) => {
-        function whenable() {
-          const thenable = Promise.resolve(rows(table));
-          const chain = Object.assign(thenable, {
-            limit: () => whenable(),
-            orderBy: () => whenable(),
+        // Honours limit() like the database, so a query that caps its rows too low shows up here.
+        function whenable(result: unknown): Promise<unknown> & { limit: (count: number) => unknown; orderBy: () => unknown } {
+          const thenable = Promise.resolve(result);
+          return Object.assign(thenable, {
+            limit: (count: number) => whenable(Array.isArray(result) ? result.slice(0, count) : result),
+            orderBy: () => whenable(result),
           });
-          return chain;
         }
         return {
-          where: () => whenable(),
+          where: () => whenable(rows(table)),
         };
       },
     };
@@ -123,6 +123,15 @@ describe("refreshBusinessSnapshot write-through", () => {
     const cache = memoryCache();
     await refreshBusinessSnapshot({ db: {} as never, snapshotCache: cache }, { businessId });
     expect((await cache.get(businessId))?.employees).toEqual([{ name: "Ana Petrović", services: ["Colour", "Haircut"] }, { name: "Marko Jovanović" }]);
+  });
+
+  it("keeps up to the snapshot's snippet limit, not just the few that prompts list", async () => {
+    // Answers saved from the unanswered-questions inbox are snippets too; knowledge search needs them all.
+    const snippetRows = Array.from({ length: 12 }, (_, index) => ({ id: `snippet-${index}`, title: `Question ${index}`, content: `Answer ${index}`, tags: [], priority: 100 - index }));
+    mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => callback(makeTx({ businesses: [businessRow], receptionist_profiles: [profileRow], knowledge_snippets: snippetRows })));
+    const cache = memoryCache();
+    await refreshBusinessSnapshot({ db: {} as never, snapshotCache: cache }, { businessId });
+    expect((await cache.get(businessId))?.knowledgeSnippets?.map((snippet) => snippet.id)).toEqual(snippetRows.map((row) => row.id));
   });
 
   it("pushes the regenerated snapshot into the shared cache", async () => {

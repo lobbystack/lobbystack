@@ -4,7 +4,7 @@ import { and, asc, desc, eq, ilike, inArray, isNull, lt, ne, notInArray, sql } f
 
 import { agentRules, businessContextSnapshots, businesses, businessHours, closures, enqueueOutbox, inOrder, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, phoneNumbers, receptionistProfiles, services, staffServiceAssignments, storageObjects, websiteIngestionJobs, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { defaultGreeting, FULL_CRAWL_PAGE_LIMIT, getKnowledgeStorageLimitBytes, normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeReceptionistVoice, normalizeRuntimeLocale, normalizeTransferMode, ONBOARDING_CRAWL_PAGE_LIMIT, runtimeLocales, servicePriceFromColumns, type BusinessContextSnapshot } from "@lobbystack/shared";
-import { buildBusinessContextSnapshot } from "../snapshot";
+import { buildBusinessContextSnapshot, MAX_KNOWLEDGE_SNIPPETS_PER_SNAPSHOT } from "../snapshot";
 import { countKnowledgeTokens, fuseKnowledgeRanks, KNOWLEDGE_SEARCH_TOKEN_BUDGET, knowledgeLexicalQueries, knowledgeQueryTerms, withinKnowledgeBudget, type KnowledgePassage } from "../knowledgeRanking";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
@@ -624,7 +624,7 @@ export async function refreshBusinessSnapshot(
       () => tx.select().from(closures).where(and(eq(closures.businessId, input.businessId), isNull(closures.staffId))).orderBy(asc(closures.startsAt)),
       () => tx.select().from(services).where(and(eq(services.businessId, input.businessId), eq(services.active, true))).orderBy(asc(services.name)),
       () => tx.select().from(agentRules).where(and(eq(agentRules.businessId, input.businessId), eq(agentRules.active, true))).orderBy(asc(agentRules.sortOrder), asc(agentRules.createdAt), asc(agentRules.id)),
-      () => tx.select().from(knowledgeSnippets).where(and(eq(knowledgeSnippets.businessId, input.businessId), eq(knowledgeSnippets.active, true))).orderBy(desc(knowledgeSnippets.priority)).limit(8),
+      () => tx.select().from(knowledgeSnippets).where(and(eq(knowledgeSnippets.businessId, input.businessId), eq(knowledgeSnippets.active, true))).orderBy(desc(knowledgeSnippets.priority)).limit(MAX_KNOWLEDGE_SNIPPETS_PER_SNAPSHOT),
       () => tx.select({ title: knowledgeDocuments.title, sourceUrl: knowledgeDocuments.sourceUrl, tags: knowledgeDocuments.tags, revision: knowledgeDocuments.revision }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.active, true), eq(knowledgeDocuments.status, "indexed"))).orderBy(desc(knowledgeDocuments.updatedAt), asc(knowledgeDocuments.id)).limit(40),
       () => tx.select().from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"))).orderBy(desc(phoneNumbers.createdAt), asc(phoneNumbers.id)),
       () => listBookableEmployees(tx, input.businessId),
