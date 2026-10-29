@@ -25,9 +25,9 @@ export async function resolveCalendarAccessToken(context: DomainContext, input: 
     if (!connection || connection.businessId !== input.businessId || connection.status === "disconnected") throw new Error("Calendar connection is unavailable.");
     const now = input.now ?? new Date();
     if (!input.forceRefresh && connection.encryptedAccessToken && connection.tokenExpiresAt && connection.tokenExpiresAt.getTime() > now.getTime() + 60_000) return input.decryptToken(connection.encryptedAccessToken);
-    if (!connection.encryptedRefreshToken) throw new Error("Google Calendar authorization requires reconnection.");
+    if (!connection.encryptedRefreshToken) throw Object.assign(new Error("Calendar authorization requires reconnection."), { reconnectRequired: true });
     const refreshed = await input.refreshAccessToken({ refreshToken: input.decryptToken(connection.encryptedRefreshToken) });
-    if (!refreshed.accessToken || !Number.isFinite(refreshed.expiresIn) || refreshed.expiresIn <= 0) throw new Error("Google Calendar returned an invalid refreshed token.");
+    if (!refreshed.accessToken || !Number.isFinite(refreshed.expiresIn) || refreshed.expiresIn <= 0) throw new Error("The calendar provider returned an invalid refreshed token.");
     await tx.update(calendarConnections).set({
       encryptedAccessToken: input.encryptToken(refreshed.accessToken),
       ...(refreshed.refreshToken ? { encryptedRefreshToken: input.encryptToken(refreshed.refreshToken) } : {}),

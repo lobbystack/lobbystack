@@ -932,12 +932,12 @@ describe("calendars", () => {
 
   it("reaches Google only where it is set up", async () => {
     await v1.listAccountCalendars(call(`/calendars/${connectionId}/calendars`), params());
-    const access = domain.listAccountCalendarsForApi.mock.calls[0]![3] as () => unknown;
+    const access = domain.listAccountCalendarsForApi.mock.calls[0]![3] as (provider: string) => unknown;
     setGoogle(false);
-    const refused = (() => { try { access(); } catch (error) { return error; } })();
+    const refused = (() => { try { access("google"); } catch (error) { return error; } })();
     expect(refused).toMatchObject({ status: 403, code: "forbidden" });
     setGoogle(true);
-    expect(access()).toEqual({ decryptToken: expect.any(Function), encryptToken: expect.any(Function), refreshAccessToken: expect.any(Function), listCalendars: expect.any(Function) });
+    expect(access("google")).toEqual({ decryptToken: expect.any(Function), encryptToken: expect.any(Function), refreshAccessToken: expect.any(Function), listCalendars: expect.any(Function) });
   });
 
   it("reads with business:read and changes with business:write", async () => {

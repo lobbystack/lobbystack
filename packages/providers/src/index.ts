@@ -1,4 +1,5 @@
 export * from "./ai/embeddingProvider";
+export * from "./calendar";
 export * from "./crypto/secretBox";
 export * from "./crawling/firecrawl";
 export * from "./crawling/urlSafety";

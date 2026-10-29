@@ -6,15 +6,15 @@ import { assignCalendarStaff, discoverCalendars, disconnectCalendar, listCalenda
 import { SecretBox } from "@lobbystack/providers";
 import { jsonError } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
-import { googleCalendarProvider } from "@/lib/google-calendar-provider";
+import { calendarProvider } from "@/lib/calendar-providers";
 import { operatorRoute } from "@/lib/operator-request";
 
 export const dynamic = "force-dynamic";
 
-async function calendarDiscovery(domain: DomainContext, userId: string, businessId: string, connectionId: string) {
+async function calendarDiscovery(domain: DomainContext, userId: string, businessId: string, connectionId: string, providerName: string) {
   const encryptionKey = process.env.ENCRYPTION_KEY;
-  if (!encryptionKey) throw new Error("Google Calendar discovery is not configured.");
-  const provider = googleCalendarProvider();
+  if (!encryptionKey) throw new Error("Calendar discovery is not configured.");
+  const provider = calendarProvider(providerName);
   const box = new SecretBox(encryptionKey);
   return await discoverCalendars(domain, {
     userId, businessId, connectionId,
@@ -39,7 +39,7 @@ export const GET = operatorRoute(async ({ userId, businessId, domain, transactio
   let discoveryError: string | null = null;
   if (googleConnection) {
     try {
-      calendarOptions = await calendarDiscovery(domain, userId, businessId, googleConnection.id);
+      calendarOptions = await calendarDiscovery(domain, userId, businessId, googleConnection.id, googleConnection.provider);
     } catch (error) {
       discoveryError = error instanceof Error ? error.message : "Calendar discovery failed.";
     }
@@ -65,7 +65,9 @@ export const PATCH = operatorRoute(async ({ userId, businessId, body: input, dom
   if (!body.connectionId || (!body.calendarId && body.staffId === undefined)) return jsonError("connectionId and a calendarId or staffId are required.", 400);
   if (body.calendarId) {
     await transaction(async () => undefined, { minimumRole: "business_admin" });
-    const options = await calendarDiscovery(domain, userId, businessId, body.connectionId);
+    const connection = (await listCalendarConnections(domain, { userId, businessId })).find((row) => row.id === body.connectionId);
+    if (!connection) return jsonError("Calendar connection not found.", 404);
+    const options = await calendarDiscovery(domain, userId, businessId, connection.id, connection.provider);
     const selected = options.find((option) => option.id === body.calendarId?.trim());
     if (!selected || !["owner", "writer"].includes(selected.accessRole ?? "")) return jsonError("Select a calendar you can write to.", 400);
     await selectCalendar(domain, { userId, businessId, connectionId: body.connectionId, calendarId: selected.id });

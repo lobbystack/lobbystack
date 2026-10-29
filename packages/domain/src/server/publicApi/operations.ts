@@ -961,11 +961,11 @@ export async function updateWidgetKeyForApi(context: DomainContext, caller: ApiC
   });
 }
 
-// Calendars. Google asks the calendar's owner to agree in a browser, so the
-// API hands out a link that starts that flow in the dashboard, then manages
-// the connections it creates as the integrations page does.
+// Calendars. Google and Cal.com ask the calendar's owner to agree in a browser,
+// so the API hands out a link that starts that flow in the dashboard, then
+// manages the connections it creates as the integrations page does.
 
-/** What the API needs from Google for a connection: its tokens, kept encrypted, and its calendars. */
+/** What the API needs from a connection's provider: its tokens, kept encrypted, and its calendars. */
 export type CalendarAccess = {
   decryptToken: (value: string) => string;
   encryptToken: (value: string) => string;
@@ -975,37 +975,42 @@ export type CalendarAccess = {
 
 type AccountCalendar = Awaited<ReturnType<CalendarAccess["listCalendars"]>>[number];
 
+/** How the API names a provider to the caller, and the path that connects it again. */
+const CALENDAR_PROVIDER_NAMES: Record<string, string> = { google: "Google Calendar", calcom: "Cal.com" };
+const providerName = (provider: string) => CALENDAR_PROVIDER_NAMES[provider] ?? provider;
+const connectPath = (provider: string) => `POST /calendars/${provider === "calcom" ? "calcom" : "google"}/connect`;
+
 /** LobbyStack adds appointments to the calendar it reads, so it needs one it may write to, as in the dashboard. */
 function isWritableCalendar(calendar: AccountCalendar): boolean {
   return calendar.accessRole === "owner" || calendar.accessRole === "writer";
 }
 
-// Google refused the stored authorization, or none is stored, so only connecting again helps.
+// The provider refused the stored authorization, or none is stored, so only connecting again helps.
 function needsReconnect(error: unknown): boolean {
-  return error instanceof Error && (error.message === "Google Calendar authorization requires reconnection." || (error as { reconnectRequired?: unknown }).reconnectRequired === true);
+  return error instanceof Error && (error as { reconnectRequired?: unknown }).reconnectRequired === true;
 }
 
-/** The status Google answered a failed calendar request with, which the provider's error carries. */
-function googleStatus(error: unknown): unknown {
+/** The status the provider answered a failed calendar request with, which its error carries. */
+function providerStatus(error: unknown): unknown {
   return typeof error === "object" && error !== null ? (error as { responseStatus?: unknown }).responseStatus : undefined;
 }
 
 /** The account's calendars, with a token refreshed under the connection's lock when it's about to expire. */
-async function accountCalendars(context: DomainContext, caller: ApiCaller, connectionId: string, access: CalendarAccess): Promise<AccountCalendar[]> {
+async function accountCalendars(context: DomainContext, caller: ApiCaller, connectionId: string, provider: string, access: CalendarAccess): Promise<AccountCalendar[]> {
   const list = async (forceRefresh: boolean) => await access.listCalendars({ accessToken: await resolveCalendarAccessToken(context, { businessId: caller.businessId, connectionId, decryptToken: access.decryptToken, encryptToken: access.encryptToken, refreshAccessToken: access.refreshAccessToken, forceRefresh }) });
   try {
     return await list(false).catch(async (error: unknown) => {
-      // A token revoked in the Google account still looks unexpired here.
+      // A token revoked in the provider's account still looks unexpired here.
       // Refreshing it once either works or shows that the grant is gone.
-      if (googleStatus(error) === 401) return await list(true);
+      if (providerStatus(error) === 401) return await list(true);
       throw error;
     });
   } catch (error) {
-    if (needsReconnect(error) || googleStatus(error) === 401) throw conflict("Google no longer accepts this connection. Connect the calendar again with POST /calendars/google/connect.");
+    if (needsReconnect(error) || providerStatus(error) === 401) throw conflict(`${provider === "google" ? "Google" : providerName(provider)} no longer accepts this connection. Connect the calendar again with ${connectPath(provider)}.`);
     // Disconnected since it was read.
     if (error instanceof Error && error.message === "Calendar connection is unavailable.") throw notFound("Calendar connection");
-    // Google's own errors never reach the caller: its 401 would read as the caller's key.
-    throw new Error("Google Calendar couldn't list the account's calendars.", { cause: error });
+    // The provider's own errors never reach the caller: its 401 would read as the caller's key.
+    throw new Error(`${providerName(provider)} couldn't list the account's calendars.`, { cause: error });
   }
 }
 
@@ -1014,10 +1019,10 @@ async function loadCalendarConnection(tx: DatabaseTransaction, businessId: strin
 }
 
 /** Records the link and returns it. `link` signs it in the admin app, which serves the page it opens. */
-export async function createCalendarConnectLinkForApi(context: DomainContext, caller: ApiCaller, options: { link: (input: { businessId: string }) => { url: string; expiresAt: Date } }): Promise<ApiCalendarConnectLink> {
+export async function createCalendarConnectLinkForApi(context: DomainContext, caller: ApiCaller, options: { provider?: string; link: (input: { businessId: string }) => { url: string; expiresAt: Date } }): Promise<ApiCalendarConnectLink> {
   return await inBusiness(context, caller, async (tx) => {
     const { url, expiresAt } = options.link({ businessId: caller.businessId });
-    await audit(tx, caller, { eventType: "api.calendar.connect_link_created", entityType: "business", entityId: caller.businessId, payload: { provider: "google", expiresAt: expiresAt.toISOString() } });
+    await audit(tx, caller, { eventType: "api.calendar.connect_link_created", entityType: "business", entityId: caller.businessId, payload: { provider: options.provider ?? "google", expiresAt: expiresAt.toISOString() } });
     return { url, expires_at: expiresAt.toISOString() };
   });
 }
@@ -1026,20 +1031,20 @@ export async function listCalendarConnectionsForApi(context: DomainContext, call
   return await inBusiness(context, caller, async (tx) => (await listCalendarConnectionsInTransaction(tx, { businessId: caller.businessId })).map(serializeCalendarConnection));
 }
 
-export async function listAccountCalendarsForApi(context: DomainContext, caller: ApiCaller, connectionId: string, access: () => CalendarAccess): Promise<ApiAccountCalendar[]> {
+export async function listAccountCalendarsForApi(context: DomainContext, caller: ApiCaller, connectionId: string, access: (provider: string) => CalendarAccess): Promise<ApiAccountCalendar[]> {
   const connection = await inBusiness(context, caller, async (tx) => await loadCalendarConnection(tx, caller.businessId, connectionId));
   if (!connection) throw notFound("Calendar connection");
-  return (await accountCalendars(context, caller, connectionId, access())).map((calendar) => ({ id: calendar.id, name: calendar.summary, primary: calendar.primary, writable: isWritableCalendar(calendar), selected: calendar.id === connection.selectedCalendarId }));
+  return (await accountCalendars(context, caller, connectionId, connection.provider, access(connection.provider))).map((calendar) => ({ id: calendar.id, name: calendar.summary, primary: calendar.primary, writable: isWritableCalendar(calendar), selected: calendar.id === connection.selectedCalendarId }));
 }
 
-/** Picks the calendar or the staff member. `access` is called only when a new calendar has to be checked with Google. */
-export async function updateCalendarConnectionForApi(context: DomainContext, caller: ApiCaller, connectionId: string, input: ApiCalendarConnectionUpdate, access: () => CalendarAccess): Promise<ApiCalendarConnection> {
+/** Picks the calendar or the staff member. `access` is called only when a new calendar has to be checked with the provider. */
+export async function updateCalendarConnectionForApi(context: DomainContext, caller: ApiCaller, connectionId: string, input: ApiCalendarConnectionUpdate, access: (provider: string) => CalendarAccess): Promise<ApiCalendarConnection> {
   if (Object.keys(input).length === 0) throw invalidRequest("Send at least one field to update.");
   const current = await inBusiness(context, caller, async (tx) => await loadCalendarConnection(tx, caller.businessId, connectionId));
   if (!current) throw notFound("Calendar connection");
   const calendarId = input.calendar_id !== undefined && input.calendar_id !== current.selectedCalendarId ? input.calendar_id : undefined;
   if (calendarId !== undefined) {
-    const picked = (await accountCalendars(context, caller, connectionId, access())).find((calendar) => calendar.id === calendarId);
+    const picked = (await accountCalendars(context, caller, connectionId, current.provider, access(current.provider))).find((calendar) => calendar.id === calendarId);
     if (!picked) throw invalidRequest("The connected account has no calendar with this id.", [{ path: "calendar_id", message: "Use an id from GET /calendars/{connection_id}/calendars." }]);
     if (!isWritableCalendar(picked)) throw invalidRequest("LobbyStack can't add appointments to this calendar. Pick one the account can change.", [{ path: "calendar_id", message: "Not writable." }]);
   }
@@ -1048,7 +1053,7 @@ export async function updateCalendarConnectionForApi(context: DomainContext, cal
     const [locked] = await tx.select({ staffId: calendarConnections.staffId, selectedCalendarId: calendarConnections.selectedCalendarId }).from(calendarConnections).where(and(eq(calendarConnections.id, connectionId), eq(calendarConnections.businessId, caller.businessId), ne(calendarConnections.status, "disconnected"))).limit(1).for("no key update");
     if (!locked) throw notFound("Calendar connection");
     const fields: string[] = [];
-    // A calendar_id not checked with Google above was the connection's own calendar
+    // A calendar_id not checked with the provider above was the connection's own calendar
     // when the request began. If someone picked another since, it goes back, as any later write would.
     if (input.calendar_id !== undefined && input.calendar_id !== locked.selectedCalendarId) {
       if (!await selectCalendarInTransaction(tx, { businessId: caller.businessId, connectionId, calendarId: input.calendar_id })) throw notFound("Calendar connection");
