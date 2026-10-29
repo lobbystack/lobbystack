@@ -62,16 +62,25 @@ export type CalcomSchedule = { timeZone: string; availability: Array<{ days: str
 type Booking = { uid: string; start: string; end: string; status: string };
 
 /**
- * The Cal.com settings from the environment, or null when its OAuth client
- * isn't set. The stand-in address domain defaults to `noreply.` plus the
- * dashboard's host.
+ * What's missing from a Cal.com setup the environment started, or null when
+ * it's complete or not started at all. The stand-in address domain has no
+ * default: Cal.com refuses an attendee domain without an MX record, so a
+ * guessed one would fail every booking.
  */
+export function calcomCalendarConfigProblem(env: Record<string, string | undefined> = process.env): string | null {
+  const names = ["CALCOM_CLIENT_ID", "CALCOM_CLIENT_SECRET", "CALCOM_REDIRECT_URI", "CALCOM_PLACEHOLDER_EMAIL_DOMAIN"] as const;
+  const missing = names.filter((name) => !env[name]?.trim());
+  if (missing.length === 0 || missing.length === names.length) return null;
+  return `Cal.com is off until ${missing.join(", ")} ${missing.length === 1 ? "is" : "are"} set. CALCOM_PLACEHOLDER_EMAIL_DOMAIN must accept mail, since Cal.com checks it for an MX record.`;
+}
+
+/** The Cal.com settings from the environment, or null until all four CALCOM_ variables are set. */
 export function calcomCalendarConfigFromEnv(env: Record<string, string | undefined> = process.env): CalcomCalendarConfig | null {
-  const clientId = env.CALCOM_CLIENT_ID;
-  const clientSecret = env.CALCOM_CLIENT_SECRET;
-  const redirectUri = env.CALCOM_REDIRECT_URI;
-  if (!clientId || !clientSecret || !redirectUri) return null;
-  const placeholderEmailDomain = env.CALCOM_PLACEHOLDER_EMAIL_DOMAIN?.trim() || `noreply.${new URL(env.APP_BASE_URL || redirectUri).hostname}`;
+  const clientId = env.CALCOM_CLIENT_ID?.trim();
+  const clientSecret = env.CALCOM_CLIENT_SECRET?.trim();
+  const redirectUri = env.CALCOM_REDIRECT_URI?.trim();
+  const placeholderEmailDomain = env.CALCOM_PLACEHOLDER_EMAIL_DOMAIN?.trim();
+  if (!clientId || !clientSecret || !redirectUri || !placeholderEmailDomain) return null;
   return { clientId, clientSecret, redirectUri, placeholderEmailDomain, ...(env.CALCOM_API_URL ? { apiUrl: env.CALCOM_API_URL } : {}), ...(env.CALCOM_APP_URL ? { appUrl: env.CALCOM_APP_URL } : {}) };
 }
 

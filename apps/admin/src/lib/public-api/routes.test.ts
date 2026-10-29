@@ -915,6 +915,9 @@ describe("calendars", () => {
     vi.stubEnv("CALCOM_CLIENT_ID", "client");
     vi.stubEnv("CALCOM_CLIENT_SECRET", "secret");
     vi.stubEnv("CALCOM_REDIRECT_URI", "https://app.lobbystack.example/api/calendar/calcom/callback");
+    // Without the stand-in domain, Cal.com stays off.
+    expect((await connectCalcom()).status).toBe(403);
+    vi.stubEnv("CALCOM_PLACEHOLDER_EMAIL_DOMAIN", "bookings.lobbystack.example");
     vi.stubEnv("APP_BASE_URL", "https://app.lobbystack.example");
     vi.stubEnv("BETTER_AUTH_SECRET", "link-test-secret");
     domain.createCalendarConnectLinkForApi.mockImplementation(async (_context: unknown, _caller: unknown, options: { link: (input: { businessId: string }) => { url: string; expiresAt: Date } }) => {

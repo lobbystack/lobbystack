@@ -1,4 +1,4 @@
-import { CalcomCalendarProvider, calcomCalendarConfigFromEnv, type CalendarProvider } from "@lobbystack/providers";
+import { CalcomCalendarProvider, calcomCalendarConfigFromEnv, calcomCalendarConfigProblem, type CalendarProvider } from "@lobbystack/providers";
 
 import { googleCalendarProvider } from "./google-calendar-provider";
 
@@ -12,7 +12,7 @@ export function calendarProviderConfigured(provider: string): boolean {
 
 export function calcomCalendarProvider(): CalcomCalendarProvider {
   const config = calcomCalendarConfigFromEnv();
-  if (!config) throw new Error("Cal.com OAuth is not configured.");
+  if (!config) throw new Error(calcomCalendarConfigProblem() ?? "Cal.com OAuth is not configured.");
   return new CalcomCalendarProvider(config);
 }
 

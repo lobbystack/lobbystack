@@ -7,7 +7,7 @@ import { createEmbeddingProvider } from "@lobbystack/providers/ai/embeddingProvi
 import { FirecrawlProvider } from "@lobbystack/providers/crawling/firecrawl";
 import { createCustomHostnameProvider, systemTxtLookup } from "@lobbystack/providers/customHostnames/customHostnames";
 import { SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
-import { CalcomCalendarProvider, calcomCalendarConfigFromEnv } from "@lobbystack/providers/calcom/calendar";
+import { CalcomCalendarProvider, calcomCalendarConfigFromEnv, calcomCalendarConfigProblem } from "@lobbystack/providers/calcom/calendar";
 import { GoogleCalendarProvider } from "@lobbystack/providers/google/calendar";
 import { InstagramProvider } from "@lobbystack/providers/instagram/instagram";
 import { SecretBox } from "@lobbystack/providers/crypto/secretBox";
@@ -124,6 +124,8 @@ async function main(): Promise<void> {
     ...(process.env.STORAGE_PROVIDER === "s3" ? [] : ["LOCAL_STORAGE_SIGNING_SECRET"]),
   ]);
   for (const warning of partnerFeatureWarnings(process.env)) console.warn(`[partners] ${warning}`);
+  const calcomProblem = calcomCalendarConfigProblem(process.env);
+  if (calcomProblem) console.warn(`[calendar] ${calcomProblem}`);
   await initializeTelemetry({ serviceName: "lobbystack-worker" });
   const database = createDatabaseClient("lobbystack_worker");
   const dispatcherDatabase = createDatabaseClient("lobbystack_dispatcher");

@@ -2,7 +2,7 @@ import { createHmac } from "node:crypto";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CALCOM_SCOPES, CalcomCalendarProvider, calcomCalendarConfigFromEnv, calcomPlaceholderEmail, verifyCalcomWebhookSignature } from "./calendar";
+import { CALCOM_SCOPES, CalcomCalendarProvider, calcomCalendarConfigFromEnv, calcomCalendarConfigProblem, calcomPlaceholderEmail, verifyCalcomWebhookSignature } from "./calendar";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -168,11 +168,16 @@ describe("CalcomCalendarProvider", () => {
 });
 
 describe("calcomCalendarConfigFromEnv", () => {
-  it("needs the OAuth client and derives the stand-in domain from the dashboard's host", () => {
-    expect(calcomCalendarConfigFromEnv({ CALCOM_CLIENT_ID: "client" })).toBeNull();
+  it("needs the OAuth client and a stand-in domain, and says what a partial setup lacks", () => {
     const env = { CALCOM_CLIENT_ID: "client", CALCOM_CLIENT_SECRET: "secret", CALCOM_REDIRECT_URI: "https://app.example/api/calendar/calcom/callback", APP_BASE_URL: "https://dashboard.example" };
-    expect(calcomCalendarConfigFromEnv(env)).toEqual({ clientId: "client", clientSecret: "secret", redirectUri: env.CALCOM_REDIRECT_URI, placeholderEmailDomain: "noreply.dashboard.example" });
-    expect(calcomCalendarConfigFromEnv({ ...env, CALCOM_PLACEHOLDER_EMAIL_DOMAIN: "bookings.example", CALCOM_API_URL: "https://cal.internal/api" })).toMatchObject({ placeholderEmailDomain: "bookings.example", apiUrl: "https://cal.internal/api" });
+    expect(calcomCalendarConfigFromEnv({})).toBeNull();
+    expect(calcomCalendarConfigProblem({})).toBeNull();
+    // A guessed domain has no MX record, so Cal.com would refuse every booking.
+    expect(calcomCalendarConfigFromEnv(env)).toBeNull();
+    expect(calcomCalendarConfigProblem(env)).toContain("CALCOM_PLACEHOLDER_EMAIL_DOMAIN is set");
+    const complete = { ...env, CALCOM_PLACEHOLDER_EMAIL_DOMAIN: "bookings.example", CALCOM_API_URL: "https://cal.internal/api" };
+    expect(calcomCalendarConfigFromEnv(complete)).toEqual({ clientId: "client", clientSecret: "secret", redirectUri: env.CALCOM_REDIRECT_URI, placeholderEmailDomain: "bookings.example", apiUrl: "https://cal.internal/api" });
+    expect(calcomCalendarConfigProblem(complete)).toBeNull();
   });
 });
 

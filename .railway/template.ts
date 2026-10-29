@@ -130,7 +130,8 @@ export default defineRailway((ctx) => {
       GOOGLE_CLIENT_ID: preserve(),
       GOOGLE_CLIENT_SECRET: preserve(),
       GOOGLE_REDIRECT_URI: "${{APP_BASE_URL}}/api/calendar/google/callback",
-      // Optional user input for Cal.com: a confidential OAuth client whose redirect URI is CALCOM_REDIRECT_URI.
+      // Optional user input for Cal.com: a confidential OAuth client whose redirect URI is CALCOM_REDIRECT_URI,
+      // and CALCOM_PLACEHOLDER_EMAIL_DOMAIN, a domain with an MX record. Cal.com stays off until all are set.
       CALCOM_CLIENT_ID: preserve(),
       CALCOM_CLIENT_SECRET: preserve(),
       CALCOM_REDIRECT_URI: "${{APP_BASE_URL}}/api/calendar/calcom/callback",
