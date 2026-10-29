@@ -1,6 +1,6 @@
 ---
 title: "Configure third-party providers"
-description: "See which provider accounts a self-hosted LobbyStack needs: Twilio and OpenAI for live calls, plus optional services like Google Calendar, S3 storage, and PostHog."
+description: "See which provider accounts a self-hosted LobbyStack needs: Twilio or Telnyx and OpenAI for live calls, plus optional services like Google Calendar, S3 storage, and PostHog."
 sidebarTitle: "Third-party providers"
 contentType: "Reference"
 ---
@@ -12,6 +12,9 @@ The Docker Compose baseline runs LobbyStack's application, PostgreSQL, Redis, an
 <AccordionGroup>
   <Accordion title="Twilio" icon="phone">
     Twilio supplies phone numbers, call transfers, and phone verification. An Elastic SIP trunk sends calls for your numbers to OpenAI. Every number must sit on the trunk to answer calls. Keep the Twilio auth token server-side.
+  </Accordion>
+  <Accordion title="Telnyx" icon="phone">
+    Telnyx can replace Twilio for some countries or capabilities, or for all of them. An FQDN connection sends calls for your Telnyx numbers to OpenAI, a messaging profile handles texts, and a TeXML application takes calls the receptionist stops answering. Set `TELEPHONY_NUMBERS` to pick the countries whose numbers you buy from Telnyx, and `TELEPHONY_VERIFY` or `TELEPHONY_LOOKUP` to use Telnyx Verify or Number Lookup. Ask Telnyx support to enable SIP REFER on your account, or call transfers may fail. Keep the API key server-side.
   </Accordion>
   <Accordion title="OpenAI" icon="waveform">
     OpenAI's GPT-Live model holds the conversation on phone and browser calls, and OpenAI hosts the audio. When the caller needs business data, such as openings or a booking, GPT-Live asks LobbyStack's worker, which answers with the receptionist agent. Your OpenAI project needs SIP enabled and an incoming-call webhook for phone calls.

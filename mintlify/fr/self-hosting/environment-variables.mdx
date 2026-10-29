@@ -51,13 +51,18 @@ La réponse SMS à HELP commence par le nom de l'application. Les e-mails, l'API
 
 ## Appels vocaux
 
-Le modèle GPT-Live d'OpenAI répond aux appels dans le navigateur et aux appels téléphoniques. Les appels téléphoniques l'atteignent par votre trunk SIP Twilio. L'admin démarre chaque appel et le worker l'exécute.
+Le modèle GPT-Live d'OpenAI répond aux appels dans le navigateur et aux appels téléphoniques. Les appels téléphoniques l'atteignent par votre opérateur : un trunk SIP Twilio ou une connexion SIP Telnyx. L'admin démarre chaque appel et le worker l'exécute.
 
 | Variable | Rôle |
 | --- | --- |
 | `LIVE_PROTOTYPE_ENABLED` | Définissez-la à `true` sur l'admin et le worker. Compose la définit par défaut. Les appels dans le navigateur échouent sans elle. |
 | `OPENAI_WEBHOOK_SECRET` | Vérifie le webhook d'appel entrant d'OpenAI à `/api/webhooks/openai/live`. Appels téléphoniques seulement. |
 | `TWILIO_SIP_TRUNK_SID` | Le trunk Twilio Elastic SIP qui envoie les appels à votre projet OpenAI. Les nouveaux numéros s'y ajoutent, et le worker ne provisionne pas de numéro sans lui. |
+| `TELEPHONY_NUMBERS` | L'opérateur qui vend les numéros de chaque pays, par exemple `US:telnyx,*:twilio`. Laissez-la vide pour acheter tous les numéros chez Twilio. Une valeur mal formée empêche le worker de démarrer. |
+| `TELEPHONY_VERIFY`, `TELEPHONY_LOOKUP`, `TELEPHONY_ALERT_SMS` | L'opérateur du code de vérification à l'inscription, de la vérification du type de ligne et des textos de l'expéditeur partagé. Chacune vaut `twilio` par défaut. |
+| `TELEPHONY_ALERT_SMS_FROM` | Le numéro de l'expéditeur partagé. À défaut, `TWILIO_ALERT_SMS_FROM`. |
+| `TELNYX_SIP_CONNECTION_ID`, `OPENAI_PROJECT_ID` | La connexion FQDN Telnyx qui envoie les appels à OpenAI, et l'ID de votre projet OpenAI (`proj_…`). Le worker n'achète aucun numéro Telnyx sans les deux. |
+| `TELNYX_TEXML_APPLICATION_ID`, `TELNYX_TEXML_WEBHOOK_SECRET` | L'application TeXML vers laquelle passe un numéro Telnyx quand la réceptionniste cesse d'y répondre, par exemple un essai à court de minutes, et le secret que son URL vocale porte en `?key=`. |
 | `WEB_CALL_MAX_DURATION_MS` | Durée maximale facultative des appels dans le navigateur. |
 | `WEB_CALL_PUBLIC_BUSINESS_SLUG` | Entreprise qui répond à l'appel de démo public sur votre site marketing. |
 | `WEB_CALL_ALLOWED_ORIGINS` | Sites, séparés par des virgules, autorisés à lancer cet appel de démo public. Les appels du widget du site Web utilisent plutôt les origines autorisées de chaque clé de widget. |
@@ -134,6 +139,7 @@ Un point de terminaison OTLP vide ne désactive ni les journaux stdout des conte
 | Groupe de variables | Rôle |
 | --- | --- |
 | `TWILIO_*` | Voix, vérification, provisionnement des numéros et authentification des webhooks. |
+| `TELNYX_*` | La même chose pour Telnyx : `TELNYX_API_KEY`, `TELNYX_PUBLIC_KEY` pour les signatures des webhooks, `TELNYX_MESSAGING_PROFILE_ID`, `TELNYX_VERIFY_PROFILE_ID`, et `TELNYX_GB_REQUIREMENT_GROUP_ID`, `TELNYX_AU_REQUIREMENT_GROUP_ID` ou `TELNYX_NZ_REQUIREMENT_GROUP_ID` pour ces pays. |
 | `OPENAI_API_KEY` | Appels GPT-Live et clé de repli pour `AI_CHAT_*` et `AI_EMBEDDING_*`. |
 | `AI_CHAT_API_KEY`, `AI_CHAT_BASE_URL`, `AI_CHAT_MODEL`, `AI_CHAT_PROVIDER_NAME` | L'agent réceptionniste pour le clavardage du site Web et les appels. Laissez `AI_CHAT_MODEL` vide sur OpenAI pour utiliser `gpt-6-luna`. Définissez-la pour tout autre point de terminaison compatible OpenAI. |
 | `AI_CHAT_REASONING_EFFORT` | OpenAI seulement : `none`, `minimal`, `low`, `medium`, `high` ou `xhigh`. Vaut `high` par défaut. |
