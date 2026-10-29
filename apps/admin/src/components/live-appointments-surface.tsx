@@ -97,17 +97,16 @@ export function LiveAppointmentsSurface() {
     </TabsList>
   </Tabs> : null;
 
-  // The title and the view switch share one row, including on phones.
-  return <PageSurface actions={viewTabs} headerClassName="flex-row items-center justify-between gap-4 sm:items-center" title={t("appointments.title")}><div className="flex w-full flex-col gap-6">
+  return <PageSurface title={t("appointments.title")}><div className="flex w-full flex-col gap-6">
     {business ? <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="relative w-full sm:max-w-sm">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input className="pl-10" onChange={(event) => setSearch(event.target.value)} placeholder={t("appointments.searchPlaceholder")} value={search} />
       </div>
-      {whenTabs || employeeFilter ? <div className="flex w-full flex-wrap items-center gap-2 sm:ms-auto sm:w-auto">{whenTabs}{employeeFilter}</div> : null}
+      <div className="flex w-full flex-wrap items-center gap-2 sm:ms-auto sm:w-auto">{whenTabs}{employeeFilter}{view === "list" ? viewTabs : null}</div>
     </div> : <p className="type-section-description">{t("appointments.chooseWorkspace")}</p>}
     {view === "calendar" ? isClient ? <>
-      <AppointmentsCalendar appointments={filtered} contactName={contactName} onSelectDay={setSelectedDay} onViewChange={(next) => setParam("range", next, "month")} selectedDay={day} timeZone={timeZone} today={today} view={range} />
+      <AppointmentsCalendar appointments={filtered} contactName={contactName} onSelectDay={setSelectedDay} onViewChange={(next) => setParam("range", next, "month")} selectedDay={day} timeZone={timeZone} today={today} trailing={viewTabs} view={range} />
       <section aria-live="polite" className="flex flex-col gap-3">
         <h2 className="type-section-title px-1 first-letter:uppercase">{formatDateTime(keyToDate(day).toISOString(), i18n.language, { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" })}</h2>
         {dayAppointments.length ? <Surface className="p-0">

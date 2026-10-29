@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { CalendarCheck2, ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -23,7 +23,7 @@ const DOT: CSSProperties = { width: 6, height: 6 };
  * the page, which lists that day's appointments under the grid. Phones get a
  * compact grid with a dot per busy day instead of booking previews.
  */
-export function AppointmentsCalendar({ appointments, onSelectDay, onViewChange, selectedDay, timeZone, today, contactName, view }: {
+export function AppointmentsCalendar({ appointments, onSelectDay, onViewChange, selectedDay, timeZone, today, contactName, trailing, view }: {
   appointments: Appointment[];
   onSelectDay: (day: string) => void;
   onViewChange: (view: CalendarView) => void;
@@ -32,6 +32,8 @@ export function AppointmentsCalendar({ appointments, onSelectDay, onViewChange, 
   today: string;
   contactName: (appointment: Appointment) => string;
   view: CalendarView;
+  /** Rendered after the week/month switch, e.g. the page's list/calendar switch. */
+  trailing?: ReactNode;
 }) {
   const { i18n, t } = useTranslation("common");
   const locale = intlLocale(i18n.language);
@@ -60,10 +62,10 @@ export function AppointmentsCalendar({ appointments, onSelectDay, onViewChange, 
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button aria-label={t("appointments.calendarView.previous")} onClick={() => step(-1)} size="icon-sm" variant="outline"><ChevronLeft /></Button>
         <Button aria-label={t("appointments.calendarView.next")} onClick={() => step(1)} size="icon-sm" variant="outline"><ChevronRight /></Button>
-        <h2 aria-live="polite" className="type-section-title min-w-0 flex-1 truncate text-base capitalize sm:text-xl">{title}</h2>
+        <h2 aria-live="polite" className="type-section-title min-w-0 flex-1 basis-24 truncate text-base capitalize sm:text-xl">{title}</h2>
         <Button aria-label={t("appointments.calendarView.today")} className="sm:hidden" onClick={() => { setAnchor(today); onSelectDay(today); }} size="icon-sm" variant="outline"><CalendarCheck2 /></Button>
         <Button className="hidden sm:inline-flex" onClick={() => { setAnchor(today); onSelectDay(today); }} size="sm" variant="outline">{t("appointments.calendarView.today")}</Button>
         <Tabs className="shrink-0" onValueChange={(value) => { onViewChange(value as CalendarView); setAnchor(selectedDay); }} value={view}>
@@ -72,6 +74,7 @@ export function AppointmentsCalendar({ appointments, onSelectDay, onViewChange, 
             <TabsTrigger value="month">{t("appointments.calendarView.month")}</TabsTrigger>
           </TabsList>
         </Tabs>
+        {trailing}
       </div>
 
       {/* Phones: weekday initials, then each day's number with a dot when it has bookings. */}

@@ -74,15 +74,18 @@ describe("new appointments locale baseline", () => {
     await userEvent.click(screen.getByRole("tab", { name: en.appointments.calendarView.month }));
     expect(route.replace).toHaveBeenLastCalledWith("/appointments", { scroll: false });
   });
-  it("puts the view switch on the title's row and shows Upcoming and Past only in the list", async () => {
+  it("shows Upcoming and Past only in the list, and keeps the view switch next to Week and Month in the calendar", async () => {
     route.search = "view=list";
     await setup("en", false);
-    const title = screen.getByRole("heading", { name: en.appointments.title });
-    const header = title.parentElement!.parentElement!;
-    expect(within(header).getByRole("tab", { name: en.appointments.views.list })).toBeTruthy();
-    expect(within(header).getByRole("tab", { name: en.appointments.views.calendar })).toBeTruthy();
-    expect(within(header).queryByRole("tab", { name: en.appointments.when.upcoming })).toBeNull();
     expect(screen.getByRole("tab", { name: en.appointments.when.upcoming })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: en.appointments.views.calendar })).toBeTruthy();
+    cleanup();
+    route.search = "";
+    await setup("en", false);
+    const month = screen.getByRole("tab", { name: en.appointments.calendarView.month });
+    const list = screen.getByRole("tab", { name: en.appointments.views.list });
+    expect(month.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByRole("tab", { name: en.appointments.when.upcoming })).toBeNull();
   });
   it("shows the calendar by default and shows today's appointments under it", async () => {
     route.search = "";
