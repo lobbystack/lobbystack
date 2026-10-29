@@ -125,6 +125,18 @@ it("does not record a sync failure when the calendar selection changed mid-sync"
   expect(mocks.record).not.toHaveBeenCalled();
 });
 
+it("keeps a released Cal.com booking that an appointment took back after the event type changed", async () => {
+  const release = { businessId: "business", appointmentId: "appointment", connectionId: "connection", calendarId: "41", eventId: "booking-uid" };
+  const calcom = { ...provider };
+  const withCalcom = { domain: dependencies.domain, calendars: { calcom } };
+  batches = [[{ status: "connected", selectedCalendarId: "42", provider: "calcom" }], [{ eventId: "booking-uid" }], [{ id: "appointment" }]];
+  await expect(deleteReleasedCalendarEvent(withCalcom, release)).resolves.toMatchObject({ status: "skipped" });
+  expect(calcom.deleteEvent).not.toHaveBeenCalled();
+  batches = [[{ status: "connected", selectedCalendarId: "42", provider: "calcom" }], [{ eventId: null }], []];
+  await expect(deleteReleasedCalendarEvent(withCalcom, release)).resolves.toMatchObject({ status: "completed" });
+  expect(calcom.deleteEvent).toHaveBeenCalledWith({ accessToken: "access", calendarId: "41", eventId: "booking-uid", appointmentId: "appointment" });
+});
+
 it("deletes a released booking's event from the calendar its connection left, unless it switched back and wrote it again", async () => {
   const release = { businessId: "business", appointmentId: "appointment", connectionId: "connection", calendarId: "old", eventId: "event" };
   batches = [[{ status: "connected", selectedCalendarId: "new", provider: "google" }], [{ eventId: "event" }]];

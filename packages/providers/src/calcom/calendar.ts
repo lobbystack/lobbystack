@@ -59,7 +59,7 @@ export type CalcomEventType = {
 
 export type CalcomSchedule = { timeZone: string; availability: Array<{ days: string[]; startTime: string; endTime: string }> };
 
-type Booking = { uid: string; start: string; end: string; status: string };
+type Booking = { uid: string; start: string; end: string; status: string; eventTypeId?: number };
 
 /**
  * What's missing from a Cal.com setup the environment started, or null when
@@ -190,9 +190,13 @@ export class CalcomCalendarProvider implements CalendarProvider {
     if (!key) throw new Error("Cal.com bookings need an appointment id.");
     const email = calcomPlaceholderEmail(key, this.config.placeholderEmailDomain);
     const lengthInMinutes = Math.round((Date.parse(input.endsAt) - Date.parse(input.startsAt)) / 60_000);
+    // The stored uid can point at a booking that's gone: canceled in Cal.com, or replaced by a reschedule whose
+    // new uid LobbyStack never saved. A booking of another event type belongs to a calendar the connection left.
+    const stored = input.eventId ? await this.getBooking(input.accessToken, input.eventId) : null;
+    const usable = (item: Booking | null): item is Booking => Boolean(item && BUSY_STATUSES.has(item.status) && (item.eventTypeId === undefined || item.eventTypeId === eventTypeId));
     // Cal.com has no idempotency key. The stand-in address is unique to the appointment, so a booking a failed attempt made is found again.
-    const existing = (input.eventId ? await this.getBooking(input.accessToken, input.eventId) : null) ?? await this.findBookingByAttendee(input.accessToken, email);
-    if (existing && BUSY_STATUSES.has(existing.status)) {
+    const existing = usable(stored) ? stored : await this.findBookingByAttendee(input.accessToken, email, eventTypeId);
+    if (existing) {
       if (sameInstant(existing.start, input.startsAt) && sameInstant(existing.end, input.endsAt)) return { externalEventId: existing.uid };
       // A reschedule cancels the old booking and returns a new one under a new uid.
       const moved = await this.request<{ uid?: string }>(input.accessToken, `/v2/bookings/${encodeURIComponent(existing.uid)}/reschedule`, { method: "POST", version: API_VERSIONS.bookings, what: "booking reschedule", body: { start: toUtc(input.startsAt), lengthInMinutes, reschedulingReason: "Rescheduled in LobbyStack" } });
@@ -226,8 +230,9 @@ export class CalcomCalendarProvider implements CalendarProvider {
   async deleteEvent(input: { accessToken: string; calendarId: string; eventId: string; appointmentId?: string }): Promise<void> {
     assertCertificationCalendar(input.calendarId);
     // The event id is LobbyStack's own placeholder when no booking was stored, so fall back to the stand-in address.
+    // Only bookings of this connection's event type, the calendar being released, are looked up by address.
     const booking = await this.getBooking(input.accessToken, input.eventId)
-      ?? (input.appointmentId ? await this.findBookingByAttendee(input.accessToken, calcomPlaceholderEmail(input.appointmentId, this.config.placeholderEmailDomain)) : null);
+      ?? (input.appointmentId ? await this.findBookingByAttendee(input.accessToken, calcomPlaceholderEmail(input.appointmentId, this.config.placeholderEmailDomain), Number(input.calendarId)) : null);
     if (!booking || !BUSY_STATUSES.has(booking.status)) return;
     try {
       await this.request(input.accessToken, `/v2/bookings/${encodeURIComponent(booking.uid)}/cancel`, { method: "POST", version: API_VERSIONS.bookings, what: "booking cancellation", body: { cancellationReason: "Canceled in LobbyStack" } });
@@ -289,9 +294,10 @@ export class CalcomCalendarProvider implements CalendarProvider {
     }
   }
 
-  private async findBookingByAttendee(accessToken: string, email: string): Promise<Booking | null> {
+  /** The appointment's live booking of `eventTypeId`, found by its stand-in address. */
+  private async findBookingByAttendee(accessToken: string, email: string, eventTypeId: number): Promise<Booking | null> {
     for (const status of ["upcoming", "unconfirmed"]) {
-      const found = (await this.listBookings(accessToken, { status, attendeeEmail: email })).find((item) => BUSY_STATUSES.has(item.status));
+      const found = (await this.listBookings(accessToken, { status, attendeeEmail: email, eventTypeId: String(eventTypeId) })).find((item) => BUSY_STATUSES.has(item.status) && (item.eventTypeId === undefined || item.eventTypeId === eventTypeId));
       if (found) return found;
     }
     return null;
@@ -337,7 +343,9 @@ export class CalcomCalendarProvider implements CalendarProvider {
 }
 
 function booking(value: Partial<Booking> | null | undefined): Booking | null {
-  return value && typeof value.uid === "string" && typeof value.start === "string" && typeof value.end === "string" && typeof value.status === "string" ? { uid: value.uid, start: value.start, end: value.end, status: value.status } : null;
+  return value && typeof value.uid === "string" && typeof value.start === "string" && typeof value.end === "string" && typeof value.status === "string"
+    ? { uid: value.uid, start: value.start, end: value.end, status: value.status, ...(typeof value.eventTypeId === "number" ? { eventTypeId: value.eventTypeId } : {}) }
+    : null;
 }
 
 function interval(start: string, end: string, externalEventId?: string): CalendarBusyBlock {

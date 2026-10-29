@@ -112,6 +112,8 @@ export async function deleteReleasedCalendarEvent(dependencies: Dependencies, in
   // A disconnected connection has no token left. Event ids repeat across calendars, so a connection
   // switched back to this calendar that wrote the booking again holds a live event under this id.
   if (!connection || connection.status === "disconnected" || (connection.selectedCalendarId === calendarId && currentEventId === eventId)) return { status: "skipped", entityId: appointmentId };
+  // A Cal.com uid names one booking anywhere, so one an appointment holds again is live, whichever event type it's on.
+  if (connection.provider === "calcom" && await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => (await tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.businessId, businessId), eq(appointments.calendarExternalId, eventId))).limit(1)).length > 0)) return { status: "skipped", entityId: appointmentId };
   const provider = dependencies.calendars[connection.provider];
   if (!provider) return { status: "skipped", entityId: appointmentId };
   await provider.deleteEvent({ accessToken: await accessToken(dependencies, businessId, connectionId, provider), calendarId, eventId, appointmentId });

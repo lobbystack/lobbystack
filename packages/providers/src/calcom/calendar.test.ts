@@ -107,9 +107,30 @@ describe("CalcomCalendarProvider", () => {
     expect(body(calls.at(-1)!.init)).toMatchObject({ start: "2026-11-02T15:00:00Z", lengthInMinutes: 45 });
   });
 
+  it("after a switch to another event type, books it instead of adopting the old event type's booking", async () => {
+    const calls = routes(
+      on("GET", "/v2/bookings", (url) => ok(url.searchParams.get("status") === "upcoming" ? [{ ...booking("on-41", write.startsAt, write.endsAt), eventTypeId: 41 }] : [], { pagination: { hasMore: false, nextCursor: null } })),
+      on("POST", "/v2/bookings", () => ok({ uid: "on-42" })),
+    );
+    await expect(new CalcomCalendarProvider(config).upsertEvent(write)).resolves.toEqual({ externalEventId: "on-42" });
+    const lookups = calls.filter((call) => call.url.pathname === "/v2/bookings" && call.init.method === undefined);
+    expect(lookups.every((call) => call.url.searchParams.get("eventTypeId") === "42")).toBe(true);
+  });
+
+  it("finds the booking a reschedule made when the new uid was never saved, instead of booking twice", async () => {
+    const calls = routes(
+      // The reschedule went through in Cal.com, so the stored uid now names a canceled booking.
+      on("GET", "/v2/bookings/stored", () => ok({ ...booking("stored", "2026-11-02T14:00:00.000Z", "2026-11-02T14:45:00.000Z", "cancelled"), eventTypeId: 42 })),
+      on("GET", "/v2/bookings", (url) => ok(url.searchParams.get("status") === "upcoming" ? [{ ...booking("moved", write.startsAt, write.endsAt), eventTypeId: 42 }] : [], { pagination: { hasMore: false, nextCursor: null } })),
+    );
+    await expect(new CalcomCalendarProvider(config).upsertEvent({ ...write, eventId: "stored" })).resolves.toEqual({ externalEventId: "moved" });
+    expect(calls.some((call) => call.init.method === "POST")).toBe(false);
+  });
+
   it("books again when the stored booking was canceled in Cal.com", async () => {
     routes(
       on("GET", "/v2/bookings/stored", () => ok(booking("stored", write.startsAt, write.endsAt, "cancelled"))),
+      on("GET", "/v2/bookings", () => ok([], { pagination: { hasMore: false, nextCursor: null } })),
       on("POST", "/v2/bookings", () => ok({ uid: "fresh" })),
     );
     await expect(new CalcomCalendarProvider(config).upsertEvent({ ...write, eventId: "stored" })).resolves.toEqual({ externalEventId: "fresh" });
