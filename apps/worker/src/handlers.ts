@@ -20,7 +20,8 @@ import { brandForEmail, businessExists, businessGetsHostEmails, hostBrandFromEnv
 import type { DomainContext } from "@lobbystack/domain";
 import { numberReleaseEmailSubject, numberTrialEmailSubject, type SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
 import type { RuntimeStorageProvider } from "@lobbystack/providers/storage/provider";
-import type { TwilioProvider } from "@lobbystack/providers/twilio/twilioProvider";
+import { isCarrierId, type CarrierId } from "@lobbystack/providers/telephony/types";
+import type { Telephony } from "@lobbystack/providers/telephony/registry";
 import type OpenAI from "openai";
 import { extractDocumentTextInThread, type OcrRecorder } from "./documentExtraction";
 import { isLivePrototypeEnabled, type LiveRecoveryOutcome } from "./liveCalls";
@@ -61,8 +62,8 @@ export type WorkerDependencies = {
   domain: DomainContext;
   storage?: RuntimeStorageProvider;
   email?: Pick<SmtpEmailProvider, "sendTemplate">;
-  twilio?: Pick<TwilioProvider, "sendSms"> & Partial<Pick<TwilioProvider, "getMessagePricing" | "getCallPricing" | "findTrunkCall" | "releasePhoneNumber" | "verifyPhone" | "findOwnedPhoneNumber" | "purchasePhoneNumber" | "addNumberToSipTrunk" | "routeNumber" | "getPhoneNumberMonthlyPrice">>;
-  twilioAlerts?: Pick<TwilioProvider, "sendSms"> & { from: string };
+  /** The carriers: each number's own for operations on it, and the shared sender's for alert texts. */
+  telephony?: Pick<Telephony, "forNumber" | "alertSms">;
   polar?: { recordUsage(input: { eventName: string; externalCustomerId: string; quantity: number; timestamp: string; idempotencyKey: string; businessId: string; usageKind: string }): Promise<void>; createCheckout?(input: { productId: string; customerEmail: string; externalCustomerId: string; successUrl: string; returnUrl: string; idempotencyKey?: string }): Promise<{ checkoutUrl: string; checkoutId: string }> };
   /** Sets partners' own domains up: Cloudflare for SaaS or Caddy, as partnerFeatures decides, and DNS for partners' TXT records. Without it, their jobs are skipped. */
   customDomains?: CustomDomainProviders;
@@ -566,39 +567,42 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
     case "sms.syncPrice": {
       const providerMessageId = String(job.payload.providerMessageId ?? "").trim();
       const providerStatus = String(job.payload.providerStatus ?? "").trim();
-      if (!dependencies.twilio?.getMessagePricing || !providerMessageId || !isTerminalSmsStatus(providerStatus)) return { status: "skipped", entityId: providerMessageId };
-      const pricing = await dependencies.twilio.getMessagePricing({ providerMessageId });
-      if (pricing.providerCostUsd === undefined || pricing.providerNumSegments === undefined) throw new Error(`Twilio SMS pricing is incomplete for ${providerMessageId}.`);
+      const sms = dependencies.telephony?.forNumber(jobCarrier(job))?.sms;
+      if (!sms || !providerMessageId || !isTerminalSmsStatus(providerStatus)) return { status: "skipped", entityId: providerMessageId };
+      const pricing = await sms.getMessagePricing({ providerMessageId });
+      if (pricing.providerCostUsd === undefined || pricing.providerNumSegments === undefined) throw new Error(`${sms.carrier} SMS pricing is incomplete for ${providerMessageId}.`);
       const businessId = businessIdOrThrow(job);
       const notificationId = typeof job.payload.notificationId === "string" ? job.payload.notificationId : undefined;
       const operatorDeliveryId = typeof job.payload.operatorDeliveryId === "string" ? job.payload.operatorDeliveryId : undefined;
       const recorded = notificationId
-        ? await updateNotificationDeliveryStatus(dependencies.domain, { businessId, notificationId, providerMessageId, providerStatus, ...pricing })
+        ? await updateNotificationDeliveryStatus(dependencies.domain, { businessId, notificationId, providerMessageId, providerStatus, carrier: sms.carrier, ...pricing })
         : operatorDeliveryId
-          ? await updateOperatorNotificationDeliveryStatus(dependencies.domain, { businessId, deliveryId: operatorDeliveryId, providerMessageId, providerStatus, ...pricing })
+          ? await updateOperatorNotificationDeliveryStatus(dependencies.domain, { businessId, deliveryId: operatorDeliveryId, providerMessageId, providerStatus, carrier: sms.carrier, ...pricing })
           : await recordSmsProviderPricing(dependencies.domain, { businessId, providerMessageId, ...pricing });
       return { status: recorded ? "completed" : "skipped", entityId: providerMessageId };
     }
     case "call.syncPrice": {
       const liveCallId = String(job.payload.callId ?? "").trim();
       if (liveCallId && !job.payload.providerCallId) {
-        // A GPT-Live phone call: find the Twilio call on the SIP trunk first.
-        const trunkSid = process.env.TWILIO_SIP_TRUNK_SID?.trim();
-        if (!dependencies.twilio?.getCallPricing || !dependencies.twilio.findTrunkCall || !trunkSid) return { status: "skipped", entityId: liveCallId };
+        // A GPT-Live phone call: find the carrier's leg of it first.
+        if (!dependencies.telephony) return { status: "skipped", entityId: liveCallId };
         const businessId = businessIdOrThrow(job);
         const call = await loadLiveCallForPricing(dependencies.domain, { businessId, callId: liveCallId });
-        if (!call) return { status: "skipped", entityId: liveCallId };
-        const twilioCallId = await dependencies.twilio.findTrunkCall({ trunkSid, near: call.startedAt, ...(call.callerPhone ? { from: call.callerPhone } : {}) });
-        if (!twilioCallId) throw new Error(`No Twilio call found yet for live call ${liveCallId}.`);
-        const pricing = await dependencies.twilio.getCallPricing({ providerCallId: twilioCallId });
-        if (pricing.providerCostUsd === undefined) throw new Error(`Twilio call pricing is incomplete for ${twilioCallId}.`);
-        const recorded = await recordCallProviderPricing(dependencies.domain, { businessId, providerCallId: twilioCallId, callId: liveCallId, ...pricing });
+        const callCost = call ? dependencies.telephony.forNumber(call.carrier)?.callCost : undefined;
+        if (!call || !callCost?.findLiveCallCost) return { status: "skipped", entityId: liveCallId };
+        const found = await callCost.findLiveCallCost({ near: call.startedAt, from: call.callerPhone });
+        if (!found) throw new Error(`No ${callCost.carrier} call found yet for live call ${liveCallId}.`);
+        const { providerCallId, ...pricing } = found;
+        if (pricing.providerCostUsd === undefined) throw new Error(`${callCost.carrier} call pricing is incomplete for ${providerCallId}.`);
+        const recorded = await recordCallProviderPricing(dependencies.domain, { businessId, providerCallId, callId: liveCallId, ...pricing });
         return { status: recorded ? "completed" : "skipped", entityId: liveCallId };
       }
+      // A call from the Twilio Media Streams path, which names its Twilio call.
       const providerCallId = String(job.payload.providerCallId ?? "").trim();
       const providerCallStatus = String(job.payload.providerCallStatus ?? "").trim();
-      if (!dependencies.twilio?.getCallPricing || !providerCallId || !isTerminalCallStatus(providerCallStatus)) return { status: "skipped", entityId: providerCallId };
-      const pricing = await dependencies.twilio.getCallPricing({ providerCallId });
+      const getCallPricing = dependencies.telephony?.forNumber("twilio")?.callCost?.getCallPricing;
+      if (!getCallPricing || !providerCallId || !isTerminalCallStatus(providerCallStatus)) return { status: "skipped", entityId: providerCallId };
+      const pricing = await getCallPricing({ providerCallId });
       if (pricing.providerCostUsd === undefined) throw new Error(`Twilio call pricing is incomplete for ${providerCallId}.`);
       const recorded = await recordCallProviderPricing(dependencies.domain, { businessId: businessIdOrThrow(job), providerCallId, ...pricing });
       return { status: recorded ? "completed" : "skipped", entityId: providerCallId };
@@ -908,47 +912,37 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
     }
     case "phoneNumber.provision": {
       const businessId = businessIdOrThrow(job); const claimId = String(job.payload.claimId ?? "");
-      if (!claimId || !dependencies.twilio?.findOwnedPhoneNumber || !dependencies.twilio.purchasePhoneNumber) return { status: "skipped", entityId: claimId };
-      // Calls reach GPT-Live only through the Twilio SIP trunk. A number off the
-      // trunk has nothing to answer it, so refuse to buy one without a trunk.
-      const sipTrunkSid = process.env.TWILIO_SIP_TRUNK_SID?.trim();
-      if (!sipTrunkSid) throw new Error("TWILIO_SIP_TRUNK_SID is required to provision a phone number. See docs/voice/runtime.md.");
-      if (!dependencies.twilio.addNumberToSipTrunk) throw new Error("The Twilio provider can't assign numbers to a SIP trunk.");
-      const addNumberToSipTrunk = dependencies.twilio.addNumberToSipTrunk.bind(dependencies.twilio);
+      if (!claimId || !dependencies.telephony) return { status: "skipped", entityId: claimId };
       const claim = await claimNumberProvisioning(dependencies.domain, { businessId, claimId });
       // A worker killed mid-purchase leaves the claim provisioning. Retry once its lease ends instead of leaving it stuck.
       if (!claim) return retryAfterLease(await numberProvisioningLeaseEndsAt(dependencies.domain, { businessId, claimId }), claimId);
-      const baseUrl = (process.env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
-      const smsUrl = `${baseUrl}/api/webhooks/twilio/sms`; const statusCallbackUrl = `${baseUrl}/api/webhooks/twilio/status`;
+      const carrier = claim.carrier;
+      const { inventory, routing } = dependencies.telephony.forNumber(carrier) ?? {};
       let purchased = false; let providerPhoneId: string | undefined;
       try {
+        if (!inventory || !routing) throw new Error(`${carrier} can't sell or route numbers on this deployment. Check its credentials.`);
+        // Failing the claim is better than buying a number that can't answer.
+        const missing = routing.missingSetup();
+        if (missing) throw new Error(missing);
+        const countryCode = claim.selection?.countryCode;
+        const kind = claim.selection?.kind;
+        if (typeof countryCode !== "string" || (kind !== "local" && kind !== "mobile" && kind !== "toll_free")) throw new Error("The number claim doesn't say which country and kind of number it buys.");
         // A number that counts against a partner's tier costs the partner what the host pays for it, so read that before buying it.
-        let monthlyCostCents: number | undefined;
-        if (claim.countsForPartner) {
-          const kind = claim.selection?.kind;
-          if (!dependencies.twilio.getPhoneNumberMonthlyPrice) throw new Error("The Twilio provider can't read number prices.");
-          if (typeof claim.selection?.countryCode !== "string" || (kind !== "local" && kind !== "mobile" && kind !== "toll_free")) throw new Error("The number claim doesn't say which country and kind of number it buys.");
-          monthlyCostCents = (await dependencies.twilio.getPhoneNumberMonthlyPrice({ countryCode: claim.selection.countryCode, kind })).monthlyCents;
-        }
-        const owned = await dependencies.twilio.findOwnedPhoneNumber({ e164: claim.e164 });
+        const monthlyCostCents = claim.countsForPartner ? (await inventory.getPhoneNumberMonthlyPrice({ countryCode, kind })).monthlyCents : undefined;
+        const owned = await inventory.findOwnedPhoneNumber({ e164: claim.e164 });
+        let smsUrl: string | undefined;
         if (owned) providerPhoneId = owned.providerPhoneId;
         else {
-          // Twilio sells UK, Australian and New Zealand numbers only under the
-          // regulatory bundle it approved for LobbyStack. See docs/voice/runtime.md.
-          const country = claim.selection?.countryCode;
-          const bundleSid = country === "GB" ? process.env.TWILIO_GB_BUNDLE_SID?.trim() : country === "AU" ? process.env.TWILIO_AU_BUNDLE_SID?.trim() : country === "NZ" ? process.env.TWILIO_NZ_BUNDLE_SID?.trim() : undefined;
-          const addressSid = country === "AU" ? process.env.TWILIO_AU_ADDRESS_SID?.trim() : country === "NZ" ? process.env.TWILIO_NZ_ADDRESS_SID?.trim() : undefined;
-          if ((country === "GB" || country === "AU" || country === "NZ") && !bundleSid) throw new Error(`TWILIO_${country}_BUNDLE_SID is required to buy a number in ${country}. See docs/voice/runtime.md.`);
-          const result = await dependencies.twilio.purchasePhoneNumber({ e164: claim.e164, friendlyName: `LobbyStack ${businessId}`, smsUrl, statusCallbackUrl, ...(bundleSid ? { bundleSid } : {}), ...(addressSid ? { addressSid } : {}) });
-          providerPhoneId = result.providerPhoneId; purchased = true;
+          const result = await inventory.purchasePhoneNumber({ e164: claim.e164, countryCode, kind, label: `LobbyStack ${businessId}` });
+          providerPhoneId = result.providerPhoneId; smsUrl = result.smsUrl; purchased = true;
         }
-        await addNumberToSipTrunk({ trunkSid: sipTrunkSid, providerPhoneId });
-        const phoneNumberId = await completeNumberProvisioning(dependencies.domain, { businessId, claimId, e164: claim.e164, providerPhoneId, voiceUrl: `sip-trunk:${sipTrunkSid}`, smsUrl, ...(monthlyCostCents !== undefined ? { monthlyCostCents } : {}) });
+        // Calls reach GPT-Live only through the carrier's SIP path, so a number that can't join it is released.
+        const { target } = await routing.routeNumber({ providerPhoneId, mode: "receptionist" });
+        const phoneNumberId = await completeNumberProvisioning(dependencies.domain, { businessId, claimId, carrier, e164: claim.e164, providerPhoneId, voiceUrl: target, ...(smsUrl ? { smsUrl } : {}), ...(monthlyCostCents !== undefined ? { monthlyCostCents } : {}) });
         return { status: "completed", entityId: phoneNumberId };
       } catch (error) {
-        if (purchased && providerPhoneId && dependencies.twilio.releasePhoneNumber) await dependencies.twilio.releasePhoneNumber({ providerPhoneId }).catch(() => undefined);
-        const { getTwilioProviderErrorCode } = await import("@lobbystack/providers/twilio/twilioProvider");
-        await failNumberProvisioning(dependencies.domain, { businessId, claimId, unavailable: getTwilioProviderErrorCode(error) === 21422 });
+        if (purchased && providerPhoneId && inventory) await inventory.releasePhoneNumber({ providerPhoneId }).catch(() => undefined);
+        await failNumberProvisioning(dependencies.domain, { businessId, claimId, unavailable: inventory?.isNumberUnavailableError(error) ?? false });
         throw error;
       }
     }
@@ -972,14 +966,15 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         const rows = await tx.update(phoneNumbers)
           .set({ status: "reclaiming", updatedAt: new Date() })
           .where(and(eq(phoneNumbers.id, phoneNumberId), eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), lte(phoneNumbers.reclaimScheduledAt, new Date()), ...(sharedSender ? [ne(phoneNumbers.e164, sharedSender)] : [])))
-          .returning({ id: phoneNumbers.id, providerPhoneId: phoneNumbers.providerPhoneId });
+          .returning({ id: phoneNumbers.id, providerPhoneId: phoneNumbers.providerPhoneId, carrier: phoneNumbers.carrier });
         return rows[0] ?? null;
       });
       if (!claimed) return { status: "skipped", entityId: phoneNumberId };
       try {
         if (claimed.providerPhoneId) {
-          if (!dependencies.twilio?.releasePhoneNumber) throw new Error("Twilio phone-number release is not configured.");
-          await dependencies.twilio.releasePhoneNumber({ providerPhoneId: claimed.providerPhoneId });
+          const inventory = dependencies.telephony?.forNumber(isCarrierId(claimed.carrier) ? claimed.carrier : null)?.inventory;
+          if (!inventory) throw new Error(`${claimed.carrier} phone-number release is not configured.`);
+          await inventory.releasePhoneNumber({ providerPhoneId: claimed.providerPhoneId });
         }
         await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
           await tx.update(phoneNumbers).set({ status: "reclaimed", voiceEnabled: false, smsEnabled: false, reclaimScheduledAt: null, updatedAt: new Date() }).where(and(eq(phoneNumbers.id, claimed.id), eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "reclaiming")));
@@ -999,9 +994,10 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       if (!providerPhoneId) return { status: "skipped", entityId: "" };
       // Every hosted business texts from the shared sender, so it's never released.
       if (isSharedSmsSender(e164)) return { status: "skipped", entityId: providerPhoneId };
-      if (!dependencies.twilio?.releasePhoneNumber) throw new Error("Twilio phone-number release is not configured.");
+      const inventory = dependencies.telephony?.forNumber(jobCarrier(job))?.inventory;
+      if (!inventory) throw new Error(`${jobCarrier(job)} phone-number release is not configured.`);
       try {
-        await dependencies.twilio.releasePhoneNumber({ providerPhoneId });
+        await inventory.releasePhoneNumber({ providerPhoneId });
       } catch (error) {
         // A number the provider no longer has is released already, such as by a reclaim that was under way.
         if ((error as { status?: unknown } | null)?.status !== 404) throw error;
@@ -1012,16 +1008,15 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
     case "phoneNumber.route": {
       const businessId = businessIdOrThrow(job);
       const phoneNumberId = String(job.payload.phoneNumberId ?? "");
-      if (!phoneNumberId || !dependencies.twilio?.routeNumber) return { status: "skipped", entityId: phoneNumberId };
-      const trunkSid = process.env.TWILIO_SIP_TRUNK_SID?.trim();
-      if (!trunkSid) throw new Error("TWILIO_SIP_TRUNK_SID is required to route a phone number. See docs/voice/runtime.md.");
+      if (!phoneNumberId || !dependencies.telephony) return { status: "skipped", entityId: phoneNumberId };
       // The trial decides where calls go now, whatever this job asked for, so jobs that run out of order agree.
       const desired = await desiredNumberRouting(dependencies.domain, { businessId, phoneNumberId });
       if (!desired) return { status: "skipped", entityId: phoneNumberId };
-      const fallbackUrl = `${(process.env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "")}/api/webhooks/twilio/voice`;
-      await dependencies.twilio.routeNumber({ providerPhoneId: desired.providerPhoneId, trunkSid, mode: desired.mode, fallbackUrl });
+      const routing = dependencies.telephony.forNumber(desired.carrier)?.routing;
+      if (!routing) throw new Error(`${desired.carrier} can't route numbers on this deployment. Check its credentials.`);
+      const { target } = await routing.routeNumber({ providerPhoneId: desired.providerPhoneId, mode: desired.mode });
       await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
-        await tx.update(phoneNumbers).set({ voiceWebhookTargetUrl: desired.mode === "receptionist" ? `sip-trunk:${trunkSid}` : fallbackUrl, voiceWebhookStatus: "synced", voiceWebhookLastSyncedAt: new Date(), updatedAt: new Date() }).where(and(eq(phoneNumbers.id, phoneNumberId), eq(phoneNumbers.businessId, businessId)));
+        await tx.update(phoneNumbers).set({ voiceWebhookTargetUrl: target, voiceWebhookStatus: "synced", voiceWebhookLastSyncedAt: new Date(), updatedAt: new Date() }).where(and(eq(phoneNumbers.id, phoneNumberId), eq(phoneNumbers.businessId, businessId)));
       });
       return { status: "completed", entityId: `${phoneNumberId}:${desired.mode}` };
     }
@@ -1159,6 +1154,11 @@ async function updateWebsiteIngestion(db: Database, input: { businessId: string;
 
 const terminalSmsStatuses = new Set(["sent", "delivered", "undelivered", "failed", "canceled"]);
 const terminalCallStatuses = new Set(["busy", "canceled", "completed", "failed", "no-answer"]);
+
+/** The carrier a job names, or Twilio for a job queued before jobs named one. */
+function jobCarrier(job: JobEnvelope): CarrierId {
+  return isCarrierId(job.payload.carrier) ? job.payload.carrier : "twilio";
+}
 
 function isTerminalSmsStatus(status: string): boolean {
   return terminalSmsStatuses.has(status.toLowerCase());

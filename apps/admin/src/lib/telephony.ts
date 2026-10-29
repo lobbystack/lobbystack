@@ -5,34 +5,33 @@ import { createHmac } from "node:crypto";
 import { normalizeIP } from "@better-auth/core/utils/ip";
 
 import type { OnboardingPhoneVerifyProvider } from "@lobbystack/domain";
-import { TwilioProvider } from "@lobbystack/providers";
+import { numberCarriersConfigured } from "@lobbystack/providers/telephony/config";
+import { createTelephony, type Telephony } from "@lobbystack/providers/telephony/registry";
 
 import { jsonError } from "./api-helpers";
 import { trustedClientIp } from "./trusted-client-ip";
 
-let provider: TwilioProvider | undefined;
+let telephony: Telephony | undefined;
 
-export function getTwilioProvider(): TwilioProvider {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  if (!accountSid || !authToken) throw new Error("Twilio is not configured: set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN.");
-  provider ??= new TwilioProvider({ accountSid, authToken });
-  return provider;
+/** Every carrier with credentials, routed by the TELEPHONY_* settings. See docs/voice/runtime.md. */
+export function getTelephony(): Telephony {
+  telephony ??= createTelephony(process.env);
+  return telephony;
 }
 
 /**
- * Twilio for a dashboard route that searches numbers. A deployment without
- * Twilio answers 503 phone_numbers_unavailable, which the number picker
+ * Number search for a dashboard route. A deployment where no carrier can
+ * sell numbers answers 503 phone_numbers_unavailable, which the number picker
  * explains, instead of an alertable 500.
  */
-export function requireTwilioProvider(): TwilioProvider {
-  if (!twilioConfigured()) throw jsonError("Phone numbers aren't set up on this dashboard.", 503, "phone_numbers_unavailable");
-  return getTwilioProvider();
+export function requireNumberSearch(): Telephony["numbers"] {
+  if (!numbersConfigured()) throw jsonError("Phone numbers aren't set up on this dashboard.", 503, "phone_numbers_unavailable");
+  return getTelephony().numbers;
 }
 
-/** Whether the deployment has a Twilio account to search and buy numbers with. Checked before a search counts against the rate limit. */
-export function twilioConfigured(): boolean {
-  return Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN);
+/** Whether a carrier the deployment buys numbers from has credentials. Checked before a search counts against the rate limit. */
+export function numbersConfigured(): boolean {
+  return numberCarriersConfigured(process.env);
 }
 
 export function getNumberClaimTokenSecret(): string {
@@ -41,15 +40,15 @@ export function getNumberClaimTokenSecret(): string {
   return value;
 }
 
-/** Twilio Verify and Lookup for the onboarding phone step. */
+/** Verify and Lookup for the onboarding phone step, through the carriers TELEPHONY_VERIFY and TELEPHONY_LOOKUP name. */
 export function getOnboardingPhoneVerifyProvider(): OnboardingPhoneVerifyProvider {
-  const serviceSid = process.env.TWILIO_VERIFY_SERVICE_SID?.trim();
-  if (!serviceSid) throw new Error("TWILIO_VERIFY_SERVICE_SID is required for the onboarding phone step.");
-  const twilio = getTwilioProvider();
+  const { verifier, lineTypes, routes } = getTelephony();
+  if (!verifier) throw new Error(routes.verify === "twilio" ? "TWILIO_VERIFY_SERVICE_SID is required for the onboarding phone step." : `${routes.verify} Verify isn't configured for the onboarding phone step. See docs/voice/runtime.md.`);
+  if (!lineTypes) throw new Error(`${routes.lookup} Lookup isn't configured for the onboarding phone step. See docs/voice/runtime.md.`);
   return {
-    lookupLineType: (phoneE164) => twilio.lookupLineType(phoneE164),
-    sendCode: async ({ to, locale }) => ({ sid: (await twilio.verifyPhone({ to, serviceSid, ...(locale ? { locale } : {}) })).verificationSid }),
-    checkCode: ({ to, code }) => twilio.checkPhoneVerification({ to, code, serviceSid }),
+    lookupLineType: (phoneE164) => lineTypes.lookupLineType(phoneE164),
+    sendCode: ({ to, locale }) => verifier.sendCode({ to, ...(locale ? { locale } : {}) }),
+    checkCode: ({ to, code }) => verifier.checkCode({ to, code }),
   };
 }
 

@@ -2,6 +2,8 @@ import { DateTime } from "luxon";
 import { and, desc, eq, gt, gte, inArray, isNull, lte, ne, sql } from "drizzle-orm";
 
 import { businesses, calls, enqueueOutbox, numberTrials, numberWaitlist, onboardingPhoneVerifications, phoneNumbers, receptionistProfiles, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { numberCountryReady } from "@lobbystack/providers/telephony/config";
+import { isCarrierId, type CarrierId, type NumberRoutingMode } from "@lobbystack/providers/telephony/types";
 import { isTransferPhone, normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
 
 import { hasMinimumRole, requireBusinessAdmin, requireBusinessMembership } from "../authz";
@@ -16,21 +18,16 @@ export type NumberCountry = "US" | "CA" | "PR" | "GB" | "AU" | "NZ";
 
 export const NUMBER_TRIAL_DAYS = 14;
 
+const NUMBER_COUNTRIES: NumberCountry[] = ["US", "CA", "PR", "GB", "AU", "NZ"];
+
 /**
  * Countries we sell numbers in. The US, Canada and Puerto Rico need no
- * registration; the others need the regulatory bundle Twilio approved for
- * LobbyStack (and, where the number needs one, its address). See docs/voice/runtime.md.
+ * registration; the others need what the country's carrier asks for, such as
+ * the regulatory bundle Twilio approved for LobbyStack and its address, or a
+ * Telnyx requirement group. See docs/voice/runtime.md.
  */
 export function numberCountries(env: NodeJS.ProcessEnv = process.env): NumberCountry[] {
-  const set = (name: string) => Boolean(env[name]?.trim());
-  return [
-    "US",
-    "CA",
-    "PR",
-    ...(set("TWILIO_GB_BUNDLE_SID") ? ["GB" as const] : []),
-    ...(set("TWILIO_AU_BUNDLE_SID") && set("TWILIO_AU_ADDRESS_SID") ? ["AU" as const] : []),
-    ...(set("TWILIO_NZ_BUNDLE_SID") && set("TWILIO_NZ_ADDRESS_SID") ? ["NZ" as const] : []),
-  ];
+  return NUMBER_COUNTRIES.filter((country) => numberCountryReady(country, env));
 }
 
 /** Countries with a free trial number. An Australian number costs $8.25 a month, so Australia is paid only. */
@@ -231,30 +228,31 @@ export async function loadNumberReleaseEmail(context: DomainContext, input: { bu
   });
 }
 
-export type NumberRoutingMode = "receptionist" | "fallback";
+export type { NumberRoutingMode };
 
 /**
  * Where a number's calls should go now, read from the trial. Routing jobs
  * apply this instead of their own payload, so two jobs that run out of order
  * still leave the number where it belongs. Null when the number is gone.
  */
-export async function desiredNumberRouting(context: DomainContext, input: { businessId: string; phoneNumberId: string }): Promise<{ mode: NumberRoutingMode; providerPhoneId: string } | null> {
+export async function desiredNumberRouting(context: DomainContext, input: { businessId: string; phoneNumberId: string }): Promise<{ mode: NumberRoutingMode; providerPhoneId: string; carrier: CarrierId } | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const row = (await tx.select({ providerPhoneId: phoneNumbers.providerPhoneId, trialStatus: numberTrials.status, minutesExhaustedAt: numberTrials.minutesExhaustedAt })
+    const row = (await tx.select({ providerPhoneId: phoneNumbers.providerPhoneId, carrier: phoneNumbers.carrier, trialStatus: numberTrials.status, minutesExhaustedAt: numberTrials.minutesExhaustedAt })
       .from(phoneNumbers)
       .leftJoin(numberTrials, and(eq(numberTrials.phoneNumberId, phoneNumbers.id), inArray(numberTrials.status, ["active", "ended"])))
       .where(and(eq(phoneNumbers.id, input.phoneNumberId), eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active")))
       .limit(1))[0];
     if (!row?.providerPhoneId) return null;
     const off = row.trialStatus === "ended" || (row.trialStatus === "active" && Boolean(row.minutesExhaustedAt));
-    return { mode: off ? "fallback" : "receptionist", providerPhoneId: row.providerPhoneId };
+    if (!isCarrierId(row.carrier)) throw new Error(`Phone number ${input.phoneNumberId} names an unknown carrier, ${row.carrier}.`);
+    return { mode: off ? "fallback" : "receptionist", providerPhoneId: row.providerPhoneId, carrier: row.carrier };
   });
 }
 
 /**
- * Moves a number on or off the SIP trunk. Off the trunk, Twilio asks
- * /api/webhooks/twilio/voice what to do, which forwards the call to the owner
- * or rejects it.
+ * Moves a number on or off its carrier's SIP path to the receptionist. Off
+ * it, the carrier asks our voice webhook (/api/webhooks/<carrier>/voice)
+ * what to do, which forwards the call to the owner or rejects it.
  */
 export async function enqueueNumberRouting(tx: DatabaseTransaction, input: { businessId: string; phoneNumberId: string; mode: NumberRoutingMode }): Promise<void> {
   await enqueueOutbox(tx, {

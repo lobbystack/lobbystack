@@ -6,7 +6,7 @@ vi.mock("../error-reporting", () => ({ reportServerError: vi.fn(async () => unde
 // CI runs these tests with a real Redis, where every file's requests share one key's per-minute budget; the limiter has its own tests.
 vi.mock("../public-api/rate-limit", async (importOriginal) => ({ ...(await importOriginal<typeof import("../public-api/rate-limit")>()), enforceApiRateLimit: vi.fn(async () => ({ allowed: true, limit: 120, remaining: 119, resetAt: Math.ceil(Date.now() / 60_000) * 60 })) }));
 // The phone number routes' server-only modules, which these tests never reach.
-vi.mock("../twilio-provider", () => ({ getTwilioProvider: vi.fn(), getNumberClaimTokenSecret: vi.fn(), requestIpHash: vi.fn() }));
+vi.mock("../telephony", () => ({ getTelephony: vi.fn(), getNumberClaimTokenSecret: vi.fn(), requestIpHash: vi.fn() }));
 vi.mock("../phone-number-search-limit", () => ({ checkPhoneNumberSearchLimit: vi.fn() }));
 
 const idempotency = vi.hoisted(() => ({ store: new Map<string, { hash: string; response: { status: number; body: unknown } }>() }));

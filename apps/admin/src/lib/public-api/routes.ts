@@ -152,7 +152,7 @@ import { googleCalendarProvider } from "../google-calendar-provider";
 import { checkPhoneNumberSearchLimit } from "../phone-number-search-limit";
 import { getStorageProvider } from "../storage";
 import { withStripeConnect } from "../stripe-connect";
-import { getNumberClaimTokenSecret, getTwilioProvider, twilioConfigured } from "../twilio-provider";
+import { getNumberClaimTokenSecret, getTelephony, numbersConfigured } from "../telephony";
 import { hasVerifiedPhone } from "../verified-phone";
 import { data, handleApiRequest, pageQuery, queryParam, readApiBody, uuidParam, type ApiCredential, type RestApiCaller } from "./http";
 import { partnerV1 } from "./partner-routes";
@@ -402,11 +402,11 @@ export const v1 = {
   }),
   listPhoneNumbers: (request: Request) => handleApiRequest(request, "listPhoneNumbers", async ({ context, caller }) => ({ body: { data: await listPhoneNumbersForApi(context, caller), next_cursor: null, has_more: false } })),
   searchPhoneNumbers: (request: Request) => handleApiRequest(request, "searchPhoneNumbers", async ({ context, caller }) => {
-    // A deployment without Twilio answers 503 phone_numbers_unavailable, before the search counts against the limit.
-    if (!twilioConfigured()) throw new PublicApiError(503, "phone_numbers_unavailable", "Phone numbers aren't set up on this deployment.");
+    // A deployment with no carrier for numbers answers 503 phone_numbers_unavailable, before the search counts against the limit.
+    if (!numbersConfigured()) throw new PublicApiError(503, "phone_numbers_unavailable", "Phone numbers aren't set up on this deployment.");
     const body = await readApiBody(request, apiPhoneNumberSearchSchema);
     const userId = await resolveActingUserId(context, caller);
-    return { body: { data: await searchPhoneNumbersForApi(context, caller, body, { userId, provider: getTwilioProvider(), claimTokenSecret: getNumberClaimTokenSecret(), beforeSearch: () => requireNumberSearchAllowed(userId) }), next_cursor: null, has_more: false } };
+    return { body: { data: await searchPhoneNumbersForApi(context, caller, body, { userId, provider: getTelephony().numbers, claimTokenSecret: getNumberClaimTokenSecret(), beforeSearch: () => requireNumberSearchAllowed(userId) }), next_cursor: null, has_more: false } };
   }),
   createPhoneNumberClaim: (request: Request) => handleApiRequest(request, "createPhoneNumberClaim", async ({ context, caller }) => {
     const body = await readApiBody(request, apiPhoneNumberClaimCreateSchema);

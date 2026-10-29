@@ -108,7 +108,7 @@ vi.mock("../error-reporting", () => ({ reportServerError: vi.fn() }));
 vi.mock("../storage", () => ({ getStorageProvider: () => storageProvider }));
 // CI runs these tests with a real Redis, where every file's requests share one key's per-minute budget; the limiter has its own tests.
 vi.mock("./rate-limit", async (importOriginal) => ({ ...(await importOriginal<typeof import("./rate-limit")>()), enforceApiRateLimit: vi.fn(async () => ({ allowed: true, limit: 120, remaining: 119, resetAt: Math.ceil(Date.now() / 60_000) * 60 })) }));
-vi.mock("../twilio-provider", () => ({ getTwilioProvider: () => numbers.provider, getNumberClaimTokenSecret: () => "number-claim-secret", twilioConfigured: () => numbers.twilio }));
+vi.mock("../telephony", () => ({ getTelephony: () => ({ numbers: numbers.provider }), getNumberClaimTokenSecret: () => "number-claim-secret", numbersConfigured: () => numbers.twilio }));
 vi.mock("../phone-number-search-limit", () => ({ checkPhoneNumberSearchLimit: numbers.searchLimit }));
 const phones = vi.hoisted(() => ({ verified: vi.fn(async (_userId: string) => true) }));
 vi.mock("../verified-phone", () => ({ hasVerifiedPhone: phones.verified }));

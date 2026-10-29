@@ -10,6 +10,9 @@ export default defineConfig({
     alias: {
       "@lobbystack/contracts": `${root}/packages/contracts/src/index.ts`,
       "@lobbystack/db": `${root}/packages/db/src/index.ts`,
+      "@lobbystack/providers/telephony": `${root}/packages/providers/src/telephony`,
+      "@lobbystack/providers/telnyx": `${root}/packages/providers/src/telnyx`,
+      "@lobbystack/providers/twilio": `${root}/packages/providers/src/twilio`,
       "@lobbystack/domain": `${root}/packages/domain/src/index.ts`,
       "@lobbystack/providers/crawling/urlSafety": `${root}/packages/providers/src/crawling/urlSafety.ts`,
       "@lobbystack/providers/crypto/secretBox": `${root}/packages/providers/src/crypto/secretBox.ts`,
