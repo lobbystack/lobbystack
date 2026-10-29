@@ -59,29 +59,21 @@ export const GET = operatorRoute(async ({ userId, businessId, domain, transactio
     listCalendarStaff(domain, { userId, businessId }),
   ]);
   const googleConnection = calendar.find((connection) => connection.provider === "google");
-  let calendarOptions: CalendarOption[] = [];
-  let discoveryError: string | null = null;
-  if (googleConnection) {
-    try {
-      calendarOptions = await calendarDiscovery(domain, userId, businessId, googleConnection.id, googleConnection.provider);
-    } catch (error) {
-      discoveryError = error instanceof Error ? error.message : "Calendar discovery failed.";
-    }
-  }
   const calcomConnection = calendar.find((connection) => connection.provider === "calcom");
-  const calcom = { configured: calendarProviderConfigured("calcom"), options: [] as CalendarOption[], discoveryError: null as string | null, warnings: [] as CalcomEventTypeWarning[] };
-  if (calcomConnection) {
-    try {
-      Object.assign(calcom, await calcomDiscovery(domain, userId, businessId, calcomConnection.id, () => transaction(async (tx) => {
-        const [business] = await tx.select({ timezone: businesses.timezone }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
-        const durations = await tx.select({ minutes: services.durationMinutes }).from(services).where(and(eq(services.businessId, businessId), eq(services.active, true)));
-        const hours = await tx.select({ dayOfWeek: businessHours.dayOfWeek, openMinutes: businessHours.openMinutes, closeMinutes: businessHours.closeMinutes }).from(businessHours).where(and(eq(businessHours.businessId, businessId), isNull(businessHours.staffId)));
-        return { serviceDurations: durations.map((row) => row.minutes), hours, timezone: business?.timezone ?? "UTC" };
-      })));
-    } catch (error) {
-      calcom.discoveryError = error instanceof Error ? error.message : "Calendar discovery failed.";
-    }
-  }
+  const failure = (error: unknown) => error instanceof Error ? error.message : "Calendar discovery failed.";
+  // Each provider answers on its own, so neither waits on the other.
+  const [google, calcomResult] = await Promise.all([
+    googleConnection ? calendarDiscovery(domain, userId, businessId, googleConnection.id, googleConnection.provider).then((options) => ({ options, error: null }), (error: unknown) => ({ options: [] as CalendarOption[], error: failure(error) })) : { options: [] as CalendarOption[], error: null },
+    calcomConnection ? calcomDiscovery(domain, userId, businessId, calcomConnection.id, () => transaction(async (tx) => {
+      const [business] = await tx.select({ timezone: businesses.timezone }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
+      const durations = await tx.select({ minutes: services.durationMinutes }).from(services).where(and(eq(services.businessId, businessId), eq(services.active, true)));
+      const hours = await tx.select({ dayOfWeek: businessHours.dayOfWeek, openMinutes: businessHours.openMinutes, closeMinutes: businessHours.closeMinutes }).from(businessHours).where(and(eq(businessHours.businessId, businessId), isNull(businessHours.staffId)));
+      return { serviceDurations: durations.map((row) => row.minutes), hours, timezone: business?.timezone ?? "UTC" };
+    })).then((found) => ({ ...found, discoveryError: null }), (error: unknown) => ({ options: [] as CalendarOption[], warnings: [] as CalcomEventTypeWarning[], discoveryError: failure(error) })) : { options: [] as CalendarOption[], warnings: [] as CalcomEventTypeWarning[], discoveryError: null },
+  ]);
+  const calendarOptions = google.options;
+  const discoveryError = google.error;
+  const calcom = { configured: calendarProviderConfigured("calcom"), ...calcomResult };
   return NextResponse.json({
     calendarConnections: calendar.map((connection) => ({
       ...connection,
