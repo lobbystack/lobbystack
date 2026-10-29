@@ -64,7 +64,7 @@ export async function POST(request: Request) {
   if (!candidates.length) {
     // No deployment can route a call without a dialled number.
     // The header names show which header a new carrier uses, without logging the caller's number.
-    console.warn("[live] incoming call without a dialled number", JSON.stringify({ sessionId, routing, headerNames: event.data.sip_headers.map((item) => item.name) }));
+    console.warn("[live] incoming call without a dialled number", JSON.stringify({ sessionId, routing, headerNames: event.data.sip_headers.map((item) => item.name), ...(telnyxConnection ? { telnyxConnection } : {}) }));
     await client.live.sessions.reject(sessionId, { status_code: 404 }).catch(() => undefined);
     return new NextResponse(null, { status: 200 });
   }
