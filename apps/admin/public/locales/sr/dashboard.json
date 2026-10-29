@@ -143,7 +143,10 @@
       },
       "appointment": "Termin: {{appointment}}",
       "noAppointment": "Nijedan predstojeći termin ne odgovara ovom zahtevu. Proverite stranicu Termini.",
-      "alreadyCancelled": "Ovaj termin je već otkazan."
+      "alreadyCancelled": "Ovaj termin je već otkazan.",
+      "cancellationRequest": "Zahtev za otkazivanje",
+      "requested": "Traženo: {{details}}",
+      "notes": "Napomene: {{notes}}"
     },
     "upcoming": {
       "title": "Predstojeće",

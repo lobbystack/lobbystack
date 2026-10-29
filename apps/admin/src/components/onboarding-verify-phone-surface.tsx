@@ -10,10 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { PhoneInput } from "@/components/ui/phone-input";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { useTelemetry } from "@/components/product-analytics";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
+import { PhoneCountrySelect } from "@/components/phone-country-select";
 import { formatPhoneNumberDisplay, getDefaultPhoneCountry, getLocalePhoneCountry, getPhoneCountryOptions } from "@/lib/phone";
 import { requestJson } from "@/lib/request-json";
 import { useStepNavigation } from "@/lib/use-step-navigation";
@@ -137,10 +137,7 @@ export function OnboardingVerifyPhoneSurface() {
         <Field>
           <FieldLabel htmlFor="onboarding-phone">{t("verifyPhone.fields.mobileNumber")}</FieldLabel>
           <div className="flex min-w-0">
-            <Select onValueChange={(value) => { if (value && value !== country) { setCountry(value as Country); setPhone(""); setJoined(false); setError(null); } }} value={country}>
-              <SelectTrigger aria-label={t("verifyPhone.fields.country")} className="h-11 w-24 shrink-0 rounded-l-4xl rounded-r-none px-4 font-medium text-muted-foreground data-[size=default]:h-11"><span>{selected?.callingCode ?? ""}</span></SelectTrigger>
-              <SelectContent className="min-w-72"><SelectGroup>{options.map((option) => <SelectItem key={option.code} value={option.code}><span>{option.label}</span><span className="text-muted-foreground">{option.callingCode}</span></SelectItem>)}</SelectGroup></SelectContent>
-            </Select>
+            <PhoneCountrySelect ariaLabel={t("verifyPhone.fields.country")} className="h-11 w-24 rounded-l-4xl rounded-r-none px-4 font-medium text-muted-foreground" countries={options} onChange={(next) => { setCountry(next as Country); setPhone(""); setJoined(false); setError(null); }} value={country} />
             <PhoneInput autoFocus className="h-11 rounded-l-none border-l-0" containerClassName="min-w-0 flex-1" country={country} disabled={!sellsNumbers} id="onboarding-phone" limitNationalDigits onChange={(value) => setPhone(value ?? "")} value={phone} />
           </div>
           {sellsNumbers ? <FieldDescription>{t("verifyPhone.hint")}</FieldDescription> : null}

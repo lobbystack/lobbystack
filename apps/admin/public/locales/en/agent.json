@@ -323,6 +323,11 @@
       "placeholder": "Select a default language",
       "hint": "Choose the fallback language your receptionist should use when a caller's preference is unknown."
     },
+    "teamLocale": {
+      "label": "Team language",
+      "hint": "The language your receptionist writes messages, notes and requests in for your team. Callers are still answered in their own language.",
+      "sameAsCaller": "Same as customer language"
+    },
     "voice": {
       "label": "Voice",
       "change": "Change voice",

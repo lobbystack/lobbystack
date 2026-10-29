@@ -1,3 +1,5 @@
+import { intlLocale } from "@/lib/locale";
+
 export function parseFollowUpTaskBody(body: string): {
   callbackPhone?: string;
   urgency?: string;
@@ -39,6 +41,41 @@ export function parseFollowUpTaskBody(body: string): {
     ...(callbackWindow ? { callbackWindow } : {}),
     message: messageLines.join(" "),
   };
+}
+
+/** Splits a cancellation request's stored English body into the requested service and time, and the caller's notes. */
+export function parseCancellationBody(body: string): { requested?: string; notes?: string } {
+  let requested: string | undefined;
+  let notes: string | undefined;
+  for (const line of body.split("\n").map((entry) => entry.trim())) {
+    if (line.startsWith("Cancellation request:")) requested = line.replace("Cancellation request:", "").trim();
+    else if (line.startsWith("Notes:")) notes = line.replace("Notes:", "").trim();
+  }
+  // The action writes "appointment" when the caller named no service or time.
+  return { ...(requested && requested !== "appointment" ? { requested } : {}), ...(notes ? { notes } : {}) };
+}
+
+/** What the caller asked to cancel, as the domain saves it. */
+export type RequestedCancellation = { service?: string; startsAt?: string; notes?: string };
+
+/** A requested date or date and time is the business's wall-clock time, so it is shown as written, in the viewer's language. */
+export function formatRequestedStart(value: string, locale: string): string {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
+  if (!match) return value;
+  const [, year, month, day, hour, minute] = match;
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour ?? 0), Number(minute ?? 0)));
+  return new Intl.DateTimeFormat(intlLocale(locale), { weekday: "long", month: "long", day: "numeric", ...(hour ? { hour: "numeric", minute: "2-digit" } : {}), timeZone: "UTC" }).format(date);
+}
+
+/**
+ * The service and time a cancellation request asked for, and the caller's notes. Requests saved with details read
+ * them from there and show in `locale`; older ones fall back to the English body.
+ */
+export function cancellationRequestDetails(item: { body: string; requested?: RequestedCancellation | null | undefined }, locale: string): { requested?: string; notes?: string } {
+  const { requested } = item;
+  if (!requested) return parseCancellationBody(item.body);
+  const details = [requested.service, requested.startsAt ? formatRequestedStart(requested.startsAt, locale) : undefined].filter(Boolean).join(", ");
+  return { ...(details ? { requested: details } : {}), ...(requested.notes ? { notes: requested.notes } : {}) };
 }
 
 export function normalizeFollowUpTitleText(value: string): string {

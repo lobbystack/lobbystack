@@ -279,6 +279,8 @@ export type BusinessContextSnapshot = {
   legalName?: string;
   timezone: string;
   defaultLocale: RuntimeLocale;
+  /** The language the team reads what the receptionist writes for it. Absent follows `defaultLocale`. */
+  teamLocale?: RuntimeLocale;
   businessType: BusinessType;
   /** Optional analytics consent captured at call start; absence is not consent. */
   telemetryEnabled?: boolean;

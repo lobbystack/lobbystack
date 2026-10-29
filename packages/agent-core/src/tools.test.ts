@@ -1,3 +1,4 @@
+import { asSchema } from "ai";
 import { demoSnapshot, type BusinessContextSnapshot, type KnowledgeSnippet } from "@lobbystack/shared";
 import { describe, expect, it, vi } from "vitest";
 
@@ -116,6 +117,21 @@ describe("requestAppointmentCancellation", () => {
       businessId: demoSnapshot.businessId, channel: "web_voice", timezone: "America/Toronto", callerName: "Milan",
       appointmentStartsAt: "2026-10-14T15:00", serviceName: "General Checkup", callbackPhone: "+14165550100", callId: "call_1", conversationId: "conversation_1",
     });
+  });
+
+  // The team reads these notes in the business's language, not the caller's.
+  it("asks for the notes in the business's language", async () => {
+    const schema = async (locale: "en" | "sr") => {
+      const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "web_voice", snapshot: { ...demoSnapshot, defaultLocale: locale } });
+      return JSON.stringify(await asSchema(tools.requestAppointmentCancellation!.inputSchema).jsonSchema);
+    };
+    expect(await schema("sr")).toContain("Write it in Serbian (Latin script), even when the caller spoke another language.");
+    expect(await schema("en")).toContain("Write it in English, even when the caller spoke another language.");
+  });
+
+  it("prefers the team language over the customer language for those notes", async () => {
+    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "web_voice", snapshot: { ...demoSnapshot, defaultLocale: "en", teamLocale: "sr" } });
+    expect(JSON.stringify(await asSchema(tools.requestAppointmentCancellation!.inputSchema).jsonSchema)).toContain("Write it in Serbian (Latin script)");
   });
 
   it("uses the trusted caller number and asks for a name before saving", async () => {

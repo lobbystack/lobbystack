@@ -24,6 +24,7 @@ import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useActiveBusiness } from "@/hooks/use-active-business";
+import { cancellationRequestDetails, parseFollowUpTaskBody, type RequestedCancellation } from "@/lib/follow-up-task";
 import { formatDuration } from "@/lib/duration";
 import { requestJson } from "@/lib/request-json";
 import { getChannelLabel, getContactDisplayName, hasDisplayablePhone, normalizeChannel } from "@/lib/contact-display";
@@ -52,7 +53,7 @@ type Detail = {
   transcript: Array<{ id: string; sequence: number; speaker: string; text: string; confidence: number | null; final: boolean; createdAt: string }>;
   recording: { state: "available" | "pending" | "expired" | "missing"; objectId?: string; contentType?: string };
   appointments: Array<{ id: string; startsAt: string; endsAt: string; timezone: string; status: string; serviceName: string; staffName: string }>;
-  followUpTasks: Array<{ id: string; title: string; body: string; status: string; request?: string | null; createdAt: string; updatedAt: string }>;
+  followUpTasks: Array<{ id: string; title: string; body: string; status: string; request?: string | null; requested?: RequestedCancellation | null; createdAt: string; updatedAt: string }>;
 };
 
 function formatDate(value: string, locale: string): string {
@@ -205,6 +206,31 @@ function RecordingTab({ detail, src }: { detail: Detail; src: string | null }) {
     return <div className="py-4"><Card className="ph-no-capture" size="sm"><CallRecordingPlayer className="px-4 py-0" downloadLabel={t("actions.download")} initialDurationSeconds={detail.call.providerDurationSeconds ?? 0} pauseLabel={t("actions.pause")} playLabel={t("actions.play")} src={src} /></Card></div>;
 }
 
+// The stored title and body are English text the agent tool wrote, so the labels are rebuilt here in the dashboard language.
+const URGENCY_VALUES = ["low", "normal", "urgent"];
+function FollowUpDetails({ followUp }: { followUp: Detail["followUpTasks"][number] }) {
+  const { i18n, t } = useTranslation("calls");
+  const details = parseFollowUpTaskBody(followUp.body);
+  const caller = followUp.title.match(/^Voice message from (.+)$/i)?.[1]?.trim();
+  const title = caller ? t("followUp.fromCaller", { name: caller.toLowerCase() === "unknown caller" ? t("followUp.unknownCaller") : caller }) : followUp.title;
+  const urgency = details.urgency && URGENCY_VALUES.includes(details.urgency.toLowerCase()) ? t(`followUp.urgency.${details.urgency.toLowerCase()}`) : details.urgency;
+  const callbackWindow = details.callbackWindow?.toLowerCase() === "not specified" ? t("followUp.notSpecified") : details.callbackWindow;
+  if (followUp.request) {
+    const request = cancellationRequestDetails(followUp, i18n.language);
+    return <>
+      <p className="type-item-title">{caller ? t("followUp.cancellationFromCaller", { name: caller.toLowerCase() === "unknown caller" ? t("followUp.unknownCaller") : caller }) : t("followUp.cancellationRequest")}</p>
+      {request.requested ? <p className="type-body-muted">{t("followUp.requested", { details: request.requested })}</p> : null}
+      {request.notes ? <p className="type-body-muted">{t("followUp.notes", { notes: request.notes })}</p> : null}
+    </>;
+  }
+  const fields = [[t("followUp.fields.callback"), details.callbackPhone], [t("followUp.fields.urgency"), urgency], [t("followUp.fields.callbackWindow"), callbackWindow]].filter((field): field is [string, string] => Boolean(field[1]));
+  return <>
+    <p className="type-item-title">{title}</p>
+    {fields.length ? <div className="flex flex-col gap-1">{fields.map(([label, value]) => <p className="type-body-muted" key={label}>{t("followUp.field", { label, value })}</p>)}</div> : null}
+    {details.message ? <p className="type-body-muted">{details.message}</p> : null}
+  </>;
+}
+
 function DetailsTab({ detail, marking, onCompleteFollowUp }: { detail: Detail; marking: string | undefined; onCompleteFollowUp: (inboxItemId: string) => void }) {
   const { t } = useTranslation("calls");
   // Grouped like Home: the call's messages are one follow-up, the newest
@@ -214,7 +240,7 @@ function DetailsTab({ detail, marking, onCompleteFollowUp }: { detail: Detail; m
   return (
     <div className="py-4">
       <Surface className="flex flex-col">
-        <DetailSection title={t("detail.details.followUpTitle", { count: Math.max(1, followUps.length) })}>{followUps.length ? <div className="flex flex-col gap-6">{followUps.map((followUp) => <div className="flex flex-col gap-3" key={followUp.id}><p className="type-item-title">{followUp.title}</p><p className="type-body-muted whitespace-pre-line">{followUp.body}</p><div className="flex items-center gap-2 pt-1"><Button disabled={marking !== undefined} onClick={() => onCompleteFollowUp(followUp.id)} size="sm" variant="outline">{marking === followUp.id ? t("detail.details.markingDone") : t("detail.details.markDone")}</Button></div></div>)}</div> : <p className="type-body-muted">{t("detail.details.noFollowUp")}</p>}</DetailSection>
+        <DetailSection title={t("detail.details.followUpTitle", { count: Math.max(1, followUps.length) })}>{followUps.length ? <div className="flex flex-col gap-6">{followUps.map((followUp) => <div className="flex flex-col gap-3" key={followUp.id}><FollowUpDetails followUp={followUp} /><div className="flex items-center gap-2 pt-1"><Button disabled={marking !== undefined} onClick={() => onCompleteFollowUp(followUp.id)} size="sm" variant={followUp.request ? "success" : "outline"}>{marking === followUp.id ? t("detail.details.markingDone") : t("detail.details.markDone")}</Button></div></div>)}</div> : <p className="type-body-muted">{t("detail.details.noFollowUp")}</p>}</DetailSection>
         <DetailSection className="border-t border-border" title={t("detail.details.callInfoTitle")}>
           <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-6 gap-y-3">
             <dt className="type-meta">{t("detail.details.twilioCallSid")}</dt><dd className="type-technical-value truncate">{detail.call.providerCallId}</dd>

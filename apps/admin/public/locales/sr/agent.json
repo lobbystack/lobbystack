@@ -323,6 +323,11 @@
       "placeholder": "Izaberite podrazumevani jezik",
       "hint": "Izaberite jezik koji recepcioner koristi kada ne znamo koji jezik pozivalac želi."
     },
+    "teamLocale": {
+      "label": "Jezik tima",
+      "hint": "Jezik na kom recepcioner piše poruke, napomene i zahteve za vaš tim. Pozivaoci i dalje dobijaju odgovor na svom jeziku.",
+      "sameAsCaller": "Isto kao jezik klijenata"
+    },
     "voice": {
       "label": "Glas",
       "change": "Promeni glas",

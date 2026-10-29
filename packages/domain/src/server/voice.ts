@@ -12,7 +12,7 @@ import { queueOperatorAlertInTransaction } from "./notifications";
 import { finalizeWebVoiceUsageInTransaction, normalizeWebCallMaxDurationMs, reserveWebVoiceUsageInTransaction } from "./billing";
 import { correctUsageInTransaction, enqueueUsageSyncInTransaction, reserveUsageInTransaction } from "./usage";
 import { recordUnitEconomicsEventInTransaction, type UnitEconomicsEventInput } from "./unitEconomics";
-import { visibleFollowUpBody, visibleFollowUpTitle } from "./followUpRetention";
+import { visibleFollowUpBody, visibleFollowUpMetadata, visibleFollowUpTitle } from "./followUpRetention";
 import { recordCallOutcomeInTransaction, resolveCallOutcome } from "./callOutcome";
 import { buildCallEvents } from "./callEvents";
 import { recordingListState, recordingState, type RecordingState } from "./recordingState";
@@ -552,7 +552,7 @@ export async function getCallDetail(
       () => row.contactId
         ? tx.select({ id: appointments.id, startsAt: appointments.startsAt, endsAt: appointments.endsAt, timezone: appointments.timezone, status: appointments.status, serviceName: services.name, staffName: staff.name }).from(appointments).innerJoin(services, eq(appointments.serviceId, services.id)).innerJoin(staff, eq(appointments.staffId, staff.id)).where(and(eq(appointments.businessId, input.businessId), eq(appointments.contactId, row.contactId))).orderBy(asc(appointments.startsAt))
         : Promise.resolve([]),
-      () => tx.select({ id: inboxItems.id, title: visibleFollowUpTitle, body: visibleFollowUpBody, status: inboxItems.status, request: followUpRequest, createdAt: inboxItems.createdAt, updatedAt: inboxItems.updatedAt })
+      () => tx.select({ id: inboxItems.id, title: visibleFollowUpTitle, body: visibleFollowUpBody, status: inboxItems.status, request: followUpRequest, requestedService, requestedStartsAt, requestedNotes, createdAt: inboxItems.createdAt, updatedAt: inboxItems.updatedAt })
         .from(inboxItems)
         .where(and(eq(inboxItems.businessId, input.businessId), eq(inboxItems.relatedCallId, input.callId), eq(inboxItems.kind, "voice_message")))
         .orderBy(desc(inboxItems.createdAt)),
@@ -585,14 +585,28 @@ export async function getCallDetail(
         ...(row.recordingRetentionUntil ? { retentionUntil: row.recordingRetentionUntil } : {}),
       },
       appointments: appointmentRows,
-      followUpTasks,
+      followUpTasks: followUpTasks.map(({ requestedService, requestedStartsAt, requestedNotes, ...task }) => ({ ...task, requested: requestedCancellation({ requestedService, requestedStartsAt, requestedNotes }) })),
     };
   });
 }
 
 /** Marks a follow-up as a caller's request to cancel, linked to the appointment when one matched. */
 export const CANCELLATION_REQUEST = "appointment_cancellation";
-export type FollowUpRequest = { request: typeof CANCELLATION_REQUEST; appointmentId?: string };
+/**
+ * `requestedService`, `requestedStartsAt` (a date, or a date and time, in the business's timezone) and `notes`
+ * are what the caller said, kept apart from the English body so the dashboard can show them in its own language.
+ */
+export type FollowUpRequest = { request: typeof CANCELLATION_REQUEST; appointmentId?: string; requestedService?: string; requestedStartsAt?: string; notes?: string };
+
+/** What a cancellation request asked for, from its metadata. Null on other follow-ups and on older requests that predate it. */
+export type RequestedCancellation = { service?: string; startsAt?: string; notes?: string };
+const requestedService = visibleFollowUpMetadata("requestedService").as("requested_service");
+const requestedStartsAt = visibleFollowUpMetadata("requestedStartsAt").as("requested_starts_at");
+const requestedNotes = visibleFollowUpMetadata("notes").as("requested_notes");
+function requestedCancellation(row: { requestedService: string | null; requestedStartsAt: string | null; requestedNotes: string | null }): RequestedCancellation | null {
+  const requested = { ...(row.requestedService ? { service: row.requestedService } : {}), ...(row.requestedStartsAt ? { startsAt: row.requestedStartsAt } : {}), ...(row.requestedNotes ? { notes: row.requestedNotes } : {}) };
+  return Object.keys(requested).length ? requested : null;
+}
 
 const followUpRequest = sql<string | null>`${inboxItems.metadata}->>'request'`;
 // One follow-up each: a call's messages are one, since a later message
@@ -677,11 +691,12 @@ export async function listOpenVoiceFollowUps(tx: DatabaseTransaction, businessId
     id: inboxItems.id, title: visibleFollowUpTitle, body: visibleFollowUpBody,
     relatedCallId: inboxItems.relatedCallId, createdAt: inboxItems.createdAt,
     request: followUpRequest.as("request"),
+    requestedService, requestedStartsAt, requestedNotes,
     appointmentId: sql<string | null>`${inboxItems.metadata}->>'appointmentId'`.as("appointment_id"),
   }).from(inboxItems).where(and(eq(inboxItems.businessId, businessId), eq(inboxItems.kind, "voice_message"), eq(inboxItems.status, "open")))
     .orderBy(followUpGroup, desc(inboxItems.createdAt), desc(inboxItems.id)).as("latest_voice_follow_ups");
   const rows = await tx.select({
-    id: latest.id, title: latest.title, body: latest.body, relatedCallId: latest.relatedCallId, createdAt: latest.createdAt, request: latest.request,
+    id: latest.id, title: latest.title, body: latest.body, relatedCallId: latest.relatedCallId, createdAt: latest.createdAt, request: latest.request, requestedService: latest.requestedService, requestedStartsAt: latest.requestedStartsAt, requestedNotes: latest.requestedNotes,
     appointmentId: appointments.id, appointmentStartsAt: appointments.startsAt, appointmentTimezone: appointments.timezone, appointmentStatus: appointments.status, appointmentServiceName: services.name, appointmentContactName: contacts.name,
   }).from(latest)
     // Compared as text: metadata is free-form JSON, and a bad id must not break the dashboard.
@@ -689,8 +704,9 @@ export async function listOpenVoiceFollowUps(tx: DatabaseTransaction, businessId
     .leftJoin(services, eq(services.id, appointments.serviceId))
     .leftJoin(contacts, eq(contacts.id, appointments.contactId))
     .orderBy(desc(latest.createdAt)).limit(6);
-  return rows.map(({ appointmentId, appointmentStartsAt, appointmentTimezone, appointmentStatus, appointmentServiceName, appointmentContactName, ...item }) => ({
+  return rows.map(({ appointmentId, appointmentStartsAt, appointmentTimezone, appointmentStatus, appointmentServiceName, appointmentContactName, requestedService, requestedStartsAt, requestedNotes, ...item }) => ({
     ...item,
+    requested: requestedCancellation({ requestedService, requestedStartsAt, requestedNotes }),
     appointment: appointmentId && appointmentStartsAt && appointmentTimezone && appointmentStatus ? { id: appointmentId, startsAt: appointmentStartsAt, timezone: appointmentTimezone, status: appointmentStatus, serviceName: appointmentServiceName, contactName: appointmentContactName } : null,
   }));
 }

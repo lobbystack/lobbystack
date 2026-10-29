@@ -64,7 +64,10 @@ describe("several follow-ups on one call", () => {
       followUp("closed", { body: "Already handled", status: "done" }),
     ]);
     await userEvent.click(await screen.findByRole("tab", { name: "detail.tabs.details" }));
-    for (const body of ["Cancellation request: Cleaning", "Please call back about parking", "Cancellation request: Consultation"]) expect(screen.getByText(body)).toBeTruthy();
+    // Each request shows its localized title and requested service; the message keeps the agent's text. The mocked translator returns keys.
+    expect(screen.getAllByText("followUp.cancellationRequest")).toHaveLength(2);
+    expect(screen.getAllByText("followUp.requested")).toHaveLength(2);
+    expect(screen.getByText("Please call back about parking")).toBeTruthy();
     expect(screen.queryByText("Please call back (imported)")).toBeNull();
     expect(screen.queryByText("Already handled")).toBeNull();
     const buttons = screen.getAllByRole("button", { name: "detail.details.markDone" });

@@ -90,6 +90,7 @@ export const GET = operatorRoute(async ({ businessId, transaction }) => NextResp
       createdAt: item.createdAt.toISOString(),
       callId: item.relatedCallId,
       request: item.request,
+      requested: item.requested,
       appointment: item.appointment ? { ...item.appointment, startsAt: item.appointment.startsAt.toISOString() } : null,
     })), ...handoffConversations.map((conversation) => ({
       id: conversation.id,

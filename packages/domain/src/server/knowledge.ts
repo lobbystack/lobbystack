@@ -647,6 +647,7 @@ export async function refreshBusinessSnapshot(
       ...(business[0].legalName ? { legalName: business[0].legalName } : {}),
       timezone: business[0].timezone,
       defaultLocale,
+      ...(business[0].teamLocale ? { teamLocale: normalizeRuntimeLocale(business[0].teamLocale) } : {}),
       businessType: ["clinic", "repair_shop", "salon", "service_company"].includes(business[0].businessType) ? business[0].businessType as BusinessContextSnapshot["businessType"] : "other",
       telemetryEnabled: business[0].telemetryEnabled,
       ...(phoneNumber ? { phoneNumber } : {}),

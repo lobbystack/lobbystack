@@ -42,6 +42,8 @@ export type ReceptionistProfilePatch = {
 export type ReceptionistSettingsChange = {
   patch: ReceptionistProfilePatch;
   locale?: RuntimeLocale;
+  /** The language the team reads the receptionist's notes in. Null goes back to following `locale`. */
+  teamLocale?: RuntimeLocale | null;
   timezone?: string;
   currency?: string;
   /** Hands the summary back to AI, which rewrites it from the knowledge sources. */
@@ -97,14 +99,15 @@ export function readReceptionistSettingsChange(body: unknown): ReceptionistSetti
   if (voice !== undefined && !isReceptionistVoice(voice)) throw invalid("voice is invalid.");
   const patch = { ...fields, ...(policy !== undefined ? { appointmentChangePolicy: policy } : {}), ...(bookingMode !== undefined ? { bookingMode } : {}), ...(voice !== undefined ? { voice } : {}) } as ReceptionistProfilePatch;
 
-  const { locale, timezone, currency, regenerateSummary } = input;
+  const { locale, teamLocale, timezone, currency, regenerateSummary } = input;
   if (locale !== undefined && !isRuntimeLocale(locale)) throw invalid("locale is invalid.");
+  if (teamLocale !== undefined && teamLocale !== null && !isRuntimeLocale(teamLocale)) throw invalid("teamLocale is invalid.");
   if (timezone !== undefined && typeof timezone !== "string") throw invalid("timezone must be a string.");
   if (currency !== undefined && !isCurrencyCode(currency)) throw invalid("currency is invalid.");
   if (regenerateSummary !== undefined && regenerateSummary !== true) throw invalid("regenerateSummary must be true.");
   if (regenerateSummary && patch.summary !== undefined) throw invalid("Send summary or regenerateSummary, not both.");
-  if (Object.keys(patch).length === 0 && locale === undefined && timezone === undefined && currency === undefined && !regenerateSummary) throw invalid("At least one profile field is required.");
-  return { patch, ...(locale !== undefined ? { locale } : {}), ...(timezone !== undefined ? { timezone } : {}), ...(currency !== undefined ? { currency } : {}), regenerateSummary: regenerateSummary === true };
+  if (Object.keys(patch).length === 0 && locale === undefined && teamLocale === undefined && timezone === undefined && currency === undefined && !regenerateSummary) throw invalid("At least one profile field is required.");
+  return { patch, ...(locale !== undefined ? { locale } : {}), ...(teamLocale !== undefined ? { teamLocale } : {}), ...(timezone !== undefined ? { timezone } : {}), ...(currency !== undefined ? { currency } : {}), regenerateSummary: regenerateSummary === true };
 }
 
 /** The settings a receptionist has before anyone edits them. */

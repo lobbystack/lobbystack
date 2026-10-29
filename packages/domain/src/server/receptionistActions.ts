@@ -326,6 +326,12 @@ export async function requestCancellationForCaller(
     ...(input.callbackPhone ? { callbackPhone: input.callbackPhone } : {}),
     ...(input.callId ? { callId: input.callId } : {}),
     ...(input.conversationId ? { conversationId: input.conversationId } : {}),
-    request: { request: CANCELLATION_REQUEST, ...(appointmentId ? { appointmentId } : {}) },
+    request: {
+      request: CANCELLATION_REQUEST,
+      ...(appointmentId ? { appointmentId } : {}),
+      ...(serviceName ? { requestedService: serviceName } : {}),
+      ...(described ? { requestedStartsAt: described } : {}),
+      ...(input.notes?.trim() ? { notes: input.notes.trim() } : {}),
+    },
   });
 }

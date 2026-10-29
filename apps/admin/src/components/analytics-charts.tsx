@@ -76,27 +76,24 @@ function useEvenDateAxis(data: AnalyticsChartPoint[], rightMargin: number) {
 }
 
 /**
- * Indices of the dates to label, always including the first and newest. The step is the smallest that keeps
- * labels apart, or a slightly larger one that divides the axis exactly. When none does, the leftover points
- * are spread one per gap across the axis, so gaps differ by at most one point instead of one gap absorbing them all.
+ * Indices of the dates to label. Every label sits one constant step from the next, counted back from the newest
+ * date, so the gaps are identical and the most recent date is always readable. The oldest date is labelled only
+ * when the step lands on it. The step is the smallest that keeps labels apart.
  */
 export function evenlySpacedTicks(labels: string[], span: number): Set<number> {
   const count = labels.length;
   if (count === 0) return new Set();
   if (span <= 0 || count === 1) return new Set(labels.keys());
   const longest = Math.max(...labels.map(labelWidth));
-  // Too narrow for the first and newest labels side by side: the newest one wins.
+  // Too narrow for two labels side by side: the newest one wins.
   if (span < 2 * longest + LABEL_GAP) return new Set([count - 1]);
-  // An edge label reaches a whole label width inward, not half, so its neighbor needs that much more room.
+  // The newest label reaches a whole label width inward, not half, so its neighbor needs that much more room.
   const edgeRoom = longest * 1.5 + LABEL_GAP;
   const gaps = count - 1;
-  const minimum = Math.max(1, Math.ceil(edgeRoom / (span / gaps)));
-  let segments = Math.max(1, Math.floor(gaps / minimum));
-  // Up to twice as sparse, but keeping at least three labels.
-  for (let candidate = minimum; candidate <= Math.min(2 * minimum, gaps / 2); candidate += 1) {
-    if (gaps % candidate === 0) { segments = gaps / candidate; break; }
-  }
-  return new Set(Array.from({ length: segments + 1 }, (_, index) => Math.round((index * gaps) / segments)));
+  const step = Math.max(1, Math.ceil(edgeRoom / (span / gaps)));
+  const shown = new Set<number>();
+  for (let index = count - 1; index >= 0; index -= step) shown.add(index);
+  return shown;
 }
 
 type XAxisTickProps = { index: number; x: number | string; y: number | string };
@@ -124,7 +121,7 @@ export function AnalyticsMetricChart({ data, dataKey, label, formatValue }: { da
       <LineChart accessibilityLayer data={points} margin={{ bottom: 8, left: 0, right: 0, top: 8 }}>
         <CartesianGrid horizontal={false} strokeDasharray="4 6" vertical verticalCoordinatesGenerator={axis.gridX} />
         <XAxis axisLine={false} dataKey="slot" fontSize={12} height={28} interval={0} tick={axis.tick} tickLine={false} />
-        <YAxis domain={[0, (maximum: number) => Math.max(maximum, 1)]} hide padding={{ bottom: 16, top: 8 }} />
+        <YAxis domain={[0, (maximum: number) => Math.max(maximum, 1)]} hide padding={{ bottom: 2, top: 8 }} />
         <ChartTooltip content={<ChartTooltipContent indicator="dot" labelFormatter={pointLabel} formatter={(value) => <MetricTooltipRow label={label} value={format(Number(value))} />} />} cursor={false} />
         <Line dataKey={dataKey} dot={false} stroke={`var(--color-${dataKey})`} strokeWidth={2} type="natural" />
       </LineChart>

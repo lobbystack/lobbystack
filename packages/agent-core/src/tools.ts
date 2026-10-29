@@ -24,7 +24,7 @@ import {
   type SmsConsentOnFile,
   type UnavailableReason,
 } from "@lobbystack/domain";
-import { isBusinessOpen, isTransferPermitted, type BusinessContextSnapshot, type RuntimeLocale } from "@lobbystack/shared";
+import { isBusinessOpen, isTransferPermitted, normalizeRuntimeLocale, runtimeLocaleName, type BusinessContextSnapshot, type RuntimeLocale } from "@lobbystack/shared";
 import { tool, type ToolSet } from "ai";
 import { DateTime } from "luxon";
 import { z } from "zod";
@@ -173,6 +173,9 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
   const businessId = snapshot.businessId;
   const timezone = snapshot.timezone;
   const channel = context.channel;
+  // The team reads what the receptionist writes for them in its own language, whatever language the caller spoke.
+  const teamLanguage = runtimeLocaleName(normalizeRuntimeLocale(snapshot.teamLocale ?? snapshot.defaultLocale));
+  const forTeam = `Write it in ${teamLanguage}, even when the caller spoke another language.`;
   // capabilities.ts decides which tools this conversation gets.
   const { tools: offeredTools, callerTextable } = receptionistCapabilities(snapshot, context);
   const offered = (name: ToolName) => offeredTools.includes(name);
@@ -269,7 +272,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
     takeMessage: tool({
       description: "Save a message for the team to follow up on: a callback request, a question you couldn't answer, or anything the caller wants passed on. Get their name and a callback number first.",
       inputSchema: z.object({
-        message: z.string().describe("What the caller needs, summarized for staff."),
+        message: z.string().describe(`What the caller needs, summarized for staff. ${forTeam}`),
         callerName: z.string().optional(),
         callbackPhone: phone.optional(),
         urgency: z.enum(["low", "normal", "urgent"]).optional(),
@@ -427,7 +430,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
         preferredTime: z.string().describe("The caller's preferred day and time, in their words."),
         callerName: z.string(),
         callbackPhone: phone.optional(),
-        notes: z.string().optional(),
+        notes: z.string().optional().describe(`Anything else the team should know. ${forTeam}`),
       }),
       execute: async (input) => {
         const callbackPhone = input.callbackPhone?.trim() || context.callerPhone;
@@ -536,7 +539,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
         appointmentStartsAt: z.string().optional().describe("The appointment's date as YYYY-MM-DD, or date and time as YYYY-MM-DDTHH:mm, in the business's timezone."),
         serviceName: z.string().optional(),
         callbackPhone: phone.optional().describe("The number the appointment was booked with, if the caller gives it."),
-        notes: z.string().optional(),
+        notes: z.string().optional().describe(`Anything else the team should know. ${forTeam}`),
       }),
       execute: async (input) => {
         if (!input.callerName.trim()) return { ok: false, reason: "Ask for the name the appointment was booked under." };

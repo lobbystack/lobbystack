@@ -53,8 +53,22 @@
     "completeFailed": "No se pudo marcar la tarea de devolución de llamada como hecha.",
     "fields": {
       "callback": "Devolver llamada",
-      "callbackWindow": "Horario preferido para devolver la llamada"
-    }
+      "callbackWindow": "Horario preferido para devolver la llamada",
+      "urgency": "Urgencia"
+    },
+    "fromCaller": "Mensaje de voz de {{name}}",
+    "unknownCaller": "llamante desconocido",
+    "field": "{{label}}: {{value}}",
+    "notSpecified": "No especificado",
+    "urgency": {
+      "low": "Baja",
+      "normal": "Normal",
+      "urgent": "Urgente"
+    },
+    "cancellationRequest": "Solicitud de cancelación",
+    "cancellationFromCaller": "Solicitud de cancelación de {{name}}",
+    "requested": "Solicitado: {{details}}",
+    "notes": "Notas: {{notes}}"
   },
   "pagination": {
     "rowsPerPage": "Filas por página",

@@ -53,8 +53,22 @@
     "completeFailed": "Zadatak povratnog poziva nije moguće označiti kao završen.",
     "fields": {
       "callback": "Povratni poziv",
-      "callbackWindow": "Željeno vreme povratnog poziva"
-    }
+      "callbackWindow": "Željeno vreme povratnog poziva",
+      "urgency": "Hitnost"
+    },
+    "fromCaller": "Govorna poruka od {{name}}",
+    "unknownCaller": "nepoznati pozivalac",
+    "field": "{{label}}: {{value}}",
+    "notSpecified": "Nije navedeno",
+    "urgency": {
+      "low": "Niska",
+      "normal": "Normalna",
+      "urgent": "Hitna"
+    },
+    "cancellationRequest": "Zahtev za otkazivanje",
+    "cancellationFromCaller": "Zahtev za otkazivanje od {{name}}",
+    "requested": "Traženo: {{details}}",
+    "notes": "Napomene: {{notes}}"
   },
   "pagination": {
     "rowsPerPage": "Redova po stranici",

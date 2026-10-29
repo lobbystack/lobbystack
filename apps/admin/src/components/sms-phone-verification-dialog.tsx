@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Field, FieldError, FieldGroup, FieldLabel } from "./ui/field";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "./ui/input-otp";
 import { PhoneInput } from "./ui/phone-input";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger } from "./ui/select";
+import { PhoneCountrySelect } from "@/components/phone-country-select";
 import { formatPhoneNumberDisplay, getDefaultPhoneCountry, getPhoneCountryOptions, inferPhoneCountry } from "@/lib/phone";
 import { requestJson } from "@/lib/request-json";
 
@@ -113,7 +113,6 @@ export function SmsPhoneVerificationDialog({ businessId, open, onOpenChange, onV
     setStep({ kind: "phone" }); setCode(""); setError(null); setLocked(false); submittedCodeRef.current = "";
   }
 
-  const selected = countries.find((option) => option.code === country) ?? countries[0];
   const shownError = error ?? (attemptError ? t(`notifications.phoneVerification.errors.${attemptError}`) : null);
 
   return <Dialog open={open} onOpenChange={onOpenChange}>
@@ -134,10 +133,7 @@ export function SmsPhoneVerificationDialog({ businessId, open, onOpenChange, onV
           <Field data-invalid={error ? true : undefined}>
             <FieldLabel className="sr-only" htmlFor="sms-alert-phone">{t("notifications.phoneVerification.fields.mobileNumber")}</FieldLabel>
             <div className="flex min-w-0">
-              <Select onValueChange={(value) => { if (value && value !== country) { setCountry(value as Country); setPhone(""); } }} value={country}>
-                <SelectTrigger aria-label={t("notifications.phoneVerification.fields.country")} className="h-11 w-20 shrink-0 rounded-l-4xl rounded-r-none px-4 font-medium text-muted-foreground data-[size=default]:h-11" data-phone-country-prefix><span>{selected?.callingCode ?? ""}</span></SelectTrigger>
-                <SelectContent className="min-w-72"><SelectGroup>{countries.map((option) => <SelectItem key={option.code} value={option.code}><span>{option.label}</span><span className="text-muted-foreground">{option.callingCode}</span></SelectItem>)}</SelectGroup></SelectContent>
-              </Select>
+              <PhoneCountrySelect ariaLabel={t("notifications.phoneVerification.fields.country")} className="h-11 w-20 rounded-l-4xl rounded-r-none px-4 font-medium text-muted-foreground" countries={countries} onChange={(next) => { setCountry(next as Country); setPhone(""); }} value={country} />
               <PhoneInput autoFocus className="h-11 rounded-l-none border-l-0" containerClassName="min-w-0 flex-1" country={country} id="sms-alert-phone" limitNationalDigits onChange={(value) => { setPhone(value ?? ""); setError(null); }} onRawValueChange={(raw) => { if (raw.trim().startsWith("+")) { const inferred = inferPhoneCountry(raw, country); if (inferred && inferred !== country) setCountry(inferred as Country); } }} value={phone} />
             </div>
           </Field>

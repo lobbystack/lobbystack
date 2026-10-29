@@ -25,6 +25,10 @@
     "it": "Italiano",
     "nl": "Neerlandés"
   },
+  "phoneCountry": {
+    "search": "Buscar país o prefijo",
+    "noResults": "No se encontró ningún país."
+  },
   "badges": {
     "live": "En vivo",
     "configured": "Configurado",

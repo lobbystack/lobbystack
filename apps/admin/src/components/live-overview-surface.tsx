@@ -8,7 +8,7 @@ import { getChannelLabel, getContactDisplayName, hasDisplayablePhone } from "@/l
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 
 import Link from "next/link";
-import { getFollowUpDisplayTitle, isUrgentFollowUpValue, parseFollowUpTaskBody } from "@/lib/follow-up-task";
+import { extractFollowUpContactName, getFollowUpDisplayTitle, isUrgentFollowUpValue, cancellationRequestDetails, parseFollowUpTaskBody, type RequestedCancellation } from "@/lib/follow-up-task";
 import { useEffect, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { useTranslation } from "react-i18next";
@@ -48,7 +48,7 @@ type DashboardSummary = {
   };
   monthlyCalls: Array<{ monthStart: string; total: number }>;
   recentCalls: Array<{ id: string; startedAt: string; status: string; transport?: string | null; durationSeconds: number; contactName: string | null; contactPhone: string | null; contactEmail?: string | null }>;
-  actionRequired: Array<{ id: string; kind: string; title: string; body: string; createdAt: string; conversationId?: string; callId?: string | null; request?: string | null; appointment?: { id: string; startsAt: string; timezone: string; status: string; serviceName: string | null; contactName: string | null } | null }>;
+  actionRequired: Array<{ id: string; kind: string; title: string; body: string; createdAt: string; conversationId?: string; callId?: string | null; request?: string | null; requested?: RequestedCancellation | null; appointment?: { id: string; startsAt: string; timezone: string; status: string; serviceName: string | null; contactName: string | null } | null }>;
   upcoming: Array<{ id: string; startsAt: string; timezone: string; status: string; sourceChannel: string; contactName: string | null; contactPhone?: string | null; contactEmail?: string | null; serviceName: string | null; staffName: string | null; employeeName?: string | null }>;
 };
 
@@ -169,6 +169,13 @@ export function LiveOverviewSurface() {
                                   {cancellation ? (
                                     <ItemDescription>{appointment ? t("home.actionRequired.appointment", { appointment: appointmentSummary(appointment, i18n.language, t) }) : t(cancelled ? "home.actionRequired.alreadyCancelled" : "home.actionRequired.noAppointment")}</ItemDescription>
                                   ) : null}
+                                  {cancellation ? (() => {
+                                    const request = cancellationRequestDetails(item, i18n.language);
+                                    return <>
+                                      {!appointment && request.requested ? <ItemDescription>{t("home.actionRequired.requested", { details: request.requested })}</ItemDescription> : null}
+                                      {request.notes ? <ItemDescription>{t("home.actionRequired.notes", { notes: request.notes })}</ItemDescription> : null}
+                                    </>;
+                                  })() : null}
                                   <ItemFooter className="flex-wrap gap-2 text-xs text-muted-foreground">
                                     <span>
                                       {formatDateTime(item.createdAt, i18n.language, {
@@ -186,7 +193,7 @@ export function LiveOverviewSurface() {
                                         </Badge>
                                       ) : null}
                                     </span>
-                                    {appointment ? <CancelAppointmentButton appointment={appointment} approve /> : null}
+                                    {appointment ? <CancelAppointmentButton appointment={appointment} approve variant="destructive" /> : null}
                                   </ItemFooter>
                                 </ItemContent>
                               </Item>
@@ -389,6 +396,12 @@ function getActionDisplayTitle(
   item: DashboardSummary["actionRequired"][number],
   t: ReturnType<typeof useTranslation<"dashboard">>["t"],
 ): string {
+  if (item.request === CANCELLATION_REQUEST) {
+    // The stored body is English, so the title is rebuilt from the contact name.
+    const name = extractFollowUpContactName(item.title, item.kind);
+    const message = t("home.actionRequired.cancellationRequest");
+    return name ? t("home.actionRequired.titleWithContact", { message, name }) : message;
+  }
   return getFollowUpDisplayTitle({
     title: item.title,
     kind: item.kind,

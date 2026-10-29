@@ -31,15 +31,15 @@ import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldTitle } from "@/components/ui/field";
+import { Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatDateTime, intlLocale } from "@/lib/locale";
+import { PhoneCountrySelect } from "@/components/phone-country-select";
 import { formatPhoneNumberDisplay, getDefaultTransferCountry, getPhoneCountryOptions, inferPhoneCountry } from "@/lib/phone";
 
 type TimeOff = { startsOn: string; endsOn: string };
@@ -289,6 +289,7 @@ function EmployeeDialog({ businessId, employee, open, onOpenChange, services, to
   const servicesId = useId();
   const hoursId = useId();
   const timeOffId = useId();
+  const addTimeOffId = useId();
   const [name, setName] = useState("");
   const [country, setCountry] = useState<Country>(defaultCountry);
   const [phone, setPhone] = useState("");
@@ -353,7 +354,6 @@ function EmployeeDialog({ businessId, employee, open, onOpenChange, services, to
   const hoursError = submitted ? hoursProblem : null;
   const timeOffMissing = timeOff.some((entry) => !entry.value);
   const timeOffError = submitted && timeOffMissing ? t("add.fields.timeOff.required") : timeOffInvalid ? t("add.fields.timeOff.invalid") : null;
-  const selected = countries.find((option) => option.code === country) ?? countries[0];
   const editTimeOff = (next: Array<{ key: number; value: TimeOff | null }>) => { setTimeOff(next); setTimeOffInvalid(false); };
 
   return <Dialog onOpenChange={onOpenChange} open={open}>
@@ -370,10 +370,7 @@ function EmployeeDialog({ businessId, employee, open, onOpenChange, services, to
             <Field data-invalid={phoneError ? true : undefined}>
               <FieldContent><FieldLabel htmlFor={phoneId}>{t("add.fields.phone.label")}</FieldLabel><FieldDescription>{t("add.fields.phone.hint")}</FieldDescription></FieldContent>
               <div className="flex min-w-0">
-                <Select onValueChange={(value) => { if (value && value !== country) { setCountry(value as Country); setPhone(""); setPhoneDraft(""); setPhoneProblem(null); } }} value={country}>
-                  <SelectTrigger aria-label={t("add.fields.phone.country")} className="w-20 shrink-0 rounded-r-none px-4 font-medium text-muted-foreground" data-phone-country-prefix><span>{selected?.callingCode ?? ""}</span></SelectTrigger>
-                  <SelectContent className="min-w-72"><SelectGroup>{countries.filter((option) => isTransferCountry(option.code)).map((option) => <SelectItem key={option.code} value={option.code}><span>{option.label}</span><span className="text-muted-foreground">{option.callingCode}</span></SelectItem>)}</SelectGroup></SelectContent>
-                </Select>
+                <PhoneCountrySelect ariaLabel={t("add.fields.phone.country")} className="w-20 rounded-r-none px-4 font-medium text-muted-foreground" countries={countries.filter((option) => isTransferCountry(option.code))} onChange={(next) => { setCountry(next as Country); setPhone(""); setPhoneDraft(""); setPhoneProblem(null); }} value={country} />
                 <PhoneInput aria-describedby={phoneError ? `${phoneId}-error` : undefined} aria-invalid={phoneError ? true : undefined} className="rounded-l-none border-l-0" containerClassName="min-w-0 flex-1" country={country} id={phoneId} limitNationalDigits locale={locale} onChange={(value) => { setPhone(value ?? ""); setPhoneProblem(null); }} onRawValueChange={(raw) => { setPhoneDraft(raw); if (raw.trim().startsWith("+")) { const inferred = inferPhoneCountry(raw, country); if (inferred && inferred !== country) setCountry(inferred as Country); } }} value={phone} />
               </div>
               {phoneError ? <FieldError id={`${phoneId}-error`}>{phoneError}</FieldError> : null}
@@ -399,12 +396,12 @@ function EmployeeDialog({ businessId, employee, open, onOpenChange, services, to
               </Field>}
             </div>
             <Field data-invalid={timeOffError ? true : undefined}>
-              <FieldContent><FieldTitle id={timeOffId}>{t("add.fields.timeOff.label")}</FieldTitle><FieldDescription>{t("add.fields.timeOff.hint")}</FieldDescription></FieldContent>
+              <FieldContent><FieldLabel htmlFor={addTimeOffId} id={timeOffId}>{t("add.fields.timeOff.label")}</FieldLabel><FieldDescription>{t("add.fields.timeOff.hint")}</FieldDescription></FieldContent>
               {timeOff.map((entry) => <div className="flex items-center gap-2" key={entry.key}>
                 <div className="min-w-0 flex-1"><TimeOffPicker invalid={(submitted && !entry.value) || timeOffInvalid} label={t("add.fields.timeOff.dates")} locale={locale} onChange={(value) => editTimeOff(timeOff.map((item) => (item.key === entry.key ? { ...item, value } : item)))} today={today} value={entry.value} /></div>
                 <Button aria-label={t("add.fields.timeOff.remove")} onClick={() => editTimeOff(timeOff.filter((item) => item.key !== entry.key))} size="icon-sm" type="button" variant="ghost"><X /></Button>
               </div>)}
-              <Button aria-describedby={timeOffId} className="w-fit" onClick={() => editTimeOff([...timeOff, { key: nextTimeOffKey.current++, value: null }])} size="sm" type="button" variant="outline"><Plus data-icon="inline-start" />{t("add.fields.timeOff.add")}</Button>
+              <Button aria-labelledby={`${timeOffId} ${addTimeOffId}`} className="w-fit" id={addTimeOffId} onClick={() => editTimeOff([...timeOff, { key: nextTimeOffKey.current++, value: null }])} size="sm" type="button" variant="outline"><Plus data-icon="inline-start" />{t("add.fields.timeOff.add")}</Button>
               {timeOffError ? <FieldError>{timeOffError}</FieldError> : null}
             </Field>
           </FieldGroup>

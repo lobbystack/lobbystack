@@ -31,6 +31,10 @@
     "it": "Italijanski",
     "nl": "Holandski"
   },
+  "phoneCountry": {
+    "search": "Pretraži zemlje ili pozivne brojeve",
+    "noResults": "Nijedna zemlja nije pronađena."
+  },
   "badges": {
     "live": "Uživo",
     "configured": "Podešeno",

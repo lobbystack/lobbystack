@@ -53,8 +53,22 @@
     },
     "fields": {
       "callback": "Rappel",
-      "callbackWindow": "Rappel préféré"
-    }
+      "callbackWindow": "Rappel préféré",
+      "urgency": "Urgence"
+    },
+    "fromCaller": "Message vocal de {{name}}",
+    "unknownCaller": "appelant inconnu",
+    "field": "{{label}} : {{value}}",
+    "notSpecified": "Non précisé",
+    "urgency": {
+      "low": "Faible",
+      "normal": "Normale",
+      "urgent": "Urgente"
+    },
+    "cancellationRequest": "Demande d'annulation",
+    "cancellationFromCaller": "Demande d'annulation de {{name}}",
+    "requested": "Demandé : {{details}}",
+    "notes": "Notes : {{notes}}"
   },
   "pagination": {
     "rowsPerPage": "Lignes par page",

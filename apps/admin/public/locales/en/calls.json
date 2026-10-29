@@ -53,8 +53,22 @@
     "completeFailed": "Couldn't mark the callback task done.",
     "fields": {
       "callback": "Callback",
-      "callbackWindow": "Preferred callback"
-    }
+      "callbackWindow": "Preferred callback",
+      "urgency": "Urgency"
+    },
+    "fromCaller": "Voice message from {{name}}",
+    "unknownCaller": "unknown caller",
+    "field": "{{label}}: {{value}}",
+    "notSpecified": "Not specified",
+    "urgency": {
+      "low": "Low",
+      "normal": "Normal",
+      "urgent": "Urgent"
+    },
+    "cancellationRequest": "Cancellation request",
+    "cancellationFromCaller": "Cancellation request from {{name}}",
+    "requested": "Requested: {{details}}",
+    "notes": "Notes: {{notes}}"
   },
   "pagination": {
     "rowsPerPage": "Rows per page",

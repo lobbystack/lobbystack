@@ -170,8 +170,10 @@ describe.skipIf(!client)("cancellation requests from calls without a trusted num
       const row = await item(saved.inboxItemId);
       expect(row.metadata).toMatchObject({ request: CANCELLATION_REQUEST, appointmentId: ids.consultation, channel: "web_voice" });
       expect(row.body).toContain(`Cancellation request: consultation, ${local(1, 15).toFormat("cccc, LLLL d 'at' h:mm a")}`);
+      // What was asked is kept apart from the English body, so the dashboard can show it in its own language.
+      expect(row.metadata).toMatchObject({ requestedService: "consultation", requestedStartsAt: asked(local(1, 15)) });
       const { followUps } = await dashboard();
-      expect(followUps).toEqual([expect.objectContaining({ id: saved.inboxItemId, request: CANCELLATION_REQUEST, appointment: { id: ids.consultation, startsAt: local(1, 15).toJSDate(), timezone, status: "confirmed", serviceName: "Consultation", contactName: "Milan Obrenovic" } })]);
+      expect(followUps).toEqual([expect.objectContaining({ id: saved.inboxItemId, request: CANCELLATION_REQUEST, requested: { service: "consultation", startsAt: asked(local(1, 15)) }, appointment: { id: ids.consultation, startsAt: local(1, 15).toJSDate(), timezone, status: "confirmed", serviceName: "Consultation", contactName: "Milan Obrenovic" } })]);
     });
   });
 

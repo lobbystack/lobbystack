@@ -143,7 +143,10 @@
       },
       "appointment": "Rendez-vous : {{appointment}}",
       "noAppointment": "Aucun rendez-vous à venir ne correspond à cette demande. Consultez la page Rendez-vous.",
-      "alreadyCancelled": "Ce rendez-vous est déjà annulé."
+      "alreadyCancelled": "Ce rendez-vous est déjà annulé.",
+      "cancellationRequest": "Demande d'annulation",
+      "requested": "Demandé : {{details}}",
+      "notes": "Notes : {{notes}}"
     },
     "upcoming": {
       "title": "À venir",

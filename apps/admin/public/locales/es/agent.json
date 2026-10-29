@@ -323,6 +323,11 @@
       "placeholder": "Seleccione un idioma predeterminado",
       "hint": "Elija el idioma que su recepcionista debe usar cuando no se conoce la preferencia de la persona que llama."
     },
+    "teamLocale": {
+      "label": "Idioma del equipo",
+      "hint": "El idioma en el que tu recepcionista redacta mensajes, notas y solicitudes para tu equipo. A las personas que llaman se les sigue respondiendo en su idioma.",
+      "sameAsCaller": "Igual que el idioma de los clientes"
+    },
     "voice": {
       "label": "Voz",
       "change": "Cambiar voz",

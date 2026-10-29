@@ -32,6 +32,7 @@ import { VoiceDialog, voiceName, useVoicePreview, useVoiceTraits } from "@/compo
 import { BusinessHoursSection } from "@/components/business-hours-section";
 import { availableTimeZones, groupTimeZones, isTimeZoneRegion, type TimeZoneOption } from "@/lib/time-zones";
 import { errorCode } from "@/lib/checkout-errors";
+import { PhoneCountrySelect } from "@/components/phone-country-select";
 import { getDefaultTransferCountry, getPhoneCountryOptions, inferPhoneCountry } from "@/lib/phone";
 import { cn } from "@/lib/utils";
 
@@ -45,7 +46,7 @@ type TimeZoneItemGroup = { value: string; label: string; items: TimeZoneOption[]
 type CurrencyOption = { id: string; label: string };
 
 type AgentSettings = {
-  business: { defaultLocale: RuntimeLocale; timezone: string; currency?: string } | null;
+  business: { defaultLocale: RuntimeLocale; teamLocale?: RuntimeLocale | null; timezone: string; currency?: string } | null;
   profile: { greeting: string; summary: string; summarySource: "placeholder" | "generated" | "operator"; summaryRegenerateStatus?: "pending" | "completed" | "empty" | "failed" | null; transferNumber: string | null; transferMode: string; appointmentChangePolicy: AppointmentChangePolicy | null; bookingMode: BookingMode; voice?: string } | null;
   hasKnowledgeSources?: boolean;
 };
@@ -117,7 +118,7 @@ export function AgentBasicSettingsPage({
   });
   const configuration = query.data;
   const isLoadingConfiguration = !businessId || query.isLoading;
-  async function saveProfile({ defaultLocale: locale, ...patch }: { businessId: string; defaultLocale?: RuntimeLocale; timezone?: string; currency?: string; greeting?: string; summary?: string; regenerateSummary?: true; transferNumber?: string | null; transferMode?: string; appointmentChangePolicy?: AppointmentChangePolicy; bookingMode?: BookingMode; voice?: ReceptionistVoice }, refetchType: "active" | "none" = "active") {
+  async function saveProfile({ defaultLocale: locale, ...patch }: { businessId: string; defaultLocale?: RuntimeLocale; teamLocale?: RuntimeLocale | null; timezone?: string; currency?: string; greeting?: string; summary?: string; regenerateSummary?: true; transferNumber?: string | null; transferMode?: string; appointmentChangePolicy?: AppointmentChangePolicy; bookingMode?: BookingMode; voice?: ReceptionistVoice }, refetchType: "active" | "none" = "active") {
     await requestJson(`/api/agent?businessId=${encodeURIComponent(businessId)}`, { method: "PATCH", body: JSON.stringify({ ...patch, ...(locale ? { locale } : {}) }) });
     await queryClient.invalidateQueries({ queryKey: ["agent-settings", businessId], refetchType });
   }
@@ -203,7 +204,6 @@ export function AgentBasicSettingsPage({
   const defaultTransferCountry = getDefaultTransferCountry(i18n.language) as Country;
   const countries = useMemo(() => getPhoneCountryOptions(i18n.language), [i18n.language]);
   const [transferCountry, setTransferCountry] = useState<Country>(defaultTransferCountry);
-  const selectedTransferCountry = countries.find((option) => option.code === transferCountry);
   const [allowAppointmentCancel, setAllowAppointmentCancel] = useState(true);
   const [allowAppointmentReschedule, setAllowAppointmentReschedule] = useState(true);
   const [appointmentChangeVerification, setAppointmentChangeVerification] = useState<AppointmentChangeVerificationMode>("phone_match_and_facts");
@@ -219,6 +219,9 @@ export function AgentBasicSettingsPage({
   const [isGreetingSaving, setIsGreetingSaving] = useState(false);
   const [isGreetingOpen, setIsGreetingOpen] = useState(false);
   const [isLocaleSaving, setIsLocaleSaving] = useState(false);
+  // "default" follows the caller language.
+  const [teamLocale, setTeamLocale] = useState<RuntimeLocale | "default">("default");
+  const [isTeamLocaleSaving, setIsTeamLocaleSaving] = useState(false);
   const [isTransferSaving, setIsTransferSaving] = useState(false);
   const [isAppointmentChangeSaving, setIsAppointmentChangeSaving] = useState(false);
   // The profile the text fields last took their values from. Every save refetches the
@@ -243,6 +246,7 @@ export function AgentBasicSettingsPage({
     setGreeting((current) => !previous || current === previous.greeting ? profile.greeting : current);
     setSummary((current) => !previous || current === shownSummary(previous) ? shownSummary(profile) : current);
     setDefaultLocale(configuration.business?.defaultLocale ?? "en");
+    setTeamLocale(configuration.business?.teamLocale ?? "default");
     if (!transferNumberEdited.current) {
       setTransferNumber(profile.transferNumber ?? "");
       setTransferNumberInputValue(profile.transferNumber ?? "");
@@ -635,6 +639,55 @@ export function AgentBasicSettingsPage({
               variant="default"
             >
               <ItemContent>
+                <ItemTitle>{t("agent:fields.teamLocale.label")}</ItemTitle>
+                <ItemDescription>{t("agent:fields.teamLocale.hint")}</ItemDescription>
+              </ItemContent>
+              <ItemActions className="w-full sm:w-auto">
+                {isLoadingConfiguration ? (
+                  <Skeleton className="h-10 w-full rounded-md sm:w-52" />
+                ) : (
+                  <Select
+                    disabled={!canManageTenant || isTeamLocaleSaving}
+                    items={[{ value: "default", label: t("agent:fields.teamLocale.sameAsCaller") }, ...runtimeLocales.map((code) => ({ value: code, label: t(`common:callerLanguage.${code}`) }))]}
+                    onValueChange={(value) => {
+                      const next = ((value as RuntimeLocale | "default" | null) || "default");
+                      setTeamLocale(next);
+                      void (async () => {
+                        if (!canManageTenant || !persistedProfile) {
+                          return;
+                        }
+
+                        setIsTeamLocaleSaving(true);
+                        try {
+                          await saveProfile({ businessId, teamLocale: next === "default" ? null : next });
+                          telemetry.track("web.agent.settings_saved", { businessId, setting: "team_locale" });
+                          toast.success(t("agent:actions.saved"));
+                        } catch {
+                          toast.error(t("agent:actions.saveFailed"));
+                        } finally {
+                          setIsTeamLocaleSaving(false);
+                        }
+                      })();
+                    }}
+                    value={teamLocale}
+                  >
+                    <SelectTrigger aria-label={t("agent:fields.teamLocale.label")} className="w-full sm:w-52" id="agent-team-language" loading={isTeamLocaleSaving}><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="default">{t("agent:fields.teamLocale.sameAsCaller")}</SelectItem>
+                        {runtimeLocales.map((code) => <SelectItem key={code} value={code}>{t(`common:callerLanguage.${code}`)}</SelectItem>)}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                )}
+              </ItemActions>
+            </Item>
+
+            <Item
+              className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
+              variant="default"
+            >
+              <ItemContent>
                 <ItemTitle>{t("agent:fields.voice.label")}</ItemTitle>
                 <ItemDescription>{t("agent:fields.voice.summary", { voice: voiceName(voice), traits: voiceTraits(voice) })}</ItemDescription>
               </ItemContent>
@@ -735,10 +788,7 @@ export function AgentBasicSettingsPage({
                     <Skeleton className="h-10 w-full rounded-md sm:w-72" />
                   ) : (
                     <div className="flex w-full min-w-0 sm:w-fit">
-                      <Select disabled={!canManageTenant} onValueChange={(value) => { if (value && value !== transferCountry) { transferNumberEdited.current = true; setTransferCountry(value as Country); setTransferNumber(""); setTransferNumberInputValue(""); setTransferStatus(null); } }} value={transferCountry}>
-                        <SelectTrigger aria-label={t("agent:fields.transferNumber.country")} className="w-20 shrink-0 rounded-r-none px-4 font-medium text-muted-foreground" data-phone-country-prefix><span>{selectedTransferCountry?.callingCode ?? ""}</span></SelectTrigger>
-                        <SelectContent className="min-w-72"><SelectGroup>{countries.filter((option) => isTransferCountry(option.code)).map((option) => <SelectItem key={option.code} value={option.code}><span>{option.label}</span><span className="text-muted-foreground">{option.callingCode}</span></SelectItem>)}</SelectGroup></SelectContent>
-                      </Select>
+                      <PhoneCountrySelect ariaLabel={t("agent:fields.transferNumber.country")} className="w-20 rounded-r-none px-4 font-medium text-muted-foreground" countries={countries.filter((option) => isTransferCountry(option.code))} disabled={!canManageTenant} onChange={(next) => { transferNumberEdited.current = true; setTransferCountry(next as Country); setTransferNumber(""); setTransferNumberInputValue(""); setTransferStatus(null); }} value={transferCountry} />
                       <PhoneInput
                         className="rounded-l-none border-l-0 sm:w-40"
                         containerClassName="min-w-0 flex-1"

@@ -161,6 +161,8 @@ export const businesses = pgTable(
     legalName: text("legal_name"),
     timezone: varchar("timezone", { length: 80 }).notNull(),
     defaultLocale: varchar("default_locale", { length: 8 }).default("en").notNull(),
+    /** The language the team reads what the receptionist writes for it; null follows `defaultLocale`. */
+    teamLocale: varchar("team_locale", { length: 8 }),
     /** ISO 4217 code every service price is in. */
     currency: varchar("currency", { length: 3 }).default("USD").notNull(),
     businessType: varchar("business_type", { length: 64 }).notNull(),

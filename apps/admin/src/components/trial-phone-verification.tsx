@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { PhoneInput } from "@/components/ui/phone-input";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger } from "@/components/ui/select";
+import { PhoneCountrySelect } from "@/components/phone-country-select";
 import { formatPhoneNumberDisplay, getPhoneCountryOptions } from "@/lib/phone";
 import { requestJson } from "@/lib/request-json";
 
@@ -56,7 +56,6 @@ export function TrialPhoneVerification({ businessId, onVerified }: { businessId:
     const suggested = numbers.data?.suggestedCountry;
     setCountry((suggested && trialCountries.includes(suggested) ? suggested : trialCountries[0]) as Country);
   }, [country, numbers.data?.suggestedCountry, trialCountries]);
-  const selected = options.find((option) => option.code === country);
 
   const send = useMutation({
     mutationFn: () => requestJson<{ attemptId: string; phoneE164: string }>(`/api/onboarding/phone-verification?${query}`, { method: "POST", body: JSON.stringify({ phoneNumber: attempt?.phoneE164 ?? phone, countryCode: country, locale }) }),
@@ -113,10 +112,7 @@ export function TrialPhoneVerification({ businessId, onVerified }: { businessId:
         <Field data-invalid={error ? true : undefined}>
           <FieldLabel htmlFor="trial-phone">{t("phoneNumber.trialPhone.fields.mobileNumber")}</FieldLabel>
           <div className="flex min-w-0">
-            <Select onValueChange={(value) => { if (value && value !== country) { setCountry(value as Country); setPhone(""); setError(null); } }} value={country}>
-              <SelectTrigger aria-label={t("phoneNumber.trialPhone.fields.country")} className="h-11 w-24 shrink-0 rounded-l-4xl rounded-r-none px-4 font-medium text-muted-foreground data-[size=default]:h-11"><span>{selected?.callingCode ?? ""}</span></SelectTrigger>
-              <SelectContent className="min-w-72"><SelectGroup>{options.map((option) => <SelectItem key={option.code} value={option.code}><span>{option.label}</span><span className="text-muted-foreground">{option.callingCode}</span></SelectItem>)}</SelectGroup></SelectContent>
-            </Select>
+            <PhoneCountrySelect ariaLabel={t("phoneNumber.trialPhone.fields.country")} className="h-11 w-24 rounded-l-4xl rounded-r-none px-4 font-medium text-muted-foreground" countries={options} onChange={(next) => { setCountry(next as Country); setPhone(""); setError(null); }} value={country} />
             <PhoneInput autoFocus className="h-11 rounded-l-none border-l-0" containerClassName="min-w-0 flex-1" country={country} id="trial-phone" limitNationalDigits onChange={(value) => { setPhone(value ?? ""); setError(null); }} value={phone} />
           </div>
           <FieldDescription>{t("phoneNumber.trialPhone.hint")}</FieldDescription>

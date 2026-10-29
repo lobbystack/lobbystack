@@ -143,7 +143,10 @@
       },
       "appointment": "Appointment: {{appointment}}",
       "noAppointment": "No upcoming appointment matches this request. Check the Appointments page.",
-      "alreadyCancelled": "This appointment is already cancelled."
+      "alreadyCancelled": "This appointment is already cancelled.",
+      "cancellationRequest": "Cancellation request",
+      "requested": "Requested: {{details}}",
+      "notes": "Notes: {{notes}}"
     },
     "upcoming": {
       "title": "Upcoming",

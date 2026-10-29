@@ -323,6 +323,11 @@
       "placeholder": "Choisir une langue par défaut",
       "hint": "Choisissez la langue de repli que votre réceptionniste doit utiliser quand la préférence du client est inconnue."
     },
+    "teamLocale": {
+      "label": "Langue de l'équipe",
+      "hint": "La langue dans laquelle votre réceptionniste rédige les messages, notes et demandes pour votre équipe. Les appelants reçoivent toujours une réponse dans leur langue.",
+      "sameAsCaller": "Identique à la langue des clients"
+    },
     "voice": {
       "label": "Voix",
       "change": "Changer de voix",

@@ -143,7 +143,10 @@
       },
       "appointment": "Cita: {{appointment}}",
       "noAppointment": "Ninguna cita próxima coincide con esta solicitud. Revise la página Citas.",
-      "alreadyCancelled": "Esta cita ya está cancelada."
+      "alreadyCancelled": "Esta cita ya está cancelada.",
+      "cancellationRequest": "Solicitud de cancelación",
+      "requested": "Solicitado: {{details}}",
+      "notes": "Notas: {{notes}}"
     },
     "upcoming": {
       "title": "Próximas",
