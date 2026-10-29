@@ -10,6 +10,8 @@ const tenantSchedules: Array<{ queue: JobQueue; name: string; type: JobType; eve
   { queue: "maintenance", name: "privacy-retention-sweep", type: "privacy.scrubMessage", every: 60 * 60_000 },
   { queue: "maintenance", name: "pending-upload-cleanup", type: "privacy.cleanupPendingUpload", every: 15 * 60_000 },
   { queue: "default", name: "calendar-reconcile", type: "calendar.reconcileBusiness", every: 15 * 60_000 },
+  // A dead-lettered webhook removal must not keep a disconnected connection's tokens forever.
+  { queue: "maintenance", name: "calendar-retired-sweep", type: "calendar.sweepRetired", every: 24 * 60 * 60_000 },
   { queue: "maintenance", name: "phone-number-reclaim", type: "phoneNumber.reclaim", every: 60 * 60_000 },
   // A trial ends and sends its emails on time even when nobody uses the workspace.
   { queue: "maintenance", name: "number-trial-sweep", type: "numberTrial.sweep", every: 60 * 60_000 },

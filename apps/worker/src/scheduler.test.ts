@@ -18,9 +18,9 @@ describe("worker schedulers", () => {
 
     await configureSchedulers(queues, [{ id: "business-a", active: true }, { id: "business-b", active: true }]);
 
-    expect(upsertJobScheduler).toHaveBeenCalledTimes(29);
+    expect(upsertJobScheduler).toHaveBeenCalledTimes(31);
     const tenantCalls = upsertJobScheduler.mock.calls.filter((call) => call[2].data.businessId !== null);
-    expect(tenantCalls).toHaveLength(22);
+    expect(tenantCalls).toHaveLength(24);
     expect(tenantCalls.filter((call) => call[2].data.type === "api.retention")).toHaveLength(2);
     for (const call of tenantCalls) {
       expect(call[2].data.businessId).toMatch(/^business-[ab]$/);
@@ -63,7 +63,9 @@ describe("worker schedulers", () => {
       "outbox-backlog-sample:dormant",
     ]);
     const tenantTypes = upsertJobScheduler.mock.calls.filter((call) => call[2].data.businessId === "dormant").map((call) => call[2].data.type);
-    expect(tenantTypes).toHaveLength(9);
+    expect(tenantTypes).toHaveLength(10);
+    // A disconnected connection's kept tokens go even if nobody opens the workspace.
+    expect(tenantTypes).toContain("calendar.sweepRetired");
     expect(tenantTypes).toContain("privacy.scrubMessage");
     // A trial must still end, and its emails go out, when the owner stops calling.
     expect(tenantTypes).toContain("numberTrial.sweep");
@@ -94,6 +96,7 @@ describe("worker schedulers", () => {
     expect(removeJobScheduler.mock.calls.map((call) => call[0]).sort()).toEqual([
       "api-retention:b",
       "calendar-reconcile:b",
+      "calendar-retired-sweep:b",
       "instagram-token-refresh:b",
       "number-trial-sweep:b",
       "pending-upload-cleanup:b",

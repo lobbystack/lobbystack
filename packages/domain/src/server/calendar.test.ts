@@ -6,7 +6,7 @@ vi.mock("@lobbystack/db", async (original) => ({ ...await original<typeof import
 vi.mock("./notifications", () => ({ queueOperatorAlertInTransaction: mocks.alert }));
 vi.mock("../authz", () => ({ requireBusinessAdmin: vi.fn(), requireBusinessMembership: vi.fn() }));
 import { appointments, calendarBusyBlocks, calendarConnections } from "@lobbystack/db";
-import { assignCalendarStaff, connectCalendar, queueUnsyncedAppointmentSyncs, resolveCalendarAccessToken, selectCalendar, updateAppointmentSyncStateInTransaction, upsertBusyBlocks } from "./calendar";
+import { assignCalendarStaff, connectCalendar, forgetStaleRetiredCalendarTokens, queueUnsyncedAppointmentSyncs, resolveCalendarAccessToken, selectCalendar, updateAppointmentSyncStateInTransaction, upsertBusyBlocks } from "./calendar";
 
 const now = new Date("2026-09-13T12:00:00Z");
 const row = { id: "connection", businessId: "business", status: "connected", encryptedAccessToken: "enc:old", encryptedRefreshToken: "enc:refresh", tokenExpiresAt: new Date(now.getTime() - 1000) };
@@ -62,6 +62,18 @@ it("refreshes a disconnected connection's kept tokens only to retire its webhook
   expect(update).toHaveBeenCalledWith(expect.objectContaining({ encryptedAccessToken: "enc:fresh", encryptedRefreshToken: "enc:rotated" }));
   useConnection({ ...retired, externalWebhookId: null });
   await expect(resolveCalendarAccessToken(context, { ...input, retired: true })).rejects.toThrow("unavailable");
+});
+
+it("forgets the tokens of connections disconnected over a week ago, whatever became of their webhook", async () => {
+  let where: SQL | undefined;
+  let values: Record<string, unknown> | undefined;
+  const tx = { update: () => ({ set: (set: Record<string, unknown>) => { values = set; return { where: (condition: SQL) => { where = condition; return { returning: async () => [{ id: "old" }] }; } }; } }) };
+  mocks.transaction.mockImplementation(async (_db, _scope, callback) => callback(tx));
+  await expect(forgetStaleRetiredCalendarTokens(context, { businessId: "business", now })).resolves.toBe(1);
+  expect(values).toMatchObject({ encryptedAccessToken: null, encryptedRefreshToken: null, externalWebhookId: null, encryptedWebhookSecret: null });
+  const query = new PgDialect().sqlToQuery(where!);
+  expect(query.sql).toContain('"calendar_connections"."status" = $2');
+  expect(query.params).toEqual(["business", "disconnected", new Date(now.getTime() - 7 * 24 * 60 * 60_000).toISOString()]);
 });
 
 it("alerts operators once per appointment time, not once per sync retry", async () => {

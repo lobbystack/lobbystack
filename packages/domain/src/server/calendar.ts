@@ -467,6 +467,24 @@ export async function getRetiredCalendarWebhook(context: DomainContext, input: {
   });
 }
 
+/** How long a disconnected connection may keep tokens for a webhook removal before the sweep forgets them. */
+export const RETIRED_TOKEN_RETENTION_MS = 7 * 24 * 60 * 60_000;
+
+/**
+ * Forgets the tokens and webhook of connections disconnected more than a week
+ * ago, whatever became of the webhook removal. Its deliveries reach a
+ * disconnected connection, which the route ignores. Returns how many it cleared.
+ */
+export async function forgetStaleRetiredCalendarTokens(context: DomainContext, input: { businessId: string; now?: Date }): Promise<number> {
+  const cutoff = new Date((input.now ?? new Date()).getTime() - RETIRED_TOKEN_RETENTION_MS);
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => (await tx.update(calendarConnections).set({ encryptedAccessToken: null, encryptedRefreshToken: null, externalWebhookId: null, encryptedWebhookSecret: null, webhookRegistrationUntil: null, updatedAt: new Date() }).where(and(
+    eq(calendarConnections.businessId, input.businessId),
+    eq(calendarConnections.status, "disconnected"),
+    lt(calendarConnections.updatedAt, cutoff),
+    or(sql`${calendarConnections.encryptedAccessToken} is not null`, sql`${calendarConnections.encryptedRefreshToken} is not null`, sql`${calendarConnections.externalWebhookId} is not null`),
+  )).returning({ id: calendarConnections.id })).length);
+}
+
 /** Forgets a disconnected connection's tokens and webhook once the webhook is gone. A reconnected connection keeps them. */
 export async function forgetRetiredCalendarWebhook(context: DomainContext, input: { businessId: string; connectionId: string }): Promise<void> {
   await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
