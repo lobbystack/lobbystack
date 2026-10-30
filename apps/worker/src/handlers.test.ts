@@ -1201,6 +1201,13 @@ describe("worker handlers", () => {
     expect(markBillingUsageSynced).not.toHaveBeenCalled();
   });
 
+  it("checks a text's price again later when the carrier has no record of it yet, and gives up after an hour", async () => {
+    const job = pricingJob("sms.syncPrice", { providerMessageId: "SM123", providerStatus: "delivered" });
+    const dependencies = { domain: { db: undefined as never }, telephony: twilioTelephony({ getMessagePricing: vi.fn().mockResolvedValue({}) }) };
+    await expect(handleJob(job, dependencies, { queuedAtMs: Date.now() })).resolves.toEqual({ status: "deferred", entityId: "SM123", retryAt: expect.any(Date) });
+    await expect(handleJob(job, dependencies, { queuedAtMs: Date.now() - 2 * 60 * 60_000 })).rejects.toThrow(/pricing is incomplete/);
+  });
+
   it("records complete Twilio SMS pricing only for terminal messages", async () => {
     const job = pricingJob("sms.syncPrice", { providerMessageId: "SM123", providerStatus: "delivered" });
     vi.mocked(recordSmsProviderPricing).mockResolvedValue(true);

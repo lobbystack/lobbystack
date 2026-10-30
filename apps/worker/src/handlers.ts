@@ -103,6 +103,9 @@ function retryAfterLease(leaseEndsAt: Date | null, entityId: string): JobResult 
   return leaseEndsAt ? { status: "deferred", entityId, retryAt: leaseEndsAt } : { status: "skipped", entityId };
 }
 
+const MESSAGE_PRICE_WAIT_MS = 60 * 60_000;
+const MESSAGE_PRICE_RETRY_MS = 2 * 60_000;
+
 const BRAND_FAILURE_LOG_INTERVAL_MS = 60_000;
 let lastBrandFailureLogAt = 0;
 
@@ -570,6 +573,8 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const sms = dependencies.telephony?.forNumber(jobCarrier(job))?.sms;
       if (!sms || !providerMessageId || !isTerminalSmsStatus(providerStatus)) return { status: "skipped", entityId: providerMessageId };
       const pricing = await sms.getMessagePricing({ providerMessageId });
+      // Telnyx writes a text's detail record a little after delivery. Check again without spending an attempt.
+      if (Object.keys(pricing).length === 0 && Date.now() - (execution.queuedAtMs ?? 0) < MESSAGE_PRICE_WAIT_MS) return { status: "deferred", entityId: providerMessageId, retryAt: new Date(Date.now() + MESSAGE_PRICE_RETRY_MS) };
       if (pricing.providerCostUsd === undefined || pricing.providerNumSegments === undefined) throw new Error(`${sms.carrier} SMS pricing is incomplete for ${providerMessageId}.`);
       const businessId = businessIdOrThrow(job);
       const notificationId = typeof job.payload.notificationId === "string" ? job.payload.notificationId : undefined;
