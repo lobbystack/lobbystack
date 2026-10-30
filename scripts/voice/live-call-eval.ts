@@ -9,7 +9,7 @@
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 
-import { buildBrowserSessionConfig, buildPhoneSessionConfig, callerIsDone, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, type CallControl, type LiveCallSummary } from "@lobbystack/agent-core";
+import { buildBrowserSessionConfig, buildPhoneSessionConfig, callerIsDone, callerIsLeaving, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, type CallControl, type LiveCallSummary } from "@lobbystack/agent-core";
 import { defaultGreeting, demoSnapshot, isRuntimeLocale, runtimeLocales, type BusinessContextSnapshot } from "@lobbystack/shared";
 import OpenAI from "openai";
 import type { SidebandWS } from "openai/resources/live/sideband/ws";
@@ -161,7 +161,7 @@ async function run(scenario: Scenario, audio: Map<string, Buffer>, agentModel: N
       client,
       sessionId: `eval_${scenario.name}`,
       phone: false,
-      setup: { agent, greeting: snapshot.greeting, callerDone: async (conversation, abortSignal) => { const done = await callerIsDone(agentModel, conversation, abortSignal); checks.push(done); return done; } },
+      setup: { agent, greeting: snapshot.greeting, callerDone: async (conversation, abortSignal) => { const done = await callerIsDone(agentModel, conversation, abortSignal); checks.push(done); return done; }, callerLeaving: (conversation, abortSignal) => callerIsLeaving(agentModel, conversation, abortSignal) },
       connect: () => ws as unknown as SidebandWS,
       onDelegation: (timing) => { if (timing.offsetMs >= scenarioStartMs) handOvers.push(timing.tools.join("+") || "reply"); },
       onGreeting: (event) => { if (event.step === "sent") greetingCommands += 1; },

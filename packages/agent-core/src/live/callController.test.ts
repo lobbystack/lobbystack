@@ -29,7 +29,7 @@ type Generate = (options: { prompt: string; onStepEnd?: (step: unknown) => void 
 
 const reply = (text: string) => ({ text, steps: [{ toolCalls: [], toolResults: [] }] });
 
-function setup(options: { phone?: boolean; silenceTimeoutMs?: number; maxDurationMs?: number; topUp?: () => Promise<number>; firstEventTimeoutMs?: number; generate?: Generate; callerDone?: LiveCallSetup["callerDone"]; setup?: Promise<LiveCallSetup>; onGreeting?: (event: GreetingEvent) => void; refer?: ReturnType<typeof vi.fn> } = {}) {
+function setup(options: { phone?: boolean; silenceTimeoutMs?: number; maxDurationMs?: number; topUp?: () => Promise<number>; firstEventTimeoutMs?: number; generate?: Generate; callerDone?: LiveCallSetup["callerDone"]; callerLeaving?: LiveCallSetup["callerLeaving"]; setup?: Promise<LiveCallSetup>; onGreeting?: (event: GreetingEvent) => void; refer?: ReturnType<typeof vi.fn> } = {}) {
   const generate = vi.fn(options.generate ?? (async () => ({ text: "We're open until 5.", steps: [{ toolCalls: [{ toolCallId: "call_1", toolName: "getBusinessHours" }], toolResults: [] }, { toolCalls: [], toolResults: [] }] })));
   const turns: LiveCallTurn[] = [];
   const closed: LiveCallSummary[] = [];
@@ -42,7 +42,7 @@ function setup(options: { phone?: boolean; silenceTimeoutMs?: number; maxDuratio
     client: { live: { sessions: { hangup, refer } } } as never,
     sessionId: "live_1",
     phone: options.phone ?? true,
-    setup: options.setup ?? { agent: { generate } as never, greeting: "Thanks for calling Northside Plumbing.", ...(options.callerDone ? { callerDone: options.callerDone } : {}) },
+    setup: options.setup ?? { agent: { generate } as never, greeting: "Thanks for calling Northside Plumbing.", ...(options.callerDone ? { callerDone: options.callerDone } : {}), ...(options.callerLeaving ? { callerLeaving: options.callerLeaving } : {}) },
     ...(options.silenceTimeoutMs ? { silenceTimeoutMs: options.silenceTimeoutMs } : {}),
     ...(options.maxDurationMs ? { maxDurationMs: options.maxDurationMs } : {}),
     ...(options.topUp ? { topUp: options.topUp } : {}),
@@ -681,6 +681,84 @@ describe("LiveCallController ending when the caller is done", () => {
     expect(endOnClose(socket, closed)).toBe("caller_finished");
     // The next request may end the call again, so it doesn't hear that the first one did.
     expect(generate.mock.calls[1]![0].prompt).not.toMatch(/The call is ending|endCall/);
+  });
+
+  // GPT-Live can answer a goodbye itself and never hand the call over.
+  describe("a goodbye GPT-Live doesn't hand over", () => {
+    function missedGoodbye(socket: FakeSocket, reply = "Au revoir !") {
+      socket.emit("session.input_transcript.delta", { delta: "Je m'en vais. Bye bye.", start_ms: 1_000, end_ms: 1_800 });
+      socket.emit("session.output_transcript.delta", { delta: reply, start_ms: 2_000, end_ms: 2_500 });
+    }
+
+    it("asks once both sides are quiet, and hangs up when the caller is leaving", async () => {
+      fakeTimers();
+      const callerLeaving = vi.fn(async (_conversation: string, _abortSignal: AbortSignal) => true);
+      const { socket, hangup, closed } = setup({ callerLeaving });
+      await vi.advanceTimersByTimeAsync(0);
+      missedGoodbye(socket);
+      await vi.advanceTimersByTimeAsync(1_400);
+      expect(callerLeaving).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(200);
+      expect(callerLeaving).toHaveBeenCalledOnce();
+      expect(callerLeaving.mock.calls[0]![0]).toContain("Caller: Je m'en vais. Bye bye.\nReceptionist: Au revoir !");
+      // The hangup waits 3.5 seconds from the end of the reply.
+      await vi.advanceTimersByTimeAsync(1_600);
+      expect(hangup).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1_800);
+      expect(hangup).toHaveBeenCalledWith("live_1");
+      expect(endOnClose(socket, closed)).toBe("caller_finished");
+    });
+
+    it("keeps the call going when the caller isn't leaving, and asks about each turn once", async () => {
+      fakeTimers();
+      const callerLeaving = vi.fn(async (_conversation: string, _abortSignal: AbortSignal) => false);
+      const { socket, hangup } = setup({ callerLeaving });
+      await vi.advanceTimersByTimeAsync(0);
+      missedGoodbye(socket, "Okay.");
+      await vi.advanceTimersByTimeAsync(1_600);
+      socket.emit("session.output_transcript.delta", { delta: " Sure.", start_ms: 3_000, end_ms: 3_300 });
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(callerLeaving).toHaveBeenCalledOnce();
+      expect(hangup).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ["a question", "Would you like to book a time?"],
+      ["a long reply", "We can answer calls when you're busy, take reservations and pass along special instructions to your staff."],
+    ])("doesn't ask after %s", async (_name, reply) => {
+      fakeTimers();
+      const callerLeaving = vi.fn(async (_conversation: string, _abortSignal: AbortSignal) => true);
+      const { socket } = setup({ callerLeaving });
+      await vi.advanceTimersByTimeAsync(0);
+      missedGoodbye(socket, reply);
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(callerLeaving).not.toHaveBeenCalled();
+    });
+
+    it("doesn't ask while a request is running", async () => {
+      fakeTimers();
+      const callerLeaving = vi.fn(async (_conversation: string, _abortSignal: AbortSignal) => true);
+      const { socket } = setup({ callerLeaving, generate: () => new Promise(() => undefined) });
+      await vi.advanceTimersByTimeAsync(0);
+      delegate(socket, "item_1", "Are you open on Saturday?", 1_800);
+      socket.emit("session.output_transcript.delta", { delta: "One moment.", start_ms: 2_000, end_ms: 2_500 });
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(callerLeaving).not.toHaveBeenCalled();
+    });
+
+    it("drops the hangup when the caller speaks during the check", async () => {
+      fakeTimers();
+      let answer!: (leaving: boolean) => void;
+      const callerLeaving = vi.fn((_conversation: string, _abortSignal: AbortSignal) => new Promise<boolean>((resolve) => { answer = resolve; }));
+      const { socket, hangup } = setup({ callerLeaving });
+      await vi.advanceTimersByTimeAsync(0);
+      missedGoodbye(socket);
+      await vi.advanceTimersByTimeAsync(1_600);
+      socket.emit("session.input_transcript.delta", { delta: "Oh wait, one more thing.", start_ms: 4_000, end_ms: 4_500 });
+      answer(true);
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(hangup).not.toHaveBeenCalled();
+    });
   });
 
   // Once GPT-Live's goodbye has played, 2 seconds in, the caller answers with

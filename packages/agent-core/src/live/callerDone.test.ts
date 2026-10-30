@@ -1,7 +1,7 @@
 import { MockLanguageModelV4 } from "ai/test";
 import { describe, expect, it } from "vitest";
 
-import { callerIsDone } from "./callerDone";
+import { callerIsDone, callerIsLeaving } from "./callerDone";
 
 function model(text: string) {
   return new MockLanguageModelV4({
@@ -28,5 +28,18 @@ describe("callerIsDone", () => {
     const prompt = JSON.stringify(mock.doGenerateCalls[0]!.prompt);
     expect(prompt).toContain("Judge the caller's latest words");
     expect(prompt).toContain("Receptionist: Goodbye!\\nCaller: Bye!");
+  });
+});
+
+describe("callerIsLeaving", () => {
+  it("ends the call only on a done answer", async () => {
+    await expect(callerIsLeaving(model("done"), "Caller: Bye bye.")).resolves.toBe(true);
+    await expect(callerIsLeaving(model("continue"), "Caller: Thanks.")).resolves.toBe(false);
+  });
+
+  it("treats thanks alone as the caller staying", async () => {
+    const mock = model("continue");
+    await callerIsLeaving(mock, "Caller: Thanks.");
+    expect(JSON.stringify(mock.doGenerateCalls[0]!.prompt)).toContain("only say thanks or okay");
   });
 });

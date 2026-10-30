@@ -1,7 +1,7 @@
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import { callerIsDone, closeLiveSession, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, WRAP_UP_MAX_MS, type AgentChannel, type CallControl, type KeypadPasscodeCheck, type LiveCallSetup, type LiveCallSummary } from "@lobbystack/agent-core";
+import { callerIsDone, callerIsLeaving, closeLiveSession, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, WRAP_UP_MAX_MS, type AgentChannel, type CallControl, type KeypadPasscodeCheck, type LiveCallSetup, type LiveCallSummary } from "@lobbystack/agent-core";
 import {
   blockLiveCaller,
   checkNumberTrialMinutes,
@@ -452,9 +452,15 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
         console.info(JSON.stringify({ event: "live.caller_done_check", sessionId: request.sessionId, done, ms: Math.round(performance.now() - startedAt) }));
         return done;
       };
+      const callerLeaving = async (conversation: string, abortSignal: AbortSignal) => {
+        const startedAt = performance.now();
+        const leaving = await callerIsLeaving(model, conversation, abortSignal);
+        console.info(JSON.stringify({ event: "live.missed_goodbye_check", sessionId: request.sessionId, leaving, ms: Math.round(performance.now() - startedAt) }));
+        return leaving;
+      };
       // A recovered call, or one with a saved transcript, is already under
       // way, so the greeting fallback must not fire.
-      return { agent, callerDone, ...(phone && normalizeAppointmentChangePolicy(snapshot.appointmentChangePolicy).verificationMode === "passcode_required" ? { maskKeypad: true } : {}), ...(recovery || saved > 0 ? {} : { greeting: snapshot.greeting }) };
+      return { agent, callerDone, callerLeaving, ...(phone && normalizeAppointmentChangePolicy(snapshot.appointmentChangePolicy).verificationMode === "passcode_required" ? { maskKeypad: true } : {}), ...(recovery || saved > 0 ? {} : { greeting: snapshot.greeting }) };
     });
 
     const finish = async (summary: LiveCallSummary) => {
