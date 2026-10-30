@@ -62,6 +62,7 @@ El modelo GPT-Live de OpenAI contesta las llamadas desde el navegador y las llam
 | `TELEPHONY_VERIFY`, `TELEPHONY_LOOKUP`, `TELEPHONY_ALERT_SMS` | El operador del código de verificación al registrarse, de la comprobación del tipo de línea y de los mensajes del remitente compartido. Cada una vale `twilio` por defecto. |
 | `TELEPHONY_ALERT_SMS_FROM` | El número del remitente compartido. Si falta, se usa `TWILIO_ALERT_SMS_FROM`. |
 | `OPENAI_PROJECT_ID` | El ID de su proyecto de OpenAI (`proj_…`). El worker le da a cada número de Telnyx su propia conexión SIP a ese proyecto, y no compra ningún número de Telnyx sin él. |
+| `TELNYX_OUTBOUND_VOICE_PROFILE_ID` | El perfil de voz saliente de la conexión de cada número, que usan las transferencias de llamadas. |
 | `TELNYX_TEXML_APPLICATION_ID`, `TELNYX_TEXML_WEBHOOK_SECRET` | La aplicación TeXML a la que pasa un número de Telnyx cuando la recepcionista deja de contestarlo, por ejemplo una prueba sin minutos, y el secreto que su URL de voz lleva como `?key=`. |
 | `WEB_CALL_MAX_DURATION_MS` | Límite opcional de la duración de las llamadas desde el navegador. |
 | `WEB_CALL_PUBLIC_BUSINESS_SLUG` | Negocio que contesta la llamada de demostración pública en su sitio de marketing. |

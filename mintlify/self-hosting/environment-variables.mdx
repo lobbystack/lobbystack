@@ -62,6 +62,7 @@ OpenAI's GPT-Live model answers browser calls and phone calls. Phone calls reach
 | `TELEPHONY_VERIFY`, `TELEPHONY_LOOKUP`, `TELEPHONY_ALERT_SMS` | The carrier for the onboarding phone code, the line type check, and the shared sender's texts. Each defaults to `twilio`. |
 | `TELEPHONY_ALERT_SMS_FROM` | The shared sender's number. Falls back to `TWILIO_ALERT_SMS_FROM`. |
 | `OPENAI_PROJECT_ID` | Your OpenAI project ID (`proj_…`). The worker gives each Telnyx number its own SIP connection to that project, and won't buy a Telnyx number without it. |
+| `TELNYX_OUTBOUND_VOICE_PROFILE_ID` | The outbound voice profile each number's connection gets, which call transfers dial through. |
 | `TELNYX_TEXML_APPLICATION_ID`, `TELNYX_TEXML_WEBHOOK_SECRET` | The TeXML application a Telnyx number moves to when the receptionist stops answering it, such as a trial out of minutes, and the secret its voice URL carries as `?key=`. |
 | `WEB_CALL_MAX_DURATION_MS` | Optional cap on browser call length. |
 | `WEB_CALL_PUBLIC_BUSINESS_SLUG` | Business that answers the public demo call on your marketing site. |

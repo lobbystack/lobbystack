@@ -108,6 +108,7 @@ export function createTelnyxCarrier(env: Env = process.env, options: TelnyxCarri
   const orderPoll = options.orderPoll ?? { intervalMs: 3_000, attempts: 10 };
   const sipConnectionId = env.TELNYX_SIP_CONNECTION_ID?.trim();
   const openAiProjectId = env.OPENAI_PROJECT_ID?.trim();
+  const outboundVoiceProfileId = env.TELNYX_OUTBOUND_VOICE_PROFILE_ID?.trim();
   const texmlApplicationId = env.TELNYX_TEXML_APPLICATION_ID?.trim();
   const messagingProfileId = env.TELNYX_MESSAGING_PROFILE_ID?.trim();
   const fallbackUrl = `${appBaseUrl(env)}/api/webhooks/telnyx/voice`;
@@ -128,6 +129,8 @@ export function createTelnyxCarrier(env: Env = process.env, options: TelnyxCarri
     const id = String(connection.id);
     try {
       await client.post("/fqdns", { connection_id: id, fqdn: "sip.api.openai.com", port: 5061, dns_record_type: "a" });
+      // Transfers dial out through this profile. Telnyx refuses it on a connection that still expects credentials.
+      if (outboundVoiceProfileId) await client.patch(`/fqdn_connections/${encodeURIComponent(id)}`, { outbound: { fqdn_authentication_method: "ip-authentication", outbound_voice_profile_id: outboundVoiceProfileId } });
     } catch (error) {
       await deleteNumberConnection(id);
       throw error;

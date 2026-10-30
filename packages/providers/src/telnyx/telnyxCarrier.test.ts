@@ -134,6 +134,17 @@ describe("Telnyx numbers", () => {
     expect(calls.filter((call) => call.method === "DELETE").map((call) => call.url.pathname)).toEqual(["/v2/phone_numbers/pn_1", "/v2/fqdn_connections/nc_1", "/v2/phone_numbers/pn_2"]);
   });
 
+  it("gives a number's connection the outbound profile that transfers dial through", async () => {
+    const { client, calls } = fakeTelnyx({
+      ...connectionRoutes(),
+      "PATCH /fqdn_connections/nc_1": () => ({ data: {} }),
+      "POST /number_orders": () => ({ data: { id: "ord_4", status: "success" } }),
+      "GET /phone_numbers": () => ({ data: [{ id: "pn_4", phone_number: "+12125550100", connection_id: "nc_1" }] }),
+    });
+    await createTelnyxCarrier({ ...env, TELNYX_OUTBOUND_VOICE_PROFILE_ID: "ovp_1" }, { client })!.inventory!.purchasePhoneNumber({ e164: "+12125550100", countryCode: "US", kind: "local", label: "x" });
+    expect(calls.find((call) => call.method === "PATCH")?.body).toEqual({ outbound: { fqdn_authentication_method: "ip-authentication", outbound_voice_profile_id: "ovp_1" } });
+  });
+
   it("answers a release of a number Telnyx no longer has with a 404", async () => {
     const { client } = fakeTelnyx({});
     await expect(createTelnyxCarrier(env, { client })!.inventory!.releasePhoneNumber({ providerPhoneId: "pn_gone" })).rejects.toMatchObject({ status: 404 });
