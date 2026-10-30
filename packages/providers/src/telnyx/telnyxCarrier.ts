@@ -87,7 +87,12 @@ function smsSender(client: TelnyxClient, env: Env): SmsSender {
       for (const [key, value] of Object.entries(ids)) if (value) url.searchParams.set(key, value);
       return url.toString();
     },
-    getMessagePricing: async ({ providerMessageId }) => telnyxMessagePricing((await client.get<Data<TelnyxMessage>>(`/messages/${encodeURIComponent(providerMessageId)}`)).data),
+    // GET /messages answers 404 for a text Telnyx has delivered, so read its detail record, which has a flat cost.
+    getMessagePricing: async ({ providerMessageId }) => {
+      const record = ((await client.get<Data<Array<{ cost?: string; currency?: string; parts?: number; sent_at?: string; completed_at?: string }>>>("/detail_records", { "filter[record_type]": "messaging", "filter[date_range]": "last_2_days", "filter[id]": providerMessageId, "page[size]": 1 })).data ?? [])[0];
+      if (!record) return {};
+      return telnyxMessagePricing({ ...(record.cost !== undefined ? { cost: { amount: record.cost, ...(record.currency ? { currency: record.currency } : {}) } } : {}), ...(record.parts !== undefined ? { parts: record.parts } : {}), ...(record.sent_at ? { sent_at: record.sent_at } : {}), ...(record.completed_at ? { completed_at: record.completed_at } : {}) });
+    },
     permanentErrorCode: permanentTelnyxSmsErrorCode,
   };
 }

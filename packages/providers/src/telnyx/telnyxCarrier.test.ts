@@ -187,7 +187,7 @@ describe("Telnyx texts, Verify, Lookup and call cost", () => {
   it("sends a text with its status webhook and reads its price later", async () => {
     const { client, calls } = fakeTelnyx({
       "POST /messages": () => ({ data: { id: "msg_1" } }),
-      "GET /messages/msg_1": () => ({ data: { id: "msg_1", parts: 1, cost: { amount: "0.004", currency: "USD" } } }),
+      "GET /detail_records": () => ({ data: [{ id: "msg_1", parts: 1, cost: "0.0040", currency: "USD" }] }),
     });
     const sms = createTelnyxCarrier(env, { client })!.sms!;
     const statusCallback = sms.statusCallbackUrl({ messageId: "m1" });
