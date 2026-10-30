@@ -333,20 +333,6 @@ async function checkReleasable(config: Config, root: string, sha: string, option
   throw new Error(`${config.branch} has moved on to ${tip.slice(0, 12)}. Release that instead, or pass --allow-older to ship ${sha.slice(0, 12)}.`);
 }
 
-/** Production and staging together don't fit in the host's 4 GB, so production releases wait for staging to stop. */
-async function checkOtherEnvironmentsStopped(config: Config) {
-  if (config.environment !== "production") return;
-  for (const [name, target] of Object.entries(ENVIRONMENTS)) {
-    if (name === "production") continue;
-    for (const applicationId of Object.values(target.applicationIds)) {
-      const app = await getApplication(config, applicationId);
-      if ((await getTasks(config, app.appName)).some((task) => task.state === "running")) {
-        throw new Error(`${name} is running on the host. Stop it with scripts/${name}-stop.sh, then release again.`);
-      }
-    }
-  }
-}
-
 /** Only a "not found" answer counts as missing: rebuilding after a network error would overwrite a tag production may run. */
 export function isMissingManifest(message: string): boolean {
   return /no such manifest|manifest unknown|name unknown|not found/i.test(message);
@@ -521,7 +507,6 @@ async function main() {
   });
 
   const root = (await run("git", ["rev-parse", "--show-toplevel"], { capture: true })).trim();
-  if (!options.buildOnly) await checkOtherEnvironmentsStopped(config);
   step(config.requireMain ? `Checking the commit against GitHub ${config.branch}` : "Resolving the commit");
   const sha = (await run("git", ["-C", root, "rev-parse", "--verify", `${options.ref ?? (await fetchTip(config, root))}^{commit}`], { capture: true })).trim();
   if ((await checkReleasable(config, root, sha, options)) === "skip") {
@@ -559,12 +544,11 @@ async function main() {
     return;
   }
 
-  // A build takes long enough for someone to merge, or start staging, in the meantime.
+  // A build takes long enough for someone to merge in the meantime.
   if ((await checkReleasable(config, root, sha, options)) === "skip") {
     console.log(`    Skipping ${sha.slice(0, 12)}: ${config.branch} moved on during the build, and its own pipeline releases it.`);
     return;
   }
-  await checkOtherEnvironmentsStopped(config);
   const release = { tag, subject };
   try {
     await deployService(config, "migrator", apps.migrator, images.migrator, release);
