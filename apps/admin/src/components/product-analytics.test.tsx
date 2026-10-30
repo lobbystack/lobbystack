@@ -196,6 +196,11 @@ describe("queued authentication analytics", () => {
     expect(consumeAuthSuccess()).toBeNull();
   });
 
+  it("carries the passkey method onto the deferred login event", async () => {
+    recordAuthSuccess("web.auth.login_succeeded", { method: "passkey" });
+    expect(consumeAuthSuccess()).toEqual({ event: "web.auth.login_succeeded", method: "passkey" });
+  });
+
   it("carries the Google method and calculator source onto the deferred signup event", async () => {
     recordAuthSuccess("web.auth.signup_succeeded", { method: "google", source: "calculator" });
     const client = setup(undefined);

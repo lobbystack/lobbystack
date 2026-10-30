@@ -651,9 +651,43 @@
     }
   },
   "account": {
+    "loading": "Cargando su cuenta",
+    "passkeys": {
+      "title": "Llaves de acceso",
+      "description": "Inicie sesión con su huella, su rostro o el bloqueo del dispositivo, sin contraseña.",
+      "add": "Añadir una llave de acceso",
+      "empty": "Aún no ha añadido ninguna llave de acceso.",
+      "unnamed": "Llave de acceso",
+      "addedOn": "Añadida el {{date}}",
+      "added": "Llave de acceso añadida.",
+      "renamed": "Llave de acceso renombrada.",
+      "removed": "Llave de acceso eliminada.",
+      "remove": "Eliminar",
+      "removeTitle": "¿Eliminar esta llave de acceso?",
+      "removeDescription": "Ya no podrá iniciar sesión con {{name}}. Su contraseña sigue funcionando.",
+      "rename": {
+        "action": "Renombrar",
+        "title": "Renombrar la llave de acceso",
+        "description": "Elija un nombre que indique en qué dispositivo está.",
+        "label": "Nombre",
+        "placeholder": "P. ej.: Portátil del trabajo",
+        "save": "Guardar",
+        "required": "Introduzca un nombre."
+      },
+      "errors": {
+        "addFailed": "No pudimos añadir la llave de acceso. Inténtelo de nuevo.",
+        "wrongAddress": "Las llaves de acceso no están configuradas para esta dirección. Abra la aplicación en su dirección habitual y vuelva a intentarlo.",
+        "alreadyAdded": "Este dispositivo ya tiene una llave de acceso para su cuenta.",
+        "signInAgain": "Vuelva a iniciar sesión y añada una llave de acceso.",
+        "renameFailed": "No pudimos renombrar la llave de acceso. Inténtelo de nuevo.",
+        "removeFailed": "No pudimos eliminar la llave de acceso. Inténtelo de nuevo.",
+        "loadFailed": "No pudimos cargar sus llaves de acceso."
+      }
+    },
     "title": "Cuenta",
     "actions": {
-      "change": "Cambiar"
+      "change": "Cambiar",
+      "cancel": "Cancelar"
     },
     "businessName": {
       "label": "Nombre del negocio",
@@ -666,12 +700,13 @@
     "changeEmail": {
       "label": "Cambiar correo electrónico",
       "description": "Correo electrónico que usa para iniciar sesión.",
-      "newEmailPlaceholder": "Nuevo correo electrónico",
-      "currentPasswordPlaceholder": "Contraseña actual",
+      "newEmailLabel": "Nuevo correo electrónico",
+      "newEmailPlaceholder": "nombre@example.com",
       "save": "Enviar enlace de confirmación",
       "title": "Correo electrónico",
       "currentPasswordLabel": "Contraseña actual",
       "currentEmail": "{{email}}",
+      "currentEmailLabel": "Correo electrónico actual",
       "confirmationSent": "Enviamos un enlace de confirmación a {{email}}.",
       "errors": {
         "invalidPassword": "La contraseña actual es incorrecta.",
@@ -679,6 +714,7 @@
         "unchanged": "Introduzca un correo electrónico diferente.",
         "noEmail": "Esta cuenta aún no tiene un correo electrónico configurado.",
         "required": "Introduzca un nuevo correo electrónico.",
+        "invalid": "Introduzca un correo electrónico válido.",
         "failed": "No pudimos enviar el enlace de confirmación. Inténtelo de nuevo."
       }
     },
@@ -688,15 +724,20 @@
       "description": "Contraseña que usa para iniciar sesión.",
       "dialogDescription": "Introduzca su contraseña actual y una nueva contraseña.",
       "currentPasswordLabel": "Contraseña actual",
-      "currentPasswordPlaceholder": "Contraseña actual",
       "newPasswordLabel": "Nueva contraseña",
-      "newPasswordPlaceholder": "Nueva contraseña",
       "confirmPasswordLabel": "Confirmar nueva contraseña",
-      "confirmPasswordPlaceholder": "Confirmar nueva contraseña",
       "save": "Guardar",
       "saved": "Contraseña actualizada.",
       "errors": {
         "mismatch": "Las nuevas contraseñas no coinciden.",
+        "currentRequired": "Introduzca su contraseña actual.",
+        "newRequired": "Introduzca una nueva contraseña.",
+        "confirmRequired": "Confirme su nueva contraseña.",
+        "minimumLengthMissing": "Use al menos 8 caracteres.",
+        "numberMissing": "Incluya al menos un número.",
+        "specialCharacterMissing": "Incluya al menos un carácter especial.",
+        "unchanged": "Elija una contraseña distinta de la actual.",
+        "invalidCurrent": "La contraseña actual es incorrecta.",
         "failed": "No se pudo actualizar la contraseña."
       }
     }

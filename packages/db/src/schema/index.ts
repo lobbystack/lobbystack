@@ -109,6 +109,25 @@ export const sessions = pgTable(
   (table) => [uniqueIndex("sessions_token_unique").on(table.token), index("sessions_user_idx").on(table.userId)],
 );
 
+/** Better Auth's passkey plugin names these columns, so the property names follow its field names. */
+export const passkeys = pgTable(
+  "passkeys",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name"),
+    publicKey: text("public_key").notNull(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    credentialID: text("credential_id").notNull(),
+    counter: integer("counter").notNull(),
+    deviceType: text("device_type").notNull(),
+    backedUp: boolean("backed_up").notNull(),
+    transports: text("transports"),
+    aaguid: text("aaguid"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [uniqueIndex("passkeys_credential_id_unique").on(table.credentialID), index("passkeys_user_idx").on(table.userId)],
+);
+
 export const verifications = pgTable(
   "verifications",
   {

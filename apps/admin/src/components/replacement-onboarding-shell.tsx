@@ -22,7 +22,7 @@ type OnboardingShellProps = {
   children: React.ReactNode;
   legalFooter?: React.ReactNode;
   /** The agreement line login and signup show, for the action the person is taking. Left out when the partner has no terms or privacy page. */
-  legalAgreement?: "login" | "signup" | "business";
+  legalAgreement?: "login" | "signup" | "business" | "emailChange";
   onSignOut?: () => void;
 };
 
@@ -47,6 +47,8 @@ const progressRoutes: Record<number, string> = Object.fromEntries(Object.entries
 
 const widths = { sm: "max-w-sm", md: "max-w-md", lg: "max-w-lg", xl: "max-w-xl", wide: "max-w-7xl" } as const;
 
+const legalPrefixKeys = { login: "login.legalPrefix", signup: "signup.legal.prefix", business: "signup.legal.businessPrefix", emailChange: "signup.legal.emailChangePrefix" } as const;
+
 export function ReplacementOnboardingShell({ icon, eyebrow, title, description, progress, width = "md", children, legalFooter: customLegalFooter, legalAgreement, onSignOut }: OnboardingShellProps) {
   const { t, i18n } = useTranslation("onboarding");
   const { t: tAuth } = useTranslation("auth");
@@ -54,7 +56,7 @@ export function ReplacementOnboardingShell({ icon, eyebrow, title, description, 
   const { partner } = useBranding();
   const legalFooter = customLegalFooter ?? (legalAgreement && links.terms && links.privacy ? (
     <p className="max-w-full text-center text-xs leading-5 text-muted-foreground sm:whitespace-nowrap">
-      {tAuth(legalAgreement === "login" ? "login.legalPrefix" : legalAgreement === "business" ? "signup.legal.businessPrefix" : "signup.legal.prefix")} {" "}
+      {tAuth(legalPrefixKeys[legalAgreement])} {" "}
       <a className="underline underline-offset-4 hover:text-foreground" href={links.terms} rel="noreferrer" target="_blank">{tAuth("signup.legal.terms")}</a>{" "}
       {tAuth("signup.legal.and")} {" "}
       <a className="underline underline-offset-4 hover:text-foreground" href={links.privacy} rel="noreferrer" target="_blank">{tAuth("signup.legal.privacy")}</a>

@@ -1,8 +1,9 @@
 -- Telnyx replaces the dialled number with the OpenAI project ID in the
--- Request-URI and To, and adds no Diversion, so a GPT-Live webhook can't tell
--- which number a Telnyx call was for. Each Telnyx number gets its own SIP
--- connection instead, and every INVITE names it in X-Telnyx-Connection-id.
--- This column holds that connection, so the webhook can find the number.
+-- Request-URI and adds no Diversion. The number normally stays in To, but a
+-- call from another Telnyx number can carry the project ID there too. Each
+-- Telnyx number gets its own SIP connection, and every INVITE names it in
+-- X-Telnyx-Connection-id. This column holds that connection, so the webhook
+-- can find the number when no header carries it.
 ALTER TABLE public.phone_numbers
   ADD COLUMN IF NOT EXISTS carrier_connection_id varchar(64);
 

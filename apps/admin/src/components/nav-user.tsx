@@ -69,7 +69,8 @@ export function NavUser({
             aria-expanded={open}
             render={
               <SidebarMenuButton
-                className="data-[popup-open=true]:bg-sidebar-accent data-[popup-open=true]:text-sidebar-accent-foreground"
+                // Collapsed, the button is a 32px square with no padding, so the avatar is the only content and sits in the middle.
+                className="data-[popup-open=true]:bg-sidebar-accent data-[popup-open=true]:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
                 size="lg"
               />
             }
@@ -77,10 +78,10 @@ export function NavUser({
             <Avatar className="shadow-xs" size="sm">
               <AvatarFallback>{emailInitial}</AvatarFallback>
             </Avatar>
-            <div className="grid flex-1 text-start text-sm leading-tight">
+            <div className="grid flex-1 text-start text-sm leading-tight group-data-[collapsible=icon]:hidden">
               <span className="truncate text-sm">{user.email}</span>
             </div>
-            <ChevronsUpDown className="ms-auto size-4" />
+            <ChevronsUpDown className="ms-auto size-4 group-data-[collapsible=icon]:hidden" />
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="end"

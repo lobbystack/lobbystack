@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type SubmitEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { TriangleAlert } from "lucide-react";
+import { KeyRound, TriangleAlert } from "lucide-react";
 
 import { ReplacementOnboardingShell } from "@/components/replacement-onboarding-shell";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,7 @@ function GoogleLogo() {
 /** White Label's own sign-in and sign-up: they link to each other and land back in the partner console. */
 export type PartnerAuth = { returnTo: string };
 
-export function AuthCard({ mode, google = false, partner }: { mode: "login" | "signup"; google?: boolean; partner?: PartnerAuth | undefined }) {
+export function AuthCard({ mode, google = false, passkey = false, partner }: { mode: "login" | "signup"; google?: boolean; passkey?: boolean; partner?: PartnerAuth | undefined }) {
   const router = useRouter();
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   const { t, i18n } = useTranslation("auth");
@@ -39,6 +39,8 @@ export function AuthCard({ mode, google = false, partner }: { mode: "login" | "s
   const [signupSource, setSignupSource] = useState<"calculator" | null>(null);
   const [googleError, setGoogleError] = useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [passkeyError, setPasskeyError] = useState<string | null>(null);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setReturnTo(getSafeReturnTo(params.get("returnTo")) ?? partner?.returnTo ?? null);
@@ -77,6 +79,8 @@ export function AuthCard({ mode, google = false, partner }: { mode: "login" | "s
   const passwordInputRef = useRef<HTMLInputElement>(null);
   const autoGoogleStarted = useRef(false);
   const login = mode === "login";
+  // Passkeys are for signing in; a new account has none yet. A partner's host offers email and password only.
+  const offerPasskey = login && passkey && !partner;
 
   // The marketing site's "Sign up with Google" button links here with
   // ?provider=google, since Google sign-in has to start from this origin.
@@ -194,9 +198,42 @@ export function AuthCard({ mode, google = false, partner }: { mode: "login" | "s
     }
   }
 
-  function finishAuthentication() {
+  async function signInWithPasskey(autoFill = false) {
+    if (!autoFill) { setPasskeyError(null); setPasskeyLoading(true); }
+    try {
+      const { authClient } = await import("@/lib/auth-client");
+      const result = await authClient.signIn.passkey(autoFill ? { autoFill: true } : undefined);
+      if (result?.error) {
+        // Closing the browser's prompt, or a newer prompt replacing it, is not a failure to report.
+        const code = String((result.error as { code?: unknown }).code);
+        if (autoFill || ["AUTH_CANCELLED", "ERROR_CEREMONY_ABORTED"].includes(code)) return;
+        // The browser throws "not allowed" when the person closes its prompt, it times out, or no passkey exists for this site.
+        // The browser refuses a passkey for another address than the one it was made for, such as a tunnel's.
+        setPasskeyError(code === "ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY" ? "errors.passkeyNotChosen" : code === "ERROR_INVALID_RP_ID" ? "errors.passkeyWrongAddress" : "errors.passkeyFailed");
+        return;
+      }
+      finishAuthentication("passkey");
+    } catch {
+      if (!autoFill) setPasskeyError("errors.passkeyFailed");
+    } finally {
+      if (!autoFill) setPasskeyLoading(false);
+    }
+  }
+
+  // Lets the browser offer a saved passkey in the email field's suggestions.
+  useEffect(() => {
+    if (!offerPasskey) return;
+    let active = true;
+    void (async () => {
+      const available = await window.PublicKeyCredential?.isConditionalMediationAvailable?.().catch(() => false);
+      if (active && available) await signInWithPasskey(true);
+    })();
+    return () => { active = false; };
+  }, [offerPasskey]);
+
+  function finishAuthentication(method: "email" | "passkey" = "email") {
     const event = login ? "web.auth.login_succeeded" : "web.auth.signup_succeeded";
-    recordAuthSuccess(event, { method: "email", ...(signupSource ? { source: signupSource } : {}) });
+    recordAuthSuccess(event, { method, ...(signupSource ? { source: signupSource } : {}) });
     const safeReturnTo = getSafeReturnTo(new URLSearchParams(window.location.search).get("returnTo")) ?? partner?.returnTo ?? "/";
     const target = new URL(safeReturnTo, window.location.origin);
     window.location.assign(target.origin === window.location.origin ? `${target.pathname}${target.search}${target.hash}` : "/");
@@ -339,19 +376,21 @@ export function AuthCard({ mode, google = false, partner }: { mode: "login" | "s
   return (
     <ReplacementOnboardingShell {...(partner ? { eyebrow: t("partner.eyebrow") } : {})} legalAgreement={login ? "login" : "signup"} progress={login || partner ? null : { current: 1, total: 9 }} title={login ? t("login.title") : t("signup.title")} width="sm">
       <div className="flex w-full flex-col gap-6">
-        {google ? <>
+        {google || offerPasskey ? <>
           <div className="flex flex-col gap-2">
-            <Button className="h-11 w-full" loading={googleLoading} loadingLabel={t("google.redirecting")} onClick={() => void continueWithGoogle()} type="button" variant="outline"><GoogleLogo />{t("google.continue")}</Button>
+            {google ? <Button className="h-11 w-full" loading={googleLoading} loadingLabel={t("google.redirecting")} onClick={() => void continueWithGoogle()} type="button" variant="outline"><GoogleLogo />{t("google.continue")}</Button> : null}
+            {offerPasskey ? <Button className="h-11 w-full" loading={passkeyLoading} loadingLabel={t("passkey.waiting")} onClick={() => void signInWithPasskey()} type="button" variant="outline"><KeyRound />{t("passkey.signIn")}</Button> : null}
             {googleError ? <FieldError>{t(googleError)}</FieldError> : null}
+            {passkeyError ? <FieldError>{t(passkeyError)}</FieldError> : null}
           </div>
           <FieldSeparator>{t("google.or")}</FieldSeparator>
         </> : null}
         <form noValidate onSubmit={submit}>
           <FieldGroup className="gap-4">
-            <Field data-invalid={emailError ? true : undefined}><FieldLabel htmlFor="auth-email">{login ? t("login.email") : t("signup.email")}</FieldLabel><Input aria-describedby={emailError ? "auth-email-error" : undefined} aria-invalid={emailError ? true : undefined} autoComplete="email" className={cn("h-11", emailError && invalidInputClassName)} id="auth-email" onBlur={() => setHasBlurredEmail(true)} onChange={(event) => { setHasBlurredEmail(false); setEmail(event.target.value); }} placeholder={login ? t("login.emailPlaceholder") : t("signup.emailPlaceholder")} ref={emailInputRef} required type="email" value={email} />{emailError ? <FieldError className="flex items-center gap-2 font-medium" id="auth-email-error"><TriangleAlert className="size-4 shrink-0" aria-hidden="true" /><span>{t(`${login ? "login" : "signup"}.${emailError}`)}</span></FieldError> : null}</Field>
+            <Field data-invalid={emailError ? true : undefined}><FieldLabel htmlFor="auth-email">{login ? t("login.email") : t("signup.email")}</FieldLabel><Input aria-describedby={emailError ? "auth-email-error" : undefined} aria-invalid={emailError ? true : undefined} autoComplete={offerPasskey ? "username webauthn" : "email"} className={cn("h-11", emailError && invalidInputClassName)} id="auth-email" onBlur={() => setHasBlurredEmail(true)} onChange={(event) => { setHasBlurredEmail(false); setEmail(event.target.value); }} placeholder={login ? t("login.emailPlaceholder") : t("signup.emailPlaceholder")} ref={emailInputRef} required type="email" value={email} />{emailError ? <FieldError className="flex items-center gap-2 font-medium" id="auth-email-error"><TriangleAlert className="size-4 shrink-0" aria-hidden="true" /><span>{t(`${login ? "login" : "signup"}.${emailError}`)}</span></FieldError> : null}</Field>
             <Field data-invalid={passwordInvalid ? true : undefined}>
               <div className="flex items-center justify-between gap-3"><FieldLabel htmlFor="auth-password">{login ? t("login.password") : t("signup.password")}</FieldLabel>{login ? <Link className="text-xs font-medium text-muted-foreground hover:text-foreground" href={forgotPasswordPath}>{t("login.forgotPassword")}</Link> : null}</div>
-              <Input aria-describedby={passwordError ? "auth-password-error" : passwordInvalid ? "auth-password-criteria" : undefined} aria-invalid={passwordInvalid ? true : undefined} autoComplete={login ? "current-password" : "new-password"} className={cn("h-11", passwordInvalid && invalidInputClassName)} id="auth-password" minLength={8} onChange={(event) => setPassword(event.target.value)} onFocus={() => setHasFocusedPassword(true)} placeholder={login ? t("login.passwordPlaceholder") : t("signup.passwordPlaceholder")} ref={passwordInputRef} required type="password" value={password} />
+              <Input aria-describedby={passwordError ? "auth-password-error" : passwordInvalid ? "auth-password-criteria" : undefined} aria-invalid={passwordInvalid ? true : undefined} autoComplete={login ? "current-password" : "new-password"} className={cn("h-11", passwordInvalid && invalidInputClassName)} id="auth-password" minLength={8} onChange={(event) => setPassword(event.target.value)} onFocus={() => setHasFocusedPassword(true)} ref={passwordInputRef} required type="password" value={password} />
               {passwordError ? <FieldError className="flex items-center gap-2 font-medium" id="auth-password-error"><TriangleAlert className="size-4 shrink-0" aria-hidden="true" /><span>{t(`${login ? "login" : "signup"}.${passwordError}`)}</span></FieldError> : null}
               {!login && hasFocusedPassword ? <ul aria-live="polite" className="flex flex-col gap-1 pt-0.5 text-sm font-medium" id="auth-password-criteria">{passwordCriteria.map((criterion) => <li className={cn("flex items-center gap-2", criterion.isMet ? "text-emerald-700" : passwordInvalid ? "text-destructive" : "text-muted-foreground")} key={criterion.label}><span aria-hidden="true" className="w-3 text-center">{criterion.isMet ? "✓" : "×"}</span><span>{criterion.label}</span></li>)}</ul> : null}
             </Field>

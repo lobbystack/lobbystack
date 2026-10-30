@@ -174,7 +174,7 @@ test("operator authentication, workspace access, isolation, and revocation", asy
   await expect(page).toHaveURL(/\/en\/login$/);
   await page.getByLabel("Email").fill(`${prefix}-owner-a@example.invalid`);
   await page.locator('input[type="password"]').fill(password);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL("/");
 
   const foreignContext = await browser.newContext();

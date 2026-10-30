@@ -7,7 +7,9 @@ test("login and signup pages expose accessible auth forms", async ({ page }) => 
   await expect(page.getByLabel("Email")).toBeVisible();
   await expect(page.getByLabel("Password")).toBeVisible();
   await expect(page.getByRole("link", { name: "Create one" })).toHaveAttribute("href", "/en/signup");
-  await expect(page.getByRole("button", { name: "Sign in" })).toHaveCSS("border-radius", "26px");
+  // "Sign in" alone would also match the passkey button, "Sign in with a passkey".
+  await expect(page.getByRole("button", { name: "Sign in", exact: true })).toHaveCSS("border-radius", "26px");
+  await expect(page.getByRole("button", { name: "Sign in with a passkey" })).toBeVisible();
 
   await page.goto("/en/signup");
   await expect(page.getByRole("heading", { name: "Create your account" })).toBeVisible();
@@ -41,7 +43,7 @@ test("auth layout preserves the original mobile composition", async ({ page }) =
   await page.goto("/en/login");
 
   await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
-  const submitBox = await page.getByRole("button", { name: "Sign in" }).boundingBox();
+  const submitBox = await page.getByRole("button", { name: "Sign in", exact: true }).boundingBox();
   expect(submitBox?.width ?? 0).toBeGreaterThan(300);
   await expect(page.getByRole("contentinfo")).toContainText("Terms");
   await expect(page.getByRole("contentinfo")).toContainText("Privacy");

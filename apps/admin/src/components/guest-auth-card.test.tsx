@@ -9,11 +9,11 @@ const analytics = vi.hoisted(() => ({ record: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => navigation }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock("@/lib/auth-success-analytics", () => ({ recordAuthSuccess: analytics.record }));
-vi.mock("./auth-card", () => ({ AuthCard: ({ mode, google }: { mode: string; google: boolean }) => <div>{mode} form{google ? " with Google" : ""}</div> }));
+vi.mock("./auth-card", () => ({ AuthCard: ({ mode, google, passkey }: { mode: string; google: boolean; passkey?: boolean }) => <div>{mode} form{google ? " with Google" : ""}{passkey ? " with passkey" : ""}</div> }));
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.clearAllMocks(); window.history.replaceState(null, "", "/"); });
 
-function stubFetch(session: unknown, google = false) {
-  vi.stubGlobal("fetch", vi.fn(async (url: string) => Response.json(url === "/api/auth/providers" ? { google } : session)));
+function stubFetch(session: unknown, google = false, passkey = false) {
+  vi.stubGlobal("fetch", vi.fn(async (url: string) => Response.json(url === "/api/auth/providers" ? { google, passkey } : session)));
 }
 
 it.each(["login", "signup"] as const)("redirects an authenticated %s visitor without showing the form", async mode => {
@@ -46,6 +46,12 @@ it("offers Google when the server has its OAuth client", async () => {
   render(<GuestAuthCard mode="signup" />);
   expect(await screen.findByText("signup form with Google")).toBeTruthy();
   expect(fetch).toHaveBeenCalledWith("/api/auth/providers");
+});
+
+it("offers passkeys when the server says this host allows them", async () => {
+  stubFetch(null, false, true);
+  render(<GuestAuthCard mode="login" />);
+  expect(await screen.findByText("login form with passkey")).toBeTruthy();
 });
 
 it.each(["login", "signup"] as const)("records a finished Google %s with its source, then follows returnTo", async event => {

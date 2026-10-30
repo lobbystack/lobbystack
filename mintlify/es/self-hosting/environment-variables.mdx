@@ -17,6 +17,7 @@ Use `.env.example` como fuente de referencia. Guarde los valores de producción 
 | `LOBBYSTACK_AUTH_PASSWORD`, `LOBBYSTACK_WORKER_PASSWORD`, `LOBBYSTACK_DISPATCHER_PASSWORD` | Contraseñas de los demás roles. Un servicio se conecta con cada rol combinando el host y la base de datos de `DATABASE_URL` con la contraseña de ese rol. |
 | `LOBBYSTACK_<ROLE>_DATABASE_URL` | Opcional. Reemplaza la cadena de conexión construida para un rol, por ejemplo para usar otro host. |
 | `BETTER_AUTH_SECRET` | Secreto de firma de Better Auth. Use al menos 32 caracteres aleatorios. |
+| `PASSKEY_RP_ID` | Opcional. El dominio al que están vinculadas las llaves de acceso. Por defecto es el nombre de host de `APP_BASE_URL`. Indique un dominio superior como `example.com` para que todos los hosts por debajo compartan las llaves de acceso, o su host de túnel para las pruebas. Cambiarlo deja sin efecto las llaves de acceso existentes. |
 | `ENCRYPTION_KEY` | Cifra las credenciales de la aplicación almacenadas. |
 | `OTP_HASH_SECRET` | Genera el hash de los códigos de verificación de un solo uso y de los PIN de quienes llaman. Configure el mismo valor en el servicio de administración y en el worker. Si lo cambia, todos los PIN guardados dejan de funcionar. |
 

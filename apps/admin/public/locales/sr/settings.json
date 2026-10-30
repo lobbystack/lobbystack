@@ -651,9 +651,43 @@
     }
   },
   "account": {
+    "loading": "Učitavanje vašeg naloga",
+    "passkeys": {
+      "title": "Pristupni ključevi",
+      "description": "Prijavite se otiskom prsta, licem ili zaključavanjem uređaja umesto lozinke.",
+      "add": "Dodaj pristupni ključ",
+      "empty": "Još niste dodali pristupni ključ.",
+      "unnamed": "Pristupni ključ",
+      "addedOn": "Dodato {{date}}",
+      "added": "Pristupni ključ je dodat.",
+      "renamed": "Pristupni ključ je preimenovan.",
+      "removed": "Pristupni ključ je uklonjen.",
+      "remove": "Ukloni",
+      "removeTitle": "Ukloniti ovaj pristupni ključ?",
+      "removeDescription": "Više se nećete moći prijaviti pomoću {{name}}. Lozinka i dalje radi.",
+      "rename": {
+        "action": "Preimenuj",
+        "title": "Preimenuj pristupni ključ",
+        "description": "Izaberite ime koje govori na kom je uređaju.",
+        "label": "Ime",
+        "placeholder": "Npr. Poslovni laptop",
+        "save": "Sačuvaj",
+        "required": "Unesite ime."
+      },
+      "errors": {
+        "addFailed": "Nismo mogli da dodamo pristupni ključ. Pokušajte ponovo.",
+        "wrongAddress": "Pristupni ključevi nisu podešeni za ovu adresu. Otvorite aplikaciju na uobičajenoj adresi, pa pokušajte ponovo.",
+        "alreadyAdded": "Ovaj uređaj već ima pristupni ključ za vaš nalog.",
+        "signInAgain": "Prijavite se ponovo, pa dodajte pristupni ključ.",
+        "renameFailed": "Nismo mogli da preimenujemo pristupni ključ. Pokušajte ponovo.",
+        "removeFailed": "Nismo mogli da uklonimo pristupni ključ. Pokušajte ponovo.",
+        "loadFailed": "Nismo mogli da učitamo vaše pristupne ključeve."
+      }
+    },
     "title": "Nalog",
     "actions": {
-      "change": "Promeni"
+      "change": "Promeni",
+      "cancel": "Otkaži"
     },
     "businessName": {
       "label": "Naziv firme",
@@ -666,12 +700,13 @@
     "changeEmail": {
       "label": "Promeni imejl",
       "description": "Imejl adresa kojom se prijavljujete.",
-      "newEmailPlaceholder": "Novi imejl",
-      "currentPasswordPlaceholder": "Trenutna lozinka",
+      "newEmailLabel": "Novi imejl",
+      "newEmailPlaceholder": "ime@example.com",
       "save": "Pošalji link za potvrdu",
       "title": "Imejl",
       "currentPasswordLabel": "Trenutna lozinka",
       "currentEmail": "{{email}}",
+      "currentEmailLabel": "Trenutna imejl adresa",
       "confirmationSent": "Poslali smo link za potvrdu na {{email}}.",
       "errors": {
         "invalidPassword": "Trenutna lozinka nije ispravna.",
@@ -679,6 +714,7 @@
         "unchanged": "Unesite drugu imejl adresu.",
         "noEmail": "Za ovaj nalog još nije podešen imejl.",
         "required": "Unesite novu imejl adresu.",
+        "invalid": "Unesite ispravnu imejl adresu.",
         "failed": "Nismo uspeli da pošaljemo link za potvrdu. Pokušajte ponovo."
       }
     },
@@ -688,15 +724,20 @@
       "description": "Lozinka kojom se prijavljujete.",
       "dialogDescription": "Unesite trenutnu i novu lozinku.",
       "currentPasswordLabel": "Trenutna lozinka",
-      "currentPasswordPlaceholder": "Trenutna lozinka",
       "newPasswordLabel": "Nova lozinka",
-      "newPasswordPlaceholder": "Nova lozinka",
       "confirmPasswordLabel": "Potvrdite novu lozinku",
-      "confirmPasswordPlaceholder": "Potvrdite novu lozinku",
       "save": "Sačuvaj",
       "saved": "Lozinka je ažurirana.",
       "errors": {
         "mismatch": "Nove lozinke se ne podudaraju.",
+        "currentRequired": "Unesite trenutnu lozinku.",
+        "newRequired": "Unesite novu lozinku.",
+        "confirmRequired": "Potvrdite novu lozinku.",
+        "minimumLengthMissing": "Koristite najmanje 8 znakova.",
+        "numberMissing": "Uključite najmanje jedan broj.",
+        "specialCharacterMissing": "Uključite najmanje jedan specijalni znak.",
+        "unchanged": "Izaberite lozinku koja se razlikuje od trenutne.",
+        "invalidCurrent": "Trenutna lozinka nije ispravna.",
         "failed": "Nije moguće ažurirati lozinku."
       }
     }

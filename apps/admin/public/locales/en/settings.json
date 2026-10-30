@@ -644,9 +644,43 @@
     }
   },
   "account": {
+    "loading": "Loading your account",
+    "passkeys": {
+      "title": "Passkeys",
+      "description": "Sign in with your fingerprint, face or device lock instead of a password.",
+      "add": "Add a passkey",
+      "empty": "You haven't added a passkey yet.",
+      "unnamed": "Passkey",
+      "addedOn": "Added {{date}}",
+      "added": "Passkey added.",
+      "renamed": "Passkey renamed.",
+      "removed": "Passkey removed.",
+      "remove": "Remove",
+      "removeTitle": "Remove this passkey?",
+      "removeDescription": "You won't be able to sign in with {{name}} anymore. Your password still works.",
+      "rename": {
+        "action": "Rename",
+        "title": "Rename passkey",
+        "description": "Pick a name that tells you which device it is on.",
+        "label": "Name",
+        "placeholder": "E.g. Work Laptop",
+        "save": "Save",
+        "required": "Enter a name."
+      },
+      "errors": {
+        "addFailed": "We couldn't add the passkey. Try again.",
+        "wrongAddress": "Passkeys aren't set up for this address. Open the app at its usual address, then try again.",
+        "alreadyAdded": "This device already has a passkey for your account.",
+        "signInAgain": "Sign in again, then add a passkey.",
+        "renameFailed": "We couldn't rename the passkey. Try again.",
+        "removeFailed": "We couldn't remove the passkey. Try again.",
+        "loadFailed": "We couldn't load your passkeys."
+      }
+    },
     "title": "Account",
     "actions": {
-      "change": "Change"
+      "change": "Change",
+      "cancel": "Cancel"
     },
     "businessName": {
       "label": "Business name",
@@ -659,12 +693,13 @@
     "changeEmail": {
       "label": "Change email",
       "description": "Email address you use to log in.",
-      "newEmailPlaceholder": "New email",
-      "currentPasswordPlaceholder": "Current password",
+      "newEmailLabel": "New email",
+      "newEmailPlaceholder": "name@example.com",
       "save": "Send confirmation link",
       "title": "Email",
       "currentPasswordLabel": "Current password",
       "currentEmail": "{{email}}",
+      "currentEmailLabel": "Current email",
       "confirmationSent": "We sent a confirmation link to {{email}}.",
       "errors": {
         "invalidPassword": "Current password is incorrect.",
@@ -672,6 +707,7 @@
         "unchanged": "Enter a different email address.",
         "noEmail": "No email is configured for this account yet.",
         "required": "Enter a new email address.",
+        "invalid": "Enter a valid email address.",
         "failed": "We couldn't send a confirmation link. Please try again."
       }
     },
@@ -681,15 +717,20 @@
       "description": "Password you use to log in.",
       "dialogDescription": "Enter your current password and a new password.",
       "currentPasswordLabel": "Current password",
-      "currentPasswordPlaceholder": "Current password",
       "newPasswordLabel": "New password",
-      "newPasswordPlaceholder": "New password",
       "confirmPasswordLabel": "Confirm new password",
-      "confirmPasswordPlaceholder": "Confirm new password",
       "save": "Save",
       "saved": "Password updated.",
       "errors": {
         "mismatch": "New passwords do not match.",
+        "currentRequired": "Enter your current password.",
+        "newRequired": "Enter a new password.",
+        "confirmRequired": "Confirm your new password.",
+        "minimumLengthMissing": "Use at least 8 characters.",
+        "numberMissing": "Include at least one number.",
+        "specialCharacterMissing": "Include at least one special character.",
+        "unchanged": "Choose a password different from your current one.",
+        "invalidCurrent": "Current password is incorrect.",
         "failed": "Unable to update password."
       }
     }

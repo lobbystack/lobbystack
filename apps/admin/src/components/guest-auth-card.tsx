@@ -15,12 +15,13 @@ export function GuestAuthCard({ mode, partner }: { mode: "login" | "signup"; par
   const { t } = useTranslation("auth");
   const [checking, setChecking] = useState(true);
   const [google, setGoogle] = useState(false);
+  const [passkey, setPasskey] = useState(false);
   useEffect(() => {
     let active = true;
-    // Offer Google only when this server has the OAuth client for it.
+    // Offer Google only when this server has the OAuth client for it, and passkeys only on the host's own domain.
     fetch("/api/auth/providers")
-      .then(async (response) => (await response.json() as { google?: unknown } | null)?.google === true)
-      .then((enabled) => { if (active) setGoogle(enabled); })
+      .then(async (response) => await response.json() as { google?: unknown; passkey?: unknown } | null)
+      .then((providers) => { if (active) { setGoogle(providers?.google === true); setPasskey(providers?.passkey === true); } })
       .catch(() => {});
     return () => { active = false; };
   }, []);
@@ -56,5 +57,5 @@ export function GuestAuthCard({ mode, partner }: { mode: "login" | "signup"; par
   }, [router, partner?.returnTo]);
 
   if (checking) return <div className="flex min-h-svh items-center justify-center" role="status"><LoaderCircle className="size-5 animate-spin" aria-hidden="true" /><span className="sr-only">{t("checkingSession")}</span></div>;
-  return <AuthCard google={google} mode={mode} partner={partner} />;
+  return <AuthCard google={google} mode={mode} partner={partner} passkey={passkey} />;
 }

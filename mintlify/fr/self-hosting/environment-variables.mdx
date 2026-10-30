@@ -17,6 +17,7 @@ Utilisez `.env.example` comme source de référence. Stockez les valeurs de prod
 | `LOBBYSTACK_AUTH_PASSWORD`, `LOBBYSTACK_WORKER_PASSWORD`, `LOBBYSTACK_DISPATCHER_PASSWORD` | Mots de passe des autres rôles. Un service se connecte avec chaque rôle en combinant l'hôte et la base de données de `DATABASE_URL` avec le mot de passe de ce rôle. |
 | `LOBBYSTACK_<ROLE>_DATABASE_URL` | Facultatif. Remplace la chaîne de connexion construite pour un rôle, par exemple pour utiliser un autre hôte. |
 | `BETTER_AUTH_SECRET` | Secret de signature de Better Auth. Utilisez au moins 32 caractères aléatoires. |
+| `PASSKEY_RP_ID` | Facultatif. Le domaine auquel les clés d'accès sont liées. Par défaut, c'est le nom d'hôte de `APP_BASE_URL`. Indiquez un domaine parent comme `example.com` pour que tous les hôtes en dessous partagent les clés d'accès, ou votre hôte de tunnel pour vos tests. Le modifier rend inutilisables les clés d'accès existantes. |
 | `ENCRYPTION_KEY` | Chiffre les identifiants d'application stockés. |
 | `OTP_HASH_SECRET` | Hache les codes de vérification à usage unique et les codes PIN des appelants. Définissez la même valeur sur l'admin et le worker. La changer rend inutilisables tous les codes PIN enregistrés. |
 

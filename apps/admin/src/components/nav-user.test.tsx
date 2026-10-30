@@ -20,6 +20,16 @@ async function setup(upgrade = false, partnerConsole = false, partner?: PartnerB
   await screen.findByRole("menu");
   return { onUpgrade, onSignOut };
 }
+describe("collapsed sidebar", () => {
+  // Tailwind's CSS isn't loaded under jsdom, so this checks the classes that do the centering.
+  it("centers the avatar by hiding everything beside it and centering what is left", async () => {
+    render(<BrandingProvider i18n={{ options: {} } as unknown as I18nextInstance} initial={{ appName: "LobbyStack", logoUrl: null, final: true }}><SidebarProvider><NavUser onSignOut={vi.fn()} user={{ email: "operator@example.invalid", name: "Operator" }} /></SidebarProvider></BrandingProvider>);
+    const button = screen.getByRole("button", { name: /operator@example.invalid/ });
+    expect(button.className).toContain("group-data-[collapsible=icon]:justify-center");
+    expect(button.querySelector("span.truncate")?.parentElement?.className).toContain("group-data-[collapsible=icon]:hidden");
+    expect(button.querySelector("svg")?.getAttribute("class")).toContain("group-data-[collapsible=icon]:hidden");
+  });
+});
 describe("original account menu interactions", () => {
   it("hides the upgrade action when unavailable", async () => { await setup(); expect(screen.queryByRole("menuitem", { name: "sidebar.upgradeToPro" })).toBeNull(); });
   it("opens the supplied upgrade dialog directly", async () => {

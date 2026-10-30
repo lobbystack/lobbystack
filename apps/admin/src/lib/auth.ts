@@ -1,4 +1,5 @@
 import { betterAuth, type BetterAuthOptions, type BetterAuthPlugin } from "better-auth";
+import { passkey } from "@better-auth/passkey";
 import { emailOTP } from "better-auth/plugins/email-otp";
 import { APIError, createAuthMiddleware, getOAuthState } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -8,10 +9,11 @@ import { createHash, randomUUID } from "node:crypto";
 import { and, eq, isNotNull, sql } from "drizzle-orm";
 
 import { assertDatabaseRole, enqueueOutbox, withBusinessTransaction } from "@lobbystack/db";
-import { accounts, sessions, users, verifications } from "@lobbystack/db";
+import { accounts, passkeys, sessions, users, verifications } from "@lobbystack/db";
 import { partnerFeatures } from "@lobbystack/shared";
 
 import { configuredAppOrigins } from "./app-origins";
+import { isPasskeyPath, passkeyAllowed, passkeyRpId } from "./passkey";
 import { loadRequestEmailBrand } from "./branding";
 import { getDatabase } from "./databases";
 import { SUPPORTED_LOCALES, resolveLocale } from "./locale";
@@ -353,7 +355,7 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
   return betterAuth({
     database: drizzleAdapter(adapterDatabase ?? database.db, {
       provider: "pg",
-      schema: { user: users, session: sessions, account: accounts, verification: verifications, ...oauthProviderSchema },
+      schema: { user: users, session: sessions, account: accounts, verification: verifications, passkey: passkeys, ...oauthProviderSchema },
     }),
     baseURL: authBaseURL(),
     trustedOrigins: authTrustedOrigins,
@@ -368,7 +370,7 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
       // the shared per-path bucket rather than trusting a spoofable value.
       ...(trustedIpHeader ? { ipAddress: { ipAddressHeaders: [trustedIpHeader] } } : {}),
     },
-    plugins: [resolvedOriginsOnly(), ...mcpOAuthPlugins(), emailOTP({
+    plugins: [resolvedOriginsOnly(), ...mcpOAuthPlugins(), passkey({ rpID: passkeyRpId(), rpName: "LobbyStack" }), emailOTP({
       disableSignUp: true,
       storeOTP: "hashed",
       expiresIn: 600,
@@ -491,6 +493,8 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
       customRules: {
         "/sign-in/email": { window: 60, max: 5 },
         "/sign-up/email": { window: 60, max: 3 },
+        "/passkey/generate-authenticate-options": { window: 60, max: 10 },
+        "/passkey/verify-authentication": { window: 60, max: 10 },
         "/email-otp/request-password-reset": { window: 60, max: 3 },
         "/email-otp/reset-password": { window: 60, max: 3 },
         "/email-otp/verify-email": { window: 60, max: 3 },
@@ -508,6 +512,10 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
           throw new APIError("NOT_FOUND", { message: "Endpoint not enabled." });
         }
         if (ctx.path && socialSignInPaths.has(ctx.path) && !(ctx.headers && readResolvedBrand(ctx.headers)?.kind === "host")) {
+          throw new APIError("NOT_FOUND", { message: "Endpoint not enabled." });
+        }
+        // Passkeys belong to one domain, so they are for the host's own domain only.
+        if (isPasskeyPath(ctx.path) && !(ctx.headers && passkeyAllowed(ctx.headers))) {
           throw new APIError("NOT_FOUND", { message: "Endpoint not enabled." });
         }
         if (needsMcpResource(ctx.path)) await ensureMcpResource(database.db);

@@ -101,3 +101,71 @@ export function ChartBlockSkeleton({ height = 320 }: { height?: number }) {
     </Surface>
   );
 }
+
+/** One account setting: its title, what it is for, and the value it holds, with the Change button on the right. */
+function AccountSettingSkeleton() {
+  return (
+    <Item variant="outline">
+      <ItemContent>
+        <Skeleton className="h-5 w-16" />
+        <Skeleton className="h-5 w-52 max-w-full" />
+        <Skeleton className="h-6 w-44 max-w-full" />
+      </ItemContent>
+      <ItemActions>
+        <Skeleton className="h-8 w-20 rounded-full" />
+      </ItemActions>
+    </Item>
+  );
+}
+
+/** The rows of a passkey list: a name and the day it was added, then Rename and Remove. */
+export function PasskeyRowsSkeleton({ count = 2 }: { count?: number }) {
+  return (
+    <div className="flex flex-col divide-y divide-border">
+      {Array.from({ length: count }).map((_, index) => (
+        <div className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0" key={index}>
+          <div className="flex flex-col gap-1.5">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-3 w-24" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-6 w-16 rounded-full" />
+            <Skeleton className="h-6 w-16 rounded-full" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** The Passkeys card before its list, or whether passkeys are on at all, is known. */
+export function PasskeysCardSkeleton() {
+  return (
+    <Item className="flex-wrap" variant="outline">
+      <ItemContent>
+        <Skeleton className="h-5 w-20" />
+        <Skeleton className="h-5 w-80 max-w-full" />
+      </ItemContent>
+      <ItemActions>
+        <Skeleton className="h-8 w-32 rounded-full" />
+      </ItemActions>
+      <div className="w-full basis-full">
+        <PasskeyRowsSkeleton />
+      </div>
+    </Item>
+  );
+}
+
+/** The account page while its data loads: Email and Password side by side, then Passkeys. `label` is what a screen reader hears. */
+export function AccountSkeleton({ label }: { label: string }) {
+  return (
+    <div aria-busy="true" className="flex flex-col gap-8" role="status">
+      <span className="sr-only">{label}</span>
+      <div className="grid gap-8 md:grid-cols-2">
+        <AccountSettingSkeleton />
+        <AccountSettingSkeleton />
+      </div>
+      <PasskeysCardSkeleton />
+    </div>
+  );
+}

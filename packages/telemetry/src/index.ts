@@ -241,7 +241,7 @@ export type TelemetryContext = {
 
 export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.auth.login_succeeded": ["deploymentMode", "pathname"],
-  // method: "email" or "google".
+  // method: "email", "google" or "passkey".
   "web.auth.signup_succeeded": ["deploymentMode", "method", "pathname"],
   "web.workspace.business_switched": [
     "businessId",

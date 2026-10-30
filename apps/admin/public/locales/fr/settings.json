@@ -651,9 +651,43 @@
     }
   },
   "account": {
+    "loading": "Chargement de votre compte",
+    "passkeys": {
+      "title": "Clés d'accès",
+      "description": "Connectez-vous avec votre empreinte, votre visage ou le verrouillage de votre appareil, sans mot de passe.",
+      "add": "Ajouter une clé d'accès",
+      "empty": "Vous n'avez pas encore ajouté de clé d'accès.",
+      "unnamed": "Clé d'accès",
+      "addedOn": "Ajoutée le {{date}}",
+      "added": "Clé d'accès ajoutée.",
+      "renamed": "Clé d'accès renommée.",
+      "removed": "Clé d'accès supprimée.",
+      "remove": "Supprimer",
+      "removeTitle": "Supprimer cette clé d'accès ?",
+      "removeDescription": "Vous ne pourrez plus vous connecter avec {{name}}. Votre mot de passe fonctionne toujours.",
+      "rename": {
+        "action": "Renommer",
+        "title": "Renommer la clé d'accès",
+        "description": "Choisissez un nom qui indique l'appareil concerné.",
+        "label": "Nom",
+        "placeholder": "Par ex. : Ordinateur du bureau",
+        "save": "Enregistrer",
+        "required": "Entrez un nom."
+      },
+      "errors": {
+        "addFailed": "Impossible d'ajouter la clé d'accès. Réessayez.",
+        "wrongAddress": "Les clés d'accès ne sont pas configurées pour cette adresse. Ouvrez l'application à son adresse habituelle, puis réessayez.",
+        "alreadyAdded": "Cet appareil a déjà une clé d'accès pour votre compte.",
+        "signInAgain": "Reconnectez-vous, puis ajoutez une clé d'accès.",
+        "renameFailed": "Impossible de renommer la clé d'accès. Réessayez.",
+        "removeFailed": "Impossible de supprimer la clé d'accès. Réessayez.",
+        "loadFailed": "Impossible de charger vos clés d'accès."
+      }
+    },
     "title": "Account",
     "actions": {
-      "change": "Modifier"
+      "change": "Modifier",
+      "cancel": "Annuler"
     },
     "businessName": {
       "label": "Nom de l'entreprise",
@@ -666,12 +700,13 @@
     "changeEmail": {
       "label": "Changer le courriel",
       "description": "Entrez votre nouveau courriel et votre mot de passe actuel. Nous enverrons un lien de confirmation avant de modifier votre courriel de connexion.",
-      "newEmailPlaceholder": "Nouveau courriel",
-      "currentPasswordPlaceholder": "Mot de passe actuel",
+      "newEmailLabel": "Nouveau courriel",
+      "newEmailPlaceholder": "nom@example.com",
       "save": "Envoyer le lien de confirmation",
       "title": "Courriel",
       "currentPasswordLabel": "Mot de passe actuel",
       "currentEmail": "Courriel actuel : {{email}}",
+      "currentEmailLabel": "Courriel actuel",
       "confirmationSent": "Nous avons envoye un lien de confirmation a {{email}}.",
       "errors": {
         "invalidPassword": "Le mot de passe actuel est incorrect.",
@@ -679,6 +714,7 @@
         "unchanged": "Entrez une adresse courriel differente.",
         "noEmail": "Aucun courriel n'est configure pour ce compte.",
         "required": "Entrez une nouvelle adresse courriel.",
+        "invalid": "Entrez une adresse courriel valide.",
         "failed": "Impossible d'envoyer un lien de confirmation. Veuillez reessayer."
       }
     },
@@ -688,15 +724,20 @@
       "description": "Mot de passe utilise pour vous connecter.",
       "dialogDescription": "Entrez votre mot de passe actuel et un nouveau mot de passe.",
       "currentPasswordLabel": "Mot de passe actuel",
-      "currentPasswordPlaceholder": "Mot de passe actuel",
       "newPasswordLabel": "Nouveau mot de passe",
-      "newPasswordPlaceholder": "Nouveau mot de passe",
       "confirmPasswordLabel": "Confirmer le nouveau mot de passe",
-      "confirmPasswordPlaceholder": "Confirmer le nouveau mot de passe",
       "save": "Enregistrer",
       "saved": "Mot de passe mis a jour.",
       "errors": {
         "mismatch": "Les nouveaux mots de passe ne correspondent pas.",
+        "currentRequired": "Entrez votre mot de passe actuel.",
+        "newRequired": "Entrez un nouveau mot de passe.",
+        "confirmRequired": "Confirmez votre nouveau mot de passe.",
+        "minimumLengthMissing": "Utilisez au moins 8 caractères.",
+        "numberMissing": "Incluez au moins un chiffre.",
+        "specialCharacterMissing": "Incluez au moins un caractère spécial.",
+        "unchanged": "Choisissez un mot de passe différent de l'actuel.",
+        "invalidCurrent": "Le mot de passe actuel est incorrect.",
         "failed": "Impossible de mettre a jour le mot de passe."
       }
     }

@@ -19,6 +19,8 @@ function partnerBaseDomainOrigins(): string | undefined {
 }
 
 const nextConfig: NextConfig = {
+  // Hides the route indicator that `next dev` draws on the page. Compile and runtime errors still show.
+  devIndicators: false,
   // PostHog's source map step writes the release ID into each JS chunk after
   // Turbopack has named it, so a chunk that did not change keeps its URL while
   // its bytes change. Browsers cache those URLs as immutable and kept running

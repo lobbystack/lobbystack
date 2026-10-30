@@ -17,6 +17,7 @@ Use `.env.example` as the source of truth. Store production values in your deplo
 | `LOBBYSTACK_AUTH_PASSWORD`, `LOBBYSTACK_WORKER_PASSWORD`, `LOBBYSTACK_DISPATCHER_PASSWORD` | Passwords for the other roles. A service connects as each role by combining `DATABASE_URL`'s host and database with that role's password. |
 | `LOBBYSTACK_<ROLE>_DATABASE_URL` | Optional. Overrides the built connection string for one role, for example to use a different host. |
 | `BETTER_AUTH_SECRET` | Better Auth signing secret. Use at least 32 random characters. |
+| `PASSKEY_RP_ID` | Optional. The domain passkeys are tied to. It defaults to the hostname of `APP_BASE_URL`. Set it to a parent domain such as `example.com` so every host under it shares passkeys, or to your tunnel host when you test. Changing it stops existing passkeys from working. |
 | `ENCRYPTION_KEY` | Encrypts stored application credentials. |
 | `OTP_HASH_SECRET` | Hashes one-time verification codes and callers' keypad PINs. Set the same value on the admin and the worker. Changing it makes every saved PIN stop working. |
 
