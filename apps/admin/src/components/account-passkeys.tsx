@@ -70,6 +70,7 @@ export function AccountPasskeys({ businessName }: { businessName?: string | null
       const messages: Record<string, string> = {
         ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED: "account.passkeys.errors.alreadyAdded",
         SESSION_NOT_FRESH: "account.passkeys.errors.signInAgain",
+        EMAIL_NOT_VERIFIED: "account.passkeys.errors.verifyEmail",
         // The browser refuses a passkey for another address than the one set in PASSKEY_RP_ID.
         ERROR_INVALID_RP_ID: "account.passkeys.errors.wrongAddress",
       };

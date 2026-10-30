@@ -20,6 +20,11 @@ export function isPasskeyPath(path?: string): boolean {
   return Boolean(path?.startsWith("/passkey/"));
 }
 
+/** Better Auth's paths that add a passkey to the signed-in account. */
+export function isPasskeyRegistrationPath(path?: string): boolean {
+  return path === "/passkey/generate-register-options" || path === "/passkey/verify-registration";
+}
+
 /**
  * Whether a request may use passkeys: only on the host's own domain, as the
  * proxy resolved it. A passkey belongs to one domain, and a partner's host
