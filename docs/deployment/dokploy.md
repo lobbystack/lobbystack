@@ -103,7 +103,7 @@ Memory decides what can run at once. Dokploy, Traefik, the registry and the oper
 
 Follow these rules while everything shares the server:
 
-- Stop staging when you finish with it, and don't release to production while it runs.
+- Stop staging when you finish with it.
 - Upgrade Dokploy, Docker or the kernel, or reboot, only in the quiet hour with no call in progress. Each can restart Traefik or every container.
 - Give any new service a memory cap before you deploy it.
 
