@@ -333,7 +333,7 @@ async function checkReleasable(config: Config, root: string, sha: string, option
   throw new Error(`${config.branch} has moved on to ${tip.slice(0, 12)}. Release that instead, or pass --allow-older to ship ${sha.slice(0, 12)}.`);
 }
 
-/** Production and staging together don't fit in the host's 4 GB, so production releases wait for staging to stop. */
+/** Production and staging share a host, so production releases wait for staging to stop. */
 async function checkOtherEnvironmentsStopped(config: Config) {
   if (config.environment !== "production") return;
   for (const [name, target] of Object.entries(ENVIRONMENTS)) {

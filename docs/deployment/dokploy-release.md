@@ -8,7 +8,7 @@ GitHub Actions ships each merge to `main` to the `production` environment of the
 
 `scripts/dokploy-release.ts` runs these steps and stops at the first failure:
 
-1. Checks that staging is stopped, for a production release. Production and staging together don't fit in the host's 4 GB.
+1. Checks that staging is stopped, for a production release. Production and staging share a host.
 2. Checks that the commit is the tip of GitHub `main`, for a production release.
 3. Reads the environment's migrator, worker and admin applications from Dokploy.
 4. Builds the images ghcr.io doesn't hold yet, for `linux/amd64`, and pushes them. The admin's build arguments come from the admin's environment in Dokploy.
