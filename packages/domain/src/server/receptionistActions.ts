@@ -59,7 +59,8 @@ export async function findOpenings(
       dates: [input.date],
       limit: input.limit ?? 3,
       ...(input.staffId ? { staffId: input.staffId } : {}),
-      ...(input.preferredHour24 !== undefined ? { preferredMinutes: input.preferredHour24 * 60 + (input.preferredMinute ?? 0) } : {}),
+      // With no preferred time, the times offered span the day.
+      ...(input.preferredHour24 !== undefined ? { preferredMinutes: input.preferredHour24 * 60 + (input.preferredMinute ?? 0) } : { spread: true }),
     });
     if (input.callId) await recordCallOutcomeInTransaction(tx, { businessId: input.businessId, callId: input.callId, outcome: { kind: "booking_in_progress", serviceName: service.name, startsAt: null } });
     return {
@@ -68,6 +69,7 @@ export async function findOpenings(
       date: input.date,
       timezone: found.timezone,
       openings: found.openings.map((startsAt) => ({ startsAt, displayTime: DateTime.fromISO(startsAt).setZone(found.timezone).toFormat("cccc LLL d, h:mm a") })),
+      moreOpenings: found.moreOpenings,
       ...(found.reason ? { reason: found.reason } : {}),
     };
   });

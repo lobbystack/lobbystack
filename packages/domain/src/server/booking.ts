@@ -230,13 +230,16 @@ export async function findAvailability(
  * Open start times for a service on whole local days, from one read of the
  * schedule and of the staff's bookings. It tries every half hour inside the
  * opening hours, nearest the preferred time first, and returns up to `limit`
- * of them in time order. With none, the reason is why the nearest time can't
- * be booked: later times can fail for another reason, such as a closure.
+ * of them in time order. With `spread`, those are spaced across everything
+ * open, so a caller with no preference doesn't only hear the first times of
+ * the day. `moreOpenings` counts the open times left out. With none, the
+ * reason is why the nearest time can't be booked: later times can fail for
+ * another reason, such as a closure.
  */
 export async function findOpeningsInTransaction(
   tx: DatabaseTransaction,
-  input: { businessId: string; serviceId: string; dates: string[]; staffId?: string; preferredMinutes?: number; limit?: number },
-): Promise<{ timezone: string; durationMinutes: number; openings: string[]; reason?: NoOpeningsReason }> {
+  input: { businessId: string; serviceId: string; dates: string[]; staffId?: string; preferredMinutes?: number; limit?: number; spread?: boolean },
+): Promise<{ timezone: string; durationMinutes: number; openings: string[]; moreOpenings: number; reason?: NoOpeningsReason }> {
   const now = new Date();
   const schedule = await loadSchedule(tx, { businessId: input.businessId, serviceId: input.serviceId, from: now });
   const found = { timezone: schedule.timezone, durationMinutes: schedule.serviceDurationMinutes };
@@ -246,7 +249,7 @@ export async function findOpeningsInTransaction(
       const day = DateTime.fromISO(`${date}T00:00:00`, { zone: schedule.timezone });
       return day.isValid && !schedule.hours.some((window) => window.dayOfWeek === day.weekday % 7);
     });
-    return { ...found, openings: [], reason: !schedule.hours.length ? "no_hours" : closedDays ? "closed_day" : "no_times_left" };
+    return { ...found, openings: [], moreOpenings: 0, reason: !schedule.hours.length ? "no_hours" : closedDays ? "closed_day" : "no_times_left" };
   }
   const starts = candidates.map((value) => new Date(value));
   const requested = input.staffId ? [input.staffId] : undefined;
@@ -259,12 +262,20 @@ export async function findOpeningsInTransaction(
   const openings: string[] = [];
   let reason: UnavailableReason | undefined;
   for (const [index, startsAt] of starts.entries()) {
-    if (openings.length >= limit) break;
     const staffIds = staffForTime(schedule, startsAt, requested, now.getTime());
     if (typeof staffIds !== "string" && openSlots(schedule, startsAt, staffIds, busy).length) openings.push(candidates[index]!);
     else reason ??= typeof staffIds === "string" ? staffIds : "taken";
   }
-  return openings.length ? { ...found, openings: openings.sort() } : { ...found, openings, reason: reason ?? "taken" };
+  if (!openings.length) return { ...found, openings, moreOpenings: 0, reason: reason ?? "taken" };
+  const chosen = input.spread ? spreadAcross(openings.sort(), limit) : openings.slice(0, limit);
+  return { ...found, openings: chosen.sort(), moreOpenings: openings.length - chosen.length };
+}
+
+/** Up to `limit` items, evenly spaced from the first to the last. */
+function spreadAcross(items: string[], limit: number): string[] {
+  if (items.length <= limit) return items;
+  if (limit <= 1) return items.slice(0, limit);
+  return Array.from({ length: limit }, (_, index) => items[Math.round((index * (items.length - 1)) / (limit - 1))]!);
 }
 
 export async function bookAppointment(

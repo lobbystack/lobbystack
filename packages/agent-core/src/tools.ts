@@ -328,7 +328,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
       return { ok: true as const, staffId: match.staffId, employeeName: match.name };
     };
     tools.findAvailability = tool({
-      description: "Find open appointment times for one service on one date. Never state availability without calling this. Don't use it to recheck a time the caller already accepted; bookAppointment checks that.",
+      description: "Find open appointment times for one service on one date. It returns a few of them, and moreOpenings counts the others open that day, so never say the times listed are the only ones. For a part of the day or another time, call it again with preferredTime. Never state availability without calling this. Don't use it to recheck a time the caller already accepted; bookAppointment checks that.",
       inputSchema: z.object({
         serviceName: z.string().describe("One of the business's services."),
         date: z.string().describe("Date as YYYY-MM-DD in the business's timezone."),
