@@ -13,7 +13,7 @@ Run `pnpm voice:eval` after any change that can alter what GPT-Live says or when
 
 Run `pnpm voice:call` once the change is deployed to staging, before you merge. It covers what the eval skips: Twilio, the SIP trunk, the admin webhook, and the worker attaching to the call.
 
-GPT-Live doesn't answer the same way twice. Run each scenario at least 3 times, and compare pass counts before and after your change on the same scenarios.
+GPT-Live doesn't answer the same way twice. Run each scenario at least 3 times, and compare pass counts before and after your change on the same scenarios. A scenario that expects the call to end must pass on every run, even when main fails it too. Look into any run that stays open before you merge.
 
 ## Run the API eval
 

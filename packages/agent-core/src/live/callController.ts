@@ -134,6 +134,12 @@ export type LiveCallSetup = {
    */
   callerDone?: (conversation: string, abortSignal: AbortSignal) => Promise<boolean>;
   /**
+   * Whether the caller is leaving, when GPT-Live gave a short reply to their
+   * turn and no request is running (live/callerDone.ts). Without it, a goodbye
+   * GPT-Live answers itself leaves the call open until the silence timeout.
+   */
+  callerLeaving?: (conversation: string, abortSignal: AbortSignal) => Promise<boolean>;
+  /**
    * The business takes PINs on the keypad, so key presses reach the transcript
    * as "[pressed a key]", without the key: a PIN typed before the receptionist
    * asks for it stays out of the transcript too.
@@ -233,6 +239,13 @@ const CALLER_DONE_QUIET_MS = 2_000;
 const CALLER_DONE_MAX_MS = 20_000;
 // A caller who spoke after the call was ended is checked once they've paused this long.
 const CALLER_CHECK_QUIET_MS = 800;
+// A goodbye GPT-Live answered without handing the call over: a short reply
+// that isn't a question, once both sides have been quiet this long.
+const MISSED_GOODBYE_QUIET_MS = 1_500;
+const MISSED_GOODBYE_MAX_WORDS = 12;
+// GPT-Live's reply wasn't sure to be the last word, so the caller gets longer
+// to say more than after a hand-over. With 2 seconds, it hung up on "oh wait".
+const MISSED_GOODBYE_HANGUP_QUIET_MS = 3_500;
 // A wrap-up's goodbye counts from OpenAI's acknowledgment of the command, or
 // from the request when no acknowledgment arrives by this long.
 const WRAP_UP_ACK_WAIT_MS = 2_000;
@@ -286,7 +299,7 @@ type PendingAppend = { kind: "greeting" | "answer" | "update" | "wrap_up"; deleg
 // that ended the call was made on the session timeline: the caller speaking
 // after it holds the hangup until a check says whether they're only saying
 // goodbye, or cancels it when there's no check.
-type PendingHangup = { afterMs: number; requestedAt: number; callerSpoke?: boolean; checking?: boolean };
+type PendingHangup = { afterMs: number; requestedAt: number; callerSpoke?: boolean; checking?: boolean; replied?: boolean };
 // The close reason when another worker took the call over.
 const DETACHED = "detached";
 /** The ends the agent can ask for with its endCall tool. */
@@ -398,9 +411,13 @@ export class LiveCallController {
   // The request the agent is answering now. Requests run one at a time.
   private answering: { offsetMs: number; revision: number } | undefined;
   private pendingHangup: PendingHangup | undefined;
+  // The caller's words last asked about, and the timer that asks once both sides are quiet.
+  private missedGoodbyeCheckedMs = Number.NEGATIVE_INFINITY;
+  private missedGoodbyeTimer: ReturnType<typeof setTimeout> | undefined;
   // The caller kept the call going after the last request that ended it.
   private hangupCancelled = false;
   private callerDone: LiveCallSetup["callerDone"];
+  private callerLeaving: LiveCallSetup["callerLeaving"];
   private ending = false;
   // Why the call is ending, from the first end that was asked for. See LiveCallSummary.end.
   private endReason: LiveCallEnd | undefined;
@@ -422,6 +439,7 @@ export class LiveCallController {
     // A failed setup ends the call; the worker reports it.
     this.ready.then((setup) => {
       this.callerDone = setup.callerDone;
+      this.callerLeaving = setup.callerLeaving;
       this.maskKeypad = setup.maskKeypad === true;
     }, () => this.endSession());
   }
@@ -453,6 +471,7 @@ export class LiveCallController {
       if (event.delta.trim()) this.heardSpeech(event.end_ms);
       this.measure(() => this.latency.receptionistTranscript(event.start_ms, event.end_ms));
       this.appendTranscript("receptionist", event.delta, event.end_ms);
+      this.watchForMissedGoodbye();
     });
     // OpenAI reflects output audio to the sideband with timeline offsets, but
     // the SDK's sideband event types leave it out. GPT-Live is full duplex, so
@@ -827,8 +846,8 @@ export class LiveCallController {
     const quietSince = Math.max(this.playbackEndsAt(), this.lastSpeechAt, this.lastCallerAt);
     // The goodbye follows the result that ended the call, unless GPT-Live stays silent.
     const answeredAt = Math.max(this.lastAnswerSentAt ?? 0, hangup.requestedAt);
-    const saidGoodbye = this.lastSpeechAt >= answeredAt || now - answeredAt > GOODBYE_START_MS;
-    const done = this.runningDelegations === 0 && saidGoodbye && now - quietSince >= CALLER_DONE_QUIET_MS;
+    const saidGoodbye = hangup.replied === true || this.lastSpeechAt >= answeredAt || now - answeredAt > GOODBYE_START_MS;
+    const done = this.runningDelegations === 0 && saidGoodbye && now - quietSince >= (hangup.replied ? MISSED_GOODBYE_HANGUP_QUIET_MS : CALLER_DONE_QUIET_MS);
     if (!done && now - Math.max(hangup.requestedAt, this.lastCallerAt) < CALLER_DONE_MAX_MS) {
       setTimeout(() => this.hangUpWhenQuiet(hangup), GOODBYE_POLL_MS);
       return;
@@ -856,6 +875,35 @@ export class LiveCallController {
     if (!hangup || startMs <= hangup.afterMs) return;
     if (this.callerDone) hangup.callerSpoke = true;
     else this.cancelHangup();
+  }
+
+  // GPT-Live spoke, so once both sides are quiet the worker may ask whether it
+  // just answered a goodbye. Every new word restarts the wait.
+  private watchForMissedGoodbye(): void {
+    if (!this.callerLeaving) return;
+    clearTimeout(this.missedGoodbyeTimer);
+    this.missedGoodbyeTimer = setTimeout(() => this.checkMissedGoodbye(), MISSED_GOODBYE_QUIET_MS);
+  }
+
+  private checkMissedGoodbye(): void {
+    const callerLeaving = this.callerLeaving;
+    const heard = this.lastCallerStartMs;
+    const [callerTurn, reply] = this.turns.slice(-2);
+    const unanswered = () => !this.ending && !this.finished && !this.pendingHangup && !this.transfer && !this.passcode && this.runningDelegations === 0 && heard === this.lastCallerStartMs;
+    if (!callerLeaving || !unanswered() || heard <= this.missedGoodbyeCheckedMs || callerTurn?.role !== "caller" || reply?.role !== "receptionist") return;
+    if (performance.now() - this.lastCallerAt < MISSED_GOODBYE_QUIET_MS) return;
+    // A question or a longer reply carries the conversation on.
+    const text = reply.text.trim();
+    if (text.endsWith("?") || text.split(/\s+/).length > MISSED_GOODBYE_MAX_WORDS) return;
+    this.missedGoodbyeCheckedMs = heard;
+    void callerLeaving(this.conversationText(), this.abort.signal).catch(() => false).then((leaving) => {
+      if (!leaving || !unanswered()) return;
+      this.hangupCancelled = false;
+      this.endReason ??= "caller_finished";
+      const hangup: PendingHangup = { afterMs: heard, requestedAt: performance.now(), replied: true };
+      this.pendingHangup = hangup;
+      this.hangUpWhenQuiet(hangup);
+    });
   }
 
   // Asks whether the caller's words after the request that ended the call

@@ -79,7 +79,7 @@ describe("buildLiveInstructions", () => {
 
   it("keeps GPT-Live's waiting line neutral until the backend confirms an action", () => {
     const instructions = buildLiveInstructions(demoSnapshot, "voice", callStart);
-    expect(instructions).toContain("say one short neutral line such as \"One moment.\"");
+    expect(instructions).toContain("say one short neutral line such as \"One moment.\" while you wait");
     expect(instructions).toContain("Don't say you've booked, cancelled, saved, sent or confirmed anything until the backend's result says it's done.");
   });
 
@@ -94,7 +94,7 @@ describe("buildLiveInstructions", () => {
     expect(doNotDelegate.join("\n")).not.toMatch(/goodbye|done|end the call|ends on its own/i);
     expect(rest).toContain(`${doNotDelegate.at(-1)}\nEnding the call always goes to the backend, even though you could answer a goodbye yourself.`);
     expect(delegate).toContain("- The caller says goodbye or is done (\"that's it\", \"nothing else\"), so the backend can end the call.");
-    expect(rest).toContain("While you wait, say one short neutral line such as \"One moment.\" When the caller is done, say nothing while you wait.");
+    expect(rest).toContain("When the caller is done, say nothing while you wait. For any other request, say one short neutral line such as \"One moment.\" while you wait.");
     expect(instructions).not.toMatch(/goodbye, then delegate|goodbye instead/);
     expect(delegate).toContain("- The call is spam or the caller is abusive, so the backend can end the call.");
     expect(delegate).toContain("- Ending the call: hang up when the caller is done, or on a spam or abusive call.");
