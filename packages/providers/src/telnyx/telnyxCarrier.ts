@@ -113,10 +113,9 @@ export function createTelnyxCarrier(env: Env = process.env, options: TelnyxCarri
   const fallbackUrl = `${appBaseUrl(env)}/api/webhooks/telnyx/voice`;
 
   /**
-   * A SIP connection to OpenAI for one number. Telnyx puts the OpenAI project
-   * in place of the dialled number and sends no Diversion, so the connection,
-   * which every INVITE names in X-Telnyx-Connection-id, is how the GPT-Live
-   * webhook tells numbers apart. Settings follow Telnyx's GPT-Live guide.
+   * A SIP connection to OpenAI for one number. The GPT-Live webhook finds a
+   * number by To, and by this connection in X-Telnyx-Connection-id if To
+   * doesn't have it. Settings follow Telnyx's GPT-Live guide.
    */
   const createNumberConnection = async (e164: string): Promise<string> => {
     const connection = (await client.post<Data<{ id: string | number }>>("/fqdn_connections", {
@@ -252,7 +251,7 @@ export function createTelnyxCarrier(env: Env = process.env, options: TelnyxCarri
         const number = (await client.get<Data<TelnyxPhoneNumber>>(path)).data;
         const connectionId = carrierConnectionId ?? await createNumberConnection(number.phone_number);
         await client.patch(path, { connection_id: connectionId });
-        // The translated number puts the OpenAI project in the Request-URI, which is how OpenAI finds the project.
+        // The translated number puts the OpenAI project in the Request-URI, which is how OpenAI finds the project. ignore_for_to_header keeps the dialled number in To.
         await client.patch(`${path}/voice`, {
           translated_number: openAiProjectId,
           translated_number_config: "ignore_for_to_header",

@@ -39,13 +39,13 @@ export async function POST(request: Request) {
   // number in "Diversion". A forwarded call can carry several Diversions, the
   // first of which may be the business's old line, so every number is a
   // candidate, in this order. A Telnyx number's translated number puts the
-  // project in the Request-URI, so its dialled number can only survive in
-  // these or in History-Info (RFC 7044), which records the original
-  // Request-URI. See docs/voice/runtime.md.
+  // project in the Request-URI, and ignore_for_to_header keeps the dialled
+  // number in To. History-Info (RFC 7044) records the original Request-URI.
+  // See docs/voice/runtime.md.
   const dialledHeaders = ["diversion", "to", "p-called-party-id", "history-info"];
   const candidates = dialledHeaders.flatMap((name) => event.data.sip_headers.filter((item) => item.name.toLowerCase() === name).flatMap((item) => phonesFromSipHeader(item.value).map((phone) => ({ header: item.name, phone }))));
-  // Telnyx sends neither: it replaces the dialled number with the project. Each
-  // Telnyx number has its own SIP connection, which X-Telnyx-Connection-id names.
+  // The fallback when none of them has it: each Telnyx number has its own SIP
+  // connection, which X-Telnyx-Connection-id names.
   const telnyxConnection = event.data.sip_headers.find((item) => item.name.toLowerCase() === "x-telnyx-connection-id")?.value.trim();
   if (!candidates.length && telnyxConnection) {
     try {
