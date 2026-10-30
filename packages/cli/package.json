@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@lobbystack/shared": "workspace:*",
-    "yaml": "^2.9.0",
+    "yaml": "^2.9.1",
     "zod": "^4.6.6"
   },
   "devDependencies": {
