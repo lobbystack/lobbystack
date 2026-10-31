@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const fixture = vi.hoisted(() => ({ capabilities: ["activity", "setup", "team"] as string[] }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string) => key }) }));
-vi.mock("@/hooks/use-active-business", () => ({ useActiveBusiness: () => ({ business: { businessId: "harbor", role: "business_owner" } }) }));
+vi.mock("@/hooks/use-active-business", () => ({ useActiveBusiness: () => ({ businesses: { isLoading: false }, business: { businessId: "harbor", role: "business_owner" } }) }));
 vi.mock("./business-capabilities-provider", () => ({ useBusinessCan: () => (capability: string) => fixture.capabilities.includes(capability) }));
 vi.mock("./upgrade-plan-dialog-context", () => ({ useOpenUpgradePlanDialog: () => vi.fn() }));
 vi.mock("@/lib/number-step", () => ({ useOpenNumberStep: () => vi.fn() }));

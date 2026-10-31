@@ -74,6 +74,20 @@ describe("original workspace switcher behavior", () => {
     expect(container.querySelector('[data-slot="skeleton"]')).toBeTruthy();
     expect(screen.queryByRole("button")).toBeNull();
   });
+  it("shows a row shaped like the real switcher, with the 24px initial, a one-line name and the chevron, and no border", () => {
+    const { container } = setup("Tim Hortons", true);
+    const placeholders = container.querySelectorAll('[data-slot="skeleton"]');
+    expect([...placeholders].map((placeholder) => placeholder.className.match(/size-\d+|h-4 w-32/)?.[0])).toEqual(["size-6", "h-4 w-32", "size-4"]);
+    const row = container.querySelector('[data-slot="item"]')!;
+    for (const token of ["w-full", "gap-2", "rounded-lg", "px-2", "py-2"]) expect(row.className).toContain(token);
+    // The real switcher is a borderless row too, so the outline variant's border would change its size on load.
+    expect(row.getAttribute("data-variant")).not.toBe("outline");
+  });
+  it("replaces the row with the real switcher once the workspaces have loaded", () => {
+    const { container } = setup("Tim Hortons");
+    expect(container.querySelector('[data-slot="skeleton"]')).toBeNull();
+    expect(screen.getByRole("button", { name: /Tim Hortons/ })).toBeTruthy();
+  });
   it("switches the workspace and discards the previous tenant's cached data", async () => {
     const { client, fetchMock } = setup();
     client.setQueryData(["contacts", "business-1"], { private: true });

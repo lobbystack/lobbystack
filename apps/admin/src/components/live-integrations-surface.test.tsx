@@ -65,11 +65,12 @@ describe("original integration permissions and setup navigation", () => {
     fireEvent.click(await screen.findByRole("button", { name: "integrations.google.refreshCalendars" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/api/integrations?businessId=business"), expect.objectContaining({ method: "POST" })));
   });
-  it("does not request administrator calendar connections for viewers", () => {
+  it("does not request administrator calendar connections for viewers", async () => {
     const fetchMock = setup("viewer");
     // Only the Instagram card asks, and only whether Instagram is set up.
     expect((fetchMock.mock.calls as unknown as Array<[unknown]>).every(([url]) => String(url).startsWith("/api/integrations/instagram?"))).toBe(true);
-    expect(screen.getByRole("button", { name: "integrations.actions.connect" }).hasAttribute("disabled")).toBe(true);
+    // Their cards turn real once the Instagram status has answered.
+    expect((await screen.findByRole("button", { name: "integrations.actions.connect" })).hasAttribute("disabled")).toBe(true);
   });
   it("hides the Instagram card until the server has a Meta app", async () => {
     const fetchMock = setup("business_admin", { configured: false, account: null } as Partial<IntegrationsViewModel>);
@@ -86,5 +87,45 @@ describe("original integration permissions and setup navigation", () => {
     setup("business_admin");
     expect(await screen.findByRole("dialog")).toBeTruthy();
     await waitFor(() => expect(route.router.replace).toHaveBeenCalledWith("/integrations?keep=value", { scroll: false }));
+  });
+});
+describe("integration loading states", () => {
+  const cards = () => document.querySelectorAll("ul > li").length;
+  const titles = ["google", "webhooks", "zapier"].map((card) => `integrations.cards.${card}.title`);
+  function renderPending(workspace: boolean) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); clients.push(client);
+    if (workspace) client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_admin" }] });
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+    render(<QueryClientProvider client={client}><LiveIntegrationsSurface /></QueryClientProvider>);
+  }
+
+  it("shows a placeholder for every card, with no real card content or buttons, while the workspace loads", () => {
+    renderPending(false);
+    expect(cards()).toBe(4);
+    expect(document.querySelectorAll("ul > li [data-slot=\"skeleton\"]").length).toBe(4 * 5);
+    for (const title of titles) expect(screen.queryByText(title)).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("keeps every card a placeholder while the Google and Instagram statuses load", () => {
+    renderPending(true);
+    expect(cards()).toBe(4);
+    for (const title of titles) expect(screen.queryByText(title)).toBeNull();
+    expect(screen.queryByRole("button", { name: "integrations.actions.connect" })).toBeNull();
+  });
+
+  it("swaps all the cards to real content together once the statuses have loaded", async () => {
+    setup("business_admin", { configured: true, account: null } as Partial<IntegrationsViewModel>);
+    expect(await screen.findByText("integrations.cards.instagram.title")).toBeTruthy();
+    for (const title of titles) expect(screen.getByText(title)).toBeTruthy();
+    expect(cards()).toBe(4);
+    expect(document.querySelectorAll("ul > li [data-slot=\"skeleton\"]").length).toBe(0);
+  });
+
+  it("settles on three cards when the server has no Meta app", async () => {
+    setup("business_admin", { configured: false, account: null } as Partial<IntegrationsViewModel>);
+    expect(await screen.findByText("integrations.cards.google.title")).toBeTruthy();
+    expect(cards()).toBe(3);
+    expect(screen.queryByText("integrations.cards.instagram.title")).toBeNull();
   });
 });
