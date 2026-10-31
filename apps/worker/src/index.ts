@@ -12,7 +12,7 @@ import { InstagramProvider } from "@lobbystack/providers/instagram/instagram";
 import { SecretBox } from "@lobbystack/providers/crypto/secretBox";
 import { PolarBillingProvider } from "@lobbystack/providers/polar/polarBilling";
 import { createStorageProvider } from "@lobbystack/providers/storage/provider";
-import { TwilioProvider } from "@lobbystack/providers/twilio/twilioProvider";
+import { createTelephony } from "@lobbystack/providers/telephony/registry";
 import { getMeter, initializeTelemetry, redactOtelExceptionText, shutdownTelemetry, withExtractedTraceContext, withSpan } from "@lobbystack/telemetry/node";
 import { redactJobError } from "./redactJobError";
 import { DelayedError, Worker } from "bullmq";
@@ -52,29 +52,10 @@ function createOnboardingFollowupSender(): OnboardingFollowupSender | undefined 
   return from && name ? { from, name } : undefined;
 }
 
-function createTwilioProvider(): TwilioProvider | undefined {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  return accountSid && authToken ? new TwilioProvider({ accountSid, authToken }) : undefined;
-}
-
 function createPolarProvider(): PolarBillingProvider | undefined {
   const accessToken = process.env.POLAR_ACCESS_TOKEN;
   const organizationId = process.env.POLAR_ORGANIZATION_ID;
   return accessToken && organizationId ? new PolarBillingProvider({ accessToken, organizationId, ...(process.env.POLAR_API_BASE_URL ? { baseUrl: process.env.POLAR_API_BASE_URL } : {}) }) : undefined;
-}
-
-function createAlertSmsProvider(): WorkerDependencies["twilioAlerts"] {
-  const accountSid = process.env.TWILIO_ALERT_ACCOUNT_SID;
-  const apiKeySid = process.env.TWILIO_ALERT_API_KEY_SID;
-  const apiKeySecret = process.env.TWILIO_ALERT_API_KEY_SECRET;
-  const from = process.env.TWILIO_ALERT_SMS_FROM;
-  if (!accountSid || !apiKeySid || !apiKeySecret || !from) return undefined;
-  const provider = new TwilioProvider({ accountSid, apiKeySid, apiKeySecret });
-  return { from, sendSms: input => {
-    if (input.from !== from) throw new Error("Restricted alert provider cannot use another sender.");
-    return provider.sendSms(input);
-  } };
 }
 
 function createCrawlerProvider(): FirecrawlProvider | undefined {
@@ -167,8 +148,8 @@ async function main(): Promise<void> {
   const health = startHealthServer(workerPort, state, liveCalls.handle);
   const email = createEmailProvider();
   const onboardingFollowupSender = createOnboardingFollowupSender();
-  const twilio = createTwilioProvider();
-  const twilioAlerts = createAlertSmsProvider();
+  // Every carrier with credentials, routed by TELEPHONY_* (docs/voice/runtime.md). Malformed routing fails the boot.
+  const telephony = createTelephony(process.env);
   const storage = createStorageProvider();
   const polar = createPolarProvider();
   const customHostnames = createCustomHostnameProvider(process.env);
@@ -195,8 +176,7 @@ async function main(): Promise<void> {
     ...(email ? { email } : {}),
     ...(onboardingFollowupSender ? { onboardingFollowupSender } : {}),
     ...(embeddings ? { embeddings } : {}),
-    ...(twilio ? { twilio } : {}),
-    ...(twilioAlerts ? { twilioAlerts } : {}),
+    telephony,
     storage,
     ...(openai ? { liveSessions: openai.live.sessions } : {}),
     recoverLiveCall: liveCalls.recover,

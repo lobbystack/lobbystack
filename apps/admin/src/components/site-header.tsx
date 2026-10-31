@@ -1,5 +1,4 @@
 import { useEffect, useState, useSyncExternalStore, type RefObject } from "react";
-import { Phone } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -17,7 +16,6 @@ function MobileTestCallButton() {
   if (!ready) return null;
   return (
     <Button className="md:hidden" onClick={() => startTestCall()} size="sm" type="button" variant="outline">
-      <Phone />
       {t("testCall.trigger")}
     </Button>
   );

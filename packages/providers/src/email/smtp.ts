@@ -12,7 +12,7 @@ export type SmtpConfig = {
   from: string;
 };
 
-type TemplateName = "existing_account" | "account_setup" | "verify_email" | "password_reset" | "invitation" | "operator_alert" | "feedback_submission" | "onboarding_followup" | "number_trial" | "number_release" | "partner_pool_alert" | "business_allowance_alert" | "partner_business_allowance_alert" | "business_released" | "business_deleted";
+type TemplateName = "existing_account" | "account_setup" | "verify_email" | "password_reset" | "passkey_added" | "invitation" | "operator_alert" | "feedback_submission" | "onboarding_followup" | "number_trial" | "number_release" | "partner_pool_alert" | "business_allowance_alert" | "partner_business_allowance_alert" | "business_released" | "business_deleted";
 
 export class SmtpEmailProvider {
   private readonly transporter: Transporter;
@@ -96,6 +96,14 @@ const EXISTING_ACCOUNT_SUBJECTS: Record<string, (name: string) => string> = {
   sr: (name) => `Već imate ${name} nalog`,
 };
 
+// The subjects of the alert that a passkey joined the account.
+const PASSKEY_ADDED_SUBJECTS: Record<string, (name: string) => string> = {
+  en: (name) => `New passkey on your ${name} account`,
+  fr: (name) => `Nouvelle clé d’accès sur votre compte ${name}`,
+  es: (name) => `Nueva llave de acceso en su cuenta de ${name}`,
+  sr: (name) => `Novi pristupni ključ na vašem ${name} nalogu`,
+};
+
 /**
  * The subject of an email whose payload names none, under the brand it goes
  * out under. A link to confirm an email change says so in `purpose`.
@@ -110,6 +118,8 @@ function templateSubject(template: TemplateName, variables: Record<string, strin
       return `Reset your ${name} password`;
     case "existing_account":
       return (EXISTING_ACCOUNT_SUBJECTS[variables.locale ?? "en"] ?? EXISTING_ACCOUNT_SUBJECTS.en!)(name);
+    case "passkey_added":
+      return (PASSKEY_ADDED_SUBJECTS[variables.locale ?? "en"] ?? PASSKEY_ADDED_SUBJECTS.en!)(name);
     case "account_setup":
       return (SETUP_SUBJECTS[variables.locale ?? "en"] ?? SETUP_SUBJECTS.en!)(name);
     case "number_trial":
@@ -169,6 +179,8 @@ function templateBody(template: TemplateName, variables: Record<string, string>,
   switch (template) {
     case "existing_account":
       return existingAccountBody(variables, brand);
+    case "passkey_added":
+      return passkeyAddedBody(variables, brand);
     case "account_setup":
       return accountSetupBody(variables, brand);
     case "verify_email":
@@ -555,6 +567,22 @@ function accountSetupBody(variables: Record<string, string>, brand: EmailBrand):
       return `Pozvani ste da napravite ${name} nalog sa adresom ${email}. Napravite ga ovde, sa ovom adresom: ${url}. Ako ovo niste očekivali, zanemarite ovaj imejl.`;
     default:
       return `You were invited to make a ${name} account with ${email}. Make it here, with this address: ${url}. If you weren't expecting this, ignore this email.`;
+  }
+}
+
+function passkeyAddedBody(variables: Record<string, string>, brand: EmailBrand): string {
+  const name = brand.name;
+  const settings = dashboardLink(variables.settingsUrl, brand);
+  const reset = dashboardLink(variables.resetUrl, brand);
+  switch (variables.locale) {
+    case "fr":
+      return `Quelqu’un a ajouté une clé d’accès à votre compte ${name}. Si c’était vous, vous n’avez rien à faire. Consultez vos clés d’accès : ${settings}. Si ce n’était pas vous, réinitialisez votre mot de passe maintenant : ${reset}. La réinitialisation supprime toutes vos clés d’accès et déconnecte tous vos appareils.`;
+    case "es":
+      return `Alguien añadió una llave de acceso a su cuenta de ${name}. Si fue usted, no tiene que hacer nada. Vea sus llaves de acceso: ${settings}. Si no fue usted, restablezca su contraseña ahora: ${reset}. Al restablecerla, se eliminan todas sus llaves de acceso y se cierra la sesión en todos sus dispositivos.`;
+    case "sr":
+      return `Neko je dodao pristupni ključ na vaš ${name} nalog. Ako ste to bili vi, ne morate ništa da radite. Pogledajte svoje pristupne ključeve: ${settings}. Ako to niste bili vi, odmah resetujte lozinku: ${reset}. Resetovanje uklanja sve vaše pristupne ključeve i odjavljuje sve vaše uređaje.`;
+    default:
+      return `Someone added a passkey to your ${name} account. If it was you, you're all set. See your passkeys: ${settings}. If it wasn't you, reset your password now: ${reset}. A reset removes all your passkeys and signs out all your devices.`;
   }
 }
 

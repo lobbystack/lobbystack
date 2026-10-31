@@ -624,6 +624,8 @@ export const phoneNumbers = pgTable(
     businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
     e164: varchar("e164", { length: 32 }).notNull(),
     providerPhoneId: varchar("provider_phone_id", { length: 255 }),
+    // The carrier that owns the number, which every operation on it goes to (migration 0170).
+    carrier: varchar("carrier", { length: 32 }).default("twilio").notNull(),
     voiceEnabled: boolean("voice_enabled").default(true).notNull(),
     smsEnabled: boolean("sms_enabled").default(true).notNull(),
     status: varchar("status", { length: 32 }).default("active").notNull(),
@@ -637,12 +639,17 @@ export const phoneNumbers = pgTable(
     smsWebhookTargetUrl: text("sms_webhook_target_url"),
     smsWebhookLastSyncedAt: timestamp("sms_webhook_last_synced_at", { withTimezone: true }),
     smsWebhookLastError: text("sms_webhook_last_error"),
+    // Where the carrier forwards refused calls, for carriers that store it (migration 0171).
+    refusedCallsForwardTo: varchar("refused_calls_forward_to", { length: 32 }),
+    // The carrier connection that only this number uses, for carriers that route calls by it (migration 0172).
+    carrierConnectionId: varchar("carrier_connection_id", { length: 64 }),
     ...legacyId,
     ...timestamps,
   },
   (table) => [
     uniqueIndex("phone_numbers_e164_unreclaimed_unique").on(table.e164).where(sql`${table.status} <> 'reclaimed'`),
     uniqueIndex("phone_numbers_provider_id_unique").on(table.providerPhoneId),
+    uniqueIndex("phone_numbers_carrier_connection_unique").on(table.carrier, table.carrierConnectionId).where(sql`${table.carrierConnectionId} is not null and ${table.status} <> 'reclaimed'`),
     index("phone_numbers_business_idx").on(table.businessId),
   ],
 );
@@ -652,9 +659,11 @@ export const onboardingPhoneVerifications = pgTable("onboarding_phone_verificati
 }, (table) => [index("onboarding_phone_verifications_business_user_idx").on(table.businessId, table.userId, table.updatedAt), index("onboarding_phone_verifications_provider_idx").on(table.providerVerificationId), index("onboarding_phone_verifications_user_phone_status_idx").on(table.userId, table.phoneE164, table.status, table.updatedAt)]);
 
 export const onboardingNumberClaimEvents = pgTable("onboarding_number_claim_events", {
-  id: uuid("id").defaultRandom().primaryKey(), businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }), userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }), purpose: varchar("purpose", { length: 32 }).default("onboarding").notNull(), replacingPhoneNumberId: uuid("replacing_phone_number_id").references(() => phoneNumbers.id, { onDelete: "set null" }), requestedE164: varchar("requested_e164", { length: 32 }).notNull(), selectionContext: jsonb("selection_context").$type<Record<string, unknown>>().notNull(), claimTokenHash: text("claim_token_hash").notNull(), idempotencyKey: varchar("idempotency_key", { length: 255 }).notNull(), status: varchar("status", { length: 32 }).default("reserved").notNull(), phoneNumberId: uuid("phone_number_id").references(() => phoneNumbers.id, { onDelete: "set null" }), providerPhoneId: varchar("provider_phone_id", { length: 255 }), reservedAt: timestamp("reserved_at", { withTimezone: true }).defaultNow().notNull(), purchasedAt: timestamp("purchased_at", { withTimezone: true }), completedAt: timestamp("completed_at", { withTimezone: true }), attemptCount: integer("attempt_count").default(0).notNull(), lastError: text("last_error"), alternatives: jsonb("alternatives").$type<Array<Record<string, unknown>>>(),
+  id: uuid("id").defaultRandom().primaryKey(), businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }), userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }), purpose: varchar("purpose", { length: 32 }).default("onboarding").notNull(), replacingPhoneNumberId: uuid("replacing_phone_number_id").references(() => phoneNumbers.id, { onDelete: "set null" }), requestedE164: varchar("requested_e164", { length: 32 }).notNull(), selectionContext: jsonb("selection_context").$type<Record<string, unknown>>().notNull(), claimTokenHash: text("claim_token_hash").notNull(), idempotencyKey: varchar("idempotency_key", { length: 255 }).notNull(), status: varchar("status", { length: 32 }).default("reserved").notNull(), phoneNumberId: uuid("phone_number_id").references(() => phoneNumbers.id, { onDelete: "set null" }), providerPhoneId: varchar("provider_phone_id", { length: 255 }), providerOrderId: varchar("provider_order_id", { length: 255 }), reservedAt: timestamp("reserved_at", { withTimezone: true }).defaultNow().notNull(), purchasedAt: timestamp("purchased_at", { withTimezone: true }), completedAt: timestamp("completed_at", { withTimezone: true }), attemptCount: integer("attempt_count").default(0).notNull(), lastError: text("last_error"), alternatives: jsonb("alternatives").$type<Array<Record<string, unknown>>>(),
   // A partner member made the claim through an open of the business, so only the partner's quotas count it (migration 0159).
-  byPartnerMember: boolean("by_partner_member").default(false).notNull(), ...timestamps,
+  byPartnerMember: boolean("by_partner_member").default(false).notNull(),
+  // The carrier that sells the number, from the signed offer (migration 0170).
+  carrier: varchar("carrier", { length: 32 }).default("twilio").notNull(), ...timestamps,
 }, (table) => [uniqueIndex("onboarding_number_claim_events_business_key_unique").on(table.businessId, table.idempotencyKey), uniqueIndex("onboarding_number_claim_events_provider_unique").on(table.providerPhoneId), index("onboarding_number_claim_events_user_purchased_idx").on(table.userId, table.purchasedAt), index("onboarding_number_claim_events_business_status_idx").on(table.businessId, table.status, table.reservedAt)]);
 
 export const numberTrials = pgTable("number_trials", {
@@ -881,6 +890,8 @@ export const messages = pgTable(
     direction: varchar("direction", { length: 16 }).notNull(),
     channel: varchar("channel", { length: 32 }).notNull(),
     providerMessageId: varchar("provider_message_id", { length: 255 }),
+    // The carrier a text went through; null on other channels (migration 0170).
+    carrier: varchar("carrier", { length: 32 }),
     providerUpdatedAt: timestamp("provider_updated_at", { withTimezone: true }),
     providerPrice: doublePrecision("provider_price"),
     providerPriceUnit: varchar("provider_price_unit", { length: 16 }),
@@ -916,6 +927,8 @@ export const calls = pgTable(
     contactId: uuid("contact_id").references(() => contacts.id, { onDelete: "set null" }),
     provider: varchar("provider", { length: 32 }).default("twilio").notNull(),
     providerCallId: varchar("provider_call_id", { length: 255 }).notNull(),
+    // The carrier that carried a phone call; null for browser calls (migration 0170).
+    carrier: varchar("carrier", { length: 32 }),
     gatewaySessionId: varchar("gateway_session_id", { length: 255 }),
     transport: varchar("transport", { length: 32 }).notNull(),
     originUrl: text("origin_url"),

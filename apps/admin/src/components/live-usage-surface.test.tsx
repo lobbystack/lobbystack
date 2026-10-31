@@ -3,6 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BusinessCapabilitiesProvider } from "./business-capabilities-provider";
+import type { ComponentProps } from "react";
 import { LiveUsageSurface } from "./live-usage-surface";
 
 const language = vi.hoisted(() => ({ value: "en" }));
@@ -82,5 +83,44 @@ describe("a partner's business, which has no billing", () => {
     expect(screen.getByText(text => text.startsWith("100 /"))).toBeTruthy();
     expect(screen.queryByText("billing.usage.noLimit")).toBeNull();
     expect(screen.getByText("billing.usage.blockedDescription")).toBeTruthy();
+  });
+});
+
+describe("usage loading states", () => {
+  const skeletons = () => document.querySelectorAll('[data-slot="skeleton"]').length;
+  function renderPending(capabilities?: ComponentProps<typeof BusinessCapabilitiesProvider>["initial"]) {
+    language.value = "en";
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    clients.push(client);
+    client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true }] });
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+    const surface = <LiveUsageSurface />;
+    render(<QueryClientProvider client={client}>{capabilities ? <BusinessCapabilitiesProvider initial={capabilities}>{surface}</BusinessCapabilitiesProvider> : surface}</QueryClientProvider>);
+  }
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it("shows a placeholder for the section title and the description, and four meter placeholders, while the plan usage loads", () => {
+    renderPending();
+    expect(screen.queryByRole("heading", { name: "billing.usage.title" })).toBeNull();
+    // The placeholder holds the real title, hidden, so it is as wide as the title.
+    expect(screen.getByText("billing.usage.title").className).toContain("invisible");
+    expect(document.querySelectorAll('[data-slot="surface"] > div').length).toBe(4);
+    // A title and a description, then a label, a value and a bar for each meter.
+    expect(skeletons()).toBe(2 + 4 * 3);
+    expect(screen.queryByText("billing.usage.voiceTitle")).toBeNull();
+  });
+
+  it("turns the title into a real heading once the plan usage has loaded", () => {
+    setup("en");
+    expect(screen.getByRole("heading", { name: "billing.usage.title" })).toBeTruthy();
+    expect(skeletons()).toBe(0);
+  });
+
+  it("shows two meter placeholders under the allowance title for a business billed outside LobbyStack", () => {
+    renderPending(["activity"]);
+    expect(screen.queryByRole("heading", { name: "billing.usage.allowanceTitle" })).toBeNull();
+    expect(screen.getByText("billing.usage.allowanceTitle").className).toContain("invisible");
+    expect(document.querySelectorAll('[data-slot="surface"] > div').length).toBe(2);
+    expect(skeletons()).toBe(2 + 2 * 3);
   });
 });

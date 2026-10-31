@@ -392,7 +392,7 @@ describe.skipIf(!client)("a partner's prospect demos against PostgreSQL", () => 
         released: await tx.select({ businessId: outboxMessages.businessId, payload: outboxMessages.payload }).from(outboxMessages).where(and(eq(outboxMessages.topic, "phoneNumber.releaseDeleted"), eq(outboxMessages.aggregateId, number!.id))),
         stored: await tx.select({ businessId: outboxMessages.businessId, payload: outboxMessages.payload }).from(outboxMessages).where(and(eq(outboxMessages.topic, "privacy.deleteStoredObjects"), eq(outboxMessages.aggregateId, closed.businessId))),
       }));
-      expect(queued).toEqual({ released: [{ businessId: null, payload: line }], stored: [{ businessId: null, payload: { objectKeys: [objectKey] } }] });
+      expect(queued).toEqual({ released: [{ businessId: null, payload: { ...line, carrier: "twilio" } }], stored: [{ businessId: null, payload: { objectKeys: [objectKey] } }] });
 
       // One past its expiry is closed too, before the hourly sweep turns it off.
       await asMigrator(tx, async () => await tx.update(prospectDemos).set({ expiresAt: new Date(Date.now() - 60_000) }).where(eq(prospectDemos.id, open.demoId)));

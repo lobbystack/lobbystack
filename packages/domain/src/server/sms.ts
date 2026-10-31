@@ -1,6 +1,7 @@
 import { and, eq, gt, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 
 import { businesses, contacts, conversationSessions, conversations, enqueueOutbox, messages, providerEvents, smsConsentEvents, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import type { CarrierId } from "@lobbystack/providers/telephony/types";
 import { DEFAULT_APP_NAME, brandLinks, contactEmailFor, isTerminalTwilioMessageStatus, mapTwilioStatusToMessageStatus, normalizeTwilioMessageStatus, shouldApplyMessageStatusTransition } from "@lobbystack/shared";
 
 import { deploymentAppName } from "./branding";
@@ -177,11 +178,12 @@ async function restoreAfterSharedSenderOptOut(tx: DatabaseTransaction, input: { 
 
 export async function receiveInboundSms(
   context: DomainContext,
-  input: { businessId: string; providerMessageId: string; from: string; to: string; body: string; payload: Record<string, unknown> },
+  input: { businessId: string; providerMessageId: string; from: string; to: string; body: string; payload: Record<string, unknown>; carrier?: CarrierId },
 ): Promise<{ messageId?: string; duplicate: boolean }> {
+  const carrier = input.carrier ?? "twilio";
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const [providerEvent] = await tx.insert(providerEvents).values({
-      provider: "twilio",
+      provider: carrier,
       providerEventId: input.providerMessageId,
       eventType: "sms.received",
       businessId: input.businessId,
@@ -197,7 +199,7 @@ export async function receiveInboundSms(
     if (!session) throw new Error("Inbound SMS session could not be created.");
     const retentionPlan = isContentRetentionEnabled() ? await resolveBusinessBillingPlan(tx, input.businessId) : null;
     const contentExpiresAt = retentionPlan ? contentExpiryForPlan(retentionPlan, "messages") : null;
-    const [message] = await tx.insert(messages).values({ businessId: input.businessId, conversationId: conversation.id, conversationSessionId: session.id, direction: "inbound", channel: "sms", body: input.body, contentExpiresAt, providerMessageId: input.providerMessageId, status: "received" }).onConflictDoNothing({ target: messages.providerMessageId }).returning({ id: messages.id });
+    const [message] = await tx.insert(messages).values({ businessId: input.businessId, conversationId: conversation.id, conversationSessionId: session.id, direction: "inbound", channel: "sms", body: input.body, contentExpiresAt, providerMessageId: input.providerMessageId, carrier, status: "received" }).onConflictDoNothing({ target: messages.providerMessageId }).returning({ id: messages.id });
     if (!message) {
       const existing = (await tx.select({ id: messages.id }).from(messages).where(and(eq(messages.businessId, input.businessId), eq(messages.providerMessageId, input.providerMessageId))).limit(1))[0];
       if (!existing) throw new Error("Inbound SMS message could not be persisted.");
@@ -338,15 +340,16 @@ export async function setContactSmsManualBlock(
   });
 }
 
-export async function markSmsSent(context: DomainContext, input: { businessId: string; messageId: string; providerMessageId: string }): Promise<void> {
+export async function markSmsSent(context: DomainContext, input: { businessId: string; messageId: string; providerMessageId: string; carrier?: CarrierId }): Promise<void> {
+  const carrier = input.carrier ?? "twilio";
   await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const current = (await tx.select({ status: messages.status, providerMessageId: messages.providerMessageId }).from(messages).where(and(eq(messages.id, input.messageId), eq(messages.businessId, input.businessId))).limit(1))[0];
     if (!current) return;
     const applySent = shouldApplyMessageStatusTransition(current.status, "sent");
-    await tx.update(messages).set({ ...(current.providerMessageId ? {} : { providerMessageId: input.providerMessageId }), ...(applySent ? { status: "sent", providerStatus: "sent" } : {}), revision: sql`${messages.revision} + 1`, updatedAt: new Date() }).where(and(eq(messages.id, input.messageId), eq(messages.businessId, input.businessId)));
+    await tx.update(messages).set({ ...(current.providerMessageId ? {} : { providerMessageId: input.providerMessageId, carrier }), ...(applySent ? { status: "sent", providerStatus: "sent" } : {}), revision: sql`${messages.revision} + 1`, updatedAt: new Date() }).where(and(eq(messages.id, input.messageId), eq(messages.businessId, input.businessId)));
     if (!applySent) return;
     await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "message", aggregateId: input.messageId, dedupeKey: `message:${input.messageId}:sent:${input.providerMessageId}`, payload: { type: "message.deliveryUpdated", entityId: input.messageId } });
-    await enqueueOutbox(tx, { topic: "sms.syncPrice", businessId: input.businessId, aggregateType: "message", aggregateId: input.messageId, dedupeKey: `message:${input.messageId}:price:sent`, payload: { providerMessageId: input.providerMessageId, providerStatus: "sent" } });
+    await enqueueOutbox(tx, { topic: "sms.syncPrice", businessId: input.businessId, aggregateType: "message", aggregateId: input.messageId, dedupeKey: `message:${input.messageId}:price:sent`, payload: { providerMessageId: input.providerMessageId, providerStatus: "sent", carrier } });
   });
 }
 
@@ -376,7 +379,7 @@ export async function updateSmsDeliveryStatus(
   input: { businessId: string; providerMessageId: string; providerStatus: string; messageId?: string },
 ): Promise<boolean> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const current = (await tx.select({ id: messages.id, status: messages.status, conversationId: messages.conversationId })
+    const current = (await tx.select({ id: messages.id, status: messages.status, conversationId: messages.conversationId, carrier: messages.carrier })
       .from(messages)
       .where(and(eq(messages.businessId, input.businessId), input.messageId ? eq(messages.id, input.messageId) : eq(messages.providerMessageId, input.providerMessageId)))
       .limit(1))[0];
@@ -411,7 +414,7 @@ export async function updateSmsDeliveryStatus(
         aggregateType: "message",
         aggregateId: current.id,
         dedupeKey: `message:${current.id}:price:${normalizeTwilioMessageStatus(input.providerStatus)}`,
-        payload: { providerMessageId: input.providerMessageId, providerStatus: input.providerStatus },
+        payload: { providerMessageId: input.providerMessageId, providerStatus: input.providerStatus, carrier: current.carrier ?? "twilio" },
       });
     }
     if (nextStatus === "failed" || nextStatus === "undelivered") await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKind: "smsFailed", eventKey: `smsFailed:${current.id}`, subject: "SMS delivery failed", body: "A message could not be delivered. Open the inbox to review it." });
@@ -432,10 +435,10 @@ export async function recordSmsProviderPricing(
       providerNumSegments: input.providerNumSegments,
       revision: sql`${messages.revision} + 1`,
       updatedAt: new Date(),
-    }).where(and(eq(messages.businessId, input.businessId), eq(messages.providerMessageId, input.providerMessageId))).returning({ id: messages.id, revision: messages.revision, aiGenerated: messages.aiGenerated, conversationId: messages.conversationId, createdAt: messages.createdAt });
+    }).where(and(eq(messages.businessId, input.businessId), eq(messages.providerMessageId, input.providerMessageId))).returning({ id: messages.id, revision: messages.revision, aiGenerated: messages.aiGenerated, conversationId: messages.conversationId, createdAt: messages.createdAt, carrier: messages.carrier });
     if (!message) return false;
     if (input.providerCostUsd !== undefined && !message.aiGenerated) {
-      await recordUnitEconomicsEventInTransaction(tx, { businessId: input.businessId, eventKey: `sms_provider:${message.id}`, eventKind: "sms_provider", channel: "sms", costUsd: input.providerCostUsd, occurredAt: message.createdAt, ...(input.providerNumSegments !== undefined ? { quantity: input.providerNumSegments, quantityUnit: "segment" } : {}), provider: "twilio", messageId: message.id, conversationId: message.conversationId });
+      await recordUnitEconomicsEventInTransaction(tx, { businessId: input.businessId, eventKey: `sms_provider:${message.id}`, eventKind: "sms_provider", channel: "sms", costUsd: input.providerCostUsd, occurredAt: message.createdAt, ...(input.providerNumSegments !== undefined ? { quantity: input.providerNumSegments, quantityUnit: "segment" } : {}), provider: message.carrier ?? "twilio", messageId: message.id, conversationId: message.conversationId });
     }
     await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "message", aggregateId: message.id, dedupeKey: `message:${message.id}:pricing:${message.revision}`, payload: { type: "message.deliveryUpdated", entityId: message.id, revision: message.revision } });
     return true;

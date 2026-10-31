@@ -679,6 +679,7 @@
         "wrongAddress": "Pristupni ključevi nisu podešeni za ovu adresu. Otvorite aplikaciju na uobičajenoj adresi, pa pokušajte ponovo.",
         "alreadyAdded": "Ovaj uređaj već ima pristupni ključ za vaš nalog.",
         "signInAgain": "Prijavite se ponovo, pa dodajte pristupni ključ.",
+        "verifyEmail": "Potvrdite imejl, pa dodajte pristupni ključ.",
         "renameFailed": "Nismo mogli da preimenujemo pristupni ključ. Pokušajte ponovo.",
         "removeFailed": "Nismo mogli da uklonimo pristupni ključ. Pokušajte ponovo.",
         "loadFailed": "Nismo mogli da učitamo vaše pristupne ključeve."

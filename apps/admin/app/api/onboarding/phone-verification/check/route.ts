@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { checkOnboardingPhoneVerificationCode } from "@lobbystack/domain";
 import { jsonError } from "@/lib/api-helpers";
 import { operatorRoute } from "@/lib/operator-request";
-import { getOnboardingPhoneVerifyProvider } from "@/lib/twilio-provider";
+import { getOnboardingPhoneVerifyProvider } from "@/lib/telephony";
 
 export const dynamic = "force-dynamic";
 

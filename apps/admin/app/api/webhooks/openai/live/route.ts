@@ -38,16 +38,33 @@ export async function POST(request: Request) {
   // Twilio trunks rewrite "To" to our OpenAI SIP URI and keep the dialled
   // number in "Diversion". A forwarded call can carry several Diversions, the
   // first of which may be the business's old line, so every number is a
-  // candidate, in this order.
-  const dialledHeaders = ["diversion", "to", "p-called-party-id"];
+  // candidate, in this order. A Telnyx number's translated number puts the
+  // project in the Request-URI, and ignore_for_to_header keeps the dialled
+  // number in To. History-Info (RFC 7044) records the original Request-URI.
+  // See docs/voice/runtime.md.
+  const dialledHeaders = ["diversion", "to", "p-called-party-id", "history-info"];
   const candidates = dialledHeaders.flatMap((name) => event.data.sip_headers.filter((item) => item.name.toLowerCase() === name).flatMap((item) => phonesFromSipHeader(item.value).map((phone) => ({ header: item.name, phone }))));
+  // The fallback when none of them has it: each Telnyx number has its own SIP
+  // connection, which X-Telnyx-Connection-id names.
+  const telnyxConnection = event.data.sip_headers.find((item) => item.name.toLowerCase() === "x-telnyx-connection-id")?.value.trim();
+  if (!candidates.length && telnyxConnection) {
+    try {
+      const phone = (await getAppDatabase().db.execute<{ phone: string | null }>(sql`select app.resolve_phone_by_carrier_connection('telnyx', ${telnyxConnection}) as phone`)).rows[0]?.phone;
+      if (phone) candidates.push({ header: "X-Telnyx-Connection-id", phone });
+    } catch (error) {
+      // As below: ownership is unknown, so a 503 makes OpenAI deliver the event again.
+      console.error("[live] couldn't look up the Telnyx connection", error instanceof Error ? error.message : error);
+      return new NextResponse(null, { status: 503 });
+    }
+  }
   // Undefined when the caller withheld their number.
   const from = phonesFromSipHeader(event.data.sip_headers.find((item) => item.name.toLowerCase() === "from")?.value)[0];
   // Only the dialled-number headers: "From" is the caller's own number.
   const routing = event.data.sip_headers.filter((item) => dialledHeaders.includes(item.name.toLowerCase()));
   if (!candidates.length) {
     // No deployment can route a call without a dialled number.
-    console.warn("[live] incoming call without a dialled number", JSON.stringify({ sessionId, routing }));
+    // The header names show which header a new carrier uses, without logging the caller's number.
+    console.warn("[live] incoming call without a dialled number", JSON.stringify({ sessionId, routing, headerNames: event.data.sip_headers.map((item) => item.name), ...(telnyxConnection ? { telnyxConnection } : {}) }));
     await client.live.sessions.reject(sessionId, { status_code: 404 }).catch(() => undefined);
     return new NextResponse(null, { status: 200 });
   }
@@ -131,8 +148,10 @@ async function answerCall(client: LiveClient, input: { sessionId: string; busine
       // 503 makes the Twilio trunk fail over to its disaster recovery URL,
       // /api/webhooks/twilio/voice, which forwards the call to the transfer
       // number or the owner's verified phone, and gives a busy signal only
-      // when there's neither. Twilio never fails over on 486 or 6xx. A trial
-      // number also moves off the trunk so later calls forward directly.
+      // when there's neither. Twilio never fails over on 486 or 6xx. Telnyx
+      // retries a 503 once, then forwards to the number stored on the Telnyx
+      // number. A trial number also moves off the receptionist so later
+      // calls forward directly.
       await markNumberTrialMinutesExhausted(domain, { businessId: input.businessId }).catch((cause: unknown) => console.error("[live] couldn't switch the trial number to forwarding", cause instanceof Error ? cause.message : cause));
       await client.live.sessions.reject(input.sessionId, { status_code: 503 });
       return new NextResponse(null, { status: 200 });

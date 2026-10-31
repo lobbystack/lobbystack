@@ -29,7 +29,7 @@ const setup = vi.hoisted(() => {
 
 vi.mock("../error-reporting", () => ({ reportServerError: vi.fn(async () => undefined) }));
 // The phone number routes' server-only modules, which onboarding with a partner's key never reaches.
-vi.mock("../twilio-provider", () => ({ getTwilioProvider: vi.fn(), getNumberClaimTokenSecret: vi.fn() }));
+vi.mock("../telephony", () => ({ getTelephony: vi.fn(), getNumberClaimTokenSecret: vi.fn() }));
 vi.mock("../phone-number-search-limit", () => ({ checkPhoneNumberSearchLimit: vi.fn() }));
 // Point the routes' context factories at the test database's role pools.
 vi.mock("../domain-context", () => ({

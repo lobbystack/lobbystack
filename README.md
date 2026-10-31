@@ -81,7 +81,7 @@ LobbyStack can be adapted for many local business workflows:
 
 | Area | What it gives you |
 | --- | --- |
-| Voice reception | Inbound phone and browser calls answered by OpenAI GPT-Live, with Twilio phone numbers. |
+| Voice reception | Inbound phone and browser calls answered by OpenAI GPT-Live, with phone numbers from Twilio or Telnyx. |
 | Business knowledge | Answers from structured business facts, text entries, documents, and imported website pages. |
 | Booking | Service-aware scheduling with availability checks and calendar handoff. |
 | Appointment changes | Safer cancellation and rescheduling flows with appointment lookup and verification. |
@@ -90,7 +90,7 @@ LobbyStack can be adapted for many local business workflows:
 | Website widget | Embeddable chat, lead capture, and browser calls with per-site access controls. Restricted: new widget keys are off unless you set `WIDGET_KEY_ISSUANCE_ENABLED=true`. |
 | Dashboard | Calls, messages, contacts, appointments, recordings, transcripts, follow-ups, and analytics together. |
 | Usage and billing | Hosted plans, voice usage, alert SMS, transfer attempts, storage, and spending caps. |
-| Bring your own API keys | Self-hosted deployments can use your own Twilio, OpenAI-compatible AI, calendar, email, analytics, and billing provider credentials. |
+| Bring your own API keys | Self-hosted deployments can use your own Twilio or Telnyx, OpenAI-compatible AI, calendar, email, analytics, and billing provider credentials. |
 
 ## Technology
 
@@ -98,7 +98,7 @@ LobbyStack can be adapted for many local business workflows:
 | --- | --- |
 | App | Next.js, React, Tailwind CSS, shadcn/ui |
 | Backend | PostgreSQL, Drizzle ORM, Redis, BullMQ |
-| Voice | OpenAI GPT-Live over SIP and WebRTC, Twilio Elastic SIP Trunking |
+| Voice | OpenAI GPT-Live over SIP and WebRTC, through Twilio Elastic SIP Trunking or Telnyx SIP connections |
 | Agent | Vercel AI SDK, `gpt-6-luna` or any OpenAI-compatible model |
 
 ## Hosted and open source
@@ -107,14 +107,14 @@ LobbyStack is open source with a hosted cloud service.
 
 Use **LobbyStack Cloud** when you want the product managed for you. You still control the receptionist behavior, knowledge, services, rules, numbers, integrations, and team workflow from the app.
 
-Self-host when your team wants to run the stack on your own infrastructure, bring your own API keys, and use your own PostgreSQL, Twilio, OpenAI-compatible AI, calendar, analytics, billing, and email provider accounts.
+Self-host when your team wants to run the stack on your own infrastructure, bring your own API keys, and use your own PostgreSQL, Twilio or Telnyx, OpenAI-compatible AI, calendar, analytics, billing, and email provider accounts.
 
 To self-host on Railway, deploy the [LobbyStack template](https://railway.com/deploy/lobbystack). Railway generates every secret and database password, and you enter an OpenAI API key and your Twilio credentials.
 
 After deploying, set a few variables in Railway:
 
 - **Email:** `SMTP_*` and `EMAIL_FROM` on the worker. Password resets, verification codes, and invites fail without them.
-- **Phone calls:** an OpenAI webhook to `https://your_admin_domain/api/webhooks/openai/live`, its secret as `OPENAI_WEBHOOK_SECRET` on the admin, and your Twilio Elastic SIP trunk as `TWILIO_SIP_TRUNK_SID` on the worker. See [`docs/voice/runtime.md`](./docs/voice/runtime.md#set-up-the-phone-path).
+- **Phone calls:** an OpenAI webhook to `https://your_admin_domain/api/webhooks/openai/live`, its secret as `OPENAI_WEBHOOK_SECRET` on the admin, and your Twilio Elastic SIP trunk as `TWILIO_SIP_TRUNK_SID` on the worker. See [`docs/voice/runtime.md`](./docs/voice/runtime.md#set-up-the-phone-path). To use Telnyx for some countries or all of them, follow [Use Telnyx](./docs/voice/runtime.md#use-telnyx).
 - **Optional:** `FIRECRAWL_API_KEY` on the worker for website import, and `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` on the admin for Google Calendar.
 - **Custom domain:** `APP_BASE_URL` on the admin. The other URL variables reference it.
 

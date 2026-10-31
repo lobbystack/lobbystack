@@ -2,6 +2,8 @@ import { DateTime } from "luxon";
 import { and, desc, eq, gt, gte, inArray, isNull, lte, ne, sql } from "drizzle-orm";
 
 import { businesses, calls, enqueueOutbox, numberTrials, numberWaitlist, onboardingPhoneVerifications, phoneNumbers, receptionistProfiles, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { numberCountryReady } from "@lobbystack/providers/telephony/config";
+import { CARRIERS_FORWARDING_REFUSED_CALLS, isCarrierId, type CarrierId, type NumberRoutingMode } from "@lobbystack/providers/telephony/types";
 import { isTransferPhone, normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
 
 import { hasMinimumRole, requireBusinessAdmin, requireBusinessMembership } from "../authz";
@@ -16,21 +18,16 @@ export type NumberCountry = "US" | "CA" | "PR" | "GB" | "AU" | "NZ";
 
 export const NUMBER_TRIAL_DAYS = 14;
 
+const NUMBER_COUNTRIES: NumberCountry[] = ["US", "CA", "PR", "GB", "AU", "NZ"];
+
 /**
  * Countries we sell numbers in. The US, Canada and Puerto Rico need no
- * registration; the others need the regulatory bundle Twilio approved for
- * LobbyStack (and, where the number needs one, its address). See docs/voice/runtime.md.
+ * registration; the others need what the country's carrier asks for, such as
+ * the regulatory bundle Twilio approved for LobbyStack and its address, or a
+ * Telnyx requirement group. See docs/voice/runtime.md.
  */
 export function numberCountries(env: NodeJS.ProcessEnv = process.env): NumberCountry[] {
-  const set = (name: string) => Boolean(env[name]?.trim());
-  return [
-    "US",
-    "CA",
-    "PR",
-    ...(set("TWILIO_GB_BUNDLE_SID") ? ["GB" as const] : []),
-    ...(set("TWILIO_AU_BUNDLE_SID") && set("TWILIO_AU_ADDRESS_SID") ? ["AU" as const] : []),
-    ...(set("TWILIO_NZ_BUNDLE_SID") && set("TWILIO_NZ_ADDRESS_SID") ? ["NZ" as const] : []),
-  ];
+  return NUMBER_COUNTRIES.filter((country) => numberCountryReady(country, env));
 }
 
 /** Countries with a free trial number. An Australian number costs $8.25 a month, so Australia is paid only. */
@@ -231,30 +228,31 @@ export async function loadNumberReleaseEmail(context: DomainContext, input: { bu
   });
 }
 
-export type NumberRoutingMode = "receptionist" | "fallback";
+export type { NumberRoutingMode };
 
 /**
  * Where a number's calls should go now, read from the trial. Routing jobs
  * apply this instead of their own payload, so two jobs that run out of order
  * still leave the number where it belongs. Null when the number is gone.
  */
-export async function desiredNumberRouting(context: DomainContext, input: { businessId: string; phoneNumberId: string }): Promise<{ mode: NumberRoutingMode; providerPhoneId: string } | null> {
+export async function desiredNumberRouting(context: DomainContext, input: { businessId: string; phoneNumberId: string }): Promise<{ mode: NumberRoutingMode; providerPhoneId: string; e164: string; carrier: CarrierId; carrierConnectionId: string | null } | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const row = (await tx.select({ providerPhoneId: phoneNumbers.providerPhoneId, trialStatus: numberTrials.status, minutesExhaustedAt: numberTrials.minutesExhaustedAt })
+    const row = (await tx.select({ providerPhoneId: phoneNumbers.providerPhoneId, e164: phoneNumbers.e164, carrier: phoneNumbers.carrier, carrierConnectionId: phoneNumbers.carrierConnectionId, trialStatus: numberTrials.status, minutesExhaustedAt: numberTrials.minutesExhaustedAt })
       .from(phoneNumbers)
       .leftJoin(numberTrials, and(eq(numberTrials.phoneNumberId, phoneNumbers.id), inArray(numberTrials.status, ["active", "ended"])))
       .where(and(eq(phoneNumbers.id, input.phoneNumberId), eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active")))
       .limit(1))[0];
     if (!row?.providerPhoneId) return null;
     const off = row.trialStatus === "ended" || (row.trialStatus === "active" && Boolean(row.minutesExhaustedAt));
-    return { mode: off ? "fallback" : "receptionist", providerPhoneId: row.providerPhoneId };
+    if (!isCarrierId(row.carrier)) throw new Error(`Phone number ${input.phoneNumberId} names an unknown carrier, ${row.carrier}.`);
+    return { mode: off ? "fallback" : "receptionist", providerPhoneId: row.providerPhoneId, e164: row.e164, carrier: row.carrier, carrierConnectionId: row.carrierConnectionId };
   });
 }
 
 /**
- * Moves a number on or off the SIP trunk. Off the trunk, Twilio asks
- * /api/webhooks/twilio/voice what to do, which forwards the call to the owner
- * or rejects it.
+ * Moves a number on or off its carrier's SIP path to the receptionist. Off
+ * it, the carrier asks our voice webhook (/api/webhooks/<carrier>/voice)
+ * what to do, which forwards the call to the owner or rejects it.
  */
 export async function enqueueNumberRouting(tx: DatabaseTransaction, input: { businessId: string; phoneNumberId: string; mode: NumberRoutingMode }): Promise<void> {
   await enqueueOutbox(tx, {
@@ -332,6 +330,51 @@ export async function resolveNumberFallback(context: DomainContext, input: { bus
     const to = [row.transferNumber?.trim(), ownerPhone].find((phone): phone is string => Boolean(phone && E164.test(phone) && isTransferPhone(phone) && phone !== input.e164));
     return to ? { action: "forward", to } : { action: "reject" };
   });
+}
+
+/**
+ * Re-routes the business's numbers on carriers that store the refused-call
+ * forward themselves, so they learn a new transfer number or owner phone.
+ * Other carriers ask our voice webhook on each call and need nothing.
+ */
+export async function enqueueRefusedCallForwardRefresh(tx: DatabaseTransaction, businessId: string): Promise<void> {
+  const numbers = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), inArray(phoneNumbers.carrier, [...CARRIERS_FORWARDING_REFUSED_CALLS])));
+  for (const number of numbers) await enqueueNumberRouting(tx, { businessId, phoneNumberId: number.id, mode: "receptionist" });
+}
+
+/**
+ * Re-routes each number whose carrier-stored forward no longer matches what
+ * the fallback answers now. The hourly number sweep runs it, which catches
+ * changes no write path queues a routing job for, such as a new owner.
+ * Returns how many numbers it queued.
+ */
+export async function refreshStaleRefusedCallForwards(context: DomainContext, input: { businessId: string }): Promise<number> {
+  const numbers = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) =>
+    await tx.select({ id: phoneNumbers.id, e164: phoneNumbers.e164, stored: phoneNumbers.refusedCallsForwardTo }).from(phoneNumbers)
+      .where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"), inArray(phoneNumbers.carrier, [...CARRIERS_FORWARDING_REFUSED_CALLS]))));
+  let queued = 0;
+  for (const number of numbers) {
+    const forward = await resolveRefusedCallForward(context, { businessId: input.businessId, e164: number.e164 });
+    if (forward === number.stored) continue;
+    await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+      await enqueueNumberRouting(tx, { businessId: input.businessId, phoneNumberId: number.id, mode: "receptionist" });
+    });
+    queued += 1;
+  }
+  return queued;
+}
+
+/**
+ * The number a refused call to this business's number forwards to, or null
+ * when it should fail. Never the dialled number or the line that forwarded
+ * the call here, which would loop. Both the carrier voice webhooks and
+ * carriers that store the forward themselves (CARRIERS_FORWARDING_REFUSED_CALLS)
+ * go by it.
+ */
+export async function resolveRefusedCallForward(context: DomainContext, input: { businessId: string; e164: string; forwardedFrom?: string | null | undefined }): Promise<string | null> {
+  const fallback = await resolveNumberFallback(context, { businessId: input.businessId, e164: input.e164 });
+  if (fallback.action !== "forward" || !E164.test(fallback.to) || fallback.to === input.e164 || fallback.to === input.forwardedFrom) return null;
+  return fallback.to;
 }
 
 /** Whether calls to this business's number must go unanswered because its trial ended. */

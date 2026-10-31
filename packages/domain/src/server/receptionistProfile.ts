@@ -1,3 +1,4 @@
+
 import { enqueueOutbox, receptionistProfiles, type DatabaseTransaction } from "@lobbystack/db";
 import {
   appointmentChangeVerificationModes,
@@ -18,7 +19,7 @@ import {
   type TransferPolicy,
 } from "@lobbystack/shared";
 
-import { assertTransferNumberAllowed } from "./numberTrials";
+import { assertTransferNumberAllowed, enqueueRefusedCallForwardRefresh } from "./numberTrials";
 
 // Receptionist settings. The dashboard and the v1 API check and save them
 // here, so both follow one set of rules.
@@ -167,6 +168,8 @@ export async function saveReceptionistProfileInTransaction(
     set: { ...patch, ...(patch.summary !== undefined ? { summarySource: "operator" as const, summaryRegenerateStatus: null } : {}), ...(input.regenerateSummary ? { summarySource: "generated" as const, summaryRegenerateStatus: "pending" as const } : {}), updatedAt: new Date() },
   }).returning();
   if (!profile) return null;
+  // Some carriers forward a call the receptionist refuses to a number stored on the carrier, so they learn the new transfer number.
+  if (patch.transferNumber !== undefined) await enqueueRefusedCallForwardRefresh(tx, businessId);
   await enqueueOutbox(tx, {
     topic: "snapshot.refresh",
     businessId,

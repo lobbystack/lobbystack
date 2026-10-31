@@ -2,32 +2,14 @@ import twilio from "twilio";
 
 import { assertCertificationRecipient, assertCertificationOperationAllowed } from "@lobbystack/shared";
 
+import type { AvailablePhoneNumber, CallPricing, LineType, MessagePricing } from "../telephony/types";
+
 export type TwilioProviderConfig = {
   accountSid: string;
 } & ({ authToken: string; apiKeySid?: never; apiKeySecret?: never } | { authToken?: never; apiKeySid: string; apiKeySecret: string });
 
-export type TwilioMessagePricing = {
-  providerUpdatedAt?: string;
-  providerPrice?: number;
-  providerPriceUnit?: string;
-  providerCostUsd?: number;
-  providerNumSegments?: number;
-};
-
-export type TwilioCallPricing = {
-  providerUpdatedAt?: string;
-  providerPrice?: number;
-  providerPriceUnit?: string;
-  providerCostUsd?: number;
-};
-
-export type AvailablePhoneNumber = {
-  phoneE164: string;
-  locality?: string;
-  region?: string;
-  countryCode: string;
-  capabilities: { sms: boolean; voice: boolean };
-};
+export type TwilioMessagePricing = MessagePricing;
+export type TwilioCallPricing = CallPricing;
 
 export type TwilioProviderErrorCode = 21404 | 21422;
 
@@ -153,7 +135,7 @@ export class TwilioProvider {
   }
 
   /** The line type from Twilio Lookup (mobile, landline, fixedVoip, nonFixedVoip, …), or null when Lookup doesn't know. */
-  async lookupLineType(phoneE164: string): Promise<string | null> {
+  async lookupLineType(phoneE164: string): Promise<LineType | string | null> {
     const result = await this.client.lookups.v2.phoneNumbers(phoneE164).fetch({ fields: "line_type_intelligence" });
     const type = (result.lineTypeIntelligence as { type?: unknown } | null | undefined)?.type;
     return typeof type === "string" && type ? type : null;

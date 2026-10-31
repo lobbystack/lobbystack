@@ -672,6 +672,7 @@
         "wrongAddress": "Passkeys aren't set up for this address. Open the app at its usual address, then try again.",
         "alreadyAdded": "This device already has a passkey for your account.",
         "signInAgain": "Sign in again, then add a passkey.",
+        "verifyEmail": "Verify your email, then add a passkey.",
         "renameFailed": "We couldn't rename the passkey. Try again.",
         "removeFailed": "We couldn't remove the passkey. Try again.",
         "loadFailed": "We couldn't load your passkeys."

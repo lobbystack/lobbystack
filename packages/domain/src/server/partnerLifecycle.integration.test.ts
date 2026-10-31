@@ -662,7 +662,7 @@ describe.skipIf(!client)("deleting a partner's businesses 90 days after its tier
       const releases = [numbers[0]!, numbers[1]!, numbers[4]!];
       expect(queued.numbers).toEqual([]);
       expect(queued.released).toHaveLength(releases.length);
-      expect(queued.released).toEqual(expect.arrayContaining(releases.map((number) => ({ aggregateId: number.id, businessId: null, payload: { providerPhoneId: number.providerPhoneId, e164: number.e164 } }))));
+      expect(queued.released).toEqual(expect.arrayContaining(releases.map((number) => ({ aggregateId: number.id, businessId: null, payload: { providerPhoneId: number.providerPhoneId, e164: number.e164, carrier: "twilio" } }))));
       expect(queued.stored).toEqual([{ businessId: null, payload: { objectKeys: [objectKey] } }]);
       // Each owner hears their business is gone, from the partner, as when the partner deletes it.
       const notices = await asMigrator(tx, async () => await tx.select({ businessId: outboxMessages.businessId, payload: outboxMessages.payload }).from(outboxMessages).where(and(eq(outboxMessages.topic, "email.sendNotice"), inArray(outboxMessages.dedupeKey, [harbor, maple].map((deleted) => `partner-business-deleted:${deleted.businessId}:${deleted.owner.email}`)))));
@@ -718,7 +718,7 @@ describe.skipIf(!client)("deleting a partner's businesses 90 days after its tier
       }));
       expect(left).toEqual({
         demos: [],
-        released: [{ businessId: null, payload: { providerPhoneId: number.providerPhoneId, e164: number.e164 } }],
+        released: [{ businessId: null, payload: { providerPhoneId: number.providerPhoneId, e164: number.e164, carrier: "twilio" } }],
         stored: [{ businessId: null, payload: { objectKeys: [objectKey] } }],
         templates: [{ id: templateId }],
       });

@@ -1,7 +1,7 @@
 import { betterAuth, type BetterAuthOptions, type BetterAuthPlugin } from "better-auth";
 import { passkey } from "@better-auth/passkey";
 import { emailOTP } from "better-auth/plugins/email-otp";
-import { APIError, createAuthMiddleware, getOAuthState } from "better-auth/api";
+import { APIError, createAuthMiddleware, getOAuthState, getSessionFromCtx } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { runWithAdapter } from "@better-auth/core/context";
 import { z } from "zod";
@@ -13,7 +13,7 @@ import { accounts, passkeys, sessions, users, verifications } from "@lobbystack/
 import { partnerFeatures } from "@lobbystack/shared";
 
 import { configuredAppOrigins } from "./app-origins";
-import { isPasskeyPath, passkeyAllowed, passkeyRpId } from "./passkey";
+import { isPasskeyPath, isPasskeyRegistrationPath, passkeyAllowed, passkeyRpId } from "./passkey";
 import { loadRequestEmailBrand } from "./branding";
 import { getDatabase } from "./databases";
 import { SUPPORTED_LOCALES, resolveLocale } from "./locale";
@@ -305,6 +305,20 @@ export async function issueEmailVerificationCode(email: string, remoteIp?: strin
   });
 }
 
+/** Tells the account's owner a passkey is being added, with where to see it and how to undo it. */
+async function enqueuePasskeyAddedEmail(userId: string, request?: Request): Promise<void> {
+  const user = (await getAuthDatabase().db.select({ email: users.email, preferredLocale: users.preferredLocale }).from(users).where(eq(users.id, userId)).limit(1))[0];
+  if (!user) return;
+  const locale = resolveLocale(user.preferredLocale);
+  const base = authLinkOrigin(request);
+  await enqueueAuthEmailOutbox({
+    userId,
+    dedupeKey: `auth-passkey-added:${userId}:${randomUUID()}`,
+    payload: { template: "passkey_added", to: user.email,
+      variables: { locale, settingsUrl: new URL("/settings/account", base).href, resetUrl: new URL(`/${locale}/forgot-password`, base).href } },
+  });
+}
+
 async function rehashLegacyPassword(userId: string, password: string): Promise<void> {
   const database = getAuthDatabase();
   const account = (await database.db.select({ id: accounts.id, password: accounts.password })
@@ -370,7 +384,12 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
       // the shared per-path bucket rather than trusting a spoofable value.
       ...(trustedIpHeader ? { ipAddress: { ipAddressHeaders: [trustedIpHeader] } } : {}),
     },
-    plugins: [resolvedOriginsOnly(), ...mcpOAuthPlugins(), passkey({ rpID: passkeyRpId(), rpName: "LobbyStack" }), emailOTP({
+    plugins: [resolvedOriginsOnly(), ...mcpOAuthPlugins(), passkey({
+      rpID: passkeyRpId(),
+      rpName: "LobbyStack",
+      // Runs before the passkey is saved, so a passkey the owner wasn't told about can't exist.
+      registration: { afterVerification: async ({ ctx, user }) => { await enqueuePasskeyAddedEmail(user.id, ctx.request); } },
+    }), emailOTP({
       disableSignUp: true,
       storeOTP: "hashed",
       expiresIn: 600,
@@ -433,6 +452,10 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
         verify: async ({ hash, password }: { hash: string; password: string }) => await verifyLegacyPassword(hash, password),
       },
       revokeSessionsOnPasswordReset: true,
+      // A reset is how someone takes their account back, so it removes every way back in, passkeys as well as sessions.
+      onPasswordReset: async ({ user }) => {
+        await database.db.delete(passkeys).where(eq(passkeys.userId, user.id));
+      },
     },
     emailVerification: {
       sendOnSignUp: true,
@@ -517,6 +540,10 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
         // Passkeys belong to one domain, so they are for the host's own domain only.
         if (isPasskeyPath(ctx.path) && !(ctx.headers && passkeyAllowed(ctx.headers))) {
           throw new APIError("NOT_FOUND", { message: "Endpoint not enabled." });
+        }
+        // A passkey outlives the session that added it, so an unproven address can't add one and keep it once the real owner claims the account.
+        if (isPasskeyRegistrationPath(ctx.path) && (await getSessionFromCtx(ctx))?.user.emailVerified === false) {
+          throw new APIError("FORBIDDEN", { code: "EMAIL_NOT_VERIFIED", message: "Verify your email before adding a passkey." });
         }
         if (needsMcpResource(ctx.path)) await ensureMcpResource(database.db);
         const registration = registrationWithApplicationType(ctx.path, ctx.body);

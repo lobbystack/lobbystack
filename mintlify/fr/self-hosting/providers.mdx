@@ -1,6 +1,6 @@
 ---
 title: "Configurer les fournisseurs tiers"
-description: "Voyez de quels comptes fournisseurs un LobbyStack auto-hébergé a besoin : Twilio et OpenAI pour les appels en direct, plus des services facultatifs comme Google Calendar, le stockage S3 et PostHog."
+description: "Voyez de quels comptes fournisseurs un LobbyStack auto-hébergé a besoin : Twilio ou Telnyx et OpenAI pour les appels en direct, plus des services facultatifs comme Google Calendar, le stockage S3 et PostHog."
 sidebarTitle: "Fournisseurs tiers"
 contentType: "Reference"
 ---
@@ -12,6 +12,9 @@ La base Docker Compose exécute l'application LobbyStack, PostgreSQL, Redis et u
 <AccordionGroup>
   <Accordion title="Twilio" icon="phone">
     Twilio fournit les numéros de téléphone, les transferts d'appel et la vérification des numéros de téléphone. Un trunk Elastic SIP envoie à OpenAI les appels reçus sur vos numéros. Chaque numéro doit faire partie du trunk pour répondre aux appels. Gardez le jeton d'authentification Twilio côté serveur.
+  </Accordion>
+  <Accordion title="Telnyx" icon="phone">
+    Telnyx peut remplacer Twilio pour certains pays ou certaines fonctions, ou pour tout. Le worker donne à chaque numéro Telnyx sa propre connexion FQDN vers OpenAI, un profil de messagerie gère les textos, et une application TeXML prend les appels auxquels la réceptionniste cesse de répondre. Réglez `TELEPHONY_NUMBERS` pour choisir les pays dont vous achetez les numéros chez Telnyx, et `TELEPHONY_VERIFY` ou `TELEPHONY_LOOKUP` pour utiliser Telnyx Verify ou Number Lookup. Donnez à l'application TeXML le même profil vocal sortant que `TELNYX_OUTBOUND_VOICE_PROFILE_ID`, sinon les appels transférés coupent après une seconde. Utilisez un numéro d'un autre opérateur comme numéro de transfert, car les appels entre numéros Telnyx n'atteignent pas la réceptionniste. Si un transfert échoue avec une erreur 603, demandez au soutien de Telnyx d'activer SIP REFER sur votre compte. Gardez la clé d'API côté serveur.
   </Accordion>
   <Accordion title="OpenAI" icon="waveform">
     Le modèle GPT-Live d'OpenAI mène la conversation pendant les appels téléphoniques et les appels dans le navigateur, et OpenAI héberge l'audio. Quand l'appelant a besoin de données de l'entreprise, comme des disponibilités ou une réservation, GPT-Live interroge le worker de LobbyStack, qui répond avec l'agent réceptionniste. Votre projet OpenAI doit avoir SIP activé et un webhook d'appel entrant pour les appels téléphoniques.

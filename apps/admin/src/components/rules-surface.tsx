@@ -13,7 +13,7 @@ import { requestJson } from "@/lib/request-json";
 import { HeaderActions, HeaderSearch } from "@/components/header-actions";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { DataTablePagination, paginationFeatures } from "./data-table/pagination";
-import { TableCardSkeleton } from "./loading-skeletons";
+import { DataTablePaginationSkeleton, HeaderButtonSkeleton, HeaderSearchSkeleton, RuleRowsSkeleton, RulesPageSkeleton } from "./loading-skeletons";
 import { PageSurface } from "./page-surface";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -69,6 +69,7 @@ export function RulesSurface() {
   }, [orderedRules, search]);
   const table = useTable({ features: paginationFeatures, data: filteredRules, columns: [], onPaginationChange: setPagination, state: { pagination } });
   const pageRows = table.getRowModel().rows.map((row) => row.original);
+  const loading = rules.isLoading;
 
   useEffect(() => {
     const pageCount = Math.max(1, Math.ceil(filteredRules.length / pagination.pageSize));
@@ -100,22 +101,25 @@ export function RulesSurface() {
     if (ids.some((id, index) => id !== orderedRules[index]?.id)) reorderRules.mutate(ids);
   }
 
-  if (businesses.isLoading) return <p className="text-sm text-muted-foreground">{t("loading.workspace")}</p>;
+  if (businesses.isLoading) return <PageSurface title={t("sections.rules.title")}><div className="flex w-full flex-col gap-6">
+    <HeaderActions><HeaderSearchSkeleton /><HeaderButtonSkeleton label={t("sections.rules.addKnowledge")} /></HeaderActions>
+    <RulesPageSkeleton headings={[t("table.title"), t("table.preview"), t("table.status"), t("table.added")]} />
+  </div></PageSurface>;
   if (!business) return <PageSurface title={t("sections.rules.title")}><p className="text-sm text-muted-foreground">{t("empty.description")}</p></PageSurface>;
 
   return (
     <PageSurface title={t("sections.rules.title")}>
       <div className="flex w-full flex-col gap-6">
         <HeaderActions>
-          <HeaderSearch onChange={setSearch} placeholder={t("table.searchPlaceholder")} value={search} />
-          {canManage ? <Button onClick={() => { setEditingRule(null); setDialogOpen(true); }}><Plus data-icon="inline-start" />{t("sections.rules.addKnowledge")}</Button> : null}
+          {loading ? <HeaderSearchSkeleton /> : <HeaderSearch onChange={setSearch} placeholder={t("table.searchPlaceholder")} value={search} />}
+          {canManage ? loading ? <HeaderButtonSkeleton label={t("sections.rules.addKnowledge")} /> : <Button onClick={() => { setEditingRule(null); setDialogOpen(true); }}><Plus data-icon="inline-start" />{t("sections.rules.addKnowledge")}</Button> : null}
         </HeaderActions>
-        {rules.isLoading ? <TableCardSkeleton columns={5} /> : <><TableCard>
+        <TableCard>
           <Table className="min-w-[60rem] w-full table-fixed">
             <colgroup>{canManage ? <col className="w-10" /> : null}<col className="w-[18%]" /><col className="w-[42%]" /><col className="w-[14%]" /><col className="w-[18%]" /><col className="w-12" /></colgroup>
             <TableHeader><TableRow>{canManage ? <TableHead /> : null}<TableHead>{t("table.title")}</TableHead><TableHead>{t("table.preview")}</TableHead><TableHead>{t("table.status")}</TableHead><TableHead className="text-right">{t("table.added")}</TableHead><TableHead /></TableRow></TableHeader>
-            <TableBody>
-              {pageRows.length ? pageRows.map((rule) => {
+            <TableBody aria-busy={loading || undefined}>
+              {loading ? <RuleRowsSkeleton handle={canManage} rows={Math.min(pagination.pageSize, 10)} /> : pageRows.length ? pageRows.map((rule) => {
                 const orderedIndex = orderedRules.findIndex((candidate) => candidate.id === rule.id);
                 const dropLine = dropTarget?.id === rule.id && draggingId !== rule.id ? (dropTarget.after ? "shadow-[inset_0_-2px_0_var(--primary)]" : "shadow-[inset_0_2px_0_var(--primary)]") : "";
                 return <TableRow
@@ -146,7 +150,7 @@ export function RulesSurface() {
             </TableBody>
           </Table>
         </TableCard>
-        <DataTablePagination labels={{ rowsPerPage: t("pagination.rowsPerPage"), pageOf: (page, total) => t("pagination.pageOf", { page, total }), firstPage: t("pagination.firstPage"), previousPage: t("pagination.previousPage"), nextPage: t("pagination.nextPage"), lastPage: t("pagination.lastPage"), goToPage: (page) => t("pagination.goToPage", { page }) }} table={table} /></>}
+        {loading ? <DataTablePaginationSkeleton /> : <DataTablePagination labels={{ rowsPerPage: t("pagination.rowsPerPage"), pageOf: (page, total) => t("pagination.pageOf", { page, total }), firstPage: t("pagination.firstPage"), previousPage: t("pagination.previousPage"), nextPage: t("pagination.nextPage"), lastPage: t("pagination.lastPage"), goToPage: (page) => t("pagination.goToPage", { page }) }} table={table} />}
         <RuleDialog editingRule={editingRule} onOpenChange={(open) => { setDialogOpen(open); if (!open) setEditingRule(null); }} open={dialogOpen} pending={createRule.isPending || updateRule.isPending} save={async (input) => { if (editingRule) await updateRule.mutateAsync({ ruleId: editingRule.id, ...input }); else await createRule.mutateAsync(input); setDialogOpen(false); setEditingRule(null); }} />
         <ConfirmActionDialog confirmVariant="destructive" cancelLabel={t("actions.deleteCancel")} confirmLabel={t("actions.delete")} description={t("actions.deleteDescription")} onConfirm={async () => { if (!deleteCandidate) return; await deleteRule.mutateAsync(deleteCandidate.id); toast.success(t("actions.deleted")); }} onOpenChange={(open) => { if (!open) setDeleteCandidate(null); }} open={deleteCandidate !== null} pending={deleteRule.isPending} title={t("actions.deleteTitle")} />
       </div>
