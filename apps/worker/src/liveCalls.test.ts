@@ -996,10 +996,10 @@ describe("live call latency telemetry", () => {
     const options = await startCall();
     expect(options.silenceTimeoutMs).toBe(40_000);
     expect(options.silenceCheckMs).toBe(12_000);
-    options.onSilenceCheck!(1 as never);
-    expect(info).toHaveBeenCalledWith(expect.stringMatching(/^\{"event":"live\.silence_check","sessionId":"live_2","stage":1,"ms":\d+\}$/));
-    options.onSilenceCheck!(2 as never);
-    expect(info).toHaveBeenCalledWith(expect.stringMatching(/^\{"event":"live\.silence_check","sessionId":"live_2","stage":2,"ms":\d+\}$/));
+    options.onSilenceCheck!(1 as never, 1 as never);
+    expect(info).toHaveBeenCalledWith(expect.stringMatching(/^\{"event":"live\.silence_check","sessionId":"live_2","stage":1,"attempt":1,"ms":\d+\}$/));
+    options.onSilenceCheck!(2 as never, 1 as never);
+    expect(info).toHaveBeenCalledWith(expect.stringMatching(/^\{"event":"live\.silence_check","sessionId":"live_2","stage":2,"attempt":1,"ms":\d+\}$/));
     options.onSilenceRescue!();
     expect(info).toHaveBeenCalledWith(JSON.stringify({ event: "live.silence_rescued", sessionId: "live_2" }));
     info.mockRestore();

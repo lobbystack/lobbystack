@@ -178,8 +178,8 @@ export type LiveCallControllerOptions = {
   onGreeting?: (event: GreetingEvent) => void;
   onTurn?: (turn: LiveCallTurn) => void;
   onTimeout?: (reason: LiveCallTimeout) => void;
-  /** A silence check-in was sent: 1 for the first, 2 for the second. */
-  onSilenceCheck?: (stage: number) => void;
+  /** A silence check-in was sent: which stage, and which attempt at it. */
+  onSilenceCheck?: (stage: number, attempt: number) => void;
   /** The caller spoke during the silence notice, so the call goes on instead of ending. */
   onSilenceRescue?: () => void;
   /** Each step of a transfer started with transferAfterAnnouncement(). */
@@ -289,6 +289,12 @@ const PASSCODE_IDLE_MS = 60_000;
 // moving the deadline.
 const SILENCE_CHECK_QUIET_MS = 1_000;
 const SILENCE_RECHECK_MS = 500;
+// GPT-Live can acknowledge an appended command and still wait for the caller,
+// as the greeting's fallback documents. Past this long without its voice, send
+// the check-in or the notice again, up to this many commands in all.
+const SILENCE_COMMAND_RETRY_MS = 4_500;
+const SILENCE_CHECK_COMMANDS = 3;
+const SILENCE_NOTICE_COMMANDS = 3;
 
 // The facts GPT-Live receives when a request fails. Its instructions say what to do then.
 const FAILED_ANSWER = "The backend couldn't complete this request.";
@@ -391,6 +397,12 @@ export class LiveCallController {
   private silenceChecks = 0;
   private silenceRescues = 0;
   private silenceEnd: { requestedAt: number; cancelled: boolean } | undefined;
+  // The check-in sent last: how many times, and when it went, so an unspoken
+  // command can be sent again. The notice keeps the same bookkeeping.
+  private silenceCheckTimer: ReturnType<typeof setTimeout> | undefined;
+  private silenceCheckAttempts = 0;
+  private silenceCheckAt = 0;
+  private silenceNotice: { attempts: number; at: number } | undefined;
   // How many times each wrap-up ran, so a repeated notice gets its own command id.
   private readonly wrapUpAttempts = new Map<LiveCallWrapUp, number>();
   private durationTimer: ReturnType<typeof setTimeout> | undefined;
@@ -978,25 +990,85 @@ export class LiveCallController {
       const silenceEnd = reason === "silence_timeout" ? { requestedAt: performance.now(), cancelled: false } : undefined;
       this.silenceEnd = silenceEnd;
       clearTimeout(this.silenceTimer);
-      // A rescued silence notice can be followed by another one, so each
-      // command needs its own id: OpenAI correlates an acknowledgment by it,
-      // and a repeated id could pass for a command already seen.
-      const attempt = (this.wrapUpAttempts.get(reason) ?? 0) + 1;
-      this.wrapUpAttempts.set(reason, attempt);
+      clearTimeout(this.silenceCheckTimer);
+      this.silenceCheckTimer = undefined;
       // The previous notice's acknowledgment doesn't say when this request's words started.
       this.wrapUpAckedAt = undefined;
-      this.send({ type: "session.instructions.append", delegation_id: null, content: WRAP_UP[reason], event_id: `wrap_up_${reason}_${attempt}` }, { kind: "wrap_up" });
-      this.afterSpeech(() => {
-        if (silenceEnd?.cancelled) return;
-        // The caller may have spoken during the quiet beat after the notice.
-        if (this.rescueSilence()) return;
-        // The hangup is going out, so the notice is no longer cancelable.
-        if (silenceEnd) silenceEnd.cancelled = true;
-        if (this.silenceEnd === silenceEnd) this.silenceEnd = undefined;
-        this.endSession();
-      }, () => this.wrapUpAckedAt);
+      if (reason === "silence_timeout") {
+        // The notice is sent again while GPT-Live stays silent, so the silence
+        // path watches it itself instead of the answer's afterSpeech.
+        this.silenceNotice = { attempts: 0, at: 0 };
+        this.sendSilenceNotice();
+      } else {
+        this.send({ type: "session.instructions.append", delegation_id: null, content: WRAP_UP[reason], event_id: this.wrapUpEventId(reason) }, { kind: "wrap_up" });
+        this.afterSpeech(() => this.endSession(), () => this.wrapUpAckedAt);
+      }
     }
     return this.whenFinished;
+  }
+
+  // A rescued silence notice can be followed by another one, so each command
+  // needs its own id: OpenAI correlates an acknowledgment by it, and a
+  // repeated id could pass for a command already seen.
+  private wrapUpEventId(reason: LiveCallWrapUp): string {
+    const attempt = (this.wrapUpAttempts.get(reason) ?? 0) + 1;
+    this.wrapUpAttempts.set(reason, attempt);
+    return `wrap_up_${reason}_${attempt}`;
+  }
+
+  /**
+   * Sends the silence notice, again if GPT-Live stayed silent on the last one.
+   * The caller can still call the end off by speaking before the hangup.
+   */
+  private sendSilenceNotice(): void {
+    const notice = this.silenceNotice;
+    if (!notice || this.finished || !this.ending) return;
+    notice.attempts += 1;
+    notice.at = performance.now();
+    this.send({ type: "session.instructions.append", delegation_id: null, content: WRAP_UP.silence_timeout, event_id: this.wrapUpEventId("silence_timeout") }, { kind: "wrap_up" });
+    this.afterSilenceNotice(notice);
+  }
+
+  private afterSilenceNotice(notice: { attempts: number; at: number }): void {
+    const check = () => {
+      if (this.finished || this.silenceNotice !== notice) return;
+      if (this.rescueSilence()) return;
+      const now = performance.now();
+      // A notice that plays and never stops can't hold the call open.
+      if (now - notice.at > GOODBYE_MAX_MS) {
+        this.endAfterSilenceNotice(notice);
+        return;
+      }
+      if (this.lastSpeechAt >= notice.at) {
+        // The notice is playing: end once it has played out and both sides are quiet.
+        if (now - this.lastSpeechAt > GOODBYE_QUIET_MS && now > this.playbackEndsAt()) {
+          this.endAfterSilenceNotice(notice);
+          return;
+        }
+      } else if (now - notice.at >= SILENCE_COMMAND_RETRY_MS) {
+        if (notice.attempts < SILENCE_NOTICE_COMMANDS) {
+          this.sendSilenceNotice();
+          return;
+        }
+        // GPT-Live ignored every command: hang up rather than wait forever.
+        if (now - notice.at > GOODBYE_START_MS) {
+          this.endAfterSilenceNotice(notice);
+          return;
+        }
+      }
+      setTimeout(check, GOODBYE_POLL_MS);
+    };
+    setTimeout(check, GOODBYE_POLL_MS);
+  }
+
+  private endAfterSilenceNotice(notice: { attempts: number; at: number }): void {
+    if (this.silenceNotice !== notice) return;
+    this.silenceNotice = undefined;
+    // The hangup is going out, so the notice is no longer cancelable.
+    const silenceEnd = this.silenceEnd;
+    if (silenceEnd) silenceEnd.cancelled = true;
+    if (this.silenceEnd === silenceEnd) this.silenceEnd = undefined;
+    this.endSession();
   }
 
   /**
@@ -1153,6 +1225,9 @@ export class LiveCallController {
   private armSilenceLadder(): void {
     this.silenceStage = 0;
     this.silenceAnchorAt = performance.now();
+    this.silenceCheckAttempts = 0;
+    clearTimeout(this.silenceCheckTimer);
+    this.silenceCheckTimer = undefined;
     this.scheduleSilenceStep();
   }
 
@@ -1215,15 +1290,52 @@ export class LiveCallController {
 
   private sendSilenceCheck(): void {
     this.silenceStage += 1;
-    const stage = this.silenceStage;
-    this.silenceChecks += 1;
-    this.send({ type: "session.instructions.append", delegation_id: null, content: SILENCE_CHECKS[stage - 1]!, event_id: `silence_check_${stage}_${this.silenceChecks}` });
+    this.silenceCheckAttempts = 0;
+    clearTimeout(this.silenceCheckTimer);
+    this.silenceCheckTimer = undefined;
+    this.sendSilenceCheckAttempt();
     this.scheduleSilenceStep();
+  }
+
+  // Sends the current check-in once more while GPT-Live stays silent. The
+  // greeting needs the same: an acknowledged command can go unspoken.
+  private sendSilenceCheckAttempt(): void {
+    const stage = this.silenceStage;
+    this.silenceCheckAttempts += 1;
+    this.silenceChecks += 1;
+    this.silenceCheckAt = performance.now();
+    this.send({ type: "session.instructions.append", delegation_id: null, content: SILENCE_CHECKS[stage - 1]!, event_id: `silence_check_${stage}_${this.silenceChecks}` });
     try {
-      this.options.onSilenceCheck?.(stage);
+      this.options.onSilenceCheck?.(stage, this.silenceCheckAttempts);
     } catch {
       // Logging must never affect the call.
     }
+    if (this.silenceCheckAttempts >= SILENCE_CHECK_COMMANDS) return;
+    this.silenceCheckTimer = setTimeout(() => this.retrySilenceCheck(stage, this.silenceCheckAttempts), SILENCE_COMMAND_RETRY_MS);
+  }
+
+  private retrySilenceCheck(stage: number, attempt: number): void {
+    this.silenceCheckTimer = undefined;
+    if (this.finished || this.ending) return;
+    // A newer check-in took over, or the ladder moved on to the next step.
+    if (stage !== this.silenceStage || attempt !== this.silenceCheckAttempts) return;
+    // The receptionist answered since: the caller has heard from it.
+    if (this.lastSpeechAt >= this.silenceCheckAt) return;
+    if (this.silenceCheckBlocked() || this.silenceStepIsDue()) {
+      this.silenceCheckTimer = setTimeout(() => this.retrySilenceCheck(stage, attempt), SILENCE_RECHECK_MS);
+      return;
+    }
+    this.sendSilenceCheckAttempt();
+  }
+
+  // The next rung of the ladder is due, so its own step sends the next command.
+  private silenceStepIsDue(): boolean {
+    const elapsed = performance.now() - this.silenceAnchorAt;
+    const checkMs = this.options.silenceCheckMs;
+    const timeoutMs = this.options.silenceTimeoutMs;
+    if (timeoutMs !== undefined && elapsed >= timeoutMs) return true;
+    if (checkMs === undefined || checkMs <= 0 || this.silenceStage >= SILENCE_CHECKS.length) return false;
+    return elapsed >= checkMs * (this.silenceStage + 1);
   }
 
   /**
@@ -1239,6 +1351,7 @@ export class LiveCallController {
     if (this.lastCallerAt <= pending.requestedAt) return false;
     pending.cancelled = true;
     this.silenceEnd = undefined;
+    this.silenceNotice = undefined;
     this.ending = false;
     this.wrapUpAckedAt = undefined;
     if (this.endReason === "silence_timeout") this.endReason = undefined;
@@ -1486,7 +1599,7 @@ export class LiveCallController {
     // never heard from the session leaves the decision to its worker.
     const leaveSession = detached || (this.options.firstEventTimeoutMs !== undefined && !this.sessionAlive);
     if (!sessionClosed && !this.finalizeTimer && !leaveSession) this.endWithoutSideband();
-    for (const timer of [this.silenceTimer, this.durationTimer, this.topUpTimer, this.greetingTimer, this.finalizeTimer, this.firstEventTimer, this.transferTimer, this.passcode?.timer]) clearTimeout(timer);
+    for (const timer of [this.silenceTimer, this.silenceCheckTimer, this.durationTimer, this.topUpTimer, this.greetingTimer, this.finalizeTimer, this.firstEventTimer, this.transferTimer, this.passcode?.timer]) clearTimeout(timer);
     this.passcode = undefined;
     this.abort.abort();
     this.socket?.close({ code: 1000, reason: "session finished" });

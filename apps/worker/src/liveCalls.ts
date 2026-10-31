@@ -501,7 +501,7 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
       ...(topUp ? { topUp } : {}),
       onStarted: () => void markLiveCallMediaStarted(input.domain, call).catch(logError(request.sessionId, "media start not recorded")),
       onGreeting: (greeting) => console.info(JSON.stringify({ event: "live.greeting", sessionId: request.sessionId, ...greeting })),
-      onSilenceCheck: (stage) => console.info(JSON.stringify({ event: "live.silence_check", sessionId: request.sessionId, stage, ms: Math.round(performance.now() - attachedAt) })),
+      onSilenceCheck: (stage, attempt) => console.info(JSON.stringify({ event: "live.silence_check", sessionId: request.sessionId, stage, attempt, ms: Math.round(performance.now() - attachedAt) })),
       onSilenceRescue: () => console.info(JSON.stringify({ event: "live.silence_rescued", sessionId: request.sessionId })),
       onTurn: (turn) => void savedTurns.then((saved) => retryWrite(() => saveLiveCallTurn(input.domain, { ...call, ...turn, sequence: turn.sequence + saved }))).catch(logError(request.sessionId, "transcript save failed")),
       onTimeout: (reason) => void controller!.wrapUp(reason),

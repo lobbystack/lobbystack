@@ -1185,11 +1185,29 @@ describe("LiveCallController silence ladder", () => {
     expect(silenceChecks(socket)).toHaveLength(0);
     await vi.advanceTimersByTimeAsync(1);
     expect(silenceChecks(socket)).toEqual([expect.objectContaining({ event_id: "silence_check_1_1" })]);
+    // GPT-Live asks it, so it isn't sent again.
+    socket.emit("session.output_transcript.delta", { delta: "Are you still there?", start_ms: 12_200, end_ms: 13_000 });
     await vi.advanceTimersByTimeAsync(11_999);
     expect(silenceChecks(socket)).toHaveLength(1);
     await vi.advanceTimersByTimeAsync(1);
     expect(silenceChecks(socket)).toHaveLength(2);
     expect(onTimeout).not.toHaveBeenCalled();
+  });
+
+  it("sends a check-in again while GPT-Live stays silent, with a new id each time", async () => {
+    fakeTimers();
+    const { socket } = setup({ silenceTimeoutMs: 40_000, silenceCheckMs: 12_000 });
+    await greet(socket);
+    await vi.advanceTimersByTimeAsync(12_000);
+    expect(silenceChecks(socket)).toEqual([expect.objectContaining({ event_id: "silence_check_1_1" })]);
+    // The acknowledged command went unspoken, so it is sent again.
+    await vi.advanceTimersByTimeAsync(4_500);
+    expect(silenceChecks(socket).map((event) => event.event_id)).toEqual(["silence_check_1_1", "silence_check_1_2"]);
+    await vi.advanceTimersByTimeAsync(4_500);
+    expect(silenceChecks(socket).map((event) => event.event_id)).toEqual(["silence_check_1_1", "silence_check_1_2", "silence_check_1_3"]);
+    // All three commands went unspoken, so the ladder moves on at 24 seconds.
+    await vi.advanceTimersByTimeAsync(3_000);
+    expect(silenceChecks(socket).map((event) => event.event_id)).toEqual(["silence_check_1_1", "silence_check_1_2", "silence_check_1_3", "silence_check_2_4"]);
   });
 
   it("holds the check-ins and the deadline while a request is being answered, without moving the deadline", async () => {
@@ -1205,9 +1223,11 @@ describe("LiveCallController silence ladder", () => {
     finish();
     await vi.advanceTimersByTimeAsync(1_000);
     expect(silenceChecks(socket)).toEqual([]);
-    // The answer re-arms the ladder from its delivery.
+    // The answer re-arms the ladder from its delivery. GPT-Live doesn't speak
+    // the check-in in this test, so it is sent again up to three times.
     await vi.advanceTimersByTimeAsync(12_000);
-    expect(silenceChecks(socket)).toEqual([expect.objectContaining({ event_id: "silence_check_1_1" })]);
+    expect(silenceChecks(socket)[0]).toEqual(expect.objectContaining({ event_id: "silence_check_1_1" }));
+    expect(silenceChecks(socket).every((event) => event.event_id.startsWith("silence_check_1_"))).toBe(true);
   });
 
   it("never checks in before the greeting has played", async () => {
@@ -1395,12 +1415,26 @@ describe("LiveCallController wrap-up", () => {
   it("hangs up when GPT-Live stays silent, and asks for the goodbye only once", async () => {
     fakeTimers();
     const { socket, controller, hangup } = setup();
-    void controller.wrapUp("silence_timeout");
+    void controller.wrapUp("duration_limit");
     void controller.wrapUp("service_restart");
     expect(sentOfType(socket, "session.instructions.append")).toHaveLength(1);
     await vi.advanceTimersByTimeAsync(4_000);
     expect(hangup).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(400);
+    expect(hangup).toHaveBeenCalledWith("live_1");
+  });
+
+  it("sends the silence notice again while GPT-Live stays silent, then hangs up", async () => {
+    fakeTimers();
+    const { socket, controller, hangup } = setup();
+    void controller.wrapUp("silence_timeout");
+    const notices = () => sentOfType(socket, "session.instructions.append").filter((event) => event.event_id.startsWith("wrap_up_silence_timeout")).map((event) => event.event_id);
+    expect(notices()).toEqual(["wrap_up_silence_timeout_1"]);
+    await vi.advanceTimersByTimeAsync(4_600);
+    expect(notices()).toEqual(["wrap_up_silence_timeout_1", "wrap_up_silence_timeout_2"]);
+    await vi.advanceTimersByTimeAsync(4_600);
+    expect(notices()).toEqual(["wrap_up_silence_timeout_1", "wrap_up_silence_timeout_2", "wrap_up_silence_timeout_3"]);
+    await vi.advanceTimersByTimeAsync(4_600);
     expect(hangup).toHaveBeenCalledWith("live_1");
   });
 
