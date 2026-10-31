@@ -131,7 +131,7 @@ Once attached, the worker owns the call until OpenAI closes the session. It:
 - saves each caller and receptionist turn to the transcript
 - transfers phone calls with a SIP REFER to the destination number, once GPT-Live has told the caller
 - hangs up after the receptionist's goodbye has played, when the agent ends the call
-- checks in when the caller goes quiet: at 12 seconds it asks GPT-Live to see whether they're still there, at 24 seconds it asks once more, and at 40 seconds it tells GPT-Live the call will end and hangs up after the notice. A request or a transfer holds a check-in and the deadline until it finishes. The call also ends at the duration limit: the minutes it has reserved, and at most 30 minutes. When the admin sends no limit, as on an unlimited plan, the call stops at 30 minutes.
+- checks in when the caller goes quiet: at 8 seconds it asks GPT-Live to see whether they're still there, at 16 seconds it asks once more, and at 25 seconds it tells GPT-Live the call will end and hangs up after the notice. A request or a transfer holds a check-in and the deadline until it finishes. The call also ends at the duration limit: the minutes it has reserved, and at most 30 minutes. When the admin sends no limit, as on an unlimited plan, the call stops at 30 minutes.
 - records the final call state, billed seconds, and estimated cost
 - queues a copy of OpenAI's stored recording into LobbyStack storage, where the copy follows the plan's retention (see [Recordings](#recordings))
 - reports the call to the dashboard's live-call count

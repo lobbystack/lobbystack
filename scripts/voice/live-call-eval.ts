@@ -23,8 +23,8 @@ const CHUNK_BYTES = (RATE * 2 * CHUNK_MS) / 1000;
 // How long a run waits after the caller's last line for the receptionist to hang up.
 const DEFAULT_END_WINDOW_MS = 15_000;
 // The worker's silence ladder, so a silent caller ends the call the same way over the API.
-const SILENCE_TIMEOUT_MS = 40_000;
-const SILENCE_CHECK_MS = 12_000;
+const SILENCE_TIMEOUT_MS = 25_000;
+const SILENCE_CHECK_MS = 8_000;
 // The receptionist has answered once it has been quiet this long after speaking.
 const REPLY_QUIET_MS = 1_500;
 // How long the caller waits for a greeting before speaking: long enough for the worker's fallback and both retries.

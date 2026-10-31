@@ -64,10 +64,10 @@ type AttachRequest = {
  */
 export type LiveRecoveryOutcome = "attached" | "finished" | "owned" | "skipped";
 
-const SILENCE_TIMEOUT_MS = 40_000;
+const SILENCE_TIMEOUT_MS = 25_000;
 // The worker asks GPT-Live whether the caller is still there this long after
 // their last words, again at twice this long, then ends the call.
-const SILENCE_CHECK_MS = 12_000;
+const SILENCE_CHECK_MS = 8_000;
 // A call that saved a turn this recently has a live worker, even if its lock
 // lapsed, so recovery leaves it alone.
 const RECENT_ACTIVITY_MS = 45_000;
