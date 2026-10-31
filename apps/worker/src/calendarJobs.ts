@@ -1,18 +1,19 @@
 import { createHash, randomBytes } from "node:crypto";
 import { and, asc, eq, isNull, ne, or, sql } from "drizzle-orm";
 import { appointments, calendarConnections, contacts, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { CALENDAR_SYNC_HORIZON_MS, cancelAppointmentsCancelledInCalendar, forgetRetiredCalendarWebhook, getRetiredCalendarConnection, markCalendarConnectionSync, pickCalendarWriter, queueUnsyncedAppointmentSyncs, recordProductEvent, registerCalendarWebhookOnce, resolveCalendarAccessToken, updateAppointmentSyncState, updateAppointmentSyncStateInTransaction, upsertBusyBlocks, type DomainContext } from "@lobbystack/domain";
+import { CALENDAR_SYNC_HORIZON_MS, followCalendarBookingChanges, forgetRetiredCalendarWebhook, getRetiredCalendarConnection, markCalendarConnectionSync, pickCalendarWriter, queueUnsyncedAppointmentSyncs, recordProductEvent, registerCalendarWebhookOnce, resolveCalendarAccessToken, updateAppointmentSyncState, updateAppointmentSyncStateInTransaction, upsertBusyBlocks, type DomainContext } from "@lobbystack/domain";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 import { redactOtelExceptionText } from "@lobbystack/telemetry/node";
-import { calendarProviderLabel, type CalendarProvider } from "@lobbystack/providers/calendar";
+import { calendarProviderLabel, type CalendarBookingChanges, type CalendarProvider } from "@lobbystack/providers/calendar";
+import { CALENDAR_RECONNECT_ERROR } from "@lobbystack/shared";
 import type { JobResult } from "./handlers";
 
 export type CalendarOperations = Pick<CalendarProvider, "getBusyBlocks" | "upsertEvent" | "deleteEvent" | "refreshAccessToken"> & {
   /** A provider that pushes changes, as Cal.com does, registers a webhook for each connection. */
   registerWebhook?: (input: { accessToken: string; subscriberUrl: string; secret: string }) => Promise<{ webhookId: string }>;
   deleteWebhook?: (input: { accessToken: string; webhookId: string }) => Promise<void>;
-  /** A provider whose bookings people can cancel themselves says which ones they did. */
-  getCancelledEventIds?: (input: { accessToken: string; startsAt: string; endsAt: string }) => Promise<string[]>;
+  /** A provider whose bookings people can change themselves says which ones they did. */
+  getBookingChanges?: (input: { accessToken: string; startsAt: string; endsAt: string }) => Promise<CalendarBookingChanges>;
 };
 /** The configured providers by name; a connection whose provider is missing here is left alone. */
 export type CalendarProviders = Partial<Record<string, CalendarOperations>>;
@@ -147,13 +148,16 @@ export async function reconcileBusinessCalendar(dependencies: Dependencies, busi
       const endsAt = new Date(startsAt.getTime() + CALENDAR_SYNC_HORIZON_MS);
       const blocks = await provider.getBusyBlocks({ accessToken: token, calendarId: connection.calendarId, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() });
       await upsertBusyBlocks(dependencies.domain, { businessId, connectionId: connection.id, calendarId: connection.calendarId, syncStartedAt: startsAt, blocks: blocks.map((block) => ({ ...block, ...(connection.staffId ? { staffId: connection.staffId } : {}) })) });
-      if (provider.getCancelledEventIds) await cancelAppointmentsCancelledInCalendar(dependencies.domain, { businessId, provider: calendarProviderLabel(connection.provider), eventIds: await provider.getCancelledEventIds({ accessToken: token, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() }) });
+      if (provider.getBookingChanges) await followCalendarBookingChanges(dependencies.domain, { businessId, provider: calendarProviderLabel(connection.provider), changes: await provider.getBookingChanges({ accessToken: token, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() }) });
       await queueUnsyncedAppointmentSyncs(dependencies.domain, { businessId, connectionId: connection.id });
       synced++;
     } catch (error) {
       const message = error instanceof Error ? redactOtelExceptionText(error.message) : "Calendar synchronization failed.";
       if (message === "Calendar selection changed during synchronization.") continue;
-      await markCalendarConnectionSync(dependencies.domain, { businessId, connectionId: connection.id, error: message });
+      // Only a rejected grant needs the operator to reconnect; the dashboard tells them so from this message.
+      const failure = error as { reconnectRequired?: unknown; responseStatus?: unknown };
+      const rejected = failure.reconnectRequired === true || failure.responseStatus === 401 || failure.responseStatus === 403;
+      await markCalendarConnectionSync(dependencies.domain, { businessId, connectionId: connection.id, error: rejected ? CALENDAR_RECONNECT_ERROR : message });
       failures++;
     }
   }

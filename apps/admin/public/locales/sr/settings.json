@@ -591,12 +591,14 @@
       "eventTypeSaved": "Tip događaja je sačuvan.",
       "refresh": "Osveži",
       "syncNeedsAttention": "Potrebna je pažnja",
+      "syncFailed": "Vaša recepcionerka nije uspela da završi sinhronizaciju sa Cal.com i neće nuditi termine dok sinhronizacija ne uspe. Sama pokušava ponovo, a možete i da kliknete na Osveži.",
       "discoveryFailed": "Vaša recepcionerka ne može da pristupi vašem Cal.com nalogu. Osvežite ili ponovo povežite nalog.",
       "howItWorks": "Svaki termin postaje rezervacija ovog tipa događaja. Cal.com dobija ime, broj telefona i zamensku adresu e-pošte pozivaoca, pa mu ne piše. Prava adresa e-pošte stoji u beleškama rezervacije za vaš tim, a vaša recepcionerka šalje potvrdu.",
       "warningsTitle": "Proverite ovaj tip događaja u Cal.com",
       "warnings": {
         "missingLengths": "Dodajte {{lengths}} minuta trajanjima tipa događaja. Do tada Cal.com zakazuje te usluge u podrazumevanom trajanju tipa događaja.",
         "smsReminders": "Isključite SMS tok rada za ovaj tip događaja, inače Cal.com šalje poruke pozivaocima pored poruka vaše recepcionerke.",
+        "videoLocation": "Dodajte „Broj telefona učesnika” kao lokaciju ovog tipa događaja. Do tada rezervacije imaju video link umesto telefona pozivaoca.",
         "narrowerAvailability": "Proširite raspored tipa događaja za {{days}} da odgovara vašem radnom vremenu. Cal.com odbija rezervacije van svog rasporeda."
       }
     },

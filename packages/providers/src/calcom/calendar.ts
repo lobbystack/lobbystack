@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 import { assertCertificationCalendar } from "@lobbystack/shared";
 
-import type { CalendarBusyBlock, CalendarEventWrite, CalendarListEntry, CalendarProvider } from "../calendar";
+import type { CalendarBookingChanges, CalendarBusyBlock, CalendarEventWrite, CalendarListEntry, CalendarProvider } from "../calendar";
 
 /**
  * Every scope the integration uses. Cal.com reviews an OAuth client again when
@@ -55,6 +55,8 @@ export type CalcomEventType = {
   scheduleId: number | null;
   /** An SMS workflow is attached, so Cal.com texts the attendee. */
   smsReminders: boolean;
+  /** Every location is a video call or a link, so a caller books a meeting they won't join. */
+  videoOnly: boolean;
 };
 
 export type CalcomSchedule = { timeZone: string; availability: Array<{ days: string[]; startTime: string; endTime: string }> };
@@ -139,7 +141,7 @@ export class CalcomCalendarProvider implements CalendarProvider {
   }
 
   async listEventTypes(input: { accessToken: string }): Promise<CalcomEventType[]> {
-    const data = await this.request<Array<{ id?: number; title?: string; lengthInMinutes?: number; lengthInMinutesOptions?: number[]; scheduleId?: number | null; bookingFields?: Array<{ slug?: string }> }>>(input.accessToken, "/v2/event-types", { version: API_VERSIONS.eventTypes, what: "event type discovery" });
+    const data = await this.request<Array<{ id?: number; title?: string; lengthInMinutes?: number; lengthInMinutesOptions?: number[]; scheduleId?: number | null; bookingFields?: Array<{ slug?: string }>; locations?: Array<{ type?: string }> }>>(input.accessToken, "/v2/event-types", { version: API_VERSIONS.eventTypes, what: "event type discovery" });
     if (!Array.isArray(data)) throw new Error("Cal.com event type discovery returned an invalid response.");
     return data.flatMap((eventType) => typeof eventType.id === "number" && eventType.title && typeof eventType.lengthInMinutes === "number" ? [{
       id: String(eventType.id),
@@ -148,14 +150,15 @@ export class CalcomCalendarProvider implements CalendarProvider {
       lengths: [...new Set([eventType.lengthInMinutes, ...(eventType.lengthInMinutesOptions ?? [])])].sort((a, b) => a - b),
       scheduleId: typeof eventType.scheduleId === "number" ? eventType.scheduleId : null,
       smsReminders: (eventType.bookingFields ?? []).some((field) => field.slug === "smsReminderNumber"),
+      videoOnly: (eventType.locations ?? []).every((location) => location.type === "integration" || location.type === "link"),
     }] : []);
   }
 
-  /** The lengths a booking of the event type may pick, its default included. */
-  async getEventType(accessToken: string, eventTypeId: number): Promise<{ lengths: number[] }> {
-    const data = await this.request<{ lengthInMinutes?: number; lengthInMinutesOptions?: number[] }>(accessToken, `/v2/event-types/${eventTypeId}`, { version: API_VERSIONS.eventTypes, what: "event type lookup" });
+  /** The lengths a booking of the event type may pick, its default included, and whether it takes the caller's phone as its location. */
+  async getEventType(accessToken: string, eventTypeId: number): Promise<{ lengths: number[]; attendeePhone: boolean }> {
+    const data = await this.request<{ lengthInMinutes?: number; lengthInMinutesOptions?: number[]; locations?: Array<{ type?: string }> }>(accessToken, `/v2/event-types/${eventTypeId}`, { version: API_VERSIONS.eventTypes, what: "event type lookup" });
     if (typeof data?.lengthInMinutes !== "number") throw new Error("Cal.com event type lookup returned an invalid response.");
-    return { lengths: [...new Set([data.lengthInMinutes, ...(data.lengthInMinutesOptions ?? [])])] };
+    return { lengths: [...new Set([data.lengthInMinutes, ...(data.lengthInMinutesOptions ?? [])])], attendeePhone: (data.locations ?? []).some((location) => location.type === "attendeePhone") };
   }
 
   /** Event types stand in for calendars: appointments become bookings of the one a connection picks. */
@@ -189,10 +192,30 @@ export class CalcomCalendarProvider implements CalendarProvider {
     return blocks;
   }
 
-  /** Bookings cancelled in the window. A moved booking also reads as cancelled, under its old uid, so it's left out. */
-  async getCancelledEventIds(input: { accessToken: string; startsAt: string; endsAt: string }): Promise<string[]> {
-    const bookings = await this.listBookings(input.accessToken, { status: "cancelled", afterStart: input.startsAt, beforeEnd: input.endsAt });
-    return bookings.filter((booking) => booking.status === "cancelled" && !booking.rescheduledToUid).map((booking) => booking.uid);
+  /**
+   * What changed to bookings in the window. Moving a booking cancels it and makes a new one under a new uid, so a
+   * cancelled booking with a successor was moved, possibly more than once: its last successor says where it ended up.
+   */
+  async getBookingChanges(input: { accessToken: string; startsAt: string; endsAt: string }): Promise<CalendarBookingChanges> {
+    const window = { afterStart: shiftDays(input.startsAt, -1), beforeEnd: shiftDays(input.endsAt, 1) };
+    const [gone, ...live] = await Promise.all(["cancelled", "upcoming", "unconfirmed"].map((status) => this.listBookings(input.accessToken, { status, ...window })));
+    const closed = new Map(gone!.filter((booking) => booking.status === "cancelled").map((booking) => [booking.uid, booking]));
+    const open = new Map(live.flat().filter((booking) => BUSY_STATUSES.has(booking.status)).map((booking) => [booking.uid, booking]));
+    const changes: CalendarBookingChanges = { cancelled: [], moved: [] };
+    for (const booking of closed.values()) {
+      let last = booking;
+      const seen = new Set([last.uid]);
+      while (last.rescheduledToUid && closed.has(last.rescheduledToUid) && !seen.has(last.rescheduledToUid)) {
+        last = closed.get(last.rescheduledToUid)!;
+        seen.add(last.uid);
+      }
+      const successor = last.rescheduledToUid ? open.get(last.rescheduledToUid) : undefined;
+      if (successor) {
+        const { startsAt, endsAt } = interval(successor.start, successor.end);
+        changes.moved.push({ eventId: booking.uid, toEventId: successor.uid, startsAt, endsAt });
+      } else if (!last.rescheduledToUid) changes.cancelled.push(booking.uid);
+    }
+    return changes;
   }
 
   async upsertEvent(input: CalendarEventWrite): Promise<{ externalEventId: string }> {
@@ -205,7 +228,7 @@ export class CalcomCalendarProvider implements CalendarProvider {
     const lengthInMinutes = Math.round((Date.parse(input.endsAt) - Date.parse(input.startsAt)) / 60_000);
     // Cal.com takes a length only from an event type that offers several, and only one of those. Otherwise the
     // booking gets the event type's own length, which then never matches the appointment's end.
-    const { lengths } = await this.getEventType(input.accessToken, eventTypeId);
+    const { lengths, attendeePhone } = await this.getEventType(input.accessToken, eventTypeId);
     const pickable = lengths.length > 1 && lengths.includes(lengthInMinutes);
     const length = pickable ? { lengthInMinutes } : {};
     // The stored uid can point at a booking that's gone: canceled in Cal.com, or replaced by a reschedule whose
@@ -233,6 +256,8 @@ export class CalcomCalendarProvider implements CalendarProvider {
         start: toUtc(input.startsAt),
         ...length,
         attendee: { name, email, timeZone: input.timezone || "UTC", ...(attendee.phone ? { phoneNumber: attendee.phone } : {}) },
+        // Cal.com refuses a location the event type doesn't list, so it's sent only when listed. The dashboard warns otherwise.
+        ...(attendee.phone && attendeePhone ? { location: { type: "attendeePhone", phone: attendee.phone } } : {}),
         bookingFieldsResponses: { notes: truncate(`Booked by LobbyStack. ${contact.join(", ")}${input.description ? `. ${input.description}` : ""}`, 500) },
         metadata: {
           lobbystackAppointmentId: truncate(key, 500),

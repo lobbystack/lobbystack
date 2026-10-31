@@ -66,6 +66,7 @@ export type CalendarConnectionViewModel = {
 export type CalcomEventTypeWarningViewModel =
   | { code: "missing_lengths"; lengths: number[] }
   | { code: "sms_reminders" }
+  | { code: "video_location" }
   | { code: "narrower_availability"; days: number[] };
 
 export type IntegrationsViewModel = {

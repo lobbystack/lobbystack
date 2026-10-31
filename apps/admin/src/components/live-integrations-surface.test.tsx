@@ -73,15 +73,26 @@ describe("original integration permissions and setup navigation", () => {
   it("lets an admin pick a Cal.com event type and shows what to fix in Cal.com", async () => {
     const fetchMock = setup("business_admin", {
       calendarConnections: [{ id: "calcom-connection", provider: "calcom", externalAccountId: "1234", status: "connected", staffId: null, selectedCalendarId: "42", lastSyncError: null }],
-      calcom: { configured: true, options: [{ id: "42", summary: "Haircut", primary: false, accessRole: "owner", selected: true }, { id: "43", summary: "Consultation", primary: false, accessRole: "owner", selected: false }], discoveryError: null, warnings: [{ code: "missing_lengths", lengths: [45] }, { code: "sms_reminders" }, { code: "narrower_availability", days: [6] }] },
+      calcom: { configured: true, options: [{ id: "42", summary: "Haircut", primary: false, accessRole: "owner", selected: true }, { id: "43", summary: "Consultation", primary: false, accessRole: "owner", selected: false }], discoveryError: null, warnings: [{ code: "missing_lengths", lengths: [45] }, { code: "sms_reminders" }, { code: "video_location" }, { code: "narrower_availability", days: [6] }] },
     });
     fireEvent.click(await screen.findByRole("button", { name: "integrations.actions.connected" }));
     const dialog = await screen.findByRole("dialog");
     expect(dialog.textContent).toContain("integrations.calcom.howItWorks");
-    for (const key of ["missingLengths", "smsReminders", "narrowerAvailability"]) expect(dialog.textContent).toContain(`integrations.calcom.warnings.${key}`);
+    for (const key of ["missingLengths", "smsReminders", "videoLocation", "narrowerAvailability"]) expect(dialog.textContent).toContain(`integrations.calcom.warnings.${key}`);
     fireEvent.click(screen.getByRole("button", { name: "integrations.calcom.disconnect" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("connectionId=calcom-connection"), expect.objectContaining({ method: "DELETE" })));
     await waitFor(() => telemetryRef.current!.expectEvent("web.integration.calendar_disconnect_completed", { businessId: "business", provider: "calcom", scope: "business" }));
+  });
+  it.each([
+    ["Cal.com webhook registration failed with status 500.", "integrations.calcom.syncNeedsAttention", "integrations.calcom.syncFailed"],
+    ["Calendar authorization requires reconnection.", "integrations.status.reconnectRequired", "integrations.calcom.discoveryFailed"],
+  ])("tells a failed sync from a rejected grant: %s", async (lastSyncError, title, body) => {
+    const button = title.endsWith("syncNeedsAttention") ? title : "integrations.calcom.reconnect";
+    setup("business_admin", { calendarConnections: [{ id: "calcom-connection", provider: "calcom", externalAccountId: "1234", status: "error", staffId: null, selectedCalendarId: "42", lastSyncError }], calcom: { configured: true, options: [], discoveryError: null, warnings: [] } });
+    fireEvent.click(await screen.findByRole("button", { name: button }));
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog.textContent).toContain(title);
+    expect(dialog.textContent).toContain(body);
   });
   it("gives Cal.com callback feedback of its own", async () => {
     route.search = new URLSearchParams("calendar=calcom&status=success");

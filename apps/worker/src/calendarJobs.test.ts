@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ transaction: vi.fn(), token: vi.fn(), update: vi.fn(), updateTx: vi.fn(), mark: vi.fn(), busy: vi.fn(), backfill: vi.fn(), record: vi.fn(), registerOnce: vi.fn(), retired: vi.fn(), forget: vi.fn(), cancelInCalendar: vi.fn() }));
+const mocks = vi.hoisted(() => ({ transaction: vi.fn(), token: vi.fn(), update: vi.fn(), updateTx: vi.fn(), mark: vi.fn(), busy: vi.fn(), backfill: vi.fn(), record: vi.fn(), registerOnce: vi.fn(), retired: vi.fn(), forget: vi.fn(), follow: vi.fn() }));
 vi.mock("@lobbystack/db", async (original) => ({ ...await original<typeof import("@lobbystack/db")>(), withBusinessTransaction: mocks.transaction }));
-vi.mock("@lobbystack/domain", async () => ({ ...await vi.importActual<typeof import("../../../packages/domain/src/calendarWriter")>("../../../packages/domain/src/calendarWriter"), CALENDAR_SYNC_HORIZON_MS: 90 * 86400_000, resolveCalendarAccessToken: mocks.token, updateAppointmentSyncState: mocks.update, updateAppointmentSyncStateInTransaction: mocks.updateTx, markCalendarConnectionSync: mocks.mark, queueUnsyncedAppointmentSyncs: mocks.backfill, upsertBusyBlocks: mocks.busy, recordProductEvent: mocks.record, registerCalendarWebhookOnce: mocks.registerOnce, getRetiredCalendarConnection: mocks.retired, forgetRetiredCalendarWebhook: mocks.forget, cancelAppointmentsCancelledInCalendar: mocks.cancelInCalendar }));
+vi.mock("@lobbystack/domain", async () => ({ ...await vi.importActual<typeof import("../../../packages/domain/src/calendarWriter")>("../../../packages/domain/src/calendarWriter"), CALENDAR_SYNC_HORIZON_MS: 90 * 86400_000, resolveCalendarAccessToken: mocks.token, updateAppointmentSyncState: mocks.update, updateAppointmentSyncStateInTransaction: mocks.updateTx, markCalendarConnectionSync: mocks.mark, queueUnsyncedAppointmentSyncs: mocks.backfill, upsertBusyBlocks: mocks.busy, recordProductEvent: mocks.record, registerCalendarWebhookOnce: mocks.registerOnce, getRetiredCalendarConnection: mocks.retired, forgetRetiredCalendarWebhook: mocks.forget, followCalendarBookingChanges: mocks.follow }));
 import { calendarConnections } from "@lobbystack/db";
 import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
@@ -34,11 +34,23 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllEnvs());
 
-it("cancels the appointments of bookings someone cancelled in Cal.com", async () => {
-  const calcom = { ...provider, getCancelledEventIds: vi.fn().mockResolvedValue(["booking-uid"]) };
+it("follows bookings someone changed in Cal.com", async () => {
+  const changes = { cancelled: ["booking-uid"], moved: [] };
+  const calcom = { ...provider, getBookingChanges: vi.fn().mockResolvedValue(changes) };
   batches = [[{ id: "connection", provider: "calcom", calendarId: "42", status: "connected", webhookId: "webhook" }]];
   await reconcileBusinessCalendar({ domain: dependencies.domain, calendars: { calcom } }, "business");
-  expect(mocks.cancelInCalendar).toHaveBeenCalledWith(dependencies.domain, { businessId: "business", provider: "Cal.com", eventIds: ["booking-uid"] });
+  expect(mocks.follow).toHaveBeenCalledWith(dependencies.domain, { businessId: "business", provider: "Cal.com", changes });
+});
+
+it("asks for a reconnect only when the provider rejected the grant", async () => {
+  const connection = { id: "connection", provider: "calcom", calendarId: "42", status: "connected", webhookId: "webhook" };
+  const failing = (error: Error) => ({ domain: dependencies.domain, calendars: { calcom: { ...provider, getBusyBlocks: vi.fn().mockRejectedValue(error) } } });
+  batches = [[connection]];
+  await expect(reconcileBusinessCalendar(failing(Object.assign(new Error("Cal.com booking list failed with status 401."), { responseStatus: 401 })), "business")).rejects.toThrow("1 connection");
+  expect(mocks.mark).toHaveBeenLastCalledWith(dependencies.domain, expect.objectContaining({ error: "Calendar authorization requires reconnection." }));
+  batches = [[connection]];
+  await expect(reconcileBusinessCalendar(failing(new Error("Cal.com webhook registration failed with status 409.")), "business")).rejects.toThrow("1 connection");
+  expect(mocks.mark).toHaveBeenLastCalledWith(dependencies.domain, expect.objectContaining({ error: "Cal.com webhook registration failed with status 409." }));
 });
 
 it("rereads durable cancellation state and deletes instead of rewriting the event", async () => {

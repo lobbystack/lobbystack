@@ -6,6 +6,8 @@ export type CalcomEventTypeWarning =
   | { code: "missing_lengths"; lengths: number[] }
   /** An SMS workflow is attached, so Cal.com texts callers on top of LobbyStack's messages. */
   | { code: "sms_reminders" }
+  /** Every location is a video call or a link, so bookings carry a meeting link instead of the caller's phone. */
+  | { code: "video_location" }
   /** The event type's schedule leaves out hours the business is open, so Cal.com refuses bookings then. */
   | { code: "narrower_availability"; days: number[] };
 
@@ -19,7 +21,7 @@ const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Frida
  * Without a schedule, availability isn't compared. Date overrides aren't either.
  */
 export function calcomEventTypeWarnings(input: {
-  eventType: { lengths: number[]; smsReminders: boolean };
+  eventType: { lengths: number[]; smsReminders: boolean; videoOnly: boolean };
   serviceDurations: number[];
   hours: Array<{ dayOfWeek: number; openMinutes: number; closeMinutes: number }>;
   timezone: string;
@@ -29,6 +31,7 @@ export function calcomEventTypeWarnings(input: {
   const missing = [...new Set(input.serviceDurations)].filter((length) => !input.eventType.lengths.includes(length)).sort((a, b) => a - b);
   if (missing.length) warnings.push({ code: "missing_lengths", lengths: missing });
   if (input.eventType.smsReminders) warnings.push({ code: "sms_reminders" });
+  if (input.eventType.videoOnly) warnings.push({ code: "video_location" });
   if (input.schedule) {
     const days = [...new Set(input.hours.filter((window) => !coveredBySchedule(window, input.timezone, input.schedule!)).map((window) => window.dayOfWeek))].sort((a, b) => a - b);
     if (days.length) warnings.push({ code: "narrower_availability", days });

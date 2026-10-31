@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { appointments, auditLogs, businessHours, businessMemberships, businesses, calendarBusyBlocks, calendarConnections, contacts, createDatabaseClient, outboxMessages, services, staff, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
-import { cancelAppointmentsCancelledInCalendar, checkAvailability, rescheduleAppointmentInTransaction } from "./booking";
+import { checkAvailability, followCalendarBookingChanges, rescheduleAppointmentInTransaction } from "./booking";
 import { WEBHOOK_REGISTRATION_LEASE_MS, assignCalendarStaff, connectCalendar, disconnectCalendar, disconnectCalendarInTransaction, forgetStaleRetiredCalendarTokens, getCalendarWebhook, getRetiredCalendarConnection, queueUnsyncedAppointmentSyncs, registerCalendarWebhookOnce, resolveBusinessByCalendarWebhook, selectCalendar } from "./calendar";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
@@ -67,13 +67,36 @@ describe.skipIf(!testUrl)("calendar backfill against dedicated PostgreSQL roles"
       const kept = await book({ calendarSyncState: "synced", calendarExternalId: "kept" });
       const writing = await book({ calendarSyncState: "pending", calendarExternalId: "writing" });
       const past = await book({ calendarSyncState: "synced", calendarExternalId: "past", startsAt: new Date("2020-01-01T12:00:00Z"), endsAt: new Date("2020-01-01T12:30:00Z") });
-      const follow = () => asWorker(tx, (db) => cancelAppointmentsCancelledInCalendar({ db }, { businessId, provider: "Cal.com", eventIds: ["gone", "writing", "past"] }));
-      await expect(follow()).resolves.toEqual([gone.id]);
-      await expect(follow()).resolves.toEqual([]);
+      const follow = () => asWorker(tx, (db) => followCalendarBookingChanges({ db }, { businessId, provider: "Cal.com", changes: { cancelled: ["gone", "writing", "past"], moved: [] } }));
+      await expect(follow()).resolves.toEqual({ cancelled: [gone.id], moved: [] });
+      await expect(follow()).resolves.toEqual({ cancelled: [], moved: [] });
       const rows = await tx.select({ id: appointments.id, status: appointments.status }).from(appointments).where(inArray(appointments.id, [gone.id, kept.id, writing.id, past.id]));
       expect(rows.filter((row) => row.status === "canceled").map((row) => row.id)).toEqual([gone.id]);
       const audit = await tx.select({ payload: auditLogs.payload }).from(auditLogs).where(and(eq(auditLogs.entityId, gone.id), eq(auditLogs.eventType, "appointment_change.canceled")));
       expect(audit).toEqual([{ payload: { source: "calendar", provider: "Cal.com" } }]);
+    });
+  });
+
+  it("moves an appointment with its booking, and keeps it when the staff member can't take the new time", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, book } = await workspace(tx);
+      const moved = await book({ calendarSyncState: "synced", calendarExternalId: "old" });
+      const blocked = await book({ calendarSyncState: "synced", calendarExternalId: "blocked" });
+      const reissued = await book({ calendarSyncState: "synced", calendarExternalId: "reissued" });
+      const startsAt = "2030-02-01T15:00:00.000Z";
+      const endsAt = "2030-02-01T15:45:00.000Z";
+      const followed = await asWorker(tx, (db) => followCalendarBookingChanges({ db }, { businessId, provider: "Cal.com", changes: { cancelled: [], moved: [
+        { eventId: "old", toEventId: "new", startsAt, endsAt },
+        { eventId: "blocked", toEventId: "clash", startsAt: reissued.startsAt.toISOString(), endsAt: reissued.endsAt.toISOString() },
+        { eventId: "reissued", toEventId: "reissued-2", startsAt: reissued.startsAt.toISOString(), endsAt: reissued.endsAt.toISOString() },
+      ] } }));
+      expect(followed).toEqual({ cancelled: [], moved: [moved.id] });
+      const rows = await tx.select().from(appointments).where(inArray(appointments.id, [moved.id, blocked.id, reissued.id]));
+      expect(rows.find((row) => row.id === moved.id)).toMatchObject({ status: "confirmed", startsAt: new Date(startsAt), endsAt: new Date(endsAt), calendarExternalId: "new", calendarSyncState: "synced" });
+      expect(rows.find((row) => row.id === blocked.id)).toMatchObject({ startsAt: blocked.startsAt, calendarExternalId: "blocked" });
+      expect(rows.find((row) => row.id === reissued.id)).toMatchObject({ startsAt: reissued.startsAt, calendarExternalId: "reissued-2" });
+      const audit = await tx.select({ payload: auditLogs.payload }).from(auditLogs).where(and(eq(auditLogs.entityId, moved.id), eq(auditLogs.eventType, "appointment_change.rescheduled")));
+      expect(audit).toEqual([{ payload: { source: "calendar", provider: "Cal.com", startsAt, endsAt } }]);
     });
   });
 

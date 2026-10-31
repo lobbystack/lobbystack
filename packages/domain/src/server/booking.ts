@@ -443,6 +443,8 @@ async function recordAppointmentChange(
   });
 }
 
+const EXCLUSION_VIOLATION = "23P01";
+
 type AppointmentChangeSource = { source: "operator"; userId: string } | { source: "caller"; callId?: string } | { source: "api"; audit: ApiAudit } | { source: "calendar"; provider: string };
 
 function changeAudit(change: AppointmentChangeSource): { actorUserId: string | null; payload: Record<string, unknown> } {
@@ -515,32 +517,69 @@ export async function cancelAppointmentInTransaction(
 }
 
 /**
- * Follows bookings someone cancelled in the calendar itself: cancels the
- * upcoming appointments they belong to and tells the operator. An appointment
- * with a calendar write still pending keeps its booking, since that write may
- * be the change that retired the event id.
+ * Follows bookings someone changed in the calendar itself, where the time has
+ * already changed. A cancelled booking cancels its upcoming appointment and a
+ * moved one moves it, and the operator hears about either. An appointment with
+ * a calendar write still pending stays out of this, since that write may be
+ * the change that retired its event id.
  */
-export async function cancelAppointmentsCancelledInCalendar(
+export async function followCalendarBookingChanges(
   context: DomainContext,
-  input: { businessId: string; provider: string; eventIds: string[] },
-): Promise<string[]> {
-  if (!input.eventIds.length) return [];
-  const cancelled = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const rows = await tx.select({ id: appointments.id, startsAt: appointments.startsAt, timezone: appointments.timezone, contactName: contacts.name }).from(appointments)
+  input: { businessId: string; provider: string; changes: { cancelled: string[]; moved: Array<{ eventId: string; toEventId: string; startsAt: string; endsAt: string }> } },
+): Promise<{ cancelled: string[]; moved: string[] }> {
+  const moves = new Map(input.changes.moved.map((move) => [move.eventId, move]));
+  const eventIds = [...input.changes.cancelled, ...moves.keys()];
+  if (!eventIds.length) return { cancelled: [], moved: [] };
+  const followed = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const rows = await tx.select({ id: appointments.id, startsAt: appointments.startsAt, endsAt: appointments.endsAt, timezone: appointments.timezone, eventId: appointments.calendarExternalId, contactName: contacts.name }).from(appointments)
       .leftJoin(contacts, and(eq(contacts.id, appointments.contactId), eq(contacts.businessId, input.businessId)))
-      .where(and(eq(appointments.businessId, input.businessId), eq(appointments.status, "confirmed"), eq(appointments.calendarSyncState, "synced"), gt(appointments.startsAt, new Date()), inArray(appointments.calendarExternalId, input.eventIds)))
+      .where(and(eq(appointments.businessId, input.businessId), eq(appointments.status, "confirmed"), eq(appointments.calendarSyncState, "synced"), gt(appointments.startsAt, new Date()), inArray(appointments.calendarExternalId, eventIds)))
       .for("update", { of: appointments });
-    const ids: string[] = [];
+    const cancelled: string[] = [];
+    const moved: string[] = [];
     for (const row of rows) {
-      if (await cancelAppointmentInTransaction(tx, { businessId: input.businessId, appointmentId: row.id, change: { source: "calendar", provider: input.provider } }) !== "cancelled") continue;
-      ids.push(row.id);
-      const time = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short", timeZone: row.timezone }).format(row.startsAt);
-      await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKind: "calendarSync", eventKey: `calendarSync:appointment:${row.id}:cancelled-in-calendar`, subject: `Appointment cancelled in ${input.provider}`, body: `Someone cancelled ${row.contactName ?? "a customer"}'s ${time} booking in ${input.provider}, so LobbyStack cancelled the appointment. Customers who agreed to texts get a cancellation text.` });
+      const alert = async (key: string, subject: string, body: string) => await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKind: "calendarSync", eventKey: `calendarSync:appointment:${row.id}:${key}`, subject, body });
+      const when = (value: Date) => new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short", timeZone: row.timezone }).format(value);
+      const customer = row.contactName ?? "a customer";
+      const move = moves.get(row.eventId!);
+      if (!move) {
+        if (await cancelAppointmentInTransaction(tx, { businessId: input.businessId, appointmentId: row.id, change: { source: "calendar", provider: input.provider } }) !== "cancelled") continue;
+        cancelled.push(row.id);
+        await alert("cancelled-in-calendar", `Appointment cancelled in ${input.provider}`, `Someone cancelled ${customer}'s ${when(row.startsAt)} booking in ${input.provider}, so LobbyStack cancelled the appointment. Customers who agreed to texts get a cancellation text.`);
+        continue;
+      }
+      const startsAt = new Date(move.startsAt);
+      const endsAt = new Date(move.endsAt);
+      // Same time under a new uid: nobody needs to hear about it.
+      if (startsAt.getTime() === row.startsAt.getTime() && endsAt.getTime() === row.endsAt.getTime()) {
+        await tx.update(appointments).set({ calendarExternalId: move.toEventId, updatedAt: new Date() }).where(and(eq(appointments.id, row.id), eq(appointments.businessId, input.businessId)));
+        continue;
+      }
+      try {
+        // A savepoint, so a time the staff member can't take leaves the rest of the changes standing.
+        await tx.transaction(async (savepoint) => {
+          const [updated] = await savepoint.update(appointments).set({ startsAt, endsAt, calendarExternalId: move.toEventId, revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(and(eq(appointments.id, row.id), eq(appointments.businessId, input.businessId))).returning();
+          if (!updated) return;
+          await rescheduleAppointmentReminderInTransaction(savepoint, { businessId: input.businessId, appointmentId: row.id, startsAt, revision: updated.revision });
+          const audit = changeAudit({ source: "calendar", provider: input.provider });
+          await savepoint.insert(auditLogs).values({ businessId: input.businessId, actorUserId: audit.actorUserId, eventType: "appointment_change.rescheduled", entityType: "appointment", entityId: row.id, payload: { ...audit.payload, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() } });
+          await enqueueOutbox(savepoint, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "appointment", aggregateId: row.id, dedupeKey: `appointment:${row.id}:updated:${updated.revision}`, payload: { type: "appointment.updated", entityId: row.id, revision: updated.revision } });
+          await emitWebhookEventInTransaction(savepoint, { businessId: input.businessId, type: "appointment.rescheduled", resourceId: row.id });
+        });
+      } catch (error) {
+        const failure = error as { code?: unknown; cause?: { code?: unknown } };
+        if (failure.code !== EXCLUSION_VIOLATION && failure.cause?.code !== EXCLUSION_VIOLATION) throw error;
+        await alert(`move-conflict:${move.toEventId}`, `Booking moved in ${input.provider} clashes with an appointment`, `Someone moved ${customer}'s ${when(row.startsAt)} booking to ${when(startsAt)} in ${input.provider}, but the same staff member already has an appointment then. LobbyStack kept the appointment at ${when(row.startsAt)}. Move one of them, then let ${customer} know.`);
+        continue;
+      }
+      moved.push(row.id);
+      await alert(`moved-in-calendar:${move.toEventId}`, `Appointment moved in ${input.provider}`, `Someone moved ${customer}'s ${when(row.startsAt)} booking to ${when(startsAt)} in ${input.provider}, so LobbyStack moved the appointment and its reminder. Let ${customer} know about the new time.`);
     }
-    return ids;
+    return { cancelled, moved };
   });
-  for (const appointmentId of cancelled) await recordAppointmentChange(context, { name: "appointment.cancelled", businessId: input.businessId, appointmentId, source: "calendar" });
-  return cancelled;
+  for (const appointmentId of followed.cancelled) await recordAppointmentChange(context, { name: "appointment.cancelled", businessId: input.businessId, appointmentId, source: "calendar" });
+  for (const appointmentId of followed.moved) await recordAppointmentChange(context, { name: "appointment.rescheduled", businessId: input.businessId, appointmentId, source: "calendar" });
+  return followed;
 }
 
 /**

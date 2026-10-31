@@ -591,12 +591,14 @@
       "eventTypeSaved": "Tipo de evento guardado.",
       "refresh": "Actualizar",
       "syncNeedsAttention": "Requiere atención",
+      "syncFailed": "Su recepcionista no pudo terminar la sincronización con Cal.com y no ofrecerá horarios hasta que una sincronización funcione. Lo vuelve a intentar por sí sola, o puede hacer clic en Actualizar.",
       "discoveryFailed": "Su recepcionista no pudo acceder a su cuenta de Cal.com. Actualice o vuelva a conectar la cuenta.",
       "howItWorks": "Cada cita se convierte en una reserva de este tipo de evento. Cal.com recibe el nombre, el teléfono y un correo sustituto de quien llama, para no escribirle. Su correo real queda en las notas de la reserva para su equipo, y su recepcionista envía la confirmación.",
       "warningsTitle": "Revise este tipo de evento en Cal.com",
       "warnings": {
         "missingLengths": "Agregue {{lengths}} minutos a las duraciones del tipo de evento. Mientras tanto, Cal.com reserva esos servicios con la duración predeterminada del tipo de evento.",
         "smsReminders": "Desactive el flujo de SMS de este tipo de evento, o Cal.com enviará mensajes a quienes llaman además de los de su recepcionista.",
+        "videoLocation": "Agregue «Número de teléfono del asistente» como ubicación de este tipo de evento. Mientras tanto, las reservas llevan un enlace de video en lugar del teléfono de la persona que llama.",
         "narrowerAvailability": "Amplíe el horario del tipo de evento el {{days}} para que coincida con su horario de atención. Cal.com rechaza las reservas fuera de su horario."
       }
     },

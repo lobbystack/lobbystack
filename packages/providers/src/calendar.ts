@@ -19,6 +19,9 @@ export type CalendarListEntry = { id: string; summary: string; primary: boolean;
 
 export type CalendarBusyBlock = { startsAt: string; endsAt: string; externalEventId?: string };
 
+/** Bookings people changed in the calendar itself: the ones they cancelled, and where the ones they moved went. */
+export type CalendarBookingChanges = { cancelled: string[]; moved: Array<{ eventId: string; toEventId: string; startsAt: string; endsAt: string }> };
+
 /** The person an appointment is for. Providers that book on someone's behalf use it; Google ignores it. */
 export type CalendarAttendee = { name?: string | null; phone?: string | null; email?: string | null };
 

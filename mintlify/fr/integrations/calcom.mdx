@@ -46,6 +46,7 @@ Une fois le type d'événement choisi, la boîte de dialogue liste ce qu'il faut
 
 - **Durées** : le type d'événement doit offrir chaque durée de vos services. Ajoutez les durées manquantes dans les réglages de durée du type d'événement, sinon Cal.com réserve sa durée par défaut.
 - **Workflow SMS** : désactivez tout workflow SMS du type d'événement. Sinon, les appelants reçoivent des textos de Cal.com et de votre réceptionniste IA.
+- **Lieu** : ajoutez **Numéro de téléphone du participant** comme lieu. Sinon, les réservations portent un lien vidéo et votre équipe doit chercher le numéro de l'appelant dans les notes de réservation.
 - **Horaire** : les disponibilités du type d'événement doivent couvrir vos heures d'ouverture. Cal.com refuse les réservations hors de son horaire, et le tableau de bord vous alerte quand une réservation ne se synchronise pas.
 
 ## Utiliser Cal.com avec Google Calendar
@@ -64,7 +65,7 @@ Les nouveaux rendez-vous utilisent le nouveau type d'événement. Les rendez-vou
 
 Si vous annulez une réservation dans Cal.com, LobbyStack annule le rendez-vous et vous envoie une alerte. Les appelants qui ont accepté les textos reçoivent un texto d'annulation.
 
-LobbyStack ne suit pas une réservation que vous déplacez dans Cal.com : le rendez-vous garde son heure d'origine.
+Si vous déplacez une réservation dans Cal.com, LobbyStack déplace le rendez-vous et son rappel, puis vous alerte pour que vous puissiez annoncer la nouvelle heure à l'appelant. LobbyStack n'envoie pas de texto à l'appelant pour ce changement. Si le membre du personnel a déjà un rendez-vous à la nouvelle heure, LobbyStack garde l'heure d'origine et vous alerte pour que vous régliez le conflit.
 
 ## Reconnecter ou déconnecter
 

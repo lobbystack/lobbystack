@@ -52,13 +52,13 @@ describe("CalcomCalendarProvider", () => {
 
   it("lists event types as calendars, with the lengths a booking may pick and whether an SMS workflow is attached", async () => {
     const calls = routes(on("GET", "/v2/event-types", () => ok([
-      { id: 42, title: "Haircut", lengthInMinutes: 30, lengthInMinutesOptions: [30, 45, 60], scheduleId: 7, bookingFields: [{ slug: "email" }, { slug: "smsReminderNumber" }] },
-      { id: 43, title: "Consultation", lengthInMinutes: 15, scheduleId: null, bookingFields: [] },
+      { id: 42, title: "Haircut", lengthInMinutes: 30, lengthInMinutesOptions: [30, 45, 60], scheduleId: 7, bookingFields: [{ slug: "email" }, { slug: "smsReminderNumber" }], locations: [{ type: "integration" }, { type: "attendeePhone" }] },
+      { id: 43, title: "Consultation", lengthInMinutes: 15, scheduleId: null, bookingFields: [], locations: [{ type: "integration" }] },
     ])));
     const provider = new CalcomCalendarProvider(config);
     await expect(provider.listEventTypes({ accessToken: "access" })).resolves.toEqual([
-      { id: "42", title: "Haircut", lengthInMinutes: 30, lengths: [30, 45, 60], scheduleId: 7, smsReminders: true },
-      { id: "43", title: "Consultation", lengthInMinutes: 15, lengths: [15], scheduleId: null, smsReminders: false },
+      { id: "42", title: "Haircut", lengthInMinutes: 30, lengths: [30, 45, 60], scheduleId: 7, smsReminders: true, videoOnly: false },
+      { id: "43", title: "Consultation", lengthInMinutes: 15, lengths: [15], scheduleId: null, smsReminders: false, videoOnly: true },
     ]);
     await expect(provider.listCalendars({ accessToken: "access" })).resolves.toEqual([
       { id: "42", summary: "Haircut", primary: false, accessRole: "owner" },
@@ -66,6 +66,20 @@ describe("CalcomCalendarProvider", () => {
     ]);
     expect(new Headers(calls[0]!.init.headers).get("cal-api-version")).toBe("2026-06-12");
     expect(new Headers(calls[0]!.init.headers).get("authorization")).toBe("Bearer access");
+  });
+
+  it("sets the caller's phone as the location only on an event type that lists it", async () => {
+    const book = async (locations: Array<{ type: string }>) => {
+      const calls = routes(
+        (url, init) => (init.method ?? "GET") === "GET" && url.pathname === "/v2/event-types/42" ? ok({ id: 42, lengthInMinutes: 30, locations }) : undefined,
+        on("GET", "/v2/bookings", () => ok([], { pagination: { hasMore: false, nextCursor: null } })),
+        on("POST", "/v2/bookings", () => ok({ id: 1, uid: "booking-uid", status: "accepted" }, {})),
+      );
+      await new CalcomCalendarProvider(config).upsertEvent(write);
+      return body(calls.find((call) => call.init.method === "POST")!.init);
+    };
+    expect((await book([{ type: "integration" }, { type: "attendeePhone" }])).location).toEqual({ type: "attendeePhone", phone: write.attendee!.phone });
+    expect(await book([{ type: "integration" }])).not.toHaveProperty("location");
   });
 
   it("books under a stand-in address and keeps the caller's details in the notes and metadata", async () => {
@@ -237,14 +251,18 @@ describe("CalcomCalendarProvider", () => {
     await expect(new CalcomCalendarProvider(config).getBusyBlocks({ accessToken: "access", calendarId: "42", startsAt: "2026-11-01T00:00:00.000Z", endsAt: "2027-01-30T00:00:00.000Z" })).rejects.toThrow("status 500");
   });
 
-  it("reports cancelled bookings and leaves out moved ones", async () => {
-    const calls = routes(on("GET", "/v2/bookings", () => ok([
-      { uid: "cancelled", start: "2026-11-02T10:00:00.000Z", end: "2026-11-02T10:30:00.000Z", status: "cancelled" },
-      { uid: "moved", start: "2026-11-02T11:00:00.000Z", end: "2026-11-02T11:30:00.000Z", status: "cancelled", rescheduledToUid: "new-uid" },
-      { uid: "rejected", start: "2026-11-02T12:00:00.000Z", end: "2026-11-02T12:30:00.000Z", status: "rejected" },
-    ])));
-    await expect(new CalcomCalendarProvider(config).getCancelledEventIds({ accessToken: "access", startsAt: "2026-11-01T00:00:00.000Z", endsAt: "2027-01-30T00:00:00.000Z" })).resolves.toEqual(["cancelled"]);
-    expect(calls[0]!.url.searchParams.get("status")).toBe("cancelled");
+  it("reports cancelled bookings, and where moved ones ended up", async () => {
+    const closed = (uid: string, rescheduledToUid?: string, status = "cancelled") => ({ uid, start: "2026-11-02T10:00:00.000Z", end: "2026-11-02T10:30:00.000Z", status, ...(rescheduledToUid ? { rescheduledToUid } : {}) });
+    const live = { uid: "live", start: "2026-11-03T15:00:00.000Z", end: "2026-11-03T15:30:00.000Z", status: "accepted" };
+    const calls = routes(on("GET", "/v2/bookings", (url) => ok(url.searchParams.get("status") === "cancelled"
+      ? [closed("gone"), closed("moved-once", "live"), closed("moved-twice", "moved-again"), closed("moved-again", "live"), closed("moved-then-gone", "gone"), closed("beyond-window", "unknown"), closed("rejected", undefined, "rejected")]
+      : url.searchParams.get("status") === "upcoming" ? [live] : [])));
+    const move = { toEventId: "live", startsAt: live.start, endsAt: live.end };
+    await expect(new CalcomCalendarProvider(config).getBookingChanges({ accessToken: "access", startsAt: "2026-11-01T00:00:00.000Z", endsAt: "2027-01-30T00:00:00.000Z" })).resolves.toEqual({
+      cancelled: ["gone", "moved-then-gone"],
+      moved: [{ eventId: "moved-once", ...move }, { eventId: "moved-twice", ...move }, { eventId: "moved-again", ...move }],
+    });
+    expect(calls.map((call) => call.url.searchParams.get("status")).sort()).toEqual(["cancelled", "unconfirmed", "upcoming"]);
   });
 
   it("replaces a webhook that already posts to the connection's address", async () => {

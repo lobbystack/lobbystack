@@ -6,7 +6,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { intlLocale } from "@lobbystack/shared";
+import { CALENDAR_RECONNECT_ERROR, intlLocale } from "@lobbystack/shared";
 
 import type { CalcomEventTypeWarningViewModel, IntegrationsViewModel } from "@/lib/page-view-models";
 import { requestJson } from "@/lib/request-json";
@@ -37,6 +37,9 @@ export function CalcomIntegrationCard({ businessId, canManage, data }: { busines
   const connected = connection?.status === "connected";
   const syncing = connection?.status === "syncing";
   const discoveryFailed = Boolean(data?.calcom?.discoveryError);
+  // A failed sync clears on its own; only a rejected grant takes a reconnect.
+  const syncFailed = connection?.status === "error" && Boolean(connection.lastSyncError) && connection.lastSyncError !== CALENDAR_RECONNECT_ERROR;
+  const canRefresh = connected || syncFailed;
   const needsAttention = Boolean(connection && (!(connected || syncing) || connection.lastSyncError || discoveryFailed));
   const queryKey = ["integrations", businessId];
 
@@ -79,20 +82,21 @@ export function CalcomIntegrationCard({ businessId, canManage, data }: { busines
   const warningText = (warning: CalcomEventTypeWarningViewModel) => {
     if (warning.code === "missing_lengths") return t("integrations.calcom.warnings.missingLengths", { lengths: list(warning.lengths.map((length) => new Intl.NumberFormat(locale).format(length))) });
     if (warning.code === "sms_reminders") return t("integrations.calcom.warnings.smsReminders");
+    if (warning.code === "video_location") return t("integrations.calcom.warnings.videoLocation");
     return t("integrations.calcom.warnings.narrowerAvailability", { days: list(warning.days.map(weekday)) });
   };
 
   return <>
     <li className={`${surfaceClassName} p-4`}>
       <div className="mb-8 flex items-center justify-between gap-3"><div className="flex size-10 shrink-0 items-center justify-center"><CalcomLogo /></div><div className="flex items-center gap-2">
-        <Button disabled={!canManage} onClick={() => connection ? setDialogOpen(true) : void connect()} size="sm" type="button" variant="outline" className={connected ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-300" : undefined}>{connected ? t("integrations.actions.connected") : syncing ? t("integrations.status.syncing") : connection ? t("integrations.calcom.reconnect") : t("integrations.actions.connect")}</Button>
+        <Button disabled={!canManage} onClick={() => connection ? setDialogOpen(true) : void connect()} size="sm" type="button" variant="outline" className={connected ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-300" : undefined}>{connected ? t("integrations.actions.connected") : syncing ? t("integrations.status.syncing") : syncFailed ? t("integrations.calcom.syncNeedsAttention") : connection ? t("integrations.calcom.reconnect") : t("integrations.actions.connect")}</Button>
       </div></div>
       <div className="flex flex-col gap-1"><h2 className="type-section-title text-lg">{t("integrations.cards.calcom.title")}</h2><p className="type-body-muted line-clamp-2">{t("integrations.cards.calcom.description")}</p></div>
     </li>
     <Dialog onOpenChange={setDialogOpen} open={dialogOpen}><DialogContent className="w-full gap-0 p-0">
       <DialogHeader className="flex-row items-center gap-3 p-6 pb-4"><CalcomLogo /><div className="flex flex-col gap-1"><DialogTitle>{t("integrations.calcom.sheetTitle")}</DialogTitle><DialogDescription>{t("integrations.calcom.sheetDescription")}</DialogDescription></div></DialogHeader>
       <div className="flex flex-col gap-4 px-6 pb-6">
-        {connection && needsAttention ? <Alert variant="destructive"><AlertTitle>{connected || syncing ? t("integrations.calcom.syncNeedsAttention") : t("integrations.status.reconnectRequired")}</AlertTitle><AlertDescription className="flex flex-col gap-3"><span>{t("integrations.calcom.discoveryFailed")}</span>{connected ? <Button className="w-fit" disabled={!canManage || update.isPending || syncing} onClick={() => update.mutate({ method: "POST" })} size="sm" variant="outline"><RefreshCcw data-icon="inline-start" />{t("integrations.calcom.refresh")}</Button> : null}</AlertDescription></Alert> : null}
+        {connection && needsAttention ? <Alert variant="destructive"><AlertTitle>{connected || syncing || syncFailed ? t("integrations.calcom.syncNeedsAttention") : t("integrations.status.reconnectRequired")}</AlertTitle><AlertDescription className="flex flex-col gap-3"><span>{syncFailed && !discoveryFailed ? t("integrations.calcom.syncFailed") : t("integrations.calcom.discoveryFailed")}</span>{canRefresh ? <Button className="w-fit" disabled={!canManage || update.isPending || syncing} onClick={() => update.mutate({ method: "POST" })} size="sm" variant="outline"><RefreshCcw data-icon="inline-start" />{t("integrations.calcom.refresh")}</Button> : null}</AlertDescription></Alert> : null}
         {connection ? <Field><FieldLabel htmlFor="calcom-event-type">{t("integrations.calcom.eventTypeLabel")}</FieldLabel>
           <Select disabled={!canManage || discoveryFailed || !options.length || update.isPending} items={options.map((option) => ({ value: option.id, label: option.summary }))} onValueChange={(value) => selectEventType(value ?? "")} value={selectedId}>
             <SelectTrigger id="calcom-event-type" className="w-full"><SelectValue placeholder={t("integrations.calcom.selectEventType")} /></SelectTrigger>
@@ -104,7 +108,7 @@ export function CalcomIntegrationCard({ businessId, canManage, data }: { busines
       </div>
       {connection ? <DialogFooter className="m-0 rounded-b-xl border-t px-6 py-4">
         <Button className="w-full sm:w-auto" disabled={!canManage || update.isPending} onClick={() => update.mutate({ method: "DELETE" })} size="sm" variant="destructive"><Trash2 data-icon="inline-start" />{t("integrations.calcom.disconnect")}</Button>
-        <Button className="w-full sm:w-auto" disabled={!canManage} onClick={() => void connect()} size="sm" variant={needsAttention && !connected && !syncing ? "default" : "outline"}>{t("integrations.calcom.reconnect")}</Button>
+        <Button className="w-full sm:w-auto" disabled={!canManage} onClick={() => void connect()} size="sm" variant={needsAttention && !connected && !syncing && !syncFailed ? "default" : "outline"}>{t("integrations.calcom.reconnect")}</Button>
       </DialogFooter> : null}
     </DialogContent></Dialog>
   </>;
