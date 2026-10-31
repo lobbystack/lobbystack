@@ -11,6 +11,4 @@ Si vous auto-hébergez LobbyStack, vous pouvez maintenant utiliser Telnyx pour v
 
 LobbyStack achète chaque numéro Telnyx et le connecte à GPT-Live par SIP chiffré. Votre réceptionniste répond aux appels, transfère les appelants à votre équipe et renvoie les appels qu'elle ne peut pas prendre. Les textos passent par le même numéro, et LobbyStack enregistre le coût de chaque appel et de chaque texto.
 
-Vous pouvez aussi passer Verify et les recherches de numéros à Telnyx avec leurs propres réglages, tout en gardant vos numéros chez Twilio.
-
 LobbyStack hébergé reste sur Twilio : les clients hébergés n'ont rien à changer. Pour configurer Telnyx, suivez le [guide d'auto-hébergement](https://docs.lobbystack.com/fr/self-hosting/providers).
