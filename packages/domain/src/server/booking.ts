@@ -13,7 +13,7 @@ import { consumeAppointmentChangeVerificationInTransaction } from "./appointment
 import { findOrCreateContactByPhone } from "./contacts";
 import { recordSmsConsentAnswerInTransaction, smsConsentOnFile, type SmsConsentAnswer, type SmsConsentOnFile } from "./contactSmsConsent";
 import { recordProductEventBestEffort } from "./productEvents";
-import { CANCELLATION_CONFIRMATION, heldForCall, rescheduleAppointmentReminderInTransaction } from "./notifications";
+import { CANCELLATION_CONFIRMATION, heldForCall, queueOperatorAlertInTransaction, rescheduleAppointmentReminderInTransaction } from "./notifications";
 import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
 import { CANCELLATION_REQUEST } from "./voice";
 
@@ -443,11 +443,12 @@ async function recordAppointmentChange(
   });
 }
 
-type AppointmentChangeSource = { source: "operator"; userId: string } | { source: "caller"; callId?: string } | { source: "api"; audit: ApiAudit };
+type AppointmentChangeSource = { source: "operator"; userId: string } | { source: "caller"; callId?: string } | { source: "api"; audit: ApiAudit } | { source: "calendar"; provider: string };
 
 function changeAudit(change: AppointmentChangeSource): { actorUserId: string | null; payload: Record<string, unknown> } {
   if (change.source === "operator") return { actorUserId: change.userId, payload: { source: "operator" } };
   if (change.source === "api") return { actorUserId: change.audit.actorUserId, payload: { source: "api", ...change.audit.payload } };
+  if (change.source === "calendar") return { actorUserId: null, payload: { source: "calendar", provider: change.provider } };
   return { actorUserId: null, payload: { source: "caller" } };
 }
 
@@ -511,6 +512,35 @@ export async function cancelAppointmentInTransaction(
   });
   await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "appointment.cancelled", resourceId: appointment.id });
   return "cancelled";
+}
+
+/**
+ * Follows bookings someone cancelled in the calendar itself: cancels the
+ * upcoming appointments they belong to and tells the operator. An appointment
+ * with a calendar write still pending keeps its booking, since that write may
+ * be the change that retired the event id.
+ */
+export async function cancelAppointmentsCancelledInCalendar(
+  context: DomainContext,
+  input: { businessId: string; provider: string; eventIds: string[] },
+): Promise<string[]> {
+  if (!input.eventIds.length) return [];
+  const cancelled = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const rows = await tx.select({ id: appointments.id, startsAt: appointments.startsAt, timezone: appointments.timezone, contactName: contacts.name }).from(appointments)
+      .leftJoin(contacts, and(eq(contacts.id, appointments.contactId), eq(contacts.businessId, input.businessId)))
+      .where(and(eq(appointments.businessId, input.businessId), eq(appointments.status, "confirmed"), eq(appointments.calendarSyncState, "synced"), gt(appointments.startsAt, new Date()), inArray(appointments.calendarExternalId, input.eventIds)))
+      .for("update", { of: appointments });
+    const ids: string[] = [];
+    for (const row of rows) {
+      if (await cancelAppointmentInTransaction(tx, { businessId: input.businessId, appointmentId: row.id, change: { source: "calendar", provider: input.provider } }) !== "cancelled") continue;
+      ids.push(row.id);
+      const time = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short", timeZone: row.timezone }).format(row.startsAt);
+      await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKind: "calendarSync", eventKey: `calendarSync:appointment:${row.id}:cancelled-in-calendar`, subject: `Appointment cancelled in ${input.provider}`, body: `Someone cancelled ${row.contactName ?? "a customer"}'s ${time} booking in ${input.provider}, so LobbyStack cancelled the appointment. Customers who agreed to texts get a cancellation text.` });
+    }
+    return ids;
+  });
+  for (const appointmentId of cancelled) await recordAppointmentChange(context, { name: "appointment.cancelled", businessId: input.businessId, appointmentId, source: "calendar" });
+  return cancelled;
 }
 
 /**

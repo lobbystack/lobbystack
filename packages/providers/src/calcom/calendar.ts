@@ -59,7 +59,7 @@ export type CalcomEventType = {
 
 export type CalcomSchedule = { timeZone: string; availability: Array<{ days: string[]; startTime: string; endTime: string }> };
 
-type Booking = { uid: string; start: string; end: string; status: string; eventTypeId?: number };
+type Booking = { uid: string; start: string; end: string; status: string; eventTypeId?: number; rescheduledToUid?: string };
 
 /**
  * What's missing from a Cal.com setup the environment started, or null when
@@ -187,6 +187,12 @@ export class CalcomCalendarProvider implements CalendarProvider {
       if (!bookedTimes.has(`${busy.startsAt}/${busy.endsAt}`)) blocks.push(busy);
     }
     return blocks;
+  }
+
+  /** Bookings cancelled in the window. A moved booking also reads as cancelled, under its old uid, so it's left out. */
+  async getCancelledEventIds(input: { accessToken: string; startsAt: string; endsAt: string }): Promise<string[]> {
+    const bookings = await this.listBookings(input.accessToken, { status: "cancelled", afterStart: input.startsAt, beforeEnd: input.endsAt });
+    return bookings.filter((booking) => booking.status === "cancelled" && !booking.rescheduledToUid).map((booking) => booking.uid);
   }
 
   async upsertEvent(input: CalendarEventWrite): Promise<{ externalEventId: string }> {
@@ -363,7 +369,7 @@ export class CalcomCalendarProvider implements CalendarProvider {
 
 function booking(value: Partial<Booking> | null | undefined): Booking | null {
   return value && typeof value.uid === "string" && typeof value.start === "string" && typeof value.end === "string" && typeof value.status === "string"
-    ? { uid: value.uid, start: value.start, end: value.end, status: value.status, ...(typeof value.eventTypeId === "number" ? { eventTypeId: value.eventTypeId } : {}) }
+    ? { uid: value.uid, start: value.start, end: value.end, status: value.status, ...(typeof value.eventTypeId === "number" ? { eventTypeId: value.eventTypeId } : {}), ...(typeof value.rescheduledToUid === "string" ? { rescheduledToUid: value.rescheduledToUid } : {}) }
     : null;
 }
 

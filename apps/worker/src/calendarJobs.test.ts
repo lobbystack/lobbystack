@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ transaction: vi.fn(), token: vi.fn(), update: vi.fn(), updateTx: vi.fn(), mark: vi.fn(), busy: vi.fn(), backfill: vi.fn(), record: vi.fn(), registerOnce: vi.fn(), retired: vi.fn(), forget: vi.fn() }));
+const mocks = vi.hoisted(() => ({ transaction: vi.fn(), token: vi.fn(), update: vi.fn(), updateTx: vi.fn(), mark: vi.fn(), busy: vi.fn(), backfill: vi.fn(), record: vi.fn(), registerOnce: vi.fn(), retired: vi.fn(), forget: vi.fn(), cancelInCalendar: vi.fn() }));
 vi.mock("@lobbystack/db", async (original) => ({ ...await original<typeof import("@lobbystack/db")>(), withBusinessTransaction: mocks.transaction }));
-vi.mock("@lobbystack/domain", async () => ({ ...await vi.importActual<typeof import("../../../packages/domain/src/calendarWriter")>("../../../packages/domain/src/calendarWriter"), CALENDAR_SYNC_HORIZON_MS: 90 * 86400_000, resolveCalendarAccessToken: mocks.token, updateAppointmentSyncState: mocks.update, updateAppointmentSyncStateInTransaction: mocks.updateTx, markCalendarConnectionSync: mocks.mark, queueUnsyncedAppointmentSyncs: mocks.backfill, upsertBusyBlocks: mocks.busy, recordProductEvent: mocks.record, registerCalendarWebhookOnce: mocks.registerOnce, getRetiredCalendarConnection: mocks.retired, forgetRetiredCalendarWebhook: mocks.forget }));
+vi.mock("@lobbystack/domain", async () => ({ ...await vi.importActual<typeof import("../../../packages/domain/src/calendarWriter")>("../../../packages/domain/src/calendarWriter"), CALENDAR_SYNC_HORIZON_MS: 90 * 86400_000, resolveCalendarAccessToken: mocks.token, updateAppointmentSyncState: mocks.update, updateAppointmentSyncStateInTransaction: mocks.updateTx, markCalendarConnectionSync: mocks.mark, queueUnsyncedAppointmentSyncs: mocks.backfill, upsertBusyBlocks: mocks.busy, recordProductEvent: mocks.record, registerCalendarWebhookOnce: mocks.registerOnce, getRetiredCalendarConnection: mocks.retired, forgetRetiredCalendarWebhook: mocks.forget, cancelAppointmentsCancelledInCalendar: mocks.cancelInCalendar }));
 import { calendarConnections } from "@lobbystack/db";
 import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
@@ -33,6 +33,13 @@ beforeEach(() => {
   });
 });
 afterEach(() => vi.unstubAllEnvs());
+
+it("cancels the appointments of bookings someone cancelled in Cal.com", async () => {
+  const calcom = { ...provider, getCancelledEventIds: vi.fn().mockResolvedValue(["booking-uid"]) };
+  batches = [[{ id: "connection", provider: "calcom", calendarId: "42", status: "connected", webhookId: "webhook" }]];
+  await reconcileBusinessCalendar({ domain: dependencies.domain, calendars: { calcom } }, "business");
+  expect(mocks.cancelInCalendar).toHaveBeenCalledWith(dependencies.domain, { businessId: "business", provider: "Cal.com", eventIds: ["booking-uid"] });
+});
 
 it("rereads durable cancellation state and deletes instead of rewriting the event", async () => {
   batches = [[appointment], [{ ...appointment, status: "canceled" }]];

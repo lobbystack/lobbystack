@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { appointments, auditLogs, businessHours, businessMemberships, businesses, calendarBusyBlocks, calendarConnections, contacts, createDatabaseClient, outboxMessages, services, staff, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
-import { checkAvailability, rescheduleAppointmentInTransaction } from "./booking";
+import { cancelAppointmentsCancelledInCalendar, checkAvailability, rescheduleAppointmentInTransaction } from "./booking";
 import { WEBHOOK_REGISTRATION_LEASE_MS, assignCalendarStaff, connectCalendar, disconnectCalendar, disconnectCalendarInTransaction, forgetStaleRetiredCalendarTokens, getCalendarWebhook, getRetiredCalendarConnection, queueUnsyncedAppointmentSyncs, registerCalendarWebhookOnce, resolveBusinessByCalendarWebhook, selectCalendar } from "./calendar";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
@@ -60,6 +60,23 @@ async function queuedSyncs(tx: DatabaseTransaction, businessId: string) {
 }
 
 describe.skipIf(!testUrl)("calendar backfill against dedicated PostgreSQL roles", () => {
+  it("cancels upcoming appointments whose booking someone cancelled in the calendar, and alerts once", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, book } = await workspace(tx);
+      const gone = await book({ calendarSyncState: "synced", calendarExternalId: "gone" });
+      const kept = await book({ calendarSyncState: "synced", calendarExternalId: "kept" });
+      const writing = await book({ calendarSyncState: "pending", calendarExternalId: "writing" });
+      const past = await book({ calendarSyncState: "synced", calendarExternalId: "past", startsAt: new Date("2020-01-01T12:00:00Z"), endsAt: new Date("2020-01-01T12:30:00Z") });
+      const follow = () => asWorker(tx, (db) => cancelAppointmentsCancelledInCalendar({ db }, { businessId, provider: "Cal.com", eventIds: ["gone", "writing", "past"] }));
+      await expect(follow()).resolves.toEqual([gone.id]);
+      await expect(follow()).resolves.toEqual([]);
+      const rows = await tx.select({ id: appointments.id, status: appointments.status }).from(appointments).where(inArray(appointments.id, [gone.id, kept.id, writing.id, past.id]));
+      expect(rows.filter((row) => row.status === "canceled").map((row) => row.id)).toEqual([gone.id]);
+      const audit = await tx.select({ payload: auditLogs.payload }).from(auditLogs).where(and(eq(auditLogs.entityId, gone.id), eq(auditLogs.eventType, "appointment_change.canceled")));
+      expect(audit).toEqual([{ payload: { source: "calendar", provider: "Cal.com" } }]);
+    });
+  });
+
   it("queues upcoming bookings that no calendar covered, once per connection", async () => {
     await rollbackTest(async (tx) => {
       const { businessId, userId, firstStaffId, secondStaffId, book } = await workspace(tx);

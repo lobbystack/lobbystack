@@ -237,6 +237,16 @@ describe("CalcomCalendarProvider", () => {
     await expect(new CalcomCalendarProvider(config).getBusyBlocks({ accessToken: "access", calendarId: "42", startsAt: "2026-11-01T00:00:00.000Z", endsAt: "2027-01-30T00:00:00.000Z" })).rejects.toThrow("status 500");
   });
 
+  it("reports cancelled bookings and leaves out moved ones", async () => {
+    const calls = routes(on("GET", "/v2/bookings", () => ok([
+      { uid: "cancelled", start: "2026-11-02T10:00:00.000Z", end: "2026-11-02T10:30:00.000Z", status: "cancelled" },
+      { uid: "moved", start: "2026-11-02T11:00:00.000Z", end: "2026-11-02T11:30:00.000Z", status: "cancelled", rescheduledToUid: "new-uid" },
+      { uid: "rejected", start: "2026-11-02T12:00:00.000Z", end: "2026-11-02T12:30:00.000Z", status: "rejected" },
+    ])));
+    await expect(new CalcomCalendarProvider(config).getCancelledEventIds({ accessToken: "access", startsAt: "2026-11-01T00:00:00.000Z", endsAt: "2027-01-30T00:00:00.000Z" })).resolves.toEqual(["cancelled"]);
+    expect(calls[0]!.url.searchParams.get("status")).toBe("cancelled");
+  });
+
   it("replaces a webhook that already posts to the connection's address", async () => {
     const subscriberUrl = "https://app.example/api/webhooks/calcom/connection";
     const calls = routes(
