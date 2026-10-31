@@ -17,7 +17,7 @@
     "@lobbystack/providers": "workspace:*",
     "@lobbystack/shared": "workspace:*",
     "@lobbystack/telemetry": "workspace:*",
-    "drizzle-orm": "^0.45.3",
+    "drizzle-orm": "^0.45.4",
     "luxon": "^3.7.2",
     "zod": "^4.6.6"
   },
