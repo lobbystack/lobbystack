@@ -77,9 +77,23 @@ Elija el idioma que habla la mayoría de quienes le llaman. Si no ha cambiado el
 
 ## Voz
 
-Elija en **Voz** la voz de su recepcionista. Habla con esa voz en las llamadas telefónicas y en las llamadas desde su navegador, incluidas las llamadas de prueba. Los negocios empiezan con Marin.
+**Voz** define cómo suena su recepcionista en las llamadas telefónicas y en las llamadas desde su navegador, incluidas las llamadas de prueba. La fila muestra la voz actual y cómo suena, por ejemplo Marin · Aguda, rápida. Los negocios nuevos empiezan con Marin.
 
-Haga clic en **Cambiar voz** para abrir la lista. Pulse el botón de reproducción de una voz para escucharla en el idioma predeterminado de sus clientes, luego selecciónela y haga clic en **Usar esta voz**. Una llamada en curso mantiene la voz con la que empezó.
+<Steps>
+  <Step title="Abra la lista de voces">
+    Vaya a **Agente** > **Ajustes de IA** y haga clic en **Cambiar voz**. **Actual** muestra la voz en uso, y **Todas las voces** enumera las demás con su tono y su ritmo.
+  </Step>
+  <Step title="Escuche una voz">
+    Haga clic en el botón de reproducción junto a una voz para escucharla en su idioma predeterminado del cliente. Escuchar una voz no la selecciona.
+  </Step>
+  <Step title="Guarde su elección">
+    Seleccione la voz y haga clic en **Usar esta voz**.
+  </Step>
+</Steps>
+
+Las llamadas nuevas usan la voz poco después de guardarla. Una llamada en curso mantiene la voz con la que empezó. Para comprobar el resultado, inicie una llamada de prueba.
+
+Los propietarios y los administradores pueden cambiar la voz. Los lectores ven la voz actual, pero **Cambiar voz** está desactivado para ellos. Si su negocio tiene acceso **Solo actividad** a través de un socio, su equipo no ve **Ajustes de IA**.
 
 Puede elegir entre Alloy, Ash, Ballad, Beacon, Bossa, Cedar, Cinder, Coral, Delta, Echo, Gleam, Marin, Meridian, Quartz, Ripple, Sage, Shimmer, Stone, Tempo, Verse, Vesper y Willow. En la [API](/es/api/overview), envíe `voice` en `PATCH /receptionist` con el nombre en minúsculas, por ejemplo `cedar`.
 
