@@ -259,13 +259,13 @@ export class CalcomCalendarProvider implements CalendarProvider {
 
   /** Replaces any webhook of the account that already posts to `subscriberUrl`, so a reconnect leaves one behind. */
   async registerWebhook(input: { accessToken: string; subscriberUrl: string; secret: string }): Promise<{ webhookId: string }> {
-    const existing = await this.request<Array<{ id?: number; subscriberUrl?: string }>>(input.accessToken, "/v2/webhooks", { query: { take: "250" }, what: "webhook lookup" });
+    const existing = await this.request<Array<{ id?: string; subscriberUrl?: string }>>(input.accessToken, "/v2/webhooks", { query: { take: "250" }, what: "webhook lookup" });
     for (const webhook of Array.isArray(existing) ? existing : []) {
-      if (webhook.subscriberUrl === input.subscriberUrl && typeof webhook.id === "number") await this.deleteWebhook({ accessToken: input.accessToken, webhookId: String(webhook.id) });
+      if (webhook.subscriberUrl === input.subscriberUrl && webhook.id) await this.deleteWebhook({ accessToken: input.accessToken, webhookId: webhook.id });
     }
-    const created = await this.request<{ id?: number }>(input.accessToken, "/v2/webhooks", { method: "POST", what: "webhook registration", body: { active: true, subscriberUrl: input.subscriberUrl, triggers: CALCOM_WEBHOOK_TRIGGERS, secret: input.secret } });
-    if (typeof created.id !== "number") throw new Error("Cal.com webhook registration did not return a webhook.");
-    return { webhookId: String(created.id) };
+    const created = await this.request<{ id?: string }>(input.accessToken, "/v2/webhooks", { method: "POST", what: "webhook registration", body: { active: true, subscriberUrl: input.subscriberUrl, triggers: CALCOM_WEBHOOK_TRIGGERS, secret: input.secret } });
+    if (!created.id) throw new Error("Cal.com webhook registration did not return a webhook.");
+    return { webhookId: created.id };
   }
 
   async deleteWebhook(input: { accessToken: string; webhookId: string }): Promise<void> {

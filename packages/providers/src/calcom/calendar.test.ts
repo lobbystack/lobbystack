@@ -240,12 +240,12 @@ describe("CalcomCalendarProvider", () => {
   it("replaces a webhook that already posts to the connection's address", async () => {
     const subscriberUrl = "https://app.example/api/webhooks/calcom/connection";
     const calls = routes(
-      on("GET", "/v2/webhooks", () => ok([{ id: 9, subscriberUrl }, { id: 10, subscriberUrl: "https://elsewhere.example/hook" }])),
-      on("DELETE", "/v2/webhooks/9", () => ok({})),
-      on("POST", "/v2/webhooks", () => ok({ id: 11, subscriberUrl })),
+      on("GET", "/v2/webhooks", () => ok([{ id: "stale-webhook", subscriberUrl }, { id: "other-webhook", subscriberUrl: "https://elsewhere.example/hook" }])),
+      on("DELETE", "/v2/webhooks/stale-webhook", () => ok({})),
+      on("POST", "/v2/webhooks", () => ok({ id: "new-webhook", subscriberUrl })),
     );
-    await expect(new CalcomCalendarProvider(config).registerWebhook({ accessToken: "access", subscriberUrl, secret: "shh" })).resolves.toEqual({ webhookId: "11" });
-    expect(calls.map((call) => `${call.init.method ?? "GET"} ${call.url.pathname}`)).toEqual(["GET /v2/webhooks", "DELETE /v2/webhooks/9", "POST /v2/webhooks"]);
+    await expect(new CalcomCalendarProvider(config).registerWebhook({ accessToken: "access", subscriberUrl, secret: "shh" })).resolves.toEqual({ webhookId: "new-webhook" });
+    expect(calls.map((call) => `${call.init.method ?? "GET"} ${call.url.pathname}`)).toEqual(["GET /v2/webhooks", "DELETE /v2/webhooks/stale-webhook", "POST /v2/webhooks"]);
     expect(body(calls[2]!.init)).toMatchObject({ active: true, subscriberUrl, secret: "shh", triggers: expect.arrayContaining(["BOOKING_CREATED", "BOOKING_RESCHEDULED", "BOOKING_CANCELLED"]) });
   });
 });
