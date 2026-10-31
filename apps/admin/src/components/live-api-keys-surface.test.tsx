@@ -102,3 +102,33 @@ describe("API keys settings", () => {
     expect(screen.queryByTestId("secret-value")).toBeNull();
   });
 });
+
+describe("API keys loading state", () => {
+  const skeletons = () => document.querySelectorAll('[data-slot="skeleton"]').length;
+  function renderPending(workspace: boolean) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); clients.push(client);
+    if (workspace) client.setQueryData(["businesses"], { businesses: [{ businessId: "business-1", name: "Salon", active: true, role: "business_owner" }] });
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+    render(<QueryClientProvider client={client}><LiveApiKeysSurface /></QueryClientProvider>);
+  }
+
+  it.each([["the workspace", false], ["the keys", true]])("shows the section as a placeholder, title, description and button included, while %s load", (_, workspace) => {
+    renderPending(workspace);
+    expect(screen.getByText("apiKeys.title").className).toContain("invisible");
+    expect(screen.getByText("apiKeys.description").className).toContain("invisible");
+    expect(screen.getByText("apiKeys.create.action").className).toContain("invisible");
+    expect(document.querySelectorAll("li").length).toBe(2);
+    // A title, a description and the button, then a name, a line and two buttons for each of two keys.
+    expect(skeletons()).toBe(3 + 2 * 4);
+    expect(screen.queryByRole("heading")).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByText("apiKeys.empty")).toBeNull();
+  });
+
+  it("turns the section real together once the keys have loaded", async () => {
+    setup("business_owner");
+    expect(await screen.findByRole("heading", { name: "apiKeys.title" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "apiKeys.create.action" })).toBeTruthy();
+    expect(skeletons()).toBe(0);
+  });
+});

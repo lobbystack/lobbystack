@@ -19,7 +19,8 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { InstagramIntegrationCard } from "@/components/instagram-integration-card";
 import { PageHeader } from "@/components/page-header";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
+import { IntegrationCardSkeleton } from "@/components/loading-skeletons";
+import { useInstagramStatus } from "@/hooks/use-instagram-status";
 import { surfaceClassName } from "@/components/ui/surface";
 import { useTelemetry } from "@/components/product-analytics";
 import googleCalendar from "@iconify-icons/logos/google-calendar-2020";
@@ -41,7 +42,7 @@ export function LiveIntegrationsSurface() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedCalendarId, setSelectedCalendarId] = useState("");
-  const { business } = useActiveBusiness();
+  const { businesses, business } = useActiveBusiness();
   const canManage = business ? ["business_owner", "business_admin"].includes(business.role) : false;
   const integrations = useQuery({ queryKey: ["integrations", business?.businessId], queryFn: () => requestJson<IntegrationsViewModel>(`/api/integrations?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId && canManage), refetchInterval: (query) => query.state.data?.calendarConnections.some((connection) => connection.status === "syncing") ? 2000 : false });
   const google = integrations.data?.calendarConnections.find((connection) => connection.provider === "google") ?? null;
@@ -75,13 +76,24 @@ export function LiveIntegrationsSurface() {
 
   async function connect() { if (!business) return; telemetry.track("web.integration.calendar_connect_started", { businessId: business.businessId, provider: "google" }); try { const result = await requestJson<{ url: string }>(`/api/calendar/google/start?businessId=${encodeURIComponent(business.businessId)}`); window.location.assign(result.url); } catch (error) { telemetry.track("web.integration.calendar_connect_failed", { businessId: business.businessId, provider: "google" }); toast.error(error instanceof Error ? error.message : t("integrations.google.connectFailed")); } }
 
+  // Every card waits for the same data, so the cards turn real together. Instagram's status decides whether its card exists at all.
+  const instagram = useInstagramStatus(business?.businessId);
+  const loading = businesses.isLoading || integrations.isLoading || instagram.isLoading;
+  // The widest label each button can take, so its placeholder is never narrower than the button.
+  const longest = (...labels: string[]) => labels.reduce((widest, label) => label.length > widest.length ? label : widest);
+
   return <>
     <div className="flex flex-col gap-6">
       <PageHeader title={t("sections.integrations")} />
       {discoveryFailed || google?.lastSyncError ? <Alert variant="destructive"><AlertTitle>{t("integrations.google.syncNeedsAttention")}</AlertTitle><AlertDescription>{t("integrations.google.discoveryFailed")}</AlertDescription></Alert> : null}
-      <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3"><li className={`${surfaceClassName} p-4`}>
+      <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{loading ? <>
+        <IntegrationCardSkeleton label={longest(t("integrations.actions.connect"), t("integrations.actions.connected"), t("integrations.status.syncing"), t("integrations.google.reconnect"))} />
+        <IntegrationCardSkeleton label={t("integrations.actions.connected")} />
+        <IntegrationCardSkeleton label={t("integrations.actions.manage")} />
+        <IntegrationCardSkeleton label={t("integrations.actions.setUp")} />
+      </> : <><li className={`${surfaceClassName} p-4`}>
         <div className="mb-8 flex items-center justify-between gap-3"><div className="flex size-10 shrink-0 items-center justify-center"><GoogleCalendarLogo /></div><div className="flex items-center gap-2">
-          {integrations.isLoading ? <Skeleton className="h-9 w-24 rounded-md" /> : <Button disabled={!canManage} onClick={() => google ? setDialogOpen(true) : void connect()} size="sm" type="button" variant="outline" className={connected ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-300" : undefined}>{connected ? t("integrations.actions.connected") : syncing ? t("integrations.status.syncing") : google ? t("integrations.google.reconnect") : t("integrations.actions.connect")}</Button>}
+          <Button disabled={!canManage} onClick={() => google ? setDialogOpen(true) : void connect()} size="sm" type="button" variant="outline" className={connected ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-300" : undefined}>{connected ? t("integrations.actions.connected") : syncing ? t("integrations.status.syncing") : google ? t("integrations.google.reconnect") : t("integrations.actions.connect")}</Button>
         </div></div>
         <div className="flex flex-col gap-1"><h2 className="type-section-title text-lg">{t("integrations.cards.google.title")}</h2><p className="type-body-muted line-clamp-2">{t("integrations.cards.google.description")}</p></div>
       </li><InstagramIntegrationCard businessId={business?.businessId} canManage={canManage} /><li className={`${surfaceClassName} p-4`}>
@@ -90,7 +102,7 @@ export function LiveIntegrationsSurface() {
       </li><li className={`${surfaceClassName} p-4`}>
         <div className="mb-8 flex items-center justify-between gap-3"><div className="flex size-10 shrink-0 items-center justify-center"><Icon aria-hidden="true" className="size-7" icon={zapierIcon} id="zapier-logo" ssr /></div><Button nativeButton={false} render={<Link href={ZAPIER_URL} rel="noreferrer" target="_blank" />} size="sm" variant="outline">{t("integrations.actions.setUp")}</Button></div>
         <div className="flex flex-col gap-1"><h2 className="type-section-title text-lg">{t("integrations.cards.zapier.title")}</h2><p className="type-body-muted line-clamp-2">{t("integrations.cards.zapier.description")}</p></div>
-      </li></ul>
+      </li></>}</ul>
     </div>
     <Dialog onOpenChange={setDialogOpen} open={dialogOpen}><DialogContent className="w-full gap-0 p-0">
       <DialogHeader className="flex-row items-center gap-3 p-6 pb-4"><GoogleCalendarLogo /><div className="flex flex-col gap-1"><DialogTitle>{t("integrations.google.sheetTitle")}</DialogTitle><DialogDescription>{t("integrations.google.sheetDescription")}</DialogDescription></div></DialogHeader>

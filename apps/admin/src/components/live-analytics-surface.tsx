@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CalendarIcon, Check, ChevronDown, CircleCheck, Ellipsis, PhoneCall, PhoneForwarded, PhoneMissed, type LucideIcon } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousForBusiness } from "@/lib/keep-previous-for-business";
 import { useTranslation } from "react-i18next";
 
 import type { AnalyticsViewModel } from "@/lib/page-view-models";
@@ -23,14 +24,14 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ChartBlockSkeleton, MetricCardGridSkeleton } from "@/components/loading-skeletons";
+import { AnalyticsControlsSkeleton } from "@/components/loading-skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import { intlLocale } from "@/lib/locale";
 import type { AnalyticsChartPoint } from "./analytics-charts";
 
-const AnalyticsOverviewChart = dynamic(() => import("./analytics-charts").then((module) => module.AnalyticsOverviewChart), { ssr: false });
-const AnalyticsMetricChart = dynamic(() => import("./analytics-charts").then((module) => module.AnalyticsMetricChart), { ssr: false });
+const AnalyticsOverviewChart = dynamic(() => import("./analytics-charts").then((module) => module.AnalyticsOverviewChart), { ssr: false, loading: () => <Skeleton className="h-[300px] w-full" /> });
+const AnalyticsMetricChart = dynamic(() => import("./analytics-charts").then((module) => module.AnalyticsMetricChart), { ssr: false, loading: () => <Skeleton className="h-40 w-full" /> });
 
 type Granularity = AnalyticsViewModel["granularity"];
 type Preset = "allTime" | "custom" | "today" | "yesterday" | "thisWeek" | "thisMonth" | "lastMonth" | "last30" | "last3Months" | "thisYear" | "lastYear";
@@ -95,6 +96,8 @@ export function LiveAnalyticsSurface() {
       return requestJson<AnalyticsViewModel>(`/api/analytics?${parameters.toString()}`);
     },
     enabled: Boolean(business?.businessId),
+    // Keep the previous range on screen, dimmed, while a new range or granularity loads.
+    placeholderData: keepPreviousForBusiness<AnalyticsViewModel>(business?.businessId),
   });
 
   useEffect(() => {
@@ -103,6 +106,7 @@ export function LiveAnalyticsSurface() {
   }, [business?.businessId, queryClient]);
 
   const data = analytics.data;
+  const loading = businesses.isLoading || analytics.isLoading;
   const pointFormat = new Intl.DateTimeFormat(intlLocale(i18n.language), effectiveGranularity === "year" ? { year: "numeric", timeZone: "UTC" } : effectiveGranularity === "month" ? { month: "short", ...(longRange ? { year: "2-digit" as const } : {}), timeZone: "UTC" } : effectiveGranularity === "hour" ? { hour: "numeric", timeZone: "UTC" } : { day: "2-digit", month: "short", ...(longRange ? { year: "2-digit" as const } : {}), timeZone: "UTC" });
   const series = data?.series ?? [];
   const chartData: AnalyticsChartPoint[] = series.map((point) => ({
@@ -126,7 +130,8 @@ export function LiveAnalyticsSurface() {
       key: "withoutTransfer",
       value: withoutTransfer?.current == null ? "—" : percentFormat.format(withoutTransfer.current / 100),
       // A share moves in percentage points, and there's nothing to compare while either period has no calls.
-      description: withoutTransfer?.current == null || withoutTransfer.previous == null ? null
+      description: withoutTransfer?.current == null ? null
+        : withoutTransfer.previous == null ? t("home.analytics.metrics.noPreviousCalls")
         : withoutTransfer.current === withoutTransfer.previous ? t("home.analytics.metrics.flat")
           : t(withoutTransfer.current > withoutTransfer.previous ? "home.analytics.metrics.pointsUp" : "home.analytics.metrics.pointsDown", { value: pointsFormat.format(Math.abs(withoutTransfer.current - withoutTransfer.previous)) }),
     },
@@ -141,61 +146,89 @@ export function LiveAnalyticsSurface() {
 
   return <div className="flex flex-col gap-4">
     <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4 py-2"><h1 className="type-page-title">{t("analyticsPage.title")}</h1><div className="ms-auto flex flex-wrap items-center gap-3">
+      {loading ? <AnalyticsControlsSkeleton granularityLabel={t(`home.analytics.controls.granularities.${granularityTranslation[effectiveGranularity]}`)} rangeLabel={t(`home.analytics.controls.presets.${preset}`)} /> : <>
       <DropdownMenu><DropdownMenuTrigger render={<Button aria-label={t("home.analytics.controls.granularity")} variant="outline" />}><span>{t(`home.analytics.controls.granularities.${granularityTranslation[effectiveGranularity]}`)}</span><ChevronDown className="text-muted-foreground" data-icon="inline-end" /></DropdownMenuTrigger><DropdownMenuContent align="start" className="w-44"><DropdownMenuGroup>{granularities.map((option) => <DropdownMenuItem className="justify-between" disabled={tooLongFor(option)} key={option} onClick={() => setGranularity(option)}>{t(`home.analytics.controls.granularities.${granularityTranslation[option]}`)}{option === effectiveGranularity ? <Check /> : null}</DropdownMenuItem>)}</DropdownMenuGroup></DropdownMenuContent></DropdownMenu>
       <ButtonGroup><Popover><PopoverTrigger render={<Button aria-label={t("home.analytics.controls.dateRange")} size="icon" variant="outline" />}><CalendarIcon /></PopoverTrigger><PopoverContent align="start" className="w-auto p-0" sideOffset={8}><Calendar captionLayout="label" mode="range" onSelect={(selection: DateRange | undefined) => { if (!selection?.from) return; setCustomRange({ from: selection.from, to: selection.to ?? selection.from }); setPreset("custom"); }} selected={{ from: range.from, to: range.to }} /></PopoverContent></Popover><DropdownMenu><DropdownMenuTrigger render={<Button aria-label={t("home.analytics.controls.presetRange")} className="max-w-56" variant="outline" />}><span className="truncate">{t(`home.analytics.controls.presets.${preset}`)}</span></DropdownMenuTrigger><DropdownMenuContent align="end" className="min-w-56"><DropdownMenuGroup>{presets.map((option) => <DropdownMenuItem className="justify-between" key={option} onClick={() => setPreset(option)}>{t(`home.analytics.controls.presets.${option}`)}{option === preset ? <Check /> : null}</DropdownMenuItem>)}</DropdownMenuGroup></DropdownMenuContent></DropdownMenu></ButtonGroup>
+      </>}
     </div></div>
     {businesses.isError || analytics.isError ? <Surface className="p-8 text-center text-sm text-destructive">Analytics are unavailable.</Surface> : null}
-    {businesses.isLoading || analytics.isLoading ? <AnalyticsSkeleton /> : null}
-    {data ? <><Surface className="grid sm:grid-cols-3">{results.map((result) => <section className="flex min-w-0 flex-col gap-2 border-b p-6 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0" key={result.key}><h2 className="type-card-title text-foreground">{t(`home.analytics.results.${result.key}`)}</h2><p className="text-4xl font-normal tracking-normal break-words text-foreground tabular-nums">{result.value}</p>{result.description ? <p className="type-meta">{result.description}</p> : null}</section>)}</Surface>
+    {loading ? <AnalyticsSkeleton /> : null}
+    {data ? <div aria-busy={analytics.isPlaceholderData || undefined} className={`flex flex-col gap-4 transition-opacity ${analytics.isPlaceholderData ? "opacity-60" : ""}`}><Surface className="grid sm:grid-cols-3">{results.map((result) => <section className="flex min-w-0 flex-col gap-2 border-b p-6 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0" key={result.key}><h2 className="type-card-title text-foreground">{t(`home.analytics.results.${result.key}`)}</h2><p className="text-4xl font-normal tracking-normal break-words text-foreground tabular-nums">{result.value}</p>{result.description ? <p className="type-meta">{result.description}</p> : null}</section>)}</Surface>
       <Card><CardHeader><CardTitle>{t("home.analytics.chart.title")}</CardTitle><CardDescription>{t("home.analytics.chart.description")}</CardDescription></CardHeader><CardContent className="px-6"><AnalyticsOverviewChart data={chartData} /></CardContent></Card>
       <Surface className="grid sm:grid-cols-2">{metrics.map((metric) => <section className="border-b p-6 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0" key={metric.key}><div className="flex min-h-32 flex-col gap-6"><div className="flex flex-col gap-5"><h2 className="type-card-title text-foreground">{metric.title}</h2><div className="flex flex-col gap-3"><p className="text-5xl font-normal tracking-normal text-foreground tabular-nums">{metric.value}</p><div className="flex items-center gap-2 text-base text-muted-foreground"><span className="size-3 rounded-full border-2 border-primary" /><span>{rangeLabel}</span></div></div></div><AnalyticsMetricChart data={chartData} dataKey={metric.key} label={metric.title} {...(metric.key === "agentResponseSeconds" ? { formatValue: formatDuration } : {})} /><p className="type-meta">{metric.description}</p></div></section>)}</Surface>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2"><Card><CardHeader><CardTitle>{t("home.analytics.outcomes.title")}</CardTitle><CardDescription>{t("home.analytics.outcomes.description")}</CardDescription></CardHeader><CardContent><BarList items={data.outcomes.map((item) => ({ name: t(`home.analytics.outcomes.labels.${item.outcome}`), value: item.count, ...(OUTCOME_ICONS[item.outcome] ? { icon: OUTCOME_ICONS[item.outcome] } : {}) }))} /></CardContent></Card><Card><CardHeader><CardTitle>{t("home.analytics.channels.title")}</CardTitle><CardDescription>{t("home.analytics.channels.description")}</CardDescription></CardHeader><CardContent><BarList muted items={channelItems} suffix="%" /></CardContent></Card></div></> : null}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2"><Card><CardHeader><CardTitle>{t("home.analytics.outcomes.title")}</CardTitle><CardDescription>{t("home.analytics.outcomes.description")}</CardDescription></CardHeader><CardContent><BarList items={data.outcomes.map((item) => ({ name: t(`home.analytics.outcomes.labels.${item.outcome}`), value: item.count, ...(OUTCOME_ICONS[item.outcome] ? { icon: OUTCOME_ICONS[item.outcome] } : {}) }))} /></CardContent></Card><Card><CardHeader><CardTitle>{t("home.analytics.channels.title")}</CardTitle><CardDescription>{t("home.analytics.channels.description")}</CardDescription></CardHeader><CardContent><BarList muted items={channelItems} suffix="%" /></CardContent></Card></div></div> : null}
   </div>;
 }
 
 function AnalyticsSkeleton() {
-  return (
-<>
-          <MetricCardGridSkeleton count={3} />
-          <ChartBlockSkeleton />
-          <MetricCardGridSkeleton />
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <Surface className="p-6">
-              <div className="space-y-2">
-                <Skeleton className="h-5 w-28" />
-                <Skeleton className="h-4 w-40" />
-              </div>
-              <div className="mt-6 space-y-3">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <div className="flex items-center justify-between gap-3" key={index}>
-                    <div className="min-w-0 flex-1 space-y-2">
-                      <Skeleton className="h-4 w-24" />
-                      <Skeleton className="h-2.5 w-full rounded-full" />
-                    </div>
-                    <Skeleton className="h-4 w-12" />
-                  </div>
-                ))}
-              </div>
-            </Surface>
-            <Surface className="p-6">
-              <div className="space-y-2">
-                <Skeleton className="h-5 w-28" />
-                <Skeleton className="h-4 w-40" />
-              </div>
-              <div className="mt-6 space-y-3">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <div className="flex items-center justify-between gap-3" key={index}>
-                    <div className="min-w-0 flex-1 space-y-2">
-                      <Skeleton className="h-4 w-20" />
-                      <Skeleton className="h-2.5 w-full rounded-full" />
-                    </div>
-                    <Skeleton className="h-4 w-10" />
-                  </div>
-                ))}
-              </div>
-            </Surface>
+  const barRows = (widths: string[]) => (
+    <div className="flex flex-col gap-3">
+      {widths.map((width, index) => (
+        <div className="flex items-center justify-between gap-3" key={index}>
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <Skeleton className={`h-4 ${width}`} />
+            <Skeleton className="h-2.5 w-full rounded-full" />
           </div>
-        </>
+          <Skeleton className="h-4 w-10" />
+        </div>
+      ))}
+    </div>
+  );
+
+  return (
+    <>
+      <Surface className="grid sm:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <section className="flex min-w-0 flex-col gap-2 border-b p-6 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0" key={index}>
+            <Skeleton className="h-5 w-28" />
+            <Skeleton className="h-10 w-24" />
+            <Skeleton className="h-4 w-32" />
+          </section>
+        ))}
+      </Surface>
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-4 w-56" />
+        </CardHeader>
+        <CardContent className="px-6">
+          <Skeleton className="h-[300px] w-full" />
+        </CardContent>
+      </Card>
+      <Surface className="grid sm:grid-cols-2">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <section className="border-b p-6 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0" key={index}>
+            <div className="flex min-h-32 flex-col gap-6">
+              <div className="flex flex-col gap-5">
+                <Skeleton className="h-5 w-28" />
+                <div className="flex flex-col gap-3">
+                  <Skeleton className="h-12 w-24" />
+                  <Skeleton className="h-5 w-40" />
+                </div>
+              </div>
+              <Skeleton className="h-40 w-full" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+          </section>
+        ))}
+      </Surface>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-5 w-28" />
+            <Skeleton className="h-4 w-40" />
+          </CardHeader>
+          <CardContent>{barRows(["w-24", "w-20", "w-28", "w-16"])}</CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-5 w-28" />
+            <Skeleton className="h-4 w-40" />
+          </CardHeader>
+          <CardContent>{barRows(["w-20", "w-24", "w-16", "w-24"])}</CardContent>
+        </Card>
+      </div>
+    </>
   );
 }
 

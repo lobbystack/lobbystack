@@ -144,3 +144,31 @@ describe("canceling a paid plan", () => {
     expect(screen.queryByRole("button", { name: "billing.actions.cancelPlan" })).toBeNull();
   });
 });
+describe("billing loading state", () => {
+  function renderPending() {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); clients.push(client);
+    client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true }] });
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+    render(<QueryClientProvider client={client}><UpgradePlanDialogProvider onOpen={vi.fn()}><LivePlanSurface /></UpgradePlanDialogProvider></QueryClientProvider>);
+  }
+
+  it("shows a placeholder for every section, titles and descriptions included, shaped like the plan, the cap and the transactions", () => {
+    renderPending();
+    expect(document.querySelectorAll("section").length).toBe(3);
+    expect(screen.queryAllByRole("heading", { level: 2 })).toEqual([]);
+    // Each placeholder holds its real text, hidden, so it is as wide as the text.
+    for (const text of ["billing.currentPlan.title", "billing.spendingCap.title", "billing.transactions.title", "billing.transactions.description", "billing.currentPlan.includedTitle", "billing.spendingCap.amountLabel"]) {
+      expect(screen.getByText(text).className).toContain("invisible");
+    }
+    // The four included items, as a two-column grid.
+    expect(document.querySelectorAll(".sm\\:grid-cols-2 > div").length).toBe(4);
+    expect(screen.queryByText("billing.planLabels.proCard")).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("swaps the placeholders for real headings and content once billing has loaded", () => {
+    setup({ transactions: true });
+    expect(screen.getAllByRole("heading", { level: 2 }).length).toBeGreaterThanOrEqual(3);
+    expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBe(0);
+  });
+});

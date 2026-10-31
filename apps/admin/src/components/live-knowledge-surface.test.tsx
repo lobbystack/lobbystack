@@ -187,3 +187,37 @@ describe("original knowledge row interactions", () => {
     expect(() => telemetryRef.current!.expectEvent("web.knowledge.upload_completed", { businessId: "business" })).toThrow();
   });
 });
+
+describe("knowledge loading states", () => {
+  const skeletons = (selector: string) => document.querySelectorAll(`${selector} [data-slot="skeleton"]`).length;
+  function renderPending(seedBusinesses: boolean) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); clients.push(client);
+    if (seedBusinesses) client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+    render(<QueryClientProvider client={client}><LiveKnowledgeSurface /></QueryClientProvider>);
+  }
+  it("shows the page title, a placeholder table and no bare loading text while the workspace loads", () => {
+    renderPending(false);
+    expect(screen.getByRole("heading", { name: "sections.knowledge.title" })).toBeTruthy();
+    expect(screen.queryByText("loading.workspace")).toBeNull();
+    expect(screen.getByText("table.title")).toBeTruthy();
+    expect(skeletons("tbody")).toBe(60);
+    expect(skeletons('[aria-hidden="true"]')).toBe(9);
+    expect(screen.queryByPlaceholderText("table.searchPlaceholder")).toBeNull();
+  });
+  it("keeps the real header and shows placeholder rows, search and pagination while the entries load", () => {
+    renderPending(true);
+    expect(screen.getByText("table.title")).toBeTruthy();
+    expect(document.querySelector("tbody")?.getAttribute("aria-busy")).toBe("true");
+    expect(skeletons("tbody")).toBe(60);
+    expect(skeletons('[aria-hidden="true"]')).toBe(9);
+    expect(screen.queryByText("sections.knowledge.emptyState")).toBeNull();
+    expect(screen.queryByPlaceholderText("table.searchPlaceholder")).toBeNull();
+    expect(screen.queryByRole("button", { name: /sections.knowledge.addKnowledge/ })).toBeNull();
+  });
+  it("shows the search box and the add button together once the entries have loaded", async () => {
+    setup();
+    expect(await screen.findByPlaceholderText("table.searchPlaceholder")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /sections.knowledge.addKnowledge/ })).toBeTruthy();
+  });
+});
