@@ -128,6 +128,12 @@ export type LiveCallSetup = {
    */
   greeting?: string;
   /**
+   * The language the call opened in, named for the model. Commands sent while
+   * the caller is silent name it, since a model that has heard no words for a
+   * while can drift to another language.
+   */
+  language?: string;
+  /**
    * Whether a caller who spoke after the agent ended the call is only saying
    * goodbye (live/callerDone.ts), so the call still ends. Without it, any
    * words keep the call going.
@@ -400,6 +406,7 @@ export class LiveCallController {
   // The check-in sent last: how many times, and when it went, so an unspoken
   // command can be sent again. The notice keeps the same bookkeeping.
   private silenceCheckTimer: ReturnType<typeof setTimeout> | undefined;
+  private speechSettleTimer: ReturnType<typeof setTimeout> | undefined;
   private silenceCheckAttempts = 0;
   private silenceCheckAt = 0;
   private silenceNotice: { attempts: number; at: number } | undefined;
@@ -464,6 +471,7 @@ export class LiveCallController {
   private hangupCancelled = false;
   private callerDone: LiveCallSetup["callerDone"];
   private callerLeaving: LiveCallSetup["callerLeaving"];
+  private language: string | undefined;
   private ending = false;
   // Why the call is ending, from the first end that was asked for. See LiveCallSummary.end.
   private endReason: LiveCallEnd | undefined;
@@ -486,6 +494,7 @@ export class LiveCallController {
     this.ready.then((setup) => {
       this.callerDone = setup.callerDone;
       this.callerLeaving = setup.callerLeaving;
+      this.language = setup.language;
       this.maskKeypad = setup.maskKeypad === true;
     }, () => this.endSession());
   }
@@ -710,7 +719,20 @@ export class LiveCallController {
   private heardSpeech(endMs: number | undefined): void {
     this.greetingDone();
     this.lastSpeechAt = performance.now();
+    // A caller who hasn't spoken yet hears the greeting first: count their
+    // silence from its last word, not its first.
+    if (!this.callerSpoke() && this.silenceStage === 0) this.settleGreetingSilence();
     if (typeof endMs === "number") this.lastSpeechEndMs = Math.max(this.lastSpeechEndMs, endMs);
+  }
+
+  private settleGreetingSilence(): void {
+    clearTimeout(this.speechSettleTimer);
+    this.speechSettleTimer = setTimeout(() => {
+      if (this.finished || this.ending || this.callerSpoke() || this.silenceStage > 0) return;
+      if (this.lastSpeechAt <= this.silenceAnchorAt) return;
+      this.silenceAnchorAt = this.lastSpeechAt;
+      this.scheduleSilenceStep();
+    }, SILENCE_CHECK_QUIET_MS);
   }
 
   // The first greeting command, when the greeting from the starting history wasn't heard.
@@ -992,6 +1014,8 @@ export class LiveCallController {
       clearTimeout(this.silenceTimer);
       clearTimeout(this.silenceCheckTimer);
       this.silenceCheckTimer = undefined;
+      clearTimeout(this.speechSettleTimer);
+      this.speechSettleTimer = undefined;
       // The previous notice's acknowledgment doesn't say when this request's words started.
       this.wrapUpAckedAt = undefined;
       if (reason === "silence_timeout") {
@@ -1000,7 +1024,7 @@ export class LiveCallController {
         this.silenceNotice = { attempts: 0, at: 0 };
         this.sendSilenceNotice();
       } else {
-        this.send({ type: "session.instructions.append", delegation_id: null, content: WRAP_UP[reason], event_id: this.wrapUpEventId(reason) }, { kind: "wrap_up" });
+        this.send({ type: "session.instructions.append", delegation_id: null, content: this.wrapUpContent(reason), event_id: this.wrapUpEventId(reason) }, { kind: "wrap_up" });
         this.afterSpeech(() => this.endSession(), () => this.wrapUpAckedAt);
       }
     }
@@ -1025,8 +1049,23 @@ export class LiveCallController {
     if (!notice || this.finished || !this.ending) return;
     notice.attempts += 1;
     notice.at = performance.now();
-    this.send({ type: "session.instructions.append", delegation_id: null, content: WRAP_UP.silence_timeout, event_id: this.wrapUpEventId("silence_timeout") }, { kind: "wrap_up" });
+    this.send({ type: "session.instructions.append", delegation_id: null, content: this.wrapUpContent("silence_timeout"), event_id: this.wrapUpEventId("silence_timeout") }, { kind: "wrap_up" });
     this.afterSilenceNotice(notice);
+  }
+
+  // A caller who has been silent leaves the model without a language cue, and
+  // GPT-Live has drifted to French or German in evals. Name the language the
+  // call opened in, without overriding one the caller switched to.
+  private commandLanguage(): string {
+    return this.language ? `the language the call has been using (${this.language} if the caller hasn't spoken)` : "the language of the conversation";
+  }
+
+  private silenceCheckContent(stage: number): string {
+    return SILENCE_CHECKS[stage - 1]!.replace("the language of the conversation", this.commandLanguage());
+  }
+
+  private wrapUpContent(reason: LiveCallWrapUp): string {
+    return WRAP_UP[reason].replace("the language of the conversation", this.commandLanguage());
   }
 
   private afterSilenceNotice(notice: { attempts: number; at: number }): void {
@@ -1228,6 +1267,8 @@ export class LiveCallController {
     this.silenceCheckAttempts = 0;
     clearTimeout(this.silenceCheckTimer);
     this.silenceCheckTimer = undefined;
+    clearTimeout(this.speechSettleTimer);
+    this.speechSettleTimer = undefined;
     this.scheduleSilenceStep();
   }
 
@@ -1304,7 +1345,7 @@ export class LiveCallController {
     this.silenceCheckAttempts += 1;
     this.silenceChecks += 1;
     this.silenceCheckAt = performance.now();
-    this.send({ type: "session.instructions.append", delegation_id: null, content: SILENCE_CHECKS[stage - 1]!, event_id: `silence_check_${stage}_${this.silenceChecks}` });
+    this.send({ type: "session.instructions.append", delegation_id: null, content: this.silenceCheckContent(stage), event_id: `silence_check_${stage}_${this.silenceChecks}` });
     try {
       this.options.onSilenceCheck?.(stage, this.silenceCheckAttempts);
     } catch {
@@ -1599,7 +1640,7 @@ export class LiveCallController {
     // never heard from the session leaves the decision to its worker.
     const leaveSession = detached || (this.options.firstEventTimeoutMs !== undefined && !this.sessionAlive);
     if (!sessionClosed && !this.finalizeTimer && !leaveSession) this.endWithoutSideband();
-    for (const timer of [this.silenceTimer, this.silenceCheckTimer, this.durationTimer, this.topUpTimer, this.greetingTimer, this.finalizeTimer, this.firstEventTimer, this.transferTimer, this.passcode?.timer]) clearTimeout(timer);
+    for (const timer of [this.silenceTimer, this.silenceCheckTimer, this.speechSettleTimer, this.durationTimer, this.topUpTimer, this.greetingTimer, this.finalizeTimer, this.firstEventTimer, this.transferTimer, this.passcode?.timer]) clearTimeout(timer);
     this.passcode = undefined;
     this.abort.abort();
     this.socket?.close({ code: 1000, reason: "session finished" });

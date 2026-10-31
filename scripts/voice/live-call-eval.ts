@@ -10,7 +10,7 @@ import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 
 import { buildBrowserSessionConfig, buildPhoneSessionConfig, callerIsDone, callerIsLeaving, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, type CallControl, type LiveCallSummary } from "@lobbystack/agent-core";
-import { defaultGreeting, demoSnapshot, isRuntimeLocale, runtimeLocales, type BusinessContextSnapshot } from "@lobbystack/shared";
+import { defaultGreeting, demoSnapshot, isRuntimeLocale, runtimeLocaleName, runtimeLocales, type BusinessContextSnapshot } from "@lobbystack/shared";
 import OpenAI from "openai";
 import type { SidebandWS } from "openai/resources/live/sideband/ws";
 import { LiveWS } from "openai/resources/live/ws";
@@ -164,7 +164,7 @@ async function run(scenario: Scenario, audio: Map<string, Buffer>, agentModel: N
       client,
       sessionId: `eval_${scenario.name}`,
       phone: false,
-      setup: { agent, greeting: snapshot.greeting, callerDone: async (conversation, abortSignal) => { const done = await callerIsDone(agentModel, conversation, abortSignal); checks.push(done); return done; }, callerLeaving: (conversation, abortSignal) => callerIsLeaving(agentModel, conversation, abortSignal) },
+      setup: { agent, greeting: snapshot.greeting, language: runtimeLocaleName(snapshot.defaultLocale), callerDone: async (conversation, abortSignal) => { const done = await callerIsDone(agentModel, conversation, abortSignal); checks.push(done); return done; }, callerLeaving: (conversation, abortSignal) => callerIsLeaving(agentModel, conversation, abortSignal) },
       silenceTimeoutMs: SILENCE_TIMEOUT_MS,
       silenceCheckMs: SILENCE_CHECK_MS,
       onTimeout: (reason) => void controller.wrapUp(reason),

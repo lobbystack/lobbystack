@@ -29,7 +29,7 @@ type Generate = (options: { prompt: string; onStepEnd?: (step: unknown) => void 
 
 const reply = (text: string) => ({ text, steps: [{ toolCalls: [], toolResults: [] }] });
 
-function setup(options: { phone?: boolean; silenceTimeoutMs?: number; silenceCheckMs?: number; maxDurationMs?: number; topUp?: () => Promise<number>; firstEventTimeoutMs?: number; generate?: Generate; callerDone?: LiveCallSetup["callerDone"]; callerLeaving?: LiveCallSetup["callerLeaving"]; setup?: Promise<LiveCallSetup>; onGreeting?: (event: GreetingEvent) => void; onSilenceCheck?: (stage: number) => void; onSilenceRescue?: () => void; refer?: ReturnType<typeof vi.fn> } = {}) {
+function setup(options: { phone?: boolean; silenceTimeoutMs?: number; silenceCheckMs?: number; maxDurationMs?: number; topUp?: () => Promise<number>; firstEventTimeoutMs?: number; generate?: Generate; callerDone?: LiveCallSetup["callerDone"]; callerLeaving?: LiveCallSetup["callerLeaving"]; setup?: Promise<LiveCallSetup>; onGreeting?: (event: GreetingEvent) => void; onSilenceCheck?: (stage: number) => void; onSilenceRescue?: () => void; language?: string; refer?: ReturnType<typeof vi.fn> } = {}) {
   const generate = vi.fn(options.generate ?? (async () => ({ text: "We're open until 5.", steps: [{ toolCalls: [{ toolCallId: "call_1", toolName: "getBusinessHours" }], toolResults: [] }, { toolCalls: [], toolResults: [] }] })));
   const turns: LiveCallTurn[] = [];
   const closed: LiveCallSummary[] = [];
@@ -42,7 +42,7 @@ function setup(options: { phone?: boolean; silenceTimeoutMs?: number; silenceChe
     client: { live: { sessions: { hangup, refer } } } as never,
     sessionId: "live_1",
     phone: options.phone ?? true,
-    setup: options.setup ?? { agent: { generate } as never, greeting: "Thanks for calling Northside Plumbing.", ...(options.callerDone ? { callerDone: options.callerDone } : {}), ...(options.callerLeaving ? { callerLeaving: options.callerLeaving } : {}) },
+    setup: options.setup ?? { agent: { generate } as never, greeting: "Thanks for calling Northside Plumbing.", ...(options.callerDone ? { callerDone: options.callerDone } : {}), ...(options.language ? { language: options.language } : {}), ...(options.callerLeaving ? { callerLeaving: options.callerLeaving } : {}) },
     ...(options.silenceTimeoutMs ? { silenceTimeoutMs: options.silenceTimeoutMs } : {}),
     ...(options.silenceCheckMs ? { silenceCheckMs: options.silenceCheckMs } : {}),
     ...(options.maxDurationMs ? { maxDurationMs: options.maxDurationMs } : {}),
@@ -1283,15 +1283,27 @@ describe("LiveCallController silence ladder", () => {
     expect(onTimeout).not.toHaveBeenCalled();
   });
 
-  it("defers a check-in while the receptionist is speaking", async () => {
+  it("names the call's language in the command, since silence gives the model no cue", async () => {
+    fakeTimers();
+    const { socket } = setup({ silenceTimeoutMs: 40_000, silenceCheckMs: 12_000, language: "English" });
+    await greet(socket);
+    await vi.advanceTimersByTimeAsync(12_000);
+    expect(silenceChecks(socket)[0]?.content).toContain("the language the call has been using (English if the caller hasn't spoken)");
+  });
+
+  it("counts the silence from the greeting's last word, not its first", async () => {
     fakeTimers();
     const { socket } = setup({ silenceTimeoutMs: 40_000, silenceCheckMs: 12_000 });
-    await greet(socket);
-    await vi.advanceTimersByTimeAsync(11_500);
-    socket.emit("session.output_transcript.delta", { delta: "Let me look that up.", start_ms: 11_000, end_ms: 12_500 });
-    await vi.advanceTimersByTimeAsync(500);
+    socket.socket.emit("open");
+    socket.emit("session.started", {});
+    await vi.advanceTimersByTimeAsync(1_000);
+    socket.emit("session.output_transcript.delta", { delta: "Thanks for calling ", start_ms: 500, end_ms: 1_000 });
+    await vi.advanceTimersByTimeAsync(2_000);
+    socket.emit("session.output_transcript.delta", { delta: "Northside Plumbing.", start_ms: 1_000, end_ms: 3_000 });
+    // The greeting ends at 3 seconds, so the check-in is due at 15.
+    await vi.advanceTimersByTimeAsync(11_999);
     expect(silenceChecks(socket)).toEqual([]);
-    await vi.advanceTimersByTimeAsync(500);
+    await vi.advanceTimersByTimeAsync(1);
     expect(silenceChecks(socket)).toEqual([expect.objectContaining({ event_id: "silence_check_1_1" })]);
   });
 
