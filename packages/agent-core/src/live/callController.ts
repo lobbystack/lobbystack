@@ -1049,7 +1049,8 @@ export class LiveCallController {
     if (!notice || this.finished || !this.ending) return;
     notice.attempts += 1;
     notice.at = performance.now();
-    this.send({ type: "session.instructions.append", delegation_id: null, content: this.wrapUpContent("silence_timeout"), event_id: this.wrapUpEventId("silence_timeout") }, { kind: "wrap_up" });
+    // Commentary, like the check-ins: speakable context GPT-Live says itself.
+    this.send({ type: "session.commentary.append", delegation_id: null, content: this.wrapUpContent("silence_timeout"), event_id: this.wrapUpEventId("silence_timeout") }, { kind: "wrap_up" });
     this.afterSilenceNotice(notice);
   }
 
@@ -1345,7 +1346,9 @@ export class LiveCallController {
     this.silenceCheckAttempts += 1;
     this.silenceChecks += 1;
     this.silenceCheckAt = performance.now();
-    this.send({ type: "session.instructions.append", delegation_id: null, content: this.silenceCheckContent(stage), event_id: `silence_check_${stage}_${this.silenceChecks}` });
+    // Commentary, not instructions: GPT-Live treats instructions as context it
+    // may ignore, and on phone calls it ignored the check-ins until a retry.
+    this.send({ type: "session.commentary.append", delegation_id: null, content: this.silenceCheckContent(stage), event_id: `silence_check_${stage}_${this.silenceChecks}` });
     try {
       this.options.onSilenceCheck?.(stage, this.silenceCheckAttempts);
     } catch {

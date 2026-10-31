@@ -109,9 +109,9 @@ describe("LiveCallController sideband", () => {
       peer = socket;
       send(socket, { type: "session.started" });
       onCommand(socket, (event) => {
-        if (event.type !== "session.instructions.append" || !event.event_id?.startsWith("wrap_up_silence_timeout")) return;
+        if (event.type !== "session.commentary.append" || !event.event_id?.startsWith("wrap_up_silence_timeout")) return;
         order.push("goodbye");
-        send(socket, { type: "session.instructions.appended", client_event_id: event.event_id, start_ms: 300, end_ms: 300 });
+        send(socket, { type: "session.commentary.appended", client_event_id: event.event_id, start_ms: 300, end_ms: 300 });
         send(socket, { type: "session.output_transcript.delta", delta: "It's been quiet, so I'll hang up now. Goodbye!", start_ms: 400, end_ms: 900 });
       });
     }], { silenceTimeoutMs: 100, onTimeout: (reason) => void holder.controller!.wrapUp(reason) });
@@ -137,14 +137,14 @@ describe("LiveCallController sideband", () => {
       send(socket, { type: "session.input_transcript.delta", delta: "Hi, are you open on Saturday?", start_ms: 0, end_ms: 100 });
       send(socket, { type: "session.output_transcript.delta", delta: "Thanks for calling Northside Plumbing.", start_ms: 100, end_ms: 400 });
       onCommand(socket, (event) => {
-        if (event.type === "session.instructions.append" && event.event_id?.startsWith("silence_check_")) {
+        if (event.type === "session.commentary.append" && event.event_id?.startsWith("silence_check_")) {
           order.push(event.event_id);
-          send(socket, { type: "session.instructions.appended", client_event_id: event.event_id, start_ms: 0, end_ms: 0 });
+          send(socket, { type: "session.commentary.appended", client_event_id: event.event_id, start_ms: 0, end_ms: 0 });
           return;
         }
-        if (event.type !== "session.instructions.append" || !event.event_id?.startsWith("wrap_up_silence_timeout")) return;
+        if (event.type !== "session.commentary.append" || !event.event_id?.startsWith("wrap_up_silence_timeout")) return;
         order.push("notice");
-        send(socket, { type: "session.instructions.appended", client_event_id: event.event_id, start_ms: 2_000, end_ms: 2_000 });
+        send(socket, { type: "session.commentary.appended", client_event_id: event.event_id, start_ms: 2_000, end_ms: 2_000 });
         send(socket, { type: "session.output_transcript.delta", delta: "I haven't heard back, so I'll disconnect. Call back if you need anything.", start_ms: 2_100, end_ms: 2_600 });
       });
     }], { silenceCheckMs: 1_200, silenceTimeoutMs: 3_600, onSilenceCheck: (stage) => checks.push(stage), onTimeout: (reason) => void holder.controller!.wrapUp(reason) });

@@ -1166,8 +1166,8 @@ describe("LiveCallController silence ladder", () => {
     // The worker's onTimeout asks for the notice, which plays before the hangup.
     expect(hangup).not.toHaveBeenCalled();
     void controller.wrapUp("silence_timeout");
-    expect(sentOfType(socket, "session.instructions.append").at(-1)).toEqual(expect.objectContaining({ delegation_id: null, event_id: "wrap_up_silence_timeout_1", content: "The caller hasn't answered. In the language of the conversation, say briefly that you haven't heard back, that you will disconnect, and invite them to call back if they need anything." }));
-    socket.emit("session.instructions.appended", { client_event_id: "wrap_up_silence_timeout_1" });
+    expect(sentOfType(socket, "session.commentary.append").at(-1)).toEqual(expect.objectContaining({ delegation_id: null, event_id: "wrap_up_silence_timeout_1", content: "The caller hasn't answered. In the language of the conversation, say briefly that you haven't heard back, that you will disconnect, and invite them to call back if they need anything." }));
+    socket.emit("session.commentary.appended", { client_event_id: "wrap_up_silence_timeout_1" });
     socket.emit("session.output_transcript.delta", { delta: "I haven't heard back, so I'll disconnect. Call back if you need anything.", start_ms: 43_000, end_ms: 48_000 });
     await vi.advanceTimersByTimeAsync(1_000);
     expect(hangup).not.toHaveBeenCalled();
@@ -1331,7 +1331,7 @@ describe("LiveCallController silence ladder", () => {
     await vi.advanceTimersByTimeAsync(40_000);
     expect(onTimeout).toHaveBeenCalledWith("silence_timeout");
     void controller.wrapUp("silence_timeout");
-    socket.emit("session.instructions.appended", { client_event_id: "wrap_up_silence_timeout_1" });
+    socket.emit("session.commentary.appended", { client_event_id: "wrap_up_silence_timeout_1" });
     socket.emit("session.output_transcript.delta", { delta: "I haven't heard back, so I'll disconnect. Call back if you need anything.", start_ms: 41_000, end_ms: 44_000 });
     // The notice is still playing when the caller comes back.
     await vi.advanceTimersByTimeAsync(2_500);
@@ -1357,7 +1357,7 @@ describe("LiveCallController silence ladder", () => {
     await vi.advanceTimersByTimeAsync(40_000);
     expect(onTimeout).toHaveBeenCalledWith("silence_timeout");
     void controller.wrapUp("silence_timeout");
-    socket.emit("session.instructions.appended", { client_event_id: "wrap_up_silence_timeout_1" });
+    socket.emit("session.commentary.appended", { client_event_id: "wrap_up_silence_timeout_1" });
     // The notice runs to 43 seconds from now on the session timeline.
     socket.emit("session.output_transcript.delta", { delta: "I haven't heard back, so I'll disconnect. Call back if you need anything.", start_ms: 41_000, end_ms: 44_000 });
     // The notice has played out, but the hangup hasn't gone yet.
@@ -1379,7 +1379,7 @@ describe("LiveCallController silence ladder", () => {
     await vi.advanceTimersByTimeAsync(40_000);
     expect(onTimeout).toHaveBeenCalledTimes(1);
     void controller.wrapUp("silence_timeout");
-    socket.emit("session.instructions.appended", { client_event_id: "wrap_up_silence_timeout_1" });
+    socket.emit("session.commentary.appended", { client_event_id: "wrap_up_silence_timeout_1" });
     socket.emit("session.output_transcript.delta", { delta: "I haven't heard back, so I'll disconnect.", start_ms: 41_000, end_ms: 44_000 });
     await vi.advanceTimersByTimeAsync(2_500);
     // The caller comes back before the hangup, so the first notice is called off.
@@ -1389,7 +1389,7 @@ describe("LiveCallController silence ladder", () => {
     await vi.advanceTimersByTimeAsync(40_000);
     expect(onTimeout).toHaveBeenCalledTimes(2);
     void controller.wrapUp("silence_timeout");
-    expect(sentOfType(socket, "session.instructions.append").at(-1)).toEqual(expect.objectContaining({ event_id: "wrap_up_silence_timeout_2" }));
+    expect(sentOfType(socket, "session.commentary.append").at(-1)).toEqual(expect.objectContaining({ event_id: "wrap_up_silence_timeout_2" }));
   });
 
   it("leaves a duration limit's end in place when the caller speaks", async () => {
@@ -1440,7 +1440,7 @@ describe("LiveCallController wrap-up", () => {
     fakeTimers();
     const { socket, controller, hangup } = setup();
     void controller.wrapUp("silence_timeout");
-    const notices = () => sentOfType(socket, "session.instructions.append").filter((event) => event.event_id.startsWith("wrap_up_silence_timeout")).map((event) => event.event_id);
+    const notices = () => sentOfType(socket, "session.commentary.append").filter((event) => event.event_id.startsWith("wrap_up_silence_timeout")).map((event) => event.event_id);
     expect(notices()).toEqual(["wrap_up_silence_timeout_1"]);
     await vi.advanceTimersByTimeAsync(4_600);
     expect(notices()).toEqual(["wrap_up_silence_timeout_1", "wrap_up_silence_timeout_2"]);
