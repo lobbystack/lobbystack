@@ -199,6 +199,20 @@ describe("SMTP delivery", () => {
     expect(french).toContain("Créez-le ici, avec cette adresse : https://app.example.test/fr/signup");
   });
 
+  it.each([
+    ["en", "New passkey on your LobbyStack account", "reset your password now: https://app.example.test/en/forgot-password"],
+    ["fr", "Nouvelle clé d’accès sur votre compte LobbyStack", "réinitialisez votre mot de passe maintenant : https://app.example.test/fr/forgot-password"],
+    ["es", "Nueva llave de acceso en su cuenta de LobbyStack", "restablezca su contraseña ahora: https://app.example.test/es/forgot-password"],
+    ["sr", "Novi pristupni ključ na vašem LobbyStack nalogu", "odmah resetujte lozinku: https://app.example.test/sr/forgot-password"],
+  ])("writes the passkey alert in %s, with where to see passkeys and how to undo it", async (locale, subject, resetLine) => {
+    const { provider, sendMail } = capture();
+    await send(provider, { template: "passkey_added", to: "owner@example.test", variables: { locale, settingsUrl: "https://app.example.test/settings/account", resetUrl: `https://app.example.test/${locale}/forgot-password` } });
+    const sent = sendMail.mock.calls[0]![0];
+    expect(sent.subject).toBe(subject);
+    expect(sent.text).toContain("https://app.example.test/settings/account");
+    expect(sent.text).toContain(resetLine);
+  });
+
   it("localizes the onboarding follow-up and existing-account emails in Spanish and Serbian", async () => {
     const { provider, sendMail } = capture();
     await send(provider, { template: "onboarding_followup", to: "owner@example.test", subject: "¿Qué le pareció LobbyStack?", variables: { locale: "es", firstName: "Ana", businessName: "Clínica Sol", senderName: "Raphael" } });

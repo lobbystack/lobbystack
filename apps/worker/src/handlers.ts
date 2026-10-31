@@ -514,13 +514,13 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
     case "email.send":
     case "email.sendNotice":
       if (!dependencies.email) {
-        if (["verify_email", "password_reset", "existing_account", "account_setup"].includes(String(job.payload.template))) {
+        if (["verify_email", "password_reset", "passkey_added", "existing_account", "account_setup"].includes(String(job.payload.template))) {
           throw new Error("Authentication email delivery requires SMTP configuration.");
         }
         return { status: "skipped" };
       }
       {
-        const template = job.payload.template === "existing_account" || job.payload.template === "account_setup" || job.payload.template === "verify_email" || job.payload.template === "password_reset" || job.payload.template === "invitation" || job.payload.template === "operator_alert" || job.payload.template === "feedback_submission" || job.payload.template === "onboarding_followup" || job.payload.template === "partner_pool_alert" || job.payload.template === "business_allowance_alert" || job.payload.template === "partner_business_allowance_alert" || (job.type === "email.sendNotice" && (job.payload.template === "business_released" || job.payload.template === "business_deleted"))
+        const template = job.payload.template === "existing_account" || job.payload.template === "account_setup" || job.payload.template === "verify_email" || job.payload.template === "password_reset" || job.payload.template === "passkey_added" || job.payload.template === "invitation" || job.payload.template === "operator_alert" || job.payload.template === "feedback_submission" || job.payload.template === "onboarding_followup" || job.payload.template === "partner_pool_alert" || job.payload.template === "business_allowance_alert" || job.payload.template === "partner_business_allowance_alert" || (job.type === "email.sendNotice" && (job.payload.template === "business_released" || job.payload.template === "business_deleted"))
           ? job.payload.template
           : "operator_alert";
         const variables = typeof job.payload.variables === "object" && job.payload.variables !== null

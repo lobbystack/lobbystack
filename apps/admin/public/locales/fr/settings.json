@@ -679,6 +679,7 @@
         "wrongAddress": "Les clés d'accès ne sont pas configurées pour cette adresse. Ouvrez l'application à son adresse habituelle, puis réessayez.",
         "alreadyAdded": "Cet appareil a déjà une clé d'accès pour votre compte.",
         "signInAgain": "Reconnectez-vous, puis ajoutez une clé d'accès.",
+        "verifyEmail": "Vérifiez votre e-mail, puis ajoutez une clé d'accès.",
         "renameFailed": "Impossible de renommer la clé d'accès. Réessayez.",
         "removeFailed": "Impossible de supprimer la clé d'accès. Réessayez.",
         "loadFailed": "Impossible de charger vos clés d'accès."

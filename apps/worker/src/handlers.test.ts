@@ -133,7 +133,7 @@ function pricingJob(type: "sms.syncPrice" | "call.syncPrice", payload: Record<st
 }
 
 describe("worker handlers", () => {
-  it.each(["verify_email", "password_reset", "existing_account"])("fails %s delivery when SMTP is missing", async template => {
+  it.each(["verify_email", "password_reset", "passkey_added", "existing_account"])("fails %s delivery when SMTP is missing", async template => {
     await expect(handleJob({ jobId: randomUUID(), businessId: null, type: "email.send", queue: "default", payload: { template }, trace: {}, idempotencyKey: randomUUID(), scheduled: false }, { domain: { db: undefined as never } })).rejects.toThrow("SMTP configuration");
   });
   it("skips the onboarding follow-up when no founder sender is configured", async () => {

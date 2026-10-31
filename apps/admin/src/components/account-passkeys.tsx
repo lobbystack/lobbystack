@@ -2,7 +2,6 @@
 
 import { useId, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { KeyRound } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -70,6 +69,7 @@ export function AccountPasskeys({ businessName }: { businessName?: string | null
       const messages: Record<string, string> = {
         ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED: "account.passkeys.errors.alreadyAdded",
         SESSION_NOT_FRESH: "account.passkeys.errors.signInAgain",
+        EMAIL_NOT_VERIFIED: "account.passkeys.errors.verifyEmail",
         // The browser refuses a passkey for another address than the one set in PASSKEY_RP_ID.
         ERROR_INVALID_RP_ID: "account.passkeys.errors.wrongAddress",
       };
@@ -108,7 +108,7 @@ export function AccountPasskeys({ businessName }: { businessName?: string | null
         <ItemDescription>{t("account.passkeys.description")}</ItemDescription>
       </ItemContent>
       <ItemActions>
-        <Button loading={add.isPending} onClick={() => add.mutate()} size="sm" type="button" variant="outline"><KeyRound data-icon="inline-start" />{t("account.passkeys.add")}</Button>
+        <Button loading={add.isPending} onClick={() => add.mutate()} size="sm" type="button" variant="outline">{t("account.passkeys.add")}</Button>
       </ItemActions>
       <div className="flex w-full basis-full flex-col">
         {passkeys.isLoading ? <PasskeyRowsSkeleton /> : null}

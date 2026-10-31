@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 // Runs the real Better Auth config against an in-memory database: the passkey
@@ -12,6 +13,7 @@ vi.mock("./databases", () => ({ getDatabase: (role: string) => ({ db: {}, role }
 vi.mock("@lobbystack/db", async importOriginal => ({ ...await importOriginal<typeof import("@lobbystack/db")>(), assertDatabaseRole: async () => undefined }));
 
 const base = "http://localhost:3000";
+const secret = "passkey-test-secret-with-enough-length";
 const hostBrand = { "x-lobbystack-brand": "host" };
 const partnerOrigin = "http://acme.partners.localhost:3000";
 const partnerBrand = { host: "acme.partners.localhost:3000", "x-lobbystack-brand": "partner:7b0c5a43-62c4-4a51-9d0e-6f6f0e0d9a11", "x-lobbystack-brand-origin": partnerOrigin };
@@ -33,6 +35,7 @@ beforeEach(() => {
   vi.stubEnv("TRUSTED_CLIENT_IP_HEADER", "x-real-ip");
   vi.stubEnv("APP_BASE_URL", base);
   vi.stubEnv("PASSKEY_RP_ID", "");
+  vi.stubEnv("BETTER_AUTH_SECRET", secret);
 });
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 
@@ -57,6 +60,32 @@ it.each([
     expect((await handle(path, brand)).status).toBe(404);
   }
   expect((await handle("/passkey/verify-authentication", brand, { method: "POST", body: JSON.stringify({ response: {} }), headers: { "content-type": "application/json" } })).status).toBe(404);
+});
+
+/** Puts a signed-in user in the store and returns the cookie of their new session. */
+function signIn(emailVerified: boolean): { cookie: string } {
+  const now = new Date();
+  const token = "session-token";
+  store.tables.user!.push({ id: "user-1", name: "Owner", email: "owner@example.test", emailVerified, createdAt: now, updatedAt: now });
+  store.tables.session!.push({ id: "session-1", token, userId: "user-1", expiresAt: new Date(now.getTime() + 3_600_000), createdAt: now, updatedAt: now });
+  const signature = createHmac("sha256", secret).update(token).digest("base64");
+  return { cookie: `better-auth.session_token=${encodeURIComponent(`${token}.${signature}`)}` };
+}
+
+it("lets an account with a verified email start adding a passkey", async () => {
+  const response = await handle("/passkey/generate-register-options", hostBrand, { headers: signIn(true) });
+  expect(response.status).toBe(200);
+  expect((await response.json() as { rp: { id: string } }).rp.id).toBe("localhost");
+});
+
+it("refuses a passkey for an account whose email isn't verified", async () => {
+  const cookie = signIn(false);
+  const options = await handle("/passkey/generate-register-options", hostBrand, { headers: cookie });
+  expect(options.status).toBe(403);
+  expect(await options.json()).toMatchObject({ code: "EMAIL_NOT_VERIFIED" });
+  const verify = await handle("/passkey/verify-registration", hostBrand, { method: "POST", body: JSON.stringify({ response: {} }), headers: { "content-type": "application/json", origin: base, ...cookie } });
+  expect(verify.status).toBe(403);
+  expect(store.tables.passkey).toEqual([]);
 });
 
 it("needs a signed-in session to list or register passkeys", async () => {
