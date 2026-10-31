@@ -153,8 +153,17 @@ export type LiveCallControllerOptions = {
   /** A phone call ends through OpenAI's SIP hangup; a browser call by closing the session. */
   phone: boolean;
   setup: LiveCallSetup | Promise<LiveCallSetup>;
-  /** Hang up after this long without either side speaking. */
+  /**
+   * Hang up this long after the caller's last words, or after the spoken
+   * greeting or the latest answer when they haven't spoken yet.
+   */
   silenceTimeoutMs?: number;
+  /**
+   * Ask GPT-Live whether the caller is still there this long after the same
+   * point, then again at twice this long. Without it, the call goes straight
+   * to the silence timeout.
+   */
+  silenceCheckMs?: number;
   /** The call ends by this long: the goodbye starts a little before it. */
   maxDurationMs?: number;
   /**
@@ -169,6 +178,10 @@ export type LiveCallControllerOptions = {
   onGreeting?: (event: GreetingEvent) => void;
   onTurn?: (turn: LiveCallTurn) => void;
   onTimeout?: (reason: LiveCallTimeout) => void;
+  /** A silence check-in was sent: 1 for the first, 2 for the second. */
+  onSilenceCheck?: (stage: number) => void;
+  /** The caller spoke during the silence notice, so the call goes on instead of ending. */
+  onSilenceRescue?: () => void;
   /** Each step of a transfer started with transferAfterAnnouncement(). */
   onTransfer?: (state: LiveCallTransferState) => void;
   onDelegation?: (timing: DelegationTiming) => void;
@@ -271,14 +284,26 @@ const MAX_REMEMBERED_ACTIONS = 10;
 const PASSCODE_KEY_GAP_MS = 6_000;
 // With no key for this long, the keypad stops taking a PIN.
 const PASSCODE_IDLE_MS = 60_000;
+// A silence check waits until the receptionist has been quiet this long, so it
+// never talks over it. A blocked step is tried again this often, without
+// moving the deadline.
+const SILENCE_CHECK_QUIET_MS = 1_000;
+const SILENCE_RECHECK_MS = 500;
 
 // The facts GPT-Live receives when a request fails. Its instructions say what to do then.
 const FAILED_ANSWER = "The backend couldn't complete this request.";
 const CALLER_SPOKE_AGAIN = "The caller spoke again before the call ended, so reply to what they said.";
+const CALL_CONTINUES = "The caller spoke again during the silence notice, so the call continues. In the language of the conversation, answer what they said.";
 const STILL_WORKING = "Still checking. This is taking a few more seconds.";
+// Commands for GPT-Live when the caller goes quiet: two check-ins, then the
+// notice that the call is ending.
+const SILENCE_CHECKS = [
+  "The caller has gone quiet. In the language of the conversation, ask briefly whether they are still there.",
+  "The caller is still quiet. In the language of the conversation, ask once more whether they are there or need a moment.",
+] as const;
 // Commands for GPT-Live when the call has to end, or a transfer didn't go through.
 const WRAP_UP: Record<LiveCallWrapUp, string> = {
-  silence_timeout: "Nobody has spoken for a while, so the call is ending now. In the language of the conversation, say a short goodbye.",
+  silence_timeout: "The caller hasn't answered. In the language of the conversation, say briefly that you haven't heard back, that you will disconnect, and invite them to call back if they need anything.",
   duration_limit: "The call has reached its time limit and is ending now. In the language of the conversation, tell the caller briefly, apologize, invite them to call back if they need more help, and say goodbye.",
   service_restart: "The phone service is restarting, so the call has to end now. In the language of the conversation, apologize briefly, ask the caller to call back in a minute, and say goodbye.",
 };
@@ -359,6 +384,15 @@ export class LiveCallController {
   private transcriptWaiters: Array<{ offsetMs: number; resolve: () => void }> = [];
   private emittedTurns = 0;
   private silenceTimer: ReturnType<typeof setTimeout> | undefined;
+  // The silence ladder: the point it counts from, the check-in it is waiting
+  // to send, and the notice whose hangup the caller can still call off.
+  private silenceAnchorAt = 0;
+  private silenceStage = 0;
+  private silenceChecks = 0;
+  private silenceRescues = 0;
+  private silenceEnd: { requestedAt: number; cancelled: boolean } | undefined;
+  // How many times each wrap-up ran, so a repeated notice gets its own command id.
+  private readonly wrapUpAttempts = new Map<LiveCallWrapUp, number>();
   private durationTimer: ReturnType<typeof setTimeout> | undefined;
   private greetingTimer: ReturnType<typeof setTimeout> | undefined;
   private finalizeTimer: ReturnType<typeof setTimeout> | undefined;
@@ -565,7 +599,7 @@ export class LiveCallController {
     (socket.socket as unknown as { on(type: "open", listener: () => void): void }).on("open", opened);
     // A retried attach opens on a new connection.
     socket.on("reconnected", opened);
-    this.resetSilenceTimer();
+    this.armSilenceLadder();
     this.scheduleDurationLimit();
   }
 
@@ -664,7 +698,6 @@ export class LiveCallController {
   private heardSpeech(endMs: number | undefined): void {
     this.greetingDone();
     this.lastSpeechAt = performance.now();
-    this.resetSilenceTimer();
     if (typeof endMs === "number") this.lastSpeechEndMs = Math.max(this.lastSpeechEndMs, endMs);
   }
 
@@ -705,6 +738,8 @@ export class LiveCallController {
     this.greetingSpoken = true;
     clearTimeout(this.greetingTimer);
     this.reportGreeting("spoken");
+    // The caller hasn't spoken yet, so the silence ladder counts from the greeting.
+    this.armSilenceLadder();
   }
 
   private reportGreeting(step: GreetingEvent["step"], trigger?: GreetingEvent["trigger"], error?: string): void {
@@ -871,6 +906,8 @@ export class LiveCallController {
   private heardCaller(startMs: number): void {
     this.lastCallerAt = performance.now();
     this.lastCallerStartMs = Math.max(this.lastCallerStartMs, startMs);
+    this.armSilenceLadder();
+    this.rescueSilence();
     const hangup = this.pendingHangup;
     if (!hangup || startMs <= hangup.afterMs) return;
     if (this.callerDone) hangup.callerSpoke = true;
@@ -927,16 +964,37 @@ export class LiveCallController {
   }
 
   /**
-   * Ends a call that's still going: tells GPT-Live why and asks for a short
-   * goodbye, then ends the call once it has played. Resolves once OpenAI has
-   * finalized the call or the finalization timeout passed.
+   * Ends a call that's still going: tells GPT-Live why and asks for the
+   * closing words, then ends the call once they have played. The silence
+   * notice is cancelable until the hangup goes out, since the caller may speak
+   * during it. A duration limit or service restart stays final. Resolves once
+   * OpenAI has finalized the call or the finalization timeout passed.
    */
   wrapUp(reason: LiveCallWrapUp): Promise<void> {
     if (!this.ending && !this.finished) {
       this.ending = true;
       this.endReason ??= reason;
-      this.send({ type: "session.instructions.append", delegation_id: null, content: WRAP_UP[reason], event_id: `wrap_up_${reason}` }, { kind: "wrap_up" });
-      this.afterSpeech(() => this.endSession(), () => this.wrapUpAckedAt);
+      // The caller can still keep the call going after the silence notice.
+      const silenceEnd = reason === "silence_timeout" ? { requestedAt: performance.now(), cancelled: false } : undefined;
+      this.silenceEnd = silenceEnd;
+      clearTimeout(this.silenceTimer);
+      // A rescued silence notice can be followed by another one, so each
+      // command needs its own id: OpenAI correlates an acknowledgment by it,
+      // and a repeated id could pass for a command already seen.
+      const attempt = (this.wrapUpAttempts.get(reason) ?? 0) + 1;
+      this.wrapUpAttempts.set(reason, attempt);
+      // The previous notice's acknowledgment doesn't say when this request's words started.
+      this.wrapUpAckedAt = undefined;
+      this.send({ type: "session.instructions.append", delegation_id: null, content: WRAP_UP[reason], event_id: `wrap_up_${reason}_${attempt}` }, { kind: "wrap_up" });
+      this.afterSpeech(() => {
+        if (silenceEnd?.cancelled) return;
+        // The caller may have spoken during the quiet beat after the notice.
+        if (this.rescueSilence()) return;
+        // The hangup is going out, so the notice is no longer cancelable.
+        if (silenceEnd) silenceEnd.cancelled = true;
+        if (this.silenceEnd === silenceEnd) this.silenceEnd = undefined;
+        this.endSession();
+      }, () => this.wrapUpAckedAt);
     }
     return this.whenFinished;
   }
@@ -958,7 +1016,7 @@ export class LiveCallController {
   }
 
   private passcodeKey(passcode: NonNullable<LiveCallController["passcode"]>, key: string): void {
-    this.resetSilenceTimer();
+    this.armSilenceLadder();
     // Keys pressed while the PIN is being checked don't count.
     if (passcode.checking) return;
     if (key === "*") passcode.digits = "";
@@ -1056,6 +1114,9 @@ export class LiveCallController {
     clearTimeout(this.transferTimer);
     console.error(`[live] ${this.options.sessionId} transfer failed`, message);
     this.send({ type: "session.instructions.append", delegation_id: null, content: TRANSFER_FAILED, event_id: `transfer_failed_${Date.now()}` });
+    // The call carries on with the receptionist, so the caller gets the ladder's
+    // full time to answer its offer, not the leftover from before the transfer.
+    this.armSilenceLadder();
     this.options.onTransfer?.("failed");
   }
 
@@ -1083,13 +1144,113 @@ export class LiveCallController {
     }
   }
 
-  private resetSilenceTimer(): void {
+  /**
+   * Starts the silence ladder over from now. The caller's words, a keypad
+   * press, the spoken greeting and a delivered answer are the points it counts
+   * from. A check-in's own speech doesn't move it, or each nudge would push
+   * the deadline back and the ladder would never finish.
+   */
+  private armSilenceLadder(): void {
+    this.silenceStage = 0;
+    this.silenceAnchorAt = performance.now();
+    this.scheduleSilenceStep();
+  }
+
+  /** The delay from the anchor to the ladder's next step, or nothing when silence isn't watched. */
+  private silenceStepAt(): number | undefined {
+    const checkMs = this.options.silenceCheckMs;
+    if (this.silenceStage < SILENCE_CHECKS.length && checkMs) {
+      const checkAt = checkMs * (this.silenceStage + 1);
+      return this.options.silenceTimeoutMs ? Math.min(checkAt, this.options.silenceTimeoutMs) : checkAt;
+    }
+    return this.options.silenceTimeoutMs;
+  }
+
+  private scheduleSilenceStep(): void {
     clearTimeout(this.silenceTimer);
-    // OpenAI's guide: transcript gaps alone don't establish silence, so a
-    // request still being answered counts as activity too. Reflected output
-    // audio doesn't: it can cover silence.
-    if (!this.options.silenceTimeoutMs || this.finished || this.runningDelegations > 0) return;
-    this.silenceTimer = setTimeout(() => this.options.onTimeout?.("silence_timeout"), this.options.silenceTimeoutMs);
+    this.silenceTimer = undefined;
+    if (this.finished || this.ending) return;
+    const at = this.silenceStepAt();
+    if (at === undefined) return;
+    this.silenceTimer = setTimeout(() => this.silenceStep(), Math.max(0, this.silenceAnchorAt + at - performance.now()));
+  }
+
+  // Sends the next check-in, or asks for the closing words at the deadline. A
+  // step that can't go now is tried again shortly, without moving the deadline.
+  private silenceStep(): void {
+    this.silenceTimer = undefined;
+    if (this.finished || this.ending) return;
+    const elapsed = performance.now() - this.silenceAnchorAt;
+    const checkMs = this.options.silenceCheckMs;
+    const timeoutMs = this.options.silenceTimeoutMs;
+    const atDeadline = timeoutMs !== undefined && elapsed >= timeoutMs;
+    const dueChecks = checkMs === undefined || checkMs <= 0 ? 0 : Math.min(SILENCE_CHECKS.length, Math.floor(elapsed / checkMs));
+    if (!atDeadline && dueChecks > this.silenceStage) {
+      if (this.silenceCheckBlocked()) return void (this.silenceTimer = setTimeout(() => this.silenceStep(), SILENCE_RECHECK_MS));
+      this.sendSilenceCheck();
+      return;
+    }
+    // A timer can fire a hair early, before the step's own threshold.
+    if (!atDeadline) return this.scheduleSilenceStep();
+    // The deadline waits for a request or a transfer, but doesn't start over.
+    if (this.silenceEndBlocked()) return void (this.silenceTimer = setTimeout(() => this.silenceStep(), SILENCE_RECHECK_MS));
+    this.options.onTimeout?.("silence_timeout");
+  }
+
+  private silenceCheckBlocked(): boolean {
+    if (this.ending || this.finished || this.pendingHangup) return true;
+    if (this.runningDelegations > 0 || this.answering) return true;
+    if (this.transfer || this.passcode) return true;
+    if (!this.greetingSpoken) return true;
+    return performance.now() - this.lastSpeechAt < SILENCE_CHECK_QUIET_MS;
+  }
+
+  private silenceEndBlocked(): boolean {
+    if (this.ending || this.finished || this.pendingHangup) return true;
+    if (this.runningDelegations > 0 || this.answering !== undefined || this.transfer !== undefined) return true;
+    // The deadline waits for the receptionist to finish its sentence, so the
+    // notice never talks over a long answer.
+    return performance.now() - this.lastSpeechAt < SILENCE_CHECK_QUIET_MS;
+  }
+
+  private sendSilenceCheck(): void {
+    this.silenceStage += 1;
+    const stage = this.silenceStage;
+    this.silenceChecks += 1;
+    this.send({ type: "session.instructions.append", delegation_id: null, content: SILENCE_CHECKS[stage - 1]!, event_id: `silence_check_${stage}_${this.silenceChecks}` });
+    this.scheduleSilenceStep();
+    try {
+      this.options.onSilenceCheck?.(stage);
+    } catch {
+      // Logging must never affect the call.
+    }
+  }
+
+  /**
+   * The caller spoke during the silence notice, before the hangup went out, so
+   * the call goes on: the pending end is called off, unless it's a
+   * duration_limit or service_restart wrap-up, and GPT-Live is told to answer
+   * them.
+   */
+  private rescueSilence(): boolean {
+    const pending = this.silenceEnd;
+    if (!pending || pending.cancelled || this.finished) return false;
+    // Words from before the notice are what the ladder waited out.
+    if (this.lastCallerAt <= pending.requestedAt) return false;
+    pending.cancelled = true;
+    this.silenceEnd = undefined;
+    this.ending = false;
+    this.wrapUpAckedAt = undefined;
+    if (this.endReason === "silence_timeout") this.endReason = undefined;
+    this.silenceRescues += 1;
+    this.send({ type: "session.instructions.append", delegation_id: null, content: CALL_CONTINUES, event_id: `silence_rescue_${this.silenceRescues}` });
+    this.armSilenceLadder();
+    try {
+      this.options.onSilenceRescue?.();
+    } catch {
+      // Logging must never affect the call.
+    }
+    return true;
   }
 
   // Report every turn except the one still in progress.
@@ -1102,7 +1263,6 @@ export class LiveCallController {
   }
 
   private appendTranscript(role: Turn["role"], delta: string, endMs: number, startMs?: number): void {
-    this.resetSilenceTimer();
     const last = this.turns.at(-1);
     if (last?.role === role) {
       last.text += delta;
@@ -1191,7 +1351,6 @@ export class LiveCallController {
     // Another request means the caller isn't done after all.
     this.cancelHangup();
     this.runningDelegations += 1;
-    this.resetSilenceTimer();
     const previous = this.delegationQueue;
     let release!: () => void;
     this.delegationQueue = new Promise<void>((resolve) => { release = resolve; });
@@ -1285,6 +1444,8 @@ export class LiveCallController {
       } else {
         this.unheardResults = [];
         this.lastAnswerSentAt = performance.now();
+        // The caller hears the answer next, so the silence ladder counts from here.
+        this.armSilenceLadder();
         // GPT-Live says its goodbye when it hears the call is ending, and the hangup waits for it.
         this.send({ type: "session.commentary.append", delegation_id: delegationId, content: ended && failed ? CALL_ENDING : answer, event_id: `answer_${delegationId}` }, { kind: "answer", delegationId });
       }
@@ -1311,7 +1472,6 @@ export class LiveCallController {
       this.options.onDelegation?.(timing);
     } finally {
       this.runningDelegations -= 1;
-      this.resetSilenceTimer();
       release();
     }
   }

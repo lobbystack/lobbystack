@@ -1,5 +1,5 @@
 // Calls a receptionist's number with a scripted caller, to test a real phone
-// line end to end. After the scripted lines, the caller stays silent for 40
+// line end to end. After the scripted lines, the caller stays silent for 65
 // seconds, so a call much shorter than its script means the receptionist hung
 // up. See docs/voice/testing.md.
 //

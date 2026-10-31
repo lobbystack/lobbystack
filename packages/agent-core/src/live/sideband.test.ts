@@ -109,7 +109,7 @@ describe("LiveCallController sideband", () => {
       peer = socket;
       send(socket, { type: "session.started" });
       onCommand(socket, (event) => {
-        if (event.type !== "session.instructions.append" || event.event_id !== "wrap_up_silence_timeout") return;
+        if (event.type !== "session.instructions.append" || !event.event_id?.startsWith("wrap_up_silence_timeout")) return;
         order.push("goodbye");
         send(socket, { type: "session.instructions.appended", client_event_id: event.event_id, start_ms: 300, end_ms: 300 });
         send(socket, { type: "session.output_transcript.delta", delta: "It's been quiet, so I'll hang up now. Goodbye!", start_ms: 400, end_ms: 900 });
@@ -125,6 +125,40 @@ describe("LiveCallController sideband", () => {
     expect(order).toEqual(["goodbye", "hangup"]);
     expect(closed[0]).toMatchObject({ closeReason: "close_requested", usageConfirmed: true });
   });
+
+  it("checks in on silence, then asks for the notice before hanging up", async () => {
+    let peer!: WebSocket;
+    const order: string[] = [];
+    const checks: number[] = [];
+    const holder: { controller?: LiveCallController } = {};
+    const { controller, hangup, closed } = await sideband([(socket) => {
+      peer = socket;
+      send(socket, { type: "session.started" });
+      send(socket, { type: "session.input_transcript.delta", delta: "Hi, are you open on Saturday?", start_ms: 0, end_ms: 100 });
+      send(socket, { type: "session.output_transcript.delta", delta: "Thanks for calling Northside Plumbing.", start_ms: 100, end_ms: 400 });
+      onCommand(socket, (event) => {
+        if (event.type === "session.instructions.append" && event.event_id?.startsWith("silence_check_")) {
+          order.push(event.event_id);
+          send(socket, { type: "session.instructions.appended", client_event_id: event.event_id, start_ms: 0, end_ms: 0 });
+          return;
+        }
+        if (event.type !== "session.instructions.append" || !event.event_id?.startsWith("wrap_up_silence_timeout")) return;
+        order.push("notice");
+        send(socket, { type: "session.instructions.appended", client_event_id: event.event_id, start_ms: 2_000, end_ms: 2_000 });
+        send(socket, { type: "session.output_transcript.delta", delta: "I haven't heard back, so I'll disconnect. Call back if you need anything.", start_ms: 2_100, end_ms: 2_600 });
+      });
+    }], { silenceCheckMs: 1_200, silenceTimeoutMs: 3_600, onSilenceCheck: (stage) => checks.push(stage), onTimeout: (reason) => void holder.controller!.wrapUp(reason) });
+    holder.controller = controller;
+    hangup.mockImplementation((async () => {
+      order.push("hangup");
+      send(peer, { type: "session.closed", reason: "close_requested", usage: { seconds: 5 } });
+    }) as never);
+    controller.start();
+    await vi.waitFor(() => expect(closed).toHaveLength(1), { timeout: 10_000 });
+    expect(checks).toEqual([1, 2]);
+    expect(order).toEqual(["silence_check_1_1", "silence_check_2_2", "notice", "hangup"]);
+    expect(closed[0]).toMatchObject({ closeReason: "close_requested", usageConfirmed: true });
+  }, 15_000);
 
   it("announces a transfer, refers the call once the announcement has played, and records the answer", async () => {
     let peer!: WebSocket;

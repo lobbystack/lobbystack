@@ -88,7 +88,7 @@ Upoznajte ograničenja proizvoda pre nego što prosledite liniju. Kod LobbyStack
 - AI ne odgovara na SMS poruke. Vaš tim odgovara ručno iz kontrolne table.
 - Preusmerenja idu na jedan broj po firmi. To su slepa preusmerenja, pa recepcioner ne najavljuje pozivaoca Vašem osoblju pre nego što ga prebaci.
 - Ne upućuje odlazne pozive, kao što su povratni pozivi ili pozivi sa podsetnikom.
-- Poziv traje najviše 30 minuta, a posle 75 sekundi tišine recepcioner se pozdravlja i prekida vezu.
+- Poziv traje najviše 30 minuta. Ako pozivalac ućuti, recepcioner proveri da li je još tu pre nego što prekine vezu.
 - Nema sinhronizaciju sa softverom za ordinacije, terenski servis ili CRM. Druge alate možete da povežete preko webhookova i REST API-ja.
 
 Drugi dobavljači nude više integracija. [Upfirst](https://upfirst.ai/pricing) zakazuje u Google, Outlook, Calendly, Acuity, Clio i Square kalendare, a [RingCentral AI Receptionist (AIR)](https://www.ringcentral.com/pricing/ai-receptionist.html) se povezuje sa Salesforce, HubSpot i Zoho sistemima.

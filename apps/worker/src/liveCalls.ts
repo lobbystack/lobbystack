@@ -64,7 +64,10 @@ type AttachRequest = {
  */
 export type LiveRecoveryOutcome = "attached" | "finished" | "owned" | "skipped";
 
-const SILENCE_TIMEOUT_MS = 75_000;
+const SILENCE_TIMEOUT_MS = 40_000;
+// The worker asks GPT-Live whether the caller is still there this long after
+// their last words, again at twice this long, then ends the call.
+const SILENCE_CHECK_MS = 12_000;
 // A call that saved a turn this recently has a live worker, even if its lock
 // lapsed, so recovery leaves it alone.
 const RECENT_ACTIVITY_MS = 45_000;
@@ -486,16 +489,20 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
       if (completed) void checkNumberTrialMinutes(input.domain, { businessId: call.businessId }).catch(logError(request.sessionId, "trial minutes check failed"));
     };
 
+    const attachedAt = performance.now();
     controller = new LiveCallController({
       client,
       sessionId: request.sessionId,
       phone,
       setup,
       silenceTimeoutMs: SILENCE_TIMEOUT_MS,
+      silenceCheckMs: SILENCE_CHECK_MS,
       maxDurationMs: Math.min(request.maxDurationMs ?? MAX_PHONE_CALL_MS, MAX_PHONE_CALL_MS),
       ...(topUp ? { topUp } : {}),
       onStarted: () => void markLiveCallMediaStarted(input.domain, call).catch(logError(request.sessionId, "media start not recorded")),
       onGreeting: (greeting) => console.info(JSON.stringify({ event: "live.greeting", sessionId: request.sessionId, ...greeting })),
+      onSilenceCheck: (stage) => console.info(JSON.stringify({ event: "live.silence_check", sessionId: request.sessionId, stage, ms: Math.round(performance.now() - attachedAt) })),
+      onSilenceRescue: () => console.info(JSON.stringify({ event: "live.silence_rescued", sessionId: request.sessionId })),
       onTurn: (turn) => void savedTurns.then((saved) => retryWrite(() => saveLiveCallTurn(input.domain, { ...call, ...turn, sequence: turn.sequence + saved }))).catch(logError(request.sessionId, "transcript save failed")),
       onTimeout: (reason) => void controller!.wrapUp(reason),
       onTransfer: (state) => {

@@ -991,6 +991,20 @@ describe("live call latency telemetry", () => {
     info.mockRestore();
   });
 
+  it("gives the controller the silence ladder, and logs each check-in and the rescue", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const options = await startCall();
+    expect(options.silenceTimeoutMs).toBe(40_000);
+    expect(options.silenceCheckMs).toBe(12_000);
+    options.onSilenceCheck!(1 as never);
+    expect(info).toHaveBeenCalledWith(expect.stringMatching(/^\{"event":"live\.silence_check","sessionId":"live_2","stage":1,"ms":\d+\}$/));
+    options.onSilenceCheck!(2 as never);
+    expect(info).toHaveBeenCalledWith(expect.stringMatching(/^\{"event":"live\.silence_check","sessionId":"live_2","stage":2,"ms":\d+\}$/));
+    options.onSilenceRescue!();
+    expect(info).toHaveBeenCalledWith(JSON.stringify({ event: "live.silence_rescued", sessionId: "live_2" }));
+    info.mockRestore();
+  });
+
   it("logs the reflected caller audio on live.closed", async () => {
     const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
     const options = await startCall();

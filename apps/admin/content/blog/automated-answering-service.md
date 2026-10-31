@@ -88,7 +88,7 @@ Learn a product's limits before you forward a line. LobbyStack's are:
 - The AI doesn't reply to texts. Your team replies by hand from the dashboard.
 - Transfers go to one number per business. They're blind transfers, so the receptionist doesn't brief your staff before it puts the caller through.
 - It doesn't place outbound calls, such as callbacks or reminder calls.
-- Calls end at 30 minutes, and after 75 seconds of silence the receptionist says goodbye.
+- Calls end at 30 minutes. If the line goes quiet, the receptionist checks in before ending the call.
 - It has no practice-management, field-service or CRM sync. You can connect other tools through webhooks and the REST API.
 
 Other vendors go further on integrations. [Upfirst](https://upfirst.ai/pricing) books into Google, Outlook, Calendly, Acuity, Clio and Square calendars, and [RingCentral AI Receptionist (AIR)](https://www.ringcentral.com/pricing/ai-receptionist.html) connects to Salesforce, HubSpot and Zoho.

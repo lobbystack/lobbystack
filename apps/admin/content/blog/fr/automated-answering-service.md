@@ -90,7 +90,7 @@ Vérifiez les limites d'un produit avant d'y renvoyer votre ligne. Voici celles 
 - L'IA ne répond pas aux SMS. Votre équipe y répond à la main depuis le tableau de bord.
 - Les transferts vont vers un seul numéro par entreprise. Ce sont des transferts à l'aveugle : le réceptionniste ne présente pas l'appel à votre équipe avant de le passer.
 - Il ne passe pas d'appels sortants, par exemple pour rappeler un client ou lui rappeler un rendez-vous.
-- Les appels s'arrêtent à 30 minutes, et après 75 secondes de silence, le réceptionniste dit au revoir.
+- Les appels s'arrêtent à 30 minutes. Si la ligne devient silencieuse, le réceptionniste prend des nouvelles avant de raccrocher.
 - Il ne se synchronise avec aucun logiciel de gestion de cabinet ou d'interventions, ni avec un CRM. Vous pouvez relier d'autres outils avec les webhooks et l'API REST.
 
 D'autres fournisseurs vont plus loin sur les intégrations. [Upfirst](https://upfirst.ai/pricing) réserve dans les agendas Google, Outlook, Calendly, Acuity, Clio et Square, et [RingCentral AI Receptionist (AIR)](https://www.ringcentral.com/pricing/ai-receptionist.html) se connecte à Salesforce, HubSpot et Zoho.

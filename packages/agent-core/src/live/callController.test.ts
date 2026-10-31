@@ -29,7 +29,7 @@ type Generate = (options: { prompt: string; onStepEnd?: (step: unknown) => void 
 
 const reply = (text: string) => ({ text, steps: [{ toolCalls: [], toolResults: [] }] });
 
-function setup(options: { phone?: boolean; silenceTimeoutMs?: number; maxDurationMs?: number; topUp?: () => Promise<number>; firstEventTimeoutMs?: number; generate?: Generate; callerDone?: LiveCallSetup["callerDone"]; callerLeaving?: LiveCallSetup["callerLeaving"]; setup?: Promise<LiveCallSetup>; onGreeting?: (event: GreetingEvent) => void; refer?: ReturnType<typeof vi.fn> } = {}) {
+function setup(options: { phone?: boolean; silenceTimeoutMs?: number; silenceCheckMs?: number; maxDurationMs?: number; topUp?: () => Promise<number>; firstEventTimeoutMs?: number; generate?: Generate; callerDone?: LiveCallSetup["callerDone"]; callerLeaving?: LiveCallSetup["callerLeaving"]; setup?: Promise<LiveCallSetup>; onGreeting?: (event: GreetingEvent) => void; onSilenceCheck?: (stage: number) => void; onSilenceRescue?: () => void; refer?: ReturnType<typeof vi.fn> } = {}) {
   const generate = vi.fn(options.generate ?? (async () => ({ text: "We're open until 5.", steps: [{ toolCalls: [{ toolCallId: "call_1", toolName: "getBusinessHours" }], toolResults: [] }, { toolCalls: [], toolResults: [] }] })));
   const turns: LiveCallTurn[] = [];
   const closed: LiveCallSummary[] = [];
@@ -44,10 +44,13 @@ function setup(options: { phone?: boolean; silenceTimeoutMs?: number; maxDuratio
     phone: options.phone ?? true,
     setup: options.setup ?? { agent: { generate } as never, greeting: "Thanks for calling Northside Plumbing.", ...(options.callerDone ? { callerDone: options.callerDone } : {}), ...(options.callerLeaving ? { callerLeaving: options.callerLeaving } : {}) },
     ...(options.silenceTimeoutMs ? { silenceTimeoutMs: options.silenceTimeoutMs } : {}),
+    ...(options.silenceCheckMs ? { silenceCheckMs: options.silenceCheckMs } : {}),
     ...(options.maxDurationMs ? { maxDurationMs: options.maxDurationMs } : {}),
     ...(options.topUp ? { topUp: options.topUp } : {}),
     ...(options.firstEventTimeoutMs ? { firstEventTimeoutMs: options.firstEventTimeoutMs } : {}),
     ...(options.onGreeting ? { onGreeting: options.onGreeting } : {}),
+    ...(options.onSilenceCheck ? { onSilenceCheck: options.onSilenceCheck } : {}),
+    ...(options.onSilenceRescue ? { onSilenceRescue: options.onSilenceRescue } : {}),
     onTurn: (turn) => turns.push(turn),
     onTimeout,
     onTransfer: (state) => transfers.push(state),
@@ -60,6 +63,8 @@ function setup(options: { phone?: boolean; silenceTimeoutMs?: number; maxDuratio
 
 const sentOfType = (socket: FakeSocket, type: string) => socket.sent.filter((event) => event.type === type) as Array<{ event_id: string; content: string; delegation_id: string | null }>;
 const greetings = (socket: FakeSocket) => socket.sent.filter((event) => String(event.event_id).startsWith("greeting_")) as Array<{ event_id: string; content: string }>;
+const silenceChecks = (socket: FakeSocket) => socket.sent.filter((event) => String(event.event_id).startsWith("silence_check_")) as Array<{ event_id: string; content: string; delegation_id: string | null }>;
+const silenceRescues = (socket: FakeSocket) => socket.sent.filter((event) => String(event.event_id).startsWith("silence_rescue_")) as Array<{ event_id: string; content: string }>;
 // performance.now() drives the goodbye and attach timing, so it's faked too.
 const fakeTimers = () => vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "Date", "performance"] });
 
@@ -1123,6 +1128,250 @@ describe("LiveCallController transcript and silence", () => {
   });
 });
 
+describe("LiveCallController silence ladder", () => {
+  const greet = async (socket: FakeSocket, atMs = 1_000) => {
+    socket.socket.emit("open");
+    socket.emit("session.started", {});
+    await vi.advanceTimersByTimeAsync(atMs);
+    socket.emit("session.output_transcript.delta", { delta: "Thanks for calling Northside Plumbing.", start_ms: atMs - 500, end_ms: atMs });
+  };
+
+  it("checks in at 12 seconds without hanging up, checks again at 24, and asks for the notice at 40", async () => {
+    fakeTimers();
+    const checks: number[] = [];
+    const { socket, controller, onTimeout, hangup } = setup({ silenceTimeoutMs: 40_000, silenceCheckMs: 12_000, onSilenceCheck: (stage) => checks.push(stage) });
+    await greet(socket);
+    await vi.advanceTimersByTimeAsync(11_999);
+    expect(silenceChecks(socket)).toEqual([]);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(silenceChecks(socket)).toEqual([expect.objectContaining({ delegation_id: null, event_id: "silence_check_1_1", content: "The caller has gone quiet. In the language of the conversation, ask briefly whether they are still there." })]);
+    expect(checks).toEqual([1]);
+    expect(onTimeout).not.toHaveBeenCalled();
+    expect(hangup).not.toHaveBeenCalled();
+
+    // GPT-Live asks it, which doesn't move the ladder.
+    socket.emit("session.output_transcript.delta", { delta: "Hello? Are you still there?", start_ms: 14_200, end_ms: 15_000 });
+    await vi.advanceTimersByTimeAsync(11_999);
+    expect(silenceChecks(socket)).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(silenceChecks(socket)).toEqual([expect.objectContaining({ event_id: "silence_check_1_1" }), expect.objectContaining({ event_id: "silence_check_2_2", content: "The caller is still quiet. In the language of the conversation, ask once more whether they are there or need a moment." })]);
+    expect(checks).toEqual([1, 2]);
+    expect(onTimeout).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(15_999);
+    expect(onTimeout).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(onTimeout).toHaveBeenCalledWith("silence_timeout");
+
+    // The worker's onTimeout asks for the notice, which plays before the hangup.
+    expect(hangup).not.toHaveBeenCalled();
+    void controller.wrapUp("silence_timeout");
+    expect(sentOfType(socket, "session.instructions.append").at(-1)).toEqual(expect.objectContaining({ delegation_id: null, event_id: "wrap_up_silence_timeout_1", content: "The caller hasn't answered. In the language of the conversation, say briefly that you haven't heard back, that you will disconnect, and invite them to call back if they need anything." }));
+    socket.emit("session.instructions.appended", { client_event_id: "wrap_up_silence_timeout_1" });
+    socket.emit("session.output_transcript.delta", { delta: "I haven't heard back, so I'll disconnect. Call back if you need anything.", start_ms: 43_000, end_ms: 48_000 });
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(hangup).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(400);
+    expect(hangup).toHaveBeenCalledWith("live_1");
+  });
+
+  it("counts the ladder from the caller's new words", async () => {
+    fakeTimers();
+    const { socket, onTimeout } = setup({ silenceTimeoutMs: 40_000, silenceCheckMs: 12_000 });
+    await greet(socket);
+    await vi.advanceTimersByTimeAsync(10_000);
+    socket.emit("session.input_transcript.delta", { delta: "Hello?", start_ms: 10_500, end_ms: 11_000 });
+    await vi.advanceTimersByTimeAsync(11_999);
+    expect(silenceChecks(socket)).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(silenceChecks(socket)).toEqual([expect.objectContaining({ event_id: "silence_check_1_1" })]);
+    await vi.advanceTimersByTimeAsync(11_999);
+    expect(silenceChecks(socket)).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(silenceChecks(socket)).toHaveLength(2);
+    expect(onTimeout).not.toHaveBeenCalled();
+  });
+
+  it("holds the check-ins and the deadline while a request is being answered, without moving the deadline", async () => {
+    fakeTimers();
+    let finish!: () => void;
+    const { socket, onTimeout } = setup({ silenceTimeoutMs: 40_000, silenceCheckMs: 12_000, generate: async () => { await new Promise<void>((resolve) => { finish = resolve; }); return reply("Done."); } });
+    await greet(socket);
+    socket.emit("session.input_transcript.delta", { delta: "Can you check that?", start_ms: 1_500, end_ms: 2_000 });
+    socket.emit("session.delegation.created", { delegation: { id: "item_1" }, offset_ms: 1_900 });
+    await vi.advanceTimersByTimeAsync(40_000);
+    expect(silenceChecks(socket)).toEqual([]);
+    expect(onTimeout).not.toHaveBeenCalled();
+    finish();
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(silenceChecks(socket)).toEqual([]);
+    // The answer re-arms the ladder from its delivery.
+    await vi.advanceTimersByTimeAsync(12_000);
+    expect(silenceChecks(socket)).toEqual([expect.objectContaining({ event_id: "silence_check_1_1" })]);
+  });
+
+  it("never checks in before the greeting has played", async () => {
+    fakeTimers();
+    const { socket, onTimeout } = setup({ silenceTimeoutMs: 40_000, silenceCheckMs: 12_000 });
+    socket.socket.emit("open");
+    socket.emit("session.started", {});
+    await vi.advanceTimersByTimeAsync(40_000);
+    expect(silenceChecks(socket)).toEqual([]);
+    expect(onTimeout).toHaveBeenCalledWith("silence_timeout");
+  });
+
+  it("never checks in during a transfer", async () => {
+    fakeTimers();
+    const { socket, controller, onTimeout } = setup({ silenceTimeoutMs: 40_000, silenceCheckMs: 12_000, refer: vi.fn(() => new Promise(() => undefined)) });
+    await greet(socket);
+    expect(controller.transferAfterAnnouncement("tel:+14165550199")).toBe(true);
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(silenceChecks(socket)).toEqual([]);
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(silenceChecks(socket)).toEqual([]);
+    expect(onTimeout).not.toHaveBeenCalled();
+  });
+
+  it("starts the ladder over when a transfer fails", async () => {
+    fakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { socket, controller, transfers } = setup({ silenceTimeoutMs: 40_000, silenceCheckMs: 12_000, refer: vi.fn(async () => undefined) });
+    await greet(socket);
+    expect(controller.transferAfterAnnouncement("tel:+14165550199")).toBe(true);
+    // The announcement goes unspoken, so the REFER goes out after the 4 seconds.
+    await vi.advanceTimersByTimeAsync(4_400);
+    expect(transfers).toEqual(["referring", "referred"]);
+    // Past the point the ladder would have checked in from the greeting.
+    await vi.advanceTimersByTimeAsync(8_000);
+    expect(silenceChecks(socket)).toEqual([]);
+    socket.emit("transport.failed", { type: "transport.failed", session_id: "live_1", error: { code: "busy", message: "Busy Here", type: "call_error" } });
+    expect(transfers).toEqual(["referring", "referred", "failed"]);
+    // The failure restarts the ladder, so the check-in comes 12 seconds later.
+    await vi.advanceTimersByTimeAsync(11_999);
+    expect(silenceChecks(socket)).toEqual([]);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(silenceChecks(socket)).toEqual([expect.objectContaining({ event_id: "silence_check_1_1" })]);
+  });
+
+  it("never checks in while a keypad PIN is being taken", async () => {
+    fakeTimers();
+    const { socket, controller, onTimeout } = setup({ silenceTimeoutMs: 40_000, silenceCheckMs: 12_000 });
+    await greet(socket);
+    expect(controller.collectPasscode(async () => ({ status: "accepted", result: { ok: true } }))).toBe(true);
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(silenceChecks(socket)).toEqual([]);
+    expect(onTimeout).not.toHaveBeenCalled();
+  });
+
+  it("defers a check-in while the receptionist is speaking", async () => {
+    fakeTimers();
+    const { socket } = setup({ silenceTimeoutMs: 40_000, silenceCheckMs: 12_000 });
+    await greet(socket);
+    await vi.advanceTimersByTimeAsync(11_500);
+    socket.emit("session.output_transcript.delta", { delta: "Let me look that up.", start_ms: 11_000, end_ms: 12_500 });
+    await vi.advanceTimersByTimeAsync(500);
+    expect(silenceChecks(socket)).toEqual([]);
+    await vi.advanceTimersByTimeAsync(500);
+    expect(silenceChecks(socket)).toEqual([expect.objectContaining({ event_id: "silence_check_1_1" })]);
+  });
+
+  it("waits for the receptionist to finish its sentence before the notice", async () => {
+    fakeTimers();
+    const { socket, onTimeout } = setup({ silenceTimeoutMs: 40_000, silenceCheckMs: 12_000 });
+    await greet(socket);
+    await vi.advanceTimersByTimeAsync(39_500);
+    socket.emit("session.output_transcript.delta", { delta: "Let me read out the details for you.", start_ms: 39_000, end_ms: 40_500 });
+    await vi.advanceTimersByTimeAsync(500);
+    expect(onTimeout).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(onTimeout).toHaveBeenCalledWith("silence_timeout");
+  });
+
+  it("keeps the call going when the caller speaks during the silence notice", async () => {
+    fakeTimers();
+    const rescues = vi.fn();
+    const { socket, controller, onTimeout, hangup, closed } = setup({ silenceTimeoutMs: 40_000, silenceCheckMs: 12_000, onSilenceRescue: rescues });
+    socket.socket.emit("open");
+    socket.emit("session.started", {});
+    // The caller's words place the session timeline.
+    socket.emit("session.input_transcript.delta", { delta: "Hi, are you open on Saturday?", start_ms: 500, end_ms: 1_000 });
+    socket.emit("session.output_transcript.delta", { delta: "Thanks for calling Northside Plumbing.", start_ms: 1_000, end_ms: 2_000 });
+    await vi.advanceTimersByTimeAsync(40_000);
+    expect(onTimeout).toHaveBeenCalledWith("silence_timeout");
+    void controller.wrapUp("silence_timeout");
+    socket.emit("session.instructions.appended", { client_event_id: "wrap_up_silence_timeout_1" });
+    socket.emit("session.output_transcript.delta", { delta: "I haven't heard back, so I'll disconnect. Call back if you need anything.", start_ms: 41_000, end_ms: 44_000 });
+    // The notice is still playing when the caller comes back.
+    await vi.advanceTimersByTimeAsync(2_500);
+    expect(hangup).not.toHaveBeenCalled();
+    socket.emit("session.input_transcript.delta", { delta: "Wait, I'm still here!", start_ms: 43_600, end_ms: 44_000 });
+    expect(rescues).toHaveBeenCalledOnce();
+    expect(silenceRescues(socket)).toEqual([expect.objectContaining({ event_id: "silence_rescue_1", content: expect.stringContaining("the call continues") })]);
+    // The notice's own afterSpeech pass no longer ends the call.
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(hangup).not.toHaveBeenCalled();
+    socket.emit("session.closed", { reason: "remote_hangup" });
+    expect(closed[0]?.end).toBe("caller_hung_up");
+  });
+
+  it("calls off the hangup when the caller speaks just after the notice plays", async () => {
+    fakeTimers();
+    const { socket, controller, onTimeout, hangup } = setup({ silenceTimeoutMs: 40_000, silenceCheckMs: 12_000 });
+    socket.socket.emit("open");
+    socket.emit("session.started", {});
+    // The caller's words place the session timeline.
+    socket.emit("session.input_transcript.delta", { delta: "Hi, are you open on Saturday?", start_ms: 500, end_ms: 1_000 });
+    socket.emit("session.output_transcript.delta", { delta: "Thanks for calling Northside Plumbing.", start_ms: 1_000, end_ms: 2_000 });
+    await vi.advanceTimersByTimeAsync(40_000);
+    expect(onTimeout).toHaveBeenCalledWith("silence_timeout");
+    void controller.wrapUp("silence_timeout");
+    socket.emit("session.instructions.appended", { client_event_id: "wrap_up_silence_timeout_1" });
+    // The notice runs to 43 seconds from now on the session timeline.
+    socket.emit("session.output_transcript.delta", { delta: "I haven't heard back, so I'll disconnect. Call back if you need anything.", start_ms: 41_000, end_ms: 44_000 });
+    // The notice has played out, but the hangup hasn't gone yet.
+    await vi.advanceTimersByTimeAsync(3_100);
+    expect(hangup).not.toHaveBeenCalled();
+    socket.emit("session.input_transcript.delta", { delta: "Wait, I'm still here!", start_ms: 43_100, end_ms: 43_500 });
+    expect(silenceRescues(socket)).toEqual([expect.objectContaining({ event_id: "silence_rescue_1" })]);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(hangup).not.toHaveBeenCalled();
+  });
+
+  it("gives a second silence notice its own command id", async () => {
+    fakeTimers();
+    const { socket, controller, onTimeout } = setup({ silenceTimeoutMs: 40_000, silenceCheckMs: 12_000 });
+    socket.socket.emit("open");
+    socket.emit("session.started", {});
+    socket.emit("session.input_transcript.delta", { delta: "Hi, are you open on Saturday?", start_ms: 500, end_ms: 1_000 });
+    socket.emit("session.output_transcript.delta", { delta: "Thanks for calling Northside Plumbing.", start_ms: 1_000, end_ms: 2_000 });
+    await vi.advanceTimersByTimeAsync(40_000);
+    expect(onTimeout).toHaveBeenCalledTimes(1);
+    void controller.wrapUp("silence_timeout");
+    socket.emit("session.instructions.appended", { client_event_id: "wrap_up_silence_timeout_1" });
+    socket.emit("session.output_transcript.delta", { delta: "I haven't heard back, so I'll disconnect.", start_ms: 41_000, end_ms: 44_000 });
+    await vi.advanceTimersByTimeAsync(2_500);
+    // The caller comes back before the hangup, so the first notice is called off.
+    socket.emit("session.input_transcript.delta", { delta: "Wait, I'm here!", start_ms: 43_600, end_ms: 44_000 });
+    expect(silenceRescues(socket)).toHaveLength(1);
+    // They go quiet again, and the second deadline asks for a second notice.
+    await vi.advanceTimersByTimeAsync(40_000);
+    expect(onTimeout).toHaveBeenCalledTimes(2);
+    void controller.wrapUp("silence_timeout");
+    expect(sentOfType(socket, "session.instructions.append").at(-1)).toEqual(expect.objectContaining({ event_id: "wrap_up_silence_timeout_2" }));
+  });
+
+  it("leaves a duration limit's end in place when the caller speaks", async () => {
+    fakeTimers();
+    const { socket, controller, hangup } = setup({ silenceTimeoutMs: 40_000, silenceCheckMs: 12_000 });
+    await greet(socket);
+    void controller.wrapUp("duration_limit");
+    socket.emit("session.input_transcript.delta", { delta: "Wait, I have a question!", start_ms: 1_500, end_ms: 2_000 });
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect(hangup).toHaveBeenCalledWith("live_1");
+    expect(silenceChecks(socket)).toEqual([]);
+  });
+});
+
 describe("LiveCallController wrap-up", () => {
   it("tells GPT-Live why the call is ending, and hangs up once the goodbye has played", async () => {
     fakeTimers();
@@ -1130,7 +1379,7 @@ describe("LiveCallController wrap-up", () => {
     // The caller's words place the session timeline: 1,000 ms in, now.
     socket.emit("session.input_transcript.delta", { delta: "So about that quote...", start_ms: 500, end_ms: 1_000 });
     const done = controller.wrapUp("duration_limit");
-    expect(sentOfType(socket, "session.instructions.append")).toEqual([expect.objectContaining({ delegation_id: null, event_id: "wrap_up_duration_limit", content: expect.stringContaining("reached its time limit") })]);
+    expect(sentOfType(socket, "session.instructions.append")).toEqual([expect.objectContaining({ delegation_id: null, event_id: "wrap_up_duration_limit_1", content: expect.stringContaining("reached its time limit") })]);
     await vi.advanceTimersByTimeAsync(1_000);
     // The goodbye runs to 4,500 ms on the timeline: 2.5 seconds from now.
     socket.emit("session.output_transcript.delta", { delta: "I'm sorry, we're out of time. Please call back. Goodbye!", start_ms: 2_000, end_ms: 4_500 });
@@ -1186,7 +1435,7 @@ describe("LiveCallController wrap-up", () => {
     socket.emit("session.output_transcript.delta", { delta: "It's forty dollars.", start_ms: 900, end_ms: 1_100 });
     void controller.wrapUp("duration_limit");
     await vi.advanceTimersByTimeAsync(300);
-    socket.emit("session.instructions.appended", { client_event_id: "wrap_up_duration_limit" });
+    socket.emit("session.instructions.appended", { client_event_id: "wrap_up_duration_limit_1" });
     // Measured from the request, that sentence would have ended the call by now.
     await vi.advanceTimersByTimeAsync(1_700);
     expect(hangup).not.toHaveBeenCalled();

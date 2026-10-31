@@ -8,7 +8,7 @@ import { OPENING, type CallScenario } from "./scenarios";
 const VOICE = "Polly.Joanna-Neural";
 const GREETING_WAIT_S = 6;
 const ANSWER_WAIT_S = 12;
-const FINAL_SILENCE_S = 40;
+const FINAL_SILENCE_S = 65;
 
 /** The call's TwiML, and the seconds of silence in it. A call shorter than that silence ended early. */
 export function callTwiml(scenario: CallScenario): { twiml: string; silenceS: number } {

@@ -34,7 +34,7 @@ These options change what runs:
 - **`--locale <code>`**: sets the business's caller language to `en`, `fr`, `es`, `sr`, `de`, `pt`, `it` or `nl` and gives it that language's default greeting. The scripted caller speaks the same language. Without it, the caller speaks English and the business keeps its own language and greeting.
 - **`--browser`**: plays a browser call, like one from the website widget, instead of a phone call. GPT-Live gets the browser call's instructions, the agent runs on the `web_voice` channel, and the caller's audio skips the phone-line filter. Use it after you change what browser calls hear, such as how they answer a caller who asks for a person.
 
-Each run uses under a minute of GPT-Live audio, plus a delegation model call for each hand-over. The default 18 runs take about 5 minutes.
+Each run uses under a minute of GPT-Live audio, plus a delegation model call for each hand-over. The default runs take several minutes, and `goes-quiet` adds its longer end window.
 
 Agent tools that read the database fail in the eval, as they would with the database down. A hand-over that needs one, such as booking, gets the agent's failure answer. Use the eval for how calls flow and end, not for booking results.
 
@@ -50,12 +50,14 @@ Each field answers one question:
 
 - **`PASS` or `FAIL`**: whether the call ended or went on, as the scenario expects
 - **`greeted at … s`**: when the receptionist first spoke, before the caller did, and how many greeting commands the worker sent. The caller waits 15 seconds for it.
-- **`ended … after the caller`**: how long after the caller's last line the controller closed the session, or `still open` after 15 seconds
+- **`ended … after the caller`**: how long after the caller's last line the controller closed the session, or `still open` when the scenario's end window passed
 - **`hand-overs`**: each request GPT-Live handed to the backend after the opening question, by the tools the agent used. `reply` means the agent answered without a tool.
 - **`checks`**: each answer from the caller check, which runs when the caller speaks after the agent ended the call
 - **`goodbyes`**: how many of the receptionist's lines said goodbye. More than 1 means the caller heard a double goodbye.
 - **`opened`**: the greeting, then the answer to the opening question. With `--locale`, check that both are in that language.
 - **`receptionist`**: what the receptionist said after the opening question
+
+The `goes-quiet` scenario answers the opening question and then says nothing. Its end window is 60 seconds, so the receptionist has time to check in twice and then end the call. Read its `receptionist` lines for the two check-ins and the notice.
 
 The script exits with code 1 when any run fails.
 
@@ -75,7 +77,7 @@ pnpm voice:eval --snapshot snapshot.json
 
 ## Place real test calls
 
-`pnpm voice:call` calls a receptionist's number with Twilio and plays the same scenarios with Amazon Polly's voice. After the scripted lines, the caller stays silent for 40 seconds. If the call ends before the script's silences add up, the receptionist hung up.
+`pnpm voice:call` calls a receptionist's number with Twilio and plays the same scenarios with Amazon Polly's voice. After the scripted lines, the caller stays silent for 65 seconds. If the call ends before the script's silences add up, the receptionist hung up.
 
 You need a Twilio number to call from and the auth token of the account that owns it. To test staging, call the staging number from a number on another account, such as the production toll-free number:
 
@@ -139,6 +141,7 @@ Both scripts read their callers from `scripts/voice/scenarios.ts`. Every call fi
 - **`name`**: what you pass to `--scenario`
 - **`expect`**: `ends` when the receptionist should hang up after the last line, `continues` when the call should go on
 - **`lines`**: the caller's lines, each with an optional `pauseMs` of silence before it. A line has `text` for words or `digits` for keys, such as `"5829#"`. The phone script rounds pauses to whole seconds and presses keys with Twilio's `<Play digits>`.
+- **`endWindowMs`**: optional. How long the eval waits for the call to end after the last line. The default is 15 seconds. A scenario where the caller says nothing needs longer, as `goes-quiet` does with 60 seconds.
 - **`mustNotSay`**: optional. The eval fails a run when any of the receptionist's lines matches this pattern. The phone script can't check it.
 
 Add a scenario when you fix a call that went wrong, so the eval catches the same failure next time. Put a scenario that books or changes an appointment in `BOOKING_SCENARIOS`, so it runs only when you name it. Add each new line in `SCENARIOS` to `TRANSLATED_LINES` in every caller language, or `--locale` stops with an error naming the missing line. The eval can't press keys and stops with an error on a scenario with `digits`, so keep those out of `SCENARIOS`.

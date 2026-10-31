@@ -21,7 +21,10 @@ const RATE = 24_000;
 const CHUNK_MS = 100;
 const CHUNK_BYTES = (RATE * 2 * CHUNK_MS) / 1000;
 // How long a run waits after the caller's last line for the receptionist to hang up.
-const END_WINDOW_MS = 15_000;
+const DEFAULT_END_WINDOW_MS = 15_000;
+// The worker's silence ladder, so a silent caller ends the call the same way over the API.
+const SILENCE_TIMEOUT_MS = 40_000;
+const SILENCE_CHECK_MS = 12_000;
 // The receptionist has answered once it has been quiet this long after speaking.
 const REPLY_QUIET_MS = 1_500;
 // How long the caller waits for a greeting before speaking: long enough for the worker's fallback and both retries.
@@ -162,6 +165,9 @@ async function run(scenario: Scenario, audio: Map<string, Buffer>, agentModel: N
       sessionId: `eval_${scenario.name}`,
       phone: false,
       setup: { agent, greeting: snapshot.greeting, callerDone: async (conversation, abortSignal) => { const done = await callerIsDone(agentModel, conversation, abortSignal); checks.push(done); return done; }, callerLeaving: (conversation, abortSignal) => callerIsLeaving(agentModel, conversation, abortSignal) },
+      silenceTimeoutMs: SILENCE_TIMEOUT_MS,
+      silenceCheckMs: SILENCE_CHECK_MS,
+      onTimeout: (reason) => void controller.wrapUp(reason),
       connect: () => ws as unknown as SidebandWS,
       onDelegation: (timing) => { if (timing.offsetMs >= scenarioStartMs) handOvers.push(timing.tools.join("+") || "reply"); },
       onGreeting: (event) => { if (event.step === "sent") greetingCommands += 1; },
@@ -210,7 +216,7 @@ async function run(scenario: Scenario, audio: Map<string, Buffer>, agentModel: N
       await play(line.text);
     }
     const lastLineAt = sessionMs;
-    const ended = await Promise.race([closedAt.then((at) => at), sleep(END_WINDOW_MS).then(() => undefined)]);
+    const ended = await Promise.race([closedAt.then((at) => at), sleep(scenario.endWindowMs ?? DEFAULT_END_WINDOW_MS).then(() => undefined)]);
     flushReply();
     if (ended === undefined) {
       ws.send({ type: "session.close" });

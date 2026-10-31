@@ -13,6 +13,12 @@ export type CallScenario = {
   /** "ends": the receptionist should hang up after the last line. "continues": the call should go on. */
   expect: "ends" | "continues";
   lines: CallerLine[];
+  /**
+   * How long the eval waits for the call to end after the caller's last line.
+   * The default is 15 seconds; a scenario that leaves the caller silent needs
+   * longer, for the silence ladder to run.
+   */
+  endWindowMs?: number;
   /** The eval fails a run when any of the receptionist's lines matches this. The phone script can't check it. */
   mustNotSay?: RegExp;
 };
@@ -28,6 +34,9 @@ export const SCENARIOS: CallScenario[] = [
   { name: "has-to-go", expect: "ends", lines: [{ text: "Ah no, I actually have to go. Bye bye." }] },
   // The caller answers the receptionist's goodbye with their own.
   { name: "trailing-goodbye", expect: "ends", lines: [{ text: "No, that's everything." }, { text: "Goodbye!", pauseMs: 1_500 }] },
+  // The caller asks the opening question, then goes quiet: the receptionist
+  // should check in, check again, and end the call with a notice.
+  { name: "goes-quiet", expect: "ends", lines: [], endWindowMs: 60_000 },
   // The caller pauses before the question, so the receptionist mustn't hang up meanwhile.
   { name: "one-more-thing", expect: "continues", lines: [{ text: "No, that's everything." }, { text: "Oh wait, one more thing.", pauseMs: 3_000 }, { text: "Do you have parking?", pauseMs: 3_000 }] },
 ];

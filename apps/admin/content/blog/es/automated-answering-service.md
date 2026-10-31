@@ -88,7 +88,7 @@ Conozca los límites de un producto antes de desviar una línea. Estos son los d
 - La IA no responde mensajes de texto. Su equipo los contesta a mano desde el panel.
 - Las transferencias van a un solo número por negocio. Son transferencias ciegas, así que la recepcionista no pone al tanto a su personal antes de pasarle la llamada.
 - No hace llamadas salientes, como devoluciones de llamada o recordatorios por teléfono.
-- Las llamadas terminan a los 30 minutos, y tras 75 segundos de silencio la recepcionista se despide.
+- Las llamadas terminan a los 30 minutos. Si la línea se queda en silencio, la recepcionista pregunta si sigue ahí antes de despedirse.
 - No se sincroniza con software de gestión de consultorios, de servicios de campo ni con un CRM. Puede conectar otras herramientas mediante webhooks y la API REST.
 
 Otros proveedores van más lejos en integraciones. [Upfirst](https://upfirst.ai/pricing) reserva en calendarios de Google, Outlook, Calendly, Acuity, Clio y Square, y [RingCentral AI Receptionist (AIR)](https://www.ringcentral.com/pricing/ai-receptionist.html) se conecta con Salesforce, HubSpot y Zoho.
