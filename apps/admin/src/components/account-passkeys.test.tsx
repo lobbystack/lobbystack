@@ -112,6 +112,7 @@ describe("passkeys on the account page", () => {
     ["the browser reports \"not allowed\"", "ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY", null],
     ["the device already has one", "ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED", "account.passkeys.errors.alreadyAdded"],
     ["the session is too old to add one", "SESSION_NOT_FRESH", "account.passkeys.errors.signInAgain"],
+    ["the account's email isn't verified", "EMAIL_NOT_VERIFIED", "account.passkeys.errors.verifyEmail"],
     ["the browser rejects this address", "ERROR_INVALID_RP_ID", "account.passkeys.errors.wrongAddress"],
     ["anything else goes wrong", "UNKNOWN_ERROR", "account.passkeys.errors.addFailed"],
   ])("handles adding when %s", async (_case, code, message) => {

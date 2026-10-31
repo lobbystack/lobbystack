@@ -679,6 +679,7 @@
         "wrongAddress": "Las llaves de acceso no están configuradas para esta dirección. Abra la aplicación en su dirección habitual y vuelva a intentarlo.",
         "alreadyAdded": "Este dispositivo ya tiene una llave de acceso para su cuenta.",
         "signInAgain": "Vuelva a iniciar sesión y añada una llave de acceso.",
+        "verifyEmail": "Verifique su correo y luego añada una llave de acceso.",
         "renameFailed": "No pudimos renombrar la llave de acceso. Inténtelo de nuevo.",
         "removeFailed": "No pudimos eliminar la llave de acceso. Inténtelo de nuevo.",
         "loadFailed": "No pudimos cargar sus llaves de acceso."

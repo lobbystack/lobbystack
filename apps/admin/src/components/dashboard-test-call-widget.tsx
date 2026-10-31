@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Phone } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
@@ -87,7 +86,6 @@ export function DashboardTestCallWidget({
         type="button"
         variant="outline"
       >
-        <Phone className="text-sidebar-foreground" />
         <span className="text-sidebar-foreground">{t("testCall.trigger")}</span>
       </Button>
 
