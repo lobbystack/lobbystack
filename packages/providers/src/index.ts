@@ -13,3 +13,4 @@ export * from "./storage/local";
 export * from "./storage/provider";
 export * from "./stripe/stripeConnect";
 export * from "./twilio/twilioProvider";
+export * from "./telephony";

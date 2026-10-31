@@ -1030,7 +1030,7 @@ export async function deletePartnerBusinessInTransaction(tx: DatabaseTransaction
   const [provisioning] = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "provisioning"))).limit(1);
   if (claiming || provisioning) throw failure("The business's phone number is still being set up. Try again in a few minutes.", 409, "business_number_in_progress");
   // A number being released already is released again, in case that release fails once the business is gone.
-  const held = await tx.select({ id: phoneNumbers.id, e164: phoneNumbers.e164, providerPhoneId: phoneNumbers.providerPhoneId }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), inArray(phoneNumbers.status, ["active", "reclaiming"])));
+  const held = await tx.select({ id: phoneNumbers.id, e164: phoneNumbers.e164, providerPhoneId: phoneNumbers.providerPhoneId, carrier: phoneNumbers.carrier }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), inArray(phoneNumbers.status, ["active", "reclaiming"])));
   const stored = await tx.select({ objectKey: storageObjects.objectKey }).from(storageObjects).where(and(eq(storageObjects.businessId, businessId), ne(storageObjects.status, "deleted")));
   // Read who to tell before the business and its team go, whoever deletes it.
   const ownerEmails = await partnerBusinessOwnerEmails(tx, businessId);
@@ -1050,7 +1050,7 @@ export async function deletePartnerBusinessInTransaction(tx: DatabaseTransaction
       aggregateType: "phone_number",
       aggregateId: number.id,
       dedupeKey: `phone-number:${number.id}:release-deleted`,
-      payload: { providerPhoneId: number.providerPhoneId, e164: number.e164 },
+      payload: { providerPhoneId: number.providerPhoneId, e164: number.e164, carrier: number.carrier },
     });
   }
   for (let start = 0; start < stored.length; start += STORED_OBJECTS_PER_JOB) {

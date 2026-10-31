@@ -3,6 +3,7 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { and, eq, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 
 import { businesses, enqueueOutbox, numberTrials, onboardingNumberClaimEvents, phoneNumbers, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { isCarrierId, type CarrierId } from "@lobbystack/providers/telephony/types";
 
 import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
@@ -23,8 +24,10 @@ export type NumberSelection = {
   sms?: boolean;
   trial?: boolean;
   verifiedPhone?: string;
+  /** The carrier that sells the number, so the worker buys it there. */
+  carrier?: CarrierId;
 };
-export type NumberInventoryProvider = { listAvailablePhoneNumbers(input: NumberSelection & { limit: number }): Promise<Array<{ phoneE164: string; locality?: string; region?: string; countryCode: string; capabilities: { sms: boolean; voice: boolean } }>> };
+export type NumberInventoryProvider = { listAvailablePhoneNumbers(input: NumberSelection & { limit: number }): Promise<Array<{ phoneE164: string; locality?: string; region?: string; countryCode: string; capabilities: { sms: boolean; voice: boolean }; carrier?: CarrierId }>> };
 export type NumberClaimPurpose = "onboarding" | "replacement";
 /** A searched number, signed for one person and one business so a claim can trust it. */
 export type NumberOffer = { v: 1; purpose: NumberClaimPurpose; businessId: string; userId: string; e164: string; countryCode: string; kind: NumberSelection["kind"]; capabilities: { sms: boolean; voice: true }; selection: NumberSelection; exp: number };
@@ -177,8 +180,8 @@ export async function offerBusinessNumbers(input: { userId: string; businessId: 
   const selection: NumberSelection = { countryCode, kind, ...(input.selection?.areaCode ? { areaCode: input.selection.areaCode.replace(/\D/g, "") } : {}), ...(input.selection?.city ? { city: input.selection.city.trim() } : {}), ...(input.selection?.regionCode ? { regionCode: input.selection.regionCode.trim() } : {}), ...(input.selection?.postalCode ? { postalCode: input.selection.postalCode.trim() } : {}) };
   const limit = Math.max(1, Math.min(20, Math.trunc(input.limit ?? 10)));
   const exp = Date.now() + offerLifetimeMs;
-  return (await provider.listAvailablePhoneNumbers({ ...selection, limit, ...(smsRequired ? { sms: true } : {}) })).filter(number => number.capabilities.voice && (!smsRequired || number.capabilities.sms)).slice(0, limit).map(number => {
-    const offered: NumberSelection = { ...selection, sms: number.capabilities.sms, ...(trial ? { trial: true, verifiedPhone: trial.verifiedPhone } : {}) };
+  return (await provider.listAvailablePhoneNumbers({ ...selection, limit, ...(smsRequired ? { sms: true } : {}) })).filter(number => number.capabilities.voice && (!smsRequired || number.capabilities.sms)).slice(0, limit).map(({ carrier, ...number }) => {
+    const offered: NumberSelection = { ...selection, sms: number.capabilities.sms, ...(trial ? { trial: true, verifiedPhone: trial.verifiedPhone } : {}), ...(carrier ? { carrier } : {}) };
     return { ...number, kind, trial: Boolean(trial), claimToken: issueOffer({ v: 1, purpose: input.purpose, businessId: input.businessId, userId: input.userId, e164: number.phoneE164, countryCode: number.countryCode, kind, capabilities: { sms: number.capabilities.sms, voice: true }, selection: offered, exp }, input.claimTokenSecret), expiresAt: new Date(exp) };
   });
 }
@@ -298,10 +301,33 @@ const numberProvisioningLeaseMs = 10 * 60_000;
  * a partner's tier, so the worker reads what the host pays for it before
  * buying it.
  */
-export async function claimNumberProvisioning(context: DomainContext, input: { businessId: string; claimId: string }) {
+export async function claimNumberProvisioning(context: DomainContext, input: { businessId: string; claimId: string }): Promise<{ id: string; e164: string; selection: Record<string, unknown>; carrier: CarrierId; countsForPartner: boolean; reservedAt: Date; providerOrderId: string | null } | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const claim = (await tx.update(onboardingNumberClaimEvents).set({ status: "provisioning", attemptCount: sql`${onboardingNumberClaimEvents.attemptCount} + 1`, updatedAt: new Date() }).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId), or(eq(onboardingNumberClaimEvents.status, "reserved"), and(eq(onboardingNumberClaimEvents.status, "provisioning"), lt(onboardingNumberClaimEvents.updatedAt, new Date(Date.now() - numberProvisioningLeaseMs)))))).returning({ id: onboardingNumberClaimEvents.id, e164: onboardingNumberClaimEvents.requestedE164, selection: onboardingNumberClaimEvents.selectionContext }))[0];
-    return claim ? { ...claim, countsForPartner: await numberCountsForPartnerInTransaction(tx, input.businessId) } : null;
+    // The signed offer names the carrier that sells the number. An offer from before carriers were recorded is Twilio's, the column's default.
+    const carrier = sql`CASE WHEN ${onboardingNumberClaimEvents.selectionContext}->>'carrier' ~ '^[a-z][a-z0-9_]{1,31}$' THEN ${onboardingNumberClaimEvents.selectionContext}->>'carrier' ELSE ${onboardingNumberClaimEvents.carrier} END`;
+    const claim = (await tx.update(onboardingNumberClaimEvents).set({ status: "provisioning", carrier, attemptCount: sql`${onboardingNumberClaimEvents.attemptCount} + 1`, updatedAt: new Date() }).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId), or(eq(onboardingNumberClaimEvents.status, "reserved"), and(eq(onboardingNumberClaimEvents.status, "provisioning"), lt(onboardingNumberClaimEvents.updatedAt, new Date(Date.now() - numberProvisioningLeaseMs)))))).returning({ id: onboardingNumberClaimEvents.id, e164: onboardingNumberClaimEvents.requestedE164, selection: onboardingNumberClaimEvents.selectionContext, carrier: onboardingNumberClaimEvents.carrier, reservedAt: onboardingNumberClaimEvents.reservedAt, providerOrderId: onboardingNumberClaimEvents.providerOrderId }))[0];
+    if (!claim) return null;
+    if (!isCarrierId(claim.carrier)) throw new Error(`Number claim ${claim.id} names an unknown carrier, ${claim.carrier}.`);
+    return { ...claim, carrier: claim.carrier, countsForPartner: await numberCountsForPartnerInTransaction(tx, input.businessId) };
+  });
+}
+
+/**
+ * How long a claim waits on a carrier order before it fails. Telnyx can take
+ * days to review a regulated country's documents.
+ */
+export const NUMBER_ORDER_MAX_WAIT_MS = 5 * 86_400_000;
+
+/**
+ * Keeps a claim provisioning while the carrier finishes its order, with the
+ * order's id so the next attempt checks it instead of ordering again.
+ * Returns when that attempt can take the claim.
+ */
+export async function deferNumberProvisioning(context: DomainContext, input: { businessId: string; claimId: string; providerOrderId: string }): Promise<Date> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const now = new Date();
+    await tx.update(onboardingNumberClaimEvents).set({ providerOrderId: input.providerOrderId, lastError: "Waiting for the carrier to finish the number order.", updatedAt: now }).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId), eq(onboardingNumberClaimEvents.status, "provisioning")));
+    return new Date(now.getTime() + numberProvisioningLeaseMs);
   });
 }
 
@@ -318,13 +344,13 @@ export async function numberProvisioningLeaseEndsAt(context: DomainContext, inpu
  * the host pays for the number each month, is recorded for a number that
  * counts against a partner's tier.
  */
-export async function completeNumberProvisioning(context: DomainContext, input: { businessId: string; claimId: string; e164: string; providerPhoneId: string; voiceUrl: string; smsUrl: string; monthlyCostCents?: number | undefined }): Promise<string> {
+export async function completeNumberProvisioning(context: DomainContext, input: { businessId: string; claimId: string; carrier?: CarrierId; e164: string; providerPhoneId: string; carrierConnectionId?: string | undefined; voiceUrl: string; smsUrl?: string; monthlyCostCents?: number | undefined }): Promise<string> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const existing = (await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(eq(phoneNumbers.providerPhoneId, input.providerPhoneId)).limit(1))[0];
     const offered = (await tx.select({ selection: onboardingNumberClaimEvents.selectionContext }).from(onboardingNumberClaimEvents).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId))).limit(1))[0]?.selection;
     // Claims from before voice-only numbers didn't record texting; those numbers all text.
     const smsEnabled = offered?.sms !== false;
-    const [number] = existing ? [existing] : await tx.insert(phoneNumbers).values({ businessId: input.businessId, e164: input.e164, providerPhoneId: input.providerPhoneId, status: "active", voiceEnabled: true, smsEnabled, voiceWebhookStatus: "synced", voiceWebhookTargetUrl: input.voiceUrl, voiceWebhookLastSyncedAt: new Date(), smsWebhookStatus: "synced", smsWebhookTargetUrl: input.smsUrl, smsWebhookLastSyncedAt: new Date() }).returning({ id: phoneNumbers.id });
+    const [number] = existing ? [existing] : await tx.insert(phoneNumbers).values({ businessId: input.businessId, e164: input.e164, providerPhoneId: input.providerPhoneId, ...(input.carrier ? { carrier: input.carrier } : {}), ...(input.carrierConnectionId ? { carrierConnectionId: input.carrierConnectionId } : {}), status: "active", voiceEnabled: true, smsEnabled, voiceWebhookStatus: "synced", voiceWebhookTargetUrl: input.voiceUrl, voiceWebhookLastSyncedAt: new Date(), ...(input.smsUrl ? { smsWebhookStatus: "synced", smsWebhookTargetUrl: input.smsUrl, smsWebhookLastSyncedAt: new Date() } : {}) }).returning({ id: phoneNumbers.id });
     if (!number) throw new Error("Provisioned number could not be persisted.");
     if (input.monthlyCostCents !== undefined) await recordPartnerNumberCostInTransaction(tx, { businessId: input.businessId, phoneNumberId: number.id, monthlyCostCents: input.monthlyCostCents });
     const claim = (await tx.update(onboardingNumberClaimEvents).set({ status: "claimed", phoneNumberId: number.id, providerPhoneId: input.providerPhoneId, purchasedAt: new Date(), completedAt: new Date(), updatedAt: new Date() }).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId), eq(onboardingNumberClaimEvents.status, "provisioning"))).returning({ purpose: onboardingNumberClaimEvents.purpose, replacingPhoneNumberId: onboardingNumberClaimEvents.replacingPhoneNumberId }))[0];

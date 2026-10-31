@@ -10,6 +10,7 @@ const rows = vi.hoisted(() => ({
   optIn: { claimSmsOptInConfirmation: vi.fn(), releaseSmsOptInConfirmation: vi.fn() },
   branding: { deploymentAppName: vi.fn() },
   brands: { brandForBusiness: vi.fn() },
+  sender: { businessNumberCarrier: vi.fn(async () => null) },
 }));
 vi.mock("./sms", () => rows.sms);
 vi.mock("./appointmentChanges", () => rows.changeCode);
@@ -19,9 +20,13 @@ vi.mock("./billing", () => rows.usage);
 vi.mock("./productEvents", () => rows.events);
 vi.mock("./smsOptIn", () => rows.optIn);
 vi.mock("./branding", () => rows.branding);
+vi.mock("./smsSender", () => rows.sender);
 vi.mock("./brands", async (importOriginal) => ({ ...await importOriginal<typeof import("./brands")>(), ...rows.brands }));
 
-import { deliverOutbound, type OutboundDelivery } from "./outboundDelivery";
+import { twilioStatusCallbackUrl } from "@lobbystack/providers/twilio/twilioCarrier";
+import { permanentSmsErrorCode } from "@lobbystack/shared";
+
+import { deliverOutbound, type OutboundDelivery, type OutboundProviders } from "./outboundDelivery";
 
 const context = { db: {} as never };
 const businessId = "business-1";
@@ -30,8 +35,12 @@ const twilioError = (code: number) => Object.assign(new Error(`Twilio error ${co
 const smsTarget = { to: "+14165550123", from: "+14165550100" };
 const { sms, changeCode, code, notifications, usage, optIn } = rows;
 
-function providers() {
-  return { twilio: { sendSms: vi.fn().mockResolvedValue({ providerMessageId: "SM1" }) }, email: { sendTemplate: vi.fn().mockResolvedValue({ messageId: "email-1" }) } };
+/** Twilio texts every number; `alert` is the shared sender's account. */
+function providers(alert?: { from: string; sendSms: ReturnType<typeof vi.fn> }) {
+  const twilio = { sendSms: vi.fn().mockResolvedValue({ providerMessageId: "SM1" }) };
+  const sms = (sendSms: ReturnType<typeof vi.fn>) => ({ carrier: "twilio" as const, sendSms, statusCallbackUrl: (ids: Record<string, string | undefined>) => twilioStatusCallbackUrl(ids), getMessagePricing: vi.fn(), permanentErrorCode: permanentSmsErrorCode });
+  const telephony = { forNumber: () => ({ carrier: "twilio" as const, sms: sms(twilio.sendSms) }), ...(alert ? { alertSms: { ...sms(alert.sendSms), from: alert.from } } : {}) } as unknown as NonNullable<OutboundProviders["telephony"]>;
+  return { twilio, telephony, email: { sendTemplate: vi.fn().mockResolvedValue({ messageId: "email-1" }) } };
 }
 
 /** Each kind: its request, the rows that make it ready to send, and how it hands the row back or closes it. */
@@ -208,7 +217,7 @@ describe("inbox replies", () => {
     const sender = providers();
     await expect(deliverOutbound(context, sender, kinds.message.delivery)).resolves.toEqual({ status: "completed", entityId: "message-1" });
     expect(sender.twilio.sendSms).toHaveBeenCalledWith({ ...smsTarget, body: "We open at 9.", statusCallback: "https://app.example.test/api/webhooks/twilio/status?messageId=message-1" });
-    expect(sms.markSmsSent).toHaveBeenCalledWith(context, { businessId, messageId: "message-1", providerMessageId: "SM1" });
+    expect(sms.markSmsSent).toHaveBeenCalledWith(context, { businessId, messageId: "message-1", providerMessageId: "SM1", carrier: "twilio" });
   });
 });
 
@@ -241,7 +250,7 @@ describe("codes", () => {
   it("sends a change code from the shared sender through the alert account", async () => {
     kinds.changeCode.ready();
     const alertSms = vi.fn().mockResolvedValue({ providerMessageId: "SMalert" });
-    const sender = { ...providers(), twilioAlerts: { from: smsTarget.from, sendSms: alertSms } };
+    const sender = providers({ from: smsTarget.from, sendSms: alertSms });
     await expect(deliverOutbound(context, sender, kinds.changeCode.delivery)).resolves.toEqual({ status: "completed", entityId: "verification-1" });
     expect(alertSms).toHaveBeenCalledWith({ ...smsTarget, body: "Axum Barbershop: your verification code is 123456. It expires in 10 minutes." });
     expect(sender.twilio.sendSms).not.toHaveBeenCalled();

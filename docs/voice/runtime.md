@@ -82,7 +82,7 @@ OpenAI's [Live conversations guide](https://developers.openai.com/api/docs/guide
 
 ## Follow a phone call
 
-A Twilio Elastic SIP trunk sends calls for its numbers to your OpenAI project's SIP address. The call then goes through these steps:
+The number's carrier sends its calls to your OpenAI project's SIP address: a Twilio Elastic SIP trunk, or a Telnyx FQDN connection (see [Use Telnyx](#use-telnyx)). The call then goes through these steps:
 
 1. OpenAI sends a `live.transport.incoming` webhook to `/api/webhooks/openai/live` on the admin app.
 2. The admin finds the business from the dialled number. It tries each number in the SIP `Diversion` headers in order, then `To` and `P-Called-Party-ID`, and uses the first one that belongs to a business. On a forwarded call, the first `Diversion` can hold the business's old line.
@@ -107,6 +107,8 @@ A business out of minutes, on Free or at a Starter or Pro overage cap, still get
 The route skips a forward to the dialled number itself, and to the line in Twilio's `ForwardedFrom`, because a line that forwards its missed calls to LobbyStack would send the call straight back. A trial number that runs out also moves off the trunk, so later calls reach the same route as its voice URL.
 
 Twilio fails over to the next origination URI, and then to the disaster recovery URL, on any final error except 2xx, 400, 404, 405, 410, 416, 482, 484, 486, and 6xx ([Twilio](https://www.twilio.com/docs/sip-trunking)). That's why the limit uses 503 and not 486. The other 503 rejections, a missing snapshot or a failed setup, reach the same forward. The function takes only a business and a number, so a white-label partner's businesses can reuse it.
+
+A Telnyx number has no disaster recovery URL. Telnyx retries a 503 from its second signaling address, so OpenAI sends a second `live.transport.incoming` for the same call and the admin refuses it again. Telnyx then forwards the call to the number stored as the Telnyx number's forward on failure. Each time the worker routes the number, it sets that forward to what `resolveRefusedCallForward` in `packages/domain` answers, and saves it in `phone_numbers.refused_calls_forward_to`. The Telnyx voice webhook uses the same function. A new transfer number or a newly verified owner phone queues a routing job for the business's Telnyx numbers, and the hourly number sweep reroutes any number whose saved forward no longer matches, such as after a change of owner. With nowhere to forward, the worker turns forwarding off and the call fails.
 
 Forwarding never accepts the GPT-Live session, so it uses no OpenAI audio and no plan minutes or transfer attempts, and the call gets no call record. Twilio bills the call at Programmable Voice rates instead of trunking rates: the inbound minutes on the number plus the outbound `<Dial>` leg, for as long as the forwarded call lasts. On 2026-10-24, US rates were $0.0085 a minute to receive on a local number ($0.0220 toll-free) and $0.0140 a minute to call out ([Twilio US voice pricing](https://www.twilio.com/en-us/voice/pricing/us)), about $0.023 a minute in all. Twilio may still bill a few seconds of the refused trunk leg.
 
@@ -251,12 +253,25 @@ The admin and worker read these variables:
 | `OPENAI_WEBHOOK_SECRET` | admin | Verifies OpenAI's incoming-call webhook. Phone path only. |
 | `INTERNAL_SERVICE_TOKEN` | admin, worker | Authenticates the admin's attach request to the worker. |
 | `WORKER_INTERNAL_URL` | admin | Private URL of the worker's HTTP port, for example `http://worker:3002`. |
+| `TELEPHONY_NUMBERS` | admin, worker | The carrier that sells numbers in each country, such as `US:telnyx,*:twilio`. Defaults to `*:twilio`. See [Choose carriers](#choose-carriers). |
+| `TELEPHONY_VERIFY`, `TELEPHONY_LOOKUP` | admin | The carrier for the onboarding phone code and the line type check. Each defaults to `twilio`. |
+| `TELEPHONY_ALERT_SMS`, `TELEPHONY_ALERT_SMS_FROM` | admin, worker | The carrier and number of the shared sender. The number falls back to `TWILIO_ALERT_SMS_FROM`, and the carrier defaults to `twilio`. |
 | `TWILIO_SIP_TRUNK_SID` | worker | Adds new phone numbers to the SIP trunk. The worker refuses to provision a number without it. |
 | `TWILIO_GB_BUNDLE_SID` | worker | The approved Twilio regulatory bundle for UK mobile numbers. The worker won't buy a UK number without it. |
 | `TWILIO_AU_BUNDLE_SID` | worker | The approved Twilio regulatory bundle for Australian mobile numbers. The worker won't buy an Australian number without it. |
 | `TWILIO_AU_ADDRESS_SID` | worker | The address in the Australian bundle. Twilio needs an address on every Australian mobile number. |
 | `TWILIO_NZ_BUNDLE_SID`, `TWILIO_NZ_ADDRESS_SID` | admin, worker | The approved Twilio regulatory bundle for New Zealand local numbers, and the address in it. |
 | `TWILIO_VERIFY_SERVICE_SID` | admin | The Twilio Verify service that texts the onboarding phone code. Onboarding can't verify a phone without it. |
+| `TELNYX_API_KEY` | admin, worker | The Telnyx API key. Without it, the deployment has no Telnyx carrier. |
+| `TELNYX_PUBLIC_KEY` | admin | The account's Ed25519 public key, from **Account settings > Keys & Credentials > Public Key**, which checks every Telnyx webhook. |
+| `OPENAI_PROJECT_ID` | worker | The OpenAI project ID (`proj_…`) each Telnyx number translates to. The worker won't buy a Telnyx number without it. |
+| `TELNYX_OUTBOUND_VOICE_PROFILE_ID` | worker | The outbound voice profile each number's connection gets, which transfers dial through. |
+| `TELNYX_SIP_CONNECTION_ID` | worker | Optional. A shared FQDN connection numbers used before each got their own. The worker moves a number off it the next time it routes the number, and still prices calls on it. |
+| `TELNYX_TEXML_APPLICATION_ID` | worker | The TeXML application a Telnyx number moves to in fallback mode. |
+| `TELNYX_TEXML_WEBHOOK_SECRET` | admin | A secret the TeXML application's voice URL carries as `?key=`, in case Telnyx sends that request unsigned. |
+| `TELNYX_MESSAGING_PROFILE_ID` | worker | The messaging profile new Telnyx numbers join, so they can text. |
+| `TELNYX_VERIFY_PROFILE_ID` | admin | The Telnyx Verify profile for the onboarding phone code, when `TELEPHONY_VERIFY` is `telnyx`. |
+| `TELNYX_GB_REQUIREMENT_GROUP_ID`, `TELNYX_AU_REQUIREMENT_GROUP_ID`, `TELNYX_NZ_REQUIREMENT_GROUP_ID` | admin, worker | The approved Telnyx requirement group a number order in that country goes under, when `TELEPHONY_NUMBERS` sends the country to Telnyx. |
 
 The admin also reads the bundle variables: it offers numbers only in the countries whose bundle is set. Set `TWILIO_GB_BUNDLE_SID`, `TWILIO_AU_BUNDLE_SID` and `TWILIO_AU_ADDRESS_SID` on the admin too.
 | `WEB_CALL_MAX_DURATION_MS` | admin | Optional cap on browser call length. |
@@ -271,7 +286,7 @@ The worker listens on its health port for `/internal/live/attach`. Keep that por
 
 ## Set up the phone path
 
-The phone path needs an OpenAI project with SIP enabled and a Twilio account. To connect them:
+The phone path needs an OpenAI project with SIP enabled and a Twilio or Telnyx account. This section connects Twilio; for Telnyx, see [Use Telnyx](#use-telnyx). To connect Twilio:
 
 1. In the OpenAI dashboard, add a webhook for `live.transport.incoming` that points to `https://your_app_domain/api/webhooks/openai/live`, and set its secret as `OPENAI_WEBHOOK_SECRET` on the admin.
 2. In Twilio, create an Elastic SIP trunk with the origination URI `sip:your_openai_project_id@sip.api.openai.com;transport=tls`, and set its transfer mode to allow transfers to any number. Under **Origination**, set the disaster recovery URL to `https://your_app_domain/api/webhooks/twilio/voice` with `POST`. Without it, a business out of minutes leaves its callers with an error instead of forwarding them. `scripts/production-smoke.ts` checks this URL.
@@ -318,3 +333,48 @@ To set up a country:
 4. On the admin and the worker, set the bundle's SID as `TWILIO_GB_BUNDLE_SID`, `TWILIO_AU_BUNDLE_SID` or `TWILIO_NZ_BUNDLE_SID`. For Australia and New Zealand, also set the SID of the bundle's address as `TWILIO_AU_ADDRESS_SID` or `TWILIO_NZ_ADDRESS_SID`.
 
 Until you set a country's bundle, number claims there fail with an error that includes the missing variable's name.
+
+## Choose carriers
+
+One deployment can buy numbers from Twilio and Telnyx at once and send each capability to either. Every setting defaults to Twilio, so a deployment that sets none works as it did before carriers were configurable.
+
+Requests go to a carrier by these rules:
+
+- **Operations on a number**: texts from it, its webhooks, routing it, releasing it, pricing its calls and its fallback all go to the carrier that owns it. `phone_numbers.carrier` records the owner, and `messages.carrier` and `calls.carrier` record the carrier each text and phone call used.
+- **Number search and purchase**: `TELEPHONY_NUMBERS` picks the carrier by country, with `*` for the countries it doesn't list. The signed number offer names the carrier, so the worker buys from the carrier that showed the number.
+- **Verify, Lookup and the shared sender**: `TELEPHONY_VERIFY`, `TELEPHONY_LOOKUP` and `TELEPHONY_ALERT_SMS` each name one carrier.
+
+A malformed setting, such as an unknown carrier or a country listed twice, stops the worker at boot and fails the admin's first telephony request. Each carrier lives in `packages/providers/src/<carrier>/` behind the interfaces in `packages/providers/src/telephony/types.ts`, and `createTelephony` builds every carrier that has credentials. Adding a carrier means an adapter, its id in `CARRIER_IDS`, and its webhook routes under `/api/webhooks/<carrier>/`.
+
+Countries outside the US, Canada and Puerto Rico appear in the number picker only when the carrier `TELEPHONY_NUMBERS` sends them to has their registration: a Twilio bundle, or a Telnyx requirement group.
+
+## Use Telnyx
+
+A Telnyx number reaches GPT-Live through an FQDN connection of its own, texts through a messaging profile, and falls back to a TeXML application. Telnyx's [GPT-Live configuration guide](https://developers.telnyx.com/docs/voice/sip-trunking/gpt-live-configuration-guide) covers the connection. To set it up:
+
+1. You don't create the SIP connection. The worker creates an FQDN connection for each Telnyx number when it buys or routes it, named `LobbyStack <number>` and tagged `lobbystack-number`: TLS, mandatory SRTP, Opus with PCMU and PCMA, and the FQDN `sip.api.openai.com` on port `5061`. With `TELNYX_OUTBOUND_VOICE_PROFILE_ID` set, the worker also switches the connection to IP authentication and attaches the profile, because Telnyx refuses a profile on a connection that expects credentials. Releasing the number deletes its connection.
+2. Set your OpenAI project ID, with its `proj_` prefix, as `OPENAI_PROJECT_ID` on the worker. The worker sets it as each number's translated number, which puts the project in the SIP Request-URI.
+3. Create an outbound voice profile and set its ID as `TELNYX_OUTBOUND_VOICE_PROFILE_ID` on the worker. Create a TeXML application whose voice URL is `https://your_app_domain/api/webhooks/telnyx/voice?key=your_texml_secret` with `POST`, and give it the same profile. Without one, its `<Dial>` fails and the caller is cut off after a second. Set its ID as `TELNYX_TEXML_APPLICATION_ID` on the worker and the secret as `TELNYX_TEXML_WEBHOOK_SECRET` on the admin.
+4. Create a messaging profile whose webhook URL is `https://your_app_domain/api/webhooks/telnyx/sms`. Set its ID as `TELNYX_MESSAGING_PROFILE_ID` on the worker. Each text also carries its own status webhook, `/api/webhooks/telnyx/status`.
+5. Set `TELNYX_API_KEY` on the admin and the worker, and the account's public key as `TELNYX_PUBLIC_KEY` on the admin.
+6. Route countries to Telnyx with `TELEPHONY_NUMBERS`, such as `US:telnyx,*:twilio`, on the admin and the worker.
+
+For Telnyx Verify, create a Verify profile, set it as `TELNYX_VERIFY_PROFILE_ID` on the admin, and set `TELEPHONY_VERIFY=telnyx`. To check line types with Telnyx Number Lookup, set `TELEPHONY_LOOKUP=telnyx`. To send the shared sender's texts through Telnyx, put that number on the messaging profile and set `TELEPHONY_ALERT_SMS=telnyx` and `TELEPHONY_ALERT_SMS_FROM`.
+
+To sell UK, Australian or New Zealand numbers through Telnyx, create a requirement group for the country and number type in the portal, wait for Telnyx to approve it, and set its ID as `TELNYX_GB_REQUIREMENT_GROUP_ID`, `TELNYX_AU_REQUIREMENT_GROUP_ID` or `TELNYX_NZ_REQUIREMENT_GROUP_ID` on the admin and the worker.
+
+### What differs from Twilio
+
+These parts of the Telnyx path haven't been tested against a live account, because Telnyx's docs leave them open:
+
+- **Dialled number**: the translated number replaces the dialled number in the Request-URI, so the worker sets `translated_number_config` to `ignore_for_to_header`, which keeps it in `To`. On a call from another carrier on 2026-10-30, `routedBy` on `live.incoming` was `To`. If a call has no dialled number in its headers, the admin falls back to `X-Telnyx-Connection-id`, looked up in `phone_numbers.carrier_connection_id`. No real call has used that fallback. A call a Call Control application places to a Telnyx number doesn't test either path: it arrives with the project in `To`, and `X-Telnyx-Connection-id` names the application's connection, so run `pnpm voice:call` from another carrier.
+- **Replies and shared sender**: a text in a conversation goes out from the business's own number through its carrier. Confirmations, reminders and alerts for a US or Canadian cloud business go out from the shared sender, so they stay on Twilio unless `TELEPHONY_ALERT_SMS` is `telnyx`.
+- **Transfers**: on 2026-10-30, a REFER from OpenAI worked on a connection with an outbound voice profile, without asking Telnyx support to enable anything. A call from Twilio to a Canadian Telnyx number then transferred to a Canadian mobile, which answered.
+- **Calls between Telnyx numbers**: Telnyx puts the project in `To` and may send no `X-Telnyx-Connection-id`, so the admin refuses the call and Telnyx forwards it. Don't set a Telnyx number as a business's transfer number.
+- **Refused calls**: Telnyx forwards a call the receptionist refuses to one fixed number per Telnyx number, as [Calls the receptionist can't take](#calls-the-receptionist-cant-take) describes, and its retry of the 503 means OpenAI sends the webhook twice.
+- **Number orders**: Telnyx fills orders in the background, and a review of a requirement group can take days. The worker waits 30 seconds, then saves the order's ID on the claim (`onboarding_number_claim_events.provider_order_id`) and checks that order again every 10 minutes. After 5 days it fails the claim and releases the number if the order put it on the account.
+- **Call cost**: the worker prices a call from Telnyx's SIP trunking detail records, matched by caller, connection and start time. It pages back through the account's newest records until they start before the call, up to 1,000 records. Telnyx's API spec doesn't define those records' fields, and doesn't say how long they take to appear.
+- **Verify language**: a Telnyx Verify profile texts in its own language, whatever the user's interface language.
+- **TeXML signatures**: Telnyx doesn't say whether it signs the TeXML voice URL request, so the route also takes `TELNYX_TEXML_WEBHOOK_SECRET` in the URL. The texting webhooks always check the signature.
+
+Run `pnpm voice:call` against a staging Telnyx number before you send production countries to Telnyx.

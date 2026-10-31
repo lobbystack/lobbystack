@@ -52,13 +52,19 @@ The SMS HELP reply opens with the app name. Emails, the API, and other text mess
 
 ## Voice calls
 
-OpenAI's GPT-Live model answers browser calls and phone calls. Phone calls reach it through your Twilio SIP trunk. The admin starts each call and the worker runs it.
+OpenAI's GPT-Live model answers browser calls and phone calls. Phone calls reach it through your carrier: a Twilio SIP trunk or a Telnyx SIP connection. The admin starts each call and the worker runs it.
 
 | Variable | Purpose |
 | --- | --- |
 | `LIVE_PROTOTYPE_ENABLED` | Set to `true` on admin and worker. Compose sets it by default. Browser calls fail without it. |
 | `OPENAI_WEBHOOK_SECRET` | Verifies OpenAI's incoming-call webhook at `/api/webhooks/openai/live`. Phone calls only. |
 | `TWILIO_SIP_TRUNK_SID` | The Twilio Elastic SIP trunk that sends calls to your OpenAI project. New numbers join it, and the worker won't provision a number without it. |
+| `TELEPHONY_NUMBERS` | The carrier that sells numbers in each country, such as `US:telnyx,*:twilio`. Leave it empty to buy every number from Twilio. A malformed value stops the worker at startup. |
+| `TELEPHONY_VERIFY`, `TELEPHONY_LOOKUP`, `TELEPHONY_ALERT_SMS` | The carrier for the onboarding phone code, the line type check, and the shared sender's texts. Each defaults to `twilio`. |
+| `TELEPHONY_ALERT_SMS_FROM` | The shared sender's number. Falls back to `TWILIO_ALERT_SMS_FROM`. |
+| `OPENAI_PROJECT_ID` | Your OpenAI project ID (`proj_…`). The worker gives each Telnyx number its own SIP connection to that project, and won't buy a Telnyx number without it. |
+| `TELNYX_OUTBOUND_VOICE_PROFILE_ID` | The outbound voice profile each number's connection gets, which call transfers dial through. |
+| `TELNYX_TEXML_APPLICATION_ID`, `TELNYX_TEXML_WEBHOOK_SECRET` | The TeXML application a Telnyx number moves to when the receptionist stops answering it, such as a trial out of minutes, and the secret its voice URL carries as `?key=`. |
 | `WEB_CALL_MAX_DURATION_MS` | Optional cap on browser call length. |
 | `WEB_CALL_PUBLIC_BUSINESS_SLUG` | Business that answers the public demo call on your marketing site. |
 | `WEB_CALL_ALLOWED_ORIGINS` | Comma-separated sites allowed to start that public demo call. Website widget calls use each widget key's allowed origins instead. |
@@ -135,6 +141,7 @@ An empty OTLP endpoint does not disable container stdout logs, application healt
 | Variable group | Purpose |
 | --- | --- |
 | `TWILIO_*` | Voice, verification, number provisioning, and webhook authentication. |
+| `TELNYX_*` | The same for Telnyx: `TELNYX_API_KEY`, `TELNYX_PUBLIC_KEY` for webhook signatures, `TELNYX_MESSAGING_PROFILE_ID`, `TELNYX_VERIFY_PROFILE_ID`, and `TELNYX_GB_REQUIREMENT_GROUP_ID`, `TELNYX_AU_REQUIREMENT_GROUP_ID` or `TELNYX_NZ_REQUIREMENT_GROUP_ID` for those countries. |
 | `OPENAI_API_KEY` | GPT-Live calls and the fallback key for `AI_CHAT_*` and `AI_EMBEDDING_*`. |
 | `AI_CHAT_API_KEY`, `AI_CHAT_BASE_URL`, `AI_CHAT_MODEL`, `AI_CHAT_PROVIDER_NAME` | The receptionist agent for website chat and calls. Leave `AI_CHAT_MODEL` blank on OpenAI to use `gpt-6-luna`. Set it for any other OpenAI-compatible endpoint. |
 | `AI_CHAT_REASONING_EFFORT` | OpenAI only: `none`, `minimal`, `low`, `medium`, `high`, or `xhigh`. Defaults to `high`. |

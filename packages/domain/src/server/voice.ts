@@ -128,6 +128,8 @@ export async function startCall(
       ...(input.billable === false ? { billingExcluded: true } : {}),
       ...(blocked ? { status: "blocked", disposition: "blocked_contact" } : {}),
       gatewaySessionId: input.gatewaySessionId,
+      // A phone call came in on the carrier that owns the dialled number.
+      ...(input.transport === "voice" ? { carrier: sql<string>`coalesce((select carrier from public.phone_numbers where business_id = ${input.businessId}::uuid and e164 = ${input.to} and status <> 'reclaimed' limit 1), 'twilio')` } : {}),
       startedAt: new Date(input.startedAt ?? Date.now()),
     }).returning({ id: calls.id }))[0]?.id;
     if (!callId) {
@@ -384,18 +386,18 @@ export async function setTransferState(
 }
 
 /**
- * What the worker needs to find the Twilio call behind a GPT-Live phone call.
+ * What the worker needs to find the carrier's call behind a GPT-Live phone call.
  * Null when the caller withheld their number: the trunk is shared by every
  * business, so a lookup by start time alone could price another business's call.
  */
 export async function loadLiveCallForPricing(
   context: DomainContext,
   input: { businessId: string; callId: string },
-): Promise<{ startedAt: Date; callerPhone: string } | null> {
+): Promise<{ startedAt: Date; callerPhone: string; carrier: string | null } | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const [call] = await tx.select({ startedAt: calls.startedAt, callerPhone: contacts.phone }).from(calls).leftJoin(contacts, eq(contacts.id, calls.contactId)).where(and(eq(calls.businessId, input.businessId), eq(calls.id, input.callId))).limit(1);
+    const [call] = await tx.select({ startedAt: calls.startedAt, callerPhone: contacts.phone, carrier: calls.carrier }).from(calls).leftJoin(contacts, eq(contacts.id, calls.contactId)).where(and(eq(calls.businessId, input.businessId), eq(calls.id, input.callId))).limit(1);
     if (!call?.callerPhone?.startsWith("+")) return null;
-    return { startedAt: call.startedAt, callerPhone: call.callerPhone };
+    return { startedAt: call.startedAt, callerPhone: call.callerPhone, carrier: call.carrier };
   });
 }
 
@@ -412,9 +414,9 @@ export async function recordCallProviderPricing(
       revision: sql`${calls.revision} + 1`,
       updatedAt: new Date(),
     // GPT-Live calls store the OpenAI session as providerCallId, so they're priced by our call id.
-    }).where(and(eq(calls.businessId, input.businessId), input.callId ? eq(calls.id, input.callId) : eq(calls.providerCallId, input.providerCallId))).returning({ id: calls.id, revision: calls.revision, providerDurationSeconds: calls.providerDurationSeconds, startedAt: calls.startedAt, provider: calls.provider, transport: calls.transport });
+    }).where(and(eq(calls.businessId, input.businessId), input.callId ? eq(calls.id, input.callId) : eq(calls.providerCallId, input.providerCallId))).returning({ id: calls.id, revision: calls.revision, providerDurationSeconds: calls.providerDurationSeconds, startedAt: calls.startedAt, provider: calls.provider, transport: calls.transport, carrier: calls.carrier });
     if (!call) return null;
-    if (input.providerCostUsd !== undefined) await recordUnitEconomicsEventInTransaction(tx, { businessId: input.businessId, eventKey: `voice_provider:${call.id}`, eventKind: "voice_provider", channel: "voice", costUsd: input.providerCostUsd, occurredAt: call.startedAt, ...(call.providerDurationSeconds !== null ? { quantity: call.providerDurationSeconds } : {}), quantityUnit: "second", provider: "twilio", callId: call.id });
+    if (input.providerCostUsd !== undefined) await recordUnitEconomicsEventInTransaction(tx, { businessId: input.businessId, eventKey: `voice_provider:${call.id}`, eventKind: "voice_provider", channel: "voice", costUsd: input.providerCostUsd, occurredAt: call.startedAt, ...(call.providerDurationSeconds !== null ? { quantity: call.providerDurationSeconds } : {}), quantityUnit: "second", provider: call.carrier ?? "twilio", callId: call.id });
     await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "call", aggregateId: call.id, dedupeKey: `call:${call.id}:pricing:${call.revision}`, payload: { type: "call.updated", entityId: call.id, revision: call.revision } });
     return { callId: call.id, provider: call.provider, transport: call.transport, providerDurationSeconds: call.providerDurationSeconds };
   });
