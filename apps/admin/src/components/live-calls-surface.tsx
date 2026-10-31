@@ -18,7 +18,7 @@ import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-quer
 import { HeaderSearch } from "@/components/header-actions";
 import { CallRecordingPlayer } from "@/components/audio/call-recording-player";
 import { DataTablePagination, paginationFeatures } from "@/components/data-table/pagination";
-import { TableCardSkeleton } from "@/components/loading-skeletons";
+import { CallRowsSkeleton, DataTablePaginationSkeleton, HeaderSearchSkeleton } from "@/components/loading-skeletons";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -191,20 +191,23 @@ export function LiveCallsSurface() {
     onPaginationChange: setPagination,
     state: { pagination },
   });
+  // The active-calls query stays idle until a workspace is picked, so the workspace lookup counts as loading too.
+  const liveLoading = businesses.isLoading || activeCalls.isLoading;
+  const loading = businesses.isLoading || calls.isLoading;
   const liveCalls = activeCalls.isError || activeCalls.fetchStatus === "paused" || !activeCalls.data || now - activeCalls.dataUpdatedAt > 15_000 ? null : activeCalls.data.active;
 
   return (
     <div className="flex flex-1 flex-col gap-6">
       <PageHeader
-        actions={<HeaderSearch onChange={(value) => { setSearch(value); setPagination((current) => ({ ...current, pageIndex: 0 })); }} placeholder={t("filters.searchPlaceholder")} value={search} />}
+        actions={loading ? <HeaderSearchSkeleton /> : <HeaderSearch onChange={(value) => { setSearch(value); setPagination((current) => ({ ...current, pageIndex: 0 })); }} placeholder={t("filters.searchPlaceholder")} value={search} />}
         title={t("page.title")}
         titleAside={
           <div className="inline-flex shrink-0 items-center gap-2 font-heading leading-tight font-semibold tracking-tight text-foreground">
-            {!activeCalls.isLoading && <span className="relative flex size-2.5 shrink-0" aria-hidden="true" data-testid="live-call-indicator">
+            {!liveLoading && <span className="relative flex size-2.5 shrink-0" aria-hidden="true" data-testid="live-call-indicator">
               {liveCalls !== null && liveCalls > 0 && <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500/45" />}
               <span className={`relative inline-flex size-2.5 rounded-full ${liveCalls === null ? "bg-muted-foreground" : "bg-emerald-500"}`} />
             </span>}
-            {activeCalls.isLoading ? <Skeleton className="h-6 w-8" /> : liveCalls === null
+            {liveLoading ? <Skeleton className="h-6 w-8" /> : liveCalls === null
               ? <span className="text-sm text-muted-foreground">{t("page.liveUnavailable")}</span>
               : <span className="text-base font-semibold leading-none">{liveCalls.toLocaleString(intlLocale(i18n.language))}</span>}
           </div>
@@ -220,54 +223,51 @@ export function LiveCallsSurface() {
         src={recording.data?.url ?? null}
         variant="hidden"
       />
-      {businesses.isLoading || calls.isLoading ? <TableCardSkeleton columns={5} /> : (
-        <>
-          <TableCard>
-            <Table className="min-w-[56rem]">
-              <TableHeader>
-                {table.getHeaderGroups().map((group) => (
-                  <TableRow key={group.id}>
-                    {group.headers.map((header) => (
-                      <TableHead className={header.column.id === "purpose" ? "min-w-80" : header.column.id === "play" ? "w-12 text-right" : undefined} key={header.id}>
-                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    ))}
-                  </TableRow>
+      <TableCard>
+        <Table className="min-w-[56rem]">
+          <TableHeader>
+            {table.getHeaderGroups().map((group) => (
+              <TableRow key={group.id}>
+                {group.headers.map((header) => (
+                  <TableHead className={header.column.id === "purpose" ? "min-w-80" : header.column.id === "play" ? "w-12 text-right" : undefined} key={header.id}>
+                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
                 ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    className="h-12 cursor-pointer"
-                    data-state={row.original.id === activeRecordingId ? "selected" : undefined}
-                    key={row.id}
-                    onClick={() => router.push(`/calls/${row.original.id}`)}
-                  >
-                    {row.getAllCells().map((cell) => (
-                      <TableCell className={cell.column.id === "purpose" ? "max-w-0 whitespace-normal" : cell.column.id === "play" ? "w-12 text-right" : undefined} key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody aria-busy={loading || undefined}>
+            {loading ? <CallRowsSkeleton rows={Math.min(pagination.pageSize, 10)} /> : null}
+            {loading ? null : table.getRowModel().rows.map((row) => (
+              <TableRow
+                className="h-12 cursor-pointer"
+                data-state={row.original.id === activeRecordingId ? "selected" : undefined}
+                key={row.id}
+                onClick={() => router.push(`/calls/${row.original.id}`)}
+              >
+                {row.getAllCells().map((cell) => (
+                  <TableCell className={cell.column.id === "purpose" ? "max-w-0 whitespace-normal" : cell.column.id === "play" ? "w-12 text-right" : undefined} key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
                 ))}
-                {table.getRowModel().rows.length === 0 ? <TableRow><TableCell className="h-24 text-center text-muted-foreground" colSpan={5}>{t("table.empty")}</TableCell></TableRow> : null}
-              </TableBody>
-            </Table>
-          </TableCard>
-          <DataTablePagination
-            labels={{
-              rowsPerPage: t("pagination.rowsPerPage"),
-              pageOf: (page, total) => t("pagination.pageOf", { page, total }),
-              firstPage: t("pagination.firstPage"),
-              previousPage: t("pagination.previousPage"),
-              nextPage: t("pagination.nextPage"),
-              lastPage: t("pagination.lastPage"),
-              goToPage: (page) => t("pagination.goToPage", { page }),
-            }}
-            table={table}
-          />
-        </>
-      )}
+              </TableRow>
+            ))}
+            {!loading && table.getRowModel().rows.length === 0 ? <TableRow><TableCell className="h-24 text-center text-muted-foreground" colSpan={5}>{t("table.empty")}</TableCell></TableRow> : null}
+          </TableBody>
+        </Table>
+      </TableCard>
+      {loading ? <DataTablePaginationSkeleton /> : <DataTablePagination
+        labels={{
+          rowsPerPage: t("pagination.rowsPerPage"),
+          pageOf: (page, total) => t("pagination.pageOf", { page, total }),
+          firstPage: t("pagination.firstPage"),
+          previousPage: t("pagination.previousPage"),
+          nextPage: t("pagination.nextPage"),
+          lastPage: t("pagination.lastPage"),
+          goToPage: (page) => t("pagination.goToPage", { page }),
+        }}
+        table={table}
+      />}
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "@/components/ui/item";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBusinessCan } from "./business-capabilities-provider";
+import { SmallButtonSkeleton } from "./loading-skeletons";
 import { PhoneNumberChooser, phoneNumberChooserApi, type ClaimResult } from "./phone-number-chooser";
 import { TrialPhoneVerification } from "./trial-phone-verification";
 import { useOpenUpgradePlanDialog } from "./upgrade-plan-dialog-context";
@@ -51,7 +52,7 @@ export function LivePhoneNumberSettingsSurface() {
   const queryClient = useQueryClient();
   const openUpgradePlanDialog = useOpenUpgradePlanDialog();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const { business } = useActiveBusiness();
+  const { businesses, business } = useActiveBusiness();
   const businessId = business?.businessId ?? "";
   const openNumberStep = useOpenNumberStep();
   const canManageTenant = Boolean(business && ["business_owner", "business_admin"].includes(business.role));
@@ -93,6 +94,28 @@ export function LivePhoneNumberSettingsSurface() {
   // Only a free workspace without a number can start a trial. The number step runs the claim, and offers the plans if the claim refuses.
   const trial = useQuery({ queryKey: ["number-trial", businessId], enabled: Boolean(businessId) && showPaidPlanRequired && !hasPhoneNumber, queryFn: () => requestJson<{ trial: { status: string } }>(`/api/number-trial?businessId=${encodeURIComponent(businessId)}`) });
   const offersFreeTrial = showPaidPlanRequired && !hasPhoneNumber && trial.data?.trial?.status === "available";
+
+  // The button's label and state come from the number, the plan and the trial, which load one after another, so everything waits for all of them.
+  if (businesses.isLoading || numbers.isLoading || billing.isLoading || trial.isLoading) return (
+    <div className="flex flex-1 flex-col">
+      <div className="w-full space-y-4">
+        <ItemGroup spacing="section">
+          <Item variant="outline">
+            <ItemContent>
+              <ItemTitle aria-hidden="true"><Skeleton className="w-fit"><span className="invisible">{t("phoneNumber.current.label")}</span></Skeleton></ItemTitle>
+              <div aria-hidden="true" className="text-sm"><Skeleton className="w-fit max-w-full"><span className="invisible">{t("phoneNumber.current.description")}</span></Skeleton></div>
+              <Skeleton className="h-6 w-48 max-w-full" />
+            </ItemContent>
+            {businesses.isLoading || canManageTenant ? (
+              <ItemActions>
+                <SmallButtonSkeleton label={[t("phoneNumber.actions.getNumber"), t("phoneNumber.actions.requestChange"), t("phoneNumber.freeTrial.cta"), t("phoneNumber.requiresPaidPlan.upgradeCta")].reduce((widest, label) => label.length > widest.length ? label : widest)} />
+              </ItemActions>
+            ) : null}
+          </Item>
+        </ItemGroup>
+      </div>
+    </div>
+  );
 
   function handleClaimed(result: Extract<ClaimResult, { status: "claimed" }>): void {
     toast.success(t(hasPhoneNumber ? "phoneNumber.toast.changed" : "phoneNumber.toast.added"));

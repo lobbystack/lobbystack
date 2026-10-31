@@ -12,6 +12,7 @@ import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { CredentialList, CredentialRow } from "@/components/credential-list";
 import { PageHeader } from "@/components/page-header";
 import { SecretReveal } from "@/components/secret-reveal";
+import { CredentialRowsSkeleton, SectionSkeleton, SmallButtonSkeleton } from "@/components/loading-skeletons";
 import { SectionBlock } from "@/components/section-block";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import { requestJson } from "@/lib/request-json";
 import { intlLocale } from "@/lib/locale";
@@ -145,7 +145,12 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
     return [created, row.lastUsedAt ? t("apiKeys.lastUsed", { date: formatDate(row.lastUsedAt) }) : t("apiKeys.neverUsed")];
   }
 
-  if (loading) return <Skeleton className="h-64 w-full rounded-xl" />;
+  // The workspace, then the keys: the page turns real once both are known.
+  if (loading || keys.isLoading) {
+    const action = <SmallButtonSkeleton label={t("apiKeys.create.action")} />;
+    if (layout === "section") return <SectionSkeleton action={action} description={t("apiKeys.description")} title={t("apiKeys.title")}><CredentialRowsSkeleton actions={2} /></SectionSkeleton>;
+    return <div className="flex flex-col gap-6"><PageHeader actions={action} title={t("apiKeys.title")} /><CredentialRowsSkeleton actions={2} /></div>;
+  }
   if (!canManage) return <Alert><AlertTitle>{t("apiKeys.restricted.title")}</AlertTitle><AlertDescription>{t("apiKeys.restricted.description")}</AlertDescription></Alert>;
 
   const rows = keys.data ?? [];
@@ -158,7 +163,7 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
         title={t("apiKeys.title")}
       >
         <Surface>
-          {keys.isLoading ? <div className="p-6"><Skeleton className="h-24 w-full rounded-xl" /></div> : rows.length === 0 ? (
+          {rows.length === 0 ? (
             layout === "page" ? (
             <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
               <h2 className="text-base font-medium">{t("apiKeys.empty")}</h2>

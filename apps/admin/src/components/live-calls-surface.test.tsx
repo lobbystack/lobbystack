@@ -117,3 +117,19 @@ it("searches and pages calls on the server so calls older than the first page st
   expect(callUrls().filter((url) => /search=J/.test(url))).toEqual(["/api/calls?limit=10&offset=0&search=Jane"]);
   client.clear();
 });
+
+it("keeps the table header and shows placeholder rows, with no empty state or live status, while data loads", () => {
+  vi.stubGlobal("EventSource", FakeEventSource);
+  vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(<QueryClientProvider client={client}><LiveCallsSurface /></QueryClientProvider>);
+
+  expect(screen.getByText("table.caller")).toBeTruthy();
+  expect(document.querySelectorAll("tbody [data-slot=\"skeleton\"]").length).toBe(50);
+  expect(document.querySelector("tbody")?.getAttribute("aria-busy")).toBe("true");
+  expect(screen.queryByText("table.empty")).toBeNull();
+  expect(screen.queryByPlaceholderText("filters.searchPlaceholder")).toBeNull();
+  expect(document.querySelectorAll("[aria-hidden=\"true\"] [data-slot=\"skeleton\"]").length).toBe(9);
+  expect(screen.queryByText("page.liveUnavailable")).toBeNull();
+  expect(screen.queryByTestId("live-call-indicator")).toBeNull();
+});

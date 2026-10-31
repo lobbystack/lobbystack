@@ -68,7 +68,8 @@
         "durationUp": "+{{value}} respecto al período anterior",
         "durationDown": "-{{value}} respecto al período anterior",
         "pointsUp": "+{{value}} pts respecto al período anterior",
-        "pointsDown": "-{{value}} pts respecto al período anterior"
+        "pointsDown": "-{{value}} pts respecto al período anterior",
+        "noPreviousCalls": "Sin llamadas en el período anterior"
       },
       "outcomes": {
         "title": "Resultados de llamadas",
