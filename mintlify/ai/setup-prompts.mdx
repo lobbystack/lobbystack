@@ -1,0 +1,35 @@
+---
+title: "Set up LobbyStack with an AI assistant"
+description: "Copy a ready-made prompt into Claude, ChatGPT, Cursor or another AI assistant, and it sets up your receptionist with you."
+sidebarTitle: "Setup prompts"
+contentType: "How-to"
+---
+
+import NoCodePrompt from "/snippets/setup-prompts/no-code.mdx";
+import SaasPrompt from "/snippets/setup-prompts/saas.mdx";
+import WhiteLabelPrompt from "/snippets/setup-prompts/white-label.mdx";
+import PartnerPrompt from "/snippets/setup-prompts/partner.mdx";
+import SelfHostPrompt from "/snippets/setup-prompts/self-host.mdx";
+
+Copy a prompt, paste it into your AI assistant, and it does the setup with you. Each prompt names the docs to read, starts with a test business, and asks the assistant for a short plan before it changes anything.
+
+The assistant stops and asks you when only you can act, such as signing in, adding DNS records or paying.
+
+## Pick a prompt
+
+<NoCodePrompt />
+
+<SaasPrompt />
+
+<WhiteLabelPrompt />
+
+<PartnerPrompt />
+
+<SelfHostPrompt />
+
+## Choose an assistant
+
+Any assistant can use these prompts, and its tools decide how much it can do for you:
+
+- **Coding assistants**: Claude Code, Codex and Cursor send API requests themselves, so they do the most.
+- **Chat assistants**: Claude and ChatGPT work through the [MCP server](/ai/mcp). They read calls, change opening hours and add knowledge, then tell you which steps to do in the dashboard.

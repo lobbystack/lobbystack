@@ -46,6 +46,8 @@ const adminEnv = {
   // instead of collapsing into one shared bucket. Never copy this to a
   // deployment whose ingress does not overwrite the header.
   TRUSTED_CLIENT_IP_HEADER: "x-real-ip",
+  // The setup prompts journey opens the marketing site, which this hostname serves.
+  MARKETING_HOSTS: "lobbystack.localhost",
   // The widget settings journey creates a widget key, which stays off unless an operator opts in.
   WIDGET_KEY_ISSUANCE_ENABLED: "true",
   DATABASE_URL: roleDatabaseUrl(baseDatabaseUrl, "lobbystack_app", process.env.LOBBYSTACK_APP_PASSWORD ?? replacement.LOBBYSTACK_APP_PASSWORD ?? "app", process.env.LOBBYSTACK_APP_DATABASE_URL),
