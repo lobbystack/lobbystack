@@ -17,10 +17,10 @@ AI text replies can't ship for US customers until this is solved.
 
 LobbyStack registers each business that wants to text US numbers from a +1 local number. The owner answers one question first: is this a registered company?
 
-- **Not registered:** an unincorporated owner gives a name, address, email and mobile number, then confirms a one-time passcode. LobbyStack creates a sole proprietor brand, and the owner gives no tax ID.
-- **Registered company:** the owner also gives the legal details and a tax ID, such as an EIN or a Canadian Business Number. LobbyStack creates a low-volume standard brand. A registered company that has no tax ID to give stays unregistered, and its texts to US numbers stay off until it gives one.
+- **Not registered:** an unincorporated owner gives a name, address, email and mobile number, then confirms a one-time passcode. LobbyStack creates a sole proprietor brand, and the owner gives no Business Number or EIN.
+- **Registered company:** the owner also gives the legal details and a Business Number or EIN. LobbyStack creates a low-volume standard brand. A registered company that can't give one stays unregistered, and its texts to US numbers stay off until it does. Canadian incorporations usually receive a Business Number automatically, so an owner who says the company has no tax number may still hold one. The form should say where to find it, and it should always ask for a "Business Number or EIN", because owners may not recognise "tax ID".
 
-Sole proprietor is the path for unincorporated owners only. It isn't the small-business default, and having no tax ID doesn't qualify a company for it: Twilio's rules exclude any registered company, even one with no number.
+Sole proprietor is the path for unincorporated owners only. It isn't the small-business default, and having no Business Number or EIN doesn't qualify a company for it: Twilio's rules exclude any registered company, even one with no number.
 
 Either way, LobbyStack works under the existing ISV primary profile, creates one campaign, and adds the number to the campaign's Messaging Service.
 
@@ -34,7 +34,7 @@ The primary profile is already approved with the identity `isv_reseller_or_partn
 
 - Cloud businesses with a +1 Twilio number.
 - Unregistered US and Canadian owners, on a sole proprietor brand.
-- Registered companies with a tax ID, on a low-volume standard brand.
+- Registered companies with a Business Number or EIN, on a low-volume standard brand.
 - Status polling, dashboard status, inbox blocking and fix-and-resubmit.
 - Texts that name the business that sends them.
 
@@ -82,25 +82,25 @@ Twilio requires an ISV to name itself as the reseller on campaigns it submits fo
 
 | Data | Where it lives |
 |---|---|
-| Legal name, tax ID, address, representative | Sent to Twilio. See open decision 2 for what LobbyStack keeps. |
+| Legal name, Business Number or EIN, address, representative | Sent to Twilio. See open decision 2 for what LobbyStack keeps. |
 | Profile, brand, campaign and Messaging Service SIDs | A new business-scoped table with RLS |
 | Status and last error codes | The same table |
 
-`businesses.legal_name`, `business_type` and `website_url` exist. The tax ID, street address and representative contact don't.
+`businesses.legal_name`, `business_type` and `website_url` exist. The Business Number or EIN, street address and representative contact don't.
 
 ### Brand types
 
 | | Sole proprietor | Low-volume standard |
 |---|---|---|
-| Who | Unregistered US or Canadian owner | Registered company with a tax ID |
-| The owner provides | Name, address, email, mobile, passcode | Legal name, tax ID, address, representative |
+| Who | Unregistered US or Canadian owner | Registered company with a Business Number or EIN |
+| The owner provides | Name, address, email, mobile, passcode | Legal name, Business Number or EIN, address, representative |
 | Campaigns | 1 | Up to 5 |
 | Numbers per campaign | 1 | Several |
 | Speed | 1 message a second | Lowest tier |
 
 Each sole proprietor mobile can validate three brands across all vendors, and each email or address 10. The mobile must be a real US or Canadian mobile, so a Twilio or other VoIP number won't work. Prefill it from the owner's verified `users.phone`.
 
-A registered company can't use the sole proprietor path, with or without a tax ID. An owner who holds a tax ID can't use it either: Twilio says a Canadian Business Number counts as one. A business that claims otherwise pays to register again.
+A registered company can't use the sole proprietor path, with or without a Business Number or EIN. An owner who holds either can't use it, because Twilio treats a Canadian Business Number as a tax ID. A business that claims otherwise pays to register again.
 
 ### Registration flow
 
@@ -145,7 +145,7 @@ The shared toll-free number can't carry this traffic. Twilio's error 30478 decli
 
 ### Sending rule
 
-`sms_registration_required` already exists for AI text replies (`textReplyBlockedReason` in `packages/domain/src/server/sms.ts`). It applies when a cloud business's own +1 number would text a US-bound number. This spec adds two things: an approved campaign clears the block, and inbox replies follow the same rule. Canadian recipients aren't affected. `smsRecipientRegion` in `packages/shared/src/smsReach.ts` counts US territories as US-bound. The worker checks the same rule before it sends.
+`sms_registration_required` already exists for AI text replies (`textReplyBlockedReason` in `packages/domain/src/server/sms.ts`). It applies when a cloud business would text a US-bound number, from any sender. This spec adds two things: an approved campaign clears the block, and inbox replies follow the same rule. Canadian recipients aren't affected. `smsRecipientRegion` in `packages/shared/src/smsReach.ts` counts US territories as US-bound. The worker checks the same rule before it sends.
 
 `STOP`, `START` and `HELP` replies still go out, because Twilio's opt-out handling and carrier rules expect them.
 
@@ -196,7 +196,7 @@ Twilio's published figures, to confirm in the Console before launch:
 ## Open decisions
 
 1. **Who pays the fees?** Recommendation: LobbyStack pays the first submission for paying plans and passes on nothing. At $19.50 once and up to $2 a month, the fee is small against a subscription, and a form with a fee would slow signups.
-2. **Does LobbyStack keep the tax ID?** Recommendation: keep it only until Twilio accepts the profile, then clear it and store the last four digits. A rejected profile can ask the business to enter it again.
+2. **Does LobbyStack keep the Business Number or EIN?** Recommendation: keep it only until Twilio accepts the profile, then clear it and store the last four digits. A rejected profile can ask the business to enter it again.
 3. **Which business runs the pilot?** It needs a +1 number, an unregistered owner, and a real mobile.
 4. **What happens to the failed campaign?** Recommendation: leave it. It has no campaign ID, and `usAppToPersonRegistered` on that Messaging Service doesn't mean a number can send.
 5. **One account, or one subaccount per business?** This spec assumes one account with a Messaging Service per business, Twilio's architecture #4, which Twilio allows. Twilio prefers #1, a subaccount per customer: a business that sends noncompliant traffic could otherwise get the primary account suspended, and per-business analytics are harder. Moving later has a price. Numbers, webhooks and registrations move to each subaccount, the carrier code gains per-business credentials, and Twilio's opt-out lists reset because they belong to the account, so LobbyStack has to export them first. Recommendation: decide before Step 0, because the pilot's brand and campaign would otherwise be the first thing to move.

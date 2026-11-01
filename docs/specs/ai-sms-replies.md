@@ -8,7 +8,7 @@ When a customer texts a business's number, LobbyStack saves the text and alerts 
 
 Two limits shape the feature:
 
-- A customer can't be asked for a tax ID to start AI texting.
+- A customer can't be asked for a Business Number or EIN to start AI texting.
 - The live terms and Help Center say LobbyStack doesn't reply to texts with AI.
 
 ## Solution
@@ -17,13 +17,13 @@ The receptionist answers texts to a business's own number when that business has
 
 US-bound recipients get no AI reply from a cloud business, because no campaign covers them yet. Their texts reach the team as they do today. [Business SMS registration](business-sms-registration.md) lifts that block later.
 
-Turning the feature on never asks for a tax ID. `pnpm text-replies:set` is the only way to turn it on, and only the host can run it. A dashboard switch waits for the new terms.
+Turning the feature on never asks for a Business Number or EIN. `pnpm text-replies:set` is the only way to turn it on, and only the host can run it. A dashboard switch waits for the new terms.
 
 ## How a reply works
 
 1. `receiveInboundSms` saves the text in its usual transaction.
 2. It queues an `sms.aiReply` job when all of these hold:
-   - The text isn't `STOP`, `START` or `HELP`, or one of their synonyms.
+   - The text isn't a compliance keyword.
    - The conversation is on `ai_active`.
    - The contact isn't blocked.
    - `textReplyBlockedReason` finds nothing in the way.
@@ -41,7 +41,7 @@ A newer text has its own job, which answers both. `NO_REPLY` works as it does on
 |---|---|
 | `text_replies_off` | The business's flag is off. |
 | `shared_sender` | The sender is the shared toll-free number. |
-| `sms_registration_required` | A cloud business's +1 number would text a US-bound number. |
+| `sms_registration_required` | A cloud business would text a US-bound number, from a +1 number or any other. |
 
 The check runs at three points: when the text arrives, when the job starts, and when `sms.send` takes the message. Turning the flag off stops replies already in the queue.
 
@@ -55,7 +55,7 @@ The check runs at three points: when the text arrives, when the job starts, and 
 
 `isUsCanadaOrPuertoRicoPhone` lumps these together and can't make this decision.
 
-A cloud business's US number can also reply to a Canadian recipient, because registration covers US-bound traffic. Twilio's guidance on that route needs a check on staging before a US business goes on.
+A sender outside +1, such as a UK number, gets the same block for US-bound recipients and can reach everyone else. A cloud business's US number can also reply to a Canadian recipient, because registration covers US-bound traffic. Twilio's guidance on that route needs a check on staging before a US business goes on.
 
 ### Inbox replies stay as they are
 
@@ -94,7 +94,23 @@ With the flag off, an inbox reply doesn't change `automation_state` and the butt
 
 The sender's number isn't verified the way caller ID is, because SMS sender IDs can be spoofed. The job doesn't pass it as `callerPhone`, so a text can't change or cancel an appointment. The receptionist sends those requests to the team. The number goes into the prompt, so the receptionist can use it for bookings and messages.
 
-The first reply in a conversation says the sender is the business's automated assistant and mentions `STOP`.
+The first reply in a conversation opens with a fixed line in the business's default language, such as "Automated assistant for Javor. Reply STOP to opt out." The job adds it after the length cut, so neither the model nor the cut can drop it. The whole text still fits in 320 characters. A customer who writes in another language still gets this line in the business's language.
+
+## Compliance keywords
+
+The receptionist never answers these. Each gets its fixed reply, or Twilio's for opt-outs:
+
+| Meaning | Keywords |
+|---|---|
+| Opt out | `STOP`, `STOPALL`, `UNSUBSCRIBE`, `END`, `QUIT`, `CANCEL`, `OPT OUT`, `REVOKE`, `ARRET` |
+| Opt back in | `START`, `UNSTOP`, `SUBSCRIBE` |
+| Help | `HELP`, `INFO`, `AIDE` |
+
+Matching ignores case, spaces, punctuation and accents, so `ARRÊT` and `opt-out` count.
+
+`YES` opts a customer back in only when they had opted out, or when Twilio marks the text as `START`. Otherwise it goes to the receptionist, because "Shall I book Tuesday at 9?" gets that answer. The shared number holds no conversations, so `YES` always counts there.
+
+These keywords changed for live traffic too, with the flag off. `OPT OUT`, `REVOKE` and `ARRET` now record an opt-out, and `INFO` and `AIDE` get the `HELP` reply.
 
 ## Cost
 

@@ -4,7 +4,7 @@ import { createAgentModel, createReceptionistAgent, describeAgentUsage } from "@
 import type { JobEnvelope } from "@lobbystack/contracts";
 import { withBusinessTransaction } from "@lobbystack/db";
 import { alertUnansweredText, getCachedBusinessSnapshot, loadTextReplyContext, recordAiGenerationEvent, refreshBusinessSnapshot, reserveWidgetChatUsageInTransaction, saveTextReply, type DomainContext } from "@lobbystack/domain";
-import { normalizeRuntimeLocale, runtimeLocaleName } from "@lobbystack/shared";
+import { normalizeRuntimeLocale, runtimeLocaleName, type RuntimeLocale } from "@lobbystack/shared";
 
 import { instagramReplyText, NO_REPLY_INSTRUCTIONS } from "./instagramJobs";
 
@@ -20,10 +20,24 @@ const OPERATION = "sms.aiReply";
 const TEXT_INSTRUCTIONS = [
   "You are replying to text messages sent to the business's phone number, not a website chat.",
   `Write plain text only: no markdown, bullet symbols, headings or tables. Keep each reply under ${TEXT_REPLY_MAX_CHARS - 40} characters.`,
-  "In your first reply in a conversation, say you're the business's automated assistant and that they can reply STOP to opt out.",
+  "If someone asks whether you're a person, say you're an automated assistant.",
+  "If they ask to stop getting texts, tell them to reply STOP.",
   "If you can't help, offer to take a message so someone from the team replies by text.",
   ...NO_REPLY_INSTRUCTIONS,
 ].join(" ");
+
+// The first reply opens with this, in the business's language, whatever the model wrote. It stays
+// in code because a prompt can't promise it, and comes after the cut so the cut can't drop it.
+const TEXT_REPLY_DISCLOSURE: Record<RuntimeLocale, (name: string) => string> = {
+  en: (name) => `Automated assistant for ${name}. Reply STOP to opt out.`,
+  fr: (name) => `Assistant automatisé de ${name}. Répondez STOP pour vous désabonner.`,
+  es: (name) => `Asistente automatizado de ${name}. Responda STOP para darse de baja.`,
+  sr: (name) => `Automatizovani asistent firme ${name}. Odgovorite STOP za odjavu.`,
+  de: (name) => `Automatischer Assistent von ${name}. Antworten Sie STOP zum Abmelden.`,
+  pt: (name) => `Assistente automatizado de ${name}. Responda STOP para cancelar.`,
+  it: (name) => `Assistente automatico di ${name}. Rispondi STOP per annullare l'iscrizione.`,
+  nl: (name) => `Geautomatiseerde assistent van ${name}. Antwoord STOP om af te melden.`,
+};
 
 export async function replyToTextMessage(domain: DomainContext, job: JobEnvelope, options: { model?: LanguageModel } = {}, execution: { isFinalAttempt?: boolean } = {}): Promise<JobResult> {
   const businessId = job.businessId;
@@ -54,7 +68,7 @@ export async function replyToTextMessage(domain: DomainContext, job: JobEnvelope
     const result = await agent.generate({ messages: reply.history.map((row) => ({ role: row.direction === "inbound" ? "user" as const : "assistant" as const, content: row.body })) });
     if (!result.text.trim()) throw new Error("The AI assistant returned an empty reply.");
     const text = instagramReplyText(result.text);
-    const savedId = text ? await saveTextReply(domain, { businessId, conversationId, answeringMessageId: messageId, body: textReplyBody(text) }) : null;
+    const savedId = text ? await saveTextReply(domain, { businessId, conversationId, answeringMessageId: messageId, body: textReplyBody(text, reply.firstReply ? TEXT_REPLY_DISCLOSURE[locale](snapshot.displayName.slice(0, 60)) : undefined) }) : null;
     void recordAiGenerationEvent(domain, { businessId, operation: OPERATION, conversationId, ...(savedId ? { messageId: savedId } : {}), traceId, isStreaming: false, ...describeAgentUsage(result.usage, performance.now() - startedAt) }).catch(() => undefined);
     // Null when the model chose not to answer, the team took over, or a newer text arrived while the reply was written.
     return savedId ? { status: "completed", entityId: savedId } : { status: "skipped", entityId: messageId };
@@ -67,10 +81,14 @@ export async function replyToTextMessage(domain: DomainContext, job: JobEnvelope
   }
 }
 
-/** The reply as it goes out: cut at the last full sentence that fits, or the last word when none does. */
-export function textReplyBody(text: string): string {
-  if (text.length <= TEXT_REPLY_MAX_CHARS) return text;
-  const cut = text.slice(0, TEXT_REPLY_MAX_CHARS);
+/** The reply as it goes out, disclosure first: cut to what's left at the last full sentence that fits, or the last word when none does. */
+export function textReplyBody(text: string, disclosure?: string): string {
+  return disclosure ? `${disclosure} ${cutToLength(text, TEXT_REPLY_MAX_CHARS - disclosure.length - 1)}` : cutToLength(text, TEXT_REPLY_MAX_CHARS);
+}
+
+function cutToLength(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text;
+  const cut = text.slice(0, maxChars);
   const sentenceEnd = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
   if (sentenceEnd > 0) return cut.slice(0, sentenceEnd + 1);
   const wordEnd = cut.lastIndexOf(" ");

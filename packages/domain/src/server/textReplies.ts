@@ -23,6 +23,8 @@ const DAY_MS = 24 * 60 * 60_000;
 
 export type TextReplyContext = {
   phone: string;
+  /** No reply has gone to this conversation yet, so this one carries the disclosure. */
+  firstReply: boolean;
   history: Array<{ direction: "inbound" | "outbound"; body: string }>;
 };
 
@@ -57,7 +59,8 @@ export async function loadTextReplyContext(context: DomainContext, input: { busi
     }
     const rows = await tx.select({ direction: messages.direction, body: messages.body }).from(messages)
       .where(and(eq(messages.businessId, input.businessId), eq(messages.conversationId, input.conversationId), eq(messages.channel, "sms"))).orderBy(desc(messages.createdAt)).limit(20);
-    return { phone: reach.phone, history: rows.reverse().map((row) => ({ direction: row.direction === "inbound" ? "inbound" : "outbound", body: row.body })) };
+    const [earlierReply] = await tx.select({ id: messages.id }).from(messages).where(and(eq(messages.businessId, input.businessId), eq(messages.conversationId, input.conversationId), aiReply)).limit(1);
+    return { phone: reach.phone, firstReply: !earlierReply, history: rows.reverse().map((row) => ({ direction: row.direction === "inbound" ? "inbound" : "outbound", body: row.body })) };
   });
 }
 

@@ -13,9 +13,9 @@ const model = {} as never;
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.load.mockResolvedValue({ phone: "+14165550123", history: [{ direction: "inbound", body: "Are you open Sunday?" }] });
+  mocks.load.mockResolvedValue({ phone: "+14165550123", firstReply: false, history: [{ direction: "inbound", body: "Are you open Sunday?" }] });
   mocks.reserve.mockResolvedValue({ allowed: true });
-  mocks.snapshot.mockResolvedValue({ defaultLocale: "en" });
+  mocks.snapshot.mockResolvedValue({ defaultLocale: "en", displayName: "Javor" });
   mocks.save.mockResolvedValue("reply");
   mocks.usage.mockResolvedValue(null);
   mocks.generate.mockResolvedValue({ text: "We open at 9.", usage: {} });
@@ -30,6 +30,23 @@ it("answers on the sms channel, without treating the sender as a verified caller
   expect(extraInstructions).toContain("+14165550123");
   expect(mocks.save).toHaveBeenCalledWith(domain, { businessId: "business", conversationId: "conversation", answeringMessageId: "message", body: "We open at 9." });
   expect(mocks.usage).toHaveBeenCalledWith(domain, expect.objectContaining({ operation: "sms.aiReply", messageId: "reply" }));
+});
+
+it("opens the first reply with the disclosure, however long the reply, in the business's language", async () => {
+  mocks.load.mockResolvedValue({ phone: "+14165550123", firstReply: true, history: [{ direction: "inbound", body: "Bonjour" }] });
+  mocks.snapshot.mockResolvedValue({ defaultLocale: "fr", displayName: "Javor" });
+  mocks.generate.mockResolvedValue({ text: `${"a".repeat(310)}. Merci.`, usage: {} });
+  await replyToTextMessage(domain, job, { model });
+  const { body } = mocks.save.mock.calls[0]![1];
+  expect(body.startsWith("Assistant automatisé de Javor. Répondez STOP pour vous désabonner. ")).toBe(true);
+  expect(body.length).toBeLessThanOrEqual(TEXT_REPLY_MAX_CHARS);
+});
+
+it("sends no disclosure when the model chooses not to answer the first text", async () => {
+  mocks.load.mockResolvedValue({ phone: "+14165550123", firstReply: true, history: [{ direction: "inbound", body: "ok" }] });
+  mocks.generate.mockResolvedValue({ text: "NO_REPLY", usage: {} });
+  await expect(replyToTextMessage(domain, job, { model })).resolves.toMatchObject({ status: "skipped" });
+  expect(mocks.save).not.toHaveBeenCalled();
 });
 
 it("writes nothing when the domain says not to answer", async () => {

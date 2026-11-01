@@ -75,7 +75,7 @@ describe.skipIf(!testUrl)("AI text replies against PostgreSQL under production l
     });
   });
 
-  it("queues a reply to a Canadian customer instead of alerting, with no tax ID on file", async () => {
+  it("queues a reply to a Canadian customer instead of alerting, with no Business Number or EIN on file", async () => {
     await rollbackTest(async (tx) => {
       const business = await seedBusiness(tx, { enabled: true });
       await business.receive("Are you open Sunday?");
@@ -98,9 +98,36 @@ describe.skipIf(!testUrl)("AI text replies against PostgreSQL under production l
   it("leaves STOP, START and HELP to their fixed replies", async () => {
     await rollbackTest(async (tx) => {
       const business = await seedBusiness(tx, { enabled: true });
-      for (const keyword of ["HELP", "STOP", "START"]) await business.receive(keyword);
+      for (const keyword of ["HELP", "INFO", "AIDE", "STOP", "YES", "START"]) await business.receive(keyword);
 
       expect(await business.replyJobs()).toHaveLength(0);
+    });
+  });
+
+  it("records OPT OUT, REVOKE and ARRET as opt-outs, with no reply from the receptionist", async () => {
+    await rollbackTest(async (tx) => {
+      for (const keyword of ["OPT OUT", "revoke", "ARRÊT"]) {
+        const business = await seedBusiness(tx, { enabled: true });
+        await business.receive(keyword);
+
+        expect(await business.replyJobs()).toHaveLength(0);
+        expect((await tx.select({ status: contacts.smsConsentStatus }).from(contacts).where(eq(contacts.businessId, business.businessId)))[0]?.status).toBe("opted_out");
+      }
+    });
+  });
+
+  it("treats YES as an answer unless the customer opted out", async () => {
+    await rollbackTest(async (tx) => {
+      const answering = await seedBusiness(tx, { enabled: true });
+      await answering.receive("Yes");
+      expect(await answering.replyJobs()).toHaveLength(1);
+      expect((await tx.select({ status: contacts.smsConsentStatus }).from(contacts).where(eq(contacts.businessId, answering.businessId)))[0]?.status).toBeNull();
+
+      const returning = await seedBusiness(tx, { enabled: true });
+      await returning.receive("STOP");
+      await returning.receive("YES");
+      expect(await returning.replyJobs()).toHaveLength(0);
+      expect((await tx.select({ status: contacts.smsConsentStatus }).from(contacts).where(eq(contacts.businessId, returning.businessId)))[0]?.status).toBe("subscribed");
     });
   });
 
@@ -135,7 +162,18 @@ describe.skipIf(!testUrl)("AI text replies against PostgreSQL under production l
 
       const context = await asWorker(tx, (db) => loadTextReplyContext({ db }, { businessId: business.businessId, conversationId, messageId: messageId! }));
 
-      expect(context).toEqual({ phone: canadian, history: [{ direction: "inbound", body: "Are you open Sunday?" }] });
+      expect(context).toEqual({ phone: canadian, firstReply: true, history: [{ direction: "inbound", body: "Are you open Sunday?" }] });
+    });
+  });
+
+  it("knows the first reply is past once one went out, however long ago", async () => {
+    await rollbackTest(async (tx) => {
+      const business = await seedBusiness(tx, { enabled: true });
+      const { messageId } = await business.receive("Are you open Sunday?");
+      const conversationId = await business.conversationId();
+      await seedReplies(tx, { businessId: business.businessId, conversationId, replies: 1, at: new Date(Date.now() - 30 * 24 * 60 * 60_000) });
+
+      expect(await asWorker(tx, (db) => loadTextReplyContext({ db }, { businessId: business.businessId, conversationId, messageId: messageId! }))).toMatchObject({ firstReply: false });
     });
   });
 

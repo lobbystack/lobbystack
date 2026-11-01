@@ -178,8 +178,12 @@ describe("the receptionist's text replies", () => {
     expect(textReplyBlockedReason({ ...reach, phone: usNumber, from: "+15145550100" })).toBe("sms_registration_required");
   });
 
-  it("leaves a sender outside +1, and a self-hosted business, alone", () => {
-    expect(textReplyBlockedReason({ ...reach, phone: usNumber, from: "+447700900100" })).toBeNull();
+  it("blocks a cloud business's sender outside +1 from US recipients too, and lets it reach everyone else", () => {
+    expect(textReplyBlockedReason({ ...reach, phone: usNumber, from: "+447700900100" })).toBe("sms_registration_required");
+    expect(textReplyBlockedReason({ ...reach, phone: "+447700900123", from: "+447700900100" })).toBeNull();
+  });
+
+  it("leaves a self-hosted business, which registers its own number, alone", () => {
     expect(textReplyBlockedReason({ ...reach, phone: usNumber, selfHosted: true })).toBeNull();
   });
 

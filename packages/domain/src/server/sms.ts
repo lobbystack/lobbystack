@@ -14,26 +14,35 @@ import { businessSmsNumber, isSelfHostedBusiness, isSharedSmsSender } from "./sm
 import { recordUnitEconomicsEventInTransaction } from "./unitEconomics";
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 
-const SMS_STOP_KEYWORDS = new Set(["STOP", "STOPALL", "UNSUBSCRIBE", "END", "QUIT", "CANCEL"]);
+// ARRET and AIDE are the French words Canadian carriers expect beside STOP and HELP.
+const SMS_STOP_KEYWORDS = new Set(["STOP", "STOPALL", "UNSUBSCRIBE", "END", "QUIT", "CANCEL", "OPTOUT", "REVOKE", "ARRET"]);
 const SMS_START_KEYWORDS = new Set(["START", "UNSTOP", "SUBSCRIBE"]);
-const SMS_HELP_KEYWORDS = new Set(["HELP"]);
+const SMS_HELP_KEYWORDS = new Set(["HELP", "INFO", "AIDE"]);
+
+/**
+ * "YES" restarts texts only for a phone that opted out. Anyone else who texts
+ * it is answering a question, such as the receptionist offering a time.
+ */
+function isStartKeyword(keyword: string, optedOut: boolean | undefined): boolean {
+  return SMS_START_KEYWORDS.has(keyword) || (keyword === "YES" && optedOut === true);
+}
 
 export type SmsConsentUpdate = { status: "subscribed" | "opted_out"; source: string };
 export type SmsKeywordReply = { kind: "help" | "start" };
 
 export function normalizeSmsKeyword(value: string): string {
-  return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return value.normalize("NFD").replace(/\p{M}/gu, "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
-export function classifySmsConsentUpdate(input: { body: string; optOutType?: string }): SmsConsentUpdate | null {
+export function classifySmsConsentUpdate(input: { body: string; optOutType?: string; optedOut?: boolean }): SmsConsentUpdate | null {
   const normalizedOptOutType = input.optOutType?.trim().toUpperCase();
   if (normalizedOptOutType) {
     if (SMS_STOP_KEYWORDS.has(normalizedOptOutType)) return { status: "opted_out", source: `twilio_opt_out:${normalizedOptOutType}` };
-    if (SMS_START_KEYWORDS.has(normalizedOptOutType)) return { status: "subscribed", source: `twilio_opt_out:${normalizedOptOutType}` };
+    if (isStartKeyword(normalizedOptOutType, input.optedOut)) return { status: "subscribed", source: `twilio_opt_out:${normalizedOptOutType}` };
   }
   const normalizedBody = normalizeSmsKeyword(input.body ?? "");
   if (SMS_STOP_KEYWORDS.has(normalizedBody)) return { status: "opted_out", source: `keyword:${normalizedBody}` };
-  if (SMS_START_KEYWORDS.has(normalizedBody)) return { status: "subscribed", source: `keyword:${normalizedBody}` };
+  if (isStartKeyword(normalizedBody, input.optedOut)) return { status: "subscribed", source: `keyword:${normalizedBody}` };
   return null;
 }
 
@@ -63,12 +72,12 @@ export function smsStartReply(input: { appName?: string; businessName: string })
   return `${input.appName ?? DEFAULT_APP_NAME}: You can get appointment texts from ${input.businessName} again. Msg frequency varies. Msg & data rates may apply. Reply HELP for help or STOP to opt out.`;
 }
 
-export function classifySmsKeywordReply(input: { body: string; optOutType?: string }): SmsKeywordReply | null {
+export function classifySmsKeywordReply(input: { body: string; optOutType?: string; optedOut?: boolean }): SmsKeywordReply | null {
   const normalizedOptOutType = input.optOutType?.trim().toUpperCase();
   const normalizedBody = normalizeSmsKeyword(input.body ?? "");
   const keyword = normalizedOptOutType || normalizedBody;
   if (SMS_HELP_KEYWORDS.has(keyword)) return { kind: "help" };
-  if (SMS_START_KEYWORDS.has(keyword)) return { kind: "start" };
+  if (isStartKeyword(keyword, input.optedOut)) return { kind: "start" };
   return null;
 }
 
@@ -113,8 +122,10 @@ export async function receiveSharedSenderSms(
   context: DomainContext,
   input: { from: string; body: string; optOutType?: string },
 ): Promise<{ reply: string | null; contactsChanged: number }> {
-  const consentUpdate = classifySmsConsentUpdate(input);
-  const keywordReply = classifySmsKeywordReply(input);
+  // This number holds no conversation for "YES" to answer.
+  const keyword = { ...input, optedOut: true };
+  const consentUpdate = classifySmsConsentUpdate(keyword);
+  const keywordReply = classifySmsKeywordReply(keyword);
   if (!consentUpdate && !keywordReply) return { reply: null, contactsChanged: 0 };
   const listed = await withBusinessTransaction(context.db, { actorType: "worker" }, async (tx) => await tx.execute<{ business_id: string }>(sql`select app.list_businesses_by_contact_phone(${input.from}) as business_id`));
   const businessIds = listed.rows.map((row) => row.business_id);
@@ -209,8 +220,9 @@ export async function receiveInboundSms(
     await tx.update(conversations).set({ updatedAt: new Date() }).where(and(eq(conversations.id, conversation.id), eq(conversations.businessId, input.businessId)));
     await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "message", aggregateId: message.id, dedupeKey: `message:${message.id}:created`, payload: { type: "message.upserted", entityId: message.id, conversationId: conversation.id } });
     const optOutType = typeof input.payload?.OptOutType === "string" && input.payload.OptOutType ? input.payload.OptOutType : undefined;
-    const consentUpdate = classifySmsConsentUpdate({ body: input.body, ...(optOutType !== undefined ? { optOutType } : {}) });
-    const keywordReply = classifySmsKeywordReply({ body: input.body, ...(optOutType !== undefined ? { optOutType } : {}) });
+    const keyword = { body: input.body, optedOut: contact.smsConsentStatus === "opted_out", ...(optOutType !== undefined ? { optOutType } : {}) };
+    const consentUpdate = classifySmsConsentUpdate(keyword);
+    const keywordReply = classifySmsKeywordReply(keyword);
     if (consentUpdate) {
       const now = new Date();
       // STOP clears the opt-in confirmation. START's reply confirms the opt-in itself.
@@ -297,16 +309,16 @@ export function smsReplyBlockedReason(reach: SmsReach, complianceReply = false):
  * Why the receptionist can't text this contact, or null when it can. On top of
  * the rule for any text: the business has to have replies on, the shared
  * number never carries them because a toll-free number maps to one business,
- * and a cloud business's +1 number can't reach US recipients, US territories
- * included, until it's registered. Nothing registers one yet. A self-hosted
- * business registers its own number.
+ * and a cloud business can't reach US recipients, US territories included,
+ * from any number until it's registered. Nothing registers one yet. A
+ * self-hosted business registers its own number.
  */
 export function textReplyBlockedReason(reach: TextReplyReach): SmsReplyBlockedReason | null {
   if (!reach.textRepliesEnabled) return "text_replies_off";
   const blocked = smsReplyBlockedReason(reach);
   if (blocked) return blocked;
   if (isSharedSmsSender(reach.from)) return "shared_sender";
-  return !reach.selfHosted && reach.from!.startsWith("+1") && smsRecipientRegion(reach.phone!) === "us" ? "sms_registration_required" : null;
+  return !reach.selfHosted && smsRecipientRegion(reach.phone!) === "us" ? "sms_registration_required" : null;
 }
 
 /** Whether the receptionist answers texts for this business. */

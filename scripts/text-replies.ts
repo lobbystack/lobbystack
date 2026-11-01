@@ -17,7 +17,7 @@ function printUsage(): void {
   --off       It stops, including replies already queued.
 
 A cloud business's texts to US numbers stay blocked either way until the
-business is registered. No tax ID is needed for this command.
+business is registered. This command needs no Business Number or EIN.
 
 Required env:
   DATABASE_URL
