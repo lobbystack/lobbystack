@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CopyIcon, ExternalLinkIcon, GiftIcon } from "lucide-react";
+import { CheckIcon, CopyIcon, ExternalLinkIcon, GiftIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -114,6 +114,12 @@ export function LiveAffiliateSurface() {
   const [payoutEmail, setPayoutEmail] = useState("");
   const [payoutError, setPayoutError] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  useEffect(() => {
+    if (!linkCopied) return;
+    const timeout = setTimeout(() => setLinkCopied(false), 2000);
+    return () => clearTimeout(timeout);
+  }, [linkCopied]);
   const saveEmail = useMutation({ mutationFn: updatePayoutEmail, onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["affiliate"] }); toast.success(t("toast.paypalSaved")); setIsDialogOpen(false); }, onError: () => setPayoutError(t("toast.paypalFailed")) });
 
   const summary = useMemo(() => {
@@ -133,13 +139,14 @@ export function LiveAffiliateSurface() {
   async function handleCopy() {
     if (!profile?.referralLink) return;
     await navigator.clipboard.writeText(profile.referralLink);
+    setLinkCopied(true);
     toast.success(t("toast.copied"));
   }
 
   return (
     <PageSurface title={t("title")}>
       <Card><CardContent className="flex flex-col gap-8">
-        <div className="flex flex-col gap-4"><CardTitle>{t("referral.title")}</CardTitle>{profile ? <div className="flex flex-col gap-2 sm:flex-row"><Input readOnly value={profile.referralLink} /><Button onClick={() => void handleCopy()} type="button"><CopyIcon data-icon="inline-start" />{t("referral.copy")}</Button></div> : <p className="text-sm text-muted-foreground">{t("toast.profileFailed")}</p>}</div>
+        <div className="flex flex-col gap-4"><CardTitle>{t("referral.title")}</CardTitle>{profile ? <div className="flex flex-col gap-2 sm:flex-row"><Input disabled readOnly value={profile.referralLink} /><Button disabled={linkCopied} onClick={() => void handleCopy()} type="button">{linkCopied ? <CheckIcon data-icon="inline-start" /> : <CopyIcon data-icon="inline-start" />}{linkCopied ? t("referral.copied") : t("referral.copy")}</Button></div> : <p className="text-sm text-muted-foreground">{t("toast.profileFailed")}</p>}</div>
         <div className="flex flex-col gap-4"><div className="flex items-center justify-between gap-4"><CardTitle>{t("terms.title")}</CardTitle><a className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline" href={affiliateTermsHref(locale)} rel="noreferrer" target="_blank">{t("terms.link")}<ExternalLinkIcon aria-hidden="true" className="size-4" /></a></div><div className="flex flex-col gap-4"><div className="flex items-center gap-3"><GiftIcon aria-hidden="true" className="size-4 shrink-0" /><p className="text-base font-medium text-foreground">{t("terms.reward", { rate: "20%", duration: t("terms.oneYear") })}</p></div><Separator /><div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"><span><span className="font-medium text-foreground">{formatCurrency(locale, 10_000, currency)}</span>{" "}<span className="lowercase">{t("terms.minimum")}</span></span><span aria-hidden="true">/</span><span><span className="font-medium text-foreground">{t("terms.days", { count: 30 })}</span>{" "}<span className="lowercase">{t("terms.hold")}</span></span></div></div></div>
       </CardContent></Card>
 

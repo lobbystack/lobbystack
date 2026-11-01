@@ -7,6 +7,7 @@
     "description": "Podelite ovaj link gde god preporučujete {{appName}}.",
     "active": "Aktivan",
     "copy": "Kopiraj link",
+    "copied": "Kopirano",
     "code": "Kod preporuke: {{code}}"
   },
   "terms": {
