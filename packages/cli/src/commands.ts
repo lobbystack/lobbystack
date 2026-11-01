@@ -261,8 +261,9 @@ export const groups: Record<string, Group> = Object.fromEntries([
     create: { operation: "createWidgetKey", show: (data) => `Key: ${String(data.key)} (shown only now)\n\nPaste this into the website's HTML:\n${String(data.embed_snippet)}` },
     update: { operation: "updateWidgetKey" },
   }),
-  group("calendar", "Google Calendar connections.", {
+  group("calendar", "Google Calendar and Cal.com connections.", {
     connect: { operation: "createCalendarConnectLink", show: (data) => `Send this link to whoever owns the Google Calendar. It works until ${String(data.expires_at)}:\n${String(data.url)}` },
+    "connect-calcom": { operation: "createCalcomConnectLink", show: (data) => `Send this link to whoever owns the Cal.com account. It works until ${String(data.expires_at)}:\n${String(data.url)}` },
     list: { operation: "listCalendarConnections", columns: columns("id", "account_id", "calendar_id", "staff_id", "status", "last_synced_at") },
     calendars: { operation: "listAccountCalendars", columns: columns("id", "name", "primary", "writable", "selected") },
     set: { operation: "updateCalendarConnection" },

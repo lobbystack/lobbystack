@@ -1,53 +1,73 @@
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { and, asc, eq, isNull, ne, or, sql } from "drizzle-orm";
 import { appointments, calendarConnections, contacts, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { CALENDAR_SYNC_HORIZON_MS, markCalendarConnectionSync, queueUnsyncedAppointmentSyncs, recordProductEvent, resolveCalendarAccessToken, updateAppointmentSyncState, updateAppointmentSyncStateInTransaction, upsertBusyBlocks, type DomainContext } from "@lobbystack/domain";
+import { CALENDAR_SYNC_HORIZON_MS, followCalendarBookingChanges, forgetRetiredCalendarWebhook, getRetiredCalendarConnection, markCalendarConnectionSync, pickCalendarWriter, queueUnsyncedAppointmentSyncs, recordProductEvent, registerCalendarWebhookOnce, resolveCalendarAccessToken, updateAppointmentSyncState, updateAppointmentSyncStateInTransaction, upsertBusyBlocks, type DomainContext } from "@lobbystack/domain";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 import { redactOtelExceptionText } from "@lobbystack/telemetry/node";
-import type { GoogleCalendarProvider } from "@lobbystack/providers/google/calendar";
+import { calendarProviderLabel, type CalendarBookingChanges, type CalendarProvider } from "@lobbystack/providers/calendar";
+import { CALENDAR_RECONNECT_ERROR } from "@lobbystack/shared";
 import type { JobResult } from "./handlers";
 
-export type CalendarOperations = Pick<GoogleCalendarProvider, "getBusyBlocks" | "upsertEvent" | "deleteEvent" | "refreshAccessToken">;
-type Dependencies = { domain: DomainContext; calendar?: CalendarOperations };
+export type CalendarOperations = Pick<CalendarProvider, "getBusyBlocks" | "upsertEvent" | "deleteEvent" | "refreshAccessToken"> & {
+  /** A provider that pushes changes, as Cal.com does, registers a webhook for each connection. */
+  registerWebhook?: (input: { accessToken: string; subscriberUrl: string; secret: string }) => Promise<{ webhookId: string }>;
+  deleteWebhook?: (input: { accessToken: string; webhookId: string }) => Promise<void>;
+  /** A provider whose bookings people can change themselves says which ones they did. */
+  getBookingChanges?: (input: { accessToken: string; startsAt: string; endsAt: string }) => Promise<CalendarBookingChanges>;
+};
+/** The configured providers by name; a connection whose provider is missing here is left alone. */
+export type CalendarProviders = Partial<Record<string, CalendarOperations>>;
+type Dependencies = { domain: DomainContext; calendars?: CalendarProviders };
 
-async function accessToken(dependencies: Dependencies, businessId: string, connectionId: string, forceRefresh = false): Promise<string> {
+async function secretBox() {
   const key = process.env.ENCRYPTION_KEY;
-  if (!key || !dependencies.calendar) throw new Error("Calendar synchronization is not configured.");
+  if (!key) throw new Error("Calendar synchronization is not configured.");
   const { SecretBox } = await import("@lobbystack/providers/crypto/secretBox");
-  const box = new SecretBox(key);
+  return new SecretBox(key);
+}
+
+async function accessToken(dependencies: Dependencies, businessId: string, connectionId: string, calendar: CalendarOperations, forceRefresh = false): Promise<string> {
+  const box = await secretBox();
   return await resolveCalendarAccessToken(dependencies.domain, {
     businessId, connectionId, forceRefresh,
     decryptToken: (value) => box.decrypt(value), encryptToken: (value) => box.encrypt(value),
-    refreshAccessToken: (input) => dependencies.calendar!.refreshAccessToken(input),
+    refreshAccessToken: (input) => calendar.refreshAccessToken(input),
   });
 }
 
 export async function syncAppointmentCalendar(dependencies: Dependencies, input: { businessId: string; appointmentId: string }): Promise<JobResult> {
   const { businessId, appointmentId } = input;
-  if (!dependencies.calendar || !appointmentId) return { status: "skipped", entityId: appointmentId };
-  const provider = dependencies.calendar;
+  if (!appointmentId) return { status: "skipped", entityId: appointmentId };
   // FOR SHARE makes a calendar switch wait for an event write already running, so its release comes after it.
-  const load = async (tx: DatabaseTransaction) => (await tx.select({
+  // Every connection covering the staff member is read and locked; pickCalendarWriter chooses the one that gets the appointment.
+  const load = async (tx: DatabaseTransaction) => pickCalendarWriter(await tx.select({
     id: appointments.id, status: appointments.status, startsAt: appointments.startsAt, endsAt: appointments.endsAt,
-    externalEventId: appointments.calendarExternalId, serviceName: services.name, contactName: contacts.name,
+    timezone: appointments.timezone, externalEventId: appointments.calendarExternalId, serviceName: services.name,
+    contactName: contacts.name, contactPhone: contacts.phone, contactEmail: contacts.email,
     connectionId: calendarConnections.id, calendarId: calendarConnections.selectedCalendarId, connectionStatus: calendarConnections.status,
-    provider: calendarConnections.provider,
+    provider: calendarConnections.provider, staffId: calendarConnections.staffId,
   }).from(appointments)
     .innerJoin(services, and(eq(services.id, appointments.serviceId), eq(services.businessId, businessId)))
     .leftJoin(contacts, and(eq(contacts.id, appointments.contactId), eq(contacts.businessId, businessId)))
     .innerJoin(calendarConnections, and(eq(calendarConnections.businessId, businessId), ne(calendarConnections.status, "disconnected"), or(isNull(calendarConnections.staffId), eq(calendarConnections.staffId, appointments.staffId))))
     .where(and(eq(appointments.id, appointmentId), eq(appointments.businessId, businessId)))
-    .orderBy(sql`(${calendarConnections.staffId} is not null) desc`, asc(calendarConnections.id)).limit(1).for("share", { of: calendarConnections }))[0];
+    .orderBy(asc(calendarConnections.id)).for("share", { of: calendarConnections }), (row) => ({ id: row.connectionId, provider: row.provider, staffId: row.staffId, selectedCalendarId: row.calendarId }));
   const initial = await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, load);
   if (!initial?.calendarId) {
     await updateAppointmentSyncState(dependencies.domain, { businessId, appointmentId, state: "not_required" });
+    return { status: "skipped", entityId: appointmentId };
+  }
+  const provider = dependencies.calendars?.[initial.provider];
+  if (!provider) {
+    // The appointment belongs in a calendar this worker can't reach. Failing it alerts the operator, once per appointment time.
+    await updateAppointmentSyncState(dependencies.domain, { businessId, appointmentId, state: "failed", error: `${calendarProviderLabel(initial.provider)} isn't set up on this server.` });
     return { status: "skipped", entityId: appointmentId };
   }
   let tokenResolved = false;
   try {
     // Commit refreshed credentials independently before external event writes.
     // No nested pool acquisition while the appointment sync lock is held.
-    const token = await accessToken(dependencies, businessId, initial.connectionId, initial.connectionStatus === "error");
+    const token = await accessToken(dependencies, businessId, initial.connectionId, provider, initial.connectionStatus === "error");
     tokenResolved = true;
     return await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
       await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`calendar:appointment:${appointmentId}`}, 0))`);
@@ -57,10 +77,13 @@ export async function syncAppointmentCalendar(dependencies: Dependencies, input:
       const clientEventId = `a${createHash("sha256").update(current.id).digest("hex").slice(0, 31)}`;
       // Durable current state wins over a delayed or out-of-order job payload.
       if (current.status === "canceled" || current.status === "cancelled") {
-        await provider.deleteEvent({ accessToken: token, calendarId: current.calendarId, eventId: current.externalEventId ?? clientEventId });
+        await provider.deleteEvent({ accessToken: token, calendarId: current.calendarId, eventId: current.externalEventId ?? clientEventId, appointmentId });
         await updateAppointmentSyncStateInTransaction(tx, { businessId, appointmentId, state: "synced" });
       } else {
-        const external = await provider.upsertEvent({ accessToken: token, calendarId: current.calendarId, clientEventId, ...(current.externalEventId ? { eventId: current.externalEventId } : {}), title: current.serviceName, startsAt: current.startsAt.toISOString(), endsAt: current.endsAt.toISOString(), ...(current.contactName ? { description: `Appointment for ${current.contactName}` } : {}) });
+        const external = await provider.upsertEvent({
+          accessToken: token, calendarId: current.calendarId, clientEventId, ...(current.externalEventId ? { eventId: current.externalEventId } : {}), title: current.serviceName, startsAt: current.startsAt.toISOString(), endsAt: current.endsAt.toISOString(), ...(current.contactName ? { description: `Appointment for ${current.contactName}` } : {}),
+          appointmentId, timezone: current.timezone, attendee: { name: current.contactName, phone: current.contactPhone, email: current.contactEmail },
+        });
         await updateAppointmentSyncStateInTransaction(tx, { businessId, appointmentId, state: "synced", externalEventId: external.externalEventId });
       }
       return { status: "completed", entityId: appointmentId };
@@ -90,41 +113,98 @@ export async function syncAppointmentCalendar(dependencies: Dependencies, input:
 /** Deletes the event a released booking left in a calendar its connection no longer writes it to. */
 export async function deleteReleasedCalendarEvent(dependencies: Dependencies, input: { businessId: string; appointmentId: string; connectionId: string; calendarId: string; eventId: string }): Promise<JobResult> {
   const { businessId, appointmentId, connectionId, calendarId, eventId } = input;
-  if (!dependencies.calendar || !connectionId || !calendarId || !eventId) return { status: "skipped", entityId: appointmentId };
+  if (!dependencies.calendars || !connectionId || !calendarId || !eventId) return { status: "skipped", entityId: appointmentId };
   const { connection, currentEventId } = await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => ({
-    connection: (await tx.select({ status: calendarConnections.status, selectedCalendarId: calendarConnections.selectedCalendarId }).from(calendarConnections).where(and(eq(calendarConnections.id, connectionId), eq(calendarConnections.businessId, businessId))).limit(1))[0],
+    connection: (await tx.select({ status: calendarConnections.status, selectedCalendarId: calendarConnections.selectedCalendarId, provider: calendarConnections.provider }).from(calendarConnections).where(and(eq(calendarConnections.id, connectionId), eq(calendarConnections.businessId, businessId))).limit(1))[0],
     currentEventId: (await tx.select({ eventId: appointments.calendarExternalId }).from(appointments).where(and(eq(appointments.id, appointmentId), eq(appointments.businessId, businessId))).limit(1))[0]?.eventId,
   }));
   // A disconnected connection has no token left. Event ids repeat across calendars, so a connection
   // switched back to this calendar that wrote the booking again holds a live event under this id.
   if (!connection || connection.status === "disconnected" || (connection.selectedCalendarId === calendarId && currentEventId === eventId)) return { status: "skipped", entityId: appointmentId };
-  await dependencies.calendar.deleteEvent({ accessToken: await accessToken(dependencies, businessId, connectionId), calendarId, eventId });
+  // A Cal.com uid names one booking anywhere, so one an appointment holds again is live, whichever event type it's on.
+  if (connection.provider === "calcom" && await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => (await tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.businessId, businessId), eq(appointments.calendarExternalId, eventId))).limit(1)).length > 0)) return { status: "skipped", entityId: appointmentId };
+  const provider = dependencies.calendars[connection.provider];
+  if (!provider) return { status: "skipped", entityId: appointmentId };
+  await provider.deleteEvent({ accessToken: await accessToken(dependencies, businessId, connectionId, provider), calendarId, eventId, appointmentId });
   return { status: "completed", entityId: appointmentId };
 }
 
-export async function reconcileBusinessCalendar(dependencies: Dependencies, businessId: string): Promise<JobResult> {
-  if (!dependencies.calendar) return { status: "skipped", entityId: businessId };
-  const connections = await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => tx.select({ id: calendarConnections.id, calendarId: calendarConnections.selectedCalendarId, staffId: calendarConnections.staffId, status: calendarConnections.status }).from(calendarConnections).where(and(eq(calendarConnections.businessId, businessId), ne(calendarConnections.status, "disconnected"))));
+/** Syncs the business's live connections, or only `connectionId`, as a webhook delivery asks. */
+export async function reconcileBusinessCalendar(dependencies: Dependencies, businessId: string, connectionId?: string): Promise<JobResult> {
+  if (!dependencies.calendars) return { status: "skipped", entityId: businessId };
+  const connections = await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => tx.select({ id: calendarConnections.id, provider: calendarConnections.provider, calendarId: calendarConnections.selectedCalendarId, staffId: calendarConnections.staffId, status: calendarConnections.status, webhookId: calendarConnections.externalWebhookId }).from(calendarConnections).where(and(eq(calendarConnections.businessId, businessId), ne(calendarConnections.status, "disconnected"), connectionId ? eq(calendarConnections.id, connectionId) : undefined)));
   let synced = 0;
   let failures = 0;
   for (const connection of connections) {
     // Connecting OAuth does not authorize writes to the implicit primary calendar.
     if (!connection.calendarId) continue;
+    const provider = dependencies.calendars[connection.provider];
+    if (!provider) continue;
     try {
-      const token = await accessToken(dependencies, businessId, connection.id, connection.status === "error");
+      const token = await accessToken(dependencies, businessId, connection.id, provider, connection.status === "error");
+      // A push provider's busy time is only as fresh as its webhook, so the connection fails until one is registered.
+      if (provider.registerWebhook && !connection.webhookId) await registerWebhook(dependencies, provider, { businessId, connectionId: connection.id, accessToken: token });
       const startsAt = new Date();
       const endsAt = new Date(startsAt.getTime() + CALENDAR_SYNC_HORIZON_MS);
-      const blocks = await dependencies.calendar.getBusyBlocks({ accessToken: token, calendarId: connection.calendarId, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() });
+      const blocks = await provider.getBusyBlocks({ accessToken: token, calendarId: connection.calendarId, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() });
       await upsertBusyBlocks(dependencies.domain, { businessId, connectionId: connection.id, calendarId: connection.calendarId, syncStartedAt: startsAt, blocks: blocks.map((block) => ({ ...block, ...(connection.staffId ? { staffId: connection.staffId } : {}) })) });
+      if (provider.getBookingChanges) await followCalendarBookingChanges(dependencies.domain, { businessId, provider: calendarProviderLabel(connection.provider), changes: await provider.getBookingChanges({ accessToken: token, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() }) });
       await queueUnsyncedAppointmentSyncs(dependencies.domain, { businessId, connectionId: connection.id });
       synced++;
     } catch (error) {
       const message = error instanceof Error ? redactOtelExceptionText(error.message) : "Calendar synchronization failed.";
       if (message === "Calendar selection changed during synchronization.") continue;
-      await markCalendarConnectionSync(dependencies.domain, { businessId, connectionId: connection.id, error: message });
+      // Only a rejected grant needs the operator to reconnect; the dashboard tells them so from this message.
+      const failure = error as { reconnectRequired?: unknown; responseStatus?: unknown };
+      const rejected = failure.reconnectRequired === true || failure.responseStatus === 401 || failure.responseStatus === 403;
+      await markCalendarConnectionSync(dependencies.domain, { businessId, connectionId: connection.id, error: rejected ? CALENDAR_RECONNECT_ERROR : message });
       failures++;
     }
   }
   if (failures) throw new Error(`Calendar synchronization failed for ${failures} connection(s).`);
   return { status: synced ? "completed" : "skipped", entityId: `${businessId}:${synced}` };
+}
+
+async function registerWebhook(dependencies: Dependencies, provider: CalendarOperations, input: { businessId: string; connectionId: string; accessToken: string }): Promise<void> {
+  const box = await secretBox();
+  const baseUrl = (process.env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  // Under a lease on the connection, so two syncs at once register one webhook between them.
+  await registerCalendarWebhookOnce(dependencies.domain, {
+    businessId: input.businessId, connectionId: input.connectionId,
+    discard: async (webhookId) => { await provider.deleteWebhook?.({ accessToken: input.accessToken, webhookId }); },
+    register: async () => {
+      const secret = randomBytes(32).toString("hex");
+      const { webhookId } = await provider.registerWebhook!({ accessToken: input.accessToken, subscriberUrl: `${baseUrl}/api/webhooks/calcom/${input.connectionId}`, secret });
+      return { externalWebhookId: webhookId, encryptedWebhookSecret: box.encrypt(secret) };
+    },
+  });
+}
+
+/**
+ * Retires a disconnected Cal.com connection with the tokens the disconnect kept:
+ * cancels the upcoming bookings it made, which its public booking page would
+ * otherwise still show as taken, removes its webhook, then forgets the tokens.
+ * A connection reconnected in the meantime keeps everything.
+ */
+export async function retireCalendarWebhook(dependencies: Dependencies, input: { businessId: string; connectionId: string; cancel?: Array<{ appointmentId: string; calendarId: string; eventId: string }> }): Promise<JobResult> {
+  const { cancel = [], ...connection } = input;
+  const retired = await getRetiredCalendarConnection(dependencies.domain, connection);
+  if (!retired) return { status: "skipped", entityId: input.connectionId };
+  const provider = dependencies.calendars?.[retired.provider];
+  if (provider) {
+    const box = await secretBox();
+    try {
+      // A refresh rotates the refresh token, so the new one is saved before any call: a retry after a failure uses it.
+      const token = await resolveCalendarAccessToken(dependencies.domain, { ...connection, retired: true, decryptToken: (value) => box.decrypt(value), encryptToken: (value) => box.encrypt(value), refreshAccessToken: (refresh) => provider.refreshAccessToken(refresh) });
+      // Cancelling skips a booking that's already gone, so a retry repeats none of the finished ones.
+      for (const booking of cancel) await provider.deleteEvent({ accessToken: token, calendarId: booking.calendarId, eventId: booking.eventId, appointmentId: booking.appointmentId });
+      if (retired.externalWebhookId && provider.deleteWebhook) await provider.deleteWebhook({ accessToken: token, webhookId: retired.externalWebhookId });
+    } catch (error) {
+      // A revoked grant can't cancel or remove anything. Its webhook's deliveries reach a disconnected connection, which the route ignores.
+      const failure = error as { reconnectRequired?: unknown; responseStatus?: unknown };
+      if (failure.reconnectRequired !== true && failure.responseStatus !== 401 && failure.responseStatus !== 403) throw error;
+    }
+  }
+  await forgetRetiredCalendarWebhook(dependencies.domain, input);
+  return { status: "completed", entityId: input.connectionId };
 }

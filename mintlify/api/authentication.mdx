@@ -60,7 +60,7 @@ Each endpoint except `GET /me` requires one scope. A key without it gets `403` w
 | Scope | Allows |
 | --- | --- |
 | `business:read` | `GET /business`, `GET /services`, `GET /staff`, `GET /receptionist`, `GET /rules`, `GET /onboarding`, `GET /widget-keys`, `GET /calendars`, `GET /calendars/{connection_id}/calendars`, `GET /notification-preferences` |
-| `business:write` | `PATCH /business`, `PATCH /receptionist`, `POST /services`, `PATCH` and `DELETE` on `/services/{service_id}`, `POST /rules`, `PATCH` and `DELETE` on `/rules/{rule_id}`, `POST /rules/reorder`, `PATCH /onboarding`, `POST /onboarding/complete`, `POST /widget-keys`, `PATCH /widget-keys/{widget_key_id}`, `POST /calendars/google/connect`, `PATCH` and `DELETE` on `/calendars/{connection_id}`, `PATCH /notification-preferences` |
+| `business:write` | `PATCH /business`, `PATCH /receptionist`, `POST /services`, `PATCH` and `DELETE` on `/services/{service_id}`, `POST /rules`, `PATCH` and `DELETE` on `/rules/{rule_id}`, `POST /rules/reorder`, `PATCH /onboarding`, `POST /onboarding/complete`, `POST /widget-keys`, `PATCH /widget-keys/{widget_key_id}`, `POST /calendars/google/connect`, `POST /calendars/calcom/connect`, `PATCH` and `DELETE` on `/calendars/{connection_id}`, `PATCH /notification-preferences` |
 | `calls:read` | `GET /calls`, `GET /calls/{call_id}` |
 | `contacts:read` | `GET /contacts`, `GET /contacts/{contact_id}` |
 | `contacts:write` | `POST /contacts`, `PATCH /contacts/{contact_id}`, `POST /contacts/passcodes`, `POST /contacts/passcodes/generate` |
