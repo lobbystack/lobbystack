@@ -1,7 +1,7 @@
 import { and, desc, eq, ilike, notInArray, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
-import { contacts, conversations, messages, widgetVisitors } from "@lobbystack/db";
+import { businesses, contacts, conversations, messages, widgetVisitors } from "@lobbystack/db";
 import { appendMessage, setAutomationState } from "@lobbystack/domain";
 import { isTextChatChannel, isUuid, TEXT_CHAT_CHANNELS } from "@lobbystack/shared";
 import { jsonError } from "@/lib/api-helpers";
@@ -38,7 +38,8 @@ export const GET = operatorRoute(async ({ request, businessId, transaction }) =>
       isTextChatChannel(channel) ? eq(conversations.channel, channel) : channel === "sms" ? notInArray(conversations.channel, [...TEXT_CHAT_CHANNELS]) : undefined,
       search ? or(...[contacts.name, contacts.phone, widgetVisitors.name, widgetVisitors.email, latest.body].map((column) => ilike(column, `%${search}%`))) : undefined,
     )).orderBy(desc(latest.createdAt), desc(conversations.id)).limit(limit + 1).offset(offset);
-    return { messages: rows.slice(0, limit), hasNext: rows.length > limit, instagramOffered: instagramConfigured() };
+    const [business] = await tx.select({ textRepliesEnabled: businesses.textRepliesEnabled }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
+    return { messages: rows.slice(0, limit), hasNext: rows.length > limit, instagramOffered: instagramConfigured(), textRepliesOn: business?.textRepliesEnabled === true };
   }));
 });
 

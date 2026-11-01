@@ -194,6 +194,8 @@ export const businesses = pgTable(
     phoneNumberReplacementReservedAt: timestamp("phone_number_replacement_reserved_at", { withTimezone: true }),
     phoneNumberReplacementUsedAt: timestamp("phone_number_replacement_used_at", { withTimezone: true }),
     telemetryEnabled: boolean("telemetry_enabled").default(true).notNull(),
+    // Whether the receptionist answers texts to the business's own number. Only the host turns it on, with pnpm text-replies:set.
+    textRepliesEnabled: boolean("text_replies_enabled").default(false).notNull(),
     // Who set the opening hours: none yet, AI from the knowledge sources, or a person.
     hoursSource: varchar("hours_source", { length: 16 }).$type<"none" | "generated" | "operator">().default("none").notNull(),
     hoursFingerprint: varchar("hours_fingerprint", { length: 64 }),

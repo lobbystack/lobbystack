@@ -36,6 +36,13 @@
       "certification": ["scripts/replacement-unit-economics-check.ts"]
     },
     {
+      "id": "sms.text_replies",
+      "status": "required",
+      "implementation": ["packages/domain/src/server/textReplies.ts", "packages/domain/src/server/sms.ts", "apps/worker/src/textReplyJobs.ts"],
+      "tests": ["apps/worker/src/textReplyJobs.test.ts", "packages/domain/src/server/textReplies.integration.test.ts", "packages/shared/src/smsReach.test.ts"],
+      "certification": ["docs/validation/certification-runbook.md"]
+    },
+    {
       "id": "certification.release_gates",
       "status": "required",
       "implementation": [".github/workflows/replacement-platform.yml"],
@@ -45,13 +52,13 @@
     {
       "id": "billing.ai_sms",
       "status": "excluded",
-      "reason": "AI-generated SMS and AI-SMS add-on billing or metering are intentionally excluded.",
+      "reason": "An AI-SMS add-on, with its own billing or metering, is intentionally excluded. AI text replies themselves are sms.text_replies and draw on the chat allowance.",
       "forbiddenPatterns": ["ai_sms", "sms_ai", "sms.processInbound", "sms.reply"]
     },
     {
       "id": "compliance.twilio_a2p",
       "status": "excluded",
-      "reason": "Twilio A2P registration is intentionally excluded; production alerts require an independently compliant sender.",
+      "reason": "Twilio A2P registration is not built yet (docs/specs/business-sms-registration.md); production alerts require an independently compliant sender, and AI text replies skip US recipients on cloud businesses.",
       "forbiddenPatterns": ["twilioA2p", "10DLC", "a2pRegistration"]
     },
     {

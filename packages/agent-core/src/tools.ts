@@ -33,7 +33,7 @@ import { serviceFacts, upcomingClosures, weeklyHours } from "./businessFacts";
 import { receptionistCapabilities, type ToolName } from "./capabilities";
 
 /** Where the conversation happens. Phone calls know the caller's number. */
-export type AgentChannel = "voice" | "web_voice" | "web_chat" | "instagram";
+export type AgentChannel = "voice" | "web_voice" | "web_chat" | "instagram" | "sms";
 
 /**
  * What came of a PIN the caller typed on the keypad. "accepted" verifies the
@@ -75,7 +75,7 @@ export type AgentToolContext = {
   domain: DomainContext;
   snapshot: BusinessContextSnapshot;
   channel: AgentChannel;
-  /** Verified caller ID on phone calls. Never set from what a visitor types. */
+  /** Verified caller ID on phone calls. Never set from what a visitor types, or from a text's sender, which can be spoofed. */
   callerPhone?: string;
   callId?: string;
   conversationId?: string;

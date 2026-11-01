@@ -160,4 +160,14 @@ describe("receptionistCapabilities", () => {
     expect(toolUse("findAvailability").kind).toBe("reusable_lookup");
     expect(toolUse("endCall").kind).toBe("other");
   });
+
+  it("answers a text in writing, without trusting its sender for appointment changes", () => {
+    const { tools, guidance } = capabilities(changePolicy({}), { channel: "sms", conversationId: "conversation" });
+    expect(tools).not.toContain("cancelAppointment");
+    expect(tools).not.toContain("transferCall");
+    expect(tools).toContain("requestAppointmentCancellation");
+    expect(guidance.join("\n")).toContain("in this chat");
+    expect(guidance.join("\n")).toContain("This text conversation can't be transferred");
+    expect(guidance.join("\n")).toContain("replies here");
+  });
 });

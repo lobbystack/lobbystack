@@ -20,14 +20,19 @@ type JobResult = { status: "completed" | "skipped"; entityId?: string } | { stat
 const NO_REPLY = "NO_REPLY";
 const NO_REPLY_MARKER = new RegExp(`\\b${NO_REPLY}\\b`, "gi");
 
+// When the receptionist stays quiet, on channels where each reply goes straight to someone's phone.
+export const NO_REPLY_INSTRUCTIONS = [
+  `Not every message needs an answer. When the person's latest message only acknowledges or closes a finished exchange ("ok", "thanks", "great", "bye", a lone emoji or reaction) and they aren't waiting on anything, reply with exactly ${NO_REPLY} and nothing else.`,
+  `Never use ${NO_REPLY} for a greeting, a question, a request, or when you still owe them an answer or confirmation.`,
+  `If the other side is clearly another business's automated assistant rather than a person, reply with ${NO_REPLY}.`,
+];
+
 // Instagram is a text chat like the website's, with its own limits: plain text, and short.
 const INSTAGRAM_INSTRUCTIONS = [
   "You are replying to direct messages sent to the business's Instagram account, not a website chat.",
   "Write plain text only: no markdown, bullet symbols, headings or tables. Keep each reply to a few short sentences.",
   "If you can't help, offer to take a message so someone from the team gets back to them here.",
-  `Not every message needs an answer. When the person's latest message only acknowledges or closes a finished exchange ("ok", "thanks", "great", "bye", a lone emoji or reaction) and they aren't waiting on anything, reply with exactly ${NO_REPLY} and nothing else.`,
-  `Never use ${NO_REPLY} for a greeting, a question, a request, or when you still owe them an answer or confirmation.`,
-  `If the other side is clearly another business's automated assistant rather than a person, reply with ${NO_REPLY}.`,
+  ...NO_REPLY_INSTRUCTIONS,
 ].join(" ");
 
 export async function replyToInstagramMessage(domain: DomainContext, job: JobEnvelope, options: { model?: LanguageModel } = {}): Promise<JobResult> {

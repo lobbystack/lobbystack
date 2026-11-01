@@ -1,6 +1,6 @@
 import { stepCountIs, ToolLoopAgent, type LanguageModel, type StopCondition, type ToolSet } from "ai";
 
-import { isTextChatChannel } from "@lobbystack/shared";
+import { isWrittenChannel } from "@lobbystack/shared";
 
 import { buildAgentInstructions } from "./instructions";
 import { directToolAnswer } from "./live/directAnswer";
@@ -35,6 +35,6 @@ export function createReceptionistAgent(input: {
     instructions: [buildAgentInstructions(input.context.snapshot, input.context), input.extraInstructions].filter(Boolean).join("\n\n"),
     tools: createReceptionistTools(input.context),
     stopWhen,
-    ...(isTextChatChannel(input.context.channel) ? { maxOutputTokens: WEB_CHAT_MAX_OUTPUT_TOKENS } : {}),
+    ...(isWrittenChannel(input.context.channel) ? { maxOutputTokens: WEB_CHAT_MAX_OUTPUT_TOKENS } : {}),
   });
 }

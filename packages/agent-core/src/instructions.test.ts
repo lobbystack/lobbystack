@@ -7,6 +7,16 @@ import { buildAgentInstructions, buildLiveInstructions, liveLanguage } from "./i
 
 const callStart = DateTime.fromISO("2026-10-01T18:30:00.000Z");
 
+describe("buildAgentInstructions on a text", () => {
+  it("writes short replies under the business's text instructions, not as a voice backend", () => {
+    const instructions = buildAgentInstructions({ ...demoSnapshot, smsInstructions: "Sign off with our name.", chatInstructions: "Use the website voice." }, { channel: "sms" });
+    expect(instructions).toContain("someone who texted the business's phone number");
+    expect(instructions).toContain("Sign off with our name.");
+    expect(instructions).not.toContain("Use the website voice.");
+    expect(instructions).not.toContain("live voice model");
+  });
+});
+
 describe("buildLiveInstructions", () => {
   it("hands the caller's answer about texts to the backend, which saves it", () => {
     expect(buildLiveInstructions(demoSnapshot, "voice")).toContain("- The caller says whether they want texts about their appointments, so the backend can save their answer.");
