@@ -198,7 +198,6 @@ function checkKey(run: Run): void {
   const { plan, phone_number: phoneNumber } = run.manifest;
   if (run.manifest.business.access_level !== undefined && run.access !== "partner") throw new CliError("business.access_level is only for a partner's platform key, which sets what the business's own team can use. Leave it out of the manifest.");
   if (run.access === "partner" && plan) throw new CliError("A partner's businesses don't buy the host's plans, so a partner's key can't pick one. Leave plan out of the manifest.");
-  if (run.access === "partner" && phoneNumber) throw new CliError("A partner's platform key can't claim phone numbers. Leave phone_number out of the manifest.");
   if (run.access === "group" && (plan || phoneNumber)) {
     throw new CliError("A platform key with group access can't buy a plan or a number: the business's owner pays for them, and once they claim the business your key can't reach it. Leave plan and phone_number out of the manifest, and the owner picks both in the dashboard after claiming it.");
   }
@@ -257,9 +256,9 @@ async function ensureBusiness(run: Run, make: (business?: string) => Client, nam
     const same = onboarded.find((business) => sameName(business.name, wanted.name));
     if (same) throw new CliError(`You already onboarded ${String(same.name)} (${String(same.id)}), and there's no state file to say it's this one. To set it up, put id: ${String(same.id)} under business in the manifest. To make another business, give it another name.`);
   }
-  // A partner's key invites the owner as it creates the business, and can't later.
+  // A partner's key invites the owner as it creates the business, and can't later. Without one, the partner runs the business itself.
   const owner = run.access === "partner" ? run.manifest.owner?.email : undefined;
-  if (run.access === "partner" && !owner) throw new CliError("A partner's platform key invites the business's owner as it creates the business. Add owner to the manifest.");
+  if (run.access === "partner" && wanted.package_id && !owner) throw new CliError("A package's checkout opens from the owner's invitation, so a business with package_id needs owner in the manifest.");
   if (run.plan) {
     run.log({ step: "business", action: "would create", detail: wanted.name });
     return undefined;
@@ -642,6 +641,12 @@ async function syncPhoneNumber(run: Run, billing: Billing | undefined): Promise<
         offers = (await run.client.call("searchPhoneNumbers", { body: { ...wanted, limit: 5 } })).data;
       } catch (error) {
         // A key that can't read the plan learns here that the business has no paid one, which only someone paying changes.
+        // A partner's business buys no plan: its partner's tier pays for the number, which only choosing a tier changes.
+        if (run.access === "partner" && error instanceof ApiError && error.status === 409) {
+          run.log({ step: "phone number", action: "waiting", detail: "for a paid tier" });
+          run.waiting.push(`${error.message} Then run this again.`);
+          return;
+        }
         if (!(!billing && error instanceof ApiError && error.status === 409)) throw error;
         run.log({ step: "phone number", action: "waiting", detail: "for a paid plan" });
         run.waiting.push(`${error.message} Pay for a plan in the dashboard, or add plan to the manifest, then run this again.`);
@@ -685,7 +690,8 @@ async function completeOnboarding(run: Run): Promise<void> {
   // A key with group access can't pick a plan or a number, so the owner finds those steps open in the dashboard.
   if (run.access === "group" && wanted?.complete !== true) return run.log({ step: "onboarding", action: "left open", detail: "for the owner to pick a plan and a number after claiming it" });
   // A partner's business ends its owner's onboarding once they verify their phone, the first time they sign in.
-  if (run.access === "partner" && wanted?.complete !== true) return run.log({ step: "onboarding", action: "left open", detail: "for the owner to finish when they first sign in" });
+  // With no owner, nobody signs in, so the run finishes it.
+  if (run.access === "partner" && run.manifest.owner && wanted?.complete !== true) return run.log({ step: "onboarding", action: "left open", detail: "for the owner to finish when they first sign in" });
   const current = (await run.client.call("getOnboarding")).data;
   if (current.complete) return run.log({ step: "onboarding", action: "unchanged", detail: "complete" });
   const missing = current.missing.filter((item) => !(item === "phone_number" && wanted?.skip_number));
@@ -710,7 +716,8 @@ export const onboard: Command = {
   notes: [
     "The business is the one in the state file, business.id in the manifest or --business, which have to agree.",
     "LOBBYSTACK_BUSINESS and a profile's business are never used. With none of them, a platform key makes the",
-    "business and a per-business key sets up its own. A partner's key invites the owner as it makes the business.",
+    "business and a per-business key sets up its own. A partner's key invites the owner, if the manifest names one,",
+    "as it makes the business.",
     "",
     "Exit codes: 0 the business matches the manifest. 4 not finished: the rest waits on a payment or the owner's",
     "claim, so run it again once that's done. 1, 2 and 3 as for every command.",

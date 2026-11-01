@@ -737,7 +737,8 @@ export type PartnerBusinessInput = {
   timezone: string;
   businessType: string;
   accessLevel: string;
-  ownerEmail: string;
+  /** Who to invite to own the business. Only a partner's platform key can leave it out, for a business with no owner. */
+  ownerEmail?: string | undefined;
   /** The package the business is sold, or null or absent to bill it outside LobbyStack. */
   packageId?: string | null | undefined;
   slug?: string | undefined;
@@ -771,13 +772,22 @@ export type PartnerBusinessInput = {
  * invitation that then fails, leaves no business behind, so the owner never
  * hears of one that isn't set up. Someone on the partner's team or one of
  * its keys applies it, as they would set the business up themself.
+ *
+ * A partner's platform key can leave the owner out, for a business that runs
+ * on the partner's own product. Nobody is invited and nobody can own it, so it
+ * can't be released, and it can't be sold a package, whose checkout opens from
+ * the owner's invitation. With nobody on its team, a call the receptionist
+ * can't take forwards only to its transfer number and is refused without one,
+ * and only webhooks tell the partner about its calls and messages.
  */
+export async function createPartnerBusiness(context: DomainContext, actor: PartnerActor, input: PartnerBusinessInput & { ownerEmail: string }, setup?: BusinessSetupDependencies): Promise<{ businessId: string; invitationId: string; expiresAt: Date }>;
+export async function createPartnerBusiness(context: DomainContext, actor: PartnerActor, input: PartnerBusinessInput, setup?: BusinessSetupDependencies): Promise<{ businessId: string; invitationId: string | null; expiresAt: Date | null }>;
 export async function createPartnerBusiness(
   context: DomainContext,
   actor: PartnerActor,
   input: PartnerBusinessInput,
   setup?: BusinessSetupDependencies,
-): Promise<{ businessId: string; invitationId: string; expiresAt: Date }> {
+): Promise<{ businessId: string; invitationId: string | null; expiresAt: Date | null }> {
   const name = input.name.replace(/\s+/g, " ").trim();
   if (!name || name.length > PARTNER_BUSINESS_NAME_MAX_LENGTH) throw failure(`Enter the business's name, up to ${PARTNER_BUSINESS_NAME_MAX_LENGTH} characters.`, 400, "invalid_name");
   const timezone = ianaTimeZone(input.timezone);
@@ -786,10 +796,11 @@ export async function createPartnerBusiness(
   if (!businessType || businessType.length > 64) throw failure("Choose the kind of business.", 400, "invalid_business_type");
   const accessLevel = input.accessLevel;
   if (!isPartnerAccessLevel(accessLevel)) throw failure("accessLevel must be full or activity.", 400, "invalid_access_level");
-  const ownerEmail = normalizeAuthEmail(input.ownerEmail);
-  if (!isSingleEmailAddress(ownerEmail)) throw failure("Enter one valid email address for the owner.", 400, "invalid_email");
+  const ownerEmail = input.ownerEmail === undefined ? null : normalizeAuthEmail(input.ownerEmail);
+  if (ownerEmail === null ? actor.kind === "member" : !isSingleEmailAddress(ownerEmail)) throw failure("Enter one valid email address for the owner.", 400, "invalid_email");
   const packageId = input.packageId ?? null;
   if (packageId !== null && !isUuid(packageId)) throw failure("packageId must be a UUID, or null to bill the business outside LobbyStack.", 400, "invalid_package");
+  if (packageId !== null && ownerEmail === null) throw failure("A package's checkout opens from the owner's invitation, so send owner_email with package_id.", 400, "invalid_email");
   const applier = input.templateId === undefined ? null : templateApplier(actor);
   if (applier && !setup) throw new Error("Applying a template needs the worker's context and storage.");
   const { baseDomain } = partnerFeatures(process.env);
@@ -799,10 +810,10 @@ export async function createPartnerBusiness(
   // The worker writes the email under the business's brand, the partner's, and puts its link on the partner's domain.
   // A key invites as the partner, with no person behind it.
   const invite = async (tx: DatabaseTransaction, templateId: string | null) => {
-    const { invitationId, expiresAt } = await insertInvitationInTransaction(tx, { businessId, normalizedEmail: ownerEmail, role: "business_owner", ...(actor.kind === "member" ? { invitedByUserId: actor.userId } : { invitedByPlatformKeyId: actor.platformKeyId }) });
+    const invitation = ownerEmail === null ? { invitationId: null, expiresAt: null } : await insertInvitationInTransaction(tx, { businessId, normalizedEmail: ownerEmail, role: "business_owner", ...(actor.kind === "member" ? { invitedByUserId: actor.userId } : { invitedByPlatformKeyId: actor.platformKeyId }) });
     const by = actor.kind === "member" ? {} : { actor: "platform_key", platformKeyId: actor.platformKeyId, groupId: partnerId };
-    await tx.insert(auditLogs).values({ businessId, actorUserId: actor.kind === "member" ? actor.userId : null, eventType: "partner.business_created", entityType: "business", entityId: businessId, payload: { ...by, partnerId, accessLevel, packageId, ownerInvitationId: invitationId, ...(templateId ? { templateId } : {}), ...(input.requestHash ? { requestHash: input.requestHash } : {}) } });
-    return { invitationId, expiresAt };
+    await tx.insert(auditLogs).values({ businessId, actorUserId: actor.kind === "member" ? actor.userId : null, eventType: "partner.business_created", entityType: "business", entityId: businessId, payload: { ...by, partnerId, accessLevel, packageId, ownerInvitationId: invitation.invitationId, ...(templateId ? { templateId } : {}), ...(input.requestHash ? { requestHash: input.requestHash } : {}) } });
+    return { invitationId: invitation.invitationId, expiresAt: invitation.expiresAt };
   };
   // A key's transaction names the key, so the partner's templates, which only its team and keys read, show to it.
   const created = await withBusinessTransaction(context.db, { ...partnerRls(actor), businessId, actorType: "system" }, async (tx) => {
@@ -810,7 +821,7 @@ export async function createPartnerBusiness(
     // Revoking a key waits for a business it's creating, so the owner's invitation is never sent by a key revoked first.
     if (actor.kind === "key") await lockActivePartnerPlatformKey(tx, actor.platformKeyId);
     // The partner's people work in its businesses through opens, never on their teams, so none of them owns one.
-    if (await isPartnerMemberEmail(tx, { partnerId: actor.partnerId, normalizedEmail: ownerEmail })) throw failure("The owner can't be someone on your team. Your team works in the business from the console.", 409, "owner_on_partner_team");
+    if (ownerEmail !== null && await isPartnerMemberEmail(tx, { partnerId: actor.partnerId, normalizedEmail: ownerEmail })) throw failure("The owner can't be someone on your team. Your team works in the business from the console.", 409, "owner_on_partner_team");
     const template = input.templateId === undefined ? null : await loadBusinessTemplateInTransaction(tx, { partnerId, templateId: input.templateId });
     // A partner that signed up while the deployment had no base domain gets its subdomain now, if it can.
     const domain = baseDomain ? await reserveSubdomainIn(tx, partnerId, baseDomain) : { subdomain: null, changed: false };
@@ -946,7 +957,7 @@ export async function releaseBusiness(context: DomainContext, actor: PartnerActo
       .where(and(eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.role, "business_owner"), eq(businessMemberships.status, "active")))
       .orderBy(asc(businessMemberships.createdAt), asc(businessMemberships.id))
       .limit(1);
-    if (!owner) throw failure("The business's owner has to accept their invitation before you can release it.", 409, "owner_required");
+    if (!owner) throw failure("This business has no owner yet. Someone has to accept an invitation to own it before you can release it.", 409, "owner_required");
     // Read who to tell while the business is still the partner's.
     const ownerEmails = await partnerBusinessOwnerEmails(tx, input.businessId);
     // A direct business pays the host, so it keeps none of its partner's packages.

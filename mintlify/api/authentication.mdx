@@ -94,9 +94,13 @@ A platform key (`lsp_...`) onboards and manages many businesses, where an API ke
   </Step>
 </Steps>
 
-A partner's key acts as the partner, so it keeps working when the person who made it leaves the team. Its billing scopes are the exception: see [Partner endpoints](#partner-endpoints). It reaches the partner's active businesses, including the ones the console created, and no others. With the partner scopes, it also runs the partner itself through the [Partner endpoints](#partner-endpoints). It can't start a Polar checkout for a business, set a managed plan or create a claim link. It can't search for or claim phone numbers, or read or change alert preferences, because those act as a person.
+A partner's key acts as the partner, so it keeps working when the person who made it leaves the team. Its billing scopes are the exception: see [Partner endpoints](#partner-endpoints). It reaches the partner's active businesses, including the ones the console created, and no others. With the partner scopes, it also runs the partner itself through the [Partner endpoints](#partner-endpoints). It can't start a Polar checkout for a business, set a managed plan or create a claim link. It can't read or change alert preferences, because those act as a person.
 
 `POST /businesses` with a partner's key creates a business of the partner, with no owner yet. Name the owner in `owner_email`, and the partner emails them an invitation to sign in on its dashboard. `access_level` sets what the business's own team can use: `full`, the default, or `activity`. `template_id` starts the business from one of the partner's templates and needs `partner:read` too. `package_id` sells it one of the partner's packages and needs `partner.businesses:write` too. Without the scope, the request returns `403` with the code `insufficient_scope`. A partner's platform keys can create 30 businesses an hour between them. The invitations it sends through `POST /team/invitations` and `POST /users` come from the partner and link to its dashboard.
+
+Leave `owner_email` out for a business the partner runs itself. Nobody gets an invitation, and a key can't invite an owner later, so the business can't be released. `package_id` then returns `400`, because its checkout opens from the owner's invitation.
+
+With `phone_numbers:manage`, a partner's key searches for, claims and replaces numbers as itself. On a deployment that bills tiers, this needs a paid tier, and Free returns `409`. A key can claim only an offer it searched for, and it never gets a trial offer. The partner's keys share 20 searches in 10 minutes.
 
 The links the API returns for a partner's business, such as a widget's script tag or a calendar connect link, point at the partner's dashboard too.
 

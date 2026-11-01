@@ -616,7 +616,7 @@
       "knowledge_read": "Read knowledge entries, FAQs, websites and files",
       "knowledge_write": "Add, edit and delete knowledge entries, FAQs, websites and files",
       "billing_manage": "See the plan",
-      "phone_numbers_manage": "See and release phone numbers",
+      "phone_numbers_manage": "Find, buy, replace and release phone numbers",
       "team_manage": "Invite and remove team members and change roles",
       "webhooks_manage": "Create and delete webhook endpoints",
       "businesses_create": "Create businesses and invite their owners",

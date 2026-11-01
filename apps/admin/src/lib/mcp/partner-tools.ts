@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import {
   addPartnerDomainForApi,
+  claimPhoneNumberForApi,
   archivePartnerPackageForApi,
   createPartnerBusinessForApi,
   createPartnerDemoForApi,
@@ -23,8 +24,10 @@ import {
   getPartnerStripeForApi,
   getPartnerTeamForApi,
   getPartnerTierCheckoutForApi,
+  getPhoneNumberClaimForApi,
   idempotencyRequestHash,
   isPartnerMemberSubject,
+  listPhoneNumbersForApi,
   listPartnerBusinessesForApi,
   listPartnerDemosForApi,
   listPartnerPackagesForApi,
@@ -37,11 +40,16 @@ import {
   revokePartnerDemoForApi,
   revokePartnerTeamInvitationForApi,
   rotatePartnerDemoLinkForApi,
+  PublicApiError,
   updatePartnerBrandForApi,
   updatePartnerBusinessBillingForApi,
   updatePartnerPoolOverageForApi,
   updatePartnerTeamMemberForApi,
+  searchPhoneNumbersForApi,
+  type ApiCaller,
   type DomainContext,
+  type NumberInventoryProvider,
+  type PartnerPlatformKey,
   type PartnerSubject,
   type TemplateStorage,
 } from "@lobbystack/domain";
@@ -84,6 +92,11 @@ import {
   apiPartnerTemplateSchema,
   apiPartnerTierCheckoutCreateSchema,
   apiPartnerTierCheckoutSchema,
+  apiPhoneNumberClaimCreateSchema,
+  apiPhoneNumberClaimSchema,
+  apiPhoneNumberOfferSchema,
+  apiPhoneNumberSchema,
+  apiPhoneNumberSearchSchema,
   billingIntervals,
   keyHasScope,
   paidPartnerTierSlugs,
@@ -105,6 +118,10 @@ import { contractBody, defined } from "./tools";
 
 /** The partner operations the tools call. Tests replace them to check the mapping. */
 export const partnerMcpOperations = {
+  claimPhoneNumberForApi,
+  getPhoneNumberClaimForApi,
+  listPhoneNumbersForApi,
+  searchPhoneNumbersForApi,
   getPartnerForApi,
   listPartnerBusinessesForApi,
   createPartnerBusinessForApi,
@@ -159,6 +176,12 @@ export type PartnerToolRun = {
   limit: (input: PartnerLimit) => Promise<void>;
   /** Runs after the brand changes, so the partner's public pages render again. */
   brandChanged: (partnerId: string) => void;
+  /** Checks the connection may act on a business, and returns the caller the v1 operations run as. */
+  businessCaller: (businessId: string) => Promise<ApiCaller>;
+  /** The carriers a partner's key searches, behind the partner's search limit. */
+  numberSearch: (partnerId: string) => Promise<{ provider: NumberInventoryProvider; claimTokenSecret: string }>;
+  /** Runs a call that costs money once for its key, in the record REST keeps for the same operation. */
+  once: (caller: ApiCaller, operation: ApiOperationId, key: string, body: Record<string, unknown>, run: (context: DomainContext) => Promise<Record<string, unknown>>) => Promise<Record<string, unknown>>;
 };
 
 type ToolInput = z.ZodObject;
@@ -171,6 +194,8 @@ type PartnerToolDefinition<Input extends ToolInput> = {
   operation: ApiOperationId;
   /** A scope other than the operation's, where the REST route's doesn't fit a partner connection. */
   scope?: ApiKeyScope;
+  /** Only a partner's platform key gets this tool. A person on the team buys numbers in the business's dashboard, where they verify who they are. */
+  platformKeysOnly?: boolean;
   annotations: ToolAnnotations;
   inputSchema: Input;
   outputSchema: StandardSchemaWithJSON;
@@ -194,6 +219,22 @@ const destroys: ToolAnnotations = { readOnlyHint: false, destructiveHint: true, 
 const uuid = (what: string) => z.uuid().describe(`The ${what} id (UUID).`);
 const list = (items: unknown[]) => ({ data: items, next_cursor: null, has_more: false });
 const idempotencyKeyInput = z.string().min(1).max(255).regex(/^[\x21-\x7e]+$/, "Use visible ASCII characters only.").optional().describe("Optional. A unique value you choose, such as a UUID. Retrying with the same value returns the business the first call created instead of creating another.");
+const claimKeyInput = z.string().min(1).max(255).regex(/^[\x21-\x7e]+$/, "Use visible ASCII characters only.").describe("A unique value you choose, such as a UUID. Retrying with the same value within 24 hours returns the first claim instead of buying another number.");
+
+/** The key behind a tool only a platform key gets. */
+function platformKey(subject: PartnerSubject): PartnerPlatformKey {
+  if (isPartnerMemberSubject(subject)) throw new PublicApiError(403, "forbidden", "Only a partner's platform key can do this. Someone on the team does it in the business's dashboard.");
+  return subject;
+}
+
+/** Runs a claim with a partner's key: one business, once for its key. */
+async function claimNumber({ subject, businessCaller, once, operations, numberSearch }: PartnerToolRun, operation: "createPhoneNumberClaim" | "replacePhoneNumber", input: { business_id: string; offer_token: string; idempotency_key: string }, replaces?: string): Promise<Record<string, unknown>> {
+  const { platformKeyId, partnerId } = platformKey(subject);
+  const body = contractBody(apiPhoneNumberClaimCreateSchema, { offer_token: input.offer_token });
+  const { claimTokenSecret } = await numberSearch(partnerId);
+  const caller = await businessCaller(input.business_id);
+  return await once(caller, operation, input.idempotency_key, { ...body, ...(replaces ? { replaces } : {}) }, async (context) => await operations.claimPhoneNumberForApi(context, caller, { offerToken: body.offer_token, replaces }, { platformKeyId, claimTokenSecret }));
+}
 
 export const partnerMcpTools: PartnerMcpTool[] = [
   // The partner
@@ -223,12 +264,12 @@ export const partnerMcpTools: PartnerMcpTool[] = [
   partnerTool({
     name: "create_business",
     title: "Create a business",
-    description: "Creates a business for a client, with no owner yet, and emails owner_email an invitation to own it under the partner's brand. Pass template_id (from list_templates) to set it up from a saved template, and package_id (from list_packages) to sell it a package; without one, it's billed outside LobbyStack. template_id also needs the partner:read scope and package_id the partner.businesses:write scope. Confirm the name, owner email, template and package with the person first.",
+    description: "Creates a business for a client, with no owner yet, and emails owner_email an invitation to own it under the partner's brand. A platform key can leave owner_email out for a business it runs itself: nobody is invited, and the business can't be sold a package or released. Pass template_id (from list_templates) to set it up from a saved template, and package_id (from list_packages) to sell it a package; without one, it's billed outside LobbyStack. template_id also needs the partner:read scope and package_id the partner.businesses:write scope. Confirm the name, owner email, template and package with the person first.",
     operation: "createBusiness",
     annotations: creates,
     inputSchema: z.object({
       name: z.string().describe("The business name."),
-      owner_email: z.string().describe("Who will own the business. They get an invitation by email."),
+      owner_email: z.string().optional().describe("Who will own the business. They get an invitation by email. An agency connection has to send it. A platform key can leave it out."),
       timezone: z.string().describe("IANA time zone, for example America/Toronto."),
       access_level: z.enum(partnerAccessLevels).optional().describe("What the business's own team can use once someone owns it. full (the default) lets them run the receptionist; activity shows them calls, messages and appointments, and the agency sets up the receptionist."),
       template_id: z.uuid().optional().describe("A template from list_templates to set the business up from."),
@@ -251,6 +292,69 @@ export const partnerMcpTools: PartnerMcpTool[] = [
       return result.business;
     },
   }),
+  // Phone numbers
+  partnerTool({
+    name: "list_phone_numbers",
+    title: "List a business's phone numbers",
+    description: "Every number the business has or had, newest first. Use a number's id with replace_phone_number. Only a platform key gets this tool.",
+    operation: "listPhoneNumbers",
+    platformKeysOnly: true,
+    annotations: readOnly,
+    inputSchema: z.object({ business_id: uuid("business") }),
+    outputSchema: contractSchema(apiPageSchema(apiPhoneNumberSchema)),
+    run: async ({ worker, businessCaller, operations }, input) => list(await operations.listPhoneNumbersForApi(worker, await businessCaller(input.business_id))),
+  }),
+  partnerTool({
+    name: "search_phone_numbers",
+    title: "Find numbers to claim",
+    description: "Searches the carrier for numbers the business can claim. Each offer expires after 5 minutes. Needs the partner on a paid tier. Send replaces with a number's id to find a replacement for it. A partner's platform keys share 20 searches in 10 minutes. Only a platform key gets this tool.",
+    operation: "searchPhoneNumbers",
+    platformKeysOnly: true,
+    annotations: readOnly,
+    inputSchema: apiPhoneNumberSearchSchema.extend({ business_id: uuid("business") }),
+    outputSchema: contractSchema(apiPageSchema(apiPhoneNumberOfferSchema)),
+    run: async ({ worker, subject, businessCaller, numberSearch, operations }, input) => {
+      const { platformKeyId, partnerId } = platformKey(subject);
+      const { business_id: businessId, ...fields } = input;
+      const body = contractBody(apiPhoneNumberSearchSchema, defined(fields));
+      const search = await numberSearch(partnerId);
+      return list(await operations.searchPhoneNumbersForApi(worker, await businessCaller(businessId), body, { platformKeyId, ...search }));
+    },
+  }),
+  partnerTool({
+    name: "claim_phone_number",
+    title: "Claim a number",
+    description: "Buys a number from search_phone_numbers for a business with no number, and connects it to the receptionist. It costs money, so confirm the number with the person first. Numbers past the tier's included ones are charged to the partner each month. Returns the claim at once: poll get_phone_number_claim until its status is claimed or failed. Only a platform key gets this tool.",
+    operation: "createPhoneNumberClaim",
+    platformKeysOnly: true,
+    annotations: creates,
+    inputSchema: z.object({ business_id: uuid("business"), offer_token: apiPhoneNumberClaimCreateSchema.shape.offer_token, idempotency_key: claimKeyInput }),
+    outputSchema: contractSchema(apiPhoneNumberClaimSchema),
+    run: async (run, input) => await claimNumber(run, "createPhoneNumberClaim", input),
+  }),
+  partnerTool({
+    name: "replace_phone_number",
+    title: "Replace a number",
+    description: "Claims a replacement offer from search_phone_numbers with replaces. The old number keeps working until 30 days after the new one goes live, then is released. A business can replace its number once. It costs money, so confirm the number with the person first. Only a platform key gets this tool.",
+    operation: "replacePhoneNumber",
+    platformKeysOnly: true,
+    annotations: creates,
+    inputSchema: z.object({ business_id: uuid("business"), phone_number_id: uuid("phone number"), offer_token: apiPhoneNumberClaimCreateSchema.shape.offer_token, idempotency_key: claimKeyInput }),
+    outputSchema: contractSchema(apiPhoneNumberClaimSchema),
+    run: async (run, input) => await claimNumber(run, "replacePhoneNumber", input, input.phone_number_id),
+  }),
+  partnerTool({
+    name: "get_phone_number_claim",
+    title: "Check a claim",
+    description: "Returns a claim's status. A claim that waited 15 minutes for the carrier to start, or made no progress for 30, reads as failed. Only a platform key gets this tool.",
+    operation: "getPhoneNumberClaim",
+    platformKeysOnly: true,
+    annotations: readOnly,
+    inputSchema: z.object({ business_id: uuid("business"), claim_id: uuid("claim") }),
+    outputSchema: contractSchema(apiPhoneNumberClaimSchema),
+    run: async ({ worker, businessCaller, operations }, input) => await operations.getPhoneNumberClaimForApi(worker, await businessCaller(input.business_id), input.claim_id),
+  }),
+
   partnerTool({
     name: "release_business",
     title: "Release a business to its owner",
@@ -667,8 +771,8 @@ export const partnerMcpTools: PartnerMcpTool[] = [
 ];
 
 /** The partner tools a connection's scopes allow. */
-export function partnerToolsForScopes(scopes: readonly ApiKeyScope[]): PartnerMcpTool[] {
-  return partnerMcpTools.filter((entry) => keyHasScope(scopes, entry.scope));
+export function partnerToolsForScopes(scopes: readonly ApiKeyScope[], subject: PartnerSubject): PartnerMcpTool[] {
+  return partnerMcpTools.filter((entry) => keyHasScope(scopes, entry.scope) && !(entry.platformKeysOnly && isPartnerMemberSubject(subject)));
 }
 
 /** Whether the subject is a person, whose limits count against them rather than the partner. */

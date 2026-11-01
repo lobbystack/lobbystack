@@ -114,7 +114,7 @@ import { createPartnerBusiness } from "../partners";
 import { loadNotificationPreferencesInTransaction, loadSavedNotificationPreferencesInTransaction, saveNotificationPreferencesInTransaction } from "../notifications";
 import { completeUploadInTransaction, insertPendingUploadInTransaction, planUpload, type StorageProvider } from "../storage";
 import { bookForCaller } from "../receptionistActions";
-import { expireAbandonedNumberClaimsInTransaction, lockBusinessNumberClaims, numberEligibilityInTransaction, offerBusinessNumbers, readNumberOffer, reserveApiNumberClaimInTransaction, type NumberInventoryProvider, type NumberOffer, type NumberSelection } from "../phoneNumbers";
+import { expireAbandonedNumberClaimsInTransaction, lockBusinessNumberClaims, numberEligibilityInTransaction, offerBusinessNumbers, readNumberOffer, reserveApiNumberClaimInTransaction, reservePartnerKeyNumberClaimInTransaction, type NumberInventoryProvider, type NumberOffer, type NumberSelection } from "../phoneNumbers";
 import { isSharedSmsSender, resolveSmsSender } from "../smsSender";
 import { loadBillingContext } from "../usage";
 import { defaultReceptionistProfile, saveReceptionistProfileInTransaction, type ReceptionistProfilePatch } from "../receptionistProfile";
@@ -233,7 +233,8 @@ export function callerAudit(caller: ApiCaller): ApiAudit {
  * themself. A per-business key acts as the person who created it, but only
  * while they are still an owner or admin of the business; otherwise the call
  * is refused with key_owner_inactive. A partner's platform key acts as the
- * partner, which has no account, so it's refused.
+ * partner, which has no account, so it's refused. Number claims and team
+ * invitations take that key itself instead.
  */
 export async function resolveActingUserId(context: DomainContext, caller: ApiCaller): Promise<string> {
   if (caller.actor === "partner_member" || caller.grantId !== undefined) return caller.userId;
@@ -512,7 +513,7 @@ const numberRefusalMessages: Record<string, string> = {
   number_claim_rate_limited: "Too many numbers were claimed in the last hour. Try again later.",
   daily_claim_quota_reached: "Too many numbers were claimed today. Try again tomorrow.",
   monthly_claim_quota_reached: "Too many numbers were claimed in the last 30 days. Try again later.",
-  partner_numbers_unavailable: "A partner's business can't get a phone number on this server yet.",
+  partner_numbers_unavailable: "This business can't get a phone number now: this server doesn't bill partners' tiers yet, or the business isn't live.",
   partner_number_limit_reached: "This business's partner needs a paid tier for more phone numbers. Its owners choose one on the console's Billing page.",
   partner_trial_used: "This business's partner already used its free trial number. Its owners choose a paid tier on the console's Billing page.",
 };
@@ -557,14 +558,24 @@ export async function listPhoneNumbersForApi(context: DomainContext, caller: Api
   return await inBusiness(context, caller, async (tx) => await listPhoneNumberResources(tx, caller.businessId));
 }
 
+/** Who searches for and claims a number: the person the caller acts as, or for a partner's platform key, the key itself. */
+type NumberClaimant = { userId: string; platformKeyId?: undefined } | { platformKeyId: string; userId?: undefined };
+
+/** Who a number offer is signed for. A key's id can't be mistaken for a person's, so the dashboard never takes its offers. */
+function offerSubject(claimant: NumberClaimant): string {
+  return claimant.userId ?? `platform:${claimant.platformKeyId}`;
+}
+
 /**
  * Finds numbers the business can claim, as offers signed for the account the
- * caller acts as. `replaces` asks for replacement offers instead. Without a
- * paid plan, a cloud business is offered free trial numbers when the dashboard
- * would offer them. `beforeSearch` runs once the business may search, just
- * before the carrier is asked, so a refused search uses up no search limit.
+ * caller acts as, or for a partner's platform key, the key. `replaces` asks
+ * for replacement offers instead. Without a paid plan, a cloud business is
+ * offered free trial numbers when the dashboard would offer them. A partner's
+ * key needs its partner on a paid tier and is never offered one.
+ * `beforeSearch` runs once the business may search, just before the carrier
+ * is asked, so a refused search uses up no search limit.
  */
-export async function searchPhoneNumbersForApi(context: DomainContext, caller: ApiCaller, input: ApiPhoneNumberSearch, options: { userId: string; provider: NumberInventoryProvider; claimTokenSecret: string; beforeSearch?: (() => Promise<void>) | undefined }): Promise<ApiPhoneNumberOffer[]> {
+export async function searchPhoneNumbersForApi(context: DomainContext, caller: ApiCaller, input: ApiPhoneNumberSearch, options: NumberClaimant & { provider: NumberInventoryProvider; claimTokenSecret: string; beforeSearch?: (() => Promise<void>) | undefined }): Promise<ApiPhoneNumberOffer[]> {
   const purpose = input.replaces ? "replacement" : "onboarding";
   const selection: Partial<NumberSelection> = {
     ...(input.country ? { countryCode: input.country } : {}),
@@ -577,7 +588,7 @@ export async function searchPhoneNumbersForApi(context: DomainContext, caller: A
   const eligibility = await inBusiness(context, caller, async (tx) => {
     if (input.replaces) await requireReplaceableNumber(tx, caller.businessId, input.replaces);
     try {
-      return await numberEligibilityInTransaction(tx, { userId: options.userId, businessId: caller.businessId, purpose, selection, via: "api" });
+      return await numberEligibilityInTransaction(tx, { userId: options.userId ?? null, businessId: caller.businessId, purpose, selection, via: "api" });
     } catch (error) {
       throw numberRefusal(error);
     }
@@ -585,7 +596,7 @@ export async function searchPhoneNumbersForApi(context: DomainContext, caller: A
   await options.beforeSearch?.();
   let offers: Awaited<ReturnType<typeof offerBusinessNumbers>>;
   try {
-    offers = await offerBusinessNumbers({ businessId: caller.businessId, userId: options.userId, purpose, eligibility, selection, limit: input.limit, claimTokenSecret: options.claimTokenSecret }, options.provider);
+    offers = await offerBusinessNumbers({ businessId: caller.businessId, userId: offerSubject(options), purpose, eligibility, selection, limit: input.limit, claimTokenSecret: options.claimTokenSecret }, options.provider);
   } catch (error) {
     const refusal = numberRefusal(error);
     throw refusal instanceof PublicApiError ? refusal : numberSearchError(error);
@@ -606,11 +617,12 @@ export async function searchPhoneNumbersForApi(context: DomainContext, caller: A
 /**
  * Claims an offer, or with `replaces` a replacement offer for that number, and
  * queues its purchase. The offer must be for this business and the account
- * the caller acts as. A trial offer starts the business's free trial, once per
- * business, person and phone, as in the dashboard. Every key acts as one
- * person, so each key gets one trial at most.
+ * the caller acts as, or for a partner's platform key, the key. A trial offer
+ * starts the business's free trial, once per business, person and phone, as
+ * in the dashboard. Every key acts as one person, so each key gets one trial
+ * at most, and a partner's key gets none.
  */
-export async function claimPhoneNumberForApi(context: DomainContext, caller: ApiCaller, input: { offerToken: string; replaces?: string | undefined }, options: { userId: string; claimTokenSecret: string }): Promise<ApiPhoneNumberClaim> {
+export async function claimPhoneNumberForApi(context: DomainContext, caller: ApiCaller, input: { offerToken: string; replaces?: string | undefined }, options: NumberClaimant & { claimTokenSecret: string }): Promise<ApiPhoneNumberClaim> {
   const purpose = input.replaces ? "replacement" : "onboarding";
   let offer: NumberOffer;
   try {
@@ -618,13 +630,18 @@ export async function claimPhoneNumberForApi(context: DomainContext, caller: Api
   } catch (error) {
     throw numberRefusal(error);
   }
-  if (offer.businessId !== caller.businessId || offer.userId !== options.userId) throw invalidRequest("This offer was made for another business or account. Search again with this key.", [{ path: "offer_token", message: "Made for another business or account." }]);
+  if (offer.businessId !== caller.businessId || offer.userId !== offerSubject(options)) throw invalidRequest("This offer was made for another business or account. Search again with this key.", [{ path: "offer_token", message: "Made for another business or account." }]);
   if (offer.purpose !== purpose) throw invalidRequest(purpose === "replacement" ? "This offer is for a new number. Claim it with POST /phone-numbers/claims." : "This offer is for a replacement. Claim it with POST /phone-numbers/{phone_number_id}/replace.", [{ path: "offer_token", message: "The wrong kind of offer." }]);
   return await inBusiness(context, caller, async (tx) => {
+    // Revoking the key waits for this claim, and a key already revoked buys nothing.
+    if (options.platformKeyId !== undefined) await lockActivePartnerPlatformKey(tx, options.platformKeyId);
     if (input.replaces) await requireReplaceableNumber(tx, caller.businessId, input.replaces);
     let claimId: string;
     try {
-      claimId = await reserveApiNumberClaimInTransaction(tx, { businessId: caller.businessId, userId: options.userId, offer, claimToken: input.offerToken, replacingPhoneNumberId: input.replaces ?? null, quotaByBusiness: caller.platformKeyId !== undefined, requestKey: randomUUID() });
+      const replacingPhoneNumberId = input.replaces ?? null;
+      claimId = options.platformKeyId !== undefined
+        ? await reservePartnerKeyNumberClaimInTransaction(tx, { businessId: caller.businessId, platformKeyId: options.platformKeyId, offer, claimToken: input.offerToken, replacingPhoneNumberId, requestKey: randomUUID() })
+        : await reserveApiNumberClaimInTransaction(tx, { businessId: caller.businessId, userId: options.userId, offer, claimToken: input.offerToken, replacingPhoneNumberId, quotaByBusiness: caller.platformKeyId !== undefined, requestKey: randomUUID() });
     } catch (error) {
       throw numberRefusal(error);
     }
@@ -1359,7 +1376,9 @@ const partnerBusinessFields: Record<string, string> = { invalid_name: "name", in
  * Creates a business of the partner for one of its platform keys, through
  * the partner operation the console uses: with no owner yet, at the access
  * level the request picks, and with an invitation the partner emails to
- * owner_email. As for a host's key, the Idempotency-Key decides the business
+ * owner_email. A partner's key can leave owner_email out, so the business runs
+ * on the partner's own product and nobody hears from LobbyStack; a person on
+ * its team sends one, as in the console. As for a host's key, the Idempotency-Key decides the business
  * id, so a retry returns the business it made, and a different body with the
  * same key is idempotency_key_reused. The audit row keeps the request's hash
  * for that check. Pass the app role's context: only it can act as the system,
@@ -1376,7 +1395,7 @@ export async function createPartnerBusinessForApi(
   // Selling a package and reading a template are the partner's own work, so they take its scopes on top of businesses:create.
   if (body.package_id !== undefined && !keyHasScope(key.scopes, "partner.businesses:write")) throw new PublicApiError(403, "insufficient_scope", `${what} needs the partner.businesses:write scope to send package_id.`);
   if (body.template_id !== undefined && !keyHasScope(key.scopes, "partner:read")) throw new PublicApiError(403, "insufficient_scope", `${what} needs the partner:read scope to send template_id.`);
-  if (body.owner_email === undefined) throw invalidRequest("A partner invites the business's owner as it creates the business, so send owner_email.", [{ path: "owner_email", message: "Required for a partner's business." }]);
+  if (body.owner_email === undefined && isPartnerMemberSubject(key)) throw invalidRequest("A partner invites the business's owner as it creates the business, so send owner_email.", [{ path: "owner_email", message: "Required for a partner's business." }]);
   const timezone = ianaTimeZone(body.timezone);
   if (!timezone) throw invalidRequest("timezone is not a valid IANA time zone.", [{ path: "timezone", message: "Use an IANA time zone such as America/Toronto." }]);
   // The Idempotency-Key decides the id within its key, or within a person's agency connection.
@@ -1404,7 +1423,7 @@ export async function createPartnerBusinessForApi(
       timezone,
       businessType: body.business_type ?? "service_company",
       accessLevel: body.access_level ?? "full",
-      ownerEmail: body.owner_email,
+      ...(body.owner_email !== undefined ? { ownerEmail: body.owner_email } : {}),
       slug: body.slug,
       defaultLocale: body.locale,
       websiteUrl: body.website_url,

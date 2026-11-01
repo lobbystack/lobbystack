@@ -14,10 +14,11 @@ import {
   runIdempotent,
   type ApiCaller,
   type DomainContext,
+  type NumberInventoryProvider,
   type PartnerSubject,
   type TemplateStorage,
 } from "@lobbystack/domain";
-import { apiOperations, type ApiErrorCode, type ApiKeyScope } from "@lobbystack/shared";
+import { apiOperations, type ApiErrorCode, type ApiKeyScope, type ApiOperationId } from "@lobbystack/shared";
 
 import { createDomainContext, createWorkerDomainContext } from "../domain-context";
 import { reportServerError } from "../error-reporting";
@@ -76,8 +77,8 @@ export const MCP_SERVER_INSTRUCTIONS = [
 export const MCP_PARTNER_SERVER_INSTRUCTIONS = [
   "LobbyStack runs AI receptionists for businesses. This connection acts for an agency (a LobbyStack partner) that resells them under its own brand. It does what the agency's console does: demos, client businesses, packages, templates, branding, the team and, for owners, billing.",
   "Start with get_partner, then list_businesses. Every per-business tool, such as get_business, list_calls or book_appointment, needs business_id: one of the agency's businesses from list_businesses or create_business. Never guess one. Another agency's business answers not_found.",
-  "To pitch a prospect, call create_demo with their website, poll get_demo until every ready flag is true, then publish_demo with the token create_demo returned, and share the url. To sign up a client, call create_business with the owner's email, and a template_id from list_templates and a package_id from list_packages when the person names them.",
-  "Tools marked destructive delete, release, revoke or remove something, or replace settings. Confirm the exact business, demo, package, template or person with the person you are helping before calling one, and never call one on your own initiative. Confirm prices and anything that emails someone too.",
+  "To pitch a prospect, call create_demo with their website, poll get_demo until every ready flag is true, then publish_demo with the token create_demo returned, and share the url. To sign up a client, call create_business with the owner's email, and a template_id from list_templates and a package_id from list_packages when the person names them. A platform key can leave the owner's email out for a business the agency runs itself.",
+  "Tools marked destructive delete, release, revoke or remove something, or replace settings. Confirm the exact business, demo, package, template or person with the person you are helping before calling one, and never call one on your own initiative. Confirm prices, phone numbers before you claim them, and anything that emails someone too.",
   "Links such as a Stripe onboarding link, a tier checkout_url or a demo url are for the person to open in their browser. Show them; never try to open them yourself.",
   "What each tool may do follows the person's current role on the agency's team, or an admin's for a platform key: members can't manage businesses, packages or the team, and only owners reach Stripe and billing. A forbidden error means the role doesn't allow it; say so instead of retrying.",
   "Per-business tools return times in UTC; show them in the business time zone from get_business. Errors come back as JSON with error.code and error.message. On rate_limited, wait the number of seconds in the message before trying again.",
@@ -99,6 +100,8 @@ export type McpServerDependencies = {
   partnerLimit?: (subject: { partnerId: string; userId?: string | undefined }, input: PartnerLimit) => Promise<void>;
   /** Checks a partner connection may act on a business, and returns the caller the v1 operations run as. */
   partnerBusinessCaller?: (principal: McpPartnerPrincipal, businessId: string) => Promise<ApiCaller>;
+  /** The carriers a partner's key searches, behind the partner's search limit. */
+  partnerNumberSearch?: (partnerId: string) => Promise<{ provider: NumberInventoryProvider; claimTokenSecret: string }>;
 };
 
 type ToolError = { code: ApiErrorCode; message: string; details?: Array<{ path: string; message: string }> };
@@ -134,12 +137,12 @@ function rateLimitError(decision: Exclude<RateLimitDecision, { allowed: true }>)
  * and the same body hash. A retry on either transport replays the first
  * response; the domain work and the record commit in one transaction.
  */
-async function runIdempotentTool(dependencies: { runIdempotent: typeof runIdempotent }, context: DomainContext, caller: ApiCaller, entry: McpTool, key: string, args: Record<string, unknown>, run: (transactional: DomainContext) => Promise<Record<string, unknown>>): Promise<Record<string, unknown>> {
+async function runIdempotentTool(dependencies: { runIdempotent: typeof runIdempotent }, context: DomainContext, caller: ApiCaller, operation: ApiOperationId, key: string, request: Record<string, unknown>, run: (transactional: DomainContext) => Promise<Record<string, unknown>>): Promise<Record<string, unknown>> {
   // A partner's caller acts on many businesses, so its records name the business too, as REST's do for a platform key.
   const principal = caller.platformKeyId !== undefined || caller.actor === "partner_member" ? `${callerPrincipalId(caller)}:${caller.businessId}` : callerPrincipalId(caller);
-  const scope = { businessId: caller.businessId, apiKeyId: principal, operation: entry.operation, key };
-  const status = apiOperations[entry.operation].status;
-  const outcome = await dependencies.runIdempotent(context, scope, idempotencyRequestHash(entry.restBody!(args)), async (transactional) => ({ status, body: JSON.stringify({ data: await run(transactional) }) }));
+  const scope = { businessId: caller.businessId, apiKeyId: principal, operation, key };
+  const status = apiOperations[operation].status;
+  const outcome = await dependencies.runIdempotent(context, scope, idempotencyRequestHash(request), async (transactional) => ({ status, body: JSON.stringify({ data: await run(transactional) }) }));
   // REST stores the response body as JSON text of the v1 envelope; the tool result is its data.
   const body = typeof outcome.response.body === "string" ? JSON.parse(outcome.response.body) as { data?: unknown } : outcome.response.body as { data?: unknown };
   if (!body || typeof body.data !== "object" || body.data === null) throw new Error("The stored idempotent response has no data.");
@@ -207,7 +210,7 @@ export function createLobbyStackMcpServer(principal: McpPrincipal, dependencies:
     const context = dependencies.context();
     const run = async (runContext: DomainContext) => await entry.run({ context: runContext, caller, operations }, args as never);
     const idempotencyKey = entry.idempotent && typeof args.idempotency_key === "string" ? args.idempotency_key : null;
-    return idempotencyKey ? await runIdempotentTool({ runIdempotent: dependencies.runIdempotent ?? runIdempotent }, context, caller, entry, idempotencyKey, args, run) : await run(context);
+    return idempotencyKey ? await runIdempotentTool({ runIdempotent: dependencies.runIdempotent ?? runIdempotent }, context, caller, entry.operation, idempotencyKey, entry.restBody!(args), run) : await run(context);
   };
 
   const register = (entry: McpTool | PartnerMcpTool, inputSchema: z.ZodObject, handler: (args: Record<string, unknown>) => Promise<CallToolResult>) => {
@@ -239,7 +242,7 @@ export function createLobbyStackMcpServer(principal: McpPrincipal, dependencies:
   const partnerOperations = dependencies.partnerOperations ?? partnerMcpOperations;
   const partnerLimit = dependencies.partnerLimit ?? requirePartnerActionAllowed;
   const subject = principal.subject;
-  for (const entry of partnerToolsForScopes(principal.scopes)) {
+  for (const entry of partnerToolsForScopes(principal.scopes, subject)) {
     register(entry, entry.inputSchema, async (args) => await handle(entry.name, () => (typeof args.business_id === "string" ? { business_id: args.business_id } : {}), async () => await entry.run({
       context: (dependencies.partnerContext ?? (() => withStripeConnect(createDomainContext())))(),
       worker: createWorkerDomainContext(),
@@ -247,6 +250,10 @@ export function createLobbyStackMcpServer(principal: McpPrincipal, dependencies:
       subject,
       operations: partnerOperations,
       limit: async (input) => await partnerLimit(limitSubject(subject), input),
+      businessCaller: async (businessId) => await businessCaller(principal, businessId),
+      // A server-only module, loaded when used.
+      numberSearch: dependencies.partnerNumberSearch ?? (async (partnerId) => (await import("../partner-numbers")).partnerNumberSearch(partnerId)),
+      once: async (caller, operation, key, body, run) => await runIdempotentTool({ runIdempotent: dependencies.runIdempotent ?? runIdempotent }, dependencies.context(), caller, operation, key, body, run),
       // This process renders the partner's public pages again on their next visit, as a save in the console does.
       brandChanged: (partnerId) => { for (const page of partnerSitePages(partnerId)) revalidatePath(page); },
     }, args as never)));
