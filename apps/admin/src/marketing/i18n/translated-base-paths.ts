@@ -75,6 +75,7 @@ export const translatedBasePaths = [
   "/blog/white-label-ai-receptionist/",
   "/blog/white-label-ai-voice-agent-platforms/",
   "/blog/start-ai-receptionist-business/",
+  "/blog/white-label-ai-agent/",
   "/blog/gohighlevel-ai-receptionist-alternative/",
   "/blog/how-to-create-an-ai-receptionist/",
   "/affiliate-program/",
