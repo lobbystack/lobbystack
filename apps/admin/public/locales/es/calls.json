@@ -91,7 +91,7 @@
     "downloadAudio": "Descargar audio",
     "noCalls": "Todavía no se ha registrado ninguna llamada.",
     "noBusinessTitle": "Llamadas recientes",
-    "noBusinessDescription": "Cree un negocio para revisar grabaciones y transcripciones."
+    "noBusinessDescription": "Cree un espacio de trabajo para revisar grabaciones y transcripciones."
   },
   "transcript": {
     "title": "Transcripción de la llamada",

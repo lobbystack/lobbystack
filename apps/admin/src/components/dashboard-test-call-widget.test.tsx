@@ -54,9 +54,9 @@ vi.mock("react-i18next", () => ({
     t: (key: string) => {
       const translations: Record<string, string> = {
         "testCall.trigger": "Test Call",
-        "testCall.title": "Test your AI receptionist",
+        "testCall.title": "Test your AI agent",
         "testCall.description":
-          "Start a live browser call with your configured receptionist.",
+          "Start a live browser call with your configured agent.",
       };
 
       return translations[key] ?? key;
@@ -97,7 +97,7 @@ describe("DashboardTestCallWidget", () => {
     fireEvent.click(screen.getByRole("button", { name: "Test Call" }));
 
     expect(screen.getByTestId("aura-voice-demo")).toBeTruthy();
-    expect(screen.getByText("Test your AI receptionist")).toBeTruthy();
+    expect(screen.getByText("Test your AI agent")).toBeTruthy();
     expect(startCall).toHaveBeenCalledTimes(1);
     fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape", code: "Escape" });
     await waitFor(() => expect(forceEndCall).toHaveBeenCalledTimes(1));

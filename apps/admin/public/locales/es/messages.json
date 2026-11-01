@@ -40,7 +40,7 @@
     "takeOver": "Tomar el control",
     "waitingBadge": "Pide una persona",
     "waitingTitle": "Visitante esperando",
-    "waitingDescription": "Este visitante pidió hablar con una persona. Responda o pulse Unirse al chat en 3 minutos; si no, la recepcionista retoma el chat y ofrece devolver la llamada.",
+    "waitingDescription": "Este visitante pidió hablar con una persona. Responda o pulse Unirse al chat en 3 minutos; si no, el agente retoma el chat y ofrece devolver la llamada.",
     "joinChat": "Unirse al chat",
     "send": "Enviar",
     "sendFailed": "No se pudo enviar su mensaje.",

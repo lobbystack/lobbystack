@@ -33,7 +33,7 @@
     "terms": "Uslovi korišćenja",
     "privacy": "Politika privatnosti",
     "signOut": "Odjavi se",
-    "createBusiness": "Kreiraj firmu",
+    "createBusiness": "Kreiraj radni prostor",
     "setupGuide": {
       "title": "Prvi koraci",
       "open": "Otvori vodič za podešavanje",
@@ -48,10 +48,10 @@
         "phoneNumber": "Povežite broj telefona"
       },
       "stepDescriptions": {
-        "fullScan": "Tokom početnog podešavanja pročitan je deo Vašeg sajta kako bi recepcioner mogao da počne da odgovara. Pročitajte i ostatak da bi znao sve.",
-        "sources": "Otpremite dokument sa pravilima, čestim pitanjima, cenama ili drugim podacima koje recepcioner treba da zna.",
-        "testCall": "Pozovite recepcionera iz ovog pregledača i pitajte ga nešto što zna samo Vaša firma.",
-        "phoneNumber": "Dodelite recepcioneru sopstveni broj kako bi mogao da odgovara pravim pozivaocima, danju i noću."
+        "fullScan": "Tokom početnog podešavanja pročitan je deo Vašeg sajta kako bi agent mogao da počne da odgovara. Pročitajte i ostatak da bi znao sve.",
+        "sources": "Otpremite dokument sa pravilima, čestim pitanjima, cenama ili drugim podacima koje agent treba da zna.",
+        "testCall": "Pozovite agenta iz ovog pregledača i pitajte ga nešto što zna samo Vaša firma.",
+        "phoneNumber": "Dodelite agentu sopstveni broj kako bi mogao da odgovara pravim pozivaocima, danju i noću."
       },
       "stepActions": {
         "fullScan": "Pročitaj ostatak",

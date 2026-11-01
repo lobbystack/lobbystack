@@ -8,7 +8,7 @@ export function brandingMetadata(branding: Pick<BrandingSnapshot, "appName" | "l
   const icon = brandIconSrc(branding);
   return {
     title: branding.appName,
-    description: "AI receptionist dashboard",
+    description: "AI agent dashboard",
     ...(icon ? { icons: { icon } } : {}),
   };
 }

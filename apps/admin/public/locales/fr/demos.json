@@ -7,7 +7,7 @@
     "startHint": "Appuyez sur le bouton pour démarrer un appel vocal en direct.",
     "promptsTitle": "Essayez de demander :",
     "intakeNotice": "Ceci est une démo. Les appels fonctionnent, mais la prise de rendez-vous et les autres fonctionnalités sont désactivées.",
-    "claimCta": "Réclamer cette réceptionniste"
+    "claimCta": "Réclamer cet agent"
   },
   "states": {
     "invalid": {
@@ -32,12 +32,12 @@
     "claimed": {
       "title": "Cette démo a déjà été réclamée",
       "titleWithBusiness": "La démo pour {{businessName}} a déjà été réclamée",
-      "description": "Quelqu'un a déjà réclamé cette réceptionniste."
+      "description": "Quelqu'un a déjà réclamé cet agent."
     }
   },
   "claim": {
     "loadingTitle": "Configuration de votre espace de travail",
-    "loadingDescription": "Réclamation de votre réceptionniste…",
+    "loadingDescription": "Réclamation de votre agent…",
     "errorTitle": "Nous n'avons pas pu réclamer cette démo",
     "errorDescription": "Une erreur s'est produite. Réessayez.",
     "unavailableTitle": "Ce lien de démo est indisponible",

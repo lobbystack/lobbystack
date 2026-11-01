@@ -11,10 +11,10 @@
   "adminRequired": {
     "eyebrow": "Workspace setup",
     "title": "Setup is waiting on an admin",
-    "description": "This workspace is still being configured. Ask a business owner or admin to finish setup before you use it.",
-    "descriptionWithBusiness": "{{businessName}} is still being configured. Ask a business owner or admin to finish setup before you use it.",
+    "description": "This workspace is still being configured. Ask a workspace owner or admin to finish setup before you use it.",
+    "descriptionWithBusiness": "{{businessName}} is still being configured. Ask a workspace owner or admin to finish setup before you use it.",
     "statusTitle": "Your access is active",
-    "statusDescription": "You will be able to use the workspace once an admin completes onboarding. Setup changes are limited to business owners and admins.",
+    "statusDescription": "You will be able to use the workspace once an admin completes onboarding. Setup changes are limited to workspace owners and admins.",
     "goToWorkspace": "Go to workspace"
   },
   "brand": {
@@ -43,7 +43,7 @@
     "title": "First, what is the name of your business?",
     "description": "",
     "createTitle": "Create workspace",
-    "createDescription": "These details become the foundation of the receptionist context.",
+    "createDescription": "These details become the foundation of the agent context.",
     "existingTitle": "Workspace already exists",
     "existingDescription": "Continue setup using the active workspace.",
     "configured": "Business details are already configured.",
@@ -113,7 +113,7 @@
     "skipFailed": "We couldn't skip this step right now. Please try again."
   },
   "testCall": {
-    "title": "Hear your receptionist",
+    "title": "Hear your agent",
     "continue": "Continue",
     "skip": "Skip for now",
     "continueFailed": "We couldn't continue. Try again."
@@ -148,7 +148,7 @@
     },
     "unavailable": {
       "title": "We don't offer numbers in this country yet ({{country}}).",
-      "body": "You can still use your receptionist in the browser, and we can email you when numbers arrive there.",
+      "body": "You can still use your agent in the browser, and we can email you when numbers arrive there.",
       "notify": "Email me when they're available",
       "joined": "Done. We'll email you.",
       "continue": "Continue without a number",
@@ -171,7 +171,7 @@
   "number": {
     "ready": {
       "label": "Your number is ready",
-      "body": "Call it from your phone and hear your receptionist answer.",
+      "body": "Call it from your phone and hear your agent answer.",
       "call": "Call {{number}}"
     },
     "planRequired": "To get a number, choose a plan.",
@@ -200,8 +200,8 @@
     "searchFailed": "We couldn't search numbers right now.",
     "claimFailed": "We couldn't provision that number. Please try again.",
     "claimRateLimited": "You've tried several numbers. Please wait a bit before trying again.",
-    "partnerTierRequired": "This business's partner needs a paid tier to add phone numbers.",
-    "partnerNumbersUnavailable": "Phone numbers aren't available for this business yet.",
+    "partnerTierRequired": "This workspace's partner needs a paid tier to add phone numbers.",
+    "partnerNumbersUnavailable": "Phone numbers aren't available for this workspace yet.",
     "offerExpired": "That offer expired. Search again and pick a number.",
     "trialAccountPurchaseLimit": "This Twilio account can't buy that number yet. Trial accounts can only buy eligible trial numbers; release an existing number or upgrade the account, then try again.",
     "skipFailed": "We couldn't skip this step right now. Please try again.",
@@ -268,10 +268,10 @@
     "continueFailed": "We couldn't continue right now. Please try again."
   },
   "noBusinesses": {
-    "title": "No business here yet",
-    "description": "{{appName}} hasn't added {{email}} to a business. Ask them to invite you, then open the link in their email.",
+    "title": "No workspace here yet",
+    "description": "{{appName}} hasn't added {{email}} to a workspace. Ask them to invite you, then open the link in their email.",
     "switchAccount": "Sign in with another account",
-    "released": "{{email}} has no business on this dashboard any more. A business you own moved to your own account, so open your dashboard to run it.",
+    "released": "{{email}} has no workspace on this dashboard any more. A workspace you own moved to your own account, so open your dashboard to run it.",
     "openDashboard": "Open your dashboard"
   }
 }

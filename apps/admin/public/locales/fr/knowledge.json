@@ -5,7 +5,7 @@
   },
   "manager": {
     "title": "Base de connaissances",
-    "description": "Ajoutez des connaissances et des documents que la réceptionniste peut utiliser dans l'aperçu, les SMS et l'actualisation de l'instantané vocal.",
+    "description": "Ajoutez des connaissances et des documents que l'agent peut utiliser dans l'aperçu, les SMS et l'actualisation de l'instantané vocal.",
     "items": "{{count}} éléments",
     "manualDocument": "Document manuel",
     "placeholders": {
@@ -20,13 +20,13 @@
     "noDocuments": "Aucun document pour le moment."
   },
   "preview": {
-    "title": "Aperçu de la réceptionniste",
+    "title": "Aperçu de l'agent",
     "description": "Testez la même couche de contexte d'entreprise utilisée pour les SMS et les flux IA asynchrones avant de la mettre devant les appelants.",
     "promptPlaceholder": "À quelle heure êtes-vous ouverts demain?",
     "generate": "Lancer l'aperçu",
     "generating": "Génération...",
-    "emptyResponse": "Les réponses d'aperçu apparaîtront ici après avoir lancé la réceptionniste.",
-    "disabled": "Connectez-vous et créez une entreprise pour lancer le vrai flux d'aperçu."
+    "emptyResponse": "Les réponses d'aperçu apparaîtront ici après avoir lancé l'agent.",
+    "disabled": "Connectez-vous et créez un espace de travail pour lancer le vrai flux d'aperçu."
   },
   "unansweredQuestions": {
     "title": "Questions sans réponse",
@@ -37,7 +37,7 @@
     "askedSummary": "{{asked}} · {{lastAsked}}",
     "answer": "Répondre",
     "answerLabel": "Réponse à : {{question}}",
-    "answerPlaceholder": "Écrivez ce que votre réceptionniste doit répondre.",
+    "answerPlaceholder": "Écrivez ce que votre agent doit répondre.",
     "answerTooLong": "Raccourcissez votre réponse à {{max}} caractères ou moins.",
     "saveAnswer": "Enregistrer la réponse",
     "cancel": "Annuler",
@@ -48,12 +48,12 @@
       "alreadyHandled": "Quelqu'un a déjà répondu à cette question ou l'a ignorée."
     },
     "emptyTitle": "Aucune question sans réponse",
-    "emptyDescription": "Quand votre réceptionniste ne trouve pas de réponse dans vos connaissances, la question apparaît ici.",
+    "emptyDescription": "Quand votre agent ne trouve pas de réponse dans vos connaissances, la question apparaît ici.",
     "loadFailed": "Nous n'avons pas pu charger vos questions sans réponse. Actualisez la page pour réessayer.",
     "home": {
-      "count_one": "{{count}} question à laquelle votre réceptionniste n'a pas su répondre",
-      "count_many": "{{count}} questions auxquelles votre réceptionniste n'a pas su répondre",
-      "count_other": "{{count}} questions auxquelles votre réceptionniste n'a pas su répondre",
+      "count_one": "{{count}} question à laquelle votre agent n'a pas su répondre",
+      "count_many": "{{count}} questions auxquelles votre agent n'a pas su répondre",
+      "count_other": "{{count}} questions auxquelles votre agent n'a pas su répondre",
       "description": "Ajoutez les réponses dans la page Connaissances."
     }
   }

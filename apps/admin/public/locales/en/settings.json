@@ -24,7 +24,7 @@
   },
   "widget": {
     "title": "Website widget",
-    "description": "Let website visitors chat with your receptionist.",
+    "description": "Let website visitors chat with your agent.",
     "created": {
       "title": "Your widget is ready",
       "description": "You can copy this snippet again any time from the widget's settings below.",
@@ -61,7 +61,7 @@
       "requirePhone": "Require a phone number",
       "showBeforeChat": "Ask before the chat starts",
       "liveChat": "Let visitors chat with your team",
-      "liveChatHint": "When a visitor asks for a person during opening hours, your team gets an alert and can reply from Messages. If nobody joins within 3 minutes, the receptionist offers to take a message."
+      "liveChatHint": "When a visitor asks for a person during opening hours, your team gets an alert and can reply from Messages. If nobody joins within 3 minutes, the agent offers to take a message."
     },
     "positions": {
       "bottomRight": "Bottom right",
@@ -240,7 +240,7 @@
       "customAllowance": "{{used}} {{unit}} used · Custom allowance",
       "noLimit": "{{used}} {{unit}} used · No limit",
       "extraTitle": "Extra usage",
-      "extraOnDescription": "Your receptionist keeps answering past your allowance, and {{appName}} bills you for the extra minutes and chats.",
+      "extraOnDescription": "Your agent keeps answering past your allowance, and {{appName}} bills you for the extra minutes and chats.",
       "extraOffDescription": "Extra usage is off. {{appName}} bills you for the extra minutes and chats you used before it went off."
     },
     "spendingCap": {
@@ -343,7 +343,7 @@
         "title": "Next steps",
         "call": {
           "title": "Call it now",
-          "description": "Hear your receptionist answer a real call."
+          "description": "Hear your agent answer a real call."
         },
         "forward": {
           "title": "Forward your business line to it",
@@ -352,7 +352,7 @@
         },
         "transfer": {
           "title": "Choose where urgent calls go",
-          "description": "Add a transfer number in AI settings so your receptionist can pass urgent callers to a person.",
+          "description": "Add a transfer number in AI settings so your agent can pass urgent callers to a person.",
           "action": "Open AI settings"
         }
       },
@@ -370,11 +370,11 @@
     "chats_other": "{{amount}} chats",
     "allowance": "Each month includes {{minutes}} and {{chats}}.",
     "status": {
-      "awaiting_payment": "Your receptionist starts answering calls and chats once you pay.",
+      "awaiting_payment": "Your agent starts answering calls and chats once you pay.",
       "active": "Your subscription is active.",
       "renews": "Your subscription renews on {{date}}.",
-      "past_due": "Your last payment failed, and we'll try again. Update your card to keep your receptionist answering.",
-      "inactive": "Your subscription ended, so your receptionist doesn't answer calls or chats. Subscribe again to turn it back on."
+      "past_due": "Your last payment failed, and we'll try again. Update your card to keep your agent answering.",
+      "inactive": "Your subscription ended, so your agent doesn't answer calls or chats. Subscribe again to turn it back on."
     },
     "badge": {
       "awaiting_payment": "Awaiting payment",
@@ -386,7 +386,7 @@
     "manage": "Manage billing",
     "opening": "Opening…",
     "manageHint": "Update your card, download invoices or cancel your subscription.",
-    "paid": "Payment received. Your receptionist starts answering in a moment.",
+    "paid": "Payment received. Your agent starts answering in a moment.",
     "errors": {
       "portal": "The billing portal isn't available right now. Ask {{appName}} about it.",
       "checkout": "We couldn't open the checkout. Try again.",
@@ -396,7 +396,7 @@
   "phoneNumber": {
     "current": {
       "label": "Current phone number",
-      "description": "This is the number callers use to reach your AI receptionist.",
+      "description": "This is the number callers use to reach your AI agent.",
       "empty": "You don't have a number yet."
     },
     "reclaim": {
@@ -414,14 +414,14 @@
       "upgradeCta": "View plans"
     },
     "partnerTierRequired": {
-      "description": "This business's partner needs a paid tier to add phone numbers."
+      "description": "This workspace's partner needs a paid tier to add phone numbers."
     },
     "partnerNumbersUnavailable": {
-      "description": "Phone numbers aren't available for this business yet."
+      "description": "Phone numbers aren't available for this workspace yet."
     },
     "trialPhone": {
       "title": "Verify your mobile number",
-      "description": "During the 14-day trial, the receptionist transfers calls only to this mobile.",
+      "description": "During the 14-day trial, the agent transfers calls only to this mobile.",
       "fields": {
         "mobileNumber": "Mobile number",
         "country": "Country"
@@ -458,7 +458,7 @@
       "title": "Choose a new phone number",
       "description": "You can change your phone number once.",
       "getNumberTitle": "Choose a phone number",
-      "getNumberDescription": "Pick a number callers can use to reach your AI receptionist."
+      "getNumberDescription": "Pick a number callers can use to reach your AI agent."
     },
     "picker": {
       "countryLabel": "Country",
@@ -585,7 +585,7 @@
       },
       "instagram": {
         "title": "Instagram",
-        "description": "Reply to Instagram direct messages with the same knowledge as your receptionist."
+        "description": "Reply to Instagram direct messages with the same knowledge as your agent."
       }
     },
     "status": {
@@ -602,22 +602,22 @@
       "syncedAppointments": "Synced appointments"
     },
     "instagram": {
-      "connectedSuccess": "Instagram connected. Your receptionist now replies to direct messages.",
+      "connectedSuccess": "Instagram connected. Your agent now replies to direct messages.",
       "connectFailed": "Instagram couldn't be connected. Please try again.",
       "accountInUse": "This Instagram account is already connected to another workspace.",
-      "permissionMissing": "Your receptionist needs access to your Instagram messages. Connect again and allow it.",
+      "permissionMissing": "Your agent needs access to your Instagram messages. Connect again and allow it.",
       "disconnectedSuccess": "Instagram disconnected.",
       "disconnect": "Disconnect",
       "reconnect": "Reconnect",
       "connectedAs": "Replying to direct messages as @{{username}}.",
-      "dialogDescription": "Your receptionist answers direct messages sent to this account.",
+      "dialogDescription": "Your agent answers direct messages sent to this account.",
       "accountLabel": "Instagram account",
-      "reconnectDescription": "Instagram stopped accepting your receptionist's access. Reconnect the account to keep answering messages."
+      "reconnectDescription": "Instagram stopped accepting your agent's access. Reconnect the account to keep answering messages."
     }
   },
   "profile": {
-    "title": "Receptionist Profile",
-    "description": "Define the voice, tone, booking policy, and transfer rules that shape your receptionist.",
+    "title": "Agent Profile",
+    "description": "Define the voice, tone, booking policy, and transfer rules that shape your agent.",
     "greeting": "Greeting",
     "tone": "Tone",
     "defaultCustomerLanguage": "Default customer language",
@@ -638,7 +638,7 @@
     },
     "save": "Save profile",
     "saving": "Saving...",
-    "saved": "Saved receptionist profile.",
+    "saved": "Saved agent profile.",
     "placeholders": {
       "transferNumber": "+1 555 123 4567"
     }
@@ -707,7 +707,7 @@
       "invitedOn": "Invited on {{date}}",
       "status": {
         "pending": "Pending",
-        "handover": "Hands over the business"
+        "handover": "Hands over the workspace"
       },
       "actions": {
         "moreOptions": "More options",
@@ -737,7 +737,7 @@
       "sent": "Invitation sent to {{email}}.",
       "errors": {
         "invalidEmail": "Enter a valid email address.",
-        "partnerMember": "{{email}} is on this business's partner team. They work here from the partner console, so they can't join the team.",
+        "partnerMember": "{{email}} is on this workspace's partner team. They work here from the partner console, so they can't join the team.",
         "failed": "We couldn't send that invitation. Please try again."
       }
     },
@@ -750,17 +750,17 @@
       "revokeFailed": "We couldn't revoke that invitation."
     },
     "delete": {
-      "title": "Delete business",
-      "description": "Permanently erase this business with its calls, chats, contacts, appointments, settings and team access. Its phone number is released and its paid plan ends. You can't undo this.",
-      "action": "Delete business",
+      "title": "Delete workspace",
+      "description": "Permanently erase this workspace with its calls, chats, contacts, appointments, settings and team access. Its phone number is released and its paid plan ends. You can't undo this.",
+      "action": "Delete workspace",
       "dialogTitle": "Delete {{name}}?",
-      "dialogDescription": "Everything in this business is erased for good, its phone number goes back to the provider, and the receptionist stops answering. Its team loses access, and nobody can restore it.",
+      "dialogDescription": "Everything in this workspace is erased for good, its phone number goes back to the provider, and the agent stops answering. Its team loses access, and nobody can restore it.",
       "confirmLabel": "Type <name>{{name}}</name> to confirm",
       "submit": "Delete",
       "deleting": "Deleting...",
       "errors": {
-        "failed": "The business couldn't be deleted. Try again.",
-        "numberInProgress": "A phone number is still being set up for this business. Try again in a few minutes.",
+        "failed": "The workspace couldn't be deleted. Try again.",
+        "numberInProgress": "A phone number is still being set up for this workspace. Try again in a few minutes.",
         "billing": "Billing isn't available right now, so the paid plan couldn't be ended. Try again later."
       },
       "cancel": "Cancel"
@@ -768,7 +768,7 @@
   },
   "hours": {
     "title": "Opening Hours",
-    "description": "Structured hours stay authoritative over documents and help the receptionist answer availability questions reliably.",
+    "description": "Structured hours stay authoritative over documents and help the agent answer availability questions reliably.",
     "save": "Save hours",
     "saving": "Saving...",
     "leaveBlank": "Leave a day blank to mark it closed.",
@@ -778,7 +778,7 @@
   },
   "services": {
     "title": "Services",
-    "description": "Service definitions power both booking logic and the receptionist snapshot callers hear.",
+    "description": "Service definitions power both booking logic and the agent snapshot callers hear.",
     "serviceName": "Service name",
     "englishLabel": "English label",
     "frenchLabel": "French label",
@@ -802,7 +802,7 @@
   },
   "phoneRouting": {
     "title": "Phone Number Routing",
-    "description": "Map Twilio numbers to this business so live calls and SMS load the correct receptionist snapshot.",
+    "description": "Map Twilio numbers to this workspace so live calls and SMS load the correct agent snapshot.",
     "managedNumber": "Managed number",
     "selectNumber": "Select a number",
     "addNewNumber": "Add new number",
@@ -859,18 +859,18 @@
     "assignedServices": "{{count}} services"
   },
   "snapshot": {
-    "title": "Receptionist Snapshot",
-    "description": "Your receptionist loads this business context once when a call starts.",
-    "business": "Business",
+    "title": "Agent Snapshot",
+    "description": "Your agent loads this business context once when a call starts.",
+    "business": "Workspace",
     "timezone": "Timezone",
     "transferPolicy": "Transfer policy",
     "services": "Services in snapshot",
     "knowledgeDigest": "Knowledge digest",
-    "emptyDigest": "No generated digest yet. Add knowledge or documents to enrich the receptionist."
+    "emptyDigest": "No generated digest yet. Add knowledge or documents to enrich the agent."
   },
   "nextSteps": {
     "title": "What to do next",
-    "description": "Tighten the live receptionist behavior before you route real traffic.",
+    "description": "Tighten the live agent behavior before you route real traffic.",
     "hours": "Set hours, services, and bookable team assignments so booking can suggest real times.",
     "transfer": "Add transfer rules and a fallback number before handing off urgent calls.",
     "snapshot": "Refresh your snapshot after major policy changes so voice picks them up quickly."
@@ -1001,7 +1001,7 @@
     "revoked": "Revoked {{date}}",
     "restricted": {
       "title": "Only owners and admins can manage API keys",
-      "description": "Ask an owner or admin of this business to create a key for you."
+      "description": "Ask an owner or admin of this workspace to create a key for you."
     },
     "create": {
       "action": "Create API key",
@@ -1039,19 +1039,19 @@
       "done": "API key updated"
     },
     "scopes": {
-      "business_read": "Read business details, hours, services, and receptionist settings and rules",
-      "business_write": "Update business details, hours, services, and receptionist settings and rules, including where calls are transferred",
+      "business_read": "Read business details, hours, services, and agent settings and rules",
+      "business_write": "Update business details, hours, services, and agent settings and rules, including where calls are transferred",
       "calls_read": "Read calls, summaries and transcripts",
       "contacts_read": "Read contacts",
       "contacts_write": "Create and update contacts",
       "appointments_read": "Read appointments and open times",
       "appointments_write": "Book, cancel and reschedule appointments",
-      "messages_read": "Read messages the receptionist took",
+      "messages_read": "Read messages the agent took",
       "knowledge_read": "Read knowledge entries, FAQs, websites and files",
       "knowledge_write": "Add, edit and delete knowledge entries, FAQs, websites and files",
       "billing_manage": "See the plan, set the spending cap and start checkouts",
       "phone_numbers_manage": "Find, buy, replace and release phone numbers",
-      "team_manage": "Invite and remove team members, change roles and hand the business over",
+      "team_manage": "Invite and remove team members, change roles and hand the workspace over",
       "webhooks_manage": "Create and delete webhook endpoints"
     }
   },
@@ -1062,7 +1062,7 @@
     "enabledLabel": "Send events to this endpoint",
     "restricted": {
       "title": "Only owners and admins can manage webhooks",
-      "description": "Ask an owner or admin of this business to set up the webhook."
+      "description": "Ask an owner or admin of this workspace to set up the webhook."
     },
     "status": {
       "enabled": "On",
@@ -1085,7 +1085,7 @@
       "appointment_booked": "An appointment was booked",
       "appointment_rescheduled": "An appointment moved to a new time",
       "appointment_cancelled": "An appointment was cancelled",
-      "message_taken": "The receptionist took a message for your team",
+      "message_taken": "The agent took a message for your team",
       "contact_created": "A new contact was added"
     },
     "create": {
@@ -1160,7 +1160,7 @@
     "revoke": {
       "action": "Disconnect",
       "title": "Disconnect {{name}}?",
-      "description": "{{name}} loses access to this business right away. To use it again, connect it and approve access again.",
+      "description": "{{name}} loses access to this workspace right away. To use it again, connect it and approve access again.",
       "confirm": "Disconnect",
       "cancel": "Cancel",
       "done": "App disconnected",
@@ -1174,7 +1174,7 @@
       "contacts_write": "Create and update contacts",
       "appointments_read": "Read appointments and open times",
       "appointments_write": "Book, cancel and reschedule appointments",
-      "messages_read": "Read messages the receptionist took",
+      "messages_read": "Read messages the agent took",
       "knowledge_write": "Add knowledge entries and FAQs"
     }
   },

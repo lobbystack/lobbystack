@@ -24,7 +24,7 @@
   },
   "widget": {
     "title": "Vidžet za sajt",
-    "description": "Omogućite posetiocima sajta da se dopisuju sa Vašim recepcionerom.",
+    "description": "Omogućite posetiocima sajta da se dopisuju sa Vašim agentom.",
     "created": {
       "title": "Vaš vidžet je spreman",
       "description": "Ovaj kod možete ponovo kopirati bilo kada iz podešavanja vidžeta ispod.",
@@ -61,7 +61,7 @@
       "requirePhone": "Obavezan broj telefona",
       "showBeforeChat": "Pitaj pre početka razgovora",
       "liveChat": "Dozvolite posetiocima da razgovaraju sa Vašim timom",
-      "liveChatHint": "Kada posetilac tokom radnog vremena zatraži osobu, Vaš tim dobija upozorenje i može da odgovori iz Poruka. Ako se niko ne pridruži u roku od 3 minuta, recepcioner nudi da primi poruku."
+      "liveChatHint": "Kada posetilac tokom radnog vremena zatraži osobu, Vaš tim dobija upozorenje i može da odgovori iz Poruka. Ako se niko ne pridruži u roku od 3 minuta, agent nudi da primi poruku."
     },
     "positions": {
       "bottomRight": "Dole desno",
@@ -240,7 +240,7 @@
       "customAllowance": "Iskorišćeno: {{used}} {{unit}} · Prilagođeni iznos",
       "noLimit": "Iskorišćeno: {{used}} {{unit}} · Bez ograničenja",
       "extraTitle": "Dodatna potrošnja",
-      "extraOnDescription": "Vaš recepcioner nastavlja da odgovara i posle uključenog iznosa, a {{appName}} Vam naplaćuje dodatne minute i četove.",
+      "extraOnDescription": "Vaš agent nastavlja da odgovara i posle uključenog iznosa, a {{appName}} Vam naplaćuje dodatne minute i četove.",
       "extraOffDescription": "Dodatna potrošnja je isključena. {{appName}} Vam naplaćuje dodatne minute i četove koje ste potrošili pre nego što je isključena."
     },
     "spendingCap": {
@@ -347,7 +347,7 @@
         "title": "Sledeći koraci",
         "call": {
           "title": "Pozovite ga sada",
-          "description": "Čujte kako recepcioner odgovara na pravi poziv."
+          "description": "Čujte kako agent odgovara na pravi poziv."
         },
         "forward": {
           "title": "Preusmerite poslovnu liniju na ovaj broj",
@@ -356,7 +356,7 @@
         },
         "transfer": {
           "title": "Izaberite kuda idu hitni pozivi",
-          "description": "Dodajte broj za preusmeravanje u AI podešavanjima da bi recepcioner mogao da prosledi hitne pozive osobi.",
+          "description": "Dodajte broj za preusmeravanje u AI podešavanjima da bi agent mogao da prosledi hitne pozive osobi.",
           "action": "Otvori AI podešavanja"
         }
       },
@@ -376,11 +376,11 @@
     "chats_other": "{{amount}} četova",
     "allowance": "Svakog meseca dobijate {{minutes}} i {{chats}}.",
     "status": {
-      "awaiting_payment": "Vaš recepcioner počinje da odgovara na pozive i četove čim platite.",
+      "awaiting_payment": "Vaš agent počinje da odgovara na pozive i četove čim platite.",
       "active": "Vaša pretplata je aktivna.",
       "renews": "Vaša pretplata se obnavlja {{date}}.",
-      "past_due": "Poslednja uplata nije prošla, a pokušaćemo ponovo. Ažurirajte karticu da bi recepcioner nastavio da odgovara.",
-      "inactive": "Vaša pretplata je istekla, pa recepcioner ne odgovara na pozive i četove. Ponovo se pretplatite da biste ga uključili."
+      "past_due": "Poslednja uplata nije prošla, a pokušaćemo ponovo. Ažurirajte karticu da bi agent nastavio da odgovara.",
+      "inactive": "Vaša pretplata je istekla, pa agent ne odgovara na pozive i četove. Ponovo se pretplatite da biste ga uključili."
     },
     "badge": {
       "awaiting_payment": "Čeka uplatu",
@@ -392,7 +392,7 @@
     "manage": "Upravljajte naplatom",
     "opening": "Otvaramo…",
     "manageHint": "Ažurirajte karticu, preuzmite račune ili otkažite pretplatu.",
-    "paid": "Uplata je primljena. Recepcioner počinje da odgovara za trenutak.",
+    "paid": "Uplata je primljena. Agent počinje da odgovara za trenutak.",
     "errors": {
       "portal": "Portal za naplatu trenutno nije dostupan. Obratite se firmi {{appName}}.",
       "checkout": "Nismo mogli da otvorimo plaćanje. Pokušajte ponovo.",
@@ -402,7 +402,7 @@
   "phoneNumber": {
     "current": {
       "label": "Trenutni broj telefona",
-      "description": "Ovo je broj na koji pozivaoci dobijaju Vašeg AI recepcionera.",
+      "description": "Ovo je broj na koji pozivaoci dobijaju Vašeg AI agenta.",
       "empty": "Još nemate broj."
     },
     "reclaim": {
@@ -420,14 +420,14 @@
       "upgradeCta": "Pogledaj pakete"
     },
     "partnerTierRequired": {
-      "description": "Partner ove firme mora da plaća nivo da bi dodao brojeve telefona."
+      "description": "Partner ovog radnog prostora mora da plaća nivo da bi dodao brojeve telefona."
     },
     "partnerNumbersUnavailable": {
-      "description": "Brojevi telefona još nisu dostupni za ovu firmu."
+      "description": "Brojevi telefona još nisu dostupni za ovaj radni prostor."
     },
     "trialPhone": {
       "title": "Potvrdite broj mobilnog telefona",
-      "description": "Tokom probe od 14 dana recepcioner prebacuje pozive samo na ovaj mobilni.",
+      "description": "Tokom probe od 14 dana agent prebacuje pozive samo na ovaj mobilni.",
       "fields": {
         "mobileNumber": "Broj mobilnog telefona",
         "country": "Zemlja"
@@ -465,7 +465,7 @@
       "title": "Izaberite novi broj telefona",
       "description": "Broj telefona možete promeniti samo jednom.",
       "getNumberTitle": "Izaberite broj telefona",
-      "getNumberDescription": "Izaberite broj na koji pozivaoci mogu da dobiju Vašeg AI recepcionera."
+      "getNumberDescription": "Izaberite broj na koji pozivaoci mogu da dobiju Vašeg AI agenta."
     },
     "picker": {
       "countryLabel": "Država",
@@ -592,7 +592,7 @@
       },
       "instagram": {
         "title": "Instagram",
-        "description": "Odgovarajte na direktne poruke na Instagramu sa istim znanjem kao vaša recepcionerka."
+        "description": "Odgovarajte na direktne poruke na Instagramu sa istim znanjem kao vaš agent."
       }
     },
     "status": {
@@ -609,22 +609,22 @@
       "syncedAppointments": "Sinhronizovani termini"
     },
     "instagram": {
-      "connectedSuccess": "Instagram je povezan. Vaša recepcionerka sada odgovara na direktne poruke.",
+      "connectedSuccess": "Instagram je povezan. Vaš agent sada odgovara na direktne poruke.",
       "connectFailed": "Povezivanje Instagrama nije uspelo. Pokušajte ponovo.",
       "accountInUse": "Ovaj Instagram nalog je već povezan sa drugim radnim prostorom.",
-      "permissionMissing": "Vašoj recepcionerki je potreban pristup porukama na Instagramu. Ponovo povežite Instagram i dozvolite pristup.",
+      "permissionMissing": "Vašem agentu je potreban pristup porukama na Instagramu. Ponovo povežite Instagram i dozvolite pristup.",
       "disconnectedSuccess": "Instagram je isključen.",
       "disconnect": "Isključi",
       "reconnect": "Ponovo poveži",
       "connectedAs": "Odgovara na direktne poruke kao @{{username}}.",
-      "dialogDescription": "Vaša recepcionerka odgovara na direktne poruke poslate ovom nalogu.",
+      "dialogDescription": "Vaš agent odgovara na direktne poruke poslate ovom nalogu.",
       "accountLabel": "Instagram nalog",
-      "reconnectDescription": "Instagram više ne prihvata pristup vaše recepcionerke. Ponovo povežite nalog da biste nastavili da odgovarate na poruke."
+      "reconnectDescription": "Instagram više ne prihvata pristup vašeg agenta. Ponovo povežite nalog da biste nastavili da odgovarate na poruke."
     }
   },
   "profile": {
-    "title": "Profil recepcionera",
-    "description": "Definišite glas, ton, pravila zakazivanja i preusmeravanja koja oblikuju Vašeg recepcionera.",
+    "title": "Profil agenta",
+    "description": "Definišite glas, ton, pravila zakazivanja i preusmeravanja koja oblikuju Vašeg agenta.",
     "greeting": "Pozdrav",
     "tone": "Ton",
     "defaultCustomerLanguage": "Podrazumevani jezik klijenta",
@@ -645,7 +645,7 @@
     },
     "save": "Sačuvaj profil",
     "saving": "Čuvanje...",
-    "saved": "Profil recepcionera je sačuvan.",
+    "saved": "Profil agenta je sačuvan.",
     "placeholders": {
       "transferNumber": "+1 555 123 4567"
     }
@@ -714,7 +714,7 @@
       "invitedOn": "Poziv poslat {{date}}",
       "status": {
         "pending": "Na čekanju",
-        "handover": "Predaja firme"
+        "handover": "Predaja radnog prostora"
       },
       "actions": {
         "moreOptions": "Još opcija",
@@ -744,7 +744,7 @@
       "sent": "Poziv je poslat na {{email}}.",
       "errors": {
         "invalidEmail": "Unesite ispravnu imejl adresu.",
-        "partnerMember": "{{email}} je u timu partnera ove firme. Radi ovde iz partnerske konzole, pa ne može da se pridruži timu.",
+        "partnerMember": "{{email}} je u timu partnera ovog radnog prostora. Radi ovde iz partnerske konzole, pa ne može da se pridruži timu.",
         "failed": "Nismo uspeli da pošaljemo poziv. Pokušajte ponovo."
       }
     },
@@ -757,17 +757,17 @@
       "revokeFailed": "Nismo uspeli da opozovemo poziv."
     },
     "delete": {
-      "title": "Obriši firmu",
-      "description": "Trajno briše ovu firmu zajedno sa pozivima, razgovorima, kontaktima, terminima, podešavanjima i pristupom tima. Njen broj telefona se oslobađa, a plaćeni plan se završava. Ovo se ne može poništiti.",
-      "action": "Obriši firmu",
+      "title": "Obriši radni prostor",
+      "description": "Trajno briše ovaj radni prostor zajedno sa pozivima, razgovorima, kontaktima, terminima, podešavanjima i pristupom tima. Njegov broj telefona se oslobađa, a plaćeni plan se završava. Ovo se ne može poništiti.",
+      "action": "Obriši radni prostor",
       "dialogTitle": "Obrisati {{name}}?",
-      "dialogDescription": "Sve u ovoj firmi se trajno briše, njen broj telefona se vraća provajderu, a recepcionar prestaje da se javlja. Tim gubi pristup i niko ne može da je vrati.",
+      "dialogDescription": "Sve u ovom radnom prostoru se trajno briše, njegov broj telefona se vraća provajderu, a agent prestaje da se javlja. Tim gubi pristup i niko ne može da ga vrati.",
       "confirmLabel": "Upišite <name>{{name}}</name> za potvrdu",
       "submit": "Obriši",
       "deleting": "Brisanje...",
       "errors": {
-        "failed": "Firma nije mogla da se obriše. Pokušajte ponovo.",
-        "numberInProgress": "Broj telefona za ovu firmu se još podešava. Pokušajte ponovo za nekoliko minuta.",
+        "failed": "Radni prostor nije mogao da se obriše. Pokušajte ponovo.",
+        "numberInProgress": "Broj telefona za ovaj radni prostor se još podešava. Pokušajte ponovo za nekoliko minuta.",
         "billing": "Naplata trenutno nije dostupna, pa plaćeni plan nije mogao da se završi. Pokušajte kasnije."
       },
       "cancel": "Otkaži"
@@ -775,7 +775,7 @@
   },
   "hours": {
     "title": "Radno vreme",
-    "description": "Strukturisano radno vreme ima prednost nad dokumentima i pomaže recepcioneru da pouzdano odgovara na pitanja o dostupnosti.",
+    "description": "Strukturisano radno vreme ima prednost nad dokumentima i pomaže agentu da pouzdano odgovara na pitanja o dostupnosti.",
     "save": "Sačuvaj radno vreme",
     "saving": "Čuvanje...",
     "leaveBlank": "Ostavite dan prazan da biste ga označili kao neradni.",
@@ -785,7 +785,7 @@
   },
   "services": {
     "title": "Usluge",
-    "description": "Definicije usluga pokreću logiku zakazivanja i snimak recepcionera koji pozivaoci čuju.",
+    "description": "Definicije usluga pokreću logiku zakazivanja i snimak agenta koji pozivaoci čuju.",
     "serviceName": "Naziv usluge",
     "englishLabel": "Naziv na engleskom",
     "frenchLabel": "Naziv na francuskom",
@@ -809,7 +809,7 @@
   },
   "phoneRouting": {
     "title": "Rutiranje brojeva telefona",
-    "description": "Povežite Twilio brojeve sa ovom firmom kako bi pozivi uživo i SMS poruke učitali odgovarajući snimak recepcionera.",
+    "description": "Povežite Twilio brojeve sa ovim radnim prostorom kako bi pozivi uživo i SMS poruke učitali odgovarajući snimak agenta.",
     "managedNumber": "Upravljani broj",
     "selectNumber": "Izaberite broj",
     "addNewNumber": "Dodaj novi broj",
@@ -866,21 +866,21 @@
     "assignedServices": "Usluge: {{count}}"
   },
   "snapshot": {
-    "title": "Snimak recepcionera",
-    "description": "Vaš recepcioner učitava ove podatke o firmi jednom, na početku poziva.",
-    "business": "Firma",
+    "title": "Snimak agenta",
+    "description": "Vaš agent učitava ove podatke o firmi jednom, na početku poziva.",
+    "business": "Radni prostor",
     "timezone": "Vremenska zona",
     "transferPolicy": "Pravila preusmeravanja",
     "services": "Usluge u snimku",
     "knowledgeDigest": "Sažetak znanja",
-    "emptyDigest": "Sažetak još nije generisan. Dodajte znanje ili dokumente kako bi recepcioner imao više informacija."
+    "emptyDigest": "Sažetak još nije generisan. Dodajte znanje ili dokumente kako bi agent imao više informacija."
   },
   "nextSteps": {
     "title": "Sledeći koraci",
-    "description": "Doradite ponašanje recepcionera pre nego što preusmerite stvarne pozive.",
+    "description": "Doradite ponašanje agenta pre nego što preusmerite stvarne pozive.",
     "hours": "Podesite radno vreme, usluge i dodelu članova tima kako bi zakazivanje predlagalo stvarne termine.",
     "transfer": "Dodajte pravila preusmeravanja i rezervni broj pre nego što počnete da preusmeravate hitne pozive.",
-    "snapshot": "Osvežite snimak posle većih promena pravila kako bi ih glasovni recepcioner brzo preuzeo."
+    "snapshot": "Osvežite snimak posle većih promena pravila kako bi ih glasovni agent brzo preuzeo."
   },
   "notifications": {
     "title": "Obaveštenja",
@@ -1008,7 +1008,7 @@
     "revoked": "Opozvan {{date}}",
     "restricted": {
       "title": "Samo vlasnici i administratori mogu da upravljaju API ključevima",
-      "description": "Zamolite vlasnika ili administratora ove firme da kreira ključ za Vas."
+      "description": "Zamolite vlasnika ili administratora ovog radnog prostora da kreira ključ za Vas."
     },
     "create": {
       "action": "Kreiraj API ključ",
@@ -1046,19 +1046,19 @@
       "done": "API ključ je ažuriran"
     },
     "scopes": {
-      "business_read": "Čitanje podataka o firmi, radnog vremena, usluga, kao i podešavanja i pravila recepcionera",
-      "business_write": "Izmena podataka o firmi, radnog vremena, usluga, kao i podešavanja i pravila recepcionera, uključujući broj na koji se pozivi prebacuju",
+      "business_read": "Čitanje podataka o firmi, radnog vremena, usluga, kao i podešavanja i pravila agenta",
+      "business_write": "Izmena podataka o firmi, radnog vremena, usluga, kao i podešavanja i pravila agenta, uključujući broj na koji se pozivi prebacuju",
       "calls_read": "Čitanje poziva, rezimea i transkripata",
       "contacts_read": "Čitanje kontakata",
       "contacts_write": "Kreiranje i izmena kontakata",
       "appointments_read": "Čitanje zakazanih i slobodnih termina",
       "appointments_write": "Zakazivanje, otkazivanje i pomeranje termina",
-      "messages_read": "Čitanje poruka koje je primio recepcioner",
+      "messages_read": "Čitanje poruka koje je primio agent",
       "knowledge_read": "Čitanje unosa u znanje, čestih pitanja, veb-sajtova i fajlova",
       "knowledge_write": "Dodavanje, izmena i brisanje unosa u znanje, čestih pitanja, veb-sajtova i fajlova",
       "billing_manage": "Pregled plana, podešavanje limita potrošnje i pokretanje plaćanja",
       "phone_numbers_manage": "Pretraga, kupovina, zamena i oslobađanje brojeva telefona",
-      "team_manage": "Pozivanje i uklanjanje članova tima, promena uloga i predaja firme",
+      "team_manage": "Pozivanje i uklanjanje članova tima, promena uloga i predaja radnog prostora",
       "webhooks_manage": "Kreiranje i brisanje webhook endpointa"
     }
   },
@@ -1069,7 +1069,7 @@
     "enabledLabel": "Šalji događaje na ovaj endpoint",
     "restricted": {
       "title": "Samo vlasnici i administratori mogu da upravljaju webhookovima",
-      "description": "Zamolite vlasnika ili administratora ove firme da podesi webhook."
+      "description": "Zamolite vlasnika ili administratora ovog radnog prostora da podesi webhook."
     },
     "status": {
       "enabled": "Uključeno",
@@ -1092,7 +1092,7 @@
       "appointment_booked": "Termin je zakazan",
       "appointment_rescheduled": "Termin je pomeren",
       "appointment_cancelled": "Termin je otkazan",
-      "message_taken": "Recepcioner je primio poruku za Vaš tim",
+      "message_taken": "Agent je primio poruku za Vaš tim",
       "contact_created": "Dodat je novi kontakt"
     },
     "create": {
@@ -1167,7 +1167,7 @@
     "revoke": {
       "action": "Prekini vezu",
       "title": "Prekinuti vezu sa aplikacijom {{name}}?",
-      "description": "{{name}} odmah gubi pristup ovoj firmi. Da biste je ponovo koristili, povežite je i ponovo odobrite pristup.",
+      "description": "{{name}} odmah gubi pristup ovom radnom prostoru. Da biste je ponovo koristili, povežite je i ponovo odobrite pristup.",
       "confirm": "Prekini vezu",
       "cancel": "Otkaži",
       "done": "Veza sa aplikacijom je prekinuta",
@@ -1181,7 +1181,7 @@
       "contacts_write": "Kreiranje i izmena kontakata",
       "appointments_read": "Čitanje zakazanih i slobodnih termina",
       "appointments_write": "Zakazivanje, otkazivanje i pomeranje termina",
-      "messages_read": "Čitanje poruka koje je primio recepcioner",
+      "messages_read": "Čitanje poruka koje je primio agent",
       "knowledge_write": "Dodavanje unosa u znanje i čestih pitanja"
     }
   },

@@ -11,7 +11,7 @@
     "title": "Učitavanje...",
     "retry": "Ponovo učitaj",
     "failed": "Neki prevodi nisu mogli da se učitaju.",
-    "description": "Sinhronizujemo Vaš radni prostor i podešavanja recepcionera."
+    "description": "Sinhronizujemo Vaš radni prostor i podešavanja agenta."
   },
   "language": {
     "label": "Jezik",
@@ -61,7 +61,7 @@
   },
   "labels": {
     "customer": "Klijent",
-    "receptionist": "Recepcioner",
+    "receptionist": "Agent",
     "prompt": "Prompt"
   },
   "aiPhoneNumber": {
@@ -98,13 +98,13 @@
     "outOfMinutes": "Potrošili ste minute. Pozivi sada idu na {{forwardTo}}.",
     "stillAvailable": "{{number}} je i dalje dostupan. Pretplatite se sada da biste ga vratili.",
     "keepNumber": "Zadrži moj broj",
-    "getReceptionistBack": "Vrati mog recepcionera",
+    "getReceptionistBack": "Vrati mog agenta",
     "getNumberBack": "Vrati moj broj"
   },
   "testCall": {
     "trigger": "Probni poziv",
-    "title": "Isprobajte svog AI recepcionera",
-    "description": "Započnite poziv uživo iz pregledača sa podešenim recepcionerom.",
+    "title": "Isprobajte svog AI agenta",
+    "description": "Započnite poziv uživo iz pregledača sa podešenim agentom.",
     "start": "Započni poziv",
     "connecting": "Povezivanje...",
     "hangUp": "Prekini",
@@ -112,8 +112,8 @@
     "status": {
       "idle": "Spremno kad i Vi",
       "requesting_microphone": "Traži se pristup mikrofonu",
-      "connecting": "Povezivanje sa AI recepcionerom",
-      "connected": "Uživo sa AI recepcionerom",
+      "connecting": "Povezivanje sa AI agentom",
+      "connected": "Uživo sa AI agentom",
       "ending": "Završavanje poziva",
       "ended": "Poziv je završen",
       "error": "Poziv nije mogao da se započne"
@@ -139,7 +139,7 @@
       "businessNotFound": "Nismo pronašli ovaj radni prostor. Pređite na aktivan radni prostor i pokušajte ponovo.",
       "rateLimited": "Započeto je previše probnih poziva. Pokušajte ponovo malo kasnije.",
       "voiceLimitReached": "Ovaj radni prostor je potrošio minute razgovora za ovaj mesec.",
-      "unavailable": "Vaš AI recepcioner trenutno nije dostupan.",
+      "unavailable": "Vaš AI agent trenutno nije dostupan.",
       "generic": "Došlo je do greške pri pokretanju poziva."
     }
   },

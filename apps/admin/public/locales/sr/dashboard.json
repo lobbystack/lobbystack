@@ -164,8 +164,8 @@
     }
   },
   "setup": {
-    "title": "Kreirajte svoju prvu firmu",
-    "description": "Ovim se kreiraju zakupac, profil recepcionera i prvi snimak podešavanja koji koristi glasovni kanal.",
+    "title": "Kreirajte svoj prvi radni prostor",
+    "description": "Ovim se kreiraju radni prostor, profil agenta i prvi snimak podešavanja koji koristi glasovni kanal.",
     "businessName": "Naziv firme",
     "slug": "Slug",
     "timezone": "Vremenska zona",
@@ -182,10 +182,10 @@
       "other": "Ostalo"
     },
     "selectBusinessType": "Izaberite vrstu firme",
-    "create": "Kreiraj firmu",
+    "create": "Kreiraj radni prostor",
     "creating": "Kreiranje...",
-    "created": "Firma je kreirana. Snimak podešavanja recepcionera se sada osvežava.",
-    "failed": "Kreiranje firme nije uspelo."
+    "created": "Radni prostor je kreiran. Snimak podešavanja agenta se sada osvežava.",
+    "failed": "Kreiranje radnog prostora nije uspelo."
   },
   "cards": {
     "calls": {
@@ -194,7 +194,7 @@
     },
     "services": {
       "title": "Podešene usluge",
-      "footer": "Koriste ih i recepcioner i sistem za zakazivanje."
+      "footer": "Koriste ih i agent i sistem za zakazivanje."
     },
     "hours": {
       "title": "Podešeni radni dani",
@@ -209,7 +209,7 @@
   "quickActions": {
     "title": "Brze radnje",
     "description": "Održavajte firmu {{businessName}} spremnom za pozive, SMS i zakazivanje.",
-    "configureProfile": "Podesite profil recepcionera",
+    "configureProfile": "Podesite profil agenta",
     "addKnowledge": "Dodajte znanje i dokumente",
     "reviewInbox": "Pregledajte prijemno sanduče poziva",
     "readiness": "Spremnost podešavanja",
@@ -221,7 +221,7 @@
   },
   "nextSteps": {
     "title": "Sledeći koraci",
-    "description": "Doradite ponašanje recepcionera pre nego što na njega usmerite prave pozive.",
+    "description": "Doradite ponašanje agenta pre nego što na njega usmerite prave pozive.",
     "hours": "Podesite radno vreme i usluge kako bi zakazivanje predlagalo stvarne termine.",
     "transfer": "Dodajte pravila preusmeravanja i rezervni broj pre nego što preusmerite hitne pozive.",
     "snapshot": "Osvežite snimak podešavanja nakon većih promena pravila kako bi ih glasovni kanal brzo preuzeo."
@@ -247,7 +247,7 @@
     },
     "forwardTrial": {
       "title": "Preusmerite propuštene pozive na {{number}}",
-      "description": "Uključite preusmeravanje poziva kod svog operatera i pozivi na koje ne stignete da odgovorite ići će Vašem recepcioneru umesto na govornu poštu.",
+      "description": "Uključite preusmeravanje poziva kod svog operatera i pozivi na koje ne stignete da odgovorite ići će Vašem agentu umesto na govornu poštu.",
       "cta": "Podesite preusmeravanje"
     },
     "upgrade": {
@@ -262,11 +262,11 @@
     "modes": {
       "missed": {
         "label": "Propušteni pozivi",
-        "help": "Vaš telefon prvo zvoni. Ako se ne javite, javlja se recepcioner."
+        "help": "Vaš telefon prvo zvoni. Ako se ne javite, javlja se agent."
       },
       "all": {
         "label": "Svi pozivi",
-        "help": "Recepcioner odgovara na svaki poziv, a Vaš telefon ne zvoni."
+        "help": "Agent odgovara na svaki poziv, a Vaš telefon ne zvoni."
       }
     },
     "carrier": {
@@ -296,16 +296,16 @@
     },
     "notes": {
       "planFeature": "Ako se preusmeravanje ne uključi, zamolite operatera {{name}} da doda preusmeravanje poziva u Vaš paket.",
-      "iphone": "Na iPhone-u isključite Live Voicemail u podešavanjima aplikacije Telefon. U suprotnom se ona javlja pre recepcionera.",
-      "ringTime": "Ako možete da izaberete trajanje zvonjenja, 15 do 20 sekundi Vam daje oko četiri zvona pre nego što se recepcioner javi.",
+      "iphone": "Na iPhone-u isključite Live Voicemail u podešavanjima aplikacije Telefon. U suprotnom se ona javlja pre agenta.",
+      "ringTime": "Ako možete da izaberete trajanje zvonjenja, 15 do 20 sekundi Vam daje oko četiri zvona pre nego što se agent javi.",
       "voicemail": "Ako koristite govornu poštu operatera {{name}}, zamolite {{name}} da je ukloni. Propušteni pozivi ne mogu da se preusmere dok je uključena.",
       "androidOnly": "Ovi koraci su za Android telefone. Na iPhone-u zamolite operatera {{name}} da ga uključi za Vas.",
       "adminOnly": "Ovo može da promeni samo administrator Vašeg {{name}} naloga.",
       "verifyNumber": "{{name}} šalje kod na {{number}} pre nego što uključi preusmeravanje. Izaberite da kod dobijete pozivom, pa ga pročitajte u transkriptu tog poziva u odeljku Pozivi."
     },
     "test": {
-      "missed": "Da biste proverili, pozovite poslovni broj s drugog telefona i pustite da zvoni. Recepcioner bi trebalo da se javi.",
-      "all": "Da biste proverili, pozovite poslovni broj s drugog telefona. Recepcioner bi trebalo da se javi."
+      "missed": "Da biste proverili, pozovite poslovni broj s drugog telefona i pustite da zvoni. Agent bi trebalo da se javi.",
+      "all": "Da biste proverili, pozovite poslovni broj s drugog telefona. Agent bi trebalo da se javi."
     },
     "unsupported": {
       "missed": "{{name}} ne nudi preusmeravanje samo propuštenih poziva. Izaberite Svi pozivi ili zamolite {{name}} da preusmeri neodgovorene pozive na {{number}}.",

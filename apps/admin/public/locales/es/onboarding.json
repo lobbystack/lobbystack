@@ -11,10 +11,10 @@
   "adminRequired": {
     "eyebrow": "Configuración del espacio de trabajo",
     "title": "La configuración está pendiente de un administrador",
-    "description": "Este espacio de trabajo aún se está configurando. Pida a un propietario o administrador del negocio que termine la configuración antes de usarlo.",
-    "descriptionWithBusiness": "{{businessName}} aún se está configurando. Pida a un propietario o administrador del negocio que termine la configuración antes de usarlo.",
+    "description": "Este espacio de trabajo aún se está configurando. Pida a un propietario o administrador que termine la configuración antes de usarlo.",
+    "descriptionWithBusiness": "{{businessName}} aún se está configurando. Pida a un propietario o administrador del espacio de trabajo que termine la configuración antes de usarlo.",
     "statusTitle": "Su acceso está activo",
-    "statusDescription": "Podrá usar el espacio de trabajo cuando un administrador complete la configuración inicial. Solo los propietarios y administradores del negocio pueden cambiar la configuración.",
+    "statusDescription": "Podrá usar el espacio de trabajo cuando un administrador complete la configuración inicial. Solo los propietarios y administradores del espacio de trabajo pueden cambiar la configuración.",
     "goToWorkspace": "Ir al espacio de trabajo"
   },
   "brand": {
@@ -43,7 +43,7 @@
     "title": "Primero, ¿cómo se llama su negocio?",
     "description": "",
     "createTitle": "Crear espacio de trabajo",
-    "createDescription": "Estos datos son la base del contexto de su recepcionista.",
+    "createDescription": "Estos datos son la base del contexto de su agente.",
     "existingTitle": "El espacio de trabajo ya existe",
     "existingDescription": "Continúe la configuración con el espacio de trabajo activo.",
     "configured": "Los datos del negocio ya están configurados.",
@@ -113,7 +113,7 @@
     "skipFailed": "No pudimos omitir este paso en este momento. Inténtelo de nuevo."
   },
   "testCall": {
-    "title": "Escuche a su recepcionista",
+    "title": "Escuche a su agente",
     "continue": "Continuar",
     "skip": "Omitir por ahora",
     "continueFailed": "No pudimos continuar. Inténtelo de nuevo."
@@ -149,7 +149,7 @@
     },
     "unavailable": {
       "title": "Todavía no ofrecemos números en este país ({{country}}).",
-      "body": "Puede seguir usando a su recepcionista en el navegador, y podemos escribirle cuando los números lleguen allí.",
+      "body": "Puede seguir usando a su agente en el navegador, y podemos escribirle cuando los números lleguen allí.",
       "notify": "Avísenme cuando estén disponibles",
       "joined": "Listo. Le escribiremos.",
       "continue": "Continuar sin número",
@@ -172,7 +172,7 @@
   "number": {
     "ready": {
       "label": "Su número está listo",
-      "body": "Llámelo desde su teléfono y escuche cómo responde su recepcionista.",
+      "body": "Llámelo desde su teléfono y escuche cómo responde su agente.",
       "call": "Llamar al {{number}}"
     },
     "planRequired": "Para obtener un número, elija un plan.",
@@ -201,8 +201,8 @@
     "searchFailed": "No pudimos buscar números en este momento.",
     "claimFailed": "No pudimos activar ese número. Inténtelo de nuevo.",
     "claimRateLimited": "Ha probado varios números. Espere un momento antes de volver a intentarlo.",
-    "partnerTierRequired": "El socio de este negocio necesita pagar un nivel para agregar números de teléfono.",
-    "partnerNumbersUnavailable": "Los números de teléfono todavía no están disponibles para este negocio.",
+    "partnerTierRequired": "El socio de este espacio de trabajo necesita pagar un nivel para agregar números de teléfono.",
+    "partnerNumbersUnavailable": "Los números de teléfono todavía no están disponibles para este espacio de trabajo.",
     "offerExpired": "Esta oferta caducó. Vuelva a buscar y elija un número.",
     "trialAccountPurchaseLimit": "Esta cuenta de Twilio aún no puede comprar ese número. Las cuentas de prueba solo pueden comprar números de prueba elegibles; libere un número existente o mejore la cuenta y vuelva a intentarlo.",
     "skipFailed": "No pudimos omitir este paso en este momento. Inténtelo de nuevo.",
@@ -269,10 +269,10 @@
     "continueFailed": "No pudimos continuar en este momento. Inténtelo de nuevo."
   },
   "noBusinesses": {
-    "title": "Todavía no hay ningún negocio aquí",
-    "description": "{{appName}} aún no agregó {{email}} a un negocio. Pídale que lo invite y abra el enlace de su correo.",
+    "title": "Todavía no hay ningún espacio de trabajo aquí",
+    "description": "{{appName}} aún no agregó {{email}} a un espacio de trabajo. Pídale que lo invite y abra el enlace de su correo.",
     "switchAccount": "Iniciar sesión con otra cuenta",
-    "released": "{{email}} ya no tiene ningún negocio en este panel. Un negocio suyo pasó a su propia cuenta, así que abra su panel para administrarlo.",
+    "released": "{{email}} ya no tiene ningún espacio de trabajo en este panel. Un espacio de trabajo suyo pasó a su propia cuenta, así que abra su panel para administrarlo.",
     "openDashboard": "Abrir su panel"
   }
 }

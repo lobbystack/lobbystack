@@ -5,7 +5,7 @@
     "title": "Cargando...",
     "retry": "Reintentar la carga",
     "failed": "No se pudieron cargar algunas traducciones.",
-    "description": "Sincronizando su espacio de trabajo y la configuración de la recepcionista."
+    "description": "Sincronizando su espacio de trabajo y la configuración del agente."
   },
   "language": {
     "label": "Idioma",
@@ -55,7 +55,7 @@
   },
   "labels": {
     "customer": "Cliente",
-    "receptionist": "Recepcionista",
+    "receptionist": "Agente",
     "prompt": "Instrucción"
   },
   "aiPhoneNumber": {
@@ -92,13 +92,13 @@
     "outOfMinutes": "Se acabaron sus minutos. Las llamadas ahora van al {{forwardTo}}.",
     "stillAvailable": "El {{number}} sigue disponible. Suscríbase ahora para recuperarlo.",
     "keepNumber": "Conservar mi número",
-    "getReceptionistBack": "Recuperar a mi recepcionista",
+    "getReceptionistBack": "Recuperar a mi agente",
     "getNumberBack": "Recuperar mi número"
   },
   "testCall": {
     "trigger": "Llamada de prueba",
-    "title": "Pruebe su recepcionista con IA",
-    "description": "Inicie una llamada en vivo desde el navegador con su recepcionista configurada.",
+    "title": "Pruebe su agente con IA",
+    "description": "Inicie una llamada en vivo desde el navegador con su agente configurado.",
     "start": "Iniciar llamada",
     "connecting": "Conectando...",
     "hangUp": "Colgar",
@@ -106,8 +106,8 @@
     "status": {
       "idle": "Listo cuando usted quiera",
       "requesting_microphone": "Solicitando acceso al micrófono",
-      "connecting": "Conectando con su recepcionista con IA",
-      "connected": "En vivo con su recepcionista con IA",
+      "connecting": "Conectando con su agente con IA",
+      "connected": "En vivo con su agente con IA",
       "ending": "Finalizando la llamada",
       "ended": "Llamada finalizada",
       "error": "No se pudo iniciar la llamada"
@@ -133,7 +133,7 @@
       "businessNotFound": "No encontramos este espacio de trabajo. Cambie a un espacio de trabajo activo e inténtelo de nuevo.",
       "rateLimited": "Se han iniciado demasiadas llamadas de prueba. Inténtelo de nuevo en unos minutos.",
       "voiceLimitReached": "Este espacio de trabajo ya usó los minutos de voz de este mes.",
-      "unavailable": "Su recepcionista con IA no está disponible en este momento.",
+      "unavailable": "Su agente con IA no está disponible en este momento.",
       "generic": "Algo salió mal al iniciar la llamada."
     }
   },

@@ -2,16 +2,16 @@
   "page": {
     "eyebrow": "Radni prostor agenta",
     "title": "Agent",
-    "description": "Podesite kako se Vaš AI recepcioner ponaša, šta zna i kako obrađuje pozive i poruke."
+    "description": "Podesite kako se Vaš AI agent ponaša, šta zna i kako obrađuje pozive i poruke."
   },
   "sections": {
     "basicSettings": {
       "title": "AI podešavanja",
-      "description": "Pozdrav i podešavanja preusmeravanja za Vašeg recepcionera."
+      "description": "Pozdrav i podešavanja preusmeravanja za Vašeg agenta."
     },
     "knowledge": {
       "title": "Znanje",
-      "description": "Informacije i smernice koje recepcioner koristi da odgovara na pitanja.",
+      "description": "Informacije i smernice koje agent koristi da odgovara na pitanja.",
       "listTitle": "Baza znanja",
       "addKnowledge": "Dodaj znanje",
       "addKnowledgeOptions": {
@@ -26,7 +26,7 @@
       "websiteImport": {
         "badge": "Sajt",
         "title": "Uvezi sajt",
-        "description": "Učitajte javne stranice Vašeg sajta kako bi ih recepcioner koristio kao znanje.",
+        "description": "Učitajte javne stranice Vašeg sajta kako bi ih agent koristio kao znanje.",
         "submit": "Uvezi",
         "submitting": "Uvoz…",
         "success": "Uvoz sajta je pokrenut. Stranice će se pojavljivati ovde kako se budu obrađivale.",
@@ -41,9 +41,9 @@
           "urlRequired": "Unesite URL sajta koji želite da uvezete."
         }
       },
-      "addKnowledgeDescription": "Dodajte radno vreme, cene, pravila poslovanja ili bilo koju drugu informaciju koju recepcioner treba da zna.",
-      "editKnowledgeDescription": "Izmenite informacije koje recepcioner koristi kada odgovara na pitanja klijenata.",
-      "uploadDocumentDescription": "Otpremite fajl kako bi ga recepcioner koristio.",
+      "addKnowledgeDescription": "Dodajte radno vreme, cene, pravila poslovanja ili bilo koju drugu informaciju koju agent treba da zna.",
+      "editKnowledgeDescription": "Izmenite informacije koje agent koristi kada odgovara na pitanja klijenata.",
+      "uploadDocumentDescription": "Otpremite fajl kako bi ga agent koristio.",
       "documentBadge": "Dokument",
       "textBadge": "Tekst",
       "emptyState": "Još niste dodali znanje.",
@@ -85,8 +85,8 @@
         "content": {
           "label": "Sadržaj",
           "placeholder": "Radimo od ponedeljka do petka, od 9 do 17 časova.",
-          "hint": "Informacija koju recepcioner treba da koristi.",
-          "required": "Unesite informaciju koju recepcioner treba da koristi."
+          "hint": "Informacija koju agent treba da koristi.",
+          "required": "Unesite informaciju koju agent treba da koristi."
         },
         "tags": {
           "label": "Oznake",
@@ -97,7 +97,7 @@
     },
     "services": {
       "title": "Usluge",
-      "description": "Detalji o uslugama koje recepcioner koristi da objasni ponudu i pomogne da se zakaže pravi termin.",
+      "description": "Detalji o uslugama koje agent koristi da objasni ponudu i pomogne da se zakaže pravi termin.",
       "listTitle": "Usluge",
       "addKnowledge": "Dodaj uslugu",
       "editKnowledge": "Izmeni uslugu",
@@ -116,9 +116,9 @@
       "copyName": "{{name}} (kopija)",
       "copyNameNumbered": "{{name}} (kopija {{number}})",
       "uploadDocument": "Otpremi dokument",
-      "addKnowledgeDescription": "Dodajte svoje usluge, šta obuhvataju, kome su namenjene i sve što recepcioner treba da pomene.",
-      "editKnowledgeDescription": "Izmenite detalje usluge koje recepcioner treba da pomene i koristi pri zakazivanju.",
-      "uploadDocumentDescription": "Otpremite fajl kako bi ga recepcioner koristio.",
+      "addKnowledgeDescription": "Dodajte svoje usluge, šta obuhvataju, kome su namenjene i sve što agent treba da pomene.",
+      "editKnowledgeDescription": "Izmenite detalje usluge koje agent treba da pomene i koristi pri zakazivanju.",
+      "uploadDocumentDescription": "Otpremite fajl kako bi ga agent koristio.",
       "documentBadge": "Dokument",
       "textBadge": "Tekst",
       "emptyState": "Još niste dodali usluge.",
@@ -156,7 +156,7 @@
         "content": {
           "label": "Sadržaj",
           "placeholder": "Razgovor od 30 minuta u kome saznajemo šta je pozivaocu potrebno i predlažemo sledeći korak.",
-          "hint": "Opišite uslugu kako bi je recepcioner jasno objasnio."
+          "hint": "Opišite uslugu kako bi je agent jasno objasnio."
         },
         "duration": {
           "label": "Trajanje",
@@ -170,12 +170,12 @@
         },
         "price": {
           "label": "Cena",
-          "hint": "Opciono. Recepcioner navodi tačno ovu cenu; ako iznos ostavite prazan, neće ga izmišljati.",
+          "hint": "Opciono. Agent navodi tačno ovu cenu; ako iznos ostavite prazan, neće ga izmišljati.",
           "placeholder": "0",
           "amount": "Cena",
           "lowest": "Najniža cena",
           "highest": "Najviša cena",
-          "inPersonHint": "Recepcioner kaže pozivaocima da se cena određuje kada firma sazna šta im je potrebno.",
+          "inPersonHint": "Agent kaže pozivaocima da se cena određuje kada firma sazna šta im je potrebno.",
           "types": {
             "fixed": "Fiksna",
             "from": "Od",
@@ -203,22 +203,22 @@
         }
       },
       "deleteTitle": "Obrisati uslugu?",
-      "deleteDescription": "Recepcioner prestaje da je nudi. Prošli termini je i dalje prikazuju."
+      "deleteDescription": "Agent prestaje da je nudi. Prošli termini je i dalje prikazuju."
     },
     "employees": {
       "title": "Zaposleni",
-      "description": "Osobe kod kojih recepcioner može da zakaže termin i kojima može da preusmeri poziv."
+      "description": "Osobe kod kojih agent može da zakaže termin i kojima može da preusmeri poziv."
     },
     "rules": {
       "title": "Pravila",
-      "description": "Uputstva po kojima recepcioner obrađuje pozive i poruke.",
+      "description": "Uputstva po kojima agent obrađuje pozive i poruke.",
       "listTitle": "Pravila",
       "addKnowledge": "Dodaj pravilo",
       "editKnowledge": "Izmeni pravilo",
       "uploadDocument": "Otpremi dokument",
-      "addKnowledgeDescription": "Šta recepcioner treba da radi, na primer da preusmerava pozive, postavlja pitanja i šalje SMS poruke.",
-      "editKnowledgeDescription": "Izmenite uputstvo koje recepcioner treba da prati tokom poziva i naknadnih koraka.",
-      "uploadDocumentDescription": "Otpremite fajl kako bi ga recepcioner koristio.",
+      "addKnowledgeDescription": "Šta agent treba da radi, na primer da preusmerava pozive, postavlja pitanja i šalje SMS poruke.",
+      "editKnowledgeDescription": "Izmenite uputstvo koje agent treba da prati tokom poziva i naknadnih koraka.",
+      "uploadDocumentDescription": "Otpremite fajl kako bi ga agent koristio.",
       "documentBadge": "Dokument",
       "textBadge": "Tekst",
       "emptyState": "Još niste dodali pravila.",
@@ -254,8 +254,8 @@
         "content": {
           "label": "Sadržaj",
           "placeholder": "Kada neko traži da razgovara sa osobom, preusmeri poziv na 555-123-4567.",
-          "hint": "Opišite šta recepcioner treba da uradi.",
-          "required": "Opišite šta recepcioner treba da uradi."
+          "hint": "Opišite šta agent treba da uradi.",
+          "required": "Opišite šta agent treba da uradi."
         },
         "tags": {
           "label": "Oznake",
@@ -294,7 +294,7 @@
     },
     "summary": {
       "label": "Opis firme",
-      "hint": "Šta Vaš recepcioner govori pozivaocima o firmi.",
+      "hint": "Šta Vaš agent govori pozivaocima o firmi.",
       "placeholder": "Na primer: Porodična klinika Maple u Torontu nudi preglede, vakcinacije i fizioterapiju.",
       "regenerate": "Napiši ponovo pomoću AI",
       "regenerating": "AI ga ponovo piše na osnovu Vašeg znanja. To traje trenutak.",
@@ -316,16 +316,16 @@
     "greeting": {
       "label": "Pozdrav",
       "placeholder": "Dobar dan, hvala što ste nas pozvali…",
-      "hint": "Prva rečenica koju recepcioner izgovori kada se javi na poziv ili započne razgovor."
+      "hint": "Prva rečenica koju agent izgovori kada se javi na poziv ili započne razgovor."
     },
     "defaultLocale": {
       "label": "Podrazumevani jezik za klijente",
       "placeholder": "Izaberite podrazumevani jezik",
-      "hint": "Izaberite jezik koji recepcioner koristi kada ne znamo koji jezik pozivalac želi."
+      "hint": "Izaberite jezik koji agent koristi kada ne znamo koji jezik pozivalac želi."
     },
     "teamLocale": {
       "label": "Jezik tima",
-      "hint": "Jezik na kom recepcioner piše poruke, napomene i zahteve za vaš tim. Pozivaoci i dalje dobijaju odgovor na svom jeziku.",
+      "hint": "Jezik na kom agent piše poruke, napomene i zahteve za vaš tim. Pozivaoci i dalje dobijaju odgovor na svom jeziku.",
       "sameAsCaller": "Isto kao jezik klijenata"
     },
     "voice": {
@@ -357,7 +357,7 @@
     },
     "timezone": {
       "label": "Vremenska zona firme",
-      "hint": "Recepcioner koristi ovu vremensku zonu za radno vreme i termine koje nudi klijentima.",
+      "hint": "Agent koristi ovu vremensku zonu za radno vreme i termine koje nudi klijentima.",
       "search": "Pretraži vremenske zone...",
       "noResults": "Nije pronađena nijedna vremenska zona.",
       "regions": {
@@ -382,11 +382,11 @@
     "transferNumber": {
       "label": "Podrazumevani broj za preusmeravanje",
       "placeholder": "+1 555-123-4567",
-      "hint": "Broj telefona na koji recepcioner preusmerava pozivaoca kada treba da razgovara sa osobom.",
+      "hint": "Broj telefona na koji agent preusmerava pozivaoca kada treba da razgovara sa osobom.",
       "country": "Država",
       "errors": {
         "invalid": "Pre čuvanja unesite potpun i ispravan broj za preusmeravanje.",
-        "countryUnsupported": "Recepcioner još ne može da preusmerava pozive na brojeve u ovoj zemlji."
+        "countryUnsupported": "Agent još ne može da preusmerava pozive na brojeve u ovoj zemlji."
       }
     }
   },
@@ -410,11 +410,11 @@
     "title": "Izmene termina",
     "allowCancel": {
       "label": "Dozvoli AI otkazivanje",
-      "hint": "Recepcioner može da otkaže potvrđen budući termin."
+      "hint": "Agent može da otkaže potvrđen budući termin."
     },
     "allowReschedule": {
       "label": "Dozvoli AI pomeranje",
-      "hint": "Recepcioner može da pomeri potvrđen budući termin nakon provere slobodnih termina."
+      "hint": "Agent može da pomeri potvrđen budući termin nakon provere slobodnih termina."
     },
     "verification": {
       "label": "Provera pozivaoca",
@@ -428,7 +428,7 @@
         "phone_match_and_facts": "Pozivalac mora da zove sa broja sa kog je termin zakazan i da kaže vreme ili uslugu termina.",
         "otp_required": "Pozivalac takođe pročita jednokratni kod poslat SMS-om na taj broj pre svakog otkazivanja ili pomeranja.",
         "passcode_required": "Pozivalac takođe ukuca na tastaturi telefona PIN sačuvan na svom kontaktu. Zahtev pozivaoca bez PIN-a prosleđuje se vašem timu. PIN podesite na kartici Detalji svakog kontakta.",
-        "operator_only": "Recepcioner ne menja termine. Zahteve prosleđuje vašem timu."
+        "operator_only": "Agent ne menja termine. Zahteve prosleđuje vašem timu."
       }
     }
   },
@@ -471,7 +471,7 @@
   },
   "readOnly": "Uz pristup za pregled možete samo da čitate.",
   "empty": {
-    "description": "Prvo napravite firmu, pa se vratite ovde da podesite AI recepcionera."
+    "description": "Prvo napravite radni prostor, pa se vratite ovde da podesite AI agenta."
   },
   "hours": {
     "title": "Radno vreme",

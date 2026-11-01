@@ -34,6 +34,6 @@ export const PATCH = operatorRoute(async ({ businessId, body, transaction }) => 
   }
 
   const profile = await saveReceptionistProfileInTransaction(tx, { businessId, businessName: business.name, locale: locale ?? previousLocale, patch, regenerateSummary });
-  if (!profile) throw jsonError("Receptionist profile could not be saved.", 500);
+  if (!profile) throw jsonError("Agent profile could not be saved.", 500);
   return { profile };
 }, { minimumRole: "business_admin" })));

@@ -40,7 +40,7 @@
     "takeOver": "Preuzmi",
     "waitingBadge": "Traži osobu",
     "waitingTitle": "Posetilac čeka",
-    "waitingDescription": "Ovaj posetilac je tražio da razgovara sa osobom. Odgovorite ili pritisnite Pridruži se razgovoru u roku od 3 minuta, inače recepcioner preuzima razgovor i nudi povratni poziv.",
+    "waitingDescription": "Ovaj posetilac je tražio da razgovara sa osobom. Odgovorite ili pritisnite Pridruži se razgovoru u roku od 3 minuta, inače agent preuzima razgovor i nudi povratni poziv.",
     "joinChat": "Pridruži se razgovoru",
     "send": "Pošalji",
     "sendFailed": "Nije moguće poslati Vašu poruku.",

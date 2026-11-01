@@ -33,7 +33,7 @@
     "terms": "Términos del servicio",
     "privacy": "Política de privacidad",
     "signOut": "Cerrar sesión",
-    "createBusiness": "Crear negocio",
+    "createBusiness": "Crear espacio de trabajo",
     "setupGuide": {
       "title": "Primeros pasos",
       "open": "Abrir la guía de configuración",
@@ -48,10 +48,10 @@
         "phoneNumber": "Conectar un número de teléfono"
       },
       "stepDescriptions": {
-        "fullScan": "Durante la configuración inicial se leyó una parte de su sitio para que su recepcionista pudiera empezar a responder. Lea el resto para que lo conozca entero.",
-        "sources": "Suba un documento con políticas, preguntas frecuentes, precios u otros datos que su recepcionista deba conocer.",
-        "testCall": "Llame a su recepcionista desde este navegador y pregúntele algo que solo su negocio sabría.",
-        "phoneNumber": "Dé a su recepcionista su propio número para que atienda a personas reales, de día y de noche."
+        "fullScan": "Durante la configuración inicial se leyó una parte de su sitio para que su agente pudiera empezar a responder. Lea el resto para que lo conozca entero.",
+        "sources": "Suba un documento con políticas, preguntas frecuentes, precios u otros datos que su agente deba conocer.",
+        "testCall": "Llame a su agente desde este navegador y pregúntele algo que solo su negocio sabría.",
+        "phoneNumber": "Dé a su agente su propio número para que atienda a personas reales, de día y de noche."
       },
       "stepActions": {
         "fullScan": "Leer el resto",

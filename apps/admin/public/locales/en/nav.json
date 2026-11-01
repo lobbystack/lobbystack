@@ -32,7 +32,7 @@
     "terms": "Terms of service",
     "privacy": "Privacy policy",
     "signOut": "Sign out",
-    "createBusiness": "Create Business",
+    "createBusiness": "Create workspace",
     "setupGuide": {
       "title": "Getting started",
       "open": "Open setup guide",
@@ -47,10 +47,10 @@
         "phoneNumber": "Connect a phone number"
       },
       "stepDescriptions": {
-        "fullScan": "Onboarding read a sample of your site so your receptionist could start answering. Read the rest so it knows the whole thing.",
-        "sources": "Upload a document with policies, FAQs, pricing, or other details your receptionist should know.",
-        "testCall": "Call your receptionist from this browser and ask it something only your business would know.",
-        "phoneNumber": "Give your receptionist its own number so it can answer real callers, day and night."
+        "fullScan": "Onboarding read a sample of your site so your agent could start answering. Read the rest so it knows the whole thing.",
+        "sources": "Upload a document with policies, FAQs, pricing, or other details your agent should know.",
+        "testCall": "Call your agent from this browser and ask it something only your business would know.",
+        "phoneNumber": "Give your agent its own number so it can answer real callers, day and night."
       },
       "stepActions": {
         "fullScan": "Read the rest",

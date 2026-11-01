@@ -7,7 +7,7 @@
     "startHint": "Toque el botón para iniciar una llamada de voz en vivo.",
     "promptsTitle": "Pruebe a preguntar:",
     "intakeNotice": "Esta es una demo. Las llamadas funcionan, pero las reservas y otras funciones están desactivadas.",
-    "claimCta": "Quedarme con esta recepcionista"
+    "claimCta": "Quedarme con este agente"
   },
   "states": {
     "invalid": {
@@ -32,12 +32,12 @@
     "claimed": {
       "title": "Esta demo ya se ha reclamado",
       "titleWithBusiness": "La demo para {{businessName}} ya se ha reclamado",
-      "description": "Alguien ya reclamó esta recepcionista."
+      "description": "Alguien ya reclamó este agente."
     }
   },
   "claim": {
     "loadingTitle": "Preparando su espacio de trabajo",
-    "loadingDescription": "Reclamando su recepcionista…",
+    "loadingDescription": "Reclamando su agente…",
     "errorTitle": "No pudimos reclamar esta demo",
     "errorDescription": "Algo salió mal. Inténtelo de nuevo.",
     "unavailableTitle": "Este enlace de demo no está disponible",

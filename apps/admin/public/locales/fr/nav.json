@@ -33,7 +33,7 @@
     "terms": "Conditions d'utilisation",
     "privacy": "Politique de confidentialité",
     "signOut": "Se déconnecter",
-    "createBusiness": "Créer une entreprise",
+    "createBusiness": "Créer un espace de travail",
     "setupGuide": {
       "title": "Premiers pas",
       "open": "Ouvrir le guide de configuration",
@@ -48,10 +48,10 @@
         "phoneNumber": "Associez un numéro"
       },
       "stepDescriptions": {
-        "fullScan": "L'inscription a lu un échantillon de votre site pour que votre réceptionniste puisse commencer à répondre. Lisez le reste pour qu'il connaisse tout.",
+        "fullScan": "L'inscription a lu un échantillon de votre site pour que votre agent puisse commencer à répondre. Lisez le reste pour qu'il connaisse tout.",
         "sources": "Téléversez un document avec vos politiques, FAQ, tarifs ou autres détails utiles.",
-        "testCall": "Appelez votre réceptionniste depuis ce navigateur et posez-lui une question que seule votre entreprise connaît.",
-        "phoneNumber": "Donnez à votre réceptionniste son propre numéro pour qu'il réponde à vos vrais clients, jour et nuit."
+        "testCall": "Appelez votre agent depuis ce navigateur et posez-lui une question que seule votre entreprise connaît.",
+        "phoneNumber": "Donnez à votre agent son propre numéro pour qu'il réponde à vos vrais clients, jour et nuit."
       },
       "stepActions": {
         "fullScan": "Lire le reste",

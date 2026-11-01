@@ -2,16 +2,16 @@
   "page": {
     "eyebrow": "Espacio del agente",
     "title": "Agente",
-    "description": "Configure cómo se comporta su recepcionista con IA, qué sabe y cómo gestiona las llamadas y los mensajes."
+    "description": "Configure cómo se comporta su agente con IA, qué sabe y cómo gestiona las llamadas y los mensajes."
   },
   "sections": {
     "basicSettings": {
       "title": "Ajustes de IA",
-      "description": "Saludo y ajustes de transferencia de su recepcionista."
+      "description": "Saludo y ajustes de transferencia de su agente."
     },
     "knowledge": {
       "title": "Conocimiento",
-      "description": "Información y pautas que su recepcionista usa para responder preguntas.",
+      "description": "Información y pautas que su agente usa para responder preguntas.",
       "listTitle": "Base de conocimiento",
       "addKnowledge": "Añadir conocimiento",
       "addKnowledgeOptions": {
@@ -26,7 +26,7 @@
       "websiteImport": {
         "badge": "Sitio web",
         "title": "Importar sitio web",
-        "description": "Rastree las páginas públicas de su sitio web para que su recepcionista pueda usarlas como conocimiento.",
+        "description": "Rastree las páginas públicas de su sitio web para que su agente pueda usarlas como conocimiento.",
         "submit": "Importar",
         "submitting": "Importando…",
         "success": "La importación del sitio web ha comenzado. Las páginas aparecerán aquí a medida que terminen de procesarse.",
@@ -41,9 +41,9 @@
           "urlRequired": "Introduzca la URL del sitio web que desea importar."
         }
       },
-      "addKnowledgeDescription": "Añada el horario de atención, precios, políticas o cualquier otra información que su recepcionista deba conocer.",
-      "editKnowledgeDescription": "Actualice la información que su recepcionista debe usar para responder a las preguntas de los clientes.",
-      "uploadDocumentDescription": "Suba un archivo para que su recepcionista pueda usarlo.",
+      "addKnowledgeDescription": "Añada el horario de atención, precios, políticas o cualquier otra información que su agente deba conocer.",
+      "editKnowledgeDescription": "Actualice la información que su agente debe usar para responder a las preguntas de los clientes.",
+      "uploadDocumentDescription": "Suba un archivo para que su agente pueda usarlo.",
       "documentBadge": "Documento",
       "textBadge": "Texto",
       "emptyState": "Aún no ha añadido conocimiento.",
@@ -85,8 +85,8 @@
         "content": {
           "label": "Contenido",
           "placeholder": "Abrimos de lunes a viernes, de 9:00 a 17:00.",
-          "hint": "La información concreta que debe usar la recepcionista.",
-          "required": "Escriba la información que debe usar la recepcionista."
+          "hint": "La información concreta que debe usar el agente.",
+          "required": "Escriba la información que debe usar el agente."
         },
         "tags": {
           "label": "Etiquetas",
@@ -97,7 +97,7 @@
     },
     "services": {
       "title": "Servicios",
-      "description": "Detalles de los servicios que su recepcionista puede usar para explicar su oferta y ayudar a reservar la cita adecuada.",
+      "description": "Detalles de los servicios que su agente puede usar para explicar su oferta y ayudar a reservar la cita adecuada.",
       "listTitle": "Servicios",
       "addKnowledge": "Añadir servicio",
       "editKnowledge": "Editar servicio",
@@ -116,9 +116,9 @@
       "copyName": "{{name}} (copia)",
       "copyNameNumbered": "{{name}} (copia {{number}})",
       "uploadDocument": "Subir documento",
-      "addKnowledgeDescription": "Añada sus servicios, qué incluyen, para quién son y cualquier cosa que su recepcionista deba mencionar.",
-      "editKnowledgeDescription": "Actualice los detalles del servicio que su recepcionista debe mencionar y usar al reservar.",
-      "uploadDocumentDescription": "Suba un archivo para que su recepcionista pueda usarlo.",
+      "addKnowledgeDescription": "Añada sus servicios, qué incluyen, para quién son y cualquier cosa que su agente deba mencionar.",
+      "editKnowledgeDescription": "Actualice los detalles del servicio que su agente debe mencionar y usar al reservar.",
+      "uploadDocumentDescription": "Suba un archivo para que su agente pueda usarlo.",
       "documentBadge": "Documento",
       "textBadge": "Texto",
       "emptyState": "Aún no ha añadido servicios.",
@@ -156,7 +156,7 @@
         "content": {
           "label": "Contenido",
           "placeholder": "Una consulta de 30 minutos para entender las necesidades del cliente y recomendar el siguiente paso adecuado.",
-          "hint": "Describa el servicio para que la recepcionista pueda explicarlo con claridad."
+          "hint": "Describa el servicio para que el agente pueda explicarlo con claridad."
         },
         "duration": {
           "label": "Duración",
@@ -170,12 +170,12 @@
         },
         "price": {
           "label": "Precio",
-          "hint": "Opcional. La recepcionista dice este precio tal cual; si deja el importe vacío, no se inventará uno.",
+          "hint": "Opcional. El agente dice este precio tal cual; si deja el importe vacío, no se inventará uno.",
           "placeholder": "0",
           "amount": "Precio",
           "lowest": "Precio mínimo",
           "highest": "Precio máximo",
-          "inPersonHint": "La recepcionista dice a quien llama que el precio se fija cuando el negocio sabe lo que necesita.",
+          "inPersonHint": "El agente dice a quien llama que el precio se fija cuando el negocio sabe lo que necesita.",
           "types": {
             "fixed": "Fijo",
             "from": "Desde",
@@ -203,22 +203,22 @@
         }
       },
       "deleteTitle": "¿Eliminar el servicio?",
-      "deleteDescription": "Su recepcionista dejará de ofrecerlo. Las citas pasadas lo siguen mostrando."
+      "deleteDescription": "Su agente dejará de ofrecerlo. Las citas pasadas lo siguen mostrando."
     },
     "employees": {
       "title": "Empleados",
-      "description": "Personas con las que su recepcionista puede reservar citas y a las que puede transferir llamadas."
+      "description": "Personas con las que su agente puede reservar citas y a las que puede transferir llamadas."
     },
     "rules": {
       "title": "Reglas",
-      "description": "Instrucciones que indican cómo debe gestionar su recepcionista las llamadas y los mensajes.",
+      "description": "Instrucciones que indican cómo debe gestionar su agente las llamadas y los mensajes.",
       "listTitle": "Reglas",
       "addKnowledge": "Añadir regla",
       "editKnowledge": "Editar regla",
       "uploadDocument": "Subir documento",
-      "addKnowledgeDescription": "Lo que debe hacer su recepcionista, como transferir llamadas, hacer preguntas y enviar SMS.",
-      "editKnowledgeDescription": "Actualice la instrucción que su recepcionista debe seguir durante las llamadas y los seguimientos.",
-      "uploadDocumentDescription": "Suba un archivo para que su recepcionista pueda usarlo.",
+      "addKnowledgeDescription": "Lo que debe hacer su agente, como transferir llamadas, hacer preguntas y enviar SMS.",
+      "editKnowledgeDescription": "Actualice la instrucción que su agente debe seguir durante las llamadas y los seguimientos.",
+      "uploadDocumentDescription": "Suba un archivo para que su agente pueda usarlo.",
       "documentBadge": "Documento",
       "textBadge": "Texto",
       "emptyState": "Aún no ha añadido reglas.",
@@ -254,8 +254,8 @@
         "content": {
           "label": "Contenido",
           "placeholder": "Cuando alguien pida hablar con una persona, transfiérala al 555-123-4567.",
-          "hint": "Describa lo que debe hacer la recepcionista.",
-          "required": "Describa lo que debe hacer la recepcionista."
+          "hint": "Describa lo que debe hacer el agente.",
+          "required": "Describa lo que debe hacer el agente."
         },
         "tags": {
           "label": "Etiquetas",
@@ -294,7 +294,7 @@
     },
     "summary": {
       "label": "Resumen del negocio",
-      "hint": "Lo que su recepcionista dice a quienes llaman sobre el negocio.",
+      "hint": "Lo que su agente dice a quienes llaman sobre el negocio.",
       "placeholder": "Por ejemplo: Clínica Familiar Maple es una clínica de Toronto que ofrece chequeos, vacunas y fisioterapia.",
       "regenerate": "Reescribir con IA",
       "regenerating": "La IA lo está reescribiendo a partir de su conocimiento. Tardará un momento.",
@@ -316,16 +316,16 @@
     "greeting": {
       "label": "Saludo",
       "placeholder": "Hola, gracias por llamar…",
-      "hint": "La frase inicial que usa su recepcionista al contestar una llamada o iniciar una conversación."
+      "hint": "La frase inicial que usa su agente al contestar una llamada o iniciar una conversación."
     },
     "defaultLocale": {
       "label": "Idioma predeterminado del cliente",
       "placeholder": "Seleccione un idioma predeterminado",
-      "hint": "Elija el idioma que su recepcionista debe usar cuando no se conoce la preferencia de la persona que llama."
+      "hint": "Elija el idioma que su agente debe usar cuando no se conoce la preferencia de la persona que llama."
     },
     "teamLocale": {
       "label": "Idioma del equipo",
-      "hint": "El idioma en el que tu recepcionista redacta mensajes, notas y solicitudes para tu equipo. A las personas que llaman se les sigue respondiendo en su idioma.",
+      "hint": "El idioma en el que tu agente redacta mensajes, notas y solicitudes para tu equipo. A las personas que llaman se les sigue respondiendo en su idioma.",
       "sameAsCaller": "Igual que el idioma de los clientes"
     },
     "voice": {
@@ -357,7 +357,7 @@
     },
     "timezone": {
       "label": "Zona horaria del negocio",
-      "hint": "Su recepcionista usa esta zona horaria para su horario de atención y los horarios de citas que ofrece a los clientes.",
+      "hint": "Su agente usa esta zona horaria para su horario de atención y los horarios de citas que ofrece a los clientes.",
       "search": "Buscar zonas horarias...",
       "noResults": "No se encontraron zonas horarias.",
       "regions": {
@@ -382,11 +382,11 @@
     "transferNumber": {
       "label": "Número de transferencia predeterminado",
       "placeholder": "+1 555-123-4567",
-      "hint": "El número de teléfono que su recepcionista debe usar al pasar una llamada a una persona.",
+      "hint": "El número de teléfono que su agente debe usar al pasar una llamada a una persona.",
       "country": "País",
       "errors": {
         "invalid": "Introduzca un número de transferencia completo y válido antes de guardar.",
-        "countryUnsupported": "Su recepcionista aún no puede transferir llamadas a este país."
+        "countryUnsupported": "Su agente aún no puede transferir llamadas a este país."
       }
     }
   },
@@ -410,11 +410,11 @@
     "title": "Cambios de citas",
     "allowCancel": {
       "label": "Permitir cancelaciones por IA",
-      "hint": "Permita que la recepcionista cancele una cita futura verificada."
+      "hint": "Permita que el agente cancele una cita futura verificada."
     },
     "allowReschedule": {
       "label": "Permitir reprogramación por IA",
-      "hint": "Permita que la recepcionista cambie una cita futura verificada después de comprobar la disponibilidad."
+      "hint": "Permita que el agente cambie una cita futura verificada después de comprobar la disponibilidad."
     },
     "verification": {
       "label": "Verificación de quien llama",
@@ -428,7 +428,7 @@
         "phone_match_and_facts": "Quien llama debe hacerlo desde el número con el que se reservó la cita y decir su hora o servicio.",
         "otp_required": "Además, debe leer un código de un solo uso enviado por SMS a ese número antes de cualquier cancelación o reprogramación.",
         "passcode_required": "Además, debe marcar en el teclado del teléfono el PIN guardado en su contacto. Si no tiene PIN, su solicitud pasa a su equipo. Configure los PIN en la pestaña Detalles de cada contacto.",
-        "operator_only": "La recepcionista no cambia citas. Pasa las solicitudes a su equipo."
+        "operator_only": "El agente no cambia citas. Pasa las solicitudes a su equipo."
       }
     }
   },
@@ -471,7 +471,7 @@
   },
   "readOnly": "El acceso de lector es de solo lectura.",
   "empty": {
-    "description": "Primero cree un negocio y luego vuelva aquí para configurar su recepcionista con IA."
+    "description": "Primero cree un espacio de trabajo y luego vuelva aquí para configurar su agente con IA."
   },
   "hours": {
     "title": "Horario de atención",

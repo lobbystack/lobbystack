@@ -5,7 +5,7 @@
     "title": "Loading...",
     "retry": "Retry loading",
     "failed": "Some translations could not be loaded.",
-    "description": "Syncing your workspace and receptionist settings."
+    "description": "Syncing your workspace and agent settings."
   },
   "language": {
     "label": "Language",
@@ -55,7 +55,7 @@
   },
   "labels": {
     "customer": "Customer",
-    "receptionist": "Receptionist",
+    "receptionist": "Agent",
     "prompt": "Prompt"
   },
   "aiPhoneNumber": {
@@ -91,13 +91,13 @@
     "outOfMinutes": "You're out of minutes. Calls now go to {{forwardTo}}.",
     "stillAvailable": "{{number}} is still available. Subscribe now to get it back.",
     "keepNumber": "Keep my number",
-    "getReceptionistBack": "Get my receptionist back",
+    "getReceptionistBack": "Get my agent back",
     "getNumberBack": "Get my number back"
   },
   "testCall": {
     "trigger": "Test Call",
-    "title": "Test your AI receptionist",
-    "description": "Start a live browser call with your configured receptionist.",
+    "title": "Test your AI agent",
+    "description": "Start a live browser call with your configured agent.",
     "start": "Start call",
     "connecting": "Connecting...",
     "hangUp": "Hang up",
@@ -105,8 +105,8 @@
     "status": {
       "idle": "Ready when you are",
       "requesting_microphone": "Asking for microphone access",
-      "connecting": "Connecting to your AI receptionist",
-      "connected": "Live with your AI receptionist",
+      "connecting": "Connecting to your AI agent",
+      "connected": "Live with your AI agent",
       "ending": "Ending the call",
       "ended": "Call ended",
       "error": "Could not start the call"
@@ -132,7 +132,7 @@
       "businessNotFound": "We couldn't find this workspace. Switch to an active workspace and try again.",
       "rateLimited": "Too many test calls have been started. Please try again shortly.",
       "voiceLimitReached": "This workspace has used this month's voice minutes.",
-      "unavailable": "Your AI receptionist is unavailable right now.",
+      "unavailable": "Your AI agent is unavailable right now.",
       "generic": "Something went wrong while starting the call."
     }
   },

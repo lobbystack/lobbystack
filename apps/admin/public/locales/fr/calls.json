@@ -91,7 +91,7 @@
     "downloadAudio": "Télécharger l'audio",
     "noCalls": "Aucun appel n'a encore été capturé.",
     "noBusinessTitle": "Appels récents",
-    "noBusinessDescription": "Créez une entreprise pour consulter les enregistrements et les transcriptions."
+    "noBusinessDescription": "Créez un espace de travail pour consulter les enregistrements et les transcriptions."
   },
   "transcript": {
     "title": "Transcription de l'appel",

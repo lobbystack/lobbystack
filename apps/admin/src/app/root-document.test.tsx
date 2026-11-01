@@ -37,7 +37,7 @@ describe("the root document", () => {
     expect(document.props.children.props.children.props.branding).toEqual({ appName: "Acme Desk", logoUrl: null, final: true });
     expect(fixture.headers).toHaveBeenCalled();
     // A renamed deployment with no logo of its own shows no LobbyStack mark in the tab.
-    expect(await generateBrandingMetadata()).toEqual({ title: "Acme Desk", description: "AI receptionist dashboard" });
+    expect(await generateBrandingMetadata()).toEqual({ title: "Acme Desk", description: "AI agent dashboard" });
     expect(document.props.children.props.style).toBeUndefined();
   });
 
@@ -49,7 +49,7 @@ describe("the root document", () => {
     expect(document.props.children.props.children.props.branding).toEqual({ appName: "Bright Desk", logoUrl: logo, final: true, partner: { faviconUrl: logo, color: "#fde047", links: { terms: null, privacy: null, support: null } } });
     // A light color gets the dark text that reads on it.
     expect(document.props.children.props.style).toEqual({ "--primary": "#fde047", "--primary-foreground": "oklch(0.205 0 0)", "--ring": "#fde047" });
-    expect(await generateBrandingMetadata()).toEqual({ title: "Bright Desk", description: "AI receptionist dashboard", icons: { icon: logo } });
+    expect(await generateBrandingMetadata()).toEqual({ title: "Bright Desk", description: "AI agent dashboard", icons: { icon: logo } });
     expect(fixture.saved).not.toHaveBeenCalled();
   });
 

@@ -27,7 +27,7 @@
     "analytics": {
       "chart": {
         "title": "Resumen de actividad",
-        "description": "Llamadas y mensajes en su espacio de trabajo de recepción."
+        "description": "Llamadas y mensajes en su espacio de trabajo."
       },
       "cards": {
         "calls": "Número de llamadas",
@@ -164,8 +164,8 @@
     }
   },
   "setup": {
-    "title": "Cree su primer negocio",
-    "description": "Esto crea la cuenta, el perfil de la recepcionista y la primera instantánea que usa la voz.",
+    "title": "Cree su primer espacio de trabajo",
+    "description": "Esto crea el espacio de trabajo, el perfil del agente y la primera instantánea que usa la voz.",
     "businessName": "Nombre del negocio",
     "slug": "Slug",
     "timezone": "Zona horaria",
@@ -182,10 +182,10 @@
       "other": "Otro"
     },
     "selectBusinessType": "Elija el tipo de negocio",
-    "create": "Crear negocio",
+    "create": "Crear espacio de trabajo",
     "creating": "Creando...",
-    "created": "Negocio creado. Se está actualizando la instantánea de la recepcionista.",
-    "failed": "No se pudo crear el negocio."
+    "created": "Espacio de trabajo creado. Se está actualizando la instantánea del agente.",
+    "failed": "No se pudo crear el espacio de trabajo."
   },
   "cards": {
     "calls": {
@@ -194,7 +194,7 @@
     },
     "services": {
       "title": "Servicios configurados",
-      "footer": "Los usan tanto la recepcionista como el sistema de reservas."
+      "footer": "Los usan tanto el agente como el sistema de reservas."
     },
     "hours": {
       "title": "Días de apertura definidos",
@@ -209,7 +209,7 @@
   "quickActions": {
     "title": "Acciones rápidas",
     "description": "Mantenga {{businessName}} listo para llamadas, SMS y reservas.",
-    "configureProfile": "Configurar el perfil de la recepcionista",
+    "configureProfile": "Configurar el perfil del agente",
     "addKnowledge": "Añadir conocimiento y documentos",
     "reviewInbox": "Revisar la bandeja de llamadas",
     "readiness": "Estado de la configuración",
@@ -221,7 +221,7 @@
   },
   "nextSteps": {
     "title": "Próximos pasos",
-    "description": "Ajuste el comportamiento de la recepcionista antes de recibir llamadas reales.",
+    "description": "Ajuste el comportamiento del agente antes de recibir llamadas reales.",
     "hours": "Defina el horario y los servicios para que las reservas propongan horarios reales.",
     "transfer": "Añada reglas de transferencia y un número de respaldo antes de transferir llamadas urgentes.",
     "snapshot": "Actualice la instantánea después de cambios importantes en sus políticas para que la voz los aplique rápido."
@@ -247,7 +247,7 @@
     },
     "forwardTrial": {
       "title": "Envíe sus llamadas perdidas al {{number}}",
-      "description": "Active el desvío de llamadas con su operador y las llamadas que no pueda contestar irán a su recepcionista en lugar del buzón de voz.",
+      "description": "Active el desvío de llamadas con su operador y las llamadas que no pueda contestar irán a su agente en lugar del buzón de voz.",
       "cta": "Configurar el desvío"
     },
     "upgrade": {
@@ -262,11 +262,11 @@
     "modes": {
       "missed": {
         "label": "Llamadas perdidas",
-        "help": "Su teléfono suena primero. Si no contesta, su recepcionista atiende."
+        "help": "Su teléfono suena primero. Si no contesta, su agente atiende."
       },
       "all": {
         "label": "Todas las llamadas",
-        "help": "Su recepcionista contesta cada llamada, y su teléfono no suena."
+        "help": "Su agente contesta cada llamada, y su teléfono no suena."
       }
     },
     "carrier": {
@@ -296,16 +296,16 @@
     },
     "notes": {
       "planFeature": "Si el desvío no se activa, pida a {{name}} que agregue el desvío de llamadas a su plan.",
-      "iphone": "En un iPhone, desactive el Buzón de voz en vivo en los ajustes de Teléfono. Si no, contesta antes que su recepcionista.",
-      "ringTime": "Si puede elegir el tiempo de timbre, de 15 a 20 segundos le dan unos cuatro timbres antes de que su recepcionista conteste.",
+      "iphone": "En un iPhone, desactive el Buzón de voz en vivo en los ajustes de Teléfono. Si no, contesta antes que su agente.",
+      "ringTime": "Si puede elegir el tiempo de timbre, de 15 a 20 segundos le dan unos cuatro timbres antes de que su agente conteste.",
       "voicemail": "Si tiene el buzón de voz de {{name}}, pida a {{name}} que lo quite. Las llamadas perdidas no se pueden desviar mientras esté activo.",
       "androidOnly": "Estos pasos son para teléfonos Android. En un iPhone, pida a {{name}} que lo active por usted.",
       "adminOnly": "Solo un administrador de su cuenta de {{name}} puede cambiar esto.",
       "verifyNumber": "{{name}} envía un código al {{number}} antes de desviar. Elija recibir el código por llamada y léalo en la transcripción de esa llamada, en Llamadas."
     },
     "test": {
-      "missed": "Para probarlo, llame a su número de negocio desde otro teléfono y déjelo sonar. Su recepcionista debería contestar.",
-      "all": "Para probarlo, llame a su número de negocio desde otro teléfono. Su recepcionista debería contestar."
+      "missed": "Para probarlo, llame a su número de negocio desde otro teléfono y déjelo sonar. Su agente debería contestar.",
+      "all": "Para probarlo, llame a su número de negocio desde otro teléfono. Su agente debería contestar."
     },
     "unsupported": {
       "missed": "{{name}} no ofrece desvío solo para llamadas perdidas. Elija Todas las llamadas, o pida a {{name}} que desvíe las llamadas sin respuesta al {{number}}.",

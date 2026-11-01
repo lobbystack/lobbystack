@@ -24,7 +24,7 @@
   },
   "widget": {
     "title": "Widget del sitio web",
-    "description": "Permita que los visitantes de su sitio web chateen con su recepcionista.",
+    "description": "Permita que los visitantes de su sitio web chateen con su agente.",
     "created": {
       "title": "Su widget está listo",
       "description": "Puede volver a copiar este código en cualquier momento desde la configuración del widget, más abajo.",
@@ -61,7 +61,7 @@
       "requirePhone": "Exigir número de teléfono",
       "showBeforeChat": "Preguntar antes de empezar el chat",
       "liveChat": "Permitir que los visitantes chateen con su equipo",
-      "liveChatHint": "Cuando un visitante pide hablar con una persona durante el horario de atención, su equipo recibe una alerta y puede responder desde Mensajes. Si nadie se une en 3 minutos, la recepcionista ofrece tomar un mensaje."
+      "liveChatHint": "Cuando un visitante pide hablar con una persona durante el horario de atención, su equipo recibe una alerta y puede responder desde Mensajes. Si nadie se une en 3 minutos, el agente ofrece tomar un mensaje."
     },
     "positions": {
       "bottomRight": "Abajo a la derecha",
@@ -240,7 +240,7 @@
       "customAllowance": "{{used}} {{unit}} usados · Volumen personalizado",
       "noLimit": "{{used}} {{unit}} usados · Sin límite",
       "extraTitle": "Uso adicional",
-      "extraOnDescription": "Su recepcionista sigue contestando después de su volumen incluido, y {{appName}} le cobra los minutos y chats adicionales.",
+      "extraOnDescription": "Su agente sigue contestando después de su volumen incluido, y {{appName}} le cobra los minutos y chats adicionales.",
       "extraOffDescription": "El uso adicional está desactivado. {{appName}} le cobra los minutos y chats adicionales que usó antes de que se desactivara."
     },
     "spendingCap": {
@@ -347,7 +347,7 @@
         "title": "Próximos pasos",
         "call": {
           "title": "Llámelo ahora",
-          "description": "Escuche a su recepcionista atender una llamada real."
+          "description": "Escuche a su agente atender una llamada real."
         },
         "forward": {
           "title": "Desvíe la línea de su negocio a este número",
@@ -356,7 +356,7 @@
         },
         "transfer": {
           "title": "Elija adónde van las llamadas urgentes",
-          "description": "Agregue un número de transferencia en Ajustes de IA para que su recepcionista pueda pasar las llamadas urgentes a una persona.",
+          "description": "Agregue un número de transferencia en Ajustes de IA para que su agente pueda pasar las llamadas urgentes a una persona.",
           "action": "Abrir Ajustes de IA"
         }
       },
@@ -376,11 +376,11 @@
     "chats_other": "{{amount}} chats",
     "allowance": "Cada mes incluye {{minutes}} y {{chats}}.",
     "status": {
-      "awaiting_payment": "Su recepcionista empieza a atender llamadas y chats en cuanto pague.",
+      "awaiting_payment": "Su agente empieza a atender llamadas y chats en cuanto pague.",
       "active": "Su suscripción está activa.",
       "renews": "Su suscripción se renueva el {{date}}.",
-      "past_due": "Su último pago falló y lo volveremos a intentar. Actualice su tarjeta para que su recepcionista siga atendiendo.",
-      "inactive": "Su suscripción terminó, así que su recepcionista no atiende llamadas ni chats. Suscríbase de nuevo para reactivarla."
+      "past_due": "Su último pago falló y lo volveremos a intentar. Actualice su tarjeta para que su agente siga atendiendo.",
+      "inactive": "Su suscripción terminó, así que su agente no atiende llamadas ni chats. Suscríbase de nuevo para reactivarlo."
     },
     "badge": {
       "awaiting_payment": "Pago pendiente",
@@ -392,7 +392,7 @@
     "manage": "Administrar facturación",
     "opening": "Abriendo…",
     "manageHint": "Actualice su tarjeta, descargue facturas o cancele su suscripción.",
-    "paid": "Recibimos su pago. Su recepcionista empieza a atender en un momento.",
+    "paid": "Recibimos su pago. Su agente empieza a atender en un momento.",
     "errors": {
       "portal": "El portal de facturación no está disponible en este momento. Consulte a {{appName}}.",
       "checkout": "No pudimos abrir el pago. Inténtelo de nuevo.",
@@ -402,7 +402,7 @@
   "phoneNumber": {
     "current": {
       "label": "Número de teléfono actual",
-      "description": "Este es el número que usan las personas que llaman para comunicarse con su recepcionista con IA.",
+      "description": "Este es el número que usan las personas que llaman para comunicarse con su agente con IA.",
       "empty": "Aún no tiene un número."
     },
     "reclaim": {
@@ -420,14 +420,14 @@
       "upgradeCta": "Ver planes"
     },
     "partnerTierRequired": {
-      "description": "El socio de este negocio necesita pagar un nivel para agregar números de teléfono."
+      "description": "El socio de este espacio de trabajo necesita pagar un nivel para agregar números de teléfono."
     },
     "partnerNumbersUnavailable": {
-      "description": "Los números de teléfono todavía no están disponibles para este negocio."
+      "description": "Los números de teléfono todavía no están disponibles para este espacio de trabajo."
     },
     "trialPhone": {
       "title": "Verifique su número de móvil",
-      "description": "Durante la prueba de 14 días, el recepcionista solo transfiere llamadas a este móvil.",
+      "description": "Durante la prueba de 14 días, el agente solo transfiere llamadas a este móvil.",
       "fields": {
         "mobileNumber": "Número de móvil",
         "country": "País"
@@ -465,7 +465,7 @@
       "title": "Elija un nuevo número de teléfono",
       "description": "Puede cambiar su número de teléfono una sola vez.",
       "getNumberTitle": "Elija un número de teléfono",
-      "getNumberDescription": "Elija un número que las personas que llaman puedan usar para comunicarse con su recepcionista con IA."
+      "getNumberDescription": "Elija un número que las personas que llaman puedan usar para comunicarse con su agente con IA."
     },
     "picker": {
       "countryLabel": "País",
@@ -592,7 +592,7 @@
       },
       "instagram": {
         "title": "Instagram",
-        "description": "Responda a los mensajes directos de Instagram con los mismos conocimientos que su recepcionista."
+        "description": "Responda a los mensajes directos de Instagram con los mismos conocimientos que su agente."
       }
     },
     "status": {
@@ -609,22 +609,22 @@
       "syncedAppointments": "Citas sincronizadas"
     },
     "instagram": {
-      "connectedSuccess": "Instagram está conectado. Su recepcionista ahora responde a los mensajes directos.",
+      "connectedSuccess": "Instagram está conectado. Su agente ahora responde a los mensajes directos.",
       "connectFailed": "No se pudo conectar Instagram. Inténtelo de nuevo.",
       "accountInUse": "Esta cuenta de Instagram ya está conectada a otro espacio de trabajo.",
-      "permissionMissing": "Su recepcionista necesita acceso a sus mensajes de Instagram. Vuelva a conectar Instagram y permita ese acceso.",
+      "permissionMissing": "Su agente necesita acceso a sus mensajes de Instagram. Vuelva a conectar Instagram y permita ese acceso.",
       "disconnectedSuccess": "Instagram desconectado.",
       "disconnect": "Desconectar",
       "reconnect": "Volver a conectar",
       "connectedAs": "Responde a los mensajes directos como @{{username}}.",
-      "dialogDescription": "Su recepcionista responde a los mensajes directos que recibe esta cuenta.",
+      "dialogDescription": "Su agente responde a los mensajes directos que recibe esta cuenta.",
       "accountLabel": "Cuenta de Instagram",
-      "reconnectDescription": "Instagram dejó de aceptar el acceso de su recepcionista. Vuelva a conectar la cuenta para seguir respondiendo a los mensajes."
+      "reconnectDescription": "Instagram dejó de aceptar el acceso de su agente. Vuelva a conectar la cuenta para seguir respondiendo a los mensajes."
     }
   },
   "profile": {
-    "title": "Perfil de la recepcionista",
-    "description": "Defina la voz, el tono, la política de reservas y las reglas de transferencia de su recepcionista.",
+    "title": "Perfil del agente",
+    "description": "Defina la voz, el tono, la política de reservas y las reglas de transferencia de su agente.",
     "greeting": "Saludo",
     "tone": "Tono",
     "defaultCustomerLanguage": "Idioma predeterminado del cliente",
@@ -645,7 +645,7 @@
     },
     "save": "Guardar perfil",
     "saving": "Guardando...",
-    "saved": "Perfil de la recepcionista guardado.",
+    "saved": "Perfil del agente guardado.",
     "placeholders": {
       "transferNumber": "+1 555 123 4567"
     }
@@ -714,7 +714,7 @@
       "invitedOn": "Invitado el {{date}}",
       "status": {
         "pending": "Pendiente",
-        "handover": "Entrega el negocio"
+        "handover": "Entrega el espacio de trabajo"
       },
       "actions": {
         "moreOptions": "Más opciones",
@@ -744,7 +744,7 @@
       "sent": "Invitación enviada a {{email}}.",
       "errors": {
         "invalidEmail": "Introduzca un correo electrónico válido.",
-        "partnerMember": "{{email}} forma parte del equipo del socio de este negocio. Trabaja aquí desde la consola de socios, así que no puede unirse al equipo.",
+        "partnerMember": "{{email}} forma parte del equipo del socio de este espacio de trabajo. Trabaja aquí desde la consola de socios, así que no puede unirse al equipo.",
         "failed": "No pudimos enviar esa invitación. Inténtelo de nuevo."
       }
     },
@@ -757,17 +757,17 @@
       "revokeFailed": "No pudimos revocar esa invitación."
     },
     "delete": {
-      "title": "Eliminar negocio",
-      "description": "Borra de forma permanente este negocio con sus llamadas, chats, contactos, citas, ajustes y accesos del equipo. Su número de teléfono se libera y su plan de pago termina. No se puede deshacer.",
-      "action": "Eliminar negocio",
+      "title": "Eliminar espacio de trabajo",
+      "description": "Borra de forma permanente este espacio de trabajo con sus llamadas, chats, contactos, citas, ajustes y accesos del equipo. Su número de teléfono se libera y su plan de pago termina. No se puede deshacer.",
+      "action": "Eliminar espacio de trabajo",
       "dialogTitle": "¿Eliminar {{name}}?",
-      "dialogDescription": "Todo lo que hay en este negocio se borra para siempre, su número de teléfono vuelve al proveedor y la recepcionista deja de responder. Su equipo pierde el acceso y nadie puede restaurarlo.",
+      "dialogDescription": "Todo lo que hay en este espacio de trabajo se borra para siempre, su número de teléfono vuelve al proveedor y el agente deja de responder. Su equipo pierde el acceso y nadie puede restaurarlo.",
       "confirmLabel": "Escribe <name>{{name}}</name> para confirmar",
       "submit": "Eliminar",
       "deleting": "Eliminando...",
       "errors": {
-        "failed": "No se pudo eliminar el negocio. Inténtalo de nuevo.",
-        "numberInProgress": "Todavía se está configurando un número de teléfono para este negocio. Inténtalo de nuevo en unos minutos.",
+        "failed": "No se pudo eliminar el espacio de trabajo. Inténtalo de nuevo.",
+        "numberInProgress": "Todavía se está configurando un número de teléfono para este espacio de trabajo. Inténtalo de nuevo en unos minutos.",
         "billing": "La facturación no está disponible ahora, así que no se pudo terminar el plan de pago. Inténtalo más tarde."
       },
       "cancel": "Cancelar"
@@ -775,7 +775,7 @@
   },
   "hours": {
     "title": "Horario de atención",
-    "description": "El horario estructurado tiene prioridad sobre los documentos y ayuda a la recepcionista a responder con fiabilidad las preguntas sobre disponibilidad.",
+    "description": "El horario estructurado tiene prioridad sobre los documentos y ayuda al agente a responder con fiabilidad las preguntas sobre disponibilidad.",
     "save": "Guardar horario",
     "saving": "Guardando...",
     "leaveBlank": "Deje un día en blanco para marcarlo como cerrado.",
@@ -785,7 +785,7 @@
   },
   "services": {
     "title": "Servicios",
-    "description": "Las definiciones de servicios alimentan la lógica de reservas y la instantánea de la recepcionista que escuchan las personas que llaman.",
+    "description": "Las definiciones de servicios alimentan la lógica de reservas y la instantánea del agente que escuchan las personas que llaman.",
     "serviceName": "Nombre del servicio",
     "englishLabel": "Etiqueta en inglés",
     "frenchLabel": "Etiqueta en francés",
@@ -809,7 +809,7 @@
   },
   "phoneRouting": {
     "title": "Enrutamiento de números de teléfono",
-    "description": "Asocie números de Twilio a este negocio para que las llamadas en vivo y los SMS carguen la instantánea correcta de la recepcionista.",
+    "description": "Asocie números de Twilio a este espacio de trabajo para que las llamadas en vivo y los SMS carguen la instantánea correcta del agente.",
     "managedNumber": "Número gestionado",
     "selectNumber": "Seleccione un número",
     "addNewNumber": "Agregar nuevo número",
@@ -866,18 +866,18 @@
     "assignedServices": "{{count}} servicios"
   },
   "snapshot": {
-    "title": "Instantánea de la recepcionista",
-    "description": "Su recepcionista carga este contexto del negocio una vez al comenzar cada llamada.",
-    "business": "Negocio",
+    "title": "Instantánea del agente",
+    "description": "Su agente carga este contexto del negocio una vez al comenzar cada llamada.",
+    "business": "Espacio de trabajo",
     "timezone": "Zona horaria",
     "transferPolicy": "Política de transferencia",
     "services": "Servicios en la instantánea",
     "knowledgeDigest": "Resumen del conocimiento",
-    "emptyDigest": "Aún no se ha generado ningún resumen. Agregue conocimiento o documentos para enriquecer a la recepcionista."
+    "emptyDigest": "Aún no se ha generado ningún resumen. Agregue conocimiento o documentos para enriquecer al agente."
   },
   "nextSteps": {
     "title": "Próximos pasos",
-    "description": "Ajuste el comportamiento de la recepcionista antes de dirigirle llamadas reales.",
+    "description": "Ajuste el comportamiento del agente antes de dirigirle llamadas reales.",
     "hours": "Defina el horario, los servicios y las asignaciones del equipo para que las reservas propongan horarios reales.",
     "transfer": "Agregue reglas de transferencia y un número de respaldo antes de transferir llamadas urgentes.",
     "snapshot": "Actualice la instantánea después de cambios importantes en sus políticas para que la voz los aplique rápido."
@@ -1008,7 +1008,7 @@
     "revoked": "Revocada el {{date}}",
     "restricted": {
       "title": "Solo los propietarios y administradores pueden gestionar las claves de API",
-      "description": "Pida a un propietario o administrador de este negocio que cree una clave para usted."
+      "description": "Pida a un propietario o administrador de este espacio de trabajo que cree una clave para usted."
     },
     "create": {
       "action": "Crear clave de API",
@@ -1046,19 +1046,19 @@
       "done": "Clave de API actualizada"
     },
     "scopes": {
-      "business_read": "Leer los datos, el horario, los servicios, y la configuración y las reglas de la recepcionista del negocio",
-      "business_write": "Actualizar los datos, el horario, los servicios, y la configuración y las reglas de la recepcionista del negocio, incluido el número al que se transfieren las llamadas",
+      "business_read": "Leer los datos, el horario, los servicios, y la configuración y las reglas del agente del negocio",
+      "business_write": "Actualizar los datos, el horario, los servicios, y la configuración y las reglas del agente del negocio, incluido el número al que se transfieren las llamadas",
       "calls_read": "Leer llamadas, resúmenes y transcripciones",
       "contacts_read": "Leer contactos",
       "contacts_write": "Crear y actualizar contactos",
       "appointments_read": "Leer citas y horarios disponibles",
       "appointments_write": "Reservar, cancelar y reprogramar citas",
-      "messages_read": "Leer los mensajes que tomó la recepcionista",
+      "messages_read": "Leer los mensajes que tomó el agente",
       "knowledge_read": "Leer entradas de conocimiento, preguntas frecuentes, sitios web y archivos",
       "knowledge_write": "Agregar, editar y eliminar entradas de conocimiento, preguntas frecuentes, sitios web y archivos",
       "billing_manage": "Ver el plan, fijar el límite de gasto e iniciar pagos",
       "phone_numbers_manage": "Buscar, comprar, reemplazar y liberar números de teléfono",
-      "team_manage": "Invitar y quitar miembros del equipo, cambiar roles y entregar el negocio",
+      "team_manage": "Invitar y quitar miembros del equipo, cambiar roles y entregar el espacio de trabajo",
       "webhooks_manage": "Crear y eliminar endpoints de webhook"
     }
   },
@@ -1069,7 +1069,7 @@
     "enabledLabel": "Enviar eventos a este endpoint",
     "restricted": {
       "title": "Solo los propietarios y administradores pueden gestionar los webhooks",
-      "description": "Pida a un propietario o administrador de este negocio que configure el webhook."
+      "description": "Pida a un propietario o administrador de este espacio de trabajo que configure el webhook."
     },
     "status": {
       "enabled": "Activado",
@@ -1092,7 +1092,7 @@
       "appointment_booked": "Se reservó una cita",
       "appointment_rescheduled": "Se cambió una cita a otro horario",
       "appointment_cancelled": "Se canceló una cita",
-      "message_taken": "La recepcionista tomó un mensaje para su equipo",
+      "message_taken": "El agente tomó un mensaje para su equipo",
       "contact_created": "Se agregó un nuevo contacto"
     },
     "create": {
@@ -1167,7 +1167,7 @@
     "revoke": {
       "action": "Desconectar",
       "title": "¿Desconectar {{name}}?",
-      "description": "{{name}} pierde el acceso a este negocio de inmediato. Para volver a usarla, conéctela y apruebe el acceso otra vez.",
+      "description": "{{name}} pierde el acceso a este espacio de trabajo de inmediato. Para volver a usarla, conéctela y apruebe el acceso otra vez.",
       "confirm": "Desconectar",
       "cancel": "Cancelar",
       "done": "Aplicación desconectada",
@@ -1181,7 +1181,7 @@
       "contacts_write": "Crear y actualizar contactos",
       "appointments_read": "Leer citas y horarios disponibles",
       "appointments_write": "Reservar, cancelar y reprogramar citas",
-      "messages_read": "Leer los mensajes que tomó la recepcionista",
+      "messages_read": "Leer los mensajes que tomó el agente",
       "knowledge_write": "Agregar entradas de conocimiento y preguntas frecuentes"
     }
   },

@@ -43,7 +43,7 @@
     "title": "D'abord, quel est le nom de votre entreprise ?",
     "description": "",
     "createTitle": "Créer un espace de travail",
-    "createDescription": "Ces informations constituent la base du contexte de votre réceptionniste.",
+    "createDescription": "Ces informations constituent la base du contexte de votre agent.",
     "existingTitle": "L'espace de travail existe déjà",
     "existingDescription": "Continuez la configuration avec l'espace de travail actif.",
     "configured": "Les détails de l'entreprise sont déjà configurés.",
@@ -113,7 +113,7 @@
     "skipFailed": "Impossible d'ignorer cette étape maintenant. Réessayez."
   },
   "testCall": {
-    "title": "Écoutez votre réceptionniste",
+    "title": "Écoutez votre agent",
     "continue": "Continuer",
     "skip": "Passer pour l'instant",
     "continueFailed": "Impossible de continuer. Réessayez."
@@ -149,7 +149,7 @@
     },
     "unavailable": {
       "title": "Nous n'offrons pas encore de numéros dans ce pays ({{country}}).",
-      "body": "Vous pouvez quand même utiliser votre réceptionniste dans le navigateur, et nous pouvons vous écrire quand les numéros y arriveront.",
+      "body": "Vous pouvez quand même utiliser votre agent dans le navigateur, et nous pouvons vous écrire quand les numéros y arriveront.",
       "notify": "M'écrire quand ils seront disponibles",
       "joined": "C'est noté. Nous vous écrirons.",
       "continue": "Continuer sans numéro",
@@ -172,7 +172,7 @@
   "number": {
     "ready": {
       "label": "Votre numéro est prêt",
-      "body": "Appelez-le depuis votre téléphone et écoutez votre réceptionniste répondre.",
+      "body": "Appelez-le depuis votre téléphone et écoutez votre agent répondre.",
       "call": "Appeler le {{number}}"
     },
     "planRequired": "Pour obtenir un numéro, choisissez un forfait.",
@@ -201,8 +201,8 @@
     "searchFailed": "Impossible de rechercher maintenant.",
     "claimFailed": "Impossible de provisionner ce numéro. Réessayez.",
     "claimRateLimited": "Vous avez essayé plusieurs numéros. Attendez un peu avant de réessayer.",
-    "partnerTierRequired": "Le partenaire de cette entreprise doit payer un palier pour ajouter des numéros de téléphone.",
-    "partnerNumbersUnavailable": "Les numéros de téléphone ne sont pas encore disponibles pour cette entreprise.",
+    "partnerTierRequired": "Le partenaire de cet espace de travail doit payer un palier pour ajouter des numéros de téléphone.",
+    "partnerNumbersUnavailable": "Les numéros de téléphone ne sont pas encore disponibles pour cet espace de travail.",
     "offerExpired": "Cette offre a expiré. Relancez la recherche et choisissez un numéro.",
     "trialAccountPurchaseLimit": "Ce compte Twilio ne peut pas encore acheter ce numéro. Les comptes d'essai ne peuvent acheter que des numéros admissibles; libérez un numéro existant ou mettez le compte à niveau, puis réessayez.",
     "skipFailed": "Impossible d'ignorer cette étape maintenant. Réessayez.",
@@ -269,10 +269,10 @@
     "continueFailed": "Impossible de continuer maintenant. Réessayez."
   },
   "noBusinesses": {
-    "title": "Aucune entreprise ici pour l'instant",
-    "description": "{{appName}} n'a pas encore ajouté {{email}} à une entreprise. Demandez-lui de vous inviter, puis ouvrez le lien de son courriel.",
+    "title": "Aucun espace de travail ici pour l'instant",
+    "description": "{{appName}} n'a pas encore ajouté {{email}} à un espace de travail. Demandez-lui de vous inviter, puis ouvrez le lien de son courriel.",
     "switchAccount": "Se connecter avec un autre compte",
-    "released": "{{email}} n'a plus d'entreprise sur ce tableau de bord. Une entreprise qui vous appartient est passée à votre propre compte : ouvrez votre tableau de bord pour la gérer.",
+    "released": "{{email}} n'a plus d'espace de travail sur ce tableau de bord. Un espace de travail qui vous appartient est passé à votre propre compte : ouvrez votre tableau de bord pour le gérer.",
     "openDashboard": "Ouvrir votre tableau de bord"
   }
 }

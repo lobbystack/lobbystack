@@ -59,7 +59,7 @@
     "cancel": "Cancelar",
     "moreActions": "Más acciones para {{name}}",
     "neverUsed": "Todavía no está en un sitio web",
-    "emptyDescription": "Agregue un widget para obtener un fragmento de código. Péguelo en su sitio web y los visitantes podrán chatear con su recepcionista.",
+    "emptyDescription": "Agregue un widget para obtener un fragmento de código. Péguelo en su sitio web y los visitantes podrán chatear con su agente.",
     "originsHint": "Indique cada dirección donde debe aparecer el chat, empezando por https://. Sepárelas con comas.",
     "pickColor": "Elegir un color",
     "copySnippet": "Copiar código",

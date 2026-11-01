@@ -54,7 +54,7 @@
         "invalid": "Introduce un número de teléfono válido.",
         "exists": "Ya existe un empleado con este número de teléfono.",
         "trialLocked": "Durante la prueba gratuita, las llamadas solo se pueden transferir al móvil de la persona que solicitó la prueba.",
-        "countryUnsupported": "Tu recepcionista aún no puede transferir llamadas a este país."
+        "countryUnsupported": "Tu agente aún no puede transferir llamadas a este país."
       },
       "services": {
         "label": "Servicios",
@@ -76,7 +76,7 @@
       },
       "timeOff": {
         "label": "Permisos",
-        "hint": "Opcional. El recepcionista no reserva a este empleado esos días y les dice a los clientes cuándo vuelve.",
+        "hint": "Opcional. El agente no reserva a este empleado esos días y les dice a los clientes cuándo vuelve.",
         "add": "Agregar permiso",
         "placeholder": "Elige el primer y el último día",
         "dates": "Fechas del permiso",
