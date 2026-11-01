@@ -13,6 +13,7 @@ export default defineConfig({
       "@lobbystack/providers/telephony": `${root}/packages/providers/src/telephony`,
       "@lobbystack/providers/telnyx": `${root}/packages/providers/src/telnyx`,
       "@lobbystack/providers/twilio": `${root}/packages/providers/src/twilio`,
+      "@lobbystack/providers/calendar": `${root}/packages/providers/src/calendar.ts`,
       "@lobbystack/domain": `${root}/packages/domain/src/index.ts`,
       "@lobbystack/providers/crawling/urlSafety": `${root}/packages/providers/src/crawling/urlSafety.ts`,
       "@lobbystack/providers/crypto/secretBox": `${root}/packages/providers/src/crypto/secretBox.ts`,
