@@ -1,6 +1,6 @@
 ---
 title: "Add business knowledge"
-description: "Add text, documents, and website content so your receptionist can answer common business questions from accurate source material."
+description: "Add text, documents, and website content so your receptionist can answer common business questions, and answer the questions it couldn't."
 sidebarTitle: "Knowledge"
 contentType: "How-to"
 ---
@@ -79,23 +79,40 @@ Website import focuses on public, caller-facing pages and skips:
 
 ## Answer unanswered questions
 
-When the receptionist looks up a question in your knowledge and finds nothing, LobbyStack saves the question for you to answer. Open questions appear under **Unanswered Questions** on the Knowledge page, most asked first, with how many times people asked and when they last asked.
+When your receptionist looks up a question in your knowledge and finds nothing, LobbyStack saves the question under **Unanswered Questions** on the Knowledge page. This covers phone calls, browser calls, website chats, and Instagram messages. Your own test calls count too.
 
-A question asked again with different capitalization or punctuation counts on the same row.
+The list shows up to 50 questions, most asked first, with how many times people asked and when they last asked. Each question appears as your receptionist searched for it, up to 300 characters, so the wording can differ from what the caller said.
+
+A question asked again with different capitalization or punctuation counts on the same row. A reworded question gets its own row.
 
 <Steps>
   <Step title="Open unanswered questions">
-    Go to **Agent** > **Knowledge** and scroll to **Unanswered Questions**. When questions are waiting, the home page also links to them under **Action required**.
+    Go to **Agent** > **Knowledge** and scroll to **Unanswered Questions**. When questions are waiting, owners and admins also get a link under **Action required** on [Home](/dashboard/home).
   </Step>
   <Step title="Write the answer">
-    Click **Answer**, write what the receptionist should say, and click **Save Answer**. LobbyStack adds a text entry titled with the question, and it appears in the Knowledge table.
+    Click **Answer**, write what the receptionist should say in up to 5,000 characters, and click **Save Answer**. LobbyStack adds a text entry titled with the question to the Knowledge table. New calls and conversations use it shortly after you save, and you can edit it like any other entry.
   </Step>
   <Step title="Dismiss what you won't answer">
-    Click **Dismiss** to take a question off the list. If someone asks it again, it stays off the list until LobbyStack deletes it with your other caller content. Asked after that, it comes back as a new question.
+    Click **Dismiss** to take a question off the list.
   </Step>
 </Steps>
 
-Owners and admins can answer and dismiss questions. Other team members can view the list. LobbyStack deletes a question when your plan's retention period for follow-ups ends, counted from the last time someone asked it.
+### What happens when someone asks again
+
+| Question | If someone asks it again |
+| --- | --- |
+| Answered | Your receptionist uses your answer. If its lookup still finds nothing, the question returns to the list as a new question, with its count back at 1. |
+| Dismissed | The question stays off the list, even if people keep asking. It returns as a new question only if someone asks after LobbyStack has deleted it. |
+
+You can't bring a dismissed question back from the dashboard. To answer it later, add a [text entry](#text-entries) yourself.
+
+### Who can answer questions
+
+Owners and admins can answer and dismiss questions. Viewers can read the list, but they don't get the **Answer** and **Dismiss** buttons or the link on Home. If your business has **Activity only** access through a partner, your team doesn't see the Knowledge page.
+
+### How long LobbyStack keeps questions
+
+LobbyStack deletes a question 30 days after someone last asked it on Free, or 365 days on Starter and Pro. Each new ask restarts that period, including on a dismissed question. A text entry you saved as an answer stays in your knowledge until you delete it.
 
 ## Manage entries
 
