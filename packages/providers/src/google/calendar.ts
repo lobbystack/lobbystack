@@ -1,6 +1,8 @@
 import { assertCertificationCalendar } from "@lobbystack/shared";
 import { DateTime } from "luxon";
 
+import type { CalendarEventWrite, CalendarProvider } from "../calendar";
+
 export class GoogleOAuthRefreshError extends Error {
   constructor(readonly reconnectRequired: boolean) {
     super(reconnectRequired ? "Google Calendar authorization requires reconnection." : "Google Calendar token refresh is temporarily unavailable.");
@@ -14,7 +16,7 @@ export type GoogleCalendarConfig = {
   redirectUri: string;
 };
 
-export class GoogleCalendarProvider {
+export class GoogleCalendarProvider implements CalendarProvider {
   constructor(private readonly config: GoogleCalendarConfig) {}
 
   buildAuthorizationUrl(input: { state: string; scopes?: string[] }): string {
@@ -109,7 +111,7 @@ export class GoogleCalendarProvider {
     throw new Error("Google Calendar availability exceeded the page limit.");
   }
 
-  async upsertEvent(input: { accessToken: string; calendarId: string; eventId?: string; clientEventId?: string; title: string; startsAt: string; endsAt: string; description?: string }): Promise<{ externalEventId: string }> {
+  async upsertEvent(input: CalendarEventWrite): Promise<{ externalEventId: string }> {
     assertCertificationCalendar(input.calendarId);
     const method = input.eventId ? "PUT" : "POST";
     const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(input.calendarId)}/events${input.eventId ? `/${encodeURIComponent(input.eventId)}` : ""}`;

@@ -148,7 +148,8 @@ import { getDatabase } from "../databases";
 import { createDomainContext, createWorkerDomainContext } from "../domain-context";
 import { enforceFixedWindow, fixedWindowLimit } from "../fixed-window-limit";
 import { calendarSigningConfigured, createCalendarConnectLink } from "../google-calendar-oauth";
-import { googleCalendarProvider } from "../google-calendar-provider";
+import { calendarProvider, calendarProviderConfigured } from "../calendar-providers";
+import { calendarProviderLabel } from "@lobbystack/providers/calendar";
 import { checkPhoneNumberSearchLimit } from "../phone-number-search-limit";
 import { getStorageProvider } from "../storage";
 import { withStripeConnect } from "../stripe-connect";
@@ -296,18 +297,18 @@ async function partnerOrigin(context: DomainContext, partnerId: string): Promise
   return brand.origin;
 }
 
-const googleCalendarUnavailable = () => new PublicApiError(403, "forbidden", "Google Calendar isn't available on this deployment.");
+const calendarUnavailable = (provider: string) => new PublicApiError(403, "forbidden", `${calendarProviderLabel(provider)} isn't available on this deployment.`);
 
-/** Refuses where Google Calendar isn't set up: the OAuth client, and ENCRYPTION_KEY for the tokens the callback stores. Returns that key. */
-function requireGoogleCalendar(): string {
+/** Refuses where `provider` isn't set up: its OAuth client, and ENCRYPTION_KEY for the tokens the callback stores. Returns that key. */
+function requireCalendarProvider(provider: string): string {
   const encryptionKey = process.env.ENCRYPTION_KEY;
-  if (!encryptionKey || !process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET || !process.env.GOOGLE_REDIRECT_URI) throw googleCalendarUnavailable();
+  if (!encryptionKey || !calendarProviderConfigured(provider)) throw calendarUnavailable(provider);
   return encryptionKey;
 }
 
-function calendarAccess(): CalendarAccess {
-  const box = new SecretBox(requireGoogleCalendar());
-  const provider = googleCalendarProvider();
+function calendarAccess(providerName: string): CalendarAccess {
+  const box = new SecretBox(requireCalendarProvider(providerName));
+  const provider = calendarProvider(providerName);
   return { decryptToken: (value) => box.decrypt(value), encryptToken: (value) => box.encrypt(value), refreshAccessToken: (input) => provider.refreshAccessToken(input), listCalendars: (input) => provider.listCalendars(input) };
 }
 
@@ -489,10 +490,16 @@ export const v1 = {
   getReceptionist: (request: Request) => handleApiRequest(request, "getReceptionist", async ({ context, caller }) => ({ body: data(await getReceptionistForApi(context, caller)) })),
   updateReceptionist: (request: Request) => handleApiRequest(request, "updateReceptionist", async ({ context, caller }) => ({ body: data(await updateReceptionistForApi(context, caller, await readApiBody(request, apiReceptionistUpdateSchema))) })),
   createCalendarConnectLink: (request: Request) => handleApiRequest(request, "createCalendarConnectLink", async ({ context, caller }) => {
-    requireGoogleCalendar();
-    if (!calendarSigningConfigured()) throw googleCalendarUnavailable();
+    requireCalendarProvider("google");
+    if (!calendarSigningConfigured()) throw calendarUnavailable("google");
     const origin = await businessOrigin(context, caller.businessId);
     return { body: data(await createCalendarConnectLinkForApi(context, caller, { link: ({ businessId }) => createCalendarConnectLink({ origin, businessId }) })) };
+  }),
+  createCalcomConnectLink: (request: Request) => handleApiRequest(request, "createCalcomConnectLink", async ({ context, caller }) => {
+    requireCalendarProvider("calcom");
+    if (!calendarSigningConfigured()) throw calendarUnavailable("calcom");
+    const origin = await businessOrigin(context, caller.businessId);
+    return { body: data(await createCalendarConnectLinkForApi(context, caller, { provider: "calcom", link: ({ businessId }) => createCalendarConnectLink({ origin, businessId, provider: "calcom" }) })) };
   }),
   listCalendarConnections: (request: Request) => handleApiRequest(request, "listCalendarConnections", async ({ context, caller }) => ({ body: { data: await listCalendarConnectionsForApi(context, caller), next_cursor: null, has_more: false } })),
   listAccountCalendars: (request: Request, { params }: Params<"connection_id">) => handleApiRequest(request, "listAccountCalendars", async ({ context, caller }) => {

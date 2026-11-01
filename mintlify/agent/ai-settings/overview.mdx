@@ -77,9 +77,23 @@ Choose the language most of your callers speak. If you haven't changed the greet
 
 ## Voice
 
-Pick the voice your receptionist speaks in from **Voice**. It uses that voice on phone calls and on calls from your browser, including test calls. Businesses start with Marin.
+**Voice** sets how your receptionist sounds on phone calls and on calls from your browser, including test calls. The row shows the current voice and how it sounds, such as Marin · Bright, quick. New businesses start with Marin.
 
-Click **Change voice** to open the voice list. Click the play button next to a voice to hear it in your default customer language, then select the voice and click **Use this voice**. A call already in progress keeps the voice it started with.
+<Steps>
+  <Step title="Open the voice list">
+    Go to **Agent** > **AI settings** and click **Change voice**. **Current** shows the voice in use, and **All voices** lists the others with their pitch and pace.
+  </Step>
+  <Step title="Listen to a voice">
+    Click the play button next to a voice to hear it in your default customer language. Playing a voice doesn't select it.
+  </Step>
+  <Step title="Save your choice">
+    Select the voice and click **Use this voice**.
+  </Step>
+</Steps>
+
+New calls use the voice shortly after you save. A call already in progress keeps the voice it started with. To check the result, start a test call.
+
+Owners and admins can change the voice. Viewers can see the current voice, but **Change voice** is turned off for them. If your business has **Activity only** access through a partner, your team doesn't see **AI settings**.
 
 You can choose from Alloy, Ash, Ballad, Beacon, Bossa, Cedar, Cinder, Coral, Delta, Echo, Gleam, Marin, Meridian, Quartz, Ripple, Sage, Shimmer, Stone, Tempo, Verse, Vesper, and Willow. In the [API](/api/overview), set `voice` on `PATCH /receptionist` to the name in lowercase, such as `cedar`.
 

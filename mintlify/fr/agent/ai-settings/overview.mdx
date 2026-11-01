@@ -77,9 +77,23 @@ Choisissez la langue que parlent la plupart de vos appelants. Si vous n'avez pas
 
 ## Voix
 
-Choisissez dans **Voix** la voix de votre réceptionniste. Elle parle avec cette voix au téléphone et pendant les appels depuis votre navigateur, appels test compris. Les entreprises commencent avec Marin.
+**Voix** définit le son de votre réceptionniste au téléphone et pendant les appels depuis votre navigateur, appels test compris. La ligne indique la voix actuelle et sa sonorité, par exemple Marin · Claire, rapide. Les nouvelles entreprises commencent avec Marin.
 
-Cliquez sur **Changer de voix** pour ouvrir la liste. Cliquez sur le bouton de lecture d’une voix pour l’écouter dans la langue par défaut de vos clients, puis sélectionnez-la et cliquez sur **Utiliser cette voix**. Un appel déjà en cours garde la voix avec laquelle il a commencé.
+<Steps>
+  <Step title="Ouvrez la liste des voix">
+    Allez dans **Agent** > **Paramètres IA** et cliquez sur **Changer de voix**. **Actuelle** indique la voix utilisée, et **Toutes les voix** liste les autres avec leur tonalité et leur rythme.
+  </Step>
+  <Step title="Écoutez une voix">
+    Cliquez sur le bouton de lecture à côté d'une voix pour l'écouter dans votre langue client par défaut. Écouter une voix ne la sélectionne pas.
+  </Step>
+  <Step title="Enregistrez votre choix">
+    Sélectionnez la voix et cliquez sur **Utiliser cette voix**.
+  </Step>
+</Steps>
+
+Les nouveaux appels utilisent la voix peu après l'enregistrement. Un appel déjà en cours garde la voix avec laquelle il a commencé. Pour vérifier le résultat, lancez un appel test.
+
+Les propriétaires et les administrateurs peuvent changer la voix. Les lecteurs voient la voix actuelle, mais **Changer de voix** est désactivé pour eux. Si votre entreprise a l'accès **Activité seulement** par l'intermédiaire d'un partenaire, votre équipe ne voit pas les **Paramètres IA**.
 
 Vous pouvez choisir parmi Alloy, Ash, Ballad, Beacon, Bossa, Cedar, Cinder, Coral, Delta, Echo, Gleam, Marin, Meridian, Quartz, Ripple, Sage, Shimmer, Stone, Tempo, Verse, Vesper et Willow. Dans l'[API](/fr/api/overview), indiquez `voice` dans `PATCH /receptionist` avec le nom en minuscules, par exemple `cedar`.
 

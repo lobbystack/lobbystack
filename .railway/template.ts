@@ -130,6 +130,12 @@ export default defineRailway((ctx) => {
       GOOGLE_CLIENT_ID: preserve(),
       GOOGLE_CLIENT_SECRET: preserve(),
       GOOGLE_REDIRECT_URI: "${{APP_BASE_URL}}/api/calendar/google/callback",
+      // Optional user input for Cal.com: a confidential OAuth client whose redirect URI is CALCOM_REDIRECT_URI,
+      // and CALCOM_PLACEHOLDER_EMAIL_DOMAIN, a domain with an MX record. Cal.com stays off until all are set.
+      CALCOM_CLIENT_ID: preserve(),
+      CALCOM_CLIENT_SECRET: preserve(),
+      CALCOM_REDIRECT_URI: "${{APP_BASE_URL}}/api/calendar/calcom/callback",
+      CALCOM_PLACEHOLDER_EMAIL_DOMAIN: preserve(),
       // Optional user input for Instagram direct messages: a Meta app with Instagram Business Login.
       INSTAGRAM_APP_ID: preserve(),
       INSTAGRAM_APP_SECRET: preserve(),
@@ -186,6 +192,11 @@ export default defineRailway((ctx) => {
       GOOGLE_CLIENT_ID: "${{admin.GOOGLE_CLIENT_ID}}",
       GOOGLE_CLIENT_SECRET: "${{admin.GOOGLE_CLIENT_SECRET}}",
       GOOGLE_REDIRECT_URI: "${{admin.GOOGLE_REDIRECT_URI}}",
+      // Cal.com sync, token refresh and webhook registration use the same OAuth client as admin.
+      CALCOM_CLIENT_ID: "${{admin.CALCOM_CLIENT_ID}}",
+      CALCOM_CLIENT_SECRET: "${{admin.CALCOM_CLIENT_SECRET}}",
+      CALCOM_REDIRECT_URI: "${{admin.CALCOM_REDIRECT_URI}}",
+      CALCOM_PLACEHOLDER_EMAIL_DOMAIN: "${{admin.CALCOM_PLACEHOLDER_EMAIL_DOMAIN}}",
       // Instagram replies and token refresh use the same Meta app as admin.
       INSTAGRAM_APP_ID: "${{admin.INSTAGRAM_APP_ID}}",
       INSTAGRAM_APP_SECRET: "${{admin.INSTAGRAM_APP_SECRET}}",

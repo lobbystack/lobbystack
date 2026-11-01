@@ -13,7 +13,7 @@ import { consumeAppointmentChangeVerificationInTransaction } from "./appointment
 import { findOrCreateContactByPhone } from "./contacts";
 import { recordSmsConsentAnswerInTransaction, smsConsentOnFile, type SmsConsentAnswer, type SmsConsentOnFile } from "./contactSmsConsent";
 import { recordProductEventBestEffort } from "./productEvents";
-import { CANCELLATION_CONFIRMATION, heldForCall, rescheduleAppointmentReminderInTransaction } from "./notifications";
+import { CANCELLATION_CONFIRMATION, heldForCall, queueOperatorAlertInTransaction, rescheduleAppointmentReminderInTransaction } from "./notifications";
 import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
 import { CANCELLATION_REQUEST } from "./voice";
 
@@ -181,13 +181,51 @@ async function loadBusyTimes(tx: DatabaseTransaction, schedule: Schedule, input:
   // Events LobbyStack wrote for its own appointments come back as busy blocks. Skip them:
   // the appointment rows above already hold that time for the right staff member. An event
   // someone moved or stretched in the calendar no longer matches its row, so it still blocks.
-  const busy = connectionIds.length ? await tx.select().from(calendarBusyBlocks).where(and(eq(calendarBusyBlocks.businessId, schedule.businessId), inArray(calendarBusyBlocks.connectionId, connectionIds), lt(calendarBusyBlocks.startsAt, input.to), gt(calendarBusyBlocks.endsAt, input.from),
-    notExists(tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.businessId, calendarBusyBlocks.businessId), eq(appointments.calendarExternalId, calendarBusyBlocks.externalEventId), eq(appointments.startsAt, calendarBusyBlocks.startsAt), eq(appointments.endsAt, calendarBusyBlocks.endsAt)))))) : [];
+  const uidOnly = new Set(configured.filter((connection) => connection.provider === "calcom").map((connection) => connection.id));
+  const timeMatched = connectionIds.filter((id) => !uidOnly.has(id));
+  const window = (ids: string[]) => and(eq(calendarBusyBlocks.businessId, schedule.businessId), inArray(calendarBusyBlocks.connectionId, ids), lt(calendarBusyBlocks.startsAt, input.to), gt(calendarBusyBlocks.endsAt, input.from));
+  // Only an appointment that still holds its time, as the rows above count it, accounts for its event: a canceled
+  // one whose calendar delete hasn't gone through yet leaves the event busy until the next sync drops it.
+  const holdsTime = ne(appointments.status, "canceled");
+  const matched = timeMatched.length ? await tx.select().from(calendarBusyBlocks).where(and(window(timeMatched),
+    notExists(tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.businessId, calendarBusyBlocks.businessId), holdsTime, eq(appointments.calendarExternalId, calendarBusyBlocks.externalEventId), eq(appointments.startsAt, calendarBusyBlocks.startsAt), eq(appointments.endsAt, calendarBusyBlocks.endsAt)))))) : [];
+  // A Cal.com event type can fix a booking's length, so its bookings match their appointment on the uid
+  // alone, and only the appointment's own span leaves the block: time Cal.com holds past it stays busy.
+  const calcomIds = connectionIds.filter((id) => uidOnly.has(id));
+  const calcom = calcomIds.length ? await tx.select({ block: calendarBusyBlocks, appointmentId: appointments.id, ownStartsAt: appointments.startsAt, ownEndsAt: appointments.endsAt }).from(calendarBusyBlocks)
+    .leftJoin(appointments, and(eq(appointments.businessId, calendarBusyBlocks.businessId), holdsTime, eq(appointments.calendarExternalId, calendarBusyBlocks.externalEventId)))
+    .where(window(calcomIds)) : [];
+  // Cal.com copies its bookings into the calendars it checks, so an appointment being moved can come back as a
+  // block on another connection that carries no id of ours. One with exactly the appointment's span, or its
+  // Cal.com booking's, on a calendar of the staff member's own or the business's, is that copy, and moving the
+  // appointment frees it. The same span on another staff member's calendar is theirs, and stays busy.
+  const [moving] = input.ignoreAppointmentId ? await tx.select({ staffId: appointments.staffId, startsAt: appointments.startsAt, endsAt: appointments.endsAt }).from(appointments).where(and(eq(appointments.businessId, schedule.businessId), eq(appointments.id, input.ignoreAppointmentId))).limit(1) : [];
+  const movingSpans = moving ? [moving, ...calcom.filter(({ appointmentId }) => appointmentId === input.ignoreAppointmentId).map(({ block }) => block)] : [];
+  const movingCalendars = new Set(moving ? schedule.connections.filter((connection) => connection.staffId === null || connection.staffId === moving.staffId).map((connection) => connection.id) : []);
+  const isMovingCopy = (block: { connectionId: string; staffId: string | null; startsAt: Date; endsAt: Date }) => movingCalendars.has(block.connectionId) && (block.staffId === null || block.staffId === moving?.staffId)
+    && movingSpans.some((span) => span.startsAt.getTime() === block.startsAt.getTime() && span.endsAt.getTime() === block.endsAt.getTime());
+  const busy = [
+    ...matched.filter((block) => !isMovingCopy(block)),
+    ...calcom.flatMap(({ block, appointmentId, ownStartsAt, ownEndsAt }) => {
+      // The appointment being moved gives up its whole booking, which moves with it.
+      if (appointmentId && appointmentId === input.ignoreAppointmentId) return [];
+      return withoutOwnAppointment(block, ownStartsAt && ownEndsAt ? { startsAt: ownStartsAt, endsAt: ownEndsAt } : null);
+    }),
+  ];
   const staffByConnection = new Map(schedule.connections.map((connection) => [connection.id, connection.staffId]));
   return [
     ...existing.map((row) => ({ staffId: row.staffId, startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString() })),
     ...busy.flatMap((row) => { const owner = row.staffId ?? staffByConnection.get(row.connectionId); return (owner ? [owner] : input.staffIds.filter((id) => !schedule.employees.has(id))).map((staffId) => ({ staffId, startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString() })); }),
   ];
+}
+
+/** What's left of a calendar busy block once the span of the appointment it books is taken out. */
+export function withoutOwnAppointment<T extends { startsAt: Date; endsAt: Date }>(block: T, own: { startsAt: Date; endsAt: Date } | null): T[] {
+  if (!own || own.endsAt <= block.startsAt || own.startsAt >= block.endsAt) return [block];
+  const pieces: T[] = [];
+  if (own.startsAt > block.startsAt) pieces.push({ ...block, endsAt: own.startsAt });
+  if (own.endsAt < block.endsAt) pieces.push({ ...block, startsAt: own.endsAt });
+  return pieces;
 }
 
 /** The slots at a time: the staff who could take it and aren't busy then. staffForTime has checked the schedule. */
@@ -405,11 +443,14 @@ async function recordAppointmentChange(
   });
 }
 
-type AppointmentChangeSource = { source: "operator"; userId: string } | { source: "caller"; callId?: string } | { source: "api"; audit: ApiAudit };
+const EXCLUSION_VIOLATION = "23P01";
+
+type AppointmentChangeSource = { source: "operator"; userId: string } | { source: "caller"; callId?: string } | { source: "api"; audit: ApiAudit } | { source: "calendar"; provider: string };
 
 function changeAudit(change: AppointmentChangeSource): { actorUserId: string | null; payload: Record<string, unknown> } {
   if (change.source === "operator") return { actorUserId: change.userId, payload: { source: "operator" } };
   if (change.source === "api") return { actorUserId: change.audit.actorUserId, payload: { source: "api", ...change.audit.payload } };
+  if (change.source === "calendar") return { actorUserId: null, payload: { source: "calendar", provider: change.provider } };
   return { actorUserId: null, payload: { source: "caller" } };
 }
 
@@ -473,6 +514,72 @@ export async function cancelAppointmentInTransaction(
   });
   await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "appointment.cancelled", resourceId: appointment.id });
   return "cancelled";
+}
+
+/**
+ * Follows bookings someone changed in the calendar itself, where the time has
+ * already changed. A cancelled booking cancels its upcoming appointment and a
+ * moved one moves it, and the operator hears about either. An appointment with
+ * a calendar write still pending stays out of this, since that write may be
+ * the change that retired its event id.
+ */
+export async function followCalendarBookingChanges(
+  context: DomainContext,
+  input: { businessId: string; provider: string; changes: { cancelled: string[]; moved: Array<{ eventId: string; toEventId: string; startsAt: string; endsAt: string }> } },
+): Promise<{ cancelled: string[]; moved: string[] }> {
+  const moves = new Map(input.changes.moved.map((move) => [move.eventId, move]));
+  const eventIds = [...input.changes.cancelled, ...moves.keys()];
+  if (!eventIds.length) return { cancelled: [], moved: [] };
+  const followed = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const rows = await tx.select({ id: appointments.id, startsAt: appointments.startsAt, endsAt: appointments.endsAt, timezone: appointments.timezone, eventId: appointments.calendarExternalId, contactName: contacts.name }).from(appointments)
+      .leftJoin(contacts, and(eq(contacts.id, appointments.contactId), eq(contacts.businessId, input.businessId)))
+      .where(and(eq(appointments.businessId, input.businessId), eq(appointments.status, "confirmed"), eq(appointments.calendarSyncState, "synced"), gt(appointments.startsAt, new Date()), inArray(appointments.calendarExternalId, eventIds)))
+      .for("update", { of: appointments });
+    const cancelled: string[] = [];
+    const moved: string[] = [];
+    for (const row of rows) {
+      const alert = async (key: string, subject: string, body: string) => await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKind: "calendarSync", eventKey: `calendarSync:appointment:${row.id}:${key}`, subject, body });
+      const when = (value: Date) => new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short", timeZone: row.timezone }).format(value);
+      const customer = row.contactName ?? "a customer";
+      const move = moves.get(row.eventId!);
+      if (!move) {
+        if (await cancelAppointmentInTransaction(tx, { businessId: input.businessId, appointmentId: row.id, change: { source: "calendar", provider: input.provider } }) !== "cancelled") continue;
+        cancelled.push(row.id);
+        await alert("cancelled-in-calendar", `Appointment cancelled in ${input.provider}`, `Someone cancelled ${customer}'s ${when(row.startsAt)} booking in ${input.provider}, so LobbyStack cancelled the appointment. Customers who agreed to texts get a cancellation text.`);
+        continue;
+      }
+      const startsAt = new Date(move.startsAt);
+      const endsAt = new Date(move.endsAt);
+      // Same time under a new uid: nobody needs to hear about it.
+      if (startsAt.getTime() === row.startsAt.getTime() && endsAt.getTime() === row.endsAt.getTime()) {
+        await tx.update(appointments).set({ calendarExternalId: move.toEventId, updatedAt: new Date() }).where(and(eq(appointments.id, row.id), eq(appointments.businessId, input.businessId)));
+        continue;
+      }
+      try {
+        // A savepoint, so a time the staff member can't take leaves the rest of the changes standing.
+        await tx.transaction(async (savepoint) => {
+          const [updated] = await savepoint.update(appointments).set({ startsAt, endsAt, calendarExternalId: move.toEventId, revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(and(eq(appointments.id, row.id), eq(appointments.businessId, input.businessId))).returning();
+          if (!updated) return;
+          await rescheduleAppointmentReminderInTransaction(savepoint, { businessId: input.businessId, appointmentId: row.id, startsAt, revision: updated.revision });
+          const audit = changeAudit({ source: "calendar", provider: input.provider });
+          await savepoint.insert(auditLogs).values({ businessId: input.businessId, actorUserId: audit.actorUserId, eventType: "appointment_change.rescheduled", entityType: "appointment", entityId: row.id, payload: { ...audit.payload, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() } });
+          await enqueueOutbox(savepoint, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "appointment", aggregateId: row.id, dedupeKey: `appointment:${row.id}:updated:${updated.revision}`, payload: { type: "appointment.updated", entityId: row.id, revision: updated.revision } });
+          await emitWebhookEventInTransaction(savepoint, { businessId: input.businessId, type: "appointment.rescheduled", resourceId: row.id });
+        });
+      } catch (error) {
+        const failure = error as { code?: unknown; cause?: { code?: unknown } };
+        if (failure.code !== EXCLUSION_VIOLATION && failure.cause?.code !== EXCLUSION_VIOLATION) throw error;
+        await alert(`move-conflict:${move.toEventId}`, `Booking moved in ${input.provider} clashes with an appointment`, `Someone moved ${customer}'s ${when(row.startsAt)} booking to ${when(startsAt)} in ${input.provider}, but the same staff member already has an appointment then. LobbyStack kept the appointment at ${when(row.startsAt)}. Move one of them, then let ${customer} know.`);
+        continue;
+      }
+      moved.push(row.id);
+      await alert(`moved-in-calendar:${move.toEventId}`, `Appointment moved in ${input.provider}`, `Someone moved ${customer}'s ${when(row.startsAt)} booking to ${when(startsAt)} in ${input.provider}, so LobbyStack moved the appointment and its reminder. Let ${customer} know about the new time.`);
+    }
+    return { cancelled, moved };
+  });
+  for (const appointmentId of followed.cancelled) await recordAppointmentChange(context, { name: "appointment.cancelled", businessId: input.businessId, appointmentId, source: "calendar" });
+  for (const appointmentId of followed.moved) await recordAppointmentChange(context, { name: "appointment.rescheduled", businessId: input.businessId, appointmentId, source: "calendar" });
+  return followed;
 }
 
 /**

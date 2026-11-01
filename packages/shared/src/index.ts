@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 export { isMaintenanceMode } from "./maintenance";
+/** The sync error of a connection whose provider rejected its grant. Any other sync error clears without a reconnect. */
+export const CALENDAR_RECONNECT_ERROR = "Calendar authorization requires reconnection.";
 export { interfaceLocaleTags, interfaceLocales, intlLocale, isInterfaceLocale, isRuntimeLocale, normalizeInterfaceLocale, normalizeRuntimeLocale, runtimeLocaleName, runtimeLocales } from "./locales";
 export type { InterfaceLocale, RuntimeLocale } from "./locales";
 import { interfaceLocales, runtimeLocales, type InterfaceLocale, type RuntimeLocale } from "./locales";
