@@ -390,6 +390,46 @@
       }
     }
   },
+  "staffFirst": {
+    "title": "El personal responde primero",
+    "save": "Guardar el personal responde primero",
+    "mode": {
+      "label": "Llamar primero a tu equipo",
+      "hint": "Tu teléfono suena primero. Pulsa 1 para atender la llamada. Si no, responde la recepcionista.",
+      "options": {
+        "never": "Desactivado",
+        "business_hours": "En horario de atención",
+        "always": "Siempre"
+      }
+    },
+    "unavailable": {
+      "plan": "Disponible en los planes de pago.",
+      "carrier": "Aún no está disponible en este número."
+    },
+    "number": {
+      "label": "Teléfono del personal",
+      "hint": "No uses un teléfono que desvíe llamadas al número de tu recepcionista."
+    },
+    "ring": {
+      "label": "Tiempo de timbre",
+      "hint": "Cada timbre usa una transferencia.",
+      "seconds": "{{count}} segundos"
+    },
+    "message": {
+      "label": "Mensaje antes del timbre",
+      "hint": "Opcional. Quien llama lo oye primero.",
+      "noSerbianVoice": "Quien llama no lo oirá. Los mensajes aún no se pueden leer en serbio."
+    },
+    "handover": {
+      "label": "Mensaje antes de que responda la recepcionista",
+      "hint": "Opcional. Quien llama lo oye si nadie contesta."
+    },
+    "errors": {
+      "numberRequired": "Agrega un teléfono del personal.",
+      "ownLine": "Usa un teléfono distinto del número de tu recepcionista.",
+      "trialLocked": "Durante la prueba gratuita, usa el móvil que verificaste."
+    }
+  },
   "booking": {
     "title": "Reservas",
     "mode": {

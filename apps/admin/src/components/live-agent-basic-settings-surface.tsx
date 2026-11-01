@@ -30,6 +30,7 @@ import { Switch } from "@/components/ui/switch";
 import { useTelemetry } from "@/components/product-analytics";
 import { VoiceDialog, voiceName, useVoicePreview, useVoiceTraits } from "@/components/voice-dialog";
 import { BusinessHoursSection } from "@/components/business-hours-section";
+import { StaffFirstSection, type StaffFirstPatch, type StaffFirstProfile } from "@/components/staff-first-section";
 import { availableTimeZones, groupTimeZones, isTimeZoneRegion, type TimeZoneOption } from "@/lib/time-zones";
 import { errorCode } from "@/lib/checkout-errors";
 import { PhoneCountrySelect } from "@/components/phone-country-select";
@@ -47,8 +48,9 @@ type CurrencyOption = { id: string; label: string };
 
 type AgentSettings = {
   business: { defaultLocale: RuntimeLocale; teamLocale?: RuntimeLocale | null; timezone: string; currency?: string } | null;
-  profile: { greeting: string; summary: string; summarySource: "placeholder" | "generated" | "operator"; summaryRegenerateStatus?: "pending" | "completed" | "empty" | "failed" | null; transferNumber: string | null; transferMode: string; appointmentChangePolicy: AppointmentChangePolicy | null; bookingMode: BookingMode; voice?: string } | null;
+  profile: { greeting: string; summary: string; summarySource: "placeholder" | "generated" | "operator"; summaryRegenerateStatus?: "pending" | "completed" | "empty" | "failed" | null; transferNumber: string | null; transferMode: string; appointmentChangePolicy: AppointmentChangePolicy | null; bookingMode: BookingMode; voice?: string } & StaffFirstProfile | null;
   hasKnowledgeSources?: boolean;
+  staffFirstBlock?: "plan" | "carrier" | null;
 };
 
 // Matches SelectTrigger, so the searchable timezone picker looks like the selects beside it.
@@ -118,7 +120,7 @@ export function AgentBasicSettingsPage({
   });
   const configuration = query.data;
   const isLoadingConfiguration = !businessId || query.isLoading;
-  async function saveProfile({ defaultLocale: locale, ...patch }: { businessId: string; defaultLocale?: RuntimeLocale; teamLocale?: RuntimeLocale | null; timezone?: string; currency?: string; greeting?: string; summary?: string; regenerateSummary?: true; transferNumber?: string | null; transferMode?: string; appointmentChangePolicy?: AppointmentChangePolicy; bookingMode?: BookingMode; voice?: ReceptionistVoice }, refetchType: "active" | "none" = "active") {
+  async function saveProfile({ defaultLocale: locale, ...patch }: { businessId: string; defaultLocale?: RuntimeLocale; teamLocale?: RuntimeLocale | null; timezone?: string; currency?: string; greeting?: string; summary?: string; regenerateSummary?: true; transferNumber?: string | null; transferMode?: string; appointmentChangePolicy?: AppointmentChangePolicy; bookingMode?: BookingMode; voice?: ReceptionistVoice } & Partial<StaffFirstPatch>, refetchType: "active" | "none" = "active") {
     await requestJson(`/api/agent?businessId=${encodeURIComponent(businessId)}`, { method: "PATCH", body: JSON.stringify({ ...patch, ...(locale ? { locale } : {}) }) });
     await queryClient.invalidateQueries({ queryKey: ["agent-settings", businessId], refetchType });
   }
@@ -843,6 +845,8 @@ export function AgentBasicSettingsPage({
             </Item>
           </Surface>
         </section>
+
+        <StaffFirstSection block={configuration?.staffFirstBlock ?? null} businessId={businessId} canManage={canManageTenant} defaultLocale={configuration?.business?.defaultLocale ?? "en"} isLoading={isLoadingConfiguration} onSave={(patch) => saveProfile({ businessId, ...patch })} profile={persistedProfile} />
 
         <section className="flex flex-col gap-3">
           <h2 className="font-heading text-sm leading-snug font-medium">
