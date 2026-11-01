@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { billingAccounts, billingUsageEvents, businessHours, businessMemberships, businesses, calls, contacts, createDatabaseClient, numberTrials, onboardingNumberClaimEvents, outboxMessages, partners, phoneNumbers, receptionistProfiles, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { apiCallSchema } from "@lobbystack/shared";
+import { billingAccounts, billingUsageEvents, businessHours, businessMemberships, businesses, calls, contacts, createDatabaseClient, numberTrials, onboardingNumberClaimEvents, outboxMessages, partners, phoneNumbers, receptionistProfiles, users, webhookEndpoints, webhookEvents, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { getAnalytics } from "./analytics";
 import { loadEntitlement } from "./entitlement";
@@ -330,6 +331,19 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
         expect(await tx.select({ id: billingUsageEvents.id }).from(billingUsageEvents).where(eq(billingUsageEvents.businessId, businessId))).toEqual([]);
         const jobs = await tx.select({ topic: outboxMessages.topic, payload: outboxMessages.payload }).from(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), eq(outboxMessages.topic, "call.syncPrice")));
         expect(jobs).toEqual([{ topic: "call.syncPrice", payload: { providerCallId: "CA1", providerCallStatus: "completed" } }]);
+      });
+    });
+
+    it("fires call.completed once, as the usual call resource", async () => {
+      await rollbackTest(async (tx) => {
+        const businessId = await business(tx, { carrier: "twilio" });
+        await tx.insert(webhookEndpoints).values({ businessId, url: "https://hooks.example.com/lobbystack", events: ["call.completed"], encryptedSecret: "secret" });
+        await answered(tx, businessId, "+14165550134");
+        await answered(tx, businessId, "+14165550134");
+        const events = await tx.select({ payload: webhookEvents.payload }).from(webhookEvents).where(and(eq(webhookEvents.businessId, businessId), eq(webhookEvents.type, "call.completed")));
+        expect(events).toHaveLength(1);
+        const [call] = await tx.select({ id: calls.id }).from(calls).where(eq(calls.businessId, businessId));
+        expect(apiCallSchema.parse(events[0]!.payload.data)).toMatchObject({ id: call!.id, channel: "phone", status: "completed", outcome: "none", summary: null, end_reason: "answered_by_team", caller_phone: "+14165550134", duration_seconds: 42 });
       });
     });
 

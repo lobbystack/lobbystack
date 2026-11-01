@@ -10,6 +10,7 @@ import { reserveOutboundCallAttempt } from "./billing";
 import type { DomainContext } from "./context";
 import { loadEntitlement } from "./entitlement";
 import { assertTransferNumberAllowed, enqueueNumberRouting, trialTransferNumberInTransaction } from "./numberTrials";
+import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
 import { getCachedBusinessSnapshot } from "./snapshotCache";
 import { findOrCreateCallContactInTransaction } from "./voice";
 
@@ -174,5 +175,7 @@ export async function recordStaffAnsweredCall(context: DomainContext, input: { b
     if (!call) return;
     await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "call", aggregateId: call.id, dedupeKey: `call:${call.id}:completed:${call.revision}`, payload: { type: "call.completed", entityId: call.id, revision: call.revision } });
     await enqueueOutbox(tx, { topic: "call.syncPrice", businessId: input.businessId, aggregateType: "call", aggregateId: call.id, dedupeKey: `call:${call.id}:staff-price`, payload: { providerCallId: input.providerCallId, providerCallStatus: "completed" } });
+    // Other calls fire this once their conversation closes. This one has no conversation, and only the insert above reaches here.
+    await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "call.completed", resourceId: call.id });
   });
 }
