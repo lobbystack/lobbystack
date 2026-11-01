@@ -62,7 +62,7 @@
       "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
       "to": "owner@example.test",
       "subject": "How'd you like LobbyStack?",
-      "text": "Hi Sam,\n\nI'm Raphael, the founder of LobbyStack. You set up a receptionist for Acme Dental yesterday. Thanks for giving it a try.\n\nI'd love to hear what you thought:\n\n1. Did you like it? What worked, and what felt off?\n2. What should we improve?\n3. Do you plan to use it for real, with your own phone number? If not, what's stopping you?\n\nYou can reply to this email, and two lines would be plenty!\n\nThanks again,\nRaphael\nFounder, LobbyStack",
+      "text": "Hi Sam,\n\nI'm Raphael, the founder of LobbyStack. You set up an agent for Acme Dental yesterday. Thanks for giving it a try.\n\nI'd love to hear what you thought:\n\n1. Did you like it? What worked, and what felt off?\n2. What should we improve?\n3. Do you plan to use it for real, with your own phone number? If not, what's stopping you?\n\nYou can reply to this email, and two lines would be plenty!\n\nThanks again,\nRaphael\nFounder, LobbyStack",
       "messageId": "<7131d0b3c4813d4f44e29a71a6ed72b5bf1d55a8bcab256d5cd69f6e9d575d47@mail.lobbystack.internal>"
     }
   },
@@ -91,7 +91,7 @@
       "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
       "to": "owner@example.test",
       "subject": "trial day10 en",
-      "text": "Hi Sam,\n\nYour free trial ends on October 9.\n\nSo far your receptionist has answered 3 calls for Acme Dental.\n\nWhen it ends, your receptionist stops answering +1 416 555 0199 and we release the number. Choose a plan to keep it. Starter is $30 a month for 150 minutes.\n\nKeep my number: https://app.example.test/settings/plan\n\nRaphael",
+      "text": "Hi Sam,\n\nYour free trial ends on October 9.\n\nSo far your agent has answered 3 calls for Acme Dental.\n\nWhen it ends, your agent stops answering +1 416 555 0199 and we release the number. Choose a plan to keep it. Starter is $30 a month for 150 minutes.\n\nKeep my number: https://app.example.test/settings/plan\n\nRaphael",
       "messageId": "<08995491f744136a62d7b2779b4a9b6f155c0b067bf34c7f6957933e00aec6eb@mail.lobbystack.internal>"
     }
   },
@@ -120,7 +120,7 @@
       "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
       "to": "owner@example.test",
       "subject": "trial day13 en",
-      "text": "Hi Sam,\n\nYour free trial ends at midnight tomorrow.\n\nSo far your receptionist has answered 3 calls for Acme Dental.\n\nAfter that, calls to +1 416 555 0199 go unanswered and we release the number. Keep it for $30 a month with Starter.\n\nKeep my number: https://app.example.test/settings/plan\n\nRaphael",
+      "text": "Hi Sam,\n\nYour free trial ends at midnight tomorrow.\n\nSo far your agent has answered 3 calls for Acme Dental.\n\nAfter that, calls to +1 416 555 0199 go unanswered and we release the number. Keep it for $30 a month with Starter.\n\nKeep my number: https://app.example.test/settings/plan\n\nRaphael",
       "messageId": "<c6c1a1e9a0ecda367147b67bc6065082d757bcc0349b54bd4888e7203406f3d1@mail.lobbystack.internal>"
     }
   },
@@ -149,7 +149,7 @@
       "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
       "to": "owner@example.test",
       "subject": "trial ended en",
-      "text": "Hi Sam,\n\nYour 14-day trial ended yesterday, so your receptionist stopped answering +1 416 555 0199. We're releasing the number. Subscribe now if you want to keep it. Starter is $30 a month for 150 minutes.\n\nKeep my number: https://app.example.test/settings/plan\n\nRaphael",
+      "text": "Hi Sam,\n\nYour 14-day trial ended yesterday, so your agent stopped answering +1 416 555 0199. We're releasing the number. Subscribe now if you want to keep it. Starter is $30 a month for 150 minutes.\n\nKeep my number: https://app.example.test/settings/plan\n\nRaphael",
       "messageId": "<d3b7bbd578c44d8e57de9c6483d8e31455a0d13da5f11abb8d8cad506a2e664e@mail.lobbystack.internal>"
     }
   },
@@ -178,7 +178,7 @@
       "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
       "to": "owner@example.test",
       "subject": "trial minutes_out en",
-      "text": "Hi Sam,\n\nAcme Dental used its 30 free minutes, so your receptionist stopped answering +1 416 555 0199. Calls now ring +1 416 555 0123. Upgrade now to get your receptionist back. Starter is $30 a month for 150 minutes, and you keep your number.\n\nGet my receptionist back: https://app.example.test/settings/plan\n\nRaphael",
+      "text": "Hi Sam,\n\nAcme Dental used its 30 free minutes, so your agent stopped answering +1 416 555 0199. Calls now ring +1 416 555 0123. Upgrade now to get your agent back. Starter is $30 a month for 150 minutes, and you keep your number.\n\nGet my agent back: https://app.example.test/settings/plan\n\nRaphael",
       "messageId": "<f54c8effae31f3b0449c6a66f3d8a67c29393c13791270184388814576392130@mail.lobbystack.internal>"
     }
   },
@@ -299,7 +299,7 @@
       "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
       "to": "owner@example.test",
       "subject": "Qu'avez-vous pensé de LobbyStack ?",
-      "text": "Bonjour Sam,\n\nJe suis Raphael, le fondateur de LobbyStack. Vous avez configuré une réceptionniste pour Acme Dental hier. Merci de l'avoir essayée.\n\nJ'aimerais savoir ce que vous en avez pensé :\n\n1. Avez-vous aimé l'expérience ? Qu'est-ce qui a bien fonctionné, et qu'est-ce qui clochait ?\n2. Que devrions-nous améliorer ?\n3. Comptez-vous l'utiliser pour vrai, avec votre propre numéro de téléphone ? Sinon, qu'est-ce qui vous en empêche ?\n\nVous pouvez répondre à ce courriel, et deux lignes suffiraient !\n\nMerci encore,\nRaphael\nFondateur, LobbyStack",
+      "text": "Bonjour Sam,\n\nJe suis Raphael, le fondateur de LobbyStack. Vous avez configuré un agent pour Acme Dental hier. Merci de l'avoir essayé.\n\nJ'aimerais savoir ce que vous en avez pensé :\n\n1. Avez-vous aimé l'expérience ? Qu'est-ce qui a bien fonctionné, et qu'est-ce qui clochait ?\n2. Que devrions-nous améliorer ?\n3. Comptez-vous l'utiliser pour vrai, avec votre propre numéro de téléphone ? Sinon, qu'est-ce qui vous en empêche ?\n\nVous pouvez répondre à ce courriel, et deux lignes suffiraient !\n\nMerci encore,\nRaphael\nFondateur, LobbyStack",
       "messageId": "<e0fb2779c5d80a75cef52876f787a33f48bb71a5d77a1f51d95eb5cd00baf04c@mail.lobbystack.internal>"
     }
   },
@@ -328,7 +328,7 @@
       "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
       "to": "owner@example.test",
       "subject": "trial day10 fr",
-      "text": "Bonjour Sam,\n\nVotre essai gratuit se termine le October 9.\n\nVotre réceptionniste a déjà répondu à 3 appels pour Acme Dental.\n\nÀ la fin de l'essai, votre réceptionniste cesse de répondre au +1 416 555 0199 et nous libérons le numéro. Choisissez un forfait pour le garder. Starter coûte 30 $ par mois pour 150 minutes.\n\nGarder mon numéro: https://app.example.test/settings/plan\n\nRaphael",
+      "text": "Bonjour Sam,\n\nVotre essai gratuit se termine le October 9.\n\nVotre agent a déjà répondu à 3 appels pour Acme Dental.\n\nÀ la fin de l'essai, votre agent cesse de répondre au +1 416 555 0199 et nous libérons le numéro. Choisissez un forfait pour le garder. Starter coûte 30 $ par mois pour 150 minutes.\n\nGarder mon numéro: https://app.example.test/settings/plan\n\nRaphael",
       "messageId": "<73c230074b07702a4ff60a88453caa065812eae997865de30b7c07f08ea8deff@mail.lobbystack.internal>"
     }
   },
@@ -357,7 +357,7 @@
       "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
       "to": "owner@example.test",
       "subject": "trial day13 fr",
-      "text": "Bonjour Sam,\n\nVotre essai gratuit se termine demain à minuit.\n\nVotre réceptionniste a déjà répondu à 3 appels pour Acme Dental.\n\nEnsuite, les appels au +1 416 555 0199 restent sans réponse et nous libérons le numéro. Gardez-le pour 30 $ par mois avec Starter.\n\nGarder mon numéro: https://app.example.test/settings/plan\n\nRaphael",
+      "text": "Bonjour Sam,\n\nVotre essai gratuit se termine demain à minuit.\n\nVotre agent a déjà répondu à 3 appels pour Acme Dental.\n\nEnsuite, les appels au +1 416 555 0199 restent sans réponse et nous libérons le numéro. Gardez-le pour 30 $ par mois avec Starter.\n\nGarder mon numéro: https://app.example.test/settings/plan\n\nRaphael",
       "messageId": "<97410c467078162fbc65689e23b6fd1c2f560a56d4aa3cab95242f1a8f79f611@mail.lobbystack.internal>"
     }
   },
@@ -386,7 +386,7 @@
       "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
       "to": "owner@example.test",
       "subject": "trial ended fr",
-      "text": "Bonjour Sam,\n\nVotre essai de 14 jours s'est terminé hier, alors votre réceptionniste ne répond plus au +1 416 555 0199. Nous libérons le numéro. Abonnez-vous dès maintenant si vous voulez le garder. Starter coûte 30 $ par mois pour 150 minutes.\n\nGarder mon numéro: https://app.example.test/settings/plan\n\nRaphael",
+      "text": "Bonjour Sam,\n\nVotre essai de 14 jours s'est terminé hier, alors votre agent ne répond plus au +1 416 555 0199. Nous libérons le numéro. Abonnez-vous dès maintenant si vous voulez le garder. Starter coûte 30 $ par mois pour 150 minutes.\n\nGarder mon numéro: https://app.example.test/settings/plan\n\nRaphael",
       "messageId": "<efa0c237844d8a4af495503109118154fd22742021eb4d8345e2e0d4e5b23433@mail.lobbystack.internal>"
     }
   },
@@ -415,7 +415,7 @@
       "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
       "to": "owner@example.test",
       "subject": "trial minutes_out fr",
-      "text": "Bonjour Sam,\n\nAcme Dental a utilisé ses 30 minutes gratuites, alors votre réceptionniste ne répond plus au +1 416 555 0199. Les appels sonnent maintenant au +1 416 555 0123. Passez à un forfait payant pour retrouver votre réceptionniste. Starter coûte 30 $ par mois pour 150 minutes, et vous gardez votre numéro.\n\nRetrouver ma réceptionniste: https://app.example.test/settings/plan\n\nRaphael",
+      "text": "Bonjour Sam,\n\nAcme Dental a utilisé ses 30 minutes gratuites, alors votre agent ne répond plus au +1 416 555 0199. Les appels sonnent maintenant au +1 416 555 0123. Passez à un forfait payant pour retrouver votre agent. Starter coûte 30 $ par mois pour 150 minutes, et vous gardez votre numéro.\n\nRetrouver mon agent: https://app.example.test/settings/plan\n\nRaphael",
       "messageId": "<bd3a1a547843163d485de93f51ff4dac0cfca05d7e82820e76bc96f79abdfe97@mail.lobbystack.internal>"
     }
   },
@@ -536,7 +536,7 @@
       "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
       "to": "owner@example.test",
       "subject": "¿Qué le pareció LobbyStack?",
-      "text": "Hola, Sam:\n\nSoy Raphael, fundador de LobbyStack. Ayer configuró una recepcionista para Acme Dental. Gracias por probarla.\n\nMe encantaría saber qué le pareció:\n\n1. ¿Le gustó? ¿Qué funcionó bien y qué no le convenció?\n2. ¿Qué deberíamos mejorar?\n3. ¿Piensa usarla de verdad, con su propio número de teléfono? Si no, ¿qué se lo impide?\n\nPuede responder a este correo. ¡Con dos líneas basta!\n\nGracias de nuevo,\nRaphael\nFundador, LobbyStack",
+      "text": "Hola, Sam:\n\nSoy Raphael, fundador de LobbyStack. Ayer configuró un agente para Acme Dental. Gracias por probarlo.\n\nMe encantaría saber qué le pareció:\n\n1. ¿Le gustó? ¿Qué funcionó bien y qué no le convenció?\n2. ¿Qué deberíamos mejorar?\n3. ¿Piensa usarla de verdad, con su propio número de teléfono? Si no, ¿qué se lo impide?\n\nPuede responder a este correo. ¡Con dos líneas basta!\n\nGracias de nuevo,\nRaphael\nFundador, LobbyStack",
       "messageId": "<5e4ae7a4e3d19f6c9abafd1bdeba011ba9eb3582537eeb6e4230fe06d07fe859@mail.lobbystack.internal>"
     }
   },
@@ -565,7 +565,7 @@
       "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
       "to": "owner@example.test",
       "subject": "trial day10 es",
-      "text": "Hola, Sam:\n\nSu prueba gratuita termina el October 9.\n\nSu recepcionista ya contestó 3 llamadas para Acme Dental.\n\nCuando termine la prueba, su recepcionista dejará de contestar el +1 416 555 0199 y liberaremos el número. Elija un plan para conservarlo. Starter cuesta 30 USD al mes por 150 minutos.\n\nConservar mi número: https://app.example.test/settings/plan\n\nRaphael",
+      "text": "Hola, Sam:\n\nSu prueba gratuita termina el October 9.\n\nSu agente ya contestó 3 llamadas para Acme Dental.\n\nCuando termine la prueba, su agente dejará de contestar el +1 416 555 0199 y liberaremos el número. Elija un plan para conservarlo. Starter cuesta 30 USD al mes por 150 minutos.\n\nConservar mi número: https://app.example.test/settings/plan\n\nRaphael",
       "messageId": "<6cc585bfa90d765178432eb79ac54f1b5c89e080390b6588b87569053605ce74@mail.lobbystack.internal>"
     }
   },
@@ -594,7 +594,7 @@
       "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
       "to": "owner@example.test",
       "subject": "trial day13 es",
-      "text": "Hola, Sam:\n\nSu prueba gratuita termina mañana a medianoche.\n\nSu recepcionista ya contestó 3 llamadas para Acme Dental.\n\nDespués, las llamadas al +1 416 555 0199 quedarán sin respuesta y liberaremos el número. Consérvelo por 30 USD al mes con Starter.\n\nConservar mi número: https://app.example.test/settings/plan\n\nRaphael",
+      "text": "Hola, Sam:\n\nSu prueba gratuita termina mañana a medianoche.\n\nSu agente ya contestó 3 llamadas para Acme Dental.\n\nDespués, las llamadas al +1 416 555 0199 quedarán sin respuesta y liberaremos el número. Consérvelo por 30 USD al mes con Starter.\n\nConservar mi número: https://app.example.test/settings/plan\n\nRaphael",
       "messageId": "<c1af8bfc9453c271c2f04229ed61d48c8b25d2f6007180c7762f2f7deaf4938d@mail.lobbystack.internal>"
     }
   },
@@ -623,7 +623,7 @@
       "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
       "to": "owner@example.test",
       "subject": "trial ended es",
-      "text": "Hola, Sam:\n\nSu prueba de 14 días terminó ayer, así que su recepcionista dejó de contestar el +1 416 555 0199. Estamos liberando el número. Suscríbase ahora si quiere conservarlo. Starter cuesta 30 USD al mes por 150 minutos.\n\nConservar mi número: https://app.example.test/settings/plan\n\nRaphael",
+      "text": "Hola, Sam:\n\nSu prueba de 14 días terminó ayer, así que su agente dejó de contestar el +1 416 555 0199. Estamos liberando el número. Suscríbase ahora si quiere conservarlo. Starter cuesta 30 USD al mes por 150 minutos.\n\nConservar mi número: https://app.example.test/settings/plan\n\nRaphael",
       "messageId": "<ed2b79ff244a75b446f0e56a41a97dd519de8ec9dd72d0294c753afd6ccf411a@mail.lobbystack.internal>"
     }
   },
@@ -652,7 +652,7 @@
       "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
       "to": "owner@example.test",
       "subject": "trial minutes_out es",
-      "text": "Hola, Sam:\n\nAcme Dental usó sus 30 minutos gratuitos, así que su recepcionista dejó de contestar el +1 416 555 0199. Las llamadas ahora suenan en el +1 416 555 0123. Mejore su plan ahora para recuperar a su recepcionista. Starter cuesta 30 USD al mes por 150 minutos, y conserva su número.\n\nRecuperar a mi recepcionista: https://app.example.test/settings/plan\n\nRaphael",
+      "text": "Hola, Sam:\n\nAcme Dental usó sus 30 minutos gratuitos, así que su agente dejó de contestar el +1 416 555 0199. Las llamadas ahora suenan en el +1 416 555 0123. Mejore su plan ahora para recuperar a su agente. Starter cuesta 30 USD al mes por 150 minutos, y conserva su número.\n\nRecuperar a mi agente: https://app.example.test/settings/plan\n\nRaphael",
       "messageId": "<cd3a19fda62c75396da520b4838daa91f1a3d70da4c59ca9225df5bba20bc573@mail.lobbystack.internal>"
     }
   },
@@ -773,7 +773,7 @@
       "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
       "to": "owner@example.test",
       "subject": "Kako Vam se dopao LobbyStack?",
-      "text": "Zdravo, Sam,\n\nJa sam Raphael, osnivač LobbyStacka. Juče ste podesili recepcionera za Acme Dental. Hvala što ste ga isprobali.\n\nVoleo bih da čujem Vaše utiske:\n\n1. Da li Vam se dopao? Šta je dobro radilo, a šta Vam nije delovalo kako treba?\n2. Šta bi trebalo da poboljšamo?\n3. Da li planirate da ga zaista koristite, sa svojim brojem telefona? Ako ne, šta Vas sprečava?\n\nMožete da odgovorite na ovaj imejl, i dva reda su sasvim dovoljna!\n\nHvala još jednom,\nRaphael\nOsnivač, LobbyStack",
+      "text": "Zdravo, Sam,\n\nJa sam Raphael, osnivač LobbyStacka. Juče ste podesili agenta za Acme Dental. Hvala što ste ga isprobali.\n\nVoleo bih da čujem Vaše utiske:\n\n1. Da li Vam se dopao? Šta je dobro radilo, a šta Vam nije delovalo kako treba?\n2. Šta bi trebalo da poboljšamo?\n3. Da li planirate da ga zaista koristite, sa svojim brojem telefona? Ako ne, šta Vas sprečava?\n\nMožete da odgovorite na ovaj imejl, i dva reda su sasvim dovoljna!\n\nHvala još jednom,\nRaphael\nOsnivač, LobbyStack",
       "messageId": "<906ce8c5cd55d6638e70670f47bc19c86242a9c7381f955bf3736f9616e44465@mail.lobbystack.internal>"
     }
   },
@@ -802,7 +802,7 @@
       "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
       "to": "owner@example.test",
       "subject": "trial day10 sr",
-      "text": "Zdravo, Sam,\n\nVaša besplatna proba ističe October 9.\n\nVaš recepcioner je već odgovorio na 3 poziva za Acme Dental.\n\nKada proba istekne, recepcioner prestaje da odgovara na +1 416 555 0199 i mi oslobađamo broj. Izaberite paket da biste ga zadržali. Starter košta 30 USD mesečno za 150 minuta.\n\nZadrži moj broj: https://app.example.test/settings/plan\n\nRaphael",
+      "text": "Zdravo, Sam,\n\nVaša besplatna proba ističe October 9.\n\nVaš agent je već odgovorio na 3 poziva za Acme Dental.\n\nKada proba istekne, agent prestaje da odgovara na +1 416 555 0199 i mi oslobađamo broj. Izaberite paket da biste ga zadržali. Starter košta 30 USD mesečno za 150 minuta.\n\nZadrži moj broj: https://app.example.test/settings/plan\n\nRaphael",
       "messageId": "<7d9b37870e9f9dc00d3e38c9a9afb9a4e76d51054ac73461b8f41d6fe70f07d4@mail.lobbystack.internal>"
     }
   },
@@ -831,7 +831,7 @@
       "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
       "to": "owner@example.test",
       "subject": "trial day13 sr",
-      "text": "Zdravo, Sam,\n\nVaša besplatna proba ističe sutra u ponoć.\n\nVaš recepcioner je već odgovorio na 3 poziva za Acme Dental.\n\nNakon toga, pozivi na +1 416 555 0199 ostaju bez odgovora i mi oslobađamo broj. Zadržite ga za 30 USD mesečno uz Starter.\n\nZadrži moj broj: https://app.example.test/settings/plan\n\nRaphael",
+      "text": "Zdravo, Sam,\n\nVaša besplatna proba ističe sutra u ponoć.\n\nVaš agent je već odgovorio na 3 poziva za Acme Dental.\n\nNakon toga, pozivi na +1 416 555 0199 ostaju bez odgovora i mi oslobađamo broj. Zadržite ga za 30 USD mesečno uz Starter.\n\nZadrži moj broj: https://app.example.test/settings/plan\n\nRaphael",
       "messageId": "<30dbbf8630f2b432011ba956b4892d34c3ca26e56dbff8a35d9ce9f9ad794b45@mail.lobbystack.internal>"
     }
   },
@@ -860,7 +860,7 @@
       "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
       "to": "owner@example.test",
       "subject": "trial ended sr",
-      "text": "Zdravo, Sam,\n\nVaša proba od 14 dana istekla je juče, pa recepcioner više ne odgovara na +1 416 555 0199. Oslobađamo broj. Pretplatite se sada ako želite da ga zadržite. Starter košta 30 USD mesečno za 150 minuta.\n\nZadrži moj broj: https://app.example.test/settings/plan\n\nRaphael",
+      "text": "Zdravo, Sam,\n\nVaša proba od 14 dana istekla je juče, pa agent više ne odgovara na +1 416 555 0199. Oslobađamo broj. Pretplatite se sada ako želite da ga zadržite. Starter košta 30 USD mesečno za 150 minuta.\n\nZadrži moj broj: https://app.example.test/settings/plan\n\nRaphael",
       "messageId": "<2cab05625847a960d0609d019e43ee4630c11ec603227d593bdd1e122fc082fa@mail.lobbystack.internal>"
     }
   },
@@ -889,7 +889,7 @@
       "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
       "to": "owner@example.test",
       "subject": "trial minutes_out sr",
-      "text": "Zdravo, Sam,\n\nAcme Dental je potrošio 30 besplatnih minuta, pa recepcioner više ne odgovara na +1 416 555 0199. Pozivi sada zvone na +1 416 555 0123. Pređite na plaćeni paket da biste vratili recepcionera. Starter košta 30 USD mesečno za 150 minuta, a broj ostaje Vaš.\n\nVrati mog recepcionera: https://app.example.test/settings/plan\n\nRaphael",
+      "text": "Zdravo, Sam,\n\nAcme Dental je potrošio 30 besplatnih minuta, pa agent više ne odgovara na +1 416 555 0199. Pozivi sada zvone na +1 416 555 0123. Pređite na plaćeni paket da biste vratili agenta. Starter košta 30 USD mesečno za 150 minuta, a broj ostaje Vaš.\n\nVrati mog agenta: https://app.example.test/settings/plan\n\nRaphael",
       "messageId": "<9cfe6b34899badc6129307a718baad458704be8e538d48ed576ac9de8c1b9818@mail.lobbystack.internal>"
     }
   },
@@ -965,7 +965,7 @@
       "from": "Raphael <raphael@lobbystack.com>",
       "to": "owner@example.test",
       "subject": "How'd you like LobbyStack?",
-      "text": "Hi,\n\nI'm Raphael, the founder of LobbyStack. You set up a receptionist for Acme Dental yesterday. Thanks for giving it a try.\n\nI'd love to hear what you thought:\n\n1. Did you like it? What worked, and what felt off?\n2. What should we improve?\n3. Do you plan to use it for real, with your own phone number? If not, what's stopping you?\n\nYou can reply to this email, and two lines would be plenty!\n\nThanks again,\nRaphael\nFounder, LobbyStack"
+      "text": "Hi,\n\nI'm Raphael, the founder of LobbyStack. You set up an agent for Acme Dental yesterday. Thanks for giving it a try.\n\nI'd love to hear what you thought:\n\n1. Did you like it? What worked, and what felt off?\n2. What should we improve?\n3. Do you plan to use it for real, with your own phone number? If not, what's stopping you?\n\nYou can reply to this email, and two lines would be plenty!\n\nThanks again,\nRaphael\nFounder, LobbyStack"
     }
   },
   {
@@ -991,7 +991,7 @@
       "replyTo": "support@example.test",
       "to": "owner@example.test",
       "subject": "trial",
-      "text": "Hi,\n\nYour free trial ends on October 9.\n\nSo far your receptionist has answered 1 call for Acme Dental.\n\nWhen it ends, your receptionist stops answering +1 416 555 0199 and we release the number. Choose a plan to keep it. Starter is $30 a month for 150 minutes.\n\nKeep my number: https://app.example.test/settings/plan\n\nLobbyStack"
+      "text": "Hi,\n\nYour free trial ends on October 9.\n\nSo far your agent has answered 1 call for Acme Dental.\n\nWhen it ends, your agent stops answering +1 416 555 0199 and we release the number. Choose a plan to keep it. Starter is $30 a month for 150 minutes.\n\nKeep my number: https://app.example.test/settings/plan\n\nLobbyStack"
     }
   },
   {
