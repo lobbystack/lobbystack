@@ -46,6 +46,20 @@ describe("createTwilioCarrier", () => {
     expect(untrunked.callCost!.findLiveCallCost).toBeUndefined();
   });
 
+  it("puts a staff-first number on the staff-first webhook, with a fallback to the receptionist", async () => {
+    const twilio = fakeTwilio();
+    const routing = createTwilioCarrier({ ...env, OPENAI_PROJECT_ID: "proj_1" }, twilio as unknown as TwilioProvider)!.routing!;
+    expect(await routing.routeNumber({ providerPhoneId: "PN1", mode: "staff_first" })).toEqual({ target: "https://app.example.test/api/webhooks/twilio/staff-first/incoming" });
+    expect(twilio.routeNumber).toHaveBeenCalledWith({ providerPhoneId: "PN1", trunkSid: "TK1", mode: "fallback", fallbackUrl: "https://app.example.test/api/webhooks/twilio/staff-first/incoming", errorUrl: "https://app.example.test/api/webhooks/twilio/staff-first/fallback" });
+  });
+
+  it("won't ring staff first without the OpenAI project", async () => {
+    const twilio = fakeTwilio();
+    const routing = createTwilioCarrier(env, twilio as unknown as TwilioProvider)!.routing!;
+    await expect(routing.routeNumber({ providerPhoneId: "PN1", mode: "staff_first" })).rejects.toThrow(/OPENAI_PROJECT_ID/);
+    expect(twilio.routeNumber).not.toHaveBeenCalled();
+  });
+
   it("prices a GPT-Live call from its trunk leg", async () => {
     const twilio = fakeTwilio();
     const near = new Date("2026-10-01T12:00:00Z");

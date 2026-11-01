@@ -78,8 +78,13 @@ export class NumberOrderPendingError extends Error {
   }
 }
 
-/** receptionist: calls go to GPT-Live over SIP. fallback: the carrier asks our voice webhook, which forwards or rejects. */
-export type NumberRoutingMode = "receptionist" | "fallback";
+/**
+ * receptionist: calls go to GPT-Live over SIP. fallback: the carrier asks our
+ * voice webhook, which forwards or rejects. staff_first: the carrier asks our
+ * staff-first webhook, which rings the staff phone and then dials GPT-Live.
+ * Only CARRIERS_WITH_STAFF_FIRST take it.
+ */
+export type NumberRoutingMode = "receptionist" | "fallback" | "staff_first";
 
 export interface NumberRouting {
   readonly carrier: CarrierId;

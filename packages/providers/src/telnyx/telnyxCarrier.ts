@@ -251,6 +251,7 @@ export function createTelnyxCarrier(env: Env = process.env, options: TelnyxCarri
     missingSetup: () => !openAiProjectId ? "OPENAI_PROJECT_ID is required to route Telnyx numbers to GPT-Live. See docs/voice/runtime.md." : undefined,
     routeNumber: async ({ providerPhoneId, mode, refusedCallsForwardTo, carrierConnectionId }) => {
       assertCertificationOperationAllowed();
+      if (mode === "staff_first") throw new Error("Telnyx numbers don't support staff answers first yet.");
       const path = `/phone_numbers/${encodeURIComponent(providerPhoneId)}`;
       if (mode === "receptionist") {
         const missing = routing.missingSetup();

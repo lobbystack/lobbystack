@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { billingAccounts, businesses, createDatabaseClient, outboxMessages, phoneNumbers, receptionistProfiles, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { billingAccounts, businesses, createDatabaseClient, numberTrials, outboxMessages, phoneNumbers, receptionistProfiles, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
+import { desiredNumberRouting } from "./numberTrials";
 import { saveReceptionistProfileInTransaction } from "./receptionistProfile";
 import { createBusiness } from "./tenancy";
 
@@ -86,6 +87,28 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
       await save(tx, businessId, { staffFirstMode: "always", staffFirstNumber: staffPhone });
       await expect(save(tx, businessId, { staffFirstNumber: null })).rejects.toMatchObject({ code: "staff_first_number_required" });
       expect((await tx.select({ number: receptionistProfiles.staffFirstNumber }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, businessId)))[0]?.number).toBe(staffPhone);
+    });
+  });
+
+  it("routes a number to staff_first while the setting is on, and a trial's fallback wins", async () => {
+    await rollbackTest(async (tx) => {
+      const businessId = await business(tx, { carrier: "twilio" });
+      const [number] = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(eq(phoneNumbers.businessId, businessId));
+      const desired = () => desiredNumberRouting({ db: tx as unknown as Database }, { businessId, phoneNumberId: number!.id });
+      expect((await desired())?.mode).toBe("receptionist");
+      await save(tx, businessId, { staffFirstMode: "business_hours", staffFirstNumber: staffPhone });
+      expect((await desired())?.mode).toBe("staff_first");
+      await tx.insert(numberTrials).values({ businessId, userId: (await tx.select({ id: users.id }).from(users).limit(1))[0]!.id, status: "ended", phoneNumberId: number!.id, verifiedPhone: staffPhone });
+      expect((await desired())?.mode).toBe("fallback");
+    });
+  });
+
+  it("leaves a Telnyx number on the receptionist", async () => {
+    await rollbackTest(async (tx) => {
+      const businessId = await business(tx, { carrier: "telnyx" });
+      const [number] = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(eq(phoneNumbers.businessId, businessId));
+      await tx.update(receptionistProfiles).set({ staffFirstMode: "always", staffFirstNumber: staffPhone }).where(eq(receptionistProfiles.businessId, businessId));
+      expect((await desiredNumberRouting({ db: tx as unknown as Database }, { businessId, phoneNumberId: number!.id }))?.mode).toBe("receptionist");
     });
   });
 

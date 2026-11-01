@@ -143,9 +143,10 @@ export class TwilioProvider {
 
   /**
    * Puts a number on the SIP trunk, where the receptionist answers, or takes
-   * it off so Twilio asks `fallbackUrl` what to do with each call.
+   * it off so Twilio asks `fallbackUrl` what to do with each call. Twilio asks
+   * `errorUrl` when that webhook fails; without one, it reads out an error.
    */
-  async routeNumber(input: { providerPhoneId: string; trunkSid: string; mode: "receptionist" | "fallback"; fallbackUrl: string }): Promise<void> {
+  async routeNumber(input: { providerPhoneId: string; trunkSid: string; mode: "receptionist" | "fallback"; fallbackUrl: string; errorUrl?: string }): Promise<void> {
     assertCertificationOperationAllowed();
     if (input.mode === "receptionist") {
       await this.addNumberToSipTrunk(input);
@@ -153,7 +154,7 @@ export class TwilioProvider {
     }
     const number = await this.client.incomingPhoneNumbers(input.providerPhoneId).fetch();
     if (number.trunkSid) await this.client.trunking.v1.trunks(number.trunkSid).phoneNumbers(input.providerPhoneId).remove();
-    await this.client.incomingPhoneNumbers(input.providerPhoneId).update({ voiceUrl: input.fallbackUrl, voiceMethod: "POST" });
+    await this.client.incomingPhoneNumbers(input.providerPhoneId).update({ voiceUrl: input.fallbackUrl, voiceMethod: "POST", voiceFallbackUrl: input.errorUrl ?? "", voiceFallbackMethod: "POST" });
   }
 
   async listAvailablePhoneNumbers(input: { countryCode: string; kind: "local" | "mobile" | "toll_free"; areaCode?: string; city?: string; regionCode?: string; postalCode?: string; sms?: boolean; limit: number }): Promise<AvailablePhoneNumber[]> {

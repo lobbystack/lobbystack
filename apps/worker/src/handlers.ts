@@ -957,8 +957,8 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         // Calls reach GPT-Live only through the carrier's SIP path, so a number that can't join it is released.
         const { target, carrierConnectionId } = await routing.routeNumber({ providerPhoneId, mode: "receptionist", carrierConnectionId: boughtConnectionId });
         const phoneNumberId = await completeNumberProvisioning(dependencies.domain, { businessId, claimId, carrier, e164: claim.e164, providerPhoneId, carrierConnectionId, voiceUrl: target, ...(smsUrl ? { smsUrl } : {}), ...(monthlyCostCents !== undefined ? { monthlyCostCents } : {}) });
-        // A carrier that forwards refused calls itself learns where to once the number belongs to the business.
-        if (routing.forwardsRefusedCalls) await enqueueRouting(dependencies.domain, { businessId, phoneNumberId });
+        // A carrier that forwards refused calls itself learns where to once the number belongs to the business, and a business with staff answers first on moves the number off the trunk.
+        if (routing.forwardsRefusedCalls || (await desiredNumberRouting(dependencies.domain, { businessId, phoneNumberId }))?.mode === "staff_first") await enqueueRouting(dependencies.domain, { businessId, phoneNumberId });
         return { status: "completed", entityId: phoneNumberId };
       } catch (error) {
         if (error instanceof NumberOrderPendingError && inventory) {
