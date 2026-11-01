@@ -25,8 +25,8 @@ Custom connectors work on the Free, Pro, Max, Team and Enterprise plans. The Fre
   <Step title="Connect and sign in">
     Click **Connect**. Claude opens LobbyStack. Sign in if you aren't signed in already.
   </Step>
-  <Step title="Choose the business and permissions">
-    Pick the business, uncheck anything Claude shouldn't do, and click **Allow access**. You go back to Claude, connected.
+  <Step title="Choose the workspace and permissions">
+    Pick the workspace, uncheck anything Claude shouldn't do, and click **Allow access**. You go back to Claude, connected.
   </Step>
 </Steps>
 
@@ -117,7 +117,7 @@ Ask Claude to call `get_business`. It should answer with your business name, tim
 
 | Symptom | Fix |
 | --- | --- |
-| The sign-in page says you can't connect apps | Ask an owner of the business to connect Claude, or to make you an admin. |
+| The sign-in page says you can't connect apps | Ask an owner of the workspace to connect Claude, or to make you an admin. |
 | `401` or "unauthorized" | Connect again. With an API key, check that you copied the whole key and that nobody revoked it. |
 | `403` or "insufficient_scope" | Connect again and allow at least one permission. With an API key, create one with a scope other than `webhooks:manage`. |
 | A tool is missing | Connect again and allow the permission that tool needs. |

@@ -5,7 +5,7 @@ sidebarTitle: "Entreprises"
 contentType: "How-to"
 ---
 
-Chaque client est une entreprise sur la page **Entreprises**, avec sa propre réceptionniste, son numéro de téléphone, son équipe et son tableau de bord sur votre adresse. Les propriétaires et les administrateurs créent les entreprises et invitent leurs propriétaires. Toute votre équipe peut ouvrir une entreprise pour la configurer ou lui offrir du soutien, et le journal d'audit de l'entreprise consigne chaque ouverture.
+Chaque client est une entreprise sur la page **Entreprises**, avec son propre agent, son numéro de téléphone, son équipe et son tableau de bord sur votre adresse. Les propriétaires et les administrateurs créent les entreprises et invitent leurs propriétaires. Toute votre équipe peut ouvrir une entreprise pour la configurer ou lui offrir du soutien, et le journal d'audit de l'entreprise consigne chaque ouverture.
 
 ## Créer une entreprise
 
@@ -40,8 +40,8 @@ Le niveau d'accès définit ce que l'équipe propre de l'entreprise peut utilise
 
 | Niveau d'accès | Ce que l'équipe de l'entreprise peut utiliser |
 | --- | --- |
-| **Accès complet** | La réceptionniste, ses connaissances, ses heures, ses services et les membres de l'équipe, plus tout ce que comprend **Activité seulement**. L'équipe ne voit ni la facturation, ni les clés API, ni [MCP](/fr/ai/mcp). |
-| **Activité seulement** | Les appels, les clavardages, les rendez-vous, les contacts et les messages. Vous configurez la réceptionniste pour elle. |
+| **Accès complet** | L'agent, ses connaissances, ses heures, ses services et les membres de l'équipe, plus tout ce que comprend **Activité seulement**. L'équipe ne voit ni la facturation, ni les clés API, ni [MCP](/fr/ai/mcp). |
+| **Activité seulement** | Les appels, les clavardages, les rendez-vous, les contacts et les messages. Vous configurez l'agent pour elle. |
 
 Aux deux niveaux, l'équipe de l'entreprise voit son utilisation du mois, et ses propriétaires et ses administrateurs vous paient depuis **Réglages** > **Facturation**.
 
@@ -54,13 +54,13 @@ Ce que le propriétaire voit ensuite dépend de la facturation de l'entreprise 
 - **Sur une formule** : le lien nomme la formule, avec ses minutes et ses clavardages, et ouvre une page de paiement Stripe sur votre compte. Après avoir payé, le propriétaire se connecte ou crée un compte. Si votre compte de paiement ne peut pas encore accepter de paiements, le propriétaire se connecte d'abord et paie plus tard depuis **Réglages** > **Facturation**.
 - **Vous la facturez vous-même** : le lien mène directement à la connexion.
 
-L'intégration demande ensuite au propriétaire de vérifier son téléphone. Les appels vont à ce téléphone quand l'entreprise n'a pas de numéro de transfert et qu'elle a épuisé ses minutes. Transmettez [Utiliser la réceptionniste qu'un partenaire a configurée pour vous](/fr/white-label/business-owners) à vos clients.
+L'intégration demande ensuite au propriétaire de vérifier son téléphone. Les appels vont à ce téléphone quand l'entreprise n'a pas de numéro de transfert et qu'elle a épuisé ses minutes. Transmettez [Utiliser l'agent qu'un partenaire a configuré pour vous](/fr/white-label/business-owners) à vos clients.
 
 ## Ouvrir une entreprise pour offrir du soutien
 
 Cliquez sur **Ouvrir** dans la ligne d'une entreprise pour travailler dans son tableau de bord, sur votre adresse. Si vous ouvrez une entreprise depuis `app.lobbystack.com`, vous arrivez sur votre adresse, où vous vous connectez de nouveau.
 
-Dans l'entreprise, vous avez un accès complet, quel que soit son niveau d'accès : la réceptionniste, les connaissances, l'équipe, le numéro de téléphone et les intégrations. La facturation, les clés API et MCP restent fermés à votre équipe. Vous pouvez ouvrir une entreprise avant que son propriétaire accepte l'invitation, pour configurer d'abord la réceptionniste.
+Dans l'entreprise, vous avez un accès complet, quel que soit son niveau d'accès : l'agent, les connaissances, l'équipe, le numéro de téléphone et les intégrations. La facturation, les clés API et MCP restent fermés à votre équipe. Vous pouvez ouvrir une entreprise avant que son propriétaire accepte l'invitation, pour configurer d'abord l'agent.
 
 Votre accès à une entreprise que vous avez ouverte dure 8 heures, et une nouvelle ouverture relance les 8 heures. Ouvrir une entreprise ne vous ajoute pas à son équipe : sa liste d'équipe n'affiche donc que les personnes de l'entreprise.
 
@@ -74,7 +74,7 @@ Retirer quelqu'un de votre équipe met fin d'un coup à son accès à toutes les
 
 Une entreprise obtient son numéro de téléphone dans son propre tableau de bord, sous **Réglages** > **Numéro de téléphone**. Avec **Accès complet**, ses propriétaires et ses administrateurs peuvent en obtenir un, tout comme toute personne de votre équipe qui ouvre l'entreprise.
 
-Le propriétaire doit d'abord terminer l'intégration. D'ici là, la page indique **Les numéros de téléphone ne sont pas encore disponibles pour cette entreprise.** Votre palier fixe le nombre de numéros que vos entreprises détiennent au total. Sur Gratuit, une entreprise peut obtenir votre unique numéro d'essai. Consultez [Numéros de téléphone par palier](/fr/white-label/tiers#numéros-de-téléphone-par-palier).
+Le propriétaire doit d'abord terminer l'intégration. D'ici là, la page indique **Les numéros de téléphone ne sont pas encore disponibles pour cet espace de travail.** Votre palier fixe le nombre de numéros que vos entreprises détiennent au total. Sur Gratuit, une entreprise peut obtenir votre unique numéro d'essai. Consultez [Numéros de téléphone par palier](/fr/white-label/tiers#numéros-de-téléphone-par-palier).
 
 ## Suivre l'utilisation de chaque entreprise
 
@@ -91,7 +91,7 @@ Sous la formule, la colonne résume le dépassement de l'entreprise, par exemple
 
 ## Céder une entreprise à son propriétaire
 
-Céder une entreprise la remet à son propriétaire, qui garde la réceptionniste sur le forfait Free de LobbyStack et paie LobbyStack à partir de ce moment. L'entreprise quitte votre console et vos adresses, et le propriétaire se connecte à `app.lobbystack.com`. Une entreprise cédée ne peut pas revenir sous votre partenaire.
+Céder une entreprise la remet à son propriétaire, qui garde l'agent sur le forfait Free de LobbyStack et paie LobbyStack à partir de ce moment. L'entreprise quitte votre console et vos adresses, et le propriétaire se connecte à `app.lobbystack.com`. Une entreprise cédée ne peut pas revenir sous votre partenaire.
 
 1. Ouvrez le menu **Plus d'actions** de l'entreprise et choisissez **Céder au propriétaire**.
 2. Cliquez sur **Céder l'entreprise** pour confirmer.

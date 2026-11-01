@@ -14,7 +14,9 @@ Use these instructions when you change the public LobbyStack Help Center.
 
 - Use "LobbyStack" for the product name.
 - Use "Help Center" for customer-facing docs.
-- Use "AI receptionist" for the caller-facing automation.
+- Use "agent" for the AI that answers calls and messages. Use "AI agent" where a page needs to say what it is.
+- Use "workspace" in navigation, settings labels, and badges, and "business" for the company itself, as in "business hours". See `GLOSSARY.md`.
+- Keep "business" in pages about the partner console, and keep `receptionist` in API paths, fields, and commands. The partner console and the API still use those names.
 - Use "dashboard" for the operator web app.
 
 ## Style preferences
@@ -28,5 +30,5 @@ Use these instructions when you change the public LobbyStack Help Center.
 
 ## Content boundaries
 
-- Document customer setup, receptionist configuration, dashboard workflows, billing, integrations, and self-hosting.
+- Document customer setup, agent configuration, dashboard workflows, billing, integrations, and self-hosting.
 - Do not publish internal architecture notes, ADRs, planning docs, or Linear tracking content here unless they are rewritten as public developer documentation.

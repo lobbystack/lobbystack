@@ -14,7 +14,7 @@ La base de Docker Compose ejecuta la aplicación de LobbyStack, PostgreSQL, Redi
     Twilio proporciona los números de teléfono, las transferencias de llamadas y la verificación por teléfono. Un trunk Elastic SIP envía a OpenAI las llamadas a sus números. Cada número debe estar en el trunk para contestar llamadas. Mantenga el token de autenticación de Twilio en el servidor.
   </Accordion>
   <Accordion title="OpenAI" icon="waveform">
-    El modelo GPT-Live de OpenAI mantiene la conversación en las llamadas telefónicas y desde el navegador, y OpenAI aloja el audio. Cuando la persona que llama necesita datos del negocio, como horarios disponibles o una reserva, GPT-Live se los pide al worker de LobbyStack, que responde con el agente de la recepcionista. Su proyecto de OpenAI necesita tener SIP activado y un webhook de llamadas entrantes para las llamadas telefónicas.
+    El modelo GPT-Live de OpenAI mantiene la conversación en las llamadas telefónicas y desde el navegador, y OpenAI aloja el audio. Cuando la persona que llama necesita datos del negocio, como horarios disponibles o una reserva, GPT-Live se los pide al worker de LobbyStack, que responde con el agente. Su proyecto de OpenAI necesita tener SIP activado y un webhook de llamadas entrantes para las llamadas telefónicas.
   </Accordion>
 </AccordionGroup>
 
@@ -22,7 +22,7 @@ La base de Docker Compose ejecuta la aplicación de LobbyStack, PostgreSQL, Redi
 
 <AccordionGroup>
   <Accordion title="IA compatible con OpenAI" icon="sparkles">
-    El agente de la recepcionista para el chat del sitio web y las llamadas funciona con `gpt-6-luna` con razonamiento alto por defecto. Para usar otro proveedor o un entorno de ejecución autoalojado que implemente las API de chat y embeddings compatibles con OpenAI, configure las variables `AI_CHAT_*` y `AI_EMBEDDING_*`. El modelo debe admitir llamadas a herramientas, y los modelos de embeddings deben devolver exactamente 1536 dimensiones.
+    El agente para el chat del sitio web y las llamadas funciona con `gpt-6-luna` con razonamiento alto por defecto. Para usar otro proveedor o un entorno de ejecución autoalojado que implemente las API de chat y embeddings compatibles con OpenAI, configure las variables `AI_CHAT_*` y `AI_EMBEDDING_*`. El modelo debe admitir llamadas a herramientas, y los modelos de embeddings deben devolver exactamente 1536 dimensiones.
   </Accordion>
   <Accordion title="Firecrawl" icon="globe">
     Firecrawl importa el contenido público del sitio web al proceso de conocimiento. Puede omitirlo si los operadores solo suben documentos e introducen el conocimiento manualmente.

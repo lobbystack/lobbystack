@@ -14,7 +14,7 @@ La base Docker Compose exécute l'application LobbyStack, PostgreSQL, Redis et u
     Twilio fournit les numéros de téléphone, les transferts d'appel et la vérification des numéros de téléphone. Un trunk Elastic SIP envoie à OpenAI les appels reçus sur vos numéros. Chaque numéro doit faire partie du trunk pour répondre aux appels. Gardez le jeton d'authentification Twilio côté serveur.
   </Accordion>
   <Accordion title="OpenAI" icon="waveform">
-    Le modèle GPT-Live d'OpenAI mène la conversation pendant les appels téléphoniques et les appels dans le navigateur, et OpenAI héberge l'audio. Quand l'appelant a besoin de données de l'entreprise, comme des disponibilités ou une réservation, GPT-Live interroge le worker de LobbyStack, qui répond avec l'agent réceptionniste. Votre projet OpenAI doit avoir SIP activé et un webhook d'appel entrant pour les appels téléphoniques.
+    Le modèle GPT-Live d'OpenAI mène la conversation pendant les appels téléphoniques et les appels dans le navigateur, et OpenAI héberge l'audio. Quand l'appelant a besoin de données de l'entreprise, comme des disponibilités ou une réservation, GPT-Live interroge le worker de LobbyStack, qui répond avec l'agent. Votre projet OpenAI doit avoir SIP activé et un webhook d'appel entrant pour les appels téléphoniques.
   </Accordion>
 </AccordionGroup>
 
@@ -22,7 +22,7 @@ La base Docker Compose exécute l'application LobbyStack, PostgreSQL, Redis et u
 
 <AccordionGroup>
   <Accordion title="IA compatible OpenAI" icon="sparkles">
-    L'agent réceptionniste pour le clavardage du site Web et les appels utilise par défaut `gpt-6-luna` avec un raisonnement élevé. Pour utiliser un autre fournisseur ou un environnement d'exécution auto-hébergé qui implémente les API de clavardage et d'embeddings compatibles OpenAI, définissez les variables `AI_CHAT_*` et `AI_EMBEDDING_*`. Le modèle doit prendre en charge les appels d'outils, et les modèles d'embeddings doivent renvoyer exactement 1536 dimensions.
+    L'agent pour le clavardage du site Web et les appels utilise par défaut `gpt-6-luna` avec un raisonnement élevé. Pour utiliser un autre fournisseur ou un environnement d'exécution auto-hébergé qui implémente les API de clavardage et d'embeddings compatibles OpenAI, définissez les variables `AI_CHAT_*` et `AI_EMBEDDING_*`. Le modèle doit prendre en charge les appels d'outils, et les modèles d'embeddings doivent renvoyer exactement 1536 dimensions.
   </Accordion>
   <Accordion title="Firecrawl" icon="globe">
     Firecrawl importe le contenu public des sites Web dans le pipeline de connaissances. Vous pouvez vous en passer si les opérateurs se contentent de téléverser des documents et de saisir les connaissances à la main.

@@ -5,7 +5,7 @@ sidebarTitle: "Widget de site Web"
 contentType: "How-to"
 ---
 
-La page **Widget de site web**, dans le menu latéral, crée et gère les clés du widget de réceptionniste. Depuis le widget, les visiteurs peuvent clavarder, laisser leurs coordonnées et lancer un appel depuis leur navigateur.
+La page **Widget de site web**, dans le menu latéral, crée et gère les clés du widget d'agent. Depuis le widget, les visiteurs peuvent clavarder, laisser leurs coordonnées et lancer un appel depuis leur navigateur.
 
 <Note>
   Le clavardage sur le site Web est restreint et ne fait pas partie des forfaits hébergés. La création de nouvelles clés de widget est désactivée par défaut. Sur un déploiement auto-hébergé, définissez `WIDGET_KEY_ISSUANCE_ENABLED=true` pour en créer. Les clés existantes continuent de fonctionner.
@@ -43,16 +43,16 @@ Vous pouvez permettre à quelqu'un de votre équipe de rejoindre un clavardage d
 
 Pendant vos heures d'ouverture, ou en tout temps si vous n'en avez pas défini, un visiteur qui demande à parler à quelqu'un dans le clavardage attend votre équipe :
 
-1. La réceptionniste dit au visiteur qu'elle a prévenu l'équipe, puis cesse de répondre.
+1. L'agent dit au visiteur qu'il a prévenu l'équipe, puis cesse de répondre.
 2. Votre équipe reçoit une alerte **Visiteur qui demande une personne**, et le clavardage affiche **Visiteur en attente** dans [Messages](/fr/dashboard/messages).
 3. La première personne qui répond ou clique sur **Rejoindre le clavardage** prend le clavardage. Le visiteur voit le prénom inscrit à son profil.
-4. Si personne ne se joint dans les 3 minutes, la réceptionniste reprend le clavardage et demande au visiteur son nom et son numéro, pour que quelqu'un le rappelle.
+4. Si personne ne se joint dans les 3 minutes, l'agent reprend le clavardage et demande au visiteur son nom et son numéro, pour que quelqu'un le rappelle.
 
 Activez ou désactivez cette alerte par courriel et par SMS sur la page **Widget de site web**.
 
-En dehors des heures d'ouverture, pendant les appels depuis le navigateur et quand le clavardage en direct est désactivé, la réceptionniste propose de prendre un message pour que votre équipe rappelle le visiteur. Les demandes de rappel apparaissent dans le tableau de bord comme les autres messages.
+En dehors des heures d'ouverture, pendant les appels depuis le navigateur et quand le clavardage en direct est désactivé, l'agent propose de prendre un message pour que votre équipe rappelle le visiteur. Les demandes de rappel apparaissent dans le tableau de bord comme les autres messages.
 
-Les clavardages du site Web et les appels depuis le navigateur ne peuvent pas être transférés vers une ligne téléphonique, donc la réceptionniste ne dit jamais qu'elle met le visiteur en relation. Pendant les appels depuis le navigateur, et dans les clavardages où le clavardage en direct est désactivé, elle donne aussi au visiteur le numéro de téléphone de votre entreprise si vous avez défini un **Numéro de transfert par défaut**. Le visiteur peut appeler ce numéro et demander à parler à quelqu'un. La réceptionniste suit votre règle de transfert : si les transferts sont réservés aux urgences, elle donne le numéro pour les urgences, et si les transferts sont désactivés, elle ne donne aucun numéro.
+Les clavardages du site Web et les appels depuis le navigateur ne peuvent pas être transférés vers une ligne téléphonique, donc l'agent ne dit jamais qu'il met le visiteur en relation. Pendant les appels depuis le navigateur, et dans les clavardages où le clavardage en direct est désactivé, il donne aussi au visiteur le numéro de téléphone de votre entreprise si vous avez défini un **Numéro de transfert par défaut**. Le visiteur peut appeler ce numéro et demander à parler à quelqu'un. L'agent suit votre règle de transfert : si les transferts sont réservés aux urgences, il donne le numéro pour les urgences, et si les transferts sont désactivés, il ne donne aucun numéro.
 
 ## Gérer vos widgets
 

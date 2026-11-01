@@ -135,7 +135,7 @@ Un point de terminaison OTLP vide ne désactive ni les journaux stdout des conte
 | --- | --- |
 | `TWILIO_*` | Voix, vérification, provisionnement des numéros et authentification des webhooks. |
 | `OPENAI_API_KEY` | Appels GPT-Live et clé de repli pour `AI_CHAT_*` et `AI_EMBEDDING_*`. |
-| `AI_CHAT_API_KEY`, `AI_CHAT_BASE_URL`, `AI_CHAT_MODEL`, `AI_CHAT_PROVIDER_NAME` | L'agent réceptionniste pour le clavardage du site Web et les appels. Laissez `AI_CHAT_MODEL` vide sur OpenAI pour utiliser `gpt-6-luna`. Définissez-la pour tout autre point de terminaison compatible OpenAI. |
+| `AI_CHAT_API_KEY`, `AI_CHAT_BASE_URL`, `AI_CHAT_MODEL`, `AI_CHAT_PROVIDER_NAME` | L'agent pour le clavardage du site Web et les appels. Laissez `AI_CHAT_MODEL` vide sur OpenAI pour utiliser `gpt-6-luna`. Définissez-la pour tout autre point de terminaison compatible OpenAI. |
 | `AI_CHAT_REASONING_EFFORT` | OpenAI seulement : `none`, `minimal`, `low`, `medium`, `high` ou `xhigh`. Vaut `high` par défaut. |
 | `AI_SUMMARY_MODEL` | Le modèle que le worker utilise sur le point de terminaison `AI_CHAT_*` pour écrire le résumé d'une ligne de chaque appel terminé et relever le nom de l'appelant. Laissez-la vide pour utiliser `AI_CHAT_MODEL`. Avec un modèle différent, le coût IA du résumé d'appel reste inconnu, car les prix `AI_CHAT_*` décrivent le modèle de clavardage. Sans aucun modèle de texte, les appels reçoivent un résumé tiré de la transcription. |
 | `AI_SUMMARY_REASONING_EFFORT` | OpenAI seulement : effort de raisonnement pour les résumés d'appel. Vaut `low` par défaut. |

@@ -135,7 +135,7 @@ Un endpoint OTLP vacío no desactiva los registros stdout de los contenedores, l
 | --- | --- |
 | `TWILIO_*` | Voz, verificación, aprovisionamiento de números y autenticación de webhooks. |
 | `OPENAI_API_KEY` | Llamadas de GPT-Live y clave de respaldo para `AI_CHAT_*` y `AI_EMBEDDING_*`. |
-| `AI_CHAT_API_KEY`, `AI_CHAT_BASE_URL`, `AI_CHAT_MODEL`, `AI_CHAT_PROVIDER_NAME` | El agente de la recepcionista para el chat del sitio web y las llamadas. Deje `AI_CHAT_MODEL` en blanco con OpenAI para usar `gpt-6-luna`. Configúrela para cualquier otro endpoint compatible con OpenAI. |
+| `AI_CHAT_API_KEY`, `AI_CHAT_BASE_URL`, `AI_CHAT_MODEL`, `AI_CHAT_PROVIDER_NAME` | El agente para el chat del sitio web y las llamadas. Deje `AI_CHAT_MODEL` en blanco con OpenAI para usar `gpt-6-luna`. Configúrela para cualquier otro endpoint compatible con OpenAI. |
 | `AI_CHAT_REASONING_EFFORT` | Solo OpenAI: `none`, `minimal`, `low`, `medium`, `high` o `xhigh`. El valor predeterminado es `high`. |
 | `AI_SUMMARY_MODEL` | El modelo que el worker usa en el endpoint `AI_CHAT_*` para escribir el resumen de una línea de cada llamada terminada y obtener el nombre de la persona que llama. Déjela en blanco para usar `AI_CHAT_MODEL`. Con un modelo distinto, el costo de IA del resumen de la llamada queda desconocido, porque los precios de `AI_CHAT_*` corresponden al modelo de chat. Sin ningún modelo de texto, las llamadas recurren a un resumen tomado de la transcripción. |
 | `AI_SUMMARY_REASONING_EFFORT` | Solo OpenAI: esfuerzo de razonamiento para los resúmenes de llamadas. El valor predeterminado es `low`. |

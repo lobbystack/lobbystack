@@ -25,8 +25,8 @@ Los conectores personalizados están disponibles en los planes Free, Pro, Max, T
   <Step title="Conéctese e inicie sesión">
     Haga clic en **Connect**. Claude abre LobbyStack. Inicie sesión si aún no lo ha hecho.
   </Step>
-  <Step title="Elija el negocio y los permisos">
-    Elija el negocio, desmarque lo que Claude no deba hacer y haga clic en **Permitir acceso**. Volverá a Claude con la conexión hecha.
+  <Step title="Elija el espacio de trabajo y los permisos">
+    Elija el espacio de trabajo, desmarque lo que Claude no deba hacer y haga clic en **Permitir acceso**. Volverá a Claude con la conexión hecha.
   </Step>
 </Steps>
 
@@ -117,7 +117,7 @@ Pida a Claude que llame a `get_business`. Debería responder con el nombre de su
 
 | Síntoma | Solución |
 | --- | --- |
-| La página de inicio de sesión indica que no puede conectar aplicaciones | Pida a un propietario del negocio que conecte Claude o que le haga administrador. |
+| La página de inicio de sesión indica que no puede conectar aplicaciones | Pida a un propietario del espacio de trabajo que conecte Claude o que le haga administrador. |
 | `401` o "unauthorized" | Vuelva a conectarse. Con una clave de API, compruebe que copió la clave completa y que nadie la revocó. |
 | `403` o "insufficient_scope" | Vuelva a conectarse y permita al menos un permiso. Con una clave de API, cree una con un permiso distinto de `webhooks:manage`. |
 | Falta una herramienta | Vuelva a conectarse y permita el permiso que necesita esa herramienta. |

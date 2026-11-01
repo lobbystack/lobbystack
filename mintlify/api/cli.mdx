@@ -1,11 +1,11 @@
 ---
 title: "Onboard a business from the command line"
-description: "Describe a business in one file, and let the lobbystack command set up its knowledge, receptionist, plan, phone number and owner."
+description: "Describe a business in one file, and let the lobbystack command set up its knowledge, agent, plan, phone number and owner."
 sidebarTitle: "Command line"
 contentType: "How-to"
 ---
 
-The `lobbystack` command works with LobbyStack through the [API](/api/overview). `lobbystack onboard` reads one file that describes a business and makes the business match it. It creates the business, adds its knowledge, sets up the receptionist and services, picks a plan, claims a phone number, and sends the owner a link to take over. When you change the file and run it again, it changes only what differs.
+The `lobbystack` command works with LobbyStack through the [API](/api/overview). `lobbystack onboard` reads one file that describes a business and makes the business match it. It creates the business, adds its knowledge, sets up the agent and services, picks a plan, claims a phone number, and sends the owner a link to take over. When you change the file and run it again, it changes only what differs.
 
 ## Install the command
 
@@ -93,7 +93,7 @@ owner:
 | `receptionist` | The fields of `PATCH /receptionist`, such as `greeting`, `tone`, `transfer_mode`, `transfer_number` and `booking_mode`. |
 | `services` | The fields of `POST /services`. A service with the same name is updated instead of added again. |
 | `rules` | The fields of `POST /rules`. A rule with the same title is updated. |
-| `knowledge.websites` | Sites the receptionist reads. The first read takes a sample of each site. |
+| `knowledge.websites` | Sites the agent reads. The first read takes a sample of each site. |
 | `knowledge.read_full_site` | `true` waits for that sample, then reads the rest of each site. |
 | `knowledge.files` | PDF, Word, text, Markdown, JPEG, PNG, WebP or TIFF files up to 10 MB, as paths inside the manifest's folder. Give an entry `path`, `title` and `tags` to name it. |
 | `knowledge.faqs` | Questions and answers. An FAQ with the same question gets the new answer. |

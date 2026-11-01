@@ -1,13 +1,13 @@
 ---
 title: "Configure appointment changes"
-description: "Let your AI receptionist cancel and reschedule appointments during calls with configurable verification."
+description: "Let your AI agent cancel and reschedule appointments during calls with configurable verification."
 sidebarTitle: "Appointment changes"
 contentType: "How-to"
 ---
 
 When callers need to cancel or move an appointment, LobbyStack can handle the request during the call.
 
-Instead of waiting for your team to read a message, check the calendar, and reply manually, the AI receptionist can identify the appointment, confirm the request, and update the booking for you.
+Instead of waiting for your team to read a message, check the calendar, and reply manually, the AI agent can identify the appointment, confirm the request, and update the booking for you.
 
 ## What the AI can handle
 
@@ -25,14 +25,14 @@ This is designed for everyday appointment changes that usually take your team aw
 
 Appointment changes are not made from a casual request alone. LobbyStack asks for enough detail to make sure the customer is changing the right appointment.
 
-By default, the receptionist uses:
+By default, the agent uses:
 
 - The phone number from the call.
 - The customer's name.
 - An appointment detail, such as the appointment time or service.
 - A clear final confirmation before canceling or rescheduling.
 
-If the receptionist cannot confirm the appointment confidently, it will not make the change automatically. It can hand the conversation to your team instead.
+If the agent cannot confirm the appointment confidently, it will not make the change automatically. It can hand the conversation to your team instead.
 
 <Note>
   LobbyStack helps you apply consistent confirmation steps, but it does not replace your own legal or privacy review. Configure the level of verification that fits your business, region, and appointment type.
@@ -45,14 +45,14 @@ For businesses that want extra assurance, **Caller verification** adds a check b
 | Option | What the caller does |
 | --- | --- |
 | **Phone number and booking details** | Calls from the number the appointment was booked with and says its time or service. This is the default. |
-| **Texted one-time code** | Also reads back a code the receptionist texts to that number. |
+| **Texted one-time code** | Also reads back a code the agent texts to that number. |
 | **Keypad PIN** | Also types a PIN on the phone keypad. Your team sets each customer's PIN, and no text is needed. |
 
 A stricter check is useful when appointments are sensitive, high-value, or subject to stricter internal policies.
 
 ### Set up keypad PINs
 
-With **Keypad PIN** selected, the receptionist asks the caller to type their PIN on the phone keypad and press the pound key (#). The PIN never reaches the AI or the call transcript, and the receptionist won't accept a PIN that's said aloud.
+With **Keypad PIN** selected, the agent asks the caller to type their PIN on the phone keypad and press the pound key (#). The PIN never reaches the AI or the call transcript, and the agent won't accept a PIN that's said aloud.
 
 <Steps>
   <Step title="Open the contact">
@@ -70,7 +70,7 @@ To give PINs to many customers at once, use the [command line](/api/cli) or the 
 
 A caller can try their PIN 3 times on each change. After 5 wrong PINs in a row, even across calls, the PIN is locked and the contact shows it as locked. Setting a new PIN unlocks it.
 
-Callers without a PIN, or with a locked one, can't change appointments by phone. The receptionist passes their cancellation request to your team instead.
+Callers without a PIN, or with a locked one, can't change appointments by phone. The agent passes their cancellation request to your team instead.
 
 <Warning>
   On a self-hosted LobbyStack, PINs are checked with the server's `OTP_HASH_SECRET` (or `ENCRYPTION_KEY` when it isn't set). If that secret changes, every saved PIN stops working and has to be set again.
@@ -90,7 +90,7 @@ For rescheduling, LobbyStack checks availability before offering a new time. If 
 
 ## Turn appointment changes on or off
 
-You control whether the receptionist can cancel or reschedule, and how it verifies callers.
+You control whether the agent can cancel or reschedule, and how it verifies callers.
 
 <Steps>
   <Step title="Open AI settings">

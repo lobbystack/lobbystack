@@ -7,7 +7,7 @@ description: "Use the LobbyStack MCP tools to read a business's calls, messages,
 
 # LobbyStack
 
-LobbyStack runs an AI receptionist that answers a business's phone calls and website chat. The LobbyStack MCP server lets you work on that business's data for the owner. Each connection sees one business. The permissions the owner approved (or the API key's scopes) decide which tools you have, so a tool listed here may be missing from your session.
+LobbyStack runs an AI agent that answers a business's phone calls and website chat. The LobbyStack MCP server lets you work on that business's data for the owner. Each connection sees one business. The permissions the owner approved (or the API key's scopes) decide which tools you have, so a tool listed here may be missing from your session.
 
 ## Before you act
 
@@ -36,7 +36,7 @@ LobbyStack runs an AI receptionist that answers a business's phone calls and web
 | `book_appointment` | `appointments:write` | Book an open time |
 | `cancel_appointment` | `appointments:write` | Cancel an appointment |
 | `reschedule_appointment` | `appointments:write` | Move an appointment to another open time |
-| `list_messages` | `messages:read` | Read messages the receptionist took |
+| `list_messages` | `messages:read` | Read messages the agent took |
 | `add_knowledge` | `knowledge:write` | Add an FAQ or a text entry |
 
 List tools return `{ data, next_cursor, has_more }`. When `has_more` is true, call again with `cursor` set to `next_cursor`.
@@ -55,7 +55,7 @@ List tools return `{ data, next_cursor, has_more }`. When `has_more` is true, ca
 2. Call `list_services` and pick the service the owner named.
 3. Call `check_availability` with `service_id` and `start_date` as `YYYY-MM-DD` in the business time zone. Add `end_date` for a range of up to 7 days. If the customer wants a particular person, get their id from `list_staff` and pass it as `staff_id` here and to `book_appointment`.
 4. Offer a few times in local time. When the owner picks one, call `book_appointment` with that slot's `starts_at` unchanged, plus `contact_id` or `contact_phone`.
-5. Set `sms_consent` to true only if the owner says the customer agreed to texts. It only takes effect on self-hosted instances; on LobbyStack Cloud, only the receptionist collects text consent, on a call.
+5. Set `sms_consent` to true only if the owner says the customer agreed to texts. It only takes effect on self-hosted instances; on LobbyStack Cloud, only the agent collects text consent, on a call.
 6. Send an `idempotency_key` (any unique string). If the call times out, retry with the same key; you get the first booking back instead of a duplicate.
 
 To reschedule, run `check_availability` for the appointment's `service_id`, then call `reschedule_appointment`. The staff member stays the same unless you pass `staff_id`; check availability with that `staff_id` first. To see one customer's bookings, call `list_appointments` with their `contact_id`.
@@ -65,7 +65,7 @@ To reschedule, run `check_availability` for the appointment's `service_id`, then
 1. Call `get_business` for the time zone.
 2. Work out yesterday's local midnight and today's local midnight, with their UTC offset, for example `2026-09-26T00:00:00-04:00` and `2026-09-27T00:00:00-04:00`.
 3. Call `list_calls` with `started_after` and `started_before` set to those times. Page through with `cursor` if `has_more` is true.
-4. Calls with `outcome` `message_taken`, `booking_incomplete` or `none` are the ones that may need a follow-up. `appointment_booked` means the receptionist handled it.
+4. Calls with `outcome` `message_taken`, `booking_incomplete` or `none` are the ones that may need a follow-up. `appointment_booked` means the agent handled it.
 5. Call `list_messages` with `status` `open` for the callbacks the team still owes. Match messages to calls with `call_id`.
 6. Call `get_call` only for the calls you need to explain. Transcripts can be long.
 
@@ -78,13 +78,13 @@ To reschedule, run `check_availability` for the appointment's `service_id`, then
 
 ### Add an FAQ
 
-Call `add_knowledge` with `type` `faq`, a `question` as a caller would ask it, and a factual `answer`. For longer material such as a price list or a policy, use `type` `text` with `title` and `content`. Write facts about the business, not instructions to the receptionist. Don't add anything the owner didn't give you.
+Call `add_knowledge` with `type` `faq`, a `question` as a caller would ask it, and a factual `answer`. For longer material such as a price list or a policy, use `type` `text` with `title` and `content`. Write facts about the business, not instructions to the agent. Don't add anything the owner didn't give you.
 
 ## Booking mode
 
 | `booking_mode` | Meaning | What to do |
 | --- | --- | --- |
-| `instant` | The receptionist and these tools book directly. | Book or reschedule. |
+| `instant` | The agent and these tools book directly. | Book or reschedule. |
 | `request` | The team confirms each request in the dashboard. | Don't book. Tell the owner the team confirms requests from the dashboard inbox. |
 | `off` | The business takes no bookings. | Don't book. Tell the owner. |
 

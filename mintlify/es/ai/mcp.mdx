@@ -1,6 +1,6 @@
 ---
-title: "Maneje su recepcionista desde un asistente de IA"
-description: "Conecte Claude, ChatGPT y otros clientes MCP a LobbyStack para leer llamadas, reservar citas y actualizar lo que sabe su recepcionista."
+title: "Maneje su agente desde un asistente de IA"
+description: "Conecte Claude, ChatGPT y otros clientes MCP a LobbyStack para leer llamadas, reservar citas y actualizar lo que sabe su agente."
 sidebarTitle: "Servidor MCP"
 contentType: "Reference"
 ---
@@ -77,8 +77,8 @@ Los propietarios y administradores ven todos los asistentes conectados al negoci
 | `book_appointment` | `appointments:write` | Reserva un horario libre |
 | `cancel_appointment` | `appointments:write` | Cancela una cita |
 | `reschedule_appointment` | `appointments:write` | Mueve una cita a otro horario libre o a otro miembro del equipo |
-| `list_messages` | `messages:read` | Mensajes que la recepcionista tomó para su equipo |
-| `add_knowledge` | `knowledge:write` | Agrega una pregunta frecuente o un texto que la recepcionista puede usar |
+| `list_messages` | `messages:read` | Mensajes que el agente tomó para su equipo |
+| `add_knowledge` | `knowledge:write` | Agrega una pregunta frecuente o un texto que el agente puede usar |
 
 En una conexión de socio, cada una de estas herramientas también recibe un `business_id`, y se suman las herramientas de socio de [Gestione la consola de socios desde un asistente de IA](/es/white-label/mcp-for-agencies#herramientas). Los permisos (scopes) son los mismos para OAuth y para las claves de API. Las herramientas devuelven los mismos objetos que la API REST, con las horas en UTC. Las herramientas de solo lectura llevan la anotación `readOnlyHint`, y las que cancelan, mueven o reemplazan datos llevan `destructiveHint`, para que su asistente pueda pedirle confirmación antes de ejecutarlas.
 

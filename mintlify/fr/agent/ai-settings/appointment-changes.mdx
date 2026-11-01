@@ -1,13 +1,13 @@
 ---
 title: "Configurer les modifications de rendez-vous"
-description: "Laissez votre réceptionniste IA annuler et déplacer des rendez-vous pendant les appels, avec un niveau de vérification que vous choisissez."
+description: "Laissez votre agent IA annuler et déplacer des rendez-vous pendant les appels, avec un niveau de vérification que vous choisissez."
 sidebarTitle: "Modifications de rendez-vous"
 contentType: "How-to"
 ---
 
 Quand un appelant doit annuler ou déplacer un rendez-vous, LobbyStack peut traiter la demande pendant l'appel.
 
-Votre équipe n'a plus à lire un message, vérifier le calendrier et répondre à la main : la réceptionniste IA peut retrouver le rendez-vous, confirmer la demande et mettre à jour la réservation pour vous.
+Votre équipe n'a plus à lire un message, vérifier le calendrier et répondre à la main : l'agent IA peut retrouver le rendez-vous, confirmer la demande et mettre à jour la réservation pour vous.
 
 ## Ce que l'IA peut faire
 
@@ -25,14 +25,14 @@ Cette fonction vise les modifications de rendez-vous courantes, qui détournent 
 
 Une simple demande en passant ne suffit pas pour modifier un rendez-vous. LobbyStack demande assez de détails pour s'assurer que le client modifie le bon rendez-vous.
 
-Par défaut, la réceptionniste utilise :
+Par défaut, l'agent utilise :
 
 - Le numéro de téléphone de l'appel.
 - Le nom du client.
 - Un détail du rendez-vous, comme l'heure ou le service.
 - Une confirmation finale claire avant d'annuler ou de déplacer le rendez-vous.
 
-Si la réceptionniste ne parvient pas à confirmer le rendez-vous avec certitude, elle ne fait pas la modification automatiquement. Elle peut plutôt transmettre la conversation à votre équipe.
+Si l'agent ne parvient pas à confirmer le rendez-vous avec certitude, il ne fait pas la modification automatiquement. Il peut plutôt transmettre la conversation à votre équipe.
 
 <Note>
   LobbyStack vous aide à appliquer des étapes de confirmation cohérentes, mais ne remplace pas votre propre analyse juridique ou de confidentialité. Configurez le niveau de vérification adapté à votre entreprise, à votre région et au type de rendez-vous.
@@ -45,14 +45,14 @@ Si votre entreprise veut une garantie supplémentaire, **Vérification de l'appe
 | Option | Ce que fait l'appelant |
 | --- | --- |
 | **Numéro de téléphone et détails du rendez-vous** | Il appelle du numéro utilisé pour réserver et indique l'heure ou le service du rendez-vous. C'est l'option par défaut. |
-| **Code unique par SMS** | Il lit aussi un code que la réceptionniste envoie par SMS à ce numéro. |
+| **Code unique par SMS** | Il lit aussi un code que l'agent envoie par SMS à ce numéro. |
 | **Code PIN sur le clavier** | Il saisit aussi un code PIN sur le clavier de son téléphone. Votre équipe définit le code PIN de chaque client, sans aucun SMS. |
 
 Une vérification plus stricte est utile pour les rendez-vous sensibles, de grande valeur ou soumis à des politiques internes plus strictes.
 
 ### Configurer les codes PIN
 
-Avec **Code PIN sur le clavier**, la réceptionniste demande à l'appelant de saisir son code PIN sur le clavier de son téléphone, puis d'appuyer sur la touche dièse (#). Le code PIN n'est jamais transmis à l'IA ni à la transcription de l'appel, et la réceptionniste refuse un code PIN dit à voix haute.
+Avec **Code PIN sur le clavier**, l'agent demande à l'appelant de saisir son code PIN sur le clavier de son téléphone, puis d'appuyer sur la touche dièse (#). Le code PIN n'est jamais transmis à l'IA ni à la transcription de l'appel, et l'agent refuse un code PIN dit à voix haute.
 
 <Steps>
   <Step title="Ouvrez le contact">
@@ -70,7 +70,7 @@ Pour donner un code PIN à de nombreux clients à la fois, utilisez la [ligne de
 
 L'appelant peut essayer son code PIN 3 fois par modification. Après 5 codes PIN erronés d'affilée, même sur plusieurs appels, le code PIN est bloqué et la fiche contact l'indique. Définir un nouveau code PIN le débloque.
 
-Un appelant sans code PIN, ou dont le code PIN est bloqué, ne peut pas modifier ses rendez-vous par téléphone. La réceptionniste transmet plutôt sa demande d'annulation à votre équipe.
+Un appelant sans code PIN, ou dont le code PIN est bloqué, ne peut pas modifier ses rendez-vous par téléphone. L'agent transmet plutôt sa demande d'annulation à votre équipe.
 
 <Warning>
   Sur une installation auto-hébergée de LobbyStack, les codes PIN sont vérifiés avec le `OTP_HASH_SECRET` du serveur (ou `ENCRYPTION_KEY` s'il n'est pas défini). Si ce secret change, tous les codes PIN enregistrés cessent de fonctionner et doivent être redéfinis.
@@ -90,7 +90,7 @@ Pour un déplacement, LobbyStack vérifie les disponibilités avant de proposer 
 
 ## Activer ou désactiver les modifications de rendez-vous
 
-Vous décidez si la réceptionniste peut annuler ou déplacer des rendez-vous, et comment elle vérifie l'appelant.
+Vous décidez si l'agent peut annuler ou déplacer des rendez-vous, et comment il vérifie l'appelant.
 
 <Steps>
   <Step title="Ouvrez Paramètres IA">
