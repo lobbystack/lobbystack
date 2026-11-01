@@ -910,6 +910,7 @@ export const messages = pgTable(
     body: text("body").notNull(),
     status: varchar("status", { length: 32 }).default("pending").notNull(),
     providerStatus: varchar("provider_status", { length: 64 }),
+    // "compliance" on a STOP, START or HELP text and its fixed reply.
     senderRole: varchar("sender_role", { length: 32 }),
     // The team member who wrote it, so a website chat can show their name.
     sentByUserId: uuid("sent_by_user_id").references(() => users.id, { onDelete: "set null" }),

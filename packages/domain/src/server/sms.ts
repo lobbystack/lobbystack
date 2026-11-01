@@ -1,4 +1,4 @@
-import { and, eq, gt, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, lt, ne, or, sql, type SQL } from "drizzle-orm";
 
 import { businesses, contacts, conversationSessions, conversations, enqueueOutbox, messages, providerEvents, smsConsentEvents, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import type { CarrierId } from "@lobbystack/providers/telephony/types";
@@ -25,6 +25,17 @@ const SMS_HELP_KEYWORDS = new Set(["HELP", "INFO", "AIDE"]);
  */
 function isStartKeyword(keyword: string, optedOut: boolean | undefined): boolean {
   return SMS_START_KEYWORDS.has(keyword) || (keyword === "YES" && optedOut === true);
+}
+
+/**
+ * messages.senderRole on a STOP, START or HELP text and on its fixed reply.
+ * providerStatus can't mark them, because delivery updates overwrite it.
+ */
+const COMPLIANCE_SENDER_ROLE = "compliance";
+
+/** Filters out compliance texts and replies, which never answer or replace a customer's question. */
+export function notComplianceMessage(): SQL {
+  return sql`${messages.senderRole} is distinct from ${COMPLIANCE_SENDER_ROLE}`;
 }
 
 export type SmsConsentUpdate = { status: "subscribed" | "opted_out"; source: string };
@@ -210,7 +221,11 @@ export async function receiveInboundSms(
     if (!session) throw new Error("Inbound SMS session could not be created.");
     const retentionPlan = isContentRetentionEnabled() ? await resolveBusinessBillingPlan(tx, input.businessId) : null;
     const contentExpiresAt = retentionPlan ? contentExpiryForPlan(retentionPlan, "messages") : null;
-    const [message] = await tx.insert(messages).values({ businessId: input.businessId, conversationId: conversation.id, conversationSessionId: session.id, direction: "inbound", channel: "sms", body: input.body, contentExpiresAt, providerMessageId: input.providerMessageId, carrier, status: "received" }).onConflictDoNothing({ target: messages.providerMessageId }).returning({ id: messages.id });
+    const optOutType = typeof input.payload?.OptOutType === "string" && input.payload.OptOutType ? input.payload.OptOutType : undefined;
+    const keyword = { body: input.body, optedOut: contact.smsConsentStatus === "opted_out", ...(optOutType !== undefined ? { optOutType } : {}) };
+    const consentUpdate = classifySmsConsentUpdate(keyword);
+    const keywordReply = classifySmsKeywordReply(keyword);
+    const [message] = await tx.insert(messages).values({ businessId: input.businessId, conversationId: conversation.id, conversationSessionId: session.id, direction: "inbound", channel: "sms", body: input.body, contentExpiresAt, providerMessageId: input.providerMessageId, carrier, status: "received", ...(consentUpdate || keywordReply ? { senderRole: COMPLIANCE_SENDER_ROLE } : {}) }).onConflictDoNothing({ target: messages.providerMessageId }).returning({ id: messages.id });
     if (!message) {
       const existing = (await tx.select({ id: messages.id }).from(messages).where(and(eq(messages.businessId, input.businessId), eq(messages.providerMessageId, input.providerMessageId))).limit(1))[0];
       if (!existing) throw new Error("Inbound SMS message could not be persisted.");
@@ -219,10 +234,6 @@ export async function receiveInboundSms(
     }
     await tx.update(conversations).set({ updatedAt: new Date() }).where(and(eq(conversations.id, conversation.id), eq(conversations.businessId, input.businessId)));
     await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "message", aggregateId: message.id, dedupeKey: `message:${message.id}:created`, payload: { type: "message.upserted", entityId: message.id, conversationId: conversation.id } });
-    const optOutType = typeof input.payload?.OptOutType === "string" && input.payload.OptOutType ? input.payload.OptOutType : undefined;
-    const keyword = { body: input.body, optedOut: contact.smsConsentStatus === "opted_out", ...(optOutType !== undefined ? { optOutType } : {}) };
-    const consentUpdate = classifySmsConsentUpdate(keyword);
-    const keywordReply = classifySmsKeywordReply(keyword);
     if (consentUpdate) {
       const now = new Date();
       // STOP clears the opt-in confirmation. START's reply confirms the opt-in itself.
@@ -235,7 +246,7 @@ export async function receiveInboundSms(
       const business = (await tx.select({ name: businesses.name }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0];
       const replyInput = { appName: await deploymentAppName(tx), businessName: business?.name ?? "" };
       const body = keywordReply.kind === "help" ? smsHelpReply(replyInput) : smsStartReply(replyInput);
-      const [replyMessage] = await tx.insert(messages).values({ businessId: input.businessId, conversationId: conversation.id, conversationSessionId: session.id, direction: "outbound", channel: "sms", body, contentExpiresAt, aiGenerated: false, status: "queued", providerStatus: "compliance_reply" }).returning({ id: messages.id });
+      const [replyMessage] = await tx.insert(messages).values({ businessId: input.businessId, conversationId: conversation.id, conversationSessionId: session.id, direction: "outbound", channel: "sms", body, contentExpiresAt, aiGenerated: false, status: "queued", providerStatus: "compliance_reply", senderRole: COMPLIANCE_SENDER_ROLE }).returning({ id: messages.id });
       if (replyMessage) {
         await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "message", aggregateId: replyMessage.id, dedupeKey: `message:${replyMessage.id}:created`, payload: { type: "message.upserted", entityId: replyMessage.id, conversationId: conversation.id } });
         await enqueueOutbox(tx, { topic: "sms.send", businessId: input.businessId, aggregateType: "message", aggregateId: replyMessage.id, dedupeKey: `message:${replyMessage.id}:send`, payload: { messageId: replyMessage.id } });

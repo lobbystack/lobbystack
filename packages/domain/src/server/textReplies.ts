@@ -5,7 +5,7 @@ import { contacts, conversations, enqueueOutbox, messages, withBusinessTransacti
 import type { DomainContext } from "./context";
 import { insertMessageInTransaction } from "./conversations";
 import { queueOperatorAlertInTransaction } from "./notifications";
-import { loadTextReplyReachInTransaction, queueUnansweredTextAlertInTransaction, textReplyBlockedReason } from "./sms";
+import { loadTextReplyReachInTransaction, notComplianceMessage, queueUnansweredTextAlertInTransaction, textReplyBlockedReason } from "./sms";
 
 /**
  * Replies in the window that hand a conversation to the team. A loop with
@@ -58,7 +58,7 @@ export async function loadTextReplyContext(context: DomainContext, input: { busi
       return null;
     }
     const rows = await tx.select({ direction: messages.direction, body: messages.body }).from(messages)
-      .where(and(eq(messages.businessId, input.businessId), eq(messages.conversationId, input.conversationId), eq(messages.channel, "sms"))).orderBy(desc(messages.createdAt)).limit(20);
+      .where(and(eq(messages.businessId, input.businessId), eq(messages.conversationId, input.conversationId), eq(messages.channel, "sms"), notComplianceMessage())).orderBy(desc(messages.createdAt)).limit(20);
     const [earlierReply] = await tx.select({ id: messages.id }).from(messages).where(and(eq(messages.businessId, input.businessId), eq(messages.conversationId, input.conversationId), aiReply)).limit(1);
     return { phone: reach.phone, firstReply: !earlierReply, history: rows.reverse().map((row) => ({ direction: row.direction === "inbound" ? "inbound" : "outbound", body: row.body })) };
   });
@@ -74,8 +74,9 @@ async function handOffToTeamInTransaction(tx: DatabaseTransaction, input: { busi
 /**
  * Whether the receptionist still answers `messageId`: the conversation is an
  * open text one it handles, the contact isn't blocked, and that message is
- * still the newest text. Locks the conversation, so the answer holds until the
- * transaction ends.
+ * still the newest text. A STOP, START or HELP text and its fixed reply don't
+ * count, so they can't strand a question waiting for its job. Locks the
+ * conversation, so the answer holds until the transaction ends.
  */
 async function stillAnsweringInTransaction(tx: DatabaseTransaction, input: { businessId: string; conversationId: string; messageId: string }): Promise<boolean> {
   const [conversation] = await tx.select({ automationState: conversations.automationState, channel: conversations.channel, status: conversations.status, contactBlockedAt: contacts.operatorBlockedAt })
@@ -83,7 +84,7 @@ async function stillAnsweringInTransaction(tx: DatabaseTransaction, input: { bus
     .where(and(eq(conversations.id, input.conversationId), eq(conversations.businessId, input.businessId))).limit(1).for("update", { of: conversations });
   if (!conversation || conversation.channel !== "sms" || conversation.status !== "open" || conversation.automationState !== "ai_active" || conversation.contactBlockedAt) return false;
   const [latest] = await tx.select({ id: messages.id, direction: messages.direction }).from(messages)
-    .where(and(eq(messages.businessId, input.businessId), eq(messages.conversationId, input.conversationId), eq(messages.channel, "sms"))).orderBy(desc(messages.createdAt)).limit(1);
+    .where(and(eq(messages.businessId, input.businessId), eq(messages.conversationId, input.conversationId), eq(messages.channel, "sms"), notComplianceMessage())).orderBy(desc(messages.createdAt)).limit(1);
   return latest?.id === input.messageId && latest.direction === "inbound";
 }
 

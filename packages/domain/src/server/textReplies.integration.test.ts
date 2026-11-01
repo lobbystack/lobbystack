@@ -5,7 +5,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { businessMemberships, businesses, contacts, conversations, createDatabaseClient, messages, operatorNotificationDeliveries, outboxMessages, phoneNumbers, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { appendMessage } from "./conversations";
-import { loadSmsDeliveryTarget, receiveInboundSms, recordSmsProviderPricing } from "./sms";
+import { loadSmsDeliveryTarget, markSmsSent, receiveInboundSms, recordSmsProviderPricing } from "./sms";
 import { loadTextReplyContext, saveTextReply, TEXT_REPLY_BUSINESS_DAILY_LIMIT, TEXT_REPLY_CONVERSATION_DAILY_LIMIT, TEXT_REPLY_LOOP_LIMIT } from "./textReplies";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
@@ -186,6 +186,37 @@ describe.skipIf(!testUrl)("AI text replies against PostgreSQL under production l
       const conversationId = await business.conversationId();
 
       expect(await asWorker(tx, (db) => saveTextReply({ db }, { businessId: business.businessId, conversationId, answeringMessageId: first.messageId!, body: "Yes" }))).toBeNull();
+    });
+  });
+
+  it("still answers a question when HELP follows it before the job runs", async () => {
+    await rollbackTest(async (tx) => {
+      const business = await seedBusiness(tx, { enabled: true });
+      const question = await business.receive("Are you open Sunday?");
+      const help = await business.receive("HELP");
+      const conversationId = await business.conversationId();
+      const [reply] = await tx.select({ id: messages.id }).from(messages).where(and(eq(messages.conversationId, conversationId), eq(messages.direction, "outbound")));
+      // The fixed reply goes out first, and delivery overwrites its provider status.
+      await asWorker(tx, (db) => markSmsSent({ db }, { businessId: business.businessId, messageId: reply!.id, providerMessageId: "SM-help-reply" }));
+      await tx.update(messages).set({ createdAt: new Date(Date.now() + 1_000) }).where(eq(messages.id, help.messageId!));
+      await tx.update(messages).set({ createdAt: new Date(Date.now() + 2_000) }).where(eq(messages.id, reply!.id));
+
+      const context = await asWorker(tx, (db) => loadTextReplyContext({ db }, { businessId: business.businessId, conversationId, messageId: question.messageId! }));
+      expect(context?.history).toEqual([{ direction: "inbound", body: "Are you open Sunday?" }]);
+      expect(await asWorker(tx, (db) => saveTextReply({ db }, { businessId: business.businessId, conversationId, answeringMessageId: question.messageId!, body: "We're closed Sunday." }))).toEqual(expect.any(String));
+    });
+  });
+
+  it("alerts the team to a question the customer followed with STOP", async () => {
+    await rollbackTest(async (tx) => {
+      const business = await seedBusiness(tx, { enabled: true });
+      const question = await business.receive("Are you open Sunday?");
+      const stop = await business.receive("STOP");
+      await tx.update(messages).set({ createdAt: new Date(Date.now() + 1_000) }).where(eq(messages.id, stop.messageId!));
+      const conversationId = await business.conversationId();
+
+      expect(await asWorker(tx, (db) => loadTextReplyContext({ db }, { businessId: business.businessId, conversationId, messageId: question.messageId! }))).toBeNull();
+      expect(await business.alerts()).toEqual([{ kind: "pausedSms" }]);
     });
   });
 
