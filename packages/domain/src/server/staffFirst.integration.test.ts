@@ -101,6 +101,16 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
     });
   });
 
+  it("lets a trial lock stop a staff phone, but not turning the setting off", async () => {
+    await rollbackTest(async (tx) => {
+      const businessId = await business(tx, { carrier: "twilio" });
+      await save(tx, businessId, { staffFirstMode: "always", staffFirstNumber: staffPhone });
+      await tx.insert(numberTrials).values({ businessId, userId: (await tx.select({ id: users.id }).from(users).limit(1))[0]!.id, status: "active", verifiedPhone: "+14165550199" });
+      expect(await save(tx, businessId, { staffFirstMode: "never", staffFirstNumber: staffPhone })).toMatchObject({ staffFirstMode: "never", staffFirstNumber: staffPhone });
+      await expect(save(tx, businessId, { staffFirstMode: "always" })).rejects.toMatchObject({ status: 409, code: "trial_transfer_locked" });
+    });
+  });
+
   it("refuses a Free business", async () => {
     await rollbackTest(async (tx) => {
       const businessId = await business(tx, { plan: "free_cloud", carrier: "twilio" });

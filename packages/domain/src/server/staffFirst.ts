@@ -32,10 +32,13 @@ export async function assertStaffFirstChange(tx: DatabaseTransaction, input: { b
   const mode = input.mode ?? current?.mode ?? "never";
   const number = input.number !== undefined ? input.number : current?.number;
   if (mode !== "never" && !number) throw Object.assign(new Error("Add the staff phone to ring first."), { status: 400, code: "staff_first_number_required" });
-  if (input.number) {
-    await assertTransferNumberAllowed(tx, { businessId: input.businessId, phone: input.number });
+  // Nothing dials the phone once it's off, so a rule like the trial's lock can't stop someone turning it off. Turning it back on checks the phone it would ring.
+  const turningOn = mode !== "never" && (current?.mode ?? "never") === "never";
+  const phone = input.mode === "never" ? undefined : input.number || (turningOn ? number : undefined);
+  if (phone) {
+    await assertTransferNumberAllowed(tx, { businessId: input.businessId, phone });
     // Ringing the number the call came in on would loop.
-    const own = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.e164, input.number), inArray(phoneNumbers.status, ["active", "provisioning"]))).limit(1);
+    const own = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.e164, phone), inArray(phoneNumbers.status, ["active", "provisioning"]))).limit(1);
     if (own.length) throw Object.assign(new Error("The staff phone can't be your LobbyStack number."), { status: 400, code: "staff_first_number_own_line" });
   }
   if (input.mode === undefined || input.mode === "never") return;
