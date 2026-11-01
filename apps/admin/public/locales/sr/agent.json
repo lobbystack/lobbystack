@@ -404,7 +404,8 @@
     },
     "unavailable": {
       "plan": "Dostupno na plaćenim paketima.",
-      "carrier": "Još nije dostupno na ovom broju."
+      "carrier": "Još nije dostupno na ovom broju.",
+      "setup": "Još nije podešeno na ovoj instalaciji."
     },
     "number": {
       "label": "Telefon osoblja",

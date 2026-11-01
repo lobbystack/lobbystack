@@ -50,7 +50,7 @@ type AgentSettings = {
   business: { defaultLocale: RuntimeLocale; teamLocale?: RuntimeLocale | null; timezone: string; currency?: string } | null;
   profile: { greeting: string; summary: string; summarySource: "placeholder" | "generated" | "operator"; summaryRegenerateStatus?: "pending" | "completed" | "empty" | "failed" | null; transferNumber: string | null; transferMode: string; appointmentChangePolicy: AppointmentChangePolicy | null; bookingMode: BookingMode; voice?: string } & StaffFirstProfile | null;
   hasKnowledgeSources?: boolean;
-  staffFirstBlock?: "plan" | "carrier" | null;
+  staffFirstBlock?: "plan" | "carrier" | "setup" | null;
 };
 
 // Matches SelectTrigger, so the searchable timezone picker looks like the selects beside it.

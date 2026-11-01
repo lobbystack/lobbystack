@@ -404,7 +404,8 @@
     },
     "unavailable": {
       "plan": "Available on paid plans.",
-      "carrier": "Not available on this number yet."
+      "carrier": "Not available on this number yet.",
+      "setup": "Not set up on this deployment yet."
     },
     "number": {
       "label": "Staff phone",

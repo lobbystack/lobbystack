@@ -152,6 +152,14 @@ it.each([["503"], ["486"], [undefined]])("forwards a call GPT-Live refused with 
   expect(mocks.forward).toHaveBeenCalledWith({}, { businessId: BUSINESS, e164: NUMBER, forwardedFrom: undefined });
 });
 
+it("gives a busy signal when a ring ends with no OpenAI project and the forward can't be read", async () => {
+  vi.stubEnv("OPENAI_PROJECT_ID", "");
+  mocks.forward.mockRejectedValue(new Error("database down"));
+  const { status, body } = await post("staff-result", { DialCallStatus: "no-answer", DialBridged: "false" }, routed);
+  expect(status).toBe(200);
+  expect(body).toContain('<Reject reason="busy"/>');
+});
+
 it("gives a busy signal when a refused call has nowhere to go", async () => {
   mocks.forward.mockResolvedValue(null);
   expect((await post("receptionist-result", { DialCallStatus: "failed", DialBridged: "false" }, routed)).body).toContain("<Reject");

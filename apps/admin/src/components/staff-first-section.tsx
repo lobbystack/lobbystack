@@ -36,6 +36,7 @@ const saveErrors: Record<string, string> = {
   staff_first_number_own_line: "agent:staffFirst.errors.ownLine",
   staff_first_plan_required: "agent:staffFirst.unavailable.plan",
   staff_first_carrier_unsupported: "agent:staffFirst.unavailable.carrier",
+  staff_first_not_configured: "agent:staffFirst.unavailable.setup",
   transfer_country_unsupported: "agent:fields.transferNumber.errors.countryUnsupported",
   transfer_number_invalid: "agent:fields.transferNumber.errors.invalid",
   trial_transfer_locked: "agent:staffFirst.errors.trialLocked",
@@ -44,7 +45,7 @@ const saveErrors: Record<string, string> = {
 /** Staff answers first: which phone rings before the receptionist answers, and for how long. */
 export function StaffFirstSection({ businessId, block, canManage, defaultLocale, isLoading, onSave, profile }: {
   businessId: string;
-  block: "plan" | "carrier" | null;
+  block: "plan" | "carrier" | "setup" | null;
   canManage: boolean;
   defaultLocale: RuntimeLocale;
   isLoading: boolean;

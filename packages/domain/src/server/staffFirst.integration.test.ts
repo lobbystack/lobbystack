@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { apiCallSchema } from "@lobbystack/shared";
 import { billingAccounts, billingUsageEvents, businessHours, businessMemberships, businesses, calls, contacts, createDatabaseClient, numberTrials, onboardingNumberClaimEvents, outboxMessages, partners, phoneNumbers, receptionistProfiles, users, webhookEndpoints, webhookEvents, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
@@ -74,6 +74,9 @@ const saveFromApi = (tx: DatabaseTransaction, businessId: string, patch: Patch) 
 const decide = (tx: DatabaseTransaction, input: Parameters<typeof decideStaffFirstCall>[1]) => as(tx, "lobbystack_worker", (db) => decideStaffFirstCall({ db }, input));
 
 describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
+  beforeEach(() => { vi.stubEnv("OPENAI_PROJECT_ID", "proj_test"); });
+  afterEach(() => { vi.unstubAllEnvs(); });
+
   it("saves the settings on a paid plan and queues a routing job for each Twilio number", async () => {
     await rollbackTest(async (tx) => {
       const businessId = await business(tx, { carrier: "twilio" });
@@ -115,6 +118,16 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
     await rollbackTest(async (tx) => {
       const businessId = await business(tx, { plan: "free_cloud", carrier: "twilio" });
       await expect(save(tx, businessId, { staffFirstMode: "always", staffFirstNumber: staffPhone })).rejects.toMatchObject({ status: 402, code: "staff_first_plan_required" });
+    });
+  });
+
+  it("refuses to turn on when the admin app can't reach GPT-Live, and still turns off", async () => {
+    await rollbackTest(async (tx) => {
+      const businessId = await business(tx, { carrier: "twilio" });
+      await save(tx, businessId, { staffFirstMode: "always", staffFirstNumber: staffPhone });
+      vi.stubEnv("OPENAI_PROJECT_ID", " ");
+      await expect(save(tx, businessId, { staffFirstMode: "business_hours" })).rejects.toMatchObject({ status: 409, code: "staff_first_not_configured", message: "Staff answers first needs OPENAI_PROJECT_ID on the admin app." });
+      expect(await save(tx, businessId, { staffFirstMode: "never" })).toMatchObject({ staffFirstMode: "never" });
     });
   });
 

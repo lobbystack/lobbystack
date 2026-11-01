@@ -404,7 +404,8 @@
     },
     "unavailable": {
       "plan": "Disponible en los planes de pago.",
-      "carrier": "Aún no está disponible en este número."
+      "carrier": "Aún no está disponible en este número.",
+      "setup": "Aún no está configurado en esta implementación."
     },
     "number": {
       "label": "Teléfono del personal",

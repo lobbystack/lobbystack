@@ -21,6 +21,11 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("StaffFirstSection", () => {
+  it("says when this deployment isn't set up for it", () => {
+    section({ block: "setup", profile: { staffFirstMode: "never" } });
+    expect(screen.getByText("agent:staffFirst.unavailable.setup")).toBeTruthy();
+  });
+
   it("hides the details while the setting is off", () => {
     section({ profile: { staffFirstMode: "never" } });
     expect(screen.queryByText("agent:staffFirst.number.label")).toBeNull();

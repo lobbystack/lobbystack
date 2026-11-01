@@ -404,7 +404,8 @@
     },
     "unavailable": {
       "plan": "Offert avec les forfaits payants.",
-      "carrier": "Pas encore offert sur ce numéro."
+      "carrier": "Pas encore offert sur ce numéro.",
+      "setup": "Pas encore configuré sur ce déploiement."
     },
     "number": {
       "label": "Téléphone du personnel",

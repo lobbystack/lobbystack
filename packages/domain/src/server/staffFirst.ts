@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { and, eq, gt, inArray, like, ne, sql } from "drizzle-orm";
 
 import { billingUsageEvents, calls, contacts, enqueueOutbox, numberTrials, phoneNumbers, receptionistProfiles, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { sipAddress } from "@lobbystack/providers/telephony/config";
 import { CARRIERS_WITH_STAFF_FIRST, type CarrierId } from "@lobbystack/providers/telephony/types";
 import { includesStaffFirst, isTransferPhone, shouldRingStaffFirst, type RuntimeLocale, type StaffFirstMode } from "@lobbystack/shared";
 
@@ -17,13 +18,15 @@ import { findOrCreateCallContactInTransaction } from "./voice";
 // Staff answers first: a call rings one staff phone before the receptionist
 // answers. See docs/specs/staff-answers-first.md.
 
-/** Why a business can't turn staff answers first on, or null when it can. A business with no number yet can: the setting applies to the number it buys. */
-export type StaffFirstBlock = "plan" | "carrier" | null;
+/** Why a business can't turn staff answers first on, or null when it can. A business with no number yet can: the setting applies to the number it buys. "setup" means this deployment's admin app can't reach GPT-Live. */
+export type StaffFirstBlock = "plan" | "carrier" | "setup" | null;
 
 export async function staffFirstBlockInTransaction(tx: DatabaseTransaction, businessId: string): Promise<StaffFirstBlock> {
   if (!includesStaffFirst(await loadEntitlement(tx, businessId))) return "plan";
   const numbers = await tx.select({ carrier: phoneNumbers.carrier }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active")));
-  return numbers.length && !numbers.some((number) => CARRIERS_WITH_STAFF_FIRST.includes(number.carrier as CarrierId)) ? "carrier" : null;
+  if (numbers.length && !numbers.some((number) => CARRIERS_WITH_STAFF_FIRST.includes(number.carrier as CarrierId))) return "carrier";
+  // The admin app dials GPT-Live from the webhook, so the worker's copy of the project doesn't help a call.
+  return sipAddress() ? null : "setup";
 }
 
 /** The rules a change to the mode or the staff phone must pass. The phone follows the same rules as a transfer number. */
@@ -45,6 +48,7 @@ export async function assertStaffFirstChange(tx: DatabaseTransaction, input: { b
   const block = await staffFirstBlockInTransaction(tx, input.businessId);
   if (block === "plan") throw Object.assign(new Error("Staff answers first needs a paid plan."), { status: 402, code: "staff_first_plan_required" });
   if (block === "carrier") throw Object.assign(new Error("Staff answers first isn't available on this number yet."), { status: 409, code: "staff_first_carrier_unsupported" });
+  if (block === "setup") throw Object.assign(new Error("Staff answers first needs OPENAI_PROJECT_ID on the admin app."), { status: 409, code: "staff_first_not_configured" });
 }
 
 /** Saving the mode moves the business's numbers on or off the staff-first webhook. desiredNumberRouting decides where each one goes. */

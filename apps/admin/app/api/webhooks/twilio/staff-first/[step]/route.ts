@@ -45,6 +45,16 @@ async function refusedCall(input: { businessId: string; called: string; forwarde
   return to ? forwardTwiml(to) : rejectTwiml();
 }
 
+/** refusedCall on a step with no voice fallback, so a database error still answers Twilio. */
+async function refusedCallOrBusy(input: { businessId: string; called: string; forwardedFrom?: string | undefined }): Promise<string> {
+  try {
+    return await refusedCall(input);
+  } catch (error) {
+    console.error("[staff-first] couldn't forward a refused call", error instanceof Error ? error.message : error);
+    return rejectTwiml();
+  }
+}
+
 const callerPhone = (from: string | undefined) => from && E164_PATTERN.test(from) ? from : undefined;
 
 /**
@@ -129,7 +139,7 @@ export async function POST(request: Request, { params: route }: { params: Promis
         console.error("[staff-first] couldn't read the handover", error instanceof Error ? error.message : error);
         return { locale: "en" as const };
       });
-      return twiml(dialReceptionist({ businessId, called, ...handover }) ?? await refusedCall({ businessId, called, forwardedFrom: params.ForwardedFrom }));
+      return twiml(dialReceptionist({ businessId, called, ...handover }) ?? await refusedCallOrBusy({ businessId, called, forwardedFrom: params.ForwardedFrom }));
     }
     case "receptionist-result": {
       const outcome = receptionistDialOutcome(params);
