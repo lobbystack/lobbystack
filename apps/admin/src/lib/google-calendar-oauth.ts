@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { oauthSigningSecret, oauthStartOriginValid, oauthStateDigest, oauthPayloadCurrent, signOAuthPayload, verifyOAuthPayload } from "./signed-oauth-state";
+import { oauthSigningSecret, oauthStartOriginValid, keyedStateDigest, oauthPayloadCurrent, signOAuthPayload, verifyOAuthPayload } from "./signed-oauth-state";
 
 /** `origin` names the partner's host the connection started on, and is absent on the host's domain. */
 type CalendarOAuthState = { userId: string; businessId: string; origin?: string; issuedAt: number; nonce: string };
@@ -35,7 +35,7 @@ function signingDomain(provider: CalendarOAuthProvider): string {
  * it never leaves the server and needs no storing, and a state works once.
  */
 export function calendarPkceVerifier(state: string): string {
-  return oauthStateDigest("calendar-pkce", state, UNCONFIGURED);
+  return keyedStateDigest("calendar-pkce", state, UNCONFIGURED);
 }
 
 // Each kind signs under its own domain, so an OAuth state never passes as a link, or a link as a state.
@@ -50,7 +50,7 @@ function verified(provider: CalendarOAuthProvider, kind: TokenKind, value: strin
 
 /** Domain-separated lookup digest; never persist the bearer value. */
 export function calendarOAuthStateDigest(state: string, provider: CalendarOAuthProvider = "google"): string {
-  return oauthStateDigest(signingDomain(provider), state, UNCONFIGURED);
+  return keyedStateDigest(signingDomain(provider), state, UNCONFIGURED);
 }
 
 export function verifyCalendarOAuthState(value: string, provider: CalendarOAuthProvider = "google"): CalendarOAuthState | null {
