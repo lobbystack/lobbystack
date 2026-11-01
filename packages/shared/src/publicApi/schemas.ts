@@ -255,7 +255,7 @@ export const apiPhoneNumberOfferSchema = z.object({
   region: z.string().nullable(),
   capabilities: z.object({ voice: z.boolean(), sms: z.boolean() }),
   trial: z.boolean().describe("A free trial number, offered to a cloud business without a paid plan, as in the dashboard: once per business, per account and verified phone, and per network in 30 days. It stops answering when the trial ends unless the business starts a paid plan."),
-  offer_token: z.string().describe("Claim the number with this before expires_at. Only this business, and the account the key acts as, can use it."),
+  offer_token: z.string().describe("Claim the number with this before expires_at. Only this business, and the account the key acts as or the partner's platform key that searched, can use it."),
   expires_at: timestamp,
 }).describe("A number the business can claim.");
 
@@ -473,10 +473,10 @@ export const apiBusinessCreateSchema = z.strictObject({
   slug: z.string().trim().min(2).max(120).optional().describe("Lowercase letters, digits and hyphens. Made from the name when left out. Another business already using it is a 409."),
   locale: locale.optional().describe("Default language for callers: en, fr, es, sr (Serbian, Latin script), de, pt (Brazilian Portuguese), it or nl. Defaults to en."),
   website_url: z.url().max(2_000).optional(),
-  owner_email: teamEmail.optional().describe("Required with a partner's platform key, and refused with the host's. The partner emails this address an invitation to own the business and sign in on the partner's dashboard."),
+  owner_email: teamEmail.optional().describe("Only with a partner's platform key. The partner emails this address an invitation to own the business and sign in on the partner's dashboard. Leave it out for a business you run from your own product: nobody hears from LobbyStack, and nobody can own the business later. It then can't be released and can't take package_id. Webhooks cover its calls and messages, and its other alerts email the partner's owners and admins. Set a transfer_number on the receptionist, or calls it can't take are refused."),
   access_level: z.enum(partnerAccessLevels).optional().describe("Only with a partner's platform key: what the business's own team can use. full, the default, lets them run the receptionist, its knowledge, hours, services and team, without billing, API keys or MCP. activity shows them calls, chats, appointments, contacts and messages, and the partner sets up the receptionist."),
   template_id: id.optional().describe("Only with a partner's platform key: one of the partner's templates, from GET /partner/templates, to start the business from. The key needs partner:read too. The business takes its setup and documents, apart from the name and time zone sent here, before the owner's invitation goes out. A template that can't be applied leaves no business behind and is a 409."),
-  package_id: id.optional().describe("Only with a partner's platform key: one of the partner's packages, from GET /partner/packages, to sell the business. The key needs partner.businesses:write too. The owner's invitation then opens a checkout on the partner's Stripe account. Left out, the business is billed outside LobbyStack."),
+  package_id: id.optional().describe("Only with a partner's platform key: one of the partner's packages, from GET /partner/packages, to sell the business. The key needs partner.businesses:write too, and owner_email is required. The owner's invitation then opens a checkout on the partner's Stripe account. Left out, the business is billed outside LobbyStack."),
 });
 
 export const apiBusinessSummarySchema = z.object({

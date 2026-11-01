@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { auditLogs, businesses, createDatabaseClient, outboxMessages, partnerApiIdempotencyKeys, partnerInvitations, partnerMembers, prospectDemos, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { auditLogs, businesses, businessInvitations, createDatabaseClient, outboxMessages, partnerApiIdempotencyKeys, partnerInvitations, partnerMembers, prospectDemos, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { FakeStripeConnect } from "@lobbystack/providers/stripe/fakeStripeConnect";
 import type { ApiKeyScope } from "@lobbystack/shared";
 
@@ -630,6 +630,28 @@ describe.skipIf(!testUrl)("the v1 Partner endpoints with a partner's own keys, a
       const left = await asMigrator(tx, async () => await tx.select({ key: partnerApiIdempotencyKeys.key, partnerId: partnerApiIdempotencyKeys.partnerId }).from(partnerApiIdempotencyKeys).where(sql`${partnerApiIdempotencyKeys.partnerId} in (${acme.partnerId}::uuid, ${bright.partnerId}::uuid)`));
       expect(left).toEqual([{ key: "fresh", partnerId: acme.partnerId }]);
       expect(await prunePartnerApiIdempotencyKeys(workerContext(tx))).toEqual({ deleted: 0 });
+    });
+  });
+
+  it("sells no package to a business nobody can own, which would stop answering with nobody to pay", async () => {
+    await rollbackTest(async (tx) => {
+      const acme = await partner(tx, "Acme Agency");
+      await connectStripe(acme);
+      const key = await acme.key(["businesses:create", "partner.packages:write", "partner.businesses:write", "partner:read"]);
+      const made = await createPartnerPackageForApi(acme.context, key, { name: "Front desk", monthly_price_minor: 9_900, voice_minutes: 300, chats: 500 });
+      const { business } = await createPartnerBusinessForApi(acme.context, { key, idempotencyKey: randomUUID(), requestHash: "hash", body: { name: "Pier Dental", timezone: "America/Toronto" } });
+
+      expect(await refusal(updatePartnerBusinessBillingForApi(acme.context, key, business.id, { package_id: made.id }))).toMatchObject({ status: 409, message: expect.stringContaining("no owner") });
+      expect(await getPartnerBusinessBillingForApi(acme.context, key, business.id)).toMatchObject({ kind: "outside" });
+      // Billing it outside LobbyStack needs nobody to pay.
+      expect(await updatePartnerBusinessBillingForApi(acme.context, key, business.id, { package_id: null })).toMatchObject({ kind: "outside" });
+
+      // Someone an invitation still reaches can pay, until it runs out.
+      const invited = await acme.business("Cedar Clinic");
+      expect(await updatePartnerBusinessBillingForApi(acme.context, key, invited, { package_id: made.id })).toMatchObject({ kind: "package" });
+      await updatePartnerBusinessBillingForApi(acme.context, key, invited, { package_id: null });
+      await asMigrator(tx, async () => await tx.update(businessInvitations).set({ expiresAt: new Date(Date.now() - 60_000) }).where(eq(businessInvitations.businessId, invited)));
+      expect(await refusal(updatePartnerBusinessBillingForApi(acme.context, key, invited, { package_id: made.id }))).toMatchObject({ status: 409 });
     });
   });
 

@@ -89,7 +89,7 @@ describe("v1 contract", () => {
   });
 
   it("keeps platform-only scopes off per-business keys, OAuth grants and Settings", () => {
-    expect([...platformOnlyScopes]).toEqual(["businesses:create", "users:create", ...partnerScopes]);
+    expect([...platformOnlyScopes]).toEqual(["businesses:create", "users:create", "phone_numbers:purchase", ...partnerScopes]);
     for (const scope of platformOnlyScopes) {
       expect(apiKeyScopes).toContain(scope);
       expect(businessApiKeyScopes).not.toContain(scope);

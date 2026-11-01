@@ -56,6 +56,18 @@ export function newPartnerNumberRefusal(standing: PartnerNumberStanding, deploym
 }
 
 /**
+ * Why a partner's platform key can't buy this partner a number on this
+ * deployment, as app.reserve_partner_key_number_claim decides, or null when it
+ * can. Only a paid tier pays for what a key buys, so a key needs one for a
+ * replacement too, and never gets a Free partner's trial number, which runs on
+ * one person's verified mobile.
+ */
+export function partnerKeyNumberRefusal(standing: PartnerNumberStanding, deploymentMode: string): "partner_numbers_unavailable" | "partner_number_limit_reached" | null {
+  if (!standing.counted) return deploymentMode === "cloud" ? "partner_numbers_unavailable" : null;
+  return standing.paidTier ? null : "partner_number_limit_reached";
+}
+
+/**
  * Whether a partner's business on this deployment gets its partner's one
  * 14-day trial number instead of the new number its tier doesn't include: a
  * partner on Free that hasn't had its trial, on the cloud while the

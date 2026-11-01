@@ -88,11 +88,23 @@ En plus des outils d'entreprise, une connexion partenaire reçoit ceux-ci. Les o
 | --- | --- | --- |
 | `get_partner` | `partner:read` | Le nom, les adresses et le palier de votre partenaire, et la réserve du mois avec l'accès à la facturation |
 | `list_businesses` | `partner:read` | Vos entreprises avec leurs propriétaires, leurs niveaux d'accès et leur utilisation, et leur facturation pour les propriétaires et les administrateurs |
-| `create_business` | `businesses:create` | Crée une entreprise et invite son propriétaire. `template_id` demande aussi `partner:read`, et `package_id` demande `partner.businesses:write`. |
+| `create_business` | `businesses:create` | Crée une entreprise et invite son propriétaire. Une clé de plateforme peut laisser `owner_email` de côté. `template_id` demande aussi `partner:read`, et `package_id` demande `partner.businesses:write`. |
 | `release_business` | `partner.businesses:write` | Cède une entreprise à son propriétaire. Destructif. |
 | `delete_business` | `partner.businesses:write` | Supprime une entreprise et tout son contenu. Destructif. |
 | `get_business_billing` | `partner:read` | La formule d'une entreprise, l'état de son abonnement et son dépassement |
 | `set_business_billing` | `partner.businesses:write` | Choisit la formule et le dépassement d'une entreprise |
+
+### Numéros de téléphone
+
+Seule une clé de plateforme reçoit ces outils. Réserver et remplacer coûtent de l'argent et demandent un palier payant : confirmez donc le numéro d'abord. Rechercher, réserver et remplacer demandent aussi `phone_numbers:manage`. Une personne connectée avec son propre compte achète les numéros dans le tableau de bord de l'entreprise.
+
+| Outil | Portée | Ce qu'il fait |
+| --- | --- | --- |
+| `list_phone_numbers` | `phone_numbers:manage` | Les numéros d'une entreprise, du plus récent au plus ancien |
+| `search_phone_numbers` | `phone_numbers:purchase` | Trouve des numéros qu'une entreprise peut réserver |
+| `claim_phone_number` | `phone_numbers:purchase` | Achète un numéro proposé. `idempotency_key` est obligatoire. |
+| `replace_phone_number` | `phone_numbers:purchase` | Réserve un numéro de remplacement, une fois par entreprise. `idempotency_key` est obligatoire. |
+| `get_phone_number_claim` | `phone_numbers:manage` | Le statut d'une réservation |
 
 ### Démos
 
