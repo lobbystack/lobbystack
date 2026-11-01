@@ -8,6 +8,7 @@ import { CARRIERS_WITH_STAFF_FIRST, type CarrierId } from "@lobbystack/providers
 import { includesStaffFirst, isTransferPhone, shouldRingStaffFirst, type RuntimeLocale, type StaffFirstMode } from "@lobbystack/shared";
 
 import { reserveOutboundCallAttempt } from "./billing";
+import { STAFF_ANSWERED_DISPOSITION } from "./callOutcome";
 import type { DomainContext } from "./context";
 import { loadEntitlement } from "./entitlement";
 import { assertTransferNumberAllowed, enqueueNumberRouting, trialTransferNumberInTransaction } from "./numberTrials";
@@ -59,7 +60,6 @@ export async function enqueueStaffFirstRouting(tx: DatabaseTransaction, business
 
 /** A call a staff member took: GPT-Live never saw it, so its carrier's call ID keys the record. */
 export const STAFF_ANSWERED_CALL_PROVIDER = "staff_answered";
-export const STAFF_ANSWERED_DISPOSITION = "answered_by_team";
 
 /** How long after a ring starts a second call from the caller counts as the same call: the ring, Twilio's buffer, and the carrier's forward. */
 const RING_SETTLE_SECONDS = 15;
@@ -184,5 +184,21 @@ export async function recordStaffAnsweredCall(context: DomainContext, input: { b
     await enqueueOutbox(tx, { topic: "call.syncPrice", businessId: input.businessId, aggregateType: "call", aggregateId: call.id, dedupeKey: `call:${call.id}:staff-price`, payload: { providerCallId: input.providerCallId, providerCallStatus: "completed" } });
     // Other calls fire this once their conversation closes. This one has no conversation, and only the insert above reaches here.
     await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "call.completed", resourceId: call.id });
+  });
+}
+
+const FINAL_CALL_STATUSES: ReadonlySet<string> = new Set(["completed", "busy", "no-answer", "failed", "canceled"]);
+
+/**
+ * Twilio's final status for a call, from the number's status callback. Only a
+ * call a staff member took has a record under Twilio's call ID: GPT-Live's are
+ * keyed on its session, and a ring nobody took leaves none. The seconds stay
+ * as recordStaffAnsweredCall wrote them, because the callback's duration
+ * includes the ring and the cap counts bridged time.
+ */
+export async function recordStaffCallStatus(context: DomainContext, input: { businessId: string; providerCallId: string; status: string; reportedAt?: Date }): Promise<void> {
+  if (!FINAL_CALL_STATUSES.has(input.status)) return;
+  await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    await tx.update(calls).set({ status: input.status, providerUpdatedAt: input.reportedAt ?? new Date(), updatedAt: new Date() }).where(and(eq(calls.businessId, input.businessId), eq(calls.provider, STAFF_ANSWERED_CALL_PROVIDER), eq(calls.providerCallId, input.providerCallId)));
   });
 }

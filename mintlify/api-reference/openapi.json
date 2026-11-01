@@ -16173,8 +16173,10 @@
               "booking_incomplete",
               "message_taken",
               "conversation",
+              "answered_by_team",
               "none"
-            ]
+            ],
+            "description": "answered_by_team: a staff member took the call through Staff answers first."
           },
           "summary": {
             "description": "Short summary of the call, when one is available.",
@@ -16300,8 +16302,10 @@
               "booking_incomplete",
               "message_taken",
               "conversation",
+              "answered_by_team",
               "none"
-            ]
+            ],
+            "description": "answered_by_team: a staff member took the call through Staff answers first."
           },
           "summary": {
             "description": "Short summary of the call, when one is available.",
@@ -22165,8 +22169,10 @@
                   "booking_incomplete",
                   "message_taken",
                   "conversation",
+                  "answered_by_team",
                   "none"
-                ]
+                ],
+                "description": "answered_by_team: a staff member took the call through Staff answers first."
               },
               "summary": {
                 "description": "Short summary of the call, when one is available.",

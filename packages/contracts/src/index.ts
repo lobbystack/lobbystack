@@ -28,6 +28,13 @@ export const twilioSmsStatusSchema = z.object({
   RawDlrDoneDate: z.string().max(128).optional(),
 }).refine((value) => Boolean(value.MessageSid ?? value.SmsSid), { error: "A Twilio message SID is required.", path: ["MessageSid"] });
 
+export const twilioCallStatusSchema = z.object({
+  CallSid: z.string().min(1).max(255),
+  CallStatus: z.string().min(1).max(64),
+  To: z.string().max(64).optional(),
+  Called: z.string().max(64).optional(),
+});
+
 export const polarWebhookSchema = z.object({
   id: z.string().min(1),
   type: z.string().min(1),

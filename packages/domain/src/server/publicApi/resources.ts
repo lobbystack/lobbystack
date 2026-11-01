@@ -39,7 +39,7 @@ import {
   type ApiWidgetKey,
 } from "@lobbystack/shared";
 
-import { resolveCallOutcome } from "../callOutcome";
+import { resolveCallOutcome, STAFF_ANSWERED_DISPOSITION } from "../callOutcome";
 import type { NotificationPreferences, OperatorNotificationEventKey } from "../notifications";
 import { EXPIRED_FOLLOW_UP_TITLE } from "../followUpRetention";
 import { recordingState } from "../recordingState";
@@ -230,7 +230,7 @@ export function serializeCall(row: CallRow): ApiCall {
     id: row.id,
     channel: row.transport.includes("web") ? "web" : "phone",
     status: row.endedAt ? "completed" : "in_progress",
-    outcome: outcome.kind === "booked" ? "appointment_booked" : outcome.kind === "booking_in_progress" ? "booking_incomplete" : outcome.kind === "message_taking" ? "message_taken" : outcome.kind === "summary" ? "conversation" : "none",
+    outcome: outcome.kind === "booked" ? "appointment_booked" : outcome.kind === "booking_in_progress" ? "booking_incomplete" : outcome.kind === "message_taking" ? "message_taken" : outcome.kind === "summary" ? "conversation" : outcome.kind === "disposition" && outcome.disposition === STAFF_ANSWERED_DISPOSITION ? "answered_by_team" : "none",
     summary: summaryText ?? fallbackSummary,
     end_reason: row.disposition,
     contact_id: row.contactId,

@@ -137,7 +137,9 @@ Today, a call that never reaches GPT-Live has no record. Staff-answered calls ne
 
 Each staff ring uses one `outbound_call_attempts`, like a transfer: the carrier bills the outbound leg either way. Calls bill at Programmable Voice rates instead of trunking rates, so check the margin against the spike's costs. `call.syncPrice` matches trunk legs only, and needs a path for these calls.
 
-A staff-answered call has no conversation, so `finalizeConversationSession` never sees it. `recordStaffAnsweredCall` fires `call.completed` itself when it inserts the record, so a repeated carrier webhook can't fire it twice. The event carries the usual call resource, with `outcome` set to `none`, `summary` set to null and `end_reason` set to `answered_by_team`.
+A staff-answered call has no conversation, so `finalizeConversationSession` never sees it. `recordStaffAnsweredCall` fires `call.completed` itself when it inserts the record, so a repeated carrier webhook can't fire it twice. The event carries the usual call resource, with `outcome` and `end_reason` set to `answered_by_team` and `summary` set to null.
+
+A number off the trunk reports its calls to the `StatusCallback` set when it was bought, `/api/webhooks/twilio/status`. That route tells a call from a text by `CallStatus`. It saves the final status on the staff-answered record, leaves the record's seconds alone, and answers 200 for a call with no such record.
 
 ### Limits on staff-answered calls
 

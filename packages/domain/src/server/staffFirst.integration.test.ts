@@ -10,7 +10,7 @@ import { refreshBusinessSnapshot } from "./knowledge";
 import { desiredNumberRouting, loadNumberTrialEmail } from "./numberTrials";
 import { completeNumberProvisioning } from "./phoneNumbers";
 import { saveReceptionistProfileInTransaction } from "./receptionistProfile";
-import { decideStaffFirstCall, recordStaffAnsweredCall, STAFF_BRIDGED_MINUTES_PER_DAY } from "./staffFirst";
+import { decideStaffFirstCall, recordStaffAnsweredCall, recordStaffCallStatus, STAFF_BRIDGED_MINUTES_PER_DAY } from "./staffFirst";
 import { createBusiness } from "./tenancy";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
@@ -366,7 +366,31 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
         const events = await tx.select({ payload: webhookEvents.payload }).from(webhookEvents).where(and(eq(webhookEvents.businessId, businessId), eq(webhookEvents.type, "call.completed")));
         expect(events).toHaveLength(1);
         const [call] = await tx.select({ id: calls.id }).from(calls).where(eq(calls.businessId, businessId));
-        expect(apiCallSchema.parse(events[0]!.payload.data)).toMatchObject({ id: call!.id, channel: "phone", status: "completed", outcome: "none", summary: null, end_reason: "answered_by_team", caller_phone: "+14165550134", duration_seconds: 42 });
+        expect(apiCallSchema.parse(events[0]!.payload.data)).toMatchObject({ id: call!.id, channel: "phone", status: "completed", outcome: "answered_by_team", summary: null, end_reason: "answered_by_team", caller_phone: "+14165550134", duration_seconds: 42 });
+      });
+    });
+
+    it("records Twilio's final status on the call a staff member took, and keeps its bridged seconds", async () => {
+      await rollbackTest(async (tx) => {
+        const businessId = await business(tx, { carrier: "twilio" });
+        await answered(tx, businessId, "+14165550134");
+        const reportedAt = new Date("2026-11-02T15:00:43Z");
+        await as(tx, "lobbystack_worker", (db) => recordStaffCallStatus({ db }, { businessId, providerCallId: "CA1", status: "completed", reportedAt }));
+        const [row] = await tx.select({ status: calls.status, providerUpdatedAt: calls.providerUpdatedAt, providerDurationSeconds: calls.providerDurationSeconds }).from(calls).where(eq(calls.businessId, businessId));
+        expect(row).toEqual({ status: "completed", providerUpdatedAt: reportedAt, providerDurationSeconds: 42 });
+      });
+    });
+
+    it("ignores a status that isn't final, and a call with no staff-answered record", async () => {
+      await rollbackTest(async (tx) => {
+        const businessId = await business(tx, { carrier: "twilio" });
+        await answered(tx, businessId, "+14165550134");
+        await as(tx, "lobbystack_worker", async (db) => {
+          await recordStaffCallStatus({ db }, { businessId, providerCallId: "CA1", status: "in-progress" });
+          await recordStaffCallStatus({ db }, { businessId, providerCallId: "CAother", status: "completed" });
+        });
+        const rows = await tx.select({ providerCallId: calls.providerCallId, providerUpdatedAt: calls.providerUpdatedAt }).from(calls).where(eq(calls.businessId, businessId));
+        expect(rows).toEqual([{ providerCallId: "CA1", providerUpdatedAt: null }]);
       });
     });
 

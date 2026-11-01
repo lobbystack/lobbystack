@@ -546,7 +546,7 @@ export const apiCallSchema = z.object({
   id,
   channel: z.enum(["phone", "web"]).describe("phone: a phone call. web: a browser call from the website or dashboard."),
   status: z.enum(["in_progress", "completed"]),
-  outcome: z.enum(["appointment_booked", "booking_incomplete", "message_taken", "conversation", "none"]),
+  outcome: z.enum(["appointment_booked", "booking_incomplete", "message_taken", "conversation", "answered_by_team", "none"]).describe("answered_by_team: a staff member took the call through Staff answers first."),
   summary: z.string().nullable().describe("Short summary of the call, when one is available."),
   end_reason: z.string().nullable().describe("Why the call ended, as reported by the call provider or receptionist."),
   contact_id: id.nullable(),

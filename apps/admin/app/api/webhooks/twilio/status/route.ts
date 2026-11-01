@@ -1,8 +1,8 @@
 import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
-import { twilioSmsStatusSchema } from "@lobbystack/contracts";
-import { updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, updateSmsDeliveryStatus } from "@lobbystack/domain";
+import { twilioCallStatusSchema, twilioSmsStatusSchema } from "@lobbystack/contracts";
+import { recordStaffCallStatus, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, updateSmsDeliveryStatus } from "@lobbystack/domain";
 import { resolveTwilioWebhookUrl, validateTwilioSignature } from "@lobbystack/providers/twilio/webhookSecurity";
 import { getAppDatabase } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
@@ -11,12 +11,33 @@ import { twilioStatusAuthToken } from "@/lib/twilio-status-auth";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/**
+ * A number's StatusCallback reports its calls here. A call on the SIP trunk
+ * doesn't use it, so these come from numbers off the trunk, as with staff
+ * answers first. A text's own callback carries MessageStatus instead.
+ */
+async function recordCallStatus(params: Record<string, string>): Promise<void> {
+  const body = twilioCallStatusSchema.parse(params);
+  for (const phone of new Set([body.To, body.Called])) {
+    if (!phone) continue;
+    const businessId = (await getAppDatabase().db.execute<{ business_id: string | null }>(sql`select app.resolve_business_by_phone(${phone}) as business_id`)).rows[0]?.business_id;
+    if (businessId) {
+      await recordStaffCallStatus(createWorkerDomainContext(), { businessId, providerCallId: body.CallSid, status: body.CallStatus });
+      return;
+    }
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const rawBody = await request.text();
     const params = Object.fromEntries(new URLSearchParams(rawBody));
     const valid = validateTwilioSignature({ authToken: twilioStatusAuthToken(params, request.url, process.env, request.headers.get("x-twilio-signature-key-sid")), signatureHeader: request.headers.get("x-twilio-signature"), url: resolveTwilioWebhookUrl(request.url, process.env.TWILIO_STATUS_CALLBACK_URL), params });
     if (!valid) return new NextResponse("Unauthorized", { status: 401 });
+    if (params.MessageStatus === undefined && params.CallStatus !== undefined) {
+      await recordCallStatus(params);
+      return NextResponse.json({ ok: true });
+    }
     const body = twilioSmsStatusSchema.parse(params);
     const providerPrice = body.Price !== undefined && Number.isFinite(Number(body.Price)) ? Number(body.Price) : undefined;
     const providerPriceUnit = body.PriceUnit?.trim().toLowerCase() || undefined;
