@@ -1,13 +1,13 @@
 # LobbyStack
 
-LobbyStack answers businesses' phone calls and website chats with an AI receptionist. Some businesses buy from LobbyStack directly, and others buy from a partner that resells LobbyStack under its own brand.
+LobbyStack answers businesses' calls and messages with AI agents. Some businesses buy from LobbyStack directly, and others buy from a partner that resells LobbyStack under its own brand.
 
 ## Language
 
 ### Who
 
 **Business**:
-An organization whose calls and website chats LobbyStack answers. It belongs to the host directly or to a partner.
+An organization whose calls and messages LobbyStack answers. It belongs to the host directly or to a partner.
 _Avoid_: Client, tenant, customer
 
 **Partner**:
@@ -29,6 +29,20 @@ _Avoid_: User, staff, host
 **Affiliate**:
 A person who refers businesses to LobbyStack for a commission. An affiliate never manages the businesses it refers.
 _Avoid_: Partner, referrer
+
+### What answers
+
+**Agent**:
+The AI that answers a business's channels, with its own name, voice, instructions, and rules. A business can have several. The marketing site can still call its job an AI receptionist.
+_Avoid_: Receptionist, chatbot, AI worker
+
+**Channel**:
+A connected place where customers reach an agent, such as a phone number, a website widget, or an Instagram account. A channel belongs to one agent.
+_Avoid_: Line, integration
+
+**Employee**:
+A person at a business whom an agent books appointments with or transfers calls to.
+_Avoid_: Staff, human agent
 
 ### What gets sold
 
