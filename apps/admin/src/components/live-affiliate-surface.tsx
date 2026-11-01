@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { affiliateTermsHref } from "@/lib/marketing-site-url";
 import { formatDateTime, intlLocale, resolveLocale, type SupportedLocale } from "@/lib/locale";
 
+import { HiddenTextSkeleton } from "./loading-skeletons";
 import { PageSurface } from "./page-surface";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -55,8 +56,54 @@ function StatCard({ description, label, value }: { description: string; label: s
   return <Card size="sm"><CardHeader><CardDescription>{label}</CardDescription><CardTitle className="text-2xl">{value}</CardTitle></CardHeader><CardContent><p className="text-sm text-muted-foreground">{description}</p></CardContent></Card>;
 }
 
-function LoadingAffiliatePage() {
-  return <div className="flex flex-1 flex-col gap-6"><Skeleton className="h-10 w-64" /><Skeleton className="h-40" /><div className="grid gap-4 md:grid-cols-3"><Skeleton className="h-32" /><Skeleton className="h-32" /><Skeleton className="h-32" /></div></div>;
+/** The page before its data arrives: the titles, labels and tabs are fixed text, so each placeholder holds the real text, hidden, and is as wide and tall as the text that replaces it. */
+function LoadingAffiliatePage({ locale, t }: { locale: SupportedLocale; t: Translate }) {
+  const stats: Array<[label: string, description: string]> = [
+    ["clicks", "clicksDescription"], ["referrals", "referralsDescription"], ["conversions", "conversionsDescription"],
+    ["pending", "pendingDescription"], ["eligible", "eligibleWaiting"], ["paid", "paidDescription"],
+  ].map(([label, description]) => [t(`stats.${label}`), t(`stats.${description}`)]);
+  const tabs = [t("tabs.quickstart"), t("tabs.earnings"), t("tabs.payouts"), t("tabs.faq"), t("settings.open")];
+  return (
+    <PageSurface title={t("title")}>
+      <div aria-busy="true" className="flex flex-col gap-6">
+        <Card><CardContent className="flex flex-col gap-8">
+          <div className="flex flex-col gap-4">
+            <HiddenTextSkeleton className="font-medium leading-snug">{t("referral.title")}</HiddenTextSkeleton>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 shrink-0"><span className="invisible inline-flex items-center gap-2 px-3 text-sm font-medium"><CopyIcon className="size-4" />{t("referral.copy")}</span></Skeleton>
+            </div>
+          </div>
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between gap-4">
+              <HiddenTextSkeleton className="font-medium leading-snug">{t("terms.title")}</HiddenTextSkeleton>
+              <HiddenTextSkeleton className="text-sm font-medium">{t("terms.link")}</HiddenTextSkeleton>
+            </div>
+            <div className="flex flex-col gap-4">
+              <HiddenTextSkeleton className="text-base font-medium">{t("terms.reward", { rate: "20%", duration: t("terms.oneYear") })}</HiddenTextSkeleton>
+              <Separator />
+              <HiddenTextSkeleton className="text-sm">{`${formatCurrency(locale, 10_000)} ${t("terms.minimum")} / ${t("terms.days", { count: 30 })} ${t("terms.hold")}`}</HiddenTextSkeleton>
+            </div>
+          </div>
+        </CardContent></Card>
+
+        <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
+          {stats.map(([label, description]) => <Card key={label} size="sm"><CardHeader>
+            <HiddenTextSkeleton className="text-sm">{label}</HiddenTextSkeleton>
+            <Skeleton className="h-8 w-16" />
+          </CardHeader><CardContent><HiddenTextSkeleton className="text-sm">{description}</HiddenTextSkeleton></CardContent></Card>)}
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <div className="flex gap-1 border-b pb-2">{tabs.map((label) => <HiddenTextSkeleton className="px-3 py-1 text-sm font-medium" key={label}>{label}</HiddenTextSkeleton>)}</div>
+          <div className="grid gap-4 md:grid-cols-3">{["share", "resources", "receive"].map((key) => <Card key={key}><CardHeader>
+            <HiddenTextSkeleton className="font-medium leading-snug">{t(`quickstart.${key}.title`)}</HiddenTextSkeleton>
+            <HiddenTextSkeleton className="text-sm">{t(`quickstart.${key}.description`)}</HiddenTextSkeleton>
+          </CardHeader></Card>)}</div>
+        </div>
+      </div>
+    </PageSurface>
+  );
 }
 
 export function LiveAffiliateSurface() {
@@ -76,7 +123,7 @@ export function LiveAffiliateSurface() {
     return { ...affiliate.data.stats, eligibleCents, pendingCents: Math.max(0, affiliate.data.stats.pendingCommissionCents - eligibleCents) };
   }, [affiliate.data]);
 
-  if (affiliate.isLoading) return <LoadingAffiliatePage />;
+  if (affiliate.isLoading) return <LoadingAffiliatePage locale={locale} t={t} />;
   if (affiliate.isError) return <PageSurface title={t("title")}><Card><CardContent className="py-12 text-center text-sm text-muted-foreground">{t("toast.profileFailed")}</CardContent></Card></PageSurface>;
 
   const data = affiliate.data;
