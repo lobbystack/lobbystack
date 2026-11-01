@@ -57,7 +57,7 @@ export function OnboardingNumberSurface() {
     } finally { setClaiming(false); }
   }, []);
   const getErrorMessage = useCallback((error: unknown, fallback: string) => getSafeOnboardingErrorMessage(error, t, fallback), [t]);
-  const skip = useMutation({ mutationFn: () => requestJson(`/api/onboarding/phone-numbers/skip?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST" }), onSuccess: () => router.push(finished ? "/" : "/onboarding/attribution"), meta: { inlineError: true } });
+  const skip = useMutation({ mutationFn: () => requestJson(`/api/onboarding/phone-numbers/skip?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST" }), onSuccess: () => router.push(finished ? "/" : "/onboarding/goal"), meta: { inlineError: true } });
 
   if (!phones.data || (!claiming && phones.data.activeClaim)) return <Surface className="flex justify-center p-6"><LoaderCircle className="size-5 animate-spin text-muted-foreground" /></Surface>;
   if (primary) {
@@ -70,7 +70,7 @@ export function OnboardingNumberSurface() {
           <p className="text-sm text-muted-foreground">{t("number.ready.body")}</p>
         </div>
         <Button nativeButton={false} render={<Link href={`tel:${primary.e164}`} />}><Phone />{t("number.ready.call", { number: formatPhoneNumberDisplay(primary.e164) })}</Button>
-        <Button onClick={() => router.push(finished ? "/" : "/onboarding/attribution")} type="button" variant="outline">{t("number.continue")}</Button>
+        <Button onClick={() => router.push(finished ? "/" : "/onboarding/goal")} type="button" variant="outline">{t("number.continue")}</Button>
       </Surface>
     );
   }

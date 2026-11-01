@@ -171,7 +171,7 @@ export const businesses = pgTable(
     websiteUrl: text("website_url"),
     onboardingStage: varchar("onboarding_stage", { length: 64 }).default("create_business").notNull(),
     onboardingAttribution: varchar("onboarding_attribution", { length: 120 }),
-    onboardingGoal: varchar("onboarding_goal", { length: 32 }).$type<"answer_calls" | "book_appointments" | "answer_website_visitors" | "answer_instagram_messages">(),
+    onboardingGoal: varchar("onboarding_goal", { length: 32 }),
     setupGuideSkippedSteps: jsonb("setup_guide_skipped_steps").$type<string[]>().default([]).notNull(),
     phoneNumberReplacementReservedAt: timestamp("phone_number_replacement_reserved_at", { withTimezone: true }),
     phoneNumberReplacementUsedAt: timestamp("phone_number_replacement_used_at", { withTimezone: true }),
@@ -1090,6 +1090,14 @@ export const firstRealConversations = pgTable("first_real_conversations", {
   conversationId: uuid("conversation_id").references(() => conversations.id, { onDelete: "set null" }),
   occurredAt: timestamp("occurred_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+// What owners answered to the founder's check-in email (migration 0172), one row
+// per answer, so a second click changes nothing.
+export const checkInAnswers = pgTable("check_in_answers", {
+  businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+  answer: varchar("answer", { length: 32 }).notNull(),
+  answeredAt: timestamp("answered_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [primaryKey({ columns: [table.businessId, table.answer] })]);
 
 // Questions the receptionist found no knowledge for (migration 0168). The same
 // normalized question counts again on its open or dismissed row.

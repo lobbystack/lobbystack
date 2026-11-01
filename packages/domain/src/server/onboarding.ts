@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { HOST_EMAIL_BRAND, normalizeInterfaceLocale, type InterfaceLocale, type PartnerAccessLevel } from "@lobbystack/shared";
 
 import { businesses, enqueueOutbox, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
@@ -26,8 +26,22 @@ export type OnboardingStage =
   | "verify_phone"
   | "phone_number"
   | "phone_number_claiming"
+  | "goal"
   | "attribution"
   | "complete";
+
+/**
+ * What the owner wants their agent to do first, as they answered at the goal
+ * step. Each is something the product does today. Stored on the business, sent
+ * to telemetry, and read by the new-account Home, so keep the values stable.
+ * The businesses_onboarding_goal_valid check constraint lists them too.
+ */
+export const ONBOARDING_GOALS = ["answer_calls", "book_appointments", "answer_website_visitors", "answer_instagram_messages"] as const;
+export type OnboardingGoal = (typeof ONBOARDING_GOALS)[number];
+
+export function isOnboardingGoal(value: unknown): value is OnboardingGoal {
+  return (ONBOARDING_GOALS as readonly unknown[]).includes(value);
+}
 
 const stageRoutes: Record<OnboardingStage, string> = {
   create_business: "/onboarding/business",
@@ -38,6 +52,7 @@ const stageRoutes: Record<OnboardingStage, string> = {
   verify_phone: "/onboarding/verify-phone",
   phone_number: "/onboarding/number",
   phone_number_claiming: "/onboarding/number",
+  goal: "/onboarding/goal",
   attribution: "/onboarding/attribution",
   complete: "/",
 };
@@ -51,12 +66,13 @@ const stageSteps: Record<OnboardingStage, number> = {
   verify_phone: 7,
   phone_number: 8,
   phone_number_claiming: 8,
-  attribution: 9,
-  complete: 10,
+  goal: 9,
+  attribution: 10,
+  complete: 11,
 };
 
 // Owners hear their agent before anything else is asked of them. Verifying a
-// phone leads to the number step, or straight to attribution when the
+// phone leads to the number step, or straight to the goal question when the
 // business's country has no numbers yet or the owner skips the number.
 const transitions: Record<OnboardingStage, readonly OnboardingStage[]> = {
   create_business: ["website"],
@@ -64,16 +80,17 @@ const transitions: Record<OnboardingStage, readonly OnboardingStage[]> = {
   knowledge: ["greeting"],
   greeting: ["test_call"],
   test_call: ["verify_phone"],
-  verify_phone: ["phone_number", "attribution"],
-  phone_number: ["attribution"],
-  phone_number_claiming: ["phone_number", "attribution"],
+  verify_phone: ["phone_number", "goal"],
+  phone_number: ["goal"],
+  phone_number_claiming: ["phone_number", "goal"],
+  goal: ["attribution"],
   attribution: ["complete"],
   complete: [],
 };
 
 // A partner's business skips what the host does for its direct businesses:
 // the partner created it and gives it its numbers, and the host asks its
-// owner no attribution. The owner still verifies their phone, because calls
+// owner neither the goal question nor attribution. The owner still verifies their phone, because calls
 // forward to it, and that finishes onboarding. At the activity level the
 // partner sets the receptionist up, so the phone is the owner's only step.
 const partnerTransitions: Record<OnboardingStage, readonly OnboardingStage[]> = {
@@ -81,6 +98,7 @@ const partnerTransitions: Record<OnboardingStage, readonly OnboardingStage[]> = 
   verify_phone: ["complete"],
   phone_number: ["complete"],
   phone_number_claiming: ["complete"],
+  goal: ["complete"],
   attribution: ["complete"],
 };
 
@@ -89,9 +107,9 @@ const partnerTransitions: Record<OnboardingStage, readonly OnboardingStage[]> = 
  * app.reserve_trial_number_claim does: from the number step on. A partner's
  * business has no number step, so its claims wait for its owner's onboarding.
  */
-export const NUMBER_CLAIM_STAGES: readonly OnboardingStage[] = ["phone_number", "attribution", "complete"];
+export const NUMBER_CLAIM_STAGES: readonly OnboardingStage[] = ["phone_number", "goal", "attribution", "complete"];
 
-const directSteps: readonly OnboardingStage[] =["create_business", "website", "knowledge", "greeting", "test_call", "verify_phone", "phone_number", "attribution"];
+const directSteps: readonly OnboardingStage[] =["create_business", "website", "knowledge", "greeting", "test_call", "verify_phone", "phone_number", "goal", "attribution"];
 const partnerSteps: readonly OnboardingStage[] = ["website", "knowledge", "greeting", "test_call", "verify_phone"];
 const activitySteps: readonly OnboardingStage[] = ["verify_phone"];
 
@@ -247,6 +265,30 @@ export async function advanceOnboardingStage(
     // Revisiting an earlier form must never move durable onboarding progress backwards.
     if (canVisitOnboardingStage(currentStage, input.to)) return;
     await advanceOnboardingStageInTransaction(tx, { ...input, from: currentStage, partnerId: current.partnerId });
+  });
+}
+
+/**
+ * Saves the owner's goal and moves on to attribution. Skipping sends no goal
+ * and keeps any saved one. A partner's business has no goal step, so this
+ * refuses it. Revisiting the step from a later stage leaves the stage alone.
+ */
+export async function submitOnboardingGoal(
+  context: DomainContext,
+  input: { userId: string; businessId: string; goal: OnboardingGoal | null },
+): Promise<void> {
+  await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+    await requireBusinessAdmin(tx, input);
+    const changed = await tx.update(businesses)
+      .set({ ...(input.goal ? { onboardingGoal: input.goal } : {}), onboardingStage: sql`CASE WHEN ${businesses.onboardingStage} = 'goal' THEN 'attribution' ELSE ${businesses.onboardingStage} END`, updatedAt: new Date() })
+      .where(and(eq(businesses.id, input.businessId), isNull(businesses.partnerId), inArray(businesses.onboardingStage, ["goal", "attribution", "complete"])))
+      .returning({ id: businesses.id });
+    if (!changed.length) {
+      const error = new Error("The goal cannot be submitted at this onboarding stage.") as Error & { status: number; code: string };
+      error.status = 409;
+      error.code = "onboarding_stage_conflict";
+      throw error;
+    }
   });
 }
 

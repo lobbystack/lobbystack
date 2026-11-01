@@ -56,6 +56,7 @@
         "/onboarding/verify-phone/code",
         "/onboarding/plan",
         "/onboarding/number",
+        "/onboarding/goal",
         "/onboarding/attribution"
       ],
       "actions": [
@@ -64,6 +65,7 @@
         "review knowledge",
         "configure greeting and locale",
         "select or skip number",
+        "submit goal",
         "submit attribution",
         "resume after refresh"
       ],
@@ -78,8 +80,10 @@
         "apps/admin/src/components/onboarding-website-surface.tsx",
         "apps/admin/src/components/onboarding-knowledge-surface.tsx",
         "apps/admin/src/components/onboarding-greeting-surface.tsx",
+        "apps/admin/src/components/onboarding-goal-surface.tsx",
         "apps/admin/src/components/onboarding-attribution-surface.tsx",
         "apps/admin/app/api/onboarding/stage/route.ts",
+        "apps/admin/app/api/onboarding/goal/route.ts",
         "apps/admin/app/api/onboarding/attribution/route.ts",
         "packages/domain/src/server/onboarding.ts"
       ],

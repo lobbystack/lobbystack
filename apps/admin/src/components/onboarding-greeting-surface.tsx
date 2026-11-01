@@ -21,7 +21,7 @@ type Profile = { greeting: string };
 type KnowledgeDocument = { id: string; createdAt?: string; websiteImport?: WebsiteImportSummary | null };
 
 // The stages after this one: an owner there already saved a caller language.
-const PAST_GREETING = new Set(["test_call", "verify_phone", "phone_number", "phone_number_claiming", "attribution", "complete"]);
+const PAST_GREETING = new Set(["test_call", "verify_phone", "phone_number", "phone_number_claiming", "goal", "attribution", "complete"]);
 
 export function OnboardingGreetingSurface() {
   const { t } = useTranslation("onboarding");

@@ -243,6 +243,20 @@
     "continue": "Continuar",
     "numbersUnavailable": "Los números de teléfono aún no están configurados en este panel. Pida a quien lo administra que conecte un proveedor de telefonía."
   },
+  "goal": {
+    "title": "¿Qué quiere que haga primero su agente?",
+    "description": "Elija una para empezar. Podrá agregar las demás más adelante.",
+    "options": {
+      "answer_calls": "Contestar mis llamadas",
+      "book_appointments": "Reservar citas",
+      "answer_website_visitors": "Atender a quienes visitan mi sitio web",
+      "answer_instagram_messages": "Responder mensajes de Instagram"
+    },
+    "continue": "Continuar",
+    "saving": "Guardando...",
+    "skip": "Omitir",
+    "submitFailed": "No pudimos guardarlo en este momento. Inténtelo de nuevo."
+  },
   "attribution": {
     "title": "¿Cómo conoció {{appName}}?",
     "description": "Nos ayuda a centrarnos en lo que funciona.",

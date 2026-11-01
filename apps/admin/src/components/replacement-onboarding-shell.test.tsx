@@ -45,11 +45,12 @@ describe("OnboardingShell", () => {
   });
 
   it("routes every reached step while revisiting earlier steps", () => {
-    renderShell({ current: 4, navigableUntil: 9, total: 9 });
+    renderShell({ current: 4, navigableUntil: 10, total: 10 });
 
-    expect(screen.getAllByRole("listitem")).toHaveLength(9);
+    expect(screen.getAllByRole("listitem")).toHaveLength(10);
     expect(screen.getByRole("link", { name: "Go to onboarding step 6" }).getAttribute("href")).toBe("/onboarding/test-call");
-    expect(screen.getByRole("link", { name: "Go to onboarding step 9" }).getAttribute("href")).toBe("/onboarding/attribution");
+    expect(screen.getByRole("link", { name: "Go to onboarding step 9" }).getAttribute("href")).toBe("/onboarding/goal");
+    expect(screen.getByRole("link", { name: "Go to onboarding step 10" }).getAttribute("href")).toBe("/onboarding/attribution");
   });
 
   it("does not link to steps beyond the current navigable stage", () => {

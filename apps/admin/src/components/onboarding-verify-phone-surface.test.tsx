@@ -53,7 +53,7 @@ describe("onboarding phone verification", () => {
     expect(JSON.parse(String(joined?.[1]?.body))).toEqual({ countryCode: "FR" });
     telemetryRef.current!.expectEvent("web.onboarding.number_waitlist_joined", { businessId: "business", countryCode: "FR" });
     await userEvent.click(screen.getByRole("button", { name: "verifyPhone.unavailable.continue" }));
-    await waitFor(() => expect(navigation.push).toHaveBeenCalledWith("/onboarding/attribution"));
+    await waitFor(() => expect(navigation.push).toHaveBeenCalledWith("/onboarding/goal"));
   });
 
   it("sends a self-hosted install straight to the number step, since it has no free trial to guard", async () => {

@@ -243,6 +243,20 @@
     "continue": "Nastavi",
     "numbersUnavailable": "Brojevi telefona još nisu podešeni na ovoj kontrolnoj tabli. Zamolite osobu koja njome upravlja da poveže telefonskog provajdera."
   },
+  "goal": {
+    "title": "Šta želite da Vaš agent prvo radi?",
+    "description": "Izaberite jednu stavku za početak. Ostale možete dodati kasnije.",
+    "options": {
+      "answer_calls": "Odgovaranje na moje pozive",
+      "book_appointments": "Zakazivanje termina",
+      "answer_website_visitors": "Odgovaranje posetiocima sajta",
+      "answer_instagram_messages": "Odgovaranje na Instagram poruke"
+    },
+    "continue": "Nastavi",
+    "saving": "Čuvanje...",
+    "skip": "Preskoči",
+    "submitFailed": "Trenutno ne možemo to da sačuvamo. Pokušajte ponovo."
+  },
   "attribution": {
     "title": "Kako ste čuli za {{appName}}?",
     "description": "Tako znamo šta funkcioniše.",

@@ -242,6 +242,20 @@
     "continue": "Continue",
     "numbersUnavailable": "Phone numbers aren't set up on this dashboard yet. Ask whoever runs it to connect a phone provider."
   },
+  "goal": {
+    "title": "What do you want your agent to do first?",
+    "description": "Pick one to start with. You can add the others later.",
+    "options": {
+      "answer_calls": "Answer my calls",
+      "book_appointments": "Book appointments",
+      "answer_website_visitors": "Answer website visitors",
+      "answer_instagram_messages": "Answer Instagram messages"
+    },
+    "continue": "Continue",
+    "saving": "Saving...",
+    "skip": "Skip",
+    "submitFailed": "We couldn't save that right now. Please try again."
+  },
   "attribution": {
     "title": "How did you hear about {{appName}}?",
     "description": "It helps us focus on what's working.",

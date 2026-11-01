@@ -10,7 +10,7 @@ import { useSignOut } from "@/hooks/use-sign-out";
 import { NestedPageSurfaceProvider } from "@/components/page-surface";
 import { onboardingRoutes as routes, ReplacementOnboardingShell } from "@/components/replacement-onboarding-shell";
 
-// A partner's business skips creating it, the number and attribution, and at
+// A partner's business skips creating it, the number, the goal and attribution, and at
 // the activity level everything but the owner's phone, as onboardingSteps in
 // packages/domain decides. The dots then count only the owner's own steps.
 const PARTNER_ROUTES = ["/onboarding/website", "/onboarding/knowledge", "/onboarding/greeting", "/onboarding/test-call", "/onboarding/verify-phone"] as const;
@@ -37,14 +37,14 @@ export function OnboardingRouteShell({ children }: { children: React.ReactNode }
   const stage = business?.onboardingStage;
   const phones = useQuery({ queryKey: ["onboarding-primary-number", business?.businessId], enabled: route.key === "number" && Boolean(business), queryFn: () => requestJson<{ phoneNumbers: Array<{ id: string; e164: string; reclaimScheduledAt: string | null }> }>(`/api/phone-numbers?businessId=${encodeURIComponent(business!.businessId)}`) });
   const hasPrimaryNumber = Boolean(phones.data?.phoneNumbers.some(number => !number.reclaimScheduledAt));
-  const selectedNumber = route.key === "number" && hasPrimaryNumber && ["attribution", "complete"].includes(stage ?? "");
-  const navigableUntil = ({ create_business: 2, website: 3, knowledge: 4, greeting: 5, test_call: 6, verify_phone: 7, phone_number: 8, phone_number_claiming: 8, attribution: 9, complete: 10 } as Record<string, number>)[stage ?? ""];
+  const selectedNumber = route.key === "number" && hasPrimaryNumber && ["goal", "attribution", "complete"].includes(stage ?? "");
+  const navigableUntil = ({ create_business: 2, website: 3, knowledge: 4, greeting: 5, test_call: 6, verify_phone: 7, phone_number: 8, phone_number_claiming: 8, goal: 9, attribution: 10, complete: 11 } as Record<string, number>)[stage ?? ""];
   return (
     <ReplacementOnboardingShell
       description={showDescription ? t(`${route.key}.description`) : ""}
       legalAgreement="business"
       onSignOut={() => void signOut()}
-      progress={business?.partnerAccessLevel ? partnerProgress(pathname, stage, business.partnerAccessLevel) : { current: route.step, ...(navigableUntil === undefined ? {} : { navigableUntil }), total: 9 }}
+      progress={business?.partnerAccessLevel ? partnerProgress(pathname, stage, business.partnerAccessLevel) : { current: route.step, ...(navigableUntil === undefined ? {} : { navigableUntil }), total: 10 }}
       title={t(selectedNumber ? "number.selectedTitle" : `${route.key}.title`)}
       width={route.key === "number" && (!phones.data || hasPrimaryNumber) ? "md" : route.width}
     >

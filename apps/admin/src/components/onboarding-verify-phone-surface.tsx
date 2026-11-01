@@ -84,8 +84,8 @@ export function OnboardingVerifyPhoneSurface() {
     meta: { inlineError: true },
   });
   const skip = useMutation({
-    mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: partnerBusiness ? "complete" : "attribution" }) }),
-    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["businesses"] }); navigate(partnerBusiness ? "/" : "/onboarding/attribution"); },
+    mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: partnerBusiness ? "complete" : "goal" }) }),
+    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["businesses"] }); navigate(partnerBusiness ? "/" : "/onboarding/goal"); },
     onError: (cause) => setError(getSafeOnboardingErrorMessage(cause, t, "verifyPhone.unavailable.failed")),
     meta: { inlineError: true },
   });

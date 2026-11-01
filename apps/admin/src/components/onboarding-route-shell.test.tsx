@@ -25,8 +25,8 @@ function progressAt(pathname: string, business: Record<string, unknown>) {
 }
 
 describe("onboarding progress", () => {
-  it("counts a direct owner's nine steps, sign-up first", () => {
-    expect(progressAt("/onboarding/website", { onboardingStage: "website", partnerAccessLevel: null })).toEqual({ current: 3, navigableUntil: 3, total: 9 });
+  it("counts a direct owner's ten steps, sign-up first", () => {
+    expect(progressAt("/onboarding/website", { onboardingStage: "website", partnerAccessLevel: null })).toEqual({ current: 3, navigableUntil: 3, total: 10 });
   });
 
   it("counts only the steps a partner's business keeps for its owner", () => {

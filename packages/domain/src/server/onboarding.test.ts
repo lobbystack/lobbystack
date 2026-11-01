@@ -24,7 +24,10 @@ describe("onboarding stages", () => {
     expect(isValidOnboardingTransition("test_call", "verify_phone")).toBe(true);
     expect(isValidOnboardingTransition("verify_phone", "phone_number")).toBe(true);
     // A country without numbers skips the number step.
-    expect(isValidOnboardingTransition("verify_phone", "attribution")).toBe(true);
+    expect(isValidOnboardingTransition("verify_phone", "goal")).toBe(true);
+    expect(isValidOnboardingTransition("phone_number", "goal")).toBe(true);
+    expect(isValidOnboardingTransition("goal", "attribution")).toBe(true);
+    expect(isValidOnboardingTransition("verify_phone", "attribution")).toBe(false);
     expect(isValidOnboardingTransition("test_call", "phone_number")).toBe(false);
     expect(isValidOnboardingTransition("greeting", "knowledge")).toBe(false);
     expect(isValidOnboardingTransition("complete", "website")).toBe(false);
@@ -32,7 +35,7 @@ describe("onboarding stages", () => {
 
   it("skips the business, the number and attribution for a partner's business, and finishes at the owner's phone", () => {
     const partner = { partnerId: "partner", accessLevel: "full" } as const;
-    expect(onboardingSteps(null)).toEqual(["create_business", "website", "knowledge", "greeting", "test_call", "verify_phone", "phone_number", "attribution"]);
+    expect(onboardingSteps(null)).toEqual(["create_business", "website", "knowledge", "greeting", "test_call", "verify_phone", "phone_number", "goal", "attribution"]);
     expect(onboardingSteps({ partnerId: null, accessLevel: "activity" })).toEqual(onboardingSteps(null));
     expect(onboardingSteps(partner)).toEqual(["website", "knowledge", "greeting", "test_call", "verify_phone"]);
     expect(onboardingSteps({ ...partner, accessLevel: "activity" })).toEqual(["verify_phone"]);

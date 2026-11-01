@@ -18,6 +18,7 @@ const routeStages: Record<string, OnboardingStage> = {
   "/onboarding/test-call": "test_call",
   "/onboarding/verify-phone": "verify_phone",
   "/onboarding/number": "phone_number",
+  "/onboarding/goal": "goal",
   "/onboarding/attribution": "attribution",
 };
 
@@ -43,7 +44,7 @@ export async function requireOnboardingStage(pathname: string, options: { allowC
   // A fresh self-hosted deployment's first owner names it before naming their business.
   if (expected === "create_business" && state.businessId === null && await initialBrandingFields(session.user.id, requestHeaders)) redirect(BRAND_ROUTE);
   if (options.allowCreate && expected === "create_business" && state.businessId === null) return;
-  // A partner's business skips some steps, such as creating it, the number and attribution.
+  // A partner's business skips some steps, such as creating it, the number, the goal and attribution.
   if (!state.steps.includes(expected) || !canVisitOnboardingStage(state.stage, expected)) redirect(current);
   if (expected === "phone_number" && state.businessId) {
     const elsewhere = await numberStepRedirect({ db: getAppDatabase().db }, { userId: session.user.id, businessId: state.businessId, finished: state.stage === "complete" });

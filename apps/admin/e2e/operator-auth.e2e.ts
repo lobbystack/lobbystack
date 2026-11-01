@@ -134,9 +134,11 @@ async function completeOnboardingBySkippingOptionalInputs(page: Page, businessId
   await page.getByRole("button", { name: "Skip for now", exact: true }).click();
   await expect(page).toHaveURL("/onboarding/verify-phone");
   // Verifying a mobile needs a real phone, so leave the step the way an owner in a country without numbers does.
-  const moved = await page.evaluate(async (id) => (await fetch(`/api/onboarding/stage?businessId=${encodeURIComponent(id)}`, { method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify({ to: "attribution" }) })).status, businessId);
+  const moved = await page.evaluate(async (id) => (await fetch(`/api/onboarding/stage?businessId=${encodeURIComponent(id)}`, { method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify({ to: "goal" }) })).status, businessId);
   expect(moved).toBe(200);
-  await page.goto("/onboarding/attribution");
+  await page.goto("/onboarding/goal");
+  await page.getByRole("button", { name: "Skip", exact: true }).click();
+  await expect(page).toHaveURL("/onboarding/attribution");
   await page.getByRole("button", { name: "Skip", exact: true }).click();
   await expect(page).toHaveURL("/");
 }

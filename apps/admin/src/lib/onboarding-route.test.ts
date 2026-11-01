@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // The onboarding stages each kind of business's owner goes through.
-const DIRECT = ["create_business", "website", "knowledge", "greeting", "test_call", "verify_phone", "phone_number", "attribution"];
+const DIRECT = ["create_business", "website", "knowledge", "greeting", "test_call", "verify_phone", "phone_number", "goal", "attribution"];
 const PARTNER = ["website", "knowledge", "greeting", "test_call", "verify_phone"];
 
 const fixture = vi.hoisted(() => ({
@@ -106,7 +106,7 @@ describe("on a partner's host", () => {
 
   it("skips creating the business, the number and attribution for the partner's business, and keeps the phone", async () => {
     fixture.state = { businessId: "business-1", stage: "verify_phone", steps: PARTNER };
-    for (const path of ["/onboarding/business", "/onboarding/number", "/onboarding/attribution"]) {
+    for (const path of ["/onboarding/business", "/onboarding/number", "/onboarding/goal", "/onboarding/attribution"]) {
       await expect(requireOnboardingStage(path)).rejects.toThrow("redirect:/onboarding/verify-phone");
     }
     await expect(requireOnboardingStage("/onboarding/business", { allowCreate: true })).rejects.toThrow("redirect:/onboarding/verify-phone");

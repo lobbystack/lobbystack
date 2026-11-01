@@ -40,7 +40,8 @@ export const onboardingRoutes = {
   "/onboarding/test-call": { key: "testCall", step: 6, width: "md" },
   "/onboarding/verify-phone": { key: "verifyPhone", step: 7, width: "md" },
   "/onboarding/number": { key: "number", step: 8, width: "lg" },
-  "/onboarding/attribution": { key: "attribution", step: 9, width: "xl" },
+  "/onboarding/goal": { key: "goal", step: 9, width: "md" },
+  "/onboarding/attribution": { key: "attribution", step: 10, width: "xl" },
 } as const;
 
 const progressRoutes: Record<number, string> = Object.fromEntries(Object.entries(onboardingRoutes).map(([path, route]) => [route.step, path]));
