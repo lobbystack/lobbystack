@@ -1128,7 +1128,7 @@
   },
   "webhooks": {
     "title": "Webhooks",
-    "description": "{{appName}} sends an HTTPS POST to your URL when something happens, such as a finished call or a new booking. Each request is signed so you can check it came from us.",
+    "description": "{{appName}} sends an HTTPS POST to your URL when something happens, such as a finished call or a new booking.",
     "empty": "No webhook endpoints yet.",
     "enabledLabel": "Send events to this endpoint",
     "restricted": {

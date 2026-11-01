@@ -1135,7 +1135,7 @@
   },
   "webhooks": {
     "title": "Webhooks",
-    "description": "{{appName}} envía un HTTPS POST a su URL cuando ocurre algo, como una llamada finalizada o una nueva reserva. Cada solicitud está firmada para que pueda comprobar que proviene de nosotros.",
+    "description": "{{appName}} envía un HTTPS POST a su URL cuando ocurre algo, como una llamada finalizada o una nueva reserva.",
     "empty": "Aún no hay endpoints de webhook.",
     "enabledLabel": "Enviar eventos a este endpoint",
     "restricted": {

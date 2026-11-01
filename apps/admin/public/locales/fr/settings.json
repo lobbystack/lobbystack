@@ -1135,7 +1135,7 @@
   },
   "webhooks": {
     "title": "Webhooks",
-    "description": "{{appName}} envoie une requête HTTPS POST à votre URL quand quelque chose se produit, par exemple un appel terminé ou une nouvelle réservation. Chaque requête est signée pour que vous puissiez vérifier qu'elle vient de nous.",
+    "description": "{{appName}} envoie une requête HTTPS POST à votre URL quand quelque chose se produit, par exemple un appel terminé ou une nouvelle réservation.",
     "empty": "Aucun point de terminaison webhook pour l'instant.",
     "enabledLabel": "Envoyer les événements à ce point de terminaison",
     "restricted": {
