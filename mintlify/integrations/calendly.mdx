@@ -51,7 +51,7 @@ The AI receptionist sends the caller's confirmation and reminders itself. Calend
 LobbyStack starts reading your Calendly events, and the calendars Calendly checks for conflicts, within a few seconds.
 
 <Note>
-  A link from `POST /calendars/calendly/connect` works only for an owner or admin of the business. For a business with neither, the API answers `409`, so hand the business over with `POST /team/claim-link` first.
+  A link from `POST /calendars/calendly/connect` works only for an owner or admin of the business. For a business with neither, the API answers `409`, so invite one with `POST /team/invitations` first.
 </Note>
 
 ## Set up the event type in Calendly

@@ -59,7 +59,7 @@ On Free, these requests return `409`. A key never gets your 14-day trial number,
 
 A business with no owner has nobody on its team, which changes four things:
 
-- **Alerts:** [Webhooks](/api/webhooks) cover calls, messages, appointments and contacts. LobbyStack emails your owners and admins when a website visitor asks for a person, a transfer or a text fails, a customer's text needs a reply, a calendar stops syncing, an AI reply fails or a webhook endpoint turns off. You have 3 minutes to answer a visitor from the business's **Messages**. Nobody gets an alert about new website or Instagram chats, or texts in a paused conversation.
+- **Alerts:** [Webhooks](/api/webhooks) cover calls, messages, appointments and contacts. LobbyStack emails your owners and admins when a website visitor asks for a person, a transfer or a text fails, a customer's text needs a reply, a calendar stops syncing, an AI reply fails or a webhook endpoint turns off. You have 3 minutes to answer a visitor from the business's **Messages**. Nobody gets an alert about new website or Instagram chats.
 - **Calls the receptionist can't take:** LobbyStack forwards them to the business's transfer number and refuses them without one. Set `transfer_number` with `PATCH /receptionist`.
 - **Onboarding:** Your key finishes it with `POST /onboarding/complete`. Send `skip_number: true` if the business has no number.
 - **Selling and handing over:** A package needs an owner, because the checkout opens from their invitation. `package_id` returns `400` without `owner_email`, and setting a package later returns `409`. You can delete the business, but you can't release it.

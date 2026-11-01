@@ -484,7 +484,7 @@ describe.skipIf(!client)("a business with no owner", () => {
       const acme = await partner(tx, "Acme Software");
       const worker = workerContext(tx);
       const options = { provider: "calendly", requireAdmin: true, link: () => ({ url: "https://app.example.test/connect", expiresAt: new Date("2030-01-01T00:00:00Z") }) };
-      await expect(createCalendarConnectLinkForApi(worker, callerFor(acme, await ownerless(acme)), options)).rejects.toMatchObject({ status: 409, code: "conflict", message: "This business has no owner or admin to open the link. Send the claim link first." });
+      await expect(createCalendarConnectLinkForApi(worker, callerFor(acme, await ownerless(acme)), options)).rejects.toMatchObject({ status: 409, code: "conflict", message: "This business has no owner or admin to open the link. Invite one with POST /team/invitations first." });
       const { businessId } = await owned(tx, acme);
       await expect(createCalendarConnectLinkForApi(worker, callerFor(acme, businessId), options)).resolves.toMatchObject({ url: "https://app.example.test/connect" });
     });

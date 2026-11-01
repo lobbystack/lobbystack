@@ -1046,7 +1046,7 @@ export async function createCalendarConnectLinkForApi(context: DomainContext, ca
   return await inBusiness(context, caller, async (tx) => {
     if (options.requireAdmin) {
       const [admin] = await tx.select({ id: businessMemberships.id }).from(businessMemberships).where(and(eq(businessMemberships.businessId, caller.businessId), inArray(businessMemberships.role, ["business_owner", "business_admin"]), eq(businessMemberships.status, "active"))).limit(1);
-      if (!admin) throw conflict("This business has no owner or admin to open the link. Send the claim link first.");
+      if (!admin) throw conflict("This business has no owner or admin to open the link. Invite one with POST /team/invitations first.");
     }
     const { url, expiresAt } = options.link({ businessId: caller.businessId });
     await audit(tx, caller, { eventType: "api.calendar.connect_link_created", entityType: "business", entityId: caller.businessId, payload: { provider: options.provider ?? "google", expiresAt: expiresAt.toISOString() } });
