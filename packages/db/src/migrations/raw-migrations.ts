@@ -182,6 +182,7 @@ export const SCHEMA_MIGRATIONS = [
   "0176_text_replies.sql",
   "0177_calendly_calendar_webhooks.sql",
   "0178_partner_key_number_claims.sql",
+  "0179_partner_replacement_tier.sql",
 ] as const;
 
 const CONCURRENT_INDEX_DIRECTIVE = /^-- lobbystack:concurrent-index ([a-z][a-z0-9_]*)$/m;

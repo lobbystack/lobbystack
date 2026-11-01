@@ -10,7 +10,7 @@ import type { DomainContext } from "./context";
 import { loadEntitlement } from "./entitlement";
 import { activateNumberTrialInTransaction, enqueueNumberRouting, failNumberTrialInTransaction, isNumberCountry, keepBusinessNumbersInTransaction, trialCountries, trialNumberPaidForInTransaction, verifiedPhone, type NumberCountry } from "./numberTrials";
 import { normalizeOnboardingStage, NUMBER_CLAIM_STAGES } from "./onboarding";
-import { loadPartnerNumberStanding, newPartnerNumberRefusal, numberCountsForPartnerInTransaction, partnerKeyNumberRefusal, partnerTrialOffered, recordPartnerNumberCostInTransaction, unclaimedPartnerDemoInTransaction } from "./partnerNumbers";
+import { loadPartnerNumberStanding, newPartnerNumberRefusal, numberCountsForPartnerInTransaction, partnerKeyNumberRefusal, partnerReplacementRefusal, partnerTrialOffered, recordPartnerNumberCostInTransaction, unclaimedPartnerDemoInTransaction } from "./partnerNumbers";
 import { resolveBusinessNumberMarket, type BusinessNumberMarket } from "./phoneNumberMarket";
 
 export type NumberSelection = {
@@ -142,6 +142,9 @@ export async function numberEligibilityInTransaction(tx: DatabaseTransaction, in
     if (business.replacementUsedAt) throw refused("replacement_already_used");
     const active = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"), isNull(phoneNumbers.reclaimScheduledAt))).limit(1);
     if (!active.length) throw refused("active_number_required");
+    // Checked after the active number, so a running trial's number keeps that refusal. The claim check in migration 0179 refuses the same.
+    const refusal = entitlement.poolPartnerId ? partnerReplacementRefusal(await loadPartnerNumberStanding(tx, entitlement.poolPartnerId)) : null;
+    if (refusal) throw refused(refusal);
   }
   const verified = input.userId === null ? null : input.via === "dashboard" ? await verifiedPhone(tx, { userId: input.userId, businessId: input.businessId }) : await apiVerifiedPhone(tx, { userId: input.userId, businessId: input.businessId });
   // The verified phone's country decides the number's country.

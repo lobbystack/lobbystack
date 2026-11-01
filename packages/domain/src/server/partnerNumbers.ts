@@ -47,12 +47,22 @@ export async function loadPartnerNumberStanding(tx: DatabaseTransaction, partner
 /**
  * Why a partner's business on this deployment can't get a new number, as the
  * claim check in migration 0147 decides, or null when it can. A replacement
- * adds no number, so this doesn't apply to it.
+ * adds no number, so partnerReplacementRefusal decides that instead.
  */
 export function newPartnerNumberRefusal(standing: PartnerNumberStanding, deploymentMode: string): "partner_numbers_unavailable" | "partner_number_limit_reached" | null {
   // Without tier billing, nobody would pay for the number on the cloud, and a self-hosted server puts no tier limit on it.
   if (!standing.counted) return deploymentMode === "cloud" ? "partner_numbers_unavailable" : null;
   return standing.held >= standing.included && !standing.paidTier ? "partner_number_limit_reached" : null;
+}
+
+/**
+ * Why a partner's business can't replace a number, as the claim check in
+ * migration 0179 decides, or null when it can. The new number costs the host,
+ * and Free is never charged for it, so it needs a paid tier wherever the
+ * deployment bills tiers. A business stays live for a while after its tier ends.
+ */
+export function partnerReplacementRefusal(standing: PartnerNumberStanding): "partner_number_limit_reached" | null {
+  return standing.counted && !standing.paidTier ? "partner_number_limit_reached" : null;
 }
 
 /**
