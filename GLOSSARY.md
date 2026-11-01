@@ -10,6 +10,10 @@ LobbyStack answers businesses' calls and messages with AI agents. Some businesse
 An organization whose calls and messages LobbyStack answers. It belongs to the host directly or to a partner.
 _Avoid_: Client, tenant, customer
 
+**Workspace**:
+The name operators see for a business in the dashboard's navigation and settings. It's the same thing as a business, not a level above or below one.
+_Avoid_: Organization, account
+
 **Partner**:
 A company that resells LobbyStack to businesses under its own brand, domain, and bills. It keeps the businesses it sets up.
 _Avoid_: Agency, reseller, white-label partner
