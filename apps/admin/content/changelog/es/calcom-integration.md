@@ -11,4 +11,4 @@ Ahora puede conectar Cal.com desde **Integraciones**. Elija un tipo de evento, y
 
 Los cambios que haga en Cal.com vuelven a LobbyStack. Si cancela una reserva allí, LobbyStack cancela la cita. Si mueve una, LobbyStack mueve la cita y su recordatorio. En ambos casos recibe una alerta, y usted avisa a la persona de la nueva hora.
 
-Cal.com recibe el nombre y el teléfono de quien llama y una dirección de correo sustituta, así que no le envía correos. Su correo real queda en las notas de la reserva para su equipo. Para conectar su cuenta, siga la [guía de Cal.com](https://docs.lobbystack.com/es/integrations/calcom).
+Cal.com recibe el nombre y el teléfono de quien llama y una dirección de correo sustituta, así que no le envía correos. Su correo real queda en las notas de la reserva para su equipo. Para conectar su cuenta, empiece por la [guía de integraciones](https://docs.lobbystack.com/es/integrations/overview).

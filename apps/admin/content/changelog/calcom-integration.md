@@ -11,4 +11,4 @@ You can now connect Cal.com from **Integrations**. Pick an event type, and each 
 
 Changes you make in Cal.com come back to LobbyStack. Cancel a booking there and LobbyStack cancels the appointment. Move one and LobbyStack moves the appointment and its reminder. You get an alert either way, and you tell the caller about a new time.
 
-Cal.com gets the caller's name and phone number plus a stand-in email address, so it doesn't email callers. Their real email goes in the booking's notes for your team. To connect your account, follow the [Cal.com guide](https://docs.lobbystack.com/integrations/calcom).
+Cal.com gets the caller's name and phone number plus a stand-in email address, so it doesn't email callers. Their real email goes in the booking's notes for your team. To connect your account, start from the [integrations guide](https://docs.lobbystack.com/integrations/overview).

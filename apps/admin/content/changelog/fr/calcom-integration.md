@@ -11,4 +11,4 @@ Vous pouvez maintenant connecter Cal.com depuis **Intégrations**. Choisissez un
 
 Les changements faits dans Cal.com reviennent dans LobbyStack. Si vous y annulez une réservation, LobbyStack annule le rendez-vous. Si vous en déplacez une, LobbyStack déplace le rendez-vous et son rappel. Vous recevez une alerte dans les deux cas, et c'est à vous d'annoncer la nouvelle heure à l'appelant.
 
-Cal.com reçoit le nom et le numéro de téléphone de l'appelant, avec une adresse courriel de remplacement : il n'envoie donc aucun courriel aux appelants. Leur vraie adresse figure dans les notes de la réservation pour votre équipe. Pour connecter votre compte, suivez le [guide Cal.com](https://docs.lobbystack.com/fr/integrations/calcom).
+Cal.com reçoit le nom et le numéro de téléphone de l'appelant, avec une adresse courriel de remplacement : il n'envoie donc aucun courriel aux appelants. Leur vraie adresse figure dans les notes de la réservation pour votre équipe. Pour connecter votre compte, commencez par le [guide des intégrations](https://docs.lobbystack.com/fr/integrations/overview).
