@@ -1,13 +1,15 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { createHash } from "node:crypto";
 
-import { calls, contacts, enqueueOutbox, numberTrials, phoneNumbers, receptionistProfiles, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { and, eq, gt, inArray, like, ne, sql } from "drizzle-orm";
+
+import { billingUsageEvents, calls, contacts, enqueueOutbox, numberTrials, phoneNumbers, receptionistProfiles, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { CARRIERS_WITH_STAFF_FIRST, type CarrierId } from "@lobbystack/providers/telephony/types";
 import { includesStaffFirst, isTransferPhone, shouldRingStaffFirst, type RuntimeLocale, type StaffFirstMode } from "@lobbystack/shared";
 
 import { reserveOutboundCallAttempt } from "./billing";
 import type { DomainContext } from "./context";
 import { loadEntitlement } from "./entitlement";
-import { enqueueNumberRouting, trialTransferNumberInTransaction } from "./numberTrials";
+import { assertTransferNumberAllowed, enqueueNumberRouting, trialTransferNumberInTransaction } from "./numberTrials";
 import { getCachedBusinessSnapshot } from "./snapshotCache";
 import { findOrCreateCallContactInTransaction } from "./voice";
 
@@ -23,13 +25,14 @@ export async function staffFirstBlockInTransaction(tx: DatabaseTransaction, busi
   return numbers.length && !numbers.some((number) => CARRIERS_WITH_STAFF_FIRST.includes(number.carrier as CarrierId)) ? "carrier" : null;
 }
 
-/** The rules a change to the mode or the staff phone must pass, on top of assertTransferNumberAllowed. */
+/** The rules a change to the mode or the staff phone must pass. The phone follows the same rules as a transfer number. */
 export async function assertStaffFirstChange(tx: DatabaseTransaction, input: { businessId: string; mode?: StaffFirstMode | undefined; number?: string | null | undefined }): Promise<void> {
   const current = (await tx.select({ mode: receptionistProfiles.staffFirstMode, number: receptionistProfiles.staffFirstNumber }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, input.businessId)).limit(1))[0];
   const mode = input.mode ?? current?.mode ?? "never";
   const number = input.number !== undefined ? input.number : current?.number;
   if (mode !== "never" && !number) throw Object.assign(new Error("Add the staff phone to ring first."), { status: 400, code: "staff_first_number_required" });
   if (input.number) {
+    await assertTransferNumberAllowed(tx, { businessId: input.businessId, phone: input.number });
     // Ringing the number the call came in on would loop.
     const own = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.e164, input.number), inArray(phoneNumbers.status, ["active", "provisioning"]))).limit(1);
     if (own.length) throw Object.assign(new Error("The staff phone can't be your LobbyStack number."), { status: 400, code: "staff_first_number_own_line" });
@@ -49,6 +52,31 @@ export async function enqueueStaffFirstRouting(tx: DatabaseTransaction, business
 /** A call a staff member took: GPT-Live never saw it, so its carrier's call ID keys the record. */
 export const STAFF_ANSWERED_CALL_PROVIDER = "staff_answered";
 export const STAFF_ANSWERED_DISPOSITION = "answered_by_team";
+
+/** How long after a ring starts a second call from the caller counts as the same call: the ring, Twilio's buffer, and the carrier's forward. */
+const RING_SETTLE_SECONDS = 15;
+
+/** Ties a ring's attempt to its caller, without a phone number in billing data. */
+function callerKey(businessId: string, from: string): string {
+  return createHash("sha256").update(`${businessId}:${from}`).digest("hex").slice(0, 16);
+}
+
+/**
+ * The guard for a forward that names no line: a carrier can leave out
+ * ForwardedFrom, and a staff phone that forwards here would ring itself until
+ * the first <Dial> times out, using an attempt each time. The same caller
+ * arriving during their own ring is that forward, so the receptionist takes
+ * it. A caller who hangs up and redials in that time reaches the receptionist
+ * too. A withheld number can't be matched, so the first <Dial>'s timeout is
+ * the only limit there.
+ */
+async function callerIsRinging(context: DomainContext, input: { businessId: string; caller: string; sourceKey: string; ringSeconds: number; now: Date }): Promise<boolean> {
+  const since = new Date(input.now.getTime() - (input.ringSeconds + RING_SETTLE_SECONDS) * 1_000);
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const rings = await tx.select({ id: billingUsageEvents.id }).from(billingUsageEvents).where(and(eq(billingUsageEvents.businessId, input.businessId), like(billingUsageEvents.sourceKey, `staff_ring:${input.caller}:%`), ne(billingUsageEvents.sourceKey, input.sourceKey), gt(billingUsageEvents.createdAt, since))).limit(1);
+    return rings.length > 0;
+  });
+}
 
 export type StaffFirstDecision =
   // A blocked caller, or a number whose trial ended.
@@ -75,11 +103,15 @@ export async function decideStaffFirstCall(context: DomainContext, input: { busi
   const locale = snapshot?.defaultLocale ?? "en";
   const policy = snapshot?.staffFirstPolicy;
   if (!snapshot || !policy || !included || !shouldRingStaffFirst(snapshot, input.now)) return { action: "receptionist", locale };
-  // A staff line that forwards here, or the dialled number itself, would loop.
-  if (policy.number === input.e164 || policy.number === input.forwardedFrom) return { action: "receptionist", locale };
+  // A staff line that forwards here, or the dialled number itself, would loop. Some carriers put the forwarding line in From.
+  if (policy.number === input.e164 || policy.number === input.forwardedFrom || policy.number === input.from) return { action: "receptionist", locale };
   // The last check before a number is dialed, as on a transfer: a trial can start after the staff phone was saved.
   if (!isTransferPhone(policy.number) || (trialPhone && policy.number !== trialPhone)) return { action: "receptionist", locale };
-  const attempt = await reserveOutboundCallAttempt(context, { businessId: input.businessId, sourceKey: `staff_ring:${input.providerCallId}` });
+  const now = input.now ?? new Date();
+  const caller = input.from ? callerKey(input.businessId, input.from) : undefined;
+  const sourceKey = caller ? `staff_ring:${caller}:${input.providerCallId}` : `staff_ring:${input.providerCallId}`;
+  if (caller && await callerIsRinging(context, { businessId: input.businessId, caller, sourceKey, ringSeconds: policy.ringSeconds, now })) return { action: "receptionist", locale };
+  const attempt = await reserveOutboundCallAttempt(context, { businessId: input.businessId, sourceKey, recordedAt: now });
   if (!attempt.allowed) return { action: "receptionist", locale };
   return { action: "ring", locale, phone: policy.number, ringSeconds: policy.ringSeconds, ...(policy.message ? { message: policy.message } : {}) };
 }

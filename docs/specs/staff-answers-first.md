@@ -114,7 +114,8 @@ Telnyx clears its stored forward on a TeXML application, so this route is the on
 
 The staff phone can't be the dialled number, and can't be a line that forwards to it:
 
-- The webhook refuses to ring `ForwardedFrom` on Twilio.
+- The webhook refuses to ring `ForwardedFrom` on Twilio, or the caller's own number.
+- Twilio can leave `ForwardedFrom` out, so a call from the same caller during their own ring goes to the receptionist. A withheld number can't be matched, and the first `<Dial>`'s timeout limits that loop.
 - Telnyx sends no such field, so its loop guard has to come from a call that re-enters the webhook within the same ring window.
 - The setting's help text warns against entering a phone that forwards to LobbyStack, because a forward on no answer would otherwise bring the call back.
 

@@ -89,6 +89,16 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
     });
   });
 
+  it("holds the staff phone to the transfer number rules", async () => {
+    await rollbackTest(async (tx) => {
+      const businessId = await business(tx, { carrier: "twilio" });
+      await expect(save(tx, businessId, { staffFirstMode: "always", staffFirstNumber: "+8613800138000" })).rejects.toMatchObject({ status: 400, code: "transfer_country_unsupported" });
+      await expect(saveFromApi(tx, businessId, { staffFirstNumber: "416-555-0142" })).rejects.toMatchObject({ status: 400, code: "transfer_number_invalid" });
+      await tx.insert(numberTrials).values({ businessId, userId: (await tx.select({ id: users.id }).from(users).limit(1))[0]!.id, status: "active", verifiedPhone: "+14165550199" });
+      await expect(save(tx, businessId, { staffFirstNumber: staffPhone })).rejects.toMatchObject({ status: 409, code: "trial_transfer_locked" });
+    });
+  });
+
   it("refuses a Free business", async () => {
     await rollbackTest(async (tx) => {
       const businessId = await business(tx, { plan: "free_cloud", carrier: "twilio" });
@@ -146,6 +156,7 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
     // Monday 2026-11-02 at 10:00 and 20:00 in Toronto.
     const open = new Date("2026-11-02T15:00:00Z");
     const closed = new Date("2026-11-03T01:00:00Z");
+    const caller = "+14165550134";
     const context = (tx: DatabaseTransaction) => ({ db: tx as unknown as Database });
 
     async function configured(tx: DatabaseTransaction, mode: "business_hours" | "always", plan: "free_cloud" | "starter" = "starter") {
@@ -174,6 +185,30 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
         await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA2", now: open });
         const attempts = await tx.select({ sourceKey: billingUsageEvents.sourceKey }).from(billingUsageEvents).where(and(eq(billingUsageEvents.businessId, businessId), eq(billingUsageEvents.usageKind, "outbound_call_attempts")));
         expect(attempts.map((attempt) => attempt.sourceKey).sort()).toEqual(["staff_ring:CA1", "staff_ring:CA2"]);
+      });
+    });
+
+    it("sends a forwarded call to the receptionist when the carrier names no forwarding line", async () => {
+      await rollbackTest(async (tx) => {
+        const businessId = await configured(tx, "always");
+        const call = (providerCallId: string, now: Date) => decide(tx, { businessId, e164: lobbyNumber, providerCallId, from: caller, now });
+        expect((await call("CA1", open)).action).toBe("ring");
+        // Twilio repeating the webhook is the same call, not a forward.
+        expect((await call("CA1", open)).action).toBe("ring");
+        expect((await call("CA2", new Date(open.getTime() + 20_000))).action).toBe("receptionist");
+        // Other callers still ring, and so does this one once the ring is over.
+        expect((await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA3", from: "+14165550155", now: new Date(open.getTime() + 20_000) })).action).toBe("ring");
+        expect((await call("CA4", new Date(open.getTime() + 31_000))).action).toBe("ring");
+        const attempts = await tx.select({ sourceKey: billingUsageEvents.sourceKey }).from(billingUsageEvents).where(eq(billingUsageEvents.businessId, businessId));
+        expect(attempts).toHaveLength(3);
+        expect(attempts.map((attempt) => attempt.sourceKey).join()).not.toContain("4165550134");
+      });
+    });
+
+    it("won't ring the staff phone for a call from the staff phone", async () => {
+      await rollbackTest(async (tx) => {
+        const businessId = await configured(tx, "always");
+        expect(await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA1", from: staffPhone, now: open })).toEqual({ action: "receptionist", locale: "en" });
       });
     });
 
