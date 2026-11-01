@@ -44,6 +44,10 @@ _Avoid_: Line, integration
 A person at a business whom an agent books appointments with or transfers calls to.
 _Avoid_: Staff, human agent
 
+**Real conversation**:
+A conversation between an agent and a customer on any channel. Test calls and calls from a team's verified phones don't count.
+_Avoid_: Real call, live call
+
 ### What gets sold
 
 **Plan**:
