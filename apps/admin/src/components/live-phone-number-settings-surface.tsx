@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useActiveBusiness } from "@/hooks/use-active-business";
@@ -42,6 +43,33 @@ function getSettingsPhoneNumberErrorMessage(error: unknown, fallback: string): s
   return fallback;
 }
 
+/** The labels and error messages the number chooser takes, from the settings copy. */
+export function phoneNumberChooserText(t: TFunction<"settings">) {
+  return {
+    labels: {
+      countryLabel: t("phoneNumber.picker.countryLabel"),
+      areaCodeLabel: t("phoneNumber.picker.areaCodeLabel"),
+      areaCodePlaceholder: t("phoneNumber.picker.areaCodePlaceholder"),
+      search: t("phoneNumber.picker.search"),
+      phoneNumberHeader: t("phoneNumber.picker.phoneNumberHeader"),
+      select: t("phoneNumber.picker.select"),
+      loadMore: t("phoneNumber.picker.loadMore"),
+      empty: t("phoneNumber.picker.empty"),
+      loadFailed: t("phoneNumber.picker.loadFailed"),
+      searchFailed: t("phoneNumber.picker.searchFailed"),
+      claimFailed: t("phoneNumber.picker.claimFailed"),
+      unavailable: t("phoneNumber.picker.unavailable"),
+    },
+    getErrorMessage(error: unknown, fallback: string): string {
+      const code = (error as { code?: string } | null)?.code;
+      if (code === "partner_number_limit_reached") return t("phoneNumber.partnerTierRequired.description");
+      if (code === "partner_numbers_unavailable") return t("phoneNumber.partnerNumbersUnavailable.description");
+      if (code === "phone_numbers_unavailable") return t("phoneNumber.numbersUnavailable");
+      return getSettingsPhoneNumberErrorMessage(error, fallback);
+    },
+  };
+}
+
 function formatReclaimDate(value: number, locale: string): string {
   return formatDateTime(value, locale, { year: "numeric", month: "long", day: "numeric" });
 }
@@ -65,6 +93,7 @@ export function LivePhoneNumberSettingsSurface() {
   const partnerNumbers = numbers.data?.partnerNumbers ?? null;
   const isReplacement = Boolean(primaryPhoneNumber);
   const numberApi = useMemo(() => phoneNumberChooserApi(isReplacement), [isReplacement]);
+  const chooserText = phoneNumberChooserText(t);
   const displayPhoneNumber = primaryPhoneNumber
     ? formatPhoneNumberDisplay(primaryPhoneNumber.e164, i18n.language)
     : null;
@@ -210,28 +239,9 @@ export function LivePhoneNumberSettingsSurface() {
                         <PhoneNumberChooser
                           businessId={businessId}
                           claimNumber={numberApi.claimNumber}
-                          getErrorMessage={(error, fallback) => {
-                            const code = (error as { code?: string } | null)?.code;
-                            if (code === "partner_number_limit_reached") return t("phoneNumber.partnerTierRequired.description");
-                            if (code === "partner_numbers_unavailable") return t("phoneNumber.partnerNumbersUnavailable.description");
-                            if (code === "phone_numbers_unavailable") return t("phoneNumber.numbersUnavailable");
-                            return getSettingsPhoneNumberErrorMessage(error, fallback);
-                          }}
+                          getErrorMessage={chooserText.getErrorMessage}
                           getInitialNumberSuggestion={numberApi.getInitialNumberSuggestion}
-                          labels={{
-                            countryLabel: t("phoneNumber.picker.countryLabel"),
-                            areaCodeLabel: t("phoneNumber.picker.areaCodeLabel"),
-                            areaCodePlaceholder: t("phoneNumber.picker.areaCodePlaceholder"),
-                            search: t("phoneNumber.picker.search"),
-                            phoneNumberHeader: t("phoneNumber.picker.phoneNumberHeader"),
-                            select: t("phoneNumber.picker.select"),
-                            loadMore: t("phoneNumber.picker.loadMore"),
-                            empty: t("phoneNumber.picker.empty"),
-                            loadFailed: t("phoneNumber.picker.loadFailed"),
-                            searchFailed: t("phoneNumber.picker.searchFailed"),
-                            claimFailed: t("phoneNumber.picker.claimFailed"),
-                            unavailable: t("phoneNumber.picker.unavailable"),
-                          }}
+                          labels={chooserText.labels}
                           onClaimed={handleClaimed}
                           searchAvailableNumbers={numberApi.searchAvailableNumbers}
                         />

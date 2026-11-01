@@ -23,6 +23,18 @@ export async function countOperatorTestCallsHeard(tx: DatabaseTransaction, busin
   return Number(row?.count ?? 0);
 }
 
+/** The operator's latest test call that someone heard, by the same rule as countOperatorTestCallsHeard. */
+export async function latestOperatorTestCall(tx: DatabaseTransaction, businessId: string) {
+  return (await tx.select({ id: calls.id, startedAt: calls.startedAt, endedAt: calls.endedAt, providerDurationSeconds: calls.providerDurationSeconds }).from(calls).where(and(
+    eq(calls.businessId, businessId),
+    eq(calls.transport, "web_voice"),
+    eq(calls.widgetId, DASHBOARD_TEST_CALL_WIDGET_ID),
+    isNull(calls.prospectDemoId),
+    isNotNull(calls.mediaStartedAt),
+    isNotNull(calls.endedAt),
+  )).orderBy(desc(calls.startedAt)).limit(1))[0] ?? null;
+}
+
 /**
  * The crawl describing the business's own website. Resubmitting a URL reuses
  * that URL's earlier import, so creation time alone would favour whichever site

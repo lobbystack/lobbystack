@@ -10,6 +10,7 @@ import { receiveInstagramMessage, saveInstagramReply } from "./instagram";
 import { finishLiveCall, markLiveCallMediaStarted, saveLiveCallTurn, startLivePhoneCall, startLiveWebCall } from "./liveCalls";
 import { receiveInboundSms } from "./sms";
 import { completeCall } from "./voice";
+import { readFirstRealConversationAt } from "./firstRealConversation";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -352,6 +353,28 @@ describe.skipIf(!testUrl)("first real conversation against PostgreSQL under prod
         return (await db.execute(sql`select * from app.first_real_conversation_facts(${businessId}::uuid, ${TEAM_PHONE})`)).rows;
       });
       expect(facts).toEqual([]);
+    });
+  });
+});
+
+describe.skipIf(!testUrl)("the new-account Home's switch", () => {
+  it("stays answered after the conversation behind it is gone", async () => {
+    await rollbackTest(async (tx) => {
+      const [business] = await tx.insert(businesses).values({ name: "Switch", slug: `switch-${randomUUID()}`, timezone: "UTC", businessType: "other" }).returning({ id: businesses.id });
+      const [conversation] = await tx.insert(conversations).values({ businessId: business!.id, channel: "voice" }).returning({ id: conversations.id });
+      expect(await readFirstRealConversationAt(tx, business!.id)).toBeNull();
+      await tx.insert(firstRealConversations).values({ businessId: business!.id, channel: "voice", conversationId: conversation!.id });
+      const first = await readFirstRealConversationAt(tx, business!.id);
+      expect(first).toBeInstanceOf(Date);
+      await tx.delete(conversations).where(eq(conversations.id, conversation!.id));
+      expect(await readFirstRealConversationAt(tx, business!.id)).toEqual(first);
+    });
+  });
+
+  it("gives the app role no way to delete or change the row", async () => {
+    await rollbackTest(async (tx) => {
+      const [{ del, upd }] = (await tx.execute<{ del: boolean; upd: boolean }>(sql`select has_table_privilege('lobbystack_app', 'public.first_real_conversations', 'DELETE') as del, has_table_privilege('lobbystack_app', 'public.first_real_conversations', 'UPDATE') as upd`)).rows as [{ del: boolean; upd: boolean }];
+      expect([del, upd]).toEqual([false, false]);
     });
   });
 });

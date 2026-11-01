@@ -1,8 +1,8 @@
 /** Forward only the calls the owner doesn't answer, or every call. */
 export type ForwardingMode = "missed" | "all";
 
-/** How a code expects the destination: 10 digits, 1 plus 10 digits, or +1 and 10 digits. */
-export type NumberFormat = "national" | "1prefix" | "plus";
+/** How a code expects the destination: 10 digits, 1 plus 10 digits, +1 and 10 digits, or the full international number. */
+export type NumberFormat = "national" | "1prefix" | "plus" | "e164";
 
 /** Fixed notes the dialog can show; their text lives in the locale files. */
 export type ForwardingNote = "planFeature" | "voicemail" | "androidOnly" | "adminOnly" | "verifyNumber";
@@ -22,7 +22,7 @@ export type ForwardingMethod =
   }
   | { method: "settings"; where: "phone" | "app" | "web"; path: string[]; notes?: ForwardingNote[] };
 
-export type CarrierGroup = "usMobile" | "caMobile" | "landline" | "voip";
+export type CarrierGroup = "usMobile" | "caMobile" | "ukMobile" | "landline" | "voip";
 
 export type Carrier = {
   id: string;
@@ -32,8 +32,9 @@ export type Carrier = {
   all: ForwardingMethod | null;
 };
 
-/** Fills a carrier code with a North American number in the form the carrier expects. */
+/** Fills a carrier code with the number in the form the carrier expects. Every format but e164 is North American. */
 export function dialCode(template: string, e164: string, format: NumberFormat): string {
+  if (format === "e164") return template.replace("{number}", e164);
   const national = e164.replace(/\D/g, "").replace(/^1(?=\d{10}$)/, "");
   const number = format === "national" ? national : format === "1prefix" ? `1${national}` : `+1${national}`;
   return template.replace("{number}", number);
@@ -120,3 +121,34 @@ const carriers: Carrier[] = [
 const groupOrder: CarrierGroup[] = ["usMobile", "caMobile", "landline", "voip"];
 
 export const carrierGroups = groupOrder.map((id) => ({ id, items: carriers.filter((carrier) => carrier.group === id) }));
+
+// Vodafone's help page gives these codes, with +44 in place of the leading 0: vodafone.co.uk/help/mobile/how-do-i-manage-call-diverts
+const ukCarriers: Carrier[] = [
+  { id: "vodafone-uk", name: "Vodafone UK", group: "ukMobile", missed: gsmMissed("**", "e164", ["##61#", "##67#", "##62#"]), all: gsmAll("**21*{number}#", "##21#", "e164") },
+];
+
+const canadianLandlines = new Set(["landline-ca", "bell-home", "telus-home"]);
+
+/**
+ * The carrier groups for a country, or the whole North American list when the
+ * country is unknown. Empty for a country we hold no sourced steps for, where
+ * the guide falls back to the phone's settings and the carrier.
+ */
+export function carrierGroupsFor(country: string | null): Array<{ id: CarrierGroup; items: Carrier[] }> {
+  if (country === null) return carrierGroups;
+  if (country === "GB") return [{ id: "ukMobile", items: ukCarriers }];
+  const northAmerican = (keep: (carrier: Carrier) => boolean) => carrierGroups.map((group) => ({ ...group, items: group.items.filter(keep) })).filter((group) => group.items.length > 0);
+  if (country === "CA") return northAmerican((carrier) => carrier.group !== "usMobile" && carrier.id !== "landline-us");
+  if (country === "US" || country === "PR") return northAmerican((carrier) => carrier.group !== "caMobile" && !canadianLandlines.has(carrier.id));
+  return [];
+}
+
+/**
+ * Which country's carriers to list for a forwarding number. A number outside
+ * +1 names its own country. A +1 number doesn't say US or Canada, so the
+ * business's time zone decides, and with no answer the guide lists both.
+ */
+export function forwardingCountry(e164: string, businessCountry: string | null, inferCountry: (e164: string) => string | undefined): string | null {
+  if (!e164.startsWith("+1")) return inferCountry(e164) ?? businessCountry ?? "unknown";
+  return businessCountry === "US" || businessCountry === "CA" || businessCountry === "PR" ? businessCountry : null;
+}

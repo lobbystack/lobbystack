@@ -37,6 +37,11 @@ export function isRealCallCandidate(call: Omit<EndedCall, "id" | "conversationId
   return call.transport !== "web_voice" || call.widgetId === WIDGET_VOICE_ID;
 }
 
+/** When the business had its first real conversation, or null before it has one. The row outlives the conversation, so the answer never goes back to null. */
+export async function readFirstRealConversationAt(tx: DatabaseTransaction, businessId: string): Promise<Date | null> {
+  return (await tx.select({ occurredAt: firstRealConversations.occurredAt }).from(firstRealConversations).where(eq(firstRealConversations.businessId, businessId)).limit(1))[0]?.occurredAt ?? null;
+}
+
 async function alreadyRecorded(tx: DatabaseTransaction, businessId: string): Promise<boolean> {
   return (await tx.select({ businessId: firstRealConversations.businessId }).from(firstRealConversations).where(eq(firstRealConversations.businessId, businessId)).limit(1)).length > 0;
 }

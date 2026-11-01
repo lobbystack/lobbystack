@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
 import { DashboardActivationCard } from "@/components/dashboard-activation-card";
+import { NewAccountHome } from "@/components/new-account-home";
 import { appointmentSummary, CancelAppointmentButton } from "@/components/cancel-appointment-button";
 import { ChartBlockSkeleton, MetricCardGridSkeleton } from "@/components/loading-skeletons";
 import { Item, ItemActions, ItemHeader, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item";
@@ -32,6 +33,7 @@ import { fetchUnansweredQuestions, UNANSWERED_QUESTIONS_ANCHOR, unansweredQuesti
 import { useBusinessCan } from "@/components/business-capabilities-provider";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { dayKey } from "@/lib/calendar-days";
+import { showsNewAccountHome } from "@/lib/new-account-home";
 
 const OverviewCallChart = dynamic(() => import("./overview-call-chart").then((module) => module.OverviewCallChart), {
   loading: () => <div className="h-[350px] animate-pulse rounded-xl bg-muted" />,
@@ -50,6 +52,8 @@ type DashboardSummary = {
   recentCalls: Array<{ id: string; startedAt: string; status: string; transport?: string | null; durationSeconds: number; contactName: string | null; contactPhone: string | null; contactEmail?: string | null }>;
   actionRequired: Array<{ id: string; kind: string; title: string; body: string; createdAt: string; conversationId?: string; callId?: string | null; request?: string | null; requested?: RequestedCancellation | null; appointment?: { id: string; startsAt: string; timezone: string; status: string; serviceName: string | null; contactName: string | null } | null }>;
   upcoming: Array<{ id: string; startsAt: string; timezone: string; status: string; sourceChannel: string; contactName: string | null; contactPhone?: string | null; contactEmail?: string | null; serviceName: string | null; staffName: string | null; employeeName?: string | null }>;
+  /** Null until the business's first real conversation. */
+  firstRealConversationAt?: string | null;
 };
 
 // A caller asked to cancel on a call where the agent couldn't (see the domain's CANCELLATION_REQUEST).
@@ -69,7 +73,8 @@ function initials(value: string | null): string {
 export function LiveOverviewSurface() {
   const { i18n, t } = useTranslation("dashboard");
   const queryClient = useQueryClient();
-  const summary = useQuery({ queryKey: ["dashboard"], queryFn: getSummary });
+  // Realtime events bring the switch to the normal Home. The slow poll covers a browser that lost its event stream.
+  const summary = useQuery({ queryKey: ["dashboard"], queryFn: getSummary, refetchInterval: (query) => query.state.data?.firstRealConversationAt === null ? 60_000 : false });
   const businessId = summary.data?.businessId;
   const { appointments } = useAppointments();
   const { t: tKnowledge } = useTranslation("knowledge");
@@ -93,6 +98,9 @@ export function LiveOverviewSurface() {
       : { key: "appointments", value: summary.data.kpis.appointments.total.toLocaleString(intlLocale(i18n.language)), description: formatDelta(summary.data.kpis.appointments.deltaPercent, t) },
     { key: "averageDuration", value: formatDuration(summary.data.kpis.averageDuration.totalSeconds), description: formatDurationDelta(summary.data.kpis.averageDuration.deltaSeconds, t) },
   ] as const : [];
+
+  if (summary.data?.firstRealConversationAt === null && !business) return <PageHeader title={t("home.title")} />;
+  if (businessId && showsNewAccountHome({ firstRealConversationAt: summary.data?.firstRealConversationAt, canSetUp, role: business?.role })) return <NewAccountHome businessId={businessId} goal={business?.onboardingGoal ?? null} />;
 
   return (
     <div className="flex flex-col gap-6">

@@ -255,6 +255,70 @@
       "cta": "Choose a plan"
     }
   },
+  "newAccountHome": {
+    "title": {
+      "answer_calls": "Get your agent answering your calls",
+      "book_appointments": "Get your agent booking appointments",
+      "answer_website_visitors": "Get your agent answering your website visitors",
+      "answer_instagram_messages": "Get your agent answering your Instagram messages",
+      "none": "Get your agent talking to your customers"
+    },
+    "description": "Three steps to your first real conversation. This page changes on its own after that.",
+    "done": "Done",
+    "hear": {
+      "title": "Hear it",
+      "prompt": {
+        "answer_calls": "Call your agent from your browser and ask what your callers ask most.",
+        "book_appointments": "Call your agent from your browser and ask it to book an appointment.",
+        "answer_website_visitors": "Call your agent from your browser and ask what people ask on your website.",
+        "answer_instagram_messages": "Call your agent from your browser and ask what people ask in your Instagram messages.",
+        "none": "Call your agent from your browser and ask what your customers ask most."
+      },
+      "lastCall": "Your test call",
+      "lastCallDetails": "{{date}}, {{duration}}",
+      "readTranscript": "Read the transcript",
+      "again": "Call it again",
+      "read_one": "It has read {{count}} page of {{host}}.",
+      "read_other": "It has read {{count}} pages of {{host}}."
+    },
+    "teach": {
+      "title": "Teach it",
+      "description": "Your agent answers from what you give it. Fill in what it missed.",
+      "tasks": {
+        "knowledge": {
+          "title": "Add what it should know",
+          "description": "Prices, policies and the questions you hear every day."
+        },
+        "hours": {
+          "title": "Set your business hours",
+          "description": "So it tells callers when you're open."
+        },
+        "calendar": {
+          "title": "Connect your calendar",
+          "description": "So it books only when you're free."
+        },
+        "services": {
+          "title": "List your services",
+          "description": "So it knows what customers can book."
+        },
+        "widget": {
+          "title": "Add the chat widget to your website",
+          "description": "So visitors can ask it questions on your site."
+        },
+        "instagram": {
+          "title": "Connect Instagram",
+          "description": "So it answers your direct messages."
+        }
+      }
+    },
+    "number": {
+      "title": "Put it on your number",
+      "ready": "Your agent answers on {{number}}. Forward your business line to it so real callers reach it.",
+      "switches": "This page switches to your calls and appointments after your agent's first conversation with a customer. Calls from your team's verified phones don't count.",
+      "claim": "Your plan includes a number. Pick one, then forward your business line to it.",
+      "plan": "A phone number lets your agent answer real customers. Choose a plan to get one."
+    }
+  },
   "forwarding": {
     "title": "Forward your calls to {{number}}",
     "description": "Pick your carrier, then follow the steps on the phone your customers call.",
@@ -277,7 +341,8 @@
       "usMobile": "US mobile",
       "caMobile": "Canadian mobile",
       "landline": "Landlines",
-      "voip": "Business phone systems"
+      "voip": "Business phone systems",
+      "ukMobile": "UK mobile"
     },
     "code": {
       "dial": "Dial this code:",
@@ -313,6 +378,10 @@
     "notListed": {
       "missed": "Carrier not listed? Ask them to forward unanswered calls to {{number}}.",
       "all": "Carrier not listed? Ask them to forward all your calls to {{number}}."
+    },
+    "general": {
+      "missed": "On a mobile, open your phone's call settings and forward unanswered calls to {{number}}. On a landline or business phone system, ask your carrier to do it.",
+      "all": "On a mobile, open your phone's call settings and forward all calls to {{number}}. On a landline or business phone system, ask your carrier to do it."
     }
   }
 }

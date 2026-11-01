@@ -256,6 +256,71 @@
       "cta": "Elegir un plan"
     }
   },
+  "newAccountHome": {
+    "title": {
+      "answer_calls": "Ponga a su agente a contestar sus llamadas",
+      "book_appointments": "Ponga a su agente a reservar citas",
+      "answer_website_visitors": "Ponga a su agente a atender a los visitantes de su sitio web",
+      "answer_instagram_messages": "Ponga a su agente a contestar sus mensajes de Instagram",
+      "none": "Ponga a su agente a hablar con sus clientes"
+    },
+    "description": "Tres pasos hasta su primera conversación real. Después, esta página cambia sola.",
+    "done": "Listo",
+    "hear": {
+      "title": "Escúchelo",
+      "prompt": {
+        "answer_calls": "Llame a su agente desde el navegador y pregúntele lo que más le preguntan quienes llaman.",
+        "book_appointments": "Llame a su agente desde el navegador y pídale que reserve una cita.",
+        "answer_website_visitors": "Llame a su agente desde el navegador y pregúntele lo que la gente pregunta en su sitio web.",
+        "answer_instagram_messages": "Llame a su agente desde el navegador y pregúntele lo que la gente pregunta en sus mensajes de Instagram.",
+        "none": "Llame a su agente desde el navegador y pregúntele lo que más preguntan sus clientes."
+      },
+      "lastCall": "Su llamada de prueba",
+      "lastCallDetails": "{{date}}, {{duration}}",
+      "readTranscript": "Leer la transcripción",
+      "again": "Llamar de nuevo",
+      "read_one": "Ha leído {{count}} página de {{host}}.",
+      "read_many": "Ha leído {{count}} páginas de {{host}}.",
+      "read_other": "Ha leído {{count}} páginas de {{host}}."
+    },
+    "teach": {
+      "title": "Enséñele",
+      "description": "Su agente responde con lo que usted le da. Complete lo que le falta.",
+      "tasks": {
+        "knowledge": {
+          "title": "Agregue lo que debe saber",
+          "description": "Precios, políticas y las preguntas que oye todos los días."
+        },
+        "hours": {
+          "title": "Indique su horario de atención",
+          "description": "Para que diga a los clientes cuándo está abierto."
+        },
+        "calendar": {
+          "title": "Conecte su calendario",
+          "description": "Para que reserve solo cuando usted esté libre."
+        },
+        "services": {
+          "title": "Indique sus servicios",
+          "description": "Para que sepa qué pueden reservar sus clientes."
+        },
+        "widget": {
+          "title": "Agregue el widget de chat a su sitio web",
+          "description": "Para que los visitantes le hagan preguntas en su sitio."
+        },
+        "instagram": {
+          "title": "Conecte Instagram",
+          "description": "Para que conteste sus mensajes directos."
+        }
+      }
+    },
+    "number": {
+      "title": "Póngalo en su número",
+      "ready": "Su agente contesta en el {{number}}. Desvíe a ese número la línea de su negocio para que las llamadas reales le lleguen.",
+      "switches": "Esta página pasa a mostrar sus llamadas y citas después de la primera conversación de su agente con un cliente. Las llamadas de los teléfonos verificados de su equipo no cuentan.",
+      "claim": "Su plan incluye un número. Elíjalo y desvíe a él la línea de su negocio.",
+      "plan": "Un número de teléfono permite a su agente atender a clientes reales. Elija un plan para obtener uno."
+    }
+  },
   "forwarding": {
     "title": "Desvíe sus llamadas al {{number}}",
     "description": "Elija su operador y siga los pasos en el teléfono al que llaman sus clientes.",
@@ -278,7 +343,8 @@
       "usMobile": "Celular (EE. UU.)",
       "caMobile": "Celular (Canadá)",
       "landline": "Líneas fijas",
-      "voip": "Sistemas telefónicos para empresas"
+      "voip": "Sistemas telefónicos para empresas",
+      "ukMobile": "Móviles del Reino Unido"
     },
     "code": {
       "dial": "Marque este código:",
@@ -314,6 +380,10 @@
     "notListed": {
       "missed": "¿Su operador no aparece? Pídale que desvíe las llamadas sin respuesta al {{number}}.",
       "all": "¿Su operador no aparece? Pídale que desvíe todas sus llamadas al {{number}}."
+    },
+    "general": {
+      "missed": "En un móvil, abra los ajustes de llamadas del teléfono y desvíe las llamadas sin respuesta al {{number}}. En una línea fija o un sistema telefónico de empresa, pídaselo a su operador.",
+      "all": "En un móvil, abra los ajustes de llamadas del teléfono y desvíe todas las llamadas al {{number}}. En una línea fija o un sistema telefónico de empresa, pídaselo a su operador."
     }
   }
 }

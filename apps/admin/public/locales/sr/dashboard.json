@@ -256,6 +256,71 @@
       "cta": "Izaberi paket"
     }
   },
+  "newAccountHome": {
+    "title": {
+      "answer_calls": "Neka agent odgovara na Vaše pozive",
+      "book_appointments": "Neka agent zakazuje termine",
+      "answer_website_visitors": "Neka agent odgovara posetiocima Vašeg sajta",
+      "answer_instagram_messages": "Neka agent odgovara na Vaše Instagram poruke",
+      "none": "Povežite agenta sa Vašim klijentima"
+    },
+    "description": "Tri koraka do prvog pravog razgovora. Posle toga se ova stranica sama menja.",
+    "done": "Gotovo",
+    "hear": {
+      "title": "Čujte ga",
+      "prompt": {
+        "answer_calls": "Pozovite agenta iz pregledača i pitajte ono što Vas klijenti najčešće pitaju.",
+        "book_appointments": "Pozovite agenta iz pregledača i zamolite ga da zakaže termin.",
+        "answer_website_visitors": "Pozovite agenta iz pregledača i pitajte ono što ljudi pitaju na Vašem sajtu.",
+        "answer_instagram_messages": "Pozovite agenta iz pregledača i pitajte ono što ljudi pitaju u Vašim Instagram porukama.",
+        "none": "Pozovite agenta iz pregledača i pitajte ono što Vas klijenti najčešće pitaju."
+      },
+      "lastCall": "Vaš probni poziv",
+      "lastCallDetails": "{{date}}, {{duration}}",
+      "readTranscript": "Pročitajte transkript",
+      "again": "Pozovite ponovo",
+      "read_one": "Pročitao je {{count}} stranicu sajta {{host}}.",
+      "read_few": "Pročitao je {{count}} stranice sajta {{host}}.",
+      "read_other": "Pročitao je {{count}} stranica sajta {{host}}."
+    },
+    "teach": {
+      "title": "Naučite ga",
+      "description": "Agent odgovara na osnovu onoga što mu date. Dopunite ono što mu nedostaje.",
+      "tasks": {
+        "knowledge": {
+          "title": "Dodajte ono što treba da zna",
+          "description": "Cene, pravila i pitanja koja čujete svaki dan."
+        },
+        "hours": {
+          "title": "Podesite radno vreme",
+          "description": "Da klijentima kaže kada radite."
+        },
+        "calendar": {
+          "title": "Povežite kalendar",
+          "description": "Da zakazuje samo kada ste slobodni."
+        },
+        "services": {
+          "title": "Navedite usluge",
+          "description": "Da zna šta klijenti mogu da zakažu."
+        },
+        "widget": {
+          "title": "Dodajte čet vidžet na sajt",
+          "description": "Da mu posetioci postavljaju pitanja na Vašem sajtu."
+        },
+        "instagram": {
+          "title": "Povežite Instagram",
+          "description": "Da odgovara na Vaše direktne poruke."
+        }
+      }
+    },
+    "number": {
+      "title": "Stavite ga na svoj broj",
+      "ready": "Agent se javlja na {{number}}. Preusmerite poslovnu liniju na taj broj da bi ga pravi pozivi stigli.",
+      "switches": "Ova stranica prelazi na Vaše pozive i termine posle prvog razgovora agenta sa klijentom. Pozivi sa verifikovanih telefona Vašeg tima se ne računaju.",
+      "claim": "Vaš plan uključuje broj. Izaberite ga, pa preusmerite poslovnu liniju na njega.",
+      "plan": "Sa brojem telefona agent može da odgovara pravim klijentima. Izaberite plan da biste ga dobili."
+    }
+  },
   "forwarding": {
     "title": "Preusmerite pozive na {{number}}",
     "description": "Izaberite operatera, pa pratite korake na telefonu koji Vaši klijenti zovu.",
@@ -278,7 +343,8 @@
       "usMobile": "Mobilni (SAD)",
       "caMobile": "Mobilni (Kanada)",
       "landline": "Fiksne linije",
-      "voip": "Poslovni telefonski sistemi"
+      "voip": "Poslovni telefonski sistemi",
+      "ukMobile": "Mobilni u Velikoj Britaniji"
     },
     "code": {
       "dial": "Ukucajte ovaj kod:",
@@ -314,6 +380,10 @@
     "notListed": {
       "missed": "Vašeg operatera nema na listi? Zamolite ga da preusmeri neodgovorene pozive na {{number}}.",
       "all": "Vašeg operatera nema na listi? Zamolite ga da preusmeri sve Vaše pozive na {{number}}."
+    },
+    "general": {
+      "missed": "Na mobilnom otvorite podešavanja poziva i preusmerite neodgovorene pozive na {{number}}. Za fiksnu liniju ili poslovni telefonski sistem zamolite operatera da to uradi.",
+      "all": "Na mobilnom otvorite podešavanja poziva i preusmerite sve pozive na {{number}}. Za fiksnu liniju ili poslovni telefonski sistem zamolite operatera da to uradi."
     }
   }
 }

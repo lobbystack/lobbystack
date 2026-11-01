@@ -256,6 +256,71 @@
       "cta": "Choisir un forfait"
     }
   },
+  "newAccountHome": {
+    "title": {
+      "answer_calls": "Faites répondre votre agent à vos appels",
+      "book_appointments": "Faites prendre vos rendez-vous par votre agent",
+      "answer_website_visitors": "Faites répondre votre agent aux visiteurs de votre site",
+      "answer_instagram_messages": "Faites répondre votre agent à vos messages Instagram",
+      "none": "Mettez votre agent en contact avec vos clients"
+    },
+    "description": "Trois étapes avant votre première vraie conversation. Cette page change ensuite d'elle-même.",
+    "done": "Fait",
+    "hear": {
+      "title": "Écoutez-le",
+      "prompt": {
+        "answer_calls": "Appelez votre agent depuis votre navigateur et posez la question que vos clients posent le plus souvent.",
+        "book_appointments": "Appelez votre agent depuis votre navigateur et demandez-lui de prendre un rendez-vous.",
+        "answer_website_visitors": "Appelez votre agent depuis votre navigateur et posez les questions que les gens posent sur votre site.",
+        "answer_instagram_messages": "Appelez votre agent depuis votre navigateur et posez les questions que les gens posent dans vos messages Instagram.",
+        "none": "Appelez votre agent depuis votre navigateur et posez la question que vos clients posent le plus souvent."
+      },
+      "lastCall": "Votre appel test",
+      "lastCallDetails": "{{date}}, {{duration}}",
+      "readTranscript": "Lire la transcription",
+      "again": "Rappeler",
+      "read_one": "Il a lu {{count}} page de {{host}}.",
+      "read_many": "Il a lu {{count}} pages de {{host}}.",
+      "read_other": "Il a lu {{count}} pages de {{host}}."
+    },
+    "teach": {
+      "title": "Formez-le",
+      "description": "Votre agent répond à partir de ce que vous lui donnez. Ajoutez ce qui lui manque.",
+      "tasks": {
+        "knowledge": {
+          "title": "Ajoutez ce qu'il doit savoir",
+          "description": "Vos prix, vos politiques et les questions que vous entendez chaque jour."
+        },
+        "hours": {
+          "title": "Indiquez vos heures d'ouverture",
+          "description": "Pour qu'il dise aux clients quand vous êtes ouvert."
+        },
+        "calendar": {
+          "title": "Connectez votre calendrier",
+          "description": "Pour qu'il réserve seulement quand vous êtes libre."
+        },
+        "services": {
+          "title": "Listez vos services",
+          "description": "Pour qu'il sache ce que vos clients peuvent réserver."
+        },
+        "widget": {
+          "title": "Ajoutez le widget de clavardage à votre site",
+          "description": "Pour que les visiteurs lui posent leurs questions sur votre site."
+        },
+        "instagram": {
+          "title": "Connectez Instagram",
+          "description": "Pour qu'il réponde à vos messages directs."
+        }
+      }
+    },
+    "number": {
+      "title": "Mettez-le sur votre numéro",
+      "ready": "Votre agent répond au {{number}}. Renvoyez-y votre ligne d'affaires pour que les vrais appels lui parviennent.",
+      "switches": "Cette page passe à vos appels et rendez-vous après la première conversation de votre agent avec un client. Les appels des téléphones vérifiés de votre équipe ne comptent pas.",
+      "claim": "Votre forfait inclut un numéro. Choisissez-le, puis renvoyez-y votre ligne d'affaires.",
+      "plan": "Un numéro de téléphone permet à votre agent de répondre à vos vrais clients. Choisissez un forfait pour en obtenir un."
+    }
+  },
   "forwarding": {
     "title": "Renvoyez vos appels vers le {{number}}",
     "description": "Choisissez votre fournisseur, puis suivez les étapes sur le téléphone que vos clients appellent.",
@@ -278,7 +343,8 @@
       "usMobile": "Mobile (États-Unis)",
       "caMobile": "Mobile (Canada)",
       "landline": "Lignes fixes",
-      "voip": "Systèmes téléphoniques d'entreprise"
+      "voip": "Systèmes téléphoniques d'entreprise",
+      "ukMobile": "Mobile au Royaume-Uni"
     },
     "code": {
       "dial": "Composez ce code :",
@@ -314,6 +380,10 @@
     "notListed": {
       "missed": "Votre fournisseur n'est pas dans la liste? Demandez-lui de renvoyer les appels sans réponse vers le {{number}}.",
       "all": "Votre fournisseur n'est pas dans la liste? Demandez-lui de renvoyer tous vos appels vers le {{number}}."
+    },
+    "general": {
+      "missed": "Sur un mobile, ouvrez les réglages d'appel de votre téléphone et renvoyez les appels sans réponse vers le {{number}}. Sur une ligne fixe ou un système téléphonique d'entreprise, demandez-le à votre fournisseur.",
+      "all": "Sur un mobile, ouvrez les réglages d'appel de votre téléphone et renvoyez tous les appels vers le {{number}}. Sur une ligne fixe ou un système téléphonique d'entreprise, demandez-le à votre fournisseur."
     }
   }
 }
