@@ -172,7 +172,7 @@ export async function loadInstagramReplyContext(context: DomainContext, input: {
     if (recentAiReplies >= INSTAGRAM_AI_REPLY_LIMIT) {
       await tx.update(conversations).set({ automationState: "human_handoff", automationPausedAt: now, automationPausedByUserId: null, updatedAt: now })
         .where(and(eq(conversations.id, input.conversationId), eq(conversations.businessId, input.businessId)));
-      await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKind: "aiReplyFailed", eventKey: `instagram-reply-limit:${input.conversationId}`, subject: "Instagram conversation paused", body: "The receptionist stopped answering an Instagram conversation that kept replying back, which usually means another automated account. Open Messages to take it over or turn the receptionist back on." });
+      await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKind: "aiReplyFailed", eventKey: `instagram-reply-limit:${input.conversationId}`, subject: "Instagram conversation paused", body: "The agent stopped answering an Instagram conversation that kept replying back, which usually means another automated account. Open Messages to take it over or turn the agent back on." });
       return null;
     }
     return { conversationId: input.conversationId, history: rows.reverse().map((row) => ({ direction: row.direction === "inbound" ? "inbound" : "outbound", body: row.body })) };
@@ -303,7 +303,7 @@ export async function refreshInstagramTokenIfDue(
     return await withBusinessTransaction(context.db, scope, async (tx) => {
       const [marked] = await tx.update(instagramAccounts).set({ status: "reconnect_required", lastError: "Instagram authorization expired. Connect the account again.", updatedAt: now }).where(unchanged).returning({ id: instagramAccounts.id });
       if (!marked) return "current";
-      await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKind: "aiReplyFailed", eventKey: `instagram-reconnect:${account.id}:${now.toISOString().slice(0, 10)}`, subject: "Reconnect Instagram", body: "Instagram stopped accepting the receptionist's access. Open Integrations and connect Instagram again." });
+      await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKind: "aiReplyFailed", eventKey: `instagram-reconnect:${account.id}:${now.toISOString().slice(0, 10)}`, subject: "Reconnect Instagram", body: "Instagram stopped accepting the agent's access. Open Integrations and connect Instagram again." });
       return "reconnect_required";
     });
   }

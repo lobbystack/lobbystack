@@ -107,7 +107,7 @@ const E164 = /^\+[1-9]\d{6,14}$/;
  */
 export async function assertTransferNumberAllowed(tx: DatabaseTransaction, input: { businessId: string; phone: string }): Promise<void> {
   if (!E164.test(input.phone)) throw Object.assign(new Error("Enter a valid phone number."), { status: 400, code: "transfer_number_invalid" });
-  if (!isTransferPhone(input.phone)) throw Object.assign(new Error("Your receptionist can't transfer calls to this country yet."), { status: 400, code: "transfer_country_unsupported" });
+  if (!isTransferPhone(input.phone)) throw Object.assign(new Error("Your agent can't transfer calls to this country yet."), { status: 400, code: "transfer_country_unsupported" });
   const trialPhone = await trialTransferNumberInTransaction(tx, input);
   if (trialPhone && input.phone !== trialPhone) throw Object.assign(new Error("During the free trial, calls can only transfer to the mobile of the person who claimed the trial."), { status: 409, code: "trial_transfer_locked" });
 }
