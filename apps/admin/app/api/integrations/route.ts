@@ -2,11 +2,11 @@ import { and, count, eq, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { billingAccounts, businessHours, businesses, phoneNumbers, services } from "@lobbystack/db";
-import { assignCalendarStaff, calcomEventTypeWarnings, discoverCalendars, disconnectCalendar, listCalendarConnections, listCalendarStaff, refreshCalendar, resolveCalendarAccessToken, selectCalendar, type CalcomEventTypeWarning, type DomainContext } from "@lobbystack/domain";
-import { SecretBox, calendarProviderLabel, type CalcomEventType } from "@lobbystack/providers";
+import { assignCalendarStaff, calcomEventTypeWarnings, calendlyEventTypeWarnings, discoverCalendars, disconnectCalendar, listCalendarConnections, listCalendarStaff, refreshCalendar, resolveCalendarAccessToken, selectCalendar, type CalcomEventTypeWarning, type CalendlyEventTypeWarning, type DomainContext } from "@lobbystack/domain";
+import { SecretBox, calendarProviderLabel, type CalcomEventType, type CalendlyEventType } from "@lobbystack/providers";
 import { jsonError } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
-import { calcomCalendarProvider, calendarProvider, calendarProviderConfigured } from "@/lib/calendar-providers";
+import { calcomCalendarProvider, calendarProvider, calendarProviderConfigured, calendlyCalendarProvider } from "@/lib/calendar-providers";
 import { operatorRoute } from "@/lib/operator-request";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +48,22 @@ async function calcomDiscovery(domain: DomainContext, userId: string, businessId
   return { options, warnings };
 }
 
+/**
+ * A Calendly connection's event types, what to say about the selected one, and
+ * whether the account's plan can book through the API at all.
+ */
+async function calendlyDiscovery(domain: DomainContext, userId: string, businessId: string, connectionId: string, readServiceDurations: () => Promise<number[]>) {
+  const provider = calendlyCalendarProvider();
+  let eventTypes: CalendlyEventType[] = [];
+  let paidPlan: boolean | null = null;
+  const options = await calendarDiscovery(domain, userId, businessId, connectionId, "calendly", async (input) => {
+    [eventTypes, paidPlan] = await Promise.all([provider.listEventTypes(input), provider.getAccount(input).then((account) => account.paidPlan, () => null)]);
+    return eventTypes.map((eventType) => ({ id: eventType.id, summary: eventType.title, primary: false, accessRole: eventType.blockingQuestions.length ? "reader" : "owner" }));
+  });
+  const selected = eventTypes.find((eventType) => options.some((option) => option.selected && option.id === eventType.id));
+  return { options, paidPlan, warnings: selected ? calendlyEventTypeWarnings({ eventType: selected, serviceDurations: await readServiceDurations() }) : [] };
+}
+
 export const GET = operatorRoute(async ({ userId, businessId, domain, transaction }) => {
   const { billing, phones } = await transaction(async (tx) => {
     const billing = await tx.select({ plan: billingAccounts.plan, state: billingAccounts.subscriptionState, updatedAt: billingAccounts.updatedAt }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId)).limit(1);
@@ -60,9 +76,10 @@ export const GET = operatorRoute(async ({ userId, businessId, domain, transactio
   ]);
   const googleConnection = calendar.find((connection) => connection.provider === "google");
   const calcomConnection = calendar.find((connection) => connection.provider === "calcom");
+  const calendlyConnection = calendar.find((connection) => connection.provider === "calendly");
   const failure = (error: unknown) => error instanceof Error ? error.message : "Calendar discovery failed.";
   // Each provider answers on its own, so neither waits on the other.
-  const [google, calcomResult] = await Promise.all([
+  const [google, calcomResult, calendlyResult] = await Promise.all([
     googleConnection ? calendarDiscovery(domain, userId, businessId, googleConnection.id, googleConnection.provider).then((options) => ({ options, error: null }), (error: unknown) => ({ options: [] as CalendarOption[], error: failure(error) })) : { options: [] as CalendarOption[], error: null },
     calcomConnection ? calcomDiscovery(domain, userId, businessId, calcomConnection.id, () => transaction(async (tx) => {
       const [business] = await tx.select({ timezone: businesses.timezone }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
@@ -70,21 +87,27 @@ export const GET = operatorRoute(async ({ userId, businessId, domain, transactio
       const hours = await tx.select({ dayOfWeek: businessHours.dayOfWeek, openMinutes: businessHours.openMinutes, closeMinutes: businessHours.closeMinutes }).from(businessHours).where(and(eq(businessHours.businessId, businessId), isNull(businessHours.staffId)));
       return { serviceDurations: durations.map((row) => row.minutes), hours, timezone: business?.timezone ?? "UTC" };
     })).then((found) => ({ ...found, discoveryError: null }), (error: unknown) => ({ options: [] as CalendarOption[], warnings: [] as CalcomEventTypeWarning[], discoveryError: failure(error) })) : { options: [] as CalendarOption[], warnings: [] as CalcomEventTypeWarning[], discoveryError: null },
+    calendlyConnection ? calendlyDiscovery(domain, userId, businessId, calendlyConnection.id, () => transaction(async (tx) => (await tx.select({ minutes: services.durationMinutes }).from(services).where(and(eq(services.businessId, businessId), eq(services.active, true)))).map((row) => row.minutes)))
+      .then((found) => ({ ...found, discoveryError: null }), (error: unknown) => ({ options: [] as CalendarOption[], warnings: [] as CalendlyEventTypeWarning[], paidPlan: null, discoveryError: failure(error) })) : { options: [] as CalendarOption[], warnings: [] as CalendlyEventTypeWarning[], paidPlan: null, discoveryError: null },
   ]);
   const calendarOptions = google.options;
   const discoveryError = google.error;
   const calcom = { configured: calendarProviderConfigured("calcom"), ...calcomResult };
+  const calendly = { configured: calendarProviderConfigured("calendly"), ...calendlyResult };
+  const providerOptions = (provider: string) => provider === "calcom" ? calcom.options : provider === "calendly" ? calendly.options : calendarOptions;
+  const providerDiscoveryError = (provider: string) => provider === "calcom" ? calcom.discoveryError : provider === "calendly" ? calendly.discoveryError : discoveryError;
   return NextResponse.json({
     calendarConnections: calendar.map((connection) => ({
       ...connection,
-      selectedCalendarSummary: (connection.provider === "calcom" ? calcom.options : calendarOptions).find((option) => option.id === connection.selectedCalendarId)?.summary ?? null,
+      selectedCalendarSummary: providerOptions(connection.provider).find((option) => option.id === connection.selectedCalendarId)?.summary ?? null,
     })),
     staff: staffRows,
     calendarOptions,
     discoveryError,
     calcom,
+    calendly,
     integrations: [
-      ...(calendar[0] ? [{ name: calendarProviderLabel(calendar[0].provider), account: calendar[0].externalAccountId, status: calendar[0].status, updatedAt: calendar[0].updatedAt, connectionId: calendar[0].id, staffId: calendar[0].staffId, selectedCalendarId: calendar[0].selectedCalendarId, lastSyncError: calendar[0].lastSyncError, calendarOptions: calendar[0].provider === "calcom" ? calcom.options : calendarOptions, discoveryError: calendar[0].provider === "calcom" ? calcom.discoveryError : discoveryError }] : [{ name: calendarProviderLabel("google"), account: "Not connected", status: "disconnected", updatedAt: null, connectionId: null, staffId: null, selectedCalendarId: null, lastSyncError: null, calendarOptions: [], discoveryError: null }]),
+      ...(calendar[0] ? [{ name: calendarProviderLabel(calendar[0].provider), account: calendar[0].externalAccountId, status: calendar[0].status, updatedAt: calendar[0].updatedAt, connectionId: calendar[0].id, staffId: calendar[0].staffId, selectedCalendarId: calendar[0].selectedCalendarId, lastSyncError: calendar[0].lastSyncError, calendarOptions: providerOptions(calendar[0].provider), discoveryError: providerDiscoveryError(calendar[0].provider) }] : [{ name: calendarProviderLabel("google"), account: "Not connected", status: "disconnected", updatedAt: null, connectionId: null, staffId: null, selectedCalendarId: null, lastSyncError: null, calendarOptions: [], discoveryError: null }]),
       { name: "Twilio", account: `${Number(phones[0]?.count ?? 0)} active phone number${Number(phones[0]?.count ?? 0) === 1 ? "" : "s"}`, status: Number(phones[0]?.count ?? 0) > 0 ? "connected" : "disconnected", updatedAt: null },
       { name: "Polar billing", account: billing[0]?.plan ?? "Not configured", status: billing[0]?.state ?? "disconnected", updatedAt: billing[0]?.updatedAt ?? null },
     ],
@@ -116,7 +139,7 @@ export const POST = operatorRoute(async ({ userId, businessId, body, domain }) =
 export const DELETE = operatorRoute(async ({ request, userId, businessId, domain }) => {
   const connectionId = new URL(request.url).searchParams.get("connectionId");
   if (!connectionId) return jsonError("connectionId is required.", 400);
-  // A Cal.com connection's webhook is removed from Cal.com by a job the disconnect queues.
+  // A booking provider's webhook is removed from it by a job the disconnect queues.
   await disconnectCalendar(domain, { userId, businessId, connectionId });
   return NextResponse.json({ ok: true });
 });
