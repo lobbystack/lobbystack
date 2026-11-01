@@ -2,12 +2,12 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 
 import { calls, contacts, enqueueOutbox, numberTrials, phoneNumbers, receptionistProfiles, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { CARRIERS_WITH_STAFF_FIRST, type CarrierId } from "@lobbystack/providers/telephony/types";
-import { includesStaffFirst, shouldRingStaffFirst, type RuntimeLocale, type StaffFirstMode } from "@lobbystack/shared";
+import { includesStaffFirst, isTransferPhone, shouldRingStaffFirst, type RuntimeLocale, type StaffFirstMode } from "@lobbystack/shared";
 
 import { reserveOutboundCallAttempt } from "./billing";
 import type { DomainContext } from "./context";
 import { loadEntitlement } from "./entitlement";
-import { enqueueNumberRouting } from "./numberTrials";
+import { enqueueNumberRouting, trialTransferNumberInTransaction } from "./numberTrials";
 import { getCachedBusinessSnapshot } from "./snapshotCache";
 import { findOrCreateCallContactInTransaction } from "./voice";
 
@@ -66,10 +66,10 @@ export type StaffFirstDecision =
  */
 export async function decideStaffFirstCall(context: DomainContext, input: { businessId: string; e164: string; providerCallId: string; from?: string | undefined; forwardedFrom?: string | undefined; now?: Date }): Promise<StaffFirstDecision> {
   const snapshot = await getCachedBusinessSnapshot(context, { businessId: input.businessId });
-  const { ended, blocked, included } = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+  const { ended, blocked, included, trialPhone } = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const trial = (await tx.select({ id: numberTrials.id }).from(numberTrials).where(and(eq(numberTrials.businessId, input.businessId), eq(numberTrials.status, "ended"))).limit(1))[0];
     const caller = input.from ? (await tx.select({ blockedAt: contacts.operatorBlockedAt }).from(contacts).where(and(eq(contacts.businessId, input.businessId), eq(contacts.phone, input.from))).limit(1))[0] : undefined;
-    return { ended: Boolean(trial), blocked: Boolean(caller?.blockedAt), included: includesStaffFirst(await loadEntitlement(tx, input.businessId)) };
+    return { ended: Boolean(trial), blocked: Boolean(caller?.blockedAt), included: includesStaffFirst(await loadEntitlement(tx, input.businessId)), trialPhone: await trialTransferNumberInTransaction(tx, input) };
   });
   if (ended || blocked) return { action: "reject" };
   const locale = snapshot?.defaultLocale ?? "en";
@@ -77,6 +77,8 @@ export async function decideStaffFirstCall(context: DomainContext, input: { busi
   if (!snapshot || !policy || !included || !shouldRingStaffFirst(snapshot, input.now)) return { action: "receptionist", locale };
   // A staff line that forwards here, or the dialled number itself, would loop.
   if (policy.number === input.e164 || policy.number === input.forwardedFrom) return { action: "receptionist", locale };
+  // The last check before a number is dialed, as on a transfer: a trial can start after the staff phone was saved.
+  if (!isTransferPhone(policy.number) || (trialPhone && policy.number !== trialPhone)) return { action: "receptionist", locale };
   const attempt = await reserveOutboundCallAttempt(context, { businessId: input.businessId, sourceKey: `staff_ring:${input.providerCallId}` });
   if (!attempt.allowed) return { action: "receptionist", locale };
   return { action: "ring", locale, phone: policy.number, ringSeconds: policy.ringSeconds, ...(policy.message ? { message: policy.message } : {}) };

@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { billingAccounts, billingUsageEvents, businessHours, businessMemberships, businesses, calls, contacts, createDatabaseClient, numberTrials, outboxMessages, phoneNumbers, receptionistProfiles, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { billingAccounts, billingUsageEvents, businessHours, businessMemberships, businesses, calls, contacts, createDatabaseClient, numberTrials, onboardingNumberClaimEvents, outboxMessages, phoneNumbers, receptionistProfiles, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { getAnalytics } from "./analytics";
 import { refreshBusinessSnapshot } from "./knowledge";
 import { desiredNumberRouting, loadNumberTrialEmail } from "./numberTrials";
+import { completeNumberProvisioning } from "./phoneNumbers";
 import { saveReceptionistProfileInTransaction } from "./receptionistProfile";
 import { decideStaffFirstCall, recordStaffAnsweredCall } from "./staffFirst";
 import { createBusiness } from "./tenancy";
@@ -37,7 +38,7 @@ async function rollbackTest(run: (tx: DatabaseTransaction) => Promise<void>) {
 }
 
 // Security-definer functions trust session_user, so switch it rather than the current role.
-async function as<T>(tx: DatabaseTransaction, role: "lobbystack_worker", run: (db: Database) => Promise<T>): Promise<T> {
+async function as<T>(tx: DatabaseTransaction, role: "lobbystack_app" | "lobbystack_worker", run: (db: Database) => Promise<T>): Promise<T> {
   await tx.execute(sql.raw(`set local session authorization ${role}`));
   try {
     return await run(tx as unknown as Database);
@@ -59,7 +60,16 @@ async function business(tx: DatabaseTransaction, input: { plan?: "free_cloud" | 
   return businessId;
 }
 
-const save = (tx: DatabaseTransaction, businessId: string, patch: Parameters<typeof saveReceptionistProfileInTransaction>[1]["patch"]) => saveReceptionistProfileInTransaction(tx, { businessId, businessName: "Harbor dental", patch });
+type Patch = Parameters<typeof saveReceptionistProfileInTransaction>[1]["patch"];
+// The dashboard saves in the app role, as the signed-in operator.
+async function save(tx: DatabaseTransaction, businessId: string, patch: Patch) {
+  const [member] = await tx.select({ userId: businessMemberships.userId }).from(businessMemberships).where(eq(businessMemberships.businessId, businessId));
+  return await as(tx, "lobbystack_app", (db) => withBusinessTransaction(db, { userId: member!.userId, businessId, actorType: "operator" }, (inner) => saveReceptionistProfileInTransaction(inner, { businessId, businessName: "Harbor dental", patch })));
+}
+// The v1 API saves in the worker role.
+const saveFromApi = (tx: DatabaseTransaction, businessId: string, patch: Patch) => as(tx, "lobbystack_worker", (db) => withBusinessTransaction(db, { businessId, actorType: "worker" }, (inner) => saveReceptionistProfileInTransaction(inner, { businessId, businessName: "Harbor dental", patch })));
+// The webhooks run as the worker role.
+const decide = (tx: DatabaseTransaction, input: Parameters<typeof decideStaffFirstCall>[1]) => as(tx, "lobbystack_worker", (db) => decideStaffFirstCall({ db }, input));
 
 describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
   it("saves the settings on a paid plan and queues a routing job for each Twilio number", async () => {
@@ -69,6 +79,13 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
       expect(profile).toMatchObject({ staffFirstMode: "always", staffFirstNumber: staffPhone, staffFirstRingSeconds: 20, staffFirstMessage: "One moment.", staffFirstHandoverMessage: "Connecting you now." });
       const jobs = await tx.select({ topic: outboxMessages.topic }).from(outboxMessages).where(eq(outboxMessages.businessId, businessId));
       expect(jobs.map((job) => job.topic)).toContain("phoneNumber.route");
+    });
+  });
+
+  it("saves through the v1 API's role too", async () => {
+    await rollbackTest(async (tx) => {
+      const businessId = await business(tx, { carrier: "twilio" });
+      expect(await saveFromApi(tx, businessId, { staffFirstMode: "business_hours", staffFirstNumber: staffPhone })).toMatchObject({ staffFirstMode: "business_hours" });
     });
   });
 
@@ -143,18 +160,18 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
     it("rings during hours and goes to the receptionist outside them", async () => {
       await rollbackTest(async (tx) => {
         const businessId = await configured(tx, "business_hours");
-        const decide = (now: Date) => decideStaffFirstCall(context(tx), { businessId, e164: lobbyNumber, providerCallId: `CA${now.getTime()}`, from: "+14165550134", now });
-        expect(await decide(open)).toEqual({ action: "ring", locale: "en", phone: staffPhone, ringSeconds: 15, message: "One moment." });
-        expect(await decide(closed)).toEqual({ action: "receptionist", locale: "en" });
+        const at = (now: Date) => decide(tx, { businessId, e164: lobbyNumber, providerCallId: `CA${now.getTime()}`, from: "+14165550134", now });
+        expect(await at(open)).toEqual({ action: "ring", locale: "en", phone: staffPhone, ringSeconds: 15, message: "One moment." });
+        expect(await at(closed)).toEqual({ action: "receptionist", locale: "en" });
       });
     });
 
     it("uses one transfer attempt per ring, however often Twilio repeats the webhook", async () => {
       await rollbackTest(async (tx) => {
         const businessId = await configured(tx, "always");
-        await decideStaffFirstCall(context(tx), { businessId, e164: lobbyNumber, providerCallId: "CA1", now: open });
-        await decideStaffFirstCall(context(tx), { businessId, e164: lobbyNumber, providerCallId: "CA1", now: open });
-        await decideStaffFirstCall(context(tx), { businessId, e164: lobbyNumber, providerCallId: "CA2", now: open });
+        await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA1", now: open });
+        await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA1", now: open });
+        await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA2", now: open });
         const attempts = await tx.select({ sourceKey: billingUsageEvents.sourceKey }).from(billingUsageEvents).where(and(eq(billingUsageEvents.businessId, businessId), eq(billingUsageEvents.usageKind, "outbound_call_attempts")));
         expect(attempts.map((attempt) => attempt.sourceKey).sort()).toEqual(["staff_ring:CA1", "staff_ring:CA2"]);
       });
@@ -163,7 +180,7 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
     it("skips the ring and spends no attempt outside the hours", async () => {
       await rollbackTest(async (tx) => {
         const businessId = await configured(tx, "business_hours");
-        await decideStaffFirstCall(context(tx), { businessId, e164: lobbyNumber, providerCallId: "CA1", now: closed });
+        await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA1", now: closed });
         expect(await tx.select({ id: billingUsageEvents.id }).from(billingUsageEvents).where(eq(billingUsageEvents.businessId, businessId))).toEqual([]);
       });
     });
@@ -172,7 +189,7 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
       await rollbackTest(async (tx) => {
         const businessId = await configured(tx, "always");
         await tx.insert(contacts).values({ businessId, phone: "+14165550134", operatorBlockedAt: new Date() });
-        expect(await decideStaffFirstCall(context(tx), { businessId, e164: lobbyNumber, providerCallId: "CA1", from: "+14165550134", now: open })).toEqual({ action: "reject" });
+        expect(await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA1", from: "+14165550134", now: open })).toEqual({ action: "reject" });
       });
     });
 
@@ -180,21 +197,30 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
       await rollbackTest(async (tx) => {
         const businessId = await configured(tx, "always");
         await tx.insert(numberTrials).values({ businessId, userId: (await tx.select({ id: users.id }).from(users).limit(1))[0]!.id, status: "ended", verifiedPhone: staffPhone });
-        expect(await decideStaffFirstCall(context(tx), { businessId, e164: lobbyNumber, providerCallId: "CA1", now: open })).toEqual({ action: "reject" });
+        expect(await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA1", now: open })).toEqual({ action: "reject" });
       });
     });
 
     it("won't ring the line that forwarded the call here", async () => {
       await rollbackTest(async (tx) => {
         const businessId = await configured(tx, "always");
-        expect(await decideStaffFirstCall(context(tx), { businessId, e164: lobbyNumber, providerCallId: "CA1", forwardedFrom: staffPhone, now: open })).toEqual({ action: "receptionist", locale: "en" });
+        expect(await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA1", forwardedFrom: staffPhone, now: open })).toEqual({ action: "receptionist", locale: "en" });
+      });
+    });
+
+    it("won't ring anyone but the verified mobile during a trial", async () => {
+      await rollbackTest(async (tx) => {
+        const businessId = await configured(tx, "always");
+        await tx.insert(numberTrials).values({ businessId, userId: (await tx.select({ id: users.id }).from(users).limit(1))[0]!.id, status: "active", verifiedPhone: "+14165550199" });
+        expect(await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA1", now: open })).toEqual({ action: "receptionist", locale: "en" });
+        expect(await tx.select({ id: billingUsageEvents.id }).from(billingUsageEvents).where(eq(billingUsageEvents.businessId, businessId))).toEqual([]);
       });
     });
 
     it("stops ringing a business that fell back to Free", async () => {
       await rollbackTest(async (tx) => {
         const businessId = await configured(tx, "always", "free_cloud");
-        expect(await decideStaffFirstCall(context(tx), { businessId, e164: lobbyNumber, providerCallId: "CA1", now: open })).toEqual({ action: "receptionist", locale: "en" });
+        expect(await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA1", now: open })).toEqual({ action: "receptionist", locale: "en" });
       });
     });
   });
@@ -202,7 +228,7 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
   describe("recordStaffAnsweredCall", () => {
     const context = (tx: DatabaseTransaction) => ({ db: tx as unknown as Database });
     const endedAt = new Date("2026-11-02T15:00:42Z");
-    const answered = (tx: DatabaseTransaction, businessId: string, from?: string) => recordStaffAnsweredCall(context(tx), { businessId, providerCallId: "CA1", to: lobbyNumber, seconds: 42, endedAt, ...(from ? { from } : {}) });
+    const answered = (tx: DatabaseTransaction, businessId: string, from?: string) => as(tx, "lobbystack_worker", (db) => recordStaffAnsweredCall({ db }, { businessId, providerCallId: "CA1", to: lobbyNumber, seconds: 42, endedAt, ...(from ? { from } : {}) }));
 
     it("records the call once, against the caller's contact, with no minutes or conversation", async () => {
       await rollbackTest(async (tx) => {
@@ -249,6 +275,23 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
         await tx.insert(calls).values({ businessId, provider: "openai_live", providerCallId: "session_1", transport: "voice", status: "completed", startedAt: new Date("2026-11-02T14:00:00Z"), endedAt: new Date("2026-11-02T14:05:00Z") });
         expect((await as(tx, "lobbystack_worker", (db) => loadNumberTrialEmail({ db }, { businessId, trialId: trial!.id, email: "day10" })))?.callsAnswered).toBe(1);
       });
+    });
+  });
+
+  it("moves a number bought after the setting went on, and leaves other businesses' new numbers alone", async () => {
+    await rollbackTest(async (tx) => {
+      const provision = async (businessId: string, e164: string) => {
+        const [member] = await tx.select({ userId: businessMemberships.userId }).from(businessMemberships).where(eq(businessMemberships.businessId, businessId));
+        const [claim] = await tx.insert(onboardingNumberClaimEvents).values({ businessId, userId: member!.userId, requestedE164: e164, selectionContext: {}, claimTokenHash: randomUUID(), idempotencyKey: randomUUID(), status: "provisioning" }).returning({ id: onboardingNumberClaimEvents.id });
+        await as(tx, "lobbystack_worker", (db) => completeNumberProvisioning({ db }, { businessId, claimId: claim!.id, carrier: "twilio", e164, providerPhoneId: `PN${randomUUID()}`, voiceUrl: "sip-trunk:TK1" }));
+        return (await tx.select({ topic: outboxMessages.topic }).from(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), eq(outboxMessages.topic, "phoneNumber.route"))));
+      };
+      const on = await business(tx);
+      await save(tx, on, { staffFirstMode: "always", staffFirstNumber: staffPhone });
+      expect(await provision(on, "+14165550124")).toHaveLength(1);
+      const off = await business(tx);
+      await save(tx, off, { greeting: "Hello." });
+      expect(await provision(off, "+14165550125")).toHaveLength(0);
     });
   });
 
