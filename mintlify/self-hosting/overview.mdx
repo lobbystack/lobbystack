@@ -59,6 +59,12 @@ In Cal.com, open **Settings**, then **Developer**, then **OAuth clients**, and c
 
 LobbyStack books under a stand-in attendee address, `booking+appointment_id@` followed by `CALCOM_PLACEHOLDER_EMAIL_DOMAIN`. Set that variable on the `admin` service too: Cal.com stays off until it's set, since Cal.com checks the domain for an MX record. Point the domain at a mail server that discards mail. Cal.com sends booking webhooks to `APP_BASE_URL`, so the worker needs the public admin address there.
 
+#### Connect Calendly (optional)
+
+In Calendly, open **Developer tools** from the profile menu, select **Create OAuth app**, and choose the **Production** environment. Add `https://your_admin_domain/api/calendar/calendly/callback` as its redirect URI and select every scope LobbyStack requests: `users:read`, `organizations:read`, `event_types:read`, `availability:read`, `scheduled_events:read`, `scheduled_events:write`, `webhooks:read` and `webhooks:write`. Calendly shows the client ID, client secret and webhook signing key once, so copy all three. Set `CALENDLY_CLIENT_ID`, `CALENDLY_CLIENT_SECRET` and `CALENDLY_WEBHOOK_SIGNING_KEY` on the `admin` service. The template fills in `CALENDLY_REDIRECT_URI`, and the worker reads the Calendly variables from the admin.
+
+LobbyStack books under a stand-in invitee address, `booking+appointment_id@` followed by `CALENDLY_PLACEHOLDER_EMAIL_DOMAIN`. Set that variable on the `admin` service too: Calendly stays off until it's set. Calendly sends its invitee notifications to that address, so point the domain at a mail server that discards mail. Calendly sends booking webhooks to `APP_BASE_URL`, so the worker needs the public admin address there.
+
 #### Use a custom domain
 
 Add the domain to the `admin` service, then set `APP_BASE_URL` on the `admin` service to `https://your_domain`. These variables reference it and follow the change:

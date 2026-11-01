@@ -59,6 +59,12 @@ Dans Cal.com, ouvrez **Settings**, puis **Developer**, puis **OAuth clients**, e
 
 LobbyStack réserve avec une adresse de participant de remplacement, `booking+appointment_id@` suivie de `CALCOM_PLACEHOLDER_EMAIL_DOMAIN`. Définissez aussi cette variable sur le service `admin` : Cal.com reste désactivé tant qu’elle manque, car Cal.com vérifie que le domaine a un enregistrement MX. Pointez le domaine vers un serveur de courriel qui jette les messages. Cal.com envoie ses webhooks de réservation à `APP_BASE_URL`, donc le worker doit y avoir l'adresse publique de l'admin.
 
+#### Connecter Calendly (facultatif)
+
+Dans Calendly, ouvrez **Developer tools** depuis le menu du profil, sélectionnez **Create OAuth app** et choisissez l'environnement **Production**. Ajoutez `https://votre_domaine_admin/api/calendar/calendly/callback` comme URI de redirection et sélectionnez toutes les portées que LobbyStack demande : `users:read`, `organizations:read`, `event_types:read`, `availability:read`, `scheduled_events:read`, `scheduled_events:write`, `webhooks:read` et `webhooks:write`. Calendly n'affiche qu'une fois l'identifiant client, le secret client et la clé de signature de webhook : copiez les trois. Définissez `CALENDLY_CLIENT_ID`, `CALENDLY_CLIENT_SECRET` et `CALENDLY_WEBHOOK_SIGNING_KEY` sur le service `admin`. Le modèle remplit `CALENDLY_REDIRECT_URI`, et le worker lit les variables Calendly depuis l'admin.
+
+LobbyStack réserve avec une adresse d'invité de remplacement, `booking+appointment_id@` suivie de `CALENDLY_PLACEHOLDER_EMAIL_DOMAIN`. Définissez aussi cette variable sur le service `admin` : Calendly reste désactivé tant qu'elle manque. Calendly envoie ses notifications d'invité à cette adresse, alors pointez le domaine vers un serveur de courriel qui jette les messages. Calendly envoie ses webhooks de réservation à `APP_BASE_URL`, et le worker a donc besoin de l'adresse publique de l'admin à cet endroit.
+
 #### Utilisez un domaine personnalisé
 
 Ajoutez le domaine au service `admin`, puis donnez à `APP_BASE_URL` sur le service `admin` la valeur `https://votre_domaine`. Ces variables y font référence et suivent le changement :
