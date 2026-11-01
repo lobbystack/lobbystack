@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ load: vi.fn(), save: vi.fn(), alert: vi.fn(), reserve: vi.fn(), snapshot: vi.fn(), usage: vi.fn(), generate: vi.fn(), createAgent: vi.fn() }));
-vi.mock("@lobbystack/domain", () => ({ alertUnansweredText: mocks.alert, getCachedBusinessSnapshot: mocks.snapshot, loadTextReplyContext: mocks.load, recordAiGenerationEvent: mocks.usage, refreshBusinessSnapshot: vi.fn(), reserveWidgetChatUsageInTransaction: mocks.reserve, saveTextReply: mocks.save }));
+vi.mock("@lobbystack/domain", () => ({ alertUnansweredText: mocks.alert, getCachedBusinessSnapshot: mocks.snapshot, loadTextReplyContext: mocks.load, recordAiGenerationEvent: mocks.usage, refreshBusinessSnapshot: vi.fn(), reserveTextReplyUsageInTransaction: mocks.reserve, saveTextReply: mocks.save }));
 vi.mock("@lobbystack/agent-core", () => ({ createAgentModel: () => ({}), createReceptionistAgent: mocks.createAgent, describeAgentUsage: () => ({ provider: "openai", model: "test" }) }));
 vi.mock("@lobbystack/db", () => ({ withBusinessTransaction: async (_db: unknown, _scope: unknown, run: (tx: unknown) => Promise<unknown>) => await run({}) }));
 

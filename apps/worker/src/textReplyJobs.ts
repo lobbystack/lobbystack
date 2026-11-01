@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { createAgentModel, createReceptionistAgent, describeAgentUsage } from "@lobbystack/agent-core";
 import type { JobEnvelope } from "@lobbystack/contracts";
 import { withBusinessTransaction } from "@lobbystack/db";
-import { alertUnansweredText, getCachedBusinessSnapshot, loadTextReplyContext, recordAiGenerationEvent, refreshBusinessSnapshot, reserveWidgetChatUsageInTransaction, saveTextReply, type DomainContext } from "@lobbystack/domain";
+import { alertUnansweredText, getCachedBusinessSnapshot, loadTextReplyContext, recordAiGenerationEvent, refreshBusinessSnapshot, reserveTextReplyUsageInTransaction, saveTextReply, type DomainContext } from "@lobbystack/domain";
 import { normalizeRuntimeLocale, runtimeLocaleName, type RuntimeLocale } from "@lobbystack/shared";
 
 import { instagramReplyText, NO_REPLY_INSTRUCTIONS } from "./instagramJobs";
@@ -51,7 +51,7 @@ export async function replyToTextMessage(domain: DomainContext, job: JobEnvelope
   try {
     const model = options.model ?? createAgentModel();
     if (!model) throw new Error("The AI chat provider is not configured.");
-    const allowance = await withBusinessTransaction(domain.db, { businessId, actorType: "worker" }, async (tx) => await reserveWidgetChatUsageInTransaction(tx, { businessId, conversationId }));
+    const allowance = await withBusinessTransaction(domain.db, { businessId, actorType: "worker" }, async (tx) => await reserveTextReplyUsageInTransaction(tx, { businessId, conversationId }));
     if (!allowance.allowed) {
       await alertUnansweredText(domain, { businessId, conversationId });
       return { status: "skipped", entityId: messageId };

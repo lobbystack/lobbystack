@@ -4,7 +4,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { billingAccounts, billingUsageEvents, businesses, createDatabaseClient, onboardingPhoneVerifications, phoneNumbers, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { hasLiveEntitlement, type Entitlement } from "@lobbystack/shared";
 
-import { getWebVoiceBillingAllowance, getWidgetChatAllowance, reserveWebVoiceUsageInTransaction, reserveWidgetChatUsageInTransaction } from "./billing";
+import { getWebVoiceBillingAllowance, getWidgetChatAllowance, reserveTextReplyUsageInTransaction, reserveWebVoiceUsageInTransaction, reserveWidgetChatUsageInTransaction } from "./billing";
 import { loadEntitlement } from "./entitlement";
 import { reserveApiNumberClaimInTransaction, reserveOnboardingNumberClaim, reserveReplacementNumberClaim, searchBusinessNumberInventory, type NumberOffer } from "./phoneNumbers";
 import { createBusiness } from "./tenancy";
@@ -262,6 +262,27 @@ describe.skipIf(!testUrl)("usage limits per direct plan against dedicated Postgr
         expect(await reserveWidgetChatUsageInTransaction(inner, { businessId, conversationId: randomUUID() })).toEqual({ allowed: false, errorCode: "chat_ai_limit_reached", plan: "free_cloud" });
       });
       await as(tx, "lobbystack_worker", async (db) => expect(await getWidgetChatAllowance({ db }, { businessId })).toEqual({ allowed: false, errorCode: "chat_ai_limit_reached", plan: "free_cloud" }));
+    });
+  });
+
+  it("charges an open text thread a chat a day, so it can't outrun the allowance", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId } = await numberStepBusiness(tx);
+      await setPlan(tx, businessId, cloud({ plan: "free_cloud" }));
+      await seedUsage(tx, businessId, "free_cloud", "chat_ai_tokens", 1, 4);
+      const conversationId = randomUUID();
+      // Two days of this month, which is the period the seeded usage sits in.
+      const today = new Date();
+      const firstDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1, 12));
+      const secondDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 2, 12));
+      await asWorker(tx, businessId, async (inner) => {
+        // The month's last chat: the day's second reply draws on it too.
+        expect(await reserveTextReplyUsageInTransaction(inner, { businessId, conversationId, now: firstDay })).toMatchObject({ allowed: true });
+        expect(await reserveTextReplyUsageInTransaction(inner, { businessId, conversationId, now: new Date(firstDay.getTime() + 60_000) })).toMatchObject({ allowed: true });
+      });
+      await asWorker(tx, businessId, async (inner) => {
+        expect(await reserveTextReplyUsageInTransaction(inner, { businessId, conversationId, now: secondDay })).toEqual({ allowed: false, errorCode: "chat_ai_limit_reached", plan: "free_cloud" });
+      });
     });
   });
 
