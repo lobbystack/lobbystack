@@ -1,11 +1,13 @@
 import { and, eq, inArray } from "drizzle-orm";
 
-import { phoneNumbers, receptionistProfiles, type DatabaseTransaction } from "@lobbystack/db";
+import { contacts, numberTrials, phoneNumbers, receptionistProfiles, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { CARRIERS_WITH_STAFF_FIRST, type CarrierId } from "@lobbystack/providers/telephony/types";
-import { includesStaffFirst, type StaffFirstMode } from "@lobbystack/shared";
+import { includesStaffFirst, shouldRingStaffFirst, type RuntimeLocale, type StaffFirstMode } from "@lobbystack/shared";
 
+import type { DomainContext } from "./context";
 import { loadEntitlement } from "./entitlement";
 import { enqueueNumberRouting } from "./numberTrials";
+import { getCachedBusinessSnapshot } from "./snapshotCache";
 
 // Staff answers first: a call rings one staff phone before the receptionist
 // answers. See docs/specs/staff-answers-first.md.
@@ -40,4 +42,45 @@ export async function assertStaffFirstChange(tx: DatabaseTransaction, input: { b
 export async function enqueueStaffFirstRouting(tx: DatabaseTransaction, businessId: string): Promise<void> {
   const numbers = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), inArray(phoneNumbers.carrier, [...CARRIERS_WITH_STAFF_FIRST])));
   for (const number of numbers) await enqueueNumberRouting(tx, { businessId, phoneNumberId: number.id, mode: "receptionist" });
+}
+
+export type StaffFirstDecision =
+  // A blocked caller, or a number whose trial ended.
+  | { action: "reject" }
+  | { action: "receptionist"; locale: RuntimeLocale }
+  | { action: "ring"; locale: RuntimeLocale; phone: string; ringSeconds: number; message?: string | undefined };
+
+/**
+ * What to do with a call to a staff-first number. Everything that can't ring
+ * goes straight to the receptionist, which applies the plan's and the trial's
+ * minutes as on any other call. Hours come from the snapshot, like the rest of
+ * a call's setup, so a change reaches calls when the snapshot refreshes.
+ */
+export async function decideStaffFirstCall(context: DomainContext, input: { businessId: string; e164: string; from?: string | undefined; forwardedFrom?: string | undefined; now?: Date }): Promise<StaffFirstDecision> {
+  const snapshot = await getCachedBusinessSnapshot(context, { businessId: input.businessId });
+  const { ended, blocked, included } = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const trial = (await tx.select({ id: numberTrials.id }).from(numberTrials).where(and(eq(numberTrials.businessId, input.businessId), eq(numberTrials.status, "ended"))).limit(1))[0];
+    const caller = input.from ? (await tx.select({ blockedAt: contacts.operatorBlockedAt }).from(contacts).where(and(eq(contacts.businessId, input.businessId), eq(contacts.phone, input.from))).limit(1))[0] : undefined;
+    return { ended: Boolean(trial), blocked: Boolean(caller?.blockedAt), included: includesStaffFirst(await loadEntitlement(tx, input.businessId)) };
+  });
+  if (ended || blocked) return { action: "reject" };
+  const locale = snapshot?.defaultLocale ?? "en";
+  const policy = snapshot?.staffFirstPolicy;
+  if (!snapshot || !policy || !included || !shouldRingStaffFirst(snapshot, input.now)) return { action: "receptionist", locale };
+  // A staff line that forwards here, or the dialled number itself, would loop.
+  if (policy.number === input.e164 || policy.number === input.forwardedFrom) return { action: "receptionist", locale };
+  return { action: "ring", locale, phone: policy.number, ringSeconds: policy.ringSeconds, ...(policy.message ? { message: policy.message } : {}) };
+}
+
+/** What the staff leg reads out. The team's language decides it, and a caller's saved name beats their number. */
+export async function loadStaffPrompt(context: DomainContext, input: { businessId: string; from?: string | undefined }): Promise<{ business: string; locale: RuntimeLocale; caller: { name?: string | null; phone?: string } }> {
+  const snapshot = await getCachedBusinessSnapshot(context, { businessId: input.businessId });
+  const contact = input.from ? await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => (await tx.select({ name: contacts.name }).from(contacts).where(and(eq(contacts.businessId, input.businessId), eq(contacts.phone, input.from!))).limit(1))[0]) : undefined;
+  return { business: snapshot?.displayName ?? "", locale: snapshot?.teamLocale ?? snapshot?.defaultLocale ?? "en", caller: { ...(contact?.name ? { name: contact.name } : {}), ...(input.from ? { phone: input.from } : {}) } };
+}
+
+/** What the receptionist's leg needs after a ring: the business's language and the handover message. */
+export async function loadStaffFirstHandover(context: DomainContext, input: { businessId: string }): Promise<{ locale: RuntimeLocale; message?: string }> {
+  const snapshot = await getCachedBusinessSnapshot(context, { businessId: input.businessId });
+  return { locale: snapshot?.defaultLocale ?? "en", ...(snapshot?.staffFirstPolicy?.handoverMessage ? { message: snapshot.staffFirstPolicy.handoverMessage } : {}) };
 }

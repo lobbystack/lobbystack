@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { billingAccounts, businesses, createDatabaseClient, numberTrials, outboxMessages, phoneNumbers, receptionistProfiles, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { billingAccounts, businessHours, businesses, contacts, createDatabaseClient, numberTrials, outboxMessages, phoneNumbers, receptionistProfiles, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
+import { refreshBusinessSnapshot } from "./knowledge";
 import { desiredNumberRouting } from "./numberTrials";
 import { saveReceptionistProfileInTransaction } from "./receptionistProfile";
+import { decideStaffFirstCall } from "./staffFirst";
 import { createBusiness } from "./tenancy";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
@@ -109,6 +111,61 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
       const [number] = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(eq(phoneNumbers.businessId, businessId));
       await tx.update(receptionistProfiles).set({ staffFirstMode: "always", staffFirstNumber: staffPhone }).where(eq(receptionistProfiles.businessId, businessId));
       expect((await desiredNumberRouting({ db: tx as unknown as Database }, { businessId, phoneNumberId: number!.id }))?.mode).toBe("receptionist");
+    });
+  });
+
+  describe("decideStaffFirstCall", () => {
+    // Monday 2026-11-02 at 10:00 and 20:00 in Toronto.
+    const open = new Date("2026-11-02T15:00:00Z");
+    const closed = new Date("2026-11-03T01:00:00Z");
+    const context = (tx: DatabaseTransaction) => ({ db: tx as unknown as Database });
+
+    async function configured(tx: DatabaseTransaction, mode: "business_hours" | "always", plan: "free_cloud" | "starter" = "starter") {
+      const businessId = await business(tx, { carrier: "twilio" });
+      await save(tx, businessId, { staffFirstMode: mode, staffFirstNumber: staffPhone, staffFirstMessage: "One moment." });
+      if (plan === "free_cloud") await tx.update(billingAccounts).set({ plan, subscriptionState: null }).where(eq(billingAccounts.businessId, businessId));
+      await tx.insert(businessHours).values({ businessId, dayOfWeek: 1, openMinutes: 540, closeMinutes: 1020 });
+      await refreshBusinessSnapshot(context(tx), { businessId });
+      return businessId;
+    }
+
+    it("rings during hours and goes to the receptionist outside them", async () => {
+      await rollbackTest(async (tx) => {
+        const businessId = await configured(tx, "business_hours");
+        const decide = (now: Date) => decideStaffFirstCall(context(tx), { businessId, e164: lobbyNumber, from: "+14165550134", now });
+        expect(await decide(open)).toEqual({ action: "ring", locale: "en", phone: staffPhone, ringSeconds: 15, message: "One moment." });
+        expect(await decide(closed)).toEqual({ action: "receptionist", locale: "en" });
+      });
+    });
+
+    it("rejects a blocked caller", async () => {
+      await rollbackTest(async (tx) => {
+        const businessId = await configured(tx, "always");
+        await tx.insert(contacts).values({ businessId, phone: "+14165550134", operatorBlockedAt: new Date() });
+        expect(await decideStaffFirstCall(context(tx), { businessId, e164: lobbyNumber, from: "+14165550134", now: open })).toEqual({ action: "reject" });
+      });
+    });
+
+    it("rejects a call on an ended trial", async () => {
+      await rollbackTest(async (tx) => {
+        const businessId = await configured(tx, "always");
+        await tx.insert(numberTrials).values({ businessId, userId: (await tx.select({ id: users.id }).from(users).limit(1))[0]!.id, status: "ended", verifiedPhone: staffPhone });
+        expect(await decideStaffFirstCall(context(tx), { businessId, e164: lobbyNumber, now: open })).toEqual({ action: "reject" });
+      });
+    });
+
+    it("won't ring the line that forwarded the call here", async () => {
+      await rollbackTest(async (tx) => {
+        const businessId = await configured(tx, "always");
+        expect(await decideStaffFirstCall(context(tx), { businessId, e164: lobbyNumber, forwardedFrom: staffPhone, now: open })).toEqual({ action: "receptionist", locale: "en" });
+      });
+    });
+
+    it("stops ringing a business that fell back to Free", async () => {
+      await rollbackTest(async (tx) => {
+        const businessId = await configured(tx, "always", "free_cloud");
+        expect(await decideStaffFirstCall(context(tx), { businessId, e164: lobbyNumber, now: open })).toEqual({ action: "receptionist", locale: "en" });
+      });
     });
   });
 
