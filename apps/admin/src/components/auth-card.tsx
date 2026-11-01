@@ -329,7 +329,7 @@ export function AuthCard({ mode, google = false, passkey = false, partner }: { m
   }
 
   if (verificationPending) return (
-    <ReplacementOnboardingShell description={t(login ? "verifyEmail.codeDescription" : "verifyEmail.codeDescriptionSignup", { email: email.trim().toLowerCase() })} title={t("verifyEmail.codeTitle")} width="sm">
+    <ReplacementOnboardingShell {...(login ? {} : { legalAgreement: "verifyEmail" as const })} description={t(login ? "verifyEmail.codeDescription" : "verifyEmail.codeDescriptionSignup", { email: email.trim().toLowerCase() })} title={t("verifyEmail.codeTitle")} width="sm">
       <div className="flex w-full flex-col gap-6">
         <form onSubmit={verifyEmail}>
           <FieldGroup className="gap-4">
@@ -339,14 +339,14 @@ export function AuthCard({ mode, google = false, passkey = false, partner }: { m
                 disabled={verificationLoading}
                 autoComplete="one-time-code"
                 autoFocus
-                containerClassName="justify-center"
+                containerClassName="w-full"
                 id="verification-code"
                 maxLength={6}
                 onChange={(value) => setVerificationCode(value.replace(/\D/g, "").slice(0, 6))}
                 value={verificationCode}
               >
-                <InputOTPGroup>
-                  {[0, 1, 2, 3, 4, 5].map((index) => <InputOTPSlot aria-invalid={verificationError ? true : undefined} className="size-12 text-lg" index={index} key={index} />)}
+                <InputOTPGroup className="w-full">
+                  {[0, 1, 2, 3, 4, 5].map((index) => <InputOTPSlot aria-invalid={verificationError ? true : undefined} className="size-auto h-12 flex-1 text-lg" index={index} key={index} />)}
                 </InputOTPGroup>
               </InputOTP>
             </Field>
