@@ -17,6 +17,34 @@ async function requestCode() {
 }
 
 describe("password recovery", () => {
+  it("checks each step before sending, and shows what is wrong under the field", async () => {
+    const fetcher = vi.fn().mockResolvedValue(Response.json({ success: true }));
+    vi.stubGlobal("fetch", fetcher);
+    render(<ForgotPasswordPage />);
+    expect(screen.queryByText("forgotPassword.emailRequired")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "forgotPassword.submit" }));
+    expect(screen.getByText("forgotPassword.emailRequired")).toBeTruthy();
+    expect(document.activeElement).toBe(screen.getByLabelText("forgotPassword.email"));
+    await userEvent.type(screen.getByLabelText("forgotPassword.email"), "person@");
+    await userEvent.click(screen.getByRole("button", { name: "forgotPassword.submit" }));
+    expect(screen.getByText("forgotPassword.emailInvalid")).toBeTruthy();
+    expect(fetcher).not.toHaveBeenCalled();
+    await userEvent.type(screen.getByLabelText("forgotPassword.email"), "example.test");
+    await userEvent.click(screen.getByRole("button", { name: "forgotPassword.submit" }));
+    await screen.findByLabelText("forgotPassword.code");
+    expect(screen.queryByText("forgotPassword.codeRequired")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "forgotPassword.verifySubmit" }));
+    expect(screen.getByText("forgotPassword.codeRequired")).toBeTruthy();
+    await userEvent.type(screen.getByLabelText("forgotPassword.code"), "12345678");
+    await userEvent.click(screen.getByRole("button", { name: "forgotPassword.verifySubmit" }));
+    expect(screen.getByText("forgotPassword.passwordRequired")).toBeTruthy();
+    await userEvent.type(screen.getByLabelText("forgotPassword.newPassword"), "short");
+    await userEvent.click(screen.getByRole("button", { name: "forgotPassword.verifySubmit" }));
+    expect(screen.queryByText("forgotPassword.passwordRequired")).toBeNull();
+    expect(screen.getByText("signup.passwordCriteria.number")).toBeTruthy();
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
   it("clears the code and password when returning to the request form", async () => {
     const fetcher = vi.fn().mockResolvedValue(Response.json({ success: true }));
     vi.stubGlobal("fetch", fetcher);
