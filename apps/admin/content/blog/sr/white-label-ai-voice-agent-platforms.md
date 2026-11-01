@@ -108,7 +108,7 @@ Zatim proverite ovih pet stvari:
 
 Izaberite LobbyStack kada prodajete AI recepcionera malim firmama i želite da počnete bez plaćanja: nivo Free ne traži karticu i uključuje probni broj za pravi demo poziv. Nivo Starter od $49 donosi zajednički fond, dva broja i sopstveni domen. Klijenti vam plaćaju preko vašeg Stripe naloga, a MIT licenca vam dozvoljava da ceo program kasnije preselite na svoje servere.
 
-Izaberite drugu platformu kada vam trebaju odlazne kampanje, prilagođeni tokovi poziva za druge poslove, imejl sa brendom sa vašeg domena, ili GoHighLevel u centru vašeg sistema.
+Izaberite drugu platformu kada vam trebaju odlazne kampanje, prilagođeni tokovi poziva za druge poslove, imejl sa brendom sa vašeg domena, ili GoHighLevel u centru vašeg sistema. Naše [poređenje sa GoHighLevel-om](/sr/blog/gohighlevel-ai-receptionist-alternative/) pokriva taj poslednji slučaj, a naš vodič za [prodaju white label AI agenta](/sr/blog/white-label-ai-agent/) upoređuje kontrolnu tablu sa brendom i vaš sopstveni UI.
 
 ## Česta pitanja
 

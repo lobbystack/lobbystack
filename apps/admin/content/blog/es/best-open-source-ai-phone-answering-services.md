@@ -143,3 +143,5 @@ El mejor **servicio de código abierto para contestar llamadas con IA** para ust
 - Necesita una recepción para servicios del hogar → **Hearthline**
 
 Si quiere inspeccionar un stack completo antes de desviar su línea principal, empiece por el [repositorio de LobbyStack en GitHub](https://github.com/lobbystack/lobbystack) o por la [visión general del stack de recepcionista con IA de código abierto](/es/blog/open-source-ai-receptionist-stack/).
+
+Si también valora una plataforma alojada para desarrolladores, lea nuestra [comparativa de la alternativa a Vapi](/es/blog/vapi-alternative/).
