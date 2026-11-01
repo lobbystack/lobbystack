@@ -463,6 +463,7 @@ export class LiveCallController {
       this.observeTimeline(event.end_ms);
       this.measure(() => this.latency.callerTranscript(event.start_ms, event.end_ms));
       this.appendTranscript("caller", event.delta, event.end_ms, event.start_ms);
+      this.watchForMissedGoodbye();
     });
     // OpenAI's guide: transcript events arrive for intervals that contain
     // text, so words in session.output_transcript.delta are the evidence that
@@ -877,8 +878,8 @@ export class LiveCallController {
     else this.cancelHangup();
   }
 
-  // GPT-Live spoke, so once both sides are quiet the worker may ask whether it
-  // just answered a goodbye. Every new word restarts the wait.
+  // Either side spoke, so once both are quiet the worker may ask whether
+  // GPT-Live just answered a goodbye. Every new word restarts the wait.
   private watchForMissedGoodbye(): void {
     if (!this.callerLeaving) return;
     clearTimeout(this.missedGoodbyeTimer);
@@ -888,7 +889,11 @@ export class LiveCallController {
   private checkMissedGoodbye(): void {
     const callerLeaving = this.callerLeaving;
     const heard = this.lastCallerStartMs;
-    const [callerTurn, reply] = this.turns.slice(-2);
+    // The caller's transcript can lag GPT-Live's reply, so words they said
+    // before the reply ended can land after it.
+    const lagging = this.turns.at(-1)?.role === "caller" && heard <= this.lastSpeechEndMs;
+    const reply = this.turns.at(lagging ? -2 : -1);
+    const callerTurn = this.turns.at(lagging ? -3 : -2);
     const unanswered = () => !this.ending && !this.finished && !this.pendingHangup && !this.transfer && !this.passcode && this.runningDelegations === 0 && heard === this.lastCallerStartMs;
     if (!callerLeaving || !unanswered() || heard <= this.missedGoodbyeCheckedMs || callerTurn?.role !== "caller" || reply?.role !== "receptionist") return;
     if (performance.now() - this.lastCallerAt < MISSED_GOODBYE_QUIET_MS) return;

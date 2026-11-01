@@ -722,6 +722,38 @@ describe("LiveCallController ending when the caller is done", () => {
       expect(hangup).not.toHaveBeenCalled();
     });
 
+    it("asks when the caller's last words land after the reply", async () => {
+      fakeTimers();
+      const callerLeaving = vi.fn(async (_conversation: string, _abortSignal: AbortSignal) => true);
+      const { socket, hangup, closed } = setup({ callerLeaving });
+      await vi.advanceTimersByTimeAsync(0);
+      socket.emit("session.input_transcript.delta", { delta: "Nope, that's it", start_ms: 1_000, end_ms: 1_800 });
+      socket.emit("session.output_transcript.delta", { delta: "You're welcome.", start_ms: 2_200, end_ms: 3_000 });
+      await vi.advanceTimersByTimeAsync(1_000);
+      // Said at 2.0 seconds, before the reply ended, and transcribed after it.
+      socket.emit("session.input_transcript.delta", { delta: ". Thanks", start_ms: 2_000, end_ms: 2_400 });
+      await vi.advanceTimersByTimeAsync(1_400);
+      expect(callerLeaving).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(200);
+      expect(callerLeaving).toHaveBeenCalledOnce();
+      expect(callerLeaving.mock.calls[0]![0]).toContain("Caller: Nope, that's it\nReceptionist: You're welcome.\nCaller: . Thanks");
+      await vi.advanceTimersByTimeAsync(4_000);
+      expect(hangup).toHaveBeenCalledWith("live_1");
+      expect(endOnClose(socket, closed)).toBe("caller_finished");
+    });
+
+    it("doesn't ask about words the caller said after the reply", async () => {
+      fakeTimers();
+      const callerLeaving = vi.fn(async (_conversation: string, _abortSignal: AbortSignal) => true);
+      const { socket } = setup({ callerLeaving });
+      await vi.advanceTimersByTimeAsync(0);
+      missedGoodbye(socket);
+      await vi.advanceTimersByTimeAsync(500);
+      socket.emit("session.input_transcript.delta", { delta: "Thanks, one more thing", start_ms: 3_000, end_ms: 3_400 });
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(callerLeaving).not.toHaveBeenCalled();
+    });
+
     it.each([
       ["a question", "Would you like to book a time?"],
       ["a long reply", "We can answer calls when you're busy, take reservations and pass along special instructions to your staff."],

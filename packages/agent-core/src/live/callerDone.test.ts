@@ -42,4 +42,10 @@ describe("callerIsLeaving", () => {
     await callerIsLeaving(mock, "Caller: Thanks.");
     expect(JSON.stringify(mock.doGenerateCalls[0]!.prompt)).toContain("only say thanks or okay");
   });
+
+  it("reads a caller's turn split by the receptionist's reply as one turn", async () => {
+    const mock = model("done");
+    await callerIsLeaving(mock, "Caller: Nope. That's it\nReceptionist: You're welcome\nCaller: . Thanks\nReceptionist: .");
+    expect(JSON.stringify(mock.doGenerateCalls[0]!.prompt)).toContain("read those pieces together as one turn");
+  });
 });
