@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ valid: vi.fn(), execute: vi.fn(), decide: vi.fn(), forward: vi.fn(), prompt: vi.fn(), handover: vi.fn() }));
-vi.mock("@lobbystack/domain", () => ({ decideStaffFirstCall: mocks.decide, resolveRefusedCallForward: mocks.forward, loadStaffPrompt: mocks.prompt, loadStaffFirstHandover: mocks.handover }));
+const mocks = vi.hoisted(() => ({ valid: vi.fn(), execute: vi.fn(), decide: vi.fn(), forward: vi.fn(), prompt: vi.fn(), handover: vi.fn(), record: vi.fn() }));
+vi.mock("@lobbystack/domain", () => ({ decideStaffFirstCall: mocks.decide, resolveRefusedCallForward: mocks.forward, loadStaffPrompt: mocks.prompt, loadStaffFirstHandover: mocks.handover, recordStaffAnsweredCall: mocks.record }));
 vi.mock("@lobbystack/providers/twilio/webhookSecurity", () => ({ resolveTwilioWebhookUrl: (url: string) => url, validateTwilioSignature: mocks.valid }));
 vi.mock("@/lib/api-helpers", () => ({ getAppDatabase: () => ({ db: { execute: mocks.execute } }) }));
 vi.mock("@/lib/domain-context", () => ({ createWorkerDomainContext: () => ({}) }));
@@ -23,6 +23,7 @@ beforeEach(() => {
   mocks.valid.mockReturnValue(true);
   mocks.execute.mockResolvedValue({ rows: [{ business_id: BUSINESS }] });
   mocks.handover.mockResolvedValue({ locale: "en" });
+  mocks.record.mockResolvedValue(undefined);
 });
 
 it("refuses a request without a valid Twilio signature", async () => {
@@ -40,7 +41,7 @@ it("rings the staff phone with the business and dialled number in the action URL
   const { body } = await post("incoming", { To: NUMBER });
   expect(body).toContain(`>${STAFF}</Number>`);
   expect(body).toContain(`staff-result?business=${BUSINESS}&amp;called=%2B15815550100`);
-  expect(mocks.decide).toHaveBeenCalledWith({}, { businessId: BUSINESS, e164: NUMBER, from: CALLER, forwardedFrom: undefined });
+  expect(mocks.decide).toHaveBeenCalledWith({}, { businessId: BUSINESS, e164: NUMBER, providerCallId: "CAfixture", from: CALLER, forwardedFrom: undefined });
 });
 
 it("passes the forwarding line on, for the loop guard", async () => {
@@ -107,8 +108,19 @@ it("bridges a press of 1 and hangs up anything else", async () => {
   expect((await post("staff-press", { Digits: "7" })).body).toContain("<Hangup/>");
 });
 
-it("ends the call after a staff member accepted", async () => {
+it("records a call a staff member accepted, then ends it", async () => {
   expect((await post("staff-result", { DialCallStatus: "completed", DialBridged: "true", DialCallDuration: "42" }, routed)).body).toContain("<Hangup/>");
+  expect(mocks.record).toHaveBeenCalledWith({}, { businessId: BUSINESS, providerCallId: "CAfixture", from: CALLER, to: NUMBER, seconds: 42 });
+});
+
+it("ends an accepted call even when the record can't be written", async () => {
+  mocks.record.mockRejectedValue(new Error("database down"));
+  expect((await post("staff-result", { DialCallStatus: "completed", DialBridged: "true" }, routed)).body).toContain("<Hangup/>");
+});
+
+it("records nothing for a voicemail that answered without a press of 1", async () => {
+  await post("staff-result", { DialCallStatus: "completed", DialBridged: "false" }, routed);
+  expect(mocks.record).not.toHaveBeenCalled();
 });
 
 it.each(["no-answer", "busy", "failed", "completed"])("hands a %s ring to the receptionist with the handover message", async (DialCallStatus) => {

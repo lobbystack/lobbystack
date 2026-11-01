@@ -161,11 +161,12 @@ export interface CallCostLookup {
   readonly carrier: CarrierId;
   /**
    * Finds the carrier's leg of a GPT-Live phone call, by caller and start
-   * time, and its price. Undefined while the carrier has no record of it
-   * yet. Absent when the carrier can't tell which call was ours.
+   * time, and its price. `dialled` holds the business's numbers. Undefined
+   * while the carrier has no record of it yet. Absent when the carrier can't
+   * tell which call was ours.
    */
-  findLiveCallCost?(input: { from: string; to?: string; near: Date }): Promise<({ providerCallId: string } & CallPricing) | undefined>;
-  /** The price of a call the carrier names by its own id. */
+  findLiveCallCost?(input: { from: string; dialled?: string[]; near: Date }): Promise<({ providerCallId: string } & CallPricing) | undefined>;
+  /** The price of a call the carrier names by its own id, with every leg it dialled. */
   getCallPricing?(input: { providerCallId: string }): Promise<CallPricing>;
 }
 

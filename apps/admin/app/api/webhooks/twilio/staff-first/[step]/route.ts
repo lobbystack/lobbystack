@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
-import { decideStaffFirstCall, loadStaffFirstHandover, loadStaffPrompt, resolveRefusedCallForward } from "@lobbystack/domain";
+import { decideStaffFirstCall, loadStaffFirstHandover, loadStaffPrompt, recordStaffAnsweredCall, resolveRefusedCallForward } from "@lobbystack/domain";
 import { appBaseUrl, sipAddress } from "@lobbystack/providers/telephony/config";
 import { dialReceptionistTwiml, emptyTwiml, forwardTwiml, hangupTwiml, receptionistDialOutcome, referTargetPhone, referTwiml, rejectTwiml, ringStaffTwiml, staffDialOutcome, staffPressTwiml, staffPromptTwiml } from "@lobbystack/providers/twilio/staffFirstTwiml";
 import { resolveTwilioWebhookUrl, validateTwilioSignature } from "@lobbystack/providers/twilio/webhookSecurity";
@@ -79,7 +79,7 @@ export async function POST(request: Request, { params: route }: { params: Promis
       try {
         const routed = await businessForNumber([params.To, params.Called]);
         if (!routed) return twiml(rejectTwiml());
-        const decision = await decideStaffFirstCall(domain, { businessId: routed.businessId, e164: routed.called, from: callerPhone(params.From), forwardedFrom: params.ForwardedFrom });
+        const decision = await decideStaffFirstCall(domain, { businessId: routed.businessId, e164: routed.called, providerCallId: params.CallSid ?? "", from: callerPhone(params.From), forwardedFrom: params.ForwardedFrom });
         if (decision.action === "reject") return twiml(rejectTwiml());
         if (decision.action === "ring") {
           return twiml(ringStaffTwiml({
@@ -119,7 +119,11 @@ export async function POST(request: Request, { params: route }: { params: Promis
     case "staff-result": {
       const outcome = staffDialOutcome(params);
       if (outcome === "caller_gone") return twiml(emptyTwiml());
-      if (outcome === "accepted") return twiml(hangupTwiml());
+      if (outcome === "accepted") {
+        // The call happened either way, so a failed write only costs the record.
+        await recordStaffAnsweredCall(domain, { businessId, providerCallId: params.CallSid ?? "", from: callerPhone(params.From), to: called, seconds: Number(params.DialCallDuration) || 0 }).catch((error: unknown) => console.error("[staff-first] couldn't record a staff-answered call", error instanceof Error ? error.message : error));
+        return twiml(hangupTwiml());
+      }
       // An action URL has no voice fallback, so a failed read still reaches the receptionist, without the message.
       const handover = await loadStaffFirstHandover(domain, { businessId }).catch((error: unknown) => {
         console.error("[staff-first] couldn't read the handover", error instanceof Error ? error.message : error);

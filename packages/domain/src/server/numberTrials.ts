@@ -553,7 +553,7 @@ export async function loadNumberTrialEmail(context: DomainContext, input: { busi
     const owner = (await tx.execute<{ email: string; name: string | null; preferred_locale: string; business_name: string }>(sql`select email, name, preferred_locale, business_name from app.resolve_business_owner_contact(${input.businessId}::uuid)`)).rows[0];
     if (!owner) return null;
     const answered = trial.startedAt
-      ? (await tx.select({ count: sql<number>`count(*)::int` }).from(calls).where(and(eq(calls.businessId, input.businessId), ne(calls.transport, "web_voice"), inArray(calls.status, ["completed", "transferred"]), gte(calls.startedAt, trial.startedAt))))[0]?.count ?? 0
+      ? (await tx.select({ count: sql<number>`count(*)::int` }).from(calls).where(and(eq(calls.businessId, input.businessId), eq(calls.billingExcluded, false), ne(calls.transport, "web_voice"), inArray(calls.status, ["completed", "transferred"]), gte(calls.startedAt, trial.startedAt))))[0]?.count ?? 0
       : 0;
     return {
       email: input.email,

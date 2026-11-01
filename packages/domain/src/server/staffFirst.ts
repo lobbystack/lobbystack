@@ -1,13 +1,15 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 
-import { contacts, numberTrials, phoneNumbers, receptionistProfiles, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { calls, contacts, enqueueOutbox, numberTrials, phoneNumbers, receptionistProfiles, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { CARRIERS_WITH_STAFF_FIRST, type CarrierId } from "@lobbystack/providers/telephony/types";
 import { includesStaffFirst, shouldRingStaffFirst, type RuntimeLocale, type StaffFirstMode } from "@lobbystack/shared";
 
+import { reserveOutboundCallAttempt } from "./billing";
 import type { DomainContext } from "./context";
 import { loadEntitlement } from "./entitlement";
 import { enqueueNumberRouting } from "./numberTrials";
 import { getCachedBusinessSnapshot } from "./snapshotCache";
+import { findOrCreateCallContactInTransaction } from "./voice";
 
 // Staff answers first: a call rings one staff phone before the receptionist
 // answers. See docs/specs/staff-answers-first.md.
@@ -44,6 +46,10 @@ export async function enqueueStaffFirstRouting(tx: DatabaseTransaction, business
   for (const number of numbers) await enqueueNumberRouting(tx, { businessId, phoneNumberId: number.id, mode: "receptionist" });
 }
 
+/** A call a staff member took: GPT-Live never saw it, so its carrier's call ID keys the record. */
+export const STAFF_ANSWERED_CALL_PROVIDER = "staff_answered";
+export const STAFF_ANSWERED_DISPOSITION = "answered_by_team";
+
 export type StaffFirstDecision =
   // A blocked caller, or a number whose trial ended.
   | { action: "reject" }
@@ -54,9 +60,11 @@ export type StaffFirstDecision =
  * What to do with a call to a staff-first number. Everything that can't ring
  * goes straight to the receptionist, which applies the plan's and the trial's
  * minutes as on any other call. Hours come from the snapshot, like the rest of
- * a call's setup, so a change reaches calls when the snapshot refreshes.
+ * a call's setup, so a change reaches calls when the snapshot refreshes. Each
+ * ring uses one transfer attempt, keyed on the carrier's call so a repeated
+ * webhook doesn't use another, and with none left the receptionist answers.
  */
-export async function decideStaffFirstCall(context: DomainContext, input: { businessId: string; e164: string; from?: string | undefined; forwardedFrom?: string | undefined; now?: Date }): Promise<StaffFirstDecision> {
+export async function decideStaffFirstCall(context: DomainContext, input: { businessId: string; e164: string; providerCallId: string; from?: string | undefined; forwardedFrom?: string | undefined; now?: Date }): Promise<StaffFirstDecision> {
   const snapshot = await getCachedBusinessSnapshot(context, { businessId: input.businessId });
   const { ended, blocked, included } = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const trial = (await tx.select({ id: numberTrials.id }).from(numberTrials).where(and(eq(numberTrials.businessId, input.businessId), eq(numberTrials.status, "ended"))).limit(1))[0];
@@ -69,6 +77,8 @@ export async function decideStaffFirstCall(context: DomainContext, input: { busi
   if (!snapshot || !policy || !included || !shouldRingStaffFirst(snapshot, input.now)) return { action: "receptionist", locale };
   // A staff line that forwards here, or the dialled number itself, would loop.
   if (policy.number === input.e164 || policy.number === input.forwardedFrom) return { action: "receptionist", locale };
+  const attempt = await reserveOutboundCallAttempt(context, { businessId: input.businessId, sourceKey: `staff_ring:${input.providerCallId}` });
+  if (!attempt.allowed) return { action: "receptionist", locale };
   return { action: "ring", locale, phone: policy.number, ringSeconds: policy.ringSeconds, ...(policy.message ? { message: policy.message } : {}) };
 }
 
@@ -83,4 +93,36 @@ export async function loadStaffPrompt(context: DomainContext, input: { businessI
 export async function loadStaffFirstHandover(context: DomainContext, input: { businessId: string }): Promise<{ locale: RuntimeLocale; message?: string }> {
   const snapshot = await getCachedBusinessSnapshot(context, { businessId: input.businessId });
   return { locale: snapshot?.defaultLocale ?? "en", ...(snapshot?.staffFirstPolicy?.handoverMessage ? { message: snapshot.staffFirstPolicy.handoverMessage } : {}) };
+}
+
+/**
+ * Records a call a staff member took, once the carrier reports it over. It
+ * uses no plan minutes and no conversation: the receptionist wasn't on it. It
+ * stays out of mediaStartedAt so it doesn't count as the receptionist's first
+ * call. A repeated webhook finds the record and changes nothing.
+ */
+export async function recordStaffAnsweredCall(context: DomainContext, input: { businessId: string; providerCallId: string; from?: string | undefined; to: string; seconds: number; endedAt?: Date }): Promise<void> {
+  const endedAt = input.endedAt ?? new Date();
+  await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const existing = await tx.select({ id: calls.id }).from(calls).where(and(eq(calls.provider, STAFF_ANSWERED_CALL_PROVIDER), eq(calls.providerCallId, input.providerCallId))).limit(1);
+    if (existing.length) return;
+    const { contactId } = await findOrCreateCallContactInTransaction(tx, { businessId: input.businessId, from: input.from });
+    const [call] = await tx.insert(calls).values({
+      businessId: input.businessId,
+      contactId,
+      provider: STAFF_ANSWERED_CALL_PROVIDER,
+      providerCallId: input.providerCallId,
+      transport: "voice",
+      carrier: sql<string>`coalesce((select carrier from public.phone_numbers where business_id = ${input.businessId}::uuid and e164 = ${input.to} and status <> 'reclaimed' limit 1), 'twilio')`,
+      status: "completed",
+      disposition: STAFF_ANSWERED_DISPOSITION,
+      billingExcluded: true,
+      startedAt: new Date(endedAt.getTime() - input.seconds * 1_000),
+      endedAt,
+      providerDurationSeconds: input.seconds,
+    }).onConflictDoNothing().returning({ id: calls.id, revision: calls.revision });
+    if (!call) return;
+    await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "call", aggregateId: call.id, dedupeKey: `call:${call.id}:completed:${call.revision}`, payload: { type: "call.completed", entityId: call.id, revision: call.revision } });
+    await enqueueOutbox(tx, { topic: "call.syncPrice", businessId: input.businessId, aggregateType: "call", aggregateId: call.id, dedupeKey: `call:${call.id}:staff-price`, payload: { providerCallId: input.providerCallId, providerCallStatus: "completed" } });
+  });
 }

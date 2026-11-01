@@ -86,6 +86,33 @@ export class TwilioProvider {
     return best?.sid;
   }
 
+  /** The inbound call behind a GPT-Live call a voice webhook dialled, nearest to `near`. Trunk calls never match, since they aren't `inbound`. */
+  async findInboundCall(input: { from: string; dialled: string[]; near: Date; windowMs?: number }): Promise<string | undefined> {
+    const windowMs = input.windowMs ?? 2 * 60_000;
+    const calls = await this.client.calls.list({ from: input.from, startTimeAfter: new Date(input.near.getTime() - windowMs), startTimeBefore: new Date(input.near.getTime() + windowMs), limit: 50 });
+    return calls
+      .filter((call) => call.startTime && call.direction === "inbound" && input.dialled.includes(call.to))
+      .sort((a, b) => Math.abs(a.startTime.getTime() - input.near.getTime()) - Math.abs(b.startTime.getTime() - input.near.getTime()))[0]?.sid;
+  }
+
+  /**
+   * A call's price with every leg it dialled, which Twilio prices apart. Legs
+   * that never connected have no price. Without the full total this returns no
+   * cost, so the job tries again once Twilio has priced each leg.
+   */
+  async getCallTreePricing(input: { providerCallId: string }): Promise<TwilioCallPricing> {
+    const [call, children] = await Promise.all([this.client.calls(input.providerCallId).fetch(), this.client.calls.list({ parentCallSid: input.providerCallId, limit: 20 })]);
+    const prices = [call, ...children.filter((child) => child.status === "completed")].map((leg) => finiteNumber(leg.price));
+    const providerPriceUnit = normalizedUnit(call.priceUnit);
+    const providerPrice = prices.every((price) => price !== undefined) ? prices.reduce<number>((total, price) => total + (price ?? 0), 0) : undefined;
+    return {
+      ...(call.dateUpdated ? { providerUpdatedAt: call.dateUpdated.toISOString() } : {}),
+      ...(providerPrice !== undefined ? { providerPrice } : {}),
+      ...(providerPriceUnit !== undefined ? { providerPriceUnit } : {}),
+      ...(providerPrice !== undefined && providerPriceUnit === "usd" ? { providerCostUsd: Math.abs(providerPrice) } : {}),
+    };
+  }
+
   async getCallPricing(input: { providerCallId: string }): Promise<TwilioCallPricing> {
     const call = await this.client.calls(input.providerCallId).fetch();
     const providerPrice = finiteNumber(call.price);

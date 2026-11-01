@@ -97,12 +97,15 @@ export function createTwilioCarrier(env: Env = process.env, provider?: TwilioPro
     carrier: "twilio",
     // Without the trunk there's no telling which trunk call was ours, so GPT-Live calls go unpriced.
     ...(trunkSid ? {
-      findLiveCallCost: async ({ from, near }: { from: string; near: Date }) => {
+      findLiveCallCost: async ({ from, dialled, near }: { from: string; dialled?: string[]; near: Date }) => {
         const providerCallId = await twilio.findTrunkCall({ trunkSid, from, near });
-        return providerCallId ? { providerCallId, ...await twilio.getCallPricing({ providerCallId }) } : undefined;
+        if (providerCallId) return { providerCallId, ...await twilio.getCallPricing({ providerCallId }) };
+        // A staff-first number's call reached GPT-Live from a voice webhook, off the trunk.
+        const inbound = dialled?.length ? await twilio.findInboundCall({ from, dialled, near }) : undefined;
+        return inbound ? { providerCallId: inbound, ...await twilio.getCallTreePricing({ providerCallId: inbound }) } : undefined;
       },
     } : {}),
-    getCallPricing: (input) => twilio.getCallPricing(input),
+    getCallPricing: (input) => twilio.getCallTreePricing(input),
   };
   return { carrier: "twilio", inventory, routing, sms: smsSender(twilio, env), ...(verifier ? { verifier } : {}), lineTypes, callCost };
 }
