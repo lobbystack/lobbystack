@@ -29,7 +29,7 @@ describe("StaffFirstSection", () => {
   it("says why a Telnyx number can't use it, and locks the setting", () => {
     section({ block: "carrier", profile: { staffFirstMode: "never" } });
     expect(screen.getByText("agent:staffFirst.unavailable.carrier")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "agent:staffFirst.save" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.queryByRole("button", { name: "agent:staffFirst.save" })).toBeNull();
   });
 
   it("says a Free business needs a paid plan", () => {

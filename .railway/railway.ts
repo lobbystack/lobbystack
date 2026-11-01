@@ -77,6 +77,7 @@ export default defineRailway((ctx) => {
       // New phone numbers join this Twilio Elastic SIP trunk, which sends their
       // calls to GPT-Live. Provisioning fails without it.
       TWILIO_SIP_TRUNK_SID: preserve(),
+      OPENAI_PROJECT_ID: preserve(),
       // Twilio sells UK, Australian and New Zealand numbers only under these
       // approved regulatory bundles. See docs/voice/runtime.md.
       TWILIO_GB_BUNDLE_SID: preserve(),
@@ -234,6 +235,8 @@ export default defineRailway((ctx) => {
       LIVE_PROTOTYPE_ENABLED: "true",
       WORKER_INTERNAL_URL: "http://worker.railway.internal:3002",
       OPENAI_WEBHOOK_SECRET: preserve(),
+      // The staff answers first webhooks dial this project over SIP. See docs/voice/runtime.md.
+      OPENAI_PROJECT_ID: preserve(),
       ...(production ? { LOBBYSTACK_MAINTENANCE_MODE: preserve() } : {}),
     },
   });
