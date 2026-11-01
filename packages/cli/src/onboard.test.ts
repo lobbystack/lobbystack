@@ -102,6 +102,7 @@ function fakeWorld(mode: Mode = { key: "platform", access: "all" }) {
     writes: [] as string[],
     /** A partner's key on a tier that isn't paid gets a 409 from the number search. */
     partnerTierPaid: undefined as boolean | undefined,
+    partnerKeyScopes: ["phone_numbers:manage", "phone_numbers:purchase"] as string[],
     /** Requests whose next answer is lost after the work is done, as when the connection drops. */
     lose: new Set<string>(),
     /** Requests that fail with a 500 next time. */
@@ -145,7 +146,7 @@ function fakeWorld(mode: Mode = { key: "platform", access: "all" }) {
       return error(404, "not_found", "Business not found.");
     }
     if (route === "GET /me") {
-      if (mode.key === "partner") return ok({ api_key: { id: id(), name: "Acme Agency", prefix: "lsp_1a2b3c4d", scopes: [], created_at: "2026-10-26T00:00:00.000Z" }, business: header ? { id: BUSINESS, name: world.business.name } : null, platform: { group: PARTNER, partner: PARTNER, reach: "group", access: "partner", partner_id: PARTNER } });
+      if (mode.key === "partner") return ok({ api_key: { id: id(), name: "Acme Agency", prefix: "lsp_1a2b3c4d", scopes: world.partnerKeyScopes, created_at: "2026-10-26T00:00:00.000Z" }, business: header ? { id: BUSINESS, name: world.business.name } : null, platform: { group: PARTNER, partner: PARTNER, reach: "group", access: "partner", partner_id: PARTNER } });
       return ok(mode.key === "business" ? { api_key: { id: id(), name: "Setup", prefix: "lsk_1a2b3c4d", scopes: [], created_at: "2026-10-12T00:00:00.000Z" }, business: { id: BUSINESS, name: world.business.name } } : { api_key: { id: id(), name: "Acme", prefix: "lsp_1a2b3c4d", scopes: [], created_at: "2026-10-12T00:00:00.000Z" }, business: header ? { id: BUSINESS, name: world.business.name } : null, platform: mode.access === "partner" ? { partner: "acme", access: "partner" } : { group: "acme", partner: "acme", reach: mode.access === "all" ? "all" : "group", access: mode.access === "all" ? "all" : "partner" } });
     }
     if (route === "GET /businesses") return page(world.businesses.filter(() => reachable).map((business) => ({ id: business, name: world.business.name, timezone: world.business.timezone, locale: "en", website_url: null, onboarding_stage: "website", created_at: "2026-10-12T00:00:00.000Z" })));
@@ -509,6 +510,26 @@ describe("lobbystack onboard", () => {
     expect(done.out).toContain("phone number   claimed      +14165550123");
     expect(world.writes).toContain("POST /onboarding/complete");
     expect(done.out).toContain("The business matches the manifest.");
+  });
+
+  it("with a partner's key, refuses a number the key can't buy before anything changes", async () => {
+    const { world, fetch } = fakeWorld({ key: "partner" });
+    world.partnerKeyScopes = ["phone_numbers:manage"];
+    await writeFile(manifest, partnerYaml.replace("owner: { email: owner@acmeplumbing.ca }\n", 'phone_number: { country: CA, area_code: "416" }\n'));
+    expect(await onboard(["--yes"], fetch)).toMatchObject({ code: exitCodes.invalid, err: expect.stringContaining("needs phone_numbers:purchase") });
+    expect(world.writes).toEqual([]);
+  });
+
+  it("with a partner's key, leaves onboarding open for an owner the manifest doesn't name", async () => {
+    const { world, fetch } = fakeWorld({ key: "partner" });
+    world.businesses.push(BUSINESS);
+    await writeFile(manifest, partnerYaml.replace("owner: { email: owner@acmeplumbing.ca }\n", "").replace("  name: Acme Plumbing\n", `  id: ${BUSINESS}\n  name: Acme Plumbing\n`));
+    world.team = { members: [], invitations: [{ id: "invited", email: "owner@acmeplumbing.ca", role: "business_owner", status: "pending", transfers_ownership: false }] };
+    const invited = await onboard(["--yes"], fetch);
+    expect(invited.out).toContain("onboarding     left open    for the owner to finish when they first sign in");
+    world.team = { members: [{ id: "member", email: "owner@acmeplumbing.ca", role: "business_owner" }], invitations: [] };
+    expect((await onboard(["--yes"], fetch)).out).toContain("onboarding     left open    for the owner to finish when they first sign in");
+    expect(world.writes).not.toContain("POST /onboarding/complete");
   });
 
   it("with a partner's key, waits for a paid tier when the search refuses a number", async () => {

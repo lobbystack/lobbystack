@@ -735,9 +735,14 @@ describe("MCP for partner connections", () => {
     const numberTools = ["list_phone_numbers", "search_phone_numbers", "claim_phone_number", "replace_phone_number", "get_phone_number_claim"];
 
     it("gives them to a platform key, never to an agency connection", async () => {
-      const key = await connect(partnerKeyWith(["phone_numbers:manage"]));
+      const key = await connect(partnerKeyWith(["phone_numbers:manage", "phone_numbers:purchase"]));
       expect((await key.listTools()).tools.map((entry) => entry.name)).toEqual(expect.arrayContaining(numberTools));
-      const agency = await connect(agencyToken(["phone_numbers:manage", "partner:read"]));
+      // A key made before keys could buy numbers reads them, and gets nothing that spends money.
+      const older = await connect(partnerKeyWith(["phone_numbers:manage"]));
+      const olderNames = (await older.listTools()).tools.map((entry) => entry.name);
+      expect(olderNames).toEqual(expect.arrayContaining(["list_phone_numbers", "get_phone_number_claim"]));
+      for (const tool of ["search_phone_numbers", "claim_phone_number", "replace_phone_number"]) expect(olderNames).not.toContain(tool);
+      const agency = await connect(agencyToken(["phone_numbers:manage", "phone_numbers:purchase", "partner:read"]));
       const names = (await agency.listTools()).tools.map((entry) => entry.name);
       for (const tool of numberTools) expect(names).not.toContain(tool);
     });
@@ -745,13 +750,13 @@ describe("MCP for partner connections", () => {
     it("searches and claims as the key, on the business it names, once for each idempotency key", async () => {
       fake("searchPhoneNumbersForApi").mockImplementation(async () => [offer]);
       fake("claimPhoneNumberForApi").mockImplementation(async () => claim);
-      const client = await connect(partnerKeyWith(["phone_numbers:manage"]));
+      const client = await connect(partnerKeyWith(["phone_numbers:manage", "phone_numbers:purchase"]));
       const found = await client.callTool({ name: "search_phone_numbers", arguments: { business_id: businessA, area_code: "416" } });
       expect(found.structuredContent).toMatchObject({ data: [{ offer_token: "signed" }] });
       const [, searchCaller, body, searchOptions] = fake("searchPhoneNumbersForApi").mock.calls[0]!;
       expect(searchCaller).toEqual({ businessId: businessA, platformKeyId, groupId: partnerId, partnerId, actor: "platform_key" });
       expect(body).toEqual({ area_code: "416" });
-      expect(searchOptions).toMatchObject({ platformKeyId, claimTokenSecret: "number-claim-secret" });
+      expect(searchOptions).toMatchObject({ platformKeyId, scopes: ["phone_numbers:manage", "phone_numbers:purchase"], claimTokenSecret: "number-claim-secret" });
 
       const args = { business_id: businessA, offer_token: "signed", idempotency_key: "claim-1" };
       expect((await client.callTool({ name: "claim_phone_number", arguments: args })).structuredContent).toMatchObject({ id: claim.id });
@@ -760,12 +765,12 @@ describe("MCP for partner connections", () => {
       const [, claimCaller, claimInput, claimOptions] = fake("claimPhoneNumberForApi").mock.calls[0]!;
       expect(claimCaller).toMatchObject({ businessId: businessA, platformKeyId });
       expect(claimInput).toEqual({ offerToken: "signed", replaces: undefined });
-      expect(claimOptions).toEqual({ platformKeyId, claimTokenSecret: "number-claim-secret" });
+      expect(claimOptions).toEqual({ platformKeyId, scopes: ["phone_numbers:manage", "phone_numbers:purchase"], claimTokenSecret: "number-claim-secret" });
     });
 
     it("replaces a number, needing an idempotency key, and refuses a business that isn't the partner's", async () => {
       fake("claimPhoneNumberForApi").mockImplementation(async () => claim);
-      const client = await connect(partnerKeyWith(["phone_numbers:manage"]));
+      const client = await connect(partnerKeyWith(["phone_numbers:manage", "phone_numbers:purchase"]));
       const phoneNumberId = randomUUID();
       expect((await client.callTool({ name: "replace_phone_number", arguments: { business_id: businessA, phone_number_id: phoneNumberId, offer_token: "signed" } })).isError).toBe(true);
       await client.callTool({ name: "replace_phone_number", arguments: { business_id: businessA, phone_number_id: phoneNumberId, offer_token: "signed", idempotency_key: "swap-1" } });

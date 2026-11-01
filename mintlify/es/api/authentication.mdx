@@ -71,6 +71,7 @@ Cada endpoint, salvo `GET /me`, requiere un permiso (scope). Una clave sin ese p
 | `knowledge:write` | `POST /knowledge`, `PATCH` y `DELETE` en `/knowledge/{entry_id}`, `POST /knowledge/sources`, `PATCH` y `DELETE` en `/knowledge/sources/{source_id}`, `POST /knowledge/sources/{source_id}/expand`, `/retry` y `/cancel`, `POST /knowledge/uploads` y `POST /knowledge/uploads/{upload_id}/complete` |
 | `billing:manage` | `GET` y `PATCH /billing`, `POST /billing/checkout`, `GET /billing/checkout/{checkout_id}` y, con una clave de plataforma que tiene acceso a todos los negocios, `POST` y `DELETE /billing/managed-plan` |
 | `phone_numbers:manage` | `GET /phone-numbers`, `POST /phone-numbers/search`, `POST /phone-numbers/claims`, `GET /phone-numbers/claims/{claim_id}`, `DELETE /phone-numbers/{phone_number_id}` y `POST /phone-numbers/{phone_number_id}/replace` |
+| `phone_numbers:purchase` | Solo para la clave de plataforma de un socio, con `phone_numbers:manage`: `POST /phone-numbers/search`, `POST /phone-numbers/claims`, `POST /phone-numbers/{phone_number_id}/replace` |
 | `team:manage` | `GET /team`, `POST /team/invitations`, `DELETE /team/invitations/{invitation_id}`, `PATCH` y `DELETE` en `/team/members/{membership_id}`, `POST /team/claim-link` |
 | `webhooks:manage` | `GET`, `POST`, `PATCH` y `DELETE` en `/webhooks`, y `POST /webhooks/{webhook_id}/test` |
 
@@ -100,7 +101,7 @@ Con la clave de plataforma de un socio, `POST /businesses` crea un negocio del s
 
 Omita `owner_email` para un negocio que el socio gestiona por sí mismo. Nadie recibe una invitación, y una clave no puede invitar a un propietario más tarde, así que el negocio no se puede entregar. `package_id` devuelve entonces `400`, porque el pago se abre desde la invitación del propietario.
 
-Con `phone_numbers:manage`, la clave de un socio busca, reserva y reemplaza números en su propio nombre. En un despliegue que factura los niveles, esto necesita un nivel de pago, y Free devuelve `409`. Una clave solo puede reservar una oferta que ella misma buscó, y nunca recibe una oferta de prueba. Las claves del socio comparten 20 búsquedas cada 10 minutos.
+Con `phone_numbers:manage` y `phone_numbers:purchase`, la clave de un socio busca, reserva y reemplaza números en su propio nombre. En un despliegue que factura los niveles, esto necesita un nivel de pago, y Free devuelve `409`. Una clave solo puede reservar una oferta que ella misma buscó, y nunca recibe una oferta de prueba. Las claves del socio comparten 20 búsquedas cada 10 minutos.
 
 Los enlaces que devuelve la API para el negocio de un socio, como la etiqueta de script de un widget o un enlace para conectar un calendario, también llevan al panel del socio.
 

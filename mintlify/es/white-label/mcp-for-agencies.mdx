@@ -96,14 +96,14 @@ Además de las herramientas de negocio, una conexión de socio recibe estas. Las
 
 ### Números de teléfono
 
-Solo una clave de plataforma recibe estas herramientas. Reservar y reemplazar cuestan dinero y necesitan un nivel de pago, así que confirme el número primero. Quien se conecta con su propia cuenta compra los números en el panel del negocio.
+Solo una clave de plataforma recibe estas herramientas. Reservar y reemplazar cuestan dinero y necesitan un nivel de pago, así que confirme el número primero. Buscar, reservar y reemplazar también necesitan `phone_numbers:manage`. Quien se conecta con su propia cuenta compra los números en el panel del negocio.
 
 | Herramienta | Alcance | Qué hace |
 | --- | --- | --- |
 | `list_phone_numbers` | `phone_numbers:manage` | Los números de un negocio, del más reciente al más antiguo |
-| `search_phone_numbers` | `phone_numbers:manage` | Busca números que un negocio puede reservar |
-| `claim_phone_number` | `phone_numbers:manage` | Compra un número ofrecido. `idempotency_key` es obligatorio. |
-| `replace_phone_number` | `phone_numbers:manage` | Reserva un número de reemplazo, una vez por negocio. `idempotency_key` es obligatorio. |
+| `search_phone_numbers` | `phone_numbers:purchase` | Busca números que un negocio puede reservar |
+| `claim_phone_number` | `phone_numbers:purchase` | Compra un número ofrecido. `idempotency_key` es obligatorio. |
+| `replace_phone_number` | `phone_numbers:purchase` | Reserva un número de reemplazo, una vez por negocio. `idempotency_key` es obligatorio. |
 | `get_phone_number_claim` | `phone_numbers:manage` | El estado de una reserva |
 
 ### Demos

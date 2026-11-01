@@ -1,8 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, gt, ne, sql } from "drizzle-orm";
 
-import { auditLogs, billingAccounts, businesses, businessInvitations, enqueueOutbox, partnerPackages, partnerStripeAccounts, providerEvents, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { auditLogs, billingAccounts, businesses, businessInvitations, businessMemberships, enqueueOutbox, partnerPackages, partnerStripeAccounts, prospectDemos, providerEvents, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import type { StripeConnectEvent, StripeConnectProvider, StripeConnectSubscription } from "@lobbystack/providers";
 import { hasLivePackageSubscription, isPackageOverageAmount, isUuid, packageOverageIn, packageSubscriptionStatus, type PackageOverage, type PackageSubscriptionStatus, type PartnerRole } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
@@ -275,8 +275,22 @@ async function recheckActor(tx: DatabaseTransaction, actor: PartnerActor, busine
 }
 
 /**
+ * Whether someone can pay for a package: an owner, someone an owner invitation
+ * still reaches, or whoever claims a demo nobody claimed yet.
+ */
+async function someoneCanPayInTransaction(tx: DatabaseTransaction, businessId: string): Promise<boolean> {
+  const [owner] = await tx.select({ id: businessMemberships.id }).from(businessMemberships).where(and(eq(businessMemberships.businessId, businessId), eq(businessMemberships.role, "business_owner"), eq(businessMemberships.status, "active"))).limit(1);
+  if (owner) return true;
+  const [invited] = await tx.select({ id: businessInvitations.id }).from(businessInvitations).where(and(eq(businessInvitations.businessId, businessId), eq(businessInvitations.role, "business_owner"), eq(businessInvitations.status, "pending"), eq(businessInvitations.transfersOwnership, false), gt(businessInvitations.expiresAt, new Date()))).limit(1);
+  if (invited) return true;
+  const [demo] = await tx.select({ id: prospectDemos.id }).from(prospectDemos).where(and(eq(prospectDemos.businessId, businessId), ne(prospectDemos.status, "claimed"))).limit(1);
+  return Boolean(demo);
+}
+
+/**
  * Sells one of the partner's businesses a package, or bills it outside
- * LobbyStack with packageId null. Owners and admins can. The business's
+ * LobbyStack with packageId null. Owners and admins can. A business nobody
+ * can own or pay for gets no package. The business's
  * audit log records the change, and a checkout the change leaves nobody to
  * pay closes.
  */
@@ -289,6 +303,8 @@ export async function setPartnerBusinessBilling(context: DomainContext, actor: P
     // Releasing the business takes this lock too. The key and the business may have changed since the check above.
     await lockBusinessBillingAccount(tx, input.businessId);
     await recheckActor(tx, actor, input.businessId, "Only owners and admins can change how a business is billed.");
+    // A package isn't live until someone pays, so a business nobody can own would stop answering.
+    if (input.packageId !== null && !await someoneCanPayInTransaction(tx, input.businessId)) throw failure("A package's checkout opens from the owner's invitation, so a business with no owner can't be sold one.", 409, "owner_required");
     const changed = await setBusinessPackageInTransaction(tx, { businessId: input.businessId, partnerId: actor.partnerId, packageId: input.packageId, stripeConnect: Boolean(context.stripeConnect) });
     if (changed.changed) await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: actorUserId(actor), eventType: "partner.business_billing_changed", entityType: "business", entityId: input.businessId, payload: { partnerId: actor.partnerId, packageId: input.packageId, ...keyAuditFields(actor) } });
     return changed;

@@ -71,6 +71,7 @@ Each endpoint except `GET /me` requires one scope. A key without it gets `403` w
 | `knowledge:write` | `POST /knowledge`, `PATCH` and `DELETE` on `/knowledge/{entry_id}`, `POST /knowledge/sources`, `PATCH` and `DELETE` on `/knowledge/sources/{source_id}`, `POST /knowledge/sources/{source_id}/expand`, `/retry` and `/cancel`, `POST /knowledge/uploads` and `POST /knowledge/uploads/{upload_id}/complete` |
 | `billing:manage` | `GET` and `PATCH /billing`, `POST /billing/checkout`, `GET /billing/checkout/{checkout_id}` and, with a platform key that has access to every business, `POST` and `DELETE /billing/managed-plan` |
 | `phone_numbers:manage` | `GET /phone-numbers`, `POST /phone-numbers/search`, `POST /phone-numbers/claims`, `GET /phone-numbers/claims/{claim_id}`, `DELETE /phone-numbers/{phone_number_id}` and `POST /phone-numbers/{phone_number_id}/replace` |
+| `phone_numbers:purchase` | Only for a partner's platform key, with `phone_numbers:manage`: `POST /phone-numbers/search`, `POST /phone-numbers/claims`, `POST /phone-numbers/{phone_number_id}/replace` |
 | `team:manage` | `GET /team`, `POST /team/invitations`, `DELETE /team/invitations/{invitation_id}`, `PATCH` and `DELETE` on `/team/members/{membership_id}`, `POST /team/claim-link` |
 | `webhooks:manage` | `GET`, `POST`, `PATCH` and `DELETE` on `/webhooks`, and `POST /webhooks/{webhook_id}/test` |
 
@@ -100,7 +101,7 @@ A partner's key acts as the partner, so it keeps working when the person who mad
 
 Leave `owner_email` out for a business the partner runs itself. Nobody gets an invitation, and a key can't invite an owner later, so the business can't be released. `package_id` then returns `400`, because its checkout opens from the owner's invitation.
 
-With `phone_numbers:manage`, a partner's key searches for, claims and replaces numbers as itself. On a deployment that bills tiers, this needs a paid tier, and Free returns `409`. A key can claim only an offer it searched for, and it never gets a trial offer. The partner's keys share 20 searches in 10 minutes.
+With `phone_numbers:manage` and `phone_numbers:purchase`, a partner's key searches for, claims and replaces numbers as itself. On a deployment that bills tiers, this needs a paid tier, and Free returns `409`. A key can claim only an offer it searched for, and it never gets a trial offer. The partner's keys share 20 searches in 10 minutes.
 
 The links the API returns for a partner's business, such as a widget's script tag or a calendar connect link, point at the partner's dashboard too.
 

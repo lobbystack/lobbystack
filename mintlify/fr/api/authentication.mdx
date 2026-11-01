@@ -71,6 +71,7 @@ Chaque point de terminaison, sauf `GET /me`, exige une portée. Une clé qui ne 
 | `knowledge:write` | `POST /knowledge`, `PATCH` et `DELETE` sur `/knowledge/{entry_id}`, `POST /knowledge/sources`, `PATCH` et `DELETE` sur `/knowledge/sources/{source_id}`, `POST /knowledge/sources/{source_id}/expand`, `/retry` et `/cancel`, `POST /knowledge/uploads` et `POST /knowledge/uploads/{upload_id}/complete` |
 | `billing:manage` | `GET` et `PATCH /billing`, `POST /billing/checkout`, `GET /billing/checkout/{checkout_id}` et, avec une clé de plateforme qui a accès à toutes les entreprises, `POST` et `DELETE /billing/managed-plan` |
 | `phone_numbers:manage` | `GET /phone-numbers`, `POST /phone-numbers/search`, `POST /phone-numbers/claims`, `GET /phone-numbers/claims/{claim_id}`, `DELETE /phone-numbers/{phone_number_id}` et `POST /phone-numbers/{phone_number_id}/replace` |
+| `phone_numbers:purchase` | Seulement pour la clé de plateforme d'un partenaire, avec `phone_numbers:manage` : `POST /phone-numbers/search`, `POST /phone-numbers/claims`, `POST /phone-numbers/{phone_number_id}/replace` |
 | `team:manage` | `GET /team`, `POST /team/invitations`, `DELETE /team/invitations/{invitation_id}`, `PATCH` et `DELETE` sur `/team/members/{membership_id}`, `POST /team/claim-link` |
 | `webhooks:manage` | `GET`, `POST`, `PATCH` et `DELETE` sur `/webhooks`, et `POST /webhooks/{webhook_id}/test` |
 
@@ -100,7 +101,7 @@ Avec la clé de plateforme d'un partenaire, `POST /businesses` crée une entrepr
 
 Laissez `owner_email` de côté pour une entreprise que le partenaire gère lui-même. Personne ne reçoit d'invitation, et une clé ne peut pas inviter de propriétaire plus tard : l'entreprise ne peut donc pas être remise. `package_id` renvoie alors `400`, parce que le paiement s'ouvre depuis l'invitation du propriétaire.
 
-Avec `phone_numbers:manage`, la clé d'un partenaire recherche, réserve et remplace des numéros en son propre nom. Sur un déploiement qui facture les paliers, il faut un palier payant, et Free renvoie `409`. Une clé ne peut réserver qu'une offre qu'elle a elle-même recherchée, et elle ne reçoit jamais d'offre d'essai. Les clés du partenaire partagent 20 recherches par tranche de 10 minutes.
+Avec `phone_numbers:manage` et `phone_numbers:purchase`, la clé d'un partenaire recherche, réserve et remplace des numéros en son propre nom. Sur un déploiement qui facture les paliers, il faut un palier payant, et Free renvoie `409`. Une clé ne peut réserver qu'une offre qu'elle a elle-même recherchée, et elle ne reçoit jamais d'offre d'essai. Les clés du partenaire partagent 20 recherches par tranche de 10 minutes.
 
 Les liens que l'API renvoie pour l'entreprise d'un partenaire, comme la balise de script d'un widget ou un lien de connexion d'agenda, mènent eux aussi au tableau de bord du partenaire.
 

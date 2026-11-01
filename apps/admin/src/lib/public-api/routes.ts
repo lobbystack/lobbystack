@@ -214,8 +214,8 @@ function requireActingUser(actingUserId: string | null): string {
 }
 
 /** Who claims a number: the account the caller acts as, or a partner's platform key itself, since the partner has no account. */
-async function numberClaimant(context: DomainContext, caller: RestApiCaller): Promise<{ userId: string } | { platformKeyId: string }> {
-  if (caller.platformKeyId !== undefined && caller.partnerId !== undefined) return { platformKeyId: caller.platformKeyId };
+async function numberClaimant(context: DomainContext, caller: RestApiCaller, credential: ApiCredential): Promise<{ userId: string } | { platformKeyId: string; scopes: readonly string[] }> {
+  if (caller.platformKeyId !== undefined && caller.partnerId !== undefined) return { platformKeyId: caller.platformKeyId, scopes: credential.scopes };
   return { userId: await resolveActingUserId(context, caller) };
 }
 
@@ -410,28 +410,28 @@ export const v1 = {
     return { body: data(await endManagedPlanForApi(context, caller)) };
   }),
   listPhoneNumbers: (request: Request) => handleApiRequest(request, "listPhoneNumbers", async ({ context, caller }) => ({ body: { data: await listPhoneNumbersForApi(context, caller), next_cursor: null, has_more: false } })),
-  searchPhoneNumbers: (request: Request) => handleApiRequest(request, "searchPhoneNumbers", async ({ context, caller }) => {
+  searchPhoneNumbers: (request: Request) => handleApiRequest(request, "searchPhoneNumbers", async ({ context, caller, credential }) => {
     // A deployment with no carrier for numbers answers 503 phone_numbers_unavailable, before the search counts against the limit.
     if (!numbersConfigured()) throw new PublicApiError(503, "phone_numbers_unavailable", "Phone numbers aren't set up on this deployment.");
     const body = await readApiBody(request, apiPhoneNumberSearchSchema);
     // A partner's key searches as itself, so its searches count against the partner.
     if (caller.platformKeyId !== undefined && caller.partnerId !== undefined) {
-      return { body: { data: await searchPhoneNumbersForApi(context, caller, body, { platformKeyId: caller.platformKeyId, ...partnerNumberSearch(caller.partnerId) }), next_cursor: null, has_more: false } };
+      return { body: { data: await searchPhoneNumbersForApi(context, caller, body, { platformKeyId: caller.platformKeyId, scopes: credential.scopes, ...partnerNumberSearch(caller.partnerId) }), next_cursor: null, has_more: false } };
     }
     const userId = await resolveActingUserId(context, caller);
     return { body: { data: await searchPhoneNumbersForApi(context, caller, body, { userId, provider: guardedNumberSearch(getTelephony().numbers, () => requireNumberSearchAllowed(userId)), claimTokenSecret: getNumberClaimTokenSecret() }), next_cursor: null, has_more: false } };
   }),
-  createPhoneNumberClaim: (request: Request) => handleApiRequest(request, "createPhoneNumberClaim", async ({ context, caller }) => {
+  createPhoneNumberClaim: (request: Request) => handleApiRequest(request, "createPhoneNumberClaim", async ({ context, caller, credential }) => {
     const body = await readApiBody(request, apiPhoneNumberClaimCreateSchema);
     // No network hash: customers of one integration platform claim from its addresses, so a per-network limit would let only one of them have a trial.
-    return { body: data(await claimPhoneNumberForApi(context, caller, { offerToken: body.offer_token }, { ...await numberClaimant(context, caller), claimTokenSecret: getNumberClaimTokenSecret() })) };
+    return { body: data(await claimPhoneNumberForApi(context, caller, { offerToken: body.offer_token }, { ...await numberClaimant(context, caller, credential), claimTokenSecret: getNumberClaimTokenSecret() })) };
   }),
   getPhoneNumberClaim: (request: Request, { params }: Params<"claim_id">) => handleApiRequest(request, "getPhoneNumberClaim", async ({ context, caller }) => ({ body: data(await getPhoneNumberClaimForApi(context, caller, uuidParam((await params).claim_id, "claim_id"))) })),
   releasePhoneNumber: (request: Request, { params }: Params<"phone_number_id">) => handleApiRequest(request, "releasePhoneNumber", async ({ context, caller }) => ({ body: data(await releasePhoneNumberForApi(context, caller, uuidParam((await params).phone_number_id, "phone_number_id"))) })),
-  replacePhoneNumber: (request: Request, { params }: Params<"phone_number_id">) => handleApiRequest(request, "replacePhoneNumber", async ({ context, caller }) => {
+  replacePhoneNumber: (request: Request, { params }: Params<"phone_number_id">) => handleApiRequest(request, "replacePhoneNumber", async ({ context, caller, credential }) => {
     const phoneNumberId = uuidParam((await params).phone_number_id, "phone_number_id");
     const body = await readApiBody(request, apiPhoneNumberClaimCreateSchema);
-    return { body: data(await claimPhoneNumberForApi(context, caller, { offerToken: body.offer_token, replaces: phoneNumberId }, { ...await numberClaimant(context, caller), claimTokenSecret: getNumberClaimTokenSecret() })) };
+    return { body: data(await claimPhoneNumberForApi(context, caller, { offerToken: body.offer_token, replaces: phoneNumberId }, { ...await numberClaimant(context, caller, credential), claimTokenSecret: getNumberClaimTokenSecret() })) };
   }),
   getOnboarding: (request: Request) => handleApiRequest(request, "getOnboarding", async ({ context, caller }) => ({ body: data(await getOnboardingForApi(context, caller)) })),
   updateOnboarding: (request: Request) => handleApiRequest(request, "updateOnboarding", async ({ context, caller }) => ({ body: data(await updateOnboardingForApi(context, caller, await readApiBody(request, apiOnboardingUpdateSchema))) })),

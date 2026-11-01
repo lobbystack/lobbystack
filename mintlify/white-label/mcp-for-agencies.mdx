@@ -96,14 +96,14 @@ On top of the per-business tools, a partner connection gets these. Tools marked 
 
 ### Phone numbers
 
-Only a platform key gets these tools. Claiming and replacing cost money and need a paid tier, so confirm the number first. Someone connected with their own account buys numbers in the business's dashboard.
+Only a platform key gets these tools. Claiming and replacing cost money and need a paid tier, so confirm the number first. Searching, claiming and replacing also need `phone_numbers:manage`. Someone connected with their own account buys numbers in the business's dashboard.
 
 | Tool | Scope | What it does |
 | --- | --- | --- |
 | `list_phone_numbers` | `phone_numbers:manage` | A business's numbers, newest first |
-| `search_phone_numbers` | `phone_numbers:manage` | Finds numbers a business can claim |
-| `claim_phone_number` | `phone_numbers:manage` | Buys an offered number. `idempotency_key` is required. |
-| `replace_phone_number` | `phone_numbers:manage` | Claims a replacement for a number, once per business. `idempotency_key` is required. |
+| `search_phone_numbers` | `phone_numbers:purchase` | Finds numbers a business can claim |
+| `claim_phone_number` | `phone_numbers:purchase` | Buys an offered number. `idempotency_key` is required. |
+| `replace_phone_number` | `phone_numbers:purchase` | Claims a replacement for a number, once per business. `idempotency_key` is required. |
 | `get_phone_number_claim` | `phone_numbers:manage` | A claim's status |
 
 ### Demos

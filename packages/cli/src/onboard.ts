@@ -229,6 +229,7 @@ async function ensureBusiness(run: Run, make: (business?: string) => Client, nam
   // GET /me names the partner of a partner's key. A server from before reach sends only access, which reads "partner" for group access.
   run.access = me.platform ? (me.platform.partner_id ? "partner" : (me.platform.reach ?? me.platform.access) === "all" ? "all" : "group") : "business";
   checkKey(run);
+  if (run.access === "partner" && run.manifest.phone_number && !me.api_key.scopes.includes("phone_numbers:purchase")) throw new CliError("A partner's platform key needs phone_numbers:purchase to buy a number. Add it on the console's API keys page, or leave phone_number out of the manifest.");
   // A per-business key sets up its own business; only a platform key makes one.
   const id = given[0]?.[1] ?? (me.platform ? undefined : me.business?.id);
   if (id) {
@@ -519,6 +520,22 @@ async function checkPartnerOwner(run: Run, email: string): Promise<void> {
     : `${email} doesn't own the business and has no invitation to. A partner's key invites the owner only when it creates the business.`);
 }
 
+/**
+ * Whether a partner's business has an owner, or an invitation to one. A
+ * manifest can leave the owner out of a business that already has one, so the
+ * team decides, and a key that can't read the team leaves it to them.
+ */
+async function ownerExpected(run: Run): Promise<boolean> {
+  if (run.manifest.owner) return true;
+  try {
+    const team = (await run.client.call("getTeam")).data;
+    return team.members.some((member) => member.role === "business_owner") || team.invitations.some((invitation) => invitation.role === "business_owner" && invitation.status === "pending");
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 403) return true;
+    throw error;
+  }
+}
+
 /** Sends the owner a claim link, unless they own the business or have one already. */
 async function handOver(run: Run): Promise<void> {
   const owner = run.manifest.owner;
@@ -691,7 +708,7 @@ async function completeOnboarding(run: Run): Promise<void> {
   if (run.access === "group" && wanted?.complete !== true) return run.log({ step: "onboarding", action: "left open", detail: "for the owner to pick a plan and a number after claiming it" });
   // A partner's business ends its owner's onboarding once they verify their phone, the first time they sign in.
   // With no owner, nobody signs in, so the run finishes it.
-  if (run.access === "partner" && run.manifest.owner && wanted?.complete !== true) return run.log({ step: "onboarding", action: "left open", detail: "for the owner to finish when they first sign in" });
+  if (run.access === "partner" && wanted?.complete !== true && await ownerExpected(run)) return run.log({ step: "onboarding", action: "left open", detail: "for the owner to finish when they first sign in" });
   const current = (await run.client.call("getOnboarding")).data;
   if (current.complete) return run.log({ step: "onboarding", action: "unchanged", detail: "complete" });
   const missing = current.missing.filter((item) => !(item === "phone_number" && wanted?.skip_number));

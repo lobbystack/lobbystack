@@ -1447,7 +1447,7 @@ describe("a partner's platform keys on v1 routes", () => {
       });
       const response = await search();
       expect(response.status).toBe(200);
-      expect(domain.searchPhoneNumbersForApi).toHaveBeenCalledWith(expect.anything(), expect.objectContaining(caller), { area_code: "416" }, { platformKeyId, provider: expect.objectContaining({ listAvailablePhoneNumbers: expect.any(Function) }), claimTokenSecret: expect.any(String) });
+      expect(domain.searchPhoneNumbersForApi).toHaveBeenCalledWith(expect.anything(), expect.objectContaining(caller), { area_code: "416" }, { platformKeyId, scopes: expect.arrayContaining(["phone_numbers:manage"]), provider: expect.objectContaining({ listAvailablePhoneNumbers: expect.any(Function) }), claimTokenSecret: expect.any(String) });
       expect(invites.limit).toHaveBeenCalledWith([["phone-number-search", "partner-10m", partnerId, 20, 600, "rate_limit_partner"]]);
       expect(numbers.searchLimit).not.toHaveBeenCalled();
       expect(domain.resolveActingUserId).not.toHaveBeenCalled();
@@ -1463,10 +1463,10 @@ describe("a partner's platform keys on v1 routes", () => {
       domain.claimPhoneNumberForApi.mockResolvedValue(claim);
       const claimed = await v1.createPhoneNumberClaim(partnerCall("/phone-numbers/claims", { method: "POST", headers: { "Idempotency-Key": "claim-1" }, body: JSON.stringify({ offer_token: "signed" }) }));
       expect(claimed.status).toBe(202);
-      expect(domain.claimPhoneNumberForApi).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining(caller), { offerToken: "signed" }, { platformKeyId, claimTokenSecret: expect.any(String) });
+      expect(domain.claimPhoneNumberForApi).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining(caller), { offerToken: "signed" }, { platformKeyId, scopes: expect.arrayContaining(["phone_numbers:manage"]), claimTokenSecret: expect.any(String) });
       const replaced = await v1.replacePhoneNumber(partnerCall(`/phone-numbers/${phoneNumberId}/replace`, { method: "POST", headers: { "Idempotency-Key": "replace-1" }, body: JSON.stringify({ offer_token: "signed" }) }), { params: Promise.resolve({ phone_number_id: phoneNumberId }) });
       expect(replaced.status).toBe(202);
-      expect(domain.claimPhoneNumberForApi).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining(caller), { offerToken: "signed", replaces: phoneNumberId }, { platformKeyId, claimTokenSecret: expect.any(String) });
+      expect(domain.claimPhoneNumberForApi).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining(caller), { offerToken: "signed", replaces: phoneNumberId }, { platformKeyId, scopes: expect.arrayContaining(["phone_numbers:manage"]), claimTokenSecret: expect.any(String) });
       expect(domain.resolveActingUserId).not.toHaveBeenCalled();
     });
   });

@@ -229,11 +229,11 @@ function platformKey(subject: PartnerSubject): PartnerPlatformKey {
 
 /** Runs a claim with a partner's key: one business, once for its key. */
 async function claimNumber({ subject, businessCaller, once, operations, numberSearch }: PartnerToolRun, operation: "createPhoneNumberClaim" | "replacePhoneNumber", input: { business_id: string; offer_token: string; idempotency_key: string }, replaces?: string): Promise<Record<string, unknown>> {
-  const { platformKeyId, partnerId } = platformKey(subject);
+  const { platformKeyId, partnerId, scopes } = platformKey(subject);
   const body = contractBody(apiPhoneNumberClaimCreateSchema, { offer_token: input.offer_token });
   const { claimTokenSecret } = await numberSearch(partnerId);
   const caller = await businessCaller(input.business_id);
-  return await once(caller, operation, input.idempotency_key, { ...body, ...(replaces ? { replaces } : {}) }, async (context) => await operations.claimPhoneNumberForApi(context, caller, { offerToken: body.offer_token, replaces }, { platformKeyId, claimTokenSecret }));
+  return await once(caller, operation, input.idempotency_key, { ...body, ...(replaces ? { replaces } : {}) }, async (context) => await operations.claimPhoneNumberForApi(context, caller, { offerToken: body.offer_token, replaces }, { platformKeyId, scopes, claimTokenSecret }));
 }
 
 export const partnerMcpTools: PartnerMcpTool[] = [
@@ -309,16 +309,17 @@ export const partnerMcpTools: PartnerMcpTool[] = [
     title: "Find numbers to claim",
     description: "Searches the carrier for numbers the business can claim. Each offer expires after 5 minutes. Needs the partner on a paid tier. Send replaces with a number's id to find a replacement for it. A partner's platform keys share 20 searches in 10 minutes. Only a platform key gets this tool.",
     operation: "searchPhoneNumbers",
+    scope: "phone_numbers:purchase",
     platformKeysOnly: true,
     annotations: readOnly,
     inputSchema: apiPhoneNumberSearchSchema.extend({ business_id: uuid("business") }),
     outputSchema: contractSchema(apiPageSchema(apiPhoneNumberOfferSchema)),
     run: async ({ worker, subject, businessCaller, numberSearch, operations }, input) => {
-      const { platformKeyId, partnerId } = platformKey(subject);
+      const { platformKeyId, partnerId, scopes } = platformKey(subject);
       const { business_id: businessId, ...fields } = input;
       const body = contractBody(apiPhoneNumberSearchSchema, defined(fields));
       const search = await numberSearch(partnerId);
-      return list(await operations.searchPhoneNumbersForApi(worker, await businessCaller(businessId), body, { platformKeyId, ...search }));
+      return list(await operations.searchPhoneNumbersForApi(worker, await businessCaller(businessId), body, { platformKeyId, scopes, ...search }));
     },
   }),
   partnerTool({
@@ -326,6 +327,7 @@ export const partnerMcpTools: PartnerMcpTool[] = [
     title: "Claim a number",
     description: "Buys a number from search_phone_numbers for a business with no number, and connects it to the receptionist. It costs money, so confirm the number with the person first. Numbers past the tier's included ones are charged to the partner each month. Returns the claim at once: poll get_phone_number_claim until its status is claimed or failed. Only a platform key gets this tool.",
     operation: "createPhoneNumberClaim",
+    scope: "phone_numbers:purchase",
     platformKeysOnly: true,
     annotations: creates,
     inputSchema: z.object({ business_id: uuid("business"), offer_token: apiPhoneNumberClaimCreateSchema.shape.offer_token, idempotency_key: claimKeyInput }),
@@ -337,6 +339,7 @@ export const partnerMcpTools: PartnerMcpTool[] = [
     title: "Replace a number",
     description: "Claims a replacement offer from search_phone_numbers with replaces. The old number keeps working until 30 days after the new one goes live, then is released. A business can replace its number once. It costs money, so confirm the number with the person first. Only a platform key gets this tool.",
     operation: "replacePhoneNumber",
+    scope: "phone_numbers:purchase",
     platformKeysOnly: true,
     annotations: creates,
     inputSchema: z.object({ business_id: uuid("business"), phone_number_id: uuid("phone number"), offer_token: apiPhoneNumberClaimCreateSchema.shape.offer_token, idempotency_key: claimKeyInput }),

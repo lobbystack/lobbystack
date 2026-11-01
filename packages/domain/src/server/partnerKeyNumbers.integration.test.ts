@@ -1,22 +1,23 @@
-import { createHmac, randomUUID } from "node:crypto";
+import { createHash, createHmac, randomUUID } from "node:crypto";
 
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { auditLogs, businesses, businessInvitations, createDatabaseClient, onboardingNumberClaimEvents, outboxMessages, partnerNumberCharges, phoneNumbers, receptionistProfiles, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { auditLogs, businesses, businessInvitations, createDatabaseClient, onboardingNumberClaimEvents, operatorNotificationDeliveries, outboxMessages, partnerNumberCharges, phoneNumbers, receptionistProfiles, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import type { ApiKeyScope } from "@lobbystack/shared";
 
 import { forgetCachedBrands } from "./brands";
 import type { DomainContext } from "./context";
-import { queueOperatorAlertInTransaction } from "./notifications";
+import { queueOperatorAlertInTransaction, type OperatorNotificationEventKey } from "./notifications";
 import { resolveNumberFallback } from "./numberTrials";
 import { reconcilePartnerTier, recordPartnerPolarEvent } from "./partnerBilling";
 import { createPartnerPlatformKey, revokePartnerPlatformKey } from "./partnerPlatformKeys";
 import { loadPartnerNumberStanding, recordPartnerTierBilling, settlePartnerNumberCharges, type PartnerNumberCharge } from "./partnerNumbers";
-import { createPartnerBusiness, listPartnerBusinesses, signUpPartner, type PartnerMemberActor } from "./partners";
+import { createPartnerBusiness, listPartnerBusinesses, releaseBusiness, signUpPartner, type PartnerMemberActor } from "./partners";
 import { claimNumberProvisioning, completeNumberProvisioning, reserveOnboardingNumberClaim } from "./phoneNumbers";
 import { deletePartnerBusinessForApi, releasePartnerBusinessForApi } from "./publicApi/partner";
 import { claimPhoneNumberForApi, completeOnboardingForApi, createPartnerBusinessForApi, getOnboardingForApi, getTeamForApi, resolveActingUserId, searchPhoneNumbersForApi, type PlatformKeyCaller } from "./publicApi/operations";
 import type { PartnerPlatformKey } from "./publicApi/platformKeys";
+import { acceptInvitation } from "./tenancy";
 
 // A partner that runs its own product on the v1 API: its platform keys buy and
 // replace numbers on a paid tier, and create businesses nobody owns. These run
@@ -99,7 +100,7 @@ async function refusal(promise: Promise<unknown>): Promise<{ status?: number; co
 const testNumber = () => `+1416${String(Math.floor(Math.random() * 10_000_000)).padStart(7, "0")}`;
 const inventory = () => ({ listAvailablePhoneNumbers: vi.fn(async () => [{ phoneE164: testNumber(), countryCode: "CA", capabilities: { sms: true, voice: true } }]) });
 
-const SCOPES: ApiKeyScope[] = ["businesses:create", "business:read", "business:write", "phone_numbers:manage", "team:manage", "partner:read", "partner.businesses:write"];
+const SCOPES: ApiKeyScope[] = ["businesses:create", "business:read", "business:write", "phone_numbers:manage", "phone_numbers:purchase", "team:manage", "partner:read", "partner.businesses:write"];
 
 /** A partner signed up by its owner, with a key made in its console, as the v1 pipeline resolves it. */
 async function partner(tx: DatabaseTransaction, name: string) {
@@ -137,14 +138,26 @@ async function ownerless(team: Partner, name = "Pier Dental"): Promise<string> {
   return business.id;
 }
 
+/** A business whose owner accepted the partner's invitation. */
+async function owned(tx: DatabaseTransaction, team: Partner): Promise<{ businessId: string; userId: string }> {
+  const userId = randomUUID();
+  const email = `${userId}@example.invalid`;
+  await asMigrator(tx, async () => { await tx.insert(users).values({ id: userId, email, normalizedEmail: email, name: "Business owner", emailVerified: true }); });
+  const { businessId, invitationId } = await createPartnerBusiness(team.context, team.ownerActor, { name: `Harbor Dental ${randomUUID().slice(0, 8)}`, timezone: "America/Toronto", businessType: "dental", accessLevel: "full", ownerEmail: email });
+  const [message] = await asMigrator(tx, async () => await tx.select({ payload: outboxMessages.payload }).from(outboxMessages).where(and(eq(outboxMessages.aggregateId, invitationId), eq(outboxMessages.topic, "email.send"))));
+  const token = new URL(String(message!.payload.url)).searchParams.get("token")!;
+  await acceptInvitation(team.context, { userId, tokenHash: createHash("sha256").update(token).digest("hex"), email, emailVerified: true });
+  return { businessId, userId };
+}
+
 const callerFor = (team: Partner, businessId: string, key = team.key): PlatformKeyCaller => ({ businessId, platformKeyId: key.platformKeyId, groupId: team.partnerId, partnerId: team.partnerId, actor: "platform_key" });
 
 /** Searches as the key and claims the first offer. */
 async function buy(tx: DatabaseTransaction, team: Partner, businessId: string) {
   const worker = workerContext(tx);
   const caller = callerFor(team, businessId);
-  const [offer] = await searchPhoneNumbersForApi(worker, caller, {}, { platformKeyId: team.key.platformKeyId, provider: inventory(), claimTokenSecret: SECRET });
-  return await claimPhoneNumberForApi(worker, caller, { offerToken: offer!.offer_token }, { platformKeyId: team.key.platformKeyId, claimTokenSecret: SECRET });
+  const [offer] = await searchPhoneNumbersForApi(worker, caller, {}, { platformKeyId: team.key.platformKeyId, scopes: SCOPES, provider: inventory(), claimTokenSecret: SECRET });
+  return await claimPhoneNumberForApi(worker, caller, { offerToken: offer!.offer_token }, { platformKeyId: team.key.platformKeyId, scopes: SCOPES, claimTokenSecret: SECRET });
 }
 
 /** Buys the number a claim reserved, as the worker does. */
@@ -184,11 +197,11 @@ describe.skipIf(!client)("a partner's platform key and phone numbers", () => {
       await expect(resolveActingUserId(worker, caller)).rejects.toMatchObject({ status: 403, code: "forbidden" });
 
       const provider = inventory();
-      const [offer] = await searchPhoneNumbersForApi(worker, caller, {}, { platformKeyId: acme.key.platformKeyId, provider, claimTokenSecret: SECRET });
+      const [offer] = await searchPhoneNumbersForApi(worker, caller, {}, { platformKeyId: acme.key.platformKeyId, scopes: SCOPES, provider, claimTokenSecret: SECRET });
       expect(offer).toMatchObject({ trial: false });
       expect(provider.listAvailablePhoneNumbers).toHaveBeenCalledTimes(1);
 
-      const claim = await claimPhoneNumberForApi(worker, caller, { offerToken: offer!.offer_token }, { platformKeyId: acme.key.platformKeyId, claimTokenSecret: SECRET });
+      const claim = await claimPhoneNumberForApi(worker, caller, { offerToken: offer!.offer_token }, { platformKeyId: acme.key.platformKeyId, scopes: SCOPES, claimTokenSecret: SECRET });
       expect(claim).toMatchObject({ phone_number: offer!.phone_number, status: "pending" });
       const [row] = await asMigrator(tx, async () => await tx.select().from(onboardingNumberClaimEvents).where(eq(onboardingNumberClaimEvents.id, claim.id)));
       expect(row).toMatchObject({ userId: null, platformKeyId: acme.key.platformKeyId, businessId, purpose: "onboarding", byPartnerMember: false });
@@ -200,9 +213,9 @@ describe.skipIf(!client)("a partner's platform key and phone numbers", () => {
       const [business] = await asMigrator(tx, async () => await tx.select({ stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, businessId)));
       expect(business!.stage).toBe("website");
 
-      const [replacement] = await searchPhoneNumbersForApi(worker, caller, { replaces: numberId }, { platformKeyId: acme.key.platformKeyId, provider: inventory(), claimTokenSecret: SECRET });
-      expect(await refusal(claimPhoneNumberForApi(worker, caller, { offerToken: replacement!.offer_token }, { platformKeyId: acme.key.platformKeyId, claimTokenSecret: SECRET }))).toMatchObject({ code: "invalid_request" });
-      const swap = await claimPhoneNumberForApi(worker, caller, { offerToken: replacement!.offer_token, replaces: numberId }, { platformKeyId: acme.key.platformKeyId, claimTokenSecret: SECRET });
+      const [replacement] = await searchPhoneNumbersForApi(worker, caller, { replaces: numberId }, { platformKeyId: acme.key.platformKeyId, scopes: SCOPES, provider: inventory(), claimTokenSecret: SECRET });
+      expect(await refusal(claimPhoneNumberForApi(worker, caller, { offerToken: replacement!.offer_token }, { platformKeyId: acme.key.platformKeyId, scopes: SCOPES, claimTokenSecret: SECRET }))).toMatchObject({ code: "invalid_request" });
+      const swap = await claimPhoneNumberForApi(worker, caller, { offerToken: replacement!.offer_token, replaces: numberId }, { platformKeyId: acme.key.platformKeyId, scopes: SCOPES, claimTokenSecret: SECRET });
       expect(swap).toMatchObject({ replaces_phone_number_id: numberId });
       await provision(tx, businessId, swap.id);
       const [old] = await asMigrator(tx, async () => await tx.select({ reclaimScheduledAt: phoneNumbers.reclaimScheduledAt }).from(phoneNumbers).where(eq(phoneNumbers.id, numberId)));
@@ -217,7 +230,7 @@ describe.skipIf(!client)("a partner's platform key and phone numbers", () => {
       const businessId = await ownerless(acme);
       const worker = workerContext(tx);
       const caller = callerFor(acme, businessId);
-      const key = { platformKeyId: acme.key.platformKeyId, claimTokenSecret: SECRET };
+      const key = { platformKeyId: acme.key.platformKeyId, scopes: SCOPES, claimTokenSecret: SECRET };
 
       const provider = inventory();
       expect(await refusal(searchPhoneNumbersForApi(worker, caller, {}, { ...key, provider }))).toMatchObject({ status: 409, message: expect.stringContaining("paid tier") });
@@ -243,13 +256,53 @@ describe.skipIf(!client)("a partner's platform key and phone numbers", () => {
     });
   });
 
+  it("refuses a key made before keys could buy numbers, which holds phone_numbers:manage alone", async () => {
+    await rollbackTest(async (tx) => {
+      await billTiers(tx, true);
+      const acme = await partner(tx, "Acme Software");
+      await tier(tx, acme.partnerId, { tier: "growth", status: "active" });
+      const businessId = await ownerless(acme);
+      const worker = workerContext(tx);
+      const caller = callerFor(acme, businessId);
+      const scopes: ApiKeyScope[] = ["phone_numbers:manage", "business:read"];
+      const provider = inventory();
+      expect(await refusal(searchPhoneNumbersForApi(worker, caller, {}, { platformKeyId: acme.key.platformKeyId, scopes, provider, claimTokenSecret: SECRET }))).toMatchObject({ status: 403, code: "insufficient_scope", message: expect.stringContaining("phone_numbers:purchase") });
+      expect(provider.listAvailablePhoneNumbers).not.toHaveBeenCalled();
+      expect(await refusal(claimPhoneNumberForApi(worker, caller, { offerToken: signedOffer({ businessId, subject: `platform:${acme.key.platformKeyId}` }) }, { platformKeyId: acme.key.platformKeyId, scopes, claimTokenSecret: SECRET }))).toMatchObject({ status: 403, code: "insufficient_scope" });
+      // The new scope alone isn't enough either: it adds to phone_numbers:manage.
+      expect(await refusal(searchPhoneNumbersForApi(worker, caller, {}, { platformKeyId: acme.key.platformKeyId, scopes: ["phone_numbers:purchase"], provider, claimTokenSecret: SECRET }))).toMatchObject({ status: 403, message: expect.stringContaining("phone_numbers:manage") });
+      expect(await asMigrator(tx, async () => await tx.select({ id: onboardingNumberClaimEvents.id }).from(onboardingNumberClaimEvents).where(eq(onboardingNumberClaimEvents.businessId, businessId)))).toEqual([]);
+    });
+  });
+
+  it("waits for a number being bought before it releases a business, so the host never pays for it", async () => {
+    await rollbackTest(async (tx) => {
+      await billTiers(tx, true);
+      const acme = await partner(tx, "Acme Software");
+      await tier(tx, acme.partnerId, { tier: "growth", status: "active" });
+      const { businessId, userId } = await owned(tx, acme);
+      const claim = await buy(tx, acme, businessId);
+
+      // The claim is waiting for the worker, so the business stays with the partner.
+      expect(await refusal(releaseBusiness(acme.context, acme.ownerActor, { businessId }))).toMatchObject({ status: 409, code: "business_number_in_progress" });
+      const [held] = await asMigrator(tx, async () => await tx.select({ partnerId: businesses.partnerId }).from(businesses).where(eq(businesses.id, businessId)));
+      expect(held!.partnerId).toBe(acme.partnerId);
+
+      // Bought and charged to the partner, the number no longer holds the business back.
+      const numberId = await provision(tx, businessId, claim.id, 115);
+      const [charge] = await asMigrator(tx, async () => await tx.select({ partnerId: partnerNumberCharges.partnerId }).from(partnerNumberCharges).where(eq(partnerNumberCharges.phoneNumberId, numberId)));
+      expect(charge!.partnerId).toBe(acme.partnerId);
+      expect(await releaseBusiness(acme.context, acme.ownerActor, { businessId })).toMatchObject({ ownerUserId: userId });
+    });
+  });
+
   it("never gives a key a trial number, even from a validly signed offer", async () => {
     await rollbackTest(async (tx) => {
       await billTiers(tx, true);
       const acme = await partner(tx, "Acme Software");
       const onFree = await ownerless(acme);
       const worker = workerContext(tx);
-      const key = { platformKeyId: acme.key.platformKeyId, claimTokenSecret: SECRET };
+      const key = { platformKeyId: acme.key.platformKeyId, scopes: SCOPES, claimTokenSecret: SECRET };
       const trialOffer = (businessId: string) => signedOffer({ businessId, subject: `platform:${acme.key.platformKeyId}`, trial: true });
 
       expect(await refusal(claimPhoneNumberForApi(worker, callerFor(acme, onFree), { offerToken: trialOffer(onFree) }, key))).toMatchObject({ status: 409 });
@@ -271,11 +324,11 @@ describe.skipIf(!client)("a partner's platform key and phone numbers", () => {
       const other = await ownerless(acme, "Cedar Clinic");
       const worker = workerContext(tx);
       const caller = callerFor(acme, businessId);
-      const claimWith = (offerToken: string, platformKeyId = acme.key.platformKeyId) => claimPhoneNumberForApi(worker, { ...caller, platformKeyId }, { offerToken }, { platformKeyId, claimTokenSecret: SECRET });
-      const [offer] = await searchPhoneNumbersForApi(worker, caller, {}, { platformKeyId: acme.key.platformKeyId, provider: inventory(), claimTokenSecret: SECRET });
+      const claimWith = (offerToken: string, platformKeyId = acme.key.platformKeyId) => claimPhoneNumberForApi(worker, { ...caller, platformKeyId }, { offerToken }, { platformKeyId, scopes: SCOPES, claimTokenSecret: SECRET });
+      const [offer] = await searchPhoneNumbersForApi(worker, caller, {}, { platformKeyId: acme.key.platformKeyId, scopes: SCOPES, provider: inventory(), claimTokenSecret: SECRET });
 
       // Another business, another of the partner's keys, and a person's offer: none is this key's.
-      expect(await refusal(claimPhoneNumberForApi(worker, callerFor(acme, other), { offerToken: offer!.offer_token }, { platformKeyId: acme.key.platformKeyId, claimTokenSecret: SECRET }))).toMatchObject({ code: "invalid_request" });
+      expect(await refusal(claimPhoneNumberForApi(worker, callerFor(acme, other), { offerToken: offer!.offer_token }, { platformKeyId: acme.key.platformKeyId, scopes: SCOPES, claimTokenSecret: SECRET }))).toMatchObject({ code: "invalid_request" });
       const second = await acme.makeKey();
       expect(await refusal(claimWith(offer!.offer_token, second.platformKeyId))).toMatchObject({ code: "invalid_request" });
       expect(await refusal(claimWith(signedOffer({ businessId, subject: randomUUID() })))).toMatchObject({ code: "invalid_request" });
@@ -385,7 +438,7 @@ describe.skipIf(!client)("a business with no owner", () => {
     });
   });
 
-  it("refuses a call it can't take unless it has a transfer number, and alerts nobody", async () => {
+  it("refuses a call it can't take unless it has a transfer number", async () => {
     await rollbackTest(async (tx) => {
       const acme = await partner(tx, "Acme Software");
       const businessId = await ownerless(acme);
@@ -397,11 +450,32 @@ describe.skipIf(!client)("a business with no owner", () => {
       await asMigrator(tx, async () => await tx.update(receptionistProfiles).set({ transferNumber: "+14165550177" }).where(eq(receptionistProfiles.businessId, businessId)));
       expect(await resolveNumberFallback(worker, { businessId, e164 })).toEqual({ action: "forward", to: "+14165550177" });
 
-      const queued = await worker.db.transaction(async (inner) => {
+    });
+  });
+
+  it("emails the partner's owners and admins the alerts no webhook covers, while it has no owner", async () => {
+    await rollbackTest(async (tx) => {
+      const acme = await partner(tx, "Acme Software");
+      const worker = workerContext(tx);
+      const alert = (businessId: string, eventKind: OperatorNotificationEventKey) => worker.db.transaction(async (inner) => {
         await inner.execute(sql`select set_config('app.actor_type', 'worker', true), set_config('app.business_id', ${businessId}, true)`);
-        return await queueOperatorAlertInTransaction(inner, { businessId, eventKind: "voiceMessage", eventKey: `voiceMessage:${randomUUID()}`, subject: "A message", body: "Someone left a message." });
+        return await queueOperatorAlertInTransaction(inner, { businessId, eventKind, eventKey: `${eventKind}:${randomUUID()}`, subject: "An alert", body: "Something happened." });
       });
-      expect(queued).toEqual([]);
+      const businessId = await ownerless(acme);
+      const ids = await alert(businessId, "liveChatRequest");
+      expect(ids).toHaveLength(1);
+      const [delivery] = await asMigrator(tx, async () => await tx.select({ userId: operatorNotificationDeliveries.userId, channel: operatorNotificationDeliveries.channel, destination: operatorNotificationDeliveries.destination }).from(operatorNotificationDeliveries).where(eq(operatorNotificationDeliveries.id, ids[0]!)));
+      expect(delivery).toEqual({ userId: acme.ownerActor.userId, channel: "email", destination: `${acme.ownerActor.userId}@example.invalid` });
+      const [queued] = await asMigrator(tx, async () => await tx.select({ topic: outboxMessages.topic }).from(outboxMessages).where(eq(outboxMessages.aggregateId, ids[0]!)));
+      expect(queued!.topic).toBe("notification.dispatch");
+      for (const eventKind of ["transferFailed", "smsFailed", "calendarSync", "aiReplyFailed", "webhookDisabled"] as const) expect(await alert(businessId, eventKind), eventKind).toHaveLength(1);
+
+      // Webhooks cover a message someone left, and a business with an owner tells them instead.
+      expect(await alert(businessId, "voiceMessage")).toEqual([]);
+      const { businessId: withOwner, userId } = await owned(tx, acme);
+      const told = await alert(withOwner, "liveChatRequest");
+      expect(await asMigrator(tx, async () => await tx.select({ userId: operatorNotificationDeliveries.userId }).from(operatorNotificationDeliveries).where(eq(operatorNotificationDeliveries.businessId, withOwner)))).toEqual([{ userId }]);
+      expect(told).toHaveLength(1);
     });
   });
 

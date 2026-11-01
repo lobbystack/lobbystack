@@ -777,8 +777,9 @@ export type PartnerBusinessInput = {
  * on the partner's own product. Nobody is invited and nobody can own it, so it
  * can't be released, and it can't be sold a package, whose checkout opens from
  * the owner's invitation. With nobody on its team, a call the receptionist
- * can't take forwards only to its transfer number and is refused without one,
- * and only webhooks tell the partner about its calls and messages.
+ * can't take forwards only to its transfer number and is refused without one.
+ * Webhooks tell the partner about its calls and messages, and its other
+ * alerts email the partner's owners and admins.
  */
 export async function createPartnerBusiness(context: DomainContext, actor: PartnerActor, input: PartnerBusinessInput & { ownerEmail: string }, setup?: BusinessSetupDependencies): Promise<{ businessId: string; invitationId: string; expiresAt: Date }>;
 export async function createPartnerBusiness(context: DomainContext, actor: PartnerActor, input: PartnerBusinessInput, setup?: BusinessSetupDependencies): Promise<{ businessId: string; invitationId: string | null; expiresAt: Date | null }>;
@@ -902,6 +903,18 @@ async function lockPartnerBusiness(tx: DatabaseTransaction, partnerId: string, b
   return business.partnerId;
 }
 
+/**
+ * Refuses while a number is being bought for the business, which would finish
+ * for a business that has left the partner or is gone. The caller holds the
+ * business's number claims lock.
+ */
+async function refuseNumberInProgress(tx: DatabaseTransaction, businessId: string): Promise<void> {
+  // RLS shows the partner's people none of the business's claims, so the database answers. A claim no worker will finish doesn't count.
+  const claiming = (await tx.execute<{ busy: boolean }>(sql`select app.business_number_claim_in_progress(${businessId}::uuid) as busy`)).rows[0]?.busy === true;
+  const [provisioning] = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "provisioning"))).limit(1);
+  if (claiming || provisioning) throw failure("The business's phone number is still being set up. Try again in a few minutes.", 409, "business_number_in_progress");
+}
+
 /** The host's Free plan, as a billing account holds it: no paid plan, subscription or spending cap, and none of the partner's overage or the items that billed it. */
 const FREE_PLAN_ACCOUNT = {
   plan: "free_cloud",
@@ -940,7 +953,8 @@ async function partnerBusinessOwnerEmails(tx: DatabaseTransaction, businessId: s
  * partner's keys or people set up stop sending. Its audit log records who
  * released it and each webhook it turned off. A business on one of the partner's packages leaves it, which
  * waits while its subscription is live and the deployment would hear it end:
- * the partner cancels it in Stripe first. Only owners and admins can.
+ * the partner cancels it in Stripe first. It also waits while a number is
+ * being bought for the business. Only owners and admins can.
  */
 export async function releaseBusiness(context: DomainContext, actor: PartnerActor, input: { businessId: string }): Promise<{ ownerUserId: string }> {
   const member = businessesActor(actor);
@@ -949,10 +963,14 @@ export async function releaseBusiness(context: DomainContext, actor: PartnerActo
     if (await currentRole(tx, member) === "member") throw new AuthorizationError("Only owners and admins can release the partner's businesses.");
     // Team changes take this lock, so the owner can't leave while the business moves to them.
     await lockBusinessTeam(tx, input.businessId);
+    // Number claims take this lock, so none starts buying a number while the business moves.
+    await lockBusinessNumberClaims(tx, input.businessId);
     // The Connect webhook's writes take this before the business's row, so this does too.
     await lockBusinessBillingAccount(tx, input.businessId);
     // Clearing the partner changes no key, so joining the team, which checks the business's key, doesn't wait on this.
     const partnerId = await lockPartnerBusiness(tx, member.partnerId, input.businessId, "no key update");
+    // A number bought after the business leaves the partner would count against no tier, and the host would pay for it.
+    await refuseNumberInProgress(tx, input.businessId);
     const [owner] = await tx.select({ userId: businessMemberships.userId }).from(businessMemberships)
       .where(and(eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.role, "business_owner"), eq(businessMemberships.status, "active")))
       .orderBy(asc(businessMemberships.createdAt), asc(businessMemberships.id))
@@ -1036,10 +1054,7 @@ export async function deletePartnerBusinessInTransaction(tx: DatabaseTransaction
   const checkout = input.by === "partner"
     ? await dropBusinessPackageInTransaction(tx, { businessId, partnerId, stripeConnect: input.stripeConnect })
     : await endLifecycleBusinessBillingInTransaction(tx, { businessId, partnerId, stripeConnect: input.stripeConnect, cancelledSubscriptionId: input.cancelledSubscriptionId });
-  // RLS shows the partner's people none of the business's claims, so the database answers. A claim no worker will finish doesn't count.
-  const claiming = (await tx.execute<{ busy: boolean }>(sql`select app.business_number_claim_in_progress(${businessId}::uuid) as busy`)).rows[0]?.busy === true;
-  const [provisioning] = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "provisioning"))).limit(1);
-  if (claiming || provisioning) throw failure("The business's phone number is still being set up. Try again in a few minutes.", 409, "business_number_in_progress");
+  await refuseNumberInProgress(tx, businessId);
   // A number being released already is released again, in case that release fails once the business is gone.
   const held = await tx.select({ id: phoneNumbers.id, e164: phoneNumbers.e164, providerPhoneId: phoneNumbers.providerPhoneId, carrier: phoneNumbers.carrier }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), inArray(phoneNumbers.status, ["active", "reclaiming"])));
   const stored = await tx.select({ objectKey: storageObjects.objectKey }).from(storageObjects).where(and(eq(storageObjects.businessId, businessId), ne(storageObjects.status, "deleted")));

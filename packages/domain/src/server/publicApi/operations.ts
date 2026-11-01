@@ -123,7 +123,7 @@ import { insertWidgetKeyInTransaction, updateWidgetKeyInTransaction, type Widget
 import { ianaTimeZone, insertBusinessInTransaction, insertInvitationInTransaction, invitationUrl, isSingleEmailAddress, lockBusinessTeam, partnerBusinessNotClaimable, removeMemberInTransaction, revokeInvitationInTransaction, updateBusinessInTransaction, updateMemberRoleInTransaction } from "../tenancy";
 import { conflict, invalidRequest, notFound, PublicApiError } from "./errors";
 import { isPartnerMemberSubject, partnerSubjectActor, type PartnerSubject } from "./partner";
-import { lockActivePartnerPlatformKey, refusePartnerPlatformKey, type HostPlatformKey, type ResolvedPlatformKey } from "./platformKeys";
+import { lockActivePartnerPlatformKey, refusePartnerPlatformKey, requirePartnerNumberPurchase, type HostPlatformKey, type ResolvedPlatformKey } from "./platformKeys";
 import {
   clockToMinutes,
   decodeCursor,
@@ -558,8 +558,8 @@ export async function listPhoneNumbersForApi(context: DomainContext, caller: Api
   return await inBusiness(context, caller, async (tx) => await listPhoneNumberResources(tx, caller.businessId));
 }
 
-/** Who searches for and claims a number: the person the caller acts as, or for a partner's platform key, the key itself. */
-type NumberClaimant = { userId: string; platformKeyId?: undefined } | { platformKeyId: string; userId?: undefined };
+/** Who searches for and claims a number: the person the caller acts as, or for a partner's platform key, the key itself, with its scopes. */
+type NumberClaimant = { userId: string; platformKeyId?: undefined } | { platformKeyId: string; scopes: readonly string[]; userId?: undefined };
 
 /** Who a number offer is signed for. A key's id can't be mistaken for a person's, so the dashboard never takes its offers. */
 function offerSubject(claimant: NumberClaimant): string {
@@ -571,11 +571,13 @@ function offerSubject(claimant: NumberClaimant): string {
  * caller acts as, or for a partner's platform key, the key. `replaces` asks
  * for replacement offers instead. Without a paid plan, a cloud business is
  * offered free trial numbers when the dashboard would offer them. A partner's
- * key needs its partner on a paid tier and is never offered one.
+ * key needs phone_numbers:purchase and its partner on a paid tier, and is
+ * never offered one.
  * `beforeSearch` runs once the business may search, just before the carrier
  * is asked, so a refused search uses up no search limit.
  */
 export async function searchPhoneNumbersForApi(context: DomainContext, caller: ApiCaller, input: ApiPhoneNumberSearch, options: NumberClaimant & { provider: NumberInventoryProvider; claimTokenSecret: string; beforeSearch?: (() => Promise<void>) | undefined }): Promise<ApiPhoneNumberOffer[]> {
+  if (options.platformKeyId !== undefined) requirePartnerNumberPurchase(options.scopes);
   const purpose = input.replaces ? "replacement" : "onboarding";
   const selection: Partial<NumberSelection> = {
     ...(input.country ? { countryCode: input.country } : {}),
@@ -623,6 +625,7 @@ export async function searchPhoneNumbersForApi(context: DomainContext, caller: A
  * at most, and a partner's key gets none.
  */
 export async function claimPhoneNumberForApi(context: DomainContext, caller: ApiCaller, input: { offerToken: string; replaces?: string | undefined }, options: NumberClaimant & { claimTokenSecret: string }): Promise<ApiPhoneNumberClaim> {
+  if (options.platformKeyId !== undefined) requirePartnerNumberPurchase(options.scopes);
   const purpose = input.replaces ? "replacement" : "onboarding";
   let offer: NumberOffer;
   try {

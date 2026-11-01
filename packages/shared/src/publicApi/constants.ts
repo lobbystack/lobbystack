@@ -30,6 +30,7 @@ export const apiKeyScopes = [
   "team:manage",
   "businesses:create",
   "users:create",
+  "phone_numbers:purchase",
   "partner:read",
   "partner.businesses:write",
   "partner.demos:write",
@@ -81,8 +82,15 @@ export function isPartnerScope(value: unknown): value is PartnerScope {
   return typeof value === "string" && (partnerScopes as readonly string[]).includes(value);
 }
 
+/**
+ * What a partner's platform key needs on top of phone_numbers:manage to search
+ * for and buy numbers, which charge the partner. No endpoint takes it alone,
+ * and a key made before keys could buy numbers doesn't hold it.
+ */
+export const PARTNER_NUMBER_PURCHASE_SCOPES = ["phone_numbers:manage", "phone_numbers:purchase"] as const satisfies readonly ApiKeyScope[];
+
 /** Scopes that act outside a single business, so only a platform key can hold them. */
-export const platformOnlyScopes = ["businesses:create", "users:create", ...partnerScopes] as const satisfies readonly ApiKeyScope[];
+export const platformOnlyScopes = ["businesses:create", "users:create", "phone_numbers:purchase", ...partnerScopes] as const satisfies readonly ApiKeyScope[];
 export type PlatformOnlyScope = (typeof platformOnlyScopes)[number];
 export type BusinessApiKeyScope = Exclude<ApiKeyScope, PlatformOnlyScope>;
 
