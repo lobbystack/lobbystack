@@ -471,7 +471,7 @@ describe.skipIf(!client)("the host's own emails", () => {
       const trialOf = (id: string) => trials.find((trial) => trial.businessId === id)!.id;
       const sender = { from: "Raphael <raphael@desk.example.test>", name: "Raphael" };
       await asWorker(tx, async () => {
-        expect(await queueOnboardingFollowupEmail(context, { businessId, completedAt: new Date(now.getTime() - 86_400_000), sender })).toBe(false);
+        expect(await queueOnboardingFollowupEmail(context, { businessId, sender })).toBe(false);
         expect(await loadNumberReleaseEmail(context, { businessId, phoneNumberId: numberOf(businessId) })).toBeNull();
         expect(await loadNumberReleaseEmail(context, { businessId: direct, phoneNumberId: numberOf(direct) })).toMatchObject({ to: owner!.email });
         expect(await loadNumberTrialEmail(context, { businessId, trialId: trialOf(businessId), email: "day13" })).toBeNull();

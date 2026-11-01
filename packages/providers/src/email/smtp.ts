@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 import nodemailer, { type Transporter } from "nodemailer";
-import { DEFAULT_APP_NAME, assertCertificationRecipient, type EmailBrand } from "@lobbystack/shared";
+import { CHECK_IN_ANSWERS, DEFAULT_APP_NAME, assertCertificationRecipient, checkInTokenVariable, type CheckInAnswer, type EmailBrand } from "@lobbystack/shared";
 
 export type SmtpConfig = {
   host: string;
@@ -190,7 +190,7 @@ function templateBody(template: TemplateName, variables: Record<string, string>,
     case "feedback_submission":
       return variables.body ?? "LobbyStack dashboard feedback";
     case "onboarding_followup":
-      return onboardingFollowupBody(variables);
+      return onboardingFollowupBody(variables, brand);
     case "number_trial":
       return numberTrialBody(variables);
     case "number_release":
@@ -574,82 +574,63 @@ function existingAccountBody(variables: Record<string, string>, brand: EmailBran
   }
 }
 
-function onboardingFollowupBody(variables: Record<string, string>): string {
+type CheckInCopy = { greeting: (name: string) => string; intro: (sender: string, business: string) => string; question: string; answers: Record<CheckInAnswer, string>; close: string; title: string };
+
+const CHECK_IN_COPY: Record<"en" | "fr" | "es" | "sr", CheckInCopy> = {
+  en: {
+    greeting: (name) => (name ? `Hi ${name},` : "Hi,"),
+    intro: (sender, business) => `I'm ${sender}, the founder of LobbyStack. You set up an agent for ${business} yesterday, and it hasn't talked to a real customer yet.`,
+    question: "What's holding you back? Click one:",
+    answers: { still_testing: "I'm still testing it", connect_number: "I don't know how to connect my number", test_call_mistakes: "It made mistakes on my test call", not_a_fit: "It's not right for my business" },
+    close: "If it's something else, just reply. I read every answer.",
+    title: "Founder, LobbyStack",
+  },
+  fr: {
+    greeting: (name) => (name ? `Bonjour ${name},` : "Bonjour,"),
+    intro: (sender, business) => `Je suis ${sender}, le fondateur de LobbyStack. Vous avez configuré un agent pour ${business} hier, et il n'a pas encore parlé à un vrai client.`,
+    question: "Qu'est-ce qui vous retient ? Cliquez sur une réponse :",
+    answers: { still_testing: "Je suis encore en train de le tester", connect_number: "Je ne sais pas comment connecter mon numéro", test_call_mistakes: "Il a fait des erreurs pendant mon appel test", not_a_fit: "Il ne convient pas à mon entreprise" },
+    close: "Si c'est autre chose, répondez simplement à ce courriel. Je lis toutes les réponses.",
+    title: "Fondateur, LobbyStack",
+  },
+  es: {
+    greeting: (name) => (name ? `Hola, ${name}:` : "Hola:"),
+    intro: (sender, business) => `Soy ${sender}, fundador de LobbyStack. Ayer configuró un agente para ${business}, y todavía no ha hablado con ningún cliente real.`,
+    question: "¿Qué le está frenando? Haga clic en una opción:",
+    answers: { still_testing: "Todavía lo estoy probando", connect_number: "No sé cómo conectar mi número", test_call_mistakes: "Cometió errores en mi llamada de prueba", not_a_fit: "No es adecuado para mi negocio" },
+    close: "Si es otra cosa, responda a este correo. Leo todas las respuestas.",
+    title: "Fundador, LobbyStack",
+  },
+  sr: {
+    greeting: (name) => (name ? `Zdravo, ${name},` : "Zdravo,"),
+    intro: (sender, business) => `Ja sam ${sender}, osnivač LobbyStacka. Juče ste podesili agenta za ${business}, a on još nije razgovarao ni sa jednim pravim klijentom.`,
+    question: "Šta Vas koči? Kliknite na jedan odgovor:",
+    answers: { still_testing: "Još ga testiram", connect_number: "Ne znam kako da povežem svoj broj", test_call_mistakes: "Pravio je greške u mom probnom pozivu", not_a_fit: "Ne odgovara mom poslovanju" },
+    close: "Ako je nešto drugo, samo odgovorite na ovaj imejl. Čitam svaki odgovor.",
+    title: "Osnivač, LobbyStack",
+  },
+};
+
+/**
+ * The founder's check-in, as plain text. Each answer is a link to a page that
+ * asks to confirm it, so a mail scanner opening the link answers nothing.
+ */
+function onboardingFollowupBody(variables: Record<string, string>, brand: EmailBrand): string {
+  const locale = variables.locale === "fr" || variables.locale === "es" || variables.locale === "sr" ? variables.locale : "en";
+  const copy = CHECK_IN_COPY[locale];
   const sender = variables.senderName ?? "";
-  const business = variables.businessName ?? "";
-  if (variables.locale === "es") {
-    return [
-      variables.firstName ? `Hola, ${variables.firstName}:` : "Hola:",
-      "",
-      `Soy ${sender}, fundador de LobbyStack. Ayer configuró un agente para ${business}. Gracias por probarlo.`,
-      "",
-      "Me encantaría saber qué le pareció:",
-      "",
-      "1. ¿Le gustó? ¿Qué funcionó bien y qué no le convenció?",
-      "2. ¿Qué deberíamos mejorar?",
-      "3. ¿Piensa usarla de verdad, con su propio número de teléfono? Si no, ¿qué se lo impide?",
-      "",
-      "Puede responder a este correo. ¡Con dos líneas basta!",
-      "",
-      "Gracias de nuevo,",
-      sender,
-      "Fundador, LobbyStack",
-    ].join("\n");
-  }
-  if (variables.locale === "sr") {
-    return [
-      variables.firstName ? `Zdravo, ${variables.firstName},` : "Zdravo,",
-      "",
-      `Ja sam ${sender}, osnivač LobbyStacka. Juče ste podesili agenta za ${business}. Hvala što ste ga isprobali.`,
-      "",
-      "Voleo bih da čujem Vaše utiske:",
-      "",
-      "1. Da li Vam se dopao? Šta je dobro radilo, a šta Vam nije delovalo kako treba?",
-      "2. Šta bi trebalo da poboljšamo?",
-      "3. Da li planirate da ga zaista koristite, sa svojim brojem telefona? Ako ne, šta Vas sprečava?",
-      "",
-      "Možete da odgovorite na ovaj imejl, i dva reda su sasvim dovoljna!",
-      "",
-      "Hvala još jednom,",
-      sender,
-      "Osnivač, LobbyStack",
-    ].join("\n");
-  }
-  if (variables.locale === "fr") {
-    return [
-      variables.firstName ? `Bonjour ${variables.firstName},` : "Bonjour,",
-      "",
-      `Je suis ${sender}, le fondateur de LobbyStack. Vous avez configuré un agent pour ${business} hier. Merci de l'avoir essayé.`,
-      "",
-      "J'aimerais savoir ce que vous en avez pensé :",
-      "",
-      "1. Avez-vous aimé l'expérience ? Qu'est-ce qui a bien fonctionné, et qu'est-ce qui clochait ?",
-      "2. Que devrions-nous améliorer ?",
-      "3. Comptez-vous l'utiliser pour vrai, avec votre propre numéro de téléphone ? Sinon, qu'est-ce qui vous en empêche ?",
-      "",
-      "Vous pouvez répondre à ce courriel, et deux lignes suffiraient !",
-      "",
-      "Merci encore,",
-      sender,
-      "Fondateur, LobbyStack",
-    ].join("\n");
-  }
   return [
-    variables.firstName ? `Hi ${variables.firstName},` : "Hi,",
+    copy.greeting(variables.firstName ?? ""),
     "",
-    `I'm ${sender}, the founder of LobbyStack. You set up an agent for ${business} yesterday. Thanks for giving it a try.`,
+    copy.intro(sender, variables.businessName ?? ""),
     "",
-    "I'd love to hear what you thought:",
+    copy.question,
     "",
-    "1. Did you like it? What worked, and what felt off?",
-    "2. What should we improve?",
-    "3. Do you plan to use it for real, with your own phone number? If not, what's stopping you?",
+    ...CHECK_IN_ANSWERS.flatMap((answer) => [copy.answers[answer], `${brand.origin}/${locale}/check-in/${variables[checkInTokenVariable(answer)] ?? ""}`, ""]),
+    copy.close,
     "",
-    "You can reply to this email, and two lines would be plenty!",
-    "",
-    "Thanks again,",
     sender,
-    "Founder, LobbyStack",
+    copy.title,
   ].join("\n");
 }
 

@@ -7,14 +7,15 @@ import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
 import { attributeBusiness } from "./affiliates";
 import { businessShowsOnBrand, readBusinessAccess, type BrandScope } from "./businessAccess";
+import { checkInTokenVariables } from "./checkIn";
 import { businessGetsHostEmails } from "./hostEmails";
 import { readActiveBusinessIdInTransaction } from "./tenancy";
 
-const ONBOARDING_FOLLOWUP_SUBJECTS: Record<InterfaceLocale, string> = {
-  en: "How'd you like LobbyStack?",
-  fr: "Qu'avez-vous pensé de LobbyStack ?",
-  es: "¿Qué le pareció LobbyStack?",
-  sr: "Kako Vam se dopao LobbyStack?",
+const ONBOARDING_FOLLOWUP_SUBJECTS: Record<InterfaceLocale, (business: string) => string> = {
+  en: (business) => `${business}'s agent hasn't had a real conversation yet`,
+  fr: (business) => `Votre agent pour ${business} n'a pas encore eu de vraie conversation`,
+  es: (business) => `El agente de ${business} aún no ha tenido una conversación real`,
+  sr: (business) => `Agent za ${business} još nije imao pravi razgovor`,
 };
 
 export type OnboardingStage =
@@ -339,7 +340,7 @@ export async function scheduleOnboardingFollowupInTransaction(tx: DatabaseTransa
     aggregateId: businessId,
     dedupeKey: `onboarding-followup:${businessId}`,
     availableAt: new Date(completedAt.getTime() + ONBOARDING_FOLLOWUP_DELAY_MS),
-    payload: { completedAt: completedAt.toISOString() },
+    payload: {},
   });
 }
 
@@ -353,18 +354,18 @@ export type OnboardingFollowupSender = {
 };
 
 /**
- * Queues the founder check-in email for a business that finished onboarding,
- * unless its owner has come back since or shares the sender's email domain,
- * or it's a partner's business. Returns whether an email was queued.
+ * Queues the founder check-in email for a business that finished onboarding
+ * and has had no real conversation, unless its owner shares the sender's email
+ * domain or it's a partner's business. Returns whether an email was queued.
  */
 export async function queueOnboardingFollowupEmail(
   context: DomainContext,
-  input: { businessId: string; completedAt: Date; sender: OnboardingFollowupSender },
+  input: { businessId: string; sender: OnboardingFollowupSender },
 ): Promise<boolean> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     if (!await businessGetsHostEmails(tx, input.businessId)) return false;
     const result = await tx.execute<{ user_id: string; email: string; name: string | null; preferred_locale: string; business_name: string }>(
-      sql`select user_id, email, name, preferred_locale, business_name from app.resolve_onboarding_followup_recipient(${input.businessId}::uuid, ${input.completedAt.toISOString()}::timestamptz)`,
+      sql`select user_id, email, name, preferred_locale, business_name from app.resolve_onboarding_followup_recipient(${input.businessId}::uuid)`,
     );
     const recipient = result.rows[0];
     if (!recipient) return false;
@@ -382,8 +383,8 @@ export async function queueOnboardingFollowupEmail(
         template: "onboarding_followup",
         to: recipient.email,
         from: input.sender.from,
-        subject: ONBOARDING_FOLLOWUP_SUBJECTS[locale],
-        variables: { locale, firstName, businessName: recipient.business_name, senderName: input.sender.name },
+        subject: ONBOARDING_FOLLOWUP_SUBJECTS[locale](recipient.business_name),
+        variables: { locale, firstName, businessName: recipient.business_name, senderName: input.sender.name, ...checkInTokenVariables(input.businessId) },
         // The founder writes as the host. With a sender of its own, the email
         // takes replies at that sender, so it sets no Reply-To.
         brand: HOST_EMAIL_BRAND,

@@ -86,6 +86,7 @@ export const SMS_EVENT_NAMES = [
   "sms.delivery_failed",
   "sms.provider_cost_recorded",
   "conversation.first_real_recorded",
+  "onboarding.check_in_answered",
   "conversation.automation_paused",
   "conversation.team_requested",
   "conversation.team_joined",
@@ -480,6 +481,7 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   ],
   // channel: voice, web_voice, web_chat, instagram or sms. Once per business.
   "conversation.first_real_recorded": ["businessId", "deploymentMode", "channel", "conversationId"],
+  "onboarding.check_in_answered": ["businessId", "deploymentMode", "answer"],
   "conversation.automation_paused": [
     "businessId",
     "deploymentMode",

@@ -30,6 +30,7 @@
   ],
   "localizedPortRoutes": [
     "/[locale]/accept-invite",
+    "/[locale]/check-in/[token]",
     "/[locale]/claim-demo",
     "/[locale]/confirm-email-change",
     "/[locale]/demo",
@@ -349,6 +350,12 @@
       "dynamicKey": "demoToken",
       "snapshotId": "/claim-demo-token",
       "standalone": true
+    },
+    {
+      "path": "/check-in/[token]",
+      "fixtureState": "public",
+      "state": "invalid-link",
+      "comparison": "port-baseline"
     },
     {
       "path": "/reset-password/[resetToken]",

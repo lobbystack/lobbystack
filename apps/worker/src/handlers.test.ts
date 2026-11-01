@@ -134,20 +134,18 @@ describe("worker handlers", () => {
   });
   it("skips the onboarding follow-up when no founder sender is configured", async () => {
     const businessId = randomUUID();
-    const job = { jobId: randomUUID(), type: "onboarding.sendFollowup" as const, queue: "default" as const, businessId, payload: { completedAt: new Date().toISOString() }, trace: {}, idempotencyKey: `onboarding-followup:${businessId}`, scheduled: false };
+    const job = { jobId: randomUUID(), type: "onboarding.sendFollowup" as const, queue: "default" as const, businessId, payload: {}, trace: {}, idempotencyKey: `onboarding-followup:${businessId}`, scheduled: false };
     await expect(handleJob(job, { domain: { db: undefined as never }, email: { sendTemplate: vi.fn() } })).resolves.toEqual({ status: "skipped" });
     expect(queueOnboardingFollowupEmail).not.toHaveBeenCalled();
   });
   it("queues the onboarding follow-up through the domain with the configured sender", async () => {
     const businessId = randomUUID(); const domain = { db: undefined as never };
-    const completedAt = "2026-09-24T10:00:00.000Z";
     const sender = { from: "Raphael from LobbyStack <raphael@lobbystack.com>", name: "Raphael" };
     vi.mocked(queueOnboardingFollowupEmail).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
-    const job = { jobId: randomUUID(), type: "onboarding.sendFollowup" as const, queue: "default" as const, businessId, payload: { completedAt }, trace: {}, idempotencyKey: `onboarding-followup:${businessId}`, scheduled: false };
+    const job = { jobId: randomUUID(), type: "onboarding.sendFollowup" as const, queue: "default" as const, businessId, payload: { completedAt: "2026-09-24T10:00:00.000Z" }, trace: {}, idempotencyKey: `onboarding-followup:${businessId}`, scheduled: false };
     await expect(handleJob(job, { domain, email: { sendTemplate: vi.fn() }, onboardingFollowupSender: sender })).resolves.toEqual({ status: "completed", entityId: businessId });
-    expect(queueOnboardingFollowupEmail).toHaveBeenCalledWith(domain, { businessId, completedAt: new Date(completedAt), sender });
+    expect(queueOnboardingFollowupEmail).toHaveBeenCalledWith(domain, { businessId, sender });
     await expect(handleJob(job, { domain, email: { sendTemplate: vi.fn() }, onboardingFollowupSender: sender })).resolves.toEqual({ status: "skipped", entityId: businessId });
-    await expect(handleJob({ ...job, payload: {} }, { domain, email: { sendTemplate: vi.fn() }, onboardingFollowupSender: sender })).rejects.toThrow("Invalid onboarding follow-up payload.");
   });
   it("sends an email queued before payloads carried a brand exactly as one queued under a brand, LobbyStack included", async () => {
     vi.stubEnv("APP_BASE_URL", "https://app.example.test");

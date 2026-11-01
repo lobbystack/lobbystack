@@ -1092,9 +1092,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
     case "onboarding.sendFollowup": {
       const businessId = businessIdOrThrow(job);
       if (!dependencies.email || !dependencies.onboardingFollowupSender) return { status: "skipped" };
-      const completedAt = typeof job.payload.completedAt === "string" ? new Date(job.payload.completedAt) : new Date(Number.NaN);
-      if (Number.isNaN(completedAt.getTime())) throw new Error("Invalid onboarding follow-up payload.");
-      const queued = await queueOnboardingFollowupEmail(dependencies.domain, { businessId, completedAt, sender: dependencies.onboardingFollowupSender });
+      const queued = await queueOnboardingFollowupEmail(dependencies.domain, { businessId, sender: dependencies.onboardingFollowupSender });
       return { status: queued ? "completed" : "skipped", entityId: businessId };
     }
     case "affiliate.generatePayoutRun": {

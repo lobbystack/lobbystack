@@ -175,6 +175,7 @@ export const SCHEMA_MIGRATIONS = [
   "0169_unanswered_questions.sql",
   "0170_first_real_conversations.sql",
   "0171_onboarding_goal.sql",
+  "0172_check_in_answers.sql",
 ] as const;
 
 const CONCURRENT_INDEX_DIRECTIVE = /^-- lobbystack:concurrent-index ([a-z][a-z0-9_]*)$/m;

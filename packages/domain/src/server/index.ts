@@ -20,6 +20,7 @@ export * from "./contacts";
 export * from "./contactPasscodes";
 export * from "./contactSmsConsent";
 export * from "./context";
+export * from "./checkIn";
 export * from "./conversations";
 export * from "./firstRealConversation";
 export * from "./instagram";

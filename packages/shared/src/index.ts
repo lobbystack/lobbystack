@@ -8,6 +8,7 @@ import { appointmentChangeVerificationModes, bookingModes, transferModes, type R
 import { WIDGET_COLOR_PATTERN, widgetPositionSchema, type WidgetPosition } from "./widget";
 export * from "./receptionist";
 export * from "./chatChannels";
+export * from "./checkIn";
 export * from "./branding";
 export * from "./brandLinks";
 export * from "./brand";

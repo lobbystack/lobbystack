@@ -162,6 +162,7 @@ it("redirects legacy public URLs to a canonical locale while preserving safe que
 it("keeps sensitive and dynamic responses private while caching fixed public pages", async () => {
   for (const url of [
     "/en/reset-password/token-value",
+    "/en/check-in/token-value",
     "/fr/verify-email?token=private",
     "/api/dashboard",
     "/api/realtime",
@@ -491,6 +492,8 @@ describe("a partner's host", () => {
       ["/api/affiliate", "GET"],
       ["/api/affiliate", "PATCH"],
       ["/api/affiliate/click", "POST"],
+      ["/en/check-in/token", "GET"],
+      ["/api/check-in", "POST"],
     ] as const) {
       const partner = await visit(`https://bright.portal.example.test${path}`, { method, headers: { origin: "https://bright.portal.example.test" } });
       expect(partner.status, `${method} ${path} on a partner's host`).toBe(404);

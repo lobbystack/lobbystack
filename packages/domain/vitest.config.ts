@@ -10,6 +10,7 @@ export default defineConfig({
       "@lobbystack/db": `${root}/packages/db/src/index.ts`,
       "@lobbystack/providers/crawling/urlSafety": `${root}/packages/providers/src/crawling/urlSafety.ts`,
       "@lobbystack/providers/crypto/secretBox": `${root}/packages/providers/src/crypto/secretBox.ts`,
+      "@lobbystack/providers/crypto/signedPayload": `${root}/packages/providers/src/crypto/signedPayload.ts`,
       "@lobbystack/providers/customHostnames/customHostnames": `${root}/packages/providers/src/customHostnames/customHostnames.ts`,
       "@lobbystack/providers/customHostnames/fakeCustomHostnames": `${root}/packages/providers/src/customHostnames/fakeCustomHostnames.ts`,
       "@lobbystack/providers/stripe/fakeStripeConnect": `${root}/packages/providers/src/stripe/fakeStripeConnect.ts`,
