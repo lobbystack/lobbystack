@@ -231,7 +231,9 @@ export class CalendlyCalendarProvider implements CalendarProvider {
   /**
    * What people changed in Calendly itself. A move cancels the event and makes a
    * new one, possibly more than once: each canceled invitee names its successor.
-   * Cancellations LobbyStack made, which move an appointment too, are skipped.
+   * A move whose new event was then canceled counts as a cancellation of the
+   * event the appointment still holds. Cancellations LobbyStack made, which move
+   * an appointment too, are skipped.
    */
   async getBookingChanges(input: { accessToken: string; calendarId?: string; startsAt: string; endsAt: string }): Promise<CalendarBookingChanges> {
     const account = await this.account(input.accessToken);
@@ -342,18 +344,21 @@ export class CalendlyCalendarProvider implements CalendarProvider {
     }
   }
 
-  // The active event a canceled one moved to; undefined when it moved somewhere that's gone too, and null when it never moved.
+  // The active event a canceled one moved to; null when it never moved, or its last move was canceled too, so nothing is
+  // left of the booking. Undefined when that can't be told: LobbyStack canceled the last event while it moved the
+  // appointment, which is the new booking's business, or the moves ran past the limit.
   private async lastSuccessor(accessToken: string, eventId: string): Promise<ScheduledEvent | null | undefined> {
     let last = eventId;
     for (let step = 0; step < MAX_MOVES_FOLLOWED; step++) {
       const invitees = await this.collection<{ new_invitee?: string | null }>(accessToken, `/scheduled_events/${encodeURIComponent(last)}/invitees`, {}, "invitee list");
       const next = invitees.find((invitee) => invitee.new_invitee)?.new_invitee;
-      if (!next) return step === 0 ? null : undefined;
+      if (!next) return null;
       // An invitee's uri is /scheduled_events/{event}/invitees/{invitee}.
       const nextId = /\/scheduled_events\/([^/]+)\/invitees\//.exec(next)?.[1];
       if (!nextId) throw new Error("Calendly returned an invalid invitee.");
       const event = await this.getEvent(accessToken, nextId);
       if (event?.status === "active" && event.uri && event.start_time && event.end_time) return event;
+      if (event?.cancellation?.reason === OWN_CANCELLATION_REASON) return undefined;
       last = nextId;
     }
     return undefined;

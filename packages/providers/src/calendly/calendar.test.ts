@@ -339,12 +339,29 @@ describe("changes made in Calendly", () => {
     expect(calls.some((call) => call.url.pathname.includes("OURS") || call.url.pathname.includes("OTHER"))).toBe(false);
   });
 
-  it("reports nothing for a move whose new booking is gone too", async () => {
+  it("reports a cancellation for a move whose new booking was canceled before the next sync", async () => {
     routes(
       on("GET", "/scheduled_events", () => page([event("MOVED", "2026-11-06T10:00:00Z", "2026-11-06T10:30:00Z", { status: "canceled" })])),
       on("GET", "/scheduled_events/MOVED/invitees", () => page([{ new_invitee: `${api}/scheduled_events/STEP/invitees/I2` }])),
       on("GET", "/scheduled_events/STEP", () => resource(event("STEP", "2026-11-09T10:00:00Z", "2026-11-09T10:30:00Z", { status: "canceled" }))),
       on("GET", "/scheduled_events/STEP/invitees", () => page([{ new_invitee: null }])));
+    await expect(new CalendlyCalendarProvider(config).getBookingChanges(window)).resolves.toEqual({ cancelled: ["MOVED"], moved: [] });
+  });
+
+  it("leaves a move alone when LobbyStack canceled its new booking", async () => {
+    routes(
+      on("GET", "/scheduled_events", () => page([event("MOVED", "2026-11-06T10:00:00Z", "2026-11-06T10:30:00Z", { status: "canceled" })])),
+      on("GET", "/scheduled_events/MOVED/invitees", () => page([{ new_invitee: `${api}/scheduled_events/STEP/invitees/I2` }])),
+      on("GET", "/scheduled_events/STEP", () => resource(event("STEP", "2026-11-09T10:00:00Z", "2026-11-09T10:30:00Z", { status: "canceled", cancellation: { reason: "Canceled in LobbyStack" } }))));
+    await expect(new CalendlyCalendarProvider(config).getBookingChanges(window)).resolves.toEqual({ cancelled: [], moved: [] });
+  });
+
+  it("leaves a booking alone when its moves run past the limit", async () => {
+    const hop = (index: number) => [
+      on("GET", `/scheduled_events/E${index}/invitees`, () => page([{ new_invitee: `${api}/scheduled_events/E${index + 1}/invitees/I${index}` }])),
+      on("GET", `/scheduled_events/E${index + 1}`, () => resource(event(`E${index + 1}`, "2026-11-09T10:00:00Z", "2026-11-09T10:30:00Z", { status: "canceled" }))),
+    ];
+    routes(on("GET", "/scheduled_events", () => page([event("E0", "2026-11-06T10:00:00Z", "2026-11-06T10:30:00Z", { status: "canceled" })])), ...Array.from({ length: 10 }, (_, index) => hop(index)).flat());
     await expect(new CalendlyCalendarProvider(config).getBookingChanges(window)).resolves.toEqual({ cancelled: [], moved: [] });
   });
 });
