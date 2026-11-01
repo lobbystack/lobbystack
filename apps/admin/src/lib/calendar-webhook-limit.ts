@@ -5,9 +5,9 @@ import { enforceFixedWindow, fixedWindowLimit, type FixedWindowResult } from "./
 const minute = 60;
 
 /**
- * Bounds Cal.com webhook deliveries per sending client, before the body is
- * read or the database is asked. Cal.com sends every account's deliveries
- * from its own servers, so the limit is generous.
+ * Bounds calendar webhook deliveries per sending client, before the body is
+ * read or the database is asked. Cal.com and Calendly send every account's
+ * deliveries from their own servers, so the limit is generous.
  */
 export async function enforceCalendarWebhookClientLimit(input: { ip?: string | undefined }): Promise<FixedWindowResult> {
   return await enforceFixedWindow([

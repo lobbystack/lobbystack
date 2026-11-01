@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CALENDAR_CONNECT_LINK_LIFETIME_MS, createCalendarConnectLink, createCalendarOAuthState, verifyCalendarConnectLinkToken, verifyCalendarOAuthState } from "./google-calendar-oauth";
+import { CALENDAR_CONNECT_LINK_LIFETIME_MS, calendarOAuthCodeVerifier, createCalendarConnectLink, createCalendarOAuthState, verifyCalendarConnectLinkToken, verifyCalendarOAuthState } from "./google-calendar-oauth";
 import { signOAuthPayload } from "./signed-oauth-state";
 
 afterEach(() => {
@@ -24,6 +24,24 @@ describe("Google Calendar OAuth state", () => {
       const state = signOAuthPayload("google-calendar:state", { userId: "user-1", businessId: "business-1", origin, issuedAt: Date.now(), nonce: "2f0c1d2e-3f40-4a51-8b62-7c83d94ea5b6" }, "unconfigured");
       expect(verifyCalendarOAuthState(state), String(origin)).toBeNull();
     }
+  });
+
+  it("derives a PKCE verifier for a state that only the signing secret can reproduce", () => {
+    vi.stubEnv("BETTER_AUTH_SECRET", "pkce-secret");
+    const verifier = calendarOAuthCodeVerifier("state");
+    expect(verifier).toMatch(/^[A-Za-z0-9_-]{43,128}$/);
+    expect(calendarOAuthCodeVerifier("state")).toBe(verifier);
+    expect(calendarOAuthCodeVerifier("other")).not.toBe(verifier);
+    vi.stubEnv("BETTER_AUTH_SECRET", "another-secret");
+    expect(calendarOAuthCodeVerifier("state")).not.toBe(verifier);
+  });
+
+  it("signs a Calendly state apart from Google's and Cal.com's", () => {
+    vi.stubEnv("BETTER_AUTH_SECRET", "state-secret");
+    const state = createCalendarOAuthState({ userId: "user", businessId: "business", provider: "calendly" });
+    expect(verifyCalendarOAuthState(state, "calendly")).toMatchObject({ userId: "user" });
+    expect(verifyCalendarOAuthState(state, "calcom")).toBeNull();
+    expect(verifyCalendarOAuthState(state)).toBeNull();
   });
 
   it("rejects tampered state", () => {
