@@ -19024,6 +19024,42 @@
             ],
             "description": "The voice the receptionist speaks in on phone and browser calls. New businesses start with marin."
           },
+          "staff_first_mode": {
+            "type": "string",
+            "enum": [
+              "never",
+              "business_hours",
+              "always"
+            ],
+            "description": "When calls ring staff_first_number before the receptionist answers: never, business_hours or always."
+          },
+          "staff_first_number": {
+            "description": "The staff phone calls ring first, in E.164 format.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "staff_first_ring_seconds": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "How long the staff phone rings before the receptionist answers: 10, 15, 20, 30, 45 or 60."
+          },
+          "staff_first_message": {
+            "description": "What callers hear before the staff phone rings.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "staff_first_handover_message": {
+            "description": "What callers hear before the receptionist answers.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "appointment_change_policy": {
             "type": "object",
             "properties": {
@@ -19076,6 +19112,11 @@
           "transfer_number",
           "booking_mode",
           "voice",
+          "staff_first_mode",
+          "staff_first_number",
+          "staff_first_ring_seconds",
+          "staff_first_message",
+          "staff_first_handover_message",
           "appointment_change_policy",
           "updated_at"
         ],
@@ -19207,6 +19248,82 @@
               "verse",
               "vesper",
               "willow"
+            ]
+          },
+          "staff_first_mode": {
+            "description": "business_hours and always need a staff_first_number, a paid plan and a Twilio number.",
+            "type": "string",
+            "enum": [
+              "never",
+              "business_hours",
+              "always"
+            ]
+          },
+          "staff_first_number": {
+            "description": "Follows the same rules as transfer_number, and can't be one of the business's own numbers.",
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\+[1-9]\\d{6,14}$",
+                "description": "Phone number in E.164 format."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "staff_first_ring_seconds": {
+            "anyOf": [
+              {
+                "type": "number",
+                "const": 10
+              },
+              {
+                "type": "number",
+                "const": 15
+              },
+              {
+                "type": "number",
+                "const": 20
+              },
+              {
+                "type": "number",
+                "const": 30
+              },
+              {
+                "type": "number",
+                "const": 45
+              },
+              {
+                "type": "number",
+                "const": 60
+              }
+            ]
+          },
+          "staff_first_message": {
+            "description": "null removes it.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "staff_first_handover_message": {
+            "description": "null removes it.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
             ]
           },
           "appointment_change_policy": {

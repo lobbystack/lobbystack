@@ -17,6 +17,12 @@ export function isCarrierId(value: unknown): value is CarrierId {
  */
 export const CARRIERS_FORWARDING_REFUSED_CALLS: readonly CarrierId[] = ["telnyx"];
 
+/**
+ * The carriers that can ring a staff phone before handing the call to
+ * GPT-Live. Telnyx waits on the open questions in docs/specs/staff-answers-first.md.
+ */
+export const CARRIERS_WITH_STAFF_FIRST: readonly CarrierId[] = ["twilio"];
+
 export type NumberKind = "local" | "mobile" | "toll_free";
 
 export type NumberSearch = {

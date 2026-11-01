@@ -3,7 +3,7 @@ import { z } from "zod";
 import { billingPlanSlugs } from "../billing";
 import { interfaceLocales, runtimeLocales } from "../locales";
 import { partnerAccessLevels } from "../partners";
-import { appointmentChangeVerificationModes, bookingModes, CONTACT_PASSCODE_DEFAULT_LENGTH, CONTACT_PASSCODE_LOCK_ATTEMPTS, CONTACT_PASSCODE_MAX_LENGTH, CONTACT_PASSCODE_MIN_LENGTH, isContactPasscode, isGuessableContactPasscode, RECEPTIONIST_INSTRUCTIONS_MAX_LENGTH, RECEPTIONIST_TEXT_MAX_LENGTH, RULE_CONTENT_CALL_MAX_LENGTH, RULE_TITLE_MAX_LENGTH, RULES_MAX, receptionistVoices, transferModes } from "../receptionist";
+import { appointmentChangeVerificationModes, bookingModes, STAFF_FIRST_MESSAGE_MAX_LENGTH, staffFirstModes, staffFirstRingSeconds, CONTACT_PASSCODE_DEFAULT_LENGTH, CONTACT_PASSCODE_LOCK_ATTEMPTS, CONTACT_PASSCODE_MAX_LENGTH, CONTACT_PASSCODE_MIN_LENGTH, isContactPasscode, isGuessableContactPasscode, RECEPTIONIST_INSTRUCTIONS_MAX_LENGTH, RECEPTIONIST_TEXT_MAX_LENGTH, RULE_CONTENT_CALL_MAX_LENGTH, RULE_TITLE_MAX_LENGTH, RULES_MAX, receptionistVoices, transferModes } from "../receptionist";
 import { WIDGET_COLOR_PATTERN, widgetPositionSchema } from "../widget";
 import { CONTACT_PASSCODES_MAX_PER_REQUEST, KNOWLEDGE_UPLOAD_MAX_BYTES, PUBLIC_API_VERSION, WEBHOOK_TEST_EVENT_TYPE, apiKeyScopes, webhookEventTypes, weekdays } from "./constants";
 
@@ -128,9 +128,16 @@ export const apiReceptionistSchema = z.object({
   transfer_number: z.string().nullable().describe("Where it transfers calls, in E.164 format. A number saved before that was required may be in another format. With no number, it never transfers."),
   booking_mode: z.enum(bookingModes).describe("instant: appointments are booked directly. request: the receptionist takes a request and the team confirms it. off: no booking."),
   voice: z.enum(receptionistVoices).describe("The voice the receptionist speaks in on phone and browser calls. New businesses start with marin."),
+  staff_first_mode: z.enum(staffFirstModes).describe("When calls ring staff_first_number before the receptionist answers: never, business_hours or always."),
+  staff_first_number: z.string().nullable().describe("The staff phone calls ring first, in E.164 format."),
+  staff_first_ring_seconds: z.number().int().describe("How long the staff phone rings before the receptionist answers: 10, 15, 20, 30, 45 or 60."),
+  staff_first_message: z.string().nullable().describe("What callers hear before the staff phone rings."),
+  staff_first_handover_message: z.string().nullable().describe("What callers hear before the receptionist answers."),
   appointment_change_policy: z.object(appointmentChangePolicyFields).describe("Whether callers can cancel or reschedule their own appointments, and how they prove it's theirs."),
   updated_at: timestamp,
 }).describe("How the receptionist answers, what it says about the business, and what it may do.");
+
+const staffFirstMessage = z.string().trim().min(1).max(STAFF_FIRST_MESSAGE_MAX_LENGTH).nullable();
 
 export const apiReceptionistUpdateSchema = z.strictObject({
   greeting: receptionistText.optional(),
@@ -145,6 +152,11 @@ export const apiReceptionistUpdateSchema = z.strictObject({
   transfer_number: e164.nullable().optional().describe("null removes it, which stops transfers."),
   booking_mode: z.enum(bookingModes).optional(),
   voice: z.enum(receptionistVoices).optional().describe("Calls that start after the business snapshot refreshes use it."),
+  staff_first_mode: z.enum(staffFirstModes).optional().describe("business_hours and always need a staff_first_number, a paid plan and a Twilio number."),
+  staff_first_number: e164.nullable().optional().describe("Follows the same rules as transfer_number, and can't be one of the business's own numbers."),
+  staff_first_ring_seconds: z.union(staffFirstRingSeconds.map((seconds) => z.literal(seconds))).optional(),
+  staff_first_message: staffFirstMessage.optional().describe("null removes it."),
+  staff_first_handover_message: staffFirstMessage.optional().describe("null removes it."),
   appointment_change_policy: z.strictObject(appointmentChangePolicyFields).optional().describe("Send all four fields."),
 }).refine((value) => value.summary === undefined || value.regenerate_summary === undefined, { message: "Send summary or regenerate_summary, not both.", path: ["regenerate_summary"] });
 
