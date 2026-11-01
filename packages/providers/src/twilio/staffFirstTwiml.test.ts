@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { dialReceptionistTwiml, emptyTwiml, hangupTwiml, receptionistDialOutcome, referTargetPhone, ringStaffTwiml, staffDialOutcome, staffPressTwiml, staffPromptTwiml } from "./staffFirstTwiml";
+import { dialReceptionistTwiml, emptyTwiml, hangupTwiml, receptionistDialOutcome, referTargetPhone, ringStaffTwiml, STAFF_CALL_LIMIT_SECONDS, staffDialOutcome, staffPressTwiml, staffPromptTwiml } from "./staffFirstTwiml";
 
 const sip = "sip:proj_1@sip.api.openai.com;transport=tls;secure=true";
 
@@ -14,6 +14,11 @@ describe("ringStaffTwiml", () => {
 
   it("keeps the shortest ring at Twilio's minimum", () => {
     expect(ringStaffTwiml({ ...ring, ringSeconds: 10 })).toContain('timeout="5"');
+  });
+
+  it("ends a staff-answered call after 30 minutes", () => {
+    expect(STAFF_CALL_LIMIT_SECONDS).toBe(1_800);
+    expect(ringStaffTwiml(ring)).toContain('timeLimit="1800"');
   });
 
   it("keeps the caller ringing and sends the staff leg to the prompt", () => {

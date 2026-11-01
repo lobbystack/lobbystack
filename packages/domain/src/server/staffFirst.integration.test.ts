@@ -1,14 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { billingAccounts, billingUsageEvents, businessHours, businessMemberships, businesses, calls, contacts, createDatabaseClient, numberTrials, onboardingNumberClaimEvents, outboxMessages, phoneNumbers, receptionistProfiles, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { billingAccounts, billingUsageEvents, businessHours, businessMemberships, businesses, calls, contacts, createDatabaseClient, numberTrials, onboardingNumberClaimEvents, outboxMessages, partners, phoneNumbers, receptionistProfiles, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { getAnalytics } from "./analytics";
+import { loadEntitlement } from "./entitlement";
 import { refreshBusinessSnapshot } from "./knowledge";
 import { desiredNumberRouting, loadNumberTrialEmail } from "./numberTrials";
 import { completeNumberProvisioning } from "./phoneNumbers";
 import { saveReceptionistProfileInTransaction } from "./receptionistProfile";
-import { decideStaffFirstCall, recordStaffAnsweredCall } from "./staffFirst";
+import { decideStaffFirstCall, recordStaffAnsweredCall, STAFF_BRIDGED_MINUTES_PER_DAY } from "./staffFirst";
 import { createBusiness } from "./tenancy";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
@@ -249,6 +250,57 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
         await tx.insert(numberTrials).values({ businessId, userId: (await tx.select({ id: users.id }).from(users).limit(1))[0]!.id, status: "active", verifiedPhone: "+14165550199" });
         expect(await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA1", now: open })).toEqual({ action: "receptionist", locale: "en" });
         expect(await tx.select({ id: billingUsageEvents.id }).from(billingUsageEvents).where(eq(billingUsageEvents.businessId, businessId))).toEqual([]);
+      });
+    });
+
+    describe("bridged minutes", () => {
+      const bridged = (tx: DatabaseTransaction, businessId: string, seconds: number, endedAt: Date, provider?: string) => as(tx, "lobbystack_worker", (db) => recordStaffAnsweredCall({ db }, { businessId, providerCallId: `CA${randomUUID()}`, to: lobbyNumber, seconds, endedAt })).then(async () => {
+        if (provider) await tx.update(calls).set({ provider }).where(eq(calls.businessId, businessId));
+      });
+      const cap = STAFF_BRIDGED_MINUTES_PER_DAY * 60;
+
+      it("sends calls to the receptionist at the cap, and spends no attempt", async () => {
+        await rollbackTest(async (tx) => {
+          const businessId = await configured(tx, "always");
+          await bridged(tx, businessId, cap - 1, new Date(open.getTime() - 60_000));
+          expect(await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA-under", from: caller, now: open })).toMatchObject({ action: "ring" });
+          await bridged(tx, businessId, 1, new Date(open.getTime() - 60_000));
+          const attempts = await tx.select({ id: billingUsageEvents.id }).from(billingUsageEvents).where(eq(billingUsageEvents.businessId, businessId));
+          expect(await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA-over", from: "+14165550135", now: open })).toEqual({ action: "receptionist", locale: "en" });
+          expect(await tx.select({ id: billingUsageEvents.id }).from(billingUsageEvents).where(eq(billingUsageEvents.businessId, businessId))).toHaveLength(attempts.length);
+        });
+      });
+
+      it("rolls: minutes from more than 24 hours ago stop counting", async () => {
+        await rollbackTest(async (tx) => {
+          const businessId = await configured(tx, "always");
+          await bridged(tx, businessId, cap, new Date(open.getTime() - 25 * 60 * 60_000));
+          expect(await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA-next-day", from: caller, now: open })).toMatchObject({ action: "ring" });
+        });
+      });
+
+      it("counts only calls staff took", async () => {
+        await rollbackTest(async (tx) => {
+          const businessId = await configured(tx, "always");
+          await bridged(tx, businessId, cap, new Date(open.getTime() - 60_000), "openai_live");
+          expect(await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA-receptionist", from: caller, now: open })).toMatchObject({ action: "ring" });
+        });
+      });
+
+      it("holds a partner's business billed outside LobbyStack too", async () => {
+        await rollbackTest(async (tx) => {
+          const [partner] = await tx.insert(partners).values({ name: "Acme", slug: `acme-${randomUUID().slice(0, 8)}` }).returning({ id: partners.id });
+          const businessId = randomUUID();
+          await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Harbor dental", timezone: "America/Toronto", businessType: "test", telemetryEnabled: true, deploymentMode: "cloud", partnerId: partner!.id });
+          await tx.insert(phoneNumbers).values({ businessId, e164: lobbyNumber, status: "active", carrier: "twilio", providerPhoneId: `PN${randomUUID()}` });
+          await saveFromApi(tx, businessId, { staffFirstMode: "always", staffFirstNumber: staffPhone });
+          await refreshBusinessSnapshot(context(tx), { businessId });
+          const { source } = await as(tx, "lobbystack_worker", (db) => withBusinessTransaction(db, { businessId, actorType: "worker" }, (inner) => loadEntitlement(inner, businessId)));
+          expect(source).toBe("billed_outside");
+          expect(await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA-under", from: caller, now: open })).toMatchObject({ action: "ring" });
+          await bridged(tx, businessId, cap, new Date(open.getTime() - 60_000));
+          expect(await decide(tx, { businessId, e164: lobbyNumber, providerCallId: "CA-outside", from: caller, now: open })).toEqual({ action: "receptionist", locale: "en" });
+        });
       });
     });
 

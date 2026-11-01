@@ -120,7 +120,7 @@ export async function POST(request: Request, { params: route }: { params: Promis
       const outcome = staffDialOutcome(params);
       if (outcome === "caller_gone") return twiml(emptyTwiml());
       if (outcome === "accepted") {
-        // The call happened either way, so a failed write only costs the record.
+        // The call happened either way, so a failed write only costs the record and its seconds toward the cap.
         await recordStaffAnsweredCall(domain, { businessId, providerCallId: params.CallSid ?? "", from: callerPhone(params.From), to: called, seconds: Number(params.DialCallDuration) || 0 }).catch((error: unknown) => console.error("[staff-first] couldn't record a staff-answered call", error instanceof Error ? error.message : error));
         return twiml(hangupTwiml());
       }

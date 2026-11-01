@@ -56,6 +56,11 @@ export const STAFF_ANSWERED_DISPOSITION = "answered_by_team";
 /** How long after a ring starts a second call from the caller counts as the same call: the ring, Twilio's buffer, and the carrier's forward. */
 const RING_SETTLE_SECONDS = 15;
 
+/** Bridged minutes a business gets in any 24 hours, whatever pays for it. Past this, calls go straight to the receptionist, so a staff phone can't carry unmetered traffic. */
+export const STAFF_BRIDGED_MINUTES_PER_DAY = 600;
+
+const DAY_MS = 24 * 60 * 60_000;
+
 /** Ties a ring's attempt to its caller, without a phone number in billing data. */
 function callerKey(businessId: string, from: string): string {
   return createHash("sha256").update(`${businessId}:${from}`).digest("hex").slice(0, 16);
@@ -78,6 +83,14 @@ async function callerIsRinging(context: DomainContext, input: { businessId: stri
   });
 }
 
+/** Whether the business used up its bridged minutes. Calls count once they end, so calls in progress can pass the cap by up to their own length. */
+async function bridgedCapReached(context: DomainContext, input: { businessId: string; now: Date }): Promise<boolean> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const [bridged] = await tx.select({ seconds: sql<number>`coalesce(sum(${calls.providerDurationSeconds}), 0)`.mapWith(Number) }).from(calls).where(and(eq(calls.businessId, input.businessId), eq(calls.provider, STAFF_ANSWERED_CALL_PROVIDER), gt(calls.startedAt, new Date(input.now.getTime() - DAY_MS))));
+    return (bridged?.seconds ?? 0) >= STAFF_BRIDGED_MINUTES_PER_DAY * 60;
+  });
+}
+
 export type StaffFirstDecision =
   // A blocked caller, or a number whose trial ended.
   | { action: "reject" }
@@ -90,7 +103,8 @@ export type StaffFirstDecision =
  * minutes as on any other call. Hours come from the snapshot, like the rest of
  * a call's setup, so a change reaches calls when the snapshot refreshes. Each
  * ring uses one transfer attempt, keyed on the carrier's call so a repeated
- * webhook doesn't use another, and with none left the receptionist answers.
+ * webhook doesn't use another. With none left, or past the bridged minutes,
+ * the receptionist answers.
  */
 export async function decideStaffFirstCall(context: DomainContext, input: { businessId: string; e164: string; providerCallId: string; from?: string | undefined; forwardedFrom?: string | undefined; now?: Date }): Promise<StaffFirstDecision> {
   const snapshot = await getCachedBusinessSnapshot(context, { businessId: input.businessId });
@@ -108,6 +122,7 @@ export async function decideStaffFirstCall(context: DomainContext, input: { busi
   // The last check before a number is dialed, as on a transfer: a trial can start after the staff phone was saved.
   if (!isTransferPhone(policy.number) || (trialPhone && policy.number !== trialPhone)) return { action: "receptionist", locale };
   const now = input.now ?? new Date();
+  if (await bridgedCapReached(context, { businessId: input.businessId, now })) return { action: "receptionist", locale };
   const caller = input.from ? callerKey(input.businessId, input.from) : undefined;
   const sourceKey = caller ? `staff_ring:${caller}:${input.providerCallId}` : `staff_ring:${input.providerCallId}`;
   if (caller && await callerIsRinging(context, { businessId: input.businessId, caller, sourceKey, ringSeconds: policy.ringSeconds, now })) return { action: "receptionist", locale };
@@ -131,9 +146,10 @@ export async function loadStaffFirstHandover(context: DomainContext, input: { bu
 
 /**
  * Records a call a staff member took, once the carrier reports it over. It
- * uses no plan minutes and no conversation: the receptionist wasn't on it. It
- * stays out of mediaStartedAt so it doesn't count as the receptionist's first
- * call. A repeated webhook finds the record and changes nothing.
+ * uses no plan minutes and no conversation: the receptionist wasn't on it. Its
+ * seconds count toward STAFF_BRIDGED_MINUTES_PER_DAY. It stays out of
+ * mediaStartedAt so it doesn't count as the receptionist's first call. A
+ * repeated webhook finds the record and changes nothing.
  */
 export async function recordStaffAnsweredCall(context: DomainContext, input: { businessId: string; providerCallId: string; from?: string | undefined; to: string; seconds: number; endedAt?: Date }): Promise<void> {
   const endedAt = input.endedAt ?? new Date();

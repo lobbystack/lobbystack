@@ -35,6 +35,9 @@ const PRESS_SECONDS = 6;
 const DIAL_TIMEOUT_BUFFER_SECONDS = 5;
 const DIAL_TIMEOUT_MIN_SECONDS = 5;
 
+/** The longest a staff-answered call runs. Twilio's default is four hours, and these calls use no plan minutes. */
+export const STAFF_CALL_LIMIT_SECONDS = 30 * 60;
+
 function respond(build: (response: Response) => void): string {
   const response = new twilio.twiml.VoiceResponse();
   build(response);
@@ -67,7 +70,7 @@ export function forwardTwiml(to: string): string {
 export function ringStaffTwiml(input: { staffPhone: string; ringSeconds: number; message?: string | undefined; locale: RuntimeLocale; actionUrl: string; promptUrl: string }): string {
   return respond((response) => {
     say(response, input.locale, input.message);
-    const dial = response.dial({ answerOnBridge: true, action: input.actionUrl, method: "POST", timeout: Math.max(DIAL_TIMEOUT_MIN_SECONDS, input.ringSeconds - DIAL_TIMEOUT_BUFFER_SECONDS) });
+    const dial = response.dial({ answerOnBridge: true, action: input.actionUrl, method: "POST", timeout: Math.max(DIAL_TIMEOUT_MIN_SECONDS, input.ringSeconds - DIAL_TIMEOUT_BUFFER_SECONDS), timeLimit: STAFF_CALL_LIMIT_SECONDS });
     dial.number({ url: input.promptUrl, method: "POST" }, input.staffPhone);
   });
 }
