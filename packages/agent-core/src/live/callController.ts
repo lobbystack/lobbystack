@@ -408,6 +408,8 @@ export class LiveCallController {
   // latest words started on the session timeline.
   private lastCallerAt = Number.NEGATIVE_INFINITY;
   private lastCallerStartMs = Number.NEGATIVE_INFINITY;
+  // When the caller's audio was last loud enough to be speech.
+  private lastCallerVoiceAt = Number.NEGATIVE_INFINITY;
   // The request the agent is answering now. Requests run one at a time.
   private answering: { offsetMs: number; revision: number } | undefined;
   private pendingHangup: PendingHangup | undefined;
@@ -488,16 +490,19 @@ export class LiveCallController {
       if (typeof event.delta === "string" && isVoice(event.delta)) this.heardSpeech(event.end_ms);
     });
     // OpenAI's server-controls guide: the sideband also receives the caller's
-    // audio as OpenAI received it, with no timeline position. The worker only
+    // audio as OpenAI received it, with no timeline position. The worker
     // measures it, to show whether audio reaches GPT-Live while the caller is
-    // silent.
+    // silent, and a hangup waits for loud audio, since it precedes the
+    // caller's transcript.
     untyped.on<{ audio?: unknown }>("session.input_audio.append", (event) => {
       if (typeof event.audio !== "string") return;
       const chunk = measurePcm(event.audio);
       this.inputAudio.chunks += 1;
       this.inputAudio.samples += chunk.samples;
       this.inputAudio.payloadBytes += event.audio.length;
-      if (chunk.voice) this.inputAudio.loudSamples += chunk.samples;
+      if (!chunk.voice) return;
+      this.inputAudio.loudSamples += chunk.samples;
+      this.lastCallerVoiceAt = performance.now();
     });
     // A keypad press reaches only the sideband, with no timeline position. It
     // counts as caller input, so the next request's agent sees it, unless it's
@@ -844,7 +849,7 @@ export class LiveCallController {
       setTimeout(() => this.hangUpWhenQuiet(hangup), GOODBYE_POLL_MS);
       return;
     }
-    const quietSince = Math.max(this.playbackEndsAt(), this.lastSpeechAt, this.lastCallerAt);
+    const quietSince = Math.max(this.playbackEndsAt(), this.lastSpeechAt, this.lastCallerAt, this.lastCallerVoiceAt);
     // The goodbye follows the result that ended the call, unless GPT-Live stays silent.
     const answeredAt = Math.max(this.lastAnswerSentAt ?? 0, hangup.requestedAt);
     const saidGoodbye = hangup.replied === true || this.lastSpeechAt >= answeredAt || now - answeredAt > GOODBYE_START_MS;
@@ -896,7 +901,12 @@ export class LiveCallController {
     const callerTurn = this.turns.at(lagging ? -3 : -2);
     const unanswered = () => !this.ending && !this.finished && !this.pendingHangup && !this.transfer && !this.passcode && this.runningDelegations === 0 && heard === this.lastCallerStartMs;
     if (!callerLeaving || !unanswered() || heard <= this.missedGoodbyeCheckedMs || callerTurn?.role !== "caller" || reply?.role !== "receptionist") return;
-    if (performance.now() - this.lastCallerAt < MISSED_GOODBYE_QUIET_MS) return;
+    // A timer can fire just before performance.now() reaches its delay.
+    const waitMs = this.lastCallerAt + MISSED_GOODBYE_QUIET_MS - performance.now();
+    if (waitMs > 0) {
+      this.missedGoodbyeTimer = setTimeout(() => this.checkMissedGoodbye(), waitMs);
+      return;
+    }
     // A question or a longer reply carries the conversation on.
     const text = reply.text.trim();
     if (text.endsWith("?") || text.split(/\s+/).length > MISSED_GOODBYE_MAX_WORDS) return;

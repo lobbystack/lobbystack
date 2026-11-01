@@ -742,6 +742,52 @@ describe("LiveCallController ending when the caller is done", () => {
       expect(endOnClose(socket, closed)).toBe("caller_finished");
     });
 
+    it("asks again when its timer fires just before the caller's quiet period ends", async () => {
+      fakeTimers();
+      const callerLeaving = vi.fn(async (_conversation: string, _abortSignal: AbortSignal) => true);
+      const { socket } = setup({ callerLeaving });
+      await vi.advanceTimersByTimeAsync(0);
+      // The clock reads ahead of the timer's start, as when Node starts a timer from its cached loop time.
+      const clock = performance.now.bind(performance);
+      const ahead = vi.spyOn(performance, "now").mockImplementation(() => clock() + 5);
+      missedGoodbye(socket);
+      ahead.mockRestore();
+      await vi.advanceTimersByTimeAsync(1_500);
+      expect(callerLeaving).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(5);
+      expect(callerLeaving).toHaveBeenCalledOnce();
+    });
+
+    it("holds the hangup while the caller's audio is loud, before their transcript arrives", async () => {
+      fakeTimers();
+      const callerLeaving = vi.fn(async (_conversation: string, _abortSignal: AbortSignal) => true);
+      const { socket, hangup } = setup({ callerLeaving });
+      await vi.advanceTimersByTimeAsync(0);
+      missedGoodbye(socket);
+      await vi.advanceTimersByTimeAsync(3_000);
+      socket.emit("session.input_audio.append", { audio: pcm(3_000) });
+      await vi.advanceTimersByTimeAsync(3_400);
+      expect(hangup).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(400);
+      expect(hangup).toHaveBeenCalledWith("live_1");
+    });
+
+    it("hangs up despite a noisy line once the longest wait passes", async () => {
+      fakeTimers();
+      const callerLeaving = vi.fn(async (_conversation: string, _abortSignal: AbortSignal) => true);
+      const { socket, hangup } = setup({ callerLeaving });
+      await vi.advanceTimersByTimeAsync(0);
+      missedGoodbye(socket);
+      for (let second = 0; second < 19; second += 1) {
+        socket.emit("session.input_audio.append", { audio: pcm(3_000) });
+        await vi.advanceTimersByTimeAsync(1_000);
+      }
+      expect(hangup).not.toHaveBeenCalled();
+      socket.emit("session.input_audio.append", { audio: pcm(3_000) });
+      await vi.advanceTimersByTimeAsync(3_000);
+      expect(hangup).toHaveBeenCalledWith("live_1");
+    });
+
     it("doesn't ask about words the caller said after the reply", async () => {
       fakeTimers();
       const callerLeaving = vi.fn(async (_conversation: string, _abortSignal: AbortSignal) => true);
