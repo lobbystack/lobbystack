@@ -104,6 +104,7 @@ export function ProductAnalytics({ children }: { children?: ReactNode }) {
   const telemetryRef = useRef<BrowserTelemetry | null>(null);
   const allowedRef = useRef(false);
   allowedRef.current = allowed;
+  const deadClicksOnRef = useRef(false);
   // The SDK initializes opted out, so no event is collected before the tenant
   // and route checks below grant consent.
   if (!telemetryRef.current) telemetryRef.current = createBrowserTelemetry(hostPage ? posthog : undefined, { optedOut: true });
@@ -117,6 +118,10 @@ export function ProductAnalytics({ children }: { children?: ReactNode }) {
       // An anonymous id, such as one carried over from lobbystack.com, stays
       // through signup so identify() can merge the landing visit.
       if (sensitive && posthog.get_property("$user_state") === "identified") telemetry.reset();
+      if (deadClicksOnRef.current) {
+        deadClicksOnRef.current = false;
+        posthog.set_config({ capture_dead_clicks: false });
+      }
       telemetry.setOptOut(true);
       telemetry.setSensitiveRoute(sensitive);
       if (!sensitive && tenantId && consent?.telemetryEnabled === false) {
@@ -131,6 +136,10 @@ export function ProductAnalytics({ children }: { children?: ReactNode }) {
       return;
     }
     telemetry.setDeploymentMode(deploymentMode);
+    if (!deadClicksOnRef.current) {
+      deadClicksOnRef.current = true;
+      posthog.set_config({ capture_dead_clicks: true });
+    }
     // Granting consent captures the current page as a pageview; later
     // navigations are captured by capture_pageview: history_change.
     telemetry.setOptOut(false);

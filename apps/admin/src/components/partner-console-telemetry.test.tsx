@@ -26,6 +26,7 @@ const mocks = vi.hoisted(() => ({
     opt_in_capturing: vi.fn(),
     opt_out_capturing: vi.fn(),
     startSessionRecording: vi.fn(),
+    set_config: vi.fn(),
     stopSessionRecording: vi.fn(),
   },
 }));

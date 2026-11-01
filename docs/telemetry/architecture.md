@@ -40,6 +40,10 @@ The landing page records sessions after cookie consent. The admin dashboard reco
 
 Masking happens in the browser, because PostHog privacy controls run before data leaves the page and `before_send` cannot redact recorded payloads. Mask caller and contact text with the `ph-mask` class and block whole elements with `ph-no-capture` when an attribute carries personal data, such as the signed URL of a call recording or a contact's `title` tooltip. Secrets shown once, such as a new API key, platform key or webhook signing secret, render through `SecretReveal`, which marks its value `ph-no-capture`. Both classes are honored by the SDK defaults.
 
+Dead-click capture starts with the same consent, on both surfaces, from code bundled with the recorder. `$dead_click` events describe the clicked element, so the dashboard sets `mask_all_text` and `mask_all_element_attributes` to keep customer text out of them. Those two settings don't change replays.
+
+PostHog's Replay Vision skips recordings under 15 seconds or with under 10 seconds of activity, and marks them `ineligible`. It can't be configured. Watch those recordings in the player. The query in `kpi-spec.md` lists them.
+
 Client analytics posts to the PostHog managed reverse proxy (`NEXT_PUBLIC_POSTHOG_HOST`), and the SDK `defaults` value is pinned to `2026-05-30` so later defaults tiers cannot silently enable session-replay network body capture.
 
 ## Collection

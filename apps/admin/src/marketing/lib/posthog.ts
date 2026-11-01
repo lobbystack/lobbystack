@@ -50,8 +50,9 @@ const anonymousConfig = {
 } as const
 
 /**
- * Everything the visitor agreed to once they accept. Recording stays off here
- * and `startRecording` turns it on once our bundled recorder has loaded.
+ * Everything the visitor agreed to once they accept. Recording and dead clicks
+ * stay off here, and `startRecording` turns them on once our bundled code has
+ * loaded.
  */
 const consentedConfig = {
   autocapture: true,
@@ -80,7 +81,9 @@ const startRecording = () => {
 
   import("@/marketing/lib/session-recorder")
     .then(() => {
-      if (isRecordingWanted) posthog.startSessionRecording()
+      if (!isRecordingWanted) return
+      posthog.set_config({ capture_dead_clicks: true })
+      posthog.startSessionRecording()
     })
     .catch(() => {})
 }

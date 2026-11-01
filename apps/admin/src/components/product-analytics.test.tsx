@@ -29,6 +29,7 @@ const mocks = vi.hoisted(() => ({
     reset: vi.fn(),
     opt_in_capturing: vi.fn(),
     opt_out_capturing: vi.fn(),
+    set_config: vi.fn(),
     startSessionRecording: vi.fn(),
     stopSessionRecording: vi.fn(),
   },
@@ -99,6 +100,21 @@ describe("workspace telemetry preference", () => {
     expect(mocks.posthog.group).toHaveBeenCalledWith("business", "business:business");
     expect(mocks.posthog.startSessionRecording).toHaveBeenCalled();
     expect(mocks.posthog.stopSessionRecording).not.toHaveBeenCalled();
+  });
+
+  it("starts dead-click capture with consent, before opting in", async () => {
+    setup(true);
+    await waitFor(() => expect(mocks.posthog.opt_in_capturing).toHaveBeenCalled());
+    expect(mocks.posthog.set_config).toHaveBeenCalledTimes(1);
+    expect(mocks.posthog.set_config).toHaveBeenCalledWith({ capture_dead_clicks: true });
+    expect(mocks.posthog.set_config.mock.invocationCallOrder[0]).toBeLessThan(mocks.posthog.opt_in_capturing.mock.invocationCallOrder[0]!);
+  });
+
+  it("never starts dead-click capture when the business has telemetry off", async () => {
+    setup(false);
+    await act(async () => { await Promise.resolve(); });
+    expect(mocks.posthog.opt_in_capturing).not.toHaveBeenCalled();
+    expect(mocks.posthog.set_config).not.toHaveBeenCalled();
   });
 
   it("stops capturing and recording when the tenant is switched off", async () => {
