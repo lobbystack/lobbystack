@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type SubmitEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { KeyRound, TriangleAlert } from "lucide-react";
+import { Check, KeyRound, TriangleAlert, X } from "lucide-react";
 
 import { ReplacementOnboardingShell } from "@/components/replacement-onboarding-shell";
 import { Button } from "@/components/ui/button";
@@ -392,7 +392,7 @@ export function AuthCard({ mode, google = false, passkey = false, partner }: { m
               <div className="flex items-center justify-between gap-3"><FieldLabel htmlFor="auth-password">{login ? t("login.password") : t("signup.password")}</FieldLabel>{login ? <Link className="text-xs font-medium text-muted-foreground hover:text-foreground" href={forgotPasswordPath}>{t("login.forgotPassword")}</Link> : null}</div>
               <Input aria-describedby={passwordError ? "auth-password-error" : passwordInvalid ? "auth-password-criteria" : undefined} aria-invalid={passwordInvalid ? true : undefined} autoComplete={login ? "current-password" : "new-password"} className={cn("h-11", passwordInvalid && invalidInputClassName)} id="auth-password" minLength={8} onChange={(event) => setPassword(event.target.value)} onFocus={() => setHasFocusedPassword(true)} ref={passwordInputRef} required type="password" value={password} />
               {passwordError ? <FieldError className="flex items-center gap-2 font-medium" id="auth-password-error"><TriangleAlert className="size-4 shrink-0" aria-hidden="true" /><span>{t(`${login ? "login" : "signup"}.${passwordError}`)}</span></FieldError> : null}
-              {!login && hasFocusedPassword ? <ul aria-live="polite" className="flex flex-col gap-1 pt-0.5 text-sm font-medium" id="auth-password-criteria">{passwordCriteria.map((criterion) => <li className={cn("flex items-center gap-2", criterion.isMet ? "text-emerald-700" : passwordInvalid ? "text-destructive" : "text-muted-foreground")} key={criterion.label}><span aria-hidden="true" className="w-3 text-center">{criterion.isMet ? "✓" : "×"}</span><span>{criterion.label}</span></li>)}</ul> : null}
+              {!login && hasFocusedPassword ? <ul aria-live="polite" className="flex flex-col gap-1 pt-0.5 text-sm font-medium" id="auth-password-criteria">{passwordCriteria.map((criterion) => <li className={cn("flex items-center gap-2", criterion.isMet ? "text-emerald-700 dark:text-emerald-400" : passwordInvalid ? "text-destructive" : "text-muted-foreground")} key={criterion.label}>{criterion.isMet ? <Check className="size-4 shrink-0" aria-hidden="true" /> : <X className="size-4 shrink-0" aria-hidden="true" />}<span>{criterion.label}</span></li>)}</ul> : null}
             </Field>
             {error ? <div className="flex flex-col gap-2 -mt-1"><FieldError>{error}</FieldError></div> : null}
             <Button className="mt-2 h-11 w-full" loading={loading} loadingLabel={login ? t("login.submitting") : t("signup.submitting")} type="submit">{login ? t("login.submit") : t("signup.submit")}</Button>

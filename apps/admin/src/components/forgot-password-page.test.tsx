@@ -1,13 +1,14 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ForgotPasswordPage from "../../app/(public)/[locale]/forgot-password/page";
 
 const router = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock("@/components/replacement-onboarding-shell", () => ({ ReplacementOnboardingShell: ({ children }: { children: React.ReactNode }) => <main>{children}</main> }));
+beforeEach(() => { Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => null }); vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} unobserve() {} }); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
 async function requestCode() {
@@ -32,10 +33,12 @@ describe("password recovery", () => {
     await userEvent.type(screen.getByLabelText("forgotPassword.email"), "example.test");
     await userEvent.click(screen.getByRole("button", { name: "forgotPassword.submit" }));
     await screen.findByLabelText("forgotPassword.code");
+    // The first render of the code step must not carry the email step's send attempt.
+    expect(document.querySelector("[aria-invalid=true]")).toBeNull();
     expect(screen.queryByText("forgotPassword.codeRequired")).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "forgotPassword.verifySubmit" }));
     expect(screen.getByText("forgotPassword.codeRequired")).toBeTruthy();
-    await userEvent.type(screen.getByLabelText("forgotPassword.code"), "12345678");
+    await userEvent.type(screen.getByLabelText("forgotPassword.code"), "123456");
     await userEvent.click(screen.getByRole("button", { name: "forgotPassword.verifySubmit" }));
     expect(screen.getByText("forgotPassword.passwordRequired")).toBeTruthy();
     await userEvent.type(screen.getByLabelText("forgotPassword.newPassword"), "short");
