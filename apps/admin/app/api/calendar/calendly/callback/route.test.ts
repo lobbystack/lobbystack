@@ -11,7 +11,7 @@ vi.mock("@/lib/api-helpers", () => ({
 vi.mock("@/lib/domain-context", () => ({ createDomainContext: () => ({}) }));
 vi.mock("@/lib/google-calendar-oauth-store", () => ({ consumeCalendarOAuthState: mocks.consume }));
 vi.mock("@/lib/google-calendar-oauth-limit", () => ({ enforceCalendarOAuthRateLimits: mocks.rate }));
-import { calendarOAuthCodeVerifier, createCalendarOAuthState } from "@/lib/google-calendar-oauth";
+import { calendarPkceVerifier, createCalendarOAuthState } from "@/lib/google-calendar-oauth";
 import { GET } from "./route";
 
 beforeEach(() => {
@@ -47,7 +47,7 @@ it("connects the Calendly account with encrypted tokens and lands on the integra
   const response = await GET(callback(state));
   expect(response.headers.get("location")).toBe("https://app.example.test/integrations?calendar=calendly&status=success");
   expect(mocks.consume).toHaveBeenCalledWith(state, "user-1", "business", "calendly");
-  expect(mocks.exchange).toHaveBeenCalledWith("code", calendarOAuthCodeVerifier(state));
+  expect(mocks.exchange).toHaveBeenCalledWith("code", calendarPkceVerifier(state));
   expect(mocks.connect).toHaveBeenCalledWith({}, expect.objectContaining({ userId: "user-1", businessId: "business", provider: "calendly", externalAccountId: "1234", encryptedAccessToken: "encrypted:token", encryptedRefreshToken: "encrypted:refresh" }));
   expect(mocks.switchWorkspace).toHaveBeenCalledWith({}, { userId: "user-1", businessId: "business", brand: { kind: "host" } });
 });

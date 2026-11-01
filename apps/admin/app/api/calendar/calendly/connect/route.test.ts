@@ -8,7 +8,7 @@ vi.mock("@/lib/api-helpers", () => ({
 }));
 vi.mock("@/lib/operator-request", () => ({ requireOperator: mocks.operator }));
 vi.mock("@/lib/calendar-providers", () => ({ calendlyCalendarProvider: () => ({ buildAuthorizationUrl: ({ state }: { state: string }) => `https://auth.calendly.test/oauth/authorize?state=${state}` }) }));
-vi.mock("@/lib/google-calendar-oauth", () => ({ calendarOAuthCodeVerifier: () => "verifier", createCalendarOAuthState: mocks.state, verifyCalendarConnectLinkToken: mocks.verifyLink }));
+vi.mock("@/lib/google-calendar-oauth", () => ({ calendarPkceVerifier: () => "verifier", createCalendarOAuthState: mocks.state, verifyCalendarConnectLinkToken: mocks.verifyLink }));
 vi.mock("@/lib/google-calendar-oauth-store", () => ({ storeCalendarOAuthState: mocks.store }));
 vi.mock("@/lib/google-calendar-oauth-limit", () => ({ enforceCalendarOAuthRateLimits: mocks.rate }));
 vi.mock("@/lib/trusted-client-ip", () => ({ trustedClientIp: () => "203.0.113.10" }));

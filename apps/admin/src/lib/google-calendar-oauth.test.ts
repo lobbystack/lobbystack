@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CALENDAR_CONNECT_LINK_LIFETIME_MS, calendarOAuthCodeVerifier, createCalendarConnectLink, createCalendarOAuthState, verifyCalendarConnectLinkToken, verifyCalendarOAuthState } from "./google-calendar-oauth";
+import { CALENDAR_CONNECT_LINK_LIFETIME_MS, calendarOAuthStateDigest, calendarPkceVerifier, createCalendarConnectLink, createCalendarOAuthState, verifyCalendarConnectLinkToken, verifyCalendarOAuthState } from "./google-calendar-oauth";
 import { signOAuthPayload } from "./signed-oauth-state";
 
 afterEach(() => {
@@ -28,12 +28,13 @@ describe("Google Calendar OAuth state", () => {
 
   it("derives a PKCE verifier for a state that only the signing secret can reproduce", () => {
     vi.stubEnv("BETTER_AUTH_SECRET", "pkce-secret");
-    const verifier = calendarOAuthCodeVerifier("state");
+    const verifier = calendarPkceVerifier("state");
     expect(verifier).toMatch(/^[A-Za-z0-9_-]{43,128}$/);
-    expect(calendarOAuthCodeVerifier("state")).toBe(verifier);
-    expect(calendarOAuthCodeVerifier("other")).not.toBe(verifier);
+    expect(calendarPkceVerifier("state")).toBe(verifier);
+    expect(calendarPkceVerifier("other")).not.toBe(verifier);
+    expect(calendarOAuthStateDigest("state", "calendly")).not.toBe(verifier);
     vi.stubEnv("BETTER_AUTH_SECRET", "another-secret");
-    expect(calendarOAuthCodeVerifier("state")).not.toBe(verifier);
+    expect(calendarPkceVerifier("state")).not.toBe(verifier);
   });
 
   it("signs a Calendly state apart from Google's and Cal.com's", () => {

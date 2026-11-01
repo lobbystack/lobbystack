@@ -11,4 +11,4 @@ Sada možete da povežete Calendly u delu **Integracije**. Izaberite tip događa
 
 Izmene u Calendly vraćaju se u LobbyStack. Ako tamo otkažete rezervaciju, LobbyStack otkazuje termin. Ako je pomerite, LobbyStack pomera termin i podsetnik. U oba slučaja dobijate obaveštenje, a pozivaocu sami javljate novo vreme.
 
-Calendly traži plaćeni paket, Standard ili viši, i ograničava rezervacije iz drugih aplikacija na 100 dnevno po korisniku ispod paketa Enterprise. Dobija ime pozivaoca i zamensku adresu, pa mu ne šalje imejlove. Da biste povezali nalog, počnite od [vodiča za Calendly](https://docs.lobbystack.com/integrations/calendly).
+Calendly traži plaćeni paket, Standard ili viši, i ograničava rezervacije iz drugih aplikacija na 100 dnevno po korisniku ispod paketa Enterprise. Dobija ime pozivaoca i zamensku adresu, pa mu ne šalje imejlove. Da biste povezali nalog, počnite od [vodiča za integracije](https://docs.lobbystack.com/integrations/overview).

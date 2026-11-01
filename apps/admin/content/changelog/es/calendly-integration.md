@@ -11,4 +11,4 @@ Ya puede conectar Calendly desde **Integraciones**. Elija un tipo de evento y ca
 
 Los cambios que haga en Calendly vuelven a LobbyStack. Si cancela una reserva allí, LobbyStack cancela la cita. Si mueve una, LobbyStack mueve la cita y su recordatorio. Recibe una alerta en ambos casos, y usted comunica la nueva hora a quien llama.
 
-Calendly exige un plan de pago, Standard o superior, y limita las reservas de otras aplicaciones a 100 por día por usuario por debajo de Enterprise. Recibe el nombre de quien llama y una dirección sustituta, así que no le escribe. Para conectar su cuenta, empiece por la [guía de Calendly](https://docs.lobbystack.com/es/integrations/calendly).
+Calendly exige un plan de pago, Standard o superior, y limita las reservas de otras aplicaciones a 100 por día por usuario por debajo de Enterprise. Recibe el nombre de quien llama y una dirección sustituta, así que no le escribe. Para conectar su cuenta, empiece por la [guía de integraciones](https://docs.lobbystack.com/es/integrations/overview).

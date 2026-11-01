@@ -11,4 +11,4 @@ Vous pouvez maintenant connecter Calendly depuis **Intégrations**. Choisissez u
 
 Les changements faits dans Calendly reviennent dans LobbyStack. Si vous y annulez une réservation, LobbyStack annule le rendez-vous. Si vous en déplacez une, LobbyStack déplace le rendez-vous et son rappel. Vous recevez une alerte dans les deux cas, et vous annoncez la nouvelle heure à l'appelant.
 
-Calendly exige un forfait payant, Standard ou supérieur, et limite les réservations d'autres applications à 100 par jour par utilisateur sous Enterprise. Il reçoit le nom de l'appelant et une adresse de remplacement, et ne lui écrit donc pas. Pour connecter votre compte, commencez par le [guide Calendly](https://docs.lobbystack.com/fr/integrations/calendly).
+Calendly exige un forfait payant, Standard ou supérieur, et limite les réservations d'autres applications à 100 par jour par utilisateur sous Enterprise. Il reçoit le nom de l'appelant et une adresse de remplacement, et ne lui écrit donc pas. Pour connecter votre compte, commencez par le [guide des intégrations](https://docs.lobbystack.com/fr/integrations/overview).

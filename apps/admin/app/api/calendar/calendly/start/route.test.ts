@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
-vi.mock("@/lib/google-calendar-oauth", () => ({ createCalendarOAuthState: mocks.state, calendarOAuthCodeVerifier: (state: string) => `verifier-of-${state}` }));
+vi.mock("@/lib/google-calendar-oauth", () => ({ createCalendarOAuthState: mocks.state, calendarPkceVerifier: (state: string) => `verifier-of-${state}` }));
 vi.mock("@lobbystack/providers", () => ({ calendlyCodeChallenge: (verifier: string) => `challenge-of-${verifier}` }));
 vi.mock("@/lib/calendar-providers", () => ({
   calendlyCalendarProvider: () => ({ buildAuthorizationUrl: ({ state, codeChallenge }: { state: string; codeChallenge: string }) => `https://auth.calendly.test/oauth/authorize?state=${state}&code_challenge=${codeChallenge}` }),

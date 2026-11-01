@@ -1,4 +1,4 @@
-import { createHmac, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 
 import { oauthSigningSecret, oauthStartOriginValid, oauthStateDigest, oauthPayloadCurrent, signOAuthPayload, verifyOAuthPayload } from "./signed-oauth-state";
 
@@ -34,10 +34,8 @@ function signingDomain(provider: CalendarOAuthProvider): string {
  * The PKCE code verifier for a state. It's derived with the signing secret, so
  * it never leaves the server and needs no storing, and a state works once.
  */
-export function calendarOAuthCodeVerifier(state: string): string {
-  const secret = oauthSigningSecret();
-  if (!secret) throw new Error(UNCONFIGURED);
-  return createHmac("sha256", secret).update(`calendar-pkce:${state}`).digest("base64url");
+export function calendarPkceVerifier(state: string): string {
+  return oauthStateDigest("calendar-pkce", state, UNCONFIGURED);
 }
 
 // Each kind signs under its own domain, so an OAuth state never passes as a link, or a link as a state.

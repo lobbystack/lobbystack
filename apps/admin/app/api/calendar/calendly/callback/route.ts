@@ -6,7 +6,7 @@ import { assertCertificationRecipient } from "@lobbystack/shared";
 import { asApiResponse, jsonError, requireApiSession } from "@/lib/api-helpers";
 import { calendlyCalendarProvider } from "@/lib/calendar-providers";
 import { createDomainContext } from "@/lib/domain-context";
-import { calendarOAuthCodeVerifier, verifyCalendarOAuthState } from "@/lib/google-calendar-oauth";
+import { calendarPkceVerifier, verifyCalendarOAuthState } from "@/lib/google-calendar-oauth";
 import { enforceCalendarOAuthRateLimits } from "@/lib/google-calendar-oauth-limit";
 import { consumeCalendarOAuthState } from "@/lib/google-calendar-oauth-store";
 import { routeOAuthCallback } from "@/lib/oauth-callback-host";
@@ -53,7 +53,7 @@ export async function GET(request: Request) {
     const encryptionKey = process.env.ENCRYPTION_KEY;
     if (!encryptionKey) throw new Error("Calendar token encryption is not configured.");
     const provider = calendlyCalendarProvider();
-    const tokens = await provider.exchangeCode(code, calendarOAuthCodeVerifier(state));
+    const tokens = await provider.exchangeCode(code, calendarPkceVerifier(state));
     const account = await provider.getAccount({ accessToken: tokens.accessToken });
     assertCertificationRecipient("email", account.email ?? "");
     // Connecting queues a sync, which registers the booking webhook with the stored token. A Free account connects

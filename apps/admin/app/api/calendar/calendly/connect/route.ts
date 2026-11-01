@@ -4,7 +4,7 @@ import { calendlyCodeChallenge } from "@lobbystack/providers";
 import { asApiResponse } from "@/lib/api-helpers";
 import { buildAuthPathWithReturnTo } from "@/lib/auth-return-to";
 import { calendlyCalendarProvider } from "@/lib/calendar-providers";
-import { calendarOAuthCodeVerifier, createCalendarOAuthState, verifyCalendarConnectLinkToken } from "@/lib/google-calendar-oauth";
+import { calendarPkceVerifier, createCalendarOAuthState, verifyCalendarConnectLinkToken } from "@/lib/google-calendar-oauth";
 import { enforceCalendarOAuthRateLimits } from "@/lib/google-calendar-oauth-limit";
 import { storeCalendarOAuthState } from "@/lib/google-calendar-oauth-store";
 import { requireOperator } from "@/lib/operator-request";
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
     if (!rate.allowed) return failed();
     const state = createCalendarOAuthState({ ...operator, origin: partnerRequestOrigin(request.headers), provider: "calendly" });
     await storeCalendarOAuthState(state, "calendly");
-    return NextResponse.redirect(calendlyCalendarProvider().buildAuthorizationUrl({ state, codeChallenge: calendlyCodeChallenge(calendarOAuthCodeVerifier(state)) }));
+    return NextResponse.redirect(calendlyCalendarProvider().buildAuthorizationUrl({ state, codeChallenge: calendlyCodeChallenge(calendarPkceVerifier(state)) }));
   } catch (error) {
     // Reports unexpected failures, as the callback does.
     return failed(asApiResponse(error).status === 403 ? "not_admin" : "error");

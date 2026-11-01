@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { calendlyCodeChallenge } from "@lobbystack/providers";
 import { jsonError } from "@/lib/api-helpers";
 import { calendlyCalendarProvider } from "@/lib/calendar-providers";
-import { calendarOAuthCodeVerifier, createCalendarOAuthState } from "@/lib/google-calendar-oauth";
+import { calendarPkceVerifier, createCalendarOAuthState } from "@/lib/google-calendar-oauth";
 import { enforceCalendarOAuthRateLimits } from "@/lib/google-calendar-oauth-limit";
 import { storeCalendarOAuthState } from "@/lib/google-calendar-oauth-store";
 import { operatorRoute } from "@/lib/operator-request";
@@ -24,5 +24,5 @@ export const GET = operatorRoute(async ({ request, userId, businessId, transacti
   // Calendly returns to the host's domain, which hands the callback back to a partner's host it started on.
   const state = createCalendarOAuthState({ userId, businessId, origin: partnerRequestOrigin(request.headers), provider: "calendly" });
   await storeCalendarOAuthState(state, "calendly");
-  return NextResponse.json({ url: calendlyCalendarProvider().buildAuthorizationUrl({ state, codeChallenge: calendlyCodeChallenge(calendarOAuthCodeVerifier(state)) }) });
+  return NextResponse.json({ url: calendlyCalendarProvider().buildAuthorizationUrl({ state, codeChallenge: calendlyCodeChallenge(calendarPkceVerifier(state)) }) });
 });
