@@ -427,6 +427,12 @@
       "comparison": "frozen-main"
     },
     {
+      "path": "/onboarding/goal",
+      "fixtureState": "onboarding",
+      "state": "default",
+      "comparison": "port-baseline"
+    },
+    {
       "path": "/onboarding/attribution",
       "fixtureState": "onboarding",
       "state": "default",
