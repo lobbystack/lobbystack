@@ -11,6 +11,7 @@ import { findOrCreateContactByPhone } from "./contacts";
 import { buildConversationSessionSummary, extractCallerContext, normalizeCallSummaryLocale, sanitizeGeneratedCallerName, type CallSummaryLocale, type ConversationTranscriptTurn, type GeneratedCallSummary } from "./conversationSummary";
 import type { DomainContext } from "./context";
 import { queueOperatorAlertInTransaction, type OperatorNotificationEventKey } from "./notifications";
+import { recordFirstRealChatInTransaction } from "./firstRealConversation";
 import { recordProductEventBestEffort } from "./productEvents";
 import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
 import { smsReplyBlockedInTransaction } from "./sms";
@@ -176,6 +177,7 @@ export async function insertMessageInTransaction(tx: DatabaseTransaction, input:
       payload: { messageId: message.id },
     });
   }
+  if (input.direction === "outbound") await recordFirstRealChatInTransaction(tx, input);
   return message.id;
 }
 

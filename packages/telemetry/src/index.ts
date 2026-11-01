@@ -47,6 +47,7 @@ export const WEB_EVENT_NAMES = [
   "web.onboarding.number_claim_completed",
   "web.onboarding.plan_selected",
   "web.onboarding.plan_checkout_started",
+  "web.onboarding.goal_submitted",
   "web.onboarding.attribution_submitted",
   "web.knowledge.upload_started",
   "web.knowledge.upload_completed",
@@ -84,6 +85,7 @@ export const SMS_EVENT_NAMES = [
   "sms.delivery_accepted",
   "sms.delivery_failed",
   "sms.provider_cost_recorded",
+  "conversation.first_real_recorded",
   "conversation.automation_paused",
   "conversation.team_requested",
   "conversation.team_joined",
@@ -317,6 +319,7 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.onboarding.plan_selected": ["businessId", "deploymentMode", "plan"],
   "web.onboarding.plan_checkout_started": ["businessId", "deploymentMode", "plan"],
   "web.onboarding.plan_checkout_completed": ["businessId", "deploymentMode", "plan"],
+  "web.onboarding.goal_submitted": ["businessId", "deploymentMode", "goal"],
   "web.onboarding.attribution_submitted": ["businessId", "deploymentMode", "source"],
   "web.knowledge.upload_started": [
     "businessId",
@@ -475,6 +478,8 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "channel",
     "provider",
   ],
+  // channel: voice, web_voice, web_chat, instagram or sms. Once per business.
+  "conversation.first_real_recorded": ["businessId", "deploymentMode", "channel", "conversationId"],
   "conversation.automation_paused": [
     "businessId",
     "deploymentMode",
@@ -879,6 +884,11 @@ export function bucketOutboxBacklog(backlog: number): string {
 
 export function getPostHogDistinctIdForBusinessSystem(businessId: string): string {
   return `system:business:${businessId}`;
+}
+
+/** The id `ProductAnalytics` identifies an operator with, so server events can join their person. */
+export function getPostHogDistinctIdForUser(userId: string): string {
+  return `user:${userId}`;
 }
 
 export function getPostHogBusinessGroupKey(businessId: string): string {

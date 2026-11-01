@@ -171,6 +171,7 @@ export const businesses = pgTable(
     websiteUrl: text("website_url"),
     onboardingStage: varchar("onboarding_stage", { length: 64 }).default("create_business").notNull(),
     onboardingAttribution: varchar("onboarding_attribution", { length: 120 }),
+    onboardingGoal: varchar("onboarding_goal", { length: 32 }).$type<"answer_calls" | "book_appointments" | "answer_website_visitors" | "answer_instagram_messages">(),
     setupGuideSkippedSteps: jsonb("setup_guide_skipped_steps").$type<string[]>().default([]).notNull(),
     phoneNumberReplacementReservedAt: timestamp("phone_number_replacement_reserved_at", { withTimezone: true }),
     phoneNumberReplacementUsedAt: timestamp("phone_number_replacement_used_at", { withTimezone: true }),
@@ -1080,6 +1081,15 @@ export const knowledgeSnippets = pgTable(
   },
   (table) => [index("knowledge_snippets_business_active_idx").on(table.businessId, table.active)],
 );
+
+// The first real conversation of each business. One row per business makes its
+// event fire once, and it outlives the calls and messages content retention deletes.
+export const firstRealConversations = pgTable("first_real_conversations", {
+  businessId: uuid("business_id").primaryKey().references(() => businesses.id, { onDelete: "cascade" }),
+  channel: varchar("channel", { length: 32 }).notNull(),
+  conversationId: uuid("conversation_id").references(() => conversations.id, { onDelete: "set null" }),
+  occurredAt: timestamp("occurred_at", { withTimezone: true }).defaultNow().notNull(),
+});
 
 // Questions the receptionist found no knowledge for (migration 0168). The same
 // normalized question counts again on its open or dismissed row.

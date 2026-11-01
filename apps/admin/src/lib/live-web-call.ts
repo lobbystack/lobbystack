@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 
 import { widgetKeys, withBusinessTransaction } from "@lobbystack/db";
 import { bearerToken, businessShowsOnBrand } from "@lobbystack/domain";
-import { DASHBOARD_TEST_CALL_WIDGET_ID, PROSPECT_DEMO_WIDGET_ID } from "@lobbystack/shared";
+import { DASHBOARD_TEST_CALL_WIDGET_ID, PROSPECT_DEMO_WIDGET_ID, WIDGET_VOICE_ID } from "@lobbystack/shared";
 
 import { getWorkerDatabase } from "./api-helpers";
 import { requireOperator } from "./operator-request";
@@ -61,7 +61,6 @@ export type LiveWebCallAccess = {
 
 export type LiveWebCallDenied = { status: number; code: string };
 
-const WIDGET_VOICE_ID = "lobbystack-widget";
 
 export const LIVE_WEB_CALL_WIDGET_IDS = [DASHBOARD_TEST_CALL_WIDGET_ID, PROSPECT_DEMO_WIDGET_ID, WIDGET_VOICE_ID, "lobbystack-landing"] as const;
 

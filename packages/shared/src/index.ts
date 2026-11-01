@@ -543,6 +543,6 @@ export { isTransferCountry, isTransferPhone, TRANSFER_COUNTRY_CALLING_CODES, typ
 export { OPERATOR_SMS_ACCEPTED_DISCLOSURE_VERSIONS, OPERATOR_SMS_DISCLOSURE_TEXT, OPERATOR_SMS_DISCLOSURE_VERSION } from "./operatorSmsConsent";
 export { canTextNumber, permanentSmsErrorCode } from "./smsReach";
 
-export { DASHBOARD_TEST_CALL_WIDGET_ID, PROSPECT_DEMO_WIDGET_ID } from "./testCall";
+export { DASHBOARD_TEST_CALL_WIDGET_ID, PROSPECT_DEMO_WIDGET_ID, WIDGET_VOICE_ID } from "./testCall";
 
 export * from "./publicApi";

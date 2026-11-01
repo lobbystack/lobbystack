@@ -21,6 +21,7 @@ export * from "./contactPasscodes";
 export * from "./contactSmsConsent";
 export * from "./context";
 export * from "./conversations";
+export * from "./firstRealConversation";
 export * from "./instagram";
 export * from "./demos";
 export { effectiveBillingPlan, loadEntitlement } from "./entitlement";

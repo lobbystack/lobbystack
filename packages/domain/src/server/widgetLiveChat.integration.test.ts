@@ -102,7 +102,7 @@ async function seedChat(tx: DatabaseTransaction) {
       return await tx.select({ eventKind: operatorNotificationDeliveries.eventKind, channel: operatorNotificationDeliveries.channel, destination: operatorNotificationDeliveries.destination, subject: operatorNotificationDeliveries.subject, body: operatorNotificationDeliveries.body }).from(operatorNotificationDeliveries).where(eq(operatorNotificationDeliveries.businessId, businessId));
     },
     async events() {
-      return (await tx.select({ name: productEvents.name }).from(productEvents).where(eq(productEvents.businessId, businessId))).map((row) => row.name).sort();
+      return (await tx.select({ name: productEvents.name }).from(productEvents).where(eq(productEvents.businessId, businessId))).map((row) => row.name).filter((name) => name !== "conversation.first_real_recorded").sort();
     },
     async messageRows() {
       return await tx.select({ body: messages.body, aiGenerated: messages.aiGenerated, sentByUserId: messages.sentByUserId }).from(messages).where(eq(messages.conversationId, conversationId));

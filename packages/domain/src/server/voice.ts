@@ -16,6 +16,7 @@ import { visibleFollowUpBody, visibleFollowUpMetadata, visibleFollowUpTitle } fr
 import { recordCallOutcomeInTransaction, resolveCallOutcome } from "./callOutcome";
 import { buildCallEvents } from "./callEvents";
 import { recordingListState, recordingState, type RecordingState } from "./recordingState";
+import { recordFirstRealCallInTransaction } from "./firstRealConversation";
 import { recordProductEventBestEffort } from "./productEvents";
 import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
 
@@ -258,7 +259,7 @@ export async function completeCall(
       // Recovery re-validates the provider binding inside the finalizing write,
       // so a bind that lands after the read cannot have its reservation released.
       input.expectedProviderCallId !== undefined ? eq(calls.providerCallId, input.expectedProviderCallId) : undefined,
-    )).returning({ id: calls.id, revision: calls.revision, transport: calls.transport, provider: calls.provider, startedAt: calls.startedAt, billingExcluded: calls.billingExcluded, disposition: calls.disposition });
+    )).returning({ id: calls.id, revision: calls.revision, transport: calls.transport, provider: calls.provider, startedAt: calls.startedAt, billingExcluded: calls.billingExcluded, disposition: calls.disposition, conversationId: calls.conversationId, contactId: calls.contactId, widgetId: calls.widgetId, prospectDemoId: calls.prospectDemoId, mediaStartedAt: calls.mediaStartedAt });
     if (!call) {
       return null;
     }
@@ -295,6 +296,7 @@ export async function completeCall(
     });
     for (const message of input.outbox ?? []) await enqueueOutbox(tx, message);
     if (input.costEvent) await recordUnitEconomicsEventInTransaction(tx, input.costEvent);
+    await recordFirstRealCallInTransaction(tx, { businessId: input.businessId, call: { ...call, status: input.status } });
     // The short-call exemption, as opposed to spam or a non-billable call: the
     // business pays nothing, but the provider may still bill us.
     const shortCallWaived = durationSeconds === 0 && !isNonBillableCallDisposition(call.disposition) && ((input.providerDurationSeconds ?? 0) > 0 || measuredSeconds > 0);

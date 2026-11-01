@@ -7,6 +7,7 @@ import {
   getTelemetryRequiredProperties,
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForBusinessSystem,
+  getPostHogDistinctIdForUser,
   percentileMs,
   redactTelemetryProperties,
   redactOtelAttributes,
@@ -236,6 +237,7 @@ describe("telemetry redaction", () => {
     expect(getPostHogDistinctIdForBusinessSystem("biz_123")).toBe(
       "system:business:biz_123",
     );
+    expect(getPostHogDistinctIdForUser("user_123")).toBe("user:user_123");
     expect(getPostHogBusinessGroupKey("biz_123")).toBe("business:biz_123");
   });
 

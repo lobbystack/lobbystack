@@ -94,6 +94,7 @@ The answer gap skips caller speech that ended while the receptionist was still t
 - `sms.inbound_received`
 - `sms.delivery_accepted`
 - `sms.delivery_failed`
+- `conversation.first_real_recorded`: a business's first real conversation, once per business, with `channel`. `kpi-spec.md` says what counts.
 - `conversation.automation_paused`
 - `conversation.team_requested`: a website visitor asked for a person and the team was alerted.
 - `conversation.team_joined`: a team member replied or pressed Join while the visitor waited. `waitSeconds` is how long the visitor waited.
