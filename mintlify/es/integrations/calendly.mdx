@@ -50,6 +50,10 @@ La recepcionista de IA envía la confirmación y los recordatorios a quien llama
 
 LobbyStack empieza a leer sus eventos de Calendly, y los calendarios que Calendly revisa para detectar conflictos, en pocos segundos.
 
+<Note>
+  Un enlace de `POST /calendars/calendly/connect` solo funciona para un propietario o administrador del negocio. Para un negocio sin ninguno, la API responde `409`, así que primero transfiera el negocio con `POST /team/claim-link`.
+</Note>
+
 ## Configure el tipo de evento en Calendly
 
 Después de elegir un tipo de evento, el cuadro de diálogo enumera lo que debe corregir en Calendly:
@@ -76,6 +80,8 @@ Las citas nuevas usan el nuevo tipo de evento. Las próximas citas pasan a él e
 ## Cuando una reserva cambia en Calendly
 
 Si cancela una reserva en Calendly, LobbyStack cancela la cita y le avisa. Quienes aceptaron recibir mensajes de texto reciben un mensaje de cancelación.
+
+Si mueve una reserva en Calendly y luego cancela la nueva reserva, LobbyStack cancela la cita.
 
 Si mueve una reserva en Calendly, LobbyStack mueve la cita y su recordatorio, y le avisa para que comunique la nueva hora a quien llama. LobbyStack no envía mensajes de texto por este cambio. Si el miembro del equipo ya tiene una cita a la nueva hora, LobbyStack mantiene la hora original y le avisa para que lo resuelva.
 

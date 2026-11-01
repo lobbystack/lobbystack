@@ -28,10 +28,10 @@ Turning the feature on never asks for a Business Number or EIN. `pnpm text-repli
    - The contact isn't blocked.
    - `textReplyBlockedReason` finds nothing in the way.
 3. With no job queued, the team gets the usual alert. With a job queued, the alert is held back, because the customer doesn't need a person yet.
-4. `replyToTextMessage` in `apps/worker/src/textReplyJobs.ts` reads the context, reserves a chat from the plan's allowance, writes the reply with the shared receptionist agent, and saves it.
+4. `replyToTextMessage` in `apps/worker/src/textReplyJobs.ts` reads the context, reserves the conversation's chat for the day from the plan's allowance, writes the reply with the shared receptionist agent, and saves it.
 5. The saved reply goes through `sms.send`, which checks the sending rule again.
 
-A newer text has its own job, which answers both. `NO_REPLY` works as it does on Instagram: the receptionist stays quiet after "thanks" or a lone emoji, and when the other side is another business's bot.
+A newer text has its own job, which answers both. A compliance keyword isn't a newer text: it has no job, so the question before it keeps its own. `NO_REPLY` works as it does on Instagram: the receptionist stays quiet after "thanks" or a lone emoji, and when the other side is another business's bot.
 
 ## What blocks a reply
 
@@ -73,9 +73,11 @@ The shared toll-free number can't carry AI replies. Twilio requires a toll-free 
 | Replies per conversation | 5 in 5 minutes | Handoff to the team, with an alert. This is the loop guard. |
 | Replies per conversation | 20 in 24 hours | Handoff to the team, with an alert. |
 | Replies per business | 500 in 24 hours | No reply, with the usual alert. The conversation stays with the receptionist. |
-| Plan allowance | The chat allowance | No reply, with the usual alert. |
+| Plan allowance | One chat per conversation per UTC day | No reply, with the usual alert. |
 
 Instagram's loop guard allows 15 replies in 5 minutes. Texts cost money per segment, so this one trips sooner.
+
+A text thread stays open for good, so the usage key holds the day: `chat:<conversationId>:<date>`. A key without it would pay once and answer forever, because `reserveUsageInTransaction` allows a key it has seen.
 
 ## Team handoff
 
@@ -85,6 +87,8 @@ A text conversation works like an Instagram chat once the flag is on:
 - **Take over** and **Resume AI** appear on text conversations.
 - The receptionist can't transfer anyone. It offers to take a message, and the team replies in the same thread.
 - A failed reply alerts the team on the job's final attempt.
+- A reply that fails after a tool saved a message or booked alerts the team at once and doesn't retry, because a retry would do it again. A worker killed mid-job can still repeat it.
+- On a business with no owner, the unanswered-text alert goes to its partner's owners and admins by email. No webhook event covers an inbound text.
 
 With the flag off, an inbox reply doesn't change `automation_state` and the buttons stay hidden.
 
@@ -108,7 +112,9 @@ The receptionist never answers these. Each gets its fixed reply, or Twilio's for
 
 Matching ignores case, spaces, punctuation and accents, so `ARRÊT` and `opt-out` count.
 
-`YES` opts a customer back in only when they had opted out, or when Twilio marks the text as `START`. Otherwise it goes to the receptionist, because "Shall I book Tuesday at 9?" gets that answer. The shared number holds no conversations, so `YES` always counts there.
+`YES` opts a customer back in only when they had opted out. Otherwise it goes to the receptionist, because "Shall I book Tuesday at 9?" gets that answer. That holds when Twilio marks the text `OptOutType=START`, which it does for `YES` as well as `START` and `UNSTOP`. With Advanced Opt-Out on, Twilio sends its own confirmation for an opt-in keyword, which LobbyStack can't stop. The shared number holds no conversations, so `YES` always counts there.
+
+A keyword text and its fixed reply carry `sender_role` `compliance`. The job ignores those rows when it looks for the newest text and leaves them out of the receptionist's history, so `HELP` can't strand a question waiting for its job. `provider_status` can't mark them, because delivery updates overwrite it.
 
 These keywords changed for live traffic too, with the flag off. `OPT OUT`, `REVOKE` and `ARRET` now record an opt-out, and `INFO` and `AIDE` get the `HELP` reply.
 
@@ -175,10 +181,12 @@ Spanish, `mintlify/es/integrations/sms.mdx`:
 ## Open decisions
 
 1. **Do the terms cover more than section 9.1?** Section 3.1 lists what the Service does and leaves out texts. The privacy policy needs to say texts go to the AI provider. Recommendation: change all three together.
-2. **Does a heavy text business pay more?** A chat allowance counts conversations, and a conversation can hold 20 replies a day. Recommendation: watch `sms_provider` cost per business for a month before adding a price.
+2. **Does a heavy text business pay more?** A text conversation uses one chat a day, and can hold 20 replies a day. Recommendation: watch `sms_provider` cost per business for a month before adding a price.
 3. **Who sees the dashboard switch?** Recommendation: owners and admins, under the phone number settings, once the terms are live.
 
 ## Sources
 
 - [Error 30478](https://www.twilio.com/docs/api/errors/30478)
 - [ISV onboarding overview](https://www.twilio.com/docs/messaging/compliance/a2p-10dlc/onboarding-isv)
+- [Advanced Opt-Out](https://www.twilio.com/docs/messaging/tutorials/advanced-opt-out)
+- [Twilio support for opt-out keywords](https://support.twilio.com/hc/en-us/articles/223134027-Twilio-support-for-opt-out-keywords-SMS-STOP-filtering)

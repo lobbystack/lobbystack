@@ -29,6 +29,8 @@ Carrier forwarding stays as it is. The two work independently, and the Help Cent
 - Press-to-accept, always on. The staff member hears who's calling and presses 1. Without this, a phone's voicemail counts as an answer and the receptionist never gets the call.
 - Optional message before ringing, and optional handover message. Each holds up to 200 characters, and the carrier reads them in the business's language.
 - Twilio numbers. The setting shows as unavailable on a Telnyx number.
+- A deployment whose admin app has `OPENAI_PROJECT_ID`. The admin app dials GPT-Live, so without it the setting can't be turned on and the dashboard shows it as unavailable.
+- A limit on staff-answered calls: 30 minutes each, and 600 minutes per business in 24 hours. See "Limits on staff-answered calls".
 
 ### Left for later
 
@@ -135,6 +137,23 @@ Today, a call that never reaches GPT-Live has no record. Staff-answered calls ne
 
 Each staff ring uses one `outbound_call_attempts`, like a transfer: the carrier bills the outbound leg either way. Calls bill at Programmable Voice rates instead of trunking rates, so check the margin against the spike's costs. `call.syncPrice` matches trunk legs only, and needs a path for these calls.
 
+A staff-answered call has no conversation, so `finalizeConversationSession` never sees it. `recordStaffAnsweredCall` fires `call.completed` itself when it inserts the record, so a repeated carrier webhook can't fire it twice. The event carries the usual call resource, with `outcome` set to `none`, `summary` set to null and `end_reason` set to `answered_by_team`.
+
+### Limits on staff-answered calls
+
+These calls use no plan minutes, so the plan's limits can't stop a business bridging callers to its own line for hours. Two limits do:
+
+- **Call length:** `ringStaffTwiml` sets `timeLimit` to `STAFF_CALL_LIMIT_SECONDS`, 30 minutes. Twilio's default is four hours.
+- **Daily cap:** `decideStaffFirstCall` adds up `provider_duration_seconds` on the business's `staff_answered` calls that started in the last 24 hours. At `STAFF_BRIDGED_MINUTES_PER_DAY`, 600 minutes, the call goes straight to the receptionist and uses no attempt.
+
+The cap applies to every business, including package and billed-outside businesses, which have no attempt limit.
+
+A call counts once it ends, so calls already bridged can pass the cap by up to 30 minutes each. The `staff-result` webhook writes the seconds, so a failed write leaves them out.
+
+### Changing the setting
+
+Turning the setting off skips the staff phone's checks, so a trial lock can't stop it. Turning it back on checks the stored phone.
+
 ## Implementation order
 
 Each step lands on its own.
@@ -168,6 +187,6 @@ Each step lands on its own.
 
 ## Decisions
 
-1. **Billing:** a staff-answered call uses one transfer attempt and no plan minutes. Free doesn't get this feature, because its two attempts would run out within two calls.
+1. **Billing:** a staff-answered call uses one transfer attempt and no plan minutes. Free doesn't get this feature, because its two attempts would run out within two calls. The limits above guard against abuse and don't bill anything.
 2. **Staff phone:** a new field that starts with the transfer number filled in, because a business may want different phones.
 3. **Custom hours:** not in the first version.
