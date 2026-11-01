@@ -21,10 +21,12 @@ const SMS_HELP_KEYWORDS = new Set(["HELP", "INFO", "AIDE"]);
 
 /**
  * "YES" restarts texts only for a phone that opted out. Anyone else who texts
- * it is answering a question, such as the receptionist offering a time.
+ * it is answering a question, such as the receptionist offering a time, even
+ * though Twilio marks it OptOutType=START as it does START and UNSTOP.
  */
-function isStartKeyword(keyword: string, optedOut: boolean | undefined): boolean {
-  return SMS_START_KEYWORDS.has(keyword) || (keyword === "YES" && optedOut === true);
+function isStartKeyword(keyword: string, input: { body: string; optedOut?: boolean | undefined }): boolean {
+  const saidYes = (keyword === "YES" || keyword === "START") && normalizeSmsKeyword(input.body ?? "") === "YES";
+  return saidYes ? input.optedOut === true : SMS_START_KEYWORDS.has(keyword);
 }
 
 /**
@@ -49,11 +51,11 @@ export function classifySmsConsentUpdate(input: { body: string; optOutType?: str
   const normalizedOptOutType = input.optOutType?.trim().toUpperCase();
   if (normalizedOptOutType) {
     if (SMS_STOP_KEYWORDS.has(normalizedOptOutType)) return { status: "opted_out", source: `twilio_opt_out:${normalizedOptOutType}` };
-    if (isStartKeyword(normalizedOptOutType, input.optedOut)) return { status: "subscribed", source: `twilio_opt_out:${normalizedOptOutType}` };
+    if (isStartKeyword(normalizedOptOutType, input)) return { status: "subscribed", source: `twilio_opt_out:${normalizedOptOutType}` };
   }
   const normalizedBody = normalizeSmsKeyword(input.body ?? "");
   if (SMS_STOP_KEYWORDS.has(normalizedBody)) return { status: "opted_out", source: `keyword:${normalizedBody}` };
-  if (isStartKeyword(normalizedBody, input.optedOut)) return { status: "subscribed", source: `keyword:${normalizedBody}` };
+  if (isStartKeyword(normalizedBody, input)) return { status: "subscribed", source: `keyword:${normalizedBody}` };
   return null;
 }
 
@@ -88,7 +90,7 @@ export function classifySmsKeywordReply(input: { body: string; optOutType?: stri
   const normalizedBody = normalizeSmsKeyword(input.body ?? "");
   const keyword = normalizedOptOutType || normalizedBody;
   if (SMS_HELP_KEYWORDS.has(keyword)) return { kind: "help" };
-  if (isStartKeyword(keyword, input.optedOut)) return { kind: "start" };
+  if (isStartKeyword(keyword, input)) return { kind: "start" };
   return null;
 }
 

@@ -21,6 +21,17 @@ describe("SMS consent classifiers", () => {
     expect(classifySmsConsentUpdate({ body: "Yes please" })).toBeNull();
   });
 
+  it("reads Twilio's START on a YES as an answer unless the phone opted out", () => {
+    const yes = { body: "Yes", optOutType: "START" };
+    expect(classifySmsConsentUpdate(yes)).toBeNull();
+    expect(classifySmsConsentUpdate({ ...yes, optedOut: false })).toBeNull();
+    expect(classifySmsKeywordReply({ ...yes, optedOut: false })).toBeNull();
+    expect(classifySmsConsentUpdate({ ...yes, optedOut: true })).toEqual({ status: "subscribed", source: "twilio_opt_out:START" });
+    expect(classifySmsKeywordReply({ ...yes, optedOut: true })?.kind).toBe("start");
+    expect(classifySmsConsentUpdate({ body: "START", optOutType: "START", optedOut: false })).toEqual({ status: "subscribed", source: "twilio_opt_out:START" });
+    expect(classifySmsKeywordReply({ body: "UNSTOP", optOutType: "START", optedOut: false })?.kind).toBe("start");
+  });
+
   it("returns compliance replies only for HELP and START", () => {
     expect(classifySmsKeywordReply({ body: "help" })?.kind).toBe("help");
     expect(classifySmsKeywordReply({ body: "start" })?.kind).toBe("start");

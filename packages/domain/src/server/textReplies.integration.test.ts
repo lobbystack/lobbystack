@@ -131,6 +131,27 @@ describe.skipIf(!testUrl)("AI text replies against PostgreSQL under production l
     });
   });
 
+  it("treats a YES Twilio marked START the same way", async () => {
+    await rollbackTest(async (tx) => {
+      const consent = async (businessId: string) => (await tx.select({ status: contacts.smsConsentStatus }).from(contacts).where(eq(contacts.businessId, businessId)))[0]?.status;
+      const yes = (businessId: string) => asWorker(tx, (db) => receiveInboundSms({ db }, { businessId, providerMessageId: `SM-${randomUUID()}`, from: canadian, to: "+14165550100", body: "YES", payload: { OptOutType: "START" } }));
+
+      const answering = await seedBusiness(tx, { enabled: true });
+      await answering.receive("Can you do Tuesday at 9?");
+      await tx.update(contacts).set({ smsConsentStatus: "subscribed", smsConsentUpdatedAt: new Date(Date.now() - 60_000) }).where(eq(contacts.businessId, answering.businessId));
+      await yes(answering.businessId);
+      expect(await answering.replyJobs()).toHaveLength(2);
+      expect(await tx.select({ id: messages.id }).from(messages).where(and(eq(messages.businessId, answering.businessId), eq(messages.direction, "outbound")))).toEqual([]);
+      expect(await consent(answering.businessId)).toBe("subscribed");
+
+      const returning = await seedBusiness(tx, { enabled: true });
+      await returning.receive("STOP");
+      await yes(returning.businessId);
+      expect(await returning.replyJobs()).toHaveLength(0);
+      expect(await consent(returning.businessId)).toBe("subscribed");
+    });
+  });
+
   it("alerts instead of replying after the customer opted out", async () => {
     await rollbackTest(async (tx) => {
       const business = await seedBusiness(tx, { enabled: true });
