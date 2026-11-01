@@ -22,7 +22,7 @@ type OnboardingShellProps = {
   children: React.ReactNode;
   legalFooter?: React.ReactNode;
   /** The agreement line login and signup show, for the action the person is taking. Left out when the partner has no terms or privacy page. */
-  legalAgreement?: "login" | "signup" | "business" | "emailChange";
+  legalAgreement?: "login" | "signup" | "business" | "emailChange" | "passwordReset";
   onSignOut?: () => void;
 };
 
@@ -47,7 +47,7 @@ const progressRoutes: Record<number, string> = Object.fromEntries(Object.entries
 
 const widths = { sm: "max-w-sm", md: "max-w-md", lg: "max-w-lg", xl: "max-w-xl", wide: "max-w-7xl" } as const;
 
-const legalPrefixKeys = { login: "login.legalPrefix", signup: "signup.legal.prefix", business: "signup.legal.businessPrefix", emailChange: "signup.legal.emailChangePrefix" } as const;
+const legalPrefixKeys = { login: "login.legalPrefix", signup: "signup.legal.prefix", business: "signup.legal.businessPrefix", emailChange: "signup.legal.emailChangePrefix", passwordReset: "forgotPassword.legalPrefix" } as const;
 
 export function ReplacementOnboardingShell({ icon, eyebrow, title, description, progress, width = "md", children, legalFooter: customLegalFooter, legalAgreement, onSignOut }: OnboardingShellProps) {
   const { t, i18n } = useTranslation("onboarding");
