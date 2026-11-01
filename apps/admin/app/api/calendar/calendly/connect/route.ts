@@ -18,12 +18,13 @@ export const dynamic = "force-dynamic";
  * Opens the link POST /v1/calendars/calendly/connect returns: it asks a
  * signed-out visitor to sign in first, checks they are an owner or admin of
  * the link's business, and sends them to Calendly as the integrations page's
- * Connect button does. Nothing changes until they agree there; the callback
- * then connects the account and opens that business.
+ * Connect button does. Anyone else lands on the integrations page with a
+ * message saying so. Nothing changes until they agree there; the callback then
+ * connects the account and opens that business.
  */
 export async function GET(request: Request) {
   const appUrl = (path: string) => new URL(path, partnerRequestOrigin(request.headers) ?? process.env.APP_BASE_URL ?? request.url);
-  const failed = () => NextResponse.redirect(appUrl("/integrations?calendar=calendly&status=error"));
+  const failed = (status = "error") => NextResponse.redirect(appUrl(`/integrations?calendar=calendly&status=${status}`));
   try {
     const url = new URL(request.url);
     const link = verifyCalendarConnectLinkToken(url.searchParams.get("token") ?? "", "calendly");
@@ -43,7 +44,7 @@ export async function GET(request: Request) {
     await storeCalendarOAuthState(state, "calendly");
     return NextResponse.redirect(calendlyCalendarProvider().buildAuthorizationUrl({ state, codeChallenge: calendlyCodeChallenge(calendarOAuthCodeVerifier(state)) }));
   } catch (error) {
-    asApiResponse(error); // Reports unexpected failures, as the callback does.
-    return failed();
+    // Reports unexpected failures, as the callback does.
+    return failed(asApiResponse(error).status === 403 ? "not_admin" : "error");
   }
 }

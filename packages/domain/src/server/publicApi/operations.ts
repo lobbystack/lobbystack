@@ -1037,9 +1037,17 @@ async function loadCalendarConnection(tx: DatabaseTransaction, businessId: strin
   return (await listCalendarConnectionsInTransaction(tx, { businessId, connectionId }))[0] ?? null;
 }
 
-/** Records the link and returns it. `link` signs it in the admin app, which serves the page it opens. */
-export async function createCalendarConnectLinkForApi(context: DomainContext, caller: ApiCaller, options: { provider?: string; link: (input: { businessId: string }) => { url: string; expiresAt: Date } }): Promise<ApiCalendarConnectLink> {
+/**
+ * Records the link and returns it. `link` signs it in the admin app, which
+ * serves the page it opens. With `requireAdmin`, a business with no active
+ * owner or admin is refused, because nobody it could send the link to can open it.
+ */
+export async function createCalendarConnectLinkForApi(context: DomainContext, caller: ApiCaller, options: { provider?: string; requireAdmin?: boolean; link: (input: { businessId: string }) => { url: string; expiresAt: Date } }): Promise<ApiCalendarConnectLink> {
   return await inBusiness(context, caller, async (tx) => {
+    if (options.requireAdmin) {
+      const [admin] = await tx.select({ id: businessMemberships.id }).from(businessMemberships).where(and(eq(businessMemberships.businessId, caller.businessId), inArray(businessMemberships.role, ["business_owner", "business_admin"]), eq(businessMemberships.status, "active"))).limit(1);
+      if (!admin) throw conflict("This business has no owner or admin to open the link. Send the claim link first.");
+    }
     const { url, expiresAt } = options.link({ businessId: caller.businessId });
     await audit(tx, caller, { eventType: "api.calendar.connect_link_created", entityType: "business", entityId: caller.businessId, payload: { provider: options.provider ?? "google", expiresAt: expiresAt.toISOString() } });
     return { url, expires_at: expiresAt.toISOString() };

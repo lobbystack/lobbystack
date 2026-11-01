@@ -129,6 +129,11 @@ describe("original integration permissions and setup navigation", () => {
     expect(notify.success).not.toHaveBeenCalledWith("integrations.google.connectedSuccess");
     telemetryRef.current!.expectEvent("web.integration.calendar_connect_completed", { businessId: "business", provider: "calcom" });
   });
+  it("tells someone who isn't an owner or admin why a Calendly link didn't work", async () => {
+    route.search = new URLSearchParams("calendar=calendly&status=not_admin");
+    setup("business_admin", { calendly: { configured: true, options: [], discoveryError: null, warnings: [], paidPlan: null } });
+    await waitFor(() => expect(notify.error).toHaveBeenCalledWith("integrations.calendly.connectNotAdmin"));
+  });
   it("does not request administrator calendar connections for viewers", async () => {
     const fetchMock = setup("viewer");
     // Only the Instagram card asks, and only whether Instagram is set up.

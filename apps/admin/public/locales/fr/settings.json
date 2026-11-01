@@ -610,6 +610,7 @@
       "disconnect": "Déconnecter",
       "connectedSuccess": "Calendly est connecté. Choisissez le type d'événement à réserver.",
       "connectFailed": "Impossible de connecter Calendly. Veuillez réessayer.",
+      "connectNotAdmin": "Seul un propriétaire ou un administrateur de l'entreprise peut connecter Calendly.",
       "disconnectedSuccess": "Calendly est déconnecté.",
       "eventTypeLabel": "Type d'événement",
       "selectEventType": "Choisir un type d'événement",

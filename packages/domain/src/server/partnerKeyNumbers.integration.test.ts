@@ -15,7 +15,7 @@ import { loadPartnerNumberStanding, recordPartnerTierBilling, settlePartnerNumbe
 import { createPartnerBusiness, listPartnerBusinesses, releaseBusiness, signUpPartner, type PartnerMemberActor } from "./partners";
 import { claimNumberProvisioning, completeNumberProvisioning, reserveOnboardingNumberClaim } from "./phoneNumbers";
 import { deletePartnerBusinessForApi, releasePartnerBusinessForApi } from "./publicApi/partner";
-import { claimPhoneNumberForApi, completeOnboardingForApi, createPartnerBusinessForApi, getOnboardingForApi, getTeamForApi, resolveActingUserId, searchPhoneNumbersForApi, type PlatformKeyCaller } from "./publicApi/operations";
+import { claimPhoneNumberForApi, completeOnboardingForApi, createCalendarConnectLinkForApi, createPartnerBusinessForApi, getOnboardingForApi, getTeamForApi, resolveActingUserId, searchPhoneNumbersForApi, type PlatformKeyCaller } from "./publicApi/operations";
 import type { PartnerPlatformKey } from "./publicApi/platformKeys";
 import { acceptInvitation } from "./tenancy";
 
@@ -476,6 +476,17 @@ describe.skipIf(!client)("a business with no owner", () => {
       const told = await alert(withOwner, "liveChatRequest");
       expect(await asMigrator(tx, async () => await tx.select({ userId: operatorNotificationDeliveries.userId }).from(operatorNotificationDeliveries).where(eq(operatorNotificationDeliveries.businessId, withOwner)))).toEqual([{ userId }]);
       expect(told).toHaveLength(1);
+    });
+  });
+
+  it("refuses a Calendly link for a business nobody could open it for", async () => {
+    await rollbackTest(async (tx) => {
+      const acme = await partner(tx, "Acme Software");
+      const worker = workerContext(tx);
+      const options = { provider: "calendly", requireAdmin: true, link: () => ({ url: "https://app.example.test/connect", expiresAt: new Date("2030-01-01T00:00:00Z") }) };
+      await expect(createCalendarConnectLinkForApi(worker, callerFor(acme, await ownerless(acme)), options)).rejects.toMatchObject({ status: 409, code: "conflict", message: "This business has no owner or admin to open the link. Send the claim link first." });
+      const { businessId } = await owned(tx, acme);
+      await expect(createCalendarConnectLinkForApi(worker, callerFor(acme, businessId), options)).resolves.toMatchObject({ url: "https://app.example.test/connect" });
     });
   });
 

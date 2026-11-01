@@ -56,7 +56,7 @@ export function CalendlyIntegrationCard({ businessId, canManage, data }: { busin
     if (searchParams.get("calendar") !== "calendly" || !status || handledCallback.current === key) return;
     handledCallback.current = key;
     if (status === "success") { if (businessId) telemetry.track("web.integration.calendar_connect_completed", { businessId, provider: "calendly" }); toast.success(t("integrations.calendly.connectedSuccess")); void queryClient.invalidateQueries({ queryKey: ["integrations", businessId] }); setDialogOpen(true); }
-    else { if (businessId) telemetry.track("web.integration.calendar_connect_failed", { businessId, provider: "calendly" }); toast.error(t("integrations.calendly.connectFailed")); }
+    else { if (businessId) telemetry.track("web.integration.calendar_connect_failed", { businessId, provider: "calendly" }); toast.error(t(status === "not_admin" ? "integrations.calendly.connectNotAdmin" : "integrations.calendly.connectFailed")); }
   }, [businessId, queryClient, searchParams, t, telemetry]);
 
   const update = useMutation({

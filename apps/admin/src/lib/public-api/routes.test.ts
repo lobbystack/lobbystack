@@ -952,7 +952,7 @@ describe("calendars", () => {
     });
     const response = await connectCalendly();
     expect(response.status).toBe(201);
-    expect(domain.createCalendarConnectLinkForApi).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({ provider: "calendly" }));
+    expect(domain.createCalendarConnectLinkForApi).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({ provider: "calendly", requireAdmin: true }));
     const url = new URL(((await response.json()) as { data: { url: string } }).data.url);
     expect(`${url.origin}${url.pathname}`).toBe("https://app.lobbystack.example/api/calendar/calendly/connect");
     expect(verifyCalendarConnectLinkToken(url.searchParams.get("token")!, "calendly")).toMatchObject({ businessId });

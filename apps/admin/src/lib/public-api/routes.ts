@@ -514,7 +514,7 @@ export const v1 = {
     requireCalendarProvider("calendly");
     if (!calendarSigningConfigured()) throw calendarUnavailable("calendly");
     const origin = await businessOrigin(context, caller.businessId);
-    return { body: data(await createCalendarConnectLinkForApi(context, caller, { provider: "calendly", link: ({ businessId }) => createCalendarConnectLink({ origin, businessId, provider: "calendly" }) })) };
+    return { body: data(await createCalendarConnectLinkForApi(context, caller, { provider: "calendly", requireAdmin: true, link: ({ businessId }) => createCalendarConnectLink({ origin, businessId, provider: "calendly" }) })) };
   }),
   listCalendarConnections: (request: Request) => handleApiRequest(request, "listCalendarConnections", async ({ context, caller }) => ({ body: { data: await listCalendarConnectionsForApi(context, caller), next_cursor: null, has_more: false } })),
   listAccountCalendars: (request: Request, { params }: Params<"connection_id">) => handleApiRequest(request, "listAccountCalendars", async ({ context, caller }) => {

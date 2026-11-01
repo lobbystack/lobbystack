@@ -610,6 +610,7 @@
       "disconnect": "Prekini vezu",
       "connectedSuccess": "Calendly je povezan. Izaberite tip događaja za zakazivanje.",
       "connectFailed": "Povezivanje sa Calendly nije uspelo. Pokušajte ponovo.",
+      "connectNotAdmin": "Samo vlasnik ili administrator firme može da poveže Calendly.",
       "disconnectedSuccess": "Veza sa Calendly je prekinuta.",
       "eventTypeLabel": "Tip događaja",
       "selectEventType": "Izaberite tip događaja",

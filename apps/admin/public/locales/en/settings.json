@@ -603,6 +603,7 @@
       "disconnect": "Disconnect",
       "connectedSuccess": "Calendly connected. Pick the event type to book.",
       "connectFailed": "Calendly couldn't be connected. Please try again.",
+      "connectNotAdmin": "Only an owner or admin of the business can connect Calendly.",
       "disconnectedSuccess": "Calendly disconnected.",
       "eventTypeLabel": "Event type",
       "selectEventType": "Choose an event type",
