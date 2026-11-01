@@ -21,6 +21,7 @@ const competitorSlugs = [
   "elevenlabs-reception-alternative",
   "ruby-receptionists-alternative",
   "gohighlevel-ai-receptionist-alternative",
+  "vapi-alternative",
 ] as const
 
 const comparisonSlugs = [
