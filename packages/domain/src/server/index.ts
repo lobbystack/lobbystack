@@ -22,6 +22,7 @@ export * from "./contactSmsConsent";
 export * from "./context";
 export * from "./conversations";
 export * from "./instagram";
+export * from "./textReplies";
 export * from "./demos";
 export { effectiveBillingPlan, loadEntitlement } from "./entitlement";
 export * from "./feedback";

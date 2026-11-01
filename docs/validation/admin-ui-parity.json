@@ -280,12 +280,12 @@
     {
       "id": "billing.ai_sms",
       "status": "excluded",
-      "reason": "AI-generated SMS and AI-SMS add-on billing or metering are intentionally excluded."
+      "reason": "An AI-SMS add-on, with its own billing or metering, is intentionally excluded. AI text replies have no settings page yet."
     },
     {
       "id": "compliance.twilio_a2p",
       "status": "excluded",
-      "reason": "Twilio A2P registration is intentionally excluded."
+      "reason": "Twilio A2P registration is not built yet (docs/specs/business-sms-registration.md)."
     }
   ],
   "visualRoutes": [
@@ -606,7 +606,7 @@
       "fixtureState": "operator",
       "state": "default",
       "comparison": "excluded",
-      "reason": "Page removed: AI SMS is not offered"
+      "reason": "Page removed: no AI SMS add-on is offered"
     },
     {
       "path": "/calls",

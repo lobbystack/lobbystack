@@ -9,7 +9,7 @@ vi.mock("./publicApi/webhooks", () => ({ emitWebhookEventInTransaction: vi.fn() 
 vi.mock("../authz", () => ({ requireBusinessMembership: vi.fn(), requireBusinessAdmin: vi.fn() }));
 
 import { appendMessage } from "./conversations";
-import { receiveInboundSms, smsReplyBlockedReason } from "./sms";
+import { receiveInboundSms, smsReplyBlockedReason, textReplyBlockedReason } from "./sms";
 import { businessSmsNumber } from "./smsSender";
 
 const context = { db: {} as never };
@@ -150,5 +150,46 @@ describe("the business's SMS number", () => {
     const tx = { select: () => ({ from: () => ({ where: () => ({ orderBy: (...columns: SQL[]) => { orderBys.push(columns); return { limit: async () => selects.shift() }; } }) }) }) };
     await expect(businessSmsNumber(tx as never, businessId)).resolves.toBe("+14165550199");
     expect(new PgDialect().sqlToQuery(sql.join(orderBys[0]!, sql`, `)).sql).toBe('"phone_numbers"."reclaim_scheduled_at" is not null, "phone_numbers"."created_at" desc');
+  });
+});
+
+describe("the receptionist's text replies", () => {
+  const reach = { phone: "+14165550123", operatorBlockedAt: null, smsConsentStatus: null, customerTexted: true, from: "+14165550100", textRepliesEnabled: true, selfHosted: false };
+  const usNumber = "+12125550123";
+
+  it("answers a Canadian customer who texted, with nothing asked of the business", () => {
+    expect(textReplyBlockedReason(reach)).toBeNull();
+    expect(textReplyBlockedReason({ ...reach, from: "+12125550100" })).toBeNull();
+  });
+
+  it("stays off until the business turns it on", () => {
+    expect(textReplyBlockedReason({ ...reach, textRepliesEnabled: false })).toBe("text_replies_off");
+  });
+
+  it("keeps the rule for any text", () => {
+    expect(textReplyBlockedReason({ ...reach, smsConsentStatus: "opted_out" })).toBe("sms_consent");
+    expect(textReplyBlockedReason({ ...reach, operatorBlockedAt: new Date() })).toBe("sms_blocked");
+  });
+
+  it("needs registration for a US recipient, US territories included, on a cloud business", () => {
+    expect(textReplyBlockedReason({ ...reach, phone: usNumber })).toBe("sms_registration_required");
+    expect(textReplyBlockedReason({ ...reach, phone: "+17875550123" })).toBe("sms_registration_required");
+    expect(textReplyBlockedReason({ ...reach, phone: "+16715550123" })).toBe("sms_registration_required");
+    expect(textReplyBlockedReason({ ...reach, phone: usNumber, from: "+15145550100" })).toBe("sms_registration_required");
+  });
+
+  it("leaves a sender outside +1, and a self-hosted business, alone", () => {
+    expect(textReplyBlockedReason({ ...reach, phone: usNumber, from: "+447700900100" })).toBeNull();
+    expect(textReplyBlockedReason({ ...reach, phone: usNumber, selfHosted: true })).toBeNull();
+  });
+
+  it("never replies from the shared number", () => {
+    vi.stubEnv("TELEPHONY_ALERT_SMS_FROM", "+18445550100");
+    expect(textReplyBlockedReason({ ...reach, from: "+18445550100", selfHosted: true })).toBe("shared_sender");
+    vi.unstubAllEnvs();
+  });
+
+  it("doesn't change the rule for a team member's reply", () => {
+    expect(smsReplyBlockedReason({ ...reach, phone: usNumber })).toBeNull();
   });
 });

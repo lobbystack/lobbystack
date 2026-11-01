@@ -2,7 +2,7 @@ import { and, eq, gt, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 
 import { businesses, contacts, conversationSessions, conversations, enqueueOutbox, messages, providerEvents, smsConsentEvents, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import type { CarrierId } from "@lobbystack/providers/telephony/types";
-import { DEFAULT_APP_NAME, brandLinks, contactEmailFor, isTerminalTwilioMessageStatus, mapTwilioStatusToMessageStatus, normalizeTwilioMessageStatus, shouldApplyMessageStatusTransition } from "@lobbystack/shared";
+import { DEFAULT_APP_NAME, brandLinks, contactEmailFor, isTerminalTwilioMessageStatus, mapTwilioStatusToMessageStatus, normalizeTwilioMessageStatus, shouldApplyMessageStatusTransition, smsRecipientRegion } from "@lobbystack/shared";
 
 import { deploymentAppName } from "./branding";
 import { findOrCreateContactByPhone } from "./contacts";
@@ -10,7 +10,7 @@ import type { DomainContext } from "./context";
 import { contentExpiryForPlan, isContentRetentionEnabled, resolveBusinessBillingPlan } from "./contentRetentionPolicy";
 import { queueOperatorAlertInTransaction, smsOptInConfirmationInTransaction, type SmsOptInConfirmation } from "./notifications";
 import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
-import { businessSmsNumber } from "./smsSender";
+import { businessSmsNumber, isSelfHostedBusiness, isSharedSmsSender } from "./smsSender";
 import { recordUnitEconomicsEventInTransaction } from "./unitEconomics";
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 
@@ -229,12 +229,22 @@ export async function receiveInboundSms(
         await enqueueOutbox(tx, { topic: "sms.send", businessId: input.businessId, aggregateType: "message", aggregateId: replyMessage.id, dedupeKey: `message:${replyMessage.id}:send`, payload: { messageId: replyMessage.id } });
       }
     }
-    // Any text but STOP, START or HELP alerts, opted-out customers' included:
-    // they can still write in. One alert per conversation each hour.
-    if (!contact.operatorBlockedAt && !consentUpdate && !keywordReply) await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKind: "pausedSms", eventKey: `pausedSms:${conversation.id}:${new Date().toISOString().slice(0, 13)}`, subject: "New message needs a reply", body: "A customer sent a message. Open the inbox to respond." });
+    const needsAnswer = !contact.operatorBlockedAt && !consentUpdate && !keywordReply;
+    const replyQueued = needsAnswer && conversation.automationState === "ai_active" && !textReplyBlockedReason(await loadTextReplyReachInTransaction(tx, { businessId: input.businessId, conversationId: conversation.id }));
+    if (replyQueued) {
+      await enqueueOutbox(tx, { topic: "sms.aiReply", businessId: input.businessId, aggregateType: "message", aggregateId: message.id, dedupeKey: `message:${message.id}:text-reply`, payload: { conversationId: conversation.id, messageId: message.id } });
+    } else if (needsAnswer) {
+      // Opted-out customers' texts alert too: they can still write in.
+      await queueUnansweredTextAlertInTransaction(tx, { businessId: input.businessId, conversationId: conversation.id });
+    }
     await tx.update(providerEvents).set({ status: "processed", updatedAt: new Date() }).where(eq(providerEvents.id, providerEvent.id));
     return { messageId: message.id, duplicate: false };
   });
+}
+
+/** Tells the team a customer's text needs an answer from a person. One alert per conversation each hour. */
+export async function queueUnansweredTextAlertInTransaction(tx: DatabaseTransaction, input: { businessId: string; conversationId: string }): Promise<void> {
+  await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKind: "pausedSms", eventKey: `pausedSms:${input.conversationId}:${new Date().toISOString().slice(0, 13)}`, subject: "New message needs a reply", body: "A customer sent a message. Open the inbox to respond." });
 }
 
 const smsDeliveryLeaseMs = 10 * 60_000;
@@ -264,9 +274,10 @@ export async function smsDeliveryLeaseEndsAt(context: DomainContext, input: { bu
   });
 }
 
-export type SmsReplyBlockedReason = "sms_blocked" | "sms_unreachable" | "no_sms_sender" | "sms_consent";
+export type SmsReplyBlockedReason = "sms_blocked" | "sms_unreachable" | "no_sms_sender" | "sms_consent" | "text_replies_off" | "shared_sender" | "sms_registration_required";
 
 type SmsReach = { phone: string | null; operatorBlockedAt: Date | null; smsConsentStatus: string | null; customerTexted: boolean; from: string | null };
+export type TextReplyReach = SmsReach & { textRepliesEnabled: boolean; selfHosted: boolean };
 
 /**
  * Why a text in a conversation can't go out, or null when it can. The contact
@@ -280,6 +291,34 @@ export function smsReplyBlockedReason(reach: SmsReach, complianceReply = false):
   if (!reach.from) return "no_sms_sender";
   if (complianceReply || reach.smsConsentStatus === "subscribed") return null;
   return reach.customerTexted && reach.smsConsentStatus !== "opted_out" ? null : "sms_consent";
+}
+
+/**
+ * Why the receptionist can't text this contact, or null when it can. On top of
+ * the rule for any text: the business has to have replies on, the shared
+ * number never carries them because a toll-free number maps to one business,
+ * and a cloud business's +1 number can't reach US recipients, US territories
+ * included, until it's registered. Nothing registers one yet. A self-hosted
+ * business registers its own number.
+ */
+export function textReplyBlockedReason(reach: TextReplyReach): SmsReplyBlockedReason | null {
+  if (!reach.textRepliesEnabled) return "text_replies_off";
+  const blocked = smsReplyBlockedReason(reach);
+  if (blocked) return blocked;
+  if (isSharedSmsSender(reach.from)) return "shared_sender";
+  return !reach.selfHosted && reach.from!.startsWith("+1") && smsRecipientRegion(reach.phone!) === "us" ? "sms_registration_required" : null;
+}
+
+/** Whether the receptionist answers texts for this business. */
+export async function textRepliesEnabledInTransaction(tx: DatabaseTransaction, businessId: string): Promise<boolean> {
+  return (await tx.select({ textRepliesEnabled: businesses.textRepliesEnabled }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0]?.textRepliesEnabled === true;
+}
+
+export async function loadTextReplyReachInTransaction(tx: DatabaseTransaction, input: { businessId: string; conversationId: string }): Promise<TextReplyReach> {
+  const textRepliesEnabled = await textRepliesEnabledInTransaction(tx, input.businessId);
+  // With replies off the reason is already known, so a text costs no more queries than it did.
+  if (!textRepliesEnabled) return { phone: null, operatorBlockedAt: null, smsConsentStatus: null, customerTexted: false, from: null, textRepliesEnabled, selfHosted: false };
+  return { ...await loadSmsReach(tx, input), textRepliesEnabled, selfHosted: await isSelfHostedBusiness(tx, input.businessId) };
 }
 
 async function loadSmsReach(tx: DatabaseTransaction, input: { businessId: string; conversationId: string }): Promise<SmsReach & { contactId: string | null }> {
@@ -303,18 +342,21 @@ export async function smsReplyBlockedInTransaction(tx: DatabaseTransaction, inpu
  * What to send for a queued text, why it can't go out, or null when no such
  * text is waiting. A reply to a customer who agreed to texts and hasn't had
  * one yet comes after the opt-in confirmation; a STOP, START or HELP reply
- * never does.
+ * never does. The receptionist's replies meet the stricter rule again here, so
+ * turning replies off stops the ones already queued.
  */
 export async function loadSmsDeliveryTarget(db: Database, input: { businessId: string; messageId: string }): Promise<{ to: string; from: string; body: string; optIn?: SmsOptInConfirmation } | { blocked: SmsReplyBlockedReason } | null> {
   return await withBusinessTransaction(db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const message = (await tx.select({ conversationId: messages.conversationId, body: messages.body, providerStatus: messages.providerStatus })
+    const message = (await tx.select({ conversationId: messages.conversationId, body: messages.body, providerStatus: messages.providerStatus, aiGenerated: messages.aiGenerated })
       .from(messages)
       .where(and(eq(messages.id, input.messageId), eq(messages.businessId, input.businessId), eq(messages.direction, "outbound"), eq(messages.channel, "sms"), inArray(messages.status, ["queued", "sending"])))
       .limit(1))[0];
     if (!message) return null;
     const reach = await loadSmsReach(tx, { businessId: input.businessId, conversationId: message.conversationId });
     const complianceReply = message.providerStatus === "compliance_reply";
-    const blocked = smsReplyBlockedReason(reach, complianceReply);
+    const blocked = message.aiGenerated
+      ? textReplyBlockedReason({ ...reach, textRepliesEnabled: await textRepliesEnabledInTransaction(tx, input.businessId), selfHosted: await isSelfHostedBusiness(tx, input.businessId) })
+      : smsReplyBlockedReason(reach, complianceReply);
     if (blocked || !reach.phone || !reach.from) return { blocked: blocked ?? "sms_unreachable" };
     const optIn = !complianceReply && reach.contactId ? await smsOptInConfirmationInTransaction(tx, { businessId: input.businessId, contactId: reach.contactId }) : undefined;
     return { to: reach.phone, from: reach.from, body: message.body, ...(optIn ? { optIn } : {}) };
@@ -435,9 +477,9 @@ export async function recordSmsProviderPricing(
       providerNumSegments: input.providerNumSegments,
       revision: sql`${messages.revision} + 1`,
       updatedAt: new Date(),
-    }).where(and(eq(messages.businessId, input.businessId), eq(messages.providerMessageId, input.providerMessageId))).returning({ id: messages.id, revision: messages.revision, aiGenerated: messages.aiGenerated, conversationId: messages.conversationId, createdAt: messages.createdAt, carrier: messages.carrier });
+    }).where(and(eq(messages.businessId, input.businessId), eq(messages.providerMessageId, input.providerMessageId))).returning({ id: messages.id, revision: messages.revision, conversationId: messages.conversationId, createdAt: messages.createdAt, carrier: messages.carrier });
     if (!message) return false;
-    if (input.providerCostUsd !== undefined && !message.aiGenerated) {
+    if (input.providerCostUsd !== undefined) {
       await recordUnitEconomicsEventInTransaction(tx, { businessId: input.businessId, eventKey: `sms_provider:${message.id}`, eventKind: "sms_provider", channel: "sms", costUsd: input.providerCostUsd, occurredAt: message.createdAt, ...(input.providerNumSegments !== undefined ? { quantity: input.providerNumSegments, quantityUnit: "segment" } : {}), provider: message.carrier ?? "twilio", messageId: message.id, conversationId: message.conversationId });
     }
     await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "message", aggregateId: message.id, dedupeKey: `message:${message.id}:pricing:${message.revision}`, payload: { type: "message.deliveryUpdated", entityId: message.id, revision: message.revision } });

@@ -21,7 +21,7 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); clients.forEach((client) => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
-function setup(options: { instagramConfigured?: boolean } = {}) {
+function setup(options: { instagramConfigured?: boolean; textRepliesOn?: boolean } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true }] });
@@ -29,7 +29,7 @@ function setup(options: { instagramConfigured?: boolean } = {}) {
     if (String(url).startsWith("/api/messages") && init?.method === "POST") return Response.json({ ok: true });
     // An activity-only business can't read the setup-only Integrations routes, so the inbox must not need them.
     if (String(url).startsWith("/api/integrations")) return Response.json({ error: "You can't do that in this business." }, { status: 403 });
-    if (String(url).startsWith("/api/messages")) return Response.json({ instagramOffered: options.instagramConfigured ?? false, messages: [{ id: "m1", conversationId: "conversation-1", contactName: "Ada Caller", contactPhone: "+14155550100", visitorName: null, visitorEmail: null, channel: "sms", automationState: "ai_active", body: "Hello there", direction: "inbound", status: "delivered", createdAt: "2026-09-01T12:00:00Z" }] });
+    if (String(url).startsWith("/api/messages")) return Response.json({ instagramOffered: options.instagramConfigured ?? false, textRepliesOn: options.textRepliesOn ?? false, messages: [{ id: "m1", conversationId: "conversation-1", contactName: "Ada Caller", contactPhone: "+14155550100", visitorName: null, visitorEmail: null, channel: "sms", automationState: "ai_active", body: "Hello there", direction: "inbound", status: "delivered", createdAt: "2026-09-01T12:00:00Z" }] });
     return Response.json({});
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -66,6 +66,17 @@ describe("messages telemetry", () => {
 });
 
 describe("messages channel filters", () => {
+  it("offers Take over on a text conversation only once the receptionist answers texts", async () => {
+    setup();
+    await userEvent.click(await screen.findByRole("button", { name: /Ada Caller/ }));
+    expect(screen.queryByRole("button", { name: /takeOver|automationTakeOver/i })).toBeNull();
+    cleanup();
+
+    setup({ textRepliesOn: true });
+    await userEvent.click(await screen.findByRole("button", { name: /Ada Caller/ }));
+    expect(await screen.findByRole("button", { name: /takeOver|automationTakeOver/i })).toBeTruthy();
+  });
+
   it("hides the Instagram filter until the server has a Meta app", async () => {
     setup();
     await screen.findByRole("button", { name: /Ada Caller/ });
