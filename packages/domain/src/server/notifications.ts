@@ -603,7 +603,7 @@ export async function queueOperatorAlert(context: DomainContext, input: { busine
 // The alerts no webhook event stands in for, about something that went wrong
 // or someone waiting. A partner running a business with no owner can't hear
 // of these any other way.
-const partnerFallbackAlerts: ReadonlySet<OperatorNotificationEventKey> = new Set<OperatorNotificationEventKey>(["transferFailed", "smsFailed", "calendarSync", "liveChatRequest", "aiReplyFailed", "webhookDisabled"]);
+const partnerFallbackAlerts: ReadonlySet<OperatorNotificationEventKey> = new Set<OperatorNotificationEventKey>(["pausedSms", "transferFailed", "smsFailed", "calendarSync", "liveChatRequest", "aiReplyFailed", "webhookDisabled"]);
 
 /**
  * Who gets an alert in place of a business's owner: the owners and admins of

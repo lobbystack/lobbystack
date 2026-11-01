@@ -468,7 +468,7 @@ describe.skipIf(!client)("a business with no owner", () => {
       expect(delivery).toEqual({ userId: acme.ownerActor.userId, channel: "email", destination: `${acme.ownerActor.userId}@example.invalid` });
       const [queued] = await asMigrator(tx, async () => await tx.select({ topic: outboxMessages.topic }).from(outboxMessages).where(eq(outboxMessages.aggregateId, ids[0]!)));
       expect(queued!.topic).toBe("notification.dispatch");
-      for (const eventKind of ["transferFailed", "smsFailed", "calendarSync", "aiReplyFailed", "webhookDisabled"] as const) expect(await alert(businessId, eventKind), eventKind).toHaveLength(1);
+      for (const eventKind of ["pausedSms", "transferFailed", "smsFailed", "calendarSync", "aiReplyFailed", "webhookDisabled"] as const) expect(await alert(businessId, eventKind), eventKind).toHaveLength(1);
 
       // Webhooks cover a message someone left, and a business with an owner tells them instead.
       expect(await alert(businessId, "voiceMessage")).toEqual([]);
