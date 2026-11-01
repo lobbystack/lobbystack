@@ -962,7 +962,7 @@ export async function updateWidgetKeyForApi(context: DomainContext, caller: ApiC
   });
 }
 
-// Calendars. Google and Cal.com ask the calendar's owner to agree in a browser,
+// Calendars. Google, Cal.com and Calendly ask the calendar's owner to agree in a browser,
 // so the API hands out a link that starts that flow in the dashboard, then
 // manages the connections it creates as the integrations page does.
 
@@ -977,7 +977,7 @@ export type CalendarAccess = {
 type AccountCalendar = Awaited<ReturnType<CalendarAccess["listCalendars"]>>[number];
 
 /** The path that connects a provider again. */
-const connectPath = (provider: string) => `POST /calendars/${provider === "calcom" ? "calcom" : "google"}/connect`;
+const connectPath = (provider: string) => `POST /calendars/${provider === "calcom" || provider === "calendly" ? provider : "google"}/connect`;
 
 /** LobbyStack adds appointments to the calendar it reads, so it needs one it may write to, as in the dashboard. */
 function isWritableCalendar(calendar: AccountCalendar): boolean {

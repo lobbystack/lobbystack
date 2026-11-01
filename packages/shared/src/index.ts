@@ -3,6 +3,8 @@ import { z } from "zod";
 export { isMaintenanceMode } from "./maintenance";
 /** The sync error of a connection whose provider rejected its grant. Any other sync error clears without a reconnect. */
 export const CALENDAR_RECONNECT_ERROR = "Calendar authorization requires reconnection.";
+/** The last sync error of a Calendly connection on a plan that can't book through the API. */
+export const CALENDLY_PLAN_ERROR = "Calendly books through its API only on paid plans.";
 export { interfaceLocaleTags, interfaceLocales, intlLocale, isInterfaceLocale, isRuntimeLocale, normalizeInterfaceLocale, normalizeRuntimeLocale, runtimeLocaleName, runtimeLocales } from "./locales";
 export type { InterfaceLocale, RuntimeLocale } from "./locales";
 import { interfaceLocales, runtimeLocales, type InterfaceLocale, type RuntimeLocale } from "./locales";

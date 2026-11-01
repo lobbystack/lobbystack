@@ -6,7 +6,7 @@ import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 import { appointments, auditLogs, calendarBusyBlocks, calendarConnections, enqueueOutbox, staff, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
-import { pickCalendarWriter } from "../calendarWriter";
+import { isBookingCalendarProvider, pickCalendarWriter } from "../calendarWriter";
 import type { DomainContext } from "./context";
 import { queueOperatorAlertInTransaction } from "./notifications";
 import { recordProductEventBestEffort } from "./productEvents";
@@ -379,7 +379,7 @@ async function releaseMovedAppointments(tx: DatabaseTransaction, businessId: str
     const live = after.some((row) => row.id === was.id && row.status !== "disconnected");
     if (live) await enqueueOutbox(tx, { topic: "calendar.deleteEvent", businessId, aggregateType: "appointment", aggregateId: id, dedupeKey: `appointment:${id}:calendar:release:${was.id}:${revision}`, payload: { appointmentId: id, connectionId: was.id, calendarId: was.selectedCalendarId, eventId } });
     // A Cal.com booking stays bookable on its public page, so its retirement job cancels it while the tokens last.
-    else if (was.provider === "calcom") retired.push({ connectionId: was.id, calendarId: was.selectedCalendarId, appointmentId: id, eventId });
+    else if (isBookingCalendarProvider(was.provider)) retired.push({ connectionId: was.id, calendarId: was.selectedCalendarId, appointmentId: id, eventId });
   }
   return retired;
 }
@@ -425,7 +425,7 @@ export async function discoverCalendars(
 // Cal.com webhooks. Each Cal.com connection registers one, at a URL that names
 // the connection, so a booking made in Cal.com syncs busy time right away.
 
-/** The business of a live Cal.com connection, found before any business context exists, or null. */
+/** The business of a live Cal.com or Calendly connection, found before any business context exists, or null. */
 export async function resolveBusinessByCalendarWebhook(context: DomainContext, connectionId: string): Promise<string | null> {
   return await withBusinessTransaction(context.db, { actorType: "worker" }, async (tx) => (await tx.execute<{ business_id: string | null }>(sql`select app.resolve_business_by_calendar_webhook(${connectionId}::uuid) as business_id`)).rows[0]?.business_id ?? null);
 }
@@ -534,7 +534,7 @@ async function finishRetirement(tx: DatabaseTransaction, businessId: string, ret
   const forget: string[] = [];
   for (const row of retired) {
     const cancel = bookings.filter((booking) => booking.connectionId === row.id).map(({ appointmentId, calendarId, eventId }) => ({ appointmentId, calendarId, eventId }));
-    if (row.provider !== "calcom" || (!row.externalWebhookId && !cancel.length)) { forget.push(row.id); continue; }
+    if (!isBookingCalendarProvider(row.provider) || (!row.externalWebhookId && !cancel.length)) { forget.push(row.id); continue; }
     await enqueueOutbox(tx, { topic: "calendar.retireWebhook", businessId, aggregateType: "calendar_connection", aggregateId: row.id, dedupeKey: `calendar:${row.id}:retire:${Date.now()}`, payload: { connectionId: row.id, cancel } });
   }
   if (forget.length) await tx.update(calendarConnections).set({ encryptedAccessToken: null, encryptedRefreshToken: null }).where(and(eq(calendarConnections.businessId, businessId), inArray(calendarConnections.id, forget)));

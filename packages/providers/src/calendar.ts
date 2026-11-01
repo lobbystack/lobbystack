@@ -1,5 +1,5 @@
 /** The calendar providers a business can connect. */
-export const CALENDAR_PROVIDERS = ["google", "calcom"] as const;
+export const CALENDAR_PROVIDERS = ["google", "calcom", "calendly"] as const;
 export type CalendarProviderName = (typeof CALENDAR_PROVIDERS)[number];
 
 export function isCalendarProviderName(value: unknown): value is CalendarProviderName {
@@ -7,14 +7,14 @@ export function isCalendarProviderName(value: unknown): value is CalendarProvide
 }
 
 /** How people see each provider named, in the API, the dashboard and errors. */
-export const CALENDAR_PROVIDER_LABELS: Record<CalendarProviderName, string> = { google: "Google Calendar", calcom: "Cal.com" };
+export const CALENDAR_PROVIDER_LABELS: Record<CalendarProviderName, string> = { google: "Google Calendar", calcom: "Cal.com", calendly: "Calendly" };
 
 /** The provider's display name, or its stored name when it isn't one LobbyStack knows. */
 export function calendarProviderLabel(provider: string): string {
   return isCalendarProviderName(provider) ? CALENDAR_PROVIDER_LABELS[provider] : provider;
 }
 
-/** A calendar a connection could write to. For Cal.com it's an event type. */
+/** A calendar a connection could write to. For Cal.com and Calendly it's an event type. */
 export type CalendarListEntry = { id: string; summary: string; primary: boolean; accessRole?: string };
 
 export type CalendarBusyBlock = { startsAt: string; endsAt: string; externalEventId?: string };
