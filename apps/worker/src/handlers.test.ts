@@ -325,7 +325,7 @@ describe("worker handlers", () => {
       from: '"Bright Desk" <no-reply@bright.example.test>',
       replyTo: "help@bright.example.test",
       subject: "Cedar Clinic used 80% of this month's minutes",
-      text: ["Hi Mia,", "", "Cedar Clinic used 8 of its 10 minutes for October.", "", "Past them, your receptionist keeps answering calls, and Bright Desk bills you for each extra minute.", "", "See your usage: https://bright.example.test/settings/usage", "", "Bright Desk"].join("\n"),
+      text: ["Hi Mia,", "", "Cedar Clinic used 8 of its 10 minutes for October.", "", "Past them, your agent keeps answering calls, and Bright Desk bills you for each extra minute.", "", "See your usage: https://bright.example.test/settings/usage", "", "Bright Desk"].join("\n"),
     });
 
     // A business deleted after it queued the alert has nobody left to tell.
@@ -380,7 +380,7 @@ describe("worker handlers", () => {
       from: "LobbyStack <no-reply@example.test>",
       replyTo: "support@example.test",
       subject: "Cedar Clinic used all of its package's minutes",
-      text: ["Hi Ana,", "", "Cedar Clinic used all 10 minutes in its package for October.", "", "Its receptionist keeps answering calls until its overage reaches the monthly cap you set, and you bill the business for each extra minute.", "", `Change its overage on the Businesses page: https://app.example.test/partner/${partnerId}/businesses`, "", "LobbyStack"].join("\n"),
+      text: ["Hi Ana,", "", "Cedar Clinic used all 10 minutes in its package for October.", "", "Its agent keeps answering calls until its overage reaches the monthly cap you set, and you bill the business for each extra minute.", "", `Change its overage on the Businesses page: https://app.example.test/partner/${partnerId}/businesses`, "", "LobbyStack"].join("\n"),
     });
 
     // The alert is about the business, so once the business is deleted there's nothing left to tell its partner.
