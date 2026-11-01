@@ -17,6 +17,12 @@ export function isCarrierId(value: unknown): value is CarrierId {
  */
 export const CARRIERS_FORWARDING_REFUSED_CALLS: readonly CarrierId[] = ["telnyx"];
 
+/**
+ * The carriers that can ring a staff phone before handing the call to
+ * GPT-Live. Telnyx waits on the open questions in docs/specs/staff-answers-first.md.
+ */
+export const CARRIERS_WITH_STAFF_FIRST: readonly CarrierId[] = ["twilio"];
+
 export type NumberKind = "local" | "mobile" | "toll_free";
 
 export type NumberSearch = {
@@ -72,8 +78,13 @@ export class NumberOrderPendingError extends Error {
   }
 }
 
-/** receptionist: calls go to GPT-Live over SIP. fallback: the carrier asks our voice webhook, which forwards or rejects. */
-export type NumberRoutingMode = "receptionist" | "fallback";
+/**
+ * receptionist: calls go to GPT-Live over SIP. fallback: the carrier asks our
+ * voice webhook, which forwards or rejects. staff_first: the carrier asks our
+ * staff-first webhook, which rings the staff phone and then dials GPT-Live.
+ * Only CARRIERS_WITH_STAFF_FIRST take it.
+ */
+export type NumberRoutingMode = "receptionist" | "fallback" | "staff_first";
 
 export interface NumberRouting {
   readonly carrier: CarrierId;
@@ -150,11 +161,12 @@ export interface CallCostLookup {
   readonly carrier: CarrierId;
   /**
    * Finds the carrier's leg of a GPT-Live phone call, by caller and start
-   * time, and its price. Undefined while the carrier has no record of it
-   * yet. Absent when the carrier can't tell which call was ours.
+   * time, and its price. `dialled` holds the business's numbers. Undefined
+   * while the carrier has no record of it yet. Absent when the carrier can't
+   * tell which call was ours.
    */
-  findLiveCallCost?(input: { from: string; to?: string; near: Date }): Promise<({ providerCallId: string } & CallPricing) | undefined>;
-  /** The price of a call the carrier names by its own id. */
+  findLiveCallCost?(input: { from: string; dialled?: string[]; near: Date }): Promise<({ providerCallId: string } & CallPricing) | undefined>;
+  /** The price of a call the carrier names by its own id, with every leg it dialled. */
   getCallPricing?(input: { providerCallId: string }): Promise<CallPricing>;
 }
 

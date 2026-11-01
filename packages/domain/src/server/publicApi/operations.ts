@@ -1231,6 +1231,11 @@ const receptionistApiFields: Record<keyof ReceptionistProfilePatch, keyof ApiRec
   appointmentChangePolicy: "appointment_change_policy",
   bookingMode: "booking_mode",
   voice: "voice",
+  staffFirstMode: "staff_first_mode",
+  staffFirstNumber: "staff_first_number",
+  staffFirstRingSeconds: "staff_first_ring_seconds",
+  staffFirstMessage: "staff_first_message",
+  staffFirstHandoverMessage: "staff_first_handover_message",
 };
 
 /** The business's receptionist row, or the defaults it would be saved with when it has none yet. */
@@ -1270,6 +1275,11 @@ export async function updateReceptionistForApi(context: DomainContext, caller: A
       ...(input.transfer_number !== undefined ? { transferNumber: input.transfer_number } : {}),
       ...(input.booking_mode !== undefined ? { bookingMode: input.booking_mode } : {}),
       ...(input.voice !== undefined ? { voice: input.voice } : {}),
+      ...(input.staff_first_mode !== undefined ? { staffFirstMode: input.staff_first_mode } : {}),
+      ...(input.staff_first_number !== undefined ? { staffFirstNumber: input.staff_first_number } : {}),
+      ...(input.staff_first_ring_seconds !== undefined ? { staffFirstRingSeconds: input.staff_first_ring_seconds } : {}),
+      ...(input.staff_first_message !== undefined ? { staffFirstMessage: input.staff_first_message } : {}),
+      ...(input.staff_first_handover_message !== undefined ? { staffFirstHandoverMessage: input.staff_first_handover_message } : {}),
       ...(policy ? { appointmentChangePolicy: { enabled: policy.enabled, allowCancel: policy.allow_cancel, allowReschedule: policy.allow_reschedule, verificationMode: policy.verification_mode } } : {}),
     };
     const unchanged = (field: keyof ReceptionistProfilePatch): boolean => {

@@ -122,6 +122,8 @@ export default defineRailway((ctx) => {
       // Optional user input for phone calls: the secret of the OpenAI webhook
       // that points at /api/webhooks/openai/live. See docs/voice/runtime.md.
       OPENAI_WEBHOOK_SECRET: preserve(),
+      // The staff answers first webhooks dial this project over SIP. See docs/voice/runtime.md.
+      OPENAI_PROJECT_ID: preserve(),
       TWILIO_SMS_WEBHOOK_URL: "${{APP_BASE_URL}}/api/webhooks/twilio/sms",
       TWILIO_STATUS_CALLBACK_URL: "${{APP_BASE_URL}}/api/webhooks/twilio/status",
       // Optional user input for Google Calendar and Google sign-in: an OAuth client from Google Cloud
@@ -175,6 +177,7 @@ export default defineRailway((ctx) => {
       // sends calls to OpenAI. New numbers can't be provisioned without it.
       // See docs/voice/runtime.md.
       TWILIO_SIP_TRUNK_SID: preserve(),
+      OPENAI_PROJECT_ID: preserve(),
       APP_BASE_URL: "${{admin.APP_BASE_URL}}",
       TWILIO_STATUS_CALLBACK_URL: "${{admin.TWILIO_STATUS_CALLBACK_URL}}",
       // Optional user input for email. Without SMTP_HOST, password reset, verification codes,

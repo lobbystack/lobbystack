@@ -1,9 +1,19 @@
 import type { BusinessContextSnapshot, TransferPolicy } from "./index";
-import { transferModes } from "./receptionist";
+import { staffFirstModes, transferModes, type StaffFirstMode } from "./receptionist";
 
 export function normalizeTransferMode(value: string | null | undefined): TransferPolicy["mode"] {
   if (value == null) return "on_request";
   return (transferModes as readonly string[]).includes(value) ? value as TransferPolicy["mode"] : "never";
+}
+
+export function normalizeStaffFirstMode(value: string | null | undefined): StaffFirstMode {
+  return (staffFirstModes as readonly string[]).includes(value ?? "") ? value as StaffFirstMode : "never";
+}
+
+/** Whether a call at `now` rings the staff phone first. Hours decide per call, so the number's routing never changes with them. */
+export function shouldRingStaffFirst(snapshot: Pick<BusinessContextSnapshot, "staffFirstPolicy" | "timezone" | "hours" | "closures">, now: Date = new Date()): boolean {
+  if (!snapshot.staffFirstPolicy) return false;
+  return snapshot.staffFirstPolicy.mode === "always" || isBusinessOpen(snapshot, now);
 }
 
 /** Authoritative transfer gate, including automated provider-failure fallbacks. */

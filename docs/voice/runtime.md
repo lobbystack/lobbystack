@@ -112,6 +112,25 @@ A Telnyx number has no disaster recovery URL. Telnyx retries a 503 from its seco
 
 Forwarding never accepts the GPT-Live session, so it uses no OpenAI audio and no plan minutes or transfer attempts, and the call gets no call record. Twilio bills the call at Programmable Voice rates instead of trunking rates: the inbound minutes on the number plus the outbound `<Dial>` leg, for as long as the forwarded call lasts. On 2026-10-24, US rates were $0.0085 a minute to receive on a local number ($0.0220 toll-free) and $0.0140 a minute to call out ([Twilio US voice pricing](https://www.twilio.com/en-us/voice/pricing/us)), about $0.023 a minute in all. Twilio may still bill a few seconds of the refused trunk leg.
 
+### Ring a staff phone first
+
+A business with staff answers first on has its Twilio numbers on `/api/webhooks/twilio/staff-first/incoming` instead of the trunk. `desiredNumberRouting` returns `staff_first` while the setting is on, and a trial's `fallback` wins. Hours never move a number: the webhook applies them on each call. Telnyx numbers stay on the receptionist, and the dashboard shows the setting as unavailable. See [the spec](../specs/staff-answers-first.md) for the open Telnyx questions.
+
+One route, `/api/webhooks/twilio/staff-first/[step]`, checks Twilio's signature and handles each step:
+
+1. `incoming` rejects a blocked caller and a number whose trial ended. It sends the call to GPT-Live outside the mode's hours, on a plan without the feature, when the staff phone is the line in `ForwardedFrom` or the caller, when the same caller is already ringing it, or with no transfer attempts left. That last-but-one check catches a forward from a carrier that leaves out `ForwardedFrom`: each ring's attempt carries a hash of the caller, and a second call within the ring time plus 15 seconds goes to the receptionist. A withheld number can't be matched, so the first `<Dial>`'s timeout limits that loop. Otherwise it reserves one `outbound_call_attempts` and dials the staff phone. Hours and the staff phone come from the business snapshot.
+2. `staff-prompt` tells the staff leg who's calling and waits for a key. `staff-press` bridges the call on a 1 and hangs up on anything else, so a voicemail never keeps the call.
+3. `staff-result` reads `DialBridged`, because Twilio reports `DialCallStatus=completed` when a voicemail answers and nobody presses 1. An accepted call gets a record and ends. Anything else plays the handover message and dials GPT-Live.
+4. `receptionist-result` ends a call that ran its course. A refusal goes through `resolveRefusedCallForward`, as on the disaster recovery URL. A `DialSipResponseCode` of 603 gets `<Reject>`. A 503, a 486, or a refusal with no code gets the forward, or a busy signal when `resolveNumberFallback` finds nowhere to send it. The spike looked for `SipResponseCode`, which isn't Twilio's name for this field, so check `DialSipResponseCode` on a real refusal.
+5. `refer` dials the target in `ReferTransferTarget`, after checking `isTransferPhone`. `<Dial>` needs `referUrl`, or Twilio refuses the REFER with error 13802.
+6. `fallback` is the number's voice fallback URL. It dials GPT-Live without reading the database, so a failed `incoming` still reaches the receptionist.
+
+The `<Sip>` address is `sip:<project>@sip.api.openai.com;transport=tls;secure=true?X-LobbyStack-Called=tel:<dialled number>`. Keep SRTP in the URI: the `secure="true"` attribute gets the call refused with `Live SIP calls require SRTP`. Staging and production share an OpenAI project, so a new header has to reach production before staging can use it.
+
+A staff-answered call has a `calls` row with the provider `staff_answered`, keyed on Twilio's `CallSid`, and `billing_excluded` set. It has no session, minutes or conversation, and it stays out of analytics, the finance export and the trial's call count. `call.syncPrice` adds up the parent call and each connected child leg. For a call that went on to GPT-Live, it finds the inbound call by caller, the business's numbers and start time. Twilio bills these calls at Programmable Voice rates rather than trunking rates.
+
+Twilio has no Serbian `<Say>` voice. A business whose default language is Serbian skips the caller messages, and its staff hear the prompt in English.
+
 ## Follow a browser call
 
 Dashboard test calls, the website widget, prospect demos, and the landing site demo all start at `/api/voice/live/session`. The browser sends its WebRTC offer, and the admin:
@@ -264,7 +283,7 @@ The admin and worker read these variables:
 | `TWILIO_VERIFY_SERVICE_SID` | admin | The Twilio Verify service that texts the onboarding phone code. Onboarding can't verify a phone without it. |
 | `TELNYX_API_KEY` | admin, worker | The Telnyx API key. Without it, the deployment has no Telnyx carrier. |
 | `TELNYX_PUBLIC_KEY` | admin | The account's Ed25519 public key, from **Account settings > Keys & Credentials > Public Key**, which checks every Telnyx webhook. |
-| `OPENAI_PROJECT_ID` | worker | The OpenAI project ID (`proj_…`) each Telnyx number translates to. The worker won't buy a Telnyx number without it. |
+| `OPENAI_PROJECT_ID` | admin, worker | The OpenAI project ID (`proj_…`). Each Telnyx number translates to it, and the worker won't buy a Telnyx number without it. On Twilio, the staff-first webhooks build the `<Sip>` address from it, and the worker won't route a number to them without it. |
 | `TELNYX_OUTBOUND_VOICE_PROFILE_ID` | worker | The outbound voice profile each number's connection gets, which transfers dial through. |
 | `TELNYX_SIP_CONNECTION_ID` | worker | Optional. A shared FQDN connection numbers used before each got their own. The worker moves a number off it the next time it routes the number, and still prices calls on it. |
 | `TELNYX_TEXML_APPLICATION_ID` | worker | The TeXML application a Telnyx number moves to in fallback mode. |
@@ -300,7 +319,7 @@ pnpm exec tsx scripts/operations/move-number-to-gpt-live.ts \
   --business-id your_business_id --number +15815550123 --apply
 ```
 
-A number off the trunk has nothing to answer its calls, so keep every number on it.
+Keep every number on the trunk, unless its business turned on [staff answers first](#ring-a-staff-phone-first). A number off the trunk has no other way to reach GPT-Live.
 
 To take calls and texts on a local stack while a deployment keeps its numbers, see [Run and debug LobbyStack on your desktop](./local-debugging.md).
 

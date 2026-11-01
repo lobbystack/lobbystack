@@ -2,13 +2,13 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 import { and, eq, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 
-import { businesses, enqueueOutbox, numberTrials, onboardingNumberClaimEvents, phoneNumbers, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { businesses, enqueueOutbox, numberTrials, onboardingNumberClaimEvents, phoneNumbers, receptionistProfiles, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { isCarrierId, type CarrierId } from "@lobbystack/providers/telephony/types";
 
 import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
 import { loadEntitlement } from "./entitlement";
-import { activateNumberTrialInTransaction, failNumberTrialInTransaction, isNumberCountry, keepBusinessNumbersInTransaction, trialCountries, trialNumberPaidForInTransaction, verifiedPhone, type NumberCountry } from "./numberTrials";
+import { activateNumberTrialInTransaction, enqueueNumberRouting, failNumberTrialInTransaction, isNumberCountry, keepBusinessNumbersInTransaction, trialCountries, trialNumberPaidForInTransaction, verifiedPhone, type NumberCountry } from "./numberTrials";
 import { normalizeOnboardingStage, NUMBER_CLAIM_STAGES } from "./onboarding";
 import { loadPartnerNumberStanding, newPartnerNumberRefusal, numberCountsForPartnerInTransaction, partnerTrialOffered, recordPartnerNumberCostInTransaction, unclaimedPartnerDemoInTransaction } from "./partnerNumbers";
 import { resolveBusinessNumberMarket, type BusinessNumberMarket } from "./phoneNumberMarket";
@@ -366,6 +366,9 @@ export async function completeNumberProvisioning(context: DomainContext, input: 
       // The owner, or for a partner's trial the partner, may have paid while we bought the number: that payment found no trial to convert, so convert it now.
       if (activated && await trialNumberPaidForInTransaction(tx, input.businessId)) await keepBusinessNumbersInTransaction(tx, { businessId: input.businessId });
     }
+    // Every number starts on the receptionist. With staff answers first on, routing moves this one to the webhook.
+    const profile = (await tx.select({ staffFirstMode: receptionistProfiles.staffFirstMode }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, input.businessId)).limit(1))[0];
+    if (profile && profile.staffFirstMode !== "never") await enqueueNumberRouting(tx, { businessId: input.businessId, phoneNumberId: number.id, mode: "receptionist" });
     return number.id;
   });
 }

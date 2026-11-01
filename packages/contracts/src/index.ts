@@ -153,6 +153,13 @@ export const snapshotSchema = z.object({
     mode: z.enum(["never", "always", "on_request", "on_urgent", "during_business_hours"]),
     transferNumber: z.string().optional(),
   }),
+  staffFirstPolicy: z.object({
+    mode: z.enum(["business_hours", "always"]),
+    number: z.string(),
+    ringSeconds: z.number().int().positive(),
+    message: z.string().optional(),
+    handoverMessage: z.string().optional(),
+  }).optional(),
   hours: z.array(z.object({
     dayOfWeek: z.number().int().min(0).max(6),
     openMinutes: z.number().int().min(0).max(1440),

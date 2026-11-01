@@ -3,6 +3,18 @@
 /** When the receptionist may put a caller through to the team. */
 export const transferModes = ["never", "always", "on_request", "on_urgent", "during_business_hours"] as const;
 
+/** When a call rings the staff phone before the receptionist answers. */
+export const staffFirstModes = ["never", "business_hours", "always"] as const;
+export type StaffFirstMode = (typeof staffFirstModes)[number];
+
+/** How long the staff phone may ring. */
+export const staffFirstRingSeconds = [10, 15, 20, 30, 45, 60] as const;
+export type StaffFirstRingSeconds = (typeof staffFirstRingSeconds)[number];
+export const DEFAULT_STAFF_FIRST_RING_SECONDS: StaffFirstRingSeconds = 15;
+
+/** The longest message the carrier reads to a caller before ringing or at handover. */
+export const STAFF_FIRST_MESSAGE_MAX_LENGTH = 200;
+
 /** How the receptionist handles appointment requests. */
 export const bookingModes = ["off", "request", "instant"] as const;
 

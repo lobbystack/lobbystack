@@ -607,7 +607,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         const call = await loadLiveCallForPricing(dependencies.domain, { businessId, callId: liveCallId });
         const callCost = call ? dependencies.telephony.forNumber(call.carrier)?.callCost : undefined;
         if (!call || !callCost?.findLiveCallCost) return { status: "skipped", entityId: liveCallId };
-        const found = await callCost.findLiveCallCost({ near: call.startedAt, from: call.callerPhone });
+        const found = await callCost.findLiveCallCost({ near: call.startedAt, from: call.callerPhone, dialled: call.dialled });
         if (!found) throw new Error(`No ${callCost.carrier} call found yet for live call ${liveCallId}.`);
         const { providerCallId, ...pricing } = found;
         if (pricing.providerCostUsd === undefined) throw new Error(`${callCost.carrier} call pricing is incomplete for ${providerCallId}.`);

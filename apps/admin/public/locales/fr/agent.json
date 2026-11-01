@@ -390,6 +390,46 @@
       }
     }
   },
+  "staffFirst": {
+    "title": "Le personnel répond d'abord",
+    "save": "Enregistrer le personnel répond d'abord",
+    "mode": {
+      "label": "Faire sonner votre équipe d'abord",
+      "hint": "Votre téléphone sonne d'abord. Appuyez sur 1 pour prendre l'appel. Sinon, le réceptionniste répond.",
+      "options": {
+        "never": "Désactivé",
+        "business_hours": "Pendant les heures d'ouverture",
+        "always": "Toujours"
+      }
+    },
+    "unavailable": {
+      "plan": "Offert avec les forfaits payants.",
+      "carrier": "Pas encore offert sur ce numéro."
+    },
+    "number": {
+      "label": "Téléphone du personnel",
+      "hint": "N'utilisez pas un téléphone renvoyé vers le numéro de votre réceptionniste."
+    },
+    "ring": {
+      "label": "Durée de la sonnerie",
+      "hint": "Chaque sonnerie utilise un transfert.",
+      "seconds": "{{count}} secondes"
+    },
+    "message": {
+      "label": "Message avant la sonnerie",
+      "hint": "Facultatif. Les appelants l'entendent en premier.",
+      "noSerbianVoice": "Les appelants ne l'entendront pas. Les messages ne peuvent pas encore être lus en serbe."
+    },
+    "handover": {
+      "label": "Message avant la réponse du réceptionniste",
+      "hint": "Facultatif. Les appelants l'entendent si personne ne répond."
+    },
+    "errors": {
+      "numberRequired": "Ajoutez un téléphone du personnel.",
+      "ownLine": "Utilisez un autre téléphone que le numéro de votre réceptionniste.",
+      "trialLocked": "Pendant l'essai gratuit, utilisez le mobile que vous avez vérifié."
+    }
+  },
   "booking": {
     "title": "Rendez-vous",
     "mode": {

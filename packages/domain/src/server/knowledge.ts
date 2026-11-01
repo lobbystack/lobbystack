@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { and, asc, desc, eq, ilike, inArray, isNull, lt, ne, notInArray, sql } from "drizzle-orm";
 
 import { agentRules, businessContextSnapshots, businesses, businessHours, closures, enqueueOutbox, inOrder, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, phoneNumbers, receptionistProfiles, services, staffServiceAssignments, storageObjects, websiteIngestionJobs, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { defaultGreeting, FULL_CRAWL_PAGE_LIMIT, getKnowledgeStorageLimitBytes, normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeReceptionistVoice, normalizeRuntimeLocale, normalizeTransferMode, ONBOARDING_CRAWL_PAGE_LIMIT, runtimeLocales, servicePriceFromColumns, type BusinessContextSnapshot } from "@lobbystack/shared";
+import { defaultGreeting, FULL_CRAWL_PAGE_LIMIT, getKnowledgeStorageLimitBytes, normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeReceptionistVoice, normalizeRuntimeLocale, normalizeStaffFirstMode, normalizeTransferMode, ONBOARDING_CRAWL_PAGE_LIMIT, runtimeLocales, servicePriceFromColumns, type BusinessContextSnapshot } from "@lobbystack/shared";
 import { buildBusinessContextSnapshot, MAX_KNOWLEDGE_SNIPPETS_PER_SNAPSHOT } from "../snapshot";
 import { countKnowledgeTokens, fuseKnowledgeRanks, KNOWLEDGE_SEARCH_TOKEN_BUDGET, knowledgeLexicalQueries, knowledgeQueryTerms, withinKnowledgeBudget, type KnowledgePassage } from "../knowledgeRanking";
 
@@ -639,6 +639,14 @@ export async function refreshBusinessSnapshot(
     const smsNumber = await resolveSmsSender(tx, input.businessId);
     const version = `${Date.now()}`;
     const defaultLocale = normalizeRuntimeLocale(business[0].defaultLocale);
+    const staffFirstMode = normalizeStaffFirstMode(currentProfile?.staffFirstMode);
+    const staffFirstPolicy = staffFirstMode !== "never" && currentProfile?.staffFirstNumber ? {
+      mode: staffFirstMode,
+      number: currentProfile.staffFirstNumber,
+      ringSeconds: currentProfile.staffFirstRingSeconds,
+      ...(currentProfile.staffFirstMessage ? { message: currentProfile.staffFirstMessage } : {}),
+      ...(currentProfile.staffFirstHandoverMessage ? { handoverMessage: currentProfile.staffFirstHandoverMessage } : {}),
+    } : undefined;
     builtSnapshot = buildBusinessContextSnapshot({
       businessId: input.businessId,
       version,
@@ -681,6 +689,7 @@ export async function refreshBusinessSnapshot(
       appointmentChangePolicy: normalizeAppointmentChangePolicy(currentProfile?.appointmentChangePolicy),
       bookingMode: normalizeBookingMode(currentProfile?.bookingMode),
       transferPolicy: { mode: normalizeTransferMode(currentProfile?.transferMode), ...(currentProfile?.transferNumber ? { transferNumber: currentProfile.transferNumber } : {}) },
+      ...(staffFirstPolicy ? { staffFirstPolicy } : {}),
     });
     await tx.insert(businessContextSnapshots).values({ businessId: input.businessId, version, snapshot: builtSnapshot as unknown as Record<string, unknown> });
     // Readers only use the newest row. now() is this transaction's start, the

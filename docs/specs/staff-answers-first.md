@@ -1,6 +1,6 @@
 # Spec: staff answers first
 
-Status: ready to build on Twilio. Telnyx waits on the open questions in the spike results.
+Status: built on Twilio, waiting on manual staging calls. Telnyx waits on the open questions in the spike results.
 
 ## Problem Statement
 
@@ -80,7 +80,7 @@ The results change the design in four ways:
 - **Dialled number:** `liveRoute` reads `X-LobbyStack-Called`, shipped in #357. Staging and production share an OpenAI project, so an old production route rejects these calls before staging can accept them. Production has to read a new header first.
 - **SIP address:** the `sipAddress` helper builds `sip:<project>@sip.api.openai.com;transport=tls;secure=true`.
 - **Voicemail:** when a staff phone answers and nobody presses 1, Twilio reports `DialCallStatus=completed` with `DialBridged=false`, so the `action` webhook has to read `DialBridged`. On Telnyx, the caller's leg connected when the unanswered whisper ended, so voicemail may keep the call. Telnyx sends no `DialBridged`. Solve this before Telnyx ships.
-- **Refusals:** a rejected `<Sip>` leg reaches `action` as `DialCallStatus=failed`. Telnyx adds `SipHangupCause`, but Twilio sent no `SipResponseCode` in these calls, so refusal handling on Twilio can't rely on that field yet.
+- **Refusals:** a rejected `<Sip>` leg reaches `action` as `DialCallStatus=failed`. Telnyx adds `SipHangupCause`, but Twilio sent no `SipResponseCode` in these calls, so refusal handling on Twilio can't rely on that field yet. Twilio documents the field as `DialSipResponseCode`, which the spike didn't check. The webhook reads it for a 603 and treats a missing code as a refusal.
 
 ## Design
 
@@ -114,7 +114,8 @@ Telnyx clears its stored forward on a TeXML application, so this route is the on
 
 The staff phone can't be the dialled number, and can't be a line that forwards to it:
 
-- The webhook refuses to ring `ForwardedFrom` on Twilio.
+- The webhook refuses to ring `ForwardedFrom` on Twilio, or the caller's own number.
+- Twilio can leave `ForwardedFrom` out, so a call from the same caller during their own ring goes to the receptionist. A withheld number can't be matched, and the first `<Dial>`'s timeout limits that loop.
 - Telnyx sends no such field, so its loop guard has to come from a call that re-enters the webhook within the same ring window.
 - The setting's help text warns against entering a phone that forwards to LobbyStack, because a forward on no answer would otherwise bring the call back.
 

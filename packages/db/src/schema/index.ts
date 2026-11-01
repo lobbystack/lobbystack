@@ -726,6 +726,12 @@ export const receptionistProfiles = pgTable(
     // The GPT-Live voice calls speak in. No check constraint: a voice OpenAI
     // retires stays stored and calls fall back to marin.
     voice: varchar("voice", { length: 32 }).default("marin").notNull(),
+    // Staff answers first: when calls ring this phone before the receptionist answers.
+    staffFirstMode: varchar("staff_first_mode", { length: 16 }).$type<"never" | "business_hours" | "always">().default("never").notNull(),
+    staffFirstNumber: text("staff_first_number"),
+    staffFirstRingSeconds: smallint("staff_first_ring_seconds").default(15).notNull(),
+    staffFirstMessage: text("staff_first_message"),
+    staffFirstHandoverMessage: text("staff_first_handover_message"),
     ...timestamps,
   },
   (table) => [uniqueIndex("receptionist_profiles_business_unique").on(table.businessId)],
