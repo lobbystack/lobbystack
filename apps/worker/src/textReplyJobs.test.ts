@@ -70,6 +70,29 @@ it("alerts the team when the plan has no chats left", async () => {
   expect(mocks.createAgent).not.toHaveBeenCalled();
 });
 
+it("doesn't retry once a tool acted and the text came back empty, and tells the team", async () => {
+  mocks.createAgent.mockImplementation(({ onAction }: { onAction: () => void }) => ({
+    generate: async () => { onAction(); return { text: "  ", usage: {} }; },
+  }));
+  await expect(replyToTextMessage(domain, job, { model }, { isFinalAttempt: false })).resolves.toEqual({ status: "skipped", entityId: "message" });
+  expect(mocks.alert).toHaveBeenCalledWith(domain, { businessId: "business", conversationId: "conversation" });
+  expect(mocks.save).not.toHaveBeenCalled();
+});
+
+it("doesn't retry when the model fails after a tool acted", async () => {
+  mocks.createAgent.mockImplementation(({ onAction }: { onAction: () => void }) => ({
+    generate: async () => { onAction(); throw new Error("provider down"); },
+  }));
+  await expect(replyToTextMessage(domain, job, { model }, { isFinalAttempt: false })).resolves.toEqual({ status: "skipped", entityId: "message" });
+  expect(mocks.alert).toHaveBeenCalledOnce();
+});
+
+it("retries an empty reply when no tool acted", async () => {
+  mocks.generate.mockResolvedValue({ text: "", usage: {} });
+  await expect(replyToTextMessage(domain, job, { model }, { isFinalAttempt: false })).rejects.toThrow("empty reply");
+  expect(mocks.alert).not.toHaveBeenCalled();
+});
+
 it("alerts the team only when the last attempt fails", async () => {
   mocks.generate.mockRejectedValue(new Error("provider down"));
   await expect(replyToTextMessage(domain, job, { model }, { isFinalAttempt: false })).rejects.toThrow("provider down");

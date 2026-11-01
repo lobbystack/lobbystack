@@ -1,8 +1,10 @@
-import { beforeEach, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ claim: vi.fn(), finish: vi.fn(), partSent: vi.fn(), release: vi.fn(), leaseEndsAt: vi.fn() }));
-vi.mock("@lobbystack/domain", () => ({ claimInstagramDelivery: mocks.claim, finishInstagramDelivery: mocks.finish, instagramDeliveryLeaseEndsAt: mocks.leaseEndsAt, recordInstagramPartSent: mocks.partSent, releaseInstagramDelivery: mocks.release }));
+import { beforeEach, describe, expect, it, vi } from "vitest";
+const mocks = vi.hoisted(() => ({ claim: vi.fn(), finish: vi.fn(), partSent: vi.fn(), release: vi.fn(), leaseEndsAt: vi.fn(), alert: vi.fn(), load: vi.fn(), reserve: vi.fn(), save: vi.fn(), snapshot: vi.fn(), usage: vi.fn(), createAgent: vi.fn() }));
+vi.mock("@lobbystack/domain", () => ({ alertUnansweredInstagram: mocks.alert, claimInstagramDelivery: mocks.claim, finishInstagramDelivery: mocks.finish, getCachedBusinessSnapshot: mocks.snapshot, instagramDeliveryLeaseEndsAt: mocks.leaseEndsAt, loadInstagramReplyContext: mocks.load, recordAiGenerationEvent: mocks.usage, recordInstagramPartSent: mocks.partSent, refreshBusinessSnapshot: vi.fn(), releaseInstagramDelivery: mocks.release, reserveWidgetChatUsageInTransaction: mocks.reserve, saveInstagramReply: mocks.save }));
+vi.mock("@lobbystack/agent-core", () => ({ createAgentModel: () => ({}), createReceptionistAgent: mocks.createAgent, describeAgentUsage: () => ({ provider: "openai", model: "test" }) }));
+vi.mock("@lobbystack/db", () => ({ withBusinessTransaction: async (_db: unknown, _scope: unknown, run: (tx: unknown) => Promise<unknown>) => await run({}) }));
 import { InstagramApiError } from "@lobbystack/providers/instagram/instagram";
-import { instagramReplyText, sendInstagramMessage } from "./instagramJobs";
+import { instagramReplyText, replyToInstagramMessage, sendInstagramMessage } from "./instagramJobs";
 
 const job = { id: "job", type: "instagram.send", businessId: "business", payload: { messageId: "message" } } as never;
 const domain = { db: {} } as never;
@@ -16,6 +18,30 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.claim.mockResolvedValue(delivery);
   provider.sendTextMessage.mockResolvedValue({ messageId: "mid_1" });
+});
+
+describe("replyToInstagramMessage", () => {
+  const replyJob = { id: "job", type: "instagram.reply", businessId: "business", payload: { conversationId: "conversation", messageId: "message" } } as never;
+  const generating = (generate: () => Promise<unknown>) => mocks.createAgent.mockImplementation(({ onAction }: { onAction: () => void }) => ({ generate: async () => { onAction(); return await generate(); } }));
+
+  beforeEach(() => {
+    mocks.load.mockResolvedValue({ conversationId: "conversation", history: [{ direction: "inbound", body: "Call me back" }] });
+    mocks.reserve.mockResolvedValue({ allowed: true });
+    mocks.snapshot.mockResolvedValue({ defaultLocale: "en", displayName: "Javor" });
+    mocks.usage.mockResolvedValue(null);
+  });
+
+  it("doesn't retry once a tool acted and the text came back empty, and tells the team", async () => {
+    generating(async () => ({ text: "", usage: {} }));
+    await expect(replyToInstagramMessage(domain, replyJob, { model: {} as never })).resolves.toEqual({ status: "skipped", entityId: "message" });
+    expect(mocks.alert).toHaveBeenCalledWith(domain, { businessId: "business", conversationId: "conversation" });
+  });
+
+  it("retries a failure when no tool acted", async () => {
+    mocks.createAgent.mockReturnValue({ generate: async () => { throw new Error("provider down"); } });
+    await expect(replyToInstagramMessage(domain, replyJob, { model: {} as never })).rejects.toThrow("provider down");
+    expect(mocks.alert).not.toHaveBeenCalled();
+  });
 });
 
 it("sends without refreshing the token, which the daily job keeps current", async () => {

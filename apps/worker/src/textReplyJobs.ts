@@ -48,6 +48,8 @@ export async function replyToTextMessage(domain: DomainContext, job: JobEnvelope
   if (!reply) return { status: "skipped", entityId: messageId };
   const traceId = randomUUID();
   const startedAt = performance.now();
+  // Set once a tool saves a message or books: another attempt would do it twice.
+  let acted = false;
   try {
     const model = options.model ?? createAgentModel();
     if (!model) throw new Error("The AI chat provider is not configured.");
@@ -64,6 +66,7 @@ export async function replyToTextMessage(domain: DomainContext, job: JobEnvelope
       // No callerPhone: a text's sender can be spoofed, so it can't verify an appointment change.
       context: { domain, snapshot, channel: "sms", conversationId },
       extraInstructions: `${TEXT_INSTRUCTIONS} They're texting from ${reply.phone}: use it as their contact and callback number unless they give another. Reply in the language of the person's latest message; if it's unclear, use ${runtimeLocaleName(locale)}.`,
+      onAction: () => { acted = true; },
     });
     const result = await agent.generate({ messages: reply.history.map((row) => ({ role: row.direction === "inbound" ? "user" as const : "assistant" as const, content: row.body })) });
     if (!result.text.trim()) throw new Error("The AI assistant returned an empty reply.");
@@ -76,7 +79,8 @@ export async function replyToTextMessage(domain: DomainContext, job: JobEnvelope
     // Only a stable category: provider errors can quote the conversation.
     void recordAiGenerationEvent(domain, { businessId, operation: OPERATION, conversationId, traceId, provider: "unknown", model: "unknown", latencyMs: performance.now() - startedAt, isStreaming: false, isError: true, error: "generation_failed" }).catch(() => undefined);
     // The team got no alert when the text came in, because this job was going to answer it.
-    if (execution.isFinalAttempt) await alertUnansweredText(domain, { businessId, conversationId });
+    if (acted || execution.isFinalAttempt) await alertUnansweredText(domain, { businessId, conversationId });
+    if (acted) return { status: "skipped", entityId: messageId };
     throw error;
   }
 }

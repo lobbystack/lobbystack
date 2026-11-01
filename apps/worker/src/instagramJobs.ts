@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { createAgentModel, createReceptionistAgent, describeAgentUsage } from "@lobbystack/agent-core";
 import type { JobEnvelope } from "@lobbystack/contracts";
 import { withBusinessTransaction } from "@lobbystack/db";
-import { claimInstagramDelivery, finishInstagramDelivery, getCachedBusinessSnapshot, instagramDeliveryLeaseEndsAt, loadInstagramReplyContext, recordAiGenerationEvent, recordInstagramPartSent, refreshBusinessSnapshot, refreshInstagramTokenIfDue, releaseInstagramDelivery, reserveWidgetChatUsageInTransaction, saveInstagramReply, type DomainContext } from "@lobbystack/domain";
+import { alertUnansweredInstagram, claimInstagramDelivery, finishInstagramDelivery, getCachedBusinessSnapshot, instagramDeliveryLeaseEndsAt, loadInstagramReplyContext, recordAiGenerationEvent, recordInstagramPartSent, refreshBusinessSnapshot, refreshInstagramTokenIfDue, releaseInstagramDelivery, reserveWidgetChatUsageInTransaction, saveInstagramReply, type DomainContext } from "@lobbystack/domain";
 import { InstagramApiError, splitInstagramText, type InstagramProvider } from "@lobbystack/providers/instagram/instagram";
 import { normalizeRuntimeLocale, runtimeLocaleName } from "@lobbystack/shared";
 
@@ -49,11 +49,14 @@ export async function replyToInstagramMessage(domain: DomainContext, job: JobEnv
   const snapshot = await getCachedBusinessSnapshot(domain, { businessId }) ?? (await refreshBusinessSnapshot(domain, { businessId }), await getCachedBusinessSnapshot(domain, { businessId }));
   if (!snapshot) throw new Error("The business snapshot is unavailable.");
   const locale = normalizeRuntimeLocale(snapshot.defaultLocale);
+  // Set once a tool saves a message or books: another attempt would do it twice.
+  let acted = false;
   const agent = createReceptionistAgent({
     model,
     // A text conversation, so it gets the website chat's knowledge, tools and booking.
     context: { domain, snapshot, channel: "instagram", conversationId },
     extraInstructions: `${INSTAGRAM_INSTRUCTIONS} Reply in the language of the person's latest message; if it's unclear, use ${runtimeLocaleName(locale)}.`,
+    onAction: () => { acted = true; },
   });
   const traceId = randomUUID();
   const startedAt = performance.now();
@@ -72,7 +75,9 @@ export async function replyToInstagramMessage(domain: DomainContext, job: JobEnv
   } catch (error) {
     // Only a stable category: provider errors can quote the conversation.
     void recordAiGenerationEvent(domain, { businessId, operation: "instagram.reply", conversationId, traceId, provider: "unknown", model: "unknown", latencyMs: performance.now() - startedAt, isStreaming: false, isError: true, error: "generation_failed" }).catch(() => undefined);
-    throw error;
+    if (!acted) throw error;
+    await alertUnansweredInstagram(domain, { businessId, conversationId });
+    return { status: "skipped", entityId: messageId };
   }
 }
 
