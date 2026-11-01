@@ -595,6 +595,34 @@
         "narrowerAvailability": "Widen the event type's schedule on {{days}} to match your opening hours. Cal.com turns down bookings outside its schedule."
       }
     },
+    "calendly": {
+      "sheetTitle": "Calendly",
+      "sheetDescription": "Connect your Calendly account and pick the event type your receptionist books.",
+      "connect": "Connect Calendly",
+      "reconnect": "Reconnect",
+      "disconnect": "Disconnect",
+      "connectedSuccess": "Calendly connected. Pick the event type to book.",
+      "connectFailed": "Calendly couldn't be connected. Please try again.",
+      "disconnectedSuccess": "Calendly disconnected.",
+      "eventTypeLabel": "Event type",
+      "selectEventType": "Choose an event type",
+      "eventTypeSaved": "Event type saved.",
+      "refresh": "Refresh",
+      "syncNeedsAttention": "Needs attention",
+      "syncFailed": "Your receptionist couldn't finish syncing with Calendly and won't offer times from it until a sync works. It tries again on its own, or you can click Refresh.",
+      "discoveryFailed": "Your receptionist couldn't reach your Calendly account. Refresh, or reconnect the account.",
+      "howItWorks": "Each appointment becomes a booking of this event type. Calendly gets the caller's name and a stand-in email address, so it doesn't email them. Your receptionist sends the confirmation, and the caller's phone and email go in a text question on the event type.",
+      "blockedOption": "{{name}} (can't be booked)",
+      "planRequiredTitle": "Paid plan required",
+      "planRequired": "Calendly only takes bookings from other apps on its paid plans. Upgrade to Standard or above, then click Reconnect.",
+      "warningsTitle": "Check this event type in Calendly",
+      "warnings": {
+        "requiredQuestions": "Make {{questions}} optional, or pick another event type. Your receptionist can't answer required choice questions, so Calendly turns down every booking.",
+        "missingLengths": "Your {{lengths}}-minute services don't match this event type. Calendly books them at the event type's own length.",
+        "noDetailsQuestion": "Add a text question to this event type. Until you do, your team won't see the caller's phone or email in Calendly.",
+        "videoLocation": "This event type only offers video calls, so bookings carry a meeting link. Add a phone or in-person location for callers."
+      }
+    },
     "cards": {
       "google": {
         "title": "Google Calendar",
@@ -603,6 +631,10 @@
       "calcom": {
         "title": "Cal.com",
         "description": "Book appointments into one of your Cal.com event types."
+      },
+      "calendly": {
+        "title": "Calendly",
+        "description": "Book appointments into one of your Calendly event types."
       },
       "webhooks": {
         "title": "Webhooks",

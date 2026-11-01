@@ -1,0 +1,86 @@
+---
+title: "Conectar Calendly"
+description: "Conecte una cuenta de pago de Calendly, elija el tipo de evento que reserva su recepcionista de IA y mantenga su disponibilidad sincronizada."
+sidebarTitle: "Calendly"
+contentType: "How-to"
+---
+
+Conecte Calendly si su equipo ya recibe reservas allí. Su recepcionista de IA registra cada cita como una reserva de Calendly de un solo tipo de evento. También cuenta sus eventos de Calendly como tiempo ocupado, así que no ofrece horarios ya reservados en su página de Calendly.
+
+<Note>
+  Necesita un plan de pago de Calendly, Standard o superior. En el plan Free, Calendly rechaza las reservas y los webhooks de otras aplicaciones. Si conecta una cuenta Free, la tarjeta de Calendly le indica que cambie de plan.
+</Note>
+
+## Conozca los límites antes de conectar
+
+Calendly aplica estos límites a las reservas que llegan desde otras aplicaciones:
+
+- **Tope de reservas**: por debajo de Enterprise, cada usuario de Calendly tiene 10 reservas por minuto, 50 por hora y 100 por día. Una prueba tiene 5 por día.
+- **Cambios de hora**: Calendly no permite que una aplicación reprograme. LobbyStack reserva la nueva hora y luego cancela la anterior, así que un cambio cuenta como una reserva.
+- **Duración**: cada reserva toma la duración predeterminada del tipo de evento.
+
+Si llega al tope, su recepcionista de IA igual toma la cita. LobbyStack la agrega a Calendly cuando el límite se reinicia y le avisa si la espera supera unos minutos.
+
+## Qué recibe Calendly
+
+Por cada cita, Calendly recibe:
+
+- **Nombre del invitado**: el de quien llama, para que vea quién reservó
+- **Correo del invitado**: una dirección sustituta exclusiva de la cita, para que Calendly no le escriba a quien llama
+- **Respuestas a las preguntas del tipo de evento**: el nombre, el teléfono y el correo real de quien llama van en una pregunta de texto, para que pueda comunicarse
+
+La recepcionista de IA envía la confirmación y los recordatorios a quien llama. Calendly sigue enviando sus notificaciones de anfitrión a su equipo.
+
+## Conectar Calendly
+
+<Steps>
+  <Step title="Abra Integraciones">
+    En el panel, abra **Integraciones**.
+  </Step>
+  <Step title="Inicie la conexión con Calendly">
+    Busque **Calendly** y haga clic en **Conectar**.
+  </Step>
+  <Step title="Autorice a LobbyStack">
+    Inicie sesión en Calendly y apruebe los permisos solicitados.
+  </Step>
+  <Step title="Elija un tipo de evento">
+    De vuelta en el panel, elija un tipo de evento en **Tipo de evento**. LobbyStack guarda su elección de inmediato.
+  </Step>
+</Steps>
+
+LobbyStack empieza a leer sus eventos de Calendly, y los calendarios que Calendly revisa para detectar conflictos, en pocos segundos.
+
+## Configure el tipo de evento en Calendly
+
+Después de elegir un tipo de evento, el cuadro de diálogo enumera lo que debe corregir en Calendly:
+
+- **Preguntas de opción obligatorias**: hágalas opcionales. Su recepcionista de IA no puede responder una pregunta obligatoria de selección única o múltiple, así que no puede elegir un tipo de evento que tenga una.
+- **Pregunta de texto**: agregue una al tipo de evento. Sin ella, su equipo no ve el teléfono ni el correo de quien llama en Calendly.
+- **Duración**: ajuste el tipo de evento a la duración de sus servicios. Calendly reserva cada cita con esa duración.
+- **Ubicación**: agregue una ubicación telefónica o presencial. De lo contrario, las reservas llevan un enlace de video.
+
+La disponibilidad del tipo de evento también debe cubrir su horario de atención. Calendly solo reserva horarios libres de su agenda. Si rechaza una reserva, la cita muestra un problema de sincronización y LobbyStack le avisa.
+
+## Use Calendly con Google Calendar o Cal.com
+
+El tiempo ocupado de cada calendario conectado bloquea reservas. Las citas nuevas van a Calendly o Cal.com antes que a Google Calendar, porque sus páginas de reserva reciben reservas por su cuenta. El calendario propio de un miembro del equipo sigue teniendo prioridad para sus citas.
+
+## Cambie el tipo de evento
+
+1. Abra **Integraciones**.
+2. Haga clic en la tarjeta de Calendly.
+3. Elija otro tipo de evento.
+
+Las citas nuevas usan el nuevo tipo de evento. Las próximas citas pasan a él en la siguiente sincronización.
+
+## Cuando una reserva cambia en Calendly
+
+Si cancela una reserva en Calendly, LobbyStack cancela la cita y le avisa. Quienes aceptaron recibir mensajes de texto reciben un mensaje de cancelación.
+
+Si mueve una reserva en Calendly, LobbyStack mueve la cita y su recordatorio, y le avisa para que comunique la nueva hora a quien llama. LobbyStack no envía mensajes de texto por este cambio. Si el miembro del equipo ya tiene una cita a la nueva hora, LobbyStack mantiene la hora original y le avisa para que lo resuelva.
+
+## Reconecte o desconecte
+
+Si Calendly deja de aceptar la conexión, la tarjeta indica que debe reconectar. Abra la tarjeta de Calendly y haga clic en **Reconectar**.
+
+Para quitar la integración, abra la tarjeta de Calendly y haga clic en **Desconectar**. LobbyStack cancela las próximas reservas que su recepcionista de IA hizo en Calendly, y su página de reservas vuelve a mostrar esos horarios como libres. Si Google Calendar también está conectado, esas citas pasan a él. Las reservas pasadas siguen en Calendly.

@@ -962,7 +962,7 @@ export async function updateWidgetKeyForApi(context: DomainContext, caller: ApiC
   });
 }
 
-// Calendars. Google and Cal.com ask the calendar's owner to agree in a browser,
+// Calendars. Google, Cal.com and Calendly ask the calendar's owner to agree in a browser,
 // so the API hands out a link that starts that flow in the dashboard, then
 // manages the connections it creates as the integrations page does.
 
@@ -971,13 +971,13 @@ export type CalendarAccess = {
   decryptToken: (value: string) => string;
   encryptToken: (value: string) => string;
   refreshAccessToken: (input: { refreshToken: string }) => Promise<{ accessToken: string; expiresIn: number; refreshToken?: string }>;
-  listCalendars: (input: { accessToken: string }) => Promise<Array<{ id: string; summary: string; primary: boolean; accessRole?: string }>>;
+  listCalendars: (input: { accessToken: string }) => Promise<Array<{ id: string; summary: string; primary: boolean; accessRole?: string; unwritableReason?: string }>>;
 };
 
 type AccountCalendar = Awaited<ReturnType<CalendarAccess["listCalendars"]>>[number];
 
 /** The path that connects a provider again. */
-const connectPath = (provider: string) => `POST /calendars/${provider === "calcom" ? "calcom" : "google"}/connect`;
+const connectPath = (provider: string) => `POST /calendars/${provider === "calcom" || provider === "calendly" ? provider : "google"}/connect`;
 
 /** LobbyStack adds appointments to the calendar it reads, so it needs one it may write to, as in the dashboard. */
 function isWritableCalendar(calendar: AccountCalendar): boolean {
@@ -1045,7 +1045,7 @@ export async function updateCalendarConnectionForApi(context: DomainContext, cal
   if (calendarId !== undefined) {
     const picked = (await accountCalendars(context, caller, connectionId, current.provider, access(current.provider))).find((calendar) => calendar.id === calendarId);
     if (!picked) throw invalidRequest("The connected account has no calendar with this id.", [{ path: "calendar_id", message: "Use an id from GET /calendars/{connection_id}/calendars." }]);
-    if (!isWritableCalendar(picked)) throw invalidRequest("LobbyStack can't add appointments to this calendar. Pick one the account can change.", [{ path: "calendar_id", message: "Not writable." }]);
+    if (!isWritableCalendar(picked)) throw invalidRequest(picked.unwritableReason ?? "LobbyStack can't add appointments to this calendar. Pick one the account can change.", [{ path: "calendar_id", message: "Not writable." }]);
   }
   return await inBusiness(context, caller, async (tx) => {
     // Held to the end, so a disconnect can't land between the checks and the changes.

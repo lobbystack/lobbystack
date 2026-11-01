@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { CALENDLY_PLAN_ERROR } from "@lobbystack/shared";
 import { LiveIntegrationsSurface } from "./live-integrations-surface";
 import type { IntegrationsViewModel } from "@/lib/page-view-models";
 import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
@@ -64,6 +65,33 @@ describe("original integration permissions and setup navigation", () => {
     fireEvent.click(await screen.findByRole("button", { name: "integrations.actions.connected" }));
     fireEvent.click(await screen.findByRole("button", { name: "integrations.google.refreshCalendars" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/api/integrations?businessId=business"), expect.objectContaining({ method: "POST" })));
+  });
+  it("hides the Calendly card where Calendly isn't set up and nothing is connected", async () => {
+    setup("business_admin", { calendly: { configured: false, options: [], discoveryError: null, warnings: [], paidPlan: null } });
+    await screen.findByText("integrations.cards.google.title");
+    expect(screen.queryByText("integrations.cards.calendly.title")).toBeNull();
+  });
+  it("lists what to fix on a Calendly event type", async () => {
+    setup("business_admin", {
+      calendarConnections: [{ id: "calendly-connection", provider: "calendly", externalAccountId: "U1", status: "connected", staffId: null, selectedCalendarId: "ET1", lastSyncError: null }],
+      calendly: { configured: true, options: [{ id: "ET1", summary: "Haircut", primary: false, accessRole: "owner", selected: true }], discoveryError: null, paidPlan: true, warnings: [{ code: "required_questions", questions: ["Which clinic?"] }, { code: "missing_lengths", lengths: [45] }, { code: "no_details_question" }, { code: "video_location" }] },
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "integrations.actions.connected" }));
+    const dialog = await screen.findByRole("dialog");
+    for (const key of ["requiredQuestions", "missingLengths", "noDetailsQuestion", "videoLocation"]) expect(dialog.textContent).toContain(`integrations.calendly.warnings.${key}`);
+  });
+  it.each([
+    ["the plan lookup", { paidPlan: false, lastSyncError: null }],
+    ["a sync the plan stopped", { paidPlan: null, lastSyncError: CALENDLY_PLAN_ERROR }],
+  ])("shows a Free Calendly account why it can't book, from %s", async (_source, state) => {
+    setup("business_admin", {
+      calendarConnections: [{ id: "calendly-connection", provider: "calendly", externalAccountId: "U1", status: state.lastSyncError ? "error" : "connected", staffId: null, selectedCalendarId: null, lastSyncError: state.lastSyncError }],
+      calendly: { configured: true, options: [], discoveryError: null, paidPlan: state.paidPlan, warnings: [] },
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "integrations.calendly.planRequiredTitle" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog.textContent).toContain("integrations.calendly.planRequired");
+    expect(dialog.textContent).not.toContain("integrations.calendly.syncFailed");
   });
   it("hides the Cal.com card where Cal.com isn't set up and nothing is connected", async () => {
     setup("business_admin", { calcom: { configured: false, options: [], discoveryError: null, warnings: [] } });

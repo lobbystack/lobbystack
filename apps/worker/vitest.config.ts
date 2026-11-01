@@ -19,6 +19,7 @@ export default defineConfig({
       "@lobbystack/providers/customHostnames/fakeCustomHostnames": `${root}/packages/providers/src/customHostnames/fakeCustomHostnames.ts`,
       "@lobbystack/providers/email/smtp": `${root}/packages/providers/src/email/smtp.ts`,
       "@lobbystack/providers/calcom/calendar": `${root}/packages/providers/src/calcom/calendar.ts`,
+      "@lobbystack/providers/calendly/calendar": `${root}/packages/providers/src/calendly/calendar.ts`,
       "@lobbystack/providers/calendar": `${root}/packages/providers/src/calendar.ts`,
       "@lobbystack/providers/google/calendar": `${root}/packages/providers/src/google/calendar.ts`,
       "@lobbystack/providers/instagram/instagram": `${root}/packages/providers/src/instagram/instagram.ts`,

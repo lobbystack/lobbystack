@@ -1,5 +1,5 @@
 /** The calendar providers a business can connect. */
-export const CALENDAR_PROVIDERS = ["google", "calcom"] as const;
+export const CALENDAR_PROVIDERS = ["google", "calcom", "calendly"] as const;
 export type CalendarProviderName = (typeof CALENDAR_PROVIDERS)[number];
 
 export function isCalendarProviderName(value: unknown): value is CalendarProviderName {
@@ -7,15 +7,15 @@ export function isCalendarProviderName(value: unknown): value is CalendarProvide
 }
 
 /** How people see each provider named, in the API, the dashboard and errors. */
-export const CALENDAR_PROVIDER_LABELS: Record<CalendarProviderName, string> = { google: "Google Calendar", calcom: "Cal.com" };
+export const CALENDAR_PROVIDER_LABELS: Record<CalendarProviderName, string> = { google: "Google Calendar", calcom: "Cal.com", calendly: "Calendly" };
 
 /** The provider's display name, or its stored name when it isn't one LobbyStack knows. */
 export function calendarProviderLabel(provider: string): string {
   return isCalendarProviderName(provider) ? CALENDAR_PROVIDER_LABELS[provider] : provider;
 }
 
-/** A calendar a connection could write to. For Cal.com it's an event type. */
-export type CalendarListEntry = { id: string; summary: string; primary: boolean; accessRole?: string };
+/** A calendar a connection could write to. For Cal.com and Calendly it's an event type. */
+export type CalendarListEntry = { id: string; summary: string; primary: boolean; accessRole?: string; /** Why the provider won't take appointments here, for a calendar that reads as read-only. */ unwritableReason?: string };
 
 export type CalendarBusyBlock = { startsAt: string; endsAt: string; externalEventId?: string };
 
@@ -45,5 +45,6 @@ export interface CalendarProvider {
   listCalendars(input: { accessToken: string }): Promise<CalendarListEntry[]>;
   getBusyBlocks(input: { accessToken: string; calendarId: string; startsAt: string; endsAt: string }): Promise<CalendarBusyBlock[]>;
   upsertEvent(input: CalendarEventWrite): Promise<{ externalEventId: string }>;
-  deleteEvent(input: { accessToken: string; calendarId: string; eventId: string; appointmentId?: string }): Promise<void>;
+  /** `keepEventId` names a booking the appointment still holds, which a provider that looks bookings up must leave alone. */
+  deleteEvent(input: { accessToken: string; calendarId: string; eventId: string; appointmentId?: string; keepEventId?: string }): Promise<void>;
 }

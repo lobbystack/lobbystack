@@ -933,6 +933,32 @@ describe("calendars", () => {
     expect(verifyCalendarConnectLinkToken(url.searchParams.get("token")!)).toBeNull();
   });
 
+  it("hands out a Calendly link signed for Calendly only where Calendly is set up", async () => {
+    const connectCalendly = () => v1.createCalendlyConnectLink(call("/calendars/calendly/connect", { method: "POST" }));
+    vi.stubEnv("ENCRYPTION_KEY", "calendar-test-key");
+    expect(await (await connectCalendly()).json()).toMatchObject({ error: { code: "forbidden", message: "Calendly isn't available on this deployment." } });
+    vi.stubEnv("CALENDLY_CLIENT_ID", "client");
+    vi.stubEnv("CALENDLY_CLIENT_SECRET", "secret");
+    vi.stubEnv("CALENDLY_REDIRECT_URI", "https://app.lobbystack.example/api/calendar/calendly/callback");
+    vi.stubEnv("CALENDLY_WEBHOOK_SIGNING_KEY", "signing-key");
+    // Without the stand-in domain, Calendly stays off.
+    expect((await connectCalendly()).status).toBe(403);
+    vi.stubEnv("CALENDLY_PLACEHOLDER_EMAIL_DOMAIN", "bookings.lobbystack.example");
+    vi.stubEnv("APP_BASE_URL", "https://app.lobbystack.example");
+    vi.stubEnv("BETTER_AUTH_SECRET", "link-test-secret");
+    domain.createCalendarConnectLinkForApi.mockImplementation(async (_context: unknown, _caller: unknown, options: { link: (input: { businessId: string }) => { url: string; expiresAt: Date } }) => {
+      const { url, expiresAt } = options.link({ businessId });
+      return { url, expires_at: expiresAt.toISOString() };
+    });
+    const response = await connectCalendly();
+    expect(response.status).toBe(201);
+    expect(domain.createCalendarConnectLinkForApi).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({ provider: "calendly" }));
+    const url = new URL(((await response.json()) as { data: { url: string } }).data.url);
+    expect(`${url.origin}${url.pathname}`).toBe("https://app.lobbystack.example/api/calendar/calendly/connect");
+    expect(verifyCalendarConnectLinkToken(url.searchParams.get("token")!, "calendly")).toMatchObject({ businessId });
+    expect(verifyCalendarConnectLinkToken(url.searchParams.get("token")!)).toBeNull();
+  });
+
   it("lists connections and an account's calendars, and checks changes before the domain sees them", async () => {
     domain.listCalendarConnectionsForApi.mockResolvedValue([connection]);
     expect(await (await v1.listCalendarConnections(call("/calendars"))).json()).toEqual({ data: [connection], next_cursor: null, has_more: false });

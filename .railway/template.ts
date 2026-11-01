@@ -138,6 +138,13 @@ export default defineRailway((ctx) => {
       CALCOM_CLIENT_SECRET: preserve(),
       CALCOM_REDIRECT_URI: "${{APP_BASE_URL}}/api/calendar/calcom/callback",
       CALCOM_PLACEHOLDER_EMAIL_DOMAIN: preserve(),
+      // Optional user input for Calendly: an OAuth app whose redirect URI is CALENDLY_REDIRECT_URI, its webhook
+      // signing key, and a domain for the stand-in invitee address. Calendly stays off until all are set.
+      CALENDLY_CLIENT_ID: preserve(),
+      CALENDLY_CLIENT_SECRET: preserve(),
+      CALENDLY_REDIRECT_URI: "${{APP_BASE_URL}}/api/calendar/calendly/callback",
+      CALENDLY_WEBHOOK_SIGNING_KEY: preserve(),
+      CALENDLY_PLACEHOLDER_EMAIL_DOMAIN: preserve(),
       // Optional user input for Instagram direct messages: a Meta app with Instagram Business Login.
       INSTAGRAM_APP_ID: preserve(),
       INSTAGRAM_APP_SECRET: preserve(),
@@ -200,6 +207,12 @@ export default defineRailway((ctx) => {
       CALCOM_CLIENT_SECRET: "${{admin.CALCOM_CLIENT_SECRET}}",
       CALCOM_REDIRECT_URI: "${{admin.CALCOM_REDIRECT_URI}}",
       CALCOM_PLACEHOLDER_EMAIL_DOMAIN: "${{admin.CALCOM_PLACEHOLDER_EMAIL_DOMAIN}}",
+      // Calendly sync, token refresh and webhook registration use the same OAuth app as admin.
+      CALENDLY_CLIENT_ID: "${{admin.CALENDLY_CLIENT_ID}}",
+      CALENDLY_CLIENT_SECRET: "${{admin.CALENDLY_CLIENT_SECRET}}",
+      CALENDLY_REDIRECT_URI: "${{admin.CALENDLY_REDIRECT_URI}}",
+      CALENDLY_WEBHOOK_SIGNING_KEY: "${{admin.CALENDLY_WEBHOOK_SIGNING_KEY}}",
+      CALENDLY_PLACEHOLDER_EMAIL_DOMAIN: "${{admin.CALENDLY_PLACEHOLDER_EMAIL_DOMAIN}}",
       // Instagram replies and token refresh use the same Meta app as admin.
       INSTAGRAM_APP_ID: "${{admin.INSTAGRAM_APP_ID}}",
       INSTAGRAM_APP_SECRET: "${{admin.INSTAGRAM_APP_SECRET}}",

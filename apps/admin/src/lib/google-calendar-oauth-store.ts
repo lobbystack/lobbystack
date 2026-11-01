@@ -3,7 +3,7 @@ import { verifications } from "@lobbystack/db";
 import { getAuthDatabase } from "./auth";
 import { calendarOAuthStateDigest, verifyCalendarOAuthState, type CalendarOAuthProvider } from "./google-calendar-oauth";
 
-const identifier = (state: string, provider: CalendarOAuthProvider) => `${provider === "calcom" ? "calcom-calendar" : "google-calendar"}:${calendarOAuthStateDigest(state, provider)}`;
+const identifier = (state: string, provider: CalendarOAuthProvider) => `${provider}-calendar:${calendarOAuthStateDigest(state, provider)}`;
 
 export async function storeCalendarOAuthState(state: string, provider: CalendarOAuthProvider = "google"): Promise<void> {
   const parsed = verifyCalendarOAuthState(state, provider);
