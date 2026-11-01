@@ -268,7 +268,7 @@ describe.skipIf(!testUrl)("usage limits per direct plan against dedicated Postgr
   it("charges an open text thread a chat a day, so it can't outrun the allowance", async () => {
     await rollbackTest(async (tx) => {
       const { businessId } = await numberStepBusiness(tx);
-      await setPlan(tx, businessId, cloud({ plan: "free_cloud" }));
+      await setPlan(tx, businessId, cloud({ plan: "free_cloud", subscriptionState: null }));
       await seedUsage(tx, businessId, "free_cloud", "chat_ai_tokens", 1, 4);
       const conversationId = randomUUID();
       // Two days of this month, which is the period the seeded usage sits in.
