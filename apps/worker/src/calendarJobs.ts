@@ -134,7 +134,7 @@ export async function deleteReleasedCalendarEvent(dependencies: Dependencies, in
   if (isBookingCalendarProvider(connection.provider) && await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => (await tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.businessId, businessId), eq(appointments.calendarExternalId, eventId))).limit(1)).length > 0)) return { status: "skipped", entityId: appointmentId };
   const provider = dependencies.calendars[connection.provider];
   if (!provider) return { status: "skipped", entityId: appointmentId };
-  await provider.deleteEvent({ accessToken: await accessToken(dependencies, businessId, connectionId, provider), calendarId, eventId, appointmentId });
+  await provider.deleteEvent({ accessToken: await accessToken(dependencies, businessId, connectionId, provider), calendarId, eventId, appointmentId, ...(currentEventId && currentEventId !== eventId ? { keepEventId: currentEventId } : {}) });
   return { status: "completed", entityId: appointmentId };
 }
 
@@ -144,6 +144,7 @@ export async function reconcileBusinessCalendar(dependencies: Dependencies, busi
   const connections = await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => tx.select({ id: calendarConnections.id, provider: calendarConnections.provider, calendarId: calendarConnections.selectedCalendarId, staffId: calendarConnections.staffId, status: calendarConnections.status, webhookId: calendarConnections.externalWebhookId }).from(calendarConnections).where(and(eq(calendarConnections.businessId, businessId), ne(calendarConnections.status, "disconnected"), connectionId ? eq(calendarConnections.id, connectionId) : undefined)));
   let synced = 0;
   let failures = 0;
+  let retryAfterMs = 0;
   for (const connection of connections) {
     // Connecting OAuth does not authorize writes to the implicit primary calendar.
     if (!connection.calendarId) continue;
@@ -161,6 +162,12 @@ export async function reconcileBusinessCalendar(dependencies: Dependencies, busi
       await queueUnsyncedAppointmentSyncs(dependencies.domain, { businessId, connectionId: connection.id });
       synced++;
     } catch (error) {
+      // A rate limit says nothing about the calendar, so the connection stays as it was and keeps taking bookings.
+      const { retryAfterMs: wait } = error as { retryAfterMs?: unknown };
+      if (typeof wait === "number") {
+        retryAfterMs = Math.max(retryAfterMs, wait);
+        continue;
+      }
       const message = error instanceof Error ? redactOtelExceptionText(error.message) : "Calendar synchronization failed.";
       if (message === "Calendar selection changed during synchronization.") continue;
       // Only a rejected grant needs the operator to reconnect; the dashboard tells them so from this message.
@@ -171,6 +178,7 @@ export async function reconcileBusinessCalendar(dependencies: Dependencies, busi
     }
   }
   if (failures) throw new Error(`Calendar synchronization failed for ${failures} connection(s).`);
+  if (retryAfterMs) return { status: "deferred", entityId: businessId, retryAt: new Date(Date.now() + retryAfterMs) };
   return { status: synced ? "completed" : "skipped", entityId: `${businessId}:${synced}` };
 }
 

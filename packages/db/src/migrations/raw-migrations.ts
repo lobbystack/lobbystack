@@ -178,7 +178,7 @@ export const SCHEMA_MIGRATIONS = [
   "0172_carrier_orders_and_forwards.sql",
   "0173_carrier_connection_per_number.sql",
   "0174_calcom_calendar_webhooks.sql",
-  "0175_calendly_calendar_webhooks.sql",
+  "0177_calendly_calendar_webhooks.sql",
 ] as const;
 
 const CONCURRENT_INDEX_DIRECTIVE = /^-- lobbystack:concurrent-index ([a-z][a-z0-9_]*)$/m;

@@ -113,6 +113,28 @@ it("registers a Calendly webhook at Calendly's own route, and passes the event t
   expect(calendly.getBookingChanges).toHaveBeenCalledWith(expect.objectContaining({ calendarId: "ET1" }));
 });
 
+it("tells a release which booking the appointment still holds", async () => {
+  const calendly = { ...provider, deleteEvent: vi.fn().mockResolvedValue(undefined) };
+  batches = [[{ status: "connected", selectedCalendarId: "ET2", provider: "calendly" }], [{ eventId: "new-booking" }], []];
+  await deleteReleasedCalendarEvent({ domain: dependencies.domain, calendars: { calendly } }, { businessId: "business", appointmentId: "appointment", connectionId: "connection", calendarId: "ET1", eventId: "old-booking" });
+  expect(calendly.deleteEvent).toHaveBeenCalledWith({ accessToken: "access", calendarId: "ET1", eventId: "old-booking", appointmentId: "appointment", keepEventId: "new-booking" });
+});
+
+it("leaves a rate-limited connection alone, so bookings go on, and comes back when the limit resets", async () => {
+  const calendly = { ...provider, getBusyBlocks: vi.fn().mockRejectedValue(Object.assign(new Error("Calendly's booking limit is reached for now."), { retryAfterMs: 60_000 })) };
+  batches = [[{ id: "connection", provider: "calendly", calendarId: "ET1", staffId: null, status: "connected", webhookId: "11" }]];
+  await expect(reconcileBusinessCalendar({ domain: dependencies.domain, calendars: { calendly } }, "business")).resolves.toMatchObject({ status: "deferred", entityId: "business", retryAt: expect.any(Date) });
+  expect(mocks.mark).not.toHaveBeenCalled();
+});
+
+it("still reports a real failure when another connection is rate limited", async () => {
+  const calendly = { ...provider, getBusyBlocks: vi.fn().mockRejectedValueOnce(Object.assign(new Error("limited"), { retryAfterMs: 60_000 })).mockRejectedValueOnce(new Error("permission denied")) };
+  batches = [[{ id: "first", provider: "calendly", calendarId: "ET1", staffId: null, status: "connected", webhookId: "11" }, { id: "second", provider: "calendly", calendarId: "ET2", staffId: "staff", status: "connected", webhookId: "12" }]];
+  await expect(reconcileBusinessCalendar({ domain: dependencies.domain, calendars: { calendly } }, "business")).rejects.toThrow("1 connection");
+  expect(mocks.mark).toHaveBeenCalledOnce();
+  expect(mocks.mark).toHaveBeenCalledWith(dependencies.domain, expect.objectContaining({ connectionId: "second" }));
+});
+
 it("keeps Calendly's plan error on the connection instead of asking for a reconnect", async () => {
   const calendly = { ...provider, getBusyBlocks: vi.fn().mockRejectedValue(new Error(CALENDLY_PLAN_ERROR)) };
   batches = [[{ id: "connection", provider: "calendly", calendarId: "ET1", staffId: null, status: "connected", webhookId: "11" }]];

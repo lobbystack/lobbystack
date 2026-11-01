@@ -187,9 +187,16 @@ export class CalendlyCalendarProvider implements CalendarProvider {
     }] : []);
   }
 
-  /** Event types stand in for calendars. One with a question LobbyStack can't answer can't be written to, so it reads as read-only. */
+  /**
+   * Event types stand in for calendars. On a Free plan none can be booked, and one with a question LobbyStack can't
+   * answer can't either, so those read as read-only. Picking one would stop the business's bookings at the first sync.
+   */
   async listCalendars(input: { accessToken: string }): Promise<CalendarListEntry[]> {
-    return (await this.listEventTypes(input)).map((eventType) => ({ id: eventType.id, summary: eventType.title, primary: false, accessRole: eventType.blockingQuestions.length ? "reader" : "owner" }));
+    const [eventTypes, paidPlan] = await Promise.all([this.listEventTypes(input), this.getAccount(input).then((account) => account.paidPlan, () => null)]);
+    return eventTypes.map((eventType) => {
+      const reason = paidPlan === false ? CALENDLY_PLAN_ERROR : eventType.blockingQuestions.length ? `This event type requires an answer to ${eventType.blockingQuestions.join(", ")}, which LobbyStack can't give.` : null;
+      return { id: eventType.id, summary: eventType.title, primary: false, accessRole: reason ? "reader" : "owner", ...(reason ? { unwritableReason: reason } : {}) };
+    });
   }
 
   /** Calendly's own events and the calendars it checks for conflicts, a week of them per request. */
@@ -273,13 +280,15 @@ export class CalendlyCalendarProvider implements CalendarProvider {
     return { externalEventId: created };
   }
 
-  async deleteEvent(input: { accessToken: string; calendarId: string; eventId: string; appointmentId?: string }): Promise<void> {
+  async deleteEvent(input: { accessToken: string; calendarId: string; eventId: string; appointmentId?: string; keepEventId?: string }): Promise<void> {
     assertCertificationCalendar(input.calendarId);
-    // The event id is LobbyStack's own placeholder when no booking was stored, so fall back to the stand-in address.
+    // The event id is LobbyStack's own placeholder when no booking was stored. A move that failed before saving its
+    // new event leaves that one holding a slot too, so the stand-in address finds whatever else the appointment holds.
     const stored = await this.getEvent(input.accessToken, input.eventId);
-    const events = stored?.status === "active" ? [stored]
-      : input.appointmentId ? await this.findEventsByInvitee(input.accessToken, calendlyPlaceholderEmail(input.appointmentId, this.config.placeholderEmailDomain), input.calendarId) : [];
-    for (const event of events) await this.cancel(input.accessToken, uuidOf(event.uri!));
+    const found = input.appointmentId ? await this.findEventsByInvitee(input.accessToken, calendlyPlaceholderEmail(input.appointmentId, this.config.placeholderEmailDomain), input.calendarId) : [];
+    const events = new Map([...(stored?.status === "active" ? [stored] : []), ...found].map((event) => [uuidOf(event.uri!), event]));
+    if (input.keepEventId) events.delete(input.keepEventId);
+    for (const eventId of events.keys()) await this.cancel(input.accessToken, eventId);
   }
 
   /** Replaces any subscription of the user that already posts to `subscriberUrl`, so a reconnect leaves one behind. */

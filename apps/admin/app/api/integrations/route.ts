@@ -11,7 +11,7 @@ import { operatorRoute } from "@/lib/operator-request";
 
 export const dynamic = "force-dynamic";
 
-type CalendarOption = { id: string; summary: string; primary: boolean; accessRole?: string; selected: boolean };
+type CalendarOption = { id: string; summary: string; primary: boolean; accessRole?: string; unwritableReason?: string; selected: boolean };
 
 async function calendarDiscovery(domain: DomainContext, userId: string, businessId: string, connectionId: string, providerName: string, listCalendars?: (input: { accessToken: string }) => Promise<Array<Omit<CalendarOption, "selected">>>) {
   const encryptionKey = process.env.ENCRYPTION_KEY;
@@ -123,7 +123,7 @@ export const PATCH = operatorRoute(async ({ userId, businessId, body: input, dom
     if (!connection) return jsonError("Calendar connection not found.", 404);
     const options = await calendarDiscovery(domain, userId, businessId, connection.id, connection.provider);
     const selected = options.find((option) => option.id === body.calendarId?.trim());
-    if (!selected || !["owner", "writer"].includes(selected.accessRole ?? "")) return jsonError("Select a calendar you can write to.", 400);
+    if (!selected || !["owner", "writer"].includes(selected.accessRole ?? "")) return jsonError(selected?.unwritableReason ?? "Select a calendar you can write to.", 400);
     await selectCalendar(domain, { userId, businessId, connectionId: body.connectionId, calendarId: selected.id });
   }
   if (body.staffId !== undefined) await assignCalendarStaff(domain, { userId, businessId, connectionId: body.connectionId, staffId: body.staffId });

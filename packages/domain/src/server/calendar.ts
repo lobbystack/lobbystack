@@ -409,9 +409,9 @@ export async function discoverCalendars(
     connectionId: string;
     decryptAccessToken: (value: string) => string;
     resolveAccessToken?: (connectionId: string) => Promise<string>;
-    listCalendars: (input: { accessToken: string }) => Promise<Array<{ id: string; summary: string; primary: boolean; accessRole?: string }>>;
+    listCalendars: (input: { accessToken: string }) => Promise<Array<{ id: string; summary: string; primary: boolean; accessRole?: string; unwritableReason?: string }>>;
   },
-): Promise<Array<{ id: string; summary: string; primary: boolean; accessRole?: string; selected: boolean }>> {
+): Promise<Array<{ id: string; summary: string; primary: boolean; accessRole?: string; unwritableReason?: string; selected: boolean }>> {
   const connection = await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessMembership(tx, input);
     return (await tx.select({ encryptedAccessToken: calendarConnections.encryptedAccessToken, selectedCalendarId: calendarConnections.selectedCalendarId, status: calendarConnections.status }).from(calendarConnections).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId))).limit(1))[0] ?? null;

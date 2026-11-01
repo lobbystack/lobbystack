@@ -120,10 +120,22 @@ describe("account and event types", () => {
       { id: "ET2", title: "Consult", lengthInMinutes: 45, blockingQuestions: ["Which clinic?"], detailsQuestion: false, videoOnly: true },
     ]);
     expect(calls.find((call) => call.url.pathname === "/event_types")!.url.searchParams.get("user")).toBe(user);
-    await expect(provider.listCalendars({ accessToken: "access" })).resolves.toEqual([
+  });
+
+  it("lists calendars with why one can't be picked, and every one as read-only on a Free plan", async () => {
+    const eventTypes = on("GET", "/event_types", () => page([eventType(), eventType({ uri: `${api}/event_types/ET2`, name: "Consult", custom_questions: [{ name: "Which clinic?", type: "single_select", enabled: true, required: true }] })]));
+    const paid = routes(eventTypes, on("GET", "/organizations/O1", () => resource({ plan: "standard", stage: "paid" })));
+    await expect(new CalendlyCalendarProvider(config).listCalendars({ accessToken: "access" })).resolves.toEqual([
       { id: "ET1", summary: "Haircut", primary: false, accessRole: "owner" },
-      { id: "ET2", summary: "Consult", primary: false, accessRole: "reader" },
+      { id: "ET2", summary: "Consult", primary: false, accessRole: "reader", unwritableReason: "This event type requires an answer to Which clinic?, which LobbyStack can't give." },
     ]);
+    expect(paid.some((call) => call.url.pathname === "/organizations/O1")).toBe(true);
+    routes(eventTypes, on("GET", "/organizations/O1", () => resource({ plan: "basic", stage: "free" })));
+    const free = await new CalendlyCalendarProvider(config).listCalendars({ accessToken: "access" });
+    expect(free.map((calendar) => [calendar.accessRole, calendar.unwritableReason])).toEqual([["reader", CALENDLY_PLAN_ERROR], ["reader", CALENDLY_PLAN_ERROR]]);
+    // A failed plan lookup doesn't lock the account out: the sync still reports a Free plan.
+    routes(eventTypes, on("GET", "/organizations/O1", () => Response.json({}, { status: 500 })));
+    expect((await new CalendlyCalendarProvider(config).listCalendars({ accessToken: "access" }))[0]).toMatchObject({ accessRole: "owner" });
   });
 
   it("follows pages, and fails closed when one doesn't advance", async () => {
@@ -276,12 +288,28 @@ describe("booking", () => {
 
 describe("cancelling", () => {
   it("cancels the stored booking, or what the stand-in address finds when it's gone", async () => {
-    const calls = routes(on("GET", "/scheduled_events/E1", () => resource(event("E1", write.startsAt, write.endsAt))), on("POST", "/scheduled_events/E1/cancellation", cancelled));
+    const calls = routes(noEvents, on("GET", "/scheduled_events/E1", () => resource(event("E1", write.startsAt, write.endsAt))), on("POST", "/scheduled_events/E1/cancellation", cancelled));
     await new CalendlyCalendarProvider(config).deleteEvent({ accessToken: "access", calendarId: "ET1", eventId: "E1", appointmentId });
     expect(posted(calls)).toEqual(["/scheduled_events/E1/cancellation"]);
     const fallback = routes(on("GET", "/scheduled_events/placeholder", () => Response.json({}, { status: 404 })), on("GET", "/scheduled_events", () => page([event("E2", write.startsAt, write.endsAt), event("E3", write.startsAt, write.endsAt, { event_type: `${api}/event_types/OTHER` })])), on("POST", "/scheduled_events/E2/cancellation", cancelled));
     await new CalendlyCalendarProvider(config).deleteEvent({ accessToken: "access", calendarId: "ET1", eventId: "placeholder", appointmentId });
     expect(posted(fallback)).toEqual(["/scheduled_events/E2/cancellation"]);
+  });
+
+  it("cancels both bookings a half-finished move left, so the new one doesn't hold the slot", async () => {
+    const old = event("E1", "2026-11-02T10:00:00Z", "2026-11-02T10:30:00Z");
+    const next = event("E2", write.startsAt, write.endsAt);
+    const calls = routes(on("GET", "/scheduled_events/E1", () => resource(old)), on("GET", "/scheduled_events", () => page([old, next])), on("POST", /\/cancellation$/, cancelled));
+    await new CalendlyCalendarProvider(config).deleteEvent({ accessToken: "access", calendarId: "ET1", eventId: "E1", appointmentId });
+    expect(posted(calls).sort()).toEqual(["/scheduled_events/E1/cancellation", "/scheduled_events/E2/cancellation"]);
+  });
+
+  it("leaves alone a booking the appointment still holds when an old one is released", async () => {
+    const old = event("E1", "2026-11-02T10:00:00Z", "2026-11-02T10:30:00Z");
+    const next = event("E2", write.startsAt, write.endsAt);
+    const calls = routes(on("GET", "/scheduled_events/E1", () => resource(old)), on("GET", "/scheduled_events", () => page([old, next])), on("POST", /\/cancellation$/, cancelled));
+    await new CalendlyCalendarProvider(config).deleteEvent({ accessToken: "access", calendarId: "ET1", eventId: "E1", appointmentId, keepEventId: "E2" });
+    expect(posted(calls)).toEqual(["/scheduled_events/E1/cancellation"]);
   });
 
   it("treats a booking that's already gone as done", async () => {
