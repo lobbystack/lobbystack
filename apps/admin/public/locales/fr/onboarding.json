@@ -116,7 +116,37 @@
     "title": "Écoutez votre agent",
     "continue": "Continuer",
     "skip": "Passer pour l'instant",
-    "continueFailed": "Impossible de continuer. Réessayez."
+    "continueFailed": "Impossible de continuer. Réessayez.",
+    "wait": {
+      "skip": "Ne pas attendre",
+      "stillReading": "Vous pouvez appeler maintenant. Votre agent continue de lire et ne pourra pas utiliser le reste de votre site avant d'avoir terminé.",
+      "slides": {
+        "answers": {
+          "title": "Répond à partir de vos contenus",
+          "body": "Votre agent répond aux appelants à partir de votre site, de vos fichiers et de vos notes."
+        },
+        "booking": {
+          "title": "Prend les rendez-vous",
+          "body": "Activez la réservation et votre agent trouve un créneau libre pendant l'appel."
+        },
+        "transfer": {
+          "title": "Passe les appels à votre équipe",
+          "body": "Quand un appelant demande une personne, votre agent transfère l'appel au bon employé."
+        },
+        "languages": {
+          "title": "Change de langue pendant l'appel",
+          "body": "Votre agent commence dans votre langue et change quand l'appelant le demande ou parle une autre langue."
+        },
+        "summaries": {
+          "title": "Résume chaque appel",
+          "body": "Ouvrez un appel dans votre tableau de bord pour lire son résumé et sa transcription."
+        },
+        "widget": {
+          "title": "Répond aussi sur votre site",
+          "body": "Ajoutez le widget de chat à votre site et le même agent répond à vos visiteurs."
+        }
+      }
+    }
   },
   "verifyPhone": {
     "title": "Vérifiez votre numéro de mobile",

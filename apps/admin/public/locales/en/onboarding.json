@@ -116,7 +116,37 @@
     "title": "Hear your agent",
     "continue": "Continue",
     "skip": "Skip for now",
-    "continueFailed": "We couldn't continue. Try again."
+    "continueFailed": "We couldn't continue. Try again.",
+    "wait": {
+      "skip": "Skip the wait",
+      "stillReading": "You can call now. Your agent keeps reading and can't use the rest of your site until it finishes.",
+      "slides": {
+        "answers": {
+          "title": "Answers from your own pages",
+          "body": "Your agent answers callers from your website, your files and your notes."
+        },
+        "booking": {
+          "title": "Books appointments",
+          "body": "Turn on booking and your agent finds an open time while the caller is on the line."
+        },
+        "transfer": {
+          "title": "Puts callers through to your team",
+          "body": "When a caller asks for a person, your agent transfers the call to the right employee."
+        },
+        "languages": {
+          "title": "Switches language mid-call",
+          "body": "Your agent opens in your language and switches when a caller asks or speaks another one."
+        },
+        "summaries": {
+          "title": "Sums up every call",
+          "body": "Open a call in your dashboard to read its summary and transcript."
+        },
+        "widget": {
+          "title": "Answers on your website too",
+          "body": "Add the chat widget to your site and the same agent replies to visitors."
+        }
+      }
+    }
   },
   "verifyPhone": {
     "title": "Verify your mobile number",
