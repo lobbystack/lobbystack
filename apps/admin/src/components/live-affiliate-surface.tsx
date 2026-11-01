@@ -117,7 +117,7 @@ export function LiveAffiliateSurface() {
   const [linkCopied, setLinkCopied] = useState(false);
   useEffect(() => {
     if (!linkCopied) return;
-    const timeout = setTimeout(() => setLinkCopied(false), 2000);
+    const timeout = setTimeout(() => setLinkCopied(false), 1000);
     return () => clearTimeout(timeout);
   }, [linkCopied]);
   const saveEmail = useMutation({ mutationFn: updatePayoutEmail, onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["affiliate"] }); toast.success(t("toast.paypalSaved")); setIsDialogOpen(false); }, onError: () => setPayoutError(t("toast.paypalFailed")) });
