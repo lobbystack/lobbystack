@@ -175,7 +175,7 @@ describe("checkOperatorPhoneVerificationCode", () => {
     const { sets, executed } = setup({ selects: [[attempt()]], execute: async () => ({ rows: [{ approved: true }] }) });
     await expect(checkOperatorPhoneVerificationCode(context, { ...input, code: "123456" })).resolves.toEqual({ approved: true, status: "approved" });
     expect(sets[0]).toMatchObject({ attemptCount: 1, codeHash: null });
-    expect(executed[0]).toContain("complete_phone_verification");
+    expect(executed[0]).toContain("finish_phone_verification");
     // Sending the code was the consent, so the server records it with the verification.
     expect(mocks.enableOperatorSmsAlertsWithConsent).toHaveBeenCalledWith(expect.anything(), { businessId: "business-1", userId: "user-1", phone: "+14165550123", now });
   });

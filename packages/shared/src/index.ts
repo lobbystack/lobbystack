@@ -13,6 +13,8 @@ import { WIDGET_COLOR_PATTERN, widgetPositionSchema, type WidgetPosition } from 
 export * from "./receptionist";
 export * from "./chatChannels";
 export * from "./checkIn";
+export * from "./onboardingStages";
+export * from "./siteLanguage";
 export * from "./branding";
 export * from "./brandLinks";
 export * from "./brand";

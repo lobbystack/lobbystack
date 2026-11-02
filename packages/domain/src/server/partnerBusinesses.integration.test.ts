@@ -151,8 +151,8 @@ const hash = (token: string) => createHash("sha256").update(token).digest("hex")
 const testNumber = () => `+1416${String(Math.floor(Math.random() * 10_000_000)).padStart(7, "0")}`;
 
 // The onboarding stages each kind of business's owner goes through.
-const DIRECT_STEPS = ["create_business", "website", "knowledge", "greeting", "test_call", "verify_phone", "phone_number", "goal", "attribution"];
-const PARTNER_STEPS = ["website", "knowledge", "greeting", "test_call", "verify_phone"];
+const DIRECT_STEPS = ["create_business", "website", "language", "verify_phone", "phone_number", "goal", "attribution", "meet"];
+const PARTNER_STEPS = ["website", "language", "verify_phone", "meet"];
 
 /** A business the partner created for this person, who accepted the invitation and owns it. */
 async function ownedPartnerBusiness(tx: DatabaseTransaction, input: { actor: PartnerMemberActor; owner: Person; name: string; accessLevel?: PartnerAccessLevel }): Promise<string> {
@@ -497,7 +497,7 @@ describe.skipIf(!client)("the owner's onboarding", () => {
   };
   const followups = (tx: DatabaseTransaction, businessId: string) => asMigrator(tx, async () => await tx.select({ id: outboxMessages.id }).from(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), eq(outboxMessages.topic, "onboarding.sendFollowup"))));
 
-  it("at full access, skips creating the business, the number and attribution, and finishes once the owner verifies their phone", async () => {
+  it("at full access, skips creating the business, the number and attribution, and ends on Meet your agent", async () => {
     await rollbackTest(async (tx) => {
       const acme = await partner(tx, "Acme Reception");
       const [owner] = await people(tx, 1);
@@ -507,14 +507,16 @@ describe.skipIf(!client)("the owner's onboarding", () => {
       expect(await state()).toEqual({ businessId, stage: "website", steps: PARTNER_STEPS });
 
       // The owner sets up the receptionist as a direct owner would.
-      for (const to of ["knowledge", "greeting", "test_call", "verify_phone"] as const) await advanceOnboardingStage(context, { userId: owner!.userId, businessId, to });
+      await advanceOnboardingStage(context, { userId: owner!.userId, businessId, to: "verify_phone" });
       expect((await state()).stage).toBe("verify_phone");
       // The partner gives it numbers, so there's no number step and no trial to offer.
       await expect(advanceOnboardingStage(context, { userId: owner!.userId, businessId, to: "phone_number" })).rejects.toThrow("Invalid onboarding transition from verify_phone to phone_number.");
       expect(await getNumberTrialState(context, { userId: owner!.userId, businessId })).toEqual({ status: "none" });
 
-      // Calls forward to the owner's phone, so they still verify it, and that finishes onboarding.
+      // Calls forward to the owner's phone, so they still verify it, and then they meet their agent.
       expect(await verifyPhone(tx, { userId: owner!.userId, businessId })).toMatchObject({ approved: true });
+      expect((await state()).stage).toBe("meet");
+      await advanceOnboardingStage(context, { userId: owner!.userId, businessId, to: "complete" });
       expect(await state()).toEqual({ businessId, stage: "complete", steps: PARTNER_STEPS });
       // Finishing without attribution schedules no founder's check-in either.
       expect(await followups(tx, businessId)).toEqual([]);
@@ -567,13 +569,13 @@ describe.skipIf(!client)("the owner's onboarding", () => {
     });
   });
 
-  it("keeps a direct business's onboarding as it was: the phone leads to the number, and only attribution finishes it", async () => {
+  it("keeps a direct business's own path: the phone leads to the number, and only Meet your agent finishes it", async () => {
     await rollbackTest(async (tx) => {
       const [owner] = await people(tx, 1);
       const context = { db: tx as unknown as Database };
       const { businessId } = await createBusiness(context, { userId: owner!.userId, name: "Corner Shop", timezone: "UTC", businessType: "test" });
-      for (const to of ["knowledge", "greeting", "test_call", "verify_phone"] as const) await advanceOnboardingStage(context, { userId: owner!.userId, businessId, to });
-      await expect(advanceOnboardingStage(context, { userId: owner!.userId, businessId, to: "complete" })).rejects.toMatchObject({ status: 400, code: "invalid_onboarding_stage" });
+      await advanceOnboardingStage(context, { userId: owner!.userId, businessId, to: "verify_phone" });
+      await expect(advanceOnboardingStage(context, { userId: owner!.userId, businessId, to: "complete" })).rejects.toThrow("Invalid onboarding transition from verify_phone to complete.");
       expect(await verifyPhone(tx, { userId: owner!.userId, businessId })).toMatchObject({ approved: true });
       expect(await getActiveOnboardingState(context.db, owner!.userId, HOST_BRAND_SCOPE)).toEqual({ businessId, stage: "phone_number", steps: DIRECT_STEPS });
     });

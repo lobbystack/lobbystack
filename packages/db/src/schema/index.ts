@@ -191,6 +191,12 @@ export const businesses = pgTable(
     onboardingStage: varchar("onboarding_stage", { length: 64 }).default("create_business").notNull(),
     onboardingAttribution: varchar("onboarding_attribution", { length: 120 }),
     onboardingGoal: varchar("onboarding_goal", { length: 32 }),
+    // False while the business's language is a guess from the browser, so reading its website may replace it.
+    defaultLocaleChosen: boolean("default_locale_chosen").default(true).notNull(),
+    // The last reply a test chat got, the only record a test chat leaves.
+    lastTestChatAt: timestamp("last_test_chat_at", { withTimezone: true }),
+    // When the plans last opened by themselves after a test.
+    planOfferShownAt: timestamp("plan_offer_shown_at", { withTimezone: true }),
     setupGuideSkippedSteps: jsonb("setup_guide_skipped_steps").$type<string[]>().default([]).notNull(),
     phoneNumberReplacementReservedAt: timestamp("phone_number_replacement_reserved_at", { withTimezone: true }),
     phoneNumberReplacementUsedAt: timestamp("phone_number_replacement_used_at", { withTimezone: true }),

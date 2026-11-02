@@ -37,6 +37,7 @@ export * from "./notifications";
 export * from "./numberTrials";
 export { countryCodeForBusinessTimezone } from "./phoneNumberMarket";
 export * from "./onboarding";
+export * from "./planOffer";
 export * from "./operatorActivity";
 export * from "./outbox";
 export * from "./packageBilling";

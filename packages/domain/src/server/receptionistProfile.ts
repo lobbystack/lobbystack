@@ -80,6 +80,8 @@ export type ReceptionistProfilePatch = {
 };
 
 export type ReceptionistSettingsChange = {
+  /** The agent's name, which operators see and callers don't. */
+  name?: string;
   patch: ReceptionistProfilePatch;
   locale?: RuntimeLocale;
   /** The language the team reads the receptionist's notes in. Null goes back to following `locale`. */
@@ -89,6 +91,8 @@ export type ReceptionistSettingsChange = {
   /** Hands the summary back to AI, which rewrites it from the knowledge sources. */
   regenerateSummary: boolean;
 };
+
+const AGENT_NAME_MAX_LENGTH = 80;
 
 const profileFields = ["greeting", "tone", "summary", "bookingPolicy", "voiceInstructions", "smsInstructions", "chatInstructions", "transferMode", "transferNumber", "staffFirstMode", "staffFirstNumber", "staffFirstMessage", "staffFirstHandoverMessage"] as const;
 type ProfileField = (typeof profileFields)[number];
@@ -145,14 +149,16 @@ export function readReceptionistSettingsChange(body: unknown): ReceptionistSetti
   const patch = { ...fields, ...(policy !== undefined ? { appointmentChangePolicy: policy } : {}), ...(bookingMode !== undefined ? { bookingMode } : {}), ...(voice !== undefined ? { voice } : {}), ...(ringSeconds !== undefined ? { staffFirstRingSeconds: ringSeconds } : {}) } as ReceptionistProfilePatch;
 
   const { locale, teamLocale, timezone, currency, regenerateSummary } = input;
+  const name = optionalText(input.name, "name", AGENT_NAME_MAX_LENGTH);
+  if (name === null) throw invalid("name cannot be empty.");
   if (locale !== undefined && !isRuntimeLocale(locale)) throw invalid("locale is invalid.");
   if (teamLocale !== undefined && teamLocale !== null && !isRuntimeLocale(teamLocale)) throw invalid("teamLocale is invalid.");
   if (timezone !== undefined && typeof timezone !== "string") throw invalid("timezone must be a string.");
   if (currency !== undefined && !isCurrencyCode(currency)) throw invalid("currency is invalid.");
   if (regenerateSummary !== undefined && regenerateSummary !== true) throw invalid("regenerateSummary must be true.");
   if (regenerateSummary && patch.summary !== undefined) throw invalid("Send summary or regenerateSummary, not both.");
-  if (Object.keys(patch).length === 0 && locale === undefined && teamLocale === undefined && timezone === undefined && currency === undefined && !regenerateSummary) throw invalid("At least one profile field is required.");
-  return { patch, ...(locale !== undefined ? { locale } : {}), ...(teamLocale !== undefined ? { teamLocale } : {}), ...(timezone !== undefined ? { timezone } : {}), ...(currency !== undefined ? { currency } : {}), regenerateSummary: regenerateSummary === true };
+  if (Object.keys(patch).length === 0 && name === undefined && locale === undefined && teamLocale === undefined && timezone === undefined && currency === undefined && !regenerateSummary) throw invalid("At least one profile field is required.");
+  return { patch, ...(name !== undefined ? { name } : {}), ...(locale !== undefined ? { locale } : {}), ...(teamLocale !== undefined ? { teamLocale } : {}), ...(timezone !== undefined ? { timezone } : {}), ...(currency !== undefined ? { currency } : {}), regenerateSummary: regenerateSummary === true };
 }
 
 /** The settings a receptionist has before anyone edits them. */
@@ -191,7 +197,7 @@ export function defaultReceptionistProfile(businessName: string, locale: Runtime
  */
 export async function saveReceptionistProfileInTransaction(
   tx: DatabaseTransaction,
-  input: { businessId: string; businessName: string; locale?: RuntimeLocale | undefined; patch: ReceptionistProfilePatch; regenerateSummary?: boolean | undefined },
+  input: { businessId: string; businessName: string; locale?: RuntimeLocale | undefined; name?: string | undefined; patch: ReceptionistProfilePatch; regenerateSummary?: boolean | undefined },
 ): Promise<typeof agents.$inferSelect | null> {
   const { businessId, patch } = input;
   // An E.164 number in a country Twilio can call and, during a free trial, only the mobile its claimer verified. Employees' numbers follow the same rules.
@@ -201,7 +207,7 @@ export async function saveReceptionistProfileInTransaction(
   const defaults = defaultReceptionistProfile(input.businessName, input.locale);
   const [profile] = await tx.insert(agents).values({
     businessId,
-    name: defaults.name,
+    name: input.name ?? defaults.name,
     greeting: patch.greeting ?? defaults.greeting,
     tone: patch.tone ?? defaults.tone,
     summary: patch.summary ?? defaults.summary,
@@ -223,7 +229,7 @@ export async function saveReceptionistProfileInTransaction(
     ...(patch.staffFirstHandoverMessage !== undefined ? { staffFirstHandoverMessage: patch.staffFirstHandoverMessage } : {}),
   }).onConflictDoUpdate({
     target: agents.businessId,
-    set: { ...patch, ...(patch.summary !== undefined ? { summarySource: "operator" as const, summaryRegenerateStatus: null } : {}), ...(input.regenerateSummary ? { summarySource: "generated" as const, summaryRegenerateStatus: "pending" as const } : {}), updatedAt: new Date() },
+    set: { ...patch, ...(input.name !== undefined ? { name: input.name } : {}), ...(patch.summary !== undefined ? { summarySource: "operator" as const, summaryRegenerateStatus: null } : {}), ...(input.regenerateSummary ? { summarySource: "generated" as const, summaryRegenerateStatus: "pending" as const } : {}), updatedAt: new Date() },
   }).returning();
   if (!profile) return null;
   // Some carriers forward a call the receptionist refuses to a number stored on the carrier, so they learn the new transfer number.

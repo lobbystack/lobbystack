@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { JobEnvelope } from "@lobbystack/contracts";
 import { websiteIngestionJobs } from "@lobbystack/db";
-import { indexCrawledWebsitePage, markKnowledgeDocumentFailed } from "@lobbystack/domain";
+import { applySiteLanguageInTransaction, indexCrawledWebsitePage, markKnowledgeDocumentFailed } from "@lobbystack/domain";
 
 const mocks = vi.hoisted(() => ({ updates: [] as Array<{ table: unknown; set: Record<string, unknown> }> }));
 
@@ -29,6 +29,7 @@ vi.mock("@lobbystack/domain", async (importOriginal) => ({
   ...await importOriginal<typeof import("@lobbystack/domain")>(),
   enqueueKnowledgeDerivedRefresh: vi.fn(),
   indexCrawledWebsitePage: vi.fn(),
+  applySiteLanguageInTransaction: vi.fn(async () => true),
   markKnowledgeDocumentFailed: vi.fn(async () => true),
   recordAiGenerationEvent: vi.fn(async () => undefined),
 }));
@@ -49,6 +50,23 @@ function crawl(): { job: JobEnvelope; documentId: string; dependencies: Paramete
 }
 
 describe("knowledge.crawlWebsite", () => {
+  it("passes on the language of the pages it read", async () => {
+    const { job, dependencies } = crawl();
+    dependencies.crawler.crawl.mockResolvedValueOnce([{ url: "https://example.com/", markdown: "Accueil", language: "fr-CA" }] as never);
+    vi.mocked(indexCrawledWebsitePage).mockResolvedValueOnce({ chunkCount: 1 });
+
+    await expect(handleJob(job, dependencies)).resolves.toMatchObject({ status: "completed" });
+    expect(applySiteLanguageInTransaction).toHaveBeenCalledWith(expect.anything(), { businessId: job.businessId, locale: "fr" });
+  });
+
+  it("leaves the language alone when the pages don't settle it", async () => {
+    const { job, dependencies } = crawl();
+    vi.mocked(indexCrawledWebsitePage).mockResolvedValue({ chunkCount: 1 });
+
+    await expect(handleJob(job, dependencies)).resolves.toMatchObject({ status: "completed" });
+    expect(applySiteLanguageInTransaction).not.toHaveBeenCalled();
+  });
+
   it("keeps the pages that indexed when another page fails, without crawling again", async () => {
     const { job, dependencies } = crawl();
     vi.mocked(indexCrawledWebsitePage).mockRejectedValueOnce(new Error("Embedding provider timed out.")).mockResolvedValueOnce({ chunkCount: 1 });

@@ -1,8 +1,8 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import { assertPublicHttpUrl } from "./urlSafety";
 
-export type CrawlPage = { url: string; title?: string; markdown?: string };
-type CrawlResponse = { success?: boolean; id?: string; status?: string; next?: string | null; data?: Array<{ metadata?: { sourceURL?: string; title?: string }; markdown?: string }> };
+export type CrawlPage = { url: string; title?: string; markdown?: string; language?: string };
+type CrawlResponse = { success?: boolean; id?: string; status?: string; next?: string | null; data?: Array<{ metadata?: { sourceURL?: string; title?: string; language?: string }; markdown?: string }> };
 
 export class FirecrawlProvider {
   constructor(private readonly config: { apiKey: string; baseUrl?: string; pollIntervalMs?: number; timeoutMs?: number }) {}
@@ -44,7 +44,7 @@ export class FirecrawlProvider {
     for (;;) {
       for (const page of payload.data ?? []) {
         const pageUrl = page.metadata?.sourceURL ?? url.toString();
-        pages.set(pageUrl, { url: pageUrl, ...(page.metadata?.title ? { title: page.metadata.title } : {}), ...(page.markdown ? { markdown: page.markdown } : {}) });
+        pages.set(pageUrl, { url: pageUrl, ...(page.metadata?.title ? { title: page.metadata.title } : {}), ...(page.metadata?.language ? { language: page.metadata.language } : {}), ...(page.markdown ? { markdown: page.markdown } : {}) });
         if (pages.size >= limit) return [...pages.values()];
       }
       if (!payload.next) return [...pages.values()];

@@ -4,49 +4,61 @@ import { canVisitOnboardingStage, firstOnboardingStage, isOnboardingStage, isVal
 
 describe("onboarding stages", () => {
   it("maps persisted stages to their dedicated routes", () => {
-    expect(resolveOnboardingRoute("test_call")).toBe("/onboarding/test-call");
+    expect(resolveOnboardingRoute("language")).toBe("/onboarding/language");
     expect(resolveOnboardingRoute("verify_phone")).toBe("/onboarding/verify-phone");
     expect(resolveOnboardingRoute("phone_number_claiming")).toBe("/onboarding/number");
+    expect(resolveOnboardingRoute("meet")).toBe("/onboarding/meet");
     expect(resolveOnboardingRoute("complete")).toBe("/");
   });
 
-  it("resumes retired stages at the nearest step that still exists", () => {
-    expect(normalizeOnboardingStage("plan")).toBe("test_call");
-    expect(normalizeOnboardingStage("verify_phone_code")).toBe("verify_phone");
-    expect(resolveOnboardingRoute("plan")).toBe("/onboarding/test-call");
+  it("resumes retired stages at the next step that still exists", () => {
+    for (const stage of ["plan", "verify_phone_code", "knowledge", "greeting", "test_call"]) {
+      expect(normalizeOnboardingStage(stage)).toBe("verify_phone");
+      expect(resolveOnboardingRoute(stage)).toBe("/onboarding/verify-phone");
+    }
     expect(normalizeOnboardingStage("not-a-stage")).toBe("create_business");
   });
 
-  it("asks for no plan: the owner hears the agent, verifies a phone, then picks a number", () => {
+  it("reads the site, verifies a phone, picks a number, and ends on Meet your agent", () => {
     expect(isValidOnboardingTransition("create_business", "website")).toBe(true);
-    expect(isValidOnboardingTransition("website", "knowledge")).toBe(true);
-    expect(isValidOnboardingTransition("greeting", "test_call")).toBe(true);
-    expect(isValidOnboardingTransition("test_call", "verify_phone")).toBe(true);
+    expect(isValidOnboardingTransition("website", "verify_phone")).toBe(true);
+    expect(isValidOnboardingTransition("website", "language")).toBe(true);
+    expect(isValidOnboardingTransition("language", "verify_phone")).toBe(true);
     expect(isValidOnboardingTransition("verify_phone", "phone_number")).toBe(true);
     // A country without numbers skips the number step.
     expect(isValidOnboardingTransition("verify_phone", "goal")).toBe(true);
     expect(isValidOnboardingTransition("phone_number", "goal")).toBe(true);
     expect(isValidOnboardingTransition("goal", "attribution")).toBe(true);
+    expect(isValidOnboardingTransition("attribution", "meet")).toBe(true);
+    expect(isValidOnboardingTransition("meet", "complete")).toBe(true);
+    expect(isValidOnboardingTransition("attribution", "complete")).toBe(false);
     expect(isValidOnboardingTransition("verify_phone", "attribution")).toBe(false);
-    expect(isValidOnboardingTransition("test_call", "phone_number")).toBe(false);
-    expect(isValidOnboardingTransition("greeting", "knowledge")).toBe(false);
+    expect(isValidOnboardingTransition("website", "phone_number")).toBe(false);
     expect(isValidOnboardingTransition("complete", "website")).toBe(false);
   });
 
-  it("skips the business, the number and attribution for a partner's business, and finishes at the owner's phone", () => {
+  it("skips the business, the number and attribution for a partner's business", () => {
     const partner = { partnerId: "partner", accessLevel: "full" } as const;
-    expect(onboardingSteps(null)).toEqual(["create_business", "website", "knowledge", "greeting", "test_call", "verify_phone", "phone_number", "goal", "attribution"]);
+    const activity = { ...partner, accessLevel: "activity" } as const;
+    expect(onboardingSteps(null)).toEqual(["create_business", "website", "language", "verify_phone", "phone_number", "goal", "attribution", "meet"]);
     expect(onboardingSteps({ partnerId: null, accessLevel: "activity" })).toEqual(onboardingSteps(null));
-    expect(onboardingSteps(partner)).toEqual(["website", "knowledge", "greeting", "test_call", "verify_phone"]);
-    expect(onboardingSteps({ ...partner, accessLevel: "activity" })).toEqual(["verify_phone"]);
+    expect(onboardingSteps(partner)).toEqual(["website", "language", "verify_phone", "meet"]);
+    expect(onboardingSteps(activity)).toEqual(["verify_phone"]);
     expect(firstOnboardingStage({ partnerId: null, accessLevel: "full" })).toBe("website");
     expect(firstOnboardingStage(partner)).toBe("website");
-    expect(firstOnboardingStage({ ...partner, accessLevel: "activity" })).toBe("verify_phone");
-    expect(isValidOnboardingTransition("verify_phone", "complete", partner)).toBe(true);
+    expect(firstOnboardingStage(activity)).toBe("verify_phone");
+    expect(isValidOnboardingTransition("verify_phone", "meet", partner)).toBe(true);
+    expect(isValidOnboardingTransition("meet", "complete", partner)).toBe(true);
+    expect(isValidOnboardingTransition("verify_phone", "complete", partner)).toBe(false);
     expect(isValidOnboardingTransition("verify_phone", "phone_number", partner)).toBe(false);
     expect(isValidOnboardingTransition("verify_phone", "attribution", partner)).toBe(false);
+  });
+
+  it("finishes an activity-level business at its owner's phone", () => {
+    const activity = { partnerId: "partner", accessLevel: "activity" } as const;
+    expect(isValidOnboardingTransition("verify_phone", "complete", activity)).toBe(true);
+    expect(isValidOnboardingTransition("verify_phone", "meet", activity)).toBe(false);
     expect(isValidOnboardingTransition("verify_phone", "complete")).toBe(false);
-    expect(isValidOnboardingTransition("test_call", "verify_phone", partner)).toBe(true);
   });
 
   it("rejects unknown persisted values", () => {
@@ -61,9 +73,11 @@ describe("onboarding stages", () => {
   it("allows completed and later stages to revisit every reached step", () => {
     expect(canVisitOnboardingStage("create_business", "website")).toBe(false);
     expect(canVisitOnboardingStage("website", "website")).toBe(true);
-    expect(canVisitOnboardingStage("verify_phone", "test_call")).toBe(true);
+    expect(canVisitOnboardingStage("verify_phone", "language")).toBe(true);
     expect(canVisitOnboardingStage("verify_phone", "phone_number")).toBe(false);
     expect(canVisitOnboardingStage("phone_number_claiming", "phone_number")).toBe(true);
+    expect(canVisitOnboardingStage("meet", "attribution")).toBe(true);
+    expect(canVisitOnboardingStage("attribution", "meet")).toBe(false);
     expect(canVisitOnboardingStage("complete", "attribution")).toBe(true);
     expect(canVisitOnboardingStage("complete", "create_business")).toBe(true);
   });

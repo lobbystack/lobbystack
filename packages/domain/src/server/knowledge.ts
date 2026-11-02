@@ -99,7 +99,7 @@ export async function createKnowledgeDocumentInTransaction(
   if (input.onboarding || business?.onboardingStage === "website") {
     await tx.update(businesses).set({ websiteUrl: sourceUrl, updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
     if (business?.onboardingStage === "website") {
-      await moveOnboardingStageInTransaction(tx, { businessId: input.businessId, from: "website", to: "knowledge" });
+      await moveOnboardingStageInTransaction(tx, { businessId: input.businessId, from: "website", to: "verify_phone" });
     }
   }
   const existing = (await tx.select().from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.sourceUrl, sourceUrl))).limit(1).for("update"))[0];

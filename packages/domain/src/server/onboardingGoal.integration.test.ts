@@ -74,7 +74,7 @@ describe.skipIf(!testUrl)("onboarding goal against dedicated PostgreSQL roles", 
 
   it("refuses the goal before its step", async () => {
     await rollbackTest(async tx => {
-      const { userId, businessId } = await workspace(tx, "test_call");
+      const { userId, businessId } = await workspace(tx, "verify_phone");
       await expect(asApp(tx, (db) => submitOnboardingGoal({ db }, { userId, businessId, goal: "answer_calls" }))).rejects.toMatchObject({ status: 409 });
     });
   });
