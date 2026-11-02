@@ -135,7 +135,8 @@ Each prototype covers the menu, Home, the agent pages, settings and setup. Each 
 
 ### The multi-agent build
 
-- Reuse the `agents` table and the links from phone numbers, widget keys, calls, conversations and rules on the `feat/inbox-calendar-staff` branch, and renumber its migrations.
+- [`multi-agent-build.md`](multi-agent-build.md) holds the plan.
+- Rename `receptionist_profiles` to `agents` in place. Reuse the domain logic and the links from phone numbers, widget keys, calls, conversations and rules on the `feat/inbox-calendar-staff` branch, but not its migrations.
 - Add Instagram as a channel.
 - Leave out its knowledge and service opt-outs until someone needs them.
 
