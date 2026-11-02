@@ -77,9 +77,23 @@ Choisissez la langue que parlent la plupart de vos appelants. Si vous n'avez pas
 
 ## Voix
 
-Choisissez dans **Voix** la voix de votre agent. Il parle avec cette voix au téléphone et pendant les appels depuis votre navigateur, appels test compris. Les entreprises commencent avec Marin.
+**Voix** définit le son de votre agent au téléphone et pendant les appels depuis votre navigateur, appels test compris. La ligne indique la voix actuelle et sa sonorité, par exemple Marin · Claire, rapide. Les nouvelles entreprises commencent avec Marin.
 
-Cliquez sur **Changer de voix** pour ouvrir la liste. Cliquez sur le bouton de lecture d’une voix pour l’écouter dans la langue par défaut de vos clients, puis sélectionnez-la et cliquez sur **Utiliser cette voix**. Un appel déjà en cours garde la voix avec laquelle il a commencé.
+<Steps>
+  <Step title="Ouvrez la liste des voix">
+    Allez dans **Agent** > **Paramètres IA** et cliquez sur **Changer de voix**. **Actuelle** indique la voix utilisée, et **Toutes les voix** liste les autres avec leur tonalité et leur rythme.
+  </Step>
+  <Step title="Écoutez une voix">
+    Cliquez sur le bouton de lecture à côté d'une voix pour l'écouter dans votre langue client par défaut. Écouter une voix ne la sélectionne pas.
+  </Step>
+  <Step title="Enregistrez votre choix">
+    Sélectionnez la voix et cliquez sur **Utiliser cette voix**.
+  </Step>
+</Steps>
+
+Les nouveaux appels utilisent la voix peu après l'enregistrement. Un appel déjà en cours garde la voix avec laquelle il a commencé. Pour vérifier le résultat, lancez un appel test.
+
+Les propriétaires et les administrateurs peuvent changer la voix. Les lecteurs voient la voix actuelle, mais **Changer de voix** est désactivé pour eux. Si votre entreprise a l'accès **Activité seulement** par l'intermédiaire d'un partenaire, votre équipe ne voit pas les **Paramètres IA**.
 
 Vous pouvez choisir parmi Alloy, Ash, Ballad, Beacon, Bossa, Cedar, Cinder, Coral, Delta, Echo, Gleam, Marin, Meridian, Quartz, Ripple, Sage, Shimmer, Stone, Tempo, Verse, Vesper et Willow. Dans l'[API](/fr/api/overview), indiquez `voice` dans `PATCH /receptionist` avec le nom en minuscules, par exemple `cedar`.
 
@@ -116,6 +130,38 @@ LobbyStack renvoie aussi les appels vers ce numéro quand vos minutes vocales so
 <Note>
   Ajoutez un numéro de transfert si vous voulez qu'un humain puisse prendre le relais en direct. Sans numéro, l'agent note les coordonnées pour un rappel ou un suivi, et votre équipe peut répondre depuis le tableau de bord.
 </Note>
+
+## Le personnel répond d'abord
+
+**Le personnel répond d'abord** fait sonner un téléphone du personnel avant que votre agent réponde. Appuyez sur 1 pour prendre l'appel. Si personne n'appuie sur 1 avant la fin de la sonnerie, votre agent répond comme d'habitude. Une messagerie vocale ne peut pas prendre l'appel, car elle n'appuie jamais sur 1.
+
+<Steps>
+  <Step title="Choisir quand faire sonner">
+    Sous **Le personnel répond d'abord**, réglez **Faire sonner votre équipe d'abord** sur **Pendant les heures d'ouverture** ou **Toujours**. **Pendant les heures d'ouverture** suit vos [heures d'ouverture](#heures-douverture) et saute les fermetures.
+  </Step>
+  <Step title="Ajouter le téléphone du personnel">
+    Entrez le numéro dans **Téléphone du personnel**. Le champ reprend votre numéro de transfert par défaut, et vous pouvez le changer.
+  </Step>
+  <Step title="Régler la durée de la sonnerie">
+    Choisissez 10, 15, 20, 30, 45 ou 60 secondes dans **Durée de la sonnerie**. La valeur par défaut est 15.
+  </Step>
+  <Step title="Ajouter des messages au besoin">
+    **Message avant la sonnerie** joue avant que le téléphone du personnel sonne. **Message avant la réponse de l'agent** joue quand personne ne prend l'appel. Chacun contient 200 caractères, et les appelants les entendent dans votre langue client par défaut. Le serbe n'a pas encore de voix pour ces messages, donc une entreprise en serbe les saute.
+  </Step>
+  <Step title="Enregistrer">
+    Cliquez sur **Enregistrer** au bas de la section.
+  </Step>
+</Steps>
+
+Chaque sonnerie utilise une [tentative de transfert](/fr/billing/usage). Les appels auxquels vous répondez n'utilisent aucune minute vocale et apparaissent dans **Appels** avec **Répondu par votre équipe**.
+
+Les appels auxquels vous répondez se terminent après 30 minutes. Après 600 minutes d'appels répondus en 24 heures, les nouveaux appels vont directement à votre agent jusqu'à ce que ce total baisse. Cette limite s'applique à tous les forfaits.
+
+<Warning>
+  N'utilisez pas un téléphone qui renvoie les appels sans réponse vers votre numéro LobbyStack. L'appel revient directement à votre agent.
+</Warning>
+
+Le personnel répond d'abord exige un forfait payant et fonctionne sur les numéros Twilio. Sur les autres numéros, le réglage s'affiche comme non disponible. Pour le comparer au renvoi d'appels, consultez [Renvoyer votre ligne d'entreprise vers LobbyStack](/fr/getting-started/forward-calls#choisir-les-appels-à-renvoyer).
 
 ## Modifications de rendez-vous
 

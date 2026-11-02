@@ -1,5 +1,7 @@
+import type { Telephony } from "@lobbystack/providers/telephony/registry";
+import type { CarrierId, SmsSender } from "@lobbystack/providers/telephony/types";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
-import { emailSender, normalizeInterfaceLocale, permanentSmsErrorCode, type EmailBrand } from "@lobbystack/shared";
+import { emailSender, normalizeInterfaceLocale, type EmailBrand } from "@lobbystack/shared";
 
 import { appointmentChangeOtpLeaseEndsAt, claimAppointmentChangeOtp, loadAppointmentChangeOtpTarget, markAppointmentChangeOtpSent, releaseAppointmentChangeOtp } from "./appointmentChanges";
 import { correctAlertSmsUsage, enqueueBillingUsageSync, reserveAlertSmsUsage } from "./billing";
@@ -11,17 +13,16 @@ import { issueOperatorPhoneVerificationCode, markOperatorPhoneVerificationCodeSe
 import { recordProductEventBestEffort } from "./productEvents";
 import { claimSmsDelivery, failSmsDelivery, loadSmsDeliveryTarget, markSmsSent, releaseSmsDelivery, smsDeliveryLeaseEndsAt } from "./sms";
 import { claimSmsOptInConfirmation, releaseSmsOptInConfirmation } from "./smsOptIn";
+import { businessNumberCarrier } from "./smsSender";
 import { estimateSmsSegments } from "./usage";
 import { verificationCodeSmsBody } from "./verificationCode";
 
-type SmsProvider = { sendSms(input: { to: string; from: string; body: string; statusCallback?: string }): Promise<{ providerMessageId: string }> };
 type EmailProvider = { sendTemplate(input: { template: "operator_alert"; to: string; subject: string; variables: { message: string }; brand: EmailBrand; idempotencyKey: string; from?: string; replyTo?: string }): Promise<{ messageId: string }> };
 
-/** The adapters a delivery goes out through: Twilio and SMTP in production, fakes in tests. */
+/** The adapters a delivery goes out through: the telephony carriers and SMTP in production, fakes in tests. */
 export type OutboundProviders = {
-  twilio?: SmsProvider;
-  /** The account that owns the shared sender, TWILIO_ALERT_SMS_FROM. */
-  twilioAlerts?: SmsProvider & { from: string };
+  /** A text goes out through the carrier that owns its sender, and the shared sender through the account TELEPHONY_ALERT_SMS names. */
+  telephony?: Pick<Telephony, "forNumber" | "alertSms">;
   email?: EmailProvider;
 };
 
@@ -59,7 +60,7 @@ type Lease = {
   heldUntil(): Promise<Date | null>;
   /** What to send, or null once the row is closed with the reason nothing goes out. */
   load(): Promise<Outgoing | null>;
-  markSent(providerMessageId: string): Promise<unknown>;
+  markSent(providerMessageId: string, carrier: CarrierId): Promise<unknown>;
   /** Hands the row back for the job's next attempt. */
   release(): Promise<unknown>;
   /** Closes the row without a send. */
@@ -88,8 +89,9 @@ export async function deliverOutbound(context: DomainContext, providers: Outboun
   const outgoing = await lease.load();
   if (!outgoing) return skipped;
   const { businessId } = delivery;
-  const statusCallback = outgoing.channel === "sms" && outgoing.callback ? twilioStatusCallback(outgoing.callback) : undefined;
-  const send = providerSend(context, providers, outgoing, businessId);
+  const sms = outgoing.channel === "sms" ? await smsSenderFor(context, providers, outgoing.from, businessId) : undefined;
+  const statusCallback = outgoing.channel === "sms" && outgoing.callback ? sms?.statusCallbackUrl(outgoing.callback) : undefined;
+  const send = providerSend(context, providers, outgoing, businessId, sms);
   if (!send) {
     await lease.close("skipped", `${outgoing.channel === "sms" ? "SMS" : "Email"} delivery is not configured.`);
     return skipped;
@@ -121,10 +123,10 @@ export async function deliverOutbound(context: DomainContext, providers: Outboun
     if (optIn && !optIn.sent) await optIn.release().catch(() => undefined);
     if (optIn?.sent) await optIn.bill().catch(() => undefined);
     if (usageSourceKey && usageEventId) await correctAlertSmsUsage(context, { businessId, sourceKey: usageSourceKey, segments: 0 }).catch(() => undefined);
-    const permanentCode = outgoing.channel === "sms" ? permanentSmsErrorCode(error) : undefined;
+    const permanentCode = outgoing.channel === "sms" ? sms?.permanentErrorCode(error) : undefined;
     if (permanentCode) {
-      // Twilio rejects this destination on every attempt, so don't retry.
-      await lease.close("failed", `Twilio error ${permanentCode}.`);
+      // The carrier rejects this destination on every attempt, so don't retry.
+      await lease.close("failed", `${carrierName(sms?.carrier)} error ${permanentCode}.`);
       return skipped;
     }
     if (execution.isFinalAttempt === false) await lease.release();
@@ -133,14 +135,14 @@ export async function deliverOutbound(context: DomainContext, providers: Outboun
   }
   for (let attempt = 1; ; attempt += 1) {
     try {
-      await lease.markSent(providerMessageId);
+      await lease.markSent(providerMessageId, sms?.carrier ?? "twilio");
       break;
     } catch (error) {
       if (attempt === MARK_SENT_ATTEMPTS) throw error;
       await new Promise((resolve) => setTimeout(resolve, MARK_SENT_RETRY_DELAY_MS));
     }
   }
-  // A status callback brings Twilio's segment count and syncs it. Without one
+  // A status callback brings the carrier's segment count and syncs it. Without one
   // the estimate is final, so bill it now.
   if (usageSourceKey && usageEventId && !statusCallback) {
     const finalUsageEventId = await correctAlertSmsUsage(context, { businessId, sourceKey: usageSourceKey, segments: estimateSmsSegments(outgoing.body) });
@@ -203,11 +205,9 @@ async function claimOptIn(context: DomainContext, input: { businessId: string; c
 /**
  * The provider call for this message, or undefined when nothing can send it.
  * An SMS call takes the body, so the opt-in confirmation can go out through it
- * too. The shared sender, which texts operator alerts and cloud customers'
- * appointment texts and codes, goes through the alert account that owns it;
- * any other number through the default account.
+ * too.
  */
-function providerSend(context: DomainContext, providers: OutboundProviders, outgoing: Outgoing, businessId: string): SendText | undefined {
+function providerSend(context: DomainContext, providers: OutboundProviders, outgoing: Outgoing, businessId: string, sms: SmsSender | undefined): SendText | undefined {
   if (outgoing.channel === "email") {
     const email = providers.email;
     // An alert belongs to its business: the delivery row holds the business,
@@ -218,21 +218,26 @@ function providerSend(context: DomainContext, providers: OutboundProviders, outg
       return (await email.sendTemplate({ template: "operator_alert", to: outgoing.to, subject: outgoing.subject, variables: { message: outgoing.body }, brand, idempotencyKey: outgoing.idempotencyKey, ...emailSender(brand, {}) })).messageId;
     });
   }
-  const sms = !outgoing.from ? undefined : providers.twilioAlerts?.from === outgoing.from ? providers.twilioAlerts : providers.twilio;
   return sms && (async (body, statusCallback) => (await sms.sendSms({ to: outgoing.to, from: outgoing.from, body, ...(statusCallback ? { statusCallback } : {}) })).providerMessageId);
 }
 
-function twilioStatusCallback(ids: StatusCallbackIds): string | undefined {
-  const configured = process.env.TWILIO_STATUS_CALLBACK_URL;
-  if (!configured) return undefined;
-  try {
-    const url = new URL(configured);
-    for (const [key, value] of Object.entries(ids)) if (value) url.searchParams.set(key, value);
-    return url.toString();
-  } catch {
-    return configured;
-  }
+/**
+ * The carrier a text goes out through. The shared sender, which texts
+ * operator alerts and cloud customers' appointment texts and codes, goes
+ * through the account that owns it; any other number through the carrier
+ * that owns that number.
+ */
+async function smsSenderFor(context: DomainContext, providers: OutboundProviders, from: string, businessId: string): Promise<SmsSender | undefined> {
+  if (!from || !providers.telephony) return undefined;
+  const alert = providers.telephony.alertSms;
+  if (alert?.from === from) return alert;
+  return providers.telephony.forNumber(await businessNumberCarrier(context, businessId, from))?.sms;
 }
+
+function carrierName(carrier: CarrierId | undefined): string {
+  return carrier ? `${carrier[0]!.toUpperCase()}${carrier.slice(1)}` : "Carrier";
+}
+
 
 function leaseFor(context: DomainContext, delivery: OutboundDelivery): Lease {
   switch (delivery.kind) {
@@ -256,7 +261,7 @@ function messageLease(context: DomainContext, input: { businessId: string; messa
       await failSmsDelivery(context, { ...ids, reason: target?.blocked ?? "missing" });
       return null;
     },
-    markSent: (providerMessageId) => markSmsSent(context, { ...ids, providerMessageId }),
+    markSent: (providerMessageId, carrier) => markSmsSent(context, { ...ids, providerMessageId, carrier }),
     release: () => releaseSmsDelivery(context, ids),
     close: (_outcome, reason) => failSmsDelivery(context, { ...ids, reason }),
   };

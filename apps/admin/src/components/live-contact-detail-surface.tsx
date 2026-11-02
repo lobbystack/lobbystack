@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import { HiddenTextSkeleton } from "@/components/loading-skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -145,7 +146,7 @@ export function LiveContactDetailSurface({ contactId }: { contactId: string }) {
     onSuccess: () => router.push("/contacts"),
   });
 
-  if (businesses.isLoading || detail.isLoading) return <DetailSkeleton />;
+  if (businesses.isLoading || detail.isLoading) return <DetailSkeleton t={t} />;
   const data = detail.data;
   if (businesses.isError || detail.isError || !data?.contact) {
     return <div className="flex flex-1 flex-col gap-6"><BackLink href="/contacts" label={t("detail.backToList")} /><div className="flex flex-col items-center gap-2 py-16 text-center"><User className="size-8 text-muted-foreground/40" /><p className="type-empty-title">{t("detail.notFound")}</p><p className="type-empty-description">{t("detail.notFoundDescription")}</p></div></div>;
@@ -264,6 +265,68 @@ function Empty({ icon: Icon, label }: { icon: typeof Activity; label: string }) 
   return <div className="flex flex-col items-center gap-2 py-16 text-center"><Icon className="size-8 text-muted-foreground/40" /><p className="type-empty-description">{label}</p></div>;
 }
 
-function DetailSkeleton() {
-  return <div className="flex flex-1 flex-col gap-6"><Skeleton className="h-5 w-24" /><Skeleton className="h-9 w-64" /><div className="grid grid-cols-2 gap-4 sm:grid-cols-3">{Array.from({ length: 3 }).map((_, index) => <Skeleton className="h-12" key={index} />)}</div><Skeleton className="h-28" /><Skeleton className="h-80" /></div>;
+/**
+ * The contact page while it loads: the back link stays real, since it needs no data, and the rest takes the real
+ * page's shape. Fixed text is a placeholder holding its real text, hidden, so each is as wide as the text.
+ */
+function DetailSkeleton({ t }: { t: (key: string) => string }) {
+  const metadata = ["phone", "email", "firstSeen"] as const;
+  const stats = [["calls", ""], ["messages", "border-l border-border"], ["appointments", "border-t border-border sm:border-l sm:border-t-0"], ["conversations", "border-l border-t border-border sm:border-t-0"]] as const;
+  const tabs = [["activity", Activity], ["appointments", Calendar], ["details", Info]] as const;
+  return (
+    <div aria-busy="true" className="flex flex-1 flex-col gap-6">
+      <BackLink href="/contacts" label={t("detail.backToList")} />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-2">
+          <div className="flex h-[37.5px] items-center"><Skeleton className="h-8 w-64 max-w-full" /></div>
+          <div className="flex items-center gap-1">
+            {[0, 1].map((icon) => <div className="flex size-7 items-center justify-center" key={icon}><Skeleton className="size-3.5" /></div>)}
+          </div>
+        </div>
+        <Skeleton className="size-8" />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+        {metadata.map((field) => (
+          <div className="flex flex-col gap-1" key={field}>
+            <HiddenTextSkeleton className="type-meta">{t(`detail.metadata.${field}`)}</HiddenTextSkeleton>
+            <div className="flex h-6 items-center"><Skeleton className="h-4 w-28 max-w-full" /></div>
+          </div>
+        ))}
+      </div>
+      <Separator />
+      <Surface className="grid grid-cols-2 sm:grid-cols-4">
+        {stats.map(([stat, border]) => (
+          <div className={cn("flex items-center px-4 py-3", border)} key={stat}>
+            <div className="flex flex-col gap-1">
+              <div className="flex h-[18px] items-center"><Skeleton className="h-[18px] w-8" /></div>
+              <HiddenTextSkeleton className="type-meta">{t(`detail.stats.${stat}`)}</HiddenTextSkeleton>
+            </div>
+          </div>
+        ))}
+      </Surface>
+
+      <div>
+        <div className="inline-flex items-center gap-2">
+          {tabs.map(([tab, Icon]) => (
+            <Skeleton aria-hidden="true" className="inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-medium whitespace-nowrap" key={tab}>
+              <Icon className="invisible size-4" />
+              <span className="invisible">{t(`detail.tabs.${tab}`)}</span>
+            </Skeleton>
+          ))}
+        </div>
+        <div className="flex flex-col py-4">
+          {[0, 1, 2].map((row) => (
+            <div className="flex items-start gap-3 py-2.5 pl-2 pr-2" key={row}>
+              <div className="flex w-[23px] shrink-0 justify-center"><Skeleton className="mt-1 size-[23px] rounded-full" /></div>
+              <div className="flex min-w-0 flex-1 items-start justify-between gap-3 pt-0.5">
+                <div className="flex h-6 items-center"><Skeleton className="h-4 w-48 max-w-full" /></div>
+                <div className="flex h-4 items-center"><Skeleton className="h-3 w-14" /></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }

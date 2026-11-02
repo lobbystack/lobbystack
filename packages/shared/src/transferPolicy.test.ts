@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isBusinessOpen, isTransferPermitted, normalizeTransferMode } from "./transferPolicy";
+import { isBusinessOpen, isTransferPermitted, normalizeTransferMode, shouldRingStaffFirst } from "./transferPolicy";
 import { demoSnapshot, normalizeAppointmentChangePolicy, type TransferPolicy } from "./index";
 
 const snapshot = (mode: TransferPolicy["mode"]) => ({ ...demoSnapshot, timezone: "America/Toronto", transferPolicy: { mode, transferNumber: "+14165550100" }, hours: [{ dayOfWeek: 5, openMinutes: 540, closeMinutes: 1020 }], closures: [] });
@@ -45,5 +45,30 @@ describe("stored appointment policy", () => {
     expect(normalizeAppointmentChangePolicy(null).enabled).toBe(true);
     expect(normalizeAppointmentChangePolicy({ allowCancel: true }).enabled).toBe(false);
     expect(normalizeAppointmentChangePolicy({ enabled: true, allowCancel: true, allowReschedule: true, verificationMode: "unknown" }).verificationMode).toBe("operator_only");
+  });
+});
+
+describe("shouldRingStaffFirst", () => {
+  const hours = { timezone: "America/Toronto", hours: [{ dayOfWeek: 1, openMinutes: 9 * 60, closeMinutes: 17 * 60 }], closures: [] };
+  const staffFirstPolicy = { mode: "business_hours" as const, number: "+14165550100", ringSeconds: 15 };
+  // Monday 2026-11-02 at 10:00 and 20:00 in Toronto.
+  const open = new Date("2026-11-02T15:00:00Z");
+  const closed = new Date("2026-11-03T01:00:00Z");
+
+  it("rings during business hours in business_hours mode", () => {
+    expect(shouldRingStaffFirst({ ...hours, staffFirstPolicy }, open)).toBe(true);
+    expect(shouldRingStaffFirst({ ...hours, staffFirstPolicy }, closed)).toBe(false);
+  });
+
+  it("skips a closure inside business hours", () => {
+    expect(shouldRingStaffFirst({ ...hours, staffFirstPolicy, closures: [{ startsAt: "2026-11-02T14:00:00.000Z", endsAt: "2026-11-02T16:00:00.000Z", reason: "Staff day" }] }, open)).toBe(false);
+  });
+
+  it("rings at any time in always mode", () => {
+    expect(shouldRingStaffFirst({ ...hours, staffFirstPolicy: { ...staffFirstPolicy, mode: "always" } }, closed)).toBe(true);
+  });
+
+  it("doesn't ring without a policy", () => {
+    expect(shouldRingStaffFirst(hours, open)).toBe(false);
   });
 });

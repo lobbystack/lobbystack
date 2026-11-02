@@ -196,6 +196,13 @@ async function stillAnsweringInTransaction(tx: DatabaseTransaction, input: { bus
   return latest?.id === input.messageId && latest.direction === "inbound";
 }
 
+/** Alerts the team to a message the receptionist acted on but couldn't finish answering. One alert per conversation each hour. */
+export async function alertUnansweredInstagram(context: DomainContext, input: { businessId: string; conversationId: string }): Promise<void> {
+  await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKind: "aiReplyFailed", eventKey: `instagram-unanswered:${input.conversationId}:${new Date().toISOString().slice(0, 13)}`, subject: "Instagram message needs a reply", body: "The receptionist couldn't finish answering an Instagram message. Open Messages to reply." });
+  });
+}
+
 /**
  * Saves the receptionist's reply to `answeringMessageId` and queues it for
  * Instagram, or returns null when, while the reply was written, the team took

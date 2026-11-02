@@ -102,6 +102,7 @@
     "noSegments": "Aún no hay fragmentos de transcripción para esta llamada."
   },
   "outcome": {
+    "answeredByTeam": "Atendida por su equipo",
     "label": "Resumen",
     "booked": "El cliente reservó {{serviceName}} para el {{startsAt}}.",
     "scheduling": "El cliente empezó a pedir una cita, pero no se confirmó ninguna.",

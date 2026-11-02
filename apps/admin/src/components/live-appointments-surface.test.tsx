@@ -18,16 +18,43 @@ beforeEach(() => { route.search = ""; route.replace.mockReset(); });
 beforeEach(() => { vi.stubGlobal("matchMedia", vi.fn((query: string) => ({ matches: false, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() }))); });
 beforeEach(() => { vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn() }); });
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.useRealTimers(); });
-async function setup(locale: "en" | "fr", populated: boolean, role?: string) {
+async function setup(locale: "en" | "fr", populated: boolean, role?: string, loading = false) {
   vi.stubGlobal("EventSource", class { addEventListener() {} removeEventListener() {} close() {} });
   const i18n = createInstance();
   await i18n.init({ lng: locale, defaultNS: "common", resources: { en: { common: en }, fr: { common: fr } } });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Clinic", active: true, ...(role ? { role } : {}) }] });
-  client.setQueryData(["appointments", "business"], { appointments: populated ? [{ id: "appointment", startsAt: "2026-09-06T12:00:00Z", timezone: "UTC", status: "confirmed", calendarSyncState: "synced", contactName: null, serviceName: "Consultation", staffName: "Alex" }] : [] });
+  if (loading) vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+  else client.setQueryData(["appointments", "business"], { appointments: populated ? [{ id: "appointment", startsAt: "2026-09-06T12:00:00Z", timezone: "UTC", status: "confirmed", calendarSyncState: "synced", contactName: null, serviceName: "Consultation", staffName: "Alex" }] : [] });
   render(<I18nextProvider i18n={i18n}><QueryClientProvider client={client}><LiveAppointmentsSurface /></QueryClientProvider></I18nextProvider>);
 }
 describe("new appointments locale baseline", () => {
+  it("shows placeholders instead of an empty state while the calendar loads", async () => {
+    await setup("en", false, undefined, true);
+    expect(screen.getByRole("status").textContent).toBe(en.appointments.loading);
+    expect(screen.queryByRole("tab")).toBeNull();
+    expect(screen.queryByText(en.appointments.calendarView.dayEmpty)).toBeNull();
+    expect(screen.queryByPlaceholderText(en.appointments.searchPlaceholder)).toBeNull();
+  });
+  it("shows the tabs together with the loaded list", async () => {
+    route.search = "view=list";
+    await setup("en", false);
+    expect(screen.getAllByRole("tab").length).toBe(4);
+  });
+  it("shows the search box together with the loaded calendar", async () => {
+    await setup("en", false);
+    expect(screen.getByPlaceholderText(en.appointments.searchPlaceholder)).toBeTruthy();
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+  it("shows placeholder rows instead of an empty state while the list loads", async () => {
+    route.search = "view=list";
+    await setup("en", false, undefined, true);
+    expect(screen.getByText(en.appointments.loading)).toBeTruthy();
+    expect(screen.queryByText(en.appointments.empty)).toBeNull();
+    expect(screen.queryByRole("tab")).toBeNull();
+    expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(20);
+    expect(screen.queryByPlaceholderText(en.appointments.searchPlaceholder)).toBeNull();
+  });
   it.each(["en", "fr"] as const)("renders empty states in %s", async locale => {
     route.search = "view=list";
     await setup(locale, false);

@@ -40,7 +40,7 @@ export function PasswordResetForm({ token }: { token: string | null }) {
   return <ReplacementOnboardingShell title={t("forgotPassword.newPassword")} description={complete ? t("forgotPassword.resetComplete") : undefined} progress={null} width="sm">
     <div className="flex w-full flex-col gap-6">
       {!complete ? <form onSubmit={submit}><FieldGroup className="gap-4">
-        <Field><FieldLabel htmlFor="reset-new-password">{t("forgotPassword.newPassword")}</FieldLabel><Input autoComplete="new-password" className="h-11" id="reset-new-password" onChange={event => setPassword(event.target.value)} placeholder={t("forgotPassword.newPasswordPlaceholder")} required type="password" value={password} /></Field>
+        <Field><FieldLabel htmlFor="reset-new-password">{t("forgotPassword.newPassword")}</FieldLabel><Input autoComplete="new-password" className="h-11" id="reset-new-password" onChange={event => setPassword(event.target.value)} required type="password" value={password} /></Field>
         {error ? <div className="-mt-1 flex flex-col gap-2"><FieldError>{t(`errors.${error}`)}</FieldError></div> : null}
         <div className="mt-2"><Button className="h-11 w-full" disabled={!token} loading={loading} loadingLabel={t("forgotPassword.verifySubmitting")} type="submit">{t("forgotPassword.verifySubmit")}</Button></div>
       </FieldGroup></form> : null}

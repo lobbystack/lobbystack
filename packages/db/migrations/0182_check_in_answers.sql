@@ -20,9 +20,10 @@ GRANT SELECT ON public.check_in_answers TO lobbystack_readonly;
 
 -- The check-in now goes to any active owner whose business has had no real
 -- conversation. Signing in or making a test call no longer takes an owner off
--- the list: an owner who is still testing is who the email asks.
-DROP FUNCTION IF EXISTS app.resolve_onboarding_followup_recipient(uuid, timestamptz);
-CREATE FUNCTION app.resolve_onboarding_followup_recipient(target_business_id uuid)
+-- the list: an owner who is still testing is who the email asks. A database
+-- that ran this migration as 0172 replays it, so nothing here may fail on a
+-- second run.
+CREATE OR REPLACE FUNCTION app.resolve_onboarding_followup_recipient(target_business_id uuid)
 RETURNS TABLE(user_id uuid, email text, name text, preferred_locale text, business_name text)
 LANGUAGE sql
 STABLE
@@ -46,3 +47,19 @@ $$;
 
 REVOKE ALL ON FUNCTION app.resolve_onboarding_followup_recipient(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION app.resolve_onboarding_followup_recipient(uuid) TO lobbystack_worker;
+
+-- The worker from the previous release keeps calling the old signature while it
+-- drains, so it stays as a thin alias. The date no longer matters. Slice 8 of
+-- docs/specs/multi-agent-build.md drops this.
+CREATE OR REPLACE FUNCTION app.resolve_onboarding_followup_recipient(target_business_id uuid, onboarding_completed_at timestamptz)
+RETURNS TABLE(user_id uuid, email text, name text, preferred_locale text, business_name text)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_catalog
+AS $$
+  SELECT * FROM app.resolve_onboarding_followup_recipient(target_business_id)
+$$;
+
+REVOKE ALL ON FUNCTION app.resolve_onboarding_followup_recipient(uuid, timestamptz) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION app.resolve_onboarding_followup_recipient(uuid, timestamptz) TO lobbystack_worker;

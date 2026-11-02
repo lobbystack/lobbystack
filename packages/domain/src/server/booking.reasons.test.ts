@@ -93,7 +93,7 @@ describe("bookAppointment refusals", () => {
 
 describe("findOpeningsInTransaction", () => {
   const booked = { staffId: "staff-1", startsAt: new Date(startsAt), endsAt: new Date("2027-06-07T15:30:00.000Z") };
-  const search = (tx: never, input: { dates?: string[]; staffId?: string; preferredMinutes?: number; limit?: number } = {}) =>
+  const search = (tx: never, input: { dates?: string[]; staffId?: string; preferredMinutes?: number; limit?: number; spread?: boolean } = {}) =>
     findOpeningsInTransaction(tx, { businessId: "biz-1", serviceId: "svc-1", dates: ["2027-06-07"], ...input });
 
   it("finds a day's openings nearest the preferred time, reading the schedule and bookings once", async () => {
@@ -102,8 +102,16 @@ describe("findOpeningsInTransaction", () => {
       timezone: "UTC",
       durationMinutes: 30,
       openings: ["2027-06-07T14:00:00.000Z", "2027-06-07T14:30:00.000Z", "2027-06-07T15:30:00.000Z"],
+      moreOpenings: 12,
     });
     for (const table of [services, businesses, staff, staffServiceAssignments, calendarConnections, businessHours, closures, appointments]) expect(reads.get(table)).toBe(1);
+  });
+
+  it("spaces the times across the day when asked, and counts the ones left out", async () => {
+    const { tx } = useRows({});
+    const { openings, moreOpenings } = await search(tx, { limit: 3, spread: true });
+    expect(openings).toEqual(["2027-06-07T09:00:00.000Z", "2027-06-07T13:00:00.000Z", "2027-06-07T16:30:00.000Z"]);
+    expect(moreOpenings).toBe(13);
   });
 
   it("keeps to the staff member asked for", async () => {

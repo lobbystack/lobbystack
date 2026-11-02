@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { createAgentModel, createReceptionistAgent, describeAgentUsage } from "@lobbystack/agent-core";
 import type { JobEnvelope } from "@lobbystack/contracts";
 import { withBusinessTransaction } from "@lobbystack/db";
-import { claimInstagramDelivery, finishInstagramDelivery, getCachedBusinessSnapshot, instagramDeliveryLeaseEndsAt, loadInstagramReplyContext, recordAiGenerationEvent, recordInstagramPartSent, refreshBusinessSnapshot, refreshInstagramTokenIfDue, releaseInstagramDelivery, reserveWidgetChatUsageInTransaction, saveInstagramReply, type DomainContext } from "@lobbystack/domain";
+import { alertUnansweredInstagram, claimInstagramDelivery, finishInstagramDelivery, getCachedBusinessSnapshot, instagramDeliveryLeaseEndsAt, loadInstagramReplyContext, recordAiGenerationEvent, recordInstagramPartSent, refreshBusinessSnapshot, refreshInstagramTokenIfDue, releaseInstagramDelivery, reserveWidgetChatUsageInTransaction, saveInstagramReply, type DomainContext } from "@lobbystack/domain";
 import { InstagramApiError, splitInstagramText, type InstagramProvider } from "@lobbystack/providers/instagram/instagram";
 import { normalizeRuntimeLocale, runtimeLocaleName } from "@lobbystack/shared";
 
@@ -20,14 +20,19 @@ type JobResult = { status: "completed" | "skipped"; entityId?: string } | { stat
 const NO_REPLY = "NO_REPLY";
 const NO_REPLY_MARKER = new RegExp(`\\b${NO_REPLY}\\b`, "gi");
 
+// When the receptionist stays quiet, on channels where each reply goes straight to someone's phone.
+export const NO_REPLY_INSTRUCTIONS = [
+  `Not every message needs an answer. When the person's latest message only acknowledges or closes a finished exchange ("ok", "thanks", "great", "bye", a lone emoji or reaction) and they aren't waiting on anything, reply with exactly ${NO_REPLY} and nothing else.`,
+  `Never use ${NO_REPLY} for a greeting, a question, a request, or when you still owe them an answer or confirmation.`,
+  `If the other side is clearly another business's automated assistant rather than a person, reply with ${NO_REPLY}.`,
+];
+
 // Instagram is a text chat like the website's, with its own limits: plain text, and short.
 const INSTAGRAM_INSTRUCTIONS = [
   "You are replying to direct messages sent to the business's Instagram account, not a website chat.",
   "Write plain text only: no markdown, bullet symbols, headings or tables. Keep each reply to a few short sentences.",
   "If you can't help, offer to take a message so someone from the team gets back to them here.",
-  `Not every message needs an answer. When the person's latest message only acknowledges or closes a finished exchange ("ok", "thanks", "great", "bye", a lone emoji or reaction) and they aren't waiting on anything, reply with exactly ${NO_REPLY} and nothing else.`,
-  `Never use ${NO_REPLY} for a greeting, a question, a request, or when you still owe them an answer or confirmation.`,
-  `If the other side is clearly another business's automated assistant rather than a person, reply with ${NO_REPLY}.`,
+  ...NO_REPLY_INSTRUCTIONS,
 ].join(" ");
 
 export async function replyToInstagramMessage(domain: DomainContext, job: JobEnvelope, options: { model?: LanguageModel } = {}): Promise<JobResult> {
@@ -44,11 +49,14 @@ export async function replyToInstagramMessage(domain: DomainContext, job: JobEnv
   const snapshot = await getCachedBusinessSnapshot(domain, { businessId }) ?? (await refreshBusinessSnapshot(domain, { businessId }), await getCachedBusinessSnapshot(domain, { businessId }));
   if (!snapshot) throw new Error("The business snapshot is unavailable.");
   const locale = normalizeRuntimeLocale(snapshot.defaultLocale);
+  // Set once a tool saves a message or books: another attempt would do it twice.
+  let acted = false;
   const agent = createReceptionistAgent({
     model,
     // A text conversation, so it gets the website chat's knowledge, tools and booking.
     context: { domain, snapshot, channel: "instagram", conversationId },
     extraInstructions: `${INSTAGRAM_INSTRUCTIONS} Reply in the language of the person's latest message; if it's unclear, use ${runtimeLocaleName(locale)}.`,
+    onAction: () => { acted = true; },
   });
   const traceId = randomUUID();
   const startedAt = performance.now();
@@ -67,7 +75,9 @@ export async function replyToInstagramMessage(domain: DomainContext, job: JobEnv
   } catch (error) {
     // Only a stable category: provider errors can quote the conversation.
     void recordAiGenerationEvent(domain, { businessId, operation: "instagram.reply", conversationId, traceId, provider: "unknown", model: "unknown", latencyMs: performance.now() - startedAt, isStreaming: false, isError: true, error: "generation_failed" }).catch(() => undefined);
-    throw error;
+    if (!acted) throw error;
+    await alertUnansweredInstagram(domain, { businessId, conversationId });
+    return { status: "skipped", entityId: messageId };
   }
 }
 

@@ -1,4 +1,7 @@
 export * from "./ai/embeddingProvider";
+export * from "./calendar";
+export * from "./calcom/calendar";
+export * from "./calendly/calendar";
 export * from "./crypto/secretBox";
 export * from "./crawling/firecrawl";
 export * from "./crawling/urlSafety";
@@ -13,3 +16,4 @@ export * from "./storage/local";
 export * from "./storage/provider";
 export * from "./stripe/stripeConnect";
 export * from "./twilio/twilioProvider";
+export * from "./telephony";

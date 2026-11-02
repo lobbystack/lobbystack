@@ -577,10 +577,72 @@
       "syncNeedsAttention": "Attention requise",
       "discoveryFailed": "L’accès au calendrier ou sa synchronisation n’a pas pu être vérifié. Réessayez la synchronisation ou reconnectez votre compte Google."
     },
+    "calcom": {
+      "sheetTitle": "Cal.com",
+      "sheetDescription": "Connectez votre compte Cal.com et choisissez le type d’événement que votre agent réserve.",
+      "connect": "Connecter Cal.com",
+      "reconnect": "Reconnecter",
+      "disconnect": "Déconnecter",
+      "connectedSuccess": "Cal.com est connecté. Choisissez le type d’événement à réserver.",
+      "connectFailed": "Impossible de connecter Cal.com. Veuillez réessayer.",
+      "disconnectedSuccess": "Cal.com est déconnecté.",
+      "eventTypeLabel": "Type d’événement",
+      "selectEventType": "Choisir un type d’événement",
+      "eventTypeSaved": "Le type d’événement a été enregistré.",
+      "refresh": "Actualiser",
+      "syncNeedsAttention": "Attention requise",
+      "syncFailed": "Votre agent n'a pas pu terminer la synchronisation avec Cal.com et ne proposera pas d'horaires tant qu'une synchronisation n'aura pas réussi. Il réessaie de lui-même, ou vous pouvez cliquer sur Actualiser.",
+      "discoveryFailed": "Votre agent n’arrive pas à joindre votre compte Cal.com. Actualisez ou reconnectez le compte.",
+      "howItWorks": "Chaque rendez-vous devient une réservation de ce type d’événement. Cal.com reçoit le nom, le numéro de téléphone et un courriel de remplacement de l’appelant, pour ne pas lui écrire. Son vrai courriel figure dans les notes de la réservation pour votre équipe, et votre agent envoie la confirmation.",
+      "warningsTitle": "Vérifiez ce type d’événement dans Cal.com",
+      "warnings": {
+        "missingLengths": "Ajoutez {{lengths}} minutes aux durées du type d’événement. D’ici là, Cal.com réserve ces services à la durée par défaut du type d’événement.",
+        "smsReminders": "Désactivez le workflow SMS de ce type d’événement, sinon Cal.com envoie des textos aux appelants en plus de ceux de votre agent.",
+        "videoLocation": "Ajoutez « Numéro de téléphone du participant » comme lieu de ce type d'événement. D'ici là, les réservations portent un lien vidéo au lieu du téléphone de l'appelant.",
+        "narrowerAvailability": "Élargissez l’horaire du type d’événement le {{days}} pour suivre vos heures d’ouverture. Cal.com refuse les réservations hors de son horaire."
+      }
+    },
+    "calendly": {
+      "sheetTitle": "Calendly",
+      "sheetDescription": "Connectez votre compte Calendly et choisissez le type d'événement que votre agent réserve.",
+      "connect": "Connecter Calendly",
+      "reconnect": "Reconnecter",
+      "disconnect": "Déconnecter",
+      "connectedSuccess": "Calendly est connecté. Choisissez le type d'événement à réserver.",
+      "connectFailed": "Impossible de connecter Calendly. Veuillez réessayer.",
+      "connectNotAdmin": "Seul un propriétaire ou un administrateur de l'entreprise peut connecter Calendly.",
+      "disconnectedSuccess": "Calendly est déconnecté.",
+      "eventTypeLabel": "Type d'événement",
+      "selectEventType": "Choisir un type d'événement",
+      "eventTypeSaved": "Type d'événement enregistré.",
+      "refresh": "Actualiser",
+      "syncNeedsAttention": "À vérifier",
+      "syncFailed": "Votre agent n'a pas pu terminer la synchronisation avec Calendly et n'en proposera aucun créneau tant qu'une synchronisation n'aura pas réussi. Il réessaie de lui-même, ou cliquez sur Actualiser.",
+      "discoveryFailed": "Votre agent n'a pas pu joindre votre compte Calendly. Actualisez ou reconnectez le compte.",
+      "howItWorks": "Chaque rendez-vous devient une réservation de ce type d'événement. Calendly reçoit le nom de l'appelant et une adresse de remplacement, et ne lui écrit donc pas. Votre agent envoie la confirmation. Le téléphone et le courriel de l'appelant vont dans une question texte du type d'événement.",
+      "blockedOption": "{{name}} (réservation impossible)",
+      "planRequiredTitle": "Forfait payant requis",
+      "planRequired": "Calendly accepte les réservations d'autres applications seulement sur ses forfaits payants. Passez au forfait Standard ou supérieur, puis cliquez sur Reconnecter.",
+      "warningsTitle": "Vérifiez ce type d'événement dans Calendly",
+      "warnings": {
+        "requiredQuestions": "Rendez {{questions}} facultatif ou choisissez un autre type d'événement. Votre agent ne peut pas répondre aux questions à choix obligatoires, et Calendly refuse donc chaque réservation.",
+        "missingLengths": "Vos services de {{lengths}} minutes ne correspondent pas à ce type d'événement. Calendly les réserve à la durée du type d'événement.",
+        "noDetailsQuestion": "Ajoutez une question texte à ce type d'événement. D'ici là, votre équipe ne verra pas le téléphone ni le courriel de l'appelant dans Calendly.",
+        "videoLocation": "Ce type d'événement propose seulement la vidéo, donc les réservations portent un lien de réunion. Ajoutez un lieu ou le téléphone pour les appelants."
+      }
+    },
     "cards": {
       "google": {
         "title": "Google Calendar",
         "description": "Synchronisez les réservations avec un Google Calendar."
+      },
+      "calcom": {
+        "title": "Cal.com",
+        "description": "Réservez les rendez-vous dans un de vos types d’événement Cal.com."
+      },
+      "calendly": {
+        "title": "Calendly",
+        "description": "Réservez les rendez-vous dans l'un de vos types d'événement Calendly."
       },
       "webhooks": {
         "title": "Webhooks",
@@ -651,9 +713,44 @@
     }
   },
   "account": {
+    "loading": "Chargement de votre compte",
+    "passkeys": {
+      "title": "Clés d'accès",
+      "description": "Connectez-vous avec votre empreinte, votre visage ou le verrouillage de votre appareil, sans mot de passe.",
+      "add": "Ajouter une clé d'accès",
+      "empty": "Vous n'avez pas encore ajouté de clé d'accès.",
+      "unnamed": "Clé d'accès",
+      "addedOn": "Ajoutée le {{date}}",
+      "added": "Clé d'accès ajoutée.",
+      "renamed": "Clé d'accès renommée.",
+      "removed": "Clé d'accès supprimée.",
+      "remove": "Supprimer",
+      "removeTitle": "Supprimer cette clé d'accès ?",
+      "removeDescription": "Vous ne pourrez plus vous connecter avec {{name}}. Votre mot de passe fonctionne toujours.",
+      "rename": {
+        "action": "Renommer",
+        "title": "Renommer la clé d'accès",
+        "description": "Choisissez un nom qui indique l'appareil concerné.",
+        "label": "Nom",
+        "placeholder": "Par ex. : Ordinateur du bureau",
+        "save": "Enregistrer",
+        "required": "Entrez un nom."
+      },
+      "errors": {
+        "addFailed": "Impossible d'ajouter la clé d'accès. Réessayez.",
+        "wrongAddress": "Les clés d'accès ne sont pas configurées pour cette adresse. Ouvrez l'application à son adresse habituelle, puis réessayez.",
+        "alreadyAdded": "Cet appareil a déjà une clé d'accès pour votre compte.",
+        "signInAgain": "Reconnectez-vous, puis ajoutez une clé d'accès.",
+        "verifyEmail": "Vérifiez votre e-mail, puis ajoutez une clé d'accès.",
+        "renameFailed": "Impossible de renommer la clé d'accès. Réessayez.",
+        "removeFailed": "Impossible de supprimer la clé d'accès. Réessayez.",
+        "loadFailed": "Impossible de charger vos clés d'accès."
+      }
+    },
     "title": "Account",
     "actions": {
-      "change": "Modifier"
+      "change": "Modifier",
+      "cancel": "Annuler"
     },
     "businessName": {
       "label": "Nom de l'entreprise",
@@ -666,12 +763,13 @@
     "changeEmail": {
       "label": "Changer le courriel",
       "description": "Entrez votre nouveau courriel et votre mot de passe actuel. Nous enverrons un lien de confirmation avant de modifier votre courriel de connexion.",
-      "newEmailPlaceholder": "Nouveau courriel",
-      "currentPasswordPlaceholder": "Mot de passe actuel",
+      "newEmailLabel": "Nouveau courriel",
+      "newEmailPlaceholder": "nom@example.com",
       "save": "Envoyer le lien de confirmation",
       "title": "Courriel",
       "currentPasswordLabel": "Mot de passe actuel",
       "currentEmail": "Courriel actuel : {{email}}",
+      "currentEmailLabel": "Courriel actuel",
       "confirmationSent": "Nous avons envoye un lien de confirmation a {{email}}.",
       "errors": {
         "invalidPassword": "Le mot de passe actuel est incorrect.",
@@ -679,6 +777,7 @@
         "unchanged": "Entrez une adresse courriel differente.",
         "noEmail": "Aucun courriel n'est configure pour ce compte.",
         "required": "Entrez une nouvelle adresse courriel.",
+        "invalid": "Entrez une adresse courriel valide.",
         "failed": "Impossible d'envoyer un lien de confirmation. Veuillez reessayer."
       }
     },
@@ -688,15 +787,20 @@
       "description": "Mot de passe utilise pour vous connecter.",
       "dialogDescription": "Entrez votre mot de passe actuel et un nouveau mot de passe.",
       "currentPasswordLabel": "Mot de passe actuel",
-      "currentPasswordPlaceholder": "Mot de passe actuel",
       "newPasswordLabel": "Nouveau mot de passe",
-      "newPasswordPlaceholder": "Nouveau mot de passe",
       "confirmPasswordLabel": "Confirmer le nouveau mot de passe",
-      "confirmPasswordPlaceholder": "Confirmer le nouveau mot de passe",
       "save": "Enregistrer",
       "saved": "Mot de passe mis a jour.",
       "errors": {
         "mismatch": "Les nouveaux mots de passe ne correspondent pas.",
+        "currentRequired": "Entrez votre mot de passe actuel.",
+        "newRequired": "Entrez un nouveau mot de passe.",
+        "confirmRequired": "Confirmez votre nouveau mot de passe.",
+        "minimumLengthMissing": "Utilisez au moins 8 caractères.",
+        "numberMissing": "Incluez au moins un chiffre.",
+        "specialCharacterMissing": "Incluez au moins un caractère spécial.",
+        "unchanged": "Choisissez un mot de passe différent de l'actuel.",
+        "invalidCurrent": "Le mot de passe actuel est incorrect.",
         "failed": "Impossible de mettre a jour le mot de passe."
       }
     }
@@ -1064,7 +1168,7 @@
   },
   "webhooks": {
     "title": "Webhooks",
-    "description": "{{appName}} envoie une requête HTTPS POST à votre URL quand quelque chose se produit, par exemple un appel terminé ou une nouvelle réservation. Chaque requête est signée pour que vous puissiez vérifier qu'elle vient de nous.",
+    "description": "{{appName}} envoie une requête HTTPS POST à votre URL quand quelque chose se produit, par exemple un appel terminé ou une nouvelle réservation.",
     "empty": "Aucun point de terminaison webhook pour l'instant.",
     "enabledLabel": "Envoyer les événements à ce point de terminaison",
     "restricted": {

@@ -390,6 +390,47 @@
       }
     }
   },
+  "staffFirst": {
+    "title": "Osoblje se javlja prvo",
+    "save": "Sačuvaj podešavanje za osoblje",
+    "mode": {
+      "label": "Prvo pozovi tim",
+      "hint": "Vaš telefon zvoni prvi. Pritisnite 1 da preuzmete poziv. Ako to ne uradite, javlja se agent.",
+      "options": {
+        "never": "Isključeno",
+        "business_hours": "Tokom radnog vremena",
+        "always": "Uvek"
+      }
+    },
+    "unavailable": {
+      "plan": "Dostupno na plaćenim paketima.",
+      "carrier": "Još nije dostupno na ovom broju.",
+      "setup": "Još nije podešeno na ovoj instalaciji."
+    },
+    "number": {
+      "label": "Telefon osoblja",
+      "hint": "Nemojte koristiti telefon koji prosleđuje pozive na broj vašeg agenta."
+    },
+    "ring": {
+      "label": "Trajanje zvonjenja",
+      "hint": "Svako zvonjenje koristi jedan transfer.",
+      "seconds": "{{count}} sekundi"
+    },
+    "message": {
+      "label": "Poruka pre zvonjenja",
+      "hint": "Opciono. Pozivaoci je čuju prvu.",
+      "noSerbianVoice": "Pozivaoci je neće čuti. Poruke još ne mogu da se čitaju na srpskom."
+    },
+    "handover": {
+      "label": "Poruka pre nego što se agent javi",
+      "hint": "Opciono. Pozivaoci je čuju ako se niko ne javi."
+    },
+    "errors": {
+      "numberRequired": "Dodajte telefon osoblja.",
+      "ownLine": "Koristite telefon koji nije broj vašeg agenta.",
+      "trialLocked": "Tokom besplatne probe koristite mobilni koji ste potvrdili."
+    }
+  },
   "booking": {
     "title": "Zakazivanje",
     "mode": {

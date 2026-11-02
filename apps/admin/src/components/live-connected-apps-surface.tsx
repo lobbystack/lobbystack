@@ -9,9 +9,9 @@ import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useBusinessCan } from "@/components/business-capabilities-provider";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { CredentialList, CredentialRow } from "@/components/credential-list";
+import { CredentialRowsSkeleton, SectionSkeleton } from "@/components/loading-skeletons";
 import { SectionBlock } from "@/components/section-block";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import { requestJson } from "@/lib/request-json";
 import { intlLocale } from "@/lib/locale";
@@ -64,14 +64,17 @@ export function LiveConnectedAppsSurface() {
     onError: () => toast.error(t("connectedApps.revoke.failed")),
   });
 
-  if (businesses.isLoading || !canManage) return null;
+  // Whether the section exists depends on the person's role, so it holds its place for anyone whose plan has MCP and goes away if the role can't manage it.
+  if (businesses.isLoading) return can("mcp") ? <SectionSkeleton description={t("connectedApps.description")} title={t("connectedApps.title")}><CredentialRowsSkeleton actions={1} /></SectionSkeleton> : null;
+  if (!canManage) return null;
+  if (grants.isLoading) return <SectionSkeleton description={t("connectedApps.description")} title={t("connectedApps.title")}><CredentialRowsSkeleton actions={1} /></SectionSkeleton>;
 
   const rows = grants.data?.grants ?? [];
   return (
     <>
       <SectionBlock description={t("connectedApps.description")} title={t("connectedApps.title")}>
         <Surface>
-          {grants.isLoading ? <div className="p-6"><Skeleton className="h-24 w-full rounded-xl" /></div> : rows.length === 0 ? (
+          {rows.length === 0 ? (
             <p className="type-body-muted p-6 text-center">{t("connectedApps.empty")}</p>
           ) : (
             <CredentialList label={t("connectedApps.title")}>

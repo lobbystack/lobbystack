@@ -14,7 +14,7 @@ import { queueOperatorAlertInTransaction, type OperatorNotificationEventKey } fr
 import { recordFirstRealChatInTransaction } from "./firstRealConversation";
 import { recordProductEventBestEffort } from "./productEvents";
 import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
-import { smsReplyBlockedInTransaction } from "./sms";
+import { smsReplyBlockedInTransaction, textRepliesEnabledInTransaction } from "./sms";
 
 export { buildConversationSessionSummary, type CallSummaryLocale, type ConversationTranscriptTurn, type GeneratedCallSummary } from "./conversationSummary";
 
@@ -185,8 +185,6 @@ export async function appendMessage(
   context: DomainContext,
   input: MessageInput & { operatorAlert?: { eventKind: OperatorNotificationEventKey; subject: string; body: string } },
 ): Promise<string> {
-  // A team member who writes in a website or Instagram chat takes it over, so the AI stops answering alongside them.
-  const takesOver = input.userId !== undefined && input.direction === "outbound" && isTextChatChannel(input.channel);
   const { messageId, takeOver } = await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: input.userId ? "operator" : "worker" }, async (tx) => {
     if (input.userId) {
       await requireBusinessMembership(tx, { userId: input.userId, businessId: input.businessId, minimumRole: "scheduler" });
@@ -203,6 +201,8 @@ export async function appendMessage(
       throw new Error("Message could not be persisted.");
     }
     if (input.operatorAlert) await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKey: `${input.operatorAlert.eventKind}:${id}`, ...input.operatorAlert });
+    // A team member who writes in a website or Instagram chat takes it over, so the AI stops answering alongside them. The same goes for a text once the receptionist answers texts.
+    const takesOver = input.userId !== undefined && input.direction === "outbound" && (isTextChatChannel(input.channel) || (input.channel === "sms" && await textRepliesEnabledInTransaction(tx, input.businessId)));
     const takeOver = takesOver ? await takeOverChatInTransaction(tx, { businessId: input.businessId, conversationId: input.conversationId, userId: input.userId! }) : null;
     return { messageId: id, takeOver };
   });

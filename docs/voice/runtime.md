@@ -82,10 +82,10 @@ OpenAI's [Live conversations guide](https://developers.openai.com/api/docs/guide
 
 ## Follow a phone call
 
-A Twilio Elastic SIP trunk sends calls for its numbers to your OpenAI project's SIP address. The call then goes through these steps:
+The number's carrier sends its calls to your OpenAI project's SIP address: a Twilio Elastic SIP trunk, or a Telnyx FQDN connection (see [Use Telnyx](#use-telnyx)). The call then goes through these steps:
 
 1. OpenAI sends a `live.transport.incoming` webhook to `/api/webhooks/openai/live` on the admin app.
-2. The admin finds the business from the dialled number. It tries each number in the SIP `Diversion` headers in order, then `To` and `P-Called-Party-ID`, and uses the first one that belongs to a business. On a forwarded call, the first `Diversion` can hold the business's old line.
+2. The admin finds the business from the dialled number. It tries each number in the SIP `Diversion` headers in order, then `To`, `P-Called-Party-ID`, `History-Info` and `X-LobbyStack-Called`, and uses the first one that belongs to a business. A voice webhook that hands a call to OpenAI with `<Dial><Sip>` has to set `X-LobbyStack-Called` to `tel:<dialled number>`, because `To` holds the project there and Twilio refused `P-Called-Party-ID` on that leg in testing. On a forwarded call, the first `Diversion` can hold the business's old line.
 3. The admin records the call and reserves minutes for it while it loads the business snapshot. A call reserves 5 minutes, or what the plan has left when that's less, and the worker adds more as the call runs. Calls share what's left, so the free plan's 30 minutes let six calls start at once. An unlimited plan reserves nothing. The admin rejects the call with SIP 503 when the plan is out of minutes or at its overage cap, so the trunk forwards it (see [Calls the receptionist can't take](#calls-the-receptionist-cant-take)). It rejects with 603 when the caller is blocked, and 486 (busy) when the number's trial ended.
 4. The admin accepts the call with the business's instructions, then asks the worker to attach. It passes the reserved length as the call's limit, or no limit on an unlimited plan.
 5. The worker opens the sideband, then loads the business, speaks the greeting, and handles the call until it ends.
@@ -108,7 +108,28 @@ The route skips a forward to the dialled number itself, and to the line in Twili
 
 Twilio fails over to the next origination URI, and then to the disaster recovery URL, on any final error except 2xx, 400, 404, 405, 410, 416, 482, 484, 486, and 6xx ([Twilio](https://www.twilio.com/docs/sip-trunking)). That's why the limit uses 503 and not 486. The other 503 rejections, a missing snapshot or a failed setup, reach the same forward. The function takes only a business and a number, so a white-label partner's businesses can reuse it.
 
+A Telnyx number has no disaster recovery URL. Telnyx retries a 503 from its second signaling address, so OpenAI sends a second `live.transport.incoming` for the same call and the admin refuses it again. Telnyx then forwards the call to the number stored as the Telnyx number's forward on failure. Each time the worker routes the number, it sets that forward to what `resolveRefusedCallForward` in `packages/domain` answers, and saves it in `phone_numbers.refused_calls_forward_to`. The Telnyx voice webhook uses the same function. A new transfer number or a newly verified owner phone queues a routing job for the business's Telnyx numbers, and the hourly number sweep reroutes any number whose saved forward no longer matches, such as after a change of owner. With nowhere to forward, the worker turns forwarding off and the call fails.
+
 Forwarding never accepts the GPT-Live session, so it uses no OpenAI audio and no plan minutes or transfer attempts, and the call gets no call record. Twilio bills the call at Programmable Voice rates instead of trunking rates: the inbound minutes on the number plus the outbound `<Dial>` leg, for as long as the forwarded call lasts. On 2026-10-24, US rates were $0.0085 a minute to receive on a local number ($0.0220 toll-free) and $0.0140 a minute to call out ([Twilio US voice pricing](https://www.twilio.com/en-us/voice/pricing/us)), about $0.023 a minute in all. Twilio may still bill a few seconds of the refused trunk leg.
+
+### Ring a staff phone first
+
+A business with staff answers first on has its Twilio numbers on `/api/webhooks/twilio/staff-first/incoming` instead of the trunk. `desiredNumberRouting` returns `staff_first` while the setting is on, and a trial's `fallback` wins. Hours never move a number: the webhook applies them on each call. Telnyx numbers stay on the receptionist, and the dashboard shows the setting as unavailable. See [the spec](../specs/staff-answers-first.md) for the open Telnyx questions.
+
+One route, `/api/webhooks/twilio/staff-first/[step]`, checks Twilio's signature and handles each step:
+
+1. `incoming` rejects a blocked caller and a number whose trial ended. It sends the call to GPT-Live outside the mode's hours, on a plan without the feature, when the staff phone is the line in `ForwardedFrom` or the caller, when the same caller is already ringing it, or with no transfer attempts left. It does the same once the business's staff-answered calls reach `STAFF_BRIDGED_MINUTES_PER_DAY`, 600 in 24 hours, on every plan. The check on the same caller catches a forward from a carrier that leaves out `ForwardedFrom`: each ring's attempt carries a hash of the caller, and a second call within the ring time plus 15 seconds goes to the receptionist. A withheld number can't be matched, so the first `<Dial>`'s timeout limits that loop. Otherwise it reserves one `outbound_call_attempts` and dials the staff phone. Hours and the staff phone come from the business snapshot.
+2. `staff-prompt` tells the staff leg who's calling and waits for a key. `staff-press` bridges the call on a 1 and hangs up on anything else, so a voicemail never keeps the call.
+3. `staff-result` reads `DialBridged`, because Twilio reports `DialCallStatus=completed` when a voicemail answers and nobody presses 1. An accepted call gets a record, fires `call.completed`, and ends. `<Dial timeLimit>` stops it at 30 minutes. Anything else plays the handover message and dials GPT-Live.
+4. `receptionist-result` ends a call that ran its course. A refusal goes through `resolveRefusedCallForward`, as on the disaster recovery URL. A `DialSipResponseCode` of 603 gets `<Reject>`. A 503, a 486, or a refusal with no code gets the forward, or a busy signal when `resolveNumberFallback` finds nowhere to send it. The spike looked for `SipResponseCode`, which isn't Twilio's name for this field, so check `DialSipResponseCode` on a real refusal.
+5. `refer` dials the target in `ReferTransferTarget`, after checking `isTransferPhone`. `<Dial>` needs `referUrl`, or Twilio refuses the REFER with error 13802.
+6. `fallback` is the number's voice fallback URL. It dials GPT-Live without reading the database, so a failed `incoming` still reaches the receptionist.
+
+The `<Sip>` address is `sip:<project>@sip.api.openai.com;transport=tls;secure=true?X-LobbyStack-Called=tel:<dialled number>`. Keep SRTP in the URI: the `secure="true"` attribute gets the call refused with `Live SIP calls require SRTP`. Staging and production share an OpenAI project, so a new header has to reach production before staging can use it.
+
+A staff-answered call has a `calls` row with the provider `staff_answered`, keyed on Twilio's `CallSid`, and `billing_excluded` set. It has no session, minutes or conversation, and it stays out of analytics, the finance export and the trial's call count. `call.syncPrice` adds up the parent call and each connected child leg. For a call that went on to GPT-Live, it finds the inbound call by caller, the business's numbers and start time. Twilio bills these calls at Programmable Voice rates rather than trunking rates.
+
+Twilio has no Serbian `<Say>` voice. A business whose default language is Serbian skips the caller messages, and its staff hear the prompt in English.
 
 ## Follow a browser call
 
@@ -138,7 +159,9 @@ When the caller is done, GPT-Live hands the call to the backend and says nothing
 
 The worker sends the answer, "The call is ending.", with `session.commentary.append`, and sends no "still checking" update. GPT-Live says one short goodbye when it hears it. Instructions that let GPT-Live say its goodbye before the answer failed: it took the goodbye for its reply and kept the call in 5 of 12 API runs with phone audio, and in 5 of 6 staging calls. With the goodbye after the answer, GPT-Live handed the call over in 24 runs out of 24. In 3 of them, it also said "Bye" or "Take care" while it waited, so the caller heard two goodbyes.
 
-For a caller who is done, the worker hangs up once the request has an answer, GPT-Live's goodbye after it has finished playing, and both sides have been quiet for 2 seconds. When GPT-Live says nothing within 4 seconds of the answer, the worker stops waiting for the goodbye. If GPT-Live keeps talking, the worker hangs up 20 seconds after the agent ended the call or the caller last spoke, whichever is later. If the caller says anything after GPT-Live handed the call over, the worker holds the hangup. Once the caller has paused for 0.8 seconds, it sends the conversation to the delegation model, which answers whether the caller's latest words only close the call, such as "Thanks, bye", or keep it going, such as "oh, one more thing". The worker asks only in this case, never on other turns. On "done", the hangup goes ahead once both sides have been quiet for 2 seconds. On "continue", or when the check fails, the worker cancels the hangup and the call goes on. If the caller says more while the check runs, the worker checks their newest words again. GPT-Live handing over another request also cancels the hangup, and it hands the call over again when the caller is done. `live.caller_done_check` logs each answer and how long it took.
+For a caller who is done, the worker hangs up once the request has an answer, GPT-Live's goodbye after it has finished playing, and both sides have been quiet for 2 seconds. When GPT-Live says nothing within 4 seconds of the answer, the worker stops waiting for the goodbye. If GPT-Live keeps talking, the worker hangs up 20 seconds after the agent ended the call or the caller last spoke, whichever is later. If the caller says anything after GPT-Live handed the call over, the worker holds the hangup. Once the caller has paused for 0.8 seconds, it sends the conversation to the delegation model, which answers whether the caller's latest words only close the call, such as "Thanks, bye", or keep it going, such as "oh, one more thing". The worker also asks a similar question when GPT-Live skips the hand-over, as the next paragraph describes. On "done", the hangup goes ahead once both sides have been quiet for 2 seconds. On "continue", or when the check fails, the worker cancels the hangup and the call goes on. If the caller says more while the check runs, the worker checks their newest words again. GPT-Live handing over another request also cancels the hangup, and it hands the call over again when the caller is done. `live.caller_done_check` logs each answer and how long it took.
+
+GPT-Live also answers some goodbyes itself and never hands the call over, even though its instructions say to. On 2026-10-30, 11 of 66 eval runs where the call should have ended stayed open this way, in English and French, and code from 2026-10-09 failed just as often. Without a hand-over, nothing ends the call until the silence timeout. So when GPT-Live gives a short reply that isn't a question, with no request running, and both sides stay quiet for 1.5 seconds, the worker sends the conversation to the delegation model (`callerIsLeaving` in `packages/agent-core/src/live/callerDone.ts`). The model answers `done` only when the caller clearly says goodbye, has to go or needs nothing else. Thanks alone doesn't count. On `done`, the worker hangs up once the reply has played and both sides have been quiet for 3.5 seconds. It waits longer than after a hand-over because a 2-second wait hung up on a caller saying "oh wait". `live.missed_goodbye_check` logs each answer and how long it took.
 
 The check exists because GPT-Live answers a caller's "bye" after its own goodbye but rarely hands the call over again. Letting only a new hand-over cancel the hangup didn't work either: GPT-Live answered "Oh wait, one more thing" with "Go ahead" and no hand-over, and the call ended before the caller asked their question. With the check, API runs with phone audio ended the call after a trailing "Goodbye" 6 times out of 6, and never ended one in 14 runs where the caller said "Oh wait, one more thing".
 
@@ -249,12 +272,25 @@ The admin and worker read these variables:
 | `OPENAI_WEBHOOK_SECRET` | admin | Verifies OpenAI's incoming-call webhook. Phone path only. |
 | `INTERNAL_SERVICE_TOKEN` | admin, worker | Authenticates the admin's attach request to the worker. |
 | `WORKER_INTERNAL_URL` | admin | Private URL of the worker's HTTP port, for example `http://worker:3002`. |
+| `TELEPHONY_NUMBERS` | admin, worker | The carrier that sells numbers in each country, such as `US:telnyx,*:twilio`. Defaults to `*:twilio`. See [Choose carriers](#choose-carriers). |
+| `TELEPHONY_VERIFY`, `TELEPHONY_LOOKUP` | admin | The carrier for the onboarding phone code and the line type check. Each defaults to `twilio`. |
+| `TELEPHONY_ALERT_SMS`, `TELEPHONY_ALERT_SMS_FROM` | admin, worker | The carrier and number of the shared sender. The number falls back to `TWILIO_ALERT_SMS_FROM`, and the carrier defaults to `twilio`. |
 | `TWILIO_SIP_TRUNK_SID` | worker | Adds new phone numbers to the SIP trunk. The worker refuses to provision a number without it. |
 | `TWILIO_GB_BUNDLE_SID` | worker | The approved Twilio regulatory bundle for UK mobile numbers. The worker won't buy a UK number without it. |
 | `TWILIO_AU_BUNDLE_SID` | worker | The approved Twilio regulatory bundle for Australian mobile numbers. The worker won't buy an Australian number without it. |
 | `TWILIO_AU_ADDRESS_SID` | worker | The address in the Australian bundle. Twilio needs an address on every Australian mobile number. |
 | `TWILIO_NZ_BUNDLE_SID`, `TWILIO_NZ_ADDRESS_SID` | admin, worker | The approved Twilio regulatory bundle for New Zealand local numbers, and the address in it. |
 | `TWILIO_VERIFY_SERVICE_SID` | admin | The Twilio Verify service that texts the onboarding phone code. Onboarding can't verify a phone without it. |
+| `TELNYX_API_KEY` | admin, worker | The Telnyx API key. Without it, the deployment has no Telnyx carrier. |
+| `TELNYX_PUBLIC_KEY` | admin | The account's Ed25519 public key, from **Account settings > Keys & Credentials > Public Key**, which checks every Telnyx webhook. |
+| `OPENAI_PROJECT_ID` | admin, worker | The OpenAI project ID (`proj_…`). Each Telnyx number translates to it, and the worker won't buy a Telnyx number without it. On Twilio, the staff-first webhooks build the `<Sip>` address from it. Without it, the admin app refuses to turn the setting on and the worker won't route a number to the webhooks. |
+| `TELNYX_OUTBOUND_VOICE_PROFILE_ID` | worker | The outbound voice profile each number's connection gets, which transfers dial through. |
+| `TELNYX_SIP_CONNECTION_ID` | worker | Optional. A shared FQDN connection numbers used before each got their own. The worker moves a number off it the next time it routes the number, and still prices calls on it. |
+| `TELNYX_TEXML_APPLICATION_ID` | worker | The TeXML application a Telnyx number moves to in fallback mode. |
+| `TELNYX_TEXML_WEBHOOK_SECRET` | admin | A secret the TeXML application's voice URL carries as `?key=`, in case Telnyx sends that request unsigned. |
+| `TELNYX_MESSAGING_PROFILE_ID` | worker | The messaging profile new Telnyx numbers join, so they can text. |
+| `TELNYX_VERIFY_PROFILE_ID` | admin | The Telnyx Verify profile for the onboarding phone code, when `TELEPHONY_VERIFY` is `telnyx`. |
+| `TELNYX_GB_REQUIREMENT_GROUP_ID`, `TELNYX_AU_REQUIREMENT_GROUP_ID`, `TELNYX_NZ_REQUIREMENT_GROUP_ID` | admin, worker | The approved Telnyx requirement group a number order in that country goes under, when `TELEPHONY_NUMBERS` sends the country to Telnyx. |
 
 The admin also reads the bundle variables: it offers numbers only in the countries whose bundle is set. Set `TWILIO_GB_BUNDLE_SID`, `TWILIO_AU_BUNDLE_SID` and `TWILIO_AU_ADDRESS_SID` on the admin too.
 | `WEB_CALL_MAX_DURATION_MS` | admin | Optional cap on browser call length. |
@@ -269,7 +305,7 @@ The worker listens on its health port for `/internal/live/attach`. Keep that por
 
 ## Set up the phone path
 
-The phone path needs an OpenAI project with SIP enabled and a Twilio account. To connect them:
+The phone path needs an OpenAI project with SIP enabled and a Twilio or Telnyx account. This section connects Twilio; for Telnyx, see [Use Telnyx](#use-telnyx). To connect Twilio:
 
 1. In the OpenAI dashboard, add a webhook for `live.transport.incoming` that points to `https://your_app_domain/api/webhooks/openai/live`, and set its secret as `OPENAI_WEBHOOK_SECRET` on the admin.
 2. In Twilio, create an Elastic SIP trunk with the origination URI `sip:your_openai_project_id@sip.api.openai.com;transport=tls`, and set its transfer mode to allow transfers to any number. Under **Origination**, set the disaster recovery URL to `https://your_app_domain/api/webhooks/twilio/voice` with `POST`. Without it, a business out of minutes leaves its callers with an error instead of forwarding them. `scripts/production-smoke.ts` checks this URL.
@@ -283,7 +319,7 @@ pnpm exec tsx scripts/operations/move-number-to-gpt-live.ts \
   --business-id your_business_id --number +15815550123 --apply
 ```
 
-A number off the trunk has nothing to answer its calls, so keep every number on it.
+Keep every number on the trunk, unless its business turned on [staff answers first](#ring-a-staff-phone-first). A number off the trunk has no other way to reach GPT-Live.
 
 To take calls and texts on a local stack while a deployment keeps its numbers, see [Run and debug LobbyStack on your desktop](./local-debugging.md).
 
@@ -316,3 +352,48 @@ To set up a country:
 4. On the admin and the worker, set the bundle's SID as `TWILIO_GB_BUNDLE_SID`, `TWILIO_AU_BUNDLE_SID` or `TWILIO_NZ_BUNDLE_SID`. For Australia and New Zealand, also set the SID of the bundle's address as `TWILIO_AU_ADDRESS_SID` or `TWILIO_NZ_ADDRESS_SID`.
 
 Until you set a country's bundle, number claims there fail with an error that includes the missing variable's name.
+
+## Choose carriers
+
+One deployment can buy numbers from Twilio and Telnyx at once and send each capability to either. Every setting defaults to Twilio, so a deployment that sets none works as it did before carriers were configurable.
+
+Requests go to a carrier by these rules:
+
+- **Operations on a number**: texts from it, its webhooks, routing it, releasing it, pricing its calls and its fallback all go to the carrier that owns it. `phone_numbers.carrier` records the owner, and `messages.carrier` and `calls.carrier` record the carrier each text and phone call used.
+- **Number search and purchase**: `TELEPHONY_NUMBERS` picks the carrier by country, with `*` for the countries it doesn't list. The signed number offer names the carrier, so the worker buys from the carrier that showed the number.
+- **Verify, Lookup and the shared sender**: `TELEPHONY_VERIFY`, `TELEPHONY_LOOKUP` and `TELEPHONY_ALERT_SMS` each name one carrier.
+
+A malformed setting, such as an unknown carrier or a country listed twice, stops the worker at boot and fails the admin's first telephony request. Each carrier lives in `packages/providers/src/<carrier>/` behind the interfaces in `packages/providers/src/telephony/types.ts`, and `createTelephony` builds every carrier that has credentials. Adding a carrier means an adapter, its id in `CARRIER_IDS`, and its webhook routes under `/api/webhooks/<carrier>/`.
+
+Countries outside the US, Canada and Puerto Rico appear in the number picker only when the carrier `TELEPHONY_NUMBERS` sends them to has their registration: a Twilio bundle, or a Telnyx requirement group.
+
+## Use Telnyx
+
+A Telnyx number reaches GPT-Live through an FQDN connection of its own, texts through a messaging profile, and falls back to a TeXML application. Telnyx's [GPT-Live configuration guide](https://developers.telnyx.com/docs/voice/sip-trunking/gpt-live-configuration-guide) covers the connection. To set it up:
+
+1. You don't create the SIP connection. The worker creates an FQDN connection for each Telnyx number when it buys or routes it, named `LobbyStack <number>` and tagged `lobbystack-number`: TLS, mandatory SRTP, Opus with PCMU and PCMA, and the FQDN `sip.api.openai.com` on port `5061`. With `TELNYX_OUTBOUND_VOICE_PROFILE_ID` set, the worker also switches the connection to IP authentication and attaches the profile, because Telnyx refuses a profile on a connection that expects credentials. Releasing the number deletes its connection.
+2. Set your OpenAI project ID, with its `proj_` prefix, as `OPENAI_PROJECT_ID` on the worker. The worker sets it as each number's translated number, which puts the project in the SIP Request-URI.
+3. Create an outbound voice profile and set its ID as `TELNYX_OUTBOUND_VOICE_PROFILE_ID` on the worker. Create a TeXML application whose voice URL is `https://your_app_domain/api/webhooks/telnyx/voice?key=your_texml_secret` with `POST`, and give it the same profile. Without one, its `<Dial>` fails and the caller is cut off after a second. Set its ID as `TELNYX_TEXML_APPLICATION_ID` on the worker and the secret as `TELNYX_TEXML_WEBHOOK_SECRET` on the admin.
+4. Create a messaging profile whose webhook URL is `https://your_app_domain/api/webhooks/telnyx/sms`. Set its ID as `TELNYX_MESSAGING_PROFILE_ID` on the worker. Each text also carries its own status webhook, `/api/webhooks/telnyx/status`.
+5. Set `TELNYX_API_KEY` on the admin and the worker, and the account's public key as `TELNYX_PUBLIC_KEY` on the admin.
+6. Route countries to Telnyx with `TELEPHONY_NUMBERS`, such as `US:telnyx,*:twilio`, on the admin and the worker.
+
+For Telnyx Verify, create a Verify profile, set it as `TELNYX_VERIFY_PROFILE_ID` on the admin, and set `TELEPHONY_VERIFY=telnyx`. To check line types with Telnyx Number Lookup, set `TELEPHONY_LOOKUP=telnyx`. To send the shared sender's texts through Telnyx, put that number on the messaging profile and set `TELEPHONY_ALERT_SMS=telnyx` and `TELEPHONY_ALERT_SMS_FROM`.
+
+To sell UK, Australian or New Zealand numbers through Telnyx, create a requirement group for the country and number type in the portal, wait for Telnyx to approve it, and set its ID as `TELNYX_GB_REQUIREMENT_GROUP_ID`, `TELNYX_AU_REQUIREMENT_GROUP_ID` or `TELNYX_NZ_REQUIREMENT_GROUP_ID` on the admin and the worker.
+
+### What differs from Twilio
+
+These parts of the Telnyx path haven't been tested against a live account, because Telnyx's docs leave them open:
+
+- **Dialled number**: the translated number replaces the dialled number in the Request-URI, so the worker sets `translated_number_config` to `ignore_for_to_header`, which keeps it in `To`. On a call from another carrier on 2026-10-30, `routedBy` on `live.incoming` was `To`. If a call has no dialled number in its headers, the admin falls back to `X-Telnyx-Connection-id`, looked up in `phone_numbers.carrier_connection_id`. No real call has used that fallback. A call a Call Control application places to a Telnyx number doesn't test either path: it arrives with the project in `To`, and `X-Telnyx-Connection-id` names the application's connection, so run `pnpm voice:call` from another carrier.
+- **Replies and shared sender**: a text in a conversation goes out from the business's own number through its carrier. Confirmations, reminders and alerts for a US or Canadian cloud business go out from the shared sender, so they stay on Twilio unless `TELEPHONY_ALERT_SMS` is `telnyx`.
+- **Transfers**: on 2026-10-30, a REFER from OpenAI worked on a connection with an outbound voice profile, without asking Telnyx support to enable anything. A call from Twilio to a Canadian Telnyx number then transferred to a Canadian mobile, which answered.
+- **Calls between Telnyx numbers**: Telnyx puts the project in `To` and may send no `X-Telnyx-Connection-id`, so the admin refuses the call and Telnyx forwards it. Don't set a Telnyx number as a business's transfer number.
+- **Refused calls**: Telnyx forwards a call the receptionist refuses to one fixed number per Telnyx number, as [Calls the receptionist can't take](#calls-the-receptionist-cant-take) describes, and its retry of the 503 means OpenAI sends the webhook twice.
+- **Number orders**: Telnyx fills orders in the background, and a review of a requirement group can take days. The worker waits 30 seconds, then saves the order's ID on the claim (`onboarding_number_claim_events.provider_order_id`) and checks that order again every 10 minutes. After 5 days it fails the claim and releases the number if the order put it on the account.
+- **Call cost**: the worker prices a call from Telnyx's SIP trunking detail records, matched by caller, connection and start time. It pages back through the account's newest records until they start before the call, up to 1,000 records. Telnyx's API spec doesn't define those records' fields, and doesn't say how long they take to appear.
+- **Verify language**: a Telnyx Verify profile texts in its own language, whatever the user's interface language.
+- **TeXML signatures**: Telnyx doesn't say whether it signs the TeXML voice URL request, so the route also takes `TELNYX_TEXML_WEBHOOK_SECRET` in the URL. The texting webhooks always check the signature.
+
+Run `pnpm voice:call` against a staging Telnyx number before you send production countries to Telnyx.

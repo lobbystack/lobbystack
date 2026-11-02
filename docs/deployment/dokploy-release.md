@@ -8,17 +8,16 @@ GitHub Actions ships each merge to `main` to the `production` environment of the
 
 `scripts/dokploy-release.ts` runs these steps and stops at the first failure:
 
-1. Checks that staging is stopped, for a production release. Production and staging together don't fit in the host's 4 GB.
-2. Checks that the commit is the tip of GitHub `main`, for a production release.
-3. Reads the environment's migrator, worker and admin applications from Dokploy.
-4. Builds the images ghcr.io doesn't hold yet, for `linux/amd64`, and pushes them. The admin's build arguments come from the admin's environment in Dokploy.
-5. Checks `main` and staging again, since someone may have merged or started staging during the build.
-6. Points the migrator at the new tag, deploys it, and waits for the old migrator container to stop. Dokploy runs a schedule in the first running container it finds, so the old one has to go first.
-7. Runs the `migrate` schedule, which runs `migrate`, `bootstrap`, `check` and `verify-rls`, and prints the end of its log.
-8. Deploys the worker and waits until Docker Swarm reports the new worker running, which it does once the health check passes. The old worker keeps its calls and exits when the last one ends, after 31 minutes at most in production.
-9. Deploys the admin and waits until the new admin runs and the old one has stopped.
-10. Requests the environment's `/api/health/ready` and expects a 200.
-11. Purges Cloudflare's cache for the hosts in the admin's `MARKETING_HOSTS`, so visitors get the new marketing pages. Without `CLOUDFLARE_CACHE_PURGE_TOKEN`, or when Cloudflare refuses, it warns and the release still succeeds. [Serve lobbystack.com from the admin app](marketing-site.md#cache-pages-at-cloudflares-edge) explains the cache.
+1. Checks that the commit is the tip of GitHub `main`, for a production release.
+2. Reads the environment's migrator, worker and admin applications from Dokploy.
+3. Builds the images ghcr.io doesn't hold yet, for `linux/amd64`, and pushes them. The admin's build arguments come from the admin's environment in Dokploy.
+4. Checks `main` again, since someone may have merged during the build.
+5. Points the migrator at the new tag, deploys it, and waits for the old migrator container to stop. Dokploy runs a schedule in the first running container it finds, so the old one has to go first.
+6. Runs the `migrate` schedule, which runs `migrate`, `bootstrap`, `check` and `verify-rls`, and prints the end of its log.
+7. Deploys the worker and waits until Docker Swarm reports the new worker running, which it does once the health check passes. The old worker keeps its calls and exits when the last one ends, after 31 minutes at most in production.
+8. Deploys the admin and waits until the new admin runs and the old one has stopped.
+9. Requests the environment's `/api/health/ready` and expects a 200.
+10. Purges Cloudflare's cache for the hosts in the admin's `MARKETING_HOSTS`, so visitors get the new marketing pages. Without `CLOUDFLARE_CACHE_PURGE_TOKEN`, or when Cloudflare refuses, it warns and the release still succeeds. [Serve lobbystack.com from the admin app](marketing-site.md#cache-pages-at-cloudflares-edge) explains the cache.
 
 The script talks to Dokploy through its API alone, so it needs no SSH access to the host. Each Dokploy deployment gets the title `Release <tag>` and the commit subject, so the deployment list shows what shipped.
 
@@ -63,8 +62,6 @@ pbpaste | gh secret set DOKPLOY_API_KEY --env production -R lobbystack/lobbystac
 ```
 
 The workflows push images with the run's own `GITHUB_TOKEN`, so they need no registry secret.
-
-A production release fails when staging runs. Stop staging with `scripts/staging-stop.sh` and rerun the job.
 
 ## Release from your machine
 

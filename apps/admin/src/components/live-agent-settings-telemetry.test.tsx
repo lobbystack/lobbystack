@@ -39,6 +39,16 @@ describe("agent settings telemetry", () => {
     await waitFor(() => telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "greeting" }));
   });
 
+  it("saves staff answers first and records settings_saved for it", async () => {
+    const fetchMock = setup({ transferNumber: "+14165550100" });
+    await userEvent.click(await screen.findByRole("combobox", { name: "agent:staffFirst.mode.label" }));
+    await userEvent.click(await screen.findByRole("option", { name: "agent:staffFirst.mode.options.always" }));
+    await userEvent.click(screen.getByRole("button", { name: "agent:staffFirst.save" }));
+    await waitFor(() => telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "staff_first" }));
+    const patch = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");
+    expect(JSON.parse(String(patch?.[1]?.body))).toEqual({ businessId: "business", staffFirstMode: "always", staffFirstNumber: "+14165550100", staffFirstRingSeconds: 15, staffFirstMessage: null, staffFirstHandoverMessage: null });
+  });
+
   it("saves the booking mode and records settings_saved for it", async () => {
     const fetchMock = setup();
     const select = await screen.findByRole("combobox", { name: "agent:booking.mode.label" });

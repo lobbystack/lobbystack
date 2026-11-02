@@ -17,6 +17,7 @@ Use `.env.example` as the source of truth. Store production values in your deplo
 | `LOBBYSTACK_AUTH_PASSWORD`, `LOBBYSTACK_WORKER_PASSWORD`, `LOBBYSTACK_DISPATCHER_PASSWORD` | Passwords for the other roles. A service connects as each role by combining `DATABASE_URL`'s host and database with that role's password. |
 | `LOBBYSTACK_<ROLE>_DATABASE_URL` | Optional. Overrides the built connection string for one role, for example to use a different host. |
 | `BETTER_AUTH_SECRET` | Better Auth signing secret. Use at least 32 random characters. |
+| `PASSKEY_RP_ID` | Optional. The domain passkeys are tied to. It defaults to the hostname of `APP_BASE_URL`. Set it to a parent domain such as `example.com` so every host under it shares passkeys, or to your tunnel host when you test. Changing it stops existing passkeys from working. |
 | `ENCRYPTION_KEY` | Encrypts stored application credentials. |
 | `OTP_HASH_SECRET` | Hashes one-time verification codes and callers' keypad PINs. Set the same value on the admin and the worker. Changing it makes every saved PIN stop working. |
 
@@ -51,13 +52,19 @@ The SMS HELP reply opens with the app name. Emails, the API, and other text mess
 
 ## Voice calls
 
-OpenAI's GPT-Live model answers browser calls and phone calls. Phone calls reach it through your Twilio SIP trunk. The admin starts each call and the worker runs it.
+OpenAI's GPT-Live model answers browser calls and phone calls. Phone calls reach it through your carrier: a Twilio SIP trunk or a Telnyx SIP connection. The admin starts each call and the worker runs it.
 
 | Variable | Purpose |
 | --- | --- |
 | `LIVE_PROTOTYPE_ENABLED` | Set to `true` on admin and worker. Compose sets it by default. Browser calls fail without it. |
 | `OPENAI_WEBHOOK_SECRET` | Verifies OpenAI's incoming-call webhook at `/api/webhooks/openai/live`. Phone calls only. |
 | `TWILIO_SIP_TRUNK_SID` | The Twilio Elastic SIP trunk that sends calls to your OpenAI project. New numbers join it, and the worker won't provision a number without it. |
+| `TELEPHONY_NUMBERS` | The carrier that sells numbers in each country, such as `US:telnyx,*:twilio`. Leave it empty to buy every number from Twilio. A malformed value stops the worker at startup. |
+| `TELEPHONY_VERIFY`, `TELEPHONY_LOOKUP`, `TELEPHONY_ALERT_SMS` | The carrier for the onboarding phone code, the line type check, and the shared sender's texts. Each defaults to `twilio`. |
+| `TELEPHONY_ALERT_SMS_FROM` | The shared sender's number. Falls back to `TWILIO_ALERT_SMS_FROM`. |
+| `OPENAI_PROJECT_ID` | Your OpenAI project ID (`proj_…`). The worker gives each Telnyx number its own SIP connection to that project, and won't buy a Telnyx number without it. The admin app and the worker both need it for Staff answers first on Twilio numbers. Without it on the admin app, the setting can't be turned on. |
+| `TELNYX_OUTBOUND_VOICE_PROFILE_ID` | The outbound voice profile each number's connection gets, which call transfers dial through. |
+| `TELNYX_TEXML_APPLICATION_ID`, `TELNYX_TEXML_WEBHOOK_SECRET` | The TeXML application a Telnyx number moves to when the agent stops answering it, such as a trial out of minutes, and the secret its voice URL carries as `?key=`. |
 | `WEB_CALL_MAX_DURATION_MS` | Optional cap on browser call length. |
 | `WEB_CALL_PUBLIC_BUSINESS_SLUG` | Business that answers the public demo call on your marketing site. |
 | `WEB_CALL_ALLOWED_ORIGINS` | Comma-separated sites allowed to start that public demo call. Website widget calls use each widget key's allowed origins instead. |
@@ -134,6 +141,7 @@ An empty OTLP endpoint does not disable container stdout logs, application healt
 | Variable group | Purpose |
 | --- | --- |
 | `TWILIO_*` | Voice, verification, number provisioning, and webhook authentication. |
+| `TELNYX_*` | The same for Telnyx: `TELNYX_API_KEY`, `TELNYX_PUBLIC_KEY` for webhook signatures, `TELNYX_MESSAGING_PROFILE_ID`, `TELNYX_VERIFY_PROFILE_ID`, and `TELNYX_GB_REQUIREMENT_GROUP_ID`, `TELNYX_AU_REQUIREMENT_GROUP_ID` or `TELNYX_NZ_REQUIREMENT_GROUP_ID` for those countries. |
 | `OPENAI_API_KEY` | GPT-Live calls and the fallback key for `AI_CHAT_*` and `AI_EMBEDDING_*`. |
 | `AI_CHAT_API_KEY`, `AI_CHAT_BASE_URL`, `AI_CHAT_MODEL`, `AI_CHAT_PROVIDER_NAME` | The agent for website chat and calls. Leave `AI_CHAT_MODEL` blank on OpenAI to use `gpt-6-luna`. Set it for any other OpenAI-compatible endpoint. |
 | `AI_CHAT_REASONING_EFFORT` | OpenAI only: `none`, `minimal`, `low`, `medium`, `high`, or `xhigh`. Defaults to `high`. |
@@ -148,6 +156,8 @@ An empty OTLP endpoint does not disable container stdout logs, application healt
 | `WIDGET_SESSION_SECRET` | Signs cross-origin website-widget sessions. |
 | `FIRECRAWL_*` | Website knowledge ingestion. |
 | `GOOGLE_*` | Google Calendar OAuth and **Continue with Google** sign-in. |
+| `CALCOM_*` | Cal.com OAuth client and the stand-in email domain. The Cal.com card stays hidden until they're set. See [Self-hosting](/self-hosting/overview). |
+| `CALENDLY_*` | Calendly OAuth app, its webhook signing key and the stand-in email domain. The Calendly card stays hidden until they're set. See [Self-hosting](/self-hosting/overview). |
 | `INSTAGRAM_*` | Instagram direct messages: `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET` and `INSTAGRAM_REDIRECT_URI` from a Meta app with Instagram Business Login, and `INSTAGRAM_WEBHOOK_VERIFY_TOKEN` for the `/api/webhooks/instagram` subscription. |
 | `SMTP_*`, `EMAIL_*` | Transactional email. |
 | `POLAR_*` | Hosted billing and usage meters. |

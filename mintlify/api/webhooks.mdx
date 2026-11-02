@@ -11,8 +11,8 @@ Webhooks send an HTTPS `POST` to your URL when something happens in a business, 
 
 | Event | Sent when | `data` | Scope |
 | --- | --- | --- | --- |
-| `call.completed` | A call ended and LobbyStack saved its summary and outcome. | Call | `calls:read` |
-| `appointment.booked` | Anyone books an appointment: the agent, the dashboard or the API. | Appointment | `appointments:read` |
+| `call.completed` | A call ended and LobbyStack saved its summary and outcome. A call your team took with [Staff answers first](/agent/ai-settings/overview#staff-answers-first) has no summary, and its `outcome` and `end_reason` are `answered_by_team`. | Call | `calls:read` |
+| `appointment.booked` | Anyone books an appointment: the receptionist, the dashboard or the API. | Appointment | `appointments:read` |
 | `appointment.rescheduled` | An appointment moves to a new time. | Appointment | `appointments:read` |
 | `appointment.cancelled` | An appointment is cancelled. | Appointment | `appointments:read` |
 | `message.taken` | The agent takes a message for your team. | Message | `messages:read` |

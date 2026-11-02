@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { getCurrentAdapter, runWithAdapter } from "@better-auth/core/context";
+import { PgDialect } from "drizzle-orm/pg-core";
 
 const mocks = vi.hoisted(() => ({
   config: undefined as any,
   createOtp: vi.fn(), enqueue: vi.fn(), allowed: vi.fn(), role: vi.fn(), challenge: vi.fn(),
-  select: vi.fn(), acquired: true, lockHeld: false, adapter: vi.fn(),
+  select: vi.fn(), deleteWhere: vi.fn(), acquired: true, lockHeld: false, adapter: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("better-auth", () => ({ betterAuth: (config: unknown) => {
@@ -20,6 +21,7 @@ vi.mock("./email-verification-policy", async importOriginal => ({ ...await impor
 vi.mock("./databases", () => {
   const db = {
     select: () => ({ from: () => ({ where: () => ({ limit: mocks.select }) }) }),
+    delete: () => ({ where: mocks.deleteWhere }),
     transaction: async (callback: (tx: unknown) => unknown) => {
       let owned = false;
       const tx = { ...db, execute: async () => {
@@ -123,6 +125,29 @@ it("queues every auth email under the request's brand, for the worker to write i
     expect(payload).toMatchObject({ brand: { kind: "partner", partnerId: "partner-1" }, replyTo: null });
     expect(payload).not.toHaveProperty("subject");
   }
+});
+
+it("emails the owner, in their language, before a new passkey is saved", async () => {
+  vi.stubEnv("APP_BASE_URL", "https://app.example.test");
+  const { getAuth } = await import("./auth"); getAuth();
+  mocks.select.mockResolvedValue([{ email: "owner@example.invalid", preferredLocale: "fr" }]);
+  const { afterVerification } = mocks.config.plugins.find((plugin: { id?: string }) => plugin.id === "passkey").options.registration;
+  await afterVerification({ ctx: { request: new Request("https://app.example.test/api/auth/passkey/verify-registration") }, user: { id: "user-1" } });
+  expect(mocks.enqueue).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ aggregateId: "user-1", payload: expect.objectContaining({
+    template: "passkey_added", to: "owner@example.invalid",
+    variables: { locale: "fr", settingsUrl: "https://app.example.test/settings/account", resetUrl: "https://app.example.test/fr/forgot-password" },
+  }) }));
+  // The plugin saves the passkey after this returns, so a failed email stops the passkey.
+  mocks.enqueue.mockRejectedValueOnce(new Error("outbox down"));
+  await expect(afterVerification({ ctx: {}, user: { id: "user-1" } })).rejects.toThrow("outbox down");
+});
+
+it("removes the account's passkeys on a password reset", async () => {
+  const { getAuth } = await import("./auth"); getAuth();
+  await mocks.config.emailAndPassword.onPasswordReset({ user: { id: "user-1" } });
+  expect(mocks.deleteWhere).toHaveBeenCalledOnce();
+  const dialect = new PgDialect();
+  expect(dialect.sqlToQuery(mocks.deleteWhere.mock.calls[0]![0]).params).toEqual(["user-1"]);
 });
 
 it("links a partner's auth emails to the partner's host the proxy resolved", async () => {

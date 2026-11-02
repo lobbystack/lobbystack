@@ -625,6 +625,7 @@
       "knowledge_write": "Agregar, editar y eliminar entradas de conocimiento, preguntas frecuentes, sitios web y archivos",
       "billing_manage": "Ver el plan",
       "phone_numbers_manage": "Ver y liberar números de teléfono",
+      "phone_numbers_purchase": "Buscar, comprar y reemplazar números de teléfono. Los números que superan los incluidos en su nivel se le cobran a usted",
       "team_manage": "Invitar y quitar miembros del equipo y cambiar roles",
       "webhooks_manage": "Crear y eliminar endpoints de webhook",
       "businesses_create": "Crear negocios e invitar a sus propietarios",

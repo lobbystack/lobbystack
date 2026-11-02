@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 
 import { CallRecordingPlayer } from "@/components/audio/call-recording-player";
 import { BackLink, DetailSection, MetadataField, truncateId, useCopiedField } from "@/components/detail-fields";
+import { HiddenTextSkeleton, SectionSkeleton } from "@/components/loading-skeletons";
 import { SectionBlock } from "@/components/section-block";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -106,7 +107,7 @@ export function LiveCallDetailSurface({ callId }: { callId: string }) {
   });
   const completeFollowUp = useMutation({ mutationFn: (inboxItemId: string) => requestJson<{ completed: number }>(`/api/calls/${encodeURIComponent(callId)}?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PATCH", body: JSON.stringify({ action: "complete_follow_up", inboxItemId }) }), onSuccess: async (_, inboxItemId) => { if (business) telemetry.track("web.voice.follow_up_completed", { businessId: business.businessId, callId, inboxItemId }); await Promise.all([queryClient.invalidateQueries({ queryKey: ["call", business?.businessId, callId] }), queryClient.invalidateQueries({ queryKey: ["dashboard"] })]); } });
 
-  if (businesses.isLoading || detail.isLoading) return <DetailPageSkeleton />;
+  if (businesses.isLoading || detail.isLoading) return <DetailPageSkeleton t={t} />;
   if (businesses.isError || detail.isError || !detail.data) {
     return (
       <div className="flex flex-1 flex-col gap-6">
@@ -253,6 +254,70 @@ function DetailsTab({ detail, marking, onCompleteFollowUp }: { detail: Detail; m
   );
 }
 
-function DetailPageSkeleton() {
-  return <div className="flex flex-1 flex-col gap-6"><Skeleton className="h-5 w-24" /><Skeleton className="h-9 w-64" /><div className="grid grid-cols-2 gap-4 sm:grid-cols-4">{Array.from({ length: 4 }).map((_, index) => <Skeleton className="h-12" key={index} />)}</div><Skeleton className="h-28 w-full" /><Skeleton className="h-80 w-full" /></div>;
+/**
+ * The call page while it loads: the back link stays real, since it needs no data, and the rest takes the real
+ * page's shape. Fixed text is a placeholder holding its real text, hidden, so each is as wide as the text.
+ */
+function DetailPageSkeleton({ t }: { t: (key: string) => string }) {
+  const metadata = ["from", "duration", "started", "id"] as const;
+  const events = ["received", "connected", "completed"] as const;
+  const tabs = [["transcript", FileText], ["recording", Headphones], ["details", Info]] as const;
+  const bubbles = [["justify-start", "w-2/5"], ["justify-end", "w-3/5"], ["justify-start", "w-1/3"], ["justify-end", "w-1/2"]] as const;
+  return (
+    <div aria-busy="true" className="flex flex-1 flex-col gap-6">
+      <BackLink href="/calls" label={t("detail.backToList")} />
+
+      <div className="flex h-[37.5px] items-center"><Skeleton className="h-8 w-64 max-w-full" /></div>
+
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {metadata.map((field) => (
+          <div className="flex flex-col gap-1" key={field}>
+            <HiddenTextSkeleton className="type-meta">{t(`detail.metadata.${field}`)}</HiddenTextSkeleton>
+            <div className="flex h-6 items-center"><Skeleton className="h-4 w-28 max-w-full" /></div>
+          </div>
+        ))}
+      </div>
+
+      <Separator />
+
+      <SectionSkeleton title={t("detail.events.title")}>
+        <Surface className="px-4">
+          <div className="flex items-start px-2 py-4">
+            {events.map((event, index) => (
+              <div className="flex items-start" key={event}>
+                <div className="flex flex-col items-center gap-1.5">
+                  <div className="flex size-8 items-center justify-center"><Skeleton className="size-5 rounded-full" /></div>
+                  <HiddenTextSkeleton className="type-body whitespace-nowrap">{t(`detail.events.${event}`)}</HiddenTextSkeleton>
+                  <div className="flex h-4 items-center"><Skeleton className="h-3 w-20" /></div>
+                </div>
+                {index < events.length - 1 ? <div className="mt-3.5 h-px w-12 self-start bg-border sm:w-20" /> : null}
+              </div>
+            ))}
+          </div>
+        </Surface>
+      </SectionSkeleton>
+
+      <div>
+        <div className="inline-flex items-center gap-2">
+          {tabs.map(([tab, Icon]) => (
+            <Skeleton aria-hidden="true" className="inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-medium whitespace-nowrap" key={tab}>
+              <Icon className="invisible size-4" />
+              <span className="invisible">{t(`detail.tabs.${tab}`)}</span>
+            </Skeleton>
+          ))}
+        </div>
+        <div className="py-4">
+          <Card size="sm">
+            <CardContent className="flex flex-col gap-3 pt-0">
+              {bubbles.map(([side, width], index) => (
+                <div className={cn("flex", side)} key={index}>
+                  <Skeleton className={cn("h-14 max-w-[80%]", width)} />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
 }

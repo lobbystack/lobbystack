@@ -99,6 +99,13 @@ describe("findOpenings", () => {
     expect(mocks.recordCallOutcomeInTransaction.mock.lastCall?.[1]).toMatchObject({ callId: "call_1", outcome: { kind: "booking_in_progress", serviceName: "Haircut", startsAt: null } });
   });
 
+  it("spreads the times across the day when the caller has no preferred time, and says how many more are open", async () => {
+    mocks.findOpeningsInTransaction.mockResolvedValueOnce({ timezone: "America/Toronto", durationMinutes: 60, openings: ["2030-01-08T15:00:00.000Z"], moreOpenings: 5 });
+    const { preferredHour24: _preferred, ...anyTime } = input;
+    await expect(findOpenings(context, anyTime)).resolves.toMatchObject({ moreOpenings: 5 });
+    expect(mocks.findOpeningsInTransaction.mock.lastCall?.[1]).toEqual({ businessId: "biz_1", serviceId: "svc_1", dates: ["2030-01-08"], limit: 3, spread: true });
+  });
+
   it("passes on why a day has no openings", async () => {
     mocks.findOpeningsInTransaction.mockResolvedValueOnce({ timezone: "America/Toronto", durationMinutes: 60, openings: [], reason: "closure" });
     await expect(findOpenings(context, input)).resolves.toMatchObject({ ok: true, openings: [], reason: "closure" });

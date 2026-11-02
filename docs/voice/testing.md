@@ -13,7 +13,7 @@ Run `pnpm voice:eval` after any change that can alter what GPT-Live says or when
 
 Run `pnpm voice:call` once the change is deployed to staging, before you merge. It covers what the eval skips: Twilio, the SIP trunk, the admin webhook, and the worker attaching to the call.
 
-GPT-Live doesn't answer the same way twice. Run each scenario at least 3 times, and compare pass counts before and after your change on the same scenarios.
+GPT-Live doesn't answer the same way twice. Run each scenario at least 3 times, and compare pass counts before and after your change on the same scenarios. A scenario that expects the call to end must pass on every run, even when main fails it too. Look into any run that stays open before you merge.
 
 ## Run the API eval
 
@@ -43,7 +43,7 @@ Agent tools that read the database fail in the eval, as they would with the data
 The eval prints one line per run, then a summary per scenario. A run line looks like this:
 
 ```text
-PASS trailing-goodbye  greeted at 1.6 s | ended 4.1 s after the caller | hand-overs: endCall | checks: done | goodbyes: 1 | opened: "Thank you for calling Maple Family Clinic." / "We're closed on Saturdays. Anything else?" | receptionist: "Okay." / "Good bye."
+PASS trailing-goodbye  greeted at 1.6 s | ended 4.1 s after the caller | hand-overs: endCall | checks: done | leaving: none | goodbyes: 1 | opened: "Thank you for calling Maple Family Clinic." / "We're closed on Saturdays. Anything else?" | receptionist: "Okay." / "Good bye."
 ```
 
 Each field answers one question:
@@ -53,6 +53,7 @@ Each field answers one question:
 - **`ended … after the caller`**: how long after the caller's last line the controller closed the session, or `still open` after 15 seconds
 - **`hand-overs`**: each request GPT-Live handed to the backend after the opening question, by the tools the agent used. `reply` means the agent answered without a tool.
 - **`checks`**: each answer from the caller check, which runs when the caller speaks after the agent ended the call
+- **`leaving`**: each answer from the leaving check, which runs when GPT-Live gives a short reply and no request is running. `yes` means the controller hangs up even though nothing was handed over.
 - **`goodbyes`**: how many of the receptionist's lines said goodbye. More than 1 means the caller heard a double goodbye.
 - **`opened`**: the greeting, then the answer to the opening question. With `--locale`, check that both are in that language.
 - **`receptionist`**: what the receptionist said after the opening question
@@ -90,6 +91,8 @@ The script places one call per scenario, one after another, and prints the call'
 ```text
 PASS trailing-goodbye  CA9f964def1626388da1a76203fefa95e5 completed 28 s, the receptionist hung up
 ```
+
+To test a Telnyx number, call it from another carrier, such as a Twilio number. A call that a Telnyx Call Control application places to a Telnyx number arrives with the OpenAI project in `To`, so it doesn't test how the admin finds the business.
 
 To see why a call failed, read its transcript on the call's page in the dashboard, and the worker's `live.delegation`, `live.caller_done_check` and `live.closed` log lines for its session.
 

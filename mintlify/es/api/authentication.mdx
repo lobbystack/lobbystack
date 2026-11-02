@@ -60,7 +60,7 @@ Cada endpoint, salvo `GET /me`, requiere un permiso (scope). Una clave sin ese p
 | Permiso | Permite |
 | --- | --- |
 | `business:read` | `GET /business`, `GET /services`, `GET /staff`, `GET /receptionist`, `GET /rules`, `GET /onboarding`, `GET /widget-keys`, `GET /calendars`, `GET /calendars/{connection_id}/calendars`, `GET /notification-preferences` |
-| `business:write` | `PATCH /business`, `PATCH /receptionist`, `POST /services`, `PATCH` y `DELETE` en `/services/{service_id}`, `POST /rules`, `PATCH` y `DELETE` en `/rules/{rule_id}`, `POST /rules/reorder`, `PATCH /onboarding`, `POST /onboarding/complete`, `POST /widget-keys`, `PATCH /widget-keys/{widget_key_id}`, `POST /calendars/google/connect`, `PATCH` y `DELETE` en `/calendars/{connection_id}`, `PATCH /notification-preferences` |
+| `business:write` | `PATCH /business`, `PATCH /receptionist`, `POST /services`, `PATCH` y `DELETE` en `/services/{service_id}`, `POST /rules`, `PATCH` y `DELETE` en `/rules/{rule_id}`, `POST /rules/reorder`, `PATCH /onboarding`, `POST /onboarding/complete`, `POST /widget-keys`, `PATCH /widget-keys/{widget_key_id}`, `POST /calendars/google/connect`, `POST /calendars/calcom/connect`, `POST /calendars/calendly/connect`, `PATCH` y `DELETE` en `/calendars/{connection_id}`, `PATCH /notification-preferences` |
 | `calls:read` | `GET /calls`, `GET /calls/{call_id}` |
 | `contacts:read` | `GET /contacts`, `GET /contacts/{contact_id}` |
 | `contacts:write` | `POST /contacts`, `PATCH /contacts/{contact_id}`, `POST /contacts/passcodes`, `POST /contacts/passcodes/generate` |
@@ -71,6 +71,7 @@ Cada endpoint, salvo `GET /me`, requiere un permiso (scope). Una clave sin ese p
 | `knowledge:write` | `POST /knowledge`, `PATCH` y `DELETE` en `/knowledge/{entry_id}`, `POST /knowledge/sources`, `PATCH` y `DELETE` en `/knowledge/sources/{source_id}`, `POST /knowledge/sources/{source_id}/expand`, `/retry` y `/cancel`, `POST /knowledge/uploads` y `POST /knowledge/uploads/{upload_id}/complete` |
 | `billing:manage` | `GET` y `PATCH /billing`, `POST /billing/checkout`, `GET /billing/checkout/{checkout_id}` y, con una clave de plataforma que tiene acceso a todos los negocios, `POST` y `DELETE /billing/managed-plan` |
 | `phone_numbers:manage` | `GET /phone-numbers`, `POST /phone-numbers/search`, `POST /phone-numbers/claims`, `GET /phone-numbers/claims/{claim_id}`, `DELETE /phone-numbers/{phone_number_id}` y `POST /phone-numbers/{phone_number_id}/replace` |
+| `phone_numbers:purchase` | Solo para la clave de plataforma de un socio, con `phone_numbers:manage`: `POST /phone-numbers/search`, `POST /phone-numbers/claims`, `POST /phone-numbers/{phone_number_id}/replace` |
 | `team:manage` | `GET /team`, `POST /team/invitations`, `DELETE /team/invitations/{invitation_id}`, `PATCH` y `DELETE` en `/team/members/{membership_id}`, `POST /team/claim-link` |
 | `webhooks:manage` | `GET`, `POST`, `PATCH` y `DELETE` en `/webhooks`, y `POST /webhooks/{webhook_id}/test` |
 
@@ -94,9 +95,13 @@ Una clave de plataforma (`lsp_...`) incorpora y gestiona muchos negocios, mientr
   </Step>
 </Steps>
 
-La clave de plataforma de un socio actúa en nombre del socio, así que sigue funcionando cuando la persona que la creó deja el equipo. Sus alcances de facturación son la excepción: consulte [Endpoints de socio](#endpoints-de-socio). Llega a los negocios activos del socio, incluidos los que se crearon desde la consola, y a ningún otro. Con los permisos de socio, también gestiona al socio mismo con los [endpoints de socio](#endpoints-de-socio). No puede iniciar un pago de Polar para un negocio, fijar un plan gestionado ni crear un enlace de reclamación. Tampoco puede buscar ni reservar números de teléfono, ni consultar o cambiar las preferencias de alertas, porque esas acciones se hacen en nombre de una persona.
+La clave de plataforma de un socio actúa en nombre del socio, así que sigue funcionando cuando la persona que la creó deja el equipo. Sus alcances de facturación son la excepción: consulte [Endpoints de socio](#endpoints-de-socio). Llega a los negocios activos del socio, incluidos los que se crearon desde la consola, y a ningún otro. Con los permisos de socio, también gestiona al socio mismo con los [endpoints de socio](#endpoints-de-socio). No puede iniciar un pago de Polar para un negocio, fijar un plan gestionado ni crear un enlace de reclamación. Tampoco puede consultar ni cambiar las preferencias de alertas, porque esas acciones se hacen en nombre de una persona.
 
 Con la clave de plataforma de un socio, `POST /businesses` crea un negocio del socio, todavía sin propietario. Indique el propietario en `owner_email`, y el socio le envía por correo una invitación para iniciar sesión en su panel. `access_level` define lo que puede usar el equipo del negocio: `full`, el valor predeterminado, o `activity`. `template_id` parte de una de las plantillas del socio y también necesita `partner:read`. `package_id` le vende al negocio uno de los paquetes del socio y también necesita `partner.businesses:write`. Sin ese alcance, la solicitud devuelve `403` con el código `insufficient_scope`. Las claves de plataforma de un socio pueden crear 30 negocios por hora en total. Las invitaciones que envía con `POST /team/invitations` y `POST /users` llegan del socio y llevan a su panel.
+
+Omita `owner_email` para un negocio que el socio gestiona por sí mismo. Nadie recibe una invitación, y una clave no puede invitar a un propietario más tarde, así que el negocio no se puede entregar. `package_id` devuelve entonces `400`, porque el pago se abre desde la invitación del propietario.
+
+Con `phone_numbers:manage` y `phone_numbers:purchase`, la clave de un socio busca, reserva y reemplaza números en su propio nombre. En un despliegue que factura los niveles, esto necesita un nivel de pago, y Free devuelve `409`. Una clave solo puede reservar una oferta que ella misma buscó, y nunca recibe una oferta de prueba. Las claves del socio comparten 20 búsquedas cada 10 minutos.
 
 Los enlaces que devuelve la API para el negocio de un socio, como la etiqueta de script de un widget o un enlace para conectar un calendario, también llevan al panel del socio.
 

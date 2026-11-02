@@ -6,6 +6,7 @@ import { billingAccounts, businesses, createDatabaseClient, numberTrials, onboar
 
 import { openPartnerBusiness } from "./businessAccess";
 import { forgetCachedBrands } from "./brands";
+import { loadEntitlement } from "./entitlement";
 import { claimProspectDemo, createPartnerDemo } from "./demos";
 import { getPartnerBilling, reconcilePartnerTier, recordPartnerPolarEvent } from "./partnerBilling";
 import { loadPartnerNumberStanding, partnerNumberAvailabilityInTransaction, recordPartnerNumberCostInTransaction, recordPartnerTierBilling, settlePartnerNumberCharges, type PartnerNumberCharge } from "./partnerNumbers";
@@ -184,9 +185,15 @@ function apiClaim(tx: DatabaseTransaction, input: { businessId: string; owner: P
 }
 
 /** Reserves a replacement for a number the business holds through the v1 API, as a platform key does. */
-function apiReplacement(tx: DatabaseTransaction, input: { businessId: string; owner: Person; phoneNumberId: string }): Promise<unknown> {
+function apiReplacement(tx: DatabaseTransaction, input: { businessId: string; owner: Person; phoneNumberId: string }, quotaByBusiness = true): Promise<unknown> {
   const db = tx as unknown as Database;
-  return asWorker(tx, async () => await withBusinessTransaction(db, { businessId: input.businessId, actorType: "worker" }, async (inner) => await inner.execute(sql`select app.reserve_api_number_claim(${input.businessId}::uuid, ${input.owner.userId}::uuid, 'replacement', ${input.phoneNumberId}::uuid, ${testNumber()}, '{"countryCode":"CA","kind":"local"}'::jsonb, ${randomUUID()}, ${randomUUID()}, null, true)`)));
+  return asWorker(tx, async () => await withBusinessTransaction(db, { businessId: input.businessId, actorType: "worker" }, async (inner) => await inner.execute(sql`select app.reserve_api_number_claim(${input.businessId}::uuid, ${input.owner.userId}::uuid, 'replacement', ${input.phoneNumberId}::uuid, ${testNumber()}, '{"countryCode":"CA","kind":"local"}'::jsonb, ${randomUUID()}, ${randomUUID()}, null, ${quotaByBusiness})`)));
+}
+
+/** Reserves a replacement from the dashboard, as the business's owner. */
+function dashboardReplacement(tx: DatabaseTransaction, input: { businessId: string; owner: Person }): Promise<unknown> {
+  const db = tx as unknown as Database;
+  return asAppSession(tx, async () => await withBusinessTransaction(db, { userId: input.owner.userId, businessId: input.businessId, actorType: "operator" }, async (inner) => await inner.execute(sql`select app.reserve_replacement_number_claim(${input.businessId}::uuid, ${input.owner.userId}::uuid, ${testNumber()}, '{"countryCode":"CA","kind":"local"}'::jsonb, ${randomUUID()}, ${randomUUID()})`)));
 }
 
 /** Claims of the business that bought a number `hoursAgo`, made by its owner, whose own claim limits the dashboard then counts. */
@@ -352,6 +359,36 @@ describe.skipIf(!client)("phone numbers across a partner's businesses", () => {
       expect((await searchBusinessNumberInventory(acme.context, { userId: harbor!.owner.userId, businessId: harbor!.businessId, purpose: "replacement", claimTokenSecret: "test-secret" }, offered)).numbers).toHaveLength(1);
       await expect(apiReplacement(tx, { ...harbor!, phoneNumberId: held })).resolves.toBeDefined();
       expect(await getPartnerBilling(acme.context, acme.ownerActor)).toMatchObject({ numbersCounted: false });
+    });
+  });
+
+  it("refuses a replacement once the partner's tier ends, however it's claimed, while the business stays live", async () => {
+    await rollbackTest(async (tx) => {
+      await billTiers(tx, true);
+      const acme = await partner(tx, "Acme Reception");
+      await tier(tx, acme.partnerId, { tier: "starter", status: "active", modifiedAt: "2026-10-01T00:00:00.000Z" });
+      const harbor = await business(tx, acme, "Harbor Dental");
+      const held = await hold(tx, harbor.businessId);
+      const search = (provider = inventory()) => searchBusinessNumberInventory(acme.context, { userId: harbor.owner.userId, businessId: harbor.businessId, purpose: "replacement", claimTokenSecret: "test-secret" }, provider);
+      expect((await search()).numbers).toHaveLength(1);
+
+      await tier(tx, acme.partnerId, { tier: "starter", status: "revoked", modifiedAt: "2026-10-02T00:00:00.000Z" });
+      const { live } = await asWorker(tx, async () => await withBusinessTransaction(acme.context.db, { businessId: harbor.businessId, actorType: "worker" }, async (inner) => await loadEntitlement(inner, harbor.businessId)));
+      expect(live).toBe(true);
+
+      const provider = inventory();
+      expect(await refusal(search(provider))).toMatchObject({ status: 409, code: "partner_number_limit_reached" });
+      expect(provider.listAvailablePhoneNumbers).not.toHaveBeenCalled();
+      const refused = { code: "P0001", message: "partner_number_limit_reached" };
+      expect(await refusal(dashboardReplacement(tx, harbor))).toMatchObject(refused);
+      // An ordinary API key's claim, then a platform key's limits on the same function.
+      expect(await refusal(apiReplacement(tx, { ...harbor, phoneNumberId: held }, false))).toMatchObject(refused);
+      expect(await refusal(apiReplacement(tx, { ...harbor, phoneNumberId: held }))).toMatchObject(refused);
+      expect(await asMigrator(tx, async () => await tx.select({ id: onboardingNumberClaimEvents.id }).from(onboardingNumberClaimEvents).where(eq(onboardingNumberClaimEvents.businessId, harbor.businessId)))).toEqual([]);
+
+      // A partner back on a paid tier can replace it.
+      await tier(tx, acme.partnerId, { tier: "starter", status: "active", modifiedAt: "2026-10-03T00:00:00.000Z" });
+      await expect(dashboardReplacement(tx, harbor)).resolves.toBeDefined();
     });
   });
 
@@ -785,6 +822,11 @@ describe.skipIf(!client)("a partner's trial number", () => {
       expect(trial!.endsAt!.getTime() - trial!.startedAt!.getTime()).toBeGreaterThan(13 * DAY);
       expect(await asMigrator(tx, async () => (await tx.select({ reason: phoneNumbers.reclaimReason }).from(phoneNumbers).where(eq(phoneNumbers.id, phoneNumberId)))[0])).toEqual({ reason: "trial" });
       expect(await getPartnerBilling(acme.context, acme.ownerActor)).toMatchObject({ trialNumber: "used", numbersHeld: 0 });
+
+      // A running trial's number can't be replaced, with the refusal it always had.
+      expect(await refusal(searchBusinessNumberInventory(acme.context, { userId: harbor.owner.userId, businessId: harbor.businessId, purpose: "replacement", claimTokenSecret }, inventory()))).toMatchObject({ status: 409, code: "active_number_required" });
+      expect(await refusal(dashboardReplacement(tx, harbor))).toMatchObject({ code: "P0001", message: "active_number_required" });
+      expect(await refusal(apiReplacement(tx, { ...harbor, phoneNumberId }, false))).toMatchObject({ code: "P0001", message: "active_number_required" });
 
       // Deleting the business deletes its trial, and the partner still had its one.
       await asMigrator(tx, async () => await tx.delete(businesses).where(eq(businesses.id, harbor.businessId)));

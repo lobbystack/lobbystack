@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   finishLiveCall: vi.fn(async (..._args: unknown[]) => false),
   createAgentModel: vi.fn((..._args: unknown[]) => ({})),
   callerIsDone: vi.fn(async (..._args: unknown[]) => true),
+  callerIsLeaving: vi.fn(async (..._args: unknown[]) => true),
   createReceptionistAgent: vi.fn((..._args: unknown[]) => ({})),
   closeLiveSession: vi.fn(async (..._args: unknown[]) => undefined),
   controllers_: [] as Array<{ endSession: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn>; wrapUp: ReturnType<typeof vi.fn>; transferAfterAnnouncement: ReturnType<typeof vi.fn>; canTransfer: ReturnType<typeof vi.fn>; collectPasscode: ReturnType<typeof vi.fn>; detach: ReturnType<typeof vi.fn>; options: Record<string, unknown> }>,
@@ -27,6 +28,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@lobbystack/agent-core", () => ({
   callerIsDone: mocks.callerIsDone,
+  callerIsLeaving: mocks.callerIsLeaving,
   createAgentModel: mocks.createAgentModel,
   createReceptionistAgent: mocks.createReceptionistAgent,
   liveDelegationEnvironment: () => ({ AI_CHAT_REASONING_EFFORT: "low" }),
@@ -967,6 +969,17 @@ describe("live call latency telemetry", () => {
     await expect(setup.callerDone("Caller: Bye!", signal)).resolves.toBe(true);
     expect(mocks.callerIsDone).toHaveBeenCalledWith(mocks.createAgentModel.mock.results.at(-1)!.value, "Caller: Bye!", signal);
     expect(info).toHaveBeenCalledWith(expect.stringMatching(/^\{"event":"live\.caller_done_check","sessionId":"live_2","done":true,"ms":\d+\}$/));
+    info.mockRestore();
+  });
+
+  it("checks a goodbye GPT-Live didn't hand over on the delegation model, and logs live.missed_goodbye_check", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const options = await startCall();
+    const setup = await (options.setup as unknown as Promise<{ callerLeaving: (conversation: string, abortSignal: AbortSignal) => Promise<boolean> }>);
+    const signal = new AbortController().signal;
+    await expect(setup.callerLeaving("Caller: Bye bye.", signal)).resolves.toBe(true);
+    expect(mocks.callerIsLeaving).toHaveBeenCalledWith(mocks.createAgentModel.mock.results.at(-1)!.value, "Caller: Bye bye.", signal);
+    expect(info).toHaveBeenCalledWith(expect.stringMatching(/^\{"event":"live\.missed_goodbye_check","sessionId":"live_2","leaving":true,"ms":\d+\}$/));
     info.mockRestore();
   });
 

@@ -1444,6 +1444,9 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
       expect(listCalendars).toHaveBeenCalledWith({ accessToken: "access" });
 
       await expectApiError(updateCalendarConnectionForApi(context, caller, connectionId, { calendar_id: "holidays" }, access), 400, "invalid_request");
+      // A provider that says why a calendar can't take appointments, as Calendly does for a Free plan, gets to tell the caller.
+      const freePlan = { ...access(), listCalendars: async () => [{ id: "event-type", summary: "Haircut", primary: false, accessRole: "reader", unwritableReason: "Calendly books through its API only on paid plans." }] };
+      await expect(updateCalendarConnectionForApi(context, caller, connectionId, { calendar_id: "event-type" }, () => freePlan)).rejects.toMatchObject({ status: 400, message: "Calendly books through its API only on paid plans." });
       await expectApiError(updateCalendarConnectionForApi(context, caller, connectionId, { calendar_id: "missing" }, access), 400, "invalid_request");
       expect(await updateCalendarConnectionForApi(context, caller, connectionId, { calendar_id: "main@example.com" }, access)).toMatchObject({ calendar_id: "main@example.com", status: "syncing" });
       // The worker reads the picked calendar, as after a pick in the dashboard.

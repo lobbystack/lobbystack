@@ -1,6 +1,6 @@
 ---
 title: "Ajouter les connaissances de votre entreprise"
-description: "Ajoutez du texte, des documents et le contenu de votre site Web pour que votre agent réponde aux questions courantes à partir de sources exactes."
+description: "Ajoutez du texte, des documents et le contenu de votre site Web pour que votre agent réponde aux questions courantes, et répondez à celles qu'il n'a pas su traiter."
 sidebarTitle: "Connaissances"
 contentType: "How-to"
 ---
@@ -79,23 +79,40 @@ L'importation du site Web se concentre sur les pages publiques destinées aux ap
 
 ## Répondre aux questions sans réponse
 
-Quand l'agent cherche une réponse dans vos connaissances sans rien trouver, LobbyStack enregistre la question pour que vous y répondiez. Les questions ouvertes apparaissent sous **Questions sans réponse** dans la page Connaissances, des plus posées aux moins posées, avec le nombre de fois où on les a posées et la date de la dernière fois.
+Quand votre agent cherche une réponse dans vos connaissances sans rien trouver, LobbyStack enregistre la question sous **Questions sans réponse** dans la page Connaissances. Cela vaut pour les appels téléphoniques, les appels depuis le navigateur, les clavardages sur le site Web et les messages Instagram. Vos propres appels test comptent aussi.
 
-Une question posée de nouveau avec d'autres majuscules ou une autre ponctuation compte sur la même ligne.
+La liste affiche jusqu'à 50 questions, des plus posées aux moins posées, avec le nombre de fois où on les a posées et la date de la dernière fois. Chaque question apparaît telle que votre agent l'a cherchée, jusqu'à 300 caractères, donc sa formulation peut différer de celle de l'appelant.
+
+Une question posée de nouveau avec d'autres majuscules ou une autre ponctuation compte sur la même ligne. Une question reformulée a sa propre ligne.
 
 <Steps>
   <Step title="Ouvrez les questions sans réponse">
-    Allez dans **Agent** > **Connaissances** et faites défiler jusqu'à **Questions sans réponse**. Quand des questions attendent, la page d'accueil y mène aussi sous **Action requise**.
+    Allez dans **Agent** > **Connaissances** et faites défiler jusqu'à **Questions sans réponse**. Quand des questions attendent, les propriétaires et les administrateurs ont aussi un lien sous **Action requise** dans l'[Accueil](/fr/dashboard/home).
   </Step>
   <Step title="Écrivez la réponse">
-    Cliquez sur **Répondre**, écrivez ce que l'agent doit dire et cliquez sur **Enregistrer la réponse**. LobbyStack ajoute une entrée de texte titrée avec la question, qui apparaît dans le tableau Connaissances.
+    Cliquez sur **Répondre**, écrivez ce que l'agent doit dire en 5 000 caractères au plus et cliquez sur **Enregistrer la réponse**. LobbyStack ajoute au tableau Connaissances une entrée de texte titrée avec la question. Les nouveaux appels et les nouvelles conversations l'utilisent peu après l'enregistrement, et vous pouvez la modifier comme toute autre entrée.
   </Step>
   <Step title="Ignorez celles auxquelles vous ne répondrez pas">
-    Cliquez sur **Ignorer** pour retirer une question de la liste. Si quelqu'un la pose de nouveau, elle reste hors de la liste jusqu'à ce que LobbyStack la supprime avec le reste du contenu de vos appelants. Posée après cela, elle revient comme une nouvelle question.
+    Cliquez sur **Ignorer** pour retirer une question de la liste.
   </Step>
 </Steps>
 
-Les propriétaires et les administrateurs peuvent répondre aux questions et les ignorer. Les autres membres de l'équipe peuvent consulter la liste. LobbyStack supprime une question à la fin de la période de conservation des suivis de votre forfait, comptée à partir de la dernière fois que quelqu'un l'a posée.
+### Ce qui se passe quand quelqu'un la pose de nouveau
+
+| Question | Si quelqu'un la pose de nouveau |
+| --- | --- |
+| Avec une réponse | Votre agent utilise votre réponse. Si sa recherche ne trouve toujours rien, la question revient dans la liste comme une nouvelle question, et son compteur repart à 1. |
+| Ignorée | La question reste hors de la liste, même si d'autres personnes la posent. Elle revient comme une nouvelle question seulement si quelqu'un la pose après que LobbyStack l'a supprimée. |
+
+Vous ne pouvez pas rétablir une question ignorée depuis le tableau de bord. Pour y répondre plus tard, ajoutez vous-même une [entrée de texte](#entrées-de-texte).
+
+### Qui peut répondre aux questions
+
+Les propriétaires et les administrateurs peuvent répondre aux questions et les ignorer. Les lecteurs peuvent consulter la liste, mais ils n'ont ni les boutons **Répondre** et **Ignorer**, ni le lien dans l'Accueil. Si votre entreprise a l'accès **Activité seulement** par l'intermédiaire d'un partenaire, votre équipe ne voit pas la page Connaissances.
+
+### Combien de temps LobbyStack conserve les questions
+
+LobbyStack supprime une question 30 jours après la dernière fois qu'on l'a posée avec le forfait Free, ou 365 jours avec Starter et Pro. Chaque nouvelle demande relance cette période, même pour une question ignorée. Une entrée de texte enregistrée comme réponse reste dans vos connaissances jusqu'à ce que vous la supprimiez.
 
 ## Gérer les entrées
 

@@ -306,8 +306,8 @@ describe.skipIf(!testUrl)("platform keys partners make, against PostgreSQL with 
       const [sent] = await asMigrator(tx, async () => await tx.select({ invitedByUserId: businessInvitations.invitedByUserId, invitedByPlatformKeyId: businessInvitations.invitedByPlatformKeyId, role: businessInvitations.role }).from(businessInvitations).where(eq(businessInvitations.id, staff.id)));
       expect(sent).toEqual({ invitedByUserId: null, invitedByPlatformKeyId: platformKey.id, role: "scheduler" });
 
-      // owner_email is required, the access level defaults to full, and the console's checks hold.
-      expect(await refusal(create({ idempotencyKey: "no-owner", body: { name: "No Owner", timezone: "UTC" } }))).toMatchObject({ status: 400, code: "invalid_request", details: [{ path: "owner_email" }] });
+      // owner_email is optional, the access level defaults to full, and the console's checks hold.
+      expect((await create({ idempotencyKey: "no-owner", body: { name: "No Owner", timezone: "UTC" } })).business).toMatchObject({ name: "No Owner" });
       expect(await refusal(create({ idempotencyKey: "bad-email", body: { name: "Bad Email", timezone: "UTC", owner_email: "one@example.invalid, two@example.invalid" } }))).toMatchObject({ status: 400, details: [{ path: "owner_email" }] });
       expect(await refusal(create({ idempotencyKey: "bad-zone", body: { name: "Bad Zone", timezone: "Mars/Olympus", owner_email: client!.email } }))).toMatchObject({ status: 400, details: [{ path: "timezone" }] });
       const full = await create({ idempotencyKey: "onboard-pier", body: { name: "Pier Plumbing", timezone: "UTC", owner_email: `${randomUUID()}@example.invalid` } });

@@ -6,7 +6,7 @@ import { normalizeInterfaceLocale } from "@lobbystack/shared";
 import { jsonError } from "@/lib/api-helpers";
 import { operatorRoute } from "@/lib/operator-request";
 import { inferPhoneCountry, normalizePhoneNumber } from "@/lib/phone";
-import { getOnboardingPhoneVerifyProvider } from "@/lib/twilio-provider";
+import { getOnboardingPhoneVerifyProvider } from "@/lib/telephony";
 
 export const dynamic = "force-dynamic";
 

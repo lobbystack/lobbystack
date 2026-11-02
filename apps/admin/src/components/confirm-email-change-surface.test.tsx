@@ -20,3 +20,12 @@ it.each([true, false])("renders original inline confirmation state for success=%
   expect(screen.getByRole("link", { name: "confirmEmailChange.backToSettings" }).getAttribute("href")).toBe("/settings");
   expect(fetcher.mock.calls.some(([url]) => url === "/api/auth/verify-email?token=fixture")).toBe(true);
 });
+
+it("shows the terms and privacy agreement line, worded for confirming the change", () => {
+  window.history.replaceState({}, "", "/confirm-email-change?token=fixture&email=new@example.invalid");
+  vi.stubGlobal("fetch", vi.fn(async () => Response.json({})));
+  render(<ConfirmEmailChangeSurface />);
+  expect(screen.getByText("signup.legal.emailChangePrefix", { exact: false })).toBeTruthy();
+  expect(screen.getByRole("link", { name: "signup.legal.terms" })).toBeTruthy();
+  expect(screen.getByRole("link", { name: "signup.legal.privacy" })).toBeTruthy();
+});

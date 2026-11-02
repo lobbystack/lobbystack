@@ -394,7 +394,7 @@ describe.skipIf(!client)("deleting a business", () => {
         queued: expect.arrayContaining([{ topic: "privacy.deleteStoredObjects", businessId: null, payload: { objectKeys: [objectKey] } }, { topic: "email.sendNotice", businessId: null, payload: expect.objectContaining({ template: "business_deleted" }) }]),
         numbers: [],
         // The active number, and the one a reclaim was releasing in case that release fails now the business is gone.
-        released: expect.arrayContaining(numbers.slice(0, 2).map((number) => ({ topic: "phoneNumber.releaseDeleted", businessId: null, payload: { providerPhoneId: number.providerPhoneId, e164: number.e164 } }))),
+        released: expect.arrayContaining(numbers.slice(0, 2).map((number) => ({ topic: "phoneNumber.releaseDeleted", businessId: null, payload: { providerPhoneId: number.providerPhoneId, e164: number.e164, carrier: "twilio" } }))),
         // Pier's owner never gets an invitation to a business that's gone.
         ownerInvitationEmail: [],
       });

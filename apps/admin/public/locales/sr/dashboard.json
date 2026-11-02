@@ -68,7 +68,8 @@
         "durationUp": "+{{value}} u odnosu na prethodni period",
         "durationDown": "-{{value}} u odnosu na prethodni period",
         "pointsUp": "+{{value}} p. p. u odnosu na prethodni period",
-        "pointsDown": "-{{value}} p. p. u odnosu na prethodni period"
+        "pointsDown": "-{{value}} p. p. u odnosu na prethodni period",
+        "noPreviousCalls": "Nema poziva u prethodnom periodu"
       },
       "outcomes": {
         "title": "Ishodi poziva",

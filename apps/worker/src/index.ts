@@ -7,14 +7,17 @@ import { createEmbeddingProvider } from "@lobbystack/providers/ai/embeddingProvi
 import { FirecrawlProvider } from "@lobbystack/providers/crawling/firecrawl";
 import { createCustomHostnameProvider, systemTxtLookup } from "@lobbystack/providers/customHostnames/customHostnames";
 import { SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
+import { CalcomCalendarProvider, calcomCalendarConfigFromEnv, calcomCalendarConfigProblem } from "@lobbystack/providers/calcom/calendar";
+import { CalendlyCalendarProvider, calendlyCalendarConfigFromEnv, calendlyCalendarConfigProblem } from "@lobbystack/providers/calendly/calendar";
 import { GoogleCalendarProvider } from "@lobbystack/providers/google/calendar";
 import { InstagramProvider } from "@lobbystack/providers/instagram/instagram";
 import { SecretBox } from "@lobbystack/providers/crypto/secretBox";
 import { PolarBillingProvider } from "@lobbystack/providers/polar/polarBilling";
 import { createStorageProvider } from "@lobbystack/providers/storage/provider";
-import { TwilioProvider } from "@lobbystack/providers/twilio/twilioProvider";
+import { createTelephony } from "@lobbystack/providers/telephony/registry";
 import { getMeter, initializeTelemetry, redactOtelExceptionText, shutdownTelemetry, withExtractedTraceContext, withSpan } from "@lobbystack/telemetry/node";
 import { redactJobError } from "./redactJobError";
+import type { CalendarProviders } from "./calendarJobs";
 import { DelayedError, Worker } from "bullmq";
 import { and, eq, isNull } from "drizzle-orm";
 import OpenAI from "openai";
@@ -52,29 +55,10 @@ function createOnboardingFollowupSender(): OnboardingFollowupSender | undefined 
   return from && name ? { from, name } : undefined;
 }
 
-function createTwilioProvider(): TwilioProvider | undefined {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  return accountSid && authToken ? new TwilioProvider({ accountSid, authToken }) : undefined;
-}
-
 function createPolarProvider(): PolarBillingProvider | undefined {
   const accessToken = process.env.POLAR_ACCESS_TOKEN;
   const organizationId = process.env.POLAR_ORGANIZATION_ID;
   return accessToken && organizationId ? new PolarBillingProvider({ accessToken, organizationId, ...(process.env.POLAR_API_BASE_URL ? { baseUrl: process.env.POLAR_API_BASE_URL } : {}) }) : undefined;
-}
-
-function createAlertSmsProvider(): WorkerDependencies["twilioAlerts"] {
-  const accountSid = process.env.TWILIO_ALERT_ACCOUNT_SID;
-  const apiKeySid = process.env.TWILIO_ALERT_API_KEY_SID;
-  const apiKeySecret = process.env.TWILIO_ALERT_API_KEY_SECRET;
-  const from = process.env.TWILIO_ALERT_SMS_FROM;
-  if (!accountSid || !apiKeySid || !apiKeySecret || !from) return undefined;
-  const provider = new TwilioProvider({ accountSid, apiKeySid, apiKeySecret });
-  return { from, sendSms: input => {
-    if (input.from !== from) throw new Error("Restricted alert provider cannot use another sender.");
-    return provider.sendSms(input);
-  } };
 }
 
 function createCrawlerProvider(): FirecrawlProvider | undefined {
@@ -82,11 +66,17 @@ function createCrawlerProvider(): FirecrawlProvider | undefined {
   return apiKey ? new FirecrawlProvider({ apiKey, ...(process.env.FIRECRAWL_BASE_URL ? { baseUrl: process.env.FIRECRAWL_BASE_URL } : {}) }) : undefined;
 }
 
-function createCalendarProvider(): GoogleCalendarProvider | undefined {
+function createCalendarProviders(): CalendarProviders | undefined {
+  const providers: CalendarProviders = {};
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   const redirectUri = process.env.GOOGLE_REDIRECT_URI;
-  return clientId && clientSecret && redirectUri ? new GoogleCalendarProvider({ clientId, clientSecret, redirectUri }) : undefined;
+  if (clientId && clientSecret && redirectUri) providers.google = new GoogleCalendarProvider({ clientId, clientSecret, redirectUri });
+  const calcom = calcomCalendarConfigFromEnv();
+  if (calcom) providers.calcom = new CalcomCalendarProvider(calcom);
+  const calendly = calendlyCalendarConfigFromEnv();
+  if (calendly) providers.calendly = new CalendlyCalendarProvider(calendly);
+  return Object.keys(providers).length ? providers : undefined;
 }
 
 // Sending needs the app's ID and secret and the key the tokens are encrypted with.
@@ -137,6 +127,10 @@ async function main(): Promise<void> {
     ...(process.env.STORAGE_PROVIDER === "s3" ? [] : ["LOCAL_STORAGE_SIGNING_SECRET"]),
   ]);
   for (const warning of partnerFeatureWarnings(process.env)) console.warn(`[partners] ${warning}`);
+  const calcomProblem = calcomCalendarConfigProblem(process.env);
+  if (calcomProblem) console.warn(`[calendar] ${calcomProblem}`);
+  const calendlyProblem = calendlyCalendarConfigProblem(process.env);
+  if (calendlyProblem) console.warn(`[calendar] ${calendlyProblem}`);
   await initializeTelemetry({ serviceName: "lobbystack-worker" });
   const database = createDatabaseClient("lobbystack_worker");
   const dispatcherDatabase = createDatabaseClient("lobbystack_dispatcher");
@@ -167,13 +161,13 @@ async function main(): Promise<void> {
   const health = startHealthServer(workerPort, state, liveCalls.handle);
   const email = createEmailProvider();
   const onboardingFollowupSender = createOnboardingFollowupSender();
-  const twilio = createTwilioProvider();
-  const twilioAlerts = createAlertSmsProvider();
+  // Every carrier with credentials, routed by TELEPHONY_* (docs/voice/runtime.md). Malformed routing fails the boot.
+  const telephony = createTelephony(process.env);
   const storage = createStorageProvider();
   const polar = createPolarProvider();
   const customHostnames = createCustomHostnameProvider(process.env);
   const crawler = createCrawlerProvider();
-  const calendar = createCalendarProvider();
+  const calendars = createCalendarProviders();
   const instagram = createInstagramOperations();
   const productAnalytics = createProductAnalytics();
   const callSummarizer = createCallSummarizer();
@@ -185,7 +179,7 @@ async function main(): Promise<void> {
   const dependencies: WorkerDependencies = {
     domain,
     realtime,
-    ...(calendar ? { calendar } : {}),
+    ...(calendars ? { calendars } : {}),
     ...(instagram ? { instagram } : {}),
     ...(crawler ? { crawler } : {}),
     ...(productAnalytics ? { productAnalytics } : {}),
@@ -195,8 +189,7 @@ async function main(): Promise<void> {
     ...(email ? { email } : {}),
     ...(onboardingFollowupSender ? { onboardingFollowupSender } : {}),
     ...(embeddings ? { embeddings } : {}),
-    ...(twilio ? { twilio } : {}),
-    ...(twilioAlerts ? { twilioAlerts } : {}),
+    telephony,
     storage,
     ...(openai ? { liveSessions: openai.live.sessions } : {}),
     recoverLiveCall: liveCalls.recover,

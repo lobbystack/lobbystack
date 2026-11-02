@@ -26,4 +26,12 @@ describe("asApiResponse", () => {
     });
     expect(mocks.reportServerError).not.toHaveBeenCalled();
   });
+
+  it("keeps the code of a country whose carrier isn't set up, so the number picker can explain it", async () => {
+    const response = asApiResponse(Object.assign(new Error("Phone numbers aren't set up on this deployment."), { status: 503, code: "phone_numbers_unavailable" }));
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({ error: "Phone numbers aren't set up on this deployment.", code: "phone_numbers_unavailable" });
+    expect(mocks.reportServerError).not.toHaveBeenCalled();
+  });
 });

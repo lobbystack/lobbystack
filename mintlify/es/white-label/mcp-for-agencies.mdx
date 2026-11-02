@@ -88,11 +88,23 @@ Además de las herramientas de negocio, una conexión de socio recibe estas. Las
 | --- | --- | --- |
 | `get_partner` | `partner:read` | El nombre, las direcciones y el nivel de su cuenta de socio, y la bolsa compartida del mes con acceso a la facturación |
 | `list_businesses` | `partner:read` | Sus negocios con sus propietarios, niveles de acceso y uso, y su facturación para propietarios y administradores |
-| `create_business` | `businesses:create` | Crea un negocio e invita a su propietario. `template_id` también necesita `partner:read`, y `package_id` necesita `partner.businesses:write`. |
+| `create_business` | `businesses:create` | Crea un negocio e invita a su propietario. Una clave de plataforma puede omitir `owner_email`. `template_id` también necesita `partner:read`, y `package_id` necesita `partner.businesses:write`. |
 | `release_business` | `partner.businesses:write` | Cede un negocio a su propietario. Destructiva. |
 | `delete_business` | `partner.businesses:write` | Elimina un negocio y todo lo que contiene. Destructiva. |
 | `get_business_billing` | `partner:read` | El paquete de un negocio, el estado de su suscripción y su excedente |
 | `set_business_billing` | `partner.businesses:write` | Elige el paquete y el excedente de un negocio |
+
+### Números de teléfono
+
+Solo una clave de plataforma recibe estas herramientas. Reservar y reemplazar cuestan dinero y necesitan un nivel de pago, así que confirme el número primero. Buscar, reservar y reemplazar también necesitan `phone_numbers:manage`. Quien se conecta con su propia cuenta compra los números en el panel del negocio.
+
+| Herramienta | Alcance | Qué hace |
+| --- | --- | --- |
+| `list_phone_numbers` | `phone_numbers:manage` | Los números de un negocio, del más reciente al más antiguo |
+| `search_phone_numbers` | `phone_numbers:purchase` | Busca números que un negocio puede reservar |
+| `claim_phone_number` | `phone_numbers:purchase` | Compra un número ofrecido. `idempotency_key` es obligatorio. |
+| `replace_phone_number` | `phone_numbers:purchase` | Reserva un número de reemplazo, una vez por negocio. `idempotency_key` es obligatorio. |
+| `get_phone_number_claim` | `phone_numbers:manage` | El estado de una reserva |
 
 ### Demos
 

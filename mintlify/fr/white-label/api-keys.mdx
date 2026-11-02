@@ -29,13 +29,40 @@ La page liste chaque clé par son nom, avec la personne qui l'a créée, sa date
 
 La clé d'un partenaire agit au nom de votre partenaire plutôt qu'au nom d'une personne : elle continue donc de fonctionner quand le collègue qui l'a créée quitte l'équipe. Elle atteint vos entreprises actives, y compris celles créées depuis la console, et aucune autre :
 
-- `POST /businesses` crée une entreprise encore sans propriétaire. Indiquez le propriétaire dans `owner_email`, et LobbyStack lui envoie votre invitation par courriel. `access_level` accepte `full`, la valeur par défaut, ou `activity`.
+- `POST /businesses` crée une entreprise encore sans propriétaire. Indiquez le propriétaire dans `owner_email`, et LobbyStack lui envoie votre invitation par courriel. Laissez ce champ de côté pour [gérer l'entreprise depuis votre propre produit](#gérer-des-entreprises-depuis-votre-propre-produit). `access_level` accepte `full`, la valeur par défaut, ou `activity`.
 - Toutes les autres requêtes nomment leur entreprise dans l'en-tête `LobbyStack-Business`.
 - Les liens que l'API renvoie, comme la balise de script d'un widget ou un lien de connexion d'agenda, mènent à votre adresse.
 
-Vos clés peuvent créer 30 entreprises par heure au total. `POST /businesses` accepte `template_id` pour partir d'un de vos modèles, avec la portée `partner:read`, et `package_id` pour vendre une de vos formules, avec la portée `partner.businesses:write`. Une clé ne peut pas rechercher ou réserver de numéros de téléphone, ni modifier les préférences d'alertes : faites-le dans la console.
+Vos clés peuvent créer 30 entreprises par heure au total. `POST /businesses` accepte `template_id` pour partir d'un de vos modèles, avec la portée `partner:read`, et `package_id` pour vendre une de vos formules, avec la portée `partner.businesses:write`. Une clé ne peut pas modifier les préférences d'alertes : faites-le dans la console.
 
 [Clés de plateforme](/fr/api/authentication#clés-de-plateforme) liste les portées, les en-têtes et les réponses.
+
+## Gérer des entreprises depuis votre propre produit
+
+Si vos clients utilisent votre produit sans jamais voir LobbyStack, laissez `owner_email` hors de `POST /businesses`. Personne ne reçoit d'invitation, et votre clé configure et gère l'entreprise. Une clé ne peut pas inviter de propriétaire : l'entreprise reste donc sans propriétaire.
+
+Sur un palier payant, une clé avec `phone_numbers:manage` et `phone_numbers:purchase` achète le numéro de l'entreprise. Une clé n'a pas `phone_numbers:purchase` par défaut : activez d'abord **Rechercher, acheter et remplacer des numéros de téléphone** sur la clé. Nommez l'entreprise dans l'en-tête `LobbyStack-Business` :
+
+<Steps>
+  <Step title="Rechercher">
+    `POST /phone-numbers/search` renvoie des offres. Chaque offre dure 5 minutes, et seule la clé qui a fait la recherche peut la réserver.
+  </Step>
+  <Step title="Réserver">
+    `POST /phone-numbers/claims` achète le numéro. Interrogez `GET /phone-numbers/claims/{claim_id}` jusqu'à ce que son statut soit `claimed` ou `failed`.
+  </Step>
+  <Step title="Remplacer, au besoin">
+    Relancez la recherche avec `replaces`, puis appelez `POST /phone-numbers/{phone_number_id}/replace`. Une entreprise peut remplacer son numéro une fois.
+  </Step>
+</Steps>
+
+Sur le palier Free, ces requêtes renvoient `409`. Une clé n'obtient jamais votre numéro d'essai de 14 jours, parce que cet essai demande le mobile vérifié d'une personne. Vos clés partagent 20 recherches par tranche de 10 minutes, et [les limites de votre palier sur les nouveaux numéros](/fr/white-label/tiers#numéros-de-téléphone-par-palier) s'appliquent.
+
+Une entreprise sans propriétaire n'a personne dans son équipe, ce qui change quatre choses :
+
+- **Alertes :** les [webhooks](/fr/api/webhooks) couvrent les appels, les messages, les rendez-vous et les contacts. LobbyStack envoie un courriel à vos propriétaires et administrateurs quand un visiteur du site demande une personne, qu'un transfert ou un texto échoue, qu'un texto d'un client attend une réponse, qu'un agenda cesse de se synchroniser, qu'une réponse de l'IA échoue ou qu'un point de terminaison de webhook se désactive. Vous avez 3 minutes pour répondre à un visiteur depuis les **Messages** de l'entreprise. Personne ne reçoit d'alerte pour les nouvelles discussions du site ou d'Instagram.
+- **Appels que la réceptionniste ne peut pas prendre :** LobbyStack les transfère au numéro de transfert de l'entreprise, et les refuse s'il n'y en a pas. Définissez `transfer_number` avec `PATCH /receptionist`.
+- **Intégration :** votre clé la termine avec `POST /onboarding/complete`. Envoyez `skip_number: true` si l'entreprise n'a pas de numéro.
+- **Vente et remise :** une formule demande un propriétaire, parce que le paiement s'ouvre depuis son invitation. `package_id` renvoie `400` sans `owner_email`, et définir une formule plus tard renvoie `409`. Vous pouvez supprimer l'entreprise, mais pas la remettre à quelqu'un.
 
 ## Gérer votre partenaire depuis du code
 
@@ -57,7 +84,7 @@ La clé agit comme un administrateur : elle ne peut pas inviter de propriétair
 lobbystack login --url https://app.lobbystack.com --key-stdin < key.txt
 ```
 
-La clé a besoin de `businesses:create`, `business:read`, `business:write`, `knowledge:read`, `knowledge:write` et `team:manage`. Le manifeste d'une clé de partenaire nomme le propriétaire, qui reçoit votre invitation quand la commande crée l'entreprise :
+La clé a besoin de `businesses:create`, `business:read`, `business:write`, `knowledge:read`, `knowledge:write` et `team:manage`, plus `phone_numbers:manage` et `phone_numbers:purchase` pour un numéro. Le manifeste d'une clé de partenaire peut nommer le propriétaire, qui reçoit votre invitation quand la commande crée l'entreprise :
 
 ```yaml harbor-dental.yaml
 business:
@@ -72,7 +99,7 @@ owner:
   email: owner@harbordental.example
 ```
 
-Laissez `plan` et `phone_number` hors du manifeste : vos entreprises n'achètent pas les forfaits de LobbyStack, et une clé ne peut pas réserver de numéros. Prévisualisez l'exécution avec `--plan`, puis lancez-la :
+Laissez `plan` hors du manifeste : vos entreprises n'achètent pas les forfaits de LobbyStack. Sur un palier payant, ajoutez `phone_number` et la commande réserve le premier numéro que la recherche propose. Laissez `owner` de côté pour une entreprise sans propriétaire, et la commande termine son intégration. Prévisualisez l'exécution avec `--plan`, puis lancez-la :
 
 ```bash
 lobbystack onboard harbor-dental.yaml --plan

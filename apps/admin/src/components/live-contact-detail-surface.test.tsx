@@ -160,3 +160,34 @@ describe("contact detail keypad PIN", () => {
     expect(screen.queryByRole("button", { name: "detail.passcode.removeAction" })).toBeNull();
   });
 });
+
+describe("contact detail loading state", () => {
+  const skeletons = () => document.querySelectorAll('[data-slot="skeleton"]').length;
+  const hidden = (text: string) => screen.getByText(text).className.includes("invisible");
+  function renderPending(workspace: boolean) {
+    language.current = "en";
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); clients.push(client);
+    if (workspace) client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Business", active: true, role: "business_owner" }] });
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+    render(<QueryClientProvider client={client}><LiveContactDetailSurface contactId="contact" /></QueryClientProvider>);
+  }
+
+  it.each([["the workspace", false], ["the contact", true]])("keeps the back link and shows the rest of the page as placeholders while %s load", (_, workspace) => {
+    renderPending(workspace);
+    expect(screen.getByRole("link", { name: "detail.backToList" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
+    // The name, two channel icons, the menu button, three metadata fields and four stats (a label and a value each), three tabs and three activity rows.
+    expect(skeletons()).toBe(1 + 2 + 1 + 3 * 2 + 4 * 2 + 3 + 3 * 3);
+    for (const text of ["detail.metadata.phone", "detail.metadata.firstSeen", "detail.stats.calls", "detail.stats.conversations", "detail.tabs.activity", "detail.tabs.details"]) expect(hidden(text)).toBe(true);
+    expect(screen.queryByRole("tab")).toBeNull();
+    expect(screen.queryByText("detail.notFound")).toBeNull();
+  });
+
+  it("swaps the placeholders for the real page once the contact has loaded", async () => {
+    language.current = "en";
+    renderDetail("en");
+    expect(await screen.findByRole("heading", { level: 1, name: "Ana" })).toBeTruthy();
+    expect(skeletons()).toBe(0);
+    expect(screen.getAllByRole("tab").length).toBe(3);
+  });
+});

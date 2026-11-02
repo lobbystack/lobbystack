@@ -1,24 +1,31 @@
+
 import { enqueueOutbox, receptionistProfiles, type DatabaseTransaction } from "@lobbystack/db";
 import {
   appointmentChangeVerificationModes,
   bookingModes,
   defaultAppointmentChangePolicy,
   DEFAULT_RECEPTIONIST_VOICE,
+  DEFAULT_STAFF_FIRST_RING_SECONDS,
   defaultGreeting,
   isCurrencyCode,
   isReceptionistVoice,
   isRuntimeLocale,
   RECEPTIONIST_INSTRUCTIONS_MAX_LENGTH,
   RECEPTIONIST_TEXT_MAX_LENGTH,
+  STAFF_FIRST_MESSAGE_MAX_LENGTH,
+  staffFirstModes,
+  staffFirstRingSeconds,
   transferModes,
   type AppointmentChangePolicy,
   type BookingMode,
   type ReceptionistVoice,
   type RuntimeLocale,
+  type StaffFirstMode,
   type TransferPolicy,
 } from "@lobbystack/shared";
 
-import { assertTransferNumberAllowed } from "./numberTrials";
+import { assertTransferNumberAllowed, enqueueRefusedCallForwardRefresh } from "./numberTrials";
+import { assertStaffFirstChange, enqueueStaffFirstRouting } from "./staffFirst";
 
 // Receptionist settings. The dashboard and the v1 API check and save them
 // here, so both follow one set of rules.
@@ -37,6 +44,11 @@ export type ReceptionistProfilePatch = {
   appointmentChangePolicy?: AppointmentChangePolicy;
   bookingMode?: BookingMode;
   voice?: ReceptionistVoice;
+  staffFirstMode?: StaffFirstMode;
+  staffFirstNumber?: string | null;
+  staffFirstRingSeconds?: number;
+  staffFirstMessage?: string | null;
+  staffFirstHandoverMessage?: string | null;
 };
 
 export type ReceptionistSettingsChange = {
@@ -50,10 +62,11 @@ export type ReceptionistSettingsChange = {
   regenerateSummary: boolean;
 };
 
-const profileFields = ["greeting", "tone", "summary", "bookingPolicy", "voiceInstructions", "smsInstructions", "chatInstructions", "transferMode", "transferNumber"] as const;
+const profileFields = ["greeting", "tone", "summary", "bookingPolicy", "voiceInstructions", "smsInstructions", "chatInstructions", "transferMode", "transferNumber", "staffFirstMode", "staffFirstNumber", "staffFirstMessage", "staffFirstHandoverMessage"] as const;
 type ProfileField = (typeof profileFields)[number];
 const instructionFields: readonly ProfileField[] = ["voiceInstructions", "smsInstructions", "chatInstructions"];
-const clearableFields: readonly ProfileField[] = [...instructionFields, "transferNumber"];
+const staffFirstMessageFields: readonly ProfileField[] = ["staffFirstMessage", "staffFirstHandoverMessage"];
+const clearableFields: readonly ProfileField[] = [...instructionFields, ...staffFirstMessageFields, "transferNumber", "staffFirstNumber"];
 
 function invalid(message: string): Error {
   return Object.assign(new Error(message), { status: 400 });
@@ -87,17 +100,21 @@ export function readReceptionistSettingsChange(body: unknown): ReceptionistSetti
   const fields: Partial<Record<ProfileField, string | null>> = {};
   for (const field of profileFields) {
     if (!(field in input)) continue;
-    const value = optionalText(input[field], field, instructionFields.includes(field) ? RECEPTIONIST_INSTRUCTIONS_MAX_LENGTH : RECEPTIONIST_TEXT_MAX_LENGTH);
+    const maxLength = staffFirstMessageFields.includes(field) ? STAFF_FIRST_MESSAGE_MAX_LENGTH : instructionFields.includes(field) ? RECEPTIONIST_INSTRUCTIONS_MAX_LENGTH : RECEPTIONIST_TEXT_MAX_LENGTH;
+    const value = optionalText(input[field], field, maxLength);
     if (value === null && !clearableFields.includes(field)) throw invalid(`${field} cannot be empty.`);
     if (value !== undefined) fields[field] = value;
   }
   if (fields.transferMode !== undefined && !(transferModes as readonly string[]).includes(fields.transferMode ?? "")) throw invalid("transferMode is invalid.");
+  if (fields.staffFirstMode !== undefined && !(staffFirstModes as readonly string[]).includes(fields.staffFirstMode ?? "")) throw invalid("staffFirstMode is invalid.");
+  const ringSeconds = input.staffFirstRingSeconds;
+  if (ringSeconds !== undefined && !(staffFirstRingSeconds as readonly unknown[]).includes(ringSeconds)) throw invalid("staffFirstRingSeconds is invalid.");
   const policy = appointmentPolicy(input.appointmentChangePolicy);
   const bookingMode = input.bookingMode;
   if (bookingMode !== undefined && !(bookingModes as readonly unknown[]).includes(bookingMode)) throw invalid("bookingMode is invalid.");
   const voice = input.voice;
   if (voice !== undefined && !isReceptionistVoice(voice)) throw invalid("voice is invalid.");
-  const patch = { ...fields, ...(policy !== undefined ? { appointmentChangePolicy: policy } : {}), ...(bookingMode !== undefined ? { bookingMode } : {}), ...(voice !== undefined ? { voice } : {}) } as ReceptionistProfilePatch;
+  const patch = { ...fields, ...(policy !== undefined ? { appointmentChangePolicy: policy } : {}), ...(bookingMode !== undefined ? { bookingMode } : {}), ...(voice !== undefined ? { voice } : {}), ...(ringSeconds !== undefined ? { staffFirstRingSeconds: ringSeconds } : {}) } as ReceptionistProfilePatch;
 
   const { locale, teamLocale, timezone, currency, regenerateSummary } = input;
   if (locale !== undefined && !isRuntimeLocale(locale)) throw invalid("locale is invalid.");
@@ -126,6 +143,11 @@ export function defaultReceptionistProfile(businessName: string, locale: Runtime
     appointmentChangePolicy: defaultAppointmentChangePolicy,
     bookingMode: "instant" as const,
     voice: DEFAULT_RECEPTIONIST_VOICE,
+    staffFirstMode: "never" as const,
+    staffFirstNumber: null,
+    staffFirstRingSeconds: DEFAULT_STAFF_FIRST_RING_SECONDS,
+    staffFirstMessage: null,
+    staffFirstHandoverMessage: null,
   };
 }
 
@@ -145,6 +167,8 @@ export async function saveReceptionistProfileInTransaction(
   const { businessId, patch } = input;
   // An E.164 number in a country Twilio can call and, during a free trial, only the mobile its claimer verified. Employees' numbers follow the same rules.
   if (patch.transferNumber) await assertTransferNumberAllowed(tx, { businessId, phone: patch.transferNumber });
+  const changesStaffFirst = patch.staffFirstMode !== undefined || patch.staffFirstNumber !== undefined;
+  if (changesStaffFirst) await assertStaffFirstChange(tx, { businessId, mode: patch.staffFirstMode, number: patch.staffFirstNumber });
   const defaults = defaultReceptionistProfile(input.businessName, input.locale);
   const [profile] = await tx.insert(receptionistProfiles).values({
     businessId,
@@ -162,11 +186,19 @@ export async function saveReceptionistProfileInTransaction(
     appointmentChangePolicy: patch.appointmentChangePolicy ?? defaults.appointmentChangePolicy,
     ...(patch.bookingMode !== undefined ? { bookingMode: patch.bookingMode } : {}),
     ...(patch.voice !== undefined ? { voice: patch.voice } : {}),
+    ...(patch.staffFirstMode !== undefined ? { staffFirstMode: patch.staffFirstMode } : {}),
+    ...(patch.staffFirstNumber !== undefined ? { staffFirstNumber: patch.staffFirstNumber } : {}),
+    ...(patch.staffFirstRingSeconds !== undefined ? { staffFirstRingSeconds: patch.staffFirstRingSeconds } : {}),
+    ...(patch.staffFirstMessage !== undefined ? { staffFirstMessage: patch.staffFirstMessage } : {}),
+    ...(patch.staffFirstHandoverMessage !== undefined ? { staffFirstHandoverMessage: patch.staffFirstHandoverMessage } : {}),
   }).onConflictDoUpdate({
     target: receptionistProfiles.businessId,
     set: { ...patch, ...(patch.summary !== undefined ? { summarySource: "operator" as const, summaryRegenerateStatus: null } : {}), ...(input.regenerateSummary ? { summarySource: "generated" as const, summaryRegenerateStatus: "pending" as const } : {}), updatedAt: new Date() },
   }).returning();
   if (!profile) return null;
+  // Some carriers forward a call the receptionist refuses to a number stored on the carrier, so they learn the new transfer number.
+  if (patch.transferNumber !== undefined) await enqueueRefusedCallForwardRefresh(tx, businessId);
+  if (patch.staffFirstMode !== undefined) await enqueueStaffFirstRouting(tx, businessId);
   await enqueueOutbox(tx, {
     topic: "snapshot.refresh",
     businessId,

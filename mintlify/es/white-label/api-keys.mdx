@@ -29,13 +29,40 @@ La página muestra cada clave por su nombre, con quién la creó, cuándo y cuá
 
 La clave de un socio actúa en nombre de su cuenta de socio y no de una persona, así que sigue funcionando cuando el compañero que la creó se va. Llega a sus negocios activos, incluidos los que creó la consola, y a ningún otro:
 
-- `POST /businesses` crea un negocio todavía sin propietario. Indique el propietario en `owner_email`, y LobbyStack le envía por correo su invitación. `access_level` acepta `full`, el valor predeterminado, o `activity`.
+- `POST /businesses` crea un negocio todavía sin propietario. Indique el propietario en `owner_email`, y LobbyStack le envía por correo su invitación. Omítalo para [gestionar el negocio desde su propio producto](#gestione-negocios-desde-su-propio-producto). `access_level` acepta `full`, el valor predeterminado, o `activity`.
 - Todas las demás solicitudes indican su negocio en el encabezado `LobbyStack-Business`.
 - Los enlaces que devuelve la API, como la etiqueta de script de un widget o un enlace para conectar un calendario, apuntan a su dirección.
 
-Entre todas, sus claves pueden crear 30 negocios por hora. `POST /businesses` acepta `template_id` para partir de una de sus plantillas, con el alcance `partner:read`, y `package_id` para vender uno de sus paquetes, con el alcance `partner.businesses:write`. Una clave no puede buscar ni reservar números de teléfono, ni cambiar las preferencias de alertas, así que haga esas tareas en la consola.
+Entre todas, sus claves pueden crear 30 negocios por hora. `POST /businesses` acepta `template_id` para partir de una de sus plantillas, con el alcance `partner:read`, y `package_id` para vender uno de sus paquetes, con el alcance `partner.businesses:write`. Una clave no puede cambiar las preferencias de alertas, así que haga esa tarea en la consola.
 
 [Claves de plataforma](/es/api/authentication#claves-de-plataforma) enumera los permisos, los encabezados y las respuestas.
+
+## Gestione negocios desde su propio producto
+
+Si sus clientes usan su producto y nunca ven LobbyStack, omita `owner_email` en `POST /businesses`. Nadie recibe una invitación, y su clave configura y gestiona el negocio. Una clave no puede invitar a un propietario, así que el negocio sigue sin propietario.
+
+En un nivel de pago, una clave con `phone_numbers:manage` y `phone_numbers:purchase` compra el número del negocio. Una clave no tiene `phone_numbers:purchase` de forma predeterminada, así que active primero **Buscar, comprar y reemplazar números de teléfono** en la clave. Indique el negocio en el encabezado `LobbyStack-Business`:
+
+<Steps>
+  <Step title="Busque">
+    `POST /phone-numbers/search` devuelve ofertas. Cada oferta dura 5 minutos, y solo la clave que buscó puede reservarla.
+  </Step>
+  <Step title="Reserve">
+    `POST /phone-numbers/claims` compra el número. Consulte `GET /phone-numbers/claims/{claim_id}` hasta que su estado sea `claimed` o `failed`.
+  </Step>
+  <Step title="Reemplace, si hace falta">
+    Busque de nuevo con `replaces` y llame a `POST /phone-numbers/{phone_number_id}/replace`. Un negocio puede reemplazar su número una vez.
+  </Step>
+</Steps>
+
+En el nivel Free, estas solicitudes devuelven `409`. Una clave nunca recibe su número de prueba de 14 días, porque esa prueba necesita el móvil verificado de una persona. Sus claves comparten 20 búsquedas cada 10 minutos, y se aplican [los límites de su nivel sobre números nuevos](/es/white-label/tiers#números-de-teléfono-en-cada-nivel).
+
+Un negocio sin propietario no tiene a nadie en su equipo, lo que cambia cuatro cosas:
+
+- **Alertas:** los [webhooks](/es/api/webhooks) cubren llamadas, mensajes, citas y contactos. LobbyStack envía un correo a sus propietarios y administradores cuando un visitante del sitio pide hablar con una persona, falla una transferencia o un mensaje de texto, un mensaje de texto de un cliente necesita respuesta, un calendario deja de sincronizarse, falla una respuesta de la IA o se desactiva un endpoint de webhook. Tiene 3 minutos para responder a un visitante desde **Mensajes** en el negocio. Nadie recibe una alerta por chats nuevos del sitio o de Instagram.
+- **Llamadas que la recepcionista no puede atender:** LobbyStack las reenvía al número de transferencia del negocio, y las rechaza si no tiene uno. Defina `transfer_number` con `PATCH /receptionist`.
+- **Incorporación:** su clave la termina con `POST /onboarding/complete`. Envíe `skip_number: true` si el negocio no tiene número.
+- **Venta y entrega:** un paquete necesita un propietario, porque el pago se abre desde su invitación. `package_id` devuelve `400` sin `owner_email`, y asignar un paquete más tarde devuelve `409`. Puede eliminar el negocio, pero no entregarlo a nadie.
 
 ## Gestione su socio desde código
 
@@ -57,7 +84,7 @@ La clave actúa como un administrador, así que no puede invitar a un propietari
 lobbystack login --url https://app.lobbystack.com --key-stdin < key.txt
 ```
 
-La clave necesita `businesses:create`, `business:read`, `business:write`, `knowledge:read`, `knowledge:write` y `team:manage`. Un manifiesto para la clave de un socio indica el propietario, que recibe su invitación cuando el comando crea el negocio:
+La clave necesita `businesses:create`, `business:read`, `business:write`, `knowledge:read`, `knowledge:write` y `team:manage`, además de `phone_numbers:manage` y `phone_numbers:purchase` para un número. Un manifiesto para la clave de un socio puede indicar el propietario, que recibe su invitación cuando el comando crea el negocio:
 
 ```yaml harbor-dental.yaml
 business:
@@ -72,7 +99,7 @@ owner:
   email: owner@harbordental.example
 ```
 
-Deje `plan` y `phone_number` fuera: sus negocios no compran los planes de LobbyStack, y una clave no puede reservar números. Revise la ejecución con `--plan` y luego ejecútela:
+Deje `plan` fuera: sus negocios no compran los planes de LobbyStack. En un nivel de pago, agregue `phone_number` y el comando reserva el primer número que ofrece la búsqueda. Omita `owner` para un negocio sin propietario, y el comando termina su incorporación. Revise la ejecución con `--plan` y luego ejecútela:
 
 ```bash
 lobbystack onboard harbor-dental.yaml --plan

@@ -11,6 +11,11 @@ export function isTransferCountry(country: string | null | undefined): country i
 // +1 area codes outside the US, Canada and Puerto Rico: the Caribbean countries and the other US territories.
 const OTHER_NANP_AREA_CODES = new Set(["242", "246", "264", "268", "284", "340", "345", "441", "473", "649", "658", "664", "670", "671", "684", "721", "758", "767", "784", "809", "829", "849", "868", "869", "876"]);
 
+/** Whether this +1 area code belongs to one of the Caribbean countries or US territories that share +1. */
+export function isOtherNanpAreaCode(areaCode: string): boolean {
+  return OTHER_NANP_AREA_CODES.has(areaCode);
+}
+
 /** Whether this +1 number is in the US, Canada or Puerto Rico rather than another country or territory that shares +1. */
 export function isUsCanadaOrPuertoRicoPhone(phone: string): boolean {
   return phone.startsWith("+1") && !OTHER_NANP_AREA_CODES.has(phone.slice(2, 5));

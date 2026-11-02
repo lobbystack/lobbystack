@@ -82,7 +82,6 @@ export function ForgotPasswordForm({
                   autoComplete="new-password"
                   className="h-11"
                   onChange={(event) => onNewPasswordChange(event.target.value)}
-                  placeholder={t("forgotPassword.newPasswordPlaceholder")}
                   required
                   type="password"
                   value={newPassword}

@@ -577,10 +577,72 @@
       "syncNeedsAttention": "Requiere atención",
       "discoveryFailed": "No se pudo verificar el acceso al calendario ni su sincronización. Vuelva a intentar la sincronización o vuelva a conectar su cuenta de Google."
     },
+    "calcom": {
+      "sheetTitle": "Cal.com",
+      "sheetDescription": "Conecte su cuenta de Cal.com y elija el tipo de evento que reserva su agente.",
+      "connect": "Conectar Cal.com",
+      "reconnect": "Volver a conectar",
+      "disconnect": "Desconectar",
+      "connectedSuccess": "Cal.com está conectado. Elija el tipo de evento que se reservará.",
+      "connectFailed": "No se pudo conectar Cal.com. Inténtelo de nuevo.",
+      "disconnectedSuccess": "Cal.com desconectado.",
+      "eventTypeLabel": "Tipo de evento",
+      "selectEventType": "Elija un tipo de evento",
+      "eventTypeSaved": "Tipo de evento guardado.",
+      "refresh": "Actualizar",
+      "syncNeedsAttention": "Requiere atención",
+      "syncFailed": "Su agente no pudo terminar la sincronización con Cal.com y no ofrecerá horarios hasta que una sincronización funcione. Lo vuelve a intentar por sí solo, o puede hacer clic en Actualizar.",
+      "discoveryFailed": "Su agente no pudo acceder a su cuenta de Cal.com. Actualice o vuelva a conectar la cuenta.",
+      "howItWorks": "Cada cita se convierte en una reserva de este tipo de evento. Cal.com recibe el nombre, el teléfono y un correo sustituto de quien llama, para no escribirle. Su correo real queda en las notas de la reserva para su equipo, y su agente envía la confirmación.",
+      "warningsTitle": "Revise este tipo de evento en Cal.com",
+      "warnings": {
+        "missingLengths": "Agregue {{lengths}} minutos a las duraciones del tipo de evento. Mientras tanto, Cal.com reserva esos servicios con la duración predeterminada del tipo de evento.",
+        "smsReminders": "Desactive el flujo de SMS de este tipo de evento, o Cal.com enviará mensajes a quienes llaman además de los de su agente.",
+        "videoLocation": "Agregue «Número de teléfono del asistente» como ubicación de este tipo de evento. Mientras tanto, las reservas llevan un enlace de video en lugar del teléfono de la persona que llama.",
+        "narrowerAvailability": "Amplíe el horario del tipo de evento el {{days}} para que coincida con su horario de atención. Cal.com rechaza las reservas fuera de su horario."
+      }
+    },
+    "calendly": {
+      "sheetTitle": "Calendly",
+      "sheetDescription": "Conecte su cuenta de Calendly y elija el tipo de evento que reserva su agente.",
+      "connect": "Conectar Calendly",
+      "reconnect": "Reconectar",
+      "disconnect": "Desconectar",
+      "connectedSuccess": "Calendly conectado. Elija el tipo de evento que se reservará.",
+      "connectFailed": "No se pudo conectar Calendly. Inténtelo de nuevo.",
+      "connectNotAdmin": "Solo un propietario o administrador del negocio puede conectar Calendly.",
+      "disconnectedSuccess": "Calendly desconectado.",
+      "eventTypeLabel": "Tipo de evento",
+      "selectEventType": "Elija un tipo de evento",
+      "eventTypeSaved": "Tipo de evento guardado.",
+      "refresh": "Actualizar",
+      "syncNeedsAttention": "Requiere atención",
+      "syncFailed": "Su agente no pudo terminar de sincronizar con Calendly y no ofrecerá horarios hasta que una sincronización funcione. Lo reintenta por su cuenta, o puede hacer clic en Actualizar.",
+      "discoveryFailed": "Su agente no pudo acceder a su cuenta de Calendly. Actualice o vuelva a conectar la cuenta.",
+      "howItWorks": "Cada cita se convierte en una reserva de este tipo de evento. Calendly recibe el nombre de quien llama y una dirección sustituta, así que no le escribe. Su agente envía la confirmación. El teléfono y el correo de quien llama van en una pregunta de texto del tipo de evento.",
+      "blockedOption": "{{name}} (no se puede reservar)",
+      "planRequiredTitle": "Se requiere un plan de pago",
+      "planRequired": "Calendly solo acepta reservas de otras aplicaciones en sus planes de pago. Cambie a Standard o superior y haga clic en Reconectar.",
+      "warningsTitle": "Revise este tipo de evento en Calendly",
+      "warnings": {
+        "requiredQuestions": "Haga que {{questions}} sea opcional o elija otro tipo de evento. Su agente no puede responder preguntas de opción obligatorias, así que Calendly rechaza todas las reservas.",
+        "missingLengths": "Sus servicios de {{lengths}} minutos no coinciden con este tipo de evento. Calendly los reserva con la duración del tipo de evento.",
+        "noDetailsQuestion": "Agregue una pregunta de texto a este tipo de evento. Hasta entonces, su equipo no verá el teléfono ni el correo de quien llama en Calendly.",
+        "videoLocation": "Este tipo de evento solo ofrece videollamadas, así que las reservas llevan un enlace de reunión. Agregue una ubicación física o telefónica para quienes llaman."
+      }
+    },
     "cards": {
       "google": {
         "title": "Google Calendar",
         "description": "Sincronice las reservas con un Google Calendar."
+      },
+      "calcom": {
+        "title": "Cal.com",
+        "description": "Reserve las citas en uno de sus tipos de evento de Cal.com."
+      },
+      "calendly": {
+        "title": "Calendly",
+        "description": "Reserve citas en uno de sus tipos de evento de Calendly."
       },
       "webhooks": {
         "title": "Webhooks",
@@ -651,9 +713,44 @@
     }
   },
   "account": {
+    "loading": "Cargando su cuenta",
+    "passkeys": {
+      "title": "Llaves de acceso",
+      "description": "Inicie sesión con su huella, su rostro o el bloqueo del dispositivo, sin contraseña.",
+      "add": "Añadir una llave de acceso",
+      "empty": "Aún no ha añadido ninguna llave de acceso.",
+      "unnamed": "Llave de acceso",
+      "addedOn": "Añadida el {{date}}",
+      "added": "Llave de acceso añadida.",
+      "renamed": "Llave de acceso renombrada.",
+      "removed": "Llave de acceso eliminada.",
+      "remove": "Eliminar",
+      "removeTitle": "¿Eliminar esta llave de acceso?",
+      "removeDescription": "Ya no podrá iniciar sesión con {{name}}. Su contraseña sigue funcionando.",
+      "rename": {
+        "action": "Renombrar",
+        "title": "Renombrar la llave de acceso",
+        "description": "Elija un nombre que indique en qué dispositivo está.",
+        "label": "Nombre",
+        "placeholder": "P. ej.: Portátil del trabajo",
+        "save": "Guardar",
+        "required": "Introduzca un nombre."
+      },
+      "errors": {
+        "addFailed": "No pudimos añadir la llave de acceso. Inténtelo de nuevo.",
+        "wrongAddress": "Las llaves de acceso no están configuradas para esta dirección. Abra la aplicación en su dirección habitual y vuelva a intentarlo.",
+        "alreadyAdded": "Este dispositivo ya tiene una llave de acceso para su cuenta.",
+        "signInAgain": "Vuelva a iniciar sesión y añada una llave de acceso.",
+        "verifyEmail": "Verifique su correo y luego añada una llave de acceso.",
+        "renameFailed": "No pudimos renombrar la llave de acceso. Inténtelo de nuevo.",
+        "removeFailed": "No pudimos eliminar la llave de acceso. Inténtelo de nuevo.",
+        "loadFailed": "No pudimos cargar sus llaves de acceso."
+      }
+    },
     "title": "Cuenta",
     "actions": {
-      "change": "Cambiar"
+      "change": "Cambiar",
+      "cancel": "Cancelar"
     },
     "businessName": {
       "label": "Nombre del negocio",
@@ -666,12 +763,13 @@
     "changeEmail": {
       "label": "Cambiar correo electrónico",
       "description": "Correo electrónico que usa para iniciar sesión.",
-      "newEmailPlaceholder": "Nuevo correo electrónico",
-      "currentPasswordPlaceholder": "Contraseña actual",
+      "newEmailLabel": "Nuevo correo electrónico",
+      "newEmailPlaceholder": "nombre@example.com",
       "save": "Enviar enlace de confirmación",
       "title": "Correo electrónico",
       "currentPasswordLabel": "Contraseña actual",
       "currentEmail": "{{email}}",
+      "currentEmailLabel": "Correo electrónico actual",
       "confirmationSent": "Enviamos un enlace de confirmación a {{email}}.",
       "errors": {
         "invalidPassword": "La contraseña actual es incorrecta.",
@@ -679,6 +777,7 @@
         "unchanged": "Introduzca un correo electrónico diferente.",
         "noEmail": "Esta cuenta aún no tiene un correo electrónico configurado.",
         "required": "Introduzca un nuevo correo electrónico.",
+        "invalid": "Introduzca un correo electrónico válido.",
         "failed": "No pudimos enviar el enlace de confirmación. Inténtelo de nuevo."
       }
     },
@@ -688,15 +787,20 @@
       "description": "Contraseña que usa para iniciar sesión.",
       "dialogDescription": "Introduzca su contraseña actual y una nueva contraseña.",
       "currentPasswordLabel": "Contraseña actual",
-      "currentPasswordPlaceholder": "Contraseña actual",
       "newPasswordLabel": "Nueva contraseña",
-      "newPasswordPlaceholder": "Nueva contraseña",
       "confirmPasswordLabel": "Confirmar nueva contraseña",
-      "confirmPasswordPlaceholder": "Confirmar nueva contraseña",
       "save": "Guardar",
       "saved": "Contraseña actualizada.",
       "errors": {
         "mismatch": "Las nuevas contraseñas no coinciden.",
+        "currentRequired": "Introduzca su contraseña actual.",
+        "newRequired": "Introduzca una nueva contraseña.",
+        "confirmRequired": "Confirme su nueva contraseña.",
+        "minimumLengthMissing": "Use al menos 8 caracteres.",
+        "numberMissing": "Incluya al menos un número.",
+        "specialCharacterMissing": "Incluya al menos un carácter especial.",
+        "unchanged": "Elija una contraseña distinta de la actual.",
+        "invalidCurrent": "La contraseña actual es incorrecta.",
         "failed": "No se pudo actualizar la contraseña."
       }
     }
@@ -1064,7 +1168,7 @@
   },
   "webhooks": {
     "title": "Webhooks",
-    "description": "{{appName}} envía un HTTPS POST a su URL cuando ocurre algo, como una llamada finalizada o una nueva reserva. Cada solicitud está firmada para que pueda comprobar que proviene de nosotros.",
+    "description": "{{appName}} envía un HTTPS POST a su URL cuando ocurre algo, como una llamada finalizada o una nueva reserva.",
     "empty": "Aún no hay endpoints de webhook.",
     "enabledLabel": "Enviar eventos a este endpoint",
     "restricted": {

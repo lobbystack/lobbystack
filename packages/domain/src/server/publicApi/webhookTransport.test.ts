@@ -131,12 +131,16 @@ describe("webhook sender", () => {
   });
 
   it("refuses loopback targets with the default DNS guard", async () => {
-    const port = await listen((_request, response) => response.writeHead(200).end());
+    let hits = 0;
+    const port = await listen((_request, response) => { hits += 1; response.writeHead(200).end(); });
     const send = createWebhookSender({ policy: { allowHttp: true } });
     const viaIp = await send({ url: `http://127.0.0.1:${port}/`, secret: generateWebhookSecret(), id: "evt", body: "{}" });
     expect(viaIp.ok).toBe(false);
     expect(viaIp.error).toMatch(/public IP/);
-    const viaName = await send({ url: `http://127.0.0.1.nip.io:${port}/`, secret: generateWebhookSecret(), id: "evt", body: "{}" });
+    const guarded = createWebhookSender({ policy: { allowHttp: true }, lookup: createGuardedLookup(localLookup) });
+    const viaName = await guarded({ url: `http://hooks.test:${port}/`, secret: generateWebhookSecret(), id: "evt", body: "{}" });
     expect(viaName.ok).toBe(false);
+    expect(viaName.error).toMatch(/private or reserved/);
+    expect(hits).toBe(0);
   });
 });

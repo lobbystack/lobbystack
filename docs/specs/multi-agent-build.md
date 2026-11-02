@@ -38,7 +38,7 @@ Every slice also runs `pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm build
 
 ### 0. Prepare the branch
 
-- Merge main. Main has its own migrations 0170 to 0174, so renumber this branch's three to 0175, 0176 and 0177. The journal tracks filenames, so a database that applied the old names replays them. Check that all three are idempotent.
+- Merge main. Main has its own migrations 0170 to 0179, so renumber this branch's three to 0180, 0181 and 0182. The journal tracks filenames, so a database that applied the old names replays them. Check that all three are idempotent.
 - Keep an alias for `resolve_onboarding_followup_recipient`'s old signature for one release, so the old worker's job doesn't fail during a deploy.
 
 ### 1. Rename the table

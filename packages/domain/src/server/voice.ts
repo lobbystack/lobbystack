@@ -1,6 +1,6 @@
 import { and, count, asc, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 
-import { appointments, billingUsageEvents, calls, contacts, conversations, conversationSessions, enqueueOutbox, inboxItems, inOrder, services, staff, storageObjects, transcripts, withBusinessTransaction, type DatabaseTransaction, type NewOutboxMessage } from "@lobbystack/db";
+import { appointments, billingUsageEvents, calls, contacts, conversations, conversationSessions, enqueueOutbox, inboxItems, inOrder, phoneNumbers, services, staff, storageObjects, transcripts, withBusinessTransaction, type DatabaseTransaction, type NewOutboxMessage } from "@lobbystack/db";
 import { billableVoiceSeconds, isNonBillableCallDisposition } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem, type TelemetryEventName, type TelemetryProperties } from "@lobbystack/telemetry";
 
@@ -71,6 +71,16 @@ export async function recordVoiceSnapshotLoaded(
   });
 }
 
+/** The contact behind a call. Callers without a number each get their own, so blocking one never blocks the rest. */
+export async function findOrCreateCallContactInTransaction(tx: DatabaseTransaction, input: { businessId: string; from?: string | undefined }): Promise<{ contactId: string; blocked: boolean }> {
+  const callerPhone = input.from && input.from !== "web" ? input.from : undefined;
+  const caller = callerPhone ? await findOrCreateContactByPhone(tx, { businessId: input.businessId, phone: callerPhone }) : undefined;
+  const contactId = caller?.contact.id ?? (await tx.insert(contacts).values({ businessId: input.businessId }).returning({ id: contacts.id }))[0]?.id;
+  if (!contactId) throw new Error("Call contact could not be created.");
+  if (caller?.created) await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "contact.created", resourceId: contactId });
+  return { contactId, blocked: Boolean(caller?.contact.operatorBlockedAt) };
+}
+
 export async function startCall(
   context: DomainContext,
   input: {
@@ -100,15 +110,12 @@ export async function startCall(
       const reservation = input.transport === "web_voice" ? undefined : (await tx.select({ quantity: billingUsageEvents.quantity }).from(billingUsageEvents).where(and(eq(billingUsageEvents.businessId, input.businessId), eq(billingUsageEvents.sourceKey, `voice:${existing[0].id}`))).limit(1))[0];
       return { callId: existing[0].id, conversationId: existing[0].conversationId, contactId: existing[0].contactId, duplicate: true, blocked: Boolean(contact?.operatorBlockedAt), ...(existing[0].webCallMaxDurationMs !== null ? { webCallMaxDurationMs: existing[0].webCallMaxDurationMs } : {}), ...(reservation ? { reservedSeconds: reservation.quantity } : {}) };
     }
-    // Callers without a number each get their own contact, so blocking one never blocks the rest.
-    const callerPhone = input.from && input.from !== "web" ? input.from : undefined;
-    const caller = callerPhone && !existing[0]?.contactId ? await findOrCreateContactByPhone(tx, { businessId: input.businessId, phone: callerPhone }) : undefined;
-    const contactId = existing[0]?.contactId ?? caller?.contact.id ?? (await tx.insert(contacts).values({ businessId: input.businessId }).returning({ id: contacts.id }))[0]?.id;
+    const caller = existing[0]?.contactId ? undefined : await findOrCreateCallContactInTransaction(tx, { businessId: input.businessId, from: input.from });
+    const contactId = existing[0]?.contactId ?? caller?.contactId;
     if (!contactId) {
       throw new Error("Call contact could not be created.");
     }
-    if (caller?.created) await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "contact.created", resourceId: contactId });
-    const blocked = Boolean(caller?.contact.operatorBlockedAt);
+    const blocked = Boolean(caller?.blocked);
     const conversationId = existing[0]?.conversationId ?? (await tx.insert(conversations).values({ businessId: input.businessId, contactId, channel: "voice", status: "open", automationState: "ai_active" }).returning({ id: conversations.id }))[0]?.id;
     if (!conversationId) {
       throw new Error("Call conversation could not be created.");
@@ -129,6 +136,8 @@ export async function startCall(
       ...(input.billable === false ? { billingExcluded: true } : {}),
       ...(blocked ? { status: "blocked", disposition: "blocked_contact" } : {}),
       gatewaySessionId: input.gatewaySessionId,
+      // A phone call came in on the carrier that owns the dialled number.
+      ...(input.transport === "voice" ? { carrier: sql<string>`coalesce((select carrier from public.phone_numbers where business_id = ${input.businessId}::uuid and e164 = ${input.to} and status <> 'reclaimed' limit 1), 'twilio')` } : {}),
       startedAt: new Date(input.startedAt ?? Date.now()),
     }).returning({ id: calls.id }))[0]?.id;
     if (!callId) {
@@ -386,18 +395,21 @@ export async function setTransferState(
 }
 
 /**
- * What the worker needs to find the Twilio call behind a GPT-Live phone call.
+ * What the worker needs to find the carrier's call behind a GPT-Live phone call.
  * Null when the caller withheld their number: the trunk is shared by every
  * business, so a lookup by start time alone could price another business's call.
+ * `dialled` holds the business's numbers, which find a call that reached GPT-Live
+ * from a voice webhook rather than the trunk.
  */
 export async function loadLiveCallForPricing(
   context: DomainContext,
   input: { businessId: string; callId: string },
-): Promise<{ startedAt: Date; callerPhone: string } | null> {
+): Promise<{ startedAt: Date; callerPhone: string; carrier: string | null; dialled: string[] } | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const [call] = await tx.select({ startedAt: calls.startedAt, callerPhone: contacts.phone }).from(calls).leftJoin(contacts, eq(contacts.id, calls.contactId)).where(and(eq(calls.businessId, input.businessId), eq(calls.id, input.callId))).limit(1);
+    const [call] = await tx.select({ startedAt: calls.startedAt, callerPhone: contacts.phone, carrier: calls.carrier }).from(calls).leftJoin(contacts, eq(contacts.id, calls.contactId)).where(and(eq(calls.businessId, input.businessId), eq(calls.id, input.callId))).limit(1);
     if (!call?.callerPhone?.startsWith("+")) return null;
-    return { startedAt: call.startedAt, callerPhone: call.callerPhone };
+    const numbers = await tx.select({ e164: phoneNumbers.e164 }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active")));
+    return { startedAt: call.startedAt, callerPhone: call.callerPhone, carrier: call.carrier, dialled: numbers.map((number) => number.e164) };
   });
 }
 
@@ -414,9 +426,9 @@ export async function recordCallProviderPricing(
       revision: sql`${calls.revision} + 1`,
       updatedAt: new Date(),
     // GPT-Live calls store the OpenAI session as providerCallId, so they're priced by our call id.
-    }).where(and(eq(calls.businessId, input.businessId), input.callId ? eq(calls.id, input.callId) : eq(calls.providerCallId, input.providerCallId))).returning({ id: calls.id, revision: calls.revision, providerDurationSeconds: calls.providerDurationSeconds, startedAt: calls.startedAt, provider: calls.provider, transport: calls.transport });
+    }).where(and(eq(calls.businessId, input.businessId), input.callId ? eq(calls.id, input.callId) : eq(calls.providerCallId, input.providerCallId))).returning({ id: calls.id, revision: calls.revision, providerDurationSeconds: calls.providerDurationSeconds, startedAt: calls.startedAt, provider: calls.provider, transport: calls.transport, carrier: calls.carrier });
     if (!call) return null;
-    if (input.providerCostUsd !== undefined) await recordUnitEconomicsEventInTransaction(tx, { businessId: input.businessId, eventKey: `voice_provider:${call.id}`, eventKind: "voice_provider", channel: "voice", costUsd: input.providerCostUsd, occurredAt: call.startedAt, ...(call.providerDurationSeconds !== null ? { quantity: call.providerDurationSeconds } : {}), quantityUnit: "second", provider: "twilio", callId: call.id });
+    if (input.providerCostUsd !== undefined) await recordUnitEconomicsEventInTransaction(tx, { businessId: input.businessId, eventKey: `voice_provider:${call.id}`, eventKind: "voice_provider", channel: "voice", costUsd: input.providerCostUsd, occurredAt: call.startedAt, ...(call.providerDurationSeconds !== null ? { quantity: call.providerDurationSeconds } : {}), quantityUnit: "second", provider: call.carrier ?? "twilio", callId: call.id });
     await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "call", aggregateId: call.id, dedupeKey: `call:${call.id}:pricing:${call.revision}`, payload: { type: "call.updated", entityId: call.id, revision: call.revision } });
     return { callId: call.id, provider: call.provider, transport: call.transport, providerDurationSeconds: call.providerDurationSeconds };
   });

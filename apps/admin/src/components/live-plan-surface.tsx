@@ -17,6 +17,7 @@ import { SectionBlock } from "./section-block";
 import { Button } from "./ui/button";
 import { useOpenUpgradePlanDialog } from "./upgrade-plan-dialog-context";
 import { formatMoney, SpendingCapSection } from "./billing-spending-cap";
+import { SectionSkeleton } from "./loading-skeletons";
 import { Skeleton } from "./ui/skeleton";
 import { Surface } from "./ui/surface";
 import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
@@ -261,21 +262,38 @@ function PlanSectionSkeleton({
   t: Translate;
 }) {
   return (
-    <SectionBlock title={t("billing.currentPlan.title")}>
+    <SectionSkeleton title={t("billing.currentPlan.title")}>
       <Surface className="px-6 py-5">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex flex-1 flex-col gap-2">
-            <Skeleton className="h-5 w-28" />
-            <Skeleton className="h-4 w-48" />
+        <div className="flex flex-col gap-6">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
+            <div className="flex flex-col gap-3">
+              <div className="flex h-7 items-center"><Skeleton className="h-5 w-32" /></div>
+              <div className="flex items-end gap-2">
+                <Skeleton className="h-10 w-28" />
+                <Skeleton className="mb-1 h-5 w-16" />
+              </div>
+            </div>
+            <div className="flex flex-col gap-4">
+              <div aria-hidden="true" className="text-base font-medium leading-6">
+                <Skeleton className="h-6 w-fit"><span className="invisible">{t("billing.currentPlan.includedTitle")}</span></Skeleton>
+              </div>
+              <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div className="flex items-start gap-2.5" key={index}>
+                    <Skeleton className="mt-0.5 size-4 rounded-full" />
+                    <div className="flex h-6 flex-1 items-center"><Skeleton className="h-4 w-32 max-w-full" /></div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-          <Skeleton className="h-5 w-20" />
-        </div>
-        <div className="mt-3 flex gap-2">
-          <Skeleton className="h-9 w-28 rounded-md" />
-          <Skeleton className="h-9 w-36 rounded-md" />
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Skeleton className="h-8 w-full sm:w-32" />
+            <Skeleton className="h-8 w-full sm:w-44" />
+          </div>
         </div>
       </Surface>
-    </SectionBlock>
+    </SectionSkeleton>
   );
 }
 
@@ -285,17 +303,25 @@ function SpendingCapSectionSkeleton({
   t: Translate;
 }) {
   return (
-    <SectionBlock title={t("billing.spendingCap.title")}>
+    <SectionSkeleton title={t("billing.spendingCap.title")}>
       <Surface className="px-6 py-5">
         <div className="flex flex-col gap-6">
-          <Skeleton className="h-12 w-full rounded-xl" />
-          <div className="flex items-end gap-3">
-            <Skeleton className="h-10 max-w-xs flex-1 rounded-xl" />
-            <Skeleton className="h-8 w-24 rounded-xl" />
+          <div className="flex items-center justify-between gap-2">
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-5 w-24" />
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="flex w-full max-w-xs flex-col gap-2">
+              <div aria-hidden="true" className="text-sm leading-none font-medium">
+                <Skeleton className="h-4 w-fit"><span className="invisible">{t("billing.spendingCap.amountLabel")}</span></Skeleton>
+              </div>
+              <Skeleton className="h-9 w-full" />
+            </div>
+            <Skeleton className="h-8 w-20" />
           </div>
         </div>
       </Surface>
-    </SectionBlock>
+    </SectionSkeleton>
   );
 }
 
@@ -305,10 +331,7 @@ function TransactionsSectionSkeleton({
   t: Translate;
 }) {
   return (
-    <SectionBlock
-      title={t("billing.transactions.title")}
-      description={t("billing.transactions.description")}
-    >
+    <SectionSkeleton description={t("billing.transactions.description")} title={t("billing.transactions.title")}>
       <TableCard>
         <Table className="min-w-[42rem]">
           <TableHeader>
@@ -353,7 +376,7 @@ function TransactionsSectionSkeleton({
           </TableBody>
         </Table>
       </TableCard>
-    </SectionBlock>
+    </SectionSkeleton>
   );
 }
 

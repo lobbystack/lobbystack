@@ -74,7 +74,8 @@ describe("phone-number replacement permissions", () => {
   });
   it("opens the shared upgrade dialog for a free plan without a number", async () => {
     setup("free_cloud", "business_owner", null, false);
-    await userEvent.click(screen.getByRole("button", { name: "phoneNumber.requiresPaidPlan.upgradeCta" }));
+    // The trial status is asked for first, and the button waits for the answer.
+    await userEvent.click(await screen.findByRole("button", { name: "phoneNumber.requiresPaidPlan.upgradeCta" }));
     expect(actions.upgrade).toHaveBeenCalledOnce();
   });
   it("restores the scheduled-reclaim banner and upgrade action", async () => {
@@ -112,5 +113,37 @@ describe("phone-number replacement permissions", () => {
     await userEvent.click(screen.getByRole("button", { name: "phoneNumber.actions.getNumber" }));
     await screen.findByText("Inventory is temporarily unavailable.");
     expect(actions.navigate).not.toHaveBeenCalled();
+  });
+});
+describe("phone number loading state", () => {
+  function renderPending({ workspace, role = "business_owner" }: { workspace: boolean; role?: string }) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    clients.push(client);
+    if (workspace) client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role }] });
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+    render(<QueryClientProvider client={client}><LivePhoneNumberSettingsSurface /></QueryClientProvider>);
+  }
+  const skeletons = () => document.querySelectorAll('[data-slot="skeleton"]').length;
+
+  it.each([["the workspace", false], ["the numbers", true]])("shows placeholders for the title, the description, the number and the button while %s load", (_, workspace) => {
+    renderPending({ workspace });
+    expect(screen.getByText("phoneNumber.current.label").className).toContain("invisible");
+    expect(screen.getByText("phoneNumber.current.description").className).toContain("invisible");
+    expect(skeletons()).toBe(4);
+    // None of the button's states shows before the number, the plan and the trial are known.
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByText("phoneNumber.current.empty")).toBeNull();
+  });
+
+  it("leaves out the button placeholder for a viewer once the workspace is known", () => {
+    renderPending({ workspace: true, role: "viewer" });
+    expect(skeletons()).toBe(3);
+  });
+
+  it("turns the whole card real together once the number and the plan are known", () => {
+    setup("starter");
+    expect(skeletons()).toBe(0);
+    expect(screen.getByText("(416) 555-0100")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "phoneNumber.actions.requestChange" })).toBeTruthy();
   });
 });

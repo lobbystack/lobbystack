@@ -62,11 +62,30 @@ export type CalendarConnectionViewModel = {
   lastSyncError: string | null;
 };
 
+/** What the dashboard warns about the Cal.com event type an operator picked. `days` are 0 for Sunday. */
+export type CalcomEventTypeWarningViewModel =
+  | { code: "missing_lengths"; lengths: number[] }
+  | { code: "sms_reminders" }
+  | { code: "video_location" }
+  | { code: "narrower_availability"; days: number[] };
+
+/** What the dashboard says about a Calendly event type. `required_questions` means it can't be booked. */
+export type CalendlyEventTypeWarningViewModel =
+  | { code: "required_questions"; questions: string[] }
+  | { code: "missing_lengths"; lengths: number[] }
+  | { code: "no_details_question" }
+  | { code: "video_location" };
+
 export type IntegrationsViewModel = {
   calendarConnections: CalendarConnectionViewModel[];
   staff: Array<{ id: string; name: string }>;
+  /** The Google connection's calendars. */
   calendarOptions: CalendarOptionViewModel[];
   discoveryError: string | null;
+  /** The Cal.com connection's event types, and whether this deployment has Cal.com set up. */
+  calcom?: { configured: boolean; options: CalendarOptionViewModel[]; discoveryError: string | null; warnings: CalcomEventTypeWarningViewModel[] };
+  /** The Calendly connection's event types, whether this deployment has Calendly set up, and whether the account's plan can book. Null when unknown. */
+  calendly?: { configured: boolean; options: CalendarOptionViewModel[]; discoveryError: string | null; warnings: CalendlyEventTypeWarningViewModel[]; paidPlan: boolean | null };
 };
 
 export type TeamMemberViewModel = {

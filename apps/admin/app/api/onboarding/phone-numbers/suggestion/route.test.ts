@@ -5,7 +5,7 @@ const fixture = vi.hoisted(() => ({ limit: vi.fn(), search: vi.fn(), secret: vi.
 vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
 vi.mock("@/lib/phone-number-search-limit", () => ({ assertPhoneNumberSearchAllowed: fixture.limit }));
 vi.mock("@lobbystack/domain", () => ({ searchBusinessNumberInventory: fixture.search }));
-vi.mock("@/lib/twilio-provider", async (importOriginal) => ({ ...await importOriginal<typeof import("@/lib/twilio-provider")>(), getNumberClaimTokenSecret: fixture.secret }));
+vi.mock("@/lib/telephony", async (importOriginal) => ({ ...await importOriginal<typeof import("@/lib/telephony")>(), getNumberClaimTokenSecret: fixture.secret }));
 
 import { resetFakeOperator } from "@/lib/operator-request.fake";
 import { GET } from "./route";

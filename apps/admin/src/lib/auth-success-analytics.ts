@@ -3,7 +3,7 @@ import { isFreshPendingRecord } from "./pending-analytics";
 type AuthSuccessEvent = "web.auth.login_succeeded" | "web.auth.signup_succeeded";
 export const authSuccessSources = ["calculator"] as const;
 export type AuthSuccessSource = (typeof authSuccessSources)[number];
-export type AuthMethod = "email" | "google";
+export type AuthMethod = "email" | "google" | "passkey";
 
 export type ConsumedAuthSuccess = {
   event: AuthSuccessEvent;
@@ -31,6 +31,6 @@ export function consumeAuthSuccess(): ConsumedAuthSuccess | null {
     if (record.event !== "web.auth.login_succeeded" && record.event !== "web.auth.signup_succeeded") return null;
     if (!isFreshPendingRecord(record)) return null;
     // Records queued before Google sign-in existed carry no method; they were all email.
-    return { event: record.event, method: record.method === "google" ? "google" : "email", ...(isAuthSuccessSource(record.source) ? { source: record.source } : {}) };
+    return { event: record.event, method: record.method === "google" || record.method === "passkey" ? record.method : "email", ...(isAuthSuccessSource(record.source) ? { source: record.source } : {}) };
   } catch { return null; }
 }

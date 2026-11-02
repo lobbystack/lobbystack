@@ -11,8 +11,8 @@ Les webhooks envoient une requête HTTPS `POST` à votre URL quand quelque chose
 
 | Événement | Envoyé quand | `data` | Portée |
 | --- | --- | --- | --- |
-| `call.completed` | Un appel s'est terminé et LobbyStack a enregistré son résumé et son résultat. | Appel | `calls:read` |
-| `appointment.booked` | Quelqu'un réserve un rendez-vous : l'agent, le tableau de bord ou l'API. | Rendez-vous | `appointments:read` |
+| `call.completed` | Un appel s'est terminé et LobbyStack a enregistré son résumé et son résultat. Un appel pris par votre équipe avec [Le personnel répond d'abord](/fr/agent/ai-settings/overview#le-personnel-répond-dabord) n'a pas de résumé, et ses champs `outcome` et `end_reason` valent `answered_by_team`. | Appel | `calls:read` |
+| `appointment.booked` | Quelqu'un réserve un rendez-vous : la réceptionniste, le tableau de bord ou l'API. | Rendez-vous | `appointments:read` |
 | `appointment.rescheduled` | Un rendez-vous est déplacé à une nouvelle heure. | Rendez-vous | `appointments:read` |
 | `appointment.cancelled` | Un rendez-vous est annulé. | Rendez-vous | `appointments:read` |
 | `message.taken` | L'agent prend un message pour votre équipe. | Message | `messages:read` |

@@ -17,6 +17,8 @@ import {
 } from "@/lib/locale";
 
 type AppearanceContextValue = {
+  /** False until the stored choice has been read, which only the browser can do. */
+  ready: boolean;
   timeFormatPreference: TimeFormatPreference;
   setTimeFormatPreference: (value: TimeFormatPreference) => void;
 };
@@ -27,7 +29,8 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
   const { i18n } = useTranslation();
   // Read after mount: the server can't see localStorage, so the first render uses the locale's default.
   const [storedPreference, setStoredPreference] = useState<TimeFormatPreference | null>(null);
-  useEffect(() => { setStoredPreference(readStoredTimeFormatPreference()); }, []);
+  const [ready, setReady] = useState(false);
+  useEffect(() => { setStoredPreference(readStoredTimeFormatPreference()); setReady(true); }, []);
   const timeFormatPreference = resolveTimeFormatPreference({
     storedPreference,
     locale: i18n.resolvedLanguage ?? i18n.language,
@@ -35,13 +38,14 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AppearanceContextValue>(
     () => ({
+      ready,
       timeFormatPreference,
       setTimeFormatPreference: (nextValue) => {
         setStoredPreference(nextValue);
         writeStoredTimeFormatPreference(nextValue);
       },
     }),
-    [timeFormatPreference],
+    [ready, timeFormatPreference],
   );
 
   return (

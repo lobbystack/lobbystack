@@ -105,3 +105,39 @@ describe("original notification controls", () => {
     await waitFor(() => expect(screen.getByRole("switch", { name: "notifications.sources.sms.title" }).getAttribute("aria-checked")).toBe("true"));
   });
 });
+describe("notification loading state", () => {
+  const skeletons = () => document.querySelectorAll('[data-slot="skeleton"]').length;
+  function renderPending({ workspace, widgetOnly = false }: { workspace: boolean; widgetOnly?: boolean }) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); clients.push(client);
+    if (workspace) client.setQueryData(["businesses"], { businesses: [{ businessId: "business-1", active: true }] });
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+    render(<QueryClientProvider client={client}><LiveNotificationSettingsSurface widgetOnly={widgetOnly} /></QueryClientProvider>);
+  }
+
+  it.each([["the workspace", false], ["the saved preferences", true]])("shows the three sections as placeholders, titles and rows included, while %s load", (_, workspace) => {
+    renderPending({ workspace });
+    // The sources, the communication events and the system issues.
+    expect(document.querySelectorAll("section").length).toBe(3);
+    for (const title of ["notifications.sources.title", "notifications.communication.title", "notifications.systemIssues.title"]) expect(screen.getByText(title).className).toContain("invisible");
+    expect(document.querySelectorAll("tbody tr").length).toBe(2 + 4);
+    expect(document.querySelectorAll("tbody")[0]?.getAttribute("aria-busy")).toBe("true");
+    expect(skeletons()).toBe(37);
+    expect(screen.queryByRole("switch")).toBeNull();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+  });
+
+  it("shows only the sources and the widget events as placeholders in the widget view", () => {
+    renderPending({ workspace: true, widgetOnly: true });
+    expect(document.querySelectorAll("section").length).toBe(2);
+    expect(document.querySelectorAll("tbody tr").length).toBe(2);
+    expect(skeletons()).toBe(18);
+    expect(screen.queryByText("notifications.systemIssues.title")).toBeNull();
+  });
+
+  it("turns all the sections real together once the preferences have loaded", () => {
+    setup();
+    expect(skeletons()).toBe(0);
+    expect(screen.getAllByRole("switch").length).toBe(2);
+    expect(screen.getAllByRole("checkbox").length).toBeGreaterThan(0);
+  });
+});

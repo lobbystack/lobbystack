@@ -12,6 +12,7 @@ import { useBranding } from "./branding-provider";
 import { useBusinessCan } from "./business-capabilities-provider";
 import { MOBILE_UTILITY_SLOT_ID } from "./site-header";
 import { Button } from "./ui/button";
+import { Skeleton } from "./ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { DashboardTestCallWidget } from "./dashboard-test-call-widget";
 import { DashboardFeedbackWidget } from "./dashboard-feedback-widget";
@@ -20,15 +21,32 @@ import { DashboardAbandonIntent } from "./dashboard-abandon-intent";
 
 export function DashboardUtilityBar() {
   const { t } = useTranslation("nav");
-  const { business } = useActiveBusiness();
+  const { t: tCommon } = useTranslation("common");
+  const { businesses, business } = useActiveBusiness();
   const can = useBusinessCan();
   // The host's affiliate program stays on the host's domain: a partner's businesses never get the host's marketing.
   const { partner } = useBranding();
   const isMobile = useIsMobile();
   const [mobileSlot, setMobileSlot] = useState<HTMLElement | null>(null);
   useEffect(() => { setMobileSlot(isMobile ? document.getElementById(MOBILE_UTILITY_SLOT_ID) : null); }, [isMobile]);
-  if (!business) return null;
-  const items = (
+  // The bar needs a business, but it holds its place while the businesses load, so it doesn't pop in.
+  if (!business && !businesses.isLoading) return null;
+  const items = !business ? (
+    <>
+      {can("setup") ? <>
+        <div aria-hidden="true" className="hidden items-center md:flex">
+          <Skeleton className="inline-flex h-8 items-center gap-1 rounded-4xl border border-transparent px-3 text-sm font-medium whitespace-nowrap">
+            <span className="invisible size-4 shrink-0" />
+            <span className="invisible">{tCommon("testCall.trigger")}</span>
+          </Skeleton>
+        </div>
+        <span aria-hidden="true" className="ml-3 mr-2.5 hidden h-4 w-px bg-border md:block" />
+      </> : null}
+      {partner ? null : <Skeleton aria-hidden="true" className="size-6 rounded-md" />}
+      <Skeleton aria-hidden="true" className="size-6 rounded-md" />
+      <Skeleton aria-hidden="true" className="size-6 rounded-md" />
+    </>
+  ) : (
     <>
         {/* The test call tries out the receptionist's setup, which an activity-only business leaves to its partner. */}
         {can("setup") ? <>
@@ -61,7 +79,7 @@ export function DashboardUtilityBar() {
   );
   return (
     <>
-    <DashboardAbandonIntent businessId={business.businessId} />
+    {business ? <DashboardAbandonIntent businessId={business.businessId} /> : null}
     {mobileSlot
       ? createPortal(items, mobileSlot)
       : (

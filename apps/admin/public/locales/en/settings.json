@@ -570,10 +570,72 @@
       "syncNeedsAttention": "Needs attention",
       "discoveryFailed": "Calendar access or synchronization could not be verified. Retry synchronization or reconnect your Google account."
     },
+    "calcom": {
+      "sheetTitle": "Cal.com",
+      "sheetDescription": "Connect your Cal.com account and pick the event type your agent books.",
+      "connect": "Connect Cal.com",
+      "reconnect": "Reconnect",
+      "disconnect": "Disconnect",
+      "connectedSuccess": "Cal.com connected. Pick the event type to book.",
+      "connectFailed": "Cal.com couldn't be connected. Please try again.",
+      "disconnectedSuccess": "Cal.com disconnected.",
+      "eventTypeLabel": "Event type",
+      "selectEventType": "Choose an event type",
+      "eventTypeSaved": "Event type saved.",
+      "refresh": "Refresh",
+      "syncNeedsAttention": "Needs attention",
+      "syncFailed": "Your agent couldn't finish syncing with Cal.com and won't offer times from it until a sync works. It tries again on its own, or you can click Refresh.",
+      "discoveryFailed": "Your agent couldn't reach your Cal.com account. Refresh, or reconnect the account.",
+      "howItWorks": "Each appointment becomes a booking of this event type. Cal.com gets the caller's name, phone number and a stand-in email address, so it doesn't email them. Their real email goes in the booking's notes for your team, and your agent sends the confirmation.",
+      "warningsTitle": "Check this event type in Cal.com",
+      "warnings": {
+        "missingLengths": "Add {{lengths}} minutes to the event type's durations. Until you do, Cal.com books those services at the event type's default length.",
+        "smsReminders": "Turn off the SMS workflow on this event type, or Cal.com texts callers on top of your agent's texts.",
+        "videoLocation": "Add \"Attendee phone number\" as a location on this event type. Until you do, bookings carry a video link instead of the caller's phone.",
+        "narrowerAvailability": "Widen the event type's schedule on {{days}} to match your opening hours. Cal.com turns down bookings outside its schedule."
+      }
+    },
+    "calendly": {
+      "sheetTitle": "Calendly",
+      "sheetDescription": "Connect your Calendly account and pick the event type your agent books.",
+      "connect": "Connect Calendly",
+      "reconnect": "Reconnect",
+      "disconnect": "Disconnect",
+      "connectedSuccess": "Calendly connected. Pick the event type to book.",
+      "connectFailed": "Calendly couldn't be connected. Please try again.",
+      "connectNotAdmin": "Only an owner or admin of the business can connect Calendly.",
+      "disconnectedSuccess": "Calendly disconnected.",
+      "eventTypeLabel": "Event type",
+      "selectEventType": "Choose an event type",
+      "eventTypeSaved": "Event type saved.",
+      "refresh": "Refresh",
+      "syncNeedsAttention": "Needs attention",
+      "syncFailed": "Your agent couldn't finish syncing with Calendly and won't offer times from it until a sync works. It tries again on its own, or you can click Refresh.",
+      "discoveryFailed": "Your agent couldn't reach your Calendly account. Refresh, or reconnect the account.",
+      "howItWorks": "Each appointment becomes a booking of this event type. Calendly gets the caller's name and a stand-in email address, so it doesn't email them. Your agent sends the confirmation, and the caller's phone and email go in a text question on the event type.",
+      "blockedOption": "{{name}} (can't be booked)",
+      "planRequiredTitle": "Paid plan required",
+      "planRequired": "Calendly only takes bookings from other apps on its paid plans. Upgrade to Standard or above, then click Reconnect.",
+      "warningsTitle": "Check this event type in Calendly",
+      "warnings": {
+        "requiredQuestions": "Make {{questions}} optional, or pick another event type. Your agent can't answer required choice questions, so Calendly turns down every booking.",
+        "missingLengths": "Your {{lengths}}-minute services don't match this event type. Calendly books them at the event type's own length.",
+        "noDetailsQuestion": "Add a text question to this event type. Until you do, your team won't see the caller's phone or email in Calendly.",
+        "videoLocation": "This event type only offers video calls, so bookings carry a meeting link. Add a phone or in-person location for callers."
+      }
+    },
     "cards": {
       "google": {
         "title": "Google Calendar",
         "description": "Sync bookings with a Google Calendar."
+      },
+      "calcom": {
+        "title": "Cal.com",
+        "description": "Book appointments into one of your Cal.com event types."
+      },
+      "calendly": {
+        "title": "Calendly",
+        "description": "Book appointments into one of your Calendly event types."
       },
       "webhooks": {
         "title": "Webhooks",
@@ -644,9 +706,44 @@
     }
   },
   "account": {
+    "loading": "Loading your account",
+    "passkeys": {
+      "title": "Passkeys",
+      "description": "Sign in with your fingerprint, face or device lock instead of a password.",
+      "add": "Add a passkey",
+      "empty": "You haven't added a passkey yet.",
+      "unnamed": "Passkey",
+      "addedOn": "Added {{date}}",
+      "added": "Passkey added.",
+      "renamed": "Passkey renamed.",
+      "removed": "Passkey removed.",
+      "remove": "Remove",
+      "removeTitle": "Remove this passkey?",
+      "removeDescription": "You won't be able to sign in with {{name}} anymore. Your password still works.",
+      "rename": {
+        "action": "Rename",
+        "title": "Rename passkey",
+        "description": "Pick a name that tells you which device it is on.",
+        "label": "Name",
+        "placeholder": "E.g. Work Laptop",
+        "save": "Save",
+        "required": "Enter a name."
+      },
+      "errors": {
+        "addFailed": "We couldn't add the passkey. Try again.",
+        "wrongAddress": "Passkeys aren't set up for this address. Open the app at its usual address, then try again.",
+        "alreadyAdded": "This device already has a passkey for your account.",
+        "signInAgain": "Sign in again, then add a passkey.",
+        "verifyEmail": "Verify your email, then add a passkey.",
+        "renameFailed": "We couldn't rename the passkey. Try again.",
+        "removeFailed": "We couldn't remove the passkey. Try again.",
+        "loadFailed": "We couldn't load your passkeys."
+      }
+    },
     "title": "Account",
     "actions": {
-      "change": "Change"
+      "change": "Change",
+      "cancel": "Cancel"
     },
     "businessName": {
       "label": "Business name",
@@ -659,12 +756,13 @@
     "changeEmail": {
       "label": "Change email",
       "description": "Email address you use to log in.",
-      "newEmailPlaceholder": "New email",
-      "currentPasswordPlaceholder": "Current password",
+      "newEmailLabel": "New email",
+      "newEmailPlaceholder": "name@example.com",
       "save": "Send confirmation link",
       "title": "Email",
       "currentPasswordLabel": "Current password",
       "currentEmail": "{{email}}",
+      "currentEmailLabel": "Current email",
       "confirmationSent": "We sent a confirmation link to {{email}}.",
       "errors": {
         "invalidPassword": "Current password is incorrect.",
@@ -672,6 +770,7 @@
         "unchanged": "Enter a different email address.",
         "noEmail": "No email is configured for this account yet.",
         "required": "Enter a new email address.",
+        "invalid": "Enter a valid email address.",
         "failed": "We couldn't send a confirmation link. Please try again."
       }
     },
@@ -681,15 +780,20 @@
       "description": "Password you use to log in.",
       "dialogDescription": "Enter your current password and a new password.",
       "currentPasswordLabel": "Current password",
-      "currentPasswordPlaceholder": "Current password",
       "newPasswordLabel": "New password",
-      "newPasswordPlaceholder": "New password",
       "confirmPasswordLabel": "Confirm new password",
-      "confirmPasswordPlaceholder": "Confirm new password",
       "save": "Save",
       "saved": "Password updated.",
       "errors": {
         "mismatch": "New passwords do not match.",
+        "currentRequired": "Enter your current password.",
+        "newRequired": "Enter a new password.",
+        "confirmRequired": "Confirm your new password.",
+        "minimumLengthMissing": "Use at least 8 characters.",
+        "numberMissing": "Include at least one number.",
+        "specialCharacterMissing": "Include at least one special character.",
+        "unchanged": "Choose a password different from your current one.",
+        "invalidCurrent": "Current password is incorrect.",
         "failed": "Unable to update password."
       }
     }
@@ -1057,7 +1161,7 @@
   },
   "webhooks": {
     "title": "Webhooks",
-    "description": "{{appName}} sends an HTTPS POST to your URL when something happens, such as a finished call or a new booking. Each request is signed so you can check it came from us.",
+    "description": "{{appName}} sends an HTTPS POST to your URL when something happens, such as a finished call or a new booking.",
     "empty": "No webhook endpoints yet.",
     "enabledLabel": "Send events to this endpoint",
     "restricted": {

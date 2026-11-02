@@ -9,7 +9,7 @@
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 
-import { buildBrowserSessionConfig, buildPhoneSessionConfig, callerIsDone, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, type CallControl, type LiveCallSummary } from "@lobbystack/agent-core";
+import { buildBrowserSessionConfig, buildPhoneSessionConfig, callerIsDone, callerIsLeaving, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, type CallControl, type LiveCallSummary } from "@lobbystack/agent-core";
 import { defaultGreeting, demoSnapshot, isRuntimeLocale, runtimeLocales, type BusinessContextSnapshot } from "@lobbystack/shared";
 import OpenAI from "openai";
 import type { SidebandWS } from "openai/resources/live/sideband/ws";
@@ -107,7 +107,7 @@ function sessionConfig() {
   return session;
 }
 
-type RunResult = { scenario: Scenario; passed: boolean; greetedAfterMs?: number; greetingCommands: number; ended: boolean; endedAfterMs?: number; handOvers: string[]; checks: boolean[]; goodbyes: number; opened: string[]; replies: string[]; forbidden?: string; error?: string };
+type RunResult = { scenario: Scenario; passed: boolean; greetedAfterMs?: number; greetingCommands: number; ended: boolean; endedAfterMs?: number; handOvers: string[]; checks: boolean[]; leaving: boolean[]; goodbyes: number; opened: string[]; replies: string[]; forbidden?: string; error?: string };
 
 async function run(scenario: Scenario, audio: Map<string, Buffer>, agentModel: NonNullable<typeof model>): Promise<RunResult> {
   const ws = new LiveWS(client);
@@ -126,6 +126,7 @@ async function run(scenario: Scenario, audio: Map<string, Buffer>, agentModel: N
   let replyEndMs = -1;
   const replies: string[] = [];
   const checks: boolean[] = [];
+  const leaving: boolean[] = [];
   // Each hand-over after the opening question, by the tools the agent used.
   const handOvers: string[] = [];
 
@@ -161,7 +162,7 @@ async function run(scenario: Scenario, audio: Map<string, Buffer>, agentModel: N
       client,
       sessionId: `eval_${scenario.name}`,
       phone: false,
-      setup: { agent, greeting: snapshot.greeting, callerDone: async (conversation, abortSignal) => { const done = await callerIsDone(agentModel, conversation, abortSignal); checks.push(done); return done; } },
+      setup: { agent, greeting: snapshot.greeting, callerDone: async (conversation, abortSignal) => { const done = await callerIsDone(agentModel, conversation, abortSignal); checks.push(done); return done; }, callerLeaving: async (conversation, abortSignal) => { const left = await callerIsLeaving(agentModel, conversation, abortSignal); leaving.push(left); return left; } },
       connect: () => ws as unknown as SidebandWS,
       onDelegation: (timing) => { if (timing.offsetMs >= scenarioStartMs) handOvers.push(timing.tools.join("+") || "reply"); },
       onGreeting: (event) => { if (event.step === "sent") greetingCommands += 1; },
@@ -220,9 +221,9 @@ async function run(scenario: Scenario, audio: Map<string, Buffer>, agentModel: N
     const endedAfterMs = ended === undefined ? undefined : Math.max(0, ended - lastLineAt);
     const forbidden = scenario.mustNotSay ? replies.find((line) => scenario.mustNotSay!.test(line)) : undefined;
     const passed = (scenario.expect === "ends" ? ended !== undefined : ended === undefined) && forbidden === undefined;
-    return { scenario, passed, ...(greetedAfterMs !== undefined ? { greetedAfterMs } : {}), greetingCommands, ended: ended !== undefined, ...(endedAfterMs !== undefined ? { endedAfterMs } : {}), handOvers, checks, goodbyes, opened, replies, ...(forbidden ? { forbidden } : {}) };
+    return { scenario, passed, ...(greetedAfterMs !== undefined ? { greetedAfterMs } : {}), greetingCommands, ended: ended !== undefined, ...(endedAfterMs !== undefined ? { endedAfterMs } : {}), handOvers, checks, leaving, goodbyes, opened, replies, ...(forbidden ? { forbidden } : {}) };
   } catch (error) {
-    return { scenario, passed: false, ...(greetedAfterMs !== undefined ? { greetedAfterMs } : {}), greetingCommands, ended: false, handOvers, checks, goodbyes: 0, opened, replies, error: error instanceof Error ? error.message : String(error) };
+    return { scenario, passed: false, ...(greetedAfterMs !== undefined ? { greetedAfterMs } : {}), greetingCommands, ended: false, handOvers, checks, leaving, goodbyes: 0, opened, replies, error: error instanceof Error ? error.message : String(error) };
   } finally {
     clearInterval(pump);
     setTimeout(() => ws.close(), 1_000);
@@ -241,7 +242,7 @@ await Promise.all(Array.from({ length: Math.min(Number(values.concurrency), jobs
     results.push(result);
     const greeting = `${result.greetedAfterMs === undefined ? "no greeting in 15 s" : `greeted at ${(result.greetedAfterMs / 1000).toFixed(1)} s`}${result.greetingCommands ? ` after ${result.greetingCommands} command${result.greetingCommands > 1 ? "s" : ""}` : ""}`;
     const outcome = `${result.error ? `error: ${result.error}` : result.ended ? `ended ${((result.endedAfterMs ?? 0) / 1000).toFixed(1)} s after the caller` : "still open"}${result.forbidden ? ` | said what it mustn't: "${result.forbidden}"` : ""}`;
-    console.log(`${result.passed ? "PASS" : "FAIL"} ${result.scenario.name.padEnd(17)} ${greeting} | ${outcome} | hand-overs: ${result.handOvers.join(", ") || "none"} | checks: ${result.checks.map((done) => (done ? "done" : "continue")).join(", ") || "none"} | goodbyes: ${result.goodbyes} | opened: ${result.opened.map((line) => `"${line.trim()}"`).join(" / ")} | receptionist: ${result.replies.map((line) => `"${line}"`).join(" / ")}`);
+    console.log(`${result.passed ? "PASS" : "FAIL"} ${result.scenario.name.padEnd(17)} ${greeting} | ${outcome} | hand-overs: ${result.handOvers.join(", ") || "none"} | checks: ${result.checks.map((done) => (done ? "done" : "continue")).join(", ") || "none"} | leaving: ${result.leaving.map((left) => (left ? "yes" : "no")).join(", ") || "none"} | goodbyes: ${result.goodbyes} | opened: ${result.opened.map((line) => `"${line.trim()}"`).join(" / ")} | receptionist: ${result.replies.map((line) => `"${line}"`).join(" / ")}`);
   }
 }));
 

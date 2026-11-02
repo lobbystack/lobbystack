@@ -52,7 +52,7 @@ GitHub Actions builds the images on GitHub's runners and pushes them to public p
 
 Each environment gets its own admin image because Next.js writes some settings into it at build time: the Turnstile and PostHog settings, `DEPLOYMENT_MODE`, the brand and link settings, and the `S3_*` settings, since the content security policy names the storage origin. The release reads these build arguments from the admin's environment in Dokploy, so change them there and release again.
 
-[Release a commit to Dokploy](dokploy-release.md) covers the `release-production` and `release-staging` CI jobs and `pnpm release:dokploy`. Don't build images on the server: a Next.js build would compete with live calls for its 4 GB.
+[Release a commit to Dokploy](dokploy-release.md) covers the `release-production` and `release-staging` CI jobs and `pnpm release:dokploy`. Don't build images on the server: a Next.js build would compete with live calls for its memory.
 
 The server also runs a registry at `127.0.0.1:5000`, in the `lobbystack-registry` container, which only the server can reach. It holds the images from before CI. Production runs admin `911ca1f9-r2` and worker and migrator `55379a5f` from it until its first `release-production` run, so keep the registry as a rollback until then.
 
@@ -68,7 +68,7 @@ DOKPLOY_API_KEY=<key> scripts/staging-start.sh
 DOKPLOY_API_KEY=<key> scripts/staging-stop.sh
 ```
 
-`staging-start.sh` starts Postgres and Redis, runs the `migrate` schedule, then starts the worker and admin and waits for `https://staging.lobbystack.com/api/health/ready`. Don't release to production while staging runs: production at its 7-day peak plus staging at its peak needs about 4.25 GB.
+`staging-start.sh` starts Postgres and Redis, runs the `migrate` schedule, then starts the worker and admin and waits for `https://staging.lobbystack.com/api/health/ready`.
 
 These staging provider settings point at `staging.lobbystack.com`:
 
@@ -103,7 +103,7 @@ Memory decides what can run at once. Dokploy, Traefik, the registry and the oper
 
 Follow these rules while everything shares the server:
 
-- Stop staging when you finish with it, and don't release to production while it runs.
+- Stop staging when you finish with it.
 - Upgrade Dokploy, Docker or the kernel, or reboot, only in the quiet hour with no call in progress. Each can restart Traefik or every container.
 - Give any new service a memory cap before you deploy it.
 

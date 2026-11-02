@@ -24,6 +24,8 @@ export const SCENARIOS: CallScenario[] = [
   { name: "goodbye", expect: "ends", lines: [{ text: "No, that's everything. Goodbye!" }] },
   { name: "good-day", expect: "ends", lines: [{ text: "Great, thank you so much. Have a good day, bye bye." }] },
   { name: "thats-it", expect: "ends", lines: [{ text: "Nope, that's it. Thanks." }] },
+  // The caller leaves without answering the receptionist's question.
+  { name: "has-to-go", expect: "ends", lines: [{ text: "Ah no, I actually have to go. Bye bye." }] },
   // The caller answers the receptionist's goodbye with their own.
   { name: "trailing-goodbye", expect: "ends", lines: [{ text: "No, that's everything." }, { text: "Goodbye!", pauseMs: 1_500 }] },
   // The caller pauses before the question, so the receptionist mustn't hang up meanwhile.
@@ -70,6 +72,7 @@ const TRANSLATED_LINES: Record<Exclude<RuntimeLocale, "en">, Record<string, stri
     "Goodbye!": "Au revoir !",
     "Oh wait, one more thing.": "Ah, attendez, encore une chose.",
     "Do you have parking?": "Est-ce que vous avez un stationnement ?",
+    "Ah no, I actually have to go. Bye bye.": "Ah non, je dois y aller, en fait. Bye bye.",
   },
   es: {
     [OPENING]: "Hola, ¿abren los sábados?",
@@ -81,6 +84,7 @@ const TRANSLATED_LINES: Record<Exclude<RuntimeLocale, "en">, Record<string, stri
     "Goodbye!": "¡Adiós!",
     "Oh wait, one more thing.": "Ah, espere, una cosa más.",
     "Do you have parking?": "¿Tienen estacionamiento?",
+    "Ah no, I actually have to go. Bye bye.": "Ah no, la verdad es que me tengo que ir. Adiós, adiós.",
   },
   sr: {
     [OPENING]: "Dobar dan, da li radite u subotu?",
@@ -92,6 +96,7 @@ const TRANSLATED_LINES: Record<Exclude<RuntimeLocale, "en">, Record<string, stri
     "Goodbye!": "Doviđenja!",
     "Oh wait, one more thing.": "A, čekajte, još nešto.",
     "Do you have parking?": "Da li imate parking?",
+    "Ah no, I actually have to go. Bye bye.": "Ah ne, zapravo moram da idem. Ćao, ćao.",
   },
   de: {
     [OPENING]: "Hallo, haben Sie am Samstag geöffnet?",
@@ -103,6 +108,7 @@ const TRANSLATED_LINES: Record<Exclude<RuntimeLocale, "en">, Record<string, stri
     "Goodbye!": "Auf Wiederhören!",
     "Oh wait, one more thing.": "Ach, warten Sie, noch eine Sache.",
     "Do you have parking?": "Gibt es bei Ihnen Parkplätze?",
+    "Ah no, I actually have to go. Bye bye.": "Ach nein, ich muss jetzt eigentlich los. Tschüss, tschüss.",
   },
   pt: {
     [OPENING]: "Oi, vocês abrem no sábado?",
@@ -114,6 +120,7 @@ const TRANSLATED_LINES: Record<Exclude<RuntimeLocale, "en">, Record<string, stri
     "Goodbye!": "Tchau!",
     "Oh wait, one more thing.": "Ah, espera, mais uma coisa.",
     "Do you have parking?": "Vocês têm estacionamento?",
+    "Ah no, I actually have to go. Bye bye.": "Ah não, na verdade eu preciso ir. Tchau, tchau.",
   },
   it: {
     [OPENING]: "Buongiorno, siete aperti il sabato?",
@@ -125,6 +132,7 @@ const TRANSLATED_LINES: Record<Exclude<RuntimeLocale, "en">, Record<string, stri
     "Goodbye!": "Arrivederci!",
     "Oh wait, one more thing.": "Ah, aspetti, un'altra cosa.",
     "Do you have parking?": "Avete un parcheggio?",
+    "Ah no, I actually have to go. Bye bye.": "Ah no, in realtà devo andare. Ciao ciao.",
   },
   nl: {
     [OPENING]: "Hallo, zijn jullie op zaterdag open?",
@@ -136,6 +144,7 @@ const TRANSLATED_LINES: Record<Exclude<RuntimeLocale, "en">, Record<string, stri
     "Goodbye!": "Tot ziens!",
     "Oh wait, one more thing.": "O wacht, nog één ding.",
     "Do you have parking?": "Is er parkeergelegenheid?",
+    "Ah no, I actually have to go. Bye bye.": "Ah nee, ik moet eigenlijk gaan. Doei doei.",
   },
 };
 

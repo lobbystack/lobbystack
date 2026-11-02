@@ -77,9 +77,23 @@ Choose the language most of your callers speak. If you haven't changed the greet
 
 ## Voice
 
-Pick the voice your agent speaks in from **Voice**. It uses that voice on phone calls and on calls from your browser, including test calls. Businesses start with Marin.
+**Voice** sets how your agent sounds on phone calls and on calls from your browser, including test calls. The row shows the current voice and how it sounds, such as Marin · Bright, quick. New businesses start with Marin.
 
-Click **Change voice** to open the voice list. Click the play button next to a voice to hear it in your default customer language, then select the voice and click **Use this voice**. A call already in progress keeps the voice it started with.
+<Steps>
+  <Step title="Open the voice list">
+    Go to **Agent** > **AI settings** and click **Change voice**. **Current** shows the voice in use, and **All voices** lists the others with their pitch and pace.
+  </Step>
+  <Step title="Listen to a voice">
+    Click the play button next to a voice to hear it in your default customer language. Playing a voice doesn't select it.
+  </Step>
+  <Step title="Save your choice">
+    Select the voice and click **Use this voice**.
+  </Step>
+</Steps>
+
+New calls use the voice shortly after you save. A call already in progress keeps the voice it started with. To check the result, start a test call.
+
+Owners and admins can change the voice. Viewers can see the current voice, but **Change voice** is turned off for them. If your business has **Activity only** access through a partner, your team doesn't see **AI settings**.
 
 You can choose from Alloy, Ash, Ballad, Beacon, Bossa, Cedar, Cinder, Coral, Delta, Echo, Gleam, Marin, Meridian, Quartz, Ripple, Sage, Shimmer, Stone, Tempo, Verse, Vesper, and Willow. In the [API](/api/overview), set `voice` on `PATCH /receptionist` to the name in lowercase, such as `cedar`.
 
@@ -116,6 +130,38 @@ LobbyStack also forwards calls to this number when your voice minutes run out or
 <Note>
   Add a transfer number when you want live human handoff. Without one, the agent takes callback or follow-up details so your team can respond from the dashboard.
 </Note>
+
+## Staff answers first
+
+**Staff answers first** rings one staff phone before your agent answers. You press 1 to take the call. If nobody presses 1 before the ring time ends, your agent answers as usual. A voicemail greeting can't take the call, because it never presses 1.
+
+<Steps>
+  <Step title="Pick when to ring">
+    Under **Staff answers first**, set **Ring your team first** to **During business hours** or **Always**. **During business hours** follows your [opening hours](#opening-hours) and skips closures.
+  </Step>
+  <Step title="Add the staff phone">
+    Enter the number in **Staff phone**. It starts with your default transfer number, and you can change it.
+  </Step>
+  <Step title="Set the ring time">
+    Choose 10, 15, 20, 30, 45 or 60 seconds in **Ring for**. The default is 15.
+  </Step>
+  <Step title="Add messages if you want them">
+    **Message before ringing** plays before the staff phone rings. **Message before the agent answers** plays when nobody takes the call. Each holds 200 characters, and callers hear them in your default customer language. Serbian has no voice for these messages yet, so a business in Serbian skips them.
+  </Step>
+  <Step title="Save">
+    Click **Save** at the bottom of the section.
+  </Step>
+</Steps>
+
+Each ring uses one [transfer attempt](/billing/usage). Calls you answer use no voice minutes and appear in **Calls** as **Answered by your team**.
+
+Calls you answer end after 30 minutes. After 600 minutes of answered calls in 24 hours, new calls go straight to your agent until that total drops. This limit applies on every plan.
+
+<Warning>
+  Don't use a phone that forwards unanswered calls to your LobbyStack number. The call comes straight back to your agent.
+</Warning>
+
+Staff answers first needs a paid plan and works on Twilio numbers. On other numbers, the setting shows as unavailable. To compare it with carrier forwarding, see [Forward your business line to LobbyStack](/getting-started/forward-calls#choose-what-to-forward).
 
 ## Appointment changes
 

@@ -6,12 +6,18 @@ import { cn } from "@/lib/utils"
 export const inputClassName =
   "h-9 w-full min-w-0 rounded-4xl border border-input bg-input/30 px-3 py-1 text-base transition-colors outline-none enabled:hover:bg-input/50 file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-[3px] aria-invalid:ring-destructive/20 md:text-sm dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40"
 
+/** What an empty password field shows: eight bullets, the character browsers mask typed passwords with, so no field needs its own wording. */
+export const PASSWORD_PLACEHOLDER = "\u2022".repeat(8);
+
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+  const password = type === "password";
   return (
     <InputPrimitive
       type={type}
       data-slot="input"
-      className={cn(inputClassName, className)}
+      // Geist Sans draws small password bullets; monospace keeps them an even size, and the placeholder uses the same bullet.
+      className={cn(inputClassName, password && "font-mono", className)}
+      {...(password ? { placeholder: PASSWORD_PLACEHOLDER } : {})}
       {...props}
     />
   )

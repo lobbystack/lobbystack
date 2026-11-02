@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Start the Dokploy staging environment: datastores, then the migrator and its
 # `migrate` schedule, then the apps once migration has succeeded.
-# Staging shares a 4 GB box with production, so stop it again with
+# Staging shares a box with production, so stop it again with
 # scripts/staging-stop.sh when you finish. See docs/deployment/dokploy.md.
 #
 # Needs DOKPLOY_API_KEY (Dokploy: Settings > Profile > API keys).

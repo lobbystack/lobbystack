@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
-import { readReceptionistSettingsChange, saveReceptionistProfileInTransaction, updateBusinessInTransaction } from "@lobbystack/domain";
+import { readReceptionistSettingsChange, saveReceptionistProfileInTransaction, staffFirstBlockInTransaction, updateBusinessInTransaction } from "@lobbystack/domain";
 import { businesses, knowledgeDocuments, knowledgeSnippets, receptionistProfiles } from "@lobbystack/db";
 import { normalizeRuntimeLocale } from "@lobbystack/shared";
 import { jsonError } from "@/lib/api-helpers";
@@ -10,6 +10,7 @@ import { operatorRoute } from "@/lib/operator-request";
 export const dynamic = "force-dynamic";
 
 export const GET = operatorRoute(async ({ businessId, transaction }) => NextResponse.json(await transaction(async (tx) => {
+  const staffFirstBlock = await staffFirstBlockInTransaction(tx, businessId);
   const [business, profile, snippet, document] = await Promise.all([
     tx.select({ id: businesses.id, name: businesses.name, timezone: businesses.timezone, defaultLocale: businesses.defaultLocale, teamLocale: businesses.teamLocale, currency: businesses.currency }).from(businesses).where(eq(businesses.id, businessId)).limit(1),
     tx.select().from(receptionistProfiles).where(eq(receptionistProfiles.businessId, businessId)).limit(1),
@@ -17,7 +18,7 @@ export const GET = operatorRoute(async ({ businessId, transaction }) => NextResp
     tx.select({ id: knowledgeDocuments.id }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, businessId), eq(knowledgeDocuments.active, true), eq(knowledgeDocuments.status, "indexed"))).limit(1),
   ]);
   // The same sources the summary rewrite reads; without any, "Rewrite with AI" has nothing to go on.
-  return { business: business[0] ?? null, profile: profile[0] ?? null, hasKnowledgeSources: snippet.length > 0 || document.length > 0 };
+  return { business: business[0] ?? null, profile: profile[0] ?? null, hasKnowledgeSources: snippet.length > 0 || document.length > 0, staffFirstBlock };
 })));
 
 export const PATCH = operatorRoute(async ({ businessId, body, transaction }) => NextResponse.json(await transaction(async (tx) => {

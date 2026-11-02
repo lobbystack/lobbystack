@@ -134,10 +134,10 @@ it("keeps Google off a partner's host, where only email and password sign in", a
 it("offers Google on the host's domain only", async () => {
   const { GET } = await import("../../app/api/auth/providers/route");
   const providers = async (headers: Record<string, string>) => await (GET(new Request(`${base}/api/auth/providers`, { headers })) as Response).json();
-  expect(await providers(hostBrand)).toEqual({ google: true });
-  expect(await providers(partnerBrand)).toEqual({ google: false });
-  expect(await providers({})).toEqual({ google: false });
-  // Without the OAuth client, the host's domain doesn't offer it either.
+  expect(await providers(hostBrand)).toEqual({ google: true, passkey: true });
+  expect(await providers(partnerBrand)).toEqual({ google: false, passkey: false });
+  expect(await providers({})).toEqual({ google: false, passkey: false });
+  // Without the OAuth client, the host's domain doesn't offer it either. Passkeys don't depend on it.
   vi.stubEnv("GOOGLE_CLIENT_SECRET", "");
-  expect(await providers(hostBrand)).toEqual({ google: false });
+  expect(await providers(hostBrand)).toEqual({ google: false, passkey: true });
 });

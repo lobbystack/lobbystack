@@ -173,9 +173,19 @@ export const SCHEMA_MIGRATIONS = [
   "0167_business_team_locale.sql",
   "0168_receptionist_voice.sql",
   "0169_unanswered_questions.sql",
-  "0170_first_real_conversations.sql",
-  "0171_onboarding_goal.sql",
-  "0172_check_in_answers.sql",
+  "0170_passkeys.sql",
+  "0171_telephony_carrier.sql",
+  "0172_carrier_orders_and_forwards.sql",
+  "0173_carrier_connection_per_number.sql",
+  "0174_calcom_calendar_webhooks.sql",
+  "0175_staff_first.sql",
+  "0176_text_replies.sql",
+  "0177_calendly_calendar_webhooks.sql",
+  "0178_partner_key_number_claims.sql",
+  "0179_partner_replacement_tier.sql",
+  "0180_first_real_conversations.sql",
+  "0181_onboarding_goal.sql",
+  "0182_check_in_answers.sql",
 ] as const;
 
 const CONCURRENT_INDEX_DIRECTIVE = /^-- lobbystack:concurrent-index ([a-z][a-z0-9_]*)$/m;

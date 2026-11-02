@@ -9,6 +9,8 @@ import { BrandingProvider } from "./branding-provider";
 const analytics = vi.hoisted(() => ({ record: vi.fn() }));
 const navigation = vi.hoisted(() => ({ replace: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => navigation }));
+const passkeyClient = vi.hoisted(() => ({ signIn: vi.fn() }));
+vi.mock("@/lib/auth-client", () => ({ authClient: { signIn: { passkey: passkeyClient.signIn } } }));
 vi.mock("@/lib/auth-success-analytics", () => ({ recordAuthSuccess: analytics.record }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en", resolvedLanguage: "en" } }) }));
 vi.mock("@/components/turnstile", () => ({ Turnstile: ({ siteKey, onTokenChange }: { siteKey: string; onTokenChange: (token: string) => void }) => <button data-testid="challenge" data-site-key={siteKey} onClick={() => onTokenChange("fixture-challenge-token")}>Solve challenge</button> }));
@@ -302,5 +304,82 @@ describe("the sign-up agreement line", () => {
     render(<AuthCard mode="signup" />);
     expect(screen.getByRole("link", { name: "signup.legal.terms" }).getAttribute("href")).toMatch(/^https:\/\/lobbystack\.com\/(en\/)?terms\/$/);
     expect(screen.getByRole("link", { name: "signup.legal.privacy" }).getAttribute("href")).toMatch(/^https:\/\/lobbystack\.com\/(en\/)?privacy\/$/);
+  });
+});
+
+describe("passkey sign-in", () => {
+  const signedIn = () => { const assign = vi.fn(); vi.stubGlobal("location", { ...window.location, assign, search: "", origin: window.location.origin }); return assign; };
+
+  it("offers a passkey on the login page only, and never on a partner's host", () => {
+    const { rerender } = render(<AuthCard mode="login" passkey />);
+    expect(screen.getByRole("button", { name: "passkey.signIn" })).toBeTruthy();
+    // It sits under the same "or" divider as Google, above the email form.
+    expect(screen.getByText("google.or")).toBeTruthy();
+    rerender(<AuthCard mode="signup" passkey />);
+    expect(screen.queryByRole("button", { name: "passkey.signIn" })).toBeNull();
+    rerender(<AuthCard mode="login" partner={{ returnTo: "/partner" }} passkey />);
+    expect(screen.queryByRole("button", { name: "passkey.signIn" })).toBeNull();
+    rerender(<AuthCard mode="login" />);
+    expect(screen.queryByRole("button", { name: "passkey.signIn" })).toBeNull();
+  });
+
+  it("signs in with the passkey, records the method, and opens the dashboard", async () => {
+    const assign = signedIn();
+    passkeyClient.signIn.mockResolvedValue({ data: { session: { token: "session" } }, error: null });
+    render(<AuthCard mode="login" passkey />);
+    await userEvent.click(screen.getByRole("button", { name: "passkey.signIn" }));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("/"));
+    expect(passkeyClient.signIn).toHaveBeenCalledWith(undefined);
+    expect(analytics.record).toHaveBeenCalledWith("web.auth.login_succeeded", { method: "passkey" });
+  });
+
+  it("says nothing when the person closes the browser's prompt, and reports any other failure", async () => {
+    const assign = signedIn();
+    passkeyClient.signIn.mockResolvedValueOnce({ data: null, error: { code: "ERROR_CEREMONY_ABORTED", message: "Cancelled", status: 400 } });
+    render(<AuthCard mode="login" passkey />);
+    await userEvent.click(screen.getByRole("button", { name: "passkey.signIn" }));
+    await waitFor(() => expect((screen.getByRole("button", { name: "passkey.signIn" }) as HTMLButtonElement).disabled).toBe(false));
+    expect(screen.queryByText("errors.passkeyFailed")).toBeNull();
+    passkeyClient.signIn.mockResolvedValueOnce({ data: null, error: { code: "AUTHENTICATION_FAILED", message: "Failed", status: 401 } });
+    await userEvent.click(screen.getByRole("button", { name: "passkey.signIn" }));
+    expect(await screen.findByText("errors.passkeyFailed")).toBeTruthy();
+    expect(assign).not.toHaveBeenCalled();
+  });
+
+  it("tells the person nothing was used when the browser's prompt is dismissed or has no passkey to offer", async () => {
+    const assign = signedIn();
+    // The browser's "not allowed": the prompt was closed, it timed out, or this site has no passkey.
+    passkeyClient.signIn.mockResolvedValue({ data: null, error: { code: "ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY", message: "x", status: 400 } });
+    render(<AuthCard mode="login" passkey />);
+    await userEvent.click(screen.getByRole("button", { name: "passkey.signIn" }));
+    expect(await screen.findByText("errors.passkeyNotChosen")).toBeTruthy();
+    expect(screen.queryByText("errors.passkeyFailed")).toBeNull();
+    expect(assign).not.toHaveBeenCalled();
+  });
+
+  it("explains when the browser won't use a passkey on this address", async () => {
+    signedIn();
+    passkeyClient.signIn.mockResolvedValue({ data: null, error: { code: "ERROR_INVALID_RP_ID", message: "x", status: 400 } });
+    render(<AuthCard mode="login" passkey />);
+    await userEvent.click(screen.getByRole("button", { name: "passkey.signIn" }));
+    expect(await screen.findByText("errors.passkeyWrongAddress")).toBeTruthy();
+    expect(screen.queryByText("errors.passkeyFailed")).toBeNull();
+  });
+
+  it("lets the browser suggest a saved passkey in the email field when it can", async () => {
+    const assign = signedIn();
+    vi.stubGlobal("PublicKeyCredential", { isConditionalMediationAvailable: async () => true });
+    passkeyClient.signIn.mockResolvedValue({ data: { session: { token: "session" } }, error: null });
+    render(<AuthCard mode="login" passkey />);
+    expect(screen.getByLabelText("login.email").getAttribute("autocomplete")).toBe("username webauthn");
+    await waitFor(() => expect(passkeyClient.signIn).toHaveBeenCalledWith({ autoFill: true }));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("/"));
+  });
+
+  it("does not start a background request when the browser can't suggest passkeys", async () => {
+    vi.stubGlobal("PublicKeyCredential", { isConditionalMediationAvailable: async () => false });
+    render(<AuthCard mode="login" passkey />);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(passkeyClient.signIn).not.toHaveBeenCalled();
   });
 });

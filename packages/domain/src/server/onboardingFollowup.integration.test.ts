@@ -127,6 +127,22 @@ describe.skipIf(!testUrl)("onboarding follow-up email against dedicated PostgreS
     });
   });
 
+  it("answers the previous release's call with the onboarding date as the current one", async () => {
+    await rollbackTest(async tx => {
+      const { businessId, email } = await completedWorkspace(tx);
+      const resolve = async () => (await tx.execute<{ email: string }>(sql`select user_id, email, name, preferred_locale, business_name from app.resolve_onboarding_followup_recipient(${businessId}::uuid, ${new Date().toISOString()}::timestamptz)`)).rows;
+      expect(await resolve()).toHaveLength(0);
+      await tx.execute(sql`set local session authorization lobbystack_worker`);
+      await tx.execute(sql`select set_config('app.actor_type', 'worker', true), set_config('app.business_id', ${businessId}, true)`);
+      expect(await resolve()).toEqual([expect.objectContaining({ email })]);
+      await tx.execute(sql`reset session authorization`);
+      await tx.insert(firstRealConversations).values({ businessId, channel: "voice" });
+      await tx.execute(sql`set local session authorization lobbystack_worker`);
+      expect(await resolve()).toHaveLength(0);
+      await tx.execute(sql`reset session authorization`);
+    });
+  });
+
   it("skips owners on the sender's own email domain", async () => {
     await rollbackTest(async tx => {
       const { businessId } = await completedWorkspace(tx, `${randomUUID()}@LobbyStack.test`);

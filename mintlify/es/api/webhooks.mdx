@@ -11,8 +11,8 @@ Los webhooks envían un `POST` HTTPS a su URL cuando ocurre algo en un negocio, 
 
 | Evento | Se envía cuando | `data` | Permiso |
 | --- | --- | --- | --- |
-| `call.completed` | Una llamada terminó y LobbyStack guardó su resumen y su resultado. | Llamada | `calls:read` |
-| `appointment.booked` | Alguien reserva una cita: el agente, el panel o la API. | Cita | `appointments:read` |
+| `call.completed` | Una llamada terminó y LobbyStack guardó su resumen y su resultado. Una llamada que su equipo tomó con [El personal responde primero](/es/agent/ai-settings/overview#el-personal-responde-primero) no tiene resumen, y sus campos `outcome` y `end_reason` son `answered_by_team`. | Llamada | `calls:read` |
+| `appointment.booked` | Alguien reserva una cita: la recepcionista, el panel o la API. | Cita | `appointments:read` |
 | `appointment.rescheduled` | Una cita se cambia a otra hora. | Cita | `appointments:read` |
 | `appointment.cancelled` | Se cancela una cita. | Cita | `appointments:read` |
 | `message.taken` | El agente toma un mensaje para su equipo. | Mensaje | `messages:read` |

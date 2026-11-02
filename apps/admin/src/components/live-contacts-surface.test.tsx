@@ -119,3 +119,26 @@ describe("contact names and channels", () => {
     expect(cells[1]!.textContent).not.toContain("555");
   });
 });
+
+describe("contact list loading state", () => {
+  it("keeps the table header and shows placeholder rows, search and pagination while data loads", () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); clients.push(client);
+    client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+    render(<QueryClientProvider client={client}><LiveContactsSurface /></QueryClientProvider>);
+    expect(screen.getByText("table.contact")).toBeTruthy();
+    expect(document.querySelector("tbody")?.getAttribute("aria-busy")).toBe("true");
+    expect(document.querySelectorAll('tbody [data-slot="skeleton"]').length).toBe(90);
+    expect(screen.queryByText("table.empty")).toBeNull();
+    expect(screen.queryByPlaceholderText("page.searchPlaceholder")).toBeNull();
+    expect(document.querySelectorAll('[aria-hidden="true"] [data-slot="skeleton"]').length).toBe(9);
+  });
+  it("keeps the search box and the current rows while a new search loads", async () => {
+    setup();
+    await screen.findByText("Contact 1");
+    const input = screen.getByPlaceholderText("page.searchPlaceholder");
+    await userEvent.type(input, "ab");
+    expect(screen.getByPlaceholderText("page.searchPlaceholder")).toBe(input);
+    expect(await screen.findByText("Matching contact beyond first 100")).toBeTruthy();
+  });
+});

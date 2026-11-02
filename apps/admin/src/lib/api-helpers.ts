@@ -74,6 +74,8 @@ export function asApiResponse(error: unknown): NextResponse {
   }
   const status = typeof error === "object" && error !== null && "status" in error && typeof error.status === "number" ? error.status : 500;
   const code = typeof error === "object" && error !== null && "code" in error && typeof error.code === "string" ? error.code : undefined;
+  // A deployment without a carrier for the country is a setup gap the number picker explains, not a server error.
+  if (code === "phone_numbers_unavailable") return jsonError(error instanceof Error ? error.message : "Phone numbers aren't set up on this dashboard.", 503, code);
   const message = status >= 500 ? "Request failed." : error instanceof Error ? error.message : "Request failed.";
   if (status >= 500) {
     const errorId = crypto.randomUUID();

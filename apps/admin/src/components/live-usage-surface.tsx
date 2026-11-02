@@ -46,7 +46,7 @@ function PlanUsageSurface() {
   };
   const resetAt = billing.data?.account?.currentPeriodEnd ?? new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString();
 
-  if (businesses.isLoading || billing.isLoading) return <UsageSkeleton />;
+  if (businesses.isLoading || billing.isLoading) return <UsageSkeleton title={t("billing.usage.title")} />;
   if (businesses.isError || billing.isError) return <Surface className="flex flex-col items-start gap-4 p-6"><p role="alert">{t("billing.usage.unavailable")}</p><Button variant="outline" onClick={() => { if (businesses.isError || !business) void businesses.refetch(); else void billing.refetch(); }}>{t("billing.actions.retry")}</Button></Surface>;
   if (plan === "self_host") return <SectionBlock title={t("billing.usage.title")}><Surface className="p-6"><p className="text-[15px] leading-6 text-muted-foreground">{t("billing.currentPlan.selfHostNotice")}</p></Surface></SectionBlock>;
 
@@ -63,7 +63,7 @@ function AllowanceUsageSurface() {
   const { i18n, t } = useTranslation("settings");
   const { businesses, business } = useActiveBusiness();
   const usage = useQuery({ queryKey: ["usage", business?.businessId], queryFn: () => requestJson<AllowanceUsage>(`/api/usage?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId) });
-  if (businesses.isLoading || usage.isLoading) return <UsageSkeleton rows={2} />;
+  if (businesses.isLoading || usage.isLoading) return <UsageSkeleton rows={2} title={t("billing.usage.allowanceTitle")} />;
   if (businesses.isError || usage.isError || !usage.data) return <Surface className="flex flex-col items-start gap-4 p-6"><p role="alert">{t("billing.usage.unavailable")}</p><Button variant="outline" onClick={() => { if (businesses.isError || !business) void businesses.refetch(); else void usage.refetch(); }}>{t("billing.actions.retry")}</Button></Surface>;
   const { voiceSeconds, chats, resetsAt, overage } = usage.data;
   // Periods run in UTC, so the reset day is read in UTC too.
@@ -91,4 +91,29 @@ function UsageMeter({ label, used, included, unit, blocked, showUsedUnit = false
   return <div className="border-b border-border px-6 py-5 last:border-b-0"><div className="flex flex-col gap-2"><div className="flex items-center justify-between gap-4"><span className="text-[15px] font-medium leading-6">{label}</span><span className="text-[15px] leading-6 text-muted-foreground tabular-nums">{included === null ? t(noLimit ? "billing.usage.noLimit" : "billing.usage.customAllowance", { used: used.toLocaleString(intlLocale(i18n.language)), unit }) : <>{used.toLocaleString(intlLocale(i18n.language))}{showUsedUnit ? ` ${unit}` : ""} / {included.toLocaleString(intlLocale(i18n.language))} {unit}</>}</span></div>{included !== null && included > 0 ? <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary"><div className={blocked ? "h-full rounded-full bg-destructive" : "h-full rounded-full bg-foreground transition-all duration-700"} style={{ width: `${percentage}%` }} /></div> : null}{blocked ? <span className="text-sm leading-6 text-destructive">{t("billing.usage.blockedDescription")}</span> : null}</div></div>;
 }
 
-function UsageSkeleton({ rows = 4 }: { rows?: number }) { return <div className="flex flex-col gap-3"><div className="space-y-2"><Skeleton className="h-5 w-32" /><Skeleton className="h-4 w-44" /></div><Surface>{Array.from({ length: rows }).map((_, index) => <div className="space-y-2 border-b px-6 py-5 last:border-b-0" key={index}><div className="flex justify-between"><Skeleton className="h-5 w-32" /><Skeleton className="h-5 w-24" /></div><Skeleton className="h-1.5 w-full rounded-full" /></div>)}</Surface></div>; }
+/** The title and description are placeholders too, so the whole section turns real together. The title holds its real text, hidden, so the placeholder is as wide as the title. */
+function UsageSkeleton({ rows = 4, title }: { rows?: number; title: string }) {
+  return (
+    <div className="flex w-full flex-col gap-10">
+      <section className="flex flex-col gap-5">
+        <div className="flex flex-col gap-1">
+          <div aria-hidden="true" className="type-section-title">
+            <Skeleton className="h-6 w-fit"><span className="invisible">{title}</span></Skeleton>
+          </div>
+          <div className="flex h-7 items-center"><Skeleton className="h-4 w-56" /></div>
+        </div>
+        <Surface className="p-0">
+          {Array.from({ length: rows }).map((_, index) => (
+            <div className="flex flex-col gap-2 border-b border-border px-6 py-5 last:border-b-0" key={index}>
+              <div className="flex h-6 items-center justify-between gap-4">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-28" />
+              </div>
+              <Skeleton className="h-1.5 w-full rounded-full" />
+            </div>
+          ))}
+        </Surface>
+      </section>
+    </div>
+  );
+}

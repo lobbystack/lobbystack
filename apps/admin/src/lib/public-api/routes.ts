@@ -148,11 +148,14 @@ import { getDatabase } from "../databases";
 import { createDomainContext, createWorkerDomainContext } from "../domain-context";
 import { enforceFixedWindow, fixedWindowLimit } from "../fixed-window-limit";
 import { calendarSigningConfigured, createCalendarConnectLink } from "../google-calendar-oauth";
-import { googleCalendarProvider } from "../google-calendar-provider";
+import { calendarProvider, calendarProviderConfigured } from "../calendar-providers";
+import { calendarProviderLabel } from "@lobbystack/providers/calendar";
+import { partnerNumberSearch } from "../partner-numbers";
 import { checkPhoneNumberSearchLimit } from "../phone-number-search-limit";
 import { getStorageProvider } from "../storage";
 import { withStripeConnect } from "../stripe-connect";
-import { getNumberClaimTokenSecret, getTwilioProvider, twilioConfigured } from "../twilio-provider";
+import { guardedNumberSearch } from "@lobbystack/providers/telephony/registry";
+import { getNumberClaimTokenSecret, getTelephony, numbersConfigured } from "../telephony";
 import { hasVerifiedPhone } from "../verified-phone";
 import { data, handleApiRequest, pageQuery, queryParam, readApiBody, uuidParam, type ApiCredential, type RestApiCaller } from "./http";
 import { partnerV1 } from "./partner-routes";
@@ -190,8 +193,8 @@ function requireOperatorKey(credential: ApiCredential): void {
 }
 
 /**
- * Each business a partner's key creates emails its owner an invitation, so
- * the partner's keys together create at most as many an hour as one person
+ * Each business a partner's key creates can email its owner an invitation,
+ * so the partner's keys together create at most as many an hour as one person
  * can from the console. The limit counts against the partner, since a partner
  * can make as many keys as it likes.
  */
@@ -208,6 +211,12 @@ async function requirePartnerBusinessCreationAllowed(partnerId: string): Promise
 function requireActingUser(actingUserId: string | null): string {
   if (!actingUserId) throw new Error("A host's platform key acts as its owner, so it always has an account.");
   return actingUserId;
+}
+
+/** Who claims a number: the account the caller acts as, or a partner's platform key itself, since the partner has no account. */
+async function numberClaimant(context: DomainContext, caller: RestApiCaller, credential: ApiCredential): Promise<{ userId: string } | { platformKeyId: string; scopes: readonly string[] }> {
+  if (caller.platformKeyId !== undefined && caller.partnerId !== undefined) return { platformKeyId: caller.platformKeyId, scopes: credential.scopes };
+  return { userId: await resolveActingUserId(context, caller) };
 }
 
 /** A key searches numbers as the account it acts as, so its searches count against that account's dashboard limit. */
@@ -295,18 +304,18 @@ async function partnerOrigin(context: DomainContext, partnerId: string): Promise
   return brand.origin;
 }
 
-const googleCalendarUnavailable = () => new PublicApiError(403, "forbidden", "Google Calendar isn't available on this deployment.");
+const calendarUnavailable = (provider: string) => new PublicApiError(403, "forbidden", `${calendarProviderLabel(provider)} isn't available on this deployment.`);
 
-/** Refuses where Google Calendar isn't set up: the OAuth client, and ENCRYPTION_KEY for the tokens the callback stores. Returns that key. */
-function requireGoogleCalendar(): string {
+/** Refuses where `provider` isn't set up: its OAuth client, and ENCRYPTION_KEY for the tokens the callback stores. Returns that key. */
+function requireCalendarProvider(provider: string): string {
   const encryptionKey = process.env.ENCRYPTION_KEY;
-  if (!encryptionKey || !process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET || !process.env.GOOGLE_REDIRECT_URI) throw googleCalendarUnavailable();
+  if (!encryptionKey || !calendarProviderConfigured(provider)) throw calendarUnavailable(provider);
   return encryptionKey;
 }
 
-function calendarAccess(): CalendarAccess {
-  const box = new SecretBox(requireGoogleCalendar());
-  const provider = googleCalendarProvider();
+function calendarAccess(providerName: string): CalendarAccess {
+  const box = new SecretBox(requireCalendarProvider(providerName));
+  const provider = calendarProvider(providerName);
   return { decryptToken: (value) => box.decrypt(value), encryptToken: (value) => box.encrypt(value), refreshAccessToken: (input) => provider.refreshAccessToken(input), listCalendars: (input) => provider.listCalendars(input) };
 }
 
@@ -401,26 +410,28 @@ export const v1 = {
     return { body: data(await endManagedPlanForApi(context, caller)) };
   }),
   listPhoneNumbers: (request: Request) => handleApiRequest(request, "listPhoneNumbers", async ({ context, caller }) => ({ body: { data: await listPhoneNumbersForApi(context, caller), next_cursor: null, has_more: false } })),
-  searchPhoneNumbers: (request: Request) => handleApiRequest(request, "searchPhoneNumbers", async ({ context, caller }) => {
-    // A deployment without Twilio answers 503 phone_numbers_unavailable, before the search counts against the limit.
-    if (!twilioConfigured()) throw new PublicApiError(503, "phone_numbers_unavailable", "Phone numbers aren't set up on this deployment.");
+  searchPhoneNumbers: (request: Request) => handleApiRequest(request, "searchPhoneNumbers", async ({ context, caller, credential }) => {
+    // A deployment with no carrier for numbers answers 503 phone_numbers_unavailable, before the search counts against the limit.
+    if (!numbersConfigured()) throw new PublicApiError(503, "phone_numbers_unavailable", "Phone numbers aren't set up on this deployment.");
     const body = await readApiBody(request, apiPhoneNumberSearchSchema);
+    // A partner's key searches as itself, so its searches count against the partner.
+    if (caller.platformKeyId !== undefined && caller.partnerId !== undefined) {
+      return { body: { data: await searchPhoneNumbersForApi(context, caller, body, { platformKeyId: caller.platformKeyId, scopes: credential.scopes, ...partnerNumberSearch(caller.partnerId) }), next_cursor: null, has_more: false } };
+    }
     const userId = await resolveActingUserId(context, caller);
-    return { body: { data: await searchPhoneNumbersForApi(context, caller, body, { userId, provider: getTwilioProvider(), claimTokenSecret: getNumberClaimTokenSecret(), beforeSearch: () => requireNumberSearchAllowed(userId) }), next_cursor: null, has_more: false } };
+    return { body: { data: await searchPhoneNumbersForApi(context, caller, body, { userId, provider: guardedNumberSearch(getTelephony().numbers, () => requireNumberSearchAllowed(userId)), claimTokenSecret: getNumberClaimTokenSecret() }), next_cursor: null, has_more: false } };
   }),
-  createPhoneNumberClaim: (request: Request) => handleApiRequest(request, "createPhoneNumberClaim", async ({ context, caller }) => {
+  createPhoneNumberClaim: (request: Request) => handleApiRequest(request, "createPhoneNumberClaim", async ({ context, caller, credential }) => {
     const body = await readApiBody(request, apiPhoneNumberClaimCreateSchema);
-    const userId = await resolveActingUserId(context, caller);
     // No network hash: customers of one integration platform claim from its addresses, so a per-network limit would let only one of them have a trial.
-    return { body: data(await claimPhoneNumberForApi(context, caller, { offerToken: body.offer_token }, { userId, claimTokenSecret: getNumberClaimTokenSecret() })) };
+    return { body: data(await claimPhoneNumberForApi(context, caller, { offerToken: body.offer_token }, { ...await numberClaimant(context, caller, credential), claimTokenSecret: getNumberClaimTokenSecret() })) };
   }),
   getPhoneNumberClaim: (request: Request, { params }: Params<"claim_id">) => handleApiRequest(request, "getPhoneNumberClaim", async ({ context, caller }) => ({ body: data(await getPhoneNumberClaimForApi(context, caller, uuidParam((await params).claim_id, "claim_id"))) })),
   releasePhoneNumber: (request: Request, { params }: Params<"phone_number_id">) => handleApiRequest(request, "releasePhoneNumber", async ({ context, caller }) => ({ body: data(await releasePhoneNumberForApi(context, caller, uuidParam((await params).phone_number_id, "phone_number_id"))) })),
-  replacePhoneNumber: (request: Request, { params }: Params<"phone_number_id">) => handleApiRequest(request, "replacePhoneNumber", async ({ context, caller }) => {
+  replacePhoneNumber: (request: Request, { params }: Params<"phone_number_id">) => handleApiRequest(request, "replacePhoneNumber", async ({ context, caller, credential }) => {
     const phoneNumberId = uuidParam((await params).phone_number_id, "phone_number_id");
     const body = await readApiBody(request, apiPhoneNumberClaimCreateSchema);
-    const userId = await resolveActingUserId(context, caller);
-    return { body: data(await claimPhoneNumberForApi(context, caller, { offerToken: body.offer_token, replaces: phoneNumberId }, { userId, claimTokenSecret: getNumberClaimTokenSecret() })) };
+    return { body: data(await claimPhoneNumberForApi(context, caller, { offerToken: body.offer_token, replaces: phoneNumberId }, { ...await numberClaimant(context, caller, credential), claimTokenSecret: getNumberClaimTokenSecret() })) };
   }),
   getOnboarding: (request: Request) => handleApiRequest(request, "getOnboarding", async ({ context, caller }) => ({ body: data(await getOnboardingForApi(context, caller)) })),
   updateOnboarding: (request: Request) => handleApiRequest(request, "updateOnboarding", async ({ context, caller }) => ({ body: data(await updateOnboardingForApi(context, caller, await readApiBody(request, apiOnboardingUpdateSchema))) })),
@@ -488,10 +499,22 @@ export const v1 = {
   getReceptionist: (request: Request) => handleApiRequest(request, "getReceptionist", async ({ context, caller }) => ({ body: data(await getReceptionistForApi(context, caller)) })),
   updateReceptionist: (request: Request) => handleApiRequest(request, "updateReceptionist", async ({ context, caller }) => ({ body: data(await updateReceptionistForApi(context, caller, await readApiBody(request, apiReceptionistUpdateSchema))) })),
   createCalendarConnectLink: (request: Request) => handleApiRequest(request, "createCalendarConnectLink", async ({ context, caller }) => {
-    requireGoogleCalendar();
-    if (!calendarSigningConfigured()) throw googleCalendarUnavailable();
+    requireCalendarProvider("google");
+    if (!calendarSigningConfigured()) throw calendarUnavailable("google");
     const origin = await businessOrigin(context, caller.businessId);
     return { body: data(await createCalendarConnectLinkForApi(context, caller, { link: ({ businessId }) => createCalendarConnectLink({ origin, businessId }) })) };
+  }),
+  createCalcomConnectLink: (request: Request) => handleApiRequest(request, "createCalcomConnectLink", async ({ context, caller }) => {
+    requireCalendarProvider("calcom");
+    if (!calendarSigningConfigured()) throw calendarUnavailable("calcom");
+    const origin = await businessOrigin(context, caller.businessId);
+    return { body: data(await createCalendarConnectLinkForApi(context, caller, { provider: "calcom", link: ({ businessId }) => createCalendarConnectLink({ origin, businessId, provider: "calcom" }) })) };
+  }),
+  createCalendlyConnectLink: (request: Request) => handleApiRequest(request, "createCalendlyConnectLink", async ({ context, caller }) => {
+    requireCalendarProvider("calendly");
+    if (!calendarSigningConfigured()) throw calendarUnavailable("calendly");
+    const origin = await businessOrigin(context, caller.businessId);
+    return { body: data(await createCalendarConnectLinkForApi(context, caller, { provider: "calendly", requireAdmin: true, link: ({ businessId }) => createCalendarConnectLink({ origin, businessId, provider: "calendly" }) })) };
   }),
   listCalendarConnections: (request: Request) => handleApiRequest(request, "listCalendarConnections", async ({ context, caller }) => ({ body: { data: await listCalendarConnectionsForApi(context, caller), next_cursor: null, has_more: false } })),
   listAccountCalendars: (request: Request, { params }: Params<"connection_id">) => handleApiRequest(request, "listAccountCalendars", async ({ context, caller }) => {

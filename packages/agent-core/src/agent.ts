@@ -1,7 +1,8 @@
 import { stepCountIs, ToolLoopAgent, type LanguageModel, type StopCondition, type ToolSet } from "ai";
 
-import { isTextChatChannel } from "@lobbystack/shared";
+import { isWrittenChannel } from "@lobbystack/shared";
 
+import { toolUse } from "./capabilities";
 import { buildAgentInstructions } from "./instructions";
 import { directToolAnswer } from "./live/directAnswer";
 import { createReceptionistTools, type AgentToolContext } from "./tools";
@@ -26,6 +27,12 @@ export function createReceptionistAgent(input: {
    * skips the model step that would only reword them.
    */
   directToolAnswers?: boolean;
+  /**
+   * Called after a step where a tool changed something, such as saving a
+   * message or booking. It fires before any later failure, so a job can tell
+   * that running the agent again would do the change twice.
+   */
+  onAction?: () => void;
 }): ReceptionistAgent {
   // One lookup, maybe a second, then the answer. Voice callers are waiting.
   const stopWhen: Array<StopCondition<ToolSet>> = [stepCountIs(4)];
@@ -35,6 +42,12 @@ export function createReceptionistAgent(input: {
     instructions: [buildAgentInstructions(input.context.snapshot, input.context), input.extraInstructions].filter(Boolean).join("\n\n"),
     tools: createReceptionistTools(input.context),
     stopWhen,
-    ...(isTextChatChannel(input.context.channel) ? { maxOutputTokens: WEB_CHAT_MAX_OUTPUT_TOKENS } : {}),
+    ...(isWrittenChannel(input.context.channel) ? { maxOutputTokens: WEB_CHAT_MAX_OUTPUT_TOKENS } : {}),
+    ...(input.onAction ? { onStepEnd: ({ toolResults }: { toolResults: ReadonlyArray<{ toolName: string; output: unknown }> }) => { if (toolResults.some(changedSomething)) input.onAction?.(); } } : {}),
   });
+}
+
+// A tool that answers { ok: false } refused before it changed anything.
+function changedSomething(result: { toolName: string; output: unknown }): boolean {
+  return toolUse(result.toolName).kind === "action" && (result.output as { ok?: unknown } | null)?.ok !== false;
 }

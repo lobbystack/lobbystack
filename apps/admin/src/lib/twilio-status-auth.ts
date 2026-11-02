@@ -1,3 +1,4 @@
+import { alertSmsFrom } from "@lobbystack/providers/telephony/config";
 import { isUuid } from "@lobbystack/shared";
 
 /**
@@ -10,7 +11,8 @@ export function twilioStatusAuthToken(params: Record<string, string>, url: strin
     const query = new URL(url).searchParams;
     const ids = ["operatorDeliveryId", "notificationId"].map((key) => query.get(key)).filter((value): value is string => value !== null);
     if (ids.length !== 1 || !isUuid(ids[0]!) || query.has("messageId")) return undefined;
-    if (!env.TWILIO_ALERT_SMS_FROM || params.From !== env.TWILIO_ALERT_SMS_FROM) return undefined;
+    const from = alertSmsFrom(env);
+    if (!from || params.From !== from) return undefined;
     if (!signatureKeySid || signatureKeySid !== env.TWILIO_ALERT_WEBHOOK_KEY_ID) return undefined;
     return env.TWILIO_ALERT_WEBHOOK_SECRET;
   }
@@ -21,7 +23,8 @@ export function twilioStatusAuthToken(params: Record<string, string>, url: strin
 /** The shared alert account may only authenticate texts to its sender, which answers STOP, START and HELP. */
 export function twilioSmsAuthToken(params: Record<string, string>, env: Record<string, string | undefined> = process.env, signatureKeySid?: string | null): string | undefined {
   if (env.TWILIO_ALERT_ACCOUNT_SID && env.TWILIO_ALERT_ACCOUNT_SID !== env.TWILIO_ACCOUNT_SID && params.AccountSid === env.TWILIO_ALERT_ACCOUNT_SID) {
-    if (!env.TWILIO_ALERT_SMS_FROM || params.To !== env.TWILIO_ALERT_SMS_FROM) return undefined;
+    const from = alertSmsFrom(env);
+    if (!from || params.To !== from) return undefined;
     if (!signatureKeySid || signatureKeySid !== env.TWILIO_ALERT_WEBHOOK_KEY_ID) return undefined;
     return env.TWILIO_ALERT_WEBHOOK_SECRET;
   }

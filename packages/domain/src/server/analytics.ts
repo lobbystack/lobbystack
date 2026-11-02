@@ -250,7 +250,7 @@ export async function getAnalytics(context: DomainContext, input: AnalyticsInput
         ${calls.startedAt} >= ${input.from.toISOString()}::timestamptz as current,
         ${calls.providerDurationSeconds} as duration
       from ${calls}
-      where ${calls.businessId} = ${input.businessId}::uuid
+      where ${calls.businessId} = ${input.businessId}::uuid and not ${calls.billingExcluded}
         and ${calls.startedAt} >= ${input.previousFrom.toISOString()}::timestamptz and ${calls.startedAt} < ${input.to.toISOString()}::timestamptz
     `))).rows;
     const appointmentRows = (await tx.execute<ActivityRow>(activityQuery(sql`

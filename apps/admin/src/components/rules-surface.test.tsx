@@ -54,3 +54,47 @@ describe("rules drag and drop", () => {
     expect(screen.queryByTitle("actions.dragToReorder")).toBeNull();
   });
 });
+
+describe("rules loading states", () => {
+  const skeletons = (selector: string) => document.querySelectorAll(`${selector} [data-slot="skeleton"]`).length;
+  function renderPending({ workspace, role = "business_owner" }: { workspace: boolean; role?: string }) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    if (workspace) client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role }] });
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+    render(<QueryClientProvider client={client}><RulesSurface /></QueryClientProvider>);
+  }
+
+  it("shows the page title, the real column headings and placeholders for the header controls while the workspace loads", () => {
+    renderPending({ workspace: false });
+    expect(screen.getByRole("heading", { name: "sections.rules.title" })).toBeTruthy();
+    expect(screen.queryByText("loading.workspace")).toBeNull();
+    expect(screen.getByText("table.title")).toBeTruthy();
+    expect(skeletons("tbody")).toBe(60);
+    expect(screen.getByText("sections.rules.addKnowledge")).toBeTruthy();
+    expect(screen.queryByPlaceholderText("table.searchPlaceholder")).toBeNull();
+  });
+
+  it("keeps the real header and shows placeholder rows, search, button and pagination while the rules load", () => {
+    renderPending({ workspace: true });
+    expect(screen.getByText("table.title")).toBeTruthy();
+    expect(document.querySelector("tbody")?.getAttribute("aria-busy")).toBe("true");
+    expect(skeletons("tbody")).toBe(60);
+    expect(skeletons('[aria-hidden="true"]')).toBe(9);
+    expect(screen.queryByText("sections.rules.emptyState")).toBeNull();
+    expect(screen.queryByPlaceholderText("table.searchPlaceholder")).toBeNull();
+    expect(screen.queryByRole("button", { name: /sections.rules.addKnowledge/ })).toBeNull();
+  });
+
+  it("leaves out the drag handle column and the add button for read-only members while the rules load", () => {
+    renderPending({ workspace: true, role: "viewer" });
+    expect(skeletons("tbody")).toBe(50);
+    expect(screen.queryByText("sections.rules.addKnowledge")).toBeNull();
+  });
+
+  it("shows the search box and the add button together once the rules have loaded", () => {
+    setup();
+    expect(screen.getByPlaceholderText("table.searchPlaceholder")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /sections.rules.addKnowledge/ })).toBeTruthy();
+    expect(skeletons("tbody")).toBe(0);
+  });
+});

@@ -3,7 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 import { billingAccounts, businesses, createDatabaseClient, numberTrials, numberWaitlist, onboardingPhoneVerifications, outboxMessages, phoneNumbers, receptionistProfiles, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
-import { getNumberTrialState, isNumberTrialEnded, joinNumberWaitlist, keepBusinessNumbersInTransaction, loadNumberTrialEmail, markNumberTrialMinutesExhausted, numberStepRedirect, resolveNumberFallback, sweepNumberTrial } from "./numberTrials";
+import { enqueueRefusedCallForwardRefresh, getNumberTrialState, isNumberTrialEnded, joinNumberWaitlist, keepBusinessNumbersInTransaction, loadNumberTrialEmail, markNumberTrialMinutesExhausted, numberStepRedirect, refreshStaleRefusedCallForwards, resolveNumberFallback, resolveRefusedCallForward, sweepNumberTrial } from "./numberTrials";
 import { claimNumberProvisioning, completeNumberProvisioning, reserveOnboardingNumberClaim, searchBusinessNumberInventory } from "./phoneNumbers";
 import { checkOnboardingPhoneVerificationCode, startOnboardingPhoneVerification } from "./phoneVerification";
 import { createBusiness } from "./tenancy";
@@ -145,6 +145,40 @@ describe.skipIf(!testUrl)("free trial numbers against dedicated PostgreSQL roles
       // The worker reads the owner's phone only for the business its transaction is bound to.
       const other = await as(tx, "lobbystack_worker", db => withBusinessTransaction(db, { businessId: randomUUID(), actorType: "worker" }, async inner => (await inner.execute<{ phone: string | null }>(sql`select app.resolve_business_owner_verified_phone(${businessId}::uuid) as phone`)).rows[0]?.phone));
       expect(other).toBeNull();
+    });
+  });
+
+  it("re-routes only numbers on carriers that store the refused-call forward, when that forward goes stale", async () => {
+    await rollbackTest(async (tx) => {
+      const userId = randomUUID();
+      await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid`, name: "Sam Lee", phone: ownerPhone, phoneVerifiedAt: new Date() });
+      await tx.execute(sql`set local role lobbystack_app`);
+      const { businessId } = await createBusiness({ db: tx as unknown as Database }, { userId, name: "Two carrier clinic", timezone: "America/Toronto", businessType: "test" });
+      await tx.execute(sql`reset role`);
+      const telnyxNumber = "+14165550125";
+      const [telnyx] = await tx.insert(phoneNumbers).values({ businessId, e164: telnyxNumber, providerPhoneId: `tx-${randomUUID()}`, carrier: "telnyx" }).returning({ id: phoneNumbers.id });
+      await tx.insert(phoneNumbers).values({ businessId, e164: "+14165550126", providerPhoneId: `PN${randomUUID().replaceAll("-", "")}` });
+      const routeJobs = async () => (await tx.select({ aggregateId: outboxMessages.aggregateId }).from(outboxMessages).where(sql`${outboxMessages.businessId} = ${businessId} and ${outboxMessages.topic} = 'phoneNumber.route'`)).map((row) => row.aggregateId);
+      const refresh = () => as(tx, "lobbystack_worker", db => refreshStaleRefusedCallForwards({ db }, { businessId }));
+
+      // A line that forwarded the call here is never the forward either.
+      expect(await as(tx, "lobbystack_worker", db => resolveRefusedCallForward({ db }, { businessId, e164: telnyxNumber }))).toBe(ownerPhone);
+      expect(await as(tx, "lobbystack_worker", db => resolveRefusedCallForward({ db }, { businessId, e164: telnyxNumber, forwardedFrom: ownerPhone }))).toBeNull();
+
+      // Telnyx hasn't been told the owner's phone yet; Twilio asks the webhook on each call, so its number is left alone.
+      expect(await refresh()).toBe(1);
+      expect(await routeJobs()).toEqual([telnyx!.id]);
+
+      await tx.update(phoneNumbers).set({ refusedCallsForwardTo: ownerPhone }).where(eq(phoneNumbers.id, telnyx!.id));
+      expect(await refresh()).toBe(0);
+
+      // A new owner phone makes the stored forward stale again.
+      await tx.update(users).set({ phone: "+14165550112" }).where(eq(users.id, userId));
+      expect(await refresh()).toBe(1);
+
+      await tx.delete(outboxMessages).where(eq(outboxMessages.businessId, businessId));
+      await enqueueRefusedCallForwardRefresh(tx, businessId);
+      expect(await routeJobs()).toEqual([telnyx!.id]);
     });
   });
 
