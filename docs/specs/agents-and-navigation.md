@@ -1,6 +1,6 @@
 # Spec: agents and navigation
 
-Status: ready-for-agent up to the prototype choice. The multi-agent build waits for that choice.
+Status: Raphael chose concept A, drill-in. The multi-agent build starts from `proto/a-drill-in`.
 
 ## Problem Statement
 
@@ -129,6 +129,7 @@ Each prototype covers the menu, Home, the agent pages, settings and setup. Each 
 
 - Update the top tasks with: add a second agent, change one agent's greeting, connect Instagram to an agent, see which agent handled a call, find billing, change your password, invite a teammate.
 - Score each prototype on those tasks by click count and against Bastien and Scapin's criteria. Raphael picks the winner.
+- Raphael picked concept A, with Agents and Settings in the main menu and agents listed by name under Agents.
 - Ship to everyone in one release, with no feature flag.
 - Judge it from replays and first real conversations.
 
