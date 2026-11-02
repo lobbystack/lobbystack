@@ -1,7 +1,7 @@
 ---
 title: "Alternativa za ElevenLabs Reception: minuti i vlasništvo"
 seoTitle: "Alternativa za ElevenLabs Reception: LobbyStack"
-description: "Uporedite ElevenLabs Reception (Reception.ai) i LobbyStack: $29 za 75 minuta ili $30 za 150, prekoračenja, veb čet, HIPAA, jezici i samostalno hostovanje."
+description: "Uporedite ElevenLabs Reception i LobbyStack: $29 za 75 minuta ili $30 za 150, prekoračenja, veb čet, HIPAA, jezici i samostalno hostovanje."
 pubDate: 2026-09-19T10:00:00-04:00
 updatedDate: 2026-09-19T10:00:00-04:00
 author: "LobbyStack tim"
@@ -13,7 +13,7 @@ locale: "sr"
 canonicalSlug: "elevenlabs-reception-alternative"
 ---
 
-Ako tražite **alternativu za ElevenLabs Reception**, počnite od minuta. Za istih $24 mesečno uz godišnje plaćanje, Reception uključuje 75 minuta telefonskih razgovora, a LobbyStack 150. ElevenLabs je 16. septembra 2026. pokrenuo Reception, pod imenom Reception by ElevenAgents na sajtu Reception.ai. Proizvod donosi ElevenLabs glasove malim firmama kojima treba neko da odgovara na telefon.
+Ako tražite **alternativu za ElevenLabs Reception**, počnite od minuta. Za istih $24 mesečno uz godišnje plaćanje, Reception uključuje 75 minuta telefonskih razgovora, a LobbyStack 150. ElevenLabs je 16. septembra 2026. pokrenuo Reception, pod imenom Reception by ElevenAgents. Proizvod donosi ElevenLabs glasove malim firmama kojima treba neko da odgovara na telefon.
 
 Reception zvuči odlično i govori više od 70 jezika. LobbyStack Vam daje dvostruko više minuta, nižu cenu prekoračenja, besplatan paket koji ne ističe i kod koji možete sami da hostujete pod MIT licencom.
 

@@ -11,7 +11,7 @@ Many owners want to take their own calls and use the receptionist as a backstop.
 - A setup step on the customer's phone can fail, and support can't see why.
 - A business that gives out its LobbyStack number has no way to ring staff first.
 
-Reception.ai offers this as a setting called **Staff answers first**, alongside carrier forwarding.
+A competitor offers this as a setting called **Staff answers first**, alongside carrier forwarding.
 
 ## Solution
 
@@ -56,7 +56,7 @@ Run real calls on both carriers from a scratch number. Change no production code
 5. Does a second `<Dial>` keep the caller hearing ringing, with `answerOnBridge`, or do they hear silence?
 6. Does a transfer work from this leg? Twilio needs `referUrl`, or it raises error 13802. TeXML has `referUrl` too.
 7. Does press-to-accept work with a `<Number url>` on Twilio and its TeXML equivalent?
-8. Do Canadian numbers work on both carriers? Reception.ai doesn't offer this on its own Canadian numbers, and its docs don't say why.
+8. Do Canadian numbers work on both carriers? That competitor doesn't offer this on its own Canadian numbers, and its docs don't say why.
 9. What does a call cost on each carrier, with the ringing leg and the `<Sip>` leg?
 
 **If a carrier fails question 1, 2 or 4,** the feature ships without that carrier, and the setting says so for its numbers. If Twilio fails, stop and rethink the design.
