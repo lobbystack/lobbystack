@@ -118,6 +118,7 @@ async function startConnectedCall(): Promise<FakePeerConnection> {
   await waitFor(() => expect(FakePeerConnection.last?.setRemoteDescription).toHaveBeenCalled());
   const connection = FakePeerConnection.last!;
   act(() => connection.setState("connected"));
+  act(() => connection.receive({ type: "session.output_transcript.delta", delta: "Thanks for calling." }));
   await waitFor(() => expect(statusText()).toBe("testCall.status.connected"));
   return connection;
 }
@@ -294,9 +295,41 @@ describe("TestWindow voice call endings", () => {
     const connection = FakePeerConnection.last!;
     act(() => connection.setState("disconnected"));
     act(() => connection.setState("connected"));
+    act(() => connection.receive({ type: "session.output_transcript.delta", delta: "Thanks for calling." }));
 
     await waitFor(() => expect(statusText()).toBe("testCall.status.connected"));
     expect(eventNames().filter((name) => name === "web.voice.test_call_connected")).toHaveLength(1);
+  });
+
+  it("reports the peer connecting but shows connecting until the agent speaks", async () => {
+    placeCall();
+    await waitFor(() => expect(FakePeerConnection.last?.setRemoteDescription).toHaveBeenCalled());
+    const connection = FakePeerConnection.last!;
+    act(() => connection.setState("connected"));
+
+    telemetryRef.current!.expectEvent("web.voice.test_call_connected", { businessId: "business-1" });
+    expect(statusText()).toBe("testCall.status.connecting");
+    expect(screen.getByRole("button", { name: "testCall.connecting" })).toBeTruthy();
+
+    act(() => connection.receive({ type: "session.output_transcript.delta", delta: "Thanks for calling." }));
+    expect(statusText()).toBe("testCall.status.connected");
+    expect(screen.getByRole("button", { name: "testCall.hangUp" })).toBeTruthy();
+    expect(eventNames().filter((name) => name === "web.voice.test_call_connected")).toHaveLength(1);
+  });
+
+  it("lets the caller hang up from the orb while the agent hasn't spoken", async () => {
+    placeCall();
+    await waitFor(() => expect(FakePeerConnection.last?.setRemoteDescription).toHaveBeenCalled());
+    const connection = FakePeerConnection.last!;
+    expect((screen.getByRole("button", { name: "testCall.aria.connecting" }) as HTMLButtonElement).disabled).toBe(true);
+    act(() => connection.setState("connected"));
+
+    fireEvent.click(screen.getByRole("button", { name: "testCall.aria.end" }));
+
+    expect(connection.channel.send).toHaveBeenCalledWith(JSON.stringify({ type: "session.close" }));
+    act(() => connection.receive({ type: "session.closed", reason: "close_requested" }));
+    await waitFor(() => expect(statusText()).toBe("testCall.status.ended"));
+    telemetryRef.current!.expectEvent("web.voice.test_call_ended", { businessId: "business-1", endedBy: "caller" });
   });
 
   it("keeps the call going when a disconnect recovers", async () => {

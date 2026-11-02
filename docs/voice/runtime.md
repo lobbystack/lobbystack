@@ -142,6 +142,14 @@ Dashboard test calls, the website widget, prospect demos, and the landing site d
 
 A dashboard test call can name an `agentId`. The admin checks it under the operator's own access and answers 404 `agent_not_found` for an archived agent or one outside their business. Widget calls answer as the widget key's agent, and every other caller gets the default agent, whatever the browser sends.
 
+The browser shows the call as connecting until the receptionist starts speaking, so the animation ends on the greeting. GPT-Live's audio track runs through silence and its data channel has no speech event, so `useWebVoiceCall` takes the first of these:
+
+- The remote audio gets loud, by the worker's voice threshold.
+- A transcript delta with words arrives from either side. A delta covers audio that already started, so it trails the audio. A caller who speaks first also ends the wait, because the worker then stops sending the greeting.
+- 9 seconds pass after the peer connects, which covers a greeting from the worker's first command.
+
+For an agent with no greeting, the session response has `agentGreets: false`, and the call goes live when the peer connects. The `connected` call event and its telemetry always fire when the peer connects. The caller can hang up from the orb during the wait.
+
 The browser can only close the session. It can't change instructions or answer delegations. Before it sends its WebRTC offer, the browser waits for ICE candidate gathering to finish, for up to 10 seconds. When the caller hangs up, it sends `session.close` and mutes the microphone. It keeps the connection open until `session.closed` arrives, for up to 15 seconds. The host's own prospect demos don't count against minutes. A partner's demo is one of the partner's businesses, so its calls count like theirs. Every demo's agent can only answer questions and take messages.
 
 ## What the worker does during a call

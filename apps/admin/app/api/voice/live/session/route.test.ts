@@ -189,6 +189,13 @@ describe("POST /api/voice/live/session", () => {
     await expect(response.json()).resolves.toMatchObject({ sessionId: "live_1", endToken: "token-for-live_1", sdp: "answer" });
   });
 
+  it("tells the browser whether the agent opens the call", async () => {
+    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-dashboard-test-call", dashboardTestCall: true, billable: true });
+    await expect((await start("lobbystack-dashboard-test-call")).json()).resolves.toMatchObject({ agentGreets: true });
+    mocks.snapshot.mockResolvedValue({ ...snapshot, greeting: " " });
+    await expect((await start("lobbystack-dashboard-test-call")).json()).resolves.toMatchObject({ agentGreets: false });
+  });
+
   it("rejects unknown callers", async () => {
     const response = await start("somebody-else");
     expect(response.status).toBe(400);
