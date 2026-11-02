@@ -36,6 +36,7 @@ export function UpgradePlanDialog({
   locale,
   loadingPlan,
   onBillingIntervalChange,
+  offered = false,
   onContactEnterprise,
   onOpenChange,
   onStartCheckout,
@@ -50,6 +51,8 @@ export function UpgradePlanDialog({
   loading: "checkout" | "portal" | null;
   locale: string;
   loadingPlan: HostedUpgradePlan | null;
+  /** The dialog opened by itself after a test, so it offers a plain way out. */
+  offered?: boolean;
   onBillingIntervalChange: (billingInterval: BillingInterval) => void;
   onContactEnterprise: () => void;
   onOpenChange: (open: boolean) => void;
@@ -205,6 +208,11 @@ export function UpgradePlanDialog({
             );
           })}
         </div>
+        {offered ? (
+          <div className="flex justify-center">
+            <Button onClick={() => onOpenChange(false)} type="button" variant="ghost">{t("billing.upgradeDialog.notNow")}</Button>
+          </div>
+        ) : null}
       </DialogContent>
     </Dialog>
   );

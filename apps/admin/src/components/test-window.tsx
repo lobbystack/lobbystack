@@ -18,7 +18,7 @@ import { useUpgradePlanDialogOpener } from "@/components/upgrade-plan-dialog-con
 import { AuraVoiceDemo } from "@/components/web-voice/AuraVoiceDemo";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { requestJson } from "@/lib/request-json";
-import { finishTestCall, registerTestWindow, setTestCallActive, type TestWindowOptions } from "@/lib/test-window";
+import { announceTestChatReplied, finishTestCall, registerTestWindow, setTestCallActive, type TestWindowOptions } from "@/lib/test-window";
 import { cn } from "@/lib/utils";
 import { renderSafeMarkdown } from "@/lib/widget-markdown";
 import { DASHBOARD_TEST_CALL_WIDGET_ID, TEST_CHAT_MAX_MESSAGES } from "@lobbystack/shared";
@@ -61,7 +61,7 @@ function TestChat({ agentId, businessId, children }: { agentId: string | undefin
       },
     }),
   }));
-  const { error, messages, sendMessage, status } = useChat({ transport });
+  const { error, messages, sendMessage, status } = useChat({ transport, onFinish: ({ message }) => { if (messageText(message).trim()) announceTestChatReplied(); } });
   const busy = status === "submitted" || status === "streaming";
   const lastMessage = messages.at(-1);
   // A reply can come back empty when the model runs out of room before it writes.
@@ -119,7 +119,7 @@ type TestPanelProps = {
   onUpgrade?: (() => void) | undefined;
 };
 
-/** The call, the agent's number and the chat. The window shows it, and onboarding embeds it. */
+/** The call, the agent's number and the chat. The window shows it, and Meet your agent embeds it. */
 export function TestPanel({ agentId, businessId, businessSlug, onCallEnded, onRegisterControls, onUpgrade }: TestPanelProps) {
   const { t } = useTranslation("common");
   const telemetry = useTelemetry();
@@ -190,7 +190,7 @@ export function TestWindow({ businessId, businessSlug, className }: TestWindowPr
   const { t } = useTranslation("common");
   const [opened, setOpened] = useState<TestWindowOptions | null>(null);
   const voiceControlsRef = useRef<WebVoiceControls | null>(null);
-  // Onboarding has no plan dialog, and only a business with billing gets an upgrade offer.
+  // Only a business with billing gets an upgrade offer.
   const openUpgradePlanDialog = useUpgradePlanDialogOpener();
   const can = useBusinessCan();
   const billing = useQuery({ queryKey: ["billing", businessId], enabled: Boolean(businessId) && can("billing"), queryFn: () => requestJson<{ effectivePlan: string }>(`/api/billing?businessId=${encodeURIComponent(businessId!)}`) });

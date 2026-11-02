@@ -32,18 +32,27 @@ function setup() {
 }
 
 describe("onboarding attribution telemetry", () => {
+  it("shows the answer already saved to someone who comes back", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ source: "google" })));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    clients.push(client);
+    client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true }] });
+    render(<QueryClientProvider client={client}><OnboardingAttributionSurface /></QueryClientProvider>);
+    await waitFor(() => expect(screen.getByRole("button", { name: "attribution.options.google" }).getAttribute("aria-pressed")).toBe("true"));
+  });
+
   it("records the selected attribution source", async () => {
     setup();
     await userEvent.click(await screen.findByRole("button", { name: "attribution.options.google" }));
-    await userEvent.click(screen.getByRole("button", { name: "attribution.finish" }));
-    await waitFor(() => expect(route.router.push).toHaveBeenCalledWith("/"));
+    await userEvent.click(screen.getByRole("button", { name: "attribution.continue" }));
+    await waitFor(() => expect(route.router.push).toHaveBeenCalledWith("/onboarding/meet"));
     telemetryRef.current!.expectEvent("web.onboarding.attribution_submitted", { businessId: "business", source: "google" });
   });
 
   it("does not emit attribution_submitted when the operator skips", async () => {
     setup();
     await userEvent.click(await screen.findByRole("button", { name: "attribution.skip" }));
-    await waitFor(() => expect(route.router.push).toHaveBeenCalledWith("/"));
+    await waitFor(() => expect(route.router.push).toHaveBeenCalledWith("/onboarding/meet"));
     expect(telemetryRef.current!.events.some(event => event.name === "web.onboarding.attribution_submitted")).toBe(false);
   });
 });

@@ -3,7 +3,8 @@
     "signOut": "Sign out",
     "terms": "Terms",
     "privacy": "Privacy",
-    "support": "Support"
+    "support": "Support",
+    "back": "Back"
   },
   "errors": {
     "tooManyBusinesses": "You already own 10 workspaces, the limit for one account."
@@ -41,7 +42,6 @@
   },
   "businessName": {
     "title": "First, what is the name of your business?",
-    "description": "",
     "createTitle": "Create workspace",
     "createDescription": "These details become the foundation of the agent context.",
     "existingTitle": "Workspace already exists",
@@ -71,7 +71,6 @@
   },
   "website": {
     "title": "Now let's train {{appName}} on your website",
-    "description": "",
     "label": "Website",
     "placeholder": "yourcompany.com",
     "sourceName": "Source name",
@@ -85,61 +84,25 @@
     "invalidUrl": "Enter your website address, like yourcompany.com.",
     "skipFailed": "We couldn't skip this step right now. Please try again."
   },
-  "knowledge": {
-    "title": "Add training documents",
-    "description": "Help your AI understand your business.",
-    "tabs": {
-      "upload": "Upload files",
-      "paste": "Paste text"
-    },
-    "upload": {
-      "headline": "Drag & drop or click to upload",
-      "formats": "PDF, DOCX, TXT, MD supported",
-      "remove": "Remove",
-      "tooLarge": "Documents must be 10 MB or smaller.",
-      "unsupportedType": "Supported types are PDF, DOCX, TXT, and Markdown.",
-      "failed": "We couldn't upload that document. Please try again."
-    },
-    "paste": {
-      "placeholder": "Paste any business info: services, FAQ, hours, policies...",
-      "hint": "We'll add this to your AI's knowledge base immediately.",
-      "defaultTitle": "Onboarding notes"
-    },
+  "language": {
+    "title": "What language should your agent speak?",
+    "label": "Caller language",
     "continue": "Continue",
-    "continuing": "Saving...",
-    "skip": "Skip for now",
-    "skipping": "Skipping...",
-    "continueFailed": "We couldn't continue right now. Please try again.",
-    "skipFailed": "We couldn't skip this step right now. Please try again."
+    "saving": "Saving...",
+    "submitFailed": "We couldn't save that right now. Please try again."
   },
-  "testCall": {
-    "title": "Hear your agent",
-    "continue": "Continue",
-    "skip": "Skip for now",
-    "continueFailed": "We couldn't continue. Try again.",
-    "wait": {
-      "skip": "Skip the wait",
-      "stillReading": "Your agent is still reading your site.",
-      "slides": {
-        "answers": {
-          "title": "Answers from your own pages"
-        },
-        "booking": {
-          "title": "Books appointments"
-        },
-        "transfer": {
-          "title": "Puts callers through to your team"
-        },
-        "languages": {
-          "title": "Switches language mid-call"
-        },
-        "summaries": {
-          "title": "Sums up every call"
-        },
-        "widget": {
-          "title": "Answers on your website too"
-        }
-      }
+  "reading": {
+    "title": "Reading your website",
+    "skip": "Skip the wait",
+    "previous": "Previous",
+    "next": "Next",
+    "slides": {
+      "answers": "Answers from your own pages",
+      "booking": "Books appointments",
+      "transfer": "Puts callers through to your team",
+      "languages": "Switches language mid-call",
+      "summaries": "Sums up every call",
+      "widget": "Answers on your website too"
     }
   },
   "verifyPhone": {
@@ -180,27 +143,16 @@
       "partnerTitle": "We can't verify phones in this country yet ({{country}}).",
       "partnerBody": "You can finish setup without a verified phone.",
       "partnerContinue": "Continue"
-    }
-  },
-  "greeting": {
-    "title": "How should we greet your callers?",
-    "description": "This is what your AI says first. You can change it any time.",
-    "label": "Greeting",
-    "language": "Caller language",
-    "placeholder": "Thanks for calling. How can I help?",
-    "continue": "Continue",
-    "submitting": "Saving...",
-    "submitFailed": "We couldn't save that greeting right now. Please try again."
+    },
+    "continue": "Continue"
   },
   "number": {
     "ready": {
       "label": "Your number is ready",
-      "body": "Call it from your phone and hear your agent answer.",
       "call": "Call {{number}}"
     },
     "planRequired": "To get a number, choose a plan.",
     "title": "Pick your AI's phone number",
-    "description": "Choose a local number callers can reach you on.",
     "countryLabel": "Country",
     "kindLocal": "Local",
     "kindTollFree": "Toll-free",
@@ -251,7 +203,6 @@
   },
   "attribution": {
     "title": "How did you hear about {{appName}}?",
-    "description": "It helps us focus on what's working.",
     "options": {
       "ai_assistant": "ChatGPT, Claude, etc.",
       "newsletter": "Newsletter or blog",
@@ -277,10 +228,20 @@
     "social": "Social media",
     "event": "Event or community",
     "other": "Other",
-    "finish": "Finish",
-    "finishing": "Finishing...",
     "failed": "Unable to finish setup.",
-    "submitFailed": "We couldn't save that right now. Please try again."
+    "submitFailed": "We couldn't save that right now. Please try again.",
+    "continue": "Continue",
+    "saving": "Saving..."
+  },
+  "meet": {
+    "title": "Meet your agent",
+    "name": "Agent name",
+    "greeting": "Greeting",
+    "language": "Caller language",
+    "finish": "Go to dashboard",
+    "finishing": "Opening...",
+    "saveFailed": "We couldn't save that. Try again.",
+    "finishFailed": "We couldn't finish setup. Try again."
   },
   "plan": {
     "title": "Choose your plan",

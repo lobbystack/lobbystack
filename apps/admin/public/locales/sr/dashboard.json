@@ -270,7 +270,8 @@
       "fullScan": "Pročitajte ostatak sajta",
       "sources": "Dodajte još izvora",
       "testCall": "Čujte svog agenta",
-      "phoneNumber": "Povežite broj telefona"
+      "phoneNumber": "Povežite broj telefona",
+      "forwardCalls": "Preusmerite pozive"
     },
     "stepDescriptions": {
       "fullScan": "Agent je pročitao deo Vašeg sajta.",

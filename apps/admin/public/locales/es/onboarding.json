@@ -3,7 +3,8 @@
     "signOut": "Cerrar sesión",
     "terms": "Términos",
     "privacy": "Privacidad",
-    "support": "Soporte"
+    "support": "Soporte",
+    "back": "Atrás"
   },
   "errors": {
     "tooManyBusinesses": "Ya es propietario de 10 espacios de trabajo, el límite para una cuenta."
@@ -41,7 +42,6 @@
   },
   "businessName": {
     "title": "Primero, ¿cómo se llama su negocio?",
-    "description": "",
     "createTitle": "Crear espacio de trabajo",
     "createDescription": "Estos datos son la base del contexto de su agente.",
     "existingTitle": "El espacio de trabajo ya existe",
@@ -71,7 +71,6 @@
   },
   "website": {
     "title": "Ahora entrenemos a {{appName}} con su sitio web",
-    "description": "",
     "label": "Sitio web",
     "placeholder": "suempresa.com",
     "sourceName": "Nombre de la fuente",
@@ -85,61 +84,25 @@
     "invalidUrl": "Ingrese la dirección de su sitio web, por ejemplo suempresa.com.",
     "skipFailed": "No pudimos omitir este paso en este momento. Inténtelo de nuevo."
   },
-  "knowledge": {
-    "title": "Añada documentos de entrenamiento",
-    "description": "Ayude a su IA a entender su negocio.",
-    "tabs": {
-      "upload": "Subir archivos",
-      "paste": "Pegar texto"
-    },
-    "upload": {
-      "headline": "Arrastre y suelte o haga clic para subir",
-      "formats": "Admite PDF, DOCX, TXT y MD",
-      "remove": "Quitar",
-      "tooLarge": "Los documentos deben pesar 10 MB o menos.",
-      "unsupportedType": "Los tipos admitidos son PDF, DOCX, TXT y Markdown.",
-      "failed": "No pudimos subir ese documento. Inténtelo de nuevo."
-    },
-    "paste": {
-      "placeholder": "Pegue cualquier información del negocio: servicios, preguntas frecuentes, horario, políticas...",
-      "hint": "Lo añadiremos de inmediato a la base de conocimiento de su IA.",
-      "defaultTitle": "Notas de configuración inicial"
-    },
+  "language": {
+    "title": "¿En qué idioma debe hablar su agente?",
+    "label": "Idioma de las llamadas",
     "continue": "Continuar",
-    "continuing": "Guardando...",
-    "skip": "Omitir por ahora",
-    "skipping": "Omitiendo...",
-    "continueFailed": "No pudimos continuar en este momento. Inténtelo de nuevo.",
-    "skipFailed": "No pudimos omitir este paso en este momento. Inténtelo de nuevo."
+    "saving": "Guardando...",
+    "submitFailed": "No pudimos guardarlo ahora. Inténtalo de nuevo."
   },
-  "testCall": {
-    "title": "Escuche a su agente",
-    "continue": "Continuar",
-    "skip": "Omitir por ahora",
-    "continueFailed": "No pudimos continuar. Inténtelo de nuevo.",
-    "wait": {
-      "skip": "Omitir la espera",
-      "stillReading": "Su agente sigue leyendo su sitio.",
-      "slides": {
-        "answers": {
-          "title": "Responde con su propio contenido"
-        },
-        "booking": {
-          "title": "Reserva citas"
-        },
-        "transfer": {
-          "title": "Pasa las llamadas a su equipo"
-        },
-        "languages": {
-          "title": "Cambia de idioma durante la llamada"
-        },
-        "summaries": {
-          "title": "Resume cada llamada"
-        },
-        "widget": {
-          "title": "También responde en su sitio web"
-        }
-      }
+  "reading": {
+    "title": "Leyendo su sitio web",
+    "skip": "Omitir la espera",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "slides": {
+      "answers": "Responde con su propio contenido",
+      "booking": "Reserva citas",
+      "transfer": "Pasa las llamadas a su equipo",
+      "languages": "Cambia de idioma durante la llamada",
+      "summaries": "Resume cada llamada",
+      "widget": "También responde en su sitio web"
     }
   },
   "verifyPhone": {
@@ -181,27 +144,16 @@
       "partnerTitle": "Todavía no podemos verificar teléfonos en este país ({{country}}).",
       "partnerBody": "Puede terminar la configuración sin un teléfono verificado.",
       "partnerContinue": "Continuar"
-    }
-  },
-  "greeting": {
-    "title": "¿Cómo debemos saludar a quienes llaman?",
-    "description": "Esto es lo primero que dice su IA. Puede cambiarlo en cualquier momento.",
-    "label": "Saludo",
-    "language": "Idioma de quienes llaman",
-    "placeholder": "Gracias por llamar. ¿En qué puedo ayudarle?",
-    "continue": "Continuar",
-    "submitting": "Guardando...",
-    "submitFailed": "No pudimos guardar ese saludo en este momento. Inténtelo de nuevo."
+    },
+    "continue": "Continuar"
   },
   "number": {
     "ready": {
       "label": "Su número está listo",
-      "body": "Llámelo desde su teléfono y escuche cómo responde su agente.",
       "call": "Llamar al {{number}}"
     },
     "planRequired": "Para obtener un número, elija un plan.",
     "title": "Elija el número de teléfono de su IA",
-    "description": "Elija un número local en el que sus clientes puedan llamarle.",
     "countryLabel": "País",
     "kindLocal": "Local",
     "kindTollFree": "Gratuito",
@@ -252,7 +204,6 @@
   },
   "attribution": {
     "title": "¿Cómo conoció {{appName}}?",
-    "description": "Nos ayuda a centrarnos en lo que funciona.",
     "options": {
       "ai_assistant": "ChatGPT, Claude, etc.",
       "newsletter": "Boletín o blog",
@@ -278,10 +229,20 @@
     "social": "Redes sociales",
     "event": "Evento o comunidad",
     "other": "Otro",
-    "finish": "Finalizar",
-    "finishing": "Finalizando...",
     "failed": "No se pudo completar la configuración.",
-    "submitFailed": "No pudimos guardarlo en este momento. Inténtelo de nuevo."
+    "submitFailed": "No pudimos guardarlo en este momento. Inténtelo de nuevo.",
+    "continue": "Continuar",
+    "saving": "Guardando..."
+  },
+  "meet": {
+    "title": "Conozca a su agente",
+    "name": "Nombre del agente",
+    "greeting": "Saludo",
+    "language": "Idioma de las llamadas",
+    "finish": "Ir al panel",
+    "finishing": "Abriendo...",
+    "saveFailed": "No pudimos guardarlo. Inténtalo de nuevo.",
+    "finishFailed": "No pudimos terminar la configuración. Inténtalo de nuevo."
   },
   "plan": {
     "title": "Elija su plan",

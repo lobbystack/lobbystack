@@ -3,7 +3,8 @@
     "signOut": "Déconnexion",
     "terms": "Conditions",
     "privacy": "Confidentialité",
-    "support": "Assistance"
+    "support": "Assistance",
+    "back": "Retour"
   },
   "errors": {
     "tooManyBusinesses": "Vous possédez déjà 10 espaces de travail, la limite pour un compte."
@@ -41,7 +42,6 @@
   },
   "businessName": {
     "title": "D'abord, quel est le nom de votre entreprise ?",
-    "description": "",
     "createTitle": "Créer un espace de travail",
     "createDescription": "Ces informations constituent la base du contexte de votre agent.",
     "existingTitle": "L'espace de travail existe déjà",
@@ -71,7 +71,6 @@
   },
   "website": {
     "title": "Entraînons {{appName}} avec votre site web",
-    "description": "",
     "label": "Site web",
     "placeholder": "votreentreprise.com",
     "sourceName": "Nom de la source",
@@ -85,61 +84,25 @@
     "invalidUrl": "Entrez l'adresse de votre site web, par exemple votreentreprise.com.",
     "skipFailed": "Impossible d'ignorer cette étape maintenant. Réessayez."
   },
-  "knowledge": {
-    "title": "Ajouter des documents d'entraînement",
-    "description": "Aidez votre IA à comprendre votre entreprise.",
-    "tabs": {
-      "upload": "Téléverser des fichiers",
-      "paste": "Coller du texte"
-    },
-    "upload": {
-      "headline": "Glissez-déposez ou cliquez pour téléverser",
-      "formats": "PDF, DOCX, TXT, MD pris en charge",
-      "remove": "Retirer",
-      "tooLarge": "Les documents doivent faire 10 Mo ou moins.",
-      "unsupportedType": "Types pris en charge : PDF, DOCX, TXT, Markdown.",
-      "failed": "Impossible de téléverser ce document. Réessayez."
-    },
-    "paste": {
-      "placeholder": "Collez les infos de votre entreprise : services, FAQ, horaires, politiques...",
-      "hint": "Nous ajouterons ce contenu à la base de connaissances de votre IA immédiatement.",
-      "defaultTitle": "Notes d'intégration"
-    },
+  "language": {
+    "title": "Dans quelle langue votre agent doit-il parler ?",
+    "label": "Langue des appelants",
     "continue": "Continuer",
-    "continuing": "Enregistrement...",
-    "skip": "Ignorer pour l'instant",
-    "skipping": "Ignorer...",
-    "continueFailed": "Impossible de continuer maintenant. Réessayez.",
-    "skipFailed": "Impossible d'ignorer cette étape maintenant. Réessayez."
+    "saving": "Enregistrement...",
+    "submitFailed": "Impossible d'enregistrer pour le moment. Réessayez."
   },
-  "testCall": {
-    "title": "Écoutez votre agent",
-    "continue": "Continuer",
-    "skip": "Passer pour l'instant",
-    "continueFailed": "Impossible de continuer. Réessayez.",
-    "wait": {
-      "skip": "Ne pas attendre",
-      "stillReading": "Votre agent lit encore votre site.",
-      "slides": {
-        "answers": {
-          "title": "Répond à partir de vos contenus"
-        },
-        "booking": {
-          "title": "Prend les rendez-vous"
-        },
-        "transfer": {
-          "title": "Passe les appels à votre équipe"
-        },
-        "languages": {
-          "title": "Change de langue pendant l'appel"
-        },
-        "summaries": {
-          "title": "Résume chaque appel"
-        },
-        "widget": {
-          "title": "Répond aussi sur votre site"
-        }
-      }
+  "reading": {
+    "title": "Lecture de votre site web",
+    "skip": "Ne pas attendre",
+    "previous": "Précédent",
+    "next": "Suivant",
+    "slides": {
+      "answers": "Répond à partir de vos contenus",
+      "booking": "Prend les rendez-vous",
+      "transfer": "Passe les appels à votre équipe",
+      "languages": "Change de langue pendant l'appel",
+      "summaries": "Résume chaque appel",
+      "widget": "Répond aussi sur votre site"
     }
   },
   "verifyPhone": {
@@ -181,27 +144,16 @@
       "partnerTitle": "Nous ne pouvons pas encore vérifier les téléphones dans ce pays ({{country}}).",
       "partnerBody": "Vous pouvez terminer la configuration sans téléphone vérifié.",
       "partnerContinue": "Continuer"
-    }
-  },
-  "greeting": {
-    "title": "Comment devons-nous accueillir vos appelants ?",
-    "description": "C'est la première phrase que dira votre IA. Modifiable à tout moment.",
-    "label": "Message d'accueil",
-    "language": "Langue des appelants",
-    "placeholder": "Merci d'appeler. Comment puis-je vous aider ?",
-    "continue": "Continuer",
-    "submitting": "Enregistrement...",
-    "submitFailed": "Impossible d'enregistrer ce message maintenant. Réessayez."
+    },
+    "continue": "Continuer"
   },
   "number": {
     "ready": {
       "label": "Votre numéro est prêt",
-      "body": "Appelez-le depuis votre téléphone et écoutez votre agent répondre.",
       "call": "Appeler le {{number}}"
     },
     "planRequired": "Pour obtenir un numéro, choisissez un forfait.",
     "title": "Choisissez le numéro de votre IA",
-    "description": "Choisissez un numéro local que vos appelants peuvent composer.",
     "countryLabel": "Pays",
     "kindLocal": "Local",
     "kindTollFree": "Sans frais",
@@ -252,7 +204,6 @@
   },
   "attribution": {
     "title": "Comment avez-vous connu {{appName}} ?",
-    "description": "Cela nous aide à savoir ce qui fonctionne.",
     "options": {
       "ai_assistant": "ChatGPT, Claude, etc.",
       "newsletter": "Newsletter ou blog",
@@ -278,10 +229,20 @@
     "social": "Réseaux sociaux",
     "event": "Événement ou communauté",
     "other": "Autre",
-    "finish": "Terminer",
-    "finishing": "Finalisation...",
     "failed": "Impossible de terminer la configuration.",
-    "submitFailed": "Impossible d'enregistrer maintenant. Réessayez."
+    "submitFailed": "Impossible d'enregistrer maintenant. Réessayez.",
+    "continue": "Continuer",
+    "saving": "Enregistrement..."
+  },
+  "meet": {
+    "title": "Rencontrez votre agent",
+    "name": "Nom de l'agent",
+    "greeting": "Message d'accueil",
+    "language": "Langue des appelants",
+    "finish": "Aller au tableau de bord",
+    "finishing": "Ouverture...",
+    "saveFailed": "Impossible d'enregistrer. Réessayez.",
+    "finishFailed": "Impossible de terminer la configuration. Réessayez."
   },
   "plan": {
     "title": "Choisissez votre forfait",

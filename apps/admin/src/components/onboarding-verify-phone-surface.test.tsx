@@ -65,12 +65,12 @@ describe("onboarding phone verification", () => {
   });
 
   describe("at a partner's business", () => {
-    it("finishes the owner's onboarding once the phone is verified, with no number step", async () => {
+    it("goes on to Meet your agent once the phone is verified, with no number step", async () => {
       setup("CA", true, "full");
       await userEvent.type(await screen.findByLabelText("verifyPhone.fields.mobileNumber"), "4165550123");
       await userEvent.click(screen.getByRole("button", { name: "verifyPhone.sendCode" }));
       await userEvent.type(await screen.findByRole("textbox"), "123456");
-      await waitFor(() => expect(navigation.push).toHaveBeenCalledWith("/"));
+      await waitFor(() => expect(navigation.push).toHaveBeenCalledWith("/onboarding/meet"));
       expect(navigation.push).not.toHaveBeenCalledWith("/onboarding/number");
     });
 
@@ -84,11 +84,11 @@ describe("onboarding phone verification", () => {
       expect(JSON.parse(String(stage?.[1]?.body))).toEqual({ to: "complete" });
     });
 
-    it("finishes on a self-hosted install, which verifies no phones", async () => {
+    it("passes straight on at a self-hosted install, which verifies no phones", async () => {
       const fetchMock = setup("CA", false, "full");
-      await waitFor(() => expect(navigation.push).toHaveBeenCalledWith("/"));
+      await waitFor(() => expect(navigation.push).toHaveBeenCalledWith("/onboarding/meet"));
       const stage = fetchMock.mock.calls.find(([url]) => String(url).startsWith("/api/onboarding/stage?"));
-      expect(JSON.parse(String(stage?.[1]?.body))).toEqual({ to: "complete" });
+      expect(JSON.parse(String(stage?.[1]?.body))).toEqual({ to: "meet" });
     });
   });
 });

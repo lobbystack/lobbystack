@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { Fragment } from "react";
 import { useTranslation } from "react-i18next";
@@ -16,9 +17,11 @@ type OnboardingShellProps = {
   eyebrow?: string;
   title: string;
   description?: React.ReactNode;
-  /** The step dots. `routes` names the page of each step when the owner's onboarding skips some, as a partner's business does. */
+  /** The step dots. `routes` names the page of each step, and a dot without one has no link. */
   progress?: { current: number; navigableUntil?: number; total: number; routes?: readonly string[] } | null;
-  width?: "sm" | "md" | "lg" | "xl" | "wide";
+  /** The previous step, for the Back button. */
+  backHref?: string | null | undefined;
+  width?: keyof typeof widths;
   children: React.ReactNode;
   legalFooter?: React.ReactNode;
   /** The agreement line login and signup show, for the action the person is taking. Left out when the partner has no terms or privacy page. */
@@ -26,31 +29,25 @@ type OnboardingShellProps = {
   onSignOut?: () => void;
 };
 
-/**
- * Onboarding routes after sign-up (step 1), keyed by path. The brand step
- * comes before the business only for a deployment's first owner, so it shares
- * step 2 and the progress dots keep linking that step to the business.
- */
+/** Onboarding's pages after sign-up, keyed by path. */
 export const onboardingRoutes = {
-  "/onboarding/brand": { key: "brand", step: 2, width: "md" },
-  "/onboarding/business": { key: "businessName", step: 2, width: "md" },
-  "/onboarding/website": { key: "website", step: 3, width: "md" },
-  "/onboarding/knowledge": { key: "knowledge", step: 4, width: "lg" },
-  "/onboarding/greeting": { key: "greeting", step: 5, width: "md" },
-  "/onboarding/test-call": { key: "testCall", step: 6, width: "md" },
-  "/onboarding/verify-phone": { key: "verifyPhone", step: 7, width: "md" },
-  "/onboarding/number": { key: "number", step: 8, width: "lg" },
-  "/onboarding/goal": { key: "goal", step: 9, width: "md" },
-  "/onboarding/attribution": { key: "attribution", step: 10, width: "xl" },
+  "/onboarding/brand": { key: "brand", width: "md" },
+  "/onboarding/business": { key: "businessName", width: "md" },
+  "/onboarding/website": { key: "website", width: "md" },
+  "/onboarding/language": { key: "language", width: "md" },
+  "/onboarding/reading": { key: "reading", width: "lg" },
+  "/onboarding/verify-phone": { key: "verifyPhone", width: "md" },
+  "/onboarding/number": { key: "number", width: "lg" },
+  "/onboarding/goal": { key: "goal", width: "md" },
+  "/onboarding/attribution": { key: "attribution", width: "xl" },
+  "/onboarding/meet": { key: "meet", width: "5xl" },
 } as const;
 
-const progressRoutes: Record<number, string> = Object.fromEntries(Object.entries(onboardingRoutes).map(([path, route]) => [route.step, path]));
-
-const widths = { sm: "max-w-sm", md: "max-w-md", lg: "max-w-lg", xl: "max-w-xl", wide: "max-w-7xl" } as const;
+const widths = { sm: "max-w-sm", md: "max-w-md", lg: "max-w-lg", xl: "max-w-xl", "5xl": "max-w-5xl", wide: "max-w-7xl" } as const;
 
 const legalPrefixKeys = { login: "login.legalPrefix", signup: "signup.legal.prefix", business: "signup.legal.businessPrefix", emailChange: "signup.legal.emailChangePrefix" } as const;
 
-export function ReplacementOnboardingShell({ icon, eyebrow, title, description, progress, width = "md", children, legalFooter: customLegalFooter, legalAgreement, onSignOut }: OnboardingShellProps) {
+export function ReplacementOnboardingShell({ icon, eyebrow, title, description, progress, backHref, width = "md", children, legalFooter: customLegalFooter, legalAgreement, onSignOut }: OnboardingShellProps) {
   const { t, i18n } = useTranslation("onboarding");
   const { t: tAuth } = useTranslation("auth");
   const links = useBrandLinks(resolveLocale(i18n.resolvedLanguage, i18n.language));
@@ -72,12 +69,17 @@ export function ReplacementOnboardingShell({ icon, eyebrow, title, description, 
   ].filter((link): link is { key: string; href: string; label: string } => Boolean(link.href));
   return (
     <div className="relative flex min-h-svh w-full flex-col bg-background text-foreground">
+      {backHref ? (
+        <Link className="absolute left-6 top-6 inline-flex items-center gap-1 rounded-full py-3 pl-2 pr-4 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background" href={backHref}>
+          <ChevronLeft aria-hidden="true" className="size-4" />{t("shell.back")}
+        </Link>
+      ) : null}
       {onSignOut ? (
         <button className="absolute right-6 top-6 rounded-full px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background" onClick={onSignOut} type="button">
           {t("shell.signOut")}
         </button>
       ) : null}
-      <main className="flex flex-1 flex-col items-center px-6 py-12">
+      <main className={cn("flex flex-1 flex-col items-center px-6 pb-12", onSignOut || backHref ? "pt-20 sm:pt-12" : "pt-12")}>
         <div className={cn("my-auto flex w-full flex-col items-center", widths[width])}>
           <BrandMark />
           <div className="mt-10 flex w-full flex-col items-center gap-4 text-center">
@@ -98,7 +100,7 @@ export function ReplacementOnboardingShell({ icon, eyebrow, title, description, 
                   const active = step === progress.current;
                   const completed = step < progress.current;
                   const canNavigate = step <= (progress.navigableUntil ?? progress.current);
-                  const href = !active && canNavigate ? (progress.routes ? progress.routes[step - 1] : progressRoutes[step]) : undefined;
+                  const href = !active && canNavigate ? progress.routes?.[step - 1] : undefined;
                   const className = cn(
                     "h-1.5 rounded-full transition-all",
                     active ? "w-6 bg-foreground" : "w-1.5",

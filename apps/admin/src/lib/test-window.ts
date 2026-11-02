@@ -62,6 +62,20 @@ export function announceTestCallEnded(): void {
   for (const listener of endListeners) listener();
 }
 
+const chatReplyListeners = new Set<() => void>();
+
+/** A test chat keeps no record the browser can read, so surfaces that react to a reply subscribe here. */
+export function subscribeTestChatReplied(onReplied: () => void): () => void {
+  chatReplyListeners.add(onReplied);
+  return () => {
+    chatReplyListeners.delete(onReplied);
+  };
+}
+
+export function announceTestChatReplied(): void {
+  for (const listener of chatReplyListeners) listener();
+}
+
 let callActive = false;
 
 /**

@@ -1,5 +1,6 @@
 "use client";
 
+import { ONBOARDING_DOT_COUNT } from "@lobbystack/shared";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type SubmitEvent } from "react";
@@ -374,7 +375,7 @@ export function AuthCard({ mode, google = false, passkey = false, partner }: { m
   const passwordInvalid = Boolean(passwordError) || (submitted && Boolean(password) && isPasswordWeak);
   const invalidInputClassName = "border-destructive text-destructive focus-visible:border-destructive focus-visible:ring-destructive/20";
   return (
-    <ReplacementOnboardingShell {...(partner ? { eyebrow: t("partner.eyebrow") } : {})} legalAgreement={login ? "login" : "signup"} progress={login || partner ? null : { current: 1, total: 9 }} title={login ? t("login.title") : t("signup.title")} width="sm">
+    <ReplacementOnboardingShell {...(partner ? { eyebrow: t("partner.eyebrow") } : {})} legalAgreement={login ? "login" : "signup"} progress={login || partner ? null : { current: 1, total: ONBOARDING_DOT_COUNT }} title={login ? t("login.title") : t("signup.title")} width="sm">
       <div className="flex w-full flex-col gap-6">
         {google || offerPasskey ? <>
           <div className="flex flex-col gap-2">

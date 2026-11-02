@@ -18,15 +18,16 @@ import { formatPhoneNumberDisplay, getDefaultPhoneCountry, getLocalePhoneCountry
 import { requestJson } from "@/lib/request-json";
 import { useStepNavigation } from "@/lib/use-step-navigation";
 
-type NumberCountries = { countries: string[]; trialCountries: string[]; suggestedCountry: string | null; verifyPhone: boolean };
+type NumberCountries = { countries: string[]; trialCountries: string[]; suggestedCountry: string | null; verifyPhone: boolean; verifiedPhone: string | null };
 type CheckResult = { approved: boolean; status: string; remainingAttempts?: number };
 
 /**
  * The "verify you're real" step. The owner's mobile and the country they pick
  * for it decide where their number comes from. In a country without numbers
  * they can join the waitlist and carry on without one. A partner's business
- * gets its numbers from its partner, so verifying finishes its owner's
- * onboarding, and the host offers no waitlist there.
+ * gets its numbers from its partner, so verifying leads to Meet your agent, or
+ * finishes onboarding at the activity level, and the host offers no waitlist
+ * there.
  */
 export function OnboardingVerifyPhoneSurface() {
   const { i18n, t } = useTranslation("onboarding");
@@ -35,8 +36,11 @@ export function OnboardingVerifyPhoneSurface() {
   const queryClient = useQueryClient();
   const { business } = useActiveBusiness();
   const partnerBusiness = Boolean(business?.partnerAccessLevel);
-  // Where the owner goes once the phone is done: the number step, or for a partner's business, the dashboard.
-  const next = partnerBusiness ? { stage: "complete", route: "/" } : { stage: "phone_number", route: "/onboarding/number" };
+  // Where the owner goes once the phone is done: the number step, or for a partner's business, its next step.
+  const partnerNext = business?.partnerAccessLevel === "activity" ? { stage: "complete", route: "/" } : { stage: "meet", route: "/onboarding/meet" };
+  const next = partnerBusiness ? partnerNext : { stage: "phone_number", route: "/onboarding/number" };
+  // Without a number to pick, a direct business moves on to the goal.
+  const withoutNumber = partnerBusiness ? partnerNext : { stage: "goal", route: "/onboarding/goal" };
   const locale = i18n.resolvedLanguage ?? i18n.language;
   const options = useMemo(() => getPhoneCountryOptions(locale), [locale]);
   const numbers = useQuery({ queryKey: ["onboarding-number-countries", business?.businessId], enabled: Boolean(business), queryFn: () => requestJson<NumberCountries>(`/api/onboarding/numbers?businessId=${encodeURIComponent(business!.businessId)}`) });
@@ -46,6 +50,7 @@ export function OnboardingVerifyPhoneSurface() {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [joined, setJoined] = useState(false);
+  const [changing, setChanging] = useState(false);
   const submittedCode = useRef("");
   useEffect(() => { prefetch(next.route); }, [prefetch, next.route]);
   // Start on the country the business's time zone points to, else the browser's region.
@@ -84,12 +89,12 @@ export function OnboardingVerifyPhoneSurface() {
     meta: { inlineError: true },
   });
   const skip = useMutation({
-    mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: partnerBusiness ? "complete" : "goal" }) }),
-    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["businesses"] }); navigate(partnerBusiness ? "/" : "/onboarding/goal"); },
+    mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: withoutNumber.stage }) }),
+    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["businesses"] }); navigate(withoutNumber.route); },
     onError: (cause) => setError(getSafeOnboardingErrorMessage(cause, t, "verifyPhone.unavailable.failed")),
     meta: { inlineError: true },
   });
-  // A self-hosted install has no free trial to guard, so it goes straight to the number step, or finishes a partner's business.
+  // A self-hosted install has no free trial to guard, so it goes straight on. An owner who already verified moves on the same way.
   const passOn = useMutation({
     mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: next.stage }) }),
     onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["businesses"] }); navigate(next.route); },
@@ -113,6 +118,17 @@ export function OnboardingVerifyPhoneSurface() {
 
   if (passOn.isError) return <FieldError>{getSafeOnboardingErrorMessage(passOn.error, t, "verifyPhone.unavailable.failed")}</FieldError>;
   if (!country || numbers.isLoading || passOnNeeded) return <div className="flex justify-center p-6"><LoaderCircle className="size-5 animate-spin text-muted-foreground" /></div>;
+
+  const verified = numbers.data?.verifiedPhone;
+  if (verified && !changing && !attempt) {
+    return (
+      <div className="flex flex-col items-center gap-4">
+        <p className="text-lg font-medium">{formatPhoneNumberDisplay(verified)}</p>
+        <Button className="h-11 w-full" disabled={passOn.isPending || navigating} onClick={() => passOn.mutate()} type="button">{t("verifyPhone.continue")}</Button>
+        <button className="text-sm text-muted-foreground hover:text-foreground" onClick={() => setChanging(true)} type="button">{t("verifyPhone.code.changeNumber")}</button>
+      </div>
+    );
+  }
 
   if (attempt) {
     return (

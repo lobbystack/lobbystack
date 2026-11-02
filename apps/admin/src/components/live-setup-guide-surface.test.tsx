@@ -276,6 +276,18 @@ describe("the number step", () => {
     expect(screen.queryByLabelText(en.forwarding.carrier.label)).toBeNull();
   });
 
+  it("says what's left to do once a number exists", async () => {
+    await setup({ complete: [...order], numbers: [number] });
+    expect(await screen.findByText(copy.steps.forwardCalls)).toBeTruthy();
+    expect(screen.queryByText(copy.steps.phoneNumber)).toBeNull();
+  });
+
+  it("asks for a number until there is one", async () => {
+    await setup({ ...before, trial: { status: "available" } });
+    expect(await screen.findByText(copy.steps.phoneNumber)).toBeTruthy();
+    expect(screen.queryByText(copy.steps.forwardCalls)).toBeNull();
+  });
+
   it("can be skipped once a number exists", async () => {
     const { fetchMock } = await setup({ complete: [...order], numbers: [number] });
     const guide = await screen.findByLabelText(en.forwarding.carrier.label);

@@ -30,7 +30,7 @@ it("shows crawl progress on the dashboard, which does not load the onboarding na
 });
 
 it("shows crawl progress during onboarding", () => {
-  renderOn("/onboarding/knowledge", crawling);
+  renderOn("/onboarding/reading", crawling);
   expect(screen.getByText("Reading resend.com")).toBeTruthy();
 });
 
@@ -41,7 +41,7 @@ it("counts the pages it finished reading", () => {
 });
 
 it("points a failed import at details the operator can add anywhere it renders", () => {
-  renderOn("/onboarding/greeting", { status: "failed", websiteUrl: "https://resend.com", importedCount: 0, indexedCount: 0 });
+  renderOn("/onboarding/reading", { status: "failed", websiteUrl: "https://resend.com", importedCount: 0, indexedCount: 0 });
   expect(screen.getByText("We couldn't read resend.com")).toBeTruthy();
   // The card also sits above the greeting field, so the hint cannot send
   // anyone to a form "below" it.

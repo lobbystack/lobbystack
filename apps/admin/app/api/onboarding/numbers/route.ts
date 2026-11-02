@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { businesses } from "@lobbystack/db";
-import { countryCodeForBusinessTimezone, joinNumberWaitlist, numberCountries, trialCountries } from "@lobbystack/domain";
+import { countryCodeForBusinessTimezone, joinNumberWaitlist, numberCountries, trialCountries, verifiedPhone } from "@lobbystack/domain";
 import { jsonError } from "@/lib/api-helpers";
 import { operatorRoute } from "@/lib/operator-request";
 
@@ -12,10 +12,14 @@ export const dynamic = "force-dynamic";
 // country the business's time zone points to, which the phone step starts on.
 // Only hosted businesses verify a phone: it guards the free trial number, which
 // self-hosted installs don't offer.
-export const GET = operatorRoute(async ({ businessId, transaction }) => {
-  const business = await transaction(async (tx) => (await tx.select({ timezone: businesses.timezone, deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0]);
+export const GET = operatorRoute(async ({ userId, businessId, transaction }) => {
+  const { business, verified } = await transaction(async (tx) => ({
+    business: (await tx.select({ timezone: businesses.timezone, deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0],
+    verified: await verifiedPhone(tx, { userId, businessId }),
+  }));
   const suggestedCountry = countryCodeForBusinessTimezone(business?.timezone) ?? null;
-  return NextResponse.json({ countries: numberCountries(), trialCountries: trialCountries(), suggestedCountry, verifyPhone: business?.deploymentMode === "cloud" });
+  // verifiedPhone lets an owner who comes back see the phone they already verified.
+  return NextResponse.json({ countries: numberCountries(), trialCountries: trialCountries(), suggestedCountry, verifyPhone: business?.deploymentMode === "cloud", verifiedPhone: verified?.phone ?? null });
 });
 
 // An owner in a country without numbers asks to hear when numbers arrive there.

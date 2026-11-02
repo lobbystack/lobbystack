@@ -35,7 +35,7 @@ describe("onboarding website", () => {
     fireEvent.change(screen.getByLabelText("website.label"), { target: { value: "example.com" } });
     await waitFor(() => expect((screen.getByRole("button", { name: "website.continue" }) as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(screen.getByRole("button", { name: "website.continue" }));
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/knowledge"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/reading"));
     const submission = fetcher.mock.calls.find(([url]) => url === "/api/knowledge");
     expect(JSON.parse(String(submission?.[1]?.body))).toEqual({ businessId: "business-1", title: "example.com", sourceType: "website", sourceUrl: "example.com", onboarding: true });
     telemetryRef.current!.expectEvent("web.onboarding.website_submitted", { businessId: "business-1" });
@@ -52,7 +52,7 @@ describe("onboarding website", () => {
     setup();
     await waitFor(() => expect((screen.getByRole("button", { name: "website.skip" }) as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(screen.getByRole("button", { name: "website.skip" }));
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/knowledge"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/language"));
     telemetryRef.current!.expectEvent("web.onboarding.website_skipped", { businessId: "business-1" });
   });
   it("waits for refreshed durable progress before navigating", async () => {
@@ -64,8 +64,8 @@ describe("onboarding website", () => {
     await waitFor(() => expect(fetcher.mock.calls.filter(([url]) => url === "/api/businesses")).toHaveLength(2));
     expect(push).not.toHaveBeenCalled();
     expect((screen.getByRole("button", { name: "website.submitting" }) as HTMLButtonElement).disabled).toBe(true);
-    finish(Response.json({ businesses: [{ businessId: "business-1", active: true, onboardingStage: "knowledge" }] }));
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/knowledge"));
+    finish(Response.json({ businesses: [{ businessId: "business-1", active: true, onboardingStage: "verify_phone" }] }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/reading"));
   });
   it("prefills the saved website when revisiting", async () => {
     setup({ websiteUrl: "https://example.com" });

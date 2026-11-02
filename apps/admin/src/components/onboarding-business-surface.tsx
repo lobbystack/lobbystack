@@ -5,6 +5,7 @@ import { requestJson } from "@/lib/request-json";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useStepNavigation } from "@/lib/use-step-navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { normalizeRuntimeLocale } from "@lobbystack/shared";
 import { Building2, LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -34,6 +35,8 @@ export function OnboardingBusinessSurface({ createNew = false }: { createNew?: b
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
         businessType: "service_company",
         referralCode: getStoredAffiliateReferralCode(),
+        // A starting point until the website's language, or the owner's answer, replaces it.
+        browserLocale: normalizeRuntimeLocale(navigator.language),
       }),
     }),
     onSuccess: async (created: { businessId: string }) => {

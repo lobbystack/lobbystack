@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { createReceptionistAgent } from "@lobbystack/agent-core/agent";
 import { createAgentModel, describeAgentUsage } from "@lobbystack/agent-core/model";
-import { activeAgentExistsInTransaction, getBusinessSnapshotForAgent, recordAiGenerationEvent } from "@lobbystack/domain";
+import { activeAgentExistsInTransaction, getBusinessSnapshotForAgent, recordAiGenerationEvent, recordTestChatReply } from "@lobbystack/domain";
 import { normalizeRuntimeLocale, runtimeLocaleName, testChatRequestSchema } from "@lobbystack/shared";
 
 import { jsonError } from "@/lib/api-helpers";
@@ -18,7 +18,7 @@ export const maxDuration = 30;
  * One turn of a test chat, on the website chat's agent. The browser holds the
  * chat and the agent gets only its read-only tools, so this writes no
  * conversation, message or alert, reserves no chat session, and leaves the
- * inbox alone. The rate limit stands in for the allowance. The generation still
+ * inbox alone. It only notes when a reply came, for the plans offer. The rate limit stands in for the allowance. The generation still
  * goes on the host's cost record, under its own operation.
  */
 export const POST = operatorRoute(async ({ request, userId, body, businessId, transaction }) => {
@@ -44,5 +44,9 @@ export const POST = operatorRoute(async ({ request, userId, body, businessId, tr
   void Promise.resolve(generation.totalUsage)
     .then((usage) => recordAiGenerationEvent(domain, { businessId, operation: "agent.test_chat", traceId: randomUUID(), isStreaming: true, ...describeAgentUsage(usage, performance.now() - startedAt) }))
     .catch((cause: unknown) => console.error("Test chat generation failed", { errorType: cause instanceof Error ? cause.name : typeof cause }));
+  // An empty reply isn't a working test, so only text counts towards the plans offer.
+  void Promise.resolve(generation.text)
+    .then((text) => text.trim() ? recordTestChatReply(domain, { businessId }) : undefined)
+    .catch((cause: unknown) => console.error("Test chat reply was not recorded", { errorType: cause instanceof Error ? cause.name : typeof cause }));
   return generation.toUIMessageStreamResponse({ headers: { "cache-control": "no-cache, no-transform", "x-accel-buffering": "no" } });
 });

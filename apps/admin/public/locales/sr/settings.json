@@ -196,7 +196,8 @@
       },
       "actions": {
         "currentPlan": "Trenutni paket"
-      }
+      },
+      "notNow": "Ne sada"
     },
     "usage": {
       "title": "Uključena potrošnja",

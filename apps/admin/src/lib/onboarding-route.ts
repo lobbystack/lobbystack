@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { canVisitOnboardingStage, getActiveOnboardingState, numberStepRedirect, resolveOnboardingRoute, type OnboardingStage, type OnboardingState } from "@lobbystack/domain";
+import { ONBOARDING_READING_ROUTE } from "@lobbystack/shared";
 
 import { getAppDatabase } from "./api-helpers";
 import { getSession } from "./auth";
@@ -13,13 +14,14 @@ const BRAND_ROUTE = "/onboarding/brand";
 const routeStages: Record<string, OnboardingStage> = {
   "/onboarding/business": "create_business",
   "/onboarding/website": "website",
-  "/onboarding/knowledge": "knowledge",
-  "/onboarding/greeting": "greeting",
-  "/onboarding/test-call": "test_call",
+  "/onboarding/language": "language",
+  // The wait opens once the website step has moved the stage on.
+  [ONBOARDING_READING_ROUTE]: "verify_phone",
   "/onboarding/verify-phone": "verify_phone",
   "/onboarding/number": "phone_number",
   "/onboarding/goal": "goal",
   "/onboarding/attribution": "attribution",
+  "/onboarding/meet": "meet",
 };
 
 /**

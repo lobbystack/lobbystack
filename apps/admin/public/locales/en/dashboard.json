@@ -269,7 +269,8 @@
       "fullScan": "Read the rest of your site",
       "sources": "Add more sources",
       "testCall": "Hear your agent",
-      "phoneNumber": "Connect a phone number"
+      "phoneNumber": "Connect a phone number",
+      "forwardCalls": "Forward your calls"
     },
     "stepDescriptions": {
       "fullScan": "Your agent has read a sample of your site.",

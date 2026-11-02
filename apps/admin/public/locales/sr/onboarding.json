@@ -3,7 +3,8 @@
     "signOut": "Odjavi se",
     "terms": "Uslovi",
     "privacy": "Privatnost",
-    "support": "Podrška"
+    "support": "Podrška",
+    "back": "Nazad"
   },
   "errors": {
     "tooManyBusinesses": "Već posedujete 10 radnih prostora, što je ograničenje za jedan nalog."
@@ -41,7 +42,6 @@
   },
   "businessName": {
     "title": "Za početak, kako se zove Vaša firma?",
-    "description": "",
     "createTitle": "Napravite radni prostor",
     "createDescription": "Ovi podaci su osnova onoga što agent zna o Vašoj firmi.",
     "existingTitle": "Radni prostor već postoji",
@@ -71,7 +71,6 @@
   },
   "website": {
     "title": "Sada ćemo obučiti {{appName}} pomoću Vašeg sajta",
-    "description": "",
     "label": "Sajt",
     "placeholder": "mojafirma.rs",
     "sourceName": "Naziv izvora",
@@ -85,61 +84,25 @@
     "invalidUrl": "Unesite adresu svog sajta, na primer mojafirma.rs.",
     "skipFailed": "Trenutno ne možemo da preskočimo ovaj korak. Pokušajte ponovo."
   },
-  "knowledge": {
-    "title": "Dodajte dokumente za obuku",
-    "description": "Pomozite AI agentu da razume Vašu firmu.",
-    "tabs": {
-      "upload": "Otpremi fajlove",
-      "paste": "Nalepi tekst"
-    },
-    "upload": {
-      "headline": "Prevucite fajlove ili kliknite za otpremanje",
-      "formats": "Podržani su PDF, DOCX, TXT i MD",
-      "remove": "Ukloni",
-      "tooLarge": "Dokument može imati najviše 10 MB.",
-      "unsupportedType": "Podržani tipovi su PDF, DOCX, TXT i Markdown.",
-      "failed": "Nismo mogli da otpremimo dokument. Pokušajte ponovo."
-    },
-    "paste": {
-      "placeholder": "Nalepite bilo koje informacije o firmi: usluge, česta pitanja, radno vreme, pravila poslovanja...",
-      "hint": "Odmah ćemo ovo dodati u bazu znanja Vašeg AI agenta.",
-      "defaultTitle": "Beleške sa početnog podešavanja"
-    },
+  "language": {
+    "title": "Na kom jeziku treba da govori vaš agent?",
+    "label": "Jezik pozivalaca",
     "continue": "Nastavi",
-    "continuing": "Čuvanje...",
-    "skip": "Preskoči za sada",
-    "skipping": "Preskakanje...",
-    "continueFailed": "Trenutno ne možemo da nastavimo. Pokušajte ponovo.",
-    "skipFailed": "Trenutno ne možemo da preskočimo ovaj korak. Pokušajte ponovo."
+    "saving": "Čuvanje...",
+    "submitFailed": "Trenutno ne možemo da sačuvamo. Pokušajte ponovo."
   },
-  "testCall": {
-    "title": "Poslušajte svog agenta",
-    "continue": "Nastavi",
-    "skip": "Preskoči za sada",
-    "continueFailed": "Nismo mogli da nastavimo. Pokušajte ponovo.",
-    "wait": {
-      "skip": "Preskoči čekanje",
-      "stillReading": "Vaš agent još čita Vaš sajt.",
-      "slides": {
-        "answers": {
-          "title": "Odgovara na osnovu vašeg sadržaja"
-        },
-        "booking": {
-          "title": "Zakazuje termine"
-        },
-        "transfer": {
-          "title": "Prebacuje pozive vašem timu"
-        },
-        "languages": {
-          "title": "Menja jezik tokom poziva"
-        },
-        "summaries": {
-          "title": "Sažima svaki poziv"
-        },
-        "widget": {
-          "title": "Odgovara i na vašem sajtu"
-        }
-      }
+  "reading": {
+    "title": "Čitamo vaš sajt",
+    "skip": "Preskoči čekanje",
+    "previous": "Prethodno",
+    "next": "Sledeće",
+    "slides": {
+      "answers": "Odgovara na osnovu vašeg sadržaja",
+      "booking": "Zakazuje termine",
+      "transfer": "Prebacuje pozive vašem timu",
+      "languages": "Menja jezik tokom poziva",
+      "summaries": "Sažima svaki poziv",
+      "widget": "Odgovara i na vašem sajtu"
     }
   },
   "verifyPhone": {
@@ -181,27 +144,16 @@
       "partnerTitle": "Još ne možemo da potvrdimo telefone u ovoj zemlji ({{country}}).",
       "partnerBody": "Podešavanje možete da završite bez potvrđenog telefona.",
       "partnerContinue": "Nastavi"
-    }
-  },
-  "greeting": {
-    "title": "Kako da pozdravimo Vaše pozivaoce?",
-    "description": "Ovo je prvo što Vaš AI agent kaže. Možete to promeniti bilo kada.",
-    "label": "Pozdrav",
-    "language": "Jezik pozivalaca",
-    "placeholder": "Hvala što ste nas pozvali. Kako mogu da pomognem?",
-    "continue": "Nastavi",
-    "submitting": "Čuvanje...",
-    "submitFailed": "Trenutno ne možemo da sačuvamo pozdrav. Pokušajte ponovo."
+    },
+    "continue": "Nastavi"
   },
   "number": {
     "ready": {
       "label": "Vaš broj je spreman",
-      "body": "Pozovite ga sa svog telefona i čujte kako agent odgovara.",
       "call": "Pozovi {{number}}"
     },
     "planRequired": "Da biste dobili broj, izaberite paket.",
     "title": "Izaberite broj telefona za AI agenta",
-    "description": "Izaberite lokalni broj na koji Vas pozivaoci mogu dobiti.",
     "countryLabel": "Zemlja",
     "kindLocal": "Lokalni",
     "kindTollFree": "Besplatni",
@@ -252,7 +204,6 @@
   },
   "attribution": {
     "title": "Kako ste čuli za {{appName}}?",
-    "description": "Tako znamo šta funkcioniše.",
     "options": {
       "ai_assistant": "ChatGPT, Claude i sl.",
       "newsletter": "Bilten ili blog",
@@ -278,10 +229,20 @@
     "social": "Društvene mreže",
     "event": "Događaj ili zajednica",
     "other": "Drugo",
-    "finish": "Završi",
-    "finishing": "Završavanje...",
     "failed": "Podešavanje nije moglo da se završi.",
-    "submitFailed": "Trenutno ne možemo to da sačuvamo. Pokušajte ponovo."
+    "submitFailed": "Trenutno ne možemo to da sačuvamo. Pokušajte ponovo.",
+    "continue": "Nastavi",
+    "saving": "Čuvanje..."
+  },
+  "meet": {
+    "title": "Upoznajte svog agenta",
+    "name": "Ime agenta",
+    "greeting": "Pozdrav",
+    "language": "Jezik pozivalaca",
+    "finish": "Idi na kontrolnu tablu",
+    "finishing": "Otvaranje...",
+    "saveFailed": "Čuvanje nije uspelo. Pokušajte ponovo.",
+    "finishFailed": "Podešavanje nije završeno. Pokušajte ponovo."
   },
   "plan": {
     "title": "Izaberite paket",

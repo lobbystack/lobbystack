@@ -270,7 +270,8 @@
       "fullScan": "Lire le reste de votre site",
       "sources": "Ajoutez d'autres sources",
       "testCall": "Écoutez votre agent",
-      "phoneNumber": "Associez un numéro"
+      "phoneNumber": "Associez un numéro",
+      "forwardCalls": "Transférez vos appels"
     },
     "stepDescriptions": {
       "fullScan": "Votre agent a lu un échantillon de votre site.",

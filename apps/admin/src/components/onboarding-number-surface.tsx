@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { resolveOnboardingRoute } from "@lobbystack/shared";
 import { useTranslation } from "react-i18next";
 import { LoaderCircle, Phone } from "lucide-react";
 import { useActiveBusiness } from "@/hooks/use-active-business";
@@ -38,7 +39,9 @@ export function OnboardingNumberSurface() {
   const phones = useQuery({ queryKey: ["onboarding-primary-number", business?.businessId], refetchInterval: query => query.state.data?.activeClaim ? 1000 : false, enabled: Boolean(business), queryFn: () => requestJson<{ activeClaim?: { id: string; status: string } | null; phoneNumbers: Array<{ id: string; e164: string; reclaimScheduledAt: string | null }> }>(`/api/phone-numbers?businessId=${encodeURIComponent(business!.businessId)}`) });
   // A trial number keeps its release date hidden, so any active number is the one to call.
   const primary = phones.data?.phoneNumbers[0];
-  const finished = business?.onboardingStage === "complete";
+  // Past the number already, as someone who bought a plan from a later step is, the owner returns to where they were.
+  const stage = business?.onboardingStage;
+  const afterNumber = stage === "complete" ? "/" : stage === "goal" || stage === "attribution" || stage === "meet" ? resolveOnboardingRoute(stage) : "/onboarding/goal";
   const chooser = useMemo(() => ({
     ...onboardingNumbers,
     getInitialNumberSuggestion: async (args: Parameters<typeof onboardingNumbers.getInitialNumberSuggestion>[0]) => {
@@ -57,7 +60,7 @@ export function OnboardingNumberSurface() {
     } finally { setClaiming(false); }
   }, []);
   const getErrorMessage = useCallback((error: unknown, fallback: string) => getSafeOnboardingErrorMessage(error, t, fallback), [t]);
-  const skip = useMutation({ mutationFn: () => requestJson(`/api/onboarding/phone-numbers/skip?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST" }), onSuccess: () => router.push(finished ? "/" : "/onboarding/goal"), meta: { inlineError: true } });
+  const skip = useMutation({ mutationFn: () => requestJson(`/api/onboarding/phone-numbers/skip?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST" }), onSuccess: () => router.push(afterNumber), meta: { inlineError: true } });
 
   if (!phones.data || (!claiming && phones.data.activeClaim)) return <Surface className="flex justify-center p-6"><LoaderCircle className="size-5 animate-spin text-muted-foreground" /></Surface>;
   if (primary) {
@@ -67,10 +70,9 @@ export function OnboardingNumberSurface() {
         <div className="flex flex-col gap-2">
           <p className="text-sm font-medium text-muted-foreground">{t("number.ready.label")}</p>
           <p className="text-2xl font-semibold text-foreground">{formatPhoneNumberDisplay(primary.e164)}</p>
-          <p className="text-sm text-muted-foreground">{t("number.ready.body")}</p>
         </div>
         <Button nativeButton={false} render={<Link href={`tel:${primary.e164}`} />}><Phone />{t("number.ready.call", { number: formatPhoneNumberDisplay(primary.e164) })}</Button>
-        <Button onClick={() => router.push(finished ? "/" : "/onboarding/goal")} type="button" variant="outline">{t("number.continue")}</Button>
+        <Button onClick={() => router.push(afterNumber)} type="button" variant="outline">{t("number.continue")}</Button>
       </Surface>
     );
   }
