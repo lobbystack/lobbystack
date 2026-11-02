@@ -12,7 +12,7 @@ import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FieldError } from "@/components/ui/field";
-import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupTextarea } from "@/components/ui/input-group";
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUpgradePlanDialogOpener } from "@/components/upgrade-plan-dialog-context";
 import { AuraVoiceDemo } from "@/components/web-voice/AuraVoiceDemo";
@@ -99,9 +99,9 @@ function TestChat({ agentId, businessId, children }: { agentId: string | undefin
         {failed ? <FieldError className="w-full">{t("testWindow.sendFailed")}</FieldError> : null}
       </div>
       <form className="shrink-0" onSubmit={send}>
-        <InputGroup>
-          <InputGroupTextarea aria-label={t("testWindow.message")} autoComplete="off" className="min-h-16 max-h-32" maxLength={4_000} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} placeholder={t("testWindow.message")} rows={2} value={draft} />
-          <InputGroupAddon align="block-end" className="justify-end">
+        <InputGroup className="h-11">
+          <InputGroupInput aria-label={t("testWindow.message")} autoComplete="off" maxLength={4_000} onChange={(event) => setDraft(event.target.value)} placeholder={t("testWindow.message")} value={draft} />
+          <InputGroupAddon align="inline-end">
             <InputGroupButton aria-label={t("testWindow.send")} disabled={busy || !draft.trim()} size="icon-sm" type="submit" variant="default"><ArrowUp /></InputGroupButton>
           </InputGroupAddon>
         </InputGroup>
