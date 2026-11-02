@@ -1,4 +1,4 @@
-import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomInt, randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 
 import { THIRD_PARTY_ORIGIN, THIRD_PARTY_PORT } from "./full-stack-environment";
@@ -39,7 +39,7 @@ async function readBody(request: IncomingMessage): Promise<string> {
 }
 
 function randomTorontoNumber(): string {
-  return `+1416${String(Math.floor(Math.random() * 10_000_000)).padStart(7, "0")}`;
+  return `+1416${String(randomInt(10_000_000)).padStart(7, "0")}`;
 }
 
 export type ThirdParties = {
