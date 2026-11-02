@@ -138,6 +138,8 @@ test("the no-website path asks the language, and Not now closes the plans", asyn
 
     await leavePhoneStep(page, businessId);
     await page.getByRole("button", { name: onboarding.goal.skip, exact: true }).click();
+    // Both steps call it Skip, so wait for the page to change before clicking again.
+    await expect(page).toHaveURL("/onboarding/attribution");
     await page.getByRole("button", { name: onboarding.attribution.skip, exact: true }).click();
     await expect(page).toHaveURL("/onboarding/meet");
 
