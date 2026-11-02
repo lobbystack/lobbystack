@@ -196,8 +196,7 @@
       },
       "actions": {
         "currentPlan": "Current plan"
-      },
-      "notNow": "Not now"
+      }
     },
     "usage": {
       "title": "Included usage",

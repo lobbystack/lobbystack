@@ -196,8 +196,7 @@
       },
       "actions": {
         "currentPlan": "Forfait actuel"
-      },
-      "notNow": "Pas maintenant"
+      }
     },
     "usage": {
       "title": "Utilisation incluse",

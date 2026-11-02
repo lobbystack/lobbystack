@@ -106,7 +106,6 @@ export function LiveUpgradePlanProvider({ children }: { children: ReactNode }) {
       loadingPlan={checkout?.target ?? (mutation.isPending ? mutation.variables.target : null)}
       onBillingIntervalChange={setInterval}
       onContactEnterprise={() => window.location.assign(`mailto:${contactEmailFor(brandLinks(), "sales")}?subject=${encodeURIComponent(t("billing.upgradeDialog.enterpriseSubject"))}`)}
-      offered={offer !== null}
       onOpenChange={changeOpen}
       onStartCheckout={(target, billingInterval) => {
         offer?.onPlanClicked(target);

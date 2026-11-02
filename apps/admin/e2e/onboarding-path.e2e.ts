@@ -5,7 +5,6 @@ import { eq, sql } from "drizzle-orm";
 import { businesses, createDatabaseClient } from "@lobbystack/db";
 
 import onboarding from "../public/locales/en/onboarding.json" with { type: "json" };
-import settings from "../public/locales/en/settings.json" with { type: "json" };
 
 import { completeSignupEmailVerification, isolateAuthRateLimit } from "./fixtures/email-verification";
 
@@ -120,7 +119,7 @@ test("the website path waits for the import, keeps answers on Back, and ends on 
   }
 });
 
-test("the no-website path asks the language, and Not now closes the plans", async ({ page }, testInfo) => {
+test("the no-website path asks the language, and the X closes the plans", async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   const database = migrator();
   const email = `${prefix}-${randomUUID()}@example.invalid`;
@@ -147,16 +146,16 @@ test("the no-website path asks the language, and Not now closes the plans", asyn
     await page.route("**/api/plan-offer**", (route) => route.request().method() === "GET" ? route.fulfill({ json: { due: true } }) : route.fulfill({ json: { ok: true } }));
     await page.route("**/api/billing?**", (route) => route.fulfill({ json: { account: { plan: "free_cloud", billingInterval: null, subscriptionState: null }, availableCheckoutPlans: ["starter", "pro"], availableCheckoutIntervals: { starter: ["monthly"], pro: ["monthly"] } } }));
     await page.reload();
-    const notNow = page.getByRole("button", { name: settings.billing.upgradeDialog.notNow });
-    await expect(notNow).toBeVisible();
-    await notNow.click();
-    await expect(notNow).toHaveCount(0);
+    const plans = page.getByRole("dialog");
+    await expect(plans).toBeVisible();
+    await plans.getByRole("button", { name: "Close" }).click();
+    await expect(plans).toHaveCount(0);
 
     // The same session never shows it twice.
     await page.reload();
     await expect(page.getByRole("heading", { name: onboarding.meet.title })).toBeVisible();
     await expect(page.getByLabel(onboarding.meet.name)).toBeVisible();
-    await expect(notNow).toHaveCount(0);
+    await expect(plans).toHaveCount(0);
   } finally {
     await removeFixtures(database, email, businessId);
     await database.pool.end();

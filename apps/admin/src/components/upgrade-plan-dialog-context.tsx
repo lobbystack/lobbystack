@@ -44,7 +44,7 @@ export function useUpgradePlanDialogOpener(): (() => void) | null {
   return useContext(OpenUpgradePlanDialogContext);
 }
 
-/** Opens the plan picker as an offer, which adds "Not now" and reports how it ended. Null outside the provider. */
+/** Opens the plan picker as an offer, and reports how it ended. Null outside the provider. */
 export function usePlanOfferOpener(): ((callbacks: PlanOfferCallbacks) => void) | null {
   return useContext(OpenPlanOfferContext);
 }

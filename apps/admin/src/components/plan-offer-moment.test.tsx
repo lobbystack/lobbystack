@@ -40,12 +40,13 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); setTestCallActive(false); vi.unstubAllGlobals(); });
 
-const notNow = () => screen.findByRole("button", { name: "billing.upgradeDialog.notNow" });
+const planDialog = () => screen.findByRole("dialog");
+const closeButton = () => screen.findByRole("button", { name: "accessibility.close" });
 
 describe("the plans offer", () => {
   it("opens once a test has completed, and reports showing", async () => {
     const { fetchMock } = setup(() => true);
-    await notNow();
+    await planDialog();
     telemetryRef.current!.expectEvent("web.onboarding.plan_offer_shown", { businessId, surface: "meet" });
     await waitFor(() => expect(fetchMock.mock.calls.some(([url, init]) => url.startsWith("/api/plan-offer") && init?.method === "POST")).toBe(true));
   });
@@ -54,7 +55,7 @@ describe("the plans offer", () => {
     const { fetchMock } = setup(() => false);
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     await act(async () => { await Promise.resolve(); });
-    expect(screen.queryByRole("button", { name: "billing.upgradeDialog.notNow" })).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
     expect(telemetryRef.current!.events).toEqual([]);
   });
 
@@ -64,7 +65,7 @@ describe("the plans offer", () => {
     await act(async () => { await Promise.resolve(); });
     answered = true;
     act(() => announceTestChatReplied());
-    await screen.findByRole("button", { name: "billing.upgradeDialog.notNow" }, { timeout: 4_000 });
+    await screen.findByRole("dialog", {}, { timeout: 4_000 });
   });
 
   it("waits for a running call to end", async () => {
@@ -75,16 +76,16 @@ describe("the plans offer", () => {
     expect(telemetryRef.current!.events).toEqual([]);
   });
 
-  it("reports Not now and closes", async () => {
+  it("reports the X and closes", async () => {
     setup(() => true);
-    await userEvent.click(await notNow());
+    await userEvent.click(await closeButton());
     telemetryRef.current!.expectEvent("web.onboarding.plan_offer_dismissed", { businessId, surface: "meet" });
-    await waitFor(() => expect(screen.queryByRole("button", { name: "billing.upgradeDialog.notNow" })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
   it("reports a plan clicked, and not a dismissal", async () => {
     setup(() => true);
-    await notNow();
+    await planDialog();
     await userEvent.click(screen.getAllByRole("button").find((button) => button.closest("section")?.querySelector("h3") && !(button as HTMLButtonElement).disabled && button.closest("section")?.getAttribute("data-selected") === "true")!);
     await waitFor(() => expect(telemetryRef.current!.events.some((event) => event.name === "web.onboarding.plan_offer_clicked")).toBe(true));
     expect(telemetryRef.current!.events.some((event) => event.name === "web.onboarding.plan_offer_dismissed")).toBe(false);
@@ -92,13 +93,13 @@ describe("the plans offer", () => {
 
   it("never opens twice in one session", async () => {
     const first = setup(() => true);
-    await userEvent.click(await notNow());
+    await userEvent.click(await closeButton());
     first.view.unmount();
     telemetryRef.current = createRecordedBrowserTelemetry();
     const { fetchMock } = setup(() => true);
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     await act(async () => { await Promise.resolve(); });
-    expect(screen.queryByRole("button", { name: "billing.upgradeDialog.notNow" })).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
     expect(telemetryRef.current!.events).toEqual([]);
   });
 });
