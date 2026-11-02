@@ -5,7 +5,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { businesses, calls, createDatabaseClient, firstRealConversations, outboxMessages, sessions, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { readCheckInToken } from "./checkIn";
 import { createBusiness } from "./tenancy";
-import { ONBOARDING_FOLLOWUP_DELAY_MS, queueOnboardingFollowupEmail, submitOnboardingAttribution } from "./onboarding";
+import { advanceOnboardingStage, ONBOARDING_FOLLOWUP_DELAY_MS, queueOnboardingFollowupEmail } from "./onboarding";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -58,11 +58,11 @@ describe.skipIf(!testUrl)("onboarding follow-up email against dedicated PostgreS
   it("schedules the follow-up a day after onboarding completes, once", async () => {
     await rollbackTest(async tx => {
       const { userId, businessId } = await completedWorkspace(tx);
-      await tx.update(businesses).set({ onboardingStage: "attribution" }).where(eq(businesses.id, businessId));
+      await tx.update(businesses).set({ onboardingStage: "meet" }).where(eq(businesses.id, businessId));
       await tx.execute(sql`set local role lobbystack_app`);
       const before = Date.now();
-      await submitOnboardingAttribution({ db: tx as unknown as Database }, { userId, businessId, source: "google" });
-      await submitOnboardingAttribution({ db: tx as unknown as Database }, { userId, businessId, source: "google" });
+      await advanceOnboardingStage({ db: tx as unknown as Database }, { userId, businessId, to: "complete" });
+      await advanceOnboardingStage({ db: tx as unknown as Database }, { userId, businessId, to: "complete" });
       await tx.execute(sql`reset role`);
       const scheduled = await tx.select().from(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), eq(outboxMessages.topic, "onboarding.sendFollowup")));
       expect(scheduled).toHaveLength(1);

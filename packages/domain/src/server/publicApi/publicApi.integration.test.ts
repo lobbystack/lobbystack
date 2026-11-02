@@ -526,7 +526,7 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
     await admin!.db.update(businesses).set({ onboardingStage: "website" }).where(eq(businesses.id, b.businessId));
     await createKnowledgeSourceForApi({ db: worker!.db }, b.caller, { type: "website", url: "https://birch-api.example" });
     const [business] = await admin!.db.select({ websiteUrl: businesses.websiteUrl, stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, b.businessId));
-    expect(business).toEqual({ websiteUrl: "https://birch-api.example/", stage: "knowledge" });
+    expect(business).toEqual({ websiteUrl: "https://birch-api.example/", stage: "verify_phone" });
   });
 
   it("adds, changes and deletes services, and keeps slugs unique among live services", async () => {
