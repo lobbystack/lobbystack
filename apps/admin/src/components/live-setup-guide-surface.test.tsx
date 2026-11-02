@@ -15,7 +15,7 @@ import { ALL_CAPABILITIES, BusinessCapabilitiesProvider } from "./business-capab
 import { LiveOverviewSurface } from "./live-overview-surface";
 import { UpgradePlanDialogProvider } from "./upgrade-plan-dialog-context";
 import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
-import { announceTestCallEnded, registerTestCallStarter } from "@/lib/test-call-launcher";
+import { announceTestCallEnded, registerTestWindow } from "@/lib/test-window";
 
 vi.mock("next/dynamic", () => ({ default: () => () => null }));
 const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
@@ -204,9 +204,9 @@ describe("steps", () => {
 describe("the test call step", () => {
   const heard = { activation: { completedWebCalls: 1, lastTestCall: { id: "call-1", startedAt: "2026-11-01T12:00:00.000Z", durationSeconds: 75 } } };
 
-  it("starts the call in place", async () => {
+  it("opens the test window in place", async () => {
     const starter = vi.fn();
-    const unregister = registerTestCallStarter(starter);
+    const unregister = registerTestWindow(starter);
     await setup({ complete: ["fullScan", "sources"] });
     await userEvent.click(await screen.findByRole("button", { name: copy.stepActions.testCall }));
     expect(starter).toHaveBeenCalledOnce();

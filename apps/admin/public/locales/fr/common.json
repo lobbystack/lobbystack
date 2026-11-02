@@ -101,10 +101,14 @@
     "getReceptionistBack": "Retrouver mon agent",
     "getNumberBack": "Récupérer mon numéro"
   },
+  "testWindow": {
+    "orCall": "Ou appelez le",
+    "message": "Message",
+    "send": "Envoyer",
+    "sendFailed": "Message non envoyé. Réessayez."
+  },
   "testCall": {
     "trigger": "Appel test",
-    "title": "Tester votre agent IA",
-    "description": "Démarrez un appel en direct dans le navigateur avec votre agent configuré.",
     "start": "Lancer l’appel",
     "connecting": "Connexion...",
     "hangUp": "Raccrocher",

@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DashboardAbandonIntent } from "./dashboard-abandon-intent";
 import { LiveUpgradePlanProvider } from "./live-upgrade-plan-provider";
 import { useOpenUpgradePlanDialog } from "./upgrade-plan-dialog-context";
-import { announceTestCallEnded, setTestCallActive } from "@/lib/test-call-launcher";
+import { announceTestCallEnded, setTestCallActive } from "@/lib/test-window";
 import { ABANDON_INTENT_CALL_GRACE_MS, ABANDON_INTENT_IDLE_MS, ABANDON_INTENT_MIN_DWELL_MS } from "@/lib/abandon-intent";
 import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 import { setUpgradeInProgress } from "@/lib/upgrade-in-progress";

@@ -5,7 +5,7 @@ import type { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useTelemetry } from "@/components/product-analytics";
-import { isTestCallActive, subscribeTestCallEnded } from "@/lib/test-call-launcher";
+import { isTestCallActive, subscribeTestCallEnded } from "@/lib/test-window";
 import { isUpgradeInProgress } from "@/lib/upgrade-in-progress";
 import {
   captureSurveyDismissed,

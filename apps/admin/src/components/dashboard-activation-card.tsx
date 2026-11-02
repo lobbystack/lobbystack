@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Phone } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -9,7 +9,7 @@ import { CallForwardingDialog } from "@/components/call-forwarding-dialog";
 import { useActivation } from "@/hooks/use-activation";
 import { useOpenNumberStep } from "@/lib/number-step";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
-import { getTestCallStarter, startTestCall, subscribeTestCallStarter } from "@/lib/test-call-launcher";
+import { openTestWindow, useTestWindowReady } from "@/lib/test-window";
 import { Button } from "./ui/button";
 import { Surface } from "./ui/surface";
 import { isWebsiteImportRunning, websiteImportHost, WebsiteImportProgress } from "./website-import-progress";
@@ -18,7 +18,7 @@ export function DashboardActivationCard({ businessId }: { businessId: string | u
   const { t } = useTranslation("dashboard");
   const [forwardingOpen, setForwardingOpen] = useState(false);
   const openNumberStep = useOpenNumberStep();
-  const canStartTestCall = useSyncExternalStore(subscribeTestCallStarter, () => getTestCallStarter() !== null, () => false);
+  const testWindowReady = useTestWindowReady();
   const { canSetUp, data, eligible, heardItWork, needsNumberClaim, trialAvailable, trialNumber, upgrade } = useActivation(businessId);
 
   if (!businessId || !canSetUp || !data || !eligible) return null;
@@ -72,8 +72,8 @@ export function DashboardActivationCard({ businessId }: { businessId: string | u
         </p>
       </div>
       {!heardItWork
-        ? canStartTestCall
-          ? <Button className="shrink-0" onClick={() => startTestCall()} type="button" variant="outline"><Phone />{t("activation.hearIt.cta")}</Button>
+        ? testWindowReady
+          ? <Button className="shrink-0" onClick={() => openTestWindow()} type="button" variant="outline"><Phone />{t("activation.hearIt.cta")}</Button>
           : null
         : needsNumberClaim
           ? <Button className="shrink-0" nativeButton={false} render={<Link href="/settings/phone-number" />}>{t("activation.claimNumber.cta")}</Button>

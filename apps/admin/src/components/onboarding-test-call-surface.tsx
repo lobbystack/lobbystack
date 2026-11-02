@@ -6,18 +6,14 @@ import { useTranslation } from "react-i18next";
 
 import { ImportWaitSlides, useImportWait } from "@/components/onboarding-import-wait";
 import { useTelemetry } from "@/components/product-analytics";
-import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
-import { AuraVoiceDemo } from "@/components/web-voice/AuraVoiceDemo";
+import { TestPanel } from "@/components/test-window";
 import { currentWebsiteImport, isWebsiteImportRunning, WebsiteImportProgress, type WebsiteImportSummary } from "@/components/website-import-progress";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
 import { requestJson } from "@/lib/request-json";
 import { useStepNavigation } from "@/lib/use-step-navigation";
-import { DASHBOARD_TEST_CALL_WIDGET_ID } from "@lobbystack/shared";
-import type { TelemetryEventName, TelemetryProperties } from "@lobbystack/telemetry";
-import { LIVE_WEB_CALL_ENDPOINT } from "@lobbystack/web-voice";
 
 type KnowledgeDocument = { id: string; createdAt?: string; websiteImport?: WebsiteImportSummary | null };
 
@@ -28,14 +24,10 @@ export function OnboardingTestCallSurface() {
   const telemetry = useTelemetry();
   const queryClient = useQueryClient();
   const { business } = useActiveBusiness();
-  const { resolvedTheme } = useTheme();
   const [heard, setHeard] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => { prefetch("/onboarding/verify-phone"); }, [prefetch]);
   const businessId = business?.businessId;
-  const trackVoice = useCallback((eventName: TelemetryEventName, properties?: Record<string, unknown>) => {
-    if (businessId) telemetry.track(eventName, { businessId, ...properties } as TelemetryProperties);
-  }, [businessId, telemetry]);
   const markHeard = useCallback(() => setHeard(true), []);
   // A failed check must not hold anyone here, so it doesn't retry.
   const documents = useQuery({
@@ -64,18 +56,8 @@ export function OnboardingTestCallSurface() {
       {websiteImport && (phase === "waiting" || phase === "waited") ? <div aria-live="polite"><WebsiteImportProgress job={websiteImport} /></div> : null}
       {phase === "waited" && isWebsiteImportRunning(websiteImport) ? <p className="text-xs text-muted-foreground">{t("testCall.wait.stillReading")}</p> : null}
       {phase === "waiting" ? <ImportWaitSlides /> : null}
-      {/* The same call as the dashboard's test call: the owner's login authorizes it, and it counts as heard. */}
-      {business && (phase === "ready" || phase === "waited") ? (
-        <AuraVoiceDemo
-          auraTone={resolvedTheme === "dark" ? "dark" : "light"}
-          businessSlug={business.slug}
-          className="w-full max-w-[22rem]"
-          endpoint={`${LIVE_WEB_CALL_ENDPOINT}?businessId=${encodeURIComponent(business.businessId)}`}
-          onCallEnded={markHeard}
-          onEvent={trackVoice}
-          widgetId={DASHBOARD_TEST_CALL_WIDGET_ID}
-        />
-      ) : null}
+      {/* The same panel as the test window: the owner's login authorizes the call, and it counts as heard. */}
+      {business && (phase === "ready" || phase === "waited") ? <TestPanel businessId={business.businessId} businessSlug={business.slug} onCallEnded={markHeard} /> : null}
       {error ? <FieldError>{error}</FieldError> : null}
       {phase === "waiting" ? (
         <Button className="h-11 w-full" onClick={stopWaiting} type="button" variant="ghost">{t("testCall.wait.skip")}</Button>

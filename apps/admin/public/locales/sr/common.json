@@ -101,10 +101,14 @@
     "getReceptionistBack": "Vrati mog agenta",
     "getNumberBack": "Vrati moj broj"
   },
+  "testWindow": {
+    "orCall": "Ili pozovite",
+    "message": "Poruka",
+    "send": "Pošalji",
+    "sendFailed": "Poruka nije poslata. Pokušajte ponovo."
+  },
   "testCall": {
     "trigger": "Probni poziv",
-    "title": "Isprobajte svog AI agenta",
-    "description": "Započnite poziv uživo iz pregledača sa podešenim agentom.",
     "start": "Započni poziv",
     "connecting": "Povezivanje...",
     "hangUp": "Prekini",

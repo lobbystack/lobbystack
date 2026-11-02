@@ -95,10 +95,14 @@
     "getReceptionistBack": "Recuperar a mi agente",
     "getNumberBack": "Recuperar mi número"
   },
+  "testWindow": {
+    "orCall": "O llame al",
+    "message": "Mensaje",
+    "send": "Enviar",
+    "sendFailed": "Mensaje no enviado. Inténtelo de nuevo."
+  },
   "testCall": {
     "trigger": "Llamada de prueba",
-    "title": "Pruebe su agente con IA",
-    "description": "Inicie una llamada en vivo desde el navegador con su agente configurado.",
     "start": "Iniciar llamada",
     "connecting": "Conectando...",
     "hangUp": "Colgar",

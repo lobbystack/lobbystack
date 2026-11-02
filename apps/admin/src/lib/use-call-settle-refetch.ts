@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { subscribeTestCallEnded } from "@/lib/test-call-launcher";
+import { subscribeTestCallEnded } from "@/lib/test-window";
 
 /** The call ends in the browser before the worker finishes writing it down. */
 export const CALL_SETTLE_POLL_MS = 2_000;

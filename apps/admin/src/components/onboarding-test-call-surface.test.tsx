@@ -35,6 +35,12 @@ function setup(knowledge: () => Response = () => Response.json({ documents: [] }
 }
 
 describe("onboarding test call", () => {
+  it("embeds the test panel, with the chat beside the call", async () => {
+    setup();
+    await waitFor(() => expect(voice.props).not.toBeNull());
+    expect(screen.getByRole("textbox", { name: "testWindow.message" })).toBeTruthy();
+  });
+
   it("calls the receptionist as the dashboard test call, then moves on to phone verification and records that the owner heard the agent", async () => {
     const fetchMock = setup();
     await waitFor(() => expect(voice.props).toMatchObject({ auraTone: "dark", businessSlug: "biz", endpoint: "/api/voice/live/session?businessId=business", widgetId: "lobbystack-dashboard-test-call" }));

@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DashboardActivationCard } from "./dashboard-activation-card";
 import { UpgradePlanDialogProvider } from "./upgrade-plan-dialog-context";
-import { announceTestCallEnded, registerTestCallStarter } from "@/lib/test-call-launcher";
+import { announceTestCallEnded, registerTestWindow } from "@/lib/test-window";
 import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 
 const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
@@ -104,16 +104,16 @@ describe("dashboard activation card", () => {
   });
 
   it("invites the operator to hear the agent once the import finishes", async () => {
-    const stop = registerTestCallStarter(vi.fn());
+    const stop = registerTestWindow(vi.fn());
     setup({ websiteImport: { status: "completed", websiteUrl: "https://example.com", importedCount: 12, indexedCount: 11 } });
     expect(await screen.findByText("activation.hearIt.title")).toBeTruthy();
     expect(screen.getByText("activation.hearIt.descriptionWithPages")).toBeTruthy();
     stop();
   });
 
-  it("starts a call through the registered launcher", async () => {
+  it("opens the test window", async () => {
     const start = vi.fn();
-    const stop = registerTestCallStarter(start);
+    const stop = registerTestWindow(start);
     setup({});
     await userEvent.click(await screen.findByRole("button", { name: /activation.hearIt.cta/ }));
     expect(start).toHaveBeenCalledOnce();
@@ -177,7 +177,7 @@ describe("dashboard activation card", () => {
   });
 
   it("re-checks activation after a call ends in this tab", async () => {
-    const stop = registerTestCallStarter(vi.fn());
+    const stop = registerTestWindow(vi.fn());
     let completedWebCalls = 0;
     vi.stubGlobal("fetch", vi.fn(async () => Response.json(activationBody({ completedWebCalls }))));
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });

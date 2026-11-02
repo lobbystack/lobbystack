@@ -14,9 +14,9 @@ import { MOBILE_UTILITY_SLOT_ID } from "./site-header";
 import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
-import { DashboardTestCallWidget } from "./dashboard-test-call-widget";
 import { DashboardFeedbackWidget } from "./dashboard-feedback-widget";
 import { DashboardAbandonIntent } from "./dashboard-abandon-intent";
+import { TestWindow } from "./test-window";
 
 
 export function DashboardUtilityBar() {
@@ -50,7 +50,7 @@ export function DashboardUtilityBar() {
     <>
         {/* The test call tries out the receptionist's setup, which an activity-only business leaves to its partner. */}
         {can("setup") ? <>
-          <DashboardTestCallWidget className="pointer-events-auto md:flex" businessId={business.businessId} businessSlug={business.slug} />
+          <TestWindow className="pointer-events-auto md:flex" businessId={business.businessId} businessSlug={business.slug} />
           {/* mr is smaller than ml because the icon button's own padding adds the rest of the visible gap. */}
           <span aria-hidden="true" className="ml-3 mr-2.5 hidden h-4 w-px bg-border md:block" />
         </> : null}

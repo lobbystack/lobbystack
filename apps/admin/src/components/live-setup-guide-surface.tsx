@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ChevronRight } from "lucide-react";
@@ -29,7 +29,7 @@ import type { BillingUsageViewModel, PhoneNumberViewModel } from "@/lib/page-vie
 import { inferPhoneCountry } from "@/lib/phone";
 import { requestJson } from "@/lib/request-json";
 import { isSetupStepDone, numberPath, SETUP_STEP_ORDER, type NumberPath, type SetupGuide, type SetupStep, type SetupStepId } from "@/lib/setup-guide";
-import { getTestCallStarter, startTestCall, subscribeTestCallStarter } from "@/lib/test-call-launcher";
+import { openTestWindow, useTestWindowReady } from "@/lib/test-window";
 import { useCallSettleRefetch } from "@/lib/use-call-settle-refetch";
 import { BookingWithoutHoursAlert, needsHoursForBooking, useBusinessHours } from "./business-hours-section";
 
@@ -130,7 +130,7 @@ function StepActions({ primary, skip }: { primary?: ReactNode; skip: ReactNode }
 
 function TestCallStep({ call, goal, skip }: { call: NonNullable<Activation["lastTestCall"]> | null; goal: OnboardingGoal | null; skip: ReactNode }) {
   const { i18n, t } = useTranslation("dashboard");
-  const canStartTestCall = useSyncExternalStore(subscribeTestCallStarter, () => getTestCallStarter() !== null, () => false);
+  const testWindowReady = useTestWindowReady();
   return (
     <>
       <StepDescription>{t(`setupGuide.stepDescriptions.testCall.${goal ?? "none"}`)}</StepDescription>
@@ -143,7 +143,7 @@ function TestCallStep({ call, goal, skip }: { call: NonNullable<Activation["last
           <ItemActions><span className="type-body-muted hidden sm:inline">{t("setupGuide.readTranscript")}</span><ChevronRight className="size-4 text-muted-foreground" /></ItemActions>
         </Item>
       ) : null}
-      <StepActions primary={canStartTestCall ? <Button onClick={() => startTestCall()} type="button" variant={call ? "outline" : "default"}>{t(call ? "setupGuide.callAgain" : "setupGuide.stepActions.testCall")}</Button> : null} skip={skip} />
+      <StepActions primary={testWindowReady ? <Button onClick={() => openTestWindow()} type="button" variant={call ? "outline" : "default"}>{t(call ? "setupGuide.callAgain" : "setupGuide.stepActions.testCall")}</Button> : null} skip={skip} />
     </>
   );
 }

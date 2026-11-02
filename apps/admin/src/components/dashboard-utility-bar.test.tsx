@@ -8,7 +8,7 @@ vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => k
 vi.mock("./branding-provider", () => ({ useBranding: () => ({ appName: "Desk", logoUrl: null, partner: brand.partner, ready: true, setBranding: () => undefined }) }));
 vi.mock("@/hooks/use-active-business", () => ({ useActiveBusiness: () => ({ businesses: { isLoading: active.loading }, business: active.business }) }));
 vi.mock("@/hooks/use-mobile", () => ({ useIsMobile: () => false }));
-vi.mock("./dashboard-test-call-widget", () => ({ DashboardTestCallWidget: () => null }));
+vi.mock("./test-window", () => ({ TestWindow: () => null }));
 vi.mock("./dashboard-feedback-widget", () => ({ DashboardFeedbackWidget: () => null }));
 vi.mock("./dashboard-abandon-intent", () => ({ DashboardAbandonIntent: () => null }));
 

@@ -1,7 +1,7 @@
 
 import { and, eq, isNull } from "drizzle-orm";
 
-import { agents, enqueueOutbox, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, businesses, enqueueOutbox, phoneNumbers, type DatabaseTransaction } from "@lobbystack/db";
 import {
   appointmentChangeVerificationModes,
   bookingModes,
@@ -38,6 +38,24 @@ import { assertStaffFirstChange, enqueueStaffFirstRouting } from "./staffFirst";
 export async function activeAgentExistsInTransaction(tx: DatabaseTransaction, input: { businessId: string; agentId: string }): Promise<boolean> {
   const rows = await tx.select({ id: agents.id }).from(agents).where(and(eq(agents.id, input.agentId), eq(agents.businessId, input.businessId), isNull(agents.archivedAt))).limit(1);
   return rows.length > 0;
+}
+
+export type TestWindowAgent = { agentId: string; agentName: string; businessName: string; phoneNumber: string | null };
+
+/**
+ * What the test window shows: the agent, its workspace, and the active number
+ * that reaches this agent. Null when the business has no such active agent.
+ * Without an agentId it reads the default agent. Run it under the operator's own access.
+ */
+export async function loadTestWindowAgentInTransaction(tx: DatabaseTransaction, input: { businessId: string; agentId?: string | undefined }): Promise<TestWindowAgent | null> {
+  const row = (await tx.select({ agentId: agents.id, agentName: agents.name, businessName: businesses.name })
+    .from(agents)
+    .innerJoin(businesses, eq(businesses.id, agents.businessId))
+    .where(and(eq(agents.businessId, input.businessId), isNull(agents.archivedAt), input.agentId ? eq(agents.id, input.agentId) : eq(agents.isDefault, true)))
+    .limit(1))[0];
+  if (!row) return null;
+  const number = (await tx.select({ e164: phoneNumbers.e164 }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.agentId, row.agentId), eq(phoneNumbers.status, "active"))).limit(1))[0];
+  return { ...row, phoneNumber: number?.e164 ?? null };
 }
 
 /** Fields a change can set. A missing field stays as it is; null clears an optional one. */

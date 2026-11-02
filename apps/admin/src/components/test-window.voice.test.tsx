@@ -4,18 +4,20 @@ import { act, cleanup, fireEvent, render as renderView, screen, waitFor } from "
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DashboardTestCallWidget } from "./dashboard-test-call-widget";
+import { TestWindow } from "./test-window";
 import { UpgradePlanDialogProvider } from "./upgrade-plan-dialog-context";
 import { DISCONNECT_GRACE_MS } from "@lobbystack/web-voice";
 import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
+import { isTestCallActive, subscribeTestCallEnded } from "@/lib/test-window";
 
-// Drives the real dashboard test call (widget, AuraVoiceDemo and
+// Drives the real dashboard test call (window, AuraVoiceDemo and
 // useWebVoiceCall) with fake WebRTC, so telemetry is checked on the path
 // production uses.
 
 const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
 vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("@/components/theme-provider", () => ({ useTheme: () => ({ resolvedTheme: "light" }) }));
 
 class FakePeerConnection {
   static last: FakePeerConnection | undefined;
@@ -80,10 +82,11 @@ const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
 
 const openUpgrade = vi.fn();
 let client: QueryClient;
-// Billing is seeded, so the only request a test sees is the call itself.
+// Billing and the agent are seeded, so the only request a test sees is the call itself.
 function render(ui: ReactNode, plan = "pro") {
   client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   client.setQueryData(["billing", "business-1"], { effectivePlan: plan });
+  client.setQueryData(["test-window", "business-1", "default"], { agentId: "agent-1", agentName: "Front desk", businessName: "Acme Dental", phoneNumber: null });
   return renderView(<QueryClientProvider client={client}><UpgradePlanDialogProvider onOpen={openUpgrade}>{ui}</UpgradePlanDialogProvider></QueryClientProvider>);
 }
 
@@ -111,13 +114,19 @@ afterEach(() => {
 });
 
 async function startConnectedCall(): Promise<FakePeerConnection> {
-  render(<DashboardTestCallWidget businessId={"business-1" as never} businessSlug="acme-dental" />);
-  fireEvent.click(screen.getByRole("button", { name: "testCall.trigger" }));
+  placeCall();
   await waitFor(() => expect(FakePeerConnection.last?.setRemoteDescription).toHaveBeenCalled());
   const connection = FakePeerConnection.last!;
   act(() => connection.setState("connected"));
   await waitFor(() => expect(statusText()).toBe("testCall.status.connected"));
   return connection;
+}
+
+// Opens the window, then presses its call button.
+function placeCall(plan?: string) {
+  render(<TestWindow businessId="business-1" businessSlug="acme-dental" />, plan);
+  fireEvent.click(screen.getByRole("button", { name: "testCall.trigger" }));
+  fireEvent.click(screen.getByRole("button", { name: "testCall.start" }));
 }
 
 // The call's live region, which stays readable after the dialog closes.
@@ -129,7 +138,60 @@ function eventNames() {
   return telemetryRef.current!.events.map((event) => event.name);
 }
 
-describe("DashboardTestCallWidget voice call endings", () => {
+describe("closing the window during a call", () => {
+  it("ends the session once and announces the end once", async () => {
+    const ended = vi.fn();
+    const stop = subscribeTestCallEnded(ended);
+    const connection = await startConnectedCall();
+    expect(isTestCallActive()).toBe(true);
+
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape", code: "Escape" });
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(connection.channel.send).toHaveBeenCalledWith(JSON.stringify({ type: "session.close" }));
+    expect(isTestCallActive()).toBe(false);
+    expect(ended).toHaveBeenCalledOnce();
+    telemetryRef.current!.expectEvent("web.voice.test_call_ended", { businessId: "business-1", endedBy: "caller" });
+    expect(eventNames().filter((name) => name === "web.voice.test_call_ended")).toHaveLength(1);
+    stop();
+  });
+
+  it("announces nothing when no call ran", async () => {
+    const ended = vi.fn();
+    const stop = subscribeTestCallEnded(ended);
+    render(<TestWindow businessId="business-1" businessSlug="acme-dental" />);
+    fireEvent.click(screen.getByRole("button", { name: "testCall.trigger" }));
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape", code: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(ended).not.toHaveBeenCalled();
+    stop();
+  });
+});
+
+describe("the call in the window", () => {
+  it("stays open on the ended state and announces the end", async () => {
+    const ended = vi.fn();
+    const stop = subscribeTestCallEnded(ended);
+    const connection = await startConnectedCall();
+    act(() => connection.receive({ type: "session.closed", reason: "close_requested" }));
+    await waitFor(() => expect(statusText()).toBe("testCall.status.ended"));
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(ended).toHaveBeenCalledOnce();
+    expect(screen.getByRole("button", { name: "testCall.start" })).toBeTruthy();
+    stop();
+  });
+
+  it("shows a refused microphone and stops counting as a call", async () => {
+    vi.stubGlobal("navigator", { ...navigator, mediaDevices: { getUserMedia: vi.fn(async () => { throw new DOMException("Denied", "NotAllowedError"); }) } });
+    placeCall();
+    await waitFor(() => expect(eventNames()).toContain("web.voice.test_call_error"));
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(statusText()).toMatch(/^testCall\.errors\./);
+    expect(isTestCallActive()).toBe(false);
+  });
+});
+
+describe("TestWindow voice call endings", () => {
   it("ends the call normally when the receptionist hangs up", async () => {
     const connection = await startConnectedCall();
 
@@ -170,8 +232,7 @@ describe("DashboardTestCallWidget voice call endings", () => {
 
   it("sends the offer once ICE gathering finishes, with the gathered candidates", async () => {
     FakePeerConnection.slowIce = true;
-    render(<DashboardTestCallWidget businessId={"business-1" as never} businessSlug="acme-dental" />);
-    fireEvent.click(screen.getByRole("button", { name: "testCall.trigger" }));
+    placeCall();
     await waitFor(() => expect(FakePeerConnection.last?.setLocalDescription).toHaveBeenCalled());
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(fetchMock).not.toHaveBeenCalled();
@@ -228,8 +289,7 @@ describe("DashboardTestCallWidget voice call endings", () => {
   });
 
   it("marks the call connected when it recovers from a disconnect before ever connecting", async () => {
-    render(<DashboardTestCallWidget businessId={"business-1" as never} businessSlug="acme-dental" />);
-    fireEvent.click(screen.getByRole("button", { name: "testCall.trigger" }));
+    placeCall();
     await waitFor(() => expect(FakePeerConnection.last?.setRemoteDescription).toHaveBeenCalled());
     const connection = FakePeerConnection.last!;
     act(() => connection.setState("disconnected"));
@@ -268,15 +328,14 @@ describe("DashboardTestCallWidget voice call endings", () => {
   });
 });
 
-describe("DashboardTestCallWidget when the free minutes run out", () => {
+describe("TestWindow when the free minutes run out", () => {
   function refuseForUsedMinutes() {
     fetchMock.mockImplementationOnce(async () => Response.json({ code: "voice_limit_reached" }, { status: 402 }));
   }
 
   it("says the minutes are used and offers the plans to a free workspace", async () => {
     refuseForUsedMinutes();
-    render(<DashboardTestCallWidget businessId={"business-1" as never} businessSlug="acme-dental" />, "free_cloud");
-    fireEvent.click(screen.getByRole("button", { name: "testCall.trigger" }));
+    placeCall("free_cloud");
 
     const upgrade = await screen.findByRole("button", { name: "testCall.upgrade" });
     expect(screen.getAllByText("testCall.errors.voiceLimitReached").length).toBeGreaterThan(0);
@@ -286,8 +345,7 @@ describe("DashboardTestCallWidget when the free minutes run out", () => {
 
   it("shows no upgrade to a paid workspace that reached its spending cap", async () => {
     refuseForUsedMinutes();
-    render(<DashboardTestCallWidget businessId={"business-1" as never} businessSlug="acme-dental" />);
-    fireEvent.click(screen.getByRole("button", { name: "testCall.trigger" }));
+    placeCall();
 
     await waitFor(() => expect(screen.getAllByText("testCall.errors.voiceLimitReached").length).toBeGreaterThan(0));
     expect(screen.queryByRole("button", { name: "testCall.upgrade" })).toBeNull();

@@ -83,6 +83,11 @@ export type AgentToolContext = {
   /** Prospect demos only answer questions and take messages: no booking, no transfers. */
   intakeOnly?: boolean;
   /**
+   * A chat in the dashboard's test window: the agent answers as on the website
+   * but keeps only the read-only tools, so nothing it says changes anything.
+   */
+  testChat?: boolean;
+  /**
    * Website chats whose widget has live chat on: the visitor can ask for
    * someone from the team to join. `locale` is the chat's language, for what
    * the receptionist says if nobody joins in time. `onTeamRequested` hears
@@ -209,9 +214,9 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
 
   // A lookup that found nothing goes on the business's list of questions to
   // answer. In the background: the reply never waits for it, and a failed save
-  // only logs. Prospect demos aren't the business's callers, so they're skipped.
+  // only logs. Prospect demos and test chats aren't the business's callers, so they're skipped.
   function recordKnowledgeMiss(query: string): void {
-    if (context.intakeOnly) return;
+    if (context.intakeOnly || context.testChat) return;
     void Promise.resolve()
       .then(() => recordUnansweredQuestion(domain, {
         businessId,
@@ -297,6 +302,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
       },
     }),
   };
+  if (!offered("takeMessage")) delete tools.takeMessage;
 
   if (offered("findAvailability")) {
     const employeeName = z.string().optional().describe("Only when the caller asked for a specific employee: that employee's name. Leave it out to book whoever is available first.");

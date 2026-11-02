@@ -567,6 +567,15 @@ export const widgetChatRequestSchema = z.object({
 
 export type WidgetChatRequest = z.infer<typeof widgetChatRequestSchema>;
 
+/** The longest test chat the server reads. The browser holds it, so nothing is stored. */
+export const TEST_CHAT_MAX_MESSAGES = 20;
+
+/** A turn in the dashboard's test window. The browser sends the chat so far, ending with the operator's message. */
+export const testChatRequestSchema = z.object({
+  agentId: z.guid().optional(),
+  messages: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().trim().min(1).max(4_000) })).min(1).max(TEST_CHAT_MAX_MESSAGES).refine((messages) => messages.at(-1)?.role === "user", "The chat must end with the operator's message."),
+});
+
 export const widgetLeadRequestSchema = z.object({
   visitorId: z.guid(),
   name: z.string().max(160).optional(),

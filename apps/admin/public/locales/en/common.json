@@ -94,10 +94,14 @@
     "getReceptionistBack": "Get my agent back",
     "getNumberBack": "Get my number back"
   },
+  "testWindow": {
+    "orCall": "Or call",
+    "message": "Message",
+    "send": "Send",
+    "sendFailed": "Message not sent. Try again."
+  },
   "testCall": {
     "trigger": "Test Call",
-    "title": "Test your AI agent",
-    "description": "Start a live browser call with your configured agent.",
     "start": "Start call",
     "connecting": "Connecting...",
     "hangUp": "Hang up",
