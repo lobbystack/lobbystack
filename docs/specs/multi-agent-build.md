@@ -1,6 +1,6 @@
 # Spec: multi-agent build
 
-Status: ready-for-agent. Slice 2 waits on production counts.
+Status: ready-for-agent.
 
 This spec turns concept A from a prototype into the product. [`agents-and-navigation.md`](agents-and-navigation.md) holds the product decisions and [ADR 0012](../adr/0012-agents-share-a-workspace.md) the model. This file covers how to build them.
 
@@ -54,6 +54,12 @@ Every slice also runs `pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm build
 - Use composite foreign keys, so that a row can't point at another business's agent. Backfill channels in the migration. Check row counts for `calls` and `conversations` before you backfill them.
 - Add a trigger that assigns the default agent, for inserts from old code. Add an archive guard that covers every channel.
 - Archive agents instead of deleting them, so that history keeps the name.
+
+Migrations 0184 to 0188 built this. Three choices affect later slices:
+
+- **Backfill:** 0184 fills the four small tables in the migration. `calls` and `conversations` take their old rows from `backfillAgentLinks`, which `migrate` runs last. It commits 1,000 rows at a time, skips locked rows, stops after 20 minutes, and resumes on the next run. Run `pnpm --filter @lobbystack/db db:backfill-agent-links` to finish it by hand. It prints how many rows are left, and exits non-zero if any are.
+- **NOT NULL:** Before the next release validates the checks, confirm that the backfill reports 0 left on `calls` and `conversations`. Then validate `*_agent_id_present` on all six tables and set NOT NULL.
+- **Foreign keys:** The composite keys are deferred, so a cross-business write fails at commit. The trigger also runs on update, because the NOT VALID check applies to any row that changes. `app.default_agent_id` creates the default agent for a business that has none.
 
 ### 3. Put agents in the snapshot
 
@@ -115,7 +121,7 @@ Test search with a limited operator, activity-only operators and partner access.
 
 ### 8. Finish the rename
 
-Remove the assign-default trigger and the onboarding alias, validate NOT NULL, and rename the remaining `receptionist` code, about 1,500 lines in 250 files. Leave what slice 6 keeps stable.
+Remove the assign-default triggers, `businesses_assign_agent_before_delete`, `backfillAgentLinks` and the onboarding alias, and rename the remaining `receptionist` code, about 1,500 lines in 250 files. Leave what slice 6 keeps stable.
 
 ### 9. Sell extra numbers
 
@@ -139,4 +145,4 @@ Raphael settled these:
 
 ## Still open
 
-- **Production counts:** slice 2 needs the row counts for `calls` and `conversations`. Slice 1's backfill is one set-based statement, so it needs no count.
+- **Production counts:** we still don't have the row counts for `calls` and `conversations`. Slice 2's backfill runs in batches, so the release doesn't depend on them. The counts decide whether it finishes inside its 20-minute limit in one release.
