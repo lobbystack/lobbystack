@@ -1,6 +1,6 @@
 # Spec: multi-agent build
 
-Status: ready-for-agent from slice 0. Slices 1, 5 and 7 each wait on the decisions listed at the end.
+Status: ready-for-agent. Slice 9 waits on number prices per country, and slices 1 and 2 on production counts.
 
 This spec turns concept A from a prototype into the product. [`agents-and-navigation.md`](agents-and-navigation.md) holds the product decisions and [ADR 0012](../adr/0012-agents-share-a-workspace.md) the model. This file covers how to build them.
 
@@ -118,20 +118,24 @@ Remove the assign-default trigger and the onboarding alias, validate NOT NULL, a
 
 ### 9. Sell extra numbers
 
-Ticket 14. Until this ships, Starter and Pro include one number and a workspace has one Instagram account, so a second agent's only spare channel is a widget.
+Ticket 14. The add-on's monthly price depends on the number's country, so the plan catalog needs a price per country. The operator sees the price for the country they pick before they buy. Until this ships, Starter and Pro include one number and a workspace has one Instagram account, so a second agent's only spare channel is a widget.
 
-## Decisions for Raphael
+## Decisions
 
-| # | Decision | Recommendation | Blocks |
+Raphael settled these:
+
+| # | Decision | Answer | Slice |
 |---|---|---|---|
 | 1 | What's an existing business's default agent called, in all 8 caller languages? | "Agent", translated. Callers never hear it. | 1 |
 | 2 | Are booking mode, booking policy, transfers and the appointment policy agent-level or workspace-level? | Agent-level, because an after-hours agent needs its own. The prototype's shared card changes to match. | 1 |
-| 3 | What happens to extra agents after a downgrade to Free? | Keep them paused. Only the default agent answers, and its siblings' channels fall back to it. Upgrading restores them. | 5 |
-| 4 | Does each agent have one instructions field or several? | Voice and chat. Hide SMS until two-way text exists. | 5 |
+| 3 | What happens to extra agents after a downgrade to Free? | They stay paused. Only the default agent answers, and their channels fall back to it. Upgrading restores them. | 5 |
+| 4 | Does each agent have one instructions field or several? | Voice and chat. SMS stays hidden until two-way text exists. | 5 |
 | 5 | Can a workspace connect several Instagram accounts? | One for now, and it moves between agents. | 5 |
 | 6 | When a channel moves, do open conversations move too? | Yes, in the same transaction. | 5 |
 | 7 | How much of `/agents` ships in the public API first? | Read endpoints and `agent_id`, with writes later. | 6 |
 | 8 | How do we hold slice 7 for one release? | One integration branch. | 7 |
-| 9 | What does the number add-on cost? | Ticket 14. | 9 |
 
-Slice 2 also needs production row counts for `calls` and `conversations`, and slice 1 the number of businesses with no profile row.
+## Still open
+
+- **Number prices:** Raphael sets the price for each country after checking carrier costs. Slice 9 waits on them.
+- **Production counts:** slice 1 needs the number of businesses with no profile row, and slice 2 the row counts for `calls` and `conversations`.
