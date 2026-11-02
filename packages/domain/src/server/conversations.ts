@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gt, isNull, sql } from "drizzle-orm";
 
-import { businesses, calls, contacts, conversations, conversationSessions, enqueueOutbox, messages, transcripts, widgetVisitors, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { businesses, calls, contacts, conversations, conversationSessions, defaultAgentIdOf, enqueueOutbox, messages, transcripts, widgetVisitors, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { isTextChatChannel } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
@@ -106,7 +106,7 @@ export async function finalizeConversationSession(
 
 export async function getOrCreateConversation(
   context: DomainContext,
-  input: { businessId: string; contactPhone: string; channel: string; userId?: string },
+  input: { businessId: string; contactPhone: string; channel: string; userId?: string; agentId?: string },
 ): Promise<{ conversationId: string; contactId: string }> {
   return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: input.userId ? "operator" : "worker" }, async (tx) => {
     if (input.userId) {
@@ -115,7 +115,7 @@ export async function getOrCreateConversation(
     const { contact, created } = await findOrCreateContactByPhone(tx, { businessId: input.businessId, phone: input.contactPhone });
     if (created) await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "contact.created", resourceId: contact.id });
     const current = await tx.select({ id: conversations.id }).from(conversations).where(and(eq(conversations.businessId, input.businessId), eq(conversations.contactId, contact.id), eq(conversations.channel, input.channel), eq(conversations.status, "open"))).orderBy(desc(conversations.updatedAt)).limit(1);
-    const conversationId = current[0]?.id ?? (await tx.insert(conversations).values({ businessId: input.businessId, contactId: contact.id, channel: input.channel, status: "open", automationState: "ai_active" }).returning({ id: conversations.id }))[0]?.id;
+    const conversationId = current[0]?.id ?? (await tx.insert(conversations).values({ businessId: input.businessId, contactId: contact.id, agentId: input.agentId ?? defaultAgentIdOf(input.businessId), channel: input.channel, status: "open", automationState: "ai_active" }).returning({ id: conversations.id }))[0]?.id;
     if (!conversationId) {
       throw new Error("Conversation could not be created.");
     }
@@ -365,7 +365,7 @@ export const WIDGET_CHAT_IDLE_CLOSE_MS = 24 * 60 * 60_000;
 
 /** The visitor's open website chat, and whether it went a day without messages. A chat without messages yet stays, however old. */
 async function openWidgetChat(tx: DatabaseTransaction, input: { businessId: string; widgetVisitorId: string; now: Date }) {
-  const [chat] = await tx.select({ id: conversations.id, automationState: conversations.automationState }).from(conversations).where(and(eq(conversations.businessId, input.businessId), eq(conversations.widgetVisitorId, input.widgetVisitorId), eq(conversations.channel, "web_chat"), eq(conversations.status, "open"))).orderBy(desc(conversations.updatedAt)).limit(1);
+  const [chat] = await tx.select({ id: conversations.id, automationState: conversations.automationState, agentId: conversations.agentId }).from(conversations).where(and(eq(conversations.businessId, input.businessId), eq(conversations.widgetVisitorId, input.widgetVisitorId), eq(conversations.channel, "web_chat"), eq(conversations.status, "open"))).orderBy(desc(conversations.updatedAt)).limit(1);
   if (!chat) return undefined;
   const [lastMessage] = await tx.select({ createdAt: messages.createdAt }).from(messages).where(and(eq(messages.businessId, input.businessId), eq(messages.conversationId, chat.id))).orderBy(desc(messages.createdAt)).limit(1);
   return { ...chat, wentIdle: lastMessage !== undefined && input.now.getTime() - lastMessage.createdAt.getTime() >= WIDGET_CHAT_IDLE_CLOSE_MS };
@@ -373,8 +373,8 @@ async function openWidgetChat(tx: DatabaseTransaction, input: { businessId: stri
 
 export async function getOrCreateWidgetConversation(
   context: DomainContext,
-  input: { businessId: string; widgetVisitorId: string; now?: Date },
-): Promise<{ conversationId: string; automationState: "ai_active" | "human_handoff" }> {
+  input: { businessId: string; widgetVisitorId: string; now?: Date; /** The widget key's agent, stored on a new chat. */ agentId?: string },
+): Promise<{ conversationId: string; automationState: "ai_active" | "human_handoff"; agentId?: string }> {
   const now = input.now ?? new Date();
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     // The update lock serializes requests for one visitor, so two first requests open one chat and agree on one when an idle one is replaced,
@@ -394,9 +394,12 @@ export async function getOrCreateWidgetConversation(
       await tx.update(conversations).set({ status: "closed", updatedAt: now }).where(and(eq(conversations.id, current.id), eq(conversations.businessId, input.businessId)));
       current = undefined;
     }
-    const conversationId = current?.id ?? (await tx.insert(conversations).values({ businessId: input.businessId, widgetVisitorId: input.widgetVisitorId, ...(visitor.contactId ? { contactId: visitor.contactId } : {}), channel: "web_chat", status: "open", automationState: "ai_active" }).returning({ id: conversations.id }))[0]?.id;
+    const created = current ? undefined : (await tx.insert(conversations).values({ businessId: input.businessId, widgetVisitorId: input.widgetVisitorId, ...(visitor.contactId ? { contactId: visitor.contactId } : {}), agentId: input.agentId ?? defaultAgentIdOf(input.businessId), channel: "web_chat", status: "open", automationState: "ai_active" }).returning({ id: conversations.id, agentId: conversations.agentId }))[0];
+    const conversationId = current?.id ?? created?.id;
     if (!conversationId) throw new Error("Conversation could not be created.");
-    return { conversationId, automationState: current?.automationState === "human_handoff" ? "human_handoff" : "ai_active" };
+    // An open chat keeps the agent it started with.
+    const agentId = current?.agentId ?? created?.agentId ?? input.agentId;
+    return { conversationId, automationState: current?.automationState === "human_handoff" ? "human_handoff" : "ai_active", ...(agentId ? { agentId } : {}) };
   });
 }
 

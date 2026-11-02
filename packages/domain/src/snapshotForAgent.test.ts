@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { demoSnapshot, type BusinessContextSnapshot, type SnapshotAgent } from "@lobbystack/shared";
 
-import { buildBusinessContextSnapshot, snapshotForAgent } from "./snapshot";
+import { buildBusinessContextSnapshot, businessHasPhoneNumber, snapshotForAgent } from "./snapshot";
 
 const base: Parameters<typeof buildBusinessContextSnapshot>[0] = {
   businessId: "biz-1",
@@ -164,5 +164,38 @@ describe("buildBusinessContextSnapshot with agents", () => {
     expect(built.voiceInstructions).toBe(`${constraints} Speak in a warm tone. Keep answers concise and helpful.`);
     expect(built.smsInstructions).toBe(`${constraints} Reply clearly in SMS form. Ask one follow-up question at a time.`);
     expect(built.chatInstructions).toBe(`${constraints} Be friendly and concise. Use short paragraphs and plain language.`);
+  });
+});
+
+describe("an agent's phone number", () => {
+  const flat = "+14165550100";
+  const own = "+14165550199";
+  const withChannels = { ...snapshot, contactChannels: { phoneNumber: flat, smsNumber: "+18005550100", email: "desk@example.com" } };
+
+  it("gives each agent its own number and leaves the other channels", () => {
+    const projected = snapshotForAgent({ ...withChannels, agents: [{ ...defaultAgent, phoneNumber: flat }, { ...afterHours, phoneNumber: own }] }, afterHours.id)!;
+    expect(projected.contactChannels).toEqual({ phoneNumber: own, smsNumber: "+18005550100", email: "desk@example.com" });
+  });
+
+  it("gives an agent with no number none, rather than the first number the business has", () => {
+    const projected = snapshotForAgent({ ...withChannels, agents: [{ ...defaultAgent, phoneNumber: flat }, { ...afterHours, phoneNumber: null }] }, afterHours.id)!;
+    expect(projected.contactChannels).toEqual({ smsNumber: "+18005550100", email: "desk@example.com" });
+  });
+
+  it("keeps the flat number for the default agent of a snapshot from before agents had their own", () => {
+    const projected = snapshotForAgent({ ...withChannels, agents: [defaultAgent, afterHours] }, defaultAgent.id)!;
+    expect(projected.contactChannels.phoneNumber).toBe(flat);
+  });
+
+  it("gives another agent of such a snapshot no number, because the flat one isn't theirs", () => {
+    const projected = snapshotForAgent({ ...withChannels, agents: [defaultAgent, afterHours] }, afterHours.id)!;
+    expect(projected.contactChannels.phoneNumber).toBeUndefined();
+  });
+
+  it("counts a number held by any agent as the business having one", () => {
+    expect(businessHasPhoneNumber({ ...snapshot, contactChannels: { phoneNumber: flat } })).toBe(true);
+    expect(businessHasPhoneNumber({ ...snapshot, contactChannels: {}, agents: [{ ...defaultAgent, phoneNumber: null }, { ...afterHours, phoneNumber: own }] })).toBe(true);
+    expect(businessHasPhoneNumber({ ...snapshot, contactChannels: {}, agents: [{ ...defaultAgent, phoneNumber: null }] })).toBe(false);
+    expect(businessHasPhoneNumber({ ...snapshot, contactChannels: {} })).toBe(false);
   });
 });

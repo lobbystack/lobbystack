@@ -5,7 +5,6 @@ const mocks = vi.hoisted(() => ({
   rateLimit: vi.fn(),
   allowance: vi.fn(),
   snapshot: vi.fn(),
-  refreshSnapshot: vi.fn(),
   startLiveWebCall: vi.fn(),
   finishLiveCall: vi.fn(),
   recordProspectDemoCallStarted: vi.fn(),
@@ -18,13 +17,13 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@lobbystack/domain", () => ({
+  businessHasPhoneNumber: (snapshot: { contactChannels: { phoneNumber?: string } }) => Boolean(snapshot.contactChannels.phoneNumber),
   finishLiveCall: mocks.finishLiveCall,
-  getCachedBusinessSnapshot: mocks.snapshot,
+  getBusinessSnapshotForAgent: mocks.snapshot,
   getWebVoiceBillingAllowance: mocks.allowance,
   recordProspectDemoCallError: mocks.recordProspectDemoCallError,
   recordProspectDemoCallStarted: mocks.recordProspectDemoCallStarted,
   recordVoiceSnapshotLoaded: mocks.recordVoiceSnapshotLoaded,
-  refreshBusinessSnapshot: mocks.refreshSnapshot,
   startLiveWebCall: mocks.startLiveWebCall,
 }));
 vi.mock("@/lib/live-web-call", async (original) => ({ ...(await original<typeof import("@/lib/live-web-call")>()), resolveLiveWebCallAccess: mocks.access, liveSessionEndToken: (sessionId: string) => `token-for-${sessionId}` }));
@@ -125,14 +124,49 @@ describe("POST /api/voice/live/session", () => {
     expect(mocks.openaiHangup).toHaveBeenCalledWith("live_1");
   });
 
-  it("builds the snapshot of a business that has none yet, and refuses the call when that fails", async () => {
+  it("refuses the call when the business has no snapshot and none can be built", async () => {
     mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-dashboard-test-call", dashboardTestCall: true, billable: true });
-    mocks.snapshot.mockResolvedValueOnce(null).mockResolvedValueOnce(snapshot);
-    expect((await start("lobbystack-dashboard-test-call")).status).toBe(201);
-    expect(mocks.refreshSnapshot).toHaveBeenCalledWith(expect.anything(), { businessId: "biz_1" });
-    mocks.snapshot.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
+    mocks.snapshot.mockResolvedValue(null);
     expect((await start("lobbystack-dashboard-test-call")).status).toBe(409);
-    expect(mocks.create).toHaveBeenCalledOnce();
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+
+  it("starts a test call as the agent the operator chose, and records it", async () => {
+    const agentId = "6b0c1f8e-3f5a-4d57-9f7c-1b2f7c3f2a11";
+    mocks.access.mockResolvedValue({ businessId: "biz_1", agentId, origin: "https://admin.lobbystack.test", widgetId: "lobbystack-dashboard-test-call", dashboardTestCall: true, billable: true });
+    mocks.startLiveWebCall.mockResolvedValue({ callId: "call_1", agentId, maxDurationMs: 120_000 });
+    expect((await start("lobbystack-dashboard-test-call", { agentId })).status).toBe(201);
+    expect(mocks.access).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ agentId }));
+    expect(mocks.snapshot).toHaveBeenCalledWith(expect.anything(), { businessId: "biz_1", agentId });
+    expect(mocks.startLiveWebCall).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ agentId }));
+    expect(mocks.attach).toHaveBeenCalledWith(expect.objectContaining({ agentId }));
+  });
+
+  it("starts a test call with no agent as the default agent", async () => {
+    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-dashboard-test-call", dashboardTestCall: true, billable: true });
+    expect((await start("lobbystack-dashboard-test-call")).status).toBe(201);
+    expect(mocks.snapshot).toHaveBeenCalledWith(expect.anything(), { businessId: "biz_1", agentId: undefined });
+    expect(mocks.startLiveWebCall.mock.calls[0]?.[1]).not.toHaveProperty("agentId");
+  });
+
+  it("refuses an agent id that isn't one, before it reaches the database", async () => {
+    expect((await start("lobbystack-dashboard-test-call", { agentId: "not-a-uuid" })).status).toBe(400);
+    expect(mocks.access).not.toHaveBeenCalled();
+  });
+
+  it("stops a test call on an agent the operator can't reach", async () => {
+    mocks.access.mockResolvedValue({ status: 404, code: "agent_not_found" });
+    const response = await start("lobbystack-dashboard-test-call", { agentId: "6b0c1f8e-3f5a-4d57-9f7c-1b2f7c3f2a11" });
+    expect(response.status).toBe(404);
+    expect(await response.json()).toMatchObject({ code: "agent_not_found" });
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+
+  it("starts widget voice as the key's agent", async () => {
+    mocks.access.mockResolvedValue({ businessId: "biz_1", agentId: "agent-after-hours", origin: "https://client.example", widgetId: "lobbystack-widget", dashboardTestCall: false, billable: true });
+    expect((await start("lobbystack-widget")).status).toBe(201);
+    expect(mocks.snapshot).toHaveBeenCalledWith(expect.anything(), { businessId: "biz_1", agentId: "agent-after-hours" });
+    expect(mocks.startLiveWebCall).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ agentId: "agent-after-hours" }));
   });
 
   it("refuses widget voice for a business without a phone number", async () => {

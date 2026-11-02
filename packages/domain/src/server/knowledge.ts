@@ -3,8 +3,8 @@ import { createHash } from "node:crypto";
 import { and, asc, desc, eq, ilike, inArray, isNull, lt, ne, notInArray, sql } from "drizzle-orm";
 
 import { agentRules, agents, businessContextSnapshots, businesses, businessHours, closures, defaultAgentOf, enqueueOutbox, inOrder, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, phoneNumbers, services, staffServiceAssignments, storageObjects, websiteIngestionJobs, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { defaultGreeting, FULL_CRAWL_PAGE_LIMIT, getKnowledgeStorageLimitBytes, normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeReceptionistVoice, normalizeRuntimeLocale, normalizeStaffFirstMode, normalizeTransferMode, ONBOARDING_CRAWL_PAGE_LIMIT, runtimeLocales, servicePriceFromColumns, type BusinessContextSnapshot } from "@lobbystack/shared";
-import { buildBusinessContextSnapshot, MAX_KNOWLEDGE_SNIPPETS_PER_SNAPSHOT } from "../snapshot";
+import { defaultGreeting, FULL_CRAWL_PAGE_LIMIT, getKnowledgeStorageLimitBytes, normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeReceptionistVoice, normalizeRuntimeLocale, normalizeStaffFirstMode, normalizeTransferMode, ONBOARDING_CRAWL_PAGE_LIMIT, runtimeLocales, servicePriceFromColumns, type BusinessContextSnapshot, type SnapshotAgent } from "@lobbystack/shared";
+import { agentInstructions, buildBusinessContextSnapshot, MAX_KNOWLEDGE_SNIPPETS_PER_SNAPSHOT, snapshotRules } from "../snapshot";
 import { countKnowledgeTokens, fuseKnowledgeRanks, KNOWLEDGE_SEARCH_TOKEN_BUDGET, knowledgeLexicalQueries, knowledgeQueryTerms, withinKnowledgeBudget, type KnowledgePassage } from "../knowledgeRanking";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
@@ -635,6 +635,25 @@ function snapshotAgentFields(agent: typeof agents.$inferSelect | undefined) {
   };
 }
 
+/**
+ * One agent as the snapshot lists it, read from its row, for a call already
+ * under way on an agent the snapshot no longer lists because it was archived.
+ * Null when the business has no such agent.
+ */
+export async function loadSnapshotAgent(
+  context: DomainContext,
+  input: { businessId: string; agentId: string; business: Pick<BusinessContextSnapshot, "displayName" | "timezone"> },
+): Promise<SnapshotAgent | null> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const [row] = await tx.select().from(agents).where(and(eq(agents.businessId, input.businessId), eq(agents.id, input.agentId))).limit(1);
+    if (!row) return null;
+    const rules = await tx.select().from(agentRules).where(and(eq(agentRules.businessId, input.businessId), eq(agentRules.agentId, input.agentId), eq(agentRules.active, true))).orderBy(asc(agentRules.sortOrder), asc(agentRules.createdAt), asc(agentRules.id));
+    const { voiceInstructions, smsInstructions, chatInstructions, ...fields } = snapshotAgentFields(row);
+    const instructions = agentInstructions(input.business, { tone: fields.tone, ...(voiceInstructions ? { voiceInstructions } : {}), ...(smsInstructions ? { smsInstructions } : {}), ...(chatInstructions ? { chatInstructions } : {}) });
+    return { id: row.id, name: row.name, isDefault: row.isDefault, greeting: row.greeting, ...fields, ...instructions, rules: snapshotRules(rules.map((rule) => ({ id: rule.id, title: rule.title, content: rule.content, order: rule.sortOrder }))), phoneNumber: null };
+  });
+}
+
 export async function refreshBusinessSnapshot(
   context: DomainContext,
   input: { businessId: string },
@@ -663,7 +682,9 @@ export async function refreshBusinessSnapshot(
     ]);
     const schedules = await loadStaffSchedules(tx, { businessId: input.businessId, staffIds: employeeRows.map((row) => row.staffId), timezone: business[0].timezone });
     const currentProfile = profile[0];
-    const phoneNumber = numbers.find((number) => number.status === "active" && number.voiceEnabled)?.e164;
+    // The number an agent gives out and answers on, never another agent's. A number with no agent yet belongs to the default agent.
+    const phoneNumberOf = (agentId: string | undefined) => numbers.find((number) => number.status === "active" && number.voiceEnabled && (number.agentId ?? currentProfile?.id) === agentId)?.e164;
+    const phoneNumber = phoneNumberOf(currentProfile?.id);
     // The number customer texts come from, so the agent offers texts only to
     // callers it can reach: the shared sender on cloud, the business's own
     // SMS number when self-hosted.
@@ -701,7 +722,7 @@ export async function refreshBusinessSnapshot(
         ...(row.localizedNames ? { localizedNames: Object.fromEntries(runtimeLocales.flatMap((locale) => typeof row.localizedNames?.[locale] === "string" ? [[locale, row.localizedNames[locale]]] : [])) } : {}),
       })),
       rules: defaultRules.map(ruleSummary),
-      agents: agentRows.map((row) => ({ id: row.id, name: row.name, isDefault: row.isDefault, greeting: row.greeting, ...snapshotAgentFields(row), rules: rulesOf(row.id).map(ruleSummary) })),
+      agents: agentRows.map((row) => ({ id: row.id, name: row.name, isDefault: row.isDefault, greeting: row.greeting, ...snapshotAgentFields(row), rules: rulesOf(row.id).map(ruleSummary), phoneNumber: phoneNumberOf(row.id) ?? null })),
       employees: employeeRows.map((row) => {
         const assigned = new Set(assignments.filter((assignment) => assignment.staffId === row.staffId).map((assignment) => assignment.serviceId));
         const names = serviceRows.filter((service) => assigned.has(service.id)).map((service) => service.name);

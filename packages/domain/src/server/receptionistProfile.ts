@@ -1,4 +1,6 @@
 
+import { and, eq, isNull } from "drizzle-orm";
+
 import { agents, enqueueOutbox, type DatabaseTransaction } from "@lobbystack/db";
 import {
   appointmentChangeVerificationModes,
@@ -31,6 +33,12 @@ import { assertStaffFirstChange, enqueueStaffFirstRouting } from "./staffFirst";
 
 // Receptionist settings. The dashboard and the v1 API check and save them
 // here, so both follow one set of rules.
+
+/** Whether the business has this agent and it isn't archived. Run it under the operator's own access. */
+export async function activeAgentExistsInTransaction(tx: DatabaseTransaction, input: { businessId: string; agentId: string }): Promise<boolean> {
+  const rows = await tx.select({ id: agents.id }).from(agents).where(and(eq(agents.id, input.agentId), eq(agents.businessId, input.businessId), isNull(agents.archivedAt))).limit(1);
+  return rows.length > 0;
+}
 
 /** Fields a change can set. A missing field stays as it is; null clears an optional one. */
 export type ReceptionistProfilePatch = {

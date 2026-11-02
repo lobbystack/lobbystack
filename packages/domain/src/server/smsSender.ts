@@ -45,12 +45,13 @@ export async function isSelfHostedBusiness(tx: DatabaseTransaction, businessId: 
 /**
  * The business's own active SMS number. A replaced number stays active for 30
  * days with a reclaim date, so prefer a number that isn't being retired, then
- * the newest.
+ * the newest. With `agentId`, that agent's own number comes first, so a reply
+ * in a conversation comes from the number the customer texted.
  */
-export async function businessSmsNumber(tx: DatabaseTransaction, businessId: string): Promise<string | null> {
+export async function businessSmsNumber(tx: DatabaseTransaction, businessId: string, agentId?: string | null): Promise<string | null> {
   return (await tx.select({ e164: phoneNumbers.e164 }).from(phoneNumbers)
     .where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), eq(phoneNumbers.smsEnabled, true)))
-    .orderBy(sql`${phoneNumbers.reclaimScheduledAt} is not null`, desc(phoneNumbers.createdAt))
+    .orderBy(...(agentId ? [sql`${phoneNumbers.agentId} is distinct from ${agentId}::uuid`] : []), sql`${phoneNumbers.reclaimScheduledAt} is not null`, desc(phoneNumbers.createdAt))
     .limit(1))[0]?.e164 ?? null;
 }
 

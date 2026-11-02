@@ -1,6 +1,6 @@
 import { and, eq, gt, inArray, isNull, lt, ne, or, sql, type SQL } from "drizzle-orm";
 
-import { businesses, contacts, conversationSessions, conversations, enqueueOutbox, messages, providerEvents, smsConsentEvents, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { businesses, contacts, conversationSessions, conversations, defaultAgentIdOf, enqueueOutbox, messages, providerEvents, smsConsentEvents, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import type { CarrierId } from "@lobbystack/providers/telephony/types";
 import { DEFAULT_APP_NAME, brandLinks, contactEmailFor, isTerminalTwilioMessageStatus, mapTwilioStatusToMessageStatus, normalizeTwilioMessageStatus, shouldApplyMessageStatusTransition, smsRecipientRegion } from "@lobbystack/shared";
 
@@ -9,6 +9,7 @@ import { findOrCreateContactByPhone } from "./contacts";
 import type { DomainContext } from "./context";
 import { contentExpiryForPlan, isContentRetentionEnabled, resolveBusinessBillingPlan } from "./contentRetentionPolicy";
 import { queueOperatorAlertInTransaction, smsOptInConfirmationInTransaction, type SmsOptInConfirmation } from "./notifications";
+import { numberAgentIdInTransaction } from "./numberTrials";
 import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
 import { businessSmsNumber, isSelfHostedBusiness, isSharedSmsSender } from "./smsSender";
 import { recordUnitEconomicsEventInTransaction } from "./unitEconomics";
@@ -217,7 +218,10 @@ export async function receiveInboundSms(
 
     const { contact, created: contactCreated } = await findOrCreateContactByPhone(tx, { businessId: input.businessId, phone: input.from });
     if (contactCreated) await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "contact.created", resourceId: contact.id });
-    const conversation = (await tx.select({ id: conversations.id, automationState: conversations.automationState }).from(conversations).where(and(eq(conversations.businessId, input.businessId), eq(conversations.contactId, contact.id), eq(conversations.channel, "sms"), eq(conversations.status, "open"))).orderBy(sql`${conversations.updatedAt} desc`).limit(1))[0] ?? (await tx.insert(conversations).values({ businessId: input.businessId, contactId: contact.id, channel: "sms", status: "open", automationState: "ai_active" }).returning({ id: conversations.id, automationState: conversations.automationState }))[0];
+    // The number texted decides the agent, so one customer texting two agents' numbers has one conversation with each. A conversation with no agent yet is the default agent's.
+    const agentId = await numberAgentIdInTransaction(tx, { businessId: input.businessId, e164: input.to });
+    const defaultAgentId = defaultAgentIdOf(input.businessId);
+    const conversation = (await tx.select({ id: conversations.id, automationState: conversations.automationState }).from(conversations).where(and(eq(conversations.businessId, input.businessId), eq(conversations.contactId, contact.id), eq(conversations.channel, "sms"), eq(conversations.status, "open"), agentId ? sql`coalesce(${conversations.agentId}, ${defaultAgentId}) = ${agentId}::uuid` : undefined)).orderBy(sql`${conversations.updatedAt} desc`).limit(1))[0] ?? (await tx.insert(conversations).values({ businessId: input.businessId, contactId: contact.id, agentId: agentId ?? defaultAgentId, channel: "sms", status: "open", automationState: "ai_active" }).returning({ id: conversations.id, automationState: conversations.automationState }))[0];
     if (!conversation) throw new Error("Inbound SMS conversation could not be created.");
     const session = (await tx.select({ id: conversationSessions.id }).from(conversationSessions).where(and(eq(conversationSessions.businessId, input.businessId), eq(conversationSessions.conversationId, conversation.id), eq(conversationSessions.status, "open"))).orderBy(sql`${conversationSessions.startedAt} desc`).limit(1))[0] ?? (await tx.insert(conversationSessions).values({ businessId: input.businessId, conversationId: conversation.id, channel: "sms", status: "open" }).returning({ id: conversationSessions.id }))[0];
     if (!session) throw new Error("Inbound SMS session could not be created.");
@@ -347,7 +351,7 @@ export async function loadTextReplyReachInTransaction(tx: DatabaseTransaction, i
 }
 
 async function loadSmsReach(tx: DatabaseTransaction, input: { businessId: string; conversationId: string }): Promise<SmsReach & { contactId: string | null }> {
-  const contact = (await tx.select({ id: contacts.id, phone: contacts.phone, operatorBlockedAt: contacts.operatorBlockedAt, smsConsentStatus: contacts.smsConsentStatus, smsConsentUpdatedAt: contacts.smsConsentUpdatedAt })
+  const contact = (await tx.select({ id: contacts.id, phone: contacts.phone, operatorBlockedAt: contacts.operatorBlockedAt, smsConsentStatus: contacts.smsConsentStatus, smsConsentUpdatedAt: contacts.smsConsentUpdatedAt, agentId: conversations.agentId })
     .from(conversations)
     .innerJoin(contacts, and(eq(contacts.id, conversations.contactId), eq(contacts.businessId, input.businessId)))
     .where(and(eq(conversations.id, input.conversationId), eq(conversations.businessId, input.businessId)))
@@ -355,7 +359,7 @@ async function loadSmsReach(tx: DatabaseTransaction, input: { businessId: string
   // Only a text since the number or consent last changed counts: an earlier one may have come from the old number.
   const since = contact?.smsConsentUpdatedAt ? gt(messages.createdAt, contact.smsConsentUpdatedAt) : undefined;
   const inbound = await tx.select({ id: messages.id }).from(messages).where(and(eq(messages.businessId, input.businessId), eq(messages.conversationId, input.conversationId), eq(messages.direction, "inbound"), eq(messages.channel, "sms"), since)).limit(1);
-  return { contactId: contact?.id ?? null, phone: contact?.phone ?? null, operatorBlockedAt: contact?.operatorBlockedAt ?? null, smsConsentStatus: contact?.smsConsentStatus ?? null, customerTexted: inbound.length > 0, from: await businessSmsNumber(tx, input.businessId) };
+  return { contactId: contact?.id ?? null, phone: contact?.phone ?? null, operatorBlockedAt: contact?.operatorBlockedAt ?? null, smsConsentStatus: contact?.smsConsentStatus ?? null, customerTexted: inbound.length > 0, from: await businessSmsNumber(tx, input.businessId, contact?.agentId) };
 }
 
 /** Why an operator's SMS reply in this conversation can't go out, or null. The worker checks the same rule again before it sends. */

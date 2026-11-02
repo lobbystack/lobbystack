@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray, lt, or, sql } from "drizzle-orm";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
-import { auditLogs, contacts, conversations, conversationSessions, enqueueOutbox, instagramAccounts, messages, providerEvents, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { auditLogs, contacts, conversations, conversationSessions, defaultAgentIdOf, enqueueOutbox, instagramAccounts, messages, providerEvents, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
@@ -134,7 +134,7 @@ export async function receiveInstagramMessage(
     const contact = await findOrCreateInstagramContact(tx, { businessId: input.businessId, instagramUserId: input.senderId });
     if (contact.created) await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "contact.created", resourceId: contact.id });
     const conversation = (await tx.select({ id: conversations.id, automationState: conversations.automationState }).from(conversations).where(and(eq(conversations.businessId, input.businessId), eq(conversations.contactId, contact.id), eq(conversations.channel, "instagram"), eq(conversations.status, "open"))).orderBy(desc(conversations.updatedAt)).limit(1))[0]
-      ?? (await tx.insert(conversations).values({ businessId: input.businessId, contactId: contact.id, channel: "instagram", status: "open", automationState: "ai_active" }).returning({ id: conversations.id, automationState: conversations.automationState }))[0];
+      ?? (await tx.insert(conversations).values({ businessId: input.businessId, contactId: contact.id, agentId: sql<string | null>`coalesce((select ${instagramAccounts.agentId} from ${instagramAccounts} where ${instagramAccounts.businessId} = ${input.businessId}::uuid), ${defaultAgentIdOf(input.businessId)})`, channel: "instagram", status: "open", automationState: "ai_active" }).returning({ id: conversations.id, automationState: conversations.automationState }))[0];
     if (!conversation) throw new Error("Instagram conversation could not be created.");
     const messageId = await insertMessageInTransaction(tx, { businessId: input.businessId, conversationId: conversation.id, body: input.text, direction: "inbound", channel: "instagram", providerMessageId: input.providerMessageId });
     await tx.update(providerEvents).set({ status: "processed", updatedAt: new Date() }).where(eq(providerEvents.id, event.id));
@@ -151,6 +151,8 @@ export async function receiveInstagramMessage(
 
 export type InstagramReplyContext = {
   conversationId: string;
+  /** The agent that answers this conversation. Absent on one with no agent yet, which the default agent answers. */
+  agentId?: string;
   history: Array<{ direction: "inbound" | "outbound"; body: string }>;
 };
 
@@ -162,7 +164,8 @@ export type InstagramReplyContext = {
  */
 export async function loadInstagramReplyContext(context: DomainContext, input: { businessId: string; conversationId: string; messageId: string; now?: Date }): Promise<InstagramReplyContext | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    if (!await stillAnsweringInTransaction(tx, input)) return null;
+    const answering = await stillAnsweringInTransaction(tx, input);
+    if (!answering) return null;
     const rows = await tx.select({ id: messages.id, direction: messages.direction, body: messages.body, aiGenerated: messages.aiGenerated, createdAt: messages.createdAt }).from(messages)
       .where(and(eq(messages.businessId, input.businessId), eq(messages.conversationId, input.conversationId))).orderBy(desc(messages.createdAt)).limit(40);
     const latestInbound = rows[0]!;
@@ -175,7 +178,7 @@ export async function loadInstagramReplyContext(context: DomainContext, input: {
       await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKind: "aiReplyFailed", eventKey: `instagram-reply-limit:${input.conversationId}`, subject: "Instagram conversation paused", body: "The agent stopped answering an Instagram conversation that kept replying back, which usually means another automated account. Open Messages to take it over or turn the agent back on." });
       return null;
     }
-    return { conversationId: input.conversationId, history: rows.reverse().map((row) => ({ direction: row.direction === "inbound" ? "inbound" : "outbound", body: row.body })) };
+    return { conversationId: input.conversationId, ...(answering.agentId ? { agentId: answering.agentId } : {}), history: rows.reverse().map((row) => ({ direction: row.direction === "inbound" ? "inbound" : "outbound", body: row.body })) };
   });
 }
 
@@ -184,16 +187,17 @@ export async function loadInstagramReplyContext(context: DomainContext, input: {
  * open Instagram one it handles, the contact isn't blocked, and that message is
  * still the newest. A newer message has its own job, which answers them
  * together, and a reply that went out after it already answered it. Locks the
- * conversation, so the answer holds until the transaction ends.
+ * conversation, so the answer holds until the transaction ends. Returns the
+ * conversation's agent, or null when the receptionist doesn't answer.
  */
-async function stillAnsweringInTransaction(tx: DatabaseTransaction, input: { businessId: string; conversationId: string; messageId: string }): Promise<boolean> {
-  const [conversation] = await tx.select({ automationState: conversations.automationState, channel: conversations.channel, status: conversations.status, contactBlockedAt: contacts.operatorBlockedAt })
+async function stillAnsweringInTransaction(tx: DatabaseTransaction, input: { businessId: string; conversationId: string; messageId: string }): Promise<{ agentId: string | null } | null> {
+  const [conversation] = await tx.select({ automationState: conversations.automationState, channel: conversations.channel, status: conversations.status, contactBlockedAt: contacts.operatorBlockedAt, agentId: conversations.agentId })
     .from(conversations).leftJoin(contacts, eq(contacts.id, conversations.contactId))
     .where(and(eq(conversations.id, input.conversationId), eq(conversations.businessId, input.businessId))).limit(1).for("update", { of: conversations });
-  if (!conversation || conversation.channel !== "instagram" || conversation.status !== "open" || conversation.automationState !== "ai_active" || conversation.contactBlockedAt) return false;
+  if (!conversation || conversation.channel !== "instagram" || conversation.status !== "open" || conversation.automationState !== "ai_active" || conversation.contactBlockedAt) return null;
   const [latest] = await tx.select({ id: messages.id, direction: messages.direction }).from(messages)
     .where(and(eq(messages.businessId, input.businessId), eq(messages.conversationId, input.conversationId))).orderBy(desc(messages.createdAt)).limit(1);
-  return latest?.id === input.messageId && latest.direction === "inbound";
+  return latest?.id === input.messageId && latest.direction === "inbound" ? { agentId: conversation.agentId } : null;
 }
 
 /** Alerts the team to a message the receptionist acted on but couldn't finish answering. One alert per conversation each hour. */

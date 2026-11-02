@@ -1,8 +1,8 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 
-import { and, desc, eq, gt, inArray, lt, or } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, lt, or } from "drizzle-orm";
 
-import { agents, appointmentChangeVerifications, appointments, auditLogs, businesses, contacts, defaultAgentOf, enqueueOutbox, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { agentOrDefaultOf, agents, appointmentChangeVerifications, appointments, auditLogs, businesses, contacts, enqueueOutbox, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { canTextNumber, normalizeAppointmentChangePolicy, normalizeInterfaceLocale, type AppointmentChangeVerificationMode, type InterfaceLocale } from "@lobbystack/shared";
 
 import { appointmentTimesMatch, serviceNamesMatch, substantiveServiceNameFactMatches } from "./appointmentFacts";
@@ -37,10 +37,10 @@ async function auditAppointmentChange(tx: DatabaseTransaction, input: { business
 
 export async function createAppointmentChangeVerification(
   context: DomainContext,
-  input: { businessId: string; appointmentId?: string; callerPhone: string; callId?: string; action: "cancel" | "reschedule"; appointmentStartsAt?: string; serviceName?: string },
+  input: { businessId: string; agentId?: string; appointmentId?: string; callerPhone: string; callId?: string; action: "cancel" | "reschedule"; appointmentStartsAt?: string; serviceName?: string },
 ): Promise<{ verificationId: string; appointmentId: string; contactId: string; status: string; expiresAt: string; smsConsent: SmsConsentOnFile } | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const profile = (await tx.select({ policy: agents.appointmentChangePolicy }).from(agents).where(defaultAgentOf(input.businessId)).limit(1))[0];
+    const profile = (await tx.select({ policy: agents.appointmentChangePolicy }).from(agents).where(agentOrDefaultOf(input.businessId, input.agentId)).orderBy(asc(agents.isDefault)).limit(1))[0];
     const policy = normalizeAppointmentChangePolicy(profile?.policy);
     if (!policy.enabled || policy.verificationMode === "operator_only" || (input.action === "cancel" ? !policy.allowCancel : !policy.allowReschedule)) return null;
     if (!input.appointmentStartsAt?.trim() && !input.serviceName?.trim()) return null;
@@ -275,9 +275,9 @@ const VERIFIED_STATUSES: Record<AppointmentChangeVerificationMode, string[]> = {
 
 export async function consumeAppointmentChangeVerificationInTransaction(
   tx: DatabaseTransaction,
-  input: { businessId: string; verificationId: string; appointmentId: string; callerPhone: string; action: "cancel" | "reschedule" },
+  input: { businessId: string; agentId?: string | undefined; verificationId: string; appointmentId: string; callerPhone: string; action: "cancel" | "reschedule" },
 ): Promise<boolean> {
-  const profile = (await tx.select({ policy: agents.appointmentChangePolicy }).from(agents).where(defaultAgentOf(input.businessId)).limit(1).for("share"))[0];
+  const profile = (await tx.select({ policy: agents.appointmentChangePolicy }).from(agents).where(agentOrDefaultOf(input.businessId, input.agentId)).orderBy(asc(agents.isDefault)).limit(1).for("share"))[0];
   const policy = normalizeAppointmentChangePolicy(profile?.policy);
   if (!policy.enabled || policy.verificationMode === "operator_only" || (input.action === "cancel" ? !policy.allowCancel : !policy.allowReschedule)) return false;
   const rows = await tx.update(appointmentChangeVerifications).set({ status: "used", updatedAt: new Date() }).where(and(eq(appointmentChangeVerifications.id, input.verificationId), eq(appointmentChangeVerifications.businessId, input.businessId), eq(appointmentChangeVerifications.appointmentId, input.appointmentId), eq(appointmentChangeVerifications.callerPhone, input.callerPhone), eq(appointmentChangeVerifications.action, input.action), inArray(appointmentChangeVerifications.status, VERIFIED_STATUSES[policy.verificationMode]), gt(appointmentChangeVerifications.expiresAt, new Date()))).returning({ id: appointmentChangeVerifications.id });

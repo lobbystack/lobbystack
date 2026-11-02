@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import { and, eq, gt, inArray, like, ne, sql } from "drizzle-orm";
 
-import { agents, billingUsageEvents, calls, contacts, defaultAgentOf, enqueueOutbox, numberTrials, phoneNumbers, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, billingUsageEvents, calls, contacts, defaultAgentIdOf, defaultAgentOf, enqueueOutbox, numberTrials, phoneNumbers, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { sipAddress } from "@lobbystack/providers/telephony/config";
 import { CARRIERS_WITH_STAFF_FIRST, type CarrierId } from "@lobbystack/providers/telephony/types";
 import { includesStaffFirst, isTransferPhone, shouldRingStaffFirst, type RuntimeLocale, type StaffFirstMode } from "@lobbystack/shared";
@@ -12,9 +12,9 @@ import { STAFF_ANSWERED_DISPOSITION } from "./callOutcome";
 import type { DomainContext } from "./context";
 import { loadEntitlement } from "./entitlement";
 import { recordFirstStaffAnsweredCallInTransaction } from "./firstRealConversation";
-import { assertTransferNumberAllowed, enqueueNumberRouting, trialTransferNumberInTransaction } from "./numberTrials";
+import { assertTransferNumberAllowed, enqueueNumberRouting, numberAgentIdInTransaction, trialTransferNumberInTransaction } from "./numberTrials";
 import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
-import { getCachedBusinessSnapshot } from "./snapshotCache";
+import { getBusinessSnapshotForAgent, getCachedBusinessSnapshot } from "./snapshotCache";
 import { findOrCreateCallContactInTransaction } from "./voice";
 
 // Staff answers first: a call rings one staff phone before the receptionist
@@ -109,20 +109,21 @@ export type StaffFirstDecision =
 /**
  * What to do with a call to a staff-first number. Everything that can't ring
  * goes straight to the receptionist, which applies the plan's and the trial's
- * minutes as on any other call. Hours come from the snapshot, like the rest of
- * a call's setup, so a change reaches calls when the snapshot refreshes. Each
+ * minutes as on any other call. The dialled number's agent decides who rings
+ * and for how long. Hours come from the snapshot, like the rest of a call's
+ * setup, so a change reaches calls when the snapshot refreshes. Each
  * ring uses one transfer attempt, keyed on the carrier's call so a repeated
  * webhook doesn't use another. With none left, or past the bridged minutes,
  * the receptionist answers.
  */
 export async function decideStaffFirstCall(context: DomainContext, input: { businessId: string; e164: string; providerCallId: string; from?: string | undefined; forwardedFrom?: string | undefined; now?: Date }): Promise<StaffFirstDecision> {
-  const snapshot = await getCachedBusinessSnapshot(context, { businessId: input.businessId });
-  const { ended, blocked, included, trialPhone } = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+  const { ended, blocked, included, trialPhone, agentId } = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const trial = (await tx.select({ id: numberTrials.id }).from(numberTrials).where(and(eq(numberTrials.businessId, input.businessId), eq(numberTrials.status, "ended"))).limit(1))[0];
     const caller = input.from ? (await tx.select({ blockedAt: contacts.operatorBlockedAt }).from(contacts).where(and(eq(contacts.businessId, input.businessId), eq(contacts.phone, input.from))).limit(1))[0] : undefined;
-    return { ended: Boolean(trial), blocked: Boolean(caller?.blockedAt), included: includesStaffFirst(await loadEntitlement(tx, input.businessId)), trialPhone: await trialTransferNumberInTransaction(tx, input) };
+    return { ended: Boolean(trial), blocked: Boolean(caller?.blockedAt), included: includesStaffFirst(await loadEntitlement(tx, input.businessId)), trialPhone: await trialTransferNumberInTransaction(tx, input), agentId: await numberAgentIdInTransaction(tx, input) };
   });
   if (ended || blocked) return { action: "reject" };
+  const snapshot = await getBusinessSnapshotForAgent(context, { businessId: input.businessId, agentId });
   const locale = snapshot?.defaultLocale ?? "en";
   const policy = snapshot?.staffFirstPolicy;
   if (!snapshot || !policy || !included || !shouldRingStaffFirst(snapshot, input.now)) return { action: "receptionist", locale };
@@ -147,9 +148,10 @@ export async function loadStaffPrompt(context: DomainContext, input: { businessI
   return { business: snapshot?.displayName ?? "", locale: snapshot?.teamLocale ?? snapshot?.defaultLocale ?? "en", caller: { ...(contact?.name ? { name: contact.name } : {}), ...(input.from ? { phone: input.from } : {}) } };
 }
 
-/** What the receptionist's leg needs after a ring: the business's language and the handover message. */
-export async function loadStaffFirstHandover(context: DomainContext, input: { businessId: string }): Promise<{ locale: RuntimeLocale; message?: string }> {
-  const snapshot = await getCachedBusinessSnapshot(context, { businessId: input.businessId });
+/** What the receptionist's leg needs after a ring: the business's language and the handover message of the dialled number's agent. */
+export async function loadStaffFirstHandover(context: DomainContext, input: { businessId: string; e164: string }): Promise<{ locale: RuntimeLocale; message?: string }> {
+  const agentId = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => await numberAgentIdInTransaction(tx, input));
+  const snapshot = await getBusinessSnapshotForAgent(context, { businessId: input.businessId, agentId });
   return { locale: snapshot?.defaultLocale ?? "en", ...(snapshot?.staffFirstPolicy?.handoverMessage ? { message: snapshot.staffFirstPolicy.handoverMessage } : {}) };
 }
 
@@ -169,6 +171,7 @@ export async function recordStaffAnsweredCall(context: DomainContext, input: { b
     const [call] = await tx.insert(calls).values({
       businessId: input.businessId,
       contactId,
+      agentId: await numberAgentIdInTransaction(tx, { businessId: input.businessId, e164: input.to }) ?? defaultAgentIdOf(input.businessId),
       provider: STAFF_ANSWERED_CALL_PROVIDER,
       providerCallId: input.providerCallId,
       transport: "voice",

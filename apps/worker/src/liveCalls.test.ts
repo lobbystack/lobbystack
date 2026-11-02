@@ -59,7 +59,7 @@ vi.mock("@lobbystack/domain", async (importOriginal) => ({
   lastLiveCallSequence: mocks.lastLiveCallSequence,
   extendLiveCallReservation: mocks.extendLiveCallReservation,
   blockLiveCaller: mocks.blockLiveCaller,
-  getCachedBusinessSnapshot: mocks.snapshot,
+  getBusinessSnapshotForAgent: mocks.snapshot,
   finishLiveCall: mocks.finishLiveCall,
   checkNumberTrialMinutes: mocks.checkNumberTrialMinutes,
   prepareLiveCallTransfer: mocks.prepareLiveCallTransfer,
@@ -422,6 +422,29 @@ describe("createLiveCallHandler", () => {
   });
 });
 
+describe("which agent a call runs as", () => {
+  const start = (body: Record<string, unknown>) => {
+    vi.stubEnv("LIVE_PROTOTYPE_ENABLED", "true");
+    vi.stubEnv("INTERNAL_SERVICE_TOKEN", "token");
+    vi.stubEnv("OPENAI_API_KEY", "sk-test");
+    mocks.snapshot.mockClear();
+    mocks.snapshot.mockImplementation(async (_domain: unknown, input: { agentId?: string }) => ({ businessId: "biz_1", greeting: `Hi from ${input.agentId ?? "the default agent"}` }));
+    return createLiveCallHandler({ domain: { db: {} as never } }).handle(attachRequest({ businessId: "biz_1", callId: "call_agent", channel: "voice", ...body }), response());
+  };
+
+  it("loads the attach's agent, and finishes as it even if it was archived since the call started", async () => {
+    await start({ sessionId: "live_agent", agentId: "agent_b" });
+    expect(mocks.snapshot).toHaveBeenCalledWith(expect.anything(), { businessId: "biz_1", agentId: "agent_b", underWay: true });
+    expect(await (mocks.controllers_.at(-1)!.options.setup as Promise<{ greeting?: string }>)).toMatchObject({ greeting: "Hi from agent_b" });
+    expect(mocks.createReceptionistAgent).toHaveBeenLastCalledWith(expect.objectContaining({ context: expect.objectContaining({ snapshot: expect.objectContaining({ greeting: "Hi from agent_b" }) }) }));
+  });
+
+  it("treats an attach from an admin that predates agents as the default agent", async () => {
+    await start({ sessionId: "live_old" });
+    expect(mocks.snapshot).toHaveBeenCalledWith(expect.anything(), { businessId: "biz_1", agentId: undefined, underWay: true });
+  });
+});
+
 describe("re-attaching after a retried webhook delivery", () => {
   async function attach(body: Record<string, unknown>) {
     vi.stubEnv("LIVE_PROTOTYPE_ENABLED", "true");
@@ -581,6 +604,14 @@ describe("recovering a call whose worker died", () => {
     mocks.snapshot.mockResolvedValue({ businessId: "biz_1", greeting: "Hi" });
     return createLiveCallHandler({ domain: { db: {} as never }, attachLock: lock });
   }
+
+  it("recovers a call as the agent it recorded, or the default agent on a call from before calls recorded one", async () => {
+    const worker = recoveringWorker();
+    await worker.recover(orphan("live_agent_b", { agentId: "agent_b" }));
+    expect(mocks.snapshot).toHaveBeenLastCalledWith(expect.anything(), { businessId: "biz_1", agentId: "agent_b", underWay: true });
+    await worker.recover(orphan("live_no_agent"));
+    expect(mocks.snapshot).toHaveBeenLastCalledWith(expect.anything(), { businessId: "biz_1", agentId: undefined, underWay: true });
+  });
 
   it("re-attaches an orphaned call with no lock for the rest of its reserved minutes", async () => {
     const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
@@ -1036,6 +1067,13 @@ describe("parseAttachRequest", () => {
   it("keeps only the fields the worker trusts", () => {
     expect(parseAttachRequest(JSON.stringify({ sessionId: "live_1", businessId: "biz_1", callId: "call_1", channel: "web_voice", intakeOnly: "yes", maxDurationMs: -1, resume: "yes" })))
       .toEqual({ sessionId: "live_1", businessId: "biz_1", callId: "call_1", channel: "web_voice" });
+  });
+
+  it("keeps the call's agent, and leaves it out of an attach from an admin that predates agents", () => {
+    const attach = { sessionId: "live_1", businessId: "biz_1", callId: "call_1", channel: "voice" };
+    expect(parseAttachRequest(JSON.stringify({ ...attach, agentId: "agent_b" }))).toMatchObject({ agentId: "agent_b" });
+    expect(parseAttachRequest(JSON.stringify({ ...attach, agentId: 7 }))).not.toHaveProperty("agentId");
+    expect(parseAttachRequest(JSON.stringify(attach))).not.toHaveProperty("agentId");
   });
 
   it("marks a retried delivery's attach as a resume", () => {

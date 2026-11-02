@@ -257,11 +257,11 @@ describe.skipIf(!testUrl)("GPT-Live phone calls against PostgreSQL", () => {
       const open = await asWorker(tx, (context) => listOpenLiveCalls(context, { businessId, startedBefore: new Date(Date.now() - 60_000) }));
       expect(open.map((row) => row.callId).sort()).toEqual([phoneCall!.callId, demoCall!.callId].sort());
       expect(open.find((row) => row.callId === phoneCall!.callId)).toEqual({
-        businessId, callId: phoneCall!.callId, sessionId: phone.sessionId, channel: "voice", conversationId: phoneCall!.conversationId, callerPhone: "+14165550134", intakeOnly: false,
+        businessId, callId: phoneCall!.callId, sessionId: phone.sessionId, channel: "voice", agentId: expect.any(String), conversationId: phoneCall!.conversationId, callerPhone: "+14165550134", intakeOnly: false,
         startedAt, reservedSeconds: 300, slicedReservation: true, lastActivityAt: new Date(startedAt.getTime() + 90_000), lastSequence: 2,
       });
       expect(open.find((row) => row.callId === demoCall!.callId)).toEqual({
-        businessId, callId: demoCall!.callId, sessionId: demo.sessionId, channel: "web_voice", conversationId: demoCall!.conversationId, intakeOnly: true,
+        businessId, callId: demoCall!.callId, sessionId: demo.sessionId, channel: "web_voice", agentId: expect.any(String), conversationId: demoCall!.conversationId, intakeOnly: true,
         startedAt, reservedSeconds: 120, slicedReservation: false, lastActivityAt: new Date(startedAt.getTime() + 3_000), lastSequence: 0,
       });
       expect(open.map((row) => row.callId)).not.toContain(recentCall!.callId);

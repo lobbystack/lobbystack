@@ -7,15 +7,17 @@ import { deserializeSnapshot, getBusinessSnapshotForAgent, getCachedBusinessSnap
 
 vi.mock("./knowledge", () => ({
   loadLatestBusinessSnapshot: vi.fn(),
+  loadSnapshotAgent: vi.fn(),
   refreshBusinessSnapshot: vi.fn(),
 }));
 
-import { loadLatestBusinessSnapshot, refreshBusinessSnapshot } from "./knowledge";
+import { loadLatestBusinessSnapshot, loadSnapshotAgent, refreshBusinessSnapshot } from "./knowledge";
 
 const businessId = "00000000-0000-4000-8000-000000000001";
 
 const loadMock = vi.mocked(loadLatestBusinessSnapshot);
 const refreshMock = vi.mocked(refreshBusinessSnapshot);
+const agentRowMock = vi.mocked(loadSnapshotAgent);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -210,5 +212,44 @@ describe("getCachedBusinessSnapshot", () => {
     const result = await getCachedBusinessSnapshot(makeContext(null), { businessId });
     expect(result?.displayName).toBe("Loaded");
     expect(loadMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("getBusinessSnapshotForAgent for a call already started", () => {
+  const stored = { ...demoSnapshot, greeting: "Hello", agents: [agent("default", "Hello")] };
+  const context = { db: {} } as unknown as DomainContext;
+
+  it("projects a snapshot it was handed without reading anything", async () => {
+    const snapshot = await getBusinessSnapshotForAgent(context, { businessId, agentId: "default", loaded: stored });
+    expect(snapshot).toMatchObject({ agentId: "default" });
+    expect(loadMock).not.toHaveBeenCalled();
+    expect(refreshMock).not.toHaveBeenCalled();
+  });
+
+  it("finishes a call as an agent archived since it started", async () => {
+    loadMock.mockResolvedValue(stored);
+    agentRowMock.mockResolvedValue(agent("archived", "Good evening"));
+    const snapshot = await getBusinessSnapshotForAgent(context, { businessId, agentId: "archived", underWay: true });
+    expect(snapshot).toMatchObject({ agentId: "archived", greeting: "Good evening" });
+    expect(refreshMock).toHaveBeenCalledOnce();
+  });
+
+  it("answers as the default agent when an agent that started no call is gone", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    loadMock.mockResolvedValue(stored);
+    const snapshot = await getBusinessSnapshotForAgent(context, { businessId, agentId: "archived" });
+    expect(snapshot).toMatchObject({ greeting: "Hello" });
+    expect(agentRowMock).not.toHaveBeenCalled();
+    expect(error).toHaveBeenCalledWith("[snapshot] unknown agent, answering as the default agent", businessId, "archived");
+    error.mockRestore();
+  });
+
+  it("answers as the default agent when even the agent's row can't be read", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    loadMock.mockResolvedValue(stored);
+    agentRowMock.mockRejectedValue(new Error("database down"));
+    const snapshot = await getBusinessSnapshotForAgent(context, { businessId, agentId: "archived", underWay: true });
+    expect(snapshot).toMatchObject({ greeting: "Hello" });
+    error.mockRestore();
   });
 });

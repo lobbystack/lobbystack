@@ -1,12 +1,13 @@
 import { DateTime } from "luxon";
-import { and, desc, eq, gt, gte, inArray, isNull, lte, ne, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, isNull, lte, ne, notInArray, sql } from "drizzle-orm";
 
-import { agents, businesses, calls, defaultAgentOf, enqueueOutbox, numberTrials, numberWaitlist, onboardingPhoneVerifications, phoneNumbers, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { agentOfRow, agents, businesses, calls, defaultAgentOf, enqueueOutbox, numberTrials, numberWaitlist, onboardingPhoneVerifications, phoneNumbers, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { numberCountryReady } from "@lobbystack/providers/telephony/config";
 import { CARRIERS_FORWARDING_REFUSED_CALLS, CARRIERS_WITH_STAFF_FIRST, isCarrierId, type CarrierId, type NumberRoutingMode } from "@lobbystack/providers/telephony/types";
 import { isTransferPhone, normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
 
 import { hasMinimumRole, requireBusinessAdmin, requireBusinessMembership } from "../authz";
+import { enqueueAgentSnapshotRefresh } from "./agentSnapshot";
 import type { DomainContext } from "./context";
 import { loadEntitlement } from "./entitlement";
 import { businessGetsHostEmails } from "./hostEmails";
@@ -242,7 +243,7 @@ export async function desiredNumberRouting(context: DomainContext, input: { busi
     const row = (await tx.select({ providerPhoneId: phoneNumbers.providerPhoneId, e164: phoneNumbers.e164, carrier: phoneNumbers.carrier, carrierConnectionId: phoneNumbers.carrierConnectionId, trialStatus: numberTrials.status, minutesExhaustedAt: numberTrials.minutesExhaustedAt, staffFirstMode: agents.staffFirstMode })
       .from(phoneNumbers)
       .leftJoin(numberTrials, and(eq(numberTrials.phoneNumberId, phoneNumbers.id), inArray(numberTrials.status, ["active", "ended"])))
-      .leftJoin(agents, defaultAgentOf(phoneNumbers.businessId))
+      .leftJoin(agents, agentOfRow(phoneNumbers.businessId, phoneNumbers.agentId))
       .where(and(eq(phoneNumbers.id, input.phoneNumberId), eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active")))
       .limit(1))[0];
     if (!row?.providerPhoneId) return null;
@@ -314,7 +315,7 @@ export async function checkNumberTrialMinutes(context: DomainContext, input: { b
  * Where a call goes when the receptionist doesn't take it: a trial number out
  * of minutes, or any number whose plan is out of minutes or at its overage cap
  * (the trunk fails the call over to /api/webhooks/twilio/voice). It forwards
- * to the business's transfer number, or else the owner's verified phone, and
+ * to the transfer number of the number's agent, or else the owner's verified phone, and
  * rejects only when neither exists. An ended trial lets the call go
  * unanswered, as if the number were gone. Forwarding uses no AI minutes, so it
  * doesn't depend on the plan.
@@ -324,7 +325,7 @@ export async function resolveNumberFallback(context: DomainContext, input: { bus
     const row = (await tx.select({ trialStatus: numberTrials.status, trialPhone: numberTrials.verifiedPhone, transferNumber: agents.transferNumber })
       .from(phoneNumbers)
       .leftJoin(numberTrials, and(eq(numberTrials.phoneNumberId, phoneNumbers.id), inArray(numberTrials.status, ["active", "ended"])))
-      .leftJoin(agents, defaultAgentOf(phoneNumbers.businessId))
+      .leftJoin(agents, agentOfRow(phoneNumbers.businessId, phoneNumbers.agentId))
       .where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.e164, input.e164), eq(phoneNumbers.status, "active")))
       .limit(1))[0];
     if (!row || row.trialStatus === "ended") return { action: "reject" };
@@ -334,6 +335,22 @@ export async function resolveNumberFallback(context: DomainContext, input: { bus
     const to = [row.transferNumber?.trim(), ownerPhone].find((phone): phone is string => Boolean(phone && E164.test(phone) && isTransferPhone(phone) && phone !== input.e164));
     return to ? { action: "forward", to } : { action: "reject" };
   });
+}
+
+/**
+ * What a number's move to another agent must queue, in the transaction that
+ * moves it. Calls read agents from the snapshot. The routing job picks up the
+ * new agent's staff-first setting and, on a carrier that stores it, the
+ * refused-call forward.
+ */
+export async function enqueueNumberAgentChange(tx: DatabaseTransaction, input: { businessId: string; phoneNumberId: string; agentId: string }): Promise<void> {
+  await enqueueAgentSnapshotRefresh(tx, { businessId: input.businessId, agentId: input.agentId, change: "channel_moved" });
+  await enqueueNumberRouting(tx, { businessId: input.businessId, phoneNumberId: input.phoneNumberId, mode: "receptionist" });
+}
+
+/** The agent a number answers as, or undefined for a number the business doesn't hold. */
+export async function numberAgentIdInTransaction(tx: DatabaseTransaction, input: { businessId: string; e164: string }): Promise<string | undefined> {
+  return (await tx.select({ agentId: phoneNumbers.agentId }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.e164, input.e164), notInArray(phoneNumbers.status, ["reclaimed", "released"]))).limit(1))[0]?.agentId ?? undefined;
 }
 
 /**

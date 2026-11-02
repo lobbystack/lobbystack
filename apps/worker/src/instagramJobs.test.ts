@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ claim: vi.fn(), finish: vi.fn(), partSent: vi.fn(), release: vi.fn(), leaseEndsAt: vi.fn(), alert: vi.fn(), load: vi.fn(), reserve: vi.fn(), save: vi.fn(), snapshot: vi.fn(), usage: vi.fn(), createAgent: vi.fn() }));
-vi.mock("@lobbystack/domain", () => ({ alertUnansweredInstagram: mocks.alert, claimInstagramDelivery: mocks.claim, finishInstagramDelivery: mocks.finish, getCachedBusinessSnapshot: mocks.snapshot, instagramDeliveryLeaseEndsAt: mocks.leaseEndsAt, loadInstagramReplyContext: mocks.load, recordAiGenerationEvent: mocks.usage, recordInstagramPartSent: mocks.partSent, refreshBusinessSnapshot: vi.fn(), releaseInstagramDelivery: mocks.release, reserveWidgetChatUsageInTransaction: mocks.reserve, saveInstagramReply: mocks.save }));
+vi.mock("@lobbystack/domain", () => ({ alertUnansweredInstagram: mocks.alert, claimInstagramDelivery: mocks.claim, finishInstagramDelivery: mocks.finish, getBusinessSnapshotForAgent: mocks.snapshot, instagramDeliveryLeaseEndsAt: mocks.leaseEndsAt, loadInstagramReplyContext: mocks.load, recordAiGenerationEvent: mocks.usage, recordInstagramPartSent: mocks.partSent, releaseInstagramDelivery: mocks.release, reserveWidgetChatUsageInTransaction: mocks.reserve, saveInstagramReply: mocks.save }));
 vi.mock("@lobbystack/agent-core", () => ({ createAgentModel: () => ({}), createReceptionistAgent: mocks.createAgent, describeAgentUsage: () => ({ provider: "openai", model: "test" }) }));
 vi.mock("@lobbystack/db", () => ({ withBusinessTransaction: async (_db: unknown, _scope: unknown, run: (tx: unknown) => Promise<unknown>) => await run({}) }));
 import { InstagramApiError } from "@lobbystack/providers/instagram/instagram";
@@ -106,4 +106,29 @@ it("never sends the NO_REPLY marker", () => {
   expect(instagramReplyText("no_reply")).toBeNull();
   expect(instagramReplyText("Glad to help! NO_REPLY")).toBe("Glad to help!");
   expect(instagramReplyText("We open at 9.")).toBe("We open at 9.");
+});
+
+describe("which agent answers an Instagram message", () => {
+  const job = { id: "job", type: "instagram.reply", businessId: "business", payload: { conversationId: "conversation", messageId: "message" } } as never;
+  const domain = { db: {} } as never;
+  const answerWith = (reply: { agentId?: string }) => {
+    mocks.load.mockResolvedValue({ conversationId: "conversation", history: [{ direction: "inbound", body: "Hi" }], ...reply });
+    mocks.reserve.mockResolvedValue({ allowed: true });
+    mocks.snapshot.mockResolvedValue({ defaultLocale: "en", displayName: "Javor" });
+    mocks.save.mockResolvedValue("reply");
+    mocks.usage.mockResolvedValue(null);
+    mocks.createAgent.mockReturnValue({ generate: vi.fn(async () => ({ text: "Hello", usage: {} })) });
+  };
+
+  it("answers as the agent stored on the conversation", async () => {
+    answerWith({ agentId: "after-hours" });
+    await replyToInstagramMessage(domain, job, { model: {} as never });
+    expect(mocks.snapshot).toHaveBeenCalledWith(domain, { businessId: "business", agentId: "after-hours" });
+  });
+
+  it("treats a job with nothing about agents, on a conversation with no agent yet, as the default agent", async () => {
+    answerWith({});
+    await replyToInstagramMessage(domain, job, { model: {} as never });
+    expect(mocks.snapshot).toHaveBeenCalledWith(domain, { businessId: "business", agentId: undefined });
+  });
 });

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { buildBrowserSessionConfig } from "@lobbystack/agent-core/live/session";
-import { finishLiveCall, getCachedBusinessSnapshot, getWebVoiceBillingAllowance, recordProspectDemoCallError, recordProspectDemoCallStarted, recordVoiceSnapshotLoaded, refreshBusinessSnapshot, startLiveWebCall, type DomainContext } from "@lobbystack/domain";
+import { businessHasPhoneNumber, finishLiveCall, getBusinessSnapshotForAgent, getWebVoiceBillingAllowance, recordProspectDemoCallError, recordProspectDemoCallStarted, recordVoiceSnapshotLoaded, startLiveWebCall } from "@lobbystack/domain";
+import { isUuid } from "@lobbystack/shared";
 import { asApiResponse, readJson } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
 import { attachWorkerToLiveSession, endLiveBrowserSession, getLiveClient, requireLivePrototype } from "@/lib/live-prototype";
@@ -25,7 +26,9 @@ function parse(body: unknown): LiveWebCallRequest | undefined {
   const sdp = typeof value.sdp === "string" && value.sdp.trim() && value.sdp.length <= MAX_SDP_BYTES ? value.sdp : undefined;
   const widgetId = text("widgetId", 128);
   if (!sdp || !widgetId || !(LIVE_WEB_CALL_WIDGET_IDS as readonly string[]).includes(widgetId)) return undefined;
-  const optional = { businessSlug: text("businessSlug", 128), visitorId: text("visitorId", 128), pageUrl: text("pageUrl"), prospectDemoToken: text("prospectDemoToken", 512) };
+  const agentId = text("agentId", 64);
+  if (agentId && !isUuid(agentId)) return undefined;
+  const optional = { businessSlug: text("businessSlug", 128), visitorId: text("visitorId", 128), pageUrl: text("pageUrl"), prospectDemoToken: text("prospectDemoToken", 512), agentId };
   return { sdp, widgetId, ...Object.fromEntries(Object.entries(optional).filter(([, entry]) => entry !== undefined)) };
 }
 
@@ -44,14 +47,6 @@ function createServerTiming() {
     },
     header: () => entries.join(", "),
   };
-}
-
-// The same loader as phone calls. A business that was never published has no snapshot until one is built.
-async function loadSnapshot(domain: DomainContext, businessId: string) {
-  const snapshot = await getCachedBusinessSnapshot(domain, { businessId });
-  if (snapshot) return snapshot;
-  await refreshBusinessSnapshot(domain, { businessId });
-  return await getCachedBusinessSnapshot(domain, { businessId });
 }
 
 function denied(status: number, code: string, headers: Record<string, string>) {
@@ -96,13 +91,14 @@ export async function POST(request: Request) {
     // independent reads run together.
     const [billing, snapshot] = await Promise.all([
       access.billable ? getWebVoiceBillingAllowance(domain, { businessId: access.businessId, ...(maxDurationMs ? { maxDurationMs } : {}) }) : undefined,
-      loadSnapshot(domain, access.businessId),
+      // A business that was never published has no snapshot until this builds one.
+      getBusinessSnapshotForAgent(domain, { businessId: access.businessId, agentId: access.agentId }),
     ]);
     timing.mark("checks");
     if (billing && !billing.allowed) return denied(402, billing.errorCode ?? "voice_limit_reached", cors);
     if (!snapshot) return denied(409, "snapshot_missing", cors);
-    // The widget offers voice only to businesses with a phone number.
-    if (access.widgetId === "lobbystack-widget" && !snapshot.contactChannels?.phoneNumber) return denied(403, "voice_unavailable", cors);
+    // The widget offers voice only to businesses with a phone number. That number can be another agent's.
+    if (access.widgetId === "lobbystack-widget" && !businessHasPhoneNumber(snapshot)) return denied(403, "voice_unavailable", cors);
     // Telemetry only; the call doesn't wait for it.
     void Promise.resolve(recordVoiceSnapshotLoaded(domain, { businessId: access.businessId, channel: "web_voice", provider: "openai_live" })).catch(() => undefined);
 
@@ -117,6 +113,7 @@ export async function POST(request: Request) {
         sessionId,
         widgetId: access.widgetId,
         billable: access.billable,
+        ...(access.agentId ? { agentId: access.agentId } : {}),
         ...(maxDurationMs ? { maxDurationMs } : {}),
         ...(access.prospectDemoId ? { sessionPurpose: "prospect_demo", prospectDemoId: access.prospectDemoId } : {}),
         // Prospect demos keep no page URL.
@@ -133,6 +130,7 @@ export async function POST(request: Request) {
           callId,
           ...(call.conversationId ? { conversationId: call.conversationId } : {}),
           channel: "web_voice",
+          ...(call.agentId ? { agentId: call.agentId } : {}),
           ...(call.maxDurationMs ? { maxDurationMs: call.maxDurationMs } : {}),
           ...(access.prospectDemoId ? { intakeOnly: true } : {}),
         }),

@@ -7,7 +7,7 @@ import {
   checkNumberTrialMinutes,
   extendLiveCallReservation,
   finishLiveCall,
-  getCachedBusinessSnapshot,
+  getBusinessSnapshotForAgent,
   lastLiveCallSequence,
   markLiveCallMediaStarted,
   orphanedLiveCallSeconds,
@@ -36,6 +36,8 @@ type AttachRequest = {
   businessId: string;
   callId: string;
   channel: LiveChannel;
+  /** The call's agent, from calls.agent_id. An attach from an admin that predates agents has none, and the default agent answers. */
+  agentId?: string;
   /** The call's own conversation, where messages taken on the call are filed. */
   conversationId?: string;
   callerPhone?: string;
@@ -173,6 +175,7 @@ export function parseAttachRequest(raw: string): AttachRequest | undefined {
     businessId: body.businessId,
     callId: body.callId,
     channel: body.channel,
+    ...(typeof body.agentId === "string" ? { agentId: body.agentId } : {}),
     ...(typeof body.conversationId === "string" ? { conversationId: body.conversationId } : {}),
     ...(typeof body.callerPhone === "string" ? { callerPhone: body.callerPhone } : {}),
     ...(typeof body.maxDurationMs === "number" && body.maxDurationMs > 0 ? { maxDurationMs: body.maxDurationMs } : {}),
@@ -333,6 +336,7 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
         businessId: orphan.businessId,
         callId: orphan.callId,
         channel: orphan.channel,
+        ...(orphan.agentId ? { agentId: orphan.agentId } : {}),
         ...(orphan.conversationId ? { conversationId: orphan.conversationId } : {}),
         ...(orphan.callerPhone ? { callerPhone: orphan.callerPhone } : {}),
         maxDurationMs: remainingMs,
@@ -386,7 +390,10 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
   async function startCall(request: AttachRequest, client: OpenAI, model: NonNullable<ReturnType<typeof createAgentModel>>): Promise<void> {
     // OpenAI replays only the last 3 seconds to a new sideband, so it connects
     // first and the business loads alongside.
-    const snapshotLoad = getCachedBusinessSnapshot(input.domain, { businessId: request.businessId });
+    // Every attach is for a call that started, so an agent archived since then
+    // still finishes it. GPT-Live already speaks with that agent's voice and
+    // instructions, and they can't change during a session.
+    const snapshotLoad = getBusinessSnapshotForAgent(input.domain, { businessId: request.businessId, agentId: request.agentId, underWay: true });
     const phone = request.channel === "voice";
     const call = { businessId: request.businessId, callId: request.callId };
     const telemetryCall = { ...call, channel: request.channel, ...(request.conversationId ? { conversationId: request.conversationId } : {}) };

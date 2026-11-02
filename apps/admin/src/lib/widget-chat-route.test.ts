@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   appendMessage: vi.fn(),
   queueOperatorAlert: vi.fn(),
   getCachedBusinessSnapshot: vi.fn(),
+  getBusinessSnapshotForAgent: vi.fn(),
   loadWidgetChatHistory: vi.fn(),
   recordAiGenerationEvent: vi.fn(),
   withBusinessTransaction: vi.fn(),
@@ -28,6 +29,7 @@ vi.mock("@lobbystack/domain", () => ({
   appendMessage: mocks.appendMessage,
   getOrCreateWidgetConversation: mocks.getOrCreateWidgetConversation,
   getCachedBusinessSnapshot: mocks.getCachedBusinessSnapshot,
+  getBusinessSnapshotForAgent: mocks.getBusinessSnapshotForAgent,
   loadWidgetChatHistory: mocks.loadWidgetChatHistory,
   recordAiGenerationEvent: mocks.recordAiGenerationEvent,
   registerWidgetVisitor: mocks.registerWidgetVisitor,
@@ -143,6 +145,7 @@ beforeEach(() => {
   mocks.enforceWidgetRateLimits.mockResolvedValue({ allowed: true });
   mocks.requestIpHash.mockReturnValue("ip-hash");
   mocks.getOrCreateWidgetConversation.mockResolvedValue({ conversationId, automationState: "ai_active" });
+  mocks.getBusinessSnapshotForAgent.mockImplementation(async (_context: unknown, input: { loaded: BusinessContextSnapshot }) => input.loaded);
   mocks.returnQuietTeamChat.mockResolvedValue("human_handoff");
   mocks.announceLateWidgetReply.mockResolvedValue(undefined);
   mocks.appendMessage.mockResolvedValue(inboundMessageId);
@@ -316,6 +319,22 @@ describe("POST /api/widget/chat", () => {
     expect(response.status).toBe(503);
     expect(await response.json()).toMatchObject({ code: "ai_provider_unavailable" });
     expect(mocks.reserveWidgetChatUsageInTransaction).not.toHaveBeenCalled();
+  });
+
+  it("stores the key's agent on the chat and answers as the agent the chat names", async () => {
+    vi.stubEnv("AI_CHAT_API_KEY", "test-api-key");
+    mocks.resolveWidgetSessionAccess.mockResolvedValue({ ok: true, session: { ...session, agentId: "agent_of_key" } });
+    mocks.getOrCreateWidgetConversation.mockResolvedValue({ conversationId, automationState: "ai_active", agentId: "agent_of_chat" });
+    const stored = { businessId } as BusinessContextSnapshot;
+    const projected = { businessId, chatInstructions: "Evening desk" } as BusinessContextSnapshot;
+    mocks.getCachedBusinessSnapshot.mockResolvedValue(stored);
+    mocks.getBusinessSnapshotForAgent.mockResolvedValue(projected);
+    mocks.loadWidgetChatHistory.mockResolvedValue([]);
+    mocks.createReceptionistAgent.mockReturnValue(agentStreaming((async function* () { yield "Hello"; })()));
+    await readSse(await POST(widgetRequest()));
+    expect(mocks.getOrCreateWidgetConversation).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ agentId: "agent_of_key" }));
+    expect(mocks.getBusinessSnapshotForAgent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ agentId: "agent_of_chat", loaded: stored }));
+    expect(mocks.createReceptionistAgent.mock.calls[0]?.[0].context.snapshot).toBe(projected);
   });
 
   it("streams an AI reply and persists the outbound message when automation is active", async () => {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getCachedBusinessSnapshot, getWebVoiceBillingAllowance, getWidgetChatAllowance } from "@lobbystack/domain";
+import { businessHasPhoneNumber, getCachedBusinessSnapshot, getWebVoiceBillingAllowance, getWidgetChatAllowance, snapshotForAgent } from "@lobbystack/domain";
 
 import { asApiResponse } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
@@ -28,15 +28,18 @@ export async function GET(request: Request) {
       getWebVoiceBillingAllowance(context, { businessId: session.businessId }),
     ]);
 
+    // Only for what the widget shows, so this public route never refreshes a snapshot.
+    const agentSnapshot = snapshot && (snapshotForAgent(snapshot, session.agentId) ?? snapshot);
+
     return NextResponse.json({
       key: session.widgetKeyId,
       business: { id: session.businessId, name: session.businessName, defaultLocale: session.defaultLocale },
       config: session.config,
       billing: { chatAllowed: chatBilling.allowed, plan: chatBilling.plan, voiceAllowed: voiceBilling.allowed },
-      greeting: session.config.greeting ?? snapshot?.greeting ?? undefined,
+      greeting: session.config.greeting ?? agentSnapshot?.greeting ?? undefined,
       snapshotPresent: snapshot !== null,
       businessSlug: session.businessSlug,
-      voiceEnabled: Boolean(snapshot?.contactChannels?.phoneNumber),
+      voiceEnabled: snapshot !== null && businessHasPhoneNumber(snapshot),
     });
   } catch (error) {
     return asApiResponse(error);

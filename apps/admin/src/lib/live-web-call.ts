@@ -3,7 +3,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { eq } from "drizzle-orm";
 
 import { widgetKeys, withBusinessTransaction } from "@lobbystack/db";
-import { bearerToken, businessShowsOnBrand } from "@lobbystack/domain";
+import { activeAgentExistsInTransaction, bearerToken, businessShowsOnBrand } from "@lobbystack/domain";
 import { DASHBOARD_TEST_CALL_WIDGET_ID, PROSPECT_DEMO_WIDGET_ID, WIDGET_VOICE_ID } from "@lobbystack/shared";
 
 import { getWorkerDatabase } from "./api-helpers";
@@ -40,11 +40,15 @@ export type LiveWebCallRequest = {
   visitorId?: string;
   pageUrl?: string;
   prospectDemoToken?: string;
+  /** The agent a dashboard test call answers as. No other caller chooses its agent. */
+  agentId?: string;
 };
 
 /** Who is calling, and on whose behalf. Decides billing, limits and tools. */
 export type LiveWebCallAccess = {
   businessId: string;
+  /** The agent the call answers as. Absent means the default agent. */
+  agentId?: string;
   /** The page the call starts from; rate limits count per origin. */
   origin: string;
   widgetId: string;
@@ -101,9 +105,11 @@ export async function resolveLiveWebCallAccess(request: Request, body: LiveWebCa
     const callerOrigin = origin ? normalizeOrigin(origin) : undefined;
     if (!callerOrigin || !trusted.includes(callerOrigin)) return { status: 403, code: "origin_denied" };
     const { businessId, transaction } = await requireOperator(request);
-    await transaction(async () => undefined, { minimumRole: "business_admin" });
+    const agentId = body.agentId;
+    const agentFound = await transaction(async (tx) => agentId ? await activeAgentExistsInTransaction(tx, { businessId, agentId }) : undefined, { minimumRole: "business_admin" });
+    if (agentId && !agentFound) return { status: 404, code: "agent_not_found" };
     // Rate limits count per origin, so record the trusted origin the call came from.
-    return { businessId, origin: callerOrigin, widgetId: body.widgetId, dashboardTestCall: true, billable: true, ...(body.visitorId ? { visitorId: body.visitorId } : {}) };
+    return { businessId, origin: callerOrigin, widgetId: body.widgetId, dashboardTestCall: true, billable: true, ...(agentId ? { agentId } : {}), ...(body.visitorId ? { visitorId: body.visitorId } : {}) };
   }
 
   const bearer = bearerToken(request.headers.get("authorization"));
@@ -111,9 +117,9 @@ export async function resolveLiveWebCallAccess(request: Request, body: LiveWebCa
     const token = verifyWidgetSessionToken(bearer);
     const parentOrigin = request.headers.get("x-widget-parent-origin");
     if (!token || !parentOrigin || token.origin !== normalizeOrigin(parentOrigin) || (body.visitorId && token.visitorId !== body.visitorId)) return { status: 403, code: "widget_session_invalid" };
-    const key = await withBusinessTransaction(getWorkerDatabase().db, { businessId: token.businessId, actorType: "worker" }, async (tx) => (await tx.select({ status: widgetKeys.status, allowedOrigins: widgetKeys.allowedOrigins }).from(widgetKeys).where(eq(widgetKeys.id, token.widgetKeyId)).limit(1))[0]);
+    const key = await withBusinessTransaction(getWorkerDatabase().db, { businessId: token.businessId, actorType: "worker" }, async (tx) => (await tx.select({ status: widgetKeys.status, allowedOrigins: widgetKeys.allowedOrigins, agentId: widgetKeys.agentId }).from(widgetKeys).where(eq(widgetKeys.id, token.widgetKeyId)).limit(1))[0]);
     if (!key || key.status !== "active" || !isAllowedWidgetOrigin(token.origin, key.allowedOrigins, { allowAdminOrigin: false, allowLocalhost: false })) return { status: 403, code: "widget_origin_denied" };
-    return { businessId: token.businessId, origin: token.origin, widgetId: WIDGET_VOICE_ID, visitorId: token.visitorId, dashboardTestCall: false, billable: true };
+    return { businessId: token.businessId, ...(key.agentId ? { agentId: key.agentId } : {}), origin: token.origin, widgetId: WIDGET_VOICE_ID, visitorId: token.visitorId, dashboardTestCall: false, billable: true };
   }
 
   if (body.prospectDemoToken && body.businessSlug) {

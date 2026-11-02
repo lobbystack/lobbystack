@@ -11,6 +11,8 @@ import { hashWidgetKey, isAllowedWidgetOrigin, normalizeOrigin, requestWidgetOri
 export type WidgetSession = {
   businessId: string;
   widgetKeyId: string;
+  /** The agent this key answers as. Absent on a key with no agent yet, which the default agent answers. */
+  agentId?: string;
   keyHash: string;
   origin: string | null;
   key: WidgetKeyConfig;
@@ -36,6 +38,7 @@ async function loadWidgetSession(businessId: string, widgetKeyId: string) {
     return {
       businessId,
       widgetKeyId,
+      ...(keyRow.agentId ? { agentId: keyRow.agentId } : {}),
       key,
       config: key.config as WidgetConfig,
       businessName: business?.name ?? "",

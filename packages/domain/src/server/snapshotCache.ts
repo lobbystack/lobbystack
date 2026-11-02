@@ -3,7 +3,7 @@ import type { BusinessContextSnapshot } from "@lobbystack/shared";
 
 import type { DomainContext } from "./context";
 import { snapshotForAgent } from "../snapshot";
-import { loadLatestBusinessSnapshot, refreshBusinessSnapshot } from "./knowledge";
+import { loadLatestBusinessSnapshot, loadSnapshotAgent, refreshBusinessSnapshot } from "./knowledge";
 
 export const SNAPSHOT_CACHE_TTL_SECONDS = 300;
 
@@ -70,12 +70,17 @@ export async function getCachedBusinessSnapshot(
  * agent or a channel move can reach a call before its refresh job does. If the
  * agent is still missing, this logs an error and returns the default agent, so
  * the call still gets answered. Null only when the business has no snapshot.
+ *
+ * `loaded` is a snapshot the caller already has, so a call that loaded it next
+ * to other work makes no second read. `underWay` says a call has started on
+ * this agent: an agent archived since then is read from its row, so the call
+ * finishes as the agent it started as.
  */
 export async function getBusinessSnapshotForAgent(
   context: DomainContext,
-  input: { businessId: string; agentId?: string | null | undefined },
+  input: { businessId: string; agentId?: string | null | undefined; loaded?: BusinessContextSnapshot; underWay?: boolean },
 ): Promise<BusinessContextSnapshot | null> {
-  const cached = await getCachedBusinessSnapshot(context, { businessId: input.businessId });
+  const cached = input.loaded ?? await getCachedBusinessSnapshot(context, { businessId: input.businessId });
   if (cached && !input.agentId) return cached;
   if (cached?.agents?.some((agent) => agent.id === input.agentId)) return snapshotForAgent(cached, input.agentId);
 
@@ -90,6 +95,13 @@ export async function getBusinessSnapshotForAgent(
   }
   if (!snapshot || !input.agentId) return snapshot;
   if (snapshot.agents?.some((agent) => agent.id === input.agentId)) return snapshotForAgent(snapshot, input.agentId);
+  if (input.underWay) {
+    const agent = await loadSnapshotAgent(context, { businessId: input.businessId, agentId: input.agentId, business: snapshot }).catch((error: unknown) => {
+      console.error("[snapshot] couldn't read an agent for a call under way", input.businessId, input.agentId, error instanceof Error ? error.message : error);
+      return null;
+    });
+    if (agent) return snapshotForAgent({ ...snapshot, agents: [...(snapshot.agents ?? []), agent] }, input.agentId);
+  }
   console.error("[snapshot] unknown agent, answering as the default agent", input.businessId, input.agentId);
   return snapshot;
 }

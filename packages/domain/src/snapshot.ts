@@ -64,7 +64,7 @@ export const MAX_AGENT_RULE_CONTENT_CHARS = RULE_CONTENT_CALL_MAX_LENGTH;
 // Knowledge search matches all of these; prompts list only the top few (agent-core's PROMPT_MAX_FAQS).
 export const MAX_KNOWLEDGE_SNIPPETS_PER_SNAPSHOT = 50;
 
-function snapshotRules(rules: Array<AgentRuleSummary> | undefined): Array<AgentRuleSummary> {
+export function snapshotRules(rules: Array<AgentRuleSummary> | undefined): Array<AgentRuleSummary> {
   return (rules ?? [])
     .slice()
     .sort((left, right) => left.order - right.order)
@@ -76,16 +76,18 @@ function snapshotRules(rules: Array<AgentRuleSummary> | undefined): Array<AgentR
     }));
 }
 
-export function buildBusinessContextSnapshot(
-  input: SnapshotBuilderInput,
-): BusinessContextSnapshot {
+/** An agent's instructions for each channel, with the default text for any it left empty. */
+export function agentInstructions(
+  business: { displayName: string; timezone: string },
+  agent: Pick<SnapshotAgentInput, "tone" | "voiceInstructions" | "smsInstructions" | "chatInstructions">,
+): Pick<SnapshotAgent, "voiceInstructions" | "smsInstructions" | "chatInstructions"> {
   const commonConstraints = [
-    `You are the AI receptionist for ${input.displayName}.`,
-    `Use the business timezone ${input.timezone}.`,
+    `You are the AI receptionist for ${business.displayName}.`,
+    `Use the business timezone ${business.timezone}.`,
     "Use structured business facts as the source of truth for hours, services, and transfer rules.",
     "Never promise a booking until the booking tool confirms success.",
   ].join(" ");
-  const instructions = (agent: Pick<SnapshotAgentInput, "tone" | "voiceInstructions" | "smsInstructions" | "chatInstructions">) => ({
+  return {
     voiceInstructions:
       agent.voiceInstructions ??
       `${commonConstraints} Speak in a ${agent.tone} tone. Keep answers concise and helpful.`,
@@ -95,7 +97,13 @@ export function buildBusinessContextSnapshot(
     chatInstructions:
       agent.chatInstructions ??
       `${commonConstraints} Be friendly and concise. Use short paragraphs and plain language.`,
-  });
+  };
+}
+
+export function buildBusinessContextSnapshot(
+  input: SnapshotBuilderInput,
+): BusinessContextSnapshot {
+  const instructions = (agent: Pick<SnapshotAgentInput, "tone" | "voiceInstructions" | "smsInstructions" | "chatInstructions">) => agentInstructions(input, agent);
 
   return {
     businessId: input.businessId,
@@ -149,8 +157,12 @@ export function snapshotForAgent(snapshot: BusinessContextSnapshot, agentId?: st
   if (!agent) return null;
   // An optional field this agent lacks must not keep the default agent's value.
   const { staffFirstPolicy: _staffFirstPolicy, appointmentChangePolicy: _appointmentChangePolicy, ...shared } = snapshot;
+  const { phoneNumber: _phoneNumber, ...channels } = snapshot.contactChannels ?? {};
+  // A snapshot from before agents had their own number keeps the default agent's flat one.
+  const phoneNumber = agent.phoneNumber === undefined && agent.isDefault ? snapshot.contactChannels?.phoneNumber : agent.phoneNumber;
   return {
     ...shared,
+    contactChannels: { ...channels, ...(phoneNumber ? { phoneNumber } : {}) },
     agentId: agent.id,
     agentName: agent.name,
     tone: agent.tone,
@@ -166,4 +178,9 @@ export function snapshotForAgent(snapshot: BusinessContextSnapshot, agentId?: st
     ...(agent.appointmentChangePolicy ? { appointmentChangePolicy: agent.appointmentChangePolicy } : {}),
     rules: agent.rules,
   };
+}
+
+/** Whether any of the business's agents has a phone number. Works on a projected snapshot too, because it keeps agents[]. */
+export function businessHasPhoneNumber(snapshot: BusinessContextSnapshot): boolean {
+  return Boolean(snapshot.contactChannels?.phoneNumber || snapshot.agents?.some((agent) => agent.phoneNumber));
 }

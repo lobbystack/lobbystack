@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ load: vi.fn(), save: vi.fn(), alert: vi.fn(), reserve: vi.fn(), snapshot: vi.fn(), usage: vi.fn(), generate: vi.fn(), createAgent: vi.fn() }));
-vi.mock("@lobbystack/domain", () => ({ alertUnansweredText: mocks.alert, getCachedBusinessSnapshot: mocks.snapshot, loadTextReplyContext: mocks.load, recordAiGenerationEvent: mocks.usage, refreshBusinessSnapshot: vi.fn(), reserveTextReplyUsageInTransaction: mocks.reserve, saveTextReply: mocks.save }));
+vi.mock("@lobbystack/domain", () => ({ alertUnansweredText: mocks.alert, getBusinessSnapshotForAgent: mocks.snapshot, loadTextReplyContext: mocks.load, recordAiGenerationEvent: mocks.usage, reserveTextReplyUsageInTransaction: mocks.reserve, saveTextReply: mocks.save }));
 vi.mock("@lobbystack/agent-core", () => ({ createAgentModel: () => ({}), createReceptionistAgent: mocks.createAgent, describeAgentUsage: () => ({ provider: "openai", model: "test" }) }));
 vi.mock("@lobbystack/db", () => ({ withBusinessTransaction: async (_db: unknown, _scope: unknown, run: (tx: unknown) => Promise<unknown>) => await run({}) }));
 
@@ -108,4 +108,18 @@ it("keeps a reply within the limit, cut at a full sentence or a word", () => {
   const words = "word ".repeat(100);
   expect(textReplyBody(words).length).toBeLessThanOrEqual(TEXT_REPLY_MAX_CHARS);
   expect(textReplyBody(words).endsWith("word")).toBe(true);
+});
+
+it("answers as the conversation's agent, with that agent's text instructions", async () => {
+  const projected = { defaultLocale: "en", displayName: "Javor", agentId: "after-hours", smsInstructions: "Evening desk" };
+  mocks.load.mockResolvedValue({ phone: "+14165550123", agentId: "after-hours", firstReply: false, history: [{ direction: "inbound", body: "Hi" }] });
+  mocks.snapshot.mockResolvedValue(projected);
+  await replyToTextMessage(domain, job, { model });
+  expect(mocks.snapshot).toHaveBeenCalledWith(domain, { businessId: "business", agentId: "after-hours" });
+  expect(mocks.createAgent.mock.calls[0]![0].context.snapshot).toBe(projected);
+});
+
+it("treats a job with nothing about agents, on a conversation with no agent yet, as the default agent", async () => {
+  await replyToTextMessage(domain, job, { model });
+  expect(mocks.snapshot).toHaveBeenCalledWith(domain, { businessId: "business", agentId: undefined });
 });

@@ -329,6 +329,8 @@ export type SnapshotAgent = {
   staffFirstPolicy?: StaffFirstPolicy;
   appointmentChangePolicy?: AppointmentChangePolicy;
   rules: Array<AgentRuleSummary>;
+  /** The number this agent answers. Null when it has none. Absent in snapshots built before agents had their own. */
+  phoneNumber?: string | null;
 };
 
 export type BusinessContextSnapshot = {

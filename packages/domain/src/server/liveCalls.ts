@@ -61,7 +61,9 @@ const DISPOSITIONS: Record<LiveCallEnd, string> = {
  * how long the call may run on what it reserved so far, and undefined when the
  * plan is unlimited: one slice at first, which the worker tops up with
  * extendLiveCallReservation, and the current total on a retried delivery.
- * Omit `from` when the caller withheld their number.
+ * `agentId` is the agent to answer as, from the dialled number or, on a retried
+ * delivery, from the call's first delivery. Omit `from` when the caller
+ * withheld their number.
  */
 export async function startLivePhoneCall(context: DomainContext, input: { businessId: string; sessionId: string; from?: string | undefined; to: string }) {
   const call = await startCall(context, {
@@ -74,7 +76,7 @@ export async function startLivePhoneCall(context: DomainContext, input: { busine
     gatewaySessionId: input.sessionId,
   });
   const maxDurationMs = call.reservedSeconds === undefined ? undefined : Math.min(MAX_PHONE_CALL_MS, Math.floor(call.reservedSeconds * 1_000));
-  return { callId: call.callId, conversationId: call.conversationId, blocked: call.blocked, duplicate: call.duplicate, maxDurationMs };
+  return { callId: call.callId, conversationId: call.conversationId, agentId: call.agentId, blocked: call.blocked, duplicate: call.duplicate, maxDurationMs };
 }
 
 /**
@@ -94,7 +96,7 @@ export async function extendLiveCallReservation(context: DomainContext, input: {
  */
 export async function startLiveWebCall(
   context: DomainContext,
-  input: { businessId: string; sessionId: string; widgetId: string; billable: boolean; maxDurationMs?: number; sessionPurpose?: string; prospectDemoId?: string; originUrl?: string; userAgent?: string },
+  input: { businessId: string; sessionId: string; widgetId: string; billable: boolean; maxDurationMs?: number; sessionPurpose?: string; prospectDemoId?: string; originUrl?: string; userAgent?: string; agentId?: string },
 ) {
   const call = await startCall(context, {
     businessId: input.businessId,
@@ -111,8 +113,9 @@ export async function startLiveWebCall(
     ...(input.prospectDemoId ? { prospectDemoId: input.prospectDemoId } : {}),
     ...(input.originUrl ? { originUrl: input.originUrl } : {}),
     ...(input.userAgent ? { userAgent: input.userAgent } : {}),
+    ...(input.agentId ? { agentId: input.agentId } : {}),
   });
-  return { callId: call.callId, conversationId: call.conversationId, maxDurationMs: call.webCallMaxDurationMs };
+  return { callId: call.callId, conversationId: call.conversationId, agentId: call.agentId, maxDurationMs: call.webCallMaxDurationMs };
 }
 
 /** Marks when audio started flowing; test-call progress counts only calls that connected. */
@@ -262,6 +265,8 @@ export type OpenLiveCall = {
   sessionId: string;
   channel: "voice" | "web_voice";
   conversationId?: string;
+  /** The agent the call answers as. Absent on a call from before calls recorded one, which the default agent answers. */
+  agentId?: string;
   /** Only a real `+` number; a withheld caller ID or a browser has none. */
   callerPhone?: string;
   /** Prospect demos only answer questions and take messages, as when the admin attached. */
@@ -306,6 +311,7 @@ export async function listOpenLiveCalls(context: DomainContext, input: { busines
       sessionId: calls.providerCallId,
       transport: calls.transport,
       conversationId: calls.conversationId,
+      agentId: calls.agentId,
       callerPhone: contacts.phone,
       sessionPurpose: calls.sessionPurpose,
       prospectDemoId: calls.prospectDemoId,
@@ -331,6 +337,7 @@ export async function listOpenLiveCalls(context: DomainContext, input: { busines
         sessionId: row.sessionId,
         channel,
         ...(row.conversationId ? { conversationId: row.conversationId } : {}),
+        ...(row.agentId ? { agentId: row.agentId } : {}),
         ...(row.callerPhone?.startsWith("+") ? { callerPhone: row.callerPhone } : {}),
         intakeOnly: row.sessionPurpose === "prospect_demo" || row.prospectDemoId !== null,
         startedAt: row.startedAt,

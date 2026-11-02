@@ -763,6 +763,28 @@ export function defaultAgentOf(businessId: string | AnyColumn): SQL {
   return sql`(${agents.businessId} = ${businessId} and ${agents.isDefault})`;
 }
 
+/** The id of a business's default agent, as a subquery for a value in a write. */
+export function defaultAgentIdOf(businessId: string): SQL<string | null> {
+  return sql<string | null>`(select ${agents.id} from ${agents} where ${agents.businessId} = ${businessId}::uuid and ${agents.isDefault} limit 1)`;
+}
+
+/**
+ * Matches the agent a channel or history row names, or the default agent for a
+ * row with no agent yet. Pass the row's columns to join on.
+ */
+export function agentOfRow(businessId: AnyColumn, agentId: AnyColumn): SQL {
+  return sql`(${agents.businessId} = ${businessId} and (${agents.id} = ${agentId} or (${agentId} is null and ${agents.isDefault})))`;
+}
+
+/**
+ * Matches one named agent and the default agent, or only the default agent with
+ * no id. Order by isDefault ascending and take the first row: the named agent
+ * wins, and an id the business doesn't have leaves the default.
+ */
+export function agentOrDefaultOf(businessId: string, agentId: string | null | undefined): SQL {
+  return agentId ? sql`(${agents.businessId} = ${businessId} and (${agents.id} = ${agentId} or ${agents.isDefault}))` : defaultAgentOf(businessId);
+}
+
 export const contacts = pgTable(
   "contacts",
   {
