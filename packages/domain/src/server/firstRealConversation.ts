@@ -51,18 +51,31 @@ async function alreadyRecorded(tx: DatabaseTransaction, businessId: string): Pro
  * second conversation racing this one can't report another first. A business
  * with telemetry off keeps the row and sends nothing.
  */
-async function claim(tx: DatabaseTransaction, input: { businessId: string; channel: RealConversationChannel; conversationId: string; customerPhone: string | null }): Promise<void> {
+async function claim(tx: DatabaseTransaction, input: { businessId: string; channel: RealConversationChannel; conversationId: string | null; customerPhone: string | null }): Promise<void> {
   const facts = (await tx.execute<{ owner_user_id: string | null; team_phone: boolean }>(sql`select owner_user_id, team_phone from app.first_real_conversation_facts(${input.businessId}::uuid, ${input.customerPhone})`)).rows[0];
   if (facts?.team_phone) return;
-  const [claimed] = await tx.insert(firstRealConversations).values({ businessId: input.businessId, channel: input.channel, conversationId: input.conversationId }).onConflictDoNothing().returning({ businessId: firstRealConversations.businessId });
+  const [claimed] = await tx.insert(firstRealConversations).values({ businessId: input.businessId, channel: input.channel, ...(input.conversationId ? { conversationId: input.conversationId } : {}) }).onConflictDoNothing().returning({ businessId: firstRealConversations.businessId });
   if (!claimed) return;
   await recordProductEventInTransaction(tx, {
     name: "conversation.first_real_recorded",
     businessId: input.businessId,
     // The owner's person, so PostHog's test user filters and signup funnels reach this event.
     distinctId: facts?.owner_user_id ? getPostHogDistinctIdForUser(facts.owner_user_id) : getPostHogDistinctIdForBusinessSystem(input.businessId),
-    properties: { channel: input.channel, conversationId: input.conversationId },
+    properties: { channel: input.channel, ...(input.conversationId ? { conversationId: input.conversationId } : {}) },
   });
+}
+
+/**
+ * Records a call a team member took, if it's the business's first real
+ * conversation: a customer reached the business's number and someone answered.
+ * The call has no conversation or transcript, so the seconds the carrier
+ * bridged stand in for the caller speaking.
+ */
+export async function recordFirstStaffAnsweredCallInTransaction(tx: DatabaseTransaction, input: { businessId: string; contactId: string | null; seconds: number }): Promise<void> {
+  const { businessId, contactId } = input;
+  if (input.seconds <= 0 || await alreadyRecorded(tx, businessId)) return;
+  const contact = contactId ? (await tx.select({ phone: contacts.phone }).from(contacts).where(and(eq(contacts.id, contactId), eq(contacts.businessId, businessId))).limit(1))[0] : undefined;
+  await claim(tx, { businessId, channel: "voice", conversationId: null, customerPhone: contact?.phone ?? null });
 }
 
 /** Records a call that just ended, if it's the business's first real conversation. A caller who never spoke doesn't count. */
@@ -78,8 +91,7 @@ export async function recordFirstRealCallInTransaction(tx: DatabaseTransaction, 
 /**
  * Records a reply just saved in a chat, if it's the business's first real
  * conversation: a customer wrote and the agent or the team answered. Replies
- * are the point, since a message nobody answered isn't a conversation. The
- * agent doesn't answer texts yet, so a text counts once the team does.
+ * are the point, since a message nobody answered isn't a conversation.
  */
 export async function recordFirstRealChatInTransaction(tx: DatabaseTransaction, input: { businessId: string; conversationId: string }): Promise<void> {
   const { businessId, conversationId } = input;

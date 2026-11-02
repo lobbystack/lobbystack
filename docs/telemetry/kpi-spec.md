@@ -39,10 +39,9 @@ The main measure for new accounts. `conversation.first_real_recorded` fires once
 
 | Channel | It fires when |
 | --- | --- |
-| `voice` | A phone call connects, the caller speaks, and the call ends. |
+| `voice` | A phone call connects, the caller speaks, and the call ends. A team member taking the call counts too, with no `conversationId`, because that call has no conversation. |
 | `web_voice` | The same, through the website widget. |
-| `web_chat`, `instagram` | The agent or the team answers a customer's message. |
-| `sms` | The team answers a customer's text. The agent doesn't answer texts yet. |
+| `web_chat`, `instagram`, `sms` | The agent or the team answers a customer's message. |
 
 These don't count: dashboard test calls, prospect demos, the landing page demo, spam, calls that never connected, callers who never spoke, and calls or texts from a team member's verified phone or the number trial's verified phone.
 
