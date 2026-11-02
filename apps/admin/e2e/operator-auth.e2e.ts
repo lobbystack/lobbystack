@@ -121,17 +121,12 @@ async function createWorkspace(page: Page, identity: string): Promise<string> {
 
 async function completeOnboardingBySkippingOptionalInputs(page: Page, businessId: string): Promise<void> {
   await page.getByRole("button", { name: "I don't have a website" }).click();
-  await expect(page).toHaveURL("/onboarding/knowledge");
+  await expect(page).toHaveURL("/onboarding/language");
   await page.goBack();
   await expect(page).toHaveURL("/onboarding/website");
   await page.goForward();
-  await expect(page).toHaveURL("/onboarding/knowledge");
-  await page.getByRole("button", { name: "Skip" }).click();
-  await expect(page).toHaveURL("/onboarding/greeting");
-  await page.getByLabel("Greeting").fill("Thanks for calling. How can we help?");
+  await expect(page).toHaveURL("/onboarding/language");
   await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page).toHaveURL("/onboarding/test-call");
-  await page.getByRole("button", { name: "Skip for now", exact: true }).click();
   await expect(page).toHaveURL("/onboarding/verify-phone");
   // Verifying a mobile needs a real phone, so leave the step the way an owner in a country without numbers does.
   const moved = await page.evaluate(async (id) => (await fetch(`/api/onboarding/stage?businessId=${encodeURIComponent(id)}`, { method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify({ to: "goal" }) })).status, businessId);
@@ -140,6 +135,8 @@ async function completeOnboardingBySkippingOptionalInputs(page: Page, businessId
   await page.getByRole("button", { name: "Skip", exact: true }).click();
   await expect(page).toHaveURL("/onboarding/attribution");
   await page.getByRole("button", { name: "Skip", exact: true }).click();
+  await expect(page).toHaveURL("/onboarding/meet");
+  await page.getByRole("button", { name: "Go to dashboard" }).click();
   await expect(page).toHaveURL("/");
 }
 

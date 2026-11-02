@@ -26,7 +26,11 @@
     "/settings/api-keys",
     "/integrations/webhooks",
     "/oauth/consent",
-    "/onboarding/brand"
+    "/onboarding/brand",
+    "/onboarding/language",
+    "/onboarding/reading",
+    "/onboarding/meet",
+    "/onboarding/[...removed]"
   ],
   "localizedPortRoutes": [
     "/[locale]/accept-invite",
@@ -50,24 +54,24 @@
       "routes": [
         "/onboarding/business",
         "/onboarding/website",
-        "/onboarding/knowledge",
-        "/onboarding/greeting",
-        "/onboarding/test-call",
+        "/onboarding/language",
+        "/onboarding/reading",
         "/onboarding/verify-phone",
         "/onboarding/verify-phone/code",
         "/onboarding/plan",
         "/onboarding/number",
         "/onboarding/goal",
-        "/onboarding/attribution"
+        "/onboarding/attribution",
+        "/onboarding/meet"
       ],
       "actions": [
         "create workspace",
         "capture website",
-        "review knowledge",
-        "configure greeting and locale",
+        "pick a language without a website",
         "select or skip number",
         "submit goal",
         "submit attribution",
+        "test and adjust the agent",
         "resume after refresh"
       ],
       "roles": {
@@ -79,8 +83,9 @@
       "implementation": [
         "apps/admin/src/lib/onboarding-route.ts",
         "apps/admin/src/components/onboarding-website-surface.tsx",
-        "apps/admin/src/components/onboarding-knowledge-surface.tsx",
-        "apps/admin/src/components/onboarding-greeting-surface.tsx",
+        "apps/admin/src/components/onboarding-language-surface.tsx",
+        "apps/admin/src/components/onboarding-reading-surface.tsx",
+        "apps/admin/src/components/onboarding-meet-surface.tsx",
         "apps/admin/src/components/onboarding-goal-surface.tsx",
         "apps/admin/src/components/onboarding-attribution-surface.tsx",
         "apps/admin/app/api/onboarding/stage/route.ts",
@@ -385,22 +390,19 @@
       "comparison": "frozen-main"
     },
     {
-      "path": "/onboarding/knowledge",
+      "path": "/onboarding/language",
       "fixtureState": "onboarding",
       "state": "default",
-      "comparison": "frozen-main"
+      "comparison": "excluded",
+      "reason": "New no-website language question"
     },
     {
-      "path": "/onboarding/greeting",
+      "path": "/onboarding/reading",
       "fixtureState": "onboarding",
       "state": "default",
-      "comparison": "frozen-main"
-    },
-    {
-      "path": "/onboarding/test-call",
-      "fixtureState": "onboarding",
-      "state": "default",
-      "comparison": "frozen-main"
+      "comparison": "excluded",
+      "reason": "Wait screen after the website step, which replaced the Documents step",
+      "referencePath": "/onboarding/knowledge"
     },
     {
       "path": "/onboarding/verify-phone",
@@ -437,6 +439,21 @@
       "fixtureState": "onboarding",
       "state": "default",
       "comparison": "frozen-main"
+    },
+    {
+      "path": "/onboarding/meet",
+      "fixtureState": "onboarding",
+      "state": "default",
+      "comparison": "excluded",
+      "reason": "New last onboarding screen, which took over the greeting step",
+      "referencePath": "/onboarding/greeting"
+    },
+    {
+      "path": "/onboarding/[...removed]",
+      "fixtureState": "onboarding",
+      "state": "redirect",
+      "comparison": "excluded",
+      "reason": "Sends a removed step to the current one, so it renders nothing"
     },
     {
       "path": "/",
