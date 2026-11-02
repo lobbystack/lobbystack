@@ -3,6 +3,7 @@ import { appSignupUrl } from "@/marketing/lib/app-links"
 import { getMcpCopy, mcpAgencyDocsUrl, mcpClientOrder, MCP_SERVER_URL, mcpDocsUrl, mcpToolGroupOrder, mcpToolGroups } from "@/marketing/lib/mcp-page-copy"
 import { getMcpFaqs } from "@/marketing/lib/mcp-page-faqs"
 import { absoluteUrl } from "@/marketing/lib/seo"
+import { setupPromptsMarkdown } from "@/marketing/lib/setup-prompts-markdown"
 
 const toolHeadings = {
   en: ["Tool", "Scope"],
@@ -83,6 +84,8 @@ ${copy.hero.urlLabel}: ${MCP_SERVER_URL}
 ${install}
 
 - ${copy.connect.guide}: ${mcpDocsUrl(locale, "mcp")}
+
+${setupPromptsMarkdown(locale, ["no-code", "saas", "white-label"])}
 
 ## ${copy.faqTitle}
 

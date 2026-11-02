@@ -330,6 +330,35 @@ describe("AgentBasicSettingsPage transfer number", () => {
     client.clear();
   });
 
+  it("keeps the digits typed so far when a refetch brings the saved number's country", async () => {
+    const patches: unknown[] = [];
+    const settings = (transferNumber: string | null) => ({
+      business: { defaultLocale: "en" },
+      profile: { greeting: "Thanks for calling.", summary: "Clinic", summarySource: "operator", transferNumber, transferMode: "on_request", appointmentChangePolicy: null, bookingMode: "instant" },
+    });
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === "PATCH") {
+        patches.push(JSON.parse(String(init.body)));
+        return Response.json({ ok: true });
+      }
+      return Response.json(settings(null));
+    }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><AgentBasicSettingsPage businessId="business" canManageTenant /></QueryClientProvider>);
+
+    const user = userEvent.setup();
+    await screen.findByRole("combobox", { name: "agent:fields.transferNumber.country" });
+    const input = document.getElementById("agent-transfer-number") as HTMLInputElement;
+    await user.type(input, "+14165");
+    // The refetch from an earlier save lands mid-typing with a number from another country.
+    act(() => client.setQueryData(["agent-settings", "business"], settings("+447911123456")));
+    await user.type(input, "550199");
+    await user.click(screen.getByRole("button", { name: "agent:actions.save" }));
+
+    await waitFor(() => expect(patches).toEqual([{ businessId: "business", transferNumber: "+14165550199" }]));
+    client.clear();
+  });
+
   it("keeps a cleared number empty when a refetch lands, even if none was saved before", async () => {
     const patches: unknown[] = [];
     const settings = (transferNumber: string | null) => ({

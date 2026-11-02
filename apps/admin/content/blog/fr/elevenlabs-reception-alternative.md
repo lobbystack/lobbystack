@@ -1,7 +1,7 @@
 ---
 title: "Alternative à ElevenLabs Reception : minutes et contrôle"
 seoTitle: "Alternative à ElevenLabs Reception : LobbyStack"
-description: "Comparez ElevenLabs Reception et LobbyStack : 29 $ pour 75 minutes ou 30 $ pour 150, dépassements, chat web, HIPAA et auto-hébergement."
+description: "Comparez ElevenLabs Reception (Reception.ai) et LobbyStack : 29 $ pour 75 minutes ou 30 $ pour 150, dépassements, chat web, HIPAA et auto-hébergement."
 pubDate: 2026-09-19T10:00:00-04:00
 updatedDate: 2026-09-19T10:00:00-04:00
 author: "Équipe LobbyStack"
@@ -13,7 +13,7 @@ locale: "fr"
 canonicalSlug: "elevenlabs-reception-alternative"
 ---
 
-Si vous cherchez une **alternative à ElevenLabs Reception**, comparez d'abord les minutes. Au même prix de 24 $ par mois en facturation annuelle, Reception inclut 75 minutes d'appels et LobbyStack en inclut 150. ElevenLabs a lancé Reception, sous la marque Reception by ElevenAgents, le 16 septembre 2026. Le produit met les voix d'ElevenLabs au service des petites entreprises qui doivent répondre au téléphone.
+Si vous cherchez une **alternative à ElevenLabs Reception**, comparez d'abord les minutes. Au même prix de 24 $ par mois en facturation annuelle, Reception inclut 75 minutes d'appels et LobbyStack en inclut 150. ElevenLabs a lancé Reception, sous la marque Reception by ElevenAgents sur Reception.ai, le 16 septembre 2026. Le produit met les voix d'ElevenLabs au service des petites entreprises qui doivent répondre au téléphone.
 
 Reception offre d'excellentes voix et parle plus de 70 langues. LobbyStack vous donne deux fois plus de minutes, un dépassement moins cher, un forfait gratuit sans date limite et un code que vous pouvez héberger vous-même sous licence MIT.
 

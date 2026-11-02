@@ -108,7 +108,7 @@ Then check these five things:
 
 Choose LobbyStack when you sell an AI receptionist to small businesses and want to start without paying: the Free tier needs no card and includes a trial number for a real demo call. The $49 Starter tier comes with a shared pool, two numbers and your own domain. Clients pay you through your own Stripe account, and the MIT license lets you move the whole program onto your own servers later.
 
-Choose another platform when you need outbound campaigns, custom call flows for other jobs, branded email from your own domain, or GoHighLevel at the center of your stack.
+Choose another platform when you need outbound campaigns, custom call flows for other jobs, branded email from your own domain, or GoHighLevel at the center of your stack. Our [GoHighLevel comparison](/blog/gohighlevel-ai-receptionist-alternative/) covers that last case, and our guide to [selling a white label AI agent](/blog/white-label-ai-agent/) compares a branded dashboard with your own UI.
 
 ## FAQ
 

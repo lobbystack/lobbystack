@@ -5,6 +5,7 @@ import { appPartnerSignupUrl } from "@/marketing/lib/app-links"
 import { supportPlansTable } from "@/marketing/lib/self-hosted-pricing-markdown"
 import { getSelfHostedSupportCopy } from "@/marketing/lib/self-hosted-support-copy"
 import { absoluteUrl } from "@/marketing/lib/seo"
+import { setupPromptsMarkdown } from "@/marketing/lib/setup-prompts-markdown"
 import { getWhiteLabelCopy } from "@/marketing/lib/white-label-copy"
 import { getWhiteLabelFaqs } from "@/marketing/lib/white-label-faqs"
 
@@ -65,6 +66,8 @@ ${copy.hero.subhead}
 ${copy.selfHost.body}
 
 - ${copy.selfHost.cta}: ${absoluteUrl(localizePath(locale, "/solutions/self-hosted-ai-receptionist/"))}
+
+${setupPromptsMarkdown(locale, ["white-label", "partner"])}
 
 ## ${copy.receptionist.title}
 

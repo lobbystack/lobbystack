@@ -143,3 +143,5 @@ Le meilleur **service open source de réponse téléphonique IA** pour vous est 
 - Besoin d'un accueil pour services à domicile → **Hearthline**
 
 Si vous voulez inspecter une pile complète avant de transférer votre ligne principale, commencez par le [dépôt GitHub LobbyStack](https://github.com/lobbystack/lobbystack) ou la [vue d'ensemble de la pile open source](/fr/blog/open-source-ai-receptionist-stack/).
+
+Si vous envisagez aussi une plateforme hébergée pour développeurs, lisez notre [comparatif d'alternative à Vapi](/fr/blog/vapi-alternative/).
