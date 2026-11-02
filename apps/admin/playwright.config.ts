@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { fullStackEnvironment } from "./e2e/fixtures/full-stack-environment";
 import { roleDatabaseUrl } from "./playwright-database-url";
 import { playwrightTestSecrets } from "./playwright-test-secrets";
 
@@ -26,13 +27,49 @@ const localDatabaseUrl = Object.keys(replacement).length > 0
 const baseDatabaseUrl = new URL(localDatabaseUrl ?? process.env.DATABASE_URL ?? "postgres://postgres:postgres@127.0.0.1:5432/lobbystack");
 process.env.REPLACEMENT_E2E_DATABASE_URL = baseDatabaseUrl.toString();
 
+// The specs in e2e/full-stack run against the fakes in e2e/fixtures with a real
+// worker, on one Playwright worker so their fixed ports and queues stay theirs.
+const fullStack = process.env.FULL_STACK_E2E === "1";
+const workerPort = process.env.E2E_WORKER_PORT ?? "13002";
+const carrierRedirect = fileURLToPath(new URL("./e2e/fixtures/carrier-redirect.mjs", import.meta.url));
+const fullStackEnv = fullStack ? fullStackEnvironment(baseURL, carrierRedirect) : {};
+
+const adminEnv = {
+  PORT: new URL(baseURL).port || "13000",
+  APP_BASE_URL: baseURL,
+  AUTH_TRUSTED_ORIGINS: baseURL,
+  ...testSecrets,
+  BETTER_AUTH_USE_SECURE_COOKIES: "false",
+  REQUIRE_EMAIL_VERIFICATION: "true",
+  // The isolated test server is reachable only on localhost, and each spec
+  // mints a unique `x-real-ip` per user so auth rate limits stay per-test
+  // instead of collapsing into one shared bucket. Never copy this to a
+  // deployment whose ingress does not overwrite the header.
+  TRUSTED_CLIENT_IP_HEADER: "x-real-ip",
+  // The widget settings journey creates a widget key, which stays off unless an operator opts in.
+  WIDGET_KEY_ISSUANCE_ENABLED: "true",
+  DATABASE_URL: roleDatabaseUrl(baseDatabaseUrl, "lobbystack_app", process.env.LOBBYSTACK_APP_PASSWORD ?? replacement.LOBBYSTACK_APP_PASSWORD ?? "app", process.env.LOBBYSTACK_APP_DATABASE_URL),
+  LOBBYSTACK_APP_DATABASE_URL: roleDatabaseUrl(baseDatabaseUrl, "lobbystack_app", process.env.LOBBYSTACK_APP_PASSWORD ?? replacement.LOBBYSTACK_APP_PASSWORD ?? "app", process.env.LOBBYSTACK_APP_DATABASE_URL),
+  LOBBYSTACK_AUTH_DATABASE_URL: roleDatabaseUrl(baseDatabaseUrl, "lobbystack_auth", process.env.LOBBYSTACK_AUTH_PASSWORD ?? replacement.LOBBYSTACK_AUTH_PASSWORD ?? "auth", process.env.LOBBYSTACK_AUTH_DATABASE_URL),
+  LOBBYSTACK_WORKER_DATABASE_URL: roleDatabaseUrl(baseDatabaseUrl, "lobbystack_worker", process.env.LOBBYSTACK_WORKER_PASSWORD ?? replacement.LOBBYSTACK_WORKER_PASSWORD ?? "worker", process.env.LOBBYSTACK_WORKER_DATABASE_URL),
+  LOBBYSTACK_DISPATCHER_DATABASE_URL: roleDatabaseUrl(baseDatabaseUrl, "lobbystack_dispatcher", process.env.LOBBYSTACK_DISPATCHER_PASSWORD ?? replacement.LOBBYSTACK_DISPATCHER_PASSWORD ?? "dispatcher", process.env.LOBBYSTACK_DISPATCHER_DATABASE_URL),
+  ...(process.env.REDIS_URL || replacement.REDIS_PORT ? { REDIS_URL: process.env.REDIS_URL ?? `redis://127.0.0.1:${replacement.REDIS_PORT}` } : {}),
+  ...(process.env.AI_CHAT_API_KEY && process.env.AI_CHAT_BASE_URL && process.env.AI_CHAT_MODEL ? {
+    AI_CHAT_API_KEY: process.env.AI_CHAT_API_KEY,
+    AI_CHAT_BASE_URL: process.env.AI_CHAT_BASE_URL,
+    AI_CHAT_MODEL: process.env.AI_CHAT_MODEL,
+  } : {}),
+  ...fullStackEnv,
+  NODE_ENV: "production",
+};
+
 export default defineConfig({
   testDir: "./e2e",
   testMatch: "**/*.e2e.ts",
-  testIgnore: ["**/visual-parity.e2e.ts", "**/new-operator-visual.e2e.ts", "**/loading-parity.e2e.ts", "**/invitation-parity.e2e.ts"],
+  testIgnore: ["**/visual-parity.e2e.ts", "**/new-operator-visual.e2e.ts", "**/loading-parity.e2e.ts", "**/invitation-parity.e2e.ts", ...(fullStack ? [] : ["**/full-stack/**"])],
   fullyParallel: false,
   // Operator fixtures share persisted active-workspace state across spec files.
-  ...(process.env.PARITY_OPERATOR_USER_ID ? { workers: 1 } : {}),
+  ...(process.env.PARITY_OPERATOR_USER_ID || fullStack ? { workers: 1 } : {}),
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? "github" : "list",
   use: {
@@ -40,37 +77,20 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  webServer: {
-    command: "pnpm exec tsx --tsconfig ../../scripts/tsconfig.json ../../scripts/prepare-admin-standalone.ts && node .next/standalone/apps/admin/server.js",
-    url: `${baseURL}/login`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-    env: {
-      PORT: new URL(baseURL).port || "13000",
-      APP_BASE_URL: baseURL,
-      AUTH_TRUSTED_ORIGINS: baseURL,
-      ...testSecrets,
-      BETTER_AUTH_USE_SECURE_COOKIES: "false",
-      REQUIRE_EMAIL_VERIFICATION: "true",
-      // The isolated test server is reachable only on localhost, and each spec
-      // mints a unique `x-real-ip` per user so auth rate limits stay per-test
-      // instead of collapsing into one shared bucket. Never copy this to a
-      // deployment whose ingress does not overwrite the header.
-      TRUSTED_CLIENT_IP_HEADER: "x-real-ip",
-      // The widget settings journey creates a widget key, which stays off unless an operator opts in.
-      WIDGET_KEY_ISSUANCE_ENABLED: "true",
-      DATABASE_URL: roleDatabaseUrl(baseDatabaseUrl, "lobbystack_app", process.env.LOBBYSTACK_APP_PASSWORD ?? replacement.LOBBYSTACK_APP_PASSWORD ?? "app", process.env.LOBBYSTACK_APP_DATABASE_URL),
-      LOBBYSTACK_APP_DATABASE_URL: roleDatabaseUrl(baseDatabaseUrl, "lobbystack_app", process.env.LOBBYSTACK_APP_PASSWORD ?? replacement.LOBBYSTACK_APP_PASSWORD ?? "app", process.env.LOBBYSTACK_APP_DATABASE_URL),
-      LOBBYSTACK_AUTH_DATABASE_URL: roleDatabaseUrl(baseDatabaseUrl, "lobbystack_auth", process.env.LOBBYSTACK_AUTH_PASSWORD ?? replacement.LOBBYSTACK_AUTH_PASSWORD ?? "auth", process.env.LOBBYSTACK_AUTH_DATABASE_URL),
-      LOBBYSTACK_WORKER_DATABASE_URL: roleDatabaseUrl(baseDatabaseUrl, "lobbystack_worker", process.env.LOBBYSTACK_WORKER_PASSWORD ?? replacement.LOBBYSTACK_WORKER_PASSWORD ?? "worker", process.env.LOBBYSTACK_WORKER_DATABASE_URL),
-      LOBBYSTACK_DISPATCHER_DATABASE_URL: roleDatabaseUrl(baseDatabaseUrl, "lobbystack_dispatcher", process.env.LOBBYSTACK_DISPATCHER_PASSWORD ?? replacement.LOBBYSTACK_DISPATCHER_PASSWORD ?? "dispatcher", process.env.LOBBYSTACK_DISPATCHER_DATABASE_URL),
-      ...(process.env.REDIS_URL || replacement.REDIS_PORT ? { REDIS_URL: process.env.REDIS_URL ?? `redis://127.0.0.1:${replacement.REDIS_PORT}` } : {}),
-      ...(process.env.AI_CHAT_API_KEY && process.env.AI_CHAT_BASE_URL && process.env.AI_CHAT_MODEL ? {
-        AI_CHAT_API_KEY: process.env.AI_CHAT_API_KEY,
-        AI_CHAT_BASE_URL: process.env.AI_CHAT_BASE_URL,
-        AI_CHAT_MODEL: process.env.AI_CHAT_MODEL,
-      } : {}),
-      NODE_ENV: "production",
+  webServer: [
+    {
+      command: "pnpm exec tsx --tsconfig ../../scripts/tsconfig.json ../../scripts/prepare-admin-standalone.ts && node .next/standalone/apps/admin/server.js",
+      url: `${baseURL}/login`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      env: adminEnv,
     },
-  },
+    ...(fullStack ? [{
+      command: "pnpm --filter @lobbystack/worker exec tsx src/index.ts",
+      url: `http://127.0.0.1:${workerPort}/health/ready`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      env: { ...adminEnv, PORT: workerPort },
+    }] : []),
+  ],
 });
