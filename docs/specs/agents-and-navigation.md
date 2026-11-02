@@ -78,7 +78,7 @@ We fix activation first, then compare four working navigation prototypes, then b
 
 - Free includes one agent. Paid plans include unlimited agents.
 - Allowance stays per business, shared across its agents.
-- Starter and Pro keep one included number, and sell extra numbers as a named add-on, with a monthly price set per country.
+- Starter and Pro keep one included number, and sell extra numbers as a named add-on, charged at the carrier's monthly cost for that country with no markup.
 - Partners keep the number limits of their tier.
 
 ### Rules every prototype shares
