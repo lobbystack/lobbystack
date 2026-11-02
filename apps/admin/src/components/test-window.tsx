@@ -12,7 +12,7 @@ import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FieldError } from "@/components/ui/field";
-import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupTextarea } from "@/components/ui/input-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUpgradePlanDialogOpener } from "@/components/upgrade-plan-dialog-context";
 import { AuraVoiceDemo } from "@/components/web-voice/AuraVoiceDemo";
@@ -83,7 +83,8 @@ function TestChat({ agentId, businessId, children }: { agentId: string | undefin
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       <div className="flex min-h-0 flex-1 flex-col items-center gap-4 overflow-y-auto" ref={scrollRef}>
-        {children}
+        {/* Auto margins centre the call until a chat needs the room, and still scroll when it overflows. */}
+        <div className={cn("flex w-full shrink-0 flex-col items-center gap-4", !messages.length && "my-auto")}>{children}</div>
         {messages.length ? (
           <div className="flex w-full flex-col gap-2">
             {messages.map((message) => {
@@ -99,9 +100,9 @@ function TestChat({ agentId, businessId, children }: { agentId: string | undefin
       </div>
       <form className="shrink-0" onSubmit={send}>
         <InputGroup>
-          <InputGroupInput aria-label={t("testWindow.message")} autoComplete="off" maxLength={4_000} onChange={(event) => setDraft(event.target.value)} placeholder={t("testWindow.message")} value={draft} />
-          <InputGroupAddon align="inline-end">
-            <InputGroupButton aria-label={t("testWindow.send")} disabled={busy || !draft.trim()} size="icon-xs" type="submit" variant="default"><ArrowUp /></InputGroupButton>
+          <InputGroupTextarea aria-label={t("testWindow.message")} autoComplete="off" className="min-h-16 max-h-32" maxLength={4_000} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} placeholder={t("testWindow.message")} rows={2} value={draft} />
+          <InputGroupAddon align="block-end" className="justify-end">
+            <InputGroupButton aria-label={t("testWindow.send")} disabled={busy || !draft.trim()} size="icon-sm" type="submit" variant="default"><ArrowUp /></InputGroupButton>
           </InputGroupAddon>
         </InputGroup>
       </form>
