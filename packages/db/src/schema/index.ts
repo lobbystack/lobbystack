@@ -1,5 +1,5 @@
 import { customType } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
+import { sql, type AnyColumn, type SQL } from "drizzle-orm";
 import {
   bigint,
   boolean,
@@ -704,11 +704,18 @@ export const numberWaitlist = pgTable("number_waitlist", {
   ...timestamps,
 }, (table) => [uniqueIndex("number_waitlist_business_country_unique").on(table.businessId, table.countryCode)]);
 
-export const receptionistProfiles = pgTable(
-  "receptionist_profiles",
+export const agents = pgTable(
+  "agents",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    // Operators see this. Callers never hear it. Pass defaultAgentName(locale)
+    // for a business's first agent; the default covers code that can't.
+    name: text("name").default("Agent").notNull(),
+    // One per business. Until slice 5 the unique index below allows no other
+    // agent, so every row is its business's default.
+    isDefault: boolean("is_default").default(true).notNull(),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
     greeting: text("greeting").notNull(),
     tone: text("tone").notNull(),
     summary: text("summary").notNull(),
@@ -739,8 +746,13 @@ export const receptionistProfiles = pgTable(
     staffFirstHandoverMessage: text("staff_first_handover_message"),
     ...timestamps,
   },
-  (table) => [uniqueIndex("receptionist_profiles_business_unique").on(table.businessId)],
+  (table) => [uniqueIndex("agents_business_unique").on(table.businessId)],
 );
+
+/** Matches a business's default agent. Pass the business id, or a column to join on. */
+export function defaultAgentOf(businessId: string | AnyColumn): SQL {
+  return sql`(${agents.businessId} = ${businessId} and ${agents.isDefault})`;
+}
 
 export const contacts = pgTable(
   "contacts",
@@ -2320,7 +2332,7 @@ export const allTenantTables = [
   phoneNumbers,
   onboardingPhoneVerifications,
   onboardingNumberClaimEvents,
-  receptionistProfiles,
+  agents,
   contacts,
   widgetKeys,
   widgetVisitors,
@@ -2399,7 +2411,7 @@ export const schema = {
   phoneNumbers,
   onboardingPhoneVerifications,
   onboardingNumberClaimEvents,
-  receptionistProfiles,
+  agents,
   contacts,
   widgetKeys,
   widgetVisitors,

@@ -2,7 +2,7 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 import { and, eq, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 
-import { businesses, enqueueOutbox, numberTrials, onboardingNumberClaimEvents, phoneNumbers, receptionistProfiles, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, businesses, defaultAgentOf, enqueueOutbox, numberTrials, onboardingNumberClaimEvents, phoneNumbers, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { isCarrierId, type CarrierId } from "@lobbystack/providers/telephony/types";
 
 import { requireBusinessAdmin } from "../authz";
@@ -398,7 +398,7 @@ export async function completeNumberProvisioning(context: DomainContext, input: 
       if (activated && await trialNumberPaidForInTransaction(tx, input.businessId)) await keepBusinessNumbersInTransaction(tx, { businessId: input.businessId });
     }
     // Every number starts on the receptionist. With staff answers first on, routing moves this one to the webhook.
-    const profile = (await tx.select({ staffFirstMode: receptionistProfiles.staffFirstMode }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, input.businessId)).limit(1))[0];
+    const profile = (await tx.select({ staffFirstMode: agents.staffFirstMode }).from(agents).where(defaultAgentOf(input.businessId)).limit(1))[0];
     if (profile && profile.staffFirstMode !== "never") await enqueueNumberRouting(tx, { businessId: input.businessId, phoneNumberId: number.id, mode: "receptionist" });
     return number.id;
   });

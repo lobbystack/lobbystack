@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import { and, eq, gt, inArray, like, ne, sql } from "drizzle-orm";
 
-import { billingUsageEvents, calls, contacts, enqueueOutbox, numberTrials, phoneNumbers, receptionistProfiles, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, billingUsageEvents, calls, contacts, defaultAgentOf, enqueueOutbox, numberTrials, phoneNumbers, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { sipAddress } from "@lobbystack/providers/telephony/config";
 import { CARRIERS_WITH_STAFF_FIRST, type CarrierId } from "@lobbystack/providers/telephony/types";
 import { includesStaffFirst, isTransferPhone, shouldRingStaffFirst, type RuntimeLocale, type StaffFirstMode } from "@lobbystack/shared";
@@ -33,7 +33,7 @@ export async function staffFirstBlockInTransaction(tx: DatabaseTransaction, busi
 
 /** The rules a change to the mode or the staff phone must pass. The phone follows the same rules as a transfer number. */
 export async function assertStaffFirstChange(tx: DatabaseTransaction, input: { businessId: string; mode?: StaffFirstMode | undefined; number?: string | null | undefined }): Promise<void> {
-  const current = (await tx.select({ mode: receptionistProfiles.staffFirstMode, number: receptionistProfiles.staffFirstNumber }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, input.businessId)).limit(1))[0];
+  const current = (await tx.select({ mode: agents.staffFirstMode, number: agents.staffFirstNumber }).from(agents).where(defaultAgentOf(input.businessId)).limit(1))[0];
   const mode = input.mode ?? current?.mode ?? "never";
   const number = input.number !== undefined ? input.number : current?.number;
   if (mode !== "never" && !number) throw Object.assign(new Error("Add the staff phone to ring first."), { status: 400, code: "staff_first_number_required" });

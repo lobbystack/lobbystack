@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
-import { businesses, businessHours, businessInvitations, businessMemberships, createDatabaseClient, outboxMessages, partners, receptionistProfiles, services, staff, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, businesses, businessHours, businessInvitations, businessMemberships, createDatabaseClient, outboxMessages, partners, services, staff, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { defaultGreeting } from "@lobbystack/shared";
 import { findAvailability } from "./booking";
 import { HOST_BRAND_SCOPE } from "./businessAccess";
@@ -185,7 +185,7 @@ describe.skipIf(!client)("businesses with no owner", () => {
       business,
       memberships: await tx.select({ userId: businessMemberships.userId }).from(businessMemberships).where(eq(businessMemberships.businessId, businessId)),
       staff: await tx.select({ name: staff.name, active: staff.active }).from(staff).where(eq(staff.businessId, businessId)),
-      greetings: (await tx.select({ greeting: receptionistProfiles.greeting }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, businessId))).map((row) => row.greeting),
+      greetings: (await tx.select({ greeting: agents.greeting }).from(agents).where(eq(agents.businessId, businessId))).map((row) => row.greeting),
       outbox: await tx.select({ topic: outboxMessages.topic, dedupeKey: outboxMessages.dedupeKey }).from(outboxMessages).where(eq(outboxMessages.businessId, businessId)),
     };
   }

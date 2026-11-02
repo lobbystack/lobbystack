@@ -251,6 +251,28 @@ export function isDefaultGreeting(greeting: string, businessName: string, locale
   return greeting === defaultGreeting(businessName, locale) || (locale === "en" && greeting === `Thanks for calling ${businessName.trim()}.`);
 }
 
+// Migration 0183's app.default_agent_name is the same list.
+const agentNames: Record<RuntimeLocale, string> = {
+  en: "Agent",
+  fr: "Agent",
+  es: "Agente",
+  sr: "Agent",
+  de: "Agent",
+  pt: "Agente",
+  it: "Agente",
+  nl: "Agent",
+};
+
+/** A business's default agent's name, in its caller language. Operators see it, and callers never hear it. */
+export function defaultAgentName(locale: RuntimeLocale = "en"): string {
+  return agentNames[locale];
+}
+
+/** Whether LobbyStack gave an agent this name in some language, so it can follow a change of caller language. */
+export function isDefaultAgentName(name: string): boolean {
+  return Object.values(agentNames).includes(name);
+}
+
 /** Missing legacy policy uses the original defaults; malformed policies disable automation. */
 export function normalizeAppointmentChangePolicy(value: unknown): AppointmentChangePolicy {
   if (value == null) return { ...defaultAppointmentChangePolicy };

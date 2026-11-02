@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { apiKeys, auditLogs, businessMemberships, businesses, contacts, createDatabaseClient, idempotencyKeys, outboxMessages, platformKeyBusinesses, receptionistProfiles, staff, users } from "@lobbystack/db";
+import { agents, apiKeys, auditLogs, businessMemberships, businesses, contacts, createDatabaseClient, idempotencyKeys, outboxMessages, platformKeyBusinesses, staff, users } from "@lobbystack/db";
 
 import { generateApiKey, resolveApiKey } from "./apiKeys";
 import { PublicApiError } from "./errors";
@@ -240,7 +240,7 @@ describe.skipIf(!testUrl)("platform keys against PostgreSQL with RLS", () => {
       expect(await admin!.db.select({ userId: businessMemberships.userId, role: businessMemberships.role }).from(businessMemberships).where(eq(businessMemberships.businessId, businessId))).toEqual([{ userId: ownerId, role: "business_owner" }]);
       expect(await admin!.db.select({ groupId: platformKeyBusinesses.groupId, createdBy: platformKeyBusinesses.createdByPlatformKeyId }).from(platformKeyBusinesses).where(eq(platformKeyBusinesses.businessId, businessId))).toEqual([{ groupId: acme, createdBy: entry.id }]);
       expect(await admin!.db.select({ id: staff.id }).from(staff).where(eq(staff.businessId, businessId))).toHaveLength(1);
-      expect(await admin!.db.select({ id: receptionistProfiles.businessId }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, businessId))).toHaveLength(1);
+      expect(await admin!.db.select({ id: agents.businessId }).from(agents).where(eq(agents.businessId, businessId))).toHaveLength(1);
       const [audit] = await admin!.db.select({ payload: auditLogs.payload }).from(auditLogs).where(and(eq(auditLogs.businessId, businessId), eq(auditLogs.eventType, "api.business.created")));
       expect(audit?.payload).toEqual({ actor: "platform_key", platformKeyId: entry.id, groupId: acme, actingUserId: ownerId, requestHash: `hash-${idempotencyKey}` });
       expect(await admin!.db.select({ topic: outboxMessages.topic }).from(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), eq(outboxMessages.topic, "snapshot.refresh")))).not.toHaveLength(0);

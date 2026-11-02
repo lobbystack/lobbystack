@@ -37,7 +37,7 @@ vi.mock("./domain-context", async () => {
   return { createDomainContext: () => ({ db: getDatabase("lobbystack_app").db }), createWorkerDomainContext: () => ({ db: getDatabase("lobbystack_worker").db }) };
 });
 
-import { auditLogs, businessMemberships, businesses, createDatabaseClient, oauthAccessTokens, oauthConsents, oauthRefreshTokens, receptionistProfiles, users, accounts } from "@lobbystack/db";
+import { agents, auditLogs, businessMemberships, businesses, createDatabaseClient, oauthAccessTokens, oauthConsents, oauthRefreshTokens, users, accounts } from "@lobbystack/db";
 import { listOAuthGrants, revokeOAuthGrant } from "@lobbystack/domain";
 
 import { getAuth } from "./auth";
@@ -70,7 +70,7 @@ async function auth(path: string, init: RequestInit = {}): Promise<Response> {
 async function seedBusiness(name: string, userId: string, role: string): Promise<string> {
   const businessId = randomUUID();
   await admin!.db.insert(businesses).values({ id: businessId, slug: `oauth-it-${businessId}`, name, timezone: "UTC", businessType: "test" });
-  await admin!.db.insert(receptionistProfiles).values({ businessId, greeting: "Hi", tone: "warm", summary: name, bookingPolicy: "Book", transferMode: "never", bookingMode: "instant" });
+  await admin!.db.insert(agents).values({ businessId, greeting: "Hi", tone: "warm", summary: name, bookingPolicy: "Book", transferMode: "never", bookingMode: "instant" });
   await admin!.db.insert(businessMemberships).values({ businessId, userId, role });
   cleanup.businesses.push(businessId);
   return businessId;

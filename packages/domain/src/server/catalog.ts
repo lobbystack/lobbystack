@@ -1,7 +1,7 @@
 import { and, asc, count, eq, ilike, inArray, isNull } from "drizzle-orm";
 
 import { enqueueOutbox, inOrder, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { agentRules, businesses, businessHours, closures, phoneNumbers, receptionistProfiles, services, staff, staffServiceAssignments } from "@lobbystack/db";
+import { agentRules, agents, businesses, businessHours, closures, defaultAgentOf, phoneNumbers, services, staff, staffServiceAssignments } from "@lobbystack/db";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import { isDiscountPercent, servicePriceTypes, type ServicePriceType } from "@lobbystack/shared";
@@ -21,7 +21,7 @@ export async function listCatalog(
       () => tx.select().from(businessHours).where(and(eq(businessHours.businessId, input.businessId), isNull(businessHours.staffId))).orderBy(asc(businessHours.dayOfWeek), asc(businessHours.openMinutes)),
       () => tx.select().from(closures).where(and(eq(closures.businessId, input.businessId), isNull(closures.staffId))).orderBy(asc(closures.startsAt)),
       () => tx.select().from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"))).orderBy(asc(phoneNumbers.e164)),
-      () => tx.select().from(receptionistProfiles).where(eq(receptionistProfiles.businessId, input.businessId)).limit(1),
+      () => tx.select().from(agents).where(defaultAgentOf(input.businessId)).limit(1),
       () => tx.select().from(agentRules).where(eq(agentRules.businessId, input.businessId)).orderBy(asc(agentRules.sortOrder), asc(agentRules.createdAt), asc(agentRules.id)),
     ]);
     const limit = Math.min(Math.max(Math.trunc(input.limit ?? 100), 1), 100);

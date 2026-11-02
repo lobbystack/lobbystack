@@ -3,8 +3,8 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { and, eq, gt, isNull, ne, or, sql } from "drizzle-orm";
 
 import { enqueueOutbox, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
-import { apiKeys, businesses, businessInvitations, businessMemberships, closures, partnerMembers, receptionistProfiles, services, staff, userActiveBusinesses, users } from "@lobbystack/db";
-import { currencyFractionDigits, defaultAppointmentChangePolicy, defaultCurrencyForTimezone, defaultGreeting, isCurrencyCode, isDefaultGreeting, normalizeAuthEmail, normalizeRuntimeLocale, parseDeploymentMode, type EmailBrandReference, type PartnerAccessLevel } from "@lobbystack/shared";
+import { agents, apiKeys, businesses, businessInvitations, businessMemberships, closures, defaultAgentOf, partnerMembers, services, staff, userActiveBusinesses, users } from "@lobbystack/db";
+import { currencyFractionDigits, defaultAgentName, defaultAppointmentChangePolicy, defaultCurrencyForTimezone, defaultGreeting, isCurrencyCode, isDefaultAgentName, isDefaultGreeting, normalizeAuthEmail, normalizeRuntimeLocale, parseDeploymentMode, type EmailBrandReference, type PartnerAccessLevel } from "@lobbystack/shared";
 
 import { requireBusinessAdmin } from "../authz";
 import { accessCapabilities, brandPartnerId, businessShowsOnBrand, capabilityNames, readBusinessAccess, requireBusinessAccess, type BrandScope, type BusinessAccessVia, type Capability } from "./businessAccess";
@@ -196,8 +196,9 @@ async function insertBusinessRowsInTransaction(tx: DatabaseTransaction, input: N
   // Booking assigns every appointment to a staff member. Businesses that don't
   // manage a team get one hidden member that stands for the business itself.
   await tx.insert(staff).values({ businessId, name, timezone });
-  await tx.insert(receptionistProfiles).values({
+  await tx.insert(agents).values({
     businessId,
+    name: defaultAgentName(normalizeRuntimeLocale(input.defaultLocale)),
     greeting: defaultGreeting(name),
     tone: "warm and direct",
     summary: `${name} uses LobbyStack to answer calls.`,
@@ -342,12 +343,16 @@ export async function updateBusinessInTransaction(
       updatedAt: new Date(),
     }).where(and(eq(closures.businessId, input.businessId), gt(closures.endsAt, sql`now()`)));
   }
-  // A greeting still on the old language's default follows the new language; one the owner wrote stays.
+  // A greeting or agent name still on the old language's default follows the new language; one the owner wrote stays.
   if (input.defaultLocale !== undefined && before) {
     const from = normalizeRuntimeLocale(before.defaultLocale);
     const to = normalizeRuntimeLocale(input.defaultLocale);
-    const [profile] = from === to ? [] : await tx.select({ greeting: receptionistProfiles.greeting }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, input.businessId)).limit(1);
-    if (profile && isDefaultGreeting(profile.greeting, before.name, from)) await tx.update(receptionistProfiles).set({ greeting: defaultGreeting(input.name?.trim() || before.name, to), updatedAt: new Date() }).where(eq(receptionistProfiles.businessId, input.businessId));
+    const [profile] = from === to ? [] : await tx.select({ name: agents.name, greeting: agents.greeting }).from(agents).where(defaultAgentOf(input.businessId)).limit(1);
+    if (profile) {
+      const name = isDefaultAgentName(profile.name) ? defaultAgentName(to) : profile.name;
+      const greeting = isDefaultGreeting(profile.greeting, before.name, from) ? { greeting: defaultGreeting(input.name?.trim() || before.name, to), updatedAt: new Date() } : null;
+      if (greeting || name !== profile.name) await tx.update(agents).set({ name, ...greeting }).where(defaultAgentOf(input.businessId));
+    }
   }
   await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "business", aggregateId: input.businessId, dedupeKey: `business:${input.businessId}:snapshot:${Date.now()}`, payload: { businessId: input.businessId, reason: "business_updated" } });
   // The generated summary names the business and is written in its default locale.

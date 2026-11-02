@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { apiCallSchema } from "@lobbystack/shared";
-import { billingAccounts, billingUsageEvents, businessHours, businessMemberships, businesses, calls, contacts, createDatabaseClient, firstRealConversations, numberTrials, onboardingNumberClaimEvents, outboxMessages, partners, phoneNumbers, productEvents, receptionistProfiles, users, webhookEndpoints, webhookEvents, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, billingAccounts, billingUsageEvents, businessHours, businessMemberships, businesses, calls, contacts, createDatabaseClient, firstRealConversations, numberTrials, onboardingNumberClaimEvents, outboxMessages, partners, phoneNumbers, productEvents, users, webhookEndpoints, webhookEvents, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { getAnalytics } from "./analytics";
 import { loadEntitlement } from "./entitlement";
@@ -151,7 +151,7 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
       const businessId = await business(tx, { carrier: "twilio" });
       await save(tx, businessId, { staffFirstMode: "always", staffFirstNumber: staffPhone });
       await expect(save(tx, businessId, { staffFirstNumber: null })).rejects.toMatchObject({ code: "staff_first_number_required" });
-      expect((await tx.select({ number: receptionistProfiles.staffFirstNumber }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, businessId)))[0]?.number).toBe(staffPhone);
+      expect((await tx.select({ number: agents.staffFirstNumber }).from(agents).where(eq(agents.businessId, businessId)))[0]?.number).toBe(staffPhone);
     });
   });
 
@@ -172,7 +172,7 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
     await rollbackTest(async (tx) => {
       const businessId = await business(tx, { carrier: "telnyx" });
       const [number] = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(eq(phoneNumbers.businessId, businessId));
-      await tx.update(receptionistProfiles).set({ staffFirstMode: "always", staffFirstNumber: staffPhone }).where(eq(receptionistProfiles.businessId, businessId));
+      await tx.update(agents).set({ staffFirstMode: "always", staffFirstNumber: staffPhone }).where(eq(agents.businessId, businessId));
       expect((await desiredNumberRouting({ db: tx as unknown as Database }, { businessId, phoneNumberId: number!.id }))?.mode).toBe("receptionist");
     });
   });
@@ -470,7 +470,7 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
     await rollbackTest(async (tx) => {
       const businessId = await business(tx);
       await save(tx, businessId, { greeting: "Hello." });
-      await expect(tx.transaction(async (nested) => { await nested.execute(sql`update receptionist_profiles set staff_first_mode = 'weekends' where business_id = ${businessId}::uuid`); })).rejects.toThrow();
+      await expect(tx.transaction(async (nested) => { await nested.execute(sql`update agents set staff_first_mode = 'weekends' where business_id = ${businessId}::uuid`); })).rejects.toThrow();
     });
   });
 });

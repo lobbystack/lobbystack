@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { and, eq } from "drizzle-orm";
 
-import { appointmentChangeVerifications, appointments, auditLogs, businesses, businessHours, contacts, createDatabaseClient, outboxMessages, phoneNumbers, receptionistProfiles, services, smsConsentEvents, staff } from "@lobbystack/db";
+import { agents, appointmentChangeVerifications, appointments, auditLogs, businesses, businessHours, contacts, createDatabaseClient, outboxMessages, phoneNumbers, services, smsConsentEvents, staff } from "@lobbystack/db";
 import { bookAppointment, cancelAppointmentForCaller, claimAppointmentChangeOtp, createAppointmentChangeVerification, issueAppointmentChangeOtp, markAppointmentChangeOtpSent, releaseAppointmentChangeOtp, rescheduleAppointmentForCaller, verifyAppointmentChangeOtp } from "@lobbystack/domain";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -33,7 +33,7 @@ async function main(): Promise<void> {
     // Booking requires an open hours window for the requested weekday.
     await db.db.insert(businessHours).values(Array.from({ length: 7 }, (_, dayOfWeek) => ({ businessId, dayOfWeek, openMinutes: 0, closeMinutes: 1439 })));
     await db.db.insert(phoneNumbers).values({ businessId, e164: "+14165550992", providerPhoneId: `PN-${randomUUID()}` });
-    await db.db.insert(receptionistProfiles).values({
+    await db.db.insert(agents).values({
       businessId,
       greeting: "Thanks for calling.",
       tone: "professional",

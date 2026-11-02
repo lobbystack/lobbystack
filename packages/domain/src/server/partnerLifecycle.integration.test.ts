@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { auditLogs, billingAccounts, businesses, businessTemplates, calls, createDatabaseClient, onboardingNumberClaimEvents, outboxMessages, partnerLifecycleEvents, partnerLifecycles, partnerPackages, partnerStripeAccounts, partnerUsageMonths, phoneNumbers, prospectDemos, receptionistProfiles, storageObjects, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, auditLogs, billingAccounts, businesses, businessTemplates, calls, createDatabaseClient, onboardingNumberClaimEvents, outboxMessages, partnerLifecycleEvents, partnerLifecycles, partnerPackages, partnerStripeAccounts, partnerUsageMonths, phoneNumbers, prospectDemos, storageObjects, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { PROSPECT_DEMO_WIDGET_ID } from "@lobbystack/shared";
 import { FakeStripeConnect } from "@lobbystack/providers/stripe/fakeStripeConnect";
 
@@ -463,7 +463,7 @@ describe.skipIf(!client)("a paused partner's businesses", () => {
       const transfer = "+14165550188";
       await asMigrator(tx, async () => {
         await tx.insert(phoneNumbers).values({ businessId: harbor.businessId, e164: line, providerPhoneId: providerPhoneId(), status: "active" });
-        await tx.update(receptionistProfiles).set({ transferNumber: transfer }).where(eq(receptionistProfiles.businessId, harbor.businessId));
+        await tx.update(agents).set({ transferNumber: transfer }).where(eq(agents.businessId, harbor.businessId));
       });
       const worker = { db: tx as unknown as Database };
       // What the live webhook does with an incoming call before it accepts it.

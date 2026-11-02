@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const fixture = vi.hoisted(() => ({ insert: vi.fn(), conflict: vi.fn(), update: vi.fn(), enqueue: vi.fn(), business: {} as Record<string, unknown>, profile: undefined as Record<string, unknown> | undefined }));
 vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
 vi.mock("@lobbystack/db", async (original) => ({ ...await original<typeof import("@lobbystack/db")>(), enqueueOutbox: fixture.enqueue }));
-import { receptionistProfiles } from "@lobbystack/db";
+import { agents } from "@lobbystack/db";
 import { defaultGreeting, runtimeLocales } from "@lobbystack/shared";
 import { fakeOperator, resetFakeOperator } from "@/lib/operator-request.fake";
 import { PATCH } from "./route";
@@ -14,7 +14,7 @@ beforeEach(() => {
   fixture.business = { name: "Clinic", defaultLocale: "en" };
   fixture.profile = undefined;
   fakeOperator.tx = {
-    select: () => ({ from: (table: unknown) => ({ where: () => ({ limit: async () => table === receptionistProfiles ? [fixture.profile].filter(Boolean) : [fixture.business], for: async () => [{ timezone: "America/Toronto", ...fixture.business }] }) }) }),
+    select: () => ({ from: (table: unknown) => ({ where: () => ({ limit: async () => table === agents ? [fixture.profile].filter(Boolean) : [fixture.business], for: async () => [{ timezone: "America/Toronto", ...fixture.business }] }) }) }),
     insert: () => ({ values: (value: unknown) => { fixture.insert(value); return { onConflictDoUpdate: (config: { set: unknown }) => { fixture.conflict(config.set); return { returning: async () => [{ id: "profile", updatedAt: new Date(0) }] }; } }; } }),
     update: () => ({ set: (value: unknown) => { fixture.update(value); return { where: () => ({ returning: async () => [{ id: "business" }] }) }; } }),
   };

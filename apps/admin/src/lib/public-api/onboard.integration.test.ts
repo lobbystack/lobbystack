@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { and, eq, inArray } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
 
-import { agentRules, auditLogs, businesses, businessInvitations, createDatabaseClient, knowledgeSnippets, outboxMessages, partners, receptionistProfiles, services, users } from "@lobbystack/db";
+import { agentRules, agents, auditLogs, businesses, businessInvitations, createDatabaseClient, knowledgeSnippets, outboxMessages, partners, services, users } from "@lobbystack/db";
 import { createPartnerPlatformKey, forgetCachedBrands, revokePartnerPlatformKey, signUpPartner, type DomainContext, type PartnerMemberActor } from "@lobbystack/domain";
 import { apiOperations, type ApiOperation } from "@lobbystack/shared";
 
@@ -156,7 +156,7 @@ describe.skipIf(!setup.testUrl)("lobbystack onboard with a partner's platform ke
       // The business is the partner's, at the access level the manifest asked for, and set up as it says.
       const [business] = await migrator!.db.select({ partnerId: businesses.partnerId, accessLevel: businesses.partnerAccessLevel, timezone: businesses.timezone, locale: businesses.defaultLocale }).from(businesses).where(eq(businesses.id, businessId));
       expect(business).toEqual({ partnerId, accessLevel: "activity", timezone: "America/Halifax", locale: "fr" });
-      expect((await migrator!.db.select({ greeting: receptionistProfiles.greeting }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, businessId)))[0]?.greeting).toBe("Merci d'appeler Harbor Dental.");
+      expect((await migrator!.db.select({ greeting: agents.greeting }).from(agents).where(eq(agents.businessId, businessId)))[0]?.greeting).toBe("Merci d'appeler Harbor Dental.");
       expect((await migrator!.db.select({ name: services.name }).from(services).where(eq(services.businessId, businessId))).map((row) => row.name)).toContain("Cleaning");
       expect((await migrator!.db.select({ title: agentRules.title }).from(agentRules).where(eq(agentRules.businessId, businessId))).map((row) => row.title)).toEqual(["Emergencies"]);
       expect(await migrator!.db.select({ id: knowledgeSnippets.id }).from(knowledgeSnippets).where(eq(knowledgeSnippets.businessId, businessId))).toHaveLength(1);

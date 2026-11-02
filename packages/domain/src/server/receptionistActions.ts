@@ -1,7 +1,7 @@
 import { and, asc, eq, gt, gte, lt, ne } from "drizzle-orm";
 import { DateTime } from "luxon";
 
-import { appointments, calls, contacts, conversationSessions, receptionistProfiles, services, staffServiceAssignments, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, appointments, calls, contacts, conversationSessions, defaultAgentOf, services, staffServiceAssignments, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { normalizeAppointmentChangePolicy } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
@@ -154,7 +154,7 @@ export async function lookupCallerAppointments(context: DomainContext, input: { 
     const [rows, profile] = await Promise.all([
       // A past appointment can't be cancelled or moved, so it doesn't count.
       tx.select({ id: appointments.id }).from(appointments).innerJoin(contacts, eq(appointments.contactId, contacts.id)).where(and(eq(appointments.businessId, input.businessId), eq(contacts.phone, input.callerPhone), eq(appointments.status, "confirmed"), gt(appointments.startsAt, new Date()))).orderBy(asc(appointments.startsAt)),
-      tx.select({ appointmentChangePolicy: receptionistProfiles.appointmentChangePolicy }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, input.businessId)).limit(1),
+      tx.select({ appointmentChangePolicy: agents.appointmentChangePolicy }).from(agents).where(defaultAgentOf(input.businessId)).limit(1),
     ]);
     const policy = normalizeAppointmentChangePolicy(profile[0]?.appointmentChangePolicy);
     // Only say whether the phone matched; never read appointment details out

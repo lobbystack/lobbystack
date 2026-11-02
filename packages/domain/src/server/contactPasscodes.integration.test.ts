@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 import { afterAll, describe, expect, it } from "vitest";
-import { apiKeys, appointmentChangeVerifications, appointments, auditLogs, businesses, businessHours, businessMemberships, calls, contactPasscodes, contacts, createDatabaseClient, receptionistProfiles, services, staff, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, apiKeys, appointmentChangeVerifications, appointments, auditLogs, businesses, businessHours, businessMemberships, calls, contactPasscodes, contacts, createDatabaseClient, services, staff, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { CONTACT_PASSCODES_MAX_PER_REQUEST, isGuessableContactPasscode, type ApiContactPasscodesGenerate, type ApiContactPasscodesUpdate, type AppointmentChangeVerificationMode } from "@lobbystack/shared";
 
 import { createAppointmentChangeVerification, issueAppointmentChangeOtp, verifyAppointmentChangePasscode } from "./appointmentChanges";
@@ -55,7 +55,7 @@ async function seed(tx: DatabaseTransaction, verificationMode: AppointmentChange
     await tx.insert(users).values({ id, email: `${id}@example.invalid`, normalizedEmail: `${id}@example.invalid` });
     await tx.insert(businessMemberships).values({ businessId, userId: id, role });
   }
-  await tx.insert(receptionistProfiles).values({ businessId, greeting: "Hi", tone: "warm", summary: "Test", bookingPolicy: "Book", transferMode: "never", bookingMode: "instant", appointmentChangePolicy: { enabled: true, verificationMode, allowCancel: true, allowReschedule: true } });
+  await tx.insert(agents).values({ businessId, greeting: "Hi", tone: "warm", summary: "Test", bookingPolicy: "Book", transferMode: "never", bookingMode: "instant", appointmentChangePolicy: { enabled: true, verificationMode, allowCancel: true, allowReschedule: true } });
   const [member] = await tx.insert(staff).values({ businessId, name: "Sam", timezone }).returning();
   const [service] = await tx.insert(services).values({ businessId, name: "Cut", slug: "cut", durationMinutes: 30 }).returning();
   await tx.insert(businessHours).values(Array.from({ length: 7 }, (_, dayOfWeek) => ({ businessId, dayOfWeek, openMinutes: 0, closeMinutes: 1439 })));
@@ -128,7 +128,7 @@ async function seed(tx: DatabaseTransaction, verificationMode: AppointmentChange
     },
     setMode: async (mode: AppointmentChangeVerificationMode) => {
       await asOwner();
-      await tx.update(receptionistProfiles).set({ appointmentChangePolicy: { enabled: true, verificationMode: mode, allowCancel: true, allowReschedule: true } }).where(eq(receptionistProfiles.businessId, businessId));
+      await tx.update(agents).set({ appointmentChangePolicy: { enabled: true, verificationMode: mode, allowCancel: true, allowReschedule: true } }).where(eq(agents.businessId, businessId));
     },
     expire: async (verificationId: string) => {
       await asOwner();

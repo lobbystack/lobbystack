@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { and, asc, desc, eq, ne } from "drizzle-orm";
 
-import { auditLogs, businessTemplateFiles, businessTemplates, businesses, enqueueOutbox, knowledgeDocuments, receptionistProfiles, storageObjects, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, auditLogs, businessTemplateFiles, businessTemplates, businesses, defaultAgentOf, enqueueOutbox, knowledgeDocuments, storageObjects, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import {
   applyBusinessTemplate,
   businessTemplateSchema,
@@ -152,7 +152,7 @@ async function readBusinessSetup(tx: DatabaseTransaction, businessId: string): P
   const business = await loadBusinessResource(tx, businessId);
   if (!business) throw businessNotFound();
   const locale = normalizeRuntimeLocale(business.locale);
-  const [profile] = await tx.select().from(receptionistProfiles).where(eq(receptionistProfiles.businessId, businessId)).limit(1);
+  const [profile] = await tx.select().from(agents).where(defaultAgentOf(businessId)).limit(1);
   const receptionist = profile ? serializeReceptionist(profile) : null;
   const demoOnly = profile ? prospectDemoSettingsIn(profile) : new Set();
   const services = await listServiceResources(tx, businessId, { includeInactive: true });

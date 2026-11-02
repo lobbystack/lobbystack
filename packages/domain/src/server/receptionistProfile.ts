@@ -1,11 +1,12 @@
 
-import { enqueueOutbox, receptionistProfiles, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, enqueueOutbox, type DatabaseTransaction } from "@lobbystack/db";
 import {
   appointmentChangeVerificationModes,
   bookingModes,
   defaultAppointmentChangePolicy,
   DEFAULT_RECEPTIONIST_VOICE,
   DEFAULT_STAFF_FIRST_RING_SECONDS,
+  defaultAgentName,
   defaultGreeting,
   isCurrencyCode,
   isReceptionistVoice,
@@ -130,6 +131,7 @@ export function readReceptionistSettingsChange(body: unknown): ReceptionistSetti
 /** The settings a receptionist has before anyone edits them. */
 export function defaultReceptionistProfile(businessName: string, locale: RuntimeLocale = "en") {
   return {
+    name: defaultAgentName(locale),
     greeting: defaultGreeting(businessName, locale),
     tone: "professional",
     summary: businessName,
@@ -163,15 +165,16 @@ export function defaultReceptionistProfile(businessName: string, locale: Runtime
 export async function saveReceptionistProfileInTransaction(
   tx: DatabaseTransaction,
   input: { businessId: string; businessName: string; locale?: RuntimeLocale | undefined; patch: ReceptionistProfilePatch; regenerateSummary?: boolean | undefined },
-): Promise<typeof receptionistProfiles.$inferSelect | null> {
+): Promise<typeof agents.$inferSelect | null> {
   const { businessId, patch } = input;
   // An E.164 number in a country Twilio can call and, during a free trial, only the mobile its claimer verified. Employees' numbers follow the same rules.
   if (patch.transferNumber) await assertTransferNumberAllowed(tx, { businessId, phone: patch.transferNumber });
   const changesStaffFirst = patch.staffFirstMode !== undefined || patch.staffFirstNumber !== undefined;
   if (changesStaffFirst) await assertStaffFirstChange(tx, { businessId, mode: patch.staffFirstMode, number: patch.staffFirstNumber });
   const defaults = defaultReceptionistProfile(input.businessName, input.locale);
-  const [profile] = await tx.insert(receptionistProfiles).values({
+  const [profile] = await tx.insert(agents).values({
     businessId,
+    name: defaults.name,
     greeting: patch.greeting ?? defaults.greeting,
     tone: patch.tone ?? defaults.tone,
     summary: patch.summary ?? defaults.summary,
@@ -192,7 +195,7 @@ export async function saveReceptionistProfileInTransaction(
     ...(patch.staffFirstMessage !== undefined ? { staffFirstMessage: patch.staffFirstMessage } : {}),
     ...(patch.staffFirstHandoverMessage !== undefined ? { staffFirstHandoverMessage: patch.staffFirstHandoverMessage } : {}),
   }).onConflictDoUpdate({
-    target: receptionistProfiles.businessId,
+    target: agents.businessId,
     set: { ...patch, ...(patch.summary !== undefined ? { summarySource: "operator" as const, summaryRegenerateStatus: null } : {}), ...(input.regenerateSummary ? { summarySource: "generated" as const, summaryRegenerateStatus: "pending" as const } : {}), updatedAt: new Date() },
   }).returning();
   if (!profile) return null;

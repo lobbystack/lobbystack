@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 
-import { businesses, createDatabaseClient, outboxMessages, receptionistProfiles, staff } from "@lobbystack/db";
+import { agents, businesses, createDatabaseClient, outboxMessages, staff } from "@lobbystack/db";
 
 import agent from "../public/locales/en/agent.json" with { type: "json" };
 import onboarding from "../public/locales/en/onboarding.json" with { type: "json" };
@@ -80,7 +80,7 @@ test("the owner's browser zone becomes the business timezone, and AI settings ch
     const savedTransfer = page.waitForResponse((response) => response.url().includes("/api/agent?") && response.request().method() === "PATCH");
     await page.getByRole("button", { name: agent.actions.save, exact: true }).click();
     expect((await savedTransfer).ok()).toBe(true);
-    const savedTransferNumber = async () => (await database.db.select({ transferNumber: receptionistProfiles.transferNumber }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, businessId!)))[0]?.transferNumber;
+    const savedTransferNumber = async () => (await database.db.select({ transferNumber: agents.transferNumber }).from(agents).where(eq(agents.businessId, businessId!)))[0]?.transferNumber;
     expect(await savedTransferNumber()).toBe("+14165550100");
 
     // Clearing the number and typing another at a person's pace keeps only the new digits.

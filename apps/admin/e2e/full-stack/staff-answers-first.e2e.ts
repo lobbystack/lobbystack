@@ -2,7 +2,7 @@ import { expect, test, type APIRequestContext } from "@playwright/test";
 import { randomBytes } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 
-import { calls, receptionistProfiles } from "@lobbystack/db";
+import { agents, calls } from "@lobbystack/db";
 
 import agent from "../../public/locales/en/agent.json" with { type: "json" };
 import callsCopy from "../../public/locales/en/calls.json" with { type: "json" };
@@ -61,7 +61,7 @@ test("an owner on a paid plan sets up staff answers first, it persists, and a ca
     await expect(mode).toContainText(agent.staffFirst.mode.options.always);
     await expect(page.getByLabel(agent.staffFirst.number.label, { exact: true })).toHaveValue(/416.*555.*0177/);
     await expect(page.getByLabel(agent.staffFirst.message.label, { exact: true })).toHaveValue("Thanks for calling. One moment.");
-    const [profile] = await database.db.select({ mode: receptionistProfiles.staffFirstMode, number: receptionistProfiles.staffFirstNumber }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, owner.businessId));
+    const [profile] = await database.db.select({ mode: agents.staffFirstMode, number: agents.staffFirstNumber }).from(agents).where(eq(agents.businessId, owner.businessId));
     expect(profile).toEqual({ mode: "always", number: staffPhone });
 
     // Saving moves the number off the trunk and onto the staff-first webhook.

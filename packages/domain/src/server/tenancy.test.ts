@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PgDialect } from "drizzle-orm/pg-core";
 import type { SQL } from "drizzle-orm";
 
-import { businesses, closures, receptionistProfiles, staff } from "@lobbystack/db";
+import { agents, businesses, closures, staff } from "@lobbystack/db";
 import { defaultGreeting } from "@lobbystack/shared";
 
 const mocks = vi.hoisted(() => ({ enqueueOutbox: vi.fn(), tx: undefined as unknown }));
@@ -77,7 +77,7 @@ describe("business timezone", () => {
       update: (table: unknown) => ({ set: (values: Record<string, unknown>) => { updates.push({ table, values }); return { where: () => ({ returning: async () => [{ id: "biz-1" }] }) }; } }),
     }) as never;
     await updateBusinessInTransaction(greetingTx(defaultGreeting("Clinic", "en")), { businessId: "biz-1", defaultLocale: "es" });
-    expect(updates.find((update) => update.table === receptionistProfiles)?.values).toMatchObject({ greeting: defaultGreeting("Clinic", "es") });
+    expect(updates.find((update) => update.table === agents)?.values).toMatchObject({ greeting: defaultGreeting("Clinic", "es") });
     expect(updates.some((update) => update.table === closures)).toBe(false);
     updates.length = 0;
     await updateBusinessInTransaction(greetingTx("Welcome to Clinic, how can we help?"), { businessId: "biz-1", defaultLocale: "es" });

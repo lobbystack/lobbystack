@@ -2,8 +2,8 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 
 import { and, desc, eq, isNull, sql, type SQL } from "drizzle-orm";
 
-import { businessContextSnapshots, businessMemberships, businesses, calls, enqueueOutbox, knowledgeDocuments, partnerMembers, prospectDemos, receptionistProfiles, services, staff, staffServiceAssignments, websiteIngestionJobs, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { defaultCurrencyForTimezone, defaultGreeting, isPartnerAccessLevel, isUuid, normalizeRuntimeLocale, partnerFeatures, partnerOrigin, type PartnerAccessLevel, type PartnerRole } from "@lobbystack/shared";
+import { agents, businessContextSnapshots, businessMemberships, businesses, calls, defaultAgentOf, enqueueOutbox, knowledgeDocuments, partnerMembers, prospectDemos, services, staff, staffServiceAssignments, websiteIngestionJobs, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { defaultAgentName, defaultCurrencyForTimezone, defaultGreeting, isPartnerAccessLevel, isUuid, normalizeRuntimeLocale, partnerFeatures, partnerOrigin, type PartnerAccessLevel, type PartnerRole } from "@lobbystack/shared";
 import { type TelemetryEventName, type TelemetryProperties } from "@lobbystack/telemetry";
 
 import { AuthorizationError } from "../authz";
@@ -290,8 +290,9 @@ async function insertDemoInTransaction(
     if (!owner.operatorUserId) throw new Error("The host's demo needs its operator.");
     await tx.insert(businessMemberships).values({ businessId, userId: owner.operatorUserId, role: "business_owner", status: "active" });
   }
-  await tx.insert(receptionistProfiles).values({
+  await tx.insert(agents).values({
     businessId,
+    name: defaultAgentName(locale),
     greeting: input.greeting?.trim() || defaultGreeting(name, locale),
     tone: "professional and friendly",
     summary: `${name} virtual receptionist`,
@@ -326,11 +327,11 @@ export async function createProspectDemo(
 /** The demo's status in a system transaction scoped to its business, or a 404 when the manager can't act on it. */
 async function readDemoStatus(context: DomainContext, manager: DemoManager, input: { demoId: string; businessId: string }): Promise<ProspectDemoStatus & { accessLevel: PartnerAccessLevel }> {
   return await withBusinessTransaction(context.db, { ...managerRls(manager), businessId: input.businessId, actorType: "system" }, async (tx) => {
-    const row = (await tx.select({ demo: prospectDemos, slug: businesses.slug, accessLevel: businesses.partnerAccessLevel, ingestionStatus: websiteIngestionJobs.status, ingestionError: websiteIngestionJobs.lastError, greeting: receptionistProfiles.greeting })
+    const row = (await tx.select({ demo: prospectDemos, slug: businesses.slug, accessLevel: businesses.partnerAccessLevel, ingestionStatus: websiteIngestionJobs.status, ingestionError: websiteIngestionJobs.lastError, greeting: agents.greeting })
       .from(prospectDemos)
       .innerJoin(businesses, eq(businesses.id, prospectDemos.businessId))
       .leftJoin(websiteIngestionJobs, eq(websiteIngestionJobs.id, prospectDemos.websiteIngestionJobId))
-      .leftJoin(receptionistProfiles, eq(receptionistProfiles.businessId, prospectDemos.businessId))
+      .leftJoin(agents, defaultAgentOf(prospectDemos.businessId))
       .where(and(eq(prospectDemos.id, input.demoId), managedBy(manager))).limit(1))[0];
     if (!row) throw demoNotFound();
     const snapshot = (await tx.select({ id: businessContextSnapshots.id }).from(businessContextSnapshots).where(eq(businessContextSnapshots.businessId, row.demo.businessId)).orderBy(desc(businessContextSnapshots.generatedAt)).limit(1))[0];
@@ -377,7 +378,7 @@ async function publishDemo(context: DomainContext, manager: DemoManager, input: 
     const prompts = input.suggestedPrompts ? cleanPrompts(input.suggestedPrompts) : demo.suggestedPrompts;
     if (prompts.length < 2) throw failure("Two suggested prompts are required before publish.", 400, "prompts_required");
     const ingestion = demo.websiteIngestionJobId ? await tx.select({ status: websiteIngestionJobs.status }).from(websiteIngestionJobs).where(eq(websiteIngestionJobs.id, demo.websiteIngestionJobId)).limit(1) : [];
-    const profile = await tx.select({ greeting: receptionistProfiles.greeting }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, demo.businessId)).limit(1);
+    const profile = await tx.select({ greeting: agents.greeting }).from(agents).where(defaultAgentOf(demo.businessId)).limit(1);
     const snapshot = await tx.select({ id: businessContextSnapshots.id }).from(businessContextSnapshots).where(eq(businessContextSnapshots.businessId, demo.businessId)).limit(1);
     const indexedDocument = await tx.select({ id: knowledgeDocuments.id }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, demo.businessId), eq(knowledgeDocuments.status, "indexed"))).limit(1);
     // Without a website crawler the demo answers from its greeting, services and prompts alone.
@@ -704,7 +705,7 @@ export async function claimProspectDemo(
 
 /** Puts back what a new business's receptionist is told wherever the demo's own settings are still in place. Settings someone changed during the demo stay. */
 async function endDemoSettingsInTransaction(tx: DatabaseTransaction, input: { businessId: string; businessName: string; locale: string }): Promise<void> {
-  const [profile] = await tx.select({ bookingPolicy: receptionistProfiles.bookingPolicy, voiceInstructions: receptionistProfiles.voiceInstructions, smsInstructions: receptionistProfiles.smsInstructions }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, input.businessId)).limit(1);
+  const [profile] = await tx.select({ bookingPolicy: agents.bookingPolicy, voiceInstructions: agents.voiceInstructions, smsInstructions: agents.smsInstructions }).from(agents).where(defaultAgentOf(input.businessId)).limit(1);
   if (!profile) return;
   const patch: Partial<Record<ProspectDemoSetting, string>> = {};
   for (const field of prospectDemoSettingsIn(profile)) patch[field] = NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS[field];

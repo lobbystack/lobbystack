@@ -83,7 +83,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   deleted = [];
   vi.stubEnv("REDIS_PREFIX", "lobbystack");
-  mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => await callback(makeTx({ businesses: [businessRow], receptionist_profiles: [profileRow] })));
+  mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => await callback(makeTx({ businesses: [businessRow], agents: [profileRow] })));
   mocks.enqueueOutbox.mockResolvedValue(undefined);
   mocks.resolveSmsSender.mockResolvedValue(null);
 });
@@ -98,7 +98,7 @@ describe("refreshBusinessSnapshot write-through", () => {
     mocks.resolveSmsSender.mockResolvedValue("+14165550003");
     mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => callback(makeTx({
       businesses: [{ ...businessRow, legalName: "Maple Clinic Inc.", businessType: "clinic", telemetryEnabled: false }],
-      receptionist_profiles: [profileRow],
+      agents: [profileRow],
       phone_numbers: [
         { e164: "+14165550001", status: "released", voiceEnabled: true, smsEnabled: true },
         { e164: "+14165550002", status: "active", voiceEnabled: true, smsEnabled: false },
@@ -114,7 +114,7 @@ describe("refreshBusinessSnapshot write-through", () => {
   it("lists the business's bookable employees with the active services each does, so the agent can offer them", async () => {
     mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => callback(makeTx({
       businesses: [businessRow],
-      receptionist_profiles: [profileRow],
+      agents: [profileRow],
       services: [{ id: "service-colour", name: "Colour", durationMinutes: 60 }, { id: "service-haircut", name: "Haircut", durationMinutes: 30 }],
       staff: [{ name: "Ana Petrović", staffId: "staff-ana" }, { name: "Marko Jovanović", staffId: "staff-marko" }],
       // A deleted or inactive service isn't in the snapshot's services, so it's left off.
@@ -128,7 +128,7 @@ describe("refreshBusinessSnapshot write-through", () => {
   it("keeps up to the snapshot's snippet limit, not just the few that prompts list", async () => {
     // Answers saved from the unanswered-questions inbox are snippets too; knowledge search needs them all.
     const snippetRows = Array.from({ length: 12 }, (_, index) => ({ id: `snippet-${index}`, title: `Question ${index}`, content: `Answer ${index}`, tags: [], priority: 100 - index }));
-    mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => callback(makeTx({ businesses: [businessRow], receptionist_profiles: [profileRow], knowledge_snippets: snippetRows })));
+    mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => callback(makeTx({ businesses: [businessRow], agents: [profileRow], knowledge_snippets: snippetRows })));
     const cache = memoryCache();
     await refreshBusinessSnapshot({ db: {} as never, snapshotCache: cache }, { businessId });
     expect((await cache.get(businessId))?.knowledgeSnippets?.map((snippet) => snippet.id)).toEqual(snippetRows.map((row) => row.id));

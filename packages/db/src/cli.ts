@@ -234,11 +234,37 @@ async function main(): Promise<void> {
             ,('lobbystack_finance_export', 'appointments', 'SELECT')
             ,('lobbystack_finance_export', 'unit_economics_events', 'SELECT')
             ,('lobbystack_finance_export', 'billing_transactions', 'SELECT')
+            ,('lobbystack_app', 'agents', 'SELECT')
+            ,('lobbystack_app', 'agents', 'INSERT')
+            ,('lobbystack_app', 'agents', 'UPDATE')
+            ,('lobbystack_worker', 'agents', 'SELECT')
+            ,('lobbystack_worker', 'agents', 'INSERT')
+            ,('lobbystack_worker', 'agents', 'UPDATE')
+            ,('lobbystack_readonly', 'agents', 'SELECT')
+            ,('lobbystack_app', 'receptionist_profiles', 'SELECT')
+            ,('lobbystack_app', 'receptionist_profiles', 'INSERT')
+            ,('lobbystack_app', 'receptionist_profiles', 'UPDATE')
+            ,('lobbystack_worker', 'receptionist_profiles', 'SELECT')
+            ,('lobbystack_worker', 'receptionist_profiles', 'INSERT')
+            ,('lobbystack_worker', 'receptionist_profiles', 'UPDATE')
+            ,('lobbystack_readonly', 'receptionist_profiles', 'SELECT')
           ) as expected(role_name, table_name, privilege_type)
           where not has_table_privilege(expected.role_name, 'public.' || expected.table_name, expected.privilege_type)
         `);
         if (grantFailures.rows.length > 0) {
           throw new Error(`Database grant verification failed for: ${grantFailures.rows.map((row) => `${row.role_name}:${row.table_name}:${row.privilege_type}`).join(", ")}`);
+        }
+        // The view old code reads agents through (migration 0183) must run as its
+        // caller, or the table's grants and policy wouldn't apply. Row-level
+        // security doesn't cover a view, so the checks above don't see it.
+        const compatibilityViewFailures = await migrator.db.execute<{ present: boolean }>(sql`
+          select true as present
+          from pg_class c
+          where c.oid = to_regclass('public.receptionist_profiles')
+            and (c.relkind <> 'v' or not coalesce(c.reloptions @> array['security_invoker=true'], false))
+        `);
+        if (compatibilityViewFailures.rows.length > 0) {
+          throw new Error("RLS verification failed: receptionist_profiles must be a security_invoker view.");
         }
         const affiliateUserGrantFailures = await migrator.db.execute<{ column_name: string }>(sql`
           select expected.column_name
