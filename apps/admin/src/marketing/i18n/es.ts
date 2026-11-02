@@ -21,6 +21,14 @@ export const es = {
     viewSolution: "Ver la solución",
     seeFullFeatureList: "Ver todas las funciones",
   },
+  setupPrompts: {
+    title: "Deje que su asistente de IA lo configure",
+    intro:
+      "Copie un prompt y péguelo en su asistente. Lee nuestra documentación, le muestra un plan y se detiene cuando lo necesita.",
+    copy: "Copiar prompt",
+    copied: "Copiado",
+    blocked: "Su navegador bloqueó la copia. Copie el prompt desde aquí:",
+  },
   routes: {
     "/": {
       title: "Recepcionista con IA para pequeñas empresas | LobbyStack",

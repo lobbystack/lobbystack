@@ -1,0 +1,47 @@
+{/* Generated from packages/shared/src/setupPrompts.ts. Run pnpm docs:setup-prompts after changing it. */}
+
+<Prompt description="**Your logo and colors.** Your assistant sets up a white-label receptionist under your brand." icon="palette">
+Set up a white-label AI receptionist on LobbyStack with our name, logo and colors. Do everything you can yourself, and ask me only for what you can't do, such as signing up, adding DNS records or paying.
+
+Read these first:
+
+* `https://docs.lobbystack.com/white-label/overview`
+* `https://docs.lobbystack.com/white-label/sign-up`
+* `https://docs.lobbystack.com/white-label/branding`
+* `https://docs.lobbystack.com/white-label/api-keys`
+* `https://docs.lobbystack.com/api/authentication`
+* `https://app.lobbystack.com/api/v1/openapi.json`
+
+Treat the OpenAPI spec as the source of truth. If a page and the spec disagree, follow the spec. Don't use an endpoint or field that isn't in it.
+
+Connect:
+
+* I sign up at `https://app.lobbystack.com/partner/signup`, then make a platform key on the partner console's API keys page. Tell me which access to turn on.
+* Base URL: `https://app.lobbystack.com/api/v1`
+* Send `Authorization: Bearer $LOBBYSTACK_API_KEY` with an `lsp_` platform key.
+* Send the `LobbyStack-Business` header on per-business requests. Requests under `/partner` don't take it.
+* Keep keys on the server. Read them from an environment variable or a secrets manager, and never put one in browser code, a mobile app, a commit, a log or this chat.
+* If you can't send web requests, connect to `https://app.lobbystack.com/api/mcp` as the partner. `https://docs.lobbystack.com/white-label/mcp-for-agencies` lists what that connection can do. Tell me which steps then stay for me in the console.
+
+Do this:
+
+1. Ask me for our name, logo, favicon, brand color, support email, and our terms, privacy and support links.
+2. Set them with `PATCH /partner/brand`. Send the logo and favicon in base64: PNG, JPEG, WebP or SVG, up to 256 KB each. Then give me our dashboard address to check.
+3. Start with a test business. Create it with `POST /businesses` and an `Idempotency-Key`, and leave out `owner_email`. Set its greeting, hours, services and knowledge, then finish onboarding with `POST /onboarding/complete`.
+4. Have me open it from the partner console's Businesses page and run a browser test call.
+5. If we want our own domain, check that we're on a paid tier, call `POST /partner/domain` with a subdomain such as `app.example.com`, and give me the DNS records to add. Check `GET /partner/domain` until the domain is live.
+
+Facts to plan around:
+
+* A partner has one brand, and all its businesses share it. A business that needs its own logo needs its own partner.
+* Callers hear the business's name. They never see the logo.
+* LobbyStack's name still appears in a few places, listed in the white label overview. Tell me about them.
+* A key can buy numbers only on a paid tier, with `phone_numbers:manage` and `phone_numbers:purchase`. Ask before you buy one.
+* The API can't send texts, and no webhook reports incoming texts. The AI doesn't reply to texts.
+* `GET /messages` returns only the messages the receptionist took for the team. It isn't a text inbox.
+* Hosted plans use Twilio numbers.
+* Website chat isn't part of the hosted plans, so `POST /widget-keys` returns `403` there.
+* LobbyStack has no voice cloning. Pick one of GPT-Live's voices with `voice` on `PATCH /receptionist`.
+
+Before you do anything, reply with a short plan: what you'll do, which access the key needs, what I have to do and what will cost money. Wait for my OK.
+</Prompt>

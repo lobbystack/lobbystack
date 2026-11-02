@@ -21,6 +21,14 @@ export const fr = {
     viewSolution: "Voir la solution",
     seeFullFeatureList: "Voir toutes les fonctionnalités",
   },
+  setupPrompts: {
+    title: "Laissez votre assistant IA s'en charger",
+    intro:
+      "Copiez un prompt et collez-le dans votre assistant. Il lit notre documentation, vous montre un plan et s'arrête quand il a besoin de vous.",
+    copy: "Copier le prompt",
+    copied: "Copié",
+    blocked: "Votre navigateur a bloqué la copie. Copiez le prompt ici :",
+  },
   routes: {
     "/": {
       title: "LobbyStack | Réceptionniste IA open source",

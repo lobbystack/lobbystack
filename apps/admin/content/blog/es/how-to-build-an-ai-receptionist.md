@@ -81,6 +81,8 @@ Las plataformas de agentes de voz alojadas manejan el audio, los números y el m
 
 Una plataforma lo lleva más rápido a la primera llamada de prueba. Usted paga sus tarifas además del modelo, o con el modelo incluido, y rehace sus reglas de reserva, transferencias y seguimientos en su editor. Irse después significa rehacerlo todo otra vez.
 
+Si no programa, nuestra guía para [crear un agente de IA recepcionista con Claude o ChatGPT](/es/blog/how-to-create-an-ai-receptionist/) parte de un producto terminado.
+
 ## Opción 4: partir de un framework de voz de código abierto
 
 Los frameworks de código abierto manejan el audio, los turnos de palabra y la conexión con el modelo, y usted los aloja:
@@ -99,7 +101,7 @@ Una recepcionista de código abierto trae lo que las opciones 1 a 4 le dejan a u
 - mover o cancelar una cita después de verificar a quien llama
 - tomar mensajes y transferir la llamada a una persona
 
-Cada llamada llega con transcripción, grabación y resumen en el panel. Contamos el cambio en [nuestro artículo sobre GPT-Live](/es/blog/ai-voice-agent-gpt-live/).
+Cada llamada llega con transcripción, grabación y resumen en el panel. Contamos el cambio en [nuestro artículo sobre GPT-Live](/es/blog/ai-voice-agent-gpt-live/). Si quiere una dentro de su propio SaaS, nuestra [guía de la API de recepcionista IA](/es/blog/ai-receptionist-api/) enumera las solicitudes.
 
 ## Las cinco opciones comparadas
 

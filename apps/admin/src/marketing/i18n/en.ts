@@ -20,6 +20,14 @@ export const en = {
     viewSolution: "View solution",
     seeFullFeatureList: "See the full feature list",
   },
+  setupPrompts: {
+    title: "Let your AI assistant set it up",
+    intro:
+      "Copy a prompt and paste it into your assistant. It reads our docs, shows you a plan, and stops when it needs you.",
+    copy: "Copy prompt",
+    copied: "Copied",
+    blocked: "Your browser blocked copying. Copy the prompt from here:",
+  },
   routes: {
     "/": {
       title: "AI Receptionist Software for Small Businesses | LobbyStack",

@@ -35,6 +35,14 @@ export type LandingMessages = {
     viewSolution: string
     seeFullFeatureList: string
   }
+  /** The cards that copy a prompt for an AI assistant. The prompts themselves stay in English. */
+  setupPrompts: {
+    title: string
+    intro: string
+    copy: string
+    copied: string
+    blocked: string
+  }
   routes: Record<string, LocalizedSeo>
 }
 
