@@ -3,12 +3,13 @@ import { randomInt, randomUUID } from "node:crypto";
 import { and, eq, like, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
-import { appointments, businessHours, businesses, calendarConnections, createDatabaseClient, notifications, outboxMessages, services, staff, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { appointments, businessHours, businessMemberships, businesses, calendarConnections, contacts, createDatabaseClient, notifications, operatorNotificationDeliveries, outboxMessages, services, staff, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { bookAppointment, followCalendarBookingChanges, followCalendarVideoLinks, rescheduleAppointmentInTransaction } from "./booking";
 import type { SmsConsentAnswer } from "./contactSmsConsent";
 import { updateAppointmentSyncState } from "./calendar";
 import { VIDEO_LINK_UPDATE, confirmationRetryAt, resolveNotificationDelivery } from "./notifications";
+import { deliverOutbound } from "./outboundDelivery";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -51,13 +52,18 @@ async function seed(tx: DatabaseTransaction, provider = "calcom") {
   await tx.insert(businessHours).values(Array.from({ length: 7 }, (_, dayOfWeek) => ({ businessId, dayOfWeek, openMinutes: 0, closeMinutes: 1439 })));
   const ownerUserId = randomUUID();
   await tx.insert(users).values({ id: ownerUserId, email: `${ownerUserId}@example.invalid`, normalizedEmail: `${ownerUserId}@example.invalid` });
+  await tx.insert(businessMemberships).values({ businessId, userId: ownerUserId, role: "business_owner" });
   await tx.insert(calendarConnections).values({ businessId, ownerUserId, provider, externalAccountId: "account", status: "connected", selectedCalendarId: "42", lastSyncedAt: new Date() });
   const db = tx as unknown as Database;
   const context = { db };
   const start = (days: number) => DateTime.utc().plus({ days }).set({ hour: 12, minute: 0, second: 0, millisecond: 0 }).toISO()!;
-  const book = async (smsConsent?: SmsConsentAnswer) => {
-    await asWorker(tx);
+  const book = async (smsConsent?: SmsConsentAnswer, email?: string) => {
     const contactPhone = `+1647${String(randomInt(0, 10_000_000)).padStart(7, "0")}`;
+    if (email) {
+      await asOwner(tx);
+      await tx.insert(contacts).values({ businessId, phone: contactPhone, email });
+    }
+    await asWorker(tx);
     return (await bookAppointment(context, { businessId, serviceId: service!.id, startsAt: start(3), timezone: "UTC", contactPhone, sourceChannel: "voice", ...(smsConsent ? { smsConsent } : {}) })).appointmentId;
   };
   /** What the sync job saves once the provider has answered. */
@@ -80,11 +86,16 @@ async function seed(tx: DatabaseTransaction, provider = "calcom") {
     await asOwner(tx);
     return await tx.select({ id: notifications.id }).from(notifications).where(and(eq(notifications.relatedId, appointmentId), like(notifications.kind, `${VIDEO_LINK_UPDATE}:%`)));
   };
+  /** The email alerts the team got. */
+  const alerts = async (business: string) => {
+    await asOwner(tx);
+    return await tx.select({ body: operatorNotificationDeliveries.body }).from(operatorNotificationDeliveries).where(eq(operatorNotificationDeliveries.businessId, business));
+  };
   const saved = async (appointmentId: string) => {
     await asOwner(tx);
     return (await tx.select({ videoUrl: appointments.videoUrl }).from(appointments).where(eq(appointments.id, appointmentId)))[0]?.videoUrl;
   };
-  return { businessId, context, start, book, synced, deliver, markSent, updates, saved, staffId: member!.id };
+  return { businessId, context, start, book, synced, deliver, markSent, updates, saved, alerts, staffId: member!.id };
 }
 
 const textOf = (resolution: Awaited<ReturnType<typeof resolveNotificationDelivery>>) => resolution?.kind === "ready" ? resolution.delivery.body : null;
@@ -174,12 +185,98 @@ describe.skipIf(!testUrl)("video links in appointment texts", () => {
     });
   });
 
-  it("sends no link to a caller who declined texts", async () => {
+  it("emails a caller who declined texts their real address, for the confirmation, reminder and changed link", async () => {
     await rollbackTest(async (tx) => {
-      const { book, synced, deliver } = await seed(tx);
-      const appointmentId = await book("declined");
+      const { businessId, context, book, synced, deliver, alerts } = await seed(tx);
+      const appointmentId = await book("declined", "caller@example.com");
+      await synced(appointmentId, OLD_LINK);
+      const providers = { email: { sendTemplate: vi.fn(async () => ({ messageId: "email-1" })) } };
+      for (const kind of ["booking_confirmation", "appointment_reminder"]) {
+        const resolved = await deliver(appointmentId, kind);
+        expect(resolved).toMatchObject({ kind: "ready", delivery: { channel: "email", to: "caller@example.com" } });
+        expect(textOf(resolved)).toContain(`Join: ${OLD_LINK}`);
+        expect(textOf(resolved)).not.toContain("Reply STOP");
+        await asOwner(tx);
+        await tx.update(notifications).set({ status: "sent" }).where(and(eq(notifications.relatedId, appointmentId), eq(notifications.kind, kind)));
+      }
+      await synced(appointmentId, NEW_LINK, "moved-uid");
+      await asOwner(tx);
+      const [update] = await tx.update(notifications).set({ scheduledFor: new Date(Date.now() - 1000) }).where(and(eq(notifications.relatedId, appointmentId), like(notifications.kind, `${VIDEO_LINK_UPDATE}:%`))).returning({ id: notifications.id });
+      await asWorker(tx);
+      await expect(deliverOutbound(context, providers, { kind: "notification", businessId, notificationId: update!.id })).resolves.toMatchObject({ status: "completed" });
+      expect(providers.email.sendTemplate).toHaveBeenCalledWith(expect.objectContaining({ to: "caller@example.com", variables: { message: expect.stringContaining(NEW_LINK) } }));
+      await asOwner(tx);
+      expect((await tx.select({ channel: notifications.channel, status: notifications.status }).from(notifications).where(eq(notifications.id, update!.id)))[0]).toEqual({ channel: "email", status: "sent" });
+      expect(await alerts(businessId)).toEqual([]);
+    });
+  });
+
+  it.each([
+    ["no email", undefined],
+    ["only a stand-in address", "booking+6f1c3a52-9b3d-4f6e-8a51-2c0e7d9b1a44@placeholder.example"],
+  ])("alerts the team once with the link when the caller declined texts and has %s", async (_case, email) => {
+    await rollbackTest(async (tx) => {
+      vi.stubEnv("CALCOM_PLACEHOLDER_EMAIL_DOMAIN", "placeholder.example");
+      const { businessId, book, synced, deliver, alerts } = await seed(tx);
+      const appointmentId = await book("declined", email);
       await synced(appointmentId, OLD_LINK);
       expect((await deliver(appointmentId, "booking_confirmation"))?.kind).toBe("skipped");
+      expect((await deliver(appointmentId, "appointment_reminder"))?.kind).toBe("skipped");
+      const sent = await alerts(businessId);
+      expect(sent).toHaveLength(1);
+      expect(sent[0]!.body).toContain(OLD_LINK);
+      expect(sent[0]!.body).not.toContain("@placeholder.example");
+    });
+  });
+
+  it("alerts the team when a caller who declined texts has a new link and no email", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, book, synced, deliver, alerts } = await seed(tx);
+      const appointmentId = await book("declined");
+      await synced(appointmentId, OLD_LINK);
+      await deliver(appointmentId, "booking_confirmation");
+      await asOwner(tx);
+      await tx.update(notifications).set({ status: "skipped" }).where(and(eq(notifications.relatedId, appointmentId), eq(notifications.kind, "booking_confirmation")));
+      await synced(appointmentId, NEW_LINK, "moved-uid");
+      await deliver(appointmentId, `${VIDEO_LINK_UPDATE}:%`);
+      const bodies = (await alerts(businessId)).map(({ body }) => body);
+      expect(bodies).toHaveLength(2);
+      expect(bodies.some((body) => body.includes(NEW_LINK))).toBe(true);
+    });
+  });
+
+  it("alerts the team when no email provider can carry the link", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, context, book, synced, alerts } = await seed(tx);
+      const appointmentId = await book("declined", "caller@example.com");
+      await synced(appointmentId, OLD_LINK);
+      await asOwner(tx);
+      const [row] = await tx.update(notifications).set({ scheduledFor: new Date(Date.now() - 1000) }).where(and(eq(notifications.relatedId, appointmentId), eq(notifications.kind, "booking_confirmation"))).returning({ id: notifications.id });
+      await asWorker(tx);
+      await deliverOutbound(context, {}, { kind: "notification", businessId, notificationId: row!.id });
+      expect(await alerts(businessId)).toHaveLength(1);
+    });
+  });
+
+  it("leaves a booking without a link as it was: no email, and no alert", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, book, synced, deliver, alerts } = await seed(tx);
+      const appointmentId = await book("declined", "caller@example.com");
+      await synced(appointmentId, null);
+      expect((await deliver(appointmentId, "booking_confirmation"))?.kind).toBe("skipped");
+      expect(await alerts(businessId)).toEqual([]);
+    });
+  });
+
+  it("sends nothing to a contact the team blocked", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, book, synced, deliver, alerts } = await seed(tx);
+      const appointmentId = await book("agreed", "caller@example.com");
+      await synced(appointmentId, OLD_LINK);
+      await asOwner(tx);
+      await tx.update(contacts).set({ operatorBlockedAt: new Date() }).where(eq(contacts.businessId, businessId));
+      expect((await deliver(appointmentId, "booking_confirmation"))?.kind).toBe("skipped");
+      expect(await alerts(businessId)).toEqual([]);
     });
   });
 

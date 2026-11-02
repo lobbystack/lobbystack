@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import { MAX_PHONE_CALL_MS, OPERATOR_SMS_ACCEPTED_DISCLOSURE_VERSIONS, OPERATOR_SMS_DISCLOSURE_VERSION, canTextNumber, intlLocale, normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
 import { and, eq, gte, inArray, isNull, like, lte, lt, ne, or, sql } from "drizzle-orm";
@@ -319,6 +319,38 @@ export function appointmentNotificationSkipReason(row: {
   return null;
 }
 
+/**
+ * The customer's own email address, or null when there's none. A booking provider only ever sees a stand-in
+ * address, which goes nowhere: `booking+<appointment id>@` the domain its integration sets.
+ */
+export function customerEmailAddress(email: string | null, env: Record<string, string | undefined> = process.env): string | null {
+  const address = email?.trim().toLowerCase();
+  if (!address || address.startsWith("booking+")) return null;
+  const standInDomains = [env.CALCOM_PLACEHOLDER_EMAIL_DOMAIN, env.CALENDLY_PLACEHOLDER_EMAIL_DOMAIN].flatMap((domain) => domain?.trim() ? [domain.trim().toLowerCase()] : []);
+  return standInDomains.some((domain) => address.endsWith(`@${domain}`)) ? null : email!.trim();
+}
+
+/** Tells the team which link to pass on, once per appointment and link, when LobbyStack can't reach the customer. */
+async function queueVideoLinkAlertInTransaction(tx: DatabaseTransaction, input: { businessId: string; appointmentId: string; videoUrl: string; contactName: string | null; contactPhone: string | null; serviceName: string; startsAt: Date; timezone: string }): Promise<void> {
+  const when = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short", timeZone: input.timezone }).format(input.startsAt);
+  const customer = [input.contactName, input.contactPhone].filter(Boolean).join(", ") || "A customer";
+  const link = createHash("sha256").update(input.videoUrl).digest("hex").slice(0, 16);
+  await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKind: "calendarSync", eventKey: `videoLink:appointment:${input.appointmentId}:${link}`, subject: "Send a customer their video link", body: `We couldn't reach ${customer} about their ${input.serviceName} appointment on ${when}. Send them this video link: ${input.videoUrl}` });
+}
+
+/** Alerts the team when a text or email that carried a video link was given up on. Other notifications pass through. */
+export async function alertVideoLinkNotSent(context: DomainContext, input: { businessId: string; notificationId: string }): Promise<void> {
+  await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const [row] = await tx.select({ kind: notifications.kind, appointmentId: appointments.id, status: appointments.status, videoUrl: appointments.videoUrl, contactName: contacts.name, contactPhone: contacts.phone, serviceName: services.name, startsAt: appointments.startsAt, timezone: appointments.timezone })
+      .from(notifications)
+      .innerJoin(appointments, and(eq(appointments.id, notifications.relatedId), eq(appointments.businessId, notifications.businessId)))
+      .innerJoin(services, and(eq(services.id, appointments.serviceId), eq(services.businessId, notifications.businessId)))
+      .innerJoin(contacts, and(eq(contacts.id, appointments.contactId), eq(contacts.businessId, notifications.businessId)))
+      .where(and(eq(notifications.id, input.notificationId), eq(notifications.businessId, input.businessId))).limit(1);
+    if (row?.videoUrl && row.status === "confirmed") await queueVideoLinkAlertInTransaction(tx, { ...row, businessId: input.businessId, videoUrl: row.videoUrl });
+  });
+}
+
 export async function resolveNotificationDelivery(
   context: DomainContext,
   input: { businessId: string; notificationId: string },
@@ -338,6 +370,7 @@ export async function resolveNotificationDelivery(
       defaultLocale: businesses.defaultLocale,
       serviceName: services.name,
       contactId: contacts.id,
+      contactName: contacts.name,
       contactPhone: contacts.phone,
       contactEmail: contacts.email,
       contactLocale: contacts.preferredLocale,
@@ -361,13 +394,29 @@ export async function resolveNotificationDelivery(
     }
     // Customer texts go out from the number that sends operator alerts.
     const senderPhone = row.channel === "sms" ? await resolveSmsSender(tx, input.businessId) : null;
-    // The channel check repeats one in the skip reason so TypeScript narrows row.channel.
-    if (!row.relatedId || appointmentNotificationSkipReason({ ...row, senderPhone }) !== null || (row.channel !== "sms" && row.channel !== "email")) {
+    const skipReason = appointmentNotificationSkipReason({ ...row, senderPhone });
+    let channel = row.channel;
+    let email = row.channel === "email" ? row.contactEmail : null;
+    // A video link is what the customer needs to attend, so a customer who can't get texts gets it by email,
+    // or from the team. Other appointments' texts stay texts. A contact the team blocked hears nothing.
+    if (row.relatedId && row.videoUrl && (skipReason === "sms_consent" || skipReason === "sms_unreachable")) {
+      email = customerEmailAddress(row.contactEmail);
+      if (!email) {
+        await queueVideoLinkAlertInTransaction(tx, { ...row, businessId: input.businessId, appointmentId: row.relatedId, videoUrl: row.videoUrl });
+        return { kind: "skipped", notificationId: row.notificationId };
+      }
+      channel = "email";
+      await tx.update(notifications).set({ channel, updatedAt: new Date() }).where(and(eq(notifications.id, row.notificationId), eq(notifications.businessId, input.businessId)));
+    } else if (skipReason !== null) {
+      return { kind: "skipped", notificationId: row.notificationId };
+    }
+    // The channel check repeats one in the skip reason so TypeScript narrows it.
+    if (!row.relatedId || (channel !== "sms" && channel !== "email")) {
       return { kind: "skipped", notificationId: row.notificationId };
     }
     const message = buildAppointmentNotification({
       kind: row.kind,
-      channel: row.channel,
+      channel,
       locale: localeFor(row.contactLocale ?? row.defaultLocale),
       businessName: row.businessName,
       serviceName: row.serviceName,
@@ -375,17 +424,17 @@ export async function resolveNotificationDelivery(
       timezone: row.timezone,
       videoUrl: row.videoUrl,
     });
-    const optIn = row.channel === "sms" ? await smsOptInConfirmationInTransaction(tx, { businessId: input.businessId, contactId: row.contactId }) : undefined;
+    const optIn = channel === "sms" ? await smsOptInConfirmationInTransaction(tx, { businessId: input.businessId, contactId: row.contactId }) : undefined;
     return {
       kind: "ready",
       delivery: {
         notificationId: row.notificationId,
         businessId: input.businessId,
-        channel: row.channel,
+        channel,
         kind: row.kind,
         relatedId: row.relatedId,
-        to: row.channel === "sms" ? row.contactPhone! : row.contactEmail!,
-        ...(row.channel === "sms" && senderPhone ? { from: senderPhone } : {}),
+        to: channel === "sms" ? row.contactPhone! : email!,
+        ...(channel === "sms" && senderPhone ? { from: senderPhone } : {}),
         subject: message.subject,
         body: message.body,
         ...(optIn ? { optIn } : {}),

@@ -597,7 +597,7 @@
       "warnings": {
         "missingLengths": "Ajoutez {{lengths}} minutes aux durées du type d’événement. D’ici là, Cal.com réserve ces services à la durée par défaut du type d’événement.",
         "smsReminders": "Désactivez le workflow SMS de ce type d’événement, sinon Cal.com envoie des textos aux appelants en plus de ceux de votre agent.",
-        "videoLocation": "Ajoutez « Numéro de téléphone du participant » comme lieu de ce type d'événement. D'ici là, les réservations portent un lien vidéo au lieu du téléphone de l'appelant, et seuls les appelants qui acceptent les textos reçoivent le lien.",
+        "videoLocation": "Ajoutez « Numéro de téléphone du participant » comme lieu de ce type d'événement. D'ici là, les réservations portent un lien vidéo au lieu du téléphone de l'appelant.",
         "narrowerAvailability": "Élargissez l’horaire du type d’événement le {{days}} pour suivre vos heures d’ouverture. Cal.com refuse les réservations hors de son horaire."
       }
     },

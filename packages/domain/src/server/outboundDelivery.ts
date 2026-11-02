@@ -8,7 +8,7 @@ import { correctAlertSmsUsage, enqueueBillingUsageSync, reserveAlertSmsUsage } f
 import { deploymentAppName } from "./branding";
 import { brandForBusiness } from "./brands";
 import type { DomainContext } from "./context";
-import { claimNotificationDelivery, claimOperatorNotificationDelivery, confirmationRetryAt, loadOperatorNotificationDelivery, markNotificationSent, markOperatorNotificationSent, markOperatorNotificationSkipped, notificationLeaseEndsAt, operatorNotificationLeaseEndsAt, releaseOperatorNotificationDelivery, resolveNotificationDelivery, transitionProcessingNotification } from "./notifications";
+import { alertVideoLinkNotSent, claimNotificationDelivery, claimOperatorNotificationDelivery, confirmationRetryAt, loadOperatorNotificationDelivery, markNotificationSent, markOperatorNotificationSent, markOperatorNotificationSkipped, notificationLeaseEndsAt, operatorNotificationLeaseEndsAt, releaseOperatorNotificationDelivery, resolveNotificationDelivery, transitionProcessingNotification } from "./notifications";
 import { issueOperatorPhoneVerificationCode, markOperatorPhoneVerificationCodeSent, releaseOperatorPhoneVerificationCodeSend } from "./phoneVerification";
 import { recordProductEventBestEffort } from "./productEvents";
 import { claimSmsDelivery, failSmsDelivery, loadSmsDeliveryTarget, markSmsSent, releaseSmsDelivery, smsDeliveryLeaseEndsAt } from "./sms";
@@ -336,7 +336,10 @@ function notificationLease(context: DomainContext, input: { businessId: string; 
     },
     markSent: (providerMessageId) => markNotificationSent(context, { ...ids, providerMessageId }),
     release: () => transitionProcessingNotification(context, ids, "pending"),
-    close: (outcome) => transitionProcessingNotification(context, ids, outcome),
+    close: async (outcome) => {
+      await transitionProcessingNotification(context, ids, outcome);
+      await alertVideoLinkNotSent(context, ids);
+    },
   };
 }
 
