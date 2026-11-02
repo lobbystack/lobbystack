@@ -593,7 +593,6 @@
       "syncNeedsAttention": "Attention requise",
       "syncFailed": "Votre agent n'a pas pu terminer la synchronisation avec Cal.com et ne proposera pas d'horaires tant qu'une synchronisation n'aura pas réussi. Il réessaie de lui-même, ou vous pouvez cliquer sur Actualiser.",
       "discoveryFailed": "Votre agent n’arrive pas à joindre votre compte Cal.com. Actualisez ou reconnectez le compte.",
-      "howItWorks": "Chaque rendez-vous devient une réservation de ce type d’événement. Cal.com reçoit le nom, le numéro de téléphone et un courriel de remplacement de l’appelant, pour ne pas lui écrire. Son vrai courriel figure dans les notes de la réservation pour votre équipe, et votre agent envoie la confirmation.",
       "warningsTitle": "Vérifiez ce type d’événement dans Cal.com",
       "warnings": {
         "missingLengths": "Ajoutez {{lengths}} minutes aux durées du type d’événement. D’ici là, Cal.com réserve ces services à la durée par défaut du type d’événement.",

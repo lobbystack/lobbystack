@@ -593,7 +593,6 @@
       "syncNeedsAttention": "Potrebna je pažnja",
       "syncFailed": "Vaš agent nije uspeo da završi sinhronizaciju sa Cal.com i neće nuditi termine dok sinhronizacija ne uspe. Sam pokušava ponovo, a možete i da kliknete na Osveži.",
       "discoveryFailed": "Vaš agent ne može da pristupi vašem Cal.com nalogu. Osvežite ili ponovo povežite nalog.",
-      "howItWorks": "Svaki termin postaje rezervacija ovog tipa događaja. Cal.com dobija ime, broj telefona i zamensku adresu e-pošte pozivaoca, pa mu ne piše. Prava adresa e-pošte stoji u beleškama rezervacije za vaš tim, a vaš agent šalje potvrdu.",
       "warningsTitle": "Proverite ovaj tip događaja u Cal.com",
       "warnings": {
         "missingLengths": "Dodajte {{lengths}} minuta trajanjima tipa događaja. Do tada Cal.com zakazuje te usluge u podrazumevanom trajanju tipa događaja.",

@@ -586,7 +586,6 @@
       "syncNeedsAttention": "Needs attention",
       "syncFailed": "Your agent couldn't finish syncing with Cal.com and won't offer times from it until a sync works. It tries again on its own, or you can click Refresh.",
       "discoveryFailed": "Your agent couldn't reach your Cal.com account. Refresh, or reconnect the account.",
-      "howItWorks": "Each appointment becomes a booking of this event type. Cal.com gets the caller's name, phone number and a stand-in email address, so it doesn't email them. Their real email goes in the booking's notes for your team, and your agent sends the confirmation.",
       "warningsTitle": "Check this event type in Cal.com",
       "warnings": {
         "missingLengths": "Add {{lengths}} minutes to the event type's durations. Until you do, Cal.com books those services at the event type's default length.",

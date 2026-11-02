@@ -593,7 +593,6 @@
       "syncNeedsAttention": "Requiere atención",
       "syncFailed": "Su agente no pudo terminar la sincronización con Cal.com y no ofrecerá horarios hasta que una sincronización funcione. Lo vuelve a intentar por sí solo, o puede hacer clic en Actualizar.",
       "discoveryFailed": "Su agente no pudo acceder a su cuenta de Cal.com. Actualice o vuelva a conectar la cuenta.",
-      "howItWorks": "Cada cita se convierte en una reserva de este tipo de evento. Cal.com recibe el nombre, el teléfono y un correo sustituto de quien llama, para no escribirle. Su correo real queda en las notas de la reserva para su equipo, y su agente envía la confirmación.",
       "warningsTitle": "Revise este tipo de evento en Cal.com",
       "warnings": {
         "missingLengths": "Agregue {{lengths}} minutos a las duraciones del tipo de evento. Mientras tanto, Cal.com reserva esos servicios con la duración predeterminada del tipo de evento.",
