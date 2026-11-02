@@ -5,11 +5,15 @@ sidebarTitle: "Self-hosting overview"
 contentType: "Conceptual"
 ---
 
+import SelfHostPrompt from "/snippets/setup-prompts/self-host.mdx";
+
 LobbyStack can run on one Docker host or as separate managed services. Self-hosting gives you control over application data, credentials, provider usage, backups, and upgrades.
 
 <Note>
   Live calls still require Twilio, OpenAI, and a public HTTPS endpoint for the dashboard. Phone calls also need a Twilio Elastic SIP trunk that sends calls to your OpenAI project.
 </Note>
+
+<SelfHostPrompt />
 
 ## Deploy on Railway
 

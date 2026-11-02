@@ -143,3 +143,5 @@ Najbolji **open-source AI servis za odgovaranje na telefonske pozive** za Vas je
 - Treba Vam recepcija za kućne usluge → **Hearthline**
 
 Ako želite da pregledate kompletan sistem pre nego što preusmerite svoju glavnu liniju, počnite od [LobbyStack GitHub repozitorijuma](https://github.com/lobbystack/lobbystack) ili [pregleda open-source sistema za AI recepcionera](/sr/blog/open-source-ai-receptionist-stack/).
+
+Ako razmatrate i hostovanu platformu za programere, pročitajte naš [tekst o alternativi za Vapi](/sr/blog/vapi-alternative/).

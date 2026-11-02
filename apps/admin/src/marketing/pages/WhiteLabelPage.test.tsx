@@ -1,8 +1,8 @@
-import { partnerTierCatalog, partnerTierSlugs, selfHostedSupportCatalog } from "@lobbystack/shared"
+import { partnerTierCatalog, partnerTierSlugs, selfHostedSupportCatalog, setupPrompts } from "@lobbystack/shared"
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
 
-import { SUPPORTED_LOCALES, type Locale } from "@/marketing/i18n"
+import { getCopy, SUPPORTED_LOCALES, type Locale } from "@/marketing/i18n"
 import { markdownAlternatePath } from "@/marketing/lib/agent-discovery"
 import { getSelfHostedSupportCopy } from "@/marketing/lib/self-hosted-support-copy"
 import { getWhiteLabelCopy } from "@/marketing/lib/white-label-copy"
@@ -54,6 +54,12 @@ describe("white-label page", () => {
     expect(hrefs).toContain(selfHostedSupportCatalog.white_label.premium.checkoutUrls.annual)
     expect(hrefs).toContain(selfHostedSupportCatalog.white_label.enterprise.checkoutUrls.annual)
     expect(hrefs).not.toContain(selfHostedSupportCatalog.business.premium.checkoutUrls.annual)
+  })
+
+  it.each(SUPPORTED_LOCALES)("offers the white-label and partner prompts in %s, with the same English text in the Markdown twin", (locale) => {
+    const html = renderToStaticMarkup(<WhiteLabelPage locale={locale} />)
+    expect(html.split(`>${getCopy(locale).setupPrompts.copy}</span>`)).toHaveLength(3)
+    for (const id of ["white-label", "partner"] as const) expect(whiteLabelMarkdown(locale)).toContain(setupPrompts[id])
   })
 
   it("switches the tiers to the view a link names, both ways", () => {

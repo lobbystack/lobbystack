@@ -1,8 +1,9 @@
+import { setupPrompts } from "@lobbystack/shared"
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
 
 import { mcpTools } from "@/lib/mcp/tools"
-import { getRouteSeo, SUPPORTED_LOCALES, translatedBasePaths, type Locale } from "@/marketing/i18n"
+import { getCopy, getRouteSeo, SUPPORTED_LOCALES, translatedBasePaths, type Locale } from "@/marketing/i18n"
 import { markdownAlternatePath } from "@/marketing/lib/agent-discovery"
 import { getMcpCopy, mcpAgencyDocsUrl, MCP_SERVER_URL, mcpToolGroups } from "@/marketing/lib/mcp-page-copy"
 import { getMcpFaqs } from "@/marketing/lib/mcp-page-faqs"
@@ -44,6 +45,13 @@ describe("MCP server page", () => {
     const body = await (await markdownTwin(locale, "features/mcp"))?.text()
     expect(body).toContain(copy.title)
     expect(body).toContain(mcpAgencyDocsUrl(locale))
+  })
+
+  it.each(SUPPORTED_LOCALES)("offers the setup prompts in %s, with the same English text in the Markdown twin", (locale) => {
+    const html = render(locale)
+    expect(html.split(`>${getCopy(locale).setupPrompts.copy}</span>`)).toHaveLength(4)
+    expect(html).not.toContain(setupPrompts.saas.split("\n")[0])
+    for (const id of ["no-code", "saas", "white-label"] as const) expect(mcpMarkdown(locale)).toContain(setupPrompts[id])
   })
 
   it("puts the main keyword in the English title and the page text", () => {

@@ -5,11 +5,15 @@ sidebarTitle: "Vue d'ensemble de l'auto-hébergement"
 contentType: "Conceptual"
 ---
 
+import SelfHostPrompt from "/snippets/fr/setup-prompts/self-host.mdx";
+
 LobbyStack peut tourner sur un seul hôte Docker ou sous forme de services gérés distincts. L'auto-hébergement vous donne le contrôle des données de l'application, des identifiants, de l'utilisation des fournisseurs, des sauvegardes et des mises à niveau.
 
 <Note>
   Les appels en direct exigent quand même Twilio, OpenAI et un point de terminaison HTTPS public pour le tableau de bord. Les appels téléphoniques nécessitent aussi un trunk Twilio Elastic SIP qui envoie les appels à votre projet OpenAI.
 </Note>
+
+<SelfHostPrompt />
 
 ## Déployer sur Railway
 

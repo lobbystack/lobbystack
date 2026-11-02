@@ -80,6 +80,8 @@ Hostovane platforme za glasovne agente vode zvuk, brojeve i model, a Vi agenta p
 
 Platforma Vas najbrže dovodi do prvog probnog poziva. Plaćate njene cene povrh modela, ili sa modelom u paketu, i pravila za zakazivanje, prebacivanja i praćenja pravite ponovo u njenom editoru. Ako kasnije odete, sve to pravite još jednom.
 
+Ako ne pišete kod, naš vodič za [pravljenje AI recepcionera uz Claude ili ChatGPT](/sr/blog/how-to-create-an-ai-receptionist/) počinje od gotovog proizvoda.
+
 ## Opcija 4: krenite od glasovnog frameworka otvorenog koda
 
 Frameworkovi otvorenog koda vode zvuk, smenu govornika i vezu sa modelom, a Vi ih hostujete:
@@ -98,7 +100,7 @@ AI recepcioner otvorenog koda donosi delove koje Vam opcije od 1 do 4 ostavljaju
 - pomeranje ili otkazivanje termina posle provere pozivaoca
 - primanje poruka i prebacivanje poziva na osobu
 
-Svaki poziv dolazi sa transkriptom, snimkom i rezimeom u panelu. Prelazak smo opisali u [našem tekstu o GPT-Live modelu](/sr/blog/ai-voice-agent-gpt-live/).
+Svaki poziv dolazi sa transkriptom, snimkom i rezimeom u panelu. Prelazak smo opisali u [našem tekstu o GPT-Live modelu](/sr/blog/ai-voice-agent-gpt-live/). Ako želite takvog recepcionera u svom SaaS-u, naš [vodič za API za AI recepcionera](/sr/blog/ai-receptionist-api/) navodi zahteve.
 
 ## Pet opcija na jednom mestu
 

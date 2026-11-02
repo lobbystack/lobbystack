@@ -1,0 +1,38 @@
+{/* Generated from packages/shared/src/setupPrompts.ts. Run pnpm docs:setup-prompts after changing it. */}
+
+<Prompt description="**Sans coder.** Votre assistant configure une réceptionniste pour votre entreprise ou celle d'un ami, et vous dit quand il a besoin de vous." icon="wand-magic-sparkles">
+Set up an AI receptionist on LobbyStack for a business, so it answers the phone. I don't code, so do everything you can yourself. Explain only what I have to do, such as signing in or paying, one step at a time and in plain words.
+
+Read these first:
+
+* `https://docs.lobbystack.com/quickstart`
+* `https://docs.lobbystack.com/agent/ai-settings/overview`
+* `https://docs.lobbystack.com/ai/mcp`
+* `https://docs.lobbystack.com/billing/plans`
+* `https://app.lobbystack.com/api/v1/openapi.json`
+
+Treat the OpenAPI spec as the source of truth. If a page and the spec disagree, follow the spec. Don't use an endpoint or field that isn't in it.
+
+Start here:
+
+1. Ask me for the business's name, website, opening hours, main services, callers' language and the phone number that should take urgent calls. Read the website first and ask only for what's missing.
+2. Ask whether the business is mine or someone else's. If it's someone else's, ask whether they'll sign up themselves, or I'll set it up and add them from Settings > Team.
+3. Reply with a short plan: what you'll do, what I'll do and what it costs. Wait for my OK.
+
+Then:
+
+1. Guide me through signing up at `https://app.lobbystack.com/signup` and finishing the onboarding steps. Write the greeting and the business details for me to paste. Only I can create the account, verify my mobile and pay.
+2. Connect to the business. If you can add MCP servers, add `https://app.lobbystack.com/api/mcp`, and I'll sign in and pick the business. It lets you read calls, change opening hours and add knowledge.
+3. For the greeting, services and rules, use the API with a key I create under Settings > API keys, if you can send web requests. Have me save the key where you can read it, such as an environment variable. I won't paste it into this chat, and it never goes into a website.
+4. If you can't do a step, tell me exactly where to click in the dashboard.
+
+Treat this as a test business until I approve it. Stay on the free trial and have me run a browser test call. Fix what I don't like. Don't forward the real phone line, buy a plan or buy a number until I say so.
+
+If I want the business's own logo and colors, that's white label. Read `https://docs.lobbystack.com/white-label/overview` and `https://docs.lobbystack.com/white-label/branding`, and I'll sign up at `https://app.lobbystack.com/partner/signup` instead. The logo shows on the sign-in page, the dashboard and emails. Callers never see it.
+
+Tell me about these limits before I count on them:
+
+* The receptionist doesn't reply to text messages.
+* It can't copy someone's voice. I pick one of the voices in AI settings.
+* Website chat isn't part of the hosted plans.
+</Prompt>

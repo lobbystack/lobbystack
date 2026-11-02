@@ -5,6 +5,8 @@ sidebarTitle: "API keys and CLI"
 contentType: "How-to"
 ---
 
+import SaasPrompt from "/snippets/setup-prompts/saas.mdx";
+
 A platform key lets your own code create businesses and set them up through LobbyStack's [API](/api/overview). It also lets the `lobbystack onboard` command build a business from one file. Owners and admins make keys on the console's **API keys** page. A key acts as your partner and reaches only your businesses.
 
 ## Create a platform key
@@ -40,6 +42,8 @@ Your keys can create 30 businesses an hour between them. `POST /businesses` take
 ## Run businesses from your own product
 
 If your customers use your product and never see LobbyStack, leave `owner_email` out of `POST /businesses`. Nobody gets an invitation, and your key sets up and runs the business. A key can't invite an owner, so the business stays without one.
+
+<SaasPrompt />
 
 On a paid tier, a key with `phone_numbers:manage` and `phone_numbers:purchase` buys the business's number. A key doesn't get `phone_numbers:purchase` by default, so turn on **Find, buy and replace phone numbers** on the key first. Send the business in the `LobbyStack-Business` header:
 

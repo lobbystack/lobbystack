@@ -143,3 +143,5 @@ The best **open source AI phone answering service** for you is the one that matc
 - Need a home-service front desk → **Hearthline**
 
 If you want to inspect a full stack before you forward your main line, start with the [LobbyStack GitHub repo](https://github.com/lobbystack/lobbystack) or the [open-source AI receptionist stack overview](/blog/open-source-ai-receptionist-stack/).
+
+If you're also weighing a hosted developer platform, read our [Vapi alternative comparison](/blog/vapi-alternative/).

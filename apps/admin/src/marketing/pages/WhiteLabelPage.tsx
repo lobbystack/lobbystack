@@ -1,5 +1,6 @@
 import { Footer } from "@/marketing/components/Footer"
 import { Navbar } from "@/marketing/components/Navbar"
+import { SetupPromptsSection } from "@/marketing/components/setup-prompts/SetupPromptsSection"
 import { WhiteLabelRelated } from "@/marketing/components/white-label/WhiteLabelRelated"
 import {
   WhiteLabelClosing,
@@ -64,6 +65,7 @@ export function WhiteLabelPage({ locale }: { locale: Locale }) {
       <main id="main-content">
         <WhiteLabelHero locale={locale} />
         <WhiteLabelHowItWorks locale={locale} />
+        <SetupPromptsSection locale={locale} prompts={["white-label", "partner"]} section="white_label_prompts" />
         <WhiteLabelDashboard locale={locale} />
         <WhiteLabelEarn locale={locale} />
         <WhiteLabelTiers locale={locale} />

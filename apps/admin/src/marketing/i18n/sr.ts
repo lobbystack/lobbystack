@@ -21,6 +21,14 @@ export const sr = {
     viewSolution: "Pogledajte rešenje",
     seeFullFeatureList: "Pogledajte sve funkcije",
   },
+  setupPrompts: {
+    title: "Neka vaš AI asistent sve podesi",
+    intro:
+      "Kopirajte prompt i nalepite ga u svog asistenta. Pročitaće našu dokumentaciju, pokazati vam plan i stati kada mu zatrebate.",
+    copy: "Kopiraj prompt",
+    copied: "Kopirano",
+    blocked: "Pregledač je blokirao kopiranje. Kopirajte prompt odavde:",
+  },
   routes: {
     "/": {
       title: "AI recepcioner za mala preduzeća | LobbyStack",
