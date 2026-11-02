@@ -3,6 +3,9 @@ import { calls, contacts, conversations, conversationSessions, withBusinessTrans
 
 import type { DomainContext } from "./context";
 
+/** How a call a staff member took ends: the receptionist wasn't on it, so it has no summary. */
+export const STAFF_ANSWERED_DISPOSITION = "answered_by_team";
+
 export type CallOutcome =
   | { kind: "booked"; serviceName: string | null; startsAt: string }
   | { kind: "booking_in_progress"; serviceName: string | null; startsAt: string | null }

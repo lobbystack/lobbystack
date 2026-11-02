@@ -35,7 +35,9 @@ Using staging credentials, verify signup and SMTP, Google OAuth and reconciliati
 
 For replay exclusions, confirm a consented workspace produces a recording, that call detail transcripts and the recording player are masked in playback, and that sessions on `/login`, `/demo/*`, and `/embed/*` produce no recording.
 
-AI-generated SMS, AI-SMS add-on billing, and Twilio A2P registration are excluded. Before production alert or reminder SMS, retain evidence that the configured sender is independently compliant for the target countries and traffic type.
+An AI-SMS add-on and Twilio A2P registration are excluded. Before production alert or reminder SMS, retain evidence that the configured sender is independently compliant for the target countries and traffic type.
+
+AI text replies ship with `businesses.text_replies_enabled` off for every business. Don't run `pnpm text-replies:set --on` until the terms and Help Center allow AI replies (`docs/specs/ai-sms-replies.md`). Before the first business goes on, text a staging number from a Canadian phone and a US phone. Confirm the Canadian phone gets a reply, the US phone gets none, the team gets an alert for the US text, and `STOP`, `START` and `HELP` get their fixed replies with no AI reply after them. Confirm the reply's `sms_provider` cost appears in unit economics.
 
 ## Apply the exit gate
 

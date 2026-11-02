@@ -27,17 +27,19 @@ export function isSharedSmsSender(phone: string | null | undefined): boolean {
  * number outside +1, such as a UK or Australian mobile, texts from that
  * number instead, so its local callers and team get texts. A self-hosted
  * business texts from its own active SMS-enabled number, which the operator
- * registers for texting. Self-hosted means the self-hosted plan, or, without
- * a billing account, a deployment mode other than cloud. Null when there's no
- * sender.
+ * registers for texting. Null when there's no sender.
  */
 export async function resolveSmsSender(tx: DatabaseTransaction, businessId: string): Promise<string | null> {
-  const account = (await tx.select({ plan: billingAccounts.plan }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId)).limit(1))[0];
-  const business = (await tx.select({ deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
-  const selfHosted = account?.plan ? account.plan === "self_hosted_standard" : business?.deploymentMode !== "cloud";
-  if (selfHosted) return await businessSmsNumber(tx, businessId);
+  if (await isSelfHostedBusiness(tx, businessId)) return await businessSmsNumber(tx, businessId);
   const own = await businessSmsNumber(tx, businessId);
   return own && !own.startsWith("+1") ? own : sharedSmsSender();
+}
+
+/** Self-hosted means the self-hosted plan, or, without a billing account, a deployment mode other than cloud. */
+export async function isSelfHostedBusiness(tx: DatabaseTransaction, businessId: string): Promise<boolean> {
+  const account = (await tx.select({ plan: billingAccounts.plan }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId)).limit(1))[0];
+  const business = (await tx.select({ deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
+  return account?.plan ? account.plan === "self_hosted_standard" : business?.deploymentMode !== "cloud";
 }
 
 /**

@@ -56,8 +56,8 @@ export function oauthStartOriginValid(origin: unknown): origin is string | undef
   }
 }
 
-/** Lookup digest of an OAuth state under `prefix`, so only the digest is stored, never the bearer value. */
-export function oauthStateDigest(prefix: string, state: string, unconfigured: string): string {
+/** Keyed digest of an OAuth state under `prefix`: a lookup value stored in place of the bearer state, or a PKCE verifier. */
+export function keyedStateDigest(prefix: string, state: string, unconfigured: string): string {
   if (!oauthSigningSecret()) throw new Error(unconfigured);
   return createHmac("sha256", oauthSigningSecret()).update(`${prefix}:lookup:${state}`).digest("hex");
 }

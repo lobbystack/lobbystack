@@ -27,6 +27,7 @@ import { extractDocumentTextInThread, type OcrRecorder } from "./documentExtract
 import { isLivePrototypeEnabled, type LiveRecoveryOutcome } from "./liveCalls";
 import { deleteReleasedCalendarEvent, reconcileBusinessCalendar, retireCalendarWebhook, syncAppointmentCalendar, type CalendarProviders } from "./calendarJobs";
 import { refreshInstagramToken, replyToInstagramMessage, sendInstagramMessage, type InstagramOperations } from "./instagramJobs";
+import { replyToTextMessage } from "./textReplyJobs";
 import { getMeter } from "@lobbystack/telemetry/node";
 import { bucketOutboxBacklog, getPostHogDistinctIdForBusinessSystem, redactTelemetryProperties, type TelemetryProperties } from "@lobbystack/telemetry";
 
@@ -571,6 +572,8 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       return { status: "completed" };
     case "sms.send":
       return await deliverOutbound(dependencies.domain, dependencies, { kind: "message", businessId: businessIdOrThrow(job), messageId: String(job.payload.messageId ?? "") }, execution);
+    case "sms.aiReply":
+      return await replyToTextMessage(dependencies.domain, job, {}, execution);
     case "instagram.reply":
       return await replyToInstagramMessage(dependencies.domain, job);
     case "instagram.send":
@@ -607,7 +610,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         const call = await loadLiveCallForPricing(dependencies.domain, { businessId, callId: liveCallId });
         const callCost = call ? dependencies.telephony.forNumber(call.carrier)?.callCost : undefined;
         if (!call || !callCost?.findLiveCallCost) return { status: "skipped", entityId: liveCallId };
-        const found = await callCost.findLiveCallCost({ near: call.startedAt, from: call.callerPhone });
+        const found = await callCost.findLiveCallCost({ near: call.startedAt, from: call.callerPhone, dialled: call.dialled });
         if (!found) throw new Error(`No ${callCost.carrier} call found yet for live call ${liveCallId}.`);
         const { providerCallId, ...pricing } = found;
         if (pricing.providerCostUsd === undefined) throw new Error(`${callCost.carrier} call pricing is incomplete for ${providerCallId}.`);

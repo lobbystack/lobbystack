@@ -103,6 +103,16 @@ export function alertSmsFrom(env: Env = process.env): string | null {
 }
 
 /** The deployment's public base URL, for the webhooks a carrier calls. */
+/**
+ * The SIP address that reaches GPT-Live from a voice webhook, or undefined
+ * without OPENAI_PROJECT_ID. OpenAI requires SRTP, which takes these URI
+ * parameters: Twilio's secure="true" attribute on <Sip> gets the call refused.
+ */
+export function sipAddress(env: Env = process.env): string | undefined {
+  const project = env.OPENAI_PROJECT_ID?.trim();
+  return project ? `sip:${project}@sip.api.openai.com;transport=tls;secure=true` : undefined;
+}
+
 export function appBaseUrl(env: Env = process.env): string {
   return (env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
 }

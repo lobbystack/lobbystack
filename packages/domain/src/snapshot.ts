@@ -6,6 +6,7 @@ import type {
   KnowledgeSnippet,
   ServiceSummary,
   SnapshotEmployee,
+  StaffFirstPolicy,
   TransferPolicy,
   AppointmentChangePolicy,
   BookingMode,
@@ -40,6 +41,7 @@ type SnapshotBuilderInput = {
   snippets: Array<KnowledgeSnippet>;
   knowledgeDigest?: string;
   transferPolicy: TransferPolicy;
+  staffFirstPolicy?: StaffFirstPolicy;
   appointmentChangePolicy?: AppointmentChangePolicy;
   bookingMode?: BookingMode;
   phoneNumber?: string;
@@ -89,6 +91,7 @@ export function buildBusinessContextSnapshot(
     bookingPolicy: input.bookingPolicy,
     knowledgeDigest: input.knowledgeDigest ?? "",
     transferPolicy: input.transferPolicy,
+    ...(input.staffFirstPolicy ? { staffFirstPolicy: input.staffFirstPolicy } : {}),
     ...(input.appointmentChangePolicy ? { appointmentChangePolicy: input.appointmentChangePolicy } : {}),
     ...(input.bookingMode ? { bookingMode: input.bookingMode } : {}),
     hours: input.hours,

@@ -177,6 +177,7 @@ beforeEach(() => {
     partnerBusinessCaller,
     partnerLimit: async () => undefined,
     partnerContext: () => ({ db: {} }) as never,
+    partnerNumberSearch: async () => ({ provider: { listAvailablePhoneNumbers: vi.fn() }, claimTokenSecret: "number-claim-secret" }),
     rateLimit,
     operations,
     log: (line) => { logs.push(line); },
@@ -725,6 +726,66 @@ describe("MCP for partner connections", () => {
     expect(options.setup).toBeDefined();
     await options.beforeCreate();
     expect(limit).toHaveBeenCalledWith({ partnerId, userId: agencyUser }, expect.objectContaining({ name: "partner-business-create", limit: 30 }));
+  });
+
+  describe("phone numbers", () => {
+    const offer = { phone_number: "+14165550123", country: "CA", kind: "local", locality: null, region: null, capabilities: { voice: true, sms: true }, trial: false, offer_token: "signed", expires_at: at };
+    const claim = { id: randomUUID(), status: "pending", phone_number: "+14165550123", phone_number_id: null, replaces_phone_number_id: null, error: null, created_at: at, updated_at: at };
+    const fake = (name: keyof PartnerMcpOperations) => partnerOperations[name] as unknown as ReturnType<typeof vi.fn>;
+    const numberTools = ["list_phone_numbers", "search_phone_numbers", "claim_phone_number", "replace_phone_number", "get_phone_number_claim"];
+
+    it("gives them to a platform key, never to an agency connection", async () => {
+      const key = await connect(partnerKeyWith(["phone_numbers:manage", "phone_numbers:purchase"]));
+      expect((await key.listTools()).tools.map((entry) => entry.name)).toEqual(expect.arrayContaining(numberTools));
+      // A key made before keys could buy numbers reads them, and gets nothing that spends money.
+      const older = await connect(partnerKeyWith(["phone_numbers:manage"]));
+      const olderNames = (await older.listTools()).tools.map((entry) => entry.name);
+      expect(olderNames).toEqual(expect.arrayContaining(["list_phone_numbers", "get_phone_number_claim"]));
+      for (const tool of ["search_phone_numbers", "claim_phone_number", "replace_phone_number"]) expect(olderNames).not.toContain(tool);
+      const agency = await connect(agencyToken(["phone_numbers:manage", "phone_numbers:purchase", "partner:read"]));
+      const names = (await agency.listTools()).tools.map((entry) => entry.name);
+      for (const tool of numberTools) expect(names).not.toContain(tool);
+    });
+
+    it("searches and claims as the key, on the business it names, once for each idempotency key", async () => {
+      fake("searchPhoneNumbersForApi").mockImplementation(async () => [offer]);
+      fake("claimPhoneNumberForApi").mockImplementation(async () => claim);
+      const client = await connect(partnerKeyWith(["phone_numbers:manage", "phone_numbers:purchase"]));
+      const found = await client.callTool({ name: "search_phone_numbers", arguments: { business_id: businessA, area_code: "416" } });
+      expect(found.structuredContent).toMatchObject({ data: [{ offer_token: "signed" }] });
+      const [, searchCaller, body, searchOptions] = fake("searchPhoneNumbersForApi").mock.calls[0]!;
+      expect(searchCaller).toEqual({ businessId: businessA, platformKeyId, groupId: partnerId, partnerId, actor: "platform_key" });
+      expect(body).toEqual({ area_code: "416" });
+      expect(searchOptions).toMatchObject({ platformKeyId, scopes: ["phone_numbers:manage", "phone_numbers:purchase"], claimTokenSecret: "number-claim-secret" });
+
+      const args = { business_id: businessA, offer_token: "signed", idempotency_key: "claim-1" };
+      expect((await client.callTool({ name: "claim_phone_number", arguments: args })).structuredContent).toMatchObject({ id: claim.id });
+      await client.callTool({ name: "claim_phone_number", arguments: args });
+      expect(fake("claimPhoneNumberForApi")).toHaveBeenCalledTimes(1);
+      const [, claimCaller, claimInput, claimOptions] = fake("claimPhoneNumberForApi").mock.calls[0]!;
+      expect(claimCaller).toMatchObject({ businessId: businessA, platformKeyId });
+      expect(claimInput).toEqual({ offerToken: "signed", replaces: undefined });
+      expect(claimOptions).toEqual({ platformKeyId, scopes: ["phone_numbers:manage", "phone_numbers:purchase"], claimTokenSecret: "number-claim-secret" });
+    });
+
+    it("replaces a number, needing an idempotency key, and refuses a business that isn't the partner's", async () => {
+      fake("claimPhoneNumberForApi").mockImplementation(async () => claim);
+      const client = await connect(partnerKeyWith(["phone_numbers:manage", "phone_numbers:purchase"]));
+      const phoneNumberId = randomUUID();
+      expect((await client.callTool({ name: "replace_phone_number", arguments: { business_id: businessA, phone_number_id: phoneNumberId, offer_token: "signed" } })).isError).toBe(true);
+      await client.callTool({ name: "replace_phone_number", arguments: { business_id: businessA, phone_number_id: phoneNumberId, offer_token: "signed", idempotency_key: "swap-1" } });
+      expect(fake("claimPhoneNumberForApi").mock.calls[0]![2]).toEqual({ offerToken: "signed", replaces: phoneNumberId });
+      const refused = await client.callTool({ name: "claim_phone_number", arguments: { business_id: businessB, offer_token: "signed", idempotency_key: "claim-2" } });
+      expect(refused.isError).toBe(true);
+      expect(fake("claimPhoneNumberForApi")).toHaveBeenCalledTimes(1);
+    });
+
+    it("creates a business with no owner for a platform key", async () => {
+      const client = await connect(partnerKeyWith(["businesses:create"]));
+      await client.callTool({ name: "create_business", arguments: { name: "Harbor Dental", timezone: "America/Halifax", idempotency_key: "harbor" } });
+      const [, input] = fake("createPartnerBusinessForApi").mock.calls[0]!;
+      expect(input.body).toEqual({ name: "Harbor Dental", timezone: "America/Halifax" });
+    });
   });
 
   it("refuses a connection whose scopes cover no tool, and tells a business connection nothing about partners", async () => {

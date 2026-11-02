@@ -7,6 +7,7 @@ import { DateTime } from "luxon";
 
 import { BookingUnavailableError, candidateStartTimes, freeStaffSlots, scheduleUnavailableReason, type NoOpeningsReason, type UnavailableReason } from "../availability";
 import { requireBusinessMembership } from "../authz";
+import { isBookingCalendarProvider } from "../calendarWriter";
 import type { DomainContext } from "./context";
 import { recordCallOutcomeInTransaction } from "./callOutcome";
 import { consumeAppointmentChangeVerificationInTransaction } from "./appointmentChanges";
@@ -181,7 +182,7 @@ async function loadBusyTimes(tx: DatabaseTransaction, schedule: Schedule, input:
   // Events LobbyStack wrote for its own appointments come back as busy blocks. Skip them:
   // the appointment rows above already hold that time for the right staff member. An event
   // someone moved or stretched in the calendar no longer matches its row, so it still blocks.
-  const uidOnly = new Set(configured.filter((connection) => connection.provider === "calcom").map((connection) => connection.id));
+  const uidOnly = new Set(configured.filter((connection) => isBookingCalendarProvider(connection.provider)).map((connection) => connection.id));
   const timeMatched = connectionIds.filter((id) => !uidOnly.has(id));
   const window = (ids: string[]) => and(eq(calendarBusyBlocks.businessId, schedule.businessId), inArray(calendarBusyBlocks.connectionId, ids), lt(calendarBusyBlocks.startsAt, input.to), gt(calendarBusyBlocks.endsAt, input.from));
   // Only an appointment that still holds its time, as the rows above count it, accounts for its event: a canceled
@@ -189,8 +190,8 @@ async function loadBusyTimes(tx: DatabaseTransaction, schedule: Schedule, input:
   const holdsTime = ne(appointments.status, "canceled");
   const matched = timeMatched.length ? await tx.select().from(calendarBusyBlocks).where(and(window(timeMatched),
     notExists(tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.businessId, calendarBusyBlocks.businessId), holdsTime, eq(appointments.calendarExternalId, calendarBusyBlocks.externalEventId), eq(appointments.startsAt, calendarBusyBlocks.startsAt), eq(appointments.endsAt, calendarBusyBlocks.endsAt)))))) : [];
-  // A Cal.com event type can fix a booking's length, so its bookings match their appointment on the uid
-  // alone, and only the appointment's own span leaves the block: time Cal.com holds past it stays busy.
+  // An event type can fix a booking's length, so its bookings match their appointment on the uid
+  // alone, and only the appointment's own span leaves the block: time the provider holds past it stays busy.
   const calcomIds = connectionIds.filter((id) => uidOnly.has(id));
   const calcom = calcomIds.length ? await tx.select({ block: calendarBusyBlocks, appointmentId: appointments.id, ownStartsAt: appointments.startsAt, ownEndsAt: appointments.endsAt }).from(calendarBusyBlocks)
     .leftJoin(appointments, and(eq(appointments.businessId, calendarBusyBlocks.businessId), holdsTime, eq(appointments.calendarExternalId, calendarBusyBlocks.externalEventId)))

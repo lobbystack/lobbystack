@@ -602,6 +602,35 @@
         "narrowerAvailability": "Élargissez l’horaire du type d’événement le {{days}} pour suivre vos heures d’ouverture. Cal.com refuse les réservations hors de son horaire."
       }
     },
+    "calendly": {
+      "sheetTitle": "Calendly",
+      "sheetDescription": "Connectez votre compte Calendly et choisissez le type d'événement que votre réceptionniste réserve.",
+      "connect": "Connecter Calendly",
+      "reconnect": "Reconnecter",
+      "disconnect": "Déconnecter",
+      "connectedSuccess": "Calendly est connecté. Choisissez le type d'événement à réserver.",
+      "connectFailed": "Impossible de connecter Calendly. Veuillez réessayer.",
+      "connectNotAdmin": "Seul un propriétaire ou un administrateur de l'entreprise peut connecter Calendly.",
+      "disconnectedSuccess": "Calendly est déconnecté.",
+      "eventTypeLabel": "Type d'événement",
+      "selectEventType": "Choisir un type d'événement",
+      "eventTypeSaved": "Type d'événement enregistré.",
+      "refresh": "Actualiser",
+      "syncNeedsAttention": "À vérifier",
+      "syncFailed": "Votre réceptionniste n'a pas pu terminer la synchronisation avec Calendly et n'en proposera aucun créneau tant qu'une synchronisation n'aura pas réussi. Elle réessaie d'elle-même, ou cliquez sur Actualiser.",
+      "discoveryFailed": "Votre réceptionniste n'a pas pu joindre votre compte Calendly. Actualisez ou reconnectez le compte.",
+      "howItWorks": "Chaque rendez-vous devient une réservation de ce type d'événement. Calendly reçoit le nom de l'appelant et une adresse de remplacement, et ne lui écrit donc pas. Votre réceptionniste envoie la confirmation. Le téléphone et le courriel de l'appelant vont dans une question texte du type d'événement.",
+      "blockedOption": "{{name}} (réservation impossible)",
+      "planRequiredTitle": "Forfait payant requis",
+      "planRequired": "Calendly accepte les réservations d'autres applications seulement sur ses forfaits payants. Passez au forfait Standard ou supérieur, puis cliquez sur Reconnecter.",
+      "warningsTitle": "Vérifiez ce type d'événement dans Calendly",
+      "warnings": {
+        "requiredQuestions": "Rendez {{questions}} facultatif ou choisissez un autre type d'événement. Votre réceptionniste ne peut pas répondre aux questions à choix obligatoires, et Calendly refuse donc chaque réservation.",
+        "missingLengths": "Vos services de {{lengths}} minutes ne correspondent pas à ce type d'événement. Calendly les réserve à la durée du type d'événement.",
+        "noDetailsQuestion": "Ajoutez une question texte à ce type d'événement. D'ici là, votre équipe ne verra pas le téléphone ni le courriel de l'appelant dans Calendly.",
+        "videoLocation": "Ce type d'événement propose seulement la vidéo, donc les réservations portent un lien de réunion. Ajoutez un lieu ou le téléphone pour les appelants."
+      }
+    },
     "cards": {
       "google": {
         "title": "Google Calendar",
@@ -610,6 +639,10 @@
       "calcom": {
         "title": "Cal.com",
         "description": "Réservez les rendez-vous dans un de vos types d’événement Cal.com."
+      },
+      "calendly": {
+        "title": "Calendly",
+        "description": "Réservez les rendez-vous dans l'un de vos types d'événement Calendly."
       },
       "webhooks": {
         "title": "Webhooks",

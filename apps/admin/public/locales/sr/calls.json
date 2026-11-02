@@ -102,6 +102,7 @@
     "noSegments": "Za ovaj poziv još nema delova transkripta."
   },
   "outcome": {
+    "answeredByTeam": "Javio se vaš tim",
     "label": "Rezime",
     "booked": "Pozivalac je zakazao: {{serviceName}}, za {{startsAt}}.",
     "scheduling": "Pozivalac je započeo zakazivanje, ali nijedan termin nije potvrđen.",

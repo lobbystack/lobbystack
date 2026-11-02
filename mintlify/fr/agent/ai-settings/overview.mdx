@@ -131,6 +131,38 @@ LobbyStack renvoie aussi les appels vers ce numéro quand vos minutes vocales so
   Ajoutez un numéro de transfert si vous voulez qu'un humain puisse prendre le relais en direct. Sans numéro, la réceptionniste note les coordonnées pour un rappel ou un suivi, et votre équipe peut répondre depuis le tableau de bord.
 </Note>
 
+## Le personnel répond d'abord
+
+**Le personnel répond d'abord** fait sonner un téléphone du personnel avant que votre réceptionniste réponde. Appuyez sur 1 pour prendre l'appel. Si personne n'appuie sur 1 avant la fin de la sonnerie, votre réceptionniste répond comme d'habitude. Une messagerie vocale ne peut pas prendre l'appel, car elle n'appuie jamais sur 1.
+
+<Steps>
+  <Step title="Choisir quand faire sonner">
+    Sous **Le personnel répond d'abord**, réglez **Faire sonner votre équipe d'abord** sur **Pendant les heures d'ouverture** ou **Toujours**. **Pendant les heures d'ouverture** suit vos [heures d'ouverture](#heures-douverture) et saute les fermetures.
+  </Step>
+  <Step title="Ajouter le téléphone du personnel">
+    Entrez le numéro dans **Téléphone du personnel**. Le champ reprend votre numéro de transfert par défaut, et vous pouvez le changer.
+  </Step>
+  <Step title="Régler la durée de la sonnerie">
+    Choisissez 10, 15, 20, 30, 45 ou 60 secondes dans **Durée de la sonnerie**. La valeur par défaut est 15.
+  </Step>
+  <Step title="Ajouter des messages au besoin">
+    **Message avant la sonnerie** joue avant que le téléphone du personnel sonne. **Message avant la réponse du réceptionniste** joue quand personne ne prend l'appel. Chacun contient 200 caractères, et les appelants les entendent dans votre langue client par défaut. Le serbe n'a pas encore de voix pour ces messages, donc une entreprise en serbe les saute.
+  </Step>
+  <Step title="Enregistrer">
+    Cliquez sur **Enregistrer** au bas de la section.
+  </Step>
+</Steps>
+
+Chaque sonnerie utilise une [tentative de transfert](/fr/billing/usage). Les appels auxquels vous répondez n'utilisent aucune minute vocale et apparaissent dans **Appels** avec **Répondu par votre équipe**.
+
+Les appels auxquels vous répondez se terminent après 30 minutes. Après 600 minutes d'appels répondus en 24 heures, les nouveaux appels vont directement à votre réceptionniste jusqu'à ce que ce total baisse. Cette limite s'applique à tous les forfaits.
+
+<Warning>
+  N'utilisez pas un téléphone qui renvoie les appels sans réponse vers votre numéro LobbyStack. L'appel revient directement à votre réceptionniste.
+</Warning>
+
+Le personnel répond d'abord exige un forfait payant et fonctionne sur les numéros Twilio. Sur les autres numéros, le réglage s'affiche comme non disponible. Pour le comparer au renvoi d'appels, consultez [Renvoyer votre ligne d'entreprise vers LobbyStack](/fr/getting-started/forward-calls#choisir-les-appels-à-renvoyer).
+
 ## Modifications de rendez-vous
 
 Utilisez **Modifications de rendez-vous** pour choisir si la réceptionniste IA peut annuler ou déplacer des rendez-vous automatiquement.

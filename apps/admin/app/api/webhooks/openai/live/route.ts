@@ -151,7 +151,9 @@ async function answerCall(client: LiveClient, input: { sessionId: string; busine
       // number or the owner's verified phone, and gives a busy signal only
       // when there's neither. Twilio never fails over on 486 or 6xx. Telnyx
       // retries a 503 once, then forwards to the number stored on the Telnyx
-      // number. A trial number also moves off the receptionist so later
+      // number. A staff-first number reaches GPT-Live from a <Dial>, so the
+      // refusal comes back to that <Dial>'s action URL instead, which forwards
+      // the same way. A trial number also moves off the receptionist so later
       // calls forward directly.
       await markNumberTrialMinutesExhausted(domain, { businessId: input.businessId }).catch((cause: unknown) => console.error("[live] couldn't switch the trial number to forwarding", cause instanceof Error ? cause.message : cause));
       await client.live.sessions.reject(input.sessionId, { status_code: 503 });

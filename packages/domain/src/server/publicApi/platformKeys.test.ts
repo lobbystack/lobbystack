@@ -65,7 +65,7 @@ describe("platform keys", () => {
     expect(parsed?.access).toBe("group");
     expect(parsed?.scopes).toEqual([...businessApiKeyScopes]);
     expect(generatePlatformKey({ name: "Onboarding", group: "acme", ownerEmail: "ops@acme.example", platformScopes: ["businesses:create"] }).entry.scopes).toEqual([...businessApiKeyScopes, "businesses:create"]);
-    expect(generatePlatformKey({ name: "Everything", group: "acme", ownerEmail: "ops@acme.example", platformScopes: ["businesses:create", "users:create"] }).entry.scopes).toEqual(apiKeyScopes.filter((scope) => !isPartnerScope(scope)));
+    expect(generatePlatformKey({ name: "Everything", group: "acme", ownerEmail: "ops@acme.example", platformScopes: ["businesses:create", "users:create"] }).entry.scopes).toEqual(apiKeyScopes.filter((scope) => !isPartnerScope(scope) && scope !== "phone_numbers:purchase"));
     // A host's key has no partner, so the partner scopes are refused, in an entry too.
     expect(() => generatePlatformKey({ name: "Agency", group: "acme", ownerEmail: "ops@acme.example", scopes: ["business:read", "partner:read"] })).toThrow(/partner:read is only for keys a partner makes/);
     expect(() => parsePlatformKeys(JSON.stringify([{ ...entry, scopes: ["business:read", "partner.team:write"] }]))).toThrow(PlatformKeyConfigError);

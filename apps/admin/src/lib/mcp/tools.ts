@@ -202,7 +202,7 @@ export const mcpTools: McpTool[] = [
   tool({
     name: "list_calls",
     title: "List calls",
-    description: "Lists calls the receptionist handled, newest first, with outcome, summary and caller details. Filter by start time to read a given day: take the business time zone from get_business and pass that day's local midnight bounds with their offset. outcome is appointment_booked, booking_incomplete, message_taken, conversation or none. Use get_call for the transcript.",
+    description: "Lists calls the receptionist handled, newest first, with outcome, summary and caller details. Filter by start time to read a given day: take the business time zone from get_business and pass that day's local midnight bounds with their offset. outcome is appointment_booked, booking_incomplete, message_taken, conversation, answered_by_team or none. Use get_call for the transcript.",
     operation: "listCalls",
     annotations: readOnly,
     inputSchema: z.object({

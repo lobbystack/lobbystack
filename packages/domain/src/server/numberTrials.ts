@@ -3,7 +3,7 @@ import { and, desc, eq, gt, gte, inArray, isNull, lte, ne, sql } from "drizzle-o
 
 import { businesses, calls, enqueueOutbox, numberTrials, numberWaitlist, onboardingPhoneVerifications, phoneNumbers, receptionistProfiles, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { numberCountryReady } from "@lobbystack/providers/telephony/config";
-import { CARRIERS_FORWARDING_REFUSED_CALLS, isCarrierId, type CarrierId, type NumberRoutingMode } from "@lobbystack/providers/telephony/types";
+import { CARRIERS_FORWARDING_REFUSED_CALLS, CARRIERS_WITH_STAFF_FIRST, isCarrierId, type CarrierId, type NumberRoutingMode } from "@lobbystack/providers/telephony/types";
 import { isTransferPhone, normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
 
 import { hasMinimumRole, requireBusinessAdmin, requireBusinessMembership } from "../authz";
@@ -231,21 +231,25 @@ export async function loadNumberReleaseEmail(context: DomainContext, input: { bu
 export type { NumberRoutingMode };
 
 /**
- * Where a number's calls should go now, read from the trial. Routing jobs
- * apply this instead of their own payload, so two jobs that run out of order
- * still leave the number where it belongs. Null when the number is gone.
+ * Where a number's calls should go now, read from the trial and the staff
+ * answers first setting. Routing jobs apply this instead of their own
+ * payload, so two jobs that run out of order still leave the number where it
+ * belongs. A trial's fallback wins over staff_first. Hours don't move a
+ * number: the webhook applies them on each call. Null when the number is gone.
  */
 export async function desiredNumberRouting(context: DomainContext, input: { businessId: string; phoneNumberId: string }): Promise<{ mode: NumberRoutingMode; providerPhoneId: string; e164: string; carrier: CarrierId; carrierConnectionId: string | null } | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const row = (await tx.select({ providerPhoneId: phoneNumbers.providerPhoneId, e164: phoneNumbers.e164, carrier: phoneNumbers.carrier, carrierConnectionId: phoneNumbers.carrierConnectionId, trialStatus: numberTrials.status, minutesExhaustedAt: numberTrials.minutesExhaustedAt })
+    const row = (await tx.select({ providerPhoneId: phoneNumbers.providerPhoneId, e164: phoneNumbers.e164, carrier: phoneNumbers.carrier, carrierConnectionId: phoneNumbers.carrierConnectionId, trialStatus: numberTrials.status, minutesExhaustedAt: numberTrials.minutesExhaustedAt, staffFirstMode: receptionistProfiles.staffFirstMode })
       .from(phoneNumbers)
       .leftJoin(numberTrials, and(eq(numberTrials.phoneNumberId, phoneNumbers.id), inArray(numberTrials.status, ["active", "ended"])))
+      .leftJoin(receptionistProfiles, eq(receptionistProfiles.businessId, phoneNumbers.businessId))
       .where(and(eq(phoneNumbers.id, input.phoneNumberId), eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active")))
       .limit(1))[0];
     if (!row?.providerPhoneId) return null;
     const off = row.trialStatus === "ended" || (row.trialStatus === "active" && Boolean(row.minutesExhaustedAt));
     if (!isCarrierId(row.carrier)) throw new Error(`Phone number ${input.phoneNumberId} names an unknown carrier, ${row.carrier}.`);
-    return { mode: off ? "fallback" : "receptionist", providerPhoneId: row.providerPhoneId, e164: row.e164, carrier: row.carrier, carrierConnectionId: row.carrierConnectionId };
+    const staffFirst = Boolean(row.staffFirstMode) && row.staffFirstMode !== "never" && CARRIERS_WITH_STAFF_FIRST.includes(row.carrier);
+    return { mode: off ? "fallback" : staffFirst ? "staff_first" : "receptionist", providerPhoneId: row.providerPhoneId, e164: row.e164, carrier: row.carrier, carrierConnectionId: row.carrierConnectionId };
   });
 }
 
@@ -549,7 +553,7 @@ export async function loadNumberTrialEmail(context: DomainContext, input: { busi
     const owner = (await tx.execute<{ email: string; name: string | null; preferred_locale: string; business_name: string }>(sql`select email, name, preferred_locale, business_name from app.resolve_business_owner_contact(${input.businessId}::uuid)`)).rows[0];
     if (!owner) return null;
     const answered = trial.startedAt
-      ? (await tx.select({ count: sql<number>`count(*)::int` }).from(calls).where(and(eq(calls.businessId, input.businessId), ne(calls.transport, "web_voice"), inArray(calls.status, ["completed", "transferred"]), gte(calls.startedAt, trial.startedAt))))[0]?.count ?? 0
+      ? (await tx.select({ count: sql<number>`count(*)::int` }).from(calls).where(and(eq(calls.businessId, input.businessId), eq(calls.billingExcluded, false), ne(calls.transport, "web_voice"), inArray(calls.status, ["completed", "transferred"]), gte(calls.startedAt, trial.startedAt))))[0]?.count ?? 0
       : 0;
     return {
       email: input.email,

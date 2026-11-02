@@ -28,6 +28,13 @@ export const twilioSmsStatusSchema = z.object({
   RawDlrDoneDate: z.string().max(128).optional(),
 }).refine((value) => Boolean(value.MessageSid ?? value.SmsSid), { error: "A Twilio message SID is required.", path: ["MessageSid"] });
 
+export const twilioCallStatusSchema = z.object({
+  CallSid: z.string().min(1).max(255),
+  CallStatus: z.string().min(1).max(64),
+  To: z.string().max(64).optional(),
+  Called: z.string().max(64).optional(),
+});
+
 export const polarWebhookSchema = z.object({
   id: z.string().min(1),
   type: z.string().min(1),
@@ -153,6 +160,13 @@ export const snapshotSchema = z.object({
     mode: z.enum(["never", "always", "on_request", "on_urgent", "during_business_hours"]),
     transferNumber: z.string().optional(),
   }),
+  staffFirstPolicy: z.object({
+    mode: z.enum(["business_hours", "always"]),
+    number: z.string(),
+    ringSeconds: z.number().int().positive(),
+    message: z.string().optional(),
+    handoverMessage: z.string().optional(),
+  }).optional(),
   hours: z.array(z.object({
     dayOfWeek: z.number().int().min(0).max(6),
     openMinutes: z.number().int().min(0).max(1440),
@@ -208,6 +222,7 @@ export const queueForJobType = {
   "appointment.sendChangeOtp": "critical",
   "sms.syncPrice": "critical",
   // The receptionist's answer to an Instagram direct message, then its delivery.
+  "sms.aiReply": "critical",
   "instagram.reply": "critical",
   "instagram.send": "critical",
   "instagram.refreshToken": "maintenance",
