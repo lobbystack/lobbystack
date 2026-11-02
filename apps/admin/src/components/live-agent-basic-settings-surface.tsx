@@ -272,6 +272,8 @@ export function AgentBasicSettingsPage({
   // The saved number's country, else the locale's.
   const savedTransferNumber = configuration?.profile?.transferNumber;
   useEffect(() => {
+    // Changing the country clears the input, so a refetch leaves a number being typed alone.
+    if (transferNumberEdited.current && transferNumberRef.current !== (savedTransferNumber ?? "")) return;
     setTransferCountry((inferPhoneCountry(savedTransferNumber, defaultTransferCountry) ?? defaultTransferCountry) as Country);
   }, [defaultTransferCountry, savedTransferNumber]);
 
