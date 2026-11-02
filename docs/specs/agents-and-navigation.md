@@ -120,6 +120,11 @@ Each prototype covers the menu, Home, the agent pages, settings and setup. Each 
 - The operator's answer to the new goal question changes the wording of the sources and test call steps, never the order. The test call step shows their last test call.
 - The goal question joins onboarding next to the attribution question, which stays.
 
+### Onboarding paths
+
+- With a website, onboarding doesn't ask for the agent's language. It detects the language from the site, and the operator can change it afterwards.
+- Without a website, onboarding asks for the language and any other detail it can't read from a site.
+
 ### Wait screen
 
 - It shows right before the test call, only while the website import is running.
