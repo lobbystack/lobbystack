@@ -3,13 +3,13 @@ import { cleanup, render } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const fixture = vi.hoisted(() => ({ pathname: "/onboarding/website", progress: [] as unknown[] }));
+const fixture = vi.hoisted(() => ({ description: undefined as unknown, pathname: "/onboarding/website", progress: [] as unknown[] }));
 vi.mock("next/navigation", () => ({ usePathname: () => fixture.pathname }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock("@/hooks/use-sign-out", () => ({ useSignOut: () => vi.fn() }));
 vi.mock("@/components/replacement-onboarding-shell", async (importOriginal) => ({
   ...await importOriginal<typeof import("./replacement-onboarding-shell")>(),
-  ReplacementOnboardingShell: ({ children, progress }: { children: React.ReactNode; progress: unknown }) => { fixture.progress.push(progress); return <main>{children}</main>; },
+  ReplacementOnboardingShell: ({ children, description, progress }: { children: React.ReactNode; description: unknown; progress: unknown }) => { fixture.description = description; fixture.progress.push(progress); return <main>{children}</main>; },
 }));
 
 import { OnboardingRouteShell } from "./onboarding-route-shell";
@@ -37,5 +37,12 @@ describe("onboarding progress", () => {
 
   it("shows no steps to an activity-only owner, whose phone is the only one", () => {
     expect(progressAt("/onboarding/verify-phone", { onboardingStage: "verify_phone", partnerAccessLevel: "activity" })).toBeNull();
+  });
+});
+
+describe("onboarding descriptions", () => {
+  it("leaves the goal question on its title alone", () => {
+    progressAt("/onboarding/goal", { onboardingStage: "goal", partnerAccessLevel: null });
+    expect(fixture.description).toBe("");
   });
 });

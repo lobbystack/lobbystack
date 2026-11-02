@@ -265,16 +265,15 @@
       "answer_instagram_messages": "Neka agent odgovara na Vaše Instagram poruke",
       "none": "Povežite agenta sa Vašim klijentima"
     },
-    "description": "Tri koraka do prvog pravog razgovora. Posle toga se ova stranica sama menja.",
     "done": "Gotovo",
     "hear": {
       "title": "Čujte ga",
       "prompt": {
-        "answer_calls": "Pozovite agenta iz pregledača i pitajte ono što Vas klijenti najčešće pitaju.",
-        "book_appointments": "Pozovite agenta iz pregledača i zamolite ga da zakaže termin.",
-        "answer_website_visitors": "Pozovite agenta iz pregledača i pitajte ono što ljudi pitaju na Vašem sajtu.",
-        "answer_instagram_messages": "Pozovite agenta iz pregledača i pitajte ono što ljudi pitaju u Vašim Instagram porukama.",
-        "none": "Pozovite agenta iz pregledača i pitajte ono što Vas klijenti najčešće pitaju."
+        "answer_calls": "Pitajte ono što Vas klijenti najčešće pitaju.",
+        "book_appointments": "Zamolite ga da zakaže termin.",
+        "answer_website_visitors": "Pitajte ono što ljudi pitaju na Vašem sajtu.",
+        "answer_instagram_messages": "Pitajte ono što ljudi pitaju na Instagramu.",
+        "none": "Pitajte ono što Vas klijenti najčešće pitaju."
       },
       "lastCall": "Vaš probni poziv",
       "lastCallDetails": "{{date}}, {{duration}}",
@@ -286,45 +285,36 @@
     },
     "teach": {
       "title": "Naučite ga",
-      "description": "Agent odgovara na osnovu onoga što mu date. Dopunite ono što mu nedostaje.",
       "tasks": {
         "knowledge": {
-          "title": "Dodajte ono što treba da zna",
-          "description": "Cene, pravila i pitanja koja čujete svaki dan."
+          "title": "Dodajte ono što treba da zna"
         },
         "hours": {
-          "title": "Podesite radno vreme",
-          "description": "Da klijentima kaže kada radite."
+          "title": "Podesite radno vreme"
         },
         "calendar": {
-          "title": "Povežite kalendar",
-          "description": "Da zakazuje samo kada ste slobodni."
+          "title": "Povežite kalendar"
         },
         "services": {
-          "title": "Navedite usluge",
-          "description": "Da zna šta klijenti mogu da zakažu."
+          "title": "Navedite usluge"
         },
         "widget": {
-          "title": "Dodajte čet vidžet na sajt",
-          "description": "Da mu posetioci postavljaju pitanja na Vašem sajtu."
+          "title": "Dodajte čet vidžet na sajt"
         },
         "instagram": {
-          "title": "Povežite Instagram",
-          "description": "Da odgovara na Vaše direktne poruke."
+          "title": "Povežite Instagram"
         }
       }
     },
     "number": {
       "title": "Stavite ga na svoj broj",
-      "ready": "Agent se javlja na {{number}}. Preusmerite poslovnu liniju na taj broj da bi ga pravi pozivi stigli.",
-      "switches": "Ova stranica prelazi na Vaše pozive i termine posle prvog razgovora agenta sa klijentom. Pozivi sa verifikovanih telefona Vašeg tima se ne računaju.",
-      "claim": "Vaš plan uključuje broj. Izaberite ga, pa preusmerite poslovnu liniju na njega.",
-      "plan": "Sa brojem telefona agent može da odgovara pravim klijentima. Izaberite plan da biste ga dobili."
+      "claim": "Izaberite broj.",
+      "plan": "Izaberite plan da biste dobili broj."
     }
   },
   "forwarding": {
     "title": "Preusmerite pozive na {{number}}",
-    "description": "Izaberite operatera, pa pratite korake na telefonu koji Vaši klijenti zovu.",
+    "description": "Izaberite operatera.",
     "modes": {
       "missed": {
         "label": "Propušteni pozivi",

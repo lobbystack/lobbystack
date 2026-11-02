@@ -28,7 +28,7 @@ import { formatDuration } from "@/lib/duration";
 import { formatDateTime } from "@/lib/locale";
 import { currentStage, numberPath, TEACH_TASK_LINKS, teachTasks, type NumberPath, type StageId } from "@/lib/new-account-home";
 import type { BillingUsageViewModel, PhoneNumberViewModel } from "@/lib/page-view-models";
-import { formatPhoneNumberDisplay, inferPhoneCountry } from "@/lib/phone";
+import { inferPhoneCountry } from "@/lib/phone";
 import { requestJson } from "@/lib/request-json";
 import { getTestCallStarter, startTestCall, subscribeTestCallStarter } from "@/lib/test-call-launcher";
 
@@ -69,10 +69,7 @@ export function NewAccountHome({ businessId, goal }: { businessId: string; goal:
     <div className="flex flex-col gap-6">
       <PageHeader title={t("home.title")} />
       <div className="flex w-full max-w-3xl flex-col gap-4">
-        <div className="flex flex-col gap-1">
-          <h2 className="type-section-title">{t(`newAccountHome.title.${goal ?? "none"}`)}</h2>
-          <p className="type-body-muted">{t("newAccountHome.description")}</p>
-        </div>
+        <h2 className="type-section-title">{t(`newAccountHome.title.${goal ?? "none"}`)}</h2>
         {loaded ? (
           <Surface>
             <Accordion onValueChange={(value) => setPicked({ open: (value[0] as StageId | undefined) ?? null, during: stage })} value={open ? [open] : []}>
@@ -130,14 +127,12 @@ function TeachStage({ activation, goal }: { activation: Activation; goal: Onboar
   const showsImport = job && (isWebsiteImportRunning(job) || job.status === "failed" || job.status === "cancelled");
   return (
     <>
-      <p className="type-body-muted">{t("newAccountHome.teach.description")}</p>
       {showsImport ? <WebsiteImportProgress job={job} /> : null}
       <ItemGroup>
         {teachTasks(goal, Boolean(activation.widgetsEnabled)).map((task) => (
           <Item key={task} render={<Link href={TEACH_TASK_LINKS[task]} />} variant="outline">
             <ItemContent>
               <ItemTitle>{t(`newAccountHome.teach.tasks.${task}.title`)}</ItemTitle>
-              <ItemDescription>{t(`newAccountHome.teach.tasks.${task}.description`)}</ItemDescription>
             </ItemContent>
             <ItemActions><ChevronRight className="size-4 text-muted-foreground" /></ItemActions>
           </Item>
@@ -158,18 +153,9 @@ type NumberStageProps = {
 };
 
 function NumberStage({ activation, businessId, needsNumberClaim, number, numbers, trialAvailable, upgrade }: NumberStageProps) {
-  const { i18n, t } = useTranslation("dashboard");
   const can = useBusinessCan();
   const billing = useQuery({ queryKey: ["billing", businessId], enabled: can("billing"), queryFn: () => requestJson<Pick<BillingUsageViewModel, "entitlement">>(`/api/billing?businessId=${encodeURIComponent(businessId)}`) });
-  if (number) {
-    return (
-      <>
-        <p className="type-body">{t("newAccountHome.number.ready", { number: formatPhoneNumberDisplay(number.e164, i18n.language) })}</p>
-        <ForwardingGuide country={forwardingCountry(number.e164, activation.country ?? null, inferPhoneCountry)} e164={number.e164} />
-        <p className="type-body-muted">{t("newAccountHome.number.switches")}</p>
-      </>
-    );
-  }
+  if (number) return <ForwardingGuide country={forwardingCountry(number.e164, activation.country ?? null, inferPhoneCountry)} e164={number.e164} />;
   if (numbers.activeClaim) return <Skeleton className="h-24 rounded-xl" />;
   if (can("billing") && !billing.data && !numbers.partnerNumbers && !trialAvailable) return <Skeleton className="h-24 rounded-xl" />;
   const path = numberPath({ includedNumbers: billing.data?.entitlement.includedNumbers, partnerNumbers: numbers.partnerNumbers, trialAvailable });

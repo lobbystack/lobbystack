@@ -265,16 +265,15 @@
       "answer_instagram_messages": "Faites répondre votre agent à vos messages Instagram",
       "none": "Mettez votre agent en contact avec vos clients"
     },
-    "description": "Trois étapes avant votre première vraie conversation. Cette page change ensuite d'elle-même.",
     "done": "Fait",
     "hear": {
       "title": "Écoutez-le",
       "prompt": {
-        "answer_calls": "Appelez votre agent depuis votre navigateur et posez la question que vos clients posent le plus souvent.",
-        "book_appointments": "Appelez votre agent depuis votre navigateur et demandez-lui de prendre un rendez-vous.",
-        "answer_website_visitors": "Appelez votre agent depuis votre navigateur et posez les questions que les gens posent sur votre site.",
-        "answer_instagram_messages": "Appelez votre agent depuis votre navigateur et posez les questions que les gens posent dans vos messages Instagram.",
-        "none": "Appelez votre agent depuis votre navigateur et posez la question que vos clients posent le plus souvent."
+        "answer_calls": "Posez la question que vos appelants posent le plus.",
+        "book_appointments": "Demandez-lui de prendre un rendez-vous.",
+        "answer_website_visitors": "Posez les questions qu'on vous pose sur votre site.",
+        "answer_instagram_messages": "Posez les questions qu'on vous pose sur Instagram.",
+        "none": "Posez la question que vos clients posent le plus."
       },
       "lastCall": "Votre appel test",
       "lastCallDetails": "{{date}}, {{duration}}",
@@ -286,45 +285,36 @@
     },
     "teach": {
       "title": "Formez-le",
-      "description": "Votre agent répond à partir de ce que vous lui donnez. Ajoutez ce qui lui manque.",
       "tasks": {
         "knowledge": {
-          "title": "Ajoutez ce qu'il doit savoir",
-          "description": "Vos prix, vos politiques et les questions que vous entendez chaque jour."
+          "title": "Ajoutez ce qu'il doit savoir"
         },
         "hours": {
-          "title": "Indiquez vos heures d'ouverture",
-          "description": "Pour qu'il dise aux clients quand vous êtes ouvert."
+          "title": "Indiquez vos heures d'ouverture"
         },
         "calendar": {
-          "title": "Connectez votre calendrier",
-          "description": "Pour qu'il réserve seulement quand vous êtes libre."
+          "title": "Connectez votre calendrier"
         },
         "services": {
-          "title": "Listez vos services",
-          "description": "Pour qu'il sache ce que vos clients peuvent réserver."
+          "title": "Listez vos services"
         },
         "widget": {
-          "title": "Ajoutez le widget de clavardage à votre site",
-          "description": "Pour que les visiteurs lui posent leurs questions sur votre site."
+          "title": "Ajoutez le widget de clavardage à votre site"
         },
         "instagram": {
-          "title": "Connectez Instagram",
-          "description": "Pour qu'il réponde à vos messages directs."
+          "title": "Connectez Instagram"
         }
       }
     },
     "number": {
       "title": "Mettez-le sur votre numéro",
-      "ready": "Votre agent répond au {{number}}. Renvoyez-y votre ligne d'affaires pour que les vrais appels lui parviennent.",
-      "switches": "Cette page passe à vos appels et rendez-vous après la première conversation de votre agent avec un client. Les appels des téléphones vérifiés de votre équipe ne comptent pas.",
-      "claim": "Votre forfait inclut un numéro. Choisissez-le, puis renvoyez-y votre ligne d'affaires.",
-      "plan": "Un numéro de téléphone permet à votre agent de répondre à vos vrais clients. Choisissez un forfait pour en obtenir un."
+      "claim": "Choisissez un numéro.",
+      "plan": "Choisissez un forfait pour obtenir un numéro."
     }
   },
   "forwarding": {
     "title": "Renvoyez vos appels vers le {{number}}",
-    "description": "Choisissez votre fournisseur, puis suivez les étapes sur le téléphone que vos clients appellent.",
+    "description": "Choisissez votre fournisseur.",
     "modes": {
       "missed": {
         "label": "Appels manqués",

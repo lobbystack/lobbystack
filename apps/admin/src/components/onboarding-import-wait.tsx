@@ -66,16 +66,13 @@ export function ImportWaitSlides() {
   const { key, Icon } = SLIDES[index]!;
 
   return (
-    <Surface className="flex min-h-48 flex-col justify-between gap-4 p-6">
+    <Surface className="flex min-h-40 flex-col justify-between gap-4 p-6">
       {/* The key restarts the fade for each slide. Without motion, slides swap in place. */}
       <div className="flex flex-col gap-3 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300" key={key}>
         <span className="flex size-10 items-center justify-center rounded-full bg-muted">
           <Icon aria-hidden="true" className="size-5 text-muted-foreground" />
         </span>
-        <div className="flex flex-col gap-1">
-          <p className="text-base font-medium">{t(`testCall.wait.slides.${key}.title`)}</p>
-          <p className="text-sm text-muted-foreground">{t(`testCall.wait.slides.${key}.body`)}</p>
-        </div>
+        <p className="text-base font-medium">{t(`testCall.wait.slides.${key}.title`)}</p>
       </div>
       <div aria-hidden="true" className="flex gap-1.5">
         {SLIDES.map((slide, position) => <span className={position === index ? "size-1.5 rounded-full bg-foreground" : "size-1.5 rounded-full bg-muted"} key={slide.key} />)}

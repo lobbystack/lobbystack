@@ -119,31 +119,25 @@
     "continueFailed": "Impossible de continuer. Réessayez.",
     "wait": {
       "skip": "Ne pas attendre",
-      "stillReading": "Vous pouvez appeler maintenant. Votre agent continue de lire et ne pourra pas utiliser le reste de votre site avant d'avoir terminé.",
+      "stillReading": "Votre agent lit encore votre site.",
       "slides": {
         "answers": {
-          "title": "Répond à partir de vos contenus",
-          "body": "Votre agent répond aux appelants à partir de votre site, de vos fichiers et de vos notes."
+          "title": "Répond à partir de vos contenus"
         },
         "booking": {
-          "title": "Prend les rendez-vous",
-          "body": "Activez la réservation et votre agent trouve un créneau libre pendant l'appel."
+          "title": "Prend les rendez-vous"
         },
         "transfer": {
-          "title": "Passe les appels à votre équipe",
-          "body": "Quand un appelant demande une personne, votre agent transfère l'appel au bon employé."
+          "title": "Passe les appels à votre équipe"
         },
         "languages": {
-          "title": "Change de langue pendant l'appel",
-          "body": "Votre agent commence dans votre langue et change quand l'appelant le demande ou parle une autre langue."
+          "title": "Change de langue pendant l'appel"
         },
         "summaries": {
-          "title": "Résume chaque appel",
-          "body": "Ouvrez un appel dans votre tableau de bord pour lire son résumé et sa transcription."
+          "title": "Résume chaque appel"
         },
         "widget": {
-          "title": "Répond aussi sur votre site",
-          "body": "Ajoutez le widget de chat à votre site et le même agent répond à vos visiteurs."
+          "title": "Répond aussi sur votre site"
         }
       }
     }
@@ -245,7 +239,6 @@
   },
   "goal": {
     "title": "Que voulez-vous que votre agent fasse en premier ?",
-    "description": "Choisissez-en une pour commencer. Vous pourrez ajouter les autres plus tard.",
     "options": {
       "answer_calls": "Répondre à mes appels",
       "book_appointments": "Prendre des rendez-vous",

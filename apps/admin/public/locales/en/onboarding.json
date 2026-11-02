@@ -119,31 +119,25 @@
     "continueFailed": "We couldn't continue. Try again.",
     "wait": {
       "skip": "Skip the wait",
-      "stillReading": "You can call now. Your agent keeps reading and can't use the rest of your site until it finishes.",
+      "stillReading": "Your agent is still reading your site.",
       "slides": {
         "answers": {
-          "title": "Answers from your own pages",
-          "body": "Your agent answers callers from your website, your files and your notes."
+          "title": "Answers from your own pages"
         },
         "booking": {
-          "title": "Books appointments",
-          "body": "Turn on booking and your agent finds an open time while the caller is on the line."
+          "title": "Books appointments"
         },
         "transfer": {
-          "title": "Puts callers through to your team",
-          "body": "When a caller asks for a person, your agent transfers the call to the right employee."
+          "title": "Puts callers through to your team"
         },
         "languages": {
-          "title": "Switches language mid-call",
-          "body": "Your agent opens in your language and switches when a caller asks or speaks another one."
+          "title": "Switches language mid-call"
         },
         "summaries": {
-          "title": "Sums up every call",
-          "body": "Open a call in your dashboard to read its summary and transcript."
+          "title": "Sums up every call"
         },
         "widget": {
-          "title": "Answers on your website too",
-          "body": "Add the chat widget to your site and the same agent replies to visitors."
+          "title": "Answers on your website too"
         }
       }
     }
@@ -244,7 +238,6 @@
   },
   "goal": {
     "title": "What do you want your agent to do first?",
-    "description": "Pick one to start with. You can add the others later.",
     "options": {
       "answer_calls": "Answer my calls",
       "book_appointments": "Book appointments",

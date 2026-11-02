@@ -119,31 +119,25 @@
     "continueFailed": "No pudimos continuar. Inténtelo de nuevo.",
     "wait": {
       "skip": "Omitir la espera",
-      "stillReading": "Ya puede llamar. Su agente sigue leyendo y no podrá usar el resto de su sitio hasta que termine.",
+      "stillReading": "Su agente sigue leyendo su sitio.",
       "slides": {
         "answers": {
-          "title": "Responde con su propio contenido",
-          "body": "Su agente responde a quienes llaman con su sitio web, sus archivos y sus notas."
+          "title": "Responde con su propio contenido"
         },
         "booking": {
-          "title": "Reserva citas",
-          "body": "Active las reservas y su agente encuentra un horario libre durante la llamada."
+          "title": "Reserva citas"
         },
         "transfer": {
-          "title": "Pasa las llamadas a su equipo",
-          "body": "Cuando alguien pide hablar con una persona, su agente transfiere la llamada al empleado indicado."
+          "title": "Pasa las llamadas a su equipo"
         },
         "languages": {
-          "title": "Cambia de idioma durante la llamada",
-          "body": "Su agente empieza en su idioma y cambia cuando la persona lo pide o habla otro."
+          "title": "Cambia de idioma durante la llamada"
         },
         "summaries": {
-          "title": "Resume cada llamada",
-          "body": "Abra una llamada en su panel para leer su resumen y su transcripción."
+          "title": "Resume cada llamada"
         },
         "widget": {
-          "title": "También responde en su sitio web",
-          "body": "Añada el widget de chat a su sitio y el mismo agente responde a sus visitantes."
+          "title": "También responde en su sitio web"
         }
       }
     }
@@ -245,7 +239,6 @@
   },
   "goal": {
     "title": "¿Qué quiere que haga primero su agente?",
-    "description": "Elija una para empezar. Podrá agregar las demás más adelante.",
     "options": {
       "answer_calls": "Contestar mis llamadas",
       "book_appointments": "Reservar citas",

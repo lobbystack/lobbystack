@@ -265,16 +265,15 @@
       "answer_instagram_messages": "Ponga a su agente a contestar sus mensajes de Instagram",
       "none": "Ponga a su agente a hablar con sus clientes"
     },
-    "description": "Tres pasos hasta su primera conversación real. Después, esta página cambia sola.",
     "done": "Listo",
     "hear": {
       "title": "Escúchelo",
       "prompt": {
-        "answer_calls": "Llame a su agente desde el navegador y pregúntele lo que más le preguntan quienes llaman.",
-        "book_appointments": "Llame a su agente desde el navegador y pídale que reserve una cita.",
-        "answer_website_visitors": "Llame a su agente desde el navegador y pregúntele lo que la gente pregunta en su sitio web.",
-        "answer_instagram_messages": "Llame a su agente desde el navegador y pregúntele lo que la gente pregunta en sus mensajes de Instagram.",
-        "none": "Llame a su agente desde el navegador y pregúntele lo que más preguntan sus clientes."
+        "answer_calls": "Pregúntele lo que más le preguntan quienes llaman.",
+        "book_appointments": "Pídale que reserve una cita.",
+        "answer_website_visitors": "Pregúntele lo que la gente pregunta en su sitio web.",
+        "answer_instagram_messages": "Pregúntele lo que la gente pregunta en Instagram.",
+        "none": "Pregúntele lo que más preguntan sus clientes."
       },
       "lastCall": "Su llamada de prueba",
       "lastCallDetails": "{{date}}, {{duration}}",
@@ -286,45 +285,36 @@
     },
     "teach": {
       "title": "Enséñele",
-      "description": "Su agente responde con lo que usted le da. Complete lo que le falta.",
       "tasks": {
         "knowledge": {
-          "title": "Agregue lo que debe saber",
-          "description": "Precios, políticas y las preguntas que oye todos los días."
+          "title": "Agregue lo que debe saber"
         },
         "hours": {
-          "title": "Indique su horario de atención",
-          "description": "Para que diga a los clientes cuándo está abierto."
+          "title": "Indique su horario de atención"
         },
         "calendar": {
-          "title": "Conecte su calendario",
-          "description": "Para que reserve solo cuando usted esté libre."
+          "title": "Conecte su calendario"
         },
         "services": {
-          "title": "Indique sus servicios",
-          "description": "Para que sepa qué pueden reservar sus clientes."
+          "title": "Indique sus servicios"
         },
         "widget": {
-          "title": "Agregue el widget de chat a su sitio web",
-          "description": "Para que los visitantes le hagan preguntas en su sitio."
+          "title": "Agregue el widget de chat a su sitio web"
         },
         "instagram": {
-          "title": "Conecte Instagram",
-          "description": "Para que conteste sus mensajes directos."
+          "title": "Conecte Instagram"
         }
       }
     },
     "number": {
       "title": "Póngalo en su número",
-      "ready": "Su agente contesta en el {{number}}. Desvíe a ese número la línea de su negocio para que las llamadas reales le lleguen.",
-      "switches": "Esta página pasa a mostrar sus llamadas y citas después de la primera conversación de su agente con un cliente. Las llamadas de los teléfonos verificados de su equipo no cuentan.",
-      "claim": "Su plan incluye un número. Elíjalo y desvíe a él la línea de su negocio.",
-      "plan": "Un número de teléfono permite a su agente atender a clientes reales. Elija un plan para obtener uno."
+      "claim": "Elija un número.",
+      "plan": "Elija un plan para obtener un número."
     }
   },
   "forwarding": {
     "title": "Desvíe sus llamadas al {{number}}",
-    "description": "Elija su operador y siga los pasos en el teléfono al que llaman sus clientes.",
+    "description": "Elija su operador.",
     "modes": {
       "missed": {
         "label": "Llamadas perdidas",

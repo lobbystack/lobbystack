@@ -119,31 +119,25 @@
     "continueFailed": "Nismo mogli da nastavimo. Pokušajte ponovo.",
     "wait": {
       "skip": "Preskoči čekanje",
-      "stillReading": "Možete da pozovete odmah. Vaš agent nastavlja da čita i neće moći da koristi ostatak sajta dok ne završi.",
+      "stillReading": "Vaš agent još čita Vaš sajt.",
       "slides": {
         "answers": {
-          "title": "Odgovara na osnovu vašeg sadržaja",
-          "body": "Vaš agent odgovara pozivaocima na osnovu vašeg sajta, fajlova i beležaka."
+          "title": "Odgovara na osnovu vašeg sadržaja"
         },
         "booking": {
-          "title": "Zakazuje termine",
-          "body": "Uključite zakazivanje i vaš agent pronalazi slobodan termin tokom poziva."
+          "title": "Zakazuje termine"
         },
         "transfer": {
-          "title": "Prebacuje pozive vašem timu",
-          "body": "Kada pozivalac zatraži osobu, vaš agent prebacuje poziv pravom zaposlenom."
+          "title": "Prebacuje pozive vašem timu"
         },
         "languages": {
-          "title": "Menja jezik tokom poziva",
-          "body": "Vaš agent počinje na vašem jeziku i menja ga kada pozivalac to zatraži ili govori drugi jezik."
+          "title": "Menja jezik tokom poziva"
         },
         "summaries": {
-          "title": "Sažima svaki poziv",
-          "body": "Otvorite poziv na kontrolnoj tabli da pročitate njegov rezime i transkript."
+          "title": "Sažima svaki poziv"
         },
         "widget": {
-          "title": "Odgovara i na vašem sajtu",
-          "body": "Dodajte čet vidžet na sajt i isti agent odgovara posetiocima."
+          "title": "Odgovara i na vašem sajtu"
         }
       }
     }
@@ -245,7 +239,6 @@
   },
   "goal": {
     "title": "Šta želite da Vaš agent prvo radi?",
-    "description": "Izaberite jednu stavku za početak. Ostale možete dodati kasnije.",
     "options": {
       "answer_calls": "Odgovaranje na moje pozive",
       "book_appointments": "Zakazivanje termina",

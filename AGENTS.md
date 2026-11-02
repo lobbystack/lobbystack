@@ -87,6 +87,8 @@ Load the matching skill from `.agents/skills/` before you write text people read
 - `writing-guidelines`: docs, such as `docs/`, `mintlify/`, READMEs, ADRs, and specs.
 - `stop-slop`: all of the above, plus blog posts, commit messages, PR descriptions, and any other prose.
 
+Keep interface copy minimal. Screens should work from titles, labels and buttons. Add a description only when the user can't act without it, keep it to one short sentence, and never explain how the page works or what will happen to it. If a line restates its title, cut it.
+
 ## Testing
 
 - Vitest is the default test runner; keep `*.test.ts` and `*.test.tsx` near their source.

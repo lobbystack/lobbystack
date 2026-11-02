@@ -141,7 +141,6 @@ describe("put it on your number", () => {
   it("walks an owner with a number through forwarding, with their country's carriers", async () => {
     await setup({ ...read, numbers: [{ id: "n", e164: "+15145550100", status: "active", reclaimScheduledAt: null }] });
     expect(await screen.findByLabelText(en.forwarding.carrier.label)).toBeTruthy();
-    expect(screen.getByText(en.newAccountHome.number.switches)).toBeTruthy();
   });
 
   it("gives general steps where it holds no carrier's", async () => {

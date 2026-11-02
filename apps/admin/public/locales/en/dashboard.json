@@ -264,16 +264,15 @@
       "answer_instagram_messages": "Get your agent answering your Instagram messages",
       "none": "Get your agent talking to your customers"
     },
-    "description": "Three steps to your first real conversation. This page changes on its own after that.",
     "done": "Done",
     "hear": {
       "title": "Hear it",
       "prompt": {
-        "answer_calls": "Call your agent from your browser and ask what your callers ask most.",
-        "book_appointments": "Call your agent from your browser and ask it to book an appointment.",
-        "answer_website_visitors": "Call your agent from your browser and ask what people ask on your website.",
-        "answer_instagram_messages": "Call your agent from your browser and ask what people ask in your Instagram messages.",
-        "none": "Call your agent from your browser and ask what your customers ask most."
+        "answer_calls": "Ask what your callers ask most.",
+        "book_appointments": "Ask it to book an appointment.",
+        "answer_website_visitors": "Ask what people ask on your website.",
+        "answer_instagram_messages": "Ask what people ask on Instagram.",
+        "none": "Ask what your customers ask most."
       },
       "lastCall": "Your test call",
       "lastCallDetails": "{{date}}, {{duration}}",
@@ -284,45 +283,36 @@
     },
     "teach": {
       "title": "Teach it",
-      "description": "Your agent answers from what you give it. Fill in what it missed.",
       "tasks": {
         "knowledge": {
-          "title": "Add what it should know",
-          "description": "Prices, policies and the questions you hear every day."
+          "title": "Add what it should know"
         },
         "hours": {
-          "title": "Set your business hours",
-          "description": "So it tells callers when you're open."
+          "title": "Set your business hours"
         },
         "calendar": {
-          "title": "Connect your calendar",
-          "description": "So it books only when you're free."
+          "title": "Connect your calendar"
         },
         "services": {
-          "title": "List your services",
-          "description": "So it knows what customers can book."
+          "title": "List your services"
         },
         "widget": {
-          "title": "Add the chat widget to your website",
-          "description": "So visitors can ask it questions on your site."
+          "title": "Add the chat widget to your website"
         },
         "instagram": {
-          "title": "Connect Instagram",
-          "description": "So it answers your direct messages."
+          "title": "Connect Instagram"
         }
       }
     },
     "number": {
       "title": "Put it on your number",
-      "ready": "Your agent answers on {{number}}. Forward your business line to it so real callers reach it.",
-      "switches": "This page switches to your calls and appointments after your agent's first conversation with a customer. Calls from your team's verified phones don't count.",
-      "claim": "Your plan includes a number. Pick one, then forward your business line to it.",
-      "plan": "A phone number lets your agent answer real customers. Choose a plan to get one."
+      "claim": "Pick a number.",
+      "plan": "Choose a plan to get a number."
     }
   },
   "forwarding": {
     "title": "Forward your calls to {{number}}",
-    "description": "Pick your carrier, then follow the steps on the phone your customers call.",
+    "description": "Pick your carrier.",
     "modes": {
       "missed": {
         "label": "Calls you miss",
