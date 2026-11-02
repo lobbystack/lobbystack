@@ -10,6 +10,7 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 import type { PoolClient } from "pg";
 import { initializeTelemetry, shutdownTelemetry } from "@lobbystack/telemetry/node";
 
+import { backfillAgentLinks } from "./agentLinkBackfill";
 import { createDatabaseClient, databaseHealthCheck } from "./client";
 import {
   concurrentIndexName,
@@ -56,6 +57,12 @@ async function main(): Promise<void> {
           await applyRawMigration(lockedMigrator, fileName, applied);
         }
         console.log("Database migrations applied.");
+        await backfillAgentLinks(lockedMigrator.db, { log: console.log });
+        break;
+      }
+      case "backfill-agent-links": {
+        const results = await backfillAgentLinks(migrator.db, { log: console.log });
+        if (results.some((result) => result.remaining > 0)) process.exitCode = 1;
         break;
       }
       case "bootstrap": {
@@ -265,6 +272,55 @@ async function main(): Promise<void> {
         `);
         if (compatibilityViewFailures.rows.length > 0) {
           throw new Error("RLS verification failed: receptionist_profiles must be a security_invoker view.");
+        }
+        // Row-level security can't stop a row pointing at another business's agent,
+        // so each link needs its composite foreign key, and old code needs the
+        // trigger that fills agent_id. The check holds until the NOT NULL release.
+        const agentLinkFailures = await migrator.db.execute<{ table_name: string; missing: string }>(sql`
+          select expected.table_name, missing.name as missing
+          from (values ('phone_numbers'), ('widget_keys'), ('instagram_accounts'), ('calls'), ('conversations'), ('agent_rules')) as expected(table_name)
+          cross join lateral (
+            select 'foreign key' as name
+            where not exists (
+              select 1 from pg_constraint con
+              where con.conrelid = to_regclass('public.' || expected.table_name)
+                and con.conname = expected.table_name || '_agent_fk'
+                and con.contype = 'f' and con.confrelid = 'public.agents'::regclass
+                and con.convalidated and con.condeferrable and con.condeferred
+                and array_length(con.conkey, 1) = 2
+            )
+            union all
+            select 'check'
+            where not exists (select 1 from pg_constraint con where con.conrelid = to_regclass('public.' || expected.table_name) and con.conname = expected.table_name || '_agent_id_present' and con.contype = 'c')
+            union all
+            select 'trigger'
+            where not exists (select 1 from pg_trigger trg where trg.tgrelid = to_regclass('public.' || expected.table_name) and trg.tgname = expected.table_name || '_assign_agent' and trg.tgenabled = 'O')
+          ) as missing
+          union all
+          select expected.table_name, 'archive guard'
+          from (values ('agents', 'agents_guard_archive'), ('phone_numbers', 'phone_numbers_guard_agent'), ('widget_keys', 'widget_keys_guard_agent'), ('instagram_accounts', 'instagram_accounts_guard_agent')) as expected(table_name, trigger_name)
+          where not exists (select 1 from pg_trigger trg where trg.tgrelid = to_regclass('public.' || expected.table_name) and trg.tgname = expected.trigger_name and trg.tgenabled = 'O')
+        `);
+        if (agentLinkFailures.rows.length > 0) {
+          throw new Error(`Agent link verification failed for: ${agentLinkFailures.rows.map((row) => `${row.table_name}:${row.missing}`).join(", ")}`);
+        }
+        // app.default_agent_id creates an agent in any business it's given, and
+        // these functions run as their owner, so only the triggers may reach them.
+        // The read-only role sees a channel's agent, but never an Instagram token.
+        const agentFunctionGrantFailures = await migrator.db.execute<{ role_name: string; object_name: string }>(sql`
+          select role.name as role_name, fn.name as object_name
+          from (values ('lobbystack_app'), ('lobbystack_worker'), ('lobbystack_dispatcher'), ('lobbystack_auth'), ('lobbystack_readonly')) as role(name)
+          cross join (values ('app.default_agent_id(uuid)'), ('app.assign_default_agent()'), ('app.assign_agent_before_business_delete()'), ('app.guard_agent_archive()'), ('app.guard_channel_agent()')) as fn(name)
+          where has_function_privilege(role.name, fn.name, 'EXECUTE')
+          union all
+          select 'lobbystack_readonly', 'public.instagram_accounts.agent_id'
+          where not has_column_privilege('lobbystack_readonly', 'public.instagram_accounts', 'agent_id', 'SELECT')
+          union all
+          select 'lobbystack_readonly', 'public.instagram_accounts.encrypted_access_token'
+          where has_column_privilege('lobbystack_readonly', 'public.instagram_accounts', 'encrypted_access_token', 'SELECT')
+        `);
+        if (agentFunctionGrantFailures.rows.length > 0) {
+          throw new Error(`Agent function grant verification failed for: ${agentFunctionGrantFailures.rows.map((row) => `${row.role_name}:${row.object_name}`).join(", ")}`);
         }
         const affiliateUserGrantFailures = await migrator.db.execute<{ column_name: string }>(sql`
           select expected.column_name

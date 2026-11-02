@@ -646,10 +646,13 @@ export const phoneNumbers = pgTable(
     refusedCallsForwardTo: varchar("refused_calls_forward_to", { length: 32 }),
     // The carrier connection that only this number uses, for carriers that route calls by it (migration 0172).
     carrierConnectionId: varchar("carrier_connection_id", { length: 64 }),
+    // The agent that answers this number. Migration 0184's trigger fills it with the default agent.
+    agentId: uuid("agent_id"),
     ...legacyId,
     ...timestamps,
   },
   (table) => [
+    foreignKey({ name: "phone_numbers_agent_fk", columns: [table.businessId, table.agentId], foreignColumns: [agents.businessId, agents.id] }),
     uniqueIndex("phone_numbers_e164_unreclaimed_unique").on(table.e164).where(sql`${table.status} <> 'reclaimed'`),
     uniqueIndex("phone_numbers_provider_id_unique").on(table.providerPhoneId),
     uniqueIndex("phone_numbers_carrier_connection_unique").on(table.carrier, table.carrierConnectionId).where(sql`${table.carrierConnectionId} is not null and ${table.status} <> 'reclaimed'`),
@@ -746,7 +749,13 @@ export const agents = pgTable(
     staffFirstHandoverMessage: text("staff_first_handover_message"),
     ...timestamps,
   },
-  (table) => [uniqueIndex("agents_business_unique").on(table.businessId)],
+  (table) => [
+    uniqueIndex("agents_business_unique").on(table.businessId),
+    // What the composite foreign keys on channels and history point at, so a
+    // row can't name another business's agent. Those keys are deferred in the
+    // database, which Drizzle can't express, so a failure comes at commit.
+    uniqueIndex("agents_business_id_id_unique").on(table.businessId, table.id),
+  ],
 );
 
 /** Matches a business's default agent. Pass the business id, or a column to join on. */
@@ -809,9 +818,12 @@ export const widgetKeys = pgTable(
     allowedOrigins: jsonb("allowed_origins").$type<string[]>().notNull().default([]),
     config: jsonb("config").$type<Record<string, unknown>>().notNull().default({}),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    // The agent that answers this widget. Migration 0184's trigger fills it with the default agent.
+    agentId: uuid("agent_id"),
     ...timestamps,
   },
   (table) => [
+    foreignKey({ name: "widget_keys_agent_fk", columns: [table.businessId, table.agentId], foreignColumns: [agents.businessId, agents.id] }),
     uniqueIndex("widget_keys_key_hash_unique").on(table.keyHash),
     index("widget_keys_business_created_idx").on(table.businessId, table.createdAt),
   ],
@@ -876,10 +888,13 @@ export const conversations = pgTable(
     currentIntent: text("current_intent"),
     locale: varchar("locale", { length: 8 }),
     revision: integer("revision").default(0).notNull(),
+    // The agent that holds this conversation. Migration 0186's trigger fills it
+    // with the default agent, and the backfill in `migrate` fills older rows.
+    agentId: uuid("agent_id"),
     ...legacyId,
     ...timestamps,
   },
-  (table) => [index("conversations_business_status_idx").on(table.businessId, table.status), index("conversations_contact_idx").on(table.businessId, table.contactId), index("conversations_business_widget_visitor_idx").on(table.businessId, table.widgetVisitorId)],
+  (table) => [foreignKey({ name: "conversations_agent_fk", columns: [table.businessId, table.agentId], foreignColumns: [agents.businessId, agents.id] }), index("conversations_business_status_idx").on(table.businessId, table.status), index("conversations_contact_idx").on(table.businessId, table.contactId), index("conversations_business_widget_visitor_idx").on(table.businessId, table.widgetVisitorId)],
 );
 
 export const conversationSessions = pgTable(
@@ -975,10 +990,14 @@ export const calls = pgTable(
     providerCostUsd: doublePrecision("provider_cost_usd"),
     recordingObjectId: uuid("recording_object_id"),
     revision: integer("revision").default(0).notNull(),
+    // The agent that answered. Migration 0185's trigger fills it with the
+    // default agent, and the backfill in `migrate` fills older rows.
+    agentId: uuid("agent_id"),
     ...legacyId,
     ...timestamps,
   },
   (table) => [
+    foreignKey({ name: "calls_agent_fk", columns: [table.businessId, table.agentId], foreignColumns: [agents.businessId, agents.id] }),
     uniqueIndex("calls_provider_call_unique").on(table.provider, table.providerCallId),
     uniqueIndex("calls_gateway_session_unique").on(table.gatewaySessionId),
     index("calls_business_started_idx").on(table.businessId, table.startedAt),
@@ -1193,10 +1212,12 @@ export const agentRules = pgTable(
     content: text("content").notNull(),
     active: boolean("active").default(true).notNull(),
     sortOrder: integer("sort_order").default(0).notNull(),
+    // The agent this rule shapes. Migration 0184's trigger fills it with the default agent.
+    agentId: uuid("agent_id"),
     ...legacyId,
     ...timestamps,
   },
-  (table) => [index("agent_rules_business_order_idx").on(table.businessId, table.sortOrder)],
+  (table) => [foreignKey({ name: "agent_rules_agent_fk", columns: [table.businessId, table.agentId], foreignColumns: [agents.businessId, agents.id] }), index("agent_rules_business_order_idx").on(table.businessId, table.sortOrder)],
 );
 
 export const websiteIngestionJobs = pgTable(
@@ -1299,9 +1320,11 @@ export const instagramAccounts = pgTable(
     tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }).notNull(),
     status: varchar("status", { length: 32 }).default("connected").notNull(),
     lastError: text("last_error"),
+    // The agent that answers this account. Migration 0184's trigger fills it with the default agent.
+    agentId: uuid("agent_id"),
     ...timestamps,
   },
-  (table) => [uniqueIndex("instagram_accounts_instagram_user_unique").on(table.instagramUserId), uniqueIndex("instagram_accounts_business_unique").on(table.businessId)],
+  (table) => [foreignKey({ name: "instagram_accounts_agent_fk", columns: [table.businessId, table.agentId], foreignColumns: [agents.businessId, agents.id] }), uniqueIndex("instagram_accounts_instagram_user_unique").on(table.instagramUserId), uniqueIndex("instagram_accounts_business_unique").on(table.businessId)],
 );
 
 export const calendarBusyBlocks = pgTable(
