@@ -103,6 +103,26 @@
       "languages": "Menja jezik tokom poziva",
       "summaries": "Sažima svaki poziv",
       "widget": "Odgovara i na vašem sajtu"
+    },
+    "scenes": {
+      "answers": {
+        "question": "Da li primate nove pacijente?",
+        "answer": "Da, i prvi pregled je besplatan."
+      },
+      "booking": {
+        "service": "Čišćenje"
+      },
+      "transfer": {
+        "agent": "Vaš agent",
+        "role": "Recepcija"
+      },
+      "summaries": {
+        "summary": "Nova pacijentkinja. Čišćenje zuba zakazano za utorak."
+      },
+      "widget": {
+        "question": "Radite li subotom?",
+        "answer": "Da, do 13 časova."
+      }
     }
   },
   "verifyPhone": {

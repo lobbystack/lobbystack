@@ -103,6 +103,26 @@
       "languages": "Switches language mid-call",
       "summaries": "Sums up every call",
       "widget": "Answers on your website too"
+    },
+    "scenes": {
+      "answers": {
+        "question": "Do you take new patients?",
+        "answer": "Yes, and the first visit is free."
+      },
+      "booking": {
+        "service": "Cleaning"
+      },
+      "transfer": {
+        "agent": "Your agent",
+        "role": "Front desk"
+      },
+      "summaries": {
+        "summary": "New patient. Booked a cleaning for Tuesday."
+      },
+      "widget": {
+        "question": "Open on Saturdays?",
+        "answer": "Yes, until 1 PM."
+      }
     }
   },
   "verifyPhone": {

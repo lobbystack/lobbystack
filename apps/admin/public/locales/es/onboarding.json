@@ -103,6 +103,26 @@
       "languages": "Cambia de idioma durante la llamada",
       "summaries": "Resume cada llamada",
       "widget": "También responde en su sitio web"
+    },
+    "scenes": {
+      "answers": {
+        "question": "¿Aceptan pacientes nuevos?",
+        "answer": "Sí, y la primera visita es gratis."
+      },
+      "booking": {
+        "service": "Limpieza"
+      },
+      "transfer": {
+        "agent": "Su agente",
+        "role": "Recepción"
+      },
+      "summaries": {
+        "summary": "Paciente nueva. Limpieza dental reservada para el martes."
+      },
+      "widget": {
+        "question": "¿Abren los sábados?",
+        "answer": "Sí, hasta las 13:00."
+      }
     }
   },
   "verifyPhone": {

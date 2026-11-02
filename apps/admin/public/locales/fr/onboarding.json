@@ -103,6 +103,26 @@
       "languages": "Change de langue pendant l'appel",
       "summaries": "Résume chaque appel",
       "widget": "Répond aussi sur votre site"
+    },
+    "scenes": {
+      "answers": {
+        "question": "Prenez-vous de nouveaux patients ?",
+        "answer": "Oui, et la première visite est offerte."
+      },
+      "booking": {
+        "service": "Détartrage"
+      },
+      "transfer": {
+        "agent": "Votre agent",
+        "role": "Accueil"
+      },
+      "summaries": {
+        "summary": "Nouvelle patiente. Détartrage réservé pour mardi."
+      },
+      "widget": {
+        "question": "Ouvert le samedi ?",
+        "answer": "Oui, jusqu'à 13 h."
+      }
     }
   },
   "verifyPhone": {

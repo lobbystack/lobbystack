@@ -24,7 +24,7 @@ it.each(["en", "fr", "es", "sr"] as const)("shows every slide in %s", async (loc
   renderSlides(locale);
   const seen = new Set<string>();
   for (let slide = 0; slide < 6; slide += 1) {
-    expect(shownTitle()).not.toContain("reading.");
+    expect(document.body.textContent).not.toContain("reading.");
     seen.add(shownTitle());
     await act(() => vi.advanceTimersByTimeAsync(7_000));
   }

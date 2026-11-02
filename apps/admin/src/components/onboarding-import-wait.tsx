@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { IMPORT_WAIT_SCENES } from "./onboarding-import-wait-scenes";
 import { Button } from "./ui/button";
 import { Surface } from "./ui/surface";
 import { isWebsiteImportRunning, type WebsiteImportSummary } from "./website-import-progress";
@@ -18,7 +18,6 @@ export const IMPORT_WAIT_LIMIT_MS = 90_000;
 
 const SLIDE_MS = 7_000;
 
-// Each one is a screenshot of a real dashboard page with sample data.
 const SLIDES = ["answers", "booking", "transfer", "languages", "summaries", "widget"] as const;
 
 /** checking: no answer yet. waiting: the screen shows. waited: the screen showed and ended. ready: it never showed. */
@@ -68,12 +67,13 @@ export function ImportWaitSlides() {
     setIndex((current) => (current + step + SLIDES.length) % SLIDES.length);
   };
   const key = SLIDES[index]!;
+  const Scene = IMPORT_WAIT_SCENES[key];
 
   return (
     <Surface className="flex flex-col gap-4 overflow-hidden p-4">
       {/* The key restarts the fade for each slide. Without motion, slides swap in place. */}
       <div className="flex flex-col gap-4 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300" key={key}>
-        <Image alt="" className="aspect-[16/10] w-full rounded-lg border border-border object-cover object-top" height={600} priority sizes="(min-width: 640px) 512px, 100vw" src={`/onboarding/slides/${key}.webp`} width={960} />
+        <Scene />
         <p className="text-center text-base font-medium">{t(`reading.slides.${key}`)}</p>
       </div>
       <div className="flex items-center justify-between">
