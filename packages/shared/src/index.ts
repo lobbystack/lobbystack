@@ -307,6 +307,30 @@ export function normalizeBookingMode(value: string | null | undefined): BookingM
   return (bookingModes as readonly string[]).includes(value ?? "") ? value as BookingMode : "instant";
 }
 
+/**
+ * What one agent changes about a business's snapshot. Instructions are already
+ * resolved, so an agent without its own holds the same default text the flat
+ * fields would.
+ */
+export type SnapshotAgent = {
+  id: string;
+  /** Operators see this. Callers never hear it. */
+  name: string;
+  isDefault: boolean;
+  greeting: string;
+  tone: string;
+  voice: ReceptionistVoice;
+  voiceInstructions: string;
+  smsInstructions: string;
+  chatInstructions: string;
+  bookingPolicy: string;
+  bookingMode: BookingMode;
+  transferPolicy: TransferPolicy;
+  staffFirstPolicy?: StaffFirstPolicy;
+  appointmentChangePolicy?: AppointmentChangePolicy;
+  rules: Array<AgentRuleSummary>;
+};
+
 export type BusinessContextSnapshot = {
   businessId: string;
   version: string;
@@ -320,6 +344,12 @@ export type BusinessContextSnapshot = {
   businessType: BusinessType;
   /** Optional analytics consent captured at call start; absence is not consent. */
   telemetryEnabled?: boolean;
+  /** Set only on a snapshotForAgent projection. Absent means the flat fields are the default agent. */
+  agentId?: string;
+  /** Set only on a snapshotForAgent projection. Operators see this. Callers never hear it. */
+  agentName?: string;
+  /** Set only on a snapshotForAgent projection. The flat voice instructions already carry the default agent's tone. */
+  tone?: string;
   greeting: string;
   /**
    * The GPT-Live voice calls speak in. Absent in snapshots built before
@@ -349,6 +379,13 @@ export type BusinessContextSnapshot = {
    */
   employees?: Array<SnapshotEmployee>;
   rules?: Array<AgentRuleSummary>;
+  /**
+   * The business's agents that aren't archived. The flat fields stay the
+   * default agent, so readers that don't know about agents keep working.
+   * Absent in snapshots built before agents existed. Read one agent through
+   * snapshotForAgent.
+   */
+  agents?: Array<SnapshotAgent>;
   knowledgeSnippets?: Array<KnowledgeSnippet>;
   contactChannels: {
     phoneNumber?: string;

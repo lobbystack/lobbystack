@@ -2,7 +2,8 @@ import { snapshotSchema } from "@lobbystack/contracts";
 import type { BusinessContextSnapshot } from "@lobbystack/shared";
 
 import type { DomainContext } from "./context";
-import { loadLatestBusinessSnapshot } from "./knowledge";
+import { snapshotForAgent } from "../snapshot";
+import { loadLatestBusinessSnapshot, refreshBusinessSnapshot } from "./knowledge";
 
 export const SNAPSHOT_CACHE_TTL_SECONDS = 300;
 
@@ -60,5 +61,35 @@ export async function getCachedBusinessSnapshot(
   if (snapshot) {
     await cache.set(input.businessId, snapshot).catch(() => undefined);
   }
+  return snapshot;
+}
+
+/**
+ * The snapshot projected for one agent, or the default agent when agentId is
+ * absent. A snapshot that doesn't list the agent gets one refresh, because an
+ * agent or a channel move can reach a call before its refresh job does. If the
+ * agent is still missing, this logs an error and returns the default agent, so
+ * the call still gets answered. Null only when the business has no snapshot.
+ */
+export async function getBusinessSnapshotForAgent(
+  context: DomainContext,
+  input: { businessId: string; agentId?: string | null | undefined },
+): Promise<BusinessContextSnapshot | null> {
+  const cached = await getCachedBusinessSnapshot(context, { businessId: input.businessId });
+  if (cached && !input.agentId) return cached;
+  if (cached?.agents?.some((agent) => agent.id === input.agentId)) return snapshotForAgent(cached, input.agentId);
+
+  let snapshot = cached;
+  try {
+    await refreshBusinessSnapshot(context, { businessId: input.businessId });
+    // Read past the cache: its write-through can fail and leave the stale copy.
+    snapshot = await loadLatestBusinessSnapshot(context, { businessId: input.businessId }) ?? cached;
+  } catch (error) {
+    if (!cached) throw error;
+    console.error("[snapshot] refresh for an agent failed", input.businessId, input.agentId, error instanceof Error ? error.message : error);
+  }
+  if (!snapshot || !input.agentId) return snapshot;
+  if (snapshot.agents?.some((agent) => agent.id === input.agentId)) return snapshotForAgent(snapshot, input.agentId);
+  console.error("[snapshot] unknown agent, answering as the default agent", input.businessId, input.agentId);
   return snapshot;
 }

@@ -57,6 +57,7 @@ export * from "./privacy";
 export * from "./publicApi";
 export * from "./oauth";
 export * from "./receptionistActions";
+export * from "./agentSnapshot";
 export * from "./receptionistProfile";
 export * from "./staffFirst";
 export * from "./productEvents";

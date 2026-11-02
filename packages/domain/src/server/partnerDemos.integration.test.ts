@@ -256,7 +256,7 @@ describe.skipIf(!client)("a partner's prospect demos against PostgreSQL", () => 
       // Real calls aren't a demo anymore: the receptionist gets back what a new business is told, apart from what someone changed during the demo.
       const receptionist = await asMigrator(tx, async () => (await tx.select({ bookingPolicy: agents.bookingPolicy, voiceInstructions: agents.voiceInstructions, smsInstructions: agents.smsInstructions }).from(agents).where(eq(agents.businessId, demo.businessId)))[0]);
       expect(receptionist).toEqual({ bookingPolicy: NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS.bookingPolicy, voiceInstructions: NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS.voiceInstructions, smsInstructions: "Text back within the hour." });
-      const refresh = await asMigrator(tx, async () => await tx.select({ id: outboxMessages.id }).from(outboxMessages).where(and(eq(outboxMessages.businessId, demo.businessId), eq(outboxMessages.topic, "snapshot.refresh"), eq(outboxMessages.aggregateType, "receptionist_profile"))));
+      const refresh = await asMigrator(tx, async () => await tx.select({ id: outboxMessages.id }).from(outboxMessages).where(and(eq(outboxMessages.businessId, demo.businessId), eq(outboxMessages.topic, "snapshot.refresh"), eq(outboxMessages.aggregateType, "agent"))));
       expect(refresh).toHaveLength(1);
       // A claim can't be turned off.
       expect(await refusal(revokePartnerDemo(bright.context, bright.memberActor, { demoId: demo.demoId }))).toMatchObject({ status: 409, code: "demo_claimed" });

@@ -8,7 +8,19 @@ const mocks = vi.hoisted(() => ({
   withBusinessTransaction: vi.fn(),
   enqueueOutbox: vi.fn(),
   resolveSmsSender: vi.fn(),
+  recordSize: vi.fn(),
 }));
+
+vi.mock("@lobbystack/telemetry/node", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@lobbystack/telemetry/node")>();
+  return {
+    ...actual,
+    getMeter: (name?: string) => {
+      const meter = actual.getMeter(name);
+      return { createCounter: meter.createCounter.bind(meter), createHistogram: (metric: string, options?: object) => metric === "rag.snapshot.size_bytes" ? { record: mocks.recordSize } : meter.createHistogram(metric, options) };
+    },
+  };
+});
 
 vi.mock("@lobbystack/db", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@lobbystack/db")>()),
@@ -123,6 +135,54 @@ describe("refreshBusinessSnapshot write-through", () => {
     const cache = memoryCache();
     await refreshBusinessSnapshot({ db: {} as never, snapshotCache: cache }, { businessId });
     expect((await cache.get(businessId))?.employees).toEqual([{ name: "Ana Petrović", services: ["Colour", "Haircut"] }, { name: "Marko Jovanović" }]);
+  });
+
+  describe("agents", () => {
+    const defaultRow = { ...profileRow, name: "Front desk", isDefault: true, voice: "cedar", bookingMode: "request", transferMode: "on_request", transferNumber: "+14165551234" };
+    const secondRow = { ...profileRow, id: "00000000-0000-4000-8000-000000000003", name: "After hours", isDefault: false, greeting: "Closed", tone: "calm", voice: "marin", voiceInstructions: "After-hours voice", smsInstructions: "After-hours text", chatInstructions: "After-hours chat", transferMode: "never", staffFirstMode: "always", staffFirstNumber: "+14165550001", staffFirstRingSeconds: 20 };
+    const rules = [
+      { id: "rule-default", title: "Default", content: "For the default agent", sortOrder: 0, agentId: defaultRow.id },
+      { id: "rule-unassigned", title: "Unassigned", content: "No agent yet", sortOrder: 1, agentId: null },
+      { id: "rule-second", title: "Second", content: "For the second agent", sortOrder: 2, agentId: secondRow.id },
+    ];
+
+    async function refreshed() {
+      mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => callback(makeTx({ businesses: [businessRow], agents: [defaultRow, secondRow], agent_rules: rules })));
+      const cache = memoryCache();
+      await refreshBusinessSnapshot({ db: {} as never, snapshotCache: cache }, { businessId });
+      return (await cache.get(businessId))!;
+    }
+
+    it("lists each agent with what it sets for itself", async () => {
+      const snapshot = await refreshed();
+      expect(snapshot.agents?.map((agent) => agent.name)).toEqual(["Front desk", "After hours"]);
+      expect(snapshot.agents?.[1]).toMatchObject({ isDefault: false, greeting: "Closed", tone: "calm", voice: "marin", voiceInstructions: "After-hours voice", smsInstructions: "After-hours text", chatInstructions: "After-hours chat", transferPolicy: { mode: "never" }, staffFirstPolicy: { mode: "always", number: "+14165550001", ringSeconds: 20 } });
+    });
+
+    it("gives each agent its own rules, and the default agent any rule with no agent", async () => {
+      const snapshot = await refreshed();
+      expect(snapshot.agents?.[0]?.rules.map((rule) => rule.id)).toEqual(["rule-default", "rule-unassigned"]);
+      expect(snapshot.agents?.[1]?.rules.map((rule) => rule.id)).toEqual(["rule-second"]);
+    });
+
+    it("keeps the default agent in the flat fields", async () => {
+      expect(await refreshed()).toMatchObject({ greeting: "Hello", voice: "cedar", bookingMode: "request", transferPolicy: { mode: "on_request", transferNumber: "+14165551234" }, rules: [{ id: "rule-default" }, { id: "rule-unassigned" }] });
+    });
+
+    it("keeps every rule in the flat fields of a business with no agent row", async () => {
+      mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => callback(makeTx({ businesses: [businessRow], agent_rules: rules })));
+      const cache = memoryCache();
+      await refreshBusinessSnapshot({ db: {} as never, snapshotCache: cache }, { businessId });
+      expect((await cache.get(businessId))?.rules).toHaveLength(3);
+      expect((await cache.get(businessId))?.agents).toEqual([]);
+    });
+  });
+
+  it("records the size of the snapshot it built", async () => {
+    mocks.recordSize.mockClear();
+    const cache = memoryCache();
+    await refreshBusinessSnapshot({ db: {} as never, snapshotCache: cache }, { businessId });
+    expect(mocks.recordSize).toHaveBeenCalledExactlyOnceWith(Buffer.byteLength(JSON.stringify(await cache.get(businessId)), "utf8"), { operation: "snapshot.refresh" });
   });
 
   it("keeps up to the snapshot's snippet limit, not just the few that prompts list", async () => {

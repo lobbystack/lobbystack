@@ -23,6 +23,7 @@ const ragMeter = getMeter("lobbystack-rag");
 const searchDuration = ragMeter.createHistogram("rag.search.duration_ms", { unit: "ms" });
 const searchResultCount = ragMeter.createHistogram("rag.search.result_count", { unit: "{result}" });
 const snapshotRefreshDuration = ragMeter.createHistogram("rag.snapshot_refresh.duration_ms", { unit: "ms" });
+const snapshotSize = ragMeter.createHistogram("rag.snapshot.size_bytes", { unit: "By" });
 
 export { normalizeWebsiteSourceUrl } from "./knowledgeUrl";
 
@@ -605,6 +606,35 @@ export async function loadLatestBusinessSnapshot(
   });
 }
 
+/**
+ * The fields each agent sets for itself. A missing row gives today's defaults
+ * for a business with no agent. Instructions stay undefined when the agent has
+ * none, so the snapshot builder fills in the default text.
+ */
+function snapshotAgentFields(agent: typeof agents.$inferSelect | undefined) {
+  const staffFirstMode = normalizeStaffFirstMode(agent?.staffFirstMode);
+  return {
+    voice: normalizeReceptionistVoice(agent?.voice),
+    tone: agent?.tone ?? "professional",
+    bookingPolicy: agent?.bookingPolicy ?? "Confirm availability before booking.",
+    ...(agent?.voiceInstructions ? { voiceInstructions: agent.voiceInstructions } : {}),
+    ...(agent?.smsInstructions ? { smsInstructions: agent.smsInstructions } : {}),
+    ...(agent?.chatInstructions ? { chatInstructions: agent.chatInstructions } : {}),
+    appointmentChangePolicy: normalizeAppointmentChangePolicy(agent?.appointmentChangePolicy),
+    bookingMode: normalizeBookingMode(agent?.bookingMode),
+    transferPolicy: { mode: normalizeTransferMode(agent?.transferMode), ...(agent?.transferNumber ? { transferNumber: agent.transferNumber } : {}) },
+    ...(staffFirstMode !== "never" && agent?.staffFirstNumber ? {
+      staffFirstPolicy: {
+        mode: staffFirstMode,
+        number: agent.staffFirstNumber,
+        ringSeconds: agent.staffFirstRingSeconds,
+        ...(agent.staffFirstMessage ? { message: agent.staffFirstMessage } : {}),
+        ...(agent.staffFirstHandoverMessage ? { handoverMessage: agent.staffFirstHandoverMessage } : {}),
+      },
+    } : {}),
+  };
+}
+
 export async function refreshBusinessSnapshot(
   context: DomainContext,
   input: { businessId: string },
@@ -612,9 +642,10 @@ export async function refreshBusinessSnapshot(
   const startedAt = performance.now();
   let builtSnapshot: BusinessContextSnapshot | undefined;
   const version = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const [business, profile] = await inOrder([
+    const [business, profile, agentRows] = await inOrder([
       () => tx.select().from(businesses).where(eq(businesses.id, input.businessId)).limit(1),
       () => tx.select().from(agents).where(defaultAgentOf(input.businessId)).limit(1),
+      () => tx.select().from(agents).where(and(eq(agents.businessId, input.businessId), isNull(agents.archivedAt))).orderBy(desc(agents.isDefault), asc(agents.createdAt), asc(agents.id)),
     ]);
     if (!business[0]) {
       throw new Error("Business not found.");
@@ -639,14 +670,10 @@ export async function refreshBusinessSnapshot(
     const smsNumber = await resolveSmsSender(tx, input.businessId);
     const version = `${Date.now()}`;
     const defaultLocale = normalizeRuntimeLocale(business[0].defaultLocale);
-    const staffFirstMode = normalizeStaffFirstMode(currentProfile?.staffFirstMode);
-    const staffFirstPolicy = staffFirstMode !== "never" && currentProfile?.staffFirstNumber ? {
-      mode: staffFirstMode,
-      number: currentProfile.staffFirstNumber,
-      ringSeconds: currentProfile.staffFirstRingSeconds,
-      ...(currentProfile.staffFirstMessage ? { message: currentProfile.staffFirstMessage } : {}),
-      ...(currentProfile.staffFirstHandoverMessage ? { handoverMessage: currentProfile.staffFirstHandoverMessage } : {}),
-    } : undefined;
+    const ruleSummary = (row: typeof ruleRows[number]) => ({ id: row.id, title: row.title, content: row.content, order: row.sortOrder });
+    // A rule with no agent yet belongs to the default agent.
+    const rulesOf = (agentId: string) => ruleRows.filter((row) => (row.agentId ?? currentProfile?.id) === agentId);
+    const defaultRules = currentProfile ? rulesOf(currentProfile.id) : ruleRows;
     builtSnapshot = buildBusinessContextSnapshot({
       businessId: input.businessId,
       version,
@@ -661,12 +688,7 @@ export async function refreshBusinessSnapshot(
       ...(phoneNumber ? { phoneNumber } : {}),
       ...(smsNumber ? { smsNumber } : {}),
       greeting: currentProfile?.greeting ?? defaultGreeting(business[0].name, defaultLocale),
-      voice: normalizeReceptionistVoice(currentProfile?.voice),
-      tone: currentProfile?.tone ?? "professional",
-      bookingPolicy: currentProfile?.bookingPolicy ?? "Confirm availability before booking.",
-      ...(currentProfile?.voiceInstructions ? { voiceInstructions: currentProfile.voiceInstructions } : {}),
-      ...(currentProfile?.smsInstructions ? { smsInstructions: currentProfile.smsInstructions } : {}),
-      ...(currentProfile?.chatInstructions ? { chatInstructions: currentProfile.chatInstructions } : {}),
+      ...snapshotAgentFields(currentProfile),
       // A sign-up placeholder says nothing about the business, so prompts get no summary until AI or a person writes one.
       summary: currentProfile && currentProfile.summarySource !== "placeholder" ? currentProfile.summary : "",
       knowledgeDigest: withinKnowledgeBudget(documents, 1600, row => JSON.stringify(row)).map(row => JSON.stringify(row)).join("\n"),
@@ -678,7 +700,8 @@ export async function refreshBusinessSnapshot(
         ...(servicePriceFromColumns(row, business[0]!.currency) ? { price: servicePriceFromColumns(row, business[0]!.currency)! } : {}),
         ...(row.localizedNames ? { localizedNames: Object.fromEntries(runtimeLocales.flatMap((locale) => typeof row.localizedNames?.[locale] === "string" ? [[locale, row.localizedNames[locale]]] : [])) } : {}),
       })),
-      rules: ruleRows.map((row) => ({ id: row.id, title: row.title, content: row.content, order: row.sortOrder })),
+      rules: defaultRules.map(ruleSummary),
+      agents: agentRows.map((row) => ({ id: row.id, name: row.name, isDefault: row.isDefault, greeting: row.greeting, ...snapshotAgentFields(row), rules: rulesOf(row.id).map(ruleSummary) })),
       employees: employeeRows.map((row) => {
         const assigned = new Set(assignments.filter((assignment) => assignment.staffId === row.staffId).map((assignment) => assignment.serviceId));
         const names = serviceRows.filter((service) => assigned.has(service.id)).map((service) => service.name);
@@ -686,10 +709,6 @@ export async function refreshBusinessSnapshot(
         return { name: row.name, ...(names.length ? { services: names } : {}), ...(ownHours ? { hours: ownHours } : {}), ...(timeOff.length ? { timeOff } : {}) };
       }),
       snippets: snippets.map((row) => ({ id: row.id, title: row.title, content: row.content, tags: row.tags, priority: row.priority })),
-      appointmentChangePolicy: normalizeAppointmentChangePolicy(currentProfile?.appointmentChangePolicy),
-      bookingMode: normalizeBookingMode(currentProfile?.bookingMode),
-      transferPolicy: { mode: normalizeTransferMode(currentProfile?.transferMode), ...(currentProfile?.transferNumber ? { transferNumber: currentProfile.transferNumber } : {}) },
-      ...(staffFirstPolicy ? { staffFirstPolicy } : {}),
     });
     await tx.insert(businessContextSnapshots).values({ businessId: input.businessId, version, snapshot: builtSnapshot as unknown as Record<string, unknown> });
     // Readers only use the newest row. now() is this transaction's start, the
@@ -709,6 +728,7 @@ export async function refreshBusinessSnapshot(
     await context.snapshotCache.set(input.businessId, builtSnapshot).catch(() => undefined);
   }
   snapshotRefreshDuration.record(performance.now() - startedAt, { operation: "snapshot.refresh" });
+  if (builtSnapshot) snapshotSize.record(Buffer.byteLength(JSON.stringify(builtSnapshot), "utf8"), { operation: "snapshot.refresh" });
   await recordProductEventBestEffort(context, {
     name: "business.snapshot_refreshed",
     businessId: input.businessId,

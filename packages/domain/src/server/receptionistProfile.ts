@@ -25,6 +25,7 @@ import {
   type TransferPolicy,
 } from "@lobbystack/shared";
 
+import { enqueueAgentSnapshotRefresh } from "./agentSnapshot";
 import { assertTransferNumberAllowed, enqueueRefusedCallForwardRefresh } from "./numberTrials";
 import { assertStaffFirstChange, enqueueStaffFirstRouting } from "./staffFirst";
 
@@ -202,14 +203,7 @@ export async function saveReceptionistProfileInTransaction(
   // Some carriers forward a call the receptionist refuses to a number stored on the carrier, so they learn the new transfer number.
   if (patch.transferNumber !== undefined) await enqueueRefusedCallForwardRefresh(tx, businessId);
   if (patch.staffFirstMode !== undefined) await enqueueStaffFirstRouting(tx, businessId);
-  await enqueueOutbox(tx, {
-    topic: "snapshot.refresh",
-    businessId,
-    aggregateType: "receptionist_profile",
-    aggregateId: profile.id,
-    dedupeKey: `snapshot:${businessId}:profile:${profile.updatedAt.toISOString()}`,
-    payload: { businessId },
-  });
+  await enqueueAgentSnapshotRefresh(tx, { businessId, agentId: profile.id, change: "agent_updated", dedupeKey: `snapshot:${businessId}:profile:${profile.updatedAt.toISOString()}` });
   if (input.regenerateSummary) {
     await enqueueOutbox(tx, {
       topic: "business.generateSummary",
