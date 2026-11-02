@@ -74,7 +74,7 @@ Resolve the agent inside `startCall`, from the number, so that routing stays liv
 | Browser test call | An `agentId` that the session route validates against the operator's access |
 | Widget chat and voice | `widget_keys.agent_id` |
 | Instagram | `instagram_accounts.agent_id`, stored on the conversation |
-| SMS | Attribution only, because SMS has no AI reply |
+| Text | `phone_numbers.agent_id`, stored on the conversation. The reply job in `textReplyJobs.ts` projects that agent |
 | Worker attach, resume and recovery | `calls.agent_id` |
 
 Tools that read the appointment change policy need the agent passed in. `contactChannels.phoneNumber` must stop taking the first active number, which is wrong for an agent with no phone.
@@ -127,9 +127,9 @@ Raphael settled these:
 | # | Decision | Answer | Slice |
 |---|---|---|---|
 | 1 | What's an existing business's default agent called, in all 8 caller languages? | "Agent", translated. Callers never hear it. | 1 |
-| 2 | Are booking mode, booking policy, transfers and the appointment policy agent-level or workspace-level? | Agent-level, because an after-hours agent needs its own. The prototype's shared card changes to match. | 1 |
+| 2 | Are booking mode, booking policy, transfers, staff-first calling and the appointment policy agent-level or workspace-level? | Agent-level, because an after-hours agent needs its own. The prototype's shared card changes to match. Staff-first calling arrived from main after this decision and follows transfers. | 1 |
 | 3 | What happens to extra agents after a downgrade to Free? | They stay paused. Only the default agent answers, and their channels fall back to it. Upgrading restores them. | 5 |
-| 4 | Does each agent have one instructions field or several? | Voice and chat. SMS stays hidden until two-way text exists. | 5 |
+| 4 | Does each agent have one instructions field or several? | Voice, chat and text. The decision was to hide text until two-way text existed, and main now has it. | 5 |
 | 5 | Can a workspace connect several Instagram accounts? | One for now, and it moves between agents. | 5 |
 | 6 | When a channel moves, do open conversations move too? | Yes, in the same transaction. | 5 |
 | 7 | How much of `/agents` ships in the public API first? | Read endpoints and `agent_id`, with writes later. | 6 |

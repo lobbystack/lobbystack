@@ -163,7 +163,7 @@ Each prototype covers the menu, Home, the agent pages, settings and setup. Each 
 - Agent limits on partner packages.
 - Helpdesk features such as tickets.
 - Per-agent knowledge and per-channel instructions.
-- WhatsApp and two-way text channels. An agent that answers texts waits for a two-way text channel.
+- WhatsApp.
 - Moving the phone number earlier in onboarding.
 - A real assistant panel. Concept D scripts its edits, and building one is a separate decision.
 
