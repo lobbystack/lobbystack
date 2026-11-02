@@ -96,6 +96,17 @@ Tools that read the appointment change policy need the agent passed in. `contact
 
 Test each channel with two agents.
 
+`answerAsAgent.integration.test.ts` does that against PostgreSQL. It drops `agents_business_unique` inside a transaction that rolls back, so two agents can exist before slice 5. Six choices affect later slices:
+
+- **Agent on the call:** `startCall` reads the number's agent in the insert that creates the conversation, and returns it. A retried delivery keeps the agent it started with, and the next call on a moved number takes the new one.
+- **Open conversations:** Text, Instagram and widget replies follow `conversations.agent_id`, not the channel, so slice 5's moves must update open conversations, as decision 6 says. A customer who texts two agents' numbers has one conversation with each, and each reply comes from the number they texted.
+- **Job payloads:** `sms.aiReply` and `instagram.reply` carry no agent, because the job reads the conversation. An old payload and a new one read the same. The attach request adds `agentId`, and an attach without it runs as the default agent.
+- **Archived agents:** An attach passes `underWay` to `getBusinessSnapshotForAgent`, which reads an archived agent's row, so a call finishes as the agent it started as. A text, Instagram or widget reply on an archived agent's conversation goes to the default agent and logs `[snapshot] unknown agent`.
+- **Phone numbers:** `agents[].phoneNumber` is null for an agent with no number. A snapshot built before this field keeps the flat number for the default agent. `businessHasPhoneNumber` gates widget voice, so a widget agent with no number still offers voice while another agent has one.
+- **Moving a number:** Slice 5 calls `enqueueNumberAgentChange` in the transaction that moves it. That queues the snapshot refresh and the routing job, which rewrites Telnyx's stored forward and applies the new agent's staff-first setting. Slice 5 also has to scope `saveReceptionistProfileInTransaction` and `assertStaffFirstChange` by agent, which still read the default agent.
+
+`voice:call` needs staging, and `voice:eval` needs an OpenAI key, so neither ran for this slice. Run both before this slice goes live.
+
 ### 5. Manage agents
 
 - Port create, resolve, archive, set default and channel moves from `feat/inbox-calendar-staff`, without the opt-outs.
