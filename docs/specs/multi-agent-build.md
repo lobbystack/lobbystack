@@ -69,6 +69,15 @@ Migrations 0184 to 0188 built this. Three choices affect later slices:
 - When an agent id isn't in the snapshot, refresh once. Falling back to the default agent would answer with the wrong voice.
 - Add a metric for snapshot size.
 
+Four choices affect slice 4 and slice 5:
+
+- **Reading an agent:** Load through `getBusinessSnapshotForAgent`, in `snapshotCache.ts`. It handles the one refresh. `snapshotForAgent` alone returns null for an agent the snapshot doesn't list, and the flat fields for a snapshot with no `agents[]`.
+- **Old snapshots:** A stored snapshot keeps its old shape until the next refresh, so the first call that names an agent on such a business pays for one refresh while the caller hears ringing. Slice 4 should expect that once per business.
+- **Refreshes:** Call `enqueueAgentSnapshotRefresh` in the transaction that creates or archives an agent or moves a channel. No code moves a channel yet.
+- **Unknown agent:** If a refresh doesn't find the agent, the call answers as the default agent and logs `[snapshot] unknown agent`. An archived agent counts as unknown, so a recovered call on an agent archived mid-call lands here.
+
+The snapshot's byte size goes to the `rag.snapshot.size_bytes` histogram on each refresh.
+
 ### 4. Answer as the right agent
 
 Resolve the agent inside `startCall`, from the number, so that routing stays live.
