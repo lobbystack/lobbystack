@@ -86,7 +86,7 @@ export default defineConfig({
       env: adminEnv,
     },
     ...(fullStack ? [{
-      command: "pnpm --filter @lobbystack/worker exec tsx src/index.ts",
+      command: "pnpm -w e2e:worker",
       url: `http://127.0.0.1:${workerPort}/health/ready`,
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
