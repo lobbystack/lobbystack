@@ -50,11 +50,12 @@ Svaki vaš kupac postaje jedna firma. Izostavite `owner_email`, pa LobbyStack ni
 ```bash
 curl https://app.lobbystack.com/api/v1/businesses \
   -H "Authorization: Bearer $LOBBYSTACK_PLATFORM_KEY" \
+  -H "Idempotency-Key: $YOUR_CUSTOMER_ID-business" \
   -H "Content-Type: application/json" \
   -d '{"name":"Harbor Dental","timezone":"America/Toronto","locale":"en"}'
 ```
 
-Odgovor novu firmu stavlja u `data`. Sačuvajte `data.id` uz zapis o kupcu i šaljite ga kao `LobbyStack-Business` u svakom sledećem zahtevu. `locale` određuje jezik na kom pozivi počinju: `en`, `fr`, `es`, `sr`, `de`, `pt`, `it` ili `nl`. Recepcioner menja jezik kada pozivalac to zatraži ili govori drugi jezik.
+`POST /businesses` traži `Idempotency-Key`, a ponovljeni zahtev sa istom vrednošću vraća već napravljenu firmu. Odgovor novu firmu stavlja u `data`. Sačuvajte `data.id` uz zapis o kupcu i šaljite ga kao `LobbyStack-Business` u svakom sledećem zahtevu. `locale` određuje jezik na kom pozivi počinju: `en`, `fr`, `es`, `sr`, `de`, `pt`, `it` ili `nl`. Recepcioner menja jezik kada pozivalac to zatraži ili govori drugi jezik.
 
 ## Korak 3: Naučite recepcionera o firmi
 
@@ -137,7 +138,7 @@ Godišnja naplata je 20% jeftinija. Svaki dodatni broj košta onoliko koliko ga 
 
 - **Ograničenja broja zahteva.** Svaki ključ šalje 120 zahteva u minuti. Vaši ključevi dele 30 novih firmi na sat i 20 pretraga brojeva na 10 minuta.
 - **Ograničenja za brojeve.** Vaše firme kupuju do 2 broja dnevno ili onoliko koliko vaš nivo uključuje, šta god je više. U periodu od 30 dana kupuju do 5, ili dvostruko više od uključenog broja. Firma može da zameni svoj broj jednom.
-- **Kalendari.** Google traži da osoba da saglasnost u pregledaču, pa API ne može sam da poveže kalendar. Planirajte ručni korak za tog kupca, ili koristite `booking_mode` `off` ili `request` ako kalendar vodi vaš proizvod.
+- **Kalendari.** Google, Cal.com i Calendly traže da osoba da saglasnost u pregledaču, pa API ne može sam da poveže kalendar. `POST /calendars/google/connect` i odgovarajuće `calcom` i `calendly` rute vraćaju link, a ko ga otvori prijavljuje se kao administrator firme. Pozovite tu osobu preko `POST /team/invitations`, za šta treba `team:manage`, ili koristite `booking_mode` `off` ili `request` ako kalendar vodi vaš proizvod.
 - **Predaja.** Ključ ne može kasnije da pozove vlasnika, pa firmu koju ste napravili bez vlasnika ne možete da predate. Koristite `owner_email` za kupce koji će možda želeti sopstvenu prijavu.
 - **Upozorenja.** Vlasnici i administratori vašeg partnerskog naloga dobijaju operativne imejlove, na primer o neuspelom prebacivanju ili kalendaru koji je prestao da se sinhronizuje. [Centar za pomoć ih navodi](https://docs.lobbystack.com/white-label/api-keys#run-businesses-from-your-own-product).
 

@@ -50,11 +50,12 @@ Chacun de vos clients devient une entreprise. Laissez `owner_email` de côté : 
 ```bash
 curl https://app.lobbystack.com/api/v1/businesses \
   -H "Authorization: Bearer $LOBBYSTACK_PLATFORM_KEY" \
+  -H "Idempotency-Key: $YOUR_CUSTOMER_ID-business" \
   -H "Content-Type: application/json" \
   -d '{"name":"Harbor Dental","timezone":"America/Toronto","locale":"en"}'
 ```
 
-La réponse place la nouvelle entreprise dans `data`. Enregistrez `data.id` avec votre fiche client, et envoyez-le dans `LobbyStack-Business` à chaque requête suivante. `locale` définit la langue dans laquelle les appels commencent : `en`, `fr`, `es`, `sr`, `de`, `pt`, `it` ou `nl`. La réceptionniste change de langue quand un appelant le demande ou parle une autre langue.
+`POST /businesses` exige un `Idempotency-Key`, et une nouvelle tentative avec la même valeur renvoie l'entreprise déjà créée. La réponse place la nouvelle entreprise dans `data`. Enregistrez `data.id` avec votre fiche client, et envoyez-le dans `LobbyStack-Business` à chaque requête suivante. `locale` définit la langue dans laquelle les appels commencent : `en`, `fr`, `es`, `sr`, `de`, `pt`, `it` ou `nl`. La réceptionniste change de langue quand un appelant le demande ou parle une autre langue.
 
 ## Étape 3 : apprendre l'entreprise à la réceptionniste
 
@@ -137,7 +138,7 @@ La facturation annuelle retire 20 %. Chaque numéro supplémentaire coûte ce qu
 
 - **Limites de débit.** Chaque clé envoie 120 requêtes par minute. Vos clés se partagent 30 nouvelles entreprises par heure et 20 recherches de numéros en 10 minutes.
 - **Limites de numéros.** Vos entreprises achètent jusqu'à 2 numéros par jour ou le nombre inclus dans votre palier, selon le plus élevé des deux. Sur 30 jours, elles en achètent jusqu'à 5, ou deux fois le nombre inclus. Une entreprise peut remplacer son numéro une fois.
-- **Agendas.** Google demande à une personne de donner son accord dans un navigateur : l'API ne peut donc pas connecter un agenda seule. Prévoyez une étape manuelle pour ce client, ou utilisez `booking_mode` `off` ou `request` si votre produit détient l'agenda.
+- **Agendas.** Google, Cal.com et Calendly demandent chacun à une personne de donner son accord dans un navigateur : l'API ne peut donc pas connecter un agenda seule. `POST /calendars/google/connect` et les routes `calcom` et `calendly` équivalentes renvoient un lien, et la personne qui l'ouvre se connecte comme administrateur de l'entreprise. Invitez-la avec `POST /team/invitations`, qui demande `team:manage`, ou utilisez `booking_mode` `off` ou `request` si votre produit détient l'agenda.
 - **Cession.** Une clé ne peut pas inviter de propriétaire plus tard : vous ne pouvez donc pas céder une entreprise créée sans propriétaire. Utilisez `owner_email` pour les clients qui voudront peut-être leur propre connexion.
 - **Alertes.** Les propriétaires et administrateurs de votre partenaire reçoivent les courriels opérationnels, comme un transfert échoué ou un agenda qui ne se synchronise plus. [Le Centre d'aide les liste](https://docs.lobbystack.com/fr/white-label/api-keys#gérer-des-entreprises-depuis-votre-propre-produit).
 

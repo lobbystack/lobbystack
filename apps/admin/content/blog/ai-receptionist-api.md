@@ -50,11 +50,12 @@ Each of your customers becomes one business. Leave `owner_email` out, so LobbySt
 ```bash
 curl https://app.lobbystack.com/api/v1/businesses \
   -H "Authorization: Bearer $LOBBYSTACK_PLATFORM_KEY" \
+  -H "Idempotency-Key: $YOUR_CUSTOMER_ID-business" \
   -H "Content-Type: application/json" \
   -d '{"name":"Harbor Dental","timezone":"America/Toronto","locale":"en"}'
 ```
 
-The response wraps the new business in `data`. Store `data.id` next to your customer record, and send it as `LobbyStack-Business` on every request from here on. `locale` sets the language calls open in: `en`, `fr`, `es`, `sr`, `de`, `pt`, `it` or `nl`. The receptionist switches when a caller asks or speaks another language.
+`POST /businesses` requires an `Idempotency-Key`, and a retry with the same value returns the business it already created. The response wraps the new business in `data`. Store `data.id` next to your customer record, and send it as `LobbyStack-Business` on every request from here on. `locale` sets the language calls open in: `en`, `fr`, `es`, `sr`, `de`, `pt`, `it` or `nl`. The receptionist switches when a caller asks or speaks another language.
 
 ## Step 3: Teach the receptionist the business
 
@@ -137,7 +138,7 @@ Annual billing takes 20% off. Each extra number costs what LobbyStack pays for i
 
 - **Rate limits.** Each key makes 120 requests a minute. Your keys share 30 new businesses an hour and 20 number searches in 10 minutes.
 - **Number limits.** Your businesses buy up to 2 numbers a day or your tier's included count, whichever is more. Over 30 days they buy up to 5, or twice your included count. A business can replace its number once.
-- **Calendars.** Google asks a person to agree in a browser, so the API can't connect a calendar alone. Plan a manual step for that customer, or use `booking_mode` `off` or `request` if your product holds the calendar.
+- **Calendars.** Google, Cal.com and Calendly each ask a person to agree in a browser, so the API can't connect a calendar alone. `POST /calendars/google/connect` and the matching `calcom` and `calendly` routes return a link, and whoever opens it signs in as an admin of the business. Invite that person with `POST /team/invitations`, which needs `team:manage`, or use `booking_mode` `off` or `request` if your product holds the calendar.
 - **Handover.** A key can't invite an owner later, so you can't release a business you created without one. Use `owner_email` for customers who may want their own login.
 - **Alerts.** Your partner's owners and admins get the operational emails, such as a failed transfer or a calendar that stopped syncing. [The Help Center lists them](https://docs.lobbystack.com/white-label/api-keys#run-businesses-from-your-own-product).
 

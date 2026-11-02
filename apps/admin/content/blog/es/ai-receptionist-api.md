@@ -50,11 +50,12 @@ Cada uno de sus clientes se convierte en un negocio. Omita `owner_email`, así L
 ```bash
 curl https://app.lobbystack.com/api/v1/businesses \
   -H "Authorization: Bearer $LOBBYSTACK_PLATFORM_KEY" \
+  -H "Idempotency-Key: $YOUR_CUSTOMER_ID-business" \
   -H "Content-Type: application/json" \
   -d '{"name":"Harbor Dental","timezone":"America/Toronto","locale":"en"}'
 ```
 
-La respuesta envuelve el nuevo negocio en `data`. Guarde `data.id` junto al registro de su cliente y envíelo como `LobbyStack-Business` en cada solicitud a partir de aquí. `locale` fija el idioma en que empiezan las llamadas: `en`, `fr`, `es`, `sr`, `de`, `pt`, `it` o `nl`. La recepcionista cambia de idioma cuando quien llama lo pide o habla otro.
+`POST /businesses` requiere una `Idempotency-Key`, y un reintento con el mismo valor devuelve el negocio ya creado. La respuesta envuelve el nuevo negocio en `data`. Guarde `data.id` junto al registro de su cliente y envíelo como `LobbyStack-Business` en cada solicitud a partir de aquí. `locale` fija el idioma en que empiezan las llamadas: `en`, `fr`, `es`, `sr`, `de`, `pt`, `it` o `nl`. La recepcionista cambia de idioma cuando quien llama lo pide o habla otro.
 
 ## Paso 3: enseñe a la recepcionista cómo es el negocio
 
@@ -137,7 +138,7 @@ La facturación anual descuenta un 20 %. Cada número adicional cuesta lo que Lo
 
 - **Límites de frecuencia.** Cada clave hace 120 solicitudes por minuto. Sus claves comparten 30 negocios nuevos por hora y 20 búsquedas de números cada 10 minutos.
 - **Límites de números.** Sus negocios compran hasta 2 números al día o la cantidad incluida en su nivel, lo que sea mayor. En 30 días compran hasta 5, o el doble de la cantidad incluida. Un negocio puede reemplazar su número una vez.
-- **Calendarios.** Google pide a una persona que acepte en un navegador, así que la API no puede conectar un calendario por sí sola. Planifique un paso manual para ese cliente, o use `booking_mode` `off` o `request` si su producto gestiona el calendario.
+- **Calendarios.** Google, Cal.com y Calendly piden a una persona que acepte en un navegador, así que la API no puede conectar un calendario por sí sola. `POST /calendars/google/connect` y las rutas equivalentes de `calcom` y `calendly` devuelven un enlace, y quien lo abre inicia sesión como administrador del negocio. Invite a esa persona con `POST /team/invitations`, que requiere `team:manage`, o use `booking_mode` `off` o `request` si su producto gestiona el calendario.
 - **Cesión.** Una clave no puede invitar a un propietario más tarde, así que no puede ceder un negocio que creó sin propietario. Use `owner_email` para los clientes que quizá quieran su propio acceso.
 - **Alertas.** Los propietarios y administradores de su socio reciben los correos operativos, como una transferencia fallida o un calendario que dejó de sincronizarse. [El Centro de ayuda los enumera](https://docs.lobbystack.com/es/white-label/api-keys#gestione-negocios-desde-su-propio-producto).
 
