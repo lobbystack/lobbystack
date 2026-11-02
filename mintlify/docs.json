@@ -172,6 +172,7 @@
           {
             "group": "AI assistants",
             "pages": [
+              "ai/setup-prompts",
               "ai/mcp",
               "ai/connect-claude",
               "ai/connect-chatgpt",
@@ -322,6 +323,7 @@
           {
             "group": "Assistants IA",
             "pages": [
+              "fr/ai/setup-prompts",
               "fr/ai/mcp",
               "fr/ai/connect-claude",
               "fr/ai/connect-chatgpt",
@@ -475,6 +477,7 @@
           {
             "group": "Asistentes de IA",
             "pages": [
+              "es/ai/setup-prompts",
               "es/ai/mcp",
               "es/ai/connect-claude",
               "es/ai/connect-chatgpt",

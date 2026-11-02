@@ -5,6 +5,8 @@ sidebarTitle: "Clés API et ligne de commande"
 contentType: "How-to"
 ---
 
+import SaasPrompt from "/snippets/fr/setup-prompts/saas.mdx";
+
 Une clé de plateforme permet à votre propre code de créer des entreprises et de les configurer par l'[API](/fr/api/overview) de LobbyStack. Elle permet aussi à la commande `lobbystack onboard` de créer une entreprise à partir d'un seul fichier. Les propriétaires et les administrateurs créent les clés sur la page **Clés API** de la console. Une clé agit au nom de votre partenaire et n'atteint que vos entreprises.
 
 ## Créer une clé de plateforme
@@ -40,6 +42,8 @@ Vos clés peuvent créer 30 entreprises par heure au total. `POST /businesses` a
 ## Gérer des entreprises depuis votre propre produit
 
 Si vos clients utilisent votre produit sans jamais voir LobbyStack, laissez `owner_email` hors de `POST /businesses`. Personne ne reçoit d'invitation, et votre clé configure et gère l'entreprise. Une clé ne peut pas inviter de propriétaire : l'entreprise reste donc sans propriétaire.
+
+<SaasPrompt />
 
 Sur un palier payant, une clé avec `phone_numbers:manage` et `phone_numbers:purchase` achète le numéro de l'entreprise. Une clé n'a pas `phone_numbers:purchase` par défaut : activez d'abord **Rechercher, acheter et remplacer des numéros de téléphone** sur la clé. Nommez l'entreprise dans l'en-tête `LobbyStack-Business` :
 

@@ -10,6 +10,7 @@ import {
   McpTools,
 } from "@/marketing/components/mcp/McpSections"
 import { Navbar } from "@/marketing/components/Navbar"
+import { SetupPromptsSection } from "@/marketing/components/setup-prompts/SetupPromptsSection"
 import { getCopy, getRouteSeo, localizePath, type Locale } from "@/marketing/i18n"
 import { getMcpCopy } from "@/marketing/lib/mcp-page-copy"
 import { getMcpFaqs } from "@/marketing/lib/mcp-page-faqs"
@@ -57,6 +58,7 @@ export function McpPage({ locale }: { locale: Locale }) {
       <main id="main-content">
         <McpHero locale={locale} />
         <McpConnect locale={locale} />
+        <SetupPromptsSection locale={locale} prompts={["no-code", "saas", "white-label"]} section="mcp_prompts" />
         <McpAsk locale={locale} />
         <McpControl locale={locale} />
         <McpTools locale={locale} />

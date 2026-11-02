@@ -1,0 +1,37 @@
+{/* Generated from packages/shared/src/setupPrompts.ts. Run pnpm docs:setup-prompts after changing it. */}
+
+<Prompt description="**Run it yourself.** Your assistant deploys LobbyStack on your servers and gets it to a test call." icon="server">
+Deploy LobbyStack, the open-source AI receptionist, on our own infrastructure, and get it to a working browser test call.
+
+Read these first:
+
+* `https://docs.lobbystack.com/self-hosting/overview`
+* `https://docs.lobbystack.com/self-hosting/docker-compose`
+* `https://docs.lobbystack.com/self-hosting/environment-variables`
+* `https://docs.lobbystack.com/self-hosting/providers`
+* `https://github.com/lobbystack/lobbystack`
+* `https://app.lobbystack.com/api/v1/openapi.json`, which your deployment also serves at `/api/v1/openapi.json`
+
+Treat the OpenAPI spec your deployment serves as the source of truth for its API. Don't use an endpoint, field or setting that the docs and the spec don't list.
+
+Start by asking me:
+
+1. Railway template or Docker Compose on one server?
+2. Which domain will the dashboard use?
+3. Which of these accounts do we already have: OpenAI, Twilio or Telnyx, and an SMTP email provider?
+
+Then reply with a short plan: what you'll run, what I have to do and what it will cost. Wait for my OK.
+
+Do this:
+
+1. On Railway, use `https://railway.com/deploy/lobbystack`. With Docker Compose, clone the repository, run `node scripts/generate-env.mjs`, set `APP_BASE_URL`, `OPENAI_API_KEY` and our Twilio credentials in `.env`, then run `docker compose --env-file .env up -d --build`.
+2. Keep every secret in `.env` or the platform's variables. Never commit one, paste one into this chat or put one in browser code. Don't expose a stack that still has example passwords or `change-me` secrets.
+3. Serve the dashboard over HTTPS, as the docs describe for the path we chose.
+4. With Docker Compose, check `curl -fsS http://127.0.0.1:3000/api/health/ready` and `curl -fsS http://127.0.0.1:3002/health/ready`.
+5. Set up email, because verification codes, password resets and invitations need it.
+6. Start with a test business. Have me create an account on the dashboard, set up the business and run a browser test call.
+7. Then set up phone calls: the OpenAI webhook, `OPENAI_WEBHOOK_SECRET`, and a Twilio Elastic SIP trunk with `TWILIO_SIP_TRUNK_SID`. Make one real test call before we move any real number.
+8. Go through the production checklist in the Docker Compose guide, including off-host backups and a restore drill.
+
+Only I can create provider accounts, pay them, and add DNS records. Tell me exactly what you need from each one.
+</Prompt>

@@ -1,6 +1,7 @@
 import { DatabaseBackup, KeyRound, LockKeyhole, RefreshCw } from "lucide-react"
 
 import { FaqSection } from "@/marketing/components/FaqSection"
+import { SetupPromptsSection } from "@/marketing/components/setup-prompts/SetupPromptsSection"
 import type { SeoLandingPageProps } from "@/marketing/components/solution-layouts/types"
 import {
   container,
@@ -165,6 +166,7 @@ export function SelfHostedLayout({ page }: SeoLandingPageProps) {
       </section>
 
       <WhatYouRun />
+      <SetupPromptsSection locale={locale} prompts={["self-host"]} section="self_hosted_prompts" />
       <CloudVsSelfHosted />
 
       {page.faqs.length > 0 && <FaqSection className={sectionSpacing} heading={page.faqHeading ?? "Common questions"} faqs={page.faqs} />}
