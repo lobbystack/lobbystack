@@ -1,12 +1,21 @@
 import { describe, expect, it } from "vitest";
 
-import { appointmentNotificationSkipReason, CANCELLATION_CONFIRMATION } from "./notifications";
+import { appointmentNotificationSkipReason, CANCELLATION_CONFIRMATION, VIDEO_LINK_UPDATE } from "./notifications";
 
 // A text to a subscribed contact from a business number that can reach them.
 const text = { channel: "sms", smsConsentStatus: "subscribed", operatorBlockedAt: null, senderPhone: "+14165550000", contactPhone: "+14165550100", contactEmail: null };
 const cancellation = { ...text, kind: CANCELLATION_CONFIRMATION, appointmentStatus: "canceled" };
 
 describe("appointment notification delivery", () => {
+  it("holds a video link text to the consent rules, and sends none without a link", () => {
+    const update = { ...text, kind: `${VIDEO_LINK_UPDATE}:id`, appointmentStatus: "confirmed", videoUrl: "https://app.cal.com/video/abc" };
+    expect(appointmentNotificationSkipReason(update)).toBeNull();
+    expect(appointmentNotificationSkipReason({ ...update, videoUrl: null })).toBe("no_video_link");
+    expect(appointmentNotificationSkipReason({ ...update, smsConsentStatus: "opted_out" })).toBe("sms_consent");
+    expect(appointmentNotificationSkipReason({ ...update, operatorBlockedAt: new Date() })).toBe("sms_blocked");
+    expect(appointmentNotificationSkipReason({ ...update, appointmentStatus: "canceled" })).toBe("appointment_status");
+  });
+
   it("sends the cancellation text for a cancelled appointment to a subscribed contact", () => {
     expect(appointmentNotificationSkipReason(cancellation)).toBeNull();
   });

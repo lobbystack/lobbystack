@@ -590,7 +590,7 @@
       "warnings": {
         "missingLengths": "Add {{lengths}} minutes to the event type's durations. Until you do, Cal.com books those services at the event type's default length.",
         "smsReminders": "Turn off the SMS workflow on this event type, or Cal.com texts callers on top of your agent's texts.",
-        "videoLocation": "Add \"Attendee phone number\" as a location on this event type. Until you do, bookings carry a video link instead of the caller's phone.",
+        "videoLocation": "Add \"Attendee phone number\" as a location on this event type. Until you do, bookings carry a video link instead of the caller's phone, and only callers who agree to texts get the link.",
         "narrowerAvailability": "Widen the event type's schedule on {{days}} to match your opening hours. Cal.com turns down bookings outside its schedule."
       }
     },

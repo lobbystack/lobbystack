@@ -1,12 +1,15 @@
+import { randomUUID } from "node:crypto";
+
 import { MAX_PHONE_CALL_MS, OPERATOR_SMS_ACCEPTED_DISCLOSURE_VERSIONS, OPERATOR_SMS_DISCLOSURE_VERSION, canTextNumber, intlLocale, normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
-import { and, eq, gte, inArray, isNull, lte, lt, ne, or, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, like, lte, lt, ne, or, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 import { isTerminalTwilioMessageStatus, mapTwilioStatusToNotificationStatus, shouldApplyNotificationStatusTransition } from "@lobbystack/shared";
 
-import { appointments, businesses, businessMemberships, contacts, enqueueOutbox, notifications, operatorNotificationDeliveries, outboxMessages, operatorNotificationPreferences, prospectDemos, services, smsConsentEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { appointments, businesses, businessMemberships, calendarConnections, contacts, enqueueOutbox, notifications, operatorNotificationDeliveries, outboxMessages, operatorNotificationPreferences, prospectDemos, services, smsConsentEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import type { CarrierId } from "@lobbystack/providers/telephony/types";
 
 import { requireBusinessMembership } from "../authz";
+import { pickCalendarWriter } from "../calendarWriter";
 import { deploymentAppName } from "./branding";
 import type { DomainContext } from "./context";
 import { resolveSmsSender } from "./smsSender";
@@ -53,6 +56,53 @@ export async function rescheduleAppointmentReminderInTransaction(
   const [reminder] = await tx.insert(notifications).values({ businessId: input.businessId, channel: "sms", kind: "appointment_reminder", relatedId: input.appointmentId, scheduledFor: reminderAt, status: "pending" }).returning({ id: notifications.id });
   if (!reminder) throw new Error("Appointment reminder could not be scheduled.");
   await enqueueOutbox(tx, { topic: "notification.dispatch", businessId: input.businessId, aggregateType: "appointment", aggregateId: input.appointmentId, dedupeKey: `notification:${reminder.id}:dispatch:${input.revision}`, availableAt: reminderAt, payload: { notificationId: reminder.id, appointmentRevision: input.revision } });
+}
+
+/** The text with a video link that a customer gets after their confirmation. Each one's kind ends in its own id, since an appointment can have several. */
+export const VIDEO_LINK_UPDATE = "video_link_update";
+
+/**
+ * Saves an appointment's video link. A customer whose confirmation is still
+ * waiting gets the link in it, and reminders read the saved link. Anyone else
+ * gets a text of its own, which delivery sends under the usual consent rules.
+ */
+export async function saveAppointmentVideoUrlInTransaction(tx: DatabaseTransaction, input: { businessId: string; appointmentId: string; videoUrl: string | null }): Promise<void> {
+  const [appointment] = await tx.select({ videoUrl: appointments.videoUrl, status: appointments.status, startsAt: appointments.startsAt }).from(appointments).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId))).limit(1).for("update");
+  if (!appointment || appointment.videoUrl === input.videoUrl) return;
+  await tx.update(appointments).set({ videoUrl: input.videoUrl, updatedAt: new Date() }).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId)));
+  if (!input.videoUrl || appointment.status !== "confirmed" || appointment.startsAt <= new Date()) return;
+  // The lock makes a claim on the confirmation wait for this commit, so a claimed one reads the new link.
+  const waiting = await tx.select({ kind: notifications.kind, status: notifications.status }).from(notifications).where(and(eq(notifications.businessId, input.businessId), eq(notifications.relatedId, input.appointmentId), or(eq(notifications.kind, "booking_confirmation"), like(notifications.kind, `${VIDEO_LINK_UPDATE}:%`)))).for("update");
+  // An update still waiting sends whichever link is current when it goes out.
+  if (!waiting.length || waiting.some((row) => row.status === "pending")) return;
+  const [update] = await tx.insert(notifications).values({ businessId: input.businessId, channel: "sms", kind: `${VIDEO_LINK_UPDATE}:${randomUUID()}`, relatedId: input.appointmentId, scheduledFor: new Date(), status: "pending" }).returning({ id: notifications.id });
+  if (!update) throw new Error("Video link notification could not be created.");
+  await enqueueOutbox(tx, { topic: "notification.dispatch", businessId: input.businessId, aggregateType: "appointment", aggregateId: input.appointmentId, dedupeKey: `notification:${update.id}:dispatch`, payload: { notificationId: update.id } });
+}
+
+const VIDEO_LINK_WAIT_MS = 2 * 60_000;
+const VIDEO_LINK_POLL_MS = 10_000;
+
+/**
+ * When to try a booking confirmation again, or null to send it now. A Cal.com
+ * booking gets its video link from the calendar sync, so its confirmation
+ * waits a short while for the sync. After that it goes out alone, and the sync
+ * sends the link in a text of its own.
+ */
+export async function confirmationRetryAt(context: DomainContext, input: { businessId: string; notificationId: string }): Promise<Date | null> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const [row] = await tx.select({ scheduledFor: notifications.scheduledFor, staffId: appointments.staffId })
+      .from(notifications)
+      .innerJoin(appointments, and(eq(appointments.id, notifications.relatedId), eq(appointments.businessId, notifications.businessId)))
+      .where(and(eq(notifications.id, input.notificationId), eq(notifications.businessId, input.businessId), eq(notifications.kind, "booking_confirmation"), eq(notifications.status, "pending"), eq(appointments.calendarSyncState, "pending")))
+      .limit(1);
+    if (!row) return null;
+    const waitEndsAt = row.scheduledFor.getTime() + VIDEO_LINK_WAIT_MS;
+    if (waitEndsAt <= Date.now()) return null;
+    const connections = await tx.select({ id: calendarConnections.id, provider: calendarConnections.provider, staffId: calendarConnections.staffId, selectedCalendarId: calendarConnections.selectedCalendarId }).from(calendarConnections)
+      .where(and(eq(calendarConnections.businessId, input.businessId), ne(calendarConnections.status, "disconnected"), or(isNull(calendarConnections.staffId), eq(calendarConnections.staffId, row.staffId))));
+    return pickCalendarWriter(connections)?.provider === "calcom" ? new Date(Math.min(waitEndsAt, Date.now() + VIDEO_LINK_POLL_MS)) : null;
+  });
 }
 
 export type NotificationDelivery = {
@@ -170,20 +220,28 @@ export function buildAppointmentNotification(input: {
   serviceName: string;
   startsAt: Date;
   timezone: string;
+  /** The link for joining a video appointment. A cancellation text leaves it out. */
+  videoUrl?: string | null;
 }): { subject: string; body: string } {
-  const message = appointmentMessage(input);
+  const appointment = appointmentMessage(input);
+  const joinable = input.videoUrl && input.kind !== CANCELLATION_CONFIRMATION && !input.kind.startsWith(VIDEO_LINK_UPDATE);
+  const message = joinable ? { ...appointment, body: `${appointment.body} ${VIDEO_LINK_LABEL[input.locale]}: ${input.videoUrl}` } : appointment;
   // Every customer text ends with the opt-out line, whether it comes from the
   // shared sender or a self-hosted business's own number. Emails don't.
   return input.channel === "sms" ? { ...message, body: `${message.body} ${SMS_OPT_OUT_FOOTER[input.locale]}` } : message;
 }
 
-function appointmentMessage(input: { kind: string; locale: InterfaceLocale; businessName: string; serviceName: string; startsAt: Date; timezone: string }): { subject: string; body: string } {
+// GSM-7 only, like the opt-out footer that follows.
+const VIDEO_LINK_LABEL: Record<InterfaceLocale, string> = { en: "Join", fr: "Lien", es: "Enlace", sr: "Link" };
+
+function appointmentMessage(input: { kind: string; locale: InterfaceLocale; businessName: string; serviceName: string; startsAt: Date; timezone: string; videoUrl?: string | null }): { subject: string; body: string } {
   // intlLocale keeps Serbian dates in Latin script ("sr-Latn").
   const date = DateTime.fromJSDate(input.startsAt).setZone(input.timezone).setLocale(intlLocale(input.locale)).toLocaleString(DateTime.DATETIME_MED);
   const reminder = input.kind === "appointment_reminder";
   // SMS bodies avoid characters outside the GSM-7 alphabet where the wording
   // allows it, so a reminder stays in as few segments as the English one.
   if (input.kind === CANCELLATION_CONFIRMATION) return cancellationNotification(input, date);
+  if (input.kind.startsWith(VIDEO_LINK_UPDATE)) return videoLinkNotification(input, date);
   if (input.locale === "fr") {
     return {
       subject: reminder ? "Rappel de rendez-vous" : "Rendez-vous confirme",
@@ -223,11 +281,19 @@ function cancellationNotification(input: { locale: InterfaceLocale; businessName
   return { subject: "Appointment cancelled", body: `${input.businessName}: your ${input.serviceName} appointment on ${date} is cancelled.` };
 }
 
+function videoLinkNotification(input: { locale: InterfaceLocale; businessName: string; serviceName: string; videoUrl?: string | null }, date: string): { subject: string; body: string } {
+  if (input.locale === "fr") return { subject: "Lien vidéo", body: `${input.businessName}: lien pour votre rendez-vous ${input.serviceName} du ${date}: ${input.videoUrl}` };
+  if (input.locale === "es") return { subject: "Enlace de video", body: `${input.businessName}: enlace para su cita de ${input.serviceName} del ${date}: ${input.videoUrl}` };
+  if (input.locale === "sr") return { subject: "Video link", body: `${input.businessName}: link za termin za ${input.serviceName}, ${date}: ${input.videoUrl}` };
+  return { subject: "Video link", body: `${input.businessName}: link for your ${input.serviceName} appointment on ${date}: ${input.videoUrl}` };
+}
+
 /**
  * Why an appointment notification can't go out, or null when it can. A
  * cancelled appointment gets only its cancellation text, and a cancellation
  * text needs a cancelled appointment. A text needs a contact who agreed to
  * texts, isn't blocked, and a sender that can reach them (resolveSmsSender).
+ * A video link text needs a link.
  */
 export function appointmentNotificationSkipReason(row: {
   kind: string;
@@ -238,9 +304,11 @@ export function appointmentNotificationSkipReason(row: {
   senderPhone: string | null;
   contactPhone: string | null;
   contactEmail: string | null;
-}): "appointment_status" | "channel" | "sms_consent" | "sms_blocked" | "sms_unreachable" | "no_email" | null {
+  videoUrl?: string | null;
+}): "appointment_status" | "no_video_link" | "channel" | "sms_consent" | "sms_blocked" | "sms_unreachable" | "no_email" | null {
   const cancelled = row.appointmentStatus === "canceled";
   if (cancelled !== (row.kind === CANCELLATION_CONFIRMATION)) return "appointment_status";
+  if (row.kind.startsWith(VIDEO_LINK_UPDATE) && !row.videoUrl) return "no_video_link";
   if (row.channel !== "sms" && row.channel !== "email") return "channel";
   if (row.channel === "sms") {
     if (row.smsConsentStatus !== "subscribed") return "sms_consent";
@@ -265,6 +333,7 @@ export async function resolveNotificationDelivery(
       appointmentStatus: appointments.status,
       startsAt: appointments.startsAt,
       timezone: appointments.timezone,
+      videoUrl: appointments.videoUrl,
       businessName: businesses.name,
       defaultLocale: businesses.defaultLocale,
       serviceName: services.name,
@@ -304,6 +373,7 @@ export async function resolveNotificationDelivery(
       serviceName: row.serviceName,
       startsAt: row.startsAt,
       timezone: row.timezone,
+      videoUrl: row.videoUrl,
     });
     const optIn = row.channel === "sms" ? await smsOptInConfirmationInTransaction(tx, { businessId: input.businessId, contactId: row.contactId }) : undefined;
     return {

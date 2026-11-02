@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { and, asc, eq, isNull, ne, or, sql } from "drizzle-orm";
 import { appointments, calendarConnections, contacts, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { CALENDAR_SYNC_HORIZON_MS, followCalendarBookingChanges, forgetRetiredCalendarWebhook, getRetiredCalendarConnection, isBookingCalendarProvider, markCalendarConnectionSync, pickCalendarWriter, queueUnsyncedAppointmentSyncs, recordProductEvent, registerCalendarWebhookOnce, resolveCalendarAccessToken, updateAppointmentSyncState, updateAppointmentSyncStateInTransaction, upsertBusyBlocks, type DomainContext } from "@lobbystack/domain";
+import { CALENDAR_SYNC_HORIZON_MS, followCalendarBookingChanges, followCalendarVideoLinks, forgetRetiredCalendarWebhook, getRetiredCalendarConnection, isBookingCalendarProvider, markCalendarConnectionSync, pickCalendarWriter, queueUnsyncedAppointmentSyncs, recordProductEvent, registerCalendarWebhookOnce, resolveCalendarAccessToken, updateAppointmentSyncState, updateAppointmentSyncStateInTransaction, upsertBusyBlocks, type DomainContext } from "@lobbystack/domain";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 import { redactOtelExceptionText } from "@lobbystack/telemetry/node";
 import { calendarProviderLabel, type CalendarBookingChanges, type CalendarProvider } from "@lobbystack/providers/calendar";
@@ -87,7 +87,7 @@ export async function syncAppointmentCalendar(dependencies: Dependencies, input:
           accessToken: token, calendarId: current.calendarId, clientEventId, ...(current.externalEventId ? { eventId: current.externalEventId } : {}), title: current.serviceName, startsAt: current.startsAt.toISOString(), endsAt: current.endsAt.toISOString(), ...(current.contactName ? { description: `Appointment for ${current.contactName}` } : {}),
           appointmentId, timezone: current.timezone, attendee: { name: current.contactName, phone: current.contactPhone, email: current.contactEmail },
         });
-        await updateAppointmentSyncStateInTransaction(tx, { businessId, appointmentId, state: "synced", externalEventId: external.externalEventId });
+        await updateAppointmentSyncStateInTransaction(tx, { businessId, appointmentId, state: "synced", externalEventId: external.externalEventId, videoUrl: external.videoUrl ?? null });
       }
       return { status: "completed", entityId: appointmentId };
     });
@@ -158,7 +158,11 @@ export async function reconcileBusinessCalendar(dependencies: Dependencies, busi
       const endsAt = new Date(startsAt.getTime() + CALENDAR_SYNC_HORIZON_MS);
       const blocks = await provider.getBusyBlocks({ accessToken: token, calendarId: connection.calendarId, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() });
       await upsertBusyBlocks(dependencies.domain, { businessId, connectionId: connection.id, calendarId: connection.calendarId, syncStartedAt: startsAt, blocks: blocks.map((block) => ({ ...block, ...(connection.staffId ? { staffId: connection.staffId } : {}) })) });
-      if (provider.getBookingChanges) await followCalendarBookingChanges(dependencies.domain, { businessId, provider: calendarProviderLabel(connection.provider), changes: await provider.getBookingChanges({ accessToken: token, calendarId: connection.calendarId, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() }) });
+      if (provider.getBookingChanges) {
+        const changes = await provider.getBookingChanges({ accessToken: token, calendarId: connection.calendarId, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() });
+        await followCalendarBookingChanges(dependencies.domain, { businessId, provider: calendarProviderLabel(connection.provider), changes });
+        if (changes.videoLinks?.length) await followCalendarVideoLinks(dependencies.domain, { businessId, links: changes.videoLinks });
+      }
       await queueUnsyncedAppointmentSyncs(dependencies.domain, { businessId, connectionId: connection.id });
       synced++;
     } catch (error) {

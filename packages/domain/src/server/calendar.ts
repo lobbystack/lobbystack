@@ -8,7 +8,7 @@ import { appointments, auditLogs, calendarBusyBlocks, calendarConnections, enque
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import { isBookingCalendarProvider, pickCalendarWriter } from "../calendarWriter";
 import type { DomainContext } from "./context";
-import { queueOperatorAlertInTransaction } from "./notifications";
+import { queueOperatorAlertInTransaction, saveAppointmentVideoUrlInTransaction } from "./notifications";
 import { recordProductEventBestEffort } from "./productEvents";
 
 export async function resolveCalendarAccessToken(context: DomainContext, input: {
@@ -182,7 +182,7 @@ export async function queueUnsyncedAppointmentSyncs(
 
 export async function updateAppointmentSyncState(
   context: DomainContext,
-  input: { businessId: string; appointmentId: string; state: string; externalEventId?: string; error?: string },
+  input: { businessId: string; appointmentId: string; state: string; externalEventId?: string; videoUrl?: string | null; error?: string },
 ): Promise<void> {
   await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     await updateAppointmentSyncStateInTransaction(tx, input);
@@ -191,8 +191,9 @@ export async function updateAppointmentSyncState(
 
 export async function updateAppointmentSyncStateInTransaction(
   tx: DatabaseTransaction,
-  input: { businessId: string; appointmentId: string; state: string; externalEventId?: string; error?: string },
+  input: { businessId: string; appointmentId: string; state: string; externalEventId?: string; videoUrl?: string | null; error?: string },
 ): Promise<void> {
+    if (input.videoUrl !== undefined) await saveAppointmentVideoUrlInTransaction(tx, { businessId: input.businessId, appointmentId: input.appointmentId, videoUrl: input.videoUrl });
     const [appointment] = await tx.update(appointments).set({
       calendarSyncState: input.state,
       calendarExternalId: input.externalEventId,
@@ -372,7 +373,7 @@ async function releaseMovedAppointments(tx: DatabaseTransaction, businessId: str
   const locked = await tx.select({ id: appointments.id, staffId: appointments.staffId, eventId: appointments.calendarExternalId, revision: appointments.revision }).from(appointments).where(and(eq(appointments.businessId, businessId), eq(appointments.status, "confirmed"), inArray(appointments.id, candidates.map(({ id }) => id)))).for("update");
   const moved = moves(locked).map((move) => ({ ...move, ...locked.find((row) => row.id === move.id)! }));
   if (!moved.length) return [];
-  await tx.update(appointments).set({ calendarExternalId: null, calendarSyncState: "not_required", revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(and(eq(appointments.businessId, businessId), inArray(appointments.id, moved.map(({ id }) => id))));
+  await tx.update(appointments).set({ calendarExternalId: null, videoUrl: null, calendarSyncState: "not_required", revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(and(eq(appointments.businessId, businessId), inArray(appointments.id, moved.map(({ id }) => id))));
   const retired: RetiredBooking[] = [];
   for (const { id, eventId, revision, was } of moved) {
     if (!eventId || !was?.selectedCalendarId) continue;

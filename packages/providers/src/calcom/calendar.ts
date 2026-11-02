@@ -17,6 +17,7 @@ export const CALCOM_WEBHOOK_TRIGGERS = ["BOOKING_CREATED", "BOOKING_REQUESTED", 
 const API_VERSIONS = { bookings: "2026-02-25", bookingList: "2026-05-01", eventTypes: "2026-06-12", schedules: "2024-06-11" } as const;
 
 const PAGE_LIMIT = 100;
+const MAX_VIDEO_URL_LENGTH = 2048;
 const MAX_PAGES = 100;
 // Cal.com still holds the time of a pending booking, as Google holds a tentative event.
 const BUSY_STATUSES = new Set(["accepted", "pending", "awaiting_host"]);
@@ -61,7 +62,8 @@ export type CalcomEventType = {
 
 export type CalcomSchedule = { timeZone: string; availability: Array<{ days: string[]; startTime: string; endTime: string }> };
 
-type Booking = { uid: string; start: string; end: string; status: string; eventTypeId?: number; rescheduledToUid?: string };
+type Booking = { uid: string; start: string; end: string; status: string; eventTypeId?: number; rescheduledToUid?: string; videoUrl?: string };
+type BookingLocation = { location?: unknown; meetingUrl?: unknown; metadata?: { videoCallUrl?: unknown } | null };
 
 /**
  * What's missing from a Cal.com setup the environment started, or null when
@@ -201,7 +203,8 @@ export class CalcomCalendarProvider implements CalendarProvider {
     const [gone, ...live] = await Promise.all(["cancelled", "upcoming", "unconfirmed"].map((status) => this.listBookings(input.accessToken, { status, ...window })));
     const closed = new Map(gone!.filter((booking) => booking.status === "cancelled").map((booking) => [booking.uid, booking]));
     const open = new Map(live.flat().filter((booking) => BUSY_STATUSES.has(booking.status)).map((booking) => [booking.uid, booking]));
-    const changes: CalendarBookingChanges = { cancelled: [], moved: [] };
+    const videoLinks = [...open.values()].flatMap(({ uid, videoUrl }) => videoUrl ? [{ eventId: uid, videoUrl }] : []);
+    const changes: CalendarBookingChanges = { cancelled: [], moved: [], videoLinks };
     for (const booking of closed.values()) {
       let last = booking;
       const seen = new Set([last.uid]);
@@ -218,7 +221,7 @@ export class CalcomCalendarProvider implements CalendarProvider {
     return changes;
   }
 
-  async upsertEvent(input: CalendarEventWrite): Promise<{ externalEventId: string }> {
+  async upsertEvent(input: CalendarEventWrite): Promise<{ externalEventId: string; videoUrl: string | null }> {
     assertCertificationCalendar(input.calendarId);
     const eventTypeId = Number(input.calendarId);
     if (!Number.isInteger(eventTypeId) || eventTypeId <= 0) throw new Error("Cal.com event type is invalid.");
@@ -239,17 +242,17 @@ export class CalcomCalendarProvider implements CalendarProvider {
     const existing = usable(stored) ? stored : await this.findBookingByAttendee(input.accessToken, email, eventTypeId);
     if (existing) {
       // Without a length to send, a reschedule keeps the booking's length, so only the start can be brought in line.
-      if (sameInstant(existing.start, input.startsAt) && (!pickable || sameInstant(existing.end, input.endsAt))) return { externalEventId: existing.uid };
+      if (sameInstant(existing.start, input.startsAt) && (!pickable || sameInstant(existing.end, input.endsAt))) return { externalEventId: existing.uid, videoUrl: existing.videoUrl ?? null };
       // A reschedule cancels the old booking and returns a new one under a new uid.
-      const moved = await this.request<{ uid?: string }>(input.accessToken, `/v2/bookings/${encodeURIComponent(existing.uid)}/reschedule`, { method: "POST", version: API_VERSIONS.bookings, what: "booking reschedule", body: { start: toUtc(input.startsAt), ...length, reschedulingReason: "Rescheduled in LobbyStack" } });
+      const moved = await this.request<{ uid?: string } & BookingLocation>(input.accessToken, `/v2/bookings/${encodeURIComponent(existing.uid)}/reschedule`, { method: "POST", version: API_VERSIONS.bookings, what: "booking reschedule", body: { start: toUtc(input.startsAt), ...length, reschedulingReason: "Rescheduled in LobbyStack" } });
       if (!moved.uid) throw new Error("Cal.com booking reschedule did not return a booking.");
-      return { externalEventId: moved.uid };
+      return { externalEventId: moved.uid, videoUrl: bookingVideoUrl(moved) };
     }
     const attendee = input.attendee ?? {};
     const name = attendee.name?.trim() || "LobbyStack caller";
     const contact = [name, attendee.phone, attendee.email].filter((value): value is string => Boolean(value?.trim()));
     // The caller's own address never reaches Cal.com, so Cal.com never emails them: LobbyStack confirms the booking.
-    const created = await this.request<{ uid?: string }>(input.accessToken, "/v2/bookings", {
+    const created = await this.request<{ uid?: string } & BookingLocation>(input.accessToken, "/v2/bookings", {
       method: "POST", version: API_VERSIONS.bookings, what: "booking write",
       body: {
         eventTypeId,
@@ -268,7 +271,7 @@ export class CalcomCalendarProvider implements CalendarProvider {
       },
     });
     if (!created.uid) throw new Error("Cal.com booking write did not return a booking.");
-    return { externalEventId: created.uid };
+    return { externalEventId: created.uid, videoUrl: bookingVideoUrl(created) };
   }
 
   async deleteEvent(input: { accessToken: string; calendarId: string; eventId: string; appointmentId?: string }): Promise<void> {
@@ -332,7 +335,7 @@ export class CalcomCalendarProvider implements CalendarProvider {
 
   private async getBooking(accessToken: string, uid: string): Promise<Booking | null> {
     try {
-      const data = await this.request<Partial<Booking> | Partial<Booking>[]>(accessToken, `/v2/bookings/${encodeURIComponent(uid)}`, { version: API_VERSIONS.bookings, what: "booking lookup" });
+      const data = await this.request<BookingPayload | BookingPayload[]>(accessToken, `/v2/bookings/${encodeURIComponent(uid)}`, { version: API_VERSIONS.bookings, what: "booking lookup" });
       return Array.isArray(data) ? null : booking(data);
     } catch (error) {
       // Cal.com documents only the 200 answer here. A uid it can't read, such as LobbyStack's own placeholder,
@@ -361,7 +364,7 @@ export class CalcomCalendarProvider implements CalendarProvider {
       for (const [key, value] of Object.entries({ ...filters, limit: String(PAGE_LIMIT), sortStart: "asc", ...(cursor ? { cursor } : {}) })) url.searchParams.set(key, value);
       const response = await fetch(url, { headers: { authorization: `Bearer ${accessToken}`, "cal-api-version": API_VERSIONS.bookingList }, signal: AbortSignal.timeout(15_000) });
       if (!response.ok) throw new CalcomApiError(`Cal.com booking list failed with status ${response.status}.`, response.status);
-      const payload = await response.json().catch(() => null) as { status?: string; data?: Array<Partial<Booking>>; pagination?: { nextCursor?: string | null; hasMore?: boolean } } | null;
+      const payload = await response.json().catch(() => null) as { status?: string; data?: BookingPayload[]; pagination?: { nextCursor?: string | null; hasMore?: boolean } } | null;
       if (!payload || payload.status !== "success" || !Array.isArray(payload.data)) throw new Error("Cal.com bookings could not be verified.");
       for (const item of payload.data) {
         const parsed = booking(item);
@@ -392,10 +395,26 @@ export class CalcomCalendarProvider implements CalendarProvider {
   }
 }
 
-function booking(value: Partial<Booking> | null | undefined): Booking | null {
-  return value && typeof value.uid === "string" && typeof value.start === "string" && typeof value.end === "string" && typeof value.status === "string"
-    ? { uid: value.uid, start: value.start, end: value.end, status: value.status, ...(typeof value.eventTypeId === "number" ? { eventTypeId: value.eventTypeId } : {}), ...(typeof value.rescheduledToUid === "string" ? { rescheduledToUid: value.rescheduledToUid } : {}) }
-    : null;
+type BookingPayload = Partial<Omit<Booking, "videoUrl">> & BookingLocation;
+
+function booking(value: BookingPayload | null | undefined): Booking | null {
+  if (!value || typeof value.uid !== "string" || typeof value.start !== "string" || typeof value.end !== "string" || typeof value.status !== "string") return null;
+  const videoUrl = bookingVideoUrl(value);
+  return { uid: value.uid, start: value.start, end: value.end, status: value.status, ...(typeof value.eventTypeId === "number" ? { eventTypeId: value.eventTypeId } : {}), ...(typeof value.rescheduledToUid === "string" ? { rescheduledToUid: value.rescheduledToUid } : {}), ...(videoUrl ? { videoUrl } : {}) };
+}
+
+/**
+ * The link a caller joins the booking's video call with. Cal.com's `location` also holds street addresses, phone
+ * numbers and placeholders such as "integrations:daily", so only an https URL counts. Its documentation deprecates
+ * `meetingUrl`, and some conferencing apps fill only `metadata.videoCallUrl`.
+ */
+function bookingVideoUrl(value: BookingLocation): string | null {
+  for (const candidate of [value.location, value.meetingUrl, value.metadata?.videoCallUrl]) {
+    if (typeof candidate !== "string" || candidate.length > MAX_VIDEO_URL_LENGTH || !URL.canParse(candidate)) continue;
+    const url = new URL(candidate);
+    if (url.protocol === "https:") return url.toString();
+  }
+  return null;
 }
 
 function interval(start: string, end: string, externalEventId?: string): CalendarBusyBlock {

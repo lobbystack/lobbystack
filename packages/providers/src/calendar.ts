@@ -19,8 +19,11 @@ export type CalendarListEntry = { id: string; summary: string; primary: boolean;
 
 export type CalendarBusyBlock = { startsAt: string; endsAt: string; externalEventId?: string };
 
-/** Bookings people changed in the calendar itself: the ones they cancelled, and where the ones they moved went. */
-export type CalendarBookingChanges = { cancelled: string[]; moved: Array<{ eventId: string; toEventId: string; startsAt: string; endsAt: string }> };
+/**
+ * Bookings people changed in the calendar itself: the ones they cancelled, and where the ones they moved went.
+ * `videoLinks` lists the live bookings that have a video link, which can arrive after the booking does.
+ */
+export type CalendarBookingChanges = { cancelled: string[]; moved: Array<{ eventId: string; toEventId: string; startsAt: string; endsAt: string }>; videoLinks?: Array<{ eventId: string; videoUrl: string }> };
 
 /** The person an appointment is for. Providers that book on someone's behalf use it; Google ignores it. */
 export type CalendarAttendee = { name?: string | null; phone?: string | null; email?: string | null };
@@ -44,7 +47,8 @@ export interface CalendarProvider {
   refreshAccessToken(input: { refreshToken: string }): Promise<{ accessToken: string; expiresIn: number; refreshToken?: string }>;
   listCalendars(input: { accessToken: string }): Promise<CalendarListEntry[]>;
   getBusyBlocks(input: { accessToken: string; calendarId: string; startsAt: string; endsAt: string }): Promise<CalendarBusyBlock[]>;
-  upsertEvent(input: CalendarEventWrite): Promise<{ externalEventId: string }>;
+  /** `videoUrl` is the booking's link for joining a video call, from a provider that makes one. */
+  upsertEvent(input: CalendarEventWrite): Promise<{ externalEventId: string; videoUrl?: string | null }>;
   /** `keepEventId` names a booking the appointment still holds, which a provider that looks bookings up must leave alone. */
   deleteEvent(input: { accessToken: string; calendarId: string; eventId: string; appointmentId?: string; keepEventId?: string }): Promise<void>;
 }

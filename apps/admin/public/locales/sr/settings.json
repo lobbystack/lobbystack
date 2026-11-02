@@ -597,7 +597,7 @@
       "warnings": {
         "missingLengths": "Dodajte {{lengths}} minuta trajanjima tipa događaja. Do tada Cal.com zakazuje te usluge u podrazumevanom trajanju tipa događaja.",
         "smsReminders": "Isključite SMS tok rada za ovaj tip događaja, inače Cal.com šalje poruke pozivaocima pored poruka vašeg agenta.",
-        "videoLocation": "Dodajte „Broj telefona učesnika” kao lokaciju ovog tipa događaja. Do tada rezervacije imaju video link umesto telefona pozivaoca.",
+        "videoLocation": "Dodajte „Broj telefona učesnika” kao lokaciju ovog tipa događaja. Do tada rezervacije imaju video link umesto telefona pozivaoca, a link dobijaju samo pozivaoci koji pristanu na poruke.",
         "narrowerAvailability": "Proširite raspored tipa događaja za {{days}} da odgovara vašem radnom vremenu. Cal.com odbija rezervacije van svog rasporeda."
       }
     },
