@@ -1,0 +1,55 @@
+{/* Generated from packages/shared/src/setupPrompts.ts. Run pnpm docs:setup-prompts after changing it. */}
+
+<Prompt description="**Vendez-la sous votre marque.** Votre assistant prépare les démos, les formules et votre première entreprise, et vous gardez ce qu'elles paient." icon="store">
+Set us up to sell an AI receptionist to the businesses we serve, under our own brand, with LobbyStack's white label. We set our own prices, and those businesses pay us. Do everything you can yourself, and ask me only for what you can't do.
+
+Read these first:
+
+* `https://docs.lobbystack.com/white-label/overview`
+* `https://docs.lobbystack.com/white-label/sign-up`
+* `https://docs.lobbystack.com/white-label/branding`
+* `https://docs.lobbystack.com/white-label/tiers`
+* `https://docs.lobbystack.com/white-label/packages`
+* `https://docs.lobbystack.com/white-label/templates`
+* `https://docs.lobbystack.com/white-label/demos`
+* `https://docs.lobbystack.com/white-label/businesses`
+* `https://docs.lobbystack.com/white-label/api-keys`
+* `https://docs.lobbystack.com/api/authentication`
+* `https://app.lobbystack.com/api/v1/openapi.json`
+
+Treat the OpenAPI spec as the source of truth. If a page and the spec disagree, follow the spec. Don't use an endpoint or field that isn't in it.
+
+Connect:
+
+* I sign up at `https://app.lobbystack.com/partner/signup`, then make a platform key on the partner console's API keys page. Tell me which access to turn on. Only an owner can give a key billing access.
+* Base URL: `https://app.lobbystack.com/api/v1`
+* Send `Authorization: Bearer $LOBBYSTACK_API_KEY` with an `lsp_` platform key.
+* Send the `LobbyStack-Business` header on per-business requests. Requests under `/partner` don't take it.
+* Keep keys on the server. Read them from an environment variable or a secrets manager, and never put one in browser code, a mobile app, a commit, a log or this chat.
+* If you can't send web requests, connect to `https://app.lobbystack.com/api/mcp` as the partner. `https://docs.lobbystack.com/white-label/mcp-for-agencies` lists its tools.
+
+Do this:
+
+1. Set our name, logo, color and links with `PATCH /partner/brand`.
+2. Start with a test business. Create it with `POST /businesses` and an `Idempotency-Key`, leave out `owner_email`, and set it up the way we'd set up a typical business. Have me open it from the console and run a browser test call.
+3. Save that setup as a template with `POST /partner/templates`.
+4. Compare the tiers with me against the number of businesses we expect. If we choose a paid one, start `POST /partner/billing/checkout` and I'll pay.
+5. Get a link from `POST /partner/stripe/onboarding-link`, and I'll connect our Stripe account.
+6. Ask me for our prices, then create packages with `POST /partner/packages`.
+7. Make a demo for a prospect: `POST /partner/demos`, poll `GET /partner/demos/{demo_id}` until it's ready, then `POST /partner/demos/{demo_id}/publish`.
+8. Set up the first real business with `POST /businesses`, sending `owner_email`, `template_id`, `package_id` and `access_level`. This emails the owner, so confirm the details with me first.
+
+Facts to plan around:
+
+* A partner has one brand, and all its businesses share it.
+* A package needs an owner, because the checkout opens from their invitation. A business created without `owner_email` can't get one later.
+* A key acts as an admin, so inviting an owner to our own team stays with me in the console.
+* A key can buy numbers only on a paid tier, with `phone_numbers:manage` and `phone_numbers:purchase`. Ask before you buy one.
+* The API can't send texts, and no webhook reports incoming texts. The AI doesn't reply to texts.
+* `GET /messages` returns only the messages the receptionist took for the team. It isn't a text inbox.
+* Hosted plans use Twilio numbers.
+* Website chat isn't part of the hosted plans, so `POST /widget-keys` returns `403` there.
+* LobbyStack has no voice cloning. Pick one of GPT-Live's voices with `voice` on `PATCH /receptionist`.
+
+Before you do anything, reply with a short plan: what you'll do, which access the key needs, what I have to do and what will cost money. Wait for my OK.
+</Prompt>

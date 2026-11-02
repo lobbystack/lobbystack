@@ -81,6 +81,8 @@ Hosted voice agent platforms run the audio, the phone numbers and the model, and
 
 Platforms get you to a working test call fastest. You pay their rates on top of the model, or bundled with it, and you rebuild booking rules, transfers and follow-ups inside their editor. Leaving later means rebuilding them again.
 
+If you don't write code, our guide to [creating an AI receptionist with Claude or ChatGPT](/blog/how-to-create-an-ai-receptionist/) starts from a finished product instead.
+
 ## Option 4: Start from an open-source voice framework
 
 Open-source frameworks handle audio, turn-taking and the connection to the model, and you host them:
@@ -99,7 +101,7 @@ An open-source receptionist ships the parts that options 1 through 4 leave to yo
 - moving or cancelling an appointment after verifying the caller
 - taking messages and transferring calls to a person
 
-Each call comes with a transcript, a recording and a summary in the dashboard. We wrote up the switch in [our GPT-Live post](/blog/ai-voice-agent-gpt-live/).
+Each call comes with a transcript, a recording and a summary in the dashboard. We wrote up the switch in [our GPT-Live post](/blog/ai-voice-agent-gpt-live/). If you want one inside your own SaaS, our [AI receptionist API guide](/blog/ai-receptionist-api/) lists the requests.
 
 ## The five options compared
 

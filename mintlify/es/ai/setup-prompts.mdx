@@ -1,0 +1,37 @@
+---
+title: "Configure LobbyStack con un asistente de IA"
+description: "Copie un prompt listo para usar en Claude, ChatGPT, Cursor u otro asistente de IA, y configurará su recepcionista con usted."
+sidebarTitle: "Prompts de configuración"
+contentType: "How-to"
+---
+
+import NoCodePrompt from "/snippets/es/setup-prompts/no-code.mdx";
+import SaasPrompt from "/snippets/es/setup-prompts/saas.mdx";
+import WhiteLabelPrompt from "/snippets/es/setup-prompts/white-label.mdx";
+import PartnerPrompt from "/snippets/es/setup-prompts/partner.mdx";
+import SelfHostPrompt from "/snippets/es/setup-prompts/self-host.mdx";
+
+Copie un prompt, péguelo en su asistente de IA, y hará la configuración con usted. Cada prompt indica la documentación que debe leer, empieza con un negocio de prueba y le pide al asistente un plan breve antes de cambiar nada.
+
+El asistente se detiene y le avisa cuando solo usted puede actuar, por ejemplo para iniciar sesión, agregar registros DNS o pagar.
+
+Los prompts se mantienen en inglés para que todos los asistentes reciban las mismas instrucciones. Pídale al suyo que le responda en español.
+
+## Elija un prompt
+
+<NoCodePrompt />
+
+<SaasPrompt />
+
+<WhiteLabelPrompt />
+
+<PartnerPrompt />
+
+<SelfHostPrompt />
+
+## Elija un asistente
+
+Cualquier asistente puede usar estos prompts, y sus herramientas deciden cuánto puede hacer por usted:
+
+- **Asistentes de código**: Claude Code, Codex y Cursor envían ellos mismos las solicitudes a la API, así que son los que más hacen.
+- **Asistentes de chat**: Claude y ChatGPT trabajan mediante el [servidor MCP](/es/ai/mcp). Leen las llamadas, cambian el horario y agregan conocimiento, y luego le indican qué pasos hacer en el panel.

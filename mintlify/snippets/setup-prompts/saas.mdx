@@ -1,0 +1,46 @@
+{/* Generated from packages/shared/src/setupPrompts.ts. Run pnpm docs:setup-prompts after changing it. */}
+
+<Prompt description="**Add it to your product.** Build an AI receptionist into your SaaS through the API. Your customers stay in your UI." icon="code">
+Add an AI receptionist to our product using LobbyStack as the backend. Our customers should stay in our UI and never need to open LobbyStack.
+
+Read these first:
+
+* `https://docs.lobbystack.com/api/overview`
+* `https://docs.lobbystack.com/api/authentication`
+* `https://docs.lobbystack.com/api/webhooks`
+* `https://docs.lobbystack.com/white-label/api-keys`
+* `https://app.lobbystack.com/api/v1/openapi.json`
+
+Treat the OpenAPI spec as the source of truth. If a page and the spec disagree, follow the spec. Don't use an endpoint or field that isn't in it.
+
+Connect:
+
+* Base URL: `https://app.lobbystack.com/api/v1`
+* Send `Authorization: Bearer $LOBBYSTACK_API_KEY` with an `lsp_` platform key.
+* Send the `LobbyStack-Business` header on per-business requests. Requests under `/partner` don't take it.
+* Keep keys on the server. Read them from an environment variable or a secrets manager, and never put one in browser code, a mobile app, a commit, a log or this chat.
+
+Build:
+
+1. A typed server client for the API, generated from the spec or checked against it.
+2. One LobbyStack business per customer. Call `POST /businesses` with an `Idempotency-Key`, and save the returned ID with the customer. Leave out `owner_email`, so nobody gets an invitation.
+3. A settings page for greeting, hours, services and knowledge, using `PATCH /receptionist`, `PATCH /business`, `/services`, `/knowledge` and `/knowledge/sources`.
+4. Pages for calls, transcripts, messages taken, contacts and appointments.
+5. A `transfer_number` for each business, set with `PATCH /receptionist`. Without one, LobbyStack refuses the calls the receptionist can't take. Finish onboarding with `POST /onboarding/complete`, and send `skip_number: true` if the business has no number.
+6. Phone numbers, if our customers need them: `POST /phone-numbers/search`, then `POST /phone-numbers/claims` with an `Idempotency-Key`, then poll `GET /phone-numbers/claims/{claim_id}` until it's `claimed` or `failed`. This needs a paid tier and a key with `phone_numbers:manage` and `phone_numbers:purchase`. Ask before you buy one.
+7. A verified, duplicate-safe webhook endpoint for `call.completed`, `appointment.booked`, `appointment.rescheduled`, `appointment.cancelled`, `message.taken` and `contact.created`. Subscribe each business with `POST /webhooks` and store its secret. Verify the signature against the raw body, skip a `webhook-id` you've already processed, and answer `2xx` within 10 seconds.
+
+Limits:
+
+* The API can't send texts, and no webhook reports incoming texts. The AI doesn't reply to texts.
+* `GET /messages` returns only the messages the receptionist took for the team. It isn't a text inbox.
+* Hosted plans use Twilio numbers.
+* Website chat isn't part of the hosted plans, so `POST /widget-keys` returns `403` there.
+* LobbyStack has no voice cloning. Pick one of GPT-Live's voices with `voice` on `PATCH /receptionist`.
+
+Start with a test business, and run the whole flow on it before you touch real customers. `DELETE /partner/businesses/{business_id}` removes it afterwards and needs `partner.businesses:write`. Ask me first.
+
+Only I can sign up as a partner at `https://app.lobbystack.com/partner/signup`, make the platform key on the partner console's API keys page, and pay for a tier.
+
+Before you change any code, reply with a short plan: what you'll build, which access the key needs, what I have to do and what will cost money. Wait for my OK.
+</Prompt>

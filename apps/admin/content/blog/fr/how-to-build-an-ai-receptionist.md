@@ -80,6 +80,8 @@ Les plateformes d'agents vocaux hébergées gèrent l'audio, les numéros et le 
 
 Une plateforme vous mène le plus vite à un premier appel de test. Vous payez ses tarifs en plus du modèle, ou inclus dedans, et vous refaites vos règles de réservation, vos transferts et vos suivis dans son éditeur. En partir plus tard, c'est tout refaire une seconde fois.
 
+Si vous n'écrivez pas de code, notre guide pour [créer un agent IA réceptionniste avec Claude ou ChatGPT](/fr/blog/how-to-create-an-ai-receptionist/) part plutôt d'un produit fini.
+
 ## Option 4 : partir d'un framework vocal open source
 
 Les frameworks open source gèrent l'audio, les tours de parole et la connexion au modèle, et vous les hébergez :
@@ -98,7 +100,7 @@ Un réceptionniste open source fournit ce que les options 1 à 4 vous laissent �
 - déplacer ou annuler un rendez-vous après avoir vérifié l'appelant
 - prendre des messages et transférer l'appel à une personne
 
-Chaque appel arrive avec une transcription, un enregistrement et un résumé dans le tableau de bord. Nous avons raconté la transition dans [notre article sur GPT-Live](/fr/blog/ai-voice-agent-gpt-live/).
+Chaque appel arrive avec une transcription, un enregistrement et un résumé dans le tableau de bord. Nous avons raconté la transition dans [notre article sur GPT-Live](/fr/blog/ai-voice-agent-gpt-live/). Si vous en voulez un dans votre propre SaaS, notre [guide de l'API de réceptionniste IA](/fr/blog/ai-receptionist-api/) liste les requêtes.
 
 ## Les cinq options comparées
 
