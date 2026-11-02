@@ -9,7 +9,9 @@ function fakeTwilio() {
     addNumberToSipTrunk: vi.fn().mockResolvedValue(undefined),
     routeNumber: vi.fn().mockResolvedValue(undefined),
     findTrunkCall: vi.fn().mockResolvedValue("CA1"),
+    findInboundCall: vi.fn().mockResolvedValue("CA2"),
     getCallPricing: vi.fn().mockResolvedValue({ providerCostUsd: 0.02, providerPriceUnit: "usd" }),
+    getCallTreePricing: vi.fn().mockResolvedValue({ providerCostUsd: 0.05, providerPriceUnit: "usd" }),
     verifyPhone: vi.fn().mockResolvedValue({ verificationSid: "VE1", status: "pending" }),
     checkPhoneVerification: vi.fn().mockResolvedValue("approved"),
   };
@@ -46,11 +48,42 @@ describe("createTwilioCarrier", () => {
     expect(untrunked.callCost!.findLiveCallCost).toBeUndefined();
   });
 
+  it("puts a staff-first number on the staff-first webhook, with a fallback to the receptionist", async () => {
+    const twilio = fakeTwilio();
+    const routing = createTwilioCarrier({ ...env, OPENAI_PROJECT_ID: "proj_1" }, twilio as unknown as TwilioProvider)!.routing!;
+    expect(await routing.routeNumber({ providerPhoneId: "PN1", mode: "staff_first" })).toEqual({ target: "https://app.example.test/api/webhooks/twilio/staff-first/incoming" });
+    expect(twilio.routeNumber).toHaveBeenCalledWith({ providerPhoneId: "PN1", trunkSid: "TK1", mode: "fallback", fallbackUrl: "https://app.example.test/api/webhooks/twilio/staff-first/incoming", errorUrl: "https://app.example.test/api/webhooks/twilio/staff-first/fallback" });
+  });
+
+  it("won't ring staff first without the OpenAI project", async () => {
+    const twilio = fakeTwilio();
+    const routing = createTwilioCarrier(env, twilio as unknown as TwilioProvider)!.routing!;
+    await expect(routing.routeNumber({ providerPhoneId: "PN1", mode: "staff_first" })).rejects.toThrow(/OPENAI_PROJECT_ID/);
+    expect(twilio.routeNumber).not.toHaveBeenCalled();
+  });
+
   it("prices a GPT-Live call from its trunk leg", async () => {
     const twilio = fakeTwilio();
     const near = new Date("2026-10-01T12:00:00Z");
     expect(await createTwilioCarrier(env, twilio as unknown as TwilioProvider)!.callCost!.findLiveCallCost!({ from: "+14165550134", near })).toEqual({ providerCallId: "CA1", providerCostUsd: 0.02, providerPriceUnit: "usd" });
     expect(twilio.findTrunkCall).toHaveBeenCalledWith({ trunkSid: "TK1", from: "+14165550134", near });
+  });
+
+  it("prices a staff-first call from its inbound call, with every leg", async () => {
+    const twilio = fakeTwilio();
+    twilio.findTrunkCall.mockResolvedValue(undefined);
+    const near = new Date("2026-10-01T12:00:00Z");
+    const cost = createTwilioCarrier(env, twilio as unknown as TwilioProvider)!.callCost!;
+    expect(await cost.findLiveCallCost!({ from: "+14165550134", dialled: ["+14165550123"], near })).toEqual({ providerCallId: "CA2", providerCostUsd: 0.05, providerPriceUnit: "usd" });
+    expect(twilio.findInboundCall).toHaveBeenCalledWith({ from: "+14165550134", dialled: ["+14165550123"], near });
+    expect(await cost.getCallPricing!({ providerCallId: "CA3" })).toEqual({ providerCostUsd: 0.05, providerPriceUnit: "usd" });
+  });
+
+  it("finds no call off the trunk without the business's numbers", async () => {
+    const twilio = fakeTwilio();
+    twilio.findTrunkCall.mockResolvedValue(undefined);
+    expect(await createTwilioCarrier(env, twilio as unknown as TwilioProvider)!.callCost!.findLiveCallCost!({ from: "+14165550134", near: new Date() })).toBeUndefined();
+    expect(twilio.findInboundCall).not.toHaveBeenCalled();
   });
 
   it("verifies through the Verify service only when one is set", async () => {

@@ -96,6 +96,8 @@ Load the matching skill from `.agents/skills/` before you write text people read
 - Prioritize booking, authz, webhook, outbox, snapshot, privacy, and telemetry regressions.
 - Every new telemetry event must include a test that asserts it fires from its real production code path. `pnpm telemetry:coverage` fails when an event in the registry has no producer.
 - Run `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm build` before opening a PR.
+- Run the e2e suite with `pnpm e2e:local` before opening a PR. CI's e2e job runs the same script.
+- Every new customer-visible feature ships with an e2e test of its main path in the same PR, and a feature with no browser surface gets the closest API-level end-to-end test. CI runs only the specs in `TESTS` in `scripts/e2e-local.sh` and in `apps/admin/e2e/full-stack/`, which adds a real worker and fakes for third parties.
 - When changing migrations or RLS, also run `pnpm db:check` and `pnpm db:verify-rls` against the test database.
 - When changing GPT-Live instructions, the call controller, or how calls end, run `pnpm voice:eval` before you open a PR and `pnpm voice:call` against staging before you merge. See `docs/voice/testing.md`.
 

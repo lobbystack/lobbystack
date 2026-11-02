@@ -3,10 +3,12 @@ import { z } from "zod";
 export { isMaintenanceMode } from "./maintenance";
 /** The sync error of a connection whose provider rejected its grant. Any other sync error clears without a reconnect. */
 export const CALENDAR_RECONNECT_ERROR = "Calendar authorization requires reconnection.";
+/** The last sync error of a Calendly connection on a plan that can't book through the API. */
+export const CALENDLY_PLAN_ERROR = "Calendly books through its API only on paid plans.";
 export { interfaceLocaleTags, interfaceLocales, intlLocale, isInterfaceLocale, isRuntimeLocale, normalizeInterfaceLocale, normalizeRuntimeLocale, runtimeLocaleName, runtimeLocales } from "./locales";
 export type { InterfaceLocale, RuntimeLocale } from "./locales";
 import { interfaceLocales, runtimeLocales, type InterfaceLocale, type RuntimeLocale } from "./locales";
-import { appointmentChangeVerificationModes, bookingModes, transferModes, type ReceptionistVoice } from "./receptionist";
+import { appointmentChangeVerificationModes, bookingModes, transferModes, type ReceptionistVoice, type StaffFirstMode } from "./receptionist";
 import { WIDGET_COLOR_PATTERN, widgetPositionSchema, type WidgetPosition } from "./widget";
 export * from "./receptionist";
 export * from "./chatChannels";
@@ -196,6 +198,14 @@ export type TransferPolicy = {
   transferNumber?: string;
 };
 
+export type StaffFirstPolicy = {
+  mode: Exclude<StaffFirstMode, "never">;
+  number: string;
+  ringSeconds: number;
+  message?: string;
+  handoverMessage?: string;
+};
+
 export type AppointmentChangeVerificationMode = (typeof appointmentChangeVerificationModes)[number];
 
 export type AppointmentChangePolicy = {
@@ -299,6 +309,8 @@ export type BusinessContextSnapshot = {
   bookingPolicy: string;
   knowledgeDigest: string;
   transferPolicy: TransferPolicy;
+  /** Set only when calls ring a staff phone first. */
+  staffFirstPolicy?: StaffFirstPolicy;
   appointmentChangePolicy?: AppointmentChangePolicy;
   /** Absent in snapshots built before booking modes existed; treat as "instant". */
   bookingMode?: BookingMode;
@@ -539,11 +551,11 @@ export * from "./planComparison";
 export { normalizeAuthEmail } from "./auth";
 export { assertProductionSecrets } from "./productionSecrets";
 
-export { isBusinessOpen, isTransferPermitted, normalizeTransferMode } from "./transferPolicy";
+export { isBusinessOpen, isTransferPermitted, normalizeStaffFirstMode, normalizeTransferMode, shouldRingStaffFirst } from "./transferPolicy";
 export { isTransferCountry, isTransferPhone, TRANSFER_COUNTRY_CALLING_CODES, type TransferCountry } from "./transferCountries";
 
 export { OPERATOR_SMS_ACCEPTED_DISCLOSURE_VERSIONS, OPERATOR_SMS_DISCLOSURE_TEXT, OPERATOR_SMS_DISCLOSURE_VERSION } from "./operatorSmsConsent";
-export { canTextNumber, permanentSmsErrorCode } from "./smsReach";
+export { canTextNumber, permanentSmsErrorCode, smsRecipientRegion, type SmsRecipientRegion } from "./smsReach";
 
 export { DASHBOARD_TEST_CALL_WIDGET_ID, PROSPECT_DEMO_WIDGET_ID } from "./testCall";
 

@@ -1,0 +1,92 @@
+---
+title: "Connecter Calendly"
+description: "Connectez un compte Calendly payant, choisissez le type d'événement que votre réceptionniste IA réserve et gardez vos disponibilités à jour."
+sidebarTitle: "Calendly"
+contentType: "How-to"
+---
+
+Connectez Calendly si votre équipe y prend déjà ses réservations. Votre réceptionniste IA réserve chaque rendez-vous comme une réservation Calendly d'un seul type d'événement. Elle compte vos événements Calendly comme du temps occupé et ne propose donc pas les créneaux déjà réservés sur votre page Calendly.
+
+<Note>
+  Il vous faut un forfait Calendly payant, Standard ou supérieur. Sur le forfait Free, Calendly refuse les réservations et les webhooks des autres applications. Si vous connectez un compte Free, la carte Calendly vous indique de passer à un forfait payant.
+</Note>
+
+## Connaître les limites avant de connecter
+
+Calendly impose ces limites aux réservations venant d'autres applications :
+
+- **Plafond de réservations** : sous Enterprise, chaque utilisateur Calendly a droit à 10 réservations par minute, 50 par heure et 100 par jour. Un essai a droit à 5 par jour.
+- **Déplacements** : Calendly ne permet pas à une application de replanifier. LobbyStack réserve la nouvelle heure, puis annule l'ancienne, et un déplacement compte donc pour une réservation.
+- **Durée** : chaque réservation prend la durée par défaut du type d'événement.
+
+Si vous atteignez le plafond, votre réceptionniste IA prend quand même le rendez-vous. LobbyStack l'ajoute à Calendly une fois la limite réinitialisée et vous alerte si l'attente dépasse quelques minutes.
+
+## Ce que Calendly reçoit
+
+Pour chaque rendez-vous, Calendly reçoit :
+
+- **Nom de l'invité** : celui de l'appelant, pour que vous voyiez qui a réservé
+- **Courriel de l'invité** : une adresse de remplacement propre au rendez-vous, pour que Calendly n'écrive pas à l'appelant
+- **Réponses aux questions du type d'événement** : le nom, le téléphone et le vrai courriel de l'appelant vont dans une question texte, pour que vous puissiez le joindre
+
+La réceptionniste IA envoie elle-même la confirmation et les rappels à l'appelant. Calendly envoie toujours ses notifications d'hôte à votre équipe.
+
+## Connecter Calendly
+
+<Steps>
+  <Step title="Ouvrir Intégrations">
+    Dans le tableau de bord, ouvrez **Intégrations**.
+  </Step>
+  <Step title="Lancer la connexion Calendly">
+    Trouvez **Calendly** et cliquez sur **Connecter**.
+  </Step>
+  <Step title="Autoriser LobbyStack">
+    Connectez-vous à Calendly et approuvez les autorisations demandées.
+  </Step>
+  <Step title="Choisir un type d'événement">
+    De retour dans le tableau de bord, choisissez un type d'événement sous **Type d'événement**. LobbyStack enregistre votre choix aussitôt.
+  </Step>
+</Steps>
+
+LobbyStack commence à lire vos événements Calendly, ainsi que les calendriers que Calendly vérifie pour les conflits, en quelques secondes.
+
+<Note>
+  Un lien obtenu avec `POST /calendars/calendly/connect` fonctionne seulement pour un propriétaire ou un administrateur de l'entreprise. Pour une entreprise qui n'en a aucun, l'API répond `409` : invitez-en un d'abord avec `POST /team/invitations`.
+</Note>
+
+## Configurer le type d'événement dans Calendly
+
+Une fois le type d'événement choisi, la fenêtre liste ce qu'il faut corriger dans Calendly :
+
+- **Questions à choix obligatoires** : rendez-les facultatives. Votre réceptionniste IA ne peut pas répondre à une question à choix unique ou multiple obligatoire, et vous ne pouvez donc pas choisir un type d'événement qui en contient une.
+- **Question texte** : ajoutez-en une au type d'événement. Sans elle, votre équipe ne voit pas le téléphone ni le courriel de l'appelant dans Calendly.
+- **Durée** : réglez le type d'événement sur la durée de vos services. Calendly réserve chaque rendez-vous à cette durée.
+- **Lieu** : ajoutez un lieu téléphonique ou en personne. Sinon, les réservations portent un lien vidéo.
+
+Les disponibilités du type d'événement doivent aussi couvrir vos heures d'ouverture. Calendly réserve seulement les créneaux libres de son horaire. S'il refuse une réservation, le rendez-vous affiche un problème de synchronisation et LobbyStack vous alerte.
+
+## Utiliser Calendly avec Google Calendar ou Cal.com
+
+Le temps occupé de chaque calendrier connecté bloque les réservations. Les nouveaux rendez-vous vont à Calendly ou Cal.com plutôt qu'à Google Calendar, car leurs pages de réservation prennent des réservations par elles-mêmes. Le calendrier personnel d'un membre de l'équipe reste prioritaire pour ses rendez-vous.
+
+## Changer de type d'événement
+
+1. Ouvrez **Intégrations**.
+2. Cliquez sur la carte Calendly.
+3. Choisissez un autre type d'événement.
+
+Les nouveaux rendez-vous utilisent le nouveau type d'événement. Les rendez-vous à venir y passent à la prochaine synchronisation.
+
+## Quand une réservation change dans Calendly
+
+Si vous annulez une réservation dans Calendly, LobbyStack annule le rendez-vous et vous alerte. Les appelants qui ont accepté les textos reçoivent un texto d'annulation.
+
+Si vous déplacez une réservation dans Calendly, puis annulez la nouvelle réservation, LobbyStack annule le rendez-vous.
+
+Si vous déplacez une réservation dans Calendly, LobbyStack déplace le rendez-vous et son rappel, puis vous alerte pour que vous annonciez la nouvelle heure à l'appelant. LobbyStack n'envoie pas de texto à l'appelant pour ce changement. Si le membre de l'équipe a déjà un rendez-vous à la nouvelle heure, LobbyStack garde l'heure d'origine et vous alerte pour que vous régliez la situation.
+
+## Reconnecter ou déconnecter
+
+Si Calendly n'accepte plus la connexion, la carte indique qu'une reconnexion est requise. Ouvrez la carte Calendly et cliquez sur **Reconnecter**.
+
+Pour retirer l'intégration, ouvrez la carte Calendly et cliquez sur **Déconnecter**. LobbyStack annule les réservations à venir que votre réceptionniste IA a faites dans Calendly, et votre page de réservation affiche de nouveau ces créneaux comme libres. Si Google Calendar est aussi connecté, ces rendez-vous y passent. Les réservations passées restent dans Calendly.

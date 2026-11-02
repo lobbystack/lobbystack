@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { and, asc, eq, isNull, ne, or, sql } from "drizzle-orm";
 import { appointments, calendarConnections, contacts, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { CALENDAR_SYNC_HORIZON_MS, followCalendarBookingChanges, forgetRetiredCalendarWebhook, getRetiredCalendarConnection, markCalendarConnectionSync, pickCalendarWriter, queueUnsyncedAppointmentSyncs, recordProductEvent, registerCalendarWebhookOnce, resolveCalendarAccessToken, updateAppointmentSyncState, updateAppointmentSyncStateInTransaction, upsertBusyBlocks, type DomainContext } from "@lobbystack/domain";
+import { CALENDAR_SYNC_HORIZON_MS, followCalendarBookingChanges, forgetRetiredCalendarWebhook, getRetiredCalendarConnection, isBookingCalendarProvider, markCalendarConnectionSync, pickCalendarWriter, queueUnsyncedAppointmentSyncs, recordProductEvent, registerCalendarWebhookOnce, resolveCalendarAccessToken, updateAppointmentSyncState, updateAppointmentSyncStateInTransaction, upsertBusyBlocks, type DomainContext } from "@lobbystack/domain";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 import { redactOtelExceptionText } from "@lobbystack/telemetry/node";
 import { calendarProviderLabel, type CalendarBookingChanges, type CalendarProvider } from "@lobbystack/providers/calendar";
@@ -9,15 +9,18 @@ import { CALENDAR_RECONNECT_ERROR } from "@lobbystack/shared";
 import type { JobResult } from "./handlers";
 
 export type CalendarOperations = Pick<CalendarProvider, "getBusyBlocks" | "upsertEvent" | "deleteEvent" | "refreshAccessToken"> & {
-  /** A provider that pushes changes, as Cal.com does, registers a webhook for each connection. */
+  /** A provider that pushes changes, as Cal.com and Calendly do, registers a webhook for each connection. */
   registerWebhook?: (input: { accessToken: string; subscriberUrl: string; secret: string }) => Promise<{ webhookId: string }>;
   deleteWebhook?: (input: { accessToken: string; webhookId: string }) => Promise<void>;
   /** A provider whose bookings people can change themselves says which ones they did. */
-  getBookingChanges?: (input: { accessToken: string; startsAt: string; endsAt: string }) => Promise<CalendarBookingChanges>;
+  getBookingChanges?: (input: { accessToken: string; calendarId?: string; startsAt: string; endsAt: string }) => Promise<CalendarBookingChanges>;
 };
 /** The configured providers by name; a connection whose provider is missing here is left alone. */
 export type CalendarProviders = Partial<Record<string, CalendarOperations>>;
 type Dependencies = { domain: DomainContext; calendars?: CalendarProviders };
+
+// A short rate-limit wait passes without a word. A longer one, like a daily cap, tells the operator the booking is late.
+const QUIET_RATE_LIMIT_WAIT_MS = 5 * 60_000;
 
 async function secretBox() {
   const key = process.env.ENCRYPTION_KEY;
@@ -90,6 +93,12 @@ export async function syncAppointmentCalendar(dependencies: Dependencies, input:
     });
   } catch (error) {
     const message = error instanceof Error ? redactOtelExceptionText(error.message) : "Calendar synchronization failed.";
+    // A provider's rate limit says when to come back, which doesn't spend one of the job's attempts.
+    const { retryAfterMs } = error as { retryAfterMs?: unknown };
+    if (typeof retryAfterMs === "number") {
+      if (retryAfterMs > QUIET_RATE_LIMIT_WAIT_MS) await updateAppointmentSyncState(dependencies.domain, { businessId, appointmentId, state: "failed", error: message });
+      return { status: "deferred", entityId: appointmentId, retryAt: new Date(Date.now() + retryAfterMs) };
+    }
     await updateAppointmentSyncState(dependencies.domain, { businessId, appointmentId, state: "failed", error: message });
     if (message !== "Calendar selection changed during synchronization.") {
       // Booking treats a connection in error as stale, so a failed event write fails only this appointment.
@@ -121,11 +130,11 @@ export async function deleteReleasedCalendarEvent(dependencies: Dependencies, in
   // A disconnected connection has no token left. Event ids repeat across calendars, so a connection
   // switched back to this calendar that wrote the booking again holds a live event under this id.
   if (!connection || connection.status === "disconnected" || (connection.selectedCalendarId === calendarId && currentEventId === eventId)) return { status: "skipped", entityId: appointmentId };
-  // A Cal.com uid names one booking anywhere, so one an appointment holds again is live, whichever event type it's on.
-  if (connection.provider === "calcom" && await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => (await tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.businessId, businessId), eq(appointments.calendarExternalId, eventId))).limit(1)).length > 0)) return { status: "skipped", entityId: appointmentId };
+  // A booking provider's id names one booking anywhere, so one an appointment holds again is live, whichever event type it's on.
+  if (isBookingCalendarProvider(connection.provider) && await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => (await tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.businessId, businessId), eq(appointments.calendarExternalId, eventId))).limit(1)).length > 0)) return { status: "skipped", entityId: appointmentId };
   const provider = dependencies.calendars[connection.provider];
   if (!provider) return { status: "skipped", entityId: appointmentId };
-  await provider.deleteEvent({ accessToken: await accessToken(dependencies, businessId, connectionId, provider), calendarId, eventId, appointmentId });
+  await provider.deleteEvent({ accessToken: await accessToken(dependencies, businessId, connectionId, provider), calendarId, eventId, appointmentId, ...(currentEventId && currentEventId !== eventId ? { keepEventId: currentEventId } : {}) });
   return { status: "completed", entityId: appointmentId };
 }
 
@@ -135,6 +144,7 @@ export async function reconcileBusinessCalendar(dependencies: Dependencies, busi
   const connections = await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => tx.select({ id: calendarConnections.id, provider: calendarConnections.provider, calendarId: calendarConnections.selectedCalendarId, staffId: calendarConnections.staffId, status: calendarConnections.status, webhookId: calendarConnections.externalWebhookId }).from(calendarConnections).where(and(eq(calendarConnections.businessId, businessId), ne(calendarConnections.status, "disconnected"), connectionId ? eq(calendarConnections.id, connectionId) : undefined)));
   let synced = 0;
   let failures = 0;
+  let retryAfterMs = 0;
   for (const connection of connections) {
     // Connecting OAuth does not authorize writes to the implicit primary calendar.
     if (!connection.calendarId) continue;
@@ -143,15 +153,21 @@ export async function reconcileBusinessCalendar(dependencies: Dependencies, busi
     try {
       const token = await accessToken(dependencies, businessId, connection.id, provider, connection.status === "error");
       // A push provider's busy time is only as fresh as its webhook, so the connection fails until one is registered.
-      if (provider.registerWebhook && !connection.webhookId) await registerWebhook(dependencies, provider, { businessId, connectionId: connection.id, accessToken: token });
+      if (provider.registerWebhook && !connection.webhookId) await registerWebhook(dependencies, provider, { businessId, connectionId: connection.id, providerName: connection.provider, accessToken: token });
       const startsAt = new Date();
       const endsAt = new Date(startsAt.getTime() + CALENDAR_SYNC_HORIZON_MS);
       const blocks = await provider.getBusyBlocks({ accessToken: token, calendarId: connection.calendarId, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() });
       await upsertBusyBlocks(dependencies.domain, { businessId, connectionId: connection.id, calendarId: connection.calendarId, syncStartedAt: startsAt, blocks: blocks.map((block) => ({ ...block, ...(connection.staffId ? { staffId: connection.staffId } : {}) })) });
-      if (provider.getBookingChanges) await followCalendarBookingChanges(dependencies.domain, { businessId, provider: calendarProviderLabel(connection.provider), changes: await provider.getBookingChanges({ accessToken: token, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() }) });
+      if (provider.getBookingChanges) await followCalendarBookingChanges(dependencies.domain, { businessId, provider: calendarProviderLabel(connection.provider), changes: await provider.getBookingChanges({ accessToken: token, calendarId: connection.calendarId, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() }) });
       await queueUnsyncedAppointmentSyncs(dependencies.domain, { businessId, connectionId: connection.id });
       synced++;
     } catch (error) {
+      // A rate limit says nothing about the calendar, so the connection stays as it was and keeps taking bookings.
+      const { retryAfterMs: wait } = error as { retryAfterMs?: unknown };
+      if (typeof wait === "number") {
+        retryAfterMs = Math.max(retryAfterMs, wait);
+        continue;
+      }
       const message = error instanceof Error ? redactOtelExceptionText(error.message) : "Calendar synchronization failed.";
       if (message === "Calendar selection changed during synchronization.") continue;
       // Only a rejected grant needs the operator to reconnect; the dashboard tells them so from this message.
@@ -162,10 +178,11 @@ export async function reconcileBusinessCalendar(dependencies: Dependencies, busi
     }
   }
   if (failures) throw new Error(`Calendar synchronization failed for ${failures} connection(s).`);
+  if (retryAfterMs) return { status: "deferred", entityId: businessId, retryAt: new Date(Date.now() + retryAfterMs) };
   return { status: synced ? "completed" : "skipped", entityId: `${businessId}:${synced}` };
 }
 
-async function registerWebhook(dependencies: Dependencies, provider: CalendarOperations, input: { businessId: string; connectionId: string; accessToken: string }): Promise<void> {
+async function registerWebhook(dependencies: Dependencies, provider: CalendarOperations, input: { businessId: string; connectionId: string; providerName: string; accessToken: string }): Promise<void> {
   const box = await secretBox();
   const baseUrl = (process.env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
   // Under a lease on the connection, so two syncs at once register one webhook between them.
@@ -174,14 +191,14 @@ async function registerWebhook(dependencies: Dependencies, provider: CalendarOpe
     discard: async (webhookId) => { await provider.deleteWebhook?.({ accessToken: input.accessToken, webhookId }); },
     register: async () => {
       const secret = randomBytes(32).toString("hex");
-      const { webhookId } = await provider.registerWebhook!({ accessToken: input.accessToken, subscriberUrl: `${baseUrl}/api/webhooks/calcom/${input.connectionId}`, secret });
+      const { webhookId } = await provider.registerWebhook!({ accessToken: input.accessToken, subscriberUrl: `${baseUrl}/api/webhooks/${input.providerName}/${input.connectionId}`, secret });
       return { externalWebhookId: webhookId, encryptedWebhookSecret: box.encrypt(secret) };
     },
   });
 }
 
 /**
- * Retires a disconnected Cal.com connection with the tokens the disconnect kept:
+ * Retires a disconnected booking provider connection with the tokens the disconnect kept:
  * cancels the upcoming bookings it made, which its public booking page would
  * otherwise still show as taken, removes its webhook, then forgets the tokens.
  * A connection reconnected in the meantime keeps everything.

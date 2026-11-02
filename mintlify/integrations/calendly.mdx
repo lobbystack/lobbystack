@@ -1,0 +1,92 @@
+---
+title: "Connect Calendly"
+description: "Connect a paid Calendly account, pick the event type your AI receptionist books, and keep busy time in sync."
+sidebarTitle: "Calendly"
+contentType: "How-to"
+---
+
+Connect Calendly when your team already takes bookings there. Your AI receptionist books each appointment as a Calendly booking of one event type, and it treats your Calendly events as busy time, so it doesn't offer times already booked through your Calendly page.
+
+<Note>
+  You need a Calendly paid plan, Standard or above. Calendly refuses bookings and webhooks from other apps on its Free plan. If you connect a Free account, the Calendly card tells you to upgrade.
+</Note>
+
+## Know the limits before you connect
+
+Calendly sets these limits on bookings from other apps:
+
+- **Booking cap**: below Enterprise, each Calendly user gets 10 bookings a minute, 50 an hour and 100 a day. A trial gets 5 a day.
+- **Moves**: Calendly has no way for an app to reschedule. LobbyStack books the new time, then cancels the old one, so a move counts as one booking.
+- **Length**: every booking takes the event type's default length.
+
+If you reach the cap, your AI receptionist still takes the appointment. LobbyStack adds it to Calendly once the limit resets, and alerts you if that takes more than a few minutes.
+
+## What Calendly receives
+
+For each appointment, Calendly receives:
+
+- **Invitee name**: the caller's, so you see who booked
+- **Invitee email**: a stand-in address unique to the appointment, so Calendly doesn't email the caller
+- **Answers to the event type's questions**: the caller's name, phone number and real email go in a text question, so you can reach them
+
+The AI receptionist sends the caller's confirmation and reminders itself. Calendly still sends your team its host notifications.
+
+## Connect Calendly
+
+<Steps>
+  <Step title="Open Integrations">
+    In the dashboard, open **Integrations**.
+  </Step>
+  <Step title="Start the Calendly connection">
+    Find **Calendly** and click **Connect**.
+  </Step>
+  <Step title="Authorize LobbyStack">
+    Sign in to Calendly and approve the requested permissions.
+  </Step>
+  <Step title="Pick an event type">
+    Back in the dashboard, choose an event type under **Event type**. LobbyStack saves your choice right away.
+  </Step>
+</Steps>
+
+LobbyStack starts reading your Calendly events, and the calendars Calendly checks for conflicts, within a few seconds.
+
+<Note>
+  A link from `POST /calendars/calendly/connect` works only for an owner or admin of the business. For a business with neither, the API answers `409`, so invite one with `POST /team/invitations` first.
+</Note>
+
+## Set up the event type in Calendly
+
+After you pick an event type, the dialog lists anything to fix in Calendly:
+
+- **Required choice questions**: make them optional. Your AI receptionist can't answer a required single-select or multiple-select question, so you can't pick an event type that has one.
+- **Text question**: add one to the event type. Without it, your team can't see the caller's phone number or email in Calendly.
+- **Duration**: set the event type to the length of your services. Calendly books every appointment at that length.
+- **Location**: add a phone or in-person location. Otherwise bookings carry a video link.
+
+The event type's availability must also cover your opening hours. Calendly only books open slots on its schedule. If it refuses a booking, the appointment shows a calendar sync issue and LobbyStack alerts you.
+
+## Use Calendly with Google Calendar or Cal.com
+
+Busy time on every connected calendar blocks bookings. New appointments go to Calendly or Cal.com over Google Calendar, because their booking pages take bookings on their own. A team member's own calendar still comes first for their appointments.
+
+## Change the event type
+
+1. Open **Integrations**.
+2. Click the Calendly card.
+3. Choose another event type.
+
+New appointments use the new event type. Upcoming appointments move to it at the next sync.
+
+## When a booking changes in Calendly
+
+If you cancel a booking in Calendly, LobbyStack cancels the appointment and alerts you. Callers who agreed to texts get a cancellation text.
+
+If you move a booking in Calendly and then cancel the new booking, LobbyStack cancels the appointment.
+
+If you move a booking in Calendly, LobbyStack moves the appointment and its reminder, then alerts you so you can tell the caller the new time. LobbyStack doesn't text callers about the change. If the staff member already has an appointment at the new time, LobbyStack keeps the original time and alerts you to sort it out.
+
+## Reconnect or disconnect
+
+If Calendly stops accepting the connection, the card shows that reconnect is required. Open the Calendly card and click **Reconnect**.
+
+To remove the integration, open the Calendly card and click **Disconnect**. LobbyStack cancels the upcoming bookings your AI receptionist made in Calendly, so your booking page shows those times as open again. If Google Calendar is connected too, those appointments move to it. Past bookings stay in Calendly.

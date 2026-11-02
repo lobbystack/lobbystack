@@ -8,7 +8,7 @@ import { InstagramProvider } from "@lobbystack/providers";
 
 import { getAuthDatabase } from "./auth";
 import { enforceFixedWindow, fixedWindowLimit, type FixedWindowLimit } from "./fixed-window-limit";
-import { oauthStartOriginValid, oauthStateDigest, oauthPayloadCurrent, signOAuthPayload, verifyOAuthPayload } from "./signed-oauth-state";
+import { oauthStartOriginValid, keyedStateDigest, oauthPayloadCurrent, signOAuthPayload, verifyOAuthPayload } from "./signed-oauth-state";
 
 /** `origin` names the partner's host the connection started on, and is absent on the host's domain. */
 type InstagramOAuthState = { userId: string; businessId: string; origin?: string; issuedAt: number; nonce: string };
@@ -43,7 +43,7 @@ export function verifyInstagramOAuthState(value: string): InstagramOAuthState | 
   return state as InstagramOAuthState;
 }
 
-const identifier = (state: string) => `instagram:${oauthStateDigest("instagram", state, UNCONFIGURED)}`;
+const identifier = (state: string) => `instagram:${keyedStateDigest("instagram", state, UNCONFIGURED)}`;
 
 export async function storeInstagramOAuthState(state: string): Promise<void> {
   const parsed = verifyInstagramOAuthState(state);

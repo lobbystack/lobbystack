@@ -101,10 +101,29 @@ export async function reserveWidgetChatUsageInTransaction(
   tx: DatabaseTransaction,
   input: { businessId: string; conversationId: string },
 ): Promise<WidgetChatBillingAllowance> {
+  return await reserveChatUsageInTransaction(tx, { businessId: input.businessId, sourceKey: `chat:${input.conversationId}` });
+}
+
+/**
+ * Reserves a text conversation's chat for the day, in UTC. A text thread stays
+ * open for good, so a key without the day would pay once and answer forever.
+ */
+export async function reserveTextReplyUsageInTransaction(
+  tx: DatabaseTransaction,
+  input: { businessId: string; conversationId: string; now?: Date },
+): Promise<WidgetChatBillingAllowance> {
+  const now = input.now ?? new Date();
+  return await reserveChatUsageInTransaction(tx, { businessId: input.businessId, sourceKey: `chat:${input.conversationId}:${now.toISOString().slice(0, 10)}`, recordedAt: now });
+}
+
+async function reserveChatUsageInTransaction(
+  tx: DatabaseTransaction,
+  input: { businessId: string; sourceKey: string; recordedAt?: Date },
+): Promise<WidgetChatBillingAllowance> {
   const { plan, entitlement } = await loadBillingContext(tx, input.businessId);
   // A partner's business counts its chats with no allowance too: they draw on its partner's pool, and the console shows them.
   if (entitlement.allowance.chats !== null || entitlement.poolPartnerId !== null) {
-    const reservation = await reserveUsageInTransaction(tx, { businessId: input.businessId, usageKind: "chat_ai_tokens", sourceKey: `chat:${input.conversationId}`, quantity: 1 });
+    const reservation = await reserveUsageInTransaction(tx, { businessId: input.businessId, usageKind: "chat_ai_tokens", sourceKey: input.sourceKey, quantity: 1, recordedAt: input.recordedAt });
     if (!reservation.allowed) return { allowed: false, errorCode: billingErrorCodes.chatAiLimitReached, plan };
     // A chat past the partner's pool is overage the partner pays for, which syncs to Polar.
     if (entitlement.poolPartnerId !== null && reservation.syncNeeded && reservation.usageEventId) await enqueueUsageSyncInTransaction(tx, { businessId: input.businessId, usageEventId: reservation.usageEventId });

@@ -1,3 +1,13 @@
+/**
+ * Whether the provider's calendar is an event type LobbyStack books, as with
+ * Cal.com and Calendly, rather than a calendar it adds events to. A booking
+ * can outlast its appointment, is public until it's cancelled, and comes with
+ * a webhook.
+ */
+export function isBookingCalendarProvider(provider: string): boolean {
+  return provider === "calcom" || provider === "calendly";
+}
+
 /** A calendar connection that could hold a staff member's appointments. */
 export type CalendarWriterCandidate = { id: string; provider: string; staffId: string | null; selectedCalendarId: string | null };
 
@@ -8,15 +18,16 @@ export type CalendarWriterCandidate = { id: string; provider: string; staffId: s
  *
  * 1. The staff member's own connection over the business's.
  * 2. One with a calendar picked over one without.
- * 3. Cal.com over Google: Cal.com's public booking page takes bookings
- *    LobbyStack doesn't see until it syncs, so its bookings are the
- *    double-booking risk, and a Cal.com booking holds the time there at once.
+ * 3. A booking provider over Google: Cal.com's and Calendly's public booking
+ *    pages take bookings LobbyStack doesn't see until it syncs, so their
+ *    bookings are the double-booking risk, and a booking holds the time there
+ *    at once.
  * 4. The oldest id, so the choice stays put.
  */
 export function compareCalendarWriters(left: CalendarWriterCandidate, right: CalendarWriterCandidate): number {
   return rank(right.staffId !== null) - rank(left.staffId !== null)
     || rank(right.selectedCalendarId !== null) - rank(left.selectedCalendarId !== null)
-    || rank(right.provider === "calcom") - rank(left.provider === "calcom")
+    || rank(isBookingCalendarProvider(right.provider)) - rank(isBookingCalendarProvider(left.provider))
     || (left.id < right.id ? -1 : left.id > right.id ? 1 : 0);
 }
 

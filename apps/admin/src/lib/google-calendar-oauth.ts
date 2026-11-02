@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
 
-import { oauthSigningSecret, oauthStartOriginValid, oauthStateDigest, oauthPayloadCurrent, signOAuthPayload, verifyOAuthPayload } from "./signed-oauth-state";
+import { oauthSigningSecret, oauthStartOriginValid, keyedStateDigest, oauthPayloadCurrent, signOAuthPayload, verifyOAuthPayload } from "./signed-oauth-state";
 
 /** `origin` names the partner's host the connection started on, and is absent on the host's domain. */
 type CalendarOAuthState = { userId: string; businessId: string; origin?: string; issuedAt: number; nonce: string };
 type CalendarConnectLinkToken = { businessId: string; issuedAt: number; nonce: string };
 type TokenKind = "state" | "link";
 /** The providers whose OAuth flow these tokens start. Each signs under its own domain. */
-export type CalendarOAuthProvider = "google" | "calcom";
+export type CalendarOAuthProvider = "google" | "calcom" | "calendly";
 
 /** How long a link from POST /v1/calendars/google/connect works. */
 export const CALENDAR_CONNECT_LINK_LIFETIME_MS = 7 * 24 * 60 * 60_000;
@@ -27,7 +27,15 @@ export function createCalendarOAuthState(input: { userId: string; businessId: st
 
 /** The signing domain of a provider's tokens: a Google state never passes for Cal.com, or the reverse. */
 function signingDomain(provider: CalendarOAuthProvider): string {
-  return provider === "calcom" ? "calcom-calendar" : "google-calendar";
+  return `${provider}-calendar`;
+}
+
+/**
+ * The PKCE code verifier for a state. It's derived with the signing secret, so
+ * it never leaves the server and needs no storing, and a state works once.
+ */
+export function calendarPkceVerifier(state: string): string {
+  return keyedStateDigest("calendar-pkce", state, UNCONFIGURED);
 }
 
 // Each kind signs under its own domain, so an OAuth state never passes as a link, or a link as a state.
@@ -42,7 +50,7 @@ function verified(provider: CalendarOAuthProvider, kind: TokenKind, value: strin
 
 /** Domain-separated lookup digest; never persist the bearer value. */
 export function calendarOAuthStateDigest(state: string, provider: CalendarOAuthProvider = "google"): string {
-  return oauthStateDigest(signingDomain(provider), state, UNCONFIGURED);
+  return keyedStateDigest(signingDomain(provider), state, UNCONFIGURED);
 }
 
 export function verifyCalendarOAuthState(value: string, provider: CalendarOAuthProvider = "google"): CalendarOAuthState | null {
@@ -54,7 +62,7 @@ export function verifyCalendarOAuthState(value: string, provider: CalendarOAuthP
 }
 
 /**
- * The link POST /v1/calendars/google/connect, or /calcom/connect, returns. It
+ * The link POST /v1/calendars/google/connect, /calcom/connect or /calendly/connect returns. It
  * names only the business: whoever opens it signs in, and must be an owner or
  * admin of that business, before the provider asks them anything. It works
  * until it expires.

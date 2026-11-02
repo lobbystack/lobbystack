@@ -6,21 +6,26 @@
 # containers on tmpfs, applies migrations and seed data with the real
 # unprivileged roles, builds the admin standalone server, and runs the
 # supported EN/FR journey subset against it with no live provider keys.
+# It then runs e2e/full-stack against a real worker and local fakes for the
+# carriers, Calendly, and the AI model.
 #
 # Usage:
 #   scripts/e2e-local.sh                 # full lifecycle: up, test, tear down
 #   scripts/e2e-local.sh --keep          # keep containers and the admin server up
 #   scripts/e2e-local.sh --skip-build    # reuse an existing .next build
 #   scripts/e2e-local.sh -- e2e/auth-pages.e2e.ts   # custom Playwright targets
+#   scripts/e2e-local.sh --skip-build -- e2e/full-stack/calendly.e2e.ts
 #
-# Environment overrides: E2E_POSTGRES_PORT, E2E_REDIS_PORT, E2E_ADMIN_PORT,
-# E2E_MAILPIT_SMTP_PORT, E2E_MAILPIT_UI_PORT.
+# Environment overrides: E2E_PROJECT (container names), E2E_POSTGRES_PORT,
+# E2E_REDIS_PORT, E2E_ADMIN_PORT, E2E_WORKER_PORT, E2E_MAILPIT_SMTP_PORT,
+# E2E_MAILPIT_UI_PORT.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-PROJECT="kinetic-yak-e2e"
+PROJECT="${E2E_PROJECT:-kinetic-yak-e2e}"
+export E2E_PROJECT="$PROJECT"
 COMPOSE=(docker compose -p "$PROJECT" -f docker-compose.e2e.yml)
 
 POSTGRES_PORT="${E2E_POSTGRES_PORT:-25433}"
@@ -43,12 +48,21 @@ TESTS=(
   e2e/supported-journeys.e2e.ts
   e2e/widget-settings.e2e.ts
 )
+FULL_STACK_TESTS=(e2e/full-stack)
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --keep) KEEP=1; shift ;;
     --skip-build) SKIP_BUILD=1; shift ;;
-    --) shift; TESTS=("$@"); break ;;
+    --)
+      shift
+      TESTS=()
+      FULL_STACK_TESTS=()
+      for target in "$@"; do
+        if [[ "$target" == e2e/full-stack* ]]; then FULL_STACK_TESTS+=("$target"); else TESTS+=("$target"); fi
+      done
+      break
+      ;;
     *) echo "Unknown argument: $1" >&2; exit 2 ;;
   esac
 done
@@ -101,5 +115,14 @@ echo "==> Applying migrations and seed data with unprivileged roles"
 pnpm --filter @lobbystack/db exec tsx src/cli.ts migrate
 pnpm --filter @lobbystack/db exec tsx src/cli.ts seed
 
-echo "==> Running the supported browser journeys"
-CI=1 pnpm --filter @lobbystack/admin exec playwright test "${TESTS[@]}"
+if [[ "${#TESTS[@]}" -gt 0 ]]; then
+  echo "==> Running the supported browser journeys"
+  CI=1 pnpm --filter @lobbystack/admin exec playwright test "${TESTS[@]}"
+fi
+
+# After the others: the worker takes every queued job, and these specs own the fixed ports.
+if [[ "${#FULL_STACK_TESTS[@]}" -gt 0 ]]; then
+  echo "==> Running the full-stack journeys against a worker and local fakes"
+  export MAILPIT_API_URL="http://127.0.0.1:${MAILPIT_UI_PORT}"
+  FULL_STACK_E2E=1 CI=1 pnpm --filter @lobbystack/admin exec playwright test "${FULL_STACK_TESTS[@]}"
+fi

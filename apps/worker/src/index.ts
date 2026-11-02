@@ -8,6 +8,7 @@ import { FirecrawlProvider } from "@lobbystack/providers/crawling/firecrawl";
 import { createCustomHostnameProvider, systemTxtLookup } from "@lobbystack/providers/customHostnames/customHostnames";
 import { SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
 import { CalcomCalendarProvider, calcomCalendarConfigFromEnv, calcomCalendarConfigProblem } from "@lobbystack/providers/calcom/calendar";
+import { CalendlyCalendarProvider, calendlyCalendarConfigFromEnv, calendlyCalendarConfigProblem } from "@lobbystack/providers/calendly/calendar";
 import { GoogleCalendarProvider } from "@lobbystack/providers/google/calendar";
 import { InstagramProvider } from "@lobbystack/providers/instagram/instagram";
 import { SecretBox } from "@lobbystack/providers/crypto/secretBox";
@@ -73,6 +74,8 @@ function createCalendarProviders(): CalendarProviders | undefined {
   if (clientId && clientSecret && redirectUri) providers.google = new GoogleCalendarProvider({ clientId, clientSecret, redirectUri });
   const calcom = calcomCalendarConfigFromEnv();
   if (calcom) providers.calcom = new CalcomCalendarProvider(calcom);
+  const calendly = calendlyCalendarConfigFromEnv();
+  if (calendly) providers.calendly = new CalendlyCalendarProvider(calendly);
   return Object.keys(providers).length ? providers : undefined;
 }
 
@@ -126,6 +129,8 @@ async function main(): Promise<void> {
   for (const warning of partnerFeatureWarnings(process.env)) console.warn(`[partners] ${warning}`);
   const calcomProblem = calcomCalendarConfigProblem(process.env);
   if (calcomProblem) console.warn(`[calendar] ${calcomProblem}`);
+  const calendlyProblem = calendlyCalendarConfigProblem(process.env);
+  if (calendlyProblem) console.warn(`[calendar] ${calendlyProblem}`);
   await initializeTelemetry({ serviceName: "lobbystack-worker" });
   const database = createDatabaseClient("lobbystack_worker");
   const dispatcherDatabase = createDatabaseClient("lobbystack_dispatcher");

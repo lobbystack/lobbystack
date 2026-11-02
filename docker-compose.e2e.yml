@@ -9,7 +9,7 @@
 services:
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: kinetic-yak-e2e-postgres
+    container_name: ${E2E_PROJECT:-kinetic-yak-e2e}-postgres
     environment:
       POSTGRES_DB: lobbystack
       POSTGRES_USER: postgres
@@ -34,7 +34,7 @@ services:
 
   redis:
     image: redis:7.4-alpine
-    container_name: kinetic-yak-e2e-redis
+    container_name: ${E2E_PROJECT:-kinetic-yak-e2e}-redis
     command: ["redis-server", "--save", "", "--appendonly", "no"]
     ports:
       - "127.0.0.1:${E2E_REDIS_PORT:-26380}:6379"
@@ -48,7 +48,7 @@ services:
 
   mailpit:
     image: axllent/mailpit:latest
-    container_name: kinetic-yak-e2e-mailpit
+    container_name: ${E2E_PROJECT:-kinetic-yak-e2e}-mailpit
     environment:
       MP_SMTP_AUTH_ACCEPT_ANY: "1"
       MP_SMTP_AUTH_ALLOW_INSECURE: "1"
@@ -71,7 +71,7 @@ services:
       dockerfile: Dockerfile.worker
       args:
         SERVICE_VERSION: e2e
-    container_name: kinetic-yak-e2e-worker
+    container_name: ${E2E_PROJECT:-kinetic-yak-e2e}-worker
     restart: "no"
     depends_on:
       postgres:

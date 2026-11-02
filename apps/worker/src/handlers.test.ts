@@ -1235,7 +1235,7 @@ describe("worker handlers", () => {
     vi.mocked(recordCallProviderPricing).mockResolvedValue(true);
     const getCallPricing = vi.fn().mockResolvedValue({ providerPrice: "ignored", providerPriceUnit: "usd", providerCostUsd: 0.12 });
 
-    const result = await handleJob(job, { domain: { db: undefined as never }, telephony: twilioTelephony({ getCallPricing }) });
+    const result = await handleJob(job, { domain: { db: undefined as never }, telephony: twilioTelephony({ getCallTreePricing: getCallPricing }) });
 
     expect(result).toEqual({ status: "completed", entityId: "CA123" });
     expect(getCallPricing).toHaveBeenCalledWith({ providerCallId: "CA123" });
@@ -1246,7 +1246,7 @@ describe("worker handlers", () => {
     const job = pricingJob("call.syncPrice", { callId: "call_1", providerCallStatus: "completed" });
     const startedAt = new Date("2026-09-26T12:00:00Z");
     vi.stubEnv("TWILIO_SIP_TRUNK_SID", "TK123");
-    vi.mocked(loadLiveCallForPricing).mockResolvedValue({ startedAt, callerPhone: "+14165550134", carrier: "twilio" });
+    vi.mocked(loadLiveCallForPricing).mockResolvedValue({ startedAt, callerPhone: "+14165550134", carrier: "twilio", dialled: [] });
     vi.mocked(recordCallProviderPricing).mockResolvedValue(true);
     const findTrunkCall = vi.fn().mockResolvedValue("CA777");
     const getCallPricing = vi.fn().mockResolvedValue({ providerPriceUnit: "usd", providerCostUsd: 0.02 });

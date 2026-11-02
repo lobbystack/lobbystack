@@ -238,6 +238,16 @@ describe.skipIf(!testUrl)("calendar backfill against dedicated PostgreSQL roles"
     });
   });
 
+  it("finds a Calendly connection's business from its webhook URL", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, userId } = await workspace(tx);
+      const [calendly] = await tx.insert(calendarConnections).values({ businessId, ownerUserId: userId, provider: "calendly", externalAccountId: "U1", selectedCalendarId: "ET1", status: "connected" }).returning();
+      await asWorker(tx, async (db) => {
+        expect(await resolveBusinessByCalendarWebhook({ db }, calendly!.id)).toBe(businessId);
+      });
+    });
+  });
+
   it("finds a Cal.com connection's business from its webhook URL until the connection is disconnected", async () => {
     await rollbackTest(async (tx) => {
       const { businessId, userId } = await workspace(tx);
