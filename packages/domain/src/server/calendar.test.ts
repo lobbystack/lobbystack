@@ -6,7 +6,7 @@ vi.mock("@lobbystack/db", async (original) => ({ ...await original<typeof import
 vi.mock("./notifications", () => ({ queueOperatorAlertInTransaction: mocks.alert }));
 vi.mock("../authz", () => ({ requireBusinessAdmin: vi.fn(), requireBusinessMembership: vi.fn() }));
 import { appointments, calendarBusyBlocks, calendarConnections } from "@lobbystack/db";
-import { assignCalendarStaff, queueUnsyncedAppointmentSyncs, resolveCalendarAccessToken, selectCalendar, updateAppointmentSyncStateInTransaction, upsertBusyBlocks } from "./calendar";
+import { assignCalendarStaff, connectCalendar, disconnectCalendar, forgetStaleRetiredCalendarTokens, queueUnsyncedAppointmentSyncs, resolveCalendarAccessToken, selectCalendar, updateAppointmentSyncStateInTransaction, upsertBusyBlocks } from "./calendar";
 
 const now = new Date("2026-09-13T12:00:00Z");
 const row = { id: "connection", businessId: "business", status: "connected", encryptedAccessToken: "enc:old", encryptedRefreshToken: "enc:refresh", tokenExpiresAt: new Date(now.getTime() - 1000) };
@@ -53,6 +53,29 @@ it("requires reconnection when credentials are missing or disconnected", async (
   expect(refresh).not.toHaveBeenCalled();
 });
 
+it("refreshes a disconnected connection's kept tokens only to retire its webhook, saving the rotated refresh token", async () => {
+  const retired = { ...row, status: "disconnected", externalWebhookId: "11" };
+  useConnection(retired);
+  await expect(resolveCalendarAccessToken(context, input)).rejects.toThrow("unavailable");
+  refresh.mockResolvedValueOnce({ accessToken: "fresh", expiresIn: 1800, refreshToken: "rotated" });
+  await expect(resolveCalendarAccessToken(context, { ...input, retired: true })).resolves.toBe("fresh");
+  expect(update).toHaveBeenCalledWith(expect.objectContaining({ encryptedAccessToken: "enc:fresh", encryptedRefreshToken: "enc:rotated" }));
+  useConnection({ ...retired, encryptedAccessToken: null, encryptedRefreshToken: null });
+  await expect(resolveCalendarAccessToken(context, { ...input, retired: true })).rejects.toThrow("unavailable");
+});
+
+it("forgets the tokens of connections disconnected over a week ago, in one call across businesses", async () => {
+  let statement: SQL | undefined;
+  let scope: unknown;
+  const tx = { execute: async (query: SQL) => { statement = query; return { rows: [{ cleared: 3 }] }; } };
+  mocks.transaction.mockImplementation(async (_db, given, callback) => { scope = given; return callback(tx); });
+  await expect(forgetStaleRetiredCalendarTokens(context, { now })).resolves.toBe(3);
+  expect(scope).toEqual({ actorType: "worker" });
+  const query = new PgDialect().sqlToQuery(statement!);
+  expect(query.sql).toContain("app.forget_stale_retired_calendar_tokens(");
+  expect(query.params).toEqual([new Date(now.getTime() - 7 * 24 * 60 * 60_000).toISOString()]);
+});
+
 it("alerts operators once per appointment time, not once per sync retry", async () => {
   // Each failed attempt bumps the appointment revision.
   let revision = 1;
@@ -76,30 +99,109 @@ function recordWrites(reads: unknown[][]) {
   const writes: Array<{ table: unknown; values: unknown }> = [];
   const chain = (result: unknown): Promise<unknown> => Object.assign(Promise.resolve(result), { from: () => chain(result), where: () => chain(result), limit: () => chain(result), for: () => chain(result), returning: () => chain(result) });
   const write = (table: unknown) => (values: unknown) => { writes.push({ table, values }); return chain([]); };
-  const tx = { select: () => chain(reads.shift() ?? []), delete: () => chain([]), insert: (table: unknown) => ({ values: write(table) }), update: (table: unknown) => ({ set: write(table) }) };
+  const insert = (table: unknown) => ({ values: (values: unknown) => { writes.push({ table, values }); return Object.assign(chain([]), { onConflictDoUpdate: (conflict: { set: unknown }) => { writes.push({ table, values: { onConflictSet: conflict.set } }); return chain(reads.shift() ?? []); } }); } });
+  const tx = { select: () => chain(reads.shift() ?? []), delete: () => chain([]), insert, update: (table: unknown) => ({ set: write(table) }) };
   mocks.transaction.mockImplementation(async (_db, _scope, callback) => callback(tx));
   return (table: unknown) => writes.filter((entry) => entry.table === table).map((entry) => entry.values);
 }
 
+// Like recordWrites, with the update that retires connections answering `retired`.
+const writtenRows: Array<{ table: unknown; values: unknown }> = [];
+function retiringTx(reads: unknown[][], retired: unknown[], writes: Array<{ table: unknown; values: unknown }>) {
+  writes.length = 0;
+  const chain = (result: unknown): Promise<unknown> => Object.assign(Promise.resolve(result), { from: () => chain(result), where: () => chain(result), limit: () => chain(result), for: () => chain(result), returning: () => chain(result) });
+  return {
+    select: () => chain(reads.shift() ?? []),
+    delete: () => chain([]),
+    insert: (table: unknown) => ({ values: (values: unknown) => { writes.push({ table, values }); return chain([]); } }),
+    update: (table: unknown) => ({ set: (values: Record<string, unknown>) => { writes.push({ table, values }); return chain(values.status === "disconnected" ? retired : []); } }),
+  };
+}
+
+const googleWide = { id: "a-google", provider: "google", staffId: null, selectedCalendarId: "team@group.calendar.google.com", status: "connected" };
+const calcomWide = { id: "b-calcom", provider: "calcom", staffId: null, selectedCalendarId: "42", status: "connected" };
+const upcoming = (id: string, staffId: string, eventId: string | null) => ({ id, staffId, eventId, revision: 1 });
+const deletes = () => mocks.enqueue.mock.calls.filter(([, message]) => message.topic === "calendar.deleteEvent").map(([, message]) => message.payload);
+
 it("clears upcoming bookings' event ids only when the selected calendar changes, and deletes their old events", async () => {
   const select = () => selectCalendar(context, { userId: "user", businessId: "business", connectionId: "connection", calendarId: "new@group.calendar.google.com" });
-  let written = recordWrites([[{ staffId: "staff", selectedCalendarId: "old@group.calendar.google.com" }], [{ id: "appointment", eventId: "event-1", revision: 4 }]]);
+  const own = (selectedCalendarId: string) => [{ id: "connection", provider: "google", staffId: "staff", selectedCalendarId, status: "connected" }];
+  let written = recordWrites([[{ staffId: "staff", selectedCalendarId: "old@group.calendar.google.com" }], own("old@group.calendar.google.com"), own("new@group.calendar.google.com"), [upcoming("appointment", "staff", "event-1")], [upcoming("appointment", "staff", "event-1")]]);
   await select();
   expect(written(appointments)).toEqual([expect.objectContaining({ calendarExternalId: null, calendarSyncState: "not_required", revision: expect.anything() })]);
-  expect(mocks.enqueue).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ topic: "calendar.deleteEvent", payload: { appointmentId: "appointment", connectionId: "connection", calendarId: "old@group.calendar.google.com", eventId: "event-1" } }));
+  expect(deletes()).toEqual([{ appointmentId: "appointment", connectionId: "connection", calendarId: "old@group.calendar.google.com", eventId: "event-1" }]);
   mocks.enqueue.mockClear();
-  written = recordWrites([[{ staffId: "staff", selectedCalendarId: "new@group.calendar.google.com" }]]);
+  written = recordWrites([[{ staffId: "staff", selectedCalendarId: "new@group.calendar.google.com" }], own("new@group.calendar.google.com"), own("new@group.calendar.google.com"), [upcoming("appointment", "staff", "event-1")]]);
   await select();
   expect(written(appointments)).toEqual([]);
-  expect(mocks.enqueue).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ topic: "calendar.deleteEvent" }));
+  expect(deletes()).toEqual([]);
 });
 
-it("moves other staff's bookings out of a business-wide calendar assigned to one staff member", async () => {
-  const written = recordWrites([[{ id: "staff-1" }], [{ staffId: null, selectedCalendarId: "shared@group.calendar.google.com" }], [{ id: "appointment", eventId: "event-2", revision: 1 }]]);
-  await assignCalendarStaff(context, { userId: "user", businessId: "business", connectionId: "connection", staffId: "staff-1" });
+it("moves business-wide bookings from Google to Cal.com once a Cal.com event type is picked", async () => {
+  const unpicked = { ...calcomWide, selectedCalendarId: null };
+  let written = recordWrites([[{ staffId: null, selectedCalendarId: null }], [googleWide, unpicked], [googleWide, calcomWide], [upcoming("appointment", "staff", "google-event")], [upcoming("appointment", "staff", "google-event")]]);
+  await selectCalendar(context, { userId: "user", businessId: "business", connectionId: "b-calcom", calendarId: "42" });
+  // Google held them, so their events leave Google's calendar, and the backfill books them in Cal.com.
   expect(written(appointments)).toEqual([expect.objectContaining({ calendarExternalId: null, calendarSyncState: "not_required" })]);
-  expect(mocks.enqueue).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ topic: "calendar.deleteEvent", payload: { appointmentId: "appointment", connectionId: "connection", calendarId: "shared@group.calendar.google.com", eventId: "event-2" } }));
-  expect(written(calendarConnections)).toEqual([expect.objectContaining({ staffId: "staff-1" })]);
+  expect(deletes()).toEqual([{ appointmentId: "appointment", connectionId: "a-google", calendarId: "team@group.calendar.google.com", eventId: "google-event" }]);
+
+  // Picking Google's calendar while Cal.com writes leaves the bookings where they are.
+  mocks.enqueue.mockClear();
+  written = recordWrites([[{ staffId: null, selectedCalendarId: "team@group.calendar.google.com" }], [googleWide, calcomWide], [{ ...googleWide, selectedCalendarId: "other@group.calendar.google.com" }, calcomWide], [upcoming("appointment", "staff", "booking-uid")]]);
+  await selectCalendar(context, { userId: "user", businessId: "business", connectionId: "a-google", calendarId: "other@group.calendar.google.com" });
+  expect(written(appointments)).toEqual([]);
+  expect(deletes()).toEqual([]);
+});
+
+it("moves only a staff member's bookings when Google is assigned to them while Cal.com writes for the business", async () => {
+  const written = recordWrites([[{ id: "staff-x" }], [{ staffId: null, selectedCalendarId: googleWide.selectedCalendarId }], [googleWide, calcomWide], [{ ...googleWide, staffId: "staff-x" }, calcomWide], [upcoming("theirs", "staff-x", "booking-uid-x"), upcoming("others", "staff-y", "booking-uid-y")], [upcoming("theirs", "staff-x", "booking-uid-x"), upcoming("others", "staff-y", "booking-uid-y")]]);
+  await assignCalendarStaff(context, { userId: "user", businessId: "business", connectionId: "a-google", staffId: "staff-x" });
+  // Staff X's booking leaves Cal.com, where it was, and the backfill writes it to Google. Everyone else's stays in Cal.com.
+  expect(written(appointments)).toEqual([expect.objectContaining({ calendarExternalId: null, calendarSyncState: "not_required" })]);
+  expect(deletes()).toEqual([{ appointmentId: "theirs", connectionId: "b-calcom", calendarId: "42", eventId: "booking-uid-x" }]);
+  expect(written(calendarConnections)).toEqual([expect.objectContaining({ staffId: "staff-x" })]);
+});
+
+it("moves the business's bookings out of Google when a staff Cal.com connection becomes business-wide", async () => {
+  const staffCalcom = { ...calcomWide, staffId: "staff-x" };
+  const written = recordWrites([[{ staffId: "staff-x", selectedCalendarId: "42" }], [googleWide, staffCalcom], [googleWide, calcomWide], [upcoming("theirs", "staff-x", "booking-uid-x"), upcoming("others", "staff-y", "google-event-y")], [upcoming("theirs", "staff-x", "booking-uid-x"), upcoming("others", "staff-y", "google-event-y")]]);
+  await assignCalendarStaff(context, { userId: "user", businessId: "business", connectionId: "b-calcom", staffId: null });
+  // Staff X's booking stays in Cal.com. Staff Y's leaves Google, and the backfill books it in Cal.com.
+  expect(written(appointments)).toEqual([expect.objectContaining({ calendarExternalId: null })]);
+  expect(deletes()).toEqual([{ appointmentId: "others", connectionId: "a-google", calendarId: "team@group.calendar.google.com", eventId: "google-event-y" }]);
+});
+
+it("leaves Cal.com's bookings alone when another Google account replaces the business-wide Google connection", async () => {
+  const replacement = { id: "c-google", provider: "google", staffId: null, selectedCalendarId: null, status: "connected" };
+  const written = recordWrites([[googleWide, calcomWide], [{ id: "c-google", staffId: null }], [{ ...googleWide, status: "disconnected" }, calcomWide, replacement], [upcoming("appointment", "staff", "booking-uid")]]);
+  await connectCalendar(context, { userId: "user", businessId: "business", provider: "google", externalAccountId: "other-account", encryptedAccessToken: "enc:access" });
+  expect(written(appointments)).toEqual([]);
+  expect(deletes()).toEqual([]);
+});
+
+it("cancels a disconnected Cal.com connection's upcoming bookings through its retirement job, and keeps its tokens for that", async () => {
+  // retireConnections answers with the Cal.com row it disconnected.
+  mocks.transaction.mockImplementationOnce(async (_db, _scope, callback) => callback(retiringTx([[googleWide, calcomWide], [{ ...googleWide }, { ...calcomWide, status: "disconnected" }], [upcoming("theirs", "staff", "booking-uid")], [upcoming("theirs", "staff", "booking-uid")]], [{ id: "b-calcom", provider: "calcom", staffId: null, externalWebhookId: "11" }], writtenRows)));
+  await disconnectCalendar(context, { userId: "user", businessId: "business", connectionId: "b-calcom" });
+  // The booking moves to Google, and Cal.com's copy is cancelled by the job, not by a delete the disconnected connection couldn't run.
+  expect(deletes()).toEqual([]);
+  expect(mocks.enqueue).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ topic: "calendar.retireWebhook", payload: { connectionId: "b-calcom", cancel: [{ appointmentId: "theirs", calendarId: "42", eventId: "booking-uid" }] } }));
+  expect(writtenRows.filter((row) => row.table === calendarConnections && "encryptedRefreshToken" in (row.values as object))).toEqual([]);
+});
+
+it("forgets a disconnected Google connection's tokens at once", async () => {
+  mocks.transaction.mockImplementationOnce(async (_db, _scope, callback) => callback(retiringTx([[googleWide], [{ ...googleWide, status: "disconnected" }], []], [{ id: "a-google", provider: "google", staffId: null, externalWebhookId: null }], writtenRows)));
+  await disconnectCalendar(context, { userId: "user", businessId: "business", connectionId: "a-google" });
+  expect(mocks.enqueue).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ topic: "calendar.retireWebhook" }));
+  expect(writtenRows.filter((row) => row.table === calendarConnections).map((row) => row.values)).toContainEqual({ encryptedAccessToken: null, encryptedRefreshToken: null });
+});
+
+it("revives a reconnected connection without the webhook its disconnect left without a secret", async () => {
+  const written = recordWrites([[calcomWide], [{ id: "b-calcom", staffId: null }], [calcomWide], []]);
+  await connectCalendar(context, { userId: "user", businessId: "business", provider: "calcom", externalAccountId: "1234", encryptedAccessToken: "enc:access" });
+  const set = (written(calendarConnections).find((values) => (values as { onConflictSet?: unknown }).onConflictSet) as { onConflictSet: Record<string, SQL> }).onConflictSet;
+  const dialect = new PgDialect();
+  for (const column of ["externalWebhookId", "encryptedWebhookSecret"]) expect(dialect.sqlToQuery(set[column]!).sql).toMatch(/^case when "calendar_connections"\."status" = 'disconnected' then null else /);
 });
 
 it("backfills a booking again once its connection switches calendars", async () => {

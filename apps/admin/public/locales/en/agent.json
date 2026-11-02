@@ -390,6 +390,47 @@
       }
     }
   },
+  "staffFirst": {
+    "title": "Staff answers first",
+    "save": "Save staff answers first",
+    "mode": {
+      "label": "Ring your team first",
+      "hint": "Your phone rings first. Press 1 to take the call. If you don't, the receptionist answers.",
+      "options": {
+        "never": "Off",
+        "business_hours": "During business hours",
+        "always": "Always"
+      }
+    },
+    "unavailable": {
+      "plan": "Available on paid plans.",
+      "carrier": "Not available on this number yet.",
+      "setup": "Not set up on this deployment yet."
+    },
+    "number": {
+      "label": "Staff phone",
+      "hint": "Don't use a phone that forwards to your receptionist's number."
+    },
+    "ring": {
+      "label": "Ring for",
+      "hint": "Each ring uses one transfer.",
+      "seconds": "{{count}} seconds"
+    },
+    "message": {
+      "label": "Message before ringing",
+      "hint": "Optional. Callers hear this first.",
+      "noSerbianVoice": "Callers won't hear this. Messages can't be read in Serbian yet."
+    },
+    "handover": {
+      "label": "Message before the receptionist answers",
+      "hint": "Optional. Callers hear this if nobody picks up."
+    },
+    "errors": {
+      "numberRequired": "Add a staff phone.",
+      "ownLine": "Use a phone other than your receptionist's number.",
+      "trialLocked": "During the free trial, use the mobile you verified."
+    }
+  },
   "booking": {
     "title": "Booking",
     "mode": {

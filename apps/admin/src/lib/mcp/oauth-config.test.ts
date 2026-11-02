@@ -40,7 +40,7 @@ describe("MCP OAuth configuration", () => {
   });
 
   it("offers agency connections exactly the scopes the partner tools use, on top of the per-business ones", () => {
-    expect(new Set(oauthPartnerGrantableScopes)).toEqual(new Set(partnerMcpTools.map((tool) => tool.scope)));
+    expect(new Set(oauthPartnerGrantableScopes)).toEqual(new Set(partnerMcpTools.filter((tool) => !tool.platformKeysOnly).map((tool) => tool.scope)));
     expect(MCP_OAUTH_SCOPES).toEqual(expect.arrayContaining([...oauthPartnerGrantableScopes]));
   });
 

@@ -4,7 +4,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { businesses, platformKeyBusinesses, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { PLATFORM_API_KEY_PREFIX, apiKeyScopes, businessApiKeyScopes, isApiKeyScope, isPartnerScope, type ApiKeyScope, type PlatformOnlyScope } from "@lobbystack/shared";
+import { PARTNER_NUMBER_PURCHASE_SCOPES, PLATFORM_API_KEY_PREFIX, apiKeyScopes, businessApiKeyScopes, isApiKeyScope, isPartnerScope, keyHasScope, type ApiKeyScope, type PlatformOnlyScope } from "@lobbystack/shared";
 
 import type { DomainContext } from "../context";
 import { notFound, PublicApiError } from "./errors";
@@ -223,6 +223,12 @@ const partnerPlatformKeyRefusals: Record<HostOnlyPlatformOperation, string> = {
  */
 export function refusePartnerPlatformKey(subject: { partnerId?: string | undefined }, operation: HostOnlyPlatformOperation): void {
   if (subject.partnerId !== undefined) throw new PublicApiError(403, "forbidden", partnerPlatformKeyRefusals[operation]);
+}
+
+/** Refuses a partner's platform key that may not search for or buy numbers, which charge the partner. */
+export function requirePartnerNumberPurchase(scopes: readonly string[]): void {
+  const missing = PARTNER_NUMBER_PURCHASE_SCOPES.filter((scope) => !keyHasScope(scopes, scope));
+  if (missing.length) throw new PublicApiError(403, "insufficient_scope", `This API key needs ${missing.join(" and ")} to search for or buy phone numbers. Add it on the console's API keys page.`);
 }
 
 /**

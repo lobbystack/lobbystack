@@ -29,13 +29,40 @@ The page lists each key by name, with who created it and when, and when it was l
 
 A partner's key acts as your partner rather than as a person, so it keeps working when the teammate who made it leaves. It reaches your active businesses, including the ones the console created, and no others:
 
-- `POST /businesses` creates a business with no owner yet. Name the owner in `owner_email`, and LobbyStack emails them your invitation. `access_level` takes `full`, the default, or `activity`.
+- `POST /businesses` creates a business with no owner yet. Name the owner in `owner_email`, and LobbyStack emails them your invitation. Leave it out to [run the business from your own product](#run-businesses-from-your-own-product). `access_level` takes `full`, the default, or `activity`.
 - Every other request names its business in the `LobbyStack-Business` header.
 - Links the API returns, such as a widget's script tag or a calendar connect link, point at your address.
 
-Your keys can create 30 businesses an hour between them. `POST /businesses` takes `template_id` to start from one of your templates, which needs `partner:read`, and `package_id` to sell one of your packages, which needs `partner.businesses:write`. A key can't search for or claim phone numbers, or change alert preferences, so do those in the console.
+Your keys can create 30 businesses an hour between them. `POST /businesses` takes `template_id` to start from one of your templates, which needs `partner:read`, and `package_id` to sell one of your packages, which needs `partner.businesses:write`. A key can't change alert preferences, so do that in the console.
 
 [Platform keys](/api/authentication#platform-keys) lists the scopes, headers and responses.
+
+## Run businesses from your own product
+
+If your customers use your product and never see LobbyStack, leave `owner_email` out of `POST /businesses`. Nobody gets an invitation, and your key sets up and runs the business. A key can't invite an owner, so the business stays without one.
+
+On a paid tier, a key with `phone_numbers:manage` and `phone_numbers:purchase` buys the business's number. A key doesn't get `phone_numbers:purchase` by default, so turn on **Find, buy and replace phone numbers** on the key first. Send the business in the `LobbyStack-Business` header:
+
+<Steps>
+  <Step title="Search">
+    `POST /phone-numbers/search` returns offers. Each offer lasts 5 minutes, and only the key that searched can claim it.
+  </Step>
+  <Step title="Claim">
+    `POST /phone-numbers/claims` buys the number. Poll `GET /phone-numbers/claims/{claim_id}` until its status is `claimed` or `failed`.
+  </Step>
+  <Step title="Replace, if you need to">
+    Search again with `replaces`, then call `POST /phone-numbers/{phone_number_id}/replace`. A business can replace its number once.
+  </Step>
+</Steps>
+
+On Free, these requests return `409`. A key never gets your 14-day trial number, because that trial needs one person's verified mobile. Your keys share 20 searches in 10 minutes, and [your tier's limits on new numbers](/white-label/tiers#phone-numbers-on-each-tier) apply.
+
+A business with no owner has nobody on its team, which changes four things:
+
+- **Alerts:** [Webhooks](/api/webhooks) cover calls, messages, appointments and contacts. LobbyStack emails your owners and admins when a website visitor asks for a person, a transfer or a text fails, a customer's text needs a reply, a calendar stops syncing, an AI reply fails or a webhook endpoint turns off. You have 3 minutes to answer a visitor from the business's **Messages**. Nobody gets an alert about new website or Instagram chats.
+- **Calls the receptionist can't take:** LobbyStack forwards them to the business's transfer number and refuses them without one. Set `transfer_number` with `PATCH /receptionist`.
+- **Onboarding:** Your key finishes it with `POST /onboarding/complete`. Send `skip_number: true` if the business has no number.
+- **Selling and handing over:** A package needs an owner, because the checkout opens from their invitation. `package_id` returns `400` without `owner_email`, and setting a package later returns `409`. You can delete the business, but you can't release it.
 
 ## Run your partner from code
 
@@ -57,7 +84,7 @@ The key acts as an admin, so it can't invite an owner or change an owner's role.
 lobbystack login --url https://app.lobbystack.com --key-stdin < key.txt
 ```
 
-The key needs `businesses:create`, `business:read`, `business:write`, `knowledge:read`, `knowledge:write` and `team:manage`. A manifest for a partner's key names the owner, who gets your invitation when the command creates the business:
+The key needs `businesses:create`, `business:read`, `business:write`, `knowledge:read`, `knowledge:write` and `team:manage`, plus `phone_numbers:manage` and `phone_numbers:purchase` for a number. A manifest for a partner's key can name the owner, who gets your invitation when the command creates the business:
 
 ```yaml harbor-dental.yaml
 business:
@@ -72,7 +99,7 @@ owner:
   email: owner@harbordental.example
 ```
 
-Leave `plan` and `phone_number` out: your businesses don't buy LobbyStack's plans, and a key can't claim numbers. Preview the run with `--plan`, then run it:
+Leave `plan` out, because your businesses don't buy LobbyStack's plans. On a paid tier, add `phone_number` and the command claims the first number the search offers. Leave `owner` out for a business with no owner, and the command finishes its onboarding. Preview the run with `--plan`, then run it:
 
 ```bash
 lobbystack onboard harbor-dental.yaml --plan

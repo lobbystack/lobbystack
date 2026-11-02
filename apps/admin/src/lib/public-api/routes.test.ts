@@ -908,6 +908,57 @@ describe("calendars", () => {
     expect(verifyCalendarConnectLinkToken(url.searchParams.get("token")!)).toMatchObject({ businessId });
   });
 
+  it("hands out a Cal.com link signed for Cal.com only where Cal.com is set up", async () => {
+    const connectCalcom = () => v1.createCalcomConnectLink(call("/calendars/calcom/connect", { method: "POST" }));
+    vi.stubEnv("ENCRYPTION_KEY", "calendar-test-key");
+    expect(await (await connectCalcom()).json()).toMatchObject({ error: { code: "forbidden", message: "Cal.com isn't available on this deployment." } });
+    vi.stubEnv("CALCOM_CLIENT_ID", "client");
+    vi.stubEnv("CALCOM_CLIENT_SECRET", "secret");
+    vi.stubEnv("CALCOM_REDIRECT_URI", "https://app.lobbystack.example/api/calendar/calcom/callback");
+    // Without the stand-in domain, Cal.com stays off.
+    expect((await connectCalcom()).status).toBe(403);
+    vi.stubEnv("CALCOM_PLACEHOLDER_EMAIL_DOMAIN", "bookings.lobbystack.example");
+    vi.stubEnv("APP_BASE_URL", "https://app.lobbystack.example");
+    vi.stubEnv("BETTER_AUTH_SECRET", "link-test-secret");
+    domain.createCalendarConnectLinkForApi.mockImplementation(async (_context: unknown, _caller: unknown, options: { link: (input: { businessId: string }) => { url: string; expiresAt: Date } }) => {
+      const { url, expiresAt } = options.link({ businessId });
+      return { url, expires_at: expiresAt.toISOString() };
+    });
+    const response = await connectCalcom();
+    expect(response.status).toBe(201);
+    expect(domain.createCalendarConnectLinkForApi).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({ provider: "calcom" }));
+    const url = new URL(((await response.json()) as { data: { url: string } }).data.url);
+    expect(`${url.origin}${url.pathname}`).toBe("https://app.lobbystack.example/api/calendar/calcom/connect");
+    expect(verifyCalendarConnectLinkToken(url.searchParams.get("token")!, "calcom")).toMatchObject({ businessId });
+    expect(verifyCalendarConnectLinkToken(url.searchParams.get("token")!)).toBeNull();
+  });
+
+  it("hands out a Calendly link signed for Calendly only where Calendly is set up", async () => {
+    const connectCalendly = () => v1.createCalendlyConnectLink(call("/calendars/calendly/connect", { method: "POST" }));
+    vi.stubEnv("ENCRYPTION_KEY", "calendar-test-key");
+    expect(await (await connectCalendly()).json()).toMatchObject({ error: { code: "forbidden", message: "Calendly isn't available on this deployment." } });
+    vi.stubEnv("CALENDLY_CLIENT_ID", "client");
+    vi.stubEnv("CALENDLY_CLIENT_SECRET", "secret");
+    vi.stubEnv("CALENDLY_REDIRECT_URI", "https://app.lobbystack.example/api/calendar/calendly/callback");
+    vi.stubEnv("CALENDLY_WEBHOOK_SIGNING_KEY", "signing-key");
+    // Without the stand-in domain, Calendly stays off.
+    expect((await connectCalendly()).status).toBe(403);
+    vi.stubEnv("CALENDLY_PLACEHOLDER_EMAIL_DOMAIN", "bookings.lobbystack.example");
+    vi.stubEnv("APP_BASE_URL", "https://app.lobbystack.example");
+    vi.stubEnv("BETTER_AUTH_SECRET", "link-test-secret");
+    domain.createCalendarConnectLinkForApi.mockImplementation(async (_context: unknown, _caller: unknown, options: { link: (input: { businessId: string }) => { url: string; expiresAt: Date } }) => {
+      const { url, expiresAt } = options.link({ businessId });
+      return { url, expires_at: expiresAt.toISOString() };
+    });
+    const response = await connectCalendly();
+    expect(response.status).toBe(201);
+    expect(domain.createCalendarConnectLinkForApi).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({ provider: "calendly", requireAdmin: true }));
+    const url = new URL(((await response.json()) as { data: { url: string } }).data.url);
+    expect(`${url.origin}${url.pathname}`).toBe("https://app.lobbystack.example/api/calendar/calendly/connect");
+    expect(verifyCalendarConnectLinkToken(url.searchParams.get("token")!, "calendly")).toMatchObject({ businessId });
+    expect(verifyCalendarConnectLinkToken(url.searchParams.get("token")!)).toBeNull();
+  });
+
   it("lists connections and an account's calendars, and checks changes before the domain sees them", async () => {
     domain.listCalendarConnectionsForApi.mockResolvedValue([connection]);
     expect(await (await v1.listCalendarConnections(call("/calendars"))).json()).toEqual({ data: [connection], next_cursor: null, has_more: false });
@@ -932,12 +983,12 @@ describe("calendars", () => {
 
   it("reaches Google only where it is set up", async () => {
     await v1.listAccountCalendars(call(`/calendars/${connectionId}/calendars`), params());
-    const access = domain.listAccountCalendarsForApi.mock.calls[0]![3] as () => unknown;
+    const access = domain.listAccountCalendarsForApi.mock.calls[0]![3] as (provider: string) => unknown;
     setGoogle(false);
-    const refused = (() => { try { access(); } catch (error) { return error; } })();
+    const refused = (() => { try { access("google"); } catch (error) { return error; } })();
     expect(refused).toMatchObject({ status: 403, code: "forbidden" });
     setGoogle(true);
-    expect(access()).toEqual({ decryptToken: expect.any(Function), encryptToken: expect.any(Function), refreshAccessToken: expect.any(Function), listCalendars: expect.any(Function) });
+    expect(access("google")).toEqual({ decryptToken: expect.any(Function), encryptToken: expect.any(Function), refreshAccessToken: expect.any(Function), listCalendars: expect.any(Function) });
   });
 
   it("reads with business:read and changes with business:write", async () => {
@@ -1408,6 +1459,44 @@ describe("a partner's platform keys on v1 routes", () => {
     expect(domain.createWebhookEndpoint).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ businessId, manager: { kind: "platform_key", platformKeyId, groupId: partnerId, partnerId } }));
   });
 
+  describe("phone numbers", () => {
+    const phoneNumberId = "1f2e3d4c-5b6a-4978-8695-a4b3c2d1e0f9";
+    const offer = { phone_number: "+14165550123", country: "CA", kind: "local", locality: null, region: null, capabilities: { voice: true, sms: true }, trial: false, offer_token: "signed", expires_at: "2026-11-01T12:00:00.000Z" };
+    const claim = { id: "2e3d4c5b-6a79-4886-9574-b3c2d1e0f9a8", status: "pending", phone_number: "+14165550123", phone_number_id: null, replaces_phone_number_id: null, error: null, created_at: "2026-11-01T12:00:00.000Z", updated_at: "2026-11-01T12:00:00.000Z" };
+    const search = () => v1.searchPhoneNumbers(partnerCall("/phone-numbers/search", { method: "POST", body: JSON.stringify({ area_code: "416" }) }));
+
+    it("searches as the key, counting against the partner's limit just before the carrier is asked", async () => {
+      numbers.provider.listAvailablePhoneNumbers.mockResolvedValue([]);
+      domain.searchPhoneNumbersForApi.mockImplementation(async (...args: unknown[]) => {
+        await (args[3] as { provider: { listAvailablePhoneNumbers(input: unknown): Promise<unknown> } }).provider.listAvailablePhoneNumbers({ countryCode: "CA", kind: "local", limit: 5 });
+        return [offer];
+      });
+      const response = await search();
+      expect(response.status).toBe(200);
+      expect(domain.searchPhoneNumbersForApi).toHaveBeenCalledWith(expect.anything(), expect.objectContaining(caller), { area_code: "416" }, { platformKeyId, scopes: expect.arrayContaining(["phone_numbers:manage"]), provider: expect.objectContaining({ listAvailablePhoneNumbers: expect.any(Function) }), claimTokenSecret: expect.any(String) });
+      expect(invites.limit).toHaveBeenCalledWith([["phone-number-search", "partner-10m", partnerId, 20, 600, "rate_limit_partner"]]);
+      expect(numbers.searchLimit).not.toHaveBeenCalled();
+      expect(domain.resolveActingUserId).not.toHaveBeenCalled();
+
+      invites.limit.mockResolvedValueOnce({ allowed: false, status: 429, reason: "rate_limit_partner" });
+      const limited = await search();
+      expect(limited.status).toBe(429);
+      expect(await limited.json()).toMatchObject({ error: { code: "rate_limited" } });
+      expect(Number(limited.headers.get("retry-after"))).toBeLessThanOrEqual(600);
+    });
+
+    it("claims and replaces as the key", async () => {
+      domain.claimPhoneNumberForApi.mockResolvedValue(claim);
+      const claimed = await v1.createPhoneNumberClaim(partnerCall("/phone-numbers/claims", { method: "POST", headers: { "Idempotency-Key": "claim-1" }, body: JSON.stringify({ offer_token: "signed" }) }));
+      expect(claimed.status).toBe(202);
+      expect(domain.claimPhoneNumberForApi).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining(caller), { offerToken: "signed" }, { platformKeyId, scopes: expect.arrayContaining(["phone_numbers:manage"]), claimTokenSecret: expect.any(String) });
+      const replaced = await v1.replacePhoneNumber(partnerCall(`/phone-numbers/${phoneNumberId}/replace`, { method: "POST", headers: { "Idempotency-Key": "replace-1" }, body: JSON.stringify({ offer_token: "signed" }) }), { params: Promise.resolve({ phone_number_id: phoneNumberId }) });
+      expect(replaced.status).toBe(202);
+      expect(domain.claimPhoneNumberForApi).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining(caller), { offerToken: "signed", replaces: phoneNumberId }, { platformKeyId, scopes: expect.arrayContaining(["phone_numbers:manage"]), claimTokenSecret: expect.any(String) });
+      expect(domain.resolveActingUserId).not.toHaveBeenCalled();
+    });
+  });
+
   it.each([
     ["POST /billing/managed-plan", () => v1.setManagedPlan(partnerCall("/billing/managed-plan", { method: "POST", body: JSON.stringify({ plan: "enterprise" }) })), domain.setManagedPlanForApi],
     ["DELETE /billing/managed-plan", () => v1.endManagedPlan(partnerCall("/billing/managed-plan", { method: "DELETE" })), domain.endManagedPlanForApi],
@@ -1444,6 +1533,12 @@ describe("a partner's platform keys on v1 routes", () => {
       expect(invites.limit).toHaveBeenCalledWith([["partner-business-create", "partner-hour", partnerId, 30, 3_600, "rate_limit_partner_hour"]]);
       expect(domain.createBusinessForApi).not.toHaveBeenCalled();
       expect(domain.resolvePlatformKeyOwner).not.toHaveBeenCalled();
+    });
+
+    it("creates a business with no owner, and passes no owner_email on", async () => {
+      domain.createPartnerBusinessForApi.mockResolvedValue({ business: created, replayed: false });
+      expect((await post({ name: "Harbor Dental", timezone: "America/Halifax" })).status).toBe(201);
+      expect(domain.createPartnerBusinessForApi).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ body: { name: "Harbor Dental", timezone: "America/Halifax" } }), { beforeCreate: expect.any(Function) });
     });
 
     it("answers 429 once the partner's keys created their hour's businesses", async () => {

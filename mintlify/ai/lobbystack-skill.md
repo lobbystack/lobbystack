@@ -65,7 +65,7 @@ To reschedule, run `check_availability` for the appointment's `service_id`, then
 1. Call `get_business` for the time zone.
 2. Work out yesterday's local midnight and today's local midnight, with their UTC offset, for example `2026-09-26T00:00:00-04:00` and `2026-09-27T00:00:00-04:00`.
 3. Call `list_calls` with `started_after` and `started_before` set to those times. Page through with `cursor` if `has_more` is true.
-4. Calls with `outcome` `message_taken`, `booking_incomplete` or `none` are the ones that may need a follow-up. `appointment_booked` means the receptionist handled it.
+4. Calls with `outcome` `message_taken`, `booking_incomplete` or `none` are the ones that may need a follow-up. `appointment_booked` means the receptionist handled it, and `answered_by_team` means someone on the team took the call.
 5. Call `list_messages` with `status` `open` for the callbacks the team still owes. Match messages to calls with `call_id`.
 6. Call `get_call` only for the calls you need to explain. Transcripts can be long.
 

@@ -118,3 +118,30 @@ describe("TwilioProvider number pricing", () => {
 function provider(): TwilioProvider {
   return new TwilioProvider({ accountSid: "AC_test", authToken: "secret" });
 }
+
+describe("TwilioProvider call pricing", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const leg = (fields: Record<string, unknown>) => ({ priceUnit: "USD", status: "completed", ...fields });
+  const withCalls = (parent: unknown, children: unknown[]) => {
+    Object.assign(mocks.client.calls, { list: vi.fn().mockResolvedValue(children) });
+    mocks.client.calls.mockReturnValue({ fetch: vi.fn().mockResolvedValue(parent) });
+  };
+
+  it("adds up the call and each leg that connected", async () => {
+    withCalls(leg({ price: "-0.0085" }), [leg({ price: "-0.014" }), leg({ price: null, status: "no-answer" })]);
+    expect((await provider().getCallTreePricing({ providerCallId: "CA1" })).providerCostUsd).toBeCloseTo(0.0225);
+  });
+
+  it("reports no cost until Twilio prices every connected leg", async () => {
+    withCalls(leg({ price: "-0.0085" }), [leg({ price: null })]);
+    expect(await provider().getCallTreePricing({ providerCallId: "CA1" })).not.toHaveProperty("providerCostUsd");
+  });
+
+  it("finds the inbound call to one of the business's numbers, nearest the start", async () => {
+    const near = new Date("2026-10-01T12:00:00Z");
+    const call = (sid: string, to: string, direction: string, offsetMs: number) => ({ sid, to, direction, startTime: new Date(near.getTime() + offsetMs) });
+    Object.assign(mocks.client.calls, { list: vi.fn().mockResolvedValue([call("CAother", "+15550000000", "inbound", 0), call("CAtrunk", "+14165550123", "trunking-originating", 0), call("CAfar", "+14165550123", "inbound", -60_000), call("CAnear", "+14165550123", "inbound", -15_000)]) });
+    expect(await provider().findInboundCall({ from: "+14165550134", dialled: ["+14165550123"], near })).toBe("CAnear");
+  });
+});

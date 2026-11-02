@@ -88,11 +88,23 @@ On top of the per-business tools, a partner connection gets these. Tools marked 
 | --- | --- | --- |
 | `get_partner` | `partner:read` | Your partner's name, addresses and tier, and this month's pool with billing access |
 | `list_businesses` | `partner:read` | Your businesses with their owners, access levels and usage, and their billing for owners and admins |
-| `create_business` | `businesses:create` | Creates a business and invites its owner. `template_id` also needs `partner:read`, and `package_id` needs `partner.businesses:write`. |
+| `create_business` | `businesses:create` | Creates a business and invites its owner. A platform key can leave `owner_email` out. `template_id` also needs `partner:read`, and `package_id` needs `partner.businesses:write`. |
 | `release_business` | `partner.businesses:write` | Hands a business over to its owner. Destructive. |
 | `delete_business` | `partner.businesses:write` | Deletes a business and everything in it. Destructive. |
 | `get_business_billing` | `partner:read` | A business's package, subscription status and overage |
 | `set_business_billing` | `partner.businesses:write` | Sets a business's package and overage |
+
+### Phone numbers
+
+Only a platform key gets these tools. Claiming and replacing cost money and need a paid tier, so confirm the number first. Searching, claiming and replacing also need `phone_numbers:manage`. Someone connected with their own account buys numbers in the business's dashboard.
+
+| Tool | Scope | What it does |
+| --- | --- | --- |
+| `list_phone_numbers` | `phone_numbers:manage` | A business's numbers, newest first |
+| `search_phone_numbers` | `phone_numbers:purchase` | Finds numbers a business can claim |
+| `claim_phone_number` | `phone_numbers:purchase` | Buys an offered number. `idempotency_key` is required. |
+| `replace_phone_number` | `phone_numbers:purchase` | Claims a replacement for a number, once per business. `idempotency_key` is required. |
+| `get_phone_number_claim` | `phone_numbers:manage` | A claim's status |
 
 ### Demos
 

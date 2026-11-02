@@ -1,4 +1,7 @@
 export * from "./ai/embeddingProvider";
+export * from "./calendar";
+export * from "./calcom/calendar";
+export * from "./calendly/calendar";
 export * from "./crypto/secretBox";
 export * from "./crawling/firecrawl";
 export * from "./crawling/urlSafety";

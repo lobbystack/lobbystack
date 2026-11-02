@@ -145,6 +145,7 @@ export function createLobbyStackMcpHttpHandler(dependencies: McpHandlerDependenc
     ...(dependencies.storage ? { storage: dependencies.storage } : {}),
     ...(dependencies.partnerLimit ? { partnerLimit: dependencies.partnerLimit } : {}),
     ...(dependencies.partnerBusinessCaller ? { partnerBusinessCaller: dependencies.partnerBusinessCaller } : {}),
+    ...(dependencies.partnerNumberSearch ? { partnerNumberSearch: dependencies.partnerNumberSearch } : {}),
   };
   const resolveKey = dependencies.resolveKey ?? (async (value: string) => await resolveApiKey(serverDependencies.context(), value));
   const resolveGrant = dependencies.resolveGrant ?? (async (value: string) => await resolveOAuthAccessToken(serverDependencies.context(), value));

@@ -14,6 +14,7 @@ import {
   normalizeAppointmentChangePolicy,
   normalizeBookingMode,
   normalizeReceptionistVoice,
+  normalizeStaffFirstMode,
   normalizeTransferMode,
   weekdays,
   type ApiAppointment,
@@ -38,7 +39,7 @@ import {
   type ApiWidgetKey,
 } from "@lobbystack/shared";
 
-import { resolveCallOutcome } from "../callOutcome";
+import { resolveCallOutcome, STAFF_ANSWERED_DISPOSITION } from "../callOutcome";
 import type { NotificationPreferences, OperatorNotificationEventKey } from "../notifications";
 import { EXPIRED_FOLLOW_UP_TITLE } from "../followUpRetention";
 import { recordingState } from "../recordingState";
@@ -229,7 +230,7 @@ export function serializeCall(row: CallRow): ApiCall {
     id: row.id,
     channel: row.transport.includes("web") ? "web" : "phone",
     status: row.endedAt ? "completed" : "in_progress",
-    outcome: outcome.kind === "booked" ? "appointment_booked" : outcome.kind === "booking_in_progress" ? "booking_incomplete" : outcome.kind === "message_taking" ? "message_taken" : outcome.kind === "summary" ? "conversation" : "none",
+    outcome: outcome.kind === "booked" ? "appointment_booked" : outcome.kind === "booking_in_progress" ? "booking_incomplete" : outcome.kind === "message_taking" ? "message_taken" : outcome.kind === "summary" ? "conversation" : outcome.kind === "disposition" && outcome.disposition === STAFF_ANSWERED_DISPOSITION ? "answered_by_team" : "none",
     summary: summaryText ?? fallbackSummary,
     end_reason: row.disposition,
     contact_id: row.contactId,
@@ -664,7 +665,7 @@ export function serializeCalendarConnection(row: { id: string; provider: string;
 
 const summarySources = ["placeholder", "generated", "operator"] as const;
 
-type ReceptionistRow = Pick<typeof receptionistProfiles.$inferSelect, "greeting" | "tone" | "summary" | "summarySource" | "bookingPolicy" | "voiceInstructions" | "smsInstructions" | "chatInstructions" | "transferMode" | "transferNumber" | "appointmentChangePolicy" | "bookingMode" | "voice" | "updatedAt">;
+type ReceptionistRow = Pick<typeof receptionistProfiles.$inferSelect, "greeting" | "tone" | "summary" | "summarySource" | "bookingPolicy" | "voiceInstructions" | "smsInstructions" | "chatInstructions" | "transferMode" | "transferNumber" | "appointmentChangePolicy" | "bookingMode" | "voice" | "staffFirstMode" | "staffFirstNumber" | "staffFirstRingSeconds" | "staffFirstMessage" | "staffFirstHandoverMessage" | "updatedAt">;
 
 /** Shows the settings as calls use them: a transfer mode, booking mode, voice or policy calls don't know reads as what they fall back to. */
 export function serializeReceptionist(row: ReceptionistRow): ApiReceptionist {
@@ -682,6 +683,11 @@ export function serializeReceptionist(row: ReceptionistRow): ApiReceptionist {
     transfer_number: row.transferNumber,
     booking_mode: normalizeBookingMode(row.bookingMode),
     voice: normalizeReceptionistVoice(row.voice),
+    staff_first_mode: normalizeStaffFirstMode(row.staffFirstMode),
+    staff_first_number: row.staffFirstNumber,
+    staff_first_ring_seconds: row.staffFirstRingSeconds,
+    staff_first_message: row.staffFirstMessage,
+    staff_first_handover_message: row.staffFirstHandoverMessage,
     appointment_change_policy: { enabled: policy.enabled, allow_cancel: policy.allowCancel, allow_reschedule: policy.allowReschedule, verification_mode: policy.verificationMode },
     updated_at: iso(row.updatedAt),
   };

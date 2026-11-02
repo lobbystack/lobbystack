@@ -250,9 +250,9 @@ export async function takeMessageForStaff(
   input: { businessId: string; message: string; channel: ReceptionistChannel; callerName?: string; callbackPhone?: string; urgency?: string; callbackWindow?: string; callId?: string; conversationId?: string; request?: FollowUpRequest },
 ) {
   const alert = { eventKind: "voiceMessage" as const, subject: "New voice message", body: "A caller left a voice message. Open the inbox to review it." };
-  // A website or Instagram chat's conversation is the person's own thread: a staff
+  // A website, Instagram or text conversation is the person's own thread: a staff
   // note there would show up to them, and to the agent, as if they had written it.
-  const inVisitorThread = (input.channel === "web_chat" || input.channel === "instagram") && input.conversationId !== undefined;
+  const inVisitorThread = (input.channel === "web_chat" || input.channel === "instagram" || input.channel === "sms") && input.conversationId !== undefined;
   if (!inVisitorThread) {
     const conversationId = input.conversationId ?? (await getOrCreateConversation(context, { businessId: input.businessId, contactPhone: input.callbackPhone ?? "unknown", channel: input.channel === "web_chat" ? "web_chat" : "voice" })).conversationId;
     await appendMessage(context, {

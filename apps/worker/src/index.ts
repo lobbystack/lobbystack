@@ -7,6 +7,8 @@ import { createEmbeddingProvider } from "@lobbystack/providers/ai/embeddingProvi
 import { FirecrawlProvider } from "@lobbystack/providers/crawling/firecrawl";
 import { createCustomHostnameProvider, systemTxtLookup } from "@lobbystack/providers/customHostnames/customHostnames";
 import { SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
+import { CalcomCalendarProvider, calcomCalendarConfigFromEnv, calcomCalendarConfigProblem } from "@lobbystack/providers/calcom/calendar";
+import { CalendlyCalendarProvider, calendlyCalendarConfigFromEnv, calendlyCalendarConfigProblem } from "@lobbystack/providers/calendly/calendar";
 import { GoogleCalendarProvider } from "@lobbystack/providers/google/calendar";
 import { InstagramProvider } from "@lobbystack/providers/instagram/instagram";
 import { SecretBox } from "@lobbystack/providers/crypto/secretBox";
@@ -15,6 +17,7 @@ import { createStorageProvider } from "@lobbystack/providers/storage/provider";
 import { createTelephony } from "@lobbystack/providers/telephony/registry";
 import { getMeter, initializeTelemetry, redactOtelExceptionText, shutdownTelemetry, withExtractedTraceContext, withSpan } from "@lobbystack/telemetry/node";
 import { redactJobError } from "./redactJobError";
+import type { CalendarProviders } from "./calendarJobs";
 import { DelayedError, Worker } from "bullmq";
 import { and, eq, isNull } from "drizzle-orm";
 import OpenAI from "openai";
@@ -63,11 +66,17 @@ function createCrawlerProvider(): FirecrawlProvider | undefined {
   return apiKey ? new FirecrawlProvider({ apiKey, ...(process.env.FIRECRAWL_BASE_URL ? { baseUrl: process.env.FIRECRAWL_BASE_URL } : {}) }) : undefined;
 }
 
-function createCalendarProvider(): GoogleCalendarProvider | undefined {
+function createCalendarProviders(): CalendarProviders | undefined {
+  const providers: CalendarProviders = {};
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   const redirectUri = process.env.GOOGLE_REDIRECT_URI;
-  return clientId && clientSecret && redirectUri ? new GoogleCalendarProvider({ clientId, clientSecret, redirectUri }) : undefined;
+  if (clientId && clientSecret && redirectUri) providers.google = new GoogleCalendarProvider({ clientId, clientSecret, redirectUri });
+  const calcom = calcomCalendarConfigFromEnv();
+  if (calcom) providers.calcom = new CalcomCalendarProvider(calcom);
+  const calendly = calendlyCalendarConfigFromEnv();
+  if (calendly) providers.calendly = new CalendlyCalendarProvider(calendly);
+  return Object.keys(providers).length ? providers : undefined;
 }
 
 // Sending needs the app's ID and secret and the key the tokens are encrypted with.
@@ -118,6 +127,10 @@ async function main(): Promise<void> {
     ...(process.env.STORAGE_PROVIDER === "s3" ? [] : ["LOCAL_STORAGE_SIGNING_SECRET"]),
   ]);
   for (const warning of partnerFeatureWarnings(process.env)) console.warn(`[partners] ${warning}`);
+  const calcomProblem = calcomCalendarConfigProblem(process.env);
+  if (calcomProblem) console.warn(`[calendar] ${calcomProblem}`);
+  const calendlyProblem = calendlyCalendarConfigProblem(process.env);
+  if (calendlyProblem) console.warn(`[calendar] ${calendlyProblem}`);
   await initializeTelemetry({ serviceName: "lobbystack-worker" });
   const database = createDatabaseClient("lobbystack_worker");
   const dispatcherDatabase = createDatabaseClient("lobbystack_dispatcher");
@@ -154,7 +167,7 @@ async function main(): Promise<void> {
   const polar = createPolarProvider();
   const customHostnames = createCustomHostnameProvider(process.env);
   const crawler = createCrawlerProvider();
-  const calendar = createCalendarProvider();
+  const calendars = createCalendarProviders();
   const instagram = createInstagramOperations();
   const productAnalytics = createProductAnalytics();
   const callSummarizer = createCallSummarizer();
@@ -166,7 +179,7 @@ async function main(): Promise<void> {
   const dependencies: WorkerDependencies = {
     domain,
     realtime,
-    ...(calendar ? { calendar } : {}),
+    ...(calendars ? { calendars } : {}),
     ...(instagram ? { instagram } : {}),
     ...(crawler ? { crawler } : {}),
     ...(productAnalytics ? { productAnalytics } : {}),

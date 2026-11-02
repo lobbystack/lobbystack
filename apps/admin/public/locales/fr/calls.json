@@ -102,6 +102,7 @@
     "noSegments": "Aucun segment de transcription n'est encore disponible pour cet appel."
   },
   "outcome": {
+    "answeredByTeam": "Répondu par votre équipe",
     "label": "Résumé",
     "booked": "L'appelant a réservé {{serviceName}} pour le {{startsAt}}.",
     "scheduling": "L'appelant a commencé la prise de rendez-vous, mais aucun rendez-vous n'a été confirmé.",

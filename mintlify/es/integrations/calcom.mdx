@@ -1,0 +1,74 @@
+---
+title: "Conectar Cal.com"
+description: "Conecte una cuenta de Cal.com, elija el tipo de evento que reserva su recepcionista de IA y mantenga la disponibilidad sincronizada."
+sidebarTitle: "Cal.com"
+contentType: "How-to"
+---
+
+Conecte Cal.com si su equipo ya recibe reservas allí. Su recepcionista de IA reserva cada cita como una reserva de Cal.com de un tipo de evento, y cuenta cada reserva de la cuenta como tiempo ocupado. Así no ofrece horarios ya reservados en su página de reservas de Cal.com.
+
+<Note>
+  Agregue los servicios que pueden pedir quienes llaman antes de conectar Cal.com. LobbyStack compara su duración con el tipo de evento que elija.
+</Note>
+
+## Lo que recibe Cal.com
+
+Para cada cita, Cal.com recibe:
+
+- **Nombre y teléfono del asistente**: los de quien llama, para que sepa quién reservó
+- **Correo del asistente**: una dirección sustituta propia de la cita, para que Cal.com no le escriba a quien llama
+- **Notas y metadatos de la reserva**: el nombre, el teléfono y el correo real de quien llama, para que pueda contactarle
+
+La recepcionista de IA envía ella misma la confirmación y los recordatorios a quien llama. Cal.com sigue enviando a su equipo sus notificaciones de anfitrión.
+
+## Conectar Cal.com
+
+<Steps>
+  <Step title="Abrir Integraciones">
+    En el panel, abra **Integraciones**.
+  </Step>
+  <Step title="Iniciar la conexión con Cal.com">
+    Busque **Cal.com** y haga clic en **Conectar**.
+  </Step>
+  <Step title="Autorizar a LobbyStack">
+    Inicie sesión en Cal.com y apruebe los permisos solicitados.
+  </Step>
+  <Step title="Elegir un tipo de evento">
+    De vuelta en el panel, elija un tipo de evento en **Tipo de evento**. LobbyStack guarda su elección de inmediato.
+  </Step>
+</Steps>
+
+LobbyStack empieza a leer sus reservas de Cal.com, y los calendarios que Cal.com revisa para evitar conflictos, en pocos segundos.
+
+## Configurar el tipo de evento en Cal.com
+
+Después de elegir el tipo de evento, el diálogo indica lo que debe corregir en Cal.com:
+
+- **Duraciones**: el tipo de evento debe ofrecer cada duración de sus servicios. Agregue las duraciones que faltan en la configuración de duración del tipo de evento, o Cal.com reservará su duración predeterminada.
+- **Flujo de SMS**: desactive cualquier flujo de SMS del tipo de evento. Si no, quienes llaman reciben mensajes de Cal.com y de su recepcionista de IA.
+- **Ubicación**: agregue **Número de teléfono del asistente** como ubicación. De lo contrario, las reservas llevan un enlace de video y su equipo debe buscar el número de la persona que llama en las notas de la reserva.
+- **Horario**: la disponibilidad del tipo de evento debe cubrir su horario de atención. Cal.com rechaza las reservas fuera de su horario, y el panel le avisa cuando una reserva no se sincroniza.
+
+## Usar Cal.com con Google Calendar
+
+Puede conectar Google Calendar y Cal.com a la vez. El tiempo ocupado en ambos bloquea las reservas, y las citas nuevas van a Cal.com en cuanto elige su tipo de evento. Cal.com las recibe porque su página de reservas acepta reservas por su cuenta, y una reserva de Cal.com bloquea el horario allí de inmediato. El calendario propio de un miembro del equipo sigue teniendo prioridad para sus citas.
+
+## Cambiar el tipo de evento
+
+1. Abra **Integraciones**.
+2. Haga clic en la tarjeta de Cal.com.
+3. Elija otro tipo de evento.
+
+Las citas nuevas usan el nuevo tipo de evento. Las citas próximas pasan a él en la siguiente sincronización.
+
+## Cuando una reserva cambia en Cal.com
+
+Si cancela una reserva en Cal.com, LobbyStack cancela la cita y le envía una alerta. Las personas que aceptaron recibir mensajes de texto reciben un mensaje de cancelación.
+
+Si mueve una reserva en Cal.com, LobbyStack mueve la cita y su recordatorio, y luego le envía una alerta para que avise a la persona de la nueva hora. LobbyStack no le envía un mensaje de texto por este cambio. Si el miembro del personal ya tiene una cita a la nueva hora, LobbyStack conserva la hora original y le avisa para que resuelva el conflicto.
+
+## Volver a conectar o desconectar
+
+Si Cal.com deja de aceptar la conexión, la tarjeta indica que debe volver a conectar. Abra la tarjeta de Cal.com y haga clic en **Volver a conectar**.
+
+Para quitar la integración, abra la tarjeta de Cal.com y haga clic en **Desconectar**. LobbyStack cancela las reservas próximas que su recepcionista de IA hizo en Cal.com, y su página de reservas vuelve a mostrar esos horarios como libres. Si Google Calendar también está conectado, esas citas pasan a él. Las reservas pasadas se quedan en Cal.com.

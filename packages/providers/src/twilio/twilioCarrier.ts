@@ -1,6 +1,6 @@
 import { permanentSmsErrorCode } from "@lobbystack/shared";
 
-import { alertSmsFrom, appBaseUrl } from "../telephony/config";
+import { alertSmsFrom, appBaseUrl, sipAddress } from "../telephony/config";
 import type { AlertSmsSender, CallCostLookup, CarrierAdapters, NumberInventory, NumberRouting, PhoneVerifier, LineTypeLookup, SmsSender, SmsStatusCallbackIds } from "../telephony/types";
 import { twilioConfigured, twilioRegistration, twilioRegulatoryDocuments } from "./registration";
 import { getTwilioProviderErrorCode, TwilioProvider } from "./twilioProvider";
@@ -40,8 +40,9 @@ function smsSender(provider: TwilioProvider, env: Env): SmsSender {
 /**
  * The Twilio account in TWILIO_ACCOUNT_SID, behind the telephony interfaces.
  * Numbers join the Elastic SIP trunk in TWILIO_SIP_TRUNK_SID, and come off
- * it onto /api/webhooks/twilio/voice for the fallback. Undefined without
- * credentials.
+ * it onto /api/webhooks/twilio/voice for the fallback or
+ * /api/webhooks/twilio/staff-first/incoming when staff answer first.
+ * Undefined without credentials.
  */
 export function createTwilioCarrier(env: Env = process.env, provider?: TwilioProvider): CarrierAdapters | undefined {
   if (!provider && !twilioConfigured(env)) return undefined;
@@ -71,6 +72,14 @@ export function createTwilioCarrier(env: Env = process.env, provider?: TwilioPro
         await twilio.addNumberToSipTrunk({ trunkSid, providerPhoneId: input.providerPhoneId });
         return { target: `sip-trunk:${trunkSid}` };
       }
+      if (input.mode === "staff_first") {
+        // The admin app dials GPT-Live from the webhook. Without the project, a call would have nowhere to go.
+        if (!sipAddress(env)) throw new Error("OPENAI_PROJECT_ID is required to ring staff first. See docs/voice/runtime.md.");
+        const staffFirstUrl = webhook("staff-first/incoming");
+        // If the webhook fails, the caller still reaches the receptionist.
+        await twilio.routeNumber({ providerPhoneId: input.providerPhoneId, trunkSid, mode: "fallback", fallbackUrl: staffFirstUrl, errorUrl: webhook("staff-first/fallback") });
+        return { target: staffFirstUrl };
+      }
       const fallbackUrl = webhook("voice");
       await twilio.routeNumber({ providerPhoneId: input.providerPhoneId, trunkSid, mode: "fallback", fallbackUrl });
       return { target: fallbackUrl };
@@ -88,12 +97,15 @@ export function createTwilioCarrier(env: Env = process.env, provider?: TwilioPro
     carrier: "twilio",
     // Without the trunk there's no telling which trunk call was ours, so GPT-Live calls go unpriced.
     ...(trunkSid ? {
-      findLiveCallCost: async ({ from, near }: { from: string; near: Date }) => {
+      findLiveCallCost: async ({ from, dialled, near }: { from: string; dialled?: string[]; near: Date }) => {
         const providerCallId = await twilio.findTrunkCall({ trunkSid, from, near });
-        return providerCallId ? { providerCallId, ...await twilio.getCallPricing({ providerCallId }) } : undefined;
+        if (providerCallId) return { providerCallId, ...await twilio.getCallPricing({ providerCallId }) };
+        // A staff-first number's call reached GPT-Live from a voice webhook, off the trunk.
+        const inbound = dialled?.length ? await twilio.findInboundCall({ from, dialled, near }) : undefined;
+        return inbound ? { providerCallId: inbound, ...await twilio.getCallTreePricing({ providerCallId: inbound }) } : undefined;
       },
     } : {}),
-    getCallPricing: (input) => twilio.getCallPricing(input),
+    getCallPricing: (input) => twilio.getCallTreePricing(input),
   };
   return { carrier: "twilio", inventory, routing, sms: smsSender(twilio, env), ...(verifier ? { verifier } : {}), lineTypes, callCost };
 }

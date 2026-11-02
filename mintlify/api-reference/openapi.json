@@ -404,7 +404,7 @@
       "post": {
         "operationId": "createBusiness",
         "summary": "Create a business",
-        "description": "Platform keys only. A host's key creates a business owned by the account in the key's owner_email, and lets every key in the same group act on it. A partner's key creates a business of the partner with no owner yet, at the access_level you pick, and the partner emails owner_email an invitation to own it. With a partner's key, template_id also needs partner:read and package_id also needs partner.businesses:write. Idempotency-Key is required: a retry with the same value returns the business it created, however much later, and a different body with that value is a 422.",
+        "description": "Platform keys only. A host's key creates a business owned by the account in the key's owner_email, and lets every key in the same group act on it. A partner's key creates a business of the partner with no owner yet, at the access_level you pick. With owner_email, the partner emails that address an invitation to own it. Without it, nobody is invited and the partner runs the business itself. With a partner's key, template_id also needs partner:read and package_id also needs partner.businesses:write. Idempotency-Key is required: a retry with the same value returns the business it created, however much later, and a different body with that value is a 422.",
         "tags": [
           "Platform"
         ],
@@ -2503,7 +2503,7 @@
       "post": {
         "operationId": "searchPhoneNumbers",
         "summary": "Find numbers to claim",
-        "description": "Searches the carrier for numbers that take calls; a self-hosted business gets only numbers that also take texts. Each offer expires after 5 minutes. On the cloud, a business on a paid plan gets numbers it buys. One without a paid plan gets free trial offers (trial: true) when the account the key acts as verified a mobile number for it in the dashboard, in a country with trials, and no trial was used; otherwise it gets a 409. On a deployment that bills partners for tiers, a partner's business gets numbers it buys while its partner pays for a tier, and a 409 otherwise. The account a key acts as can search 20 times in 10 minutes; searches refused before that don't count. Send replaces to find a replacement for an active number; a business can replace its number once.",
+        "description": "Searches the carrier for numbers that take calls; a self-hosted business gets only numbers that also take texts. Each offer expires after 5 minutes. On the cloud, a business on a paid plan gets numbers it buys. One without a paid plan gets free trial offers (trial: true) when the account the key acts as verified a mobile number for it in the dashboard, in a country with trials, and no trial was used; otherwise it gets a 409. On a deployment that bills partners for tiers, a partner's business gets numbers it buys while its partner pays for a tier, and a 409 otherwise. A partner's platform key also needs phone_numbers:purchase to search and claim for its partner's businesses, on a paid tier, and never gets a trial offer, which needs one person's verified mobile. The account a key acts as can search 20 times in 10 minutes, and a partner's platform keys share the same limit; searches refused before that don't count. Send replaces to find a replacement for an active number; a business can replace its number once.",
         "tags": [
           "Phone numbers"
         ],
@@ -2643,7 +2643,7 @@
       "post": {
         "operationId": "createPhoneNumberClaim",
         "summary": "Claim a number",
-        "description": "Buys the offered number for the business and connects it to the receptionist. It costs money, so Idempotency-Key is required. Returns the claim at once; poll GET /phone-numbers/claims/{claim_id} until its status is claimed or failed. A business that already has a number, including one still being released, or another claim in progress gets a 409. Claims are limited to 3 an hour, 2 a day and 5 in 30 days, past which they are a 429. Platform keys count each business's claims; other keys count the claims of the account they act as. A partner's businesses also share daily and 30-day limits, whichever key claims. They buy up to the larger of 2 and the numbers the partner's tier includes a day, and the larger of 5 and twice those in 30 days. A trial offer starts the business's 14-day free trial. As in the dashboard, each business, account and verified phone gets one trial. The dashboard also allows one trial per network in 30 days, and the API doesn't: an integration claims for all of its customers from the same addresses.",
+        "description": "Buys the offered number for the business and connects it to the receptionist. It costs money, so Idempotency-Key is required. Returns the claim at once; poll GET /phone-numbers/claims/{claim_id} until its status is claimed or failed. A business that already has a number, including one still being released, or another claim in progress gets a 409. Claims are limited to 3 an hour, 2 a day and 5 in 30 days, past which they are a 429. Platform keys count each business's claims; other keys count the claims of the account they act as. A partner's businesses also share daily and 30-day limits, whichever key claims. A partner's platform key also needs phone_numbers:purchase, and can only buy an offer it searched for itself. They buy up to the larger of 2 and the numbers the partner's tier includes a day, and the larger of 5 and twice those in 30 days. A trial offer starts the business's 14-day free trial. As in the dashboard, each business, account and verified phone gets one trial. The dashboard also allows one trial per network in 30 days, and the API doesn't: an integration claims for all of its customers from the same addresses.",
         "tags": [
           "Phone numbers"
         ],
@@ -3028,7 +3028,7 @@
       "post": {
         "operationId": "replacePhoneNumber",
         "summary": "Replace a number",
-        "description": "Claims a replacement offer, from POST /phone-numbers/search with replaces, for this number. The old number keeps working until 30 days after the new one goes live, then is released. A business can replace its number once, so a second replacement is a 409. Idempotency-Key is required, and the limits of POST /phone-numbers/claims apply.",
+        "description": "Claims a replacement offer, from POST /phone-numbers/search with replaces, for this number. The old number keeps working until 30 days after the new one goes live, then is released. A business can replace its number once, so a second replacement is a 409. A partner's platform key also needs phone_numbers:purchase and its partner on a paid tier. Idempotency-Key is required, and the limits of POST /phone-numbers/claims apply.",
         "tags": [
           "Phone numbers"
         ],
@@ -4802,6 +4802,236 @@
         }
       }
     },
+    "/calendars/calcom/connect": {
+      "post": {
+        "operationId": "createCalcomConnectLink",
+        "summary": "Get a link that connects Cal.com",
+        "description": "Cal.com asks the account's owner to agree in a browser, so the API can't connect an account by itself: send the link this returns to whoever owns the Cal.com account. They sign in to LobbyStack as an owner or admin of the business, agree on Cal.com's page, and land on the dashboard's integrations page, where they can pick the event type to book; PATCH /calendars/{connection_id} can pick it too. Each appointment becomes a booking of that event type, made under a stand-in email address so Cal.com never emails the caller, and the account's bookings count as busy time. The link works until expires_at. Connecting another Cal.com account replaces the business's Cal.com connection, the one without a staff member. A deployment without Cal.com answers 403.",
+        "tags": [
+          "Calendars"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scope": "business:write",
+        "parameters": [
+          {
+            "name": "LobbyStack-Business",
+            "in": "header",
+            "description": "The business a platform key acts on. Required with a platform key. A per-business key may leave it out; if it sends one, it must be the key's own business.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/CalendarConnectLink"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request is invalid (invalid_request), or a platform key sent no LobbyStack-Business header (business_required).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The API key is missing, invalid, or revoked (unauthorized).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refused. insufficient_scope: the key lacks the business:write scope. forbidden: a per-business key named another business in LobbyStack-Business. key_owner_inactive: the person the key acts for can't any more: a per-business key's creator is no longer an owner or admin, or a platform key's owner_email has no verified LobbyStack account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "A platform key named a business it cannot act on (not_found).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with the current state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests (rate_limited). Wait for the Retry-After header's number of seconds.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait."
+              }
+            }
+          }
+        }
+      }
+    },
+    "/calendars/calendly/connect": {
+      "post": {
+        "operationId": "createCalendlyConnectLink",
+        "summary": "Get a link that connects Calendly",
+        "description": "Calendly asks the account's owner to agree in a browser, so the API can't connect an account by itself: send the link this returns to whoever owns the Calendly account. They sign in to LobbyStack as an owner or admin of the business, agree on Calendly's page, and land on the dashboard's integrations page, where they can pick the event type to book; PATCH /calendars/{connection_id} can pick it too. The account needs a paid Calendly plan, Standard or above. Each appointment becomes a booking of that event type, made under a stand-in email address so Calendly never emails the caller, and the account's bookings count as busy time. The link works until expires_at. A business with no owner or admin answers 409, because nobody could open the link: invite one with POST /team/invitations first. Connecting another Calendly account replaces the business's Calendly connection, the one without a staff member. A deployment without Calendly answers 403.",
+        "tags": [
+          "Calendars"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scope": "business:write",
+        "parameters": [
+          {
+            "name": "LobbyStack-Business",
+            "in": "header",
+            "description": "The business a platform key acts on. Required with a platform key. A per-business key may leave it out; if it sends one, it must be the key's own business.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/CalendarConnectLink"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request is invalid (invalid_request), or a platform key sent no LobbyStack-Business header (business_required).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The API key is missing, invalid, or revoked (unauthorized).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refused. insufficient_scope: the key lacks the business:write scope. forbidden: a per-business key named another business in LobbyStack-Business. key_owner_inactive: the person the key acts for can't any more: a per-business key's creator is no longer an owner or admin, or a platform key's owner_email has no verified LobbyStack account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "A platform key named a business it cannot act on (not_found).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with the current state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests (rate_limited). Wait for the Retry-After header's number of seconds.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait."
+              }
+            }
+          }
+        }
+      }
+    },
     "/calendars": {
       "get": {
         "operationId": "listCalendarConnections",
@@ -4926,7 +5156,7 @@
       "get": {
         "operationId": "listAccountCalendars",
         "summary": "List a connected account's calendars",
-        "description": "Asks Google for the account's calendars, all in one page. A connection Google no longer accepts is a 409: connect it again with POST /calendars/google/connect. A deployment without Google Calendar answers 403.",
+        "description": "Asks the provider for the account's calendars, all in one page. For Cal.com and Calendly these are the account's event types. A connection the provider no longer accepts is a 409: connect it again with POST /calendars/google/connect or POST /calendars/calcom/connect. A deployment without that provider answers 403.",
         "tags": [
           "Calendars"
         ],
@@ -5056,7 +5286,7 @@
       "patch": {
         "operationId": "updateCalendarConnection",
         "summary": "Pick a calendar or a staff member",
-        "description": "calendar_id picks the calendar to use, one that GET /calendars/{connection_id}/calendars lists as writable. staff_id makes the connection a staff member's calendar, or with null the business's. Values the connection already has change nothing. A new calendar_id is checked with Google: a connection Google no longer accepts is a 409, and a deployment without Google Calendar answers 403.",
+        "description": "calendar_id picks the calendar to use, one that GET /calendars/{connection_id}/calendars lists as writable. staff_id makes the connection a staff member's calendar, or with null the business's. Values the connection already has change nothing. A new calendar_id is checked with the provider: a connection the provider no longer accepts is a 409, and a deployment without that provider answers 403.",
         "tags": [
           "Calendars"
         ],
@@ -5189,7 +5419,7 @@
       "delete": {
         "operationId": "deleteCalendarConnection",
         "summary": "Disconnect a calendar",
-        "description": "Forgets the account's Google authorization and its busy times. Appointments already added to the calendar stay there.",
+        "description": "Forgets the account's authorization and its busy times. Appointments already added to a Google calendar stay there. Upcoming bookings LobbyStack made in Cal.com are canceled there, and past ones stay.",
         "tags": [
           "Calendars"
         ],
@@ -11053,7 +11283,7 @@
       "post": {
         "operationId": "releasePartnerBusiness",
         "summary": "Release a business to its owner",
-        "description": "Hands one of the partner's businesses to its owner, who keeps it on the host's Free plan and pays the host from then on. It leaves the partner's dashboard and domains, and the webhooks the partner's keys and people set up on it stop sending. The owner has to have accepted their invitation first, or it's a 409. A business whose package subscription is live is a 409 too: cancel it in Stripe first.",
+        "description": "Hands one of the partner's businesses to its owner, who keeps it on the host's Free plan and pays the host from then on. It leaves the partner's dashboard and domains, and the webhooks the partner's keys and people set up on it stop sending. The owner has to have accepted their invitation first, or it's a 409, and so is a business whose number is still being bought. A business whose package subscription is live is a 409 too: cancel it in Stripe first.",
         "tags": [
           "Partner"
         ],
@@ -11389,7 +11619,7 @@
       "patch": {
         "operationId": "updatePartnerBusinessBilling",
         "summary": "Set a business's package and overage",
-        "description": "package_id sells the business one of the partner's packages, and the owner then pays for it through the partner's Stripe account; null bills it outside LobbyStack. overage sets what minutes and chats past the package's allowance cost and the monthly cap on them. Values the business already has change nothing.",
+        "description": "package_id sells the business one of the partner's packages, and the owner then pays for it through the partner's Stripe account; a business with no owner and no open owner invitation is a 409. null bills it outside LobbyStack. overage sets what minutes and chats past the package's allowance cost and the monthly cap on them. Values the business already has change nothing.",
         "tags": [
           "Partner"
         ],
@@ -15123,7 +15353,7 @@
       "bearerAuth": {
         "type": "http",
         "scheme": "bearer",
-        "description": "An API key from Settings > API keys (lsk_...), which acts on its own business, or a platform key from the PLATFORM_API_KEYS setting (lsp_...), which onboards and manages businesses. Scopes: business:read, business:write, calls:read, contacts:read, contacts:write, appointments:read, appointments:write, messages:read, knowledge:read, knowledge:write, webhooks:manage, billing:manage, phone_numbers:manage, team:manage, businesses:create, users:create, partner:read, partner.businesses:write, partner.demos:write, partner.packages:write, partner.branding:write, partner.templates:write, partner.team:write, partner.billing:read, partner.billing:write. Only platform keys can hold businesses:create and users:create, and only a key a partner made in its console can hold the partner scopes, which the Partner endpoints use. Only a partner's owners grant partner.billing:read and partner.billing:write."
+        "description": "An API key from Settings > API keys (lsk_...), which acts on its own business, or a platform key from the PLATFORM_API_KEYS setting (lsp_...), which onboards and manages businesses. Scopes: business:read, business:write, calls:read, contacts:read, contacts:write, appointments:read, appointments:write, messages:read, knowledge:read, knowledge:write, webhooks:manage, billing:manage, phone_numbers:manage, team:manage, businesses:create, users:create, phone_numbers:purchase, partner:read, partner.businesses:write, partner.demos:write, partner.packages:write, partner.branding:write, partner.templates:write, partner.team:write, partner.billing:read, partner.billing:write. Only platform keys can hold businesses:create and users:create, and only a key a partner made in its console can hold the partner scopes, which the Partner endpoints use. Only a partner's owners grant partner.billing:read and partner.billing:write."
       }
     },
     "schemas": {
@@ -15231,6 +15461,7 @@
                     "team:manage",
                     "businesses:create",
                     "users:create",
+                    "phone_numbers:purchase",
                     "partner:read",
                     "partner.businesses:write",
                     "partner.demos:write",
@@ -15581,7 +15812,7 @@
             "format": "uri"
           },
           "owner_email": {
-            "description": "Required with a partner's platform key, and refused with the host's. The partner emails this address an invitation to own the business and sign in on the partner's dashboard.",
+            "description": "Only with a partner's platform key. The partner emails this address an invitation to own the business and sign in on the partner's dashboard. Leave it out for a business you run from your own product: nobody hears from LobbyStack, and nobody can own the business later. It then can't be released and can't take package_id. Webhooks cover its calls and messages, and its other alerts email the partner's owners and admins. Set a transfer_number on the receptionist, or calls it can't take are refused.",
             "type": "string",
             "minLength": 3,
             "maxLength": 320
@@ -15600,7 +15831,7 @@
             "format": "uuid"
           },
           "package_id": {
-            "description": "Only with a partner's platform key: one of the partner's packages, from GET /partner/packages, to sell the business. The key needs partner.businesses:write too. The owner's invitation then opens a checkout on the partner's Stripe account. Left out, the business is billed outside LobbyStack.",
+            "description": "Only with a partner's platform key: one of the partner's packages, from GET /partner/packages, to sell the business. The key needs partner.businesses:write too, and owner_email is required. The owner's invitation then opens a checkout on the partner's Stripe account. Left out, the business is billed outside LobbyStack.",
             "type": "string",
             "format": "uuid"
           }
@@ -15942,8 +16173,10 @@
               "booking_incomplete",
               "message_taken",
               "conversation",
+              "answered_by_team",
               "none"
-            ]
+            ],
+            "description": "answered_by_team: a staff member took the call through Staff answers first."
           },
           "summary": {
             "description": "Short summary of the call, when one is available.",
@@ -16069,8 +16302,10 @@
               "booking_incomplete",
               "message_taken",
               "conversation",
+              "answered_by_team",
               "none"
-            ]
+            ],
+            "description": "answered_by_team: a staff member took the call through Staff answers first."
           },
           "summary": {
             "description": "Short summary of the call, when one is available.",
@@ -18691,7 +18926,7 @@
           },
           "offer_token": {
             "type": "string",
-            "description": "Claim the number with this before expires_at. Only this business, and the account the key acts as, can use it."
+            "description": "Claim the number with this before expires_at. Only this business, and the account the key acts as or the partner's platform key that searched, can use it."
           },
           "expires_at": {
             "type": "string",
@@ -18909,6 +19144,42 @@
             ],
             "description": "The voice the receptionist speaks in on phone and browser calls. New businesses start with marin."
           },
+          "staff_first_mode": {
+            "type": "string",
+            "enum": [
+              "never",
+              "business_hours",
+              "always"
+            ],
+            "description": "When calls ring staff_first_number before the receptionist answers: never, business_hours or always."
+          },
+          "staff_first_number": {
+            "description": "The staff phone calls ring first, in E.164 format.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "staff_first_ring_seconds": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "How long the staff phone rings before the receptionist answers: 10, 15, 20, 30, 45 or 60."
+          },
+          "staff_first_message": {
+            "description": "What callers hear before the staff phone rings.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "staff_first_handover_message": {
+            "description": "What callers hear before the receptionist answers.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "appointment_change_policy": {
             "type": "object",
             "properties": {
@@ -18961,6 +19232,11 @@
           "transfer_number",
           "booking_mode",
           "voice",
+          "staff_first_mode",
+          "staff_first_number",
+          "staff_first_ring_seconds",
+          "staff_first_message",
+          "staff_first_handover_message",
           "appointment_change_policy",
           "updated_at"
         ],
@@ -19092,6 +19368,82 @@
               "verse",
               "vesper",
               "willow"
+            ]
+          },
+          "staff_first_mode": {
+            "description": "business_hours and always need a staff_first_number, a paid plan and a Twilio number.",
+            "type": "string",
+            "enum": [
+              "never",
+              "business_hours",
+              "always"
+            ]
+          },
+          "staff_first_number": {
+            "description": "Follows the same rules as transfer_number, and can't be one of the business's own numbers.",
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\+[1-9]\\d{6,14}$",
+                "description": "Phone number in E.164 format."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "staff_first_ring_seconds": {
+            "anyOf": [
+              {
+                "type": "number",
+                "const": 10
+              },
+              {
+                "type": "number",
+                "const": 15
+              },
+              {
+                "type": "number",
+                "const": 20
+              },
+              {
+                "type": "number",
+                "const": 30
+              },
+              {
+                "type": "number",
+                "const": 45
+              },
+              {
+                "type": "number",
+                "const": 60
+              }
+            ]
+          },
+          "staff_first_message": {
+            "description": "null removes it.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "staff_first_handover_message": {
+            "description": "null removes it.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
             ]
           },
           "appointment_change_policy": {
@@ -21817,8 +22169,10 @@
                   "booking_incomplete",
                   "message_taken",
                   "conversation",
+                  "answered_by_team",
                   "none"
-                ]
+                ],
+                "description": "answered_by_team: a staff member took the call through Staff answers first."
               },
               "summary": {
                 "description": "Short summary of the call, when one is available.",

@@ -62,7 +62,7 @@ OpenAI's GPT-Live model answers browser calls and phone calls. Phone calls reach
 | `TELEPHONY_NUMBERS` | The carrier that sells numbers in each country, such as `US:telnyx,*:twilio`. Leave it empty to buy every number from Twilio. A malformed value stops the worker at startup. |
 | `TELEPHONY_VERIFY`, `TELEPHONY_LOOKUP`, `TELEPHONY_ALERT_SMS` | The carrier for the onboarding phone code, the line type check, and the shared sender's texts. Each defaults to `twilio`. |
 | `TELEPHONY_ALERT_SMS_FROM` | The shared sender's number. Falls back to `TWILIO_ALERT_SMS_FROM`. |
-| `OPENAI_PROJECT_ID` | Your OpenAI project ID (`proj_…`). The worker gives each Telnyx number its own SIP connection to that project, and won't buy a Telnyx number without it. |
+| `OPENAI_PROJECT_ID` | Your OpenAI project ID (`proj_…`). The worker gives each Telnyx number its own SIP connection to that project, and won't buy a Telnyx number without it. The admin app and the worker both need it for Staff answers first on Twilio numbers. Without it on the admin app, the setting can't be turned on. |
 | `TELNYX_OUTBOUND_VOICE_PROFILE_ID` | The outbound voice profile each number's connection gets, which call transfers dial through. |
 | `TELNYX_TEXML_APPLICATION_ID`, `TELNYX_TEXML_WEBHOOK_SECRET` | The TeXML application a Telnyx number moves to when the receptionist stops answering it, such as a trial out of minutes, and the secret its voice URL carries as `?key=`. |
 | `WEB_CALL_MAX_DURATION_MS` | Optional cap on browser call length. |
@@ -156,6 +156,8 @@ An empty OTLP endpoint does not disable container stdout logs, application healt
 | `WIDGET_SESSION_SECRET` | Signs cross-origin website-widget sessions. |
 | `FIRECRAWL_*` | Website knowledge ingestion. |
 | `GOOGLE_*` | Google Calendar OAuth and **Continue with Google** sign-in. |
+| `CALCOM_*` | Cal.com OAuth client and the stand-in email domain. The Cal.com card stays hidden until they're set. See [Self-hosting](/self-hosting/overview). |
+| `CALENDLY_*` | Calendly OAuth app, its webhook signing key and the stand-in email domain. The Calendly card stays hidden until they're set. See [Self-hosting](/self-hosting/overview). |
 | `INSTAGRAM_*` | Instagram direct messages: `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET` and `INSTAGRAM_REDIRECT_URI` from a Meta app with Instagram Business Login, and `INSTAGRAM_WEBHOOK_VERIFY_TOKEN` for the `/api/webhooks/instagram` subscription. |
 | `SMTP_*`, `EMAIL_*` | Transactional email. |
 | `POLAR_*` | Hosted billing and usage meters. |

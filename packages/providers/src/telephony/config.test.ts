@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import { alertSmsFrom, countryRegistration, numberCarriersConfigured, numberCountryReady, numbersCarrierFor, parseCountryRoutes, telephonyRoutes } from "./config";
+import { alertSmsFrom, countryRegistration, numberCarriersConfigured, numberCountryReady, numbersCarrierFor, parseCountryRoutes, sipAddress, telephonyRoutes } from "./config";
+
+describe("sipAddress", () => {
+  it("asks for TLS and SRTP in the URI", () => {
+    expect(sipAddress({ OPENAI_PROJECT_ID: " proj_1 " })).toBe("sip:proj_1@sip.api.openai.com;transport=tls;secure=true");
+  });
+
+  it("is undefined without the project", () => {
+    expect(sipAddress({})).toBeUndefined();
+  });
+});
 
 describe("telephony routing settings", () => {
   it("sends everything to Twilio when nothing is set", () => {

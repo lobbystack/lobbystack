@@ -91,6 +91,11 @@ export function hasLiveEntitlement(account: EntitlementAccount | null | undefine
   return (liveSubscriptionStates as readonly string[]).includes(account.subscriptionState ?? "");
 }
 
+/** Staff answers first costs a transfer attempt per call, so Free doesn't get it. A self-hosted server has no plans to check. */
+export function includesStaffFirst(entitlement: Pick<Entitlement, "live" | "source">): boolean {
+  return entitlement.live || entitlement.source === "unlimited";
+}
+
 /**
  * A direct plan's entitlement, from the plan catalog. `live` and the cap come
  * from the business's billing account; amounts are US cents.

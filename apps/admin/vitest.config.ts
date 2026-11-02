@@ -17,6 +17,7 @@ export default defineConfig({
       "@lobbystack/domain": `${root}/packages/domain/src/index.ts`,
       "@lobbystack/jobs": `${root}/packages/jobs/src/index.ts`,
       "@lobbystack/agent-core": `${root}/packages/agent-core/src`,
+      "@lobbystack/providers/calendar": `${root}/packages/providers/src/calendar.ts`,
       "@lobbystack/providers/storage/local": `${root}/packages/providers/src/storage/local.ts`,
       "@lobbystack/providers/crawling/urlSafety": `${root}/packages/providers/src/crawling/urlSafety.ts`,
       "@lobbystack/providers/crypto/secretBox": `${root}/packages/providers/src/crypto/secretBox.ts`,

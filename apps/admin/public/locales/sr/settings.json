@@ -577,10 +577,72 @@
       "syncNeedsAttention": "Potrebna je pažnja",
       "discoveryFailed": "Nije bilo moguće proveriti pristup kalendaru ili sinhronizaciju. Pokušajte ponovo da sinhronizujete ili ponovo povežite Google nalog."
     },
+    "calcom": {
+      "sheetTitle": "Cal.com",
+      "sheetDescription": "Povežite Cal.com nalog i izaberite tip događaja koji vaša recepcionerka zakazuje.",
+      "connect": "Poveži Cal.com",
+      "reconnect": "Ponovo poveži",
+      "disconnect": "Prekini vezu",
+      "connectedSuccess": "Cal.com je povezan. Izaberite tip događaja za zakazivanje.",
+      "connectFailed": "Povezivanje sa Cal.com nije uspelo. Pokušajte ponovo.",
+      "disconnectedSuccess": "Veza sa Cal.com je prekinuta.",
+      "eventTypeLabel": "Tip događaja",
+      "selectEventType": "Izaberite tip događaja",
+      "eventTypeSaved": "Tip događaja je sačuvan.",
+      "refresh": "Osveži",
+      "syncNeedsAttention": "Potrebna je pažnja",
+      "syncFailed": "Vaša recepcionerka nije uspela da završi sinhronizaciju sa Cal.com i neće nuditi termine dok sinhronizacija ne uspe. Sama pokušava ponovo, a možete i da kliknete na Osveži.",
+      "discoveryFailed": "Vaša recepcionerka ne može da pristupi vašem Cal.com nalogu. Osvežite ili ponovo povežite nalog.",
+      "howItWorks": "Svaki termin postaje rezervacija ovog tipa događaja. Cal.com dobija ime, broj telefona i zamensku adresu e-pošte pozivaoca, pa mu ne piše. Prava adresa e-pošte stoji u beleškama rezervacije za vaš tim, a vaša recepcionerka šalje potvrdu.",
+      "warningsTitle": "Proverite ovaj tip događaja u Cal.com",
+      "warnings": {
+        "missingLengths": "Dodajte {{lengths}} minuta trajanjima tipa događaja. Do tada Cal.com zakazuje te usluge u podrazumevanom trajanju tipa događaja.",
+        "smsReminders": "Isključite SMS tok rada za ovaj tip događaja, inače Cal.com šalje poruke pozivaocima pored poruka vaše recepcionerke.",
+        "videoLocation": "Dodajte „Broj telefona učesnika” kao lokaciju ovog tipa događaja. Do tada rezervacije imaju video link umesto telefona pozivaoca.",
+        "narrowerAvailability": "Proširite raspored tipa događaja za {{days}} da odgovara vašem radnom vremenu. Cal.com odbija rezervacije van svog rasporeda."
+      }
+    },
+    "calendly": {
+      "sheetTitle": "Calendly",
+      "sheetDescription": "Povežite svoj Calendly nalog i izaberite tip događaja koji vaša recepcionerka zakazuje.",
+      "connect": "Poveži Calendly",
+      "reconnect": "Poveži ponovo",
+      "disconnect": "Prekini vezu",
+      "connectedSuccess": "Calendly je povezan. Izaberite tip događaja za zakazivanje.",
+      "connectFailed": "Povezivanje sa Calendly nije uspelo. Pokušajte ponovo.",
+      "connectNotAdmin": "Samo vlasnik ili administrator firme može da poveže Calendly.",
+      "disconnectedSuccess": "Veza sa Calendly je prekinuta.",
+      "eventTypeLabel": "Tip događaja",
+      "selectEventType": "Izaberite tip događaja",
+      "eventTypeSaved": "Tip događaja je sačuvan.",
+      "refresh": "Osveži",
+      "syncNeedsAttention": "Potrebna pažnja",
+      "syncFailed": "Recepcionerka nije mogla da završi sinhronizaciju sa Calendly i neće nuditi termine dok sinhronizacija ne uspe. Sama pokušava ponovo, a možete i da kliknete na Osveži.",
+      "discoveryFailed": "Recepcionerka nije mogla da pristupi vašem Calendly nalogu. Osvežite ili ponovo povežite nalog.",
+      "howItWorks": "Svaki termin postaje rezervacija ovog tipa događaja. Calendly dobija ime pozivaoca i zamensku adresu, pa mu ne šalje imejlove. Recepcionerka šalje potvrdu, a telefon i imejl pozivaoca idu u tekstualno pitanje na tipu događaja.",
+      "blockedOption": "{{name}} (nije moguće zakazati)",
+      "planRequiredTitle": "Potreban je plaćeni paket",
+      "planRequired": "Calendly prima rezervacije iz drugih aplikacija samo na plaćenim paketima. Pređite na Standard ili viši paket, pa kliknite na Poveži ponovo.",
+      "warningsTitle": "Proverite ovaj tip događaja u Calendly",
+      "warnings": {
+        "requiredQuestions": "Učinite {{questions}} opcionim ili izaberite drugi tip događaja. Recepcionerka ne može da odgovori na obavezna pitanja sa izborom, pa Calendly odbija svaku rezervaciju.",
+        "missingLengths": "Vaše usluge od {{lengths}} minuta ne odgovaraju ovom tipu događaja. Calendly ih zakazuje u trajanju tipa događaja.",
+        "noDetailsQuestion": "Dodajte tekstualno pitanje ovom tipu događaja. Do tada vaš tim neće videti telefon ni imejl pozivaoca u Calendly.",
+        "videoLocation": "Ovaj tip događaja nudi samo video pozive, pa rezervacije nose link za sastanak. Dodajte telefon ili lokaciju za pozivaoce."
+      }
+    },
     "cards": {
       "google": {
         "title": "Google Calendar",
         "description": "Sinhronizujte zakazivanja sa Google kalendarom."
+      },
+      "calcom": {
+        "title": "Cal.com",
+        "description": "Zakazujte termine u jednom od vaših Cal.com tipova događaja."
+      },
+      "calendly": {
+        "title": "Calendly",
+        "description": "Zakazujte termine u jednom od vaših Calendly tipova događaja."
       },
       "webhooks": {
         "title": "Webhooks",
@@ -1106,7 +1168,7 @@
   },
   "webhooks": {
     "title": "Webhooks",
-    "description": "{{appName}} šalje HTTPS POST zahtev na Vaš URL kada se nešto dogodi, na primer kada se poziv završi ili stigne novo zakazivanje. Svaki zahtev je potpisan, pa možete proveriti da je stigao od nas.",
+    "description": "{{appName}} šalje HTTPS POST zahtev na Vaš URL kada se nešto dogodi, na primer kada se poziv završi ili stigne novo zakazivanje.",
     "empty": "Još nema webhook endpointa.",
     "enabledLabel": "Šalji događaje na ovaj endpoint",
     "restricted": {

@@ -46,8 +46,8 @@ export type RouteOptions = {
   maxBodyBytes?: number;
 };
 
-/** The body's text, read no further than the limit. */
-async function readTextWithin(request: Request, maxBytes: number): Promise<string> {
+/** The body's text, read no further than the limit. A larger body throws a 413 response. */
+export async function readTextWithin(request: Request, maxBytes: number): Promise<string> {
   const tooLarge = () => jsonError("The request body is too large.", 413, "body_too_large");
   if (Number(request.headers.get("content-length") ?? 0) > maxBytes) throw tooLarge();
   const chunks: Uint8Array[] = [];

@@ -122,8 +122,9 @@ export const onboardManifestSchema = z.strictObject({
 export type OnboardManifest = z.infer<typeof onboardManifestSchema>;
 
 // The receptionist's settings a template keeps: everything but the transfer
-// number, which is one business's phone, and the one-off summary rewrite.
-const { transfer_number: _transferNumber, regenerate_summary: _regenerateSummary, ...templateReceptionistShape } = apiReceptionistUpdateSchema.shape;
+// number and staff answers first, which belong to one business's phones, and
+// the one-off summary rewrite.
+const { transfer_number: _transferNumber, regenerate_summary: _regenerateSummary, staff_first_mode: _staffFirstMode, staff_first_number: _staffFirstNumber, staff_first_ring_seconds: _staffFirstRingSeconds, staff_first_message: _staffFirstMessage, staff_first_handover_message: _staffFirstHandoverMessage, ...templateReceptionistShape } = apiReceptionistUpdateSchema.shape;
 
 /**
  * A business's setup to start other businesses from, in the onboard file

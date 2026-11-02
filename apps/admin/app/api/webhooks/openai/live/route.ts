@@ -41,8 +41,9 @@ export async function POST(request: Request) {
   // candidate, in this order. A Telnyx number's translated number puts the
   // project in the Request-URI, and ignore_for_to_header keeps the dialled
   // number in To. History-Info (RFC 7044) records the original Request-URI.
-  // See docs/voice/runtime.md.
-  const dialledHeaders = ["diversion", "to", "p-called-party-id", "history-info"];
+  // A voice webhook's <Dial><Sip> sends X-LobbyStack-Called, the only way it
+  // can name the dialled number. See docs/voice/runtime.md.
+  const dialledHeaders = ["diversion", "to", "p-called-party-id", "history-info", "x-lobbystack-called"];
   const candidates = dialledHeaders.flatMap((name) => event.data.sip_headers.filter((item) => item.name.toLowerCase() === name).flatMap((item) => phonesFromSipHeader(item.value).map((phone) => ({ header: item.name, phone }))));
   // The fallback when none of them has it: each Telnyx number has its own SIP
   // connection, which X-Telnyx-Connection-id names.
@@ -150,7 +151,9 @@ async function answerCall(client: LiveClient, input: { sessionId: string; busine
       // number or the owner's verified phone, and gives a busy signal only
       // when there's neither. Twilio never fails over on 486 or 6xx. Telnyx
       // retries a 503 once, then forwards to the number stored on the Telnyx
-      // number. A trial number also moves off the receptionist so later
+      // number. A staff-first number reaches GPT-Live from a <Dial>, so the
+      // refusal comes back to that <Dial>'s action URL instead, which forwards
+      // the same way. A trial number also moves off the receptionist so later
       // calls forward directly.
       await markNumberTrialMinutesExhausted(domain, { businessId: input.businessId }).catch((cause: unknown) => console.error("[live] couldn't switch the trial number to forwarding", cause instanceof Error ? cause.message : cause));
       await client.live.sessions.reject(input.sessionId, { status_code: 503 });

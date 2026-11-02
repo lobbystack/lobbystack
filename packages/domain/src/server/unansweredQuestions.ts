@@ -16,7 +16,7 @@ const OPEN_QUESTIONS_LIMIT = 50;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
-export type UnansweredQuestionChannel = "voice" | "web_voice" | "web_chat" | "instagram";
+export type UnansweredQuestionChannel = "voice" | "web_voice" | "web_chat" | "instagram" | "sms";
 
 export type OpenUnansweredQuestion = {
   id: string;
