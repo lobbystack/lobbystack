@@ -44,6 +44,11 @@ Do not duplicate ownership between runtimes unless there is a specific analytics
 - `web.onboarding.number_claim_started`
 - `web.onboarding.number_claim_completed`
 - `web.onboarding.plan_checkout_completed`
+- `web.onboarding.language_submitted`: an owner with no website picked the language, with `locale`
+- `web.onboarding.meet_completed`: an owner left Meet your agent for the dashboard
+- `web.onboarding.plan_offer_shown`: the plans opened after a completed test, with `surface` set to `meet` or `home`
+- `web.onboarding.plan_offer_dismissed`: the operator closed that offer without picking a plan, with `surface`
+- `web.onboarding.plan_offer_clicked`: the operator picked a plan in that offer, with `surface` and `plan`
 - `web.activation.first_call_completed`
 - `web.activation.upgrade_prompt_shown`
 - `web.activation.upgrade_prompt_clicked`
