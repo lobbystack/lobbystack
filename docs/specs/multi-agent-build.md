@@ -1,6 +1,6 @@
 # Spec: multi-agent build
 
-Status: ready-for-agent. Slices 1 and 2 wait on production counts.
+Status: ready-for-agent. Slice 2 waits on production counts.
 
 This spec turns concept A from a prototype into the product. [`agents-and-navigation.md`](agents-and-navigation.md) holds the product decisions and [ADR 0012](../adr/0012-agents-share-a-workspace.md) the model. This file covers how to build them.
 
@@ -46,7 +46,7 @@ Every slice also runs `pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm build
 - Rename the table, then add `name`, `is_default` and `archived_at`.
 - Create the compatibility view and backfill a row for any business that has none.
 - Move the 28 runtime statements in 14 files to the Drizzle `agents` table, and behaviour stays the same.
-- Move the `summary*` columns to `businesses`, because they describe the business.
+- Leave the `summary*` columns on `agents`. Slice 5 moves them.
 
 ### 2. Link channels and history to agents
 
@@ -86,7 +86,8 @@ Test each channel with two agents.
 - Port create, resolve, archive, set default and channel moves from `feat/inbox-calendar-staff`, without the opt-outs.
 - Scope rules by agent, and split `PATCH /api/agent` into agent and workspace fields.
 - Add `includedAgents` to the plan catalog: 1 on Free, no limit on paid plans, self-hosting and partners. Check it in `createAgent` under an advisory lock, and return `agent_limit_reached`, which opens the upgrade dialog.
-- Remove the view and the unique index, and add a partial index for one default agent per business. This needs slice 4 live first, so that no old code remains.
+- Remove the view, its name trigger and the unique index, change `is_default`'s default to false, and add a partial index for one default agent per business. This needs slice 4 live first, so that no old code remains.
+- Move the `summary*` columns to `businesses`, because they describe the business. They wait for the view to go: old code writes them through it, a view that joins `businesses` isn't automatically updatable, and the old `ON CONFLICT (business_id)` fails on a joined view even with `INSTEAD OF` triggers.
 
 ### 6. Add agents to the public API
 
@@ -138,4 +139,4 @@ Raphael settled these:
 
 ## Still open
 
-- **Production counts:** slice 1 needs the number of businesses with no profile row, and slice 2 the row counts for `calls` and `conversations`.
+- **Production counts:** slice 2 needs the row counts for `calls` and `conversations`. Slice 1's backfill is one set-based statement, so it needs no count.
