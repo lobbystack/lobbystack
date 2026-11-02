@@ -611,7 +611,6 @@
       "syncNeedsAttention": "Needs attention",
       "syncFailed": "Your agent couldn't finish syncing with Calendly and won't offer times from it until a sync works. It tries again on its own, or you can click Refresh.",
       "discoveryFailed": "Your agent couldn't reach your Calendly account. Refresh, or reconnect the account.",
-      "howItWorks": "Each appointment becomes a booking of this event type. Calendly gets the caller's name and a stand-in email address, so it doesn't email them. Your agent sends the confirmation, and the caller's phone and email go in a text question on the event type.",
       "blockedOption": "{{name}} (can't be booked)",
       "planRequiredTitle": "Paid plan required",
       "planRequired": "Calendly only takes bookings from other apps on its paid plans. Upgrade to Standard or above, then click Reconnect.",

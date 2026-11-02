@@ -618,7 +618,6 @@
       "syncNeedsAttention": "Potrebna pažnja",
       "syncFailed": "Agent nije mogao da završi sinhronizaciju sa Calendly i neće nuditi termine dok sinhronizacija ne uspe. Sam pokušava ponovo, a možete i da kliknete na Osveži.",
       "discoveryFailed": "Agent nije mogao da pristupi vašem Calendly nalogu. Osvežite ili ponovo povežite nalog.",
-      "howItWorks": "Svaki termin postaje rezervacija ovog tipa događaja. Calendly dobija ime pozivaoca i zamensku adresu, pa mu ne šalje imejlove. Agent šalje potvrdu, a telefon i imejl pozivaoca idu u tekstualno pitanje na tipu događaja.",
       "blockedOption": "{{name}} (nije moguće zakazati)",
       "planRequiredTitle": "Potreban je plaćeni paket",
       "planRequired": "Calendly prima rezervacije iz drugih aplikacija samo na plaćenim paketima. Pređite na Standard ili viši paket, pa kliknite na Poveži ponovo.",

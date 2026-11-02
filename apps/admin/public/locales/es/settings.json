@@ -618,7 +618,6 @@
       "syncNeedsAttention": "Requiere atención",
       "syncFailed": "Su agente no pudo terminar de sincronizar con Calendly y no ofrecerá horarios hasta que una sincronización funcione. Lo reintenta por su cuenta, o puede hacer clic en Actualizar.",
       "discoveryFailed": "Su agente no pudo acceder a su cuenta de Calendly. Actualice o vuelva a conectar la cuenta.",
-      "howItWorks": "Cada cita se convierte en una reserva de este tipo de evento. Calendly recibe el nombre de quien llama y una dirección sustituta, así que no le escribe. Su agente envía la confirmación. El teléfono y el correo de quien llama van en una pregunta de texto del tipo de evento.",
       "blockedOption": "{{name}} (no se puede reservar)",
       "planRequiredTitle": "Se requiere un plan de pago",
       "planRequired": "Calendly solo acepta reservas de otras aplicaciones en sus planes de pago. Cambie a Standard o superior y haga clic en Reconectar.",

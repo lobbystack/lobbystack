@@ -618,7 +618,6 @@
       "syncNeedsAttention": "À vérifier",
       "syncFailed": "Votre agent n'a pas pu terminer la synchronisation avec Calendly et n'en proposera aucun créneau tant qu'une synchronisation n'aura pas réussi. Il réessaie de lui-même, ou cliquez sur Actualiser.",
       "discoveryFailed": "Votre agent n'a pas pu joindre votre compte Calendly. Actualisez ou reconnectez le compte.",
-      "howItWorks": "Chaque rendez-vous devient une réservation de ce type d'événement. Calendly reçoit le nom de l'appelant et une adresse de remplacement, et ne lui écrit donc pas. Votre agent envoie la confirmation. Le téléphone et le courriel de l'appelant vont dans une question texte du type d'événement.",
       "blockedOption": "{{name}} (réservation impossible)",
       "planRequiredTitle": "Forfait payant requis",
       "planRequired": "Calendly accepte les réservations d'autres applications seulement sur ses forfaits payants. Passez au forfait Standard ou supérieur, puis cliquez sur Reconnecter.",
