@@ -249,7 +249,7 @@
       "actions": [
         "test call",
         "send feedback",
-        "open setup guide",
+        "open getting started",
         "open affiliate",
         "redirect agent entry point"
       ],
@@ -500,6 +500,7 @@
     },
     {
       "path": "/setup-guide",
+      "portExpectedPath": "/",
       "fixtureState": "operator",
       "state": "default",
       "comparison": "frozen-main"

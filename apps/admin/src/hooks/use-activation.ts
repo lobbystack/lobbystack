@@ -60,8 +60,8 @@ async function getActivation(businessId: string): Promise<Activation> {
 
 /**
  * Where the business stands on the way to its first real caller, and the
- * activation funnel's events. The normal Home's card and the new-account Home
- * both read it, so an account fires the same events on either.
+ * activation funnel's events. The normal Home's card and Getting started both
+ * read it, so an account fires the same events on either.
  */
 export function useActivation(businessId: string | undefined) {
   const telemetry = useTelemetry();

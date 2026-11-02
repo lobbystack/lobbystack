@@ -257,59 +257,45 @@
       "cta": "Izaberi paket"
     }
   },
-  "newAccountHome": {
-    "title": {
-      "answer_calls": "Neka agent odgovara na Vaše pozive",
-      "book_appointments": "Neka agent zakazuje termine",
-      "answer_website_visitors": "Neka agent odgovara posetiocima Vašeg sajta",
-      "answer_instagram_messages": "Neka agent odgovara na Vaše Instagram poruke",
-      "none": "Povežite agenta sa Vašim klijentima"
+  "setupGuide": {
+    "title": "Prvi koraci",
+    "skip": "Preskoči podešavanje",
+    "skipStep": "Preskoči",
+    "description": "Završeno koraka podešavanja: {{completed}} od {{total}}.",
+    "lastCall": "Vaš probni poziv",
+    "lastCallDetails": "{{date}}, {{duration}}",
+    "readTranscript": "Pročitajte transkript",
+    "callAgain": "Pozovite ponovo",
+    "steps": {
+      "fullScan": "Pročitajte ostatak sajta",
+      "sources": "Dodajte još izvora",
+      "testCall": "Čujte svog agenta",
+      "phoneNumber": "Povežite broj telefona"
     },
-    "done": "Gotovo",
-    "hear": {
-      "title": "Čujte ga",
-      "prompt": {
+    "stepDescriptions": {
+      "fullScan": "Agent je pročitao deo Vašeg sajta.",
+      "sources": {
+        "answer_calls": "Otpremite pravila, česta pitanja i cene o kojima pozivaoci pitaju.",
+        "book_appointments": "Otpremite usluge, cene i pravila zakazivanja.",
+        "answer_website_visitors": "Otpremite česta pitanja i pravila o kojima pitaju posetioci sajta.",
+        "answer_instagram_messages": "Otpremite česta pitanja i cene o kojima Vas pitaju na Instagramu.",
+        "none": "Otpremite pravila, česta pitanja ili cene."
+      },
+      "testCall": {
         "answer_calls": "Pitajte ono što Vas klijenti najčešće pitaju.",
         "book_appointments": "Zamolite ga da zakaže termin.",
         "answer_website_visitors": "Pitajte ono što ljudi pitaju na Vašem sajtu.",
         "answer_instagram_messages": "Pitajte ono što ljudi pitaju na Instagramu.",
         "none": "Pitajte ono što Vas klijenti najčešće pitaju."
       },
-      "lastCall": "Vaš probni poziv",
-      "lastCallDetails": "{{date}}, {{duration}}",
-      "readTranscript": "Pročitajte transkript",
-      "again": "Pozovite ponovo",
-      "read_one": "Pročitao je {{count}} stranicu sajta {{host}}.",
-      "read_few": "Pročitao je {{count}} stranice sajta {{host}}.",
-      "read_other": "Pročitao je {{count}} stranica sajta {{host}}."
+      "phoneNumber": "Dodelite agentu sopstveni broj da bi odgovarao pravim pozivaocima.",
+      "phoneNumberTrial": "Odgovarajte na propuštene pozive besplatno 14 dana, bez kartice."
     },
-    "teach": {
-      "title": "Naučite ga",
-      "tasks": {
-        "knowledge": {
-          "title": "Dodajte ono što treba da zna"
-        },
-        "hours": {
-          "title": "Podesite radno vreme"
-        },
-        "calendar": {
-          "title": "Povežite kalendar"
-        },
-        "services": {
-          "title": "Navedite usluge"
-        },
-        "widget": {
-          "title": "Dodajte čet vidžet na sajt"
-        },
-        "instagram": {
-          "title": "Povežite Instagram"
-        }
-      }
-    },
-    "number": {
-      "title": "Stavite ga na svoj broj",
-      "claim": "Izaberite broj.",
-      "plan": "Izaberite plan da biste dobili broj."
+    "stepActions": {
+      "fullScan": "Pročitaj ostatak",
+      "sources": "Otpremi dokument",
+      "testCall": "Započni poziv",
+      "phoneNumber": "Izaberi broj"
     }
   },
   "forwarding": {

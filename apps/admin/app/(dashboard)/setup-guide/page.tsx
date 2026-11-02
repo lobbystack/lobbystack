@@ -1,3 +1,4 @@
-import { LiveSetupGuideSurface } from "@/components/live-setup-guide-surface";
+import { redirect } from "next/navigation";
 
-export default function SetupGuidePage() { return <LiveSetupGuideSurface />; }
+/** Getting started lives on Home now. Old links land there. */
+export default function SetupGuidePage() { redirect("/"); }

@@ -384,10 +384,6 @@ for (const routeCase of routes) for (const viewport of viewports) for (const loc
         }
       }
     }
-    if (routeCase.fixtureState === "operator" && !routeCase.standalone && viewport.name === "desktop" && process.env.PARITY_SETUP_GUIDE_EXPECTED === "1") {
-      const nav = JSON.parse(readFileSync(fileURLToPath(new URL(`../public/locales/${locale}/nav.json`, import.meta.url)), "utf8"));
-      await expect(page.getByRole("button", { name: nav.sidebar.setupGuide.open, exact: true })).toBeVisible();
-    }
     if (routeCase.interaction?.startsWith("claim-")) {
       const translations = JSON.parse(readFileSync(fileURLToPath(new URL(`../public/locales/${locale}/demos.json`, import.meta.url)), "utf8"));
       await expect(page.getByRole("heading", { name: translations.claim[routeCase.interaction === "claim-preparing" ? "loadingTitle" : routeCase.interaction === "claim-invalid" ? "unavailableTitle" : "errorTitle"], exact: true })).toBeVisible();

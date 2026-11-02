@@ -256,58 +256,45 @@
       "cta": "Choose a plan"
     }
   },
-  "newAccountHome": {
-    "title": {
-      "answer_calls": "Get your agent answering your calls",
-      "book_appointments": "Get your agent booking appointments",
-      "answer_website_visitors": "Get your agent answering your website visitors",
-      "answer_instagram_messages": "Get your agent answering your Instagram messages",
-      "none": "Get your agent talking to your customers"
+  "setupGuide": {
+    "title": "Getting started",
+    "skip": "Skip setup",
+    "skipStep": "Skip",
+    "description": "{{completed}} of {{total}} setup steps complete.",
+    "lastCall": "Your test call",
+    "lastCallDetails": "{{date}}, {{duration}}",
+    "readTranscript": "Read the transcript",
+    "callAgain": "Call it again",
+    "steps": {
+      "fullScan": "Read the rest of your site",
+      "sources": "Add more sources",
+      "testCall": "Hear your agent",
+      "phoneNumber": "Connect a phone number"
     },
-    "done": "Done",
-    "hear": {
-      "title": "Hear it",
-      "prompt": {
+    "stepDescriptions": {
+      "fullScan": "Your agent has read a sample of your site.",
+      "sources": {
+        "answer_calls": "Upload the policies, FAQs and prices your callers ask about.",
+        "book_appointments": "Upload your services, prices and booking rules.",
+        "answer_website_visitors": "Upload the FAQs and policies your website visitors ask about.",
+        "answer_instagram_messages": "Upload the FAQs and prices people ask about on Instagram.",
+        "none": "Upload your policies, FAQs or pricing."
+      },
+      "testCall": {
         "answer_calls": "Ask what your callers ask most.",
         "book_appointments": "Ask it to book an appointment.",
         "answer_website_visitors": "Ask what people ask on your website.",
         "answer_instagram_messages": "Ask what people ask on Instagram.",
         "none": "Ask what your customers ask most."
       },
-      "lastCall": "Your test call",
-      "lastCallDetails": "{{date}}, {{duration}}",
-      "readTranscript": "Read the transcript",
-      "again": "Call it again",
-      "read_one": "It has read {{count}} page of {{host}}.",
-      "read_other": "It has read {{count}} pages of {{host}}."
+      "phoneNumber": "Give your agent its own number to answer real callers.",
+      "phoneNumberTrial": "Answer your missed calls free for 14 days, no card needed."
     },
-    "teach": {
-      "title": "Teach it",
-      "tasks": {
-        "knowledge": {
-          "title": "Add what it should know"
-        },
-        "hours": {
-          "title": "Set your business hours"
-        },
-        "calendar": {
-          "title": "Connect your calendar"
-        },
-        "services": {
-          "title": "List your services"
-        },
-        "widget": {
-          "title": "Add the chat widget to your website"
-        },
-        "instagram": {
-          "title": "Connect Instagram"
-        }
-      }
-    },
-    "number": {
-      "title": "Put it on your number",
-      "claim": "Pick a number.",
-      "plan": "Choose a plan to get a number."
+    "stepActions": {
+      "fullScan": "Read the rest",
+      "sources": "Upload document",
+      "testCall": "Start a call",
+      "phoneNumber": "Choose a number"
     }
   },
   "forwarding": {

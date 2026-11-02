@@ -7,8 +7,9 @@ import { operatorRoute } from "@/lib/operator-request";
 export const dynamic = "force-dynamic";
 
 export const GET = operatorRoute(async ({ businessId, transaction }) => NextResponse.json(await transaction(async (tx) => {
-  const { steps, fullScanDocumentId } = await loadSetupGuideInTransaction(tx, businessId);
+  const { steps, fullScanDocumentId, skippedSteps } = await loadSetupGuideInTransaction(tx, businessId);
   return {
+    skippedSteps,
     steps: [
       { id: "fullScan", name: "Read the rest of your site", description: "Onboarding read a sample", documentId: fullScanDocumentId, status: steps.fullScan },
       { id: "sources", name: "Add more sources", description: "Upload policies, FAQs, or pricing", status: steps.sources },

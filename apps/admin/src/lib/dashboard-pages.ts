@@ -23,7 +23,6 @@ const pageCapabilities: ReadonlyArray<readonly [prefix: string, capability: Capa
   ["/analytics", "setup"],
   ["/integrations", "setup"],
   ["/integrations/webhooks", "api_keys"],
-  ["/setup-guide", "setup"],
   ["/widget", "setup"],
   ["/settings/phone-number", "setup"],
   ["/settings/team", "team"],

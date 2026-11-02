@@ -226,7 +226,7 @@ describe("instant booking without opening hours", () => {
     const queryClient = client();
     queryClient.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
     queryClient.setQueryData(["setup", "business"], { steps: [{ id: "fullScan", status: "needs setup" }] });
-    render(<QueryClientProvider client={queryClient}><LiveSetupGuideSurface /></QueryClientProvider>);
+    render(<QueryClientProvider client={queryClient}><LiveSetupGuideSurface businessId="business" goal={null} /></QueryClientProvider>);
     expect(await screen.findByText("hours.noHoursAlert.title")).toBeTruthy();
   });
 });

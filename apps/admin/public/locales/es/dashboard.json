@@ -257,59 +257,45 @@
       "cta": "Elegir un plan"
     }
   },
-  "newAccountHome": {
-    "title": {
-      "answer_calls": "Ponga a su agente a contestar sus llamadas",
-      "book_appointments": "Ponga a su agente a reservar citas",
-      "answer_website_visitors": "Ponga a su agente a atender a los visitantes de su sitio web",
-      "answer_instagram_messages": "Ponga a su agente a contestar sus mensajes de Instagram",
-      "none": "Ponga a su agente a hablar con sus clientes"
+  "setupGuide": {
+    "title": "Primeros pasos",
+    "skip": "Omitir configuración",
+    "skipStep": "Omitir",
+    "description": "{{completed}} de {{total}} pasos de configuración completados.",
+    "lastCall": "Su llamada de prueba",
+    "lastCallDetails": "{{date}}, {{duration}}",
+    "readTranscript": "Leer la transcripción",
+    "callAgain": "Llamar de nuevo",
+    "steps": {
+      "fullScan": "Leer el resto de su sitio",
+      "sources": "Añadir más fuentes",
+      "testCall": "Escuchar a su agente",
+      "phoneNumber": "Conectar un número de teléfono"
     },
-    "done": "Listo",
-    "hear": {
-      "title": "Escúchelo",
-      "prompt": {
+    "stepDescriptions": {
+      "fullScan": "Su agente ha leído una parte de su sitio.",
+      "sources": {
+        "answer_calls": "Suba las políticas, preguntas frecuentes y precios que consultan quienes llaman.",
+        "book_appointments": "Suba sus servicios, precios y reglas de reserva.",
+        "answer_website_visitors": "Suba las preguntas frecuentes y políticas que consultan los visitantes de su sitio.",
+        "answer_instagram_messages": "Suba las preguntas frecuentes y precios que le consultan en Instagram.",
+        "none": "Suba sus políticas, preguntas frecuentes o precios."
+      },
+      "testCall": {
         "answer_calls": "Pregúntele lo que más le preguntan quienes llaman.",
         "book_appointments": "Pídale que reserve una cita.",
         "answer_website_visitors": "Pregúntele lo que la gente pregunta en su sitio web.",
         "answer_instagram_messages": "Pregúntele lo que la gente pregunta en Instagram.",
         "none": "Pregúntele lo que más preguntan sus clientes."
       },
-      "lastCall": "Su llamada de prueba",
-      "lastCallDetails": "{{date}}, {{duration}}",
-      "readTranscript": "Leer la transcripción",
-      "again": "Llamar de nuevo",
-      "read_one": "Ha leído {{count}} página de {{host}}.",
-      "read_many": "Ha leído {{count}} páginas de {{host}}.",
-      "read_other": "Ha leído {{count}} páginas de {{host}}."
+      "phoneNumber": "Dé a su agente su propio número para atender a personas reales.",
+      "phoneNumberTrial": "Conteste sus llamadas perdidas gratis durante 14 días, sin tarjeta."
     },
-    "teach": {
-      "title": "Enséñele",
-      "tasks": {
-        "knowledge": {
-          "title": "Agregue lo que debe saber"
-        },
-        "hours": {
-          "title": "Indique su horario de atención"
-        },
-        "calendar": {
-          "title": "Conecte su calendario"
-        },
-        "services": {
-          "title": "Indique sus servicios"
-        },
-        "widget": {
-          "title": "Agregue el widget de chat a su sitio web"
-        },
-        "instagram": {
-          "title": "Conecte Instagram"
-        }
-      }
-    },
-    "number": {
-      "title": "Póngalo en su número",
-      "claim": "Elija un número.",
-      "plan": "Elija un plan para obtener un número."
+    "stepActions": {
+      "fullScan": "Leer el resto",
+      "sources": "Subir documento",
+      "testCall": "Iniciar una llamada",
+      "phoneNumber": "Elegir un número"
     }
   },
   "forwarding": {

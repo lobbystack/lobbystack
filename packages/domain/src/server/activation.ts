@@ -76,7 +76,7 @@ export type SetupGuideStepId = (typeof setupGuideStepIds)[number];
 export type SetupGuideStatus = "complete" | "skipped" | "needs setup";
 
 /** Each setup guide step's status. A step that got done reads complete, even if it was skipped. */
-export async function loadSetupGuideInTransaction(tx: DatabaseTransaction, businessId: string): Promise<{ steps: Record<SetupGuideStepId, SetupGuideStatus>; fullScanDocumentId: string | null }> {
+export async function loadSetupGuideInTransaction(tx: DatabaseTransaction, businessId: string): Promise<{ steps: Record<SetupGuideStepId, SetupGuideStatus>; skippedSteps: string[]; fullScanDocumentId: string | null }> {
   const business = (await tx.select({ skippedSteps: businesses.setupGuideSkippedSteps }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
   const knowledge = await tx.select({ count: count() }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, businessId), eq(knowledgeDocuments.sourceType, "upload"), ne(knowledgeDocuments.status, "error"), ne(knowledgeDocuments.status, "cancelled")));
   const sampled = await currentWebsiteIngestion(tx, businessId);
@@ -98,6 +98,7 @@ export async function loadSetupGuideInTransaction(tx: DatabaseTransaction, busin
       testCall: status(heardCalls > 0, "testCall"),
       phoneNumber: status(Number(businessNumber[0]?.count ?? 0) > 0, "phoneNumber"),
     },
+    skippedSteps: skipped,
     fullScanDocumentId: sampled?.rootDocumentId ?? null,
   };
 }

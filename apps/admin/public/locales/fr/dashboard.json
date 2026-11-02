@@ -257,59 +257,45 @@
       "cta": "Choisir un forfait"
     }
   },
-  "newAccountHome": {
-    "title": {
-      "answer_calls": "Faites répondre votre agent à vos appels",
-      "book_appointments": "Faites prendre vos rendez-vous par votre agent",
-      "answer_website_visitors": "Faites répondre votre agent aux visiteurs de votre site",
-      "answer_instagram_messages": "Faites répondre votre agent à vos messages Instagram",
-      "none": "Mettez votre agent en contact avec vos clients"
+  "setupGuide": {
+    "title": "Premiers pas",
+    "skip": "Ignorer la configuration",
+    "skipStep": "Ignorer",
+    "description": "{{completed}} étape(s) sur {{total}} complétée(s).",
+    "lastCall": "Votre appel test",
+    "lastCallDetails": "{{date}}, {{duration}}",
+    "readTranscript": "Lire la transcription",
+    "callAgain": "Rappeler",
+    "steps": {
+      "fullScan": "Lire le reste de votre site",
+      "sources": "Ajoutez d'autres sources",
+      "testCall": "Écoutez votre agent",
+      "phoneNumber": "Associez un numéro"
     },
-    "done": "Fait",
-    "hear": {
-      "title": "Écoutez-le",
-      "prompt": {
+    "stepDescriptions": {
+      "fullScan": "Votre agent a lu un échantillon de votre site.",
+      "sources": {
+        "answer_calls": "Téléversez les politiques, FAQ et tarifs utiles à vos appelants.",
+        "book_appointments": "Téléversez vos services, tarifs et règles de réservation.",
+        "answer_website_visitors": "Téléversez les FAQ et politiques utiles aux visiteurs de votre site.",
+        "answer_instagram_messages": "Téléversez les FAQ et tarifs qu'on vous demande sur Instagram.",
+        "none": "Téléversez vos politiques, FAQ ou tarifs."
+      },
+      "testCall": {
         "answer_calls": "Posez la question que vos appelants posent le plus.",
         "book_appointments": "Demandez-lui de prendre un rendez-vous.",
         "answer_website_visitors": "Posez les questions qu'on vous pose sur votre site.",
         "answer_instagram_messages": "Posez les questions qu'on vous pose sur Instagram.",
         "none": "Posez la question que vos clients posent le plus."
       },
-      "lastCall": "Votre appel test",
-      "lastCallDetails": "{{date}}, {{duration}}",
-      "readTranscript": "Lire la transcription",
-      "again": "Rappeler",
-      "read_one": "Il a lu {{count}} page de {{host}}.",
-      "read_many": "Il a lu {{count}} pages de {{host}}.",
-      "read_other": "Il a lu {{count}} pages de {{host}}."
+      "phoneNumber": "Donnez à votre agent son propre numéro pour répondre à vos vrais clients.",
+      "phoneNumberTrial": "Répondez à vos appels manqués gratuitement pendant 14 jours, sans carte."
     },
-    "teach": {
-      "title": "Formez-le",
-      "tasks": {
-        "knowledge": {
-          "title": "Ajoutez ce qu'il doit savoir"
-        },
-        "hours": {
-          "title": "Indiquez vos heures d'ouverture"
-        },
-        "calendar": {
-          "title": "Connectez votre calendrier"
-        },
-        "services": {
-          "title": "Listez vos services"
-        },
-        "widget": {
-          "title": "Ajoutez le widget de clavardage à votre site"
-        },
-        "instagram": {
-          "title": "Connectez Instagram"
-        }
-      }
-    },
-    "number": {
-      "title": "Mettez-le sur votre numéro",
-      "claim": "Choisissez un numéro.",
-      "plan": "Choisissez un forfait pour obtenir un numéro."
+    "stepActions": {
+      "fullScan": "Lire le reste",
+      "sources": "Téléverser un document",
+      "testCall": "Lancer un appel",
+      "phoneNumber": "Choisir un numéro"
     }
   },
   "forwarding": {

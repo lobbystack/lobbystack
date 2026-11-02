@@ -113,10 +113,11 @@ Each prototype covers the menu, Home, the agent pages, settings and setup. Each 
 
 ### New-account Home
 
-- One Home shows until the first real conversation, then the normal Home replaces it without any action from the operator.
-- It has three stages: hear it, teach it, put it on your number.
-- The third stage walks through forwarding, with steps for the operator's phone carrier. The number stays where it is in onboarding, after the test call.
-- It uses the operator's answer to the new goal question and shows their test call.
+- There is one setup list, Getting started, and it lives on Home. It shows until the first real conversation, then the normal Home replaces it without any action from the operator, and it never comes back.
+- "Skip setup" skips every step and also brings up the normal Home. Finishing every step without skipping keeps the list on Home until the first real conversation.
+- Every account gets the same order: read the rest of the site, add sources, test call, phone number. The test call always comes after sources.
+- The number step offers a number in place, then walks through forwarding with steps for the operator's phone carrier. It stays open once a number exists, because nothing can detect forwarding. The number stays where it is in onboarding, after the test call.
+- The operator's answer to the new goal question changes the wording of the sources and test call steps, never the order. The test call step shows their last test call.
 - The goal question joins onboarding next to the attribution question, which stays.
 
 ### Wait screen

@@ -20,7 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
 import { DashboardActivationCard } from "@/components/dashboard-activation-card";
-import { NewAccountHome } from "@/components/new-account-home";
+import { LiveSetupGuideSurface, useSetupGuide } from "@/components/live-setup-guide-surface";
 import { appointmentSummary, CancelAppointmentButton } from "@/components/cancel-appointment-button";
 import { MetricCardGridSkeleton } from "@/components/loading-skeletons";
 import { Item, ItemActions, ItemHeader, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item";
@@ -33,7 +33,7 @@ import { fetchUnansweredQuestions, UNANSWERED_QUESTIONS_ANCHOR, unansweredQuesti
 import { useBusinessCan } from "@/components/business-capabilities-provider";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { dayKey } from "@/lib/calendar-days";
-import { showsNewAccountHome } from "@/lib/new-account-home";
+import { isSetupGuideFinished, showsSetupGuide } from "@/lib/setup-guide";
 
 const OverviewCallChart = dynamic(() => import("./overview-call-chart").then((module) => module.OverviewCallChart), {
   loading: () => <div className="h-[350px] animate-pulse rounded-xl bg-muted" />,
@@ -84,6 +84,8 @@ export function LiveOverviewSurface() {
   const canAnswerQuestions = canSetUp && (business?.role === "business_owner" || business?.role === "business_admin");
   const unanswered = useQuery({ queryKey: unansweredQuestionsQueryKey(businessId), enabled: Boolean(businessId) && canAnswerQuestions, queryFn: () => fetchUnansweredQuestions(businessId!) });
   const unansweredCount = canAnswerQuestions ? unanswered.data?.openCount ?? 0 : 0;
+  const mayShowGuide = Boolean(businessId) && showsSetupGuide({ firstRealConversationAt: summary.data?.firstRealConversationAt, canSetUp, role: business?.role });
+  const guide = useSetupGuide(mayShowGuide ? businessId : undefined);
 
   useEffect(() => {
     if (!businessId) return;
@@ -100,7 +102,15 @@ export function LiveOverviewSurface() {
   ] as const : [];
 
   if (summary.data?.firstRealConversationAt === null && !business) return <PageHeader title={t("home.title")} />;
-  if (businessId && showsNewAccountHome({ firstRealConversationAt: summary.data?.firstRealConversationAt, canSetUp, role: business?.role })) return <NewAccountHome businessId={businessId} goal={business?.onboardingGoal ?? null} />;
+  // A failed request falls through to the normal Home, which works without setup.
+  if (mayShowGuide && (guide.isPending || (guide.data && !isSetupGuideFinished(guide.data)))) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader title={t("home.title")} />
+        {guide.data ? <LiveSetupGuideSurface businessId={businessId!} goal={business?.onboardingGoal ?? null} /> : <Skeleton className="h-64 rounded-xl" />}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
