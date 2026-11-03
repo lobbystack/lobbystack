@@ -9,11 +9,12 @@ import { Surface, surfaceClassName } from "@/components/ui/surface";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-export function MetricCardGridSkeleton({ count = 4 }: { count?: number }) {
+/** `titles` holds each card's real title, hidden so its placeholder is as wide as the text, or null for a default width. */
+export function MetricCardGridSkeleton({ count = 4, titles }: { count?: number; titles?: ReadonlyArray<string | null> }) {
   const columnClass = count === 3 ? "md:grid-cols-3" : "md:grid-cols-4";
 
   return (
-    <Surface className={`grid sm:grid-cols-2 ${columnClass}`}>
+    <Surface aria-busy="true" className={`grid sm:grid-cols-2 ${columnClass}`}>
       {Array.from({ length: count }).map((_, index) => (
         <div
           className="border-b p-5 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0 md:border-b-0 md:border-r md:last:border-r-0"
@@ -21,7 +22,7 @@ export function MetricCardGridSkeleton({ count = 4 }: { count?: number }) {
         >
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
-              <Skeleton className="h-5 w-28" />
+              {titles?.[index] ? <HiddenTextSkeleton className="type-card-title">{titles[index]!}</HiddenTextSkeleton> : <Skeleton className="h-5 w-28" />}
               <Skeleton className="h-10 w-20" />
             </div>
             <Skeleton className="h-4 w-32" />

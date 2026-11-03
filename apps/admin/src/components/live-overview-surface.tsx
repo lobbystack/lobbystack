@@ -38,7 +38,7 @@ import { dayKey } from "@/lib/calendar-days";
 import { isSetupGuideFinished, showsSetupGuide } from "@/lib/setup-guide";
 
 const OverviewCallChart = dynamic(() => import("./overview-call-chart").then((module) => module.OverviewCallChart), {
-  loading: () => <div className="h-[350px] animate-pulse rounded-xl bg-muted" />,
+  loading: () => <Skeleton className="h-[350px] w-full" />,
   ssr: false,
 });
 
@@ -89,8 +89,10 @@ export function LiveOverviewSurface() {
   const guide = useSetupGuide(mayShowGuide ? businessId : undefined);
   // Missing opening hours keep the guide open too: they're its one step the server doesn't track.
   const hours = useBusinessHours(mayShowGuide ? businessId ?? "" : "");
-  // A failed request leaves the guide out, and the dashboard works without setup.
-  const showGuide = mayShowGuide && (guide.isPending || (Boolean(guide.data) && (!isSetupGuideFinished(guide.data!) || (needsHoursForBooking(hours.data) && !guide.data!.skippedSteps.includes("hours")))));
+  // A failed request leaves the guide out, and the dashboard works without setup. Nothing shows in its place while it loads.
+  const showGuide = mayShowGuide && Boolean(guide.data) && (!isSetupGuideFinished(guide.data!) || (needsHoursForBooking(hours.data) && !guide.data!.skippedSteps.includes("hours")));
+  // The activation card waits too, so it doesn't appear and then give way to the guide.
+  const guidePending = mayShowGuide && guide.isPending;
   // Finishing the last step here, or skipping them all, says so once.
   const guideWasShown = useRef(false);
   useEffect(() => {
@@ -115,16 +117,19 @@ export function LiveOverviewSurface() {
     { key: "averageDuration", value: formatDuration(summary.data.kpis.averageDuration.totalSeconds), description: formatDurationDelta(summary.data.kpis.averageDuration.deltaSeconds, t) },
   ] as const : [];
 
+  // Today's count replaces the appointments total once the list loads, so that card stays a placeholder until then.
+  const metricsLoading = summary.isLoading || (Boolean(summary.data) && appointments.isPending);
+
   if (summary.data?.firstRealConversationAt === null && !business) return <PageHeader title={t("home.title")} />;
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title={t("home.title")} />
       {/* The extra margin makes the visible gap match the one between the page title and Getting started. */}
-      {showGuide ? <div className="mb-4">{guide.data ? <LiveSetupGuideSurface businessId={businessId!} goal={business?.onboardingGoal ?? null} /> : <Skeleton className="h-64 rounded-xl" />}</div> : null}
+      {showGuide ? <div className="mb-4"><LiveSetupGuideSurface businessId={businessId!} goal={business?.onboardingGoal ?? null} /></div> : null}
       <div className="flex flex-col gap-6">
         {/* Getting started covers what the activation card would offer. */}
-        {showGuide ? null : <DashboardActivationCard businessId={businessId} />}
+        {showGuide || guidePending ? null : <DashboardActivationCard businessId={businessId} />}
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
           <section className="animate-in fade-in slide-in-from-bottom-2 duration-200 flex flex-col gap-3 xl:h-full">
             <div className="flex items-center justify-between gap-4 px-1"><h2 className="type-section-title">{t("home.actionRequired.title")}</h2>{summary.isLoading ? <Skeleton className="h-6 w-12 rounded-full" /> : <Badge variant="outline">{((summary.data?.actionRequired.length ?? 0) + (unansweredCount > 0 ? 1 : 0)).toLocaleString(intlLocale(i18n.language))}</Badge>}</div>
@@ -254,7 +259,7 @@ export function LiveOverviewSurface() {
             ) : <div className="rounded-xl border border-dashed p-12 text-center xl:flex xl:flex-1 xl:flex-col xl:items-center xl:justify-center"><p className="type-empty-title">{t("home.upcoming.emptyTitle")}</p><p className="type-empty-description mt-2">{t("home.upcoming.emptyDescription")}</p></div>}
           </section>
         </div>
-        {summary.isLoading ? <MetricCardGridSkeleton count={3} /> : (
+        {metricsLoading ? <MetricCardGridSkeleton count={3} titles={[t("home.metrics.calls.title"), t("home.metrics.appointments.title"), t("home.metrics.averageDuration.title")]} /> : (
           <Surface className="grid sm:grid-cols-2 md:grid-cols-3">
             {metrics.map((metric) => (
               <section className="border-b p-5 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0 md:border-b-0 md:border-r md:last:border-r-0" key={metric.key}>
@@ -269,7 +274,7 @@ export function LiveOverviewSurface() {
             ))}
           </Surface>
         )}
-        {summary.isLoading ? <OverviewChartSkeleton /> : <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
+        {summary.isLoading ? <OverviewChartSkeleton chartTitle={t("home.chart.title")} recentCallsTitle={t("home.recentCalls.title")} /> : <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
           <Card className="col-span-1 lg:col-span-4"><CardHeader><CardTitle>{t("home.chart.title")}</CardTitle></CardHeader><CardContent className="ps-2"><OverviewCallChart data={(summary.data?.monthlyCalls ?? []).map((item) => ({ name: formatDateTime(item.monthStart, i18n.language, { month: "short", timeZone: "UTC" }), total: item.total }))} /></CardContent></Card>
           <Card className="ph-mask col-span-1 lg:col-span-3"><CardHeader><CardTitle>{t("home.recentCalls.title")}</CardTitle><CardDescription>{t("home.recentCalls.description", { count: summary.data?.recentCalls.length ?? 0 })}</CardDescription></CardHeader><CardContent><div className="flex flex-col gap-6">{(summary.data?.recentCalls ?? []).map((call) => <div className="flex items-center gap-4" key={call.id}><Avatar className="h-9 w-9"><AvatarFallback>{initials(call.contactName)}</AvatarFallback></Avatar><div className="flex flex-1 flex-wrap items-center justify-between"><div className="flex flex-col gap-1"><p className="type-item-title leading-none">{getContactDisplayName({ name: call.contactName, phone: call.contactPhone, email: call.contactEmail, channels: [call.transport] }, i18n.language, t)}</p><p className="type-body-muted">{call.contactName && hasDisplayablePhone(call.contactPhone) ? formatPhoneNumberDisplay(call.contactPhone, i18n.language) : formatDateTime(call.startedAt, i18n.language, { dateStyle: "medium", timeStyle: "short" })}</p></div><div className="type-item-title">{call.durationSeconds ? t("home.recentCalls.durationValue", { value: call.durationSeconds }) : call.status}</div></div></div>)}</div></CardContent></Card>
         </div>}
@@ -300,7 +305,7 @@ function formatDurationDelta(value: number, t: ReturnType<typeof useTranslation<
 
 function ActionRequiredSkeleton() {
   return (
-    <Card className="border-border/70">
+    <Card aria-busy="true" className="border-border/70">
       <CardContent>
         <ItemGroup>
           {Array.from({ length: 3 }).map((_, index) => (
@@ -329,7 +334,7 @@ function ActionRequiredSkeleton() {
 
 function UpcomingSkeleton() {
   return (
-    <Card className="border-border/70">
+    <Card aria-busy="true" className="border-border/70">
       <CardContent className="flex flex-col gap-4">
         {Array.from({ length: 3 }).map((_, index) => (
           <div key={index}>
@@ -352,12 +357,12 @@ function UpcomingSkeleton() {
   );
 }
 
-function OverviewChartSkeleton() {
+function OverviewChartSkeleton({ chartTitle, recentCallsTitle }: { chartTitle: string; recentCallsTitle: string }) {
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
+    <div aria-busy="true" className="grid grid-cols-1 gap-4 lg:grid-cols-7">
       <Card className="col-span-1 lg:col-span-4">
         <CardHeader>
-          <Skeleton className="h-5 w-32" />
+          <CardTitle>{chartTitle}</CardTitle>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-[350px] w-full" />
@@ -365,7 +370,7 @@ function OverviewChartSkeleton() {
       </Card>
       <Card className="col-span-1 lg:col-span-3">
         <CardHeader>
-          <Skeleton className="h-5 w-28" />
+          <CardTitle>{recentCallsTitle}</CardTitle>
           <Skeleton className="h-4 w-40" />
         </CardHeader>
         <CardContent>

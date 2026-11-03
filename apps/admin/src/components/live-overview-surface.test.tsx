@@ -175,3 +175,20 @@ describe("appointment cancellations on Home", () => {
     expect(screen.queryByRole("button", { name: /Cancel appointment/ })).toBeNull();
   });
 });
+
+describe("Home while it loads", () => {
+  it("keeps the chart titles, holds the metric titles hidden, and marks each loading block busy", async () => {
+    vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn(), removeItem: vi.fn() });
+    vi.stubGlobal("EventSource", class { addEventListener() {} removeEventListener() {} close() {} });
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => undefined)));
+    const i18n = createInstance();
+    await i18n.init({ lng: "en", defaultNS: "dashboard", resources: { en: { dashboard: en, common: enCommon, knowledge: enKnowledge } } });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); clients.push(client);
+    const { container } = render(<I18nextProvider i18n={i18n}><QueryClientProvider client={client}><BusinessCapabilitiesProvider initial={ALL_CAPABILITIES}><LiveOverviewSurface /></BusinessCapabilitiesProvider></QueryClientProvider></I18nextProvider>);
+    // The metric titles are placeholders holding their hidden text, so each card turns real together.
+    for (const title of ["calls", "appointments", "averageDuration"]) expect(screen.getByText(i18n.t(`home.metrics.${title}.title`)).closest("[data-slot='skeleton']")).toBeTruthy();
+    expect(screen.getByText(i18n.t("home.chart.title"))).toBeTruthy();
+    expect(screen.getByText(i18n.t("home.recentCalls.title"))).toBeTruthy();
+    expect(container.querySelectorAll("[aria-busy='true']")).toHaveLength(4);
+  });
+});
