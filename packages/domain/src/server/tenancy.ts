@@ -207,6 +207,7 @@ async function insertBusinessRowsInTransaction(tx: DatabaseTransaction, input: N
   await tx.insert(staff).values({ businessId, name, timezone });
   await tx.insert(agents).values({
     businessId,
+    isDefault: true,
     name: defaultAgentName(normalizeRuntimeLocale(input.defaultLocale)),
     greeting: defaultGreeting(name, normalizeRuntimeLocale(input.defaultLocale)),
     tone: "warm and direct",

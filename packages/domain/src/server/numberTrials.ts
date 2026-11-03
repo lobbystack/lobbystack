@@ -358,8 +358,9 @@ export async function numberAgentIdInTransaction(tx: DatabaseTransaction, input:
  * forward themselves, so they learn a new transfer number or owner phone.
  * Other carriers ask our voice webhook on each call and need nothing.
  */
-export async function enqueueRefusedCallForwardRefresh(tx: DatabaseTransaction, businessId: string): Promise<void> {
-  const numbers = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), inArray(phoneNumbers.carrier, [...CARRIERS_FORWARDING_REFUSED_CALLS])));
+export async function enqueueRefusedCallForwardRefresh(tx: DatabaseTransaction, businessId: string, agentId?: string): Promise<void> {
+  // With an agent, only its numbers forward to its transfer number.
+  const numbers = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), inArray(phoneNumbers.carrier, [...CARRIERS_FORWARDING_REFUSED_CALLS]), ...(agentId ? [eq(phoneNumbers.agentId, agentId)] : [])));
   for (const number of numbers) await enqueueNumberRouting(tx, { businessId, phoneNumberId: number.id, mode: "receptionist" });
 }
 

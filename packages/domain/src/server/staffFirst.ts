@@ -23,17 +23,18 @@ import { findOrCreateCallContactInTransaction } from "./voice";
 /** Why a business can't turn staff answers first on, or null when it can. A business with no number yet can: the setting applies to the number it buys. "setup" means this deployment's admin app can't reach GPT-Live. */
 export type StaffFirstBlock = "plan" | "carrier" | "setup" | null;
 
-export async function staffFirstBlockInTransaction(tx: DatabaseTransaction, businessId: string): Promise<StaffFirstBlock> {
+export async function staffFirstBlockInTransaction(tx: DatabaseTransaction, businessId: string, agentId?: string): Promise<StaffFirstBlock> {
   if (!includesStaffFirst(await loadEntitlement(tx, businessId))) return "plan";
-  const numbers = await tx.select({ carrier: phoneNumbers.carrier }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active")));
+  // With an agent, only the numbers that reach it decide.
+  const numbers = await tx.select({ carrier: phoneNumbers.carrier }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), ...(agentId ? [eq(phoneNumbers.agentId, agentId)] : [])));
   if (numbers.length && !numbers.some((number) => CARRIERS_WITH_STAFF_FIRST.includes(number.carrier as CarrierId))) return "carrier";
   // The admin app dials GPT-Live from the webhook, so the worker's copy of the project doesn't help a call.
   return sipAddress() ? null : "setup";
 }
 
 /** The rules a change to the mode or the staff phone must pass. The phone follows the same rules as a transfer number. */
-export async function assertStaffFirstChange(tx: DatabaseTransaction, input: { businessId: string; mode?: StaffFirstMode | undefined; number?: string | null | undefined }): Promise<void> {
-  const current = (await tx.select({ mode: agents.staffFirstMode, number: agents.staffFirstNumber }).from(agents).where(defaultAgentOf(input.businessId)).limit(1))[0];
+export async function assertStaffFirstChange(tx: DatabaseTransaction, input: { businessId: string; agentId?: string | undefined; mode?: StaffFirstMode | undefined; number?: string | null | undefined }): Promise<void> {
+  const current = (await tx.select({ mode: agents.staffFirstMode, number: agents.staffFirstNumber }).from(agents).where(input.agentId ? and(eq(agents.businessId, input.businessId), eq(agents.id, input.agentId)) : defaultAgentOf(input.businessId)).limit(1))[0];
   const mode = input.mode ?? current?.mode ?? "never";
   const number = input.number !== undefined ? input.number : current?.number;
   if (mode !== "never" && !number) throw Object.assign(new Error("Add the staff phone to ring first."), { status: 400, code: "staff_first_number_required" });
@@ -47,15 +48,15 @@ export async function assertStaffFirstChange(tx: DatabaseTransaction, input: { b
     if (own.length) throw Object.assign(new Error("The staff phone can't be your LobbyStack number."), { status: 400, code: "staff_first_number_own_line" });
   }
   if (input.mode === undefined || input.mode === "never") return;
-  const block = await staffFirstBlockInTransaction(tx, input.businessId);
+  const block = await staffFirstBlockInTransaction(tx, input.businessId, input.agentId);
   if (block === "plan") throw Object.assign(new Error("Staff answers first needs a paid plan."), { status: 402, code: "staff_first_plan_required" });
   if (block === "carrier") throw Object.assign(new Error("Staff answers first isn't available on this number yet."), { status: 409, code: "staff_first_carrier_unsupported" });
   if (block === "setup") throw Object.assign(new Error("Staff answers first needs OPENAI_PROJECT_ID on the admin app."), { status: 409, code: "staff_first_not_configured" });
 }
 
-/** Saving the mode moves the business's numbers on or off the staff-first webhook. desiredNumberRouting decides where each one goes. */
-export async function enqueueStaffFirstRouting(tx: DatabaseTransaction, businessId: string): Promise<void> {
-  const numbers = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), inArray(phoneNumbers.carrier, [...CARRIERS_WITH_STAFF_FIRST])));
+/** Saving the mode moves the agent's numbers, or all the business's without one, on or off the staff-first webhook. desiredNumberRouting decides where each one goes. */
+export async function enqueueStaffFirstRouting(tx: DatabaseTransaction, businessId: string, agentId?: string): Promise<void> {
+  const numbers = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), inArray(phoneNumbers.carrier, [...CARRIERS_WITH_STAFF_FIRST]), ...(agentId ? [eq(phoneNumbers.agentId, agentId)] : [])));
   for (const number of numbers) await enqueueNumberRouting(tx, { businessId, phoneNumberId: number.id, mode: "receptionist" });
 }
 
