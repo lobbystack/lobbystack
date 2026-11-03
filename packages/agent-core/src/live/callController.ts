@@ -201,11 +201,11 @@ const TRANSCRIPT_WAIT_MS = 300;
 // seconds in. With no voice by this long after the worker sees the session
 // start, it sends the greeting command once more.
 const GREETING_FALLBACK_MS = 4_000;
-// GPT-Live can acknowledge a greeting command and still wait for the caller:
-// on calls from October 3 to 8, 8 of 16 acknowledged commands went unspoken
-// until the caller spoke, or for good. A command it did follow was spoken
-// within 4 seconds of the acknowledgment, so after 4.5 seconds of silence the
-// worker sends it again, up to this many commands in all.
+// GPT-Live ignored session.instructions.append for greetings: on calls from
+// October 3 to 8, 8 of 16 acknowledged commands went unspoken until the caller
+// spoke, or for good. It spoke session.commentary.append within 0.7 seconds on
+// 3 calls out of 3. After 4.5 seconds of silence the worker still sends the
+// command again, up to this many commands in all.
 const GREETING_RETRY_MS = 4_500;
 const GREETING_COMMANDS = 3;
 // Reflected audio is 16-bit PCM at 24 kHz. A chunk this loud is voice;
@@ -700,7 +700,7 @@ export class LiveCallController {
       const greeting = setup.greeting?.trim();
       if (!greeting || stopped()) return;
       this.greetingAttempts += 1;
-      this.send({ type: "session.instructions.append", delegation_id: null, content: greetingCommand(greeting), event_id: `greeting_${this.greetingAttempts}` }, { kind: "greeting" });
+      this.send({ type: "session.commentary.append", delegation_id: null, content: greetingCommand(greeting), event_id: `greeting_${this.greetingAttempts}` }, { kind: "greeting" });
       this.reportGreeting("sent", trigger);
     }, () => undefined);
   }

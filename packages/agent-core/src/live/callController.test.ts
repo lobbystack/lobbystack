@@ -110,7 +110,7 @@ describe("LiveCallController greeting", () => {
     await vi.advanceTimersByTimeAsync(3_999);
     expect(greetings(socket)).toHaveLength(0);
     await vi.advanceTimersByTimeAsync(1);
-    expect(greetings(socket)).toEqual([expect.objectContaining({ type: "session.instructions.append", delegation_id: null, event_id: "greeting_1", content: 'Start the conversation now: say exactly "Thanks for calling Northside Plumbing." in the language of that greeting, then stop and listen to the caller.' })]);
+    expect(greetings(socket)).toEqual([expect.objectContaining({ type: "session.commentary.append", delegation_id: null, event_id: "greeting_1", content: 'Start the conversation now: say exactly "Thanks for calling Northside Plumbing." in the language of that greeting, then stop and listen to the caller.' })]);
     expect(greetingEvents[0]).toMatchObject({ step: "sent", trigger: "fallback", attempt: 1 });
   });
 
@@ -123,15 +123,15 @@ describe("LiveCallController greeting", () => {
     socket.socket.emit("open");
     startSession(socket);
     await vi.advanceTimersByTimeAsync(4_000);
-    socket.emit("session.instructions.appended", { client_event_id: "greeting_1" });
+    socket.emit("session.commentary.appended", { client_event_id: "greeting_1" });
     await vi.advanceTimersByTimeAsync(4_499);
     expect(greetings(socket)).toHaveLength(1);
     await vi.advanceTimersByTimeAsync(1);
     expect(greetings(socket).map((event) => event.event_id)).toEqual(["greeting_1", "greeting_2"]);
     expect(greetings(socket)[1]?.content).toBe(greetings(socket)[0]?.content);
-    socket.emit("session.instructions.appended", { client_event_id: "greeting_2" });
+    socket.emit("session.commentary.appended", { client_event_id: "greeting_2" });
     await vi.advanceTimersByTimeAsync(4_500);
-    socket.emit("session.instructions.appended", { client_event_id: "greeting_3" });
+    socket.emit("session.commentary.appended", { client_event_id: "greeting_3" });
     await vi.advanceTimersByTimeAsync(30_000);
     expect(greetings(socket).map((event) => event.event_id)).toEqual(["greeting_1", "greeting_2", "greeting_3"]);
     expect(greetingEvents.map((event) => `${event.step}${event.attempt}${event.trigger ? ` ${event.trigger}` : ""}`)).toEqual(["sent1 fallback", "acknowledged1", "sent2 retry", "acknowledged2", "sent3 retry", "acknowledged3"]);
@@ -144,7 +144,7 @@ describe("LiveCallController greeting", () => {
     socket.socket.emit("open");
     startSession(socket);
     await vi.advanceTimersByTimeAsync(4_000);
-    socket.emit("session.instructions.appended", { client_event_id: "greeting_1" });
+    socket.emit("session.commentary.appended", { client_event_id: "greeting_1" });
     await vi.advanceTimersByTimeAsync(2_000);
     socket.emit("session.output_audio.delta", { delta: pcm(3_000), start_ms: 6_000, end_ms: 6_100 });
     await vi.advanceTimersByTimeAsync(30_000);
@@ -158,7 +158,7 @@ describe("LiveCallController greeting", () => {
     socket.socket.emit("open");
     startSession(socket);
     await vi.advanceTimersByTimeAsync(4_000);
-    socket.emit("session.instructions.appended", { client_event_id: "greeting_1" });
+    socket.emit("session.commentary.appended", { client_event_id: "greeting_1" });
     await vi.advanceTimersByTimeAsync(3_000);
     socket.emit("session.input_transcript.delta", { delta: "Hello?", start_ms: 6_500, end_ms: 7_000 });
     await vi.advanceTimersByTimeAsync(30_000);
@@ -182,7 +182,7 @@ describe("LiveCallController greeting", () => {
     socket.socket.emit("open");
     startSession(socket);
     await vi.advanceTimersByTimeAsync(4_000);
-    socket.emit("session.instructions.appended", { client_event_id: "greeting_1" });
+    socket.emit("session.commentary.appended", { client_event_id: "greeting_1" });
     void controller.wrapUp("duration_limit");
     await vi.advanceTimersByTimeAsync(10_000);
     expect(greetings(socket)).toHaveLength(1);
