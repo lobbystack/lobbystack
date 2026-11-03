@@ -241,7 +241,7 @@ describe.skipIf(!testUrl)("video links in appointment texts", () => {
       await deliver(appointmentId, `${VIDEO_LINK_UPDATE}:%`);
       const bodies = (await alerts(businessId)).map(({ body }) => body);
       expect(bodies).toHaveLength(2);
-      expect(bodies.some((body) => body.includes(NEW_LINK))).toBe(true);
+      expect(bodies).toEqual(expect.arrayContaining([expect.stringContaining(NEW_LINK)]));
     });
   });
 
