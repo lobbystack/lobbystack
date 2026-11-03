@@ -529,11 +529,6 @@
     "edit": "Modifier",
     "cancel": "Annuler",
     "notSet": "Non définies",
-    "noHoursAlert": {
-      "title": "Ajoutez vos heures d'ouverture pour réserver des rendez-vous",
-      "description": "L'agent propose des créneaux seulement pendant vos heures d'ouverture. En attendant, il prend un message.",
-      "action": "Ajouter les heures d'ouverture"
-    },
     "neededForBooking": "Non définies. Nécessaires pour prendre des rendez-vous.",
     "add": "Ajouter",
     "closures": {

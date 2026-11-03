@@ -31,7 +31,10 @@ import { requestJson } from "@/lib/request-json";
 import { isSetupStepDone, numberPath, SETUP_STEP_ORDER, type NumberPath, type SetupGuide, type SetupStep, type SetupStepId } from "@/lib/setup-guide";
 import { openTestWindow, useTestWindowReady } from "@/lib/test-window";
 import { useCallSettleRefetch } from "@/lib/use-call-settle-refetch";
-import { BookingWithoutHoursAlert, needsHoursForBooking, useBusinessHours } from "./business-hours-section";
+import { HOURS_EDITOR_HREF, needsHoursForBooking, useBusinessHours } from "./business-hours-section";
+
+type GuideStepId = SetupStepId | "hours";
+type GuideStep = { id: GuideStepId; status: string; documentId?: string | null };
 
 type NumbersResponse = {
   phoneNumbers: PhoneNumberViewModel[];
@@ -60,17 +63,24 @@ export function LiveSetupGuideSurface({ businessId, goal }: { businessId: string
   const job = activation?.websiteImport;
   const importing = isWebsiteImportRunning(job);
   const setup = useSetupGuide(businessId, importing);
-  // Instant booking with no opening hours books nothing, so say so above the steps.
+  // Instant booking with no opening hours books nothing, so a business that
+  // books instantly gets a step for them after its sources.
   const hours = useBusinessHours(businessId);
   const skippedSteps = useMemo(() => setup.data?.skippedSteps ?? [], [setup.data?.skippedSteps]);
-  const steps = useMemo(() => SETUP_STEP_ORDER.flatMap((id) => setup.data?.steps.find((step) => step.id === id) ?? []), [setup.data?.steps]);
-  const done = (step: SetupStep) => isSetupStepDone(step, skippedSteps);
+  const steps = useMemo<GuideStep[]>(() => {
+    const serverSteps = SETUP_STEP_ORDER.flatMap((id) => setup.data?.steps.find((step) => step.id === id) ?? []);
+    if (hours.data?.bookingMode !== "instant") return serverSteps;
+    const hoursStep: GuideStep = { id: "hours", status: needsHoursForBooking(hours.data) ? "needs setup" : "complete" };
+    const after = serverSteps.findIndex((step) => step.id === "sources");
+    return [...serverSteps.slice(0, after + 1), hoursStep, ...serverSteps.slice(after + 1)];
+  }, [hours.data, setup.data?.steps]);
+  const done = (step: GuideStep) => step.id === "hours" ? step.status === "complete" : isSetupStepDone(step as SetupStep, skippedSteps);
   // A finished step stays shut, except that the test call keeps its transcript in reach.
-  const opens = (step: SetupStep) => !done(step) || (step.id === "testCall" && Boolean(activation?.lastTestCall));
+  const opens = (step: GuideStep) => !done(step) || (step.id === "testCall" && Boolean(activation?.lastTestCall));
   const completed = steps.filter(done).length;
   const active = steps.find((step) => !done(step))?.id ?? SETUP_STEP_ORDER[0]!;
   // The operator's own pick holds until the current step changes.
-  const [picked, setPicked] = useState<{ step: SetupStepId; during: SetupStepId } | null>(null);
+  const [picked, setPicked] = useState<{ step: GuideStepId; during: GuideStepId } | null>(null);
   const pickedStep = picked?.during === active ? steps.find((step) => step.id === picked.step) : undefined;
   const openStep = pickedStep && opens(pickedStep) ? pickedStep.id : active;
   const expand = useMutation({
@@ -84,21 +94,21 @@ export function LiveSetupGuideSurface({ businessId, goal }: { businessId: string
       <h2 className="type-section-title">{t("setupGuide.title")}</h2>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3 text-muted-foreground"><ProgressRing completed={completed} total={steps.length} /><p className="text-base">{t("setupGuide.description", { completed, total: steps.length })}</p></div>
-        <Button disabled={skip.isPending} onClick={async () => { for (const step of steps.filter((item) => !skippedSteps.includes(item.id))) await skip.mutateAsync(step.id); }} type="button" variant="outline">{t("setupGuide.skip")}</Button>
+        <Button disabled={skip.isPending} onClick={async () => { for (const step of steps) if (step.id !== "hours" && !skippedSteps.includes(step.id)) await skip.mutateAsync(step.id); }} type="button" variant="outline">{t("setupGuide.skip")}</Button>
       </div>
-      {needsHoursForBooking(hours.data) ? <BookingWithoutHoursAlert /> : null}
       <Surface>
-        <Accordion onValueChange={(value) => { const next = value[0] as SetupStepId | undefined; const step = steps.find((item) => item.id === next); if (step && opens(step)) setPicked({ step: step.id, during: active }); }} value={[openStep]}>
+        <Accordion onValueChange={(value) => { const next = value[0] as GuideStepId | undefined; const step = steps.find((item) => item.id === next); if (step && opens(step)) setPicked({ step: step.id, during: active }); }} value={[openStep]}>
           {steps.map((step) => {
             const finished = done(step);
             const locked = !opens(step);
-            const skipLink = finished ? null : <Button className="h-auto px-0 underline underline-offset-4" disabled={skip.isPending} onClick={() => skip.mutate(step.id)} variant="link">{t("setupGuide.skipStep")}</Button>;
+            // Hours aren't a server step, so they have nothing to skip.
+            const skipLink = finished || step.id === "hours" ? null : <Button className="h-auto px-0 underline underline-offset-4" disabled={skip.isPending} onClick={() => skip.mutate(step.id as SetupStepId)} variant="link">{t("setupGuide.skipStep")}</Button>;
             return <AccordionItem key={step.id} value={step.id}>
               <AccordionTrigger aria-disabled={locked || undefined} className={locked ? "min-h-16 cursor-default px-6 [&_[data-icon=inline-end]]:opacity-0" : "min-h-16 px-6"} tabIndex={locked ? -1 : undefined}><span className="flex min-w-0 items-center gap-4"><StepMarker completed={finished} /><span className={finished ? "truncate text-base text-muted-foreground line-through decoration-muted-foreground/70" : "truncate text-base"}>{t(step.id === "phoneNumber" && step.status !== "needs setup" && !skippedSteps.includes(step.id) ? "setupGuide.steps.forwardCalls" : `setupGuide.steps.${step.id}`)}</span></span></AccordionTrigger>
               <AccordionContent aria-labelledby="" className="px-6"><div className="flex gap-4"><span className="size-6 shrink-0" /><div className="flex min-w-0 flex-1 flex-col gap-4">
                 {step.id === "fullScan" ? (
                   <>
-                    {job && (importing || job.status === "failed" || job.status === "cancelled") ? <WebsiteImportProgress job={job} /> : <StepDescription>{t("setupGuide.stepDescriptions.fullScan")}</StepDescription>}
+                    {job && (importing || job.status === "failed" || job.status === "cancelled") ? <WebsiteImportProgress inline job={job} /> : <StepDescription>{t("setupGuide.stepDescriptions.fullScan")}</StepDescription>}
                     <StepActions primary={importing ? null : <Button disabled={expand.isPending} onClick={() => { if (step.documentId) expand.mutate(step.documentId); }}>{t("setupGuide.stepActions.fullScan")}</Button>} skip={skipLink} />
                   </>
                 ) : step.id === "sources" ? (
@@ -106,11 +116,16 @@ export function LiveSetupGuideSurface({ businessId, goal }: { businessId: string
                     <StepDescription>{t(`setupGuide.stepDescriptions.sources.${goal ?? "none"}`)}</StepDescription>
                     <StepActions primary={<Button onClick={() => router.push("/agent/knowledge?setup=upload")}>{t("setupGuide.stepActions.sources")}</Button>} skip={skipLink} />
                   </>
+                ) : step.id === "hours" ? (
+                  <>
+                    <StepDescription>{t("setupGuide.stepDescriptions.hours")}</StepDescription>
+                    <StepActions primary={<Button nativeButton={false} render={<Link href={HOURS_EDITOR_HREF} />}>{t("setupGuide.stepActions.hours")}</Button>} skip={null} />
+                  </>
                 ) : step.id === "testCall" ? (
                   <TestCallStep call={activation?.lastTestCall ?? null} goal={goal} skip={skipLink} />
-                ) : (
+                ) : step.id === "phoneNumber" ? (
                   <NumberStep activation={activation} businessId={businessId} needsNumberClaim={needsNumberClaim} skip={skipLink} trialAvailable={trialAvailable} upgrade={upgrade} />
-                )}
+                ) : null}
               </div></div></AccordionContent>
             </AccordionItem>;
           })}

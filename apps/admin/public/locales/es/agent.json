@@ -529,11 +529,6 @@
     "edit": "Editar",
     "cancel": "Cancelar",
     "notSet": "Sin definir",
-    "noHoursAlert": {
-      "title": "Agregue su horario para reservar citas",
-      "description": "El agente ofrece horas solo dentro de su horario de atención. Hasta que lo agregue, toma un mensaje.",
-      "action": "Agregar horario"
-    },
     "neededForBooking": "Sin definir. Necesarias para reservar citas.",
     "add": "Añadir",
     "closures": {

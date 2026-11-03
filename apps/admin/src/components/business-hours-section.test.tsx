@@ -221,13 +221,16 @@ describe("instant booking without opening hours", () => {
     window.history.replaceState(null, "", "#");
   });
 
-  it("warns in the setup guide", async () => {
+  it("adds an opening hours step to the setup guide, after the sources", async () => {
     stubFetch({ hoursSource: "none", hours: [] });
     const queryClient = client();
     queryClient.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
-    queryClient.setQueryData(["setup", "business"], { steps: [{ id: "fullScan", status: "needs setup" }] });
+    queryClient.setQueryData(["setup", "business"], { steps: [{ id: "fullScan", status: "complete" }, { id: "sources", status: "complete" }, { id: "testCall", status: "needs setup" }] });
     render(<QueryClientProvider client={queryClient}><LiveSetupGuideSurface businessId="business" goal={null} /></QueryClientProvider>);
-    expect(await screen.findByText("hours.noHoursAlert.title")).toBeTruthy();
+    expect(await screen.findByText("setupGuide.steps.hours")).toBeTruthy();
+    const titles = screen.getAllByText(/^setupGuide\.steps\./).map((element) => element.textContent);
+    expect(titles).toEqual(["setupGuide.steps.fullScan", "setupGuide.steps.sources", "setupGuide.steps.hours", "setupGuide.steps.testCall"]);
+    expect(screen.getByText("setupGuide.stepActions.hours").closest("a")?.getAttribute("href")).toBe("/agent/basic-settings#opening-hours");
   });
 });
 

@@ -250,6 +250,7 @@
     "doneHint_few": "{{count}} stranice su spremne za pitanja.",
     "doneHint_other": "{{count}} stranica je spremno za pitanja.",
     "failedTitle": "Nismo uspeli da pročitamo sajt {{host}}",
-    "failedHint": "Unesite podatke o firmi ručno ili ponovo pokrenite uvoz sa kontrolne table."
+    "failedHint": "Unesite podatke o firmi ručno ili ponovo pokrenite uvoz sa kontrolne table.",
+    "inlineRunning": "Čitanje sajta {{host}}. Pročitano stranica: {{count}}."
   }
 }

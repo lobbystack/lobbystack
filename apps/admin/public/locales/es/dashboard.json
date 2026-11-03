@@ -269,6 +269,7 @@
     "steps": {
       "fullScan": "Leer el resto de su sitio",
       "sources": "Añadir más fuentes",
+      "hours": "Añadir su horario",
       "testCall": "Escuchar a su agente",
       "phoneNumber": "Conectar un número de teléfono",
       "forwardCalls": "Desvíe sus llamadas"
@@ -282,6 +283,7 @@
         "answer_instagram_messages": "Suba las preguntas frecuentes y precios que le consultan en Instagram.",
         "none": "Suba sus políticas, preguntas frecuentes o precios."
       },
+      "hours": "Su agente reserva citas solo dentro de este horario.",
       "testCall": {
         "answer_calls": "Pregúntele lo que más le preguntan quienes llaman.",
         "book_appointments": "Pídale que reserve una cita.",
@@ -295,6 +297,7 @@
     "stepActions": {
       "fullScan": "Leer el resto",
       "sources": "Subir documento",
+      "hours": "Añadir horario",
       "testCall": "Iniciar una llamada",
       "phoneNumber": "Elegir un número"
     }

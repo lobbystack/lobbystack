@@ -269,6 +269,7 @@
     "steps": {
       "fullScan": "Pročitajte ostatak sajta",
       "sources": "Dodajte još izvora",
+      "hours": "Dodajte radno vreme",
       "testCall": "Čujte svog agenta",
       "phoneNumber": "Povežite broj telefona",
       "forwardCalls": "Preusmerite pozive"
@@ -282,6 +283,7 @@
         "answer_instagram_messages": "Otpremite česta pitanja i cene o kojima Vas pitaju na Instagramu.",
         "none": "Otpremite pravila, česta pitanja ili cene."
       },
+      "hours": "Agent zakazuje termine samo u ovom radnom vremenu.",
       "testCall": {
         "answer_calls": "Pitajte ono što Vas klijenti najčešće pitaju.",
         "book_appointments": "Zamolite ga da zakaže termin.",
@@ -295,6 +297,7 @@
     "stepActions": {
       "fullScan": "Pročitaj ostatak",
       "sources": "Otpremi dokument",
+      "hours": "Dodaj radno vreme",
       "testCall": "Započni poziv",
       "phoneNumber": "Izaberi broj"
     }

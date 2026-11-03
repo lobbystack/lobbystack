@@ -45,7 +45,7 @@ export function currentWebsiteImport<T extends { createdAt?: string; websiteImpo
  * Crawl progress is written by the worker as it reads a site, so the operator
  * can watch their agent learn instead of waiting in front of a blank step.
  */
-export function WebsiteImportProgress({ job }: { job: WebsiteImportSummary }) {
+export function WebsiteImportProgress({ job, inline = false }: { job: WebsiteImportSummary; inline?: boolean }) {
   // These strings live in common: the card renders on the dashboard too, and
   // the dashboard does not carry the onboarding namespace.
   const { t } = useTranslation("common");
@@ -53,6 +53,22 @@ export function WebsiteImportProgress({ job }: { job: WebsiteImportSummary }) {
   const failed = job.status === "failed" || job.status === "cancelled";
   const done = job.status === "completed";
   const percent = failed ? 100 : done ? 100 : job.status === "indexing" ? Math.min(95, 60 + Math.round((job.indexedCount / Math.max(job.importedCount, 1)) * 35)) : job.status === "crawling" ? 35 : 10;
+
+  // Inside a Getting started step: the step's own text and a bar, no card.
+  if (inline) {
+    return (
+      <div className="flex max-w-lg flex-col gap-3">
+        <p className="text-base leading-6 text-muted-foreground">
+          {failed ? t("websiteImport.failedTitle", { host }) : done ? t("websiteImport.doneTitle", { host }) : t("websiteImport.inlineRunning", { host, count: job.importedCount })}
+        </p>
+        {failed || done ? null : (
+          <div aria-hidden="true" className="h-1 w-full overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full bg-foreground transition-[width] duration-500" style={{ width: `${percent}%` }} />
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <Surface className="flex flex-col gap-3 p-4">

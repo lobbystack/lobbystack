@@ -244,6 +244,7 @@
     "doneHint_many": "{{count}} páginas están listas para responder preguntas.",
     "doneHint_other": "{{count}} páginas están listas para responder preguntas.",
     "failedTitle": "No pudimos leer {{host}}",
-    "failedHint": "Añada los datos de su negocio a mano o vuelva a intentar la importación desde su panel."
+    "failedHint": "Añada los datos de su negocio a mano o vuelva a intentar la importación desde su panel.",
+    "inlineRunning": "Leyendo {{host}}. Páginas leídas hasta ahora: {{count}}."
   }
 }
