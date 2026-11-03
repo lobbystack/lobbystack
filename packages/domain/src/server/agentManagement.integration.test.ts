@@ -1,10 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { agentRules, agents, billingAccounts, businesses, contacts, conversations, createDatabaseClient, outboxMessages, phoneNumbers, widgetKeys, type DatabaseTransaction } from "@lobbystack/db";
+import { agentRules, agents, billingAccounts, businessContextSnapshots, businesses, contacts, conversations, createDatabaseClient, outboxMessages, phoneNumbers, widgetKeys, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import type { BusinessContextSnapshot } from "@lobbystack/shared";
 
+import { snapshotForAgent } from "../snapshot";
 import { archiveAgentInTransaction, createAgentInTransaction, moveChannelInTransaction, pausedAgentIds, setDefaultAgentInTransaction } from "./agents";
 import { loadEntitlement } from "./entitlement";
+import { refreshBusinessSnapshot } from "./knowledge";
 
 // Creating, archiving and re-pointing agents against PostgreSQL, each test as
 // the migrator inside a transaction that always rolls back.
@@ -113,6 +116,19 @@ describe.skipIf(!testUrl)("managing a business's agents", () => {
       expect((await tx.select({ archivedAt: agents.archivedAt }).from(agents).where(eq(agents.id, evening.id)))[0]?.archivedAt).toBeInstanceOf(Date);
       expect((await tx.select({ agentId: widgetKeys.agentId }).from(widgetKeys).where(eq(widgetKeys.id, widgetId)))[0]?.agentId).toBe(defaultAgent);
       expect(await agentOf(tx, text)).toBe(defaultAgent);
+    });
+  });
+
+  it("pauses an extra agent on Free, so the default agent answers its channels", async () => {
+    await withBusiness("free_cloud", async ({ tx, businessId, defaultAgent, widgetId }) => {
+      // A business that had two agents on a paid plan, now on Free.
+      const [evening] = await tx.insert(agents).values({ businessId, name: "Evening", greeting: "Evening desk here", tone: "calm", summary: "A clinic", bookingPolicy: "Book", transferMode: "never" }).returning({ id: agents.id });
+      await tx.update(widgetKeys).set({ agentId: evening!.id }).where(eq(widgetKeys.id, widgetId));
+      await refreshBusinessSnapshot({ db: tx as unknown as Database }, { businessId });
+      const [stored] = await tx.select({ snapshot: businessContextSnapshots.snapshot }).from(businessContextSnapshots).where(eq(businessContextSnapshots.businessId, businessId));
+      const snapshot = stored!.snapshot as unknown as BusinessContextSnapshot;
+      expect(snapshot.agents?.find((agent) => agent.id === evening!.id)?.paused).toBe(true);
+      expect(snapshotForAgent(snapshot, evening!.id)).toMatchObject({ agentId: defaultAgent, greeting: "Front desk here" });
     });
   });
 

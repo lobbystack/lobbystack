@@ -3,6 +3,22 @@ import { enqueueOutbox, type DatabaseTransaction } from "@lobbystack/db";
 export type AgentSnapshotChange = "agent_created" | "agent_updated" | "agent_archived" | "channel_moved";
 
 /**
+ * Rebuilds the snapshot after the business moves on or off a paid plan, which
+ * pauses or restores the agents past the new plan's limit. Call it in the
+ * transaction that changes the plan.
+ */
+export async function enqueuePlanSnapshotRefresh(tx: DatabaseTransaction, businessId: string): Promise<void> {
+  await enqueueOutbox(tx, {
+    topic: "snapshot.refresh",
+    businessId,
+    aggregateType: "billing_account",
+    aggregateId: businessId,
+    dedupeKey: `billing:${businessId}:snapshot:plan_changed:${Date.now()}`,
+    payload: { businessId, reason: "plan_changed" },
+  });
+}
+
+/**
  * Rebuilds the business snapshot after a change to an agent or to which agent a
  * channel answers as. Call it in the transaction that makes the change. Calls
  * read agents only from the snapshot, and an agent id missing from it costs a
