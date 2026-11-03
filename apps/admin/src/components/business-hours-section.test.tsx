@@ -244,6 +244,28 @@ describe("instant booking without opening hours", () => {
     expect(titles).toEqual(["setupGuide.steps.testCall", "setupGuide.steps.fullScan", "setupGuide.steps.sources", "setupGuide.steps.hours", "setupGuide.steps.phoneNumber"]);
   });
 
+  // Skip setup has to end the list for a business with no hours too.
+  it("skips the opening hours step like the others", async () => {
+    const fetchMock = stubFetch({ hoursSource: "none", hours: [] });
+    const queryClient = client();
+    queryClient.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
+    queryClient.setQueryData(["setup", "business"], { steps: [{ id: "sources", status: "complete" }], skippedSteps: [] });
+    render(<QueryClientProvider client={queryClient}><LiveSetupGuideSurface businessId="business" goal={null} /></QueryClientProvider>);
+    await screen.findByText("setupGuide.steps.hours");
+    fireEvent.click(screen.getByRole("button", { name: "setupGuide.skipStep" }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url, init]) => String(url).startsWith("/api/setup") && init?.method === "PATCH" && JSON.parse(String(init.body)).stepId === "hours")).toBe(true));
+  });
+
+  it("shows a skipped opening hours step as done", async () => {
+    stubFetch({ hoursSource: "none", hours: [] });
+    const queryClient = client();
+    queryClient.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
+    queryClient.setQueryData(["setup", "business"], { steps: [{ id: "sources", status: "needs setup" }], skippedSteps: ["hours"] });
+    render(<QueryClientProvider client={queryClient}><LiveSetupGuideSurface businessId="business" goal={null} /></QueryClientProvider>);
+    expect((await screen.findByText("setupGuide.steps.hours")).className).toContain("line-through");
+    expect(screen.getByText("setupGuide.steps.sources").className).not.toContain("line-through");
+  });
+
   it("leaves the opening hours step out once the business has hours", async () => {
     const fetchMock = stubFetch({ hoursSource: "generated", hours: [{ dayOfWeek: 1, openMinutes: 540, closeMinutes: 1020 }] });
     const queryClient = client();

@@ -73,6 +73,8 @@ export async function hasAnsweredPhoneCall(tx: DatabaseTransaction, businessId: 
 
 export const setupGuideStepIds = ["fullScan", "sources", "testCall", "phoneNumber"] as const;
 export type SetupGuideStepId = (typeof setupGuideStepIds)[number];
+/** Steps the owner can skip: the guide's, plus the dashboard's opening hours step, which only shows while instant booking has no hours. */
+export const setupGuideSkippableStepIds = [...setupGuideStepIds, "hours"] as const;
 export type SetupGuideStatus = "complete" | "skipped" | "needs setup";
 
 /** Each setup guide step's status. A step that got done reads complete, even if it was skipped. */

@@ -90,7 +90,7 @@ export function LiveOverviewSurface() {
   // Missing opening hours keep the guide open too: they're its one step the server doesn't track.
   const hours = useBusinessHours(mayShowGuide ? businessId ?? "" : "");
   // A failed request leaves the guide out, and the dashboard works without setup.
-  const showGuide = mayShowGuide && (guide.isPending || (Boolean(guide.data) && (!isSetupGuideFinished(guide.data!) || needsHoursForBooking(hours.data))));
+  const showGuide = mayShowGuide && (guide.isPending || (Boolean(guide.data) && (!isSetupGuideFinished(guide.data!) || (needsHoursForBooking(hours.data) && !guide.data!.skippedSteps.includes("hours")))));
   // Finishing the last step here, or skipping them all, says so once.
   const guideWasShown = useRef(false);
   useEffect(() => {

@@ -68,7 +68,8 @@ export function LiveSetupGuideSurface({ businessId, goal }: { businessId: string
   // the website scan found hide it.
   const hours = useBusinessHours(businessId);
   const skippedSteps = useMemo(() => setup.data?.skippedSteps ?? [], [setup.data?.skippedSteps]);
-  const done = useCallback((step: GuideStep) => step.id !== "hours" && isSetupStepDone(step as SetupStep, skippedSteps), [skippedSteps]);
+  // Only skipping finishes the hours step: hours themselves hide it.
+  const done = useCallback((step: GuideStep) => step.id === "hours" ? skippedSteps.includes("hours") : isSetupStepDone(step as SetupStep, skippedSteps), [skippedSteps]);
   // Finished steps move to the top, so what's left reads in order below them.
   const steps = useMemo<GuideStep[]>(() => {
     const serverSteps: GuideStep[] = SETUP_STEP_ORDER.flatMap((id) => setup.data?.steps.find((step) => step.id === id) ?? []);
@@ -88,22 +89,21 @@ export function LiveSetupGuideSurface({ businessId, goal }: { businessId: string
     mutationFn: (documentId: string) => requestJson(`/api/knowledge/${encodeURIComponent(documentId)}?businessId=${encodeURIComponent(businessId)}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "expand" }) }),
     onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["setup", businessId] }); router.push("/agent/knowledge"); },
   });
-  const skip = useMutation({ mutationFn: (stepId: SetupStepId) => requestJson<{ skippedSteps: string[] }>(`/api/setup?businessId=${encodeURIComponent(businessId)}`, { method: "PATCH", body: JSON.stringify({ stepId, skipped: true }) }), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["setup", businessId] }); } });
+  const skip = useMutation({ mutationFn: (stepId: GuideStepId) => requestJson<{ skippedSteps: string[] }>(`/api/setup?businessId=${encodeURIComponent(businessId)}`, { method: "PATCH", body: JSON.stringify({ stepId, skipped: true }) }), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["setup", businessId] }); } });
 
   return (
     <section className="flex w-full flex-col gap-4">
       <h2 className="type-section-title">{t("setupGuide.title")}</h2>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3 text-muted-foreground"><ProgressRing completed={completed} total={steps.length} /><p className="text-base">{t("setupGuide.description", { completed, total: steps.length })}</p></div>
-        <Button disabled={skip.isPending} onClick={async () => { for (const step of steps) if (step.id !== "hours" && !skippedSteps.includes(step.id)) await skip.mutateAsync(step.id); }} type="button" variant="outline">{t("setupGuide.skip")}</Button>
+        <Button disabled={skip.isPending} onClick={async () => { for (const step of steps) if (!skippedSteps.includes(step.id)) await skip.mutateAsync(step.id); }} type="button" variant="outline">{t("setupGuide.skip")}</Button>
       </div>
       <Surface>
         <Accordion onValueChange={(value) => { const next = value[0] as GuideStepId | undefined; const step = steps.find((item) => item.id === next); if (step && opens(step)) setPicked({ step: step.id, during: active }); }} value={[openStep]}>
           {steps.map((step) => {
             const finished = done(step);
             const locked = !opens(step);
-            // Hours aren't a server step, so they have nothing to skip.
-            const skipLink = finished || step.id === "hours" ? null : <Button className="h-auto px-0 underline underline-offset-4" disabled={skip.isPending} onClick={() => skip.mutate(step.id as SetupStepId)} variant="link">{t("setupGuide.skipStep")}</Button>;
+            const skipLink = finished ? null : <Button className="h-auto px-0 underline underline-offset-4" disabled={skip.isPending} onClick={() => skip.mutate(step.id)} variant="link">{t("setupGuide.skipStep")}</Button>;
             return <AccordionItem key={step.id} value={step.id}>
               <AccordionTrigger aria-disabled={locked || undefined} className={locked ? "min-h-16 cursor-default px-6 [&_[data-icon=inline-end]]:opacity-0" : "min-h-16 px-6"} tabIndex={locked ? -1 : undefined}><span className="flex min-w-0 items-center gap-4"><StepMarker completed={finished} /><span className={finished ? "truncate text-base text-muted-foreground line-through decoration-muted-foreground/70" : "truncate text-base"}>{t(step.id === "phoneNumber" && step.status !== "needs setup" && !skippedSteps.includes(step.id) ? "setupGuide.steps.forwardCalls" : `setupGuide.steps.${step.id}`)}</span></span></AccordionTrigger>
               <AccordionContent aria-labelledby="" className="px-6"><div className="flex gap-4"><span className="size-6 shrink-0" /><div className="flex min-w-0 flex-1 flex-col gap-4">
@@ -120,7 +120,7 @@ export function LiveSetupGuideSurface({ businessId, goal }: { businessId: string
                 ) : step.id === "hours" ? (
                   <>
                     <StepDescription>{t("setupGuide.stepDescriptions.hours")}</StepDescription>
-                    <StepActions primary={<Button nativeButton={false} render={<Link href={HOURS_EDITOR_HREF} />}>{t("setupGuide.stepActions.hours")}</Button>} skip={null} />
+                    <StepActions primary={<Button nativeButton={false} render={<Link href={HOURS_EDITOR_HREF} />}>{t("setupGuide.stepActions.hours")}</Button>} skip={skipLink} />
                   </>
                 ) : step.id === "testCall" ? (
                   <TestCallStep call={activation?.lastTestCall ?? null} goal={goal} skip={skipLink} />
