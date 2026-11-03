@@ -64,13 +64,14 @@ export function LiveSetupGuideSurface({ businessId, goal }: { businessId: string
   const importing = isWebsiteImportRunning(job);
   const setup = useSetupGuide(businessId, importing);
   // Instant booking with no opening hours books nothing, so a business that
-  // books instantly gets a step for them after its sources.
+  // books instantly and has none gets a step for them after its sources. Hours
+  // the website scan found hide it.
   const hours = useBusinessHours(businessId);
   const skippedSteps = useMemo(() => setup.data?.skippedSteps ?? [], [setup.data?.skippedSteps]);
   const steps = useMemo<GuideStep[]>(() => {
     const serverSteps = SETUP_STEP_ORDER.flatMap((id) => setup.data?.steps.find((step) => step.id === id) ?? []);
-    if (hours.data?.bookingMode !== "instant") return serverSteps;
-    const hoursStep: GuideStep = { id: "hours", status: needsHoursForBooking(hours.data) ? "needs setup" : "complete" };
+    if (!needsHoursForBooking(hours.data)) return serverSteps;
+    const hoursStep: GuideStep = { id: "hours", status: "needs setup" };
     const after = serverSteps.findIndex((step) => step.id === "sources");
     return [...serverSteps.slice(0, after + 1), hoursStep, ...serverSteps.slice(after + 1)];
   }, [hours.data, setup.data?.steps]);

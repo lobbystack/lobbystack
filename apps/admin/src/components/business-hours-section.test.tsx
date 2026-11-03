@@ -232,5 +232,17 @@ describe("instant booking without opening hours", () => {
     expect(titles).toEqual(["setupGuide.steps.fullScan", "setupGuide.steps.sources", "setupGuide.steps.hours", "setupGuide.steps.testCall"]);
     expect(screen.getByText("setupGuide.stepActions.hours").closest("a")?.getAttribute("href")).toBe("/agent/basic-settings#opening-hours");
   });
+
+  it("leaves the opening hours step out once the business has hours", async () => {
+    const fetchMock = stubFetch({ hoursSource: "generated", hours: [{ dayOfWeek: 1, openMinutes: 540, closeMinutes: 1020 }] });
+    const queryClient = client();
+    queryClient.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
+    queryClient.setQueryData(["setup", "business"], { steps: [{ id: "sources", status: "needs setup" }] });
+    render(<QueryClientProvider client={queryClient}><LiveSetupGuideSurface businessId="business" goal={null} /></QueryClientProvider>);
+    await screen.findByText("setupGuide.steps.sources");
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).startsWith("/api/hours"))).toBe(true));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(screen.queryByText("setupGuide.steps.hours")).toBeNull();
+  });
 });
 
