@@ -14,7 +14,7 @@ import { consumeAppointmentChangeVerificationInTransaction } from "./appointment
 import { findOrCreateContactByPhone } from "./contacts";
 import { recordSmsConsentAnswerInTransaction, smsConsentOnFile, type SmsConsentAnswer, type SmsConsentOnFile } from "./contactSmsConsent";
 import { recordProductEventBestEffort } from "./productEvents";
-import { CANCELLATION_CONFIRMATION, heldForCall, queueOperatorAlertInTransaction, rescheduleAppointmentReminderInTransaction } from "./notifications";
+import { CANCELLATION_CONFIRMATION, heldForCall, queueOperatorAlertInTransaction, rescheduleAppointmentReminderInTransaction, saveAppointmentVideoUrlInTransaction } from "./notifications";
 import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
 import { CANCELLATION_REQUEST } from "./voice";
 
@@ -581,6 +581,23 @@ export async function followCalendarBookingChanges(
   for (const appointmentId of followed.cancelled) await recordAppointmentChange(context, { name: "appointment.cancelled", businessId: input.businessId, appointmentId, source: "calendar" });
   for (const appointmentId of followed.moved) await recordAppointmentChange(context, { name: "appointment.rescheduled", businessId: input.businessId, appointmentId, source: "calendar" });
   return followed;
+}
+
+/**
+ * Saves the video links a calendar sync read for upcoming appointments. A move
+ * can change one, and a conferencing app can add one after the booking.
+ */
+export async function followCalendarVideoLinks(context: DomainContext, input: { businessId: string; links: Array<{ eventId: string; videoUrl: string }> }): Promise<void> {
+  const links = new Map(input.links.map((link) => [link.eventId, link.videoUrl]));
+  if (!links.size) return;
+  await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const rows = await tx.select({ id: appointments.id, eventId: appointments.calendarExternalId, videoUrl: appointments.videoUrl }).from(appointments)
+      .where(and(eq(appointments.businessId, input.businessId), eq(appointments.status, "confirmed"), eq(appointments.calendarSyncState, "synced"), gt(appointments.startsAt, new Date()), inArray(appointments.calendarExternalId, [...links.keys()])));
+    for (const row of rows) {
+      const videoUrl = links.get(row.eventId!);
+      if (videoUrl && videoUrl !== row.videoUrl) await saveAppointmentVideoUrlInTransaction(tx, { businessId: input.businessId, appointmentId: row.id, videoUrl });
+    }
+  });
 }
 
 /**

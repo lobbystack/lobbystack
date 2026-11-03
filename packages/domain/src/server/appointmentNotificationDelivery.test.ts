@@ -1,12 +1,21 @@
 import { describe, expect, it } from "vitest";
 
-import { appointmentNotificationSkipReason, CANCELLATION_CONFIRMATION } from "./notifications";
+import { appointmentNotificationSkipReason, CANCELLATION_CONFIRMATION, customerEmailAddress, VIDEO_LINK_UPDATE } from "./notifications";
 
 // A text to a subscribed contact from a business number that can reach them.
 const text = { channel: "sms", smsConsentStatus: "subscribed", operatorBlockedAt: null, senderPhone: "+14165550000", contactPhone: "+14165550100", contactEmail: null };
 const cancellation = { ...text, kind: CANCELLATION_CONFIRMATION, appointmentStatus: "canceled" };
 
 describe("appointment notification delivery", () => {
+  it("holds a video link text to the consent rules, and sends none without a link", () => {
+    const update = { ...text, kind: `${VIDEO_LINK_UPDATE}:id`, appointmentStatus: "confirmed", videoUrl: "https://app.cal.com/video/abc" };
+    expect(appointmentNotificationSkipReason(update)).toBeNull();
+    expect(appointmentNotificationSkipReason({ ...update, videoUrl: null })).toBe("no_video_link");
+    expect(appointmentNotificationSkipReason({ ...update, smsConsentStatus: "opted_out" })).toBe("sms_consent");
+    expect(appointmentNotificationSkipReason({ ...update, operatorBlockedAt: new Date() })).toBe("sms_blocked");
+    expect(appointmentNotificationSkipReason({ ...update, appointmentStatus: "canceled" })).toBe("appointment_status");
+  });
+
   it("sends the cancellation text for a cancelled appointment to a subscribed contact", () => {
     expect(appointmentNotificationSkipReason(cancellation)).toBeNull();
   });
@@ -28,5 +37,18 @@ describe("appointment notification delivery", () => {
     ["a toll-free number abroad", { senderPhone: "+18445550100", contactPhone: "+381695021111" }, "sms_unreachable"],
   ] as const)("skips the cancellation text for a contact %s", (_label, change, reason) => {
     expect(appointmentNotificationSkipReason({ ...cancellation, ...change })).toBe(reason);
+  });
+});
+
+describe("the customer's own email address", () => {
+  const env = { CALCOM_PLACEHOLDER_EMAIL_DOMAIN: "Stand-In.example", CALENDLY_PLACEHOLDER_EMAIL_DOMAIN: "calendly-in.example" };
+
+  it("keeps a real address and refuses a provider's stand-in", () => {
+    expect(customerEmailAddress(" Caller@Example.com ", env)).toBe("Caller@Example.com");
+    expect(customerEmailAddress("booking+6f1c3a52@elsewhere.example", env)).toBeNull();
+    expect(customerEmailAddress("anyone@stand-in.example", env)).toBeNull();
+    expect(customerEmailAddress("anyone@calendly-in.example", env)).toBeNull();
+    expect(customerEmailAddress(null, env)).toBeNull();
+    expect(customerEmailAddress("  ", env)).toBeNull();
   });
 });

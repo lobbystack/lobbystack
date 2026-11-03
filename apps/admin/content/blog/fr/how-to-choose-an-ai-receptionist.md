@@ -371,6 +371,8 @@ Utilisez ceci avant d'acheter.
 - gardez un plan de retour en arrière ;
 - recalculez le retour sur investissement après 30, 60 et 90 jours.
 
+Une fois l'outil choisi, notre guide pour [configurer un assistant téléphonique IA en français](/fr/blog/ai-phone-assistant/) détaille les six étapes.
+
 ## Alors, comment choisir ?
 
 Choisissez le réceptionniste IA qui correspond le mieux à votre mix d'appels, à votre workflow, à votre niveau de risque et à votre budget.
