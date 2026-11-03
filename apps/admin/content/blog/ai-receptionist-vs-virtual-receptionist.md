@@ -221,6 +221,8 @@ Know the limits before you sign up:
 
 If you want a person on every call, a live service is the better buy. For the lowest AI entry price, AI-Receptionist.com's [$14 for 75 minutes](https://ai-receptionist.com/pricing) costs less per minute than our Starter plan, though its text messages start on its $39 plan.
 
+If you also need help with email, invoices and your calendar, a virtual secretary covers more than calls. Our guide to [virtual secretaries in Quebec](/blog/virtual-secretary-quebec/) lists their hourly rates.
+
 ## Virtual receptionist FAQ
 
 ### Is a virtual receptionist the same as a virtual assistant?

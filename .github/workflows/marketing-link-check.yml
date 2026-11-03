@@ -78,6 +78,7 @@ jobs:
             --exclude '^https://www\.bloomberg\.com/'
             --exclude '^https://www\.twilio\.com/'
             --exclude '^https://www\.ftc\.gov/'
+            --exclude '^https://www\.legisquebec\.gouv\.qc\.ca/'
             --exclude '^https://airagent\.fr/tarifs/$'
             './apps/admin/src/marketing/**/*.tsx'
             './apps/admin/content/**/*.md'

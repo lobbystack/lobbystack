@@ -115,6 +115,17 @@ Test each channel with two agents.
 - Remove the view, its name trigger and the unique index, change `is_default`'s default to false, and add a partial index for one default agent per business. This needs slice 4 live first, so that no old code remains.
 - Move the `summary*` columns to `businesses`, because they describe the business. They wait for the view to go: old code writes them through it, a view that joins `businesses` isn't automatically updatable, and the old `ON CONFLICT (business_id)` fails on a joined view even with `INSTEAD OF` triggers.
 
+Slice 5 ships in two releases, because the code still draining during a deploy upserts with `ON CONFLICT (business_id)`, inserts agents without `is_default`, and needs `agents_business_unique`:
+
+- **5a** changes nothing a business sees. Settings saves update the agent by id, and only create the default agent when a business has none. Every agent insert, and `app.default_agent_id` (0192), sets `is_default`. Rules, staff-first routing, the refused-call forward and number activation take an agent, with the default agent when none is given, so `/v1/rules` and `/v1/receptionist` keep acting on it. The plan catalog has `includedAgents`, and the `agent_limit_reached` code exists. `agentScope.integration.test.ts` runs each of these with two agents.
+- **5b** needs 5a live. It drops the view, its name trigger and the unique index, changes `is_default`'s default to false, and adds the partial index. It adds create, archive, set default and channel moves, splits `PATCH /api/agent`, pauses extra agents on Free, and starts the summary move, whose contract waits for slice 8.
+
+Raphael decided:
+
+- A new agent copies the settings and rules of the agent it's created from, but none of its channels.
+- A business can't archive its default agent until it picks another one.
+- The plan comparison shows the agent limit from slice 7.
+
 ### 6. Add agents to the public API
 
 - Keep `/receptionist`, its operation names, `lobbystack receptionist`, the manifest's `receptionist:` key, webhook event names and transcript's `speaker: "receptionist"`. `/receptionist` and `/rules` act on the default agent.

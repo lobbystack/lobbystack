@@ -38,6 +38,12 @@ describe("direct plan entitlements", () => {
     expect(planEntitlement("enterprise")).toMatchObject({ source: "plan", allowance: { voiceSeconds: null, chats: null, alertSms: null, outboundAttempts: null }, overage: { enabled: true }, includedNumbers: null });
     expect(planEntitlement("self_host")).toMatchObject({ source: "unlimited", overage: { enabled: false }, includedNumbers: null, poolPartnerId: null });
   });
+
+  it("keeps Free to one agent, and paid plans, self-hosting and partners' businesses to none", () => {
+    expect((["free_cloud", "starter", "pro", "enterprise", "self_host"] as const).map((plan) => planEntitlement(plan).includedAgents)).toEqual([1, null, null, null, null]);
+    expect(packageEntitlement("partner", { currency: "USD", voiceMinutes: 100, chats: 10 }, { live: false }).includedAgents).toBeNull();
+    expect(billedOutsideEntitlement("partner").includedAgents).toBeNull();
+  });
 });
 
 describe("partner tiers", () => {
@@ -212,6 +218,7 @@ describe("a partner business billed outside LobbyStack", () => {
       overage: { enabled: false, currency: "USD", rates: { voiceMinute: 0, chat: 0, alertSms: 0, outboundAttempt: 0 }, capMinor: null },
       poolPartnerId: "partner-1",
       includedNumbers: null,
+      includedAgents: null,
     });
   });
 
@@ -231,6 +238,7 @@ describe("a partner business on a package", () => {
       overage: { enabled: false, currency: "CAD", rates: { voiceMinute: 0, chat: 0, alertSms: 0, outboundAttempt: 0 }, capMinor: null },
       poolPartnerId: "partner-1",
       includedNumbers: null,
+      includedAgents: null,
     });
   });
 

@@ -8,7 +8,7 @@ import { correctAlertSmsUsage, enqueueBillingUsageSync, reserveAlertSmsUsage } f
 import { deploymentAppName } from "./branding";
 import { brandForBusiness } from "./brands";
 import type { DomainContext } from "./context";
-import { claimNotificationDelivery, claimOperatorNotificationDelivery, loadOperatorNotificationDelivery, markNotificationSent, markOperatorNotificationSent, markOperatorNotificationSkipped, notificationLeaseEndsAt, operatorNotificationLeaseEndsAt, releaseOperatorNotificationDelivery, resolveNotificationDelivery, transitionProcessingNotification } from "./notifications";
+import { alertVideoLinkNotSent, claimNotificationDelivery, claimOperatorNotificationDelivery, confirmationRetryAt, loadOperatorNotificationDelivery, markNotificationSent, markOperatorNotificationSent, markOperatorNotificationSkipped, notificationLeaseEndsAt, operatorNotificationLeaseEndsAt, releaseOperatorNotificationDelivery, resolveNotificationDelivery, transitionProcessingNotification } from "./notifications";
 import { issueOperatorPhoneVerificationCode, markOperatorPhoneVerificationCodeSent, releaseOperatorPhoneVerificationCodeSend } from "./phoneVerification";
 import { recordProductEventBestEffort } from "./productEvents";
 import { claimSmsDelivery, failSmsDelivery, loadSmsDeliveryTarget, markSmsSent, releaseSmsDelivery, smsDeliveryLeaseEndsAt } from "./sms";
@@ -315,10 +315,14 @@ function verificationCodeLease(context: DomainContext, input: { businessId: stri
 
 function notificationLease(context: DomainContext, input: { businessId: string; notificationId: string }): Lease {
   const ids = { businessId: input.businessId, notificationId: input.notificationId };
+  let retryAt: Date | null = null;
   return {
     id: input.notificationId,
-    claim: () => claimNotificationDelivery(context, ids),
-    heldUntil: () => notificationLeaseEndsAt(context, ids),
+    claim: async () => {
+      retryAt = await confirmationRetryAt(context, ids);
+      return !retryAt && await claimNotificationDelivery(context, ids);
+    },
+    heldUntil: async () => retryAt ?? await notificationLeaseEndsAt(context, ids),
     load: async () => {
       const resolution = await resolveNotificationDelivery(context, ids);
       if (resolution?.kind !== "ready") {
@@ -326,13 +330,16 @@ function notificationLease(context: DomainContext, input: { businessId: string; 
         return null;
       }
       const delivery = resolution.delivery;
-      const failureEvent = { kind: delivery.kind, ...(delivery.relatedId ? { appointmentId: delivery.relatedId } : {}) };
+      const failureEvent = { kind: delivery.kind.split(":")[0]!, ...(delivery.relatedId ? { appointmentId: delivery.relatedId } : {}) };
       if (delivery.channel === "email") return { channel: "email", to: delivery.to, subject: delivery.subject, body: delivery.body, idempotencyKey: `notification:${input.notificationId}`, failureEvent };
       return { channel: "sms", to: delivery.to, from: delivery.from ?? "", body: delivery.body, callback: { notificationId: input.notificationId }, usageSourceKey: `alert_sms:notification:${input.notificationId}`, failureEvent, ...(delivery.optIn ? { optIn: delivery.optIn } : {}) };
     },
     markSent: (providerMessageId) => markNotificationSent(context, { ...ids, providerMessageId }),
     release: () => transitionProcessingNotification(context, ids, "pending"),
-    close: (outcome) => transitionProcessingNotification(context, ids, outcome),
+    close: async (outcome) => {
+      await transitionProcessingNotification(context, ids, outcome);
+      await alertVideoLinkNotSent(context, ids);
+    },
   };
 }
 

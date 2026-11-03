@@ -221,6 +221,8 @@ Conozca los límites antes de registrarse:
 
 Si quiere una persona en cada llamada, le conviene más un servicio con personas. Si busca el precio de entrada más bajo en IA, los [$14 por 75 minutos](https://ai-receptionist.com/pricing) de AI-Receptionist.com cuestan menos por minuto que nuestro plan Starter, aunque sus mensajes de texto empiezan en el plan de $39.
 
+Si también necesita ayuda con el correo, las facturas y la agenda, una secretaria virtual hace más que contestar llamadas. Nuestra guía sobre la [secretaria virtual en Quebec](/es/blog/virtual-secretary-quebec/) recoge sus tarifas por hora.
+
 ## Preguntas frecuentes sobre la recepcionista virtual
 
 ### ¿Una recepcionista virtual es lo mismo que un asistente virtual?

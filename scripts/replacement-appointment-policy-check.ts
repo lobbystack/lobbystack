@@ -14,7 +14,7 @@ try {
     await tx.insert(contacts).values({ id: contactId, businessId, phone: callerPhone, name: "Alex Morgan" });
     await tx.insert(services).values({ id: serviceId, businessId, name: "Dental exam", slug: "dental-exam", durationMinutes: 30, localizedNames: { fr: "Examen dentaire" } });
     await tx.insert(staff).values({ id: staffId, businessId, name: "Provider", timezone: "UTC" });
-    await tx.insert(agents).values({ businessId, greeting: "Hello", tone: "warm", summary: "Clinic", bookingPolicy: "Confirm bookings", transferMode: "on_request", appointmentChangePolicy: policy });
+    await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hello", tone: "warm", summary: "Clinic", bookingPolicy: "Confirm bookings", transferMode: "on_request", appointmentChangePolicy: policy });
     await tx.insert(appointments).values({ id: appointmentId, businessId, contactId, serviceId, staffId, startsAt: new Date("2027-01-01T10:00:00Z"), endsAt: new Date("2027-01-01T10:30:00Z"), timezone: "UTC", status: "confirmed", sourceChannel: "voice" });
   });
   // The caller's number and one appointment fact verify a change; speech recognition misspells names, so the name doesn't take part.

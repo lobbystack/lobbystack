@@ -1094,6 +1094,7 @@ export const appointments = pgTable(
     sourceChannel: varchar("source_channel", { length: 32 }).notNull(),
     calendarSyncState: varchar("calendar_sync_state", { length: 32 }).default("not_required").notNull(),
     calendarExternalId: text("calendar_external_id"),
+    videoUrl: text("video_url"),
     revision: integer("revision").default(0).notNull(),
     ...legacyId,
     ...timestamps,

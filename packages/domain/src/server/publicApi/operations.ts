@@ -4,7 +4,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { and, asc, count, desc, eq, inArray, isNotNull, isNull, ne, notExists, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 
-import { agentRules, agents, apiKeys, appointments, auditLogs, billingAccounts, billingCheckoutRequests, billingUsageMonths, businesses, businessInvitations, businessMemberships, calendarConnections, contactPasscodes, contacts, defaultAgentOf, knowledgeDocuments, knowledgeSnippets, phoneNumbers, platformKeyBusinesses, services, storageObjects, users, websiteIngestionJobs, widgetKeys, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { agentRules, agents, apiKeys, appointments, auditLogs, billingAccounts, billingCheckoutRequests, billingUsageMonths, businesses, businessInvitations, businessMemberships, calendarConnections, contactPasscodes, contacts, defaultAgentIdOf, defaultAgentOf, knowledgeDocuments, knowledgeSnippets, phoneNumbers, platformKeyBusinesses, services, storageObjects, users, websiteIngestionJobs, widgetKeys, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import {
   CONTACT_PASSCODE_DEFAULT_LENGTH,
   CONTACT_PASSCODE_HASHES_PER_CALLER,
@@ -1177,12 +1177,16 @@ export async function listRulesForApi(context: DomainContext, caller: ApiCaller)
   return await inBusiness(context, caller, async (tx) => (await listAgentRulesInTransaction(tx, { businessId: caller.businessId })).map(serializeRule));
 }
 
-/** Adds a rule after the others. A business keeps up to RULES_MAX rules, so the API can always send them all in one reorder. */
+/**
+ * Adds a rule after the others. /v1/rules acts on the default agent's rules,
+ * and an agent keeps up to RULES_MAX, so the API can always send them all in
+ * one reorder.
+ */
 export async function createRuleForApi(context: DomainContext, caller: ApiCaller, input: ApiRuleCreate): Promise<ApiRule> {
   return await inBusiness(context, caller, async (tx) => {
-    await lockAgentRulesInTransaction(tx, caller.businessId);
-    const [count] = await tx.select({ rules: sql<number>`count(*)::int` }).from(agentRules).where(eq(agentRules.businessId, caller.businessId));
-    if ((count?.rules ?? 0) >= RULES_MAX) throw conflict(`A business can have up to ${RULES_MAX} rules. Delete one first.`);
+    await lockAgentRulesInTransaction(tx, { businessId: caller.businessId });
+    const count = (await listAgentRulesInTransaction(tx, { businessId: caller.businessId })).length;
+    if (count >= RULES_MAX) throw conflict(`A business can have up to ${RULES_MAX} rules. Delete one first.`);
     const rule = await insertAgentRuleInTransaction(tx, { businessId: caller.businessId, title: input.title, content: input.content, active: input.active });
     await audit(tx, caller, { eventType: "api.rule.created", entityType: "agent_rule", entityId: rule.id });
     return serializeRule(rule);
@@ -1193,7 +1197,7 @@ export async function createRuleForApi(context: DomainContext, caller: ApiCaller
 export async function updateRuleForApi(context: DomainContext, caller: ApiCaller, ruleId: string, input: ApiRuleUpdate): Promise<ApiRule> {
   if (Object.values(input).every((value) => value === undefined)) throw invalidRequest("Send at least one field to update.");
   return await inBusiness(context, caller, async (tx) => {
-    const [current] = await tx.select().from(agentRules).where(and(eq(agentRules.businessId, caller.businessId), eq(agentRules.id, ruleId))).limit(1).for("no key update");
+    const [current] = await tx.select().from(agentRules).where(and(eq(agentRules.businessId, caller.businessId), eq(agentRules.agentId, defaultAgentIdOf(caller.businessId)), eq(agentRules.id, ruleId))).limit(1).for("no key update");
     if (!current) throw notFound("Rule");
     const changes = {
       ...(input.title !== undefined && input.title !== current.title ? { title: input.title } : {}),
@@ -1223,7 +1227,7 @@ export async function deleteRuleForApi(context: DomainContext, caller: ApiCaller
 export async function reorderRulesForApi(context: DomainContext, caller: ApiCaller, input: ApiRuleReorder): Promise<ApiRule[]> {
   return await inBusiness(context, caller, async (tx) => {
     // Hold the order first, so a rule added meanwhile can't slip past the check below.
-    await lockAgentRulesInTransaction(tx, caller.businessId);
+    await lockAgentRulesInTransaction(tx, { businessId: caller.businessId });
     const current = await listAgentRulesInTransaction(tx, { businessId: caller.businessId });
     const ruleIds = input.rule_ids.map((ruleId) => ruleId.toLowerCase());
     const missing = current.filter((rule) => !ruleIds.includes(rule.id)).map((rule) => rule.id);
