@@ -120,7 +120,8 @@ export function LiveOverviewSurface() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title={t("home.title")} />
-      {showGuide ? guide.data ? <LiveSetupGuideSurface businessId={businessId!} goal={business?.onboardingGoal ?? null} /> : <Skeleton className="h-64 rounded-xl" /> : null}
+      {/* The extra margin matches the space between the page title and Getting started. */}
+      {showGuide ? <div className="mb-2">{guide.data ? <LiveSetupGuideSurface businessId={businessId!} goal={business?.onboardingGoal ?? null} /> : <Skeleton className="h-64 rounded-xl" />}</div> : null}
       <div className="flex flex-col gap-6">
         {/* Getting started covers what the activation card would offer. */}
         {showGuide ? null : <DashboardActivationCard businessId={businessId} />}
