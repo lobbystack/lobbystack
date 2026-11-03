@@ -152,8 +152,10 @@ export type LiveCallControllerOptions = {
   /** A phone call ends through OpenAI's SIP hangup; a browser call by closing the session. */
   phone: boolean;
   setup: LiveCallSetup | Promise<LiveCallSetup>;
-  /** Hang up after this long without either side speaking. */
+  /** Hang up after this long without either side speaking, counted after the last check-in. */
   silenceTimeoutMs?: number;
+  /** After this long without either side speaking, ask whether the caller is still there, up to twice before the silence timeout. */
+  silenceCheckInMs?: number;
   /** The call ends by this long: the goodbye starts a little before it. */
   maxDurationMs?: number;
   /**
@@ -273,11 +275,16 @@ const CALLER_SPOKE_AGAIN = "The caller spoke again before the call ended, so rep
 const STILL_WORKING = "Still checking. This is taking a few more seconds.";
 // Commands for GPT-Live when the call has to end, or a transfer didn't go through.
 const WRAP_UP: Record<LiveCallWrapUp, string> = {
-  silence_timeout: "Nobody has spoken for a while, so the call is ending now. In the language of the conversation, say a short goodbye.",
+  silence_timeout: "The caller hasn't answered, so the call is ending now. In the language of the conversation, tell them briefly that you haven't heard back so you're ending the call, invite them to call again if they need anything, and say goodbye.",
   duration_limit: "The call has reached its time limit and is ending now. In the language of the conversation, tell the caller briefly, apologize, invite them to call back if they need more help, and say goodbye.",
   service_restart: "The phone service is restarting, so the call has to end now. In the language of the conversation, apologize briefly, ask the caller to call back in a minute, and say goodbye.",
 };
-const TRANSFER_FAILED = "The transfer to a person didn't go through. In the language of the conversation, tell the caller briefly and offer to take a message so the team can call them back.";
+// Commands for GPT-Live when nobody has spoken for silenceCheckInMs, in order.
+const SILENCE_CHECK_INS = [
+  "Nobody has spoken for a few seconds. In the language of the conversation, briefly ask whether the caller is still there.",
+  "The caller still hasn't answered. In the language of the conversation, briefly ask once more whether they're still there or need anything else.",
+];
+const TRANSFER_FAILED ="The transfer to a person didn't go through. In the language of the conversation, tell the caller briefly and offer to take a message so the team can call them back.";
 
 // What GPT-Live hears once the caller has typed a PIN, since it never hears key presses.
 function passcodeCommand(outcome: KeypadPasscodeOutcome): string {
@@ -381,6 +388,9 @@ export class LiveCallController {
   private delegationQueue: Promise<void> = Promise.resolve();
   private latestRevision = 0;
   private runningDelegations = 0;
+  // Check-ins sent since the caller last spoke, and on the whole call.
+  private silenceCheckIns = 0;
+  private checkInsSent = 0;
   private unheardResults: string[] = [];
   private readonly completedActions: string[] = [];
   private latestLookup: string | undefined;
@@ -965,6 +975,7 @@ export class LiveCallController {
   }
 
   private passcodeKey(passcode: NonNullable<LiveCallController["passcode"]>, key: string): void {
+    this.silenceCheckIns = 0;
     this.resetSilenceTimer();
     // Keys pressed while the PIN is being checked don't count.
     if (passcode.checking) return;
@@ -1096,7 +1107,24 @@ export class LiveCallController {
     // request still being answered counts as activity too. Reflected output
     // audio doesn't: it can cover silence.
     if (!this.options.silenceTimeoutMs || this.finished || this.runningDelegations > 0) return;
+    const checkInMs = this.options.silenceCheckInMs;
+    if (checkInMs && this.silenceCheckIns < SILENCE_CHECK_INS.length) {
+      this.silenceTimer = setTimeout(() => this.checkInOnSilence(), checkInMs);
+      return;
+    }
     this.silenceTimer = setTimeout(() => this.options.onTimeout?.("silence_timeout"), this.options.silenceTimeoutMs);
+  }
+
+  // The receptionist's own speech resets the timer but not the count, so the
+  // check-ins lead to the goodbye; only the caller starts them over.
+  private checkInOnSilence(): void {
+    if (this.ending || this.finished) return;
+    // A caller waiting on a transfer, typing a PIN or about to be hung up on isn't gone.
+    if (this.transfer || this.passcode || this.pendingHangup) return this.resetSilenceTimer();
+    const content = SILENCE_CHECK_INS[this.silenceCheckIns]!;
+    this.silenceCheckIns += 1;
+    this.send({ type: "session.commentary.append", delegation_id: null, content, event_id: `check_in_${++this.checkInsSent}` }, { kind: "update" });
+    this.resetSilenceTimer();
   }
 
   // Report every turn except the one still in progress.
@@ -1109,6 +1137,7 @@ export class LiveCallController {
   }
 
   private appendTranscript(role: Turn["role"], delta: string, endMs: number, startMs?: number): void {
+    if (role === "caller") this.silenceCheckIns = 0;
     this.resetSilenceTimer();
     const last = this.turns.at(-1);
     if (last?.role === role) {

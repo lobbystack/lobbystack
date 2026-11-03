@@ -29,7 +29,7 @@ type Generate = (options: { prompt: string; onStepEnd?: (step: unknown) => void 
 
 const reply = (text: string) => ({ text, steps: [{ toolCalls: [], toolResults: [] }] });
 
-function setup(options: { phone?: boolean; silenceTimeoutMs?: number; maxDurationMs?: number; topUp?: () => Promise<number>; firstEventTimeoutMs?: number; generate?: Generate; callerDone?: LiveCallSetup["callerDone"]; callerLeaving?: LiveCallSetup["callerLeaving"]; setup?: Promise<LiveCallSetup>; onGreeting?: (event: GreetingEvent) => void; refer?: ReturnType<typeof vi.fn> } = {}) {
+function setup(options: { phone?: boolean; silenceTimeoutMs?: number; silenceCheckInMs?: number;maxDurationMs?: number; topUp?: () => Promise<number>; firstEventTimeoutMs?: number; generate?: Generate; callerDone?: LiveCallSetup["callerDone"]; callerLeaving?: LiveCallSetup["callerLeaving"]; setup?: Promise<LiveCallSetup>; onGreeting?: (event: GreetingEvent) => void; refer?: ReturnType<typeof vi.fn> } = {}) {
   const generate = vi.fn(options.generate ?? (async () => ({ text: "We're open until 5.", steps: [{ toolCalls: [{ toolCallId: "call_1", toolName: "getBusinessHours" }], toolResults: [] }, { toolCalls: [], toolResults: [] }] })));
   const turns: LiveCallTurn[] = [];
   const closed: LiveCallSummary[] = [];
@@ -44,6 +44,7 @@ function setup(options: { phone?: boolean; silenceTimeoutMs?: number; maxDuratio
     phone: options.phone ?? true,
     setup: options.setup ?? { agent: { generate } as never, greeting: "Thanks for calling Northside Plumbing.", ...(options.callerDone ? { callerDone: options.callerDone } : {}), ...(options.callerLeaving ? { callerLeaving: options.callerLeaving } : {}) },
     ...(options.silenceTimeoutMs ? { silenceTimeoutMs: options.silenceTimeoutMs } : {}),
+    ...(options.silenceCheckInMs ? { silenceCheckInMs: options.silenceCheckInMs } : {}),
     ...(options.maxDurationMs ? { maxDurationMs: options.maxDurationMs } : {}),
     ...(options.topUp ? { topUp: options.topUp } : {}),
     ...(options.firstEventTimeoutMs ? { firstEventTimeoutMs: options.firstEventTimeoutMs } : {}),
@@ -1182,6 +1183,37 @@ describe("LiveCallController transcript and silence", () => {
     finish();
     await vi.advanceTimersByTimeAsync(75_000);
     expect(onTimeout).toHaveBeenCalledWith("silence_timeout");
+  });
+
+  const checkIns = (socket: FakeSocket) => sentOfType(socket, "session.commentary.append").filter((event) => event.event_id.startsWith("check_in_"));
+
+  it("asks twice whether the caller is still there, then times out", async () => {
+    fakeTimers();
+    const { socket, onTimeout } = setup({ silenceCheckInMs: 10_000, silenceTimeoutMs: 10_000 });
+    await vi.advanceTimersByTimeAsync(9_999);
+    expect(checkIns(socket)).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(checkIns(socket)).toEqual([expect.objectContaining({ delegation_id: null, event_id: "check_in_1", content: expect.stringContaining("still there") })]);
+    // The receptionist asking doesn't count as the caller answering.
+    socket.emit("session.output_transcript.delta", { delta: "Are you still there?", start_ms: 10_500, end_ms: 11_500 });
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(checkIns(socket)).toHaveLength(2);
+    expect(onTimeout).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(onTimeout).toHaveBeenCalledWith("silence_timeout");
+    expect(checkIns(socket)).toHaveLength(2);
+  });
+
+  it("starts the check-ins over once the caller answers", async () => {
+    fakeTimers();
+    const { socket, onTimeout } = setup({ silenceCheckInMs: 10_000, silenceTimeoutMs: 10_000 });
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(checkIns(socket)).toHaveLength(2);
+    socket.emit("session.input_transcript.delta", { delta: "Sorry, I'm here.", start_ms: 20_500, end_ms: 21_500 });
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(onTimeout).not.toHaveBeenCalled();
+    expect(checkIns(socket).map((event) => event.event_id)).toEqual(["check_in_1", "check_in_2", "check_in_3"]);
+    expect(checkIns(socket)[2]?.content).toBe(checkIns(socket)[0]?.content);
   });
 });
 
