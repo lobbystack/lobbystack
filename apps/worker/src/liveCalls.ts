@@ -1,7 +1,7 @@
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import { callerIsDone, callerIsLeaving, closeLiveSession, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, WRAP_UP_MAX_MS, type AgentChannel, type CallControl, type KeypadPasscodeCheck, type LiveCallSetup, type LiveCallSummary } from "@lobbystack/agent-core";
+import { callerIsDone, callerIsLeaving, closeLiveSession, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, SILENCE_CHECK_IN_MS, SILENCE_TIMEOUT_MS, WRAP_UP_MAX_MS, type AgentChannel, type CallControl, type KeypadPasscodeCheck, type LiveCallSetup, type LiveCallSummary } from "@lobbystack/agent-core";
 import {
   blockLiveCaller,
   checkNumberTrialMinutes,
@@ -66,10 +66,6 @@ type AttachRequest = {
  */
 export type LiveRecoveryOutcome = "attached" | "finished" | "owned" | "skipped";
 
-// After this long without speech, GPT-Live asks whether the caller is still
-// there, twice; the silence timeout then runs from the second check-in.
-const SILENCE_CHECK_IN_MS = 8_000;
-const SILENCE_TIMEOUT_MS = 8_000;
 // A call that saved a turn this recently has a live worker, even if its lock
 // lapsed, so recovery leaves it alone.
 const RECENT_ACTIVITY_MS = 45_000;

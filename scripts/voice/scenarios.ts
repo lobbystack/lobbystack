@@ -15,7 +15,18 @@ export type CallScenario = {
   lines: CallerLine[];
   /** The eval fails a run when any of the receptionist's lines matches this. The phone script can't check it. */
   mustNotSay?: RegExp;
+  /** The eval fails an English run when none of the receptionist's lines matches this. */
+  mustSay?: RegExp;
+  /**
+   * How long the caller stays silent after the last line, waiting for the
+   * receptionist to hang up. It must stay under the silence check-ins'
+   * goodbye for a call that should go on. The default is END_SILENCE_MS.
+   */
+  endSilenceMs?: number;
 };
+
+/** Shorter than the two silence check-ins and their goodbye, so a call that goes on isn't ended by silence first. */
+export const END_SILENCE_MS = 15_000;
 
 export const OPENING = "Hi, are you open on Saturday?";
 
@@ -30,6 +41,9 @@ export const SCENARIOS: CallScenario[] = [
   { name: "trailing-goodbye", expect: "ends", lines: [{ text: "No, that's everything." }, { text: "Goodbye!", pauseMs: 1_500 }] },
   // The caller pauses before the question, so the receptionist mustn't hang up meanwhile.
   { name: "one-more-thing", expect: "continues", lines: [{ text: "No, that's everything." }, { text: "Oh wait, one more thing.", pauseMs: 3_000 }, { text: "Do you have parking?", pauseMs: 3_000 }] },
+  // The caller goes quiet after the answer. The receptionist asks twice whether
+  // they're still there, then says goodbye and hangs up, about 30 seconds in.
+  { name: "silent", expect: "ends", lines: [], endSilenceMs: 50_000, mustSay: /\b(still there|are you there)\b/i },
 ];
 
 // Scenarios that book a real appointment, so they run only by name.

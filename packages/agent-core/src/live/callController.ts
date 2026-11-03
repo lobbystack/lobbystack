@@ -279,6 +279,13 @@ const WRAP_UP: Record<LiveCallWrapUp, string> = {
   duration_limit: "The call has reached its time limit and is ending now. In the language of the conversation, tell the caller briefly, apologize, invite them to call back if they need more help, and say goodbye.",
   service_restart: "The phone service is restarting, so the call has to end now. In the language of the conversation, apologize briefly, ask the caller to call back in a minute, and say goodbye.",
 };
+/**
+ * Production's silence timing: after this long without speech, GPT-Live asks
+ * whether the caller is still there, twice, and the silence timeout then runs
+ * from the second check-in. The worker and the voice eval both use them.
+ */
+export const SILENCE_CHECK_IN_MS = 8_000;
+export const SILENCE_TIMEOUT_MS = 8_000;
 // Commands for GPT-Live when nobody has spoken for silenceCheckInMs, in order.
 const SILENCE_CHECK_INS = [
   "Nobody has spoken for a few seconds. In the language of the conversation, briefly ask whether the caller is still there.",

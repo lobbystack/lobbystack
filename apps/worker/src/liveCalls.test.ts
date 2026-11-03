@@ -37,6 +37,8 @@ vi.mock("@lobbystack/agent-core", () => ({
   agentModelId: () => ({ provider: "openai", model: "gpt-6-luna" }),
   describeAgentUsage: (usage: { inputTokens: number; outputTokens: number }, latencyMs: number) => ({ provider: "openai", model: "gpt-6-luna", latencyMs, inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, totalCostUsd: 0.00021 }),
   WRAP_UP_MAX_MS: 30_000,
+  SILENCE_CHECK_IN_MS: 8_000,
+  SILENCE_TIMEOUT_MS: 8_000,
   LiveCallController: class {
     endSession = vi.fn();
     end = vi.fn((_reason: string) => undefined);
