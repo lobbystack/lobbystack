@@ -233,6 +233,17 @@ describe("instant booking without opening hours", () => {
     expect(screen.getByText("setupGuide.stepActions.hours").closest("a")?.getAttribute("href")).toBe("/agent/basic-settings#opening-hours");
   });
 
+  it("lists finished steps first, then the rest in order", async () => {
+    stubFetch({ hoursSource: "none", hours: [] });
+    const queryClient = client();
+    queryClient.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
+    queryClient.setQueryData(["setup", "business"], { steps: [{ id: "fullScan", status: "needs setup" }, { id: "sources", status: "needs setup" }, { id: "testCall", status: "complete" }, { id: "phoneNumber", status: "needs setup" }] });
+    render(<QueryClientProvider client={queryClient}><LiveSetupGuideSurface businessId="business" goal={null} /></QueryClientProvider>);
+    await screen.findByText("setupGuide.steps.hours");
+    const titles = screen.getAllByText(/^setupGuide\.steps\./).map((element) => element.textContent);
+    expect(titles).toEqual(["setupGuide.steps.testCall", "setupGuide.steps.fullScan", "setupGuide.steps.sources", "setupGuide.steps.hours", "setupGuide.steps.phoneNumber"]);
+  });
+
   it("leaves the opening hours step out once the business has hours", async () => {
     const fetchMock = stubFetch({ hoursSource: "generated", hours: [{ dayOfWeek: 1, openMinutes: 540, closeMinutes: 1020 }] });
     const queryClient = client();

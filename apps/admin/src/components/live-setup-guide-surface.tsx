@@ -68,14 +68,14 @@ export function LiveSetupGuideSurface({ businessId, goal }: { businessId: string
   // the website scan found hide it.
   const hours = useBusinessHours(businessId);
   const skippedSteps = useMemo(() => setup.data?.skippedSteps ?? [], [setup.data?.skippedSteps]);
+  const done = useCallback((step: GuideStep) => step.id !== "hours" && isSetupStepDone(step as SetupStep, skippedSteps), [skippedSteps]);
+  // Finished steps move to the top, so what's left reads in order below them.
   const steps = useMemo<GuideStep[]>(() => {
-    const serverSteps = SETUP_STEP_ORDER.flatMap((id) => setup.data?.steps.find((step) => step.id === id) ?? []);
-    if (!needsHoursForBooking(hours.data)) return serverSteps;
-    const hoursStep: GuideStep = { id: "hours", status: "needs setup" };
+    const serverSteps: GuideStep[] = SETUP_STEP_ORDER.flatMap((id) => setup.data?.steps.find((step) => step.id === id) ?? []);
     const after = serverSteps.findIndex((step) => step.id === "sources");
-    return [...serverSteps.slice(0, after + 1), hoursStep, ...serverSteps.slice(after + 1)];
-  }, [hours.data, setup.data?.steps]);
-  const done = (step: GuideStep) => step.id === "hours" ? step.status === "complete" : isSetupStepDone(step as SetupStep, skippedSteps);
+    const listed = needsHoursForBooking(hours.data) ? [...serverSteps.slice(0, after + 1), { id: "hours" as const, status: "needs setup" }, ...serverSteps.slice(after + 1)] : serverSteps;
+    return [...listed.filter(done), ...listed.filter((step) => !done(step))];
+  }, [done, hours.data, setup.data?.steps]);
   // A finished step stays shut, except that the test call keeps its transcript in reach.
   const opens = (step: GuideStep) => !done(step) || (step.id === "testCall" && Boolean(activation?.lastTestCall));
   const completed = steps.filter(done).length;
