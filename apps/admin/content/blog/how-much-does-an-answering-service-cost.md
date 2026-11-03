@@ -318,6 +318,8 @@ Yes. Every live vendor in our table listed current plans on its site when we che
 
 An operator answers your calls in your business name, takes messages, screens and routes calls, and patches callers through to you or your team. On some plans, operators also book appointments in your calendar or scheduling software.
 
+For a business in Quebec, our guide to [phone answering services in Quebec](/blog/phone-answering-service-quebec/) compares the providers that answer in French, with the prices they published in November 2026.
+
 ## Questions about answering service cost
 
 ### What is the cheapest answering service?

@@ -318,6 +318,8 @@ Sí. Cada proveedor con personas de nuestra tabla mostraba planes vigentes en su
 
 Un operador contesta sus llamadas con el nombre de su negocio, toma mensajes, filtra y dirige las llamadas, y se las pasa a usted o a su equipo. En algunos planes, los operadores también reservan citas en su calendario o en su software de agenda.
 
+Si su empresa está en Quebec, nuestra comparativa de [servicios de atención telefónica en Quebec](/es/blog/phone-answering-service-quebec/) presenta los proveedores que atienden en francés, con los precios que publicaban en noviembre de 2026.
+
 ## Preguntas sobre el costo de un servicio de atención telefónica
 
 ### ¿Cuál es el servicio de atención telefónica más barato?

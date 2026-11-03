@@ -318,6 +318,8 @@ Oui. Chaque fournisseur humain de notre tableau affichait des forfaits en vigueu
 
 Un opérateur répond à vos appels au nom de votre entreprise, prend les messages, filtre et oriente les appels, et met les appelants en relation avec vous ou votre équipe. Sur certains forfaits, il prend aussi des rendez-vous dans votre agenda ou votre logiciel de planification. Certains fournisseurs vendent ce service sous le nom de [réceptionniste virtuelle](/fr/blog/ai-receptionist-vs-virtual-receptionist/).
 
+Pour une entreprise du Québec, notre comparatif des [services de réponse téléphonique au Québec](/fr/blog/phone-answering-service-quebec/) présente les fournisseurs qui répondent en français, avec leurs prix publiés en novembre 2026.
+
 ## Questions sur le prix d'un service de réponse téléphonique
 
 ### Quel est le service de réponse le moins cher ?

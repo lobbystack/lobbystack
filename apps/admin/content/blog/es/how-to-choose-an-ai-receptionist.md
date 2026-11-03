@@ -371,6 +371,8 @@ No son detalles menores. Son la diferencia entre una herramienta útil para la r
 - Tenga un plan para volver atrás.
 - Recalcule el retorno de la inversión a los 30, 60 y 90 días.
 
+Cuando haya elegido la herramienta, nuestra guía para [configurar un asistente telefónico con IA en francés](/es/blog/ai-phone-assistant/) explica los seis pasos.
+
 ## Entonces, ¿cómo debería elegir?
 
 Elija la recepcionista con IA que mejor se ajuste a su mezcla de llamadas, su flujo de trabajo, su nivel de riesgo y su presupuesto.

@@ -371,6 +371,8 @@ Koristite je pre kupovine.
 - Imajte plan za povratak na staro rešenje.
 - Ponovo izračunajte povraćaj investicije posle 30, 60 i 90 dana.
 
+Kada izaberete alat, naš vodič za [podešavanje AI telefonskog asistenta na francuskom](/sr/blog/ai-phone-assistant/) objašnjava šest koraka.
+
 ## Dakle, kako da izaberete?
 
 Izaberite AI recepcionera koji najbolje odgovara strukturi Vaših poziva, radnom toku, nivou rizika i budžetu.
