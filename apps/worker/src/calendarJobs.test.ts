@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ transaction: vi.fn(), token: vi.fn(), update: vi.fn(), updateTx: vi.fn(), mark: vi.fn(), busy: vi.fn(), backfill: vi.fn(), record: vi.fn(), registerOnce: vi.fn(), retired: vi.fn(), forget: vi.fn(), follow: vi.fn() }));
+const mocks = vi.hoisted(() => ({ followLinks: vi.fn(), transaction: vi.fn(), token: vi.fn(), update: vi.fn(), updateTx: vi.fn(), mark: vi.fn(), busy: vi.fn(), backfill: vi.fn(), record: vi.fn(), registerOnce: vi.fn(), retired: vi.fn(), forget: vi.fn(), follow: vi.fn() }));
 vi.mock("@lobbystack/db", async (original) => ({ ...await original<typeof import("@lobbystack/db")>(), withBusinessTransaction: mocks.transaction }));
-vi.mock("@lobbystack/domain", async () => ({ ...await vi.importActual<typeof import("../../../packages/domain/src/calendarWriter")>("../../../packages/domain/src/calendarWriter"), CALENDAR_SYNC_HORIZON_MS: 90 * 86400_000, resolveCalendarAccessToken: mocks.token, updateAppointmentSyncState: mocks.update, updateAppointmentSyncStateInTransaction: mocks.updateTx, markCalendarConnectionSync: mocks.mark, queueUnsyncedAppointmentSyncs: mocks.backfill, upsertBusyBlocks: mocks.busy, recordProductEvent: mocks.record, registerCalendarWebhookOnce: mocks.registerOnce, getRetiredCalendarConnection: mocks.retired, forgetRetiredCalendarWebhook: mocks.forget, followCalendarBookingChanges: mocks.follow }));
+vi.mock("@lobbystack/domain", async () => ({ ...await vi.importActual<typeof import("../../../packages/domain/src/calendarWriter")>("../../../packages/domain/src/calendarWriter"), followCalendarVideoLinks: mocks.followLinks, CALENDAR_SYNC_HORIZON_MS: 90 * 86400_000, resolveCalendarAccessToken: mocks.token, updateAppointmentSyncState: mocks.update, updateAppointmentSyncStateInTransaction: mocks.updateTx, markCalendarConnectionSync: mocks.mark, queueUnsyncedAppointmentSyncs: mocks.backfill, upsertBusyBlocks: mocks.busy, recordProductEvent: mocks.record, registerCalendarWebhookOnce: mocks.registerOnce, getRetiredCalendarConnection: mocks.retired, forgetRetiredCalendarWebhook: mocks.forget, followCalendarBookingChanges: mocks.follow }));
 import { calendarConnections } from "@lobbystack/db";
 import { CALENDLY_PLAN_ERROR } from "@lobbystack/shared";
 import type { SQL } from "drizzle-orm";
@@ -34,6 +34,29 @@ beforeEach(() => {
   });
 });
 afterEach(() => vi.unstubAllEnvs());
+
+it("saves the booking's video link with its event id, and clears it when the provider has none", async () => {
+  provider.upsertEvent.mockResolvedValueOnce({ externalEventId: "event", videoUrl: "https://app.cal.com/video/abc" });
+  await syncAppointmentCalendar(dependencies, { businessId: "business", appointmentId: "appointment" });
+  expect(mocks.updateTx).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ state: "synced", videoUrl: "https://app.cal.com/video/abc" }));
+  batches = [[appointment], [appointment]];
+  await syncAppointmentCalendar(dependencies, { businessId: "business", appointmentId: "appointment" });
+  expect(mocks.updateTx).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ state: "synced", videoUrl: null }));
+});
+
+it("saves the video links a sync reads from Cal.com, and skips the step when there are none", async () => {
+  const videoLinks = [{ eventId: "booking-uid", videoUrl: "https://app.cal.com/video/abc" }];
+  const connection = { id: "connection", provider: "calcom", calendarId: "42", status: "connected", webhookId: "webhook" };
+  const calcom = { ...provider, getBookingChanges: vi.fn().mockResolvedValue({ cancelled: [], moved: [], videoLinks }) };
+  batches = [[connection]];
+  await reconcileBusinessCalendar({ domain: dependencies.domain, calendars: { calcom } }, "business");
+  expect(mocks.followLinks).toHaveBeenCalledWith(dependencies.domain, { businessId: "business", links: videoLinks });
+  mocks.followLinks.mockClear();
+  calcom.getBookingChanges.mockResolvedValue({ cancelled: [], moved: [], videoLinks: [] });
+  batches = [[connection]];
+  await reconcileBusinessCalendar({ domain: dependencies.domain, calendars: { calcom } }, "business");
+  expect(mocks.followLinks).not.toHaveBeenCalled();
+});
 
 it("follows bookings someone changed in Cal.com", async () => {
   const changes = { cancelled: ["booking-uid"], moved: [] };

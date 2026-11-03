@@ -8,6 +8,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 const config = { clientId: "client", clientSecret: "secret", redirectUri: "https://app.example/api/calendar/calcom/callback", placeholderEmailDomain: "noreply.app.example" };
 const ok = (data: unknown, extra: Record<string, unknown> = {}) => Response.json({ status: "success", data, ...extra });
+const list = (data: unknown[]) => ok(data, { pagination: { hasMore: false, nextCursor: null } });
 const booking = (uid: string, start: string, end: string, status = "accepted") => ({ uid, start, end, status });
 
 type Route = (url: URL, init: RequestInit) => Response | undefined;
@@ -68,6 +69,45 @@ describe("CalcomCalendarProvider", () => {
     expect(new Headers(calls[0]!.init.headers).get("authorization")).toBe("Bearer access");
   });
 
+  it("reads the join link from a new booking, and only an https one", async () => {
+    const book = async (booking: Record<string, unknown>) => {
+      routes(
+        (url, init) => (init.method ?? "GET") === "GET" && url.pathname === "/v2/event-types/42" ? ok({ id: 42, lengthInMinutes: 45, locations: [{ type: "integration" }] }) : undefined,
+        on("GET", "/v2/bookings", () => list([])),
+        on("POST", "/v2/bookings", () => ok({ uid: "booking-uid", ...booking })),
+      );
+      return (await new CalcomCalendarProvider(config).upsertEvent(write)).videoUrl;
+    };
+    expect(await book({ location: "https://app.cal.com/video/abc" })).toBe("https://app.cal.com/video/abc");
+    expect(await book({ location: "integrations:google:meet", metadata: { videoCallUrl: "https://meet.google.com/abc-defg-hij" } })).toBe("https://meet.google.com/abc-defg-hij");
+    expect(await book({ location: "integrations:daily", meetingUrl: "https://app.cal.com/video/def" })).toBe("https://app.cal.com/video/def");
+    expect(await book({ location: "12 Main Street, Toronto" })).toBeNull();
+    expect(await book({ location: "+14165550100" })).toBeNull();
+    expect(await book({ location: "integrations:daily" })).toBeNull();
+    expect(await book({ location: "http://example.com/room" })).toBeNull();
+    expect(await book({})).toBeNull();
+  });
+
+  it("returns the new booking's link after a reschedule, and the live booking's when the time stands", async () => {
+    const live = { uid: "booking-uid", start: "2026-11-02T14:00:00.000Z", end: "2026-11-02T14:45:00.000Z", status: "accepted", eventTypeId: 42, location: "https://app.cal.com/video/old" };
+    const calls = routes(
+      (url, init) => (init.method ?? "GET") === "GET" && url.pathname === "/v2/event-types/42" ? ok({ id: 42, lengthInMinutes: 45, locations: [{ type: "integration" }] }) : undefined,
+      on("GET", "/v2/bookings/booking-uid", () => ok(live)),
+      on("POST", "/v2/bookings/booking-uid/reschedule", () => ok({ uid: "moved-uid", location: "https://app.cal.com/video/new" })),
+    );
+    const provider = new CalcomCalendarProvider(config);
+    await expect(provider.upsertEvent({ ...write, eventId: "booking-uid" })).resolves.toEqual({ externalEventId: "moved-uid", videoUrl: "https://app.cal.com/video/new" });
+    await expect(provider.upsertEvent({ ...write, eventId: "booking-uid", startsAt: live.start, endsAt: live.end })).resolves.toEqual({ externalEventId: "booking-uid", videoUrl: "https://app.cal.com/video/old" });
+    expect(calls.filter(({ url }) => url.pathname.endsWith("/reschedule"))).toHaveLength(1);
+  });
+
+  it("lists the video links of live bookings with the booking changes", async () => {
+    const booking = { start: "2026-11-02T14:00:00.000Z", end: "2026-11-02T14:45:00.000Z", status: "accepted", eventTypeId: 42 };
+    routes(on("GET", "/v2/bookings", (url) => list(url.searchParams.get("status") === "upcoming" ? [{ ...booking, uid: "video", location: "https://app.cal.com/video/abc" }, { ...booking, uid: "phone", location: "+14165550100" }] : [])));
+    const changes = await new CalcomCalendarProvider(config).getBookingChanges({ accessToken: "access", startsAt: "2026-11-01T00:00:00.000Z", endsAt: "2027-01-30T00:00:00.000Z" });
+    expect(changes.videoLinks).toEqual([{ eventId: "video", videoUrl: "https://app.cal.com/video/abc" }]);
+  });
+
   it("sets the caller's phone as the location only on an event type that lists it", async () => {
     const book = async (locations: Array<{ type: string }>) => {
       const calls = routes(
@@ -87,7 +127,7 @@ describe("CalcomCalendarProvider", () => {
       on("GET", "/v2/bookings", () => ok([], { pagination: { hasMore: false, nextCursor: null } })),
       on("POST", "/v2/bookings", () => ok({ id: 1, uid: "booking-uid", status: "accepted" }, {})),
     );
-    await expect(new CalcomCalendarProvider(config).upsertEvent(write)).resolves.toEqual({ externalEventId: "booking-uid" });
+    await expect(new CalcomCalendarProvider(config).upsertEvent(write)).resolves.toEqual({ externalEventId: "booking-uid", videoUrl: null });
     const create = calls.find((call) => call.init.method === "POST")!;
     expect(new Headers(create.init.headers).get("cal-api-version")).toBe("2026-02-25");
     const sent = body(create.init);
@@ -105,7 +145,7 @@ describe("CalcomCalendarProvider", () => {
 
   it("reuses the booking a failed attempt already made instead of booking twice", async () => {
     const calls = routes(on("GET", "/v2/bookings", (url) => ok(url.searchParams.get("status") === "upcoming" ? [booking("earlier", write.startsAt, write.endsAt)] : [], { pagination: { hasMore: false, nextCursor: null } })));
-    await expect(new CalcomCalendarProvider(config).upsertEvent(write)).resolves.toEqual({ externalEventId: "earlier" });
+    await expect(new CalcomCalendarProvider(config).upsertEvent(write)).resolves.toEqual({ externalEventId: "earlier", videoUrl: null });
     expect(calls.some((call) => call.init.method === "POST")).toBe(false);
   });
 
@@ -116,10 +156,10 @@ describe("CalcomCalendarProvider", () => {
       on("POST", "/v2/bookings/stored/reschedule", () => ok({ uid: "moved" })),
     );
     const provider = new CalcomCalendarProvider(config);
-    await expect(provider.upsertEvent({ ...write, eventId: "stored" })).resolves.toEqual({ externalEventId: "stored" });
+    await expect(provider.upsertEvent({ ...write, eventId: "stored" })).resolves.toEqual({ externalEventId: "stored", videoUrl: null });
     expect(calls.filter((call) => call.init.method === "POST")).toHaveLength(0);
     start = "2026-11-02T14:00:00.000Z";
-    await expect(provider.upsertEvent({ ...write, eventId: "stored" })).resolves.toEqual({ externalEventId: "moved" });
+    await expect(provider.upsertEvent({ ...write, eventId: "stored" })).resolves.toEqual({ externalEventId: "moved", videoUrl: null });
     expect(body(calls.at(-1)!.init)).toMatchObject({ start: "2026-11-02T15:00:00Z", lengthInMinutes: 45 });
   });
 
@@ -128,7 +168,7 @@ describe("CalcomCalendarProvider", () => {
       on("GET", "/v2/bookings", (url) => ok(url.searchParams.get("status") === "upcoming" ? [{ ...booking("on-41", write.startsAt, write.endsAt), eventTypeId: 41 }] : [], { pagination: { hasMore: false, nextCursor: null } })),
       on("POST", "/v2/bookings", () => ok({ uid: "on-42" })),
     );
-    await expect(new CalcomCalendarProvider(config).upsertEvent(write)).resolves.toEqual({ externalEventId: "on-42" });
+    await expect(new CalcomCalendarProvider(config).upsertEvent(write)).resolves.toEqual({ externalEventId: "on-42", videoUrl: null });
     const lookups = calls.filter((call) => call.url.pathname === "/v2/bookings" && call.init.method === undefined);
     expect(lookups.every((call) => call.url.searchParams.get("eventTypeId") === "42")).toBe(true);
   });
@@ -139,7 +179,7 @@ describe("CalcomCalendarProvider", () => {
       on("GET", "/v2/bookings/stored", () => ok({ ...booking("stored", "2026-11-02T14:00:00.000Z", "2026-11-02T14:45:00.000Z", "cancelled"), eventTypeId: 42 })),
       on("GET", "/v2/bookings", (url) => ok(url.searchParams.get("status") === "upcoming" ? [{ ...booking("moved", write.startsAt, write.endsAt), eventTypeId: 42 }] : [], { pagination: { hasMore: false, nextCursor: null } })),
     );
-    await expect(new CalcomCalendarProvider(config).upsertEvent({ ...write, eventId: "stored" })).resolves.toEqual({ externalEventId: "moved" });
+    await expect(new CalcomCalendarProvider(config).upsertEvent({ ...write, eventId: "stored" })).resolves.toEqual({ externalEventId: "moved", videoUrl: null });
     expect(calls.some((call) => call.init.method === "POST")).toBe(false);
   });
 
@@ -162,7 +202,7 @@ describe("CalcomCalendarProvider", () => {
       on("GET", "/v2/bookings/stored", () => ok({ ...booking("stored", write.startsAt, "2026-11-02T16:00:00.000Z"), eventTypeId: 42 })),
     );
     const provider = new CalcomCalendarProvider(config);
-    for (let sync = 0; sync < 3; sync++) await expect(provider.upsertEvent({ ...write, eventId: "stored" })).resolves.toEqual({ externalEventId: "stored" });
+    for (let sync = 0; sync < 3; sync++) await expect(provider.upsertEvent({ ...write, eventId: "stored" })).resolves.toEqual({ externalEventId: "stored", videoUrl: null });
     expect(calls.some((call) => call.init.method === "POST")).toBe(false);
   });
 
@@ -172,7 +212,7 @@ describe("CalcomCalendarProvider", () => {
       on("GET", "/v2/bookings/stored", () => ok({ ...booking("stored", "2026-11-02T13:00:00.000Z", "2026-11-02T14:00:00.000Z"), eventTypeId: 42 })),
       on("POST", "/v2/bookings/stored/reschedule", () => ok({ uid: "moved" })),
     );
-    await expect(new CalcomCalendarProvider(config).upsertEvent({ ...write, eventId: "stored" })).resolves.toEqual({ externalEventId: "moved" });
+    await expect(new CalcomCalendarProvider(config).upsertEvent({ ...write, eventId: "stored" })).resolves.toEqual({ externalEventId: "moved", videoUrl: null });
     const sent = body(calls.find((call) => call.init.method === "POST")!.init);
     expect(sent).toMatchObject({ start: "2026-11-02T15:00:00Z" });
     expect(sent).not.toHaveProperty("lengthInMinutes");
@@ -194,7 +234,7 @@ describe("CalcomCalendarProvider", () => {
       on("GET", "/v2/bookings", () => ok([], { pagination: { hasMore: false, nextCursor: null } })),
       on("POST", "/v2/bookings", () => ok({ uid: "fresh" })),
     );
-    await expect(new CalcomCalendarProvider(config).upsertEvent({ ...write, eventId: "stored" })).resolves.toEqual({ externalEventId: "fresh" });
+    await expect(new CalcomCalendarProvider(config).upsertEvent({ ...write, eventId: "stored" })).resolves.toEqual({ externalEventId: "fresh", videoUrl: null });
   });
 
   it("cancels the booking, finds it by the stand-in address when no uid was stored, and treats a missing one as done", async () => {
@@ -259,6 +299,7 @@ describe("CalcomCalendarProvider", () => {
       : url.searchParams.get("status") === "upcoming" ? [live] : [])));
     const move = { toEventId: "live", startsAt: live.start, endsAt: live.end };
     await expect(new CalcomCalendarProvider(config).getBookingChanges({ accessToken: "access", startsAt: "2026-11-01T00:00:00.000Z", endsAt: "2027-01-30T00:00:00.000Z" })).resolves.toEqual({
+      videoLinks: [],
       cancelled: ["gone", "moved-then-gone"],
       moved: [{ eventId: "moved-once", ...move }, { eventId: "moved-twice", ...move }, { eventId: "moved-again", ...move }],
     });
