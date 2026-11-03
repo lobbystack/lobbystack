@@ -59,6 +59,8 @@ const domain = vi.hoisted(() => ({
   reorderRulesForApi: vi.fn(async (): Promise<unknown[]> => []),
   getReceptionistForApi: vi.fn(),
   updateReceptionistForApi: vi.fn(),
+  listAgentsForApi: vi.fn(async (): Promise<unknown[]> => []),
+  getAgentForApi: vi.fn(),
   listKnowledgeEntriesForApi: vi.fn(),
   getKnowledgeEntryForApi: vi.fn(),
   updateKnowledgeEntryForApi: vi.fn(),
@@ -1134,6 +1136,38 @@ describe("receptionist settings", () => {
     expect((await v1.getReceptionist(call("/receptionist"))).status).toBe(403);
     expect(domain.updateReceptionistForApi).not.toHaveBeenCalled();
     expect(domain.getReceptionistForApi).not.toHaveBeenCalled();
+  });
+});
+
+describe("agents", () => {
+  const agentId = "7c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f";
+  const agent = { id: agentId, name: "Front desk", is_default: true, paused: false };
+
+  it("lists the agents in one page and reads one by id", async () => {
+    domain.listAgentsForApi.mockResolvedValue([agent]);
+    const list = await v1.listAgents(call("/agents"));
+    expect(list.status).toBe(200);
+    expect(await list.json()).toEqual({ data: [agent], next_cursor: null, has_more: false });
+    domain.getAgentForApi.mockResolvedValue(agent);
+    const one = await v1.getAgent(call(`/agents/${agentId}`), { params: Promise.resolve({ agent_id: agentId }) });
+    expect(one.status).toBe(200);
+    expect(await one.json()).toEqual({ data: agent });
+    expect(domain.getAgentForApi).toHaveBeenCalledWith(expect.anything(), expect.anything(), agentId);
+  });
+
+  it("refuses a malformed id before any query", async () => {
+    const response = await v1.getAgent(call("/agents/x"), { params: Promise.resolve({ agent_id: "x" }) });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: { code: "invalid_request", message: "agent_id must be a UUID." } });
+    expect(domain.getAgentForApi).not.toHaveBeenCalled();
+  });
+
+  it("needs business:read", async () => {
+    domain.resolveApiKey.mockResolvedValue({ businessId: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f", apiKeyId: "0b7c1d2e-3f40-4a51-8b62-7c83d94ea5b6", scopes: ["business:write"] });
+    expect((await v1.listAgents(call("/agents"))).status).toBe(403);
+    expect((await v1.getAgent(call(`/agents/${agentId}`), { params: Promise.resolve({ agent_id: agentId }) })).status).toBe(403);
+    expect(domain.listAgentsForApi).not.toHaveBeenCalled();
+    expect(domain.getAgentForApi).not.toHaveBeenCalled();
   });
 });
 

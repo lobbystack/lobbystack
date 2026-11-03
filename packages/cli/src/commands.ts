@@ -196,6 +196,10 @@ export const groups: Record<string, Group> = Object.fromEntries([
     get: { operation: "getReceptionist" },
     set: { operation: "updateReceptionist", files: ["summary", "booking_policy", "voice_instructions", "sms_instructions", "chat_instructions"] },
   }),
+  group("agents", "The business's agents. The receptionist and rules commands change the default one.", {
+    list: { operation: "listAgents", columns: columns("id", "name", "is_default", "paused", "voice", "updated_at") },
+    get: { operation: "getAgent" },
+  }),
   group("services", "The services customers can book.", {
     list: { operation: "listServices", columns: columns("id", "name", "duration_minutes", "active", "staff_ids") },
     add: { operation: "createService", args: ["name"] },

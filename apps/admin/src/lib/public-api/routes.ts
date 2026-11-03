@@ -42,7 +42,9 @@ import {
   getNotificationPreferencesForApi,
   getOnboardingForApi,
   getPlatformMeForApi,
+  getAgentForApi,
   getReceptionistForApi,
+  listAgentsForApi,
   getTeamForApi,
   getCallForApi,
   getCheckoutForApi,
@@ -497,6 +499,8 @@ export const v1 = {
   }),
   reorderRules: (request: Request) => handleApiRequest(request, "reorderRules", async ({ context, caller }) => ({ body: { data: await reorderRulesForApi(context, caller, await readApiBody(request, apiRuleReorderSchema)), next_cursor: null, has_more: false } })),
   getReceptionist: (request: Request) => handleApiRequest(request, "getReceptionist", async ({ context, caller }) => ({ body: data(await getReceptionistForApi(context, caller)) })),
+  listAgents: (request: Request) => handleApiRequest(request, "listAgents", async ({ context, caller }) => ({ body: { data: await listAgentsForApi(context, caller), next_cursor: null, has_more: false } })),
+  getAgent: (request: Request, { params }: Params<"agent_id">) => handleApiRequest(request, "getAgent", async ({ context, caller }) => ({ body: data(await getAgentForApi(context, caller, uuidParam((await params).agent_id, "agent_id"))) })),
   updateReceptionist: (request: Request) => handleApiRequest(request, "updateReceptionist", async ({ context, caller }) => ({ body: data(await updateReceptionistForApi(context, caller, await readApiBody(request, apiReceptionistUpdateSchema))) })),
   createCalendarConnectLink: (request: Request) => handleApiRequest(request, "createCalendarConnectLink", async ({ context, caller }) => {
     requireCalendarProvider("google");

@@ -274,6 +274,7 @@ export async function takeMessageForStaff(
     ...(input.urgency ? { urgency: input.urgency } : {}),
     ...(input.callbackWindow ? { callbackWindow: input.callbackWindow } : {}),
     ...(input.request ? { request: input.request } : {}),
+    ...(input.agentId ? { agentId: input.agentId } : {}),
   });
   if (inVisitorThread) await queueOperatorAlert(context, { businessId: input.businessId, eventKey: `${alert.eventKind}:${task.inboxItemId}`, ...alert });
   return { ok: true as const, inboxItemId: task.inboxItemId };

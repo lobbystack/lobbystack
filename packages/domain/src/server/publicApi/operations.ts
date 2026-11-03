@@ -27,6 +27,7 @@ import {
   normalizeBookingMode,
   weekdays,
   type ApiAccountCalendar,
+  type ApiAgent,
   type ApiAppointment,
   type ApiAppointmentCreate,
   type ApiAvailabilitySlot,
@@ -118,6 +119,7 @@ import { expireAbandonedNumberClaimsInTransaction, lockBusinessNumberClaims, num
 import { isSharedSmsSender, resolveSmsSender } from "../smsSender";
 import { loadBillingContext } from "../usage";
 import { defaultReceptionistProfile, saveReceptionistProfileInTransaction, type ReceptionistProfilePatch } from "../receptionistProfile";
+import { listActiveAgentsInTransaction, pausedAgentIds } from "../agents";
 import { deleteAgentRuleInTransaction, insertAgentRuleInTransaction, listAgentRulesInTransaction, lockAgentRulesInTransaction, reorderAgentRulesInTransaction, updateAgentRuleInTransaction } from "../rules";
 import { insertWidgetKeyInTransaction, updateWidgetKeyInTransaction, type WidgetKeyPatch } from "../widgetKeys";
 import { ianaTimeZone, insertBusinessInTransaction, insertInvitationInTransaction, invitationUrl, isSingleEmailAddress, lockBusinessTeam, partnerBusinessNotClaimable, removeMemberInTransaction, revokeInvitationInTransaction, updateBusinessInTransaction, updateMemberRoleInTransaction } from "../tenancy";
@@ -154,6 +156,7 @@ import {
   serializeContact,
   serializeKnowledgeEntry,
   serializeNotificationPreferences,
+  serializeAgent,
   serializeReceptionist,
   serializeRule,
   serializeWidgetKey,
@@ -1278,6 +1281,28 @@ async function loadReceptionistState(tx: DatabaseTransaction, businessId: string
   const query = tx.select().from(agents).where(defaultAgentOf(businessId)).limit(1);
   const [profile] = lock ? await query.for("update") : await query;
   return { business, profile: profile ?? null, shown: profile ?? { ...defaultReceptionistProfile(business.name, business.locale), updatedAt: business.updatedAt } };
+}
+
+// Agents. Read-only for now: the dashboard creates, archives and edits them.
+
+async function loadAgentsForApi(tx: DatabaseTransaction, businessId: string): Promise<ApiAgent[]> {
+  const [active, entitlement] = await Promise.all([listActiveAgentsInTransaction(tx, businessId), loadEntitlement(tx, businessId)]);
+  const paused = pausedAgentIds(entitlement, active);
+  return active.map((agent) => serializeAgent(agent, paused.has(agent.id)));
+}
+
+/** Active agents, the default first and then the oldest. */
+export async function listAgentsForApi(context: DomainContext, caller: ApiCaller): Promise<ApiAgent[]> {
+  return await inBusiness(context, caller, async (tx) => await loadAgentsForApi(tx, caller.businessId));
+}
+
+/** One active agent. An archived agent, or another business's, is a 404. */
+export async function getAgentForApi(context: DomainContext, caller: ApiCaller, agentId: string): Promise<ApiAgent> {
+  return await inBusiness(context, caller, async (tx) => {
+    const agent = (await loadAgentsForApi(tx, caller.businessId)).find((candidate) => candidate.id === agentId);
+    if (!agent) throw notFound("Agent");
+    return agent;
+  });
 }
 
 export async function getReceptionistForApi(context: DomainContext, caller: ApiCaller): Promise<ApiReceptionist> {
