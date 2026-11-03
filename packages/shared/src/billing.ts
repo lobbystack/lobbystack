@@ -73,6 +73,8 @@ export type Entitlement = {
   poolPartnerId: string | null;
   /** Dedicated numbers the business may hold. Null means no limit. */
   includedNumbers: number | null;
+  /** Agents the business may keep active. Null means no limit. */
+  includedAgents: number | null;
 };
 
 /** The billing account fields that decide whether an entitlement is live. */
@@ -126,6 +128,7 @@ export function planEntitlement(plan: BillingPlanSlug, account: { live: boolean;
     },
     poolPartnerId: null,
     includedNumbers: terms.includedBusinessNumbers,
+    includedAgents: terms.includedAgents,
   };
 }
 
@@ -187,6 +190,8 @@ export function packageEntitlement(partnerId: string, terms: PackageEntitlementT
     },
     poolPartnerId: partnerId,
     includedNumbers: null,
+    // A partner's business keeps every agent, paid up or not.
+    includedAgents: null,
   };
 }
 
@@ -208,6 +213,7 @@ export function billedOutsideEntitlement(partnerId: string, account: { live: boo
     overage: { enabled: false, currency: "USD", rates: { voiceMinute: 0, chat: 0, alertSms: 0, outboundAttempt: 0 }, capMinor: null },
     poolPartnerId: partnerId,
     includedNumbers: null,
+    includedAgents: null,
   };
 }
 
@@ -223,6 +229,7 @@ export const billingErrorCodes = {
   chatAiLimitReached: "chat_ai_limit_reached",
   checkoutInProgress: "checkout_in_progress",
   subscriptionActive: "subscription_active",
+  agentLimitReached: "agent_limit_reached",
 } as const;
 
 export type BillingErrorCode =
@@ -255,6 +262,7 @@ export const billingPlanCatalog = {
     outboundCallAttemptsIncluded: null,
     chatAiTokensIncluded: null,
     includedBusinessNumbers: null,
+    includedAgents: null,
     overagesBillable: false,
     voiceOverageRatePerMinuteCents: null,
     alertSmsOverageRatePerSegmentCents: null,
@@ -272,6 +280,7 @@ export const billingPlanCatalog = {
     outboundCallAttemptsIncluded: 2,
     chatAiTokensIncluded: 5,
     includedBusinessNumbers: 0,
+    includedAgents: 1,
     overagesBillable: false,
     voiceOverageRatePerMinuteCents: null,
     alertSmsOverageRatePerSegmentCents: null,
@@ -289,6 +298,7 @@ export const billingPlanCatalog = {
     outboundCallAttemptsIncluded: 20,
     chatAiTokensIncluded: 50,
     includedBusinessNumbers: 1,
+    includedAgents: null,
     overagesBillable: true,
     voiceOverageRatePerMinuteCents: 20,
     alertSmsOverageRatePerSegmentCents: 2,
@@ -306,6 +316,7 @@ export const billingPlanCatalog = {
     outboundCallAttemptsIncluded: 100,
     chatAiTokensIncluded: 200,
     includedBusinessNumbers: 1,
+    includedAgents: null,
     overagesBillable: true,
     voiceOverageRatePerMinuteCents: 18,
     alertSmsOverageRatePerSegmentCents: 2,
@@ -323,6 +334,7 @@ export const billingPlanCatalog = {
     outboundCallAttemptsIncluded: null,
     chatAiTokensIncluded: null,
     includedBusinessNumbers: null,
+    includedAgents: null,
     overagesBillable: true,
     voiceOverageRatePerMinuteCents: null,
     alertSmsOverageRatePerSegmentCents: null,
@@ -343,6 +355,8 @@ export const billingPlanCatalog = {
     outboundCallAttemptsIncluded: number | null;
     chatAiTokensIncluded: number | null;
     includedBusinessNumbers: number | null;
+    /** Active agents a business on the plan may keep. Null means no limit. */
+    includedAgents: number | null;
     overagesBillable: boolean;
     voiceOverageRatePerMinuteCents: number | null;
     alertSmsOverageRatePerSegmentCents: number | null;

@@ -36,6 +36,7 @@ async function main(): Promise<void> {
     // one gets a default agent, and a business has a single agent for now.
     await db.db.insert(agents).values({
       businessId,
+      isDefault: true,
       greeting: "Thanks for calling.",
       tone: "professional",
       summary: "Appointment audit certification",
