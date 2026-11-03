@@ -15,7 +15,9 @@ import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 import { moveOnboardingStageInTransaction } from "./onboarding";
 import { recordProductEventBestEffort } from "./productEvents";
 import { enqueueKnowledgeDerivedRefresh } from "./businessHours";
+import { pausedAgentIds } from "./agents";
 import { listBookableEmployees, loadStaffSchedules } from "./employees";
+import { loadEntitlement } from "./entitlement";
 import { resolveBusinessBillingPlan } from "./contentRetentionPolicy";
 import { resolveSmsSender } from "./smsSender";
 
@@ -681,6 +683,8 @@ export async function refreshBusinessSnapshot(
       () => tx.select({ staffId: staffServiceAssignments.staffId, serviceId: staffServiceAssignments.serviceId }).from(staffServiceAssignments).where(eq(staffServiceAssignments.businessId, input.businessId)),
     ]);
     const schedules = await loadStaffSchedules(tx, { businessId: input.businessId, staffIds: employeeRows.map((row) => row.staffId), timezone: business[0].timezone });
+    // After a downgrade, agents past the plan's limit keep their channels and the default agent answers them.
+    const paused = pausedAgentIds(await loadEntitlement(tx, input.businessId), agentRows);
     const currentProfile = profile[0];
     // The number an agent gives out and answers on, never another agent's. A number with no agent yet belongs to the default agent.
     const phoneNumberOf = (agentId: string | undefined) => numbers.find((number) => number.status === "active" && number.voiceEnabled && (number.agentId ?? currentProfile?.id) === agentId)?.e164;
@@ -722,7 +726,7 @@ export async function refreshBusinessSnapshot(
         ...(row.localizedNames ? { localizedNames: Object.fromEntries(runtimeLocales.flatMap((locale) => typeof row.localizedNames?.[locale] === "string" ? [[locale, row.localizedNames[locale]]] : [])) } : {}),
       })),
       rules: defaultRules.map(ruleSummary),
-      agents: agentRows.map((row) => ({ id: row.id, name: row.name, isDefault: row.isDefault, greeting: row.greeting, ...snapshotAgentFields(row), rules: rulesOf(row.id).map(ruleSummary), phoneNumber: phoneNumberOf(row.id) ?? null })),
+      agents: agentRows.map((row) => ({ id: row.id, name: row.name, isDefault: row.isDefault, greeting: row.greeting, ...snapshotAgentFields(row), rules: rulesOf(row.id).map(ruleSummary), phoneNumber: phoneNumberOf(row.id) ?? null, ...(paused.has(row.id) ? { paused: true } : {}) })),
       employees: employeeRows.map((row) => {
         const assigned = new Set(assignments.filter((assignment) => assignment.staffId === row.staffId).map((assignment) => assignment.serviceId));
         const names = serviceRows.filter((service) => assigned.has(service.id)).map((service) => service.name);

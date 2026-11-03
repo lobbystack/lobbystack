@@ -115,11 +115,14 @@ const appointmentChangePolicyFields = {
 const receptionistText = z.string().trim().min(1).max(RECEPTIONIST_TEXT_MAX_LENGTH);
 const receptionistInstructions = z.string().trim().min(1).max(RECEPTIONIST_INSTRUCTIONS_MAX_LENGTH).nullable();
 
-export const apiReceptionistSchema = z.object({
+// The settings each agent has of its own. The summary describes the business,
+// which its agents share, so only /receptionist shows it.
+const agentGreetingFields = {
   greeting: z.string().describe("What the receptionist says when it answers."),
   tone: z.string().describe("How it speaks, such as professional or warm."),
-  summary: z.string().describe("What it tells callers the business does. Calls leave it out while summary_source is placeholder."),
-  summary_source: z.enum(["placeholder", "generated", "operator"]).describe("placeholder: the default from sign-up. generated: written by AI from the business's knowledge. operator: written by a person or through the API, and AI never replaces it."),
+};
+
+const agentSettingFields = {
   booking_policy: z.string().describe("Rules it follows when it books."),
   voice_instructions: z.string().nullable().describe("Extra instructions for calls."),
   sms_instructions: z.string().nullable().describe("Extra instructions for text messages."),
@@ -134,8 +137,26 @@ export const apiReceptionistSchema = z.object({
   staff_first_message: z.string().nullable().describe("What callers hear before the staff phone rings."),
   staff_first_handover_message: z.string().nullable().describe("What callers hear before the receptionist answers."),
   appointment_change_policy: z.object(appointmentChangePolicyFields).describe("Whether callers can cancel or reschedule their own appointments, and how they prove it's theirs."),
+};
+
+export const apiReceptionistSchema = z.object({
+  ...agentGreetingFields,
+  summary: z.string().describe("What it tells callers the business does. Calls leave it out while summary_source is placeholder."),
+  summary_source: z.enum(["placeholder", "generated", "operator"]).describe("placeholder: the default from sign-up. generated: written by AI from the business's knowledge. operator: written by a person or through the API, and AI never replaces it."),
+  ...agentSettingFields,
   updated_at: timestamp,
 }).describe("How the receptionist answers, what it says about the business, and what it may do.");
+
+export const apiAgentSchema = z.object({
+  id,
+  name: z.string().describe("The name the dashboard shows for the agent."),
+  is_default: z.boolean().describe("Whether this is the default agent, which answers on every channel no other agent has. GET /receptionist and /rules act on it."),
+  paused: z.boolean().describe("true when the plan includes fewer agents than the business has. The default agent then answers for this one, which keeps its settings and channels."),
+  ...agentGreetingFields,
+  ...agentSettingFields,
+  created_at: timestamp,
+  updated_at: timestamp,
+}).describe("An agent: one set of greeting, voice, instructions and rules. The agents of a business share its knowledge, services and staff.");
 
 const staffFirstMessage = z.string().trim().min(1).max(STAFF_FIRST_MESSAGE_MAX_LENGTH).nullable();
 
@@ -549,6 +570,7 @@ export const apiCallSchema = z.object({
   outcome: z.enum(["appointment_booked", "booking_incomplete", "message_taken", "conversation", "answered_by_team", "none"]).describe("answered_by_team: a staff member took the call through Staff answers first."),
   summary: z.string().nullable().describe("Short summary of the call, when one is available."),
   end_reason: z.string().nullable().describe("Why the call ended, as reported by the call provider or receptionist."),
+  agent_id: id.nullable().describe("The agent that answered. It may be archived, so GET /agents no longer lists it. Null for a call saved before the business had agents."),
   contact_id: id.nullable(),
   caller_name: z.string().nullable(),
   caller_phone: z.string().nullable(),
@@ -673,6 +695,7 @@ export const apiMessageSchema = z.object({
   callback_window: z.string().nullable(),
   channel: z.enum(["voice", "web_voice", "web_chat", "instagram", "sms"]).nullable(),
   call_id: id.nullable(),
+  agent_id: id.nullable().describe("The agent that took the message. It may be archived, so GET /agents no longer lists it. Null when no agent is on record, as for a chat, text or Instagram message taken before the business had agents."),
   created_at: timestamp,
   updated_at: timestamp,
 });
@@ -825,6 +848,7 @@ export type ApiUserCreate = z.infer<typeof apiUserCreateSchema>;
 export type ApiUserInvitation = z.infer<typeof apiUserInvitationSchema>;
 export type ApiHoursWindow = z.infer<typeof apiHoursWindowSchema>;
 export type ApiReceptionist = z.infer<typeof apiReceptionistSchema>;
+export type ApiAgent = z.infer<typeof apiAgentSchema>;
 export type ApiReceptionistUpdate = z.infer<typeof apiReceptionistUpdateSchema>;
 export type ApiRule = z.infer<typeof apiRuleSchema>;
 export type ApiRuleCreate = z.infer<typeof apiRuleCreateSchema>;

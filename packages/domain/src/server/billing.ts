@@ -10,6 +10,7 @@ import { requireBusinessCapability } from "./businessAccess";
 import { loadEntitlement } from "./entitlement";
 import { keepBusinessNumbersInTransaction, queuePlanCancelNoticeInTransaction, scheduleNumberReleaseInTransaction } from "./numberTrials";
 import { poolLeft, readPartnerPoolInTransaction } from "./partnerPool";
+import { enqueuePlanSnapshotRefresh } from "./agentSnapshot";
 import { subscriptionEventEffect } from "./polarSubscriptions";
 import { recordProductEventInTransaction } from "./productEvents";
 import { requireBusinessAdmin } from "../authz";
@@ -248,6 +249,7 @@ export async function setManagedPlanInTransaction(tx: DatabaseTransaction, input
   await tx.update(billingCheckoutRequests).set({ status: "canceled", error: "The business moved to a managed plan.", updatedAt: now }).where(and(eq(billingCheckoutRequests.businessId, input.businessId), inArray(billingCheckoutRequests.status, ["pending", "processing", "error"])));
   // A managed plan is a paid plan: a trial number becomes the business's number, and a scheduled release is called off.
   await keepBusinessNumbersInTransaction(tx, { businessId: input.businessId, now });
+  await enqueuePlanSnapshotRefresh(tx, input.businessId);
   await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "billing_account", aggregateId: input.businessId, dedupeKey: `billing:${input.businessId}:managed:${now.getTime()}`, payload: { type: "billing.updated", entityId: input.businessId } });
   return "set";
 }
@@ -268,6 +270,7 @@ export async function endManagedPlanInTransaction(tx: DatabaseTransaction, input
   if (!ended.length) return false;
   // As when a paid plan ends: the numbers stay 30 more days, then go.
   await scheduleNumberReleaseInTransaction(tx, { businessId: input.businessId, now });
+  await enqueuePlanSnapshotRefresh(tx, input.businessId);
   await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "billing_account", aggregateId: input.businessId, dedupeKey: `billing:${input.businessId}:managed-ended:${now.getTime()}`, payload: { type: "billing.updated", entityId: input.businessId } });
   return true;
 }
@@ -749,6 +752,8 @@ export async function reconcileBillingProviderEvent(
         const isPaid = hasLiveEntitlement({ plan: appliedPlan ?? existing?.plan ?? null, subscriptionState: appliedState ?? existing?.subscriptionState ?? null });
         if (isPaid) await keepBusinessNumbersInTransaction(tx, { businessId: input.businessId });
         else if (wasPaid) await scheduleNumberReleaseInTransaction(tx, { businessId: input.businessId });
+        // Free keeps one agent, so moving on or off a paid plan pauses or restores the others.
+        if (isPaid !== wasPaid) await enqueuePlanSnapshotRefresh(tx, input.businessId);
         // Polar sends subscription.canceled when the owner cancels at the end of the period, while the plan is still live.
         if (isPaid && event.eventType === "subscription.canceled" && appliedPeriodEnd) await queuePlanCancelNoticeInTransaction(tx, { businessId: input.businessId, periodEnd: appliedPeriodEnd });
       }

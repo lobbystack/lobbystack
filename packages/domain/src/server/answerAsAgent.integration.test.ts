@@ -17,9 +17,8 @@ import { decideStaffFirstCall, loadStaffFirstHandover, recordStaffAnsweredCall }
 import { loadTextReplyContext } from "./textReplies";
 
 // Each channel against PostgreSQL with the worker role and its row-level
-// security, on a business with two agents. agents_business_unique still allows
-// one agent per business until slice 5, so each test drops that index as the
-// migrator inside a transaction that always rolls back. Nothing else is faked.
+// security, on a business with two agents, inside a transaction that always
+// rolls back. Nothing else is faked.
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -49,7 +48,7 @@ async function world(tx: DatabaseTransaction, input: { carrier?: string } = {}):
   await tx.insert(businesses).values({ id: businessId, slug: `agents-${businessId}`, name: "Harbor Dental", timezone: "UTC", businessType: "test", deploymentMode: "cloud", textRepliesEnabled: true });
   await tx.insert(billingAccounts).values({ businessId, billingKey: `business:${businessId}`, plan: "starter", subscriptionState: "active" }).onConflictDoUpdate({ target: billingAccounts.businessId, set: { plan: "starter", subscriptionState: "active" } });
   const common = { businessId, tone: "warm", summary: "A dental clinic", bookingPolicy: "Book" };
-  const [a] = await tx.insert(agents).values({ ...common, name: "Front desk", greeting: "Front desk here", transferMode: "on_request", transferNumber: TRANSFER_A, voice: "cedar", voiceInstructions: "Day voice text", smsInstructions: "Day text", chatInstructions: "Day chat" }).returning({ id: agents.id });
+  const [a] = await tx.insert(agents).values({ ...common, isDefault: true, name: "Front desk", greeting: "Front desk here", transferMode: "on_request", transferNumber: TRANSFER_A, voice: "cedar", voiceInstructions: "Day voice text", smsInstructions: "Day text", chatInstructions: "Day chat" }).returning({ id: agents.id });
   const [b] = await tx.insert(agents).values({ ...common, name: "Evening", isDefault: false, greeting: "Evening desk here", transferMode: "always", transferNumber: TRANSFER_B, voice: "marin", voiceInstructions: "Night voice text", smsInstructions: "Night text", chatInstructions: "Night chat", appointmentChangePolicy: noChanges, staffFirstMode: "always", staffFirstNumber: STAFF_B, staffFirstHandoverMessage: "Evening handover" }).returning({ id: agents.id });
   const [lineA] = await tx.insert(phoneNumbers).values({ businessId, agentId: a!.id, e164: LINE_A, providerPhoneId: `PN${randomUUID()}`, status: "active", carrier: input.carrier ?? "twilio", voiceEnabled: true, smsEnabled: true }).returning({ id: phoneNumbers.id });
   const [lineB] = await tx.insert(phoneNumbers).values({ businessId, agentId: b!.id, e164: LINE_B, providerPhoneId: `PN${randomUUID()}`, status: "active", carrier: input.carrier ?? "twilio", voiceEnabled: true, smsEnabled: true }).returning({ id: phoneNumbers.id });
@@ -61,7 +60,6 @@ async function withTwoAgents(run: (world: World, db: Database) => Promise<void>,
   const rollback = new Error("rollback test fixture");
   try {
     await client!.db.transaction(async (tx) => {
-      await tx.execute(sql`drop index public.agents_business_unique`);
       const fixture = await world(tx, input);
       await refreshBusinessSnapshot({ db: tx as unknown as Database }, { businessId: fixture.businessId });
       await tx.execute(sql`set local role lobbystack_worker`);
@@ -331,7 +329,7 @@ describe.skipIf(!testUrl)("a business with one agent", () => {
       const businessId = randomUUID();
       await tx.insert(businesses).values({ id: businessId, slug: `one-agent-${businessId}`, name: "Harbor Dental", timezone: "UTC", businessType: "test", deploymentMode: "cloud" });
       await tx.insert(billingAccounts).values({ businessId, billingKey: `business:${businessId}`, plan: "starter", subscriptionState: "active" }).onConflictDoUpdate({ target: billingAccounts.businessId, set: { plan: "starter", subscriptionState: "active" } });
-      const [agent] = await tx.insert(agents).values({ businessId, greeting: "Hello", tone: "warm", summary: "Clinic", bookingPolicy: "Book", transferMode: "on_request", transferNumber: TRANSFER_A }).returning({ id: agents.id });
+      const [agent] = await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hello", tone: "warm", summary: "Clinic", bookingPolicy: "Book", transferMode: "on_request", transferNumber: TRANSFER_A }).returning({ id: agents.id });
       await tx.insert(phoneNumbers).values({ businessId, e164: LINE_A, providerPhoneId: `PN${randomUUID()}`, status: "active", voiceEnabled: true, smsEnabled: true });
       await refreshBusinessSnapshot({ db: tx as unknown as Database }, { businessId });
       await tx.execute(sql`set local role lobbystack_worker`);
@@ -354,7 +352,7 @@ describe.skipIf(!testUrl)("a business with one agent", () => {
     await client!.db.transaction(async (tx) => {
       const businessId = randomUUID();
       await tx.insert(businesses).values({ id: businessId, slug: `old-shape-${businessId}`, name: "Harbor Dental", timezone: "UTC", businessType: "test" });
-      const [agent] = await tx.insert(agents).values({ businessId, greeting: "Hello", tone: "warm", summary: "Clinic", bookingPolicy: "Book", transferMode: "never" }).returning({ id: agents.id });
+      const [agent] = await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hello", tone: "warm", summary: "Clinic", bookingPolicy: "Book", transferMode: "never" }).returning({ id: agents.id });
       await tx.insert(phoneNumbers).values({ businessId, e164: LINE_A, providerPhoneId: `PN${randomUUID()}`, status: "active", voiceEnabled: true });
       await refreshBusinessSnapshot({ db: tx as unknown as Database }, { businessId });
       const db = tx as unknown as Database;
@@ -378,7 +376,7 @@ describe.skipIf(!testUrl)("a row from before agents were recorded", () => {
       await tx.execute(sql`alter table public.${sql.identifier(table)} drop constraint ${sql.identifier(`${table}_agent_id_present`)}`);
       const businessId = randomUUID();
       await tx.insert(businesses).values({ id: businessId, slug: `old-row-${businessId}`, name: "Harbor Dental", timezone: "UTC", businessType: "test", deploymentMode: "cloud", textRepliesEnabled: true });
-      const [agent] = await tx.insert(agents).values({ businessId, greeting: "Hello", tone: "warm", summary: "Clinic", bookingPolicy: "Book", transferMode: "never" }).returning({ id: agents.id });
+      const [agent] = await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hello", tone: "warm", summary: "Clinic", bookingPolicy: "Book", transferMode: "never" }).returning({ id: agents.id });
       await tx.insert(phoneNumbers).values({ businessId, e164: LINE_A, providerPhoneId: `PN${randomUUID()}`, status: "active", voiceEnabled: true, smsEnabled: true });
       await run({ tx, db: tx as unknown as Database, businessId, agentId: agent!.id });
       throw rollback;

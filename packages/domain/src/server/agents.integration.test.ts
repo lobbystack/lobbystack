@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
-import { jsonb, pgTable, smallint, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { agents, businesses, businessMemberships, createDatabaseClient, rlsContextStatement, users, type Database, type DatabaseTransaction, type RlsContext } from "@lobbystack/db";
 import { defaultAgentName, defaultGreeting, runtimeLocales } from "@lobbystack/shared";
@@ -19,36 +18,7 @@ if (testUrl) {
 const client = testUrl ? createDatabaseClient("lobbystack_migrator", { DATABASE_URL: testUrl }) : undefined;
 afterAll(async () => { await client?.pool.end(); });
 
-// The table as the previous admin and worker know it. They reach it through
-// the compatibility view during a deploy, so these queries are theirs.
-const oldProfiles = pgTable("receptionist_profiles", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  businessId: uuid("business_id").notNull(),
-  greeting: text("greeting").notNull(),
-  tone: text("tone").notNull(),
-  summary: text("summary").notNull(),
-  summarySource: varchar("summary_source", { length: 16 }).default("placeholder").notNull(),
-  summaryFingerprint: varchar("summary_fingerprint", { length: 64 }),
-  summaryGeneratedAt: timestamp("summary_generated_at", { withTimezone: true }),
-  summaryRegenerateStatus: varchar("summary_regenerate_status", { length: 16 }),
-  bookingPolicy: text("booking_policy").notNull(),
-  voiceInstructions: text("voice_instructions"),
-  smsInstructions: text("sms_instructions"),
-  chatInstructions: text("chat_instructions"),
-  transferMode: varchar("transfer_mode", { length: 32 }).notNull(),
-  transferNumber: text("transfer_number"),
-  appointmentChangePolicy: jsonb("appointment_change_policy"),
-  bookingMode: varchar("booking_mode", { length: 16 }).default("instant").notNull(),
-  voice: varchar("voice", { length: 32 }).default("marin").notNull(),
-  staffFirstMode: varchar("staff_first_mode", { length: 16 }).default("never").notNull(),
-  staffFirstNumber: text("staff_first_number"),
-  staffFirstRingSeconds: smallint("staff_first_ring_seconds").default(15).notNull(),
-  staffFirstMessage: text("staff_first_message"),
-  staffFirstHandoverMessage: text("staff_first_handover_message"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
-const oldRow = (businessId: string) => ({ businessId, greeting: "Old greeting", tone: "warm", summary: "Old summary", bookingPolicy: "Book", transferMode: "on_request" });
+const agentRow = (businessId: string, extra: Partial<typeof agents.$inferInsert> = {}) => ({ businessId, greeting: "Hello", tone: "warm", summary: "Summary", bookingPolicy: "Book", transferMode: "on_request", ...extra });
 
 type Role = "lobbystack_app" | "lobbystack_worker" | "lobbystack_dispatcher" | "lobbystack_readonly";
 
@@ -63,23 +33,18 @@ async function as<T>(role: Role, context: RlsContext, run: (tx: DatabaseTransact
 
 const failure = async (run: () => Promise<unknown>) => await run().then(() => null, (error: { code?: string; cause?: { code?: string } }) => error.cause?.code ?? error.code ?? "unknown");
 
-describe.skipIf(!client)("the compatibility view for the previous admin and worker", () => {
+describe.skipIf(!client)("several agents in a business", () => {
   let businessId: string;
   let otherBusinessId: string;
   let userId: string;
-
-  const runtimes: Array<{ role: Role; context: () => RlsContext }> = [
-    { role: "lobbystack_app", context: () => ({ businessId, userId, actorType: "operator" }) },
-    { role: "lobbystack_worker", context: () => ({ businessId, actorType: "worker" }) },
-  ];
 
   beforeEach(async () => {
     businessId = randomUUID();
     otherBusinessId = randomUUID();
     userId = randomUUID();
     await client!.db.insert(businesses).values([
-      { id: businessId, slug: `view-${businessId}`, name: "Clínica Sol", timezone: "UTC", businessType: "test", defaultLocale: "es" },
-      { id: otherBusinessId, slug: `view-${otherBusinessId}`, name: "Other", timezone: "UTC", businessType: "test" },
+      { id: businessId, slug: `agents-${businessId}`, name: "Clínica Sol", timezone: "UTC", businessType: "test", defaultLocale: "es" },
+      { id: otherBusinessId, slug: `agents-${otherBusinessId}`, name: "Other", timezone: "UTC", businessType: "test" },
     ]);
     await client!.db.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid` });
     await client!.db.insert(businessMemberships).values({ businessId, userId, role: "business_owner", status: "active" });
@@ -91,72 +56,36 @@ describe.skipIf(!client)("the compatibility view for the previous admin and work
     await client!.db.delete(users).where(eq(users.id, userId));
   });
 
-  describe.each(runtimes)("as $role", ({ role, context }) => {
-    it("inserts a default agent named in the business's language", async () => {
-      const [row] = await as(role, context(), async (tx) => await tx.insert(oldProfiles).values(oldRow(businessId)).returning());
-      expect(row).toMatchObject({ businessId, greeting: "Old greeting", bookingMode: "instant", voice: "marin" });
-      expect(await client!.db.select({ id: agents.id, name: agents.name, isDefault: agents.isDefault, archivedAt: agents.archivedAt }).from(agents).where(eq(agents.businessId, businessId)))
-        .toEqual([{ id: row!.id, name: "Agente", isDefault: true, archivedAt: null }]);
-    });
-
-    it("upserts on business_id, as saveReceptionistProfileInTransaction did", async () => {
-      const upsert = async (greeting: string) => await as(role, context(), async (tx) => await tx.insert(oldProfiles).values({ ...oldRow(businessId), greeting }).onConflictDoUpdate({
-        target: oldProfiles.businessId,
-        set: { greeting, summarySource: "operator", updatedAt: new Date() },
-      }).returning());
-      const [created] = await upsert("First");
-      const [updated] = await upsert("Second");
-      expect(updated).toMatchObject({ id: created!.id, greeting: "Second", summarySource: "operator" });
-      expect(await client!.db.select({ greeting: agents.greeting }).from(agents).where(eq(agents.businessId, businessId))).toEqual([{ greeting: "Second" }]);
-    });
-
-    it("updates the default agent", async () => {
-      await client!.db.insert(agents).values(oldRow(businessId));
-      const rows = await as(role, context(), async (tx) => await tx.update(oldProfiles).set({ summary: "New", summarySource: "generated" }).where(eq(oldProfiles.businessId, businessId)).returning({ id: oldProfiles.id }));
-      expect(rows).toHaveLength(1);
-      expect((await client!.db.select({ summary: agents.summary }).from(agents).where(eq(agents.businessId, businessId)))[0]?.summary).toBe("New");
-    });
-
-    it.each(["update", "share"] as const)("holds the agent's row with FOR %s", async (strength) => {
-      await client!.db.insert(agents).values(oldRow(businessId));
-      await as(role, context(), async (tx) => {
-        const rows = await tx.select({ greeting: oldProfiles.greeting }).from(oldProfiles).where(eq(oldProfiles.businessId, businessId)).limit(1).for(strength);
-        expect(rows).toEqual([{ greeting: "Old greeting" }]);
-        // A writer on another connection has to wait for this transaction.
-        expect(await failure(async () => await client!.db.execute(sql`select id from public.agents where business_id = ${businessId} for update nowait`))).toBe("55P03");
-      });
-    });
-
-    it("keeps another business's agent out of reach", async () => {
-      await client!.db.insert(agents).values(oldRow(otherBusinessId));
-      await as(role, context(), async (tx) => {
-        expect(await tx.select({ id: oldProfiles.id }).from(oldProfiles).where(eq(oldProfiles.businessId, otherBusinessId))).toEqual([]);
-        expect(await tx.update(oldProfiles).set({ greeting: "Taken" }).where(eq(oldProfiles.businessId, otherBusinessId)).returning({ id: oldProfiles.id })).toEqual([]);
-      });
-      expect(await failure(async () => await as(role, context(), async (tx) => await tx.insert(oldProfiles).values(oldRow(otherBusinessId)).onConflictDoNothing()))).toBe("42501");
-    });
+  it("allows any number of agents, and one default", async () => {
+    await client!.db.insert(agents).values(agentRow(businessId, { isDefault: true }));
+    const [second] = await client!.db.insert(agents).values(agentRow(businessId, { name: "Evening" })).returning({ isDefault: agents.isDefault });
+    await client!.db.insert(agents).values(agentRow(businessId, { name: "Weekend" }));
+    expect(second).toEqual({ isDefault: false });
+    expect(await failure(async () => await client!.db.insert(agents).values(agentRow(businessId, { isDefault: true })))).toBe("23505");
   });
 
-  it("shows only default agents", async () => {
-    await client!.db.insert(agents).values({ ...oldRow(businessId), isDefault: false });
-    expect(await as("lobbystack_worker", { businessId, actorType: "worker" }, async (tx) => await tx.select({ id: oldProfiles.id }).from(oldProfiles))).toEqual([]);
+  it.each([
+    { role: "lobbystack_app" as const, context: () => ({ businessId, userId, actorType: "operator" as const }) },
+    { role: "lobbystack_worker" as const, context: () => ({ businessId, actorType: "worker" as const }) },
+  ])("keeps another business's agents out of reach as $role", async ({ role, context }) => {
+    await client!.db.insert(agents).values(agentRow(otherBusinessId, { isDefault: true }));
+    await as(role, context(), async (tx) => {
+      expect(await tx.select({ id: agents.id }).from(agents).where(eq(agents.businessId, otherBusinessId))).toEqual([]);
+      expect(await tx.update(agents).set({ greeting: "Taken" }).where(eq(agents.businessId, otherBusinessId)).returning({ id: agents.id })).toEqual([]);
+    });
+    expect(await failure(async () => await as(role, context(), async (tx) => await tx.insert(agents).values(agentRow(otherBusinessId))))).toBe("42501");
   });
 
   it("gives the read-only role reads and the dispatcher nothing", async () => {
-    await client!.db.insert(agents).values(oldRow(businessId));
+    await client!.db.insert(agents).values(agentRow(businessId, { isDefault: true }));
     const worker: RlsContext = { businessId, actorType: "worker" };
-    expect(await failure(async () => await as("lobbystack_readonly", worker, async (tx) => await tx.update(oldProfiles).set({ greeting: "No" })))).toBe("42501");
-    expect(await failure(async () => await as("lobbystack_dispatcher", { businessId, actorType: "dispatcher" }, async (tx) => await tx.select({ id: oldProfiles.id }).from(oldProfiles)))).toBe("42501");
+    expect(await failure(async () => await as("lobbystack_readonly", worker, async (tx) => await tx.update(agents).set({ greeting: "No" })))).toBe("42501");
+    expect(await failure(async () => await as("lobbystack_dispatcher", { businessId, actorType: "dispatcher" }, async (tx) => await tx.select({ id: agents.id }).from(agents)))).toBe("42501");
   });
 
-  it("gives PUBLIC no privileges on the view", async () => {
-    const { rows } = await client!.db.execute<{ grantee: string }>(sql`select grantee from information_schema.role_table_grants where table_schema = 'public' and table_name = 'receptionist_profiles' and grantee = 'PUBLIC'`);
-    expect(rows).toEqual([]);
-  });
-
-  it("runs as its caller", async () => {
-    const { rows } = await client!.db.execute<{ options: string[] }>(sql`select reloptions as options from pg_class where oid = 'public.receptionist_profiles'::regclass`);
-    expect(rows[0]?.options).toContain("security_invoker=true");
+  it("has no view for code from before the rename", async () => {
+    const { rows } = await client!.db.execute<{ view: string | null }>(sql`select to_regclass('public.receptionist_profiles')::text as view`);
+    expect(rows).toEqual([{ view: null }]);
   });
 
   it("names each language's agent as @lobbystack/shared does", async () => {

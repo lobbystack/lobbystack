@@ -645,7 +645,7 @@ const followUpGroup = sql`case when ${followUpRequest} is null then coalesce(${i
 
 export async function createVoiceFollowUpTask(
   context: DomainContext,
-  input: { businessId: string; callId?: string; callerName?: string; callbackPhone?: string; urgency?: string; callbackWindow?: string; message: string; channel?: string; request?: FollowUpRequest },
+  input: { businessId: string; callId?: string; callerName?: string; callbackPhone?: string; urgency?: string; callbackWindow?: string; message: string; channel?: string; request?: FollowUpRequest; agentId?: string },
 ): Promise<{ inboxItemId: string }> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     if (input.callId) {
@@ -663,7 +663,8 @@ export async function createVoiceFollowUpTask(
       input.message.trim(),
     ].filter((line): line is string => line !== null).join("\n");
     const retentionPlan = isContentRetentionEnabled() ? await resolveBusinessBillingPlan(tx, input.businessId) : null;
-    const metadata = Object.fromEntries(Object.entries({ callerName: input.callerName?.trim(), callbackPhone: input.callbackPhone?.trim(), urgency: input.urgency?.trim(), callbackWindow: input.callbackWindow?.trim(), channel: input.channel, ...input.request }).filter(([, value]) => value));
+    // agentId names the agent for a message with no call, such as one taken in a chat.
+    const metadata = Object.fromEntries(Object.entries({ callerName: input.callerName?.trim(), callbackPhone: input.callbackPhone?.trim(), urgency: input.urgency?.trim(), callbackWindow: input.callbackWindow?.trim(), channel: input.channel, agentId: input.agentId, ...input.request }).filter(([, value]) => value));
     const values = { businessId: input.businessId, kind: "voice_message", title, body, metadata, contentExpiresAt: retentionPlan ? contentExpiryForPlan(retentionPlan, "follow_ups") : null, ...(input.callId ? { relatedCallId: input.callId } : {}) };
     // A retry replaces the open follow-up it repeats: the call's message, or
     // its request of the same kind for the same appointment. An unlinked
