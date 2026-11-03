@@ -77,6 +77,19 @@ const clients: QueryClient[] = [];
 afterEach(() => { cleanup(); clients.forEach((client) => client.clear()); clients.length = 0; vi.unstubAllGlobals(); });
 
 describe("affiliate page rendering", () => {
+  it("holds the real text, hidden, in every placeholder while the data loads", () => {
+    const i18n = createI18nInstance({ locale: "en", resources: { nav: localeResources.en.nav!, affiliate: en } });
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    clients.push(client);
+    const view = render(<I18nextProvider i18n={i18n}><QueryClientProvider client={client}><LiveAffiliateSurface /></QueryClientProvider></I18nextProvider>);
+    expect(screen.getByRole("heading", { name: en.title })).toBeTruthy();
+    expect(view.container.querySelector("[aria-busy=true]")).not.toBeNull();
+    const hidden = [...view.container.querySelectorAll("[data-slot=skeleton] .invisible")].map((node) => node.textContent ?? "");
+    for (const text of [en.referral.title, en.referral.copy, en.terms.title, en.stats.clicks, en.stats.paid, en.tabs.quickstart, en.settings.open, en.quickstart.share.title]) expect(hidden.some((value) => value.includes(text)), text).toBe(true);
+    expect(screen.queryByRole("textbox")).toBeNull();
+  });
+
   it.each(["en", "fr"] as const)("renders %s copy after client navigation loads the namespace", async (locale) => {
     // Client navigation keeps the dashboard layout, so /affiliate starts without
     // its namespace and must load it before the copy can render.

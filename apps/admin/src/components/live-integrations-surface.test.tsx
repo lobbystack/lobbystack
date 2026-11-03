@@ -170,15 +170,15 @@ describe("integration loading states", () => {
 
   it("shows a placeholder for every card, with no real card content or buttons, while the workspace loads", () => {
     renderPending(false);
-    expect(cards()).toBe(4);
-    expect(document.querySelectorAll("ul > li [data-slot=\"skeleton\"]").length).toBe(4 * 5);
+    expect(cards()).toBe(5);
+    expect(document.querySelectorAll("ul > li [data-slot=\"skeleton\"]").length).toBe(5 * 5);
     for (const title of titles) expect(screen.queryByText(title)).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();
   });
 
   it("keeps every card a placeholder while the Google and Instagram statuses load", () => {
     renderPending(true);
-    expect(cards()).toBe(4);
+    expect(cards()).toBe(5);
     for (const title of titles) expect(screen.queryByText(title)).toBeNull();
     expect(screen.queryByRole("button", { name: "integrations.actions.connect" })).toBeNull();
   });

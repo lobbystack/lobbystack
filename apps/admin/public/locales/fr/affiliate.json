@@ -7,6 +7,7 @@
     "description": "Partagez ce lien partout où vous recommandez {{appName}}.",
     "active": "Actif",
     "copy": "Copier le lien",
+    "copied": "Copié",
     "code": "Code de parrainage : {{code}}"
   },
   "terms": {

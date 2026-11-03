@@ -61,7 +61,7 @@ export default function ForgotPasswordPage() {
     } finally { if (!signingIn) setIsSubmitting(false); }
   }
 
-  return <ReplacementOnboardingShell description={step === "verify" ? t("forgotPassword.verifySubtitle", { email }) : t("forgotPassword.subtitle")} progress={null} title={step === "verify" ? t("forgotPassword.verifyTitle") : t("forgotPassword.title")} width="sm">
+  return <ReplacementOnboardingShell legalAgreement="passwordReset" description={step === "verify" ? t("forgotPassword.verifySubtitle", { email }) : t("forgotPassword.subtitle")} progress={null} title={step === "verify" ? t("forgotPassword.verifyTitle") : t("forgotPassword.title")} width="sm">
     <ForgotPasswordForm loginPath={loginPath} step={step} email={email} code={code} newPassword={newPassword} isSubmitting={isSubmitting} errorMessage={errorMessage} onEmailChange={setEmail} onCodeChange={setCode} onNewPasswordChange={setNewPassword} onSubmit={submit} onBackToRequest={() => { setStep("request"); setCode(""); setNewPassword(""); setErrorMessage(null); }} />
   </ReplacementOnboardingShell>;
 }

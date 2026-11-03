@@ -90,6 +90,7 @@ export function LiveIntegrationsSurface() {
       {discoveryFailed || google?.lastSyncError ? <Alert variant="destructive"><AlertTitle>{t("integrations.google.syncNeedsAttention")}</AlertTitle><AlertDescription>{t("integrations.google.discoveryFailed")}</AlertDescription></Alert> : null}
       <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{loading ? <>
         <IntegrationCardSkeleton label={longest(t("integrations.actions.connect"), t("integrations.actions.connected"), t("integrations.status.syncing"), t("integrations.google.reconnect"))} />
+        <IntegrationCardSkeleton label={longest(t("integrations.actions.connect"), t("integrations.actions.connected"), t("integrations.status.syncing"), t("integrations.calcom.syncNeedsAttention"), t("integrations.calcom.reconnect"))} />
         <IntegrationCardSkeleton label={t("integrations.actions.connected")} />
         <IntegrationCardSkeleton label={t("integrations.actions.manage")} />
         <IntegrationCardSkeleton label={t("integrations.actions.setUp")} />
