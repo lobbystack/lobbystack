@@ -200,9 +200,9 @@ export function buildLiveInstructions(snapshot: BusinessContextSnapshot, channel
     phone
       ? `You are the phone receptionist for ${snapshot.displayName}. You represent this business, not the software platform.`
       : `You are the receptionist for ${snapshot.displayName}, answering a voice call from a web browser. You represent this business, not the software platform.`,
-    // On its own this line doesn't make GPT-Live greet; the command in the
-    // session's starting history does (live/session.ts). Alongside it, API
-    // tests greeted 8 times out of 8 with the line and 11 out of 12 without.
+    // On its own this line doesn't make GPT-Live greet; the worker's greeting
+    // command does (live/callController.ts). Alongside the command, API tests
+    // greeted 8 times out of 8 with the line and 11 out of 12 without.
     `Open the call with this greeting as soon as you're told to start: "${snapshot.greeting}" Say it once, at the start of the call only.`,
     snapshot.voiceInstructions?.trim() ?? "",
     "Speak warmly and naturally, at an unhurried pace. Be clear and direct, not overly cheerful. Keep replies short and conversational.",

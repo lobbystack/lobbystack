@@ -3,14 +3,12 @@ import { describe, expect, it } from "vitest";
 
 import { buildBrowserSessionConfig, buildPhoneSessionConfig } from "./session";
 
-const opening = [{ role: "developer", content: [{ type: "input_text", text: `Start the conversation now: say exactly "${demoSnapshot.greeting}" in the language of that greeting, then stop and listen to the caller.` }] }];
-
 describe("GPT-Live session config", () => {
-  // OpenAI's guide: context the model needs from the start goes in input.
-  // Tested against the API, this made GPT-Live greet about 2 seconds in every time.
-  it("starts phone and browser sessions with the greeting command in their history", () => {
-    expect(buildPhoneSessionConfig(demoSnapshot).input).toEqual(opening);
-    expect(buildBrowserSessionConfig(demoSnapshot).input).toEqual(opening);
+  // The worker sends the greeting when the session starts. A second copy in
+  // the starting history could make GPT-Live greet twice.
+  it("starts phone and browser sessions without the greeting in their history", () => {
+    expect(buildPhoneSessionConfig(demoSnapshot).input).toBeUndefined();
+    expect(buildBrowserSessionConfig(demoSnapshot).input).toBeUndefined();
   });
 
   it("speaks in the voice the business picked, on the phone and in the browser", () => {

@@ -50,19 +50,21 @@ GPT-Live never hears key presses, so the worker takes the PIN:
 
 ## Greet the caller before they speak
 
-GPT-Live waits for the caller by default. To make it greet first, the admin starts every session with the greeting command in its starting history (`input`), as OpenAI's guide suggests for context the model needs from the start. In tests against the API, GPT-Live ignored a command appended after `session.started` more often, and on phone calls the worker can only connect after the session has started.
+GPT-Live waits for the caller by default. To make it greet first, the worker sends the greeting command with `session.commentary.append` and `delegation_id: null` as soon as it sees `session.started`. A phone call's session starts before the worker attaches, and the sideband replays the last 3 seconds of events, so an attach within 3 seconds still sees it. A later phone attach sends the command 3.5 seconds after the connection opens.
 
-GPT-Live doesn't always follow the command. From October 3 to 8, it greeted from the starting history on 24 of 40 calls that connected audio: 8 of 15 phone calls and 16 of 25 browser calls. When it did, it spoke 1.9 to 4.2 seconds after the worker attached.
+On November 2, GPT-Live spoke the greeting word for word on 5 browser calls out of 5, 0.9 to 1.6 seconds after the worker attached. The browser showed the call as live 1.3 to 2.4 seconds after the caller clicked. Phone calls haven't been tested this way.
 
-If the worker hears no voice 4 seconds after the session starts and the caller hasn't spoken, it sends the command with `session.commentary.append` and `delegation_id: null`. On November 2, GPT-Live spoke the greeting within 0.7 seconds of that command on 4 browser calls out of 4, word for word each time. Phone calls haven't been tested with it. The worker used `session.instructions.append` before, and GPT-Live ignored those commands: 8 of 16 acknowledged commands from October 3 to 8 went unspoken until the caller spoke or for the rest of the call, and 9 of 9 on three browser calls on November 2. After 4.5 seconds without voice from either side, the worker sends the command again, up to 3 commands in all.
+The session config used to carry the command in its starting history (`input`), with a fallback after 4 seconds of silence. From October 3 to 8, GPT-Live greeted from the starting history on 24 of 40 calls that connected audio, 1.9 to 4.2 seconds after the worker attached, so callers often waited 5 seconds for the fallback. The fallback went out with `session.instructions.append`, and GPT-Live ignored those commands: 8 of 16 acknowledged ones from October 3 to 8 went unspoken until the caller spoke or for the rest of the call, and 9 of 9 on three browser calls on November 2. The starting history now leaves the greeting out, so GPT-Live can't say it twice.
+
+After 4.5 seconds without voice from either side, the worker sends the command again, up to 3 commands in all.
 
 The worker stops sending the command once the receptionist or the caller speaks, or the call starts ending. It doesn't resend a command that OpenAI rejected or never acknowledged. OpenAI's guide says an acknowledgment waits until the session timeline reaches the end of the command, so it stays pending on a call whose audio never connected.
 
 The worker logs each step as `live.greeting` with these fields:
 
 - `step`: `sent`, `acknowledged`, `spoken` or `failed`
-- `attempt`: the number of commands sent so far. A `spoken` step with `attempt` 0 means the starting history worked, and with `attempt` 2 that the second command did.
-- `trigger`: `fallback` for the first command and `retry` for the others
+- `attempt`: the number of commands sent so far. A `spoken` step with `attempt` 2 means the second command worked.
+- `trigger`: `start` for the first command and `retry` for the others
 - `sinceAttachMs`: milliseconds since the worker attached
 - `inputAudioMs`: milliseconds of caller audio OpenAI has reflected to the sideband so far
 
