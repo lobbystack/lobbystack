@@ -99,7 +99,8 @@
     "orCall": "O llame al",
     "message": "Mensaje",
     "send": "Enviar",
-    "sendFailed": "Mensaje no enviado. Inténtelo de nuevo."
+    "sendFailed": "Mensaje no enviado. Inténtelo de nuevo.",
+    "typing": "El agente está escribiendo"
   },
   "testCall": {
     "trigger": "Llamada de prueba",

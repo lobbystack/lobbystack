@@ -159,6 +159,24 @@ describe("the test chat", () => {
     fetchMock.mockImplementation(async () => Response.json(agent));
   });
 
+  it("shows a typing indicator until the reply arrives", async () => {
+    let release: () => void = () => undefined;
+    fetchMock.mockImplementation(async (input) => {
+      if (!String(input).startsWith("/api/agent/test-chat")) return Response.json(agent);
+      await new Promise<void>((resolve) => { release = resolve; });
+      return Response.json({ code: "ai_provider_unavailable" }, { status: 503 });
+    });
+    render(testWindow);
+    act(() => { openTestWindow(); });
+    expect(screen.queryByRole("status", { name: "testWindow.typing" })).toBeNull();
+    await userEvent.type(await screen.findByRole("textbox", { name: "testWindow.message" }), "Hello{Enter}");
+    expect(await screen.findByRole("status", { name: "testWindow.typing" })).toBeTruthy();
+    await act(async () => { release(); });
+    await waitFor(() => expect(screen.queryByRole("status", { name: "testWindow.typing" })).toBeNull());
+    fetchMock.mockReset();
+    fetchMock.mockImplementation(async () => Response.json(agent));
+  });
+
   it("says when a message didn't go through", async () => {
     fetchMock.mockImplementation(async (input) => String(input).startsWith("/api/agent/test-chat") ? Response.json({ code: "ai_provider_unavailable" }, { status: 503 }) : Response.json(agent));
     render(testWindow);

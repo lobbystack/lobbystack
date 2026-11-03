@@ -64,6 +64,8 @@ function TestChat({ agentId, businessId, children }: { agentId: string | undefin
   const { error, messages, sendMessage, status } = useChat({ transport, onFinish: ({ message }) => { if (messageText(message).trim()) announceTestChatReplied(); } });
   const busy = status === "submitted" || status === "streaming";
   const lastMessage = messages.at(-1);
+  // From send until the first words of the reply arrive.
+  const typing = busy && !(lastMessage?.role === "assistant" && messageText(lastMessage).trim());
   // A reply can come back empty when the model runs out of room before it writes.
   const failed = Boolean(error) || (status === "ready" && lastMessage?.role === "assistant" && !messageText(lastMessage).trim());
 
@@ -94,6 +96,11 @@ function TestChat({ agentId, businessId, children }: { agentId: string | undefin
                 ? <p className="ml-auto max-w-[85%] rounded-xl bg-primary px-3 py-2 text-sm wrap-break-word whitespace-pre-wrap text-primary-foreground" key={message.id}>{text}</p>
                 : <div className="mr-auto max-w-[85%] rounded-xl bg-muted px-3 py-2 text-sm wrap-break-word [&_a]:underline [&_a]:underline-offset-2" dangerouslySetInnerHTML={{ __html: renderSafeMarkdown(text) }} key={message.id} />;
             })}
+          </div>
+        ) : null}
+        {typing ? (
+          <div aria-label={t("testWindow.typing")} className="mr-auto flex w-full max-w-[85%] shrink-0 items-center gap-1 rounded-xl bg-muted px-3 py-3" role="status">
+            {[0, 150, 300].map((delay) => <span aria-hidden className="size-1.5 animate-bounce rounded-full bg-muted-foreground motion-reduce:animate-pulse" key={delay} style={{ animationDelay: `${delay}ms` }} />)}
           </div>
         ) : null}
         {failed ? <FieldError className="w-full">{t("testWindow.sendFailed")}</FieldError> : null}

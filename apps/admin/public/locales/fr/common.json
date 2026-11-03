@@ -105,7 +105,8 @@
     "orCall": "Ou appelez le",
     "message": "Message",
     "send": "Envoyer",
-    "sendFailed": "Message non envoyé. Réessayez."
+    "sendFailed": "Message non envoyé. Réessayez.",
+    "typing": "L'agent écrit"
   },
   "testCall": {
     "trigger": "Appel test",

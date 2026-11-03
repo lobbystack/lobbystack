@@ -98,7 +98,8 @@
     "orCall": "Or call",
     "message": "Message",
     "send": "Send",
-    "sendFailed": "Message not sent. Try again."
+    "sendFailed": "Message not sent. Try again.",
+    "typing": "Agent is typing"
   },
   "testCall": {
     "trigger": "Test Call",

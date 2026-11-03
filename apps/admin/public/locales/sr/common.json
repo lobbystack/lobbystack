@@ -105,7 +105,8 @@
     "orCall": "Ili pozovite",
     "message": "Poruka",
     "send": "Pošalji",
-    "sendFailed": "Poruka nije poslata. Pokušajte ponovo."
+    "sendFailed": "Poruka nije poslata. Pokušajte ponovo.",
+    "typing": "Agent piše"
   },
   "testCall": {
     "trigger": "Probni poziv",
