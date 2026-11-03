@@ -14,7 +14,12 @@ it("disables a missing token and uses translated validation", async () => {
   render(<PasswordResetForm token="legacy-token" />);
   await userEvent.type(screen.getByLabelText("forgotPassword.newPassword"), "weakpassword");
   await userEvent.click(screen.getByRole("button", { name: "forgotPassword.verifySubmit" }));
-  expect(screen.getByText("errors.invalidPassword")).toBeTruthy();
+  expect(screen.getByText("signup.passwordCriteria.number")).toBeTruthy();
+  expect(fetcher).not.toHaveBeenCalled();
+  await userEvent.clear(screen.getByLabelText("forgotPassword.newPassword"));
+  await userEvent.click(screen.getByRole("button", { name: "forgotPassword.verifySubmit" }));
+  expect(screen.getByText("forgotPassword.passwordRequired")).toBeTruthy();
+  expect(document.activeElement).toBe(screen.getByLabelText("forgotPassword.newPassword"));
   expect(fetcher).not.toHaveBeenCalled();
 });
 it("accepts an existing reset link and shows translated completion", async () => {

@@ -145,29 +145,162 @@ function templateSubject(template: TemplateName, variables: Record<string, strin
 
 function renderTemplate(template: TemplateName, subject: string, variables: Record<string, string>, brand: EmailBrand): { text: string; html?: string } {
   const text = templateBody(template, variables, brand);
+  const html = templateHtml(template, subject, variables, brand);
+  return html ? { text, html } : { text };
+}
 
-  if (template === "invitation" || template === "business_released" || template === "business_deleted") {
-    return { text, html: renderNoticeHtml(brand, subject, noticeCopy(template, variables, brand), dashboardLink(variables.url, brand)) };
+/** The HTML of an email, or undefined for the founder's follow-up, which goes out as a personal plain-text letter. */
+function templateHtml(template: TemplateName, subject: string, variables: Record<string, string>, brand: EmailBrand): string | undefined {
+  const url = dashboardLink(variables.url, brand);
+  switch (template) {
+    case "invitation":
+    case "business_released":
+    case "business_deleted":
+      return renderNoticeHtml(brand, subject, noticeCopy(template, variables, brand), url);
+    case "passkey_added":
+      return renderPasskeyAddedHtml(variables, brand, subject);
+    case "existing_account":
+      return renderExistingAccountHtml(variables, brand, subject);
+    case "account_setup":
+      return renderAccountSetupHtml(variables, brand, subject);
+    case "verify_email":
+      if (variables.code) return renderCodeHtml(brand, subject, "Verify your email address", `Enter this verification code to finish setting up your ${brand.name} account.`, variables.code);
+      // One wording for a new account and an email change: emails queued before payloads carried a purpose have no way to tell them apart.
+      return renderNoticeHtml(brand, subject, { heading: "Confirm your email address", lines: [`Confirm this email address for your ${brand.name} account.`, "If you did not ask for this, you can safely ignore this email."], action: "Confirm email" }, url);
+    case "password_reset":
+      return variables.code
+        ? renderCodeHtml(brand, subject, "Reset your password", `Enter this code to reset your ${brand.name} password.`, variables.code)
+        : renderNoticeHtml(brand, subject, { heading: "Reset your password", lines: [`Use the link below to choose a new ${brand.name} password.`, "If you did not ask for a reset, you can safely ignore this email."], action: "Reset password" }, url);
+    case "operator_alert":
+      return renderMessageHtml(brand, subject, variables.message ?? `${brand.name} operator notification`);
+    case "feedback_submission":
+      return renderMessageHtml(brand, subject, variables.body ?? "LobbyStack dashboard feedback");
+    case "number_trial": {
+      const copy = numberTrialCopy(trialKind(variables.kind), variables.locale, variables);
+      return renderLetterHtml(brand, subject, variables, copy.lines, copy.button, variables.url, variables.senderName ?? "LobbyStack");
+    }
+    case "number_release": {
+      const copy = numberReleaseCopy(variables);
+      return renderLetterHtml(brand, subject, variables, copy.lines, copy.button, variables.url, variables.senderName ?? "LobbyStack");
+    }
+    case "partner_pool_alert": {
+      const copy = partnerPoolAlertCopy(variables);
+      return renderLetterHtml(brand, subject, variables, copy.lines, copy.action, variables.url, brand.name);
+    }
+    case "business_allowance_alert": {
+      const copy = businessAllowanceAlertCopy(variables, brand.name);
+      return renderLetterHtml(brand, subject, variables, copy.lines, copy.action, url, brand.name);
+    }
+    case "partner_business_allowance_alert": {
+      const copy = partnerBusinessAllowanceAlertCopy(variables);
+      return renderLetterHtml(brand, subject, variables, copy.lines, copy.action, variables.url, brand.name);
+    }
+    case "onboarding_followup":
+      return undefined;
   }
-  if (template !== "verify_email" || !variables.code) {
-    return { text };
-  }
+}
 
-  const code = escapeHtml(variables.code);
-  return {
-    text,
-    html: renderEmailLayout({
-      brand,
-      previewText: subject,
-      content: [
-        '<h1 style="margin:0 0 24px;font-size:28px;font-weight:600;line-height:1.25;color:#0B0B0D;text-align:center;">Verify your email address</h1>',
-        `<p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#3D3D3D;text-align:center;">Enter this verification code to finish setting up your ${escapeHtml(brand.name)} account.</p>`,
-        `<p style="margin:0 0 24px;padding:16px 24px;background-color:#F3F4F6;border-radius:16px;font-size:32px;font-weight:600;line-height:1.25;letter-spacing:8px;color:#0B0B0D;text-align:center;">${code}</p>`,
-        '<p style="margin:0 0 12px;font-size:14px;line-height:1.5;color:#6B7280;text-align:center;">This code expires in 10 minutes.</p>',
-        '<p style="margin:0;font-size:14px;line-height:1.5;color:#6B7280;text-align:center;">If you did not request this code, you can safely ignore this email.</p>',
-      ].join(""),
-    }),
-  };
+function renderCodeHtml(brand: EmailBrand, subject: string, heading: string, intro: string, code: string): string {
+  return renderEmailLayout({
+    brand,
+    previewText: subject,
+    content: [
+      `<h1 style="margin:0 0 24px;font-size:28px;font-weight:600;line-height:1.25;color:#0B0B0D;text-align:center;">${escapeHtml(heading)}</h1>`,
+      `<p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#3D3D3D;text-align:center;">${escapeHtml(intro)}</p>`,
+      `<p style="margin:0 0 24px;padding:16px 24px;background-color:#F3F4F6;border-radius:16px;font-size:32px;font-weight:600;line-height:1.25;letter-spacing:8px;color:#0B0B0D;text-align:center;">${escapeHtml(code)}</p>`,
+      '<p style="margin:0 0 12px;font-size:14px;line-height:1.5;color:#6B7280;text-align:center;">This code expires in 10 minutes.</p>',
+      '<p style="margin:0;font-size:14px;line-height:1.5;color:#6B7280;text-align:center;">If you did not request this code, you can safely ignore this email.</p>',
+    ].join(""),
+  });
+}
+
+const ACTION_BUTTON_STYLE = "display:inline-block;padding:12px 24px;background-color:#0B0B0D;border-radius:9999px;color:#FFFFFF;font-size:16px;font-weight:600;text-decoration:none;";
+
+/** A greeting, the copy, a button and a signature, left-aligned like a letter: the trial, release and allowance emails. */
+function renderLetterHtml(brand: EmailBrand, subject: string, variables: Record<string, string>, lines: string[], action: string, url: string | undefined, signature: string): string {
+  const greet = TRIAL_GREETINGS[variables.locale ?? "en"] ?? TRIAL_GREETINGS.en!;
+  return renderEmailLayout({
+    brand,
+    previewText: subject,
+    content: [
+      `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(greet(variables.firstName ?? ""))}</p>`,
+      ...lines.map((line) => `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(line)}</p>`),
+      ...(url ? [`<p style="margin:24px 0 32px;"><a href="${escapeHtml(url)}" style="${ACTION_BUTTON_STYLE}">${escapeHtml(action)}</a></p>`] : []),
+      `<p style="margin:0;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(signature)}</p>`,
+    ].join(""),
+  });
+}
+
+/** A free-form message for the team, such as an operator alert or dashboard feedback: its paragraphs and line breaks as written. */
+function renderMessageHtml(brand: EmailBrand, subject: string, message: string): string {
+  return renderEmailLayout({
+    brand,
+    previewText: subject,
+    content: message
+      .split(/\n{2,}/)
+      .map((paragraph) => `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(paragraph).replaceAll("\n", "<br />")}</p>`)
+      .join(""),
+  });
+}
+
+type ActionCopy = { heading: string; lines: string[]; action: string; footnote: string };
+
+function existingAccountCopy(locale: string | undefined, name: string): ActionCopy & { forgot: string } {
+  switch (locale) {
+    case "fr":
+      return { heading: "Votre compte existe déjà", lines: [`Vous avez déjà un compte ${name}. Connectez-vous pour continuer.`], action: "Se connecter", forgot: "Mot de passe oublié ?", footnote: "Si vous n’avez pas demandé la création d’un compte, ignorez cet e-mail." };
+    case "es":
+      return { heading: "Ya tiene una cuenta", lines: [`Ya tiene una cuenta de ${name}. Inicie sesión para continuar.`], action: "Iniciar sesión", forgot: "¿Olvidó su contraseña?", footnote: "Si no solicitó una cuenta, ignore este correo." };
+    case "sr":
+      return { heading: "Već imate nalog", lines: [`Već imate ${name} nalog. Prijavite se da biste nastavili.`], action: "Prijavi se", forgot: "Zaboravili ste lozinku?", footnote: "Ako niste zatražili nalog, zanemarite ovaj imejl." };
+    default:
+      return { heading: "You already have an account", lines: [`You already have a ${name} account. Sign in to continue.`], action: "Sign in", forgot: "Forgot your password?", footnote: "If you did not request an account, ignore this email." };
+  }
+}
+
+function renderExistingAccountHtml(variables: Record<string, string>, brand: EmailBrand, subject: string): string {
+  const copy = existingAccountCopy(variables.locale, brand.name);
+  const signIn = dashboardLink(variables.signInUrl, brand);
+  const reset = dashboardLink(variables.resetUrl, brand);
+  return renderEmailLayout({
+    brand,
+    previewText: subject,
+    content: [
+      `<h1 style="margin:0 0 24px;font-size:28px;font-weight:600;line-height:1.25;color:#0B0B0D;text-align:center;">${escapeHtml(copy.heading)}</h1>`,
+      ...copy.lines.map((line) => `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#3D3D3D;text-align:center;">${escapeHtml(line)}</p>`),
+      ...(signIn ? [`<p style="margin:24px 0 0;text-align:center;"><a href="${escapeHtml(signIn)}" style="${ACTION_BUTTON_STYLE}">${escapeHtml(copy.action)}</a></p>`] : []),
+      ...(reset ? [`<p style="margin:24px 0 0;text-align:center;"><a href="${escapeHtml(reset)}" style="font-size:14px;font-weight:600;color:#0B0B0D;text-decoration:underline;">${escapeHtml(copy.forgot)}</a></p>`] : []),
+      `<p style="margin:32px 0 0;padding-top:24px;border-top:1px solid #E5E7EB;font-size:14px;line-height:1.5;color:#6B7280;text-align:center;">${escapeHtml(copy.footnote)}</p>`,
+    ].join(""),
+  });
+}
+
+function accountSetupCopy(locale: string | undefined, name: string, email: string): ActionCopy {
+  switch (locale) {
+    case "fr":
+      return { heading: "Créez votre compte", lines: [`On vous a invité à créer un compte ${name} avec l’adresse ${email}.`, "Créez-le avec cette adresse."], action: "Créer mon compte", footnote: "Si vous ne l’attendiez pas, ignorez cet e-mail." };
+    case "es":
+      return { heading: "Cree su cuenta", lines: [`Le invitaron a crear una cuenta de ${name} con la dirección ${email}.`, "Créela con esta dirección."], action: "Crear mi cuenta", footnote: "Si no lo esperaba, ignore este correo." };
+    case "sr":
+      return { heading: "Napravite svoj nalog", lines: [`Pozvani ste da napravite ${name} nalog sa adresom ${email}.`, "Napravite ga sa ovom adresom."], action: "Napravi nalog", footnote: "Ako ovo niste očekivali, zanemarite ovaj imejl." };
+    default:
+      return { heading: "Make your account", lines: [`You were invited to make a ${name} account with ${email}.`, "Make it with this address."], action: "Make my account", footnote: "If you weren't expecting this, ignore this email." };
+  }
+}
+
+function renderAccountSetupHtml(variables: Record<string, string>, brand: EmailBrand, subject: string): string {
+  const copy = accountSetupCopy(variables.locale, brand.name, variables.email ?? "");
+  const url = dashboardLink(variables.url, brand);
+  return renderEmailLayout({
+    brand,
+    previewText: subject,
+    content: [
+      `<h1 style="margin:0 0 24px;font-size:28px;font-weight:600;line-height:1.25;color:#0B0B0D;text-align:center;">${escapeHtml(copy.heading)}</h1>`,
+      ...copy.lines.map((line) => `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#3D3D3D;text-align:center;">${escapeHtml(line)}</p>`),
+      ...(url ? [`<p style="margin:24px 0 0;text-align:center;"><a href="${escapeHtml(url)}" style="${ACTION_BUTTON_STYLE}">${escapeHtml(copy.action)}</a></p>`] : []),
+      `<p style="margin:32px 0 0;padding-top:24px;border-top:1px solid #E5E7EB;font-size:14px;line-height:1.5;color:#6B7280;text-align:center;">${escapeHtml(copy.footnote)}</p>`,
+    ].join(""),
+  });
 }
 
 // The account, invitation and alert emails a partner's client may get name the
@@ -584,6 +717,38 @@ function passkeyAddedBody(variables: Record<string, string>, brand: EmailBrand):
     default:
       return `Someone added a passkey to your ${name} account. If it was you, you're all set. See your passkeys: ${settings}. If it wasn't you, reset your password now: ${reset}. A reset removes all your passkeys and signs out all your devices.`;
   }
+}
+
+type PasskeyAddedCopy = { heading: string; lines: string[]; settings: string; warning: string; reset: string };
+
+function passkeyAddedCopy(locale: string | undefined, name: string): PasskeyAddedCopy {
+  switch (locale) {
+    case "fr":
+      return { heading: "Nouvelle clé d’accès ajoutée", lines: [`Quelqu’un a ajouté une clé d’accès à votre compte ${name}.`, "Si c’était vous, vous n’avez rien à faire."], settings: "Voir mes clés d’accès", warning: "Ce n’était pas vous ? Réinitialisez votre mot de passe maintenant. La réinitialisation supprime toutes vos clés d’accès et déconnecte tous vos appareils.", reset: "Réinitialiser mon mot de passe" };
+    case "es":
+      return { heading: "Nueva llave de acceso añadida", lines: [`Alguien añadió una llave de acceso a su cuenta de ${name}.`, "Si fue usted, no tiene que hacer nada."], settings: "Ver mis llaves de acceso", warning: "¿No fue usted? Restablezca su contraseña ahora. Al restablecerla, se eliminan todas sus llaves de acceso y se cierra la sesión en todos sus dispositivos.", reset: "Restablecer mi contraseña" };
+    case "sr":
+      return { heading: "Dodat je novi pristupni ključ", lines: [`Neko je dodao pristupni ključ na vaš ${name} nalog.`, "Ako ste to bili vi, ne morate ništa da radite."], settings: "Pogledaj moje pristupne ključeve", warning: "Niste bili vi? Odmah resetujte lozinku. Resetovanje uklanja sve vaše pristupne ključeve i odjavljuje sve vaše uređaje.", reset: "Resetuj moju lozinku" };
+    default:
+      return { heading: "New passkey added", lines: [`Someone added a passkey to your ${name} account.`, "If it was you, you're all set."], settings: "See your passkeys", warning: "Wasn't you? Reset your password now. A reset removes all your passkeys and signs out all your devices.", reset: "Reset my password" };
+  }
+}
+
+function renderPasskeyAddedHtml(variables: Record<string, string>, brand: EmailBrand, subject: string): string {
+  const copy = passkeyAddedCopy(variables.locale, brand.name);
+  const settings = dashboardLink(variables.settingsUrl, brand);
+  const reset = dashboardLink(variables.resetUrl, brand);
+  return renderEmailLayout({
+    brand,
+    previewText: subject,
+    content: [
+      `<h1 style="margin:0 0 24px;font-size:28px;font-weight:600;line-height:1.25;color:#0B0B0D;text-align:center;">${escapeHtml(copy.heading)}</h1>`,
+      ...copy.lines.map((line) => `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#3D3D3D;text-align:center;">${escapeHtml(line)}</p>`),
+      ...(settings ? [`<p style="margin:24px 0 0;text-align:center;"><a href="${escapeHtml(settings)}" style="display:inline-block;padding:12px 24px;background-color:#0B0B0D;border-radius:9999px;color:#FFFFFF;font-size:16px;font-weight:600;text-decoration:none;">${escapeHtml(copy.settings)}</a></p>`] : []),
+      `<p style="margin:32px 0 16px;padding-top:24px;border-top:1px solid #E5E7EB;font-size:14px;line-height:1.5;color:#6B7280;text-align:center;">${escapeHtml(copy.warning)}</p>`,
+      ...(reset ? [`<p style="margin:0;text-align:center;"><a href="${escapeHtml(reset)}" style="font-size:14px;font-weight:600;color:#0B0B0D;text-decoration:underline;">${escapeHtml(copy.reset)}</a></p>`] : []),
+    ].join(""),
+  });
 }
 
 function existingAccountBody(variables: Record<string, string>, brand: EmailBrand): string {
