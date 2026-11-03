@@ -109,9 +109,9 @@ describe("LiveCallController sideband", () => {
       peer = socket;
       send(socket, { type: "session.started" });
       onCommand(socket, (event) => {
-        if (event.type !== "session.instructions.append" || event.event_id !== "wrap_up_silence_timeout") return;
+        if (event.type !== "session.commentary.append" || event.event_id !== "wrap_up_silence_timeout") return;
         order.push("goodbye");
-        send(socket, { type: "session.instructions.appended", client_event_id: event.event_id, start_ms: 300, end_ms: 300 });
+        send(socket, { type: "session.commentary.appended", client_event_id: event.event_id, start_ms: 300, end_ms: 300 });
         send(socket, { type: "session.output_transcript.delta", delta: "It's been quiet, so I'll hang up now. Goodbye!", start_ms: 400, end_ms: 900 });
       });
     }], { silenceTimeoutMs: 100, onTimeout: (reason) => void holder.controller!.wrapUp(reason) });

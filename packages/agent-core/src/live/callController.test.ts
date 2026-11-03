@@ -1051,7 +1051,7 @@ describe("LiveCallController ending when the caller is done", () => {
     await sayGoodbye(socket);
     await vi.advanceTimersByTimeAsync(1_000);
     void controller.wrapUp("service_restart");
-    expect(sentOfType(socket, "session.instructions.append")).toHaveLength(1);
+    expect(sentOfType(socket, "session.commentary.append").filter((event) => event.event_id === "wrap_up_service_restart")).toHaveLength(1);
     await vi.advanceTimersByTimeAsync(20_000);
     expect(hangup).toHaveBeenCalledOnce();
     expect(endOnClose(socket, closed)).toBe("caller_finished");
@@ -1208,7 +1208,7 @@ describe("LiveCallController wrap-up", () => {
     // The caller's words place the session timeline: 1,000 ms in, now.
     socket.emit("session.input_transcript.delta", { delta: "So about that quote...", start_ms: 500, end_ms: 1_000 });
     const done = controller.wrapUp("duration_limit");
-    expect(sentOfType(socket, "session.instructions.append")).toEqual([expect.objectContaining({ delegation_id: null, event_id: "wrap_up_duration_limit", content: expect.stringContaining("reached its time limit") })]);
+    expect(sentOfType(socket, "session.commentary.append")).toEqual([expect.objectContaining({ delegation_id: null, event_id: "wrap_up_duration_limit", content: expect.stringContaining("reached its time limit") })]);
     await vi.advanceTimersByTimeAsync(1_000);
     // The goodbye runs to 4,500 ms on the timeline: 2.5 seconds from now.
     socket.emit("session.output_transcript.delta", { delta: "I'm sorry, we're out of time. Please call back. Goodbye!", start_ms: 2_000, end_ms: 4_500 });
@@ -1226,7 +1226,7 @@ describe("LiveCallController wrap-up", () => {
     const { socket, controller, hangup } = setup();
     void controller.wrapUp("silence_timeout");
     void controller.wrapUp("service_restart");
-    expect(sentOfType(socket, "session.instructions.append")).toHaveLength(1);
+    expect(sentOfType(socket, "session.commentary.append")).toHaveLength(1);
     await vi.advanceTimersByTimeAsync(4_000);
     expect(hangup).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(400);
@@ -1237,7 +1237,7 @@ describe("LiveCallController wrap-up", () => {
     const { socket, controller } = setup();
     controller.end("spam");
     void controller.wrapUp("service_restart");
-    expect(sentOfType(socket, "session.instructions.append")).toHaveLength(0);
+    expect(sentOfType(socket, "session.commentary.append")).toHaveLength(0);
   });
 
   it("starts the duration limit's goodbye 30 seconds early, or halfway through a call that reserved under a minute", async () => {
@@ -1264,7 +1264,7 @@ describe("LiveCallController wrap-up", () => {
     socket.emit("session.output_transcript.delta", { delta: "It's forty dollars.", start_ms: 900, end_ms: 1_100 });
     void controller.wrapUp("duration_limit");
     await vi.advanceTimersByTimeAsync(300);
-    socket.emit("session.instructions.appended", { client_event_id: "wrap_up_duration_limit" });
+    socket.emit("session.commentary.appended", { client_event_id: "wrap_up_duration_limit" });
     // Measured from the request, that sentence would have ended the call by now.
     await vi.advanceTimersByTimeAsync(1_700);
     expect(hangup).not.toHaveBeenCalled();

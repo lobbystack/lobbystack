@@ -204,7 +204,7 @@ const GREETING_FALLBACK_MS = 4_000;
 // GPT-Live ignored session.instructions.append for greetings: on calls from
 // October 3 to 8, 8 of 16 acknowledged commands went unspoken until the caller
 // spoke, or for good. It spoke session.commentary.append within 0.7 seconds on
-// 3 calls out of 3. After 4.5 seconds of silence the worker still sends the
+// 4 calls out of 4. After 4.5 seconds of silence the worker still sends the
 // command again, up to this many commands in all.
 const GREETING_RETRY_MS = 4_500;
 const GREETING_COMMANDS = 3;
@@ -950,7 +950,7 @@ export class LiveCallController {
     if (!this.ending && !this.finished) {
       this.ending = true;
       this.endReason ??= reason;
-      this.send({ type: "session.instructions.append", delegation_id: null, content: WRAP_UP[reason], event_id: `wrap_up_${reason}` }, { kind: "wrap_up" });
+      this.send({ type: "session.commentary.append", delegation_id: null, content: WRAP_UP[reason], event_id: `wrap_up_${reason}` }, { kind: "wrap_up" });
       this.afterSpeech(() => this.endSession(), () => this.wrapUpAckedAt);
     }
     return this.whenFinished;
