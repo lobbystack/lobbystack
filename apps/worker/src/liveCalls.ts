@@ -68,7 +68,7 @@ export type LiveRecoveryOutcome = "attached" | "finished" | "owned" | "skipped";
 
 // After this long without speech, GPT-Live asks whether the caller is still
 // there, twice; the silence timeout then runs from the second check-in.
-const SILENCE_CHECK_IN_MS = 10_000;
+const SILENCE_CHECK_IN_MS = 8_000;
 const SILENCE_TIMEOUT_MS = 10_000;
 // A call that saved a turn this recently has a live worker, even if its lock
 // lapsed, so recovery leaves it alone.
