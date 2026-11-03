@@ -68,7 +68,7 @@ async function seed(tx: DatabaseTransaction, options: { selfHosted: boolean; own
   const eventPreferences = defaultOperatorNotificationEventPreferences();
   eventPreferences.voiceMessage.sms = true;
   await tx.insert(operatorNotificationPreferences).values({ businessId, userId, emailEnabled: false, smsEnabled: true, eventPreferences, smsConsentGrantedAt: new Date(), smsConsentDisclosureVersion: OPERATOR_SMS_DISCLOSURE_VERSION, smsConsentPhone: ownerPhone, smsConsentSource: "operator_settings" });
-  await tx.insert(agents).values({ businessId, greeting: "Hi", tone: "warm", summary: "Test", bookingPolicy: "Book", transferMode: "never", bookingMode: "instant", appointmentChangePolicy: { enabled: true, verificationMode: "otp_required", allowCancel: true, allowReschedule: true } });
+  await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hi", tone: "warm", summary: "Test", bookingPolicy: "Book", transferMode: "never", bookingMode: "instant", appointmentChangePolicy: { enabled: true, verificationMode: "otp_required", allowCancel: true, allowReschedule: true } });
   const [member] = await tx.insert(staff).values({ businessId, name: "Sam", timezone: "UTC" }).returning();
   const [service] = await tx.insert(services).values({ businessId, name: "Cut", slug: "cut", durationMinutes: 30 }).returning();
   await tx.insert(businessHours).values(Array.from({ length: 7 }, (_, dayOfWeek) => ({ businessId, dayOfWeek, openMinutes: 0, closeMinutes: 1439 })));

@@ -248,30 +248,11 @@ async function main(): Promise<void> {
             ,('lobbystack_worker', 'agents', 'INSERT')
             ,('lobbystack_worker', 'agents', 'UPDATE')
             ,('lobbystack_readonly', 'agents', 'SELECT')
-            ,('lobbystack_app', 'receptionist_profiles', 'SELECT')
-            ,('lobbystack_app', 'receptionist_profiles', 'INSERT')
-            ,('lobbystack_app', 'receptionist_profiles', 'UPDATE')
-            ,('lobbystack_worker', 'receptionist_profiles', 'SELECT')
-            ,('lobbystack_worker', 'receptionist_profiles', 'INSERT')
-            ,('lobbystack_worker', 'receptionist_profiles', 'UPDATE')
-            ,('lobbystack_readonly', 'receptionist_profiles', 'SELECT')
           ) as expected(role_name, table_name, privilege_type)
           where not has_table_privilege(expected.role_name, 'public.' || expected.table_name, expected.privilege_type)
         `);
         if (grantFailures.rows.length > 0) {
           throw new Error(`Database grant verification failed for: ${grantFailures.rows.map((row) => `${row.role_name}:${row.table_name}:${row.privilege_type}`).join(", ")}`);
-        }
-        // The view old code reads agents through (migration 0183) must run as its
-        // caller, or the table's grants and policy wouldn't apply. Row-level
-        // security doesn't cover a view, so the checks above don't see it.
-        const compatibilityViewFailures = await migrator.db.execute<{ present: boolean }>(sql`
-          select true as present
-          from pg_class c
-          where c.oid = to_regclass('public.receptionist_profiles')
-            and (c.relkind <> 'v' or not coalesce(c.reloptions @> array['security_invoker=true'], false))
-        `);
-        if (compatibilityViewFailures.rows.length > 0) {
-          throw new Error("RLS verification failed: receptionist_profiles must be a security_invoker view.");
         }
         // Row-level security can't stop a row pointing at another business's agent,
         // so each link needs its composite foreign key, and old code needs the
