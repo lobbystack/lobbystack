@@ -23,6 +23,18 @@ export async function countOperatorTestCallsHeard(tx: DatabaseTransaction, busin
   return Number(row?.count ?? 0);
 }
 
+/** The operator's latest test call that someone heard, by the same rule as countOperatorTestCallsHeard. */
+export async function latestOperatorTestCall(tx: DatabaseTransaction, businessId: string) {
+  return (await tx.select({ id: calls.id, startedAt: calls.startedAt, endedAt: calls.endedAt, providerDurationSeconds: calls.providerDurationSeconds }).from(calls).where(and(
+    eq(calls.businessId, businessId),
+    eq(calls.transport, "web_voice"),
+    eq(calls.widgetId, DASHBOARD_TEST_CALL_WIDGET_ID),
+    isNull(calls.prospectDemoId),
+    isNotNull(calls.mediaStartedAt),
+    isNotNull(calls.endedAt),
+  )).orderBy(desc(calls.startedAt)).limit(1))[0] ?? null;
+}
+
 /**
  * The crawl describing the business's own website. Resubmitting a URL reuses
  * that URL's earlier import, so creation time alone would favour whichever site
@@ -61,10 +73,12 @@ export async function hasAnsweredPhoneCall(tx: DatabaseTransaction, businessId: 
 
 export const setupGuideStepIds = ["fullScan", "sources", "testCall", "phoneNumber"] as const;
 export type SetupGuideStepId = (typeof setupGuideStepIds)[number];
+/** Steps the owner can skip: the guide's, plus the dashboard's opening hours step, which only shows while instant booking has no hours. */
+export const setupGuideSkippableStepIds = [...setupGuideStepIds, "hours"] as const;
 export type SetupGuideStatus = "complete" | "skipped" | "needs setup";
 
 /** Each setup guide step's status. A step that got done reads complete, even if it was skipped. */
-export async function loadSetupGuideInTransaction(tx: DatabaseTransaction, businessId: string): Promise<{ steps: Record<SetupGuideStepId, SetupGuideStatus>; fullScanDocumentId: string | null }> {
+export async function loadSetupGuideInTransaction(tx: DatabaseTransaction, businessId: string): Promise<{ steps: Record<SetupGuideStepId, SetupGuideStatus>; skippedSteps: string[]; fullScanDocumentId: string | null }> {
   const business = (await tx.select({ skippedSteps: businesses.setupGuideSkippedSteps }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
   const knowledge = await tx.select({ count: count() }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, businessId), eq(knowledgeDocuments.sourceType, "upload"), ne(knowledgeDocuments.status, "error"), ne(knowledgeDocuments.status, "cancelled")));
   const sampled = await currentWebsiteIngestion(tx, businessId);
@@ -86,6 +100,7 @@ export async function loadSetupGuideInTransaction(tx: DatabaseTransaction, busin
       testCall: status(heardCalls > 0, "testCall"),
       phoneNumber: status(Number(businessNumber[0]?.count ?? 0) > 0, "phoneNumber"),
     },
+    skippedSteps: skipped,
     fullScanDocumentId: sampled?.rootDocumentId ?? null,
   };
 }

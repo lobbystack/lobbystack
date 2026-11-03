@@ -3,7 +3,8 @@
     "signOut": "Sign out",
     "terms": "Terms",
     "privacy": "Privacy",
-    "support": "Support"
+    "support": "Support",
+    "back": "Back"
   },
   "errors": {
     "tooManyBusinesses": "You already own 10 workspaces, the limit for one account."
@@ -11,10 +12,10 @@
   "adminRequired": {
     "eyebrow": "Workspace setup",
     "title": "Setup is waiting on an admin",
-    "description": "This workspace is still being configured. Ask a business owner or admin to finish setup before you use it.",
-    "descriptionWithBusiness": "{{businessName}} is still being configured. Ask a business owner or admin to finish setup before you use it.",
+    "description": "This workspace is still being configured. Ask a workspace owner or admin to finish setup before you use it.",
+    "descriptionWithBusiness": "{{businessName}} is still being configured. Ask a workspace owner or admin to finish setup before you use it.",
     "statusTitle": "Your access is active",
-    "statusDescription": "You will be able to use the workspace once an admin completes onboarding. Setup changes are limited to business owners and admins.",
+    "statusDescription": "You will be able to use the workspace once an admin completes onboarding. Setup changes are limited to workspace owners and admins.",
     "goToWorkspace": "Go to workspace"
   },
   "brand": {
@@ -41,9 +42,8 @@
   },
   "businessName": {
     "title": "First, what is the name of your business?",
-    "description": "",
     "createTitle": "Create workspace",
-    "createDescription": "These details become the foundation of the receptionist context.",
+    "createDescription": "These details become the foundation of the agent context.",
     "existingTitle": "Workspace already exists",
     "existingDescription": "Continue setup using the active workspace.",
     "configured": "Business details are already configured.",
@@ -71,7 +71,6 @@
   },
   "website": {
     "title": "Now let's train {{appName}} on your website",
-    "description": "",
     "label": "Website",
     "placeholder": "yourcompany.com",
     "sourceName": "Source name",
@@ -85,38 +84,46 @@
     "invalidUrl": "Enter your website address, like yourcompany.com.",
     "skipFailed": "We couldn't skip this step right now. Please try again."
   },
-  "knowledge": {
-    "title": "Add training documents",
-    "description": "Help your AI understand your business.",
-    "tabs": {
-      "upload": "Upload files",
-      "paste": "Paste text"
-    },
-    "upload": {
-      "headline": "Drag & drop or click to upload",
-      "formats": "PDF, DOCX, TXT, MD supported",
-      "remove": "Remove",
-      "tooLarge": "Documents must be 10 MB or smaller.",
-      "unsupportedType": "Supported types are PDF, DOCX, TXT, and Markdown.",
-      "failed": "We couldn't upload that document. Please try again."
-    },
-    "paste": {
-      "placeholder": "Paste any business info: services, FAQ, hours, policies...",
-      "hint": "We'll add this to your AI's knowledge base immediately.",
-      "defaultTitle": "Onboarding notes"
-    },
+  "language": {
+    "title": "What language should your agent speak?",
+    "label": "Caller language",
     "continue": "Continue",
-    "continuing": "Saving...",
-    "skip": "Skip for now",
-    "skipping": "Skipping...",
-    "continueFailed": "We couldn't continue right now. Please try again.",
-    "skipFailed": "We couldn't skip this step right now. Please try again."
+    "saving": "Saving...",
+    "submitFailed": "We couldn't save that right now. Please try again."
   },
-  "testCall": {
-    "title": "Hear your receptionist",
-    "continue": "Continue",
-    "skip": "Skip for now",
-    "continueFailed": "We couldn't continue. Try again."
+  "reading": {
+    "title": "Reading your website",
+    "skip": "Skip the wait",
+    "previous": "Previous",
+    "next": "Next",
+    "slides": {
+      "answers": "Answers from your own pages",
+      "booking": "Books appointments",
+      "transfer": "Puts callers through to your team",
+      "languages": "Switches language mid-call",
+      "summaries": "Sums up every call",
+      "widget": "Answers on your website too"
+    },
+    "scenes": {
+      "answers": {
+        "question": "Do you take new patients?",
+        "answer": "Yes, and the first visit is free."
+      },
+      "booking": {
+        "service": "Cleaning"
+      },
+      "transfer": {
+        "agent": "Your agent",
+        "role": "Front desk"
+      },
+      "summaries": {
+        "summary": "New patient. Booked a cleaning for Tuesday."
+      },
+      "widget": {
+        "question": "Open on Saturdays?",
+        "answer": "Yes, until 1 PM."
+      }
+    }
   },
   "verifyPhone": {
     "title": "Verify your mobile number",
@@ -148,7 +155,7 @@
     },
     "unavailable": {
       "title": "We don't offer numbers in this country yet ({{country}}).",
-      "body": "You can still use your receptionist in the browser, and we can email you when numbers arrive there.",
+      "body": "You can still use your agent in the browser, and we can email you when numbers arrive there.",
       "notify": "Email me when they're available",
       "joined": "Done. We'll email you.",
       "continue": "Continue without a number",
@@ -156,27 +163,16 @@
       "partnerTitle": "We can't verify phones in this country yet ({{country}}).",
       "partnerBody": "You can finish setup without a verified phone.",
       "partnerContinue": "Continue"
-    }
-  },
-  "greeting": {
-    "title": "How should we greet your callers?",
-    "description": "This is what your AI says first. You can change it any time.",
-    "label": "Greeting",
-    "language": "Caller language",
-    "placeholder": "Thanks for calling. How can I help?",
-    "continue": "Continue",
-    "submitting": "Saving...",
-    "submitFailed": "We couldn't save that greeting right now. Please try again."
+    },
+    "continue": "Continue"
   },
   "number": {
     "ready": {
       "label": "Your number is ready",
-      "body": "Call it from your phone and hear your receptionist answer.",
       "call": "Call {{number}}"
     },
     "planRequired": "To get a number, choose a plan.",
     "title": "Pick your AI's phone number",
-    "description": "Choose a local number callers can reach you on.",
     "countryLabel": "Country",
     "kindLocal": "Local",
     "kindTollFree": "Toll-free",
@@ -200,8 +196,8 @@
     "searchFailed": "We couldn't search numbers right now.",
     "claimFailed": "We couldn't provision that number. Please try again.",
     "claimRateLimited": "You've tried several numbers. Please wait a bit before trying again.",
-    "partnerTierRequired": "This business's partner needs a paid tier to add phone numbers.",
-    "partnerNumbersUnavailable": "Phone numbers aren't available for this business yet.",
+    "partnerTierRequired": "This workspace's partner needs a paid tier to add phone numbers.",
+    "partnerNumbersUnavailable": "Phone numbers aren't available for this workspace yet.",
     "offerExpired": "That offer expired. Search again and pick a number.",
     "trialAccountPurchaseLimit": "This Twilio account can't buy that number yet. Trial accounts can only buy eligible trial numbers; release an existing number or upgrade the account, then try again.",
     "skipFailed": "We couldn't skip this step right now. Please try again.",
@@ -212,9 +208,21 @@
     "continue": "Continue",
     "numbersUnavailable": "Phone numbers aren't set up on this dashboard yet. Ask whoever runs it to connect a phone provider."
   },
+  "goal": {
+    "title": "What do you want your agent to do first?",
+    "options": {
+      "answer_calls": "Answer my calls",
+      "book_appointments": "Book appointments",
+      "answer_website_visitors": "Answer website visitors",
+      "answer_instagram_messages": "Answer Instagram messages"
+    },
+    "continue": "Continue",
+    "saving": "Saving...",
+    "skip": "Skip",
+    "submitFailed": "We couldn't save that right now. Please try again."
+  },
   "attribution": {
     "title": "How did you hear about {{appName}}?",
-    "description": "It helps us focus on what's working.",
     "options": {
       "ai_assistant": "ChatGPT, Claude, etc.",
       "newsletter": "Newsletter or blog",
@@ -240,10 +248,20 @@
     "social": "Social media",
     "event": "Event or community",
     "other": "Other",
-    "finish": "Finish",
-    "finishing": "Finishing...",
     "failed": "Unable to finish setup.",
-    "submitFailed": "We couldn't save that right now. Please try again."
+    "submitFailed": "We couldn't save that right now. Please try again.",
+    "continue": "Continue",
+    "saving": "Saving..."
+  },
+  "meet": {
+    "title": "Meet your agent",
+    "name": "Agent name",
+    "greeting": "Greeting",
+    "language": "Caller language",
+    "finish": "Go to dashboard",
+    "finishing": "Opening...",
+    "saveFailed": "We couldn't save that. Try again.",
+    "finishFailed": "We couldn't finish setup. Try again."
   },
   "plan": {
     "title": "Choose your plan",
@@ -268,10 +286,10 @@
     "continueFailed": "We couldn't continue right now. Please try again."
   },
   "noBusinesses": {
-    "title": "No business here yet",
-    "description": "{{appName}} hasn't added {{email}} to a business. Ask them to invite you, then open the link in their email.",
+    "title": "No workspace here yet",
+    "description": "{{appName}} hasn't added {{email}} to a workspace. Ask them to invite you, then open the link in their email.",
     "switchAccount": "Sign in with another account",
-    "released": "{{email}} has no business on this dashboard any more. A business you own moved to your own account, so open your dashboard to run it.",
+    "released": "{{email}} has no workspace on this dashboard any more. A workspace you own moved to your own account, so open your dashboard to run it.",
     "openDashboard": "Open your dashboard"
   }
 }

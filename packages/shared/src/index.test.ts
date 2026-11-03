@@ -1,6 +1,33 @@
 import { describe, expect, it } from "vitest";
 
-import { defaultGreeting, isDefaultGreeting, runtimeLocales } from "./index";
+import { defaultAgentName, defaultGreeting, isDefaultAgentName, isDefaultGreeting, runtimeLocales } from "./index";
+
+describe("defaultAgentName", () => {
+  it("translates Agent into all eight caller languages", () => {
+    expect(runtimeLocales.map((locale) => [locale, defaultAgentName(locale)])).toEqual([
+      ["en", "Agent"],
+      ["fr", "Agent"],
+      ["es", "Agente"],
+      ["sr", "Agent"],
+      ["de", "Agent"],
+      ["pt", "Agente"],
+      ["it", "Agente"],
+      ["nl", "Agent"],
+    ]);
+  });
+
+  it("uses English when no language is given", () => {
+    expect(defaultAgentName()).toBe("Agent");
+  });
+});
+
+describe("isDefaultAgentName", () => {
+  it("knows the name in any language, and no name an operator chose", () => {
+    expect(isDefaultAgentName("Agente")).toBe(true);
+    expect(isDefaultAgentName("Agent")).toBe(true);
+    expect(isDefaultAgentName("Front desk")).toBe(false);
+  });
+});
 
 describe("defaultGreeting", () => {
   it("thanks the caller and asks how to help, in each caller language", () => {

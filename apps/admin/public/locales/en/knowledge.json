@@ -5,7 +5,7 @@
   },
   "manager": {
     "title": "Knowledge Base",
-    "description": "Add knowledge and documents the receptionist can use across preview, SMS, and the voice snapshot refresh.",
+    "description": "Add knowledge and documents the agent can use across preview, SMS, and the voice snapshot refresh.",
     "items": "{{count}} items",
     "manualDocument": "Manual document",
     "placeholders": {
@@ -20,13 +20,13 @@
     "noDocuments": "No documents yet."
   },
   "preview": {
-    "title": "Preview Receptionist",
+    "title": "Preview Agent",
     "description": "Test the same business context layer used for SMS and async AI flows before you put it in front of callers.",
     "promptPlaceholder": "What time are you open tomorrow?",
     "generate": "Run Preview",
     "generating": "Generating...",
-    "emptyResponse": "Preview responses will appear here after you run the receptionist.",
-    "disabled": "Sign in and create a business to run the real preview flow."
+    "emptyResponse": "Preview responses will appear here after you run the agent.",
+    "disabled": "Sign in and create a workspace to run the real preview flow."
   },
   "unansweredQuestions": {
     "title": "Unanswered Questions",
@@ -36,7 +36,7 @@
     "askedSummary": "{{asked}} · {{lastAsked}}",
     "answer": "Answer",
     "answerLabel": "Answer to: {{question}}",
-    "answerPlaceholder": "Write what your receptionist should say.",
+    "answerPlaceholder": "Write what your agent should say.",
     "answerTooLong": "Shorten your answer to {{max}} characters or fewer.",
     "saveAnswer": "Save Answer",
     "cancel": "Cancel",
@@ -47,11 +47,11 @@
       "alreadyHandled": "Someone already answered or dismissed this question."
     },
     "emptyTitle": "No unanswered questions",
-    "emptyDescription": "When your receptionist can't find an answer in your knowledge, you'll see the question here.",
+    "emptyDescription": "When your agent can't find an answer in your knowledge, you'll see the question here.",
     "loadFailed": "We couldn't load your unanswered questions. Refresh the page to try again.",
     "home": {
-      "count_one": "{{count}} question your receptionist couldn't answer",
-      "count_other": "{{count}} questions your receptionist couldn't answer",
+      "count_one": "{{count}} question your agent couldn't answer",
+      "count_other": "{{count}} questions your agent couldn't answer",
       "description": "Add the answers on the Knowledge page."
     }
   }

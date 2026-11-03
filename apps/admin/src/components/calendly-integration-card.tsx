@@ -13,7 +13,7 @@ import { requestJson } from "@/lib/request-json";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { surfaceClassName } from "@/components/ui/surface";
 import { useTelemetry } from "@/components/product-analytics";
@@ -110,7 +110,6 @@ export function CalendlyIntegrationCard({ businessId, canManage, data }: { busin
             <SelectTrigger id="calendly-event-type" className="w-full"><SelectValue placeholder={t("integrations.calendly.selectEventType")} /></SelectTrigger>
             <SelectContent><SelectGroup>{options.map((option) => <SelectItem disabled={option.accessRole === "reader"} key={option.id} value={option.id}>{optionLabel(option)}</SelectItem>)}</SelectGroup></SelectContent>
           </Select>
-          <FieldDescription>{t("integrations.calendly.howItWorks")}</FieldDescription>
         </Field> : <Button disabled={!canManage} onClick={() => void connect()}>{t("integrations.calendly.connect")}</Button>}
         {connection && warnings.length ? <Alert><AlertTitle>{t("integrations.calendly.warningsTitle")}</AlertTitle><AlertDescription><ul className="flex list-disc flex-col gap-1 pl-4">{warnings.map((warning) => <li key={warning.code}>{warningText(warning)}</li>)}</ul></AlertDescription></Alert> : null}
       </div>

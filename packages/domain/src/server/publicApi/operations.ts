@@ -4,7 +4,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { and, asc, count, desc, eq, inArray, isNotNull, isNull, ne, notExists, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 
-import { agentRules, apiKeys, appointments, auditLogs, billingAccounts, billingCheckoutRequests, billingUsageMonths, businesses, businessInvitations, businessMemberships, calendarConnections, contactPasscodes, contacts, knowledgeDocuments, knowledgeSnippets, phoneNumbers, platformKeyBusinesses, receptionistProfiles, services, storageObjects, users, websiteIngestionJobs, widgetKeys, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { agentRules, agents, apiKeys, appointments, auditLogs, billingAccounts, billingCheckoutRequests, billingUsageMonths, businesses, businessInvitations, businessMemberships, calendarConnections, contactPasscodes, contacts, defaultAgentOf, knowledgeDocuments, knowledgeSnippets, phoneNumbers, platformKeyBusinesses, services, storageObjects, users, websiteIngestionJobs, widgetKeys, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import {
   CONTACT_PASSCODE_DEFAULT_LENGTH,
   CONTACT_PASSCODE_HASHES_PER_CALLER,
@@ -701,7 +701,7 @@ const onboardingHints: Record<ApiOnboardingItem, string> = {
 async function loadOnboarding(tx: DatabaseTransaction, businessId: string): Promise<ApiOnboarding> {
   const [business] = await tx.select({ name: businesses.name, timezone: businesses.timezone, stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
   if (!business) throw notFound("Business");
-  const [profile] = await tx.select({ greeting: receptionistProfiles.greeting }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, businessId)).limit(1);
+  const [profile] = await tx.select({ greeting: agents.greeting }).from(agents).where(defaultAgentOf(businessId)).limit(1);
   const [indexed] = await tx.select({ count: count() }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, businessId), eq(knowledgeDocuments.status, "indexed")));
   const [entries] = await tx.select({ count: count() }).from(knowledgeSnippets).where(and(eq(knowledgeSnippets.businessId, businessId), eq(knowledgeSnippets.active, true)));
   const { steps } = await loadSetupGuideInTransaction(tx, businessId);
@@ -1271,7 +1271,7 @@ async function loadReceptionistState(tx: DatabaseTransaction, businessId: string
   const [row] = await tx.select({ name: businesses.name, defaultLocale: businesses.defaultLocale, updatedAt: businesses.updatedAt }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
   if (!row) throw notFound("Business");
   const business = { ...row, locale: normalizeRuntimeLocale(row.defaultLocale) };
-  const query = tx.select().from(receptionistProfiles).where(eq(receptionistProfiles.businessId, businessId)).limit(1);
+  const query = tx.select().from(agents).where(defaultAgentOf(businessId)).limit(1);
   const [profile] = lock ? await query.for("update") : await query;
   return { business, profile: profile ?? null, shown: profile ?? { ...defaultReceptionistProfile(business.name, business.locale), updatedAt: business.updatedAt } };
 }
@@ -1814,7 +1814,7 @@ export async function getAppointmentForApi(context: DomainContext, caller: ApiCa
 async function bookingContext(tx: DatabaseTransaction, businessId: string) {
   const [business] = await tx.select({ timezone: businesses.timezone }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
   if (!business) throw notFound("Business");
-  const [profile] = await tx.select({ bookingMode: receptionistProfiles.bookingMode }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, businessId)).limit(1);
+  const [profile] = await tx.select({ bookingMode: agents.bookingMode }).from(agents).where(defaultAgentOf(businessId)).limit(1);
   return { timezone: business.timezone, bookingMode: normalizeBookingMode(profile?.bookingMode) };
 }
 

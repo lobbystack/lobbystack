@@ -59,7 +59,7 @@
     "cancel": "Cancel",
     "moreActions": "More actions for {{name}}",
     "neverUsed": "Not on a website yet",
-    "emptyDescription": "Add a widget to get a short piece of code. Paste it into your website, and visitors can chat with your receptionist.",
+    "emptyDescription": "Add a widget to get a short piece of code. Paste it into your website, and visitors can chat with your agent.",
     "originsHint": "List every address where the chat should appear, starting with https://. Separate them with commas.",
     "pickColor": "Pick a color",
     "copySnippet": "Copy code",

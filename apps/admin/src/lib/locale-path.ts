@@ -2,6 +2,7 @@ import { SUPPORTED_LOCALES, type SupportedLocale } from "./locale";
 
 const publicRouteSections = new Set([
   "accept-invite",
+  "check-in",
   "claim-demo",
   "confirm-email-change",
   "demo",
@@ -43,6 +44,6 @@ export function isLegacyPublicRoutePath(pathname: string): boolean {
 export function isTokenBearingRoute(pathname: string, searchParams: URLSearchParams): boolean {
   if (searchParams.has("token") || searchParams.has("prospect_demo_token")) return true;
   const stripped = stripLocalePrefix(pathname);
-  if (/^\/(?:demo|reset-password)\/[^/]+(?:\/|$)/.test(stripped)) return true;
+  if (/^\/(?:check-in|demo|reset-password)\/[^/]+(?:\/|$)/.test(stripped)) return true;
   return false;
 }

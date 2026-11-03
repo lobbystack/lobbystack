@@ -40,7 +40,7 @@
     "takeOver": "Take over",
     "waitingBadge": "Wants a person",
     "waitingTitle": "Visitor waiting",
-    "waitingDescription": "This visitor asked to talk with a person. Reply or press Join chat within 3 minutes, or the receptionist takes the chat back and offers a callback.",
+    "waitingDescription": "This visitor asked to talk with a person. Reply or press Join chat within 3 minutes, or the agent takes the chat back and offers a callback.",
     "joinChat": "Join chat",
     "send": "Send",
     "sendFailed": "Couldn't send your message.",

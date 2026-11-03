@@ -286,6 +286,17 @@
   }
 }
 
+/* Uncovers part of an onboarding wait scene from its start. */
+@keyframes sceneWipe {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .billing-success-check path {
     animation: none;

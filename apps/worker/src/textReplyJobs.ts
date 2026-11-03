@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { createAgentModel, createReceptionistAgent, describeAgentUsage } from "@lobbystack/agent-core";
 import type { JobEnvelope } from "@lobbystack/contracts";
 import { withBusinessTransaction } from "@lobbystack/db";
-import { alertUnansweredText, getCachedBusinessSnapshot, loadTextReplyContext, recordAiGenerationEvent, refreshBusinessSnapshot, reserveTextReplyUsageInTransaction, saveTextReply, type DomainContext } from "@lobbystack/domain";
+import { alertUnansweredText, getBusinessSnapshotForAgent, loadTextReplyContext, recordAiGenerationEvent, reserveTextReplyUsageInTransaction, saveTextReply, type DomainContext } from "@lobbystack/domain";
 import { normalizeRuntimeLocale, runtimeLocaleName, type RuntimeLocale } from "@lobbystack/shared";
 
 import { instagramReplyText, NO_REPLY_INSTRUCTIONS } from "./instagramJobs";
@@ -58,7 +58,8 @@ export async function replyToTextMessage(domain: DomainContext, job: JobEnvelope
       await alertUnansweredText(domain, { businessId, conversationId });
       return { status: "skipped", entityId: messageId };
     }
-    const snapshot = await getCachedBusinessSnapshot(domain, { businessId }) ?? (await refreshBusinessSnapshot(domain, { businessId }), await getCachedBusinessSnapshot(domain, { businessId }));
+    // The conversation names its agent, so a job from before agents, whose payload says nothing about them, reads the same.
+    const snapshot = await getBusinessSnapshotForAgent(domain, { businessId, agentId: reply.agentId });
     if (!snapshot) throw new Error("The business snapshot is unavailable.");
     const locale = normalizeRuntimeLocale(snapshot.defaultLocale);
     const agent = createReceptionistAgent({

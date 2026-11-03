@@ -1,3 +1,4 @@
+export * from "./agentLinkBackfill";
 export * from "./client";
 export * from "./in-order";
 export * from "./outbox";

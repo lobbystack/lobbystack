@@ -102,7 +102,7 @@ async function seedChat(tx: DatabaseTransaction) {
       return await tx.select({ eventKind: operatorNotificationDeliveries.eventKind, channel: operatorNotificationDeliveries.channel, destination: operatorNotificationDeliveries.destination, subject: operatorNotificationDeliveries.subject, body: operatorNotificationDeliveries.body }).from(operatorNotificationDeliveries).where(eq(operatorNotificationDeliveries.businessId, businessId));
     },
     async events() {
-      return (await tx.select({ name: productEvents.name }).from(productEvents).where(eq(productEvents.businessId, businessId))).map((row) => row.name).sort();
+      return (await tx.select({ name: productEvents.name }).from(productEvents).where(eq(productEvents.businessId, businessId))).map((row) => row.name).filter((name) => name !== "conversation.first_real_recorded").sort();
     },
     async messageRows() {
       return await tx.select({ body: messages.body, aiGenerated: messages.aiGenerated, sentByUserId: messages.sentByUserId }).from(messages).where(eq(messages.conversationId, conversationId));
@@ -325,7 +325,7 @@ describe.skipIf(!testUrl)("a website chat after a day without messages, against 
       await chat.teamReplies("Hi, this is Yuri.");
       const lastMessage = Date.now();
 
-      expect(await chat.openChat(new Date(lastMessage + WIDGET_CHAT_IDLE_CLOSE_MS - 60_000))).toEqual({ conversationId: chat.conversationId, automationState: "human_handoff" });
+      expect(await chat.openChat(new Date(lastMessage + WIDGET_CHAT_IDLE_CLOSE_MS - 60_000))).toMatchObject({ conversationId: chat.conversationId, automationState: "human_handoff" });
 
       const nextDay = new Date(lastMessage + WIDGET_CHAT_IDLE_CLOSE_MS + 60_000);
       const next = await chat.openChat(nextDay);

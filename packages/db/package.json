@@ -21,7 +21,8 @@
     "db:check": "tsx src/cli.ts check",
     "db:seed": "tsx src/cli.ts seed",
     "db:reset:test": "tsx src/cli.ts reset-test",
-    "db:verify-rls": "tsx src/cli.ts verify-rls"
+    "db:verify-rls": "tsx src/cli.ts verify-rls",
+    "db:backfill-agent-links": "tsx src/cli.ts backfill-agent-links"
   },
   "dependencies": {
     "@lobbystack/contracts": "workspace:*",

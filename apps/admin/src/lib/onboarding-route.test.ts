@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // The onboarding stages each kind of business's owner goes through.
-const DIRECT = ["create_business", "website", "knowledge", "greeting", "test_call", "verify_phone", "phone_number", "attribution"];
-const PARTNER = ["website", "knowledge", "greeting", "test_call", "verify_phone"];
+const DIRECT = ["create_business", "website", "language", "verify_phone", "phone_number", "goal", "attribution", "meet"];
+const PARTNER = ["website", "language", "verify_phone", "meet"];
 
 const fixture = vi.hoisted(() => ({
   state: { businessId: null as string | null, stage: "create_business", steps: [] as string[] },
@@ -85,10 +85,22 @@ describe("brand step", () => {
 
 describe("onboarding stages", () => {
   it("sends a visit to a later step back to the current one", async () => {
-    fixture.state = { businessId: "business-1", stage: "test_call", steps: DIRECT };
-    await expect(requireOnboardingStage("/onboarding/number")).rejects.toThrow("redirect:/onboarding/test-call");
-    await expect(requireOnboardingStage("/onboarding/verify-phone")).rejects.toThrow("redirect:/onboarding/test-call");
-    await expect(requireOnboardingStage("/onboarding/greeting")).resolves.toBeUndefined();
+    fixture.state = { businessId: "business-1", stage: "website", steps: DIRECT };
+    await expect(requireOnboardingStage("/onboarding/number")).rejects.toThrow("redirect:/onboarding/website");
+    await expect(requireOnboardingStage("/onboarding/meet")).rejects.toThrow("redirect:/onboarding/website");
+    await expect(requireOnboardingStage("/onboarding/business")).resolves.toBeUndefined();
+  });
+
+  it("opens the wait once the website step has moved on", async () => {
+    fixture.state = { businessId: "business-1", stage: "verify_phone", steps: DIRECT };
+    await expect(requireOnboardingStage("/onboarding/reading")).resolves.toBeUndefined();
+    fixture.state = { businessId: "business-1", stage: "website", steps: DIRECT };
+    await expect(requireOnboardingStage("/onboarding/reading")).rejects.toThrow("redirect:/onboarding/website");
+  });
+
+  it("sends a page that left onboarding to the current step", async () => {
+    fixture.state = { businessId: "business-1", stage: "goal", steps: DIRECT };
+    await expect(requireOnboardingStage("/onboarding/removed")).rejects.toThrow("redirect:/onboarding/goal");
   });
 });
 
@@ -106,17 +118,18 @@ describe("on a partner's host", () => {
 
   it("skips creating the business, the number and attribution for the partner's business, and keeps the phone", async () => {
     fixture.state = { businessId: "business-1", stage: "verify_phone", steps: PARTNER };
-    for (const path of ["/onboarding/business", "/onboarding/number", "/onboarding/attribution"]) {
+    for (const path of ["/onboarding/business", "/onboarding/number", "/onboarding/goal", "/onboarding/attribution"]) {
       await expect(requireOnboardingStage(path)).rejects.toThrow("redirect:/onboarding/verify-phone");
     }
     await expect(requireOnboardingStage("/onboarding/business", { allowCreate: true })).rejects.toThrow("redirect:/onboarding/verify-phone");
     await expect(requireOnboardingStage("/onboarding/verify-phone")).resolves.toBeUndefined();
-    await expect(requireOnboardingStage("/onboarding/greeting")).resolves.toBeUndefined();
+    await expect(requireOnboardingStage("/onboarding/language")).resolves.toBeUndefined();
+    await expect(requireOnboardingStage("/onboarding/meet")).rejects.toThrow("redirect:/onboarding/verify-phone");
   });
 
   it("keeps an activity-only owner to the phone, since the partner sets the receptionist up", async () => {
     fixture.state = { businessId: "business-1", stage: "verify_phone", steps: ["verify_phone"] };
-    for (const path of ["/onboarding/website", "/onboarding/greeting", "/onboarding/test-call"]) {
+    for (const path of ["/onboarding/website", "/onboarding/language", "/onboarding/meet"]) {
       await expect(requireOnboardingStage(path)).rejects.toThrow("redirect:/onboarding/verify-phone");
     }
     await expect(requireOnboardingStage("/onboarding/verify-phone")).resolves.toBeUndefined();

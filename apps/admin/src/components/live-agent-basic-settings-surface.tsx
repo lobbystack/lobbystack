@@ -216,7 +216,6 @@ export function AgentBasicSettingsPage({
   const [voiceDialogOpen, setVoiceDialogOpen] = useState(false);
   const voiceTraits = useVoiceTraits();
   const voicePreview = useVoicePreview(configuration?.business?.defaultLocale ?? "en");
-  // The utility bar's test call widget registers itself; this page only starts it.
   const [transferStatus, setTransferStatus] = useState<string | null>(null);
   const [isGreetingSaving, setIsGreetingSaving] = useState(false);
   const [isGreetingOpen, setIsGreetingOpen] = useState(false);

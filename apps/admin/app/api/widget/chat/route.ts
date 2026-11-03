@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 
 import { createReceptionistAgent } from "@lobbystack/agent-core/agent";
 import { createAgentModel, describeAgentUsage } from "@lobbystack/agent-core/model";
-import { announceLateWidgetReply, appendMessage, getCachedBusinessSnapshot, getOrCreateWidgetConversation, loadWidgetChatHistory, recordAiGenerationEvent, reserveWidgetChatUsageInTransaction, returnQuietTeamChat } from "@lobbystack/domain";
+import { announceLateWidgetReply, appendMessage, getBusinessSnapshotForAgent, getCachedBusinessSnapshot, getOrCreateWidgetConversation, loadWidgetChatHistory, recordAiGenerationEvent, reserveWidgetChatUsageInTransaction, returnQuietTeamChat } from "@lobbystack/domain";
 import { withBusinessTransaction } from "@lobbystack/db";
 import { normalizeRuntimeLocale, runtimeLocaleName, widgetChatRequestSchema, type BusinessContextSnapshot, type RuntimeLocale } from "@lobbystack/shared";
 
@@ -77,7 +77,7 @@ export async function POST(request: Request) {
     }
 
     const context = createWorkerDomainContext();
-    const conversation = await getOrCreateWidgetConversation(context, { businessId: session.businessId, widgetVisitorId: body.visitorId });
+    const conversation = await getOrCreateWidgetConversation(context, { businessId: session.businessId, widgetVisitorId: body.visitorId, ...(session.agentId ? { agentId: session.agentId } : {}) });
     const { conversationId } = conversation;
     // With live chat on, a chat the team joined after the visitor asked for a
     // person goes back to the receptionist once the team goes quiet in it. A
@@ -144,7 +144,8 @@ export async function POST(request: Request) {
             return;
           }
 
-          const snapshot = await getCachedBusinessSnapshot(context, { businessId: session.businessId });
+          const stored = await getCachedBusinessSnapshot(context, { businessId: session.businessId });
+          const snapshot = stored ? await getBusinessSnapshotForAgent(context, { businessId: session.businessId, agentId: conversation.agentId, loaded: stored }) : null;
           const activeSnapshot = snapshot ?? fallbackSnapshot(session);
           const history = await loadWidgetChatHistory(context, { businessId: session.businessId, conversationId });
           // The widget's language answers; when it shows English, the widget's set language, else the business's caller language.

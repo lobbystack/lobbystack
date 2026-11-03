@@ -1,11 +1,11 @@
 ---
 title: "Connecter Calendly"
-description: "Connectez un compte Calendly payant, choisissez le type d'événement que votre réceptionniste IA réserve et gardez vos disponibilités à jour."
+description: "Connectez un compte Calendly payant, choisissez le type d'événement que votre agent IA réserve et gardez vos disponibilités à jour."
 sidebarTitle: "Calendly"
 contentType: "How-to"
 ---
 
-Connectez Calendly si votre équipe y prend déjà ses réservations. Votre réceptionniste IA réserve chaque rendez-vous comme une réservation Calendly d'un seul type d'événement. Elle compte vos événements Calendly comme du temps occupé et ne propose donc pas les créneaux déjà réservés sur votre page Calendly.
+Connectez Calendly si votre équipe y prend déjà ses réservations. Votre agent IA réserve chaque rendez-vous comme une réservation Calendly d'un seul type d'événement. Il compte vos événements Calendly comme du temps occupé et ne propose donc pas les créneaux déjà réservés sur votre page Calendly.
 
 <Note>
   Il vous faut un forfait Calendly payant, Standard ou supérieur. Sur le forfait Free, Calendly refuse les réservations et les webhooks des autres applications. Si vous connectez un compte Free, la carte Calendly vous indique de passer à un forfait payant.
@@ -19,7 +19,7 @@ Calendly impose ces limites aux réservations venant d'autres applications :
 - **Déplacements** : Calendly ne permet pas à une application de replanifier. LobbyStack réserve la nouvelle heure, puis annule l'ancienne, et un déplacement compte donc pour une réservation.
 - **Durée** : chaque réservation prend la durée par défaut du type d'événement.
 
-Si vous atteignez le plafond, votre réceptionniste IA prend quand même le rendez-vous. LobbyStack l'ajoute à Calendly une fois la limite réinitialisée et vous alerte si l'attente dépasse quelques minutes.
+Si vous atteignez le plafond, votre agent IA prend quand même le rendez-vous. LobbyStack l'ajoute à Calendly une fois la limite réinitialisée et vous alerte si l'attente dépasse quelques minutes.
 
 ## Ce que Calendly reçoit
 
@@ -29,7 +29,7 @@ Pour chaque rendez-vous, Calendly reçoit :
 - **Courriel de l'invité** : une adresse de remplacement propre au rendez-vous, pour que Calendly n'écrive pas à l'appelant
 - **Réponses aux questions du type d'événement** : le nom, le téléphone et le vrai courriel de l'appelant vont dans une question texte, pour que vous puissiez le joindre
 
-La réceptionniste IA envoie elle-même la confirmation et les rappels à l'appelant. Calendly envoie toujours ses notifications d'hôte à votre équipe.
+L'agent IA envoie lui-même la confirmation et les rappels à l'appelant. Calendly envoie toujours ses notifications d'hôte à votre équipe.
 
 ## Connecter Calendly
 
@@ -58,7 +58,7 @@ LobbyStack commence à lire vos événements Calendly, ainsi que les calendriers
 
 Une fois le type d'événement choisi, la fenêtre liste ce qu'il faut corriger dans Calendly :
 
-- **Questions à choix obligatoires** : rendez-les facultatives. Votre réceptionniste IA ne peut pas répondre à une question à choix unique ou multiple obligatoire, et vous ne pouvez donc pas choisir un type d'événement qui en contient une.
+- **Questions à choix obligatoires** : rendez-les facultatives. Votre agent IA ne peut pas répondre à une question à choix unique ou multiple obligatoire, et vous ne pouvez donc pas choisir un type d'événement qui en contient une.
 - **Question texte** : ajoutez-en une au type d'événement. Sans elle, votre équipe ne voit pas le téléphone ni le courriel de l'appelant dans Calendly.
 - **Durée** : réglez le type d'événement sur la durée de vos services. Calendly réserve chaque rendez-vous à cette durée.
 - **Lieu** : ajoutez un lieu téléphonique ou en personne. Sinon, les réservations portent un lien vidéo.
@@ -89,4 +89,4 @@ Si vous déplacez une réservation dans Calendly, LobbyStack déplace le rendez-
 
 Si Calendly n'accepte plus la connexion, la carte indique qu'une reconnexion est requise. Ouvrez la carte Calendly et cliquez sur **Reconnecter**.
 
-Pour retirer l'intégration, ouvrez la carte Calendly et cliquez sur **Déconnecter**. LobbyStack annule les réservations à venir que votre réceptionniste IA a faites dans Calendly, et votre page de réservation affiche de nouveau ces créneaux comme libres. Si Google Calendar est aussi connecté, ces rendez-vous y passent. Les réservations passées restent dans Calendly.
+Pour retirer l'intégration, ouvrez la carte Calendly et cliquez sur **Déconnecter**. LobbyStack annule les réservations à venir que votre agent IA a faites dans Calendly, et votre page de réservation affiche de nouveau ces créneaux comme libres. Si Google Calendar est aussi connecté, ces rendez-vous y passent. Les réservations passées restent dans Calendly.

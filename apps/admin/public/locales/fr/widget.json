@@ -59,7 +59,7 @@
     "cancel": "Annuler",
     "moreActions": "Autres actions pour {{name}}",
     "neverUsed": "Pas encore sur un site",
-    "emptyDescription": "Ajoutez un widget pour obtenir un court extrait de code. Collez-le dans votre site, et les visiteurs pourront clavarder avec votre réceptionniste.",
+    "emptyDescription": "Ajoutez un widget pour obtenir un court extrait de code. Collez-le dans votre site, et les visiteurs pourront clavarder avec votre agent.",
     "originsHint": "Indiquez chaque adresse où le clavardage doit apparaître, en commençant par https://. Séparez-les par des virgules.",
     "pickColor": "Choisir une couleur",
     "copySnippet": "Copier le code",

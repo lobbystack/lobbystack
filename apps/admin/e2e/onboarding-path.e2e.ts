@@ -1,0 +1,163 @@
+import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import { randomUUID } from "node:crypto";
+import { eq, sql } from "drizzle-orm";
+
+import { businesses, createDatabaseClient } from "@lobbystack/db";
+
+import onboarding from "../public/locales/en/onboarding.json" with { type: "json" };
+
+import { completeSignupEmailVerification, isolateAuthRateLimit } from "./fixtures/email-verification";
+
+const password = "Onboarding-Path-Password-123!";
+const prefix = "onboarding-path";
+
+function migrator() {
+  const databaseUrl = process.env.REPLACEMENT_E2E_DATABASE_URL;
+  if (!databaseUrl) throw new Error("The disposable E2E database is required.");
+  return createDatabaseClient("lobbystack_migrator", { DATABASE_URL: databaseUrl });
+}
+
+async function removeFixtures(database: ReturnType<typeof migrator>, email: string, businessId: string | undefined): Promise<void> {
+  if (businessId) await database.db.execute(sql`delete from public.businesses where id = ${businessId}`);
+  await database.db.execute(sql`delete from public.outbox_messages where aggregate_id in (select id from public.users where email = ${email})`);
+  await database.db.execute(sql`delete from public.verifications where identifier = ${`email-verification-otp-${email}`}`);
+  await database.db.execute(sql`delete from public.users where email = ${email}`);
+}
+
+async function newOwner(page: Page, testInfo: TestInfo, email: string): Promise<string> {
+  await page.addInitScript(() => localStorage.setItem("lobbystack.locale", "en"));
+  await isolateAuthRateLimit(page, email, testInfo);
+  await page.goto("/en/signup");
+  await page.locator('input[type="email"]').fill(email);
+  await page.locator('input[type="password"]').fill(password);
+  const signedUp = page.waitForResponse((response) => response.url().endsWith("/api/auth/sign-up/email") && response.request().method() === "POST");
+  await page.locator('button[type="submit"]').click();
+  expect((await signedUp).ok()).toBe(true);
+  await completeSignupEmailVerification(page, email, password);
+  await expect(page).toHaveURL(/\/onboarding\/business$/);
+  await page.getByLabel(onboarding.businessName.label).fill(`Onboarding Path ${randomUUID().slice(0, 8)}`);
+  const created = page.waitForResponse((response) => response.url().endsWith("/api/businesses") && response.request().method() === "POST");
+  await page.getByRole("button", { name: onboarding.businessName.continue }).click();
+  const { businessId } = await (await created).json() as { businessId: string };
+  await expect(page).toHaveURL("/onboarding/website");
+  return businessId;
+}
+
+/** Verifying a mobile needs a real phone, so leave the step the way an owner in a country without numbers does. */
+async function leavePhoneStep(page: Page, businessId: string): Promise<void> {
+  await expect(page).toHaveURL("/onboarding/verify-phone");
+  const moved = await page.evaluate(async (id) => (await fetch(`/api/onboarding/stage?businessId=${encodeURIComponent(id)}`, { method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify({ to: "goal" }) })).status, businessId);
+  expect(moved).toBe(200);
+  await page.goto("/onboarding/goal");
+}
+
+const back = (page: Page) => page.getByRole("link", { name: onboarding.shell.back, exact: true });
+
+test("the website path waits for the import, keeps answers on Back, and ends on Meet your agent", async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  const database = migrator();
+  const email = `${prefix}-${randomUUID()}@example.invalid`;
+  let businessId: string | undefined;
+  try {
+    businessId = await newOwner(page, testInfo, email);
+
+    // This run has no worker, so the import stays running and the wait stays up.
+    await page.getByLabel(onboarding.website.label).fill("example.com");
+    await page.getByRole("button", { name: onboarding.website.continue }).click();
+    await expect(page).toHaveURL("/onboarding/reading");
+    await expect(page.getByText(onboarding.reading.slides.answers)).toBeVisible();
+    await page.getByRole("button", { name: onboarding.reading.next }).click();
+    await expect(page.getByText(onboarding.reading.slides.booking)).toBeVisible();
+    await page.getByRole("button", { name: onboarding.reading.skip }).click();
+
+    await expect(page).toHaveURL("/onboarding/verify-phone");
+    await back(page).click();
+    await expect(page).toHaveURL("/onboarding/website");
+    await expect(page.getByLabel(onboarding.website.label)).toHaveValue(/example\.com/);
+    await back(page).click();
+    await expect(page).toHaveURL("/onboarding/business");
+    await expect(back(page)).toHaveCount(0);
+
+    await page.goto("/onboarding/verify-phone");
+    await leavePhoneStep(page, businessId);
+    await page.getByRole("button", { name: onboarding.goal.options.book_appointments }).click();
+    await page.getByRole("button", { name: onboarding.goal.continue }).click();
+    await expect(page).toHaveURL("/onboarding/attribution");
+
+    await back(page).click();
+    await expect(page).toHaveURL("/onboarding/goal");
+    await expect(page.getByRole("button", { name: onboarding.goal.options.book_appointments })).toHaveAttribute("aria-pressed", "true");
+    await page.getByRole("button", { name: onboarding.goal.continue }).click();
+
+    await page.getByRole("button", { name: onboarding.attribution.options.google }).click();
+    await page.getByRole("button", { name: onboarding.attribution.continue }).click();
+    await expect(page).toHaveURL("/onboarding/meet");
+    await expect(page.getByRole("heading", { name: onboarding.meet.title })).toBeVisible();
+
+    await back(page).click();
+    await expect(page).toHaveURL("/onboarding/attribution");
+    await expect(page.getByRole("button", { name: onboarding.attribution.options.google })).toHaveAttribute("aria-pressed", "true");
+    await page.getByRole("button", { name: onboarding.attribution.continue }).click();
+    await expect(page).toHaveURL("/onboarding/meet");
+
+    // Skipping the number leaves the browser test in place.
+    await expect(page.getByRole("textbox", { name: "Message" })).toBeVisible();
+    const name = page.getByLabel(onboarding.meet.name);
+    await name.fill("Maya");
+    await name.blur();
+    await expect.poll(async () => (await database.db.execute<{ name: string }>(sql`select name from public.agents where business_id = ${businessId}`)).rows[0]?.name).toBe("Maya");
+    await page.reload();
+    await expect(page.getByLabel(onboarding.meet.name)).toHaveValue("Maya");
+
+    await page.getByRole("button", { name: onboarding.meet.finish }).click();
+    await expect(page).toHaveURL("/");
+    const [row] = await database.db.select({ stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, businessId));
+    expect(row?.stage).toBe("complete");
+  } finally {
+    await removeFixtures(database, email, businessId);
+    await database.pool.end();
+  }
+});
+
+test("the no-website path asks the language, and the X closes the plans", async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  const database = migrator();
+  const email = `${prefix}-${randomUUID()}@example.invalid`;
+  let businessId: string | undefined;
+  try {
+    businessId = await newOwner(page, testInfo, email);
+    await page.getByRole("button", { name: onboarding.website.skip }).click();
+    await expect(page).toHaveURL("/onboarding/language");
+    await back(page).click();
+    await expect(page).toHaveURL("/onboarding/website");
+    await page.getByRole("button", { name: onboarding.website.skip }).click();
+    await page.getByRole("button", { name: onboarding.language.continue }).click();
+    await expect(page).toHaveURL("/onboarding/verify-phone");
+    await expect(back(page)).toHaveAttribute("href", "/onboarding/language");
+
+    await leavePhoneStep(page, businessId);
+    await page.getByRole("button", { name: onboarding.goal.skip, exact: true }).click();
+    // Both steps call it Skip, so wait for the page to change before clicking again.
+    await expect(page).toHaveURL("/onboarding/attribution");
+    await page.getByRole("button", { name: onboarding.attribution.skip, exact: true }).click();
+    await expect(page).toHaveURL("/onboarding/meet");
+
+    // This run has no billing provider, so the server's answer and the plans come from here.
+    await page.route("**/api/plan-offer**", (route) => route.request().method() === "GET" ? route.fulfill({ json: { due: true } }) : route.fulfill({ json: { ok: true } }));
+    await page.route("**/api/billing?**", (route) => route.fulfill({ json: { account: { plan: "free_cloud", billingInterval: null, subscriptionState: null }, availableCheckoutPlans: ["starter", "pro"], availableCheckoutIntervals: { starter: ["monthly"], pro: ["monthly"] } } }));
+    await page.reload();
+    const plans = page.getByRole("dialog");
+    await expect(plans).toBeVisible();
+    await plans.getByRole("button", { name: "Close" }).click();
+    await expect(plans).toHaveCount(0);
+
+    // The same session never shows it twice.
+    await page.reload();
+    await expect(page.getByRole("heading", { name: onboarding.meet.title })).toBeVisible();
+    await expect(page.getByLabel(onboarding.meet.name)).toBeVisible();
+    await expect(plans).toHaveCount(0);
+  } finally {
+    await removeFixtures(database, email, businessId);
+    await database.pool.end();
+  }
+});

@@ -138,20 +138,18 @@ describe("worker handlers", () => {
   });
   it("skips the onboarding follow-up when no founder sender is configured", async () => {
     const businessId = randomUUID();
-    const job = { jobId: randomUUID(), type: "onboarding.sendFollowup" as const, queue: "default" as const, businessId, payload: { completedAt: new Date().toISOString() }, trace: {}, idempotencyKey: `onboarding-followup:${businessId}`, scheduled: false };
+    const job = { jobId: randomUUID(), type: "onboarding.sendFollowup" as const, queue: "default" as const, businessId, payload: {}, trace: {}, idempotencyKey: `onboarding-followup:${businessId}`, scheduled: false };
     await expect(handleJob(job, { domain: { db: undefined as never }, email: { sendTemplate: vi.fn() } })).resolves.toEqual({ status: "skipped" });
     expect(queueOnboardingFollowupEmail).not.toHaveBeenCalled();
   });
   it("queues the onboarding follow-up through the domain with the configured sender", async () => {
     const businessId = randomUUID(); const domain = { db: undefined as never };
-    const completedAt = "2026-09-24T10:00:00.000Z";
     const sender = { from: "Raphael from LobbyStack <raphael@lobbystack.com>", name: "Raphael" };
     vi.mocked(queueOnboardingFollowupEmail).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
-    const job = { jobId: randomUUID(), type: "onboarding.sendFollowup" as const, queue: "default" as const, businessId, payload: { completedAt }, trace: {}, idempotencyKey: `onboarding-followup:${businessId}`, scheduled: false };
+    const job = { jobId: randomUUID(), type: "onboarding.sendFollowup" as const, queue: "default" as const, businessId, payload: { completedAt: "2026-09-24T10:00:00.000Z" }, trace: {}, idempotencyKey: `onboarding-followup:${businessId}`, scheduled: false };
     await expect(handleJob(job, { domain, email: { sendTemplate: vi.fn() }, onboardingFollowupSender: sender })).resolves.toEqual({ status: "completed", entityId: businessId });
-    expect(queueOnboardingFollowupEmail).toHaveBeenCalledWith(domain, { businessId, completedAt: new Date(completedAt), sender });
+    expect(queueOnboardingFollowupEmail).toHaveBeenCalledWith(domain, { businessId, sender });
     await expect(handleJob(job, { domain, email: { sendTemplate: vi.fn() }, onboardingFollowupSender: sender })).resolves.toEqual({ status: "skipped", entityId: businessId });
-    await expect(handleJob({ ...job, payload: {} }, { domain, email: { sendTemplate: vi.fn() }, onboardingFollowupSender: sender })).rejects.toThrow("Invalid onboarding follow-up payload.");
   });
   it("sends an email queued before payloads carried a brand exactly as one queued under a brand, LobbyStack included", async () => {
     vi.stubEnv("APP_BASE_URL", "https://app.example.test");
@@ -329,7 +327,7 @@ describe("worker handlers", () => {
       from: '"Bright Desk" <no-reply@bright.example.test>',
       replyTo: "help@bright.example.test",
       subject: "Cedar Clinic used 80% of this month's minutes",
-      text: ["Hi Mia,", "", "Cedar Clinic used 8 of its 10 minutes for October.", "", "Past them, your receptionist keeps answering calls, and Bright Desk bills you for each extra minute.", "", "See your usage: https://bright.example.test/settings/usage", "", "Bright Desk"].join("\n"),
+      text: ["Hi Mia,", "", "Cedar Clinic used 8 of its 10 minutes for October.", "", "Past them, your agent keeps answering calls, and Bright Desk bills you for each extra minute.", "", "See your usage: https://bright.example.test/settings/usage", "", "Bright Desk"].join("\n"),
     });
 
     // A business deleted after it queued the alert has nobody left to tell.
@@ -384,7 +382,7 @@ describe("worker handlers", () => {
       from: "LobbyStack <no-reply@example.test>",
       replyTo: "support@example.test",
       subject: "Cedar Clinic used all of its package's minutes",
-      text: ["Hi Ana,", "", "Cedar Clinic used all 10 minutes in its package for October.", "", "Its receptionist keeps answering calls until its overage reaches the monthly cap you set, and you bill the business for each extra minute.", "", `Change its overage on the Businesses page: https://app.example.test/partner/${partnerId}/businesses`, "", "LobbyStack"].join("\n"),
+      text: ["Hi Ana,", "", "Cedar Clinic used all 10 minutes in its package for October.", "", "Its agent keeps answering calls until its overage reaches the monthly cap you set, and you bill the business for each extra minute.", "", `Change its overage on the Businesses page: https://app.example.test/partner/${partnerId}/businesses`, "", "LobbyStack"].join("\n"),
     });
 
     // The alert is about the business, so once the business is deleted there's nothing left to tell its partner.

@@ -24,7 +24,7 @@ async function main(): Promise<void> {
   if (process.env.NODE_ENV === "production" || !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)) {
     throw new Error("seed-zapier-local only writes to a database on localhost.");
   }
-  const { apiKeys, businessHours, businesses, createDatabaseClient, receptionistProfiles, services, staff, webhookDeliveries, webhookEndpoints, webhookEvents } = await import("@lobbystack/db");
+  const { apiKeys, businessHours, businesses, createDatabaseClient, agents, services, staff, webhookDeliveries, webhookEndpoints, webhookEvents } = await import("@lobbystack/db");
   const { businessApiKeyScopes } = await import("@lobbystack/shared");
   const { hashApiKey } = await import("@lobbystack/domain");
   const database = createDatabaseClient("lobbystack_migrator", { DATABASE_URL: raw });
@@ -57,7 +57,7 @@ async function main(): Promise<void> {
       if (existing) return existing.id;
       const [business] = await tx.insert(businesses).values({ slug: SLUG, name: "Zapier Local Test Clinic", timezone: "America/Toronto", defaultLocale: "en", businessType: "service_company", deploymentMode: "development", onboardingStage: "complete" }).returning({ id: businesses.id });
       const id = business!.id;
-      await tx.insert(receptionistProfiles).values({ businessId: id, greeting: "Hi", tone: "warm", summary: "Zapier local test", bookingPolicy: "Book", transferMode: "never", bookingMode: "instant" });
+      await tx.insert(agents).values({ businessId: id, greeting: "Hi", tone: "warm", summary: "Zapier local test", bookingPolicy: "Book", transferMode: "never", bookingMode: "instant" });
       await tx.insert(staff).values({ businessId: id, name: "Alex Morgan", timezone: "America/Toronto" });
       await tx.insert(services).values({ businessId: id, name: "Consultation", slug: "consultation", durationMinutes: 30 });
       await tx.insert(businessHours).values(Array.from({ length: 7 }, (_, dayOfWeek) => ({ businessId: id, dayOfWeek, openMinutes: 8 * 60, closeMinutes: 20 * 60 })));

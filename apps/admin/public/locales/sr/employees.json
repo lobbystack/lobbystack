@@ -54,7 +54,7 @@
         "invalid": "Unesite ispravan broj telefona.",
         "exists": "Zaposleni sa ovim brojem telefona već postoji.",
         "trialLocked": "Tokom besplatne probe pozivi mogu da se prebace samo na mobilni osobe koja je preuzela probu.",
-        "countryUnsupported": "Recepcioner još ne može da prebacuje pozive na brojeve u ovoj zemlji."
+        "countryUnsupported": "Agent još ne može da prebacuje pozive na brojeve u ovoj zemlji."
       },
       "services": {
         "label": "Usluge",
@@ -76,7 +76,7 @@
       },
       "timeOff": {
         "label": "Odsustvo",
-        "hint": "Opciono. Recepcioner ne zakazuje kod ovog zaposlenog tih dana i kaže klijentima kada se vraća.",
+        "hint": "Opciono. Agent ne zakazuje kod ovog zaposlenog tih dana i kaže klijentima kada se vraća.",
         "add": "Dodaj odsustvo",
         "placeholder": "Izaberite prvi i poslednji dan",
         "dates": "Datumi odsustva",

@@ -15,7 +15,7 @@ Webhooks send an HTTPS `POST` to your URL when something happens in a business, 
 | `appointment.booked` | Anyone books an appointment: the receptionist, the dashboard or the API. | Appointment | `appointments:read` |
 | `appointment.rescheduled` | An appointment moves to a new time. | Appointment | `appointments:read` |
 | `appointment.cancelled` | An appointment is cancelled. | Appointment | `appointments:read` |
-| `message.taken` | The receptionist takes a message for your team. | Message | `messages:read` |
+| `message.taken` | The agent takes a message for your team. | Message | `messages:read` |
 | `contact.created` | A new contact appears, from a call, a text, a booking, the website widget or the API. | Contact | `contacts:read` |
 
 `data` has the same shape as the matching API resource. For example, `GET /appointments` returns the objects an `appointment.booked` event carries, so a list endpoint doubles as sample data.

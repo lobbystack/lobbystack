@@ -50,7 +50,6 @@ import { LiveUpgradePlanProvider } from "./live-upgrade-plan-provider";
 import { BillingPastDueBanner, type BillingPermissions } from "./billing-past-due-banner";
 import { NumberTrialBanner } from "./number-trial-banner";
 import { DashboardUtilityBar } from "./dashboard-utility-bar";
-import { DashboardSetupGuideCard } from "./dashboard-setup-guide-card";
 import { NavUser } from "./nav-user";
 import { useOpenUpgradePlanDialog } from "./upgrade-plan-dialog-context";
 
@@ -156,7 +155,6 @@ function BillingBanner() {
 function ReplacementSidebar({ partnerConsole = false, user, widgetsEnabled }: Pick<DashboardShellProps, "partnerConsole" | "user" | "widgetsEnabled">) {
   const pathname = usePathname();
   const showWidgets = widgetsEnabled || ["/messages", "/widget"].some(route => pathname === route || pathname.startsWith(`${route}/`));
-  const { isMobile, setOpenMobile } = useSidebar();
   const { t } = useTranslation(["nav", "settings", "agent"]);
   const can = useBusinessCan();
   const { business, appointments } = useAppointments();
@@ -198,7 +196,6 @@ function ReplacementSidebar({ partnerConsole = false, user, widgetsEnabled }: Pi
         {groups.map((group) => <NavigationGroup items={group.items} key={group.title} pathname={pathname} title={group.title} />)}
       </SidebarContent>
       <SidebarFooter>
-        <DashboardSetupGuideCard onNavigate={() => { if (isMobile) setOpenMobile(false); }} />
         <UserMenu partnerConsole={partnerConsole} user={user} />
       </SidebarFooter>
       <SidebarRail />

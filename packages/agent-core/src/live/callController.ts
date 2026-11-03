@@ -99,15 +99,14 @@ export type LiveCallTransferState = "referring" | "referred" | "completed" | "fa
 
 export type GreetingEvent = {
   /**
-   * "spoken": the receptionist's voice was heard; attempt 0 means the greeting
-   * in the session's starting history did it, and attempt N that it followed
-   * the Nth greeting command. "sent", "acknowledged" and "failed" track each
-   * command.
+   * "spoken": the receptionist's voice was heard; attempt N means it followed
+   * the Nth greeting command, and attempt 0 that it spoke before any. "sent",
+   * "acknowledged" and "failed" track each command.
    */
   step: "sent" | "acknowledged" | "spoken" | "failed";
   attempt: number;
-  /** What sent the command: the first fallback, or a retry after an acknowledged command went unspoken. */
-  trigger?: "fallback" | "retry";
+  /** What sent the command: the session starting, or a retry after an acknowledged command went unspoken. */
+  trigger?: "start" | "retry";
   /** Milliseconds since the worker attached to the call. */
   sinceAttachMs: number;
   /**
@@ -123,8 +122,8 @@ export type GreetingEvent = {
 export type LiveCallSetup = {
   agent: ReceptionistAgent;
   /**
-   * The business greeting. GPT-Live speaks it from the session's starting
-   * history; the controller only sends it again as a fallback.
+   * The business greeting. The controller sends it to GPT-Live as soon as
+   * the session starts.
    */
   greeting?: string;
   /**
@@ -153,8 +152,10 @@ export type LiveCallControllerOptions = {
   /** A phone call ends through OpenAI's SIP hangup; a browser call by closing the session. */
   phone: boolean;
   setup: LiveCallSetup | Promise<LiveCallSetup>;
-  /** Hang up after this long without either side speaking. */
+  /** Hang up after this long without either side speaking, counted after the last check-in. */
   silenceTimeoutMs?: number;
+  /** After this long without either side speaking, ask whether the caller is still there, up to twice before the silence timeout. */
+  silenceCheckInMs?: number;
   /** The call ends by this long: the goodbye starts a little before it. */
   maxDurationMs?: number;
   /**
@@ -197,15 +198,11 @@ export type LiveCallControllerOptions = {
 
 // The caller's last words can arrive just after the delegation event.
 const TRANSCRIPT_WAIT_MS = 300;
-// GPT-Live speaks the greeting from the session's starting history about 2
-// seconds in. With no voice by this long after the worker sees the session
-// start, it sends the greeting command once more.
-const GREETING_FALLBACK_MS = 4_000;
-// GPT-Live can acknowledge a greeting command and still wait for the caller:
-// on calls from October 3 to 8, 8 of 16 acknowledged commands went unspoken
-// until the caller spoke, or for good. A command it did follow was spoken
-// within 4 seconds of the acknowledgment, so after 4.5 seconds of silence the
-// worker sends it again, up to this many commands in all.
+// GPT-Live ignored session.instructions.append for greetings: on calls from
+// October 3 to 8, 8 of 16 acknowledged commands went unspoken until the caller
+// spoke, or for good. It spoke session.commentary.append within 0.7 seconds on
+// 4 calls out of 4. After 4.5 seconds of silence the worker still sends the
+// command again, up to this many commands in all.
 const GREETING_RETRY_MS = 4_500;
 const GREETING_COMMANDS = 3;
 // Reflected audio is 16-bit PCM at 24 kHz. A chunk this loud is voice;
@@ -278,11 +275,23 @@ const CALLER_SPOKE_AGAIN = "The caller spoke again before the call ended, so rep
 const STILL_WORKING = "Still checking. This is taking a few more seconds.";
 // Commands for GPT-Live when the call has to end, or a transfer didn't go through.
 const WRAP_UP: Record<LiveCallWrapUp, string> = {
-  silence_timeout: "Nobody has spoken for a while, so the call is ending now. In the language of the conversation, say a short goodbye.",
+  silence_timeout: "The caller hasn't answered, so the call is ending now. In the language of the conversation, tell them briefly that you haven't heard back so you're ending the call, invite them to call again if they need anything, and say goodbye.",
   duration_limit: "The call has reached its time limit and is ending now. In the language of the conversation, tell the caller briefly, apologize, invite them to call back if they need more help, and say goodbye.",
   service_restart: "The phone service is restarting, so the call has to end now. In the language of the conversation, apologize briefly, ask the caller to call back in a minute, and say goodbye.",
 };
-const TRANSFER_FAILED = "The transfer to a person didn't go through. In the language of the conversation, tell the caller briefly and offer to take a message so the team can call them back.";
+/**
+ * Production's silence timing: after this long without speech, GPT-Live asks
+ * whether the caller is still there, twice, and the silence timeout then runs
+ * from the second check-in. The worker and the voice eval both use them.
+ */
+export const SILENCE_CHECK_IN_MS = 8_000;
+export const SILENCE_TIMEOUT_MS = 8_000;
+// Commands for GPT-Live when nobody has spoken for silenceCheckInMs, in order.
+const SILENCE_CHECK_INS = [
+  "Nobody has spoken for a few seconds. In the language of the conversation, briefly ask whether the caller is still there.",
+  "The caller still hasn't answered. In the language of the conversation, briefly ask once more whether they're still there or need anything else.",
+];
+const TRANSFER_FAILED ="The transfer to a person didn't go through. In the language of the conversation, tell the caller briefly and offer to take a message so the team can call them back.";
 
 // What GPT-Live hears once the caller has typed a PIN, since it never hears key presses.
 function passcodeCommand(outcome: KeypadPasscodeOutcome): string {
@@ -377,7 +386,7 @@ export class LiveCallController {
   private sessionEventSeen = false;
   private sessionAlive = false;
   private greetingAttempts = 0;
-  private greetingFallbackStarted = false;
+  private greetingStarted = false;
   private greetingSpoken = false;
   private readonly pendingAppends = new Map<string, PendingAppend>();
   // Delegations run one at a time in arrival order. A newer request supersedes
@@ -386,6 +395,9 @@ export class LiveCallController {
   private delegationQueue: Promise<void> = Promise.resolve();
   private latestRevision = 0;
   private runningDelegations = 0;
+  // Check-ins sent since the caller last spoke, and on the whole call.
+  private silenceCheckIns = 0;
+  private checkInsSent = 0;
   private unheardResults: string[] = [];
   private readonly completedActions: string[] = [];
   private latestLookup: string | undefined;
@@ -529,19 +541,17 @@ export class LiveCallController {
     socket.on("error", (error) => this.handleError(error));
     // The connection ended before session.closed: final usage is unconfirmed.
     socket.on("close", () => this.finish("sideband_closed"));
-    // GPT-Live greets from the greeting command in the session's starting
-    // history (see session.ts). It ignored that command on about 4 calls in
-    // 10 from October 3 to 8, and an appended one about half the time, so the
-    // worker sends the command when no voice follows, and again after each
-    // one that goes unspoken. The
-    // sideband replays the last 3 seconds of events, so an attach within 3
-    // seconds still sees session.started; the fallback timer also starts when
-    // the connection opens, for a later attach.
+    // The worker sends the greeting command as soon as the session starts,
+    // and again after each one that goes unspoken. A greeting in the session's
+    // starting history went unspoken on about 4 calls in 10 from October 3 to
+    // 8, and left the first seconds silent. The sideband replays the last 3
+    // seconds of events, so an attach within 3 seconds still sees
+    // session.started; a later phone attach greets on its own timer.
     socket.on("session.started", () => {
       if (this.started) return;
       this.started = true;
       clearTimeout(this.greetingTimer);
-      this.greetingTimer = setTimeout(() => this.sendGreetingFallback(), GREETING_FALLBACK_MS);
+      this.sendFirstGreeting();
       this.options.onStarted?.();
     });
     // A phone call's session starts before the worker attaches, so an attach
@@ -554,7 +564,7 @@ export class LiveCallController {
       this.greetingTimer = setTimeout(() => {
         if (this.started) return;
         this.lateAttach = true;
-        this.sendGreetingFallback();
+        this.sendFirstGreeting();
       }, LATE_ATTACH_MS);
     };
     // A re-attach's wait for the first event runs from when the connection
@@ -674,11 +684,10 @@ export class LiveCallController {
     if (typeof endMs === "number") this.lastSpeechEndMs = Math.max(this.lastSpeechEndMs, endMs);
   }
 
-  // The first greeting command, when the greeting from the starting history wasn't heard.
-  private sendGreetingFallback(): void {
-    if (this.greetingFallbackStarted) return;
-    this.greetingFallbackStarted = true;
-    this.sendGreeting("fallback");
+  private sendFirstGreeting(): void {
+    if (this.greetingStarted) return;
+    this.greetingStarted = true;
+    this.sendGreeting("start");
   }
 
   // GPT-Live acknowledged a greeting command. If no voice follows, the
@@ -700,7 +709,7 @@ export class LiveCallController {
       const greeting = setup.greeting?.trim();
       if (!greeting || stopped()) return;
       this.greetingAttempts += 1;
-      this.send({ type: "session.instructions.append", delegation_id: null, content: greetingCommand(greeting), event_id: `greeting_${this.greetingAttempts}` }, { kind: "greeting" });
+      this.send({ type: "session.commentary.append", delegation_id: null, content: greetingCommand(greeting), event_id: `greeting_${this.greetingAttempts}` }, { kind: "greeting" });
       this.reportGreeting("sent", trigger);
     }, () => undefined);
   }
@@ -950,7 +959,7 @@ export class LiveCallController {
     if (!this.ending && !this.finished) {
       this.ending = true;
       this.endReason ??= reason;
-      this.send({ type: "session.instructions.append", delegation_id: null, content: WRAP_UP[reason], event_id: `wrap_up_${reason}` }, { kind: "wrap_up" });
+      this.send({ type: "session.commentary.append", delegation_id: null, content: WRAP_UP[reason], event_id: `wrap_up_${reason}` }, { kind: "wrap_up" });
       this.afterSpeech(() => this.endSession(), () => this.wrapUpAckedAt);
     }
     return this.whenFinished;
@@ -973,6 +982,7 @@ export class LiveCallController {
   }
 
   private passcodeKey(passcode: NonNullable<LiveCallController["passcode"]>, key: string): void {
+    this.silenceCheckIns = 0;
     this.resetSilenceTimer();
     // Keys pressed while the PIN is being checked don't count.
     if (passcode.checking) return;
@@ -1104,7 +1114,24 @@ export class LiveCallController {
     // request still being answered counts as activity too. Reflected output
     // audio doesn't: it can cover silence.
     if (!this.options.silenceTimeoutMs || this.finished || this.runningDelegations > 0) return;
+    const checkInMs = this.options.silenceCheckInMs;
+    if (checkInMs && this.silenceCheckIns < SILENCE_CHECK_INS.length) {
+      this.silenceTimer = setTimeout(() => this.checkInOnSilence(), checkInMs);
+      return;
+    }
     this.silenceTimer = setTimeout(() => this.options.onTimeout?.("silence_timeout"), this.options.silenceTimeoutMs);
+  }
+
+  // The receptionist's own speech resets the timer but not the count, so the
+  // check-ins lead to the goodbye; only the caller starts them over.
+  private checkInOnSilence(): void {
+    if (this.ending || this.finished) return;
+    // A caller waiting on a transfer, typing a PIN or about to be hung up on isn't gone.
+    if (this.transfer || this.passcode || this.pendingHangup) return this.resetSilenceTimer();
+    const content = SILENCE_CHECK_INS[this.silenceCheckIns]!;
+    this.silenceCheckIns += 1;
+    this.send({ type: "session.commentary.append", delegation_id: null, content, event_id: `check_in_${++this.checkInsSent}` }, { kind: "update" });
+    this.resetSilenceTimer();
   }
 
   // Report every turn except the one still in progress.
@@ -1117,6 +1144,7 @@ export class LiveCallController {
   }
 
   private appendTranscript(role: Turn["role"], delta: string, endMs: number, startMs?: number): void {
+    if (role === "caller") this.silenceCheckIns = 0;
     this.resetSilenceTimer();
     const last = this.turns.at(-1);
     if (last?.role === role) {

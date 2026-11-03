@@ -3,7 +3,6 @@ import type { BuiltInVoice, MediaSessionConfig } from "openai/resources/live/liv
 import type { SessionAcceptParams } from "openai/resources/live/sessions";
 
 import { buildLiveInstructions } from "../instructions";
-import { greetingCommand } from "./greeting";
 
 export const LIVE_MODEL = "gpt-live-1";
 
@@ -27,18 +26,10 @@ const BROWSER_SERVER_EVENTS = [
   "error",
 ].map((type) => ({ type }));
 
-// OpenAI's guide: put context the model needs from the start in input. The
-// greeting command goes there, so GPT-Live opens the call on its own.
-function openingHistory(snapshot: BusinessContextSnapshot): { input?: Array<{ role: "developer"; content: Array<{ type: "input_text"; text: string }> }> } {
-  const greeting = snapshot.greeting?.trim();
-  return greeting ? { input: [{ role: "developer", content: [{ type: "input_text", text: greetingCommand(greeting) }] }] } : {};
-}
-
 export function buildBrowserSessionConfig(snapshot: BusinessContextSnapshot): MediaSessionConfig {
   return {
     model: LIVE_MODEL,
     instructions: buildLiveInstructions(snapshot, "web_voice"),
-    ...openingHistory(snapshot),
     audio: { output: { voice: sessionVoice(snapshot) } },
     delegation: { type: "client" },
     client: { data_channel: { allowed_client_events: ["session.close"], allowed_server_events: BROWSER_SERVER_EVENTS } },
@@ -52,7 +43,6 @@ export function buildPhoneSessionConfig(snapshot: BusinessContextSnapshot): Sess
     type: "live",
     model: LIVE_MODEL,
     instructions: buildLiveInstructions(snapshot, "voice"),
-    ...openingHistory(snapshot),
     audio: { output: { voice: sessionVoice(snapshot) } },
     delegation: { type: "client" },
     // Keep OpenAI's recording so the worker can copy it into our storage.

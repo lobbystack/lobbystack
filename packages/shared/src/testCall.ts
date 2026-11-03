@@ -7,5 +7,8 @@
  */
 export const DASHBOARD_TEST_CALL_WIDGET_ID = "lobbystack-dashboard-test-call";
 
+/** The embedded website widget, the only browser call that comes from a customer. */
+export const WIDGET_VOICE_ID = "lobbystack-widget";
+
 /** The widget behind a prospect demo, which is a visitor rather than an operator. */
 export const PROSPECT_DEMO_WIDGET_ID = "lobbystack-prospect-demo";

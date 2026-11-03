@@ -83,6 +83,11 @@ export type AgentToolContext = {
   /** Prospect demos only answer questions and take messages: no booking, no transfers. */
   intakeOnly?: boolean;
   /**
+   * A chat in the dashboard's test window: the agent answers as on the website
+   * but keeps only the read-only tools, so nothing it says changes anything.
+   */
+  testChat?: boolean;
+  /**
    * Website chats whose widget has live chat on: the visitor can ask for
    * someone from the team to join. `locale` is the chat's language, for what
    * the receptionist says if nobody joins in time. `onTeamRequested` hears
@@ -171,6 +176,8 @@ const OFFERINGS_QUERY = "What does the business do and offer: services, products
 export function createReceptionistTools(context: AgentToolContext): ToolSet {
   const { domain, snapshot } = context;
   const businessId = snapshot.businessId;
+  // A projected snapshot names its agent. A flat one is the default agent.
+  const agent = snapshot.agentId ? { agentId: snapshot.agentId } : {};
   const timezone = snapshot.timezone;
   const channel = context.channel;
   // The team reads what the receptionist writes for them in its own language, whatever language the caller spoke.
@@ -207,9 +214,9 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
 
   // A lookup that found nothing goes on the business's list of questions to
   // answer. In the background: the reply never waits for it, and a failed save
-  // only logs. Prospect demos aren't the business's callers, so they're skipped.
+  // only logs. Prospect demos and test chats aren't the business's callers, so they're skipped.
   function recordKnowledgeMiss(query: string): void {
-    if (context.intakeOnly) return;
+    if (context.intakeOnly || context.testChat) return;
     void Promise.resolve()
       .then(() => recordUnansweredQuestion(domain, {
         businessId,
@@ -282,6 +289,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
         const callbackPhone = input.callbackPhone?.trim() || context.callerPhone;
         return await takeMessageForStaff(domain, {
           businessId,
+          ...agent,
           message: input.message,
           channel,
           ...(callbackPhone ? { callbackPhone } : {}),
@@ -294,6 +302,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
       },
     }),
   };
+  if (!offered("takeMessage")) delete tools.takeMessage;
 
   if (offered("findAvailability")) {
     const employeeName = z.string().optional().describe("Only when the caller asked for a specific employee: that employee's name. Leave it out to book whoever is available first.");
@@ -438,6 +447,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
         const message = [`Appointment request: ${input.serviceName}`, `Preferred time: ${input.preferredTime}`, input.notes ? `Notes: ${input.notes}` : ""].filter(Boolean).join("\n");
         return await takeMessageForStaff(domain, {
           businessId,
+          ...agent,
           message,
           channel,
           callbackPhone,
@@ -455,7 +465,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
     tools.lookupAppointmentForChange = tool({
       description: "Check whether this caller's number has upcoming appointments before cancelling or rescheduling. It does not reveal appointment details.",
       inputSchema: z.object({}),
-      execute: async () => await lookupCallerAppointments(domain, { businessId, callerPhone }),
+      execute: async () => await lookupCallerAppointments(domain, { businessId, ...agent, callerPhone }),
     });
     tools.verifyAppointmentForChange = tool({
       description: "Verify the appointment before any change, with one fact the caller gives: its date and time, or its service. The call's number already identifies the caller, so their name isn't needed.",
@@ -466,6 +476,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
       }),
       execute: async (input) => withConsentOnFile(await verifyCallerForChange(domain, {
         businessId,
+        ...agent,
         callerPhone,
         // An accepted keypad PIN counts only on this call.
         ...(context.callId ? { callId: context.callId } : {}),
@@ -512,7 +523,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
           finalConfirmation: z.boolean(),
         }),
         execute: async (input) => {
-          const result = withConsentOnFile(await cancelForCaller(domain, { businessId, callerPhone, ...input, ...(context.callId ? { callId: context.callId } : {}) }));
+          const result = withConsentOnFile(await cancelForCaller(domain, { businessId, ...agent, callerPhone, ...input, ...(context.callId ? { callId: context.callId } : {}) }));
           return "smsConsentOnFile" in result && result.smsConsentOnFile === "subscribed" ? { ...result, textConfirmation: "The caller will get a text confirming the cancellation." } : result;
         },
       });
@@ -524,7 +535,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
         execute: async (input) => {
           const start = startTime(input.startsAt);
           if (!start.ok) return start;
-          const result = await rescheduleForCaller(domain, { businessId, callerPhone, ...input, startsAt: start.startsAt });
+          const result = await rescheduleForCaller(domain, { businessId, ...agent, callerPhone, ...input, startsAt: start.startsAt });
           return !result.ok && "unavailableReason" in result && isReason(result.unavailableReason) ? { ok: false, reason: UNAVAILABLE_TOOL_MESSAGES[result.unavailableReason] } : result;
         },
       });
@@ -546,6 +557,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
         const callbackPhone = input.callbackPhone?.trim() || context.callerPhone;
         const saved = await requestCancellationForCaller(domain, {
           businessId,
+          ...agent,
           channel,
           timezone,
           callerName: input.callerName,

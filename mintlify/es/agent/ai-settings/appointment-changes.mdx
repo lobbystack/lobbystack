@@ -1,13 +1,13 @@
 ---
 title: "Configure los cambios de citas"
-description: "Permita que su recepcionista con IA cancele y reprograme citas durante las llamadas, con un nivel de verificación configurable."
+description: "Permita que su agente con IA cancele y reprograme citas durante las llamadas, con un nivel de verificación configurable."
 sidebarTitle: "Cambios de citas"
 contentType: "How-to"
 ---
 
 Cuando un cliente necesita cancelar o mover una cita, LobbyStack puede gestionar la solicitud durante la llamada.
 
-Su equipo no tiene que leer un mensaje, revisar el calendario y responder a mano: la recepcionista con IA identifica la cita, confirma la solicitud y actualiza la reserva por usted.
+Su equipo no tiene que leer un mensaje, revisar el calendario y responder a mano: el agente con IA identifica la cita, confirma la solicitud y actualiza la reserva por usted.
 
 ## Qué puede gestionar la IA
 
@@ -25,14 +25,14 @@ Esta función está pensada para los cambios de citas del día a día, que suele
 
 Una simple petición informal no basta para cambiar una cita. LobbyStack pide datos suficientes para asegurarse de que el cliente modifica la cita correcta.
 
-De forma predeterminada, la recepcionista usa:
+De forma predeterminada, el agente usa:
 
 - El número de teléfono de la llamada.
 - El nombre del cliente.
 - Un dato de la cita, como la hora o el servicio.
 - Una confirmación final clara antes de cancelar o reprogramar.
 
-Si la recepcionista no puede confirmar la cita con seguridad, no hace el cambio automáticamente. En su lugar, puede pasar la conversación a su equipo.
+Si el agente no puede confirmar la cita con seguridad, no hace el cambio automáticamente. En su lugar, puede pasar la conversación a su equipo.
 
 <Note>
   LobbyStack le ayuda a aplicar pasos de confirmación coherentes, pero no sustituye su propia revisión legal o de privacidad. Configure el nivel de verificación que corresponda a su negocio, su región y su tipo de cita.
@@ -45,14 +45,14 @@ Si su negocio quiere más garantías, **Verificación de quien llama** añade un
 | Opción | Qué hace quien llama |
 | --- | --- |
 | **Número de teléfono y datos de la cita** | Llama desde el número con el que se reservó la cita y dice su hora o servicio. Es la opción predeterminada. |
-| **Código de un solo uso por SMS** | Además, lee un código que la recepcionista envía por SMS a ese número. |
+| **Código de un solo uso por SMS** | Además, lee un código que el agente envía por SMS a ese número. |
 | **PIN en el teclado** | Además, marca un PIN en el teclado del teléfono. Su equipo configura el PIN de cada cliente, sin enviar SMS. |
 
 Una verificación más estricta resulta útil cuando las citas son delicadas, de alto valor o están sujetas a políticas internas más estrictas.
 
 ### Configurar los PIN
 
-Con **PIN en el teclado**, la recepcionista pide a quien llama que marque su PIN en el teclado del teléfono y pulse la tecla almohadilla (#). El PIN nunca llega a la IA ni a la transcripción de la llamada, y la recepcionista no acepta un PIN dicho en voz alta.
+Con **PIN en el teclado**, el agente pide a quien llama que marque su PIN en el teclado del teléfono y pulse la tecla almohadilla (#). El PIN nunca llega a la IA ni a la transcripción de la llamada, y el agente no acepta un PIN dicho en voz alta.
 
 <Steps>
   <Step title="Abra el contacto">
@@ -70,7 +70,7 @@ Para dar un PIN a muchos clientes a la vez, use la [línea de comandos](/es/api/
 
 Quien llama puede intentar su PIN 3 veces en cada cambio. Tras 5 PIN incorrectos seguidos, incluso en llamadas distintas, el PIN se bloquea y el contacto lo muestra como bloqueado. Configurar un PIN nuevo lo desbloquea.
 
-Si quien llama no tiene PIN, o lo tiene bloqueado, no puede cambiar citas por teléfono. En su lugar, la recepcionista pasa su solicitud de cancelación a su equipo.
+Si quien llama no tiene PIN, o lo tiene bloqueado, no puede cambiar citas por teléfono. En su lugar, el agente pasa su solicitud de cancelación a su equipo.
 
 <Warning>
   En una instalación autoalojada de LobbyStack, los PIN se comprueban con el `OTP_HASH_SECRET` del servidor (o `ENCRYPTION_KEY` si no está configurado). Si ese secreto cambia, todos los PIN guardados dejan de funcionar y hay que configurarlos de nuevo.
@@ -90,7 +90,7 @@ En las reprogramaciones, LobbyStack comprueba la disponibilidad antes de ofrecer
 
 ## Activar o desactivar los cambios de citas
 
-Usted decide si la recepcionista puede cancelar o reprogramar citas, y cómo verifica a quien llama.
+Usted decide si el agente puede cancelar o reprogramar citas, y cómo verifica a quien llama.
 
 <Steps>
   <Step title="Abra Ajustes de IA">

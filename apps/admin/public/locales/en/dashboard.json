@@ -27,7 +27,7 @@
     "analytics": {
       "chart": {
         "title": "Engagement Overview",
-        "description": "Calls and messages across your receptionist workspace."
+        "description": "Calls and messages across your workspace."
       },
       "cards": {
         "calls": "Number of calls",
@@ -165,8 +165,8 @@
     }
   },
   "setup": {
-    "title": "Create your first business",
-    "description": "This bootstraps the tenant, receptionist profile, and the first snapshot used by voice.",
+    "title": "Create your first workspace",
+    "description": "This sets up the workspace, agent profile, and the first snapshot used by voice.",
     "businessName": "Business name",
     "slug": "Slug",
     "timezone": "Timezone",
@@ -183,10 +183,10 @@
       "other": "Other"
     },
     "selectBusinessType": "Select business type",
-    "create": "Create business",
+    "create": "Create workspace",
     "creating": "Creating...",
-    "created": "Business created. The receptionist snapshot is refreshing now.",
-    "failed": "Failed to create business."
+    "created": "Workspace created. The agent snapshot is refreshing now.",
+    "failed": "Failed to create workspace."
   },
   "cards": {
     "calls": {
@@ -195,7 +195,7 @@
     },
     "services": {
       "title": "Services configured",
-      "footer": "These feed both the receptionist and the booking engine."
+      "footer": "These feed both the agent and the booking engine."
     },
     "hours": {
       "title": "Open days set",
@@ -210,7 +210,7 @@
   "quickActions": {
     "title": "Quick actions",
     "description": "Keep {{businessName}} ready for calls, SMS, and booking workflows.",
-    "configureProfile": "Configure receptionist profile",
+    "configureProfile": "Configure agent profile",
     "addKnowledge": "Add knowledge and documents",
     "reviewInbox": "Review call inbox",
     "readiness": "Setup readiness",
@@ -222,7 +222,7 @@
   },
   "nextSteps": {
     "title": "What to do next",
-    "description": "Tighten the live receptionist behavior before you route real traffic.",
+    "description": "Tighten the live agent behavior before you route real traffic.",
     "hours": "Set hours and services so booking can suggest real times.",
     "transfer": "Add transfer rules and a fallback number before handing off urgent calls.",
     "snapshot": "Refresh your snapshot after major policy changes so voice picks them up quickly."
@@ -247,7 +247,7 @@
     },
     "forwardTrial": {
       "title": "Send your missed calls to {{number}}",
-      "description": "Turn on call forwarding with your phone carrier, and the calls you can't pick up go to your receptionist instead of voicemail.",
+      "description": "Turn on call forwarding with your phone carrier, and the calls you can't pick up go to your agent instead of voicemail.",
       "cta": "Set up forwarding"
     },
     "upgrade": {
@@ -256,17 +256,63 @@
       "cta": "Choose a plan"
     }
   },
+  "setupGuide": {
+    "title": "Getting started",
+    "skip": "Skip setup",
+    "skipStep": "Skip",
+    "finished": "Setup complete.",
+    "description": "{{completed}} of {{total}} setup steps complete.",
+    "lastCall": "Your test call",
+    "lastCallDetails": "{{date}}, {{duration}}",
+    "readTranscript": "Read the transcript",
+    "callAgain": "Call it again",
+    "steps": {
+      "fullScan": "Read the rest of your site",
+      "sources": "Add more sources",
+      "hours": "Add opening hours",
+      "testCall": "Hear your agent",
+      "phoneNumber": "Connect a phone number",
+      "forwardCalls": "Forward your calls"
+    },
+    "stepDescriptions": {
+      "fullScan": "Your agent has read a sample of your site.",
+      "sources": {
+        "answer_calls": "Upload the policies, FAQs and prices your callers ask about.",
+        "book_appointments": "Upload your services, prices and booking rules.",
+        "answer_website_visitors": "Upload the FAQs and policies your website visitors ask about.",
+        "answer_instagram_messages": "Upload the FAQs and prices people ask about on Instagram.",
+        "none": "Upload your policies, FAQs or pricing."
+      },
+      "hours": "Your agent books appointments only during these hours.",
+      "testCall": {
+        "answer_calls": "Ask what your callers ask most.",
+        "book_appointments": "Ask it to book an appointment.",
+        "answer_website_visitors": "Ask what people ask on your website.",
+        "answer_instagram_messages": "Ask what people ask on Instagram.",
+        "none": "Ask what your customers ask most."
+      },
+      "phoneNumber": "Give your agent its own number to answer real callers.",
+      "phoneNumberTrial": "Answer your missed calls free for 14 days, no card needed."
+    },
+    "stepActions": {
+      "fullScan": "Read the rest",
+      "sources": "Upload document",
+      "hours": "Add hours",
+      "testCall": "Start a call",
+      "phoneNumber": "Choose a number"
+    }
+  },
   "forwarding": {
     "title": "Forward your calls to {{number}}",
-    "description": "Pick your carrier, then follow the steps on the phone your customers call.",
+    "description": "Pick your carrier.",
     "modes": {
       "missed": {
         "label": "Calls you miss",
-        "help": "Your phone rings first. When you don't answer, your receptionist picks up."
+        "help": "Your phone rings first. When you don't answer, your agent picks up."
       },
       "all": {
         "label": "All calls",
-        "help": "Your receptionist answers every call, and your phone doesn't ring."
+        "help": "Your agent answers every call, and your phone doesn't ring."
       }
     },
     "carrier": {
@@ -278,7 +324,8 @@
       "usMobile": "US mobile",
       "caMobile": "Canadian mobile",
       "landline": "Landlines",
-      "voip": "Business phone systems"
+      "voip": "Business phone systems",
+      "ukMobile": "UK mobile"
     },
     "code": {
       "dial": "Dial this code:",
@@ -296,16 +343,16 @@
     },
     "notes": {
       "planFeature": "If forwarding doesn't turn on, ask {{name}} to add call forwarding to your plan.",
-      "iphone": "On an iPhone, turn off Live Voicemail in your Phone settings. Otherwise it picks up before your receptionist can.",
-      "ringTime": "If you can pick a ring time, 15 to 20 seconds gives you about four rings before your receptionist answers.",
+      "iphone": "On an iPhone, turn off Live Voicemail in your Phone settings. Otherwise it picks up before your agent can.",
+      "ringTime": "If you can pick a ring time, 15 to 20 seconds gives you about four rings before your agent answers.",
       "voicemail": "If you have {{name}} voicemail, ask {{name}} to remove it. Missed calls can't forward while it's on.",
       "androidOnly": "These steps are for Android phones. On an iPhone, ask {{name}} to turn it on for you.",
       "adminOnly": "Only an admin of your {{name}} account can change this.",
       "verifyNumber": "{{name}} sends a code to {{number}} before it forwards. Choose to get the code by phone call, then read it in that call's transcript under Calls."
     },
     "test": {
-      "missed": "To test it, call your business number from another phone and let it ring. Your receptionist should answer.",
-      "all": "To test it, call your business number from another phone. Your receptionist should answer."
+      "missed": "To test it, call your business number from another phone and let it ring. Your agent should answer.",
+      "all": "To test it, call your business number from another phone. Your agent should answer."
     },
     "unsupported": {
       "missed": "{{name}} doesn't offer forwarding for missed calls only. Choose All calls, or ask {{name}} to forward unanswered calls to {{number}}.",
@@ -314,6 +361,10 @@
     "notListed": {
       "missed": "Carrier not listed? Ask them to forward unanswered calls to {{number}}.",
       "all": "Carrier not listed? Ask them to forward all your calls to {{number}}."
+    },
+    "general": {
+      "missed": "On a mobile, open your phone's call settings and forward unanswered calls to {{number}}. On a landline or business phone system, ask your carrier to do it.",
+      "all": "On a mobile, open your phone's call settings and forward all calls to {{number}}. On a landline or business phone system, ask your carrier to do it."
     }
   }
 }

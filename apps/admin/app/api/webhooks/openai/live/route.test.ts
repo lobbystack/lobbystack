@@ -2,10 +2,10 @@ import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ unwrap: vi.fn(), reject: vi.fn(), accept: vi.fn(), execute: vi.fn(), snapshot: vi.fn(), startLivePhoneCall: vi.fn(), finishLiveCall: vi.fn(), attach: vi.fn(), isNumberTrialEnded: vi.fn(), markNumberTrialMinutesExhausted: vi.fn() }));
+const mocks = vi.hoisted(() => ({ unwrap: vi.fn(), reject: vi.fn(), accept: vi.fn(), execute: vi.fn(), snapshot: vi.fn(), forAgent: vi.fn(), buildSession: vi.fn(), startLivePhoneCall: vi.fn(), finishLiveCall: vi.fn(), attach: vi.fn(), isNumberTrialEnded: vi.fn(), markNumberTrialMinutesExhausted: vi.fn() }));
 
-vi.mock("@lobbystack/agent-core/live/session", () => ({ buildPhoneSessionConfig: vi.fn() }));
-vi.mock("@lobbystack/domain", () => ({ finishLiveCall: mocks.finishLiveCall, getCachedBusinessSnapshot: mocks.snapshot, startLivePhoneCall: mocks.startLivePhoneCall, isNumberTrialEnded: mocks.isNumberTrialEnded, markNumberTrialMinutesExhausted: mocks.markNumberTrialMinutesExhausted }));
+vi.mock("@lobbystack/agent-core/live/session", () => ({ buildPhoneSessionConfig: mocks.buildSession }));
+vi.mock("@lobbystack/domain", () => ({ finishLiveCall: mocks.finishLiveCall, getBusinessSnapshotForAgent: mocks.forAgent, getCachedBusinessSnapshot: mocks.snapshot, startLivePhoneCall: mocks.startLivePhoneCall, isNumberTrialEnded: mocks.isNumberTrialEnded, markNumberTrialMinutesExhausted: mocks.markNumberTrialMinutesExhausted }));
 vi.mock("@/lib/api-helpers", () => ({ getAppDatabase: () => ({ db: { execute: mocks.execute } }) }));
 vi.mock("@/lib/domain-context", () => ({ createWorkerDomainContext: () => ({}) }));
 vi.mock("@/lib/live-prototype", () => ({
@@ -22,6 +22,7 @@ beforeEach(() => {
   mocks.execute.mockResolvedValue({ rows: [{ business_id: null, position: 1 }] });
   mocks.isNumberTrialEnded.mockResolvedValue(false);
   mocks.markNumberTrialMinutesExhausted.mockResolvedValue(true);
+  mocks.forAgent.mockImplementation(async (_domain: unknown, input: { loaded: unknown }) => input.loaded);
 });
 afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); });
 
@@ -49,6 +50,70 @@ describe("POST /api/webhooks/openai/live", () => {
     expect(logged).toContain("+15815550100");
     expect(logged).not.toContain("4165550134");
     expect(logged).not.toContain("Sam Lee");
+  });
+
+  describe("with two agents on one business", () => {
+    const ring = (dialled: string) => {
+      mocks.unwrap.mockResolvedValue({ type: "live.transport.incoming", created_at: Math.floor(Date.now() / 1000), data: { session_id: "live_1", sip_headers: [{ name: "Diversion", value: `<sip:${dialled}@example.com>` }, { name: "From", value: "<sip:+14165550134@example.com>" }] } });
+      return POST(new Request("https://admin.lobbystack.test/api/webhooks/openai/live", { method: "POST", body: "{}" }));
+    };
+    const stored = { businessId: "biz_1", greeting: "Default" };
+
+    beforeEach(() => {
+      vi.spyOn(console, "info").mockImplementation(() => undefined);
+      mocks.execute.mockResolvedValue({ rows: [{ business_id: "biz_1", position: 1 }] });
+      mocks.snapshot.mockResolvedValue(stored);
+      mocks.attach.mockResolvedValue(undefined);
+      mocks.accept.mockResolvedValue(undefined);
+      mocks.forAgent.mockImplementation(async (_domain: unknown, input: { agentId?: string }) => ({ ...stored, greeting: `Hi from ${input.agentId}` }));
+    });
+
+    it.each(["agent_a", "agent_b"])("answers as %s, the agent startLivePhoneCall read from the number", async (agentId) => {
+      mocks.startLivePhoneCall.mockResolvedValue({ callId: "call_1", conversationId: "conv_1", agentId, duplicate: false, blocked: false, maxDurationMs: 300_000 });
+      await ring("+15815550100");
+      expect(mocks.forAgent).toHaveBeenCalledWith(expect.anything(), { businessId: "biz_1", agentId, loaded: stored });
+      expect(mocks.buildSession).toHaveBeenCalledWith({ ...stored, greeting: `Hi from ${agentId}` });
+      expect(mocks.attach).toHaveBeenCalledWith(expect.objectContaining({ agentId, callId: "call_1" }));
+    });
+
+    it("loads the snapshot and the call together, and projects only after both finish", async () => {
+      let finishCall = (_value: unknown) => undefined as unknown;
+      mocks.startLivePhoneCall.mockReturnValue(new Promise((resolve) => { finishCall = resolve; }));
+      const answered = ring("+15815550100");
+      await vi.waitFor(() => expect(mocks.startLivePhoneCall).toHaveBeenCalled());
+      expect(mocks.snapshot).toHaveBeenCalledOnce();
+      expect(mocks.forAgent).not.toHaveBeenCalled();
+      finishCall({ callId: "call_1", conversationId: "conv_1", agentId: "agent_b", duplicate: false, blocked: false });
+      await answered;
+      expect(mocks.snapshot).toHaveBeenCalledOnce();
+      expect(mocks.forAgent).toHaveBeenCalledOnce();
+    });
+
+    it("doesn't project for a blocked caller, or build a snapshot for a business with none", async () => {
+      mocks.startLivePhoneCall.mockResolvedValue({ callId: "call_1", conversationId: "conv_1", agentId: "agent_b", duplicate: false, blocked: true });
+      mocks.finishLiveCall.mockResolvedValue(true);
+      await ring("+15815550100");
+      expect(mocks.forAgent).not.toHaveBeenCalled();
+
+      vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      mocks.snapshot.mockResolvedValue(null);
+      mocks.startLivePhoneCall.mockResolvedValue({ callId: "call_1", conversationId: "conv_1", agentId: "agent_b", duplicate: false, blocked: false });
+      await ring("+15815550100");
+      expect(mocks.forAgent).not.toHaveBeenCalled();
+      expect(mocks.reject).toHaveBeenCalledWith("live_1", { status_code: 503 });
+    });
+
+    it("resumes a retried delivery as the agent its call recorded", async () => {
+      mocks.startLivePhoneCall.mockResolvedValue({ callId: "call_1", conversationId: "conv_1", agentId: "agent_b", duplicate: true, blocked: false, maxDurationMs: 500_000 });
+      await ring("+15815550100");
+      expect(mocks.attach).toHaveBeenCalledWith(expect.objectContaining({ agentId: "agent_b", resume: true }));
+    });
+
+    it("attaches with no agent when the call has none", async () => {
+      mocks.startLivePhoneCall.mockResolvedValue({ callId: "call_1", conversationId: "conv_1", duplicate: false, blocked: false });
+      await ring("+15815550100");
+      expect(mocks.attach.mock.calls[0]?.[0]).not.toHaveProperty("agentId");
+    });
   });
 
   it("finishes answering a retried call without touching its record", async () => {

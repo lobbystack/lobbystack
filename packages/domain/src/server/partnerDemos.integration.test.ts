@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { billingUsageEvents, businesses, businessMemberships, createDatabaseClient, outboxMessages, partnerUsageMonths, phoneNumbers, platformKeyBusinesses, prospectDemos, receptionistProfiles, storageObjects, users, websiteIngestionJobs, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, billingUsageEvents, businesses, businessMemberships, createDatabaseClient, outboxMessages, partnerUsageMonths, phoneNumbers, platformKeyBusinesses, prospectDemos, storageObjects, users, websiteIngestionJobs, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { PROSPECT_DEMO_WIDGET_ID } from "@lobbystack/shared";
 
 import { forgetCachedBrands } from "./brands";
@@ -133,7 +133,7 @@ describe.skipIf(!client)("a partner's prospect demos against PostgreSQL", () => 
         business: (await tx.select({ partnerId: businesses.partnerId, accessLevel: businesses.partnerAccessLevel }).from(businesses).where(eq(businesses.id, demo.businessId)))[0],
         team: await tx.select({ userId: businessMemberships.userId }).from(businessMemberships).where(eq(businessMemberships.businessId, demo.businessId)),
         demo: (await tx.select({ partnerId: prospectDemos.partnerId, operatorUserId: prospectDemos.operatorUserId }).from(prospectDemos).where(eq(prospectDemos.id, demo.demoId)))[0],
-        instructions: (await tx.select({ voiceInstructions: receptionistProfiles.voiceInstructions }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, demo.businessId)))[0]?.voiceInstructions,
+        instructions: (await tx.select({ voiceInstructions: agents.voiceInstructions }).from(agents).where(eq(agents.businessId, demo.businessId)))[0]?.voiceInstructions,
       }));
       expect(stored.business).toEqual({ partnerId: bright.partnerId, accessLevel: "activity" });
       // The partner's people work in it through opens, never on its team.
@@ -159,7 +159,7 @@ describe.skipIf(!client)("a partner's prospect demos against PostgreSQL", () => 
       await tx.execute(sql`set local role lobbystack_app`);
       const [operator] = await people(tx, 1);
       const demo = await createProspectDemo({ db: tx as unknown as Database }, { operatorUserId: operator!.userId, ...demoInput("Pier Dental") });
-      const instructions = await asMigrator(tx, async () => (await tx.select({ voiceInstructions: receptionistProfiles.voiceInstructions }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, demo.businessId)))[0]?.voiceInstructions);
+      const instructions = await asMigrator(tx, async () => (await tx.select({ voiceInstructions: agents.voiceInstructions }).from(agents).where(eq(agents.businessId, demo.businessId)))[0]?.voiceInstructions);
       expect(instructions).toContain("This is a prospect demo from Front Desk.");
       expect((await asMigrator(tx, async () => await tx.select({ partnerId: prospectDemos.partnerId }).from(prospectDemos).where(eq(prospectDemos.id, demo.demoId))))[0]?.partnerId).toBeNull();
     });
@@ -236,7 +236,7 @@ describe.skipIf(!client)("a partner's prospect demos against PostgreSQL", () => 
       const groups = async () => (await asMigrator(tx, async () => await tx.select({ groupId: platformKeyBusinesses.groupId }).from(platformKeyBusinesses).where(eq(platformKeyBusinesses.businessId, demo.businessId)))).map((row) => row.groupId);
       expect(await groups()).toEqual([bright.partnerId]);
       // Someone on the team changed how the demo texts while showing it.
-      await asMigrator(tx, async () => await tx.update(receptionistProfiles).set({ smsInstructions: "Text back within the hour." }).where(eq(receptionistProfiles.businessId, demo.businessId)));
+      await asMigrator(tx, async () => await tx.update(agents).set({ smsInstructions: "Text back within the hour." }).where(eq(agents.businessId, demo.businessId)));
 
       // The demo shows only on the partner's domain.
       expect(await previewProspectDemo(bright.context, demo.token, HOST_BRAND_SCOPE)).toEqual({ state: "invalid" });
@@ -254,9 +254,9 @@ describe.skipIf(!client)("a partner's prospect demos against PostgreSQL", () => 
       // At the activity level the owner's only onboarding step is their phone, as for an owner the partner invited.
       expect(claimed.business).toEqual({ partnerId: bright.partnerId, accessLevel: "activity", onboardingStage: "verify_phone" });
       // Real calls aren't a demo anymore: the receptionist gets back what a new business is told, apart from what someone changed during the demo.
-      const receptionist = await asMigrator(tx, async () => (await tx.select({ bookingPolicy: receptionistProfiles.bookingPolicy, voiceInstructions: receptionistProfiles.voiceInstructions, smsInstructions: receptionistProfiles.smsInstructions }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, demo.businessId)))[0]);
+      const receptionist = await asMigrator(tx, async () => (await tx.select({ bookingPolicy: agents.bookingPolicy, voiceInstructions: agents.voiceInstructions, smsInstructions: agents.smsInstructions }).from(agents).where(eq(agents.businessId, demo.businessId)))[0]);
       expect(receptionist).toEqual({ bookingPolicy: NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS.bookingPolicy, voiceInstructions: NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS.voiceInstructions, smsInstructions: "Text back within the hour." });
-      const refresh = await asMigrator(tx, async () => await tx.select({ id: outboxMessages.id }).from(outboxMessages).where(and(eq(outboxMessages.businessId, demo.businessId), eq(outboxMessages.topic, "snapshot.refresh"), eq(outboxMessages.aggregateType, "receptionist_profile"))));
+      const refresh = await asMigrator(tx, async () => await tx.select({ id: outboxMessages.id }).from(outboxMessages).where(and(eq(outboxMessages.businessId, demo.businessId), eq(outboxMessages.topic, "snapshot.refresh"), eq(outboxMessages.aggregateType, "agent"))));
       expect(refresh).toHaveLength(1);
       // A claim can't be turned off.
       expect(await refusal(revokePartnerDemo(bright.context, bright.memberActor, { demoId: demo.demoId }))).toMatchObject({ status: 409, code: "demo_claimed" });

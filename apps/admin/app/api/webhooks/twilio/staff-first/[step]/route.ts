@@ -135,7 +135,7 @@ export async function POST(request: Request, { params: route }: { params: Promis
         return twiml(hangupTwiml());
       }
       // An action URL has no voice fallback, so a failed read still reaches the receptionist, without the message.
-      const handover = await loadStaffFirstHandover(domain, { businessId }).catch((error: unknown) => {
+      const handover = await loadStaffFirstHandover(domain, { businessId, e164: called }).catch((error: unknown) => {
         console.error("[staff-first] couldn't read the handover", error instanceof Error ? error.message : error);
         return { locale: "en" as const };
       });

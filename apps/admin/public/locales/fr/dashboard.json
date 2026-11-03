@@ -27,7 +27,7 @@
     "analytics": {
       "chart": {
         "title": "Vue d'ensemble de l'activite",
-        "description": "Appels et messages dans votre espace reception."
+        "description": "Appels et messages dans votre espace de travail."
       },
       "cards": {
         "calls": "Nombre d'appels",
@@ -165,8 +165,8 @@
     }
   },
   "setup": {
-    "title": "Créer votre première entreprise",
-    "description": "Cela initialise le locataire, le profil de la réceptionniste et le premier instantané utilisé par la voix.",
+    "title": "Créer votre premier espace de travail",
+    "description": "Cela initialise l'espace de travail, le profil de l'agent et le premier instantané utilisé par la voix.",
     "businessName": "Nom de l'entreprise",
     "slug": "Slug",
     "timezone": "Fuseau horaire",
@@ -183,10 +183,10 @@
       "other": "Autre"
     },
     "selectBusinessType": "Choisir un type d'entreprise",
-    "create": "Créer l'entreprise",
+    "create": "Créer l'espace de travail",
     "creating": "Création...",
-    "created": "Entreprise créée. L'instantané de la réceptionniste se met à jour.",
-    "failed": "Impossible de créer l'entreprise."
+    "created": "Espace de travail créé. L'instantané de l'agent se met à jour.",
+    "failed": "Impossible de créer l'espace de travail."
   },
   "cards": {
     "calls": {
@@ -195,7 +195,7 @@
     },
     "services": {
       "title": "Services configurés",
-      "footer": "Ils alimentent à la fois la réceptionniste et le moteur de réservation."
+      "footer": "Ils alimentent à la fois l'agent et le moteur de réservation."
     },
     "hours": {
       "title": "Jours d'ouverture définis",
@@ -210,7 +210,7 @@
   "quickActions": {
     "title": "Actions rapides",
     "description": "Gardez {{businessName}} prêt pour les appels, les SMS et les flux de réservation.",
-    "configureProfile": "Configurer le profil de la réceptionniste",
+    "configureProfile": "Configurer le profil de l'agent",
     "addKnowledge": "Ajouter des connaissances et des documents",
     "reviewInbox": "Consulter la boîte d'appels",
     "readiness": "État de préparation",
@@ -222,7 +222,7 @@
   },
   "nextSteps": {
     "title": "Prochaines étapes",
-    "description": "Ajustez le comportement de la réceptionniste avant d'acheminer du trafic réel.",
+    "description": "Ajustez le comportement de l'agent avant d'acheminer du trafic réel.",
     "hours": "Définissez les heures, les services et les affectations d'équipe afin que la réservation puisse proposer de vrais créneaux.",
     "transfer": "Ajoutez des règles de transfert et un numéro de secours avant de transférer les appels urgents.",
     "snapshot": "Actualisez l'instantané après des changements de politique importants pour que la voix les prenne rapidement en compte."
@@ -248,7 +248,7 @@
     },
     "forwardTrial": {
       "title": "Envoyez vos appels manqués au {{number}}",
-      "description": "Activez le renvoi d'appels chez votre opérateur, et les appels que vous ne pouvez pas prendre vont à votre réceptionniste plutôt qu'à la messagerie vocale.",
+      "description": "Activez le renvoi d'appels chez votre opérateur, et les appels que vous ne pouvez pas prendre vont à votre agent plutôt qu'à la messagerie vocale.",
       "cta": "Configurer le renvoi"
     },
     "upgrade": {
@@ -257,17 +257,63 @@
       "cta": "Choisir un forfait"
     }
   },
+  "setupGuide": {
+    "title": "Premiers pas",
+    "skip": "Ignorer la configuration",
+    "skipStep": "Ignorer",
+    "finished": "Configuration terminée.",
+    "description": "{{completed}} étape(s) sur {{total}} complétée(s).",
+    "lastCall": "Votre appel test",
+    "lastCallDetails": "{{date}}, {{duration}}",
+    "readTranscript": "Lire la transcription",
+    "callAgain": "Rappeler",
+    "steps": {
+      "fullScan": "Lire le reste de votre site",
+      "sources": "Ajoutez d'autres sources",
+      "hours": "Ajoutez vos heures d'ouverture",
+      "testCall": "Écoutez votre agent",
+      "phoneNumber": "Associez un numéro",
+      "forwardCalls": "Transférez vos appels"
+    },
+    "stepDescriptions": {
+      "fullScan": "Votre agent a lu un échantillon de votre site.",
+      "sources": {
+        "answer_calls": "Téléversez les politiques, FAQ et tarifs utiles à vos appelants.",
+        "book_appointments": "Téléversez vos services, tarifs et règles de réservation.",
+        "answer_website_visitors": "Téléversez les FAQ et politiques utiles aux visiteurs de votre site.",
+        "answer_instagram_messages": "Téléversez les FAQ et tarifs qu'on vous demande sur Instagram.",
+        "none": "Téléversez vos politiques, FAQ ou tarifs."
+      },
+      "hours": "Votre agent réserve des rendez-vous seulement pendant ces heures.",
+      "testCall": {
+        "answer_calls": "Posez la question que vos appelants posent le plus.",
+        "book_appointments": "Demandez-lui de prendre un rendez-vous.",
+        "answer_website_visitors": "Posez les questions qu'on vous pose sur votre site.",
+        "answer_instagram_messages": "Posez les questions qu'on vous pose sur Instagram.",
+        "none": "Posez la question que vos clients posent le plus."
+      },
+      "phoneNumber": "Donnez à votre agent son propre numéro pour répondre à vos vrais clients.",
+      "phoneNumberTrial": "Répondez à vos appels manqués gratuitement pendant 14 jours, sans carte."
+    },
+    "stepActions": {
+      "fullScan": "Lire le reste",
+      "sources": "Téléverser un document",
+      "hours": "Ajouter les heures",
+      "testCall": "Lancer un appel",
+      "phoneNumber": "Choisir un numéro"
+    }
+  },
   "forwarding": {
     "title": "Renvoyez vos appels vers le {{number}}",
-    "description": "Choisissez votre fournisseur, puis suivez les étapes sur le téléphone que vos clients appellent.",
+    "description": "Choisissez votre fournisseur.",
     "modes": {
       "missed": {
         "label": "Appels manqués",
-        "help": "Votre téléphone sonne d'abord. Si vous ne répondez pas, votre réceptionniste prend l'appel."
+        "help": "Votre téléphone sonne d'abord. Si vous ne répondez pas, votre agent prend l'appel."
       },
       "all": {
         "label": "Tous les appels",
-        "help": "Votre réceptionniste répond à chaque appel, et votre téléphone ne sonne pas."
+        "help": "Votre agent répond à chaque appel, et votre téléphone ne sonne pas."
       }
     },
     "carrier": {
@@ -279,7 +325,8 @@
       "usMobile": "Mobile (États-Unis)",
       "caMobile": "Mobile (Canada)",
       "landline": "Lignes fixes",
-      "voip": "Systèmes téléphoniques d'entreprise"
+      "voip": "Systèmes téléphoniques d'entreprise",
+      "ukMobile": "Mobile au Royaume-Uni"
     },
     "code": {
       "dial": "Composez ce code :",
@@ -297,16 +344,16 @@
     },
     "notes": {
       "planFeature": "Si le renvoi ne s'active pas, demandez à {{name}} d'ajouter le renvoi d'appel à votre forfait.",
-      "iphone": "Sur un iPhone, désactivez la messagerie vocale en direct dans les réglages de Téléphone. Sinon, elle répond avant votre réceptionniste.",
-      "ringTime": "Si vous pouvez choisir la durée de sonnerie, 15 à 20 secondes vous laissent environ quatre sonneries avant que votre réceptionniste réponde.",
+      "iphone": "Sur un iPhone, désactivez la messagerie vocale en direct dans les réglages de Téléphone. Sinon, elle répond avant votre agent.",
+      "ringTime": "Si vous pouvez choisir la durée de sonnerie, 15 à 20 secondes vous laissent environ quatre sonneries avant que votre agent réponde.",
       "voicemail": "Si vous avez la messagerie vocale de {{name}}, demandez à {{name}} de la retirer. Les appels manqués ne peuvent pas être renvoyés tant qu'elle est active.",
       "androidOnly": "Ces étapes sont pour les téléphones Android. Sur un iPhone, demandez à {{name}} de l'activer pour vous.",
       "adminOnly": "Seul un administrateur de votre compte {{name}} peut modifier ce réglage.",
       "verifyNumber": "{{name}} envoie un code au {{number}} avant d'activer le renvoi. Choisissez de recevoir le code par appel, puis lisez-le dans la transcription de cet appel, sous Appels."
     },
     "test": {
-      "missed": "Pour tester, appelez votre numéro d'entreprise depuis un autre téléphone et laissez sonner. Votre réceptionniste devrait répondre.",
-      "all": "Pour tester, appelez votre numéro d'entreprise depuis un autre téléphone. Votre réceptionniste devrait répondre."
+      "missed": "Pour tester, appelez votre numéro d'entreprise depuis un autre téléphone et laissez sonner. Votre agent devrait répondre.",
+      "all": "Pour tester, appelez votre numéro d'entreprise depuis un autre téléphone. Votre agent devrait répondre."
     },
     "unsupported": {
       "missed": "{{name}} ne propose pas de renvoi pour les appels manqués seulement. Choisissez Tous les appels, ou demandez à {{name}} de renvoyer les appels sans réponse vers le {{number}}.",
@@ -315,6 +362,10 @@
     "notListed": {
       "missed": "Votre fournisseur n'est pas dans la liste? Demandez-lui de renvoyer les appels sans réponse vers le {{number}}.",
       "all": "Votre fournisseur n'est pas dans la liste? Demandez-lui de renvoyer tous vos appels vers le {{number}}."
+    },
+    "general": {
+      "missed": "Sur un mobile, ouvrez les réglages d'appel de votre téléphone et renvoyez les appels sans réponse vers le {{number}}. Sur une ligne fixe ou un système téléphonique d'entreprise, demandez-le à votre fournisseur.",
+      "all": "Sur un mobile, ouvrez les réglages d'appel de votre téléphone et renvoyez tous les appels vers le {{number}}. Sur une ligne fixe ou un système téléphonique d'entreprise, demandez-le à votre fournisseur."
     }
   }
 }

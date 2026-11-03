@@ -7,7 +7,7 @@
     "startHint": "Dodirnite dugme da započnete glasovni poziv uživo.",
     "promptsTitle": "Pitajte, na primer:",
     "intakeNotice": "Ovo je demo. Pozivi rade, ali zakazivanje i ostale funkcije su isključene.",
-    "claimCta": "Preuzmite ovog recepcionera"
+    "claimCta": "Preuzmite ovog agenta"
   },
   "states": {
     "invalid": {
@@ -32,12 +32,12 @@
     "claimed": {
       "title": "Ovaj demo je već preuzet",
       "titleWithBusiness": "Demo za {{businessName}} je već preuzet",
-      "description": "Neko je već preuzeo ovog recepcionera."
+      "description": "Neko je već preuzeo ovog agenta."
     }
   },
   "claim": {
     "loadingTitle": "Podešavamo Vaš radni prostor",
-    "loadingDescription": "Preuzimamo Vašeg recepcionera…",
+    "loadingDescription": "Preuzimamo Vašeg agenta…",
     "errorTitle": "Nismo uspeli da preuzmemo ovaj demo",
     "errorDescription": "Došlo je do greške. Pokušajte ponovo.",
     "unavailableTitle": "Ovaj demo link nije dostupan",

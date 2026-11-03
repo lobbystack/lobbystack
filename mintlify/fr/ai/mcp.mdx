@@ -1,6 +1,6 @@
 ---
-title: "Gérer votre réceptionniste depuis un assistant IA"
-description: "Connectez Claude, ChatGPT et d'autres clients MCP à LobbyStack pour consulter les appels, réserver des rendez-vous et mettre à jour ce que sait votre réceptionniste."
+title: "Gérer votre agent depuis un assistant IA"
+description: "Connectez Claude, ChatGPT et d'autres clients MCP à LobbyStack pour consulter les appels, réserver des rendez-vous et mettre à jour ce que sait votre agent."
 sidebarTitle: "Serveur MCP"
 contentType: "Reference"
 ---
@@ -77,8 +77,8 @@ Les propriétaires et les administrateurs voient tous les assistants connectés 
 | `book_appointment` | `appointments:write` | Réserve un créneau libre |
 | `cancel_appointment` | `appointments:write` | Annule un rendez-vous |
 | `reschedule_appointment` | `appointments:write` | Déplace un rendez-vous vers un autre créneau libre ou un autre membre du personnel |
-| `list_messages` | `messages:read` | Messages que le réceptionniste a pris pour votre équipe |
-| `add_knowledge` | `knowledge:write` | Ajoute une FAQ ou un texte que le réceptionniste peut utiliser |
+| `list_messages` | `messages:read` | Messages que l'agent a pris pour votre équipe |
+| `add_knowledge` | `knowledge:write` | Ajoute une FAQ ou un texte que l'agent peut utiliser |
 
 Sur une connexion partenaire, chacun de ces outils prend aussi un `business_id`, et les outils partenaire de [Gérer la console partenaire depuis un assistant IA](/fr/white-label/mcp-for-agencies#outils) s'y ajoutent. Les portées sont les mêmes pour OAuth et pour les clés API. Les outils renvoient les mêmes objets que l'API REST, avec les heures en UTC. Les outils en lecture seule portent l'annotation `readOnlyHint`, et les outils qui annulent, déplacent ou remplacent des données portent `destructiveHint`, pour que votre assistant puisse vous demander votre accord avant de les exécuter.
 

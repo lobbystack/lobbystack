@@ -37,17 +37,19 @@ export const WEB_EVENT_NAMES = [
   "web.onboarding.business_name_submitted",
   "web.onboarding.website_submitted",
   "web.onboarding.website_skipped",
-  "web.onboarding.knowledge_uploaded",
-  "web.onboarding.knowledge_skipped",
-  "web.onboarding.greeting_submitted",
-  "web.onboarding.test_call_continued",
+  "web.onboarding.language_submitted",
   "web.onboarding.phone_verified",
   "web.onboarding.number_waitlist_joined",
   "web.onboarding.number_claim_started",
   "web.onboarding.number_claim_completed",
   "web.onboarding.plan_selected",
   "web.onboarding.plan_checkout_started",
+  "web.onboarding.goal_submitted",
   "web.onboarding.attribution_submitted",
+  "web.onboarding.meet_completed",
+  "web.onboarding.plan_offer_shown",
+  "web.onboarding.plan_offer_dismissed",
+  "web.onboarding.plan_offer_clicked",
   "web.knowledge.upload_started",
   "web.knowledge.upload_completed",
   "web.integration.calendar_connect_started",
@@ -84,6 +86,8 @@ export const SMS_EVENT_NAMES = [
   "sms.delivery_accepted",
   "sms.delivery_failed",
   "sms.provider_cost_recorded",
+  "conversation.first_real_recorded",
+  "onboarding.check_in_answered",
   "conversation.automation_paused",
   "conversation.team_requested",
   "conversation.team_joined",
@@ -293,11 +297,8 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.onboarding.business_name_submitted": ["deploymentMode"],
   "web.onboarding.website_submitted": ["businessId", "deploymentMode"],
   "web.onboarding.website_skipped": ["businessId", "deploymentMode"],
-  "web.onboarding.knowledge_uploaded": ["businessId", "deploymentMode"],
-  "web.onboarding.knowledge_skipped": ["businessId", "deploymentMode"],
-  "web.onboarding.greeting_submitted": ["businessId", "deploymentMode"],
+  "web.onboarding.language_submitted": ["businessId", "deploymentMode", "locale"],
   // heard: whether a test call ended on that screen before the owner moved on.
-  "web.onboarding.test_call_continued": ["businessId", "deploymentMode", "heard"],
   "web.onboarding.phone_verified": ["businessId", "deploymentMode", "countryCode"],
   "web.onboarding.number_waitlist_joined": ["businessId", "deploymentMode", "countryCode"],
   "web.onboarding.number_claim_started": [
@@ -317,7 +318,12 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.onboarding.plan_selected": ["businessId", "deploymentMode", "plan"],
   "web.onboarding.plan_checkout_started": ["businessId", "deploymentMode", "plan"],
   "web.onboarding.plan_checkout_completed": ["businessId", "deploymentMode", "plan"],
+  "web.onboarding.goal_submitted": ["businessId", "deploymentMode", "goal"],
   "web.onboarding.attribution_submitted": ["businessId", "deploymentMode", "source"],
+  "web.onboarding.meet_completed": ["businessId", "deploymentMode"],
+  "web.onboarding.plan_offer_shown": ["businessId", "deploymentMode", "surface"],
+  "web.onboarding.plan_offer_dismissed": ["businessId", "deploymentMode", "surface"],
+  "web.onboarding.plan_offer_clicked": ["businessId", "deploymentMode", "surface", "plan"],
   "web.knowledge.upload_started": [
     "businessId",
     "deploymentMode",
@@ -475,6 +481,9 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "channel",
     "provider",
   ],
+  // channel: voice, web_voice, web_chat, instagram or sms. Once per business.
+  "conversation.first_real_recorded": ["businessId", "deploymentMode", "channel", "conversationId"],
+  "onboarding.check_in_answered": ["businessId", "deploymentMode", "answer"],
   "conversation.automation_paused": [
     "businessId",
     "deploymentMode",
@@ -879,6 +888,11 @@ export function bucketOutboxBacklog(backlog: number): string {
 
 export function getPostHogDistinctIdForBusinessSystem(businessId: string): string {
   return `system:business:${businessId}`;
+}
+
+/** The id `ProductAnalytics` identifies an operator with, so server events can join their person. */
+export function getPostHogDistinctIdForUser(userId: string): string {
+  return `user:${userId}`;
 }
 
 export function getPostHogBusinessGroupKey(businessId: string): string {

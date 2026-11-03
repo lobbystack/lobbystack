@@ -1,14 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useId, useMemo, useState } from "react";
-import { CalendarClock, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import type { BookingMode, HoursWindow } from "@lobbystack/shared";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -17,7 +15,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { TimePicker } from "@/components/ui/time-picker";
 import { useTimeFormatPreference } from "@/components/appearance-provider";
-import { cn } from "@/lib/utils";
 import { useTelemetry } from "@/components/product-analytics";
 import { intlLocale } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
@@ -29,8 +26,6 @@ export type BusinessHoursState = { timezone: string; hoursSource: HoursSource; b
 
 /** Where the dashboard edits opening hours. */
 export const HOURS_EDITOR_HREF = "/agent/basic-settings#opening-hours";
-// Opens the editor when the link is followed on the page that already shows it, where nothing remounts.
-const OPEN_HOURS_EDITOR_EVENT = "lobbystack:open-hours-editor";
 const MAX_WINDOWS_PER_DAY = 4;
 const MAX_CLOSURES = 50;
 const MAX_CLOSURE_REASON_LENGTH = 100;
@@ -127,20 +122,6 @@ export function closuresForSave(closures: Closure[], now: string): { ok: true } 
   return { ok: true };
 }
 
-/** Shown on the setup guide: instant booking offers nothing without hours. The AI settings page says it in the hours row instead. */
-export function BookingWithoutHoursAlert({ className }: { className?: string }) {
-  const { t } = useTranslation("agent");
-  return (
-    <Alert className={cn("flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6", className)}>
-      <div className="flex min-w-0 flex-col gap-1">
-        <AlertTitle className="flex items-center gap-2"><CalendarClock aria-hidden="true" className="size-4" />{t("hours.noHoursAlert.title")}</AlertTitle>
-        <AlertDescription>{t("hours.noHoursAlert.description")}</AlertDescription>
-      </div>
-      <Button className="shrink-0 self-start sm:self-auto" nativeButton={false} render={<Link href={HOURS_EDITOR_HREF} onClick={() => window.dispatchEvent(new Event(OPEN_HOURS_EDITOR_EVENT))} />} size="sm" variant="outline">{t("hours.noHoursAlert.action")}</Button>
-    </Alert>
-  );
-}
-
 /** `bookingMode` overrides the saved mode, so the row reacts as soon as the booking setting above it changes. */
 export function BusinessHoursSection({ businessId, canManage, bookingMode }: { businessId: string; canManage: boolean; bookingMode?: BusinessHoursState["bookingMode"] }) {
   const { i18n, t } = useTranslation("agent");
@@ -154,14 +135,10 @@ export function BusinessHoursSection({ businessId, canManage, bookingMode }: { b
   const [invalidClosure, setInvalidClosure] = useState<number | null>(null);
   const errorId = useId();
   const [saving, setSaving] = useState(false);
-  // Collapsed to a one-line summary unless a link points here, such as the no-hours warning.
+  // Collapsed to a one-line summary unless a link points here, such as the Getting started step.
   const [editing, setEditing] = useState(false);
   useEffect(() => {
-    if (!canManage) return;
-    const open = () => setEditing(true);
-    if (window.location.hash === "#opening-hours") open();
-    window.addEventListener(OPEN_HOURS_EDITOR_EVENT, open);
-    return () => window.removeEventListener(OPEN_HOURS_EDITOR_EVENT, open);
+    if (canManage && window.location.hash === "#opening-hours") setEditing(true);
   }, [canManage]);
   useEffect(() => { if (state) { setDays(toDays(state.hours)); setClosures(state.closures); } }, [state]);
   const [dayNames, shortDayNames] = useDayNames();

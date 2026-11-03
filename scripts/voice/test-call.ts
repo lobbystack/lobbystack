@@ -1,7 +1,7 @@
 // Calls a receptionist's number with a scripted caller, to test a real phone
-// line end to end. After the scripted lines, the caller stays silent for 40
-// seconds, so a call much shorter than its script means the receptionist hung
-// up. See docs/voice/testing.md.
+// line end to end. After the scripted lines, the caller stays silent for 15
+// seconds, or the scenario's endSilenceMs, so a call much shorter than its
+// script means the receptionist hung up. See docs/voice/testing.md.
 //
 // TWILIO_ACCOUNT_SID=... TWILIO_AUTH_TOKEN=... pnpm voice:call --from <number> --to <number> [--scenario <name>]...
 

@@ -21,6 +21,7 @@ export default defineConfig({
       "@lobbystack/providers/storage/local": `${root}/packages/providers/src/storage/local.ts`,
       "@lobbystack/providers/crawling/urlSafety": `${root}/packages/providers/src/crawling/urlSafety.ts`,
       "@lobbystack/providers/crypto/secretBox": `${root}/packages/providers/src/crypto/secretBox.ts`,
+      "@lobbystack/providers/crypto/signedPayload": `${root}/packages/providers/src/crypto/signedPayload.ts`,
       "@lobbystack/providers/storage/provider": `${root}/packages/providers/src/storage/provider.ts`,
       "@lobbystack/providers/stripe/stripeConnect": `${root}/packages/providers/src/stripe/stripeConnect.ts`,
       "@lobbystack/providers/stripe/fakeStripeConnect": `${root}/packages/providers/src/stripe/fakeStripeConnect.ts`,

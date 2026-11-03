@@ -4,16 +4,25 @@ import { createContext, useContext, type ReactNode } from "react";
 
 const OpenUpgradePlanDialogContext = createContext<(() => void) | null>(null);
 
+/** How a plans offer ended: closed with nothing picked, or a plan clicked. */
+export type PlanOfferCallbacks = { onDismiss: () => void; onPlanClicked: (plan: "starter" | "pro") => void };
+
+const OpenPlanOfferContext = createContext<((callbacks: PlanOfferCallbacks) => void) | null>(null);
+
 export function UpgradePlanDialogProvider({
   children,
+  onOffer,
   onOpen,
 }: {
   children: ReactNode;
+  onOffer?: (callbacks: PlanOfferCallbacks) => void;
   onOpen: () => void;
 }) {
   return (
     <OpenUpgradePlanDialogContext.Provider value={onOpen}>
-      {children}
+      <OpenPlanOfferContext.Provider value={onOffer ?? null}>
+        {children}
+      </OpenPlanOfferContext.Provider>
     </OpenUpgradePlanDialogContext.Provider>
   );
 }
@@ -30,7 +39,12 @@ export function useOpenUpgradePlanDialog(): () => void {
   return openUpgradePlanDialog;
 }
 
-/** The same opener, or null outside the dashboard shell, for components that onboarding renders too. */
+/** The same opener, or null outside its provider, for components that some pages render without one. */
 export function useUpgradePlanDialogOpener(): (() => void) | null {
   return useContext(OpenUpgradePlanDialogContext);
+}
+
+/** Opens the plan picker as an offer, and reports how it ended. Null outside the provider. */
+export function usePlanOfferOpener(): ((callbacks: PlanOfferCallbacks) => void) | null {
+  return useContext(OpenPlanOfferContext);
 }

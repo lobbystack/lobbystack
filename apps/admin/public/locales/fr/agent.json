@@ -2,16 +2,16 @@
   "page": {
     "eyebrow": "Espace agent",
     "title": "Agent",
-    "description": "Configurez le comportement de votre réceptionniste IA, ses connaissances et sa gestion des appels et messages."
+    "description": "Configurez le comportement de votre agent IA, ses connaissances et sa gestion des appels et messages."
   },
   "sections": {
     "basicSettings": {
       "title": "Paramètres IA",
-      "description": "Message d'accueil et paramètres de transfert de votre réceptionniste."
+      "description": "Message d'accueil et paramètres de transfert de votre agent."
     },
     "knowledge": {
       "title": "Connaissances",
-      "description": "Informations et directives que votre réceptionniste utilise pour répondre aux questions.",
+      "description": "Informations et directives que votre agent utilise pour répondre aux questions.",
       "listTitle": "Base de connaissances",
       "addKnowledge": "Ajouter",
       "addKnowledgeOptions": {
@@ -26,7 +26,7 @@
       "websiteImport": {
         "badge": "Site web",
         "title": "Importer un site web",
-        "description": "Explorez les pages publiques de votre site web pour que votre réceptionniste puisse les utiliser comme connaissances.",
+        "description": "Explorez les pages publiques de votre site web pour que votre agent puisse les utiliser comme connaissances.",
         "submit": "Importer",
         "submitting": "Importation…",
         "success": "L'import du site web a démarré. Les pages apparaîtront ici au fur et à mesure du traitement.",
@@ -41,9 +41,9 @@
           "urlRequired": "Entrez l'URL du site web à importer."
         }
       },
-      "addKnowledgeDescription": "Ajoutez des heures d'ouverture, des tarifs, des politiques ou toute autre information que votre réceptionniste devrait connaître.",
-      "editKnowledgeDescription": "Mettez a jour les informations que votre receptionniste doit utiliser pour repondre aux questions des clients.",
-      "uploadDocumentDescription": "Téléversez un fichier que votre réceptionniste pourra utiliser.",
+      "addKnowledgeDescription": "Ajoutez des heures d'ouverture, des tarifs, des politiques ou toute autre information que votre agent devrait connaître.",
+      "editKnowledgeDescription": "Mettez à jour les informations que votre agent doit utiliser pour répondre aux questions des clients.",
+      "uploadDocumentDescription": "Téléversez un fichier que votre agent pourra utiliser.",
       "documentBadge": "Document",
       "textBadge": "Texte",
       "emptyState": "Aucune connaissance ajoutée pour le moment.",
@@ -85,8 +85,8 @@
         "content": {
           "label": "Contenu",
           "placeholder": "Nous sommes ouverts du lundi au vendredi de 9h à 17h.",
-          "hint": "L'information réelle que le réceptionniste doit utiliser.",
-          "required": "Saisissez l'information que le réceptionniste doit utiliser."
+          "hint": "L'information réelle que l'agent doit utiliser.",
+          "required": "Saisissez l'information que l'agent doit utiliser."
         },
         "tags": {
           "label": "Mots-clés",
@@ -97,7 +97,7 @@
     },
     "services": {
       "title": "Services",
-      "description": "Détails des services que votre réceptionniste peut utiliser pour expliquer vos offres et aider à réserver le bon rendez-vous.",
+      "description": "Détails des services que votre agent peut utiliser pour expliquer vos offres et aider à réserver le bon rendez-vous.",
       "listTitle": "Services",
       "addKnowledge": "Ajouter un service",
       "editKnowledge": "Modifier le service",
@@ -116,9 +116,9 @@
       "copyName": "{{name}} (copie)",
       "copyNameNumbered": "{{name}} (copie {{number}})",
       "uploadDocument": "Téléverser un document",
-      "addKnowledgeDescription": "Ajoutez vos services, ce qu'ils incluent, à qui ils s'adressent et tout ce que votre réceptionniste devrait mentionner.",
-      "editKnowledgeDescription": "Mettez a jour les details du service que votre receptionniste doit expliquer et utiliser pendant la reservation.",
-      "uploadDocumentDescription": "Téléversez un fichier que votre réceptionniste pourra utiliser.",
+      "addKnowledgeDescription": "Ajoutez vos services, ce qu'ils incluent, à qui ils s'adressent et tout ce que votre agent devrait mentionner.",
+      "editKnowledgeDescription": "Mettez à jour les détails du service que votre agent doit expliquer et utiliser pendant la réservation.",
+      "uploadDocumentDescription": "Téléversez un fichier que votre agent pourra utiliser.",
       "documentBadge": "Document",
       "textBadge": "Texte",
       "emptyState": "Aucun service ajouté pour le moment.",
@@ -156,7 +156,7 @@
         "content": {
           "label": "Contenu",
           "placeholder": "Une consultation de 30 minutes pour comprendre les besoins de l'appelant et recommander la bonne suite.",
-          "hint": "Décrivez le service pour que le réceptionniste puisse l'expliquer clairement."
+          "hint": "Décrivez le service pour que l'agent puisse l'expliquer clairement."
         },
         "duration": {
           "label": "Durée",
@@ -170,12 +170,12 @@
         },
         "price": {
           "label": "Prix",
-          "hint": "Facultatif. Le réceptionniste annonce ce prix tel quel ; laissez le montant vide et il n'en inventera pas.",
+          "hint": "Facultatif. L'agent annonce ce prix tel quel ; laissez le montant vide et il n'en inventera pas.",
           "placeholder": "0",
           "amount": "Prix",
           "lowest": "Prix minimum",
           "highest": "Prix maximum",
-          "inPersonHint": "Le réceptionniste indique aux appelants que le prix est fixé une fois que l'entreprise connaît leurs besoins.",
+          "inPersonHint": "L'agent indique aux appelants que le prix est fixé une fois que l'entreprise connaît leurs besoins.",
           "types": {
             "fixed": "Fixe",
             "from": "À partir de",
@@ -203,22 +203,22 @@
         }
       },
       "deleteTitle": "Supprimer le service ?",
-      "deleteDescription": "Votre réceptionniste ne le proposera plus. Les rendez-vous passés l'affichent toujours."
+      "deleteDescription": "Votre agent ne le proposera plus. Les rendez-vous passés l'affichent toujours."
     },
     "employees": {
       "title": "Employés",
-      "description": "Personnes avec qui votre réceptionniste peut prendre des rendez-vous et vers qui transférer les appels."
+      "description": "Personnes avec qui votre agent peut prendre des rendez-vous et vers qui transférer les appels."
     },
     "rules": {
       "title": "Règles",
-      "description": "Instructions qui guident la manière dont votre réceptionniste doit gérer les appels et les messages.",
+      "description": "Instructions qui guident la manière dont votre agent doit gérer les appels et les messages.",
       "listTitle": "Règles",
       "addKnowledge": "Ajouter une règle",
       "editKnowledge": "Modifier la regle",
       "uploadDocument": "Téléverser un document",
-      "addKnowledgeDescription": "Ce que votre réceptionniste doit faire, comme transférer des appels, poser des questions et envoyer des textos.",
-      "editKnowledgeDescription": "Mettez a jour l instruction que votre receptionniste doit suivre pendant les appels et les suivis.",
-      "uploadDocumentDescription": "Téléversez un fichier que votre réceptionniste pourra utiliser.",
+      "addKnowledgeDescription": "Ce que votre agent doit faire, comme transférer des appels, poser des questions et envoyer des textos.",
+      "editKnowledgeDescription": "Mettez à jour l'instruction que votre agent doit suivre pendant les appels et les suivis.",
+      "uploadDocumentDescription": "Téléversez un fichier que votre agent pourra utiliser.",
       "documentBadge": "Document",
       "textBadge": "Texte",
       "emptyState": "Aucune règle ajoutée pour le moment.",
@@ -254,8 +254,8 @@
         "content": {
           "label": "Contenu",
           "placeholder": "Transférez les appels urgents de facturation à l'accueil et envoyez un texto au gestionnaire après les heures d'ouverture.",
-          "hint": "Décrivez ce que le réceptionniste doit faire.",
-          "required": "Décrivez ce que le réceptionniste doit faire."
+          "hint": "Décrivez ce que l'agent doit faire.",
+          "required": "Décrivez ce que l'agent doit faire."
         },
         "tags": {
           "label": "Mots-clés",
@@ -294,7 +294,7 @@
     },
     "summary": {
       "label": "Résumé de l'entreprise",
-      "hint": "Ce que votre réceptionniste dit aux appelants au sujet de l'entreprise.",
+      "hint": "Ce que votre agent dit aux appelants au sujet de l'entreprise.",
       "placeholder": "Par exemple : La Clinique familiale Maple est une clinique de Toronto qui offre des examens, des vaccins et de la physiothérapie.",
       "regenerate": "Réécrire avec l'IA",
       "regenerating": "L'IA le réécrit à partir de vos connaissances. Cela prend un instant.",
@@ -316,16 +316,16 @@
     "greeting": {
       "label": "Message d'accueil",
       "placeholder": "Bonjour, merci d'avoir appelé…",
-      "hint": "La phrase d'ouverture utilisée par votre réceptionniste lorsqu'il répond à un appel ou démarre une conversation."
+      "hint": "La phrase d'ouverture utilisée par votre agent lorsqu'il répond à un appel ou démarre une conversation."
     },
     "defaultLocale": {
       "label": "Langue client par défaut",
       "placeholder": "Choisir une langue par défaut",
-      "hint": "Choisissez la langue de repli que votre réceptionniste doit utiliser quand la préférence du client est inconnue."
+      "hint": "Choisissez la langue de repli que votre agent doit utiliser quand la préférence du client est inconnue."
     },
     "teamLocale": {
       "label": "Langue de l'équipe",
-      "hint": "La langue dans laquelle votre réceptionniste rédige les messages, notes et demandes pour votre équipe. Les appelants reçoivent toujours une réponse dans leur langue.",
+      "hint": "La langue dans laquelle votre agent rédige les messages, notes et demandes pour votre équipe. Les appelants reçoivent toujours une réponse dans leur langue.",
       "sameAsCaller": "Identique à la langue des clients"
     },
     "voice": {
@@ -357,7 +357,7 @@
     },
     "timezone": {
       "label": "Fuseau horaire de l’entreprise",
-      "hint": "Votre réceptionniste utilise ce fuseau horaire pour vos heures d’ouverture et les créneaux qu’il propose aux clients.",
+      "hint": "Votre agent utilise ce fuseau horaire pour vos heures d’ouverture et les créneaux qu’il propose aux clients.",
       "search": "Rechercher un fuseau horaire...",
       "noResults": "Aucun fuseau horaire trouvé.",
       "regions": {
@@ -382,11 +382,11 @@
     "transferNumber": {
       "label": "Numéro de transfert par défaut",
       "placeholder": "+1 555-123-4567",
-      "hint": "Le numéro que votre réceptionniste doit utiliser lorsqu'il transfère un appel à une personne.",
+      "hint": "Le numéro que votre agent doit utiliser lorsqu'il transfère un appel à une personne.",
       "country": "Pays",
       "errors": {
         "invalid": "Entrez un numéro de transfert complet et valide avant d'enregistrer.",
-        "countryUnsupported": "Votre réceptionniste ne peut pas encore transférer d'appels vers ce pays."
+        "countryUnsupported": "Votre agent ne peut pas encore transférer d'appels vers ce pays."
       }
     }
   },
@@ -395,7 +395,7 @@
     "save": "Enregistrer le personnel répond d'abord",
     "mode": {
       "label": "Faire sonner votre équipe d'abord",
-      "hint": "Votre téléphone sonne d'abord. Appuyez sur 1 pour prendre l'appel. Sinon, le réceptionniste répond.",
+      "hint": "Votre téléphone sonne d'abord. Appuyez sur 1 pour prendre l'appel. Sinon, l'agent répond.",
       "options": {
         "never": "Désactivé",
         "business_hours": "Pendant les heures d'ouverture",
@@ -409,7 +409,7 @@
     },
     "number": {
       "label": "Téléphone du personnel",
-      "hint": "N'utilisez pas un téléphone renvoyé vers le numéro de votre réceptionniste."
+      "hint": "N'utilisez pas un téléphone renvoyé vers le numéro de votre agent."
     },
     "ring": {
       "label": "Durée de la sonnerie",
@@ -422,12 +422,12 @@
       "noSerbianVoice": "Les appelants ne l'entendront pas. Les messages ne peuvent pas encore être lus en serbe."
     },
     "handover": {
-      "label": "Message avant la réponse du réceptionniste",
+      "label": "Message avant la réponse de l'agent",
       "hint": "Facultatif. Les appelants l'entendent si personne ne répond."
     },
     "errors": {
       "numberRequired": "Ajoutez un téléphone du personnel.",
-      "ownLine": "Utilisez un autre téléphone que le numéro de votre réceptionniste.",
+      "ownLine": "Utilisez un autre téléphone que le numéro de votre agent.",
       "trialLocked": "Pendant l'essai gratuit, utilisez le mobile que vous avez vérifié."
     }
   },
@@ -451,11 +451,11 @@
     "title": "Modifications de rendez-vous",
     "allowCancel": {
       "label": "Autoriser les annulations IA",
-      "hint": "Permettre a la receptionniste d'annuler un rendez-vous a venir verifie."
+      "hint": "Permettre à l'agent d'annuler un rendez-vous à venir vérifié."
     },
     "allowReschedule": {
       "label": "Autoriser les deplacements IA",
-      "hint": "Permettre a la receptionniste de deplacer un rendez-vous verifie apres verification des disponibilites."
+      "hint": "Permettre à l'agent de déplacer un rendez-vous vérifié après vérification des disponibilités."
     },
     "verification": {
       "label": "Vérification de l'appelant",
@@ -469,7 +469,7 @@
         "phone_match_and_facts": "L'appelant doit appeler du numéro utilisé pour réserver et indiquer l'heure ou le service du rendez-vous.",
         "otp_required": "L'appelant doit aussi lire un code unique envoyé par SMS à ce numéro avant toute annulation ou modification.",
         "passcode_required": "L'appelant doit aussi saisir sur le clavier de son téléphone le code PIN enregistré sur sa fiche contact. Sans code PIN, sa demande est transmise à votre équipe. Définissez les codes PIN dans l'onglet Détails de chaque contact.",
-        "operator_only": "La réceptionniste ne modifie pas les rendez-vous. Elle transmet les demandes à votre équipe."
+        "operator_only": "L'agent ne modifie pas les rendez-vous. Il transmet les demandes à votre équipe."
       }
     }
   },
@@ -512,7 +512,7 @@
   },
   "readOnly": "L’accès lecteur est en lecture seule.",
   "empty": {
-    "description": "Créez d'abord une entreprise, puis revenez ici pour configurer votre réceptionniste IA."
+    "description": "Créez d'abord un espace de travail, puis revenez ici pour configurer votre agent IA."
   },
   "hours": {
     "title": "Heures d'ouverture",
@@ -529,11 +529,6 @@
     "edit": "Modifier",
     "cancel": "Annuler",
     "notSet": "Non définies",
-    "noHoursAlert": {
-      "title": "Ajoutez vos heures d'ouverture pour réserver des rendez-vous",
-      "description": "L'agent propose des créneaux seulement pendant vos heures d'ouverture. En attendant, il prend un message.",
-      "action": "Ajouter les heures d'ouverture"
-    },
     "neededForBooking": "Non définies. Nécessaires pour prendre des rendez-vous.",
     "add": "Ajouter",
     "closures": {

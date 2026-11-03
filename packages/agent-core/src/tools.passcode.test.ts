@@ -139,3 +139,22 @@ describe("the keypad PIN in the receptionist's capabilities", () => {
     }
   });
 });
+
+describe("the agent's appointment policy", () => {
+  const agentTools = (agentId?: string) => {
+    const set = createReceptionistTools({ domain: { db: {} as never }, channel: "voice", callId: "call_1", callerPhone, snapshot: snapshotFor("phone_match_and_facts", agentId ? { agentId } : {}) });
+    return (input: object) => (set.verifyAppointmentForChange!.execute! as Execute)(input, { toolCallId: "1", messages: [] });
+  };
+
+  it("passes the projected agent to the policy check, so its own policy applies", async () => {
+    vi.mocked(verifyCallerForChange).mockResolvedValue({ ok: false, verified: false, reason: "No." });
+    await agentTools("agent_b")({ action: "cancel", serviceName: "Cleaning" });
+    expect(verifyCallerForChange).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ agentId: "agent_b" }));
+  });
+
+  it("names no agent on a flat snapshot, which is the default agent's", async () => {
+    vi.mocked(verifyCallerForChange).mockResolvedValue({ ok: false, verified: false, reason: "No." });
+    await agentTools()({ action: "cancel", serviceName: "Cleaning" });
+    expect(vi.mocked(verifyCallerForChange).mock.calls[0]?.[1]).not.toHaveProperty("agentId");
+  });
+});

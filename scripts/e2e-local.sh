@@ -41,7 +41,9 @@ TESTS=(
   e2e/auth-pages.e2e.ts
   e2e/auth-return-to.e2e.ts
   e2e/business-timezone.e2e.ts
+  e2e/getting-started.e2e.ts
   e2e/onboarding-flow.e2e.ts
+  e2e/onboarding-path.e2e.ts
   e2e/onboarding-pending.e2e.ts
   e2e/operator-auth.e2e.ts
   e2e/performance-startup.e2e.ts

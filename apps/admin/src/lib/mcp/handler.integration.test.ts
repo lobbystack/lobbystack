@@ -5,7 +5,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { DateTime } from "luxon";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { apiKeys, appointments, auditLogs, businessHours, businesses, calls, contacts, createDatabaseClient, outboxMessages, receptionistProfiles, services, staff } from "@lobbystack/db";
+import { agents, apiKeys, appointments, auditLogs, businessHours, businesses, calls, contacts, createDatabaseClient, outboxMessages, services, staff } from "@lobbystack/db";
 import { generateApiKey, type DomainContext } from "@lobbystack/domain";
 import type { ApiKeyScope } from "@lobbystack/shared";
 
@@ -58,7 +58,7 @@ async function createKey(businessId: string, scopes: ApiKeyScope[]): Promise<{ i
 async function createFixture(label: string): Promise<Fixture> {
   const businessId = randomUUID();
   await admin!.db.insert(businesses).values({ id: businessId, slug: `mcp-${label}-${businessId}`, name: `MCP ${label}`, timezone: "America/Toronto", businessType: "test" });
-  await admin!.db.insert(receptionistProfiles).values({ businessId, greeting: "Hi", tone: "warm", summary: label, bookingPolicy: "Book", transferMode: "never", bookingMode: "instant" });
+  await admin!.db.insert(agents).values({ businessId, greeting: "Hi", tone: "warm", summary: label, bookingPolicy: "Book", transferMode: "never", bookingMode: "instant" });
   await admin!.db.insert(staff).values({ businessId, name: "Sam", timezone: "America/Toronto" });
   const [service] = await admin!.db.insert(services).values({ businessId, name: "Cleaning", slug: "cleaning", durationMinutes: 30 }).returning({ id: services.id });
   await admin!.db.insert(businessHours).values(Array.from({ length: 7 }, (_, dayOfWeek) => ({ businessId, dayOfWeek, openMinutes: 8 * 60, closeMinutes: 20 * 60 })));
@@ -214,13 +214,13 @@ describe.skipIf(!testUrl)("MCP server against PostgreSQL with RLS", () => {
 
   it("refuses to book outside instant booking mode", async () => {
     const client = await connect(a.key);
-    await admin!.db.update(receptionistProfiles).set({ bookingMode: "request" }).where(eq(receptionistProfiles.businessId, a.businessId));
+    await admin!.db.update(agents).set({ bookingMode: "request" }).where(eq(agents.businessId, a.businessId));
     try {
       const startsAt = localDayAt(3, 11).toUTC().toISO()!;
       expect(await call(client, "book_appointment", { service_id: a.serviceId, starts_at: startsAt, contact_phone: "+14165550188" })).toEqual({ error: expect.objectContaining({ code: "booking_requires_confirmation" }) });
       expect((await call(client, "get_business")).data).toMatchObject({ booking_mode: "request" });
     } finally {
-      await admin!.db.update(receptionistProfiles).set({ bookingMode: "instant" }).where(eq(receptionistProfiles.businessId, a.businessId));
+      await admin!.db.update(agents).set({ bookingMode: "instant" }).where(eq(agents.businessId, a.businessId));
     }
   });
 

@@ -13,7 +13,7 @@ import { requestJson } from "@/lib/request-json";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { surfaceClassName } from "@/components/ui/surface";
 import { useTelemetry } from "@/components/product-analytics";
@@ -106,7 +106,6 @@ export function CalcomIntegrationCard({ businessId, canManage, data }: { busines
             <SelectTrigger id="calcom-event-type" className="w-full"><SelectValue placeholder={t("integrations.calcom.selectEventType")} /></SelectTrigger>
             <SelectContent><SelectGroup>{options.map((option) => <SelectItem key={option.id} value={option.id}>{option.summary}</SelectItem>)}</SelectGroup></SelectContent>
           </Select>
-          <FieldDescription>{t("integrations.calcom.howItWorks")}</FieldDescription>
         </Field> : <Button disabled={!canManage} onClick={() => void connect()}>{t("integrations.calcom.connect")}</Button>}
         {connection && warnings.length ? <Alert><AlertTitle>{t("integrations.calcom.warningsTitle")}</AlertTitle><AlertDescription><ul className="flex list-disc flex-col gap-1 pl-4">{warnings.map((warning) => <li key={warning.code}>{warningText(warning)}</li>)}</ul></AlertDescription></Alert> : null}
       </div>

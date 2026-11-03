@@ -1,21 +1,21 @@
-import { useEffect, useState, useSyncExternalStore, type RefObject } from "react";
+import { useEffect, useState, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { getTestCallStarter, startTestCall, subscribeTestCallStarter } from "@/lib/test-call-launcher";
+import { openTestWindow, useTestWindowReady } from "@/lib/test-window";
 import { cn } from "@/lib/utils";
 
 /** Where the dashboard's utility bar renders on phones. */
 export const MOBILE_UTILITY_SLOT_ID = "mobile-utility-slot";
 
-/** The test call button on phones. The dashboard's call widget runs the call; this only starts it. */
+/** The test window's button on phones. */
 function MobileTestCallButton() {
   const { t } = useTranslation("common");
-  const ready = useSyncExternalStore(subscribeTestCallStarter, () => getTestCallStarter() !== null, () => false);
+  const ready = useTestWindowReady();
   if (!ready) return null;
   return (
-    <Button className="md:hidden" onClick={() => startTestCall()} size="sm" type="button" variant="outline">
+    <Button className="md:hidden" onClick={() => openTestWindow()} size="sm" type="button" variant="outline">
       {t("testCall.trigger")}
     </Button>
   );

@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { createAgentModel, createReceptionistAgent, describeAgentUsage } from "@lobbystack/agent-core";
 import type { JobEnvelope } from "@lobbystack/contracts";
 import { withBusinessTransaction } from "@lobbystack/db";
-import { alertUnansweredInstagram, claimInstagramDelivery, finishInstagramDelivery, getCachedBusinessSnapshot, instagramDeliveryLeaseEndsAt, loadInstagramReplyContext, recordAiGenerationEvent, recordInstagramPartSent, refreshBusinessSnapshot, refreshInstagramTokenIfDue, releaseInstagramDelivery, reserveWidgetChatUsageInTransaction, saveInstagramReply, type DomainContext } from "@lobbystack/domain";
+import { alertUnansweredInstagram, claimInstagramDelivery, finishInstagramDelivery, getBusinessSnapshotForAgent, instagramDeliveryLeaseEndsAt, loadInstagramReplyContext, recordAiGenerationEvent, recordInstagramPartSent, refreshInstagramTokenIfDue, releaseInstagramDelivery, reserveWidgetChatUsageInTransaction, saveInstagramReply, type DomainContext } from "@lobbystack/domain";
 import { InstagramApiError, splitInstagramText, type InstagramProvider } from "@lobbystack/providers/instagram/instagram";
 import { normalizeRuntimeLocale, runtimeLocaleName } from "@lobbystack/shared";
 
@@ -46,7 +46,8 @@ export async function replyToInstagramMessage(domain: DomainContext, job: JobEnv
   if (!model) throw new Error("The AI chat provider is not configured.");
   const allowance = await withBusinessTransaction(domain.db, { businessId, actorType: "worker" }, async (tx) => await reserveWidgetChatUsageInTransaction(tx, { businessId, conversationId }));
   if (!allowance.allowed) return { status: "skipped", entityId: messageId };
-  const snapshot = await getCachedBusinessSnapshot(domain, { businessId }) ?? (await refreshBusinessSnapshot(domain, { businessId }), await getCachedBusinessSnapshot(domain, { businessId }));
+  // The conversation names its agent, so a job from before agents, whose payload says nothing about them, reads the same.
+  const snapshot = await getBusinessSnapshotForAgent(domain, { businessId, agentId: reply.agentId });
   if (!snapshot) throw new Error("The business snapshot is unavailable.");
   const locale = normalizeRuntimeLocale(snapshot.defaultLocale);
   // Set once a tool saves a message or books: another attempt would do it twice.

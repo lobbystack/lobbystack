@@ -1,7 +1,7 @@
 import { and, asc, eq, gt, gte, lt, ne } from "drizzle-orm";
 import { DateTime } from "luxon";
 
-import { appointments, calls, contacts, conversationSessions, receptionistProfiles, services, staffServiceAssignments, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { agentOrDefaultOf, agents, appointments, calls, contacts, conversationSessions, services, staffServiceAssignments, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { normalizeAppointmentChangePolicy } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
@@ -149,12 +149,12 @@ export async function bookForCaller(
   }
 }
 
-export async function lookupCallerAppointments(context: DomainContext, input: { businessId: string; callerPhone: string }) {
+export async function lookupCallerAppointments(context: DomainContext, input: { businessId: string; agentId?: string; callerPhone: string }) {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const [rows, profile] = await Promise.all([
       // A past appointment can't be cancelled or moved, so it doesn't count.
       tx.select({ id: appointments.id }).from(appointments).innerJoin(contacts, eq(appointments.contactId, contacts.id)).where(and(eq(appointments.businessId, input.businessId), eq(contacts.phone, input.callerPhone), eq(appointments.status, "confirmed"), gt(appointments.startsAt, new Date()))).orderBy(asc(appointments.startsAt)),
-      tx.select({ appointmentChangePolicy: receptionistProfiles.appointmentChangePolicy }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, input.businessId)).limit(1),
+      tx.select({ appointmentChangePolicy: agents.appointmentChangePolicy }).from(agents).where(agentOrDefaultOf(input.businessId, input.agentId)).orderBy(asc(agents.isDefault)).limit(1),
     ]);
     const policy = normalizeAppointmentChangePolicy(profile[0]?.appointmentChangePolicy);
     // Only say whether the phone matched; never read appointment details out
@@ -171,7 +171,7 @@ export async function lookupCallerAppointments(context: DomainContext, input: { 
  */
 export async function verifyCallerForChange(
   context: DomainContext,
-  input: { businessId: string; callerPhone: string; callId?: string; action: "cancel" | "reschedule"; appointmentId?: string; appointmentStartsAt?: string; serviceName?: string },
+  input: { businessId: string; agentId?: string; callerPhone: string; callId?: string; action: "cancel" | "reschedule"; appointmentId?: string; appointmentStartsAt?: string; serviceName?: string },
 ) {
   const verification = await createAppointmentChangeVerification(context, input);
   if (!verification) return { ok: false as const, verified: false, reason: "The appointment could not be verified." };
@@ -197,11 +197,11 @@ export async function verifyCallerChangePasscode(context: DomainContext, input: 
 
 export async function cancelForCaller(
   context: DomainContext,
-  input: { businessId: string; callerPhone: string; appointmentId: string; verificationId?: string; finalConfirmation: boolean; callId?: string },
+  input: { businessId: string; agentId?: string; callerPhone: string; appointmentId: string; verificationId?: string; finalConfirmation: boolean; callId?: string },
 ) {
   if (!input.finalConfirmation) return { ok: false as const, reason: "Final confirmation is required." };
   if (!input.verificationId) return { ok: false as const, reason: "The appointment change verification is required." };
-  const result = await cancelAppointmentForCaller(context, { businessId: input.businessId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, verificationId: input.verificationId, ...(input.callId ? { callId: input.callId } : {}) });
+  const result = await cancelAppointmentForCaller(context, { businessId: input.businessId, ...(input.agentId ? { agentId: input.agentId } : {}), appointmentId: input.appointmentId, callerPhone: input.callerPhone, verificationId: input.verificationId, ...(input.callId ? { callId: input.callId } : {}) });
   if (!result) return { ok: false as const, reason: "The appointment could not be verified." };
   return { ok: true as const, appointmentId: input.appointmentId, startsAt: result.startsAt.toISOString(), status: "canceled", smsConsentOnFile: result.smsConsentOnFile };
 }
@@ -229,13 +229,13 @@ export async function recordTextConsentForCaller(
 
 export async function rescheduleForCaller(
   context: DomainContext,
-  input: { businessId: string; callerPhone: string; appointmentId: string; startsAt: string; verificationId?: string; finalConfirmation: boolean },
+  input: { businessId: string; agentId?: string; callerPhone: string; appointmentId: string; startsAt: string; verificationId?: string; finalConfirmation: boolean },
 ) {
   if (!input.finalConfirmation) return { ok: false as const, reason: "Final confirmation is required." };
   if (!input.verificationId) return { ok: false as const, reason: "The appointment change verification is required." };
   let result: Awaited<ReturnType<typeof rescheduleAppointmentForCaller>>;
   try {
-    result = await rescheduleAppointmentForCaller(context, { businessId: input.businessId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, startsAt: input.startsAt, verificationId: input.verificationId });
+    result = await rescheduleAppointmentForCaller(context, { businessId: input.businessId, ...(input.agentId ? { agentId: input.agentId } : {}), appointmentId: input.appointmentId, callerPhone: input.callerPhone, startsAt: input.startsAt, verificationId: input.verificationId });
   } catch (error) {
     // The new time isn't bookable: say why, and keep the verification for another try.
     if (!(error instanceof BookingUnavailableError)) throw error;
@@ -247,14 +247,14 @@ export async function rescheduleForCaller(
 
 export async function takeMessageForStaff(
   context: DomainContext,
-  input: { businessId: string; message: string; channel: ReceptionistChannel; callerName?: string; callbackPhone?: string; urgency?: string; callbackWindow?: string; callId?: string; conversationId?: string; request?: FollowUpRequest },
+  input: { businessId: string; message: string; channel: ReceptionistChannel; callerName?: string; callbackPhone?: string; urgency?: string; callbackWindow?: string; callId?: string; conversationId?: string; request?: FollowUpRequest; agentId?: string },
 ) {
   const alert = { eventKind: "voiceMessage" as const, subject: "New voice message", body: "A caller left a voice message. Open the inbox to review it." };
   // A website, Instagram or text conversation is the person's own thread: a staff
   // note there would show up to them, and to the agent, as if they had written it.
   const inVisitorThread = (input.channel === "web_chat" || input.channel === "instagram" || input.channel === "sms") && input.conversationId !== undefined;
   if (!inVisitorThread) {
-    const conversationId = input.conversationId ?? (await getOrCreateConversation(context, { businessId: input.businessId, contactPhone: input.callbackPhone ?? "unknown", channel: input.channel === "web_chat" ? "web_chat" : "voice" })).conversationId;
+    const conversationId = input.conversationId ?? (await getOrCreateConversation(context, { businessId: input.businessId, contactPhone: input.callbackPhone ?? "unknown", channel: input.channel === "web_chat" ? "web_chat" : "voice", ...(input.agentId ? { agentId: input.agentId } : {}) })).conversationId;
     await appendMessage(context, {
       businessId: input.businessId,
       conversationId,
@@ -290,7 +290,7 @@ export async function takeMessageForStaff(
  */
 export async function requestCancellationForCaller(
   context: DomainContext,
-  input: { businessId: string; channel: ReceptionistChannel; timezone: string; callerName: string; appointmentStartsAt?: string; serviceName?: string; callbackPhone?: string; notes?: string; callId?: string; conversationId?: string },
+  input: { businessId: string; channel: ReceptionistChannel; timezone: string; callerName: string; appointmentStartsAt?: string; serviceName?: string; callbackPhone?: string; notes?: string; callId?: string; conversationId?: string; agentId?: string },
 ) {
   const callerName = input.callerName.trim();
   const serviceName = input.serviceName?.trim();
@@ -328,6 +328,7 @@ export async function requestCancellationForCaller(
     ...(input.callbackPhone ? { callbackPhone: input.callbackPhone } : {}),
     ...(input.callId ? { callId: input.callId } : {}),
     ...(input.conversationId ? { conversationId: input.conversationId } : {}),
+    ...(input.agentId ? { agentId: input.agentId } : {}),
     request: {
       request: CANCELLATION_REQUEST,
       ...(appointmentId ? { appointmentId } : {}),

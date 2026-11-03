@@ -227,7 +227,7 @@ export function LobbyStackAuraVoiceDemo({
         }
       : {}),
   })
-  const { status, muted, errorKey, startCall, endCall, isCallActive } = call
+  const { status, muted, errorKey, startCall, endCall, isCallActive, canHangUp } = call
   const errors = errorCopy[locale]
 
   return (
@@ -239,7 +239,7 @@ export function LobbyStackAuraVoiceDemo({
             ? (errors[errorKey] ?? errors.generic)
             : statusLabels[locale][status]
         }
-        buttonLabel={getButtonLabel(status, muted, locale)}
+        buttonLabel={getButtonLabel(canHangUp ? "connected" : status, muted, locale)}
         pressMotion="subtle"
       >
         {/* Controls */}

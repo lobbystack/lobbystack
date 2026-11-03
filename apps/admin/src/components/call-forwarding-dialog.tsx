@@ -7,7 +7,7 @@ import { Combobox, ComboboxCollection, ComboboxContent, ComboboxEmpty, ComboboxG
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { carrierGroups, dialCode, type Carrier, type ForwardingMethod, type ForwardingMode, type NumberFormat } from "@/lib/call-forwarding";
+import { carrierGroupsFor, dialCode, type Carrier, type ForwardingMethod, type ForwardingMode, type NumberFormat } from "@/lib/call-forwarding";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 
 /** A code to dial. Lines that ask for the number after the code get it as a separate instruction. */
@@ -56,24 +56,33 @@ export function CallForwardingDialog({ e164, onOpenChange, open }: { e164: strin
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="max-h-[calc(100svh-2rem)] overflow-y-auto">
         {/* The content unmounts when the dialog closes, so each opening starts with no carrier picked. */}
+        <ForwardingDialogHeader e164={e164} />
         <ForwardingGuide e164={e164} />
       </DialogContent>
     </Dialog>
   );
 }
 
-function ForwardingGuide({ e164 }: { e164: string }) {
+function ForwardingDialogHeader({ e164 }: { e164: string }) {
   const { t, i18n } = useTranslation("dashboard");
+  return (
+    <DialogHeader>
+      <DialogTitle>{t("forwarding.title", { number: formatPhoneNumberDisplay(e164, i18n.language) })}</DialogTitle>
+      <DialogDescription>{t("forwarding.description")}</DialogDescription>
+    </DialogHeader>
+  );
+}
+
+/** The forwarding steps themselves. With no country it lists every North American carrier; a country with no carriers here gets general steps. */
+export function ForwardingGuide({ country = null, e164 }: { country?: string | null; e164: string }) {
+  const { t, i18n } = useTranslation("dashboard");
+  const groups = carrierGroupsFor(country);
   const [mode, setMode] = useState<ForwardingMode>("missed");
   const [carrier, setCarrier] = useState<Carrier | null>(null);
   const number = formatPhoneNumberDisplay(e164, i18n.language);
   const how = carrier?.[mode] ?? null;
   return (
     <>
-      <DialogHeader>
-        <DialogTitle>{t("forwarding.title", { number })}</DialogTitle>
-        <DialogDescription>{t("forwarding.description")}</DialogDescription>
-      </DialogHeader>
       <Tabs onValueChange={(value) => setMode(value as ForwardingMode)} value={mode}>
         <TabsList className="w-full">
           <TabsTrigger value="missed">{t("forwarding.modes.missed.label")}</TabsTrigger>
@@ -81,12 +90,12 @@ function ForwardingGuide({ e164 }: { e164: string }) {
         </TabsList>
         <p className="type-body-muted">{t(`forwarding.modes.${mode}.help`)}</p>
       </Tabs>
-      <Field>
+      {groups.length === 0 ? <p className="type-body">{t(`forwarding.general.${mode}`, { number })}</p> : <Field>
         <FieldLabel htmlFor="forwarding-carrier">{t("forwarding.carrier.label")}</FieldLabel>
         <Combobox
           itemToStringLabel={(item: Carrier) => item.name}
           itemToStringValue={(item: Carrier) => item.id}
-          items={carrierGroups.map((group) => ({ ...group, label: t(`forwarding.groups.${group.id}`) }))}
+          items={groups.map((group) => ({ ...group, label: t(`forwarding.groups.${group.id}`) }))}
           onValueChange={(value: Carrier | null) => setCarrier(value)}
           value={carrier}
         >
@@ -94,7 +103,7 @@ function ForwardingGuide({ e164 }: { e164: string }) {
           <ComboboxContent>
             <ComboboxEmpty>{t("forwarding.carrier.empty")}</ComboboxEmpty>
             <ComboboxList>
-              {(group: (typeof carrierGroups)[number] & { label: string }) => (
+              {(group: (typeof groups)[number] & { label: string }) => (
                 <ComboboxGroup items={group.items} key={group.id}>
                   <ComboboxLabel>{group.label}</ComboboxLabel>
                   <ComboboxCollection>
@@ -105,10 +114,10 @@ function ForwardingGuide({ e164 }: { e164: string }) {
             </ComboboxList>
           </ComboboxContent>
         </Combobox>
-      </Field>
+      </Field>}
       {carrier && how ? <Steps carrier={carrier} e164={e164} how={how} mode={mode} /> : null}
       {carrier && !how ? <p className="type-body-muted">{t(`forwarding.unsupported.${mode}`, { name: carrier.name, number })}</p> : null}
-      {!carrier ? <p className="type-body-muted">{t(`forwarding.notListed.${mode}`, { number })}</p> : null}
+      {!carrier && groups.length > 0 ? <p className="type-body-muted">{t(`forwarding.notListed.${mode}`, { number })}</p> : null}
     </>
   );
 }

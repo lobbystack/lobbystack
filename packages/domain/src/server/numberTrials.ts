@@ -1,12 +1,13 @@
 import { DateTime } from "luxon";
-import { and, desc, eq, gt, gte, inArray, isNull, lte, ne, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, isNull, lte, ne, notInArray, sql } from "drizzle-orm";
 
-import { businesses, calls, enqueueOutbox, numberTrials, numberWaitlist, onboardingPhoneVerifications, phoneNumbers, receptionistProfiles, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { agentOfRow, agents, businesses, calls, defaultAgentOf, enqueueOutbox, numberTrials, numberWaitlist, onboardingPhoneVerifications, phoneNumbers, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { numberCountryReady } from "@lobbystack/providers/telephony/config";
 import { CARRIERS_FORWARDING_REFUSED_CALLS, CARRIERS_WITH_STAFF_FIRST, isCarrierId, type CarrierId, type NumberRoutingMode } from "@lobbystack/providers/telephony/types";
 import { isTransferPhone, normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
 
 import { hasMinimumRole, requireBusinessAdmin, requireBusinessMembership } from "../authz";
+import { enqueueAgentSnapshotRefresh } from "./agentSnapshot";
 import type { DomainContext } from "./context";
 import { loadEntitlement } from "./entitlement";
 import { businessGetsHostEmails } from "./hostEmails";
@@ -79,7 +80,7 @@ export async function activateNumberTrialInTransaction(
   await tx.update(phoneNumbers)
     .set({ reclaimScheduledAt: numberTrialReleaseAt(now), reclaimReason: "trial", updatedAt: now })
     .where(and(eq(phoneNumbers.id, input.phoneNumberId), eq(phoneNumbers.businessId, input.businessId)));
-  await tx.update(receptionistProfiles).set({ transferNumber: trial.verifiedPhone, updatedAt: now }).where(eq(receptionistProfiles.businessId, input.businessId));
+  await tx.update(agents).set({ transferNumber: trial.verifiedPhone, updatedAt: now }).where(defaultAgentOf(input.businessId));
   await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "business", aggregateId: input.businessId, dedupeKey: `business:${input.businessId}:snapshot:trial:${input.claimId}`, payload: { businessId: input.businessId, reason: "number_trial_started" } });
   return true;
 }
@@ -104,7 +105,7 @@ const E164 = /^\+[1-9]\d{6,14}$/;
  */
 export async function assertTransferNumberAllowed(tx: DatabaseTransaction, input: { businessId: string; phone: string }): Promise<void> {
   if (!E164.test(input.phone)) throw Object.assign(new Error("Enter a valid phone number."), { status: 400, code: "transfer_number_invalid" });
-  if (!isTransferPhone(input.phone)) throw Object.assign(new Error("Your receptionist can't transfer calls to this country yet."), { status: 400, code: "transfer_country_unsupported" });
+  if (!isTransferPhone(input.phone)) throw Object.assign(new Error("Your agent can't transfer calls to this country yet."), { status: 400, code: "transfer_country_unsupported" });
   const trialPhone = await trialTransferNumberInTransaction(tx, input);
   if (trialPhone && input.phone !== trialPhone) throw Object.assign(new Error("During the free trial, calls can only transfer to the mobile of the person who claimed the trial."), { status: 409, code: "trial_transfer_locked" });
 }
@@ -239,10 +240,10 @@ export type { NumberRoutingMode };
  */
 export async function desiredNumberRouting(context: DomainContext, input: { businessId: string; phoneNumberId: string }): Promise<{ mode: NumberRoutingMode; providerPhoneId: string; e164: string; carrier: CarrierId; carrierConnectionId: string | null } | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const row = (await tx.select({ providerPhoneId: phoneNumbers.providerPhoneId, e164: phoneNumbers.e164, carrier: phoneNumbers.carrier, carrierConnectionId: phoneNumbers.carrierConnectionId, trialStatus: numberTrials.status, minutesExhaustedAt: numberTrials.minutesExhaustedAt, staffFirstMode: receptionistProfiles.staffFirstMode })
+    const row = (await tx.select({ providerPhoneId: phoneNumbers.providerPhoneId, e164: phoneNumbers.e164, carrier: phoneNumbers.carrier, carrierConnectionId: phoneNumbers.carrierConnectionId, trialStatus: numberTrials.status, minutesExhaustedAt: numberTrials.minutesExhaustedAt, staffFirstMode: agents.staffFirstMode })
       .from(phoneNumbers)
       .leftJoin(numberTrials, and(eq(numberTrials.phoneNumberId, phoneNumbers.id), inArray(numberTrials.status, ["active", "ended"])))
-      .leftJoin(receptionistProfiles, eq(receptionistProfiles.businessId, phoneNumbers.businessId))
+      .leftJoin(agents, agentOfRow(phoneNumbers.businessId, phoneNumbers.agentId))
       .where(and(eq(phoneNumbers.id, input.phoneNumberId), eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active")))
       .limit(1))[0];
     if (!row?.providerPhoneId) return null;
@@ -314,17 +315,17 @@ export async function checkNumberTrialMinutes(context: DomainContext, input: { b
  * Where a call goes when the receptionist doesn't take it: a trial number out
  * of minutes, or any number whose plan is out of minutes or at its overage cap
  * (the trunk fails the call over to /api/webhooks/twilio/voice). It forwards
- * to the business's transfer number, or else the owner's verified phone, and
+ * to the transfer number of the number's agent, or else the owner's verified phone, and
  * rejects only when neither exists. An ended trial lets the call go
  * unanswered, as if the number were gone. Forwarding uses no AI minutes, so it
  * doesn't depend on the plan.
  */
 export async function resolveNumberFallback(context: DomainContext, input: { businessId: string; e164: string }): Promise<{ action: "forward"; to: string } | { action: "reject" }> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const row = (await tx.select({ trialStatus: numberTrials.status, trialPhone: numberTrials.verifiedPhone, transferNumber: receptionistProfiles.transferNumber })
+    const row = (await tx.select({ trialStatus: numberTrials.status, trialPhone: numberTrials.verifiedPhone, transferNumber: agents.transferNumber })
       .from(phoneNumbers)
       .leftJoin(numberTrials, and(eq(numberTrials.phoneNumberId, phoneNumbers.id), inArray(numberTrials.status, ["active", "ended"])))
-      .leftJoin(receptionistProfiles, eq(receptionistProfiles.businessId, phoneNumbers.businessId))
+      .leftJoin(agents, agentOfRow(phoneNumbers.businessId, phoneNumbers.agentId))
       .where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.e164, input.e164), eq(phoneNumbers.status, "active")))
       .limit(1))[0];
     if (!row || row.trialStatus === "ended") return { action: "reject" };
@@ -334,6 +335,22 @@ export async function resolveNumberFallback(context: DomainContext, input: { bus
     const to = [row.transferNumber?.trim(), ownerPhone].find((phone): phone is string => Boolean(phone && E164.test(phone) && isTransferPhone(phone) && phone !== input.e164));
     return to ? { action: "forward", to } : { action: "reject" };
   });
+}
+
+/**
+ * What a number's move to another agent must queue, in the transaction that
+ * moves it. Calls read agents from the snapshot. The routing job picks up the
+ * new agent's staff-first setting and, on a carrier that stores it, the
+ * refused-call forward.
+ */
+export async function enqueueNumberAgentChange(tx: DatabaseTransaction, input: { businessId: string; phoneNumberId: string; agentId: string }): Promise<void> {
+  await enqueueAgentSnapshotRefresh(tx, { businessId: input.businessId, agentId: input.agentId, change: "channel_moved" });
+  await enqueueNumberRouting(tx, { businessId: input.businessId, phoneNumberId: input.phoneNumberId, mode: "receptionist" });
+}
+
+/** The agent a number answers as, or undefined for a number the business doesn't hold. */
+export async function numberAgentIdInTransaction(tx: DatabaseTransaction, input: { businessId: string; e164: string }): Promise<string | undefined> {
+  return (await tx.select({ agentId: phoneNumbers.agentId }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.e164, input.e164), notInArray(phoneNumbers.status, ["reclaimed", "released"]))).limit(1))[0]?.agentId ?? undefined;
 }
 
 /**
@@ -448,10 +465,10 @@ export async function getNumberTrialState(context: DomainContext, input: { userI
   const now = input.now ?? new Date();
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     const { role } = await requireBusinessMembership(tx, input);
-    const row = (await tx.select({ status: numberTrials.status, endsAt: numberTrials.endsAt, minutesExhaustedAt: numberTrials.minutesExhaustedAt, verifiedPhone: numberTrials.verifiedPhone, e164: phoneNumbers.e164, numberStatus: phoneNumbers.status, transferNumber: receptionistProfiles.transferNumber })
+    const row = (await tx.select({ status: numberTrials.status, endsAt: numberTrials.endsAt, minutesExhaustedAt: numberTrials.minutesExhaustedAt, verifiedPhone: numberTrials.verifiedPhone, e164: phoneNumbers.e164, numberStatus: phoneNumbers.status, transferNumber: agents.transferNumber })
       .from(numberTrials)
       .leftJoin(phoneNumbers, eq(phoneNumbers.id, numberTrials.phoneNumberId))
-      .leftJoin(receptionistProfiles, eq(receptionistProfiles.businessId, numberTrials.businessId))
+      .leftJoin(agents, defaultAgentOf(numberTrials.businessId))
       .where(and(eq(numberTrials.businessId, input.businessId), inArray(numberTrials.status, ["active", "ended", "released"])))
       .limit(1))[0];
     // Only admins can search and claim numbers, so only they see the offer.
@@ -541,11 +558,11 @@ export type NumberTrialEmailContent = {
 export async function loadNumberTrialEmail(context: DomainContext, input: { businessId: string; trialId: string; email: TrialEmail }): Promise<NumberTrialEmailContent | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     if (!await businessGetsHostEmails(tx, input.businessId)) return null;
-    const trial = (await tx.select({ e164: phoneNumbers.e164, verifiedPhone: numberTrials.verifiedPhone, transferNumber: receptionistProfiles.transferNumber, status: numberTrials.status, startedAt: numberTrials.startedAt, endsAt: numberTrials.endsAt, timezone: businesses.timezone })
+    const trial = (await tx.select({ e164: phoneNumbers.e164, verifiedPhone: numberTrials.verifiedPhone, transferNumber: agents.transferNumber, status: numberTrials.status, startedAt: numberTrials.startedAt, endsAt: numberTrials.endsAt, timezone: businesses.timezone })
       .from(numberTrials)
       .innerJoin(phoneNumbers, eq(phoneNumbers.id, numberTrials.phoneNumberId))
       .innerJoin(businesses, eq(businesses.id, numberTrials.businessId))
-      .leftJoin(receptionistProfiles, eq(receptionistProfiles.businessId, numberTrials.businessId))
+      .leftJoin(agents, defaultAgentOf(numberTrials.businessId))
       .where(and(eq(numberTrials.id, input.trialId), eq(numberTrials.businessId, input.businessId)))
       .limit(1))[0];
     // An owner who paid in the meantime doesn't need a reminder.

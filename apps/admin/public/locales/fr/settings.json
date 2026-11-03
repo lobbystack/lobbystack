@@ -24,7 +24,7 @@
   },
   "widget": {
     "title": "Widget de site web",
-    "description": "Permettez aux visiteurs de votre site de clavarder avec votre réceptionniste.",
+    "description": "Permettez aux visiteurs de votre site de clavarder avec votre agent.",
     "created": {
       "title": "Votre widget est prêt",
       "description": "Vous pouvez copier ce code à tout moment dans les réglages du widget ci-dessous.",
@@ -61,7 +61,7 @@
       "requirePhone": "Exiger un numéro de téléphone",
       "showBeforeChat": "Demander avant le début du clavardage",
       "liveChat": "Permettre aux visiteurs de clavarder avec votre équipe",
-      "liveChatHint": "Quand un visiteur demande à parler à une personne pendant les heures d'ouverture, votre équipe reçoit une alerte et peut répondre depuis Messages. Si personne ne se joint dans les 3 minutes, la réceptionniste propose de prendre un message."
+      "liveChatHint": "Quand un visiteur demande à parler à une personne pendant les heures d'ouverture, votre équipe reçoit une alerte et peut répondre depuis Messages. Si personne ne se joint dans les 3 minutes, l'agent propose de prendre un message."
     },
     "positions": {
       "bottomRight": "Bas à droite",
@@ -240,7 +240,7 @@
       "customAllowance": "{{used}} {{unit}} utilisés · Volume sur mesure",
       "noLimit": "Utilisation : {{used}} {{unit}} · Sans limite",
       "extraTitle": "Utilisation supplémentaire",
-      "extraOnDescription": "Votre réceptionniste continue de répondre au-delà de votre volume inclus, et {{appName}} vous facture les minutes et discussions supplémentaires.",
+      "extraOnDescription": "Votre agent continue de répondre au-delà de votre volume inclus, et {{appName}} vous facture les minutes et discussions supplémentaires.",
       "extraOffDescription": "L'utilisation supplémentaire est désactivée. {{appName}} vous facture les minutes et discussions supplémentaires que vous avez utilisées avant sa désactivation."
     },
     "spendingCap": {
@@ -347,7 +347,7 @@
         "title": "Prochaines étapes",
         "call": {
           "title": "Appelez-le maintenant",
-          "description": "Écoutez votre réceptionniste répondre à un vrai appel."
+          "description": "Écoutez votre agent répondre à un vrai appel."
         },
         "forward": {
           "title": "Transférez votre ligne d'entreprise vers ce numéro",
@@ -356,7 +356,7 @@
         },
         "transfer": {
           "title": "Choisissez où vont les appels urgents",
-          "description": "Ajoutez un numéro de transfert dans les Paramètres IA pour que votre réceptionniste puisse passer les appels urgents à une personne.",
+          "description": "Ajoutez un numéro de transfert dans les Paramètres IA pour que votre agent puisse passer les appels urgents à une personne.",
           "action": "Ouvrir les Paramètres IA"
         }
       },
@@ -376,11 +376,11 @@
     "chats_other": "{{amount}} clavardages",
     "allowance": "Chaque mois comprend {{minutes}} et {{chats}}.",
     "status": {
-      "awaiting_payment": "Votre réceptionniste répond aux appels et aux clavardages dès que vous payez.",
+      "awaiting_payment": "Votre agent répond aux appels et aux clavardages dès que vous payez.",
       "active": "Votre abonnement est actif.",
       "renews": "Votre abonnement se renouvelle le {{date}}.",
-      "past_due": "Votre dernier paiement a échoué, et nous allons réessayer. Mettez à jour votre carte pour que votre réceptionniste continue de répondre.",
-      "inactive": "Votre abonnement a pris fin, donc votre réceptionniste ne répond plus aux appels ni aux clavardages. Abonnez-vous de nouveau pour le réactiver."
+      "past_due": "Votre dernier paiement a échoué, et nous allons réessayer. Mettez à jour votre carte pour que votre agent continue de répondre.",
+      "inactive": "Votre abonnement a pris fin, donc votre agent ne répond plus aux appels ni aux clavardages. Abonnez-vous de nouveau pour le réactiver."
     },
     "badge": {
       "awaiting_payment": "Paiement en attente",
@@ -392,7 +392,7 @@
     "manage": "Gérer la facturation",
     "opening": "Ouverture…",
     "manageHint": "Mettez à jour votre carte, téléchargez vos factures ou annulez votre abonnement.",
-    "paid": "Paiement reçu. Votre réceptionniste commence à répondre dans un instant.",
+    "paid": "Paiement reçu. Votre agent commence à répondre dans un instant.",
     "errors": {
       "portal": "Le portail de facturation n'est pas disponible pour le moment. Contactez {{appName}}.",
       "checkout": "Impossible d'ouvrir le paiement. Réessayez.",
@@ -402,7 +402,7 @@
   "phoneNumber": {
     "current": {
       "label": "Numéro de téléphone actuel",
-      "description": "C'est le numéro que les appelants utilisent pour joindre votre réceptionniste IA.",
+      "description": "C'est le numéro que les appelants utilisent pour joindre votre agent IA.",
       "empty": "Vous n'avez pas encore de numéro."
     },
     "reclaim": {
@@ -420,14 +420,14 @@
       "upgradeCta": "Voir les forfaits"
     },
     "partnerTierRequired": {
-      "description": "Le partenaire de cette entreprise doit payer un palier pour ajouter des numéros de téléphone."
+      "description": "Le partenaire de cet espace de travail doit payer un palier pour ajouter des numéros de téléphone."
     },
     "partnerNumbersUnavailable": {
-      "description": "Les numéros de téléphone ne sont pas encore disponibles pour cette entreprise."
+      "description": "Les numéros de téléphone ne sont pas encore disponibles pour cet espace de travail."
     },
     "trialPhone": {
       "title": "Vérifiez votre numéro de mobile",
-      "description": "Pendant l'essai de 14 jours, le réceptionniste transfère les appels uniquement vers ce mobile.",
+      "description": "Pendant l'essai de 14 jours, l'agent transfère les appels uniquement vers ce mobile.",
       "fields": {
         "mobileNumber": "Numéro de mobile",
         "country": "Pays"
@@ -465,7 +465,7 @@
       "title": "Choisir un nouveau numéro",
       "description": "Vous pouvez changer votre numéro de téléphone une seule fois.",
       "getNumberTitle": "Choisir un numéro",
-      "getNumberDescription": "Choisissez un numéro que les appelants peuvent utiliser pour joindre votre réceptionniste IA."
+      "getNumberDescription": "Choisissez un numéro que les appelants peuvent utiliser pour joindre votre agent IA."
     },
     "picker": {
       "countryLabel": "Pays",
@@ -579,7 +579,7 @@
     },
     "calcom": {
       "sheetTitle": "Cal.com",
-      "sheetDescription": "Connectez votre compte Cal.com et choisissez le type d’événement que votre réceptionniste réserve.",
+      "sheetDescription": "Connectez votre compte Cal.com et choisissez le type d’événement que votre agent réserve.",
       "connect": "Connecter Cal.com",
       "reconnect": "Reconnecter",
       "disconnect": "Déconnecter",
@@ -591,20 +591,19 @@
       "eventTypeSaved": "Le type d’événement a été enregistré.",
       "refresh": "Actualiser",
       "syncNeedsAttention": "Attention requise",
-      "syncFailed": "Votre réceptionniste n'a pas pu terminer la synchronisation avec Cal.com et ne proposera pas d'horaires tant qu'une synchronisation n'aura pas réussi. Elle réessaie d'elle-même, ou vous pouvez cliquer sur Actualiser.",
-      "discoveryFailed": "Votre réceptionniste n’arrive pas à joindre votre compte Cal.com. Actualisez ou reconnectez le compte.",
-      "howItWorks": "Chaque rendez-vous devient une réservation de ce type d’événement. Cal.com reçoit le nom, le numéro de téléphone et un courriel de remplacement de l’appelant, pour ne pas lui écrire. Son vrai courriel figure dans les notes de la réservation pour votre équipe, et votre réceptionniste envoie la confirmation.",
+      "syncFailed": "Votre agent n'a pas pu terminer la synchronisation avec Cal.com et ne proposera pas d'horaires tant qu'une synchronisation n'aura pas réussi. Il réessaie de lui-même, ou vous pouvez cliquer sur Actualiser.",
+      "discoveryFailed": "Votre agent n’arrive pas à joindre votre compte Cal.com. Actualisez ou reconnectez le compte.",
       "warningsTitle": "Vérifiez ce type d’événement dans Cal.com",
       "warnings": {
         "missingLengths": "Ajoutez {{lengths}} minutes aux durées du type d’événement. D’ici là, Cal.com réserve ces services à la durée par défaut du type d’événement.",
-        "smsReminders": "Désactivez le workflow SMS de ce type d’événement, sinon Cal.com envoie des textos aux appelants en plus de ceux de votre réceptionniste.",
+        "smsReminders": "Désactivez le workflow SMS de ce type d’événement, sinon Cal.com envoie des textos aux appelants en plus de ceux de votre agent.",
         "videoLocation": "Ajoutez « Numéro de téléphone du participant » comme lieu de ce type d'événement. D'ici là, les réservations portent un lien vidéo au lieu du téléphone de l'appelant.",
         "narrowerAvailability": "Élargissez l’horaire du type d’événement le {{days}} pour suivre vos heures d’ouverture. Cal.com refuse les réservations hors de son horaire."
       }
     },
     "calendly": {
       "sheetTitle": "Calendly",
-      "sheetDescription": "Connectez votre compte Calendly et choisissez le type d'événement que votre réceptionniste réserve.",
+      "sheetDescription": "Connectez votre compte Calendly et choisissez le type d'événement que votre agent réserve.",
       "connect": "Connecter Calendly",
       "reconnect": "Reconnecter",
       "disconnect": "Déconnecter",
@@ -617,15 +616,14 @@
       "eventTypeSaved": "Type d'événement enregistré.",
       "refresh": "Actualiser",
       "syncNeedsAttention": "À vérifier",
-      "syncFailed": "Votre réceptionniste n'a pas pu terminer la synchronisation avec Calendly et n'en proposera aucun créneau tant qu'une synchronisation n'aura pas réussi. Elle réessaie d'elle-même, ou cliquez sur Actualiser.",
-      "discoveryFailed": "Votre réceptionniste n'a pas pu joindre votre compte Calendly. Actualisez ou reconnectez le compte.",
-      "howItWorks": "Chaque rendez-vous devient une réservation de ce type d'événement. Calendly reçoit le nom de l'appelant et une adresse de remplacement, et ne lui écrit donc pas. Votre réceptionniste envoie la confirmation. Le téléphone et le courriel de l'appelant vont dans une question texte du type d'événement.",
+      "syncFailed": "Votre agent n'a pas pu terminer la synchronisation avec Calendly et n'en proposera aucun créneau tant qu'une synchronisation n'aura pas réussi. Il réessaie de lui-même, ou cliquez sur Actualiser.",
+      "discoveryFailed": "Votre agent n'a pas pu joindre votre compte Calendly. Actualisez ou reconnectez le compte.",
       "blockedOption": "{{name}} (réservation impossible)",
       "planRequiredTitle": "Forfait payant requis",
       "planRequired": "Calendly accepte les réservations d'autres applications seulement sur ses forfaits payants. Passez au forfait Standard ou supérieur, puis cliquez sur Reconnecter.",
       "warningsTitle": "Vérifiez ce type d'événement dans Calendly",
       "warnings": {
-        "requiredQuestions": "Rendez {{questions}} facultatif ou choisissez un autre type d'événement. Votre réceptionniste ne peut pas répondre aux questions à choix obligatoires, et Calendly refuse donc chaque réservation.",
+        "requiredQuestions": "Rendez {{questions}} facultatif ou choisissez un autre type d'événement. Votre agent ne peut pas répondre aux questions à choix obligatoires, et Calendly refuse donc chaque réservation.",
         "missingLengths": "Vos services de {{lengths}} minutes ne correspondent pas à ce type d'événement. Calendly les réserve à la durée du type d'événement.",
         "noDetailsQuestion": "Ajoutez une question texte à ce type d'événement. D'ici là, votre équipe ne verra pas le téléphone ni le courriel de l'appelant dans Calendly.",
         "videoLocation": "Ce type d'événement propose seulement la vidéo, donc les réservations portent un lien de réunion. Ajoutez un lieu ou le téléphone pour les appelants."
@@ -654,7 +652,7 @@
       },
       "instagram": {
         "title": "Instagram",
-        "description": "Répondez aux messages privés Instagram avec les mêmes connaissances que votre réceptionniste."
+        "description": "Répondez aux messages privés Instagram avec les mêmes connaissances que votre agent."
       }
     },
     "status": {
@@ -671,22 +669,22 @@
       "syncedAppointments": "Rendez-vous synchronisés"
     },
     "instagram": {
-      "connectedSuccess": "Instagram est connecté. Votre réceptionniste répond désormais aux messages privés.",
+      "connectedSuccess": "Instagram est connecté. Votre agent répond désormais aux messages privés.",
       "connectFailed": "Impossible de connecter Instagram. Veuillez réessayer.",
       "accountInUse": "Ce compte Instagram est déjà connecté à un autre espace de travail.",
-      "permissionMissing": "Votre réceptionniste a besoin d'accéder à vos messages Instagram. Reconnectez Instagram et autorisez cet accès.",
+      "permissionMissing": "Votre agent a besoin d'accéder à vos messages Instagram. Reconnectez Instagram et autorisez cet accès.",
       "disconnectedSuccess": "Instagram est déconnecté.",
       "disconnect": "Déconnecter",
       "reconnect": "Reconnecter",
       "connectedAs": "Répond aux messages privés en tant que @{{username}}.",
-      "dialogDescription": "Votre réceptionniste répond aux messages privés envoyés à ce compte.",
+      "dialogDescription": "Votre agent répond aux messages privés envoyés à ce compte.",
       "accountLabel": "Compte Instagram",
-      "reconnectDescription": "Instagram n'accepte plus l'accès de votre réceptionniste. Reconnectez le compte pour continuer à répondre aux messages."
+      "reconnectDescription": "Instagram n'accepte plus l'accès de votre agent. Reconnectez le compte pour continuer à répondre aux messages."
     }
   },
   "profile": {
-    "title": "Profil de la réceptionniste",
-    "description": "Définissez la voix, le ton, la politique de réservation et les règles de transfert qui façonnent votre réceptionniste.",
+    "title": "Profil de l'agent",
+    "description": "Définissez la voix, le ton, la politique de réservation et les règles de transfert qui façonnent votre agent.",
     "greeting": "Salutation",
     "tone": "Ton",
     "defaultCustomerLanguage": "Langue client par défaut",
@@ -707,7 +705,7 @@
     },
     "save": "Enregistrer le profil",
     "saving": "Enregistrement...",
-    "saved": "Profil de la réceptionniste enregistré.",
+    "saved": "Profil de l'agent enregistré.",
     "placeholders": {
       "transferNumber": "+1 555 123 4567"
     }
@@ -818,7 +816,7 @@
       "invitedOn": "Invité le {{date}}",
       "status": {
         "pending": "En attente",
-        "handover": "Cède l'entreprise"
+        "handover": "Cède l'espace de travail"
       },
       "actions": {
         "moreOptions": "Plus d'options",
@@ -848,7 +846,7 @@
       "sent": "Invitation envoyée à {{email}}.",
       "errors": {
         "invalidEmail": "Entrez une adresse courriel valide.",
-        "partnerMember": "{{email}} fait partie de l'équipe du partenaire de cette entreprise. Cette personne y travaille depuis la console partenaire et ne peut donc pas rejoindre l'équipe.",
+        "partnerMember": "{{email}} fait partie de l'équipe du partenaire de cet espace de travail. Cette personne y travaille depuis la console partenaire et ne peut donc pas rejoindre l'équipe.",
         "failed": "Impossible d'envoyer cette invitation. Veuillez réessayer."
       }
     },
@@ -861,17 +859,17 @@
       "revokeFailed": "Impossible de révoquer cette invitation."
     },
     "delete": {
-      "title": "Supprimer l'entreprise",
-      "description": "Efface définitivement cette entreprise avec ses appels, conversations, contacts, rendez-vous, paramètres et accès d'équipe. Son numéro de téléphone est libéré et son forfait payant prend fin. Cette action est irréversible.",
-      "action": "Supprimer l'entreprise",
+      "title": "Supprimer l'espace de travail",
+      "description": "Efface définitivement cet espace de travail avec ses appels, conversations, contacts, rendez-vous, paramètres et accès d'équipe. Son numéro de téléphone est libéré et son forfait payant prend fin. Cette action est irréversible.",
+      "action": "Supprimer l'espace de travail",
       "dialogTitle": "Supprimer {{name}} ?",
-      "dialogDescription": "Tout ce que contient cette entreprise est effacé définitivement, son numéro de téléphone est rendu à l'opérateur et la réceptionniste cesse de répondre. Son équipe perd l'accès et personne ne peut la restaurer.",
+      "dialogDescription": "Tout ce que contient cet espace de travail est effacé définitivement, son numéro de téléphone est rendu à l'opérateur et l'agent cesse de répondre. Son équipe perd l'accès et personne ne peut le restaurer.",
       "confirmLabel": "Saisissez <name>{{name}}</name> pour confirmer",
       "submit": "Supprimer",
       "deleting": "Suppression...",
       "errors": {
-        "failed": "L'entreprise n'a pas pu être supprimée. Réessayez.",
-        "numberInProgress": "Un numéro de téléphone est encore en cours de configuration pour cette entreprise. Réessayez dans quelques minutes.",
+        "failed": "L'espace de travail n'a pas pu être supprimé. Réessayez.",
+        "numberInProgress": "Un numéro de téléphone est encore en cours de configuration pour cet espace de travail. Réessayez dans quelques minutes.",
         "billing": "La facturation est indisponible pour le moment, le forfait payant n'a donc pas pu être résilié. Réessayez plus tard."
       },
       "cancel": "Annuler"
@@ -879,7 +877,7 @@
   },
   "hours": {
     "title": "Heures d'ouverture",
-    "description": "Les heures structurées font autorité sur les documents et aident la réceptionniste à répondre correctement aux questions de disponibilité.",
+    "description": "Les heures structurées font autorité sur les documents et aident l'agent à répondre correctement aux questions de disponibilité.",
     "save": "Enregistrer les heures",
     "saving": "Enregistrement...",
     "leaveBlank": "Laissez une journée vide pour l'indiquer comme fermée.",
@@ -913,7 +911,7 @@
   },
   "phoneRouting": {
     "title": "Routage des numéros de téléphone",
-    "description": "Associez les numéros Twilio à cette entreprise pour que les appels en direct et les SMS chargent le bon instantané de réceptionniste.",
+    "description": "Associez les numéros Twilio à cet espace de travail pour que les appels en direct et les SMS chargent le bon instantané d'agent.",
     "managedNumber": "Numéro géré",
     "selectNumber": "Choisir un numéro",
     "addNewNumber": "Ajouter un numéro",
@@ -970,18 +968,18 @@
     "assignedServices": "{{count}} services"
   },
   "snapshot": {
-    "title": "Instantané de la réceptionniste",
-    "description": "Votre réceptionniste charge ce contexte d'entreprise une fois au début de chaque appel.",
-    "business": "Entreprise",
+    "title": "Instantané de l'agent",
+    "description": "Votre agent charge ce contexte d'entreprise une fois au début de chaque appel.",
+    "business": "Espace de travail",
     "timezone": "Fuseau horaire",
     "transferPolicy": "Politique de transfert",
     "services": "Services dans l'instantané",
     "knowledgeDigest": "Résumé des connaissances",
-    "emptyDigest": "Aucun résumé généré pour le moment. Ajoutez des connaissances ou des documents pour enrichir la réceptionniste."
+    "emptyDigest": "Aucun résumé généré pour le moment. Ajoutez des connaissances ou des documents pour enrichir l'agent."
   },
   "nextSteps": {
     "title": "Prochaines étapes",
-    "description": "Affinez le comportement de la réceptionniste avant d'acheminer du trafic réel.",
+    "description": "Affinez le comportement de l'agent avant d'acheminer du trafic réel.",
     "hours": "Définissez les heures, les services et les affectations d'équipe afin que la réservation puisse proposer de vrais créneaux.",
     "transfer": "Ajoutez des règles de transfert et un numéro de secours avant de transférer les appels urgents.",
     "snapshot": "Actualisez votre instantané après d'importants changements de politique pour que la voix les prenne rapidement en compte."
@@ -1112,7 +1110,7 @@
     "revoked": "Révoquée le {{date}}",
     "restricted": {
       "title": "Seuls les propriétaires et les administrateurs gèrent les clés API",
-      "description": "Demandez à un propriétaire ou à un administrateur de cette entreprise de créer une clé pour vous."
+      "description": "Demandez à un propriétaire ou à un administrateur de cet espace de travail de créer une clé pour vous."
     },
     "create": {
       "action": "Créer une clé API",
@@ -1150,19 +1148,19 @@
       "done": "Clé API modifiée"
     },
     "scopes": {
-      "business_read": "Lire les informations, les heures, les services, ainsi que les réglages et les règles de la réceptionniste de l'entreprise",
-      "business_write": "Modifier les informations, les heures, les services, ainsi que les réglages et les règles de la réceptionniste de l'entreprise, y compris le numéro de transfert des appels",
+      "business_read": "Lire les informations, les heures, les services, ainsi que les réglages et les règles de l'agent de l'entreprise",
+      "business_write": "Modifier les informations, les heures, les services, ainsi que les réglages et les règles de l'agent de l'entreprise, y compris le numéro de transfert des appels",
       "calls_read": "Lire les appels, les résumés et les transcriptions",
       "contacts_read": "Lire les contacts",
       "contacts_write": "Créer et modifier des contacts",
       "appointments_read": "Lire les rendez-vous et les plages libres",
       "appointments_write": "Réserver, annuler et déplacer des rendez-vous",
-      "messages_read": "Lire les messages pris par la réceptionniste",
+      "messages_read": "Lire les messages pris par l'agent",
       "knowledge_read": "Lire les entrées de connaissances, les FAQ, les sites web et les fichiers",
       "knowledge_write": "Ajouter, modifier et supprimer des entrées de connaissances, des FAQ, des sites web et des fichiers",
       "billing_manage": "Voir le forfait, fixer le plafond de dépenses et lancer des paiements",
       "phone_numbers_manage": "Rechercher, acheter, remplacer et libérer des numéros de téléphone",
-      "team_manage": "Inviter et retirer des membres de l'équipe, changer les rôles et céder l'entreprise",
+      "team_manage": "Inviter et retirer des membres de l'équipe, changer les rôles et céder l'espace de travail",
       "webhooks_manage": "Créer et supprimer des points de terminaison webhook"
     }
   },
@@ -1173,7 +1171,7 @@
     "enabledLabel": "Envoyer les événements à ce point de terminaison",
     "restricted": {
       "title": "Seuls les propriétaires et les administrateurs gèrent les webhooks",
-      "description": "Demandez à un propriétaire ou à un administrateur de cette entreprise de configurer le webhook."
+      "description": "Demandez à un propriétaire ou à un administrateur de cet espace de travail de configurer le webhook."
     },
     "status": {
       "enabled": "Activé",
@@ -1196,7 +1194,7 @@
       "appointment_booked": "Un rendez-vous a été réservé",
       "appointment_rescheduled": "Un rendez-vous a été déplacé",
       "appointment_cancelled": "Un rendez-vous a été annulé",
-      "message_taken": "La réceptionniste a pris un message pour votre équipe",
+      "message_taken": "L'agent a pris un message pour votre équipe",
       "contact_created": "Un nouveau contact a été ajouté"
     },
     "create": {
@@ -1271,7 +1269,7 @@
     "revoke": {
       "action": "Déconnecter",
       "title": "Déconnecter {{name}}?",
-      "description": "{{name}} perd l'accès à cette entreprise immédiatement. Pour l'utiliser de nouveau, connectez-la et approuvez l'accès une autre fois.",
+      "description": "{{name}} perd l'accès à cet espace de travail immédiatement. Pour l'utiliser de nouveau, connectez-la et approuvez l'accès une autre fois.",
       "confirm": "Déconnecter",
       "cancel": "Annuler",
       "done": "Application déconnectée",
@@ -1285,7 +1283,7 @@
       "contacts_write": "Créer et modifier des contacts",
       "appointments_read": "Lire les rendez-vous et les plages libres",
       "appointments_write": "Réserver, annuler et déplacer des rendez-vous",
-      "messages_read": "Lire les messages pris par la réceptionniste",
+      "messages_read": "Lire les messages pris par l'agent",
       "knowledge_write": "Ajouter des entrées de connaissances et des FAQ"
     }
   },

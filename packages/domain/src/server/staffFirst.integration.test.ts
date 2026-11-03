@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { apiCallSchema } from "@lobbystack/shared";
-import { billingAccounts, billingUsageEvents, businessHours, businessMemberships, businesses, calls, contacts, createDatabaseClient, numberTrials, onboardingNumberClaimEvents, outboxMessages, partners, phoneNumbers, receptionistProfiles, users, webhookEndpoints, webhookEvents, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, billingAccounts, billingUsageEvents, businessHours, businessMemberships, businesses, calls, contacts, createDatabaseClient, firstRealConversations, numberTrials, onboardingNumberClaimEvents, outboxMessages, partners, phoneNumbers, productEvents, users, webhookEndpoints, webhookEvents, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { getAnalytics } from "./analytics";
 import { loadEntitlement } from "./entitlement";
@@ -151,7 +151,7 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
       const businessId = await business(tx, { carrier: "twilio" });
       await save(tx, businessId, { staffFirstMode: "always", staffFirstNumber: staffPhone });
       await expect(save(tx, businessId, { staffFirstNumber: null })).rejects.toMatchObject({ code: "staff_first_number_required" });
-      expect((await tx.select({ number: receptionistProfiles.staffFirstNumber }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, businessId)))[0]?.number).toBe(staffPhone);
+      expect((await tx.select({ number: agents.staffFirstNumber }).from(agents).where(eq(agents.businessId, businessId)))[0]?.number).toBe(staffPhone);
     });
   });
 
@@ -172,7 +172,7 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
     await rollbackTest(async (tx) => {
       const businessId = await business(tx, { carrier: "telnyx" });
       const [number] = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(eq(phoneNumbers.businessId, businessId));
-      await tx.update(receptionistProfiles).set({ staffFirstMode: "always", staffFirstNumber: staffPhone }).where(eq(receptionistProfiles.businessId, businessId));
+      await tx.update(agents).set({ staffFirstMode: "always", staffFirstNumber: staffPhone }).where(eq(agents.businessId, businessId));
       expect((await desiredNumberRouting({ db: tx as unknown as Database }, { businessId, phoneNumberId: number!.id }))?.mode).toBe("receptionist");
     });
   });
@@ -357,6 +357,29 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
       });
     });
 
+    it("counts as the business's first real conversation, once", async () => {
+      await rollbackTest(async (tx) => {
+        const businessId = await business(tx, { carrier: "twilio" });
+        await answered(tx, businessId, "+14165550134");
+        await answered(tx, businessId, "+14165550134");
+        expect(await tx.select({ channel: firstRealConversations.channel, conversationId: firstRealConversations.conversationId }).from(firstRealConversations).where(eq(firstRealConversations.businessId, businessId))).toEqual([{ channel: "voice", conversationId: null }]);
+        const events = await tx.select({ properties: productEvents.properties }).from(productEvents).where(and(eq(productEvents.businessId, businessId), eq(productEvents.name, "conversation.first_real_recorded")));
+        expect(events).toHaveLength(1);
+        expect(events[0]!.properties).toMatchObject({ channel: "voice" });
+      });
+    });
+
+    it("doesn't count a call nobody talked on, or one from a team member's verified phone", async () => {
+      await rollbackTest(async (tx) => {
+        const businessId = await business(tx, { carrier: "twilio" });
+        await as(tx, "lobbystack_worker", (db) => recordStaffAnsweredCall({ db }, { businessId, providerCallId: "CA0", from: "+14165550134", to: lobbyNumber, seconds: 0, endedAt }));
+        const [owner] = await tx.select({ userId: businessMemberships.userId }).from(businessMemberships).where(eq(businessMemberships.businessId, businessId));
+        await tx.update(users).set({ phone: "+14165550135", phoneVerifiedAt: new Date() }).where(eq(users.id, owner!.userId));
+        await answered(tx, businessId, "+14165550135");
+        expect(await tx.select().from(firstRealConversations).where(eq(firstRealConversations.businessId, businessId))).toEqual([]);
+      });
+    });
+
     it("fires call.completed once, as the usual call resource", async () => {
       await rollbackTest(async (tx) => {
         const businessId = await business(tx, { carrier: "twilio" });
@@ -447,7 +470,7 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
     await rollbackTest(async (tx) => {
       const businessId = await business(tx);
       await save(tx, businessId, { greeting: "Hello." });
-      await expect(tx.transaction(async (nested) => { await nested.execute(sql`update receptionist_profiles set staff_first_mode = 'weekends' where business_id = ${businessId}::uuid`); })).rejects.toThrow();
+      await expect(tx.transaction(async (nested) => { await nested.execute(sql`update agents set staff_first_mode = 'weekends' where business_id = ${businessId}::uuid`); })).rejects.toThrow();
     });
   });
 });

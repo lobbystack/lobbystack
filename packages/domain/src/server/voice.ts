@@ -1,6 +1,6 @@
 import { and, count, asc, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 
-import { appointments, billingUsageEvents, calls, contacts, conversations, conversationSessions, enqueueOutbox, inboxItems, inOrder, phoneNumbers, services, staff, storageObjects, transcripts, withBusinessTransaction, type DatabaseTransaction, type NewOutboxMessage } from "@lobbystack/db";
+import { appointments, billingUsageEvents, calls, contacts, conversations, conversationSessions, defaultAgentIdOf, enqueueOutbox, inboxItems, inOrder, phoneNumbers, services, staff, storageObjects, transcripts, withBusinessTransaction, type DatabaseTransaction, type NewOutboxMessage } from "@lobbystack/db";
 import { billableVoiceSeconds, isNonBillableCallDisposition } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem, type TelemetryEventName, type TelemetryProperties } from "@lobbystack/telemetry";
 
@@ -16,6 +16,7 @@ import { visibleFollowUpBody, visibleFollowUpMetadata, visibleFollowUpTitle } fr
 import { recordCallOutcomeInTransaction, resolveCallOutcome } from "./callOutcome";
 import { buildCallEvents } from "./callEvents";
 import { recordingListState, recordingState, type RecordingState } from "./recordingState";
+import { recordFirstRealCallInTransaction } from "./firstRealConversation";
 import { recordProductEventBestEffort } from "./productEvents";
 import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
 
@@ -80,6 +81,12 @@ export async function findOrCreateCallContactInTransaction(tx: DatabaseTransacti
   return { contactId, blocked: Boolean(caller?.contact.operatorBlockedAt) };
 }
 
+/** The agent a new call answers as, as a subquery: the dialled number's agent on a phone call, otherwise the default agent. */
+function callAgentId(input: { businessId: string; transport: string; to: string }) {
+  if (input.transport !== "voice") return defaultAgentIdOf(input.businessId);
+  return sql<string | null>`coalesce((select agent_id from public.phone_numbers where business_id = ${input.businessId}::uuid and e164 = ${input.to} and status not in ('reclaimed', 'released') limit 1), ${defaultAgentIdOf(input.businessId)})`;
+}
+
 export async function startCall(
   context: DomainContext,
   input: {
@@ -99,15 +106,18 @@ export async function startCall(
     prospectDemoId?: string;
     maxDurationMs?: number;
     billable?: boolean;
+    /** The agent a browser call answers as. A phone call's comes from the dialled number, and with neither the default agent answers. */
+    agentId?: string;
   },
-): Promise<{ callId: string; conversationId: string; contactId: string; duplicate: boolean; blocked: boolean; webCallMaxDurationMs?: number; reservedSeconds?: number }> {
+): Promise<{ callId: string; conversationId: string; contactId: string; agentId?: string; duplicate: boolean; blocked: boolean; webCallMaxDurationMs?: number; reservedSeconds?: number }> {
   const result = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const existing = await tx.select({ id: calls.id, conversationId: calls.conversationId, contactId: calls.contactId, webCallMaxDurationMs: calls.webCallMaxDurationMs }).from(calls).where(and(eq(calls.provider, input.provider), eq(calls.providerCallId, input.providerCallId))).limit(1);
+    const existing = await tx.select({ id: calls.id, conversationId: calls.conversationId, contactId: calls.contactId, agentId: calls.agentId, webCallMaxDurationMs: calls.webCallMaxDurationMs }).from(calls).where(and(eq(calls.provider, input.provider), eq(calls.providerCallId, input.providerCallId))).limit(1);
     if (existing[0]?.conversationId && existing[0]?.contactId) {
       const contact = (await tx.select({ operatorBlockedAt: contacts.operatorBlockedAt }).from(contacts).where(and(eq(contacts.id, existing[0].contactId), eq(contacts.businessId, input.businessId))).limit(1))[0];
       // A retried phone call gets what it has reserved so far, top-ups included.
       const reservation = input.transport === "web_voice" ? undefined : (await tx.select({ quantity: billingUsageEvents.quantity }).from(billingUsageEvents).where(and(eq(billingUsageEvents.businessId, input.businessId), eq(billingUsageEvents.sourceKey, `voice:${existing[0].id}`))).limit(1))[0];
-      return { callId: existing[0].id, conversationId: existing[0].conversationId, contactId: existing[0].contactId, duplicate: true, blocked: Boolean(contact?.operatorBlockedAt), ...(existing[0].webCallMaxDurationMs !== null ? { webCallMaxDurationMs: existing[0].webCallMaxDurationMs } : {}), ...(reservation ? { reservedSeconds: reservation.quantity } : {}) };
+      // The agent the first delivery answered as, even if the number has moved since.
+      return { callId: existing[0].id, conversationId: existing[0].conversationId, contactId: existing[0].contactId, ...(existing[0].agentId ? { agentId: existing[0].agentId } : {}), duplicate: true, blocked: Boolean(contact?.operatorBlockedAt), ...(existing[0].webCallMaxDurationMs !== null ? { webCallMaxDurationMs: existing[0].webCallMaxDurationMs } : {}), ...(reservation ? { reservedSeconds: reservation.quantity } : {}) };
     }
     const caller = existing[0]?.contactId ? undefined : await findOrCreateCallContactInTransaction(tx, { businessId: input.businessId, from: input.from });
     const contactId = existing[0]?.contactId ?? caller?.contactId;
@@ -115,14 +125,20 @@ export async function startCall(
       throw new Error("Call contact could not be created.");
     }
     const blocked = Boolean(caller?.blocked);
-    const conversationId = existing[0]?.conversationId ?? (await tx.insert(conversations).values({ businessId: input.businessId, contactId, channel: "voice", status: "open", automationState: "ai_active" }).returning({ id: conversations.id }))[0]?.id;
+    // Read in this insert rather than beside it, so the caller's ringing gets no extra round trip, and a moved number answers as its new agent on the next call.
+    const conversation = existing[0]?.conversationId
+      ? { id: existing[0].conversationId, agentId: existing[0].agentId }
+      : (await tx.insert(conversations).values({ businessId: input.businessId, contactId, agentId: input.agentId ?? callAgentId(input), channel: "voice", status: "open", automationState: "ai_active" }).returning({ id: conversations.id, agentId: conversations.agentId }))[0];
+    const conversationId = conversation?.id;
     if (!conversationId) {
       throw new Error("Call conversation could not be created.");
     }
+    const agentId = conversation.agentId ?? undefined;
     const callId = existing[0]?.id ?? (await tx.insert(calls).values({
       businessId: input.businessId,
       conversationId,
       contactId,
+      agentId,
       provider: input.provider,
       providerCallId: input.providerCallId,
       transport: input.transport,
@@ -182,7 +198,7 @@ export async function startCall(
       dedupeKey: `call:${callId}:started`,
       payload: { type: "call.started", entityId: callId, revision: 0 },
     });
-    return { callId, conversationId, contactId, duplicate: false, blocked, ...(webCallMaxDurationMs !== undefined ? { webCallMaxDurationMs } : {}), ...(reservedSeconds !== undefined ? { reservedSeconds } : {}) };
+    return { callId, conversationId, contactId, ...(agentId ? { agentId } : {}), duplicate: false, blocked, ...(webCallMaxDurationMs !== undefined ? { webCallMaxDurationMs } : {}), ...(reservedSeconds !== undefined ? { reservedSeconds } : {}) };
   });
   if (!result.duplicate) {
     await recordVoiceLifecycleEvent(context, {
@@ -267,7 +283,7 @@ export async function completeCall(
       // Recovery re-validates the provider binding inside the finalizing write,
       // so a bind that lands after the read cannot have its reservation released.
       input.expectedProviderCallId !== undefined ? eq(calls.providerCallId, input.expectedProviderCallId) : undefined,
-    )).returning({ id: calls.id, revision: calls.revision, transport: calls.transport, provider: calls.provider, startedAt: calls.startedAt, billingExcluded: calls.billingExcluded, disposition: calls.disposition });
+    )).returning({ id: calls.id, revision: calls.revision, transport: calls.transport, provider: calls.provider, startedAt: calls.startedAt, billingExcluded: calls.billingExcluded, disposition: calls.disposition, conversationId: calls.conversationId, contactId: calls.contactId, widgetId: calls.widgetId, prospectDemoId: calls.prospectDemoId, mediaStartedAt: calls.mediaStartedAt });
     if (!call) {
       return null;
     }
@@ -304,6 +320,7 @@ export async function completeCall(
     });
     for (const message of input.outbox ?? []) await enqueueOutbox(tx, message);
     if (input.costEvent) await recordUnitEconomicsEventInTransaction(tx, input.costEvent);
+    await recordFirstRealCallInTransaction(tx, { businessId: input.businessId, call: { ...call, status: input.status } });
     // The short-call exemption, as opposed to spam or a non-billable call: the
     // business pays nothing, but the provider may still bill us.
     const shortCallWaived = durationSeconds === 0 && !isNonBillableCallDisposition(call.disposition) && ((input.providerDurationSeconds ?? 0) > 0 || measuredSeconds > 0);

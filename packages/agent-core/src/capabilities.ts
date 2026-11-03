@@ -45,7 +45,7 @@ export function toolUse(name: string): { kind: ToolKind; progress: string } {
 }
 
 /** What the decision reads from a conversation: the same fields the tools get. */
-export type Conversation = Pick<AgentToolContext, "channel" | "callerPhone" | "callId" | "intakeOnly" | "callControl" | "conversationId" | "liveChat">;
+export type Conversation = Pick<AgentToolContext, "channel" | "callerPhone" | "callId" | "intakeOnly" | "testChat" | "callControl" | "conversationId" | "liveChat">;
 
 export type Capabilities = {
   /** The tools the agent gets. */
@@ -129,6 +129,9 @@ function webPersonRule(snapshot: BusinessContextSnapshot, channel: Exclude<Agent
   ].join(" ");
 }
 
+// The dashboard's test window. The tools here only read, so the agent says what a real chat would do.
+const TEST_CHAT_GUIDANCE = "This is a private test chat with the business's own team. Answer as you would a website visitor. You can only look things up here. When they ask to book, cancel, leave a message or reach a person, say what you'd ask for and what you'd do in a real chat, and say that nothing was saved or sent because this is a test. Never say or suggest you booked, saved or sent anything.";
+
 // Instant booking only offers times inside the opening hours, so without them
 // nothing is bookable.
 const NO_HOURS_GUIDANCE = "The business hasn't set its opening hours yet, so you can't book appointments. Don't offer times or say a time is taken. When a caller wants an appointment, take a message with their name, number, the service and their preferred time so the team can book it.";
@@ -165,9 +168,10 @@ function employeeGuidance(snapshot: BusinessContextSnapshot, booking: BookingMod
  * offers or describes a tool reads this one decision.
  */
 export function receptionistCapabilities(snapshot: BusinessContextSnapshot, conversation: Conversation): Capabilities {
-  const { channel, callerPhone, callControl, intakeOnly } = conversation;
-  // Prospect demos only answer questions and take messages: no booking, no transfers.
-  const booking: BookingMode = intakeOnly ? "off" : normalizeBookingMode(snapshot.bookingMode);
+  const { channel, callerPhone, callControl, intakeOnly, testChat } = conversation;
+  // Prospect demos only answer questions and take messages: no booking, no
+  // transfers. Test chats only answer questions.
+  const booking: BookingMode = intakeOnly || testChat ? "off" : normalizeBookingMode(snapshot.bookingMode);
   // Changing an appointment identifies the caller by a trusted phone number.
   // The business can turn it off, or leave every change to its team.
   const changePolicy = normalizeAppointmentChangePolicy(snapshot.appointmentChangePolicy);
@@ -178,7 +182,7 @@ export function receptionistCapabilities(snapshot: BusinessContextSnapshot, conv
   // phone call's controls can take.
   const keypadPin = changePolicy.verificationMode === "passcode_required";
   // The transfer tool still checks the rules for each request, such as on_urgent.
-  const transfers = !intakeOnly && takesTransfers(snapshot);
+  const transfers = !intakeOnly && !testChat && takesTransfers(snapshot);
   const callerTextable = channel === "voice" && canTextNumber(snapshot.contactChannels?.smsNumber, callerPhone);
   // Browser calls and website chats have no trusted caller number.
   const changes = Boolean(callerPhone) && (cancels || reschedules) && (!keypadPin || Boolean(callControl?.collectPasscode));
@@ -186,7 +190,7 @@ export function receptionistCapabilities(snapshot: BusinessContextSnapshot, conv
     getBusinessHours: true,
     getBusinessServices: true,
     searchKnowledge: true,
-    takeMessage: true,
+    takeMessage: !testChat,
     findAvailability: booking === "instant",
     bookAppointment: booking === "instant",
     recordTextPreference: callerTextable && Boolean(conversation.callId) && booking !== "off",
@@ -204,7 +208,7 @@ export function receptionistCapabilities(snapshot: BusinessContextSnapshot, conv
     // Only phone calls can transfer.
     transferCall: Boolean(callControl?.transfer) && transfers,
     // Website chats whose widget lets the team join: requestTeamMember checks the opening hours when it's used.
-    requestTeamMember: channel === "web_chat" && Boolean(conversation.liveChat && conversation.conversationId) && !intakeOnly,
+    requestTeamMember: channel === "web_chat" && Boolean(conversation.liveChat && conversation.conversationId) && !intakeOnly && !testChat,
     endCall: Boolean(callControl),
   };
   const voice = !isWrittenChannel(channel);
@@ -215,9 +219,11 @@ export function receptionistCapabilities(snapshot: BusinessContextSnapshot, conv
     tools: (Object.keys(offered) as ToolName[]).filter((name) => offered[name]),
     callerTextable,
     guidance: [
-      intakeOnly
-        ? "This is a demo of the receptionist. Answer questions and take messages only. Don't book or check appointments, don't transfer the call, and don't promise texts or emails."
-        : BOOKING_GUIDANCE[booking],
+      testChat
+        ? TEST_CHAT_GUIDANCE
+        : intakeOnly
+          ? "This is a demo of the receptionist. Answer questions and take messages only. Don't book or check appointments, don't transfer the call, and don't promise texts or emails."
+          : BOOKING_GUIDANCE[booking],
       employeeGuidance(snapshot, booking),
       // A phone call can come from another number than the booking's, and
       // callers must not hang up thinking it's done.
@@ -247,7 +253,7 @@ export function receptionistCapabilities(snapshot: BusinessContextSnapshot, conv
       // With live chat on, someone from the team can join the chat instead.
       offered.requestTeamMember
         ? LIVE_CHAT_GUIDANCE
-        : channel === "voice" ? "Transfer to a person only when the transfer rules allow it; otherwise offer to take a message." : webPersonRule(snapshot, channel),
+        : testChat ? "" : channel === "voice" ? "Transfer to a person only when the transfer rules allow it; otherwise offer to take a message." : webPersonRule(snapshot, channel),
       offered.transferCall && phone && snapshot.employees?.length
         ? "When the caller asks to speak with a specific employee, pass that employee's name as employeeName to transferCall."
         : "",

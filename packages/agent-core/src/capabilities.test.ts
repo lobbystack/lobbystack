@@ -35,6 +35,14 @@ describe("receptionistCapabilities", () => {
     expect(capabilities({ bookingMode: "off" }, { channel: "voice", callerPhone }).tools).toEqual(["getBusinessHours", "getBusinessServices", "searchKnowledge", "takeMessage"]);
   });
 
+  it.each(["instant", "request", "off"] as const)("keeps a test chat to read-only tools with booking %s", (bookingMode) => {
+    const snapshot = { bookingMode, ...changePolicy({}), transferPolicy: { mode: "always" as const, transferNumber: "+14165550199" } };
+    const { guidance, tools } = capabilities(snapshot, { channel: "web_chat", testChat: true, callerPhone, callId: "call_1", conversationId: "conversation", callControl, liveChat: { locale: "en" } });
+    expect(tools.filter((name) => name !== "endCall")).toEqual(["getBusinessHours", "getBusinessServices", "searchKnowledge"]);
+    expect(guidance.join("\n")).toContain("nothing was saved or sent");
+    expect(guidance.join("\n")).not.toContain("takeMessage");
+  });
+
   it("limits prospect demos to answering questions and taking messages", () => {
     expect(capabilities({}, { channel: "web_voice", intakeOnly: true, callControl }).tools).toEqual(["getBusinessHours", "getBusinessServices", "searchKnowledge", "takeMessage", "endCall"]);
   });

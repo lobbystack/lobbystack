@@ -3,14 +3,16 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { and, eq, gt, isNull, ne, or, sql } from "drizzle-orm";
 
 import { enqueueOutbox, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
-import { apiKeys, businesses, businessInvitations, businessMemberships, closures, partnerMembers, receptionistProfiles, services, staff, userActiveBusinesses, users } from "@lobbystack/db";
-import { currencyFractionDigits, defaultAppointmentChangePolicy, defaultCurrencyForTimezone, defaultGreeting, isCurrencyCode, isDefaultGreeting, normalizeAuthEmail, normalizeRuntimeLocale, parseDeploymentMode, type EmailBrandReference, type PartnerAccessLevel } from "@lobbystack/shared";
+import { agents, apiKeys, businesses, businessInvitations, businessMemberships, closures, defaultAgentOf, partnerMembers, services, staff, userActiveBusinesses, users } from "@lobbystack/db";
+import { currencyFractionDigits, defaultAgentName, defaultAppointmentChangePolicy, defaultCurrencyForTimezone, defaultGreeting, isCurrencyCode, isDefaultAgentName, isDefaultGreeting, normalizeAuthEmail, normalizeRuntimeLocale, parseDeploymentMode, type EmailBrandReference, type PartnerAccessLevel } from "@lobbystack/shared";
+
+import type { RuntimeLocale } from "@lobbystack/shared";
 
 import { requireBusinessAdmin } from "../authz";
 import { accessCapabilities, brandPartnerId, businessShowsOnBrand, capabilityNames, readBusinessAccess, requireBusinessAccess, type BrandScope, type BusinessAccessVia, type Capability } from "./businessAccess";
 import { enqueueBusinessSummaryRefresh } from "./businessSummary";
 import type { DomainContext } from "./context";
-import type { OnboardingStage } from "./onboarding";
+import type { OnboardingGoal, OnboardingStage } from "./onboarding";
 import { invitationOfferInTransaction, type InvitationPayment } from "./packageBilling";
 import { disableWebhookEndpointsInTransaction } from "./publicApi/webhooks";
 
@@ -23,6 +25,9 @@ export type CreateBusinessInput = {
   timezone: string;
   businessType: string;
   deploymentMode?: string;
+  defaultLocale?: string | undefined;
+  /** defaultLocale came from the browser, not from a person, so the website's language can replace it. */
+  defaultLocaleGuessed?: boolean | undefined;
 };
 
 function cleanSlug(slug: string): string {
@@ -80,7 +85,7 @@ export async function createBusiness(
     if ((owned.rows[0]?.count ?? 0) >= maxOwnedBusinesses) {
       throw Object.assign(new Error(`Too many workspaces. One account can own up to ${maxOwnedBusinesses}.`), { status: 403 });
     }
-    const created = await insertBusinessInTransaction(tx, { businessId, userId: input.userId, name: input.name, slug: input.slug, timezone, businessType: input.businessType, deploymentMode: input.deploymentMode });
+    const created = await insertBusinessInTransaction(tx, { businessId, userId: input.userId, name: input.name, slug: input.slug, timezone, businessType: input.businessType, deploymentMode: input.deploymentMode, defaultLocale: input.defaultLocale, defaultLocaleGuessed: input.defaultLocaleGuessed });
     await tx.update(users).set({ activeBusinessId: businessId, updatedAt: new Date() }).where(eq(users.id, input.userId));
     return created;
   });
@@ -110,6 +115,8 @@ type NewBusiness = {
   businessType: string;
   deploymentMode?: string | undefined;
   defaultLocale?: string | undefined;
+  /** defaultLocale came from the browser, not from a person, so the website's language can replace it. */
+  defaultLocaleGuessed?: boolean | undefined;
   websiteUrl?: string | undefined;
   /** The partner that resells the business, set only when it's created: a direct business never gets one. */
   partner?: { partnerId: string; accessLevel: PartnerAccessLevel } | undefined;
@@ -169,6 +176,8 @@ async function insertBusinessRowsInTransaction(tx: DatabaseTransaction, input: N
       deploymentMode: input.deploymentMode ?? (parseDeploymentMode(process.env.DEPLOYMENT_MODE) === "self_hosted_standard" ? "self_hosted_standard" : "cloud"),
       onboardingStage: input.onboardingStage ?? "website",
       ...(input.defaultLocale !== undefined ? { defaultLocale: input.defaultLocale } : {}),
+      // With no language given, or only the browser's guess, reading the website may set it.
+      defaultLocaleChosen: input.defaultLocale !== undefined && !input.defaultLocaleGuessed,
       ...(input.websiteUrl !== undefined ? { websiteUrl: input.websiteUrl } : {}),
       ...(input.partner ? { partnerId: input.partner.partnerId, partnerAccessLevel: input.partner.accessLevel } : {}),
     });
@@ -196,9 +205,10 @@ async function insertBusinessRowsInTransaction(tx: DatabaseTransaction, input: N
   // Booking assigns every appointment to a staff member. Businesses that don't
   // manage a team get one hidden member that stands for the business itself.
   await tx.insert(staff).values({ businessId, name, timezone });
-  await tx.insert(receptionistProfiles).values({
+  await tx.insert(agents).values({
     businessId,
-    greeting: defaultGreeting(name),
+    name: defaultAgentName(normalizeRuntimeLocale(input.defaultLocale)),
+    greeting: defaultGreeting(name, normalizeRuntimeLocale(input.defaultLocale)),
     tone: "warm and direct",
     summary: `${name} uses LobbyStack to answer calls.`,
     ...NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS,
@@ -269,6 +279,8 @@ export type UserBusiness = {
   defaultLocale: string;
   websiteUrl: string | null;
   onboardingStage: string;
+  /** What the owner wants their agent to do first, or null when they skipped the question or never saw it. */
+  onboardingGoal: OnboardingGoal | null;
   createdAt: string;
   /** The access level a partner's business gives its own operators, or null for a direct business. */
   partnerAccessLevel: PartnerAccessLevel | null;
@@ -288,7 +300,7 @@ export type UserBusiness = {
 export async function listUserBusinesses(db: Database, userId: string, brand: BrandScope): Promise<UserBusiness[]> {
   return await withBusinessTransaction(db, { userId, actorType: "operator" }, async (tx) => {
     const active = await readActiveBusinessIdInTransaction(tx, { userId, brand });
-    const rows = await tx.execute<Omit<UserBusiness, "active" | "createdAt" | "partnerAccessLevel" | "via" | "capabilities"> & { createdAt: Date; partnerId: string | null; accessLevel: PartnerAccessLevel; via: BusinessAccessVia }>(sql`select business_id as "businessId", name, slug, role, timezone, business_type as "businessType", default_locale as "defaultLocale", website_url as "websiteUrl", onboarding_stage as "onboardingStage", created_at as "createdAt", partner_id as "partnerId", partner_access_level as "accessLevel", access_via as "via" from app.list_user_businesses(${userId})`);
+    const rows = await tx.execute<Omit<UserBusiness, "active" | "createdAt" | "partnerAccessLevel" | "via" | "capabilities"> & { createdAt: Date; partnerId: string | null; accessLevel: PartnerAccessLevel; via: BusinessAccessVia }>(sql`select business_id as "businessId", name, slug, role, timezone, business_type as "businessType", default_locale as "defaultLocale", website_url as "websiteUrl", onboarding_stage as "onboardingStage", onboarding_goal as "onboardingGoal", created_at as "createdAt", partner_id as "partnerId", partner_access_level as "accessLevel", access_via as "via" from app.list_user_businesses(${userId})`);
     return rows.rows.filter((row) => businessShowsOnBrand(row.partnerId, brand)).map(({ partnerId, accessLevel, via, ...row }) => ({
       ...row,
       active: row.businessId === active,
@@ -313,11 +325,11 @@ export async function updateBusiness(
 /** Updates basic business fields and refreshes the receptionist's snapshot. Callers authorize first. */
 export async function updateBusinessInTransaction(
   tx: DatabaseTransaction,
-  input: { businessId: string; name?: string; timezone?: string; businessType?: string; defaultLocale?: string; teamLocale?: string | null; websiteUrl?: string | null; currency?: string },
+  input: { businessId: string; name?: string; timezone?: string; businessType?: string; defaultLocale?: string; defaultLocaleDetected?: boolean; teamLocale?: string | null; websiteUrl?: string | null; currency?: string },
 ): Promise<void> {
   const timezone = input.timezone === undefined ? undefined : requireIanaTimeZone(input.timezone);
   if (input.currency !== undefined && !isCurrencyCode(input.currency)) throw Object.assign(new Error("currency is invalid."), { status: 400 });
-  const values = { ...(input.name !== undefined ? { name: input.name.trim() } : {}), ...(timezone !== undefined ? { timezone } : {}), ...(input.businessType !== undefined ? { businessType: input.businessType.trim() } : {}), ...(input.defaultLocale !== undefined ? { defaultLocale: input.defaultLocale.trim() } : {}), ...(input.teamLocale !== undefined ? { teamLocale: input.teamLocale } : {}), ...(input.websiteUrl !== undefined ? { websiteUrl: input.websiteUrl } : {}), ...(input.currency !== undefined ? { currency: input.currency } : {}), updatedAt: new Date() };
+  const values = { ...(input.name !== undefined ? { name: input.name.trim() } : {}), ...(timezone !== undefined ? { timezone } : {}), ...(input.businessType !== undefined ? { businessType: input.businessType.trim() } : {}), ...(input.defaultLocale !== undefined ? { defaultLocale: input.defaultLocale.trim(), ...(input.defaultLocaleDetected ? {} : { defaultLocaleChosen: true }) } : {}), ...(input.teamLocale !== undefined ? { teamLocale: input.teamLocale } : {}), ...(input.websiteUrl !== undefined ? { websiteUrl: input.websiteUrl } : {}), ...(input.currency !== undefined ? { currency: input.currency } : {}), updatedAt: new Date() };
   if (Object.keys(values).length === 1) throw Object.assign(new Error("At least one business field is required."), { status: 400 });
   // Locks the row, so a concurrent change can't alter the zone the closures were entered in, or the language the greeting is in.
   const [before] = timezone === undefined && input.defaultLocale === undefined && input.currency === undefined ? [] : await tx.select({ timezone: businesses.timezone, defaultLocale: businesses.defaultLocale, name: businesses.name, currency: businesses.currency }).from(businesses).where(eq(businesses.id, input.businessId)).for("update");
@@ -340,16 +352,32 @@ export async function updateBusinessInTransaction(
       updatedAt: new Date(),
     }).where(and(eq(closures.businessId, input.businessId), gt(closures.endsAt, sql`now()`)));
   }
-  // A greeting still on the old language's default follows the new language; one the owner wrote stays.
+  // A greeting or agent name still on the old language's default follows the new language; one the owner wrote stays.
   if (input.defaultLocale !== undefined && before) {
     const from = normalizeRuntimeLocale(before.defaultLocale);
     const to = normalizeRuntimeLocale(input.defaultLocale);
-    const [profile] = from === to ? [] : await tx.select({ greeting: receptionistProfiles.greeting }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, input.businessId)).limit(1);
-    if (profile && isDefaultGreeting(profile.greeting, before.name, from)) await tx.update(receptionistProfiles).set({ greeting: defaultGreeting(input.name?.trim() || before.name, to), updatedAt: new Date() }).where(eq(receptionistProfiles.businessId, input.businessId));
+    const [profile] = from === to ? [] : await tx.select({ name: agents.name, greeting: agents.greeting }).from(agents).where(defaultAgentOf(input.businessId)).limit(1);
+    if (profile) {
+      const name = isDefaultAgentName(profile.name) ? defaultAgentName(to) : profile.name;
+      const greeting = isDefaultGreeting(profile.greeting, before.name, from) ? { greeting: defaultGreeting(input.name?.trim() || before.name, to), updatedAt: new Date() } : null;
+      if (greeting || name !== profile.name) await tx.update(agents).set({ name, ...greeting }).where(defaultAgentOf(input.businessId));
+    }
   }
   await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "business", aggregateId: input.businessId, dedupeKey: `business:${input.businessId}:snapshot:${Date.now()}`, payload: { businessId: input.businessId, reason: "business_updated" } });
   // The generated summary names the business and is written in its default locale.
   if (input.name !== undefined || input.defaultLocale !== undefined) await enqueueBusinessSummaryRefresh(tx, { businessId: input.businessId, reason: "business_updated" });
+}
+
+/**
+ * Saves the language a website's pages are in, unless someone chose one or the
+ * business has finished onboarding, when calls may already be answered in the
+ * language it has. The greeting follows, as it does for any language change.
+ */
+export async function applySiteLanguageInTransaction(tx: DatabaseTransaction, input: { businessId: string; locale: RuntimeLocale }): Promise<boolean> {
+  const [business] = await tx.select({ chosen: businesses.defaultLocaleChosen, stage: businesses.onboardingStage, locale: businesses.defaultLocale }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1).for("update");
+  if (!business || business.chosen || business.stage === "complete" || normalizeRuntimeLocale(business.locale) === input.locale) return false;
+  await updateBusinessInTransaction(tx, { businessId: input.businessId, defaultLocale: input.locale, defaultLocaleDetected: true });
+  return true;
 }
 
 /**

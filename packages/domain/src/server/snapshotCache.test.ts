@@ -1,24 +1,125 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { demoSnapshot, runtimeLocales, type BusinessContextSnapshot } from "@lobbystack/shared";
+import { demoSnapshot, runtimeLocales, type BusinessContextSnapshot, type SnapshotAgent } from "@lobbystack/shared";
 
 import type { DomainContext } from "./context";
-import { deserializeSnapshot, getCachedBusinessSnapshot, redisSnapshotCache, snapshotCacheKey, SNAPSHOT_CACHE_TTL_SECONDS, type SnapshotCacheClient } from "./snapshotCache";
+import { deserializeSnapshot, getBusinessSnapshotForAgent, getCachedBusinessSnapshot, redisSnapshotCache, snapshotCacheKey, SNAPSHOT_CACHE_TTL_SECONDS, type SnapshotCacheClient } from "./snapshotCache";
 
 vi.mock("./knowledge", () => ({
   loadLatestBusinessSnapshot: vi.fn(),
+  loadSnapshotAgent: vi.fn(),
+  refreshBusinessSnapshot: vi.fn(),
 }));
 
-import { loadLatestBusinessSnapshot } from "./knowledge";
+import { loadLatestBusinessSnapshot, loadSnapshotAgent, refreshBusinessSnapshot } from "./knowledge";
 
 const businessId = "00000000-0000-4000-8000-000000000001";
 
 const loadMock = vi.mocked(loadLatestBusinessSnapshot);
+const refreshMock = vi.mocked(refreshBusinessSnapshot);
+const agentRowMock = vi.mocked(loadSnapshotAgent);
 
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubEnv("REDIS_PREFIX", "lobbystack");
   loadMock.mockResolvedValue({ ...demoSnapshot, displayName: "Loaded" });
+  refreshMock.mockResolvedValue("version");
+});
+
+const agent = (id: string, greeting: string): SnapshotAgent => ({
+  id,
+  name: `Agent ${id}`,
+  isDefault: id === "default",
+  greeting,
+  tone: "warm",
+  voice: "marin",
+  voiceInstructions: "Voice",
+  smsInstructions: "Text",
+  chatInstructions: "Chat",
+  bookingPolicy: "Book",
+  bookingMode: "instant",
+  transferPolicy: { mode: "never" },
+  rules: [],
+});
+
+describe("getBusinessSnapshotForAgent", () => {
+  const withAgents = { ...validSnapshotForAgents(), agents: [agent("default", "Default"), agent("after-hours", "After hours")] };
+
+  function validSnapshotForAgents(): BusinessContextSnapshot {
+    return { ...demoSnapshot, greeting: "Default" };
+  }
+
+  function cacheHolding(snapshot: BusinessContextSnapshot): SnapshotCacheClient {
+    return { get: async () => snapshot, set: async () => undefined };
+  }
+
+  it("answers from the loaded snapshot with no refresh when it lists the agent", async () => {
+    const snapshot = await getBusinessSnapshotForAgent(makeContext(cacheHolding(withAgents)), { businessId, agentId: "after-hours" });
+    expect(snapshot).toMatchObject({ agentId: "after-hours", greeting: "After hours" });
+    expect(refreshMock).not.toHaveBeenCalled();
+  });
+
+  it("returns the flat fields with no refresh when no agent is named", async () => {
+    const old = validSnapshotForAgents();
+    expect(await getBusinessSnapshotForAgent(makeContext(cacheHolding(old)), { businessId })).toBe(old);
+    expect(refreshMock).not.toHaveBeenCalled();
+  });
+
+  it("refreshes once and retries against the stored snapshot when the agent is missing", async () => {
+    // The cache still holds the stale copy, as when its write-through fails.
+    const stale = { ...withAgents, agents: [agent("default", "Default")] };
+    loadMock.mockResolvedValue(withAgents);
+    const snapshot = await getBusinessSnapshotForAgent(makeContext(cacheHolding(stale)), { businessId, agentId: "after-hours" });
+    expect(snapshot).toMatchObject({ agentId: "after-hours", greeting: "After hours" });
+    expect(refreshMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("refreshes an old snapshot with no agents before it trusts an agent id", async () => {
+    loadMock.mockResolvedValue(withAgents);
+    const snapshot = await getBusinessSnapshotForAgent(makeContext(cacheHolding(validSnapshotForAgents())), { businessId, agentId: "after-hours" });
+    expect(snapshot).toMatchObject({ agentId: "after-hours" });
+    expect(refreshMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("logs an error and answers as the default agent when a refresh doesn't find the agent", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    loadMock.mockResolvedValue(withAgents);
+    const snapshot = await getBusinessSnapshotForAgent(makeContext(cacheHolding(withAgents)), { businessId, agentId: "gone" });
+    expect(snapshot).toBe(withAgents);
+    expect(snapshot?.greeting).toBe("Default");
+    expect(refreshMock).toHaveBeenCalledTimes(1);
+    expect(error).toHaveBeenCalledWith("[snapshot] unknown agent, answering as the default agent", businessId, "gone");
+    error.mockRestore();
+  });
+
+  it("still answers as the default agent when the refresh fails", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    refreshMock.mockRejectedValue(new Error("database down"));
+    const snapshot = await getBusinessSnapshotForAgent(makeContext(cacheHolding(withAgents)), { businessId, agentId: "gone" });
+    expect(snapshot?.greeting).toBe("Default");
+    expect(error).toHaveBeenCalledTimes(2);
+    error.mockRestore();
+  });
+
+  it("builds the first snapshot of a business that has none", async () => {
+    loadMock.mockResolvedValueOnce(null).mockResolvedValueOnce(withAgents);
+    expect(await getBusinessSnapshotForAgent(makeContext(null), { businessId, agentId: "after-hours" })).toMatchObject({ agentId: "after-hours" });
+    expect(refreshMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("fails like today's loader when a business with no snapshot can't build one", async () => {
+    loadMock.mockResolvedValue(null);
+    refreshMock.mockRejectedValue(new Error("database down"));
+    await expect(getBusinessSnapshotForAgent(makeContext(null), { businessId })).rejects.toThrow("database down");
+  });
+
+  it("passes agents through the cached JSON, and reads an old entry without them", () => {
+    const parsed = deserializeSnapshot(JSON.stringify({ ...validSnapshot, agents: withAgents.agents }));
+    expect(parsed?.agents).toEqual(withAgents.agents);
+    const old = deserializeSnapshot(JSON.stringify(validSnapshot));
+    expect(old).not.toBeNull();
+    expect(old).not.toHaveProperty("agents");
+  });
 });
 
 function memoryCache(): SnapshotCacheClient {
@@ -111,5 +212,44 @@ describe("getCachedBusinessSnapshot", () => {
     const result = await getCachedBusinessSnapshot(makeContext(null), { businessId });
     expect(result?.displayName).toBe("Loaded");
     expect(loadMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("getBusinessSnapshotForAgent for a call already started", () => {
+  const stored = { ...demoSnapshot, greeting: "Hello", agents: [agent("default", "Hello")] };
+  const context = { db: {} } as unknown as DomainContext;
+
+  it("projects a snapshot it was handed without reading anything", async () => {
+    const snapshot = await getBusinessSnapshotForAgent(context, { businessId, agentId: "default", loaded: stored });
+    expect(snapshot).toMatchObject({ agentId: "default" });
+    expect(loadMock).not.toHaveBeenCalled();
+    expect(refreshMock).not.toHaveBeenCalled();
+  });
+
+  it("finishes a call as an agent archived since it started", async () => {
+    loadMock.mockResolvedValue(stored);
+    agentRowMock.mockResolvedValue(agent("archived", "Good evening"));
+    const snapshot = await getBusinessSnapshotForAgent(context, { businessId, agentId: "archived", underWay: true });
+    expect(snapshot).toMatchObject({ agentId: "archived", greeting: "Good evening" });
+    expect(refreshMock).toHaveBeenCalledOnce();
+  });
+
+  it("answers as the default agent when an agent that started no call is gone", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    loadMock.mockResolvedValue(stored);
+    const snapshot = await getBusinessSnapshotForAgent(context, { businessId, agentId: "archived" });
+    expect(snapshot).toMatchObject({ greeting: "Hello" });
+    expect(agentRowMock).not.toHaveBeenCalled();
+    expect(error).toHaveBeenCalledWith("[snapshot] unknown agent, answering as the default agent", businessId, "archived");
+    error.mockRestore();
+  });
+
+  it("answers as the default agent when even the agent's row can't be read", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    loadMock.mockResolvedValue(stored);
+    agentRowMock.mockRejectedValue(new Error("database down"));
+    const snapshot = await getBusinessSnapshotForAgent(context, { businessId, agentId: "archived", underWay: true });
+    expect(snapshot).toMatchObject({ greeting: "Hello" });
+    error.mockRestore();
   });
 });

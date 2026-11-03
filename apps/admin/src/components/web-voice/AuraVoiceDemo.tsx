@@ -95,7 +95,7 @@ export function AuraVoiceDemo({
         }
       : {}),
   });
-  const { status, muted, errorKey, startCall, endCall, forceEndCall, isCallActive } = call;
+  const { status, muted, errorKey, startCall, endCall, forceEndCall, isCallActive, canHangUp } = call;
   const wasCallActiveRef = useRef(false);
 
   useLayoutEffect(() => {
@@ -126,7 +126,7 @@ export function AuraVoiceDemo({
       <AuraVoiceOrb
         call={call}
         statusLabel={statusMessage}
-        buttonLabel={t(getButtonLabelKey(status, muted))}
+        buttonLabel={t(getButtonLabelKey(canHangUp ? "connected" : status, muted))}
         auraTone={auraTone}
       >
         {status === "idle" || status === "error" || status === "ended" ? (

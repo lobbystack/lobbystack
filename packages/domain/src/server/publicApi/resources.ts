@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, ne, not, notInArray, or, sql, type SQL } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
-import { agentRules, appointments, businesses, businessHours, calls, contactPasscodes, contacts, conversations, conversationSessions, inboxItems, inOrder, knowledgeDocuments, knowledgeSnippets, onboardingNumberClaimEvents, phoneNumbers, receptionistProfiles, services, staff, staffServiceAssignments, storageObjects, transcripts, webhookEndpoints, websiteIngestionJobs, type DatabaseTransaction } from "@lobbystack/db";
+import { agentRules, agents, appointments, businesses, businessHours, calls, contactPasscodes, contacts, conversations, conversationSessions, defaultAgentOf, inboxItems, inOrder, knowledgeDocuments, knowledgeSnippets, onboardingNumberClaimEvents, phoneNumbers, services, staff, staffServiceAssignments, storageObjects, transcripts, webhookEndpoints, websiteIngestionJobs, type DatabaseTransaction } from "@lobbystack/db";
 import {
   PUBLIC_API_DEFAULT_PAGE_SIZE,
   PUBLIC_API_MAX_PAGE_SIZE,
@@ -117,7 +117,7 @@ export function clockToMinutes(value: string): number {
 export async function loadBusinessResource(tx: DatabaseTransaction, businessId: string): Promise<ApiBusiness | null> {
   const [business] = await tx.select().from(businesses).where(eq(businesses.id, businessId)).limit(1);
   if (!business) return null;
-  const [profile] = await tx.select({ bookingMode: receptionistProfiles.bookingMode }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, businessId)).limit(1);
+  const [profile] = await tx.select({ bookingMode: agents.bookingMode }).from(agents).where(defaultAgentOf(businessId)).limit(1);
   const hours = await tx.select({ dayOfWeek: businessHours.dayOfWeek, openMinutes: businessHours.openMinutes, closeMinutes: businessHours.closeMinutes }).from(businessHours).where(and(eq(businessHours.businessId, businessId), isNull(businessHours.staffId))).orderBy(asc(businessHours.dayOfWeek), asc(businessHours.openMinutes));
   return {
     id: business.id,
@@ -665,7 +665,7 @@ export function serializeCalendarConnection(row: { id: string; provider: string;
 
 const summarySources = ["placeholder", "generated", "operator"] as const;
 
-type ReceptionistRow = Pick<typeof receptionistProfiles.$inferSelect, "greeting" | "tone" | "summary" | "summarySource" | "bookingPolicy" | "voiceInstructions" | "smsInstructions" | "chatInstructions" | "transferMode" | "transferNumber" | "appointmentChangePolicy" | "bookingMode" | "voice" | "staffFirstMode" | "staffFirstNumber" | "staffFirstRingSeconds" | "staffFirstMessage" | "staffFirstHandoverMessage" | "updatedAt">;
+type ReceptionistRow = Pick<typeof agents.$inferSelect, "greeting" | "tone" | "summary" | "summarySource" | "bookingPolicy" | "voiceInstructions" | "smsInstructions" | "chatInstructions" | "transferMode" | "transferNumber" | "appointmentChangePolicy" | "bookingMode" | "voice" | "staffFirstMode" | "staffFirstNumber" | "staffFirstRingSeconds" | "staffFirstMessage" | "staffFirstHandoverMessage" | "updatedAt">;
 
 /** Shows the settings as calls use them: a transfer mode, booking mode, voice or policy calls don't know reads as what they fall back to. */
 export function serializeReceptionist(row: ReceptionistRow): ApiReceptionist {

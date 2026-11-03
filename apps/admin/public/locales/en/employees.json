@@ -54,7 +54,7 @@
         "invalid": "Enter a valid phone number.",
         "exists": "An employee with this phone number already exists.",
         "trialLocked": "During the free trial, calls can only transfer to the mobile of the person who claimed the trial.",
-        "countryUnsupported": "Your receptionist can't transfer calls to this country yet."
+        "countryUnsupported": "Your agent can't transfer calls to this country yet."
       },
       "services": {
         "label": "Services",
@@ -76,7 +76,7 @@
       },
       "timeOff": {
         "label": "Time off",
-        "hint": "Optional. The receptionist doesn't book this employee on these days and tells callers when they're back.",
+        "hint": "Optional. The agent doesn't book this employee on these days and tells callers when they're back.",
         "add": "Add time off",
         "placeholder": "Pick the first and last day",
         "dates": "Time off dates",

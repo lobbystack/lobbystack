@@ -120,3 +120,47 @@ describe("resolveLiveWebCallAccess", () => {
     await expect(resolveLiveWebCallAccess(request({ origin: "https://evil.example" }), { sdp: "v=0", widgetId: "lobbystack-landing", businessSlug: "lobbystack-demo" })).resolves.toEqual({ status: 403, code: "web_voice_authorization_required" });
   });
 });
+
+describe("which agent a browser call answers as", () => {
+  const agentId = "6b0c1f8e-3f5a-4d57-9f7c-1b2f7c3f2a11";
+  const testCall = { sdp: "v=0", widgetId: "lobbystack-dashboard-test-call", agentId };
+  /** What the agent lookup finds under the operator's access: rows of the operator's own business, and none of another's. */
+  const operatorFinds = (rows: unknown[]) => {
+    const chain = { from: () => chain, where: () => chain, limit: async () => rows };
+    const tx = { select: () => chain };
+    mocks.requireOperator.mockResolvedValue({ businessId: "biz_1", transaction: async (run: (tx: unknown) => Promise<unknown>) => await run(tx) });
+  };
+
+  it("starts a test call as an agent of the operator's business", async () => {
+    operatorFinds([{ id: agentId }]);
+    await expect(resolveLiveWebCallAccess(request({ origin: app }), testCall)).resolves.toMatchObject({ businessId: "biz_1", agentId, dashboardTestCall: true });
+  });
+
+  it("refuses an agent the operator can't reach, such as another business's", async () => {
+    operatorFinds([]);
+    await expect(resolveLiveWebCallAccess(request({ origin: app }), testCall)).resolves.toEqual({ status: 404, code: "agent_not_found" });
+  });
+
+  it("leaves a test call with no agent to the default agent, without looking one up", async () => {
+    operatorFinds([]);
+    const access = await resolveLiveWebCallAccess(request({ origin: app }), { sdp: "v=0", widgetId: "lobbystack-dashboard-test-call" });
+    expect(access).toMatchObject({ businessId: "biz_1", dashboardTestCall: true });
+    expect(access).not.toHaveProperty("agentId");
+  });
+
+  it("answers widget voice as the key's agent, whatever the browser asks for", async () => {
+    mocks.verifyWidgetSessionToken.mockReturnValue({ businessId: "biz_1", widgetKeyId: "key_1", origin: "https://client.example", visitorId: "visitor_1" });
+    mocks.widgetKey = { status: "active", allowedOrigins: ["https://client.example"], agentId: "agent_of_key" } as typeof mocks.widgetKey;
+    const widget = new Request(`${app}/api/voice/live/session`, { method: "POST", headers: { authorization: "Bearer token", "x-widget-parent-origin": "https://client.example" } });
+    await expect(resolveLiveWebCallAccess(widget, { sdp: "v=0", widgetId: "lobbystack-widget", agentId })).resolves.toMatchObject({ agentId: "agent_of_key" });
+  });
+
+  it("never lets a landing page visitor choose an agent", async () => {
+    vi.stubEnv("WEB_CALL_PUBLIC_BUSINESS_SLUG", "demo");
+    vi.stubEnv("WEB_CALL_ALLOWED_ORIGINS", "https://www.lobbystack.test");
+    mocks.resolveWebVoiceAccess.mockResolvedValue({ allowed: true, businessId: "biz_1" });
+    const access = await resolveLiveWebCallAccess(request({ origin: "https://www.lobbystack.test" }), { sdp: "v=0", widgetId: "lobbystack-landing", businessSlug: "demo", agentId });
+    expect(access).toMatchObject({ businessId: "biz_1" });
+    expect(access).not.toHaveProperty("agentId");
+  });
+});

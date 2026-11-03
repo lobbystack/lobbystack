@@ -183,6 +183,16 @@ export const SCHEMA_MIGRATIONS = [
   "0177_calendly_calendar_webhooks.sql",
   "0178_partner_key_number_claims.sql",
   "0179_partner_replacement_tier.sql",
+  "0180_first_real_conversations.sql",
+  "0181_onboarding_goal.sql",
+  "0182_check_in_answers.sql",
+  "0183_agents.sql",
+  "0184_agent_channel_links.sql",
+  "0185_calls_agent_link.sql",
+  "0186_conversations_agent_link.sql",
+  "0187_validate_agent_history_links.sql",
+  "0188_agent_archive_guard.sql",
+  "0189_onboarding_rebuild.sql",
 ] as const;
 
 const CONCURRENT_INDEX_DIRECTIVE = /^-- lobbystack:concurrent-index ([a-z][a-z0-9_]*)$/m;

@@ -3,7 +3,8 @@
     "signOut": "Déconnexion",
     "terms": "Conditions",
     "privacy": "Confidentialité",
-    "support": "Assistance"
+    "support": "Assistance",
+    "back": "Retour"
   },
   "errors": {
     "tooManyBusinesses": "Vous possédez déjà 10 espaces de travail, la limite pour un compte."
@@ -41,9 +42,8 @@
   },
   "businessName": {
     "title": "D'abord, quel est le nom de votre entreprise ?",
-    "description": "",
     "createTitle": "Créer un espace de travail",
-    "createDescription": "Ces informations constituent la base du contexte de votre réceptionniste.",
+    "createDescription": "Ces informations constituent la base du contexte de votre agent.",
     "existingTitle": "L'espace de travail existe déjà",
     "existingDescription": "Continuez la configuration avec l'espace de travail actif.",
     "configured": "Les détails de l'entreprise sont déjà configurés.",
@@ -71,7 +71,6 @@
   },
   "website": {
     "title": "Entraînons {{appName}} avec votre site web",
-    "description": "",
     "label": "Site web",
     "placeholder": "votreentreprise.com",
     "sourceName": "Nom de la source",
@@ -85,38 +84,46 @@
     "invalidUrl": "Entrez l'adresse de votre site web, par exemple votreentreprise.com.",
     "skipFailed": "Impossible d'ignorer cette étape maintenant. Réessayez."
   },
-  "knowledge": {
-    "title": "Ajouter des documents d'entraînement",
-    "description": "Aidez votre IA à comprendre votre entreprise.",
-    "tabs": {
-      "upload": "Téléverser des fichiers",
-      "paste": "Coller du texte"
-    },
-    "upload": {
-      "headline": "Glissez-déposez ou cliquez pour téléverser",
-      "formats": "PDF, DOCX, TXT, MD pris en charge",
-      "remove": "Retirer",
-      "tooLarge": "Les documents doivent faire 10 Mo ou moins.",
-      "unsupportedType": "Types pris en charge : PDF, DOCX, TXT, Markdown.",
-      "failed": "Impossible de téléverser ce document. Réessayez."
-    },
-    "paste": {
-      "placeholder": "Collez les infos de votre entreprise : services, FAQ, horaires, politiques...",
-      "hint": "Nous ajouterons ce contenu à la base de connaissances de votre IA immédiatement.",
-      "defaultTitle": "Notes d'intégration"
-    },
+  "language": {
+    "title": "Dans quelle langue votre agent doit-il parler ?",
+    "label": "Langue des appelants",
     "continue": "Continuer",
-    "continuing": "Enregistrement...",
-    "skip": "Ignorer pour l'instant",
-    "skipping": "Ignorer...",
-    "continueFailed": "Impossible de continuer maintenant. Réessayez.",
-    "skipFailed": "Impossible d'ignorer cette étape maintenant. Réessayez."
+    "saving": "Enregistrement...",
+    "submitFailed": "Impossible d'enregistrer pour le moment. Réessayez."
   },
-  "testCall": {
-    "title": "Écoutez votre réceptionniste",
-    "continue": "Continuer",
-    "skip": "Passer pour l'instant",
-    "continueFailed": "Impossible de continuer. Réessayez."
+  "reading": {
+    "title": "Lecture de votre site web",
+    "skip": "Ne pas attendre",
+    "previous": "Précédent",
+    "next": "Suivant",
+    "slides": {
+      "answers": "Répond à partir de vos contenus",
+      "booking": "Prend les rendez-vous",
+      "transfer": "Passe les appels à votre équipe",
+      "languages": "Change de langue pendant l'appel",
+      "summaries": "Résume chaque appel",
+      "widget": "Répond aussi sur votre site"
+    },
+    "scenes": {
+      "answers": {
+        "question": "Prenez-vous de nouveaux patients ?",
+        "answer": "Oui, et la première visite est offerte."
+      },
+      "booking": {
+        "service": "Détartrage"
+      },
+      "transfer": {
+        "agent": "Votre agent",
+        "role": "Accueil"
+      },
+      "summaries": {
+        "summary": "Nouvelle patiente. Détartrage réservé pour mardi."
+      },
+      "widget": {
+        "question": "Ouvert le samedi ?",
+        "answer": "Oui, jusqu'à 13 h."
+      }
+    }
   },
   "verifyPhone": {
     "title": "Vérifiez votre numéro de mobile",
@@ -149,7 +156,7 @@
     },
     "unavailable": {
       "title": "Nous n'offrons pas encore de numéros dans ce pays ({{country}}).",
-      "body": "Vous pouvez quand même utiliser votre réceptionniste dans le navigateur, et nous pouvons vous écrire quand les numéros y arriveront.",
+      "body": "Vous pouvez quand même utiliser votre agent dans le navigateur, et nous pouvons vous écrire quand les numéros y arriveront.",
       "notify": "M'écrire quand ils seront disponibles",
       "joined": "C'est noté. Nous vous écrirons.",
       "continue": "Continuer sans numéro",
@@ -157,27 +164,16 @@
       "partnerTitle": "Nous ne pouvons pas encore vérifier les téléphones dans ce pays ({{country}}).",
       "partnerBody": "Vous pouvez terminer la configuration sans téléphone vérifié.",
       "partnerContinue": "Continuer"
-    }
-  },
-  "greeting": {
-    "title": "Comment devons-nous accueillir vos appelants ?",
-    "description": "C'est la première phrase que dira votre IA. Modifiable à tout moment.",
-    "label": "Message d'accueil",
-    "language": "Langue des appelants",
-    "placeholder": "Merci d'appeler. Comment puis-je vous aider ?",
-    "continue": "Continuer",
-    "submitting": "Enregistrement...",
-    "submitFailed": "Impossible d'enregistrer ce message maintenant. Réessayez."
+    },
+    "continue": "Continuer"
   },
   "number": {
     "ready": {
       "label": "Votre numéro est prêt",
-      "body": "Appelez-le depuis votre téléphone et écoutez votre réceptionniste répondre.",
       "call": "Appeler le {{number}}"
     },
     "planRequired": "Pour obtenir un numéro, choisissez un forfait.",
     "title": "Choisissez le numéro de votre IA",
-    "description": "Choisissez un numéro local que vos appelants peuvent composer.",
     "countryLabel": "Pays",
     "kindLocal": "Local",
     "kindTollFree": "Sans frais",
@@ -201,8 +197,8 @@
     "searchFailed": "Impossible de rechercher maintenant.",
     "claimFailed": "Impossible de provisionner ce numéro. Réessayez.",
     "claimRateLimited": "Vous avez essayé plusieurs numéros. Attendez un peu avant de réessayer.",
-    "partnerTierRequired": "Le partenaire de cette entreprise doit payer un palier pour ajouter des numéros de téléphone.",
-    "partnerNumbersUnavailable": "Les numéros de téléphone ne sont pas encore disponibles pour cette entreprise.",
+    "partnerTierRequired": "Le partenaire de cet espace de travail doit payer un palier pour ajouter des numéros de téléphone.",
+    "partnerNumbersUnavailable": "Les numéros de téléphone ne sont pas encore disponibles pour cet espace de travail.",
     "offerExpired": "Cette offre a expiré. Relancez la recherche et choisissez un numéro.",
     "trialAccountPurchaseLimit": "Ce compte Twilio ne peut pas encore acheter ce numéro. Les comptes d'essai ne peuvent acheter que des numéros admissibles; libérez un numéro existant ou mettez le compte à niveau, puis réessayez.",
     "skipFailed": "Impossible d'ignorer cette étape maintenant. Réessayez.",
@@ -213,9 +209,21 @@
     "continue": "Continuer",
     "numbersUnavailable": "Les numéros de téléphone ne sont pas encore configurés sur ce tableau de bord. Demandez à la personne qui le gère de connecter un fournisseur de téléphonie."
   },
+  "goal": {
+    "title": "Que voulez-vous que votre agent fasse en premier ?",
+    "options": {
+      "answer_calls": "Répondre à mes appels",
+      "book_appointments": "Prendre des rendez-vous",
+      "answer_website_visitors": "Répondre aux visiteurs de mon site",
+      "answer_instagram_messages": "Répondre aux messages Instagram"
+    },
+    "continue": "Continuer",
+    "saving": "Enregistrement...",
+    "skip": "Ignorer",
+    "submitFailed": "Impossible d'enregistrer maintenant. Réessayez."
+  },
   "attribution": {
     "title": "Comment avez-vous connu {{appName}} ?",
-    "description": "Cela nous aide à savoir ce qui fonctionne.",
     "options": {
       "ai_assistant": "ChatGPT, Claude, etc.",
       "newsletter": "Newsletter ou blog",
@@ -241,10 +249,20 @@
     "social": "Réseaux sociaux",
     "event": "Événement ou communauté",
     "other": "Autre",
-    "finish": "Terminer",
-    "finishing": "Finalisation...",
     "failed": "Impossible de terminer la configuration.",
-    "submitFailed": "Impossible d'enregistrer maintenant. Réessayez."
+    "submitFailed": "Impossible d'enregistrer maintenant. Réessayez.",
+    "continue": "Continuer",
+    "saving": "Enregistrement..."
+  },
+  "meet": {
+    "title": "Rencontrez votre agent",
+    "name": "Nom de l'agent",
+    "greeting": "Message d'accueil",
+    "language": "Langue des appelants",
+    "finish": "Aller au tableau de bord",
+    "finishing": "Ouverture...",
+    "saveFailed": "Impossible d'enregistrer. Réessayez.",
+    "finishFailed": "Impossible de terminer la configuration. Réessayez."
   },
   "plan": {
     "title": "Choisissez votre forfait",
@@ -269,10 +287,10 @@
     "continueFailed": "Impossible de continuer maintenant. Réessayez."
   },
   "noBusinesses": {
-    "title": "Aucune entreprise ici pour l'instant",
-    "description": "{{appName}} n'a pas encore ajouté {{email}} à une entreprise. Demandez-lui de vous inviter, puis ouvrez le lien de son courriel.",
+    "title": "Aucun espace de travail ici pour l'instant",
+    "description": "{{appName}} n'a pas encore ajouté {{email}} à un espace de travail. Demandez-lui de vous inviter, puis ouvrez le lien de son courriel.",
     "switchAccount": "Se connecter avec un autre compte",
-    "released": "{{email}} n'a plus d'entreprise sur ce tableau de bord. Une entreprise qui vous appartient est passée à votre propre compte : ouvrez votre tableau de bord pour la gérer.",
+    "released": "{{email}} n'a plus d'espace de travail sur ce tableau de bord. Un espace de travail qui vous appartient est passé à votre propre compte : ouvrez votre tableau de bord pour le gérer.",
     "openDashboard": "Ouvrir votre tableau de bord"
   }
 }

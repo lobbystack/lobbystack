@@ -9,19 +9,17 @@
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 
-import { buildBrowserSessionConfig, buildPhoneSessionConfig, callerIsDone, callerIsLeaving, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, type CallControl, type LiveCallSummary } from "@lobbystack/agent-core";
+import { buildBrowserSessionConfig, buildPhoneSessionConfig, callerIsDone, callerIsLeaving, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, SILENCE_CHECK_IN_MS, SILENCE_TIMEOUT_MS, type CallControl, type LiveCallSummary } from "@lobbystack/agent-core";
 import { defaultGreeting, demoSnapshot, isRuntimeLocale, runtimeLocales, type BusinessContextSnapshot } from "@lobbystack/shared";
 import OpenAI from "openai";
 import type { SidebandWS } from "openai/resources/live/sideband/ws";
 import { LiveWS } from "openai/resources/live/ws";
 
-import { callerLine, findScenarios, OPENING } from "./scenarios";
+import { callerLine, END_SILENCE_MS, findScenarios, OPENING } from "./scenarios";
 
 const RATE = 24_000;
 const CHUNK_MS = 100;
 const CHUNK_BYTES = (RATE * 2 * CHUNK_MS) / 1000;
-// How long a run waits after the caller's last line for the receptionist to hang up.
-const END_WINDOW_MS = 15_000;
 // The receptionist has answered once it has been quiet this long after speaking.
 const REPLY_QUIET_MS = 1_500;
 // How long the caller waits for a greeting before speaking: long enough for the worker's fallback and both retries.
@@ -162,6 +160,10 @@ async function run(scenario: Scenario, audio: Map<string, Buffer>, agentModel: N
       client,
       sessionId: `eval_${scenario.name}`,
       phone: false,
+      // Production's silence timing, so a caller who goes quiet hears the check-ins.
+      silenceCheckInMs: SILENCE_CHECK_IN_MS,
+      silenceTimeoutMs: SILENCE_TIMEOUT_MS,
+      onTimeout: (reason) => void controller.wrapUp(reason),
       setup: { agent, greeting: snapshot.greeting, callerDone: async (conversation, abortSignal) => { const done = await callerIsDone(agentModel, conversation, abortSignal); checks.push(done); return done; }, callerLeaving: async (conversation, abortSignal) => { const left = await callerIsLeaving(agentModel, conversation, abortSignal); leaving.push(left); return left; } },
       connect: () => ws as unknown as SidebandWS,
       onDelegation: (timing) => { if (timing.offsetMs >= scenarioStartMs) handOvers.push(timing.tools.join("+") || "reply"); },
@@ -211,7 +213,7 @@ async function run(scenario: Scenario, audio: Map<string, Buffer>, agentModel: N
       await play(line.text);
     }
     const lastLineAt = sessionMs;
-    const ended = await Promise.race([closedAt.then((at) => at), sleep(END_WINDOW_MS).then(() => undefined)]);
+    const ended = await Promise.race([closedAt.then((at) => at), sleep(scenario.endSilenceMs ?? END_SILENCE_MS).then(() => undefined)]);
     flushReply();
     if (ended === undefined) {
       ws.send({ type: "session.close" });
@@ -220,8 +222,10 @@ async function run(scenario: Scenario, audio: Map<string, Buffer>, agentModel: N
     const goodbyes = replies.filter((line) => GOODBYE.test(line)).length;
     const endedAfterMs = ended === undefined ? undefined : Math.max(0, ended - lastLineAt);
     const forbidden = scenario.mustNotSay ? replies.find((line) => scenario.mustNotSay!.test(line)) : undefined;
-    const passed = (scenario.expect === "ends" ? ended !== undefined : ended === undefined) && forbidden === undefined;
-    return { scenario, passed, ...(greetedAfterMs !== undefined ? { greetedAfterMs } : {}), greetingCommands, ended: ended !== undefined, ...(endedAfterMs !== undefined ? { endedAfterMs } : {}), handOvers, checks, leaving, goodbyes, opened, replies, ...(forbidden ? { forbidden } : {}) };
+    // mustSay is English, so another language's run skips it.
+    const missing = scenario.mustSay && locale === "en" && !replies.some((line) => scenario.mustSay!.test(line));
+    const passed = (scenario.expect === "ends" ? ended !== undefined : ended === undefined) && forbidden === undefined && !missing;
+    return { scenario, passed, ...(missing ? { error: `never said ${scenario.mustSay}` } : {}),...(greetedAfterMs !== undefined ? { greetedAfterMs } : {}), greetingCommands, ended: ended !== undefined, ...(endedAfterMs !== undefined ? { endedAfterMs } : {}), handOvers, checks, leaving, goodbyes, opened, replies, ...(forbidden ? { forbidden } : {}) };
   } catch (error) {
     return { scenario, passed: false, ...(greetedAfterMs !== undefined ? { greetedAfterMs } : {}), greetingCommands, ended: false, handOvers, checks, leaving, goodbyes: 0, opened, replies, error: error instanceof Error ? error.message : String(error) };
   } finally {

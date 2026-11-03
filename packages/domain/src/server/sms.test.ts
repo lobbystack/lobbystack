@@ -41,8 +41,8 @@ afterEach(() => { vi.useRealTimers(); vi.unstubAllEnvs(); vi.clearAllMocks(); })
 
 describe("new text alerts", () => {
   const receive = async (body: string, contact: { smsConsentStatus?: string | null; operatorBlockedAt?: Date | null } = {}) => {
-    // The contact, then the open conversation and its session.
-    selects = [[{ id: "contact-1", smsConsentStatus: null, operatorBlockedAt: null, ...contact }], [{ id: "conversation-1", automationState: "ai_active" }], [{ id: "session-1" }]];
+    // The contact, the number's agent, then the open conversation and its session.
+    selects = [[{ id: "contact-1", smsConsentStatus: null, operatorBlockedAt: null, ...contact }], [{ agentId: "agent-1" }], [{ id: "conversation-1", automationState: "ai_active" }], [{ id: "session-1" }]];
     await receiveInboundSms(context, { businessId, providerMessageId: `SM${Math.random()}`, from: "+14165550123", to: "+14165550100", body, payload: {} });
   };
 
@@ -75,8 +75,8 @@ describe("new text alerts", () => {
 
 describe("HELP and START replies", () => {
   const reply = async (body: string, branding: unknown[]) => {
-    // The contact, the open conversation and its session, the business, then the saved branding.
-    selects = [[{ id: "contact-1", smsConsentStatus: "subscribed", operatorBlockedAt: null }], [{ id: "conversation-1", automationState: "ai_active" }], [{ id: "session-1" }], [{ name: "Axum Barbershop" }], branding];
+    // The contact, the number's agent, the open conversation and its session, the business, then the saved branding.
+    selects = [[{ id: "contact-1", smsConsentStatus: "subscribed", operatorBlockedAt: null }], [{ agentId: "agent-1" }], [{ id: "conversation-1", automationState: "ai_active" }], [{ id: "session-1" }], [{ name: "Axum Barbershop" }], branding];
     await receiveInboundSms(context, { businessId, providerMessageId: `SM${Math.random()}`, from: "+14165550123", to: "+14165550100", body, payload: {} });
     return inserts.find((row) => row.providerStatus === "compliance_reply")?.body;
   };

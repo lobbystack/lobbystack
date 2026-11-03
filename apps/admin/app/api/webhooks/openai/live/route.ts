@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { buildPhoneSessionConfig } from "@lobbystack/agent-core/live/session";
-import { finishLiveCall, getCachedBusinessSnapshot, isNumberTrialEnded, markNumberTrialMinutesExhausted, startLivePhoneCall } from "@lobbystack/domain";
+import { finishLiveCall, getBusinessSnapshotForAgent, getCachedBusinessSnapshot, isNumberTrialEnded, markNumberTrialMinutesExhausted, startLivePhoneCall } from "@lobbystack/domain";
 import { getAppDatabase } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
 import { attachWorkerToLiveSession, getLiveClient } from "@/lib/live-prototype";
@@ -130,6 +130,8 @@ type LiveClient = ReturnType<typeof getLiveClient>;
 // Reserves minutes and records the call before accepting it, the same way the
 // Twilio media path does, so billing and limits behave identically. The
 // snapshot loads at the same time, since the caller is still hearing it ring.
+// The call record names the dialled number's agent, so the snapshot projects
+// for it once both finish.
 async function answerCall(client: LiveClient, input: { sessionId: string; businessId: string; from: string | undefined; to: string; timing: Timing }) {
   const domain = createWorkerDomainContext();
   // An ended trial's number goes unanswered, as if it were gone. The worker
@@ -168,7 +170,8 @@ async function answerCall(client: LiveClient, input: { sessionId: string; busine
     await finishLiveCall(domain, { businessId: input.businessId, callId: call.callId, seconds: 0, end: "blocked_contact" });
     return new NextResponse(null, { status: 200 });
   }
-  const snapshot = loaded.status === "fulfilled" ? loaded.value : null;
+  const stored = loaded.status === "fulfilled" ? loaded.value : null;
+  const snapshot = stored ? await getBusinessSnapshotForAgent(domain, { businessId: input.businessId, agentId: call.agentId, loaded: stored }) : null;
   if (!snapshot) {
     if (loaded.status === "rejected") console.error("[live] couldn't load the snapshot for an incoming call", loaded.reason instanceof Error ? loaded.reason.message : loaded.reason);
     else console.warn("[live] no published snapshot for incoming call", JSON.stringify({ sessionId: input.sessionId, businessId: input.businessId }));
@@ -182,7 +185,7 @@ async function answerCall(client: LiveClient, input: { sessionId: string; busine
   // A retried delivery's limit is read back from the call's reservation, which
   // top-ups may have grown. Its call may be under way, so it attaches as a resume:
   // the worker numbers turns after the saved ones and skips the greeting.
-  const attach = (resume = false) => attachWorkerToLiveSession({ sessionId: input.sessionId, businessId: input.businessId, callId: call.callId, conversationId: call.conversationId, channel: "voice", ...(input.from ? { callerPhone: input.from } : {}), ...(call.maxDurationMs !== undefined ? { maxDurationMs: call.maxDurationMs } : {}), ...(resume ? { resume } : {}) });
+  const attach = (resume = false) => attachWorkerToLiveSession({ sessionId: input.sessionId, businessId: input.businessId, callId: call.callId, conversationId: call.conversationId, channel: "voice", ...(call.agentId ? { agentId: call.agentId } : {}), ...(input.from ? { callerPhone: input.from } : {}), ...(call.maxDurationMs !== undefined ? { maxDurationMs: call.maxDurationMs } : {}), ...(resume ? { resume } : {}) });
   // A retried delivery. The first one may have died before accepting or before
   // the worker attached, so finish the job without touching the call record:
   // accepting an accepted session just fails, and attaching is idempotent.

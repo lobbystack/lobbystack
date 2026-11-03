@@ -1,9 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
+import { CHECK_IN_ANSWERS, checkInTokenVariable } from "@lobbystack/shared";
 import { afterAll, describe, expect, it } from "vitest";
-import { businesses, calls, createDatabaseClient, outboxMessages, sessions, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { businesses, calls, createDatabaseClient, firstRealConversations, outboxMessages, sessions, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { readCheckInToken } from "./checkIn";
 import { createBusiness } from "./tenancy";
-import { ONBOARDING_FOLLOWUP_DELAY_MS, queueOnboardingFollowupEmail, submitOnboardingAttribution } from "./onboarding";
+import { advanceOnboardingStage, ONBOARDING_FOLLOWUP_DELAY_MS, queueOnboardingFollowupEmail } from "./onboarding";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -41,9 +43,9 @@ async function completedWorkspace(tx: DatabaseTransaction, email = `${randomUUID
 }
 
 // The resolver trusts only the worker's login identity, so switch session_user rather than the current role.
-async function queueAsWorker(tx: DatabaseTransaction, businessId: string, completedAt: Date, from = sender) {
+async function queueAsWorker(tx: DatabaseTransaction, businessId: string, from = sender) {
   await tx.execute(sql`set local session authorization lobbystack_worker`);
-  const queued = await queueOnboardingFollowupEmail({ db: tx as unknown as Database }, { businessId, completedAt, sender: from });
+  const queued = await queueOnboardingFollowupEmail({ db: tx as unknown as Database }, { businessId, sender: from });
   await tx.execute(sql`reset session authorization`);
   return queued;
 }
@@ -56,59 +58,55 @@ describe.skipIf(!testUrl)("onboarding follow-up email against dedicated PostgreS
   it("schedules the follow-up a day after onboarding completes, once", async () => {
     await rollbackTest(async tx => {
       const { userId, businessId } = await completedWorkspace(tx);
-      await tx.update(businesses).set({ onboardingStage: "attribution" }).where(eq(businesses.id, businessId));
+      await tx.update(businesses).set({ onboardingStage: "meet" }).where(eq(businesses.id, businessId));
       await tx.execute(sql`set local role lobbystack_app`);
       const before = Date.now();
-      await submitOnboardingAttribution({ db: tx as unknown as Database }, { userId, businessId, source: "google" });
-      await submitOnboardingAttribution({ db: tx as unknown as Database }, { userId, businessId, source: "google" });
+      await advanceOnboardingStage({ db: tx as unknown as Database }, { userId, businessId, to: "complete" });
+      await advanceOnboardingStage({ db: tx as unknown as Database }, { userId, businessId, to: "complete" });
       await tx.execute(sql`reset role`);
       const scheduled = await tx.select().from(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), eq(outboxMessages.topic, "onboarding.sendFollowup")));
       expect(scheduled).toHaveLength(1);
       expect(scheduled[0]!.availableAt.getTime()).toBeGreaterThanOrEqual(before + ONBOARDING_FOLLOWUP_DELAY_MS - 1_000);
-      expect(Date.parse(String(scheduled[0]!.payload.completedAt))).toBeGreaterThanOrEqual(before - 1_000);
     });
   });
 
-  it("queues one email to an owner who has not come back", async () => {
+  it("queues one email, with a signed link per answer, to an owner with no real conversation", async () => {
     await rollbackTest(async tx => {
-      const { userId, businessId, email } = await completedWorkspace(tx);
-      const completedAt = new Date(Date.now() - ONBOARDING_FOLLOWUP_DELAY_MS);
-      // Activity inside the first hour trails the final onboarding step and does not count as a return.
-      await tx.insert(sessions).values({ token: randomUUID(), userId, expiresAt: new Date(Date.now() + 86_400_000), createdAt: new Date(completedAt.getTime() + 30 * 60_000), updatedAt: new Date(completedAt.getTime() + 30 * 60_000) });
-      await tx.insert(calls).values({ businessId, providerCallId: randomUUID(), transport: "web_voice", startedAt: new Date(completedAt.getTime() + 30 * 60_000) });
-      expect(await queueAsWorker(tx, businessId, completedAt)).toBe(true);
-      expect(await queueAsWorker(tx, businessId, completedAt)).toBe(true);
+      const { businessId, email } = await completedWorkspace(tx);
+      expect(await queueAsWorker(tx, businessId)).toBe(true);
+      expect(await queueAsWorker(tx, businessId)).toBe(true);
       const emails = await followupEmails(tx, businessId);
       expect(emails).toHaveLength(1);
       expect(emails[0]!.payload).toMatchObject({
         template: "onboarding_followup",
         to: email,
         from: sender.from,
-        subject: "Qu'avez-vous pensé de LobbyStack ?",
+        subject: expect.stringContaining("n'a pas encore eu de vraie conversation"),
         variables: { locale: "fr", firstName: "Sam", senderName: "Raphael" },
         // The host's own email. It has the founder's sender, so replies reach the founder.
         brand: { kind: "host" },
         replyTo: null,
       });
+      const variables = emails[0]!.payload.variables as Record<string, string>;
+      for (const answer of CHECK_IN_ANSWERS) expect(readCheckInToken(variables[checkInTokenVariable(answer)]!)).toEqual({ businessId, answer });
     });
   });
 
-  it("skips an owner who signed in again after onboarding", async () => {
+  it("still emails an owner who signed in again and made a test call", async () => {
     await rollbackTest(async tx => {
       const { userId, businessId } = await completedWorkspace(tx);
-      const completedAt = new Date(Date.now() - ONBOARDING_FOLLOWUP_DELAY_MS);
-      await tx.insert(sessions).values({ token: randomUUID(), userId, expiresAt: new Date(Date.now() + 86_400_000), createdAt: new Date(completedAt.getTime() + 3 * 60 * 60_000) });
-      expect(await queueAsWorker(tx, businessId, completedAt)).toBe(false);
-      expect(await followupEmails(tx, businessId)).toHaveLength(0);
+      const later = new Date(Date.now() - 60 * 60_000);
+      await tx.insert(sessions).values({ token: randomUUID(), userId, expiresAt: new Date(Date.now() + 86_400_000), createdAt: later });
+      await tx.insert(calls).values({ businessId, providerCallId: randomUUID(), transport: "web_voice", startedAt: later });
+      expect(await queueAsWorker(tx, businessId)).toBe(true);
     });
   });
 
-  it("skips a business that took a call after onboarding", async () => {
+  it("skips a business that had a real conversation", async () => {
     await rollbackTest(async tx => {
       const { businessId } = await completedWorkspace(tx);
-      const completedAt = new Date(Date.now() - ONBOARDING_FOLLOWUP_DELAY_MS);
-      await tx.insert(calls).values({ businessId, providerCallId: randomUUID(), transport: "voice", startedAt: new Date(completedAt.getTime() + 5 * 60 * 60_000) });
-      expect(await queueAsWorker(tx, businessId, completedAt)).toBe(false);
+      await tx.insert(firstRealConversations).values({ businessId, channel: "voice" });
+      expect(await queueAsWorker(tx, businessId)).toBe(false);
       expect(await followupEmails(tx, businessId)).toHaveLength(0);
     });
   });
@@ -117,8 +115,7 @@ describe.skipIf(!testUrl)("onboarding follow-up email against dedicated PostgreS
     await rollbackTest(async tx => {
       const { businessId } = await completedWorkspace(tx);
       const other = await completedWorkspace(tx);
-      const completedAt = new Date(Date.now() - ONBOARDING_FOLLOWUP_DELAY_MS).toISOString();
-      const resolve = async () => (await tx.execute(sql`select email from app.resolve_onboarding_followup_recipient(${businessId}::uuid, ${completedAt}::timestamptz)`)).rows;
+      const resolve = async () => (await tx.execute(sql`select email from app.resolve_onboarding_followup_recipient(${businessId}::uuid)`)).rows;
       await tx.execute(sql`set local session authorization lobbystack_worker`);
       expect(await resolve()).toHaveLength(0);
       await tx.execute(sql`select set_config('app.actor_type', 'worker', true), set_config('app.business_id', ${other.businessId}, true)`);
@@ -130,10 +127,26 @@ describe.skipIf(!testUrl)("onboarding follow-up email against dedicated PostgreS
     });
   });
 
+  it("answers the previous release's call with the onboarding date as the current one", async () => {
+    await rollbackTest(async tx => {
+      const { businessId, email } = await completedWorkspace(tx);
+      const resolve = async () => (await tx.execute<{ email: string }>(sql`select user_id, email, name, preferred_locale, business_name from app.resolve_onboarding_followup_recipient(${businessId}::uuid, ${new Date().toISOString()}::timestamptz)`)).rows;
+      expect(await resolve()).toHaveLength(0);
+      await tx.execute(sql`set local session authorization lobbystack_worker`);
+      await tx.execute(sql`select set_config('app.actor_type', 'worker', true), set_config('app.business_id', ${businessId}, true)`);
+      expect(await resolve()).toEqual([expect.objectContaining({ email })]);
+      await tx.execute(sql`reset session authorization`);
+      await tx.insert(firstRealConversations).values({ businessId, channel: "voice" });
+      await tx.execute(sql`set local session authorization lobbystack_worker`);
+      expect(await resolve()).toHaveLength(0);
+      await tx.execute(sql`reset session authorization`);
+    });
+  });
+
   it("skips owners on the sender's own email domain", async () => {
     await rollbackTest(async tx => {
       const { businessId } = await completedWorkspace(tx, `${randomUUID()}@LobbyStack.test`);
-      expect(await queueAsWorker(tx, businessId, new Date(Date.now() - ONBOARDING_FOLLOWUP_DELAY_MS))).toBe(false);
+      expect(await queueAsWorker(tx, businessId)).toBe(false);
       expect(await followupEmails(tx, businessId)).toHaveLength(0);
     });
   });

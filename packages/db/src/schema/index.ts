@@ -1,5 +1,5 @@
 import { customType } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
+import { sql, type AnyColumn, type SQL } from "drizzle-orm";
 import {
   bigint,
   boolean,
@@ -190,6 +190,13 @@ export const businesses = pgTable(
     websiteUrl: text("website_url"),
     onboardingStage: varchar("onboarding_stage", { length: 64 }).default("create_business").notNull(),
     onboardingAttribution: varchar("onboarding_attribution", { length: 120 }),
+    onboardingGoal: varchar("onboarding_goal", { length: 32 }),
+    // False while the business's language is a guess from the browser, so reading its website may replace it.
+    defaultLocaleChosen: boolean("default_locale_chosen").default(true).notNull(),
+    // The last reply a test chat got, the only record a test chat leaves.
+    lastTestChatAt: timestamp("last_test_chat_at", { withTimezone: true }),
+    // When the plans last opened by themselves after a test.
+    planOfferShownAt: timestamp("plan_offer_shown_at", { withTimezone: true }),
     setupGuideSkippedSteps: jsonb("setup_guide_skipped_steps").$type<string[]>().default([]).notNull(),
     phoneNumberReplacementReservedAt: timestamp("phone_number_replacement_reserved_at", { withTimezone: true }),
     phoneNumberReplacementUsedAt: timestamp("phone_number_replacement_used_at", { withTimezone: true }),
@@ -645,10 +652,13 @@ export const phoneNumbers = pgTable(
     refusedCallsForwardTo: varchar("refused_calls_forward_to", { length: 32 }),
     // The carrier connection that only this number uses, for carriers that route calls by it (migration 0172).
     carrierConnectionId: varchar("carrier_connection_id", { length: 64 }),
+    // The agent that answers this number. Migration 0184's trigger fills it with the default agent.
+    agentId: uuid("agent_id"),
     ...legacyId,
     ...timestamps,
   },
   (table) => [
+    foreignKey({ name: "phone_numbers_agent_fk", columns: [table.businessId, table.agentId], foreignColumns: [agents.businessId, agents.id] }),
     uniqueIndex("phone_numbers_e164_unreclaimed_unique").on(table.e164).where(sql`${table.status} <> 'reclaimed'`),
     uniqueIndex("phone_numbers_provider_id_unique").on(table.providerPhoneId),
     uniqueIndex("phone_numbers_carrier_connection_unique").on(table.carrier, table.carrierConnectionId).where(sql`${table.carrierConnectionId} is not null and ${table.status} <> 'reclaimed'`),
@@ -703,11 +713,18 @@ export const numberWaitlist = pgTable("number_waitlist", {
   ...timestamps,
 }, (table) => [uniqueIndex("number_waitlist_business_country_unique").on(table.businessId, table.countryCode)]);
 
-export const receptionistProfiles = pgTable(
-  "receptionist_profiles",
+export const agents = pgTable(
+  "agents",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    // Operators see this. Callers never hear it. Pass defaultAgentName(locale)
+    // for a business's first agent; the default covers code that can't.
+    name: text("name").default("Agent").notNull(),
+    // One per business. Until slice 5 the unique index below allows no other
+    // agent, so every row is its business's default.
+    isDefault: boolean("is_default").default(true).notNull(),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
     greeting: text("greeting").notNull(),
     tone: text("tone").notNull(),
     summary: text("summary").notNull(),
@@ -738,8 +755,41 @@ export const receptionistProfiles = pgTable(
     staffFirstHandoverMessage: text("staff_first_handover_message"),
     ...timestamps,
   },
-  (table) => [uniqueIndex("receptionist_profiles_business_unique").on(table.businessId)],
+  (table) => [
+    uniqueIndex("agents_business_unique").on(table.businessId),
+    // What the composite foreign keys on channels and history point at, so a
+    // row can't name another business's agent. Those keys are deferred in the
+    // database, which Drizzle can't express, so a failure comes at commit.
+    uniqueIndex("agents_business_id_id_unique").on(table.businessId, table.id),
+  ],
 );
+
+/** Matches a business's default agent. Pass the business id, or a column to join on. */
+export function defaultAgentOf(businessId: string | AnyColumn): SQL {
+  return sql`(${agents.businessId} = ${businessId} and ${agents.isDefault})`;
+}
+
+/** The id of a business's default agent, as a subquery for a value in a write. */
+export function defaultAgentIdOf(businessId: string): SQL<string | null> {
+  return sql<string | null>`(select ${agents.id} from ${agents} where ${agents.businessId} = ${businessId}::uuid and ${agents.isDefault} limit 1)`;
+}
+
+/**
+ * Matches the agent a channel or history row names, or the default agent for a
+ * row with no agent yet. Pass the row's columns to join on.
+ */
+export function agentOfRow(businessId: AnyColumn, agentId: AnyColumn): SQL {
+  return sql`(${agents.businessId} = ${businessId} and (${agents.id} = ${agentId} or (${agentId} is null and ${agents.isDefault})))`;
+}
+
+/**
+ * Matches one named agent and the default agent, or only the default agent with
+ * no id. Order by isDefault ascending and take the first row: the named agent
+ * wins, and an id the business doesn't have leaves the default.
+ */
+export function agentOrDefaultOf(businessId: string, agentId: string | null | undefined): SQL {
+  return agentId ? sql`(${agents.businessId} = ${businessId} and (${agents.id} = ${agentId} or ${agents.isDefault}))` : defaultAgentOf(businessId);
+}
 
 export const contacts = pgTable(
   "contacts",
@@ -796,9 +846,12 @@ export const widgetKeys = pgTable(
     allowedOrigins: jsonb("allowed_origins").$type<string[]>().notNull().default([]),
     config: jsonb("config").$type<Record<string, unknown>>().notNull().default({}),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    // The agent that answers this widget. Migration 0184's trigger fills it with the default agent.
+    agentId: uuid("agent_id"),
     ...timestamps,
   },
   (table) => [
+    foreignKey({ name: "widget_keys_agent_fk", columns: [table.businessId, table.agentId], foreignColumns: [agents.businessId, agents.id] }),
     uniqueIndex("widget_keys_key_hash_unique").on(table.keyHash),
     index("widget_keys_business_created_idx").on(table.businessId, table.createdAt),
   ],
@@ -863,10 +916,13 @@ export const conversations = pgTable(
     currentIntent: text("current_intent"),
     locale: varchar("locale", { length: 8 }),
     revision: integer("revision").default(0).notNull(),
+    // The agent that holds this conversation. Migration 0186's trigger fills it
+    // with the default agent, and the backfill in `migrate` fills older rows.
+    agentId: uuid("agent_id"),
     ...legacyId,
     ...timestamps,
   },
-  (table) => [index("conversations_business_status_idx").on(table.businessId, table.status), index("conversations_contact_idx").on(table.businessId, table.contactId), index("conversations_business_widget_visitor_idx").on(table.businessId, table.widgetVisitorId)],
+  (table) => [foreignKey({ name: "conversations_agent_fk", columns: [table.businessId, table.agentId], foreignColumns: [agents.businessId, agents.id] }), index("conversations_business_status_idx").on(table.businessId, table.status), index("conversations_contact_idx").on(table.businessId, table.contactId), index("conversations_business_widget_visitor_idx").on(table.businessId, table.widgetVisitorId)],
 );
 
 export const conversationSessions = pgTable(
@@ -962,10 +1018,14 @@ export const calls = pgTable(
     providerCostUsd: doublePrecision("provider_cost_usd"),
     recordingObjectId: uuid("recording_object_id"),
     revision: integer("revision").default(0).notNull(),
+    // The agent that answered. Migration 0185's trigger fills it with the
+    // default agent, and the backfill in `migrate` fills older rows.
+    agentId: uuid("agent_id"),
     ...legacyId,
     ...timestamps,
   },
   (table) => [
+    foreignKey({ name: "calls_agent_fk", columns: [table.businessId, table.agentId], foreignColumns: [agents.businessId, agents.id] }),
     uniqueIndex("calls_provider_call_unique").on(table.provider, table.providerCallId),
     uniqueIndex("calls_gateway_session_unique").on(table.gatewaySessionId),
     index("calls_business_started_idx").on(table.businessId, table.startedAt),
@@ -1124,6 +1184,23 @@ export const knowledgeSnippets = pgTable(
   (table) => [index("knowledge_snippets_business_active_idx").on(table.businessId, table.active)],
 );
 
+// The first real conversation of each business. One row per business makes its
+// event fire once, and it outlives the calls and messages content retention deletes.
+export const firstRealConversations = pgTable("first_real_conversations", {
+  businessId: uuid("business_id").primaryKey().references(() => businesses.id, { onDelete: "cascade" }),
+  channel: varchar("channel", { length: 32 }).notNull(),
+  conversationId: uuid("conversation_id").references(() => conversations.id, { onDelete: "set null" }),
+  occurredAt: timestamp("occurred_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// What owners answered to the founder's check-in email (migration 0182), one row
+// per answer, so a second click changes nothing.
+export const checkInAnswers = pgTable("check_in_answers", {
+  businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+  answer: varchar("answer", { length: 32 }).notNull(),
+  answeredAt: timestamp("answered_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [primaryKey({ columns: [table.businessId, table.answer] })]);
+
 // Questions the receptionist found no knowledge for (migration 0168). The same
 // normalized question counts again on its open or dismissed row.
 export const unansweredQuestions = pgTable(
@@ -1163,10 +1240,12 @@ export const agentRules = pgTable(
     content: text("content").notNull(),
     active: boolean("active").default(true).notNull(),
     sortOrder: integer("sort_order").default(0).notNull(),
+    // The agent this rule shapes. Migration 0184's trigger fills it with the default agent.
+    agentId: uuid("agent_id"),
     ...legacyId,
     ...timestamps,
   },
-  (table) => [index("agent_rules_business_order_idx").on(table.businessId, table.sortOrder)],
+  (table) => [foreignKey({ name: "agent_rules_agent_fk", columns: [table.businessId, table.agentId], foreignColumns: [agents.businessId, agents.id] }), index("agent_rules_business_order_idx").on(table.businessId, table.sortOrder)],
 );
 
 export const websiteIngestionJobs = pgTable(
@@ -1269,9 +1348,11 @@ export const instagramAccounts = pgTable(
     tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }).notNull(),
     status: varchar("status", { length: 32 }).default("connected").notNull(),
     lastError: text("last_error"),
+    // The agent that answers this account. Migration 0184's trigger fills it with the default agent.
+    agentId: uuid("agent_id"),
     ...timestamps,
   },
-  (table) => [uniqueIndex("instagram_accounts_instagram_user_unique").on(table.instagramUserId), uniqueIndex("instagram_accounts_business_unique").on(table.businessId)],
+  (table) => [foreignKey({ name: "instagram_accounts_agent_fk", columns: [table.businessId, table.agentId], foreignColumns: [agents.businessId, agents.id] }), uniqueIndex("instagram_accounts_instagram_user_unique").on(table.instagramUserId), uniqueIndex("instagram_accounts_business_unique").on(table.businessId)],
 );
 
 export const calendarBusyBlocks = pgTable(
@@ -2302,7 +2383,7 @@ export const allTenantTables = [
   phoneNumbers,
   onboardingPhoneVerifications,
   onboardingNumberClaimEvents,
-  receptionistProfiles,
+  agents,
   contacts,
   widgetKeys,
   widgetVisitors,
@@ -2381,7 +2462,7 @@ export const schema = {
   phoneNumbers,
   onboardingPhoneVerifications,
   onboardingNumberClaimEvents,
-  receptionistProfiles,
+  agents,
   contacts,
   widgetKeys,
   widgetVisitors,

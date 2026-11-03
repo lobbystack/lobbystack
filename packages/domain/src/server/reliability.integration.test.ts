@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
-import { businessHours, calls, conversations, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, messages, receptionistProfiles, storageObjects, transcripts, websiteIngestionJobs } from "@lobbystack/db";
+import { agents, businessHours, calls, conversations, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, messages, storageObjects, transcripts, websiteIngestionJobs } from "@lobbystack/db";
 import { affiliateCommissions, affiliatePayoutItems, affiliateProfiles, billingAccounts, billingTransactions, billingUsageEvents, billingUsageMonths, appointments, auditLogs, businessMemberships, contacts, productEvents, providerEvents, services, staff, users, businesses, notifications, outboxMessages, withBusinessTransaction, claimOutboxBatch, createDatabaseClient, enqueueOutbox, markOutboxFailed, listReembedBusinesses, listSchedulerBusinesses, listSummaryBackfillBusinesses, markOutboxPublished, prunePublishedOutbox, sessions, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { generateAffiliatePayoutRun } from "./affiliates";
 import { getBillingUsageStatus, getWebVoiceBillingAllowance, getWidgetChatAllowance, reconcileBillingProviderEvent } from "./billing";
@@ -289,7 +289,7 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
     await rollbackTest(async (tx) => {
       const businessId = randomUUID();
       await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Maple Family Clinic", timezone: "UTC", businessType: "test", deploymentMode: "cloud" });
-      await tx.insert(receptionistProfiles).values({ businessId, greeting: "Hi", tone: "warm", summary: "Maple Family Clinic uses LobbyStack to answer calls.", bookingPolicy: "Confirm first.", transferMode: "never" });
+      await tx.insert(agents).values({ businessId, greeting: "Hi", tone: "warm", summary: "Maple Family Clinic uses LobbyStack to answer calls.", bookingPolicy: "Confirm first.", transferMode: "never" });
       const [indexed, pending] = [randomUUID(), randomUUID()];
       await tx.insert(knowledgeDocuments).values([
         { id: indexed, businessId, sourceType: "website", title: "Home", status: "indexed" },
@@ -313,11 +313,11 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
       expect(reloaded).toMatchObject({ summarySource: "generated", currentFingerprint: input!.fingerprint });
 
       await withBusinessTransaction(db, { businessId, actorType: "worker" }, async (workerTx) => {
-        await workerTx.update(receptionistProfiles).set({ summary: "Written by the owner.", summarySource: "operator" }).where(eq(receptionistProfiles.businessId, businessId));
+        await workerTx.update(agents).set({ summary: "Written by the owner.", summarySource: "operator" }).where(eq(agents.businessId, businessId));
       });
       expect(await saveGeneratedBusinessSummary({ db }, { businessId, summary: "An AI rewrite.", fingerprint: "other" })).toBe(false);
       await withBusinessTransaction(db, { businessId, actorType: "worker" }, async (workerTx) => {
-        const [profile] = await workerTx.select({ summary: receptionistProfiles.summary }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, businessId));
+        const [profile] = await workerTx.select({ summary: agents.summary }).from(agents).where(eq(agents.businessId, businessId));
         expect(profile?.summary).toBe("Written by the owner.");
       });
     });
@@ -572,7 +572,7 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
       const business = async (summarySource: "placeholder" | "generated" | "operator", knowledge: { snippet?: boolean; document?: "indexed" | "processing"; chunk?: { embeddingFingerprint: string | null; embeddingStatus: string; embedded: boolean } }) => {
         const businessId = randomUUID();
         await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Backfill listing", timezone: "UTC", businessType: "test" });
-        await tx.insert(receptionistProfiles).values({ businessId, greeting: "Hi", tone: "warm", summary: "Placeholder.", summarySource, bookingPolicy: "Confirm first.", transferMode: "never" });
+        await tx.insert(agents).values({ businessId, greeting: "Hi", tone: "warm", summary: "Placeholder.", summarySource, bookingPolicy: "Confirm first.", transferMode: "never" });
         if (knowledge.snippet) await tx.insert(knowledgeSnippets).values({ businessId, title: "Services", content: "Checkups." });
         if (knowledge.document) {
           const documentId = randomUUID();

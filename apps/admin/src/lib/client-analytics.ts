@@ -26,6 +26,13 @@ export function initializeClientAnalytics(): void {
       ui_host: "https://us.posthog.com",
       defaults: "2026-05-30",
       autocapture: false,
+      // ProductAnalytics turns this on with consent, once the bundled code has
+      // loaded. Its events carry the clicked element, whose text can be a
+      // customer's, so that text and those attributes stay out of them. Neither
+      // setting touches replays, which `session_recording` masks.
+      capture_dead_clicks: false,
+      mask_all_text: true,
+      mask_all_element_attributes: true,
       capture_exceptions: false,
       // Session recording is masked in the DOM before it leaves the browser, and
       // sensitive routes stop the recorder outright.

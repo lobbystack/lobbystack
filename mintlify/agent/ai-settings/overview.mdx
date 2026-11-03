@@ -1,23 +1,23 @@
 ---
 title: "Configure voice and behavior"
-description: "Configure the opening line, default customer language, voice, opening hours, currency, appointment changes, and default transfer number for your AI receptionist."
+description: "Configure the opening line, default customer language, voice, opening hours, currency, appointment changes, and default transfer number for your AI agent."
 sidebarTitle: "AI settings"
 contentType: "How-to"
 ---
 
-Open **Agent** > **AI settings** to edit the basic behavior used by the receptionist.
+Open **Agent** > **AI settings** to edit the basic behavior used by the agent.
 
 ## Greeting
 
-The greeting is the opening line your receptionist uses when answering a call or starting a conversation. Keep it short and specific.
+The greeting is the opening line your agent uses when answering a call or starting a conversation. Keep it short and specific.
 
-Good greetings usually include the business name, a brief disclosure that the caller is speaking with the AI receptionist, and a clear offer to help.
+Good greetings usually include the business name, a brief disclosure that the caller is speaking with the AI agent, and a clear offer to help.
 
 | Business type | Example greeting |
 | --- | --- |
-| Dental clinic | Thanks for calling Bright Smile Dental. I'm the AI receptionist. How can I help? |
+| Dental clinic | Thanks for calling Bright Smile Dental. I'm the AI agent. How can I help? |
 | Salon | Thanks for calling North Loop Salon. I can help with services, availability, and messages for the team. |
-| Home services | Thanks for calling Peak HVAC. I'm the AI receptionist. Are you calling about service, scheduling, or an urgent issue? |
+| Home services | Thanks for calling Peak HVAC. I'm the AI agent. Are you calling about service, scheduling, or an urgent issue? |
 | Restaurant | Thanks for calling Maple Table. I can help with hours, reservations, and messages for the staff. |
 
 <Steps>
@@ -34,7 +34,7 @@ Good greetings usually include the business name, a brief disclosure that the ca
 
 ## Business summary
 
-The business summary is what your receptionist tells callers when they ask what the business does or offers. It reads the summary before every call.
+The business summary is what your agent tells callers when they ask what the business does or offers. It reads the summary before every call.
 
 You don't have to write it. When you add your website or documents in **Knowledge**, AI writes a summary of two to four sentences from them, in your default customer language. It rewrites the summary a few minutes after your knowledge changes, and only when the content changed.
 
@@ -44,17 +44,17 @@ To go back to an AI summary, click **Edit**, then **Rewrite with AI**. AI rewrit
 
 ## Opening hours
 
-Your receptionist books appointments only inside your opening hours. With instant booking on and no hours set, it can't offer a time. It takes the caller's request as a message for your team instead, and the booking settings show a warning until you add hours.
+Your agent books appointments only inside your opening hours. With instant booking on and no hours set, it can't offer a time. It takes the caller's request as a message for your team instead, and the booking settings show a warning until you add hours.
 
 You don't have to type them in. When your website or documents state your hours, AI fills in **Opening hours** a few minutes after your knowledge changes. It reads hours in any language and saves a lunch break as two windows on the same day. It only uses hours your sources state, and a note above the hours tells you to check them.
 
 To set the hours yourself, turn each day on or off and enter its times. Click **Add hours** for a second window around a break, then click **Save hours**. AI never changes hours you saved here or through the API.
 
-For holidays and other times you're closed, click **Add closure** and enter when you close and reopen. Use your business timezone, then click **Save hours**. Your receptionist won't book appointments during a closure. It tells callers the business is closed then and offers another day.
+For holidays and other times you're closed, click **Add closure** and enter when you close and reopen. Use your business timezone, then click **Save hours**. Your agent won't book appointments during a closure. It tells callers the business is closed then and offers another day.
 
 ## Default customer language
 
-Calls open in your **Default customer language**: your receptionist greets callers in it. When a caller asks for another language or speaks one, your receptionist switches to it. It can talk with callers in more than 70 languages.
+Calls open in your **Default customer language**: your agent greets callers in it. When a caller asks for another language or speaks one, your agent switches to it. It can talk with callers in more than 70 languages.
 
 The **Default customer language** setting supports:
 
@@ -77,7 +77,7 @@ Choose the language most of your callers speak. If you haven't changed the greet
 
 ## Voice
 
-**Voice** sets how your receptionist sounds on phone calls and on calls from your browser, including test calls. The row shows the current voice and how it sounds, such as Marin · Bright, quick. New businesses start with Marin.
+**Voice** sets how your agent sounds on phone calls and on calls from your browser, including test calls. The row shows the current voice and how it sounds, such as Marin · Bright, quick. New businesses start with Marin.
 
 <Steps>
   <Step title="Open the voice list">
@@ -99,11 +99,11 @@ You can choose from Alloy, Ash, Ballad, Beacon, Bossa, Cedar, Cinder, Coral, Del
 
 ## Currency
 
-Pick the currency your [service prices](/agent/services#prices) are in from **Currency**. Your receptionist quotes prices in it. If you change the currency later, the amounts you entered stay the same.
+Pick the currency your [service prices](/agent/services#prices) are in from **Currency**. Your agent quotes prices in it. If you change the currency later, the amounts you entered stay the same.
 
 ## Default transfer number
 
-The **Default transfer number** is the phone number your receptionist calls when it hands a caller to a person. When a caller asks for an [employee](/agent/employees) who has a phone number, your receptionist transfers the call to that employee instead.
+The **Default transfer number** is the phone number your agent calls when it hands a caller to a person. When a caller asks for an [employee](/agent/employees) who has a phone number, your agent transfers the call to that employee instead.
 
 Use a number that is answered during business hours. If different teams handle different requests, keep the default number as the safest general handoff and add rules for when a caller should be transferred.
 
@@ -111,7 +111,7 @@ Use a number that is answered during business hours. If different teams handle d
   Transfer numbers must be in one of these countries or territories: the United States, Canada, Puerto Rico, the United Kingdom, Australia, New Zealand, France, Germany, Spain, Italy, the Netherlands, Portugal, Mexico, Brazil, Israel, India, Japan, or Serbia. Transfers to numbers elsewhere don't connect.
 </Note>
 
-During a free trial, your receptionist transfers calls only to the mobile number you verified, and you can't save a different number. Upgrade to Starter or Pro to change it.
+During a free trial, your agent transfers calls only to the mobile number you verified, and you can't save a different number. Upgrade to Starter or Pro to change it.
 
 LobbyStack also forwards calls to this number when your voice minutes run out or overages reach your spending cap. Without one, those calls go to the mobile number you verified. See [Usage and limits](/billing/usage).
 
@@ -123,17 +123,17 @@ LobbyStack also forwards calls to this number when your voice minutes run out or
     Click **Save** beside the transfer number field.
   </Step>
   <Step title="Add rules if needed">
-    Use **Agent** > **Rules** to describe when the receptionist should transfer, take a message, or ask for callback details.
+    Use **Agent** > **Rules** to describe when the agent should transfer, take a message, or ask for callback details.
   </Step>
 </Steps>
 
 <Note>
-  Add a transfer number when you want live human handoff. Without one, the receptionist takes callback or follow-up details so your team can respond from the dashboard.
+  Add a transfer number when you want live human handoff. Without one, the agent takes callback or follow-up details so your team can respond from the dashboard.
 </Note>
 
 ## Staff answers first
 
-**Staff answers first** rings one staff phone before your receptionist answers. You press 1 to take the call. If nobody presses 1 before the ring time ends, your receptionist answers as usual. A voicemail greeting can't take the call, because it never presses 1.
+**Staff answers first** rings one staff phone before your agent answers. You press 1 to take the call. If nobody presses 1 before the ring time ends, your agent answers as usual. A voicemail greeting can't take the call, because it never presses 1.
 
 <Steps>
   <Step title="Pick when to ring">
@@ -146,7 +146,7 @@ LobbyStack also forwards calls to this number when your voice minutes run out or
     Choose 10, 15, 20, 30, 45 or 60 seconds in **Ring for**. The default is 15.
   </Step>
   <Step title="Add messages if you want them">
-    **Message before ringing** plays before the staff phone rings. **Message before the receptionist answers** plays when nobody takes the call. Each holds 200 characters, and callers hear them in your default customer language. Serbian has no voice for these messages yet, so a business in Serbian skips them.
+    **Message before ringing** plays before the staff phone rings. **Message before the agent answers** plays when nobody takes the call. Each holds 200 characters, and callers hear them in your default customer language. Serbian has no voice for these messages yet, so a business in Serbian skips them.
   </Step>
   <Step title="Save">
     Click **Save** at the bottom of the section.
@@ -155,17 +155,17 @@ LobbyStack also forwards calls to this number when your voice minutes run out or
 
 Each ring uses one [transfer attempt](/billing/usage). Calls you answer use no voice minutes and appear in **Calls** as **Answered by your team**.
 
-Calls you answer end after 30 minutes. After 600 minutes of answered calls in 24 hours, new calls go straight to your receptionist until that total drops. This limit applies on every plan.
+Calls you answer end after 30 minutes. After 600 minutes of answered calls in 24 hours, new calls go straight to your agent until that total drops. This limit applies on every plan.
 
 <Warning>
-  Don't use a phone that forwards unanswered calls to your LobbyStack number. The call comes straight back to your receptionist.
+  Don't use a phone that forwards unanswered calls to your LobbyStack number. The call comes straight back to your agent.
 </Warning>
 
 Staff answers first needs a paid plan and works on Twilio numbers. On other numbers, the setting shows as unavailable. To compare it with carrier forwarding, see [Forward your business line to LobbyStack](/getting-started/forward-calls#choose-what-to-forward).
 
 ## Appointment changes
 
-Use **Appointment changes** to choose whether the AI receptionist can cancel or reschedule appointments automatically.
+Use **Appointment changes** to choose whether the AI agent can cancel or reschedule appointments automatically.
 
 You can also require a texted one-time code or a keypad PIN before any appointment is changed.
 

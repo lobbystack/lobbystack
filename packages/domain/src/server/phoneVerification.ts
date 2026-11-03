@@ -18,7 +18,7 @@ import { VERIFICATION_CODE_TTL_MS, newVerificationCode, verificationCodeSecret }
 // rate limits (app.reserve_phone_verification_attempt: 5 per user and 3 per
 // phone each hour, 30 seconds between codes to one phone). The worker
 // generates each code and texts it from the alert SMS sender; only a keyed
-// hash is stored. app.complete_phone_verification then sets users.phone and
+// hash is stored. app.finish_phone_verification then sets users.phone and
 // users.phone_verified_at. Only the business's own team verifies a phone for
 // alerts, since alerts go to the team. A partner member who opened a business
 // verifies their own mobile only at the phone step, and only while the
@@ -164,7 +164,7 @@ export async function checkOperatorPhoneVerificationCode(
     const outcome = evaluatePhoneVerificationCode(attempt, code, now);
     if (outcome.status === "approved") {
       await tx.update(onboardingPhoneVerifications).set({ attemptCount: attempt.attemptCount + 1, codeHash: null, updatedAt: now }).where(scope);
-      const completed = await tx.execute(sql`SELECT app.complete_phone_verification(${input.businessId}::uuid, ${input.userId}::uuid, ${input.attemptId}::uuid, ${"approved"}) AS approved`);
+      const completed = await tx.execute(sql`SELECT app.finish_phone_verification(${input.businessId}::uuid, ${input.userId}::uuid, ${input.attemptId}::uuid, ${"approved"}) AS approved`);
       const approved = (completed.rows[0] as { approved?: unknown } | undefined)?.approved === true;
       if (!approved) return { approved: false, status: "unavailable" };
       // An owner's verified phone is where refused calls forward without a transfer number, so carriers that store the forward learn it.
@@ -346,7 +346,7 @@ export async function checkOnboardingPhoneVerificationCode(
   const status = await provider.checkCode({ to: attempt.phoneE164, code }).catch(() => "failed");
   return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
     if (status === "approved") {
-      const completed = await tx.execute(sql`SELECT app.complete_phone_verification(${input.businessId}::uuid, ${input.userId}::uuid, ${input.attemptId}::uuid, ${"approved"}) AS approved`);
+      const completed = await tx.execute(sql`SELECT app.finish_phone_verification(${input.businessId}::uuid, ${input.userId}::uuid, ${input.attemptId}::uuid, ${"approved"}) AS approved`);
       const approved = (completed.rows[0] as { approved?: unknown } | undefined)?.approved === true;
       if (!approved) return { approved: false, status: "unavailable" };
       await enqueueRefusedCallForwardRefresh(tx, input.businessId);

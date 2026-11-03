@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 import nodemailer, { type Transporter } from "nodemailer";
-import { DEFAULT_APP_NAME, assertCertificationRecipient, type EmailBrand } from "@lobbystack/shared";
+import { CHECK_IN_ANSWERS, DEFAULT_APP_NAME, assertCertificationRecipient, checkInTokenVariable, type CheckInAnswer, type EmailBrand } from "@lobbystack/shared";
 
 export type SmtpConfig = {
   host: string;
@@ -335,7 +335,7 @@ function templateBody(template: TemplateName, variables: Record<string, string>,
     case "feedback_submission":
       return variables.body ?? "LobbyStack dashboard feedback";
     case "onboarding_followup":
-      return onboardingFollowupBody(variables);
+      return onboardingFollowupBody(variables, brand);
     case "number_trial":
       return numberTrialBody(variables);
     case "number_release":
@@ -459,7 +459,7 @@ function businessAllowanceAlertCopy(v: Record<string, string>, partner: string):
     const noun = minutes ? "minutes" : "clavardages";
     const limit = capped ? " jusqu'à une limite mensuelle" : "";
     const past = minutes
-      ? on ? `${full ? "Votre" : "Au-delà, votre"} réceptionniste continue de répondre aux appels${limit}, et ${partner} vous facture chaque minute supplémentaire.` : full ? "Jusqu'au mois prochain, les appels vont à votre numéro de transfert ou au téléphone du propriétaire." : "Une fois les minutes épuisées, les appels iront à votre numéro de transfert ou au téléphone du propriétaire jusqu'au mois prochain."
+      ? on ? `${full ? "Votre" : "Au-delà, votre"} agent continue de répondre aux appels${limit}, et ${partner} vous facture chaque minute supplémentaire.` : full ? "Jusqu'au mois prochain, les appels vont à votre numéro de transfert ou au téléphone du propriétaire." : "Une fois les minutes épuisées, les appels iront à votre numéro de transfert ou au téléphone du propriétaire jusqu'au mois prochain."
       : on ? `${full ? "Le" : "Au-delà, le"} clavardage de votre site continue de répondre${limit}, et ${partner} vous facture chaque clavardage supplémentaire.` : full ? "Jusqu'au mois prochain, le clavardage de votre site ne répond plus." : "Une fois les clavardages épuisés, le clavardage de votre site cessera de répondre jusqu'au mois prochain.";
     return {
       subject: full ? `${business} a utilisé ${minutes ? "toutes ses minutes" : "tous ses clavardages"} du mois` : `${business} a utilisé 80 % de ses ${noun} du mois`,
@@ -471,7 +471,7 @@ function businessAllowanceAlertCopy(v: Record<string, string>, partner: string):
     const noun = minutes ? "minutos" : "chats";
     const limit = capped ? " hasta un tope mensual" : "";
     const past = minutes
-      ? on ? `${full ? "Su" : "Después, su"} recepcionista sigue contestando llamadas${limit}, y ${partner} le cobra cada minuto adicional.` : full ? "Hasta el próximo mes, las llamadas se desvían a su número de transferencia o al teléfono del propietario." : "Cuando se agoten, las llamadas se desviarán a su número de transferencia o al teléfono del propietario hasta el próximo mes."
+      ? on ? `${full ? "Su" : "Después, su"} agente sigue contestando llamadas${limit}, y ${partner} le cobra cada minuto adicional.` : full ? "Hasta el próximo mes, las llamadas se desvían a su número de transferencia o al teléfono del propietario." : "Cuando se agoten, las llamadas se desviarán a su número de transferencia o al teléfono del propietario hasta el próximo mes."
       : on ? `${full ? "El" : "Después, el"} chat de su sitio sigue respondiendo${limit}, y ${partner} le cobra cada chat adicional.` : full ? "Hasta el próximo mes, el chat de su sitio deja de responder." : "Cuando se agoten, el chat de su sitio dejará de responder hasta el próximo mes.";
     return {
       subject: full ? `${business} usó todos sus ${noun} del mes` : `${business} usó el 80 % de sus ${noun} del mes`,
@@ -483,7 +483,7 @@ function businessAllowanceAlertCopy(v: Record<string, string>, partner: string):
     const noun = minutes ? "minuta" : "četova";
     const limit = capped ? " do mesečnog limita" : "";
     const past = minutes
-      ? on ? full ? `Vaš recepcioner nastavlja da odgovara na pozive${limit}, a ${partner} Vam naplaćuje svaki dodatni minut.` : `Kada ih potroši, Vaš recepcioner će nastaviti da odgovara na pozive${limit}, a ${partner} će Vam naplatiti svaki dodatni minut.` : full ? "Do sledećeg meseca, pozivi idu na Vaš broj za prebacivanje ili na telefon vlasnika." : "Kada ih potroši, pozivi će ići na Vaš broj za prebacivanje ili na telefon vlasnika do sledećeg meseca."
+      ? on ? full ? `Vaš agent nastavlja da odgovara na pozive${limit}, a ${partner} Vam naplaćuje svaki dodatni minut.` : `Kada ih potroši, Vaš agent će nastaviti da odgovara na pozive${limit}, a ${partner} će Vam naplatiti svaki dodatni minut.` : full ? "Do sledećeg meseca, pozivi idu na Vaš broj za prebacivanje ili na telefon vlasnika." : "Kada ih potroši, pozivi će ići na Vaš broj za prebacivanje ili na telefon vlasnika do sledećeg meseca."
       : on ? full ? `Čet na Vašem sajtu nastavlja da odgovara${limit}, a ${partner} Vam naplaćuje svaki dodatni čet.` : `Kada ih potroši, čet na Vašem sajtu će nastaviti da odgovara${limit}, a ${partner} će Vam naplatiti svaki dodatni čet.` : full ? "Do sledećeg meseca, čet na Vašem sajtu ne odgovara." : "Kada ih potroši, čet na Vašem sajtu će prestati da odgovara do sledećeg meseca.";
     return {
       subject: full ? `Firma ${business} je potrošila sve ${minutes ? "minute" : "četove"} ovog meseca` : `Firma ${business} je potrošila 80% ${noun} ovog meseca`,
@@ -494,7 +494,7 @@ function businessAllowanceAlertCopy(v: Record<string, string>, partner: string):
   const noun = minutes ? "minutes" : "website chats";
   const limit = capped ? ", up to a monthly limit" : "";
   const past = minutes
-    ? on ? `${full ? "Your" : "Past them, your"} receptionist keeps answering calls${limit}, and ${partner} bills you for each extra minute.` : full ? "Until next month, calls forward to your transfer number or the owner's phone." : "Once they run out, calls forward to your transfer number or the owner's phone until next month."
+    ? on ? `${full ? "Your" : "Past them, your"} agent keeps answering calls${limit}, and ${partner} bills you for each extra minute.` : full ? "Until next month, calls forward to your transfer number or the owner's phone." : "Once they run out, calls forward to your transfer number or the owner's phone until next month."
     : on ? `${full ? "Your" : "Past them, your"} website chat keeps replying${limit}, and ${partner} bills you for each extra chat.` : full ? "Until next month, your website chat stops replying." : "Once they run out, your website chat stops replying until next month.";
   return {
     subject: full ? `${business} used all of this month's ${noun}` : `${business} used 80% of this month's ${noun}`,
@@ -566,7 +566,7 @@ function partnerBusinessAllowanceAlertCopy(v: Record<string, string>): PoolAlert
   const noun = minutes ? "minutes" : "website chats";
   const limit = capped ? " until its overage reaches the monthly cap you set" : "";
   const past = minutes
-    ? on ? `${full ? "Its" : "Past them, its"} receptionist keeps answering calls${limit}, and you bill the business for each extra minute.` : full ? "Its overage is off, so calls forward to its transfer number or the owner's phone until next month." : "Its overage is off, so once they run out, calls forward to its transfer number or the owner's phone until next month."
+    ? on ? `${full ? "Its" : "Past them, its"} agent keeps answering calls${limit}, and you bill the business for each extra minute.` : full ? "Its overage is off, so calls forward to its transfer number or the owner's phone until next month." : "Its overage is off, so once they run out, calls forward to its transfer number or the owner's phone until next month."
     : on ? `${full ? "Its" : "Past them, its"} website chat keeps replying${limit}, and you bill the business for each extra chat.` : full ? "Its overage is off, so its website chat stops replying until next month." : "Its overage is off, so once they run out, its website chat stops replying until next month.";
   return {
     subject: full ? `${business} used all of its package's ${noun}` : `${business} used 80% of its package's ${noun}`,
@@ -629,38 +629,38 @@ function numberTrialCopy(kind: TrialEmailKind, locale: string | undefined, v: Re
   const fwd = v.forwardTo ?? "";
   const business = v.businessName ?? "";
   if (locale === "fr") {
-    const answered = calls > 0 ? [`Votre réceptionniste a déjà répondu à ${calls} appel${calls > 1 ? "s" : ""} pour ${business}.`] : [];
+    const answered = calls > 0 ? [`Votre agent a déjà répondu à ${calls} appel${calls > 1 ? "s" : ""} pour ${business}.`] : [];
     switch (kind) {
-      case "day10": return { subject: `Plus que 4 jours pour garder le ${num}`, lines: [`Votre essai gratuit se termine le ${v.endDate}.`, ...answered, `À la fin de l'essai, votre réceptionniste cesse de répondre au ${num} et nous libérons le numéro. Choisissez un forfait pour le garder. Starter coûte 30 $ par mois pour 150 minutes.`], button: "Garder mon numéro" };
+      case "day10": return { subject: `Plus que 4 jours pour garder le ${num}`, lines: [`Votre essai gratuit se termine le ${v.endDate}.`, ...answered, `À la fin de l'essai, votre agent cesse de répondre au ${num} et nous libérons le numéro. Choisissez un forfait pour le garder. Starter coûte 30 $ par mois pour 150 minutes.`], button: "Garder mon numéro" };
       case "day13": return { subject: `Demain, dernier jour avec le ${num}`, lines: ["Votre essai gratuit se termine demain à minuit.", ...answered, `Ensuite, les appels au ${num} restent sans réponse et nous libérons le numéro. Gardez-le pour 30 $ par mois avec Starter.`], button: "Garder mon numéro" };
-      case "ended": return { subject: `Votre essai est terminé. Le ${num} ne répond plus`, lines: [`Votre essai de 14 jours s'est terminé hier, alors votre réceptionniste ne répond plus au ${num}. Nous libérons le numéro. Abonnez-vous dès maintenant si vous voulez le garder. Starter coûte 30 $ par mois pour 150 minutes.`], button: "Garder mon numéro" };
-      case "minutes_out": return { subject: `Vos minutes sont épuisées. Les appels vont maintenant au ${fwd}`, lines: [`${business} a utilisé ses 30 minutes gratuites, alors votre réceptionniste ne répond plus au ${num}. Les appels sonnent maintenant au ${fwd}. Passez à un forfait payant pour retrouver votre réceptionniste. Starter coûte 30 $ par mois pour 150 minutes, et vous gardez votre numéro.`], button: "Retrouver ma réceptionniste" };
+      case "ended": return { subject: `Votre essai est terminé. Le ${num} ne répond plus`, lines: [`Votre essai de 14 jours s'est terminé hier, alors votre agent ne répond plus au ${num}. Nous libérons le numéro. Abonnez-vous dès maintenant si vous voulez le garder. Starter coûte 30 $ par mois pour 150 minutes.`], button: "Garder mon numéro" };
+      case "minutes_out": return { subject: `Vos minutes sont épuisées. Les appels vont maintenant au ${fwd}`, lines: [`${business} a utilisé ses 30 minutes gratuites, alors votre agent ne répond plus au ${num}. Les appels sonnent maintenant au ${fwd}. Passez à un forfait payant pour retrouver votre agent. Starter coûte 30 $ par mois pour 150 minutes, et vous gardez votre numéro.`], button: "Retrouver mon agent" };
     }
   }
   if (locale === "es") {
-    const answered = calls > 0 ? [`Su recepcionista ya contestó ${calls} llamada${calls > 1 ? "s" : ""} para ${business}.`] : [];
+    const answered = calls > 0 ? [`Su agente ya contestó ${calls} llamada${calls > 1 ? "s" : ""} para ${business}.`] : [];
     switch (kind) {
-      case "day10": return { subject: `Quedan 4 días para conservar el ${num}`, lines: [`Su prueba gratuita termina el ${v.endDate}.`, ...answered, `Cuando termine la prueba, su recepcionista dejará de contestar el ${num} y liberaremos el número. Elija un plan para conservarlo. Starter cuesta 30 USD al mes por 150 minutos.`], button: "Conservar mi número" };
+      case "day10": return { subject: `Quedan 4 días para conservar el ${num}`, lines: [`Su prueba gratuita termina el ${v.endDate}.`, ...answered, `Cuando termine la prueba, su agente dejará de contestar el ${num} y liberaremos el número. Elija un plan para conservarlo. Starter cuesta 30 USD al mes por 150 minutos.`], button: "Conservar mi número" };
       case "day13": return { subject: `Mañana es su último día con el ${num}`, lines: ["Su prueba gratuita termina mañana a medianoche.", ...answered, `Después, las llamadas al ${num} quedarán sin respuesta y liberaremos el número. Consérvelo por 30 USD al mes con Starter.`], button: "Conservar mi número" };
-      case "ended": return { subject: `Su prueba terminó. El ${num} dejó de contestar`, lines: [`Su prueba de 14 días terminó ayer, así que su recepcionista dejó de contestar el ${num}. Estamos liberando el número. Suscríbase ahora si quiere conservarlo. Starter cuesta 30 USD al mes por 150 minutos.`], button: "Conservar mi número" };
-      case "minutes_out": return { subject: `Se acabaron sus minutos. Las llamadas ahora van al ${fwd}`, lines: [`${business} usó sus 30 minutos gratuitos, así que su recepcionista dejó de contestar el ${num}. Las llamadas ahora suenan en el ${fwd}. Mejore su plan ahora para recuperar a su recepcionista. Starter cuesta 30 USD al mes por 150 minutos, y conserva su número.`], button: "Recuperar a mi recepcionista" };
+      case "ended": return { subject: `Su prueba terminó. El ${num} dejó de contestar`, lines: [`Su prueba de 14 días terminó ayer, así que su agente dejó de contestar el ${num}. Estamos liberando el número. Suscríbase ahora si quiere conservarlo. Starter cuesta 30 USD al mes por 150 minutos.`], button: "Conservar mi número" };
+      case "minutes_out": return { subject: `Se acabaron sus minutos. Las llamadas ahora van al ${fwd}`, lines: [`${business} usó sus 30 minutos gratuitos, así que su agente dejó de contestar el ${num}. Las llamadas ahora suenan en el ${fwd}. Mejore su plan ahora para recuperar a su agente. Starter cuesta 30 USD al mes por 150 minutos, y conserva su número.`], button: "Recuperar a mi agente" };
     }
   }
   if (locale === "sr") {
-    const answered = calls > 0 ? [`Vaš recepcioner je već odgovorio na ${calls} ${calls === 1 ? "poziv" : "poziva"} za ${business}.`] : [];
+    const answered = calls > 0 ? [`Vaš agent je već odgovorio na ${calls} ${calls === 1 ? "poziv" : "poziva"} za ${business}.`] : [];
     switch (kind) {
-      case "day10": return { subject: `Još 4 dana da zadržite broj ${num}`, lines: [`Vaša besplatna proba ističe ${v.endDate}.`, ...answered, `Kada proba istekne, recepcioner prestaje da odgovara na ${num} i mi oslobađamo broj. Izaberite paket da biste ga zadržali. Starter košta 30 USD mesečno za 150 minuta.`], button: "Zadrži moj broj" };
+      case "day10": return { subject: `Još 4 dana da zadržite broj ${num}`, lines: [`Vaša besplatna proba ističe ${v.endDate}.`, ...answered, `Kada proba istekne, agent prestaje da odgovara na ${num} i mi oslobađamo broj. Izaberite paket da biste ga zadržali. Starter košta 30 USD mesečno za 150 minuta.`], button: "Zadrži moj broj" };
       case "day13": return { subject: `Sutra je Vaš poslednji dan sa brojem ${num}`, lines: ["Vaša besplatna proba ističe sutra u ponoć.", ...answered, `Nakon toga, pozivi na ${num} ostaju bez odgovora i mi oslobađamo broj. Zadržite ga za 30 USD mesečno uz Starter.`], button: "Zadrži moj broj" };
-      case "ended": return { subject: `Proba je istekla. ${num} više ne odgovara`, lines: [`Vaša proba od 14 dana istekla je juče, pa recepcioner više ne odgovara na ${num}. Oslobađamo broj. Pretplatite se sada ako želite da ga zadržite. Starter košta 30 USD mesečno za 150 minuta.`], button: "Zadrži moj broj" };
-      case "minutes_out": return { subject: `Potrošili ste minute. Pozivi sada idu na ${fwd}`, lines: [`${business} je potrošio 30 besplatnih minuta, pa recepcioner više ne odgovara na ${num}. Pozivi sada zvone na ${fwd}. Pređite na plaćeni paket da biste vratili recepcionera. Starter košta 30 USD mesečno za 150 minuta, a broj ostaje Vaš.`], button: "Vrati mog recepcionera" };
+      case "ended": return { subject: `Proba je istekla. ${num} više ne odgovara`, lines: [`Vaša proba od 14 dana istekla je juče, pa agent više ne odgovara na ${num}. Oslobađamo broj. Pretplatite se sada ako želite da ga zadržite. Starter košta 30 USD mesečno za 150 minuta.`], button: "Zadrži moj broj" };
+      case "minutes_out": return { subject: `Potrošili ste minute. Pozivi sada idu na ${fwd}`, lines: [`${business} je potrošio 30 besplatnih minuta, pa agent više ne odgovara na ${num}. Pozivi sada zvone na ${fwd}. Pređite na plaćeni paket da biste vratili agenta. Starter košta 30 USD mesečno za 150 minuta, a broj ostaje Vaš.`], button: "Vrati mog agenta" };
     }
   }
-  const answered = calls > 0 ? [`So far your receptionist has answered ${calls} call${calls > 1 ? "s" : ""} for ${business}.`] : [];
+  const answered = calls > 0 ? [`So far your agent has answered ${calls} call${calls > 1 ? "s" : ""} for ${business}.`] : [];
   switch (kind) {
-    case "day10": return { subject: `4 days left to keep ${num}`, lines: [`Your free trial ends on ${v.endDate}.`, ...answered, `When it ends, your receptionist stops answering ${num} and we release the number. Choose a plan to keep it. Starter is $30 a month for 150 minutes.`], button: "Keep my number" };
+    case "day10": return { subject: `4 days left to keep ${num}`, lines: [`Your free trial ends on ${v.endDate}.`, ...answered, `When it ends, your agent stops answering ${num} and we release the number. Choose a plan to keep it. Starter is $30 a month for 150 minutes.`], button: "Keep my number" };
     case "day13": return { subject: `Tomorrow is your last day with ${num}`, lines: ["Your free trial ends at midnight tomorrow.", ...answered, `After that, calls to ${num} go unanswered and we release the number. Keep it for $30 a month with Starter.`], button: "Keep my number" };
-    case "ended": return { subject: `Your trial ended. ${num} stopped answering`, lines: [`Your 14-day trial ended yesterday, so your receptionist stopped answering ${num}. We're releasing the number. Subscribe now if you want to keep it. Starter is $30 a month for 150 minutes.`], button: "Keep my number" };
-    case "minutes_out": return { subject: `You're out of minutes. Calls now go to ${fwd}`, lines: [`${business} used its 30 free minutes, so your receptionist stopped answering ${num}. Calls now ring ${fwd}. Upgrade now to get your receptionist back. Starter is $30 a month for 150 minutes, and you keep your number.`], button: "Get my receptionist back" };
+    case "ended": return { subject: `Your trial ended. ${num} stopped answering`, lines: [`Your 14-day trial ended yesterday, so your agent stopped answering ${num}. We're releasing the number. Subscribe now if you want to keep it. Starter is $30 a month for 150 minutes.`], button: "Keep my number" };
+    case "minutes_out": return { subject: `You're out of minutes. Calls now go to ${fwd}`, lines: [`${business} used its 30 free minutes, so your agent stopped answering ${num}. Calls now ring ${fwd}. Upgrade now to get your agent back. Starter is $30 a month for 150 minutes, and you keep your number.`], button: "Get my agent back" };
   }
 }
 
@@ -767,82 +767,63 @@ function existingAccountBody(variables: Record<string, string>, brand: EmailBran
   }
 }
 
-function onboardingFollowupBody(variables: Record<string, string>): string {
+type CheckInCopy = { greeting: (name: string) => string; intro: (sender: string, business: string) => string; question: string; answers: Record<CheckInAnswer, string>; close: string; title: string };
+
+const CHECK_IN_COPY: Record<"en" | "fr" | "es" | "sr", CheckInCopy> = {
+  en: {
+    greeting: (name) => (name ? `Hi ${name},` : "Hi,"),
+    intro: (sender, business) => `I'm ${sender}, the founder of LobbyStack. You set up an agent for ${business} yesterday, and it hasn't talked to a real customer yet.`,
+    question: "What's holding you back? Click one:",
+    answers: { still_testing: "I'm still testing it", connect_number: "I don't know how to connect my number", test_call_mistakes: "It made mistakes on my test call", not_a_fit: "It's not right for my business" },
+    close: "If it's something else, just reply. I read every answer.",
+    title: "Founder, LobbyStack",
+  },
+  fr: {
+    greeting: (name) => (name ? `Bonjour ${name},` : "Bonjour,"),
+    intro: (sender, business) => `Je suis ${sender}, le fondateur de LobbyStack. Vous avez configuré un agent pour ${business} hier, et il n'a pas encore parlé à un vrai client.`,
+    question: "Qu'est-ce qui vous retient ? Cliquez sur une réponse :",
+    answers: { still_testing: "Je suis encore en train de le tester", connect_number: "Je ne sais pas comment connecter mon numéro", test_call_mistakes: "Il a fait des erreurs pendant mon appel test", not_a_fit: "Il ne convient pas à mon entreprise" },
+    close: "Si c'est autre chose, répondez simplement à ce courriel. Je lis toutes les réponses.",
+    title: "Fondateur, LobbyStack",
+  },
+  es: {
+    greeting: (name) => (name ? `Hola, ${name}:` : "Hola:"),
+    intro: (sender, business) => `Soy ${sender}, fundador de LobbyStack. Ayer configuró un agente para ${business}, y todavía no ha hablado con ningún cliente real.`,
+    question: "¿Qué le está frenando? Haga clic en una opción:",
+    answers: { still_testing: "Todavía lo estoy probando", connect_number: "No sé cómo conectar mi número", test_call_mistakes: "Cometió errores en mi llamada de prueba", not_a_fit: "No es adecuado para mi negocio" },
+    close: "Si es otra cosa, responda a este correo. Leo todas las respuestas.",
+    title: "Fundador, LobbyStack",
+  },
+  sr: {
+    greeting: (name) => (name ? `Zdravo, ${name},` : "Zdravo,"),
+    intro: (sender, business) => `Ja sam ${sender}, osnivač LobbyStacka. Juče ste podesili agenta za ${business}, a on još nije razgovarao ni sa jednim pravim klijentom.`,
+    question: "Šta Vas koči? Kliknite na jedan odgovor:",
+    answers: { still_testing: "Još ga testiram", connect_number: "Ne znam kako da povežem svoj broj", test_call_mistakes: "Pravio je greške u mom probnom pozivu", not_a_fit: "Ne odgovara mom poslovanju" },
+    close: "Ako je nešto drugo, samo odgovorite na ovaj imejl. Čitam svaki odgovor.",
+    title: "Osnivač, LobbyStack",
+  },
+};
+
+/**
+ * The founder's check-in, as plain text. Each answer is a link to a page that
+ * asks to confirm it, so a mail scanner opening the link answers nothing.
+ */
+function onboardingFollowupBody(variables: Record<string, string>, brand: EmailBrand): string {
+  const locale = variables.locale === "fr" || variables.locale === "es" || variables.locale === "sr" ? variables.locale : "en";
+  const copy = CHECK_IN_COPY[locale];
   const sender = variables.senderName ?? "";
-  const business = variables.businessName ?? "";
-  if (variables.locale === "es") {
-    return [
-      variables.firstName ? `Hola, ${variables.firstName}:` : "Hola:",
-      "",
-      `Soy ${sender}, fundador de LobbyStack. Ayer configuró una recepcionista para ${business}. Gracias por probarla.`,
-      "",
-      "Me encantaría saber qué le pareció:",
-      "",
-      "1. ¿Le gustó? ¿Qué funcionó bien y qué no le convenció?",
-      "2. ¿Qué deberíamos mejorar?",
-      "3. ¿Piensa usarla de verdad, con su propio número de teléfono? Si no, ¿qué se lo impide?",
-      "",
-      "Puede responder a este correo. ¡Con dos líneas basta!",
-      "",
-      "Gracias de nuevo,",
-      sender,
-      "Fundador, LobbyStack",
-    ].join("\n");
-  }
-  if (variables.locale === "sr") {
-    return [
-      variables.firstName ? `Zdravo, ${variables.firstName},` : "Zdravo,",
-      "",
-      `Ja sam ${sender}, osnivač LobbyStacka. Juče ste podesili recepcionera za ${business}. Hvala što ste ga isprobali.`,
-      "",
-      "Voleo bih da čujem Vaše utiske:",
-      "",
-      "1. Da li Vam se dopao? Šta je dobro radilo, a šta Vam nije delovalo kako treba?",
-      "2. Šta bi trebalo da poboljšamo?",
-      "3. Da li planirate da ga zaista koristite, sa svojim brojem telefona? Ako ne, šta Vas sprečava?",
-      "",
-      "Možete da odgovorite na ovaj imejl, i dva reda su sasvim dovoljna!",
-      "",
-      "Hvala još jednom,",
-      sender,
-      "Osnivač, LobbyStack",
-    ].join("\n");
-  }
-  if (variables.locale === "fr") {
-    return [
-      variables.firstName ? `Bonjour ${variables.firstName},` : "Bonjour,",
-      "",
-      `Je suis ${sender}, le fondateur de LobbyStack. Vous avez configuré une réceptionniste pour ${business} hier. Merci de l'avoir essayée.`,
-      "",
-      "J'aimerais savoir ce que vous en avez pensé :",
-      "",
-      "1. Avez-vous aimé l'expérience ? Qu'est-ce qui a bien fonctionné, et qu'est-ce qui clochait ?",
-      "2. Que devrions-nous améliorer ?",
-      "3. Comptez-vous l'utiliser pour vrai, avec votre propre numéro de téléphone ? Sinon, qu'est-ce qui vous en empêche ?",
-      "",
-      "Vous pouvez répondre à ce courriel, et deux lignes suffiraient !",
-      "",
-      "Merci encore,",
-      sender,
-      "Fondateur, LobbyStack",
-    ].join("\n");
-  }
   return [
-    variables.firstName ? `Hi ${variables.firstName},` : "Hi,",
+    copy.greeting(variables.firstName ?? ""),
     "",
-    `I'm ${sender}, the founder of LobbyStack. You set up a receptionist for ${business} yesterday. Thanks for giving it a try.`,
+    copy.intro(sender, variables.businessName ?? ""),
     "",
-    "I'd love to hear what you thought:",
+    copy.question,
     "",
-    "1. Did you like it? What worked, and what felt off?",
-    "2. What should we improve?",
-    "3. Do you plan to use it for real, with your own phone number? If not, what's stopping you?",
+    ...CHECK_IN_ANSWERS.flatMap((answer) => [copy.answers[answer], `${brand.origin}/${locale}/check-in/${variables[checkInTokenVariable(answer)] ?? ""}`, ""]),
+    copy.close,
     "",
-    "You can reply to this email, and two lines would be plenty!",
-    "",
-    "Thanks again,",
     sender,
-    "Founder, LobbyStack",
+    copy.title,
   ].join("\n");
 }
 
@@ -865,9 +846,9 @@ function noticeCopy(template: "invitation" | "business_released" | "business_del
   }
   if (template === "business_released") {
     const partner = v.partnerName ?? "Your partner";
-    return { heading: `${business} is yours to run`, lines: [`${partner} handed ${business} over to you. Its receptionist, calls and settings stay as they were, and it's on ${name}'s Free plan now.`, `Sign in to ${name} with this email address to run it and choose a plan.`], action: `Sign in to ${name}` };
+    return { heading: `${business} is yours to run`, lines: [`${partner} handed ${business} over to you. Its agent, calls and settings stay as they were, and it's on ${name}'s Free plan now.`, `Sign in to ${name} with this email address to run it and choose a plan.`], action: `Sign in to ${name}` };
   }
-  return { heading: `${business} was deleted`, lines: [`${name} deleted ${business}, with its calls, chats, contacts, appointments and settings. Its receptionist no longer answers.`, `If you didn't expect this, contact ${name}.`], action: null };
+  return { heading: `${business} was deleted`, lines: [`${name} deleted ${business}, with its calls, chats, contacts, appointments and settings. Its agent no longer answers.`, `If you didn't expect this, contact ${name}.`], action: null };
 }
 
 function renderNoticeHtml(brand: EmailBrand, subject: string, copy: NoticeCopy, url: string | undefined): string {

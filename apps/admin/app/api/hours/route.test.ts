@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { businesses, businessHours, closures, receptionistProfiles } from "@lobbystack/db";
+import { agents, businesses, businessHours, closures } from "@lobbystack/db";
 
 const fixture = vi.hoisted(() => ({ replace: vi.fn(), failure: undefined as Error | undefined, hours: [] as unknown[], closures: [] as unknown[], hoursSource: "generated" }));
 vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
@@ -17,7 +17,7 @@ vi.mock("@lobbystack/domain", () => ({
 import { fakeOperator, resetFakeOperator } from "@/lib/operator-request.fake";
 import { GET, PUT } from "./route";
 
-const rows = (table: unknown) => table === businesses ? [{ timezone: "Europe/Belgrade", hoursSource: fixture.hoursSource }] : table === businessHours ? fixture.hours : table === receptionistProfiles ? [{ bookingMode: "instant" }] : table === closures ? fixture.closures : [];
+const rows = (table: unknown) => table === businesses ? [{ timezone: "Europe/Belgrade", hoursSource: fixture.hoursSource }] : table === businessHours ? fixture.hours : table === agents ? [{ bookingMode: "instant" }] : table === closures ? fixture.closures : [];
 const query = (table: unknown) => {
   const node: Record<string, unknown> = {};
   for (const method of ["where", "limit", "orderBy"]) node[method] = () => node;

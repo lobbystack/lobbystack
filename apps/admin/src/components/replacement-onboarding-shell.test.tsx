@@ -26,38 +26,38 @@ function renderShell(progress: { current: number; navigableUntil?: number; total
 }
 
 describe("OnboardingShell", () => {
+  const routes = ["", "/onboarding/business", "/onboarding/website", "/onboarding/verify-phone", "/onboarding/number", "/onboarding/goal", "/onboarding/attribution", "/onboarding/meet"];
+
   it("links each step to the page the owner's onboarding names, when it skips some", () => {
-    renderShell({ current: 2, navigableUntil: 3, total: 3, routes: ["/onboarding/website", "/onboarding/test-call", "/onboarding/verify-phone"] });
+    renderShell({ current: 2, navigableUntil: 3, total: 3, routes: ["/onboarding/website", "/onboarding/verify-phone", "/onboarding/meet"] });
 
     expect(screen.getAllByRole("listitem")).toHaveLength(3);
     expect(screen.getByRole("link", { name: "Go to onboarding step 1" }).getAttribute("href")).toBe("/onboarding/website");
-    expect(screen.getByRole("link", { name: "Go to onboarding step 3" }).getAttribute("href")).toBe("/onboarding/verify-phone");
+    expect(screen.getByRole("link", { name: "Go to onboarding step 3" }).getAttribute("href")).toBe("/onboarding/meet");
   });
 
-  it("renders the nine-step progress, with the test call and phone steps before the number", () => {
-    renderShell({ current: 9, navigableUntil: 9, total: 9 });
+  it("gives sign-up's dot no link, and renders eight dots on a direct path", () => {
+    renderShell({ current: 8, navigableUntil: 8, total: 8, routes });
 
-    expect(screen.getAllByRole("listitem")).toHaveLength(9);
-    expect(screen.getByRole("link", { name: "Go to onboarding step 6" }).getAttribute("href")).toBe("/onboarding/test-call");
-    expect(screen.getByRole("link", { name: "Go to onboarding step 7" }).getAttribute("href")).toBe("/onboarding/verify-phone");
-    expect(screen.getByRole("link", { name: "Go to onboarding step 8" }).getAttribute("href")).toBe("/onboarding/number");
-    expect(screen.queryByRole("link", { name: "Go to onboarding step 9" })).toBeNull();
-  });
-
-  it("routes every reached step while revisiting earlier steps", () => {
-    renderShell({ current: 4, navigableUntil: 9, total: 9 });
-
-    expect(screen.getAllByRole("listitem")).toHaveLength(9);
-    expect(screen.getByRole("link", { name: "Go to onboarding step 6" }).getAttribute("href")).toBe("/onboarding/test-call");
-    expect(screen.getByRole("link", { name: "Go to onboarding step 9" }).getAttribute("href")).toBe("/onboarding/attribution");
+    expect(screen.getAllByRole("listitem")).toHaveLength(8);
+    expect(screen.queryByRole("link", { name: "Go to onboarding step 1" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Go to onboarding step 4" }).getAttribute("href")).toBe("/onboarding/verify-phone");
+    expect(screen.getByRole("link", { name: "Go to onboarding step 7" }).getAttribute("href")).toBe("/onboarding/attribution");
+    expect(screen.queryByRole("link", { name: "Go to onboarding step 8" })).toBeNull();
   });
 
   it("does not link to steps beyond the current navigable stage", () => {
-    renderShell({ current: 5, navigableUntil: 6, total: 9 });
+    renderShell({ current: 3, navigableUntil: 4, total: 8, routes });
 
-    expect(screen.getAllByRole("listitem")).toHaveLength(9);
-    expect(screen.getByRole("link", { name: "Go to onboarding step 6" }).getAttribute("href")).toBe("/onboarding/test-call");
-    expect(screen.queryByRole("link", { name: "Go to onboarding step 7" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Go to onboarding step 4" }).getAttribute("href")).toBe("/onboarding/verify-phone");
+    expect(screen.queryByRole("link", { name: "Go to onboarding step 5" })).toBeNull();
+  });
+
+  it("shows Back only when there's a step to go back to", () => {
+    const { rerender } = render(<OnboardingShell backHref="/onboarding/goal" progress={null} title="Step title"><div /></OnboardingShell>);
+    expect(screen.getByRole("link", { name: "shell.back" }).getAttribute("href")).toBe("/onboarding/goal");
+    rerender(<OnboardingShell backHref={null} progress={null} title="Step title"><div /></OnboardingShell>);
+    expect(screen.queryByRole("link", { name: "shell.back" })).toBeNull();
   });
 });
 

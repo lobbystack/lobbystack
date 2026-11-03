@@ -274,7 +274,7 @@ describe("AgentBasicSettingsPage transfer number", () => {
     vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
       if (init?.method === "PATCH") {
         patches.push(JSON.parse(String(init.body)));
-        return Response.json({ error: "Your receptionist can't transfer calls to this country yet.", code: "transfer_country_unsupported" }, { status: 400 });
+        return Response.json({ error: "Your agent can't transfer calls to this country yet.", code: "transfer_country_unsupported" }, { status: 400 });
       }
       return Response.json({
         business: { defaultLocale: "en" },

@@ -33,6 +33,44 @@ Primary asset:
 
 - `KPI - Onboarding Activation Funnel`
 
+### First real conversation
+
+The main measure for new accounts. `conversation.first_real_recorded` fires once per business, with `channel` set to `voice`, `web_voice`, `web_chat`, `instagram`, or `sms`, and the `first_real_conversations` table enforces that. See "Real conversation" in `GLOSSARY.md`.
+
+| Channel | It fires when |
+| --- | --- |
+| `voice` | A phone call connects, the caller speaks, and the call ends. A team member taking the call counts too, with no `conversationId`, because that call has no conversation. |
+| `web_voice` | The same, through the website widget. |
+| `web_chat`, `instagram`, `sms` | The agent or the team answers a customer's message. |
+
+These don't count: dashboard test calls, prospect demos, the landing page demo, spam, calls that never connected, callers who never spoke, and calls or texts from a team member's verified phone or the number trial's verified phone.
+
+The event belongs to the business owner's person, or to the business's system person when it has no owner. PostHog's test user filters only reach the first kind, so filter both ways:
+
+```sql
+SELECT properties.channel AS channel, count() AS businesses
+FROM events
+WHERE event = 'conversation.first_real_recorded'
+  AND timestamp >= now() - INTERVAL 90 DAY
+  AND person_id NOT IN COHORT 630434
+  AND coalesce(toString(person.properties.$internal_or_test_user), '') != 'true'
+GROUP BY channel
+ORDER BY businesses DESC
+```
+
+To list the replays Replay Vision skips, so you can watch them in the player:
+
+```sql
+SELECT session_id, min(first_url) AS url,
+  dateDiff('second', min(start_time), max(end_time)) AS seconds,
+  round(sum(active_milliseconds) / 1000, 1) AS active_seconds
+FROM session_replay_events
+WHERE start_time >= now() - INTERVAL 14 DAY
+GROUP BY session_id
+HAVING seconds < 15 OR active_seconds < 10
+ORDER BY min(start_time) DESC
+```
+
 ### Messaging adoption
 
 Primary questions:

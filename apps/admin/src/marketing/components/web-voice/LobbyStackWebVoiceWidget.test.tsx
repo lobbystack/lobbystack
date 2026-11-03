@@ -98,6 +98,7 @@ async function startConnectedCall(): Promise<FakePeerConnection> {
   )
   const connection = FakePeerConnection.last!
   act(() => connection.setState("connected"))
+  act(() => connection.receive({ type: "session.output_transcript.delta", delta: "Thanks for calling." }))
   await waitFor(() =>
     expect(screen.getByRole("status").textContent).toBe("Live with the AI receptionist")
   )
@@ -177,6 +178,7 @@ describe("landing hero voice demo call endings", () => {
     const connection = FakePeerConnection.last!
     act(() => connection.setState("disconnected"))
     act(() => connection.setState("connected"))
+    act(() => connection.receive({ type: "session.output_transcript.delta", delta: "Thanks for calling." }))
 
     await waitFor(() =>
       expect(screen.getByRole("status").textContent).toBe("Live with the AI receptionist")

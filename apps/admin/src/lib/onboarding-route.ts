@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { canVisitOnboardingStage, getActiveOnboardingState, numberStepRedirect, resolveOnboardingRoute, type OnboardingStage, type OnboardingState } from "@lobbystack/domain";
+import { ONBOARDING_READING_ROUTE } from "@lobbystack/shared";
 
 import { getAppDatabase } from "./api-helpers";
 import { getSession } from "./auth";
@@ -13,12 +14,14 @@ const BRAND_ROUTE = "/onboarding/brand";
 const routeStages: Record<string, OnboardingStage> = {
   "/onboarding/business": "create_business",
   "/onboarding/website": "website",
-  "/onboarding/knowledge": "knowledge",
-  "/onboarding/greeting": "greeting",
-  "/onboarding/test-call": "test_call",
+  "/onboarding/language": "language",
+  // The wait opens once the website step has moved the stage on.
+  [ONBOARDING_READING_ROUTE]: "verify_phone",
   "/onboarding/verify-phone": "verify_phone",
   "/onboarding/number": "phone_number",
+  "/onboarding/goal": "goal",
   "/onboarding/attribution": "attribution",
+  "/onboarding/meet": "meet",
 };
 
 /**
@@ -43,7 +46,7 @@ export async function requireOnboardingStage(pathname: string, options: { allowC
   // A fresh self-hosted deployment's first owner names it before naming their business.
   if (expected === "create_business" && state.businessId === null && await initialBrandingFields(session.user.id, requestHeaders)) redirect(BRAND_ROUTE);
   if (options.allowCreate && expected === "create_business" && state.businessId === null) return;
-  // A partner's business skips some steps, such as creating it, the number and attribution.
+  // A partner's business skips some steps, such as creating it, the number, the goal and attribution.
   if (!state.steps.includes(expected) || !canVisitOnboardingStage(state.stage, expected)) redirect(current);
   if (expected === "phone_number" && state.businessId) {
     const elsewhere = await numberStepRedirect({ db: getAppDatabase().db }, { userId: session.user.id, businessId: state.businessId, finished: state.stage === "complete" });

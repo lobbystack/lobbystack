@@ -62,8 +62,9 @@ const unresolvedPrefixes = ["/api/health/", TLS_ASK_PATH];
 
 // What stays on the host's domain: MCP and its OAuth server, the OpenAPI
 // document, provider webhooks, the host's own brand step, White Label sign-in and signup, and
-// the host's affiliate program, since a partner's businesses never get the
-// host's marketing. A partner's host answers them with a 404.
+// the host's affiliate program and founder's check-in, since a partner's
+// businesses never get the host's marketing. A partner's host answers them
+// with a 404.
 const hostOnlyPrefixes = [
   "/api/mcp",
   "/.well-known/",
@@ -81,11 +82,12 @@ const hostOnlyPrefixes = [
   "/api/partner/signup",
   "/affiliate",
   "/api/affiliate",
+  "/api/check-in",
 ];
 
 function isHostOnlyPath(pathname: string): boolean {
-  // The OAuth consent page also answers under each locale, as /fr/oauth/consent.
-  return hasPrefix(pathname, hostOnlyPrefixes) || (localeFromPathname(pathname) !== null && hasPrefix(stripLocalePrefix(pathname), ["/oauth"]));
+  // The OAuth consent and check-in pages answer under each locale, as /fr/oauth/consent.
+  return hasPrefix(pathname, hostOnlyPrefixes) || (localeFromPathname(pathname) !== null && hasPrefix(stripLocalePrefix(pathname), ["/oauth", "/check-in"]));
 }
 
 function notFoundResponse(headers: Record<string, string>): NextResponse {

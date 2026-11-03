@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 
 import { createElement, useEffect } from "react";
-import { act, render, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, render, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { appendTranscriptDelta, getWebVoiceErrorKey, readSessionClosedReason, readTranscriptDelta, useWebVoiceCall } from "./useWebVoiceCall";
+import { AGENT_SPEECH_WAIT_MS, appendTranscriptDelta, DISCONNECT_GRACE_MS, getWebVoiceErrorKey, readSessionClosedReason, readTranscriptDelta, useWebVoiceCall } from "./useWebVoiceCall";
 
 type HookControls = ReturnType<typeof useWebVoiceCall>;
 
@@ -179,6 +179,207 @@ describe("live captions", () => {
     expect(turns).toEqual([{ speaker: "assistant", text: "We open" }]);
     expect(appendTranscriptDelta(turns, { speaker: "assistant", delta: " at nine." })).toEqual([{ speaker: "assistant", text: "We open at nine." }]);
     expect(appendTranscriptDelta(turns, { speaker: "caller", delta: "Thanks" })).toEqual([{ speaker: "assistant", text: "We open" }, { speaker: "caller", text: "Thanks" }]);
+  });
+});
+
+describe("waiting for the agent's first words", () => {
+  const sessionClose = JSON.stringify({ type: "session.close" });
+  const greeting = { type: "session.output_transcript.delta", delta: "Thanks for calling." };
+  // What the fake analyser reads next, as a -1 to 1 level.
+  let audioLevel = 0;
+  const audioContexts: Array<{ close: ReturnType<typeof vi.fn> }> = [];
+
+  class FakeAudioContext {
+    readonly close = vi.fn(async () => undefined);
+    readonly resume = vi.fn(async () => undefined);
+    constructor() {
+      audioContexts.push(this);
+    }
+    createMediaStreamSource() {
+      return { connect: vi.fn(), disconnect: vi.fn() };
+    }
+    createAnalyser() {
+      return { fftSize: 0, disconnect: vi.fn(), getFloatTimeDomainData: (samples: Float32Array) => samples.fill(audioLevel) };
+    }
+  }
+
+  function createPeerConnection() {
+    const channel = { readyState: "open", send: vi.fn(), onmessage: null as ((event: MessageEvent) => void) | null };
+    const peer = {
+      addTrack: vi.fn(),
+      close: vi.fn(),
+      connectionState: "new",
+      createDataChannel: vi.fn(() => channel),
+      createOffer: vi.fn(async () => ({ sdp: "offer-sdp" })),
+      iceGatheringState: "complete",
+      localDescription: { sdp: "offer-sdp" },
+      onconnectionstatechange: null as (() => void) | null,
+      ontrack: null as ((event: RTCTrackEvent) => void) | null,
+      setLocalDescription: vi.fn(async () => undefined),
+      setRemoteDescription: vi.fn(async () => undefined),
+    };
+    return { channel, peer };
+  }
+
+  async function startCall(session: Record<string, unknown> = {}) {
+    const { channel, peer } = createPeerConnection();
+    const onEvent = vi.fn();
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ sessionId: "session-123", endToken: "end", sdp: "answer-sdp", ...session })));
+    vi.stubGlobal("RTCPeerConnection", vi.fn(function () { return peer; }));
+    vi.stubGlobal("navigator", { ...navigator, mediaDevices: { getUserMedia: vi.fn(async () => createMockMediaStream(vi.fn())) } });
+
+    let controls: HookControls | null = null;
+    function Harness() {
+      const call = useWebVoiceCall({ businessSlug: "acme-dental", endpoint: "https://app.example.com/api/voice/live/session", onEvent });
+      useEffect(() => {
+        controls = call;
+      });
+      return null;
+    }
+    render(createElement(Harness));
+    await act(async () => {
+      await controls!.startCall();
+    });
+
+    return {
+      channel,
+      peer,
+      onEvent,
+      call: () => controls!,
+      connect: () => act(() => {
+        peer.connectionState = "connected";
+        peer.onconnectionstatechange!();
+      }),
+      playRemoteAudio: () => act(() => peer.ontrack!({ streams: [{} as MediaStream], track: {} } as unknown as RTCTrackEvent)),
+      deliver: (event: Record<string, unknown>) => act(() => channel.onmessage!(new MessageEvent("message", { data: JSON.stringify(event) }))),
+    };
+  }
+
+  beforeEach(() => {
+    audioLevel = 0;
+    audioContexts.length = 0;
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("stays connecting when only the peer has connected, and still reports the peer", async () => {
+    const call = await startCall();
+    vi.useFakeTimers();
+    call.connect();
+
+    expect(call.call().status).toBe("connecting");
+    expect(call.call().canHangUp).toBe(true);
+    expect(call.onEvent).toHaveBeenCalledWith("connected", expect.anything());
+    act(() => vi.advanceTimersByTime(AGENT_SPEECH_WAIT_MS - 1));
+    expect(call.call().status).toBe("connecting");
+  });
+
+  it("goes live on the agent's first transcribed words", async () => {
+    const call = await startCall();
+    call.connect();
+    call.deliver({ type: "session.output_transcript.delta", delta: " " });
+    expect(call.call().status).toBe("connecting");
+    call.deliver(greeting);
+    expect(call.call().status).toBe("connected");
+    expect(call.onEvent.mock.calls.filter(([event]) => event === "connected")).toHaveLength(1);
+  });
+
+  it("goes live when the remote audio turns from silence to voice, before any caption", async () => {
+    vi.stubGlobal("AudioContext", FakeAudioContext);
+    const call = await startCall();
+    vi.useFakeTimers();
+    call.playRemoteAudio();
+    call.connect();
+
+    audioLevel = 0.002;
+    act(() => vi.advanceTimersByTime(1_000));
+    expect(call.call().status).toBe("connecting");
+
+    audioLevel = 0.1;
+    act(() => vi.advanceTimersByTime(100));
+    expect(call.call().status).toBe("connected");
+    expect(audioContexts[0]!.close).toHaveBeenCalledOnce();
+  });
+
+  it("goes live when the caller speaks first", async () => {
+    const call = await startCall();
+    call.connect();
+    expect(call.call().status).toBe("connecting");
+    call.deliver({ type: "session.input_transcript.delta", delta: "Hello?" });
+    expect(call.call().status).toBe("connected");
+  });
+
+  it("goes live when the peer connects for an agent with no greeting", async () => {
+    const call = await startCall({ agentGreets: false });
+    call.connect();
+    expect(call.call().status).toBe("connected");
+  });
+
+  it("goes live at the fallback when nothing is heard", async () => {
+    const call = await startCall();
+    vi.useFakeTimers();
+    call.connect();
+    expect(call.call().status).toBe("connecting");
+    act(() => vi.advanceTimersByTime(AGENT_SPEECH_WAIT_MS));
+    expect(call.call().status).toBe("connected");
+  });
+
+  it("ends cleanly during the wait: late words and the fallback can't revive the call", async () => {
+    vi.stubGlobal("AudioContext", FakeAudioContext);
+    const call = await startCall();
+    vi.useFakeTimers();
+    call.playRemoteAudio();
+    call.connect();
+
+    await act(async () => {
+      await call.call().endCall();
+    });
+    expect(call.call().status).toBe("ending");
+    expect(call.channel.send).toHaveBeenCalledWith(sessionClose);
+    expect(call.onEvent.mock.calls.filter(([event, properties]) => event === "ended" && properties.endedBy === "caller")).toHaveLength(1);
+    expect(audioContexts[0]!.close).toHaveBeenCalledOnce();
+
+    call.deliver(greeting);
+    act(() => vi.advanceTimersByTime(AGENT_SPEECH_WAIT_MS));
+    expect(call.call().status).toBe("ending");
+
+    call.deliver({ type: "session.closed", reason: "close_requested" });
+    expect(call.call().status).toBe("ended");
+    expect(call.peer.close).toHaveBeenCalled();
+    expect(call.call().canHangUp).toBe(false);
+  });
+
+  it("drops the call during the wait when the connection doesn't recover", async () => {
+    const call = await startCall();
+    vi.useFakeTimers();
+    call.connect();
+    act(() => {
+      call.peer.connectionState = "disconnected";
+      call.peer.onconnectionstatechange!();
+    });
+    act(() => vi.advanceTimersByTime(DISCONNECT_GRACE_MS));
+    expect(call.call().status).toBe("error");
+    expect(call.call().errorKey).toBe("connectionDropped");
+    act(() => vi.advanceTimersByTime(AGENT_SPEECH_WAIT_MS));
+    expect(call.call().status).toBe("error");
+  });
+
+  it("lets a recovered blip go on waiting, without a second connected event", async () => {
+    const call = await startCall();
+    call.connect();
+    act(() => {
+      call.peer.connectionState = "disconnected";
+      call.peer.onconnectionstatechange!();
+    });
+    call.connect();
+    expect(call.call().status).toBe("connecting");
+    expect(call.onEvent.mock.calls.filter(([event]) => event === "connected")).toHaveLength(1);
+    call.deliver(greeting);
+    expect(call.call().status).toBe("connected");
   });
 });
 

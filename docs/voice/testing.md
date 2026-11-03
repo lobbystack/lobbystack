@@ -34,7 +34,7 @@ These options change what runs:
 - **`--locale <code>`**: sets the business's caller language to `en`, `fr`, `es`, `sr`, `de`, `pt`, `it` or `nl` and gives it that language's default greeting. The scripted caller speaks the same language. Without it, the caller speaks English and the business keeps its own language and greeting.
 - **`--browser`**: plays a browser call, like one from the website widget, instead of a phone call. GPT-Live gets the browser call's instructions, the agent runs on the `web_voice` channel, and the caller's audio skips the phone-line filter. Use it after you change what browser calls hear, such as how they answer a caller who asks for a person.
 
-Each run uses under a minute of GPT-Live audio, plus a delegation model call for each hand-over. The default 18 runs take about 5 minutes.
+Each run uses under a minute of GPT-Live audio, plus a delegation model call for each hand-over. The default 24 runs take about 7 minutes. The eval uses production's silence timing, so the `silent` scenario hears both check-ins and the goodbye.
 
 Agent tools that read the database fail in the eval, as they would with the database down. A hand-over that needs one, such as booking, gets the agent's failure answer. Use the eval for how calls flow and end, not for booking results.
 
@@ -50,7 +50,7 @@ Each field answers one question:
 
 - **`PASS` or `FAIL`**: whether the call ended or went on, as the scenario expects
 - **`greeted at … s`**: when the receptionist first spoke, before the caller did, and how many greeting commands the worker sent. The caller waits 15 seconds for it.
-- **`ended … after the caller`**: how long after the caller's last line the controller closed the session, or `still open` after 15 seconds
+- **`ended … after the caller`**: how long after the caller's last line the controller closed the session, or `still open` after 15 seconds, or the scenario's `endSilenceMs`
 - **`hand-overs`**: each request GPT-Live handed to the backend after the opening question, by the tools the agent used. `reply` means the agent answered without a tool.
 - **`checks`**: each answer from the caller check, which runs when the caller speaks after the agent ended the call
 - **`leaving`**: each answer from the leaving check, which runs when GPT-Live gives a short reply and no request is running. `yes` means the controller hangs up even though nothing was handed over.
@@ -76,7 +76,7 @@ pnpm voice:eval --snapshot snapshot.json
 
 ## Place real test calls
 
-`pnpm voice:call` calls a receptionist's number with Twilio and plays the same scenarios with Amazon Polly's voice. After the scripted lines, the caller stays silent for 40 seconds. If the call ends before the script's silences add up, the receptionist hung up.
+`pnpm voice:call` calls a receptionist's number with Twilio and plays the same scenarios with Amazon Polly's voice. After the scripted lines, the caller stays silent for 15 seconds, or for the scenario's `endSilenceMs`. If the call ends before the script's silences add up, the receptionist hung up. The wait stays under the silence check-ins, which end a quiet call about 30 seconds in, so a call that should go on isn't ended by silence first.
 
 You need a Twilio number to call from and the auth token of the account that owns it. To test staging, call the staging number from a number on another account, such as the production toll-free number:
 

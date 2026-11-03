@@ -43,7 +43,7 @@ describe("onboarding number API adapter", () => {
     expect(screen.getByText("number.ready.label")).toBeTruthy();
     expect(screen.getByText("number.ready.call").closest("a")?.getAttribute("href")).toBe("tel:+15815550102");
     await userEvent.click(screen.getByRole("button", { name: "number.continue" }));
-    expect(navigation.push).toHaveBeenCalledWith("/onboarding/attribution");
+    expect(navigation.push).toHaveBeenCalledWith("/onboarding/goal");
     expect(fetchMock).not.toHaveBeenCalled();
   });
   it("shows the chosen number when revisiting from attribution", async () => {
@@ -53,12 +53,12 @@ describe("onboarding number API adapter", () => {
     expect(navigation.push).toHaveBeenCalledWith("/onboarding/attribution");
     expect(fetchMock).not.toHaveBeenCalled();
   });
-  it.each(["attribution", "complete"])("claims a number from %s", async stage => {
+  it.each(["goal", "attribution", "meet", "complete"])("claims a number from %s", async stage => {
     const fetchMock = setup(stage);
     await userEvent.click(await screen.findByRole("button", { name: "number.select" }));
     expect(await screen.findByText("number.ready.label")).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "number.continue" }));
-    expect(navigation.push).toHaveBeenCalledWith(stage === "complete" ? "/" : "/onboarding/attribution");
+    expect(navigation.push).toHaveBeenCalledWith({ goal: "/onboarding/goal", attribution: "/onboarding/attribution", meet: "/onboarding/meet", complete: "/" }[stage]);
     const claimRequest = fetchMock.mock.calls.find(([url]) => url.includes("/claim?"));
     expect(claimRequest).toBeTruthy();
     const claimProperties = { businessId: "business-1", countryCode: "CA", selectionMode: "suggested", numberKind: "local" };

@@ -13,7 +13,7 @@ import { rememberedPlan } from "@/lib/remembered-plan";
 import { setUpgradeInProgress } from "@/lib/upgrade-in-progress";
 import type { WorkspaceViewModel } from "@/lib/page-view-models";
 import { UpgradePlanDialog, type HostedUpgradePlan } from "./upgrade-plan-dialog";
-import { UpgradePlanDialogProvider } from "./upgrade-plan-dialog-context";
+import { UpgradePlanDialogProvider, type PlanOfferCallbacks } from "./upgrade-plan-dialog-context";
 
 type WorkspaceResponse = { businesses: WorkspaceViewModel[] };
 type Billing = {
@@ -31,6 +31,8 @@ export function LiveUpgradePlanProvider({ children }: { children: ReactNode }) {
   const [interval, setInterval] = useState<BillingInterval>("annual");
   const [checkout, setCheckout] = useState<Checkout | null>(null);
   const [leaving, setLeaving] = useState(false);
+  // Set while the dialog opened by itself after a test rather than from a button.
+  const [offer, setOffer] = useState<PlanOfferCallbacks | null>(null);
   // Redirect once per checkout. A page restored from the browser's cache can rerun the
   // effect with the old ready checkout and send them straight back to it.
   const redirectedRequestId = useRef<string | null>(null);
@@ -87,7 +89,12 @@ export function LiveUpgradePlanProvider({ children }: { children: ReactNode }) {
     setUpgradeInProgress(upgrading);
     return () => setUpgradeInProgress(false);
   }, [upgrading]);
-  return <UpgradePlanDialogProvider onOpen={() => { setSelectedPlan(rememberedPlan() ?? "starter"); setOpen(true); }}>
+  const openDialog = () => { setSelectedPlan(rememberedPlan() ?? "starter"); setOpen(true); };
+  const changeOpen = (next: boolean) => {
+    if (!next && offer) { offer.onDismiss(); setOffer(null); }
+    setOpen(next);
+  };
+  return <UpgradePlanDialogProvider onOffer={(callbacks) => { setOffer(callbacks); openDialog(); }} onOpen={openDialog}>
     {children}
     {businessId && billing.data ? <UpgradePlanDialog
       availableCheckoutPlans={billing.data.availableCheckoutPlans ?? []}
@@ -99,8 +106,12 @@ export function LiveUpgradePlanProvider({ children }: { children: ReactNode }) {
       loadingPlan={checkout?.target ?? (mutation.isPending ? mutation.variables.target : null)}
       onBillingIntervalChange={setInterval}
       onContactEnterprise={() => window.location.assign(`mailto:${contactEmailFor(brandLinks(), "sales")}?subject=${encodeURIComponent(t("billing.upgradeDialog.enterpriseSubject"))}`)}
-      onOpenChange={setOpen}
-      onStartCheckout={(target, billingInterval) => mutation.mutate({ businessId, target, billingInterval })}
+      onOpenChange={changeOpen}
+      onStartCheckout={(target, billingInterval) => {
+        offer?.onPlanClicked(target);
+        setOffer(null);
+        mutation.mutate({ businessId, target, billingInterval });
+      }}
       open={open}
       selectedPlan={selectedPlan}
       t={t}

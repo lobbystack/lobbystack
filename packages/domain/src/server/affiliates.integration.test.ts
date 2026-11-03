@@ -114,7 +114,7 @@ describe.skipIf(!testUrl)("affiliate program against dedicated PostgreSQL roles"
       await tx.execute(sql`drop trigger fail_attribution on affiliate_attributions`);
       await asRole(tx, "lobbystack_app", (db) => submitOnboardingAttribution({ db }, { userId: referredUserId, businessId, source: "friend", referralCode }));
       expect(await tx.select().from(affiliateAttributions).where(eq(affiliateAttributions.businessId, businessId))).toHaveLength(1);
-      expect((await tx.select({ stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, businessId)))[0]?.stage).toBe("complete");
+      expect((await tx.select({ stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, businessId)))[0]?.stage).toBe("meet");
     });
   });
 

@@ -4,7 +4,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { agentRules, apiKeys, appointments, auditLogs, billingAccounts, billingCheckoutRequests, businesses, businessHours, businessMemberships, calendarBusyBlocks, calendarConnections, calls, contacts, conversations, createDatabaseClient, idempotencyKeys, inboxItems, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, numberTrials, onboardingNumberClaimEvents, onboardingPhoneVerifications, operatorNotificationDeliveries, operatorNotificationPreferences, outboxMessages, phoneNumbers, platformKeyBusinesses, receptionistProfiles, services, staff, staffServiceAssignments, storageObjects, users, webhookDeliveries, webhookDeliveryAttempts, webhookEndpoints, webhookEvents, websiteIngestionJobs, widgetKeys } from "@lobbystack/db";
+import { agentRules, agents, apiKeys, appointments, auditLogs, billingAccounts, billingCheckoutRequests, businesses, businessHours, businessMemberships, calendarBusyBlocks, calendarConnections, calls, contacts, conversations, createDatabaseClient, idempotencyKeys, inboxItems, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, numberTrials, onboardingNumberClaimEvents, onboardingPhoneVerifications, operatorNotificationDeliveries, operatorNotificationPreferences, outboxMessages, phoneNumbers, platformKeyBusinesses, services, staff, staffServiceAssignments, storageObjects, users, webhookDeliveries, webhookDeliveryAttempts, webhookEndpoints, webhookEvents, websiteIngestionJobs, widgetKeys } from "@lobbystack/db";
 import { apiAppointmentSchema, apiBillingSchema, apiBusinessSchema, apiCalendarConnectionSchema, apiCallSchema, apiCheckoutSchema, apiKnowledgeEntrySchema, apiKnowledgeSourceSchema, apiNotificationPreferencesSchema, apiOnboardingSchema, apiPhoneNumberClaimSchema, apiPhoneNumberOfferSchema, apiPhoneNumberSchema, apiReceptionistSchema, apiRuleSchema, apiServiceSchema, apiStaffSchema, apiTeamSchema, apiWidgetKeyCreatedSchema, defaultGreeting, OPERATOR_SMS_DISCLOSURE_VERSION, WEBHOOK_MAX_ATTEMPTS } from "@lobbystack/shared";
 
 import { finalizeConversationSession } from "../conversations";
@@ -51,7 +51,7 @@ let ownerId: string;
 async function createFixture(label: string): Promise<Fixture> {
   const businessId = randomUUID();
   await admin!.db.insert(businesses).values({ id: businessId, slug: `api-${label}-${businessId}`, name: `API ${label}`, timezone: "UTC", businessType: "test" });
-  await admin!.db.insert(receptionistProfiles).values({ businessId, greeting: "Hi", tone: "warm", summary: label, bookingPolicy: "Book", transferMode: "never", bookingMode: "instant" });
+  await admin!.db.insert(agents).values({ businessId, greeting: "Hi", tone: "warm", summary: label, bookingPolicy: "Book", transferMode: "never", bookingMode: "instant" });
   const [member] = await admin!.db.insert(staff).values({ businessId, name: "Sam", timezone: "UTC" }).returning({ id: staff.id });
   const [service] = await admin!.db.insert(services).values({ businessId, name: "Cut", slug: "cut", durationMinutes: 30 }).returning({ id: services.id });
   await admin!.db.insert(businessHours).values(Array.from({ length: 7 }, (_, dayOfWeek) => ({ businessId, dayOfWeek, openMinutes: 8 * 60, closeMinutes: 20 * 60 })));
@@ -211,12 +211,12 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
   it("books only in instant booking mode", async () => {
     const context = { db: worker!.db };
     const input = { service_id: a.serviceId, starts_at: tomorrowAt(10), contact_phone: "+14165553333", contact_name: "Booker" };
-    await admin!.db.update(receptionistProfiles).set({ bookingMode: "request" }).where(eq(receptionistProfiles.businessId, a.businessId));
+    await admin!.db.update(agents).set({ bookingMode: "request" }).where(eq(agents.businessId, a.businessId));
     await expectApiError(createAppointmentForApi(context, a.caller, input), 409, "booking_requires_confirmation");
-    await admin!.db.update(receptionistProfiles).set({ bookingMode: "off" }).where(eq(receptionistProfiles.businessId, a.businessId));
+    await admin!.db.update(agents).set({ bookingMode: "off" }).where(eq(agents.businessId, a.businessId));
     await expectApiError(createAppointmentForApi(context, a.caller, input), 409, "booking_disabled");
     expect(await admin!.db.select({ id: appointments.id }).from(appointments).innerJoin(contacts, eq(contacts.id, appointments.contactId)).where(and(eq(appointments.businessId, a.businessId), eq(contacts.phone, input.contact_phone)))).toEqual([]);
-    await admin!.db.update(receptionistProfiles).set({ bookingMode: "instant" }).where(eq(receptionistProfiles.businessId, a.businessId));
+    await admin!.db.update(agents).set({ bookingMode: "instant" }).where(eq(agents.businessId, a.businessId));
     const appointment = await createAppointmentForApi(context, a.caller, input);
     expect(apiAppointmentSchema.parse(appointment)).toMatchObject({ status: "confirmed", source: "api", service_id: a.serviceId, contact_phone: "+14165553333" });
     const [calendarJob] = await admin!.db.select({ id: outboxMessages.id }).from(outboxMessages).where(and(eq(outboxMessages.businessId, a.businessId), eq(outboxMessages.topic, "calendar.syncAppointment"), eq(outboxMessages.aggregateId, appointment.id)));
@@ -526,7 +526,7 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
     await admin!.db.update(businesses).set({ onboardingStage: "website" }).where(eq(businesses.id, b.businessId));
     await createKnowledgeSourceForApi({ db: worker!.db }, b.caller, { type: "website", url: "https://birch-api.example" });
     const [business] = await admin!.db.select({ websiteUrl: businesses.websiteUrl, stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, b.businessId));
-    expect(business).toEqual({ websiteUrl: "https://birch-api.example/", stage: "knowledge" });
+    expect(business).toEqual({ websiteUrl: "https://birch-api.example/", stage: "verify_phone" });
   });
 
   it("adds, changes and deletes services, and keeps slugs unique among live services", async () => {
@@ -653,10 +653,10 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
     const before = await getReceptionistForApi(context, a.caller);
     expect(before).toMatchObject({ greeting: "Hi", tone: "warm", booking_policy: "Book", transfer_mode: "never", booking_mode: "instant", appointment_change_policy: { enabled: true, allow_cancel: true, allow_reschedule: true, verification_mode: "phone_match_and_facts" } });
     expect(apiReceptionistSchema.safeParse(before).success).toBe(true);
-    const [profile] = await admin!.db.select({ id: receptionistProfiles.id }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, a.businessId));
+    const [profile] = await admin!.db.select({ id: agents.id }).from(agents).where(eq(agents.businessId, a.businessId));
     const refreshes = async () => (await admin!.db.select({ id: outboxMessages.id }).from(outboxMessages).where(and(eq(outboxMessages.topic, "snapshot.refresh"), eq(outboxMessages.aggregateId, profile!.id)))).length;
     const audits = async () => await admin!.db.select({ payload: auditLogs.payload }).from(auditLogs).where(and(eq(auditLogs.entityId, profile!.id), eq(auditLogs.eventType, "api.receptionist.updated")));
-    const savedAt = async () => (await admin!.db.select({ at: receptionistProfiles.updatedAt }).from(receptionistProfiles).where(eq(receptionistProfiles.id, profile!.id)))[0]!.at.getTime();
+    const savedAt = async () => (await admin!.db.select({ at: agents.updatedAt }).from(agents).where(eq(agents.id, profile!.id)))[0]!.at.getTime();
     const baseline = await refreshes();
     // No policy is stored, which calls read as the default, so sending the default changes nothing.
     await updateReceptionistForApi(context, a.caller, { appointment_change_policy: before.appointment_change_policy });
@@ -678,7 +678,7 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
     expect(await updateReceptionistForApi(context, a.caller, { voice_instructions: null, transfer_number: null })).toMatchObject({ voice_instructions: null, transfer_number: null });
 
     // Sending the summary it already has still makes it the business's own, so AI won't replace it.
-    await admin!.db.update(receptionistProfiles).set({ summary: "Maple cuts hair.", summarySource: "generated" }).where(eq(receptionistProfiles.id, profile!.id));
+    await admin!.db.update(agents).set({ summary: "Maple cuts hair.", summarySource: "generated" }).where(eq(agents.id, profile!.id));
     expect(await updateReceptionistForApi(context, a.caller, { summary: "Maple cuts hair." })).toMatchObject({ summary: "Maple cuts hair.", summary_source: "operator" });
     // Asking for a new summary hands it back to AI and queues the rewrite.
     expect(await updateReceptionistForApi(context, a.caller, { regenerate_summary: true })).toMatchObject({ summary_source: "generated" });
@@ -700,7 +700,7 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
     const businessId = randomUUID();
     await admin!.db.insert(businesses).values({ id: businessId, slug: `api-bare-${businessId}`, name: "Bare Clinic", timezone: "UTC", businessType: "test" });
     const caller: ApiKeyCaller = { businessId, apiKeyId: randomUUID() };
-    const rows = async () => await admin!.db.select({ greeting: receptionistProfiles.greeting, tone: receptionistProfiles.tone }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, businessId));
+    const rows = async () => await admin!.db.select({ greeting: agents.greeting, tone: agents.tone }).from(agents).where(eq(agents.businessId, businessId));
     try {
       const context = { db: worker!.db };
       expect(await getReceptionistForApi(context, caller)).toMatchObject({ greeting: defaultGreeting("Bare Clinic"), summary: "Bare Clinic", summary_source: "placeholder", transfer_mode: "on_request", booking_mode: "instant" });

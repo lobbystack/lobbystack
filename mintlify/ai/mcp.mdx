@@ -1,6 +1,6 @@
 ---
-title: "Run your receptionist from an AI assistant"
-description: "Connect Claude, ChatGPT and other MCP clients to LobbyStack to read calls, book appointments and update what your receptionist knows."
+title: "Run your agent from an AI assistant"
+description: "Connect Claude, ChatGPT and other MCP clients to LobbyStack to read calls, book appointments and update what your agent knows."
 sidebarTitle: "MCP server"
 contentType: "Reference"
 ---
@@ -77,8 +77,8 @@ Owners and admins see every connected assistant for the business under **MCP con
 | `book_appointment` | `appointments:write` | Books an open time |
 | `cancel_appointment` | `appointments:write` | Cancels an appointment |
 | `reschedule_appointment` | `appointments:write` | Moves an appointment to another open time or staff member |
-| `list_messages` | `messages:read` | Messages the receptionist took for your team |
-| `add_knowledge` | `knowledge:write` | Adds an FAQ or a text entry the receptionist can use |
+| `list_messages` | `messages:read` | Messages the agent took for your team |
+| `add_knowledge` | `knowledge:write` | Adds an FAQ or a text entry the agent can use |
 
 On a partner connection each of these tools also takes `business_id`, and the partner tools listed in [Run the partner console from an AI assistant](/white-label/mcp-for-agencies#tools) come on top. Scopes are the same for OAuth and API keys. Tools return the same objects as the REST API, with times in UTC. Read-only tools carry the `readOnlyHint` annotation, and tools that cancel, move or replace data carry `destructiveHint`, so your assistant can ask you before it runs them.
 

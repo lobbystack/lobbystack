@@ -8,7 +8,7 @@ import {
   contacts,
   conversations,
 } from "@lobbystack/db";
-import { listOpenVoiceFollowUps, listRecentCalls, listUpcomingAppointments } from "@lobbystack/domain";
+import { listOpenVoiceFollowUps, listRecentCalls, listUpcomingAppointments, readFirstRealConversationAt } from "@lobbystack/domain";
 import { operatorRoute } from "@/lib/operator-request";
 
 export const dynamic = "force-dynamic";
@@ -47,6 +47,7 @@ export const GET = operatorRoute(async ({ businessId, transaction }) => NextResp
   const liveCallCount = await tx.select({ count: count() }).from(calls).where(and(eq(calls.businessId, businessId), eq(calls.status, "started")));
   const handoffConversations = await tx.select({ id: conversations.id, contactName: contacts.name, summary: conversations.summary, currentIntent: conversations.currentIntent, updatedAt: conversations.updatedAt }).from(conversations).leftJoin(contacts, eq(conversations.contactId, contacts.id)).where(and(eq(conversations.businessId, businessId), eq(conversations.automationState, "human_handoff"))).orderBy(desc(conversations.updatedAt)).limit(6);
   const voiceFollowUps = await listOpenVoiceFollowUps(tx, businessId);
+  const firstRealConversationAt = await readFirstRealConversationAt(tx, businessId);
 
   const monthlyTotals = new Map((aggregates?.monthlyCalls ?? []).map((bucket) => [bucket.month, bucket.total]));
   const monthlyCalls = Array.from({ length: 12 }, (_, index) => {
@@ -64,6 +65,7 @@ export const GET = operatorRoute(async ({ businessId, transaction }) => NextResp
 
   return {
     businessId,
+    firstRealConversationAt,
     kpis: {
       calls: { total: currentCallsTotal, deltaPercent: percentageDelta(currentCallsTotal, previousCallsTotal) },
       messages: { total: aggregates?.messagesCurrent ?? 0, deltaPercent: percentageDelta(aggregates?.messagesCurrent ?? 0, aggregates?.messagesPrevious ?? 0) },

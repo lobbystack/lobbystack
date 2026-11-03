@@ -109,6 +109,20 @@ describe("startup mode", () => {
     await vi.waitFor(() =>
       expect(posthogMock.startSessionRecording).toHaveBeenCalledTimes(1)
     )
+    expect(posthogMock.set_config).toHaveBeenCalledWith({
+      capture_dead_clicks: true,
+    })
+  })
+
+  it("keeps dead clicks off for a visitor who hasn't answered", async () => {
+    stubBrowser(null)
+    await loadModule()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(posthogMock.init.mock.calls[0]![1]).toMatchObject({
+      capture_dead_clicks: false,
+    })
+    expect(posthogMock.set_config).not.toHaveBeenCalled()
   })
 
   it("does not record an undecided visitor", async () => {

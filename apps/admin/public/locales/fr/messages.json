@@ -43,7 +43,7 @@
     "takeOver": "Prendre en charge",
     "waitingBadge": "Demande une personne",
     "waitingTitle": "Visiteur en attente",
-    "waitingDescription": "Ce visiteur a demandé à parler à une personne. Répondez ou appuyez sur Rejoindre le clavardage d'ici 3 minutes, sinon la réceptionniste reprend le clavardage et propose un rappel.",
+    "waitingDescription": "Ce visiteur a demandé à parler à une personne. Répondez ou appuyez sur Rejoindre le clavardage d'ici 3 minutes, sinon l'agent reprend le clavardage et propose un rappel.",
     "joinChat": "Rejoindre le clavardage",
     "uploadFailed": "Impossible de téléverser cette pièce jointe.",
     "maxAttachments": "Vous pouvez envoyer jusqu'à {{count}} pièces jointes à la fois.",

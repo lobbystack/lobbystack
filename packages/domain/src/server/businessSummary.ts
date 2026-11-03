@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { and, asc, desc, eq, inArray, isNotNull, lt, ne, sql } from "drizzle-orm";
 
 import { countKnowledgeTokens } from "../knowledgeRanking";
-import { businesses, enqueueOutbox, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, receptionistProfiles, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, businesses, defaultAgentOf, enqueueOutbox, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
 import type { DomainContext } from "./context";
 
@@ -52,7 +52,7 @@ export type BusinessSummaryInput = {
 export async function loadBusinessSummaryInput(context: DomainContext, input: { businessId: string }): Promise<BusinessSummaryInput | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const [business] = await tx.select({ name: businesses.name, defaultLocale: businesses.defaultLocale }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
-    const [profile] = await tx.select({ summarySource: receptionistProfiles.summarySource, summaryFingerprint: receptionistProfiles.summaryFingerprint }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, input.businessId)).limit(1);
+    const [profile] = await tx.select({ summarySource: agents.summarySource, summaryFingerprint: agents.summaryFingerprint }).from(agents).where(defaultAgentOf(input.businessId)).limit(1);
     if (!business || !profile) return null;
     const snippets = await tx.select({ title: knowledgeSnippets.title, content: knowledgeSnippets.content }).from(knowledgeSnippets)
       .where(and(eq(knowledgeSnippets.businessId, input.businessId), eq(knowledgeSnippets.active, true)))
@@ -97,10 +97,10 @@ export async function loadBusinessSummaryInput(context: DomainContext, input: { 
  */
 export async function resetGeneratedBusinessSummary(context: DomainContext, input: { businessId: string; businessName: string }): Promise<boolean> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const updated = await tx.update(receptionistProfiles)
+    const updated = await tx.update(agents)
       .set({ summary: `${input.businessName.trim()} uses LobbyStack to answer calls.`, summarySource: "placeholder", summaryFingerprint: null, summaryGeneratedAt: null, updatedAt: new Date() })
-      .where(and(eq(receptionistProfiles.businessId, input.businessId), eq(receptionistProfiles.summarySource, "generated")))
-      .returning({ id: receptionistProfiles.id });
+      .where(and(defaultAgentOf(input.businessId), eq(agents.summarySource, "generated")))
+      .returning({ id: agents.id });
     if (!updated[0]) return false;
     await enqueueOutbox(tx, {
       topic: "snapshot.refresh",
@@ -117,10 +117,10 @@ export async function resetGeneratedBusinessSummary(context: DomainContext, inpu
 /** Saves a generated summary unless an operator wrote one meanwhile, and refreshes the snapshot. */
 export async function saveGeneratedBusinessSummary(context: DomainContext, input: { businessId: string; summary: string; fingerprint: string }): Promise<boolean> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const updated = await tx.update(receptionistProfiles)
+    const updated = await tx.update(agents)
       .set({ summary: input.summary, summarySource: "generated", summaryFingerprint: input.fingerprint, summaryGeneratedAt: new Date(), updatedAt: new Date() })
-      .where(and(eq(receptionistProfiles.businessId, input.businessId), ne(receptionistProfiles.summarySource, "operator")))
-      .returning({ id: receptionistProfiles.id });
+      .where(and(defaultAgentOf(input.businessId), ne(agents.summarySource, "operator")))
+      .returning({ id: agents.id });
     if (!updated[0]) return false;
     await enqueueOutbox(tx, {
       topic: "snapshot.refresh",
@@ -140,6 +140,6 @@ export type SummaryRegenerateOutcome = "completed" | "empty" | "failed";
 export async function finishBusinessSummaryRegenerate(context: DomainContext, input: { businessId: string; outcome: SummaryRegenerateOutcome | null }): Promise<void> {
   await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     // Only a rewrite that was asked for; a retry that succeeds after a failure still reports it.
-    await tx.update(receptionistProfiles).set({ summaryRegenerateStatus: input.outcome }).where(and(eq(receptionistProfiles.businessId, input.businessId), isNotNull(receptionistProfiles.summaryRegenerateStatus)));
+    await tx.update(agents).set({ summaryRegenerateStatus: input.outcome }).where(and(defaultAgentOf(input.businessId), isNotNull(agents.summaryRegenerateStatus)));
   });
 }

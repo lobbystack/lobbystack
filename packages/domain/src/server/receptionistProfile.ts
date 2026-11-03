@@ -1,11 +1,14 @@
 
-import { enqueueOutbox, receptionistProfiles, type DatabaseTransaction } from "@lobbystack/db";
+import { and, eq, isNull } from "drizzle-orm";
+
+import { agents, businesses, enqueueOutbox, phoneNumbers, type DatabaseTransaction } from "@lobbystack/db";
 import {
   appointmentChangeVerificationModes,
   bookingModes,
   defaultAppointmentChangePolicy,
   DEFAULT_RECEPTIONIST_VOICE,
   DEFAULT_STAFF_FIRST_RING_SECONDS,
+  defaultAgentName,
   defaultGreeting,
   isCurrencyCode,
   isReceptionistVoice,
@@ -24,11 +27,36 @@ import {
   type TransferPolicy,
 } from "@lobbystack/shared";
 
+import { enqueueAgentSnapshotRefresh } from "./agentSnapshot";
 import { assertTransferNumberAllowed, enqueueRefusedCallForwardRefresh } from "./numberTrials";
 import { assertStaffFirstChange, enqueueStaffFirstRouting } from "./staffFirst";
 
 // Receptionist settings. The dashboard and the v1 API check and save them
 // here, so both follow one set of rules.
+
+/** Whether the business has this agent and it isn't archived. Run it under the operator's own access. */
+export async function activeAgentExistsInTransaction(tx: DatabaseTransaction, input: { businessId: string; agentId: string }): Promise<boolean> {
+  const rows = await tx.select({ id: agents.id }).from(agents).where(and(eq(agents.id, input.agentId), eq(agents.businessId, input.businessId), isNull(agents.archivedAt))).limit(1);
+  return rows.length > 0;
+}
+
+export type TestWindowAgent = { agentId: string; agentName: string; businessName: string; phoneNumber: string | null };
+
+/**
+ * What the test window shows: the agent, its workspace, and the active number
+ * that reaches this agent. Null when the business has no such active agent.
+ * Without an agentId it reads the default agent. Run it under the operator's own access.
+ */
+export async function loadTestWindowAgentInTransaction(tx: DatabaseTransaction, input: { businessId: string; agentId?: string | undefined }): Promise<TestWindowAgent | null> {
+  const row = (await tx.select({ agentId: agents.id, agentName: agents.name, businessName: businesses.name })
+    .from(agents)
+    .innerJoin(businesses, eq(businesses.id, agents.businessId))
+    .where(and(eq(agents.businessId, input.businessId), isNull(agents.archivedAt), input.agentId ? eq(agents.id, input.agentId) : eq(agents.isDefault, true)))
+    .limit(1))[0];
+  if (!row) return null;
+  const number = (await tx.select({ e164: phoneNumbers.e164 }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.agentId, row.agentId), eq(phoneNumbers.status, "active"))).limit(1))[0];
+  return { ...row, phoneNumber: number?.e164 ?? null };
+}
 
 /** Fields a change can set. A missing field stays as it is; null clears an optional one. */
 export type ReceptionistProfilePatch = {
@@ -52,6 +80,8 @@ export type ReceptionistProfilePatch = {
 };
 
 export type ReceptionistSettingsChange = {
+  /** The agent's name, which operators see and callers don't. */
+  name?: string;
   patch: ReceptionistProfilePatch;
   locale?: RuntimeLocale;
   /** The language the team reads the receptionist's notes in. Null goes back to following `locale`. */
@@ -61,6 +91,8 @@ export type ReceptionistSettingsChange = {
   /** Hands the summary back to AI, which rewrites it from the knowledge sources. */
   regenerateSummary: boolean;
 };
+
+const AGENT_NAME_MAX_LENGTH = 80;
 
 const profileFields = ["greeting", "tone", "summary", "bookingPolicy", "voiceInstructions", "smsInstructions", "chatInstructions", "transferMode", "transferNumber", "staffFirstMode", "staffFirstNumber", "staffFirstMessage", "staffFirstHandoverMessage"] as const;
 type ProfileField = (typeof profileFields)[number];
@@ -117,19 +149,22 @@ export function readReceptionistSettingsChange(body: unknown): ReceptionistSetti
   const patch = { ...fields, ...(policy !== undefined ? { appointmentChangePolicy: policy } : {}), ...(bookingMode !== undefined ? { bookingMode } : {}), ...(voice !== undefined ? { voice } : {}), ...(ringSeconds !== undefined ? { staffFirstRingSeconds: ringSeconds } : {}) } as ReceptionistProfilePatch;
 
   const { locale, teamLocale, timezone, currency, regenerateSummary } = input;
+  const name = optionalText(input.name, "name", AGENT_NAME_MAX_LENGTH);
+  if (name === null) throw invalid("name cannot be empty.");
   if (locale !== undefined && !isRuntimeLocale(locale)) throw invalid("locale is invalid.");
   if (teamLocale !== undefined && teamLocale !== null && !isRuntimeLocale(teamLocale)) throw invalid("teamLocale is invalid.");
   if (timezone !== undefined && typeof timezone !== "string") throw invalid("timezone must be a string.");
   if (currency !== undefined && !isCurrencyCode(currency)) throw invalid("currency is invalid.");
   if (regenerateSummary !== undefined && regenerateSummary !== true) throw invalid("regenerateSummary must be true.");
   if (regenerateSummary && patch.summary !== undefined) throw invalid("Send summary or regenerateSummary, not both.");
-  if (Object.keys(patch).length === 0 && locale === undefined && teamLocale === undefined && timezone === undefined && currency === undefined && !regenerateSummary) throw invalid("At least one profile field is required.");
-  return { patch, ...(locale !== undefined ? { locale } : {}), ...(teamLocale !== undefined ? { teamLocale } : {}), ...(timezone !== undefined ? { timezone } : {}), ...(currency !== undefined ? { currency } : {}), regenerateSummary: regenerateSummary === true };
+  if (Object.keys(patch).length === 0 && name === undefined && locale === undefined && teamLocale === undefined && timezone === undefined && currency === undefined && !regenerateSummary) throw invalid("At least one profile field is required.");
+  return { patch, ...(name !== undefined ? { name } : {}), ...(locale !== undefined ? { locale } : {}), ...(teamLocale !== undefined ? { teamLocale } : {}), ...(timezone !== undefined ? { timezone } : {}), ...(currency !== undefined ? { currency } : {}), regenerateSummary: regenerateSummary === true };
 }
 
 /** The settings a receptionist has before anyone edits them. */
 export function defaultReceptionistProfile(businessName: string, locale: RuntimeLocale = "en") {
   return {
+    name: defaultAgentName(locale),
     greeting: defaultGreeting(businessName, locale),
     tone: "professional",
     summary: businessName,
@@ -162,16 +197,17 @@ export function defaultReceptionistProfile(businessName: string, locale: Runtime
  */
 export async function saveReceptionistProfileInTransaction(
   tx: DatabaseTransaction,
-  input: { businessId: string; businessName: string; locale?: RuntimeLocale | undefined; patch: ReceptionistProfilePatch; regenerateSummary?: boolean | undefined },
-): Promise<typeof receptionistProfiles.$inferSelect | null> {
+  input: { businessId: string; businessName: string; locale?: RuntimeLocale | undefined; name?: string | undefined; patch: ReceptionistProfilePatch; regenerateSummary?: boolean | undefined },
+): Promise<typeof agents.$inferSelect | null> {
   const { businessId, patch } = input;
   // An E.164 number in a country Twilio can call and, during a free trial, only the mobile its claimer verified. Employees' numbers follow the same rules.
   if (patch.transferNumber) await assertTransferNumberAllowed(tx, { businessId, phone: patch.transferNumber });
   const changesStaffFirst = patch.staffFirstMode !== undefined || patch.staffFirstNumber !== undefined;
   if (changesStaffFirst) await assertStaffFirstChange(tx, { businessId, mode: patch.staffFirstMode, number: patch.staffFirstNumber });
   const defaults = defaultReceptionistProfile(input.businessName, input.locale);
-  const [profile] = await tx.insert(receptionistProfiles).values({
+  const [profile] = await tx.insert(agents).values({
     businessId,
+    name: input.name ?? defaults.name,
     greeting: patch.greeting ?? defaults.greeting,
     tone: patch.tone ?? defaults.tone,
     summary: patch.summary ?? defaults.summary,
@@ -192,21 +228,14 @@ export async function saveReceptionistProfileInTransaction(
     ...(patch.staffFirstMessage !== undefined ? { staffFirstMessage: patch.staffFirstMessage } : {}),
     ...(patch.staffFirstHandoverMessage !== undefined ? { staffFirstHandoverMessage: patch.staffFirstHandoverMessage } : {}),
   }).onConflictDoUpdate({
-    target: receptionistProfiles.businessId,
-    set: { ...patch, ...(patch.summary !== undefined ? { summarySource: "operator" as const, summaryRegenerateStatus: null } : {}), ...(input.regenerateSummary ? { summarySource: "generated" as const, summaryRegenerateStatus: "pending" as const } : {}), updatedAt: new Date() },
+    target: agents.businessId,
+    set: { ...patch, ...(input.name !== undefined ? { name: input.name } : {}), ...(patch.summary !== undefined ? { summarySource: "operator" as const, summaryRegenerateStatus: null } : {}), ...(input.regenerateSummary ? { summarySource: "generated" as const, summaryRegenerateStatus: "pending" as const } : {}), updatedAt: new Date() },
   }).returning();
   if (!profile) return null;
   // Some carriers forward a call the receptionist refuses to a number stored on the carrier, so they learn the new transfer number.
   if (patch.transferNumber !== undefined) await enqueueRefusedCallForwardRefresh(tx, businessId);
   if (patch.staffFirstMode !== undefined) await enqueueStaffFirstRouting(tx, businessId);
-  await enqueueOutbox(tx, {
-    topic: "snapshot.refresh",
-    businessId,
-    aggregateType: "receptionist_profile",
-    aggregateId: profile.id,
-    dedupeKey: `snapshot:${businessId}:profile:${profile.updatedAt.toISOString()}`,
-    payload: { businessId },
-  });
+  await enqueueAgentSnapshotRefresh(tx, { businessId, agentId: profile.id, change: "agent_updated", dedupeKey: `snapshot:${businessId}:profile:${profile.updatedAt.toISOString()}` });
   if (input.regenerateSummary) {
     await enqueueOutbox(tx, {
       topic: "business.generateSummary",

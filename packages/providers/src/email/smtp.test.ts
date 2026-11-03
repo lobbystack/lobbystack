@@ -174,21 +174,27 @@ describe("SMTP delivery", () => {
     await provider.sendTemplate({ brand, template: "operator_alert", to: "approved@example.invalid", subject: "Test", variables: {} });
     expect(sendMail).toHaveBeenCalledOnce();
   });
-  it("sends the onboarding follow-up as plain text from the founder, with replies going to the founder", async () => {
+  it("sends the onboarding follow-up as plain text from the founder, with a link per answer and replies going to the founder", async () => {
     const { provider, sent } = capture();
-    await send(provider, { template: "onboarding_followup", to: "owner@example.test", from: "Raphael <raphael@example.test>", subject: "How'd you like LobbyStack?", variables: { locale: "en", firstName: "Sam", businessName: "Acme Dental", senderName: "Raphael" } });
+    const tokens = { checkInToken_still_testing: "v1.testing.sig", checkInToken_connect_number: "v1.number.sig", checkInToken_test_call_mistakes: "v1.mistakes.sig", checkInToken_not_a_fit: "v1.fit.sig" };
+    await send(provider, { template: "onboarding_followup", to: "owner@example.test", from: "Raphael <raphael@example.test>", subject: "Acme Dental's agent hasn't had a real conversation yet", variables: { locale: "en", firstName: "Sam", businessName: "Acme Dental", senderName: "Raphael", ...tokens } });
     expect(sent(0).from).toBe("Raphael <raphael@example.test>");
     expect(sent(0).replyTo).toBeUndefined();
     expect(sent(0).html).toBeUndefined();
     expect(sent(0).text).toMatch(/^Hi Sam,\n/);
-    expect(sent(0).text).toContain("I'm Raphael, the founder of LobbyStack. You set up a receptionist for Acme Dental yesterday.");
-    expect(sent(0).text).toContain("3. Do you plan to use it for real, with your own phone number?");
-    expect(sent(0).text).toContain("You can reply to this email, and two lines would be plenty!\n\nThanks again,\nRaphael\nFounder, LobbyStack");
-    await send(provider, { template: "onboarding_followup", to: "owner@example.test", subject: "Qu'avez-vous pensé de LobbyStack ?", variables: { locale: "fr", firstName: "", businessName: "Clinique", senderName: "Raphael" } });
+    expect(sent(0).text).toContain("You set up an agent for Acme Dental yesterday, and it hasn't talked to a real customer yet.");
+    expect(sent(0).text).toContain("What's holding you back? Click one:");
+    expect(sent(0).text).toContain("I'm still testing it\nhttps://app.example.test/en/check-in/v1.testing.sig\n");
+    expect(sent(0).text).toContain("I don't know how to connect my number\nhttps://app.example.test/en/check-in/v1.number.sig\n");
+    expect(sent(0).text).toContain("It made mistakes on my test call\nhttps://app.example.test/en/check-in/v1.mistakes.sig\n");
+    expect(sent(0).text).toContain("It's not right for my business\nhttps://app.example.test/en/check-in/v1.fit.sig\n");
+    expect(sent(0).text).toContain("If it's something else, just reply. I read every answer.\n\nRaphael\nFounder, LobbyStack");
+    await send(provider, { template: "onboarding_followup", to: "owner@example.test", subject: "Votre agent pour Clinique n'a pas encore eu de vraie conversation", variables: { locale: "fr", firstName: "", businessName: "Clinique", senderName: "Raphael", ...tokens } });
     expect(sent(1).from).toBe("no-reply@example.test");
     expect(sent(1).replyTo).toBe("support@example.test");
     expect(sent(1).text).toMatch(/^Bonjour,\n/);
-    expect(sent(1).text).toContain("une réceptionniste pour Clinique hier");
+    expect(sent(1).text).toContain("un agent pour Clinique hier");
+    expect(sent(1).text).toContain("/fr/check-in/v1.fit.sig");
   });
   it("invites an owner a platform key named to make their account at the sign-up page", async () => {
     const { provider, sendMail } = capture();
@@ -238,15 +244,17 @@ describe("SMTP delivery", () => {
 
   it("localizes the onboarding follow-up and existing-account emails in Spanish and Serbian", async () => {
     const { provider, sendMail } = capture();
-    await send(provider, { template: "onboarding_followup", to: "owner@example.test", subject: "¿Qué le pareció LobbyStack?", variables: { locale: "es", firstName: "Ana", businessName: "Clínica Sol", senderName: "Raphael" } });
-    await send(provider, { template: "onboarding_followup", to: "owner@example.test", subject: "Kako Vam se dopao LobbyStack?", variables: { locale: "sr", firstName: "", businessName: "Ordinacija Javor", senderName: "Raphael" } });
+    await send(provider, { template: "onboarding_followup", to: "owner@example.test", subject: "El agente de Clínica Sol aún no ha tenido una conversación real", variables: { locale: "es", firstName: "Ana", businessName: "Clínica Sol", senderName: "Raphael", checkInToken_still_testing: "v1.es.sig" } });
+    await send(provider, { template: "onboarding_followup", to: "owner@example.test", subject: "Agent za Ordinacija Javor još nije imao pravi razgovor", variables: { locale: "sr", firstName: "", businessName: "Ordinacija Javor", senderName: "Raphael", checkInToken_still_testing: "v1.sr.sig" } });
     await send(provider, { template: "existing_account", to: "owner@example.test", variables: { locale: "es", signInUrl: "https://app.example.test/es/login", resetUrl: "https://app.example.test/es/forgot-password" } });
     await send(provider, { template: "existing_account", to: "owner@example.test", variables: { locale: "sr", signInUrl: "https://app.example.test/sr/login", resetUrl: "https://app.example.test/sr/forgot-password" } });
     const [spanish, serbian, spanishAccount, serbianAccount] = sendMail.mock.calls.map((call) => call[0].text as string);
     expect(spanish).toMatch(/^Hola, Ana:\n/);
-    expect(spanish).toContain("una recepcionista para Clínica Sol");
+    expect(spanish).toContain("un agente para Clínica Sol");
+    expect(spanish).toContain("Todavía lo estoy probando\nhttps://app.example.test/es/check-in/v1.es.sig");
     expect(serbian).toMatch(/^Zdravo,\n/);
-    expect(serbian).toContain("recepcionera za Ordinacija Javor");
+    expect(serbian).toContain("agenta za Ordinacija Javor");
+    expect(serbian).toContain("Još ga testiram\nhttps://app.example.test/sr/check-in/v1.sr.sig");
     expect(serbian).not.toMatch(/[Ѐ-ӿ]/);
     expect(spanishAccount).toContain("Inicie sesión para continuar: https://app.example.test/es/login");
     expect(serbianAccount).toContain("Prijavite se da biste nastavili: https://app.example.test/sr/login");
@@ -327,7 +335,7 @@ describe("a business's allowance alert", () => {
       "Firma Harbor Dental je potrošila sve četove ovog meseca",
     ]);
     expect(emails[cases.length]!.text).toContain("Harbor Dental a utilisé 4 des 5 minutes incluses en October.");
-    expect(emails[cases.length * 2 + 1]!.text).toContain("Su recepcionista sigue contestando llamadas hasta un tope mensual, y Bright Desk le cobra cada minuto adicional.");
+    expect(emails[cases.length * 2 + 1]!.text).toContain("Su agente sigue contestando llamadas hasta un tope mensual, y Bright Desk le cobra cada minuto adicional.");
     for (const [index, email] of emails.entries()) {
       const locale = locales[Math.floor(index / cases.length)]!;
       expect(email.text.startsWith({ en: "Hi Mia,", fr: "Bonjour Mia,", es: "Hola, Mia:", sr: "Zdravo, Mia," }[locale]!)).toBe(true);
@@ -352,7 +360,7 @@ describe("a partner's alert about one business's allowance", () => {
     expect(sent(0)).toMatchObject({ subject: "Harbor Dental used 80% of its package's minutes", replyTo: "support@example.test" });
     expect(sent(0).text).toBe(["Hi Ana,", "", "Harbor Dental used 8 of the 10 minutes in its package for October.", "", "Its overage is off, so once they run out, calls forward to its transfer number or the owner's phone until next month.", "", `Turn on its overage on the Businesses page: ${url}`, "", "LobbyStack"].join("\n"));
     expect(sent(1).subject).toBe("Harbor Dental used all of its package's minutes");
-    expect(sent(1).text).toContain("Harbor Dental used all 10 minutes in its package for October.\n\nIts receptionist keeps answering calls until its overage reaches the monthly cap you set, and you bill the business for each extra minute.");
+    expect(sent(1).text).toContain("Harbor Dental used all 10 minutes in its package for October.\n\nIts agent keeps answering calls until its overage reaches the monthly cap you set, and you bill the business for each extra minute.");
     expect(sent(1).text).toContain(`Change its overage on the Businesses page: ${url}`);
     expect(sent(2).subject).toBe("Harbor Dental used 80% of its package's website chats");
     expect(sent(2).text).toContain("Past them, its website chat keeps replying, and you bill the business for each extra chat.");

@@ -27,7 +27,7 @@
     "analytics": {
       "chart": {
         "title": "Resumen de actividad",
-        "description": "Llamadas y mensajes en su espacio de trabajo de recepción."
+        "description": "Llamadas y mensajes en su espacio de trabajo."
       },
       "cards": {
         "calls": "Número de llamadas",
@@ -165,8 +165,8 @@
     }
   },
   "setup": {
-    "title": "Cree su primer negocio",
-    "description": "Esto crea la cuenta, el perfil de la recepcionista y la primera instantánea que usa la voz.",
+    "title": "Cree su primer espacio de trabajo",
+    "description": "Esto crea el espacio de trabajo, el perfil del agente y la primera instantánea que usa la voz.",
     "businessName": "Nombre del negocio",
     "slug": "Slug",
     "timezone": "Zona horaria",
@@ -183,10 +183,10 @@
       "other": "Otro"
     },
     "selectBusinessType": "Elija el tipo de negocio",
-    "create": "Crear negocio",
+    "create": "Crear espacio de trabajo",
     "creating": "Creando...",
-    "created": "Negocio creado. Se está actualizando la instantánea de la recepcionista.",
-    "failed": "No se pudo crear el negocio."
+    "created": "Espacio de trabajo creado. Se está actualizando la instantánea del agente.",
+    "failed": "No se pudo crear el espacio de trabajo."
   },
   "cards": {
     "calls": {
@@ -195,7 +195,7 @@
     },
     "services": {
       "title": "Servicios configurados",
-      "footer": "Los usan tanto la recepcionista como el sistema de reservas."
+      "footer": "Los usan tanto el agente como el sistema de reservas."
     },
     "hours": {
       "title": "Días de apertura definidos",
@@ -210,7 +210,7 @@
   "quickActions": {
     "title": "Acciones rápidas",
     "description": "Mantenga {{businessName}} listo para llamadas, SMS y reservas.",
-    "configureProfile": "Configurar el perfil de la recepcionista",
+    "configureProfile": "Configurar el perfil del agente",
     "addKnowledge": "Añadir conocimiento y documentos",
     "reviewInbox": "Revisar la bandeja de llamadas",
     "readiness": "Estado de la configuración",
@@ -222,7 +222,7 @@
   },
   "nextSteps": {
     "title": "Próximos pasos",
-    "description": "Ajuste el comportamiento de la recepcionista antes de recibir llamadas reales.",
+    "description": "Ajuste el comportamiento del agente antes de recibir llamadas reales.",
     "hours": "Defina el horario y los servicios para que las reservas propongan horarios reales.",
     "transfer": "Añada reglas de transferencia y un número de respaldo antes de transferir llamadas urgentes.",
     "snapshot": "Actualice la instantánea después de cambios importantes en sus políticas para que la voz los aplique rápido."
@@ -248,7 +248,7 @@
     },
     "forwardTrial": {
       "title": "Envíe sus llamadas perdidas al {{number}}",
-      "description": "Active el desvío de llamadas con su operador y las llamadas que no pueda contestar irán a su recepcionista en lugar del buzón de voz.",
+      "description": "Active el desvío de llamadas con su operador y las llamadas que no pueda contestar irán a su agente en lugar del buzón de voz.",
       "cta": "Configurar el desvío"
     },
     "upgrade": {
@@ -257,17 +257,63 @@
       "cta": "Elegir un plan"
     }
   },
+  "setupGuide": {
+    "title": "Primeros pasos",
+    "skip": "Omitir configuración",
+    "skipStep": "Omitir",
+    "finished": "Configuración completada.",
+    "description": "{{completed}} de {{total}} pasos de configuración completados.",
+    "lastCall": "Su llamada de prueba",
+    "lastCallDetails": "{{date}}, {{duration}}",
+    "readTranscript": "Leer la transcripción",
+    "callAgain": "Llamar de nuevo",
+    "steps": {
+      "fullScan": "Leer el resto de su sitio",
+      "sources": "Añadir más fuentes",
+      "hours": "Añadir su horario",
+      "testCall": "Escuchar a su agente",
+      "phoneNumber": "Conectar un número de teléfono",
+      "forwardCalls": "Desvíe sus llamadas"
+    },
+    "stepDescriptions": {
+      "fullScan": "Su agente ha leído una parte de su sitio.",
+      "sources": {
+        "answer_calls": "Suba las políticas, preguntas frecuentes y precios que consultan quienes llaman.",
+        "book_appointments": "Suba sus servicios, precios y reglas de reserva.",
+        "answer_website_visitors": "Suba las preguntas frecuentes y políticas que consultan los visitantes de su sitio.",
+        "answer_instagram_messages": "Suba las preguntas frecuentes y precios que le consultan en Instagram.",
+        "none": "Suba sus políticas, preguntas frecuentes o precios."
+      },
+      "hours": "Su agente reserva citas solo dentro de este horario.",
+      "testCall": {
+        "answer_calls": "Pregúntele lo que más le preguntan quienes llaman.",
+        "book_appointments": "Pídale que reserve una cita.",
+        "answer_website_visitors": "Pregúntele lo que la gente pregunta en su sitio web.",
+        "answer_instagram_messages": "Pregúntele lo que la gente pregunta en Instagram.",
+        "none": "Pregúntele lo que más preguntan sus clientes."
+      },
+      "phoneNumber": "Dé a su agente su propio número para atender a personas reales.",
+      "phoneNumberTrial": "Conteste sus llamadas perdidas gratis durante 14 días, sin tarjeta."
+    },
+    "stepActions": {
+      "fullScan": "Leer el resto",
+      "sources": "Subir documento",
+      "hours": "Añadir horario",
+      "testCall": "Iniciar una llamada",
+      "phoneNumber": "Elegir un número"
+    }
+  },
   "forwarding": {
     "title": "Desvíe sus llamadas al {{number}}",
-    "description": "Elija su operador y siga los pasos en el teléfono al que llaman sus clientes.",
+    "description": "Elija su operador.",
     "modes": {
       "missed": {
         "label": "Llamadas perdidas",
-        "help": "Su teléfono suena primero. Si no contesta, su recepcionista atiende."
+        "help": "Su teléfono suena primero. Si no contesta, su agente atiende."
       },
       "all": {
         "label": "Todas las llamadas",
-        "help": "Su recepcionista contesta cada llamada, y su teléfono no suena."
+        "help": "Su agente contesta cada llamada, y su teléfono no suena."
       }
     },
     "carrier": {
@@ -279,7 +325,8 @@
       "usMobile": "Celular (EE. UU.)",
       "caMobile": "Celular (Canadá)",
       "landline": "Líneas fijas",
-      "voip": "Sistemas telefónicos para empresas"
+      "voip": "Sistemas telefónicos para empresas",
+      "ukMobile": "Móviles del Reino Unido"
     },
     "code": {
       "dial": "Marque este código:",
@@ -297,16 +344,16 @@
     },
     "notes": {
       "planFeature": "Si el desvío no se activa, pida a {{name}} que agregue el desvío de llamadas a su plan.",
-      "iphone": "En un iPhone, desactive el Buzón de voz en vivo en los ajustes de Teléfono. Si no, contesta antes que su recepcionista.",
-      "ringTime": "Si puede elegir el tiempo de timbre, de 15 a 20 segundos le dan unos cuatro timbres antes de que su recepcionista conteste.",
+      "iphone": "En un iPhone, desactive el Buzón de voz en vivo en los ajustes de Teléfono. Si no, contesta antes que su agente.",
+      "ringTime": "Si puede elegir el tiempo de timbre, de 15 a 20 segundos le dan unos cuatro timbres antes de que su agente conteste.",
       "voicemail": "Si tiene el buzón de voz de {{name}}, pida a {{name}} que lo quite. Las llamadas perdidas no se pueden desviar mientras esté activo.",
       "androidOnly": "Estos pasos son para teléfonos Android. En un iPhone, pida a {{name}} que lo active por usted.",
       "adminOnly": "Solo un administrador de su cuenta de {{name}} puede cambiar esto.",
       "verifyNumber": "{{name}} envía un código al {{number}} antes de desviar. Elija recibir el código por llamada y léalo en la transcripción de esa llamada, en Llamadas."
     },
     "test": {
-      "missed": "Para probarlo, llame a su número de negocio desde otro teléfono y déjelo sonar. Su recepcionista debería contestar.",
-      "all": "Para probarlo, llame a su número de negocio desde otro teléfono. Su recepcionista debería contestar."
+      "missed": "Para probarlo, llame a su número de negocio desde otro teléfono y déjelo sonar. Su agente debería contestar.",
+      "all": "Para probarlo, llame a su número de negocio desde otro teléfono. Su agente debería contestar."
     },
     "unsupported": {
       "missed": "{{name}} no ofrece desvío solo para llamadas perdidas. Elija Todas las llamadas, o pida a {{name}} que desvíe las llamadas sin respuesta al {{number}}.",
@@ -315,6 +362,10 @@
     "notListed": {
       "missed": "¿Su operador no aparece? Pídale que desvíe las llamadas sin respuesta al {{number}}.",
       "all": "¿Su operador no aparece? Pídale que desvíe todas sus llamadas al {{number}}."
+    },
+    "general": {
+      "missed": "En un móvil, abra los ajustes de llamadas del teléfono y desvíe las llamadas sin respuesta al {{number}}. En una línea fija o un sistema telefónico de empresa, pídaselo a su operador.",
+      "all": "En un móvil, abra los ajustes de llamadas del teléfono y desvíe todas las llamadas al {{number}}. En una línea fija o un sistema telefónico de empresa, pídaselo a su operador."
     }
   }
 }

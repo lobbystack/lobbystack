@@ -16,7 +16,7 @@ vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetry
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string, options?: { day?: string; list?: string; number?: number }) => (options?.day ? `${key}:${options.day}` : options?.list ? `${key}:${options.list}` : options?.number ? `${key}:${options.number}` : key) }) }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
-vi.mock("@/lib/test-call-launcher", () => ({ startTestCall: vi.fn(), subscribeTestCallEnded: () => () => undefined, subscribeTestCallStarter: () => () => undefined, getTestCallStarter: () => null }));
+vi.mock("@/lib/test-window", () => ({ openTestWindow: vi.fn(), subscribeTestCallEnded: () => () => undefined, subscribeTestChatReplied: () => () => undefined, useTestWindowReady: () => false }));
 vi.mock("./upgrade-plan-dialog-context", () => ({ useOpenUpgradePlanDialog: () => vi.fn() }));
 
 type Closure = { startsAt: string; endsAt: string; reason: string };
@@ -221,13 +221,61 @@ describe("instant booking without opening hours", () => {
     window.history.replaceState(null, "", "#");
   });
 
-  it("warns in the setup guide", async () => {
+  it("adds an opening hours step to the setup guide, after the sources", async () => {
     stubFetch({ hoursSource: "none", hours: [] });
     const queryClient = client();
     queryClient.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
-    queryClient.setQueryData(["setup", "business"], { steps: [{ id: "fullScan", status: "needs setup" }] });
-    render(<QueryClientProvider client={queryClient}><LiveSetupGuideSurface /></QueryClientProvider>);
-    expect(await screen.findByText("hours.noHoursAlert.title")).toBeTruthy();
+    queryClient.setQueryData(["setup", "business"], { steps: [{ id: "fullScan", status: "complete" }, { id: "sources", status: "complete" }, { id: "testCall", status: "needs setup" }] });
+    render(<QueryClientProvider client={queryClient}><LiveSetupGuideSurface businessId="business" goal={null} /></QueryClientProvider>);
+    expect(await screen.findByText("setupGuide.steps.hours")).toBeTruthy();
+    const titles = screen.getAllByText(/^setupGuide\.steps\./).map((element) => element.textContent);
+    expect(titles).toEqual(["setupGuide.steps.fullScan", "setupGuide.steps.sources", "setupGuide.steps.hours", "setupGuide.steps.testCall"]);
+    expect(screen.getByText("setupGuide.stepActions.hours").closest("a")?.getAttribute("href")).toBe("/agent/basic-settings#opening-hours");
+  });
+
+  it("lists finished steps first, then the rest in order", async () => {
+    stubFetch({ hoursSource: "none", hours: [] });
+    const queryClient = client();
+    queryClient.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
+    queryClient.setQueryData(["setup", "business"], { steps: [{ id: "fullScan", status: "needs setup" }, { id: "sources", status: "needs setup" }, { id: "testCall", status: "complete" }, { id: "phoneNumber", status: "needs setup" }] });
+    render(<QueryClientProvider client={queryClient}><LiveSetupGuideSurface businessId="business" goal={null} /></QueryClientProvider>);
+    await screen.findByText("setupGuide.steps.hours");
+    const titles = screen.getAllByText(/^setupGuide\.steps\./).map((element) => element.textContent);
+    expect(titles).toEqual(["setupGuide.steps.testCall", "setupGuide.steps.fullScan", "setupGuide.steps.sources", "setupGuide.steps.hours", "setupGuide.steps.phoneNumber"]);
+  });
+
+  // Skip setup has to end the list for a business with no hours too.
+  it("skips the opening hours step like the others", async () => {
+    const fetchMock = stubFetch({ hoursSource: "none", hours: [] });
+    const queryClient = client();
+    queryClient.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
+    queryClient.setQueryData(["setup", "business"], { steps: [{ id: "sources", status: "complete" }], skippedSteps: [] });
+    render(<QueryClientProvider client={queryClient}><LiveSetupGuideSurface businessId="business" goal={null} /></QueryClientProvider>);
+    await screen.findByText("setupGuide.steps.hours");
+    fireEvent.click(screen.getByRole("button", { name: "setupGuide.skipStep" }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url, init]) => String(url).startsWith("/api/setup") && init?.method === "PATCH" && JSON.parse(String(init.body)).stepId === "hours")).toBe(true));
+  });
+
+  it("shows a skipped opening hours step as done", async () => {
+    stubFetch({ hoursSource: "none", hours: [] });
+    const queryClient = client();
+    queryClient.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
+    queryClient.setQueryData(["setup", "business"], { steps: [{ id: "sources", status: "needs setup" }], skippedSteps: ["hours"] });
+    render(<QueryClientProvider client={queryClient}><LiveSetupGuideSurface businessId="business" goal={null} /></QueryClientProvider>);
+    expect((await screen.findByText("setupGuide.steps.hours")).className).toContain("line-through");
+    expect(screen.getByText("setupGuide.steps.sources").className).not.toContain("line-through");
+  });
+
+  it("leaves the opening hours step out once the business has hours", async () => {
+    const fetchMock = stubFetch({ hoursSource: "generated", hours: [{ dayOfWeek: 1, openMinutes: 540, closeMinutes: 1020 }] });
+    const queryClient = client();
+    queryClient.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
+    queryClient.setQueryData(["setup", "business"], { steps: [{ id: "sources", status: "needs setup" }] });
+    render(<QueryClientProvider client={queryClient}><LiveSetupGuideSurface businessId="business" goal={null} /></QueryClientProvider>);
+    await screen.findByText("setupGuide.steps.sources");
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).startsWith("/api/hours"))).toBe(true));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(screen.queryByText("setupGuide.steps.hours")).toBeNull();
   });
 });
 

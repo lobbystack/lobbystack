@@ -11,7 +11,7 @@
     "title": "Chargement...",
     "retry": "Réessayer le chargement",
     "failed": "Certaines traductions n'ont pas pu être chargées.",
-    "description": "Synchronisation de votre espace et des réglages de la réceptionniste."
+    "description": "Synchronisation de votre espace et des réglages de l'agent."
   },
   "language": {
     "label": "Langue",
@@ -61,7 +61,7 @@
   },
   "labels": {
     "customer": "Client",
-    "receptionist": "Réceptionniste",
+    "receptionist": "Agent",
     "prompt": "Demande"
   },
   "aiPhoneNumber": {
@@ -98,13 +98,17 @@
     "outOfMinutes": "Vos minutes sont épuisées. Les appels vont maintenant au {{forwardTo}}.",
     "stillAvailable": "Le {{number}} est encore disponible. Abonnez-vous pour le récupérer.",
     "keepNumber": "Garder mon numéro",
-    "getReceptionistBack": "Retrouver ma réceptionniste",
+    "getReceptionistBack": "Retrouver mon agent",
     "getNumberBack": "Récupérer mon numéro"
+  },
+  "testWindow": {
+    "orCall": "Ou appelez le",
+    "message": "Message",
+    "send": "Envoyer",
+    "sendFailed": "Message non envoyé. Réessayez."
   },
   "testCall": {
     "trigger": "Appel test",
-    "title": "Tester votre réceptionniste IA",
-    "description": "Démarrez un appel en direct dans le navigateur avec votre réceptionniste configurée.",
     "start": "Lancer l’appel",
     "connecting": "Connexion...",
     "hangUp": "Raccrocher",
@@ -112,8 +116,8 @@
     "status": {
       "idle": "Prêt quand vous l’êtes",
       "requesting_microphone": "Demande d’accès au microphone",
-      "connecting": "Connexion à votre réceptionniste IA",
-      "connected": "En direct avec votre réceptionniste IA",
+      "connecting": "Connexion à votre agent IA",
+      "connected": "En direct avec votre agent IA",
       "ending": "Fin de l’appel",
       "ended": "Appel terminé",
       "error": "Impossible de démarrer l’appel"
@@ -139,7 +143,7 @@
       "businessNotFound": "Nous ne trouvons pas cet espace de travail. Passez à un espace actif et réessayez.",
       "rateLimited": "Trop d’appels test ont été lancés. Veuillez réessayer bientôt.",
       "voiceLimitReached": "Cet espace de travail a utilisé ses minutes vocales de ce mois-ci.",
-      "unavailable": "Votre réceptionniste IA est indisponible pour le moment.",
+      "unavailable": "Votre agent IA est indisponible pour le moment.",
       "generic": "Une erreur est survenue au démarrage de l’appel."
     }
   },
@@ -246,6 +250,7 @@
     "doneHint_many": "{{count}} pages sont prêtes à répondre.",
     "doneHint_other": "{{count}} pages sont prêtes à répondre.",
     "failedTitle": "Nous n'avons pas pu lire {{host}}",
-    "failedHint": "Ajoutez vos informations à la main, ou relancez l'import depuis votre tableau de bord."
+    "failedHint": "Ajoutez vos informations à la main, ou relancez l'import depuis votre tableau de bord.",
+    "inlineRunning": "Lecture de {{host}}. Pages lues jusqu'ici : {{count}}."
   }
 }

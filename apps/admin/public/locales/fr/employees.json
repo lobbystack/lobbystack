@@ -54,7 +54,7 @@
         "invalid": "Saisissez un numéro de téléphone valide.",
         "exists": "Un employé avec ce numéro de téléphone existe déjà.",
         "trialLocked": "Pendant l'essai gratuit, les appels ne peuvent être transférés qu'au mobile de la personne qui a demandé l'essai.",
-        "countryUnsupported": "Votre réceptionniste ne peut pas encore transférer d'appels vers ce pays."
+        "countryUnsupported": "Votre agent ne peut pas encore transférer d'appels vers ce pays."
       },
       "services": {
         "label": "Services",
@@ -76,7 +76,7 @@
       },
       "timeOff": {
         "label": "Congés",
-        "hint": "Facultatif. Le réceptionniste ne réserve pas cet employé ces jours-là et indique aux clients quand il revient.",
+        "hint": "Facultatif. L'agent ne réserve pas cet employé ces jours-là et indique aux clients quand il revient.",
         "add": "Ajouter un congé",
         "placeholder": "Choisissez le premier et le dernier jour",
         "dates": "Dates du congé",

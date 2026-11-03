@@ -64,7 +64,7 @@ El modelo GPT-Live de OpenAI contesta las llamadas desde el navegador y las llam
 | `TELEPHONY_ALERT_SMS_FROM` | El número del remitente compartido. Si falta, se usa `TWILIO_ALERT_SMS_FROM`. |
 | `OPENAI_PROJECT_ID` | El ID de su proyecto de OpenAI (`proj_…`). El worker le da a cada número de Telnyx su propia conexión SIP a ese proyecto, y no compra ningún número de Telnyx sin él. La aplicación de administración y el worker lo necesitan para El personal responde primero en números de Twilio. Sin él en la aplicación de administración, el ajuste no se puede activar. |
 | `TELNYX_OUTBOUND_VOICE_PROFILE_ID` | El perfil de voz saliente de la conexión de cada número, que usan las transferencias de llamadas. |
-| `TELNYX_TEXML_APPLICATION_ID`, `TELNYX_TEXML_WEBHOOK_SECRET` | La aplicación TeXML a la que pasa un número de Telnyx cuando la recepcionista deja de contestarlo, por ejemplo una prueba sin minutos, y el secreto que su URL de voz lleva como `?key=`. |
+| `TELNYX_TEXML_APPLICATION_ID`, `TELNYX_TEXML_WEBHOOK_SECRET` | La aplicación TeXML a la que pasa un número de Telnyx cuando el agente deja de contestarlo, por ejemplo una prueba sin minutos, y el secreto que su URL de voz lleva como `?key=`. |
 | `WEB_CALL_MAX_DURATION_MS` | Límite opcional de la duración de las llamadas desde el navegador. |
 | `WEB_CALL_PUBLIC_BUSINESS_SLUG` | Negocio que contesta la llamada de demostración pública en su sitio de marketing. |
 | `WEB_CALL_ALLOWED_ORIGINS` | Sitios, separados por comas, autorizados a iniciar esa llamada de demostración pública. Las llamadas del widget del sitio web usan en su lugar los orígenes permitidos de cada clave de widget. |
@@ -143,7 +143,7 @@ Un endpoint OTLP vacío no desactiva los registros stdout de los contenedores, l
 | `TWILIO_*` | Voz, verificación, aprovisionamiento de números y autenticación de webhooks. |
 | `TELNYX_*` | Lo mismo para Telnyx: `TELNYX_API_KEY`, `TELNYX_PUBLIC_KEY` para las firmas de los webhooks, `TELNYX_MESSAGING_PROFILE_ID`, `TELNYX_VERIFY_PROFILE_ID`, y `TELNYX_GB_REQUIREMENT_GROUP_ID`, `TELNYX_AU_REQUIREMENT_GROUP_ID` o `TELNYX_NZ_REQUIREMENT_GROUP_ID` para esos países. |
 | `OPENAI_API_KEY` | Llamadas de GPT-Live y clave de respaldo para `AI_CHAT_*` y `AI_EMBEDDING_*`. |
-| `AI_CHAT_API_KEY`, `AI_CHAT_BASE_URL`, `AI_CHAT_MODEL`, `AI_CHAT_PROVIDER_NAME` | El agente de la recepcionista para el chat del sitio web y las llamadas. Deje `AI_CHAT_MODEL` en blanco con OpenAI para usar `gpt-6-luna`. Configúrela para cualquier otro endpoint compatible con OpenAI. |
+| `AI_CHAT_API_KEY`, `AI_CHAT_BASE_URL`, `AI_CHAT_MODEL`, `AI_CHAT_PROVIDER_NAME` | El agente para el chat del sitio web y las llamadas. Deje `AI_CHAT_MODEL` en blanco con OpenAI para usar `gpt-6-luna`. Configúrela para cualquier otro endpoint compatible con OpenAI. |
 | `AI_CHAT_REASONING_EFFORT` | Solo OpenAI: `none`, `minimal`, `low`, `medium`, `high` o `xhigh`. El valor predeterminado es `high`. |
 | `AI_SUMMARY_MODEL` | El modelo que el worker usa en el endpoint `AI_CHAT_*` para escribir el resumen de una línea de cada llamada terminada y obtener el nombre de la persona que llama. Déjela en blanco para usar `AI_CHAT_MODEL`. Con un modelo distinto, el costo de IA del resumen de la llamada queda desconocido, porque los precios de `AI_CHAT_*` corresponden al modelo de chat. Sin ningún modelo de texto, las llamadas recurren a un resumen tomado de la transcripción. |
 | `AI_SUMMARY_REASONING_EFFORT` | Solo OpenAI: esfuerzo de razonamiento para los resúmenes de llamadas. El valor predeterminado es `low`. |

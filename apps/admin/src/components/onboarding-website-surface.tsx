@@ -5,6 +5,7 @@ import { requestJson } from "@/lib/request-json";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useStepNavigation } from "@/lib/use-step-navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { ONBOARDING_READING_ROUTE } from "@lobbystack/shared";
 import { Globe, LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -26,23 +27,23 @@ export function OnboardingWebsiteSurface() {
   const { business } = useActiveBusiness();
   // The next step is fetched while the form is still being filled in, so
   // Continue waits only on the save.
-  useEffect(() => { prefetch("/onboarding/knowledge"); }, [prefetch]);
+  useEffect(() => { prefetch(ONBOARDING_READING_ROUTE); }, [prefetch]);
   useEffect(() => { if (!edited.current && business?.websiteUrl) setWebsiteUrl(business.websiteUrl); }, [business?.websiteUrl]);
   const add = useMutation({
     mutationFn: () => requestJson("/api/knowledge", { method: "POST", body: JSON.stringify({ businessId: business!.businessId, title: websiteUrl.trim(), sourceType: "website", sourceUrl: websiteUrl.trim(), onboarding: true }) }),
     onSuccess: async () => {
       if (business) telemetry.track("web.onboarding.website_submitted", { businessId: business.businessId });
       await queryClient.invalidateQueries({ queryKey: ["businesses"] });
-      navigate("/onboarding/knowledge");
+      navigate(ONBOARDING_READING_ROUTE);
     },
     meta: { inlineError: true },
   });
   const skip = useMutation({
     mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, {
       method: "POST",
-      body: JSON.stringify({ to: "knowledge" }),
+      body: JSON.stringify({ to: "language" }),
     }),
-    onSuccess: async () => { if (business) telemetry.track("web.onboarding.website_skipped", { businessId: business.businessId }); await queryClient.invalidateQueries({ queryKey: ["businesses"] }); navigate("/onboarding/knowledge"); },
+    onSuccess: async () => { if (business) telemetry.track("web.onboarding.website_skipped", { businessId: business.businessId }); await queryClient.invalidateQueries({ queryKey: ["businesses"] }); navigate("/onboarding/language"); },
     onError: (cause) => setError(getSafeOnboardingErrorMessage(cause, t, "website.skipFailed")),
   });
 

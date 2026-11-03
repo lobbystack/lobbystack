@@ -5,7 +5,7 @@
   },
   "manager": {
     "title": "Baza znanja",
-    "description": "Dodajte znanje i dokumente koje recepcioner može da koristi u pregledu, SMS porukama i pri osvežavanju glasovnog snimka podešavanja.",
+    "description": "Dodajte znanje i dokumente koje agent može da koristi u pregledu, SMS porukama i pri osvežavanju glasovnog snimka podešavanja.",
     "items": "Stavke: {{count}}",
     "manualDocument": "Ručno unet dokument",
     "placeholders": {
@@ -20,13 +20,13 @@
     "noDocuments": "Još nema dokumenata."
   },
   "preview": {
-    "title": "Pregled recepcionera",
+    "title": "Pregled agenta",
     "description": "Isprobajte isti poslovni kontekst koji se koristi za SMS i asinhrone AI tokove pre nego što ga predstavite pozivaocima.",
     "promptPlaceholder": "Do koliko sati radite sutra?",
     "generate": "Pokreni pregled",
     "generating": "Generisanje...",
-    "emptyResponse": "Odgovori iz pregleda pojaviće se ovde kada pokrenete recepcionera.",
-    "disabled": "Prijavite se i kreirajte firmu da biste pokrenuli pravi pregled."
+    "emptyResponse": "Odgovori iz pregleda pojaviće se ovde kada pokrenete agenta.",
+    "disabled": "Prijavite se i kreirajte radni prostor da biste pokrenuli pravi pregled."
   },
   "unansweredQuestions": {
     "title": "Pitanja bez odgovora",
@@ -37,7 +37,7 @@
     "askedSummary": "{{asked}} · {{lastAsked}}",
     "answer": "Odgovori",
     "answerLabel": "Odgovor na: {{question}}",
-    "answerPlaceholder": "Napišite šta recepcioner treba da odgovori.",
+    "answerPlaceholder": "Napišite šta agent treba da odgovori.",
     "answerTooLong": "Skratite odgovor na najviše {{max}} karaktera.",
     "saveAnswer": "Sačuvaj odgovor",
     "cancel": "Otkaži",
@@ -48,12 +48,12 @@
       "alreadyHandled": "Neko je već odgovorio na ovo pitanje ili ga je odbacio."
     },
     "emptyTitle": "Nema pitanja bez odgovora",
-    "emptyDescription": "Kada recepcioner ne pronađe odgovor u vašem znanju, pitanje ćete videti ovde.",
+    "emptyDescription": "Kada agent ne pronađe odgovor u vašem znanju, pitanje ćete videti ovde.",
     "loadFailed": "Nismo mogli da učitamo pitanja bez odgovora. Osvežite stranicu i pokušajte ponovo.",
     "home": {
-      "count_one": "{{count}} pitanje na koje recepcioner nije znao odgovor",
-      "count_few": "{{count}} pitanja na koja recepcioner nije znao odgovor",
-      "count_other": "{{count}} pitanja na koja recepcioner nije znao odgovor",
+      "count_one": "{{count}} pitanje na koje agent nije znao odgovor",
+      "count_few": "{{count}} pitanja na koja agent nije znao odgovor",
+      "count_other": "{{count}} pitanja na koja agent nije znao odgovor",
       "description": "Dodajte odgovore na stranici Znanje."
     }
   }

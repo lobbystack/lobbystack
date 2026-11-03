@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { billingAccounts, businesses, createDatabaseClient, numberTrials, numberWaitlist, onboardingPhoneVerifications, outboxMessages, phoneNumbers, receptionistProfiles, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, billingAccounts, businesses, createDatabaseClient, numberTrials, numberWaitlist, onboardingPhoneVerifications, outboxMessages, phoneNumbers, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { enqueueRefusedCallForwardRefresh, getNumberTrialState, isNumberTrialEnded, joinNumberWaitlist, keepBusinessNumbersInTransaction, loadNumberTrialEmail, markNumberTrialMinutesExhausted, numberStepRedirect, refreshStaleRefusedCallForwards, resolveNumberFallback, resolveRefusedCallForward, sweepNumberTrial } from "./numberTrials";
 import { claimNumberProvisioning, completeNumberProvisioning, reserveOnboardingNumberClaim, searchBusinessNumberInventory } from "./phoneNumbers";
@@ -81,7 +81,7 @@ describe.skipIf(!testUrl)("free trial numbers against dedicated PostgreSQL roles
       const [trial] = await tx.select({ id: numberTrials.id, status: numberTrials.status, endsAt: numberTrials.endsAt }).from(numberTrials).where(eq(numberTrials.businessId, businessId));
       expect(trial?.status).toBe("active");
       expect((await tx.select({ reason: phoneNumbers.reclaimReason }).from(phoneNumbers).where(eq(phoneNumbers.id, phoneNumberId)))[0]?.reason).toBe("trial");
-      expect((await tx.select({ transferNumber: receptionistProfiles.transferNumber }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, businessId)))[0]?.transferNumber).toBe(ownerPhone);
+      expect((await tx.select({ transferNumber: agents.transferNumber }).from(agents).where(eq(agents.businessId, businessId)))[0]?.transferNumber).toBe(ownerPhone);
       expect(await as(tx, "lobbystack_app", db => getNumberTrialState({ db }, owner))).toMatchObject({ status: "active", e164: trialNumber, minutesExhausted: false });
       // Once onboarding is done, a workspace with a number has nothing to do on the number step.
       expect(await as(tx, "lobbystack_app", db => numberStepRedirect({ db }, { ...owner, finished: true }))).toBe("/");
@@ -126,7 +126,7 @@ describe.skipIf(!testUrl)("free trial numbers against dedicated PostgreSQL roles
       const number = "+14165550124";
       await tx.insert(phoneNumbers).values({ businessId, e164: number, providerPhoneId: `PN${randomUUID().replaceAll("-", "")}` });
       const fallback = () => as(tx, "lobbystack_worker", db => resolveNumberFallback({ db }, { businessId, e164: number }));
-      const setTransfer = (transferNumber: string | null) => tx.update(receptionistProfiles).set({ transferNumber }).where(eq(receptionistProfiles.businessId, businessId));
+      const setTransfer = (transferNumber: string | null) => tx.update(agents).set({ transferNumber }).where(eq(agents.businessId, businessId));
 
       // An owner phone nobody verified is never a forward.
       await setTransfer(null);

@@ -9,7 +9,8 @@ import { formatPhoneNumberDisplay } from "@/lib/phone";
 
 import Link from "next/link";
 import { extractFollowUpContactName, getFollowUpDisplayTitle, isUrgentFollowUpValue, cancellationRequestDetails, parseFollowUpTaskBody, type RequestedCancellation } from "@/lib/follow-up-task";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
+import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -20,6 +21,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
 import { DashboardActivationCard } from "@/components/dashboard-activation-card";
+import { LiveSetupGuideSurface, useSetupGuide } from "@/components/live-setup-guide-surface";
+import { needsHoursForBooking, useBusinessHours } from "@/components/business-hours-section";
 import { appointmentSummary, CancelAppointmentButton } from "@/components/cancel-appointment-button";
 import { MetricCardGridSkeleton } from "@/components/loading-skeletons";
 import { Item, ItemActions, ItemHeader, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item";
@@ -32,6 +35,7 @@ import { fetchUnansweredQuestions, UNANSWERED_QUESTIONS_ANCHOR, unansweredQuesti
 import { useBusinessCan } from "@/components/business-capabilities-provider";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { dayKey } from "@/lib/calendar-days";
+import { isSetupGuideFinished, showsSetupGuide } from "@/lib/setup-guide";
 
 const OverviewCallChart = dynamic(() => import("./overview-call-chart").then((module) => module.OverviewCallChart), {
   loading: () => <div className="h-[350px] animate-pulse rounded-xl bg-muted" />,
@@ -50,6 +54,8 @@ type DashboardSummary = {
   recentCalls: Array<{ id: string; startedAt: string; status: string; transport?: string | null; durationSeconds: number; contactName: string | null; contactPhone: string | null; contactEmail?: string | null }>;
   actionRequired: Array<{ id: string; kind: string; title: string; body: string; createdAt: string; conversationId?: string; callId?: string | null; request?: string | null; requested?: RequestedCancellation | null; appointment?: { id: string; startsAt: string; timezone: string; status: string; serviceName: string | null; contactName: string | null } | null }>;
   upcoming: Array<{ id: string; startsAt: string; timezone: string; status: string; sourceChannel: string; contactName: string | null; contactPhone?: string | null; contactEmail?: string | null; serviceName: string | null; staffName: string | null; employeeName?: string | null }>;
+  /** Null until the business's first real conversation. */
+  firstRealConversationAt?: string | null;
 };
 
 // A caller asked to cancel on a call where the agent couldn't (see the domain's CANCELLATION_REQUEST).
@@ -79,6 +85,21 @@ export function LiveOverviewSurface() {
   const canAnswerQuestions = canSetUp && (business?.role === "business_owner" || business?.role === "business_admin");
   const unanswered = useQuery({ queryKey: unansweredQuestionsQueryKey(businessId), enabled: Boolean(businessId) && canAnswerQuestions, queryFn: () => fetchUnansweredQuestions(businessId!) });
   const unansweredCount = canAnswerQuestions ? unanswered.data?.openCount ?? 0 : 0;
+  const mayShowGuide = Boolean(businessId) && showsSetupGuide({ canSetUp, role: business?.role });
+  const guide = useSetupGuide(mayShowGuide ? businessId : undefined);
+  // Missing opening hours keep the guide open too: they're its one step the server doesn't track.
+  const hours = useBusinessHours(mayShowGuide ? businessId ?? "" : "");
+  // A failed request leaves the guide out, and the dashboard works without setup.
+  const showGuide = mayShowGuide && (guide.isPending || (Boolean(guide.data) && (!isSetupGuideFinished(guide.data!) || (needsHoursForBooking(hours.data) && !guide.data!.skippedSteps.includes("hours")))));
+  // Finishing the last step here, or skipping them all, says so once.
+  const guideWasShown = useRef(false);
+  useEffect(() => {
+    if (showGuide && guide.data) guideWasShown.current = true;
+    else if (guideWasShown.current && !showGuide && guide.data) {
+      guideWasShown.current = false;
+      toast.success(t("setupGuide.finished"));
+    }
+  }, [guide.data, showGuide, t]);
 
   useEffect(() => {
     if (!businessId) return;
@@ -94,11 +115,16 @@ export function LiveOverviewSurface() {
     { key: "averageDuration", value: formatDuration(summary.data.kpis.averageDuration.totalSeconds), description: formatDurationDelta(summary.data.kpis.averageDuration.deltaSeconds, t) },
   ] as const : [];
 
+  if (summary.data?.firstRealConversationAt === null && !business) return <PageHeader title={t("home.title")} />;
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title={t("home.title")} />
+      {/* The extra margin makes the visible gap match the one between the page title and Getting started. */}
+      {showGuide ? <div className="mb-4">{guide.data ? <LiveSetupGuideSurface businessId={businessId!} goal={business?.onboardingGoal ?? null} /> : <Skeleton className="h-64 rounded-xl" />}</div> : null}
       <div className="flex flex-col gap-6">
-        <DashboardActivationCard businessId={businessId} />
+        {/* Getting started covers what the activation card would offer. */}
+        {showGuide ? null : <DashboardActivationCard businessId={businessId} />}
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
           <section className="animate-in fade-in slide-in-from-bottom-2 duration-200 flex flex-col gap-3 xl:h-full">
             <div className="flex items-center justify-between gap-4 px-1"><h2 className="type-section-title">{t("home.actionRequired.title")}</h2>{summary.isLoading ? <Skeleton className="h-6 w-12 rounded-full" /> : <Badge variant="outline">{((summary.data?.actionRequired.length ?? 0) + (unansweredCount > 0 ? 1 : 0)).toLocaleString(intlLocale(i18n.language))}</Badge>}</div>

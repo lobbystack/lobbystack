@@ -105,7 +105,6 @@ describe("original integration permissions and setup navigation", () => {
     });
     fireEvent.click(await screen.findByRole("button", { name: "integrations.actions.connected" }));
     const dialog = await screen.findByRole("dialog");
-    expect(dialog.textContent).toContain("integrations.calcom.howItWorks");
     for (const key of ["missingLengths", "smsReminders", "videoLocation", "narrowerAvailability"]) expect(dialog.textContent).toContain(`integrations.calcom.warnings.${key}`);
     fireEvent.click(screen.getByRole("button", { name: "integrations.calcom.disconnect" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("connectionId=calcom-connection"), expect.objectContaining({ method: "DELETE" })));

@@ -121,6 +121,52 @@ export const SESSION_CLOSE_TIMEOUT_MS = 15_000;
 // The guide also waits for ICE candidate gathering before sending the offer.
 const ICE_GATHERING_TIMEOUT_MS = 10_000;
 
+// How long a call shows as connecting after the peer connects, when neither
+// side has spoken. The worker sends its first greeting command 4 seconds into
+// the session, OpenAI acknowledges it within 0.7 seconds, and GPT-Live speaks
+// within 4 seconds of that (docs/voice/runtime.md), so a first-command greeting
+// lands by 8.7 seconds. Half of those commands go unspoken, and later ones land
+// up to 19 seconds in; by then the caller needs to see they can talk first.
+export const AGENT_SPEECH_WAIT_MS = 9_000;
+// The worker's voice threshold (VOICE_RMS 400 on 16-bit PCM), as a -1 to 1 level.
+const VOICE_LEVEL = 400 / 32_768;
+const VOICE_POLL_MS = 50;
+// Two reads in a row, so a single click on the line doesn't count as a word.
+const VOICE_POLLS = 2;
+
+/**
+ * Calls onVoice when the remote stream gets loud. GPT-Live is full duplex, so
+ * its audio track runs through silence and only its level marks speech. Without
+ * Web Audio this does nothing, and the transcript still ends the wait.
+ */
+function watchForVoice(stream: MediaStream, onVoice: () => void): () => void {
+  if (typeof AudioContext === "undefined") return () => undefined;
+  try {
+    const context = new AudioContext();
+    const source = context.createMediaStreamSource(stream);
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 1024;
+    source.connect(analyser);
+    void context.resume().catch(() => undefined);
+    const samples = new Float32Array(analyser.fftSize);
+    let loudPolls = 0;
+    const timer = window.setInterval(() => {
+      analyser.getFloatTimeDomainData(samples);
+      const level = Math.sqrt(samples.reduce((sum, sample) => sum + sample * sample, 0) / samples.length);
+      loudPolls = level >= VOICE_LEVEL ? loudPolls + 1 : 0;
+      if (loudPolls >= VOICE_POLLS) onVoice();
+    }, VOICE_POLL_MS);
+    return () => {
+      window.clearInterval(timer);
+      source.disconnect();
+      analyser.disconnect();
+      void context.close().catch(() => undefined);
+    };
+  } catch {
+    return () => undefined;
+  }
+}
+
 function waitForIceGathering(connection: RTCPeerConnection): Promise<void> {
   if (connection.iceGatheringState === "complete") return Promise.resolve();
   return new Promise((resolve) => {
@@ -238,6 +284,8 @@ export function useWebVoiceCall({
 }: UseWebVoiceCallOptions) {
   const [status, setStatus] = useState<WebVoiceWidgetStatus>("idle");
   const [muted, setMuted] = useState(false);
+  // The peer connected, so hanging up reaches the session even before anyone speaks.
+  const [peerConnected, setPeerConnected] = useState(false);
   const [errorKey, setErrorKey] = useState<WebVoiceErrorKey | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   // Captions for the current or last call; a new call starts them over.
@@ -252,6 +300,13 @@ export function useWebVoiceCall({
   const disconnectTimerRef = useRef<number | undefined>(undefined);
   // Set while a call waits for session.closed after session.close; calling it finishes the close.
   const closingRef = useRef<(() => void) | null>(null);
+  // Stops whatever is watching for the first words of the current call.
+  const agentWaitRef = useRef<Array<() => void>>([]);
+
+  const stopAgentWait = () => {
+    agentWaitRef.current.forEach((stop) => stop());
+    agentWaitRef.current = [];
+  };
 
   const invalidatePendingStart = () => {
     startCallAttemptRef.current += 1;
@@ -287,6 +342,7 @@ export function useWebVoiceCall({
   // Ends the session, then releases the call once OpenAI confirms with
   // session.closed or the timeout passes. The microphone is muted meanwhile.
   const closeGracefully = (onClosed: () => void) => {
+    stopAgentWait();
     localStreamRef.current?.getAudioTracks().forEach((track) => {
       track.enabled = false;
     });
@@ -309,6 +365,7 @@ export function useWebVoiceCall({
   const cleanup = (options: { resetState?: boolean } = {}) => {
     const resetState = options.resetState ?? true;
     invalidatePendingStart();
+    stopAgentWait();
     window.clearTimeout(disconnectTimerRef.current);
     disconnectTimerRef.current = undefined;
     localStreamRef.current?.getTracks().forEach((track) => track.stop());
@@ -322,6 +379,7 @@ export function useWebVoiceCall({
     if (resetState) {
       setRemoteStream(null);
       setMuted(false);
+      setPeerConnected(false);
     }
   };
 
@@ -403,6 +461,7 @@ export function useWebVoiceCall({
 
     setErrorKey(null);
     setTranscript([]);
+    setPeerConnected(false);
     setStatus("requesting_microphone");
     emit("started");
 
@@ -444,6 +503,21 @@ export function useWebVoiceCall({
       // Ignore events from a call this hook has already torn down.
       const isCurrentCall = () => peerConnectionRef.current === connection;
 
+      // The peer connects about 2 seconds before GPT-Live says anything, so the
+      // call shows as connecting until it does. emit("connected") still marks
+      // the peer connecting; only the status waits.
+      // A blip before the first "connected" still has to mark the call live, so only a
+      // recovery after that stays quiet.
+      let hasConnected = false;
+      let agentSpeaking = false;
+      const markAgentSpeaking = () => {
+        // The caller may already be hanging up, while the channel still delivers words.
+        if (agentSpeaking || attemptId !== startCallAttemptRef.current) return;
+        agentSpeaking = true;
+        stopAgentWait();
+        if (hasConnected) setStatus("connected");
+      };
+
       const dropCall = (properties: Record<string, unknown>) => {
         // Losing the connection while the caller hangs up just finishes the close.
         if (closingRef.current) {
@@ -476,6 +550,10 @@ export function useWebVoiceCall({
         const caption = readTranscriptDelta(event.data);
         if (caption) {
           setTranscript((turns) => appendTranscriptDelta(turns, caption));
+          // Each delta covers audio that already started, so this follows the
+          // voice watcher when that works. Words from the caller count too: the
+          // worker stops sending the greeting once they speak.
+          if (caption.delta.trim()) markAgentSpeaking();
           return;
         }
         const reason = readSessionClosedReason(event.data);
@@ -504,14 +582,14 @@ export function useWebVoiceCall({
           remoteAudioRef.current.srcObject = remote;
           void remoteAudioRef.current.play().catch(() => undefined);
         }
+        if (!agentSpeaking && attemptId === startCallAttemptRef.current) {
+          agentWaitRef.current.push(watchForVoice(remote, markAgentSpeaking));
+        }
       };
 
       // "disconnected" often recovers on its own after a network blip, so it
       // only starts a grace period. "failed", or no recovery in time, is a
       // dropped call. A session.closed that arrives meanwhile ends it normally.
-      // A blip before the first "connected" still has to mark the call live, so only a
-      // recovery after that stays quiet.
-      let hasConnected = false;
       connection.onconnectionstatechange = () => {
         if (!isCurrentCall()) return;
         const state = connection.connectionState;
@@ -520,10 +598,16 @@ export function useWebVoiceCall({
             window.clearTimeout(disconnectTimerRef.current);
             disconnectTimerRef.current = undefined;
           }
-          if (hasConnected) return;
+          if (hasConnected || attemptId !== startCallAttemptRef.current) return;
           hasConnected = true;
-          setStatus("connected");
+          setPeerConnected(true);
           emit("connected");
+          if (agentSpeaking) {
+            setStatus("connected");
+            return;
+          }
+          const timer = window.setTimeout(markAgentSpeaking, AGENT_SPEECH_WAIT_MS);
+          agentWaitRef.current.push(() => window.clearTimeout(timer));
           return;
         }
         if (state === "disconnected") {
@@ -582,7 +666,7 @@ export function useWebVoiceCall({
         );
       }
 
-      const payload = (await response.json()) as StartedSession & { sdp: string };
+      const payload = (await response.json()) as StartedSession & { sdp: string; agentGreets?: boolean };
       const session = { sessionId: payload.sessionId, endToken: payload.endToken };
       if (attemptId !== startCallAttemptRef.current) {
         stopAttemptResources();
@@ -592,6 +676,8 @@ export function useWebVoiceCall({
         return;
       }
       sessionRef.current = session;
+      // An agent with no greeting waits for the caller, so nothing is coming to wait for.
+      if (payload.agentGreets === false) agentSpeaking = true;
       await connection.setRemoteDescription({
         type: "answer",
         sdp: payload.sdp,
@@ -616,6 +702,7 @@ export function useWebVoiceCall({
 
   const isCallActive = status === "connecting" || status === "connected";
   const isBusy = status === "requesting_microphone" || status === "connecting";
+  const canHangUp = status === "connected" || (status === "connecting" && peerConnected);
 
   return {
     status,
@@ -629,5 +716,6 @@ export function useWebVoiceCall({
     forceEndCall,
     isCallActive,
     isBusy,
+    canHangUp,
   };
 }

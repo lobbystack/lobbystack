@@ -30,6 +30,7 @@ describe("createReceptionistTools", () => {
       [demoSnapshot, phoneCall],
       [{ ...demoSnapshot, bookingMode: "request" }, phoneCall],
       [demoSnapshot, { channel: "web_voice", intakeOnly: true, callControl }],
+      [demoSnapshot, { channel: "web_chat", testChat: true }],
     ] as Array<[BusinessContextSnapshot, Conversation]>) {
       expect(Object.keys(createReceptionistTools({ domain: { db: {} as never }, snapshot, ...conversation }))).toEqual(receptionistCapabilities(snapshot, conversation).tools);
     }
@@ -347,6 +348,12 @@ describe("unanswered questions", () => {
 
     await searchOn({ channel: "web_chat", conversationId: "chat_1" }, evidence("empty"));
     expect(recordUnansweredQuestion).toHaveBeenCalledWith(expect.anything(), { businessId: demoSnapshot.businessId, question: "Do you validate parking?", channel: "web_chat", conversationId: "chat_1" });
+  });
+
+  it("saves nothing from a test chat", async () => {
+    await expect(searchOn({ channel: "web_chat", testChat: true }, evidence("empty"))).resolves.toMatchObject({ outcome: "empty" });
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(recordUnansweredQuestion).not.toHaveBeenCalled();
   });
 
   it("saves nothing when the knowledge base answers, the search fails, or the call is a prospect demo", async () => {

@@ -109,7 +109,7 @@ export function AuraVoiceOrb({
   pressMotion = "pop",
   children,
 }: AuraVoiceOrbProps) {
-  const { status, remoteAudioRef, remoteStream, startCall, endCall, isCallActive, isBusy } = call;
+  const { status, remoteAudioRef, remoteStream, startCall, endCall, isCallActive, isBusy, canHangUp } = call;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const rafRef = useRef<number | undefined>(undefined);
@@ -404,12 +404,14 @@ export function AuraVoiceOrb({
         <button
           type="button"
           onClick={isCallActive ? endCall : startCall}
-          disabled={isBusy || status === "ending"}
+          disabled={(isBusy && !canHangUp) || status === "ending"}
           aria-label={buttonLabel}
           className={classNames(
             "voice-aura-button relative z-10 flex aspect-square w-36 items-center justify-center rounded-full",
             motion.transition,
             "cursor-pointer disabled:cursor-not-allowed disabled:opacity-40",
+            // Stays dim while it waits for the agent's first words, so only the greeting lights it.
+            isBusy && "opacity-40",
             !isCallActive && !isBusy && motion.press,
             isActive && "scale-105",
           )}

@@ -44,6 +44,11 @@ Do not duplicate ownership between runtimes unless there is a specific analytics
 - `web.onboarding.number_claim_started`
 - `web.onboarding.number_claim_completed`
 - `web.onboarding.plan_checkout_completed`
+- `web.onboarding.language_submitted`: an owner with no website picked the language, with `locale`
+- `web.onboarding.meet_completed`: an owner left Meet your agent for the dashboard
+- `web.onboarding.plan_offer_shown`: the plans opened after a completed test, with `surface` set to `meet` or `home`
+- `web.onboarding.plan_offer_dismissed`: the operator closed that offer without picking a plan, with `surface`
+- `web.onboarding.plan_offer_clicked`: the operator picked a plan in that offer, with `surface` and `plan`
 - `web.activation.first_call_completed`
 - `web.activation.upgrade_prompt_shown`
 - `web.activation.upgrade_prompt_clicked`
@@ -94,6 +99,8 @@ The answer gap skips caller speech that ended while the receptionist was still t
 - `sms.inbound_received`
 - `sms.delivery_accepted`
 - `sms.delivery_failed`
+- `conversation.first_real_recorded`: a business's first real conversation, once per business, with `channel`. `kpi-spec.md` says what counts.
+- `onboarding.check_in_answered`: an owner confirmed an answer from the founder's check-in email, with `answer` set to `still_testing`, `connect_number`, `test_call_mistakes`, or `not_a_fit`. The server records it once per business and answer.
 - `conversation.automation_paused`
 - `conversation.team_requested`: a website visitor asked for a person and the team was alerted.
 - `conversation.team_joined`: a team member replied or pressed Join while the visitor waited. `waitSeconds` is how long the visitor waited.

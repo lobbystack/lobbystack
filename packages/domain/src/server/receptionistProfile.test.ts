@@ -113,7 +113,7 @@ describe("saveReceptionistProfileInTransaction", () => {
     expect(recorded.values).toMatchObject({ businessId: "biz_1", greeting: defaultGreeting("Maple"), tone: "warm", summary: "Maple", summarySource: "placeholder", transferMode: "on_request", appointmentChangePolicy: defaultAppointmentChangePolicy });
     expect(recorded.set).toEqual({ tone: "warm", updatedAt: expect.any(Date) });
     expect(mocks.enqueueOutbox).toHaveBeenCalledTimes(1);
-    expect(mocks.enqueueOutbox).toHaveBeenCalledWith(tx, expect.objectContaining({ topic: "snapshot.refresh", businessId: "biz_1", aggregateType: "receptionist_profile", aggregateId: "profile_1", dedupeKey: `snapshot:biz_1:profile:${savedAt.toISOString()}` }));
+    expect(mocks.enqueueOutbox).toHaveBeenCalledWith(tx, expect.objectContaining({ topic: "snapshot.refresh", businessId: "biz_1", aggregateType: "agent", aggregateId: "profile_1", dedupeKey: `snapshot:biz_1:profile:${savedAt.toISOString()}`, payload: { businessId: "biz_1", reason: "agent_updated" } }));
   });
 
   it("marks a written summary as the business's own", async () => {

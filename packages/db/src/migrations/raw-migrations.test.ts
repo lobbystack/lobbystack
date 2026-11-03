@@ -67,6 +67,20 @@ describe("raw migration manifest", () => {
     expect(SCHEMA_MIGRATIONS.indexOf("0156_business_overage_stripe.sql")).toBeLessThan(SCHEMA_MIGRATIONS.indexOf("0157_validate_business_overage.sql"));
   });
 
+  it("links calls and conversations without reading either table under a lock, and leaves their old rows out of the migration", () => {
+    const calls = readFileSync(`${migrationsDirectory}/0185_calls_agent_link.sql`, "utf8");
+    const conversations = readFileSync(`${migrationsDirectory}/0186_conversations_agent_link.sql`, "utf8");
+    const validate = readFileSync(`${migrationsDirectory}/0187_validate_agent_history_links.sql`, "utf8");
+    for (const [table, file] of [["calls", calls], ["conversations", conversations]] as const) {
+      expect(file).toMatch(new RegExp(`ADD CONSTRAINT ${table}_agent_fk FOREIGN KEY [^\\n]* DEFERRABLE INITIALLY DEFERRED NOT VALID,`));
+      expect(file).toMatch(new RegExp(`ADD CONSTRAINT ${table}_agent_id_present CHECK \\(agent_id IS NOT NULL\\) NOT VALID;`));
+      // A top-level UPDATE here would hold a row lock on every old row until commit.
+      expect(file).not.toMatch(/^UPDATE/m);
+      expect(file).not.toContain("SET NOT NULL");
+      expect(validate).toContain(`VALIDATE CONSTRAINT ${table}_agent_fk;`);
+    }
+  });
+
   it("recognizes only validated concurrent-index migration directives", () => {
     expect(concurrentIndexName("-- lobbystack:concurrent-index product_events_business_sent_idx\nCREATE INDEX CONCURRENTLY ..."))
       .toBe("product_events_business_sent_idx");

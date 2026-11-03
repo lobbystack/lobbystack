@@ -2,16 +2,16 @@
   "page": {
     "eyebrow": "Agent workspace",
     "title": "Agent",
-    "description": "Configure how your AI receptionist behaves, what it knows, and how it handles calls and messages."
+    "description": "Configure how your AI agent behaves, what it knows, and how it handles calls and messages."
   },
   "sections": {
     "basicSettings": {
       "title": "AI settings",
-      "description": "Greeting and transfer settings for your receptionist."
+      "description": "Greeting and transfer settings for your agent."
     },
     "knowledge": {
       "title": "Knowledge",
-      "description": "Information and guidelines your receptionist uses to answer questions.",
+      "description": "Information and guidelines your agent uses to answer questions.",
       "listTitle": "Knowledge Base",
       "addKnowledge": "Add Knowledge",
       "addKnowledgeOptions": {
@@ -26,7 +26,7 @@
       "websiteImport": {
         "badge": "Website",
         "title": "Import Website",
-        "description": "Crawl the public pages of your website so your receptionist can use them as knowledge.",
+        "description": "Crawl the public pages of your website so your agent can use them as knowledge.",
         "submit": "Import",
         "submitting": "Importing…",
         "success": "Website import started. Pages will appear here as they finish processing.",
@@ -41,9 +41,9 @@
           "urlRequired": "Enter a website URL to import."
         }
       },
-      "addKnowledgeDescription": "Add opening hours, pricing, policies, or any other information your receptionist should know.",
-      "editKnowledgeDescription": "Update the information your receptionist should use when answering customer questions.",
-      "uploadDocumentDescription": "Upload a file so your receptionist can use it.",
+      "addKnowledgeDescription": "Add opening hours, pricing, policies, or any other information your agent should know.",
+      "editKnowledgeDescription": "Update the information your agent should use when answering customer questions.",
+      "uploadDocumentDescription": "Upload a file so your agent can use it.",
       "documentBadge": "Document",
       "textBadge": "Text",
       "emptyState": "No knowledge added yet.",
@@ -85,8 +85,8 @@
         "content": {
           "label": "Content",
           "placeholder": "We are open Monday to Friday from 9am to 5pm.",
-          "hint": "The actual information the receptionist should use.",
-          "required": "Enter the information the receptionist should use."
+          "hint": "The actual information the agent should use.",
+          "required": "Enter the information the agent should use."
         },
         "tags": {
           "label": "Tags",
@@ -97,7 +97,7 @@
     },
     "services": {
       "title": "Services",
-      "description": "Service details your receptionist can use to explain offerings and help book the right appointment.",
+      "description": "Service details your agent can use to explain offerings and help book the right appointment.",
       "listTitle": "Services",
       "addKnowledge": "Add Service",
       "editKnowledge": "Edit Service",
@@ -116,9 +116,9 @@
       "copyName": "{{name}} (copy)",
       "copyNameNumbered": "{{name}} (copy {{number}})",
       "uploadDocument": "Upload Document",
-      "addKnowledgeDescription": "Add your services, what they include, who they are for, and anything your receptionist should mention.",
-      "editKnowledgeDescription": "Update the service details your receptionist should mention and use while booking.",
-      "uploadDocumentDescription": "Upload a file so your receptionist can use it.",
+      "addKnowledgeDescription": "Add your services, what they include, who they are for, and anything your agent should mention.",
+      "editKnowledgeDescription": "Update the service details your agent should mention and use while booking.",
+      "uploadDocumentDescription": "Upload a file so your agent can use it.",
       "documentBadge": "Document",
       "textBadge": "Text",
       "emptyState": "No services added yet.",
@@ -156,7 +156,7 @@
         "content": {
           "label": "Content",
           "placeholder": "A 30-minute consultation to understand the caller's needs and recommend the right next step.",
-          "hint": "Describe the service so the receptionist can explain it clearly."
+          "hint": "Describe the service so the agent can explain it clearly."
         },
         "duration": {
           "label": "Duration",
@@ -170,12 +170,12 @@
         },
         "price": {
           "label": "Price",
-          "hint": "Optional. The receptionist quotes this price exactly; leave the amount empty and it won't guess one.",
+          "hint": "Optional. The agent quotes this price exactly; leave the amount empty and it won't guess one.",
           "placeholder": "0",
           "amount": "Price",
           "lowest": "Lowest price",
           "highest": "Highest price",
-          "inPersonHint": "The receptionist tells callers the price is set once the business knows what they need.",
+          "inPersonHint": "The agent tells callers the price is set once the business knows what they need.",
           "types": {
             "fixed": "Fixed",
             "from": "From",
@@ -203,22 +203,22 @@
         }
       },
       "deleteTitle": "Delete service?",
-      "deleteDescription": "Your receptionist stops offering it. Past appointments still show it."
+      "deleteDescription": "Your agent stops offering it. Past appointments still show it."
     },
     "employees": {
       "title": "Employees",
-      "description": "People your receptionist can book appointments with and transfer calls to."
+      "description": "People your agent can book appointments with and transfer calls to."
     },
     "rules": {
       "title": "Rules",
-      "description": "Instructions that guide how your receptionist should handle calls and messages.",
+      "description": "Instructions that guide how your agent should handle calls and messages.",
       "listTitle": "Rules",
       "addKnowledge": "Add Rule",
       "editKnowledge": "Edit Rule",
       "uploadDocument": "Upload Document",
-      "addKnowledgeDescription": "What your receptionist should do, like transfer calls, ask questions and send texts.",
-      "editKnowledgeDescription": "Update the instruction your receptionist should follow during calls and follow-up flows.",
-      "uploadDocumentDescription": "Upload a file so your receptionist can use it.",
+      "addKnowledgeDescription": "What your agent should do, like transfer calls, ask questions and send texts.",
+      "editKnowledgeDescription": "Update the instruction your agent should follow during calls and follow-up flows.",
+      "uploadDocumentDescription": "Upload a file so your agent can use it.",
       "documentBadge": "Document",
       "textBadge": "Text",
       "emptyState": "No rules added yet.",
@@ -254,8 +254,8 @@
         "content": {
           "label": "Content",
           "placeholder": "When someone asks to speak to a human, transfer them to 555-123-4567.",
-          "hint": "Describe what the receptionist should do.",
-          "required": "Describe what the receptionist should do."
+          "hint": "Describe what the agent should do.",
+          "required": "Describe what the agent should do."
         },
         "tags": {
           "label": "Tags",
@@ -294,7 +294,7 @@
     },
     "summary": {
       "label": "Business summary",
-      "hint": "What your receptionist tells callers about the business.",
+      "hint": "What your agent tells callers about the business.",
       "placeholder": "For example: Maple Family Clinic is a family practice in Toronto offering checkups, vaccinations and physiotherapy.",
       "regenerate": "Rewrite with AI",
       "regenerating": "AI is rewriting it from your knowledge. This takes a moment.",
@@ -316,16 +316,16 @@
     "greeting": {
       "label": "Greeting",
       "placeholder": "Hello, thank you for calling…",
-      "hint": "The opening line your receptionist uses when answering a call or starting a conversation."
+      "hint": "The opening line your agent uses when answering a call or starting a conversation."
     },
     "defaultLocale": {
       "label": "Default customer language",
       "placeholder": "Select a default language",
-      "hint": "Choose the fallback language your receptionist should use when a caller's preference is unknown."
+      "hint": "Choose the fallback language your agent should use when a caller's preference is unknown."
     },
     "teamLocale": {
       "label": "Team language",
-      "hint": "The language your receptionist writes messages, notes and requests in for your team. Callers are still answered in their own language.",
+      "hint": "The language your agent writes messages, notes and requests in for your team. Callers are still answered in their own language.",
       "sameAsCaller": "Same as customer language"
     },
     "voice": {
@@ -357,7 +357,7 @@
     },
     "timezone": {
       "label": "Business timezone",
-      "hint": "Your receptionist uses this timezone for your opening hours and the appointment times it offers customers.",
+      "hint": "Your agent uses this timezone for your opening hours and the appointment times it offers customers.",
       "search": "Search time zones...",
       "noResults": "No time zones found.",
       "regions": {
@@ -382,11 +382,11 @@
     "transferNumber": {
       "label": "Default transfer number",
       "placeholder": "+1 555-123-4567",
-      "hint": "The phone number your receptionist should use when handing a caller off to a human.",
+      "hint": "The phone number your agent should use when handing a caller off to a human.",
       "country": "Country",
       "errors": {
         "invalid": "Enter a complete valid transfer number before saving.",
-        "countryUnsupported": "Your receptionist can't transfer calls to this country yet."
+        "countryUnsupported": "Your agent can't transfer calls to this country yet."
       }
     }
   },
@@ -395,7 +395,7 @@
     "save": "Save staff answers first",
     "mode": {
       "label": "Ring your team first",
-      "hint": "Your phone rings first. Press 1 to take the call. If you don't, the receptionist answers.",
+      "hint": "Your phone rings first. Press 1 to take the call. If you don't, the agent answers.",
       "options": {
         "never": "Off",
         "business_hours": "During business hours",
@@ -409,7 +409,7 @@
     },
     "number": {
       "label": "Staff phone",
-      "hint": "Don't use a phone that forwards to your receptionist's number."
+      "hint": "Don't use a phone that forwards to your agent's number."
     },
     "ring": {
       "label": "Ring for",
@@ -422,12 +422,12 @@
       "noSerbianVoice": "Callers won't hear this. Messages can't be read in Serbian yet."
     },
     "handover": {
-      "label": "Message before the receptionist answers",
+      "label": "Message before the agent answers",
       "hint": "Optional. Callers hear this if nobody picks up."
     },
     "errors": {
       "numberRequired": "Add a staff phone.",
-      "ownLine": "Use a phone other than your receptionist's number.",
+      "ownLine": "Use a phone other than your agent's number.",
       "trialLocked": "During the free trial, use the mobile you verified."
     }
   },
@@ -451,11 +451,11 @@
     "title": "Appointment changes",
     "allowCancel": {
       "label": "Allow AI cancellations",
-      "hint": "Let the receptionist cancel a verified future appointment."
+      "hint": "Let the agent cancel a verified future appointment."
     },
     "allowReschedule": {
       "label": "Allow AI rescheduling",
-      "hint": "Let the receptionist move a verified future appointment after availability is checked."
+      "hint": "Let the agent move a verified future appointment after availability is checked."
     },
     "verification": {
       "label": "Caller verification",
@@ -469,7 +469,7 @@
         "phone_match_and_facts": "Callers must call from the number the appointment was booked with and say its time or service.",
         "otp_required": "Callers also read back a one-time code texted to that number before any cancellation or reschedule.",
         "passcode_required": "Callers also type the PIN saved on their contact on the phone keypad. Callers without a PIN are passed to your team. Set PINs on each contact's Details tab.",
-        "operator_only": "The receptionist doesn't change appointments. It passes requests to your team."
+        "operator_only": "The agent doesn't change appointments. It passes requests to your team."
       }
     }
   },
@@ -512,7 +512,7 @@
   },
   "readOnly": "Viewer access is read-only.",
   "empty": {
-    "description": "Create a business first, then return here to configure your AI receptionist."
+    "description": "Create a workspace first, then return here to configure your AI agent."
   },
   "hours": {
     "title": "Opening hours",
@@ -529,11 +529,6 @@
     "edit": "Edit",
     "cancel": "Cancel",
     "notSet": "Not set",
-    "noHoursAlert": {
-      "title": "Add opening hours to book appointments",
-      "description": "The agent offers times only inside your opening hours. Until you add them, it takes a message instead.",
-      "action": "Add opening hours"
-    },
     "neededForBooking": "Not set. Needed to book appointments.",
     "add": "Add hours",
     "closures": {

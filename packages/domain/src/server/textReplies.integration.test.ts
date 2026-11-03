@@ -183,7 +183,7 @@ describe.skipIf(!testUrl)("AI text replies against PostgreSQL under production l
 
       const context = await asWorker(tx, (db) => loadTextReplyContext({ db }, { businessId: business.businessId, conversationId, messageId: messageId! }));
 
-      expect(context).toEqual({ phone: canadian, firstReply: true, history: [{ direction: "inbound", body: "Are you open Sunday?" }] });
+      expect(context).toEqual({ phone: canadian, agentId: expect.any(String), firstReply: true, history: [{ direction: "inbound", body: "Are you open Sunday?" }] });
     });
   });
 

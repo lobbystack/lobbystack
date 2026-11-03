@@ -12,6 +12,9 @@ import { appointmentChangeVerificationModes, bookingModes, transferModes, type R
 import { WIDGET_COLOR_PATTERN, widgetPositionSchema, type WidgetPosition } from "./widget";
 export * from "./receptionist";
 export * from "./chatChannels";
+export * from "./checkIn";
+export * from "./onboardingStages";
+export * from "./siteLanguage";
 export * from "./branding";
 export * from "./brandLinks";
 export * from "./brand";
@@ -251,6 +254,28 @@ export function isDefaultGreeting(greeting: string, businessName: string, locale
   return greeting === defaultGreeting(businessName, locale) || (locale === "en" && greeting === `Thanks for calling ${businessName.trim()}.`);
 }
 
+// Migration 0183's app.default_agent_name is the same list.
+const agentNames: Record<RuntimeLocale, string> = {
+  en: "Agent",
+  fr: "Agent",
+  es: "Agente",
+  sr: "Agent",
+  de: "Agent",
+  pt: "Agente",
+  it: "Agente",
+  nl: "Agent",
+};
+
+/** A business's default agent's name, in its caller language. Operators see it, and callers never hear it. */
+export function defaultAgentName(locale: RuntimeLocale = "en"): string {
+  return agentNames[locale];
+}
+
+/** Whether LobbyStack gave an agent this name in some language, so it can follow a change of caller language. */
+export function isDefaultAgentName(name: string): boolean {
+  return Object.values(agentNames).includes(name);
+}
+
 /** Missing legacy policy uses the original defaults; malformed policies disable automation. */
 export function normalizeAppointmentChangePolicy(value: unknown): AppointmentChangePolicy {
   if (value == null) return { ...defaultAppointmentChangePolicy };
@@ -284,6 +309,32 @@ export function normalizeBookingMode(value: string | null | undefined): BookingM
   return (bookingModes as readonly string[]).includes(value ?? "") ? value as BookingMode : "instant";
 }
 
+/**
+ * What one agent changes about a business's snapshot. Instructions are already
+ * resolved, so an agent without its own holds the same default text the flat
+ * fields would.
+ */
+export type SnapshotAgent = {
+  id: string;
+  /** Operators see this. Callers never hear it. */
+  name: string;
+  isDefault: boolean;
+  greeting: string;
+  tone: string;
+  voice: ReceptionistVoice;
+  voiceInstructions: string;
+  smsInstructions: string;
+  chatInstructions: string;
+  bookingPolicy: string;
+  bookingMode: BookingMode;
+  transferPolicy: TransferPolicy;
+  staffFirstPolicy?: StaffFirstPolicy;
+  appointmentChangePolicy?: AppointmentChangePolicy;
+  rules: Array<AgentRuleSummary>;
+  /** The number this agent answers. Null when it has none. Absent in snapshots built before agents had their own. */
+  phoneNumber?: string | null;
+};
+
 export type BusinessContextSnapshot = {
   businessId: string;
   version: string;
@@ -297,6 +348,12 @@ export type BusinessContextSnapshot = {
   businessType: BusinessType;
   /** Optional analytics consent captured at call start; absence is not consent. */
   telemetryEnabled?: boolean;
+  /** Set only on a snapshotForAgent projection. Absent means the flat fields are the default agent. */
+  agentId?: string;
+  /** Set only on a snapshotForAgent projection. Operators see this. Callers never hear it. */
+  agentName?: string;
+  /** Set only on a snapshotForAgent projection. The flat voice instructions already carry the default agent's tone. */
+  tone?: string;
   greeting: string;
   /**
    * The GPT-Live voice calls speak in. Absent in snapshots built before
@@ -326,6 +383,13 @@ export type BusinessContextSnapshot = {
    */
   employees?: Array<SnapshotEmployee>;
   rules?: Array<AgentRuleSummary>;
+  /**
+   * The business's agents that aren't archived. The flat fields stay the
+   * default agent, so readers that don't know about agents keep working.
+   * Absent in snapshots built before agents existed. Read one agent through
+   * snapshotForAgent.
+   */
+  agents?: Array<SnapshotAgent>;
   knowledgeSnippets?: Array<KnowledgeSnippet>;
   contactChannels: {
     phoneNumber?: string;
@@ -505,6 +569,15 @@ export const widgetChatRequestSchema = z.object({
 
 export type WidgetChatRequest = z.infer<typeof widgetChatRequestSchema>;
 
+/** The longest test chat the server reads. The browser holds it, so nothing is stored. */
+export const TEST_CHAT_MAX_MESSAGES = 20;
+
+/** A turn in the dashboard's test window. The browser sends the chat so far, ending with the operator's message. */
+export const testChatRequestSchema = z.object({
+  agentId: z.guid().optional(),
+  messages: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().trim().min(1).max(4_000) })).min(1).max(TEST_CHAT_MAX_MESSAGES).refine((messages) => messages.at(-1)?.role === "user", "The chat must end with the operator's message."),
+});
+
 export const widgetLeadRequestSchema = z.object({
   visitorId: z.guid(),
   name: z.string().max(160).optional(),
@@ -558,6 +631,6 @@ export { isTransferCountry, isTransferPhone, TRANSFER_COUNTRY_CALLING_CODES, typ
 export { OPERATOR_SMS_ACCEPTED_DISCLOSURE_VERSIONS, OPERATOR_SMS_DISCLOSURE_TEXT, OPERATOR_SMS_DISCLOSURE_VERSION } from "./operatorSmsConsent";
 export { canTextNumber, permanentSmsErrorCode, smsRecipientRegion, type SmsRecipientRegion } from "./smsReach";
 
-export { DASHBOARD_TEST_CALL_WIDGET_ID, PROSPECT_DEMO_WIDGET_ID } from "./testCall";
+export { DASHBOARD_TEST_CALL_WIDGET_ID, PROSPECT_DEMO_WIDGET_ID, WIDGET_VOICE_ID } from "./testCall";
 
 export * from "./publicApi";

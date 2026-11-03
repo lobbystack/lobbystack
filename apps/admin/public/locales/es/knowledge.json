@@ -5,7 +5,7 @@
   },
   "manager": {
     "title": "Base de conocimiento",
-    "description": "Añada conocimiento y documentos que la recepcionista puede usar en la vista previa, en SMS y al actualizar la instantánea de voz.",
+    "description": "Añada conocimiento y documentos que el agente puede usar en la vista previa, en SMS y al actualizar la instantánea de voz.",
     "items": "{{count}} elementos",
     "manualDocument": "Documento manual",
     "placeholders": {
@@ -20,13 +20,13 @@
     "noDocuments": "Aún no hay documentos."
   },
   "preview": {
-    "title": "Vista previa de la recepcionista",
+    "title": "Vista previa del agente",
     "description": "Pruebe el mismo contexto del negocio que se usa en SMS y en los flujos de IA asíncronos antes de ponerlo frente a sus clientes.",
     "promptPlaceholder": "¿A qué hora abren mañana?",
     "generate": "Ejecutar vista previa",
     "generating": "Generando...",
-    "emptyResponse": "Las respuestas de la vista previa aparecerán aquí cuando ejecute la recepcionista.",
-    "disabled": "Inicie sesión y cree un negocio para ejecutar la vista previa real."
+    "emptyResponse": "Las respuestas de la vista previa aparecerán aquí cuando ejecute el agente.",
+    "disabled": "Inicie sesión y cree un espacio de trabajo para ejecutar la vista previa real."
   },
   "unansweredQuestions": {
     "title": "Preguntas sin respuesta",
@@ -37,7 +37,7 @@
     "askedSummary": "{{asked}} · {{lastAsked}}",
     "answer": "Responder",
     "answerLabel": "Respuesta a: {{question}}",
-    "answerPlaceholder": "Escriba lo que su recepcionista debe responder.",
+    "answerPlaceholder": "Escriba lo que su agente debe responder.",
     "answerTooLong": "Acorte su respuesta a {{max}} caracteres o menos.",
     "saveAnswer": "Guardar respuesta",
     "cancel": "Cancelar",
@@ -48,12 +48,12 @@
       "alreadyHandled": "Alguien ya respondió o descartó esta pregunta."
     },
     "emptyTitle": "No hay preguntas sin respuesta",
-    "emptyDescription": "Cuando su recepcionista no encuentre una respuesta en su conocimiento, verá la pregunta aquí.",
+    "emptyDescription": "Cuando su agente no encuentre una respuesta en su conocimiento, verá la pregunta aquí.",
     "loadFailed": "No pudimos cargar sus preguntas sin respuesta. Actualice la página para intentarlo de nuevo.",
     "home": {
-      "count_one": "{{count}} pregunta que su recepcionista no supo responder",
-      "count_many": "{{count}} preguntas que su recepcionista no supo responder",
-      "count_other": "{{count}} preguntas que su recepcionista no supo responder",
+      "count_one": "{{count}} pregunta que su agente no supo responder",
+      "count_many": "{{count}} preguntas que su agente no supo responder",
+      "count_other": "{{count}} preguntas que su agente no supo responder",
       "description": "Añada las respuestas en la página Conocimiento."
     }
   }

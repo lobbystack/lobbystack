@@ -23,6 +23,8 @@ const DAY_MS = 24 * 60 * 60_000;
 
 export type TextReplyContext = {
   phone: string;
+  /** The agent that answers this conversation. Absent on one with no agent yet, which the default agent answers. */
+  agentId?: string;
   /** No reply has gone to this conversation yet, so this one carries the disclosure. */
   firstReply: boolean;
   history: Array<{ direction: "inbound" | "outbound"; body: string }>;
@@ -36,7 +38,8 @@ export type TextReplyContext = {
  */
 export async function loadTextReplyContext(context: DomainContext, input: { businessId: string; conversationId: string; messageId: string; now?: Date }): Promise<TextReplyContext | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    if (!await stillAnsweringInTransaction(tx, input)) return null;
+    const answering = await stillAnsweringInTransaction(tx, input);
+    if (!answering) return null;
     const reach = await loadTextReplyReachInTransaction(tx, input);
     if (textReplyBlockedReason(reach) || !reach.phone) {
       await queueUnansweredTextAlertInTransaction(tx, input);
@@ -60,7 +63,7 @@ export async function loadTextReplyContext(context: DomainContext, input: { busi
     const rows = await tx.select({ direction: messages.direction, body: messages.body }).from(messages)
       .where(and(eq(messages.businessId, input.businessId), eq(messages.conversationId, input.conversationId), eq(messages.channel, "sms"), notComplianceMessage())).orderBy(desc(messages.createdAt)).limit(20);
     const [earlierReply] = await tx.select({ id: messages.id }).from(messages).where(and(eq(messages.businessId, input.businessId), eq(messages.conversationId, input.conversationId), aiReply)).limit(1);
-    return { phone: reach.phone, firstReply: !earlierReply, history: rows.reverse().map((row) => ({ direction: row.direction === "inbound" ? "inbound" : "outbound", body: row.body })) };
+    return { phone: reach.phone, ...(answering.agentId ? { agentId: answering.agentId } : {}), firstReply: !earlierReply, history: rows.reverse().map((row) => ({ direction: row.direction === "inbound" ? "inbound" : "outbound", body: row.body })) };
   });
 }
 
@@ -76,16 +79,17 @@ async function handOffToTeamInTransaction(tx: DatabaseTransaction, input: { busi
  * open text one it handles, the contact isn't blocked, and that message is
  * still the newest text. A STOP, START or HELP text and its fixed reply don't
  * count, so they can't strand a question waiting for its job. Locks the
- * conversation, so the answer holds until the transaction ends.
+ * conversation, so the answer holds until the transaction ends. Returns the
+ * conversation's agent, or null when the receptionist doesn't answer.
  */
-async function stillAnsweringInTransaction(tx: DatabaseTransaction, input: { businessId: string; conversationId: string; messageId: string }): Promise<boolean> {
-  const [conversation] = await tx.select({ automationState: conversations.automationState, channel: conversations.channel, status: conversations.status, contactBlockedAt: contacts.operatorBlockedAt })
+async function stillAnsweringInTransaction(tx: DatabaseTransaction, input: { businessId: string; conversationId: string; messageId: string }): Promise<{ agentId: string | null } | null> {
+  const [conversation] = await tx.select({ automationState: conversations.automationState, channel: conversations.channel, status: conversations.status, contactBlockedAt: contacts.operatorBlockedAt, agentId: conversations.agentId })
     .from(conversations).leftJoin(contacts, eq(contacts.id, conversations.contactId))
     .where(and(eq(conversations.id, input.conversationId), eq(conversations.businessId, input.businessId))).limit(1).for("update", { of: conversations });
-  if (!conversation || conversation.channel !== "sms" || conversation.status !== "open" || conversation.automationState !== "ai_active" || conversation.contactBlockedAt) return false;
+  if (!conversation || conversation.channel !== "sms" || conversation.status !== "open" || conversation.automationState !== "ai_active" || conversation.contactBlockedAt) return null;
   const [latest] = await tx.select({ id: messages.id, direction: messages.direction }).from(messages)
     .where(and(eq(messages.businessId, input.businessId), eq(messages.conversationId, input.conversationId), eq(messages.channel, "sms"), notComplianceMessage())).orderBy(desc(messages.createdAt)).limit(1);
-  return latest?.id === input.messageId && latest.direction === "inbound";
+  return latest?.id === input.messageId && latest.direction === "inbound" ? { agentId: conversation.agentId } : null;
 }
 
 /**

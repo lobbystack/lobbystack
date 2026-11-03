@@ -2,7 +2,7 @@ import { createHash, createHmac, randomUUID } from "node:crypto";
 
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { auditLogs, businesses, businessInvitations, createDatabaseClient, onboardingNumberClaimEvents, operatorNotificationDeliveries, outboxMessages, partnerNumberCharges, phoneNumbers, receptionistProfiles, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, auditLogs, businesses, businessInvitations, createDatabaseClient, onboardingNumberClaimEvents, operatorNotificationDeliveries, outboxMessages, partnerNumberCharges, phoneNumbers, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import type { ApiKeyScope } from "@lobbystack/shared";
 
 import { forgetCachedBrands } from "./brands";
@@ -447,7 +447,7 @@ describe.skipIf(!client)("a business with no owner", () => {
       const worker = workerContext(tx);
       expect(await resolveNumberFallback(worker, { businessId, e164 })).toEqual({ action: "reject" });
 
-      await asMigrator(tx, async () => await tx.update(receptionistProfiles).set({ transferNumber: "+14165550177" }).where(eq(receptionistProfiles.businessId, businessId)));
+      await asMigrator(tx, async () => await tx.update(agents).set({ transferNumber: "+14165550177" }).where(eq(agents.businessId, businessId)));
       expect(await resolveNumberFallback(worker, { businessId, e164 })).toEqual({ action: "forward", to: "+14165550177" });
 
     });

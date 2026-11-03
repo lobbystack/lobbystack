@@ -29,6 +29,7 @@ describe("locale paths", () => {
     expect(isLegacyPublicRoutePath("/reset-password/token")).toBe(true);
     expect(isLegacyPublicRoutePath("/settings")).toBe(false);
     expect(isTokenBearingRoute("/fr/reset-password/token", new URLSearchParams())).toBe(true);
+    expect(isTokenBearingRoute("/fr/check-in/token", new URLSearchParams())).toBe(true);
     expect(isTokenBearingRoute("/en/verify-email", new URLSearchParams("token=private"))).toBe(true);
     expect(isTokenBearingRoute("/en/login", new URLSearchParams())).toBe(false);
   });

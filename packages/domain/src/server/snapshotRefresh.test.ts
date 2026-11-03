@@ -8,7 +8,19 @@ const mocks = vi.hoisted(() => ({
   withBusinessTransaction: vi.fn(),
   enqueueOutbox: vi.fn(),
   resolveSmsSender: vi.fn(),
+  recordSize: vi.fn(),
 }));
+
+vi.mock("@lobbystack/telemetry/node", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@lobbystack/telemetry/node")>();
+  return {
+    ...actual,
+    getMeter: (name?: string) => {
+      const meter = actual.getMeter(name);
+      return { createCounter: meter.createCounter.bind(meter), createHistogram: (metric: string, options?: object) => metric === "rag.snapshot.size_bytes" ? { record: mocks.recordSize } : meter.createHistogram(metric, options) };
+    },
+  };
+});
 
 vi.mock("@lobbystack/db", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@lobbystack/db")>()),
@@ -83,7 +95,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   deleted = [];
   vi.stubEnv("REDIS_PREFIX", "lobbystack");
-  mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => await callback(makeTx({ businesses: [businessRow], receptionist_profiles: [profileRow] })));
+  mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => await callback(makeTx({ businesses: [businessRow], agents: [profileRow] })));
   mocks.enqueueOutbox.mockResolvedValue(undefined);
   mocks.resolveSmsSender.mockResolvedValue(null);
 });
@@ -98,7 +110,7 @@ describe("refreshBusinessSnapshot write-through", () => {
     mocks.resolveSmsSender.mockResolvedValue("+14165550003");
     mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => callback(makeTx({
       businesses: [{ ...businessRow, legalName: "Maple Clinic Inc.", businessType: "clinic", telemetryEnabled: false }],
-      receptionist_profiles: [profileRow],
+      agents: [profileRow],
       phone_numbers: [
         { e164: "+14165550001", status: "released", voiceEnabled: true, smsEnabled: true },
         { e164: "+14165550002", status: "active", voiceEnabled: true, smsEnabled: false },
@@ -114,7 +126,7 @@ describe("refreshBusinessSnapshot write-through", () => {
   it("lists the business's bookable employees with the active services each does, so the agent can offer them", async () => {
     mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => callback(makeTx({
       businesses: [businessRow],
-      receptionist_profiles: [profileRow],
+      agents: [profileRow],
       services: [{ id: "service-colour", name: "Colour", durationMinutes: 60 }, { id: "service-haircut", name: "Haircut", durationMinutes: 30 }],
       staff: [{ name: "Ana Petrović", staffId: "staff-ana" }, { name: "Marko Jovanović", staffId: "staff-marko" }],
       // A deleted or inactive service isn't in the snapshot's services, so it's left off.
@@ -125,10 +137,58 @@ describe("refreshBusinessSnapshot write-through", () => {
     expect((await cache.get(businessId))?.employees).toEqual([{ name: "Ana Petrović", services: ["Colour", "Haircut"] }, { name: "Marko Jovanović" }]);
   });
 
+  describe("agents", () => {
+    const defaultRow = { ...profileRow, name: "Front desk", isDefault: true, voice: "cedar", bookingMode: "request", transferMode: "on_request", transferNumber: "+14165551234" };
+    const secondRow = { ...profileRow, id: "00000000-0000-4000-8000-000000000003", name: "After hours", isDefault: false, greeting: "Closed", tone: "calm", voice: "marin", voiceInstructions: "After-hours voice", smsInstructions: "After-hours text", chatInstructions: "After-hours chat", transferMode: "never", staffFirstMode: "always", staffFirstNumber: "+14165550001", staffFirstRingSeconds: 20 };
+    const rules = [
+      { id: "rule-default", title: "Default", content: "For the default agent", sortOrder: 0, agentId: defaultRow.id },
+      { id: "rule-unassigned", title: "Unassigned", content: "No agent yet", sortOrder: 1, agentId: null },
+      { id: "rule-second", title: "Second", content: "For the second agent", sortOrder: 2, agentId: secondRow.id },
+    ];
+
+    async function refreshed() {
+      mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => callback(makeTx({ businesses: [businessRow], agents: [defaultRow, secondRow], agent_rules: rules })));
+      const cache = memoryCache();
+      await refreshBusinessSnapshot({ db: {} as never, snapshotCache: cache }, { businessId });
+      return (await cache.get(businessId))!;
+    }
+
+    it("lists each agent with what it sets for itself", async () => {
+      const snapshot = await refreshed();
+      expect(snapshot.agents?.map((agent) => agent.name)).toEqual(["Front desk", "After hours"]);
+      expect(snapshot.agents?.[1]).toMatchObject({ isDefault: false, greeting: "Closed", tone: "calm", voice: "marin", voiceInstructions: "After-hours voice", smsInstructions: "After-hours text", chatInstructions: "After-hours chat", transferPolicy: { mode: "never" }, staffFirstPolicy: { mode: "always", number: "+14165550001", ringSeconds: 20 } });
+    });
+
+    it("gives each agent its own rules, and the default agent any rule with no agent", async () => {
+      const snapshot = await refreshed();
+      expect(snapshot.agents?.[0]?.rules.map((rule) => rule.id)).toEqual(["rule-default", "rule-unassigned"]);
+      expect(snapshot.agents?.[1]?.rules.map((rule) => rule.id)).toEqual(["rule-second"]);
+    });
+
+    it("keeps the default agent in the flat fields", async () => {
+      expect(await refreshed()).toMatchObject({ greeting: "Hello", voice: "cedar", bookingMode: "request", transferPolicy: { mode: "on_request", transferNumber: "+14165551234" }, rules: [{ id: "rule-default" }, { id: "rule-unassigned" }] });
+    });
+
+    it("keeps every rule in the flat fields of a business with no agent row", async () => {
+      mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => callback(makeTx({ businesses: [businessRow], agent_rules: rules })));
+      const cache = memoryCache();
+      await refreshBusinessSnapshot({ db: {} as never, snapshotCache: cache }, { businessId });
+      expect((await cache.get(businessId))?.rules).toHaveLength(3);
+      expect((await cache.get(businessId))?.agents).toEqual([]);
+    });
+  });
+
+  it("records the size of the snapshot it built", async () => {
+    mocks.recordSize.mockClear();
+    const cache = memoryCache();
+    await refreshBusinessSnapshot({ db: {} as never, snapshotCache: cache }, { businessId });
+    expect(mocks.recordSize).toHaveBeenCalledExactlyOnceWith(Buffer.byteLength(JSON.stringify(await cache.get(businessId)), "utf8"), { operation: "snapshot.refresh" });
+  });
+
   it("keeps up to the snapshot's snippet limit, not just the few that prompts list", async () => {
     // Answers saved from the unanswered-questions inbox are snippets too; knowledge search needs them all.
     const snippetRows = Array.from({ length: 12 }, (_, index) => ({ id: `snippet-${index}`, title: `Question ${index}`, content: `Answer ${index}`, tags: [], priority: 100 - index }));
-    mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => callback(makeTx({ businesses: [businessRow], receptionist_profiles: [profileRow], knowledge_snippets: snippetRows })));
+    mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => callback(makeTx({ businesses: [businessRow], agents: [profileRow], knowledge_snippets: snippetRows })));
     const cache = memoryCache();
     await refreshBusinessSnapshot({ db: {} as never, snapshotCache: cache }, { businessId });
     expect((await cache.get(businessId))?.knowledgeSnippets?.map((snippet) => snippet.id)).toEqual(snippetRows.map((row) => row.id));
