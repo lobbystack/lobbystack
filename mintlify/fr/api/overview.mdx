@@ -9,7 +9,7 @@ import SaasPrompt from "/snippets/fr/setup-prompts/saas.mdx";
 
 L'API LobbyStack permet à vos propres outils de travailler avec les données d'agent d'une entreprise. Zapier, un serveur MCP ou un script peuvent lire les appels et les messages, synchroniser les contacts, réserver des rendez-vous, ajouter des connaissances et s'abonner à des webhooks.
 
-L'API appelle votre agent `receptionist` et votre espace de travail `business`, comme dans `GET /receptionist`.
+L'API appelle votre agent `receptionist` et votre espace de travail `business`, comme dans `GET /receptionist`. `GET /agents` liste les agents de l'espace de travail. `/receptionist` et `/rules` agissent sur l'agent par défaut, et chaque appel et message indique dans `agent_id` l'agent qui l'a pris.
 
 <SaasPrompt />
 
