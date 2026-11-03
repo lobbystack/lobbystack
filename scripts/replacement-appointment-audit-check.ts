@@ -32,7 +32,8 @@ async function main(): Promise<void> {
     const [staffMember] = await db.db.insert(staff).values({ businessId, name: "Audit staff", timezone: "UTC" }).returning({ id: staff.id });
     // Booking requires an open hours window for the requested weekday.
     await db.db.insert(businessHours).values(Array.from({ length: 7 }, (_, dayOfWeek) => ({ businessId, dayOfWeek, openMinutes: 0, closeMinutes: 1439 })));
-    await db.db.insert(phoneNumbers).values({ businessId, e164: "+14165550992", providerPhoneId: `PN-${randomUUID()}` });
+    // The agent comes before the number: a number added to a business without
+    // one gets a default agent, and a business has a single agent for now.
     await db.db.insert(agents).values({
       businessId,
       greeting: "Thanks for calling.",
@@ -42,6 +43,7 @@ async function main(): Promise<void> {
       transferMode: "on_request",
       appointmentChangePolicy: { enabled: true, verificationMode: "otp_required", allowCancel: true, allowReschedule: true },
     });
+    await db.db.insert(phoneNumbers).values({ businessId, e164: "+14165550992", providerPhoneId: `PN-${randomUUID()}` });
     assert(contact && service && staffMember, "Appointment audit fixtures could not be created.");
     await bookAppointment({ db: db.db }, { businessId, serviceId: service.id, startsAt: bookingSlot(10).toISOString(), timezone: "UTC", contactPhone: callerPhone, sourceChannel: "voice", smsConsent: "agreed" });
     const reminderConsent = await db.db.select().from(smsConsentEvents).where(and(eq(smsConsentEvents.businessId, businessId), eq(smsConsentEvents.action, "reminder_consent_granted")));
