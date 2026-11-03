@@ -5,13 +5,9 @@ import { isSetupGuideFinished, isSetupStepDone, numberPath, SETUP_STEP_ORDER, sh
 const owner = { canSetUp: true, role: "business_owner" };
 
 describe("showsSetupGuide", () => {
-  it("shows the guide until the first real conversation, and not after", () => {
-    expect(showsSetupGuide({ ...owner, firstRealConversationAt: null })).toBe(true);
-    expect(showsSetupGuide({ ...owner, firstRealConversationAt: "2026-11-01T12:00:00.000Z" })).toBe(false);
-  });
-
-  it("keeps the normal Home while it doesn't know", () => {
-    expect(showsSetupGuide({ ...owner, firstRealConversationAt: undefined })).toBe(false);
+  it("shows the guide to an owner or admin who can set up", () => {
+    expect(showsSetupGuide(owner)).toBe(true);
+    expect(showsSetupGuide({ canSetUp: true, role: "business_admin" })).toBe(true);
   });
 
   it.each([
@@ -20,7 +16,7 @@ describe("showsSetupGuide", () => {
     ["an owner of an activity-only business", { canSetUp: false, role: "business_owner" }],
     ["an admin of an activity-only business", { canSetUp: false, role: "business_admin" }],
   ])("keeps the normal Home for %s", (_who, access) => {
-    expect(showsSetupGuide({ ...access, firstRealConversationAt: null })).toBe(false);
+    expect(showsSetupGuide(access)).toBe(false);
   });
 });
 

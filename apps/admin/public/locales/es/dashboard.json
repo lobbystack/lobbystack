@@ -261,6 +261,7 @@
     "title": "Primeros pasos",
     "skip": "Omitir configuración",
     "skipStep": "Omitir",
+    "finished": "Configuración completada.",
     "description": "{{completed}} de {{total}} pasos de configuración completados.",
     "lastCall": "Su llamada de prueba",
     "lastCallDetails": "{{date}}, {{duration}}",

@@ -74,7 +74,7 @@ test("Getting started opens the test window on the agent, and Escape closes it",
 const list = (page: Page) => page.getByRole("heading", { name: dashboard.setupGuide.title, exact: true });
 const dailyView = (page: Page) => page.getByRole("heading", { name: dashboard.home.actionRequired.title, exact: true });
 
-test("Home shows Getting started until the owner skips setup, old links land there, and it stays gone", async ({ page }, testInfo) => {
+test("Home shows Getting started above the dashboard until the owner skips setup, old links land there, and it stays gone", async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   const database = migrator();
   const email = `${prefix}-${randomUUID()}@example.invalid`;
@@ -85,9 +85,11 @@ test("Home shows Getting started until the owner skips setup, old links land the
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByRole("heading", { level: 1, name: dashboard.home.title, exact: true })).toBeVisible();
     await expect(list(page)).toBeVisible();
+    await expect(dailyView(page)).toBeVisible();
     await expect(page.locator('[data-slot="sidebar"]').getByText(dashboard.setupGuide.title, { exact: true })).toHaveCount(0);
 
     await page.getByRole("button", { name: dashboard.setupGuide.skip, exact: true }).click();
+    await expect(page.getByText(dashboard.setupGuide.finished, { exact: true })).toBeVisible();
     await expect(dailyView(page)).toBeVisible();
     await expect(list(page)).toHaveCount(0);
     await expect(page).toHaveURL(/\/$/);
@@ -101,7 +103,7 @@ test("Home shows Getting started until the owner skips setup, old links land the
   }
 });
 
-test("the first real conversation replaces Getting started", async ({ page }, testInfo) => {
+test("Getting started stays after the first real conversation", async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   const database = migrator();
   const email = `${prefix}-${randomUUID()}@example.invalid`;
@@ -114,7 +116,7 @@ test("the first real conversation replaces Getting started", async ({ page }, te
     await database.db.execute(sql`insert into public.first_real_conversations (business_id, channel) values (${businessId}, 'voice')`);
     await page.reload();
     await expect(dailyView(page)).toBeVisible();
-    await expect(list(page)).toHaveCount(0);
+    await expect(list(page)).toBeVisible();
   } finally {
     await removeFixtures(database, email, businessId);
     await database.pool.end();

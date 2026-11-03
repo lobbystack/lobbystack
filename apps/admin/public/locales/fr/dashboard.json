@@ -261,6 +261,7 @@
     "title": "Premiers pas",
     "skip": "Ignorer la configuration",
     "skipStep": "Ignorer",
+    "finished": "Configuration terminée.",
     "description": "{{completed}} étape(s) sur {{total}} complétée(s).",
     "lastCall": "Votre appel test",
     "lastCallDetails": "{{date}}, {{duration}}",

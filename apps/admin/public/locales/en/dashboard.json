@@ -260,6 +260,7 @@
     "title": "Getting started",
     "skip": "Skip setup",
     "skipStep": "Skip",
+    "finished": "Setup complete.",
     "description": "{{completed}} of {{total}} setup steps complete.",
     "lastCall": "Your test call",
     "lastCallDetails": "{{date}}, {{duration}}",

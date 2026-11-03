@@ -1,12 +1,12 @@
 /**
- * Whether Home can show the setup guide. The first real conversation ends it
- * for good: its row is never deleted, so a business can't go back. Only people
- * who can act on the steps see them. An activity-only business leaves setup to
- * its partner, and only owners and admins claim numbers and change the agent.
+ * Whether Home can show the setup guide above the dashboard. It stays until
+ * every step is done or skipped, real conversations or not. Only people who
+ * can act on the steps see them. An activity-only business leaves setup to its
+ * partner, and only owners and admins claim numbers and change the agent.
  * Everyone else keeps the normal Home.
  */
-export function showsSetupGuide({ canSetUp, firstRealConversationAt, role }: { canSetUp: boolean; firstRealConversationAt: string | null | undefined; role: string | undefined }): boolean {
-  return firstRealConversationAt === null && canSetUp && (role === "business_owner" || role === "business_admin");
+export function showsSetupGuide({ canSetUp, role }: { canSetUp: boolean; role: string | undefined }): boolean {
+  return canSetUp && (role === "business_owner" || role === "business_admin");
 }
 
 export type SetupStepId = "fullScan" | "sources" | "testCall" | "phoneNumber";

@@ -66,35 +66,34 @@ const list = () => screen.findByRole("heading", { name: copy.title });
 const number = { id: "n", e164: "+15145550100", status: "active", reclaimScheduledAt: null };
 
 describe("the list on Home", () => {
-  it("replaces the daily view before the first real conversation, under a single page title", async () => {
+  it("sits above the daily view, under a single page title", async () => {
     await setup();
     await list();
     expect(screen.getByRole("heading", { level: 1, name: en.home.title })).toBeTruthy();
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getByText("0 of 4 setup steps complete.")).toBeTruthy();
-    expect(screen.queryByText(en.home.actionRequired.title)).toBeNull();
+    expect(screen.getByText(en.home.actionRequired.title)).toBeTruthy();
   });
 
-  it("switches with no action at the first real conversation, and never comes back", async () => {
+  // Going live doesn't hide what's left to set up.
+  it("stays after the first real conversation", async () => {
     const { client } = await setup();
     await list();
     act(() => client.setQueryData(["dashboard"], summary("2026-11-01T12:00:00.000Z")));
-    expect(await screen.findByText(en.home.actionRequired.title)).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: copy.title })).toBeNull();
     await act(async () => { await client.invalidateQueries({ queryKey: ["setup"] }); });
-    expect(screen.queryByRole("heading", { name: copy.title })).toBeNull();
+    expect(await list()).toBeTruthy();
   });
 
-  it("gives a business with a real conversation the normal Home", async () => {
+  it("shows the list to a business with a real conversation and unfinished steps", async () => {
     await setup({ firstRealConversationAt: "2026-11-01T12:00:00.000Z" });
-    expect(await screen.findByText(en.home.actionRequired.title)).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: copy.title })).toBeNull();
+    expect(await list()).toBeTruthy();
+    expect(screen.getByText(en.home.actionRequired.title)).toBeTruthy();
   });
 
   it("stays after every step gets done without a skip", async () => {
     await setup({ complete: [...order], numbers: [number] });
     await list();
-    expect(screen.queryByText(en.home.actionRequired.title)).toBeNull();
+    expect(screen.getByText(en.home.actionRequired.title)).toBeTruthy();
   });
 
   it("falls back to the normal Home when setup can't load", async () => {

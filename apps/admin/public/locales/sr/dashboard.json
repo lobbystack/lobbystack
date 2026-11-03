@@ -261,6 +261,7 @@
     "title": "Prvi koraci",
     "skip": "Preskoči podešavanje",
     "skipStep": "Preskoči",
+    "finished": "Podešavanje je završeno.",
     "description": "Završeno koraka podešavanja: {{completed}} od {{total}}.",
     "lastCall": "Vaš probni poziv",
     "lastCallDetails": "{{date}}, {{duration}}",

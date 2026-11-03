@@ -9,7 +9,8 @@ import { formatPhoneNumberDisplay } from "@/lib/phone";
 
 import Link from "next/link";
 import { extractFollowUpContactName, getFollowUpDisplayTitle, isUrgentFollowUpValue, cancellationRequestDetails, parseFollowUpTaskBody, type RequestedCancellation } from "@/lib/follow-up-task";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
+import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -21,6 +22,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { PageHeader } from "@/components/page-header";
 import { DashboardActivationCard } from "@/components/dashboard-activation-card";
 import { LiveSetupGuideSurface, useSetupGuide } from "@/components/live-setup-guide-surface";
+import { needsHoursForBooking, useBusinessHours } from "@/components/business-hours-section";
 import { appointmentSummary, CancelAppointmentButton } from "@/components/cancel-appointment-button";
 import { MetricCardGridSkeleton } from "@/components/loading-skeletons";
 import { Item, ItemActions, ItemHeader, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item";
@@ -73,8 +75,7 @@ function initials(value: string | null): string {
 export function LiveOverviewSurface() {
   const { i18n, t } = useTranslation("dashboard");
   const queryClient = useQueryClient();
-  // Realtime events bring the switch to the normal Home. The slow poll covers a browser that lost its event stream.
-  const summary = useQuery({ queryKey: ["dashboard"], queryFn: getSummary, refetchInterval: (query) => query.state.data?.firstRealConversationAt === null ? 60_000 : false });
+  const summary = useQuery({ queryKey: ["dashboard"], queryFn: getSummary });
   const businessId = summary.data?.businessId;
   const { appointments } = useAppointments();
   const { t: tKnowledge } = useTranslation("knowledge");
@@ -84,8 +85,21 @@ export function LiveOverviewSurface() {
   const canAnswerQuestions = canSetUp && (business?.role === "business_owner" || business?.role === "business_admin");
   const unanswered = useQuery({ queryKey: unansweredQuestionsQueryKey(businessId), enabled: Boolean(businessId) && canAnswerQuestions, queryFn: () => fetchUnansweredQuestions(businessId!) });
   const unansweredCount = canAnswerQuestions ? unanswered.data?.openCount ?? 0 : 0;
-  const mayShowGuide = Boolean(businessId) && showsSetupGuide({ firstRealConversationAt: summary.data?.firstRealConversationAt, canSetUp, role: business?.role });
+  const mayShowGuide = Boolean(businessId) && showsSetupGuide({ canSetUp, role: business?.role });
   const guide = useSetupGuide(mayShowGuide ? businessId : undefined);
+  // Missing opening hours keep the guide open too: they're its one step the server doesn't track.
+  const hours = useBusinessHours(mayShowGuide ? businessId ?? "" : "");
+  // A failed request leaves the guide out, and the dashboard works without setup.
+  const showGuide = mayShowGuide && (guide.isPending || (Boolean(guide.data) && (!isSetupGuideFinished(guide.data!) || needsHoursForBooking(hours.data))));
+  // Finishing the last step here, or skipping them all, says so once.
+  const guideWasShown = useRef(false);
+  useEffect(() => {
+    if (showGuide && guide.data) guideWasShown.current = true;
+    else if (guideWasShown.current && !showGuide && guide.data) {
+      guideWasShown.current = false;
+      toast.success(t("setupGuide.finished"));
+    }
+  }, [guide.data, showGuide, t]);
 
   useEffect(() => {
     if (!businessId) return;
@@ -102,21 +116,14 @@ export function LiveOverviewSurface() {
   ] as const : [];
 
   if (summary.data?.firstRealConversationAt === null && !business) return <PageHeader title={t("home.title")} />;
-  // A failed request falls through to the normal Home, which works without setup.
-  if (mayShowGuide && (guide.isPending || (guide.data && !isSetupGuideFinished(guide.data)))) {
-    return (
-      <div className="flex flex-col gap-6">
-        <PageHeader title={t("home.title")} />
-        {guide.data ? <LiveSetupGuideSurface businessId={businessId!} goal={business?.onboardingGoal ?? null} /> : <Skeleton className="h-64 rounded-xl" />}
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title={t("home.title")} />
+      {showGuide ? guide.data ? <LiveSetupGuideSurface businessId={businessId!} goal={business?.onboardingGoal ?? null} /> : <Skeleton className="h-64 rounded-xl" /> : null}
       <div className="flex flex-col gap-6">
-        <DashboardActivationCard businessId={businessId} />
+        {/* Getting started covers what the activation card would offer. */}
+        {showGuide ? null : <DashboardActivationCard businessId={businessId} />}
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
           <section className="animate-in fade-in slide-in-from-bottom-2 duration-200 flex flex-col gap-3 xl:h-full">
             <div className="flex items-center justify-between gap-4 px-1"><h2 className="type-section-title">{t("home.actionRequired.title")}</h2>{summary.isLoading ? <Skeleton className="h-6 w-12 rounded-full" /> : <Badge variant="outline">{((summary.data?.actionRequired.length ?? 0) + (unansweredCount > 0 ? 1 : 0)).toLocaleString(intlLocale(i18n.language))}</Badge>}</div>

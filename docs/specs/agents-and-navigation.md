@@ -23,7 +23,7 @@ We fix activation first, then compare four working navigation prototypes, then b
 
 - **Tracking comes first,** so replays and first real conversations can judge everything after it.
 - **Operators see "agent" and "workspace".** The marketing site keeps "AI receptionist" as the job the agent does.
-- **New accounts get their own Home** until their first real conversation, and a wait screen after the website step while the import runs.
+- **New accounts get Getting started on Home** above the dashboard until every step is done or skipped, and a wait screen after the website step while the import runs.
 - **Four worktrees hold four working dashboards.** They share one base branch for settings, search and the Inbox, and differ in how the whole navigation fits together.
 - **The chosen navigation ships to everyone at once,** with multi-agent support behind it and no feature flag.
 
@@ -35,7 +35,7 @@ We fix activation first, then compare four working navigation prototypes, then b
 2. As a new operator, I want my test call to use what's on my website, so that my first impression of the agent is a fair one.
 3. As a new operator, I want to see what the product does while my site imports, so that the wait teaches me something.
 4. As a new operator, I want forwarding steps for my phone carrier, so that real callers reach my agent.
-5. As a new operator, I want Home to change on its own after my first real conversation, so that I don't have to dismiss a setup screen.
+5. As a new operator, I want my unfinished setup steps to stay on Home next to my calls and bookings, so that going live doesn't hide what's left to do.
 
 ### Operators finding things
 
@@ -113,9 +113,10 @@ Each prototype covers the menu, Home, the agent pages, settings and setup. Each 
 
 ### New-account Home
 
-- There is one setup list, Getting started, and it lives on Home. It shows until the first real conversation, then the normal Home replaces it without any action from the operator, and it never comes back.
-- "Skip setup" skips every step and also brings up the normal Home. Finishing every step without skipping keeps the list on Home until the first real conversation.
-- Every account gets the same order: read the rest of the site, add sources, test call, phone number. The test call always comes after sources.
+- There is one setup list, Getting started, and it lives on Home above the normal dashboard. It stays until every step is done or skipped, whatever conversations come in, then a "Setup complete" toast shows once and the list never comes back. A first real conversation doesn't end it, so unfinished steps don't disappear.
+- "Skip setup" skips every step, which ends the list the same way.
+- Every account gets the same order: read the rest of the site, add sources, test call, phone number. The test call always comes after sources. Finished steps move to the top of the list, and the rest keep this order below them.
+- A business that books instantly and has no opening hours gets an "Add opening hours" step after the sources. Hours from the website scan, or entered by hand, hide it, and the list can't end while it shows.
 - The number step offers a number in place, then walks through forwarding with steps for the operator's phone carrier. It stays open once a number exists, because nothing can detect forwarding, and its title changes to "Forward your calls".
 - The operator's answer to the new goal question changes the wording of the sources and test call steps, never the order. The test call step shows their last test call.
 - The goal question sits next to the attribution question, which stays.
@@ -189,7 +190,7 @@ A partner's business has website, phone and Meet your agent, plus the language q
 
 - Every new telemetry event gets a test that asserts it fires from its real production code path.
 - Test the first real conversation event for each channel, and test that test calls and calls from verified team phones don't fire it.
-- Test that Home switches after the first real conversation and never switches back.
+- Test that Getting started stays after the first real conversation, ends once every step is done or skipped, and never comes back.
 - Test that the wait screen only appears during an import, and that it always lets the operator continue.
 - Test that a failed or empty call never brings up the plans, and that dismissing them holds for 7 days.
 - Test search with a limited operator, so that results never show a page their role can't open.
