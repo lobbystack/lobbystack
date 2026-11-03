@@ -211,6 +211,29 @@ describe("SMTP delivery", () => {
     expect(sent.subject).toBe(subject);
     expect(sent.text).toContain("https://app.example.test/settings/account");
     expect(sent.text).toContain(resetLine);
+    expect(sent.html).toContain('href="https://app.example.test/settings/account"');
+    expect(sent.html).toContain(`href="https://app.example.test/${locale}/forgot-password"`);
+  });
+
+  it("styles every other email except the founder's follow-up in the shared layout", async () => {
+    const { provider, sent } = capture();
+    const cases: [Omit<FixtureInput, "to" | "subject">, string][] = [
+      [{ template: "password_reset", variables: { url: "https://app.example.test/reset" } }, 'href="https://app.example.test/reset"'],
+      [{ template: "password_reset", variables: { code: "654321" } }, ">654321</p>"],
+      [{ template: "existing_account", variables: { locale: "fr", signInUrl: "https://app.example.test/fr/login", resetUrl: "https://app.example.test/fr/forgot-password" } }, 'href="https://app.example.test/fr/login"'],
+      [{ template: "account_setup", variables: { locale: "es", email: "o@example.test", url: "https://app.example.test/es/signup" } }, 'href="https://app.example.test/es/signup"'],
+      [{ template: "operator_alert", variables: { message: "Line <one>\n\nLine two" } }, "Line &lt;one&gt;</p>"],
+      [{ template: "number_release", variables: { locale: "en", kind: "canceled", number: "+1555", periodEnd: "May 1", releaseDate: "May 31", url: "https://app.example.test/plan" } }, 'href="https://app.example.test/plan"'],
+      [{ template: "number_trial", variables: { locale: "en", kind: "day10", url: "https://app.example.test/trial" } }, 'href="https://app.example.test/trial"'],
+      [{ template: "feedback_submission", variables: { body: "Great app" } }, ">Great app</p>"],
+    ];
+    for (const [input] of cases) {
+      await send(provider, { ...input, to: "owner@example.test", subject: "Subject" });
+    }
+    cases.forEach(([, expected], index) => {
+      expect(sent(index).html).toContain("<!doctype html>");
+      expect(sent(index).html).toContain(expected);
+    });
   });
 
   it("localizes the onboarding follow-up and existing-account emails in Spanish and Serbian", async () => {
@@ -244,7 +267,8 @@ describe("SMTP delivery", () => {
     expect(sent(0).html).toContain(">123456</p>");
     await send(provider, { template: "verify_email", to: "recipient@example.test", subject: "Verify", variables: { url: "https://app.example.test/verify" } });
     expect(sent(1).text).toContain("using this link: https://app.example.test/verify");
-    expect(sent(1).html).toBeUndefined();
+    expect(sent(1).html).toContain('href="https://app.example.test/verify"');
+    expect(sent(1).html).toContain("Confirm your email address");
   });
   it("escapes verification email content before rendering branded HTML", async () => {
     const { provider, sent } = capture();
