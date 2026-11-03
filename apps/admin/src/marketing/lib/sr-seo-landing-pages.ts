@@ -2244,6 +2244,230 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
       ctaSecondaryHref: "https://docs.lobbystack.com/self-hosting/overview",
     }
   ),
+
+  "/solutions/ai-receptionist-quebec/": serbianPage(
+    "/solutions/ai-receptionist-quebec/",
+    {
+      title: "AI recepcioner za firme u Kvebeku, na francuskom | LobbyStack",
+      description:
+        "AI recepcioner za male firme u Kvebeku: javlja se na francuskom na Vašem broju, zakazuje u Google Calendar i prelazi na engleski kada ga pozivalac govori.",
+      eyebrow: "Kvebek",
+      h1: "AI recepcioner koji Vašim klijentima u Kvebeku odgovara na francuskom",
+      intro:
+        "Na gradilištu ste u Lavalu ili sa klijentom, a telefon zvoni. LobbyStack se javlja na francuskom na Vašem poslovnom broju, odgovara na osnovu Vaših usluga i cena i zakazuje termin u Google Calendar. Kada pozivalac govori engleski, prelazi na engleski.",
+      imageAlt:
+        "LobbyStack se na francuskom javlja na poziv firme iz Kvebeka i zakazuje termin",
+      proofPoints: [
+        "Pozivi počinju na francuskom kada je to Vaš podrazumevani jezik",
+        "Kanadski brojevi, sa pretragom po pozivnom broju",
+        "Zakazuje u Google Calendar i šalje SMS potvrdu",
+        "Besplatan paket, zatim US$30 mesečno za 150 minuta",
+      ],
+      sections: [
+        {
+          title: "Vaši pozivi počinju na francuskom",
+          body: "Postavite francuski kao podrazumevani jezik firme i svaki poziv počinje na francuskom, od pozdrava do zakazivanja. Kada pozivalac zatraži engleski ili jasno govori neki drugi jezik, LobbyStack prelazi na taj jezik do kraja poziva i zadržava Vaša pravila.",
+          points: [
+            "Birate između osam podrazumevanih jezika, među njima francuskog i engleskog",
+            "Odgovara pozivaocima na više od 70 jezika uz OpenAI GPT-Live",
+            "Ista pravila za zakazivanje i prebacivanje važe na svakom jeziku",
+          ],
+        },
+        {
+          title: "Zadržite svoj broj ili uzmite kanadski",
+          body: "Preusmerite sadašnju liniju na LobbyStack, za sve pozive ili samo za propuštene i one van radnog vremena. Vaši klijenti zovu broj koji već znaju. Starter i Pro uključuju i Vaš sopstveni broj, a kanadske brojeve možete da tražite po pozivnom broju, kao što su 514, 418 ili 819, kada operater ima slobodan broj.",
+          points: [
+            "Preusmeravanje kada je linija zauzeta, kada se niko ne javi, van radnog vremena ili stalno",
+            "Besplatan paket uključuje američki ili kanadski broj na 14 dana",
+          ],
+        },
+        {
+          title: "Uslužite klijente na francuskom, poziv za pozivom",
+          body: "Od reforme iz 2022, poznate kao zakon 96 (loi 96), član 50.2 kvebečke Povelje o francuskom jeziku obavezuje firmu koja prodaje potrošačima da poštuje njihovo pravo da budu informisani i usluženi na francuskom. Recepcioner koji počinje na francuskom i odgovara na osnovu dokumenata na francuskom drži Vašu telefonsku liniju u skladu sa tim. Važni su i Vaš sajt, SMS poruke i fakture, pa svoj slučaj proverite kod OQLF-a ili pravnika.",
+          points: [
+            "Dodajte svoj sajt i dokumente na francuskom u njegovu bazu znanja",
+            "Pročitajte transkript i preslušajte snimak svakog poziva na kontrolnoj tabli",
+          ],
+        },
+        {
+          title: "Hitni pozivi zvone na Vašem mobilnom",
+          body: "Običnim rečima napišite koji pozivi ne mogu da čekaju, na primer curenje vode ili klijent koji traži vlasnika. LobbyStack postavlja pitanja koja Vaše pravilo traži, a zatim prebacuje poziv na Vaš mobilni ili osobi koju pozivalac traži. Za sve ostalo prima poruku, uz obaveštenje e-poštom ili SMS-om ako ih uključite.",
+          points: [
+            "Ako se niko ne javi, kaže to pozivaocu i nudi da primi poruku",
+            "Svaki poziv stiže sa rezimeom, transkriptom i ishodom",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Šta AI recepcioner radi za firmu u Kvebeku?",
+          answer:
+            "Javlja se na pozive koje Vaš tim ne može da primi, na francuskom ili na jeziku pozivaoca. LobbyStack odgovara na pitanja na osnovu usluga, cena i radnog vremena koje dodate, zakazuje termine u Google Calendar, prebacuje hitne pozive na Vaš mobilni i za sve ostalo prima poruku.",
+        },
+        {
+          question: "Da li govori kvebečki francuski?",
+          answer:
+            "Govori francuski glasovima OpenAI GPT-Live modela. Ne obećavamo kvebečki akcenat. Pozovite ga iz pregledača na besplatnom paketu, sa svojim pitanjima i svojim izrazima, pre nego što preusmerite liniju.",
+        },
+        {
+          question: "Može li da odgovara i na engleskom?",
+          answer:
+            "Da. Pozivi počinju na Vašem podrazumevanom jeziku, a LobbyStack prelazi na engleski ili neki drugi jezik kada pozivalac to zatraži ili ga jasno govori. Vaša pravila za zakazivanje, prebacivanje i poruke ostaju ista.",
+        },
+        {
+          question: "Da li LobbyStack usklađuje moju firmu sa zakonom 96?",
+          answer:
+            "Ne sam. Pomaže Vam da pozivaoce uslužite na francuskom preko telefona, ali Povelja o francuskom jeziku pokriva mnogo više: natpise, ugovore, sajtove i fakture. Office québécois de la langue française (OQLF) objašnjava Vaše obaveze, a pravnik može da pregleda Vaš slučaj.",
+        },
+        {
+          question: "Gde se obrađuju podaci o pozivima?",
+          answer:
+            "LobbyStack je kanadska firma. Podatke o pozivima obrađuje u Kanadi, Sjedinjenim Državama i drugim zemljama u kojima posluju njeni dobavljači, kao što su OpenAI i Twilio, kako objašnjava njena politika privatnosti. Ako podaci moraju da ostanu na serverima koje Vi kontrolišete, LobbyStack možete da hostujete sami.",
+        },
+        {
+          question: "Da li radi sa mojim softverom za zakazivanje?",
+          answer:
+            "Google Calendar je jedini kalendar sa kojim se LobbyStack direktno povezuje. Šalje i potpisane webhookove kada se poziv završi ili kada zakaže termin, a Zapier se povezuje na njih, pa podatke možete da pošaljete u drugi alat.",
+        },
+        {
+          question: "Koliko košta?",
+          answer:
+            "LobbyStack naplaćuje u američkim dolarima. Besplatan paket uključuje 30 minuta razgovora. Starter košta US$30 mesečno za 150 minuta, a Pro US$100 mesečno za 500, zatim US$0.20 i US$0.18 po dodatnom minutu. Nijedan paket nema naknadu za aktivaciju, a pozivi kraći od 10 sekundi ili završeni kao neželjeni ne računaju se.",
+        },
+      ],
+      faqHeading: "Pitanja o AI recepcionerima u Kvebeku",
+      relatedLinks: [
+        { label: "AI odgovaranje na pozive", href: "/solutions/ai-phone-answering/" },
+        {
+          label: "Izvođači renoviranja",
+          href: "/solutions/ai-receptionist-for-renovation-contractors/",
+        },
+        {
+          label: "Usluge odgovaranja na pozive u Kvebeku",
+          href: "/blog/phone-answering-service-quebec/",
+        },
+        {
+          label: "Kako da preusmerite poslovne pozive",
+          href: "/blog/how-to-forward-business-calls/",
+        },
+        pricingLink,
+      ],
+      ctaHeading: "Čujte ga kako odgovara na francuskom pre Vaših klijenata",
+      ctaBody:
+        "Počnite besplatno sa 30 minuta razgovora. Dodajte usluge i radno vreme na francuskom, pozovite ga iz pregledača, pa preusmerite liniju.",
+      ...ctaLabels,
+    }
+  ),
+
+  "/solutions/ai-receptionist-for-renovation-contractors/": serbianPage(
+    "/solutions/ai-receptionist-for-renovation-contractors/",
+    {
+      title: "AI recepcioner za izvođače renoviranja | LobbyStack",
+      description:
+        "AI recepcioner za izvođače renoviranja: zakazuje izlaske na procenu dok ste na gradilištu, proverava Vaše područje rada i prebacuje hitne slučajeve sa gradilišta.",
+      eyebrow: "Izvođači renoviranja",
+      h1: "AI recepcioner za izvođače renoviranja koji zakazuje procene dok ste na gradilištu",
+      intro:
+        "Vlasnik kuće koji traži cenu za renoviranje kupatila zove nekoliko izvođača u istom satu. LobbyStack se javlja na Vašu liniju dok Vi radite, pita za vrstu radova, adresu i rokove i zakazuje izlazak na procenu u Google Calendar pre nego što pozivalac spusti slušalicu.",
+      imageAlt:
+        "Izlazak na procenu za renoviranje kupatila koji je LobbyStack zakazao u kalendar izvođača",
+      proofPoints: [
+        "Zakazuje izlaske na procenu u Google Calendar tokom poziva",
+        "Proverava poštanski broj pozivaoca prema Vašem području rada",
+        "Prebacuje hitne slučajeve sa gradilišta na Vaš mobilni",
+      ],
+      sections: [
+        {
+          title: "Zakazuje izlazak na procenu dok je pozivalac na vezi",
+          body: "LobbyStack postavlja pitanja koja biste i Vi postavili: vrsta radova, adresa, rokovi i, ako želite, budžet. Zatim nudi slobodne termine iz Vašeg Google Calendar-a i zakazuje izlazak. Ako želite da odobrite svaki izlazak, režim zahteva beleži vreme koje pozivalac želi, a Vaš tim ga potvrđuje.",
+          points: [
+            "Preskače termine koji su već zauzeti u Vašem kalendaru",
+            "Klijentima koji pristanu šalje SMS potvrdu i podsetnik",
+          ],
+        },
+        {
+          title: "Proverava Vaše područje rada pre zakazivanja",
+          body: "Dodajte gradove ili poštanske brojeve koje pokrivate. Pozivalac van Vašeg područja čuje da tamo ne idete, umesto da dobije izlazak koji će Vaš tim morati da otkaže. Vi odlučujete da li LobbyStack ipak prima poruku za te pozive.",
+          points: [
+            "Odgovara na osnovu područja rada, radnog vremena i usluga koje unesete",
+            "Navodi samo cene koje mu date, kao početnu cenu ili raspon",
+          ],
+        },
+        {
+          title: "Postojeći klijenti dobijaju pravu osobu",
+          body: "Klijent usred renoviranja zove zbog vode ispod sudopere koju ste upravo ugradili. LobbyStack pita da li ima projekat sa Vama, prati Vaše pravilo hitnosti i zove Vaš mobilni. Pitanja o rasporedu i materijalu postaju poruke koje Vaš tim čita na kraju dana.",
+          points: [
+            "Ako se ne javite, nudi da primi poruku",
+            "Pozivi dobavljača i podizvođača takođe postaju poruke",
+          ],
+        },
+        {
+          title: "Odgovara na pitanja koja dobijate svake nedelje",
+          body: "Dodajte svoj sajt, garancije i podatke koje ponavljate u svakom pozivu, kao što su broj RBQ licence, rokovi ili radovi koje ne radite. LobbyStack odgovara na osnovu tih beleški i prima poruku kada pitanje nije pokriveno.",
+          points: [
+            "Čita PDF fajlove, tekst i stranice Vašeg sajta",
+            "Čuva rezime, transkript i snimak svakog poziva",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Šta AI recepcioner radi za izvođača renoviranja?",
+          answer:
+            "Javlja se na pozive koje propustite na gradilištu. LobbyStack pita za vrstu radova i adresu, zakazuje izlaske na procenu u Google Calendar, prebacuje hitne slučajeve postojećih klijenata na Vaš mobilni i za sve ostalo prima poruku.",
+        },
+        {
+          question: "Može li da navede cenu preko telefona?",
+          answer:
+            "Samo cene koje mu date. Možete da unesete fiksnu cenu, početnu cenu ili raspon, na primer cenu izlaska na procenu. Za kompletno renoviranje zakazuje izlazak umesto da pogađa.",
+        },
+        {
+          question: "Može li da razlikuje postojeće klijente od novih?",
+          answer:
+            "Da. LobbyStack može da pita pozivaoca da li ima projekat sa Vama. Postojeći klijenti prolaze kroz Vaša pravila za projekte i hitne slučajeve, a novi dobijaju Vaša pitanja o radovima, adresi i rokovima.",
+        },
+        {
+          question: "Da li radi sa Jobberom ili Buildertrendom?",
+          answer:
+            "Ne direktno. Google Calendar je jedini kalendar sa kojim se LobbyStack povezuje. Šalje potpisane webhookove kada se poziv završi ili kada zakaže termin i nudi REST API, a Zapier se povezuje na oba.",
+        },
+        {
+          question: "Mogu li da zadržim svoj poslovni broj?",
+          answer:
+            "Da. Zatražite od svog telefonskog operatera da preusmeri Vaš broj na LobbyStack, za sve pozive ili samo za propuštene pozive i večeri. Vaši klijenti zovu isti broj kao ranije.",
+        },
+        {
+          question: "Koliko košta?",
+          answer:
+            "Besplatan paket uključuje 30 minuta razgovora i američki ili kanadski broj na 14 dana. Starter košta US$30 mesečno za 150 minuta, a Pro US$100 mesečno za 500, zatim US$0.20 i US$0.18 po dodatnom minutu. Pozivi kraći od 10 sekundi ili završeni kao neželjeni ne računaju se.",
+        },
+      ],
+      faqHeading: "Pitanja o AI recepcionerima za izvođače renoviranja",
+      relatedLinks: [
+        {
+          label: "Javljanje van radnog vremena za izvođače",
+          href: "/solutions/after-hours-answering-service-for-contractors/",
+        },
+        {
+          label: "Uporedite usluge odgovaranja na pozive za izvođače radova",
+          href: "/blog/best-answering-services-for-contractors/",
+        },
+        {
+          label: "AI recepcioner u Kvebeku",
+          href: "/solutions/ai-receptionist-quebec/",
+        },
+        {
+          label: "Kalkulator prihoda od propuštenih poziva",
+          href: "/missed-call-revenue-calculator/",
+        },
+        pricingLink,
+      ],
+      ctaHeading: "Zakažite sledeću procenu bez odlaska sa ovog gradilišta",
+      ctaBody:
+        "Dodajte usluge, područje rada i pravilo hitnosti, pa pozovite svoj broj da ga testirate. Besplatan paket uključuje 30 minuta razgovora.",
+      ...ctaLabels,
+    }
+  ),
 }
 
 export const serbianSeoPages: Record<string, SeoLandingPage> = {

@@ -221,6 +221,8 @@ Upoznajte ograničenja pre nego što se prijavite:
 
 Ako želite osobu na svakom pozivu, bolje Vam je da kupite uslugu uživo. Ako tražite najnižu ulaznu cenu za AI, paket od [$14 za 75 minuta](https://ai-receptionist.com/pricing) kod AI-Receptionist.com košta manje po minutu od našeg paketa Starter, ali SMS poruke kod njih dobijate tek od paketa od $39.
 
+Ako Vam treba i pomoć oko imejlova, faktura i kalendara, virtuelna sekretarica radi više od odgovaranja na pozive. Naš vodič o [virtuelnoj sekretarici u Kvebeku](/sr/blog/virtual-secretary-quebec/) navodi njene cene po satu.
+
 ## Česta pitanja o virtuelnom recepcioneru
 
 ### Da li je virtuelni recepcioner isto što i virtuelni asistent?
