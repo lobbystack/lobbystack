@@ -10,6 +10,7 @@ import {
   Phone,
   XCircle,
 } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { CallRecordingPlayer } from "@/components/audio/call-recording-player";
@@ -59,6 +60,15 @@ type Detail = {
   followUpTasks: Array<{ id: string; title: string; body: string; status: string; request?: string | null; requested?: RequestedCancellation | null; appointment?: { id: string; startsAt: string; timezone: string; status: string; serviceName: string | null; contactName: string | null } | null; createdAt: string; updatedAt: string }>;
 };
 
+const CALL_TABS = ["transcript", "recording", "details"] as const;
+type CallTab = (typeof CALL_TABS)[number];
+
+function tabFromUrl(): CallTab {
+  if (typeof window === "undefined") return "transcript";
+  const tab = new URLSearchParams(window.location.search).get("tab");
+  return CALL_TABS.find((candidate) => candidate === tab) ?? "transcript";
+}
+
 function formatDate(value: string, locale: string): string {
   return formatDateTime(value, locale, { dateStyle: "medium", timeStyle: "short" });
 }
@@ -96,6 +106,14 @@ export function LiveCallDetailSurface({ callId }: { callId: string }) {
   const telemetry = useTelemetry();
   const queryClient = useQueryClient();
   const { copiedField, copy } = useCopiedField();
+  const [tab, setTab] = useState<CallTab>(tabFromUrl);
+  const selectTab = (value: unknown) => {
+    const next = CALL_TABS.find((candidate) => candidate === value) ?? "transcript";
+    setTab(next);
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", next);
+    window.history.replaceState(window.history.state, "", url);
+  };
   const { businesses, business } = useActiveBusiness();
   const detail = useQuery({
     queryKey: ["call", business?.businessId, callId],
@@ -158,7 +176,7 @@ export function LiveCallDetailSurface({ callId }: { callId: string }) {
         <Surface className="px-4"><CallEventTimeline events={detail.data.timeline} locale={i18n.language} /></Surface>
       </SectionBlock>
 
-      <Tabs defaultValue="transcript">
+      <Tabs onValueChange={selectTab} value={tab}>
         <TabsList variant="pills">
           <TabsTrigger value="transcript"><FileText className="size-4" />{t("detail.tabs.transcript")}</TabsTrigger>
           <TabsTrigger value="recording"><Headphones className="size-4" />{t("detail.tabs.recording")}</TabsTrigger>
