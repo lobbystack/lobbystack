@@ -8,13 +8,13 @@ import { getChannelLabel, getContactDisplayName, hasDisplayablePhone } from "@/l
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 
 import Link from "next/link";
-import { extractFollowUpContactName, getFollowUpDisplayTitle, isUrgentFollowUpValue, cancellationRequestDetails, parseFollowUpTaskBody, type RequestedCancellation } from "@/lib/follow-up-task";
+import { CANCELLATION_REQUEST, extractFollowUpContactName, getFollowUpDisplayTitle, isAppointmentRequest, isUrgentFollowUpValue, cancellationRequestDetails, parseFollowUpTaskBody, RESCHEDULE_REQUEST, type RequestedCancellation } from "@/lib/follow-up-task";
 import { useEffect, useRef, type ReactNode } from "react";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, CalendarX2, ChevronRight, MessageCircleQuestionMark, PhoneCall, UserRound } from "lucide-react";
+import { AlertCircle, CalendarClock, CalendarX2, ChevronRight, MessageCircleQuestionMark, PhoneCall, UserRound } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,7 @@ import { DashboardActivationCard } from "@/components/dashboard-activation-card"
 import { LiveSetupGuideSurface, useSetupGuide } from "@/components/live-setup-guide-surface";
 import { needsHoursForBooking, useBusinessHours } from "@/components/business-hours-section";
 import { appointmentSummary, CancelAppointmentButton } from "@/components/cancel-appointment-button";
+import { RescheduleAppointmentButton } from "@/components/reschedule-appointment-button";
 import { MetricCardGridSkeleton } from "@/components/loading-skeletons";
 import { Item, ItemActions, ItemHeader, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item";
 import { Separator } from "@/components/ui/separator";
@@ -58,8 +59,6 @@ type DashboardSummary = {
   firstRealConversationAt?: string | null;
 };
 
-// A caller asked to cancel on a call where the agent couldn't (see the domain's CANCELLATION_REQUEST).
-const CANCELLATION_REQUEST = "appointment_cancellation";
 
 async function getSummary(): Promise<DashboardSummary> {
   const response = await fetch("/api/dashboard", { credentials: "include" });
@@ -147,6 +146,8 @@ export function LiveOverviewSurface() {
                             const details = parseFollowUpTaskBody(item.body);
                             const displayTitle = getActionDisplayTitle(item, t);
                             const cancellation = item.request === CANCELLATION_REQUEST;
+                            const reschedule = item.request === RESCHEDULE_REQUEST;
+                            const appointmentRequest = isAppointmentRequest(item.request);
                             // A request can outlive its appointment, cancelled before the request was saved.
                             const cancelled = item.appointment?.status === "canceled";
                             const appointment = item.appointment && !cancelled ? { ...item.appointment, contactName: getContactDisplayName({ name: item.appointment.contactName }, i18n.language, t) } : null;
@@ -160,7 +161,7 @@ export function LiveOverviewSurface() {
                             return (
                               <Item className="px-1 py-1" size="sm" variant="default">
                                 <ItemMedia className="size-9 rounded-full bg-muted/70" variant="icon">
-                                  {cancellation ? <CalendarX2 className="size-4 text-muted-foreground" /> : getActionKindIcon(item.kind)}
+                                  {cancellation ? <CalendarX2 className="size-4 text-muted-foreground" /> : reschedule ? <CalendarClock className="size-4 text-muted-foreground" /> : getActionKindIcon(item.kind)}
                                 </ItemMedia>
                                 <ItemContent className="min-w-0">
                                   <ItemHeader className="flex-col items-start gap-2 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start sm:gap-x-3 sm:gap-y-2">
@@ -185,7 +186,7 @@ export function LiveOverviewSurface() {
                                     </div>
                                     <ItemActions className="hidden w-auto shrink-0 justify-end self-start sm:flex">
                                       <Badge variant="secondary">
-                                        {cancellation ? t("home.actionRequired.kinds.cancellation") : getActionKindLabel(item.kind, t)}
+                                        {cancellation ? t("home.actionRequired.kinds.cancellation") : reschedule ? t("home.actionRequired.kinds.reschedule") : getActionKindLabel(item.kind, t)}
                                       </Badge>
                                       {isUrgentFollowUpValue(details.urgency) ? (
                                         <Badge variant="destructive">
@@ -197,13 +198,14 @@ export function LiveOverviewSurface() {
                                   {details.callbackPhone ? (
                                     <ItemDescription>{details.callbackPhone}</ItemDescription>
                                   ) : null}
-                                  {cancellation ? (
+                                  {appointmentRequest ? (
                                     <ItemDescription>{appointment ? t("home.actionRequired.appointment", { appointment: appointmentSummary(appointment, i18n.language, t) }) : t(cancelled ? "home.actionRequired.alreadyCancelled" : "home.actionRequired.noAppointment")}</ItemDescription>
                                   ) : null}
-                                  {cancellation ? (() => {
+                                  {appointmentRequest ? (() => {
                                     const request = cancellationRequestDetails(item, i18n.language);
                                     return <>
                                       {!appointment && request.requested ? <ItemDescription>{t("home.actionRequired.requested", { details: request.requested })}</ItemDescription> : null}
+                                      {reschedule && request.newTime ? <ItemDescription>{t("home.actionRequired.newTime", { time: request.newTime })}</ItemDescription> : null}
                                       {request.notes ? <ItemDescription>{t("home.actionRequired.notes", { notes: request.notes })}</ItemDescription> : null}
                                     </>;
                                   })() : null}
@@ -216,7 +218,7 @@ export function LiveOverviewSurface() {
                                     </span>
                                     <span className="flex items-center gap-2 sm:hidden">
                                       <Badge variant="secondary">
-                                        {cancellation ? t("home.actionRequired.kinds.cancellation") : getActionKindLabel(item.kind, t)}
+                                        {cancellation ? t("home.actionRequired.kinds.cancellation") : reschedule ? t("home.actionRequired.kinds.reschedule") : getActionKindLabel(item.kind, t)}
                                       </Badge>
                                       {isUrgentFollowUpValue(details.urgency) ? (
                                         <Badge variant="destructive">
@@ -224,7 +226,7 @@ export function LiveOverviewSurface() {
                                         </Badge>
                                       ) : null}
                                     </span>
-                                    {appointment ? <CancelAppointmentButton appointment={appointment} approve variant="destructive" /> : null}
+                                    {appointment ? reschedule ? (item.requested?.newStartsAt ? <RescheduleAppointmentButton appointment={appointment} newStartsAt={item.requested.newStartsAt} /> : null) : <CancelAppointmentButton appointment={appointment} approve variant="destructive" /> : null}
                                   </ItemFooter>
                                 </ItemContent>
                               </Item>
@@ -440,10 +442,10 @@ function getActionDisplayTitle(
   item: DashboardSummary["actionRequired"][number],
   t: ReturnType<typeof useTranslation<"dashboard">>["t"],
 ): string {
-  if (item.request === CANCELLATION_REQUEST) {
+  if (isAppointmentRequest(item.request)) {
     // The stored body is English, so the title is rebuilt from the contact name.
     const name = extractFollowUpContactName(item.title, item.kind);
-    const message = t("home.actionRequired.cancellationRequest");
+    const message = t(item.request === RESCHEDULE_REQUEST ? "home.actionRequired.rescheduleRequest" : "home.actionRequired.cancellationRequest");
     return name ? t("home.actionRequired.titleWithContact", { message, name }) : message;
   }
   return getFollowUpDisplayTitle({

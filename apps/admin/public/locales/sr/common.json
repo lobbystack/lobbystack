@@ -224,6 +224,17 @@
       "failed": "Nismo uspeli da otkažemo termin. Pokušajte ponovo.",
       "summary": "{{service}} za {{name}}, {{time}}",
       "summaryNoService": "Termin za {{name}}, {{time}}"
+    },
+    "reschedule": {
+      "approve": "Odobri pomeranje",
+      "title": "Pomeriti ovaj termin na {{time}}?",
+      "description": "{{appointment}} biće pomeren na {{time}}. Ažuriraćemo vaš povezani kalendar i podsetnik, i zatvoriti zahtev.",
+      "confirm": "Pomeri termin",
+      "keep": "Zadrži trenutno vreme",
+      "done": "Termin je pomeren.",
+      "failed": "Termin nije pomeren. Pokušajte ponovo.",
+      "unavailable": "To vreme više nije dostupno. Dogovorite drugo vreme sa klijentom i pomerite termin iz kalendara.",
+      "notReschedulable": "Ovaj termin ne može da se pomeri. Možda je otkazan."
     }
   },
   "abandonIntent": {

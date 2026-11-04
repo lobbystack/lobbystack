@@ -216,6 +216,17 @@
       "failed": "We couldn't cancel the appointment. Try again.",
       "summary": "{{service}} for {{name}} on {{time}}",
       "summaryNoService": "Appointment for {{name}} on {{time}}"
+    },
+    "reschedule": {
+      "approve": "Approve reschedule",
+      "title": "Move this appointment to {{time}}?",
+      "description": "{{appointment}} will move to {{time}}. We'll update your connected calendar and its reminder, and close the request.",
+      "confirm": "Move appointment",
+      "keep": "Keep current time",
+      "done": "Appointment moved.",
+      "failed": "We couldn't move the appointment. Try again.",
+      "unavailable": "That time isn't available any more. Agree another time with the customer and move it from the calendar.",
+      "notReschedulable": "This appointment can't be moved. It may have been cancelled."
     }
   },
   "abandonIntent": {

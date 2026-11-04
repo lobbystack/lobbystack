@@ -218,6 +218,17 @@
       "failed": "No pudimos cancelar la cita. Inténtelo de nuevo.",
       "summary": "{{service}} para {{name}} el {{time}}",
       "summaryNoService": "Cita para {{name}} el {{time}}"
+    },
+    "reschedule": {
+      "approve": "Aprobar cambio de hora",
+      "title": "¿Mover esta cita al {{time}}?",
+      "description": "{{appointment}} se moverá al {{time}}. Actualizaremos tu calendario conectado y su recordatorio, y cerraremos la solicitud.",
+      "confirm": "Mover cita",
+      "keep": "Mantener la hora actual",
+      "done": "Cita movida.",
+      "failed": "No pudimos mover la cita. Inténtalo de nuevo.",
+      "unavailable": "Esa hora ya no está disponible. Acuerda otra hora con el cliente y mueve la cita desde el calendario.",
+      "notReschedulable": "Esta cita no se puede mover. Puede que se haya cancelado."
     }
   },
   "abandonIntent": {

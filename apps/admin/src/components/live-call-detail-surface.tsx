@@ -25,7 +25,9 @@ import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useActiveBusiness } from "@/hooks/use-active-business";
-import { cancellationRequestDetails, parseFollowUpTaskBody, type RequestedCancellation } from "@/lib/follow-up-task";
+import { CancelAppointmentButton } from "@/components/cancel-appointment-button";
+import { RescheduleAppointmentButton } from "@/components/reschedule-appointment-button";
+import { cancellationRequestDetails, isAppointmentRequest, parseFollowUpTaskBody, RESCHEDULE_REQUEST, type RequestedCancellation } from "@/lib/follow-up-task";
 import { formatDuration } from "@/lib/duration";
 import { requestJson } from "@/lib/request-json";
 import { getChannelLabel, getContactDisplayName, hasDisplayablePhone, normalizeChannel } from "@/lib/contact-display";
@@ -54,7 +56,7 @@ type Detail = {
   transcript: Array<{ id: string; sequence: number; speaker: string; text: string; confidence: number | null; final: boolean; createdAt: string }>;
   recording: { state: "available" | "pending" | "expired" | "missing"; objectId?: string; contentType?: string };
   appointments: Array<{ id: string; startsAt: string; endsAt: string; timezone: string; status: string; serviceName: string; staffName: string }>;
-  followUpTasks: Array<{ id: string; title: string; body: string; status: string; request?: string | null; requested?: RequestedCancellation | null; createdAt: string; updatedAt: string }>;
+  followUpTasks: Array<{ id: string; title: string; body: string; status: string; request?: string | null; requested?: RequestedCancellation | null; appointment?: { id: string; startsAt: string; timezone: string; status: string; serviceName: string | null; contactName: string | null } | null; createdAt: string; updatedAt: string }>;
 };
 
 function formatDate(value: string, locale: string): string {
@@ -216,11 +218,14 @@ function FollowUpDetails({ followUp }: { followUp: Detail["followUpTasks"][numbe
   const title = caller ? t("followUp.fromCaller", { name: caller.toLowerCase() === "unknown caller" ? t("followUp.unknownCaller") : caller }) : followUp.title;
   const urgency = details.urgency && URGENCY_VALUES.includes(details.urgency.toLowerCase()) ? t(`followUp.urgency.${details.urgency.toLowerCase()}`) : details.urgency;
   const callbackWindow = details.callbackWindow?.toLowerCase() === "not specified" ? t("followUp.notSpecified") : details.callbackWindow;
-  if (followUp.request) {
+  if (isAppointmentRequest(followUp.request)) {
     const request = cancellationRequestDetails(followUp, i18n.language);
+    const reschedule = followUp.request === RESCHEDULE_REQUEST;
+    const name = caller && caller.toLowerCase() === "unknown caller" ? t("followUp.unknownCaller") : caller;
     return <>
-      <p className="type-item-title">{caller ? t("followUp.cancellationFromCaller", { name: caller.toLowerCase() === "unknown caller" ? t("followUp.unknownCaller") : caller }) : t("followUp.cancellationRequest")}</p>
+      <p className="type-item-title">{name ? t(reschedule ? "followUp.rescheduleFromCaller" : "followUp.cancellationFromCaller", { name }) : t(reschedule ? "followUp.rescheduleRequest" : "followUp.cancellationRequest")}</p>
       {request.requested ? <p className="type-body-muted">{t("followUp.requested", { details: request.requested })}</p> : null}
+      {reschedule && request.newTime ? <p className="type-body-muted">{t("followUp.newTime", { time: request.newTime })}</p> : null}
       {request.notes ? <p className="type-body-muted">{t("followUp.notes", { notes: request.notes })}</p> : null}
     </>;
   }
@@ -232,6 +237,15 @@ function FollowUpDetails({ followUp }: { followUp: Detail["followUpTasks"][numbe
   </>;
 }
 
+/** Approves a caller's request to cancel or move the appointment it matched. Nothing shows for a request that matched none, or whose appointment is already cancelled. */
+function ApproveFollowUpRequest({ followUp }: { followUp: Detail["followUpTasks"][number] }) {
+  const { appointment } = followUp;
+  if (!appointment || appointment.status === "canceled" || !isAppointmentRequest(followUp.request)) return null;
+  const linked = { ...appointment, contactName: appointment.contactName ?? "" };
+  if (followUp.request === RESCHEDULE_REQUEST) return followUp.requested?.newStartsAt ? <RescheduleAppointmentButton appointment={linked} newStartsAt={followUp.requested.newStartsAt} size="default" /> : null;
+  return <CancelAppointmentButton appointment={linked} approve size="default" variant="destructive" />;
+}
+
 function DetailsTab({ detail, marking, onCompleteFollowUp }: { detail: Detail; marking: string | undefined; onCompleteFollowUp: (inboxItemId: string) => void }) {
   const { t } = useTranslation("calls");
   // Grouped like Home: the call's messages are one follow-up, the newest
@@ -241,7 +255,7 @@ function DetailsTab({ detail, marking, onCompleteFollowUp }: { detail: Detail; m
   return (
     <div className="py-4">
       <Surface className="flex flex-col">
-        <DetailSection title={t("detail.details.followUpTitle", { count: Math.max(1, followUps.length) })}>{followUps.length ? <div className="flex flex-col gap-6">{followUps.map((followUp) => <div className="flex flex-col gap-3" key={followUp.id}><FollowUpDetails followUp={followUp} /><div className="flex items-center gap-2 pt-1"><Button disabled={marking !== undefined} onClick={() => onCompleteFollowUp(followUp.id)} size="sm" variant={followUp.request ? "success" : "outline"}>{marking === followUp.id ? t("detail.details.markingDone") : t("detail.details.markDone")}</Button></div></div>)}</div> : <p className="type-body-muted">{t("detail.details.noFollowUp")}</p>}</DetailSection>
+        <DetailSection title={t("detail.details.followUpTitle", { count: Math.max(1, followUps.length) })}>{followUps.length ? <div className="flex flex-col gap-6">{followUps.map((followUp) => <div className="flex flex-col gap-3" key={followUp.id}><FollowUpDetails followUp={followUp} /><div className="flex items-center gap-2 pt-1"><ApproveFollowUpRequest followUp={followUp} /><Button disabled={marking !== undefined} onClick={() => onCompleteFollowUp(followUp.id)} size="sm" variant="outline">{marking === followUp.id ? t("detail.details.markingDone") : t("detail.details.markDone")}</Button></div></div>)}</div> : <p className="type-body-muted">{t("detail.details.noFollowUp")}</p>}</DetailSection>
         <DetailSection className="border-t border-border" title={t("detail.details.callInfoTitle")}>
           <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-6 gap-y-3">
             <dt className="type-meta">{t("detail.details.twilioCallSid")}</dt><dd className="type-technical-value truncate">{detail.call.providerCallId}</dd>

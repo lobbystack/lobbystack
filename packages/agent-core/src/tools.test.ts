@@ -10,10 +10,11 @@ vi.mock("@lobbystack/domain", async () => ({
   recordUnansweredQuestion: vi.fn(async () => null),
   bookForCaller: vi.fn(async () => ({ ok: true })),
   requestCancellationForCaller: vi.fn(async () => ({ ok: true, inboxItemId: "inbox_1" })),
+  requestRescheduleForCaller: vi.fn(async () => ({ ok: true, inboxItemId: "inbox_2" })),
   resolveEmployee: vi.fn(),
 }));
 
-import { bookForCaller, recordUnansweredQuestion, requestCancellationForCaller, resolveEmployee, searchKnowledgeEvidence } from "@lobbystack/domain";
+import { bookForCaller, recordUnansweredQuestion, requestCancellationForCaller, requestRescheduleForCaller, resolveEmployee, searchKnowledgeEvidence } from "@lobbystack/domain";
 import { receptionistCapabilities, type Conversation } from "./capabilities";
 import { createReceptionistTools, type AgentChannel } from "./tools";
 
@@ -143,6 +144,30 @@ describe("requestAppointmentCancellation", () => {
     expect(requestCancellationForCaller).not.toHaveBeenCalled();
     await execute({ callerName: "Milan", callbackPhone: "" }, { toolCallId: "2", messages: [] });
     expect(vi.mocked(requestCancellationForCaller).mock.lastCall?.[1]).toMatchObject({ callerName: "Milan", callbackPhone: "+14165550100", channel: "voice" });
+  });
+});
+
+describe("requestAppointmentReschedule", () => {
+  const execute = (tools: ReturnType<typeof createReceptionistTools>) => tools.requestAppointmentReschedule!.execute! as (input: object, options: object) => Promise<unknown>;
+
+  it("saves the wanted time as a request and says the appointment hasn't moved", async () => {
+    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "web_voice", callId: "call_1", conversationId: "conversation_1", snapshot: { ...demoSnapshot, timezone: "America/Toronto" } });
+    await expect(execute(tools)({ callerName: "Milan", newStartsAt: "2099-10-16T11:00", appointmentStartsAt: "2099-10-14T15:00", serviceName: "General Checkup", callbackPhone: "+14165550100" }, { toolCallId: "1", messages: [] }))
+      .resolves.toMatchObject({ ok: true, inboxItemId: "inbox_2", rescheduled: false, status: expect.stringContaining("keeps its current time") });
+    expect(vi.mocked(requestRescheduleForCaller).mock.lastCall?.[1]).toEqual({
+      businessId: demoSnapshot.businessId, channel: "web_voice", timezone: "America/Toronto", callerName: "Milan", newStartsAt: "2099-10-16T11:00",
+      appointmentStartsAt: "2099-10-14T15:00", serviceName: "General Checkup", callbackPhone: "+14165550100", callId: "call_1", conversationId: "conversation_1",
+    });
+  });
+
+  it("asks for a name and a future time before saving, and uses the trusted caller number", async () => {
+    vi.mocked(requestRescheduleForCaller).mockClear();
+    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "voice", callerPhone: "+14165550100", snapshot: demoSnapshot });
+    await expect(execute(tools)({ callerName: " ", newStartsAt: "2099-10-16T11:00" }, { toolCallId: "1", messages: [] })).resolves.toMatchObject({ ok: false });
+    await expect(execute(tools)({ callerName: "Milan", newStartsAt: "2020-01-01T11:00" }, { toolCallId: "2", messages: [] })).resolves.toMatchObject({ ok: false });
+    expect(requestRescheduleForCaller).not.toHaveBeenCalled();
+    await execute(tools)({ callerName: "Milan", newStartsAt: "2099-10-16T11:00" }, { toolCallId: "3", messages: [] });
+    expect(vi.mocked(requestRescheduleForCaller).mock.lastCall?.[1]).toMatchObject({ callerName: "Milan", callbackPhone: "+14165550100", channel: "voice" });
   });
 });
 

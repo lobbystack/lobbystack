@@ -8,8 +8,8 @@ import { appointments, businessMemberships, businesses, calls, contacts, convers
 import { createAppointmentChangeVerification } from "./appointmentChanges";
 import { cancelAppointment, cancelAppointmentInTransaction } from "./booking";
 import { listCurrentAppointments, listUpcomingAppointments } from "./operatorActivity";
-import { lookupCallerAppointments, requestCancellationForCaller, takeMessageForStaff } from "./receptionistActions";
-import { CANCELLATION_REQUEST, completeVoiceFollowUpTasks, getCallDetail, listOpenVoiceFollowUps } from "./voice";
+import { lookupCallerAppointments, requestCancellationForCaller, requestRescheduleForCaller, takeMessageForStaff } from "./receptionistActions";
+import { CANCELLATION_REQUEST, completeVoiceFollowUpTasks, getCallDetail, listOpenVoiceFollowUps, RESCHEDULE_REQUEST } from "./voice";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -74,6 +74,10 @@ async function seed(tx: DatabaseTransaction) {
     await as("lobbystack_worker");
     return await requestCancellationForCaller({ db }, { businessId, channel: "web_voice", timezone, callId: call!.id, conversationId, ...input });
   };
+  const requestReschedule = async (input: { callerName: string; newStartsAt: string; appointmentStartsAt?: string; serviceName?: string; callbackPhone?: string }) => {
+    await as("lobbystack_worker");
+    return await requestRescheduleForCaller({ db }, { businessId, channel: "web_voice", timezone, callId: call!.id, conversationId, ...input });
+  };
   const message = async (text: string) => {
     await as("lobbystack_worker");
     return await takeMessageForStaff({ db }, { businessId, channel: "web_voice", message: text, callerName: "Milan Obrenovic", callId: call!.id, conversationId });
@@ -125,7 +129,7 @@ async function seed(tx: DatabaseTransaction) {
     await as("lobbystack_worker");
     return await lookupCallerAppointments({ db }, { businessId, callerPhone });
   };
-  return { ids, userIds, request, message, openRequest, complete, detail, item, dashboard, cancel, cancelAsWorker, status, verify, lookup };
+  return { ids, userIds, request, requestReschedule, message, openRequest, complete, detail, item, dashboard, cancel, cancelAsWorker, status, verify, lookup };
 }
 
 describe.skipIf(!client)("self-service changes from the booking number", () => {
@@ -307,6 +311,41 @@ describe.skipIf(!client)("operator cancellation under operator RLS", () => {
       await expect(cancel(userIds.viewer, ids.consultation)).rejects.toMatchObject({ status: 403 });
       expect(await status(ids.consultation)).toBe("confirmed");
       await expect(cancel(userIds.scheduler, randomUUID())).rejects.toMatchObject({ status: 404, code: "not_found" });
+    });
+  });
+});
+
+describe.skipIf(!client)("a caller's request to move an appointment", () => {
+  it("links the matched appointment and keeps the time the caller wants, for Home and the call page", async () => {
+    await rollbackTest(async (tx) => {
+      const { ids, requestReschedule, dashboard, detail } = await seed(tx);
+      const wanted = asked(local(4, 11));
+      await requestReschedule({ callerName: "Milan Obrenovic", appointmentStartsAt: asked(local(1, 15)), serviceName: "Consultation", newStartsAt: wanted });
+      const { followUps } = await dashboard();
+      expect(followUps).toHaveLength(1);
+      expect(followUps[0]).toMatchObject({ request: RESCHEDULE_REQUEST, requested: { newStartsAt: wanted, service: "Consultation" }, appointment: { id: ids.consultation, status: "confirmed" } });
+      expect(followUps[0]!.body).toContain("Reschedule request:");
+      expect((await detail())[0]).toMatchObject({ request: RESCHEDULE_REQUEST, requested: { newStartsAt: wanted }, appointment: { id: ids.consultation, status: "confirmed" } });
+    });
+  });
+
+  it("leaves the request unlinked when it matches two appointments, and doesn't move anything", async () => {
+    await rollbackTest(async (tx) => {
+      const { ids, requestReschedule, dashboard, status } = await seed(tx);
+      await requestReschedule({ callerName: "Milan Obrenovic", newStartsAt: asked(local(4, 11)) });
+      const { followUps } = await dashboard();
+      expect(followUps[0]).toMatchObject({ request: RESCHEDULE_REQUEST, appointment: null });
+      expect(await status(ids.consultation)).toBe("confirmed");
+    });
+  });
+
+  it("is closed when the appointment is cancelled", async () => {
+    await rollbackTest(async (tx) => {
+      const { ids, userIds, requestReschedule, dashboard, cancel } = await seed(tx);
+      await requestReschedule({ callerName: "Milan Obrenovic", appointmentStartsAt: asked(local(1, 15)), newStartsAt: asked(local(4, 11)) });
+      expect((await dashboard()).followUps).toHaveLength(1);
+      await cancel(userIds.scheduler, ids.consultation);
+      expect((await dashboard()).followUps).toHaveLength(0);
     });
   });
 });

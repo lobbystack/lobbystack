@@ -224,6 +224,17 @@
       "failed": "Nous n’avons pas pu annuler le rendez-vous. Réessayez.",
       "summary": "{{service}} pour {{name}} le {{time}}",
       "summaryNoService": "Rendez-vous pour {{name}} le {{time}}"
+    },
+    "reschedule": {
+      "approve": "Approuver le report",
+      "title": "Déplacer ce rendez-vous au {{time}} ?",
+      "description": "{{appointment}} sera déplacé au {{time}}. Nous mettrons à jour votre calendrier connecté et son rappel, et fermerons la demande.",
+      "confirm": "Déplacer le rendez-vous",
+      "keep": "Garder l'horaire actuel",
+      "done": "Rendez-vous déplacé.",
+      "failed": "Impossible de déplacer le rendez-vous. Réessayez.",
+      "unavailable": "Cet horaire n'est plus disponible. Convenez d'un autre horaire avec le client et déplacez le rendez-vous depuis le calendrier.",
+      "notReschedulable": "Ce rendez-vous ne peut pas être déplacé. Il a peut-être été annulé."
     }
   },
   "abandonIntent": {

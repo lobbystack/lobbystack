@@ -68,7 +68,10 @@
     "cancellationRequest": "Demande d'annulation",
     "cancellationFromCaller": "Demande d'annulation de {{name}}",
     "requested": "Demandé : {{details}}",
-    "notes": "Notes : {{notes}}"
+    "notes": "Notes : {{notes}}",
+    "rescheduleRequest": "Demande de report",
+    "rescheduleFromCaller": "Demande de report de {{name}}",
+    "newTime": "Nouvel horaire : {{time}}"
   },
   "pagination": {
     "rowsPerPage": "Lignes par page",

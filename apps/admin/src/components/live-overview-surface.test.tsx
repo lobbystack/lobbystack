@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createInstance } from "i18next";
 import { I18nextProvider } from "react-i18next";
@@ -173,6 +174,48 @@ describe("appointment cancellations on Home", () => {
     expect(screen.getByText("Appointment: Consultation for Milan on Mon, Sep 7, 2:30 PM")).toBeTruthy();
     expect(screen.queryByRole("button", { name: enCommon.appointments.cancel.approve })).toBeNull();
     expect(screen.queryByRole("button", { name: /Cancel appointment/ })).toBeNull();
+  });
+});
+
+describe("appointment reschedules on Home", () => {
+  const request = { id: "reschedule-1", kind: "voice_message", title: "Voice message from Milan", body: "Reschedule request: Consultation\nNew time: Wednesday, September 9 at 10:00 AM", callId: "call-1", createdAt: "2026-09-04T14:30:00Z", request: "appointment_reschedule", requested: { service: "Consultation", startsAt: "2099-09-07T10:30", newStartsAt: "2099-09-09T10:00" } };
+  const linked = { id: "appointment", startsAt: "2099-09-07T14:30:00Z", timezone: "America/Toronto", status: "confirmed", serviceName: "Consultation", contactName: "Milan" };
+
+  it("shows the requested time and lets a scheduler approve the move", async () => {
+    await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, appointment: linked }] });
+    expect(screen.getAllByText(en.home.actionRequired.kinds.reschedule)).toHaveLength(2);
+    expect(screen.getByText(/New time: .*September 9/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: enCommon.appointments.reschedule.approve })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: enCommon.appointments.cancel.approve })).toBeNull();
+  });
+
+  it("moves the appointment to the time the caller asked for", async () => {
+    const i18n = await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, appointment: linked }] });
+    i18n.fetchMock.mockImplementation(async (url: string, init?: RequestInit) => init?.method === "POST" ? Response.json({ appointmentId: "appointment" }) : Response.json({ error: "Not found." }, { status: 404 }));
+    await userEvent.click(screen.getByRole("button", { name: enCommon.appointments.reschedule.approve }));
+    await userEvent.click(await screen.findByRole("button", { name: enCommon.appointments.reschedule.confirm }));
+    // 10:00 in Toronto on September 9 is 14:00 UTC.
+    await waitFor(() => expect(i18n.fetchMock).toHaveBeenCalledWith("/api/appointments/appointment/reschedule?businessId=business", expect.objectContaining({ method: "POST", body: JSON.stringify({ startsAt: "2099-09-09T14:00:00.000Z" }) })));
+  });
+
+  it("keeps the confirmation open when the time is no longer free", async () => {
+    const i18n = await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, appointment: linked }] });
+    i18n.fetchMock.mockImplementation(async (url: string, init?: RequestInit) => init?.method === "POST" ? Response.json({ error: "That appointment time is no longer available.", code: "slot_unavailable" }, { status: 409 }) : Response.json({ error: "Not found." }, { status: 404 }));
+    await userEvent.click(screen.getByRole("button", { name: enCommon.appointments.reschedule.approve }));
+    await userEvent.click(await screen.findByRole("button", { name: enCommon.appointments.reschedule.confirm }));
+    await waitFor(() => expect(i18n.fetchMock).toHaveBeenCalledWith(expect.stringContaining("/reschedule"), expect.anything()));
+    expect(screen.getByRole("alertdialog")).toBeTruthy();
+  });
+
+  it("offers nothing to approve without a matched appointment or the new time, or to a viewer", async () => {
+    await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, appointment: null }] });
+    expect(screen.queryByRole("button", { name: enCommon.appointments.reschedule.approve })).toBeNull();
+    cleanup();
+    await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, requested: { service: "Consultation" }, appointment: linked }] });
+    expect(screen.queryByRole("button", { name: enCommon.appointments.reschedule.approve })).toBeNull();
+    cleanup();
+    await setup("en", null, { role: "viewer", actionRequired: [{ ...request, appointment: linked }] });
+    expect(screen.queryByRole("button", { name: enCommon.appointments.reschedule.approve })).toBeNull();
   });
 });
 
