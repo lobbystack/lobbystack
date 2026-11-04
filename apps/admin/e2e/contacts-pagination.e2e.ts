@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { businesses, businessMemberships, contacts, createDatabaseClient, users, withBusinessTransaction } from "@lobbystack/db";
 import translations from "../public/locales/fr/contacts.json" with { type: "json" };
 
-test("contacts paginate, search and delete standalone tenant records", async ({ browser, baseURL }) => {
+test("contacts paginate, search, edit and delete standalone tenant records", async ({ browser, baseURL }) => {
   const state = process.env.PARITY_PORT_OPERATOR_STORAGE_STATE_FR; const userId = process.env.PARITY_OPERATOR_USER_ID;
   test.skip(!state || !userId, "Requires a disposable authenticated operator fixture.");
   const worker = createDatabaseClient("lobbystack_worker"); const auth = createDatabaseClient("lobbystack_auth"); const businessId = randomUUID();
@@ -30,12 +30,23 @@ test("contacts paginate, search and delete standalone tenant records", async ({ 
     await expect(page.getByRole("button", { name: translations.table.actions.moreOptions })).toHaveCount(1);
     await expect(page.getByRole("button", { name: translations.pagination.nextPage, exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: translations.table.actions.moreOptions }).click();
+    await page.getByRole("menuitem", { name: translations.table.actions.editContact }).click();
+    const editor = page.getByRole("dialog");
+    await expect(editor.getByLabel(translations.edit.name)).toHaveValue("Unique oldest contact");
+    await editor.getByLabel(translations.edit.name).fill("Corrected contact name");
+    await editor.getByLabel(translations.edit.email).fill("corrected@example.com");
+    await editor.getByRole("button", { name: translations.edit.save, exact: true }).click();
+    await expect(editor).toHaveCount(0);
+    await page.getByPlaceholder(translations.page.searchPlaceholder).fill("Corrected contact");
+    await expect(page.getByText("Corrected contact name", { exact: true })).toBeVisible();
+    await expect(page.getByText("corrected@example.com")).toBeVisible();
+    await page.getByRole("button", { name: translations.table.actions.moreOptions }).click();
     await page.getByRole("menuitem", { name: translations.table.actions.deleteContact }).click();
     const confirmation = page.getByRole("alertdialog");
     await expect(confirmation).toBeVisible();
     await confirmation.getByRole("button", { name: translations.table.actions.deleteConfirm }).click();
     await expect(confirmation).toHaveCount(0);
-    await expect(page.getByText("Unique oldest contact", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Corrected contact name", { exact: true })).toHaveCount(0);
     const result = await context.request.get(`${baseURL}/api/contacts?businessId=${businessId}&limit=100`);
     expect(result.ok()).toBeTruthy();
     expect((await result.json()).pagination.total).toBe(100);

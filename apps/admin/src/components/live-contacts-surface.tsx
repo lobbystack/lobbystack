@@ -12,7 +12,7 @@ import {
   type ColumnDef,
   type PaginationState,
 } from "@tanstack/react-table";
-import { Ellipsis, ShieldBan, ShieldCheck, Trash2 } from "lucide-react";
+import { Ellipsis, Pencil, ShieldBan, ShieldCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -20,6 +20,7 @@ import { keepPreviousForBusiness } from "@/lib/keep-previous-for-business";
 
 import { HeaderSearch } from "@/components/header-actions";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
+import { EditContactDialog } from "@/components/edit-contact-dialog";
 import { DataTablePagination, paginationFeatures } from "@/components/data-table/pagination";
 import { PageHeader } from "@/components/page-header";
 import { ContactRowsSkeleton, DataTablePaginationSkeleton, HeaderSearchSkeleton } from "@/components/loading-skeletons";
@@ -57,6 +58,7 @@ export function LiveContactsSurface() {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [pendingBlock, setPendingBlock] = useState<PendingBlock | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Contact | null>(null);
+  const [editing, setEditing] = useState<Contact | null>(null);
   const { businesses, business } = useActiveBusiness();
   const contacts = useQuery({
     queryKey: ["contacts", business?.businessId, search.trim(), pagination.pageIndex, pagination.pageSize],
@@ -134,6 +136,7 @@ export function LiveContactsSurface() {
         <div className="flex w-16 justify-end pr-0" data-slot="data-table-row-actions"><DropdownMenu>
           <DropdownMenuTrigger render={<Button aria-label={t("table.actions.moreOptions")} size="icon-sm" variant="ghost" />}><Ellipsis /></DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem disabled={!canMutate} onClick={() => setEditing(row.original)}><Pencil />{t("table.actions.editContact")}</DropdownMenuItem>
             <DropdownMenuItem disabled={!canMutate} onClick={() => setPendingBlock({ contact: row.original, nextBlocked: !row.original.operatorBlockedAt })}>{row.original.operatorBlockedAt ? <ShieldCheck /> : <ShieldBan />}{row.original.operatorBlockedAt ? t("table.actions.unblockContact") : t("table.actions.blockContact")}</DropdownMenuItem>
             <DropdownMenuItem disabled={!canMutate} onClick={() => setPendingDelete(row.original)} variant="destructive"><Trash2 />{t("table.actions.deleteContact")}</DropdownMenuItem>
           </DropdownMenuContent>
@@ -159,6 +162,7 @@ export function LiveContactsSurface() {
         </Table>
       </TableCard>
       {loading ? <DataTablePaginationSkeleton /> : <DataTablePagination labels={{ rowsPerPage: t("pagination.rowsPerPage"), pageOf: (page, total) => t("pagination.pageOf", { page, total }), firstPage: t("pagination.firstPage"), previousPage: t("pagination.previousPage"), nextPage: t("pagination.nextPage"), lastPage: t("pagination.lastPage"), goToPage: (page) => t("pagination.goToPage", { page }) }} table={table} />}
+      {business ? <EditContactDialog businessId={business.businessId} contact={editing} onOpenChange={(open) => { if (!open) setEditing(null); }} /> : null}
       <ConfirmActionDialog
         cancelLabel={t("table.actions.blockCancel")}
         confirmLabel={pendingBlock?.nextBlocked ? t("table.actions.blockConfirm") : t("table.actions.unblockConfirm")}

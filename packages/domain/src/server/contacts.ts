@@ -118,6 +118,25 @@ export async function getContactDetail(
   });
 }
 
+/**
+ * An operator corrects a contact's name or email, for example a name the agent misheard.
+ * The agent only fills a name that is empty, so a corrected name stays. Null clears a field.
+ */
+export async function updateContactDetails(
+  context: DomainContext,
+  input: { userId: string; businessId: string; contactId: string; name?: string | null | undefined; email?: string | null | undefined },
+): Promise<{ contactId: string; name: string | null; email: string | null } | null> {
+  const patch = { ...(input.name !== undefined ? { name: input.name } : {}), ...(input.email !== undefined ? { email: input.email } : {}) };
+  return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async tx => {
+    await requireBusinessAdmin(tx, input);
+    if (!Object.keys(patch).length) throw Object.assign(new Error("Send a name or an email to update."), { status: 400 });
+    const [contact] = await tx.update(contacts).set({ ...patch, updatedAt: new Date() }).where(and(eq(contacts.id, input.contactId), eq(contacts.businessId, input.businessId))).returning({ id: contacts.id, name: contacts.name, email: contacts.email });
+    if (!contact) return null;
+    await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "contact", aggregateId: input.contactId, dedupeKey: `contact:${input.contactId}:updated:${Date.now()}`, payload: { type: "conversation.updated", entityId: input.contactId } });
+    return { contactId: contact.id, name: contact.name, email: contact.email };
+  });
+}
+
 /** The dashboard can delete standalone contacts; linked history must remain intact. */
 export async function deleteContact(
   context: DomainContext,
