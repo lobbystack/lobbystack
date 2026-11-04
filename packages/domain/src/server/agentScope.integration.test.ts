@@ -7,10 +7,8 @@ import { saveReceptionistProfileInTransaction } from "./receptionistProfile";
 import { deleteAgentRuleInTransaction, insertAgentRuleInTransaction, listAgentRulesInTransaction, reorderAgentRulesInTransaction, updateAgentRuleInTransaction } from "./rules";
 import { enqueueStaffFirstRouting } from "./staffFirst";
 
-// Slice 5a: settings, rules and number routing act on one agent, and nothing
-// depends on agents_business_unique, which slice 5b drops. Each test drops that
-// index as the migrator inside a transaction that always rolls back, so a
-// business can have two agents as it will after 5b.
+// Settings, rules and number routing act on one agent of a business with two.
+// Each test runs as the migrator inside a transaction that always rolls back.
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -29,7 +27,6 @@ async function rolledBack(run: (tx: DatabaseTransaction) => Promise<void>) {
   const rollback = new Error("rollback test fixture");
   try {
     await client!.db.transaction(async (tx) => {
-      await tx.execute(sql`drop index public.agents_business_unique`);
       await run(tx);
       await tx.execute(sql`set constraints all immediate`);
       throw rollback;
@@ -91,9 +88,8 @@ describe.skipIf(!testUrl)("one agent's settings, rules and routing", () => {
     });
   });
 
-  it("gives a channel added before the agent a default agent, once is_default defaults to false", async () => {
+  it("gives a channel added before the agent a default agent", async () => {
     await rolledBack(async (tx) => {
-      await tx.execute(sql`alter table public.agents alter column is_default set default false`);
       const businessId = await business(tx);
       await tx.insert(phoneNumbers).values({ businessId, e164: "+15145550109", providerPhoneId: `PN${randomUUID()}`, status: "active" });
       expect(await tx.select({ isDefault: agents.isDefault }).from(agents).where(eq(agents.businessId, businessId))).toEqual([{ isDefault: true }]);

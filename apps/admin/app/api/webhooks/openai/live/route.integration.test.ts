@@ -1,6 +1,6 @@
 import { createHmac, randomUUID } from "node:crypto";
 
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 // A call to a business whose partner's tier ended over 30 days ago, through
@@ -83,8 +83,8 @@ beforeAll(async () => {
   await admin.db.insert(partners).values({ id: partnerId, name: "Acme Reception", slug: `acme-${partnerId.slice(0, 8)}` });
   await admin.db.insert(businesses).values({ id: businessId, slug: `harbor-${businessId.slice(0, 8)}`, name: "Harbor Dental", timezone: "America/Toronto", businessType: "dental", partnerId });
   await admin.db.insert(phoneNumbers).values({ businessId, e164: line, providerPhoneId: `PN${randomUUID().replaceAll("-", "")}`, status: "active" });
-  await admin.db.insert(agents).values({ businessId, greeting: "Hi", tone: "warm", summary: "Harbor Dental", bookingPolicy: "Book", transferMode: "never", transferNumber: transfer })
-    .onConflictDoUpdate({ target: agents.businessId, set: { transferNumber: transfer } });
+  // Adding the number gave the business its default agent.
+  await admin.db.update(agents).set({ greeting: "Hi", tone: "warm", summary: "Harbor Dental", bookingPolicy: "Book", transferMode: "never", transferNumber: transfer }).where(and(eq(agents.businessId, businessId), eq(agents.isDefault, true)));
   await admin.db.insert(businessContextSnapshots).values({ businessId, version: "v1", snapshot: { businessId, greeting: "Hi" } });
   // The partner's tier ended 31 days ago, so the hourly job paused its businesses a day ago.
   await admin.db.insert(partnerLifecycles).values({ partnerId, state: "paused", since: new Date(Date.now() - DAY) });

@@ -721,9 +721,9 @@ export const agents = pgTable(
     // Operators see this. Callers never hear it. Pass defaultAgentName(locale)
     // for a business's first agent; the default covers code that can't.
     name: text("name").default("Agent").notNull(),
-    // One per business. Until slice 5 the unique index below allows no other
-    // agent, so every row is its business's default.
-    isDefault: boolean("is_default").default(true).notNull(),
+    // One per business, which answers where no other agent does. An insert
+    // for a business's first agent sets it.
+    isDefault: boolean("is_default").default(false).notNull(),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     greeting: text("greeting").notNull(),
     tone: text("tone").notNull(),
@@ -756,7 +756,7 @@ export const agents = pgTable(
     ...timestamps,
   },
   (table) => [
-    uniqueIndex("agents_business_unique").on(table.businessId),
+    uniqueIndex("agents_one_default_per_business").on(table.businessId).where(sql`${table.isDefault}`),
     // What the composite foreign keys on channels and history point at, so a
     // row can't name another business's agent. Those keys are deferred in the
     // database, which Drizzle can't express, so a failure comes at commit.

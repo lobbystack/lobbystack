@@ -12,6 +12,7 @@ const routeCapabilities: ReadonlyArray<readonly [prefix: string, capability: Cap
   ["/api/account/phone-verification", "activity"],
   ["/api/activation", "setup"],
   ["/api/agent", "setup"],
+  ["/api/agents", "setup"],
   ["/api/analytics", "setup"],
   ["/api/api-keys", "api_keys"],
   ["/api/appointments", "activity"],

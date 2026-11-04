@@ -333,6 +333,8 @@ export type SnapshotAgent = {
   rules: Array<AgentRuleSummary>;
   /** The number this agent answers. Null when it has none. Absent in snapshots built before agents had their own. */
   phoneNumber?: string | null;
+  /** The plan keeps fewer agents than the business has, so the default agent answers this one's channels. */
+  paused?: boolean;
 };
 
 export type BusinessContextSnapshot = {

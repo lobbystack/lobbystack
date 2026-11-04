@@ -86,6 +86,13 @@ describe("snapshotForAgent", () => {
     });
   });
 
+  it("answers a paused agent's channels as the default agent, on the paused agent's number", () => {
+    const paused = { ...afterHours, paused: true, phoneNumber: "+15145550199" };
+    const projected = snapshotForAgent({ ...snapshot, agents: [defaultAgent, paused] }, paused.id)!;
+    expect(projected).toMatchObject({ agentId: defaultAgent.id, greeting: defaultAgent.greeting, voice: defaultAgent.voice, transferPolicy: defaultAgent.transferPolicy });
+    expect(projected.contactChannels.phoneNumber).toBe("+15145550199");
+  });
+
   it("keeps a field for each key of SnapshotAgent, so a new one can't be left out", () => {
     const projected = snapshotForAgent(snapshot, afterHours.id)!;
     const flatName: Record<string, string> = { id: "agentId", name: "agentName" };
