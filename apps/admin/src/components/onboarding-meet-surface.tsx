@@ -119,10 +119,10 @@ function MeetAgent() {
               <Input className="h-11" id="meet-name" maxLength={80} onBlur={saveTyped} onChange={(event) => setNameDraft(event.target.value)} value={name} />
             </Field>
             <Field>
-              <FieldLabel>{tAgent("fields.voice.label")}</FieldLabel>
+              <FieldLabel htmlFor="meet-voice">{tAgent("fields.voice.label")}</FieldLabel>
               <div className="flex items-center justify-between gap-3 rounded-xl border border-border px-4 py-2">
                 <span className="min-w-0 truncate text-sm">{tAgent("fields.voice.summary", { voice: voiceName(voice), traits: voiceTraits(voice) })}</span>
-                <Button onClick={() => setVoiceOpen(true)} size="sm" type="button" variant="outline">{tAgent("fields.voice.change")}</Button>
+                <Button id="meet-voice" onClick={() => setVoiceOpen(true)} size="sm" type="button" variant="outline">{tAgent("fields.voice.change")}</Button>
               </div>
             </Field>
             <Field>
