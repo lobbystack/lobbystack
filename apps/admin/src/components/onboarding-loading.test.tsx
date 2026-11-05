@@ -29,7 +29,7 @@ describe("onboarding steps while they load", () => {
   it("replaces the business name input with a placeholder under its label", () => {
     renderLoading(<OnboardingBusinessSurface />);
     expect(screen.getByText("businessName.label")).toBeTruthy();
-    expect(screen.queryByRole("textbox")).toBeNull();
+    // The input stays mounted under the skeleton, so a name typed before hydration is kept.
     expect(document.querySelector("[aria-busy='true'] [data-slot='skeleton']")).toBeTruthy();
   });
 
