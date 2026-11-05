@@ -9,6 +9,10 @@ import type { PhoneCountryOption } from "@/lib/phone";
 /** Shows the calling code, like the field's "+1"; the list underneath is searchable by country name or code. */
 const TRIGGER_CLASS = "flex h-9 w-fit shrink-0 items-center justify-between gap-1.5 rounded-4xl border border-input bg-input/30 px-3 py-2 text-sm whitespace-nowrap transition-colors outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 enabled:hover:bg-input/50";
 
+function countryFlag(code: string): string {
+  return String.fromCodePoint(...[...code.toUpperCase()].map((letter) => 0x1f1a5 + letter.charCodeAt(0)));
+}
+
 export function PhoneCountrySelect({ ariaLabel, className, countries, disabled = false, onChange, value }: {
   ariaLabel: string;
   /** Sizing and corners of the trigger, which sits flush against the phone input. */
@@ -40,6 +44,7 @@ export function PhoneCountrySelect({ ariaLabel, className, countries, disabled =
         <ComboboxList>
           {(option: PhoneCountryOption) => (
             <ComboboxItem key={option.code} value={option}>
+              <span aria-hidden="true">{countryFlag(option.code)}</span>
               <span>{option.label}</span>
               <span className="text-muted-foreground">{option.callingCode}</span>
             </ComboboxItem>
