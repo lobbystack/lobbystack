@@ -118,3 +118,51 @@ describe("analytics loading states", () => {
     expect(skeletons()).toBe(0);
   });
 });
+
+describe("analytics view in the URL", () => {
+  const channels = { phone_call: 0, web_call: 0, sms: 0, web_chat: 0, other: 0 };
+  afterEach(() => { window.history.replaceState(null, "", "/"); });
+
+  it("leaves the URL bare while the defaults are selected", async () => {
+    window.history.replaceState(null, "", "/analytics");
+    renderAnalytics(channels);
+    await screen.findByText("home.analytics.results.bookedValue");
+    expect(window.location.search).toBe("");
+  });
+
+  it("writes the picked interval and preset, and drops them again when the defaults return", async () => {
+    window.history.replaceState(null, "", "/analytics");
+    renderAnalytics(channels);
+    await screen.findByText("home.analytics.results.bookedValue");
+    await userEvent.click(screen.getByRole("button", { name: "home.analytics.controls.granularity" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "home.analytics.controls.granularities.daily" }));
+    await userEvent.click(screen.getByRole("button", { name: "home.analytics.controls.presetRange" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "home.analytics.controls.presets.thisMonth" }));
+    expect(new URLSearchParams(window.location.search).toString()).toBe("range=thisMonth&interval=day");
+    await userEvent.click(screen.getByRole("button", { name: "home.analytics.controls.presetRange" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "home.analytics.controls.presets.last30" }));
+    expect(window.location.search).toBe("?interval=day");
+  });
+
+  it("opens with the view the URL names", async () => {
+    window.history.replaceState(null, "", "/analytics?range=lastYear&interval=month");
+    renderAnalytics(channels);
+    await screen.findByText("home.analytics.results.bookedValue");
+    expect(screen.getByRole("button", { name: "home.analytics.controls.presetRange" }).textContent).toBe("home.analytics.controls.presets.lastYear");
+    expect(screen.getByRole("button", { name: "home.analytics.controls.granularity" }).textContent).toBe("home.analytics.controls.granularities.monthly");
+  });
+
+  it("opens a custom range from the URL and ignores values it doesn't know", async () => {
+    window.history.replaceState(null, "", "/analytics?from=2026-10-01&to=2026-10-15&interval=day");
+    renderAnalytics(channels);
+    await screen.findByText("home.analytics.results.bookedValue");
+    expect(screen.getByRole("button", { name: "home.analytics.controls.presetRange" }).textContent).toBe("home.analytics.controls.presets.custom");
+    expect(window.location.search).toBe("?from=2026-10-01&to=2026-10-15&interval=day");
+    cleanup();
+    window.history.replaceState(null, "", "/analytics?range=banana&interval=nope&from=2026-13-40&to=x");
+    renderAnalytics(channels);
+    await screen.findByText("home.analytics.results.bookedValue");
+    expect(screen.getByRole("button", { name: "home.analytics.controls.presetRange" }).textContent).toBe("home.analytics.controls.presets.last30");
+    expect(window.location.search).toBe("");
+  });
+});
