@@ -25,6 +25,8 @@ export function OnboardingWebsiteSurface() {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const edited = useRef(false);
   const [error, setError] = useState<string | null>(null);
+  // Which button started the work, so the Continue button names it.
+  const [action, setAction] = useState<"add" | "skip">("add");
   const { business } = useActiveBusiness();
   // The next step is fetched while the form is still being filled in, so
   // Continue waits only on the save.
@@ -51,6 +53,7 @@ export function OnboardingWebsiteSurface() {
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setAction("add");
     try {
       await add.mutateAsync();
     } catch (cause) {
@@ -74,11 +77,11 @@ export function OnboardingWebsiteSurface() {
           )}
         </Field>
         {error ? <FieldError>{error}</FieldError> : null}
-        <Button className="mt-2 h-11 w-full" disabled={!business || websiteUrl.trim().length === 0 || working} type="submit">{add.isPending || navigating ? <><LoaderCircle className="size-4 animate-spin" />{t("website.submitting")}</> : t("website.continue")}</Button>
+        <Button className="mt-2 h-11 w-full" disabled={!business || websiteUrl.trim().length === 0 || working} type="submit">{working ? <><LoaderCircle className="size-4 animate-spin" />{t(action === "skip" ? "website.skippingImport" : "website.submitting")}</> : t("website.continue")}</Button>
       </FieldGroup>
       </form>
       <div className="mt-6 flex flex-col items-center gap-3">
-        <button className="text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50" disabled={!business || working} onClick={() => { setError(null); skip.mutate(); }} type="button">{skip.isPending ? t("website.skipping") : t("website.skip")}</button>
+        <button className="text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50" disabled={!business || working} onClick={() => { setError(null); setAction("skip"); skip.mutate(); }} type="button">{skip.isPending ? t("website.skipping") : t("website.skip")}</button>
       </div>
     </div>
   );

@@ -67,6 +67,19 @@ describe("onboarding website", () => {
     finish(Response.json({ businesses: [{ businessId: "business-1", active: true, onboardingStage: "verify_phone" }] }));
     await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/reading"));
   });
+  it("names the skip on the Continue button while the skip finishes", async () => {
+    let finish!: (response: Response) => void;
+    const refresh = new Promise<Response>((resolve) => { finish = resolve; });
+    const fetcher = setup({ refresh });
+    await waitFor(() => expect((screen.getByRole("button", { name: "website.skip" }) as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(screen.getByRole("button", { name: "website.skip" }));
+    await waitFor(() => expect(fetcher.mock.calls.filter(([url]) => url === "/api/businesses")).toHaveLength(2));
+    const continueButton = screen.getByRole("button", { name: "website.skippingImport" }) as HTMLButtonElement;
+    expect(continueButton.disabled).toBe(true);
+    expect(screen.queryByRole("button", { name: "website.submitting" })).toBeNull();
+    finish(Response.json({ businesses: [{ businessId: "business-1", active: true, onboardingStage: "verify_phone" }] }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/language"));
+  });
   it("prefills the saved website when revisiting", async () => {
     setup({ websiteUrl: "https://example.com" });
     await waitFor(() => expect((screen.getByLabelText("website.label") as HTMLInputElement).value).toBe("https://example.com"));
