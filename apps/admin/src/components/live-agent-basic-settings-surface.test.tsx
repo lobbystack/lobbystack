@@ -301,6 +301,31 @@ describe("AgentBasicSettingsPage transfer number", () => {
     client.clear();
   });
 
+  it("saves the transfer number when Enter is pressed in its field", async () => {
+    const patches: unknown[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === "PATCH") {
+        patches.push(JSON.parse(String(init.body)));
+        return Response.json({ ok: true });
+      }
+      return Response.json({
+        business: { defaultLocale: "en" },
+        profile: { greeting: "Thanks for calling.", summary: "Clinic", summarySource: "operator", transferNumber: "+15145550123", transferMode: "on_request", appointmentChangePolicy: null, bookingMode: "instant" },
+      });
+    }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><AgentBasicSettingsPage businessId="business" canManageTenant /></QueryClientProvider>);
+
+    const user = userEvent.setup();
+    await screen.findByRole("combobox", { name: "agent:fields.transferNumber.country" });
+    const input = document.getElementById("agent-transfer-number") as HTMLInputElement;
+    await user.clear(input);
+    await user.type(input, "+14165550123{Enter}");
+
+    await waitFor(() => expect(patches).toEqual([{ businessId: "business", transferNumber: "+14165550123" }]));
+    client.clear();
+  });
+
   it("keeps a number being typed when a refetch of the saved settings lands", async () => {
     const patches: unknown[] = [];
     const settings = (transferNumber: string | null = "+15145550123") => ({

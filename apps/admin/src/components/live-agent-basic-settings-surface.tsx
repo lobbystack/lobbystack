@@ -808,6 +808,11 @@ export function AgentBasicSettingsPage({
                         limitNationalDigits
                         locale={i18n.language}
                         maxLength={18}
+                        onKeyDown={(event) => {
+                          if (event.key !== "Enter" || isLoadingConfiguration || isTransferSaving || !persistedProfile || !canManageTenant) return;
+                          event.preventDefault();
+                          void saveTransferNumber();
+                        }}
                         onChange={(nextValue) => {
                           setTransferNumber(nextValue ?? "");
                           setTransferStatus(null);
