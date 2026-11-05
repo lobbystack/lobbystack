@@ -2,7 +2,8 @@
   "accessibility": {
     "close": "Zatvori",
     "toggleSidebar": "Prikaži/sakrij bočnu traku",
-    "skipToContent": "Pređi na glavni sadržaj"
+    "skipToContent": "Pređi na glavni sadržaj",
+    "clearSearch": "Obriši pretragu"
   },
   "errors": {
     "unexpected": "Nešto nije u redu. Pokušajte ponovo."

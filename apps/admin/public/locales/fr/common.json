@@ -2,7 +2,8 @@
   "accessibility": {
     "close": "Fermer",
     "toggleSidebar": "Afficher ou masquer la barre latérale",
-    "skipToContent": "Aller au contenu principal"
+    "skipToContent": "Aller au contenu principal",
+    "clearSearch": "Effacer la recherche"
   },
   "errors": {
     "unexpected": "Une erreur est survenue. Veuillez réessayer."

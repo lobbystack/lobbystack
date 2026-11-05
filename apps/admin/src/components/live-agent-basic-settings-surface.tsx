@@ -737,7 +737,7 @@ export function AgentBasicSettingsPage({
                     </ComboboxTrigger>
                     <ComboboxContent className="min-w-(--anchor-width)">
                       {/* Above the list, so the list doesn't paint over the input's focus ring. */}
-                      <ComboboxInput className="relative z-10" placeholder={t("agent:fields.timezone.search")} showTrigger={false} />
+                      <ComboboxInput className="relative z-10" clearSearchLabel={t("common:accessibility.clearSearch")} placeholder={t("agent:fields.timezone.search")} showTrigger={false} />
                       <ComboboxEmpty>{t("agent:fields.timezone.noResults")}</ComboboxEmpty>
                       <ComboboxList>
                         {(group: TimeZoneItemGroup) => (
@@ -777,7 +777,7 @@ export function AgentBasicSettingsPage({
                       <span className="min-w-0 flex-1 truncate text-left"><ComboboxValue /></span>
                     </ComboboxTrigger>
                     <ComboboxContent className="min-w-(--anchor-width)">
-                      <ComboboxInput className="relative z-10" placeholder={t("agent:fields.currency.search")} showTrigger={false} />
+                      <ComboboxInput className="relative z-10" clearSearchLabel={t("common:accessibility.clearSearch")} placeholder={t("agent:fields.currency.search")} showTrigger={false} />
                       <ComboboxEmpty>{t("agent:fields.currency.noResults")}</ComboboxEmpty>
                       <ComboboxList>{(option: CurrencyOption) => <ComboboxItem key={option.id} value={option}><span aria-hidden="true">{currencyFlag(option.id)}</span>{option.label}</ComboboxItem>}</ComboboxList>
                     </ComboboxContent>

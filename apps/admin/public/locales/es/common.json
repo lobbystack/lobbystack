@@ -1,5 +1,5 @@
 {
-  "accessibility": { "close": "Cerrar", "toggleSidebar": "Mostrar u ocultar la barra lateral", "skipToContent": "Ir al contenido principal" },
+  "accessibility": { "close": "Cerrar", "toggleSidebar": "Mostrar u ocultar la barra lateral", "skipToContent": "Ir al contenido principal", "clearSearch": "Borrar búsqueda" },
   "errors": { "unexpected": "Algo salió mal. Inténtelo de nuevo." },
   "loading": {
     "title": "Cargando...",

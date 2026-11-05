@@ -12,7 +12,7 @@ import {
   type ColumnDef,
   type PaginationState,
 } from "@tanstack/react-table";
-import { CalendarDays, ChevronDown, MoreHorizontal, Pencil, Plus, Search, Trash2, UserRound, X } from "lucide-react";
+import { CalendarDays, ChevronDown, MoreHorizontal, Pencil, Plus, Trash2, UserRound, X } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import { enUS, es, fr, srLatn } from "react-day-picker/locale";
 import type { Country } from "react-phone-number-input/input";
@@ -34,6 +34,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/ui/search-input";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
@@ -240,9 +241,8 @@ function ServicesPicker({ id, invalid, label, onChange, services, value }: { id:
       <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
     </PopoverTrigger>
     <PopoverContent align="start" className="w-(--anchor-width) gap-0 p-0" initialFocus={searchRef}>
-      <div className="relative border-b p-2">
-        <Search aria-hidden="true" className="pointer-events-none absolute left-5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input aria-label={t("add.fields.services.search")} className="pl-9" onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") event.preventDefault(); }} placeholder={t("add.fields.services.search")} ref={searchRef} value={query} />
+      <div className="border-b p-2">
+        <SearchInput aria-label={t("add.fields.services.search")} onValueChange={setQuery} onKeyDown={(event) => { if (event.key === "Enter") event.preventDefault(); }} placeholder={t("add.fields.services.search")} ref={searchRef} value={query} />
       </div>
       {visible.length ? <div className="flex max-h-64 flex-col overflow-y-auto p-1">
         <label className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 font-medium hover:bg-muted/60">

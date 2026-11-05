@@ -36,7 +36,7 @@ export function PhoneCountrySelect({ ariaLabel, className, countries, disabled =
       </ComboboxTrigger>
       <ComboboxContent className="min-w-72">
         {/* Above the list, so the list doesn't paint over the input's focus ring. */}
-        <ComboboxInput className="relative z-10" placeholder={t("phoneCountry.search")} showTrigger={false} />
+        <ComboboxInput className="relative z-10" clearSearchLabel={t("accessibility.clearSearch")} placeholder={t("phoneCountry.search")} showTrigger={false} />
         <ComboboxEmpty>{t("phoneCountry.noResults")}</ComboboxEmpty>
         <ComboboxList>
           {(option: PhoneCountryOption) => (

@@ -1,5 +1,5 @@
 {
-  "accessibility": { "close": "Close", "toggleSidebar": "Toggle sidebar", "skipToContent": "Skip to main content" },
+  "accessibility": { "close": "Close", "toggleSidebar": "Toggle sidebar", "skipToContent": "Skip to main content", "clearSearch": "Clear search" },
   "errors": { "unexpected": "Something went wrong. Please try again." },
   "loading": {
     "title": "Loading...",
