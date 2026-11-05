@@ -3,15 +3,12 @@
 import { useTranslation } from "react-i18next";
 
 import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList, ComboboxTrigger } from "@/components/ui/combobox";
+import { countryFlag } from "@/lib/country-flag";
 import { cn } from "@/lib/utils";
 import type { PhoneCountryOption } from "@/lib/phone";
 
 /** Shows the calling code, like the field's "+1"; the list underneath is searchable by country name or code. */
 const TRIGGER_CLASS = "flex h-9 w-fit shrink-0 items-center justify-between gap-1.5 rounded-4xl border border-input bg-input/30 px-3 py-2 text-sm whitespace-nowrap transition-colors outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 enabled:hover:bg-input/50";
-
-function countryFlag(code: string): string {
-  return String.fromCodePoint(...[...code.toUpperCase()].map((letter) => 0x1f1a5 + letter.charCodeAt(0)));
-}
 
 export function PhoneCountrySelect({ ariaLabel, className, countries, disabled = false, onChange, value }: {
   ariaLabel: string;

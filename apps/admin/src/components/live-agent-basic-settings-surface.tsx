@@ -33,6 +33,7 @@ import { BusinessHoursSection } from "@/components/business-hours-section";
 import { StaffFirstSection, type StaffFirstPatch, type StaffFirstProfile } from "@/components/staff-first-section";
 import { availableTimeZones, groupTimeZones, isTimeZoneRegion, type TimeZoneOption } from "@/lib/time-zones";
 import { errorCode } from "@/lib/checkout-errors";
+import { currencyFlag } from "@/lib/country-flag";
 import { PhoneCountrySelect } from "@/components/phone-country-select";
 import { getDefaultTransferCountry, getPhoneCountryOptions, inferPhoneCountry } from "@/lib/phone";
 import { cn } from "@/lib/utils";
@@ -778,7 +779,7 @@ export function AgentBasicSettingsPage({
                     <ComboboxContent className="min-w-(--anchor-width)">
                       <ComboboxInput className="relative z-10" placeholder={t("agent:fields.currency.search")} showTrigger={false} />
                       <ComboboxEmpty>{t("agent:fields.currency.noResults")}</ComboboxEmpty>
-                      <ComboboxList>{(option: CurrencyOption) => <ComboboxItem key={option.id} value={option}>{option.label}</ComboboxItem>}</ComboboxList>
+                      <ComboboxList>{(option: CurrencyOption) => <ComboboxItem key={option.id} value={option}><span aria-hidden="true">{currencyFlag(option.id)}</span>{option.label}</ComboboxItem>}</ComboboxList>
                     </ComboboxContent>
                   </Combobox>
                 )}
