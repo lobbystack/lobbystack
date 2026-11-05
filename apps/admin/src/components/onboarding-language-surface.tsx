@@ -10,6 +10,7 @@ import { useTelemetry } from "@/components/product-analytics";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Skeleton } from "@/components/ui/skeleton";
+import { runtimeLocaleFlag } from "@/lib/country-flag";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
@@ -48,10 +49,10 @@ export function OnboardingLanguageSurface() {
       <FieldGroup className="gap-4">
         <Field aria-busy={!business || undefined}>
           <FieldLabel htmlFor="onboarding-language">{t("language.label")}</FieldLabel>
-          {!business ? <Skeleton aria-hidden="true" className="h-9 w-full" /> : (
+          {!business ? <Skeleton aria-hidden="true" className="h-11 w-full" /> : (
             <Select items={runtimeLocales.map((code) => ({ value: code, label: t(`common:callerLanguage.${code}`) }))} onValueChange={(value) => { if (value) setPicked(value as RuntimeLocale); }} value={locale}>
-              <SelectTrigger className="w-full" id="onboarding-language"><SelectValue /></SelectTrigger>
-              <SelectContent><SelectGroup>{runtimeLocales.map((code) => <SelectItem key={code} value={code}>{t(`common:callerLanguage.${code}`)}</SelectItem>)}</SelectGroup></SelectContent>
+              <SelectTrigger className="data-[size=default]:h-11 w-full" id="onboarding-language"><SelectValue className="items-center gap-1.5">{(value: RuntimeLocale | null) => value ? <><span aria-hidden="true">{runtimeLocaleFlag(value)}</span>{t(`common:callerLanguage.${value}`)}</> : null}</SelectValue></SelectTrigger>
+              <SelectContent><SelectGroup>{runtimeLocales.map((code) => <SelectItem key={code} value={code}><span aria-hidden="true">{runtimeLocaleFlag(code)}</span>{t(`common:callerLanguage.${code}`)}</SelectItem>)}</SelectGroup></SelectContent>
             </Select>
           )}
         </Field>

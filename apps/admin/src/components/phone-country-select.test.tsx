@@ -18,6 +18,7 @@ describe("PhoneCountrySelect", () => {
   it("shows a flag on each country and clears the typed search", async () => {
     render(<PhoneCountrySelect ariaLabel="Country" countries={[...countries]} onChange={vi.fn()} value="US" />);
     const user = userEvent.setup();
+    expect(screen.getByRole("combobox", { name: "Country" }).textContent).toBe("🇺🇸+1");
     await user.click(screen.getByRole("combobox", { name: "Country" }));
     expect(await screen.findByText("🇷🇸")).toBeTruthy();
     const search = screen.getByPlaceholderText("phoneCountry.search") as HTMLInputElement;

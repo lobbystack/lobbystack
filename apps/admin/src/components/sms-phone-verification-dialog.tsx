@@ -133,7 +133,7 @@ export function SmsPhoneVerificationDialog({ businessId, open, onOpenChange, onV
           <Field data-invalid={error ? true : undefined}>
             <FieldLabel className="sr-only" htmlFor="sms-alert-phone">{t("notifications.phoneVerification.fields.mobileNumber")}</FieldLabel>
             <div className="flex min-w-0">
-              <PhoneCountrySelect ariaLabel={t("notifications.phoneVerification.fields.country")} className="h-11 w-20 rounded-l-4xl rounded-r-none px-4 font-medium text-muted-foreground" countries={countries} onChange={(next) => { setCountry(next as Country); setPhone(""); }} value={country} />
+              <PhoneCountrySelect ariaLabel={t("notifications.phoneVerification.fields.country")} className="h-11 rounded-l-4xl rounded-r-none px-4 font-medium text-muted-foreground" countries={countries} onChange={(next) => { setCountry(next as Country); setPhone(""); }} value={country} />
               <PhoneInput autoFocus className="h-11 rounded-l-none border-l-0" containerClassName="min-w-0 flex-1" country={country} id="sms-alert-phone" limitNationalDigits onChange={(value) => { setPhone(value ?? ""); setError(null); }} onRawValueChange={(raw) => { if (raw.trim().startsWith("+")) { const inferred = inferPhoneCountry(raw, country); if (inferred && inferred !== country) setCountry(inferred as Country); } }} value={phone} />
             </div>
           </Field>

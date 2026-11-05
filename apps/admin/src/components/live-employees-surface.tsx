@@ -372,7 +372,7 @@ function EmployeeDialog({ businessId, employee, open, onOpenChange, services, to
             <Field data-invalid={phoneError ? true : undefined}>
               <FieldContent><FieldLabel htmlFor={phoneId}>{t("add.fields.phone.label")}</FieldLabel><FieldDescription>{t("add.fields.phone.hint")}</FieldDescription></FieldContent>
               <div className="flex min-w-0">
-                <PhoneCountrySelect ariaLabel={t("add.fields.phone.country")} className="w-20 rounded-r-none px-4 font-medium text-muted-foreground" countries={countries.filter((option) => isTransferCountry(option.code))} onChange={(next) => { setCountry(next as Country); setPhone(""); setPhoneDraft(""); setPhoneProblem(null); }} value={country} />
+                <PhoneCountrySelect ariaLabel={t("add.fields.phone.country")} className="rounded-r-none px-4 font-medium text-muted-foreground" countries={countries.filter((option) => isTransferCountry(option.code))} onChange={(next) => { setCountry(next as Country); setPhone(""); setPhoneDraft(""); setPhoneProblem(null); }} value={country} />
                 <PhoneInput aria-describedby={phoneError ? `${phoneId}-error` : undefined} aria-invalid={phoneError ? true : undefined} className="rounded-l-none border-l-0" containerClassName="min-w-0 flex-1" country={country} id={phoneId} limitNationalDigits locale={locale} onChange={(value) => { setPhone(value ?? ""); setPhoneProblem(null); }} onRawValueChange={(raw) => { setPhoneDraft(raw); if (raw.trim().startsWith("+")) { const inferred = inferPhoneCountry(raw, country); if (inferred && inferred !== country) setCountry(inferred as Country); } }} value={phone} />
               </div>
               {phoneError ? <FieldError id={`${phoneId}-error`}>{phoneError}</FieldError> : null}
