@@ -184,6 +184,7 @@
     "capabilities": "Capabilities",
     "voiceSms": "Voice · SMS",
     "search": "Search",
+    "searching": "Searching...",
     "tableHeaders": {
       "phoneNumber": "Phone number"
     },

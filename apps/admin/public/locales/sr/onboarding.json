@@ -185,6 +185,7 @@
     "capabilities": "Mogućnosti",
     "voiceSms": "Glas · SMS",
     "search": "Pretraži",
+    "searching": "Pretraga...",
     "tableHeaders": {
       "phoneNumber": "Broj telefona"
     },

@@ -465,6 +465,7 @@
       "areaCodeLabel": "Area code",
       "areaCodePlaceholder": "Area code",
       "search": "Search",
+      "searching": "Searching...",
       "phoneNumberHeader": "Phone number",
       "select": "Select",
       "claiming": "Connecting your new number...",

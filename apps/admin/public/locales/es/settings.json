@@ -472,6 +472,7 @@
       "areaCodeLabel": "Código de área",
       "areaCodePlaceholder": "Código de área",
       "search": "Buscar",
+      "searching": "Buscando...",
       "phoneNumberHeader": "Número de teléfono",
       "select": "Seleccionar",
       "claiming": "Conectando su nuevo número...",

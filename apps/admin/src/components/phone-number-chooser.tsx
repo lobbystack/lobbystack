@@ -76,6 +76,7 @@ type PhoneNumberChooserLabels = {
   areaCodeLabel: string;
   areaCodePlaceholder: string;
   search: string;
+  searching: string;
   phoneNumberHeader: string;
   select: string;
   loadMore: string;
@@ -385,14 +386,16 @@ export function PhoneNumberChooser({
           </>
         ) : null}
         <Button
-          className="h-11 w-full sm:w-auto"
+          className="w-full sm:w-auto"
           disabled={isSearching || isLoading}
           onClick={() => void handleSearch()}
           type="button"
-          variant="outline"
         >
           {searchSource === "search" ? (
-            <LoaderCircle className="size-4 animate-spin" />
+            <>
+              <LoaderCircle className="size-4 animate-spin" />
+              {labels.searching}
+            </>
           ) : (
             labels.search
           )}
