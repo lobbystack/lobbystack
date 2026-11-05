@@ -13,6 +13,7 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import { useTelemetry } from "@/components/product-analytics";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
+import { VerifyPhoneFormSkeleton } from "@/components/loading-skeletons";
 import { PhoneCountrySelect } from "@/components/phone-country-select";
 import { formatPhoneNumberDisplay, getDefaultPhoneCountry, getLocalePhoneCountry, getPhoneCountryOptions } from "@/lib/phone";
 import { requestJson } from "@/lib/request-json";
@@ -117,7 +118,7 @@ export function OnboardingVerifyPhoneSurface() {
   }
 
   if (passOn.isError) return <FieldError>{getSafeOnboardingErrorMessage(passOn.error, t, "verifyPhone.unavailable.failed")}</FieldError>;
-  if (!country || numbers.isLoading || passOnNeeded) return <div className="flex justify-center p-6"><LoaderCircle className="size-5 animate-spin text-muted-foreground" /></div>;
+  if (!country || numbers.isLoading || passOnNeeded) return <VerifyPhoneFormSkeleton labels={{ mobileNumber: t("verifyPhone.fields.mobileNumber"), hint: t("verifyPhone.hint"), submit: t("verifyPhone.sendCode") }} />;
 
   const verified = numbers.data?.verifiedPhone;
   if (verified && !changing && !attempt) {

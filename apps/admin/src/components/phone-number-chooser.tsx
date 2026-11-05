@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { LoaderCircle } from "lucide-react";
 
+import { PhoneNumberChooserSkeleton } from "@/components/loading-skeletons";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -14,7 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import {
   formatPhoneNumberDisplay,
@@ -333,6 +333,8 @@ export function PhoneNumberChooser({
     }
   }
 
+  if (isLoading) return <PhoneNumberChooserSkeleton labels={{ country: labels.countryLabel, areaCode: labels.areaCodeLabel, search: labels.search, phoneNumber: labels.phoneNumberHeader }} />;
+
   return (
     <div className="flex flex-col gap-6">
       <div
@@ -387,7 +389,7 @@ export function PhoneNumberChooser({
         ) : null}
         <Button
           className="w-full sm:w-auto"
-          disabled={isSearching || isLoading}
+          disabled={isSearching}
           onClick={() => void handleSearch()}
           type="button"
         >
@@ -408,13 +410,7 @@ export function PhoneNumberChooser({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {isLoading ? (
-            <div className="flex flex-col gap-3 px-4 py-4">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <Skeleton className="h-12 w-full rounded-lg" key={index} />
-              ))}
-            </div>
-          ) : numbers.length === 0 ? (
+          {numbers.length === 0 ? (
             <div className="px-4 py-8 text-center text-sm text-muted-foreground">
               {labels.empty}
             </div>
@@ -458,7 +454,7 @@ export function PhoneNumberChooser({
           )}
         </div>
 
-        {hasMore && !isLoading ? (
+        {hasMore ? (
           <div className="shrink-0 border-t border-border px-4 py-3">
             <button
               aria-label={labels.loadMore}

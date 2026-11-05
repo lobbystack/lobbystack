@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
+import { MeetFormSkeleton, TestPanelSkeleton } from "@/components/loading-skeletons";
 import { Textarea } from "@/components/ui/textarea";
 import { useUpgradePlanDialogOpener } from "@/components/upgrade-plan-dialog-context";
 import { VoiceDialog, voiceName, useVoicePreview, useVoiceTraits } from "@/components/voice-dialog";
@@ -109,7 +109,7 @@ function MeetAgent() {
   return (
     <div className="grid w-full gap-6 lg:grid-cols-2">
       <div className="flex h-[32rem] flex-col rounded-xl border border-border p-4 lg:h-[36rem]">
-        {business ? <TestPanel businessId={business.businessId} businessSlug={business.slug} onUpgrade={openPlans && !business.partnerAccessLevel ? openPlans : undefined} /> : <Skeleton className="h-full rounded-xl" />}
+        {business ? <TestPanel businessId={business.businessId} businessSlug={business.slug} onUpgrade={openPlans && !business.partnerAccessLevel ? openPlans : undefined} /> : <TestPanelSkeleton />}
       </div>
       <div className="flex flex-col gap-4">
         {profile ? (
@@ -120,7 +120,7 @@ function MeetAgent() {
             </Field>
             <Field>
               <FieldLabel htmlFor="meet-voice">{tAgent("fields.voice.label")}</FieldLabel>
-              <div className="flex items-center justify-between gap-3 rounded-xl border border-border px-4 py-2">
+              <div className="flex h-11 items-center justify-between gap-3 rounded-4xl border border-border pr-1.5 pl-4">
                 <span className="min-w-0 truncate text-sm">{tAgent("fields.voice.summary", { voice: voiceName(voice), traits: voiceTraits(voice) })}</span>
                 <Button id="meet-voice" onClick={() => setVoiceOpen(true)} size="sm" type="button" variant="outline">{tAgent("fields.voice.change")}</Button>
               </div>
@@ -132,12 +132,12 @@ function MeetAgent() {
             <Field>
               <FieldLabel htmlFor="meet-language">{t("meet.language")}</FieldLabel>
               <Select items={runtimeLocales.map((code) => ({ value: code, label: t(`common:callerLanguage.${code}`) }))} onValueChange={(value) => { if (value && value !== savedLocale) save.mutate({ locale: value as RuntimeLocale }); }} value={savedLocale}>
-                <SelectTrigger className="w-full" id="meet-language"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="data-[size=default]:h-11 w-full" id="meet-language"><SelectValue /></SelectTrigger>
                 <SelectContent><SelectGroup>{runtimeLocales.map((code) => <SelectItem key={code} value={code}>{t(`common:callerLanguage.${code}`)}</SelectItem>)}</SelectGroup></SelectContent>
               </Select>
             </Field>
           </FieldGroup>
-        ) : <Skeleton className="h-96 rounded-xl" />}
+        ) : <MeetFormSkeleton labels={{ name: t("meet.name"), voice: tAgent("fields.voice.label"), greeting: t("meet.greeting"), language: t("meet.language") }} />}
         {error ? <FieldError>{error}</FieldError> : null}
         <Button className="mt-2 h-11 w-full" disabled={!business || !profile || !greeting.trim() || !name.trim() || finish.isPending} onClick={() => { setError(null); finish.mutate(); }} type="button">
           {finish.isPending ? <><LoaderCircle className="size-4 animate-spin" />{t("meet.finishing")}</> : t("meet.finish")}

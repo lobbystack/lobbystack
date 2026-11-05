@@ -32,7 +32,7 @@ function setup(options: { websiteUrl?: string; fail?: boolean; invalid?: boolean
 describe("onboarding website", () => {
   it("submits the URL with the onboarding context", async () => {
     const fetcher = setup();
-    fireEvent.change(screen.getByLabelText("website.label"), { target: { value: "example.com" } });
+    fireEvent.change(await screen.findByLabelText("website.label"), { target: { value: "example.com" } });
     await waitFor(() => expect((screen.getByRole("button", { name: "website.continue" }) as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(screen.getByRole("button", { name: "website.continue" }));
     await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/reading"));
@@ -42,7 +42,7 @@ describe("onboarding website", () => {
   });
   it("asks for a valid address when the server rejects the URL", async () => {
     setup({ invalid: true });
-    fireEvent.change(screen.getByLabelText("website.label"), { target: { value: "htps://example.com" } });
+    fireEvent.change(await screen.findByLabelText("website.label"), { target: { value: "htps://example.com" } });
     await waitFor(() => expect((screen.getByRole("button", { name: "website.continue" }) as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(screen.getByRole("button", { name: "website.continue" }));
     expect(await screen.findByText("website.invalidUrl")).toBeTruthy();

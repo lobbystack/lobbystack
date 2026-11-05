@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { resolveOnboardingRoute } from "@lobbystack/shared";
 import { useTranslation } from "react-i18next";
-import { LoaderCircle, Phone } from "lucide-react";
+import { Phone } from "lucide-react";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { PhoneNumberChooser, phoneNumberChooserApi } from "./phone-number-chooser";
 import { OnboardingPlanSurface } from "./onboarding-plan-surface";
@@ -16,6 +16,7 @@ import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { useTelemetry } from "@/components/product-analytics";
 import { Button } from "./ui/button";
 import { Surface } from "./ui/surface";
+import { PhoneNumberChooserSkeleton } from "./loading-skeletons";
 import { FieldError } from "./ui/field";
 
 const onboardingNumbers = phoneNumberChooserApi(false);
@@ -62,7 +63,7 @@ export function OnboardingNumberSurface() {
   const getErrorMessage = useCallback((error: unknown, fallback: string) => getSafeOnboardingErrorMessage(error, t, fallback), [t]);
   const skip = useMutation({ mutationFn: () => requestJson(`/api/onboarding/phone-numbers/skip?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST" }), onSuccess: () => router.push(afterNumber), meta: { inlineError: true } });
 
-  if (!phones.data || (!claiming && phones.data.activeClaim)) return <Surface className="flex justify-center p-6"><LoaderCircle className="size-5 animate-spin text-muted-foreground" /></Surface>;
+  if (!phones.data || (!claiming && phones.data.activeClaim)) return <PhoneNumberChooserSkeleton labels={{ country: t("number.countryLabel"), areaCode: t("number.areaCodeLabel"), search: t("number.search"), phoneNumber: t("number.tableHeaders.phoneNumber") }} />;
   if (primary) {
     // The moment it clicks: they call their own number and their receptionist answers.
     return (

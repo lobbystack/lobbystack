@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { useTelemetry } from "@/components/product-analytics";
 
@@ -63,12 +64,14 @@ export function OnboardingWebsiteSurface() {
     <div>
       <form className="flex flex-col gap-4" onSubmit={submit}>
       <FieldGroup className="gap-4">
-        <Field>
+        <Field aria-busy={!business || undefined}>
           <FieldLabel htmlFor="onboarding-website-url">{t("website.label")}</FieldLabel>
-          <div className="relative">
-            <Globe aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input autoComplete="url" autoFocus className="h-11 pl-9" id="onboarding-website-url" onChange={(event) => { edited.current = true; setWebsiteUrl(event.target.value); }} placeholder={t("website.placeholder")} type="text" value={websiteUrl} />
-          </div>
+          {!business ? <Skeleton aria-hidden="true" className="h-11 w-full" /> : (
+            <div className="relative">
+              <Globe aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input autoComplete="url" autoFocus className="h-11 pl-9" id="onboarding-website-url" onChange={(event) => { edited.current = true; setWebsiteUrl(event.target.value); }} placeholder={t("website.placeholder")} type="text" value={websiteUrl} />
+            </div>
+          )}
         </Field>
         {error ? <FieldError>{error}</FieldError> : null}
         <Button className="mt-2 h-11 w-full" disabled={!business || websiteUrl.trim().length === 0 || working} type="submit">{add.isPending || navigating ? <><LoaderCircle className="size-4 animate-spin" />{t("website.submitting")}</> : t("website.continue")}</Button>
