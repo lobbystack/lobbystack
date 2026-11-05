@@ -8197,8 +8197,8 @@ packages:
     peerDependencies:
       react: ^16.11.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
-  systeminformation@5.33.15:
-    resolution: {integrity: sha512-s5RloL0F7xhN0ZjfHtLGnbf7EW74EI0N8NFL+1xR7Oxz9QA33obNZsl7lyfnJOhN04E/kGFPoJPlvY7TZ5fzmw==}
+  systeminformation@5.33.19:
+    resolution: {integrity: sha512-Zm7wGeCG7PqfvzegMJIzrxICopWqYCeLATVmvxOOci1isLcNVKgY4Fr0hhYQzvc7cgtK3377jQVChTFAnznOiA==}
     engines: {node: '>=10.0.0'}
     os: [darwin, linux, win32, freebsd, openbsd, netbsd, sunos, android]
     hasBin: true
@@ -9614,7 +9614,7 @@ snapshots:
       object-treeify: 1.1.33
       open: 8.4.2
       picomatch: 2.3.2
-      systeminformation: 5.33.15
+      systeminformation: 5.33.19
       undici: 7.29.1
       which: 4.0.0
       yocto-spinner: 1.2.2
@@ -17349,7 +17349,7 @@ snapshots:
       react: 19.3.1
       use-sync-external-store: 1.7.0(react@19.3.1)
 
-  systeminformation@5.33.15: {}
+  systeminformation@5.33.19: {}
 
   tagged-tag@1.0.0: {}
 
