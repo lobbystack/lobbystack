@@ -197,16 +197,56 @@ export function defaultReceptionistProfile(businessName: string, locale: Runtime
  */
 export async function saveReceptionistProfileInTransaction(
   tx: DatabaseTransaction,
-  input: { businessId: string; businessName: string; locale?: RuntimeLocale | undefined; name?: string | undefined; patch: ReceptionistProfilePatch; regenerateSummary?: boolean | undefined },
+  input: { businessId: string; agentId?: string | undefined; businessName: string; locale?: RuntimeLocale | undefined; name?: string | undefined; patch: ReceptionistProfilePatch; regenerateSummary?: boolean | undefined },
 ): Promise<typeof agents.$inferSelect | null> {
   const { businessId, patch } = input;
+  // Without an agentId the change goes to the default agent, as /v1/receptionist and the old dashboard body expect.
+  const target = input.agentId ? eq(agents.id, input.agentId) : eq(agents.isDefault, true);
+  const existing = (await tx.select({ id: agents.id }).from(agents).where(and(eq(agents.businessId, businessId), target, isNull(agents.archivedAt))).limit(1))[0];
+  if (!existing && input.agentId) throw Object.assign(new Error("Agent not found."), { status: 404, code: "agent_not_found" });
+  const agentId = existing?.id;
   // An E.164 number in a country Twilio can call and, during a free trial, only the mobile its claimer verified. Employees' numbers follow the same rules.
   if (patch.transferNumber) await assertTransferNumberAllowed(tx, { businessId, phone: patch.transferNumber });
   const changesStaffFirst = patch.staffFirstMode !== undefined || patch.staffFirstNumber !== undefined;
-  if (changesStaffFirst) await assertStaffFirstChange(tx, { businessId, mode: patch.staffFirstMode, number: patch.staffFirstNumber });
+  if (changesStaffFirst) await assertStaffFirstChange(tx, { businessId, agentId, mode: patch.staffFirstMode, number: patch.staffFirstNumber });
+  const changes = { ...patch, ...(input.name !== undefined ? { name: input.name } : {}), ...(patch.summary !== undefined ? { summarySource: "operator" as const, summaryRegenerateStatus: null } : {}), ...(input.regenerateSummary ? { summarySource: "generated" as const, summaryRegenerateStatus: "pending" as const } : {}), updatedAt: new Date() };
+  // Updates by id, so nothing depends on the one-agent-per-business index that
+  // release 5b drops. A business without a default agent gets one from the defaults.
+  const profile = agentId
+    ? (await tx.update(agents).set(changes).where(and(eq(agents.id, agentId), eq(agents.businessId, businessId))).returning())[0]
+    : await insertDefaultAgentInTransaction(tx, input, changes);
+  if (!profile) return null;
+  // Some carriers forward a call the receptionist refuses to a number stored on the carrier, so they learn the new transfer number.
+  if (patch.transferNumber !== undefined) await enqueueRefusedCallForwardRefresh(tx, businessId, profile.id);
+  if (patch.staffFirstMode !== undefined) await enqueueStaffFirstRouting(tx, businessId, profile.id);
+  await enqueueAgentSnapshotRefresh(tx, { businessId, agentId: profile.id, change: "agent_updated", dedupeKey: `snapshot:${businessId}:profile:${profile.updatedAt.toISOString()}` });
+  if (input.regenerateSummary) {
+    await enqueueOutbox(tx, {
+      topic: "business.generateSummary",
+      businessId,
+      aggregateType: "business",
+      aggregateId: businessId,
+      dedupeKey: `business-summary:${businessId}:regenerate:${Date.now()}`,
+      payload: { businessId, reason: "operator_regenerate", force: true },
+    });
+  }
+  return profile;
+}
+
+/**
+ * Creates the business's default agent from the defaults and the patch. A
+ * default agent created at the same moment wins, and the patch goes to it.
+ */
+async function insertDefaultAgentInTransaction(
+  tx: DatabaseTransaction,
+  input: { businessId: string; businessName: string; locale?: RuntimeLocale | undefined; name?: string | undefined; patch: ReceptionistProfilePatch },
+  changes: Partial<typeof agents.$inferInsert>,
+): Promise<typeof agents.$inferSelect | undefined> {
+  const { businessId, patch } = input;
   const defaults = defaultReceptionistProfile(input.businessName, input.locale);
-  const [profile] = await tx.insert(agents).values({
+  const [created] = await tx.insert(agents).values({
     businessId,
+    isDefault: true,
     name: input.name ?? defaults.name,
     greeting: patch.greeting ?? defaults.greeting,
     tone: patch.tone ?? defaults.tone,
@@ -227,24 +267,7 @@ export async function saveReceptionistProfileInTransaction(
     ...(patch.staffFirstRingSeconds !== undefined ? { staffFirstRingSeconds: patch.staffFirstRingSeconds } : {}),
     ...(patch.staffFirstMessage !== undefined ? { staffFirstMessage: patch.staffFirstMessage } : {}),
     ...(patch.staffFirstHandoverMessage !== undefined ? { staffFirstHandoverMessage: patch.staffFirstHandoverMessage } : {}),
-  }).onConflictDoUpdate({
-    target: agents.businessId,
-    set: { ...patch, ...(input.name !== undefined ? { name: input.name } : {}), ...(patch.summary !== undefined ? { summarySource: "operator" as const, summaryRegenerateStatus: null } : {}), ...(input.regenerateSummary ? { summarySource: "generated" as const, summaryRegenerateStatus: "pending" as const } : {}), updatedAt: new Date() },
-  }).returning();
-  if (!profile) return null;
-  // Some carriers forward a call the receptionist refuses to a number stored on the carrier, so they learn the new transfer number.
-  if (patch.transferNumber !== undefined) await enqueueRefusedCallForwardRefresh(tx, businessId);
-  if (patch.staffFirstMode !== undefined) await enqueueStaffFirstRouting(tx, businessId);
-  await enqueueAgentSnapshotRefresh(tx, { businessId, agentId: profile.id, change: "agent_updated", dedupeKey: `snapshot:${businessId}:profile:${profile.updatedAt.toISOString()}` });
-  if (input.regenerateSummary) {
-    await enqueueOutbox(tx, {
-      topic: "business.generateSummary",
-      businessId,
-      aggregateType: "business",
-      aggregateId: businessId,
-      dedupeKey: `business-summary:${businessId}:regenerate:${Date.now()}`,
-      payload: { businessId, reason: "operator_regenerate", force: true },
-    });
-  }
-  return profile;
+  }).onConflictDoNothing().returning();
+  if (created) return created;
+  return (await tx.update(agents).set(changes).where(and(eq(agents.businessId, businessId), eq(agents.isDefault, true), isNull(agents.archivedAt))).returning())[0];
 }

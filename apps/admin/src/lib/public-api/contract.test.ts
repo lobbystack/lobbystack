@@ -82,6 +82,20 @@ describe("v1 contract", () => {
     expect(document.components.schemas.BusinessUpdate?.properties).toHaveProperty("business_type");
   });
 
+  it("publishes agents read-only, and the agent on calls and messages", () => {
+    const agentOperations = Object.values(apiOperations).filter((operation) => operation.path.startsWith("/agents")) as ApiOperation[];
+    expect(agentOperations.map((operation) => `${operation.method} ${operation.path} ${operation.scope}`).sort()).toEqual(["GET /agents business:read", "GET /agents/{agent_id} business:read"]);
+    // /receptionist and /rules keep their names and act on the default agent.
+    expect(apiOperations.getReceptionist).toMatchObject({ method: "GET", path: "/receptionist" });
+    expect(apiOperations.listRules).toMatchObject({ method: "GET", path: "/rules" });
+    const document = buildOpenApiDocument({ serverUrl: "https://app.lobbystack.com/api/v1" }) as { components: { schemas: Record<string, { required?: string[]; properties: Record<string, { type?: unknown }> }> } };
+    const { Agent, Call, CallDetail, Message, Receptionist } = document.components.schemas;
+    expect(Agent?.required).toEqual(expect.arrayContaining(["id", "name", "is_default", "paused", "greeting", "voice", "created_at", "updated_at"]));
+    expect(Agent?.properties).not.toHaveProperty("summary");
+    expect(Object.keys(Agent?.properties ?? {})).toEqual(expect.arrayContaining(Object.keys(Receptionist?.properties ?? {}).filter((key) => !key.startsWith("summary"))));
+    for (const schema of [Call, CallDetail, Message]) expect(schema?.properties.agent_id).toBeDefined();
+  });
+
   it("requires an Idempotency-Key on POST /businesses and documents it", () => {
     expect(apiOperations.createBusiness).toMatchObject({ idempotent: "required", business: "none", scope: "businesses:create" });
     const document = buildOpenApiDocument({ serverUrl: "https://app.lobbystack.com/api/v1" }) as { paths: Record<string, Record<string, { parameters?: Array<{ name: string; required?: boolean }> }>> };

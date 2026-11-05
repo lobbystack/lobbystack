@@ -289,7 +289,7 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
     await rollbackTest(async (tx) => {
       const businessId = randomUUID();
       await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Maple Family Clinic", timezone: "UTC", businessType: "test", deploymentMode: "cloud" });
-      await tx.insert(agents).values({ businessId, greeting: "Hi", tone: "warm", summary: "Maple Family Clinic uses LobbyStack to answer calls.", bookingPolicy: "Confirm first.", transferMode: "never" });
+      await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hi", tone: "warm", summary: "Maple Family Clinic uses LobbyStack to answer calls.", bookingPolicy: "Confirm first.", transferMode: "never" });
       const [indexed, pending] = [randomUUID(), randomUUID()];
       await tx.insert(knowledgeDocuments).values([
         { id: indexed, businessId, sourceType: "website", title: "Home", status: "indexed" },
@@ -572,7 +572,7 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
       const business = async (summarySource: "placeholder" | "generated" | "operator", knowledge: { snippet?: boolean; document?: "indexed" | "processing"; chunk?: { embeddingFingerprint: string | null; embeddingStatus: string; embedded: boolean } }) => {
         const businessId = randomUUID();
         await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Backfill listing", timezone: "UTC", businessType: "test" });
-        await tx.insert(agents).values({ businessId, greeting: "Hi", tone: "warm", summary: "Placeholder.", summarySource, bookingPolicy: "Confirm first.", transferMode: "never" });
+        await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hi", tone: "warm", summary: "Placeholder.", summarySource, bookingPolicy: "Confirm first.", transferMode: "never" });
         if (knowledge.snippet) await tx.insert(knowledgeSnippets).values({ businessId, title: "Services", content: "Checkups." });
         if (knowledge.document) {
           const documentId = randomUUID();

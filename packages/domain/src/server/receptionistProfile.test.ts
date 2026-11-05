@@ -93,45 +93,62 @@ describe("defaultReceptionistProfile", () => {
 describe("saveReceptionistProfileInTransaction", () => {
   const savedAt = new Date("2026-10-11T12:00:00.000Z");
 
-  /** Records what the upsert would write, and returns `saved` as the stored row. */
-  function upsert(saved: Record<string, unknown> | null) {
+  /**
+   * Records what the save would write. `existing` is the agent the save finds,
+   * or null for a business without one; `saved` is the row the write returns.
+   */
+  function store(existing: { id: string } | null, saved: Record<string, unknown> | null) {
     const recorded: { values?: Record<string, unknown>; set?: Record<string, unknown> } = {};
+    const rows = (value: unknown[]) => ({ limit: async () => value });
     const tx = {
+      select: () => ({ from: () => ({ where: () => rows(existing ? [existing] : []) }) }),
+      update: () => ({ set: (set: Record<string, unknown>) => { recorded.set = set; return { where: () => ({ returning: async () => (saved ? [saved] : []) }) }; } }),
       insert: () => ({
         values: (values: Record<string, unknown>) => {
           recorded.values = values;
-          return { onConflictDoUpdate: (config: { set: Record<string, unknown> }) => { recorded.set = config.set; return { returning: async () => (saved ? [saved] : []) }; } };
+          return { onConflictDoNothing: () => ({ returning: async () => (saved ? [saved] : []) }) };
         },
       }),
     };
     return { tx: tx as never, recorded };
   }
 
-  it("creates a missing profile from the defaults, changes only the fields sent, and refreshes the snapshot", async () => {
-    const { tx, recorded } = upsert({ id: "profile_1", updatedAt: savedAt });
+  it("changes only the fields sent on the default agent, and refreshes the snapshot", async () => {
+    const { tx, recorded } = store({ id: "profile_1" }, { id: "profile_1", updatedAt: savedAt });
     expect(await saveReceptionistProfileInTransaction(tx, { businessId: "biz_1", businessName: "Maple", patch: { tone: "warm" } })).toMatchObject({ id: "profile_1" });
-    expect(recorded.values).toMatchObject({ businessId: "biz_1", greeting: defaultGreeting("Maple"), tone: "warm", summary: "Maple", summarySource: "placeholder", transferMode: "on_request", appointmentChangePolicy: defaultAppointmentChangePolicy });
+    expect(recorded.values).toBeUndefined();
     expect(recorded.set).toEqual({ tone: "warm", updatedAt: expect.any(Date) });
     expect(mocks.enqueueOutbox).toHaveBeenCalledTimes(1);
     expect(mocks.enqueueOutbox).toHaveBeenCalledWith(tx, expect.objectContaining({ topic: "snapshot.refresh", businessId: "biz_1", aggregateType: "agent", aggregateId: "profile_1", dedupeKey: `snapshot:biz_1:profile:${savedAt.toISOString()}`, payload: { businessId: "biz_1", reason: "agent_updated" } }));
   });
 
+  it("creates a missing default agent from the defaults and the fields sent", async () => {
+    const { tx, recorded } = store(null, { id: "profile_1", updatedAt: savedAt });
+    expect(await saveReceptionistProfileInTransaction(tx, { businessId: "biz_1", businessName: "Maple", patch: { tone: "warm" } })).toMatchObject({ id: "profile_1" });
+    expect(recorded.values).toMatchObject({ businessId: "biz_1", isDefault: true, greeting: defaultGreeting("Maple"), tone: "warm", summary: "Maple", summarySource: "placeholder", transferMode: "on_request", appointmentChangePolicy: defaultAppointmentChangePolicy });
+  });
+
+  it("refuses an agent the business doesn't have", async () => {
+    const { tx } = store(null, null);
+    await expect(saveReceptionistProfileInTransaction(tx, { businessId: "biz_1", agentId: "agent_2", businessName: "Maple", patch: { tone: "warm" } })).rejects.toMatchObject({ status: 404, code: "agent_not_found" });
+    expect(mocks.enqueueOutbox).not.toHaveBeenCalled();
+  });
+
   it("marks a written summary as the business's own", async () => {
-    const { tx, recorded } = upsert({ id: "profile_1", updatedAt: savedAt });
+    const { tx, recorded } = store({ id: "profile_1" }, { id: "profile_1", updatedAt: savedAt });
     await saveReceptionistProfileInTransaction(tx, { businessId: "biz_1", businessName: "Maple", patch: { summary: "Maple cuts hair." } });
-    expect(recorded.values).toMatchObject({ summary: "Maple cuts hair.", summarySource: "operator" });
     expect(recorded.set).toMatchObject({ summary: "Maple cuts hair.", summarySource: "operator" });
   });
 
   it("hands the summary back to AI and queues the rewrite", async () => {
-    const { tx, recorded } = upsert({ id: "profile_1", updatedAt: savedAt });
+    const { tx, recorded } = store({ id: "profile_1" }, { id: "profile_1", updatedAt: savedAt });
     await saveReceptionistProfileInTransaction(tx, { businessId: "biz_1", businessName: "Maple", patch: {}, regenerateSummary: true });
     expect(recorded.set).toMatchObject({ summarySource: "generated" });
     expect(mocks.enqueueOutbox).toHaveBeenLastCalledWith(tx, expect.objectContaining({ topic: "business.generateSummary", businessId: "biz_1", payload: { businessId: "biz_1", reason: "operator_regenerate", force: true } }));
   });
 
   it("returns null and queues nothing when nothing was saved", async () => {
-    const { tx } = upsert(null);
+    const { tx } = store({ id: "profile_1" }, null);
     expect(await saveReceptionistProfileInTransaction(tx, { businessId: "biz_1", businessName: "Maple", patch: { tone: "warm" } })).toBeNull();
     expect(mocks.enqueueOutbox).not.toHaveBeenCalled();
   });

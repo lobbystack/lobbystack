@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { RECEPTIONIST_INSTRUCTIONS_MAX_LENGTH, RECEPTIONIST_TEXT_MAX_LENGTH } from "../receptionist";
 import { CONTACT_PASSCODES_MAX_PER_REQUEST, KNOWLEDGE_UPLOAD_MAX_BYTES } from "./constants";
-import { apiAppointmentCreateSchema, apiAppointmentRescheduleSchema, apiContactCreateSchema, apiContactPasscodesGenerateSchema, apiContactPasscodesUpdateSchema, apiKnowledgeEntryCreateSchema, apiKnowledgeUploadCreateSchema, apiReceptionistUpdateSchema, parseApiInput } from "./schemas";
+import { apiAgentSchema, apiCallSchema, apiMessageSchema, apiReceptionistSchema, apiAppointmentCreateSchema,apiAppointmentRescheduleSchema, apiContactCreateSchema, apiContactPasscodesGenerateSchema, apiContactPasscodesUpdateSchema, apiKnowledgeEntryCreateSchema, apiKnowledgeUploadCreateSchema, apiReceptionistUpdateSchema, parseApiInput } from "./schemas";
 
 // API and MCP clients get these details back as error.details, so a zod upgrade must not reword them.
 describe("parseApiInput", () => {
@@ -85,5 +85,26 @@ describe("parseApiInput", () => {
       expect(parseApiInput(apiAppointmentRescheduleSchema, { starts_at })).toEqual({ ok: true, data: { starts_at } });
     }
     expect(parseApiInput(apiAppointmentRescheduleSchema, { starts_at: "2026-10-09T14:00" })).toEqual({ ok: false, details: [{ path: "starts_at", message: "Invalid ISO datetime" }] });
+  });
+});
+
+describe("agents", () => {
+  const at = "2026-11-03T12:00:00.000Z";
+  const agentId = "7c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f";
+
+  it("names the agent on calls and messages, or null when none is on record", () => {
+    const call = { id: agentId, channel: "phone", status: "completed", outcome: "none", summary: null, end_reason: null, contact_id: null, caller_name: null, caller_phone: null, duration_seconds: null, recording_available: false, started_at: at, ended_at: null, created_at: at };
+    const message = { id: agentId, status: "open", title: "Callback", body: "Call back", caller_name: null, callback_phone: null, urgency: null, callback_window: null, channel: null, call_id: null, created_at: at, updated_at: at };
+    for (const agent_id of [agentId, null]) {
+      expect(apiCallSchema.parse({ ...call, agent_id }).agent_id).toBe(agent_id);
+      expect(apiMessageSchema.parse({ ...message, agent_id }).agent_id).toBe(agent_id);
+    }
+    expect(apiCallSchema.safeParse({ ...call, agent_id: "front-desk" }).success).toBe(false);
+  });
+
+  it("shows an agent's own settings and leaves the business summary to the receptionist", () => {
+    expect(Object.keys(apiAgentSchema.shape)).toEqual(expect.arrayContaining(["id", "name", "is_default", "paused", "created_at", ...Object.keys(apiReceptionistSchema.shape).filter((key) => !key.startsWith("summary"))]));
+    expect(apiAgentSchema.shape).not.toHaveProperty("summary");
+    expect(apiAgentSchema.shape).not.toHaveProperty("summary_source");
   });
 });

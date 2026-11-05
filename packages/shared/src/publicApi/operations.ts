@@ -3,6 +3,7 @@ import { z } from "zod";
 import { BUSINESS_HEADER, CONTACT_PASSCODES_MAX_PER_REQUEST, PLATFORM_USER_INVITATIONS_PER_DAY, PUBLIC_API_AVAILABILITY_MAX_DAYS, PUBLIC_API_DEFAULT_PAGE_SIZE, PUBLIC_API_DEFAULT_RATE_LIMIT_PER_MINUTE, PUBLIC_API_MAX_PAGE_SIZE, PUBLIC_API_VERSION, WEBHOOK_TEST_EVENT_TYPE, apiKeyScopes, businessApiKeyScopes, platformOnlyScopes, webhookEventTypes, type ApiKeyScope, type BusinessApiKeyScope } from "./constants";
 import {
   apiAccountCalendarSchema,
+  apiAgentSchema,
   apiAppointmentCreateSchema,
   apiAppointmentRescheduleSchema,
   apiAppointmentSchema,
@@ -159,7 +160,9 @@ export const apiOperations = {
   createBusiness: { method: "POST", path: "/businesses", tag: "Platform", summary: "Create a business", description: "Platform keys only. A host's key creates a business owned by the account in the key's owner_email, and lets every key in the same group act on it. A partner's key creates a business of the partner with no owner yet, at the access_level you pick. With owner_email, the partner emails that address an invitation to own it. Without it, nobody is invited and the partner runs the business itself. With a partner's key, template_id also needs partner:read and package_id also needs partner.businesses:write. Idempotency-Key is required: a retry with the same value returns the business it created, however much later, and a different body with that value is a 422.", scope: "businesses:create", business: "none", idempotent: "required", request: "BusinessCreate", response: "Business", status: 201 },
   listBusinesses: { method: "GET", path: "/businesses", tag: "Platform", summary: "List onboarded businesses", description: "Platform keys only. Lists the active businesses the key's group onboarded, newest first. A partner's key lists every active business of the partner, including the ones its console created.", scope: "business:read", business: "none", list: true, params: [...pageParams], response: "BusinessSummary", status: 200 },
   createUser: { method: "POST", path: "/users", tag: "Platform", summary: "Invite an owner to make an account", description: `Platform keys only. Emails the address a link to sign up, so an owner with no LobbyStack account can make one and then accept your claim link. With a partner's key, the email comes from the partner and links to its dashboard. If the address already has an account, LobbyStack emails it a link to sign in instead and changes nothing. The answer is the same either way, so it never tells you whether someone has an account. No account exists until the person signs up, with a password or with Google. Idempotency-Key is required: a retry of the same request sends nothing more. One platform key can invite ${PLATFORM_USER_INVITATIONS_PER_DAY} addresses a day, and a partner's platform keys can invite ${PLATFORM_USER_INVITATIONS_PER_DAY} between them; past that the key gets a 429.`, scope: "users:create", business: "none", idempotent: "required", request: "UserCreate", response: "UserInvitation", status: 202 },
-  getReceptionist: { method: "GET", path: "/receptionist", tag: "Receptionist", summary: "Get the receptionist settings", description: "How the receptionist greets callers, what it says about the business, when it transfers calls and what it may book.", scope: "business:read", response: "Receptionist", status: 200 },
+  getReceptionist: { method: "GET", path: "/receptionist", tag: "Receptionist", summary: "Get the receptionist settings", description: "How the receptionist greets callers, what it says about the business, when it transfers calls and what it may book. In a business with several agents, it reads and changes the default agent, and /rules holds that agent's rules.", scope: "business:read", response: "Receptionist", status: 200 },
+  listAgents: { method: "GET", path: "/agents", tag: "Agents", summary: "List agents", description: "The business's agents, the default first and then the oldest, all in one page. Archived agents don't appear.", scope: "business:read", list: true, response: "Agent", status: 200 },
+  getAgent: { method: "GET", path: "/agents/{agent_id}", tag: "Agents", summary: "Get an agent", description: "An archived agent is a 404, though calls and messages it took keep its agent_id.", scope: "business:read", params: [idParam("agent_id", "agent")], response: "Agent", status: 200 },
   updateReceptionist: { method: "PATCH", path: "/receptionist", tag: "Receptionist", summary: "Update the receptionist settings", description: "Changes the fields sent and leaves the rest. Calls and chats pick up the change once the business snapshot refreshes. The business default caller language is locale on PATCH /business.", scope: "business:write", request: "ReceptionistUpdate", response: "Receptionist", status: 200 },
   listRules: { method: "GET", path: "/rules", tag: "Receptionist", summary: "List rules", description: "Every rule, active or not, in the order the receptionist reads them, all in one page. Calls follow the first 50 active rules.", scope: "business:read", list: true, response: "Rule", status: 200 },
   createRule: { method: "POST", path: "/rules", tag: "Receptionist", summary: "Add a rule", description: "Adds an instruction the receptionist follows, after the existing rules. A business can have up to 100 rules; one more is a 409.", scope: "business:write", idempotent: true, request: "RuleCreate", response: "Rule", status: 201 },
@@ -359,6 +362,7 @@ export const apiComponentSchemas = {
   PhoneNumberClaim: apiPhoneNumberClaimSchema,
   PhoneNumberClaimCreate: apiPhoneNumberClaimCreateSchema,
   Receptionist: apiReceptionistSchema,
+  Agent: apiAgentSchema,
   ReceptionistUpdate: apiReceptionistUpdateSchema,
   Rule: apiRuleSchema,
   RuleCreate: apiRuleCreateSchema,
@@ -527,7 +531,7 @@ export function buildOpenApiDocument(input: { serverUrl: string }): Record<strin
     },
     servers: [{ url: input.serverUrl }],
     security: [{ bearerAuth: [] }],
-    tags: ["Business", "Receptionist", "Billing", "Phone numbers", "Onboarding", "Team", "Website chat", "Calendars", "Notifications", "Calls", "Contacts", "Appointments", "Messages", "Knowledge", "Webhooks", "Platform", "Partner"].map((name) => ({ name })),
+    tags: ["Business", "Receptionist", "Agents", "Billing", "Phone numbers", "Onboarding", "Team", "Website chat", "Calendars", "Notifications", "Calls", "Contacts", "Appointments", "Messages", "Knowledge", "Webhooks", "Platform", "Partner"].map((name) => ({ name })),
     paths,
     webhooks,
     components: {

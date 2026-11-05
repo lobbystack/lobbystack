@@ -1,4 +1,5 @@
 export * from "./affiliates";
+export * from "./agents";
 export * from "./appointmentChanges";
 export * from "./activation";
 export * from "./billing";

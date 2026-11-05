@@ -14,9 +14,10 @@ beforeEach(() => {
   fixture.business = { name: "Clinic", defaultLocale: "en" };
   fixture.profile = undefined;
   fakeOperator.tx = {
-    select: () => ({ from: (table: unknown) => ({ where: () => ({ limit: async () => table === agents ? [fixture.profile].filter(Boolean) : [fixture.business], for: async () => [{ timezone: "America/Toronto", ...fixture.business }] }) }) }),
-    insert: () => ({ values: (value: unknown) => { fixture.insert(value); return { onConflictDoUpdate: (config: { set: unknown }) => { fixture.conflict(config.set); return { returning: async () => [{ id: "profile", updatedAt: new Date(0) }] }; } }; } }),
-    update: () => ({ set: (value: unknown) => { fixture.update(value); return { where: () => ({ returning: async () => [{ id: "business" }] }) }; } }),
+    select: () => ({ from: (table: unknown) => ({ where: () => ({ limit: async () => table === agents ? (fixture.profile ? [{ id: "profile", ...fixture.profile }] : []) : [fixture.business], for: async () => [{ timezone: "America/Toronto", ...fixture.business }] }) }) }),
+    // A business without an agent gets one from the defaults; one with an agent has it updated, which `conflict` records.
+    insert: () => ({ values: (value: unknown) => { fixture.insert(value); return { onConflictDoNothing: () => ({ returning: async () => [{ id: "profile", updatedAt: new Date(0) }] }) }; } }),
+    update: (table: unknown) => ({ set: (value: unknown) => { fixture.update(value); if (table === agents) fixture.conflict(value); return { where: () => ({ returning: async () => [table === agents ? { id: "profile", updatedAt: new Date(0) } : { id: "business" }] }) }; } }),
   };
 });
 
@@ -58,9 +59,12 @@ describe("agent settings validation", () => {
   it("marks a summary a person writes so AI never replaces it", async () => {
     expect((await patch({ summary: "Maple Family Clinic offers checkups in Toronto." })).status).toBe(200);
     expect(fixture.insert).toHaveBeenCalledWith(expect.objectContaining({ summary: "Maple Family Clinic offers checkups in Toronto.", summarySource: "operator" }));
+    fixture.profile = { greeting: "Hi" };
+    expect((await patch({ summary: "Maple Family Clinic offers checkups in Toronto." })).status).toBe(200);
     expect(fixture.conflict).toHaveBeenCalledWith(expect.objectContaining({ summarySource: "operator" }));
   });
   it("hands the summary back to AI and queues a regeneration", async () => {
+    fixture.profile = { greeting: "Hi" };
     expect((await patch({ regenerateSummary: true })).status).toBe(200);
     expect(fixture.conflict).toHaveBeenCalledWith(expect.objectContaining({ summarySource: "generated" }));
     expect(fixture.enqueue).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ topic: "business.generateSummary", businessId: "business", payload: expect.objectContaining({ force: true }) }));
