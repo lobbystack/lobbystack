@@ -75,6 +75,8 @@ test("the sidebar opens the website widget page, where an owner creates, edits, 
     const created = page.waitForResponse((response) => response.url().endsWith("/api/businesses") && response.request().method() === "POST");
     await page.getByRole("button", { name: onboarding.businessName.continue }).click();
     businessId = (await (await created).json() as { businessId: string }).businessId;
+    // Let the form's own navigation settle before this test moves the stage on.
+    await expect(page).toHaveURL("/onboarding/website");
     // The rest of onboarding has its own journeys; the dashboard opens once it's complete.
     await database.db.update(businesses).set({ onboardingStage: "complete" }).where(eq(businesses.id, businessId));
 

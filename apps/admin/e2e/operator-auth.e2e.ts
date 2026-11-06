@@ -122,9 +122,8 @@ async function createWorkspace(page: Page, identity: string): Promise<string> {
 async function completeOnboardingBySkippingOptionalInputs(page: Page, businessId: string): Promise<void> {
   await page.getByRole("button", { name: "I don't have a website" }).click();
   await expect(page).toHaveURL("/onboarding/language");
+  // Onboarding goes forward only: Back lands on the current step.
   await page.goBack();
-  await expect(page).toHaveURL("/onboarding/website");
-  await page.goForward();
   await expect(page).toHaveURL("/onboarding/language");
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page).toHaveURL("/onboarding/verify-phone");
