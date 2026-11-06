@@ -212,7 +212,7 @@ function templateHtml(template: TemplateName, subject: string, variables: Record
       return renderLetterHtml(brand, subject, variables, copy.lines, copy.action, variables.url, brand.name);
     }
     case "onboarding_followup":
-      return undefined;
+      return onboardingFollowupHtml(variables, brand);
   }
 }
 
@@ -851,6 +851,33 @@ function onboardingFollowupBody(variables: Record<string, string>, brand: EmailB
     sender,
     copy.title,
   ].join("\n");
+}
+
+/**
+ * The founder's note as a personal email: plain paragraphs and one text link
+ * per answer. It stays out of the branded layout, and the text part remains
+ * the same note with each answer above its link.
+ */
+function onboardingFollowupHtml(variables: Record<string, string>, brand: EmailBrand): string {
+  const locale = variables.locale === "fr" || variables.locale === "es" || variables.locale === "sr" ? variables.locale : "en";
+  const copy = CHECK_IN_COPY[locale];
+  const sender = variables.senderName ?? "";
+  const paragraph = (text: string, margin = "0 0 16px") => `<p style="margin:${margin};font-size:16px;line-height:1.6;color:#0B0B0D;">${escapeHtml(text)}</p>`;
+  const answers = CHECK_IN_ANSWERS.map((answer) => {
+    const url = `${brand.origin}/${locale}/check-in/${variables[checkInTokenVariable(answer)] ?? ""}`;
+    return `<p style="margin:0 0 8px;font-size:16px;line-height:1.6;"><a href="${escapeHtml(url)}" style="color:#0B0B0D;">${escapeHtml(copy.answers[answer])}</a></p>`;
+  });
+  return [
+    "<!doctype html><html><body style=\"margin:0;padding:0;background:#FFFFFF;\">",
+    "<div style=\"max-width:560px;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;\">",
+    paragraph(copy.greeting(variables.firstName ?? "")),
+    paragraph(copy.intro(sender, variables.businessName ?? "")),
+    paragraph(copy.question, "0 0 12px"),
+    ...answers,
+    paragraph(copy.close, "16px 0"),
+    `<p style="margin:0;font-size:16px;line-height:1.6;color:#0B0B0D;">${escapeHtml(sender)}<br />${escapeHtml(copy.title)}</p>`,
+    "</div></body></html>",
+  ].join("");
 }
 
 type NoticeCopy = { heading: string; lines: string[]; action: string | null };
