@@ -30,7 +30,7 @@ import { isLivePrototypeEnabled, type LiveRecoveryOutcome } from "./liveCalls";
 import { deleteReleasedCalendarEvent, reconcileBusinessCalendar, retireCalendarWebhook, syncAppointmentCalendar, type CalendarProviders } from "./calendarJobs";
 import { refreshInstagramToken, replyToInstagramMessage, sendInstagramMessage, type InstagramOperations } from "./instagramJobs";
 import { replyToTextMessage } from "./textReplyJobs";
-import { getMeter } from "@lobbystack/telemetry/node";
+import { emitInfoLog, getMeter } from "@lobbystack/telemetry/node";
 import { bucketOutboxBacklog, getPostHogDistinctIdForBusinessSystem, redactTelemetryProperties, type TelemetryProperties } from "@lobbystack/telemetry";
 
 const ragMeter = getMeter("lobbystack-rag");
@@ -131,6 +131,17 @@ function providerFailureReason(failure: ProviderFailure): string {
 /** The wait before retrying a provider call that first failed this long ago. */
 function providerRetryAt(elapsedMs: number): Date {
   return new Date(Date.now() + providerRetryDelayMs(elapsedMs));
+}
+
+
+/**
+ * A checkout's progress: when Polar defers it and when it opens. The log holds
+ * no customer data, and console.info keeps it in the container without a
+ * second OTel record.
+ */
+function logCheckout(event: string, attributes: Record<string, string | number | boolean>): void {
+  emitInfoLog("lobbystack-worker", event, attributes);
+  console.info(JSON.stringify({ event, ...attributes }));
 }
 
 const MESSAGE_PRICE_WAIT_MS = 60 * 60_000;
@@ -818,6 +829,12 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           idempotencyKey: `billing-checkout:${requestId}`,
         });
         await markBillingCheckoutCreated(dependencies.domain, { businessId, requestId, ...checkout });
+        logCheckout("billing.checkout_created", {
+          requestId,
+          target: request.target,
+          interval: request.billingInterval,
+          elapsedMs: Date.now() - (execution.queuedAtMs ?? Date.now()),
+        });
         return { status: "completed", entityId: requestId };
       } catch (error) {
         const failure = providerFailure(error);
@@ -825,7 +842,17 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           // Polar is unreachable, not refusing. Keep the request processing and
           // try again after a delay, within the outage window.
           const retry = await deferBillingCheckoutRequest(dependencies.domain, { businessId, requestId });
-          if (retry.status === "deferred") return { status: "deferred", entityId: requestId, retryAt: retry.retryAt };
+          if (retry.status === "deferred") {
+            logCheckout("billing.checkout_deferred", {
+              requestId,
+              target: request.target,
+              interval: request.billingInterval,
+              status: failure.status ?? 0,
+              elapsedMs: Date.now() - (execution.queuedAtMs ?? Date.now()),
+              retryInMs: retry.retryAt.getTime() - Date.now(),
+            });
+            return { status: "deferred", entityId: requestId, retryAt: retry.retryAt };
+          }
           if (retry.status !== "failed") return { status: "skipped", entityId: requestId };
         }
         // A checkout someone waited on failed for good. Fail the job once, with
@@ -864,6 +891,12 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           idempotencyKey: `partner-checkout:${requestId}`,
         });
         await markPartnerCheckoutCreated(dependencies.domain, { ...request, ...checkout });
+        logCheckout("billing.partner_checkout_created", {
+          requestId,
+          tier: checkoutRequest.tier,
+          interval: checkoutRequest.billingInterval,
+          elapsedMs: Date.now() - (execution.queuedAtMs ?? Date.now()),
+        });
         return { status: "completed", entityId: requestId };
       } catch (error) {
         const failure = providerFailure(error);
@@ -871,7 +904,17 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           // Polar is unreachable, not refusing. Keep the request processing and
           // try again after a delay, within the outage window.
           const retry = await deferPartnerCheckoutRequest(dependencies.domain, request);
-          if (retry.status === "deferred") return { status: "deferred", entityId: requestId, retryAt: retry.retryAt };
+          if (retry.status === "deferred") {
+            logCheckout("billing.partner_checkout_deferred", {
+              requestId,
+              tier: checkoutRequest.tier,
+              interval: checkoutRequest.billingInterval,
+              status: failure.status ?? 0,
+              elapsedMs: Date.now() - (execution.queuedAtMs ?? Date.now()),
+              retryInMs: retry.retryAt.getTime() - Date.now(),
+            });
+            return { status: "deferred", entityId: requestId, retryAt: retry.retryAt };
+          }
           if (retry.status !== "failed") return { status: "skipped", entityId: requestId };
         }
         // A checkout someone waited on failed for good. Fail the job once, with
