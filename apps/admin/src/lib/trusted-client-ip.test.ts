@@ -48,9 +48,15 @@ describe("trusted client IP derivation", () => {
     vi.stubEnv("TRUSTED_CLIENT_IP_HEADER", "");
     expect(trustedClientCountry(request({ "cf-ipcountry": "CA" }))).toBeUndefined();
     vi.stubEnv("TRUSTED_CLIENT_IP_HEADER", "x-real-ip");
+    expect(trustedClientCountry(request({ "cf-ipcountry": " ca " }))).toBeUndefined();
+    vi.stubEnv("TRUSTED_CLIENT_COUNTRY_HEADER", "cf-ipcountry");
+    expect(trustedClientCountry(request({ "cf-ipcountry": " ca " }))).toBe("CA");
+    vi.stubEnv("TRUSTED_CLIENT_COUNTRY_HEADER", "");
+    vi.stubEnv("TRUSTED_CLIENT_IP_HEADER", "cf-connecting-ip");
     expect(trustedClientCountry(request({ "cf-ipcountry": " ca " }))).toBe("CA");
     expect(trustedClientCountry(request({}))).toBeUndefined();
     expect(trustedClientCountry(request({ "cf-ipcountry": "Canada" }))).toBeUndefined();
+    vi.stubEnv("TRUSTED_CLIENT_IP_HEADER", "cf-connecting-ip");
     expect(trustedClientCountryFromHeaders(new Headers({ "cf-ipcountry": "T1" }))).toBe("T1");
   });
 
