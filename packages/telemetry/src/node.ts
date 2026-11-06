@@ -16,7 +16,7 @@ import { resourceFromAttributes } from "@opentelemetry/resources";
 import { BatchLogRecordProcessor, type LogRecordProcessor } from "@opentelemetry/sdk-logs";
 import { PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
 import { NodeSDK } from "@opentelemetry/sdk-node";
-import { BatchSpanProcessor, type ReadableSpan, type SpanProcessor } from "@opentelemetry/sdk-trace-base";
+import { BatchSpanProcessor, ParentBasedSampler, TraceIdRatioBasedSampler, type ReadableSpan, type SpanProcessor } from "@opentelemetry/sdk-trace-base";
 import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { UndiciInstrumentation } from "@opentelemetry/instrumentation-undici";
 import { monitorEventLoopDelay } from "node:perf_hooks";
@@ -26,6 +26,16 @@ import { PostHog } from "posthog-node";
 import { maskString, redactOtelAttributes, redactSignedStorageUrls, shouldRedactKey } from "./redaction.js";
 
 export { redactOtelAttributes } from "./redaction.js";
+
+/**
+ * The share of traces to keep when the environment names no sampler. Every
+ * database transaction and outgoing call makes a span, so a busy worker writes
+ * gigabytes a day at 100%; errors reach error tracking on their own.
+ */
+export function traceSampleRatio(env: NodeJS.ProcessEnv = process.env): number {
+  const ratio = Number(env.OTEL_TRACES_SAMPLER_ARG ?? "0.1");
+  return Number.isFinite(ratio) && ratio >= 0 && ratio <= 1 ? ratio : 0.1;
+}
 
 export type TelemetryInitializationOptions = {
   serviceName?: string;
@@ -168,6 +178,8 @@ export async function initializeTelemetry(
   activeLogRecordProcessors = logRecordProcessors;
 
   sdk = new NodeSDK({
+    // OTEL_TRACES_SAMPLER wins when a deployment sets one.
+    ...(process.env.OTEL_TRACES_SAMPLER ? {} : { sampler: new ParentBasedSampler({ root: new TraceIdRatioBasedSampler(traceSampleRatio()) }) }),
     resource,
     spanProcessors: [new RedactingSpanProcessor(), new BatchSpanProcessor(new OTLPTraceExporter({ url: `${endpoint}/v1/traces` }))],
     logRecordProcessors,
