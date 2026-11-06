@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -33,15 +33,28 @@ export function OnboardingRouteShell({ children }: { children: React.ReactNode }
   const hasPrimaryNumber = Boolean(phones.data?.phoneNumbers.some(number => !number.reclaimScheduledAt));
   const selectedNumber = route.key === "number" && hasPrimaryNumber && ["goal", "attribution", "meet", "complete"].includes(stage ?? "");
   // A browser back may restore an earlier page without asking the server, so
-  // send it forward too. The number picker stays open from later steps.
+  // send it forward too. Only a history traversal runs this check: the stage
+  // also moves after a form submits and after a normal navigation starts, and
+  // redirecting then would race the surface's own navigation.
+  const currentStage = useRef(stage);
+  useEffect(() => { currentStage.current = stage; }, [stage]);
+  const restoredPath = useRef<string | null>(null);
   useEffect(() => {
-    if (!stage) return;
-    const current = normalizeOnboardingStage(stage);
+    const remember = () => { restoredPath.current = window.location.pathname; };
+    window.addEventListener("popstate", remember);
+    return () => window.removeEventListener("popstate", remember);
+  }, []);
+  useEffect(() => {
+    const restored = restoredPath.current;
+    if (!restored) return;
+    restoredPath.current = null;
+    if (restored !== pathname || !currentStage.current) return;
+    const stageNow = normalizeOnboardingStage(currentStage.current);
     const expected = ROUTE_STAGE[route.key];
     if (!expected) return;
-    if (route.key === "number" && ["phone_number", "phone_number_claiming", "goal", "attribution", "meet", "complete"].includes(current)) return;
-    if (onboardingStages.indexOf(current) > onboardingStages.indexOf(expected)) router.replace(resolveOnboardingRoute(current));
-  }, [route.key, router, stage]);
+    const numberPickerStaysOpen = route.key === "number" && ["phone_number", "phone_number_claiming", "goal", "attribution", "meet", "complete"].includes(stageNow);
+    if (!numberPickerStaysOpen && onboardingStages.indexOf(stageNow) > onboardingStages.indexOf(expected)) router.replace(resolveOnboardingRoute(stageNow));
+  }, [pathname, route.key, router]);
   return (
     <ReplacementOnboardingShell
       description={DESCRIBED.has(route.key) ? t(`${route.key}.description`) : ""}
