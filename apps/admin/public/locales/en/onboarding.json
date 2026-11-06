@@ -289,7 +289,8 @@
     },
     "continue": "Continue",
     "continuing": "Continuing...",
-    "continueFailed": "We couldn't continue right now. Please try again."
+    "continueFailed": "We couldn't continue right now. Please try again.",
+    "backToPlans": "Back to plans"
   },
   "noBusinesses": {
     "title": "No workspace here yet",

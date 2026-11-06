@@ -290,7 +290,8 @@
     },
     "continue": "Continuar",
     "continuing": "Continuando...",
-    "continueFailed": "No pudimos continuar en este momento. Inténtelo de nuevo."
+    "continueFailed": "No pudimos continuar en este momento. Inténtelo de nuevo.",
+    "backToPlans": "Volver a los planes"
   },
   "noBusinesses": {
     "title": "Todavía no hay ningún espacio de trabajo aquí",

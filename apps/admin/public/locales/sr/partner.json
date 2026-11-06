@@ -707,7 +707,8 @@
       "annualDiscount": "Uštedite 20%",
       "action": "Izaberi {{tier}}",
       "opening": "Otvaranje plaćanja…",
-      "slow": "Provajder plaćanja je spor. I dalje otvaramo plaćanje…"
+      "slow": "Provajder plaćanja je spor. I dalje otvaramo plaćanje…",
+      "backToPlans": "Nazad na nivoe"
     },
     "portal": {
       "action": "Upravljaj pretplatom",

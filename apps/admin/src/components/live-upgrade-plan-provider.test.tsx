@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -11,7 +11,7 @@ const alerts = vi.hoisted(() => ({ error: vi.fn() }));
 vi.mock("sonner", () => ({ toast: alerts }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }) }));
 const clients: QueryClient[] = [];
-afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
+afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.useRealTimers(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
 function OpenButton() { const open = useOpenUpgradePlanDialog(); return <button onClick={open}>Open plans</button>; }
 
 describe("restarting a plan that lapsed", () => {
@@ -197,6 +197,42 @@ describe("telling the dashboard an upgrade is under way", () => {
       : Response.json({ status: "error", checkoutUrl: null, error: "provider_unavailable:503" }));
     await userEvent.click(screen.getByRole("button", { name: "Get Pro" }));
     await waitFor(() => expect(alerts.error).toHaveBeenCalledWith("billing.toast.paymentsUnavailable"));
+  });
+
+  it("stops polling after a minute, says payments are unavailable, and leaves the checkout running when closed", async () => {
+    vi.useFakeTimers();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    clients.push(client);
+    client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
+    client.setQueryData(["billing", "business"], { account: { plan: "free_cloud" }, availableCheckoutPlans: ["starter", "pro"], availableCheckoutIntervals: { starter: ["annual"], pro: ["annual"] } });
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => init?.method === "POST"
+      ? Response.json({ requestId: "request" })
+      : Response.json({ status: "pending", checkoutUrl: null, error: null }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<QueryClientProvider client={client}><LiveUpgradePlanProvider><OpenButton /></LiveUpgradePlanProvider></QueryClientProvider>);
+    fireEvent.click(screen.getByRole("button", { name: "Open plans" }));
+    fireEvent.click(screen.getByRole("button", { name: "Get Pro" }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(fetchMock.mock.calls.filter(([, init]) => init?.method === "POST")).toHaveLength(1);
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(1);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
+    expect(screen.getByRole("status").textContent).toBe("billing.upgradeDialog.providerSlow");
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(50_000); });
+    expect(screen.getByRole("alert").textContent).toContain("billing.toast.paymentsUnavailable");
+    expect(screen.queryByRole("status")).toBeNull();
+    const polled = fetchMock.mock.calls.length;
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
+    expect(fetchMock.mock.calls.length).toBe(polled);
+
+    fireEvent.click(screen.getByRole("button", { name: "billing.upgradeDialog.close" }));
+    expect(screen.queryByRole("alert")).toBeNull();
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
+    expect(fetchMock.mock.calls.length).toBe(polled);
+    const post = fetchMock.mock.calls.find(([, init]) => init?.method === "POST")!;
+    expect((post[1] as RequestInit).signal).toBeUndefined();
   });
 
   it("lets go once a failed checkout's picker is closed, and on unmount", async () => {

@@ -189,6 +189,7 @@
       "title": "Upgrade plan",
       "description": "Choose the plan that works best for your team.",
       "providerSlow": "The payment provider is slow. Still opening checkout...",
+      "close": "Close",
       "enterpriseSubject": "Enterprise plan",
       "billingIntervalLabel": "Billing interval",
       "annualDiscount": "Save 20%",

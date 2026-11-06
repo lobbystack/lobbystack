@@ -189,6 +189,7 @@
       "title": "Cambiar de plan",
       "description": "Elija el plan que mejor se adapte a su equipo.",
       "providerSlow": "El proveedor de pagos está lento. Seguimos abriendo el pago...",
+      "close": "Cerrar",
       "enterpriseSubject": "Plan Enterprise",
       "billingIntervalLabel": "Periodicidad de facturación",
       "annualDiscount": "Ahorre un 20 %",

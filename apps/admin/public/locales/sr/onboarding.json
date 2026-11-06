@@ -290,7 +290,8 @@
     },
     "continue": "Nastavi",
     "continuing": "Nastavljanje...",
-    "continueFailed": "Trenutno ne možemo da nastavimo. Pokušajte ponovo."
+    "continueFailed": "Trenutno ne možemo da nastavimo. Pokušajte ponovo.",
+    "backToPlans": "Nazad na pakete"
   },
   "noBusinesses": {
     "title": "Ovde još nemate radni prostor",
