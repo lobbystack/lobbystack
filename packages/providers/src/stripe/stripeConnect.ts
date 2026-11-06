@@ -277,14 +277,14 @@ const PLATFORM_NOT_READY_MESSAGE = "Payments aren't ready on this dashboard yet.
 /**
  * A failure to open onboarding for a partner's account. A platform account the
  * host hasn't set up is the host's to fix, so it gets its own code for the
- * console to explain and is not logged; any other Stripe failure keeps its
- * type, code and message in the server log, without the request itself.
+ * console to explain. Every Stripe failure keeps its type, code and message in
+ * the server log, without the request itself, so the host sees it too.
  */
 function onboardingFailure(error: unknown): unknown {
   if (!(error instanceof Stripe.errors.StripeError)) return error;
-  if (isPlatformNotReadyError(error)) return Object.assign(new Error(PLATFORM_NOT_READY_MESSAGE), { status: 409, code: "stripe_platform_not_ready" });
-  console.error("[stripe-connect] onboarding failed", { type: error.rawType ?? error.type, code: error.code ?? null, message: error.message });
-  return error;
+  const platformNotReady = isPlatformNotReadyError(error);
+  console.error(platformNotReady ? "[stripe-connect] platform account not ready" : "[stripe-connect] onboarding failed", { type: error.rawType ?? error.type, code: error.code ?? null, message: error.message });
+  return platformNotReady ? Object.assign(new Error(PLATFORM_NOT_READY_MESSAGE), { status: 409, code: "stripe_platform_not_ready" }) : error;
 }
 
 export class StripeConnectAdapter implements StripeConnectProvider {
