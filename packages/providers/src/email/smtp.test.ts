@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { emailSender, hostBrand, resolveBrandLinks, type Brand } from "@lobbystack/shared";
 
 import hostEmails from "./__fixtures__/host-emails.json";
-import { SmtpEmailProvider } from "./smtp";
+import { SmtpEmailProvider, isPermanentSmtpRejection } from "./smtp";
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -165,6 +165,13 @@ describe("emails under a partner's brand", () => {
 });
 
 describe("SMTP delivery", () => {
+  it("recognizes a provider's permanent 5xx rejection but not a temporary one", () => {
+    expect(isPermanentSmtpRejection(Object.assign(new Error("Message failed: 550 This API key is not authorized to send emails from receptionistportal.com"), { responseCode: 550, code: "EENVELOPE" }))).toBe(true);
+    expect(isPermanentSmtpRejection({ response: "554 5.7.1 Sender rejected" })).toBe(true);
+    expect(isPermanentSmtpRejection(Object.assign(new Error("Try again later"), { responseCode: 451 }))).toBe(false);
+    expect(isPermanentSmtpRejection(new Error("connect ECONNREFUSED 127.0.0.1:587"))).toBe(false);
+    expect(isPermanentSmtpRejection(undefined)).toBe(false);
+  });
   it("blocks unapproved certification recipients before SMTP delivery", async () => {
     vi.stubEnv("LOBBYSTACK_CERTIFICATION_MODE", "true");
     vi.stubEnv("LOBBYSTACK_CERTIFICATION_EMAILS", "approved@example.invalid");

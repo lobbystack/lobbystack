@@ -1,13 +1,14 @@
 import { createHash, randomUUID } from "node:crypto";
 import Redis from "ioredis";
-import { and, eq, inArray, isNull, lte, ne, or } from "drizzle-orm";
+import { and, eq, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
+import { UnrecoverableError } from "bullmq";
 
 import { hasSummarizableTranscript, type BusinessHoursExtractor, type BusinessSummarizer, type CallSummarizer } from "@lobbystack/agent-core";
 import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
 import { HOST_EMAIL_BRAND, billingMeterEventNames, detectSiteLanguage, emailSender, getPolarMeteredUsagePayload, intlLocale, isUuid, normalizeRuntimeLocale, parseEmailBrandReference, partnerFeatures, partnerTierProductId, type BillingUsageKind, type EmailBrandReference } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { enqueueKnowledgeDerivedRefresh, finishBusinessSummaryRegenerate, forgetStaleRetiredCalendarTokens, loadBusinessHoursInput, loadBusinessSummaryInput, markBusinessHoursChecked, resetGeneratedBusinessSummary, saveGeneratedBusinessHours, saveGeneratedBusinessSummary, type SummaryRegenerateOutcome } from "@lobbystack/domain";
-import { billingCheckoutLeaseEndsAt, checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteStoredObjects, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
+import { billingCheckoutLeaseEndsAt, checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteStoredObjects, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, embeddingInputsForChunk, hashContent, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
 import { deliverOutbound, markFeedbackEmailFailed, markFeedbackEmailSent, queueDailyOperatorSummaries, refreshUnitEconomicsMonth } from "@lobbystack/domain";
 import { NUMBER_ORDER_MAX_WAIT_MS, claimNumberProvisioning, completeNumberProvisioning, deferNumberProvisioning, desiredNumberRouting, refreshStaleRefusedCallForwards, enqueueNumberRouting, resolveRefusedCallForward, failNumberProvisioning, isSharedSmsSender, loadNumberReleaseEmail, loadNumberTrialEmail, numberProvisioningLeaseEndsAt, sharedSmsSender, sweepNumberReleases, sweepNumberTrial } from "@lobbystack/domain";
 import { createWebhookSender, processWebhookDelivery, pruneApiHistory, prunePartnerApiIdempotencyKeys, type WebhookSender } from "@lobbystack/domain";
@@ -18,7 +19,7 @@ import { advancePartnerLifecycles, claimPartnerCheckoutRequest, keepPartnerTrial
 import { checkPartnerCustomDomains, provisionPartnerCustomDomain, removePartnerCustomHostname, type CustomDomainProviders } from "@lobbystack/domain";
 import { brandForEmail, businessExists, businessGetsHostEmails, hostBrandFromEnvironment, isHostOnlyEmailTemplate } from "@lobbystack/domain";
 import type { DomainContext } from "@lobbystack/domain";
-import { numberReleaseEmailSubject, numberTrialEmailSubject, type SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
+import { numberReleaseEmailSubject, numberTrialEmailSubject, isPermanentSmtpRejection, type SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
 import type { RuntimeStorageProvider } from "@lobbystack/providers/storage/provider";
 import { NumberOrderPendingError } from "@lobbystack/providers/telephony/types";
 import type { Telephony } from "@lobbystack/providers/telephony/registry";
@@ -476,20 +477,24 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       let reembedded = 0;
       while (true) {
         const rows = await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) =>
-          await tx.select({ id: knowledgeChunks.id, content: knowledgeChunks.content })
+          await tx.select({ id: knowledgeChunks.id, documentId: knowledgeChunks.documentId, content: knowledgeChunks.content })
             .from(knowledgeChunks)
             .where(and(eq(knowledgeChunks.businessId, businessId), or(isNull(knowledgeChunks.embeddingFingerprint), ne(knowledgeChunks.embeddingFingerprint, fingerprint), isNull(knowledgeChunks.embedding), eq(knowledgeChunks.embeddingStatus, "pending"), eq(knowledgeChunks.embeddingStatus, "failed"))))
             .limit(batchSize),
         );
         if (rows.length === 0) break;
         const rowIds = rows.map((row) => row.id);
+        // A chunk stored by an older pipeline can exceed the provider's input
+        // limit. Embed each split part, then store the parts as their own rows.
+        const batches = rows.map((row) => ({ row, contents: embeddingInputsForChunk(row.content) }));
+        const inputs = batches.flatMap((batch) => batch.contents);
         let embeddings: number[][];
         try {
           await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
             await tx.update(knowledgeChunks).set({ embeddingStatus: "pending", embeddingError: null, updatedAt: new Date() }).where(and(eq(knowledgeChunks.businessId, businessId), inArray(knowledgeChunks.id, rowIds)));
           });
-          embeddings = await dependencies.embeddings.embed(rows.map((row) => row.content));
-          if (embeddings.length !== rows.length) throw new Error("Embedding provider returned an incomplete re-embedding batch.");
+          embeddings = await dependencies.embeddings.embed(inputs);
+          if (embeddings.length !== inputs.length) throw new Error("Embedding provider returned an incomplete re-embedding batch.");
           if (embeddings.some((embedding) => embedding.length !== 1536 || embedding.some((value) => !Number.isFinite(value)) || embedding.every((value) => value === 0))) {
             throw new Error("Embedding provider returned an incompatible re-embedding vector.");
           }
@@ -500,10 +505,35 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           throw error;
         }
         await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
-          for (const [index, row] of rows.entries()) {
-            const embedding = embeddings[index];
-            if (!embedding) throw new Error("Embedding provider returned an incompatible re-embedding vector.");
-            await tx.update(knowledgeChunks).set({ embedding, embeddingFingerprint: fingerprint, embeddingStatus: "completed", embeddingError: null, updatedAt: new Date() }).where(and(eq(knowledgeChunks.id, row.id), eq(knowledgeChunks.businessId, businessId)));
+          const nextSequence = new Map<string, number>();
+          const split = batches.filter((batch) => batch.contents.length > 1);
+          if (split.length > 0) {
+            const maxima = await tx.select({ documentId: knowledgeChunks.documentId, sequence: sql<number>`max(${knowledgeChunks.sequence})` })
+              .from(knowledgeChunks)
+              .where(and(eq(knowledgeChunks.businessId, businessId), inArray(knowledgeChunks.documentId, [...new Set(split.map((batch) => batch.row.documentId))])))
+              .groupBy(knowledgeChunks.documentId);
+            for (const maximum of maxima) nextSequence.set(maximum.documentId, Number(maximum.sequence) + 1);
+          }
+          let index = 0;
+          for (const { row, contents } of batches) {
+            const [first, ...rest] = contents;
+            const embedding = embeddings[index++];
+            if (first === undefined || !embedding) throw new Error("Embedding provider returned an incompatible re-embedding vector.");
+            await tx.update(knowledgeChunks).set({
+              ...(rest.length > 0 ? { content: first, contentHash: hashContent(first) } : {}),
+              embedding,
+              embeddingFingerprint: fingerprint,
+              embeddingStatus: "completed",
+              embeddingError: null,
+              updatedAt: new Date(),
+            }).where(and(eq(knowledgeChunks.id, row.id), eq(knowledgeChunks.businessId, businessId)));
+            for (const content of rest) {
+              const piece = embeddings[index++];
+              const sequence = nextSequence.get(row.documentId);
+              if (!piece || sequence === undefined) throw new Error("Embedding provider returned an incompatible re-embedding vector.");
+              await tx.insert(knowledgeChunks).values({ businessId, documentId: row.documentId, sequence, content, contentHash: hashContent(content), embedding: piece, embeddingFingerprint: fingerprint, embeddingStatus: "completed", embeddingError: null });
+              nextSequence.set(row.documentId, sequence + 1);
+            }
           }
         });
         reembedded += rows.length;
@@ -569,6 +599,13 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           if (feedbackSubmissionId) await markFeedbackEmailSent(dependencies.domain, { feedbackSubmissionId, ...(businessId ? { businessId } : {}), providerMessageId: sent.messageId });
         } catch (error) {
           if (feedbackSubmissionId) await markFeedbackEmailFailed(dependencies.domain, { feedbackSubmissionId, ...(businessId ? { businessId } : {}), error: error instanceof Error ? error.message : String(error) }).catch(() => undefined);
+          // A 5xx SMTP response refuses this sender or message for good;
+          // retrying it only fills the failed set. Report it and give up.
+          if (isPermanentSmtpRejection(error)) {
+            const code = typeof (error as { responseCode?: unknown }).responseCode === "number" ? (error as { responseCode: number }).responseCode : null;
+            console.error(JSON.stringify({ event: "email.rejected", template, code }));
+            throw new UnrecoverableError(`Email delivery rejected permanently: ${error instanceof Error ? error.message : String(error)}`);
+          }
           throw error;
         }
       }
@@ -717,7 +754,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const businessId = businessIdOrThrow(job);
       const monthKey = typeof job.payload.monthKey === "string" ? job.payload.monthKey : undefined;
       const rollupId = await refreshUnitEconomicsMonth(dependencies.domain, { businessId, ...(monthKey ? { monthKey } : {}) });
-      return { status: "completed", entityId: rollupId };
+      return rollupId ? { status: "completed", entityId: rollupId } : { status: "skipped", entityId: businessId };
     }
     case "billing.createCheckout": {
       const businessId = businessIdOrThrow(job);

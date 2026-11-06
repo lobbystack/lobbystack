@@ -195,6 +195,20 @@ describe("worker handlers", () => {
     expect(queueForJobType["email.sendNotice"]).toBe("default");
   });
 
+  it("stops retrying an email whose sender the mail provider refuses for good", async () => {
+    const error = Object.assign(new Error("Message failed: 550 This API key is not authorized to send emails from receptionistportal.com"), { responseCode: 550, code: "EENVELOPE" });
+    const email = { sendTemplate: vi.fn().mockRejectedValue(error) };
+    const job = { jobId: randomUUID(), businessId: null, type: "email.send" as const, queue: "default" as const, payload: { template: "verify_email", to: "owner@example.test", variables: { code: "123456" }, brand: { kind: "host" }, replyTo: null }, trace: {}, idempotencyKey: randomUUID(), scheduled: false };
+    await expect(handleJob(job, { domain: { db: savedBranding(null) }, email })).rejects.toMatchObject({ name: "UnrecoverableError", message: expect.stringContaining("receptionistportal.com") });
+  });
+
+  it("still retries a temporary SMTP rejection", async () => {
+    const error = Object.assign(new Error("Try again later"), { responseCode: 451 });
+    const email = { sendTemplate: vi.fn().mockRejectedValue(error) };
+    const job = { jobId: randomUUID(), businessId: null, type: "email.send" as const, queue: "default" as const, payload: { template: "verify_email", to: "owner@example.test", variables: { code: "123456" }, brand: { kind: "host" }, replyTo: null }, trace: {}, idempotencyKey: randomUUID(), scheduled: false };
+    await expect(handleJob(job, { domain: { db: savedBranding(null) }, email })).rejects.toBe(error);
+  });
+
   it("writes an email under the brand it reads when it sends: name, links, sender and Reply-To", async () => {
     const businessId = randomUUID();
     const partner: Brand = { kind: "partner", partnerId: "partner-1", name: "Bright Desk", logoUrl: null, faviconUrl: null, color: null, origin: "https://bright.example.test", links: { website: null, terms: null, privacy: null, support: null }, email: { fromName: "Bright Desk", fromAddress: "no-reply@bright.example.test", replyTo: "help@bright.example.test" } };

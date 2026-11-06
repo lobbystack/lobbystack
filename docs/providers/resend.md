@@ -29,6 +29,7 @@ For local development, start Mailpit with `docker compose --env-file .env --prof
 ## Operate email in production
 
 - Use a verified sender domain with SPF and DKIM.
+- Verify the partner base domain (`PARTNER_BASE_DOMAIN`) in Resend too. Partner emails send from `no-reply@` that domain, so the SMTP key needs sending access to every domain it sends from; a key scoped to the host's domain only gets a 550 for partner mail.
 - Keep SMTP credentials on admin/worker server runtimes only.
 - Monitor outbox retries and dead-letter jobs.
 - Store feedback before attempting delivery so provider outages do not lose submissions.

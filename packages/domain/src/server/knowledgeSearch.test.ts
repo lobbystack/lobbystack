@@ -5,7 +5,8 @@ import type { KnowledgePassage } from "../knowledgeRanking";
 
 const mocks = vi.hoisted(() => ({ transaction: vi.fn() }));
 vi.mock("@lobbystack/db", async original => ({ ...(await original<typeof import("@lobbystack/db")>()), withBusinessTransaction: mocks.transaction }));
-import { chunkText, searchKnowledgeEvidence } from "./knowledge";
+import { chunkText, embeddingInputsForChunk, searchKnowledgeEvidence } from "./knowledge";
+import { countKnowledgeTokens, EMBEDDING_INPUT_TOKEN_BUDGET } from "../knowledgeRanking";
 
 const primary: KnowledgePassage = { chunkId: "chunk", documentId: "document", title: "BAA", content: "Management", sourceUrl: "https://example.com/baa", sourceRevision: 3, sequence: 1 };
 const adjacent: KnowledgePassage = { ...primary, chunkId: "adjacent", sequence: 2, content: "MNGT 10407 — Approches du management." };
@@ -99,5 +100,19 @@ describe("knowledge chunk boundaries", () => {
   it("handles blank text and rejects non-progressing sizes", () => {
     expect(chunkText("  \n ")).toEqual([]);
     expect(() => chunkText("hello", { maxCharacters: 0 })).toThrow();
+  });
+  it("splits by tokens when a caller allows chunks over the embedding input limit", () => {
+    const text = "Notre clinique est ouverte du lundi au vendredi. ".repeat(4_000);
+    const chunks = chunkText(text, { maxCharacters: 1_000_000, overlap: 0 });
+    expect(chunks.length).toBeGreaterThan(1);
+    expect(chunks.every(chunk => countKnowledgeTokens(chunk) <= EMBEDDING_INPUT_TOKEN_BUDGET)).toBe(true);
+    expect(chunks.join(" ")).toBe(text.trim());
+  });
+  it("splits a stored chunk that exceeds the embedding input limit instead of truncating it", () => {
+    const content = "ж".repeat(20_000);
+    const inputs = embeddingInputsForChunk(content);
+    expect(inputs.length).toBeGreaterThan(1);
+    expect(inputs.every(input => countKnowledgeTokens(input) <= EMBEDDING_INPUT_TOKEN_BUDGET)).toBe(true);
+    expect(inputs.join("")).toBe(content);
   });
 });
