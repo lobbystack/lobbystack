@@ -194,7 +194,7 @@
     "title": "Ponude",
     "loadFailed": "Nismo uspeli da učitamo Vaše ponude. Osvežite stranicu i pokušajte ponovo.",
     "managersOnly": "Samo vlasnici i administratori mogu da vide ponude.",
-    "notConfigured": "Plaćanja nisu uključena na ovoj kontrolnoj tabli, pa sami naplaćujete svojim firmama.",
+    "notConfigured": "Ova kontrolna tabla ne obrađuje plaćanja, pa sami naplaćujete svojim firmama.",
     "connectFirst": {
       "owner": "Povežite nalog za plaćanje da biste prodavali ponude.",
       "admin": "Zamolite vlasnika da poveže nalog za plaćanje kako biste prodavali ponude."
@@ -225,7 +225,7 @@
     "empty": {
       "title": "Još nema ponuda",
       "description": "Napravite ponudu koju Vaši klijenti mogu da kupe.",
-      "noStripe": "Za ponude su potrebna plaćanja, a ova kontrolna tabla ih još ne nudi."
+      "noStripe": "Za ponude su potrebna plaćanja, a ova kontrolna tabla ih ne obrađuje."
     },
     "create": {
       "action": "Napravi ponudu",
@@ -511,8 +511,8 @@
     "ownersOnly": "Samo vlasnici mogu da upravljaju plaćanjima.",
     "opening": "Otvaramo Stripe…",
     "notConfigured": {
-      "title": "Plaćanja ovde nisu podešena",
-      "description": "Plaćanja nisu uključena na ovoj kontrolnoj tabli, pa sami naplaćujete svojim firmama."
+      "title": "Sami naplaćujete svojim firmama",
+      "description": "Ova kontrolna tabla ne obrađuje plaćanja u Vaše ime."
     },
     "status": {
       "notConnected": "Nije povezan",
@@ -561,6 +561,7 @@
       "failed": "Nismo uspeli da otvorimo Stripe. Pokušajte ponovo.",
       "invalidCountry": "Izaberite zemlju u kojoj je Vaša firma.",
       "notConfigured": "Ova kontrolna tabla još ne može da prima uplate.",
+      "platformNotReady": "Plaćanja još nisu spremna na ovoj kontrolnoj tabli. Zamolite firmu koja upravlja njome da ih podesi.",
       "changed": "Neko drugi je promenio podešavanja plaćanja. Osvežite stranicu i pokušajte ponovo."
     }
   },

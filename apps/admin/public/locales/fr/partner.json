@@ -194,7 +194,7 @@
     "title": "Formules",
     "loadFailed": "Impossible de charger vos formules. Actualisez pour réessayer.",
     "managersOnly": "Seuls les propriétaires et les administrateurs peuvent voir les formules.",
-    "notConfigured": "Les paiements ne sont pas activés sur ce tableau de bord : vous facturez donc vos entreprises vous-même.",
+    "notConfigured": "Ce tableau de bord ne traite pas les paiements : vous facturez donc vos entreprises vous-même.",
     "connectFirst": {
       "owner": "Connectez un compte de paiement pour vendre des formules.",
       "admin": "Demandez à un propriétaire de connecter un compte de paiement pour vendre des formules."
@@ -225,7 +225,7 @@
     "empty": {
       "title": "Aucune formule pour l'instant",
       "description": "Créez une formule que vos clients pourront acheter.",
-      "noStripe": "Les formules ont besoin des paiements, que ce tableau de bord n'offre pas encore."
+      "noStripe": "Les formules ont besoin de paiements, que ce tableau de bord ne traite pas."
     },
     "create": {
       "action": "Créer une formule",
@@ -511,8 +511,8 @@
     "ownersOnly": "Seuls les propriétaires peuvent gérer les paiements.",
     "opening": "Ouverture de Stripe…",
     "notConfigured": {
-      "title": "Les paiements ne sont pas configurés ici",
-      "description": "Les paiements ne sont pas activés sur ce tableau de bord : vous facturez donc vos entreprises vous-même."
+      "title": "Vous facturez vos entreprises vous-même",
+      "description": "Ce tableau de bord ne traite pas les paiements à votre place."
     },
     "status": {
       "notConnected": "Non connecté",
@@ -561,6 +561,7 @@
       "failed": "Impossible d'ouvrir Stripe. Réessayez.",
       "invalidCountry": "Choisissez le pays de votre entreprise.",
       "notConfigured": "Ce tableau de bord ne peut pas encore accepter de paiements.",
+      "platformNotReady": "Les paiements ne sont pas encore prêts sur ce tableau de bord. Demandez à l'entreprise qui le gère de les configurer.",
       "changed": "Quelqu'un d'autre a modifié les réglages de paiement. Actualisez et réessayez."
     }
   },

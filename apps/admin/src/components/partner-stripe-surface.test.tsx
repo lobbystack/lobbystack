@@ -92,6 +92,15 @@ describe("the partner console's Stripe page", () => {
     expect(fixture.telemetry!.events).toEqual([]);
   });
 
+  it("says the host hasn't finished setting up payments when Stripe refuses to create an account", async () => {
+    renderWith((url) => url.startsWith("/api/partner/stripe/onboarding") ? Response.json({ error: "Payments aren't ready on this dashboard yet.", code: "stripe_platform_not_ready" }, { status: 409 }) : Response.json(none));
+    await screen.findByText("stripe.connect.title");
+    await userEvent.selectOptions(screen.getByLabelText("stripe.connect.countryLabel"), "CA");
+    await userEvent.click(screen.getByRole("button", { name: "stripe.connect.action" }));
+    expect((await screen.findByRole("alert")).textContent).toBe("stripe.errors.platformNotReady");
+    expect(assign).not.toHaveBeenCalled();
+  });
+
   it("tells the owner when the deployment has no Stripe Connect, and offers nothing to click", async () => {
     renderWith(() => Response.json({ ...none, configured: false }));
     expect(await screen.findByText("stripe.notConfigured.title")).toBeTruthy();

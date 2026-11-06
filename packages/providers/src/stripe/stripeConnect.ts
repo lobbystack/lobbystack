@@ -252,6 +252,41 @@ export function connectAccountFromStripe(account: Stripe.Account): StripeConnect
   };
 }
 
+/** Stripe's own refusals to open connected accounts until the host has finished setting up its platform account. */
+const PLATFORM_NOT_READY_CODES = new Set(["platform_account_required"]);
+// Stripe sends these without a code, so its message is the only signal.
+const PLATFORM_NOT_READY_MESSAGES = [
+  /account must be activated in order to create accounts/i,
+  /platform profile is under review/i,
+  /signed up for connect/i,
+];
+
+/**
+ * Whether Stripe refused because the host's own platform account isn't ready:
+ * Connect turned on, its platform profile approved and the account activated.
+ * An account Stripe hasn't activated, and a profile under review, come back as
+ * an invalid request with no code, so those match on the message.
+ */
+function isPlatformNotReadyError(error: Stripe.errors.StripeError): boolean {
+  return (error.code !== undefined && PLATFORM_NOT_READY_CODES.has(error.code)) || PLATFORM_NOT_READY_MESSAGES.some((pattern) => pattern.test(error.message));
+}
+
+/** What the console tells a partner whose host hasn't finished setting up payments. */
+const PLATFORM_NOT_READY_MESSAGE = "Payments aren't ready on this dashboard yet. Ask the company that runs this dashboard to finish setting them up.";
+
+/**
+ * A failure to open onboarding for a partner's account. A platform account the
+ * host hasn't set up is the host's to fix, so it gets its own code for the
+ * console to explain and is not logged; any other Stripe failure keeps its
+ * type, code and message in the server log, without the request itself.
+ */
+function onboardingFailure(error: unknown): unknown {
+  if (!(error instanceof Stripe.errors.StripeError)) return error;
+  if (isPlatformNotReadyError(error)) return Object.assign(new Error(PLATFORM_NOT_READY_MESSAGE), { status: 409, code: "stripe_platform_not_ready" });
+  console.error("[stripe-connect] onboarding failed", { type: error.rawType ?? error.type, code: error.code ?? null, message: error.message });
+  return error;
+}
+
 export class StripeConnectAdapter implements StripeConnectProvider {
   private readonly stripe: Stripe;
 
@@ -267,26 +302,30 @@ export class StripeConnectAdapter implements StripeConnectProvider {
   }
 
   async createOnboardingLink(input: OnboardingLinkInput): Promise<{ accountId: string; url: string }> {
-    let accountId = input.accountId;
-    if (!accountId) {
-      if (!input.country) throw Object.assign(new Error("Choose the country your business is in."), { status: 400, code: "invalid_country" });
-      // The partner gets the full Stripe Dashboard and handles its own refunds
-      // and disputes, Stripe collects its fees from the partner, and Stripe
-      // covers losses on the account, as a standard account does.
-      const account = await this.stripe.accounts.create({
-        country: input.country,
-        controller: {
-          stripe_dashboard: { type: "full" },
-          fees: { payer: "account" },
-          losses: { payments: "stripe" },
-          requirement_collection: "stripe",
-        },
-        metadata: input.metadata,
-      }, { idempotencyKey: input.idempotencyKey });
-      accountId = account.id;
+    try {
+      let accountId = input.accountId;
+      if (!accountId) {
+        if (!input.country) throw Object.assign(new Error("Choose the country your business is in."), { status: 400, code: "invalid_country" });
+        // The partner gets the full Stripe Dashboard and handles its own refunds
+        // and disputes, Stripe collects its fees from the partner, and Stripe
+        // covers losses on the account, as a standard account does.
+        const account = await this.stripe.accounts.create({
+          country: input.country,
+          controller: {
+            stripe_dashboard: { type: "full" },
+            fees: { payer: "account" },
+            losses: { payments: "stripe" },
+            requirement_collection: "stripe",
+          },
+          metadata: input.metadata,
+        }, { idempotencyKey: input.idempotencyKey });
+        accountId = account.id;
+      }
+      const link = await this.stripe.accountLinks.create({ account: accountId, type: "account_onboarding", return_url: input.returnUrl, refresh_url: input.refreshUrl });
+      return { accountId, url: link.url };
+    } catch (error) {
+      throw onboardingFailure(error);
     }
-    const link = await this.stripe.accountLinks.create({ account: accountId, type: "account_onboarding", return_url: input.returnUrl, refresh_url: input.refreshUrl });
-    return { accountId, url: link.url };
   }
 
   async retrieveAccount(accountId: string): Promise<StripeConnectAccount> {

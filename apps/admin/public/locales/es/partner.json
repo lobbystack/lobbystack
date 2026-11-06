@@ -194,7 +194,7 @@
     "title": "Paquetes",
     "loadFailed": "No pudimos cargar sus paquetes. Actualice para intentarlo de nuevo.",
     "managersOnly": "Solo los propietarios y los administradores pueden ver los paquetes.",
-    "notConfigured": "Este panel no tiene los pagos activados, así que usted factura a sus negocios por su cuenta.",
+    "notConfigured": "Este panel no gestiona los pagos, así que usted factura a sus negocios por su cuenta.",
     "connectFirst": {
       "owner": "Conecte su cuenta de pagos para vender paquetes.",
       "admin": "Pida a un propietario que conecte una cuenta de pagos para poder vender paquetes."
@@ -225,7 +225,7 @@
     "empty": {
       "title": "Todavía no hay paquetes",
       "description": "Cree un paquete que sus clientes puedan comprar.",
-      "noStripe": "Los paquetes necesitan pagos, y este panel todavía no los ofrece."
+      "noStripe": "Los paquetes necesitan pagos, y este panel no los gestiona."
     },
     "create": {
       "action": "Crear paquete",
@@ -511,8 +511,8 @@
     "ownersOnly": "Solo los propietarios pueden gestionar los pagos.",
     "opening": "Abriendo Stripe…",
     "notConfigured": {
-      "title": "Los pagos no están configurados aquí",
-      "description": "Este panel no tiene los pagos activados, así que usted factura a sus negocios por su cuenta."
+      "title": "Usted factura a sus negocios por su cuenta",
+      "description": "Este panel no procesa los pagos en su nombre."
     },
     "status": {
       "notConnected": "Sin conectar",
@@ -561,6 +561,7 @@
       "failed": "No pudimos abrir Stripe. Inténtelo de nuevo.",
       "invalidCountry": "Elija el país de su empresa.",
       "notConfigured": "Este panel todavía no puede aceptar pagos.",
+      "platformNotReady": "Los pagos aún no están listos en este panel. Pida a la empresa que lo administra que los configure.",
       "changed": "Otra persona cambió la configuración de pagos. Actualice e inténtelo de nuevo."
     }
   },
