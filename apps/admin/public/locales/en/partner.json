@@ -725,7 +725,8 @@
       "intervalLabel": "Billing interval",
       "annualDiscount": "Save 20%",
       "action": "Choose {{tier}}",
-      "opening": "Opening checkout…"
+      "opening": "Opening checkout…",
+      "slow": "The payment provider is slow. Still opening checkout…"
     },
     "portal": {
       "action": "Manage subscription",
@@ -737,6 +738,7 @@
     },
     "errors": {
       "checkoutFailed": "We couldn't open checkout. Try again.",
+      "paymentsUnavailable": "Payments are temporarily unavailable. Try again in a few minutes.",
       "subscriptionActive": "You already have a tier. Change it in Manage subscription.",
       "checkoutInProgress": "Another owner has a checkout open. Try again in 30 minutes.",
       "unavailable": "You can't buy a tier on this dashboard.",

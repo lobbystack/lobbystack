@@ -102,6 +102,17 @@ describe("the partner console's Billing page", () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("billing.errors.checkoutInProgress"));
   });
 
+  it("says payments are unavailable when a tier checkout waited out a provider outage", async () => {
+    renderWith({
+      "GET /api/partner/billing": () => free,
+      "POST /api/partner/billing/checkout": () => ({ requestId: "request-1" }),
+      "GET /api/partner/billing/checkout": () => ({ requestId: "request-1", tier: "growth", billingInterval: "annual", status: "error", checkoutUrl: null, error: "provider_unavailable:503", synced: false }),
+    });
+    expect(await screen.findByText("billing.current.free")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "billing.choose.action:billing.tiers.growth" }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("billing.errors.paymentsUnavailable"));
+  });
+
   it("shows a paid tier with its renewal and a way to manage it in Polar, and offers no second checkout", async () => {
     const assign = vi.fn();
     vi.stubGlobal("location", { ...window.location, assign });

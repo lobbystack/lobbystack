@@ -737,7 +737,8 @@
       "intervalLabel": "Periodo de facturación",
       "annualDiscount": "Ahorre un 20 %",
       "action": "Elegir {{tier}}",
-      "opening": "Abriendo el pago…"
+      "opening": "Abriendo el pago…",
+      "slow": "El proveedor de pagos está lento. Seguimos abriendo el pago…"
     },
     "portal": {
       "action": "Gestionar suscripción",
@@ -749,6 +750,7 @@
     },
     "errors": {
       "checkoutFailed": "No pudimos abrir el pago. Inténtelo de nuevo.",
+      "paymentsUnavailable": "El pago no está disponible temporalmente. Inténtelo de nuevo en unos minutos.",
       "subscriptionActive": "Ya tiene un nivel. Cámbielo en Gestionar suscripción.",
       "checkoutInProgress": "Otro propietario tiene un pago abierto. Inténtelo de nuevo en 30 minutos.",
       "unavailable": "No puede comprar un nivel en este panel.",

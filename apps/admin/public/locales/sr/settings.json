@@ -108,6 +108,7 @@
     "toast": {
       "checkoutSuccess": "Plaćanje je uspešno završeno.",
       "checkoutFailed": "Nije moguće otvoriti plaćanje.",
+      "paymentsUnavailable": "Plaćanje privremeno nije dostupno. Pokušajte ponovo za nekoliko minuta.",
       "portalFailed": "Nije moguće otvoriti portal za korisnike."
     },
     "pastDueBanner": {
@@ -187,6 +188,7 @@
     "upgradeDialog": {
       "title": "Nadogradite paket",
       "description": "Izaberite paket koji najviše odgovara Vašem timu.",
+      "providerSlow": "Provajder plaćanja je spor. I dalje otvaramo plaćanje...",
       "enterpriseSubject": "Enterprise paket",
       "billingIntervalLabel": "Period naplate",
       "annualDiscount": "Uštedite 20%",

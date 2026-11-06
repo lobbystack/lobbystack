@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
+import { isProviderUnavailable } from "@/lib/checkout-errors";
 import { formatDateTime, intlLocale } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
 import { cn } from "@/lib/utils";
@@ -40,7 +41,7 @@ type Billing = {
   poolOverage: PoolOverage;
   trialNumber: "available" | "used" | null;
 };
-type Checkout = { requestId: string; tier: PaidPartnerTierSlug; billingInterval: BillingInterval; status: string; checkoutUrl: string | null; synced: boolean };
+type Checkout = { requestId: string; tier: PaidPartnerTierSlug; billingInterval: BillingInterval; status: string; checkoutUrl: string | null; error: string | null; synced: boolean };
 
 /** A rate of a fraction of a cent, such as $0.015, keeps its third decimal. */
 function formatRate(cents: number, locale: string): string {
@@ -140,6 +141,7 @@ export function PartnerBillingSurface() {
   const billing = useQuery({ queryKey, enabled: isOwner, queryFn: () => requestJson<Billing>(query("/api/partner/billing")) });
   const [interval, setInterval] = useState<BillingInterval>("annual");
   const [pending, setPending] = useState<{ requestId: string; tier: PaidPartnerTierSlug } | null>(null);
+  const [slowCheckout, setSlowCheckout] = useState(false);
   const [portalPending, setPortalPending] = useState(false);
   // Leave for each checkout once: a page restored from the browser's cache can rerun the effect with the old one.
   const redirected = useRef<string | null>(null);
@@ -158,13 +160,19 @@ export function PartnerBillingSurface() {
     refetchInterval: (state) => ["ready", "error", "superseded"].includes(state.state.data?.status ?? "") ? false : 1_500,
   });
   useEffect(() => {
+    if (!pending) { setSlowCheckout(false); return; }
+    setSlowCheckout(false);
+    const timer = window.setTimeout(() => setSlowCheckout(true), 10_000);
+    return () => window.clearTimeout(timer);
+  }, [pending]);
+  useEffect(() => {
     if (!pending) return;
     if (opening.data?.status === "ready" && opening.data.checkoutUrl && redirected.current !== pending.requestId) {
       redirected.current = pending.requestId;
       window.location.assign(opening.data.checkoutUrl);
     }
     if (opening.isError || opening.data?.status === "error" || opening.data?.status === "superseded") {
-      toast.error(t("billing.errors.checkoutFailed"));
+      toast.error(t(isProviderUnavailable(opening.data?.error) ? "billing.errors.paymentsUnavailable" : "billing.errors.checkoutFailed"));
       setPending(null);
     }
   }, [opening.data, opening.isError, pending, t]);
@@ -285,6 +293,9 @@ export function PartnerBillingSurface() {
               ))}
             </div>
           </div>
+          {slowCheckout ? (
+            <p className="text-sm text-muted-foreground" role="status">{t("billing.choose.slow")}</p>
+          ) : null}
           <div className="grid gap-4 md:grid-cols-3">
             {paidPartnerTierSlugs.map((tier) => (
               <Surface className="flex flex-col gap-5 p-5" key={tier}>

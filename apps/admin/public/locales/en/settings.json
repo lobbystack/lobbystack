@@ -108,6 +108,7 @@
     "toast": {
       "checkoutSuccess": "Checkout completed successfully.",
       "checkoutFailed": "Unable to open checkout.",
+      "paymentsUnavailable": "Payments are temporarily unavailable. Try again in a few minutes.",
       "portalFailed": "Unable to open the customer portal."
     },
     "pastDueBanner": {
@@ -187,6 +188,7 @@
     "upgradeDialog": {
       "title": "Upgrade plan",
       "description": "Choose the plan that works best for your team.",
+      "providerSlow": "The payment provider is slow. Still opening checkout...",
       "enterpriseSubject": "Enterprise plan",
       "billingIntervalLabel": "Billing interval",
       "annualDiscount": "Save 20%",

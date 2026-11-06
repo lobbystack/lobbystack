@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { OnboardingPlanComparison } from "@/components/onboarding-plan-comparison";
 import { useTelemetry } from "@/components/product-analytics";
-import { checkoutRefusalKey, errorCode } from "@/lib/checkout-errors";
+import { checkoutRefusalKey, errorCode, isProviderUnavailable } from "@/lib/checkout-errors";
 import { cn } from "@/lib/utils";
 
 type BillingInterval = "monthly" | "annual";
@@ -32,6 +32,7 @@ export function OnboardingPlanSurface() {
   const [interval, setInterval] = useState<BillingInterval>("annual");
   const [checkoutRequestId, setCheckoutRequestId] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [slowCheckout, setSlowCheckout] = useState(false);
   const { business } = useActiveBusiness();
   const billing = useQuery({ queryKey: ["billing", business?.businessId], queryFn: () => requestJson<BillingStatus>(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business) });
   const checkout = useQuery({
@@ -61,8 +62,15 @@ export function OnboardingPlanSurface() {
   const returnRequestId = searchParams.get("checkout") === "success" ? searchParams.get("requestId") : null;
   useEffect(() => { if (returnRequestId) router.replace(`/billing/success?requestId=${encodeURIComponent(returnRequestId)}`); }, [returnRequestId, router]);
   useEffect(() => {
+    if (!checkoutRequestId) { setSlowCheckout(false); return; }
+    setSlowCheckout(false);
+    const timer = window.setTimeout(() => setSlowCheckout(true), 10_000);
+    return () => window.clearTimeout(timer);
+  }, [checkoutRequestId]);
+  useEffect(() => {
     if (checkout.data?.status === "error" || checkout.isError) {
-      setCheckoutError(checkout.data?.error ?? t("plan.continueFailed"));
+      const error = checkout.data?.error;
+      setCheckoutError(isProviderUnavailable(error) ? t("settings:billing.toast.paymentsUnavailable") : error?.startsWith("provider_") ? t("plan.continueFailed") : error ?? t("plan.continueFailed"));
       setCheckoutRequestId(null);
     }
   }, [checkout.data, checkout.isError, t]);
@@ -107,6 +115,7 @@ export function OnboardingPlanSurface() {
           {(["monthly", "annual"] as const).map((value) => <Button aria-selected={interval === value} className={cn("h-9 rounded-full px-4", interval === value ? "bg-background text-foreground shadow-sm hover:bg-background" : "border-transparent bg-transparent text-muted-foreground hover:bg-muted")} disabled={Boolean(pendingPlan) || (availableIntervals.length > 0 && !availableIntervals.includes(value))} key={value} onClick={() => setInterval(value)} role="tab" size="sm" type="button" variant="outline">{t(`plan.billingInterval.${value}`)}{value === "annual" ? <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">{t("plan.billingInterval.save")}</span> : null}</Button>)}
         </div>
       </div>
+      {slowCheckout ? <p className="text-center text-sm text-muted-foreground" role="status">{t("settings:billing.upgradeDialog.providerSlow")}</p> : null}
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
         {planCards(i18n.language).map((tier) => {
           const paid = tier.slug === "starter" || tier.slug === "pro";

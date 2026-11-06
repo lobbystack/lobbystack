@@ -19,14 +19,14 @@ beforeEach(() => {
   telemetryRef.current = createRecordedBrowserTelemetry();
 });
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
-function setup(monthlyOnly = false, refusal?: string) {
+function setup(monthlyOnly = false, refusal?: string, checkoutError = "Checkout failed") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true }] });
   client.setQueryData(["billing", "business"], { checkoutAvailable: true, availableCheckoutPlans: ["pro"], availableCheckoutIntervals: { starter: [], pro: monthlyOnly ? ["monthly"] : ["monthly", "annual"] } });
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     if (url.includes("/api/onboarding/stage?")) return Response.json({ ok: true });
     if (url === "/api/billing/checkout" && init?.method === "POST") return refusal ? Response.json({ error: "Refused", code: refusal }, { status: 409 }) : Response.json({ requestId: "new-checkout" });
-    if (url.includes("requestId=new-checkout")) return Response.json({ status: "error", checkoutUrl: null, error: "Checkout failed" });
+    if (url.includes("requestId=new-checkout")) return Response.json({ status: "error", checkoutUrl: null, error: checkoutError });
     throw new Error(`Unexpected request ${url}`);
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -63,6 +63,16 @@ describe("original onboarding plan behavior with asynchronous checkout", () => {
     telemetryRef.current!.expectEvent("web.onboarding.plan_checkout_started", { businessId: "business", plan: "pro" });
     expect(await screen.findByText("Checkout failed")).toBeTruthy();
     await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
+  });
+  it("says payments are unavailable when a checkout waited out the provider outage", async () => {
+    setup(false, undefined, "provider_unavailable:503");
+    await userEvent.click(screen.getByRole("button", { name: "Get Pro" }));
+    expect(await screen.findByText("settings:billing.toast.paymentsUnavailable")).toBeTruthy();
+  });
+  it("hides a provider's machine reason behind the generic message", async () => {
+    setup(false, undefined, "provider_rejected:422");
+    await userEvent.click(screen.getByRole("button", { name: "Get Pro" }));
+    expect(await screen.findByText("plan.continueFailed")).toBeTruthy();
   });
   it("lets them pick again when the back button restores the page from cache", async () => {
     const assign = vi.fn();

@@ -8,7 +8,7 @@ import { brandLinks, contactEmailFor, hasLiveEntitlement, type BillingInterval, 
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { requestJson } from "@/lib/request-json";
 import { selectActiveBusiness } from "@/lib/active-business";
-import { checkoutRefusalKey } from "@/lib/checkout-errors";
+import { checkoutRefusalKey, isProviderUnavailable } from "@/lib/checkout-errors";
 import { rememberedPlan } from "@/lib/remembered-plan";
 import { setUpgradeInProgress } from "@/lib/upgrade-in-progress";
 import type { WorkspaceViewModel } from "@/lib/page-view-models";
@@ -30,6 +30,7 @@ export function LiveUpgradePlanProvider({ children }: { children: ReactNode }) {
   const [selectedPlan, setSelectedPlan] = useState<HostedUpgradePlan>("starter");
   const [interval, setInterval] = useState<BillingInterval>("annual");
   const [checkout, setCheckout] = useState<Checkout | null>(null);
+  const [slowCheckout, setSlowCheckout] = useState(false);
   const [leaving, setLeaving] = useState(false);
   // Set while the dialog opened by itself after a test rather than from a button.
   const [offer, setOffer] = useState<PlanOfferCallbacks | null>(null);
@@ -51,6 +52,12 @@ export function LiveUpgradePlanProvider({ children }: { children: ReactNode }) {
     refetchInterval: query => ["ready", "error"].includes(query.state.data?.status ?? "") ? false : 1500,
   });
   useEffect(() => { setOpen(false); setCheckout(null); }, [businessId]);
+  useEffect(() => {
+    if (!checkout) { setSlowCheckout(false); return; }
+    setSlowCheckout(false);
+    const timer = window.setTimeout(() => setSlowCheckout(true), 10_000);
+    return () => window.clearTimeout(timer);
+  }, [checkout]);
   const resetCheckoutRequest = mutation.reset;
   useEffect(() => {
     // The back button from checkout can restore this page from the browser's cache, still
@@ -74,7 +81,10 @@ export function LiveUpgradePlanProvider({ children }: { children: ReactNode }) {
       setLeaving(true);
       window.location.assign(result.data.checkoutUrl);
     }
-    if (result.data?.status === "error" || result.isError) { toast.error(t("billing.toast.checkoutFailed")); setCheckout(null); }
+    if (result.data?.status === "error" || result.isError) {
+      toast.error(t(isProviderUnavailable(result.data?.error) ? "billing.toast.paymentsUnavailable" : "billing.toast.checkoutFailed"));
+      setCheckout(null);
+    }
   }, [businessId, checkout, result.data, result.isError, t]);
   const rawPlan = billing.data?.account?.plan;
   // A cancelled or lapsed tier is not the plan someone is on, and marking its
@@ -114,6 +124,7 @@ export function LiveUpgradePlanProvider({ children }: { children: ReactNode }) {
       }}
       open={open}
       selectedPlan={selectedPlan}
+      slowCheckout={slowCheckout}
       t={t}
     /> : null}
   </UpgradePlanDialogProvider>;

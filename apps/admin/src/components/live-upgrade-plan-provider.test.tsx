@@ -191,6 +191,14 @@ describe("telling the dashboard an upgrade is under way", () => {
     expect(isUpgradeInProgress()).toBe(false);
   });
 
+  it("says payments are unavailable when the checkout waited out a provider outage", async () => {
+    await renderPlans(async (_url, init) => init?.method === "POST"
+      ? Response.json({ requestId: "request" })
+      : Response.json({ status: "error", checkoutUrl: null, error: "provider_unavailable:503" }));
+    await userEvent.click(screen.getByRole("button", { name: "Get Pro" }));
+    await waitFor(() => expect(alerts.error).toHaveBeenCalledWith("billing.toast.paymentsUnavailable"));
+  });
+
   it("lets go once a failed checkout's picker is closed, and on unmount", async () => {
     const view = await renderPlans(async () => Response.json({ error: "Checkout unavailable" }, { status: 503 }));
     await userEvent.click(screen.getByRole("button", { name: "Get Pro" }));

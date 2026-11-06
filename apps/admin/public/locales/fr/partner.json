@@ -737,7 +737,8 @@
       "intervalLabel": "Période de facturation",
       "annualDiscount": "Économisez 20 %",
       "action": "Choisir {{tier}}",
-      "opening": "Ouverture du paiement…"
+      "opening": "Ouverture du paiement…",
+      "slow": "Le prestataire de paiement est lent. Nous ouvrons toujours la page de paiement…"
     },
     "portal": {
       "action": "Gérer l'abonnement",
@@ -749,6 +750,7 @@
     },
     "errors": {
       "checkoutFailed": "Impossible d'ouvrir le paiement. Réessayez.",
+      "paymentsUnavailable": "Le paiement est temporairement indisponible. Réessayez dans quelques minutes.",
       "subscriptionActive": "Vous avez déjà un palier. Changez-le dans Gérer l'abonnement.",
       "checkoutInProgress": "Un autre propriétaire a un paiement en cours. Réessayez dans 30 minutes.",
       "unavailable": "Vous ne pouvez pas acheter de palier sur ce tableau de bord.",

@@ -41,6 +41,7 @@ export function UpgradePlanDialog({
   onStartCheckout,
   open,
   selectedPlan,
+  slowCheckout,
   t,
 }: {
   availableCheckoutPlans: Array<"starter" | "pro">;
@@ -57,6 +58,8 @@ export function UpgradePlanDialog({
   open: boolean;
   /** The plan the dialog opens on, shown as the primary choice. */
   selectedPlan: HostedUpgradePlan;
+  /** Whether the checkout has waited on the payment provider long enough to say so. */
+  slowCheckout: boolean;
   t: BillingTranslation;
 }) {
   const availableBillingIntervals = (["monthly", "annual"] as const).filter(
@@ -85,6 +88,12 @@ export function UpgradePlanDialog({
             {t("billing.upgradeDialog.description")}
           </DialogDescription>
         </DialogHeader>
+
+        {slowCheckout ? (
+          <p className="text-sm text-muted-foreground" role="status">
+            {t("billing.upgradeDialog.providerSlow")}
+          </p>
+        ) : null}
 
         <div className="flex justify-center">
           <div

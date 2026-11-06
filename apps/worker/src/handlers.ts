@@ -7,18 +7,19 @@ import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
 import { HOST_EMAIL_BRAND, billingMeterEventNames, detectSiteLanguage, emailSender, getPolarMeteredUsagePayload, intlLocale, isUuid, normalizeRuntimeLocale, parseEmailBrandReference, partnerFeatures, partnerTierProductId, type BillingUsageKind, type EmailBrandReference } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { enqueueKnowledgeDerivedRefresh, finishBusinessSummaryRegenerate, forgetStaleRetiredCalendarTokens, loadBusinessHoursInput, loadBusinessSummaryInput, markBusinessHoursChecked, resetGeneratedBusinessSummary, saveGeneratedBusinessHours, saveGeneratedBusinessSummary, type SummaryRegenerateOutcome } from "@lobbystack/domain";
-import { billingCheckoutLeaseEndsAt, checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteStoredObjects, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
+import { billingCheckoutLeaseEndsAt, checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deferBillingCheckoutRequest, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteStoredObjects, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
 import { deliverOutbound, markFeedbackEmailFailed, markFeedbackEmailSent, queueDailyOperatorSummaries, refreshUnitEconomicsMonth } from "@lobbystack/domain";
 import { NUMBER_ORDER_MAX_WAIT_MS, claimNumberProvisioning, completeNumberProvisioning, deferNumberProvisioning, desiredNumberRouting, refreshStaleRefusedCallForwards, enqueueNumberRouting, resolveRefusedCallForward, failNumberProvisioning, isSharedSmsSender, loadNumberReleaseEmail, loadNumberTrialEmail, numberProvisioningLeaseEndsAt, sharedSmsSender, sweepNumberReleases, sweepNumberTrial } from "@lobbystack/domain";
 import { createWebhookSender, processWebhookDelivery, pruneApiHistory, prunePartnerApiIdempotencyKeys, type WebhookSender } from "@lobbystack/domain";
 import { LIVE_RECORDING_ATTEMPTS, listBusinessesWithOpenLiveCalls, listOpenLiveCalls, liveCallHasRecording, persistCallRecording, retryLiveCallRecording, type OpenLiveCall } from "@lobbystack/domain";
 import { applySiteLanguageInTransaction, expireTeamRequest } from "@lobbystack/domain";
-import { syncBusinessOverage } from "@lobbystack/domain";
-import { advancePartnerLifecycles, claimPartnerCheckoutRequest, keepPartnerTrialNumber, loadPartnerCheckoutRequest, loadPoolUsageEvent, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerBillingKey, partnerCheckoutLeaseEndsAt, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
+import { syncBusinessOverage, PROVIDER_RETRY_WINDOW_MS, providerRetryDelayMs } from "@lobbystack/domain";
+import { advancePartnerLifecycles, claimPartnerCheckoutRequest, deferPartnerCheckoutRequest, keepPartnerTrialNumber, loadPartnerCheckoutRequest, loadPoolUsageEvent, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerBillingKey, partnerCheckoutLeaseEndsAt, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
 import { checkPartnerCustomDomains, provisionPartnerCustomDomain, removePartnerCustomHostname, type CustomDomainProviders } from "@lobbystack/domain";
 import { brandForEmail, businessExists, businessGetsHostEmails, hostBrandFromEnvironment, isHostOnlyEmailTemplate } from "@lobbystack/domain";
 import type { DomainContext } from "@lobbystack/domain";
 import { numberReleaseEmailSubject, numberTrialEmailSubject, type SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
+import { PolarRequestError } from "@lobbystack/providers/polar/polarBilling";
 import type { RuntimeStorageProvider } from "@lobbystack/providers/storage/provider";
 import { NumberOrderPendingError } from "@lobbystack/providers/telephony/types";
 import type { Telephony } from "@lobbystack/providers/telephony/registry";
@@ -103,6 +104,32 @@ export type JobResult = { status: "completed" | "skipped"; entityId?: string } |
 // before the lease ends. Run it again once the lease ends instead of dropping it.
 function retryAfterLease(leaseEndsAt: Date | null, entityId: string): JobResult {
   return leaseEndsAt ? { status: "deferred", entityId, retryAt: leaseEndsAt } : { status: "skipped", entityId };
+}
+
+type ProviderFailure = { transient: boolean; status: number | null; reason: string };
+
+/**
+ * Reads what the provider said, with no customer data: an outage may be tried
+ * again, while a refusal waits for someone to change the request.
+ */
+function providerFailure(error: unknown): ProviderFailure {
+  if (error instanceof PolarRequestError) {
+    return {
+      transient: error.transient,
+      status: error.status,
+      reason: error.transient ? "provider_unavailable" : "provider_rejected",
+    };
+  }
+  return { transient: false, status: null, reason: "provider_error" };
+}
+
+function providerFailureReason(failure: ProviderFailure): string {
+  return failure.status === null ? failure.reason : `${failure.reason}:${failure.status}`;
+}
+
+/** The wait before retrying a provider call that first failed this long ago. */
+function providerRetryAt(elapsedMs: number): Date {
+  return new Date(Date.now() + providerRetryDelayMs(elapsedMs));
 }
 
 const MESSAGE_PRICE_WAIT_MS = 60 * 60_000;
@@ -703,7 +730,17 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       };
       const stripe = businessId ? await attempt(async () => await syncStripeOverage(dependencies, { businessId, usageEventId })) : null;
       const polar = businessId && polarClient ? await attempt(async () => await syncPolarUsage(dependencies, polarClient, { businessId, usageEventId })) : null;
-      if (failures.length) throw failures[0];
+      if (failures.length) {
+        // Polar says to retry usage sent during maintenance, and its external id
+        // makes each event idempotent. Stay off the job's attempts while its
+        // outage window runs, then let the queue retry as before.
+        const transient = failures.find((error) => error instanceof PolarRequestError && error.transient);
+        if (transient && businessId && usageEventId) {
+          const elapsed = Date.now() - (execution.queuedAtMs ?? Date.now());
+          if (elapsed < PROVIDER_RETRY_WINDOW_MS) return { status: "deferred", entityId: usageEventId, retryAt: providerRetryAt(elapsed) };
+        }
+        throw failures[0];
+      }
       if (stripe?.status === "completed") return stripe;
       return polar ?? stripe ?? (polarClient ? { status: "skipped" } : { status: "skipped", entityId: usageEventId });
     }
@@ -746,8 +783,17 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         await markBillingCheckoutCreated(dependencies.domain, { businessId, requestId, ...checkout });
         return { status: "completed", entityId: requestId };
       } catch (error) {
-        await markBillingCheckoutFailed(dependencies.domain, { businessId, requestId, error: "Polar checkout creation failed." });
-        throw error;
+        const failure = providerFailure(error);
+        if (failure.transient) {
+          // Polar is unreachable, not refusing. Keep the request processing and
+          // try again after a delay, within the outage window.
+          const retry = await deferBillingCheckoutRequest(dependencies.domain, { businessId, requestId });
+          if (retry.status === "deferred") return { status: "deferred", entityId: requestId, retryAt: retry.retryAt };
+          if (retry.status === "failed") await markBillingCheckoutFailed(dependencies.domain, { businessId, requestId, error: providerFailureReason(failure) });
+          return { status: "skipped", entityId: requestId };
+        }
+        await markBillingCheckoutFailed(dependencies.domain, { businessId, requestId, error: providerFailureReason(failure) });
+        return { status: "skipped", entityId: requestId };
       }
     }
     case "billing.createPartnerCheckout": {
@@ -782,8 +828,17 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         await markPartnerCheckoutCreated(dependencies.domain, { ...request, ...checkout });
         return { status: "completed", entityId: requestId };
       } catch (error) {
-        await markPartnerCheckoutFailed(dependencies.domain, { ...request, error: "Polar checkout creation failed." });
-        throw error;
+        const failure = providerFailure(error);
+        if (failure.transient) {
+          // Polar is unreachable, not refusing. Keep the request processing and
+          // try again after a delay, within the outage window.
+          const retry = await deferPartnerCheckoutRequest(dependencies.domain, request);
+          if (retry.status === "deferred") return { status: "deferred", entityId: requestId, retryAt: retry.retryAt };
+          if (retry.status === "failed") await markPartnerCheckoutFailed(dependencies.domain, { ...request, error: providerFailureReason(failure) });
+          return { status: "skipped", entityId: requestId };
+        }
+        await markPartnerCheckoutFailed(dependencies.domain, { ...request, error: providerFailureReason(failure) });
+        return { status: "skipped", entityId: requestId };
       }
     }
     case "billing.reconcilePartner": {
