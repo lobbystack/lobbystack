@@ -30,11 +30,11 @@ export function OnboardingWebsiteSurface() {
   useEffect(() => { prefetch(ONBOARDING_READING_ROUTE); }, [prefetch]);
   useEffect(() => { if (!edited.current && business?.websiteUrl) setWebsiteUrl(business.websiteUrl); }, [business?.websiteUrl]);
   const add = useMutation({
-    mutationFn: () => requestJson("/api/knowledge", { method: "POST", body: JSON.stringify({ businessId: business!.businessId, title: websiteUrl.trim(), sourceType: "website", sourceUrl: websiteUrl.trim(), onboarding: true }) }),
-    onSuccess: async () => {
+    mutationFn: () => requestJson<{ documentId: string }>("/api/knowledge", { method: "POST", body: JSON.stringify({ businessId: business!.businessId, title: websiteUrl.trim(), sourceType: "website", sourceUrl: websiteUrl.trim(), onboarding: true }) }),
+    onSuccess: async ({ documentId }) => {
       if (business) telemetry.track("web.onboarding.website_submitted", { businessId: business.businessId });
       await queryClient.invalidateQueries({ queryKey: ["businesses"] });
-      navigate(ONBOARDING_READING_ROUTE);
+      navigate(`${ONBOARDING_READING_ROUTE}?documentId=${encodeURIComponent(documentId)}`);
     },
     meta: { inlineError: true },
   });

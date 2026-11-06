@@ -3,8 +3,7 @@
     "signOut": "Sign out",
     "terms": "Terms",
     "privacy": "Privacy",
-    "support": "Support",
-    "back": "Back"
+    "support": "Support"
   },
   "errors": {
     "tooManyBusinesses": "You already own 10 workspaces, the limit for one account."
@@ -172,6 +171,13 @@
       "call": "Call {{number}}"
     },
     "planRequired": "To get a number, choose a plan.",
+    "refusals": {
+      "paidPlan": "Getting a number here needs a paid plan.",
+      "trialUsed": "This workspace or your phone already used its free trial.",
+      "network": "A free trial already started from this network in the last 30 days.",
+      "unavailable": "A free trial number isn't available for this workspace.",
+      "verification": "A free number needs a verified phone."
+    },
     "title": "Pick your AI's phone number",
     "countryLabel": "Country",
     "kindLocal": "Local",

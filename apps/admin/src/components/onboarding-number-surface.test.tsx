@@ -14,10 +14,11 @@ vi.mock("./onboarding-plan-surface", () => ({ OnboardingPlanSurface: () => <div>
 const clients: QueryClient[] = [];
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); });
 beforeEach(() => { telemetryRef.current = createRecordedBrowserTelemetry(); navigation.push.mockReset(); navigation.replace.mockReset(); });
-function setup(stage: string, primary = false, pending = false, suggestion?: () => Response) {
+function setup(stage: string, primary = false, pending = false, suggestion?: () => Response, trialRefusal: string | null = null) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business-1", active: true, onboardingStage: stage }] });
   client.setQueryData(["onboarding-primary-number", "business-1"], { activeClaim: pending ? { id: "claim-1", status: "provisioning" } : null, phoneNumbers: primary ? [{ id: "phone-1", e164: "+15815550102", reclaimScheduledAt: null }] : [] });
+  client.setQueryData(["onboarding-number-countries", "business-1"], { countries: ["US", "CA"], trialCountries: ["US", "CA"], suggestedCountry: "CA", verifyPhone: true, trialRefusal, verifiedPhone: null });
   const fetchMock = vi.fn(async (input: string) => {
     if (input.includes("/api/phone-numbers?")) return Response.json({ activeClaim: null, phoneNumbers: [{ id: "phone-1", e164: "+14165550100", reclaimScheduledAt: null }] });
     if (input.includes("/suggestion?")) return suggestion ? suggestion() : Response.json({ numbers: [{ phoneE164: "+14165550100", countryCode: "CA", claimToken: "signed-offer", capabilities: { sms: true, voice: true } }] });
@@ -73,7 +74,25 @@ describe("onboarding number API adapter", () => {
   });
   it("shows the plans where a number needs one", async () => {
     setup("phone_number", false, false, () => Response.json({ error: "No trial here.", code: "dedicated_number_requires_paid_plan" }, { status: 402 }));
-    expect(await screen.findByText("number.planRequired")).toBeTruthy();
+    expect(await screen.findByText("number.refusals.paidPlan")).toBeTruthy();
     expect(screen.getByText("plans")).toBeTruthy();
+    telemetryRef.current!.expectEvent("web.onboarding.number_unavailable", { businessId: "business-1", code: "dedicated_number_requires_paid_plan" });
+  });
+  it("shows the plans before a search when the trial is already used, and still lets the owner continue", async () => {
+    const fetchMock = setup("phone_number", false, false, undefined, "trial_already_used");
+    expect(await screen.findByText("number.refusals.trialUsed")).toBeTruthy();
+    expect(screen.getByText("plans")).toBeTruthy();
+    expect(fetchMock.mock.calls.some(([url]) => url.includes("/suggestion?"))).toBe(false);
+    telemetryRef.current!.expectEvent("web.onboarding.number_unavailable", { businessId: "business-1", code: "trial_already_used" });
+    await userEvent.click(screen.getByRole("button", { name: "number.skipLater" }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url.includes("/skip?"))).toBe(true));
+    expect(navigation.push).toHaveBeenCalledWith("/onboarding/goal");
+  });
+  it("names the network limit, and the market without a trial", async () => {
+    setup("phone_number", false, false, undefined, "trial_ip_limited");
+    expect(await screen.findByText("number.refusals.network")).toBeTruthy();
+    cleanup();
+    setup("phone_number", false, false, undefined, "dedicated_number_requires_paid_plan");
+    expect(await screen.findByText("number.refusals.paidPlan")).toBeTruthy();
   });
 });

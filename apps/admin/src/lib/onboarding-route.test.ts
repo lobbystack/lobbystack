@@ -68,7 +68,7 @@ describe("brand step", () => {
 
   it("is skipped once the person has a business or someone already chose", async () => {
     fixture.state = { businessId: "business-1", stage: "website", steps: DIRECT };
-    await expect(requireOnboardingStage("/onboarding/business")).resolves.toBeUndefined();
+    await expect(requireOnboardingStage("/onboarding/business")).rejects.toThrow("redirect:/onboarding/website");
     expect(fixture.canSave).not.toHaveBeenCalled();
 
     fixture.canSave.mockResolvedValue(false);
@@ -88,7 +88,20 @@ describe("onboarding stages", () => {
     fixture.state = { businessId: "business-1", stage: "website", steps: DIRECT };
     await expect(requireOnboardingStage("/onboarding/number")).rejects.toThrow("redirect:/onboarding/website");
     await expect(requireOnboardingStage("/onboarding/meet")).rejects.toThrow("redirect:/onboarding/website");
-    await expect(requireOnboardingStage("/onboarding/business")).resolves.toBeUndefined();
+    await expect(requireOnboardingStage("/onboarding/website")).resolves.toBeUndefined();
+  });
+
+  it("sends a browser back to an earlier step to the current one", async () => {
+    fixture.state = { businessId: "business-1", stage: "goal", steps: DIRECT };
+    for (const path of ["/onboarding/business", "/onboarding/website", "/onboarding/language", "/onboarding/verify-phone"]) {
+      await expect(requireOnboardingStage(path)).rejects.toThrow("redirect:/onboarding/goal");
+    }
+    await expect(requireOnboardingStage("/onboarding/goal")).resolves.toBeUndefined();
+  });
+
+  it("keeps the number picker open from later steps", async () => {
+    fixture.state = { businessId: "business-1", stage: "goal", steps: DIRECT };
+    await expect(requireOnboardingStage("/onboarding/number")).resolves.toBeUndefined();
   });
 
   it("opens the wait once the website step has moved on", async () => {
@@ -123,7 +136,7 @@ describe("on a partner's host", () => {
     }
     await expect(requireOnboardingStage("/onboarding/business", { allowCreate: true })).rejects.toThrow("redirect:/onboarding/verify-phone");
     await expect(requireOnboardingStage("/onboarding/verify-phone")).resolves.toBeUndefined();
-    await expect(requireOnboardingStage("/onboarding/language")).resolves.toBeUndefined();
+    await expect(requireOnboardingStage("/onboarding/language")).rejects.toThrow("redirect:/onboarding/verify-phone");
     await expect(requireOnboardingStage("/onboarding/meet")).rejects.toThrow("redirect:/onboarding/verify-phone");
   });
 

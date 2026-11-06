@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { canVisitOnboardingStage, getActiveOnboardingState, numberStepRedirect, resolveOnboardingRoute, type OnboardingStage, type OnboardingState } from "@lobbystack/domain";
+import { getActiveOnboardingState, resolveOnboardingRoute, type OnboardingStage, type OnboardingState } from "@lobbystack/domain";
 import { ONBOARDING_READING_ROUTE } from "@lobbystack/shared";
 
 import { getAppDatabase } from "./api-helpers";
@@ -47,11 +47,12 @@ export async function requireOnboardingStage(pathname: string, options: { allowC
   if (expected === "create_business" && state.businessId === null && await initialBrandingFields(session.user.id, requestHeaders)) redirect(BRAND_ROUTE);
   if (options.allowCreate && expected === "create_business" && state.businessId === null) return;
   // A partner's business skips some steps, such as creating it, the number, the goal and attribution.
-  if (!state.steps.includes(expected) || !canVisitOnboardingStage(state.stage, expected)) redirect(current);
-  if (expected === "phone_number" && state.businessId) {
-    const elsewhere = await numberStepRedirect({ db: getAppDatabase().db }, { userId: session.user.id, businessId: state.businessId, finished: state.stage === "complete" });
-    if (elsewhere) redirect(elsewhere);
-  }
+  if (!state.steps.includes(expected)) redirect(current);
+  // Onboarding goes forward only: a browser back or an old link to an earlier
+  // step lands on the step the workspace is on. The number picker stays open
+  // from later steps, since the dashboard uses it to add a number.
+  const revisitsNumber = expected === "phone_number" && ["phone_number_claiming", "goal", "attribution", "meet", "complete"].includes(state.stage);
+  if (state.stage !== expected && !revisitsNumber) redirect(current);
 }
 
 /** The brand step's fields, or a redirect to the person's current step when the step doesn't apply to them. */

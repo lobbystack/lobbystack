@@ -82,40 +82,14 @@ export const ONBOARDING_DOT_COUNT = DIRECT_DOTS.length + 1;
 
 const dotRoute = (route: string) => route === "/onboarding/language" || route === ONBOARDING_READING_ROUTE ? "/onboarding/website" : route === "/onboarding/brand" ? "/onboarding/business" : route;
 
-export type OnboardingProgress = { current: number; navigableUntil?: number; total: number; routes: readonly string[] };
+export type OnboardingProgress = { current: number; total: number };
 
 /** The dots for a step, or null when the owner has only one step or the page isn't one of theirs. */
-export function onboardingProgress(pathname: string, stage: string | null | undefined, partnerAccessLevel: "full" | "activity" | null | undefined): OnboardingProgress | null {
+export function onboardingProgress(pathname: string, partnerAccessLevel: "full" | "activity" | null | undefined): OnboardingProgress | null {
   if (partnerAccessLevel === "activity") return null;
-  // Sign-up has no page to go back to, so its dot has no route.
+  // Sign-up counts as a dot but has no page of its own.
   const routes: readonly string[] = partnerAccessLevel === "full" ? PARTNER_DOTS : ["", ...DIRECT_DOTS];
   const current = routes.indexOf(dotRoute(pathname)) + 1;
   if (current === 0) return null;
-  const normalized = stage === undefined || stage === null ? null : normalizeOnboardingStage(stage);
-  const reached = normalized === "complete" ? routes.length : normalized ? routes.indexOf(dotRoute(stageRoutes[normalized])) + 1 : 0;
-  return { current, total: routes.length, routes, ...(reached > 0 ? { navigableUntil: reached } : {}) };
-}
-
-/**
- * The step before this one, for the Back button, or null on the owner's first
- * step and once onboarding is over. A website path goes back past the language
- * question it never saw.
- */
-export function onboardingBackRoute(pathname: string, business: { stage: string | null | undefined; partnerAccessLevel: "full" | "activity" | null | undefined; websiteUrl: string | null | undefined; verifiesPhone?: boolean | undefined }): string | null {
-  if (business.stage === "complete" || business.partnerAccessLevel === "activity") return null;
-  const partner = business.partnerAccessLevel === "full";
-  const beforePhone = business.websiteUrl ? "/onboarding/website" : "/onboarding/language";
-  // A self-hosted install passes straight through the phone step, so Back can't stop there.
-  const phone = business.verifiesPhone === false ? beforePhone : "/onboarding/verify-phone";
-  switch (pathname) {
-    case "/onboarding/website": return partner ? null : "/onboarding/business";
-    case "/onboarding/language":
-    case ONBOARDING_READING_ROUTE: return "/onboarding/website";
-    case "/onboarding/verify-phone": return beforePhone;
-    case "/onboarding/number": return phone;
-    case "/onboarding/goal": return "/onboarding/number";
-    case "/onboarding/attribution": return "/onboarding/goal";
-    case "/onboarding/meet": return partner ? phone : "/onboarding/attribution";
-    default: return null;
-  }
+  return { current, total: routes.length };
 }
