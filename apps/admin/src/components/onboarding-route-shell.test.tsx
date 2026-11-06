@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render } from "@testing-library/react";
+import { act, cleanup, render } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -17,11 +17,18 @@ import { OnboardingRouteShell } from "./onboarding-route-shell";
 
 afterEach(() => { cleanup(); fixture.progress = []; replace.mockReset(); });
 
-function progressAt(pathname: string, business: Record<string, unknown>) {
+function renderAt(pathname: string, business: Record<string, unknown>) {
   fixture.pathname = pathname;
   const client = new QueryClient({ defaultOptions: { queries: { enabled: false } } });
-  client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, ...business }] });
-  render(<QueryClientProvider client={client}><OnboardingRouteShell><p>Step</p></OnboardingRouteShell></QueryClientProvider>);
+  const businesses = (stage: Record<string, unknown>) => ({ businesses: [{ businessId: "business", active: true, ...stage }] });
+  client.setQueryData(["businesses"], businesses(business));
+  const ui = () => <QueryClientProvider client={client}><OnboardingRouteShell><p>Step</p></OnboardingRouteShell></QueryClientProvider>;
+  const view = render(ui());
+  return { client, businesses, rerender: () => view.rerender(ui()) };
+}
+
+function progressAt(pathname: string, business: Record<string, unknown>) {
+  renderAt(pathname, business);
   return fixture.progress.at(-1);
 }
 
@@ -55,13 +62,32 @@ describe("onboarding descriptions", () => {
 });
 
 describe("browser back", () => {
-  it("sends an earlier page on to the current step", () => {
-    progressAt("/onboarding/website", { onboardingStage: "goal", partnerAccessLevel: null });
+  it("leaves a normal navigation alone", () => {
+    renderAt("/onboarding/website", { onboardingStage: "goal", partnerAccessLevel: null });
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it("leaves a form submit to the surface's own navigation", () => {
+    const { client, businesses } = renderAt("/onboarding/website", { onboardingStage: "website", partnerAccessLevel: null });
+    act(() => { client.setQueryData(["businesses"], businesses({ onboardingStage: "verify_phone", partnerAccessLevel: null })); });
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it("sends a restored earlier page on to the current step", () => {
+    const { rerender } = renderAt("/onboarding/goal", { onboardingStage: "goal", partnerAccessLevel: null });
+    window.history.pushState({}, "", "/onboarding/website");
+    act(() => { window.dispatchEvent(new PopStateEvent("popstate")); });
+    fixture.pathname = "/onboarding/website";
+    rerender();
     expect(replace).toHaveBeenCalledWith("/onboarding/goal");
   });
 
   it("leaves the number picker open from a later step", () => {
-    progressAt("/onboarding/number", { onboardingStage: "goal", partnerAccessLevel: null });
+    const { rerender } = renderAt("/onboarding/goal", { onboardingStage: "goal", partnerAccessLevel: null });
+    window.history.pushState({}, "", "/onboarding/number");
+    act(() => { window.dispatchEvent(new PopStateEvent("popstate")); });
+    fixture.pathname = "/onboarding/number";
+    rerender();
     expect(replace).not.toHaveBeenCalled();
   });
 });
