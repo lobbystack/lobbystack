@@ -3,8 +3,7 @@
     "signOut": "Cerrar sesión",
     "terms": "Términos",
     "privacy": "Privacidad",
-    "support": "Soporte",
-    "back": "Atrás"
+    "support": "Soporte"
   },
   "errors": {
     "tooManyBusinesses": "Ya es propietario de 10 espacios de trabajo, el límite para una cuenta."
@@ -173,6 +172,13 @@
       "call": "Llamar al {{number}}"
     },
     "planRequired": "Para obtener un número, elija un plan.",
+    "refusals": {
+      "paidPlan": "Obtener un número aquí requiere un plan de pago.",
+      "trialUsed": "Este espacio de trabajo o su teléfono ya usó su prueba gratuita.",
+      "network": "Una prueba gratuita ya se inició desde esta red en los últimos 30 días.",
+      "unavailable": "No hay un número de prueba gratuito disponible para este espacio de trabajo.",
+      "verification": "Un número gratuito requiere un teléfono verificado."
+    },
     "title": "Elija el número de teléfono de su IA",
     "countryLabel": "País",
     "kindLocal": "Local",

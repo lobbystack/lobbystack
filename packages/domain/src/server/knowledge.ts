@@ -100,8 +100,11 @@ export async function createKnowledgeDocumentInTransaction(
   const business = (await tx.select({ onboardingStage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1).for("update"))[0];
   if (input.onboarding || business?.onboardingStage === "website") {
     await tx.update(businesses).set({ websiteUrl: sourceUrl, updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
-    if (business?.onboardingStage === "website") {
-      await moveOnboardingStageInTransaction(tx, { businessId: input.businessId, from: "website", to: "verify_phone" });
+    // Submitting a website answers the language question too: the import reads
+    // it. From the language step, the wait then opens on verify_phone.
+    const from = business?.onboardingStage === "website" ? "website" : business?.onboardingStage === "language" ? "language" : null;
+    if (from) {
+      await moveOnboardingStageInTransaction(tx, { businessId: input.businessId, from, to: "verify_phone" });
     }
   }
   const existing = (await tx.select().from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.sourceUrl, sourceUrl))).limit(1).for("update"))[0];

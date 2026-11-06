@@ -12,6 +12,7 @@ import type { DomainContext } from "./context";
 import { loadEntitlement } from "./entitlement";
 import { businessGetsHostEmails } from "./hostEmails";
 import { loadPartnerNumberStanding } from "./partnerNumbers";
+import { countryCodeForBusinessTimezone } from "./phoneNumberMarket";
 import { sharedSmsSender } from "./smsSender";
 import { getVoiceSecondsLeftInTransaction, readEndedVoiceSecondsLeftInTransaction } from "./usage";
 
@@ -447,18 +448,74 @@ async function trialAvailableInTransaction(tx: DatabaseTransaction, input: { use
   return !verified || (trialCountries() as string[]).includes(verified.countryCode);
 }
 
+export type NumberTrialRefusal = "dedicated_number_requires_paid_plan" | "trial_already_used" | "trial_ip_limited" | "trial_not_available";
+
+export type OnboardingNumberTrialOutlook = {
+  /** Whether verifying a mobile now can still lead to a free trial number. */
+  verificationNeeded: boolean;
+  /** Why the number step can't offer a trial now, so it shows the plans instead. */
+  refusal: NumberTrialRefusal | null;
+};
+
+/**
+ * What a direct business can expect from the number step before its owner
+ * verifies a mobile: whether the phone step can still lead to a free trial,
+ * and, when it can't, the refusal the number search would raise. Checks the
+ * plan, an existing or used trial, this network's trial and the market's
+ * country, none of which need the verified phone. The claim keeps enforcing
+ * every rule itself.
+ */
+export async function onboardingNumberTrialOutlookInTransaction(tx: DatabaseTransaction, input: { userId: string; businessId: string; ipHash?: string | null }): Promise<OnboardingNumberTrialOutlook> {
+  const business = (await tx.select({ deploymentMode: businesses.deploymentMode, timezone: businesses.timezone, partnerId: businesses.partnerId }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0];
+  if (!business) return { verificationNeeded: false, refusal: null };
+  // A self-hosted install has no host trial; it buys its numbers directly.
+  if (business.deploymentMode !== "cloud") return { verificationNeeded: false, refusal: null };
+  // A partner's business gets its numbers from its partner, and still verifies
+  // the mobile its calls forward to.
+  if (business.partnerId) return { verificationNeeded: true, refusal: null };
+  const entitlement = await loadEntitlement(tx, input.businessId);
+  // A live plan includes a number, so there is no trial to guard.
+  if (entitlement.live) return { verificationNeeded: false, refusal: null };
+  const number = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), inArray(phoneNumbers.status, ["active", "provisioning"]))).limit(1);
+  if (number.length) return { verificationNeeded: false, refusal: null };
+  // An owner who already verified continues to the number itself.
+  if (await verifiedPhone(tx, input)) return { verificationNeeded: false, refusal: null };
+  // The same once-per-workspace, per-user and per-phone rule the claim applies.
+  const used = await tx.execute(sql`SELECT app.number_trial_used(${input.businessId}::uuid, ${input.userId}::uuid) AS used`);
+  if ((used.rows[0] as { used?: boolean } | undefined)?.used) return { verificationNeeded: false, refusal: "trial_already_used" };
+  // One trial per network every 30 days, as the claim counts it. The definer
+  // function sees other workspaces' trials, which RLS hides from this query.
+  if (input.ipHash) {
+    const limited = await tx.execute(sql`SELECT app.number_trial_ip_used(${input.businessId}::uuid, ${input.userId}::uuid, ${input.ipHash}) AS used`);
+    if ((limited.rows[0] as { used?: boolean } | undefined)?.used) return { verificationNeeded: false, refusal: "trial_ip_limited" };
+  }
+  const countries = trialCountries();
+  if (countries.length === 0) return { verificationNeeded: false, refusal: "trial_not_available" };
+  // The number's country comes from the verified phone, which starts on the
+  // business's market. A market without trial numbers goes to the plans.
+  const market = countryCodeForBusinessTimezone(business.timezone);
+  if (market && !(countries as string[]).includes(market)) return { verificationNeeded: false, refusal: "dedicated_number_requires_paid_plan" };
+  return { verificationNeeded: true, refusal: null };
+}
+
+export async function onboardingNumberTrialOutlook(context: DomainContext, input: { userId: string; businessId: string; ipHash?: string | null }): Promise<OnboardingNumberTrialOutlook> {
+  return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+    await requireBusinessMembership(tx, input);
+    return await onboardingNumberTrialOutlookInTransaction(tx, input);
+  });
+}
+
 /**
  * Where the number step sends someone it can't help yet: Home, for a finished
  * workspace that already has a number, or the phone step, when a free trial
  * needs a mobile verified in this workspace first.
  */
-export async function numberStepRedirect(context: DomainContext, input: { userId: string; businessId: string; finished: boolean }): Promise<"/" | "/onboarding/verify-phone" | null> {
+export async function numberStepRedirect(context: DomainContext, input: { userId: string; businessId: string; finished: boolean; ipHash?: string | null }): Promise<"/" | "/onboarding/verify-phone" | null> {
   return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
     await requireBusinessMembership(tx, input);
     const number = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), inArray(phoneNumbers.status, ["active", "provisioning"]))).limit(1);
     if (number.length) return input.finished ? "/" : null;
-    if (!await offersHostTrialInTransaction(tx, input.businessId)) return null;
-    return await verifiedPhone(tx, input) ? null : "/onboarding/verify-phone";
+    return (await onboardingNumberTrialOutlookInTransaction(tx, input)).verificationNeeded ? "/onboarding/verify-phone" : null;
   });
 }
 

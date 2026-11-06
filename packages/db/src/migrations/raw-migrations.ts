@@ -197,6 +197,7 @@ export const SCHEMA_MIGRATIONS = [
   "0191_appointment_video_url.sql",
   "0192_default_agent_explicit.sql",
   "0193_agents_contract.sql",
+  "0194_number_trial_ip_used.sql",
 ] as const;
 
 const CONCURRENT_INDEX_DIRECTIVE = /^-- lobbystack:concurrent-index ([a-z][a-z0-9_]*)$/m;
