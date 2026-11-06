@@ -268,6 +268,22 @@ export function emitErrorLog(
   });
 }
 
+// Ordinary progress records reach PostHog Logs through the OTLP exporter.
+// Pair them with console.info in the caller, which stays in container logs and
+// is not exported, so a record is not duplicated.
+export function emitInfoLog(
+  loggerName: string,
+  body: string,
+  attributes: Record<string, string | number | boolean> = {},
+): void {
+  logs.getLogger(loggerName).emit({
+    severityNumber: SeverityNumber.INFO,
+    severityText: "INFO",
+    body,
+    attributes,
+  });
+}
+
 export function injectTraceContext(carrier: TraceContextCarrier): TraceContextCarrier {
   propagation.inject(context.active(), carrier, {
     set(target, key, value) {
