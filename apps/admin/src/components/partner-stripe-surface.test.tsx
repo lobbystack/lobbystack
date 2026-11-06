@@ -70,7 +70,7 @@ describe("the partner console's Stripe page", () => {
     expect(await screen.findByText("stripe.active.title")).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledWith("/api/partner/stripe?partnerId=partner&refresh=1", expect.anything());
     await waitFor(() => expect(fixture.replace).toHaveBeenCalledWith("/partner/partner/payments"));
-    expect(screen.getByText("acct_bright")).toBeTruthy();
+    expect(screen.queryByText("acct_bright")).toBeNull();
     expect(screen.getByText("CAD")).toBeTruthy();
     expect(screen.getByRole("link", { name: "stripe.active.dashboard" }).getAttribute("href")).toBe("https://dashboard.stripe.com/");
   });

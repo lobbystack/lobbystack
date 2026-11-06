@@ -542,7 +542,6 @@
       "action": "Reconnect"
     },
     "details": {
-      "account": "Account",
       "country": "Country",
       "currency": "Currency",
       "payouts": "Payouts",
