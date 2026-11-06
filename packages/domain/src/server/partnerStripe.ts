@@ -168,6 +168,19 @@ export async function getPartnerStripeConnection(context: DomainContext, actor: 
   return connectionFrom(await read(), true);
 }
 
+const ONBOARDING_IDEMPOTENCY_WINDOW_MS = 10 * 60 * 1000;
+
+/**
+ * The idempotency key for creating a partner's Stripe account: a new account
+ * after each disconnection, and the same one for clicks within ten minutes.
+ * Stripe replays a key's first response for 24 hours, errors included, so a
+ * key without the window would keep returning a refusal Stripe has since lifted.
+ */
+export function partnerOnboardingIdempotencyKey(partnerId: string, previousAccountId: string | null, country: string | null, now: Date): string {
+  const window = Math.floor(now.getTime() / ONBOARDING_IDEMPOTENCY_WINDOW_MS);
+  return `partner-stripe-account:${partnerId}:${previousAccountId ?? "first"}:${country ?? ""}:${window}`;
+}
+
 /**
  * Starts or resumes Stripe's onboarding for the partner's account and returns
  * the link to send the owner to. A partner with no account, or whose account
@@ -189,8 +202,7 @@ export async function startPartnerStripeOnboarding(
   const link = (accountId: string | null, country: string | null) => stripe.createOnboardingLink({
     accountId,
     country,
-    // A new account after each disconnection, and the same one for a repeated click.
-    idempotencyKey: `partner-stripe-account:${member.partnerId}:${existing?.stripeAccountId ?? "first"}:${country ?? ""}`,
+    idempotencyKey: partnerOnboardingIdempotencyKey(member.partnerId, existing?.stripeAccountId ?? null, country, new Date()),
     returnUrl: input.returnUrl,
     refreshUrl: input.refreshUrl,
     metadata: { lobbystack_partner_id: member.partnerId },
