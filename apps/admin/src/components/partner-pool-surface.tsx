@@ -93,10 +93,7 @@ export function PoolOverageSection({ partnerId, overage, spendCents }: { partner
 
   // Free bills no overage, so it skips what overage does and says why instead.
   const header = (
-    <div className="flex flex-col gap-1">
-      <h2 className="text-sm font-medium text-muted-foreground" id="partner-billing-overage">{t("billing.overage.title")}</h2>
-      {overage.billed ? <p className="text-sm text-muted-foreground">{t("billing.overage.description")}</p> : null}
-    </div>
+    <h2 className="text-sm font-medium text-muted-foreground" id="partner-billing-overage">{t("billing.overage.title")}</h2>
   );
   if (!overage.billed) {
     return (

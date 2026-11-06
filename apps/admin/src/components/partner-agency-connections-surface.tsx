@@ -32,7 +32,6 @@ export function PartnerAgencyConnectionsSurface() {
   const grants = useQuery({ queryKey, queryFn: () => requestJson<{ grants: ConnectedAppRecord[] }>(`/api/partner/oauth-grants?partnerId=${partnerId}`) });
   const formatDate = (value: string) => new Intl.DateTimeFormat(intlLocale(i18n.resolvedLanguage ?? i18n.language), { dateStyle: "medium" }).format(new Date(value));
   const appName = (grant: ConnectedAppRecord) => grant.clientName ?? t("agencyConnections.unnamed");
-  const manager = partner.role === "owner" || partner.role === "admin";
 
   const revoke = useMutation({
     mutationFn: (grant: ConnectedAppRecord) => requestJson(`/api/partner/oauth-grants/${encodeURIComponent(grant.id)}?partnerId=${partnerId}`, { method: "DELETE" }),
@@ -43,7 +42,7 @@ export function PartnerAgencyConnectionsSurface() {
   const rows = grants.data?.grants ?? [];
   return (
     <>
-      <SectionBlock description={manager ? t("agencyConnections.description") : t("agencyConnections.descriptionOwn")} title={t("agencyConnections.title")}>
+      <SectionBlock title={t("agencyConnections.title")}>
         <Surface>
           {grants.isLoading ? <div className="p-6"><Skeleton className="h-24 w-full rounded-xl" /></div> : rows.length === 0 ? (
             <p className="type-body-muted p-6 text-center">{t("agencyConnections.empty")}</p>

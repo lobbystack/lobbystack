@@ -200,7 +200,7 @@ describe("the partner console's Billing page", () => {
       },
     });
     expect(await screen.findByText("billing.overage.noCap")).toBeTruthy();
-    expect(screen.getByText("billing.overage.description")).toBeTruthy();
+    expect(screen.queryByText("billing.overage.description")).toBeNull();
     await userEvent.type(screen.getByLabelText("billing.overage.capLabel"), "abc");
     await userEvent.click(screen.getByRole("button", { name: "billing.overage.saveCap" }));
     expect(toast.error).toHaveBeenCalledWith("billing.overage.invalidAmount");

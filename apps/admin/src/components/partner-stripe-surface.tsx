@@ -136,7 +136,7 @@ export function PartnerStripeSurface() {
   }
 
   const copy = {
-    not_connected: { title: "stripe.connect.title", description: "stripe.connect.description", action: "stripe.connect.action" },
+    not_connected: { title: "stripe.connect.title", description: null, action: "stripe.connect.action" },
     onboarding: { title: "stripe.onboarding.title", description: "stripe.onboarding.description", action: "stripe.onboarding.action" },
     restricted: { title: "stripe.restricted.title", description: "stripe.restricted.description", action: "stripe.restricted.action" },
     active: { title: "stripe.active.title", description: "stripe.active.description", action: null },
@@ -153,7 +153,7 @@ export function PartnerStripeSurface() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 flex-col gap-1">
             <h2 className="text-base font-medium">{t(copy.title)}</h2>
-            <p className="text-sm leading-6 text-muted-foreground">{t(copy.description, { currency: data.currency ?? "", date: data.disconnectedAt ? formatDate(data.disconnectedAt) : "" })}</p>
+            {copy.description ? <p className="text-sm leading-6 text-muted-foreground">{t(copy.description, { currency: data.currency ?? "", date: data.disconnectedAt ? formatDate(data.disconnectedAt) : "" })}</p> : null}
           </div>
           <Badge className="shrink-0" variant={data.status === "active" ? "secondary" : "outline"}>{t(STATUS_KEYS[data.status])}</Badge>
         </div>

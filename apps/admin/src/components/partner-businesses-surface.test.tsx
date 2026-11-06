@@ -245,7 +245,7 @@ describe("the partner console's Businesses page", () => {
     await userEvent.type(screen.getByLabelText("businesses.create.ownerLabel"), "owner@pier.test");
     await userEvent.click(await screen.findByRole("combobox", { name: "businesses.create.templateLabel" }));
     await userEvent.click(await screen.findByRole("option", { name: "Dental clinic" }));
-    expect(screen.getByText("businesses.create.templateHelp")).toBeTruthy();
+    expect(screen.queryByText("businesses.create.templateHelp")).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "businesses.create.submit" }));
     expect((await screen.findByRole("alert")).textContent).toBe("businesses.create.errors.templateFailed");
     expect(fixture.telemetry!.events).toEqual([]);

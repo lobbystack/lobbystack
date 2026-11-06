@@ -14,7 +14,7 @@ import { useConsolePartner } from "@/components/partner-shell";
 import { useTelemetry } from "@/components/product-analytics";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -120,7 +120,6 @@ export function SaveTemplateDialog({ open, onOpenChange, business }: SaveTemplat
         <form className="flex flex-col gap-6" onSubmit={(event) => { event.preventDefault(); if (ready) { setError(null); save.mutate(); } }}>
           <DialogHeader>
             <DialogTitle>{t("templates.save.title")}</DialogTitle>
-            <DialogDescription>{t("templates.save.description")}</DialogDescription>
           </DialogHeader>
           <FieldGroup>
             {business ? null : (
@@ -190,7 +189,7 @@ export function PartnerTemplatesSurface() {
       ) : rows.length === 0 ? (
         <Surface className="flex flex-col items-center gap-3 px-6 py-16 text-center">
           <h2 className="text-base font-medium">{t("templates.empty.title")}</h2>
-          <p className="max-w-sm text-sm leading-6 text-muted-foreground">{t(canManage ? "templates.empty.description" : "templates.empty.memberDescription")}</p>
+          {canManage ? null : <p className="max-w-sm text-sm leading-6 text-muted-foreground">{t("templates.empty.memberDescription")}</p>}
         </Surface>
       ) : (
         <Surface className="overflow-hidden p-0">

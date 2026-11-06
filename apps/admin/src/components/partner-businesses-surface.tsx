@@ -18,7 +18,7 @@ import { useTelemetry } from "@/components/product-analytics";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Combobox, ComboboxCollection, ComboboxContent, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxLabel, ComboboxList, ComboboxTrigger, ComboboxValue } from "@/components/ui/combobox";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -174,13 +174,12 @@ function OverageDialog({ partnerId, business, billing, onClose }: { partnerId: s
         <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); if (!save.isPending) { setError(null); save.mutate(); } }}>
           <DialogHeader>
             <DialogTitle>{t("businesses.overage.title", { name: business.name })}</DialogTitle>
-            <DialogDescription>{t("businesses.overage.description", { packageName: billing.packageName })}</DialogDescription>
           </DialogHeader>
           <FieldGroup>
             <Field orientation="horizontal">
               <FieldContent>
                 <FieldLabel htmlFor="partner-business-overage">{t("businesses.overage.toggle")}</FieldLabel>
-                <FieldDescription>{t(enabled ? "businesses.overage.onHint" : "businesses.overage.offHint")}</FieldDescription>
+                {enabled ? null : <FieldDescription>{t("businesses.overage.offHint")}</FieldDescription>}
               </FieldContent>
               <Switch checked={enabled} disabled={save.isPending} id="partner-business-overage" onCheckedChange={setEnabled} />
             </Field>
@@ -340,7 +339,6 @@ export function PartnerBusinessesSurface() {
         <form className="flex flex-col gap-6" onSubmit={(event) => { event.preventDefault(); if (!create.isPending && name.trim() && ownerEmail.trim()) { setError(null); create.mutate(); } }}>
           <DialogHeader>
             <DialogTitle>{t("businesses.create.title")}</DialogTitle>
-            <DialogDescription>{t("businesses.create.description", { partnerName: partner.name })}</DialogDescription>
           </DialogHeader>
           <FieldGroup>
             <Field>
@@ -395,7 +393,6 @@ export function PartnerBusinessesSurface() {
                   <SelectTrigger aria-label={t("businesses.create.templateLabel")} className="w-full" id="partner-business-template"><SelectValue /></SelectTrigger>
                   <SelectContent><SelectGroup>{templateOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectGroup></SelectContent>
                 </Select>
-                {templateId === NO_TEMPLATE ? null : <FieldDescription>{t("businesses.create.templateHelp")}</FieldDescription>}
               </Field>
             ) : null}
           </FieldGroup>
@@ -420,7 +417,7 @@ export function PartnerBusinessesSurface() {
       ) : rows.length === 0 ? (
         <Surface className="flex flex-col items-center gap-3 px-6 py-16 text-center">
           <h2 className="text-base font-medium">{t("businesses.empty.title")}</h2>
-          <p className="max-w-sm text-sm leading-6 text-muted-foreground">{t(canCreate ? "businesses.empty.description" : "businesses.empty.memberDescription")}</p>
+          {canCreate ? null : <p className="max-w-sm text-sm leading-6 text-muted-foreground">{t("businesses.empty.memberDescription")}</p>}
         </Surface>
       ) : (
         <Surface className="overflow-hidden p-0">
@@ -533,12 +530,10 @@ export function PartnerBusinessesSurface() {
           <form className="flex flex-col gap-6" onSubmit={(event) => { event.preventDefault(); if (changing && !changeBilling.isPending) { setBillingError(null); changeBilling.mutate(changing); } }}>
             <DialogHeader>
               <DialogTitle>{t("businesses.billing.title", { name: changing?.name ?? "" })}</DialogTitle>
-              <DialogDescription>{t("businesses.billing.description")}</DialogDescription>
             </DialogHeader>
             <Field>
               <FieldLabel htmlFor="partner-business-change-billing">{t("businesses.create.billingLabel")}</FieldLabel>
               <BillingSelect current={changing?.billing ?? null} disabled={changeBilling.isPending} id="partner-business-change-billing" onChange={setNewBilling} packages={sellable} value={newBilling} />
-              <FieldDescription>{t(newBilling === BILLED_OUTSIDE ? "businesses.billing.outsideHint" : "businesses.billing.packageHint")}</FieldDescription>
             </Field>
             {billingError ? <p className="text-sm text-destructive" role="alert">{billingError}</p> : null}
             <DialogFooter>

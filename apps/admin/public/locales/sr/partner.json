@@ -81,13 +81,11 @@
     },
     "empty": {
       "title": "Još nema firmi",
-      "description": "Napravite firmu i pozovite njenog vlasnika.",
       "memberDescription": "Vlasnici i administratori Vašeg tima ovde prave firme."
     },
     "create": {
       "action": "Napravi firmu",
       "title": "Napravite firmu",
-      "description": "Vlasnik dobija imejl od {{partnerName}} sa linkom za prijavu.",
       "nameLabel": "Naziv firme",
       "namePlaceholder": "Stomatološka ordinacija Luka",
       "ownerLabel": "Imejl vlasnika",
@@ -119,7 +117,6 @@
       },
       "templateLabel": "Šablon",
       "noTemplate": "Bez šablona",
-      "templateHelp": "Firma počinje sa podešavanjima šablona. Čitamo deo svakog sajta iz šablona, a ostatak kada otvorite firmu.",
       "submit": "Napravi i pozovi",
       "submitting": "Pravljenje…",
       "created": "Napravili ste firmu {{name}} i pozvali {{email}}.",
@@ -147,9 +144,6 @@
       "change": "Promeni",
       "changeFor": "Promenite naplatu za firmu {{name}}",
       "title": "Naplata za firmu {{name}}",
-      "description": "Izaberite ponudu koju ova firma plaća ili joj sami naplaćujte.",
-      "outsideHint": "Nijedna ponuda ne ograničava njene minute ni četove.",
-      "packageHint": "Vlasnik plaća na stranici za naplatu firme.",
       "submit": "Sačuvaj",
       "saving": "Čuvamo…",
       "saved": "Promenili ste naplatu za firmu {{name}}.",
@@ -170,9 +164,7 @@
         "cap": "Prekoračenje do {{cap}} mesečno"
       },
       "title": "Prekoračenje za firmu {{name}}",
-      "description": "Dozvolite firmi da nastavi da odgovara i kada potroši ponudu {{packageName}}, po cenama koje odredite.",
       "toggle": "Dozvoli prekoračenje",
-      "onHint": "Kada potroši ponudu, firma nastavlja da odgovara dok ne dostigne limit. Prekoračenje ide na njen sledeći račun.",
       "offHint": "Kada firma potroši ponudu, pozivi se prosleđuju, a čet na sajtu prestaje da odgovara.",
       "minuteRateLabel": "Svaki dodatni minut",
       "chatRateLabel": "Svaki dodatni čet",
@@ -224,13 +216,11 @@
     },
     "empty": {
       "title": "Još nema ponuda",
-      "description": "Napravite ponudu koju Vaši klijenti mogu da kupe.",
       "noStripe": "Za ponude su potrebna plaćanja, a ova kontrolna tabla ih ne obrađuje."
     },
     "create": {
       "action": "Napravi ponudu",
       "title": "Napravite ponudu",
-      "description": "Firme sa ovom ponudom plaćaju ovaj iznos svakog meseca, u valuti {{currency}}.",
       "nameLabel": "Naziv",
       "namePlaceholder": "Recepcija",
       "priceLabel": "Mesečna cena",
@@ -254,7 +244,6 @@
     "rename": {
       "action": "Preimenuj",
       "title": "Preimenujte ponudu",
-      "description": "Vaši klijenti vide novi naziv na svojim računima.",
       "submit": "Sačuvaj naziv",
       "saving": "Čuvamo…",
       "saved": "Ponuda je preimenovana.",
@@ -304,13 +293,11 @@
     },
     "empty": {
       "title": "Još nema šablona",
-      "description": "Sačuvajte firmu kao šablon, pa ga iskoristite za sledeću.",
       "memberDescription": "Vlasnici i administratori Vašeg tima ovde čuvaju šablone."
     },
     "save": {
       "action": "Sačuvaj šablon",
       "title": "Sačuvajte šablon",
-      "description": "Čuvate kopiju podešavanja ove firme. Kasnije izmene firme ne menjaju šablon.",
       "businessLabel": "Firma",
       "businessPlaceholder": "Izaberite firmu",
       "noBusinesses": "Prvo napravite firmu, pa ovde sačuvajte njena podešavanja.",
@@ -355,7 +342,6 @@
     "invite": {
       "action": "Pozovi",
       "title": "Pozovite nekoga u svoj tim",
-      "description": "Dobiće imejl sa linkom da se pridruži timu {{partnerName}}.",
       "emailLabel": "Imejl",
       "emailPlaceholder": "ime@firma.com",
       "roleLabel": "Uloga",
@@ -405,13 +391,10 @@
       "title": "Adresa kontrolne table",
       "open": "Otvori",
       "none": "Još nemate poddomen. Treba Vam on ili Vaš sopstveni domen da biste pravili preduzeća i demo verzije.",
-      "subdomainLabel": "Vaš poddomen",
       "own": {
         "title": "Vaš sopstveni domen",
-        "description": "Koristite sopstveni poddomen, na primer app.vasafirma.com. Vaša trenutna adresa i dalje radi.",
         "label": "Domen",
         "placeholder": "app.vasafirma.com",
-        "help": "Zatim ćete dodati dva DNS zapisa kod svog DNS dobavljača.",
         "connect": "Poveži domen",
         "connecting": "Povezujemo…",
         "added": "Domen je povezan. Sada dodajte njegove DNS zapise.",
@@ -426,7 +409,6 @@
         },
         "settingUp": "Podešavamo Vaš domen. Njegovi DNS zapisi će se uskoro pojaviti ovde.",
         "pendingHelp": "Dodajte ove zapise kod svog DNS dobavljača. Izmene mogu da potraju nekoliko sati.",
-        "activeHelp": "Vaša kontrolna tabla i stranice za prijavu sada rade na ovom domenu.",
         "failedHelp": "Nismo uspeli da podesimo ovaj domen. Uklonite ga, proverite njegove DNS zapise i pokušajte ponovo.",
         "takenHelp": "Druga kontrolna tabla već koristi ovaj domen. Uklonite ga da biste dodali drugi.",
         "records": {
@@ -465,21 +447,17 @@
       "title": "Brend"
     },
     "nameLabel": "Naziv",
-    "nameHelp": "Prikazuje se na kartici pregledača, na prijavi i kao pošiljalac Vaših imejlova.",
     "logoLabel": "Logo",
-    "logoHelp": "Prikazuje se na prijavi i u imejlovima. PNG, JPEG, WebP ili SVG, do 256 KB.",
+    "logoHelp": "PNG, JPEG, WebP ili SVG, do 256 KB.",
     "faviconLabel": "Favikon",
-    "faviconHelp": "Ikonica na kartici pregledača. Bez nje se prikazuje Vaš logo.",
     "imageChoose": "Izaberite sliku",
     "imageChange": "Promenite sliku",
     "logoRemove": "Ukloni logo",
     "faviconRemove": "Ukloni favikon",
     "colorLabel": "Boja brenda",
     "colorPick": "Izaberite boju brenda",
-    "colorHelp": "Heksadecimalni kod, na primer #0f766e.",
     "links": {
       "title": "Linkovi",
-      "description": "Linkovi na Vašoj stranici za prijavu i kontrolnoj tabli. Ostavite polje prazno da sakrijete link.",
       "termsUrl": "Uslovi korišćenja",
       "termsUrlPlaceholder": "https://firma.com/uslovi",
       "privacyUrl": "Politika privatnosti",
@@ -487,8 +465,7 @@
       "supportUrl": "Stranica podrške",
       "supportUrlPlaceholder": "https://firma.com/podrska",
       "supportEmail": "Imejl podrške",
-      "supportEmailPlaceholder": "podrska@firma.com",
-      "supportEmailHelp": "Odgovori na Vaše imejlove stižu ovde. Ako nemate stranicu podrške, link podrške vodi na ovu adresu."
+      "supportEmailPlaceholder": "podrska@firma.com"
     },
     "preview": "Pregled",
     "save": "Sačuvaj brend",
@@ -523,7 +500,6 @@
     },
     "connect": {
       "title": "Povežite nalog za plaćanje",
-      "description": "Preko Stripe-a naplaćujemo Vašim klijentima u Vaše ime i isplaćujemo Vam novac.",
       "countryLabel": "Zemlja Vaše firme",
       "countryPlaceholder": "Izaberite zemlju",
       "countryHelp": "Ovo kasnije ne možete da promenite.",
@@ -579,7 +555,6 @@
     "create": {
       "action": "Kreiraj API ključ",
       "title": "Kreirajte API ključ",
-      "description": "Dajte ključu naziv koji ćete prepoznati i samo onaj pristup koji mu treba.",
       "nameLabel": "Naziv",
       "namePlaceholder": "Uvođenje klijenata",
       "scopesLabel": "Pristup",
@@ -605,7 +580,6 @@
     "update": {
       "action": "Ažuriraj",
       "title": "Ažurirajte {{name}}",
-      "description": "Promenite naziv ili pristup. Ključ ostaje isti, a aplikacije koje ga koriste dobijaju novi pristup od sledećeg zahteva.",
       "submit": "Sačuvaj",
       "saving": "Čuvanje…",
       "cancel": "Otkaži",
@@ -639,8 +613,7 @@
       "partner_team_write": "Pozivanje i uklanjanje administratora i članova, i promena njihovih uloga",
       "partner_billing_read": "Pregled Stripe veze, nivoa i potrošnje zajedničkog paketa. Samo vlasnici mogu da ga dodele",
       "partner_billing_write": "Pokretanje Stripe registracije i plaćanja nivoa, i podešavanje prekoračenja zajedničkog paketa. Samo vlasnici mogu da ga dodele"
-    },
-    "emptyDescription": "Napravite ključ da biste podešavali firme iz svog koda."
+    }
   },
   "secretReveal": {
     "copy": "Kopiraj",
@@ -711,7 +684,6 @@
     },
     "overage": {
       "title": "Prekoračenje",
-      "description": "Kada potroše fond, Vaše firme nastavljaju da odgovaraju po cenama prekoračenja Vašeg nivoa, do Vašeg limita.",
       "toggle": "Dozvoli prekoračenje",
       "free": "Nivo Besplatno nema prekoračenje. Vaše firme staju kada potroše fond.",
       "off": "Prekoračenje je isključeno. Vaše firme staju kada potroše fond svakog meseca.",
@@ -839,8 +811,6 @@
   },
   "agencyConnections": {
     "title": "MCP veze",
-    "description": "AI asistenti i drugi MCP klijenti koje je Vaš tim povezao prijavom.",
-    "descriptionOwn": "AI asistenti i drugi MCP klijenti koje ste povezali prijavom.",
     "empty": "Još nema MCP veza. Povežite asistenta sa {{appName}} MCP serverom i izaberite ovu agenciju pri prijavi.",
     "unnamed": "Aplikacija bez imena",
     "connectedOn": "Povezana {{date}}",
