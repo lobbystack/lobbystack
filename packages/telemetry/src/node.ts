@@ -21,6 +21,7 @@ import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { UndiciInstrumentation } from "@opentelemetry/instrumentation-undici";
 import { monitorEventLoopDelay } from "node:perf_hooks";
 import { format } from "node:util";
+import { PostHog } from "posthog-node";
 
 import { maskString, redactOtelAttributes, redactSignedStorageUrls, shouldRedactKey } from "./redaction.js";
 
@@ -252,6 +253,21 @@ export function getLogger(name = "lobbystack"): Logger {
   return logs.getLogger(name);
 }
 
+// Structured failure records reach PostHog Logs through the OTLP exporter.
+// Plain console output is not exported, so worker failures must call this.
+export function emitErrorLog(
+  loggerName: string,
+  body: string,
+  attributes: Record<string, string | number | boolean> = {},
+): void {
+  logs.getLogger(loggerName).emit({
+    severityNumber: SeverityNumber.ERROR,
+    severityText: "ERROR",
+    body,
+    attributes,
+  });
+}
+
 export function injectTraceContext(carrier: TraceContextCarrier): TraceContextCarrier {
   propagation.inject(context.active(), carrier, {
     set(target, key, value) {
@@ -295,6 +311,38 @@ export async function withSpan<T>(
       span.end();
     }
   });
+}
+
+let exceptionClient: PostHog | undefined;
+
+// The admin sets POSTHOG_KEY or its public project token, and the worker sets
+// POSTHOG_API_KEY for product analytics. All three name the same project.
+export function postHogProjectKey(): string | undefined {
+  return process.env.POSTHOG_KEY ?? process.env.POSTHOG_API_KEY ?? process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
+}
+
+export type ExceptionProperties = Record<string, string | number | boolean | null | undefined | Record<string, string>>;
+
+// Sends one exception to PostHog error tracking. Server runtimes use a shared
+// system identity, so issues group by fingerprint instead of by person.
+export async function captureExceptionToPostHog(
+  error: Error,
+  distinctId: string,
+  properties: ExceptionProperties = {},
+): Promise<void> {
+  const key = postHogProjectKey();
+  if (!key) return;
+  try {
+    exceptionClient ??= new PostHog(key, {
+      host: process.env.POSTHOG_HOST ?? process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://us.i.posthog.com",
+      flushAt: 1,
+      flushInterval: 0,
+    });
+    await exceptionClient.captureExceptionImmediate(error, distinctId, properties);
+  } catch {
+    // Error reporting must never replace the failure it describes.
+    console.warn("[telemetry] exception delivery failed");
+  }
 }
 
 export function recordException(

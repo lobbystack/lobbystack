@@ -23,6 +23,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import OpenAI from "openai";
 
 import { createWorkerDomainContext } from "./domainContext";
+import { createFailureReporter } from "./failureReporting";
 import { handleJob, type WorkerDependencies } from "./handlers";
 import { startHealthServer } from "./health";
 import { createLiveCallHandler, liveDrainTimeoutMs } from "./liveCalls";
@@ -213,6 +214,7 @@ async function main(): Promise<void> {
       });
     },
   };
+  const failures = createFailureReporter();
   const workers = jobQueues.map((queueName) => {
     const meter = getMeter("lobbystack-worker");
     const duration = meter.createHistogram("lobbystack.worker.job_duration_ms", { unit: "ms" });
@@ -250,8 +252,9 @@ async function main(): Promise<void> {
       throw new DelayedError();
     }, createWorkerOptions(queueName));
     // BullMQ emits connection problems as "error" events; without a listener
-    // Node treats one as fatal.
-    worker.on("error", (error) => console.error(JSON.stringify({ event: "worker.error", queue: queueName, message: redactOtelExceptionText(error.message) })));
+    // Node treats one as fatal. The reporter sends them to PostHog error
+    // tracking and logs them, but only once per window.
+    failures.attach(worker, queueName);
     const failedJobs = getMeter("lobbystack-worker").createCounter("lobbystack.worker.jobs.failed");
     worker.on("failed", (job) => failedJobs.add(1, {
       "messaging.destination.name": queueName,
@@ -261,7 +264,7 @@ async function main(): Promise<void> {
   });
   const dispatcher = new OutboxDispatcher(dispatcherDatabase.db, new Map(queues));
   const abort = new AbortController();
-  const dispatchLoop = dispatcher.run(abort.signal).catch((error) => console.error("outbox dispatcher stopped", redactOtelExceptionText(error instanceof Error ? error.message : String(error))));
+  const dispatchLoop = dispatcher.run(abort.signal).catch((error) => failures.reportDispatcherStopped(error));
   // Workers already take jobs here, so a long pass over every business at boot
   // holds up neither jobs nor the health check.
   void (async () => {
