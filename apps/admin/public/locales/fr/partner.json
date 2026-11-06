@@ -550,7 +550,6 @@
       "action": "Reconnecter"
     },
     "details": {
-      "account": "Compte",
       "country": "Pays",
       "currency": "Devise",
       "payouts": "Versements",

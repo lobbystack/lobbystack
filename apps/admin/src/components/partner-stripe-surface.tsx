@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CreditCard, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -151,18 +151,14 @@ export function PartnerStripeSurface() {
       {header}
       <Surface className="flex flex-col gap-6 p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex min-w-0 items-start gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground"><CreditCard className="size-5" /></span>
-            <div className="flex min-w-0 flex-col gap-1">
-              <h2 className="text-base font-medium">{t(copy.title)}</h2>
-              <p className="text-sm leading-6 text-muted-foreground">{t(copy.description, { currency: data.currency ?? "", date: data.disconnectedAt ? formatDate(data.disconnectedAt) : "" })}</p>
-            </div>
+          <div className="flex min-w-0 flex-col gap-1">
+            <h2 className="text-base font-medium">{t(copy.title)}</h2>
+            <p className="text-sm leading-6 text-muted-foreground">{t(copy.description, { currency: data.currency ?? "", date: data.disconnectedAt ? formatDate(data.disconnectedAt) : "" })}</p>
           </div>
           <Badge className="shrink-0" variant={data.status === "active" ? "secondary" : "outline"}>{t(STATUS_KEYS[data.status])}</Badge>
         </div>
         {data.accountId && data.status !== "disconnected" ? (
           <dl className="grid gap-4 text-sm sm:grid-cols-2">
-            <div className="flex flex-col gap-1"><dt className="text-muted-foreground">{t("stripe.details.account")}</dt><dd className="font-mono [overflow-wrap:anywhere]" dir="ltr">{data.accountId}</dd></div>
             {data.country ? <div className="flex flex-col gap-1"><dt className="text-muted-foreground">{t("stripe.details.country")}</dt><dd>{regionName(data.country)}</dd></div> : null}
             {data.currency ? <div className="flex flex-col gap-1"><dt className="text-muted-foreground">{t("stripe.details.currency")}</dt><dd>{data.currency}</dd></div> : null}
             <div className="flex flex-col gap-1"><dt className="text-muted-foreground">{t("stripe.details.payouts")}</dt><dd>{t(data.payoutsEnabled ? "stripe.details.payoutsOn" : "stripe.details.payoutsOff")}</dd></div>

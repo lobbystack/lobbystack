@@ -550,7 +550,6 @@
       "action": "Volver a conectar"
     },
     "details": {
-      "account": "Cuenta",
       "country": "País",
       "currency": "Moneda",
       "payouts": "Transferencias",
