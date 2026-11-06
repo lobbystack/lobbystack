@@ -669,8 +669,7 @@
       "extra_other": "Números de teléfono en uso: {{held}}. Paga {{count}} números adicionales cada mes."
     },
     "trial": {
-      "available": "Solicite su número de prueba de 14 días en la configuración de teléfono de cualquier negocio. Sus llamadas van al móvil de quien lo solicite.",
-      "used": "Ya usó su número de prueba de 14 días."
+      "available": "Solicite su número de prueba de 14 días en la configuración de teléfono de cualquier negocio. Sus llamadas van al móvil de quien lo solicite."
     },
     "pool": {
       "title": "Este mes",
@@ -680,13 +679,11 @@
       "noLimit": "{{used}}, sin límite"
     },
     "hostPool": {
-      "limit": "Al llegar al límite, las llamadas se desvían y el chat del sitio deja de responder hasta que se reinicie la bolsa. Para cambiarla, consulte a la empresa que administra este panel."
+      "limit": "Al llegar al límite, las llamadas se desvían y el chat del sitio deja de responder hasta que se reinicie la bolsa."
     },
     "overage": {
       "title": "Excedente",
       "toggle": "Permitir excedente",
-      "free": "El nivel Gratis no tiene excedente. Sus negocios se detienen en la bolsa.",
-      "off": "El excedente está desactivado. Sus negocios se detienen en la bolsa cada mes.",
       "noCap": "Sin límite",
       "spend": "Excedente este mes",
       "spendNoCap": "{{spend}} este mes",
@@ -811,7 +808,7 @@
   },
   "agencyConnections": {
     "title": "Conexiones MCP",
-    "empty": "Aún no hay conexiones MCP. Conecte un asistente al servidor MCP de {{appName}} y elija esta agencia al iniciar sesión.",
+    "empty": "Aún no hay conexiones MCP.",
     "unnamed": "Aplicación sin nombre",
     "connectedOn": "Conectada el {{date}}",
     "lastUsed": "Último uso el {{date}}",

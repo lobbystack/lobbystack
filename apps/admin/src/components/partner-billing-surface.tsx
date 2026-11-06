@@ -251,7 +251,7 @@ export function PartnerBillingSurface() {
             {current.tier === "free" ? <p className="text-sm text-muted-foreground">{t("billing.current.free")}</p> : <TierPrice interval={current.billingInterval ?? "monthly"} tier={current.tier} />}
             <TierTerms numbers={current.numbersCounted} tier={current.tier} trial={Boolean(current.trialNumber)} />
             {current.tier === "free" || !current.numbersCounted ? null : <NumbersInUse held={current.numbersHeld} included={current.includedNumbers} />}
-            {current.trialNumber ? <p className="text-sm text-muted-foreground">{t(current.trialNumber === "available" ? "billing.trial.available" : "billing.trial.used")}</p> : null}
+            {current.trialNumber === "available" ? <p className="text-sm text-muted-foreground">{t("billing.trial.available")}</p> : null}
             {current.endsAt ? <p className="text-sm text-muted-foreground">{t("billing.current.endsOn", { date: date(current.endsAt) })}</p> : current.currentPeriodEnd ? <p className="text-sm text-muted-foreground">{t("billing.current.renewsOn", { date: date(current.currentPeriodEnd) })}</p> : null}
           </div>
           {current.hasCustomerPortal ? (

@@ -669,8 +669,7 @@
       "extra_other": "Brojeva telefona u upotrebi: {{held}}. Svakog meseca plaćate {{count}} dodatnih brojeva."
     },
     "trial": {
-      "available": "Preuzmite probni broj na 14 dana u podešavanjima telefona bilo koje firme. Pozivi na taj broj idu na mobilni osobe koja ga preuzme.",
-      "used": "Iskoristili ste probni broj na 14 dana."
+      "available": "Preuzmite probni broj na 14 dana u podešavanjima telefona bilo koje firme. Pozivi na taj broj idu na mobilni osobe koja ga preuzme."
     },
     "pool": {
       "title": "Ovog meseca",
@@ -680,13 +679,11 @@
       "noLimit": "{{used}}, bez ograničenja"
     },
     "hostPool": {
-      "limit": "Kada firme potroše fond, pozivi se prosleđuju, a čet na sajtu ne odgovara dok fond ne počne ispočetka. Da biste ga promenili, obratite se firmi koja upravlja ovom kontrolnom tablom."
+      "limit": "Kada firme potroše fond, pozivi se prosleđuju, a čet na sajtu ne odgovara dok fond ne počne ispočetka."
     },
     "overage": {
       "title": "Prekoračenje",
       "toggle": "Dozvoli prekoračenje",
-      "free": "Nivo Besplatno nema prekoračenje. Vaše firme staju kada potroše fond.",
-      "off": "Prekoračenje je isključeno. Vaše firme staju kada potroše fond svakog meseca.",
       "noCap": "Bez limita",
       "spend": "Prekoračenje ovog meseca",
       "spendNoCap": "{{spend}} ovog meseca",
@@ -811,7 +808,7 @@
   },
   "agencyConnections": {
     "title": "MCP veze",
-    "empty": "Još nema MCP veza. Povežite asistenta sa {{appName}} MCP serverom i izaberite ovu agenciju pri prijavi.",
+    "empty": "Još nema MCP veza.",
     "unnamed": "Aplikacija bez imena",
     "connectedOn": "Povezana {{date}}",
     "lastUsed": "Poslednji put korišćena {{date}}",

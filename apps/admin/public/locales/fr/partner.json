@@ -669,8 +669,7 @@
       "extra_other": "Numéros de téléphone utilisés : {{held}}. Vous payez {{count}} numéros supplémentaires chaque mois."
     },
     "trial": {
-      "available": "Demandez votre numéro d'essai de 14 jours dans les réglages téléphoniques de n'importe quelle entreprise. Ses appels vont au mobile de la personne qui le demande.",
-      "used": "Vous avez utilisé votre numéro d'essai de 14 jours."
+      "available": "Demandez votre numéro d'essai de 14 jours dans les réglages téléphoniques de n'importe quelle entreprise. Ses appels vont au mobile de la personne qui le demande."
     },
     "pool": {
       "title": "Ce mois-ci",
@@ -680,13 +679,11 @@
       "noLimit": "{{used}}, sans limite"
     },
     "hostPool": {
-      "limit": "Une fois la réserve épuisée, les appels sont transférés et le clavardage du site cesse de répondre jusqu'à ce qu'elle reparte à zéro. Pour la modifier, adressez-vous à l'entreprise qui gère ce tableau de bord."
+      "limit": "Une fois la réserve épuisée, les appels sont transférés et le clavardage du site cesse de répondre jusqu'à ce qu'elle reparte à zéro."
     },
     "overage": {
       "title": "Dépassement",
       "toggle": "Autoriser le dépassement",
-      "free": "Le palier Gratuit n'a pas de dépassement. Vos entreprises s'arrêtent à la réserve.",
-      "off": "Le dépassement est désactivé. Vos entreprises s'arrêtent à la réserve chaque mois.",
       "noCap": "Aucun plafond",
       "spend": "Dépassement ce mois-ci",
       "spendNoCap": "{{spend}} ce mois-ci",
@@ -811,7 +808,7 @@
   },
   "agencyConnections": {
     "title": "Connexions MCP",
-    "empty": "Aucune connexion MCP pour l'instant. Connectez un assistant au serveur MCP de {{appName}} et choisissez cette agence à la connexion.",
+    "empty": "Aucune connexion MCP pour l'instant.",
     "unnamed": "Application sans nom",
     "connectedOn": "Connectée le {{date}}",
     "lastUsed": "Dernière utilisation le {{date}}",

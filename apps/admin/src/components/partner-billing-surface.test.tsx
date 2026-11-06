@@ -84,9 +84,10 @@ describe("the partner console's Billing page", () => {
     expect(started).toEqual([{ partnerId: "partner", tier: "growth", billingInterval: "monthly" }]);
   });
 
-  it("says when the partner used its trial number, and says nothing of one where the deployment offers none", async () => {
+  it("says nothing of a used trial number, nor of one where the deployment offers none", async () => {
     renderWith({ "GET /api/partner/billing": () => ({ ...free, trialNumber: "used" }) });
-    expect(await screen.findByText("billing.trial.used")).toBeTruthy();
+    expect(await screen.findByText("billing.pool.title")).toBeTruthy();
+    expect(screen.queryByText("billing.trial.used")).toBeNull();
     cleanup();
     renderWith({ "GET /api/partner/billing": () => ({ ...free, trialNumber: null }) });
     expect(await screen.findByText("billing.terms.noNumbers")).toBeTruthy();
@@ -178,9 +179,10 @@ describe("the partner console's Billing page", () => {
     expect(document.body.textContent).not.toContain("$");
   });
 
-  it("explains that Free has no overage, with nothing to change", async () => {
+  it("shows no overage section on Free, with nothing to change", async () => {
     renderWith({ "GET /api/partner/billing": () => free });
-    expect(await screen.findByText("billing.overage.free")).toBeTruthy();
+    expect(await screen.findByText("billing.pool.title")).toBeTruthy();
+    expect(screen.queryByText("billing.overage.title")).toBeNull();
     // What overage does past the pool would contradict that.
     expect(screen.queryByText("billing.overage.description")).toBeNull();
     expect(screen.queryByRole("switch")).toBeNull();
@@ -213,7 +215,7 @@ describe("the partner console's Billing page", () => {
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith("billing.overage.capRemoved"));
     await userEvent.click(await screen.findByRole("switch", { name: "billing.overage.toggle" }));
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith("billing.overage.turnedOff"));
-    expect(await screen.findByText("billing.overage.off")).toBeTruthy();
+    expect(await screen.findByRole("switch", { name: "billing.overage.toggle" })).toBeTruthy();
     expect(saved).toEqual([
       { partnerId: "partner", enabled: true, capCents: 5_000 },
       { partnerId: "partner", enabled: true, capCents: null },
