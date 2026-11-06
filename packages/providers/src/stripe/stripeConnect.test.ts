@@ -56,6 +56,30 @@ describe("the Stripe Connect adapter", () => {
     expect(sent.map((request) => request.path)).toEqual(["/v1/account_links"]);
   });
 
+  it("tells the console the host's platform account isn't ready, and keeps every Stripe refusal in the log", async () => {
+    const input = { accountId: null, country: "CA", idempotencyKey: "partner-stripe-account:p1:first:CA", returnUrl: "https://desk.test/r", refreshUrl: "https://desk.test/f", metadata: {} };
+    const refusing = (error: Record<string, unknown>) => new StripeConnectAdapter({
+      secretKey: "sk_test_platform",
+      webhookSecret,
+      httpClient: Stripe.createFetchHttpClient(vi.fn(async () => Response.json({ error }, { status: 400 })) as typeof fetch),
+    });
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    // Stripe sends the first two without a code, so their message is the only signal.
+    for (const message of [
+      "Your account must be activated in order to create accounts.",
+      "Your platform profile is under review. You can create accounts once it's approved.",
+      "You can only create new accounts if you've signed up for Connect.",
+    ]) {
+      await expect(refusing({ message, type: "invalid_request_error" }).createOnboardingLink(input)).rejects.toMatchObject({ status: 409, code: "stripe_platform_not_ready" });
+    }
+    await expect(refusing({ message: "Only Stripe Connect platforms can work with other accounts.", type: "invalid_request_error", code: "platform_account_required" }).createOnboardingLink(input)).rejects.toMatchObject({ status: 409, code: "stripe_platform_not_ready" });
+    expect(logged).toHaveBeenCalledWith("[stripe-connect] platform account not ready", { type: "invalid_request_error", code: null, message: "Your account must be activated in order to create accounts." });
+
+    await expect(refusing({ message: "An unknown parameter was sent.", type: "invalid_request_error", code: "parameter_unknown" }).createOnboardingLink(input)).rejects.toMatchObject({ code: "parameter_unknown" });
+    expect(logged).toHaveBeenCalledWith("[stripe-connect] onboarding failed", { type: "invalid_request_error", code: "parameter_unknown", message: "An unknown parameter was sent." });
+    logged.mockRestore();
+  });
+
   it("reads an account's state, with its country and currency in uppercase", async () => {
     const { adapter, sent } = stripeAnswering(() => stripeAccount);
     expect(await adapter.retrieveAccount("acct_partner")).toEqual({ accountId: "acct_partner", country: "CA", currency: "CAD", detailsSubmitted: true, chargesEnabled: true, payoutsEnabled: false, disabledReason: null });

@@ -194,7 +194,7 @@
     "title": "Packages",
     "loadFailed": "We couldn't load your packages. Refresh to try again.",
     "managersOnly": "Only owners and admins can see packages.",
-    "notConfigured": "Payments aren't turned on for this dashboard, so you bill your businesses yourself.",
+    "notConfigured": "This dashboard doesn't handle payments, so you bill your businesses yourself.",
     "connectFirst": {
       "owner": "Connect payments to sell packages.",
       "admin": "Ask an owner to connect payments so you can sell packages."
@@ -223,7 +223,7 @@
     "empty": {
       "title": "No packages yet",
       "description": "Create a package your clients can buy.",
-      "noStripe": "Packages need payments, which this dashboard doesn't offer yet."
+      "noStripe": "Packages need payments, and this dashboard doesn't handle them."
     },
     "create": {
       "action": "Create package",
@@ -503,8 +503,8 @@
     "ownersOnly": "Only owners can manage payments.",
     "opening": "Opening Stripe…",
     "notConfigured": {
-      "title": "Payments aren't set up here",
-      "description": "Payments aren't turned on for this dashboard, so you bill your businesses yourself."
+      "title": "You bill your businesses yourself",
+      "description": "This dashboard doesn't handle payments for you."
     },
     "status": {
       "notConnected": "Not connected",
@@ -553,6 +553,7 @@
       "failed": "We couldn't open Stripe. Try again.",
       "invalidCountry": "Choose the country your business is in.",
       "notConfigured": "This dashboard can't take payments yet.",
+      "platformNotReady": "Payments aren't ready on this dashboard yet. Ask the company that runs it to finish setting them up.",
       "changed": "Someone else changed the payment settings. Refresh and try again."
     }
   },

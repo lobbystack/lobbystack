@@ -43,6 +43,7 @@ const ERROR_KEYS: Record<string, string> = {
   invalid_country: "stripe.errors.invalidCountry",
   stripe_not_configured: "stripe.errors.notConfigured",
   stripe_connection_changed: "stripe.errors.changed",
+  stripe_platform_not_ready: "stripe.errors.platformNotReady",
   owner_only: "stripe.ownersOnly",
 };
 

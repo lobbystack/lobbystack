@@ -2,7 +2,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { listUserBusinesses, listUserPartners, partnerHasBillingPage } from "@lobbystack/domain";
-import { isUuid } from "@lobbystack/shared";
+import { isUuid, partnerFeatures } from "@lobbystack/shared";
 import { PartnerShell } from "@/components/partner-shell";
 import { getAppDatabase } from "@/lib/api-helpers";
 import { getSession } from "@/lib/auth";
@@ -37,7 +37,7 @@ export default async function PartnerConsoleLayout({ children, params }: { child
   // their partner opened for them doesn't count: they get back to that one from Businesses.
   const businessDashboard = businesses.some(({ via }) => via === "membership");
   return (
-    <PartnerShell billingPage={billingPage} businessDashboard={businessDashboard} partner={partner} partners={partners} sidebarOpen={sidebarOpen} user={{ email: session.user.email ?? "" }}>
+    <PartnerShell billingPage={billingPage} businessDashboard={businessDashboard} partner={partner} partners={partners} payments={partnerFeatures(process.env).stripeConnect} sidebarOpen={sidebarOpen} user={{ email: session.user.email ?? "" }}>
       {children}
     </PartnerShell>
   );
