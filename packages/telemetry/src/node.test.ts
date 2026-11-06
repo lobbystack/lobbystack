@@ -1,11 +1,19 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createServer } from "node:http";
 
-import { forceFlushTelemetryLogs, getLogger, initializeTelemetry, isStorageHttpRequest, redactExportAttributes, redactExportLogValue, redactOtelExceptionText, registerStorageHttpEndpoint, shutdownTelemetry } from "./node";
+import { forceFlushTelemetryLogs, getLogger, traceSampleRatio, initializeTelemetry, isStorageHttpRequest, redactExportAttributes, redactExportLogValue, redactOtelExceptionText, registerStorageHttpEndpoint, shutdownTelemetry } from "./node";
 
 afterEach(async () => {
   vi.unstubAllEnvs();
   await shutdownTelemetry();
+});
+
+describe("trace sampling", () => {
+  it("keeps a tenth of traces unless the deployment names a ratio", () => {
+    expect(traceSampleRatio({})).toBe(0.1);
+    expect(traceSampleRatio({ OTEL_TRACES_SAMPLER_ARG: "0.05" })).toBe(0.05);
+    for (const value of ["2", "-1", "all"]) expect(traceSampleRatio({ OTEL_TRACES_SAMPLER_ARG: value })).toBe(0.1);
+  });
 });
 
 describe("OTel exception redaction", () => {
