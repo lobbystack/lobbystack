@@ -127,8 +127,8 @@ export function createFailureReporter(options: FailureReporterOptions = {}) {
     const message = errorText(error);
     // A connection problem repeats across queues, so one issue and one report
     // per window cover the whole worker process.
-    logFailure("worker.error", { queue, message });
     if (withinCooldown("worker.error")) return;
+    logFailure("worker.error", { queue, message });
     const safe = failureError("WorkerConnectionError", `worker connection error: ${message}`, error);
     void capture(safe, DISTINCT_ID, {
       ...serviceProperties(),

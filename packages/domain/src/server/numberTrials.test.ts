@@ -82,7 +82,8 @@ function outlook({ deploymentMode = "cloud", timezone = "America/Toronto", partn
   mocks.loadEntitlement.mockResolvedValue({ live });
   // verifiedPhone reads the phone's attempts only when the account has one.
   const hasPhone = Boolean((phone[0] as { phone?: string | null } | undefined)?.phone);
-  const rows = [[{ deploymentMode, timezone, partnerId }], number, phone, ...(hasPhone ? [attempt] : []), email === null ? [] : [email]];
+  // The outlook reads these in order: business, number, email, phone, attempts.
+  const rows = [[{ deploymentMode, timezone, partnerId }], number, email === null ? [] : [email], phone, ...(hasPhone ? [attempt] : [])];
   let trialReads = 0;
   const tx = {
     select: () => chain(rows.shift() ?? []),

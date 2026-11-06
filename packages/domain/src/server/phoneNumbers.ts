@@ -161,21 +161,17 @@ export async function numberEligibilityInTransaction(tx: DatabaseTransaction, in
   if (requested && !isNumberCountry(requested)) throw numberClaimError(400, "unsupported_country", "Phone numbers aren't available in this country yet.");
   const market = resolveBusinessNumberMarket({ selection: requested ? { ...input.selection, countryCode: requested } : input.selection, timezone: business.timezone });
   let trial: { verifiedPhone: string | null } | undefined;
-  // Every trial, with a text or without, belongs to a person with a verified,
-  // non-disposable email. The claim checks the email again. A partner's key
-  // search is not a trial and keeps the partner's own refusals below.
-  if (partnerTrial || (business.deploymentMode === "cloud" && !entitlement.live && !entitlement.poolPartnerId)) {
-    if (input.userId === null) throw refused("phone_verification_required");
-    const email = await trialEmailInTransaction(tx, input.userId);
-    if (!email?.emailVerified) throw refused("email_verification_required");
-    if (isDisposableTrialEmail(email.email)) throw refused("trial_not_available");
-  }
   if (partnerTrial) {
     // The partner's trial runs by the host's trial rules: a live business,
     // the verified mobile of the person claiming, in a trial country, once.
     // A business paused with its partner's other businesses isn't live, and
     // a demo nobody claimed would spend the partner's one trial and expire.
     if (!entitlement.live || await unclaimedPartnerDemoInTransaction(tx, input.businessId)) throw refused("partner_numbers_unavailable");
+    // A trial belongs to a person with a verified, non-disposable email.
+    if (input.userId === null) throw refused("phone_verification_required");
+    const trialEmail = await trialEmailInTransaction(tx, input.userId);
+    if (!trialEmail?.emailVerified) throw refused("email_verification_required");
+    if (isDisposableTrialEmail(trialEmail.email)) throw refused("trial_not_available");
     if (!verified) throw refused("phone_verification_required");
     if (!(trialCountries() as string[]).includes(verified.countryCode)) throw refused("partner_number_limit_reached");
     const used = await tx.select({ id: numberTrials.id }).from(numberTrials).where(and(eq(numberTrials.businessId, input.businessId), ne(numberTrials.status, "failed"))).limit(1);
@@ -187,6 +183,11 @@ export async function numberEligibilityInTransaction(tx: DatabaseTransaction, in
     if (entitlement.poolPartnerId) throw refused("partner_numbers_unavailable");
     // Without a paid plan, a number is a free trial during onboarding.
     if (purpose !== "onboarding") throw refused("dedicated_number_requires_paid_plan");
+    // A trial belongs to a person with a verified, non-disposable email.
+    if (input.userId === null) throw refused("phone_verification_required");
+    const trialEmail = await trialEmailInTransaction(tx, input.userId);
+    if (!trialEmail?.emailVerified) throw refused("email_verification_required");
+    if (isDisposableTrialEmail(trialEmail.email)) throw refused("trial_not_available");
     const used = await tx.select({ id: numberTrials.id }).from(numberTrials).where(and(eq(numberTrials.businessId, input.businessId), ne(numberTrials.status, "failed"))).limit(1);
     if (used.length) throw refused("trial_already_used");
     // A verified mobile is proof enough, and the number follows its country.

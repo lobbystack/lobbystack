@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { markPlanOfferDismissedInTransaction, markPlanOfferShownInTransaction, readPlanOfferInTransaction } from "@lobbystack/domain";
+import { markPlanOfferChosenInTransaction, markPlanOfferDismissedInTransaction, markPlanOfferShownInTransaction, readPlanOfferInTransaction } from "@lobbystack/domain";
 
 import { hostedCheckoutOptions } from "@/lib/hosted-checkout";
 import { operatorRoute } from "@/lib/operator-request";
@@ -20,6 +20,11 @@ export const GET = operatorRoute(async ({ businessId, transaction }) => NextResp
  */
 export const POST = operatorRoute(async ({ body, businessId, transaction }) => {
   const dismissed = body.dismissed === true;
-  await transaction((tx) => dismissed ? markPlanOfferDismissedInTransaction(tx, businessId) : markPlanOfferShownInTransaction(tx, businessId));
+  const chosen = body.chosen === true;
+  await transaction((tx) => dismissed
+    ? markPlanOfferDismissedInTransaction(tx, businessId)
+    : chosen
+      ? markPlanOfferChosenInTransaction(tx, businessId)
+      : markPlanOfferShownInTransaction(tx, businessId));
   return NextResponse.json({ ok: true });
 });

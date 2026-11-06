@@ -70,6 +70,11 @@ export async function markPlanOfferShownInTransaction(tx: DatabaseTransaction, b
   await tx.update(businesses).set({ planOfferShownAt: new Date() }).where(eq(businesses.id, businessId));
 }
 
+/** A choice ends the dismissals in a row, whether it is Free or a paid plan. */
+export async function markPlanOfferChosenInTransaction(tx: DatabaseTransaction, businessId: string): Promise<void> {
+  await tx.update(businesses).set({ planOfferShownAt: new Date(), planOfferDismissals: 0 }).where(eq(businesses.id, businessId));
+}
+
 /** Closed without a choice: counts toward the longer pause after three in a row. */
 export async function markPlanOfferDismissedInTransaction(tx: DatabaseTransaction, businessId: string): Promise<void> {
   await tx.update(businesses).set({ planOfferShownAt: new Date(), planOfferDismissals: sql`${businesses.planOfferDismissals} + 1` }).where(eq(businesses.id, businessId));

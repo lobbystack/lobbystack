@@ -5,7 +5,7 @@ import { agents, billingAccounts, businesses, calls, createDatabaseClient, defau
 import { DASHBOARD_TEST_CALL_WIDGET_ID, defaultGreeting } from "@lobbystack/shared";
 import { advanceOnboardingStage, getActiveOnboardingState, submitOnboardingAttribution } from "./onboarding";
 import { HOST_BRAND_SCOPE } from "./businessAccess";
-import { latestCompletedTestAt, markPlanOfferDismissedInTransaction, markPlanOfferShownInTransaction, readPlanOfferInTransaction, recordTestChatReply } from "./planOffer";
+import { latestCompletedTestAt, markPlanOfferChosenInTransaction, markPlanOfferDismissedInTransaction, markPlanOfferShownInTransaction, readPlanOfferInTransaction, recordTestChatReply } from "./planOffer";
 import { skipOnboardingNumber } from "./phoneNumbers";
 import { applySiteLanguageInTransaction, createBusiness, updateBusinessInTransaction } from "./tenancy";
 
@@ -184,6 +184,8 @@ describe.skipIf(!testUrl)("the onboarding rebuild against dedicated PostgreSQL r
       await markPlanOfferDismissedInTransaction(tx, businessId);
       await markPlanOfferDismissedInTransaction(tx, businessId);
       expect((await business(tx, businessId)).planOfferDismissals).toBe(2);
+      await markPlanOfferChosenInTransaction(tx, businessId);
+      expect((await business(tx, businessId)).planOfferDismissals).toBe(0);
     });
   });
 

@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import Redis from "ioredis";
-import { and, eq, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
+import { and, eq, gte, gt, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { UnrecoverableError } from "bullmq";
 
 import { hasSummarizableTranscript, type BusinessHoursExtractor, type BusinessSummarizer, type CallSummarizer } from "@lobbystack/agent-core";
@@ -108,6 +108,7 @@ function retryAfterLease(leaseEndsAt: Date | null, entityId: string): JobResult 
 }
 
 type ProviderFailure = { transient: boolean; status: number | null; reason: string };
+type ProviderCheckout = { checkoutId: string; checkoutUrl: string };
 
 /**
  * Reads what the provider said, with no customer data: an outage may be tried
@@ -121,7 +122,9 @@ function providerFailure(error: unknown): ProviderFailure {
       reason: error.transient ? "provider_unavailable" : "provider_rejected",
     };
   }
-  return { transient: false, status: null, reason: "provider_error" };
+  // Not the provider refusing: a bookkeeping failure is retried by the queue,
+  // and the same request id keeps Polar's idempotency key.
+  throw error;
 }
 
 function providerFailureReason(failure: ProviderFailure): string {
@@ -515,7 +518,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       let reembedded = 0;
       while (true) {
         const rows = await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) =>
-          await tx.select({ id: knowledgeChunks.id, documentId: knowledgeChunks.documentId, content: knowledgeChunks.content })
+          await tx.select({ id: knowledgeChunks.id, documentId: knowledgeChunks.documentId, sequence: knowledgeChunks.sequence, content: knowledgeChunks.content })
             .from(knowledgeChunks)
             .where(and(eq(knowledgeChunks.businessId, businessId), or(isNull(knowledgeChunks.embeddingFingerprint), ne(knowledgeChunks.embeddingFingerprint, fingerprint), isNull(knowledgeChunks.embedding), eq(knowledgeChunks.embeddingStatus, "pending"), eq(knowledgeChunks.embeddingStatus, "failed"))))
             .limit(batchSize),
@@ -543,20 +546,21 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           throw error;
         }
         await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
-          const nextSequence = new Map<string, number>();
-          const split = batches.filter((batch) => batch.contents.length > 1);
-          if (split.length > 0) {
-            const maxima = await tx.select({ documentId: knowledgeChunks.documentId, sequence: sql<number>`max(${knowledgeChunks.sequence})` })
-              .from(knowledgeChunks)
-              .where(and(eq(knowledgeChunks.businessId, businessId), inArray(knowledgeChunks.documentId, [...new Set(split.map((batch) => batch.row.documentId))])))
-              .groupBy(knowledgeChunks.documentId);
-            for (const maximum of maxima) nextSequence.set(maximum.documentId, Number(maximum.sequence) + 1);
-          }
           let index = 0;
-          for (const { row, contents } of batches) {
+          // Highest sequence first, so a split's new pieces never shift the
+          // sequence of a chunk still waiting to be processed.
+          const ordered = [...batches].sort((a, b) => b.row.sequence - a.row.sequence);
+          for (const { row, contents } of ordered) {
             const [first, ...rest] = contents;
             const embedding = embeddings[index++];
             if (first === undefined || !embedding) throw new Error("Embedding provider returned an incompatible re-embedding vector.");
+            if (rest.length > 0) {
+              // Make room beside the original chunk, not after the document.
+              // The temporary offset keeps the unique (document, sequence)
+              // index satisfied while later chunks move up.
+              await tx.update(knowledgeChunks).set({ sequence: sql`${knowledgeChunks.sequence} + 1000000` }).where(and(eq(knowledgeChunks.businessId, businessId), eq(knowledgeChunks.documentId, row.documentId), gt(knowledgeChunks.sequence, row.sequence)));
+              await tx.update(knowledgeChunks).set({ sequence: sql`${knowledgeChunks.sequence} - 1000000 + ${rest.length}` }).where(and(eq(knowledgeChunks.businessId, businessId), eq(knowledgeChunks.documentId, row.documentId), gte(knowledgeChunks.sequence, row.sequence + 1000000)));
+            }
             await tx.update(knowledgeChunks).set({
               ...(rest.length > 0 ? { content: first, contentHash: hashContent(first) } : {}),
               embedding,
@@ -565,12 +569,12 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
               embeddingError: null,
               updatedAt: new Date(),
             }).where(and(eq(knowledgeChunks.id, row.id), eq(knowledgeChunks.businessId, businessId)));
+            let sequence = row.sequence + 1;
             for (const content of rest) {
               const piece = embeddings[index++];
-              const sequence = nextSequence.get(row.documentId);
-              if (!piece || sequence === undefined) throw new Error("Embedding provider returned an incompatible re-embedding vector.");
+              if (!piece) throw new Error("Embedding provider returned an incompatible re-embedding vector.");
               await tx.insert(knowledgeChunks).values({ businessId, documentId: row.documentId, sequence, content, contentHash: hashContent(content), embedding: piece, embeddingFingerprint: fingerprint, embeddingStatus: "completed", embeddingError: null });
-              nextSequence.set(row.documentId, sequence + 1);
+              sequence += 1;
             }
           }
         });
@@ -815,10 +819,11 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       }
       const request = await loadBillingCheckoutRequest(dependencies.domain, { businessId, requestId });
       if (!request) return { status: "skipped", entityId: requestId };
+      let checkout!: ProviderCheckout;
       try {
         const appUrl = (process.env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
         const planUrl = `${appUrl}/${request.onboardingStage === "complete" ? "settings/plan" : "onboarding/plan"}`;
-        const checkout = await dependencies.polar.createCheckout({
+        checkout = await dependencies.polar.createCheckout({
           productId: polarCheckoutProductId(request.target, request.billingInterval),
           customerEmail: request.customerEmail,
           externalCustomerId: request.externalCustomerId,
@@ -828,14 +833,6 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           returnUrl: planUrl,
           idempotencyKey: `billing-checkout:${requestId}`,
         });
-        await markBillingCheckoutCreated(dependencies.domain, { businessId, requestId, ...checkout });
-        logCheckout("billing.checkout_created", {
-          requestId,
-          target: request.target,
-          interval: request.billingInterval,
-          elapsedMs: Date.now() - (execution.queuedAtMs ?? Date.now()),
-        });
-        return { status: "completed", entityId: requestId };
       } catch (error) {
         const failure = providerFailure(error);
         if (failure.transient) {
@@ -860,6 +857,14 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         await markBillingCheckoutFailed(dependencies.domain, { businessId, requestId, error: providerFailureReason(failure) });
         throw new UnrecoverableError(`Checkout failed: ${providerFailureReason(failure)}`);
       }
+      await markBillingCheckoutCreated(dependencies.domain, { businessId, requestId, ...checkout });
+      logCheckout("billing.checkout_created", {
+        requestId,
+        target: request.target,
+        interval: request.billingInterval,
+        elapsedMs: Date.now() - (execution.queuedAtMs ?? Date.now()),
+      });
+      return { status: "completed", entityId: requestId };
     }
     case "billing.createPartnerCheckout": {
       // A partner's tier belongs to no business, so the job names the partner.
@@ -879,9 +884,10 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         await markPartnerCheckoutFailed(dependencies.domain, { ...request, error: "The tier's Polar product is not configured." });
         return { status: "skipped", entityId: requestId };
       }
+      let checkout!: ProviderCheckout;
       try {
         const billingUrl = `${checkoutRequest.returnOrigin}/partner/${partnerId}/billing`;
-        const checkout = await dependencies.polar.createCheckout({
+        checkout = await dependencies.polar.createCheckout({
           productId,
           customerEmail: checkoutRequest.customerEmail,
           externalCustomerId: checkoutRequest.externalCustomerId,
@@ -890,14 +896,6 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           returnUrl: billingUrl,
           idempotencyKey: `partner-checkout:${requestId}`,
         });
-        await markPartnerCheckoutCreated(dependencies.domain, { ...request, ...checkout });
-        logCheckout("billing.partner_checkout_created", {
-          requestId,
-          tier: checkoutRequest.tier,
-          interval: checkoutRequest.billingInterval,
-          elapsedMs: Date.now() - (execution.queuedAtMs ?? Date.now()),
-        });
-        return { status: "completed", entityId: requestId };
       } catch (error) {
         const failure = providerFailure(error);
         if (failure.transient) {
@@ -922,6 +920,14 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         await markPartnerCheckoutFailed(dependencies.domain, { ...request, error: providerFailureReason(failure) });
         throw new UnrecoverableError(`Checkout failed: ${providerFailureReason(failure)}`);
       }
+      await markPartnerCheckoutCreated(dependencies.domain, { ...request, ...checkout });
+      logCheckout("billing.partner_checkout_created", {
+        requestId,
+        tier: checkoutRequest.tier,
+        interval: checkoutRequest.billingInterval,
+        elapsedMs: Date.now() - (execution.queuedAtMs ?? Date.now()),
+      });
+      return { status: "completed", entityId: requestId };
     }
     case "billing.reconcilePartner": {
       const partnerId = String(job.payload.partnerId ?? "");

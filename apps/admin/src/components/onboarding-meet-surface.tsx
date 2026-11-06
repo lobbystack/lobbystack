@@ -114,7 +114,10 @@ function MeetAgent() {
               router.push("/");
               router.refresh();
             },
-            onPlanClicked: (plan) => telemetry.track("web.onboarding.plan_offer_clicked", { businessId, surface: "meet", plan }),
+            onPlanClicked: (plan) => {
+              void requestJson(`/api/plan-offer?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({ chosen: true }) }).catch(() => undefined);
+              telemetry.track("web.onboarding.plan_offer_clicked", { businessId, surface: "meet", plan });
+            },
           });
           await queryClient.invalidateQueries({ queryKey: ["businesses"] });
           return;

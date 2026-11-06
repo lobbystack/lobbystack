@@ -498,14 +498,14 @@ export async function onboardingNumberTrialOutlookInTransaction(tx: DatabaseTran
   if (entitlement.live) return { verificationNeeded: false, refusal: null };
   const number = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), inArray(phoneNumbers.status, ["active", "provisioning"]))).limit(1);
   if (number.length) return { verificationNeeded: false, refusal: null };
+  const email = await trialEmailInTransaction(tx, input.userId);
+  if (!email?.emailVerified) return { verificationNeeded: false, refusal: "email_verification_required" };
+  if (isDisposableTrialEmail(email.email)) return { verificationNeeded: false, refusal: "trial_not_available" };
   // An owner who already verified continues to the number itself.
   if (await verifiedPhone(tx, input)) return { verificationNeeded: false, refusal: null };
   // The same once-per-workspace, per-user and per-phone rule the claim applies.
   const used = await tx.execute(sql`SELECT app.number_trial_used(${input.businessId}::uuid, ${input.userId}::uuid) AS used`);
   if ((used.rows[0] as { used?: boolean } | undefined)?.used) return { verificationNeeded: false, refusal: "trial_already_used" };
-  const email = await trialEmailInTransaction(tx, input.userId);
-  if (!email?.emailVerified) return { verificationNeeded: false, refusal: "email_verification_required" };
-  if (isDisposableTrialEmail(email.email)) return { verificationNeeded: false, refusal: "trial_not_available" };
   const countries = trialCountries();
   if (countries.length === 0) return { verificationNeeded: false, refusal: "trial_not_available" };
   // The number's country comes from the search's selection, so the step only

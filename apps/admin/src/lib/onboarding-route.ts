@@ -52,7 +52,10 @@ export async function requireOnboardingStage(pathname: string, options: { allowC
   // step lands on the step the workspace is on. The number picker stays open
   // from later steps, since the dashboard uses it to add a number.
   const revisitsNumber = expected === "phone_number" && ["phone_number_claiming", "goal", "attribution", "meet", "complete"].includes(state.stage);
-  if (state.stage !== expected && !revisitsNumber) redirect(current);
+  // The number search can still ask for a mobile when the pre-check missed a
+  // signal, and the phone step is the only place to verify it.
+  const returnsToVerifyPhone = expected === "verify_phone" && state.stage === "phone_number";
+  if (state.stage !== expected && !revisitsNumber && !returnsToVerifyPhone) redirect(current);
 }
 
 /** The brand step's fields, or a redirect to the person's current step when the step doesn't apply to them. */

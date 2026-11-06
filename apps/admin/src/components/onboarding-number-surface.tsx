@@ -34,7 +34,7 @@ const REFUSAL_KEYS: Record<string, string> = {
   email_verification_required: "number.refusals.emailVerification",
 };
 
-type NumberOutlook = { trialRefusal: string | null };
+type NumberOutlook = { trialRefusal: string | null; verifyPhone: boolean };
 
 function errorCode(error: unknown): string | undefined {
   const code = error && typeof error === "object" ? (error as { code?: unknown }).code : undefined;
@@ -60,8 +60,9 @@ export function OnboardingNumberSurface() {
   const afterNumber = stage === "complete" ? "/" : stage === "goal" || stage === "attribution" || stage === "meet" ? resolveOnboardingRoute(stage) : "/onboarding/goal";
   const refusalCode = refusal ?? outlook.data?.trialRefusal ?? null;
   // The phone step is the only way to a free trial. From later steps it no
-  // longer opens, so the same refusal stays here with the plans.
-  const verifiesPhone = stage === "verify_phone";
+  // longer opens, so the same refusal stays here with the plans. The outlook
+  // says whether the search will ask for a mobile even after the pre-check.
+  const verifiesPhone = outlook.data?.verifyPhone === true;
   const refuse = useCallback((error: unknown) => {
     const code = errorCode(error);
     if (!code) return;

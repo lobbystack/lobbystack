@@ -109,9 +109,9 @@ describe("worker failure reporting", () => {
     const [error, , properties] = mocks.capture.mock.calls[1]!;
     expect(error.name).toBe("WorkerConnectionError");
     expect(properties.$exception_fingerprint).toBe("worker.error:connect ECONNREFUSED [redacted-phone]:[n]");
-    // Every occurrence still reaches PostHog Logs; only PostHog error tracking
-    // and the Discord destinations are rate limited.
-    expect(logRecords.filter((record) => record.body === "worker.error")).toHaveLength(3);
+    // A connection storm logs once per window too; only the count of dropped
+    // occurrences differs.
+    expect(logRecords.filter((record) => record.body === "worker.error")).toHaveLength(2);
   });
 
   it("captures an outbox dispatcher that stops", async () => {

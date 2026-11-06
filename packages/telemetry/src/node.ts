@@ -33,7 +33,9 @@ export { redactOtelAttributes } from "./redaction.js";
  * gigabytes a day at 100%; errors reach error tracking on their own.
  */
 export function traceSampleRatio(env: NodeJS.ProcessEnv = process.env): number {
-  const ratio = Number(env.OTEL_TRACES_SAMPLER_ARG ?? "0.1");
+  const raw = env.OTEL_TRACES_SAMPLER_ARG?.trim();
+  if (!raw) return 0.1;
+  const ratio = Number(raw);
   return Number.isFinite(ratio) && ratio >= 0 && ratio <= 1 ? ratio : 0.1;
 }
 

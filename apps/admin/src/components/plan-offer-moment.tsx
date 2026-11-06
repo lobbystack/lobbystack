@@ -67,7 +67,11 @@ export function PlanOfferMoment({ businessId, surface }: { businessId: string; s
         recordShown(true);
         telemetry.track("web.onboarding.plan_offer_dismissed", { businessId, surface });
       },
-      onPlanClicked: (plan) => telemetry.track("web.onboarding.plan_offer_clicked", { businessId, surface, plan }),
+      onPlanClicked: (plan) => {
+        // A choice ends the dismissals in a row.
+        void requestJson(`/api/plan-offer?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({ chosen: true }) }).catch(() => undefined);
+        telemetry.track("web.onboarding.plan_offer_clicked", { businessId, surface, plan });
+      },
     });
   }, [businessId, due, offer.dataUpdatedAt, openOffer, recordShown, surface, telemetry]);
   return null;
