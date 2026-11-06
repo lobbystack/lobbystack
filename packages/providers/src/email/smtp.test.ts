@@ -203,6 +203,14 @@ describe("SMTP delivery", () => {
     expect(sent(1).text).toContain("un agent pour Clinique hier");
     expect(sent(1).text).toContain("/fr/check-in/v1.fit.sig");
   });
+  it("names no forward when a trial without a mobile runs out of minutes", async () => {
+    const { provider, sent } = capture();
+    await send(provider, { template: "number_trial", to: "owner@example.test", variables: { locale: "en", kind: "minutes_out", businessName: "Acme Dental", trialNumber: "+14165550123", forwardTo: "", url: "https://app.example.test/settings/plan" } });
+    expect(sent(0).subject).toBe("You're out of minutes. Calls are not being answered");
+    expect(sent(0).text).toContain("Calls now go unanswered.");
+    expect(sent(0).text).not.toContain("Calls now ring .");
+  });
+
   it("invites an owner a platform key named to make their account at the sign-up page", async () => {
     const { provider, sendMail } = capture();
     await send(provider, { template: "account_setup", to: "owner@example.test", variables: { locale: "en", email: "owner@example.test", url: "https://app.example.test/en/signup" } });

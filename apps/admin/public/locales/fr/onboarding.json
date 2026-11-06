@@ -177,7 +177,8 @@
       "trialUsed": "Cet espace de travail ou votre téléphone a déjà utilisé son essai gratuit.",
       "network": "Un essai gratuit a déjà démarré depuis ce réseau au cours des 30 derniers jours.",
       "unavailable": "Aucun numéro d'essai gratuit n'est disponible pour cet espace de travail.",
-      "verification": "Un numéro gratuit exige un téléphone vérifié."
+      "verification": "Un numéro gratuit exige un téléphone vérifié.",
+      "emailVerification": "Vérifiez votre adresse courriel avant de choisir un numéro d'essai."
     },
     "title": "Choisissez le numéro de votre IA",
     "countryLabel": "Pays",

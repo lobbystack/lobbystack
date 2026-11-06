@@ -686,7 +686,8 @@ export const numberTrials = pgTable("number_trials", {
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   claimId: uuid("claim_id").references(() => onboardingNumberClaimEvents.id, { onDelete: "set null" }),
   phoneNumberId: uuid("phone_number_id").references(() => phoneNumbers.id, { onDelete: "set null" }),
-  verifiedPhone: varchar("verified_phone", { length: 32 }).notNull(),
+  // Null for a trial the owner started without a mobile (migration 0196).
+  verifiedPhone: varchar("verified_phone", { length: 32 }),
   ipHash: text("ip_hash"),
   status: varchar("status", { length: 16 }).default("reserved").notNull(),
   startedAt: timestamp("started_at", { withTimezone: true }),

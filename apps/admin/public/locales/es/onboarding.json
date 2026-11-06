@@ -177,7 +177,8 @@
       "trialUsed": "Este espacio de trabajo o su teléfono ya usó su prueba gratuita.",
       "network": "Una prueba gratuita ya se inició desde esta red en los últimos 30 días.",
       "unavailable": "No hay un número de prueba gratuito disponible para este espacio de trabajo.",
-      "verification": "Un número gratuito requiere un teléfono verificado."
+      "verification": "Un número gratuito requiere un teléfono verificado.",
+      "emailVerification": "Verifique su dirección de correo antes de elegir un número de prueba."
     },
     "title": "Elija el número de teléfono de su IA",
     "countryLabel": "País",

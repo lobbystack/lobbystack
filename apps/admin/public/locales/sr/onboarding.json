@@ -177,7 +177,8 @@
       "trialUsed": "Ovaj radni prostor ili vaš telefon je već iskoristio besplatnu probu.",
       "network": "Besplatna proba je već počela sa ove mreže u poslednjih 30 dana.",
       "unavailable": "Besplatan probni broj nije dostupan za ovaj radni prostor.",
-      "verification": "Besplatan broj zahteva verifikovan telefon."
+      "verification": "Besplatan broj zahteva verifikovan telefon.",
+      "emailVerification": "Verifikujte svoju imejl adresu pre nego što izaberete probni broj."
     },
     "title": "Izaberite broj telefona za AI agenta",
     "countryLabel": "Zemlja",

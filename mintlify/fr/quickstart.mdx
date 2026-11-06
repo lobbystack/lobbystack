@@ -1,6 +1,6 @@
 ---
 title: "Configurer LobbyStack"
-description: "Créez un compte LobbyStack, ajoutez votre site Web, vérifiez votre numéro de mobile, choisissez votre numéro de téléphone et rencontrez votre agent."
+description: "Créez un compte LobbyStack, ajoutez votre site Web, choisissez votre numéro de téléphone et rencontrez votre agent."
 sidebarTitle: "Guide de configuration"
 contentType: "Tutorial"
 ---
@@ -20,7 +20,7 @@ Ce tutoriel suit le parcours de configuration du tableau de bord LobbyStack, de 
 Il vous faut :
 
 - Une adresse courriel et un mot de passe.
-- Un téléphone mobile capable de recevoir un SMS. LobbyStack ne peut pas vérifier les numéros Internet (VoIP).
+- Un téléphone mobile capable de recevoir des SMS, si LobbyStack vous demande d'en vérifier un avant votre numéro d'essai gratuit. LobbyStack ne peut pas vérifier les numéros Internet (VoIP).
 - L'URL d'un site Web public, si vous voulez que LobbyStack importe les connaissances de votre site pendant la configuration.
 
 ## Étapes de configuration
@@ -44,14 +44,10 @@ Il vous faut :
     LobbyStack affiche la progression de l'importation pendant qu'elle tourne. Cliquez sur **Ne pas attendre** pour continuer : l'importation se poursuit. Elle règle aussi la langue des appelants de votre agent d'après votre site. Sans site Web, vous choisissez la langue vous-même.
   </Step>
 
-  <Step title="Vérifiez votre numéro de mobile">
-    Choisissez le pays de votre téléphone, entrez votre numéro de mobile, puis le code à 6 chiffres que LobbyStack vous envoie par SMS. Votre numéro de mobile doit être un numéro de ce pays, et ce pays détermine celui de votre numéro LobbyStack.
-
-    Pendant un essai gratuit, votre agent transfère les appels uniquement vers ce numéro de mobile.
-  </Step>
-
   <Step title="Choisissez votre numéro">
-    Choisissez un numéro dans la liste. Sans forfait payant, il est gratuit pendant 14 jours. Consultez [le fonctionnement de l'essai gratuit](/fr/getting-started/claim-your-number#essai-gratuit-du-numéro).
+    Choisissez le pays de votre numéro, puis un numéro dans la liste. Sans forfait payant, il est gratuit pendant 14 jours. Consultez [le fonctionnement de l'essai gratuit](/fr/getting-started/claim-your-number#essai-gratuit-du-numéro).
+
+    LobbyStack vous demande de vérifier un numéro de mobile d'abord lorsqu'il ne peut pas confirmer le réseau depuis lequel vous faites la configuration, ou lorsqu'un essai gratuit a déjà commencé depuis ce réseau au cours des 30 derniers jours. Pendant l'essai, les appels sont transférés uniquement vers ce mobile.
 
     Si LobbyStack ne vend pas encore de numéros dans votre pays, demandez à être prévenu par courriel quand ce sera le cas, et continuez à tester votre agent dans votre navigateur.
   </Step>

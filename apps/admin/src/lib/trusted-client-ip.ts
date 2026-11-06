@@ -59,3 +59,26 @@ export function trustedClientIp(
 ): string | undefined {
   return trustedClientIpFromHeaders(request.headers, env);
 }
+
+/**
+ * The country Cloudflare placed the caller in, from `cf-ipcountry`. Cloudflare
+ * sets it on every request it serves, so it is only meaningful when the
+ * deployment already trusts Cloudflare's client address header: without that
+ * opt-in a caller can send any country it likes.
+ */
+export function trustedClientCountryFromHeaders(
+  headers: Headers,
+  env: Record<string, string | undefined> = process.env,
+): string | undefined {
+  if (!trustedClientIpHeader(env)) return undefined;
+  // Cloudflare's Tor code is T1, so the second character can be a digit.
+  const country = headers.get("cf-ipcountry")?.trim().toUpperCase();
+  return country && /^[A-Z][A-Z0-9]$/.test(country) ? country : undefined;
+}
+
+export function trustedClientCountry(
+  request: Request,
+  env: Record<string, string | undefined> = process.env,
+): string | undefined {
+  return trustedClientCountryFromHeaders(request.headers, env);
+}
