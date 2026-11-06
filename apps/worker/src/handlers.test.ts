@@ -816,7 +816,7 @@ describe("worker handlers", () => {
     const createCheckout = vi.fn().mockRejectedValue(new PolarRequestError({ status: 503, transient: true }));
 
     await expect(handleJob({ jobId: randomUUID(), type: "billing.createCheckout", queue: "critical", businessId, payload: { requestId }, trace: {}, idempotencyKey: `test:${randomUUID()}`, scheduled: false }, { domain, polar: { recordUsage: vi.fn(), createCheckout } }))
-      .resolves.toEqual({ status: "skipped", entityId: requestId });
+      .rejects.toMatchObject({ name: "UnrecoverableError", message: "Checkout failed: provider_unavailable:503" });
     expect(markBillingCheckoutFailed).toHaveBeenCalledWith(domain, { businessId, requestId, error: "provider_unavailable:503" });
   });
 
@@ -828,7 +828,7 @@ describe("worker handlers", () => {
     const createCheckout = vi.fn().mockRejectedValue(new PolarRequestError({ status: 422, transient: false }));
 
     await expect(handleJob({ jobId: randomUUID(), type: "billing.createCheckout", queue: "critical", businessId, payload: { requestId }, trace: {}, idempotencyKey: `test:${randomUUID()}`, scheduled: false }, { domain, polar: { recordUsage: vi.fn(), createCheckout } }))
-      .resolves.toEqual({ status: "skipped", entityId: requestId });
+      .rejects.toMatchObject({ name: "UnrecoverableError", message: "Checkout failed: provider_rejected:422" });
     expect(markBillingCheckoutFailed).toHaveBeenCalledWith(domain, { businessId, requestId, error: "provider_rejected:422" });
     expect(deferBillingCheckoutRequest).not.toHaveBeenCalled();
   });
@@ -923,7 +923,7 @@ describe("worker handlers", () => {
       vi.mocked(deferPartnerCheckoutRequest).mockResolvedValue({ status: "failed" });
       const { polar } = fakePolar(Promise.reject(new PolarRequestError({ status: 503, transient: true })));
 
-      await expect(handleJob(checkoutJob(requestId), { domain, polar })).resolves.toEqual({ status: "skipped", entityId: requestId });
+      await expect(handleJob(checkoutJob(requestId), { domain, polar })).rejects.toMatchObject({ name: "UnrecoverableError", message: "Checkout failed: provider_unavailable:503" });
       expect(markPartnerCheckoutFailed).toHaveBeenCalledWith(domain, { partnerId, requestId, error: "provider_unavailable:503" });
       expect(markPartnerCheckoutCreated).not.toHaveBeenCalled();
     });
@@ -936,7 +936,7 @@ describe("worker handlers", () => {
       vi.mocked(loadPartnerCheckoutRequest).mockResolvedValue(checkoutRequest(requestId));
       const { polar } = fakePolar(Promise.reject(new PolarRequestError({ status: 422, transient: false })));
 
-      await expect(handleJob(checkoutJob(requestId), { domain, polar })).resolves.toEqual({ status: "skipped", entityId: requestId });
+      await expect(handleJob(checkoutJob(requestId), { domain, polar })).rejects.toMatchObject({ name: "UnrecoverableError", message: "Checkout failed: provider_rejected:422" });
       expect(markPartnerCheckoutFailed).toHaveBeenCalledWith(domain, { partnerId, requestId, error: "provider_rejected:422" });
       expect(deferPartnerCheckoutRequest).not.toHaveBeenCalled();
       expect(markPartnerCheckoutCreated).not.toHaveBeenCalled();

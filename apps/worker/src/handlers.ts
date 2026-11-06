@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import Redis from "ioredis";
+import { UnrecoverableError } from "bullmq";
 import { and, eq, inArray, isNull, lte, ne, or } from "drizzle-orm";
 
 import { hasSummarizableTranscript, type BusinessHoursExtractor, type BusinessSummarizer, type CallSummarizer } from "@lobbystack/agent-core";
@@ -789,11 +790,12 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           // try again after a delay, within the outage window.
           const retry = await deferBillingCheckoutRequest(dependencies.domain, { businessId, requestId });
           if (retry.status === "deferred") return { status: "deferred", entityId: requestId, retryAt: retry.retryAt };
-          if (retry.status === "failed") await markBillingCheckoutFailed(dependencies.domain, { businessId, requestId, error: providerFailureReason(failure) });
-          return { status: "skipped", entityId: requestId };
+          if (retry.status !== "failed") return { status: "skipped", entityId: requestId };
         }
+        // A checkout someone waited on failed for good. Fail the job once, with
+        // no retry, so error tracking raises it.
         await markBillingCheckoutFailed(dependencies.domain, { businessId, requestId, error: providerFailureReason(failure) });
-        return { status: "skipped", entityId: requestId };
+        throw new UnrecoverableError(`Checkout failed: ${providerFailureReason(failure)}`);
       }
     }
     case "billing.createPartnerCheckout": {
@@ -834,11 +836,12 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           // try again after a delay, within the outage window.
           const retry = await deferPartnerCheckoutRequest(dependencies.domain, request);
           if (retry.status === "deferred") return { status: "deferred", entityId: requestId, retryAt: retry.retryAt };
-          if (retry.status === "failed") await markPartnerCheckoutFailed(dependencies.domain, { ...request, error: providerFailureReason(failure) });
-          return { status: "skipped", entityId: requestId };
+          if (retry.status !== "failed") return { status: "skipped", entityId: requestId };
         }
+        // A checkout someone waited on failed for good. Fail the job once, with
+        // no retry, so error tracking raises it.
         await markPartnerCheckoutFailed(dependencies.domain, { ...request, error: providerFailureReason(failure) });
-        return { status: "skipped", entityId: requestId };
+        throw new UnrecoverableError(`Checkout failed: ${providerFailureReason(failure)}`);
       }
     }
     case "billing.reconcilePartner": {
