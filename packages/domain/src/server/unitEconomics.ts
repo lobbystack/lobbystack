@@ -1,6 +1,6 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 
-import { businessMemberships, enqueueOutbox, unitEconomicsEvents, unitEconomicsRollups, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { businessMemberships, businesses, enqueueOutbox, unitEconomicsEvents, unitEconomicsRollups, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
 import type { DomainContext } from "./context";
 
@@ -92,8 +92,13 @@ export async function recordUnitEconomicsEvent(context: DomainContext, input: Un
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => await recordUnitEconomicsEventInTransaction(tx, input));
 }
 
-export async function refreshUnitEconomicsMonth(context: DomainContext, input: { businessId: string; monthKey?: string }): Promise<string> {
+export async function refreshUnitEconomicsMonth(context: DomainContext, input: { businessId: string; monthKey?: string }): Promise<string | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    // A refresh queued before its business was deleted has nothing to write,
+    // and its insert would fail the business_id foreign key. Share-lock the
+    // row so a delete waits for this transaction instead of racing it.
+    const business = (await tx.select({ id: businesses.id }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1).for("no key update"))[0];
+    if (!business) return null;
     const targetMonth = input.monthKey ?? monthKey(new Date());
     const events = await tx.select().from(unitEconomicsEvents).where(and(eq(unitEconomicsEvents.businessId, input.businessId), eq(unitEconomicsEvents.monthKey, targetMonth))).orderBy(asc(unitEconomicsEvents.occurredAt));
     const providerCostUsd = roundUsd(events.filter((event) => event.eventKind === "voice_provider" || event.eventKind === "sms_provider" || event.eventKind === "notification_provider" || event.eventKind === "operator_notification_provider").reduce((sum, event) => sum + (event.costUsd ?? 0), 0));

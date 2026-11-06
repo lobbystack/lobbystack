@@ -14,6 +14,22 @@ export type SmtpConfig = {
 
 type TemplateName = "existing_account" | "account_setup" | "verify_email" | "password_reset" | "passkey_added" | "invitation" | "operator_alert" | "feedback_submission" | "onboarding_followup" | "number_trial" | "number_release" | "partner_pool_alert" | "business_allowance_alert" | "partner_business_allowance_alert" | "business_released" | "business_deleted";
 
+/**
+ * Whether the mail provider refused the message for good. An SMTP 5xx
+ * response names a permanent rejection, such as a sender domain the API key
+ * may not use, so retrying the same message cannot succeed.
+ */
+export function isPermanentSmtpRejection(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const { responseCode, response } = error as { responseCode?: unknown; response?: unknown };
+  if (typeof responseCode === "number") return responseCode >= 500 && responseCode <= 599;
+  if (typeof response === "string") {
+    const code = Number(/^\s*(\d{3})\b/.exec(response)?.[1]);
+    return code >= 500 && code <= 599;
+  }
+  return false;
+}
+
 export class SmtpEmailProvider {
   private readonly transporter: Transporter;
   private readonly config: SmtpConfig;
