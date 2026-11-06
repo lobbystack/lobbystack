@@ -616,9 +616,15 @@ importers:
         specifier: ^8.22.0
         version: 8.22.1
     devDependencies:
+      '@opentelemetry/api-logs':
+        specifier: ^0.222.0
+        version: 0.222.0
       '@types/node':
         specifier: ^26.6.6
         version: 26.6.6
+      posthog-node:
+        specifier: 5.55.0
+        version: 5.55.0(rxjs@7.8.2)
       tsup:
         specifier: 8.5.1
         version: 8.5.1(jiti@2.7.0)(postcss@8.5.32)(supports-color@10.2.2)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1)
@@ -890,6 +896,9 @@ importers:
       '@opentelemetry/sdk-trace-base':
         specifier: ^2.11.0
         version: 2.11.0(@opentelemetry/api@1.10.0)
+      posthog-node:
+        specifier: 5.55.0
+        version: 5.55.0(rxjs@7.8.2)
     devDependencies:
       vitest:
         specifier: ^5.0.5
