@@ -28,6 +28,10 @@ Use this checklist whenever a new product or domain event is added, renamed, or 
 - confirm the admin or worker owns each business outcome event
 - avoid duplicate emission unless analytics specifically needs two perspectives
 
+## Known gaps
+
+- Outbound provider calls from the worker are not traced. See "Outbound provider calls" in `architecture.md` for the cause, the effect on diagnosis, and the fix.
+
 ## PostHog checks
 
 - confirm the event appears in PostHog `Activity`
