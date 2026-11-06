@@ -11,3 +11,8 @@ export function checkoutRefusalKey(error: unknown): string | null {
   if (code === billingErrorCodes.subscriptionActive) return "billing.checkoutErrors.subscriptionActive";
   return null;
 }
+
+/** Whether a failed checkout request waited out the payment provider's outage. */
+export function isProviderUnavailable(error: string | null | undefined): boolean {
+  return error?.startsWith("provider_unavailable") ?? false;
+}

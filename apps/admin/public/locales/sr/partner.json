@@ -738,7 +738,8 @@
       "intervalLabel": "Period naplate",
       "annualDiscount": "Uštedite 20%",
       "action": "Izaberi {{tier}}",
-      "opening": "Otvaranje plaćanja…"
+      "opening": "Otvaranje plaćanja…",
+      "slow": "Provajder plaćanja je spor. I dalje otvaramo plaćanje…"
     },
     "portal": {
       "action": "Upravljaj pretplatom",
@@ -750,6 +751,7 @@
     },
     "errors": {
       "checkoutFailed": "Nismo uspeli da otvorimo plaćanje. Pokušajte ponovo.",
+      "paymentsUnavailable": "Plaćanje privremeno nije dostupno. Pokušajte ponovo za nekoliko minuta.",
       "subscriptionActive": "Već imate nivo. Promenite ga u Upravljaj pretplatom.",
       "checkoutInProgress": "Drugi vlasnik ima otvoreno plaćanje. Pokušajte ponovo za 30 minuta.",
       "unavailable": "Na ovoj kontrolnoj tabli ne možete da kupite nivo.",

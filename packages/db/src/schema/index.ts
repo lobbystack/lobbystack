@@ -1497,6 +1497,10 @@ export const billingCheckoutRequests = pgTable(
     checkoutId: text("checkout_id"),
     checkoutUrl: text("checkout_url"),
     error: text("error"),
+    // When a provider error first kept the request for a retry; the retry window runs from here (migration 0194).
+    firstFailedAt: timestamp("first_failed_at", { withTimezone: true }),
+    // When the worker tries the provider again, while the request stays processing.
+    retryAt: timestamp("retry_at", { withTimezone: true }),
     ...timestamps,
   },
   (table) => [uniqueIndex("billing_checkout_requests_id_unique").on(table.id), index("billing_checkout_requests_business_status_idx").on(table.businessId, table.status, table.createdAt)],
@@ -1586,6 +1590,10 @@ export const partnerCheckoutRequests = pgTable(
     checkoutId: text("checkout_id"),
     checkoutUrl: text("checkout_url"),
     error: text("error"),
+    // When a provider error first kept the request for a retry; the retry window runs from here (migration 0194).
+    firstFailedAt: timestamp("first_failed_at", { withTimezone: true }),
+    // When the worker tries the provider again, while the request stays processing.
+    retryAt: timestamp("retry_at", { withTimezone: true }),
     ...timestamps,
   },
   (table) => [index("partner_checkout_requests_partner_status_idx").on(table.partnerId, table.status, table.createdAt)],
