@@ -515,6 +515,9 @@ export async function numberStepRedirect(context: DomainContext, input: { userId
     await requireBusinessMembership(tx, input);
     const number = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), inArray(phoneNumbers.status, ["active", "provisioning"]))).limit(1);
     if (number.length) return input.finished ? "/" : null;
+    // A business the host's trial isn't for, such as a partner's business that
+    // hasn't paid its package yet, has no reason to verify a mobile here.
+    if (!await offersHostTrialInTransaction(tx, input.businessId)) return null;
     return (await onboardingNumberTrialOutlookInTransaction(tx, input)).verificationNeeded ? "/onboarding/verify-phone" : null;
   });
 }
