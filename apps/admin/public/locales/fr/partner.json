@@ -81,13 +81,11 @@
     },
     "empty": {
       "title": "Aucune entreprise pour l'instant",
-      "description": "Créez une entreprise et invitez son propriétaire.",
       "memberDescription": "Les propriétaires et administrateurs de votre équipe créent les entreprises ici."
     },
     "create": {
       "action": "Créer une entreprise",
       "title": "Créer une entreprise",
-      "description": "{{partnerName}} envoie au propriétaire un lien de connexion par courriel.",
       "nameLabel": "Nom de l'entreprise",
       "namePlaceholder": "Clinique dentaire du Port",
       "ownerLabel": "Courriel du propriétaire",
@@ -119,7 +117,6 @@
       },
       "templateLabel": "Modèle",
       "noTemplate": "Aucun modèle",
-      "templateHelp": "L'entreprise démarre avec les réglages du modèle. Nous lisons une partie de chaque site Web qu'il contient, et le reste quand vous ouvrez l'entreprise.",
       "submit": "Créer et inviter",
       "submitting": "Création…",
       "created": "Vous avez créé {{name}} et invité {{email}}.",
@@ -147,9 +144,6 @@
       "change": "Modifier",
       "changeFor": "Modifier la facturation de {{name}}",
       "title": "Facturation de {{name}}",
-      "description": "Choisissez la formule que paie cette entreprise, ou facturez-la vous-même.",
-      "outsideHint": "Aucune formule ne limite ses minutes ni ses clavardages.",
-      "packageHint": "Le propriétaire paie sur la page de facturation de l'entreprise.",
       "submit": "Enregistrer",
       "saving": "Enregistrement…",
       "saved": "Vous avez modifié la facturation de {{name}}.",
@@ -170,9 +164,7 @@
         "cap": "Dépassement jusqu'à {{cap}} par mois"
       },
       "title": "Dépassement de {{name}}",
-      "description": "Laissez l'entreprise continuer de répondre au-delà de {{packageName}}, aux tarifs que vous fixez.",
       "toggle": "Autoriser le dépassement",
-      "onHint": "Au-delà de sa formule, l'entreprise continue de répondre jusqu'au plafond. Le dépassement figure sur sa prochaine facture.",
       "offHint": "À la limite de sa formule, les appels sont transférés et le clavardage du site cesse de répondre.",
       "minuteRateLabel": "Chaque minute en plus",
       "chatRateLabel": "Chaque conversation en plus",
@@ -224,13 +216,11 @@
     },
     "empty": {
       "title": "Aucune formule pour l'instant",
-      "description": "Créez une formule que vos clients pourront acheter.",
       "noStripe": "Les formules ont besoin de paiements, que ce tableau de bord ne traite pas."
     },
     "create": {
       "action": "Créer une formule",
       "title": "Créer une formule",
-      "description": "Les entreprises sur cette formule paient ce montant chaque mois, en {{currency}}.",
       "nameLabel": "Nom",
       "namePlaceholder": "Accueil",
       "priceLabel": "Prix mensuel",
@@ -254,7 +244,6 @@
     "rename": {
       "action": "Renommer",
       "title": "Renommer la formule",
-      "description": "Vos clients voient le nouveau nom sur leurs factures.",
       "submit": "Enregistrer le nom",
       "saving": "Enregistrement…",
       "saved": "Formule renommée.",
@@ -304,13 +293,11 @@
     },
     "empty": {
       "title": "Aucun modèle pour l'instant",
-      "description": "Enregistrez une entreprise comme modèle, puis utilisez-le pour la suivante.",
       "memberDescription": "Les propriétaires et administrateurs de votre équipe enregistrent les modèles ici."
     },
     "save": {
       "action": "Enregistrer un modèle",
       "title": "Enregistrer un modèle",
-      "description": "Enregistre une copie des réglages de cette entreprise. Si vous modifiez l'entreprise ensuite, le modèle ne change pas.",
       "businessLabel": "Entreprise",
       "businessPlaceholder": "Choisissez une entreprise",
       "noBusinesses": "Créez d'abord une entreprise, puis enregistrez ses réglages ici.",
@@ -355,7 +342,6 @@
     "invite": {
       "action": "Inviter",
       "title": "Inviter quelqu'un dans votre équipe",
-      "description": "Cette personne reçoit un courriel avec un lien pour rejoindre {{partnerName}}.",
       "emailLabel": "Courriel",
       "emailPlaceholder": "nom@entreprise.com",
       "roleLabel": "Rôle",
@@ -405,13 +391,10 @@
       "title": "Adresse du tableau de bord",
       "open": "Ouvrir",
       "none": "Vous n'avez pas encore de sous-domaine. Il vous en faut un, ou votre propre domaine, pour créer des entreprises et des démos.",
-      "subdomainLabel": "Votre sous-domaine",
       "own": {
         "title": "Votre propre domaine",
-        "description": "Utilisez votre propre sous-domaine, comme app.votreentreprise.com. Votre adresse actuelle continue de fonctionner.",
         "label": "Domaine",
         "placeholder": "app.votreentreprise.com",
-        "help": "Vous ajouterez ensuite deux enregistrements DNS chez votre fournisseur DNS.",
         "connect": "Connecter le domaine",
         "connecting": "Connexion…",
         "added": "Domaine connecté. Ajoutez maintenant ses enregistrements DNS.",
@@ -426,7 +409,6 @@
         },
         "settingUp": "Nous configurons votre domaine. Ses enregistrements DNS s'afficheront ici sous peu.",
         "pendingHelp": "Ajoutez ces enregistrements chez votre fournisseur DNS. Les modifications peuvent prendre quelques heures.",
-        "activeHelp": "Votre tableau de bord et vos pages de connexion fonctionnent maintenant sur ce domaine.",
         "failedHelp": "Nous n'avons pas pu configurer ce domaine. Retirez-le, vérifiez ses enregistrements DNS et réessayez.",
         "takenHelp": "Un autre tableau de bord utilise déjà ce domaine. Retirez-le pour en ajouter un autre.",
         "records": {
@@ -465,21 +447,17 @@
       "title": "Marque"
     },
     "nameLabel": "Nom",
-    "nameHelp": "Affiché dans l'onglet du navigateur, sur la page de connexion et comme expéditeur de vos courriels.",
     "logoLabel": "Logo",
-    "logoHelp": "Affiché sur la page de connexion et dans vos courriels. PNG, JPEG, WebP ou SVG, jusqu'à 256 Ko.",
+    "logoHelp": "PNG, JPEG, WebP ou SVG, jusqu'à 256 Ko.",
     "faviconLabel": "Favicon",
-    "faviconHelp": "L'icône de l'onglet du navigateur. Par défaut, votre logo.",
     "imageChoose": "Choisir une image",
     "imageChange": "Changer l'image",
     "logoRemove": "Retirer le logo",
     "faviconRemove": "Retirer le favicon",
     "colorLabel": "Couleur de la marque",
     "colorPick": "Choisir la couleur de la marque",
-    "colorHelp": "Un code hexadécimal, comme #0f766e.",
     "links": {
       "title": "Liens",
-      "description": "Ces liens figurent sur votre page de connexion et votre tableau de bord. Laissez un champ vide pour masquer le lien.",
       "termsUrl": "Conditions d'utilisation",
       "termsUrlPlaceholder": "https://entreprise.com/conditions",
       "privacyUrl": "Politique de confidentialité",
@@ -487,8 +465,7 @@
       "supportUrl": "Page d'assistance",
       "supportUrlPlaceholder": "https://entreprise.com/assistance",
       "supportEmail": "Courriel d'assistance",
-      "supportEmailPlaceholder": "assistance@entreprise.com",
-      "supportEmailHelp": "Les réponses à vos courriels arrivent à cette adresse. Elle sert aussi de lien d'assistance si vous n'avez pas de page d'assistance."
+      "supportEmailPlaceholder": "assistance@entreprise.com"
     },
     "preview": "Aperçu",
     "save": "Enregistrer la marque",
@@ -523,7 +500,6 @@
     },
     "connect": {
       "title": "Connectez un compte de paiement",
-      "description": "Nous utilisons Stripe pour facturer vos clients à votre nom et vous verser l'argent.",
       "countryLabel": "Pays de votre entreprise",
       "countryPlaceholder": "Choisissez un pays",
       "countryHelp": "Vous ne pourrez pas le changer plus tard.",
@@ -579,7 +555,6 @@
     "create": {
       "action": "Créer une clé API",
       "title": "Créer une clé API",
-      "description": "Donnez-lui un nom facile à reconnaître, et seulement l'accès dont elle a besoin.",
       "nameLabel": "Nom",
       "namePlaceholder": "Intégration des clients",
       "scopesLabel": "Accès",
@@ -605,7 +580,6 @@
     "update": {
       "action": "Modifier",
       "title": "Modifier {{name}}",
-      "description": "Changez son nom ou son accès. Vous gardez la même clé, et les applications qui l'utilisent obtiennent le nouvel accès dès leur prochaine requête.",
       "submit": "Enregistrer",
       "saving": "Enregistrement…",
       "cancel": "Annuler",
@@ -639,8 +613,7 @@
       "partner_team_write": "Inviter et retirer des administrateurs et des membres, et changer leur rôle",
       "partner_billing_read": "Voir la connexion Stripe, votre palier et l'utilisation du forfait partagé. Seuls les propriétaires peuvent l'accorder",
       "partner_billing_write": "Lancer l'inscription Stripe et les paiements de palier, et régler le dépassement du forfait partagé. Seuls les propriétaires peuvent l'accorder"
-    },
-    "emptyDescription": "Créez-en une pour configurer vos entreprises depuis votre propre code."
+    }
   },
   "secretReveal": {
     "copy": "Copier",
@@ -711,7 +684,6 @@
     },
     "overage": {
       "title": "Dépassement",
-      "description": "Au-delà de votre réserve, vos entreprises continuent de répondre aux tarifs de dépassement de votre palier, jusqu'à votre plafond.",
       "toggle": "Autoriser le dépassement",
       "free": "Le palier Gratuit n'a pas de dépassement. Vos entreprises s'arrêtent à la réserve.",
       "off": "Le dépassement est désactivé. Vos entreprises s'arrêtent à la réserve chaque mois.",
@@ -841,8 +813,6 @@
   },
   "agencyConnections": {
     "title": "Connexions MCP",
-    "description": "Les assistants IA et autres clients MCP que votre équipe a connectés en ouvrant une session.",
-    "descriptionOwn": "Les assistants IA et autres clients MCP que vous avez connectés en ouvrant une session.",
     "empty": "Aucune connexion MCP pour l'instant. Connectez un assistant au serveur MCP de {{appName}} et choisissez cette agence à la connexion.",
     "unnamed": "Application sans nom",
     "connectedOn": "Connectée le {{date}}",

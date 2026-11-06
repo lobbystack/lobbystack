@@ -25,7 +25,7 @@ describe("the console's agency connections", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><PartnerAgencyConnectionsSurface /></QueryClientProvider>);
     expect(await screen.findByText("Claude")).toBeTruthy();
-    expect(screen.getByText("agencyConnections.descriptionOwn")).toBeTruthy();
+    expect(screen.queryByText("agencyConnections.descriptionOwn")).toBeNull();
     // One line about the connection, without its permissions or client id, and no Update.
     expect(screen.getByText("agencyConnections.connectedBy")).toBeTruthy();
     expect(screen.getByText("agencyConnections.neverUsed")).toBeTruthy();

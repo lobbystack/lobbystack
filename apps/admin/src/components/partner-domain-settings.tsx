@@ -14,7 +14,7 @@ import { useCopiedField } from "@/components/detail-fields";
 import { useConsolePartner } from "@/components/partner-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Field, FieldDescription, FieldError, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
+import { Field, FieldError, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
@@ -181,7 +181,6 @@ export function PartnerDomainSettings() {
         <FieldLegend>{t("branding.domain.title")}</FieldLegend>
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
-            <span className="text-xs font-medium text-muted-foreground">{t("branding.domain.subdomainLabel")}</span>
             {data.subdomain && data.subdomainUrl ? (
               <div className="flex flex-wrap items-center gap-3">
                 <span className="font-mono text-sm [overflow-wrap:anywhere]" dir="ltr">{data.subdomain}</span>
@@ -197,10 +196,7 @@ export function PartnerDomainSettings() {
 
           {showsOwnDomain ? (
             <div className="flex flex-col gap-4 border-t border-border pt-6">
-              <div className="flex flex-col gap-1">
-                <h3 className="text-sm font-medium">{t("branding.domain.own.title")}</h3>
-                <p className="text-sm text-muted-foreground">{t("branding.domain.own.description")}</p>
-              </div>
+              <h3 className="text-sm font-medium">{t("branding.domain.own.title")}</h3>
 
               {custom ? (
                 <div className="flex flex-col gap-4">
@@ -214,7 +210,6 @@ export function PartnerDomainSettings() {
                       </a>
                     ) : null}
                   </div>
-                  {custom.status === "active" ? <p className="text-sm text-muted-foreground">{t("branding.domain.own.activeHelp")}</p> : null}
                   {custom.status === "failed" ? <p className="text-sm text-muted-foreground">{t(custom.taken ? "branding.domain.own.takenHelp" : "branding.domain.own.failedHelp")}</p> : null}
                   {custom.status === "pending" ? (
                     <p className="text-sm text-muted-foreground">{t(custom.records.length > 0 ? "branding.domain.own.pendingHelp" : "branding.domain.own.settingUp")}</p>
@@ -250,7 +245,6 @@ export function PartnerDomainSettings() {
                       <Input autoCapitalize="none" autoComplete="off" className="font-mono" dir="ltr" disabled={connect.isPending} id={field} maxLength={CUSTOM_DOMAIN_MAX_LENGTH} onChange={(event) => setHostname(event.target.value)} placeholder={t("branding.domain.own.placeholder")} spellCheck={false} value={hostname} />
                       <Button className="shrink-0" disabled={connect.isPending || !hostname.trim()} loading={connect.isPending} loadingLabel={t("branding.domain.own.connecting")} type="submit">{t("branding.domain.own.connect")}</Button>
                     </div>
-                    <FieldDescription>{t("branding.domain.own.help")}</FieldDescription>
                   </Field>
                 </form>
               ) : (

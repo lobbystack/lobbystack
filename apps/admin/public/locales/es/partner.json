@@ -81,13 +81,11 @@
     },
     "empty": {
       "title": "Aún no hay negocios",
-      "description": "Cree un negocio e invite a su propietario.",
       "memberDescription": "Los propietarios y administradores de su equipo crean los negocios aquí."
     },
     "create": {
       "action": "Crear negocio",
       "title": "Crear un negocio",
-      "description": "El propietario recibe por correo un enlace de {{partnerName}} para iniciar sesión.",
       "nameLabel": "Nombre del negocio",
       "namePlaceholder": "Clínica Dental del Puerto",
       "ownerLabel": "Correo del propietario",
@@ -119,7 +117,6 @@
       },
       "templateLabel": "Plantilla",
       "noTemplate": "Sin plantilla",
-      "templateHelp": "El negocio empieza con la configuración de la plantilla. Leemos una parte de cada sitio web de la plantilla y el resto cuando abra el negocio.",
       "submit": "Crear e invitar",
       "submitting": "Creando…",
       "created": "Creó {{name}} e invitó a {{email}}.",
@@ -147,9 +144,6 @@
       "change": "Cambiar",
       "changeFor": "Cambiar la facturación de {{name}}",
       "title": "Facturación de {{name}}",
-      "description": "Elija el paquete que paga este negocio, o factúrelo usted.",
-      "outsideHint": "Ningún paquete limita sus minutos ni chats.",
-      "packageHint": "El propietario paga en la página de facturación del negocio.",
       "submit": "Guardar",
       "saving": "Guardando…",
       "saved": "Cambió la facturación de {{name}}.",
@@ -170,9 +164,7 @@
         "cap": "Excedente de hasta {{cap}} al mes"
       },
       "title": "Excedente de {{name}}",
-      "description": "Permita que el negocio siga respondiendo más allá de {{packageName}}, con las tarifas que usted fije.",
       "toggle": "Permitir excedente",
-      "onHint": "Pasado su paquete, el negocio sigue respondiendo hasta llegar al límite. El excedente aparece en su próxima factura.",
       "offHint": "Al llegar al límite de su paquete, las llamadas se desvían y el chat del sitio deja de responder.",
       "minuteRateLabel": "Cada minuto de más",
       "chatRateLabel": "Cada chat de más",
@@ -224,13 +216,11 @@
     },
     "empty": {
       "title": "Todavía no hay paquetes",
-      "description": "Cree un paquete que sus clientes puedan comprar.",
       "noStripe": "Los paquetes necesitan pagos, y este panel no los gestiona."
     },
     "create": {
       "action": "Crear paquete",
       "title": "Crear un paquete",
-      "description": "Los negocios con este paquete pagan este importe cada mes, en {{currency}}.",
       "nameLabel": "Nombre",
       "namePlaceholder": "Recepción",
       "priceLabel": "Precio mensual",
@@ -254,7 +244,6 @@
     "rename": {
       "action": "Cambiar nombre",
       "title": "Cambiar el nombre del paquete",
-      "description": "Sus clientes ven el nuevo nombre en sus facturas.",
       "submit": "Guardar nombre",
       "saving": "Guardando…",
       "saved": "Nombre del paquete cambiado.",
@@ -304,13 +293,11 @@
     },
     "empty": {
       "title": "Aún no hay plantillas",
-      "description": "Guarde un negocio como plantilla y úsela para el siguiente.",
       "memberDescription": "Los propietarios y administradores de su equipo guardan las plantillas aquí."
     },
     "save": {
       "action": "Guardar una plantilla",
       "title": "Guardar una plantilla",
-      "description": "Guarda una copia de la configuración de este negocio. Los cambios posteriores en el negocio no la afectan.",
       "businessLabel": "Negocio",
       "businessPlaceholder": "Elija un negocio",
       "noBusinesses": "Primero cree un negocio y luego guarde su configuración aquí.",
@@ -355,7 +342,6 @@
     "invite": {
       "action": "Invitar",
       "title": "Invite a alguien a su equipo",
-      "description": "Recibirá un correo con un enlace para unirse a {{partnerName}}.",
       "emailLabel": "Correo electrónico",
       "emailPlaceholder": "nombre@empresa.com",
       "roleLabel": "Rol",
@@ -405,13 +391,10 @@
       "title": "Dirección del panel",
       "open": "Abrir",
       "none": "Todavía no tiene un subdominio. Necesita uno, o su propio dominio, para crear negocios y demos.",
-      "subdomainLabel": "Su subdominio",
       "own": {
         "title": "Su propio dominio",
-        "description": "Use su propio subdominio, como app.suempresa.com. Su dirección actual sigue funcionando.",
         "label": "Dominio",
         "placeholder": "app.suempresa.com",
-        "help": "A continuación agregará dos registros DNS en su proveedor de DNS.",
         "connect": "Conectar dominio",
         "connecting": "Conectando…",
         "added": "Dominio conectado. Ahora agregue sus registros DNS.",
@@ -426,7 +409,6 @@
         },
         "settingUp": "Estamos configurando su dominio. Sus registros DNS aparecerán aquí en breve.",
         "pendingHelp": "Agregue estos registros en su proveedor de DNS. Los cambios pueden tardar unas horas.",
-        "activeHelp": "Su panel y sus páginas de inicio de sesión funcionan ahora en este dominio.",
         "failedHelp": "No pudimos configurar este dominio. Quítelo, revise sus registros DNS e inténtelo de nuevo.",
         "takenHelp": "Otro panel ya usa este dominio. Quítelo para agregar otro.",
         "records": {
@@ -465,21 +447,17 @@
       "title": "Marca"
     },
     "nameLabel": "Nombre",
-    "nameHelp": "Aparece en la pestaña del navegador, al iniciar sesión y como remitente de sus correos.",
     "logoLabel": "Logotipo",
-    "logoHelp": "Aparece en el inicio de sesión y en los correos. PNG, JPEG, WebP o SVG, de hasta 256 KB.",
+    "logoHelp": "PNG, JPEG, WebP o SVG, de hasta 256 KB.",
     "faviconLabel": "Favicon",
-    "faviconHelp": "El icono de la pestaña del navegador. Por defecto, muestra su logotipo.",
     "imageChoose": "Elegir una imagen",
     "imageChange": "Cambiar imagen",
     "logoRemove": "Quitar logotipo",
     "faviconRemove": "Quitar favicon",
     "colorLabel": "Color de la marca",
     "colorPick": "Elegir el color de la marca",
-    "colorHelp": "Un código hexadecimal, como #0f766e.",
     "links": {
       "title": "Enlaces",
-      "description": "Se muestran en su página de inicio de sesión y en su panel. Deje un campo vacío para ocultarlo.",
       "termsUrl": "Términos del servicio",
       "termsUrlPlaceholder": "https://empresa.com/terminos",
       "privacyUrl": "Política de privacidad",
@@ -487,8 +465,7 @@
       "supportUrl": "Página de soporte",
       "supportUrlPlaceholder": "https://empresa.com/soporte",
       "supportEmail": "Correo de soporte",
-      "supportEmailPlaceholder": "soporte@empresa.com",
-      "supportEmailHelp": "Las respuestas a sus correos llegan aquí. También es su enlace de soporte si no tiene página de soporte."
+      "supportEmailPlaceholder": "soporte@empresa.com"
     },
     "preview": "Vista previa",
     "save": "Guardar marca",
@@ -523,7 +500,6 @@
     },
     "connect": {
       "title": "Conecte una cuenta de pagos",
-      "description": "Usamos Stripe para cobrar a sus clientes en su nombre y transferirle el dinero.",
       "countryLabel": "País de su empresa",
       "countryPlaceholder": "Elija un país",
       "countryHelp": "No podrá cambiarlo después.",
@@ -579,7 +555,6 @@
     "create": {
       "action": "Crear clave de API",
       "title": "Crear una clave de API",
-      "description": "Póngale un nombre que reconozca y dele solo el acceso que necesita.",
       "nameLabel": "Nombre",
       "namePlaceholder": "Alta de clientes",
       "scopesLabel": "Acceso",
@@ -605,7 +580,6 @@
     "update": {
       "action": "Actualizar",
       "title": "Actualizar {{name}}",
-      "description": "Cambie su nombre o su acceso. Conserva la misma clave, y las aplicaciones que la usan reciben el nuevo acceso en su próxima solicitud.",
       "submit": "Guardar",
       "saving": "Guardando…",
       "cancel": "Cancelar",
@@ -639,8 +613,7 @@
       "partner_team_write": "Invitar y quitar administradores y miembros, y cambiar sus roles",
       "partner_billing_read": "Ver la conexión con Stripe, tu nivel y el uso del bolsón compartido. Solo los propietarios pueden concederlo",
       "partner_billing_write": "Iniciar el registro en Stripe y los pagos de nivel, y ajustar el excedente del bolsón compartido. Solo los propietarios pueden concederlo"
-    },
-    "emptyDescription": "Cree una para configurar sus negocios desde su propio código."
+    }
   },
   "secretReveal": {
     "copy": "Copiar",
@@ -711,7 +684,6 @@
     },
     "overage": {
       "title": "Excedente",
-      "description": "Pasada su bolsa, sus negocios siguen respondiendo con las tarifas de excedente de su nivel, hasta su límite.",
       "toggle": "Permitir excedente",
       "free": "El nivel Gratis no tiene excedente. Sus negocios se detienen en la bolsa.",
       "off": "El excedente está desactivado. Sus negocios se detienen en la bolsa cada mes.",
@@ -841,8 +813,6 @@
   },
   "agencyConnections": {
     "title": "Conexiones MCP",
-    "description": "Asistentes de IA y otros clientes MCP que su equipo conectó al iniciar sesión.",
-    "descriptionOwn": "Asistentes de IA y otros clientes MCP que usted conectó al iniciar sesión.",
     "empty": "Aún no hay conexiones MCP. Conecte un asistente al servidor MCP de {{appName}} y elija esta agencia al iniciar sesión.",
     "unnamed": "Aplicación sin nombre",
     "connectedOn": "Conectada el {{date}}",
