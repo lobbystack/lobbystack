@@ -189,6 +189,7 @@
       "title": "Nadogradite paket",
       "description": "Izaberite paket koji najviše odgovara Vašem timu.",
       "providerSlow": "Provajder plaćanja je spor. I dalje otvaramo plaćanje...",
+      "close": "Zatvori",
       "enterpriseSubject": "Enterprise paket",
       "billingIntervalLabel": "Period naplate",
       "annualDiscount": "Uštedite 20%",

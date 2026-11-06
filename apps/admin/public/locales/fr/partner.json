@@ -738,7 +738,8 @@
       "annualDiscount": "Économisez 20 %",
       "action": "Choisir {{tier}}",
       "opening": "Ouverture du paiement…",
-      "slow": "Le prestataire de paiement est lent. Nous ouvrons toujours la page de paiement…"
+      "slow": "Le prestataire de paiement est lent. Nous ouvrons toujours la page de paiement…",
+      "backToPlans": "Retour aux paliers"
     },
     "portal": {
       "action": "Gérer l'abonnement",

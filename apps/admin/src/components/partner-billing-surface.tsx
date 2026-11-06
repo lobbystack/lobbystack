@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
-import { isProviderUnavailable } from "@/lib/checkout-errors";
+import { CHECKOUT_UNAVAILABLE_AFTER_MS, isProviderUnavailable } from "@/lib/checkout-errors";
 import { formatDateTime, intlLocale } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
 import { cn } from "@/lib/utils";
@@ -142,6 +142,7 @@ export function PartnerBillingSurface() {
   const [interval, setInterval] = useState<BillingInterval>("annual");
   const [pending, setPending] = useState<{ requestId: string; tier: PaidPartnerTierSlug } | null>(null);
   const [slowCheckout, setSlowCheckout] = useState(false);
+  const [checkoutUnavailable, setCheckoutUnavailable] = useState(false);
   const [portalPending, setPortalPending] = useState(false);
   // Leave for each checkout once: a page restored from the browser's cache can rerun the effect with the old one.
   const redirected = useRef<string | null>(null);
@@ -150,7 +151,7 @@ export function PartnerBillingSurface() {
 
   const start = useMutation({
     mutationFn: (tier: PaidPartnerTierSlug) => requestJson<{ requestId: string }>(query("/api/partner/billing/checkout"), { method: "POST", body: JSON.stringify({ partnerId: partner.partnerId, tier, billingInterval: interval }) }),
-    onSuccess: (result, tier) => setPending({ requestId: result.requestId, tier }),
+    onSuccess: (result, tier) => { setCheckoutUnavailable(false); setPending({ requestId: result.requestId, tier }); },
     onError: (error: Error & { code?: string }) => toast.error(t(CHECKOUT_ERRORS[error.code ?? ""] ?? "billing.errors.checkoutFailed")),
   });
   const opening = useQuery({
@@ -162,8 +163,15 @@ export function PartnerBillingSurface() {
   useEffect(() => {
     if (!pending) { setSlowCheckout(false); return; }
     setSlowCheckout(false);
-    const timer = window.setTimeout(() => setSlowCheckout(true), 10_000);
-    return () => window.clearTimeout(timer);
+    const slow = window.setTimeout(() => setSlowCheckout(true), 10_000);
+    const unavailable = window.setTimeout(() => {
+      setCheckoutUnavailable(true);
+      setPending(null);
+    }, CHECKOUT_UNAVAILABLE_AFTER_MS);
+    return () => {
+      window.clearTimeout(slow);
+      window.clearTimeout(unavailable);
+    };
   }, [pending]);
   useEffect(() => {
     if (!pending) return;
@@ -178,7 +186,11 @@ export function PartnerBillingSurface() {
   }, [opening.data, opening.isError, pending, t]);
   useEffect(() => {
     // The back button from checkout can restore this page from the cache, still waiting on a checkout that opened.
-    const onPageShow = (event: PageTransitionEvent) => { if (event.persisted) setPending(null); };
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      setPending(null);
+      setCheckoutUnavailable(false);
+    };
     window.addEventListener("pageshow", onPageShow);
     return () => window.removeEventListener("pageshow", onPageShow);
   }, []);
@@ -293,10 +305,16 @@ export function PartnerBillingSurface() {
               ))}
             </div>
           </div>
-          {slowCheckout ? (
+          {checkoutUnavailable ? (
+            <Surface className="flex flex-col items-start gap-4 p-6" role="alert">
+              <p className="text-sm text-muted-foreground">{t("billing.errors.paymentsUnavailable")}</p>
+              <Button onClick={() => setCheckoutUnavailable(false)} type="button" variant="outline">{t("billing.choose.backToPlans")}</Button>
+            </Surface>
+          ) : null}
+          {!checkoutUnavailable && slowCheckout ? (
             <p className="text-sm text-muted-foreground" role="status">{t("billing.choose.slow")}</p>
           ) : null}
-          <div className="grid gap-4 md:grid-cols-3">
+          {!checkoutUnavailable ? <div className="grid gap-4 md:grid-cols-3">
             {paidPartnerTierSlugs.map((tier) => (
               <Surface className="flex flex-col gap-5 p-5" key={tier}>
                 <h3 className="font-heading text-lg font-medium tracking-[-0.03em]">{t(`billing.tiers.${tier}`)}</h3>
@@ -314,7 +332,7 @@ export function PartnerBillingSurface() {
                 </Button>
               </Surface>
             ))}
-          </div>
+          </div> : null}
         </section>
       ) : null}
     </div>

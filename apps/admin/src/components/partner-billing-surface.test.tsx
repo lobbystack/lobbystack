@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -45,7 +45,7 @@ beforeEach(() => {
   fixture.search = new URLSearchParams();
   fixture.telemetry = createRecordedBrowserTelemetry();
 });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
 describe("the partner console's Billing page", () => {
   it("tells admins and members that only owners manage billing, without asking the server", async () => {
@@ -111,6 +111,37 @@ describe("the partner console's Billing page", () => {
     expect(await screen.findByText("billing.current.free")).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "billing.choose.action:billing.tiers.growth" }));
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("billing.errors.paymentsUnavailable"));
+  });
+
+  it("stops polling after a minute, says payments are unavailable, and returns to the plans", async () => {
+    const fetchMock = renderWith({
+      "GET /api/partner/billing": () => free,
+      "POST /api/partner/billing/checkout": () => ({ requestId: "request-1" }),
+      "GET /api/partner/billing/checkout": () => ({ requestId: "request-1", tier: "growth", billingInterval: "annual", status: "pending", checkoutUrl: null, error: null, synced: false }),
+    });
+    expect(await screen.findByText("billing.current.free")).toBeTruthy();
+    vi.useFakeTimers();
+
+    fireEvent.click(screen.getByRole("button", { name: "billing.choose.action:billing.tiers.growth" }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(fetchMock.mock.calls.filter(([, init]) => init?.method === "POST")).toHaveLength(1);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
+    expect(screen.getByText("billing.choose.slow")).toBeTruthy();
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(50_000); });
+    expect(screen.getByText("billing.errors.paymentsUnavailable")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "billing.choose.action:billing.tiers.growth" })).toBeNull();
+    const polled = fetchMock.mock.calls.length;
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
+    expect(fetchMock.mock.calls.length).toBe(polled);
+
+    fireEvent.click(screen.getByRole("button", { name: "billing.choose.backToPlans" }));
+    expect(screen.getByRole("button", { name: "billing.choose.action:billing.tiers.growth" })).toBeTruthy();
+    expect(fetchMock.mock.calls.length).toBe(polled);
+    const post = fetchMock.mock.calls.find(([, init]) => init?.method === "POST")!;
+    expect((post[1] as RequestInit).signal).toBeUndefined();
   });
 
   it("shows a paid tier with its renewal and a way to manage it in Polar, and offers no second checkout", async () => {

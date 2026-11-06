@@ -726,7 +726,8 @@
       "annualDiscount": "Save 20%",
       "action": "Choose {{tier}}",
       "opening": "Opening checkout…",
-      "slow": "The payment provider is slow. Still opening checkout…"
+      "slow": "The payment provider is slow. Still opening checkout…",
+      "backToPlans": "Back to plans"
     },
     "portal": {
       "action": "Manage subscription",

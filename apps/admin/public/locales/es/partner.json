@@ -738,7 +738,8 @@
       "annualDiscount": "Ahorre un 20 %",
       "action": "Elegir {{tier}}",
       "opening": "Abriendo el pago…",
-      "slow": "El proveedor de pagos está lento. Seguimos abriendo el pago…"
+      "slow": "El proveedor de pagos está lento. Seguimos abriendo el pago…",
+      "backToPlans": "Volver a los niveles"
     },
     "portal": {
       "action": "Gestionar suscripción",

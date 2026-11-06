@@ -284,7 +284,8 @@
     },
     "continue": "Continuer",
     "continuing": "Continuer...",
-    "continueFailed": "Impossible de continuer maintenant. Réessayez."
+    "continueFailed": "Impossible de continuer maintenant. Réessayez.",
+    "backToPlans": "Retour aux forfaits"
   },
   "noBusinesses": {
     "title": "Aucun espace de travail ici pour l'instant",

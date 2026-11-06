@@ -16,3 +16,9 @@ export function checkoutRefusalKey(error: unknown): string | null {
 export function isProviderUnavailable(error: string | null | undefined): boolean {
   return error?.startsWith("provider_unavailable") ?? false;
 }
+
+/**
+ * How long someone waits on a checkout before the dashboard stops polling and
+ * says payments are unavailable. The worker keeps retrying in the background.
+ */
+export const CHECKOUT_UNAVAILABLE_AFTER_MS = 60_000;
