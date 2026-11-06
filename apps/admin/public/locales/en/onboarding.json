@@ -176,7 +176,8 @@
       "trialUsed": "This workspace or your phone already used its free trial.",
       "network": "A free trial already started from this network in the last 30 days.",
       "unavailable": "A free trial number isn't available for this workspace.",
-      "verification": "A free number needs a verified phone."
+      "verification": "A free number needs a verified phone.",
+      "emailVerification": "Verify your email address before you choose a trial number."
     },
     "title": "Pick your AI's phone number",
     "countryLabel": "Country",

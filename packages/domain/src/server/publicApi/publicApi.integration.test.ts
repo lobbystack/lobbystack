@@ -918,7 +918,7 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
     const context = { db: worker!.db };
     const personId = randomUUID();
     const phone = `+1416${String(Date.now()).slice(-7)}`;
-    await admin!.db.insert(users).values({ id: personId, email: `${personId}@example.invalid`, normalizedEmail: `${personId}@example.invalid`, phone, phoneVerifiedAt: new Date() });
+    await admin!.db.insert(users).values({ id: personId, email: `${personId}@example.invalid`, normalizedEmail: `${personId}@example.invalid`, phone, phoneVerifiedAt: new Date(), emailVerified: true });
     const businessIds: string[] = [];
     const cloudBusiness = async (label: string, verified = true) => {
       const businessId = randomUUID();
@@ -975,7 +975,7 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
       const personId = randomUUID();
       const phone = `+1647${String(Date.now() + people.length).slice(-7)}`;
       people.push(personId);
-      await admin!.db.insert(users).values({ id: personId, email: `${personId}@example.invalid`, normalizedEmail: `${personId}@example.invalid`, phone, phoneVerifiedAt: new Date() });
+      await admin!.db.insert(users).values({ id: personId, email: `${personId}@example.invalid`, normalizedEmail: `${personId}@example.invalid`, phone, phoneVerifiedAt: new Date(), emailVerified: true });
       return { personId, phone };
     };
     const trialBusiness = async (owner: { personId: string; phone: string }) => {

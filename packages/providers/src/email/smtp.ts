@@ -212,7 +212,7 @@ function templateHtml(template: TemplateName, subject: string, variables: Record
       return renderLetterHtml(brand, subject, variables, copy.lines, copy.action, variables.url, brand.name);
     }
     case "onboarding_followup":
-      return undefined;
+      return onboardingFollowupHtml(variables, brand);
   }
 }
 
@@ -643,6 +643,8 @@ function numberTrialCopy(kind: TrialEmailKind, locale: string | undefined, v: Re
   const calls = Number(v.calls ?? "0");
   const num = v.trialNumber ?? "";
   const fwd = v.forwardTo ?? "";
+  // A trial started without a verified mobile has no forward to name when it runs out.
+  const hasFwd = Boolean(fwd);
   const business = v.businessName ?? "";
   if (locale === "fr") {
     const answered = calls > 0 ? [`Votre agent a déjà répondu à ${calls} appel${calls > 1 ? "s" : ""} pour ${business}.`] : [];
@@ -650,7 +652,9 @@ function numberTrialCopy(kind: TrialEmailKind, locale: string | undefined, v: Re
       case "day10": return { subject: `Plus que 4 jours pour garder le ${num}`, lines: [`Votre essai gratuit se termine le ${v.endDate}.`, ...answered, `À la fin de l'essai, votre agent cesse de répondre au ${num} et nous libérons le numéro. Choisissez un forfait pour le garder. Starter coûte 30 $ par mois pour 150 minutes.`], button: "Garder mon numéro" };
       case "day13": return { subject: `Demain, dernier jour avec le ${num}`, lines: ["Votre essai gratuit se termine demain à minuit.", ...answered, `Ensuite, les appels au ${num} restent sans réponse et nous libérons le numéro. Gardez-le pour 30 $ par mois avec Starter.`], button: "Garder mon numéro" };
       case "ended": return { subject: `Votre essai est terminé. Le ${num} ne répond plus`, lines: [`Votre essai de 14 jours s'est terminé hier, alors votre agent ne répond plus au ${num}. Nous libérons le numéro. Abonnez-vous dès maintenant si vous voulez le garder. Starter coûte 30 $ par mois pour 150 minutes.`], button: "Garder mon numéro" };
-      case "minutes_out": return { subject: `Vos minutes sont épuisées. Les appels vont maintenant au ${fwd}`, lines: [`${business} a utilisé ses 30 minutes gratuites, alors votre agent ne répond plus au ${num}. Les appels sonnent maintenant au ${fwd}. Passez à un forfait payant pour retrouver votre agent. Starter coûte 30 $ par mois pour 150 minutes, et vous gardez votre numéro.`], button: "Retrouver mon agent" };
+      case "minutes_out": return hasFwd
+        ? { subject: `Vos minutes sont épuisées. Les appels vont maintenant au ${fwd}`, lines: [`${business} a utilisé ses 30 minutes gratuites, alors votre agent ne répond plus au ${num}. Les appels sonnent maintenant au ${fwd}. Passez à un forfait payant pour retrouver votre agent. Starter coûte 30 $ par mois pour 150 minutes, et vous gardez votre numéro.`], button: "Retrouver mon agent" }
+        : { subject: "Vos minutes sont épuisées. Les appels restent sans réponse", lines: [`${business} a utilisé ses 30 minutes gratuites, alors votre agent ne répond plus au ${num}. Les appels restent maintenant sans réponse. Passez à un forfait payant pour retrouver votre agent. Starter coûte 30 $ par mois pour 150 minutes, et vous gardez votre numéro.`], button: "Retrouver mon agent" };
     }
   }
   if (locale === "es") {
@@ -659,7 +663,9 @@ function numberTrialCopy(kind: TrialEmailKind, locale: string | undefined, v: Re
       case "day10": return { subject: `Quedan 4 días para conservar el ${num}`, lines: [`Su prueba gratuita termina el ${v.endDate}.`, ...answered, `Cuando termine la prueba, su agente dejará de contestar el ${num} y liberaremos el número. Elija un plan para conservarlo. Starter cuesta 30 USD al mes por 150 minutos.`], button: "Conservar mi número" };
       case "day13": return { subject: `Mañana es su último día con el ${num}`, lines: ["Su prueba gratuita termina mañana a medianoche.", ...answered, `Después, las llamadas al ${num} quedarán sin respuesta y liberaremos el número. Consérvelo por 30 USD al mes con Starter.`], button: "Conservar mi número" };
       case "ended": return { subject: `Su prueba terminó. El ${num} dejó de contestar`, lines: [`Su prueba de 14 días terminó ayer, así que su agente dejó de contestar el ${num}. Estamos liberando el número. Suscríbase ahora si quiere conservarlo. Starter cuesta 30 USD al mes por 150 minutos.`], button: "Conservar mi número" };
-      case "minutes_out": return { subject: `Se acabaron sus minutos. Las llamadas ahora van al ${fwd}`, lines: [`${business} usó sus 30 minutos gratuitos, así que su agente dejó de contestar el ${num}. Las llamadas ahora suenan en el ${fwd}. Mejore su plan ahora para recuperar a su agente. Starter cuesta 30 USD al mes por 150 minutos, y conserva su número.`], button: "Recuperar a mi agente" };
+      case "minutes_out": return hasFwd
+        ? { subject: `Se acabaron sus minutos. Las llamadas ahora van al ${fwd}`, lines: [`${business} usó sus 30 minutos gratuitos, así que su agente dejó de contestar el ${num}. Las llamadas ahora suenan en el ${fwd}. Mejore su plan ahora para recuperar a su agente. Starter cuesta 30 USD al mes por 150 minutos, y conserva su número.`], button: "Recuperar a mi agente" }
+        : { subject: "Se acabaron sus minutos. Las llamadas quedan sin respuesta", lines: [`${business} usó sus 30 minutos gratuitos, así que su agente dejó de contestar el ${num}. Las llamadas ahora quedan sin respuesta. Mejore su plan para recuperar a su agente. Starter cuesta 30 USD al mes por 150 minutos, y conserva su número.`], button: "Recuperar a mi agente" };
     }
   }
   if (locale === "sr") {
@@ -668,7 +674,9 @@ function numberTrialCopy(kind: TrialEmailKind, locale: string | undefined, v: Re
       case "day10": return { subject: `Još 4 dana da zadržite broj ${num}`, lines: [`Vaša besplatna proba ističe ${v.endDate}.`, ...answered, `Kada proba istekne, agent prestaje da odgovara na ${num} i mi oslobađamo broj. Izaberite paket da biste ga zadržali. Starter košta 30 USD mesečno za 150 minuta.`], button: "Zadrži moj broj" };
       case "day13": return { subject: `Sutra je Vaš poslednji dan sa brojem ${num}`, lines: ["Vaša besplatna proba ističe sutra u ponoć.", ...answered, `Nakon toga, pozivi na ${num} ostaju bez odgovora i mi oslobađamo broj. Zadržite ga za 30 USD mesečno uz Starter.`], button: "Zadrži moj broj" };
       case "ended": return { subject: `Proba je istekla. ${num} više ne odgovara`, lines: [`Vaša proba od 14 dana istekla je juče, pa agent više ne odgovara na ${num}. Oslobađamo broj. Pretplatite se sada ako želite da ga zadržite. Starter košta 30 USD mesečno za 150 minuta.`], button: "Zadrži moj broj" };
-      case "minutes_out": return { subject: `Potrošili ste minute. Pozivi sada idu na ${fwd}`, lines: [`${business} je potrošio 30 besplatnih minuta, pa agent više ne odgovara na ${num}. Pozivi sada zvone na ${fwd}. Pređite na plaćeni paket da biste vratili agenta. Starter košta 30 USD mesečno za 150 minuta, a broj ostaje Vaš.`], button: "Vrati mog agenta" };
+      case "minutes_out": return hasFwd
+        ? { subject: `Potrošili ste minute. Pozivi sada idu na ${fwd}`, lines: [`${business} je potrošio 30 besplatnih minuta, pa agent više ne odgovara na ${num}. Pozivi sada zvone na ${fwd}. Pređite na plaćeni paket da biste vratili agenta. Starter košta 30 USD mesečno za 150 minuta, a broj ostaje Vaš.`], button: "Vrati mog agenta" }
+        : { subject: "Potrošili ste minute. Pozivi ostaju bez odgovora", lines: [`${business} je potrošio 30 besplatnih minuta, pa agent više ne odgovara na ${num}. Pozivi sada ostaju bez odgovora. Pređite na plaćeni paket da biste vratili agenta. Starter košta 30 USD mesečno za 150 minuta, a broj ostaje Vaš.`], button: "Vrati mog agenta" };
     }
   }
   const answered = calls > 0 ? [`So far your agent has answered ${calls} call${calls > 1 ? "s" : ""} for ${business}.`] : [];
@@ -676,7 +684,9 @@ function numberTrialCopy(kind: TrialEmailKind, locale: string | undefined, v: Re
     case "day10": return { subject: `4 days left to keep ${num}`, lines: [`Your free trial ends on ${v.endDate}.`, ...answered, `When it ends, your agent stops answering ${num} and we release the number. Choose a plan to keep it. Starter is $30 a month for 150 minutes.`], button: "Keep my number" };
     case "day13": return { subject: `Tomorrow is your last day with ${num}`, lines: ["Your free trial ends at midnight tomorrow.", ...answered, `After that, calls to ${num} go unanswered and we release the number. Keep it for $30 a month with Starter.`], button: "Keep my number" };
     case "ended": return { subject: `Your trial ended. ${num} stopped answering`, lines: [`Your 14-day trial ended yesterday, so your agent stopped answering ${num}. We're releasing the number. Subscribe now if you want to keep it. Starter is $30 a month for 150 minutes.`], button: "Keep my number" };
-    case "minutes_out": return { subject: `You're out of minutes. Calls now go to ${fwd}`, lines: [`${business} used its 30 free minutes, so your agent stopped answering ${num}. Calls now ring ${fwd}. Upgrade now to get your agent back. Starter is $30 a month for 150 minutes, and you keep your number.`], button: "Get my agent back" };
+    case "minutes_out": return hasFwd
+      ? { subject: `You're out of minutes. Calls now go to ${fwd}`, lines: [`${business} used its 30 free minutes, so your agent stopped answering ${num}. Calls now ring ${fwd}. Upgrade now to get your agent back. Starter is $30 a month for 150 minutes, and you keep your number.`], button: "Get my agent back" }
+      : { subject: "You're out of minutes. Calls are not being answered", lines: [`${business} used its 30 free minutes, so your agent stopped answering ${num}. Calls now go unanswered. Choose a paid plan to get your agent back. Starter is $30 a month for 150 minutes, and you keep your number.`], button: "Get my agent back" };
   }
 }
 
@@ -841,6 +851,33 @@ function onboardingFollowupBody(variables: Record<string, string>, brand: EmailB
     sender,
     copy.title,
   ].join("\n");
+}
+
+/**
+ * The founder's note as a personal email: plain paragraphs and one text link
+ * per answer. It stays out of the branded layout, and the text part remains
+ * the same note with each answer above its link.
+ */
+function onboardingFollowupHtml(variables: Record<string, string>, brand: EmailBrand): string {
+  const locale = variables.locale === "fr" || variables.locale === "es" || variables.locale === "sr" ? variables.locale : "en";
+  const copy = CHECK_IN_COPY[locale];
+  const sender = variables.senderName ?? "";
+  const paragraph = (text: string, margin = "0 0 16px") => `<p style="margin:${margin};font-size:16px;line-height:1.6;color:#0B0B0D;">${escapeHtml(text)}</p>`;
+  const answers = CHECK_IN_ANSWERS.map((answer) => {
+    const url = `${brand.origin}/${locale}/check-in/${variables[checkInTokenVariable(answer)] ?? ""}`;
+    return `<p style="margin:0 0 8px;font-size:16px;line-height:1.6;"><a href="${escapeHtml(url)}" style="color:#0B0B0D;">${escapeHtml(copy.answers[answer])}</a></p>`;
+  });
+  return [
+    "<!doctype html><html><body style=\"margin:0;padding:0;background:#FFFFFF;\">",
+    "<div style=\"max-width:560px;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;\">",
+    paragraph(copy.greeting(variables.firstName ?? "")),
+    paragraph(copy.intro(sender, variables.businessName ?? "")),
+    paragraph(copy.question, "0 0 12px"),
+    ...answers,
+    paragraph(copy.close, "16px 0"),
+    `<p style="margin:0;font-size:16px;line-height:1.6;color:#0B0B0D;">${escapeHtml(sender)}<br />${escapeHtml(copy.title)}</p>`,
+    "</div></body></html>",
+  ].join("");
 }
 
 type NoticeCopy = { heading: string; lines: string[]; action: string | null };

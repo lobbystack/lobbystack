@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { trustedClientIp, trustedClientIpFromHeaders, trustedClientIpHeader } from "./trusted-client-ip";
+import { trustedClientCountry, trustedClientCountryFromHeaders, trustedClientIp, trustedClientIpFromHeaders, trustedClientIpHeader } from "./trusted-client-ip";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -42,6 +42,22 @@ describe("trusted client IP derivation", () => {
   it("reads from bare headers for the auth middleware context", () => {
     vi.stubEnv("TRUSTED_CLIENT_IP_HEADER", "x-real-ip");
     expect(trustedClientIpFromHeaders(new Headers({ "x-real-ip": "203.0.113.9" }))).toBe("203.0.113.9");
+  });
+
+  it("reads cf-ipcountry only from a deployment that trusts its edge", () => {
+    vi.stubEnv("TRUSTED_CLIENT_IP_HEADER", "");
+    expect(trustedClientCountry(request({ "cf-ipcountry": "CA" }))).toBeUndefined();
+    vi.stubEnv("TRUSTED_CLIENT_IP_HEADER", "x-real-ip");
+    expect(trustedClientCountry(request({ "cf-ipcountry": " ca " }))).toBeUndefined();
+    vi.stubEnv("TRUSTED_CLIENT_COUNTRY_HEADER", "cf-ipcountry");
+    expect(trustedClientCountry(request({ "cf-ipcountry": " ca " }))).toBe("CA");
+    vi.stubEnv("TRUSTED_CLIENT_COUNTRY_HEADER", "");
+    vi.stubEnv("TRUSTED_CLIENT_IP_HEADER", "cf-connecting-ip");
+    expect(trustedClientCountry(request({ "cf-ipcountry": " ca " }))).toBe("CA");
+    expect(trustedClientCountry(request({}))).toBeUndefined();
+    expect(trustedClientCountry(request({ "cf-ipcountry": "Canada" }))).toBeUndefined();
+    vi.stubEnv("TRUSTED_CLIENT_IP_HEADER", "cf-connecting-ip");
+    expect(trustedClientCountryFromHeaders(new Headers({ "cf-ipcountry": "T1" }))).toBe("T1");
   });
 
   it("warns once in production when the opt-in is missing", async () => {

@@ -187,7 +187,6 @@ describe("SMTP delivery", () => {
     await send(provider, { template: "onboarding_followup", to: "owner@example.test", from: "Raphael <raphael@example.test>", subject: "Acme Dental's agent hasn't had a real conversation yet", variables: { locale: "en", firstName: "Sam", businessName: "Acme Dental", senderName: "Raphael", ...tokens } });
     expect(sent(0).from).toBe("Raphael <raphael@example.test>");
     expect(sent(0).replyTo).toBeUndefined();
-    expect(sent(0).html).toBeUndefined();
     expect(sent(0).text).toMatch(/^Hi Sam,\n/);
     expect(sent(0).text).toContain("You set up an agent for Acme Dental yesterday, and it hasn't talked to a real customer yet.");
     expect(sent(0).text).toContain("What's holding you back? Click one:");
@@ -203,6 +202,39 @@ describe("SMTP delivery", () => {
     expect(sent(1).text).toContain("un agent pour Clinique hier");
     expect(sent(1).text).toContain("/fr/check-in/v1.fit.sig");
   });
+  it("names no forward when a trial without a mobile runs out of minutes", async () => {
+    const { provider, sent } = capture();
+    await send(provider, { template: "number_trial", to: "owner@example.test", variables: { locale: "en", kind: "minutes_out", businessName: "Acme Dental", trialNumber: "+14165550123", forwardTo: "", url: "https://app.example.test/settings/plan" } });
+    expect(sent(0).subject).toBe("You're out of minutes. Calls are not being answered");
+    expect(sent(0).text).toContain("Calls now go unanswered.");
+    expect(sent(0).text).not.toContain("Calls now ring .");
+  });
+
+  it("puts each follow-up choice on its own text link, without the branded layout", async () => {
+    const { provider, sent } = capture();
+    const tokens = { checkInToken_still_testing: "v1.testing.sig", checkInToken_connect_number: "v1.number.sig", checkInToken_test_call_mistakes: "v1.mistakes.sig", checkInToken_not_a_fit: "v1.fit.sig" };
+    const choices = ["I'm still testing it", "I don't know how to connect my number", "It made mistakes on my test call", "It's not right for my business"];
+    await send(provider, { template: "onboarding_followup", to: "owner@example.test", from: "Raphael <raphael@example.test>", variables: { locale: "en", firstName: "Sam", businessName: "Acme Dental", senderName: "Raphael", ...tokens } });
+    const html = sent(0).html as string;
+    const anchors = [...html.matchAll(/<a href="([^"]+)"[^>]*>([^<]+)<\/a>/g)].map(([, href, text]) => ({ href, text: text!.replaceAll("&#39;", "'").replaceAll("&amp;", "&").replaceAll("&quot;", '\"').replaceAll("&lt;", "<").replaceAll("&gt;", ">") }));
+    expect(anchors).toEqual([
+      { href: "https://app.example.test/en/check-in/v1.testing.sig", text: choices[0] },
+      { href: "https://app.example.test/en/check-in/v1.number.sig", text: choices[1] },
+      { href: "https://app.example.test/en/check-in/v1.mistakes.sig", text: choices[2] },
+      { href: "https://app.example.test/en/check-in/v1.fit.sig", text: choices[3] },
+    ]);
+    // A personal note: no logo, button or layout wrapper.
+    expect(html).not.toContain("<svg");
+    expect(html).not.toContain("<h1");
+    expect(html).not.toContain("<img");
+    expect(html).toContain("Hi Sam,");
+    expect(html).toContain("If it&#39;s something else, just reply. I read every answer.");
+    expect(html).toContain("Raphael<br />Founder, LobbyStack");
+    // The plain-text part keeps the answer above its signed URL.
+    expect(sent(0).text).toContain("I'm still testing it\nhttps://app.example.test/en/check-in/v1.testing.sig\n");
+    expect(sent(0).text).toContain("What's holding you back? Click one:");
+  });
+
   it("invites an owner a platform key named to make their account at the sign-up page", async () => {
     const { provider, sendMail } = capture();
     await send(provider, { template: "account_setup", to: "owner@example.test", variables: { locale: "en", email: "owner@example.test", url: "https://app.example.test/en/signup" } });

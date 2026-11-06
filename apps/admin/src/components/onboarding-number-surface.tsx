@@ -31,6 +31,7 @@ const REFUSAL_KEYS: Record<string, string> = {
   trial_ip_limited: "number.refusals.network",
   trial_not_available: "number.refusals.unavailable",
   phone_verification_required: "number.refusals.verification",
+  email_verification_required: "number.refusals.emailVerification",
 };
 
 type NumberOutlook = { trialRefusal: string | null };

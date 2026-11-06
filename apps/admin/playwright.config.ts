@@ -46,6 +46,8 @@ const adminEnv = {
   // instead of collapsing into one shared bucket. Never copy this to a
   // deployment whose ingress does not overwrite the header.
   TRUSTED_CLIENT_IP_HEADER: "x-real-ip",
+  // The trial journey sends Cloudflare's country next to its test header.
+  TRUSTED_CLIENT_COUNTRY_HEADER: "cf-ipcountry",
   // The setup prompts journey opens the marketing site, which this hostname serves.
   MARKETING_HOSTS: "lobbystack.localhost",
   // The widget settings journey creates a widget key, which stays off unless an operator opts in.

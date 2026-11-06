@@ -68,30 +68,66 @@ type Setup = {
   number?: unknown[];
   phone?: unknown[];
   attempt?: unknown[];
+  email?: { email: string; emailVerified: boolean } | null;
   used?: boolean;
   ipLimited?: boolean;
   ipHash?: string | null;
+  ipCountry?: string | null;
 };
 
+const ownerEmail = { email: "owner@example.invalid", emailVerified: true };
+
 /** The trial outlook for a business, with the reads it makes in the order it makes them. */
-function outlook({ deploymentMode = "cloud", timezone = "America/Toronto", partnerId = null, live = false, number = [], phone = [{ phone: null }], attempt = [], used = false, ipLimited = false, ipHash = null }: Setup = {}) {
+function outlook({ deploymentMode = "cloud", timezone = "America/Toronto", partnerId = null, live = false, number = [], phone = [{ phone: null }], attempt = [], email = ownerEmail, used = false, ipLimited = false, ipHash = "network-hash", ipCountry = "CA" }: Setup = {}) {
   mocks.loadEntitlement.mockResolvedValue({ live });
-  const rows = [[{ deploymentMode, timezone, partnerId }], number, phone, attempt];
+  // verifiedPhone reads the phone's attempts only when the account has one.
+  const hasPhone = Boolean((phone[0] as { phone?: string | null } | undefined)?.phone);
+  const rows = [[{ deploymentMode, timezone, partnerId }], number, phone, ...(hasPhone ? [attempt] : []), email === null ? [] : [email]];
   let trialReads = 0;
   const tx = {
     select: () => chain(rows.shift() ?? []),
     execute: vi.fn(async () => ({ rows: [{ used: trialReads++ === 0 ? used : ipLimited }] })),
   };
-  return onboardingNumberTrialOutlookInTransaction(tx as never, { userId: "user-1", businessId: "business-1", ipHash }).then((result) => ({ result, tx }));
+  return onboardingNumberTrialOutlookInTransaction(tx as never, { userId: "user-1", businessId: "business-1", ipHash, ipCountry }).then((result) => ({ result, tx }));
 }
 
 beforeEach(() => { vi.clearAllMocks(); });
 afterEach(() => { vi.unstubAllEnvs(); });
 
 describe("the number step's trial outlook", () => {
-  it("asks for a phone when a free trial is still possible", async () => {
+  it("starts a trial without a text when the email is verified and the network is known", async () => {
     const { result } = await outlook();
+    expect(result).toEqual({ verificationNeeded: false, refusal: null });
+  });
+
+  it("asks for a phone when the request has no trusted client address", async () => {
+    const { result } = await outlook({ ipHash: null });
     expect(result).toEqual({ verificationNeeded: true, refusal: null });
+  });
+
+  it.each([null, "", "X", "XX", "T1"])("asks for a phone when cf-ipcountry is %s", async (ipCountry) => {
+    const { result } = await outlook({ ipCountry });
+    expect(result).toEqual({ verificationNeeded: true, refusal: null });
+  });
+
+  it("accepts any real country Cloudflare reports, not only the number's", async () => {
+    const { result } = await outlook({ ipCountry: "FR" });
+    expect(result).toEqual({ verificationNeeded: false, refusal: null });
+  });
+
+  it("asks for a phone when this network already started a trial in the last 30 days", async () => {
+    const { result } = await outlook({ ipLimited: true });
+    expect(result).toEqual({ verificationNeeded: true, refusal: null });
+  });
+
+  it("sends an unverified email to the plans until it verifies", async () => {
+    const { result } = await outlook({ email: { email: "owner@example.invalid", emailVerified: false } });
+    expect(result).toEqual({ verificationNeeded: false, refusal: "email_verification_required" });
+  });
+
+  it("sends a disposable email domain to the plans", async () => {
+    const { result } = await outlook({ email: { email: "sam@mailinator.com", emailVerified: true } });
+    expect(result).toEqual({ verificationNeeded: false, refusal: "trial_not_available" });
   });
 
   it("skips the phone on a live plan, which includes a number", async () => {
@@ -124,13 +160,8 @@ describe("the number step's trial outlook", () => {
     expect(result).toEqual({ verificationNeeded: false, refusal: "trial_already_used" });
   });
 
-  it("sends a network that already had a trial to the plans", async () => {
-    const { result } = await outlook({ ipHash: "network-hash", ipLimited: true });
-    expect(result).toEqual({ verificationNeeded: false, refusal: "trial_ip_limited" });
-  });
-
-  it("sends a market without trial numbers to the plans", async () => {
+  it("lets the number's own country decide, so an Australian market still reaches the picker", async () => {
     const { result } = await outlook({ timezone: "Australia/Sydney" });
-    expect(result).toEqual({ verificationNeeded: false, refusal: "dedicated_number_requires_paid_plan" });
+    expect(result).toEqual({ verificationNeeded: false, refusal: null });
   });
 });
