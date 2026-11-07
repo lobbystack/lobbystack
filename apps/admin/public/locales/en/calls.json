@@ -165,7 +165,8 @@
     },
     "recording": {
       "unavailable": "No recording is available for this call.",
-      "pending": "The recording is still being processed."
+      "pending": "The recording is still being processed.",
+      "seek": "Seek in recording"
     },
     "blocking": {
       "badge": "Blocked",

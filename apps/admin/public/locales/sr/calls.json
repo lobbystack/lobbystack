@@ -165,7 +165,8 @@
     },
     "recording": {
       "unavailable": "Za ovaj poziv nema dostupnog snimka.",
-      "pending": "Snimak se još obrađuje."
+      "pending": "Snimak se još obrađuje.",
+      "seek": "Pomeranje kroz snimak"
     },
     "blocking": {
       "badge": "Blokiran",

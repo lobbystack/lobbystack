@@ -224,7 +224,7 @@ function RecordingTab({ detail, src }: { detail: Detail; src: string | null }) {
   if (!src) {
     return <div className="flex flex-col items-center gap-2 py-16 text-center"><Headphones className="size-8 text-muted-foreground/40" /><p className="type-empty-description">{detail.recording.state === "pending" ? t("detail.recording.pending") : t("detail.recording.unavailable")}</p></div>;
   }
-    return <div className="py-4"><Card className="ph-no-capture" size="sm"><CallRecordingPlayer className="px-4 py-0" downloadLabel={t("actions.download")} initialDurationSeconds={detail.call.providerDurationSeconds ?? 0} pauseLabel={t("actions.pause")} playLabel={t("actions.play")} src={src} /></Card></div>;
+    return <div className="py-4"><Card className="ph-no-capture" size="sm"><CallRecordingPlayer className="px-4 py-0" downloadLabel={t("actions.download")} initialDurationSeconds={detail.call.providerDurationSeconds ?? 0} pauseLabel={t("actions.pause")} playLabel={t("actions.play")} seekLabel={t("detail.recording.seek")} src={src} waveform /></Card></div>;
 }
 
 // The stored title and body are English text the agent tool wrote, so the labels are rebuilt here in the dashboard language.

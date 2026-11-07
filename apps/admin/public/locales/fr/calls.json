@@ -165,7 +165,8 @@
     },
     "recording": {
       "unavailable": "Aucun enregistrement n'est disponible pour cet appel.",
-      "pending": "L'enregistrement est encore en cours de traitement."
+      "pending": "L'enregistrement est encore en cours de traitement.",
+      "seek": "Se déplacer dans l'enregistrement"
     },
     "blocking": {
       "badge": "Bloqué",

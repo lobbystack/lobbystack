@@ -165,7 +165,8 @@
     },
     "recording": {
       "unavailable": "No hay grabación disponible para esta llamada.",
-      "pending": "La grabación aún se está procesando."
+      "pending": "La grabación aún se está procesando.",
+      "seek": "Moverse por la grabación"
     },
     "blocking": {
       "badge": "Bloqueada",
