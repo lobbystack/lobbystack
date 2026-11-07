@@ -12,7 +12,7 @@ import { PageHeader } from "@/components/page-header";
 import { useConsolePartner } from "@/components/partner-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -117,7 +117,6 @@ export function PartnerTeamSurface() {
         <form className="flex flex-col gap-6" onSubmit={(event) => { event.preventDefault(); if (!invite.isPending && email.trim()) { setInviteError(null); invite.mutate(); } }}>
           <DialogHeader>
             <DialogTitle>{t("team.invite.title")}</DialogTitle>
-            <DialogDescription>{t("team.invite.description", { partnerName: partner.name })}</DialogDescription>
           </DialogHeader>
           <FieldGroup>
             <Field>

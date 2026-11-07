@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { OnboardingPlanComparison } from "@/components/onboarding-plan-comparison";
 import { useTelemetry } from "@/components/product-analytics";
-import { checkoutRefusalKey, errorCode } from "@/lib/checkout-errors";
+import { CHECKOUT_UNAVAILABLE_AFTER_MS, checkoutRefusalKey, errorCode, isProviderUnavailable } from "@/lib/checkout-errors";
 import { cn } from "@/lib/utils";
 
 type BillingInterval = "monthly" | "annual";
@@ -32,6 +32,8 @@ export function OnboardingPlanSurface() {
   const [interval, setInterval] = useState<BillingInterval>("annual");
   const [checkoutRequestId, setCheckoutRequestId] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [slowCheckout, setSlowCheckout] = useState(false);
+  const [checkoutUnavailable, setCheckoutUnavailable] = useState(false);
   const { business } = useActiveBusiness();
   const billing = useQuery({ queryKey: ["billing", business?.businessId], queryFn: () => requestJson<BillingStatus>(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business) });
   const checkout = useQuery({
@@ -47,7 +49,7 @@ export function OnboardingPlanSurface() {
   });
   const startCheckout = useMutation({
     mutationFn: (target: "starter" | "pro") => requestJson<{ requestId: string }>("/api/billing/checkout", { method: "POST", body: JSON.stringify({ businessId: business!.businessId, target, billingInterval: interval }) }),
-    onSuccess: ({ requestId }) => setCheckoutRequestId(requestId),
+    onSuccess: ({ requestId }) => { setCheckoutUnavailable(false); setCheckoutRequestId(requestId); },
     // Already paying, from a checkout whose return page closed early: the number is next.
     onError: (error) => {
       if (errorCode(error) !== billingErrorCodes.subscriptionActive) return;
@@ -61,8 +63,22 @@ export function OnboardingPlanSurface() {
   const returnRequestId = searchParams.get("checkout") === "success" ? searchParams.get("requestId") : null;
   useEffect(() => { if (returnRequestId) router.replace(`/billing/success?requestId=${encodeURIComponent(returnRequestId)}`); }, [returnRequestId, router]);
   useEffect(() => {
+    if (!checkoutRequestId) { setSlowCheckout(false); return; }
+    setSlowCheckout(false);
+    const slow = window.setTimeout(() => setSlowCheckout(true), 10_000);
+    const unavailable = window.setTimeout(() => {
+      setCheckoutUnavailable(true);
+      setCheckoutRequestId(null);
+    }, CHECKOUT_UNAVAILABLE_AFTER_MS);
+    return () => {
+      window.clearTimeout(slow);
+      window.clearTimeout(unavailable);
+    };
+  }, [checkoutRequestId]);
+  useEffect(() => {
     if (checkout.data?.status === "error" || checkout.isError) {
-      setCheckoutError(checkout.data?.error ?? t("plan.continueFailed"));
+      const error = checkout.data?.error;
+      setCheckoutError(isProviderUnavailable(error) ? t("settings:billing.toast.paymentsUnavailable") : error?.startsWith("provider_") ? t("plan.continueFailed") : error ?? t("plan.continueFailed"));
       setCheckoutRequestId(null);
     }
   }, [checkout.data, checkout.isError, t]);
@@ -72,7 +88,11 @@ export function OnboardingPlanSurface() {
   useEffect(() => {
     // The back button from checkout can restore this page from the browser's cache, still
     // waiting on a checkout that already opened. Let them pick a plan again.
-    const onPageShow = (event: PageTransitionEvent) => { if (event.persisted) setCheckoutRequestId(null); };
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      setCheckoutRequestId(null);
+      setCheckoutUnavailable(false);
+    };
     window.addEventListener("pageshow", onPageShow);
     return () => window.removeEventListener("pageshow", onPageShow);
   }, []);
@@ -102,12 +122,19 @@ export function OnboardingPlanSurface() {
   return (
     <div className="flex flex-col gap-12">
 
-      <div className="flex justify-center">
+      {!checkoutUnavailable ? <div className="flex justify-center">
         <div aria-label={t("plan.billingInterval.label")} className="inline-flex rounded-full border border-border bg-input/30 p-1" role="tablist">
           {(["monthly", "annual"] as const).map((value) => <Button aria-selected={interval === value} className={cn("h-9 rounded-full px-4", interval === value ? "bg-background text-foreground shadow-sm hover:bg-background" : "border-transparent bg-transparent text-muted-foreground hover:bg-muted")} disabled={Boolean(pendingPlan) || (availableIntervals.length > 0 && !availableIntervals.includes(value))} key={value} onClick={() => setInterval(value)} role="tab" size="sm" type="button" variant="outline">{t(`plan.billingInterval.${value}`)}{value === "annual" ? <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">{t("plan.billingInterval.save")}</span> : null}</Button>)}
         </div>
-      </div>
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+      </div> : null}
+      {checkoutUnavailable ? (
+        <div className="flex flex-col items-center gap-4 rounded-xl border border-border/70 bg-muted/20 p-6" role="alert">
+          <p className="text-sm text-muted-foreground">{t("settings:billing.toast.paymentsUnavailable")}</p>
+          <Button onClick={() => setCheckoutUnavailable(false)} type="button" variant="outline">{t("plan.backToPlans")}</Button>
+        </div>
+      ) : null}
+      {!checkoutUnavailable && slowCheckout ? <p className="text-center text-sm text-muted-foreground" role="status">{t("settings:billing.upgradeDialog.providerSlow")}</p> : null}
+      {!checkoutUnavailable ? <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
         {planCards(i18n.language).map((tier) => {
           const paid = tier.slug === "starter" || tier.slug === "pro";
           const busy = tier.slug === "free_cloud" ? pendingPlan === "free_cloud" : paid && pendingPlan === "paid";
@@ -121,7 +148,7 @@ export function OnboardingPlanSurface() {
             <div className="flex-1 border-t border-border/50 pt-5"><ul className="space-y-2.5">{tier.lines.map((line) => <li className="flex items-start gap-2.5 text-sm" key={line.label}><Check className="mt-0.5 size-3.5 shrink-0 text-foreground/60" /><span className="whitespace-pre-line">{line.sublabel ? `${line.label}\n${line.sublabel}` : line.label}</span></li>)}</ul></div>
           </section>;
         })}
-      </div>
+      </div> : null}
       {selectFree.isError || checkoutFailure || checkoutError ? <FieldError>{selectFree.error?.message ?? checkoutFailure ?? checkoutError ?? t("plan.continueFailed")}</FieldError> : null}
       <OnboardingPlanComparison locale={i18n.language} t={t} />
     </div>

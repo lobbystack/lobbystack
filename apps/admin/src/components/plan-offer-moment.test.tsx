@@ -28,7 +28,7 @@ function setup(due: () => boolean) {
     return Response.json({});
   });
   vi.stubGlobal("fetch", fetchMock);
-  const view = render(<QueryClientProvider client={client}><LiveUpgradePlanProvider><PlanOfferMoment businessId={businessId} surface="meet" /></LiveUpgradePlanProvider></QueryClientProvider>);
+  const view = render(<QueryClientProvider client={client}><LiveUpgradePlanProvider><PlanOfferMoment businessId={businessId} surface="home" /></LiveUpgradePlanProvider></QueryClientProvider>);
   return { fetchMock, view };
 }
 
@@ -47,7 +47,7 @@ describe("the plans offer", () => {
   it("opens once a test has completed, and reports showing", async () => {
     const { fetchMock } = setup(() => true);
     await planDialog();
-    telemetryRef.current!.expectEvent("web.onboarding.plan_offer_shown", { businessId, surface: "meet" });
+    telemetryRef.current!.expectEvent("web.onboarding.plan_offer_shown", { businessId, surface: "home" });
     await waitFor(() => expect(fetchMock.mock.calls.some(([url, init]) => url.startsWith("/api/plan-offer") && init?.method === "POST")).toBe(true));
   });
 
@@ -79,7 +79,7 @@ describe("the plans offer", () => {
   it("reports the X and closes", async () => {
     setup(() => true);
     await userEvent.click(await closeButton());
-    telemetryRef.current!.expectEvent("web.onboarding.plan_offer_dismissed", { businessId, surface: "meet" });
+    telemetryRef.current!.expectEvent("web.onboarding.plan_offer_dismissed", { businessId, surface: "home" });
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 

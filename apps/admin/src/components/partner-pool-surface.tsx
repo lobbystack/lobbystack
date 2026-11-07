@@ -93,19 +93,10 @@ export function PoolOverageSection({ partnerId, overage, spendCents }: { partner
 
   // Free bills no overage, so it skips what overage does and says why instead.
   const header = (
-    <div className="flex flex-col gap-1">
-      <h2 className="text-sm font-medium text-muted-foreground" id="partner-billing-overage">{t("billing.overage.title")}</h2>
-      {overage.billed ? <p className="text-sm text-muted-foreground">{t("billing.overage.description")}</p> : null}
-    </div>
+    <h2 className="text-sm font-medium text-muted-foreground" id="partner-billing-overage">{t("billing.overage.title")}</h2>
   );
-  if (!overage.billed) {
-    return (
-      <section aria-labelledby="partner-billing-overage" className="flex flex-col gap-3">
-        {header}
-        <Surface className="px-6 py-5"><p className="text-sm text-muted-foreground">{t("billing.overage.free")}</p></Surface>
-      </section>
-    );
-  }
+  // Free has no overage, so there is nothing to show or change.
+  if (!overage.billed) return null;
 
   const capReached = overage.enabled && overage.capCents !== null && spendCents >= overage.capCents;
   const busy = save.isPending;
@@ -151,9 +142,7 @@ export function PoolOverageSection({ partnerId, overage, spendCents }: { partner
               </div>
             </div>
           </>
-        ) : (
-          <p className="text-sm text-muted-foreground">{t("billing.overage.off")}</p>
-        )}
+        ) : null}
       </Surface>
     </section>
   );

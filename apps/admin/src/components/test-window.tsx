@@ -146,7 +146,9 @@ export function TestPanel({ agentId, businessId, businessSlug, onCallEnded, onRe
       <AuraVoiceDemo
         auraTone={resolvedTheme === "dark" ? "dark" : "light"}
         businessSlug={businessSlug}
-        className="max-w-80 shrink-0"
+        // The orb's square leaves room above for the aura; pull it up so the
+        // aura, the button and the number sit centred as one group.
+        className="-mt-10 max-w-80 shrink-0"
         // The operator's login authorizes the call; the ID picks the workspace.
         endpoint={`${LIVE_WEB_CALL_ENDPOINT}?businessId=${encodeURIComponent(businessId)}`}
         {...(agentId ? { getStartPayload: async () => ({ agentId }) } : {})}
@@ -157,9 +159,9 @@ export function TestPanel({ agentId, businessId, businessSlug, onCallEnded, onRe
         widgetId={DASHBOARD_TEST_CALL_WIDGET_ID}
       />
       {phoneNumber ? (
-        <p className="flex shrink-0 items-center gap-2 text-sm">
-          <span className="text-muted-foreground">{t("testWindow.orCall")}</span>
-          <a className="font-medium text-foreground underline-offset-4 hover:underline" href={`tel:${phoneNumber}`}>{formatPhoneNumberDisplay(phoneNumber)}</a>
+        <p className="mt-4 flex shrink-0 flex-col items-center gap-1">
+          <span className="text-sm text-muted-foreground">{t("testWindow.orCall")}</span>
+          <a className="text-2xl font-semibold tabular-nums text-foreground underline-offset-4 hover:underline" href={`tel:${phoneNumber}`}>{formatPhoneNumberDisplay(phoneNumber)}</a>
         </p>
       ) : null}
     </TestChat>

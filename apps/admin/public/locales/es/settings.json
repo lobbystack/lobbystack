@@ -108,6 +108,7 @@
     "toast": {
       "checkoutSuccess": "El pago se completó correctamente.",
       "checkoutFailed": "No se pudo abrir el pago.",
+      "paymentsUnavailable": "El pago no está disponible temporalmente. Inténtelo de nuevo en unos minutos.",
       "portalFailed": "No se pudo abrir el portal del cliente."
     },
     "pastDueBanner": {
@@ -187,6 +188,8 @@
     "upgradeDialog": {
       "title": "Cambiar de plan",
       "description": "Elija el plan que mejor se adapte a su equipo.",
+      "providerSlow": "El proveedor de pagos está lento. Seguimos abriendo el pago...",
+      "close": "Cerrar",
       "enterpriseSubject": "Plan Enterprise",
       "billingIntervalLabel": "Periodicidad de facturación",
       "annualDiscount": "Ahorre un 20 %",

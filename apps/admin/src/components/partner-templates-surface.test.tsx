@@ -70,7 +70,7 @@ describe("the partner console's Templates page", () => {
       }
       return url.startsWith("/api/partner/businesses") ? Response.json({ businesses: [harbor] }) : Response.json({ templates });
     });
-    await screen.findByText("templates.empty.description");
+    await screen.findByText("templates.empty.title");
     await userEvent.click(screen.getByRole("button", { name: "templates.save.action" }));
     await userEvent.click(await screen.findByRole("combobox", { name: "templates.save.businessLabel" }));
     await userEvent.click(await screen.findByRole("option", { name: "Harbor Dental" }));
@@ -121,6 +121,6 @@ describe("the partner console's Templates page", () => {
     const deleted = fetchMock.mock.calls.find(([, init]) => init?.method === "DELETE");
     expect(JSON.parse(String(deleted?.[1]?.body))).toEqual({ partnerId: "partner", templateId: "dental" });
     expect(fixture.toast.success).toHaveBeenCalledWith("templates.delete.deleted");
-    expect(await screen.findByText("templates.empty.description")).toBeTruthy();
+    expect(await screen.findByText("templates.empty.title")).toBeTruthy();
   });
 });

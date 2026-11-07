@@ -79,7 +79,7 @@ describe("searchBusinessNumberInventory", () => {
   });
 
   it.each([
-    ["a cloud workspace without a verified phone", { deploymentMode: "cloud" }, "onboarding", 409, "phone_verification_required"],
+    ["a cloud workspace without a verified email", { deploymentMode: "cloud" }, "onboarding", 409, "email_verification_required"],
     ["a workspace that already replaced its number", { replacementUsedAt: new Date() }, "replacement", 409, "replacement_already_used"],
     ["a workspace still creating its business", { stage: "create_business" }, "onboarding", 409, "invalid_onboarding_stage"],
   ] as const)("answers a search from %s with %i", async (_case, business, purpose, status, code) => {
@@ -109,7 +109,7 @@ describe("searchBusinessNumberInventory", () => {
     // A business on Free. Selects in order: the business, the user's verified phone, its approved attempt, then trials.
     function trialSetup(countryCode: string, trials: unknown[] = []) {
       entitled(planEntitlement("free_cloud"));
-      const selects = [[{ stage: "phone_number", timezone: "America/Toronto", deploymentMode: "cloud", replacementUsedAt: null }], [{ phone: "+14165550123" }], [{ countryCode }], trials];
+      const selects = [[{ stage: "phone_number", timezone: "America/Toronto", deploymentMode: "cloud", replacementUsedAt: null }], [{ phone: "+14165550123" }], [{ countryCode }], [{ email: "owner@example.invalid", emailVerified: true }], trials];
       mocks.withBusinessTransaction.mockImplementation(async (_db: unknown, _scope: unknown, callback: (tx: unknown) => unknown) => await callback({ select: () => chain(selects.shift() ?? []) }));
     }
 
@@ -121,6 +121,26 @@ describe("searchBusinessNumberInventory", () => {
       expect(result.trial).toBe(true);
       const payload = JSON.parse(Buffer.from(result.numbers[0]!.claimToken.split(".")[0]!, "base64url").toString("utf8")) as { selection: { trial?: boolean; verifiedPhone?: string } };
       expect(payload.selection).toMatchObject({ trial: true, verifiedPhone: "+14165550123" });
+    });
+
+    it("asks for a mobile when no verified phone and no trusted network can identify the claimer", async () => {
+      entitled(planEntitlement("free_cloud"));
+      const selects = [[{ stage: "phone_number", timezone: "America/Toronto", deploymentMode: "cloud", replacementUsedAt: null }], [{ phone: null }], [{ email: "owner@example.invalid", emailVerified: true }]];
+      const execute = vi.fn(async () => ({ rows: [{ used: false }] }));
+      mocks.withBusinessTransaction.mockImplementation(async (_db: unknown, _scope: unknown, callback: (tx: unknown) => unknown) => await callback({ select: () => chain(selects.shift() ?? []), execute }));
+      await expect(searchBusinessNumberInventory(context, scope, { listAvailablePhoneNumbers: async () => [] })).rejects.toMatchObject({ status: 409, code: "phone_verification_required" });
+    });
+
+    it("signs a trial without a phone when the email and network are clean", async () => {
+      entitled(planEntitlement("free_cloud"));
+      const selects = [[{ stage: "phone_number", timezone: "America/Toronto", deploymentMode: "cloud", replacementUsedAt: null }], [{ phone: null }], [{ email: "owner@example.invalid", emailVerified: true }]];
+      const execute = vi.fn(async () => ({ rows: [{ used: false }] }));
+      mocks.withBusinessTransaction.mockImplementation(async (_db: unknown, _scope: unknown, callback: (tx: unknown) => unknown) => await callback({ select: () => chain(selects.shift() ?? []), execute }));
+      const result = await searchBusinessNumberInventory(context, { ...scope, ipHash: "network-hash", ipCountry: "CA" }, { listAvailablePhoneNumbers: async () => [{ phoneE164: phone, countryCode: "CA", capabilities: { sms: true, voice: true } }] });
+      const payload = JSON.parse(Buffer.from(result.numbers[0]!.claimToken.split(".")[0]!, "base64url").toString("utf8")) as { selection: { trial?: boolean; verifiedPhone?: string; withoutSms?: boolean } };
+      expect(payload.selection).toMatchObject({ trial: true, withoutSms: true });
+      expect(payload.selection.verifiedPhone).toBeUndefined();
+      expect(result.countryFixed).toBe(false);
     });
 
     it("sends Australia to the plans, since its numbers are paid only", async () => {

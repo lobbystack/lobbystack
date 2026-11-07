@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { PolarBillingProvider } from "./polarBilling";
+import { PolarBillingProvider, PolarRequestError } from "./polarBilling";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -65,9 +65,45 @@ describe("PolarBillingProvider", () => {
     await expect(provider.cancelSubscriptionAtPeriodEnd({ subscriptionId: "sub-1" })).resolves.toEqual({ endsAt: "2026-11-12T00:00:00Z" });
     expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1].body))).toEqual({ cancel_at_period_end: true });
   });
+  describe("errors", () => {
+    const provider = () => new PolarBillingProvider({ accessToken: "token", organizationId: "organization", baseUrl: "https://polar.example" });
+    const answer = (status: number, body: unknown) => vi.fn().mockResolvedValue({ ok: false, status, text: async () => typeof body === "string" ? body : JSON.stringify(body) });
+
+    it("keeps Polar's type and detail and counts a 503 as transient", async () => {
+      vi.stubGlobal("fetch", answer(503, { error: "ServiceUnavailable", detail: "Database maintenance" }));
+      await expect(provider().createCheckout({ productId: "product-1", customerEmail: "owner@example.com", externalCustomerId: "business:1", successUrl: "https://app.example/success", returnUrl: "https://app.example/plan" }))
+        .rejects.toMatchObject({ status: 503, type: "ServiceUnavailable", detail: "Database maintenance", transient: true });
+      await expect(provider().createCheckout({ productId: "product-1", customerEmail: "owner@example.com", externalCustomerId: "business:1", successUrl: "https://app.example/success", returnUrl: "https://app.example/plan" }))
+        .rejects.toThrow("status 503");
+    });
+
+    it("counts a 429 as transient and a 400 as permanent", async () => {
+      vi.stubGlobal("fetch", answer(429, { error: "RateLimited", detail: "Too many requests" }));
+      await expect(provider().recordUsage({ eventName: "billing.voice_minutes", externalCustomerId: "business:1", quantity: 1, timestamp: "2026-11-05T05:07:00.000Z", idempotencyKey: "voice:1", businessId: "1", usageKind: "voice_seconds" }))
+        .rejects.toMatchObject({ status: 429, transient: true });
+
+      vi.stubGlobal("fetch", answer(400, { error: "RequestValidationError", detail: "customer_email owner@example.com is invalid" }));
+      const error = await provider().createCheckout({ productId: "product-1", customerEmail: "owner@example.com", externalCustomerId: "business:1", successUrl: "https://app.example/success", returnUrl: "https://app.example/plan" }).catch((failure: unknown) => failure);
+      expect(error).toBeInstanceOf(PolarRequestError);
+      expect(error).toMatchObject({ status: 400, type: "RequestValidationError", transient: false });
+      expect(String((error as Error).message)).not.toContain("owner@example.com");
+      expect(String((error as Error).message)).toContain("[redacted-email]");
+    });
+
+    it("counts a network or timeout failure as transient", async () => {
+      vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("fetch failed")));
+      await expect(provider().recordUsage({ eventName: "billing.voice_minutes", externalCustomerId: "business:1", quantity: 1, timestamp: "2026-11-05T05:07:00.000Z", idempotencyKey: "voice:1", businessId: "1", usageKind: "voice_seconds" }))
+        .rejects.toMatchObject({ status: null, transient: true });
+
+      vi.stubGlobal("fetch", vi.fn().mockRejectedValue(Object.assign(new Error("aborted"), { name: "TimeoutError" })));
+      await expect(provider().recordUsage({ eventName: "billing.voice_minutes", externalCustomerId: "business:1", quantity: 1, timestamp: "2026-11-05T05:07:00.000Z", idempotencyKey: "voice:1", businessId: "1", usageKind: "voice_seconds" }))
+        .rejects.toMatchObject({ status: null, detail: "timed out", transient: true });
+    });
+  });
+
   describe("revokeSubscription", () => {
     const provider = () => new PolarBillingProvider({ accessToken: "token", organizationId: "organization", baseUrl: "https://polar.example" });
-    const answer = (status: number, body: unknown = {}) => vi.fn().mockResolvedValue({ ok: status >= 200 && status < 300, status, json: async () => body });
+    const answer = (status: number, body: unknown = {}) => vi.fn().mockResolvedValue({ ok: status >= 200 && status < 300, status, text: async () => JSON.stringify(body), json: async () => body });
 
     it("ends the subscription now", async () => {
       const fetchMock = answer(200);

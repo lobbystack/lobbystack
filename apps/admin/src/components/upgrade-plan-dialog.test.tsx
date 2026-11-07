@@ -10,9 +10,9 @@ afterEach(cleanup);
 function setup(overrides: Partial<Props> = {}) {
   const props: Props = {
     availableCheckoutPlans: ["starter", "pro"], availableCheckoutIntervals: { starter: ["monthly", "annual"], pro: ["monthly", "annual"] },
-    billingInterval: "annual", currentPlan: "free_cloud", loading: null, loadingPlan: null, locale: "en",
-    onBillingIntervalChange: vi.fn(), onContactEnterprise: vi.fn(), onOpenChange: vi.fn(), onStartCheckout: vi.fn(), open: true,
-    selectedPlan: "starter", t: ((key: string) => key) as Props["t"], ...overrides,
+    billingInterval: "annual", checkoutUnavailable: false, currentPlan: "free_cloud", loading: null, loadingPlan: null, locale: "en",
+    onBillingIntervalChange: vi.fn(), onContactEnterprise: vi.fn(), onDismissCheckout: vi.fn(), onOpenChange: vi.fn(), onStartCheckout: vi.fn(), open: true,
+    selectedPlan: "starter", slowCheckout: false, t: ((key: string) => key) as Props["t"], ...overrides,
   };
   render(<UpgradePlanDialog {...props} />);
   return props;
@@ -39,6 +39,21 @@ describe("main upgrade dialog", () => {
     setup({ currentPlan: "starter", loading: "checkout", loadingPlan: "pro" });
     expect(screen.getByRole("button", { name: "billing.upgradeDialog.actions.currentPlan" }).hasAttribute("disabled")).toBe(true);
     expect(screen.getByRole("button", { name: /Get Pro|billing.actions.openingCheckout/ }).hasAttribute("disabled")).toBe(true);
+  });
+  it("says when the payment provider is slow while a checkout waits", () => {
+    setup({ slowCheckout: true });
+    expect(screen.getByRole("status").textContent).toBe("billing.upgradeDialog.providerSlow");
+    cleanup();
+    setup();
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+  it("replaces the plans with a close button when payments stay unavailable", async () => {
+    const props = setup({ checkoutUnavailable: true, slowCheckout: true });
+    expect(screen.getByRole("alert").textContent).toContain("billing.toast.paymentsUnavailable");
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByRole("heading", { level: 3 })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "billing.upgradeDialog.close" }));
+    expect(props.onDismissCheckout).toHaveBeenCalledOnce();
   });
   it("opens enterprise contact without creating a checkout", async () => {
     const props = setup();

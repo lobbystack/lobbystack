@@ -8,7 +8,9 @@ An outbox message exhausted ten delivery attempts. Query `operations.outbox_mess
 
 ## ReplacementWorkerJobFailures
 
-At least three BullMQ jobs failed within ten minutes. Inspect worker logs and BullMQ state by queue and job type. Confirm Redis and PostgreSQL health before retrying. Job payloads can contain customer data and must not be copied into incident systems.
+At least three BullMQ jobs failed within ten minutes. A job that fails for the last time also captures a PostHog exception and writes a `worker.job.failed` log line. PostHog groups it by job type and normalized error message, so the issue created, issue reopened, and issue spiking destinations reach Discord. Inspect worker logs and BullMQ state by queue and job type. Confirm Redis and PostgreSQL health before retrying. Job payloads can contain customer data and must not be copied into incident systems.
+
+The worker reports BullMQ `worker.error` events and a stopped outbox dispatcher the same way. Connection errors are reported at most once every five minutes per kind, so a Redis outage does not flood PostHog.
 
 ## ReplacementOutboxDispatcherUnavailable
 
@@ -19,3 +21,4 @@ At least three PostgreSQL polling attempts failed within five minutes. Check the
 1. Submit a deliberately unsupported outbox topic and advance it to the terminal retry threshold. Confirm `ReplacementOutboxDeadLettered` activates without exposing its payload.
 2. Interrupt Redis and PostgreSQL in a disposable environment. Confirm the worker and dispatcher alerts activate.
 3. Restore each dependency and confirm the alerts resolve and durable processing resumes.
+4. Fail a job on its last attempt. Confirm the PostHog issue appears and notifies the configured Discord destinations.

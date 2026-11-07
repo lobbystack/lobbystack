@@ -5,7 +5,7 @@ import { and, asc, desc, eq, ilike, inArray, isNull, lt, ne, notInArray, sql } f
 import { agentRules, agents, businessContextSnapshots, businesses, businessHours, closures, defaultAgentOf, enqueueOutbox, inOrder, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, phoneNumbers, services, staffServiceAssignments, storageObjects, websiteIngestionJobs, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { defaultGreeting, FULL_CRAWL_PAGE_LIMIT, getKnowledgeStorageLimitBytes, normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeReceptionistVoice, normalizeRuntimeLocale, normalizeStaffFirstMode, normalizeTransferMode, ONBOARDING_CRAWL_PAGE_LIMIT, runtimeLocales, servicePriceFromColumns, type BusinessContextSnapshot, type SnapshotAgent } from "@lobbystack/shared";
 import { agentInstructions, buildBusinessContextSnapshot, MAX_KNOWLEDGE_SNIPPETS_PER_SNAPSHOT, snapshotRules } from "../snapshot";
-import { countKnowledgeTokens, fuseKnowledgeRanks, KNOWLEDGE_SEARCH_TOKEN_BUDGET, knowledgeLexicalQueries, knowledgeQueryTerms, withinKnowledgeBudget, type KnowledgePassage } from "../knowledgeRanking";
+import { countKnowledgeTokens, fuseKnowledgeRanks, KNOWLEDGE_SEARCH_TOKEN_BUDGET, knowledgeLexicalQueries, knowledgeQueryTerms, splitToTokenBudget, withinKnowledgeBudget, type KnowledgePassage } from "../knowledgeRanking";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
@@ -52,7 +52,10 @@ export function chunkText(text: string, options: { maxCharacters?: number; overl
       }
       const chunk = sectionText.slice(start, end).trim();
       if (chunk) {
-        chunks.push(chunk);
+        // A section can still carry more tokens than the embedding provider
+        // accepts when a caller raises maxCharacters; split it instead of
+        // sending one oversized input.
+        chunks.push(...splitToTokenBudget(chunk));
       }
       if (end >= sectionText.length) {
         break;
@@ -65,6 +68,15 @@ export function chunkText(text: string, options: { maxCharacters?: number; overl
 
 export function hashContent(value: string): string {
   return createHash("sha256").update(value).digest("hex");
+}
+
+/**
+ * The texts to embed for one stored chunk. A chunk written by an older
+ * pipeline can exceed the provider's input limit, so it is split rather than
+ * truncated or sent as one rejected input.
+ */
+export function embeddingInputsForChunk(content: string): string[] {
+  return splitToTokenBudget(content);
 }
 
 // The API reports a website's page limit, so its clients tell a sample from a full read by these.
@@ -100,8 +112,11 @@ export async function createKnowledgeDocumentInTransaction(
   const business = (await tx.select({ onboardingStage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1).for("update"))[0];
   if (input.onboarding || business?.onboardingStage === "website") {
     await tx.update(businesses).set({ websiteUrl: sourceUrl, updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
-    if (business?.onboardingStage === "website") {
-      await moveOnboardingStageInTransaction(tx, { businessId: input.businessId, from: "website", to: "verify_phone" });
+    // Submitting a website answers the language question too: the import reads
+    // it. From the language step, the wait then opens on verify_phone.
+    const from = business?.onboardingStage === "website" ? "website" : business?.onboardingStage === "language" ? "language" : null;
+    if (from) {
+      await moveOnboardingStageInTransaction(tx, { businessId: input.businessId, from, to: "verify_phone" });
     }
   }
   const existing = (await tx.select().from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.sourceUrl, sourceUrl))).limit(1).for("update"))[0];

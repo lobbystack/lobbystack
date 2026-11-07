@@ -79,7 +79,7 @@ function ImageField({ id, image, label, help, savedUrl, choice, disabled, onChan
   id: string;
   image: BrandImage;
   label: string;
-  help: string;
+  help?: string;
   savedUrl: string | null;
   choice: ImageChoice;
   disabled: boolean;
@@ -124,7 +124,7 @@ function ImageField({ id, image, label, help, savedUrl, choice, disabled, onChan
           </Button>
         ) : null}
       </div>
-      <FieldDescription>{help}</FieldDescription>
+      {help ? <FieldDescription>{help}</FieldDescription> : null}
     </Field>
   );
 }
@@ -219,11 +219,10 @@ export function PartnerBrandingSurface() {
                   <Field>
                     <FieldLabel htmlFor={field("name")}>{t("branding.nameLabel")}</FieldLabel>
                     <Input disabled={working} id={field("name")} maxLength={PARTNER_NAME_MAX_LENGTH} onChange={(event) => set({ name: event.target.value })} required value={draft.name} />
-                    <FieldDescription>{t("branding.nameHelp")}</FieldDescription>
                   </Field>
                   <div className="grid gap-5 sm:grid-cols-2">
                     <ImageField choice={logo} disabled={working} help={t("branding.logoHelp")} id={`${id}-logo`} image="logo" label={t("branding.logoLabel")} onChange={setLogo} onError={setError} savedUrl={data.logoUrl} />
-                    <ImageField choice={favicon} disabled={working} help={t("branding.faviconHelp")} id={`${id}-favicon`} image="favicon" label={t("branding.faviconLabel")} onChange={setFavicon} onError={setError} savedUrl={data.faviconUrl} />
+                    <ImageField choice={favicon} disabled={working} id={`${id}-favicon`} image="favicon" label={t("branding.faviconLabel")} onChange={setFavicon} onError={setError} savedUrl={data.faviconUrl} />
                   </div>
                   <Field className="sm:max-w-[calc(50%-10px)]">
                     <FieldLabel htmlFor={field("color")}>{t("branding.colorLabel")}</FieldLabel>
@@ -234,14 +233,12 @@ export function PartnerBrandingSurface() {
                       </label>
                       <Input className="font-mono" dir="ltr" disabled={working} id={field("color")} maxLength={7} onChange={(event) => set({ color: event.target.value })} placeholder="#0f766e" spellCheck={false} value={draft.color} />
                     </div>
-                    <FieldDescription>{t("branding.colorHelp")}</FieldDescription>
                   </Field>
                 </FieldGroup>
               </FieldSet>
 
               <FieldSet>
                 <FieldLegend>{t("branding.links.title")}</FieldLegend>
-                <FieldDescription>{t("branding.links.description")}</FieldDescription>
                 <FieldGroup className="gap-5">
                   <div className="grid gap-5 sm:grid-cols-2">
                     {(["termsUrl", "privacyUrl", "supportUrl"] as const).map((name) => (
@@ -253,7 +250,6 @@ export function PartnerBrandingSurface() {
                     <Field>
                       <FieldLabel htmlFor={field("supportEmail")}>{t("branding.links.supportEmail")}</FieldLabel>
                       <Input dir="ltr" disabled={working} id={field("supportEmail")} onChange={(event) => set({ supportEmail: event.target.value })} placeholder={t("branding.links.supportEmailPlaceholder")} type="email" value={draft.supportEmail} />
-                      <FieldDescription>{t("branding.links.supportEmailHelp")}</FieldDescription>
                     </Field>
                   </div>
                 </FieldGroup>

@@ -8,7 +8,6 @@ import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 
 import { LiveUpgradePlanProvider } from "@/components/live-upgrade-plan-provider";
-import { PlanOfferMoment } from "@/components/plan-offer-moment";
 import { useTelemetry } from "@/components/product-analytics";
 import { TestPanel } from "@/components/test-window";
 import { Button } from "@/components/ui/button";
@@ -17,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { useUpgradePlanDialogOpener } from "@/components/upgrade-plan-dialog-context";
+import { usePlanOfferOpener, useUpgradePlanDialogOpener } from "@/components/upgrade-plan-dialog-context";
 import { VoiceDialog, voiceName, useVoicePreview, useVoiceTraits } from "@/components/voice-dialog";
 import { isWebsiteImportRunning, type WebsiteImportSummary } from "@/components/website-import-progress";
 import { useActiveBusiness } from "@/hooks/use-active-business";
@@ -41,6 +40,7 @@ function MeetAgent() {
   const { business } = useActiveBusiness();
   const businessId = business?.businessId;
   const openPlans = useUpgradePlanDialogOpener();
+  const openOffer = usePlanOfferOpener();
   const agent = useQuery({ queryKey: ["onboarding-agent", businessId], queryFn: () => requestJson<Agent>("/api/agent"), enabled: Boolean(businessId) });
   // An import still running can set the language and with it the default greeting.
   const importing = useQuery({
@@ -97,7 +97,32 @@ function MeetAgent() {
       await requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(businessId!)}`, { method: "POST", body: JSON.stringify({ to: "complete" }) });
     },
     onSuccess: async () => {
-      if (businessId) telemetry.track("web.onboarding.meet_completed", { businessId });
+      if (businessId) {
+        telemetry.track("web.onboarding.meet_completed", { businessId });
+        // The plans come at the door to the dashboard, and only after a test.
+        // A failed check lets the person through rather than holding them here.
+        const due = business?.partnerAccessLevel
+          ? false
+          : await requestJson<{ due: boolean }>(`/api/plan-offer?businessId=${encodeURIComponent(businessId)}`).then((answer) => answer.due).catch(() => false);
+        if (due && openOffer) {
+          await requestJson(`/api/plan-offer?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({}) }).catch(() => undefined);
+          telemetry.track("web.onboarding.plan_offer_shown", { businessId, surface: "meet" });
+          openOffer({
+            onDismiss: () => {
+              void requestJson(`/api/plan-offer?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({ dismissed: true }) }).catch(() => undefined);
+              telemetry.track("web.onboarding.plan_offer_dismissed", { businessId, surface: "meet" });
+              router.push("/");
+              router.refresh();
+            },
+            onPlanClicked: (plan) => {
+              void requestJson(`/api/plan-offer?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({ chosen: true }) }).catch(() => undefined);
+              telemetry.track("web.onboarding.plan_offer_clicked", { businessId, surface: "meet", plan });
+            },
+          });
+          await queryClient.invalidateQueries({ queryKey: ["businesses"] });
+          return;
+        }
+      }
       await queryClient.invalidateQueries({ queryKey: ["businesses"] });
       router.push("/");
       router.refresh();
@@ -144,7 +169,6 @@ function MeetAgent() {
         </Button>
       </div>
       <VoiceDialog current={voice} onOpenChange={setVoiceOpen} onSave={async (next) => { try { await save.mutateAsync({ voice: next }); return true; } catch { return false; } }} open={voiceOpen} preview={voicePreview} saving={save.isPending} />
-      {businessId && !business.partnerAccessLevel ? <PlanOfferMoment businessId={businessId} surface="meet" /> : null}
     </div>
   );
 }

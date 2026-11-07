@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, inArray, isNotNull, like, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNotNull, like, lt, lte, or, sql } from "drizzle-orm";
 
 import { billingAccounts, billingCheckoutRequests, billingTransactions, billingUsageEvents, businesses, enqueueOutbox, partnerBillingAccounts, providerEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { billingErrorCodes, DEFAULT_WEB_CALL_MAX_DURATION_MS, hasLiveEntitlement, liveSubscriptionStates, MAX_WEB_CALL_MAX_DURATION_MS, type BillingPlanSlug } from "@lobbystack/shared";
@@ -10,6 +10,7 @@ import { requireBusinessCapability } from "./businessAccess";
 import { loadEntitlement } from "./entitlement";
 import { keepBusinessNumbersInTransaction, queuePlanCancelNoticeInTransaction, scheduleNumberReleaseInTransaction } from "./numberTrials";
 import { poolLeft, readPartnerPoolInTransaction } from "./partnerPool";
+import { PROVIDER_RETRY_WINDOW_MS, providerRetryDelayMs } from "./providerRetry";
 import { enqueuePlanSnapshotRefresh } from "./agentSnapshot";
 import { subscriptionEventEffect } from "./polarSubscriptions";
 import { recordProductEventInTransaction } from "./productEvents";
@@ -327,21 +328,58 @@ export async function claimBillingCheckoutRequest(
   input: { businessId: string; requestId: string },
 ): Promise<boolean> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const staleBefore = new Date(Date.now() - billingCheckoutLeaseMs);
-    const rows = await tx.update(billingCheckoutRequests).set({ status: "processing", updatedAt: new Date(), error: null }).where(and(
+    const now = new Date();
+    const staleBefore = new Date(now.getTime() - billingCheckoutLeaseMs);
+    const rows = await tx.update(billingCheckoutRequests).set({ status: "processing", updatedAt: now, error: null, retryAt: null }).where(and(
       eq(billingCheckoutRequests.id, input.requestId),
       eq(billingCheckoutRequests.businessId, input.businessId),
-      or(eq(billingCheckoutRequests.status, "pending"), eq(billingCheckoutRequests.status, "error"), and(eq(billingCheckoutRequests.status, "processing"), lt(billingCheckoutRequests.updatedAt, staleBefore))),
+      or(
+        eq(billingCheckoutRequests.status, "pending"),
+        eq(billingCheckoutRequests.status, "error"),
+        and(
+          eq(billingCheckoutRequests.status, "processing"),
+          or(lt(billingCheckoutRequests.updatedAt, staleBefore), and(isNotNull(billingCheckoutRequests.retryAt), lte(billingCheckoutRequests.retryAt, now))),
+        ),
+      ),
     )).returning({ id: billingCheckoutRequests.id });
     return rows.length > 0;
   });
 }
 
-/** When another run holds this checkout request, the time its lease ends and it may be claimed again. */
+/** When another run holds this checkout request, the time it may be claimed again. */
 export async function billingCheckoutLeaseEndsAt(context: DomainContext, input: { businessId: string; requestId: string }): Promise<Date | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const row = (await tx.select({ updatedAt: billingCheckoutRequests.updatedAt }).from(billingCheckoutRequests).where(and(eq(billingCheckoutRequests.id, input.requestId), eq(billingCheckoutRequests.businessId, input.businessId), eq(billingCheckoutRequests.status, "processing"))).limit(1))[0];
-    return row ? new Date(row.updatedAt.getTime() + billingCheckoutLeaseMs) : null;
+    const row = (await tx.select({ updatedAt: billingCheckoutRequests.updatedAt, retryAt: billingCheckoutRequests.retryAt }).from(billingCheckoutRequests).where(and(eq(billingCheckoutRequests.id, input.requestId), eq(billingCheckoutRequests.businessId, input.businessId), eq(billingCheckoutRequests.status, "processing"))).limit(1))[0];
+    if (!row) return null;
+    // A retry the worker already scheduled is sooner than the lease, so wait for it.
+    if (row.retryAt && row.retryAt.getTime() > Date.now()) return row.retryAt;
+    return new Date(row.updatedAt.getTime() + billingCheckoutLeaseMs);
+  });
+}
+
+/**
+ * Keeps a checkout request processing while Polar is unreachable, then lets
+ * the job run again after a growing delay. The window starts at the first
+ * transient failure, so an outage longer than that fails the request. Returns
+ * failed once the window is over, and lost when another run no longer holds
+ * the request.
+ */
+export async function deferBillingCheckoutRequest(
+  context: DomainContext,
+  input: { businessId: string; requestId: string },
+): Promise<{ status: "deferred"; retryAt: Date } | { status: "failed" | "lost" }> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const now = new Date();
+    const [row] = await tx.update(billingCheckoutRequests).set({
+      firstFailedAt: sql`coalesce(${billingCheckoutRequests.firstFailedAt}, ${now})`,
+      updatedAt: now,
+    }).where(and(eq(billingCheckoutRequests.id, input.requestId), eq(billingCheckoutRequests.businessId, input.businessId), eq(billingCheckoutRequests.status, "processing"))).returning({ firstFailedAt: billingCheckoutRequests.firstFailedAt });
+    if (!row?.firstFailedAt) return { status: "lost" };
+    const elapsed = now.getTime() - row.firstFailedAt.getTime();
+    if (elapsed >= PROVIDER_RETRY_WINDOW_MS) return { status: "failed" };
+    const retryAt = new Date(now.getTime() + providerRetryDelayMs(elapsed));
+    await tx.update(billingCheckoutRequests).set({ retryAt }).where(and(eq(billingCheckoutRequests.id, input.requestId), eq(billingCheckoutRequests.businessId, input.businessId), eq(billingCheckoutRequests.status, "processing")));
+    return { status: "deferred", retryAt };
   });
 }
 
@@ -363,7 +401,7 @@ export async function markBillingCheckoutFailed(
   input: { businessId: string; requestId: string; error: string },
 ): Promise<boolean> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const rows = await tx.update(billingCheckoutRequests).set({ status: "error", error: input.error, updatedAt: new Date() }).where(and(eq(billingCheckoutRequests.id, input.requestId), eq(billingCheckoutRequests.businessId, input.businessId), eq(billingCheckoutRequests.status, "processing"))).returning({ id: billingCheckoutRequests.id });
+    const rows = await tx.update(billingCheckoutRequests).set({ status: "error", error: input.error, retryAt: null, updatedAt: new Date() }).where(and(eq(billingCheckoutRequests.id, input.requestId), eq(billingCheckoutRequests.businessId, input.businessId), eq(billingCheckoutRequests.status, "processing"))).returning({ id: billingCheckoutRequests.id });
     if (rows.length > 0) {
       await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "billing_checkout_request", aggregateId: input.requestId, dedupeKey: `billing-checkout:${input.requestId}:error`, payload: { type: "billing.updated", entityId: input.requestId } });
     }

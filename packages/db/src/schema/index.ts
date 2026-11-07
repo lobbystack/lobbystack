@@ -197,6 +197,8 @@ export const businesses = pgTable(
     lastTestChatAt: timestamp("last_test_chat_at", { withTimezone: true }),
     // When the plans last opened by themselves after a test.
     planOfferShownAt: timestamp("plan_offer_shown_at", { withTimezone: true }),
+    // Dismissals in a row since the last plan choice. Three lengthen the pause between offers.
+    planOfferDismissals: integer("plan_offer_dismissals").default(0).notNull(),
     setupGuideSkippedSteps: jsonb("setup_guide_skipped_steps").$type<string[]>().default([]).notNull(),
     phoneNumberReplacementReservedAt: timestamp("phone_number_replacement_reserved_at", { withTimezone: true }),
     phoneNumberReplacementUsedAt: timestamp("phone_number_replacement_used_at", { withTimezone: true }),
@@ -686,7 +688,8 @@ export const numberTrials = pgTable("number_trials", {
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   claimId: uuid("claim_id").references(() => onboardingNumberClaimEvents.id, { onDelete: "set null" }),
   phoneNumberId: uuid("phone_number_id").references(() => phoneNumbers.id, { onDelete: "set null" }),
-  verifiedPhone: varchar("verified_phone", { length: 32 }).notNull(),
+  // Null for a trial the owner started without a mobile (migration 0196).
+  verifiedPhone: varchar("verified_phone", { length: 32 }),
   ipHash: text("ip_hash"),
   status: varchar("status", { length: 16 }).default("reserved").notNull(),
   startedAt: timestamp("started_at", { withTimezone: true }),
@@ -1497,6 +1500,10 @@ export const billingCheckoutRequests = pgTable(
     checkoutId: text("checkout_id"),
     checkoutUrl: text("checkout_url"),
     error: text("error"),
+    // When a provider error first kept the request for a retry; the retry window runs from here (migration 0194).
+    firstFailedAt: timestamp("first_failed_at", { withTimezone: true }),
+    // When the worker tries the provider again, while the request stays processing.
+    retryAt: timestamp("retry_at", { withTimezone: true }),
     ...timestamps,
   },
   (table) => [uniqueIndex("billing_checkout_requests_id_unique").on(table.id), index("billing_checkout_requests_business_status_idx").on(table.businessId, table.status, table.createdAt)],
@@ -1586,6 +1593,10 @@ export const partnerCheckoutRequests = pgTable(
     checkoutId: text("checkout_id"),
     checkoutUrl: text("checkout_url"),
     error: text("error"),
+    // When a provider error first kept the request for a retry; the retry window runs from here (migration 0194).
+    firstFailedAt: timestamp("first_failed_at", { withTimezone: true }),
+    // When the worker tries the provider again, while the request stays processing.
+    retryAt: timestamp("retry_at", { withTimezone: true }),
     ...timestamps,
   },
   (table) => [index("partner_checkout_requests_partner_status_idx").on(table.partnerId, table.status, table.createdAt)],

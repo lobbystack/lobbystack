@@ -69,7 +69,7 @@ async function setPlan(tx: DatabaseTransaction, businessId: string, plan: PlanCa
 async function numberStepBusiness(tx: DatabaseTransaction, input: { withNumber?: boolean } = {}) {
   const userId = randomUUID();
   const phone = testNumber();
-  await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid`, name: "Sam Owner", phone, phoneVerifiedAt: new Date() });
+  await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid`, name: "Sam Owner", phone, phoneVerifiedAt: new Date(), emailVerified: true });
   await tx.execute(sql`set local role lobbystack_app`);
   const { businessId } = await createBusiness({ db: tx as unknown as Database }, { userId, name: `Entitlement ${randomUUID()}`, timezone: "America/Toronto", businessType: "test" });
   await tx.execute(sql`reset role`);

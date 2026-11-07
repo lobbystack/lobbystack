@@ -3,7 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 import { billingAccounts, billingCheckoutRequests, createDatabaseClient, providerEvents, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { createBusiness } from "./tenancy";
-import { createBillingCheckoutRequest, scheduledSubscriptionEndInTransaction } from "./billing";
+import { claimBillingCheckoutRequest, createBillingCheckoutRequest, deferBillingCheckoutRequest, markBillingCheckoutFailed, scheduledSubscriptionEndInTransaction } from "./billing";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -54,6 +54,16 @@ async function workspace(tx: DatabaseTransaction) {
     }
   };
   return { businessId, checkout, scheduledEnd };
+}
+
+/** Runs as the worker role, as the worker does. */
+async function asWorker<T>(tx: DatabaseTransaction, run: () => Promise<T>): Promise<T> {
+  await tx.execute(sql`set local role lobbystack_worker`);
+  try {
+    return await run();
+  } finally {
+    await tx.execute(sql`reset role`);
+  }
 }
 
 describe.skipIf(!testUrl)("checkout guard against dedicated PostgreSQL roles", () => {
@@ -108,6 +118,32 @@ describe.skipIf(!testUrl)("checkout guard against dedicated PostgreSQL roles", (
       const { businessId, checkout } = await workspace(tx);
       await tx.insert(billingAccounts).values({ businessId, billingKey: `business:${businessId}`, plan: "starter", subscriptionState: "canceled" }).onConflictDoUpdate({ target: billingAccounts.businessId, set: { plan: "starter", subscriptionState: "canceled" } });
       await expect(checkout("starter")).resolves.toEqual(expect.any(String));
+    });
+  });
+
+  it("keeps a checkout processing through a short Polar outage, then fails it once the window ends", async () => {
+    await rollbackTest(async tx => {
+      const { businessId, checkout } = await workspace(tx);
+      const requestId = await checkout("starter");
+      const context = { db: tx as unknown as Database };
+      await asWorker(tx, async () => {
+        expect(await claimBillingCheckoutRequest(context, { businessId, requestId })).toBe(true);
+        const first = await deferBillingCheckoutRequest(context, { businessId, requestId });
+        expect(first).toMatchObject({ status: "deferred" });
+        if (first.status !== "deferred") return;
+        const [row] = await tx.select({ status: billingCheckoutRequests.status, firstFailedAt: billingCheckoutRequests.firstFailedAt, retryAt: billingCheckoutRequests.retryAt }).from(billingCheckoutRequests).where(eq(billingCheckoutRequests.id, requestId));
+        expect(row).toMatchObject({ status: "processing", retryAt: first.retryAt });
+        expect(row?.firstFailedAt).toBeInstanceOf(Date);
+        // The scheduled retry, not the ten minute lease, is what the claim waits for.
+        expect(await claimBillingCheckoutRequest(context, { businessId, requestId })).toBe(false);
+        await tx.update(billingCheckoutRequests).set({ retryAt: new Date(Date.now() - 1_000) }).where(eq(billingCheckoutRequests.id, requestId));
+        expect(await claimBillingCheckoutRequest(context, { businessId, requestId })).toBe(true);
+        await tx.update(billingCheckoutRequests).set({ firstFailedAt: new Date(Date.now() - 21 * 60_000) }).where(eq(billingCheckoutRequests.id, requestId));
+        expect(await deferBillingCheckoutRequest(context, { businessId, requestId })).toEqual({ status: "failed" });
+        expect(await markBillingCheckoutFailed(context, { businessId, requestId, error: "provider_unavailable:503" })).toBe(true);
+      });
+      const [row] = await tx.select({ status: billingCheckoutRequests.status, error: billingCheckoutRequests.error }).from(billingCheckoutRequests).where(eq(billingCheckoutRequests.id, requestId));
+      expect(row).toEqual({ status: "error", error: "provider_unavailable:503" });
     });
   });
 });

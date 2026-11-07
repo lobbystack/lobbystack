@@ -70,7 +70,7 @@ describe("the partner console's Stripe page", () => {
     expect(await screen.findByText("stripe.active.title")).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledWith("/api/partner/stripe?partnerId=partner&refresh=1", expect.anything());
     await waitFor(() => expect(fixture.replace).toHaveBeenCalledWith("/partner/partner/payments"));
-    expect(screen.getByText("acct_bright")).toBeTruthy();
+    expect(screen.queryByText("acct_bright")).toBeNull();
     expect(screen.getByText("CAD")).toBeTruthy();
     expect(screen.getByRole("link", { name: "stripe.active.dashboard" }).getAttribute("href")).toBe("https://dashboard.stripe.com/");
   });
@@ -90,6 +90,15 @@ describe("the partner console's Stripe page", () => {
     expect((await screen.findByRole("alert")).textContent).toBe("stripe.errors.invalidCountry");
     expect(assign).not.toHaveBeenCalled();
     expect(fixture.telemetry!.events).toEqual([]);
+  });
+
+  it("says the host hasn't finished setting up payments when Stripe refuses to create an account", async () => {
+    renderWith((url) => url.startsWith("/api/partner/stripe/onboarding") ? Response.json({ error: "Payments aren't ready on this dashboard yet.", code: "stripe_platform_not_ready" }, { status: 409 }) : Response.json(none));
+    await screen.findByText("stripe.connect.title");
+    await userEvent.selectOptions(screen.getByLabelText("stripe.connect.countryLabel"), "CA");
+    await userEvent.click(screen.getByRole("button", { name: "stripe.connect.action" }));
+    expect((await screen.findByRole("alert")).textContent).toBe("stripe.errors.platformNotReady");
+    expect(assign).not.toHaveBeenCalled();
   });
 
   it("tells the owner when the deployment has no Stripe Connect, and offers nothing to click", async () => {

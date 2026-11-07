@@ -41,7 +41,7 @@ Keep these settings when you change a service:
 - **Update order:** Dokploy's default update config starts the new container before it stops the old one and rolls back a failed update. Leave it unset.
 - **Health checks:** the worker checks `/health/live` on port 3002 and the admin checks `/api/health/ready` on port 3000, through `node -e "fetch(...)"`, because the images ship no `curl`. Docker keeps running health checks after a deploy and replaces an unhealthy task. A readiness check on the worker would restart it, and end its calls, during a short Redis or Postgres outage.
 - **Durations:** Dokploy passes the stop grace period and health check timings to Docker unchanged, so enter them in nanoseconds. 31 minutes is `1860000000000`.
-- **Admin variables:** set `HOSTNAME=0.0.0.0`, because Docker sets `HOSTNAME` to the container ID and the Next.js server binds to whatever it holds. Set `TRUSTED_CLIENT_IP_HEADER=cf-connecting-ip`, which is safe only while the firewall admits Cloudflare alone. Set `WORKER_INTERNAL_URL` to `http://<worker app name>:3002`.
+- **Admin variables:** set `HOSTNAME=0.0.0.0`, because Docker sets `HOSTNAME` to the container ID and the Next.js server binds to whatever it holds. Set `TRUSTED_CLIENT_IP_HEADER=cf-connecting-ip`, which is safe only while the firewall admits Cloudflare alone; the free trial then reads the country Cloudflare puts in `cf-ipcountry`, with no other setting. Set `WORKER_INTERNAL_URL` to `http://<worker app name>:3002`.
 
 ## Images and releases
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { markPlanOfferShownInTransaction, readPlanOfferInTransaction } from "@lobbystack/domain";
+import { markPlanOfferChosenInTransaction, markPlanOfferDismissedInTransaction, markPlanOfferShownInTransaction, readPlanOfferInTransaction } from "@lobbystack/domain";
 
 import { hostedCheckoutOptions } from "@/lib/hosted-checkout";
 import { operatorRoute } from "@/lib/operator-request";
@@ -14,8 +14,17 @@ export const GET = operatorRoute(async ({ businessId, transaction }) => NextResp
   due: await readPlanOfferInTransaction(tx, { businessId, role, canCheckOut: providerConfigured() && hostedCheckoutOptions(true).availableCheckoutPlans.length > 0 }),
 }))));
 
-/** The plans opened, so they stay away for the next week. */
-export const POST = operatorRoute(async ({ businessId, transaction }) => {
-  await transaction((tx) => markPlanOfferShownInTransaction(tx, businessId));
+/**
+ * The plans opened, so they stay away for the cooldown. Closing them without a
+ * choice counts toward the longer pause.
+ */
+export const POST = operatorRoute(async ({ body, businessId, transaction }) => {
+  const dismissed = body.dismissed === true;
+  const chosen = body.chosen === true;
+  await transaction((tx) => dismissed
+    ? markPlanOfferDismissedInTransaction(tx, businessId)
+    : chosen
+      ? markPlanOfferChosenInTransaction(tx, businessId)
+      : markPlanOfferShownInTransaction(tx, businessId));
   return NextResponse.json({ ok: true });
 });
