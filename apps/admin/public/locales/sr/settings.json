@@ -246,7 +246,7 @@
     "spendingCap": {
       "title": "Mesečni limit potrošnje",
       "placeholder": "25.00",
-      "amountLabel": "Limit prekoračenja (USD)",
+      "amountLabel": "Limit prekoračenja",
       "noCap": "Limit potrošnje nije podešen",
       "currentSpend": "Trenutni trošak prekoračenja",
       "spendOfCap": "{{spend}} od {{cap}}",

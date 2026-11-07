@@ -246,7 +246,7 @@
     "spendingCap": {
       "title": "Límite de gasto mensual",
       "placeholder": "25.00",
-      "amountLabel": "Límite de excedentes (USD)",
+      "amountLabel": "Límite de excedentes",
       "noCap": "No hay ningún límite de gasto definido",
       "currentSpend": "Gasto actual en excedentes",
       "spendOfCap": "{{spend}} de {{cap}}",

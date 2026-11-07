@@ -30,12 +30,30 @@ describe("original billing cap behavior", () => {
     await userEvent.click(screen.getByRole("button", { name: "billing.spendingCap.remove" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/billing?businessId=business", expect.objectContaining({ body: JSON.stringify({ capCents: null }) })));
   });
-  it("rejects grouping without silently changing the amount", async () => {
+  it("groups digits as they are typed and the currency sits in the field", async () => {
     const fetchMock = setup();
-    await userEvent.type(screen.getByLabelText("billing.spendingCap.amountLabel"), "1,000");
+    const field = screen.getByLabelText("billing.spendingCap.amountLabel") as HTMLInputElement;
+    await userEvent.type(field, "1000.5");
+    expect(field.value).toBe("1,000.5");
+    expect(screen.getByText("USD")).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "billing.spendingCap.save" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/billing?businessId=business", expect.objectContaining({ body: JSON.stringify({ capCents: 100050 }) })));
+  });
+  it("refuses more than two decimals by not accepting the extra digits", async () => {
+    setup();
+    const field = screen.getByLabelText("billing.spendingCap.amountLabel") as HTMLInputElement;
+    await userEvent.type(field, "12.345");
+    expect(field.value).toBe("12.34");
+  });
+  it("saves when Enter is pressed in the field, as the Save button does", async () => {
+    const fetchMock = setup();
+    await userEvent.type(screen.getByLabelText("billing.spendingCap.amountLabel"), "25{Enter}");
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/billing?businessId=business", expect.objectContaining({ body: JSON.stringify({ capCents: 2500 }) })));
+  });
+  it("does nothing on Enter while the field is empty", async () => {
+    const fetchMock = setup();
+    await userEvent.type(screen.getByLabelText("billing.spendingCap.amountLabel"), "{Enter}");
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(toast.error).toHaveBeenCalledWith("billing.spendingCap.invalidAmount");
   });
   it("keeps member controls read-only and labels incomplete spend as a lower bound", () => {
     setup("en", 1000, false, false);
