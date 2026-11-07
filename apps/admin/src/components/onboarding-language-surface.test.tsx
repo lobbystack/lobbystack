@@ -24,7 +24,8 @@ describe("the language question", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<QueryClientProvider client={client}><OnboardingLanguageSurface /></QueryClientProvider>);
 
-    expect(screen.getByRole("combobox").textContent).toContain("🇫🇷common:callerLanguage.fr");
+    expect(screen.getByRole("combobox").textContent).toContain("common:callerLanguage.fr");
+    expect(screen.getByRole("combobox").querySelector("[data-flag='FR']")).not.toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "language.continue" }));
     await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/verify-phone"));
 

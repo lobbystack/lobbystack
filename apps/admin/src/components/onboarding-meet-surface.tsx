@@ -22,7 +22,8 @@ import { VoiceDialog, voiceName, useVoicePreview, useVoiceTraits } from "@/compo
 import { isWebsiteImportRunning, type WebsiteImportSummary } from "@/components/website-import-progress";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
-import { runtimeLocaleFlag } from "@/lib/country-flag";
+import { Flag } from "@/components/flag";
+import { runtimeLocaleRegion } from "@/lib/country-flag";
 import { requestJson } from "@/lib/request-json";
 
 type Agent = { business: { defaultLocale: string } | null; profile: { name: string; greeting: string; voice: string } | null };
@@ -133,8 +134,8 @@ function MeetAgent() {
             <Field>
               <FieldLabel htmlFor="meet-language">{t("meet.language")}</FieldLabel>
               <Select items={runtimeLocales.map((code) => ({ value: code, label: t(`common:callerLanguage.${code}`) }))} onValueChange={(value) => { if (value && value !== savedLocale) save.mutate({ locale: value as RuntimeLocale }); }} value={savedLocale}>
-                <SelectTrigger className="data-[size=default]:h-11 w-full" id="meet-language"><SelectValue className="items-center gap-1.5">{(value: RuntimeLocale | null) => value ? <><span aria-hidden="true">{runtimeLocaleFlag(value)}</span>{t(`common:callerLanguage.${value}`)}</> : null}</SelectValue></SelectTrigger>
-                <SelectContent><SelectGroup>{runtimeLocales.map((code) => <SelectItem key={code} value={code}><span aria-hidden="true">{runtimeLocaleFlag(code)}</span>{t(`common:callerLanguage.${code}`)}</SelectItem>)}</SelectGroup></SelectContent>
+                <SelectTrigger className="data-[size=default]:h-11 w-full *:data-[slot=select-value]:gap-2" id="meet-language"><SelectValue>{(value: RuntimeLocale | null) => value ? <><Flag region={runtimeLocaleRegion(value)} />{t(`common:callerLanguage.${value}`)}</> : null}</SelectValue></SelectTrigger>
+                <SelectContent><SelectGroup>{runtimeLocales.map((code) => <SelectItem key={code} value={code}><Flag region={runtimeLocaleRegion(code)} />{t(`common:callerLanguage.${code}`)}</SelectItem>)}</SelectGroup></SelectContent>
               </Select>
             </Field>
           </FieldGroup>

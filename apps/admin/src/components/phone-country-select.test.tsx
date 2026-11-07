@@ -18,9 +18,12 @@ describe("PhoneCountrySelect", () => {
   it("shows a flag on each country and clears the typed search", async () => {
     render(<PhoneCountrySelect ariaLabel="Country" countries={[...countries]} onChange={vi.fn()} value="US" />);
     const user = userEvent.setup();
-    expect(screen.getByRole("combobox", { name: "Country" }).textContent).toBe("🇺🇸+1");
-    await user.click(screen.getByRole("combobox", { name: "Country" }));
-    expect(await screen.findByText("🇷🇸")).toBeTruthy();
+    const trigger = screen.getByRole("combobox", { name: "Country" });
+    expect(trigger.textContent).toBe("+1");
+    expect(trigger.querySelector("[data-flag='US']")).not.toBeNull();
+    await user.click(trigger);
+    await screen.findByText("Serbia");
+    expect(document.querySelector("[role='option'] [data-flag='RS']")).not.toBeNull();
     const search = screen.getByPlaceholderText("phoneCountry.search") as HTMLInputElement;
     expect(screen.queryByRole("button", { name: "accessibility.clearSearch" })).toBeNull();
     await user.type(search, "serb");

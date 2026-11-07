@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { LoaderCircle } from "lucide-react";
 
+import { Flag } from "@/components/flag";
 import { PhoneNumberChooserSkeleton } from "@/components/loading-skeletons";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
@@ -158,14 +159,13 @@ export function phoneNumberChooserApi(replacement: boolean): Pick<PhoneNumberCho
 const COUNTRY_OPTIONS: Array<{
   code: SupportedOnboardingPhoneCountry;
   label: string;
-  flag: string;
 }> = [
-  { code: "US", label: "US", flag: "🇺🇸" },
-  { code: "CA", label: "CA", flag: "🇨🇦" },
-  { code: "PR", label: "PR", flag: "🇵🇷" },
-  { code: "GB", label: "UK", flag: "🇬🇧" },
-  { code: "AU", label: "AU", flag: "🇦🇺" },
-  { code: "NZ", label: "NZ", flag: "🇳🇿" },
+  { code: "US", label: "US" },
+  { code: "CA", label: "CA" },
+  { code: "PR", label: "PR" },
+  { code: "GB", label: "UK" },
+  { code: "AU", label: "AU" },
+  { code: "NZ", label: "NZ" },
 ];
 
 function getNumberLocationLabel(number: AvailableNumberSummary): string | null {
@@ -350,19 +350,17 @@ export function PhoneNumberChooser({
           </label>
           {countryFixed ? (
             <p className="flex h-9 items-center gap-2 text-sm" id="number-country">
-              <span aria-hidden="true">{COUNTRY_OPTIONS.find((option) => option.code === country)?.flag}</span>
+              <Flag region={country} />
               {COUNTRY_OPTIONS.find((option) => option.code === country)?.label ?? country}
             </p>
           ) : <Select onValueChange={handleCountryChange} value={country}>
-            <SelectTrigger id="number-country">
-              <SelectValue />
+            <SelectTrigger className="*:data-[slot=select-value]:gap-2" id="number-country">
+              <SelectValue>{(value: SupportedOnboardingPhoneCountry | null) => value ? <><Flag region={value} />{COUNTRY_OPTIONS.find((option) => option.code === value)?.label ?? value}</> : null}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {COUNTRY_OPTIONS.map((option) => (
                 <SelectItem key={option.code} value={option.code}>
-                  <span className="mr-2" aria-hidden="true">
-                    {option.flag}
-                  </span>
+                  <Flag region={option.code} />
                   {option.label}
                 </SelectItem>
               ))}
