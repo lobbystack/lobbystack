@@ -288,7 +288,7 @@ describe("AgentBasicSettingsPage transfer number", () => {
     const country = await screen.findByRole("combobox", { name: "agent:fields.transferNumber.country" });
     expect(country.textContent).toContain("+1");
     await user.click(country);
-    expect(await screen.findAllByRole("option")).toHaveLength(18);
+    expect(await screen.findAllByRole("option")).toHaveLength(19);
     await user.keyboard("{Escape}");
 
     const input = document.getElementById("agent-transfer-number") as HTMLInputElement;

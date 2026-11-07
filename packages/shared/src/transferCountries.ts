@@ -1,5 +1,5 @@
 // Must match Twilio's voice dialing permissions: turn a country on in Twilio before adding it here.
-export const TRANSFER_COUNTRY_CALLING_CODES = { US: "1", CA: "1", PR: "1", GB: "44", AU: "61", NZ: "64", FR: "33", DE: "49", ES: "34", IT: "39", NL: "31", PT: "351", MX: "52", BR: "55", IL: "972", IN: "91", JP: "81", RS: "381" } as const;
+export const TRANSFER_COUNTRY_CALLING_CODES = { US: "1", CA: "1", PR: "1", GB: "44", AU: "61", NZ: "64", FR: "33", DE: "49", ES: "34", IT: "39", NL: "31", PT: "351", MX: "52", BR: "55", IL: "972", IN: "91", JP: "81", RS: "381", HR: "385" } as const;
 
 export type TransferCountry = keyof typeof TRANSFER_COUNTRY_CALLING_CODES;
 
