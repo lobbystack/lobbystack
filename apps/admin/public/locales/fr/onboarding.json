@@ -167,10 +167,6 @@
     "continue": "Continuer"
   },
   "number": {
-    "ready": {
-      "label": "Votre numéro est prêt",
-      "call": "Appeler le {{number}}"
-    },
     "planRequired": "Pour obtenir un numéro, choisissez un forfait.",
     "refusals": {
       "paidPlan": "Obtenir un numéro ici exige un forfait payant.",
@@ -213,7 +209,6 @@
     "unavailable": "Ce numéro vient d'être pris. Choisissez-en un autre.",
     "selectedTitle": "Le numéro de votre IA",
     "selectedNumberLabel": "Numéro sélectionné",
-    "continue": "Continuer",
     "numbersUnavailable": "Les numéros de téléphone ne sont pas encore configurés sur ce tableau de bord. Demandez à la personne qui le gère de connecter un fournisseur de téléphonie."
   },
   "goal": {

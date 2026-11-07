@@ -1,20 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { resolveOnboardingRoute } from "@lobbystack/shared";
 import { useTranslation } from "react-i18next";
-import { LoaderCircle, Phone } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { PhoneNumberChooser, phoneNumberChooserApi } from "./phone-number-chooser";
 import { OnboardingPlanSurface } from "./onboarding-plan-surface";
 import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
 import { requestJson } from "@/lib/request-json";
-import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { useTelemetry } from "@/components/product-analytics";
-import { Button } from "./ui/button";
 import { Surface } from "./ui/surface";
 import { FieldError } from "./ui/field";
 
@@ -94,20 +91,12 @@ export function OnboardingNumberSurface() {
   const getErrorMessage = useCallback((error: unknown, fallback: string) => getSafeOnboardingErrorMessage(error, t, fallback), [t]);
   const skip = useMutation({ mutationFn: () => requestJson(`/api/onboarding/phone-numbers/skip?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST" }), onSuccess: () => router.push(afterNumber), meta: { inlineError: true } });
 
-  if (!phones.data || (!claiming && phones.data.activeClaim) || outlook.isLoading) return <Surface className="flex justify-center p-6"><LoaderCircle className="size-5 animate-spin text-muted-foreground" /></Surface>;
-  if (primary) {
-    // The moment it clicks: they call their own number and their receptionist answers.
-    return (
-      <Surface className="mx-auto flex w-full max-w-lg flex-col gap-5 p-6 text-center">
-        <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium text-muted-foreground">{t("number.ready.label")}</p>
-          <p className="text-2xl font-semibold text-foreground">{formatPhoneNumberDisplay(primary.e164)}</p>
-        </div>
-        <Button nativeButton={false} render={<Link href={`tel:${primary.e164}`} />}><Phone />{t("number.ready.call", { number: formatPhoneNumberDisplay(primary.e164) })}</Button>
-        <Button onClick={() => router.push(afterNumber)} type="button" variant="outline">{t("number.continue")}</Button>
-      </Surface>
-    );
-  }
+  // Meet your agent shows the number to call, so a number moves straight on.
+  useEffect(() => {
+    if (primary) router.replace(afterNumber);
+  }, [afterNumber, primary, router]);
+
+  if (!phones.data || (!claiming && phones.data.activeClaim) || outlook.isLoading || primary) return <Surface className="flex justify-center p-6"><LoaderCircle className="size-5 animate-spin text-muted-foreground" /></Surface>;
   if (refusalCode) {
     return (
       <div className="flex flex-col gap-6">

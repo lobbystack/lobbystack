@@ -32,34 +32,27 @@ function setup(stage: string, primary = false, pending = false, suggestion?: () 
   return fetchMock;
 }
 describe("onboarding number API adapter", () => {
-  it("resumes a provisioning claim after reload, then offers the new number to call", async () => {
+  it("resumes a provisioning claim after reload, then moves on with the new number", async () => {
     const fetchMock = setup("phone_number", false, true);
     expect(screen.queryByRole("button", { name: "number.select" })).toBeNull();
     expect(screen.queryByRole("button", { name: "number.skipLater" })).toBeNull();
-    expect(await screen.findByText("(416) 555-0100", {}, { timeout: 2500 })).toBeTruthy();
+    await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith("/onboarding/goal"), { timeout: 2500 });
     expect(fetchMock.mock.calls.every(([url]) => url.includes("/api/phone-numbers?"))).toBe(true);
   });
-  it("asks the owner to call their new number before moving on", async () => {
+  it("moves straight on once the business has a number", async () => {
     const fetchMock = setup("phone_number", true);
-    expect(screen.getByText("number.ready.label")).toBeTruthy();
-    expect(screen.getByText("number.ready.call").closest("a")?.getAttribute("href")).toBe("tel:+15815550102");
-    await userEvent.click(screen.getByRole("button", { name: "number.continue" }));
-    expect(navigation.push).toHaveBeenCalledWith("/onboarding/goal");
+    await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith("/onboarding/goal"));
     expect(fetchMock).not.toHaveBeenCalled();
   });
-  it("shows the chosen number when revisiting from attribution", async () => {
+  it("returns to attribution when revisiting with a number", async () => {
     const fetchMock = setup("attribution", true);
-    expect(screen.getByText("(581) 555-0102")).toBeTruthy();
-    await userEvent.click(screen.getByRole("button", { name: "number.continue" }));
-    expect(navigation.push).toHaveBeenCalledWith("/onboarding/attribution");
+    await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith("/onboarding/attribution"));
     expect(fetchMock).not.toHaveBeenCalled();
   });
   it.each(["goal", "attribution", "meet", "complete"])("claims a number from %s", async stage => {
     const fetchMock = setup(stage);
     await userEvent.click(await screen.findByRole("button", { name: "number.select" }));
-    expect(await screen.findByText("number.ready.label")).toBeTruthy();
-    await userEvent.click(screen.getByRole("button", { name: "number.continue" }));
-    expect(navigation.push).toHaveBeenCalledWith({ goal: "/onboarding/goal", attribution: "/onboarding/attribution", meet: "/onboarding/meet", complete: "/" }[stage]);
+    await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith({ goal: "/onboarding/goal", attribution: "/onboarding/attribution", meet: "/onboarding/meet", complete: "/" }[stage]));
     const claimRequest = fetchMock.mock.calls.find(([url]) => url.includes("/claim?"));
     expect(claimRequest).toBeTruthy();
     const claimProperties = { businessId: "business-1", countryCode: "CA", selectionMode: "suggested", numberKind: "local" };

@@ -167,10 +167,6 @@
     "continue": "Continuar"
   },
   "number": {
-    "ready": {
-      "label": "Su número está listo",
-      "call": "Llamar al {{number}}"
-    },
     "planRequired": "Para obtener un número, elija un plan.",
     "refusals": {
       "paidPlan": "Obtener un número aquí requiere un plan de pago.",
@@ -213,7 +209,6 @@
     "unavailable": "Ese número acaba de ser asignado. Elija otro de la lista actualizada.",
     "selectedTitle": "El número de teléfono de su IA",
     "selectedNumberLabel": "Número seleccionado",
-    "continue": "Continuar",
     "numbersUnavailable": "Los números de teléfono aún no están configurados en este panel. Pida a quien lo administra que conecte un proveedor de telefonía."
   },
   "goal": {

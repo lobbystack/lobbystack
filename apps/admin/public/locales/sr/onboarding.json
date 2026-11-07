@@ -167,10 +167,6 @@
     "continue": "Nastavi"
   },
   "number": {
-    "ready": {
-      "label": "Vaš broj je spreman",
-      "call": "Pozovi {{number}}"
-    },
     "planRequired": "Da biste dobili broj, izaberite paket.",
     "refusals": {
       "paidPlan": "Dobijanje broja ovde zahteva plaćeni paket.",
@@ -213,7 +209,6 @@
     "unavailable": "Neko je upravo uzeo taj broj. Izaberite drugi sa osvežene liste.",
     "selectedTitle": "Broj telefona AI agenta",
     "selectedNumberLabel": "Izabrani broj",
-    "continue": "Nastavi",
     "numbersUnavailable": "Brojevi telefona još nisu podešeni na ovoj kontrolnoj tabli. Zamolite osobu koja njome upravlja da poveže telefonskog provajdera."
   },
   "goal": {
