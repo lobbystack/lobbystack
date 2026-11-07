@@ -66,7 +66,7 @@ export function OnboardingNumberSurface() {
   const refuse = useCallback((error: unknown) => {
     const code = errorCode(error);
     if (!code) return;
-    if (PLAN_REQUIRED.has(code)) { setRefusal(code); return; }
+    if (PLAN_REQUIRED.has(code) || code === "email_verification_required") { setRefusal(code); return; }
     if (code === "phone_verification_required" && verifiesPhone) router.replace("/onboarding/verify-phone");
     else if (code === "phone_verification_required") setRefusal(code);
   }, [router, verifiesPhone]);

@@ -88,6 +88,11 @@ describe("onboarding number API adapter", () => {
     await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url.includes("/skip?"))).toBe(true));
     expect(navigation.push).toHaveBeenCalledWith("/onboarding/goal");
   });
+  it("names an unverified email the search refuses", async () => {
+    setup("phone_number", false, false, () => Response.json({ error: "Verify your email.", code: "email_verification_required" }, { status: 409 }));
+    expect(await screen.findByText("number.refusals.emailVerification")).toBeTruthy();
+    telemetryRef.current!.expectEvent("web.onboarding.number_unavailable", { businessId: "business-1", code: "email_verification_required" });
+  });
   it("names the network limit, and the market without a trial", async () => {
     setup("phone_number", false, false, undefined, "trial_ip_limited");
     expect(await screen.findByText("number.refusals.network")).toBeTruthy();
