@@ -14,7 +14,7 @@ describe("transfer countries", () => {
   });
 
   it("accepts US, Canadian, Puerto Rican and listed overseas numbers", () => {
-    for (const phone of ["+14155550100", "+14165550199", "+15145550123", "+17875550100", "+19395550100", "+442079460958", "+381641234567", "+385911234567", "+525512345678", "+351912345678"]) expect(isTransferPhone(phone), phone).toBe(true);
+    for (const phone of ["+14155550100", "+14165550199", "+15145550123", "+17875550100", "+19395550100", "+442079460958", "+381641234567", "+385911234567", "+38761234567", "+41791234567", "+436601234567", "+525512345678", "+351912345678"]) expect(isTransferPhone(phone), phone).toBe(true);
   });
 
   it("refuses +1 numbers in the Caribbean and the other US territories, and countries off the list", () => {

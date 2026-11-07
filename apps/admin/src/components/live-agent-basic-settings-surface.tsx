@@ -634,7 +634,7 @@ export function AgentBasicSettingsPage({
                     }}
                     value={defaultLocale}
                   >
-                    <SelectTrigger aria-label={t("agent:fields.defaultLocale.label")} className="w-full sm:w-52 *:data-[slot=select-value]:gap-2" id="agent-default-language" loading={isLocaleSaving}><SelectValue>{(value: RuntimeLocale | null) => value ? <><Flag region={runtimeLocaleRegion(value)} />{t(`common:callerLanguage.${value}`)}</> : null}</SelectValue></SelectTrigger>
+                    <SelectTrigger aria-label={t("agent:fields.defaultLocale.label")} className="w-full sm:w-52 *:data-[slot=select-value]:gap-2" id="agent-default-language" loading={isLocaleSaving}><SelectValue>{(value: RuntimeLocale | null) => value ? <><Flag region={runtimeLocaleRegion(value)} /><span className="truncate">{t(`common:callerLanguage.${value}`)}</span></> : null}</SelectValue></SelectTrigger>
                     <SelectContent>
                       <SelectGroup>
                         {runtimeLocales.map((code) => <SelectItem key={code} value={code}><Flag region={runtimeLocaleRegion(code)} />{t(`common:callerLanguage.${code}`)}</SelectItem>)}
@@ -682,7 +682,7 @@ export function AgentBasicSettingsPage({
                     }}
                     value={teamLocale}
                   >
-                    <SelectTrigger aria-label={t("agent:fields.teamLocale.label")} className="w-full sm:w-52 *:data-[slot=select-value]:gap-2" id="agent-team-language" loading={isTeamLocaleSaving}><SelectValue>{(value: RuntimeLocale | "default" | null) => !value ? null : value === "default" ? t("agent:fields.teamLocale.sameAsCaller") : <><Flag region={runtimeLocaleRegion(value)} />{t(`common:callerLanguage.${value}`)}</>}</SelectValue></SelectTrigger>
+                    <SelectTrigger aria-label={t("agent:fields.teamLocale.label")} className="w-full sm:w-52 *:data-[slot=select-value]:gap-2" id="agent-team-language" loading={isTeamLocaleSaving}><SelectValue>{(value: RuntimeLocale | "default" | null) => !value ? null : value === "default" ? t("agent:fields.teamLocale.sameAsCaller") : <><Flag region={runtimeLocaleRegion(value)} /><span className="truncate">{t(`common:callerLanguage.${value}`)}</span></>}</SelectValue></SelectTrigger>
                     <SelectContent>
                       <SelectGroup>
                         <SelectItem value="default">{t("agent:fields.teamLocale.sameAsCaller")}</SelectItem>

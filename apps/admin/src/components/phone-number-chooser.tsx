@@ -355,7 +355,7 @@ export function PhoneNumberChooser({
             </p>
           ) : <Select onValueChange={handleCountryChange} value={country}>
             <SelectTrigger className="*:data-[slot=select-value]:gap-2" id="number-country">
-              <SelectValue>{(value: SupportedOnboardingPhoneCountry | null) => value ? <><Flag region={value} />{COUNTRY_OPTIONS.find((option) => option.code === value)?.label ?? value}</> : null}</SelectValue>
+              <SelectValue>{(value: SupportedOnboardingPhoneCountry | null) => value ? <><Flag region={value} /><span className="truncate">{COUNTRY_OPTIONS.find((option) => option.code === value)?.label ?? value}</span></> : null}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {COUNTRY_OPTIONS.map((option) => (

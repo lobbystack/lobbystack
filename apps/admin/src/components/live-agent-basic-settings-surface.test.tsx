@@ -2,6 +2,7 @@
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { TRANSFER_COUNTRY_CALLING_CODES } from "@lobbystack/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -288,7 +289,7 @@ describe("AgentBasicSettingsPage transfer number", () => {
     const country = await screen.findByRole("combobox", { name: "agent:fields.transferNumber.country" });
     expect(country.textContent).toContain("+1");
     await user.click(country);
-    expect(await screen.findAllByRole("option")).toHaveLength(19);
+    expect(await screen.findAllByRole("option")).toHaveLength(Object.keys(TRANSFER_COUNTRY_CALLING_CODES).length);
     await user.keyboard("{Escape}");
 
     const input = document.getElementById("agent-transfer-number") as HTMLInputElement;

@@ -1,5 +1,6 @@
 // Must match Twilio's voice dialing permissions: turn a country on in Twilio before adding it here.
-export const TRANSFER_COUNTRY_CALLING_CODES = { US: "1", CA: "1", PR: "1", GB: "44", AU: "61", NZ: "64", FR: "33", DE: "49", ES: "34", IT: "39", NL: "31", PT: "351", MX: "52", BR: "55", IL: "972", IN: "91", JP: "81", RS: "381", HR: "385" } as const;
+// Europe is listed whole, apart from Russia, Belarus, Ukraine, Moldova, Turkey, Kosovo and the microstates. Beyond Europe, countries are added when a customer needs one, because open dialing to more of the world is where toll fraud comes from.
+export const TRANSFER_COUNTRY_CALLING_CODES = { US: "1", CA: "1", PR: "1", GB: "44", AU: "61", NZ: "64", FR: "33", DE: "49", ES: "34", IT: "39", NL: "31", PT: "351", MX: "52", BR: "55", IL: "972", IN: "91", JP: "81", RS: "381", HR: "385", BA: "387", ME: "382", MK: "389", AL: "355", SI: "386", CH: "41", AT: "43", BE: "32", BG: "359", CY: "357", CZ: "420", DK: "45", EE: "372", FI: "358", GR: "30", HU: "36", IE: "353", IS: "354", LI: "423", LT: "370", LU: "352", LV: "371", MT: "356", NO: "47", PL: "48", RO: "40", SE: "46", SK: "421" } as const;
 
 export type TransferCountry = keyof typeof TRANSFER_COUNTRY_CALLING_CODES;
 

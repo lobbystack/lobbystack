@@ -52,7 +52,7 @@ export function OnboardingLanguageSurface() {
           <FieldLabel htmlFor="onboarding-language">{t("language.label")}</FieldLabel>
           {!business ? <Skeleton aria-hidden="true" className="h-11 w-full" /> : (
             <Select items={runtimeLocales.map((code) => ({ value: code, label: t(`common:callerLanguage.${code}`) }))} onValueChange={(value) => { if (value) setPicked(value as RuntimeLocale); }} value={locale}>
-              <SelectTrigger className="data-[size=default]:h-11 w-full *:data-[slot=select-value]:gap-2" id="onboarding-language"><SelectValue>{(value: RuntimeLocale | null) => value ? <><Flag region={runtimeLocaleRegion(value)} />{t(`common:callerLanguage.${value}`)}</> : null}</SelectValue></SelectTrigger>
+              <SelectTrigger className="data-[size=default]:h-11 w-full *:data-[slot=select-value]:gap-2" id="onboarding-language"><SelectValue>{(value: RuntimeLocale | null) => value ? <><Flag region={runtimeLocaleRegion(value)} /><span className="truncate">{t(`common:callerLanguage.${value}`)}</span></> : null}</SelectValue></SelectTrigger>
               <SelectContent><SelectGroup>{runtimeLocales.map((code) => <SelectItem key={code} value={code}><Flag region={runtimeLocaleRegion(code)} />{t(`common:callerLanguage.${code}`)}</SelectItem>)}</SelectGroup></SelectContent>
             </Select>
           )}
