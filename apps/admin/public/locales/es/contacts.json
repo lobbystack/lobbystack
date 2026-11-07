@@ -18,8 +18,8 @@
     },
     "actions": {
       "moreOptions": "Más opciones",
-      "blockContact": "Bloquear contacto",
-      "unblockContact": "Desbloquear contacto",
+      "blockContact": "Bloquear",
+      "unblockContact": "Desbloquear",
       "blockTitle": "¿Bloquear contacto?",
       "blockDescription": "Se dejarán de enviar respuestas por SMS y se colgarán de inmediato las nuevas llamadas entrantes de este contacto.",
       "blockConfirm": "Bloquear contacto",
@@ -30,12 +30,13 @@
       "unblockConfirm": "Desbloquear contacto",
       "unblockSuccess": "Contacto desbloqueado.",
       "updateFailed": "No se pudo actualizar el bloqueo.",
-      "deleteContact": "Eliminar contacto",
+      "deleteContact": "Eliminar",
       "deleteTitle": "¿Eliminar contacto?",
       "deleteDescription": "El contacto se eliminará de su panel de forma permanente.",
       "deleteConfirm": "Eliminar contacto",
       "deleteCancel": "Cancelar",
-      "deleteFailed": "No se pudo eliminar el contacto."
+      "deleteFailed": "No se pudo eliminar el contacto.",
+      "editContact": "Editar"
     }
   },
   "detail": {
@@ -181,5 +182,17 @@
     "nextPage": "Ir a la página siguiente",
     "lastPage": "Ir a la última página",
     "goToPage": "Ir a la página {{page}}"
+  },
+  "edit": {
+    "title": "Editar contacto",
+    "description": "Corrige un nombre mal entendido o actualiza el correo.",
+    "name": "Nombre",
+    "email": "Correo electrónico",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "saving": "Guardando...",
+    "saved": "Contacto actualizado.",
+    "failed": "No se pudo guardar el contacto. Inténtalo de nuevo.",
+    "invalidEmail": "Introduce un correo electrónico válido."
   }
 }

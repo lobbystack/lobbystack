@@ -2,9 +2,8 @@
 
 import { createContext, useContext } from "react";
 import { createPortal } from "react-dom";
-import { Search } from "lucide-react";
 
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/ui/search-input";
 
 /**
  * Where a page's search and primary action go: the page header's action area.
@@ -21,9 +20,6 @@ export function HeaderActions({ children }: { children: React.ReactNode }) {
 
 export function HeaderSearch({ value, onChange, placeholder, label }: { value: string; onChange: (value: string) => void; placeholder: string; label?: string }) {
   return (
-    <div className="relative w-full sm:w-64">
-      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-      <Input aria-label={label ?? placeholder} className="pl-10" onChange={(event) => onChange(event.target.value)} placeholder={placeholder} value={value} />
-    </div>
+    <SearchInput aria-label={label ?? placeholder} groupClassName="w-full sm:w-64" onValueChange={onChange} placeholder={placeholder} value={value} />
   );
 }

@@ -15,7 +15,7 @@ import type { DomainContext } from "./context";
 import { appendMessage, getOrCreateConversation } from "./conversations";
 import { queueOperatorAlert } from "./notifications";
 import { recordProductEventBestEffort } from "./productEvents";
-import { CANCELLATION_REQUEST, createVoiceFollowUpTask, type FollowUpRequest } from "./voice";
+import { CANCELLATION_REQUEST, createVoiceFollowUpTask, RESCHEDULE_REQUEST, type FollowUpRequest } from "./voice";
 
 // Actions the receptionist agent takes on a business's behalf, whatever the
 // channel. Each one opens its own tenant-scoped transaction.
@@ -291,7 +291,30 @@ export async function takeMessageForStaff(
  */
 export async function requestCancellationForCaller(
   context: DomainContext,
-  input: { businessId: string; channel: ReceptionistChannel; timezone: string; callerName: string; appointmentStartsAt?: string; serviceName?: string; callbackPhone?: string; notes?: string; callId?: string; conversationId?: string; agentId?: string },
+  input: AppointmentRequestInput,
+) {
+  return await passAppointmentRequestToTeam(context, input, "cancellation");
+}
+
+type AppointmentRequestInput = { businessId: string; channel: ReceptionistChannel; timezone: string; callerName: string; appointmentStartsAt?: string; serviceName?: string; callbackPhone?: string; notes?: string; callId?: string; conversationId?: string; agentId?: string };
+
+/**
+ * Passes a caller's request to move an appointment to a new time to the team,
+ * when the agent can't move it on this call. It matches the appointment like
+ * a cancellation request does, and keeps the time the caller wants, so an
+ * operator can approve it in one click. Nothing is moved until then.
+ */
+export async function requestRescheduleForCaller(
+  context: DomainContext,
+  input: AppointmentRequestInput & { newStartsAt: string },
+) {
+  return await passAppointmentRequestToTeam(context, input, "reschedule");
+}
+
+async function passAppointmentRequestToTeam(
+  context: DomainContext,
+  input: AppointmentRequestInput & { newStartsAt?: string },
+  kind: "cancellation" | "reschedule",
 ) {
   const callerName = input.callerName.trim();
   const serviceName = input.serviceName?.trim();
@@ -317,8 +340,12 @@ export async function requestCancellationForCaller(
   const matches = candidates.filter((row) => personNamesMatch(row.contactName ?? undefined, callerName) && (!serviceName || serviceNamesMatch({ name: row.serviceName, slug: row.serviceSlug, localizedNames: row.localizedNames }, serviceName)));
   const appointmentId = matches.length === 1 ? matches[0]!.id : undefined;
   const time = when?.isValid ? when.toFormat(hasTime ? "cccc, LLLL d 'at' h:mm a" : "cccc, LLLL d") : described;
+  const wanted = kind === "reschedule" ? input.newStartsAt?.trim() : undefined;
+  const wantedTime = wanted ? DateTime.fromISO(wanted, { zone: input.timezone }) : undefined;
+  const newTime = wantedTime?.isValid ? wantedTime.toFormat(wanted!.includes("T") ? "cccc, LLLL d 'at' h:mm a" : "cccc, LLLL d") : wanted;
   const message = [
-    `Cancellation request: ${[serviceName, time].filter(Boolean).join(", ") || "appointment"}`,
+    `${kind === "reschedule" ? "Reschedule" : "Cancellation"} request: ${[serviceName, time].filter(Boolean).join(", ") || "appointment"}`,
+    newTime ? `New time: ${newTime}` : "",
     input.notes?.trim() ? `Notes: ${input.notes.trim()}` : "",
   ].filter(Boolean).join("\n");
   return await takeMessageForStaff(context, {
@@ -331,10 +358,11 @@ export async function requestCancellationForCaller(
     ...(input.conversationId ? { conversationId: input.conversationId } : {}),
     ...(input.agentId ? { agentId: input.agentId } : {}),
     request: {
-      request: CANCELLATION_REQUEST,
+      request: kind === "reschedule" ? RESCHEDULE_REQUEST : CANCELLATION_REQUEST,
       ...(appointmentId ? { appointmentId } : {}),
       ...(serviceName ? { requestedService: serviceName } : {}),
       ...(described ? { requestedStartsAt: described } : {}),
+      ...(wanted ? { requestedNewStartsAt: wanted } : {}),
       ...(input.notes?.trim() ? { notes: input.notes.trim() } : {}),
     },
   });

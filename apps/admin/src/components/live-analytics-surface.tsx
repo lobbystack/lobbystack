@@ -42,6 +42,30 @@ const presets: Array<Exclude<Preset, "custom">> = ["today", "yesterday", "thisWe
 const OUTCOME_ICONS: Record<string, LucideIcon> = { completed: CircleCheck, transferred: PhoneForwarded, live: PhoneCall, missed: PhoneMissed };
 const granularityTranslation: Record<Granularity, string> = { hour: "hourly", day: "daily", week: "weekly", month: "monthly", year: "yearly" };
 
+const DEFAULT_PRESET: Preset = "last30";
+const DEFAULT_GRANULARITY: Granularity = "week";
+
+function formatDay(value: Date): string {
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+}
+
+function parseDay(value: string | null): Date | null {
+  const match = value ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(value) : null;
+  if (!match) return null;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return formatDay(date) === value ? date : null;
+}
+
+/** Reads the view from the query string; anything missing or invalid falls back to the defaults. */
+function viewFromUrl(): { customRange: { from: Date; to: Date } | null; granularity: Granularity; preset: Preset } {
+  const parameters = typeof window === "undefined" ? new URLSearchParams() : new URLSearchParams(window.location.search);
+  const granularity = granularities.find((option) => option === parameters.get("interval")) ?? DEFAULT_GRANULARITY;
+  const from = parseDay(parameters.get("from"));
+  const to = parseDay(parameters.get("to"));
+  if (from && to && from <= to) return { customRange: { from, to }, granularity, preset: "custom" };
+  return { customRange: null, granularity, preset: presets.find((option) => option === parameters.get("range")) ?? DEFAULT_PRESET };
+}
+
 function startOfDay(value: Date): Date { return new Date(value.getFullYear(), value.getMonth(), value.getDate()); }
 
 function presetRange(preset: Exclude<Preset, "custom">, businessCreatedAt?: string): { from: Date; to: Date } {
@@ -75,10 +99,31 @@ function percentDelta(current: number, previous: number, t: (...args: any[]) => 
 export function LiveAnalyticsSurface() {
   const { i18n, t } = useTranslation("dashboard");
   const queryClient = useQueryClient();
-  const [preset, setPreset] = useState<Preset>("last30");
-  const [granularity, setGranularity] = useState<Granularity>("week");
+  const [preset, setPreset] = useState<Preset>(DEFAULT_PRESET);
+  const [granularity, setGranularity] = useState<Granularity>(DEFAULT_GRANULARITY);
   const [customRange, setCustomRange] = useState<{ from: Date; to: Date } | null>(null);
+  // The server can't see the query string, so the view is read after mount to keep hydration matching.
+  const [viewRead, setViewRead] = useState(false);
+  useEffect(() => {
+    const view = viewFromUrl();
+    setPreset(view.preset);
+    setGranularity(view.granularity);
+    setCustomRange(view.customRange);
+    setViewRead(true);
+  }, []);
   const { businesses, business } = useActiveBusiness();
+  // Keeps the URL in step with the controls, leaving out whatever matches the defaults.
+  useEffect(() => {
+    if (!viewRead) return;
+    const url = new URL(window.location.href);
+    for (const key of ["range", "interval", "from", "to"]) url.searchParams.delete(key);
+    if (preset === "custom" && customRange) {
+      url.searchParams.set("from", formatDay(customRange.from));
+      url.searchParams.set("to", formatDay(customRange.to));
+    } else if (preset !== DEFAULT_PRESET && preset !== "custom") url.searchParams.set("range", preset);
+    if (granularity !== DEFAULT_GRANULARITY) url.searchParams.set("interval", granularity);
+    if (url.href !== window.location.href) window.history.replaceState(window.history.state, "", url);
+  }, [customRange, granularity, preset, viewRead]);
   const range = useMemo(() => preset === "custom" && customRange ? customRange : presetRange(preset === "custom" ? "last30" : preset, business?.createdAt), [business?.createdAt, customRange, preset]);
   // The API caps hourly views at 20 days, daily at a year and weekly at 3493 days, so longer ranges fall back to a coarser view.
   // The request adds the last picked day to this span, and the extra half day absorbs a DST hour.
@@ -95,7 +140,7 @@ export function LiveAnalyticsSurface() {
       const parameters = new URLSearchParams({ businessId: business!.businessId, from: from.toISOString(), to: to.toISOString(), granularity: effectiveGranularity });
       return requestJson<AnalyticsViewModel>(`/api/analytics?${parameters.toString()}`);
     },
-    enabled: Boolean(business?.businessId),
+    enabled: Boolean(business?.businessId) && viewRead,
     // Keep the previous range on screen, dimmed, while a new range or granularity loads.
     placeholderData: keepPreviousForBusiness<AnalyticsViewModel>(business?.businessId),
   });
@@ -106,7 +151,7 @@ export function LiveAnalyticsSurface() {
   }, [business?.businessId, queryClient]);
 
   const data = analytics.data;
-  const loading = businesses.isLoading || analytics.isLoading;
+  const loading = businesses.isLoading || !viewRead || analytics.isLoading;
   const pointFormat = new Intl.DateTimeFormat(intlLocale(i18n.language), effectiveGranularity === "year" ? { year: "numeric", timeZone: "UTC" } : effectiveGranularity === "month" ? { month: "short", ...(longRange ? { year: "2-digit" as const } : {}), timeZone: "UTC" } : effectiveGranularity === "hour" ? { hour: "numeric", timeZone: "UTC" } : { day: "2-digit", month: "short", ...(longRange ? { year: "2-digit" as const } : {}), timeZone: "UTC" });
   const series = data?.series ?? [];
   const chartData: AnalyticsChartPoint[] = series.map((point) => ({

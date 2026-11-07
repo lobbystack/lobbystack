@@ -246,7 +246,7 @@
     "spendingCap": {
       "title": "Monthly spending cap",
       "placeholder": "25.00",
-      "amountLabel": "Overage cap (USD)",
+      "amountLabel": "Overage cap",
       "noCap": "No spending cap is set",
       "currentSpend": "Current overage spend",
       "spendOfCap": "{{spend}} of {{cap}}",
@@ -465,6 +465,7 @@
       "areaCodeLabel": "Area code",
       "areaCodePlaceholder": "Area code",
       "search": "Search",
+      "searching": "Searching...",
       "phoneNumberHeader": "Phone number",
       "select": "Select",
       "claiming": "Connecting your new number...",

@@ -135,7 +135,7 @@ export function StaffFirstSection({ businessId, block, canManage, defaultLocale,
                 <ItemTitle>{t("agent:staffFirst.number.label")}</ItemTitle>
                 <ItemDescription>{t("agent:staffFirst.number.hint")}</ItemDescription>
                 <div className="flex w-full min-w-0 pt-2 sm:w-fit">
-                  <PhoneCountrySelect ariaLabel={t("agent:fields.transferNumber.country")} className="w-20 rounded-r-none px-4 font-medium text-muted-foreground" countries={countries} disabled={!canManage} onChange={(next) => { setCountry(next as Country); setNumber(""); setRawNumber(""); setStatus(null); }} value={country} />
+                  <PhoneCountrySelect ariaLabel={t("agent:fields.transferNumber.country")} className="rounded-r-none px-4 font-medium text-muted-foreground" countries={countries} disabled={!canManage} onChange={(next) => { setCountry(next as Country); setNumber(""); setRawNumber(""); setStatus(null); }} value={country} />
                   <PhoneInput
                     aria-label={t("agent:staffFirst.number.label")}
                     className="rounded-l-none border-l-0 sm:w-40"

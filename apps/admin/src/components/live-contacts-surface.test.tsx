@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LiveContactsSurface } from "./live-contacts-surface";
 import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
-const toast = vi.hoisted(() => ({ error: vi.fn() }));
+const toast = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
 vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
 vi.mock("sonner", () => ({ toast }));
@@ -39,6 +39,30 @@ describe("contact list parity and pagination", () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith(error));
     expect(screen.getByRole("alertdialog")).toBeTruthy();
     expect(screen.getByText("Contact 1")).toBeTruthy();
+  });
+  it("edits a contact's name and email and clears a field that is left empty", async () => {
+    const { fetchMock } = setup();
+    await userEvent.click(await screen.findByRole("button", { name: "table.actions.moreOptions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "table.actions.editContact" }));
+    const dialog = await screen.findByRole("dialog");
+    const name = within(dialog).getByLabelText("edit.name") as HTMLInputElement;
+    expect(name.value).toBe("Contact 1");
+    await userEvent.clear(name);
+    await userEvent.type(name, "  Milan Obrenovic  ");
+    await userEvent.click(within(dialog).getByRole("button", { name: "edit.save" }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url, init]) => init?.method === "PATCH" && String(url).startsWith("/api/contacts/contact-0?businessId=business") && init.body === JSON.stringify({ name: "Milan Obrenovic", email: null }))).toBe(true));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("edit.saved"));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+  it("keeps the edit dialog open and sends nothing when the email is not valid", async () => {
+    const { fetchMock } = setup();
+    await userEvent.click(await screen.findByRole("button", { name: "table.actions.moreOptions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "table.actions.editContact" }));
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.type(within(dialog).getByLabelText("edit.email"), "not-an-email");
+    await userEvent.click(within(dialog).getByRole("button", { name: "edit.save" }));
+    expect(await within(dialog).findByText("edit.invalidEmail")).toBeTruthy();
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PATCH")).toBe(false);
   });
   it("renders the original trailing actions layout", async () => {
     const { container } = setup();

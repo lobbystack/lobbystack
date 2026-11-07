@@ -10,6 +10,7 @@ import {
   Phone,
   XCircle,
 } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { CallRecordingPlayer } from "@/components/audio/call-recording-player";
@@ -25,7 +26,9 @@ import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useActiveBusiness } from "@/hooks/use-active-business";
-import { cancellationRequestDetails, parseFollowUpTaskBody, type RequestedCancellation } from "@/lib/follow-up-task";
+import { CancelAppointmentButton } from "@/components/cancel-appointment-button";
+import { RescheduleAppointmentButton } from "@/components/reschedule-appointment-button";
+import { cancellationRequestDetails, isAppointmentRequest, parseFollowUpTaskBody, RESCHEDULE_REQUEST, type RequestedCancellation } from "@/lib/follow-up-task";
 import { formatDuration } from "@/lib/duration";
 import { requestJson } from "@/lib/request-json";
 import { getChannelLabel, getContactDisplayName, hasDisplayablePhone, normalizeChannel } from "@/lib/contact-display";
@@ -54,8 +57,17 @@ type Detail = {
   transcript: Array<{ id: string; sequence: number; speaker: string; text: string; confidence: number | null; final: boolean; createdAt: string }>;
   recording: { state: "available" | "pending" | "expired" | "missing"; objectId?: string; contentType?: string };
   appointments: Array<{ id: string; startsAt: string; endsAt: string; timezone: string; status: string; serviceName: string; staffName: string }>;
-  followUpTasks: Array<{ id: string; title: string; body: string; status: string; request?: string | null; requested?: RequestedCancellation | null; createdAt: string; updatedAt: string }>;
+  followUpTasks: Array<{ id: string; title: string; body: string; status: string; request?: string | null; requested?: RequestedCancellation | null; appointment?: { id: string; startsAt: string; timezone: string; status: string; serviceName: string | null; contactName: string | null } | null; createdAt: string; updatedAt: string }>;
 };
+
+const CALL_TABS = ["transcript", "recording", "details"] as const;
+type CallTab = (typeof CALL_TABS)[number];
+
+function tabFromUrl(): CallTab {
+  if (typeof window === "undefined") return "transcript";
+  const tab = new URLSearchParams(window.location.search).get("tab");
+  return CALL_TABS.find((candidate) => candidate === tab) ?? "transcript";
+}
 
 function formatDate(value: string, locale: string): string {
   return formatDateTime(value, locale, { dateStyle: "medium", timeStyle: "short" });
@@ -94,6 +106,14 @@ export function LiveCallDetailSurface({ callId }: { callId: string }) {
   const telemetry = useTelemetry();
   const queryClient = useQueryClient();
   const { copiedField, copy } = useCopiedField();
+  const [tab, setTab] = useState<CallTab>(tabFromUrl);
+  const selectTab = (value: unknown) => {
+    const next = CALL_TABS.find((candidate) => candidate === value) ?? "transcript";
+    setTab(next);
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", next);
+    window.history.replaceState(window.history.state, "", url);
+  };
   const { businesses, business } = useActiveBusiness();
   const detail = useQuery({
     queryKey: ["call", business?.businessId, callId],
@@ -156,7 +176,7 @@ export function LiveCallDetailSurface({ callId }: { callId: string }) {
         <Surface className="px-4"><CallEventTimeline events={detail.data.timeline} locale={i18n.language} /></Surface>
       </SectionBlock>
 
-      <Tabs defaultValue="transcript">
+      <Tabs onValueChange={selectTab} value={tab}>
         <TabsList variant="pills">
           <TabsTrigger value="transcript"><FileText className="size-4" />{t("detail.tabs.transcript")}</TabsTrigger>
           <TabsTrigger value="recording"><Headphones className="size-4" />{t("detail.tabs.recording")}</TabsTrigger>
@@ -204,7 +224,7 @@ function RecordingTab({ detail, src }: { detail: Detail; src: string | null }) {
   if (!src) {
     return <div className="flex flex-col items-center gap-2 py-16 text-center"><Headphones className="size-8 text-muted-foreground/40" /><p className="type-empty-description">{detail.recording.state === "pending" ? t("detail.recording.pending") : t("detail.recording.unavailable")}</p></div>;
   }
-    return <div className="py-4"><Card className="ph-no-capture" size="sm"><CallRecordingPlayer className="px-4 py-0" downloadLabel={t("actions.download")} initialDurationSeconds={detail.call.providerDurationSeconds ?? 0} pauseLabel={t("actions.pause")} playLabel={t("actions.play")} src={src} /></Card></div>;
+    return <div className="py-4"><Card className="ph-no-capture" size="sm"><CallRecordingPlayer className="px-4 py-0" downloadLabel={t("actions.download")} initialDurationSeconds={detail.call.providerDurationSeconds ?? 0} pauseLabel={t("actions.pause")} playLabel={t("actions.play")} seekLabel={t("detail.recording.seek")} src={src} waveform /></Card></div>;
 }
 
 // The stored title and body are English text the agent tool wrote, so the labels are rebuilt here in the dashboard language.
@@ -216,11 +236,14 @@ function FollowUpDetails({ followUp }: { followUp: Detail["followUpTasks"][numbe
   const title = caller ? t("followUp.fromCaller", { name: caller.toLowerCase() === "unknown caller" ? t("followUp.unknownCaller") : caller }) : followUp.title;
   const urgency = details.urgency && URGENCY_VALUES.includes(details.urgency.toLowerCase()) ? t(`followUp.urgency.${details.urgency.toLowerCase()}`) : details.urgency;
   const callbackWindow = details.callbackWindow?.toLowerCase() === "not specified" ? t("followUp.notSpecified") : details.callbackWindow;
-  if (followUp.request) {
+  if (isAppointmentRequest(followUp.request)) {
     const request = cancellationRequestDetails(followUp, i18n.language);
+    const reschedule = followUp.request === RESCHEDULE_REQUEST;
+    const name = caller && caller.toLowerCase() === "unknown caller" ? t("followUp.unknownCaller") : caller;
     return <>
-      <p className="type-item-title">{caller ? t("followUp.cancellationFromCaller", { name: caller.toLowerCase() === "unknown caller" ? t("followUp.unknownCaller") : caller }) : t("followUp.cancellationRequest")}</p>
+      <p className="type-item-title">{name ? t(reschedule ? "followUp.rescheduleFromCaller" : "followUp.cancellationFromCaller", { name }) : t(reschedule ? "followUp.rescheduleRequest" : "followUp.cancellationRequest")}</p>
       {request.requested ? <p className="type-body-muted">{t("followUp.requested", { details: request.requested })}</p> : null}
+      {reschedule && request.newTime ? <p className="type-body-muted">{t("followUp.newTime", { time: request.newTime })}</p> : null}
       {request.notes ? <p className="type-body-muted">{t("followUp.notes", { notes: request.notes })}</p> : null}
     </>;
   }
@@ -232,6 +255,15 @@ function FollowUpDetails({ followUp }: { followUp: Detail["followUpTasks"][numbe
   </>;
 }
 
+/** Approves a caller's request to cancel or move the appointment it matched. Nothing shows for a request that matched none, or whose appointment is already cancelled. */
+function ApproveFollowUpRequest({ followUp }: { followUp: Detail["followUpTasks"][number] }) {
+  const { appointment } = followUp;
+  if (!appointment || appointment.status === "canceled" || !isAppointmentRequest(followUp.request)) return null;
+  const linked = { ...appointment, contactName: appointment.contactName ?? "" };
+  if (followUp.request === RESCHEDULE_REQUEST) return followUp.requested?.newStartsAt ? <RescheduleAppointmentButton appointment={linked} newStartsAt={followUp.requested.newStartsAt} size="default" /> : null;
+  return <CancelAppointmentButton appointment={linked} approve size="default" variant="destructive" />;
+}
+
 function DetailsTab({ detail, marking, onCompleteFollowUp }: { detail: Detail; marking: string | undefined; onCompleteFollowUp: (inboxItemId: string) => void }) {
   const { t } = useTranslation("calls");
   // Grouped like Home: the call's messages are one follow-up, the newest
@@ -241,7 +273,7 @@ function DetailsTab({ detail, marking, onCompleteFollowUp }: { detail: Detail; m
   return (
     <div className="py-4">
       <Surface className="flex flex-col">
-        <DetailSection title={t("detail.details.followUpTitle", { count: Math.max(1, followUps.length) })}>{followUps.length ? <div className="flex flex-col gap-6">{followUps.map((followUp) => <div className="flex flex-col gap-3" key={followUp.id}><FollowUpDetails followUp={followUp} /><div className="flex items-center gap-2 pt-1"><Button disabled={marking !== undefined} onClick={() => onCompleteFollowUp(followUp.id)} size="sm" variant={followUp.request ? "success" : "outline"}>{marking === followUp.id ? t("detail.details.markingDone") : t("detail.details.markDone")}</Button></div></div>)}</div> : <p className="type-body-muted">{t("detail.details.noFollowUp")}</p>}</DetailSection>
+        <DetailSection title={t("detail.details.followUpTitle", { count: Math.max(1, followUps.length) })}>{followUps.length ? <div className="flex flex-col gap-6">{followUps.map((followUp) => <div className="flex flex-col gap-3" key={followUp.id}><FollowUpDetails followUp={followUp} /><div className="flex items-center gap-2 pt-1"><ApproveFollowUpRequest followUp={followUp} /><Button disabled={marking !== undefined} onClick={() => onCompleteFollowUp(followUp.id)} size="sm" variant="outline">{marking === followUp.id ? t("detail.details.markingDone") : t("detail.details.markDone")}</Button></div></div>)}</div> : <p className="type-body-muted">{t("detail.details.noFollowUp")}</p>}</DetailSection>
         <DetailSection className="border-t border-border" title={t("detail.details.callInfoTitle")}>
           <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-6 gap-y-3">
             <dt className="type-meta">{t("detail.details.twilioCallSid")}</dt><dd className="type-technical-value truncate">{detail.call.providerCallId}</dd>

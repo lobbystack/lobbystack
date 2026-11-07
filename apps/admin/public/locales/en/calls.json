@@ -68,7 +68,10 @@
     "cancellationRequest": "Cancellation request",
     "cancellationFromCaller": "Cancellation request from {{name}}",
     "requested": "Requested: {{details}}",
-    "notes": "Notes: {{notes}}"
+    "notes": "Notes: {{notes}}",
+    "rescheduleRequest": "Reschedule request",
+    "rescheduleFromCaller": "Reschedule request from {{name}}",
+    "newTime": "New time: {{time}}"
   },
   "pagination": {
     "rowsPerPage": "Rows per page",
@@ -162,7 +165,8 @@
     },
     "recording": {
       "unavailable": "No recording is available for this call.",
-      "pending": "The recording is still being processed."
+      "pending": "The recording is still being processed.",
+      "seek": "Seek in recording"
     },
     "blocking": {
       "badge": "Blocked",

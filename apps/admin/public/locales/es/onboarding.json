@@ -80,6 +80,7 @@
     "submitting": "Iniciando importación...",
     "skip": "No tengo sitio web",
     "skipping": "Omitiendo...",
+    "skippingImport": "Omitiendo importación...",
     "submitFailed": "No pudimos iniciar la importación del sitio web en este momento. Inténtelo de nuevo.",
     "invalidUrl": "Ingrese la dirección de su sitio web, por ejemplo suempresa.com.",
     "skipFailed": "No pudimos omitir este paso en este momento. Inténtelo de nuevo."
@@ -185,6 +186,7 @@
     "capabilities": "Funciones",
     "voiceSms": "Voz · SMS",
     "search": "Buscar",
+    "searching": "Buscando...",
     "tableHeaders": {
       "phoneNumber": "Número de teléfono"
     },

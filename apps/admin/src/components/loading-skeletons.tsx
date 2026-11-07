@@ -9,11 +9,12 @@ import { Surface, surfaceClassName } from "@/components/ui/surface";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-export function MetricCardGridSkeleton({ count = 4 }: { count?: number }) {
+/** `titles` holds each card's real title, hidden so its placeholder is as wide as the text, or null for a default width. */
+export function MetricCardGridSkeleton({ count = 4, titles }: { count?: number; titles?: ReadonlyArray<string | null> }) {
   const columnClass = count === 3 ? "md:grid-cols-3" : "md:grid-cols-4";
 
   return (
-    <Surface className={`grid sm:grid-cols-2 ${columnClass}`}>
+    <Surface aria-busy="true" className={`grid sm:grid-cols-2 ${columnClass}`}>
       {Array.from({ length: count }).map((_, index) => (
         <div
           className="border-b p-5 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0 md:border-b-0 md:border-r md:last:border-r-0"
@@ -21,7 +22,7 @@ export function MetricCardGridSkeleton({ count = 4 }: { count?: number }) {
         >
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
-              <Skeleton className="h-5 w-28" />
+              {titles?.[index] ? <HiddenTextSkeleton className="type-card-title">{titles[index]!}</HiddenTextSkeleton> : <Skeleton className="h-5 w-28" />}
               <Skeleton className="h-10 w-20" />
             </div>
             <Skeleton className="h-4 w-32" />
@@ -660,6 +661,78 @@ export function AccountSkeleton({ label }: { label: string }) {
         <AccountSettingSkeleton />
       </div>
       <PasskeysCardSkeleton />
+    </div>
+  );
+}
+
+/** Stands in for the phone number chooser: the country and area code row, and the list of numbers. */
+export function PhoneNumberChooserSkeleton({ labels, rows = 4 }: { labels: { country: string; areaCode: string; search: string; phoneNumber: string }; rows?: number }) {
+  return (
+    <div aria-busy="true" className="flex flex-col gap-6">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[140px_1fr_160px_auto] sm:items-end">
+        <div className="flex flex-col gap-2">
+          <span className="text-sm font-medium">{labels.country}</span>
+          <Skeleton aria-hidden="true" className="h-9 w-20" />
+        </div>
+        <div aria-hidden="true" className="hidden sm:block" />
+        <div className="flex flex-col gap-2">
+          <span className="text-sm font-medium">{labels.areaCode}</span>
+          <Skeleton aria-hidden="true" className="h-9 w-full" />
+        </div>
+        <Skeleton aria-hidden="true" className="h-9 w-full rounded-full sm:w-fit"><span className="invisible px-3 text-sm font-medium">{labels.search}</span></Skeleton>
+      </div>
+      <Surface className="flex h-96 flex-col">
+        <div className="flex h-14 shrink-0 items-center border-b border-border px-4 text-sm font-medium text-muted-foreground">
+          <span>{labels.phoneNumber}</span>
+        </div>
+        <div className="flex flex-col gap-3 px-4 py-4">
+          {Array.from({ length: rows }).map((_, index) => <Skeleton aria-hidden="true" className="h-12 w-full rounded-lg" key={index} />)}
+        </div>
+      </Surface>
+    </div>
+  );
+}
+
+/** Stands in for the mobile number form on the Verify phone step. */
+export function VerifyPhoneFormSkeleton({ labels }: { labels: { mobileNumber: string; hint: string; submit: string } }) {
+  return (
+    <div aria-busy="true" className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <span className="text-sm font-medium">{labels.mobileNumber}</span>
+        <div className="flex min-w-0">
+          <Skeleton aria-hidden="true" className="h-11 w-24 rounded-r-none" />
+          <Skeleton aria-hidden="true" className="h-11 min-w-0 flex-1 rounded-l-none" />
+        </div>
+        <HiddenTextSkeleton className="text-sm">{labels.hint}</HiddenTextSkeleton>
+      </div>
+      <Skeleton aria-hidden="true" className="mt-2 h-11 w-full rounded-full"><span className="invisible">{labels.submit}</span></Skeleton>
+    </div>
+  );
+}
+
+/** Stands in for the test call and chat beside the Meet your agent form. */
+export function TestPanelSkeleton() {
+  return (
+    <div aria-busy="true" className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4">
+        <Skeleton aria-hidden="true" className="size-40 rounded-full" />
+        <Skeleton aria-hidden="true" className="h-9 w-28 rounded-full" />
+      </div>
+      <Skeleton aria-hidden="true" className="h-11 w-full shrink-0 rounded-4xl" />
+    </div>
+  );
+}
+
+/** Stands in for the agent's name, voice, greeting and language on Meet your agent. */
+export function MeetFormSkeleton({ labels }: { labels: { name: string; voice: string; greeting: string; language: string } }) {
+  return (
+    <div aria-busy="true" className="flex flex-col gap-4">
+      {([["name", "h-11 rounded-4xl"], ["voice", "h-11 rounded-4xl"], ["greeting", "h-28 rounded-xl"], ["language", "h-11 rounded-4xl"]] as const).map(([key, size]) => (
+        <div className="flex flex-col gap-2" key={key}>
+          <span className="text-sm leading-snug font-medium">{labels[key]}</span>
+          <Skeleton aria-hidden="true" className={`w-full ${size}`} />
+        </div>
+      ))}
     </div>
   );
 }

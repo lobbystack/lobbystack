@@ -13,7 +13,7 @@ import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useSetupAction } from "@/lib/use-setup-action";
 import { formatDateTime } from "@/lib/locale";
-import { formatPriceTyping, parsePriceInput, priceInputValue } from "@/lib/price-input";
+import { caretBefore, formatPriceTyping, parsePriceInput, priceInputValue } from "@/lib/price-input";
 import { requestJson } from "@/lib/request-json";
 import { DataTablePagination, paginationFeatures } from "./data-table/pagination";
 import { DataTablePaginationSkeleton, HeaderButtonSkeleton, HeaderSearchSkeleton, ServiceRowsSkeleton, ServicesPageSkeleton } from "./loading-skeletons";
@@ -59,13 +59,6 @@ export function readPrice(values: ServiceValues, currency: string, locale: strin
 /** A discount as the locale writes it, "12,5" in Serbian; grouping off for the editor's input. */
 function formatPercent(value: number, locale: string, useGrouping = true): string {
   return new Intl.NumberFormat(locale, { maximumFractionDigits: 2, useGrouping }).format(value);
-}
-
-/** Where the caret goes after reformatting: before the same number of digits it had after it. */
-function caretBefore(text: string, digitsAfter: number): number {
-  let position = text.length;
-  for (let seen = 0; position > 0 && seen < digitsAfter; position -= 1) if (/\d/u.test(text[position - 1]!)) seen += 1;
-  return position;
 }
 
 function serviceSlug(name: string): string {

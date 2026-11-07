@@ -44,19 +44,29 @@ export function parseFollowUpTaskBody(body: string): {
 }
 
 /** Splits a cancellation request's stored English body into the requested service and time, and the caller's notes. */
-export function parseCancellationBody(body: string): { requested?: string; notes?: string } {
+export function parseCancellationBody(body: string): { requested?: string; newTime?: string; notes?: string } {
   let requested: string | undefined;
+  let newTime: string | undefined;
   let notes: string | undefined;
   for (const line of body.split("\n").map((entry) => entry.trim())) {
     if (line.startsWith("Cancellation request:")) requested = line.replace("Cancellation request:", "").trim();
+    else if (line.startsWith("Reschedule request:")) requested = line.replace("Reschedule request:", "").trim();
+    else if (line.startsWith("New time:")) newTime = line.replace("New time:", "").trim();
     else if (line.startsWith("Notes:")) notes = line.replace("Notes:", "").trim();
   }
   // The action writes "appointment" when the caller named no service or time.
-  return { ...(requested && requested !== "appointment" ? { requested } : {}), ...(notes ? { notes } : {}) };
+  return { ...(requested && requested !== "appointment" ? { requested } : {}), ...(newTime ? { newTime } : {}), ...(notes ? { notes } : {}) };
+}
+
+/** The follow-up kinds an operator can approve against an appointment, as the domain marks them. */
+export const CANCELLATION_REQUEST = "appointment_cancellation";
+export const RESCHEDULE_REQUEST = "appointment_reschedule";
+export function isAppointmentRequest(request: string | null | undefined): boolean {
+  return request === CANCELLATION_REQUEST || request === RESCHEDULE_REQUEST;
 }
 
 /** What the caller asked to cancel, as the domain saves it. */
-export type RequestedCancellation = { service?: string; startsAt?: string; notes?: string };
+export type RequestedCancellation = { service?: string; startsAt?: string; newStartsAt?: string; notes?: string };
 
 /** A requested date or date and time is the business's wall-clock time, so it is shown as written, in the viewer's language. */
 export function formatRequestedStart(value: string, locale: string): string {
@@ -71,11 +81,11 @@ export function formatRequestedStart(value: string, locale: string): string {
  * The service and time a cancellation request asked for, and the caller's notes. Requests saved with details read
  * them from there and show in `locale`; older ones fall back to the English body.
  */
-export function cancellationRequestDetails(item: { body: string; requested?: RequestedCancellation | null | undefined }, locale: string): { requested?: string; notes?: string } {
+export function cancellationRequestDetails(item: { body: string; requested?: RequestedCancellation | null | undefined }, locale: string): { requested?: string; newTime?: string; notes?: string } {
   const { requested } = item;
   if (!requested) return parseCancellationBody(item.body);
   const details = [requested.service, requested.startsAt ? formatRequestedStart(requested.startsAt, locale) : undefined].filter(Boolean).join(", ");
-  return { ...(details ? { requested: details } : {}), ...(requested.notes ? { notes: requested.notes } : {}) };
+  return { ...(details ? { requested: details } : {}), ...(requested.newStartsAt ? { newTime: formatRequestedStart(requested.newStartsAt, locale) } : {}), ...(requested.notes ? { notes: requested.notes } : {}) };
 }
 
 export function normalizeFollowUpTitleText(value: string): string {

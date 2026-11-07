@@ -56,3 +56,10 @@ export function priceInputValue(priceMinor: number | null, currency: string, loc
   const unit = 10 ** currencyFractionDigits(currency);
   return joinPrice(String(Math.floor(priceMinor / unit)), priceMinor % unit ? String(priceMinor % unit).padStart(String(unit).length - 1, "0") : undefined, locale);
 }
+
+/** Where the caret goes after reformatting: before the same number of digits it had after it. */
+export function caretBefore(text: string, digitsAfter: number): number {
+  let position = text.length;
+  for (let seen = 0; position > 0 && seen < digitsAfter; position -= 1) if (/\d/u.test(text[position - 1]!)) seen += 1;
+  return position;
+}

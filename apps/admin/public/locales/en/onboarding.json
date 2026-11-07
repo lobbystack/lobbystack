@@ -80,6 +80,7 @@
     "submitting": "Starting import...",
     "skip": "I don't have a website",
     "skipping": "Skipping...",
+    "skippingImport": "Skipping import...",
     "submitFailed": "We couldn't start the website import right now. Please try again.",
     "invalidUrl": "Enter your website address, like yourcompany.com.",
     "skipFailed": "We couldn't skip this step right now. Please try again."
@@ -184,6 +185,7 @@
     "capabilities": "Capabilities",
     "voiceSms": "Voice · SMS",
     "search": "Search",
+    "searching": "Searching...",
     "tableHeaders": {
       "phoneNumber": "Phone number"
     },

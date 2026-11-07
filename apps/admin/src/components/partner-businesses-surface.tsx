@@ -364,7 +364,7 @@ export function PartnerBusinessesSurface() {
                   <span className="min-w-0 flex-1 truncate text-left"><ComboboxValue /></span>
                 </ComboboxTrigger>
                 <ComboboxContent className="min-w-(--anchor-width)">
-                  <ComboboxInput className="relative z-10" placeholder={t("businesses.create.timezoneSearch")} showTrigger={false} />
+                  <ComboboxInput className="relative z-10" clearSearchLabel={t("common:accessibility.clearSearch")} placeholder={t("businesses.create.timezoneSearch")} showTrigger={false} />
                   <ComboboxEmpty>{t("businesses.create.timezoneNoResults")}</ComboboxEmpty>
                   <ComboboxList>
                     {(group: { value: string; label: string; items: TimeZoneOption[] }) => (

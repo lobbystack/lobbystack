@@ -246,7 +246,7 @@
     "spendingCap": {
       "title": "Plafond mensuel de dépenses",
       "placeholder": "25,00",
-      "amountLabel": "Plafond de dépassement (USD)",
+      "amountLabel": "Plafond de dépassement",
       "noCap": "Aucun plafond de dépenses défini",
       "currentSpend": "Dépenses de dépassement actuelles",
       "spendOfCap": "{{spend}} sur {{cap}}",
@@ -472,6 +472,7 @@
       "areaCodeLabel": "Indicatif régional",
       "areaCodePlaceholder": "Indicatif",
       "search": "Rechercher",
+      "searching": "Recherche...",
       "phoneNumberHeader": "Numéro de téléphone",
       "select": "Sélectionner",
       "claiming": "Connexion de votre nouveau numéro...",

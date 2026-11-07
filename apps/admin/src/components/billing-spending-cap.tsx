@@ -2,15 +2,19 @@
 
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
-import { formatCapInput, parseCapInputToCents } from "@/lib/billing-cap";
+import { caretBefore, formatPriceTyping, parsePriceInput, priceInputValue } from "@/lib/price-input";
 import { requestJson } from "@/lib/request-json";
 import { SectionBlock } from "./section-block";
 import { Surface } from "./ui/surface";
 import { Button } from "./ui/button";
-import { Input } from "./ui/input";
+import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "./ui/input-group";
 import { Label } from "./ui/label";
 import { intlLocale } from "@/lib/locale";
+
+/** What LobbyStack bills overage in. */
+const CAP_CURRENCY = "USD";
 
 type SpendingCapStatus = { plan: string; overageSpendingCapCents: number | null; overageSpendCents: number; overageSpendCentsComplete: boolean; overageSpendingCapReached: boolean; hasBillingManagementAccess: boolean };
 /** Formats cents as currency, dropping the decimals for whole amounts. */
@@ -35,12 +39,12 @@ export function SpendingCapSection({
     await queryClient.invalidateQueries({ queryKey: ["billing", input.businessId] });
   }
   const [capInput, setCapInput] = useState(() =>
-    formatCapInput(status.overageSpendingCapCents, locale),
+    priceInputValue(status.overageSpendingCapCents, CAP_CURRENCY, locale),
   );
   const [saving, setSaving] = useState<"save" | "remove" | null>(null);
 
   useEffect(() => {
-    setCapInput(formatCapInput(status.overageSpendingCapCents, locale));
+    setCapInput(priceInputValue(status.overageSpendingCapCents, CAP_CURRENCY, locale));
   }, [locale, status.overageSpendingCapCents]);
 
   if (status.plan !== "starter" && status.plan !== "pro") return null;
@@ -55,8 +59,8 @@ export function SpendingCapSection({
         : Math.min(100, (spendCents / capCents) * 100);
 
   async function saveCap() {
-    const capCents = parseCapInputToCents(capInput, locale);
-    if (capCents === null) {
+    const capCents = parsePriceInput(capInput, CAP_CURRENCY, locale);
+    if (capCents === null || capCents === undefined) {
       toast.error(t("billing.spendingCap.invalidAmount"));
       return;
     }
@@ -137,20 +141,31 @@ export function SpendingCapSection({
                 <Label htmlFor="overage-spending-cap">
                   {t("billing.spendingCap.amountLabel")}
                 </Label>
-                <div className="relative">
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                    $
-                  </span>
-                  <Input
+                <InputGroup>
+                  <InputGroupInput
                     id="overage-spending-cap"
                     value={capInput}
-                    onChange={(event) => setCapInput(event.target.value)}
+                    onChange={(event) => {
+                      const input = event.target;
+                      // Keep the caret before the same digits once grouping marks are added or removed.
+                      const digitsAfter = input.value.slice(input.selectionStart ?? input.value.length).replace(/\D/gu, "").length;
+                      const next = formatPriceTyping(input.value, CAP_CURRENCY, locale);
+                      setCapInput(next);
+                      requestAnimationFrame(() => { const caret = caretBefore(next, digitsAfter); input.setSelectionRange(caret, caret); });
+                    }}
                     inputMode="decimal"
+                    onKeyDown={(event) => {
+                      if (event.key !== "Enter" || saving !== null || capInput.trim().length === 0) return;
+                      event.preventDefault();
+                      void saveCap();
+                    }}
                     placeholder={t("billing.spendingCap.placeholder")}
-                    className="pl-7"
+                    className="tabular-nums"
                     disabled={saving !== null}
+                    type="text"
                   />
-                </div>
+                  <InputGroupAddon align="inline-end"><InputGroupText>{CAP_CURRENCY}</InputGroupText></InputGroupAddon>
+                </InputGroup>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -159,9 +174,10 @@ export function SpendingCapSection({
                   disabled={saving !== null || capInput.trim().length === 0}
                 >
                   {saving === "save"
-                    ? capCents !== null
-                      ? t("billing.spendingCap.updating")
-                      : t("billing.spendingCap.saving")
+                    ? <>
+                        <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+                        {capCents !== null ? t("billing.spendingCap.updating") : t("billing.spendingCap.saving")}
+                      </>
                     : capCents !== null
                       ? t("billing.spendingCap.update")
                       : t("billing.spendingCap.save")}
@@ -174,7 +190,10 @@ export function SpendingCapSection({
                     disabled={saving !== null}
                   >
                     {saving === "remove"
-                      ? t("billing.spendingCap.removing")
+                      ? <>
+                          <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+                          {t("billing.spendingCap.removing")}
+                        </>
                       : t("billing.spendingCap.remove")}
                   </Button>
                 )}

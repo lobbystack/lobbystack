@@ -18,13 +18,13 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); clients.forEach((client) => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
-type FollowUp = { id: string; title: string; body: string; status: string; request?: string | null; createdAt: string; updatedAt: string };
+type FollowUp = { id: string; title: string; body: string; status: string; request?: string | null; requested?: { newStartsAt?: string } | null; appointment?: { id: string; startsAt: string; timezone: string; status: string; serviceName: string | null; contactName: string | null } | null; createdAt: string; updatedAt: string };
 const followUp = (id: string, overrides: Partial<FollowUp> = {}): FollowUp => ({ id, title: "Call back", body: "Please call back", status: "open", createdAt: "2026-09-01T12:06:00Z", updatedAt: "2026-09-01T12:06:00Z", ...overrides });
 
-function setup(followUpTasks: FollowUp[] = [followUp("inbox-1")]) {
+function setup(followUpTasks: FollowUp[] = [followUp("inbox-1")], role?: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   clients.push(client);
-  client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true }] });
+  client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, ...(role ? { role } : {}) }] });
   const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
     if (init?.method === "PATCH") return Response.json({ completed: 1 });
     return Response.json({
@@ -74,5 +74,49 @@ describe("several follow-ups on one call", () => {
     expect(buttons).toHaveLength(3);
     await userEvent.click(buttons[2]!);
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/calls/call-1?businessId=business", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ action: "complete_follow_up", inboxItemId: "request-1" }) })));
+  });
+});
+
+describe("approving a caller's request from the call page", () => {
+  const appointment = { id: "appointment-1", startsAt: "2099-09-07T14:30:00Z", timezone: "UTC", status: "confirmed", serviceName: "Consultation", contactName: "Milan" };
+  const reschedule = (overrides: Partial<FollowUp> = {}) => followUp("reschedule", { body: "Reschedule request: Consultation", request: "appointment_reschedule", requested: { newStartsAt: "2099-09-09T10:00" }, appointment, ...overrides });
+
+  it("offers to approve a cancellation next to Mark done", async () => {
+    setup([followUp("cancel", { body: "Cancellation request: Consultation", request: "appointment_cancellation", appointment })], "scheduler");
+    await userEvent.click(await screen.findByRole("tab", { name: "detail.tabs.details" }));
+    expect(await screen.findByRole("button", { name: "appointments.cancel.approve" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "detail.details.markDone" })).toBeTruthy();
+  });
+
+  it("shows the new time and offers to approve a reschedule", async () => {
+    setup([reschedule()], "scheduler");
+    await userEvent.click(await screen.findByRole("tab", { name: "detail.tabs.details" }));
+    expect(screen.getByText("followUp.rescheduleRequest")).toBeTruthy();
+    expect(screen.getByText("followUp.newTime")).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "appointments.reschedule.approve" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "appointments.cancel.approve" })).toBeNull();
+  });
+
+  it("moves the appointment to the requested time once approved", async () => {
+    const fetchMock = setup([reschedule()], "scheduler");
+    await userEvent.click(await screen.findByRole("tab", { name: "detail.tabs.details" }));
+    await userEvent.click(await screen.findByRole("button", { name: "appointments.reschedule.approve" }));
+    await userEvent.click(await screen.findByRole("button", { name: "appointments.reschedule.confirm" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/appointments/appointment-1/reschedule?businessId=business", expect.objectContaining({ method: "POST", body: JSON.stringify({ startsAt: "2099-09-09T10:00:00.000Z" }) })));
+  });
+
+  it("offers nothing to approve without a matched appointment, with a cancelled one, without the new time, or to a viewer", async () => {
+    for (const [tasks, role] of [
+      [[reschedule({ appointment: null })], "scheduler"],
+      [[reschedule({ appointment: { ...appointment, status: "canceled" } })], "scheduler"],
+      [[reschedule({ requested: null })], "scheduler"],
+      [[reschedule()], "viewer"],
+    ] as const) {
+      cleanup();
+      setup([...tasks], role);
+      await userEvent.click(await screen.findByRole("tab", { name: "detail.tabs.details" }));
+      expect(await screen.findByRole("button", { name: "detail.details.markDone" })).toBeTruthy();
+      expect(screen.queryByRole("button", { name: "appointments.reschedule.approve" })).toBeNull();
+    }
   });
 });

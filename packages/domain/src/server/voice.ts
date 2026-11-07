@@ -1,4 +1,4 @@
-import { and, count, asc, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
+import { and, count, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 
 import { appointments, billingUsageEvents, calls, contacts, conversations, conversationSessions, defaultAgentIdOf, enqueueOutbox, inboxItems, inOrder, phoneNumbers, services, staff, storageObjects, transcripts, withBusinessTransaction, type DatabaseTransaction, type NewOutboxMessage } from "@lobbystack/db";
 import { billableVoiceSeconds, isNonBillableCallDisposition } from "@lobbystack/shared";
@@ -581,11 +581,16 @@ export async function getCallDetail(
       () => row.contactId
         ? tx.select({ id: appointments.id, startsAt: appointments.startsAt, endsAt: appointments.endsAt, timezone: appointments.timezone, status: appointments.status, serviceName: services.name, staffName: staff.name }).from(appointments).innerJoin(services, eq(appointments.serviceId, services.id)).innerJoin(staff, eq(appointments.staffId, staff.id)).where(and(eq(appointments.businessId, input.businessId), eq(appointments.contactId, row.contactId))).orderBy(asc(appointments.startsAt))
         : Promise.resolve([]),
-      () => tx.select({ id: inboxItems.id, title: visibleFollowUpTitle, body: visibleFollowUpBody, status: inboxItems.status, request: followUpRequest, requestedService, requestedStartsAt, requestedNotes, createdAt: inboxItems.createdAt, updatedAt: inboxItems.updatedAt })
+      () => tx.select({ id: inboxItems.id, title: visibleFollowUpTitle, body: visibleFollowUpBody, status: inboxItems.status, request: followUpRequest, requestedService, requestedStartsAt, requestedNewStartsAt, requestedNotes, appointmentId: sql<string | null>`${inboxItems.metadata}->>'appointmentId'`.as("appointment_id"), createdAt: inboxItems.createdAt, updatedAt: inboxItems.updatedAt })
         .from(inboxItems)
         .where(and(eq(inboxItems.businessId, input.businessId), eq(inboxItems.relatedCallId, input.callId), eq(inboxItems.kind, "voice_message")))
         .orderBy(desc(inboxItems.createdAt)),
     ]);
+    // A request links to its appointment, so the page can approve it as Home does. Compared as UUIDs: metadata is free-form JSON.
+    const linkedIds = [...new Set(followUpTasks.flatMap((task) => task.request && task.appointmentId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(task.appointmentId) ? [task.appointmentId] : []))];
+    const linked = linkedIds.length
+      ? await tx.select({ id: appointments.id, startsAt: appointments.startsAt, timezone: appointments.timezone, status: appointments.status, serviceName: services.name, contactName: contacts.name }).from(appointments).innerJoin(services, eq(services.id, appointments.serviceId)).innerJoin(contacts, eq(contacts.id, appointments.contactId)).where(and(eq(appointments.businessId, input.businessId), inArray(appointments.id, linkedIds)))
+      : [];
     const state = recordingState({ ...row, retentionUntil: row.recordingRetentionUntil });
     const timeline = buildCallEvents({ ...row, startedAt: row.startedAt.toISOString(), endedAt: row.endedAt?.toISOString() ?? null }).map((event) => ({ type: event.key, at: event.timestamp ? new Date(event.timestamp) : null, status: event.failed ? "failed" : event.reached ? "reached" : "pending" }));
     return {
@@ -614,26 +619,31 @@ export async function getCallDetail(
         ...(row.recordingRetentionUntil ? { retentionUntil: row.recordingRetentionUntil } : {}),
       },
       appointments: appointmentRows,
-      followUpTasks: followUpTasks.map(({ requestedService, requestedStartsAt, requestedNotes, ...task }) => ({ ...task, requested: requestedCancellation({ requestedService, requestedStartsAt, requestedNotes }) })),
+      followUpTasks: followUpTasks.map(({ requestedService, requestedStartsAt, requestedNewStartsAt, requestedNotes, appointmentId, ...task }) => ({ ...task, requested: requestedCancellation({ requestedService, requestedStartsAt, requestedNewStartsAt, requestedNotes }), appointment: linked.find((appointment) => appointment.id === appointmentId) ?? null })),
     };
   });
 }
 
 /** Marks a follow-up as a caller's request to cancel, linked to the appointment when one matched. */
 export const CANCELLATION_REQUEST = "appointment_cancellation";
+/** Marks a follow-up as a caller's request to move an appointment to a new time. */
+export const RESCHEDULE_REQUEST = "appointment_reschedule";
+/** The requests an operator can approve against an appointment. */
+export const APPOINTMENT_REQUESTS = [CANCELLATION_REQUEST, RESCHEDULE_REQUEST] as const;
 /**
  * `requestedService`, `requestedStartsAt` (a date, or a date and time, in the business's timezone) and `notes`
  * are what the caller said, kept apart from the English body so the dashboard can show them in its own language.
  */
-export type FollowUpRequest = { request: typeof CANCELLATION_REQUEST; appointmentId?: string; requestedService?: string; requestedStartsAt?: string; notes?: string };
+export type FollowUpRequest = { request: (typeof APPOINTMENT_REQUESTS)[number]; appointmentId?: string; requestedService?: string; requestedStartsAt?: string; requestedNewStartsAt?: string; notes?: string };
 
-/** What a cancellation request asked for, from its metadata. Null on other follow-ups and on older requests that predate it. */
-export type RequestedCancellation = { service?: string; startsAt?: string; notes?: string };
+/** What a cancellation or reschedule request asked for, from its metadata. `newStartsAt` is the time a reschedule asks for. Null on other follow-ups and on older requests that predate it. */
+export type RequestedCancellation = { service?: string; startsAt?: string; newStartsAt?: string; notes?: string };
 const requestedService = visibleFollowUpMetadata("requestedService").as("requested_service");
 const requestedStartsAt = visibleFollowUpMetadata("requestedStartsAt").as("requested_starts_at");
+const requestedNewStartsAt = visibleFollowUpMetadata("requestedNewStartsAt").as("requested_new_starts_at");
 const requestedNotes = visibleFollowUpMetadata("notes").as("requested_notes");
-function requestedCancellation(row: { requestedService: string | null; requestedStartsAt: string | null; requestedNotes: string | null }): RequestedCancellation | null {
-  const requested = { ...(row.requestedService ? { service: row.requestedService } : {}), ...(row.requestedStartsAt ? { startsAt: row.requestedStartsAt } : {}), ...(row.requestedNotes ? { notes: row.requestedNotes } : {}) };
+function requestedCancellation(row: { requestedService: string | null; requestedStartsAt: string | null; requestedNewStartsAt: string | null; requestedNotes: string | null }): RequestedCancellation | null {
+  const requested = { ...(row.requestedService ? { service: row.requestedService } : {}), ...(row.requestedStartsAt ? { startsAt: row.requestedStartsAt } : {}), ...(row.requestedNewStartsAt ? { newStartsAt: row.requestedNewStartsAt } : {}), ...(row.requestedNotes ? { notes: row.requestedNotes } : {}) };
   return Object.keys(requested).length ? requested : null;
 }
 
@@ -721,22 +731,22 @@ export async function listOpenVoiceFollowUps(tx: DatabaseTransaction, businessId
     id: inboxItems.id, title: visibleFollowUpTitle, body: visibleFollowUpBody,
     relatedCallId: inboxItems.relatedCallId, createdAt: inboxItems.createdAt,
     request: followUpRequest.as("request"),
-    requestedService, requestedStartsAt, requestedNotes,
+    requestedService, requestedStartsAt, requestedNewStartsAt, requestedNotes,
     appointmentId: sql<string | null>`${inboxItems.metadata}->>'appointmentId'`.as("appointment_id"),
   }).from(inboxItems).where(and(eq(inboxItems.businessId, businessId), eq(inboxItems.kind, "voice_message"), eq(inboxItems.status, "open")))
     .orderBy(followUpGroup, desc(inboxItems.createdAt), desc(inboxItems.id)).as("latest_voice_follow_ups");
   const rows = await tx.select({
-    id: latest.id, title: latest.title, body: latest.body, relatedCallId: latest.relatedCallId, createdAt: latest.createdAt, request: latest.request, requestedService: latest.requestedService, requestedStartsAt: latest.requestedStartsAt, requestedNotes: latest.requestedNotes,
+    id: latest.id, title: latest.title, body: latest.body, relatedCallId: latest.relatedCallId, createdAt: latest.createdAt, request: latest.request, requestedService: latest.requestedService, requestedStartsAt: latest.requestedStartsAt, requestedNewStartsAt: latest.requestedNewStartsAt, requestedNotes: latest.requestedNotes,
     appointmentId: appointments.id, appointmentStartsAt: appointments.startsAt, appointmentTimezone: appointments.timezone, appointmentStatus: appointments.status, appointmentServiceName: services.name, appointmentContactName: contacts.name,
   }).from(latest)
     // Compared as text: metadata is free-form JSON, and a bad id must not break the dashboard.
-    .leftJoin(appointments, and(eq(latest.request, CANCELLATION_REQUEST), eq(sql`${appointments.id}::text`, latest.appointmentId), eq(appointments.businessId, businessId)))
+    .leftJoin(appointments, and(inArray(latest.request, [...APPOINTMENT_REQUESTS]), eq(sql`${appointments.id}::text`, latest.appointmentId), eq(appointments.businessId, businessId)))
     .leftJoin(services, eq(services.id, appointments.serviceId))
     .leftJoin(contacts, eq(contacts.id, appointments.contactId))
     .orderBy(desc(latest.createdAt)).limit(6);
-  return rows.map(({ appointmentId, appointmentStartsAt, appointmentTimezone, appointmentStatus, appointmentServiceName, appointmentContactName, requestedService, requestedStartsAt, requestedNotes, ...item }) => ({
+  return rows.map(({ appointmentId, appointmentStartsAt, appointmentTimezone, appointmentStatus, appointmentServiceName, appointmentContactName, requestedService, requestedStartsAt, requestedNewStartsAt, requestedNotes, ...item }) => ({
     ...item,
-    requested: requestedCancellation({ requestedService, requestedStartsAt, requestedNotes }),
+    requested: requestedCancellation({ requestedService, requestedStartsAt, requestedNewStartsAt, requestedNotes }),
     appointment: appointmentId && appointmentStartsAt && appointmentTimezone && appointmentStatus ? { id: appointmentId, startsAt: appointmentStartsAt, timezone: appointmentTimezone, status: appointmentStatus, serviceName: appointmentServiceName, contactName: appointmentContactName } : null,
   }));
 }

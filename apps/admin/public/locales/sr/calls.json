@@ -68,7 +68,10 @@
     "cancellationRequest": "Zahtev za otkazivanje",
     "cancellationFromCaller": "Zahtev za otkazivanje od {{name}}",
     "requested": "Traženo: {{details}}",
-    "notes": "Napomene: {{notes}}"
+    "notes": "Napomene: {{notes}}",
+    "rescheduleRequest": "Zahtev za pomeranje",
+    "rescheduleFromCaller": "Zahtev za pomeranje od {{name}}",
+    "newTime": "Novo vreme: {{time}}"
   },
   "pagination": {
     "rowsPerPage": "Redova po stranici",
@@ -162,7 +165,8 @@
     },
     "recording": {
       "unavailable": "Za ovaj poziv nema dostupnog snimka.",
-      "pending": "Snimak se još obrađuje."
+      "pending": "Snimak se još obrađuje.",
+      "seek": "Pomeranje kroz snimak"
     },
     "blocking": {
       "badge": "Blokiran",

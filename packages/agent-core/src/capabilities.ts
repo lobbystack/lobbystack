@@ -31,6 +31,7 @@ const TOOL_USE = {
   cancelAppointment: { kind: "action", progress: "tried to cancel the appointment" },
   rescheduleAppointment: { kind: "action", progress: "tried to reschedule the appointment" },
   requestAppointmentCancellation: { kind: "action", progress: "tried to save the cancellation request" },
+  requestAppointmentReschedule: { kind: "action", progress: "tried to save the reschedule request" },
   transferCall: { kind: "action", progress: "tried to transfer the call" },
   requestTeamMember: { kind: "action", progress: "tried to ask the team to join the chat" },
   // Not an action: a call goes on after the caller called the hangup off, and the next request may end it again.
@@ -205,6 +206,8 @@ export function receptionistCapabilities(snapshot: BusinessContextSnapshot, conv
     // Offered next to cancelAppointment too, for an appointment the caller's
     // number doesn't find or verify.
     requestAppointmentCancellation: booking !== "off",
+    // Offered next to rescheduleAppointment too, for the same cases.
+    requestAppointmentReschedule: booking !== "off",
     // Only phone calls can transfer.
     transferCall: Boolean(callControl?.transfer) && transfers,
     // Website chats whose widget lets the team join: requestTeamMember checks the opening hours when it's used.
@@ -235,6 +238,11 @@ export function receptionistCapabilities(snapshot: BusinessContextSnapshot, conv
             callerTextable ? (keypadPin ? pinCancellationTextGuidance : cancellationTextGuidance)(snapshot.displayName) : "This business can't text the caller's number, so don't offer or mention a text about a cancellation.",
           ].join("\n\n")
           : `You can't cancel appointments ${voice ? "on this call" : "in this chat"}. When the caller asks to cancel one, tell them that plainly and that the team will take care of the cancellation. Ask for the name it's booked under and its date, time and service, then save the request with requestAppointmentCancellation. Never say or suggest the appointment is already cancelled.`,
+      !offered.requestAppointmentReschedule
+        ? ""
+        : offered.rescheduleAppointment
+          ? "When the caller wants to move an appointment and verification still fails with its time or service, or they aren't calling from the number it was booked with, don't take a message: ask for the name it's booked under, its current date, time and service, and the new date and time they want, save the request with requestAppointmentReschedule, and tell the caller the team will confirm the new time. Never say or suggest the appointment has already moved."
+          : `You can't reschedule appointments ${voice ? "on this call" : "in this chat"}. When the caller asks to move one, tell them that plainly and that the team will confirm the new time. Ask for the name it's booked under, its current date, time and service, and the new date and time they want, then save the request with requestAppointmentReschedule. Never say or suggest the appointment has already moved.`,
       offered.requestKeypadPasscode ? KEYPAD_PIN_GUIDANCE : "",
       offered.bookAppointment
         ? snapshot.hours.length
