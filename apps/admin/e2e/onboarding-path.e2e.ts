@@ -139,14 +139,17 @@ test("the no-website path asks the language, and the X closes the plans", async 
     await page.route("**/api/billing?**", (route) => route.fulfill({ json: { account: { plan: "free_cloud", billingInterval: null, subscriptionState: null }, availableCheckoutPlans: ["starter", "pro"], availableCheckoutIntervals: { starter: ["monthly"], pro: ["monthly"] } } }));
     await page.reload();
     const plans = page.getByRole("dialog");
-    await expect(plans).toBeVisible();
-    await plans.getByRole("button", { name: "Close" }).click();
-    await expect(plans).toHaveCount(0);
-
-    // The same session never shows it twice.
-    await page.reload();
-    await expect(page.getByRole("heading", { name: onboarding.meet.title })).toBeVisible();
+    // The plans wait for the door to the dashboard, and closing them goes through it.
     await expect(page.getByLabel(onboarding.meet.name)).toBeVisible();
+    await expect(plans).toHaveCount(0);
+    await page.getByRole("button", { name: onboarding.meet.finish }).click();
+    await expect(plans).toBeVisible();
+    await expect(page).toHaveURL("/onboarding/meet");
+    // Shown once, the offer is no longer due, as the server would answer.
+    await page.unroute("**/api/plan-offer**");
+    await page.route("**/api/plan-offer**", (route) => route.request().method() === "GET" ? route.fulfill({ json: { due: false } }) : route.fulfill({ json: { ok: true } }));
+    await plans.getByRole("button", { name: "Close" }).click();
+    await expect(page).toHaveURL("/");
     await expect(plans).toHaveCount(0);
   } finally {
     await removeFixtures(database, email, businessId);
