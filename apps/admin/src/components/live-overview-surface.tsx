@@ -139,9 +139,9 @@ export function LiveOverviewSurface() {
             </Item> : null}
             {summary.isLoading ? <ActionRequiredSkeleton /> : summary.data?.actionRequired.length ? <Card className="ph-mask border-border/70">
                   <CardContent>
-                    <ItemGroup>
-                      {summary.data!.actionRequired.map((item, index) => (
-                        <div key={item.id}>
+                    <ItemGroup className="has-data-[size=sm]:gap-0">
+                      {summary.data!.actionRequired.map((item) => (
+                        <div className="border-b py-4 first:pt-0 last:border-b-0 last:pb-0" key={item.id}>
                           {(() => {
                             const details = parseFollowUpTaskBody(item.body);
                             const displayTitle = getActionDisplayTitle(item, t);
@@ -159,7 +159,7 @@ export function LiveOverviewSurface() {
                                 : null;
 
                             return (
-                              <Item className="px-1 py-1" size="sm" variant="default">
+                              <Item className="p-0" size="sm" variant="default">
                                 <ItemMedia className="size-9 rounded-full bg-muted/70" variant="icon">
                                   {cancellation ? <CalendarX2 className="size-4 text-muted-foreground" /> : reschedule ? <CalendarClock className="size-4 text-muted-foreground" /> : getActionKindIcon(item.kind)}
                                 </ItemMedia>
@@ -232,7 +232,6 @@ export function LiveOverviewSurface() {
                               </Item>
                             );
                           })()}
-                          {index < summary.data!.actionRequired.length - 1 ? <Separator className="mt-4" /> : null}
                         </div>
                       ))}
                     </ItemGroup>
@@ -249,10 +248,18 @@ export function LiveOverviewSurface() {
                     <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5">
                       <div className="flex min-w-0 flex-wrap items-center gap-2"><p className="type-item-title">{contactName}</p><Badge variant="outline">{getAppointmentStatusLabel(appointment.status, t)}</Badge><Badge variant="secondary">{getChannelLabel(appointment.sourceChannel, t)}</Badge></div>
                       <p className="type-item-title text-right">{formatDateTime(appointment.startsAt, i18n.language, { weekday: "short", month: "short", day: "numeric", timeZone: appointment.timezone })}</p>
-                      <p className="type-body-muted min-w-0 truncate">{appointment.serviceName ?? t("home.upcoming.unknownService")}</p>
-                      <p className="type-body-muted text-right">{formatDateTime(appointment.startsAt, i18n.language, { hour: "numeric", minute: "2-digit", timeZone: appointment.timezone })}</p>
-                      <p className="type-body-muted min-w-0 truncate">{appointment.employeeName ? t("home.upcoming.employee", { name: appointment.employeeName }) : null}</p>
-                      <div className="flex justify-end"><CancelAppointmentButton appointment={{ ...appointment, contactName }} variant="destructive" /></div>
+                      <p className="type-body-muted flex min-w-0 items-center gap-1.5">
+                        <span className="truncate">{appointment.serviceName ?? t("home.upcoming.unknownService")}</span>
+                        {appointment.employeeName ? <>
+                          <span aria-hidden="true">·</span>
+                          <span className="sr-only">{t("home.upcoming.employee", { name: appointment.employeeName })}</span>
+                          <span aria-hidden="true" className="inline-flex min-w-0 items-center gap-1"><UserRound className="size-3.5 shrink-0" /><span className="truncate">{appointment.employeeName}</span></span>
+                        </> : null}
+                      </p>
+                      <div className="flex items-center justify-end gap-3">
+                        <p className="type-body-muted">{formatDateTime(appointment.startsAt, i18n.language, { hour: "numeric", minute: "2-digit", timeZone: appointment.timezone })}</p>
+                        <CancelAppointmentButton appointment={{ ...appointment, contactName }} variant="destructive" />
+                      </div>
                     </div>
                     {index < summary.data.upcoming.length - 1 ? <Separator className="mt-4" /> : null}
                   </div>;
@@ -309,10 +316,10 @@ function ActionRequiredSkeleton() {
   return (
     <Card aria-busy="true" className="border-border/70">
       <CardContent>
-        <ItemGroup>
+        <ItemGroup className="has-data-[size=sm]:gap-0">
           {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index}>
-              <Item className="px-1 py-1" size="sm" variant="default">
+            <div className="border-b py-4 first:pt-0 last:border-b-0 last:pb-0" key={index}>
+              <Item className="p-0" size="sm" variant="default">
                 <ItemMedia className="size-9 rounded-full bg-muted/70" variant="icon">
                   <Skeleton className="size-4 rounded-full" />
                 </ItemMedia>
@@ -325,7 +332,6 @@ function ActionRequiredSkeleton() {
                   <Skeleton className="h-3 w-1/3" />
                 </ItemContent>
               </Item>
-              {index < 2 ? <Separator className="mt-4" /> : null}
             </div>
           ))}
         </ItemGroup>
@@ -346,10 +352,11 @@ function UpcomingSkeleton() {
                 <Skeleton className="h-5 w-16 rounded-full" />
               </div>
               <Skeleton className="h-4 w-24 justify-self-end" />
-              <Skeleton className="h-3 w-36" />
-              <Skeleton className="h-3 w-14 justify-self-end" />
-              <Skeleton className="h-3 w-24" />
-              <Skeleton className="h-8 w-20 justify-self-end" />
+              <Skeleton className="h-3 w-40" />
+              <div className="flex items-center justify-end gap-3">
+                <Skeleton className="h-3 w-14" />
+                <Skeleton className="h-8 w-20" />
+              </div>
             </div>
             {index < 2 ? <Separator className="mt-4" /> : null}
           </div>
