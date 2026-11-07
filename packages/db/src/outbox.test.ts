@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { initializeTelemetry, shutdownTelemetry, withSpan } from "@lobbystack/telemetry/node";
 
@@ -42,6 +42,8 @@ describe("outbox trace context", () => {
       }),
     } as unknown as DatabaseTransaction;
 
+    // Keep every trace, so the stored traceparent carries the sampled flag.
+    vi.stubEnv("OTEL_TRACES_SAMPLER_ARG", "1");
     try {
       await initializeTelemetry({ endpoint: `http://127.0.0.1:${address.port}`, serviceName: "lobbystack-test" });
       const traceId = await withSpan("api.request", {}, async (span) => {
@@ -52,6 +54,7 @@ describe("outbox trace context", () => {
       expect(rows[0]?.traceparent).toMatch(new RegExp(`^00-${traceId}-[0-9a-f]{16}-01$`));
     } finally {
       await shutdownTelemetry();
+      vi.unstubAllEnvs();
       await new Promise<void>((resolve, reject) => receiver.close((error) => error ? reject(error) : resolve()));
     }
   });

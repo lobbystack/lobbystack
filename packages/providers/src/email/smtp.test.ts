@@ -216,7 +216,7 @@ describe("SMTP delivery", () => {
     const choices = ["I'm still testing it", "I don't know how to connect my number", "It made mistakes on my test call", "It's not right for my business"];
     await send(provider, { template: "onboarding_followup", to: "owner@example.test", from: "Raphael <raphael@example.test>", variables: { locale: "en", firstName: "Sam", businessName: "Acme Dental", senderName: "Raphael", ...tokens } });
     const html = sent(0).html as string;
-    const anchors = [...html.matchAll(/<a href="([^"]+)"[^>]*>([^<]+)<\/a>/g)].map(([, href, text]) => ({ href, text: text!.replaceAll("&#39;", "'").replaceAll("&amp;", "&").replaceAll("&quot;", '\"').replaceAll("&lt;", "<").replaceAll("&gt;", ">") }));
+    const anchors = [...html.matchAll(/<a href="([^"]+)"[^>]*>([^<]+)<\/a>/g)].map(([, href, text]) => ({ href, text: text!.replaceAll("&#39;", "'") }));
     expect(anchors).toEqual([
       { href: "https://app.example.test/en/check-in/v1.testing.sig", text: choices[0] },
       { href: "https://app.example.test/en/check-in/v1.number.sig", text: choices[1] },
