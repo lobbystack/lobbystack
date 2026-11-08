@@ -81,13 +81,11 @@
     },
     "empty": {
       "title": "No businesses yet",
-      "description": "Create a business and invite its owner.",
       "memberDescription": "Your team's owners and admins create businesses here."
     },
     "create": {
       "action": "Create business",
       "title": "Create a business",
-      "description": "The owner gets a sign-in link by email from {{partnerName}}.",
       "nameLabel": "Business name",
       "namePlaceholder": "Harbor Dental",
       "ownerLabel": "Owner's email",
@@ -119,7 +117,6 @@
       },
       "templateLabel": "Template",
       "noTemplate": "No template",
-      "templateHelp": "The business starts with the template's setup. We read part of each website it lists, and the rest once you open the business.",
       "submit": "Create and invite",
       "submitting": "Creating…",
       "created": "You created {{name}} and invited {{email}}.",
@@ -147,9 +144,6 @@
       "change": "Change",
       "changeFor": "Change how {{name}} is billed",
       "title": "Billing for {{name}}",
-      "description": "Pick the package this business pays for, or bill it yourself.",
-      "outsideHint": "No package limits its minutes or chats.",
-      "packageHint": "The owner pays on the business's billing page.",
       "submit": "Save",
       "saving": "Saving…",
       "saved": "You changed how {{name}} is billed.",
@@ -170,9 +164,7 @@
         "cap": "Overage up to {{cap}} a month"
       },
       "title": "Overage for {{name}}",
-      "description": "Let the business keep answering past {{packageName}}, at rates you set.",
       "toggle": "Allow overage",
-      "onHint": "Past its package, the business keeps answering until it reaches the cap. Overage shows on its next invoice.",
       "offHint": "At its package's limit, calls forward and website chat stops replying.",
       "minuteRateLabel": "Each extra minute",
       "chatRateLabel": "Each extra chat",
@@ -194,7 +186,7 @@
     "title": "Packages",
     "loadFailed": "We couldn't load your packages. Refresh to try again.",
     "managersOnly": "Only owners and admins can see packages.",
-    "notConfigured": "Payments aren't turned on for this dashboard, so you bill your businesses yourself.",
+    "notConfigured": "This dashboard doesn't handle payments, so you bill your businesses yourself.",
     "connectFirst": {
       "owner": "Connect payments to sell packages.",
       "admin": "Ask an owner to connect payments so you can sell packages."
@@ -222,13 +214,11 @@
     },
     "empty": {
       "title": "No packages yet",
-      "description": "Create a package your clients can buy.",
-      "noStripe": "Packages need payments, which this dashboard doesn't offer yet."
+      "noStripe": "Packages need payments, and this dashboard doesn't handle them."
     },
     "create": {
       "action": "Create package",
       "title": "Create a package",
-      "description": "Businesses on this package pay this each month, in {{currency}}.",
       "nameLabel": "Name",
       "namePlaceholder": "Front desk",
       "priceLabel": "Monthly price",
@@ -252,7 +242,6 @@
     "rename": {
       "action": "Rename",
       "title": "Rename package",
-      "description": "Your clients see the new name on their invoices.",
       "submit": "Save name",
       "saving": "Saving…",
       "saved": "Package renamed.",
@@ -296,13 +285,11 @@
     },
     "empty": {
       "title": "No templates yet",
-      "description": "Save a business as a template, then use it for the next one.",
       "memberDescription": "Your team's owners and admins save templates here."
     },
     "save": {
       "action": "Save a template",
       "title": "Save a template",
-      "description": "Saves a copy of this business's setup. Later changes to the business don't touch it.",
       "businessLabel": "Business",
       "businessPlaceholder": "Choose a business",
       "noBusinesses": "Create a business first, then save its setup here.",
@@ -347,7 +334,6 @@
     "invite": {
       "action": "Invite",
       "title": "Invite someone to your team",
-      "description": "They get an email with a link to join {{partnerName}}.",
       "emailLabel": "Email",
       "emailPlaceholder": "name@company.com",
       "roleLabel": "Role",
@@ -397,13 +383,10 @@
       "title": "Dashboard address",
       "open": "Open",
       "none": "You don't have a subdomain yet. You need one, or your own domain, before you can create businesses and demos.",
-      "subdomainLabel": "Your subdomain",
       "own": {
         "title": "Your own domain",
-        "description": "Use your own subdomain, like app.yourcompany.com. Your current address keeps working.",
         "label": "Domain",
         "placeholder": "app.yourcompany.com",
-        "help": "You'll add two DNS records at your DNS provider next.",
         "connect": "Connect domain",
         "connecting": "Connecting…",
         "added": "Domain connected. Add its DNS records next.",
@@ -418,7 +401,6 @@
         },
         "settingUp": "We're setting up your domain. Its DNS records appear here shortly.",
         "pendingHelp": "Add these records at your DNS provider. Changes can take a few hours.",
-        "activeHelp": "Your dashboard and sign-in pages work on this domain now.",
         "failedHelp": "We couldn't set up this domain. Remove it, check its DNS records and try again.",
         "takenHelp": "Another dashboard already uses this domain. Remove it to add a different one.",
         "records": {
@@ -457,21 +439,17 @@
       "title": "Brand"
     },
     "nameLabel": "Name",
-    "nameHelp": "Shown in the browser tab, on sign-in and as your email sender.",
     "logoLabel": "Logo",
-    "logoHelp": "Shown on sign-in and in emails. PNG, JPEG, WebP or SVG, up to 256 KB.",
+    "logoHelp": "PNG, JPEG, WebP or SVG, up to 256 KB.",
     "faviconLabel": "Favicon",
-    "faviconHelp": "The browser tab icon. Defaults to your logo.",
     "imageChoose": "Choose an image",
     "imageChange": "Change image",
     "logoRemove": "Remove logo",
     "faviconRemove": "Remove favicon",
     "colorLabel": "Brand color",
     "colorPick": "Pick a brand color",
-    "colorHelp": "A hex code, such as #0f766e.",
     "links": {
       "title": "Links",
-      "description": "Linked from your sign-in page and dashboard. Leave a field empty to hide it.",
       "termsUrl": "Terms of service",
       "termsUrlPlaceholder": "https://company.com/terms",
       "privacyUrl": "Privacy policy",
@@ -479,8 +457,7 @@
       "supportUrl": "Support page",
       "supportUrlPlaceholder": "https://company.com/support",
       "supportEmail": "Support email",
-      "supportEmailPlaceholder": "support@company.com",
-      "supportEmailHelp": "Replies to your emails go here. It's also your support link when you have no support page."
+      "supportEmailPlaceholder": "support@company.com"
     },
     "preview": "Preview",
     "save": "Save brand",
@@ -503,8 +480,8 @@
     "ownersOnly": "Only owners can manage payments.",
     "opening": "Opening Stripe…",
     "notConfigured": {
-      "title": "Payments aren't set up here",
-      "description": "Payments aren't turned on for this dashboard, so you bill your businesses yourself."
+      "title": "You bill your businesses yourself",
+      "description": "This dashboard doesn't handle payments for you."
     },
     "status": {
       "notConnected": "Not connected",
@@ -515,7 +492,6 @@
     },
     "connect": {
       "title": "Connect a payment account",
-      "description": "We use Stripe to charge your clients in your name and pay you out.",
       "countryLabel": "Country of your business",
       "countryPlaceholder": "Choose a country",
       "countryHelp": "You can't change this later.",
@@ -542,7 +518,6 @@
       "action": "Reconnect"
     },
     "details": {
-      "account": "Account",
       "country": "Country",
       "currency": "Currency",
       "payouts": "Payouts",
@@ -553,6 +528,7 @@
       "failed": "We couldn't open Stripe. Try again.",
       "invalidCountry": "Choose the country your business is in.",
       "notConfigured": "This dashboard can't take payments yet.",
+      "platformNotReady": "Payments aren't ready on this dashboard yet. Ask the company that runs it to finish setting them up.",
       "changed": "Someone else changed the payment settings. Refresh and try again."
     }
   },
@@ -571,7 +547,6 @@
     "create": {
       "action": "Create API key",
       "title": "Create an API key",
-      "description": "Name it so you'll recognize it, and give it only the access it needs.",
       "nameLabel": "Name",
       "namePlaceholder": "Client onboarding",
       "scopesLabel": "Access",
@@ -597,7 +572,6 @@
     "update": {
       "action": "Update",
       "title": "Update {{name}}",
-      "description": "Change its name or access. You keep the same key, and apps using it get the new access on their next request.",
       "submit": "Save",
       "saving": "Saving…",
       "cancel": "Cancel",
@@ -631,8 +605,7 @@
       "partner_team_write": "Invite and remove admins and members, and change their roles",
       "partner_billing_read": "See the Stripe connection, your tier and pool usage. Only owners can grant it",
       "partner_billing_write": "Start Stripe onboarding and tier checkouts, and set the pool's overage. Only owners can grant it"
-    },
-    "emptyDescription": "Create one to set up businesses from your own code."
+    }
   },
   "secretReveal": {
     "copy": "Copy",
@@ -684,8 +657,7 @@
       "extra_other": "Phone numbers in use: {{held}}. You pay for {{count}} extra numbers each month."
     },
     "trial": {
-      "available": "Claim your 14-day trial number in any business's phone settings. Its calls go to the mobile of whoever claims it.",
-      "used": "You've used your 14-day trial number."
+      "available": "Claim your 14-day trial number in any business's phone settings. Its calls go to the mobile of whoever claims it."
     },
     "pool": {
       "title": "This month",
@@ -695,14 +667,11 @@
       "noLimit": "{{used}}, no limit"
     },
     "hostPool": {
-      "limit": "At the limit, calls forward and website chat stops replying until the pool resets. To change it, ask the company that runs this dashboard."
+      "limit": "At the limit, calls forward and website chat stops replying until the pool resets."
     },
     "overage": {
       "title": "Overage",
-      "description": "Past your pool, your businesses keep answering at your tier's overage rates, up to your cap.",
       "toggle": "Allow overage",
-      "free": "Free has no overage. Your businesses stop at the pool.",
-      "off": "Overage is off. Your businesses stop at the pool each month.",
       "noCap": "No cap",
       "spend": "Overage this month",
       "spendNoCap": "{{spend}} this month",
@@ -725,7 +694,9 @@
       "intervalLabel": "Billing interval",
       "annualDiscount": "Save 20%",
       "action": "Choose {{tier}}",
-      "opening": "Opening checkout…"
+      "opening": "Opening checkout…",
+      "slow": "The payment provider is slow. Still opening checkout…",
+      "backToPlans": "Back to plans"
     },
     "portal": {
       "action": "Manage subscription",
@@ -737,6 +708,7 @@
     },
     "errors": {
       "checkoutFailed": "We couldn't open checkout. Try again.",
+      "paymentsUnavailable": "Payments are temporarily unavailable. Try again in a few minutes.",
       "subscriptionActive": "You already have a tier. Change it in Manage subscription.",
       "checkoutInProgress": "Another owner has a checkout open. Try again in 30 minutes.",
       "unavailable": "You can't buy a tier on this dashboard.",
@@ -827,9 +799,7 @@
   },
   "agencyConnections": {
     "title": "MCP connections",
-    "description": "AI assistants and other MCP clients your team connected by signing in.",
-    "descriptionOwn": "AI assistants and other MCP clients you connected by signing in.",
-    "empty": "No MCP connections yet. Connect an assistant to the {{appName}} MCP server and choose this agency when you sign in.",
+    "empty": "No MCP connections yet.",
     "unnamed": "Unnamed app",
     "connectedOn": "Connected {{date}}",
     "lastUsed": "Last used {{date}}",

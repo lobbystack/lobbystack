@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { StrictMode } from "react";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -18,15 +18,15 @@ beforeEach(() => {
   route.search = new URLSearchParams();
   telemetryRef.current = createRecordedBrowserTelemetry();
 });
-afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
-function setup(monthlyOnly = false, refusal?: string) {
+afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.useRealTimers(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
+function setup(monthlyOnly = false, refusal?: string, checkoutError = "Checkout failed") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true }] });
   client.setQueryData(["billing", "business"], { checkoutAvailable: true, availableCheckoutPlans: ["pro"], availableCheckoutIntervals: { starter: [], pro: monthlyOnly ? ["monthly"] : ["monthly", "annual"] } });
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     if (url.includes("/api/onboarding/stage?")) return Response.json({ ok: true });
     if (url === "/api/billing/checkout" && init?.method === "POST") return refusal ? Response.json({ error: "Refused", code: refusal }, { status: 409 }) : Response.json({ requestId: "new-checkout" });
-    if (url.includes("requestId=new-checkout")) return Response.json({ status: "error", checkoutUrl: null, error: "Checkout failed" });
+    if (url.includes("requestId=new-checkout")) return Response.json({ status: "error", checkoutUrl: null, error: checkoutError });
     throw new Error(`Unexpected request ${url}`);
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -64,6 +64,16 @@ describe("original onboarding plan behavior with asynchronous checkout", () => {
     expect(await screen.findByText("Checkout failed")).toBeTruthy();
     await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
   });
+  it("says payments are unavailable when a checkout waited out the provider outage", async () => {
+    setup(false, undefined, "provider_unavailable:503");
+    await userEvent.click(screen.getByRole("button", { name: "Get Pro" }));
+    expect(await screen.findByText("settings:billing.toast.paymentsUnavailable")).toBeTruthy();
+  });
+  it("hides a provider's machine reason behind the generic message", async () => {
+    setup(false, undefined, "provider_rejected:422");
+    await userEvent.click(screen.getByRole("button", { name: "Get Pro" }));
+    expect(await screen.findByText("plan.continueFailed")).toBeTruthy();
+  });
   it("lets them pick again when the back button restores the page from cache", async () => {
     const assign = vi.fn();
     vi.stubGlobal("location", { ...window.location, assign });
@@ -81,6 +91,35 @@ describe("original onboarding plan behavior with asynchronous checkout", () => {
     await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
     expect(screen.getByRole("button", { name: "Start free" }).hasAttribute("disabled")).toBe(false);
     expect(assign).toHaveBeenCalledTimes(1);
+  });
+  it("stops polling after a minute, says payments are unavailable, and returns to the plans", async () => {
+    setup();
+    vi.useFakeTimers();
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => init?.method === "POST"
+      ? Response.json({ requestId: "new-checkout" })
+      : Response.json({ status: "pending", checkoutUrl: null, error: null }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    fireEvent.click(screen.getByRole("button", { name: "Get Pro" }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(fetchMock.mock.calls.filter(([, init]) => init?.method === "POST")).toHaveLength(1);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
+    expect(screen.getByRole("status").textContent).toBe("settings:billing.upgradeDialog.providerSlow");
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(50_000); });
+    expect(screen.getByRole("alert").textContent).toContain("settings:billing.toast.paymentsUnavailable");
+    expect(screen.queryByRole("button", { name: "Get Pro" })).toBeNull();
+    const polled = fetchMock.mock.calls.length;
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
+    expect(fetchMock.mock.calls.length).toBe(polled);
+
+    fireEvent.click(screen.getByRole("button", { name: "plan.backToPlans" }));
+    expect(screen.getByRole("button", { name: "Get Pro" })).toBeTruthy();
+    expect(fetchMock.mock.calls.length).toBe(polled);
+    const post = fetchMock.mock.calls.find(([, init]) => init?.method === "POST")!;
+    expect((post[1] as RequestInit).signal).toBeUndefined();
   });
   it("records plan_selected when the free plan is chosen", async () => {
     setup();

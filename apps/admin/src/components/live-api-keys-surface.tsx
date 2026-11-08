@@ -167,7 +167,6 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
             layout === "page" ? (
             <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
               <h2 className="text-base font-medium">{t("apiKeys.empty")}</h2>
-              <p className="max-w-sm text-sm leading-6 text-muted-foreground">{t("apiKeys.emptyDescription")}</p>
             </div>
           ) : <p className="type-body-muted p-6 text-center">{t("apiKeys.empty")}</p>
           ) : (
@@ -210,7 +209,7 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
             <>
               <DialogHeader>
                 <DialogTitle>{dialog?.mode === "update" ? t("apiKeys.update.title", { name: dialog.record.name }) : t("apiKeys.create.title")}</DialogTitle>
-                <DialogDescription>{dialog?.mode === "update" ? t("apiKeys.update.description") : t("apiKeys.create.description")}</DialogDescription>
+                {layout === "section" ? <DialogDescription>{dialog?.mode === "update" ? t("apiKeys.update.description") : t("apiKeys.create.description")}</DialogDescription> : null}
               </DialogHeader>
               <FieldGroup>
                 <Field>

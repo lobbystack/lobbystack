@@ -50,6 +50,18 @@ Client analytics posts to the PostHog managed reverse proxy (`NEXT_PUBLIC_POSTHO
 
 Server runtimes send traces, metrics, and logs to the OTLP base URL configured through `OTEL_EXPORTER_OTLP_ENDPOINT`. The logs carry each runtime's `console.warn` and `console.error` output with the active trace ID. Runtimes also keep printing them to stdout. They attach headers from `OTEL_EXPORTER_OTLP_HEADERS` and sanitize telemetry before export. An empty endpoint disables server export. Browser events use the public PostHog key and host configured through `NEXT_PUBLIC_POSTHOG_*`.
 
+### Outbound provider calls
+
+The admin and the worker trace their own requests, jobs, database transactions and live calls. Outbound HTTP calls to providers are traced only from the admin. The worker's client spans for provider hosts (`api.polar.sh`, Twilio, OpenAI, Resend, Cal.com, Google) stop at 2026-11-01, the deploy that followed the Cal.com integration (#356). Its job and database spans continue, so the SDK and the exporter work; only the HTTP client instrumentation is missing.
+
+Cause: `apps/worker` bundles every `@opentelemetry/*` package into `dist/runtime/index.js`, because they are not dependencies of the worker. Bundled instrumentation can register across two copies of `@opentelemetry/instrumentation`, and then enables nothing. The admin loads these packages from `node_modules` and keeps its client spans.
+
+Effect: a failed provider call shows as a job span with an error status and no child span. The stored reason (`provider_unavailable:503`) and the final-failure alert still name the failure, but provider latency and calls that recovered after a retry are invisible.
+
+Fix: mark `@opentelemetry/*` as `external` in `apps/worker/tsup.config.ts`, add those packages to `apps/worker/package.json`, start telemetry in its own module loaded before the bundle, and add a regression test that fetches a local 503 and asserts a client span reaches a local OTLP sink.
+
+Traces are billed by volume. `traceSampleRatio` keeps 10% unless a deployment sets `OTEL_TRACES_SAMPLER`, and client spans for provider calls add a few hundred records a day.
+
 ## Validation
 
 Run `pnpm telemetry:coverage`, `pnpm replacement:telemetry`, `pnpm replacement:privacy`, and the PostHog/OTel certification steps in `docs/validation/posthog-otel-validation.md` before production cutover.

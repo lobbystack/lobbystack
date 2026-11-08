@@ -13,10 +13,12 @@ const tenantSchedules: Array<{ queue: JobQueue; name: string; type: JobType; eve
   { queue: "maintenance", name: "phone-number-reclaim", type: "phoneNumber.reclaim", every: 60 * 60_000 },
   // A trial ends and sends its emails on time even when nobody uses the workspace.
   { queue: "maintenance", name: "number-trial-sweep", type: "numberTrial.sweep", every: 60 * 60_000 },
-  { queue: "maintenance", name: "operator-daily-summary", type: "notification.dailySummary", every: 60_000, idleEvery: 0 },
+  // Once an hour: the handler skips until the business's summary hour.
+  { queue: "maintenance", name: "operator-daily-summary", type: "notification.dailySummary", every: 60 * 60_000, idleEvery: 0 },
   // A closed demo still records events (a failed claim, a call that ends late), and only this job sends them.
-  { queue: "maintenance", name: "telemetry-flush", type: "telemetry.flush", every: 60_000, idleEvery: 60 * 60_000 },
-  { queue: "maintenance", name: "outbox-backlog-sample", type: "outbox.backlogSample", every: 60_000, idleEvery: 0 },
+  { queue: "maintenance", name: "telemetry-flush", type: "telemetry.flush", every: 5 * 60_000, idleEvery: 60 * 60_000 },
+  // Five minutes: a shorter backlog is a blip, not an alert.
+  { queue: "maintenance", name: "outbox-backlog-sample", type: "outbox.backlogSample", every: 5 * 60_000, idleEvery: 0 },
   { queue: "maintenance", name: "unit-economics-rollup", type: "billing.refreshUnitEconomics", every: 60 * 60_000 },
   { queue: "maintenance", name: "api-retention", type: "api.retention", every: 60 * 60_000 },
   // Instagram tokens lapse after 60 days unless refreshed, even for a workspace nobody opens.

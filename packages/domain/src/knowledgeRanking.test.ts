@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countKnowledgeTokens, fuseKnowledgeRanks, knowledgeLexicalQueries, knowledgeQueryTerms, withinKnowledgeBudget, type KnowledgePassage } from "./knowledgeRanking";
+import { countKnowledgeTokens, EMBEDDING_INPUT_TOKEN_BUDGET, fuseKnowledgeRanks, knowledgeLexicalQueries, knowledgeQueryTerms, splitToTokenBudget, withinKnowledgeBudget, type KnowledgePassage } from "./knowledgeRanking";
 
 const passage = (id: string): KnowledgePassage => ({ chunkId: id, documentId: "document", title: "Management", content: "MNGT 10407", sourceUrl: "https://example.com/courses", sourceRevision: 2, sequence: 0 });
 
@@ -71,5 +71,31 @@ describe("knowledge token budget", () => {
 
   it("skips items that would exceed the budget and keeps later ones that fit", () => {
     expect(withinKnowledgeBudget(["word ".repeat(10), "short", "tiny"], 3, value => value)).toEqual(["short"]);
+  });
+});
+
+describe("splitting an embedding input", () => {
+  it("keeps text that already fits as one piece", () => {
+    expect(splitToTokenBudget("Parking is free behind the building.")).toEqual(["Parking is free behind the building."]);
+  });
+
+  it("cuts an oversized passage into pieces under the provider's limit", () => {
+    const text = "Our clinic is open Monday to Friday. ".repeat(2_000);
+    const pieces = splitToTokenBudget(text, 100);
+    expect(pieces.length).toBeGreaterThan(1);
+    expect(pieces.every((piece) => countKnowledgeTokens(piece) <= 100)).toBe(true);
+    expect(pieces.join(" ")).toBe(text.trim());
+  });
+
+  it("splits one word longer than the budget without dropping characters", () => {
+    const text = "ж".repeat(20_000);
+    const pieces = splitToTokenBudget(text);
+    expect(pieces.length).toBeGreaterThan(1);
+    expect(pieces.every((piece) => countKnowledgeTokens(piece) <= EMBEDDING_INPUT_TOKEN_BUDGET)).toBe(true);
+    expect(pieces.join("")).toBe(text);
+  });
+
+  it("rejects a budget that cannot hold one token", () => {
+    expect(() => splitToTokenBudget("hello", 0)).toThrow("Invalid token budget.");
   });
 });

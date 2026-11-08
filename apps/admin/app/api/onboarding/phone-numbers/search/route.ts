@@ -3,13 +3,14 @@ import { NextResponse } from "next/server";
 import { searchBusinessNumberInventory, type NumberSelection } from "@lobbystack/domain";
 import { guardedNumberSearch } from "@lobbystack/providers/telephony/registry";
 import { operatorRoute } from "@/lib/operator-request";
-import { getNumberClaimTokenSecret, requireNumberSearch } from "@/lib/telephony";
+import { getNumberClaimTokenSecret, requestIpHash, requireNumberSearch } from "@/lib/telephony";
 import { assertPhoneNumberSearchAllowed } from "@/lib/phone-number-search-limit";
+import { trustedClientCountry } from "@/lib/trusted-client-ip";
 
-export const POST = operatorRoute(async ({ userId, businessId, body: input, domain }) => {
+export const POST = operatorRoute(async ({ request, userId, businessId, body: input, domain }) => {
   const body = input as { selection?: Partial<NumberSelection>; limit?: number };
   // Without a carrier for numbers the picker says so, before a search counts against the limit or needs the claim secret.
   // The limit counts once the country's carrier is known to work.
   const numbers = guardedNumberSearch(requireNumberSearch(), () => assertPhoneNumberSearchAllowed({ userId, initial: false }));
-  return NextResponse.json(await searchBusinessNumberInventory(domain, { userId, businessId, ...(body.selection ? { selection: body.selection } : {}), ...(body.limit !== undefined ? { limit: body.limit } : {}), claimTokenSecret: getNumberClaimTokenSecret() }, numbers));
+  return NextResponse.json(await searchBusinessNumberInventory(domain, { userId, businessId, ...(body.selection ? { selection: body.selection } : {}), ...(body.limit !== undefined ? { limit: body.limit } : {}), claimTokenSecret: getNumberClaimTokenSecret(), ipHash: requestIpHash(request), ipCountry: trustedClientCountry(request) }, numbers));
 });

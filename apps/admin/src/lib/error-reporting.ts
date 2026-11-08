@@ -1,9 +1,7 @@
-import { PostHog } from "posthog-node";
-import { recordException, redactOtelExceptionText } from "@lobbystack/telemetry/node";
+import { captureExceptionToPostHog, recordException, redactOtelExceptionText } from "@lobbystack/telemetry/node";
 
 import { releaseVersion } from "@/lib/release-version";
 
-let client: PostHog | undefined;
 const reported = new WeakSet<object>();
 
 // Keep the database diagnosis (SQLSTATE, constraint, table) that Drizzle wraps
@@ -35,12 +33,5 @@ export async function reportServerError(error: unknown, context: { operation: st
   const properties = { ...context, service: "lobbystack-admin", environment: process.env.RAILWAY_ENVIRONMENT_NAME ?? process.env.NODE_ENV, release: releaseVersion(), alertable: true, ...(cause ? { cause } : {}) };
   console.error("[admin] exception", { ...properties, name: safe.name, message: safe.message, stack: safe.stack });
   recordException(safe);
-  const key = process.env.POSTHOG_KEY ?? process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
-  if (!key) return;
-  try {
-    client ??= new PostHog(key, { host: process.env.POSTHOG_HOST ?? process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://us.i.posthog.com", flushAt: 1, flushInterval: 0 });
-    await client.captureExceptionImmediate(safe, "system:lobbystack-admin", properties);
-  } catch {
-    console.warn("[admin] exception delivery failed");
-  }
+  await captureExceptionToPostHog(safe, "system:lobbystack-admin", properties);
 }

@@ -35,7 +35,7 @@ describe("onboarding website", () => {
     fireEvent.change(await screen.findByLabelText("website.label"), { target: { value: "example.com" } });
     await waitFor(() => expect((screen.getByRole("button", { name: "website.continue" }) as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(screen.getByRole("button", { name: "website.continue" }));
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/reading"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/reading?documentId=document-1"));
     const submission = fetcher.mock.calls.find(([url]) => url === "/api/knowledge");
     expect(JSON.parse(String(submission?.[1]?.body))).toEqual({ businessId: "business-1", title: "example.com", sourceType: "website", sourceUrl: "example.com", onboarding: true });
     telemetryRef.current!.expectEvent("web.onboarding.website_submitted", { businessId: "business-1" });
@@ -65,7 +65,7 @@ describe("onboarding website", () => {
     expect(push).not.toHaveBeenCalled();
     expect((screen.getByRole("button", { name: "website.submitting" }) as HTMLButtonElement).disabled).toBe(true);
     finish(Response.json({ businesses: [{ businessId: "business-1", active: true, onboardingStage: "verify_phone" }] }));
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/reading"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/reading?documentId=document-1"));
   });
   it("names the skip on the Continue button while the skip finishes", async () => {
     let finish!: (response: Response) => void;

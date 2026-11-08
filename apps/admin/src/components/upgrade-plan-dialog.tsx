@@ -31,32 +31,41 @@ export function UpgradePlanDialog({
   availableCheckoutPlans,
   availableCheckoutIntervals,
   billingInterval,
+  checkoutUnavailable,
   currentPlan,
   loading,
   locale,
   loadingPlan,
   onBillingIntervalChange,
   onContactEnterprise,
+  onDismissCheckout,
   onOpenChange,
   onStartCheckout,
   open,
   selectedPlan,
+  slowCheckout,
   t,
 }: {
   availableCheckoutPlans: Array<"starter" | "pro">;
   availableCheckoutIntervals: HostedCheckoutPlanIntervals;
   billingInterval: BillingInterval;
+  /** Whether the checkout waited long enough that the dialog stops polling and says payments are unavailable. */
+  checkoutUnavailable: boolean;
   currentPlan: BillingPlanSlug;
   loading: "checkout" | "portal" | null;
   locale: string;
   loadingPlan: HostedUpgradePlan | null;
   onBillingIntervalChange: (billingInterval: BillingInterval) => void;
   onContactEnterprise: () => void;
+  /** Stops polling the checkout and closes the dialog. */
+  onDismissCheckout: () => void;
   onOpenChange: (open: boolean) => void;
   onStartCheckout: (target: HostedUpgradePlan, billingInterval: BillingInterval) => void;
   open: boolean;
   /** The plan the dialog opens on, shown as the primary choice. */
   selectedPlan: HostedUpgradePlan;
+  /** Whether the checkout has waited on the payment provider long enough to say so. */
+  slowCheckout: boolean;
   t: BillingTranslation;
 }) {
   const availableBillingIntervals = (["monthly", "annual"] as const).filter(
@@ -81,12 +90,31 @@ export function UpgradePlanDialog({
           <DialogTitle className="text-xl">
             {t("billing.upgradeDialog.title")}
           </DialogTitle>
-          <DialogDescription>
-            {t("billing.upgradeDialog.description")}
-          </DialogDescription>
+          {checkoutUnavailable ? null : (
+            <DialogDescription>
+              {t("billing.upgradeDialog.description")}
+            </DialogDescription>
+          )}
         </DialogHeader>
 
-        <div className="flex justify-center">
+        {checkoutUnavailable ? (
+          <div className="flex flex-col items-start gap-4 rounded-xl border border-border/70 bg-muted/20 p-6" role="alert">
+            <p className="text-sm text-muted-foreground">
+              {t("billing.toast.paymentsUnavailable")}
+            </p>
+            <Button className="rounded-full" onClick={onDismissCheckout} type="button" variant="outline">
+              {t("billing.upgradeDialog.close")}
+            </Button>
+          </div>
+        ) : null}
+
+        {!checkoutUnavailable && slowCheckout ? (
+          <p className="text-sm text-muted-foreground" role="status">
+            {t("billing.upgradeDialog.providerSlow")}
+          </p>
+        ) : null}
+
+        {!checkoutUnavailable ? <div className="flex justify-center">
           <div
             aria-label={t("billing.upgradeDialog.billingIntervalLabel")}
             className="inline-flex rounded-full border border-border bg-muted/40 p-1"
@@ -117,9 +145,9 @@ export function UpgradePlanDialog({
               </Button>
             ))}
           </div>
-        </div>
+        </div> : null}
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {!checkoutUnavailable ? <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {planCards(locale).map((card) => {
             const isCurrentPlan = currentPlan === card.slug;
             const checkoutPlan = isHostedUpgradePlan(card.slug) ? card.slug : null;
@@ -204,7 +232,7 @@ export function UpgradePlanDialog({
               </section>
             );
           })}
-        </div>
+        </div> : null}
       </DialogContent>
     </Dialog>
   );

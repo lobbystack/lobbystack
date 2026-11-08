@@ -15,7 +15,7 @@ import { useConsolePartner } from "@/components/partner-shell";
 import { useTelemetry } from "@/components/product-analytics";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -169,7 +169,6 @@ export function PartnerPackagesSurface() {
         <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); if (!create.isPending && draft.name.trim()) { setCreateError(null); create.mutate(); } }}>
           <DialogHeader>
             <DialogTitle>{t("packages.create.title")}</DialogTitle>
-            <DialogDescription>{t("packages.create.description", { currency })}</DialogDescription>
           </DialogHeader>
           <FieldGroup>
             <Field>
@@ -225,7 +224,7 @@ export function PartnerPackagesSurface() {
       {data.packages.length === 0 ? (
         <Surface className="flex flex-col items-center gap-3 px-6 py-16 text-center">
           <h2 className="text-base font-medium">{t("packages.empty.title")}</h2>
-          <p className="max-w-sm text-sm leading-6 text-muted-foreground">{t(data.stripe.configured ? "packages.empty.description" : "packages.empty.noStripe")}</p>
+          {data.stripe.configured ? null : <p className="max-w-sm text-sm leading-6 text-muted-foreground">{t("packages.empty.noStripe")}</p>}
         </Surface>
       ) : (
         <Surface className="overflow-hidden p-0">
@@ -285,7 +284,6 @@ export function PartnerPackagesSurface() {
           <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); if (renaming && !rename.isPending && newName.trim()) { setRenameError(null); rename.mutate(renaming); } }}>
             <DialogHeader>
               <DialogTitle>{t("packages.rename.title")}</DialogTitle>
-              <DialogDescription>{t("packages.rename.description")}</DialogDescription>
             </DialogHeader>
             <Field>
               <FieldLabel htmlFor="partner-package-rename">{t("packages.create.nameLabel")}</FieldLabel>

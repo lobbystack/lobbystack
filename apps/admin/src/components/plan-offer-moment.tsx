@@ -40,7 +40,7 @@ function markShownThisSession(businessId: string): void {
  * server decides who is due them. It renders nothing, and it needs the upgrade
  * dialog's provider above it.
  */
-export function PlanOfferMoment({ businessId, surface }: { businessId: string; surface: "meet" | "home" }) {
+export function PlanOfferMoment({ businessId, surface }: { businessId: string; surface: "home" }) {
   const telemetry = useTelemetry();
   const openOffer = usePlanOfferOpener();
   const settleInterval = useCallSettleRefetch();
@@ -51,7 +51,7 @@ export function PlanOfferMoment({ businessId, surface }: { businessId: string; s
     retry: false,
   });
   const markShown = useMutation({
-    mutationFn: () => requestJson(`/api/plan-offer?businessId=${encodeURIComponent(businessId)}`, { method: "POST" }),
+    mutationFn: (dismissed: boolean) => requestJson(`/api/plan-offer?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify(dismissed ? { dismissed: true } : {}) }),
     meta: { inlineError: true },
   });
   const { mutate: recordShown } = markShown;
@@ -60,11 +60,18 @@ export function PlanOfferMoment({ businessId, surface }: { businessId: string; s
     // A running call waits: the check runs again when the poll after it answers.
     if (!due || !openOffer || shownThisSession(businessId) || isTestCallActive()) return;
     markShownThisSession(businessId);
-    recordShown();
+    recordShown(false);
     telemetry.track("web.onboarding.plan_offer_shown", { businessId, surface });
     openOffer({
-      onDismiss: () => telemetry.track("web.onboarding.plan_offer_dismissed", { businessId, surface }),
-      onPlanClicked: (plan) => telemetry.track("web.onboarding.plan_offer_clicked", { businessId, surface, plan }),
+      onDismiss: () => {
+        recordShown(true);
+        telemetry.track("web.onboarding.plan_offer_dismissed", { businessId, surface });
+      },
+      onPlanClicked: (plan) => {
+        // A choice ends the dismissals in a row.
+        void requestJson(`/api/plan-offer?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({ chosen: true }) }).catch(() => undefined);
+        telemetry.track("web.onboarding.plan_offer_clicked", { businessId, surface, plan });
+      },
     });
   }, [businessId, due, offer.dataUpdatedAt, openOffer, recordShown, surface, telemetry]);
   return null;

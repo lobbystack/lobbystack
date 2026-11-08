@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNotNull, lt, lte, or, sql } from "drizzle-orm";
 
 import { enqueueOutbox, partnerBillingAccounts, partnerCheckoutRequests, partnerDomains, partners, providerEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import {
@@ -23,6 +23,7 @@ import { isLivePolarSubscriptionState, subscriptionEventEffect } from "./polarSu
 import { partnerRls, requirePartnerOwner } from "./partnerActors";
 import type { PartnerActor } from "./partners";
 import { periodKeyFor } from "./usage";
+import { PROVIDER_RETRY_WINDOW_MS, providerRetryDelayMs } from "./providerRetry";
 
 // A partner's tier: what it buys from the host through Polar. Only the
 // partner's owners start a checkout. The worker creates the checkout with
@@ -409,6 +410,8 @@ export type PartnerTierCheckout = {
   billingInterval: BillingInterval;
   status: "pending" | "processing" | "ready" | "error" | "superseded";
   checkoutUrl: string | null;
+  /** A machine-readable reason when the checkout failed, such as provider_unavailable:503. */
+  error: string | null;
   /** Whether the partner now holds the tier the checkout sold, once Polar's events have reconciled. */
   synced: boolean;
 };
@@ -417,7 +420,7 @@ export async function getPartnerTierCheckout(context: DomainContext, actor: Part
   const member = billingActor(actor);
   return await withBusinessTransaction(context.db, { ...partnerRls(member), actorType: "operator" }, async (tx) => {
     await requireOwner(tx, member);
-    const [row] = await tx.select({ requestId: partnerCheckoutRequests.id, tier: partnerCheckoutRequests.tier, billingInterval: partnerCheckoutRequests.billingInterval, status: partnerCheckoutRequests.status, checkoutUrl: partnerCheckoutRequests.checkoutUrl })
+    const [row] = await tx.select({ requestId: partnerCheckoutRequests.id, tier: partnerCheckoutRequests.tier, billingInterval: partnerCheckoutRequests.billingInterval, status: partnerCheckoutRequests.status, checkoutUrl: partnerCheckoutRequests.checkoutUrl, error: partnerCheckoutRequests.error })
       .from(partnerCheckoutRequests)
       .where(and(eq(partnerCheckoutRequests.id, input.requestId), eq(partnerCheckoutRequests.partnerId, member.partnerId)))
       .limit(1);
@@ -430,21 +433,58 @@ export async function getPartnerTierCheckout(context: DomainContext, actor: Part
 /** Takes a checkout for this worker, or one whose earlier run died holding it. */
 export async function claimPartnerCheckoutRequest(context: DomainContext, input: { partnerId: string; requestId: string }): Promise<boolean> {
   return await withBusinessTransaction(context.db, { actorType: "worker" }, async (tx) => {
-    const staleBefore = new Date(Date.now() - CHECKOUT_LEASE_MS);
-    const rows = await tx.update(partnerCheckoutRequests).set({ status: "processing", error: null, updatedAt: new Date() }).where(and(
+    const now = new Date();
+    const staleBefore = new Date(now.getTime() - CHECKOUT_LEASE_MS);
+    const rows = await tx.update(partnerCheckoutRequests).set({ status: "processing", error: null, retryAt: null, updatedAt: now }).where(and(
       eq(partnerCheckoutRequests.id, input.requestId),
       eq(partnerCheckoutRequests.partnerId, input.partnerId),
-      or(eq(partnerCheckoutRequests.status, "pending"), eq(partnerCheckoutRequests.status, "error"), and(eq(partnerCheckoutRequests.status, "processing"), lt(partnerCheckoutRequests.updatedAt, staleBefore))),
+      or(
+        eq(partnerCheckoutRequests.status, "pending"),
+        eq(partnerCheckoutRequests.status, "error"),
+        and(
+          eq(partnerCheckoutRequests.status, "processing"),
+          or(lt(partnerCheckoutRequests.updatedAt, staleBefore), and(isNotNull(partnerCheckoutRequests.retryAt), lte(partnerCheckoutRequests.retryAt, now))),
+        ),
+      ),
     )).returning({ id: partnerCheckoutRequests.id });
     return rows.length > 0;
   });
 }
 
-/** When another run holds this checkout, the time its lease ends and it may be claimed again. */
+/** When another run holds this checkout, the time it may be claimed again. */
 export async function partnerCheckoutLeaseEndsAt(context: DomainContext, input: { partnerId: string; requestId: string }): Promise<Date | null> {
   return await withBusinessTransaction(context.db, { actorType: "worker" }, async (tx) => {
-    const [row] = await tx.select({ updatedAt: partnerCheckoutRequests.updatedAt }).from(partnerCheckoutRequests).where(and(eq(partnerCheckoutRequests.id, input.requestId), eq(partnerCheckoutRequests.partnerId, input.partnerId), eq(partnerCheckoutRequests.status, "processing"))).limit(1);
-    return row ? new Date(row.updatedAt.getTime() + CHECKOUT_LEASE_MS) : null;
+    const [row] = await tx.select({ updatedAt: partnerCheckoutRequests.updatedAt, retryAt: partnerCheckoutRequests.retryAt }).from(partnerCheckoutRequests).where(and(eq(partnerCheckoutRequests.id, input.requestId), eq(partnerCheckoutRequests.partnerId, input.partnerId), eq(partnerCheckoutRequests.status, "processing"))).limit(1);
+    if (!row) return null;
+    // A retry the worker already scheduled is sooner than the lease, so wait for it.
+    if (row.retryAt && row.retryAt.getTime() > Date.now()) return row.retryAt;
+    return new Date(row.updatedAt.getTime() + CHECKOUT_LEASE_MS);
+  });
+}
+
+/**
+ * Keeps a partner's checkout processing while Polar is unreachable, then lets
+ * the job run again after a growing delay. The window starts at the first
+ * transient failure, so an outage longer than that fails the request. Returns
+ * failed once the window is over, and lost when another run no longer holds
+ * the request.
+ */
+export async function deferPartnerCheckoutRequest(
+  context: DomainContext,
+  input: { partnerId: string; requestId: string },
+): Promise<{ status: "deferred"; retryAt: Date } | { status: "failed" | "lost" }> {
+  return await withBusinessTransaction(context.db, { actorType: "worker" }, async (tx) => {
+    const now = new Date();
+    const [row] = await tx.update(partnerCheckoutRequests).set({
+      firstFailedAt: sql`coalesce(${partnerCheckoutRequests.firstFailedAt}, ${now})`,
+      updatedAt: now,
+    }).where(and(eq(partnerCheckoutRequests.id, input.requestId), eq(partnerCheckoutRequests.partnerId, input.partnerId), eq(partnerCheckoutRequests.status, "processing"))).returning({ firstFailedAt: partnerCheckoutRequests.firstFailedAt });
+    if (!row?.firstFailedAt) return { status: "lost" };
+    const elapsed = now.getTime() - row.firstFailedAt.getTime();
+    if (elapsed >= PROVIDER_RETRY_WINDOW_MS) return { status: "failed" };
+    const retryAt = new Date(now.getTime() + providerRetryDelayMs(elapsed));
+    await tx.update(partnerCheckoutRequests).set({ retryAt }).where(and(eq(partnerCheckoutRequests.id, input.requestId), eq(partnerCheckoutRequests.partnerId, input.partnerId), eq(partnerCheckoutRequests.status, "processing")));
+    return { status: "deferred", retryAt };
   });
 }
 
@@ -478,7 +518,7 @@ export async function markPartnerCheckoutCreated(context: DomainContext, input: 
 
 export async function markPartnerCheckoutFailed(context: DomainContext, input: { partnerId: string; requestId: string; error: string }): Promise<boolean> {
   return await withBusinessTransaction(context.db, { actorType: "worker" }, async (tx) => {
-    const rows = await tx.update(partnerCheckoutRequests).set({ status: "error", error: input.error, updatedAt: new Date() }).where(and(eq(partnerCheckoutRequests.id, input.requestId), eq(partnerCheckoutRequests.partnerId, input.partnerId), eq(partnerCheckoutRequests.status, "processing"))).returning({ id: partnerCheckoutRequests.id });
+    const rows = await tx.update(partnerCheckoutRequests).set({ status: "error", error: input.error, retryAt: null, updatedAt: new Date() }).where(and(eq(partnerCheckoutRequests.id, input.requestId), eq(partnerCheckoutRequests.partnerId, input.partnerId), eq(partnerCheckoutRequests.status, "processing"))).returning({ id: partnerCheckoutRequests.id });
     return rows.length > 0;
   });
 }

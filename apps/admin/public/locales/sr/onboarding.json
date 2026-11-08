@@ -3,8 +3,7 @@
     "signOut": "Odjavi se",
     "terms": "Uslovi",
     "privacy": "Privatnost",
-    "support": "Podrška",
-    "back": "Nazad"
+    "support": "Podrška"
   },
   "errors": {
     "tooManyBusinesses": "Već posedujete 10 radnih prostora, što je ograničenje za jedan nalog."
@@ -169,11 +168,15 @@
     "continue": "Nastavi"
   },
   "number": {
-    "ready": {
-      "label": "Vaš broj je spreman",
-      "call": "Pozovi {{number}}"
-    },
     "planRequired": "Da biste dobili broj, izaberite paket.",
+    "refusals": {
+      "paidPlan": "Dobijanje broja ovde zahteva plaćeni paket.",
+      "trialUsed": "Ovaj radni prostor ili vaš telefon je već iskoristio besplatnu probu.",
+      "network": "Besplatna proba je već počela sa ove mreže u poslednjih 30 dana.",
+      "unavailable": "Besplatan probni broj nije dostupan za ovaj radni prostor.",
+      "verification": "Besplatan broj zahteva verifikovan telefon.",
+      "emailVerification": "Verifikujte svoju imejl adresu pre nego što izaberete probni broj."
+    },
     "title": "Izaberite broj telefona za AI agenta",
     "countryLabel": "Zemlja",
     "kindLocal": "Lokalni",
@@ -208,7 +211,6 @@
     "unavailable": "Neko je upravo uzeo taj broj. Izaberite drugi sa osvežene liste.",
     "selectedTitle": "Broj telefona AI agenta",
     "selectedNumberLabel": "Izabrani broj",
-    "continue": "Nastavi",
     "numbersUnavailable": "Brojevi telefona još nisu podešeni na ovoj kontrolnoj tabli. Zamolite osobu koja njome upravlja da poveže telefonskog provajdera."
   },
   "goal": {
@@ -286,7 +288,8 @@
     },
     "continue": "Nastavi",
     "continuing": "Nastavljanje...",
-    "continueFailed": "Trenutno ne možemo da nastavimo. Pokušajte ponovo."
+    "continueFailed": "Trenutno ne možemo da nastavimo. Pokušajte ponovo.",
+    "backToPlans": "Nazad na pakete"
   },
   "noBusinesses": {
     "title": "Ovde još nemate radni prostor",

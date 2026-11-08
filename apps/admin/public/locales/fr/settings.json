@@ -108,6 +108,7 @@
     "toast": {
       "checkoutSuccess": "Le paiement a bien été lancé.",
       "checkoutFailed": "Impossible d'ouvrir le paiement.",
+      "paymentsUnavailable": "Le paiement est temporairement indisponible. Réessayez dans quelques minutes.",
       "portalFailed": "Impossible d'ouvrir le portail client."
     },
     "pastDueBanner": {
@@ -187,6 +188,8 @@
     "upgradeDialog": {
       "title": "Changer de forfait",
       "description": "Choisissez le forfait qui convient le mieux à votre équipe.",
+      "providerSlow": "Le prestataire de paiement est lent. Nous ouvrons toujours la page de paiement...",
+      "close": "Fermer",
       "enterpriseSubject": "Forfait Entreprise",
       "billingIntervalLabel": "Intervalle de facturation",
       "annualDiscount": "Économisez 20 %",

@@ -7,6 +7,7 @@ import { createDatabaseClient, outboxMessages, partnerBillingAccounts, partnerCh
 import {
   claimPartnerCheckoutRequest,
   createPartnerTierCheckout,
+  deferPartnerCheckoutRequest,
   getPartnerBilling,
   getPartnerTierCheckout,
   loadPartnerCheckoutRequest,
@@ -257,7 +258,33 @@ describe.skipIf(!client)("a partner's tier", () => {
         // A checkout that's ready isn't failed by a late retry.
         expect(await markPartnerCheckoutFailed(acme.context, { ...request, error: "Polar checkout creation failed." })).toBe(false);
       });
-      expect(await getPartnerTierCheckout(acme.context, acme.ownerActor, { requestId })).toEqual({ requestId, tier: "starter", billingInterval: "monthly", status: "ready", checkoutUrl: "https://polar.example.test/co_1", synced: false });
+      expect(await getPartnerTierCheckout(acme.context, acme.ownerActor, { requestId })).toEqual({ requestId, tier: "starter", billingInterval: "monthly", status: "ready", checkoutUrl: "https://polar.example.test/co_1", error: null, synced: false });
+    });
+  });
+
+  it("keeps a tier checkout processing through a short Polar outage, then fails it once the window ends", async () => {
+    await rollbackTest(async (tx) => {
+      sellTiers();
+      const acme = await partner(tx, "Acme Reception");
+      const { requestId } = await createPartnerTierCheckout(acme.context, acme.ownerActor, { tier: "starter", billingInterval: "monthly", returnOrigin: CONSOLE });
+      const request = { partnerId: acme.partnerId, requestId };
+      await asWorker(tx, async () => {
+        expect(await claimPartnerCheckoutRequest(acme.context, request)).toBe(true);
+        const first = await deferPartnerCheckoutRequest(acme.context, request);
+        expect(first).toMatchObject({ status: "deferred" });
+        if (first.status !== "deferred") return;
+        const [row] = await tx.select({ status: partnerCheckoutRequests.status, firstFailedAt: partnerCheckoutRequests.firstFailedAt, retryAt: partnerCheckoutRequests.retryAt }).from(partnerCheckoutRequests).where(eq(partnerCheckoutRequests.id, requestId));
+        expect(row).toMatchObject({ status: "processing", retryAt: first.retryAt });
+        expect(row?.firstFailedAt).toBeInstanceOf(Date);
+        // The scheduled retry, not the ten minute lease, is what the claim waits for.
+        expect(await claimPartnerCheckoutRequest(acme.context, request)).toBe(false);
+        await tx.update(partnerCheckoutRequests).set({ retryAt: new Date(Date.now() - 1_000) }).where(eq(partnerCheckoutRequests.id, requestId));
+        expect(await claimPartnerCheckoutRequest(acme.context, request)).toBe(true);
+        await tx.update(partnerCheckoutRequests).set({ firstFailedAt: new Date(Date.now() - 21 * 60_000) }).where(eq(partnerCheckoutRequests.id, requestId));
+        expect(await deferPartnerCheckoutRequest(acme.context, request)).toEqual({ status: "failed" });
+        expect(await markPartnerCheckoutFailed(acme.context, { ...request, error: "provider_unavailable:503" })).toBe(true);
+      });
+      expect(await getPartnerTierCheckout(acme.context, acme.ownerActor, { requestId })).toMatchObject({ status: "error", error: "provider_unavailable:503" });
     });
   });
 

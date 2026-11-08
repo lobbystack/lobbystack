@@ -1,24 +1,26 @@
 import { createHash, randomUUID } from "node:crypto";
 import Redis from "ioredis";
-import { and, eq, inArray, isNull, lte, ne, or } from "drizzle-orm";
+import { and, eq, gte, gt, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
+import { UnrecoverableError } from "bullmq";
 
 import { hasSummarizableTranscript, type BusinessHoursExtractor, type BusinessSummarizer, type CallSummarizer } from "@lobbystack/agent-core";
 import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
 import { HOST_EMAIL_BRAND, billingMeterEventNames, detectSiteLanguage, emailSender, getPolarMeteredUsagePayload, intlLocale, isUuid, normalizeRuntimeLocale, parseEmailBrandReference, partnerFeatures, partnerTierProductId, type BillingUsageKind, type EmailBrandReference } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { enqueueKnowledgeDerivedRefresh, finishBusinessSummaryRegenerate, forgetStaleRetiredCalendarTokens, loadBusinessHoursInput, loadBusinessSummaryInput, markBusinessHoursChecked, resetGeneratedBusinessSummary, saveGeneratedBusinessHours, saveGeneratedBusinessSummary, type SummaryRegenerateOutcome } from "@lobbystack/domain";
-import { billingCheckoutLeaseEndsAt, checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteStoredObjects, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
+import { billingCheckoutLeaseEndsAt, checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deferBillingCheckoutRequest, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteStoredObjects, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, embeddingInputsForChunk, hashContent, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
 import { deliverOutbound, markFeedbackEmailFailed, markFeedbackEmailSent, queueDailyOperatorSummaries, refreshUnitEconomicsMonth } from "@lobbystack/domain";
 import { NUMBER_ORDER_MAX_WAIT_MS, claimNumberProvisioning, completeNumberProvisioning, deferNumberProvisioning, desiredNumberRouting, refreshStaleRefusedCallForwards, enqueueNumberRouting, resolveRefusedCallForward, failNumberProvisioning, isSharedSmsSender, loadNumberReleaseEmail, loadNumberTrialEmail, numberProvisioningLeaseEndsAt, sharedSmsSender, sweepNumberReleases, sweepNumberTrial } from "@lobbystack/domain";
 import { createWebhookSender, processWebhookDelivery, pruneApiHistory, prunePartnerApiIdempotencyKeys, type WebhookSender } from "@lobbystack/domain";
 import { LIVE_RECORDING_ATTEMPTS, listBusinessesWithOpenLiveCalls, listOpenLiveCalls, liveCallHasRecording, persistCallRecording, retryLiveCallRecording, type OpenLiveCall } from "@lobbystack/domain";
 import { applySiteLanguageInTransaction, expireTeamRequest } from "@lobbystack/domain";
-import { syncBusinessOverage } from "@lobbystack/domain";
-import { advancePartnerLifecycles, claimPartnerCheckoutRequest, keepPartnerTrialNumber, loadPartnerCheckoutRequest, loadPoolUsageEvent, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerBillingKey, partnerCheckoutLeaseEndsAt, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
+import { syncBusinessOverage, PROVIDER_RETRY_WINDOW_MS, providerRetryDelayMs } from "@lobbystack/domain";
+import { advancePartnerLifecycles, claimPartnerCheckoutRequest, deferPartnerCheckoutRequest, keepPartnerTrialNumber, loadPartnerCheckoutRequest, loadPoolUsageEvent, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerBillingKey, partnerCheckoutLeaseEndsAt, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
 import { checkPartnerCustomDomains, provisionPartnerCustomDomain, removePartnerCustomHostname, type CustomDomainProviders } from "@lobbystack/domain";
 import { brandForEmail, businessExists, businessGetsHostEmails, hostBrandFromEnvironment, isHostOnlyEmailTemplate } from "@lobbystack/domain";
 import type { DomainContext } from "@lobbystack/domain";
-import { numberReleaseEmailSubject, numberTrialEmailSubject, type SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
+import { numberReleaseEmailSubject, numberTrialEmailSubject, isPermanentSmtpRejection, type SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
+import { PolarRequestError } from "@lobbystack/providers/polar/polarBilling";
 import type { RuntimeStorageProvider } from "@lobbystack/providers/storage/provider";
 import { NumberOrderPendingError } from "@lobbystack/providers/telephony/types";
 import type { Telephony } from "@lobbystack/providers/telephony/registry";
@@ -28,7 +30,7 @@ import { isLivePrototypeEnabled, type LiveRecoveryOutcome } from "./liveCalls";
 import { deleteReleasedCalendarEvent, reconcileBusinessCalendar, retireCalendarWebhook, syncAppointmentCalendar, type CalendarProviders } from "./calendarJobs";
 import { refreshInstagramToken, replyToInstagramMessage, sendInstagramMessage, type InstagramOperations } from "./instagramJobs";
 import { replyToTextMessage } from "./textReplyJobs";
-import { getMeter } from "@lobbystack/telemetry/node";
+import { emitInfoLog, getMeter } from "@lobbystack/telemetry/node";
 import { bucketOutboxBacklog, getPostHogDistinctIdForBusinessSystem, redactTelemetryProperties, type TelemetryProperties } from "@lobbystack/telemetry";
 
 const ragMeter = getMeter("lobbystack-rag");
@@ -103,6 +105,46 @@ export type JobResult = { status: "completed" | "skipped"; entityId?: string } |
 // before the lease ends. Run it again once the lease ends instead of dropping it.
 function retryAfterLease(leaseEndsAt: Date | null, entityId: string): JobResult {
   return leaseEndsAt ? { status: "deferred", entityId, retryAt: leaseEndsAt } : { status: "skipped", entityId };
+}
+
+type ProviderFailure = { transient: boolean; status: number | null; reason: string };
+type ProviderCheckout = { checkoutId: string; checkoutUrl: string };
+
+/**
+ * Reads what the provider said, with no customer data: an outage may be tried
+ * again, while a refusal waits for someone to change the request.
+ */
+function providerFailure(error: unknown): ProviderFailure {
+  if (error instanceof PolarRequestError) {
+    return {
+      transient: error.transient,
+      status: error.status,
+      reason: error.transient ? "provider_unavailable" : "provider_rejected",
+    };
+  }
+  // Not the provider refusing: a bookkeeping failure is retried by the queue,
+  // and the same request id keeps Polar's idempotency key.
+  throw error;
+}
+
+function providerFailureReason(failure: ProviderFailure): string {
+  return failure.status === null ? failure.reason : `${failure.reason}:${failure.status}`;
+}
+
+/** The wait before retrying a provider call that first failed this long ago. */
+function providerRetryAt(elapsedMs: number): Date {
+  return new Date(Date.now() + providerRetryDelayMs(elapsedMs));
+}
+
+
+/**
+ * A checkout's progress: when Polar defers it and when it opens. The log holds
+ * no customer data, and console.info keeps it in the container without a
+ * second OTel record.
+ */
+function logCheckout(event: string, attributes: Record<string, string | number | boolean>): void {
+  emitInfoLog("lobbystack-worker", event, attributes);
+  console.info(JSON.stringify({ event, ...attributes }));
 }
 
 const MESSAGE_PRICE_WAIT_MS = 60 * 60_000;
@@ -476,20 +518,24 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       let reembedded = 0;
       while (true) {
         const rows = await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) =>
-          await tx.select({ id: knowledgeChunks.id, content: knowledgeChunks.content })
+          await tx.select({ id: knowledgeChunks.id, documentId: knowledgeChunks.documentId, sequence: knowledgeChunks.sequence, content: knowledgeChunks.content })
             .from(knowledgeChunks)
             .where(and(eq(knowledgeChunks.businessId, businessId), or(isNull(knowledgeChunks.embeddingFingerprint), ne(knowledgeChunks.embeddingFingerprint, fingerprint), isNull(knowledgeChunks.embedding), eq(knowledgeChunks.embeddingStatus, "pending"), eq(knowledgeChunks.embeddingStatus, "failed"))))
             .limit(batchSize),
         );
         if (rows.length === 0) break;
         const rowIds = rows.map((row) => row.id);
+        // A chunk stored by an older pipeline can exceed the provider's input
+        // limit. Embed each split part, then store the parts as their own rows.
+        const batches = rows.map((row) => ({ row, contents: embeddingInputsForChunk(row.content) }));
+        const inputs = batches.flatMap((batch) => batch.contents);
         let embeddings: number[][];
         try {
           await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
             await tx.update(knowledgeChunks).set({ embeddingStatus: "pending", embeddingError: null, updatedAt: new Date() }).where(and(eq(knowledgeChunks.businessId, businessId), inArray(knowledgeChunks.id, rowIds)));
           });
-          embeddings = await dependencies.embeddings.embed(rows.map((row) => row.content));
-          if (embeddings.length !== rows.length) throw new Error("Embedding provider returned an incomplete re-embedding batch.");
+          embeddings = await dependencies.embeddings.embed(inputs);
+          if (embeddings.length !== inputs.length) throw new Error("Embedding provider returned an incomplete re-embedding batch.");
           if (embeddings.some((embedding) => embedding.length !== 1536 || embedding.some((value) => !Number.isFinite(value)) || embedding.every((value) => value === 0))) {
             throw new Error("Embedding provider returned an incompatible re-embedding vector.");
           }
@@ -500,10 +546,36 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           throw error;
         }
         await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
-          for (const [index, row] of rows.entries()) {
-            const embedding = embeddings[index];
-            if (!embedding) throw new Error("Embedding provider returned an incompatible re-embedding vector.");
-            await tx.update(knowledgeChunks).set({ embedding, embeddingFingerprint: fingerprint, embeddingStatus: "completed", embeddingError: null, updatedAt: new Date() }).where(and(eq(knowledgeChunks.id, row.id), eq(knowledgeChunks.businessId, businessId)));
+          let index = 0;
+          // Highest sequence first, so a split's new pieces never shift the
+          // sequence of a chunk still waiting to be processed.
+          const ordered = [...batches].sort((a, b) => b.row.sequence - a.row.sequence);
+          for (const { row, contents } of ordered) {
+            const [first, ...rest] = contents;
+            const embedding = embeddings[index++];
+            if (first === undefined || !embedding) throw new Error("Embedding provider returned an incompatible re-embedding vector.");
+            if (rest.length > 0) {
+              // Make room beside the original chunk, not after the document.
+              // The temporary offset keeps the unique (document, sequence)
+              // index satisfied while later chunks move up.
+              await tx.update(knowledgeChunks).set({ sequence: sql`${knowledgeChunks.sequence} + 1000000` }).where(and(eq(knowledgeChunks.businessId, businessId), eq(knowledgeChunks.documentId, row.documentId), gt(knowledgeChunks.sequence, row.sequence)));
+              await tx.update(knowledgeChunks).set({ sequence: sql`${knowledgeChunks.sequence} - 1000000 + ${rest.length}` }).where(and(eq(knowledgeChunks.businessId, businessId), eq(knowledgeChunks.documentId, row.documentId), gte(knowledgeChunks.sequence, row.sequence + 1000000)));
+            }
+            await tx.update(knowledgeChunks).set({
+              ...(rest.length > 0 ? { content: first, contentHash: hashContent(first) } : {}),
+              embedding,
+              embeddingFingerprint: fingerprint,
+              embeddingStatus: "completed",
+              embeddingError: null,
+              updatedAt: new Date(),
+            }).where(and(eq(knowledgeChunks.id, row.id), eq(knowledgeChunks.businessId, businessId)));
+            let sequence = row.sequence + 1;
+            for (const content of rest) {
+              const piece = embeddings[index++];
+              if (!piece) throw new Error("Embedding provider returned an incompatible re-embedding vector.");
+              await tx.insert(knowledgeChunks).values({ businessId, documentId: row.documentId, sequence, content, contentHash: hashContent(content), embedding: piece, embeddingFingerprint: fingerprint, embeddingStatus: "completed", embeddingError: null });
+              sequence += 1;
+            }
           }
         });
         reembedded += rows.length;
@@ -569,6 +641,13 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           if (feedbackSubmissionId) await markFeedbackEmailSent(dependencies.domain, { feedbackSubmissionId, ...(businessId ? { businessId } : {}), providerMessageId: sent.messageId });
         } catch (error) {
           if (feedbackSubmissionId) await markFeedbackEmailFailed(dependencies.domain, { feedbackSubmissionId, ...(businessId ? { businessId } : {}), error: error instanceof Error ? error.message : String(error) }).catch(() => undefined);
+          // A 5xx SMTP response refuses this sender or message for good;
+          // retrying it only fills the failed set. Report it and give up.
+          if (isPermanentSmtpRejection(error)) {
+            const code = typeof (error as { responseCode?: unknown }).responseCode === "number" ? (error as { responseCode: number }).responseCode : null;
+            console.error(JSON.stringify({ event: "email.rejected", template, code }));
+            throw new UnrecoverableError(`Email delivery rejected permanently: ${error instanceof Error ? error.message : String(error)}`);
+          }
           throw error;
         }
       }
@@ -703,7 +782,17 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       };
       const stripe = businessId ? await attempt(async () => await syncStripeOverage(dependencies, { businessId, usageEventId })) : null;
       const polar = businessId && polarClient ? await attempt(async () => await syncPolarUsage(dependencies, polarClient, { businessId, usageEventId })) : null;
-      if (failures.length) throw failures[0];
+      if (failures.length) {
+        // Polar says to retry usage sent during maintenance, and its external id
+        // makes each event idempotent. Stay off the job's attempts while its
+        // outage window runs, then let the queue retry as before.
+        const transient = failures.find((error) => error instanceof PolarRequestError && error.transient);
+        if (transient && businessId && usageEventId) {
+          const elapsed = Date.now() - (execution.queuedAtMs ?? Date.now());
+          if (elapsed < PROVIDER_RETRY_WINDOW_MS) return { status: "deferred", entityId: usageEventId, retryAt: providerRetryAt(elapsed) };
+        }
+        throw failures[0];
+      }
       if (stripe?.status === "completed") return stripe;
       return polar ?? stripe ?? (polarClient ? { status: "skipped" } : { status: "skipped", entityId: usageEventId });
     }
@@ -717,7 +806,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const businessId = businessIdOrThrow(job);
       const monthKey = typeof job.payload.monthKey === "string" ? job.payload.monthKey : undefined;
       const rollupId = await refreshUnitEconomicsMonth(dependencies.domain, { businessId, ...(monthKey ? { monthKey } : {}) });
-      return { status: "completed", entityId: rollupId };
+      return rollupId ? { status: "completed", entityId: rollupId } : { status: "skipped", entityId: businessId };
     }
     case "billing.createCheckout": {
       const businessId = businessIdOrThrow(job);
@@ -730,10 +819,11 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       }
       const request = await loadBillingCheckoutRequest(dependencies.domain, { businessId, requestId });
       if (!request) return { status: "skipped", entityId: requestId };
+      let checkout!: ProviderCheckout;
       try {
         const appUrl = (process.env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
         const planUrl = `${appUrl}/${request.onboardingStage === "complete" ? "settings/plan" : "onboarding/plan"}`;
-        const checkout = await dependencies.polar.createCheckout({
+        checkout = await dependencies.polar.createCheckout({
           productId: polarCheckoutProductId(request.target, request.billingInterval),
           customerEmail: request.customerEmail,
           externalCustomerId: request.externalCustomerId,
@@ -743,12 +833,38 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           returnUrl: planUrl,
           idempotencyKey: `billing-checkout:${requestId}`,
         });
-        await markBillingCheckoutCreated(dependencies.domain, { businessId, requestId, ...checkout });
-        return { status: "completed", entityId: requestId };
       } catch (error) {
-        await markBillingCheckoutFailed(dependencies.domain, { businessId, requestId, error: "Polar checkout creation failed." });
-        throw error;
+        const failure = providerFailure(error);
+        if (failure.transient) {
+          // Polar is unreachable, not refusing. Keep the request processing and
+          // try again after a delay, within the outage window.
+          const retry = await deferBillingCheckoutRequest(dependencies.domain, { businessId, requestId });
+          if (retry.status === "deferred") {
+            logCheckout("billing.checkout_deferred", {
+              requestId,
+              target: request.target,
+              interval: request.billingInterval,
+              status: failure.status ?? 0,
+              elapsedMs: Date.now() - (execution.queuedAtMs ?? Date.now()),
+              retryInMs: retry.retryAt.getTime() - Date.now(),
+            });
+            return { status: "deferred", entityId: requestId, retryAt: retry.retryAt };
+          }
+          if (retry.status !== "failed") return { status: "skipped", entityId: requestId };
+        }
+        // A checkout someone waited on failed for good. Fail the job once, with
+        // no retry, so error tracking raises it.
+        await markBillingCheckoutFailed(dependencies.domain, { businessId, requestId, error: providerFailureReason(failure) });
+        throw new UnrecoverableError(`Checkout failed: ${providerFailureReason(failure)}`);
       }
+      await markBillingCheckoutCreated(dependencies.domain, { businessId, requestId, ...checkout });
+      logCheckout("billing.checkout_created", {
+        requestId,
+        target: request.target,
+        interval: request.billingInterval,
+        elapsedMs: Date.now() - (execution.queuedAtMs ?? Date.now()),
+      });
+      return { status: "completed", entityId: requestId };
     }
     case "billing.createPartnerCheckout": {
       // A partner's tier belongs to no business, so the job names the partner.
@@ -768,9 +884,10 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         await markPartnerCheckoutFailed(dependencies.domain, { ...request, error: "The tier's Polar product is not configured." });
         return { status: "skipped", entityId: requestId };
       }
+      let checkout!: ProviderCheckout;
       try {
         const billingUrl = `${checkoutRequest.returnOrigin}/partner/${partnerId}/billing`;
-        const checkout = await dependencies.polar.createCheckout({
+        checkout = await dependencies.polar.createCheckout({
           productId,
           customerEmail: checkoutRequest.customerEmail,
           externalCustomerId: checkoutRequest.externalCustomerId,
@@ -779,12 +896,38 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           returnUrl: billingUrl,
           idempotencyKey: `partner-checkout:${requestId}`,
         });
-        await markPartnerCheckoutCreated(dependencies.domain, { ...request, ...checkout });
-        return { status: "completed", entityId: requestId };
       } catch (error) {
-        await markPartnerCheckoutFailed(dependencies.domain, { ...request, error: "Polar checkout creation failed." });
-        throw error;
+        const failure = providerFailure(error);
+        if (failure.transient) {
+          // Polar is unreachable, not refusing. Keep the request processing and
+          // try again after a delay, within the outage window.
+          const retry = await deferPartnerCheckoutRequest(dependencies.domain, request);
+          if (retry.status === "deferred") {
+            logCheckout("billing.partner_checkout_deferred", {
+              requestId,
+              tier: checkoutRequest.tier,
+              interval: checkoutRequest.billingInterval,
+              status: failure.status ?? 0,
+              elapsedMs: Date.now() - (execution.queuedAtMs ?? Date.now()),
+              retryInMs: retry.retryAt.getTime() - Date.now(),
+            });
+            return { status: "deferred", entityId: requestId, retryAt: retry.retryAt };
+          }
+          if (retry.status !== "failed") return { status: "skipped", entityId: requestId };
+        }
+        // A checkout someone waited on failed for good. Fail the job once, with
+        // no retry, so error tracking raises it.
+        await markPartnerCheckoutFailed(dependencies.domain, { ...request, error: providerFailureReason(failure) });
+        throw new UnrecoverableError(`Checkout failed: ${providerFailureReason(failure)}`);
       }
+      await markPartnerCheckoutCreated(dependencies.domain, { ...request, ...checkout });
+      logCheckout("billing.partner_checkout_created", {
+        requestId,
+        tier: checkoutRequest.tier,
+        interval: checkoutRequest.billingInterval,
+        elapsedMs: Date.now() - (execution.queuedAtMs ?? Date.now()),
+      });
+      return { status: "completed", entityId: requestId };
     }
     case "billing.reconcilePartner": {
       const partnerId = String(job.payload.partnerId ?? "");

@@ -51,14 +51,14 @@ describe.skipIf(!testUrl)("free trial numbers against dedicated PostgreSQL roles
   it("runs a trial from the verified phone to the end of day 14, then keeps the number when the owner pays", async () => {
     await rollbackTest(async (tx) => {
       const userId = randomUUID();
-      await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid`, name: "Sam Lee" });
+      await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid`, name: "Sam Lee", emailVerified: true });
       await tx.execute(sql`set local role lobbystack_app`);
       const { businessId } = await createBusiness({ db: tx as unknown as Database }, { userId, name: "Trial clinic", timezone: "America/Toronto", businessType: "test" });
       await tx.execute(sql`reset role`);
       await tx.update(businesses).set({ onboardingStage: "verify_phone", deploymentMode: "cloud" }).where(eq(businesses.id, businessId));
       const owner = { userId, businessId };
 
-      // Without a verified mobile, the number step sends the owner to verify one first.
+      // Without a trusted network, the number step sends the owner to verify a mobile first.
       expect(await as(tx, "lobbystack_app", db => numberStepRedirect({ db }, { ...owner, finished: false }))).toBe("/onboarding/verify-phone");
 
       // The owner verifies a mobile, and onboarding moves on to the number step.
@@ -113,6 +113,85 @@ describe.skipIf(!testUrl)("free trial numbers against dedicated PostgreSQL roles
       await as(tx, "lobbystack_worker", db => withBusinessTransaction(db, { businessId, actorType: "worker" }, inner => keepBusinessNumbersInTransaction(inner, { businessId })));
       expect((await tx.select({ status: numberTrials.status }).from(numberTrials).where(eq(numberTrials.id, trial!.id)))[0]?.status).toBe("converted");
       expect((await tx.select({ reason: phoneNumbers.reclaimReason, at: phoneNumbers.reclaimScheduledAt }).from(phoneNumbers).where(eq(phoneNumbers.id, phoneNumberId)))[0]).toEqual({ reason: null, at: null });
+    });
+  });
+
+  it("starts a trial without a text when the email is verified and the network is clean", async () => {
+    await rollbackTest(async (tx) => {
+      const userId = randomUUID();
+      const network = "network-without-sms";
+      await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid`, name: "Sam Lee", emailVerified: true });
+      await tx.execute(sql`set local role lobbystack_app`);
+      const { businessId } = await createBusiness({ db: tx as unknown as Database }, { userId, name: "No-text clinic", timezone: "America/Toronto", businessType: "test" });
+      await tx.execute(sql`reset role`);
+      await tx.update(businesses).set({ onboardingStage: "verify_phone", deploymentMode: "cloud" }).where(eq(businesses.id, businessId));
+      const owner = { userId, businessId };
+
+      // The phone step has nothing to do: a verified email and a known network
+      // are enough, so the number step opens directly.
+      expect(await as(tx, "lobbystack_app", db => numberStepRedirect({ db }, { ...owner, finished: false, ipHash: network, ipCountry: "CA" }))).toBeNull();
+      expect(await as(tx, "lobbystack_app", db => getNumberTrialState({ db }, owner))).toEqual({ status: "available" });
+      // The phone step passes on to the number step, as the dashboard does.
+      await tx.update(businesses).set({ onboardingStage: "phone_number" }).where(eq(businesses.id, businessId));
+
+      // The offer takes its country from the search, not from a phone.
+      const search = await as(tx, "lobbystack_app", db => searchBusinessNumberInventory({ db }, { ...owner, claimTokenSecret, ipHash: network, ipCountry: "CA" }, inventory));
+      expect(search).toMatchObject({ trial: true, countryFixed: false, market: { countryCode: "CA" } });
+
+      const claimId = await as(tx, "lobbystack_app", db => reserveOnboardingNumberClaim({ db }, { ...owner, claimToken: search.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID(), ipHash: network }));
+      const [trial] = await tx.select({ id: numberTrials.id, verifiedPhone: numberTrials.verifiedPhone, ipHash: numberTrials.ipHash, status: numberTrials.status }).from(numberTrials).where(eq(numberTrials.businessId, businessId));
+      expect(trial).toMatchObject({ verifiedPhone: null, ipHash: network, status: "reserved" });
+
+      // The worker buys it, and the agent keeps no transfer number to lock.
+      await as(tx, "lobbystack_worker", async (db) => {
+        expect(await claimNumberProvisioning({ db }, { businessId, claimId })).toBeTruthy();
+        await completeNumberProvisioning({ db }, { businessId, claimId, e164: trialNumber, providerPhoneId: `PN${randomUUID().replaceAll("-", "")}`, voiceUrl: "sip-trunk:TK-test", smsUrl: "https://example.invalid/sms" });
+      });
+      expect((await tx.select({ status: numberTrials.status }).from(numberTrials).where(eq(numberTrials.id, trial!.id)))[0]?.status).toBe("active");
+      expect((await tx.select({ transferNumber: agents.transferNumber }).from(agents).where(eq(agents.businessId, businessId)))[0]?.transferNumber).toBeNull();
+      expect(await as(tx, "lobbystack_worker", db => resolveNumberFallback({ db }, { businessId, e164: trialNumber }))).toEqual({ action: "reject" });
+
+      // Out of minutes with nobody verified, calls stay unanswered and the email has no forward to name.
+      expect(await as(tx, "lobbystack_worker", db => markNumberTrialMinutesExhausted({ db }, { businessId }))).toBe(true);
+      expect(await as(tx, "lobbystack_worker", db => loadNumberTrialEmail({ db }, { businessId, trialId: trial!.id, email: "minutes_out" }))).toMatchObject({ trialNumber, forwardTo: null });
+    });
+  });
+
+  it("asks for a mobile on a network that already started a trial, then lets the verified phone claim", async () => {
+    await rollbackTest(async (tx) => {
+      const network = "network-used-twice";
+      const first = randomUUID();
+      await tx.insert(users).values({ id: first, email: `${first}@example.invalid`, normalizedEmail: `${first}@example.invalid`, name: "First Owner", emailVerified: true });
+      await tx.execute(sql`set local role lobbystack_app`);
+      const { businessId: firstBusiness } = await createBusiness({ db: tx as unknown as Database }, { userId: first, name: "First clinic", timezone: "America/Toronto", businessType: "test" });
+      await tx.execute(sql`reset role`);
+      await tx.update(businesses).set({ onboardingStage: "phone_number", deploymentMode: "cloud" }).where(eq(businesses.id, firstBusiness));
+      const firstOwner = { userId: first, businessId: firstBusiness };
+      const firstSearch = await as(tx, "lobbystack_app", db => searchBusinessNumberInventory({ db }, { ...firstOwner, claimTokenSecret, ipHash: network, ipCountry: "CA" }, inventory));
+      await as(tx, "lobbystack_app", db => reserveOnboardingNumberClaim({ db }, { ...firstOwner, claimToken: firstSearch.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID(), ipHash: network }));
+
+      const second = randomUUID();
+      await tx.insert(users).values({ id: second, email: `${second}@example.invalid`, normalizedEmail: `${second}@example.invalid`, name: "Second Owner", emailVerified: true });
+      await tx.execute(sql`set local role lobbystack_app`);
+      const { businessId: secondBusiness } = await createBusiness({ db: tx as unknown as Database }, { userId: second, name: "Second clinic", timezone: "America/Toronto", businessType: "test" });
+      await tx.execute(sql`reset role`);
+      await tx.update(businesses).set({ onboardingStage: "verify_phone", deploymentMode: "cloud" }).where(eq(businesses.id, secondBusiness));
+      const secondOwner = { userId: second, businessId: secondBusiness };
+
+      // The same network asks for a mobile instead of refusing the plan.
+      expect(await as(tx, "lobbystack_app", db => numberStepRedirect({ db }, { ...secondOwner, finished: false, ipHash: network, ipCountry: "CA" }))).toBe("/onboarding/verify-phone");
+      // A search that reaches the number step anyway asks for the phone, not a plan.
+      await tx.update(businesses).set({ onboardingStage: "phone_number" }).where(eq(businesses.id, secondBusiness));
+      await expect(as(tx, "lobbystack_app", db => searchBusinessNumberInventory({ db }, { ...secondOwner, claimTokenSecret, ipHash: network, ipCountry: "CA" }, inventory))).rejects.toMatchObject({ status: 409, code: "phone_verification_required" });
+
+      // Verifying the mobile is the proof, and the trial records it.
+      const { attemptId } = await as(tx, "lobbystack_app", db => startOnboardingPhoneVerification({ db }, { ...secondOwner, phoneE164: ownerPhone, countryCode: "CA" }, verify));
+      await as(tx, "lobbystack_app", db => checkOnboardingPhoneVerificationCode({ db }, { ...secondOwner, attemptId, code: "123456" }, verify));
+      const verifiedSearch = await as(tx, "lobbystack_app", db => searchBusinessNumberInventory({ db }, { ...secondOwner, claimTokenSecret, ipHash: network, ipCountry: "CA" }, inventory));
+      expect(verifiedSearch.trial).toBe(true);
+      const claimId = await as(tx, "lobbystack_app", db => reserveOnboardingNumberClaim({ db }, { ...secondOwner, claimToken: verifiedSearch.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID(), ipHash: network }));
+      expect(claimId).toBeTruthy();
+      expect((await tx.select({ verifiedPhone: numberTrials.verifiedPhone, ipHash: numberTrials.ipHash }).from(numberTrials).where(eq(numberTrials.businessId, secondBusiness)))[0]).toEqual({ verifiedPhone: ownerPhone, ipHash: null });
     });
   });
 
@@ -185,7 +264,7 @@ describe.skipIf(!testUrl)("free trial numbers against dedicated PostgreSQL roles
   it("converts a trial whose number finishes buying after the owner paid", async () => {
     await rollbackTest(async (tx) => {
       const userId = randomUUID();
-      await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid`, name: "Sam Lee" });
+      await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid`, name: "Sam Lee", emailVerified: true });
       await tx.execute(sql`set local role lobbystack_app`);
       const { businessId } = await createBusiness({ db: tx as unknown as Database }, { userId, name: "Paying clinic", timezone: "America/Toronto", businessType: "test" });
       await tx.execute(sql`reset role`);

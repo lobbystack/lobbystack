@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const fixture = vi.hoisted(() => ({
   headers: new Headers(),
@@ -33,6 +33,7 @@ beforeEach(() => {
     { partnerId: OTHER, name: "Second Shop", slug: "second-shop", role: "member", subdomain: null },
   ];
 });
+afterEach(() => { vi.unstubAllEnvs(); });
 
 it("opens the console of a partner the person is on the team of, with their role and a switcher", async () => {
   const shell = await open(PARTNER.toUpperCase()) as ReactElement<{ partner: unknown; partners: unknown[]; user: unknown }>;
@@ -50,6 +51,14 @@ it("gives an owner the Billing page when the partner has one, and asks nothing f
   fixture.billingPage.mockResolvedValueOnce(true);
   expect(await billingPage()).toBe(true);
   expect(fixture.billingPage).toHaveBeenLastCalledWith(expect.anything(), { userId: "user", partnerId: PARTNER });
+});
+
+it("gives owners the Payments page only when the deployment has Stripe Connect", async () => {
+  const payments = async () => ((await open(PARTNER)) as ReactElement<{ payments: boolean }>).props.payments;
+  expect(await payments()).toBe(false);
+  vi.stubEnv("STRIPE_CONNECT_SECRET_KEY", "sk_test_platform");
+  vi.stubEnv("STRIPE_CONNECT_WEBHOOK_SECRET", "whsec_test_platform");
+  expect(await payments()).toBe(true);
 });
 
 it("sends anyone off the partner's team back to /partner, whether the id is someone else's or not an id at all", async () => {

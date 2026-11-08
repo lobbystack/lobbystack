@@ -4,12 +4,13 @@ import { afterEach, describe, expect, it } from "vitest";
 import { vi } from "vitest";
 
 import type { JobEnvelope } from "@lobbystack/contracts";
-import { billingCheckoutLeaseEndsAt, claimBillingCheckoutRequest, countPublishableOutboxMessages, deleteCallRecordingForRetention, deleteSentProductEventsBefore, deliverOutbound, expireProspectDemos, generateAffiliatePayoutRun, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, loadLiveCallForPricing, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, reconcileBillingProviderEvent, runPrivacyRetentionSweep } from "@lobbystack/domain";
+import { billingCheckoutLeaseEndsAt, claimBillingCheckoutRequest, countPublishableOutboxMessages, deferBillingCheckoutRequest, deleteCallRecordingForRetention, deleteSentProductEventsBefore, deliverOutbound, expireProspectDemos, generateAffiliatePayoutRun, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, loadLiveCallForPricing, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, reconcileBillingProviderEvent, runPrivacyRetentionSweep } from "@lobbystack/domain";
 import { queueDailyOperatorSummaries, queueOnboardingFollowupEmail } from "@lobbystack/domain";
 import { NUMBER_ORDER_MAX_WAIT_MS, claimNumberProvisioning, completeNumberProvisioning, deferNumberProvisioning, failNumberProvisioning, numberProvisioningLeaseEndsAt } from "@lobbystack/domain";
+import { PolarRequestError } from "@lobbystack/providers/polar/polarBilling";
 import { NumberOrderPendingError } from "@lobbystack/providers/telephony/types";
 import { brandForEmail, businessExists, businessGetsHostEmails, forgetCachedBrands, loadNumberReleaseEmail, type Brand } from "@lobbystack/domain";
-import { advancePartnerLifecycles, claimPartnerCheckoutRequest, keepPartnerTrialNumber, loadPartnerCheckoutRequest, loadPoolUsageEvent, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerCheckoutLeaseEndsAt, PartnerLifecycleError, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
+import { advancePartnerLifecycles, claimPartnerCheckoutRequest, deferPartnerCheckoutRequest, keepPartnerTrialNumber, loadPartnerCheckoutRequest, loadPoolUsageEvent, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerCheckoutLeaseEndsAt, PartnerLifecycleError, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
 import { checkPartnerCustomDomains, provisionPartnerCustomDomain, removePartnerCustomHostname, syncBusinessOverage } from "@lobbystack/domain";
 import { FakeCustomHostnames, FakeTxtRecords } from "@lobbystack/providers/customHostnames/fakeCustomHostnames";
 import { FakeStripeConnect } from "@lobbystack/providers/stripe/fakeStripeConnect";
@@ -24,6 +25,8 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     billingCheckoutLeaseEndsAt: vi.fn(),
     claimBillingCheckoutRequest: vi.fn(),
     claimPartnerCheckoutRequest: vi.fn(),
+    deferBillingCheckoutRequest: vi.fn(),
+    deferPartnerCheckoutRequest: vi.fn(),
     loadPartnerCheckoutRequest: vi.fn(),
     markPartnerCheckoutCreated: vi.fn(),
     markPartnerCheckoutFailed: vi.fn(),
@@ -193,6 +196,20 @@ describe("worker handlers", () => {
     await handleJob({ jobId: randomUUID(), businessId: null, type: "email.sendNotice", queue: "default", payload, trace: {}, idempotencyKey: randomUUID(), scheduled: false }, { domain: { db: undefined as never }, email });
     expect(sendMail.mock.lastCall?.[0]).toMatchObject({ to: "owner@example.test", subject: "Bright Desk deleted Harbor Dental" });
     expect(queueForJobType["email.sendNotice"]).toBe("default");
+  });
+
+  it("stops retrying an email whose sender the mail provider refuses for good", async () => {
+    const error = Object.assign(new Error("Message failed: 550 This API key is not authorized to send emails from receptionistportal.com"), { responseCode: 550, code: "EENVELOPE" });
+    const email = { sendTemplate: vi.fn().mockRejectedValue(error) };
+    const job = { jobId: randomUUID(), businessId: null, type: "email.send" as const, queue: "default" as const, payload: { template: "verify_email", to: "owner@example.test", variables: { code: "123456" }, brand: { kind: "host" }, replyTo: null }, trace: {}, idempotencyKey: randomUUID(), scheduled: false };
+    await expect(handleJob(job, { domain: { db: savedBranding(null) }, email })).rejects.toMatchObject({ name: "UnrecoverableError", message: expect.stringContaining("receptionistportal.com") });
+  });
+
+  it("still retries a temporary SMTP rejection", async () => {
+    const error = Object.assign(new Error("Try again later"), { responseCode: 451 });
+    const email = { sendTemplate: vi.fn().mockRejectedValue(error) };
+    const job = { jobId: randomUUID(), businessId: null, type: "email.send" as const, queue: "default" as const, payload: { template: "verify_email", to: "owner@example.test", variables: { code: "123456" }, brand: { kind: "host" }, replyTo: null }, trace: {}, idempotencyKey: randomUUID(), scheduled: false };
+    await expect(handleJob(job, { domain: { db: savedBranding(null) }, email })).rejects.toBe(error);
   });
 
   it("writes an email under the brand it reads when it sends: name, links, sender and Reply-To", async () => {
@@ -790,6 +807,46 @@ describe("worker handlers", () => {
     expect(createCheckout).not.toHaveBeenCalled();
   });
 
+  it("keeps a checkout processing through a Polar outage and retries it after a delay", async () => {
+    const businessId = randomUUID(); const requestId = randomUUID(); const domain = { db: undefined as never }; const retryAt = new Date(Date.now() + 5_000);
+    vi.stubEnv("POLAR_STARTER_MONTHLY_PRODUCT_ID", "product-starter-monthly");
+    vi.mocked(claimBillingCheckoutRequest).mockResolvedValue(true);
+    vi.mocked(loadBillingCheckoutRequest).mockResolvedValue({ id: requestId, businessId, target: "starter", billingInterval: "monthly", status: "processing", checkoutId: null, checkoutUrl: null, error: null, customerEmail: "owner@example.com", externalCustomerId: `business:${businessId}`, onboardingStage: "complete" });
+    vi.mocked(deferBillingCheckoutRequest).mockResolvedValue({ status: "deferred", retryAt });
+    const createCheckout = vi.fn().mockRejectedValue(new PolarRequestError({ status: 503, transient: true }));
+
+    await expect(handleJob({ jobId: randomUUID(), type: "billing.createCheckout", queue: "critical", businessId, payload: { requestId }, trace: {}, idempotencyKey: `test:${randomUUID()}`, scheduled: false }, { domain, polar: { recordUsage: vi.fn(), createCheckout } }))
+      .resolves.toEqual({ status: "deferred", entityId: requestId, retryAt });
+    expect(deferBillingCheckoutRequest).toHaveBeenCalledWith(domain, { businessId, requestId });
+    expect(markBillingCheckoutFailed).not.toHaveBeenCalled();
+  });
+
+  it("fails a checkout when Polar's outage outlasts the retry window", async () => {
+    const businessId = randomUUID(); const requestId = randomUUID(); const domain = { db: undefined as never };
+    vi.stubEnv("POLAR_STARTER_MONTHLY_PRODUCT_ID", "product-starter-monthly");
+    vi.mocked(claimBillingCheckoutRequest).mockResolvedValue(true);
+    vi.mocked(loadBillingCheckoutRequest).mockResolvedValue({ id: requestId, businessId, target: "starter", billingInterval: "monthly", status: "processing", checkoutId: null, checkoutUrl: null, error: null, customerEmail: "owner@example.com", externalCustomerId: `business:${businessId}`, onboardingStage: "complete" });
+    vi.mocked(deferBillingCheckoutRequest).mockResolvedValue({ status: "failed" });
+    const createCheckout = vi.fn().mockRejectedValue(new PolarRequestError({ status: 503, transient: true }));
+
+    await expect(handleJob({ jobId: randomUUID(), type: "billing.createCheckout", queue: "critical", businessId, payload: { requestId }, trace: {}, idempotencyKey: `test:${randomUUID()}`, scheduled: false }, { domain, polar: { recordUsage: vi.fn(), createCheckout } }))
+      .rejects.toMatchObject({ name: "UnrecoverableError", message: "Checkout failed: provider_unavailable:503" });
+    expect(markBillingCheckoutFailed).toHaveBeenCalledWith(domain, { businessId, requestId, error: "provider_unavailable:503" });
+  });
+
+  it("fails a checkout Polar refuses without retrying it", async () => {
+    const businessId = randomUUID(); const requestId = randomUUID(); const domain = { db: undefined as never };
+    vi.stubEnv("POLAR_STARTER_MONTHLY_PRODUCT_ID", "product-starter-monthly");
+    vi.mocked(claimBillingCheckoutRequest).mockResolvedValue(true);
+    vi.mocked(loadBillingCheckoutRequest).mockResolvedValue({ id: requestId, businessId, target: "starter", billingInterval: "monthly", status: "processing", checkoutId: null, checkoutUrl: null, error: null, customerEmail: "owner@example.com", externalCustomerId: `business:${businessId}`, onboardingStage: "complete" });
+    const createCheckout = vi.fn().mockRejectedValue(new PolarRequestError({ status: 422, transient: false }));
+
+    await expect(handleJob({ jobId: randomUUID(), type: "billing.createCheckout", queue: "critical", businessId, payload: { requestId }, trace: {}, idempotencyKey: `test:${randomUUID()}`, scheduled: false }, { domain, polar: { recordUsage: vi.fn(), createCheckout } }))
+      .rejects.toMatchObject({ name: "UnrecoverableError", message: "Checkout failed: provider_rejected:422" });
+    expect(markBillingCheckoutFailed).toHaveBeenCalledWith(domain, { businessId, requestId, error: "provider_rejected:422" });
+    expect(deferBillingCheckoutRequest).not.toHaveBeenCalled();
+  });
+
   it("sends Polar's back arrow to the plan page without marking checkout successful", async () => {
     const businessId = randomUUID();
     const requestId = randomUUID();
@@ -855,16 +912,47 @@ describe("worker handlers", () => {
       expect(markPartnerCheckoutFailed).not.toHaveBeenCalled();
     });
 
-    it("fails the checkout when Polar refuses it, and lets the queue retry", async () => {
+    it("keeps a tier checkout processing through a Polar outage and retries it after a delay", async () => {
       const requestId = randomUUID();
       const domain = { db: undefined as never };
       for (const [name, value] of Object.entries(tierProducts)) vi.stubEnv(name, value);
       vi.mocked(claimPartnerCheckoutRequest).mockResolvedValue(true);
       vi.mocked(loadPartnerCheckoutRequest).mockResolvedValue(checkoutRequest(requestId));
-      const { polar } = fakePolar(Promise.reject(new Error("Polar request failed with status 422.")));
+      const retryAt = new Date(Date.now() + 5_000);
+      vi.mocked(deferPartnerCheckoutRequest).mockResolvedValue({ status: "deferred", retryAt });
+      const { polar } = fakePolar(Promise.reject(new PolarRequestError({ status: 503, transient: true })));
 
-      await expect(handleJob(checkoutJob(requestId), { domain, polar })).rejects.toThrow("status 422");
-      expect(markPartnerCheckoutFailed).toHaveBeenCalledWith(domain, { partnerId, requestId, error: "Polar checkout creation failed." });
+      await expect(handleJob(checkoutJob(requestId), { domain, polar })).resolves.toEqual({ status: "deferred", entityId: requestId, retryAt });
+      expect(deferPartnerCheckoutRequest).toHaveBeenCalledWith(domain, { partnerId, requestId });
+      expect(markPartnerCheckoutFailed).not.toHaveBeenCalled();
+      expect(markPartnerCheckoutCreated).not.toHaveBeenCalled();
+    });
+
+    it("fails a tier checkout when Polar's outage outlasts the retry window", async () => {
+      const requestId = randomUUID();
+      const domain = { db: undefined as never };
+      for (const [name, value] of Object.entries(tierProducts)) vi.stubEnv(name, value);
+      vi.mocked(claimPartnerCheckoutRequest).mockResolvedValue(true);
+      vi.mocked(loadPartnerCheckoutRequest).mockResolvedValue(checkoutRequest(requestId));
+      vi.mocked(deferPartnerCheckoutRequest).mockResolvedValue({ status: "failed" });
+      const { polar } = fakePolar(Promise.reject(new PolarRequestError({ status: 503, transient: true })));
+
+      await expect(handleJob(checkoutJob(requestId), { domain, polar })).rejects.toMatchObject({ name: "UnrecoverableError", message: "Checkout failed: provider_unavailable:503" });
+      expect(markPartnerCheckoutFailed).toHaveBeenCalledWith(domain, { partnerId, requestId, error: "provider_unavailable:503" });
+      expect(markPartnerCheckoutCreated).not.toHaveBeenCalled();
+    });
+
+    it("fails a tier checkout Polar refuses without retrying it", async () => {
+      const requestId = randomUUID();
+      const domain = { db: undefined as never };
+      for (const [name, value] of Object.entries(tierProducts)) vi.stubEnv(name, value);
+      vi.mocked(claimPartnerCheckoutRequest).mockResolvedValue(true);
+      vi.mocked(loadPartnerCheckoutRequest).mockResolvedValue(checkoutRequest(requestId));
+      const { polar } = fakePolar(Promise.reject(new PolarRequestError({ status: 422, transient: false })));
+
+      await expect(handleJob(checkoutJob(requestId), { domain, polar })).rejects.toMatchObject({ name: "UnrecoverableError", message: "Checkout failed: provider_rejected:422" });
+      expect(markPartnerCheckoutFailed).toHaveBeenCalledWith(domain, { partnerId, requestId, error: "provider_rejected:422" });
+      expect(deferPartnerCheckoutRequest).not.toHaveBeenCalled();
       expect(markPartnerCheckoutCreated).not.toHaveBeenCalled();
     });
 
@@ -1492,6 +1580,55 @@ describe("worker handlers", () => {
       properties: { provider: "polar" },
     }));
     expect(recordProductEvent).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ name: "ops.billing.usage_sync_recovered" }));
+    expect(markBillingUsageSynced).not.toHaveBeenCalled();
+  });
+
+  it("retries Polar usage through an outage without spending the job's attempts", async () => {
+    const job = billingJob({ usageEventId: randomUUID() });
+    const domain = { db: undefined as never };
+    vi.mocked(loadBillingUsageEvent).mockResolvedValue({
+      id: String(job.payload.usageEventId),
+      sourceKey: "voice:call_1",
+      isFinal: true,
+      plan: "starter",
+      businessId: job.businessId!,
+      usageKind: "voice_seconds",
+      quantity: 120,
+      billableQuantity: null,
+      billingIntervalAtRecordTime: null,
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      syncStatus: "pending",
+      billingKey: "business-key",
+      customerId: "polar-customer-id",
+    });
+    const recordUsage = vi.fn().mockRejectedValue(new PolarRequestError({ status: 503, transient: true }));
+
+    await expect(handleJob(job, { domain, polar: { recordUsage } }, { queuedAtMs: Date.now() }))
+      .resolves.toEqual({ status: "deferred", entityId: String(job.payload.usageEventId), retryAt: expect.any(Date) });
+    expect(markBillingUsageSynced).not.toHaveBeenCalled();
+  });
+
+  it("fails Polar usage once the retry window has passed", async () => {
+    const job = billingJob({ usageEventId: randomUUID() });
+    const domain = { db: undefined as never };
+    vi.mocked(loadBillingUsageEvent).mockResolvedValue({
+      id: String(job.payload.usageEventId),
+      sourceKey: "voice:call_1",
+      isFinal: true,
+      plan: "starter",
+      businessId: job.businessId!,
+      usageKind: "voice_seconds",
+      quantity: 120,
+      billableQuantity: null,
+      billingIntervalAtRecordTime: null,
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      syncStatus: "pending",
+      billingKey: "business-key",
+      customerId: "polar-customer-id",
+    });
+    const recordUsage = vi.fn().mockRejectedValue(new PolarRequestError({ status: 503, transient: true }));
+
+    await expect(handleJob(job, { domain, polar: { recordUsage } }, { queuedAtMs: Date.now() - 21 * 60_000 })).rejects.toThrow("status 503");
     expect(markBillingUsageSynced).not.toHaveBeenCalled();
   });
 

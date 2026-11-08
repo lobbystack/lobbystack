@@ -43,6 +43,7 @@ Do not duplicate ownership between runtimes unless there is a specific analytics
 - `web.agent.settings_saved`
 - `web.onboarding.number_claim_started`
 - `web.onboarding.number_claim_completed`
+- `web.onboarding.number_unavailable`: the number step showed the plans instead of the picker, with `code` set to the refusal, such as `trial_already_used` or `trial_ip_limited`
 - `web.onboarding.plan_checkout_completed`
 - `web.onboarding.language_submitted`: an owner with no website picked the language, with `locale`
 - `web.onboarding.meet_completed`: an owner left Meet your agent for the dashboard
