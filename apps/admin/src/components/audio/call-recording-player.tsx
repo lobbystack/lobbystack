@@ -351,6 +351,32 @@ export function CallRecordingPlayer({
     audio.pause();
   }
 
+  // Space plays and pauses from anywhere on the page, the way a video player does, unless it belongs to something else: a field, a button, a menu or a dialog.
+  const togglePlaybackRef = useRef(togglePlayback);
+  togglePlaybackRef.current = togglePlayback;
+  useEffect(() => {
+    if (!waveform || variant === "hidden") {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== " " || event.defaultPrevented || event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) {
+        return;
+      }
+
+      const target = event.target instanceof Element ? event.target : null;
+      if (target?.closest("input, textarea, select, button, a[href], [contenteditable]:not([contenteditable='false']), [role='button'], [role='tab'], [role='combobox'], [role='menuitem'], [role='option'], [role='switch'], [role='checkbox'], [role='radio'], [role='dialog'], [role='alertdialog']")) {
+        return;
+      }
+
+      event.preventDefault();
+      void togglePlaybackRef.current();
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [variant, waveform]);
+
   function seekTo(nextTime: number) {
     const audio = audioRef.current;
     if (!audio || duration <= 0) {
@@ -412,6 +438,7 @@ export function CallRecordingPlayer({
               duration={duration}
               label={seekLabel ?? "Seek"}
               onSeek={seekTo}
+              onToggle={() => void togglePlayback()}
               peaks={peaks}
             />
           ) : (
@@ -461,11 +488,12 @@ export function CallRecordingPlayer({
   );
 }
 
-function Waveform({ currentTime, duration, label, onSeek, peaks }: {
+function Waveform({ currentTime, duration, label, onSeek, onToggle, peaks }: {
   currentTime: number;
   duration: number;
   label: string;
   onSeek: (seconds: number) => void;
+  onToggle: () => void;
   peaks: number[];
 }) {
   const ratio = duration > 0 ? currentTime / duration : 0;
@@ -488,6 +516,11 @@ function Waveform({ currentTime, duration, label, onSeek, peaks }: {
       aria-valuetext={`${formatDuration(currentTime)} / ${formatDuration(duration)}`}
       className="flex h-10 min-w-24 flex-1 cursor-pointer touch-none items-center gap-px rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
       onKeyDown={(event) => {
+        if (event.key === " " && !event.repeat && !event.ctrlKey && !event.metaKey && !event.altKey) {
+          event.preventDefault();
+          onToggle();
+          return;
+        }
         const step = event.key === "ArrowRight" || event.key === "ArrowUp" ? SEEK_STEP_SECONDS : event.key === "ArrowLeft" || event.key === "ArrowDown" ? -SEEK_STEP_SECONDS : 0;
         if (step !== 0) {
           event.preventDefault();

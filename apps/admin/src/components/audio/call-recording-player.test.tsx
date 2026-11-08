@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, render } from "@testing-library/react";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CallRecordingPlayer } from "./call-recording-player";
 
@@ -74,4 +74,34 @@ it("falls back to the slider when the recording can't be decoded", async () => {
   const { container, queryByRole } = render(<CallRecordingPlayer {...waveformProps} />);
   await vi.waitFor(() => expect(container.querySelector("[data-slot='slider']")).not.toBeNull());
   expect(queryByRole("slider", { name: "Seek in recording" })).toBeNull();
+});
+
+describe("space bar on the waveform player", () => {
+  async function ready() {
+    stubDecode({ getChannelData: () => new Float32Array(1200).fill(0.5), length: 1200, numberOfChannels: 1 });
+    const play = vi.spyOn(HTMLMediaElement.prototype, "play").mockImplementation(() => Promise.resolve());
+    const view = render(<><input aria-label="Notes" /><CallRecordingPlayer {...waveformProps} /></>);
+    const seek = await view.findByRole("slider", { name: "Seek in recording" });
+    await vi.waitFor(() => expect(seek.getAttribute("aria-valuemax")).toBe("60"));
+    return { play, seek, view };
+  }
+  const press = (target: Element | Document) => target.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: " " }));
+
+  it("plays and pauses from anywhere on the page", async () => {
+    const { play } = await ready();
+    await act(async () => { press(document.body); });
+    expect(play).toHaveBeenCalledTimes(1);
+  });
+
+  it("does the same once when the waveform has focus", async () => {
+    const { play, seek } = await ready();
+    await act(async () => { seek.focus(); press(seek); });
+    expect(play).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves the space bar to a text field and to buttons", async () => {
+    const { play, view } = await ready();
+    await act(async () => { press(view.getByLabelText("Notes")); press(view.getByRole("button", { name: "Play" })); });
+    expect(play).not.toHaveBeenCalled();
+  });
 });
