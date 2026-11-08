@@ -1,6 +1,9 @@
 "use client"
 
-import { ArrowRight, Phone, PhoneOff } from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { Toaster, toast } from "sonner"
+import { ArrowRight, Check, ChevronDown, Phone, PhoneOff } from "lucide-react"
+import { intlLocale, runtimeLocales, type RuntimeLocale } from "@lobbystack/shared"
 import {
   AuraVoiceOrb,
   useWebVoiceCall,
@@ -10,6 +13,15 @@ import {
 } from "@lobbystack/web-voice"
 
 import { Button, buttonVariants } from "@/marketing/components/ui/button"
+import { ButtonGroup } from "@/marketing/components/ui/button-group"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/marketing/components/ui/dropdown-menu"
+import { LanguageFlag } from "@/marketing/components/web-voice/LanguageFlag"
 import { appSignupUrl } from "@/marketing/lib/app-links"
 import type { Locale } from "@/marketing/i18n"
 
@@ -25,6 +37,7 @@ type LobbyStackAuraVoiceDemoProps = {
 const demoCopy = {
   en: {
     start: "Start call",
+    language: "Language the AI speaks",
     connecting: "Connecting…",
     hangUp: "Hang up",
     prompt: "Want it answering your phone?",
@@ -32,6 +45,7 @@ const demoCopy = {
   },
   fr: {
     start: "Lancer l’appel",
+    language: "Langue de l’IA",
     connecting: "Connexion…",
     hangUp: "Raccrocher",
     prompt: "Vous voulez qu’il réponde à votre téléphone ?",
@@ -39,6 +53,7 @@ const demoCopy = {
   },
   es: {
     start: "Iniciar llamada",
+    language: "Idioma de la IA",
     connecting: "Conectando…",
     hangUp: "Colgar",
     prompt: "¿Quiere que conteste su teléfono?",
@@ -46,6 +61,7 @@ const demoCopy = {
   },
   sr: {
     start: "Započni poziv",
+    language: "Jezik AI asistenta",
     connecting: "Povezivanje…",
     hangUp: "Prekini",
     prompt: "Želite da se javlja na Vaš telefon?",
@@ -171,6 +187,8 @@ const errorCopy: Record<
     browserNoMicrophone: "This browser does not support microphone calls.",
     browserNoWebRtc: "This browser does not support live voice calls.",
     voiceLimitReached: "The AI receptionist is unavailable right now.",
+    rateLimited: "You've reached the demo limit for now. Try again in an hour.",
+    businessNotFound: "The demo isn't set up on this site yet.",
     unavailable: "The AI receptionist is unavailable right now.",
     generic: "Something went wrong while starting the call.",
   },
@@ -179,6 +197,9 @@ const errorCopy: Record<
     microphoneNotFound: "Branchez un microphone pour continuer.",
     microphoneInUse: "Fermez l’autre application qui utilise le microphone.",
     connectionDropped: "La connexion vocale a été interrompue.",
+    rateLimited: "Vous avez atteint la limite de la démo. Réessayez dans une heure.",
+    voiceLimitReached: "Le réceptionniste IA est indisponible pour le moment.",
+    businessNotFound: "La démo n’est pas encore configurée sur ce site.",
     generic: "Impossible de démarrer l’appel. Réessayez.",
   },
   es: {
@@ -189,6 +210,9 @@ const errorCopy: Record<
     gatewayUnreachable:
       "Esta página no puede conectar con LobbyStack para iniciar la llamada.",
     connectionDropped: "Se cortó la conexión de voz.",
+    rateLimited: "Alcanzó el límite de la demo. Inténtelo de nuevo en una hora.",
+    voiceLimitReached: "La recepcionista con IA no está disponible ahora.",
+    businessNotFound: "La demo aún no está configurada en este sitio.",
     generic: "No se pudo iniciar la llamada. Inténtelo de nuevo.",
   },
   sr: {
@@ -199,8 +223,18 @@ const errorCopy: Record<
     gatewayUnreachable:
       "Stranica ne može da se poveže sa LobbyStack servisom da bi započela poziv.",
     connectionDropped: "Glasovna veza je prekinuta.",
+    rateLimited: "Dostigli ste ograničenje demoa. Pokušajte ponovo za sat vremena.",
+    voiceLimitReached: "AI recepcioner trenutno nije dostupan.",
+    businessNotFound: "Demo još nije podešen na ovom sajtu.",
     generic: "Poziv nije mogao da počne. Pokušajte ponovo.",
   },
+}
+
+/** Each language named in itself, so a visitor finds theirs whatever language the page is in. */
+function languageName(language: RuntimeLocale) {
+  // Asked for the bare language: "sr-Latn" would add "(latinica)", and the page is Latin script already.
+  const name = new Intl.DisplayNames([intlLocale(language)], { type: "language" }).of(language) ?? language
+  return name.charAt(0).toLocaleUpperCase(intlLocale(language)) + name.slice(1)
 }
 
 function landingEventName(event: WebVoiceCallEvent) {
@@ -216,9 +250,16 @@ export function LobbyStackAuraVoiceDemo({
   widgetId,
   onEvent,
 }: LobbyStackAuraVoiceDemoProps) {
+  // The language the AI speaks starts as the page's own and is sent with the call.
+  const [language, setLanguage] = useState<RuntimeLocale>(locale)
+  const languageRef = useRef(language)
+  languageRef.current = language
+  const getStartPayload = useCallback(async () => ({ language: languageRef.current }), [])
+  const languages = useMemo(() => runtimeLocales.map((code) => ({ code, label: languageName(code) })), [])
   const call = useWebVoiceCall({
     businessSlug,
     endpoint,
+    getStartPayload,
     ...(widgetId ? { widgetId } : {}),
     ...(onEvent
       ? {
@@ -229,9 +270,15 @@ export function LobbyStackAuraVoiceDemo({
   })
   const { status, muted, errorKey, startCall, endCall, isCallActive, canHangUp } = call
   const errors = errorCopy[locale]
+  // The line under the orb is easy to miss, so a failed start also says why in a toast.
+  const errorMessage = errorKey ? (errors[errorKey] ?? errors.generic) : null
+  useEffect(() => {
+    if (status === "error" && errorMessage) toast.error(errorMessage)
+  }, [status, errorKey, errorMessage])
 
   return (
     <div className="mx-auto flex w-full min-w-0 flex-col items-center text-center">
+      <Toaster position="bottom-center" richColors />
       <AuraVoiceOrb
         call={call}
         statusLabel={
@@ -245,16 +292,51 @@ export function LobbyStackAuraVoiceDemo({
         {/* Controls */}
         {status === "idle" || status === "error" ? (
           <div key="idle" className="swap-in absolute inset-x-0 top-1/2 z-20 mt-32 flex items-center justify-center">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={startCall}
-              className="cursor-pointer rounded-full border-border bg-background text-foreground shadow-sm hover:bg-muted"
-            >
-              <Phone className="size-4" aria-hidden="true" />
-              {demoCopy[locale].start}
-            </Button>
+            <ButtonGroup>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={startCall}
+                className="cursor-pointer rounded-l-full border-border bg-background text-foreground shadow-sm hover:bg-muted"
+              >
+                <Phone className="size-4" aria-hidden="true" />
+                {demoCopy[locale].start}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      aria-label={`${demoCopy[locale].language}: ${languageName(language)}`}
+                      className="cursor-pointer rounded-r-full border-border bg-background px-2.5 text-foreground shadow-sm hover:bg-muted"
+                    />
+                  }
+                >
+                  <LanguageFlag language={language} />
+                  <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-auto min-w-44">
+                  <DropdownMenuGroup>
+                    {languages.map(({ code, label }) => (
+                      <DropdownMenuItem
+                        key={code}
+                        className="justify-between"
+                        onClick={() => setLanguage(code)}
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <LanguageFlag language={code} />
+                          {label}
+                        </span>
+                        {code === language ? <Check aria-hidden="true" /> : null}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </ButtonGroup>
           </div>
         ) : status === "requesting_microphone" || status === "connecting" ? (
           <div key="connecting" className="swap-in absolute inset-x-0 top-1/2 z-20 mt-32 flex items-center justify-center">

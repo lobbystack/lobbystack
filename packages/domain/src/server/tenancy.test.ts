@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({ enqueueOutbox: vi.fn(), tx: undefined as unkno
 vi.mock("@lobbystack/db", async (original) => ({ ...(await original<typeof import("@lobbystack/db")>()), enqueueOutbox: mocks.enqueueOutbox, withBusinessTransaction: async (_db: unknown, _context: unknown, callback: (tx: unknown) => unknown) => await callback(mocks.tx) }));
 vi.mock("../authz", async (original) => ({ ...(await original<typeof import("../authz")>()), requireBusinessAdmin: vi.fn() }));
 
-import { createBusiness, ianaTimeZone, inviteMember, updateBusiness, updateBusinessInTransaction } from "./tenancy";
+import { createBusiness, ianaTimeZone, inviteMember, slugAfterRename, slugFromBusinessName, updateBusiness, updateBusinessInTransaction } from "./tenancy";
 
 beforeEach(() => { vi.clearAllMocks(); });
 
@@ -117,5 +117,47 @@ describe("business summary", () => {
   it("keeps the summary when neither the name nor the locale changes", async () => {
     await updateBusinessInTransaction(tx, { businessId: "biz-1", websiteUrl: "https://oak.example" });
     expect(summaryJobs()).toEqual([]);
+  });
+});
+
+describe("business slug", () => {
+  it("makes the slug from the name", () => {
+    expect(slugFromBusinessName("  GoodFellas Barbershop! ")).toBe("goodfellas-barbershop");
+    expect(slugFromBusinessName("Café Müller")).toBe("cafe-muller");
+    expect(slugFromBusinessName("!!!")).toBe("business");
+  });
+
+  it("follows a rename, with a suffix only when another business has the slug", async () => {
+    expect(await slugAfterRename("old-slug", "LobbyStack", async () => false)).toBe("lobbystack");
+    const suffixed = await slugAfterRename("old-slug", "LobbyStack", async (slug) => slug === "lobbystack");
+    expect(suffixed).toMatch(/^lobbystack-[0-9a-f]{12}$/);
+  });
+
+  it("leaves a slug that already follows the name alone", async () => {
+    const never = async () => { throw new Error("should not look"); };
+    expect(await slugAfterRename("lobbystack", "LobbyStack!", never)).toBeNull();
+    expect(await slugAfterRename("lobbystack-3fa9c21b04de", "LobbyStack", never)).toBeNull();
+  });
+
+  function useRename(current: { name: string; slug: string }, takenSlugs: string[] = []) {
+    const updates: Array<{ table: unknown; values: Record<string, unknown> }> = [];
+    const tx = {
+      execute: async () => ({ rows: [] }),
+      select: () => ({ from: () => ({ where: () => Object.assign(Promise.resolve([]), { for: async () => [current], limit: async () => takenSlugs.length ? [{ id: "other" }] : [] }) }) }),
+      update: (table: unknown) => ({ set: (values: Record<string, unknown>) => { updates.push({ table, values }); return { where: () => ({ returning: async () => [{ id: "biz-1" }] }) }; } }),
+    } as never;
+    return { tx, updates };
+  }
+
+  it("changes the slug together with the name", async () => {
+    const { tx, updates } = useRename({ name: "Old Name", slug: "old-slug" });
+    await updateBusinessInTransaction(tx, { businessId: "biz-1", name: "LobbyStack" });
+    expect(updates[0]).toEqual({ table: businesses, values: expect.objectContaining({ name: "LobbyStack", slug: "lobbystack" }) });
+  });
+
+  it("keeps the slug when the name is saved unchanged", async () => {
+    const { tx, updates } = useRename({ name: "LobbyStack", slug: "old-slug" });
+    await updateBusinessInTransaction(tx, { businessId: "biz-1", name: "LobbyStack" });
+    expect(updates[0]!.values).not.toHaveProperty("slug");
   });
 });

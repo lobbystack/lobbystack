@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 
 import { buildBrowserSessionConfig } from "@lobbystack/agent-core/live/session";
+import { withCallLanguage } from "@lobbystack/agent-core/live/callLanguage";
 import { businessHasPhoneNumber, finishLiveCall, getBusinessSnapshotForAgent, getWebVoiceBillingAllowance, recordProspectDemoCallError, recordProspectDemoCallStarted, recordVoiceSnapshotLoaded, startLiveWebCall } from "@lobbystack/domain";
-import { isUuid } from "@lobbystack/shared";
+import { isUuid, runtimeLocales, type RuntimeLocale } from "@lobbystack/shared";
 import { asApiResponse, readJson } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
 import { attachWorkerToLiveSession, endLiveBrowserSession, getLiveClient, requireLivePrototype } from "@/lib/live-prototype";
@@ -28,7 +29,9 @@ function parse(body: unknown): LiveWebCallRequest | undefined {
   if (!sdp || !widgetId || !(LIVE_WEB_CALL_WIDGET_IDS as readonly string[]).includes(widgetId)) return undefined;
   const agentId = text("agentId", 64);
   if (agentId && !isUuid(agentId)) return undefined;
-  const optional = { businessSlug: text("businessSlug", 128), visitorId: text("visitorId", 128), pageUrl: text("pageUrl"), prospectDemoToken: text("prospectDemoToken", 512), agentId };
+  // Only the landing site's demo lets a visitor choose the language the receptionist speaks.
+  const language = widgetId === "lobbystack-landing" ? (runtimeLocales as readonly string[]).find((locale) => locale === value.language) as RuntimeLocale | undefined : undefined;
+  const optional = { language, businessSlug: text("businessSlug", 128), visitorId: text("visitorId", 128), pageUrl: text("pageUrl"), prospectDemoToken: text("prospectDemoToken", 512), agentId };
   return { sdp, widgetId, ...Object.fromEntries(Object.entries(optional).filter(([, entry]) => entry !== undefined)) };
 }
 
@@ -89,14 +92,15 @@ export async function POST(request: Request) {
     // The rate limit shields the database, so only allowed callers reach it.
     // The caller hears nothing until this request returns, so these two
     // independent reads run together.
-    const [billing, snapshot] = await Promise.all([
+    const [billing, loadedSnapshot] = await Promise.all([
       access.billable ? getWebVoiceBillingAllowance(domain, { businessId: access.businessId, ...(maxDurationMs ? { maxDurationMs } : {}) }) : undefined,
       // A business that was never published has no snapshot until this builds one.
       getBusinessSnapshotForAgent(domain, { businessId: access.businessId, agentId: access.agentId }),
     ]);
     timing.mark("checks");
     if (billing && !billing.allowed) return denied(402, billing.errorCode ?? "voice_limit_reached", cors);
-    if (!snapshot) return denied(409, "snapshot_missing", cors);
+    if (!loadedSnapshot) return denied(409, "snapshot_missing", cors);
+    const snapshot = withCallLanguage(loadedSnapshot, body.language);
     // The widget offers voice only to businesses with a phone number. That number can be another agent's.
     if (access.widgetId === "lobbystack-widget" && !businessHasPhoneNumber(snapshot)) return denied(403, "voice_unavailable", cors);
     // Telemetry only; the call doesn't wait for it.
@@ -133,6 +137,7 @@ export async function POST(request: Request) {
           ...(call.agentId ? { agentId: call.agentId } : {}),
           ...(call.maxDurationMs ? { maxDurationMs: call.maxDurationMs } : {}),
           ...(access.prospectDemoId ? { intakeOnly: true } : {}),
+          ...(body.language ? { language: body.language } : {}),
         }),
       ]);
       timing.mark("attach");

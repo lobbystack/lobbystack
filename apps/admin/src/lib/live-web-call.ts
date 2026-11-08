@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 
 import { widgetKeys, withBusinessTransaction } from "@lobbystack/db";
 import { activeAgentExistsInTransaction, bearerToken, businessShowsOnBrand } from "@lobbystack/domain";
-import { DASHBOARD_TEST_CALL_WIDGET_ID, PROSPECT_DEMO_WIDGET_ID, WIDGET_VOICE_ID } from "@lobbystack/shared";
+import { DASHBOARD_TEST_CALL_WIDGET_ID, PROSPECT_DEMO_WIDGET_ID, WIDGET_VOICE_ID, type RuntimeLocale } from "@lobbystack/shared";
 
 import { getWorkerDatabase } from "./api-helpers";
 import { requireOperator } from "./operator-request";
@@ -42,6 +42,8 @@ export type LiveWebCallRequest = {
   prospectDemoToken?: string;
   /** The agent a dashboard test call answers as. No other caller chooses its agent. */
   agentId?: string;
+  /** The language the landing site's demo visitor picked. No other caller chooses its language. */
+  language?: RuntimeLocale;
 };
 
 /** Who is calling, and on whose behalf. Decides billing, limits and tools. */

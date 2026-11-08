@@ -33,6 +33,8 @@ vi.mock("@lobbystack/agent-core", () => ({
   createReceptionistAgent: mocks.createReceptionistAgent,
   liveDelegationEnvironment: () => ({ AI_CHAT_REASONING_EFFORT: "low" }),
   liveLanguage: () => "English",
+  // Tags the greeting so a test can see the picked language reached the setup.
+  withCallLanguage: (snapshot: { greeting: string }, language?: string) => language ? { ...snapshot, greeting: `${language}: ${snapshot.greeting}` } : snapshot,
   closeLiveSession: mocks.closeLiveSession,
   agentModelId: () => ({ provider: "openai", model: "gpt-6-luna" }),
   describeAgentUsage: (usage: { inputTokens: number; outputTokens: number }, latencyMs: number) => ({ provider: "openai", model: "gpt-6-luna", latencyMs, inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, totalCostUsd: 0.00021 }),
@@ -183,6 +185,17 @@ describe("createLiveCallHandler", () => {
     expect(controller.wrapUp).toHaveBeenCalledWith("silence_timeout");
     expect(controller.endSession).not.toHaveBeenCalled();
     await expect((controller.options.setup as Promise<{ language: string }>)).resolves.toMatchObject({ greeting: "Hi" });
+  });
+
+  it("greets in the language the caller picked before the call", async () => {
+    vi.stubEnv("LIVE_PROTOTYPE_ENABLED", "true");
+    vi.stubEnv("INTERNAL_SERVICE_TOKEN", "token");
+    vi.stubEnv("OPENAI_API_KEY", "sk-test");
+    mocks.snapshot.mockResolvedValue({ businessId: "biz_1", greeting: "Hi" });
+    const handler = createLiveCallHandler({ domain: { db: {} as never } });
+    await handler.handle(attachRequest({ sessionId: "live_lang", businessId: "biz_1", callId: "call_1", channel: "web_voice", language: "fr" }), response());
+    const controller = mocks.controllers_.at(-1)!;
+    await expect(controller.options.setup as Promise<unknown>).resolves.toMatchObject({ greeting: "fr: Hi" });
   });
 
   it("blocks an abusive caller before the call ends, but not a spammer", async () => {
@@ -1076,6 +1089,13 @@ describe("parseAttachRequest", () => {
     expect(parseAttachRequest(JSON.stringify({ ...attach, agentId: "agent_b" }))).toMatchObject({ agentId: "agent_b" });
     expect(parseAttachRequest(JSON.stringify({ ...attach, agentId: 7 }))).not.toHaveProperty("agentId");
     expect(parseAttachRequest(JSON.stringify(attach))).not.toHaveProperty("agentId");
+  });
+
+  it("keeps a language the caller picked, and drops one that isn't offered", () => {
+    const attach = { sessionId: "live_1", businessId: "biz_1", callId: "call_1", channel: "web_voice" };
+    expect(parseAttachRequest(JSON.stringify({ ...attach, language: "fr" }))).toMatchObject({ language: "fr" });
+    expect(parseAttachRequest(JSON.stringify({ ...attach, language: "tlh" }))).not.toHaveProperty("language");
+    expect(parseAttachRequest(JSON.stringify({ ...attach, language: 3 }))).not.toHaveProperty("language");
   });
 
   it("marks a retried delivery's attach as a resume", () => {

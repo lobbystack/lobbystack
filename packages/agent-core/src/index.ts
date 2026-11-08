@@ -5,6 +5,7 @@ export { createReceptionistTools, type AgentChannel, type AgentToolContext, type
 export { closeLiveSession, LiveCallController, SILENCE_CHECK_IN_MS, SILENCE_TIMEOUT_MS, WRAP_UP_MAX_MS,type DelegationTiming, type GreetingEvent, type LiveCallControllerOptions, type LiveCallSetup, type LiveCallSummary, type LiveCallTimeout, type LiveCallTransferState, type LiveCallTurn, type LiveCallWrapUp } from "./live/callController";
 export { callerIsDone, callerIsLeaving } from "./live/callerDone";
 export { LiveLatencyTracker, type LiveCallLatency } from "./live/latency";
+export { withCallLanguage } from "./live/callLanguage";
 export { buildBrowserSessionConfig, buildPhoneSessionConfig, LIVE_MODEL } from "./live/session";
 export { createBusinessHoursExtractor, extractBusinessHours, type BusinessHoursExtraction, type BusinessHoursExtractor, type BusinessHoursSource, type ExtractedBusinessHours } from "./businessHours";
 export { createBusinessSummarizer, summarizeBusiness, type BusinessSummarizer, type BusinessSummaryResult, type BusinessSummarySource } from "./businessSummary";
