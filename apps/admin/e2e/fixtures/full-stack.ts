@@ -43,6 +43,9 @@ export async function signUpOwner(database: Migrator, page: Page, testInfo: Test
   await page.getByRole("button", { name: onboarding.businessName.continue }).click();
   const { businessId } = await (await created).json() as { businessId: string };
   await database.db.update(businesses).set({ onboardingStage: "complete" }).where(eq(businesses.id, businessId));
+  // The business step moves on to the next one as soon as the business exists, and a business that is already complete is then sent on again.
+  // A test that opens its own page before that ends interrupts it, and its first goto fails with net::ERR_ABORTED.
+  await page.waitForURL((url) => !url.pathname.includes("/onboarding"), { waitUntil: "load" });
   return { email, businessId, businessName };
 }
 
