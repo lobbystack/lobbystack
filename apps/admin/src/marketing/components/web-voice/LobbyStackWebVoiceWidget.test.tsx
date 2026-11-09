@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { LobbyStackHeroVoiceDemo } from "@/marketing/components/web-voice/LobbyStackWebVoiceWidget"
@@ -117,23 +116,11 @@ async function capturedEvents() {
 describe("landing hero voice demo language", () => {
   const sentLanguage = () => JSON.parse(vi.mocked(fetch).mock.calls.at(-1)![1]!.body as string).language
 
-  it("asks for the page's own language unless the visitor picks another", async () => {
+  it("asks for the page's own language", async () => {
     render(<LobbyStackHeroVoiceDemo locale="es" />)
     fireEvent.click(screen.getByRole("button", { name: "Iniciar llamada" }))
     await waitFor(() => expect(fetch).toHaveBeenCalled())
     expect(sentLanguage()).toBe("es")
-  })
-
-  it("sends the language the visitor picked before starting", async () => {
-    render(<LobbyStackHeroVoiceDemo locale="en" />)
-    const user = userEvent.setup()
-    await user.click(screen.getByRole("button", { name: "Language the AI speaks: English" }))
-    await user.click(await screen.findByRole("menuitem", { name: "Français" }))
-    // The button shows only the flag, and now names the picked language.
-    expect(screen.getByRole("button", { name: "Language the AI speaks: Français" }).textContent).toBe("")
-    await user.click(screen.getByRole("button", { name: "Start call" }))
-    await waitFor(() => expect(fetch).toHaveBeenCalled())
-    expect(sentLanguage()).toBe("fr")
   })
 })
 
@@ -150,18 +137,6 @@ describe("landing hero voice demo start failures", () => {
     render(<LobbyStackHeroVoiceDemo locale="fr" />)
     fireEvent.click(screen.getByRole("button", { name: "Lancer l’appel" }))
     expect(await screen.findByText("Vous avez atteint la limite de la démo. Réessayez dans une heure.", { selector: "[data-sonner-toast] *" })).toBeTruthy()
-  })
-})
-
-describe("landing hero voice demo language menu", () => {
-  it("lists every language with its flag and marks the one in use", async () => {
-    render(<LobbyStackHeroVoiceDemo locale="en" />)
-    await userEvent.setup().click(screen.getByRole("button", { name: "Language the AI speaks: English" }))
-    const items = await screen.findAllByRole("menuitem")
-    expect(items.map((item) => item.querySelector("[data-flag]")?.getAttribute("data-flag"))).toEqual(["en", "fr", "es", "sr", "de", "pt", "it", "nl"])
-    expect(items.map((item) => item.textContent)).toContain("Srpski")
-    expect(items[0]!.querySelector("svg:not([data-flag])")).not.toBeNull()
-    expect(items[1]!.querySelector("svg:not([data-flag])")).toBeNull()
   })
 })
 

@@ -1,9 +1,8 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect } from "react"
 import { Toaster, toast } from "sonner"
-import { ArrowRight, Check, ChevronDown, Phone, PhoneOff } from "lucide-react"
-import { intlLocale, runtimeLocales, type RuntimeLocale } from "@lobbystack/shared"
+import { ArrowRight, Phone, PhoneOff } from "lucide-react"
 import {
   AuraVoiceOrb,
   useWebVoiceCall,
@@ -13,15 +12,6 @@ import {
 } from "@lobbystack/web-voice"
 
 import { Button, buttonVariants } from "@/marketing/components/ui/button"
-import { ButtonGroup } from "@/marketing/components/ui/button-group"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/marketing/components/ui/dropdown-menu"
-import { LanguageFlag } from "@/marketing/components/web-voice/LanguageFlag"
 import { appSignupUrl } from "@/marketing/lib/app-links"
 import type { Locale } from "@/marketing/i18n"
 
@@ -37,7 +27,6 @@ type LobbyStackAuraVoiceDemoProps = {
 const demoCopy = {
   en: {
     start: "Start call",
-    language: "Language the AI speaks",
     connecting: "Connecting…",
     hangUp: "Hang up",
     prompt: "Want it answering your phone?",
@@ -45,7 +34,6 @@ const demoCopy = {
   },
   fr: {
     start: "Lancer l’appel",
-    language: "Langue de l’IA",
     connecting: "Connexion…",
     hangUp: "Raccrocher",
     prompt: "Vous voulez qu’il réponde à votre téléphone ?",
@@ -53,7 +41,6 @@ const demoCopy = {
   },
   es: {
     start: "Iniciar llamada",
-    language: "Idioma de la IA",
     connecting: "Conectando…",
     hangUp: "Colgar",
     prompt: "¿Quiere que conteste su teléfono?",
@@ -61,7 +48,6 @@ const demoCopy = {
   },
   sr: {
     start: "Započni poziv",
-    language: "Jezik AI asistenta",
     connecting: "Povezivanje…",
     hangUp: "Prekini",
     prompt: "Želite da se javlja na Vaš telefon?",
@@ -230,13 +216,6 @@ const errorCopy: Record<
   },
 }
 
-/** Each language named in itself, so a visitor finds theirs whatever language the page is in. */
-function languageName(language: RuntimeLocale) {
-  // Asked for the bare language: "sr-Latn" would add "(latinica)", and the page is Latin script already.
-  const name = new Intl.DisplayNames([intlLocale(language)], { type: "language" }).of(language) ?? language
-  return name.charAt(0).toLocaleUpperCase(intlLocale(language)) + name.slice(1)
-}
-
 function landingEventName(event: WebVoiceCallEvent) {
   return event === "session_created"
     ? "landing.web_voice_session_created"
@@ -250,12 +229,8 @@ export function LobbyStackAuraVoiceDemo({
   widgetId,
   onEvent,
 }: LobbyStackAuraVoiceDemoProps) {
-  // The language the AI speaks starts as the page's own and is sent with the call.
-  const [language, setLanguage] = useState<RuntimeLocale>(locale)
-  const languageRef = useRef(language)
-  languageRef.current = language
-  const getStartPayload = useCallback(async () => ({ language: languageRef.current }), [])
-  const languages = useMemo(() => runtimeLocales.map((code) => ({ code, label: languageName(code) })), [])
+  // The AI speaks the page's language.
+  const getStartPayload = useCallback(async () => ({ language: locale }), [locale])
   const call = useWebVoiceCall({
     businessSlug,
     endpoint,
@@ -292,51 +267,16 @@ export function LobbyStackAuraVoiceDemo({
         {/* Controls */}
         {status === "idle" || status === "error" ? (
           <div key="idle" className="swap-in absolute inset-x-0 top-1/2 z-20 mt-32 flex items-center justify-center">
-            <ButtonGroup>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={startCall}
-                className="cursor-pointer rounded-l-full border-border bg-background text-foreground shadow-sm hover:bg-muted"
-              >
-                <Phone className="size-4" aria-hidden="true" />
-                {demoCopy[locale].start}
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      aria-label={`${demoCopy[locale].language}: ${languageName(language)}`}
-                      className="cursor-pointer rounded-r-full border-border bg-background px-2.5 text-foreground shadow-sm hover:bg-muted"
-                    />
-                  }
-                >
-                  <LanguageFlag language={language} />
-                  <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden="true" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-auto min-w-44">
-                  <DropdownMenuGroup>
-                    {languages.map(({ code, label }) => (
-                      <DropdownMenuItem
-                        key={code}
-                        className="justify-between"
-                        onClick={() => setLanguage(code)}
-                      >
-                        <span className="flex items-center gap-2.5">
-                          <LanguageFlag language={code} />
-                          {label}
-                        </span>
-                        {code === language ? <Check aria-hidden="true" /> : null}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </ButtonGroup>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={startCall}
+              className="cursor-pointer rounded-full border-border bg-background text-foreground shadow-sm hover:bg-muted"
+            >
+              <Phone className="size-4" aria-hidden="true" />
+              {demoCopy[locale].start}
+            </Button>
           </div>
         ) : status === "requesting_microphone" || status === "connecting" ? (
           <div key="connecting" className="swap-in absolute inset-x-0 top-1/2 z-20 mt-32 flex items-center justify-center">
