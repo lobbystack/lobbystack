@@ -99,6 +99,13 @@ describe("onboarding stages", () => {
     await expect(requireOnboardingStage("/onboarding/goal")).resolves.toBeUndefined();
   });
 
+  it("opens the first step to create another workspace from any step", async () => {
+    for (const stage of ["website", "goal", "complete"]) {
+      fixture.state = { businessId: "business-1", stage, steps: DIRECT };
+      await expect(requireOnboardingStage("/onboarding/business", { allowCreate: true })).resolves.toBeUndefined();
+    }
+  });
+
   it("keeps the number picker open from later steps", async () => {
     fixture.state = { businessId: "business-1", stage: "goal", steps: DIRECT };
     await expect(requireOnboardingStage("/onboarding/number")).resolves.toBeUndefined();
@@ -124,10 +131,6 @@ describe("creating another workspace", () => {
     await expect(requireOnboardingStage("/onboarding/business")).rejects.toThrow("redirect:");
   });
 
-  it("keeps someone whose workspace is still in onboarding on their step", async () => {
-    fixture.state = { businessId: "business-1", stage: "verify_phone", steps: DIRECT };
-    await expect(requireOnboardingStage("/onboarding/business", { allowCreate: true })).rejects.toThrow("redirect:/onboarding/verify-phone");
-  });
 });
 
 describe("on a partner's host", () => {

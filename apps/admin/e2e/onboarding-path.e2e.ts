@@ -4,6 +4,7 @@ import { eq, sql } from "drizzle-orm";
 
 import { businesses, createDatabaseClient } from "@lobbystack/db";
 
+import nav from "../public/locales/en/nav.json" with { type: "json" };
 import onboarding from "../public/locales/en/onboarding.json" with { type: "json" };
 
 import { completeSignupEmailVerification, isolateAuthRateLimit } from "./fixtures/email-verification";
@@ -107,6 +108,12 @@ test("the website path waits for the import and ends on Meet your agent", async 
     await expect(page).toHaveURL("/");
     const [row] = await database.db.select({ stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, businessId));
     expect(row?.stage).toBe("complete");
+
+    // A finished workspace still opens the first step to create another one.
+    await page.getByRole("button", { name: /^Onboarding Path / }).click();
+    await page.getByRole("menuitem", { name: nav.sidebar.createBusiness }).click();
+    await expect(page).toHaveURL("/onboarding/business?create=true");
+    await expect(page.getByLabel(onboarding.businessName.label)).toHaveValue("");
   } finally {
     await removeFixtures(database, email, businessId);
     await database.pool.end();

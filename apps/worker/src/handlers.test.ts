@@ -1345,6 +1345,27 @@ describe("worker handlers", () => {
     expect(recordCallProviderPricing).toHaveBeenCalledWith({ db: undefined as never }, expect.objectContaining({ providerCallId: "CA777", callId: "call_1", providerCostUsd: 0.02 }));
   });
 
+  it("checks a call's price again later while Twilio hasn't priced it, and gives up after an hour", async () => {
+    const job = pricingJob("call.syncPrice", { providerCallId: "CA123", providerCallStatus: "completed" });
+    const dependencies = { domain: { db: undefined as never }, telephony: twilioTelephony({ getCallTreePricing: vi.fn().mockResolvedValue({ providerPriceUnit: "usd" }) }) };
+    await expect(handleJob(job, dependencies, { queuedAtMs: Date.now() })).resolves.toEqual({ status: "deferred", entityId: "CA123", retryAt: expect.any(Date) });
+    await expect(handleJob(job, dependencies, { queuedAtMs: Date.now() - 2 * 60 * 60_000 })).rejects.toThrow(/pricing is incomplete/);
+    expect(recordCallProviderPricing).not.toHaveBeenCalled();
+  });
+
+  it("checks a GPT-Live call's price again later while its trunk call is missing or unpriced", async () => {
+    const job = pricingJob("call.syncPrice", { callId: "call_1", providerCallStatus: "completed" });
+    vi.stubEnv("TWILIO_SIP_TRUNK_SID", "TK123");
+    vi.mocked(loadLiveCallForPricing).mockResolvedValue({ startedAt: new Date(), callerPhone: "+14165550134", carrier: "twilio", dialled: [] });
+    const findTrunkCall = vi.fn().mockResolvedValueOnce(undefined).mockResolvedValue("CA777");
+    const dependencies = { domain: { db: undefined as never }, telephony: twilioTelephony({ getCallPricing: vi.fn().mockResolvedValue({}), findTrunkCall }) };
+    await expect(handleJob(job, dependencies, { queuedAtMs: Date.now() })).resolves.toEqual({ status: "deferred", entityId: "call_1", retryAt: expect.any(Date) });
+    await expect(handleJob(job, dependencies, { queuedAtMs: Date.now() })).resolves.toEqual({ status: "deferred", entityId: "call_1", retryAt: expect.any(Date) });
+    await expect(handleJob(job, dependencies, { queuedAtMs: Date.now() - 2 * 60 * 60_000 })).rejects.toThrow("twilio call pricing is incomplete for CA777.");
+    vi.unstubAllEnvs();
+    expect(recordCallProviderPricing).not.toHaveBeenCalled();
+  });
+
   it("runs the tenant-scoped daily operator summary job", async () => {
     const businessId = randomUUID();
     const domain = { db: undefined as never };

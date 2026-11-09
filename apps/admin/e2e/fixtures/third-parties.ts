@@ -3,8 +3,9 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 
 import { THIRD_PARTY_ORIGIN, THIRD_PARTY_PORT } from "./full-stack-environment";
 
-// Local stand-ins for the carriers and Calendly. carrier-redirect.mjs points
-// the carrier SDKs here, and the CALENDLY_ settings point Calendly here, so the
+// Local stand-ins for the carriers, Calendly, Firecrawl and the embedding
+// provider. carrier-redirect.mjs points the carrier SDKs here, and the
+// CALENDLY_, FIRECRAWL_ and AI_EMBEDDING_ settings point the others here, so the
 // real adapters run in the admin server and the worker. Each answers only what
 // those adapters ask, and records what they sent for the specs to check.
 
@@ -54,6 +55,12 @@ export type ThirdParties = {
     webhooks: Array<{ url: string; events: string[] }>;
     bookings: Booking[];
   };
+  firecrawl: {
+    /** How many of the next crawl starts to refuse with a 429, as a rate limit does. */
+    rateLimitedStarts: number;
+    /** Every crawl start, refused or not. */
+    starts: Array<{ url: string; status: number }>;
+  };
   close(): Promise<void>;
 };
 
@@ -64,6 +71,8 @@ export async function startThirdParties(): Promise<ThirdParties> {
   const calendly: ThirdParties["calendly"] = { plan: "paid", bookingRefusal: null, authorizations: [], tokenExchanges: [], webhooks: [], bookings: [] };
   const calls: CarrierCall[] = [];
   const offered: string[] = [];
+  const firecrawl: ThirdParties["firecrawl"] = { rateLimitedStarts: 0, starts: [] };
+  const crawls = new Map<string, string>();
 
   const numberResource = (sid: string, e164 = randomTorontoNumber()): Number => {
     const existing = numbers.get(sid);
@@ -179,6 +188,27 @@ export async function startThirdParties(): Promise<ThirdParties> {
     send(response, 404, { message: `The fake has no ${request.method} ${path}.` });
   }
 
+  function firecrawlApi(request: IncomingMessage, response: ServerResponse, url: URL, raw: string): void {
+    if (url.pathname === "/firecrawl/v1/crawl" && request.method === "POST") {
+      const { url: site } = JSON.parse(raw) as { url: string };
+      const status = firecrawl.rateLimitedStarts > 0 ? 429 : 200;
+      firecrawl.starts.push({ url: site, status });
+      if (status === 429) { firecrawl.rateLimitedStarts -= 1; return send(response, 429, { success: false, error: "Rate limit exceeded." }); }
+      const id = randomUUID();
+      crawls.set(id, site);
+      return send(response, 200, { success: true, id });
+    }
+    const site = crawls.get(/^\/firecrawl\/v1\/crawl\/([^/]+)$/.exec(url.pathname)?.[1] ?? "");
+    if (site && request.method === "GET") return send(response, 200, { status: "completed", data: [{ metadata: { sourceURL: site, title: "Harbour Plumbing", language: "en" }, markdown: "Harbour Plumbing fixes leaks and installs water heaters. We are open Monday to Friday, 8 to 6." }] });
+    send(response, 404, { success: false, error: `The fake has no ${request.method} ${url.pathname}.` });
+  }
+
+  function embeddingsApi(response: ServerResponse, raw: string): void {
+    const { input } = JSON.parse(raw) as { input: string | string[] };
+    const inputs = Array.isArray(input) ? input : [input];
+    send(response, 200, { object: "list", data: inputs.map((_, index) => ({ object: "embedding", index, embedding: Array.from({ length: 1536 }, (_, dimension) => dimension === index % 1536 ? 1 : 0.001) })), model: "text-embedding-3-small", usage: { prompt_tokens: inputs.length, total_tokens: inputs.length } });
+  }
+
   const server = createServer(async (request, response) => {
     const url = new URL(request.url ?? "/", THIRD_PARTY_ORIGIN);
     const raw = await readBody(request);
@@ -186,6 +216,8 @@ export async function startThirdParties(): Promise<ThirdParties> {
     if (routed) return carrier(request, response, routed[1]!, routed[2]!, raw);
     if (url.pathname.startsWith("/calendly-auth/")) return calendlyAuth(request, response, url, raw);
     if (url.pathname.startsWith("/calendly-api/")) return calendlyApi(request, response, url, raw);
+    if (url.pathname.startsWith("/firecrawl/")) return firecrawlApi(request, response, url, raw);
+    if (url.pathname === "/openai/v1/embeddings" && request.method === "POST") return embeddingsApi(response, raw);
     send(response, 404, { message: "Unknown third party." });
   });
   await new Promise<void>((resolve, reject) => { server.once("error", reject); server.listen(THIRD_PARTY_PORT, "127.0.0.1", resolve); });
@@ -198,6 +230,7 @@ export async function startThirdParties(): Promise<ThirdParties> {
       addNumber: ({ sid, e164, trunkSid }) => { numberResource(sid, e164).trunk_sid = trunkSid ?? null; },
     },
     calendly,
+    firecrawl,
     close: async () => { server.closeAllConnections(); await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve())); },
   };
 }
