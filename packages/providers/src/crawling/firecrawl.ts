@@ -4,8 +4,35 @@ import { assertPublicHttpUrl } from "./urlSafety";
 export type CrawlPage = { url: string; title?: string; markdown?: string; language?: string };
 type CrawlResponse = { success?: boolean; id?: string; status?: string; next?: string | null; data?: Array<{ metadata?: { sourceURL?: string; title?: string; language?: string }; markdown?: string }> };
 
+/**
+ * A refused crawl request. `transient` marks a rate limit or a server error,
+ * which a later try can get past; `retryAfterMs` carries the provider's
+ * Retry-After when it sent one.
+ */
+export class CrawlRequestError extends Error {
+  readonly transient: boolean;
+  constructor(readonly status: number, readonly retryAfterMs?: number) {
+    super(`Website crawl failed with status ${status}.`);
+    this.name = "CrawlRequestError";
+    this.transient = status === 429 || status >= 500;
+  }
+}
+
+// A few quick tries ride out a short rate limit without restarting the crawl.
+const REQUEST_ATTEMPTS = 3;
+const MAX_REQUEST_WAIT_MS = 30_000;
+
+function retryAfterMs(response: Response): number | undefined {
+  const header = response.headers.get("retry-after");
+  if (!header) return undefined;
+  const seconds = Number(header);
+  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
+  const at = Date.parse(header);
+  return Number.isNaN(at) ? undefined : Math.max(0, at - Date.now());
+}
+
 export class FirecrawlProvider {
-  constructor(private readonly config: { apiKey: string; baseUrl?: string; pollIntervalMs?: number; timeoutMs?: number }) {}
+  constructor(private readonly config: { apiKey: string; baseUrl?: string; pollIntervalMs?: number; retryDelayMs?: number; timeoutMs?: number }) {}
 
   async crawl(input: { url: string; limit?: number }): Promise<CrawlPage[]> {
     const url = await assertPublicHttpUrl(input.url);
@@ -13,15 +40,22 @@ export class FirecrawlProvider {
     const limit = Math.max(1, Math.min(1000, Math.floor(input.limit ?? 50)));
     const deadline = Date.now() + (this.config.timeoutMs ?? 5 * 60_000);
     const request = async (endpoint: string, body?: object): Promise<CrawlResponse> => {
-      const remaining = deadline - Date.now();
-      if (remaining <= 0) throw new Error("Website crawl timed out before completion.");
-      const response = await fetch(endpoint, {
-        method: body ? "POST" : "GET", redirect: "error",
-        headers: { authorization: `Bearer ${this.config.apiKey}`, ...(body ? { "content-type": "application/json" } : {}) },
-        ...(body ? { body: JSON.stringify(body) } : {}),
-        signal: AbortSignal.timeout(Math.min(30_000, remaining)),
-      });
-      if (!response.ok) throw new Error(`Website crawl failed with status ${response.status}.`);
+      let response: Response;
+      for (let attempt = 1; ; attempt += 1) {
+        const remaining = deadline - Date.now();
+        if (remaining <= 0) throw new Error("Website crawl timed out before completion.");
+        response = await fetch(endpoint, {
+          method: body ? "POST" : "GET", redirect: "error",
+          headers: { authorization: `Bearer ${this.config.apiKey}`, ...(body ? { "content-type": "application/json" } : {}) },
+          ...(body ? { body: JSON.stringify(body) } : {}),
+          signal: AbortSignal.timeout(Math.min(30_000, remaining)),
+        });
+        if (response.ok) break;
+        const error = new CrawlRequestError(response.status, retryAfterMs(response));
+        const wait = error.retryAfterMs ?? (this.config.retryDelayMs ?? 2000) * 2 ** (attempt - 1);
+        if (!error.transient || attempt >= REQUEST_ATTEMPTS || wait > MAX_REQUEST_WAIT_MS || Date.now() + wait >= deadline) throw error;
+        await sleep(wait);
+      }
       const payload = await response.json() as CrawlResponse;
       if (payload.success === false || ["failed", "cancelled", "canceled"].includes(payload.status ?? "")) throw new Error("Website crawl failed at the crawling provider.");
       return payload;
