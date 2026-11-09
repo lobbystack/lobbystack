@@ -3,6 +3,7 @@
 import { useCallback, useEffect } from "react"
 import { Toaster, toast } from "sonner"
 import { ArrowRight, Phone, PhoneOff } from "lucide-react"
+import { isRuntimeLocale, type RuntimeLocale } from "@lobbystack/shared"
 import {
   AuraVoiceOrb,
   useWebVoiceCall,
@@ -14,6 +15,7 @@ import {
 import { Button, buttonVariants } from "@/marketing/components/ui/button"
 import { appSignupUrl } from "@/marketing/lib/app-links"
 import type { Locale } from "@/marketing/i18n"
+import { SUPPORTED_LOCALES } from "@/marketing/i18n/config"
 
 type LobbyStackAuraVoiceDemoProps = {
   locale?: Locale
@@ -216,6 +218,21 @@ const errorCopy: Record<
   },
 }
 
+/**
+ * The language the AI opens the call in: the page's, except that an English page gives way to a
+ * browser language the AI speaks and the site has no pages in, such as German.
+ */
+export function callLanguage(page: Locale, browserLanguages: readonly string[]): RuntimeLocale {
+  if (page !== "en") return page
+  for (const tag of browserLanguages) {
+    const language = tag.split("-")[0]?.toLowerCase()
+    // A site language here means the visitor was offered its pages and stayed on English.
+    if ((SUPPORTED_LOCALES as readonly string[]).includes(language ?? "")) return page
+    if (isRuntimeLocale(language)) return language
+  }
+  return page
+}
+
 function landingEventName(event: WebVoiceCallEvent) {
   return event === "session_created"
     ? "landing.web_voice_session_created"
@@ -229,8 +246,10 @@ export function LobbyStackAuraVoiceDemo({
   widgetId,
   onEvent,
 }: LobbyStackAuraVoiceDemoProps) {
-  // The AI speaks the page's language.
-  const getStartPayload = useCallback(async () => ({ language: locale }), [locale])
+  const getStartPayload = useCallback(
+    async () => ({ language: callLanguage(locale, navigator.languages) }),
+    [locale],
+  )
   const call = useWebVoiceCall({
     businessSlug,
     endpoint,

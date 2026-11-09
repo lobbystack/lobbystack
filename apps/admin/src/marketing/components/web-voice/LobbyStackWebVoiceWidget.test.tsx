@@ -2,6 +2,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { callLanguage } from "@/marketing/components/web-voice/LobbyStackAuraVoiceDemo"
 import { LobbyStackHeroVoiceDemo } from "@/marketing/components/web-voice/LobbyStackWebVoiceWidget"
 import { DISCONNECT_GRACE_MS } from "@lobbystack/web-voice"
 
@@ -67,6 +68,7 @@ beforeEach(() => {
   )
   vi.stubGlobal("navigator", {
     ...navigator,
+    languages: ["en-US", "en"],
     mediaDevices: {
       getUserMedia: vi.fn(async () => ({
         getAudioTracks: () => [track],
@@ -121,6 +123,32 @@ describe("landing hero voice demo language", () => {
     fireEvent.click(screen.getByRole("button", { name: "Iniciar llamada" }))
     await waitFor(() => expect(fetch).toHaveBeenCalled())
     expect(sentLanguage()).toBe("es")
+  })
+
+  it("asks for the browser's language on the English page when the site has no pages in it", async () => {
+    vi.stubGlobal("navigator", { ...navigator, languages: ["de-DE", "de", "en"] })
+    render(<LobbyStackHeroVoiceDemo locale="en" />)
+    fireEvent.click(screen.getByRole("button", { name: "Start call" }))
+    await waitFor(() => expect(fetch).toHaveBeenCalled())
+    expect(sentLanguage()).toBe("de")
+  })
+})
+
+describe("callLanguage", () => {
+  it("keeps a translated page's language whatever the browser prefers", () => {
+    expect(callLanguage("fr", ["de-DE"])).toBe("fr")
+  })
+
+  it("takes the first browser language the AI speaks on the English page", () => {
+    expect(callLanguage("en", ["ja", "pt-BR", "it"])).toBe("pt")
+    expect(callLanguage("en", ["nl-BE"])).toBe("nl")
+  })
+
+  it("stays in English when the browser prefers a site language first", () => {
+    // A French browser on the English page chose it over the French pages.
+    expect(callLanguage("en", ["fr-FR", "de"])).toBe("en")
+    expect(callLanguage("en", ["en-US", "de"])).toBe("en")
+    expect(callLanguage("en", ["ja"])).toBe("en")
   })
 })
 
