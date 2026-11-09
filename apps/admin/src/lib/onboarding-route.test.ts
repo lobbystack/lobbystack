@@ -117,6 +117,19 @@ describe("onboarding stages", () => {
   });
 });
 
+describe("creating another workspace", () => {
+  it("opens the business step for someone whose workspace is complete", async () => {
+    fixture.state = { businessId: "business-1", stage: "complete", steps: DIRECT };
+    await expect(requireOnboardingStage("/onboarding/business", { allowCreate: true })).resolves.toBeUndefined();
+    await expect(requireOnboardingStage("/onboarding/business")).rejects.toThrow("redirect:");
+  });
+
+  it("keeps someone whose workspace is still in onboarding on their step", async () => {
+    fixture.state = { businessId: "business-1", stage: "verify_phone", steps: DIRECT };
+    await expect(requireOnboardingStage("/onboarding/business", { allowCreate: true })).rejects.toThrow("redirect:/onboarding/verify-phone");
+  });
+});
+
 describe("on a partner's host", () => {
   beforeEach(() => {
     fixture.headers = new Headers({ "x-lobbystack-brand": "partner:7b0c5a43-62c4-4a51-9d0e-6f6f0e0d9a11", "x-lobbystack-brand-origin": "https://acme.portal.test" });
