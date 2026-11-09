@@ -11,7 +11,7 @@ const hasFlag = (region: string) => flagStylesheet.includes(`.flag\\:${region}{`
 
 describe("country flags", () => {
   it("gives every caller language a flag the stylesheet has", () => {
-    expect(runtimeLocales.map(runtimeLocaleRegion)).toEqual(["GB", "FR", "ES", "RS", "DE", "BR", "IT", "NL"]);
+    expect(runtimeLocales.map(runtimeLocaleRegion)).toEqual(["GB", "FR", "ES", "RS", "DE", "BR", "IT", "NL", "PL", "TR", "VN", "PH", "SE", "RU", "UA"]);
     for (const locale of runtimeLocales) expect(hasFlag(runtimeLocaleRegion(locale))).toBe(true);
   });
 

@@ -32,6 +32,13 @@ const CUT_OFF_REPLY: Record<RuntimeLocale, string> = {
   pt: "Desculpe, minha resposta foi cortada. Pergunte de novo, ou deixe seu nome e número que alguém da equipe vai entrar em contato.",
   it: "Mi scusi, la mia risposta si è interrotta. Ripeta la domanda, oppure lasci il suo nome e il suo numero e qualcuno del team la ricontatterà.",
   nl: "Sorry, mijn antwoord werd afgebroken. Stel uw vraag nog een keer, of laat uw naam en nummer achter, dan neemt iemand van het team contact met u op.",
+  pl: "Przepraszam, moja odpowiedź została ucięta. Proszę zapytać jeszcze raz albo zostawić imię i numer telefonu, a ktoś z zespołu się odezwie.",
+  tr: "Üzgünüm, cevabım yarıda kesildi. Lütfen tekrar sorun ya da adınızı ve numaranızı bırakın, ekipten biri size dönüş yapacak.",
+  vi: "Xin lỗi, câu trả lời của tôi bị ngắt giữa chừng. Quý khách vui lòng hỏi lại, hoặc để lại tên và số điện thoại để người trong đội ngũ liên hệ lại.",
+  tl: "Pasensya na po, naputol ang sagot ko. Pakitanong po ulit, o iwan ang inyong pangalan at numero at may tatawag sa inyo mula sa team.",
+  sv: "Förlåt, mitt svar blev avbrutet. Fråga gärna igen, eller lämna ditt namn och nummer så hör någon från teamet av sig.",
+  ru: "Извините, мой ответ оборвался. Пожалуйста, спросите ещё раз или оставьте имя и номер, и кто-нибудь из команды с вами свяжется.",
+  uk: "Вибачте, мою відповідь обірвано. Будь ласка, запитайте ще раз або залиште ім'я та номер, і хтось із команди з вами зв'яжеться.",
 };
 
 function logGenerationFailure(cause: unknown): void {

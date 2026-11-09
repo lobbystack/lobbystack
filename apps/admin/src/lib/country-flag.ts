@@ -7,7 +7,7 @@ export function currencyRegion(code: string): string | null {
 }
 
 /** A language has no flag of its own, so each caller language gets the flag of the country it is most tied to. Portuguese is the Brazilian variant, Serbian the Latin script. */
-const RUNTIME_LOCALE_REGIONS: Record<RuntimeLocale, string> = { en: "GB", fr: "FR", es: "ES", sr: "RS", de: "DE", pt: "BR", it: "IT", nl: "NL" };
+const RUNTIME_LOCALE_REGIONS: Record<RuntimeLocale, string> = { en: "GB", fr: "FR", es: "ES", sr: "RS", de: "DE", pt: "BR", it: "IT", nl: "NL", pl: "PL", tr: "TR", vi: "VN", tl: "PH", sv: "SE", ru: "RU", uk: "UA" };
 
 export function runtimeLocaleRegion(locale: RuntimeLocale): string {
   return RUNTIME_LOCALE_REGIONS[locale];

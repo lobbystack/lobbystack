@@ -30,7 +30,14 @@
     "de": "Allemand",
     "pt": "Portugais (Brésil)",
     "it": "Italien",
-    "nl": "Néerlandais"
+    "nl": "Néerlandais",
+    "pl": "Polonais",
+    "tr": "Turc",
+    "vi": "Vietnamien",
+    "tl": "Tagalog",
+    "sv": "Suédois",
+    "ru": "Russe",
+    "uk": "Ukrainien"
   },
   "phoneCountry": {
     "search": "Rechercher un pays ou un indicatif",

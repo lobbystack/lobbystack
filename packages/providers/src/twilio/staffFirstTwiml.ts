@@ -5,7 +5,7 @@ import twilio from "twilio";
 
 type Response = InstanceType<typeof twilio.twiml.VoiceResponse>;
 
-/** Twilio has no Serbian voice, so a Serbian business's staff hear the English prompt and callers hear no message. */
+/** Amazon Polly has no Serbian, Vietnamese, Tagalog or Ukrainian voice, so those businesses' staff hear the English prompt and callers hear no message. */
 const SAY_VOICES: Partial<Record<RuntimeLocale, { voice: `Polly.${string}`; language: string }>> = {
   en: { voice: "Polly.Joanna-Neural", language: "en-US" },
   fr: { voice: "Polly.Gabrielle-Neural", language: "fr-CA" },
@@ -14,6 +14,11 @@ const SAY_VOICES: Partial<Record<RuntimeLocale, { voice: `Polly.${string}`; lang
   pt: { voice: "Polly.Camila-Neural", language: "pt-BR" },
   it: { voice: "Polly.Bianca-Neural", language: "it-IT" },
   nl: { voice: "Polly.Laura-Neural", language: "nl-NL" },
+  pl: { voice: "Polly.Ola-Neural", language: "pl-PL" },
+  tr: { voice: "Polly.Burcu-Neural", language: "tr-TR" },
+  sv: { voice: "Polly.Elin-Neural", language: "sv-SE" },
+  // Polly has no neural Russian voice.
+  ru: { voice: "Polly.Tatyana", language: "ru-RU" },
 };
 
 type StaffPromptCopy = { withCaller: (business: string, caller: string) => string; withheld: (business: string) => string };
@@ -26,6 +31,10 @@ const STAFF_PROMPTS: Partial<Record<RuntimeLocale, StaffPromptCopy>> & { en: Sta
   pt: { withCaller: (business, caller) => `Chamada para ${business} de ${caller}. Pressione 1 para atender.`, withheld: (business) => `Chamada para ${business} de um número privado. Pressione 1 para atender.` },
   it: { withCaller: (business, caller) => `Chiamata per ${business} da ${caller}. Premi 1 per rispondere.`, withheld: (business) => `Chiamata per ${business} da un numero privato. Premi 1 per rispondere.` },
   nl: { withCaller: (business, caller) => `Oproep voor ${business} van ${caller}. Druk op 1 om op te nemen.`, withheld: (business) => `Oproep voor ${business} van een afgeschermd nummer. Druk op 1 om op te nemen.` },
+  pl: { withCaller: (business, caller) => `Połączenie do ${business} od ${caller}. Naciśnij 1, aby odebrać.`, withheld: (business) => `Połączenie do ${business} z numeru zastrzeżonego. Naciśnij 1, aby odebrać.` },
+  tr: { withCaller: (business, caller) => `${business} için ${caller} numarasından arama. Cevaplamak için 1'e basın.`, withheld: (business) => `${business} için gizli numaradan arama. Cevaplamak için 1'e basın.` },
+  sv: { withCaller: (business, caller) => `Samtal till ${business} från ${caller}. Tryck 1 för att svara.`, withheld: (business) => `Samtal till ${business} från ett dolt nummer. Tryck 1 för att svara.` },
+  ru: { withCaller: (business, caller) => `Звонок для ${business} от ${caller}. Нажмите 1, чтобы ответить.`, withheld: (business) => `Звонок для ${business} со скрытого номера. Нажмите 1, чтобы ответить.` },
 };
 
 /** How long a staff member gets to press 1 after each reading of the prompt. A phone's voicemail never presses it. */

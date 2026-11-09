@@ -141,7 +141,7 @@ describe("buildLiveInstructions", () => {
   });
 
   it("names each caller language for GPT-Live", () => {
-    expect(runtimeLocales.map((defaultLocale) => liveLanguage({ ...demoSnapshot, defaultLocale }))).toEqual(["English", "French", "Spanish", "Serbian (Latin script)", "German", "Brazilian Portuguese", "Italian", "Dutch"]);
+    expect(runtimeLocales.map((defaultLocale) => liveLanguage({ ...demoSnapshot, defaultLocale }))).toEqual(["English", "French", "Spanish", "Serbian (Latin script)", "German", "Brazilian Portuguese", "Italian", "Dutch", "Polish", "Turkish", "Vietnamese", "Tagalog (Filipino)", "Swedish", "Russian", "Ukrainian"]);
     expect(buildLiveInstructions({ ...demoSnapshot, defaultLocale: "pt" }, "voice", callStart)).toContain("Speak Brazilian Portuguese unless the caller asks to switch or clearly speaks another language.");
     expect(buildLiveInstructions({ ...demoSnapshot, defaultLocale: "sr" }, "voice", callStart)).toContain("Speak Serbian (Latin script) unless the caller asks to switch");
   });

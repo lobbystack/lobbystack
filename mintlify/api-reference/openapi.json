@@ -15831,7 +15831,7 @@
           },
           "locale": {
             "type": "string",
-            "description": "Default language for callers: en, fr, es, sr (Serbian, Latin script), de, pt (Brazilian Portuguese), it or nl."
+            "description": "Default language for callers: en, fr, es, sr (Serbian, Latin script), de, pt (Brazilian Portuguese), it, nl, pl, tr, vi, tl (Tagalog), sv, ru or uk."
           },
           "website_url": {
             "type": [
@@ -15942,7 +15942,14 @@
               "de",
               "pt",
               "it",
-              "nl"
+              "nl",
+              "pl",
+              "tr",
+              "vi",
+              "tl",
+              "sv",
+              "ru",
+              "uk"
             ]
           },
           "website_url": {
@@ -16031,7 +16038,7 @@
             "maxLength": 120
           },
           "locale": {
-            "description": "Default language for callers: en, fr, es, sr (Serbian, Latin script), de, pt (Brazilian Portuguese), it or nl. Defaults to en.",
+            "description": "Default language for callers: en, fr, es, sr (Serbian, Latin script), de, pt (Brazilian Portuguese), it, nl, pl, tr, vi, tl (Tagalog), sv, ru or uk. Defaults to en.",
             "type": "string",
             "enum": [
               "en",
@@ -16041,7 +16048,14 @@
               "de",
               "pt",
               "it",
-              "nl"
+              "nl",
+              "pl",
+              "tr",
+              "vi",
+              "tl",
+              "sv",
+              "ru",
+              "uk"
             ]
           },
           "website_url": {
@@ -16097,7 +16111,7 @@
           },
           "locale": {
             "type": "string",
-            "description": "Default language for callers: en, fr, es, sr (Serbian, Latin script), de, pt (Brazilian Portuguese), it or nl."
+            "description": "Default language for callers: en, fr, es, sr (Serbian, Latin script), de, pt (Brazilian Portuguese), it, nl, pl, tr, vi, tl (Tagalog), sv, ru or uk."
           },
           "website_url": {
             "type": [
@@ -21316,7 +21330,14 @@
               "de",
               "pt",
               "it",
-              "nl"
+              "nl",
+              "pl",
+              "tr",
+              "vi",
+              "tl",
+              "sv",
+              "ru",
+              "uk"
             ]
           },
           "greeting": {

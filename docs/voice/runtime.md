@@ -131,7 +131,7 @@ The `<Sip>` address is `sip:<project>@sip.api.openai.com;transport=tls;secure=tr
 
 A staff-answered call has a `calls` row with the provider `staff_answered`, keyed on Twilio's `CallSid`, and `billing_excluded` set. It has no session, minutes or conversation, and it stays out of analytics, the finance export and the trial's call count. `call.syncPrice` adds up the parent call and each connected child leg. For a call that went on to GPT-Live, it finds the inbound call by caller, the business's numbers and start time. Twilio bills these calls at Programmable Voice rates rather than trunking rates.
 
-Twilio has no Serbian `<Say>` voice. A business whose default language is Serbian skips the caller messages, and its staff hear the prompt in English.
+Twilio's `<Say>` uses Amazon Polly voices, and Polly has no Serbian, Vietnamese, Tagalog or Ukrainian voice. A business whose default language is one of those skips the caller messages, and its staff hear the prompt in English.
 
 ## Follow a browser call
 

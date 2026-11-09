@@ -37,6 +37,13 @@ const TEXT_REPLY_DISCLOSURE: Record<RuntimeLocale, (name: string) => string> = {
   pt: (name) => `Assistente automatizado de ${name}. Responda STOP para cancelar.`,
   it: (name) => `Assistente automatico di ${name}. Rispondi STOP per annullare l'iscrizione.`,
   nl: (name) => `Geautomatiseerde assistent van ${name}. Antwoord STOP om af te melden.`,
+  pl: (name) => `Automatyczny asystent firmy ${name}. Odpisz STOP, aby zrezygnować.`,
+  tr: (name) => `${name} adına otomatik asistan. Abonelikten çıkmak için STOP yazın.`,
+  vi: (name) => `Trợ lý tự động của ${name}. Trả lời STOP để hủy đăng ký.`,
+  tl: (name) => `Awtomatikong assistant ng ${name}. Mag-reply ng STOP para mag-opt out.`,
+  sv: (name) => `Automatisk assistent för ${name}. Svara STOP för att avregistrera dig.`,
+  ru: (name) => `Автоматический помощник компании ${name}. Ответьте STOP, чтобы отписаться.`,
+  uk: (name) => `Автоматичний помічник компанії ${name}. Надішліть STOP, щоб відписатися.`,
 };
 
 export async function replyToTextMessage(domain: DomainContext, job: JobEnvelope, options: { model?: LanguageModel } = {}, execution: { isFinalAttempt?: boolean } = {}): Promise<JobResult> {

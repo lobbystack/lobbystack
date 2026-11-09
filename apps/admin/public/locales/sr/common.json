@@ -30,7 +30,14 @@
     "de": "Nemački",
     "pt": "Portugalski (Brazil)",
     "it": "Italijanski",
-    "nl": "Holandski"
+    "nl": "Holandski",
+    "pl": "Poljski",
+    "tr": "Turski",
+    "vi": "Vijetnamski",
+    "tl": "Tagalog",
+    "sv": "Švedski",
+    "ru": "Ruski",
+    "uk": "Ukrajinski"
   },
   "phoneCountry": {
     "search": "Pretraži zemlje ili pozivne brojeve",

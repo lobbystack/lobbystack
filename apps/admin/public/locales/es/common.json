@@ -23,7 +23,14 @@
     "de": "Alemán",
     "pt": "Portugués (Brasil)",
     "it": "Italiano",
-    "nl": "Neerlandés"
+    "nl": "Neerlandés",
+    "pl": "Polaco",
+    "tr": "Turco",
+    "vi": "Vietnamita",
+    "tl": "Tagalo",
+    "sv": "Sueco",
+    "ru": "Ruso",
+    "uk": "Ucraniano"
   },
   "phoneCountry": {
     "search": "Buscar país o prefijo",

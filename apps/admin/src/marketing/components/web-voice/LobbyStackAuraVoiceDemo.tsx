@@ -3,7 +3,7 @@
 import { useCallback, useEffect } from "react"
 import { Toaster, toast } from "sonner"
 import { ArrowRight, Phone, PhoneOff } from "lucide-react"
-import { isRuntimeLocale, type RuntimeLocale } from "@lobbystack/shared"
+import { runtimeLocaleFromTag, type RuntimeLocale } from "@lobbystack/shared"
 import {
   AuraVoiceOrb,
   useWebVoiceCall,
@@ -225,10 +225,10 @@ const errorCopy: Record<
 export function callLanguage(page: Locale, browserLanguages: readonly string[]): RuntimeLocale {
   if (page !== "en") return page
   for (const tag of browserLanguages) {
-    const language = tag.split("-")[0]?.toLowerCase()
+    const language = runtimeLocaleFromTag(tag)
     // A site language here means the visitor was offered its pages and stayed on English.
     if ((SUPPORTED_LOCALES as readonly string[]).includes(language ?? "")) return page
-    if (isRuntimeLocale(language)) return language
+    if (language) return language
   }
   return page
 }

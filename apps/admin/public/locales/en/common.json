@@ -23,7 +23,14 @@
     "de": "German",
     "pt": "Portuguese (Brazil)",
     "it": "Italian",
-    "nl": "Dutch"
+    "nl": "Dutch",
+    "pl": "Polish",
+    "tr": "Turkish",
+    "vi": "Vietnamese",
+    "tl": "Tagalog",
+    "sv": "Swedish",
+    "ru": "Russian",
+    "uk": "Ukrainian"
   },
   "phoneCountry": {
     "search": "Search countries or codes",
