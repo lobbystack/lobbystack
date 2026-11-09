@@ -99,7 +99,7 @@ function TestChat({ agentId, businessId, children }: { agentId: string | undefin
           </div>
         ) : null}
         {typing ? (
-          <div aria-label={t("testWindow.typing")} className="mr-auto flex w-full max-w-[85%] shrink-0 items-center gap-1 rounded-xl bg-muted px-3 py-3" role="status">
+          <div aria-label={t("testWindow.typing")} className="mr-auto flex h-9 shrink-0 items-center gap-1 rounded-xl bg-muted px-3.5" role="status">
             {[0, 150, 300].map((delay) => <span aria-hidden className="size-1.5 animate-bounce rounded-full bg-muted-foreground motion-reduce:animate-pulse" key={delay} style={{ animationDelay: `${delay}ms` }} />)}
           </div>
         ) : null}
