@@ -1263,9 +1263,9 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
       // skip_number finishes without one.
       const done = await completeOnboardingForApi(context, caller, { source: "podcast", skip_number: true });
       expect(done).toMatchObject({ stage: "complete", complete: true, missing: [] });
-      // The dashboard sees a finished business, and its owner gets the founder's check-in.
+      // The dashboard sees a finished business, and its owner gets the welcome email.
       expect((await admin!.db.select({ stage: businesses.onboardingStage, attribution: businesses.onboardingAttribution }).from(businesses).where(eq(businesses.id, businessId)))[0]).toEqual({ stage: "complete", attribution: "podcast" });
-      expect(await admin!.db.select({ id: outboxMessages.id }).from(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), eq(outboxMessages.topic, "onboarding.sendFollowup")))).toHaveLength(1);
+      expect(await admin!.db.select({ id: outboxMessages.id }).from(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), eq(outboxMessages.topic, "onboarding.sendWelcome")))).toHaveLength(1);
       // Finishing again changes nothing.
       expect(await completeOnboardingForApi(context, caller, { source: "radio" })).toEqual(done);
       expect(await audited("api.onboarding.completed")).toBe(1);
@@ -1276,7 +1276,7 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
     }
   });
 
-  it("credits no referral and sends no founder's check-in for a business someone else onboarded", async () => {
+  it("credits no referral and sends no welcome email for a business someone else onboarded", async () => {
     const context = { db: worker!.db };
     const groupBusinessId = randomUUID();
     const operatorBusinessId = randomUUID();
@@ -1284,7 +1284,7 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
       await admin!.db.insert(businesses).values({ id, slug: `api-onboarding-${label}-${id}`, name: `Onboarded by ${label}`, timezone: "UTC", businessType: "test" });
     }
     await admin!.db.insert(platformKeyBusinesses).values({ businessId: groupBusinessId, groupId: "acme" });
-    const followUps = async (businessId: string) => (await admin!.db.select({ id: outboxMessages.id }).from(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), eq(outboxMessages.topic, "onboarding.sendFollowup")))).length;
+    const followUps = async (businessId: string) => (await admin!.db.select({ id: outboxMessages.id }).from(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), eq(outboxMessages.topic, "onboarding.sendWelcome")))).length;
     try {
       // A business a group's platform keys onboarded: even a key of the business's own can't credit a referral, and its check-in would reach the key's account.
       const keyCaller: ApiKeyCaller = { businessId: groupBusinessId, apiKeyId: randomUUID() };

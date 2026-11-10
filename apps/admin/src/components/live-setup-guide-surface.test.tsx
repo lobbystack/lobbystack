@@ -19,7 +19,8 @@ import { announceTestCallEnded, registerTestWindow } from "@/lib/test-window";
 
 vi.mock("next/dynamic", () => ({ default: () => () => null }));
 const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
-vi.mock("next/navigation", () => ({ useRouter: () => router }));
+const search = vi.hoisted(() => ({ value: "" }));
+vi.mock("next/navigation", () => ({ useRouter: () => router, usePathname: () => "/", useSearchParams: () => new URLSearchParams(search.value) }));
 const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
 vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
 
@@ -28,7 +29,7 @@ const order = ["fullScan", "sources", "testCall", "phoneNumber"] as const;
 const goals = ["answer_calls", "book_appointments", "answer_website_visitors", "answer_instagram_messages", null] as const;
 const clients: QueryClient[] = [];
 beforeEach(() => { telemetryRef.current = createRecordedBrowserTelemetry(); });
-afterEach(() => { cleanup(); clients.forEach((client) => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
+afterEach(() => { cleanup(); clients.forEach((client) => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); search.value = ""; });
 
 const summary = (firstRealConversationAt: string | null) => ({ businessId: "business", kpis: { calls: { total: 0, deltaPercent: 0 }, appointments: { total: 0, deltaPercent: 0 }, averageDuration: { totalSeconds: 0, deltaSeconds: 0 } }, monthlyCalls: [], recentCalls: [], actionRequired: [], upcoming: [], firstRealConversationAt });
 type Setup = { firstRealConversationAt?: string | null; role?: string; capabilities?: Capability[]; goal?: string | null; activation?: Record<string, unknown>; numbers?: unknown[]; trial?: Record<string, unknown>; includedNumbers?: number | null; partnerNumbers?: Record<string, unknown> | null; complete?: string[]; skipped?: string[]; setupDown?: boolean };
@@ -285,6 +286,20 @@ describe("the number step", () => {
     await setup({ ...before, trial: { status: "available" } });
     expect(await screen.findByText(copy.steps.phoneNumber)).toBeTruthy();
     expect(screen.queryByText(copy.steps.forwardCalls)).toBeNull();
+  });
+
+  it("opens from the welcome email's link, ahead of the steps before it", async () => {
+    search.value = "setup=phoneNumber";
+    await setup({ complete: ["fullScan"], trial: { status: "available" } });
+    expect(await screen.findByRole("button", { name: en.activation.freeTrial.cta })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: copy.stepActions.sources })).toBeNull();
+    expect(router.replace).toHaveBeenCalledWith("/", { scroll: false });
+  });
+
+  it("opens on the forwarding steps from the welcome email's link once a number exists", async () => {
+    search.value = "setup=phoneNumber";
+    await setup({ complete: ["fullScan"], numbers: [number] });
+    expect(await screen.findByLabelText(en.forwarding.carrier.label)).toBeTruthy();
   });
 
   it("can be skipped once a number exists", async () => {

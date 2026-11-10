@@ -4,6 +4,7 @@ import { enqueueOutbox, type DatabaseTransaction } from "@lobbystack/db";
 import { HOST_EMAIL_BRAND, intlLocale, normalizeInterfaceLocale, partnerTierCatalog } from "@lobbystack/shared";
 
 import type { PoolChange, PoolMonth, PoolState } from "./partnerPool";
+import { greetingName } from "./emailGreeting";
 
 // Alerts at 80% and 100% of a partner's pool, minutes and chats each, and of
 // its overage cap. They go to the partner's owners and admins by email, under
@@ -105,7 +106,7 @@ function alertVariables(state: PoolState, month: PoolMonth, alert: PoolAlert, re
   const { overage } = state.terms;
   return {
     locale,
-    firstName: recipient.name?.trim().split(/\s+/)[0] ?? "",
+    firstName: greetingName(recipient.name, recipient.email),
     partnerName: recipient.partner_name,
     kind: alert.kind,
     threshold: String(alert.threshold),

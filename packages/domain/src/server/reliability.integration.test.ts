@@ -501,7 +501,7 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
         row("realtime.publish", { publishedAt: new Date() }),
         row("realtime.publish", { availableAt: old }),
         row("realtime.publish", { deadLetteredAt: old }),
-        row("onboarding.sendFollowup", { publishedAt: old }),
+        row("onboarding.sendWelcome", { publishedAt: old }),
       ]).returning({ id: outboxMessages.id });
       const ids = inserted.map((message) => message.id);
       expect(await prunePublishedOutbox(tx as unknown as Database, { publishedBefore: new Date("2001-01-01"), limit: 1_000_000 })).toBeGreaterThanOrEqual(1);

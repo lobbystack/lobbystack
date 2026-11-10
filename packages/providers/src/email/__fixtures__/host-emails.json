@@ -46,34 +46,6 @@
     }
   },
   {
-    "name": "onboarding_followup en",
-    "input": {
-      "template": "onboarding_followup",
-      "to": "owner@example.test",
-      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
-      "subject": "Acme Dental's agent hasn't had a real conversation yet",
-      "variables": {
-        "locale": "en",
-        "firstName": "Sam",
-        "businessName": "Acme Dental",
-        "senderName": "Raphael",
-        "checkInToken_still_testing": "v1.still_testing.signature",
-        "checkInToken_connect_number": "v1.connect_number.signature",
-        "checkInToken_test_call_mistakes": "v1.test_call_mistakes.signature",
-        "checkInToken_not_a_fit": "v1.not_a_fit.signature"
-      },
-      "idempotencyKey": "followup:en"
-    },
-    "sent": {
-      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
-      "to": "owner@example.test",
-      "subject": "Acme Dental's agent hasn't had a real conversation yet",
-      "text": "Hi Sam,\n\nI'm Raphael, the founder of LobbyStack. You set up an agent for Acme Dental yesterday, and it hasn't talked to a real customer yet.\n\nWhat's holding you back? Click one:\n\nI'm still testing it\nhttps://app.example.test/en/check-in/v1.still_testing.signature\n\nI don't know how to connect my number\nhttps://app.example.test/en/check-in/v1.connect_number.signature\n\nIt made mistakes on my test call\nhttps://app.example.test/en/check-in/v1.test_call_mistakes.signature\n\nIt's not right for my business\nhttps://app.example.test/en/check-in/v1.not_a_fit.signature\n\nIf it's something else, just reply. I read every answer.\n\nRaphael\nFounder, LobbyStack",
-      "html": "<!doctype html><html><body style=\"margin:0;padding:0;background:#FFFFFF;\"><div style=\"max-width:560px;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;\"><p style=\"margin:0 0 16px;font-size:16px;line-height:1.6;color:#0B0B0D;\">Hi Sam,</p><p style=\"margin:0 0 16px;font-size:16px;line-height:1.6;color:#0B0B0D;\">I&#39;m Raphael, the founder of LobbyStack. You set up an agent for Acme Dental yesterday, and it hasn&#39;t talked to a real customer yet.</p><p style=\"margin:0 0 12px;font-size:16px;line-height:1.6;color:#0B0B0D;\">What&#39;s holding you back? Click one:</p><p style=\"margin:0 0 8px;font-size:16px;line-height:1.6;\"><a href=\"https://app.example.test/en/check-in/v1.still_testing.signature\" style=\"color:#0B0B0D;\">I&#39;m still testing it</a></p><p style=\"margin:0 0 8px;font-size:16px;line-height:1.6;\"><a href=\"https://app.example.test/en/check-in/v1.connect_number.signature\" style=\"color:#0B0B0D;\">I don&#39;t know how to connect my number</a></p><p style=\"margin:0 0 8px;font-size:16px;line-height:1.6;\"><a href=\"https://app.example.test/en/check-in/v1.test_call_mistakes.signature\" style=\"color:#0B0B0D;\">It made mistakes on my test call</a></p><p style=\"margin:0 0 8px;font-size:16px;line-height:1.6;\"><a href=\"https://app.example.test/en/check-in/v1.not_a_fit.signature\" style=\"color:#0B0B0D;\">It&#39;s not right for my business</a></p><p style=\"margin:16px 0;font-size:16px;line-height:1.6;color:#0B0B0D;\">If it&#39;s something else, just reply. I read every answer.</p><p style=\"margin:0;font-size:16px;line-height:1.6;color:#0B0B0D;\">Raphael<br />Founder, LobbyStack</p></div></body></html>",
-      "messageId": "<7131d0b3c4813d4f44e29a71a6ed72b5bf1d55a8bcab256d5cd69f6e9d575d47@mail.lobbystack.internal>"
-    }
-  },
-  {
     "name": "number_trial day10 en",
     "input": {
       "template": "number_trial",
@@ -287,34 +259,6 @@
       "text": "On vous a invité à créer un compte LobbyStack avec l’adresse owner@example.test. Créez-le ici, avec cette adresse : https://app.example.test/fr/signup. Si vous ne l’attendiez pas, ignorez cet e-mail.",
       "html": "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n    <meta name=\"color-scheme\" content=\"light\" />\n    <meta name=\"supported-color-schemes\" content=\"light\" />\n    <title>Créez votre compte LobbyStack</title>\n    <style>\n      :root { color-scheme: light; }\n      @media only screen and (max-width: 620px) {\n        .email-container { width: 100% !important; padding: 24px 16px !important; }\n      }\n    </style>\n  </head>\n  <body style=\"margin:0;padding:0;background-color:#F3F4F6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;\">\n    <table role=\"presentation\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\">\n      <tr>\n        <td align=\"center\" style=\"padding:48px 16px;\">\n          <table role=\"presentation\" class=\"email-container\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"600\" style=\"width:600px;max-width:600px;background-color:#FFFFFF;border-radius:24px;padding:48px;\">\n            <tr>\n              <td align=\"center\" style=\"padding-bottom:32px;\">\n                <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"48\" height=\"48\" viewBox=\"-30 -30 278 291\" role=\"img\" aria-label=\"LobbyStack\"><g transform=\"translate(0.000000,231.000000) scale(0.100000,-0.100000)\" fill=\"#0B0B0D\" stroke=\"none\"><path d=\"M968 2280 c-42 -16 -195 -79 -340 -141 -144 -62 -317 -133 -383 -159 -90 -36 -130 -58 -162 -88 -85 -82 -78 2 -81 -976 -3 -968 -6 -916 63 -916 19 0 54 9 77 20 24 10 147 62 273 114 338 138 342 140 365 178 20 32 20 48 20 763 0 702 1 731 19 761 12 19 34 37 54 43 33 11 54 4 398 -133 267 -107 370 -152 387 -171 26 -31 23 42 25 -725 l2 -673 c0 -50 8 -86 19 -86 11 -12 31 -21 47 -21 24 0 296 106 358 140 11 5 30 27 43 47 l23 38 l0 654 0 836 -27 46 c-48 81 -77 98 -404 233 -170 71 -371 155 -447 187 -165 71 -208 75 -329 29z\"/></g></svg>\n              </td>\n            </tr>\n            <tr>\n              <td>\n                <h1 style=\"margin:0 0 24px;font-size:28px;font-weight:600;line-height:1.25;color:#0B0B0D;text-align:center;\">Créez votre compte</h1><p style=\"margin:0 0 16px;font-size:16px;line-height:1.6;color:#3D3D3D;text-align:center;\">On vous a invité à créer un compte LobbyStack avec l’adresse owner@example.test.</p><p style=\"margin:0 0 16px;font-size:16px;line-height:1.6;color:#3D3D3D;text-align:center;\">Créez-le avec cette adresse.</p><p style=\"margin:24px 0 0;text-align:center;\"><a href=\"https://app.example.test/fr/signup\" style=\"display:inline-block;padding:12px 24px;background-color:#0B0B0D;border-radius:9999px;color:#FFFFFF;font-size:16px;font-weight:600;text-decoration:none;\">Créer mon compte</a></p><p style=\"margin:32px 0 0;padding-top:24px;border-top:1px solid #E5E7EB;font-size:14px;line-height:1.5;color:#6B7280;text-align:center;\">Si vous ne l’attendiez pas, ignorez cet e-mail.</p>\n              </td>\n            </tr>\n          </table>\n        </td>\n      </tr>\n    </table>\n  </body>\n</html>",
       "messageId": "<2d310ea78de33ac014ca3ca9e71b5d71942daaa6debfb5939cb3119f4f221570@mail.lobbystack.internal>"
-    }
-  },
-  {
-    "name": "onboarding_followup fr",
-    "input": {
-      "template": "onboarding_followup",
-      "to": "owner@example.test",
-      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
-      "subject": "Votre agent pour Acme Dental n'a pas encore eu de vraie conversation",
-      "variables": {
-        "locale": "fr",
-        "firstName": "Sam",
-        "businessName": "Acme Dental",
-        "senderName": "Raphael",
-        "checkInToken_still_testing": "v1.still_testing.signature",
-        "checkInToken_connect_number": "v1.connect_number.signature",
-        "checkInToken_test_call_mistakes": "v1.test_call_mistakes.signature",
-        "checkInToken_not_a_fit": "v1.not_a_fit.signature"
-      },
-      "idempotencyKey": "followup:fr"
-    },
-    "sent": {
-      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
-      "to": "owner@example.test",
-      "subject": "Votre agent pour Acme Dental n'a pas encore eu de vraie conversation",
-      "text": "Bonjour Sam,\n\nJe suis Raphael, le fondateur de LobbyStack. Vous avez configuré un agent pour Acme Dental hier, et il n'a pas encore parlé à un vrai client.\n\nQu'est-ce qui vous retient ? Cliquez sur une réponse :\n\nJe suis encore en train de le tester\nhttps://app.example.test/fr/check-in/v1.still_testing.signature\n\nJe ne sais pas comment connecter mon numéro\nhttps://app.example.test/fr/check-in/v1.connect_number.signature\n\nIl a fait des erreurs pendant mon appel test\nhttps://app.example.test/fr/check-in/v1.test_call_mistakes.signature\n\nIl ne convient pas à mon entreprise\nhttps://app.example.test/fr/check-in/v1.not_a_fit.signature\n\nSi c'est autre chose, répondez simplement à ce courriel. Je lis toutes les réponses.\n\nRaphael\nFondateur, LobbyStack",
-      "html": "<!doctype html><html><body style=\"margin:0;padding:0;background:#FFFFFF;\"><div style=\"max-width:560px;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;\"><p style=\"margin:0 0 16px;font-size:16px;line-height:1.6;color:#0B0B0D;\">Bonjour Sam,</p><p style=\"margin:0 0 16px;font-size:16px;line-height:1.6;color:#0B0B0D;\">Je suis Raphael, le fondateur de LobbyStack. Vous avez configuré un agent pour Acme Dental hier, et il n&#39;a pas encore parlé à un vrai client.</p><p style=\"margin:0 0 12px;font-size:16px;line-height:1.6;color:#0B0B0D;\">Qu&#39;est-ce qui vous retient ? Cliquez sur une réponse :</p><p style=\"margin:0 0 8px;font-size:16px;line-height:1.6;\"><a href=\"https://app.example.test/fr/check-in/v1.still_testing.signature\" style=\"color:#0B0B0D;\">Je suis encore en train de le tester</a></p><p style=\"margin:0 0 8px;font-size:16px;line-height:1.6;\"><a href=\"https://app.example.test/fr/check-in/v1.connect_number.signature\" style=\"color:#0B0B0D;\">Je ne sais pas comment connecter mon numéro</a></p><p style=\"margin:0 0 8px;font-size:16px;line-height:1.6;\"><a href=\"https://app.example.test/fr/check-in/v1.test_call_mistakes.signature\" style=\"color:#0B0B0D;\">Il a fait des erreurs pendant mon appel test</a></p><p style=\"margin:0 0 8px;font-size:16px;line-height:1.6;\"><a href=\"https://app.example.test/fr/check-in/v1.not_a_fit.signature\" style=\"color:#0B0B0D;\">Il ne convient pas à mon entreprise</a></p><p style=\"margin:16px 0;font-size:16px;line-height:1.6;color:#0B0B0D;\">Si c&#39;est autre chose, répondez simplement à ce courriel. Je lis toutes les réponses.</p><p style=\"margin:0;font-size:16px;line-height:1.6;color:#0B0B0D;\">Raphael<br />Fondateur, LobbyStack</p></div></body></html>",
-      "messageId": "<e0fb2779c5d80a75cef52876f787a33f48bb71a5d77a1f51d95eb5cd00baf04c@mail.lobbystack.internal>"
     }
   },
   {
@@ -534,34 +478,6 @@
     }
   },
   {
-    "name": "onboarding_followup es",
-    "input": {
-      "template": "onboarding_followup",
-      "to": "owner@example.test",
-      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
-      "subject": "El agente de Acme Dental aún no ha tenido una conversación real",
-      "variables": {
-        "locale": "es",
-        "firstName": "Sam",
-        "businessName": "Acme Dental",
-        "senderName": "Raphael",
-        "checkInToken_still_testing": "v1.still_testing.signature",
-        "checkInToken_connect_number": "v1.connect_number.signature",
-        "checkInToken_test_call_mistakes": "v1.test_call_mistakes.signature",
-        "checkInToken_not_a_fit": "v1.not_a_fit.signature"
-      },
-      "idempotencyKey": "followup:es"
-    },
-    "sent": {
-      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
-      "to": "owner@example.test",
-      "subject": "El agente de Acme Dental aún no ha tenido una conversación real",
-      "text": "Hola, Sam:\n\nSoy Raphael, fundador de LobbyStack. Ayer configuró un agente para Acme Dental, y todavía no ha hablado con ningún cliente real.\n\n¿Qué le está frenando? Haga clic en una opción:\n\nTodavía lo estoy probando\nhttps://app.example.test/es/check-in/v1.still_testing.signature\n\nNo sé cómo conectar mi número\nhttps://app.example.test/es/check-in/v1.connect_number.signature\n\nCometió errores en mi llamada de prueba\nhttps://app.example.test/es/check-in/v1.test_call_mistakes.signature\n\nNo es adecuado para mi negocio\nhttps://app.example.test/es/check-in/v1.not_a_fit.signature\n\nSi es otra cosa, responda a este correo. Leo todas las respuestas.\n\nRaphael\nFundador, LobbyStack",
-      "html": "<!doctype html><html><body style=\"margin:0;padding:0;background:#FFFFFF;\"><div style=\"max-width:560px;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;\"><p style=\"margin:0 0 16px;font-size:16px;line-height:1.6;color:#0B0B0D;\">Hola, Sam:</p><p style=\"margin:0 0 16px;font-size:16px;line-height:1.6;color:#0B0B0D;\">Soy Raphael, fundador de LobbyStack. Ayer configuró un agente para Acme Dental, y todavía no ha hablado con ningún cliente real.</p><p style=\"margin:0 0 12px;font-size:16px;line-height:1.6;color:#0B0B0D;\">¿Qué le está frenando? Haga clic en una opción:</p><p style=\"margin:0 0 8px;font-size:16px;line-height:1.6;\"><a href=\"https://app.example.test/es/check-in/v1.still_testing.signature\" style=\"color:#0B0B0D;\">Todavía lo estoy probando</a></p><p style=\"margin:0 0 8px;font-size:16px;line-height:1.6;\"><a href=\"https://app.example.test/es/check-in/v1.connect_number.signature\" style=\"color:#0B0B0D;\">No sé cómo conectar mi número</a></p><p style=\"margin:0 0 8px;font-size:16px;line-height:1.6;\"><a href=\"https://app.example.test/es/check-in/v1.test_call_mistakes.signature\" style=\"color:#0B0B0D;\">Cometió errores en mi llamada de prueba</a></p><p style=\"margin:0 0 8px;font-size:16px;line-height:1.6;\"><a href=\"https://app.example.test/es/check-in/v1.not_a_fit.signature\" style=\"color:#0B0B0D;\">No es adecuado para mi negocio</a></p><p style=\"margin:16px 0;font-size:16px;line-height:1.6;color:#0B0B0D;\">Si es otra cosa, responda a este correo. Leo todas las respuestas.</p><p style=\"margin:0;font-size:16px;line-height:1.6;color:#0B0B0D;\">Raphael<br />Fundador, LobbyStack</p></div></body></html>",
-      "messageId": "<5e4ae7a4e3d19f6c9abafd1bdeba011ba9eb3582537eeb6e4230fe06d07fe859@mail.lobbystack.internal>"
-    }
-  },
-  {
     "name": "number_trial day10 es",
     "input": {
       "template": "number_trial",
@@ -778,34 +694,6 @@
     }
   },
   {
-    "name": "onboarding_followup sr",
-    "input": {
-      "template": "onboarding_followup",
-      "to": "owner@example.test",
-      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
-      "subject": "Agent za Acme Dental još nije imao pravi razgovor",
-      "variables": {
-        "locale": "sr",
-        "firstName": "Sam",
-        "businessName": "Acme Dental",
-        "senderName": "Raphael",
-        "checkInToken_still_testing": "v1.still_testing.signature",
-        "checkInToken_connect_number": "v1.connect_number.signature",
-        "checkInToken_test_call_mistakes": "v1.test_call_mistakes.signature",
-        "checkInToken_not_a_fit": "v1.not_a_fit.signature"
-      },
-      "idempotencyKey": "followup:sr"
-    },
-    "sent": {
-      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
-      "to": "owner@example.test",
-      "subject": "Agent za Acme Dental još nije imao pravi razgovor",
-      "text": "Zdravo, Sam,\n\nJa sam Raphael, osnivač LobbyStacka. Juče ste podesili agenta za Acme Dental, a on još nije razgovarao ni sa jednim pravim klijentom.\n\nŠta Vas koči? Kliknite na jedan odgovor:\n\nJoš ga testiram\nhttps://app.example.test/sr/check-in/v1.still_testing.signature\n\nNe znam kako da povežem svoj broj\nhttps://app.example.test/sr/check-in/v1.connect_number.signature\n\nPravio je greške u mom probnom pozivu\nhttps://app.example.test/sr/check-in/v1.test_call_mistakes.signature\n\nNe odgovara mom poslovanju\nhttps://app.example.test/sr/check-in/v1.not_a_fit.signature\n\nAko je nešto drugo, samo odgovorite na ovaj imejl. Čitam svaki odgovor.\n\nRaphael\nOsnivač, LobbyStack",
-      "html": "<!doctype html><html><body style=\"margin:0;padding:0;background:#FFFFFF;\"><div style=\"max-width:560px;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;\"><p style=\"margin:0 0 16px;font-size:16px;line-height:1.6;color:#0B0B0D;\">Zdravo, Sam,</p><p style=\"margin:0 0 16px;font-size:16px;line-height:1.6;color:#0B0B0D;\">Ja sam Raphael, osnivač LobbyStacka. Juče ste podesili agenta za Acme Dental, a on još nije razgovarao ni sa jednim pravim klijentom.</p><p style=\"margin:0 0 12px;font-size:16px;line-height:1.6;color:#0B0B0D;\">Šta Vas koči? Kliknite na jedan odgovor:</p><p style=\"margin:0 0 8px;font-size:16px;line-height:1.6;\"><a href=\"https://app.example.test/sr/check-in/v1.still_testing.signature\" style=\"color:#0B0B0D;\">Još ga testiram</a></p><p style=\"margin:0 0 8px;font-size:16px;line-height:1.6;\"><a href=\"https://app.example.test/sr/check-in/v1.connect_number.signature\" style=\"color:#0B0B0D;\">Ne znam kako da povežem svoj broj</a></p><p style=\"margin:0 0 8px;font-size:16px;line-height:1.6;\"><a href=\"https://app.example.test/sr/check-in/v1.test_call_mistakes.signature\" style=\"color:#0B0B0D;\">Pravio je greške u mom probnom pozivu</a></p><p style=\"margin:0 0 8px;font-size:16px;line-height:1.6;\"><a href=\"https://app.example.test/sr/check-in/v1.not_a_fit.signature\" style=\"color:#0B0B0D;\">Ne odgovara mom poslovanju</a></p><p style=\"margin:16px 0;font-size:16px;line-height:1.6;color:#0B0B0D;\">Ako je nešto drugo, samo odgovorite na ovaj imejl. Čitam svaki odgovor.</p><p style=\"margin:0;font-size:16px;line-height:1.6;color:#0B0B0D;\">Raphael<br />Osnivač, LobbyStack</p></div></body></html>",
-      "messageId": "<906ce8c5cd55d6638e70670f47bc19c86242a9c7381f955bf3736f9616e44465@mail.lobbystack.internal>"
-    }
-  },
-  {
     "name": "number_trial day10 sr",
     "input": {
       "template": "number_trial",
@@ -973,32 +861,6 @@
       "text": "Zdravo,\n\nVaš paket je istekao, a brojeve čuvamo 30 dana. Broj +1 416 555 0199 oslobađamo November 8. Obnovite pretplatu do tada da biste ga zadržali.\n\nZadrži moj broj: https://app.example.test/settings/plan\n\nLobbyStack",
       "html": "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n    <meta name=\"color-scheme\" content=\"light\" />\n    <meta name=\"supported-color-schemes\" content=\"light\" />\n    <title>release release_soon sr</title>\n    <style>\n      :root { color-scheme: light; }\n      @media only screen and (max-width: 620px) {\n        .email-container { width: 100% !important; padding: 24px 16px !important; }\n      }\n    </style>\n  </head>\n  <body style=\"margin:0;padding:0;background-color:#F3F4F6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;\">\n    <table role=\"presentation\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\">\n      <tr>\n        <td align=\"center\" style=\"padding:48px 16px;\">\n          <table role=\"presentation\" class=\"email-container\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"600\" style=\"width:600px;max-width:600px;background-color:#FFFFFF;border-radius:24px;padding:48px;\">\n            <tr>\n              <td align=\"left\" style=\"padding-bottom:32px;\">\n                <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"48\" height=\"48\" viewBox=\"-30 -30 278 291\" role=\"img\" aria-label=\"LobbyStack\"><g transform=\"translate(0.000000,231.000000) scale(0.100000,-0.100000)\" fill=\"#0B0B0D\" stroke=\"none\"><path d=\"M968 2280 c-42 -16 -195 -79 -340 -141 -144 -62 -317 -133 -383 -159 -90 -36 -130 -58 -162 -88 -85 -82 -78 2 -81 -976 -3 -968 -6 -916 63 -916 19 0 54 9 77 20 24 10 147 62 273 114 338 138 342 140 365 178 20 32 20 48 20 763 0 702 1 731 19 761 12 19 34 37 54 43 33 11 54 4 398 -133 267 -107 370 -152 387 -171 26 -31 23 42 25 -725 l2 -673 c0 -50 8 -86 19 -86 11 -12 31 -21 47 -21 24 0 296 106 358 140 11 5 30 27 43 47 l23 38 l0 654 0 836 -27 46 c-48 81 -77 98 -404 233 -170 71 -371 155 -447 187 -165 71 -208 75 -329 29z\"/></g></svg>\n              </td>\n            </tr>\n            <tr>\n              <td>\n                <p style=\"margin:0 0 16px;font-size:16px;line-height:1.6;color:#3D3D3D;\">Zdravo,</p><p style=\"margin:0 0 16px;font-size:16px;line-height:1.6;color:#3D3D3D;\">Vaš paket je istekao, a brojeve čuvamo 30 dana. Broj +1 416 555 0199 oslobađamo November 8. Obnovite pretplatu do tada da biste ga zadržali.</p><p style=\"margin:24px 0 32px;\"><a href=\"https://app.example.test/settings/plan\" style=\"display:inline-block;padding:12px 24px;background-color:#0B0B0D;border-radius:9999px;color:#FFFFFF;font-size:16px;font-weight:600;text-decoration:none;\">Zadrži moj broj</a></p><p style=\"margin:0;font-size:16px;line-height:1.6;color:#3D3D3D;\">LobbyStack</p>\n              </td>\n            </tr>\n          </table>\n        </td>\n      </tr>\n    </table>\n  </body>\n</html>",
       "messageId": "<e05e1daf8ce2f1bfff7543e0bba9508327c6c2c64ea3da13575ef4921cf37498@mail.lobbystack.internal>"
-    }
-  },
-  {
-    "name": "onboarding_followup en without a first name",
-    "input": {
-      "template": "onboarding_followup",
-      "to": "owner@example.test",
-      "from": "Raphael <raphael@lobbystack.com>",
-      "subject": "Acme Dental's agent hasn't had a real conversation yet",
-      "variables": {
-        "locale": "en",
-        "firstName": "",
-        "businessName": "Acme Dental",
-        "senderName": "Raphael",
-        "checkInToken_still_testing": "v1.still_testing.signature",
-        "checkInToken_connect_number": "v1.connect_number.signature",
-        "checkInToken_test_call_mistakes": "v1.test_call_mistakes.signature",
-        "checkInToken_not_a_fit": "v1.not_a_fit.signature"
-      }
-    },
-    "sent": {
-      "from": "Raphael <raphael@lobbystack.com>",
-      "to": "owner@example.test",
-      "subject": "Acme Dental's agent hasn't had a real conversation yet",
-      "text": "Hi,\n\nI'm Raphael, the founder of LobbyStack. You set up an agent for Acme Dental yesterday, and it hasn't talked to a real customer yet.\n\nWhat's holding you back? Click one:\n\nI'm still testing it\nhttps://app.example.test/en/check-in/v1.still_testing.signature\n\nI don't know how to connect my number\nhttps://app.example.test/en/check-in/v1.connect_number.signature\n\nIt made mistakes on my test call\nhttps://app.example.test/en/check-in/v1.test_call_mistakes.signature\n\nIt's not right for my business\nhttps://app.example.test/en/check-in/v1.not_a_fit.signature\n\nIf it's something else, just reply. I read every answer.\n\nRaphael\nFounder, LobbyStack",
-      "html": "<!doctype html><html><body style=\"margin:0;padding:0;background:#FFFFFF;\"><div style=\"max-width:560px;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;\"><p style=\"margin:0 0 16px;font-size:16px;line-height:1.6;color:#0B0B0D;\">Hi,</p><p style=\"margin:0 0 16px;font-size:16px;line-height:1.6;color:#0B0B0D;\">I&#39;m Raphael, the founder of LobbyStack. You set up an agent for Acme Dental yesterday, and it hasn&#39;t talked to a real customer yet.</p><p style=\"margin:0 0 12px;font-size:16px;line-height:1.6;color:#0B0B0D;\">What&#39;s holding you back? Click one:</p><p style=\"margin:0 0 8px;font-size:16px;line-height:1.6;\"><a href=\"https://app.example.test/en/check-in/v1.still_testing.signature\" style=\"color:#0B0B0D;\">I&#39;m still testing it</a></p><p style=\"margin:0 0 8px;font-size:16px;line-height:1.6;\"><a href=\"https://app.example.test/en/check-in/v1.connect_number.signature\" style=\"color:#0B0B0D;\">I don&#39;t know how to connect my number</a></p><p style=\"margin:0 0 8px;font-size:16px;line-height:1.6;\"><a href=\"https://app.example.test/en/check-in/v1.test_call_mistakes.signature\" style=\"color:#0B0B0D;\">It made mistakes on my test call</a></p><p style=\"margin:0 0 8px;font-size:16px;line-height:1.6;\"><a href=\"https://app.example.test/en/check-in/v1.not_a_fit.signature\" style=\"color:#0B0B0D;\">It&#39;s not right for my business</a></p><p style=\"margin:16px 0;font-size:16px;line-height:1.6;color:#0B0B0D;\">If it&#39;s something else, just reply. I read every answer.</p><p style=\"margin:0;font-size:16px;line-height:1.6;color:#0B0B0D;\">Raphael<br />Founder, LobbyStack</p></div></body></html>"
     }
   },
   {

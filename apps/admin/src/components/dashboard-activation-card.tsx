@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { Phone } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -10,6 +10,7 @@ import { useActivation } from "@/hooks/use-activation";
 import { useOpenNumberStep } from "@/lib/number-step";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { openTestWindow, useTestWindowReady } from "@/lib/test-window";
+import { useSetupAction } from "@/lib/use-setup-action";
 import { Button } from "./ui/button";
 import { Surface } from "./ui/surface";
 import { isWebsiteImportRunning, websiteImportHost, WebsiteImportProgress } from "./website-import-progress";
@@ -20,6 +21,9 @@ export function DashboardActivationCard({ businessId }: { businessId: string | u
   const openNumberStep = useOpenNumberStep();
   const testWindowReady = useTestWindowReady();
   const { canSetUp, data, eligible, heardItWork, needsNumberClaim, trialAvailable, trialNumber, upgrade } = useActivation(businessId);
+  // With setup finished, the welcome email's link (`/?setup=phoneNumber`) opens the forwarding steps for the trial number.
+  const forwards = Boolean(trialNumber && !needsNumberClaim);
+  useSetupAction(forwards, useCallback((action: string) => { if (action !== "phoneNumber") return false; setForwardingOpen(true); return true; }, []));
 
   if (!businessId || !canSetUp || !data || !eligible) return null;
 

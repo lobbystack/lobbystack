@@ -139,8 +139,8 @@ export async function markOutboxFailed(
 /**
  * Deletes up to `limit` messages published before `publishedBefore` and returns
  * how many it removed. Unpublished and dead-lettered rows are never published,
- * so they stay. Onboarding follow-ups stay too: their dedupe key is what stops
- * a resubmitted attribution form from scheduling a second check-in.
+ * so they stay. Welcome emails stay too: their dedupe key is what stops a
+ * revisited last onboarding step from sending a second welcome.
  */
 export async function prunePublishedOutbox(
   db: Database,
@@ -150,7 +150,7 @@ export async function prunePublishedOutbox(
     const batch = tx
       .select({ id: outboxMessages.id })
       .from(outboxMessages)
-      .where(and(lt(outboxMessages.publishedAt, options.publishedBefore), ne(outboxMessages.topic, "onboarding.sendFollowup")))
+      .where(and(lt(outboxMessages.publishedAt, options.publishedBefore), ne(outboxMessages.topic, "onboarding.sendWelcome")))
       .limit(options.limit)
       .for("update", { skipLocked: true });
     const deleted = await tx.delete(outboxMessages).where(inArray(outboxMessages.id, batch)).returning({ id: outboxMessages.id });

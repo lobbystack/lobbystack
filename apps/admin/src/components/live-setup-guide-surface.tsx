@@ -31,6 +31,7 @@ import { requestJson } from "@/lib/request-json";
 import { isSetupStepDone, numberPath, SETUP_STEP_ORDER, type NumberPath, type SetupGuide, type SetupStep, type SetupStepId } from "@/lib/setup-guide";
 import { openTestWindow, useTestWindowReady } from "@/lib/test-window";
 import { useCallSettleRefetch } from "@/lib/use-call-settle-refetch";
+import { useSetupAction } from "@/lib/use-setup-action";
 import { HOURS_EDITOR_HREF, needsHoursForBooking, useBusinessHours } from "./business-hours-section";
 
 type GuideStepId = SetupStepId | "hours";
@@ -85,6 +86,14 @@ export function LiveSetupGuideSurface({ businessId, goal }: { businessId: string
   const [picked, setPicked] = useState<{ step: GuideStepId; during: GuideStepId } | null>(null);
   const pickedStep = picked?.during === active ? steps.find((step) => step.id === picked.step) : undefined;
   const openStep = pickedStep && opens(pickedStep) ? pickedStep.id : active;
+  // A link such as the welcome email's (`/?setup=phoneNumber`) opens its step, as a click on it would.
+  useSetupAction(Boolean(setup.data), useCallback((action: string) => {
+    const step = steps.find((item) => item.id === action);
+    if (!step || !opens(step)) return false;
+    setPicked({ step: step.id, during: active });
+    return true;
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- opens reads only done and the test call, which steps and active already follow.
+  }, [steps, active]));
   const expand = useMutation({
     mutationFn: (documentId: string) => requestJson(`/api/knowledge/${encodeURIComponent(documentId)}?businessId=${encodeURIComponent(businessId)}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "expand" }) }),
     onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["setup", businessId] }); router.push("/agent/knowledge"); },

@@ -11,7 +11,7 @@ import { brandForEmail, forgetCachedBrands } from "./brands";
 import { capabilityNames, HOST_BRAND_SCOPE, requireBusinessAccess, type BrandScope, type Capability } from "./businessAccess";
 import { loadEntitlement } from "./entitlement";
 import { listGrantableBusinesses } from "./oauth/grants";
-import { advanceOnboardingStage, getActiveOnboardingState, queueOnboardingFollowupEmail, scheduleOnboardingFollowupInTransaction } from "./onboarding";
+import { advanceOnboardingStage, getActiveOnboardingState, queueWelcomeEmail, scheduleWelcomeEmailInTransaction } from "./onboarding";
 import { getNumberTrialState, joinNumberWaitlist, loadNumberReleaseEmail, loadNumberTrialEmail, queuePlanCancelNoticeInTransaction, sweepNumberReleases, sweepNumberTrial } from "./numberTrials";
 import { recordPartnerTierBilling } from "./partnerNumbers";
 import { searchBusinessNumberInventory, skipOnboardingNumber } from "./phoneNumbers";
@@ -438,7 +438,7 @@ describe.skipIf(!client)("the host's own emails", () => {
   /** The topics queued for a business, read as the migrator. */
   const queued = (tx: DatabaseTransaction, businessId: string) => asMigrator(tx, async () => (await tx.select({ topic: outboxMessages.topic }).from(outboxMessages).where(eq(outboxMessages.businessId, businessId))).map((row) => row.topic).sort());
 
-  it("never schedules the founder's check-in, or the number trial and release emails, for a partner's business, and never sends one queued anyway", async () => {
+  it("never schedules the welcome email, or the number trial and release emails, for a partner's business, and never sends one queued anyway", async () => {
     await rollbackTest(async (tx) => {
       const acme = await partner(tx, "Acme Reception");
       const [owner] = await people(tx, 1);
@@ -447,12 +447,12 @@ describe.skipIf(!client)("the host's own emails", () => {
       const businessId = await ownedPartnerBusiness(tx, { actor: acme.ownerActor, owner: owner!, name: "Harbor Dental" });
       const before = { direct: await queued(tx, direct), partner: await queued(tx, businessId) };
 
-      // Scheduled: the founder's check-in, a plan's cancel notice and the release reminder.
+      // Scheduled: the welcome email, a plan's cancel notice and the release reminder.
       const now = new Date();
       const numbers = await asMigrator(tx, async () => await tx.insert(phoneNumbers).values([direct, businessId].map((id) => ({ businessId: id, e164: `+1416${String(Math.floor(Math.random() * 10_000_000)).padStart(7, "0")}`, status: "active" }))).returning({ id: phoneNumbers.id, businessId: phoneNumbers.businessId }));
       const numberOf = (id: string) => numbers.find((number) => number.businessId === id)!.id;
       for (const id of [direct, businessId]) {
-        await withBusinessTransaction(context.db, { businessId: id, actorType: "system" }, async (inner) => await scheduleOnboardingFollowupInTransaction(inner, id, now));
+        await withBusinessTransaction(context.db, { businessId: id, actorType: "system" }, async (inner) => await scheduleWelcomeEmailInTransaction(inner, id, now));
       }
       await asWorker(tx, async () => {
         for (const id of [direct, businessId]) await withBusinessTransaction(context.db, { businessId: id, actorType: "worker" }, async (inner) => await queuePlanCancelNoticeInTransaction(inner, { businessId: id, periodEnd: now }));
@@ -464,14 +464,13 @@ describe.skipIf(!client)("the host's own emails", () => {
         expect(await sweepNumberReleases(context, { businessId: direct, now })).toBe(1);
       });
       expect((await queued(tx, businessId)).filter((topic) => !before.partner.includes(topic))).toEqual([]);
-      expect((await queued(tx, direct)).filter((topic) => !before.direct.includes(topic))).toEqual(["onboarding.sendFollowup", "phoneNumber.releaseEmail", "phoneNumber.releaseEmail"]);
+      expect((await queued(tx, direct)).filter((topic) => !before.direct.includes(topic))).toEqual(["onboarding.sendWelcome", "phoneNumber.releaseEmail", "phoneNumber.releaseEmail"]);
 
       // Sent: each email's job reads what to send, and gets nothing for a partner's business.
       const trials = await asMigrator(tx, async () => await tx.insert(numberTrials).values([direct, businessId].map((id) => ({ businessId: id, userId: owner!.userId, phoneNumberId: numberOf(id), verifiedPhone: "+14165550100", status: "active", startedAt: new Date(now.getTime() - 13 * 86_400_000), endsAt: new Date(now.getTime() + 86_400_000) }))).returning({ id: numberTrials.id, businessId: numberTrials.businessId }));
       const trialOf = (id: string) => trials.find((trial) => trial.businessId === id)!.id;
-      const sender = { from: "Raphael <raphael@desk.example.test>", name: "Raphael" };
       await asWorker(tx, async () => {
-        expect(await queueOnboardingFollowupEmail(context, { businessId, sender })).toBe(false);
+        expect(await queueWelcomeEmail(context, { businessId })).toBe(false);
         expect(await loadNumberReleaseEmail(context, { businessId, phoneNumberId: numberOf(businessId) })).toBeNull();
         expect(await loadNumberReleaseEmail(context, { businessId: direct, phoneNumberId: numberOf(direct) })).toMatchObject({ to: owner!.email });
         expect(await loadNumberTrialEmail(context, { businessId, trialId: trialOf(businessId), email: "day13" })).toBeNull();
@@ -495,7 +494,7 @@ describe.skipIf(!client)("the owner's onboarding", () => {
       return await checkOnboardingPhoneVerificationCode(context, { ...input, attemptId, code: "123456" }, approvingVerify);
     });
   };
-  const followups = (tx: DatabaseTransaction, businessId: string) => asMigrator(tx, async () => await tx.select({ id: outboxMessages.id }).from(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), eq(outboxMessages.topic, "onboarding.sendFollowup"))));
+  const welcomes = (tx: DatabaseTransaction, businessId: string) => asMigrator(tx, async () => await tx.select({ id: outboxMessages.id }).from(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), eq(outboxMessages.topic, "onboarding.sendWelcome"))));
 
   it("at full access, skips creating the business, the number and attribution, and ends on Meet your agent", async () => {
     await rollbackTest(async (tx) => {
@@ -518,8 +517,8 @@ describe.skipIf(!client)("the owner's onboarding", () => {
       expect((await state()).stage).toBe("meet");
       await advanceOnboardingStage(context, { userId: owner!.userId, businessId, to: "complete" });
       expect(await state()).toEqual({ businessId, stage: "complete", steps: PARTNER_STEPS });
-      // Finishing without attribution schedules no founder's check-in either.
-      expect(await followups(tx, businessId)).toEqual([]);
+      // Finishing without attribution schedules no welcome email either.
+      expect(await welcomes(tx, businessId)).toEqual([]);
     });
   });
 
@@ -537,7 +536,7 @@ describe.skipIf(!client)("the owner's onboarding", () => {
       const skipped = await ownedPartnerBusiness(tx, { actor: acme.ownerActor, owner: other!, name: "Pier Clinic", accessLevel: "activity" });
       await advanceOnboardingStage(context, { userId: other!.userId, businessId: skipped, to: "complete" });
       expect((await getActiveOnboardingState(context.db, other!.userId, acme.brand)).stage).toBe("complete");
-      expect(await followups(tx, skipped)).toEqual([]);
+      expect(await welcomes(tx, skipped)).toEqual([]);
     });
   });
 

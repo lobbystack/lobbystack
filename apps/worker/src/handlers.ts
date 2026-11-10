@@ -8,7 +8,7 @@ import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
 import { HOST_EMAIL_BRAND, billingMeterEventNames, detectSiteLanguage, emailSender, getPolarMeteredUsagePayload, intlLocale, isUuid, normalizeRuntimeLocale, parseEmailBrandReference, partnerFeatures, partnerTierProductId, type BillingUsageKind, type EmailBrandReference } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { enqueueKnowledgeDerivedRefresh, finishBusinessSummaryRegenerate, forgetStaleRetiredCalendarTokens, loadBusinessHoursInput, loadBusinessSummaryInput, markBusinessHoursChecked, resetGeneratedBusinessSummary, saveGeneratedBusinessHours, saveGeneratedBusinessSummary, type SummaryRegenerateOutcome } from "@lobbystack/domain";
-import { billingCheckoutLeaseEndsAt, checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deferBillingCheckoutRequest, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteStoredObjects, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, embeddingInputsForChunk, hashContent, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
+import { billingCheckoutLeaseEndsAt, checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deferBillingCheckoutRequest, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteStoredObjects, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, embeddingInputsForChunk, hashContent, upsertWebsiteDocument, queueWelcomeEmail, type DurableAiUsage, type GeneratedCallSummary } from "@lobbystack/domain";
 import { deliverOutbound, markFeedbackEmailFailed, markFeedbackEmailSent, queueDailyOperatorSummaries, refreshUnitEconomicsMonth } from "@lobbystack/domain";
 import { NUMBER_ORDER_MAX_WAIT_MS, claimNumberProvisioning, completeNumberProvisioning, deferNumberProvisioning, desiredNumberRouting, refreshStaleRefusedCallForwards, enqueueNumberRouting, resolveRefusedCallForward, failNumberProvisioning, isSharedSmsSender, loadNumberReleaseEmail, loadNumberTrialEmail, numberProvisioningLeaseEndsAt, sharedSmsSender, sweepNumberReleases, sweepNumberTrial } from "@lobbystack/domain";
 import { createWebhookSender, processWebhookDelivery, pruneApiHistory, prunePartnerApiIdempotencyKeys, type WebhookSender } from "@lobbystack/domain";
@@ -88,8 +88,6 @@ export type WorkerDependencies = {
   businessHoursExtractor?: BusinessHoursExtractor;
   /** Sends one signed webhook. Defaults to the SSRF-guarded HTTPS sender. */
   webhookSender?: WebhookSender;
-  /** Founder check-in sender. Without it, onboarding follow-up jobs are skipped. */
-  onboardingFollowupSender?: OnboardingFollowupSender;
   enqueueProductEventRetentionContinuation?: (input: {
     businessId: string;
     before: Date;
@@ -619,14 +617,16 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         return { status: "skipped" };
       }
       {
-        const template = job.payload.template === "existing_account" || job.payload.template === "account_setup" || job.payload.template === "verify_email" || job.payload.template === "password_reset" || job.payload.template === "passkey_added" || job.payload.template === "invitation" || job.payload.template === "operator_alert" || job.payload.template === "feedback_submission" || job.payload.template === "onboarding_followup" || job.payload.template === "partner_pool_alert" || job.payload.template === "business_allowance_alert" || job.payload.template === "partner_business_allowance_alert" || (job.type === "email.sendNotice" && (job.payload.template === "business_released" || job.payload.template === "business_deleted"))
+        const template = job.payload.template === "existing_account" || job.payload.template === "account_setup" || job.payload.template === "verify_email" || job.payload.template === "password_reset" || job.payload.template === "passkey_added" || job.payload.template === "invitation" || job.payload.template === "operator_alert" || job.payload.template === "feedback_submission" || job.payload.template === "welcome" || job.payload.template === "partner_pool_alert" || job.payload.template === "business_allowance_alert" || job.payload.template === "partner_business_allowance_alert" || (job.type === "email.sendNotice" && (job.payload.template === "business_released" || job.payload.template === "business_deleted"))
           ? job.payload.template
           : "operator_alert";
         const variables = typeof job.payload.variables === "object" && job.payload.variables !== null
           ? Object.fromEntries(Object.entries(job.payload.variables).map(([key, value]) => [key, String(value)]))
           : { message: String(job.payload.message ?? ""), url: String(job.payload.url ?? "") };
         const feedbackSubmissionId = typeof job.payload.feedbackSubmissionId === "string" ? job.payload.feedbackSubmissionId : undefined;
-        // The host's own emails, such as the founder's check-in, never reach a partner's business, whenever they were queued.
+        // A founder's check-in queued before it was removed sends nothing, rather than going out as an alert.
+        if (job.payload.template === "onboarding_followup") return { status: "skipped", ...(businessId ? { entityId: businessId } : {}) };
+        // The host's own emails, such as the welcome email, never reach a partner's business, whenever they were queued.
         if (businessId && isHostOnlyEmailTemplate(template) && !await businessGetsHostEmails(dependencies.domain.db, businessId)) return { status: "skipped", entityId: businessId };
         try {
           // An email queued before payloads carried a brand goes out under the host's.
@@ -1278,10 +1278,13 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const expired = await expireProspectDemos(dependencies.domain);
       return { status: expired > 0 ? "completed" : "skipped", entityId: String(expired) };
     }
-    case "onboarding.sendFollowup": {
+    case "onboarding.sendFollowup":
+      // The founder's check-in is gone. One scheduled before it went sends nothing.
+      return { status: "skipped" };
+    case "onboarding.sendWelcome": {
       const businessId = businessIdOrThrow(job);
-      if (!dependencies.email || !dependencies.onboardingFollowupSender) return { status: "skipped" };
-      const queued = await queueOnboardingFollowupEmail(dependencies.domain, { businessId, sender: dependencies.onboardingFollowupSender });
+      if (!dependencies.email) return { status: "skipped" };
+      const queued = await queueWelcomeEmail(dependencies.domain, { businessId });
       return { status: queued ? "completed" : "skipped", entityId: businessId };
     }
     case "affiliate.generatePayoutRun": {

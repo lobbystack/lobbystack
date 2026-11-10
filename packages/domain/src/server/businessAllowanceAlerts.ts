@@ -3,6 +3,8 @@ import { and, eq, sql } from "drizzle-orm";
 import { billingUsageEvents, billingUsageMonths, businesses, enqueueOutbox, type DatabaseTransaction } from "@lobbystack/db";
 import { HOST_EMAIL_BRAND, intlLocale, normalizeInterfaceLocale, type EmailBrandReference, type Entitlement } from "@lobbystack/shared";
 
+import { greetingName } from "./emailGreeting";
+
 // Alerts at 80% and 100% of a partner's business's allowance, its minutes and
 // its chats each. They go by email to the owners and admins of the business's
 // own team, under the business's brand, which is its partner's, and to the
@@ -98,7 +100,7 @@ function alertVariables(input: { periodKey: string; entitlement: Entitlement; us
   const measured = measure(entitlement.allowance, input.used, alert.kind) ?? { used: 0, limit: 0 };
   return {
     locale,
-    firstName: recipient.name?.trim().split(/\s+/)[0] ?? "",
+    firstName: greetingName(recipient.name, recipient.email),
     businessName: input.businessName,
     kind: alert.kind,
     threshold: String(alert.threshold),

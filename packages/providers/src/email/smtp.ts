@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 import nodemailer, { type Transporter } from "nodemailer";
-import { CHECK_IN_ANSWERS, DEFAULT_APP_NAME, assertCertificationRecipient, checkInTokenVariable, intlLocale, type CheckInAnswer, type EmailBrand } from "@lobbystack/shared";
+import { DEFAULT_APP_NAME, assertCertificationRecipient, intlLocale, type EmailBrand } from "@lobbystack/shared";
 
 export type SmtpConfig = {
   host: string;
@@ -12,7 +12,7 @@ export type SmtpConfig = {
   from: string;
 };
 
-type TemplateName = "existing_account" | "account_setup" | "verify_email" | "password_reset" | "passkey_added" | "invitation" | "operator_alert" | "feedback_submission" | "onboarding_followup" | "number_trial" | "number_release" | "partner_pool_alert" | "business_allowance_alert" | "partner_business_allowance_alert" | "business_released" | "business_deleted" | "call_summary";
+type TemplateName = "existing_account" | "account_setup" | "verify_email" | "password_reset" | "passkey_added" | "invitation" | "operator_alert" | "feedback_submission" | "welcome" | "number_trial" | "number_release" | "partner_pool_alert" | "business_allowance_alert" | "partner_business_allowance_alert" | "business_released" | "business_deleted" | "call_summary";
 
 /**
  * Whether the mail provider refused the message for good. An SMTP 5xx
@@ -167,7 +167,7 @@ function renderTemplate(template: TemplateName, subject: string, variables: Reco
   return html ? { text, html } : { text };
 }
 
-/** The HTML of an email, or undefined for the founder's follow-up, which goes out as a personal plain-text letter. */
+/** The HTML of an email, in the shared layout. */
 function templateHtml(template: TemplateName, subject: string, variables: Record<string, string>, brand: EmailBrand): string | undefined {
   const url = dashboardLink(variables.url, brand);
   switch (template) {
@@ -215,8 +215,8 @@ function templateHtml(template: TemplateName, subject: string, variables: Record
       const copy = partnerBusinessAllowanceAlertCopy(variables);
       return renderLetterHtml(brand, subject, variables, copy.lines, copy.action, variables.url, brand.name);
     }
-    case "onboarding_followup":
-      return onboardingFollowupHtml(variables, brand);
+    case "welcome":
+      return renderWelcomeHtml(brand, subject, variables);
   }
 }
 
@@ -301,7 +301,7 @@ const CALL_SUMMARY_COPY: Record<"en" | "fr" | "es" | "sr", (business: string, ca
     duration: (m, s) => (m ? `${m} min ${s} s` : `${s} s`),
     booked: (service, when) => (service ? `Rendez-vous réservé : ${service}, ${when}` : `Rendez-vous réservé : ${when}`),
     action: "Voir l’appel",
-    footnote: "Vous recevez cet e-mail pour chaque appel auquel votre agent répond.",
+    footnote: "Vous recevez ce courriel pour chaque appel auquel votre agent répond.",
     settings: "Modifier les alertes",
   }),
   es: (business, caller) => ({
@@ -474,7 +474,7 @@ function renderAccountSetupHtml(variables: Record<string, string>, brand: EmailB
 }
 
 // The account, invitation and alert emails a partner's client may get name the
-// brand. Feedback, the founder check-in, and the trial and release emails with
+// brand. Feedback, the welcome email, and the trial and release emails with
 // the host's prices are the host's own, and keep LobbyStack.
 function templateBody(template: TemplateName, variables: Record<string, string>, brand: EmailBrand): string {
   const name = brand.name;
@@ -506,8 +506,8 @@ function templateBody(template: TemplateName, variables: Record<string, string>,
       return callSummaryBody(variables, brand);
     case "feedback_submission":
       return variables.body ?? "LobbyStack dashboard feedback";
-    case "onboarding_followup":
-      return onboardingFollowupBody(variables, brand);
+    case "welcome":
+      return welcomeBody(variables);
     case "number_trial":
       return numberTrialBody(variables, brand);
     case "number_release":
@@ -949,91 +949,165 @@ function existingAccountBody(variables: Record<string, string>, brand: EmailBran
   }
 }
 
-type CheckInCopy = { greeting: (name: string) => string; intro: (sender: string, business: string) => string; question: string; answers: Record<CheckInAnswer, string>; close: string; title: string };
+type WelcomeGoal = "answer_calls" | "book_appointments" | "answer_website_visitors" | "answer_instagram_messages" | "none";
 
-const CHECK_IN_COPY: Record<"en" | "fr" | "es" | "sr", CheckInCopy> = {
+type WelcomeCopy = {
+  heading: (firstName: string) => string;
+  intro: (business: string) => string;
+  lead: string;
+  hear: { title: string; text: Record<WelcomeGoal, string> };
+  teach: { title: string; text: string; booking: string };
+  forward: { title: (number: string) => string; text: string; action: string };
+  claim: { title: string; text: string; action: string };
+  close: string;
+  signature: string;
+};
+
+const WELCOME_COPY: Record<"en" | "fr" | "es" | "sr", WelcomeCopy> = {
   en: {
-    greeting: (name) => (name ? `Hi ${name},` : "Hi,"),
-    intro: (sender, business) => `I'm ${sender}, the founder of LobbyStack. You set up an agent for ${business} yesterday, and it hasn't talked to a real customer yet.`,
-    question: "What's holding you back? Click one:",
-    answers: { still_testing: "I'm still testing it", connect_number: "I don't know how to connect my number", test_call_mistakes: "It made mistakes on my test call", not_a_fit: "It's not right for my business" },
-    close: "If it's something else, just reply. I read every answer.",
-    title: "Founder, LobbyStack",
+    heading: (name) => (name ? `Welcome to LobbyStack, ${name}` : "Welcome to LobbyStack"),
+    intro: (business) => `We're glad you're here. Your agent for ${business} is set up and ready to pick up the calls you can't.`,
+    lead: "Three steps and it's answering your customers:",
+    hear: {
+      title: "Hear your agent",
+      text: {
+        answer_calls: "Call it from your dashboard and ask what your callers ask most.",
+        book_appointments: "Call it from your dashboard and ask it to book an appointment.",
+        answer_website_visitors: "Call it from your dashboard and ask what people ask on your website.",
+        answer_instagram_messages: "Call it from your dashboard and ask what people ask on Instagram.",
+        none: "Call it from your dashboard and ask what your customers ask most.",
+      },
+    },
+    teach: { title: "Teach it your business", text: "Add your hours, prices and FAQs so it answers the way your team does.", booking: "Add your services, hours and booking rules so it books the way your team does." },
+    forward: { title: (number) => `Forward your calls to ${number}`, text: "Your phone rings first. When you miss a call, your agent picks up.", action: "Forward my missed calls" },
+    claim: { title: "Get a phone number", text: "Give your agent its own number, then forward the calls you miss to it.", action: "Answer my missed calls" },
+    close: "Questions or stuck on a step? Reply to this email and we'll help.",
+    signature: "The LobbyStack team",
   },
   fr: {
-    greeting: (name) => (name ? `Bonjour ${name},` : "Bonjour,"),
-    intro: (sender, business) => `Je suis ${sender}, le fondateur de LobbyStack. Vous avez configuré un agent pour ${business} hier, et il n'a pas encore parlé à un vrai client.`,
-    question: "Qu'est-ce qui vous retient ? Cliquez sur une réponse :",
-    answers: { still_testing: "Je suis encore en train de le tester", connect_number: "Je ne sais pas comment connecter mon numéro", test_call_mistakes: "Il a fait des erreurs pendant mon appel test", not_a_fit: "Il ne convient pas à mon entreprise" },
-    close: "Si c'est autre chose, répondez simplement à ce courriel. Je lis toutes les réponses.",
-    title: "Fondateur, LobbyStack",
+    heading: (name) => (name ? `Bienvenue chez LobbyStack, ${name}` : "Bienvenue chez LobbyStack"),
+    intro: (business) => `Nous sommes ravis de vous accueillir. Votre agent pour ${business} est prêt à répondre aux appels que vous ne pouvez pas prendre.`,
+    lead: "Trois étapes et il répond à vos clients :",
+    hear: {
+      title: "Écoutez votre agent",
+      text: {
+        answer_calls: "Appelez-le depuis votre tableau de bord et posez la question que vos appelants posent le plus.",
+        book_appointments: "Appelez-le depuis votre tableau de bord et demandez-lui de prendre un rendez-vous.",
+        answer_website_visitors: "Appelez-le depuis votre tableau de bord et posez les questions qu'on vous pose sur votre site.",
+        answer_instagram_messages: "Appelez-le depuis votre tableau de bord et posez les questions qu'on vous pose sur Instagram.",
+        none: "Appelez-le depuis votre tableau de bord et posez la question que vos clients posent le plus.",
+      },
+    },
+    teach: { title: "Présentez-lui votre entreprise", text: "Ajoutez vos heures, vos tarifs et vos FAQ pour qu'il réponde comme votre équipe.", booking: "Ajoutez vos services, vos heures et vos règles de réservation pour qu'il réserve comme votre équipe." },
+    forward: { title: (number) => `Transférez vos appels vers le ${number}`, text: "Votre téléphone sonne d'abord. Si vous ne répondez pas, votre agent prend l'appel.", action: "Transférer mes appels manqués" },
+    claim: { title: "Obtenez un numéro de téléphone", text: "Donnez un numéro à votre agent, puis transférez-y les appels que vous manquez.", action: "Répondre à mes appels manqués" },
+    close: "Une question ou bloqué à une étape ? Répondez à ce courriel et nous vous aiderons.",
+    signature: "L'équipe LobbyStack",
   },
   es: {
-    greeting: (name) => (name ? `Hola, ${name}:` : "Hola:"),
-    intro: (sender, business) => `Soy ${sender}, fundador de LobbyStack. Ayer configuró un agente para ${business}, y todavía no ha hablado con ningún cliente real.`,
-    question: "¿Qué le está frenando? Haga clic en una opción:",
-    answers: { still_testing: "Todavía lo estoy probando", connect_number: "No sé cómo conectar mi número", test_call_mistakes: "Cometió errores en mi llamada de prueba", not_a_fit: "No es adecuado para mi negocio" },
-    close: "Si es otra cosa, responda a este correo. Leo todas las respuestas.",
-    title: "Fundador, LobbyStack",
+    heading: (name) => (name ? `Le damos la bienvenida a LobbyStack, ${name}` : "Le damos la bienvenida a LobbyStack"),
+    intro: (business) => `Nos alegra tenerle aquí. Su agente para ${business} está listo para atender las llamadas que usted no puede contestar.`,
+    lead: "Tres pasos y estará atendiendo a sus clientes:",
+    hear: {
+      title: "Escuche a su agente",
+      text: {
+        answer_calls: "Llámelo desde su panel y pregúntele lo que más le preguntan quienes llaman.",
+        book_appointments: "Llámelo desde su panel y pídale que reserve una cita.",
+        answer_website_visitors: "Llámelo desde su panel y pregúntele lo que la gente pregunta en su sitio web.",
+        answer_instagram_messages: "Llámelo desde su panel y pregúntele lo que la gente pregunta en Instagram.",
+        none: "Llámelo desde su panel y pregúntele lo que más preguntan sus clientes.",
+      },
+    },
+    teach: { title: "Enséñele su negocio", text: "Agregue su horario, sus precios y sus preguntas frecuentes para que responda como su equipo.", booking: "Agregue sus servicios, su horario y sus reglas de reserva para que reserve como su equipo." },
+    forward: { title: (number) => `Desvíe sus llamadas al ${number}`, text: "Su teléfono suena primero. Si no contesta, su agente atiende la llamada.", action: "Desviar mis llamadas perdidas" },
+    claim: { title: "Consiga un número de teléfono", text: "Dé a su agente su propio número y desvíe a él las llamadas que no contesta.", action: "Atender mis llamadas perdidas" },
+    close: "¿Tiene preguntas o se atascó en un paso? Responda a este correo y le ayudaremos.",
+    signature: "El equipo de LobbyStack",
   },
   sr: {
-    greeting: (name) => (name ? `Zdravo, ${name},` : "Zdravo,"),
-    intro: (sender, business) => `Ja sam ${sender}, osnivač LobbyStacka. Juče ste podesili agenta za ${business}, a on još nije razgovarao ni sa jednim pravim klijentom.`,
-    question: "Šta Vas koči? Kliknite na jedan odgovor:",
-    answers: { still_testing: "Još ga testiram", connect_number: "Ne znam kako da povežem svoj broj", test_call_mistakes: "Pravio je greške u mom probnom pozivu", not_a_fit: "Ne odgovara mom poslovanju" },
-    close: "Ako je nešto drugo, samo odgovorite na ovaj imejl. Čitam svaki odgovor.",
-    title: "Osnivač, LobbyStack",
+    heading: (name) => (name ? `Dobro došli u LobbyStack, ${name}` : "Dobro došli u LobbyStack"),
+    intro: (business) => `Drago nam je što ste tu. Vaš agent za ${business} je spreman da preuzme pozive koje ne stignete da javite.`,
+    lead: "Tri koraka i odgovara Vašim klijentima:",
+    hear: {
+      title: "Poslušajte svog agenta",
+      text: {
+        answer_calls: "Pozovite ga iz kontrolne table i pitajte ono što Vas pozivaoci najčešće pitaju.",
+        book_appointments: "Pozovite ga iz kontrolne table i zamolite ga da zakaže termin.",
+        answer_website_visitors: "Pozovite ga iz kontrolne table i pitajte ono što ljudi pitaju na Vašem sajtu.",
+        answer_instagram_messages: "Pozovite ga iz kontrolne table i pitajte ono što ljudi pitaju na Instagramu.",
+        none: "Pozovite ga iz kontrolne table i pitajte ono što Vas klijenti najčešće pitaju.",
+      },
+    },
+    teach: { title: "Upoznajte ga sa svojim poslom", text: "Dodajte radno vreme, cene i česta pitanja da bi odgovarao kao Vaš tim.", booking: "Dodajte usluge, radno vreme i pravila zakazivanja da bi zakazivao kao Vaš tim." },
+    forward: { title: (number) => `Preusmerite pozive na ${number}`, text: "Vaš telefon zvoni prvi. Kada ne javite, javlja se agent.", action: "Preusmeri propuštene pozive" },
+    claim: { title: "Nabavite broj telefona", text: "Dodelite agentu sopstveni broj, pa na njega preusmerite pozive koje propustite.", action: "Odgovaraj na propuštene pozive" },
+    close: "Imate pitanje ili ste zapeli na nekom koraku? Odgovorite na ovaj imejl i pomoći ćemo Vam.",
+    signature: "Tim LobbyStacka",
   },
 };
 
 /**
- * The founder's check-in, as plain text. Each answer is a link to a page that
- * asks to confirm it, so a mail scanner opening the link answers nothing.
+ * The welcome email, sent when onboarding finishes, in the owner's language.
+ * Its three steps match Getting started on Home, and its button leads to the
+ * third: forwarding calls to the number the owner took, or getting one.
  */
-function onboardingFollowupBody(variables: Record<string, string>, brand: EmailBrand): string {
-  const locale = variables.locale === "fr" || variables.locale === "es" || variables.locale === "sr" ? variables.locale : "en";
-  const copy = CHECK_IN_COPY[locale];
-  const sender = variables.senderName ?? "";
+function welcomeCopy(v: Record<string, string>) {
+  const locale = v.locale === "fr" || v.locale === "es" || v.locale === "sr" ? v.locale : "en";
+  const copy = WELCOME_COPY[locale];
+  const goal: WelcomeGoal = v.goal === "answer_calls" || v.goal === "book_appointments" || v.goal === "answer_website_visitors" || v.goal === "answer_instagram_messages" ? v.goal : "none";
+  const number = v.number?.trim() ?? "";
+  const phone = number ? { title: copy.forward.title(number), text: copy.forward.text, action: copy.forward.action } : copy.claim;
+  return {
+    heading: copy.heading(v.firstName?.trim() ?? ""),
+    lines: [copy.intro(v.businessName ?? ""), copy.lead],
+    steps: [
+      { title: copy.hear.title, text: copy.hear.text[goal] },
+      { title: copy.teach.title, text: goal === "book_appointments" ? copy.teach.booking : copy.teach.text },
+      { title: phone.title, text: phone.text },
+    ],
+    action: phone.action,
+    // French puts a space before the colon that follows the button's words in the plain-text email.
+    colon: locale === "fr" ? " : " : ": ",
+    close: copy.close,
+    signature: copy.signature,
+  };
+}
+
+function welcomeBody(variables: Record<string, string>): string {
+  const copy = welcomeCopy(variables);
   return [
-    copy.greeting(variables.firstName ?? ""),
+    copy.heading,
     "",
-    copy.intro(sender, variables.businessName ?? ""),
+    ...copy.lines.flatMap((line) => [line, ""]),
+    ...copy.steps.flatMap((step, index) => [`${index + 1}. ${step.title}`, step.text, ""]),
+    `${copy.action}${copy.colon}${variables.url ?? ""}`,
     "",
-    copy.question,
-    "",
-    ...CHECK_IN_ANSWERS.flatMap((answer) => [copy.answers[answer], `${brand.origin}/${locale}/check-in/${variables[checkInTokenVariable(answer)] ?? ""}`, ""]),
     copy.close,
     "",
-    sender,
-    copy.title,
+    copy.signature,
   ].join("\n");
 }
 
-/**
- * The founder's note as a personal email: plain paragraphs and one text link
- * per answer. It stays out of the branded layout, and the text part remains
- * the same note with each answer above its link.
- */
-function onboardingFollowupHtml(variables: Record<string, string>, brand: EmailBrand): string {
-  const locale = variables.locale === "fr" || variables.locale === "es" || variables.locale === "sr" ? variables.locale : "en";
-  const copy = CHECK_IN_COPY[locale];
-  const sender = variables.senderName ?? "";
-  const paragraph = (text: string, margin = "0 0 16px") => `<p style="margin:${margin};font-size:16px;line-height:1.6;color:#0B0B0D;">${escapeHtml(text)}</p>`;
-  const answers = CHECK_IN_ANSWERS.map((answer) => {
-    const url = `${brand.origin}/${locale}/check-in/${variables[checkInTokenVariable(answer)] ?? ""}`;
-    return `<p style="margin:0 0 8px;font-size:16px;line-height:1.6;"><a href="${escapeHtml(url)}" style="color:#0B0B0D;">${escapeHtml(copy.answers[answer])}</a></p>`;
+function renderWelcomeHtml(brand: EmailBrand, subject: string, variables: Record<string, string>): string {
+  const copy = welcomeCopy(variables);
+  const url = variables.url;
+  const steps = copy.steps
+    .map((step, index) => `<tr><td style="width:40px;padding:4px 0;vertical-align:top;"><div style="width:28px;height:28px;border-radius:9999px;background-color:#0B0B0D;color:#FFFFFF;font-size:14px;font-weight:600;line-height:28px;text-align:center;">${index + 1}</div></td><td style="padding:4px 0 ${index === copy.steps.length - 1 ? 4 : 14}px;vertical-align:top;"><p style="margin:0;font-size:15px;font-weight:600;line-height:1.5;color:#0B0B0D;">${escapeHtml(step.title)}</p><p style="margin:0;font-size:15px;line-height:1.5;color:#3D3D3D;">${escapeHtml(step.text)}</p></td></tr>`)
+    .join("");
+  return renderEmailLayout({
+    brand,
+    previewText: subject,
+    align: "left",
+    content: [
+      `<h1 style="margin:0 0 20px;font-size:28px;font-weight:600;line-height:1.2;color:#0B0B0D;">${escapeHtml(copy.heading)}</h1>`,
+      `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(copy.lines[0]!)}</p>`,
+      `<p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(copy.lines[1]!)}</p>`,
+      `<table role="presentation" border="0" cellspacing="0" cellpadding="0" width="100%" style="margin:0 0 28px;background-color:#F9FAFB;border:1px solid #E5E7EB;border-radius:16px;"><tr><td style="padding:18px 20px;"><table role="presentation" border="0" cellspacing="0" cellpadding="0" width="100%">${steps}</table></td></tr></table>`,
+      ...(url ? [`<p style="margin:0;"><a href="${escapeHtml(url)}" style="${ACTION_BUTTON_STYLE}">${escapeHtml(copy.action)}</a></p>`] : []),
+      `<p style="margin:28px 0 0;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(copy.close)}</p>`,
+      `<p style="margin:16px 0 0;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(copy.signature)}</p>`,
+    ].join(""),
   });
-  return [
-    "<!doctype html><html><body style=\"margin:0;padding:0;background:#FFFFFF;\">",
-    "<div style=\"max-width:560px;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;\">",
-    paragraph(copy.greeting(variables.firstName ?? "")),
-    paragraph(copy.intro(sender, variables.businessName ?? "")),
-    paragraph(copy.question, "0 0 12px"),
-    ...answers,
-    paragraph(copy.close, "16px 0"),
-    `<p style="margin:0;font-size:16px;line-height:1.6;color:#0B0B0D;">${escapeHtml(sender)}<br />${escapeHtml(copy.title)}</p>`,
-    "</div></body></html>",
-  ].join("");
 }
 
 type NoticeCopy = { heading: string; lines: string[]; action: string | null };

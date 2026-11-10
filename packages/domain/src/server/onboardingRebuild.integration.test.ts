@@ -61,7 +61,7 @@ async function testCall(tx: DatabaseTransaction, businessId: string, line: strin
   if (line !== null) await tx.insert(transcripts).values({ businessId, callId: call!.id, sequence: 0, speaker: "receptionist", text: line, final: true });
 }
 
-const followups = async (tx: DatabaseTransaction, businessId: string) => await tx.select({ id: outboxMessages.id }).from(outboxMessages).where(sql`${outboxMessages.businessId} = ${businessId}::uuid and ${outboxMessages.topic} = 'onboarding.sendFollowup'`);
+const welcomes = async (tx: DatabaseTransaction, businessId: string) => await tx.select({ id: outboxMessages.id }).from(outboxMessages).where(sql`${outboxMessages.businessId} = ${businessId}::uuid and ${outboxMessages.topic} = 'onboarding.sendWelcome'`);
 
 describe.skipIf(!testUrl)("the onboarding rebuild against dedicated PostgreSQL roles", () => {
   it("resumes an owner parked on a removed step at the phone, and verifying moves them on", async () => {
@@ -85,17 +85,17 @@ describe.skipIf(!testUrl)("the onboarding rebuild against dedicated PostgreSQL r
     });
   });
 
-  it("goes from attribution to Meet your agent, and finishing schedules the check-in once", async () => {
+  it("goes from attribution to Meet your agent, and finishing schedules the welcome email once", async () => {
     await rollbackTest(async (tx) => {
       const { userId, businessId } = await workspace(tx, "attribution");
       await asApp(tx, (db) => submitOnboardingAttribution({ db }, { userId, businessId, source: "google" }));
       expect(await business(tx, businessId)).toMatchObject({ stage: "meet", attribution: "google" });
-      expect(await followups(tx, businessId)).toEqual([]);
+      expect(await welcomes(tx, businessId)).toEqual([]);
       await asApp(tx, (db) => advanceOnboardingStage({ db }, { userId, businessId, to: "complete" }));
       expect((await business(tx, businessId)).stage).toBe("complete");
-      expect(await followups(tx, businessId)).toHaveLength(1);
+      expect(await welcomes(tx, businessId)).toHaveLength(1);
       await asApp(tx, (db) => advanceOnboardingStage({ db }, { userId, businessId, to: "complete" }));
-      expect(await followups(tx, businessId)).toHaveLength(1);
+      expect(await welcomes(tx, businessId)).toHaveLength(1);
     });
   });
 
