@@ -123,7 +123,9 @@ test("Settings, Business and an agent open their own menus, and the back row sho
     await link(new RegExp(`^${navCopy.items.agents}`)).click();
     await expect(page).toHaveURL(new RegExp(`/agents/${UUID}$`));
     await expect(level).toHaveAttribute("data-menu-level", `agent:${agent!.id}`);
-    await expect(backRow(agent!.name)).toBeVisible();
+    // The back row names the section; the switcher under it names the agent.
+    await expect(backRow(navCopy.items.agents)).toBeVisible();
+    await expect(level.getByText(agent!.name, { exact: true })).toBeVisible();
     await link(navCopy.agentPages.rules).click();
     await expect(page).toHaveURL(new RegExp(`/agents/${agent!.id}/rules$`));
     await link(new RegExp(`^${navCopy.agentPages.channels}`)).click();
@@ -138,7 +140,7 @@ test("Settings, Business and an agent open their own menus, and the back row sho
     // A page opened from the address bar opens its section's menu too.
     await page.goto(`/agents/${agent!.id}/instructions`);
     await expect(level).toHaveAttribute("data-menu-level", `agent:${agent!.id}`);
-    await backRow(agent!.name).click();
+    await backRow(navCopy.items.agents).click();
     await expect(level).toHaveAttribute("data-menu-level", "root");
     await expect(page).toHaveURL(new RegExp(`/agents/${agent!.id}/instructions$`));
 
