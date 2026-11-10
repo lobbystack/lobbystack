@@ -20,6 +20,7 @@ import { keepPreviousForBusiness } from "@/lib/keep-previous-for-business";
 
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { EditContactDialog } from "@/components/edit-contact-dialog";
+import { NewContactButton } from "@/components/new-contact-dialog";
 import { DataTablePagination, paginationFeatures } from "@/components/data-table/pagination";
 import { PageHeader } from "@/components/page-header";
 import { ContactRowsSkeleton, DataTablePaginationSkeleton } from "@/components/loading-skeletons";
@@ -30,6 +31,7 @@ import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRo
 import { ContactChannelIcons } from "@/components/contact-channel-icons";
 import { getChannelLabel, getContactChannels, getContactDisplayName, getContactSecondaryDetails } from "@/lib/contact-display";
 import { formatDateTime } from "@/lib/locale";
+import { cn } from "@/lib/utils";
 import { useTelemetry } from "@/components/product-analytics";
 
 type Contact = {
@@ -143,19 +145,21 @@ export function LiveContactsSurface() {
     },
   ], [canMutate, i18n.language, t]);
 
+  // An empty table drops its minimum width, so its message stays centered instead of scrolling sideways; on phones it hides its headers too.
+  const hasRows = loading || rows.length > 0;
   const table = useTable({ features: paginationFeatures, columns, data: rows, manualPagination: true, rowCount: total, onPaginationChange: setPagination, state: { pagination } });
 
   return (
     <div className="flex flex-1 flex-col gap-6">
-      <PageHeader title={t("page.title")} />
+      <PageHeader actions={business ? <NewContactButton businessId={business.businessId} canCreate={canMutate} /> : null} title={t("page.title")} />
       <TableCard>
-        <Table className="min-w-[52rem] w-full table-fixed">
+        <Table className={cn("w-full table-fixed", hasRows && "min-w-[52rem]")}>
           <colgroup><col className="w-[30%]" /><col className="w-[14%]" /><col className="w-[20%]" /><col className="w-[12%]" /><col className="w-[16%]" /><col className="w-[8%]" /></colgroup>
-          <TableHeader>{table.getHeaderGroups().map((group) => <TableRow key={group.id}>{group.headers.map((header) => <TableHead className={header.column.id === "lastInteraction" || header.column.id === "actions" ? "text-right" : header.column.id === "contact" ? "min-w-[12rem]" : header.column.id === "channels" ? "min-w-[8rem]" : header.column.id === "activity" ? "min-w-[10rem]" : header.column.id === "appointments" ? "min-w-[7rem] text-center" : undefined} key={header.id}>{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
+          <TableHeader className={hasRows ? undefined : "max-sm:hidden"}>{table.getHeaderGroups().map((group) => <TableRow key={group.id}>{group.headers.map((header) => <TableHead className={header.column.id === "lastInteraction" || header.column.id === "actions" ? "text-right" : header.column.id === "contact" ? "min-w-[12rem]" : header.column.id === "channels" ? "min-w-[8rem]" : header.column.id === "activity" ? "min-w-[10rem]" : header.column.id === "appointments" ? "min-w-[7rem] text-center" : undefined} key={header.id}>{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
           <TableBody aria-busy={loading || undefined}>
             {loading ? <ContactRowsSkeleton rows={Math.min(pagination.pageSize, 10)} /> : null}
             {loading ? null : table.getRowModel().rows.map((row) => <TableRow className="h-12 cursor-pointer transition-colors hover:bg-muted/40" key={row.id} onClick={() => { if (business) telemetry.track("web.contacts.contact_opened", { businessId: business.businessId, contactId: row.original.id }); router.push(`/contacts/${row.original.id}`); }}>{row.getAllCells().map((cell) => <TableCell className={cell.column.id === "lastInteraction" ? "min-w-[11rem] max-w-0 whitespace-nowrap text-right" : cell.column.id === "actions" ? "w-16 text-right" : cell.column.id === "contact" ? "min-w-[12rem]" : cell.column.id === "channels" ? "min-w-[8rem]" : cell.column.id === "activity" ? "min-w-[10rem]" : cell.column.id === "appointments" ? "min-w-[7rem] text-center" : undefined} key={cell.id} onClick={cell.column.id === "actions" ? (event) => event.stopPropagation() : undefined}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>)}
-            {!loading && table.getRowModel().rows.length === 0 ? <TableRow><TableCell className="h-24 text-center text-muted-foreground" colSpan={6}>{t("table.empty")}</TableCell></TableRow> : null}
+            {!loading && table.getRowModel().rows.length === 0 ? <TableRow><TableCell className="h-24 text-center whitespace-normal text-muted-foreground" colSpan={6}>{t("table.empty")}</TableCell></TableRow> : null}
           </TableBody>
         </Table>
       </TableCard>

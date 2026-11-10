@@ -60,7 +60,7 @@ describe("MoveAppointmentButton", () => {
   it("starts on the appointment's day and waits for the operator to pick a time", async () => {
     const { fetchMock } = await setup("business_owner");
     await userEvent.click(screen.getByRole("button", { name: /Reschedule appointment:/ }));
-    expect(await screen.findByText(copy.noTimes)).toBeTruthy();
+    expect(await screen.findByText(en.appointments.openings.noTimes)).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledWith("/api/appointments/appointment-1/openings?businessId=business&date=2027-09-07", expect.anything());
     expect((screen.getByRole("button", { name: copy.confirm }) as HTMLButtonElement).disabled).toBe(true);
   });

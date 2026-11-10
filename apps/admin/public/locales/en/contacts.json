@@ -11,7 +11,7 @@
     "lastInteraction": "Last interaction",
     "messages": "{{count}} messages",
     "calls": "{{count}} calls",
-    "empty": "No contacts match the current search.",
+    "empty": "No contacts yet.",
     "status": {
       "blocked": "Blocked"
     },
@@ -192,5 +192,24 @@
     "saved": "Contact updated.",
     "failed": "Couldn't save the contact. Try again.",
     "invalidEmail": "Enter a valid email address."
+  },
+  "create": {
+    "action": "New contact",
+    "title": "New contact",
+    "name": "Name",
+    "phone": "Phone",
+    "phoneCountry": "Phone country",
+    "email": "Email",
+    "nameRequired": "Enter a name.",
+    "reachRequired": "Enter a phone number or an email.",
+    "phoneInvalid": "Enter a full phone number.",
+    "invalidEmail": "Enter a valid email address.",
+    "exists": "A contact with this number already exists.",
+    "openExisting": "Open contact",
+    "cancel": "Cancel",
+    "save": "Create contact",
+    "saving": "Creating...",
+    "saved": "Contact created.",
+    "failed": "Couldn't create the contact. Try again."
   }
 }

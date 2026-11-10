@@ -11,7 +11,7 @@
     "lastInteraction": "Última interacción",
     "messages": "{{count}} mensajes",
     "calls": "{{count}} llamadas",
-    "empty": "Ningún contacto coincide con la búsqueda.",
+    "empty": "Aún no hay contactos.",
     "status": {
       "blocked": "Bloqueado"
     },
@@ -192,5 +192,24 @@
     "saved": "Contacto actualizado.",
     "failed": "No se pudo guardar el contacto. Inténtalo de nuevo.",
     "invalidEmail": "Introduce un correo electrónico válido."
+  },
+  "create": {
+    "action": "Nuevo contacto",
+    "title": "Nuevo contacto",
+    "name": "Nombre",
+    "phone": "Teléfono",
+    "phoneCountry": "País del número",
+    "email": "Correo electrónico",
+    "nameRequired": "Introduce un nombre.",
+    "reachRequired": "Introduce un teléfono o un correo electrónico.",
+    "phoneInvalid": "Introduce un número de teléfono completo.",
+    "invalidEmail": "Introduce un correo electrónico válido.",
+    "exists": "Ya hay un contacto con este número.",
+    "openExisting": "Abrir contacto",
+    "cancel": "Cancelar",
+    "save": "Crear contacto",
+    "saving": "Creando...",
+    "saved": "Contacto creado.",
+    "failed": "No se pudo crear el contacto. Inténtalo de nuevo."
   }
 }
