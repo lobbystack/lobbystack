@@ -27,6 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { CancelAppointmentButton } from "@/components/cancel-appointment-button";
+import { MoveAppointmentButton } from "@/components/move-appointment-dialog";
 import { RescheduleAppointmentButton } from "@/components/reschedule-appointment-button";
 import { appointmentRequestKind, cancellationRequestDetails, isAppointmentRequest, parseFollowUpTaskBody, type RequestedCancellation } from "@/lib/follow-up-task";
 import { formatDuration } from "@/lib/duration";
@@ -255,12 +256,15 @@ function FollowUpDetails({ followUp }: { followUp: Detail["followUpTasks"][numbe
   </>;
 }
 
-/** Approves a caller's request to cancel or move the appointment it matched. Nothing shows for a request that matched none, or whose appointment is already cancelled. */
+/** Approves a caller's request to cancel or move the appointment it matched, or picks another time to move it to. Nothing shows for a request that matched none, or whose appointment is already cancelled. */
 function ApproveFollowUpRequest({ followUp }: { followUp: Detail["followUpTasks"][number] }) {
   const { appointment } = followUp;
   if (!appointment || appointment.status === "canceled" || !isAppointmentRequest(followUp.request)) return null;
   const linked = { ...appointment, contactName: appointment.contactName ?? "" };
-  if (appointmentRequestKind(followUp.request) === "reschedule") return followUp.requested?.newStartsAt ? <RescheduleAppointmentButton appointment={linked} newStartsAt={followUp.requested.newStartsAt} size="default" /> : null;
+  if (appointmentRequestKind(followUp.request) === "reschedule") {
+    const newStartsAt = followUp.requested?.newStartsAt;
+    return <span className="flex gap-2">{newStartsAt ? <RescheduleAppointmentButton appointment={linked} newStartsAt={newStartsAt} size="default" /> : null}<MoveAppointmentButton appointment={linked} otherTime={Boolean(newStartsAt)} requested={newStartsAt} size="default" /></span>;
+  }
   return <CancelAppointmentButton appointment={linked} approve size="default" variant="destructive" />;
 }
 

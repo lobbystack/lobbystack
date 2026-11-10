@@ -25,6 +25,7 @@ import { DashboardActivationCard } from "@/components/dashboard-activation-card"
 import { LiveSetupGuideSurface, useSetupGuide } from "@/components/live-setup-guide-surface";
 import { needsHoursForBooking, useBusinessHours } from "@/components/business-hours-section";
 import { appointmentSummary, CancelAppointmentButton } from "@/components/cancel-appointment-button";
+import { MoveAppointmentButton } from "@/components/move-appointment-dialog";
 import { RescheduleAppointmentButton } from "@/components/reschedule-appointment-button";
 import { MetricCardGridSkeleton, SetupGuideSkeleton } from "@/components/loading-skeletons";
 import { Item, ItemActions, ItemHeader, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item";
@@ -234,7 +235,7 @@ export function LiveOverviewSurface() {
                                         </Badge>
                                       ) : null}
                                     </span>
-                                    {appointment ? reschedule ? (item.requested?.newStartsAt ? <RescheduleAppointmentButton appointment={appointment} newStartsAt={item.requested.newStartsAt} /> : null) : <CancelAppointmentButton appointment={appointment} approve variant="destructive" /> : null}
+                                    {appointment ? reschedule ? <span className="flex gap-2">{item.requested?.newStartsAt ? <RescheduleAppointmentButton appointment={appointment} newStartsAt={item.requested.newStartsAt} /> : null}<MoveAppointmentButton appointment={appointment} otherTime={Boolean(item.requested?.newStartsAt)} requested={item.requested?.newStartsAt} /></span> : <CancelAppointmentButton appointment={appointment} approve variant="destructive" /> : null}
                                   </ItemFooter>
                                 </ItemContent>
                               </Item>

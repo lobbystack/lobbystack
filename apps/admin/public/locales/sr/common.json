@@ -241,9 +241,26 @@
       "keep": "Zadrži trenutno vreme",
       "done": "Termin je pomeren.",
       "failed": "Termin nije pomeren. Pokušajte ponovo.",
-      "unavailable": "To vreme više nije dostupno. Dogovorite drugo vreme sa klijentom i pomerite termin iz kalendara.",
+      "unavailable": "To vreme više nije slobodno. Izaberite drugo vreme.",
       "notReschedulable": "Ovaj termin ne može da se pomeri. Možda je otkazan.",
       "passed": "Traženo vreme je prošlo."
+    },
+    "move": {
+      "action": "Pomeri",
+      "otherTime": "Drugo vreme",
+      "actionLabel": "Pomeri termin: {{time}}",
+      "title": "Pomeri termin",
+      "description": "{{appointment}}",
+      "requested": "Traženo: {{time}}",
+      "date": "Dan",
+      "times": "Slobodni termini",
+      "noTimes": "Nema slobodnih termina tog dana.",
+      "timesFailed": "Nismo uspeli da učitamo slobodne termine. Pokušajte ponovo.",
+      "confirm": "Pomeri termin",
+      "keep": "Zadrži trenutno vreme",
+      "done": "Termin je pomeren",
+      "failed": "Nismo uspeli da pomerimo termin. Pokušajte ponovo.",
+      "taken": "To vreme više nije slobodno. Izaberite drugo."
     }
   },
   "abandonIntent": {

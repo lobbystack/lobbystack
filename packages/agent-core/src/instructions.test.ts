@@ -17,6 +17,48 @@ describe("buildAgentInstructions on a text", () => {
   });
 });
 
+describe("the receptionist's grammatical gender", () => {
+  const build = {
+    live: (snapshot: typeof demoSnapshot) => buildLiveInstructions(snapshot, "voice", callStart),
+    "browser call": (snapshot: typeof demoSnapshot) => buildLiveInstructions(snapshot, "web_voice", callStart),
+    "voice backend": (snapshot: typeof demoSnapshot) => buildAgentInstructions(snapshot, { channel: "voice" }),
+    "website chat": (snapshot: typeof demoSnapshot) => buildAgentInstructions(snapshot, { channel: "web_chat" }),
+    text: (snapshot: typeof demoSnapshot) => buildAgentInstructions(snapshot, { channel: "sms" }),
+    instagram: (snapshot: typeof demoSnapshot) => buildAgentInstructions(snapshot, { channel: "instagram" }),
+  };
+  const prompts = Object.entries(build);
+
+  it.each(prompts)("uses feminine forms for a woman's voice in the %s instructions", (_label, instructions) => {
+    const prompt = instructions({ ...demoSnapshot, voice: "marin" });
+    expect(prompt).toContain("Speak of yourself as a woman, to match your voice on calls.");
+    for (const form of ["\"ravie\" in French", "\"encantada\" in Spanish", "\"spremna sam\" in Serbian", "\"obrigada\" in Portuguese", "\"lieta\" in Italian", "\"Rezeptionistin\" in German", "\"gotowa\" in Polish", "\"рада\" in Russian and Ukrainian", "you're she, not he"]) expect(prompt).toContain(form);
+    expect(prompt).not.toContain("as a man");
+  });
+
+  it.each(prompts)("uses masculine forms for a man's voice in the %s instructions", (_label, instructions) => {
+    const prompt = instructions({ ...demoSnapshot, voice: "cedar" });
+    expect(prompt).toContain("Speak of yourself as a man, to match your voice on calls.");
+    for (const form of ["\"ravi\" in French", "\"encantado\" in Spanish", "\"spreman sam\" in Serbian", "\"obrigado\" in Portuguese", "\"lieto\" in Italian", "\"Rezeptionist\" in German", "\"gotowy\" in Polish", "\"рад\" in Russian", "\"радий\" in Ukrainian", "you're he, not she"]) expect(prompt).toContain(form);
+    expect(prompt).not.toContain("as a woman");
+  });
+
+  it.each(prompts)("avoids gendered self-reference for a neutral voice in the %s instructions", (_label, instructions) => {
+    const prompt = instructions({ ...demoSnapshot, voice: "alloy" });
+    expect(prompt).toContain("choose wording that doesn't mark one");
+    expect(prompt).not.toMatch(/as a (wo)?man/);
+  });
+
+  it("speaks as a woman when the snapshot predates the voice choice, since calls then speak in marin", () => {
+    const { voice: _voice, ...older } = demoSnapshot;
+    expect(buildLiveInstructions(older, "voice", callStart)).toContain("Speak of yourself as a woman");
+  });
+
+  it.each(runtimeLocales)("keeps the rule when calls open in %s, since the caller can switch languages", (defaultLocale) => {
+    const prompt = buildLiveInstructions({ ...demoSnapshot, defaultLocale, voice: "coral" }, "voice", callStart);
+    expect(prompt).toContain(`Speak ${liveLanguage({ ...demoSnapshot, defaultLocale })} unless the caller asks to switch or clearly speaks another language.\n\nSpeak of yourself as a woman`);
+  });
+});
+
 describe("buildLiveInstructions", () => {
   it("hands the caller's answer about texts to the backend, which saves it", () => {
     expect(buildLiveInstructions(demoSnapshot, "voice")).toContain("- The caller says whether they want texts about their appointments, so the backend can save their answer.");

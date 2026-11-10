@@ -65,3 +65,20 @@ describe("a business with a single agent", () => {
     expect(buildAgentInstructions(projected, { channel: "voice" })).not.toContain("Reception Desk");
   });
 });
+
+describe("a business with a woman's voice and a man's voice", () => {
+  const twoAgents = buildBusinessContextSnapshot({
+    ...business,
+    agents: [
+      { id: "00000000-0000-4000-8000-000000000003", name: "Front desk", isDefault: true, greeting: business.greeting, tone: business.tone, voice: "marin", bookingPolicy: business.bookingPolicy, bookingMode: "request", transferPolicy: business.transferPolicy },
+      { id: "00000000-0000-4000-8000-000000000004", name: "After hours", isDefault: false, greeting: business.greeting, tone: business.tone, voice: "cedar", bookingPolicy: business.bookingPolicy, bookingMode: "request", transferPolicy: business.transferPolicy },
+    ],
+  });
+
+  it.each([["000000000003", "woman"], ["000000000004", "man"]])("gives agent %s the grammar of a %s on calls and in chats", (suffix, gender) => {
+    const agent = snapshotForAgent(twoAgents, `00000000-0000-4000-8000-${suffix}`)!;
+    const rule = `Speak of yourself as a ${gender}, to match your voice on calls.`;
+    expect(buildLiveInstructions(agent, "voice")).toContain(rule);
+    expect(buildAgentInstructions(agent, { channel: "web_chat" })).toContain(rule);
+  });
+});

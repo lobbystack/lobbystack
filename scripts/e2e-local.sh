@@ -38,6 +38,7 @@ KEEP=0
 SKIP_BUILD=0
 TESTS=(
   e2e/affiliate-program.e2e.ts
+  e2e/appointment-reschedule.e2e.ts
   e2e/auth-pages.e2e.ts
   e2e/auth-return-to.e2e.ts
   e2e/billing-return-cap.e2e.ts

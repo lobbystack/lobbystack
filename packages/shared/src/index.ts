@@ -233,7 +233,8 @@ const greetings: Record<RuntimeLocale, (name: string) => string> = {
   es: (name) => `Gracias por llamar a ${name}. ¿En qué puedo ayudarle hoy?`,
   sr: (name) => `Hvala što ste pozvali ${name}. Kako mogu da vam pomognem danas?`,
   de: (name) => `Vielen Dank für Ihren Anruf bei ${name}. Wie kann ich Ihnen heute helfen?`,
-  pt: (name) => `Obrigado por ligar para ${name}. Como posso ajudar você hoje?`,
+  // "Obrigado" would mark the speaker as a man, and the default voice is a woman's.
+  pt: (name) => `Agradecemos sua ligação para ${name}. Como posso ajudar você hoje?`,
   it: (name) => `Grazie per aver chiamato ${name}. Come posso aiutarla oggi?`,
   nl: (name) => `Bedankt voor het bellen naar ${name}. Waarmee kan ik u vandaag helpen?`,
   // These put the name where it takes no case ending or suffix, since names can't be declined.
@@ -257,10 +258,14 @@ export function defaultGreeting(businessName: string, locale: RuntimeLocale = "e
 /**
  * Whether LobbyStack wrote this greeting for the language, so it can follow a
  * change of caller language. Businesses created before the default asked a
- * question have "Thanks for calling {name}."
+ * question have "Thanks for calling {name}.", and Portuguese ones from before
+ * the greeting dropped "Obrigado" have that one.
  */
 export function isDefaultGreeting(greeting: string, businessName: string, locale: RuntimeLocale): boolean {
-  return greeting === defaultGreeting(businessName, locale) || (locale === "en" && greeting === `Thanks for calling ${businessName.trim()}.`);
+  const name = businessName.trim();
+  return greeting === defaultGreeting(businessName, locale)
+    || (locale === "en" && greeting === `Thanks for calling ${name}.`)
+    || (locale === "pt" && greeting === `Obrigado por ligar para ${name}. Como posso ajudar você hoje?`);
 }
 
 // Migration 0198's app.default_agent_name is the same list.

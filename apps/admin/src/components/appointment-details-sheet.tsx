@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { XIcon } from "lucide-react";
 
 import { CancelAppointmentButton } from "@/components/cancel-appointment-button";
+import { MoveAppointmentButton } from "@/components/move-appointment-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDuration } from "@/components/ui/duration-picker";
@@ -72,7 +73,7 @@ function AppointmentDetails({ appointment, contactName, showClose }: { appointme
           ))}
         </dl>
         <DrawerFooter className="flex-row">
-          {hasEnded(appointment) ? null : <CancelAppointmentButton appointment={{ ...appointment, contactName }} className="flex-1" size="default" variant="destructive" />}
+          {hasEnded(appointment) ? null : <><MoveAppointmentButton appointment={{ ...appointment, contactName }} className="flex-1" size="default" /><CancelAppointmentButton appointment={{ ...appointment, contactName }} className="flex-1" size="default" variant="destructive" /></>}
           <DrawerClose render={<Button className="flex-1" variant="outline" />}>{t("accessibility.close")}</DrawerClose>
         </DrawerFooter>
       </DrawerContent>

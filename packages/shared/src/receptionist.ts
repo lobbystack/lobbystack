@@ -59,6 +59,40 @@ export const receptionistVoiceTraits: Record<ReceptionistVoice, { pitch: Recepti
   willow: { pitch: "high", pace: "steady" },
 };
 
+export type ReceptionistVoiceGender = "female" | "male" | "neutral";
+
+/**
+ * Whether each voice sounds like a woman or a man, so the receptionist uses
+ * matching grammar when it talks about itself ("ravie" or "ravi"). From OpenAI's
+ * descriptions where it gives one, otherwise from the preview clips' median
+ * pitch: 99 to 117 Hz is male, 188 to 213 Hz female. alloy sits between them,
+ * at 150 Hz, and OpenAI calls it neutral.
+ */
+export const receptionistVoiceGenders: Record<ReceptionistVoice, ReceptionistVoiceGender> = {
+  alloy: "neutral",
+  ash: "male",
+  ballad: "male",
+  beacon: "male",
+  bossa: "female",
+  cedar: "male",
+  cinder: "male",
+  coral: "female",
+  delta: "female",
+  echo: "male",
+  gleam: "female",
+  marin: "female",
+  meridian: "male",
+  quartz: "female",
+  ripple: "male",
+  sage: "female",
+  shimmer: "female",
+  stone: "male",
+  tempo: "male",
+  verse: "male",
+  vesper: "male",
+  willow: "female",
+};
+
 /** The voice calls used before businesses could pick one, and still the default. */
 export const DEFAULT_RECEPTIONIST_VOICE: ReceptionistVoice = "marin";
 

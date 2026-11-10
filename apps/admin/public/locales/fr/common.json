@@ -241,9 +241,26 @@
       "keep": "Garder l'horaire actuel",
       "done": "Rendez-vous déplacé.",
       "failed": "Impossible de déplacer le rendez-vous. Réessayez.",
-      "unavailable": "Cet horaire n'est plus disponible. Convenez d'un autre horaire avec le client et déplacez le rendez-vous depuis le calendrier.",
+      "unavailable": "Cet horaire n'est plus disponible. Choisissez une autre heure.",
       "notReschedulable": "Ce rendez-vous ne peut pas être déplacé. Il a peut-être été annulé.",
       "passed": "L'heure demandée est passée."
+    },
+    "move": {
+      "action": "Déplacer",
+      "otherTime": "Autre heure",
+      "actionLabel": "Déplacer le rendez-vous : {{time}}",
+      "title": "Déplacer le rendez-vous",
+      "description": "{{appointment}}",
+      "requested": "Demandé : {{time}}",
+      "date": "Jour",
+      "times": "Heures libres",
+      "noTimes": "Aucune heure libre ce jour-là.",
+      "timesFailed": "Nous n’avons pas pu charger les heures libres. Réessayez.",
+      "confirm": "Déplacer le rendez-vous",
+      "keep": "Garder l’heure actuelle",
+      "done": "Rendez-vous déplacé",
+      "failed": "Nous n’avons pas pu déplacer le rendez-vous. Réessayez.",
+      "taken": "Cette heure n’est plus libre. Choisissez-en une autre."
     }
   },
   "abandonIntent": {
