@@ -29,7 +29,7 @@ test("voice follow-up opens its call in the Inbox and completing it removes ever
     await expect(followUp).toHaveAttribute("href", `/inbox?call=${callId}`);
     await followUp.click();
     await expect(page).toHaveURL(new RegExp(`/inbox\\?call=${callId}$`));
-    await page.getByRole("tab", { name: callCopy.detail.tabs.details, exact: true }).click();
+    await expect(page.getByRole("tab", { name: callCopy.detail.tabs.details, exact: true })).toHaveAttribute("aria-selected", "true");
     await page.getByRole("button", { name: callCopy.detail.details.markDone, exact: true }).click();
     await expect(page.getByText(callCopy.detail.details.noFollowUp, { exact: true })).toBeVisible();
     const rows = await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, tx => tx.select({ status: inboxItems.status }).from(inboxItems).where(eq(inboxItems.relatedCallId, callId)));

@@ -60,12 +60,12 @@ describe("the Inbox", () => {
   });
 
   it("asks the API for what the URL filters and changes the URL to filter", async () => {
-    route.search = `channel=phone_call&agent=${FRONT}&status=open`;
+    route.search = `channel=phone_call&agent=${FRONT}`;
     const fetchMock = setup();
     await screen.findByRole("link", { name: /Marie/ });
-    expect(fetchMock).toHaveBeenCalledWith(`/api/inbox?limit=50&channel=phone_call&agentId=${FRONT}&status=open`, expect.anything());
-    await userEvent.click(screen.getByRole("button", { name: "inbox:filters.open" }));
-    expect(route.router.replace).toHaveBeenLastCalledWith(`/inbox?channel=phone_call&agent=${FRONT}`, { scroll: false });
+    expect(fetchMock).toHaveBeenCalledWith(`/api/inbox?limit=50&channel=phone_call&agentId=${FRONT}`, expect.anything());
+    expect(screen.queryByRole("button", { name: "inbox:filters.open" })).toBeNull();
+    expect(screen.queryByRole("textbox")).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "inbox:filters.all" }));
     expect(route.router.replace).toHaveBeenLastCalledWith(`/inbox?agent=${FRONT}`, { scroll: false });
   });
@@ -108,7 +108,7 @@ describe("the Inbox", () => {
     setup({ respond: () => ({ items: [], nextCursor: null, agents: twoAgents }) });
     expect(await screen.findByText("inbox:empty")).toBeTruthy();
     cleanup();
-    route.search = "status=open";
+    route.search = "channel=sms";
     setup({ respond: () => ({ items: [], nextCursor: null, agents: twoAgents }) });
     expect(await screen.findByText("inbox:noMatch")).toBeTruthy();
   });

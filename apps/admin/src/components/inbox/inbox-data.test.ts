@@ -7,13 +7,13 @@ const params = (query: string) => new URLSearchParams(query);
 
 describe("the Inbox URL", () => {
   it("reads its filters and drops values the API would refuse", () => {
-    expect(inboxFilters(params(`channel=instagram&agent=${AGENT}&status=open`), "  late ")).toEqual({ channel: "instagram", agentId: AGENT, open: true, search: "late" });
-    expect(inboxFilters(params("channel=fax&agent=front-desk&status=done"))).toEqual({ channel: null, agentId: null, open: false, search: "" });
+    expect(inboxFilters(params(`channel=instagram&agent=${AGENT}`))).toEqual({ channel: "instagram", agentId: AGENT });
+    expect(inboxFilters(params("channel=fax&agent=front-desk"))).toEqual({ channel: null, agentId: null });
   });
 
   it("asks the API for one page of what the filters keep", () => {
-    expect(inboxRequestUrl({ channel: "phone_call", agentId: AGENT, open: true, search: "Marie" }, "next")).toBe(`/api/inbox?limit=50&channel=phone_call&agentId=${AGENT}&status=open&search=Marie&cursor=next`);
-    expect(inboxRequestUrl({ channel: null, agentId: null, open: false, search: "" })).toBe("/api/inbox?limit=50");
+    expect(inboxRequestUrl({ channel: "phone_call", agentId: AGENT }, "next")).toBe(`/api/inbox?limit=50&channel=phone_call&agentId=${AGENT}&cursor=next`);
+    expect(inboxRequestUrl({ channel: null, agentId: null })).toBe("/api/inbox?limit=50");
   });
 
   it("opens one item at a time and keeps the filters", () => {

@@ -3,11 +3,9 @@
   "filters": {
     "label": "Kanal",
     "all": "Sve",
-    "open": "Potrebna je radnja",
     "agent": "Agent",
     "allAgents": "Svi agenti"
   },
-  "search": "Pretraži pozive i poruke",
   "empty": "Još nema poziva ni poruka.",
   "noMatch": "Ništa ne odgovara ovim filterima.",
   "pick": "Izaberite razgovor da biste ga pročitali.",

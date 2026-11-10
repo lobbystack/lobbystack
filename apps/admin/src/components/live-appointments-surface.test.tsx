@@ -34,16 +34,14 @@ describe("new appointments locale baseline", () => {
     expect(screen.getByRole("status").textContent).toBe(en.appointments.loading);
     expect(screen.queryByRole("tab")).toBeNull();
     expect(screen.queryByText(en.appointments.calendarView.dayEmpty)).toBeNull();
-    expect(screen.queryByPlaceholderText(en.appointments.searchPlaceholder)).toBeNull();
   });
   it("shows the tabs together with the loaded list", async () => {
     route.search = "view=list";
     await setup("en", false);
     expect(screen.getAllByRole("tab").length).toBe(4);
   });
-  it("shows the search box together with the loaded calendar", async () => {
+  it("shows the loaded calendar without a loading status", async () => {
     await setup("en", false);
-    expect(screen.getByPlaceholderText(en.appointments.searchPlaceholder)).toBeTruthy();
     expect(screen.queryByRole("status")).toBeNull();
   });
   it("shows placeholder rows instead of an empty state while the list loads", async () => {
@@ -53,7 +51,6 @@ describe("new appointments locale baseline", () => {
     expect(screen.queryByText(en.appointments.empty)).toBeNull();
     expect(screen.queryByRole("tab")).toBeNull();
     expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(20);
-    expect(screen.queryByPlaceholderText(en.appointments.searchPlaceholder)).toBeNull();
   });
   it.each(["en", "fr"] as const)("renders empty states in %s", async locale => {
     route.search = "view=list";
@@ -190,15 +187,5 @@ describe("new appointments locale baseline", () => {
     const ended = await screen.findByRole("row", { name: /12:00 PM/ });
     expect(within(ended).queryByRole("button", { name: /Cancel appointment/ })).toBeNull();
     expect(screen.queryByRole("row", { name: /3:00 PM/ })).toBeNull();
-  });
-  it("searches by customer, service or staff", async () => {
-    route.search = "view=list";
-    await setup("en", false);
-    const booking = { startsAt: "2099-09-06T12:00:00Z", endsAt: "2099-09-06T12:45:00Z", timezone: "UTC", status: "confirmed", sourceChannel: "voice", calendarSyncState: "synced" };
-    clients[0]!.setQueryData(["appointments", "business"], { appointments: [{ ...booking, id: "a", contactName: "Rosa", serviceName: "Haircut", staffName: "Ana" }, { ...booking, id: "b", contactName: "Ivan", serviceName: "Massage", staffName: "Mila" }] });
-    expect(await screen.findByText("Rosa", { selector: "td" })).toBeTruthy();
-    await userEvent.type(screen.getByPlaceholderText(en.appointments.searchPlaceholder), "mass");
-    expect(screen.queryByText("Rosa", { selector: "td" })).toBeNull();
-    expect(screen.getByText("Ivan", { selector: "td" })).toBeTruthy();
   });
 });

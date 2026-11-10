@@ -1,5 +1,5 @@
 // What the Inbox page reads from its URL and asks /api/inbox for. The URL
-// holds the filters (`channel`, `agent`, `status`) and the open item (`call`
+// holds the filters (`channel`, `agent`) and the open item (`call`
 // or `conversation`), so Home, an agent's menu or an email can link to any of
 // them.
 
@@ -28,19 +28,17 @@ export type InboxItem = {
 
 export type InboxPage = { items: InboxItem[]; nextCursor: string | null; agents: InboxAgent[]; instagramOffered?: boolean };
 
-export type InboxFilters = { channel: InboxChannel | null; agentId: string | null; open: boolean; search: string };
+export type InboxFilters = { channel: InboxChannel | null; agentId: string | null };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
 /** The filters a URL asks for. A value the API would refuse counts as no filter. */
-export function inboxFilters(params: URLSearchParams, search = ""): InboxFilters {
+export function inboxFilters(params: URLSearchParams): InboxFilters {
   const channel = params.get("channel");
   const agentId = params.get("agent");
   return {
     channel: (INBOX_CHANNELS as readonly string[]).includes(channel ?? "") ? channel as InboxChannel : null,
     agentId: agentId && UUID.test(agentId) ? agentId : null,
-    open: params.get("status") === "open",
-    search: search.trim().slice(0, 120),
   };
 }
 
@@ -50,8 +48,6 @@ export function inboxRequestUrl(filters: InboxFilters, cursor?: string | null): 
   const query = new URLSearchParams({ limit: String(INBOX_PAGE_SIZE) });
   if (filters.channel) query.set("channel", filters.channel);
   if (filters.agentId) query.set("agentId", filters.agentId);
-  if (filters.open) query.set("status", "open");
-  if (filters.search) query.set("search", filters.search);
   if (cursor) query.set("cursor", cursor);
   return `/api/inbox?${query.toString()}`;
 }

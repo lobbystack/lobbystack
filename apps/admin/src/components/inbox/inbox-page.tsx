@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { keepPreviousData, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, AtSign, Globe, MessageSquare, Monitor, Phone, type LucideIcon } from "lucide-react";
 import { Trans, useTranslation } from "react-i18next";
@@ -13,7 +13,6 @@ import { HiddenTextSkeleton } from "@/components/loading-skeletons";
 import { PageHeader } from "@/components/page-header";
 import { useTelemetry } from "@/components/product-analytics";
 import { Button } from "@/components/ui/button";
-import { SearchInput } from "@/components/ui/search-input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useActiveBusiness } from "@/hooks/use-active-business";
@@ -39,7 +38,7 @@ function useInbox(filters: ReturnType<typeof inboxFilters>) {
     initialPageParam: null as string | null,
     getNextPageParam: (last) => last.nextCursor,
     enabled: Boolean(business),
-    // Keeps the list and the open item on screen while a new filter or search loads.
+    // Keeps the list and the open item on screen while a new filter loads.
     placeholderData: keepPreviousData,
   });
   useEffect(() => {
@@ -110,13 +109,7 @@ export function InboxPage() {
   const telemetry = useTelemetry();
   const { business } = useActiveBusiness();
   const canSetUp = useBusinessCan()("setup");
-  const [search, setSearch] = useState("");
-  const [query, setQuery] = useState("");
-  useEffect(() => {
-    const timer = setTimeout(() => setQuery(search.trim()), 300);
-    return () => clearTimeout(timer);
-  }, [search]);
-  const filters = inboxFilters(params, query);
+  const filters = inboxFilters(params);
   const { inbox, items, agents, instagramOffered, loading } = useInbox(filters);
   const hasChoice = agents.length > 1;
 
@@ -138,8 +131,7 @@ export function InboxPage() {
       <div className={cn("flex w-full min-w-0 flex-col gap-3 sm:w-72 2xl:w-80", open && "hidden sm:flex")}>
         <PageHeader className="py-0" title={t("inbox:title")} />
         <div aria-label={t("inbox:filters.label")} className="flex flex-wrap items-center gap-1" role="group">
-          <Button aria-pressed={!filters.channel && !filters.open} className="px-2.5 text-xs" onClick={() => filterBy({ channel: null, status: null })} size="sm" variant={!filters.channel && !filters.open ? "secondary" : "ghost"}>{t("inbox:filters.all")}</Button>
-          <Button aria-pressed={filters.open} className="px-2.5 text-xs" onClick={() => filterBy({ status: filters.open ? null : "open" })} size="sm" variant={filters.open ? "secondary" : "ghost"}>{t("inbox:filters.open")}</Button>
+          <Button aria-pressed={!filters.channel} className="px-2.5 text-xs" onClick={() => filterBy({ channel: null })} size="sm" variant={!filters.channel ? "secondary" : "ghost"}>{t("inbox:filters.all")}</Button>
           {channels.map((channel) => <Button aria-pressed={filters.channel === channel} className="px-2.5 text-xs" key={channel} onClick={() => filterBy({ channel: filters.channel === channel ? null : channel })} size="sm" variant={filters.channel === channel ? "secondary" : "ghost"}>{getChannelLabel(channel, t)}</Button>)}
         </div>
         {hasChoice ? (
@@ -148,10 +140,9 @@ export function InboxPage() {
             <SelectContent><SelectGroup><SelectItem value="all">{t("inbox:filters.allAgents")}</SelectItem>{agents.map((agent) => <SelectItem key={agent.id} value={agent.id}>{agent.name}</SelectItem>)}</SelectGroup></SelectContent>
           </Select>
         ) : null}
-        <SearchInput aria-label={t("inbox:search")} onValueChange={setSearch} placeholder={t("inbox:search")} value={search} />
         <div aria-busy={loading || undefined} className="-mx-1 no-scrollbar min-h-0 flex-1 overflow-y-auto px-1">
           {loading ? <RowsSkeleton /> : null}
-          {!loading && !items.length ? <p className="type-body-muted p-2">{filters.channel || filters.agentId || filters.open || filters.search ? t("inbox:noMatch") : t("inbox:empty")}</p> : null}
+          {!loading && !items.length ? <p className="type-body-muted p-2">{filters.channel || filters.agentId ? t("inbox:noMatch") : t("inbox:empty")}</p> : null}
           {items.map((item) => <InboxRow href={href(openItemChange(item))} item={item} key={item.key} onOpen={() => trackOpen(item)} selected={item.key === open} showAgent={hasChoice} />)}
           {inbox.hasNextPage ? <Button className="w-full" loading={inbox.isFetchingNextPage} onClick={() => void inbox.fetchNextPage()} size="sm" variant="ghost">{t("inbox:loadMore")}</Button> : null}
         </div>

@@ -27,13 +27,8 @@ describe("GET /api/inbox", () => {
     expect(domain.listInboxItems).toHaveBeenCalledWith(expect.anything(), { userId: "user", businessId: "business", channel: "instagram", agentId: AGENT, search: "late", cursor: "abc", limit: 20 });
   });
 
-  it("keeps only what waits on the team with status=open", async () => {
-    await get("?status=open");
-    expect(domain.listInboxItems).toHaveBeenCalledWith(expect.anything(), { userId: "user", businessId: "business", open: true });
-  });
-
-  it("refuses an unknown channel, an agent that isn't a UUID, an unknown status and a page past the limit", async () => {
-    for (const query of ["?channel=call", "?agentId=front-desk", "?status=done", "?limit=500"]) {
+  it("refuses an unknown channel, an agent that isn't a UUID and a page past the limit", async () => {
+    for (const query of ["?channel=call", "?agentId=front-desk", "?limit=500"]) {
       expect((await get(query)).status, query).toBe(400);
     }
     expect(domain.listInboxItems).not.toHaveBeenCalled();

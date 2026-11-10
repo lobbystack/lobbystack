@@ -158,7 +158,6 @@
   },
   "appointments": {
     "title": "Rendez-vous",
-    "searchPlaceholder": "Rechercher des rendez-vous...",
     "details": {
       "employee": "Employé",
       "duration": "Durée",

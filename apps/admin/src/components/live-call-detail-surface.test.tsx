@@ -36,18 +36,19 @@ describe("call detail loading state", () => {
     renderCall({ workspace });
     expect(screen.getByRole("link", { name: "detail.backToList" })).toBeTruthy();
     expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
-    // The title, four metadata fields (a label and a value each), the events heading, three events (a marker, a label and a date each), three tabs and four chat bubbles.
-    expect(skeletons()).toBe(1 + 4 * 2 + 1 + 3 * 3 + 3 + 4);
-    for (const text of ["detail.metadata.from", "detail.metadata.id", "detail.events.title", "detail.events.received", "detail.tabs.transcript", "detail.tabs.details"]) expect(hidden(text)).toBe(true);
+    // The title, four metadata fields (a label and a value each), the events heading, three events (a marker, a label and a date each), three tabs, and the Details tab: two headings, the follow-up line and one call information row (a label and a value).
+    expect(skeletons()).toBe(1 + 4 * 2 + 1 + 3 * 3 + 3 + 2 + 1 + 2);
+    for (const text of ["detail.metadata.from", "detail.metadata.id", "detail.events.title", "detail.events.received", "detail.tabs.transcript", "detail.tabs.details", "detail.details.followUpTitle_one", "detail.details.callInfoTitle"]) expect(hidden(text)).toBe(true);
     expect(screen.queryByRole("tab")).toBeNull();
     expect(screen.queryByText("detail.notFound")).toBeNull();
   });
 
-  it("swaps the placeholders for the real page once the call has loaded", () => {
+  it("swaps the placeholders for the real page once the call has loaded, with Details first and open", () => {
     renderCall({ detail: true });
     expect(skeletons()).toBe(0);
     expect(screen.getByRole("heading", { level: 1, name: "Ada Lovelace" })).toBeTruthy();
-    expect(screen.getAllByRole("tab").length).toBe(3);
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["detail.tabs.details", "detail.tabs.transcript", "detail.tabs.recording"]);
+    expect(screen.getByRole("tab", { name: "detail.tabs.details", selected: true })).toBeTruthy();
   });
 });
 
@@ -55,9 +56,9 @@ describe("call detail tab and URL", () => {
   afterEach(() => { window.history.replaceState({}, "", "/"); });
 
   it("opens the tab the URL names", async () => {
-    window.history.replaceState({}, "", "/calls/call-1?tab=details");
+    window.history.replaceState({}, "", "/calls/call-1?tab=transcript");
     renderCall({ detail: true });
-    expect(await screen.findByRole("tab", { name: "detail.tabs.details", selected: true })).toBeTruthy();
+    expect(await screen.findByRole("tab", { name: "detail.tabs.transcript", selected: true })).toBeTruthy();
   });
 
   it("writes a tab to the URL and drops the query for the default one", async () => {
@@ -65,7 +66,7 @@ describe("call detail tab and URL", () => {
     renderCall({ detail: true });
     await userEvent.click(await screen.findByRole("tab", { name: "detail.tabs.recording" }));
     await waitFor(() => expect(window.location.search).toBe("?tab=recording"));
-    await userEvent.click(screen.getByRole("tab", { name: "detail.tabs.transcript" }));
+    await userEvent.click(screen.getByRole("tab", { name: "detail.tabs.details" }));
     await waitFor(() => expect(window.location.search).toBe(""));
   });
 });

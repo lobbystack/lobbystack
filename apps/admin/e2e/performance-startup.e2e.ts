@@ -50,7 +50,7 @@ test("the first dashboard page ships every translation, so startup and section c
     await page.goto(`${baseURL}/?lng=fr`);
     await expect(page.getByRole("heading", { name: frDashboard.home.title, exact: true })).toBeVisible();
     await page.locator('a[href="/contacts"]').first().click();
-    await expect(page.getByPlaceholder(fr.page.searchPlaceholder)).toBeVisible();
+    await expect(page.getByRole("heading", { name: fr.page.title, exact: true })).toBeVisible();
     expect(requested).toEqual([]);
   } finally {
     await context.close();

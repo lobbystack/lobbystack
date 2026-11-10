@@ -18,12 +18,11 @@ import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { keepPreviousForBusiness } from "@/lib/keep-previous-for-business";
 
-import { HeaderSearch } from "@/components/header-actions";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { EditContactDialog } from "@/components/edit-contact-dialog";
 import { DataTablePagination, paginationFeatures } from "@/components/data-table/pagination";
 import { PageHeader } from "@/components/page-header";
-import { ContactRowsSkeleton, DataTablePaginationSkeleton, HeaderSearchSkeleton } from "@/components/loading-skeletons";
+import { ContactRowsSkeleton, DataTablePaginationSkeleton } from "@/components/loading-skeletons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -54,17 +53,16 @@ export function LiveContactsSurface() {
   const router = useRouter();
   const telemetry = useTelemetry();
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState("");
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [pendingBlock, setPendingBlock] = useState<PendingBlock | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Contact | null>(null);
   const [editing, setEditing] = useState<Contact | null>(null);
   const { businesses, business } = useActiveBusiness();
   const contacts = useQuery({
-    queryKey: ["contacts", business?.businessId, search.trim(), pagination.pageIndex, pagination.pageSize],
-    queryFn: () => requestJson<{ contacts: Contact[]; pagination: { total: number } }>(`/api/contacts?businessId=${encodeURIComponent(business!.businessId)}&limit=${pagination.pageSize}&offset=${pagination.pageIndex * pagination.pageSize}&search=${encodeURIComponent(search.trim())}`),
+    queryKey: ["contacts", business?.businessId, pagination.pageIndex, pagination.pageSize],
+    queryFn: () => requestJson<{ contacts: Contact[]; pagination: { total: number } }>(`/api/contacts?businessId=${encodeURIComponent(business!.businessId)}&limit=${pagination.pageSize}&offset=${pagination.pageIndex * pagination.pageSize}`),
     enabled: Boolean(business),
-    // Keep the current rows on screen while the next page or search loads.
+    // Keep the current rows on screen while the next page loads.
     placeholderData: keepPreviousForBusiness(business?.businessId),
   });
   const updateBlock = useMutation({
@@ -149,7 +147,7 @@ export function LiveContactsSurface() {
 
   return (
     <div className="flex flex-1 flex-col gap-6">
-      <PageHeader actions={loading ? <HeaderSearchSkeleton /> : <HeaderSearch onChange={(value) => { setSearch(value); setPagination((current) => ({ ...current, pageIndex: 0 })); }} placeholder={t("page.searchPlaceholder")} value={search} />} title={t("page.title")} />
+      <PageHeader title={t("page.title")} />
       <TableCard>
         <Table className="min-w-[52rem] w-full table-fixed">
           <colgroup><col className="w-[30%]" /><col className="w-[14%]" /><col className="w-[20%]" /><col className="w-[12%]" /><col className="w-[16%]" /><col className="w-[8%]" /></colgroup>

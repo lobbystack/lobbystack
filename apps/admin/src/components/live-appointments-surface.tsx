@@ -5,12 +5,11 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
 
 import { Badge } from "./ui/badge";
-import { AppointmentRowsSkeleton, AppointmentsCalendarSkeleton, HeaderSearchSkeleton, TabsListSkeleton } from "./loading-skeletons";
+import { AppointmentRowsSkeleton, AppointmentsCalendarSkeleton, TabsListSkeleton } from "./loading-skeletons";
 import { CancelAppointmentButton } from "./cancel-appointment-button";
 import { MoveAppointmentButton } from "./move-appointment-dialog";
 import { AppointmentDetailsSheet } from "./appointment-details-sheet";
 import { AppointmentsCalendar, type CalendarView } from "./appointments-calendar";
-import { HeaderSearch } from "./header-actions";
 import { PageSurface } from "./page-surface";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Surface } from "./ui/surface";
@@ -55,7 +54,6 @@ export function LiveAppointmentsSurface() {
   };
   // The calendar needs the browser's clock and time zone, so it isn't rendered on the server.
   const isClient = useSyncExternalStore(subscribeNothing, () => true, () => false);
-  const [search, setSearch] = useState("");
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [detailsId, setDetailsId] = useState<string | null>(null);
   const businessId = business?.businessId;
@@ -70,15 +68,13 @@ export function LiveAppointmentsSurface() {
   // A link to someone with no upcoming bookings left shows everyone rather than an empty page.
   const employee = appointments.data && !staff.some(([key]) => key === requestedEmployee) ? ALL_EMPLOYEES : requestedEmployee;
   const byEmployee = employee === ALL_EMPLOYEES ? rows : rows.filter((appointment) => staffKey(appointment) === employee);
-  const query = search.trim().toLowerCase();
-  const filtered = query ? byEmployee.filter((appointment) => [appointment.contactName, appointment.contactPhone, appointment.contactEmail, appointment.serviceName, appointment.staffName, appointment.employeeName].some((value) => value?.toLowerCase().includes(query))) : byEmployee;
   // Past appointments read newest first.
-  const listRows = when === "past" ? filtered.filter((appointment) => hasEnded(appointment)).reverse() : filtered.filter((appointment) => !hasEnded(appointment));
+  const listRows = when === "past" ? byEmployee.filter((appointment) => hasEnded(appointment)).reverse() : byEmployee.filter((appointment) => !hasEnded(appointment));
   const contactName = (appointment: Appointment) => getContactDisplayName({ name: appointment.contactName, phone: appointment.contactPhone, email: appointment.contactEmail, channels: [appointment.sourceChannel] }, i18n.language, t);
   const timeZone = rows[0]?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   const today = dayKey(new Date(), timeZone);
   const day = selectedDay ?? today;
-  const dayAppointments = filtered.filter((appointment) => dayKey(appointment.startsAt, timeZone) === day);
+  const dayAppointments = byEmployee.filter((appointment) => dayKey(appointment.startsAt, timeZone) === day);
   // Looked up by id, so the panel closes by itself once its appointment is cancelled.
   const details = detailsId ? rows.find((appointment) => appointment.id === detailsId) : undefined;
 
@@ -103,10 +99,10 @@ export function LiveAppointmentsSurface() {
   const viewLabels = [t("appointments.views.list"), t("appointments.views.calendar")];
   const calendarSkeleton = <AppointmentsCalendarSkeleton label={t("appointments.loading")} tabs={{ range: [t("appointments.calendarView.week"), t("appointments.calendarView.month")], view: viewLabels }} weeks={range === "week" ? 1 : 5} />;
 
-  return <PageSurface actions={loading ? <HeaderSearchSkeleton /> : business ? <HeaderSearch onChange={setSearch} placeholder={t("appointments.searchPlaceholder")} value={search} /> : undefined} title={t("appointments.title")}><div className="flex w-full flex-col gap-6">
+  return <PageSurface title={t("appointments.title")}><div className="flex w-full flex-col gap-6">
     {!business && !businesses.isLoading ? <p className="type-section-description">{t("appointments.chooseWorkspace")}</p> : whenTabs || employeeFilter || view === "list" ? <div className="flex flex-wrap items-center justify-end gap-2">{loading && view === "list" ? <><TabsListSkeleton labels={[t("appointments.when.upcoming"), t("appointments.when.past")]} /><TabsListSkeleton labels={viewLabels} /></> : <>{whenTabs}{employeeFilter}{view === "list" ? viewTabs : null}</>}</div> : null}
     {view === "calendar" ? !isClient || loading ? calendarSkeleton : <>
-      <AppointmentsCalendar appointments={filtered} contactName={contactName} onSelectDay={setSelectedDay} onViewChange={(next) => setParam("range", next, "month")} selectedDay={day} timeZone={timeZone} today={today} trailing={viewTabs} view={range} />
+      <AppointmentsCalendar appointments={byEmployee} contactName={contactName} onSelectDay={setSelectedDay} onViewChange={(next) => setParam("range", next, "month")} selectedDay={day} timeZone={timeZone} today={today} trailing={viewTabs} view={range} />
       <section aria-live="polite" className="flex flex-col gap-3">
         <h2 className="type-section-title px-1 first-letter:uppercase">{formatDateTime(keyToDate(day).toISOString(), i18n.language, { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" })}</h2>
         {dayAppointments.length ? <Surface className="p-0">

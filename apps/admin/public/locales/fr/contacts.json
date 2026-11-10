@@ -1,8 +1,7 @@
 {
   "page": {
     "title": "Contacts",
-    "description": "Gérez les personnes derrière vos appels, messages et rendez-vous.",
-    "searchPlaceholder": "Rechercher des contacts..."
+    "description": "Gérez les personnes derrière vos appels, messages et rendez-vous."
   },
   "table": {
     "contact": "Contact",

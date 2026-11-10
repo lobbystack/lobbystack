@@ -61,18 +61,18 @@ type Detail = {
   followUpTasks: Array<{ id: string; title: string; body: string; status: string; request?: string | null; requested?: RequestedCancellation | null; appointment?: { id: string; startsAt: string; timezone: string; status: string; serviceName: string | null; contactName: string | null } | null; createdAt: string; updatedAt: string }>;
 };
 
-const CALL_TABS = ["transcript", "recording", "details"] as const;
+const CALL_TABS = ["details", "transcript", "recording"] as const;
 type CallTab = (typeof CALL_TABS)[number];
 
 function tabFromUrl(): CallTab {
-  if (typeof window === "undefined") return "transcript";
+  if (typeof window === "undefined") return "details";
   const tab = new URLSearchParams(window.location.search).get("tab");
-  return CALL_TABS.find((candidate) => candidate === tab) ?? "transcript";
+  return CALL_TABS.find((candidate) => candidate === tab) ?? "details";
 }
 
 /** Keeps the query out for the default tab. */
 function writeTab(tab: CallTab, url: URL): void {
-  if (tab === "transcript") url.searchParams.delete("tab");
+  if (tab === "details") url.searchParams.delete("tab");
   else url.searchParams.set("tab", tab);
 }
 
@@ -117,8 +117,8 @@ export function LiveCallDetailSurface({ callId, embedded = false }: { callId: st
   const telemetry = useTelemetry();
   const queryClient = useQueryClient();
   const { copiedField, copy } = useCopiedField();
-  const { setValue: setTab, value: tab } = useUrlState({ initial: "transcript", read: tabFromUrl, resetKey: callId, write: writeTab });
-  const selectTab = (value: unknown) => setTab(CALL_TABS.find((candidate) => candidate === value) ?? "transcript");
+  const { setValue: setTab, value: tab } = useUrlState({ initial: "details", read: tabFromUrl, resetKey: callId, write: writeTab });
+  const selectTab = (value: unknown) => setTab(CALL_TABS.find((candidate) => candidate === value) ?? "details");
   const { businesses, business } = useActiveBusiness();
   const detail = useQuery({
     queryKey: ["call", business?.businessId, callId],
@@ -183,18 +183,18 @@ export function LiveCallDetailSurface({ callId, embedded = false }: { callId: st
 
       <Tabs onValueChange={selectTab} value={tab}>
         <TabsList variant="pills">
+          <TabsTrigger value="details"><Info className="size-4" />{t("detail.tabs.details")}</TabsTrigger>
           <TabsTrigger value="transcript"><FileText className="size-4" />{t("detail.tabs.transcript")}</TabsTrigger>
           <TabsTrigger value="recording"><Headphones className="size-4" />{t("detail.tabs.recording")}</TabsTrigger>
-          <TabsTrigger value="details"><Info className="size-4" />{t("detail.tabs.details")}</TabsTrigger>
         </TabsList>
+        <TabsContent value="details">
+          <DetailsTab detail={detail.data} marking={completeFollowUp.isPending ? completeFollowUp.variables : undefined} onCompleteFollowUp={(inboxItemId) => completeFollowUp.mutate(inboxItemId)} />
+        </TabsContent>
         <TabsContent value="transcript">
           <TranscriptTab detail={detail.data} />
         </TabsContent>
         <TabsContent value="recording">
           <RecordingTab detail={detail.data} src={recording.data?.url ?? null} />
-        </TabsContent>
-        <TabsContent value="details">
-          <DetailsTab detail={detail.data} marking={completeFollowUp.isPending ? completeFollowUp.variables : undefined} onCompleteFollowUp={(inboxItemId) => completeFollowUp.mutate(inboxItemId)} />
         </TabsContent>
       </Tabs>
     </div>
@@ -301,8 +301,7 @@ function DetailsTab({ detail, marking, onCompleteFollowUp }: { detail: Detail; m
 function DetailPageSkeleton({ embedded, t }: { embedded: boolean; t: (key: string) => string }) {
   const metadata = ["from", "duration", "started", "id"] as const;
   const events = ["received", "connected", "completed"] as const;
-  const tabs = [["transcript", FileText], ["recording", Headphones], ["details", Info]] as const;
-  const bubbles = [["justify-start", "w-2/5"], ["justify-end", "w-3/5"], ["justify-start", "w-1/3"], ["justify-end", "w-1/2"]] as const;
+  const tabs = [["details", Info], ["transcript", FileText], ["recording", Headphones]] as const;
   return (
     <div aria-busy="true" className="flex flex-1 flex-col gap-6">
       {embedded ? null : <BackLink href={CALLS_HREF} label={t("detail.backToList")} />}
@@ -347,15 +346,19 @@ function DetailPageSkeleton({ embedded, t }: { embedded: boolean; t: (key: strin
           ))}
         </div>
         <div className="py-4">
-          <Card size="sm">
-            <CardContent className="flex flex-col gap-3 pt-0">
-              {bubbles.map(([side, width], index) => (
-                <div className={cn("flex", side)} key={index}>
-                  <Skeleton className={cn("h-14 max-w-[80%]", width)} />
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+          <Surface className="flex flex-col">
+            <section className="flex flex-col gap-4 px-4 py-4">
+              <HiddenTextSkeleton className="font-heading text-base font-medium">{t("detail.details.followUpTitle_one")}</HiddenTextSkeleton>
+              <Skeleton className="h-4 w-2/3" />
+            </section>
+            <section className="flex flex-col gap-4 border-t border-border px-4 py-4">
+              <HiddenTextSkeleton className="font-heading text-base font-medium">{t("detail.details.callInfoTitle")}</HiddenTextSkeleton>
+              <div className="grid grid-cols-[auto_1fr] items-baseline gap-x-6 gap-y-3">
+                <HiddenTextSkeleton className="type-meta">{t("detail.details.twilioCallSid")}</HiddenTextSkeleton>
+                <Skeleton className="h-4 w-48 max-w-full" />
+              </div>
+            </section>
+          </Surface>
         </div>
       </div>
     </div>

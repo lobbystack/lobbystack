@@ -1,6 +1,6 @@
 import { and, desc, eq, ilike, inArray, lt, or, sql, type Column, type SQL } from "drizzle-orm";
 
-import { agentOfRow, agents, calls, contacts, conversations, conversationSessions, inboxItems, messages, widgetVisitors, withBusinessTransaction } from "@lobbystack/db";
+import { agentOfRow, agents, calls, contacts, conversations, conversationSessions, messages, widgetVisitors, withBusinessTransaction } from "@lobbystack/db";
 
 import { requireBusinessMembership } from "../authz";
 import { listActiveAgentsInTransaction } from "./agents";
@@ -52,8 +52,6 @@ export type InboxInput = {
   channel?: InboxChannel | undefined;
   agentId?: string | undefined;
   search?: string | undefined;
-  /** Only what Home's Action required lists: calls with an open follow-up and conversations handed to the team. */
-  open?: boolean | undefined;
   cursor?: string | undefined;
   limit?: number | undefined;
 };
@@ -129,7 +127,7 @@ function agentOf(id: string | null, name: string | null): InboxAgent | null {
 /**
  * One page of the Inbox, newest first. `channel` and `agentId` narrow it, and
  * `search` matches names, numbers, emails, a call's summary and a thread's
- * latest message, and `open` keeps what waits on the team. Calls and conversations are read apart and merged, each
+ * latest message. Calls and conversations are read apart and merged, each
  * source limited to one page past the cursor.
  */
 export async function listInboxItems(context: DomainContext, input: InboxInput): Promise<InboxPage> {
@@ -167,7 +165,6 @@ export async function listInboxItems(context: DomainContext, input: InboxInput):
         eq(calls.businessId, input.businessId),
         callChannelFilter(input.channel),
         input.agentId ? eq(calls.agentId, input.agentId) : undefined,
-        input.open ? sql`exists (select 1 from ${inboxItems} where ${inboxItems.businessId} = ${input.businessId} and ${inboxItems.relatedCallId} = ${calls.id} and ${inboxItems.kind} = 'voice_message' and ${inboxItems.status} = 'open')` : undefined,
         pattern ? or(ilike(contacts.name, pattern), ilike(contacts.phone, pattern), ilike(conversations.summary, pattern), ilike(calls.disposition, pattern)) : undefined,
         afterCursor(cursor, "call", sql`${calls.startedAt}`, calls.id),
       ))
@@ -200,7 +197,6 @@ export async function listInboxItems(context: DomainContext, input: InboxInput):
         eq(conversations.businessId, input.businessId),
         inArray(conversations.channel, channels),
         input.agentId ? eq(conversations.agentId, input.agentId) : undefined,
-        input.open ? eq(conversations.automationState, "human_handoff") : undefined,
         pattern ? or(ilike(contacts.name, pattern), ilike(contacts.phone, pattern), ilike(contacts.email, pattern), ilike(widgetVisitors.name, pattern), ilike(widgetVisitors.email, pattern), ilike(latest.body, pattern)) : undefined,
         afterCursor(cursor, "conversation", sql`${latest.createdAt}`, conversations.id),
       ))

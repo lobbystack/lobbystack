@@ -1,8 +1,7 @@
 {
   "page": {
     "title": "Contacts",
-    "description": "Manage the people behind your calls, messages, and bookings.",
-    "searchPlaceholder": "Search contacts..."
+    "description": "Manage the people behind your calls, messages, and bookings."
   },
   "table": {
     "contact": "Contact",

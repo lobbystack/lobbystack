@@ -3,11 +3,9 @@
   "filters": {
     "label": "Channel",
     "all": "All",
-    "open": "Action required",
     "agent": "Agent",
     "allAgents": "All agents"
   },
-  "search": "Search calls and messages",
   "empty": "No calls or messages yet.",
   "noMatch": "Nothing matches these filters.",
   "pick": "Pick a conversation to read it.",

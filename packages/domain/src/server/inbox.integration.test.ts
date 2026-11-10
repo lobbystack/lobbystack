@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { agents, calls, contacts, conversations, createDatabaseClient, inboxItems, messages, outboxMessages, users, widgetVisitors, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, calls, contacts, conversations, createDatabaseClient, messages, outboxMessages, users, widgetVisitors, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { forgetCachedBrands } from "./brands";
 import { requireBusinessAccess } from "./businessAccess";
@@ -130,25 +130,6 @@ describe.skipIf(!client)("the Inbox against PostgreSQL", () => {
       expect(await keys({ search: "parking" })).toEqual([`conversation:${chat}`]);
       expect(await keys({ search: "Marie" })).toEqual([`conversation:${text}`, `call:${phoneCall}`]);
       expect(await keys({ search: "fillings" })).toEqual([`call:${phoneCall}`]);
-    });
-  });
-
-  it("keeps only what waits on the team: calls with an open follow-up and threads handed to a person", async () => {
-    await withBusiness(async ({ tx, context, userId, businessId, frontDesk }) => {
-      const followedUp = await seedCall(tx, { businessId, agentId: frontDesk, transport: "voice", startedAt: "2030-01-08T14:00:00Z" });
-      const answered = await seedCall(tx, { businessId, agentId: frontDesk, transport: "voice", startedAt: "2030-01-08T14:10:00Z" });
-      await seedCall(tx, { businessId, agentId: frontDesk, transport: "voice", startedAt: "2030-01-08T14:20:00Z" });
-      const handedOff = await seedThread(tx, { businessId, agentId: frontDesk, channel: "web_chat", bodies: [["Can a person help?", "2030-01-08T15:00:00Z"]] });
-      await seedThread(tx, { businessId, agentId: frontDesk, channel: "sms", bodies: [["Thanks", "2030-01-08T16:00:00Z"]] });
-      await asMigrator(tx, async () => {
-        await tx.update(conversations).set({ automationState: "human_handoff" }).where(eq(conversations.id, handedOff));
-        await tx.insert(inboxItems).values([
-          { businessId, relatedCallId: followedUp, kind: "voice_message", title: "Voice message from Marie", body: "Please call back." },
-          { businessId, relatedCallId: answered, kind: "voice_message", title: "Voice message from Ana", body: "Done.", status: "done" },
-        ]);
-      });
-      const open = await listInboxItems(context, { userId, businessId, open: true });
-      expect(open.items.map((item) => item.key)).toEqual([`conversation:${handedOff}`, `call:${followedUp}`]);
     });
   });
 
