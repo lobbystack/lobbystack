@@ -29,7 +29,7 @@ import { Surface } from "@/components/ui/surface";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { intlLocale } from "@/lib/locale";
-import { parsePriceInput, priceInputValue } from "@/lib/price-input";
+import { parsePriceInput, priceInputMinor, priceInputValue } from "@/lib/price-input";
 import { requestJson } from "@/lib/request-json";
 import { availableTimeZones, groupTimeZones, isTimeZoneRegion, type TimeZoneOption } from "@/lib/time-zones";
 
@@ -144,7 +144,7 @@ function OverageDialog({ partnerId, business, billing, onClose }: { partnerId: s
   const save = useMutation({
     mutationFn: async () => {
       const terms = enabled
-        ? { voiceMinuteRateMinor: parsePriceInput(minuteRate, currency, i18n.language), chatRateMinor: parsePriceInput(chatRate, currency, i18n.language), capMinor: parsePriceInput(cap, currency, i18n.language) }
+        ? { voiceMinuteRateMinor: priceInputMinor(parsePriceInput(minuteRate, currency, i18n.language)), chatRateMinor: priceInputMinor(parsePriceInput(chatRate, currency, i18n.language)), capMinor: priceInputMinor(parsePriceInput(cap, currency, i18n.language)) }
         : { voiceMinuteRateMinor: overage.voiceMinuteRateMinor, chatRateMinor: overage.chatRateMinor, capMinor: overage.capMinor };
       if (terms.voiceMinuteRateMinor === null || terms.voiceMinuteRateMinor === undefined || terms.chatRateMinor === null || terms.chatRateMinor === undefined) throw Object.assign(new Error("invalid rate"), { code: "invalid_overage_rate" });
       if (terms.capMinor === undefined) throw Object.assign(new Error("invalid cap"), { code: "invalid_overage_cap" });

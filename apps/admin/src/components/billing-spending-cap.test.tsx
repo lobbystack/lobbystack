@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SpendingCapSection } from "./billing-spending-cap";
-import { parseCapInputToCents } from "@/lib/billing-cap";
+import { parsePriceInput } from "@/lib/price-input";
 
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
@@ -65,7 +65,11 @@ describe("original billing cap behavior", () => {
     setup("en", null, true, true, plan);
     expect(screen.queryByText("billing.spendingCap.title")).toBeNull();
   });
-  it.each(["1,000", "1 000", "-1", "1.234", "NaN", "Infinity", "1e3", "9007199254740991"])("rejects malformed or unsafe English amount %s", value => {
-    expect(parseCapInputToCents(value, "en")).toBeNull();
+  it.each(["-1", "1.234", "NaN", "Infinity", "1e3", "9007199254740991"])("rejects malformed or unsafe English amount %s", value => {
+    expect(parsePriceInput(value, "USD", "en")).toEqual({ kind: "invalid" });
+  });
+
+  it("reads a grouped amount the way the rest of the dashboard does", () => {
+    expect(parsePriceInput("1,000", "USD", "en")).toEqual({ kind: "amount", minor: 100000 });
   });
 });

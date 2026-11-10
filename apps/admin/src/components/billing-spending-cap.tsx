@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 import { caretBefore, formatPriceTyping, parsePriceInput, priceInputValue } from "@/lib/price-input";
 import { requestJson } from "@/lib/request-json";
@@ -59,15 +58,15 @@ export function SpendingCapSection({
         : Math.min(100, (spendCents / capCents) * 100);
 
   async function saveCap() {
-    const capCents = parsePriceInput(capInput, CAP_CURRENCY, locale);
-    if (capCents === null || capCents === undefined) {
+    const amount = parsePriceInput(capInput, CAP_CURRENCY, locale);
+    if (amount.kind !== "amount") {
       toast.error(t("billing.spendingCap.invalidAmount"));
       return;
     }
 
     setSaving("save");
     try {
-      await setOverageSpendingCap({ businessId, capCents });
+      await setOverageSpendingCap({ businessId, capCents: amount.minor });
       toast.success(t("billing.spendingCap.saved"));
     } catch {
       toast.error(t("billing.spendingCap.saveFailed"));
@@ -172,15 +171,10 @@ export function SpendingCapSection({
                   size="sm"
                   onClick={() => void saveCap()}
                   disabled={saving !== null || capInput.trim().length === 0}
+                  loading={saving === "save"}
+                  loadingLabel={capCents !== null ? t("billing.spendingCap.updating") : t("billing.spendingCap.saving")}
                 >
-                  {saving === "save"
-                    ? <>
-                        <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
-                        {capCents !== null ? t("billing.spendingCap.updating") : t("billing.spendingCap.saving")}
-                      </>
-                    : capCents !== null
-                      ? t("billing.spendingCap.update")
-                      : t("billing.spendingCap.save")}
+                  {capCents !== null ? t("billing.spendingCap.update") : t("billing.spendingCap.save")}
                 </Button>
                 {capCents !== null && (
                   <Button
@@ -188,13 +182,10 @@ export function SpendingCapSection({
                     variant="outline"
                     onClick={() => void removeCap()}
                     disabled={saving !== null}
+                    loading={saving === "remove"}
+                    loadingLabel={t("billing.spendingCap.removing")}
                   >
-                    {saving === "remove"
-                      ? <>
-                          <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
-                          {t("billing.spendingCap.removing")}
-                        </>
-                      : t("billing.spendingCap.remove")}
+                    {t("billing.spendingCap.remove")}
                   </Button>
                 )}
               </div>

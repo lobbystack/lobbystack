@@ -39,15 +39,23 @@ export function formatPriceTyping(text: string, currency: string, locale: string
   return joinPrice(whole, digits && decimals !== undefined ? decimals.slice(0, digits) : undefined, locale);
 }
 
-/** The price text in the currency's smallest unit: null when empty, undefined when it isn't a price in this currency. */
-export function parsePriceInput(text: string, currency: string, locale: string): number | null | undefined {
-  if (!text.trim()) return null;
-  if (/[^\d\s.,]/u.test(text)) return undefined;
+/** A typed price: the amount in the currency's smallest unit, an empty field, or text that isn't a price in this currency. */
+export type PriceInput = { kind: "amount"; minor: number } | { kind: "empty" } | { kind: "invalid" };
+
+/** Reads typed price text as the field states it, so a caller never confuses an empty field with invalid text. */
+export function parsePriceInput(text: string, currency: string, locale: string): PriceInput {
+  if (!text.trim()) return { kind: "empty" };
+  if (/[^\d\s.,]/u.test(text)) return { kind: "invalid" };
   const { whole, decimals = "", marks } = splitPrice(text, locale);
   const digits = currencyFractionDigits(currency);
-  if (marks > 1 || (!whole && !decimals) || decimals.length > digits) return undefined;
+  if (marks > 1 || (!whole && !decimals) || decimals.length > digits) return { kind: "invalid" };
   const minor = Number(whole || "0") * 10 ** digits + Number(decimals.padEnd(digits, "0") || "0");
-  return Number.isSafeInteger(minor) ? minor : undefined;
+  return Number.isSafeInteger(minor) ? { kind: "amount", minor } : { kind: "invalid" };
+}
+
+/** The amount when there is one, null for an empty field, or undefined when the text isn't a price. */
+export function priceInputMinor(price: PriceInput): number | null | undefined {
+  return price.kind === "amount" ? price.minor : price.kind === "empty" ? null : undefined;
 }
 
 /** A stored price as the price input shows it: "3,500" or "12,50", which parsePriceInput reads back to the same amount. */
