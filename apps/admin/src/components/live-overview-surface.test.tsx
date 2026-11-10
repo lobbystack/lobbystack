@@ -64,7 +64,7 @@ describe("how many requests are open", () => {
   it("counts every open request and links to the rest in the Inbox when Home lists only some", async () => {
     const i18n = await setup("en", "call-123", { actionRequiredCount: 9 });
     expect(screen.getByText("9")).toBeTruthy();
-    expect(screen.getAllByRole("link", { name: i18n.t("home.actionRequired.viewAll") }).map((link) => link.getAttribute("href"))).toEqual(["/inbox?status=open", "/appointments?view=list"]);
+    expect(screen.getAllByRole("link", { name: i18n.t("home.actionRequired.viewAll") }).map((link) => link.getAttribute("href"))).toEqual(["/inbox", "/appointments?view=list"]);
   });
 
   it("offers no link when Home lists them all", async () => {
