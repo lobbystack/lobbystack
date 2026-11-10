@@ -62,7 +62,7 @@ describe("the workspace menu", () => {
   it("switches agents from the agent's menu, on the same page", async () => {
     const view = setup({ agents: [FRONT, EVENING] });
     view.navigate("/agents/agent-1/rules");
-    await userEvent.click(screen.getByRole("button", { name: /Front desk.*agentPages\.phone/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Front desk" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "Evening" }));
     expect(route.router.push).toHaveBeenLastCalledWith("/agents/agent-2/rules");
   });

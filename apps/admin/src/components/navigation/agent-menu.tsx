@@ -5,7 +5,6 @@ import { ArrowUpRight, AudioLines, Check, ChevronsUpDown, Layers, ListChecks, Me
 import { useTranslation } from "react-i18next";
 
 import { AddAgentDialog } from "@/components/agents/add-agent-dialog";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,7 +12,6 @@ import { useManagedBusiness } from "@/hooks/use-agent-settings";
 import type { AgentListItem } from "@/hooks/use-agents";
 import { useAgents } from "@/hooks/use-agents";
 import { agentHref, agentPageOf, AGENT_PAGES, type AgentPage } from "@/lib/agent-pages";
-import { intlLocale } from "@/lib/locale";
 import { MenuGroup, MenuRow } from "./menu-parts";
 
 const ICONS: Partial<Record<AgentPage["section"], LucideIcon>> = { "": AudioLines, instructions: ScrollText, rules: ListChecks, channels: Radio, shared: Layers };
@@ -21,28 +19,8 @@ const ICONS: Partial<Record<AgentPage["section"], LucideIcon>> = { "": AudioLine
 /** The rows of the agent's menu: its own pages, without the pages Channels opens. */
 const MENU_PAGES = AGENT_PAGES.filter((page) => page.section in ICONS);
 
-/** The kinds of channel an agent answers on, as a list in the person's language. */
-function useChannelSummary(): (agent: AgentListItem) => string {
-  const { i18n, t } = useTranslation(["nav", "common"]);
-  return (agent) => {
-    const kinds = [
-      agent.phoneNumbers ? t("nav:agentPages.phone") : null,
-      agent.widgetKeys ? t("nav:agentPages.widget") : null,
-      agent.instagramAccounts ? t("common:channels.instagram") : null,
-    ].filter((kind): kind is string => Boolean(kind));
-    return kinds.length ? new Intl.ListFormat(intlLocale(i18n.language), { style: "narrow", type: "unit" }).format(kinds) : t("nav:agentMenu.noChannels");
-  };
-}
-
 function AgentIdentity({ agent }: { agent: AgentListItem }) {
-  const summary = useChannelSummary();
-  return <>
-    <Avatar size="sm"><AvatarFallback>{agent.name.trim().charAt(0).toUpperCase() || "A"}</AvatarFallback></Avatar>
-    <span className="grid min-w-0 flex-1 text-start leading-tight">
-      <span className="truncate text-sm font-medium">{agent.name}</span>
-      <span className="truncate text-xs text-muted-foreground">{summary(agent)}</span>
-    </span>
-  </>;
+  return <span className="min-w-0 flex-1 truncate text-start text-sm font-medium">{agent.name}</span>;
 }
 
 /**
@@ -57,8 +35,7 @@ function AgentHeading({ agent }: { agent: AgentListItem | undefined }) {
   const { canManage } = useManagedBusiness();
   if (!agent) return (
     <div className="flex items-center gap-2 px-4 pt-3 pb-1 group-data-[collapsible=icon]:hidden">
-      <Skeleton className="size-6 rounded-full" />
-      <span className="grid flex-1 gap-1"><Skeleton className="h-4 w-24" /><Skeleton className="h-3 w-32" /></span>
+      <Skeleton className="h-4 w-24" />
     </div>
   );
   // With one agent and nothing to add, there is nothing to pick.
@@ -68,7 +45,7 @@ function AgentHeading({ agent }: { agent: AgentListItem | undefined }) {
     <SidebarMenu className="px-2 pt-2 group-data-[collapsible=icon]:hidden">
       <SidebarMenuItem>
         <DropdownMenu>
-          <DropdownMenuTrigger render={<SidebarMenuButton className="data-[popup-open=true]:bg-sidebar-accent" size="lg" />}>
+          <DropdownMenuTrigger render={<SidebarMenuButton className="data-[popup-open=true]:bg-sidebar-accent" />}>
             <AgentIdentity agent={agent} />
             <ChevronsUpDown className="ms-auto size-4 text-muted-foreground" />
           </DropdownMenuTrigger>
