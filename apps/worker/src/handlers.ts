@@ -1226,10 +1226,10 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const businessId = businessIdOrThrow(job);
       const phoneNumberId = String(job.payload.phoneNumberId ?? "");
       const kind = job.payload.kind === "canceled" ? "canceled" : "release_soon";
-      if (!dependencies.email || !dependencies.onboardingFollowupSender) return { status: "skipped", entityId: phoneNumberId };
+      if (!dependencies.email) return { status: "skipped", entityId: phoneNumberId };
       const content = await loadNumberReleaseEmail(dependencies.domain, { businessId, phoneNumberId });
       if (!content) return { status: "skipped", entityId: phoneNumberId };
-      // The host's own email, with the host's prices, from the founder. A
+      // The host's own email, with the host's prices, from LobbyStack. A
       // partner's businesses never get it, so its job carries no brand.
       const brand = await emailBrand(dependencies.domain, HOST_EMAIL_BRAND);
       const date = (value: unknown) => (typeof value === "string" ? new Intl.DateTimeFormat(intlLocale(content.locale), { month: "long", day: "numeric", timeZone: content.timezone }).format(new Date(value)) : "");
@@ -1241,20 +1241,19 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         periodEnd: date(job.payload.periodEnd),
         releaseDate: date(job.payload.releaseAt),
         url: `${brand.origin}/settings/plan`,
-        senderName: dependencies.onboardingFollowupSender.name,
       };
-      await dependencies.email.sendTemplate({ template: "number_release", to: content.to, subject: numberReleaseEmailSubject(variables), variables, brand, idempotencyKey: job.idempotencyKey, ...emailSender(brand, { from: dependencies.onboardingFollowupSender.from }) });
+      await dependencies.email.sendTemplate({ template: "number_release", to: content.to, subject: numberReleaseEmailSubject(variables), variables, brand, idempotencyKey: job.idempotencyKey, ...emailSender(brand, {}) });
       return { status: "completed", entityId: `${phoneNumberId}:${kind}` };
     }
     case "numberTrial.sendEmail": {
       const businessId = businessIdOrThrow(job);
       const trialId = String(job.payload.trialId ?? "");
       const kind = job.payload.email;
-      if (!dependencies.email || !dependencies.onboardingFollowupSender) return { status: "skipped", entityId: trialId };
+      if (!dependencies.email) return { status: "skipped", entityId: trialId };
       if (!trialId || (kind !== "day10" && kind !== "day13" && kind !== "ended" && kind !== "minutes_out")) throw new Error("Invalid number trial email payload.");
       const content = await loadNumberTrialEmail(dependencies.domain, { businessId, trialId, email: kind });
       if (!content) return { status: "skipped", entityId: trialId };
-      // The host's own email, with the host's prices, from the founder. A
+      // The host's own email, with the host's prices, from LobbyStack. A
       // partner's businesses never get it, so its job carries no brand.
       const brand = await emailBrand(dependencies.domain, HOST_EMAIL_BRAND);
       const endDate = content.endsAt
@@ -1271,9 +1270,8 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         endDate,
         calls: String(content.callsAnswered),
         url: `${brand.origin}/settings/plan`,
-        senderName: dependencies.onboardingFollowupSender.name,
       };
-      await dependencies.email.sendTemplate({ template: "number_trial", to: content.to, subject: numberTrialEmailSubject(variables), variables, brand, idempotencyKey: job.idempotencyKey, ...emailSender(brand, { from: dependencies.onboardingFollowupSender.from }) });
+      await dependencies.email.sendTemplate({ template: "number_trial", to: content.to, subject: numberTrialEmailSubject(variables), variables, brand, idempotencyKey: job.idempotencyKey, ...emailSender(brand, {}) });
       return { status: "completed", entityId: `${trialId}:${kind}` };
     }
     case "prospectDemo.expire": {

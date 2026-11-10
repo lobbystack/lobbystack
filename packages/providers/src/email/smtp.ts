@@ -193,11 +193,11 @@ function templateHtml(template: TemplateName, subject: string, variables: Record
       return renderMessageHtml(brand, subject, variables.body ?? "LobbyStack dashboard feedback");
     case "number_trial": {
       const copy = numberTrialCopy(trialKind(variables.kind), variables.locale, variables);
-      return renderLetterHtml(brand, subject, variables, copy.lines, copy.button, variables.url, variables.senderName ?? "LobbyStack");
+      return renderLetterHtml(brand, subject, variables, copy.lines, copy.button, variables.url, brand.name);
     }
     case "number_release": {
       const copy = numberReleaseCopy(variables);
-      return renderLetterHtml(brand, subject, variables, copy.lines, copy.button, variables.url, variables.senderName ?? "LobbyStack");
+      return renderLetterHtml(brand, subject, variables, copy.lines, copy.button, variables.url, brand.name);
     }
     case "partner_pool_alert": {
       const copy = partnerPoolAlertCopy(variables);
@@ -238,6 +238,7 @@ function renderLetterHtml(brand: EmailBrand, subject: string, variables: Record<
   return renderEmailLayout({
     brand,
     previewText: subject,
+    align: "left",
     content: [
       `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(greet(variables.firstName ?? ""))}</p>`,
       ...lines.map((line) => `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(line)}</p>`),
@@ -252,6 +253,7 @@ function renderMessageHtml(brand: EmailBrand, subject: string, message: string):
   return renderEmailLayout({
     brand,
     previewText: subject,
+    align: "left",
     content: message
       .split(/\n{2,}/)
       .map((paragraph) => `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(paragraph).replaceAll("\n", "<br />")}</p>`)
@@ -353,9 +355,9 @@ function templateBody(template: TemplateName, variables: Record<string, string>,
     case "onboarding_followup":
       return onboardingFollowupBody(variables, brand);
     case "number_trial":
-      return numberTrialBody(variables);
+      return numberTrialBody(variables, brand);
     case "number_release":
-      return numberReleaseBody(variables);
+      return numberReleaseBody(variables, brand);
     case "partner_pool_alert":
       return partnerPoolAlertBody(variables, brand);
     case "business_allowance_alert":
@@ -628,10 +630,10 @@ export function numberReleaseEmailSubject(variables: Record<string, string>): st
   return numberReleaseCopy(variables).subject;
 }
 
-function numberReleaseBody(variables: Record<string, string>): string {
+function numberReleaseBody(variables: Record<string, string>, brand: EmailBrand): string {
   const copy = numberReleaseCopy(variables);
   const greet = TRIAL_GREETINGS[variables.locale ?? "en"] ?? TRIAL_GREETINGS.en!;
-  return [greet(variables.firstName ?? ""), "", ...copy.lines.flatMap((line) => [line, ""]), `${copy.button}: ${variables.url ?? ""}`, "", variables.senderName ?? "LobbyStack"].join("\n");
+  return [greet(variables.firstName ?? ""), "", ...copy.lines.flatMap((line) => [line, ""]), `${copy.button}: ${variables.url ?? ""}`, "", brand.name].join("\n");
 }
 
 type TrialEmailKind = "day10" | "day13" | "ended" | "minutes_out";
@@ -706,10 +708,10 @@ export function numberTrialEmailSubject(variables: Record<string, string>): stri
   return numberTrialCopy(trialKind(variables.kind), variables.locale, variables).subject;
 }
 
-function numberTrialBody(variables: Record<string, string>): string {
+function numberTrialBody(variables: Record<string, string>, brand: EmailBrand): string {
   const copy = numberTrialCopy(trialKind(variables.kind), variables.locale, variables);
   const greet = TRIAL_GREETINGS[variables.locale ?? "en"] ?? TRIAL_GREETINGS.en!;
-  return [greet(variables.firstName ?? ""), "", ...copy.lines.flatMap((line) => [line, ""]), `${copy.button}: ${variables.url ?? ""}`, "", variables.senderName ?? "LobbyStack"].join("\n");
+  return [greet(variables.firstName ?? ""), "", ...copy.lines.flatMap((line) => [line, ""]), `${copy.button}: ${variables.url ?? ""}`, "", brand.name].join("\n");
 }
 
 /** For an owner a platform key invited: the link opens sign-up, where they make their account with this address. */
@@ -924,17 +926,23 @@ const LOBBYSTACK_MARK = `<svg xmlns="http://www.w3.org/2000/svg" width="48" heig
  * LobbyStack's mark while the name is LobbyStack, or else the name on its own. A logo saved as a path on the
  * dashboard gets the brand's origin, since a mail client has no page to resolve it against.
  */
-function emailHeader(brand: EmailBrand): string {
+function emailHeader(brand: EmailBrand, align: EmailAlign): string {
   const logoUrl = brand.emailLogoUrl === undefined ? brand.logoUrl : brand.emailLogoUrl;
   if (logoUrl) {
     const src = logoUrl.startsWith("/") ? `${brand.origin}${logoUrl}` : logoUrl;
     return `<img src="${escapeHtml(src)}" alt="${escapeHtml(brand.name)}" height="48" style="height:48px;width:auto;max-width:240px;border:0;" />`;
   }
   if (brand.name === DEFAULT_APP_NAME) return LOBBYSTACK_MARK;
-  return `<p style="margin:0;font-size:20px;font-weight:600;line-height:1.25;color:#0B0B0D;text-align:center;">${escapeHtml(brand.name)}</p>`;
+  return `<p style="margin:0;font-size:20px;font-weight:600;line-height:1.25;color:#0B0B0D;text-align:${align};">${escapeHtml(brand.name)}</p>`;
 }
 
-function renderEmailLayout({ brand, previewText, content }: { brand: EmailBrand; previewText: string; content: string }): string {
+/**
+ * Where an email's logo sits: centered over the centered account emails, and
+ * on the left over the ones whose text reads left-aligned, like a letter.
+ */
+type EmailAlign = "center" | "left";
+
+function renderEmailLayout({ brand, previewText, content, align = "center" }: { brand: EmailBrand; previewText: string; content: string; align?: EmailAlign }): string {
   const escapedPreviewText = escapeHtml(previewText);
 
   return `<!doctype html>
@@ -958,8 +966,8 @@ function renderEmailLayout({ brand, previewText, content }: { brand: EmailBrand;
         <td align="center" style="padding:48px 16px;">
           <table role="presentation" class="email-container" border="0" cellspacing="0" cellpadding="0" width="600" style="width:600px;max-width:600px;background-color:#FFFFFF;border-radius:24px;padding:48px;">
             <tr>
-              <td align="center" style="padding-bottom:32px;">
-                ${emailHeader(brand)}
+              <td align="${align}" style="padding-bottom:32px;">
+                ${emailHeader(brand, align)}
               </td>
             </tr>
             <tr>

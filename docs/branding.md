@@ -273,11 +273,11 @@ The worker reads the brand when it sends, so a brand change reaches emails still
 - **Name and logo**: the host's emails keep LobbyStack and its mark whatever the deployment's branding, as [Still branded](#still-branded) lists.
 - **Dashboard links**: producers queue whole links, and the worker keeps each link's path and query on the brand's origin.
 
-`emailSender` in `packages/shared/src/brand.ts` picks the sender and Reply-To. The host sends from `EMAIL_FROM` exactly as written, with `EMAIL_REPLY_TO` as the Reply-To. A `replyTo` of `null` means the brand's own. The founder check-in and the number trial and release emails have a sender of their own, so replies go to that sender.
+`emailSender` in `packages/shared/src/brand.ts` picks the sender and Reply-To. The host sends from `EMAIL_FROM` exactly as written, with `EMAIL_REPLY_TO` as the Reply-To. A `replyTo` of `null` means the brand's own. The founder check-in has a sender of its own, so replies go to that sender.
 
 Two kinds of email carry no `brand`:
 
-- **Number trial and release emails**: they hold the host's prices and come from the founder. A partner's businesses never get them, so the worker sends them under the host brand.
+- **Number trial and release emails**: they hold the host's prices and are signed LobbyStack. A partner's businesses never get them, so the worker sends them under the host brand.
 - **Operator alerts**: they come from delivery rows, which hold the business. The worker sends each one under its business's brand.
 
 ### Prerendered pages
