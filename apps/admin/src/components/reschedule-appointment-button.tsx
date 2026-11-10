@@ -6,15 +6,12 @@ import { useTranslation } from "react-i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { appointmentSummary, type CancellableAppointment } from "@/components/cancel-appointment-button";
+import { APPOINTMENT_ROLES, appointmentSummary, type CancellableAppointment } from "@/components/cancel-appointment-button";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { Button } from "@/components/ui/button";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { formatDateTime } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
-
-// The domain lets schedulers and above move appointments.
-const RESCHEDULE_ROLES = ["scheduler", "business_admin", "business_owner"];
 
 /**
  * Approves a caller's request to move an appointment: after a confirmation it moves it to the time they asked for,
@@ -43,7 +40,7 @@ export function RescheduleAppointmentButton({ appointment, className, newStartsA
     },
   });
 
-  if (!business || !RESCHEDULE_ROLES.includes(business.role) || !target.isValid || target.toMillis() <= Date.now()) return null;
+  if (!business || !APPOINTMENT_ROLES.includes(business.role) || !target.isValid || target.toMillis() <= Date.now()) return null;
   const time = formatDateTime(target.toUTC().toISO()!, i18n.language, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: appointment.timezone });
   return (
     <>
