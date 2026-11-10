@@ -2,8 +2,11 @@
 
 import * as React from "react"
 import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog"
+import { XIcon } from "lucide-react"
+import { useTranslation } from "react-i18next"
 
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 
 function AlertDialog({ ...props }: AlertDialogPrimitive.Root.Props) {
   return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />
@@ -41,8 +44,10 @@ function AlertDialogContent({
   className,
   children,
   onOverlayClick,
+  showCloseButton = true,
   ...props
-}: AlertDialogPrimitive.Popup.Props & { onOverlayClick?: () => void }) {
+}: AlertDialogPrimitive.Popup.Props & { onOverlayClick?: () => void; showCloseButton?: boolean }) {
+  const { t } = useTranslation("common")
   return (
     <AlertDialogPortal>
       {/* Base UI skips a nested backdrop by default; a confirmation opened from a drawer or dialog still dims it. */}
@@ -56,6 +61,7 @@ function AlertDialogContent({
         {...props}
       >
         {children}
+        {showCloseButton ? <AlertDialogPrimitive.Close data-slot="alert-dialog-x" render={<Button className="absolute top-4 right-4" size="icon-sm" variant="ghost" />}><XIcon /><span className="sr-only">{t("accessibility.close")}</span></AlertDialogPrimitive.Close> : null}
       </AlertDialogPrimitive.Popup>
     </AlertDialogPortal>
   )
