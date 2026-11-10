@@ -143,6 +143,7 @@ describe("business slug", () => {
   it("leaves a slug that already follows the new name alone", async () => {
     const never = async () => { throw new Error("should not look"); };
     expect(await slugAfterRename("lobbystack", "LobbyStack", "LobbyStack!", never)).toBeNull();
+    expect(await slugAfterRename("lobbystack-3fa9c21b04de", "LobbyStack", "LobbyStack!", never)).toBeNull();
   });
 
   function useRename(current: { name: string; slug: string }, takenSlugs: string[] = []) {

@@ -168,7 +168,8 @@ export async function slugAfterRename(currentSlug: string, previousName: string,
   const previousBase = slugFromBusinessName(previousName);
   if (currentSlug !== previousBase && !new RegExp(`^${previousBase}-[0-9a-f]{12}$`).test(currentSlug)) return null;
   const base = slugFromBusinessName(newName);
-  if (currentSlug === base) return null;
+  // A suffix this rule made from the new name already follows it.
+  if (currentSlug === base || new RegExp(`^${base}-[0-9a-f]{12}$`).test(currentSlug)) return null;
   if (!(await taken(base))) return base;
   for (let attempt = 0; attempt < 5; attempt++) {
     const candidate = `${base}-${randomBytes(6).toString("hex")}`;
