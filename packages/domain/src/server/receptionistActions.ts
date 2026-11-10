@@ -9,6 +9,7 @@ import { BookingUnavailableError, type UnavailableReason } from "../availability
 import { createAppointmentChangeVerification, verifyAppointmentChangeOtp, verifyAppointmentChangePasscode } from "./appointmentChanges";
 import { matchServiceName, personNamesMatch, serviceNamesMatch } from "./appointmentFacts";
 import { bookAppointment, cancelAppointmentForCaller, findOpeningsInTransaction, rescheduleAppointmentForCaller, type ApiAudit } from "./booking";
+import { bookingActor } from "./bookingActor";
 import { recordCallOutcomeInTransaction } from "./callOutcome";
 import { recordSmsConsentAnswerInTransaction, type SmsConsentAnswer, type SmsConsentOnFile } from "./contactSmsConsent";
 import type { DomainContext } from "./context";
@@ -96,14 +97,15 @@ async function earlierBooking(tx: DatabaseTransaction, input: { businessId: stri
 }
 
 /**
- * Books for a caller, or for the public API or MCP: the active service with
+ * Books for a caller, for the public API or MCP, or for an operator in the
+ * dashboard: the active service with
  * that id, or the one the caller's words name. A repeated request returns the
  * booking it already made (see earlierBooking). Refusals come back as a
  * reason; other errors are thrown.
  */
 export async function bookForCaller(
   context: DomainContext,
-  input: { businessId: string; service: { id: string } | { name: string }; startsAt: string; timezone: string; contactPhone: string; contactName?: string; channel: ReceptionistChannel | "api"; callerPhone?: string; callId?: string; preferredStaffId?: string; smsConsent?: SmsConsentAnswer; apiAudit?: ApiAudit },
+  input: { businessId: string; service: { id: string } | { name: string }; startsAt: string; timezone: string; contactPhone: string; contactName?: string; channel: ReceptionistChannel | "api" | "dashboard"; callerPhone?: string; callId?: string; preferredStaffId?: string; smsConsent?: SmsConsentAnswer; apiAudit?: ApiAudit; operatorUserId?: string },
 ): Promise<{ ok: true; appointmentId?: string; serviceName: string; startsAt: string; alreadyBooked?: true; employeeName?: string } | { ok: false; reason: BookingRefusal }> {
   const distinctId = getPostHogDistinctIdForBusinessSystem(input.businessId);
   const failed = async (reason: BookingRefusal | "unknown", serviceId?: string) => {
@@ -111,7 +113,7 @@ export async function bookForCaller(
     const name = reason === "unknown_service" ? "service_unavailable" : reason === "taken" ? "slot_unavailable" : reason === "no_staff" ? "no_staff_available" : reason;
     await recordProductEventBestEffort(context, { name: "appointment.booking_failed", businessId: input.businessId, distinctId, properties: { reason: name, ...(serviceId ? { serviceId } : {}), ...("name" in input.service ? { requestedServiceName: input.service.name } : {}), channel: input.channel, sourceChannel: input.channel } });
   };
-  const found = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+  const found = await withBusinessTransaction(context.db, bookingActor(input), async (tx) => {
     const service = await activeService(tx, input.businessId, input.service);
     if (!service) return undefined;
     const existing = await earlierBooking(tx, input, service);
@@ -138,6 +140,7 @@ export async function bookForCaller(
       ...(input.preferredStaffId ? { preferredStaffId: input.preferredStaffId } : {}),
       ...(input.smsConsent ? { smsConsent: input.smsConsent } : {}),
       ...(input.apiAudit ? { apiAudit: input.apiAudit } : {}),
+      ...(input.operatorUserId ? { operatorUserId: input.operatorUserId } : {}),
     });
     await recordProductEventBestEffort(context, { name: "appointment.booked", businessId: input.businessId, distinctId, properties: { appointmentId, channel: input.channel, serviceId: service.id, sourceChannel: input.channel } });
     return { ok: true, appointmentId, serviceName: service.name, startsAt: input.startsAt, ...(employeeName ? { employeeName } : {}) };

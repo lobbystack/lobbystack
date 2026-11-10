@@ -17,6 +17,7 @@ import { recordProductEventBestEffort } from "./productEvents";
 import { CANCELLATION_CONFIRMATION, heldForCall, queueOperatorAlertInTransaction, RESCHEDULE_CONFIRMATION, rescheduleAppointmentReminderInTransaction, saveAppointmentVideoUrlInTransaction } from "./notifications";
 import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
 import { APPOINTMENT_REQUESTS } from "./voice";
+import { bookingActor } from "./bookingActor";
 
 type BookingInput = {
   callId?: string;
@@ -32,6 +33,8 @@ type BookingInput = {
   smsConsent?: SmsConsentAnswer;
   /** Set when the public API or the MCP server made the booking; recorded in the audit log. */
   apiAudit?: ApiAudit;
+  /** Set when an operator booked from the dashboard; recorded in the audit log. */
+  operatorUserId?: string;
 };
 
 /** Who made an API change: the audit row's actor user (OAuth grants act for a user) and payload (actor and credential id). */
@@ -322,7 +325,7 @@ export async function bookAppointment(
   context: DomainContext,
   input: BookingInput,
 ): Promise<{ appointmentId: string; contactId: string; staffId: string; employeeName?: string }> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+  return await withBusinessTransaction(context.db, bookingActor(input), async (tx) => {
     // The first read refuses a time the schedule rules out without taking any
     // lock, and otherwise gives a stable, sorted lock set: the staff who could
     // take the time. Reference data is reloaded after each candidate lock
@@ -426,6 +429,7 @@ export async function bookAppointment(
     }
     if (input.callId) await recordCallOutcomeInTransaction(tx, { businessId: input.businessId, callId: input.callId, contactId, outcome: { kind: "booked", serviceName: reference.serviceName, startsAt: startsAt.toISOString() } });
     if (input.apiAudit) await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.apiAudit.actorUserId, eventType: "api.appointment.booked", entityType: "appointment", entityId: appointment.id, payload: input.apiAudit.payload });
+    if (input.operatorUserId) await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.operatorUserId, eventType: "appointment_change.booked", entityType: "appointment", entityId: appointment.id, payload: changeAudit({ source: "operator", userId: input.operatorUserId }).payload });
     if (contactCreated) await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "contact.created", resourceId: contactId });
     await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "appointment.booked", resourceId: appointment.id });
     const employeeName = reference.employees.get(selectedStaff.id);
