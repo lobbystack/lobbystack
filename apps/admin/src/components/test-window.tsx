@@ -106,7 +106,7 @@ function TestChat({ agentId, businessId, children }: { agentId: string | undefin
         {failed ? <FieldError className="w-full">{t("testWindow.sendFailed")}</FieldError> : null}
       </div>
       <form className="shrink-0" onSubmit={send}>
-        <InputGroup className="h-11">
+        <InputGroup>
           <InputGroupInput aria-label={t("testWindow.message")} autoComplete="off" maxLength={4_000} onChange={(event) => setDraft(event.target.value)} placeholder={t("testWindow.message")} value={draft} />
           <InputGroupAddon align="inline-end">
             <InputGroupButton aria-label={t("testWindow.send")} disabled={busy || !draft.trim()} size="icon-sm" type="submit" variant="default"><ArrowUp /></InputGroupButton>

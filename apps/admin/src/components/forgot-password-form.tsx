@@ -113,7 +113,7 @@ export function ForgotPasswordForm({
                   value={code}
                 >
                   <InputOTPGroup className="w-full">
-                    {Array.from({ length: RESET_CODE_LENGTH }, (_, index) => <InputOTPSlot aria-invalid={codeError ? true : undefined} className="size-auto h-12 flex-1 text-lg" index={index} key={index} />)}
+                    {Array.from({ length: RESET_CODE_LENGTH }, (_, index) => <InputOTPSlot aria-invalid={codeError ? true : undefined} className="w-auto flex-1" index={index} key={index} />)}
                   </InputOTPGroup>
                 </InputOTP>
                 {codeError ? <FieldError className="flex items-center gap-2 font-medium" id="reset-code-error"><TriangleAlert className="size-4 shrink-0" aria-hidden="true" /><span>{t(`forgotPassword.${codeError}`)}</span></FieldError> : null}
@@ -128,7 +128,7 @@ export function ForgotPasswordForm({
                   aria-describedby={passwordError ? "reset-password-error" : passwordInvalid ? "reset-password-criteria" : undefined}
                   aria-invalid={passwordInvalid ? true : undefined}
                   autoComplete="new-password"
-                  className={cn("h-11", passwordInvalid && invalidInputClassName)}
+                  className={cn(passwordInvalid && invalidInputClassName)}
                   minLength={8}
                   onChange={(event) => onNewPasswordChange(event.target.value)}
                   onFocus={() => setFocusedPasswordStep(step)}
@@ -149,7 +149,7 @@ export function ForgotPasswordForm({
                 aria-describedby={emailError ? "reset-email-error" : undefined}
                 aria-invalid={emailError ? true : undefined}
                 autoComplete="email"
-                className={cn("h-11", emailError && invalidInputClassName)}
+                className={cn(emailError && invalidInputClassName)}
                 onBlur={() => setBlurredEmailStep(step)}
                 onChange={(event) => { setBlurredEmailStep(null); onEmailChange(event.target.value); }}
                 placeholder={t("forgotPassword.emailPlaceholder")}

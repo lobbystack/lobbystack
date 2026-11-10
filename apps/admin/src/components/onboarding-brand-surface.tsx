@@ -136,7 +136,7 @@ export function OnboardingBrandSurface({ askAppName, askLogo }: { askAppName: bo
         {askAppName ? (
           <Field>
             <FieldLabel htmlFor="onboarding-brand-name">{t("brand.nameLabel")}</FieldLabel>
-            <Input autoComplete="off" autoFocus className="h-11" id="onboarding-brand-name" maxLength={MAX_APP_NAME_LENGTH} onChange={(event) => setName(event.target.value)} placeholder={branding.appName} type="text" value={name} />
+            <Input autoComplete="off" autoFocus id="onboarding-brand-name" maxLength={MAX_APP_NAME_LENGTH} onChange={(event) => setName(event.target.value)} placeholder={branding.appName} type="text" value={name} />
             <FieldDescription>{t("brand.nameHint")}</FieldDescription>
           </Field>
         ) : null}

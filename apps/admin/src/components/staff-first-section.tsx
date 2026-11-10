@@ -120,7 +120,7 @@ export function StaffFirstSection({ businessId, block, canManage, defaultLocale,
             <ItemDescription>{block ? t(`agent:staffFirst.unavailable.${block}`) : t("agent:staffFirst.mode.hint")}</ItemDescription>
           </ItemContent>
           <ItemActions className="w-full sm:w-auto">
-            {isLoading ? <Skeleton className="h-9 w-full sm:w-48" /> : (
+            {isLoading ? <Skeleton className="h-10 w-full sm:w-48" /> : (
               <Select disabled={disabled} items={staffFirstModes.map((value) => ({ value, label: t(`agent:staffFirst.mode.options.${value}`) }))} onValueChange={(next) => { if (next) setMode(next as StaffFirstMode); }} value={mode}>
                 <SelectTrigger aria-label={t("agent:staffFirst.mode.label")} className="w-full sm:w-48"><SelectValue /></SelectTrigger>
                 <SelectContent><SelectGroup>{staffFirstModes.map((value) => <SelectItem key={value} value={value}>{t(`agent:staffFirst.mode.options.${value}`)}</SelectItem>)}</SelectGroup></SelectContent>

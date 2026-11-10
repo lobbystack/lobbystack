@@ -136,7 +136,7 @@ export function ConversationThread({ back, conversationId }: { back?: ReactNode;
         ))}
       </div>
       <form className="flex gap-2 border-t p-4" onSubmit={submit}>
-        <Input className="h-11" onChange={(event) => setDraft(event.target.value)} placeholder={channel === "web_chat" ? t("page.composerPlaceholderWeb") : channel === "instagram" ? t("page.composerPlaceholderInstagram") : t("page.composerPlaceholderSms")} value={draft} />
+        <Input onChange={(event) => setDraft(event.target.value)} placeholder={channel === "web_chat" ? t("page.composerPlaceholderWeb") : channel === "instagram" ? t("page.composerPlaceholderInstagram") : t("page.composerPlaceholderSms")} value={draft} />
         <Button aria-label={t("page.send")} disabled={!draft.trim()} loading={send.isPending} size="icon-lg" type="submit"><Send /></Button>
       </form>
     </div>

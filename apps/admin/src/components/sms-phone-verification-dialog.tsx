@@ -133,8 +133,8 @@ export function SmsPhoneVerificationDialog({ businessId, open, onOpenChange, onV
           <Field data-invalid={error ? true : undefined}>
             <FieldLabel className="sr-only" htmlFor="sms-alert-phone">{t("notifications.phoneVerification.fields.mobileNumber")}</FieldLabel>
             <div className="flex min-w-0">
-              <PhoneCountrySelect ariaLabel={t("notifications.phoneVerification.fields.country")} className="h-11 rounded-l-xl rounded-r-none px-4 font-medium text-muted-foreground" countries={countries} onChange={(next) => { setCountry(next as Country); setPhone(""); }} value={country} />
-              <PhoneInput autoFocus className="h-11 rounded-l-none border-l-0" containerClassName="min-w-0 flex-1" country={country} id="sms-alert-phone" limitNationalDigits onChange={(value) => { setPhone(value ?? ""); setError(null); }} onRawValueChange={(raw) => { if (raw.trim().startsWith("+")) { const inferred = inferPhoneCountry(raw, country); if (inferred && inferred !== country) setCountry(inferred as Country); } }} value={phone} />
+              <PhoneCountrySelect ariaLabel={t("notifications.phoneVerification.fields.country")} className="rounded-l-xl rounded-r-none font-medium text-muted-foreground" countries={countries} onChange={(next) => { setCountry(next as Country); setPhone(""); }} value={country} />
+              <PhoneInput autoFocus className="rounded-l-none border-l-0" containerClassName="min-w-0 flex-1" country={country} id="sms-alert-phone" limitNationalDigits onChange={(value) => { setPhone(value ?? ""); setError(null); }} onRawValueChange={(raw) => { if (raw.trim().startsWith("+")) { const inferred = inferPhoneCountry(raw, country); if (inferred && inferred !== country) setCountry(inferred as Country); } }} value={phone} />
             </div>
           </Field>
           {error ? <FieldError>{error}</FieldError> : null}
@@ -148,7 +148,7 @@ export function SmsPhoneVerificationDialog({ businessId, open, onOpenChange, onV
         <DialogHeader><DialogTitle>{t("notifications.phoneVerification.code.title")}</DialogTitle><DialogDescription>{t("notifications.phoneVerification.code.description", { phone: formatPhoneNumberDisplay(step.phoneE164, locale) })}</DialogDescription></DialogHeader>
         <div className="flex flex-col items-center gap-4">
           <InputOTP aria-label={t("notifications.phoneVerification.code.title")} autoComplete="one-time-code" autoFocus containerClassName="justify-center" disabled={codeDisabled} maxLength={6} onChange={(value) => { const next = value.replace(/\D/g, "").slice(0, 6); if (next.length < 6) submittedCodeRef.current = ""; setCode(next); if (!locked) setError(null); }} value={code}>
-            <InputOTPGroup>{[0, 1, 2, 3, 4, 5].map((index) => <InputOTPSlot aria-invalid={shownError ? true : undefined} className="size-12 text-lg" index={index} key={index} />)}</InputOTPGroup>
+            <InputOTPGroup>{[0, 1, 2, 3, 4, 5].map((index) => <InputOTPSlot aria-invalid={shownError ? true : undefined} index={index} key={index} />)}</InputOTPGroup>
           </InputOTP>
           {check.isPending ? <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status"><LoaderCircle className="size-4 animate-spin" />{t("notifications.phoneVerification.code.verifying")}</div> : null}
           {shownError ? <FieldError className="text-center">{shownError}</FieldError> : null}

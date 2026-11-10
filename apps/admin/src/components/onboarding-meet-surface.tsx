@@ -143,11 +143,11 @@ function MeetAgent() {
           <FieldGroup className="gap-4">
             <Field>
               <FieldLabel htmlFor="meet-name">{t("meet.name")}</FieldLabel>
-              <Input className="h-11" id="meet-name" maxLength={80} onBlur={saveTyped} onChange={(event) => setNameDraft(event.target.value)} value={name} />
+              <Input id="meet-name" maxLength={80} onBlur={saveTyped} onChange={(event) => setNameDraft(event.target.value)} value={name} />
             </Field>
             <Field>
               <FieldLabel htmlFor="meet-voice">{tAgent("fields.voice.label")}</FieldLabel>
-              <div className="flex h-11 items-center justify-between gap-3 rounded-xl border border-border pr-1.5 pl-4">
+              <div className="flex h-10 items-center justify-between gap-3 rounded-xl border border-border pr-1 pl-3 shadow-xs">
                 <span className="min-w-0 truncate text-sm">{tAgent("fields.voice.summary", { voice: voiceName(voice), traits: voiceTraits(voice) })}</span>
                 <Button id="meet-voice" onClick={() => setVoiceOpen(true)} size="sm" type="button" variant="outline">{tAgent("fields.voice.change")}</Button>
               </div>
@@ -159,7 +159,7 @@ function MeetAgent() {
             <Field>
               <FieldLabel htmlFor="meet-language">{t("meet.language")}</FieldLabel>
               <Select items={runtimeLocales.map((code) => ({ value: code, label: t(`common:callerLanguage.${code}`) }))} onValueChange={(value) => { if (value && value !== savedLocale) save.mutate({ locale: value as RuntimeLocale }); }} value={savedLocale}>
-                <SelectTrigger className="data-[size=default]:h-11 w-full *:data-[slot=select-value]:gap-2" id="meet-language"><SelectValue>{(value: RuntimeLocale | null) => value ? <><Flag region={runtimeLocaleRegion(value)} /><span className="truncate">{t(`common:callerLanguage.${value}`)}</span></> : null}</SelectValue></SelectTrigger>
+                <SelectTrigger className="w-full *:data-[slot=select-value]:gap-2" id="meet-language"><SelectValue>{(value: RuntimeLocale | null) => value ? <><Flag region={runtimeLocaleRegion(value)} /><span className="truncate">{t(`common:callerLanguage.${value}`)}</span></> : null}</SelectValue></SelectTrigger>
                 <SelectContent><SelectGroup>{runtimeLocales.map((code) => <SelectItem key={code} value={code}><Flag region={runtimeLocaleRegion(code)} />{t(`common:callerLanguage.${code}`)}</SelectItem>)}</SelectGroup></SelectContent>
               </Select>
             </Field>

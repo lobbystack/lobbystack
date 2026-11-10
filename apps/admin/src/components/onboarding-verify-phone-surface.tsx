@@ -136,7 +136,7 @@ export function OnboardingVerifyPhoneSurface() {
       <div className="flex flex-col items-center gap-4">
         <p className="text-center text-sm text-muted-foreground">{t("verifyPhone.code.sentTo", { phone: formatPhoneNumberDisplay(attempt.phoneE164) })}</p>
         <InputOTP autoFocus disabled={check.isPending || navigating} maxLength={6} onChange={setCode} value={code}>
-          <InputOTPGroup>{[0, 1, 2, 3, 4, 5].map((index) => <InputOTPSlot className="size-12 text-lg" index={index} key={index} />)}</InputOTPGroup>
+          <InputOTPGroup>{[0, 1, 2, 3, 4, 5].map((index) => <InputOTPSlot index={index} key={index} />)}</InputOTPGroup>
         </InputOTP>
         {check.isPending ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><LoaderCircle className="size-4 animate-spin" />{t("verifyPhone.code.checking")}</div> : null}
         {error ? <FieldError>{error}</FieldError> : null}
@@ -154,8 +154,8 @@ export function OnboardingVerifyPhoneSurface() {
         <Field>
           <FieldLabel htmlFor="onboarding-phone">{t("verifyPhone.fields.mobileNumber")}</FieldLabel>
           <div className="flex min-w-0">
-            <PhoneCountrySelect ariaLabel={t("verifyPhone.fields.country")} className="h-11 rounded-l-xl rounded-r-none px-4 font-medium text-muted-foreground" countries={options} onChange={(next) => { setCountry(next as Country); setPhone(""); setJoined(false); setError(null); }} value={country} />
-            <PhoneInput autoFocus className="h-11 rounded-l-none border-l-0" containerClassName="min-w-0 flex-1" country={country} disabled={!sellsNumbers} id="onboarding-phone" limitNationalDigits onChange={(value) => setPhone(value ?? "")} value={phone} />
+            <PhoneCountrySelect ariaLabel={t("verifyPhone.fields.country")} className="rounded-l-xl rounded-r-none font-medium text-muted-foreground" countries={options} onChange={(next) => { setCountry(next as Country); setPhone(""); setJoined(false); setError(null); }} value={country} />
+            <PhoneInput autoFocus className="rounded-l-none border-l-0" containerClassName="min-w-0 flex-1" country={country} disabled={!sellsNumbers} id="onboarding-phone" limitNationalDigits onChange={(value) => setPhone(value ?? "")} value={phone} />
           </div>
           {sellsNumbers ? <FieldDescription>{t("verifyPhone.hint")}</FieldDescription> : null}
         </Field>

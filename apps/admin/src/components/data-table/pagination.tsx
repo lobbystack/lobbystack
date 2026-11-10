@@ -73,7 +73,7 @@ export function DataTablePagination<TData extends RowData>({
             }}
             value={`${table.state.pagination.pageSize}`}
           >
-            <SelectTrigger className="h-8 w-[70px]">
+            <SelectTrigger className="w-[70px]" size="sm">
               <SelectValue placeholder={table.state.pagination.pageSize} />
             </SelectTrigger>
             <SelectContent side="top">

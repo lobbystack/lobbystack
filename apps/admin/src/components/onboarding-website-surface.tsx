@@ -69,10 +69,10 @@ export function OnboardingWebsiteSurface() {
       <FieldGroup className="gap-4">
         <Field aria-busy={!business || undefined}>
           <FieldLabel htmlFor="onboarding-website-url">{t("website.label")}</FieldLabel>
-          {!business ? <Skeleton aria-hidden="true" className="h-11 w-full" /> : (
+          {!business ? <Skeleton aria-hidden="true" className="h-10 w-full rounded-xl" /> : (
             <div className="relative">
               <Globe aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input autoComplete="url" autoFocus className="h-11 pl-9" id="onboarding-website-url" onChange={(event) => { edited.current = true; setWebsiteUrl(event.target.value); }} placeholder={t("website.placeholder")} type="text" value={websiteUrl} />
+              <Input autoComplete="url" autoFocus className="pl-9" id="onboarding-website-url" onChange={(event) => { edited.current = true; setWebsiteUrl(event.target.value); }} placeholder={t("website.placeholder")} type="text" value={websiteUrl} />
             </div>
           )}
         </Field>

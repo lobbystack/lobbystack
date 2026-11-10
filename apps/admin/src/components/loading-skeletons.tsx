@@ -708,12 +708,12 @@ export function PhoneNumberChooserSkeleton({ labels, rows = 4 }: { labels: { cou
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-[140px_1fr_160px_auto] sm:items-end">
         <div className="flex flex-col gap-2">
           <span className="text-sm font-medium">{labels.country}</span>
-          <Skeleton aria-hidden="true" className="h-9 w-20" />
+          <Skeleton aria-hidden="true" className="h-10 w-20 rounded-xl" />
         </div>
         <div aria-hidden="true" className="hidden sm:block" />
         <div className="flex flex-col gap-2">
           <span className="text-sm font-medium">{labels.areaCode}</span>
-          <Skeleton aria-hidden="true" className="h-9 w-full" />
+          <Skeleton aria-hidden="true" className="h-10 w-full rounded-xl" />
         </div>
         <HiddenTextSkeleton skeletonClassName="inline-flex h-10 w-full items-center justify-center rounded-full px-5 text-sm font-[550] tracking-[0.01em] whitespace-nowrap sm:w-fit">{labels.search}</HiddenTextSkeleton>
       </div>
@@ -741,7 +741,7 @@ export function OnboardingBrandSkeleton({ labels }: { labels: { name: string; na
       <div className="flex flex-col gap-5">
         <div className="flex flex-col gap-3">
           <span className="text-sm leading-snug font-medium">{labels.name}</span>
-          <Skeleton aria-hidden="true" className="h-11 w-full rounded-xl" />
+          <Skeleton aria-hidden="true" className="h-10 w-full rounded-xl" />
           <HiddenTextSkeleton className="text-sm">{labels.nameHint}</HiddenTextSkeleton>
         </div>
         <div className="flex flex-col gap-3">
@@ -757,7 +757,7 @@ export function OnboardingBrandSkeleton({ labels }: { labels: { name: string; na
           <Surface className="px-4 py-5"><Skeleton aria-hidden="true" className="mx-auto h-6 w-40" /></Surface>
         </div>
       </div>
-      <HiddenTextSkeleton className="mt-2" skeletonClassName="flex h-11 w-full items-center justify-center rounded-full text-sm font-medium">{labels.continue}</HiddenTextSkeleton>
+      <HiddenTextSkeleton className="mt-2" skeletonClassName="flex h-10 w-full items-center justify-center rounded-full text-sm font-[550] tracking-[0.01em]">{labels.continue}</HiddenTextSkeleton>
       <HiddenTextSkeleton className="text-center" skeletonClassName="mx-auto h-5">{labels.skip}</HiddenTextSkeleton>
     </div>
   );
@@ -770,12 +770,12 @@ export function VerifyPhoneFormSkeleton({ labels }: { labels: { mobileNumber: st
       <div className="flex flex-col gap-2">
         <span className="text-sm font-medium">{labels.mobileNumber}</span>
         <div className="flex min-w-0">
-          <Skeleton aria-hidden="true" className="h-11 w-24 rounded-r-none" />
-          <Skeleton aria-hidden="true" className="h-11 min-w-0 flex-1 rounded-l-none" />
+          <Skeleton aria-hidden="true" className="h-10 w-24 rounded-l-xl rounded-r-none" />
+          <Skeleton aria-hidden="true" className="h-10 min-w-0 flex-1 rounded-l-none rounded-r-xl" />
         </div>
         <HiddenTextSkeleton className="text-sm">{labels.hint}</HiddenTextSkeleton>
       </div>
-      <HiddenTextSkeleton className="mt-2" skeletonClassName="flex h-11 w-full items-center justify-center rounded-full text-sm font-medium">{labels.submit}</HiddenTextSkeleton>
+      <HiddenTextSkeleton className="mt-2" skeletonClassName="flex h-10 w-full items-center justify-center rounded-full text-sm font-[550] tracking-[0.01em]">{labels.submit}</HiddenTextSkeleton>
     </div>
   );
 }
@@ -788,7 +788,7 @@ export function TestPanelSkeleton() {
         <Skeleton aria-hidden="true" className="size-40 rounded-full" />
         <Skeleton aria-hidden="true" className="h-10 w-28 rounded-full" />
       </div>
-      <Skeleton aria-hidden="true" className="h-11 w-full shrink-0 rounded-xl" />
+      <Skeleton aria-hidden="true" className="h-10 w-full shrink-0 rounded-xl" />
     </div>
   );
 }
@@ -826,7 +826,7 @@ export function WebsiteImportProgressSkeleton() {
 export function MeetFormSkeleton({ labels }: { labels: { name: string; voice: string; greeting: string; language: string } }) {
   return (
     <div aria-busy="true" className="flex flex-col gap-4">
-      {([["name", "h-11 rounded-xl"], ["voice", "h-11 rounded-xl"], ["greeting", "h-28 rounded-md"], ["language", "h-11 rounded-md"]] as const).map(([key, size]) => (
+      {([["name", "h-10 rounded-xl"], ["voice", "h-10 rounded-xl"], ["greeting", "h-28 rounded-md"], ["language", "h-10 rounded-md"]] as const).map(([key, size]) => (
         <div className="flex flex-col gap-2" key={key}>
           <span className="text-sm leading-snug font-medium">{labels[key]}</span>
           <Skeleton aria-hidden="true" className={`w-full ${size}`} />
@@ -838,7 +838,7 @@ export function MeetFormSkeleton({ labels }: { labels: { name: string; voice: st
 
 /** The open times grid while a day's times load: buttons the size of a time. */
 export function OpeningTimesSkeleton({ count = 6 }: { count?: number }) {
-  return <div aria-busy="true" className="grid grid-cols-3 gap-2 sm:grid-cols-2">{Array.from({ length: count }, (_, index) => <Skeleton className="h-9 rounded-xl" key={index} />)}</div>;
+  return <div aria-busy="true" className="grid grid-cols-3 gap-2 sm:grid-cols-2">{Array.from({ length: count }, (_, index) => <Skeleton className="h-10 rounded-full" key={index} />)}</div>;
 }
 
 /** A combobox's options while they load: a few one-line rows the height of an option. */
@@ -848,5 +848,5 @@ export function ComboboxOptionsSkeleton({ rows = 3 }: { rows?: number }) {
 
 /** A select or input while its options load: the control's own height and full width. */
 export function FieldControlSkeleton() {
-  return <Skeleton aria-busy="true" className="h-9 w-full rounded-4xl" />;
+  return <Skeleton aria-busy="true" className="h-10 w-full rounded-md" />;
 }

@@ -70,8 +70,8 @@ function LoadingAffiliatePage({ locale, t }: { locale: SupportedLocale; t: Trans
           <div className="flex flex-col gap-4">
             <HiddenTextSkeleton className="font-medium leading-snug">{t("referral.title")}</HiddenTextSkeleton>
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Skeleton className="h-9 w-full" />
-              <Skeleton className="h-9 shrink-0"><span className="invisible inline-flex items-center gap-2 px-3 text-sm font-medium"><CopyIcon className="size-4" />{t("referral.copy")}</span></Skeleton>
+              <Skeleton className="h-10 w-full rounded-xl" />
+              <Skeleton className="h-10 shrink-0 rounded-full"><span className="invisible inline-flex items-center gap-2 px-5 text-sm font-[550] tracking-[0.01em]"><CopyIcon className="size-4" />{t("referral.copy")}</span></Skeleton>
             </div>
           </div>
           <div className="flex flex-col gap-4">

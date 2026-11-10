@@ -92,7 +92,7 @@ export function DashboardFeedbackDialog({ businessId, onOpenChange, open }: Feed
                 placeholder={t("feedback.placeholder")}
                 rows={4}
                 value={message}
-                className="min-h-28 rounded-xl border-border/80 bg-muted/30 px-3 py-3 text-sm placeholder:text-muted-foreground/70 focus-visible:ring-ring/40"
+                className="min-h-28"
               />
             </Field>
           </FieldGroup>

@@ -315,7 +315,7 @@ function SpendingCapSectionSkeleton({
               <div aria-hidden="true" className="text-sm leading-none font-medium">
                 <Skeleton className="h-4 w-fit"><span className="invisible">{t("billing.spendingCap.amountLabel")}</span></Skeleton>
               </div>
-              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-10 w-full rounded-xl" />
             </div>
             <Skeleton className="h-8 w-20" />
           </div>
