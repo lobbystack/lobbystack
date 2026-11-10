@@ -101,10 +101,10 @@ export function PartnerPackagesSurface() {
       const setupFee = parsePriceInput(draft.setupFee, currency!, i18n.language);
       const minutes = readAllowance(draft.minutes);
       const chats = readAllowance(draft.chats);
-      if (!price) throw Object.assign(new Error("invalid price"), { code: "invalid_price" });
-      if (setupFee === undefined) throw Object.assign(new Error("invalid setup fee"), { code: "invalid_setup_fee" });
+      if (price.kind !== "amount" || price.minor === 0) throw Object.assign(new Error("invalid price"), { code: "invalid_price" });
+      if (setupFee.kind === "invalid") throw Object.assign(new Error("invalid setup fee"), { code: "invalid_setup_fee" });
       if (minutes === undefined || chats === undefined) throw Object.assign(new Error("invalid allowance"), { code: "invalid_allowance" });
-      return await requestJson<PartnerPackage>("/api/partner/packages", { method: "POST", body: JSON.stringify({ partnerId: partner.partnerId, name: draft.name.trim(), monthlyPriceMinor: price, setupFeeMinor: setupFee, voiceMinutes: minutes, chats }) });
+      return await requestJson<PartnerPackage>("/api/partner/packages", { method: "POST", body: JSON.stringify({ partnerId: partner.partnerId, name: draft.name.trim(), monthlyPriceMinor: price.minor, setupFeeMinor: setupFee.kind === "amount" ? setupFee.minor : null, voiceMinutes: minutes, chats }) });
     },
     onSuccess: async (created) => {
       telemetry.track("web.partner.package_created", { partnerId: partner.partnerId, packageId: created.packageId, currency: created.currency, setupFee: created.setupFeeMinor !== null, pathname: pathname ?? "/partner" });
