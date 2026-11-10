@@ -70,7 +70,7 @@ To give PINs to many customers at once, use the [command line](/api/cli) or the 
 
 A caller can try their PIN 3 times on each change. After 5 wrong PINs in a row, even across calls, the PIN is locked and the contact shows it as locked. Setting a new PIN unlocks it.
 
-Callers without a PIN, or with a locked one, can't change appointments by phone. The agent passes their cancellation or reschedule request to your team instead. Each request appears under **Action required** on **Home** and on the call page. Click **Approve cancellation** to cancel the appointment, or **Approve reschedule** to move it to the time the caller asked for. If that time is no longer free, the appointment stays as it is and the request stays open.
+Callers without a PIN, or with a locked one, can't change appointments by phone. The agent passes their cancellation or reschedule request to your team instead. Each request appears under **Action required** on **Home**, and clicking it opens the call in the **Inbox**. On the call's **Details** tab, click **Approve cancellation** to cancel the appointment, or **Approve reschedule** to move it to the time the caller asked for. Click **Other time** to pick a different time. If that time is no longer free, the appointment stays as it is and the request stays open.
 
 <Warning>
   On a self-hosted LobbyStack, PINs are checked with the server's `OTP_HASH_SECRET` (or `ENCRYPTION_KEY` when it isn't set). If that secret changes, every saved PIN stops working and has to be set again.

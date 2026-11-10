@@ -70,7 +70,7 @@ Para dar un PIN a muchos clientes a la vez, use la [línea de comandos](/es/api/
 
 Quien llama puede intentar su PIN 3 veces en cada cambio. Tras 5 PIN incorrectos seguidos, incluso en llamadas distintas, el PIN se bloquea y el contacto lo muestra como bloqueado. Configurar un PIN nuevo lo desbloquea.
 
-Si quien llama no tiene PIN, o lo tiene bloqueado, no puede cambiar citas por teléfono. En su lugar, el agente pasa su solicitud de cancelación o de cambio de hora a su equipo. Cada solicitud aparece en **Acción requerida** en **Inicio** y en la página de la llamada. Haz clic en **Aprobar la cancelación** para cancelar la cita, o en **Aprobar cambio de hora** para moverla a la hora que pidió quien llamó. Si esa hora ya no está libre, la cita no cambia y la solicitud sigue abierta.
+Si quien llama no tiene PIN, o lo tiene bloqueado, no puede cambiar citas por teléfono. En su lugar, el agente pasa su solicitud de cancelación o de cambio de hora a su equipo. Cada solicitud aparece en **Acción requerida** en **Inicio**, y al hacer clic en ella se abre la llamada en la **Bandeja de entrada**. En la pestaña **Detalles** de la llamada, haga clic en **Aprobar la cancelación** para cancelar la cita, o en **Aprobar cambio de hora** para moverla a la hora que pidió quien llamó. Haga clic en **Otra hora** para elegir otra hora. Si esa hora ya no está libre, la cita no cambia y la solicitud sigue abierta.
 
 <Warning>
   En una instalación autoalojada de LobbyStack, los PIN se comprueban con el `OTP_HASH_SECRET` del servidor (o `ENCRYPTION_KEY` si no está configurado). Si ese secreto cambia, todos los PIN guardados dejan de funcionar y hay que configurarlos de nuevo.

@@ -70,7 +70,7 @@ Pour donner un code PIN à de nombreux clients à la fois, utilisez la [ligne de
 
 L'appelant peut essayer son code PIN 3 fois par modification. Après 5 codes PIN erronés d'affilée, même sur plusieurs appels, le code PIN est bloqué et la fiche contact l'indique. Définir un nouveau code PIN le débloque.
 
-Un appelant sans code PIN, ou dont le code PIN est bloqué, ne peut pas modifier ses rendez-vous par téléphone. L'agent transmet plutôt sa demande d'annulation ou de report à votre équipe. Chaque demande apparaît sous **Action requise** sur **Accueil** et sur la page de l'appel. Cliquez sur **Approuver l’annulation** pour annuler le rendez-vous, ou sur **Approuver le report** pour le déplacer à l'horaire demandé par l'appelant. Si cet horaire n'est plus libre, le rendez-vous reste inchangé et la demande reste ouverte.
+Un appelant sans code PIN, ou dont le code PIN est bloqué, ne peut pas modifier ses rendez-vous par téléphone. L'agent transmet plutôt sa demande d'annulation ou de report à votre équipe. Chaque demande apparaît sous **Action requise** sur **Accueil**, et un clic dessus ouvre l'appel dans la **Boîte de réception**. Dans l'onglet **Détails** de l'appel, cliquez sur **Approuver l’annulation** pour annuler le rendez-vous, ou sur **Approuver le report** pour le déplacer à l'horaire demandé par l'appelant. Cliquez sur **Autre heure** pour choisir un autre horaire. Si cet horaire n'est plus libre, le rendez-vous reste inchangé et la demande reste ouverte.
 
 <Warning>
   Sur une installation auto-hébergée de LobbyStack, les codes PIN sont vérifiés avec le `OTP_HASH_SECRET` du serveur (ou `ENCRYPTION_KEY` s'il n'est pas défini). Si ce secret change, tous les codes PIN enregistrés cessent de fonctionner et doivent être redéfinis.
