@@ -18,8 +18,8 @@
     },
     "actions": {
       "moreOptions": "Još opcija",
-      "blockContact": "Blokiraj kontakt",
-      "unblockContact": "Odblokiraj kontakt",
+      "blockContact": "Blokiraj",
+      "unblockContact": "Odblokiraj",
       "blockTitle": "Blokirati kontakt?",
       "blockDescription": "Novi SMS odgovori biće zaustavljeni, a novi dolazni pozivi sa ovog kontakta biće odmah prekinuti.",
       "blockConfirm": "Blokiraj kontakt",
@@ -30,12 +30,13 @@
       "unblockConfirm": "Odblokiraj kontakt",
       "unblockSuccess": "Kontakt je odblokiran.",
       "updateFailed": "Nije moguće ažurirati status blokiranja.",
-      "deleteContact": "Izbriši kontakt",
+      "deleteContact": "Izbriši",
       "deleteTitle": "Izbrisati kontakt?",
       "deleteDescription": "Kontakt će biti trajno uklonjen sa Vaše kontrolne table.",
       "deleteConfirm": "Izbriši kontakt",
       "deleteCancel": "Otkaži",
-      "deleteFailed": "Nije moguće izbrisati kontakt."
+      "deleteFailed": "Nije moguće izbrisati kontakt.",
+      "editContact": "Izmeni"
     }
   },
   "detail": {
@@ -181,5 +182,16 @@
     "nextPage": "Idi na sledeću stranicu",
     "lastPage": "Idi na poslednju stranicu",
     "goToPage": "Idi na stranicu {{page}}"
+  },
+  "edit": {
+    "title": "Izmeni kontakt",
+    "name": "Ime",
+    "email": "E-pošta",
+    "cancel": "Otkaži",
+    "save": "Sačuvaj",
+    "saving": "Čuvanje...",
+    "saved": "Kontakt je ažuriran.",
+    "failed": "Kontakt nije sačuvan. Pokušajte ponovo.",
+    "invalidEmail": "Unesite ispravnu adresu e-pošte."
   }
 }

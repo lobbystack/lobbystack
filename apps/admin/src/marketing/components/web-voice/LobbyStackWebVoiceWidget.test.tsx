@@ -2,6 +2,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { callLanguage } from "@/marketing/components/web-voice/LobbyStackAuraVoiceDemo"
 import { LobbyStackHeroVoiceDemo } from "@/marketing/components/web-voice/LobbyStackWebVoiceWidget"
 import { DISCONNECT_GRACE_MS } from "@lobbystack/web-voice"
 
@@ -67,6 +68,7 @@ beforeEach(() => {
   )
   vi.stubGlobal("navigator", {
     ...navigator,
+    languages: ["en-US", "en"],
     mediaDevices: {
       getUserMedia: vi.fn(async () => ({
         getAudioTracks: () => [track],
@@ -112,6 +114,59 @@ async function capturedEvents() {
   })
   return capture.mock.calls as Array<[string, Record<string, unknown> | undefined]>
 }
+
+describe("landing hero voice demo language", () => {
+  const sentLanguage = () => JSON.parse(vi.mocked(fetch).mock.calls.at(-1)![1]!.body as string).language
+
+  it("asks for the page's own language", async () => {
+    render(<LobbyStackHeroVoiceDemo locale="es" />)
+    fireEvent.click(screen.getByRole("button", { name: "Iniciar llamada" }))
+    await waitFor(() => expect(fetch).toHaveBeenCalled())
+    expect(sentLanguage()).toBe("es")
+  })
+
+  it("asks for the browser's language on the English page when the site has no pages in it", async () => {
+    vi.stubGlobal("navigator", { ...navigator, languages: ["de-DE", "de", "en"] })
+    render(<LobbyStackHeroVoiceDemo locale="en" />)
+    fireEvent.click(screen.getByRole("button", { name: "Start call" }))
+    await waitFor(() => expect(fetch).toHaveBeenCalled())
+    expect(sentLanguage()).toBe("de")
+  })
+})
+
+describe("callLanguage", () => {
+  it("keeps a translated page's language whatever the browser prefers", () => {
+    expect(callLanguage("fr", ["de-DE"])).toBe("fr")
+  })
+
+  it("takes the first browser language the AI speaks on the English page", () => {
+    expect(callLanguage("en", ["ja", "pt-BR", "it"])).toBe("pt")
+    expect(callLanguage("en", ["nl-BE"])).toBe("nl")
+  })
+
+  it("stays in English when the browser prefers a site language first", () => {
+    // A French browser on the English page chose it over the French pages.
+    expect(callLanguage("en", ["fr-FR", "de"])).toBe("en")
+    expect(callLanguage("en", ["en-US", "de"])).toBe("en")
+    expect(callLanguage("en", ["ja"])).toBe("en")
+  })
+})
+
+describe("landing hero voice demo start failures", () => {
+  it("tells the visitor in a toast when the demo's call limit is reached", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ code: "web_voice_rate_limited", error: "The call couldn't start." }), { status: 429, headers: { "content-type": "application/json" } }))
+    render(<LobbyStackHeroVoiceDemo locale="en" />)
+    fireEvent.click(screen.getByRole("button", { name: "Start call" }))
+    expect(await screen.findByText("You've reached the demo limit for now. Try again in an hour.", { selector: "[data-sonner-toast] *" })).toBeTruthy()
+  })
+
+  it("says it in the page's language", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ code: "web_voice_rate_limited" }), { status: 429, headers: { "content-type": "application/json" } }))
+    render(<LobbyStackHeroVoiceDemo locale="fr" />)
+    fireEvent.click(screen.getByRole("button", { name: "Lancer l’appel" }))
+    expect(await screen.findByText("Vous avez atteint la limite de la démo. Réessayez dans une heure.", { selector: "[data-sonner-toast] *" })).toBeTruthy()
+  })
+})
 
 describe("landing hero voice demo call endings", () => {
   it("ends the call normally when the receptionist hangs up", async () => {

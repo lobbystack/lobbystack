@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 
-import { appointments, calls, contacts, conversations, enqueueOutbox, inOrder, messages, services, staff, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { appointments, auditLogs, calls, contacts, conversations, enqueueOutbox, inOrder, messages, services, staff, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import { contactPasscodeStatusInTransaction } from "./contactPasscodes";
@@ -115,6 +115,30 @@ export async function getContactDetail(
       () => contactPasscodeStatusInTransaction(tx, { businessId: input.businessId, contactId: input.contactId }),
     ]);
     return { contact, channels, passcode, calls: recentCalls, messages: recentMessages, appointments: recentAppointments, activityCounts: { calls: Number(callCount[0]?.count ?? 0), messages: Number(messageCount[0]?.count ?? 0), appointments: Number(appointmentCount[0]?.count ?? 0), conversations: Number(conversationCount[0]?.count ?? 0) } };
+  });
+}
+
+/**
+ * An operator corrects a contact's name or email, for example a name the agent misheard.
+ * The agent only fills a name that is empty, so a corrected name stays. Null clears a field.
+ */
+export async function updateContactDetails(
+  context: DomainContext,
+  input: { userId: string; businessId: string; contactId: string; name?: string | null | undefined; email?: string | null | undefined },
+): Promise<{ contactId: string; name: string | null; email: string | null } | null> {
+  return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async tx => {
+    await requireBusinessAdmin(tx, input);
+    if (input.name === undefined && input.email === undefined) throw Object.assign(new Error("Send a name or an email to update."), { status: 400 });
+    const [current] = await tx.select({ id: contacts.id, name: contacts.name, email: contacts.email }).from(contacts).where(and(eq(contacts.id, input.contactId), eq(contacts.businessId, input.businessId))).limit(1).for("update");
+    if (!current) return null;
+    // Only a field that actually differs is written, so saving without changes leaves no audit entry.
+    const patch = { ...(input.name !== undefined && input.name !== current.name ? { name: input.name } : {}), ...(input.email !== undefined && input.email !== current.email ? { email: input.email } : {}) };
+    if (!Object.keys(patch).length) return { contactId: current.id, name: current.name, email: current.email };
+    const [contact] = await tx.update(contacts).set({ ...patch, updatedAt: new Date() }).where(and(eq(contacts.id, input.contactId), eq(contacts.businessId, input.businessId))).returning({ id: contacts.id, name: contacts.name, email: contacts.email });
+    if (!contact) return null;
+    await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.userId, eventType: "contact.updated", entityType: "contact", entityId: contact.id, payload: { fields: Object.keys(patch) } });
+    await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "contact", aggregateId: input.contactId, dedupeKey: `contact:${input.contactId}:updated:${Date.now()}`, payload: { type: "conversation.updated", entityId: input.contactId } });
+    return { contactId: contact.id, name: contact.name, email: contact.email };
   });
 }
 

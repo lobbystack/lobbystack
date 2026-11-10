@@ -12,7 +12,7 @@ import {
   type ColumnDef,
   type PaginationState,
 } from "@tanstack/react-table";
-import { CalendarDays, ChevronDown, MoreHorizontal, Pencil, Plus, Search, Trash2, UserRound, X } from "lucide-react";
+import { CalendarDays, ChevronDown, MoreHorizontal, Pencil, Plus, Trash2, UserRound, X } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import { enUS, es, fr, srLatn } from "react-day-picker/locale";
 import type { Country } from "react-phone-number-input/input";
@@ -34,6 +34,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/ui/search-input";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
@@ -240,9 +241,8 @@ function ServicesPicker({ id, invalid, label, onChange, services, value }: { id:
       <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
     </PopoverTrigger>
     <PopoverContent align="start" className="w-(--anchor-width) gap-0 p-0" initialFocus={searchRef}>
-      <div className="relative border-b p-2">
-        <Search aria-hidden="true" className="pointer-events-none absolute left-5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input aria-label={t("add.fields.services.search")} className="pl-9" onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") event.preventDefault(); }} placeholder={t("add.fields.services.search")} ref={searchRef} value={query} />
+      <div className="border-b p-2">
+        <SearchInput aria-label={t("add.fields.services.search")} onValueChange={setQuery} onKeyDown={(event) => { if (event.key === "Enter") event.preventDefault(); }} placeholder={t("add.fields.services.search")} ref={searchRef} value={query} />
       </div>
       {visible.length ? <div className="flex max-h-64 flex-col overflow-y-auto p-1">
         <label className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 font-medium hover:bg-muted/60">
@@ -372,7 +372,7 @@ function EmployeeDialog({ businessId, employee, open, onOpenChange, services, to
             <Field data-invalid={phoneError ? true : undefined}>
               <FieldContent><FieldLabel htmlFor={phoneId}>{t("add.fields.phone.label")}</FieldLabel><FieldDescription>{t("add.fields.phone.hint")}</FieldDescription></FieldContent>
               <div className="flex min-w-0">
-                <PhoneCountrySelect ariaLabel={t("add.fields.phone.country")} className="w-20 rounded-r-none px-4 font-medium text-muted-foreground" countries={countries.filter((option) => isTransferCountry(option.code))} onChange={(next) => { setCountry(next as Country); setPhone(""); setPhoneDraft(""); setPhoneProblem(null); }} value={country} />
+                <PhoneCountrySelect ariaLabel={t("add.fields.phone.country")} className="rounded-r-none px-4 font-medium text-muted-foreground" countries={countries.filter((option) => isTransferCountry(option.code))} onChange={(next) => { setCountry(next as Country); setPhone(""); setPhoneDraft(""); setPhoneProblem(null); }} value={country} />
                 <PhoneInput aria-describedby={phoneError ? `${phoneId}-error` : undefined} aria-invalid={phoneError ? true : undefined} className="rounded-l-none border-l-0" containerClassName="min-w-0 flex-1" country={country} id={phoneId} limitNationalDigits locale={locale} onChange={(value) => { setPhone(value ?? ""); setPhoneProblem(null); }} onRawValueChange={(raw) => { setPhoneDraft(raw); if (raw.trim().startsWith("+")) { const inferred = inferPhoneCountry(raw, country); if (inferred && inferred !== country) setCountry(inferred as Country); } }} value={phone} />
               </div>
               {phoneError ? <FieldError id={`${phoneId}-error`}>{phoneError}</FieldError> : null}

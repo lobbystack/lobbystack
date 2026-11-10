@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({ enqueueOutbox: vi.fn(), tx: undefined as unkno
 vi.mock("@lobbystack/db", async (original) => ({ ...(await original<typeof import("@lobbystack/db")>()), enqueueOutbox: mocks.enqueueOutbox, withBusinessTransaction: async (_db: unknown, _context: unknown, callback: (tx: unknown) => unknown) => await callback(mocks.tx) }));
 vi.mock("../authz", async (original) => ({ ...(await original<typeof import("../authz")>()), requireBusinessAdmin: vi.fn() }));
 
-import { createBusiness, ianaTimeZone, inviteMember, updateBusiness, updateBusinessInTransaction } from "./tenancy";
+import { createBusiness, ianaTimeZone, inviteMember, slugAfterRename, slugFromBusinessName, updateBusiness, updateBusinessInTransaction } from "./tenancy";
 
 beforeEach(() => { vi.clearAllMocks(); });
 
@@ -46,6 +46,12 @@ describe("business timezone", () => {
 
   it("refuses to create a business in a zone that isn't an IANA zone", async () => {
     await expect(createBusiness({ db: undefined as never }, { userId: "unused", name: "Test", timezone: "Eastern", businessType: "test" })).rejects.toMatchObject({ status: 400, code: "invalid_timezone" });
+  });
+
+  it.each(["", "   ", "x".repeat(201)])("refuses to rename a business to %j", async (name) => {
+    const { tx, updates } = useTransaction();
+    await expect(updateBusinessInTransaction(tx, { businessId: "biz-1", name })).rejects.toMatchObject({ status: 400, code: "invalid_name" });
+    expect(updates).toEqual([]);
   });
 
   it("saves the canonical zone for the business and its default staff member, and refreshes the snapshot", async () => {
@@ -117,5 +123,61 @@ describe("business summary", () => {
   it("keeps the summary when neither the name nor the locale changes", async () => {
     await updateBusinessInTransaction(tx, { businessId: "biz-1", websiteUrl: "https://oak.example" });
     expect(summaryJobs()).toEqual([]);
+  });
+});
+
+describe("business slug", () => {
+  it("makes the slug from the name", () => {
+    expect(slugFromBusinessName("  GoodFellas Barbershop! ")).toBe("goodfellas-barbershop");
+    expect(slugFromBusinessName("Café Müller")).toBe("cafe-muller");
+    expect(slugFromBusinessName("!!!")).toBe("business");
+  });
+
+  it("follows a rename while the slug is still the one made from the old name", async () => {
+    expect(await slugAfterRename("old-name", "Old Name", "LobbyStack", async () => false)).toBe("lobbystack");
+    expect(await slugAfterRename("old-name-3fa9c21b04de", "Old Name", "LobbyStack", async () => false)).toBe("lobbystack");
+    const suffixed = await slugAfterRename("old-name", "Old Name", "LobbyStack", async (slug) => slug === "lobbystack");
+    expect(suffixed).toMatch(/^lobbystack-[0-9a-f]{12}$/);
+  });
+
+  it("keeps a slug someone chose", async () => {
+    const never = async () => { throw new Error("should not look"); };
+    expect(await slugAfterRename("my-shop", "Old Name", "LobbyStack", never)).toBeNull();
+    expect(await slugAfterRename("old-name-online", "Old Name", "LobbyStack", never)).toBeNull();
+  });
+
+  it("leaves a slug that already follows the new name alone", async () => {
+    const never = async () => { throw new Error("should not look"); };
+    expect(await slugAfterRename("lobbystack", "LobbyStack", "LobbyStack!", never)).toBeNull();
+    expect(await slugAfterRename("lobbystack-3fa9c21b04de", "LobbyStack", "LobbyStack!", never)).toBeNull();
+  });
+
+  function useRename(current: { name: string; slug: string }, takenSlugs: string[] = []) {
+    const updates: Array<{ table: unknown; values: Record<string, unknown> }> = [];
+    const tx = {
+      execute: async () => ({ rows: [] }),
+      select: () => ({ from: () => ({ where: () => Object.assign(Promise.resolve([]), { for: async () => [current], limit: async () => takenSlugs.length ? [{ id: "other" }] : [] }) }) }),
+      update: (table: unknown) => ({ set: (values: Record<string, unknown>) => { updates.push({ table, values }); return { where: () => ({ returning: async () => [{ id: "biz-1" }] }) }; } }),
+    } as never;
+    return { tx, updates };
+  }
+
+  it("changes the slug together with the name", async () => {
+    const { tx, updates } = useRename({ name: "Old Name", slug: "old-name" });
+    await updateBusinessInTransaction(tx, { businessId: "biz-1", name: "LobbyStack" });
+    expect(updates[0]).toEqual({ table: businesses, values: expect.objectContaining({ name: "LobbyStack", slug: "lobbystack" }) });
+  });
+
+  it("keeps the slug when someone chose it", async () => {
+    const { tx, updates } = useRename({ name: "Old Name", slug: "my-shop" });
+    await updateBusinessInTransaction(tx, { businessId: "biz-1", name: "LobbyStack" });
+    expect(updates[0]).toEqual({ table: businesses, values: expect.objectContaining({ name: "LobbyStack" }) });
+    expect(updates[0]!.values).not.toHaveProperty("slug");
+  });
+
+  it("keeps the slug when the name is saved unchanged", async () => {
+    const { tx, updates } = useRename({ name: "LobbyStack", slug: "old-slug" });
+    await updateBusinessInTransaction(tx, { businessId: "biz-1", name: "LobbyStack" });
+    expect(updates[0]!.values).not.toHaveProperty("slug");
   });
 });

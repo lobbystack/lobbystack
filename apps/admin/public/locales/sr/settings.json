@@ -249,7 +249,7 @@
     "spendingCap": {
       "title": "Mesečni limit potrošnje",
       "placeholder": "25.00",
-      "amountLabel": "Limit prekoračenja (USD)",
+      "amountLabel": "Limit prekoračenja",
       "noCap": "Limit potrošnje nije podešen",
       "currentSpend": "Trenutni trošak prekoračenja",
       "spendOfCap": "{{spend}} od {{cap}}",
@@ -475,6 +475,7 @@
       "areaCodeLabel": "Pozivni broj",
       "areaCodePlaceholder": "Pozivni broj",
       "search": "Pretraži",
+      "searching": "Pretraga...",
       "phoneNumberHeader": "Broj telefona",
       "select": "Izaberi",
       "claiming": "Povezivanje novog broja...",
@@ -759,7 +760,8 @@
       "placeholder": "Porodična klinika Maple",
       "save": "Sačuvaj",
       "saving": "Čuvanje...",
-      "saved": "Izmene su sačuvane"
+      "saved": "Izmene su sačuvane",
+      "required": "Unesite naziv preduzeća."
     },
     "changeEmail": {
       "label": "Promeni imejl",
@@ -851,7 +853,9 @@
         "invalidEmail": "Unesite ispravnu imejl adresu.",
         "partnerMember": "{{email}} je u timu partnera ovog radnog prostora. Radi ovde iz partnerske konzole, pa ne može da se pridruži timu.",
         "failed": "Nismo uspeli da pošaljemo poziv. Pokušajte ponovo."
-      }
+      },
+      "emailRequired": "Unesite imejl adresu.",
+      "cancel": "Otkaži"
     },
     "pending": {
       "resend": "Pošalji ponovo",
@@ -1122,6 +1126,8 @@
       "nameLabel": "Naziv",
       "namePlaceholder": "CRM sinhronizacija",
       "scopesLabel": "Pristup",
+      "nameRequired": "Unesite naziv.",
+      "scopesRequired": "Izaberite bar jednu dozvolu.",
       "cancel": "Otkaži",
       "submit": "Kreiraj ključ",
       "creating": "Kreiranje…"

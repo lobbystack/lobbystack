@@ -51,6 +51,7 @@ export function phoneNumberChooserText(t: TFunction<"settings">) {
       countryLabel: t("phoneNumber.picker.countryLabel"),
       areaCodeLabel: t("phoneNumber.picker.areaCodeLabel"),
       areaCodePlaceholder: t("phoneNumber.picker.areaCodePlaceholder"),
+      searching: t("phoneNumber.picker.searching"),
       search: t("phoneNumber.picker.search"),
       phoneNumberHeader: t("phoneNumber.picker.phoneNumberHeader"),
       select: t("phoneNumber.picker.select"),

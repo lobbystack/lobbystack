@@ -18,8 +18,8 @@
     },
     "actions": {
       "moreOptions": "Plus d'options",
-      "blockContact": "Bloquer le contact",
-      "unblockContact": "Débloquer le contact",
+      "blockContact": "Bloquer",
+      "unblockContact": "Débloquer",
       "blockTitle": "Bloquer le contact ?",
       "blockDescription": "Cela empêchera les nouvelles réponses SMS et raccrochera immédiatement les nouveaux appels entrants de ce contact.",
       "blockConfirm": "Bloquer le contact",
@@ -30,12 +30,13 @@
       "unblockConfirm": "Débloquer le contact",
       "unblockSuccess": "Contact débloqué.",
       "updateFailed": "Impossible de mettre à jour l'état de blocage.",
-      "deleteContact": "Supprimer le contact",
+      "deleteContact": "Supprimer",
       "deleteTitle": "Supprimer le contact ?",
       "deleteDescription": "Cela supprimera définitivement le contact de votre tableau de bord.",
       "deleteConfirm": "Supprimer le contact",
       "deleteCancel": "Annuler",
-      "deleteFailed": "Impossible de supprimer le contact."
+      "deleteFailed": "Impossible de supprimer le contact.",
+      "editContact": "Modifier"
     }
   },
   "detail": {
@@ -181,5 +182,16 @@
     "nextPage": "Aller a la page suivante",
     "lastPage": "Aller a la derniere page",
     "goToPage": "Aller a la page {{page}}"
+  },
+  "edit": {
+    "title": "Modifier le contact",
+    "name": "Nom",
+    "email": "E-mail",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "saving": "Enregistrement...",
+    "saved": "Contact mis à jour.",
+    "failed": "Impossible d'enregistrer le contact. Réessayez.",
+    "invalidEmail": "Saisissez une adresse e-mail valide."
   }
 }

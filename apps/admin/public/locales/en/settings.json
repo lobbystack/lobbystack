@@ -249,7 +249,7 @@
     "spendingCap": {
       "title": "Monthly spending cap",
       "placeholder": "25.00",
-      "amountLabel": "Overage cap (USD)",
+      "amountLabel": "Overage cap",
       "noCap": "No spending cap is set",
       "currentSpend": "Current overage spend",
       "spendOfCap": "{{spend}} of {{cap}}",
@@ -468,6 +468,7 @@
       "areaCodeLabel": "Area code",
       "areaCodePlaceholder": "Area code",
       "search": "Search",
+      "searching": "Searching...",
       "phoneNumberHeader": "Phone number",
       "select": "Select",
       "claiming": "Connecting your new number...",
@@ -752,7 +753,8 @@
       "placeholder": "Maple Family Clinic",
       "save": "Save",
       "saving": "Saving...",
-      "saved": "Changes saved"
+      "saved": "Changes saved",
+      "required": "Enter a business name."
     },
     "changeEmail": {
       "label": "Change email",
@@ -844,7 +846,9 @@
         "invalidEmail": "Enter a valid email address.",
         "partnerMember": "{{email}} is on this workspace's partner team. They work here from the partner console, so they can't join the team.",
         "failed": "We couldn't send that invitation. Please try again."
-      }
+      },
+      "emailRequired": "Enter an email address.",
+      "cancel": "Cancel"
     },
     "pending": {
       "resend": "Resend",
@@ -1115,6 +1119,8 @@
       "nameLabel": "Name",
       "namePlaceholder": "CRM sync",
       "scopesLabel": "Access",
+      "nameRequired": "Enter a name.",
+      "scopesRequired": "Choose at least one permission.",
       "cancel": "Cancel",
       "submit": "Create key",
       "creating": "Creating…"

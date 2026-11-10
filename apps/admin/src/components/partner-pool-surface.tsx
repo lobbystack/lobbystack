@@ -11,8 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Surface } from "@/components/ui/surface";
 import { Switch } from "@/components/ui/switch";
-import { formatCapInput, parseCapInputToCents } from "@/lib/billing-cap";
 import { intlLocale } from "@/lib/locale";
+import { parsePriceInput, priceInputValue } from "@/lib/price-input";
 import { requestJson } from "@/lib/request-json";
 
 export type PoolUsage = { periodKey: string; voiceSecondsUsed: number; chatsUsed: number; overageSpendCents: number };
@@ -70,8 +70,8 @@ export function PoolUsageSection({ usage, pool }: { usage: PoolUsage; pool: { vo
 export function PoolOverageSection({ partnerId, overage, spendCents }: { partnerId: string; overage: PoolOverage; spendCents: number }) {
   const { t, i18n } = useTranslation("partner");
   const queryClient = useQueryClient();
-  const [capInput, setCapInput] = useState(() => formatCapInput(overage.capCents, i18n.language));
-  useEffect(() => { setCapInput(formatCapInput(overage.capCents, i18n.language)); }, [i18n.language, overage.capCents]);
+  const [capInput, setCapInput] = useState(() => priceInputValue(overage.capCents, "usd", i18n.language));
+  useEffect(() => { setCapInput(priceInputValue(overage.capCents, "usd", i18n.language)); }, [i18n.language, overage.capCents]);
 
   const save = useMutation({
     mutationFn: (next: { enabled: boolean; capCents: number | null }) => requestJson<PoolOverage>(`/api/partner/billing/overage?partnerId=${encodeURIComponent(partnerId)}`, { method: "POST", body: JSON.stringify({ partnerId, ...next }) }),
@@ -83,12 +83,12 @@ export function PoolOverageSection({ partnerId, overage, spendCents }: { partner
   });
 
   function saveCap() {
-    const capCents = parseCapInputToCents(capInput, i18n.language);
-    if (capCents === null) {
+    const amount = parsePriceInput(capInput, "usd", i18n.language);
+    if (amount.kind !== "amount") {
       toast.error(t("billing.overage.invalidAmount"));
       return;
     }
-    save.mutate({ enabled: overage.enabled, capCents });
+    save.mutate({ enabled: overage.enabled, capCents: amount.minor });
   }
 
   // Free bills no overage, so it skips what overage does and says why instead.

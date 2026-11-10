@@ -117,6 +117,33 @@ describe("the partner console's Packages page", () => {
     expect(await screen.findByText("packages.notConfigured")).toBeTruthy();
   });
 
+  it("shows an error for each missing field and creates nothing, and has a Cancel button", async () => {
+    const fetchMock = renderAs("owner", () => Response.json(listing([])));
+    await screen.findByText("packages.empty.title");
+    await userEvent.click(screen.getByRole("button", { name: "packages.create.action" }));
+    await userEvent.click(await screen.findByRole("button", { name: "packages.create.submit" }));
+    expect(screen.getByText("packages.create.nameRequired")).toBeTruthy();
+    expect(screen.getByText("packages.create.priceRequired")).toBeTruthy();
+    await userEvent.type(screen.getByLabelText("packages.create.nameLabel"), "Front desk");
+    await userEvent.click(screen.getByRole("button", { name: "packages.create.submit" }));
+    expect(screen.queryByText("packages.create.nameRequired")).toBeNull();
+    expect(screen.getByText("packages.create.priceRequired")).toBeTruthy();
+    expect(sent(fetchMock, "POST")).toEqual([]);
+    await userEvent.click(screen.getByRole("button", { name: "packages.create.cancel" }));
+    await waitFor(() => expect(screen.queryByLabelText("packages.create.nameLabel")).toBeNull());
+  });
+
+  it("shows an error and renames nothing when the new name is empty", async () => {
+    const fetchMock = renderAs("admin", () => Response.json(listing([frontDesk])));
+    await userEvent.click(await screen.findByRole("button", { name: "packages.moreOptions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "packages.rename.action" }));
+    await userEvent.clear(await screen.findByLabelText("packages.create.nameLabel"));
+    await userEvent.click(screen.getByRole("button", { name: "packages.rename.submit" }));
+    expect(screen.getByText("packages.rename.nameRequired")).toBeTruthy();
+    expect(sent(fetchMock, "PATCH")).toEqual([]);
+    expect(screen.getByRole("button", { name: "packages.rename.cancel" })).toBeTruthy();
+  });
+
   it("renames a package and takes one off sale", async () => {
     const fetchMock = renderAs("admin", (_url, init) => {
       if (init?.method === "PATCH") return Response.json({ ...frontDesk, name: "Front desk plus" });

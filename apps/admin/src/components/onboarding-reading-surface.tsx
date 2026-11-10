@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
+import { WebsiteImportProgressSkeleton } from "@/components/loading-skeletons";
 import { ImportWaitSlides, useImportWait } from "@/components/onboarding-import-wait";
 import { Button } from "@/components/ui/button";
 import { currentWebsiteImport, isWebsiteImportRunning, WebsiteImportProgress, type WebsiteImportSummary } from "@/components/website-import-progress";
@@ -56,7 +57,7 @@ export function OnboardingReadingSurface({ documentId }: { documentId?: string |
   if (phase !== "waiting") return null;
   return (
     <div className="flex flex-col gap-4">
-      {websiteImport && (!documentId || submitted?.websiteImport) ? <div aria-live="polite"><WebsiteImportProgress job={websiteImport} /></div> : null}
+      {documentId && documents.isPending ? <WebsiteImportProgressSkeleton /> : websiteImport && (!documentId || submitted?.websiteImport) ? <div aria-live="polite"><WebsiteImportProgress job={websiteImport} /></div> : null}
       <ImportWaitSlides />
       <Button className="h-11 w-full" onClick={stopWaiting} type="button" variant="ghost">{t("reading.skip")}</Button>
     </div>

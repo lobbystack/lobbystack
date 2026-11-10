@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { requestJson } from "@/lib/request-json";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useStepNavigation } from "@/lib/use-step-navigation";
@@ -26,9 +25,8 @@ type BillingStatus = { checkoutAvailable: boolean; availableCheckoutPlans?: Arra
 
 export function OnboardingPlanSurface() {
   const { i18n, t } = useTranslation("onboarding");
-  const { navigate, navigating, router } = useStepNavigation();
+  const { navigate, navigating } = useStepNavigation();
   const telemetry = useTelemetry();
-  const searchParams = useSearchParams();
   const [interval, setInterval] = useState<BillingInterval>("annual");
   const [checkoutRequestId, setCheckoutRequestId] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
@@ -59,9 +57,6 @@ export function OnboardingPlanSurface() {
     meta: { inlineError: true },
   });
 
-  // Checkouts opened before the success page existed still return here.
-  const returnRequestId = searchParams.get("checkout") === "success" ? searchParams.get("requestId") : null;
-  useEffect(() => { if (returnRequestId) router.replace(`/billing/success?requestId=${encodeURIComponent(returnRequestId)}`); }, [returnRequestId, router]);
   useEffect(() => {
     if (!checkoutRequestId) { setSlowCheckout(false); return; }
     setSlowCheckout(false);

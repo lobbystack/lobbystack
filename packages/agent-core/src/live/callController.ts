@@ -240,6 +240,15 @@ const CALLER_CHECK_QUIET_MS = 800;
 // that isn't a question, once both sides have been quiet this long.
 const MISSED_GOODBYE_QUIET_MS = 1_500;
 const MISSED_GOODBYE_MAX_WORDS = 12;
+// Vietnamese writes each syllable apart, so a short goodbye there splits into
+// about twice the words. These letters appear in no other caller language.
+const VIETNAMESE_LETTERS = /[ơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ]/i;
+
+/** How many words a reply has, with Vietnamese syllables counted in pairs. */
+function spokenWordCount(text: string): number {
+  const words = text.split(/\s+/).filter(Boolean).length;
+  return VIETNAMESE_LETTERS.test(text) ? Math.ceil(words / 2) : words;
+}
 // GPT-Live's reply wasn't sure to be the last word, so the caller gets longer
 // to say more than after a hand-over. With 2 seconds, it hung up on "oh wait".
 const MISSED_GOODBYE_HANGUP_QUIET_MS = 3_500;
@@ -918,7 +927,7 @@ export class LiveCallController {
     }
     // A question or a longer reply carries the conversation on.
     const text = reply.text.trim();
-    if (text.endsWith("?") || text.split(/\s+/).length > MISSED_GOODBYE_MAX_WORDS) return;
+    if (text.endsWith("?") || spokenWordCount(text) > MISSED_GOODBYE_MAX_WORDS) return;
     this.missedGoodbyeCheckedMs = heard;
     void callerLeaving(this.conversationText(), this.abort.signal).catch(() => false).then((leaving) => {
       if (!leaving || !unanswered()) return;

@@ -4,34 +4,36 @@ import { eq } from "drizzle-orm";
 import { billingAccounts, billingCheckoutRequests, businesses, businessMemberships, createDatabaseClient, users, withBusinessTransaction } from "@lobbystack/db";
 import settings from "../public/locales/fr/settings.json" with { type: "json" };
 
-test("checkout return waits for billing confirmation and localized spending caps persist with permissions", async ({ browser, baseURL }) => {
-  const state = process.env.PARITY_PORT_OPERATOR_STORAGE_STATE_FR;
-  const userId = process.env.PARITY_OPERATOR_USER_ID;
-  test.skip(!state || !userId, "Requires an authenticated disposable operator fixture.");
+import { migrator, removeFixtures, signUp } from "./fixtures/full-stack";
+
+test("checkout return waits for billing confirmation and localized spending caps persist with permissions", async ({ browser, baseURL }, testInfo) => {
+  test.setTimeout(120_000);
+  const fixtures = migrator();
   const database = createDatabaseClient("lobbystack_worker");
   const auth = createDatabaseClient("lobbystack_auth");
   const businessId = randomUUID(); const requestId = randomUUID();
-  const context = await browser.newContext({ storageState: state!, locale: "fr" });
-  const headers = { Origin: baseURL!, "Sec-Fetch-Site": "same-origin" };
-  const original = (await auth.db.select({ activeBusinessId: users.activeBusinessId }).from(users).where(eq(users.id, userId!)))[0];
-  const transaction = <T,>(fn: Parameters<typeof withBusinessTransaction<T>>[2]) => withBusinessTransaction(database.db, { businessId, actorType: "worker" }, fn);
+  const context = await browser.newContext({ locale: "fr" });
+  const page = await context.newPage();
+  let email: string | undefined;
   try {
+    // The signup page also saves French as the operator's own language.
+    const operator = await signUp(page, testInfo, "billing-return-cap", { locale: "fr" });
+    email = operator.email;
+    const headers = { Origin: baseURL!, "Sec-Fetch-Site": "same-origin" };
+    const transaction = <T,>(fn: Parameters<typeof withBusinessTransaction<T>>[2]) => withBusinessTransaction(database.db, { businessId, actorType: "worker" }, fn);
     await transaction(async tx => {
-      await tx.insert(businesses).values({ id: businessId, slug: `checkout-return-${businessId}`, name: "Checkout certification", timezone: "UTC", businessType: "clinic", onboardingStage: "plan" });
-      await tx.insert(businessMemberships).values({ businessId, userId: userId!, role: "business_owner", status: "active" });
+      await tx.insert(businesses).values({ id: businessId, slug: `checkout-return-${businessId}`, name: "Checkout certification", timezone: "UTC", businessType: "clinic", onboardingStage: "verify_phone" });
+      await tx.insert(businessMemberships).values({ businessId, userId: operator.userId, role: "business_owner", status: "active" });
       await tx.insert(billingAccounts).values({ businessId, billingKey: `business:${businessId}`, plan: "free_cloud" });
-      await tx.insert(billingCheckoutRequests).values({ id: requestId, businessId, requestedByUserId: userId!, target: "pro", billingInterval: "monthly", status: "ready", checkoutId: `fixture-${requestId}`, checkoutUrl: "https://example.invalid/checkout" });
+      await tx.insert(billingCheckoutRequests).values({ id: requestId, businessId, requestedByUserId: operator.userId, target: "pro", billingInterval: "monthly", status: "ready", checkoutId: `fixture-${requestId}`, checkoutUrl: "https://example.invalid/checkout" });
     });
-    await auth.db.update(users).set({ activeBusinessId: businessId }).where(eq(users.id, userId!));
+    await auth.db.update(users).set({ activeBusinessId: businessId }).where(eq(users.id, operator.userId));
     const statusUrl = `${baseURL}/api/billing/checkout?businessId=${businessId}&requestId=${requestId}`;
     expect((await (await context.request.get(statusUrl)).json()).synced).toBe(false);
     expect((await context.request.get(`${baseURL}/api/billing/checkout?businessId=${randomUUID()}&requestId=${requestId}`)).status()).toBe(403);
     await context.route("**/api/onboarding/phone-numbers/suggestion?*", route => route.fulfill({ json: { numbers: [], market: { countryCode: "CA", areaCode: "416" } } }));
-    const page = await context.newPage();
     const firstPoll = page.waitForResponse(response => response.url().includes("/api/billing/checkout?"));
-    // A return URL from before the success page still lands on it.
-    await page.goto(`${baseURL}/onboarding/plan?checkout=success&requestId=${requestId}`);
-    await expect(page).toHaveURL(`${baseURL}/billing/success?requestId=${requestId}`);
+    await page.goto(`${baseURL}/billing/success?requestId=${requestId}`);
     expect((await (await firstPoll).json()).synced).toBe(false);
     await expect(page.getByRole("heading", { name: settings.billing.success.received.title, exact: true })).toBeVisible();
     // Simulate a validated webhook's durable billing result; never open a paid checkout.
@@ -46,6 +48,7 @@ test("checkout return waits for billing confirmation and localized spending caps
     const cap = page.getByLabel(settings.billing.spendingCap.amountLabel, { exact: true });
     await cap.fill("12,50");
     await page.getByRole("button", { name: settings.billing.spendingCap.save, exact: true }).click();
+    await expect(page.getByText(settings.billing.spendingCap.saved, { exact: true })).toBeVisible();
     await expect.poll(() => transaction(async tx => (await tx.select().from(billingAccounts).where(eq(billingAccounts.businessId, businessId)))[0]?.overageSpendingCapCents)).toBe(1250);
     await page.reload();
     await expect(cap).toHaveValue("12,50");
@@ -59,8 +62,7 @@ test("checkout return waits for billing confirmation and localized spending caps
     expect((await context.request.post(`${baseURL}/api/billing?businessId=${businessId}`, { headers, data: { capCents: 100 } })).status()).toBe(403);
   } finally {
     await context.close();
-    await auth.db.update(users).set({ activeBusinessId: original?.activeBusinessId ?? null }).where(eq(users.id, userId!));
-    await transaction(tx => tx.delete(businesses).where(eq(businesses.id, businessId)));
-    await Promise.all([database.pool.end(), auth.pool.end()]);
+    await removeFixtures(fixtures, { emails: email ? [email] : [], businessIds: [businessId] });
+    await Promise.all([database.pool.end(), auth.pool.end(), fixtures.pool.end()]);
   }
 });

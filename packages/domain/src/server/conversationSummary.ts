@@ -68,6 +68,13 @@ const FALLBACK_SUMMARY: Record<CallSummaryLocale, { excerpt: string; empty: stri
   pt: { excerpt: "Resumo da chamada: ", empty: "Interação por voz concluída." },
   it: { excerpt: "Riepilogo della chiamata: ", empty: "Interazione vocale completata." },
   nl: { excerpt: "Samenvatting van het gesprek: ", empty: "Spraakinteractie voltooid." },
+  pl: { excerpt: "Podsumowanie rozmowy: ", empty: "Rozmowa głosowa zakończona." },
+  tr: { excerpt: "Arama özeti: ", empty: "Sesli görüşme tamamlandı." },
+  vi: { excerpt: "Tóm tắt cuộc gọi: ", empty: "Cuộc gọi thoại đã kết thúc." },
+  tl: { excerpt: "Buod ng tawag: ", empty: "Natapos ang tawag." },
+  sv: { excerpt: "Samtalssammanfattning: ", empty: "Röstsamtalet är avslutat." },
+  ru: { excerpt: "Краткое содержание звонка: ", empty: "Голосовой разговор завершён." },
+  uk: { excerpt: "Підсумок дзвінка: ", empty: "Голосову розмову завершено." },
 };
 
 /** A model-written summary and caller name, before the domain validates them. */

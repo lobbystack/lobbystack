@@ -32,7 +32,7 @@ function setup(options: { websiteUrl?: string; fail?: boolean; invalid?: boolean
 describe("onboarding website", () => {
   it("submits the URL with the onboarding context", async () => {
     const fetcher = setup();
-    fireEvent.change(screen.getByLabelText("website.label"), { target: { value: "example.com" } });
+    fireEvent.change(await screen.findByLabelText("website.label"), { target: { value: "example.com" } });
     await waitFor(() => expect((screen.getByRole("button", { name: "website.continue" }) as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(screen.getByRole("button", { name: "website.continue" }));
     await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/reading?documentId=document-1"));
@@ -42,7 +42,7 @@ describe("onboarding website", () => {
   });
   it("asks for a valid address when the server rejects the URL", async () => {
     setup({ invalid: true });
-    fireEvent.change(screen.getByLabelText("website.label"), { target: { value: "htps://example.com" } });
+    fireEvent.change(await screen.findByLabelText("website.label"), { target: { value: "htps://example.com" } });
     await waitFor(() => expect((screen.getByRole("button", { name: "website.continue" }) as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(screen.getByRole("button", { name: "website.continue" }));
     expect(await screen.findByText("website.invalidUrl")).toBeTruthy();
@@ -66,6 +66,19 @@ describe("onboarding website", () => {
     expect((screen.getByRole("button", { name: "website.submitting" }) as HTMLButtonElement).disabled).toBe(true);
     finish(Response.json({ businesses: [{ businessId: "business-1", active: true, onboardingStage: "verify_phone" }] }));
     await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/reading?documentId=document-1"));
+  });
+  it("names the skip on the Continue button while the skip finishes", async () => {
+    let finish!: (response: Response) => void;
+    const refresh = new Promise<Response>((resolve) => { finish = resolve; });
+    const fetcher = setup({ refresh });
+    await waitFor(() => expect((screen.getByRole("button", { name: "website.skip" }) as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(screen.getByRole("button", { name: "website.skip" }));
+    await waitFor(() => expect(fetcher.mock.calls.filter(([url]) => url === "/api/businesses")).toHaveLength(2));
+    const continueButton = screen.getByRole("button", { name: "website.skippingImport" }) as HTMLButtonElement;
+    expect(continueButton.disabled).toBe(true);
+    expect(screen.queryByRole("button", { name: "website.submitting" })).toBeNull();
+    finish(Response.json({ businesses: [{ businessId: "business-1", active: true, onboardingStage: "verify_phone" }] }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/language"));
   });
   it("prefills the saved website when revisiting", async () => {
     setup({ websiteUrl: "https://example.com" });

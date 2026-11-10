@@ -2,6 +2,7 @@
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { TRANSFER_COUNTRY_CALLING_CODES } from "@lobbystack/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -288,7 +289,7 @@ describe("AgentBasicSettingsPage transfer number", () => {
     const country = await screen.findByRole("combobox", { name: "agent:fields.transferNumber.country" });
     expect(country.textContent).toContain("+1");
     await user.click(country);
-    expect(await screen.findAllByRole("option")).toHaveLength(18);
+    expect(await screen.findAllByRole("option")).toHaveLength(Object.keys(TRANSFER_COUNTRY_CALLING_CODES).length);
     await user.keyboard("{Escape}");
 
     const input = document.getElementById("agent-transfer-number") as HTMLInputElement;
@@ -298,6 +299,31 @@ describe("AgentBasicSettingsPage transfer number", () => {
 
     expect(await screen.findByText("agent:fields.transferNumber.errors.countryUnsupported")).toBeTruthy();
     expect(patches).toEqual([{ businessId: "business", transferNumber: "+18769261234" }]);
+    client.clear();
+  });
+
+  it("saves the transfer number when Enter is pressed in its field", async () => {
+    const patches: unknown[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === "PATCH") {
+        patches.push(JSON.parse(String(init.body)));
+        return Response.json({ ok: true });
+      }
+      return Response.json({
+        business: { defaultLocale: "en" },
+        profile: { greeting: "Thanks for calling.", summary: "Clinic", summarySource: "operator", transferNumber: "+15145550123", transferMode: "on_request", appointmentChangePolicy: null, bookingMode: "instant" },
+      });
+    }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><AgentBasicSettingsPage businessId="business" canManageTenant /></QueryClientProvider>);
+
+    const user = userEvent.setup();
+    await screen.findByRole("combobox", { name: "agent:fields.transferNumber.country" });
+    const input = document.getElementById("agent-transfer-number") as HTMLInputElement;
+    await user.clear(input);
+    await user.type(input, "+14165550123{Enter}");
+
+    await waitFor(() => expect(patches).toEqual([{ businessId: "business", transferNumber: "+14165550123" }]));
     client.clear();
   });
 

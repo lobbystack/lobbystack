@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -47,5 +48,24 @@ describe("call detail loading state", () => {
     expect(skeletons()).toBe(0);
     expect(screen.getByRole("heading", { level: 1, name: "Ada Lovelace" })).toBeTruthy();
     expect(screen.getAllByRole("tab").length).toBe(3);
+  });
+});
+
+describe("call detail tab and URL", () => {
+  afterEach(() => { window.history.replaceState({}, "", "/"); });
+
+  it("opens the tab the URL names", async () => {
+    window.history.replaceState({}, "", "/calls/call-1?tab=details");
+    renderCall({ detail: true });
+    expect(await screen.findByRole("tab", { name: "detail.tabs.details", selected: true })).toBeTruthy();
+  });
+
+  it("writes a tab to the URL and drops the query for the default one", async () => {
+    window.history.replaceState({}, "", "/calls/call-1");
+    renderCall({ detail: true });
+    await userEvent.click(await screen.findByRole("tab", { name: "detail.tabs.recording" }));
+    await waitFor(() => expect(window.location.search).toBe("?tab=recording"));
+    await userEvent.click(screen.getByRole("tab", { name: "detail.tabs.transcript" }));
+    await waitFor(() => expect(window.location.search).toBe(""));
   });
 });

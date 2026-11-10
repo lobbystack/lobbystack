@@ -124,7 +124,7 @@ export const snapshotSchema = z.object({
   legalName: z.string().optional(),
   timezone: z.string().min(1),
   // runtimeLocales from @lobbystack/shared, which this package doesn't depend on.
-  defaultLocale: z.enum(["en", "fr", "es", "sr", "de", "pt", "it", "nl"]),
+  defaultLocale: z.enum(["en", "fr", "es", "sr", "de", "pt", "it", "nl", "pl", "tr", "vi", "tl", "sv", "ru", "uk"]),
   businessType: z.string().min(1),
   telemetryEnabled: z.boolean().optional(),
   greeting: z.string(),

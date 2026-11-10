@@ -152,12 +152,38 @@ export const NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS = {
   smsInstructions: "Keep replies concise and friendly. Ask one follow-up question at a time.",
 } as const;
 
+/** The slug a business name makes: accents stripped, lowercase, runs of anything else as one hyphen. */
+export function slugFromBusinessName(name: string): string {
+  return name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 96).replace(/-$/, "") || "business";
+}
+
+/**
+ * The slug a renamed business takes: the new name's, or that with a random
+ * suffix when another business has it. Null when the slug stays, which is
+ * whenever someone chose it. Only a slug this function's own rule made from
+ * the old name follows a rename, so a slug the public API or CLI set, or one
+ * the business's address points at, outlives the name it was made from.
+ */
+export async function slugAfterRename(currentSlug: string, previousName: string, newName: string, taken: (slug: string) => Promise<boolean>): Promise<string | null> {
+  const previousBase = slugFromBusinessName(previousName);
+  if (currentSlug !== previousBase && !new RegExp(`^${previousBase}-[0-9a-f]{12}$`).test(currentSlug)) return null;
+  const base = slugFromBusinessName(newName);
+  // A suffix this rule made from the new name already follows it.
+  if (currentSlug === base || new RegExp(`^${base}-[0-9a-f]{12}$`).test(currentSlug)) return null;
+  if (!(await taken(base))) return base;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const candidate = `${base}-${randomBytes(6).toString("hex")}`;
+    if (!(await taken(candidate))) return candidate;
+  }
+  throw Object.assign(new Error("Business slug could not be updated."), { status: 409 });
+}
+
 async function insertBusinessRowsInTransaction(tx: DatabaseTransaction, input: NewBusiness, ownerUserId: string): Promise<{ membershipId: string }>;
 async function insertBusinessRowsInTransaction(tx: DatabaseTransaction, input: NewBusiness, ownerUserId: null): Promise<{ membershipId: null }>;
 async function insertBusinessRowsInTransaction(tx: DatabaseTransaction, input: NewBusiness, ownerUserId: string | null): Promise<{ membershipId: string | null }> {
   const { businessId, timezone } = input;
   const name = input.name.trim();
-  const generatedSlug = name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 96).replace(/-$/, "") || "business";
+  const generatedSlug = slugFromBusinessName(name);
   const baseSlug = input.slug === undefined ? generatedSlug : cleanSlug(input.slug);
   // Inserting a slug that another open transaction has inserted waits for it to end, and two transactions that each
   // hold a slug the other wants deadlock. A generated slug that another transaction is making gets a suffix instead.
@@ -330,11 +356,22 @@ export async function updateBusinessInTransaction(
 ): Promise<void> {
   const timezone = input.timezone === undefined ? undefined : requireIanaTimeZone(input.timezone);
   if (input.currency !== undefined && !isCurrencyCode(input.currency)) throw Object.assign(new Error("currency is invalid."), { status: 400 });
+  // The public API holds the name to 1-200 characters; the dashboard and the domain hold it to the same.
+  if (input.name !== undefined && (input.name.trim().length === 0 || input.name.trim().length > 200)) throw Object.assign(new Error("name must be between 1 and 200 characters."), { status: 400, code: "invalid_name" });
   const values = { ...(input.name !== undefined ? { name: input.name.trim() } : {}), ...(timezone !== undefined ? { timezone } : {}), ...(input.businessType !== undefined ? { businessType: input.businessType.trim() } : {}), ...(input.defaultLocale !== undefined ? { defaultLocale: input.defaultLocale.trim(), ...(input.defaultLocaleDetected ? {} : { defaultLocaleChosen: true }) } : {}), ...(input.teamLocale !== undefined ? { teamLocale: input.teamLocale } : {}), ...(input.websiteUrl !== undefined ? { websiteUrl: input.websiteUrl } : {}), ...(input.currency !== undefined ? { currency: input.currency } : {}), updatedAt: new Date() };
   if (Object.keys(values).length === 1) throw Object.assign(new Error("At least one business field is required."), { status: 400 });
   // Locks the row, so a concurrent change can't alter the zone the closures were entered in, or the language the greeting is in.
   const [before] = timezone === undefined && input.defaultLocale === undefined && input.currency === undefined ? [] : await tx.select({ timezone: businesses.timezone, defaultLocale: businesses.defaultLocale, name: businesses.name, currency: businesses.currency }).from(businesses).where(eq(businesses.id, input.businessId)).for("update");
-  const [business] = await tx.update(businesses).set(values).where(eq(businesses.id, input.businessId)).returning({ id: businesses.id });
+  // Only a slug made from the old name follows the name. One the business chose stays, since it's the address people and integrations know.
+  let slug: string | null = null;
+  if (input.name !== undefined) {
+    const [current] = await tx.select({ name: businesses.name, slug: businesses.slug }).from(businesses).where(eq(businesses.id, input.businessId)).for("update");
+    if (current && current.name !== values.name) {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`business-slug:${slugFromBusinessName(values.name!)}`}, 0))`);
+      slug = await slugAfterRename(current.slug, current.name, values.name!, async (candidate) => (await tx.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.slug, candidate), ne(businesses.id, input.businessId))).limit(1)).length > 0);
+    }
+  }
+  const [business] = await tx.update(businesses).set(slug ? { ...values, slug } : values).where(eq(businesses.id, input.businessId)).returning({ id: businesses.id });
   if (!business) throw Object.assign(new Error("Business not found."), { status: 404 });
   // Prices are stored in the currency's smallest unit. Keep the numbers people read: USD 40.00 (4000) becomes JPY 40 (40).
   const shift = input.currency !== undefined && before ? currencyFractionDigits(input.currency) - currencyFractionDigits(before.currency) : 0;

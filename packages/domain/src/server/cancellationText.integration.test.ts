@@ -1,16 +1,17 @@
 import { randomUUID } from "node:crypto";
 
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, like, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 import { afterAll, describe, expect, it } from "vitest";
-import { agents, appointments, businessHours, businessMemberships, businesses, calls, contacts, createDatabaseClient, notifications, outboxMessages, phoneNumbers, services, smsConsentEvents, staff, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, appointments, businessHours, businessMemberships, businesses, calls, contacts, createDatabaseClient, inboxItems, notifications, outboxMessages, phoneNumbers, services, smsConsentEvents, staff, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { createAppointmentChangeVerification } from "./appointmentChanges";
-import { bookAppointment, cancelAppointment, cancelAppointmentForCaller } from "./booking";
+import { bookAppointment, cancelAppointment, cancelAppointmentForCaller, rescheduleAppointment } from "./booking";
 import type { SmsConsentAnswer } from "./contactSmsConsent";
-import { CANCELLATION_CONFIRMATION, releaseCallTexts, resolveNotificationDelivery } from "./notifications";
+import { CANCELLATION_CONFIRMATION, releaseCallTexts, RESCHEDULE_CONFIRMATION, resolveNotificationDelivery } from "./notifications";
 import { cancelAppointmentForApi } from "./publicApi/operations";
 import { recordTextConsentForCaller } from "./receptionistActions";
+import { CANCELLATION_REQUEST } from "./voice";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -80,6 +81,13 @@ async function seed(tx: DatabaseTransaction) {
     const jobs = await tx.select({ payload: outboxMessages.payload }).from(outboxMessages).where(and(eq(outboxMessages.topic, "notification.dispatch"), eq(outboxMessages.aggregateId, appointmentId)));
     return rows.map((row) => ({ channel: row.channel, status: row.status, dispatches: jobs.filter((job) => job.payload.notificationId === row.id).length, id: row.id }));
   };
+  /** The appointment's reschedule texts, each with its dispatch job. */
+  const rescheduleTexts = async (appointmentId: string) => {
+    await asOwner();
+    const rows = await tx.select().from(notifications).where(and(eq(notifications.relatedId, appointmentId), like(notifications.kind, `${RESCHEDULE_CONFIRMATION}:%`)));
+    const jobs = await tx.select({ payload: outboxMessages.payload }).from(outboxMessages).where(and(eq(outboxMessages.topic, "notification.dispatch"), eq(outboxMessages.aggregateId, appointmentId)));
+    return rows.map((row) => ({ kind: row.kind, channel: row.channel, status: row.status, dispatches: jobs.filter((job) => job.payload.notificationId === row.id).length, id: row.id }));
+  };
   const deliver = async (appointmentId: string, kind = CANCELLATION_CONFIRMATION) => {
     await asOwner();
     const [row] = await tx.update(notifications).set({ scheduledFor: new Date(Date.now() - 1000) }).where(and(eq(notifications.relatedId, appointmentId), eq(notifications.kind, kind))).returning({ id: notifications.id });
@@ -89,6 +97,19 @@ async function seed(tx: DatabaseTransaction) {
   const operatorCancel = async (appointmentId: string) => {
     await as("lobbystack_app");
     return await cancelAppointment({ db }, { userId, businessId, appointmentId });
+  };
+  const operatorReschedule = async (appointmentId: string, startsAt: DateTime) => {
+    await as("lobbystack_app");
+    return await rescheduleAppointment({ db }, { userId, businessId, appointmentId, startsAt: startsAt.toISO()! });
+  };
+  /** A caller's cancellation request, as the agent saves it when verification fails. */
+  const openCancellationRequest = async (appointmentId: string) => {
+    await asOwner();
+    return (await tx.insert(inboxItems).values({ businessId, kind: "voice_message", title: "Voice message", body: "Cancellation request: appointment", metadata: { request: CANCELLATION_REQUEST, appointmentId } }).returning())[0]!.id;
+  };
+  const requestStatus = async (inboxItemId: string) => {
+    await asOwner();
+    return (await tx.select({ status: inboxItems.status }).from(inboxItems).where(eq(inboxItems.id, inboxItemId)))[0]?.status;
   };
   const callerCancel = async (appointmentId: string, phone: string, callId?: string) => {
     await as("lobbystack_worker");
@@ -129,7 +150,7 @@ async function seed(tx: DatabaseTransaction) {
     await as("lobbystack_worker");
     await releaseCallTexts({ db }, { businessId, callId });
   };
-  return { book, addContact, consent, cancellationTexts, deliver, operatorCancel, callerCancel, apiCancel, pastAppointment, startCall, answerTexts, job, endCall };
+  return { book, addContact, consent, cancellationTexts, rescheduleTexts, deliver, operatorCancel, operatorReschedule, openCancellationRequest, requestStatus, callerCancel, apiCancel, pastAppointment, startCall, answerTexts, job, endCall };
 }
 
 describe.skipIf(!client)("the answer to texts given while booking", () => {
@@ -233,6 +254,37 @@ describe.skipIf(!client)("the cancellation text", () => {
       const past = await pastAppointment("+14165550101");
       await expect(operatorCancel(past)).resolves.toBe("cancelled");
       expect(await cancellationTexts(past)).toEqual([]);
+    });
+  });
+});
+
+describe.skipIf(!client)("the reschedule text", () => {
+  const movedTo = (days: number) => DateTime.utc().plus({ days }).set({ hour: 14, minute: 0, second: 0, millisecond: 0 });
+
+  it("tells the caller the new time, once for each move", async () => {
+    await rollbackTest(async (tx) => {
+      const { book, deliver, operatorReschedule, rescheduleTexts } = await seed(tx);
+      const appointmentId = await book("+14165550101", "agreed");
+      await operatorReschedule(appointmentId, movedTo(10));
+      expect(await rescheduleTexts(appointmentId)).toEqual([{ kind: `${RESCHEDULE_CONFIRMATION}:1`, channel: "sms", status: "pending", dispatches: 1, id: expect.any(String) }]);
+
+      const delivery = await deliver(appointmentId, `${RESCHEDULE_CONFIRMATION}:1`);
+      expect(delivery).toMatchObject({ kind: "ready", delivery: { channel: "sms", kind: `${RESCHEDULE_CONFIRMATION}:1`, to: "+14165550101", from: sender, subject: "Appointment moved" } });
+      expect(delivery?.kind === "ready" && delivery.delivery.body).toMatch(/^Javor: your Cut appointment has moved to .+\. Msg & data rates may apply/);
+
+      // A second move gets its own kind and text, so the first doesn't block it.
+      await operatorReschedule(appointmentId, movedTo(11));
+      expect((await rescheduleTexts(appointmentId)).map((row) => row.kind)).toEqual([`${RESCHEDULE_CONFIRMATION}:1`, `${RESCHEDULE_CONFIRMATION}:2`]);
+    });
+  });
+
+  it("closes a caller's cancellation request for the appointment it moves", async () => {
+    await rollbackTest(async (tx) => {
+      const { book, operatorReschedule, openCancellationRequest, requestStatus } = await seed(tx);
+      const appointmentId = await book("+14165550101", "agreed");
+      const request = await openCancellationRequest(appointmentId);
+      await operatorReschedule(appointmentId, movedTo(10));
+      expect(await requestStatus(request)).toBe("done");
     });
   });
 });

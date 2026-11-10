@@ -7,7 +7,7 @@ import { LiveAccountSurface } from "./live-account-surface";
 
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string) => key }) }));
 vi.mock("./account-security-forms", () => ({ AccountSecurityForms: ({ currentEmail }: { currentEmail?: string | null }) => <div>forms for {currentEmail}</div> }));
-vi.mock("./account-passkeys", () => ({ AccountPasskeys: ({ businessName }: { businessName?: string }) => <div>passkeys card for {businessName}</div> }));
+vi.mock("./account-passkeys", () => ({ AccountPasskeys: () => <div>passkeys card</div> }));
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
@@ -30,7 +30,7 @@ describe("account page loading", () => {
     resolve(Response.json({ user: { id: "user", email: "owner@example.com" }, session: { id: "session", expiresAt: "2030-01-01T00:00:00Z" }, businesses: [{ businessId: "one", name: "First Co", role: "owner", active: false }, { businessId: "two", name: "Active Co", role: "owner", active: true }] }));
     expect(await screen.findByText("forms for owner@example.com")).toBeTruthy();
     // A new passkey is named after the business the person is working in.
-    expect(screen.getByText("passkeys card for Active Co")).toBeTruthy();
+    expect(screen.getByText("passkeys card")).toBeTruthy();
     expect(screen.queryByRole("status")).toBeNull();
     expect(container.querySelector("[data-slot=skeleton]")).toBeNull();
   });

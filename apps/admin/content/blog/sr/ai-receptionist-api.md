@@ -55,7 +55,7 @@ curl https://app.lobbystack.com/api/v1/businesses \
   -d '{"name":"Harbor Dental","timezone":"America/Toronto","locale":"en"}'
 ```
 
-`POST /businesses` traži `Idempotency-Key`, a ponovljeni zahtev sa istom vrednošću vraća već napravljenu firmu. Odgovor novu firmu stavlja u `data`. Sačuvajte `data.id` uz zapis o kupcu i šaljite ga kao `LobbyStack-Business` u svakom sledećem zahtevu. `locale` određuje jezik na kom pozivi počinju: `en`, `fr`, `es`, `sr`, `de`, `pt`, `it` ili `nl`. Recepcioner menja jezik kada pozivalac to zatraži ili govori drugi jezik.
+`POST /businesses` traži `Idempotency-Key`, a ponovljeni zahtev sa istom vrednošću vraća već napravljenu firmu. Odgovor novu firmu stavlja u `data`. Sačuvajte `data.id` uz zapis o kupcu i šaljite ga kao `LobbyStack-Business` u svakom sledećem zahtevu. `locale` određuje jezik na kom pozivi počinju: `en`, `fr`, `es`, `sr`, `de`, `pt`, `it`, `nl`, `pl`, `tr`, `vi`, `tl`, `sv`, `ru` ili `uk`. Recepcioner menja jezik kada pozivalac to zatraži ili govori drugi jezik.
 
 ## Korak 3: Naučite recepcionera o firmi
 

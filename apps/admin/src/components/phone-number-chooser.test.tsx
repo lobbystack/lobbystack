@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PhoneNumberChooser, type AvailableNumberSummary, type ClaimResult } from "./phone-number-chooser";
 afterEach(cleanup);
-const labels = { countryLabel: "Country", areaCodeLabel: "Area code", areaCodePlaceholder: "Area", search: "Search", phoneNumberHeader: "Phone number", select: "Select", loadMore: "Load more", empty: "Empty", loadFailed: "Load failed", searchFailed: "Search failed", claimFailed: "Claim failed", unavailable: "Unavailable" };
+const labels = { countryLabel: "Country", areaCodeLabel: "Area code", areaCodePlaceholder: "Area", search: "Search", searching: "Searching...", phoneNumberHeader: "Phone number", select: "Select", loadMore: "Load more", empty: "Empty", loadFailed: "Load failed", searchFailed: "Search failed", claimFailed: "Claim failed", unavailable: "Unavailable" };
 function offer(index: number): AvailableNumberSummary { return { e164: `+14165550${String(index).padStart(3, "0")}`, display: `(416) 555-0${String(index).padStart(3, "0")}`, countryCode: "CA", kind: "local", capabilities: { sms: true, voice: true }, selectionContext: { mode: "suggested", countryCode: "CA" }, claimToken: `token-${index}` }; }
 function setup(overrides: Partial<React.ComponentProps<typeof PhoneNumberChooser>> = {}) {
   const props = { businessId: "business-1", labels, getErrorMessage: (_error: unknown, fallback: string) => fallback, getInitialNumberSuggestion: vi.fn().mockResolvedValue({ market: { countryCode: "CA", areaCode: "416" }, suggestion: offer(0), alternatives: Array.from({ length: 9 }, (_, i) => offer(i + 1)) }), searchAvailableNumbers: vi.fn().mockResolvedValue({ market: { countryCode: "CA" }, selectionContext: { mode: "suggested", countryCode: "CA" }, numbers: Array.from({ length: 20 }, (_, i) => offer(i)) }), claimNumber: vi.fn().mockResolvedValue({ status: "failed" }), onClaimed: vi.fn(), ...overrides };
@@ -46,5 +46,17 @@ describe("original phone inventory chooser", () => {
     expect(buttons[1]!.querySelector(".animate-spin")).toBeNull();
     await act(async () => resolveClaim({ status: "claimed", phoneNumberId: "phone-1", e164: offer(0).e164 }));
     expect(props.onClaimed).toHaveBeenCalledWith({ status: "claimed", phoneNumberId: "phone-1", e164: offer(0).e164 }, offer(0));
+  });
+  it("shows a spinner and Searching... on the search button while it searches", async () => {
+    let resolveSearch!: (result: Awaited<ReturnType<React.ComponentProps<typeof PhoneNumberChooser>["searchAvailableNumbers"]>>) => void;
+    const searchAvailableNumbers = vi.fn(() => new Promise<Awaited<ReturnType<React.ComponentProps<typeof PhoneNumberChooser>["searchAvailableNumbers"]>>>(resolve => { resolveSearch = resolve; }));
+    setup({ searchAvailableNumbers });
+    await screen.findByText(offer(0).display);
+    await userEvent.click(screen.getByRole("button", { name: "Search" }));
+    const busy = screen.getByRole("button", { name: "Searching..." }) as HTMLButtonElement;
+    expect(busy.disabled).toBe(true);
+    expect(busy.querySelector(".animate-spin")).toBeTruthy();
+    await act(async () => resolveSearch({ market: { countryCode: "CA" }, selectionContext: { mode: "suggested", countryCode: "CA" }, numbers: [offer(0)] }));
+    expect(screen.getByRole("button", { name: "Search" })).toBeTruthy();
   });
 });

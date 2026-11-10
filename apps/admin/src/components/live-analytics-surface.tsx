@@ -1,12 +1,13 @@
 "use client";
 
 import { useActiveBusiness } from "@/hooks/use-active-business";
+import { useUrlState } from "@/hooks/use-url-state";
 import { formatBookedValue, formatTimeSaved } from "@/lib/analytics-results";
 import { formatDuration } from "@/lib/duration";
 import { subscribeRealtimeQuery } from "@/lib/realtime-query";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { CalendarIcon, Check, ChevronDown, CircleCheck, Ellipsis, PhoneCall, PhoneForwarded, PhoneMissed, type LucideIcon } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -42,6 +43,35 @@ const presets: Array<Exclude<Preset, "custom">> = ["today", "yesterday", "thisWe
 const OUTCOME_ICONS: Record<string, LucideIcon> = { completed: CircleCheck, transferred: PhoneForwarded, live: PhoneCall, missed: PhoneMissed };
 const granularityTranslation: Record<Granularity, string> = { hour: "hourly", day: "daily", week: "weekly", month: "monthly", year: "yearly" };
 
+const DEFAULT_PRESET: Preset = "last30";
+const DEFAULT_GRANULARITY: Granularity = "week";
+
+function formatDay(value: Date): string {
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+}
+
+function parseDay(value: string | null): Date | null {
+  const match = value ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(value) : null;
+  if (!match) return null;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return formatDay(date) === value ? date : null;
+}
+
+type AnalyticsView = { customRange: { from: Date; to: Date } | null; granularity: Granularity; preset: Preset };
+
+const DEFAULT_VIEW: AnalyticsView = { customRange: null, granularity: DEFAULT_GRANULARITY, preset: DEFAULT_PRESET };
+
+/** Reads the view from the query string; explicit dates win, and anything missing or invalid falls back to the defaults. */
+function viewFromUrl(): AnalyticsView {
+  const parameters = typeof window === "undefined" ? new URLSearchParams() : new URLSearchParams(window.location.search);
+  const granularity = granularities.find((option) => option === parameters.get("interval")) ?? DEFAULT_GRANULARITY;
+  const named = presets.find((option) => option === parameters.get("range"));
+  const from = parseDay(parameters.get("from"));
+  const to = parseDay(parameters.get("to"));
+  if (from && to && from <= to) return { customRange: { from, to }, granularity, preset: named ?? "custom" };
+  return { customRange: null, granularity, preset: named ?? DEFAULT_PRESET };
+}
+
 function startOfDay(value: Date): Date { return new Date(value.getFullYear(), value.getMonth(), value.getDate()); }
 
 function presetRange(preset: Exclude<Preset, "custom">, businessCreatedAt?: string): { from: Date; to: Date } {
@@ -75,11 +105,20 @@ function percentDelta(current: number, previous: number, t: (...args: any[]) => 
 export function LiveAnalyticsSurface() {
   const { i18n, t } = useTranslation("dashboard");
   const queryClient = useQueryClient();
-  const [preset, setPreset] = useState<Preset>("last30");
-  const [granularity, setGranularity] = useState<Granularity>("week");
-  const [customRange, setCustomRange] = useState<{ from: Date; to: Date } | null>(null);
   const { businesses, business } = useActiveBusiness();
-  const range = useMemo(() => preset === "custom" && customRange ? customRange : presetRange(preset === "custom" ? "last30" : preset, business?.createdAt), [business?.createdAt, customRange, preset]);
+  // Every share of the page names the dates it shows, so a link opened later lands on the same span.
+  const writeView = useCallback((view: AnalyticsView, url: URL) => {
+    const span = view.customRange ?? presetRange(view.preset === "custom" ? "last30" : view.preset, business?.createdAt);
+    for (const key of ["range", "interval", "from", "to"]) url.searchParams.delete(key);
+    if (view.preset !== "custom") url.searchParams.set("range", view.preset);
+    url.searchParams.set("interval", view.granularity);
+    url.searchParams.set("from", formatDay(span.from));
+    url.searchParams.set("to", formatDay(span.to));
+  }, [business?.createdAt]);
+  const { ready: viewRead, setValue: setView, value: { customRange, granularity, preset } } = useUrlState({ initial: DEFAULT_VIEW, read: viewFromUrl, write: writeView });
+  const setPreset = (next: Preset) => setView((current) => ({ ...current, customRange: null, preset: next }));
+  const setGranularity = (next: Granularity) => setView((current) => ({ ...current, granularity: next }));
+  const range = useMemo(() => customRange ?? presetRange(preset === "custom" ? "last30" : preset, business?.createdAt), [business?.createdAt, customRange, preset]);
   // The API caps hourly views at 20 days, daily at a year and weekly at 3493 days, so longer ranges fall back to a coarser view.
   // The request adds the last picked day to this span, and the extra half day absorbs a DST hour.
   const spanDays = (range.to.getTime() - range.from.getTime()) / 86_400_000;
@@ -95,7 +134,7 @@ export function LiveAnalyticsSurface() {
       const parameters = new URLSearchParams({ businessId: business!.businessId, from: from.toISOString(), to: to.toISOString(), granularity: effectiveGranularity });
       return requestJson<AnalyticsViewModel>(`/api/analytics?${parameters.toString()}`);
     },
-    enabled: Boolean(business?.businessId),
+    enabled: Boolean(business?.businessId) && viewRead,
     // Keep the previous range on screen, dimmed, while a new range or granularity loads.
     placeholderData: keepPreviousForBusiness<AnalyticsViewModel>(business?.businessId),
   });
@@ -106,7 +145,7 @@ export function LiveAnalyticsSurface() {
   }, [business?.businessId, queryClient]);
 
   const data = analytics.data;
-  const loading = businesses.isLoading || analytics.isLoading;
+  const loading = businesses.isLoading || !viewRead || analytics.isLoading;
   const pointFormat = new Intl.DateTimeFormat(intlLocale(i18n.language), effectiveGranularity === "year" ? { year: "numeric", timeZone: "UTC" } : effectiveGranularity === "month" ? { month: "short", ...(longRange ? { year: "2-digit" as const } : {}), timeZone: "UTC" } : effectiveGranularity === "hour" ? { hour: "numeric", timeZone: "UTC" } : { day: "2-digit", month: "short", ...(longRange ? { year: "2-digit" as const } : {}), timeZone: "UTC" });
   const series = data?.series ?? [];
   const chartData: AnalyticsChartPoint[] = series.map((point) => ({
@@ -148,7 +187,7 @@ export function LiveAnalyticsSurface() {
     <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4 py-2"><h1 className="type-page-title">{t("analyticsPage.title")}</h1><div className="ms-auto flex flex-wrap items-center gap-3">
       {loading ? <AnalyticsControlsSkeleton granularityLabel={t(`home.analytics.controls.granularities.${granularityTranslation[effectiveGranularity]}`)} rangeLabel={t(`home.analytics.controls.presets.${preset}`)} /> : <>
       <DropdownMenu><DropdownMenuTrigger render={<Button aria-label={t("home.analytics.controls.granularity")} variant="outline" />}><span>{t(`home.analytics.controls.granularities.${granularityTranslation[effectiveGranularity]}`)}</span><ChevronDown className="text-muted-foreground" data-icon="inline-end" /></DropdownMenuTrigger><DropdownMenuContent align="start" className="w-44"><DropdownMenuGroup>{granularities.map((option) => <DropdownMenuItem className="justify-between" disabled={tooLongFor(option)} key={option} onClick={() => setGranularity(option)}>{t(`home.analytics.controls.granularities.${granularityTranslation[option]}`)}{option === effectiveGranularity ? <Check /> : null}</DropdownMenuItem>)}</DropdownMenuGroup></DropdownMenuContent></DropdownMenu>
-      <ButtonGroup><Popover><PopoverTrigger render={<Button aria-label={t("home.analytics.controls.dateRange")} size="icon" variant="outline" />}><CalendarIcon /></PopoverTrigger><PopoverContent align="start" className="w-auto p-0" sideOffset={8}><Calendar captionLayout="label" mode="range" onSelect={(selection: DateRange | undefined) => { if (!selection?.from) return; setCustomRange({ from: selection.from, to: selection.to ?? selection.from }); setPreset("custom"); }} selected={{ from: range.from, to: range.to }} /></PopoverContent></Popover><DropdownMenu><DropdownMenuTrigger render={<Button aria-label={t("home.analytics.controls.presetRange")} className="max-w-56" variant="outline" />}><span className="truncate">{t(`home.analytics.controls.presets.${preset}`)}</span></DropdownMenuTrigger><DropdownMenuContent align="end" className="min-w-56"><DropdownMenuGroup>{presets.map((option) => <DropdownMenuItem className="justify-between" key={option} onClick={() => setPreset(option)}>{t(`home.analytics.controls.presets.${option}`)}{option === preset ? <Check /> : null}</DropdownMenuItem>)}</DropdownMenuGroup></DropdownMenuContent></DropdownMenu></ButtonGroup>
+      <ButtonGroup><Popover><PopoverTrigger render={<Button aria-label={t("home.analytics.controls.dateRange")} size="icon" variant="outline" />}><CalendarIcon /></PopoverTrigger><PopoverContent align="start" className="w-auto p-0" sideOffset={8}><Calendar captionLayout="label" mode="range" onSelect={(selection: DateRange | undefined) => { const from = selection?.from; if (!from) return; setView((current) => ({ ...current, customRange: { from, to: selection?.to ?? from }, preset: "custom" })); }} selected={{ from: range.from, to: range.to }} /></PopoverContent></Popover><DropdownMenu><DropdownMenuTrigger render={<Button aria-label={t("home.analytics.controls.presetRange")} className="max-w-56" variant="outline" />}><span className="truncate">{t(`home.analytics.controls.presets.${preset}`)}</span></DropdownMenuTrigger><DropdownMenuContent align="end" className="min-w-56"><DropdownMenuGroup>{presets.map((option) => <DropdownMenuItem className="justify-between" key={option} onClick={() => setPreset(option)}>{t(`home.analytics.controls.presets.${option}`)}{option === preset ? <Check /> : null}</DropdownMenuItem>)}</DropdownMenuGroup></DropdownMenuContent></DropdownMenu></ButtonGroup>
       </>}
     </div></div>
     {businesses.isError || analytics.isError ? <Surface className="p-8 text-center text-sm text-destructive">Analytics are unavailable.</Surface> : null}

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { defaultAgentName, defaultGreeting, isDefaultAgentName, isDefaultGreeting, runtimeLocales } from "./index";
 
 describe("defaultAgentName", () => {
-  it("translates Agent into all eight caller languages", () => {
+  it("translates Agent into every caller language", () => {
     expect(runtimeLocales.map((locale) => [locale, defaultAgentName(locale)])).toEqual([
       ["en", "Agent"],
       ["fr", "Agent"],
@@ -13,6 +13,13 @@ describe("defaultAgentName", () => {
       ["pt", "Agente"],
       ["it", "Agente"],
       ["nl", "Agent"],
+      ["pl", "Agent"],
+      ["tr", "Asistan"],
+      ["vi", "Trợ lý"],
+      ["tl", "Assistant"],
+      ["sv", "Agent"],
+      ["ru", "Агент"],
+      ["uk", "Агент"],
     ]);
   });
 
@@ -40,6 +47,13 @@ describe("defaultGreeting", () => {
       "Obrigado por ligar para Maple Clinic. Como posso ajudar você hoje?",
       "Grazie per aver chiamato Maple Clinic. Come posso aiutarla oggi?",
       "Bedankt voor het bellen naar Maple Clinic. Waarmee kan ik u vandaag helpen?",
+      "Dziękujemy za telefon, tu Maple Clinic. W czym mogę dziś pomóc?",
+      "Aradığınız için teşekkür ederiz, burası Maple Clinic. Bugün size nasıl yardımcı olabilirim?",
+      "Cảm ơn quý khách đã gọi đến Maple Clinic. Tôi có thể giúp gì cho quý khách hôm nay?",
+      "Salamat po sa pagtawag sa Maple Clinic. Paano ko po kayo matutulungan ngayon?",
+      "Tack för att du ringer Maple Clinic. Hur kan jag hjälpa dig i dag?",
+      "Спасибо за звонок, это Maple Clinic. Чем я могу вам помочь сегодня?",
+      "Дякуємо за дзвінок, це Maple Clinic. Чим я можу вам допомогти сьогодні?",
     ]);
     expect(defaultGreeting("Maple Clinic")).toBe("Thanks for calling Maple Clinic. How can I help you today?");
   });

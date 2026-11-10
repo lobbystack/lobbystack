@@ -37,7 +37,7 @@ describe("CancelAppointmentButton", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
-  it("cancels after the operator confirms, then refreshes Home and the appointments list", async () => {
+  it("cancels after the operator confirms, then refreshes Home, the appointments list and the call", async () => {
     const { fetchMock, invalidate } = await setup("scheduler");
     await userEvent.click(screen.getByRole("button", { name: "Cancel appointment: Sep 7, 2026, 2:30 PM" }));
     expect(fetchMock).not.toHaveBeenCalled();
@@ -45,6 +45,7 @@ describe("CancelAppointmentButton", () => {
     await userEvent.click(screen.getByRole("button", { name: copy.confirm }));
     await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ["appointments", "business"] }));
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["dashboard"] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["call"] });
     expect(fetchMock).toHaveBeenCalledWith("/api/appointments/appointment-1/cancel?businessId=business", expect.objectContaining({ method: "POST" }));
     expect((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body).toBeUndefined();
     expect(toast.success).toHaveBeenCalledWith(copy.done);

@@ -1,5 +1,5 @@
 {
-  "accessibility": { "close": "Close", "toggleSidebar": "Toggle sidebar", "skipToContent": "Skip to main content" },
+  "accessibility": { "close": "Close", "toggleSidebar": "Toggle sidebar", "skipToContent": "Skip to main content", "clearSearch": "Clear search" },
   "errors": { "unexpected": "Something went wrong. Please try again." },
   "loading": {
     "title": "Loading...",
@@ -23,7 +23,14 @@
     "de": "German",
     "pt": "Portuguese (Brazil)",
     "it": "Italian",
-    "nl": "Dutch"
+    "nl": "Dutch",
+    "pl": "Polish",
+    "tr": "Turkish",
+    "vi": "Vietnamese",
+    "tl": "Tagalog",
+    "sv": "Swedish",
+    "ru": "Russian",
+    "uk": "Ukrainian"
   },
   "phoneCountry": {
     "search": "Search countries or codes",
@@ -98,7 +105,8 @@
     "orCall": "Or call",
     "message": "Message",
     "send": "Send",
-    "sendFailed": "Message not sent. Try again."
+    "sendFailed": "Message not sent. Try again.",
+    "typing": "Agent is typing"
   },
   "testCall": {
     "trigger": "Test Call",
@@ -215,6 +223,18 @@
       "failed": "We couldn't cancel the appointment. Try again.",
       "summary": "{{service}} for {{name}} on {{time}}",
       "summaryNoService": "Appointment for {{name}} on {{time}}"
+    },
+    "reschedule": {
+      "approve": "Approve reschedule",
+      "title": "Move this appointment to {{time}}?",
+      "description": "{{appointment}} will move to {{time}}. We'll update your connected calendar and its reminder, and close the request.",
+      "confirm": "Move appointment",
+      "keep": "Keep current time",
+      "done": "Appointment moved.",
+      "failed": "We couldn't move the appointment. Try again.",
+      "unavailable": "That time isn't available any more. Agree another time with the customer and move it from the calendar.",
+      "notReschedulable": "This appointment can't be moved. It may have been cancelled.",
+      "passed": "The requested time has passed."
     }
   },
   "abandonIntent": {

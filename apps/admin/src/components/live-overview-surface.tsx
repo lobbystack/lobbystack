@@ -8,13 +8,13 @@ import { getChannelLabel, getContactDisplayName, hasDisplayablePhone } from "@/l
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 
 import Link from "next/link";
-import { extractFollowUpContactName, getFollowUpDisplayTitle, isUrgentFollowUpValue, cancellationRequestDetails, parseFollowUpTaskBody, type RequestedCancellation } from "@/lib/follow-up-task";
+import { appointmentRequestKind, extractFollowUpContactName, getFollowUpDisplayTitle, isAppointmentRequest, isUrgentFollowUpValue, cancellationRequestDetails, parseFollowUpTaskBody, type RequestedCancellation } from "@/lib/follow-up-task";
 import { useEffect, useRef, type ReactNode } from "react";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, CalendarX2, ChevronRight, MessageCircleQuestionMark, PhoneCall, UserRound } from "lucide-react";
+import { AlertCircle, CalendarClock, CalendarX2, ChevronRight, MessageCircleQuestionMark, PhoneCall, UserRound } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +24,8 @@ import { DashboardActivationCard } from "@/components/dashboard-activation-card"
 import { LiveSetupGuideSurface, useSetupGuide } from "@/components/live-setup-guide-surface";
 import { needsHoursForBooking, useBusinessHours } from "@/components/business-hours-section";
 import { appointmentSummary, CancelAppointmentButton } from "@/components/cancel-appointment-button";
-import { MetricCardGridSkeleton } from "@/components/loading-skeletons";
+import { RescheduleAppointmentButton } from "@/components/reschedule-appointment-button";
+import { MetricCardGridSkeleton, SetupGuideSkeleton } from "@/components/loading-skeletons";
 import { Item, ItemActions, ItemHeader, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item";
 import { Separator } from "@/components/ui/separator";
 import { Surface } from "@/components/ui/surface";
@@ -35,10 +36,10 @@ import { fetchUnansweredQuestions, UNANSWERED_QUESTIONS_ANCHOR, unansweredQuesti
 import { useBusinessCan } from "@/components/business-capabilities-provider";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { dayKey } from "@/lib/calendar-days";
-import { isSetupGuideFinished, showsSetupGuide } from "@/lib/setup-guide";
+import { isSetupGuideFinished, SETUP_STEP_ORDER, showsSetupGuide } from "@/lib/setup-guide";
 
 const OverviewCallChart = dynamic(() => import("./overview-call-chart").then((module) => module.OverviewCallChart), {
-  loading: () => <div className="h-[350px] animate-pulse rounded-xl bg-muted" />,
+  loading: () => <Skeleton className="h-[350px] w-full" />,
   ssr: false,
 });
 
@@ -58,8 +59,6 @@ type DashboardSummary = {
   firstRealConversationAt?: string | null;
 };
 
-// A caller asked to cancel on a call where the agent couldn't (see the domain's CANCELLATION_REQUEST).
-const CANCELLATION_REQUEST = "appointment_cancellation";
 
 async function getSummary(): Promise<DashboardSummary> {
   const response = await fetch("/api/dashboard", { credentials: "include" });
@@ -89,8 +88,10 @@ export function LiveOverviewSurface() {
   const guide = useSetupGuide(mayShowGuide ? businessId : undefined);
   // Missing opening hours keep the guide open too: they're its one step the server doesn't track.
   const hours = useBusinessHours(mayShowGuide ? businessId ?? "" : "");
-  // A failed request leaves the guide out, and the dashboard works without setup.
-  const showGuide = mayShowGuide && (guide.isPending || (Boolean(guide.data) && (!isSetupGuideFinished(guide.data!) || (needsHoursForBooking(hours.data) && !guide.data!.skippedSteps.includes("hours")))));
+  // A failed request leaves the guide out, and the dashboard works without setup. Its placeholder holds the space while it loads.
+  const showGuide = mayShowGuide && Boolean(guide.data) && (!isSetupGuideFinished(guide.data!) || (needsHoursForBooking(hours.data) && !guide.data!.skippedSteps.includes("hours")));
+  // The activation card waits too, so it doesn't appear and then give way to the guide.
+  const guidePending = mayShowGuide && guide.isPending;
   // Finishing the last step here, or skipping them all, says so once.
   const guideWasShown = useRef(false);
   useEffect(() => {
@@ -115,16 +116,23 @@ export function LiveOverviewSurface() {
     { key: "averageDuration", value: formatDuration(summary.data.kpis.averageDuration.totalSeconds), description: formatDurationDelta(summary.data.kpis.averageDuration.deltaSeconds, t) },
   ] as const : [];
 
+  // Today's count replaces the appointments total once the list loads, so that card stays a placeholder until then.
+  const metricsLoading = summary.isLoading || (Boolean(summary.data) && appointments.isPending);
+
   if (summary.data?.firstRealConversationAt === null && !business) return <PageHeader title={t("home.title")} />;
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title={t("home.title")} />
       {/* The extra margin makes the visible gap match the one between the page title and Getting started. */}
-      {showGuide ? <div className="mb-4">{guide.data ? <LiveSetupGuideSurface businessId={businessId!} goal={business?.onboardingGoal ?? null} /> : <Skeleton className="h-64 rounded-xl" />}</div> : null}
+      {showGuide ? (
+        <div className="mb-4"><LiveSetupGuideSurface businessId={businessId!} goal={business?.onboardingGoal ?? null} /></div>
+      ) : guidePending ? (
+        <div className="mb-4"><SetupGuideSkeleton labels={{ title: t("setupGuide.title"), skip: t("setupGuide.skip"), steps: SETUP_STEP_ORDER.map((id) => t(`setupGuide.steps.${id}`)) }} /></div>
+      ) : null}
       <div className="flex flex-col gap-6">
         {/* Getting started covers what the activation card would offer. */}
-        {showGuide ? null : <DashboardActivationCard businessId={businessId} />}
+        {showGuide || guidePending ? null : <DashboardActivationCard businessId={businessId} />}
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
           <section className="animate-in fade-in slide-in-from-bottom-2 duration-200 flex flex-col gap-3 xl:h-full">
             <div className="flex items-center justify-between gap-4 px-1"><h2 className="type-section-title">{t("home.actionRequired.title")}</h2>{summary.isLoading ? <Skeleton className="h-6 w-12 rounded-full" /> : <Badge variant="outline">{((summary.data?.actionRequired.length ?? 0) + (unansweredCount > 0 ? 1 : 0)).toLocaleString(intlLocale(i18n.language))}</Badge>}</div>
@@ -133,15 +141,19 @@ export function LiveOverviewSurface() {
               <ItemContent><ItemTitle>{tKnowledge("unansweredQuestions.home.count", { count: unansweredCount })}</ItemTitle><ItemDescription>{tKnowledge("unansweredQuestions.home.description")}</ItemDescription></ItemContent>
               <ItemActions><ChevronRight className="size-4 text-muted-foreground" /></ItemActions>
             </Item> : null}
-            {summary.isLoading ? <ActionRequiredSkeleton /> : summary.data?.actionRequired.length ? <Card className="ph-mask border-border/70">
+            {summary.isLoading ? <ActionRequiredSkeleton /> : summary.data?.actionRequired.length ? <Card className="ph-mask border-border/70 xl:flex-1">
                   <CardContent>
-                    <ItemGroup>
-                      {summary.data!.actionRequired.map((item, index) => (
-                        <div key={item.id}>
+                    <ItemGroup className="has-data-[size=sm]:gap-0">
+                      {summary.data!.actionRequired.map((item) => (
+                        <div className="border-b py-4 first:pt-0 last:border-b-0 last:pb-0" key={item.id}>
                           {(() => {
                             const details = parseFollowUpTaskBody(item.body);
                             const displayTitle = getActionDisplayTitle(item, t);
-                            const cancellation = item.request === CANCELLATION_REQUEST;
+                            const requestKind = appointmentRequestKind(item.request);
+                            const cancellation = requestKind === "cancellation";
+                            const reschedule = requestKind === "reschedule";
+                            const appointmentRequest = requestKind !== null;
+                            const requestKindLabel = requestKind ? t(`home.actionRequired.kinds.${requestKind}`) : getActionKindLabel(item.kind, t);
                             // A request can outlive its appointment, cancelled before the request was saved.
                             const cancelled = item.appointment?.status === "canceled";
                             const appointment = item.appointment && !cancelled ? { ...item.appointment, contactName: getContactDisplayName({ name: item.appointment.contactName }, i18n.language, t) } : null;
@@ -153,9 +165,9 @@ export function LiveOverviewSurface() {
                                 : null;
 
                             return (
-                              <Item className="px-1 py-1" size="sm" variant="default">
+                              <Item className="p-0" size="sm" variant="default">
                                 <ItemMedia className="size-9 rounded-full bg-muted/70" variant="icon">
-                                  {cancellation ? <CalendarX2 className="size-4 text-muted-foreground" /> : getActionKindIcon(item.kind)}
+                                  {cancellation ? <CalendarX2 className="size-4 text-muted-foreground" /> : reschedule ? <CalendarClock className="size-4 text-muted-foreground" /> : getActionKindIcon(item.kind)}
                                 </ItemMedia>
                                 <ItemContent className="min-w-0">
                                   <ItemHeader className="flex-col items-start gap-2 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start sm:gap-x-3 sm:gap-y-2">
@@ -180,7 +192,7 @@ export function LiveOverviewSurface() {
                                     </div>
                                     <ItemActions className="hidden w-auto shrink-0 justify-end self-start sm:flex">
                                       <Badge variant="secondary">
-                                        {cancellation ? t("home.actionRequired.kinds.cancellation") : getActionKindLabel(item.kind, t)}
+                                        {requestKindLabel}
                                       </Badge>
                                       {isUrgentFollowUpValue(details.urgency) ? (
                                         <Badge variant="destructive">
@@ -192,13 +204,14 @@ export function LiveOverviewSurface() {
                                   {details.callbackPhone ? (
                                     <ItemDescription>{details.callbackPhone}</ItemDescription>
                                   ) : null}
-                                  {cancellation ? (
+                                  {appointmentRequest ? (
                                     <ItemDescription>{appointment ? t("home.actionRequired.appointment", { appointment: appointmentSummary(appointment, i18n.language, t) }) : t(cancelled ? "home.actionRequired.alreadyCancelled" : "home.actionRequired.noAppointment")}</ItemDescription>
                                   ) : null}
-                                  {cancellation ? (() => {
+                                  {appointmentRequest ? (() => {
                                     const request = cancellationRequestDetails(item, i18n.language);
                                     return <>
                                       {!appointment && request.requested ? <ItemDescription>{t("home.actionRequired.requested", { details: request.requested })}</ItemDescription> : null}
+                                      {reschedule && request.newTime ? <ItemDescription>{t("home.actionRequired.newTime", { time: request.newTime })}</ItemDescription> : null}
                                       {request.notes ? <ItemDescription>{t("home.actionRequired.notes", { notes: request.notes })}</ItemDescription> : null}
                                     </>;
                                   })() : null}
@@ -211,7 +224,7 @@ export function LiveOverviewSurface() {
                                     </span>
                                     <span className="flex items-center gap-2 sm:hidden">
                                       <Badge variant="secondary">
-                                        {cancellation ? t("home.actionRequired.kinds.cancellation") : getActionKindLabel(item.kind, t)}
+                                        {requestKindLabel}
                                       </Badge>
                                       {isUrgentFollowUpValue(details.urgency) ? (
                                         <Badge variant="destructive">
@@ -219,13 +232,12 @@ export function LiveOverviewSurface() {
                                         </Badge>
                                       ) : null}
                                     </span>
-                                    {appointment ? <CancelAppointmentButton appointment={appointment} approve variant="destructive" /> : null}
+                                    {appointment ? reschedule ? (item.requested?.newStartsAt ? <RescheduleAppointmentButton appointment={appointment} newStartsAt={item.requested.newStartsAt} /> : null) : <CancelAppointmentButton appointment={appointment} approve variant="destructive" /> : null}
                                   </ItemFooter>
                                 </ItemContent>
                               </Item>
                             );
                           })()}
-                          {index < summary.data!.actionRequired.length - 1 ? <Separator className="mt-4" /> : null}
                         </div>
                       ))}
                     </ItemGroup>
@@ -235,17 +247,25 @@ export function LiveOverviewSurface() {
           <section className="animate-in fade-in slide-in-from-bottom-2 duration-200 order-first flex flex-col gap-3 xl:h-full">
             <div className="flex items-center justify-between gap-4 px-1"><div className="flex items-center gap-3"><h2 className="type-section-title">{t("home.upcoming.title")}</h2><Link className="text-sm text-muted-foreground transition-colors hover:text-foreground" href="/appointments?view=list">{t("home.upcoming.viewAll")}</Link></div>{summary.isLoading ? <Skeleton className="h-6 w-12 rounded-full" /> : <Badge variant="outline">{(summary.data?.upcoming.length ?? 0).toLocaleString(intlLocale(i18n.language))}</Badge>}</div>
             {summary.isLoading ? <UpcomingSkeleton /> : summary.data?.upcoming.length ? (
-              <Card className="ph-mask border-border/70"><CardContent className="flex flex-col gap-4">
+              <Card className="ph-mask border-border/70 xl:flex-1"><CardContent className="flex flex-col gap-4">
                 {summary.data.upcoming.map((appointment, index) => {
                   const contactName = getContactDisplayName({ name: appointment.contactName, phone: appointment.contactPhone, email: appointment.contactEmail, channels: [appointment.sourceChannel] }, i18n.language, t);
                   return <div key={appointment.id}>
                     <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5">
                       <div className="flex min-w-0 flex-wrap items-center gap-2"><p className="type-item-title">{contactName}</p><Badge variant="outline">{getAppointmentStatusLabel(appointment.status, t)}</Badge><Badge variant="secondary">{getChannelLabel(appointment.sourceChannel, t)}</Badge></div>
                       <p className="type-item-title text-right">{formatDateTime(appointment.startsAt, i18n.language, { weekday: "short", month: "short", day: "numeric", timeZone: appointment.timezone })}</p>
-                      <p className="type-body-muted min-w-0 truncate">{appointment.serviceName ?? t("home.upcoming.unknownService")}</p>
-                      <p className="type-body-muted text-right">{formatDateTime(appointment.startsAt, i18n.language, { hour: "numeric", minute: "2-digit", timeZone: appointment.timezone })}</p>
-                      <p className="type-body-muted min-w-0 truncate">{appointment.employeeName ? t("home.upcoming.employee", { name: appointment.employeeName }) : null}</p>
-                      <div className="flex justify-end"><CancelAppointmentButton appointment={{ ...appointment, contactName }} variant="destructive" /></div>
+                      <p className="type-body-muted flex min-w-0 items-center gap-1.5">
+                        <span className="truncate">{appointment.serviceName ?? t("home.upcoming.unknownService")}</span>
+                        {appointment.employeeName ? <>
+                          <span aria-hidden="true">·</span>
+                          <span className="sr-only">{t("home.upcoming.employee", { name: appointment.employeeName })}</span>
+                          <span aria-hidden="true" className="inline-flex min-w-0 items-center gap-1"><UserRound className="size-3.5 shrink-0" /><span className="truncate">{appointment.employeeName}</span></span>
+                        </> : null}
+                      </p>
+                      <div className="flex items-center justify-end gap-3">
+                        <p className="type-body-muted">{formatDateTime(appointment.startsAt, i18n.language, { hour: "numeric", minute: "2-digit", timeZone: appointment.timezone })}</p>
+                        <CancelAppointmentButton appointment={{ ...appointment, contactName }} variant="destructive" />
+                      </div>
                     </div>
                     {index < summary.data.upcoming.length - 1 ? <Separator className="mt-4" /> : null}
                   </div>;
@@ -254,7 +274,7 @@ export function LiveOverviewSurface() {
             ) : <div className="rounded-xl border border-dashed p-12 text-center xl:flex xl:flex-1 xl:flex-col xl:items-center xl:justify-center"><p className="type-empty-title">{t("home.upcoming.emptyTitle")}</p><p className="type-empty-description mt-2">{t("home.upcoming.emptyDescription")}</p></div>}
           </section>
         </div>
-        {summary.isLoading ? <MetricCardGridSkeleton count={3} /> : (
+        {metricsLoading ? <MetricCardGridSkeleton count={3} titles={[t("home.metrics.calls.title"), t("home.metrics.appointments.title"), t("home.metrics.averageDuration.title")]} /> : (
           <Surface className="grid sm:grid-cols-2 md:grid-cols-3">
             {metrics.map((metric) => (
               <section className="border-b p-5 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0 md:border-b-0 md:border-r md:last:border-r-0" key={metric.key}>
@@ -269,7 +289,7 @@ export function LiveOverviewSurface() {
             ))}
           </Surface>
         )}
-        {summary.isLoading ? <OverviewChartSkeleton /> : <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
+        {summary.isLoading ? <OverviewChartSkeleton chartTitle={t("home.chart.title")} recentCallsTitle={t("home.recentCalls.title")} /> : <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
           <Card className="col-span-1 lg:col-span-4"><CardHeader><CardTitle>{t("home.chart.title")}</CardTitle></CardHeader><CardContent className="ps-2"><OverviewCallChart data={(summary.data?.monthlyCalls ?? []).map((item) => ({ name: formatDateTime(item.monthStart, i18n.language, { month: "short", timeZone: "UTC" }), total: item.total }))} /></CardContent></Card>
           <Card className="ph-mask col-span-1 lg:col-span-3"><CardHeader><CardTitle>{t("home.recentCalls.title")}</CardTitle><CardDescription>{t("home.recentCalls.description", { count: summary.data?.recentCalls.length ?? 0 })}</CardDescription></CardHeader><CardContent><div className="flex flex-col gap-6">{(summary.data?.recentCalls ?? []).map((call) => <div className="flex items-center gap-4" key={call.id}><Avatar className="h-9 w-9"><AvatarFallback>{initials(call.contactName)}</AvatarFallback></Avatar><div className="flex flex-1 flex-wrap items-center justify-between"><div className="flex flex-col gap-1"><p className="type-item-title leading-none">{getContactDisplayName({ name: call.contactName, phone: call.contactPhone, email: call.contactEmail, channels: [call.transport] }, i18n.language, t)}</p><p className="type-body-muted">{call.contactName && hasDisplayablePhone(call.contactPhone) ? formatPhoneNumberDisplay(call.contactPhone, i18n.language) : formatDateTime(call.startedAt, i18n.language, { dateStyle: "medium", timeStyle: "short" })}</p></div><div className="type-item-title">{call.durationSeconds ? t("home.recentCalls.durationValue", { value: call.durationSeconds }) : call.status}</div></div></div>)}</div></CardContent></Card>
         </div>}
@@ -300,12 +320,12 @@ function formatDurationDelta(value: number, t: ReturnType<typeof useTranslation<
 
 function ActionRequiredSkeleton() {
   return (
-    <Card className="border-border/70">
+    <Card aria-busy="true" className="border-border/70">
       <CardContent>
-        <ItemGroup>
+        <ItemGroup className="has-data-[size=sm]:gap-0">
           {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index}>
-              <Item className="px-1 py-1" size="sm" variant="default">
+            <div className="border-b py-4 first:pt-0 last:border-b-0 last:pb-0" key={index}>
+              <Item className="p-0" size="sm" variant="default">
                 <ItemMedia className="size-9 rounded-full bg-muted/70" variant="icon">
                   <Skeleton className="size-4 rounded-full" />
                 </ItemMedia>
@@ -318,7 +338,6 @@ function ActionRequiredSkeleton() {
                   <Skeleton className="h-3 w-1/3" />
                 </ItemContent>
               </Item>
-              {index < 2 ? <Separator className="mt-4" /> : null}
             </div>
           ))}
         </ItemGroup>
@@ -329,7 +348,7 @@ function ActionRequiredSkeleton() {
 
 function UpcomingSkeleton() {
   return (
-    <Card className="border-border/70">
+    <Card aria-busy="true" className="border-border/70">
       <CardContent className="flex flex-col gap-4">
         {Array.from({ length: 3 }).map((_, index) => (
           <div key={index}>
@@ -339,10 +358,11 @@ function UpcomingSkeleton() {
                 <Skeleton className="h-5 w-16 rounded-full" />
               </div>
               <Skeleton className="h-4 w-24 justify-self-end" />
-              <Skeleton className="h-3 w-36" />
-              <Skeleton className="h-3 w-14 justify-self-end" />
-              <Skeleton className="h-3 w-24" />
-              <Skeleton className="h-8 w-20 justify-self-end" />
+              <Skeleton className="h-3 w-40" />
+              <div className="flex items-center justify-end gap-3">
+                <Skeleton className="h-3 w-14" />
+                <Skeleton className="h-8 w-20" />
+              </div>
             </div>
             {index < 2 ? <Separator className="mt-4" /> : null}
           </div>
@@ -352,12 +372,12 @@ function UpcomingSkeleton() {
   );
 }
 
-function OverviewChartSkeleton() {
+function OverviewChartSkeleton({ chartTitle, recentCallsTitle }: { chartTitle: string; recentCallsTitle: string }) {
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
+    <div aria-busy="true" className="grid grid-cols-1 gap-4 lg:grid-cols-7">
       <Card className="col-span-1 lg:col-span-4">
         <CardHeader>
-          <Skeleton className="h-5 w-32" />
+          <CardTitle>{chartTitle}</CardTitle>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-[350px] w-full" />
@@ -365,7 +385,7 @@ function OverviewChartSkeleton() {
       </Card>
       <Card className="col-span-1 lg:col-span-3">
         <CardHeader>
-          <Skeleton className="h-5 w-28" />
+          <CardTitle>{recentCallsTitle}</CardTitle>
           <Skeleton className="h-4 w-40" />
         </CardHeader>
         <CardContent>
@@ -435,10 +455,10 @@ function getActionDisplayTitle(
   item: DashboardSummary["actionRequired"][number],
   t: ReturnType<typeof useTranslation<"dashboard">>["t"],
 ): string {
-  if (item.request === CANCELLATION_REQUEST) {
+  if (isAppointmentRequest(item.request)) {
     // The stored body is English, so the title is rebuilt from the contact name.
     const name = extractFollowUpContactName(item.title, item.kind);
-    const message = t("home.actionRequired.cancellationRequest");
+    const message = t(appointmentRequestKind(item.request) === "reschedule" ? "home.actionRequired.rescheduleRequest" : "home.actionRequired.cancellationRequest");
     return name ? t("home.actionRequired.titleWithContact", { message, name }) : message;
   }
   return getFollowUpDisplayTitle({

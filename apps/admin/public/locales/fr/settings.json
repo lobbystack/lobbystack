@@ -249,7 +249,7 @@
     "spendingCap": {
       "title": "Plafond mensuel de dépenses",
       "placeholder": "25,00",
-      "amountLabel": "Plafond de dépassement (USD)",
+      "amountLabel": "Plafond de dépassement",
       "noCap": "Aucun plafond de dépenses défini",
       "currentSpend": "Dépenses de dépassement actuelles",
       "spendOfCap": "{{spend}} sur {{cap}}",
@@ -475,6 +475,7 @@
       "areaCodeLabel": "Indicatif régional",
       "areaCodePlaceholder": "Indicatif",
       "search": "Rechercher",
+      "searching": "Recherche...",
       "phoneNumberHeader": "Numéro de téléphone",
       "select": "Sélectionner",
       "claiming": "Connexion de votre nouveau numéro...",
@@ -759,7 +760,8 @@
       "placeholder": "Clinique familiale Maple",
       "save": "Enregistrer",
       "saving": "Enregistrement...",
-      "saved": "Modifications enregistrées"
+      "saved": "Modifications enregistrées",
+      "required": "Entrez un nom d'entreprise."
     },
     "changeEmail": {
       "label": "Changer le courriel",
@@ -851,7 +853,9 @@
         "invalidEmail": "Entrez une adresse courriel valide.",
         "partnerMember": "{{email}} fait partie de l'équipe du partenaire de cet espace de travail. Cette personne y travaille depuis la console partenaire et ne peut donc pas rejoindre l'équipe.",
         "failed": "Impossible d'envoyer cette invitation. Veuillez réessayer."
-      }
+      },
+      "emailRequired": "Entrez une adresse courriel.",
+      "cancel": "Annuler"
     },
     "pending": {
       "resend": "Renvoyer",
@@ -1122,6 +1126,8 @@
       "nameLabel": "Nom",
       "namePlaceholder": "Synchro CRM",
       "scopesLabel": "Accès",
+      "nameRequired": "Entrez un nom.",
+      "scopesRequired": "Choisissez au moins une autorisation.",
       "cancel": "Annuler",
       "submit": "Créer la clé",
       "creating": "Création…"

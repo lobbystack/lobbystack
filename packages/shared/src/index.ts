@@ -5,7 +5,7 @@ export { isMaintenanceMode } from "./maintenance";
 export const CALENDAR_RECONNECT_ERROR = "Calendar authorization requires reconnection.";
 /** The last sync error of a Calendly connection on a plan that can't book through the API. */
 export const CALENDLY_PLAN_ERROR = "Calendly books through its API only on paid plans.";
-export { interfaceLocaleTags, interfaceLocales, intlLocale, isInterfaceLocale, isRuntimeLocale, normalizeInterfaceLocale, normalizeRuntimeLocale, runtimeLocaleName, runtimeLocales } from "./locales";
+export { interfaceLocaleTags, interfaceLocales, intlLocale, isInterfaceLocale, isRuntimeLocale, normalizeInterfaceLocale, normalizeRuntimeLocale, runtimeLocaleFromTag, runtimeLocaleName, runtimeLocales } from "./locales";
 export type { InterfaceLocale, RuntimeLocale } from "./locales";
 import { interfaceLocales, runtimeLocales, type InterfaceLocale, type RuntimeLocale } from "./locales";
 import { appointmentChangeVerificationModes, bookingModes, transferModes, type ReceptionistVoice, type StaffFirstMode } from "./receptionist";
@@ -235,6 +235,14 @@ const greetings: Record<RuntimeLocale, (name: string) => string> = {
   pt: (name) => `Obrigado por ligar para ${name}. Como posso ajudar você hoje?`,
   it: (name) => `Grazie per aver chiamato ${name}. Come posso aiutarla oggi?`,
   nl: (name) => `Bedankt voor het bellen naar ${name}. Waarmee kan ik u vandaag helpen?`,
+  // These put the name where it takes no case ending or suffix, since names can't be declined.
+  pl: (name) => `Dziękujemy za telefon, tu ${name}. W czym mogę dziś pomóc?`,
+  tr: (name) => `Aradığınız için teşekkür ederiz, burası ${name}. Bugün size nasıl yardımcı olabilirim?`,
+  vi: (name) => `Cảm ơn quý khách đã gọi đến ${name}. Tôi có thể giúp gì cho quý khách hôm nay?`,
+  tl: (name) => `Salamat po sa pagtawag sa ${name}. Paano ko po kayo matutulungan ngayon?`,
+  sv: (name) => `Tack för att du ringer ${name}. Hur kan jag hjälpa dig i dag?`,
+  ru: (name) => `Спасибо за звонок, это ${name}. Чем я могу вам помочь сегодня?`,
+  uk: (name) => `Дякуємо за дзвінок, це ${name}. Чим я можу вам допомогти сьогодні?`,
 };
 
 /**
@@ -254,7 +262,7 @@ export function isDefaultGreeting(greeting: string, businessName: string, locale
   return greeting === defaultGreeting(businessName, locale) || (locale === "en" && greeting === `Thanks for calling ${businessName.trim()}.`);
 }
 
-// Migration 0183's app.default_agent_name is the same list.
+// Migration 0198's app.default_agent_name is the same list.
 const agentNames: Record<RuntimeLocale, string> = {
   en: "Agent",
   fr: "Agent",
@@ -264,6 +272,13 @@ const agentNames: Record<RuntimeLocale, string> = {
   pt: "Agente",
   it: "Agente",
   nl: "Agent",
+  pl: "Agent",
+  tr: "Asistan",
+  vi: "Trợ lý",
+  tl: "Assistant",
+  sv: "Agent",
+  ru: "Агент",
+  uk: "Агент",
 };
 
 /** A business's default agent's name, in its caller language. Operators see it, and callers never hear it. */
@@ -414,6 +429,13 @@ export type AppointmentRequest = {
   timezone: string;
   preferredStaffId?: string;
 };
+
+/** Marks a follow-up as a caller's request to cancel, linked to the appointment when one matched. */
+export const CANCELLATION_REQUEST = "appointment_cancellation";
+/** Marks a follow-up as a caller's request to move an appointment to a new time. */
+export const RESCHEDULE_REQUEST = "appointment_reschedule";
+/** The requests an operator can approve against an appointment. */
+export const APPOINTMENT_REQUESTS = [CANCELLATION_REQUEST, RESCHEDULE_REQUEST] as const;
 
 export type SmsConversationInput = {
   businessId: string;

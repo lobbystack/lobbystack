@@ -1,6 +1,9 @@
 "use client"
 
+import { useCallback, useEffect } from "react"
+import { Toaster, toast } from "sonner"
 import { ArrowRight, Phone, PhoneOff } from "lucide-react"
+import { runtimeLocaleFromTag, type RuntimeLocale } from "@lobbystack/shared"
 import {
   AuraVoiceOrb,
   useWebVoiceCall,
@@ -12,6 +15,7 @@ import {
 import { Button, buttonVariants } from "@/marketing/components/ui/button"
 import { appSignupUrl } from "@/marketing/lib/app-links"
 import type { Locale } from "@/marketing/i18n"
+import { SUPPORTED_LOCALES } from "@/marketing/i18n/config"
 
 type LobbyStackAuraVoiceDemoProps = {
   locale?: Locale
@@ -171,6 +175,8 @@ const errorCopy: Record<
     browserNoMicrophone: "This browser does not support microphone calls.",
     browserNoWebRtc: "This browser does not support live voice calls.",
     voiceLimitReached: "The AI receptionist is unavailable right now.",
+    rateLimited: "You've reached the demo limit for now. Try again in an hour.",
+    businessNotFound: "The demo isn't set up on this site yet.",
     unavailable: "The AI receptionist is unavailable right now.",
     generic: "Something went wrong while starting the call.",
   },
@@ -179,6 +185,9 @@ const errorCopy: Record<
     microphoneNotFound: "Branchez un microphone pour continuer.",
     microphoneInUse: "Fermez l’autre application qui utilise le microphone.",
     connectionDropped: "La connexion vocale a été interrompue.",
+    rateLimited: "Vous avez atteint la limite de la démo. Réessayez dans une heure.",
+    voiceLimitReached: "Le réceptionniste IA est indisponible pour le moment.",
+    businessNotFound: "La démo n’est pas encore configurée sur ce site.",
     generic: "Impossible de démarrer l’appel. Réessayez.",
   },
   es: {
@@ -189,6 +198,9 @@ const errorCopy: Record<
     gatewayUnreachable:
       "Esta página no puede conectar con LobbyStack para iniciar la llamada.",
     connectionDropped: "Se cortó la conexión de voz.",
+    rateLimited: "Alcanzó el límite de la demo. Inténtelo de nuevo en una hora.",
+    voiceLimitReached: "La recepcionista con IA no está disponible ahora.",
+    businessNotFound: "La demo aún no está configurada en este sitio.",
     generic: "No se pudo iniciar la llamada. Inténtelo de nuevo.",
   },
   sr: {
@@ -199,8 +211,26 @@ const errorCopy: Record<
     gatewayUnreachable:
       "Stranica ne može da se poveže sa LobbyStack servisom da bi započela poziv.",
     connectionDropped: "Glasovna veza je prekinuta.",
+    rateLimited: "Dostigli ste ograničenje demoa. Pokušajte ponovo za sat vremena.",
+    voiceLimitReached: "AI recepcioner trenutno nije dostupan.",
+    businessNotFound: "Demo još nije podešen na ovom sajtu.",
     generic: "Poziv nije mogao da počne. Pokušajte ponovo.",
   },
+}
+
+/**
+ * The language the AI opens the call in: the page's, except that an English page gives way to a
+ * browser language the AI speaks and the site has no pages in, such as German.
+ */
+export function callLanguage(page: Locale, browserLanguages: readonly string[]): RuntimeLocale {
+  if (page !== "en") return page
+  for (const tag of browserLanguages) {
+    const language = runtimeLocaleFromTag(tag)
+    // A site language here means the visitor was offered its pages and stayed on English.
+    if ((SUPPORTED_LOCALES as readonly string[]).includes(language ?? "")) return page
+    if (language) return language
+  }
+  return page
 }
 
 function landingEventName(event: WebVoiceCallEvent) {
@@ -216,9 +246,14 @@ export function LobbyStackAuraVoiceDemo({
   widgetId,
   onEvent,
 }: LobbyStackAuraVoiceDemoProps) {
+  const getStartPayload = useCallback(
+    async () => ({ language: callLanguage(locale, navigator.languages) }),
+    [locale],
+  )
   const call = useWebVoiceCall({
     businessSlug,
     endpoint,
+    getStartPayload,
     ...(widgetId ? { widgetId } : {}),
     ...(onEvent
       ? {
@@ -229,9 +264,15 @@ export function LobbyStackAuraVoiceDemo({
   })
   const { status, muted, errorKey, startCall, endCall, isCallActive, canHangUp } = call
   const errors = errorCopy[locale]
+  // The line under the orb is easy to miss, so a failed start also says why in a toast.
+  const errorMessage = errorKey ? (errors[errorKey] ?? errors.generic) : null
+  useEffect(() => {
+    if (status === "error" && errorMessage) toast.error(errorMessage)
+  }, [status, errorKey, errorMessage])
 
   return (
     <div className="mx-auto flex w-full min-w-0 flex-col items-center text-center">
+      <Toaster position="bottom-center" richColors />
       <AuraVoiceOrb
         call={call}
         statusLabel={

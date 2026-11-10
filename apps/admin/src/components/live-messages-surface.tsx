@@ -5,7 +5,7 @@ import { useActiveBusiness } from "@/hooks/use-active-business";
 import { subscribeRealtimeQuery } from "@/lib/realtime-query";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { ArrowLeft, Bot, SearchIcon, Send, User } from "lucide-react";
+import { ArrowLeft, Bot, Send, User } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -15,6 +15,7 @@ import { PageHeader } from "@/components/page-header";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/ui/search-input";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { getContactDisplayName } from "@/lib/contact-display";
@@ -131,7 +132,7 @@ export function LiveMessagesSurface() {
           <div className="flex items-center gap-1">
             {channelFilters.map((key) => <Button key={key} size="sm" variant={channelFilter === key ? "secondary" : "ghost"} className="px-2.5 text-xs" onClick={() => setChannelFilter(key)}>{key === "all" ? t("page.filterAll") : key === "web_chat" ? t("page.filterWeb") : key === "instagram" ? t("page.filterInstagram") : t("page.filterSms")}</Button>)}
           </div>
-          <div className="relative"><SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input aria-label={t("page.searchPlaceholder")} className="pl-10" onChange={(event) => setSearch(event.target.value)} placeholder={t("page.searchPlaceholder")} value={search} /></div>
+          <SearchInput aria-label={t("page.searchPlaceholder")} onValueChange={setSearch} placeholder={t("page.searchPlaceholder")} value={search} />
         </div>
         <div className="-mx-3 no-scrollbar h-full overflow-y-auto p-3">
           {conversations.map((conversation) => <div key={conversation.id}><button className={cn("group flex w-full rounded-md px-2 py-2 text-start text-sm hover:bg-accent hover:text-accent-foreground", selectedId === conversation.id && "bg-muted")} onClick={() => { if (business) telemetry.track("web.messages.thread_opened", { businessId: business.businessId, conversationId: conversation.id, channel: conversation.channel }); setSelectedId(conversation.id); }} type="button"><div className="flex w-full gap-2"><Avatar><AvatarFallback className="ph-mask">{initials(conversation.latest.visitorName ?? conversation.latest.contactName, conversation.displayName)}</AvatarFallback></Avatar><div className="min-w-0 flex-1"><div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-2"><span className="ph-mask truncate font-semibold">{conversation.displayName}</span><span className="text-[11px] text-muted-foreground">{formatDateTime(conversation.latest.createdAt, i18n.language, { hour: "numeric", minute: "2-digit" })}</span></div><span className="ph-mask line-clamp-2 text-muted-foreground">{conversation.latest.body || t("page.emptyPreview")}</span>{waitingForTeam(conversation.latest) ? <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700"><User className="size-3" />{t("page.waitingBadge")}</span> : null}</div>{conversation.channel === "web_chat" ? <span className="mt-0.5 flex size-4 items-center justify-center rounded-full bg-primary/10 text-primary" title="Web chat"><Bot className="size-3" /></span> : null}</div></button><Separator className="my-1" /></div>)}

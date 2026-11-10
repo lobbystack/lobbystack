@@ -694,6 +694,26 @@ describe("LiveCallController ending when the caller is done", () => {
       expect(endOnClose(socket, closed)).toBe("caller_finished");
     });
 
+    it("asks about a Vietnamese goodbye, whose syllables are written apart", async () => {
+      fakeTimers();
+      const callerLeaving = vi.fn(async (_conversation: string, _abortSignal: AbortSignal) => true);
+      const { socket } = setup({ callerLeaving });
+      await vi.advanceTimersByTimeAsync(0);
+      missedGoodbye(socket, "Cảm ơn quý khách đã gọi. Chúc quý khách một ngày tốt lành.");
+      await vi.advanceTimersByTimeAsync(1_600);
+      expect(callerLeaving).toHaveBeenCalledOnce();
+    });
+
+    it("leaves a longer reply alone", async () => {
+      fakeTimers();
+      const callerLeaving = vi.fn(async (_conversation: string, _abortSignal: AbortSignal) => true);
+      const { socket } = setup({ callerLeaving });
+      await vi.advanceTimersByTimeAsync(0);
+      missedGoodbye(socket, "We're open Monday to Friday from nine to five, and on Saturday mornings too.");
+      await vi.advanceTimersByTimeAsync(1_600);
+      expect(callerLeaving).not.toHaveBeenCalled();
+    });
+
     it("keeps the call going when the caller isn't leaving, and asks about each turn once", async () => {
       fakeTimers();
       const callerLeaving = vi.fn(async (_conversation: string, _abortSignal: AbortSignal) => false);

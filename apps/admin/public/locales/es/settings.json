@@ -249,7 +249,7 @@
     "spendingCap": {
       "title": "Límite de gasto mensual",
       "placeholder": "25.00",
-      "amountLabel": "Límite de excedentes (USD)",
+      "amountLabel": "Límite de excedentes",
       "noCap": "No hay ningún límite de gasto definido",
       "currentSpend": "Gasto actual en excedentes",
       "spendOfCap": "{{spend}} de {{cap}}",
@@ -475,6 +475,7 @@
       "areaCodeLabel": "Código de área",
       "areaCodePlaceholder": "Código de área",
       "search": "Buscar",
+      "searching": "Buscando...",
       "phoneNumberHeader": "Número de teléfono",
       "select": "Seleccionar",
       "claiming": "Conectando su nuevo número...",
@@ -759,7 +760,8 @@
       "placeholder": "Clínica Familiar Maple",
       "save": "Guardar",
       "saving": "Guardando...",
-      "saved": "Cambios guardados"
+      "saved": "Cambios guardados",
+      "required": "Introduzca el nombre de la empresa."
     },
     "changeEmail": {
       "label": "Cambiar correo electrónico",
@@ -851,7 +853,9 @@
         "invalidEmail": "Introduzca un correo electrónico válido.",
         "partnerMember": "{{email}} forma parte del equipo del socio de este espacio de trabajo. Trabaja aquí desde la consola de socios, así que no puede unirse al equipo.",
         "failed": "No pudimos enviar esa invitación. Inténtelo de nuevo."
-      }
+      },
+      "emailRequired": "Introduzca una dirección de correo.",
+      "cancel": "Cancelar"
     },
     "pending": {
       "resend": "Reenviar",
@@ -1122,6 +1126,8 @@
       "nameLabel": "Nombre",
       "namePlaceholder": "Sincronización con el CRM",
       "scopesLabel": "Acceso",
+      "nameRequired": "Introduzca un nombre.",
+      "scopesRequired": "Elija al menos un permiso.",
       "cancel": "Cancelar",
       "submit": "Crear clave",
       "creating": "Creando…"

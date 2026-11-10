@@ -79,6 +79,7 @@
     "submitting": "Pokretanje uvoza...",
     "skip": "Nemam sajt",
     "skipping": "Preskakanje...",
+    "skippingImport": "Preskakanje uvoza...",
     "submitFailed": "Trenutno ne možemo da pokrenemo uvoz sajta. Pokušajte ponovo.",
     "invalidUrl": "Unesite adresu svog sajta, na primer mojafirma.rs.",
     "skipFailed": "Trenutno ne možemo da preskočimo ovaj korak. Pokušajte ponovo."
@@ -188,6 +189,7 @@
     "capabilities": "Mogućnosti",
     "voiceSms": "Glas · SMS",
     "search": "Pretraži",
+    "searching": "Pretraga...",
     "tableHeaders": {
       "phoneNumber": "Broj telefona"
     },

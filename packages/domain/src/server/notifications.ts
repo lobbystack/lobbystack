@@ -164,6 +164,9 @@ function localeFor(value: string | null | undefined): InterfaceLocale {
 /** The text a customer gets when their appointment is cancelled, the one appointment notification sent for a cancelled appointment. */
 export const CANCELLATION_CONFIRMATION = "cancellation_confirmation";
 
+/** The text a customer gets when their appointment moves. Its kind carries the revision, since an appointment can move more than once. */
+export const RESCHEDULE_CONFIRMATION = "reschedule_confirmation";
+
 /**
  * The opt-out line every appointment text ends with, as in the sample the
  * shared sender's toll-free verification approved. Carriers act on STOP and
@@ -241,6 +244,7 @@ function appointmentMessage(input: { kind: string; locale: InterfaceLocale; busi
   // SMS bodies avoid characters outside the GSM-7 alphabet where the wording
   // allows it, so a reminder stays in as few segments as the English one.
   if (input.kind === CANCELLATION_CONFIRMATION) return cancellationNotification(input, date);
+  if (input.kind.startsWith(RESCHEDULE_CONFIRMATION)) return rescheduleNotification(input, date);
   if (input.kind.startsWith(VIDEO_LINK_UPDATE)) return videoLinkNotification(input, date);
   if (input.locale === "fr") {
     return {
@@ -279,6 +283,13 @@ function cancellationNotification(input: { locale: InterfaceLocale; businessName
   if (input.locale === "es") return { subject: "Cita cancelada", body: `${input.businessName}: cancelamos su cita de ${input.serviceName} del ${date}.` };
   if (input.locale === "sr") return { subject: "Termin je otkazan", body: `${input.businessName}: otkazali smo termin za ${input.serviceName}, ${date}.` };
   return { subject: "Appointment cancelled", body: `${input.businessName}: your ${input.serviceName} appointment on ${date} is cancelled.` };
+}
+
+function rescheduleNotification(input: { locale: InterfaceLocale; businessName: string; serviceName: string }, date: string): { subject: string; body: string } {
+  if (input.locale === "fr") return { subject: "Rendez-vous déplacé", body: `${input.businessName}: votre rendez-vous ${input.serviceName} est déplacé au ${date}.` };
+  if (input.locale === "es") return { subject: "Cita reprogramada", body: `${input.businessName}: su cita de ${input.serviceName} queda para el ${date}.` };
+  if (input.locale === "sr") return { subject: "Termin je pomeren", body: `${input.businessName}: vas termin za ${input.serviceName} je pomeren na ${date}.` };
+  return { subject: "Appointment moved", body: `${input.businessName}: your ${input.serviceName} appointment has moved to ${date}.` };
 }
 
 function videoLinkNotification(input: { locale: InterfaceLocale; businessName: string; serviceName: string; videoUrl?: string | null }, date: string): { subject: string; body: string } {

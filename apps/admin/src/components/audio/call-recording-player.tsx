@@ -2,6 +2,7 @@
 
 import { Download, Pause, Play } from "lucide-react";
 import {
+  type PointerEvent,
   useEffect,
   useMemo,
   useRef,
@@ -20,9 +21,41 @@ type CallRecordingPlayerProps = {
   onEnded?: () => void;
   pauseLabel: string;
   playLabel: string;
+  /** Names the seek control that replaces the slider when `waveform` is on. */
+  seekLabel?: string;
   src?: string | null;
   variant?: "default" | "hidden";
+  /** Draws the recording's loudness as bars the listener can click to seek. Loads and decodes the recording on the first play or seek. */
+  waveform?: boolean;
 };
+
+const WAVEFORM_BARS = 120;
+/** Flat bars stand in until the recording decodes, so the listener can still press play and seek. */
+const WAVEFORM_PLACEHOLDER = Array.from({ length: WAVEFORM_BARS }, () => 0.15);
+const SEEK_STEP_SECONDS = 5;
+
+/** The loudest sample in each of `count` equal slices of the recording, across all channels, scaled so the loudest slice is 1. Null when the buffer can't be read. */
+function computePeaks(buffer: { getChannelData?: (channel: number) => Float32Array; length?: number; numberOfChannels: number }, count: number): number[] | null {
+  const length = buffer.length ?? 0;
+  if (typeof buffer.getChannelData !== "function" || length <= 0) return null;
+  const channels = Array.from({ length: buffer.numberOfChannels }, (_, channel) => buffer.getChannelData!(channel));
+  const peaks = new Array<number>(count).fill(0);
+  const sliceLength = length / count;
+  for (let bar = 0; bar < count; bar += 1) {
+    const start = Math.floor(bar * sliceLength);
+    const end = Math.max(start + 1, Math.floor((bar + 1) * sliceLength));
+    let peak = 0;
+    for (const data of channels) {
+      for (let index = start; index < end && index < length; index += 1) {
+        const value = Math.abs(data[index] ?? 0);
+        if (value > peak) peak = value;
+      }
+    }
+    peaks[bar] = peak;
+  }
+  const loudest = Math.max(...peaks);
+  return loudest > 0 ? peaks.map((peak) => peak / loudest) : null;
+}
 
 function formatDuration(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) {
@@ -50,8 +83,10 @@ export function CallRecordingPlayer({
   onEnded,
   pauseLabel,
   playLabel,
+  seekLabel,
   src,
   variant = "default",
+  waveform = false,
 }: CallRecordingPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const onEndedRef = useRef(onEnded);
@@ -59,12 +94,17 @@ export function CallRecordingPlayer({
   const preparingPlaybackSrcRef = useRef<Promise<string | null> | null>(null);
   const preparedForSrcRef = useRef<string | null>(null);
   const playOnLoadRef = useRef(false);
+  // A seek made before the recording was loaded lands once its audio element exists.
+  const pendingSeekRef = useRef<number | null>(null);
   // Bumped on every src change so a download still running for an older src never sets state.
   const generationRef = useRef(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(normalizeDurationSeconds(initialDurationSeconds));
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSrc, setPlaybackSrc] = useState<string | null>(null);
+  const [peaks, setPeaks] = useState<number[] | null>(null);
+  // Set once decoding ends without peaks, so the slider takes over instead of a placeholder that never fills.
+  const [peaksFailed, setPeaksFailed] = useState(false);
 
   useEffect(() => {
     onEndedRef.current = onEnded;
@@ -79,7 +119,10 @@ export function CallRecordingPlayer({
     preparingPlaybackSrcRef.current = null;
     preparedForSrcRef.current = null;
     playOnLoadRef.current = false;
+    pendingSeekRef.current = null;
     setPlaybackSrc(null);
+    setPeaks(null);
+    setPeaksFailed(false);
   }, [src]);
 
   async function ensurePlaybackSource(): Promise<string | null> {
@@ -103,6 +146,7 @@ export function CallRecordingPlayer({
         (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
 
       if (!AudioContextCtor) {
+        setPeaksFailed(true);
         preparedForSrcRef.current = src;
         setPlaybackSrc(src);
         return src;
@@ -121,6 +165,12 @@ export function CallRecordingPlayer({
           const audioBuffer = await decodeContext.decodeAudioData(inputBuffer.slice(0));
           if (stale()) {
             return null;
+          }
+
+          if (waveform) {
+            const nextPeaks = computePeaks(audioBuffer, WAVEFORM_BARS);
+            setPeaks(nextPeaks);
+            setPeaksFailed(nextPeaks === null);
           }
 
           if (audioBuffer.numberOfChannels < 2) {
@@ -162,6 +212,7 @@ export function CallRecordingPlayer({
         if (stale()) {
           return null;
         }
+        setPeaksFailed(true);
         preparedForSrcRef.current = src;
         setPlaybackSrc(src);
         return src;
@@ -254,6 +305,13 @@ export function CallRecordingPlayer({
       })();
     }
 
+    if (pendingSeekRef.current !== null) {
+      const nextTime = pendingSeekRef.current;
+      pendingSeekRef.current = null;
+      audio.currentTime = nextTime;
+      setCurrentTime(nextTime);
+    }
+
     return () => {
       audio.pause();
       audio.removeEventListener("loadedmetadata", updateDuration);
@@ -294,6 +352,29 @@ export function CallRecordingPlayer({
     }
 
     audio.pause();
+  }
+
+  function seekTo(nextTime: number) {
+    if (duration <= 0) {
+      // The first seek on a recording that hasn't loaded yet starts the download, so the next one knows its length.
+      if (!audioRef.current && src) void ensurePlaybackSource();
+      return;
+    }
+
+    const clamped = Math.min(duration, Math.max(0, nextTime));
+    const audio = audioRef.current;
+    if (audio) {
+      audio.currentTime = clamped;
+      setCurrentTime(clamped);
+      return;
+    }
+    if (!src) {
+      return;
+    }
+
+    pendingSeekRef.current = clamped;
+    setCurrentTime(clamped);
+    void ensurePlaybackSource();
   }
 
   const progress = useMemo(() => {
@@ -339,27 +420,31 @@ export function CallRecordingPlayer({
           {isPlaying ? <Pause fill="currentColor" /> : <Play fill="currentColor" />}
         </Button>
 
-        <Slider
-          className="min-w-24 flex-1"
-          max={100}
-          min={0}
-          onValueChange={(value) => {
-            const nextValue = Array.isArray(value) ? value[0] : value;
-            if (typeof nextValue !== "number" || duration <= 0) {
-              return;
-            }
+        {waveform && !peaksFailed ? (
+          <Waveform
+            currentTime={currentTime}
+            duration={duration}
+            label={seekLabel ?? "Seek"}
+            onSeek={seekTo}
+            onToggle={() => void togglePlayback()}
+            peaks={peaks ?? WAVEFORM_PLACEHOLDER}
+          />
+        ) : (
+          <Slider
+            className="min-w-24 flex-1"
+            max={100}
+            min={0}
+            onValueChange={(value) => {
+              const nextValue = Array.isArray(value) ? value[0] : value;
+              if (typeof nextValue !== "number" || duration <= 0) {
+                return;
+              }
 
-            const audio = audioRef.current;
-            if (!audio) {
-              return;
-            }
-
-            const nextTime = (nextValue / 100) * duration;
-            audio.currentTime = nextTime;
-            setCurrentTime(nextTime);
-          }}
-          value={[progress]}
-        />
+              seekTo((nextValue / 100) * duration);
+            }}
+            value={[progress]}
+          />
+        )}
 
         <time className="min-w-10 text-right text-sm tabular-nums text-muted-foreground">
           {formatDuration(displayedRemainingSeconds)}
@@ -377,6 +462,77 @@ export function CallRecordingPlayer({
           <Download />
         </a>
       </div>
+    </div>
+  );
+}
+
+function Waveform({ currentTime, duration, label, onSeek, onToggle, peaks }: {
+  currentTime: number;
+  duration: number;
+  label: string;
+  onSeek: (seconds: number) => void;
+  onToggle: () => void;
+  peaks: number[];
+}) {
+  const ratio = duration > 0 ? currentTime / duration : 0;
+
+  function seekFromPointer(event: PointerEvent<HTMLDivElement>) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    if (rect.width <= 0 || duration <= 0) {
+      return;
+    }
+
+    onSeek(Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width)) * duration);
+  }
+
+  return (
+    <div
+      aria-label={label}
+      aria-valuemax={Math.round(duration)}
+      aria-valuemin={0}
+      aria-valuenow={Math.round(currentTime)}
+      aria-valuetext={`${formatDuration(currentTime)} / ${formatDuration(duration)}`}
+      className="flex h-10 min-w-0 flex-1 cursor-pointer touch-none items-center gap-px overflow-hidden rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+      onKeyDown={(event) => {
+        if (event.key === " " && !event.repeat && !event.ctrlKey && !event.metaKey && !event.altKey) {
+          event.preventDefault();
+          onToggle();
+          return;
+        }
+        const step = event.key === "ArrowRight" || event.key === "ArrowUp" ? SEEK_STEP_SECONDS : event.key === "ArrowLeft" || event.key === "ArrowDown" ? -SEEK_STEP_SECONDS : 0;
+        if (step !== 0) {
+          event.preventDefault();
+          onSeek(currentTime + step);
+        } else if (event.key === "Home" || event.key === "End") {
+          event.preventDefault();
+          onSeek(event.key === "Home" ? 0 : duration);
+        }
+      }}
+      onPointerDown={(event) => {
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+        seekFromPointer(event);
+      }}
+      onPointerMove={(event) => {
+        if (event.buttons === 1) {
+          seekFromPointer(event);
+        }
+      }}
+      role="slider"
+      tabIndex={0}
+    >
+      {peaks.map((peak, index) => (
+        <span
+          aria-hidden="true"
+          className={cn(
+            "min-w-0 flex-1 rounded-full",
+            // Phones show every second bar, so the full set never overflows the time and download controls.
+            index % 2 === 1 && "hidden sm:block",
+            (index + 0.5) / peaks.length <= ratio ? "bg-foreground" : "bg-muted-foreground/35",
+          )}
+          key={index}
+          style={{ height: `${Math.max(10, peak * 100)}%` }}
+        />
+      ))}
     </div>
   );
 }

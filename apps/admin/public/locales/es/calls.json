@@ -68,7 +68,10 @@
     "cancellationRequest": "Solicitud de cancelación",
     "cancellationFromCaller": "Solicitud de cancelación de {{name}}",
     "requested": "Solicitado: {{details}}",
-    "notes": "Notas: {{notes}}"
+    "notes": "Notas: {{notes}}",
+    "rescheduleRequest": "Solicitud de cambio de hora",
+    "rescheduleFromCaller": "Solicitud de cambio de hora de {{name}}",
+    "newTime": "Nueva hora: {{time}}"
   },
   "pagination": {
     "rowsPerPage": "Filas por página",
@@ -162,7 +165,8 @@
     },
     "recording": {
       "unavailable": "No hay grabación disponible para esta llamada.",
-      "pending": "La grabación aún se está procesando."
+      "pending": "La grabación aún se está procesando.",
+      "seek": "Moverse por la grabación"
     },
     "blocking": {
       "badge": "Bloqueada",

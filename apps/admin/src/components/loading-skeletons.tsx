@@ -9,11 +9,12 @@ import { Surface, surfaceClassName } from "@/components/ui/surface";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-export function MetricCardGridSkeleton({ count = 4 }: { count?: number }) {
+/** `titles` holds each card's real title, hidden so its placeholder is as wide as the text, or null for a default width. */
+export function MetricCardGridSkeleton({ count = 4, titles }: { count?: number; titles?: ReadonlyArray<string | null> }) {
   const columnClass = count === 3 ? "md:grid-cols-3" : "md:grid-cols-4";
 
   return (
-    <Surface className={`grid sm:grid-cols-2 ${columnClass}`}>
+    <Surface aria-busy="true" className={`grid sm:grid-cols-2 ${columnClass}`}>
       {Array.from({ length: count }).map((_, index) => (
         <div
           className="border-b p-5 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0 md:border-b-0 md:border-r md:last:border-r-0"
@@ -21,7 +22,7 @@ export function MetricCardGridSkeleton({ count = 4 }: { count?: number }) {
         >
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
-              <Skeleton className="h-5 w-28" />
+              {titles?.[index] ? <HiddenTextSkeleton className="type-card-title">{titles[index]!}</HiddenTextSkeleton> : <Skeleton className="h-5 w-28" />}
               <Skeleton className="h-10 w-20" />
             </div>
             <Skeleton className="h-4 w-32" />
@@ -627,9 +628,35 @@ export function CredentialRowsSkeleton({ actions, rows = 2 }: { actions: number;
   );
 }
 
-/** A placeholder for a piece of fixed text. It holds the real text, hidden, so it is as wide and tall as the text. */
-export function HiddenTextSkeleton({ children, className }: { children: string; className?: string }) {
-  return <div aria-hidden="true" className={className}><Skeleton className="w-fit max-w-full"><span className="invisible">{children}</span></Skeleton></div>;
+/** A placeholder for a piece of fixed text. It holds the real text, hidden, so it is as wide and tall as the text. `skeletonClassName` shapes the placeholder itself, such as a button or a full-width bar. */
+export function HiddenTextSkeleton({ children, className, skeletonClassName }: { children: string; className?: string; skeletonClassName?: string }) {
+  return <div aria-hidden="true" className={className}><Skeleton className={skeletonClassName ? `max-w-full ${skeletonClassName}` : "w-fit max-w-full"}><span className="invisible">{children}</span></Skeleton></div>;
+}
+
+/** Stands in for Getting started on Home: its heading row and the list of setup steps, so the guide doesn't push the page down when it loads. */
+export function SetupGuideSkeleton({ labels }: { labels: { title: string; skip: string; steps: string[] } }) {
+  return (
+    <section aria-busy="true" className="flex w-full flex-col gap-4">
+      <HiddenTextSkeleton className="type-section-title">{labels.title}</HiddenTextSkeleton>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <Skeleton aria-hidden="true" className="size-5 shrink-0 rounded-full" />
+          <Skeleton aria-hidden="true" className="h-5 w-56 max-w-full" />
+        </div>
+        <Skeleton aria-hidden="true" className="inline-flex h-9 shrink-0 items-center rounded-4xl border border-transparent px-3 text-sm font-medium whitespace-nowrap"><span className="invisible">{labels.skip}</span></Skeleton>
+      </div>
+      <Surface>
+        <div className="divide-y divide-border">
+          {labels.steps.map((step) => (
+            <div className="flex min-h-16 items-center gap-4 px-6" key={step}>
+              <Skeleton aria-hidden="true" className="size-6 shrink-0 rounded-full" />
+              <HiddenTextSkeleton className="text-base">{step}</HiddenTextSkeleton>
+            </div>
+          ))}
+        </div>
+      </Surface>
+    </section>
+  );
 }
 
 /** The Passkeys card before its list, or whether passkeys are on at all, is known. */
@@ -660,6 +687,141 @@ export function AccountSkeleton({ label }: { label: string }) {
         <AccountSettingSkeleton />
       </div>
       <PasskeysCardSkeleton />
+    </div>
+  );
+}
+
+/** Stands in for the phone number chooser: the country and area code row, and the list of numbers. */
+export function PhoneNumberChooserSkeleton({ labels, rows = 4 }: { labels: { country: string; areaCode: string; search: string; phoneNumber: string }; rows?: number }) {
+  return (
+    <div aria-busy="true" className="flex flex-col gap-6">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[140px_1fr_160px_auto] sm:items-end">
+        <div className="flex flex-col gap-2">
+          <span className="text-sm font-medium">{labels.country}</span>
+          <Skeleton aria-hidden="true" className="h-9 w-20" />
+        </div>
+        <div aria-hidden="true" className="hidden sm:block" />
+        <div className="flex flex-col gap-2">
+          <span className="text-sm font-medium">{labels.areaCode}</span>
+          <Skeleton aria-hidden="true" className="h-9 w-full" />
+        </div>
+        <HiddenTextSkeleton skeletonClassName="inline-flex h-9 w-full items-center justify-center rounded-full px-3 text-sm font-medium whitespace-nowrap sm:w-fit">{labels.search}</HiddenTextSkeleton>
+      </div>
+      <Surface className="flex h-96 flex-col">
+        <div className="flex h-14 shrink-0 items-center border-b border-border px-4 text-sm font-medium text-muted-foreground">
+          <span>{labels.phoneNumber}</span>
+        </div>
+        <div className="flex flex-col gap-3 px-4 py-4">
+          {Array.from({ length: rows }).map((_, index) => <Skeleton aria-hidden="true" className="h-12 w-full rounded-lg" key={index} />)}
+        </div>
+      </Surface>
+    </div>
+  );
+}
+
+/**
+ * The brand step's form while the server decides whether the step applies and
+ * which fields it asks. Both fields hold a place, since either can appear, and
+ * each line holds its real text, hidden, so the form keeps its size in every
+ * language.
+ */
+export function OnboardingBrandSkeleton({ labels }: { labels: { name: string; nameHint: string; logo: string; logoChoose: string; logoHint: string; preview: string; continue: string; skip: string } }) {
+  return (
+    <div aria-busy="true" className="flex flex-col gap-4">
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-3">
+          <span className="text-sm leading-snug font-medium">{labels.name}</span>
+          <Skeleton aria-hidden="true" className="h-11 w-full rounded-4xl" />
+          <HiddenTextSkeleton className="text-sm">{labels.nameHint}</HiddenTextSkeleton>
+        </div>
+        <div className="flex flex-col gap-3">
+          <span className="text-sm leading-snug font-medium">{labels.logo}</span>
+          <Skeleton aria-hidden="true" className="flex w-full items-center gap-3 rounded-xl px-4 py-3">
+            <span className="invisible size-10 shrink-0 rounded-full" />
+            <span className="invisible text-sm font-medium">{labels.logoChoose}</span>
+          </Skeleton>
+          <HiddenTextSkeleton className="text-sm">{labels.logoHint}</HiddenTextSkeleton>
+        </div>
+        <div className="flex flex-col gap-2">
+          <span className="text-xs font-medium text-muted-foreground">{labels.preview}</span>
+          <Surface className="px-4 py-5"><Skeleton aria-hidden="true" className="mx-auto h-6 w-40" /></Surface>
+        </div>
+      </div>
+      <HiddenTextSkeleton className="mt-2" skeletonClassName="flex h-11 w-full items-center justify-center rounded-full text-sm font-medium">{labels.continue}</HiddenTextSkeleton>
+      <HiddenTextSkeleton className="text-center" skeletonClassName="mx-auto h-5">{labels.skip}</HiddenTextSkeleton>
+    </div>
+  );
+}
+
+/** Stands in for the mobile number form on the Verify phone step. */
+export function VerifyPhoneFormSkeleton({ labels }: { labels: { mobileNumber: string; hint: string; submit: string } }) {
+  return (
+    <div aria-busy="true" className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <span className="text-sm font-medium">{labels.mobileNumber}</span>
+        <div className="flex min-w-0">
+          <Skeleton aria-hidden="true" className="h-11 w-24 rounded-r-none" />
+          <Skeleton aria-hidden="true" className="h-11 min-w-0 flex-1 rounded-l-none" />
+        </div>
+        <HiddenTextSkeleton className="text-sm">{labels.hint}</HiddenTextSkeleton>
+      </div>
+      <HiddenTextSkeleton className="mt-2" skeletonClassName="flex h-11 w-full items-center justify-center rounded-full text-sm font-medium">{labels.submit}</HiddenTextSkeleton>
+    </div>
+  );
+}
+
+/** Stands in for the test call and chat beside the Meet your agent form. */
+export function TestPanelSkeleton() {
+  return (
+    <div aria-busy="true" className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4">
+        <Skeleton aria-hidden="true" className="size-40 rounded-full" />
+        <Skeleton aria-hidden="true" className="h-9 w-28 rounded-full" />
+      </div>
+      <Skeleton aria-hidden="true" className="h-11 w-full shrink-0 rounded-4xl" />
+    </div>
+  );
+}
+
+/** The goal and attribution choices while their answers load: each button's shape, holding its real label so the grid keeps its size. */
+export function OnboardingOptionsSkeleton({ gridClassName, itemClassName, labels }: { gridClassName: string; itemClassName: string; labels: ReadonlyArray<string> }) {
+  return (
+    <div aria-busy="true" className={gridClassName}>
+      {labels.map((label) => (
+        <Skeleton aria-hidden="true" className={`flex items-center rounded-xl px-4 text-sm font-medium ${itemClassName}`} key={label}>
+          <span className="invisible">{label}</span>
+        </Skeleton>
+      ))}
+    </div>
+  );
+}
+
+/** The crawl card while the knowledge list answers, so the wait's slides keep their place. */
+export function WebsiteImportProgressSkeleton() {
+  return (
+    <Surface aria-busy="true" className="flex flex-col gap-3 p-4">
+      <div className="flex items-start gap-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <Skeleton aria-hidden="true" className="h-4 w-56" />
+          <Skeleton aria-hidden="true" className="h-3 w-40" />
+        </div>
+        <Skeleton aria-hidden="true" className="mt-1 size-4 shrink-0 rounded-full" />
+      </div>
+      <Skeleton aria-hidden="true" className="h-1 w-full rounded-full" />
+    </Surface>
+  );
+}
+
+/** Stands in for the agent's name, voice, greeting and language on Meet your agent. */
+export function MeetFormSkeleton({ labels }: { labels: { name: string; voice: string; greeting: string; language: string } }) {
+  return (
+    <div aria-busy="true" className="flex flex-col gap-4">
+      {([["name", "h-11 rounded-4xl"], ["voice", "h-11 rounded-4xl"], ["greeting", "h-28 rounded-xl"], ["language", "h-11 rounded-4xl"]] as const).map(([key, size]) => (
+        <div className="flex flex-col gap-2" key={key}>
+          <span className="text-sm leading-snug font-medium">{labels[key]}</span>
+          <Skeleton aria-hidden="true" className={`w-full ${size}`} />
+        </div>
+      ))}
     </div>
   );
 }

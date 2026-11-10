@@ -61,18 +61,47 @@ function ComboboxInput({
   disabled = false,
   showTrigger = true,
   showClear = false,
+  clearSearchLabel,
+  onChange,
   ...props
 }: ComboboxPrimitive.Input.Props & {
   showTrigger?: boolean
   showClear?: boolean
+  /** Adds a button that empties the typed text once there is some; its label names the button. */
+  clearSearchLabel?: string
 }) {
+  const inputRef = React.useRef<HTMLInputElement>(null)
+  const [hasText, setHasText] = React.useState(false)
+  function clearText() {
+    const input = inputRef.current
+    if (!input) return
+    // Goes through the input's own setter and an input event, so the combobox sees the change.
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(input, "")
+    input.dispatchEvent(new Event("input", { bubbles: true }))
+    input.focus()
+  }
   return (
     <InputGroup className={cn("w-auto", className)}>
       <ComboboxPrimitive.Input
+        ref={inputRef}
         render={<InputGroupInput disabled={disabled} />}
+        onChange={(event) => {
+          setHasText(event.currentTarget.value.length > 0)
+          onChange?.(event)
+        }}
         {...props}
       />
       <InputGroupAddon align="inline-end">
+        {clearSearchLabel && hasText && (
+          <InputGroupButton
+            aria-label={clearSearchLabel}
+            onClick={clearText}
+            onMouseDown={(event) => event.preventDefault()}
+            size="icon-xs"
+          >
+            <XIcon />
+          </InputGroupButton>
+        )}
         {showTrigger && (
           <InputGroupButton
             size="icon-xs"

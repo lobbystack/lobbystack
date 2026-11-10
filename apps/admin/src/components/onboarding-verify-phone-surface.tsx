@@ -13,6 +13,7 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import { useTelemetry } from "@/components/product-analytics";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
+import { VerifyPhoneFormSkeleton } from "@/components/loading-skeletons";
 import { PhoneCountrySelect } from "@/components/phone-country-select";
 import { formatPhoneNumberDisplay, getDefaultPhoneCountry, getLocalePhoneCountry, getPhoneCountryOptions } from "@/lib/phone";
 import { requestJson } from "@/lib/request-json";
@@ -117,7 +118,7 @@ export function OnboardingVerifyPhoneSurface() {
   }
 
   if (passOn.isError) return <FieldError>{getSafeOnboardingErrorMessage(passOn.error, t, "verifyPhone.unavailable.failed")}</FieldError>;
-  if (!country || numbers.isLoading || passOnNeeded) return <div className="flex justify-center p-6"><LoaderCircle className="size-5 animate-spin text-muted-foreground" /></div>;
+  if (!country || numbers.isLoading || passOnNeeded) return <VerifyPhoneFormSkeleton labels={{ mobileNumber: t("verifyPhone.fields.mobileNumber"), hint: t("verifyPhone.hint"), submit: t("verifyPhone.sendCode") }} />;
 
   const verified = numbers.data?.verifiedPhone;
   if (verified && !changing && !attempt) {
@@ -153,7 +154,7 @@ export function OnboardingVerifyPhoneSurface() {
         <Field>
           <FieldLabel htmlFor="onboarding-phone">{t("verifyPhone.fields.mobileNumber")}</FieldLabel>
           <div className="flex min-w-0">
-            <PhoneCountrySelect ariaLabel={t("verifyPhone.fields.country")} className="h-11 w-24 rounded-l-4xl rounded-r-none px-4 font-medium text-muted-foreground" countries={options} onChange={(next) => { setCountry(next as Country); setPhone(""); setJoined(false); setError(null); }} value={country} />
+            <PhoneCountrySelect ariaLabel={t("verifyPhone.fields.country")} className="h-11 rounded-l-4xl rounded-r-none px-4 font-medium text-muted-foreground" countries={options} onChange={(next) => { setCountry(next as Country); setPhone(""); setJoined(false); setError(null); }} value={country} />
             <PhoneInput autoFocus className="h-11 rounded-l-none border-l-0" containerClassName="min-w-0 flex-1" country={country} disabled={!sellsNumbers} id="onboarding-phone" limitNationalDigits onChange={(value) => setPhone(value ?? "")} value={phone} />
           </div>
           {sellsNumbers ? <FieldDescription>{t("verifyPhone.hint")}</FieldDescription> : null}

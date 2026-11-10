@@ -75,6 +75,18 @@ describe("the partner console's Team page", () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/partner/team", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ partnerId: "partner", memberId: "member-row", role: "owner" }) })));
   });
 
+  it("shows an error and sends nothing when the invitation has no email, and has a Cancel button", async () => {
+    const fetchMock = renderAs("admin");
+    await screen.findByText("max@example.test");
+    await userEvent.click(screen.getByRole("button", { name: "team.invite.action" }));
+    await userEvent.click(await screen.findByRole("button", { name: "team.invite.submit" }));
+    expect(screen.getByText("team.invite.emailRequired")).toBeTruthy();
+    expect(screen.getByLabelText("team.invite.emailLabel").getAttribute("aria-invalid")).toBe("true");
+    expect((fetchMock.mock.calls as unknown as Array<[string, RequestInit?]>).filter(([, init]) => init?.method === "POST")).toEqual([]);
+    await userEvent.click(screen.getByRole("button", { name: "team.invite.cancel" }));
+    await waitFor(() => expect(screen.queryByLabelText("team.invite.emailLabel")).toBeNull());
+  });
+
   it("sends an invitation for the partner the console is open on", async () => {
     const fetchMock = renderAs("admin");
     await screen.findByText("max@example.test");
