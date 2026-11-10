@@ -169,6 +169,13 @@ describe("original knowledge row interactions", () => {
     telemetryRef.current!.expectEvent("web.knowledge.upload_started", expected);
     telemetryRef.current!.expectEvent("web.knowledge.upload_completed", expected);
   });
+  it("offers the knowledge template in the team language chosen in agent settings", async () => {
+    const fetchMock = setup();
+    fetchMock.client.setQueryData(["agent-settings", "business"], { business: { defaultLocale: "de", teamLocale: "fr" } });
+    await userEvent.click(screen.getByRole("button", { name: "sections.knowledge.addKnowledge" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "sections.knowledge.addKnowledgeOptions.upload" }));
+    expect(screen.getByRole("link", { name: "sections.knowledge.fields.file.downloadTemplate" }).getAttribute("href")).toBe("/templates/lobbystack-knowledge-template-fr.docx");
+  });
   it("shows the translated message and reports it when storage blocks the upload", async () => {
     vi.stubGlobal("crypto", { subtle: { digest: async () => new ArrayBuffer(32) } });
     const fetchMock = setup();
