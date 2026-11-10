@@ -45,7 +45,7 @@ function AgentHeading({ agent }: { agent: AgentListItem | undefined }) {
     <SidebarMenu className="px-2 pt-2 group-data-[collapsible=icon]:hidden">
       <SidebarMenuItem>
         <DropdownMenu>
-          <DropdownMenuTrigger render={<SidebarMenuButton className="data-[popup-open=true]:bg-sidebar-accent" />}>
+          <DropdownMenuTrigger render={<SidebarMenuButton className="rounded-xl border border-input bg-input/30 hover:bg-input/50 data-[popup-open=true]:bg-input/50" />}>
             <AgentIdentity agent={agent} />
             <ChevronsUpDown className="ms-auto size-4 text-muted-foreground" />
           </DropdownMenuTrigger>
