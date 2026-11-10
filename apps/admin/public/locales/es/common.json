@@ -250,6 +250,7 @@
       "noTimes": "No hay horas libres este día.",
       "timesFailed": "No pudimos cargar las horas libres. Inténtelo de nuevo.",
       "confirm": "Cambiar la cita",
+      "moving": "Cambiando la cita...",
       "keep": "Mantener la hora actual",
       "done": "Cita cambiada",
       "failed": "No pudimos cambiar la cita. Inténtelo de nuevo.",

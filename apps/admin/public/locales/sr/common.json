@@ -257,6 +257,7 @@
       "noTimes": "Nema slobodnih termina tog dana.",
       "timesFailed": "Nismo uspeli da učitamo slobodne termine. Pokušajte ponovo.",
       "confirm": "Pomeri termin",
+      "moving": "Pomeranje termina...",
       "keep": "Zadrži trenutno vreme",
       "done": "Termin je pomeren",
       "failed": "Nismo uspeli da pomerimo termin. Pokušajte ponovo.",

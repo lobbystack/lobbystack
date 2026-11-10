@@ -25,7 +25,8 @@ function DialogClose({ ...props }: DialogPrimitive.Close.Props) {
 }
 
 function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) {
-  return <DialogPrimitive.Backdrop data-slot="dialog-overlay" className={cn("fixed inset-0 z-50 bg-black/80 duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0", className)} {...props} />
+  // Base UI skips the backdrop of a dialog opened from a drawer or another dialog; forceRender still dims the page behind it.
+  return <DialogPrimitive.Backdrop forceRender data-slot="dialog-overlay" className={cn("fixed inset-0 z-50 bg-black/80 duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0", className)} {...props} />
 }
 
 function DialogContent({ className, children, overlayClassName, showCloseButton = true, ...props }: DialogPrimitive.Popup.Props & { showCloseButton?: boolean; overlayClassName?: string }) {

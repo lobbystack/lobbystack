@@ -74,4 +74,18 @@ describe("MoveAppointmentButton", () => {
     expect(screen.getByText(copy.title)).toBeTruthy();
     expect(fetchMock.mock.calls.filter(([url]) => String(url).includes("/openings")).length).toBeGreaterThan(1);
   });
+  it("shows a spinner and \"Moving appointment...\" on the button while the move is saved", async () => {
+    let finish!: (response: Response) => void;
+    const pending = new Promise<Response>((done) => { finish = done; });
+    await setup("scheduler", { requested: "2027-09-09T10:00", move: pending as unknown as Response });
+    await userEvent.click(screen.getByRole("button", { name: /Reschedule appointment:/ }));
+    await screen.findByRole("button", { name: "10:00 AM" });
+    await userEvent.click(screen.getByRole("button", { name: copy.confirm }));
+    const moving = await screen.findByRole("button", { name: new RegExp(copy.moving.replace(".", "\\.")) }) as HTMLButtonElement;
+    expect(moving.disabled).toBe(true);
+    expect(moving.querySelector("svg.animate-spin")).not.toBeNull();
+    expect(screen.queryByRole("button", { name: copy.confirm })).toBeNull();
+    finish(Response.json({ ok: true }));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith(copy.done));
+  });
 });

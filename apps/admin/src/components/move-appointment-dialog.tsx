@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { APPOINTMENT_ROLES, appointmentSummary, type CancellableAppointment } from "@/components/cancel-appointment-button";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { Spinner } from "@/components/ui/spinner";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useActiveBusiness } from "@/hooks/use-active-business";
@@ -146,7 +147,7 @@ function MoveAppointmentDialog({ appointment, requested: requestedTime, onOpenCh
         </div>
         <DialogFooter>
           <DialogClose render={<Button disabled={move.isPending} type="button" variant="outline" />}>{t("appointments.move.keep")}</DialogClose>
-          <Button disabled={!selected || move.isPending} onClick={() => { if (selected) move.mutate(selected); }} type="button">{t("appointments.move.confirm")}</Button>
+          <Button disabled={!selected || move.isPending} onClick={() => { if (selected) move.mutate(selected); }} type="button">{move.isPending ? <Spinner data-icon="inline-start" /> : null}{t(move.isPending ? "appointments.move.moving" : "appointments.move.confirm")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
