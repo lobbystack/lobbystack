@@ -24,9 +24,9 @@ function stubServer(passkeyAllowed = true) {
     return Response.json({ status: true });
   }));
 }
-function renderCard(businessName?: string) {
+function renderCard() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={queryClient}><AccountPasskeys {...(businessName ? { businessName } : {})} /></QueryClientProvider>);
+  return render(<QueryClientProvider client={queryClient}><AccountPasskeys /></QueryClientProvider>);
 }
 const listCalls = () => vi.mocked(fetch).mock.calls.filter(([url]) => url === "/api/auth/passkey/list-user-passkeys").length;
 
@@ -96,13 +96,13 @@ describe("passkeys on the account page", () => {
     expect(await screen.findByText("account.passkeys.empty")).toBeTruthy();
   });
 
-  it("adds a passkey named after the business, confirms with a toast and reloads the list", async () => {
+  it("adds a passkey with the default name, confirms with a toast and reloads the list", async () => {
     stubServer();
     client.addPasskey.mockResolvedValue({ data: { id: "three" }, error: null });
-    renderCard("Maple Family Clinic");
+    renderCard();
     await screen.findByText("MacBook");
     await userEvent.click(screen.getByRole("button", { name: "account.passkeys.add" }));
-    expect(client.addPasskey).toHaveBeenCalledWith({ name: "maple-family-clinic-passkey" });
+    expect(client.addPasskey).toHaveBeenCalledWith({ name: defaultPasskeyName() });
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith("account.passkeys.added"));
     await waitFor(() => expect(listCalls()).toBe(2));
   });
@@ -172,21 +172,8 @@ describe("passkeys on the account page", () => {
 });
 
 describe("defaultPasskeyName", () => {
-  it("is the business's name in lowercase with dashes for spaces, then -passkey", () => {
-    expect(defaultPasskeyName("Maple Family Clinic")).toBe("maple-family-clinic-passkey");
-    expect(defaultPasskeyName("  ÉCOLE Dentaire ")).toBe("école-dentaire-passkey");
-    // A run of spaces or tabs is one dash.
-    expect(defaultPasskeyName("Acme\t  & Sons")).toBe("acme-&-sons-passkey");
-  });
-
-  it("is just passkey without a business name", () => {
-    expect(defaultPasskeyName(undefined)).toBe("passkey");
-    expect(defaultPasskeyName("   ")).toBe("passkey");
-  });
-
-  it("keeps the suffix and the name limit for a very long business name", () => {
-    const name = defaultPasskeyName("x".repeat(300));
-    expect(name).toHaveLength(100);
-    expect(name.endsWith("-passkey")).toBe(true);
+  it("is passkey and the day it was added, with no workspace name", () => {
+    expect(defaultPasskeyName(new Date(2026, 10, 10))).toBe("passkey-2026-11-10");
+    expect(defaultPasskeyName(new Date(2027, 0, 5))).toBe("passkey-2027-01-05");
   });
 });

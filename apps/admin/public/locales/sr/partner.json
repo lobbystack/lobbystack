@@ -130,7 +130,10 @@
         "failed": "Nismo uspeli da napravimo firmu. Pokušajte ponovo.",
         "templateFailed": "Nismo uspeli da napravimo firmu iz tog šablona. Pokušajte ponovo ili izaberite drugi.",
         "templateNotFound": "Neko je obrisao taj šablon. Izaberite drugi."
-      }
+      },
+      "nameRequired": "Unesite naziv firme.",
+      "ownerRequired": "Unesite imejl vlasnika.",
+      "cancel": "Otkaži"
     },
     "billing": {
       "outside": "Sami naplaćujete",
@@ -239,7 +242,10 @@
         "invalidAllowance": "Unesite cele brojeve od 0 do 1.000.000.",
         "notConnected": "Povežite nalog za plaćanje pre nego što napravite ponude.",
         "failed": "Nismo uspeli da napravimo ponudu. Pokušajte ponovo."
-      }
+      },
+      "nameRequired": "Unesite naziv ponude.",
+      "priceRequired": "Unesite mesečnu cenu.",
+      "cancel": "Otkaži"
     },
     "rename": {
       "action": "Preimenuj",
@@ -248,7 +254,9 @@
       "saving": "Čuvamo…",
       "saved": "Ponuda je preimenovana.",
       "notConnected": "Možete da preimenujete samo ponude na povezanom nalogu za plaćanje.",
-      "failed": "Nismo uspeli da preimenujemo ponudu. Pokušajte ponovo."
+      "failed": "Nismo uspeli da preimenujemo ponudu. Pokušajte ponovo.",
+      "nameRequired": "Unesite naziv ponude.",
+      "cancel": "Otkaži"
     },
     "archive": {
       "action": "Prestani sa prodajom",
@@ -357,7 +365,9 @@
         "failed": "Nismo uspeli da pošaljemo poziv. Pokušajte ponovo.",
         "invalidEmail": "Unesite jednu ispravnu imejl adresu.",
         "rateLimited": "Poslali ste previše poziva. Pokušajte ponovo za sat vremena."
-      }
+      },
+      "emailRequired": "Unesite imejl adresu.",
+      "cancel": "Otkaži"
     },
     "actions": {
       "moreOptions": "Još opcija za {{email}}",
@@ -558,6 +568,8 @@
       "nameLabel": "Naziv",
       "namePlaceholder": "Uvođenje klijenata",
       "scopesLabel": "Pristup",
+      "nameRequired": "Unesite naziv.",
+      "scopesRequired": "Izaberite bar jednu dozvolu.",
       "cancel": "Otkaži",
       "submit": "Kreiraj ključ",
       "creating": "Kreiranje…"

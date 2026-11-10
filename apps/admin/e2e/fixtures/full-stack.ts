@@ -52,6 +52,9 @@ export async function signUpOwner(database: Migrator, page: Page, testInfo: Test
   // would abort the spec's next page.goto.
   await expect(page).toHaveURL("/onboarding/website");
   await database.db.update(businesses).set({ onboardingStage: "complete" }).where(eq(businesses.id, businessId));
+  // Marking the business complete can send the page on again. A spec that opens its own page before that finishes interrupts it, and its first goto fails with net::ERR_ABORTED.
+  // The page does not always move (the website step can stay put), so this waits briefly and carries on.
+  await page.waitForURL((url) => !url.pathname.includes("/onboarding"), { waitUntil: "load", timeout: 5_000 }).catch(() => undefined);
   return { email, userId, businessId, businessName };
 }
 

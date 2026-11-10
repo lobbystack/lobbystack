@@ -35,17 +35,14 @@ async function passkeysAllowed(): Promise<boolean> {
   return response.ok && (await response.json() as { passkey?: unknown } | null)?.passkey === true;
 }
 
-const PASSKEY_NAME_SUFFIX = "-passkey";
-const PASSKEY_NAME_MAX_LENGTH = 100;
-
-/** What a new passkey is called until the person renames it: the business's name in lowercase with dashes for spaces, then "-passkey". */
-export function defaultPasskeyName(businessName?: string | null): string {
-  const name = businessName?.trim().toLocaleLowerCase().replace(/\s+/gu, "-") ?? "";
-  return name ? `${name.slice(0, PASSKEY_NAME_MAX_LENGTH - PASSKEY_NAME_SUFFIX.length)}${PASSKEY_NAME_SUFFIX}` : "passkey";
+/** What a new passkey is called until the person renames it: "passkey-" and the day it was added, so several passkeys stay apart. A passkey belongs to the account, not to a workspace. */
+export function defaultPasskeyName(now: Date = new Date()): string {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `passkey-${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
 /** Lists the account's passkeys and adds, renames and removes them. Hidden where passkeys are off, such as a partner's host. */
-export function AccountPasskeys({ businessName }: { businessName?: string | null | undefined }) {
+export function AccountPasskeys() {
   const { t, i18n } = useTranslation("settings");
   const queryClient = useQueryClient();
   const nameId = useId();
@@ -60,7 +57,7 @@ export function AccountPasskeys({ businessName }: { businessName?: string | null
   const add = useMutation({
     mutationFn: async () => {
       const { authClient } = await import("@/lib/auth-client");
-      const result = await authClient.passkey.addPasskey({ name: defaultPasskeyName(businessName) });
+      const result = await authClient.passkey.addPasskey({ name: defaultPasskeyName() });
       if (result?.error) throw Object.assign(new Error(result.error.message), { code: (result.error as { code?: string }).code });
     },
     onSuccess: async () => { toast.success(t("account.passkeys.added")); await refresh(); },

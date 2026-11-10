@@ -15,9 +15,9 @@ import { useConsolePartner } from "@/components/partner-shell";
 import { useTelemetry } from "@/components/product-analytics";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -84,9 +84,14 @@ export function PartnerPackagesSurface() {
   const [createOpen, setCreateOpen] = useState(false);
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [createSubmitted, setCreateSubmitted] = useState(false);
+  const [renameSubmitted, setRenameSubmitted] = useState(false);
   const [renaming, setRenaming] = useState<PartnerPackage | null>(null);
   const [newName, setNewName] = useState("");
   const [renameError, setRenameError] = useState<string | null>(null);
+  const createNameError = createSubmitted && !draft.name.trim() ? t("packages.create.nameRequired") : null;
+  const createPriceError = createSubmitted && !draft.price.trim() ? t("packages.create.priceRequired") : null;
+  const renameNameError = renameSubmitted && !newName.trim() ? t("packages.rename.nameRequired") : null;
   const [archiving, setArchiving] = useState<PartnerPackage | null>(null);
 
   const currency = packages.data?.stripe.currency ?? null;
@@ -163,25 +168,27 @@ export function PartnerPackagesSurface() {
           : null;
 
   const createDialog = currency ? (
-    <Dialog onOpenChange={(next) => { setCreateOpen(next); if (!next) { setDraft(EMPTY_DRAFT); setCreateError(null); } }} open={createOpen}>
+    <Dialog onOpenChange={(next) => { setCreateOpen(next); if (!next) { setDraft(EMPTY_DRAFT); setCreateError(null); setCreateSubmitted(false); } }} open={createOpen}>
       <DialogTrigger render={<Button size="sm" />}>{t("packages.create.action")}</DialogTrigger>
       <DialogContent>
-        <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); if (!create.isPending && draft.name.trim()) { setCreateError(null); create.mutate(); } }}>
+        <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); setCreateSubmitted(true); if (!create.isPending && draft.name.trim() && draft.price.trim()) { setCreateError(null); create.mutate(); } }}>
           <DialogHeader>
             <DialogTitle>{t("packages.create.title")}</DialogTitle>
           </DialogHeader>
           <FieldGroup>
-            <Field>
+            <Field data-invalid={createNameError ? true : undefined}>
               <FieldLabel htmlFor="partner-package-name">{t("packages.create.nameLabel")}</FieldLabel>
-              <Input autoComplete="off" id="partner-package-name" maxLength={PARTNER_PACKAGE_NAME_MAX_LENGTH} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder={t("packages.create.namePlaceholder")} value={draft.name} />
+              <Input aria-describedby={createNameError ? "partner-package-name-error" : undefined} aria-invalid={createNameError ? true : undefined} autoComplete="off" id="partner-package-name" maxLength={PARTNER_PACKAGE_NAME_MAX_LENGTH} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder={t("packages.create.namePlaceholder")} value={draft.name} />
+              {createNameError ? <FieldError id="partner-package-name-error">{createNameError}</FieldError> : null}
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field>
+              <Field data-invalid={createPriceError ? true : undefined}>
                 <FieldLabel htmlFor="partner-package-price">{t("packages.create.priceLabel")}</FieldLabel>
                 <InputGroup>
-                  <InputGroupInput className="tabular-nums" id="partner-package-price" inputMode="decimal" onChange={(event) => setDraft({ ...draft, price: event.target.value })} value={draft.price} />
+                  <InputGroupInput aria-describedby={createPriceError ? "partner-package-price-error" : undefined} aria-invalid={createPriceError ? true : undefined} className="tabular-nums" id="partner-package-price" inputMode="decimal" onChange={(event) => setDraft({ ...draft, price: event.target.value })} value={draft.price} />
                   <InputGroupAddon align="inline-end"><InputGroupText>{currency}</InputGroupText></InputGroupAddon>
                 </InputGroup>
+                {createPriceError ? <FieldError id="partner-package-price-error">{createPriceError}</FieldError> : null}
               </Field>
               <Field>
                 <FieldLabel htmlFor="partner-package-setup-fee">{t("packages.create.setupFeeLabel")}</FieldLabel>
@@ -205,7 +212,8 @@ export function PartnerPackagesSurface() {
           </FieldGroup>
           {createError ? <p className="text-sm text-destructive" role="alert">{createError}</p> : null}
           <DialogFooter>
-            <Button disabled={create.isPending || !draft.name.trim() || !draft.price.trim()} loading={create.isPending} loadingLabel={t("packages.create.submitting")} type="submit">{t("packages.create.submit")}</Button>
+            <DialogClose render={<Button disabled={create.isPending} type="button" variant="outline" />}>{t("packages.create.cancel")}</DialogClose>
+            <Button disabled={create.isPending} loading={create.isPending} loadingLabel={t("packages.create.submitting")} type="submit">{t("packages.create.submit")}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -279,19 +287,21 @@ export function PartnerPackagesSurface() {
           </Table>
         </Surface>
       )}
-      <Dialog onOpenChange={(next) => { if (!next) setRenaming(null); }} open={renaming !== null}>
+      <Dialog onOpenChange={(next) => { if (!next) { setRenaming(null); setRenameSubmitted(false); } }} open={renaming !== null}>
         <DialogContent>
-          <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); if (renaming && !rename.isPending && newName.trim()) { setRenameError(null); rename.mutate(renaming); } }}>
+          <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); setRenameSubmitted(true); if (renaming && !rename.isPending && newName.trim()) { setRenameError(null); rename.mutate(renaming); } }}>
             <DialogHeader>
               <DialogTitle>{t("packages.rename.title")}</DialogTitle>
             </DialogHeader>
-            <Field>
+            <Field data-invalid={renameNameError ? true : undefined}>
               <FieldLabel htmlFor="partner-package-rename">{t("packages.create.nameLabel")}</FieldLabel>
-              <Input autoComplete="off" id="partner-package-rename" maxLength={PARTNER_PACKAGE_NAME_MAX_LENGTH} onChange={(event) => setNewName(event.target.value)} value={newName} />
+              <Input aria-describedby={renameNameError ? "partner-package-rename-error" : undefined} aria-invalid={renameNameError ? true : undefined} autoComplete="off" id="partner-package-rename" maxLength={PARTNER_PACKAGE_NAME_MAX_LENGTH} onChange={(event) => setNewName(event.target.value)} value={newName} />
+              {renameNameError ? <FieldError id="partner-package-rename-error">{renameNameError}</FieldError> : null}
             </Field>
             {renameError ? <p className="text-sm text-destructive" role="alert">{renameError}</p> : null}
             <DialogFooter>
-              <Button disabled={rename.isPending || !newName.trim()} loading={rename.isPending} loadingLabel={t("packages.rename.saving")} type="submit">{t("packages.rename.submit")}</Button>
+              <DialogClose render={<Button disabled={rename.isPending} type="button" variant="outline" />}>{t("packages.rename.cancel")}</DialogClose>
+              <Button disabled={rename.isPending} loading={rename.isPending} loadingLabel={t("packages.rename.saving")} type="submit">{t("packages.rename.submit")}</Button>
             </DialogFooter>
           </form>
         </DialogContent>

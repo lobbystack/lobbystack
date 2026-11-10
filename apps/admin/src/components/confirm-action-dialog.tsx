@@ -50,7 +50,7 @@ export function ConfirmActionDialog({
   }, [onConfirm, onOpenChange]);
 
   return (
-    <AlertDialog onOpenChange={onOpenChange} open={open}>
+    <AlertDialog onOpenChange={(next) => { if (!pending) onOpenChange(next); }} open={open}>
       <AlertDialogContent initialFocus={confirmRef} onOverlayClick={() => { if (!pending) onOpenChange(false); }}>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LiveTeamSurface } from "./live-team-surface";
@@ -55,5 +56,52 @@ describe("team loading states", () => {
     render_("viewer", { team: true });
     expect(skeletons()).toBe(0);
     for (const label of ["account.actions.change", "workspaceTeam.invite.action", "workspaceTeam.delete.action"]) expect(screen.queryByRole("button", { name: label })).toBeNull();
+  });
+});
+
+describe("inviting a team member", () => {
+  it("shows an error and sends nothing when the email is empty, and has a Cancel button", async () => {
+    render_("business_owner", { team: true });
+    const fetchMock = vi.fn(async () => Response.json({ ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+    await userEvent.click(screen.getByRole("button", { name: "workspaceTeam.invite.action" }));
+    await userEvent.click(screen.getByRole("button", { name: "workspaceTeam.invite.submit" }));
+    expect(screen.getByText("workspaceTeam.invite.emailRequired")).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "workspaceTeam.invite.cancel" }));
+    await waitFor(() => expect(screen.queryByText("workspaceTeam.invite.emailRequired")).toBeNull());
+  });
+});
+
+describe("renaming the business", () => {
+  async function openDialog() {
+    render_("business_owner", { team: true });
+    const fetchMock = vi.fn(async () => Response.json({ ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+    await userEvent.click(screen.getByRole("button", { name: "account.actions.change" }));
+    return { fetchMock, input: screen.getByRole("textbox") as HTMLInputElement };
+  }
+
+  it("shows an error and saves nothing when the name is empty", async () => {
+    const { fetchMock, input } = await openDialog();
+    await userEvent.clear(input);
+    await userEvent.click(screen.getByRole("button", { name: "account.businessName.save" }));
+    expect(screen.getByText("account.businessName.required")).toBeTruthy();
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("saves the name with Enter", async () => {
+    const { fetchMock, input } = await openDialog();
+    await userEvent.clear(input);
+    await userEvent.type(input, "Maple Clinic{Enter}");
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/api/businesses"), expect.objectContaining({ method: "PATCH", body: JSON.stringify({ name: "Maple Clinic" }) })));
+  });
+
+  it("has a Cancel button that closes the dialog", async () => {
+    const { fetchMock } = await openDialog();
+    await userEvent.click(screen.getByRole("button", { name: "account.actions.cancel" }));
+    await waitFor(() => expect(screen.queryByRole("textbox")).toBeNull());
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

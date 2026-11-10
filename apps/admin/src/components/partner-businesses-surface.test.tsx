@@ -162,6 +162,18 @@ describe("the partner console's Businesses page", () => {
     }
   });
 
+  it("shows an error for the name and the owner's email and creates nothing, and has a Cancel button", async () => {
+    const fetchMock = renderAs("admin", () => Response.json({ businesses: [] }));
+    await screen.findByText("businesses.empty.title");
+    await userEvent.click(screen.getByRole("button", { name: "businesses.create.action" }));
+    await userEvent.click(await screen.findByRole("button", { name: "businesses.create.submit" }));
+    expect(screen.getByText("businesses.create.nameRequired")).toBeTruthy();
+    expect(screen.getByText("businesses.create.ownerRequired")).toBeTruthy();
+    expect(fetchMock.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === "POST")).toEqual([]);
+    await userEvent.click(screen.getByRole("button", { name: "businesses.create.cancel" }));
+    await waitFor(() => expect(screen.queryByLabelText("businesses.create.nameLabel")).toBeNull());
+  });
+
   it("creates a business at the access level picked, invites its owner, and records web.partner.business_created", async () => {
     const businesses: unknown[] = [];
     const fetchMock = renderAs("admin", (_url, init) => {
