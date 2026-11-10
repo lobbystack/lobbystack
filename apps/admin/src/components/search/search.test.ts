@@ -47,7 +47,7 @@ describe("search matches related words", () => {
     ["forwarding", "Phone number"],
     ["teammate", "Team"],
     ["dm", "Instagram"],
-    ["hours", "Business details"],
+    ["hours", "Details"],
     ["zapier", "Connections"],
     ["transcript", "Inbox"],
     ["transfer", "General"],
@@ -64,6 +64,13 @@ describe("search matches related words", () => {
   it("matches a word as it's typed", () => {
     expect(titles("bill")).toContain("Plan and billing");
     expect(titles("invo")).toContain("Plan and billing");
+  });
+
+  it("names Business's details page as its menu does, and finds it by its full name", () => {
+    for (const query of ["business details", "details", "hours"]) {
+      const found = searchEntries(query, owner).find((entry) => entry.href === "/business");
+      expect(found, query).toMatchObject({ title: "Details", where: "Business" });
+    }
   });
 
   it("ranks a title match above a synonym", () => {

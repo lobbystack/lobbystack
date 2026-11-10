@@ -111,6 +111,7 @@ it("suggests the pages and agents the person may open before anything is typed, 
   const pages = await screen.findByRole("group", { name: "search.groups.pages" });
   const names = within(pages).getAllByRole("option").map((option) => option.textContent);
   expect(names.slice(0, 6)).toEqual(["items.home", "items.inbox", "items.appointments", "items.contacts", "items.analytics", "items.agents"]);
+  expect(names).toContain("items.business›businessPages.details");
   expect(names).toContain("items.business›settingsPages.knowledge");
   expect(names).toContain("items.settings›settingsPages.team");
   const agents = await screen.findByRole("group", { name: "search.groups.agents" });

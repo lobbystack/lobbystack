@@ -82,7 +82,8 @@ export function searchCatalog(t: Translate, agents: ReadonlyArray<{ id: string; 
     page("affiliate", "/affiliate", "items.affiliate", ["affiliate"], text(t, "accountMenu")),
   ];
   const settingsPages: SearchEntry[] = [
-    ...BUSINESS_PAGES.map((item) => page(item.href, item.href, item.titleKey, PAGE_TAGS[item.href] ?? [], businessLabel)),
+    // Business's rows read as its menu does, "Business › Details"; the "business" tag still finds Details by its full name.
+    ...BUSINESS_PAGES.map((item) => page(item.href, item.href, item.menuKey ?? item.titleKey, PAGE_TAGS[item.href] ?? [], businessLabel)),
     ...ACCOUNT_PAGES.map((item) => ({ ...page(item.href, item.href, item.titleKey, PAGE_TAGS[item.href] ?? [], wherePath(settings, text(t, "sidebar.yourAccount"))) })),
     ...WORKSPACE_PAGES.map((item) => ({ ...page(item.href, item.href, item.titleKey, PAGE_TAGS[item.href] ?? [], wherePath(settings, text(t, "sidebar.workspace"))), ...(item.partnerBusinessOnly ? { partnerBusinessOnly: true } : {}) })),
   ];
