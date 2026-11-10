@@ -12,7 +12,7 @@ import { migrator, removeFixtures, signUpOwner } from "./fixtures/full-stack";
 
 const prefix = "home-analytics-metrics";
 
-test("Home shows booked value, and Analytics opens on calls, today and average duration", async ({ page }, testInfo) => {
+test("Home shows booked value and an Upcoming row with a chevron, and Analytics opens on calls, today and average duration", async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   const database = migrator();
   const fixtures = { emails: [] as string[], businessIds: [] as string[] };
@@ -38,7 +38,9 @@ test("Home shows booked value, and Analytics opens on calls, today and average d
     await expect(page.getByRole("heading", { name: dashboardCopy.home.results.timeSaved, exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: dashboardCopy.home.results.withoutTransfer, exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: dashboardCopy.home.analytics.overview.averageDuration.title, exact: true })).toHaveCount(0);
+    // The Upcoming row shows a chevron after the name, and the chevron adds nothing to the row's name.
     const row = page.getByRole("button", { name: /^Ana Silva/ });
+    await expect(row.locator("svg.lucide-chevron-right[aria-hidden='true']")).toHaveCount(1);
     await row.click();
     await expect(page.getByRole("dialog")).toContainText("Cut");
     await page.keyboard.press("Escape");

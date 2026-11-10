@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createInstance } from "i18next";
@@ -202,6 +202,21 @@ describe("appointment requests on Home", () => {
 });
 
 describe("Upcoming rows on Home", () => {
+  it("show the same chevron after the name as an Action required row, kept out of the row's name", async () => {
+    const i18n = await setup("en", "call-123");
+    const title = i18n.t("home.actionRequired.titleWithContact", { message: "Please call back", name: "Alex" });
+    const actionChevron = screen.getByRole("link", { name: title }).querySelector("svg")!;
+    const row = screen.getByRole("button", { name: /^Alex/ });
+    const name = within(row).getByText("Alex");
+    const chevron = name.nextElementSibling!;
+    expect(chevron.tagName.toLowerCase()).toBe("svg");
+    expect(chevron.getAttribute("aria-hidden")).toBe("true");
+    expect(actionChevron.getAttribute("aria-hidden")).toBe("true");
+    expect(chevron.getAttribute("class")).toBe(actionChevron.getAttribute("class")!.replace(" mt-0.5", ""));
+    // The chevron sits between the name and the badges.
+    expect(chevron.parentElement!.nextElementSibling!.textContent).toBe(i18n.t("home.upcoming.status.confirmed"));
+  });
+
   it("open the appointment's details on Home, where Cancel and Reschedule live", async () => {
     await setup("en", null, { role: "scheduler" });
     const row = screen.getByRole("button", { name: /^Alex/ });

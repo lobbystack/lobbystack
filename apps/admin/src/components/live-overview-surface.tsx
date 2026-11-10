@@ -28,6 +28,7 @@ import { needsHoursForBooking, useBusinessHours } from "@/components/business-ho
 import { AppointmentDetailsSheet } from "@/components/appointment-details-sheet";
 import { appointmentSummary } from "@/components/cancel-appointment-button";
 import { HiddenTextSkeleton, ResultsRowSkeleton, SetupGuideSkeleton } from "@/components/loading-skeletons";
+import { RowChevron } from "@/components/row-chevron";
 import { formatBookedValue, formatTimeSaved } from "@/lib/analytics-results";
 import type { AnalyticsResultsViewModel } from "@/lib/page-view-models";
 import { Item, ItemActions, ItemHeader, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item";
@@ -170,7 +171,7 @@ export function LiveOverviewSurface() {
                                             <span className="min-w-0 overflow-hidden line-clamp-2">
                                               {displayTitle}
                                             </span>
-                                            <ChevronRight className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+                                            <RowChevron className="mt-0.5" />
                                           </Link>
                                         </ItemTitle>
                                       ) : (
@@ -241,7 +242,7 @@ export function LiveOverviewSurface() {
                   return <div key={appointment.id}>
                     {/* The whole row opens the appointment's details, as a row on the appointments page does. */}
                     <button className="-mx-2 grid w-[calc(100%+1rem)] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 rounded-lg px-2 py-2 text-left outline-none transition-colors hover:bg-muted/50 focus-visible:ring-[3px] focus-visible:ring-ring/50" onClick={() => setDetailsId(appointment.id)} type="button">
-                      <span className="flex min-w-0 flex-wrap items-center gap-2"><span className="type-item-title">{contactName}</span><Badge variant="outline">{getAppointmentStatusLabel(appointment.status, t)}</Badge><Badge variant="secondary">{getChannelLabel(appointment.sourceChannel, t)}</Badge></span>
+                      <span className="flex min-w-0 flex-wrap items-center gap-2"><span className="inline-flex min-w-0 items-center gap-1"><span className="type-item-title">{contactName}</span><RowChevron /></span><Badge variant="outline">{getAppointmentStatusLabel(appointment.status, t)}</Badge><Badge variant="secondary">{getChannelLabel(appointment.sourceChannel, t)}</Badge></span>
                       <span className="type-item-title text-right">{formatDateTime(appointment.startsAt, i18n.language, { weekday: "short", month: "short", day: "numeric", timeZone: appointment.timezone })}</span>
                       <span className="type-body-muted flex min-w-0 items-center gap-1.5">
                         <span className="truncate">{appointment.serviceName ?? t("home.upcoming.unknownService")}</span>
