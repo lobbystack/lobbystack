@@ -127,16 +127,22 @@ describe("business slug", () => {
     expect(slugFromBusinessName("!!!")).toBe("business");
   });
 
-  it("follows a rename, with a suffix only when another business has the slug", async () => {
-    expect(await slugAfterRename("old-slug", "LobbyStack", async () => false)).toBe("lobbystack");
-    const suffixed = await slugAfterRename("old-slug", "LobbyStack", async (slug) => slug === "lobbystack");
+  it("follows a rename while the slug is still the one made from the old name", async () => {
+    expect(await slugAfterRename("old-name", "Old Name", "LobbyStack", async () => false)).toBe("lobbystack");
+    expect(await slugAfterRename("old-name-3fa9c21b04de", "Old Name", "LobbyStack", async () => false)).toBe("lobbystack");
+    const suffixed = await slugAfterRename("old-name", "Old Name", "LobbyStack", async (slug) => slug === "lobbystack");
     expect(suffixed).toMatch(/^lobbystack-[0-9a-f]{12}$/);
   });
 
-  it("leaves a slug that already follows the name alone", async () => {
+  it("keeps a slug someone chose", async () => {
     const never = async () => { throw new Error("should not look"); };
-    expect(await slugAfterRename("lobbystack", "LobbyStack!", never)).toBeNull();
-    expect(await slugAfterRename("lobbystack-3fa9c21b04de", "LobbyStack", never)).toBeNull();
+    expect(await slugAfterRename("my-shop", "Old Name", "LobbyStack", never)).toBeNull();
+    expect(await slugAfterRename("old-name-online", "Old Name", "LobbyStack", never)).toBeNull();
+  });
+
+  it("leaves a slug that already follows the new name alone", async () => {
+    const never = async () => { throw new Error("should not look"); };
+    expect(await slugAfterRename("lobbystack", "LobbyStack", "LobbyStack!", never)).toBeNull();
   });
 
   function useRename(current: { name: string; slug: string }, takenSlugs: string[] = []) {
@@ -150,9 +156,16 @@ describe("business slug", () => {
   }
 
   it("changes the slug together with the name", async () => {
-    const { tx, updates } = useRename({ name: "Old Name", slug: "old-slug" });
+    const { tx, updates } = useRename({ name: "Old Name", slug: "old-name" });
     await updateBusinessInTransaction(tx, { businessId: "biz-1", name: "LobbyStack" });
     expect(updates[0]).toEqual({ table: businesses, values: expect.objectContaining({ name: "LobbyStack", slug: "lobbystack" }) });
+  });
+
+  it("keeps the slug when someone chose it", async () => {
+    const { tx, updates } = useRename({ name: "Old Name", slug: "my-shop" });
+    await updateBusinessInTransaction(tx, { businessId: "biz-1", name: "LobbyStack" });
+    expect(updates[0]).toEqual({ table: businesses, values: expect.objectContaining({ name: "LobbyStack" }) });
+    expect(updates[0]!.values).not.toHaveProperty("slug");
   });
 
   it("keeps the slug when the name is saved unchanged", async () => {

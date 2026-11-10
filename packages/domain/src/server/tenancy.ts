@@ -159,13 +159,16 @@ export function slugFromBusinessName(name: string): string {
 
 /**
  * The slug a renamed business takes: the new name's, or that with a random
- * suffix when another business has it. Null when the slug already follows the
- * name, which is the name's own slug or that with a suffix this function made,
- * so a rename that changes only capitals or punctuation leaves the slug alone.
+ * suffix when another business has it. Null when the slug stays, which is
+ * whenever someone chose it. Only a slug this function's own rule made from
+ * the old name follows a rename, so a slug the public API or CLI set, or one
+ * the business's address points at, outlives the name it was made from.
  */
-export async function slugAfterRename(currentSlug: string, newName: string, taken: (slug: string) => Promise<boolean>): Promise<string | null> {
+export async function slugAfterRename(currentSlug: string, previousName: string, newName: string, taken: (slug: string) => Promise<boolean>): Promise<string | null> {
+  const previousBase = slugFromBusinessName(previousName);
+  if (currentSlug !== previousBase && !new RegExp(`^${previousBase}-[0-9a-f]{12}$`).test(currentSlug)) return null;
   const base = slugFromBusinessName(newName);
-  if (currentSlug === base || new RegExp(`^${base}-[0-9a-f]{12}$`).test(currentSlug)) return null;
+  if (currentSlug === base) return null;
   if (!(await taken(base))) return base;
   for (let attempt = 0; attempt < 5; attempt++) {
     const candidate = `${base}-${randomBytes(6).toString("hex")}`;
@@ -356,13 +359,13 @@ export async function updateBusinessInTransaction(
   if (Object.keys(values).length === 1) throw Object.assign(new Error("At least one business field is required."), { status: 400 });
   // Locks the row, so a concurrent change can't alter the zone the closures were entered in, or the language the greeting is in.
   const [before] = timezone === undefined && input.defaultLocale === undefined && input.currency === undefined ? [] : await tx.select({ timezone: businesses.timezone, defaultLocale: businesses.defaultLocale, name: businesses.name, currency: businesses.currency }).from(businesses).where(eq(businesses.id, input.businessId)).for("update");
-  // The slug follows the name. The advisory lock makes two businesses taking the same name at once pick one slug each.
+  // Only a slug made from the old name follows the name. One the business chose stays, since it's the address people and integrations know.
   let slug: string | null = null;
   if (input.name !== undefined) {
     const [current] = await tx.select({ name: businesses.name, slug: businesses.slug }).from(businesses).where(eq(businesses.id, input.businessId)).for("update");
     if (current && current.name !== values.name) {
       await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`business-slug:${slugFromBusinessName(values.name!)}`}, 0))`);
-      slug = await slugAfterRename(current.slug, values.name!, async (candidate) => (await tx.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.slug, candidate), ne(businesses.id, input.businessId))).limit(1)).length > 0);
+      slug = await slugAfterRename(current.slug, current.name, values.name!, async (candidate) => (await tx.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.slug, candidate), ne(businesses.id, input.businessId))).limit(1)).length > 0);
     }
   }
   const [business] = await tx.update(businesses).set(slug ? { ...values, slug } : values).where(eq(businesses.id, input.businessId)).returning({ id: businesses.id });
