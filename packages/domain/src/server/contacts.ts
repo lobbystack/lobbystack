@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 
-import { appointments, calls, contacts, conversations, enqueueOutbox, inOrder, messages, services, staff, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { appointments, auditLogs, calls, contacts, conversations, enqueueOutbox, inOrder, messages, services, staff, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import { contactPasscodeStatusInTransaction } from "./contactPasscodes";
@@ -132,6 +132,7 @@ export async function updateContactDetails(
     if (!Object.keys(patch).length) throw Object.assign(new Error("Send a name or an email to update."), { status: 400 });
     const [contact] = await tx.update(contacts).set({ ...patch, updatedAt: new Date() }).where(and(eq(contacts.id, input.contactId), eq(contacts.businessId, input.businessId))).returning({ id: contacts.id, name: contacts.name, email: contacts.email });
     if (!contact) return null;
+    await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.userId, eventType: "contact.updated", entityType: "contact", entityId: contact.id, payload: { fields: Object.keys(patch) } });
     await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "contact", aggregateId: input.contactId, dedupeKey: `contact:${input.contactId}:updated:${Date.now()}`, payload: { type: "conversation.updated", entityId: input.contactId } });
     return { contactId: contact.id, name: contact.name, email: contact.email };
   });
