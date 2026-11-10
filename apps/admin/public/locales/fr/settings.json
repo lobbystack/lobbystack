@@ -760,7 +760,8 @@
       "placeholder": "Clinique familiale Maple",
       "save": "Enregistrer",
       "saving": "Enregistrement...",
-      "saved": "Modifications enregistrées"
+      "saved": "Modifications enregistrées",
+      "required": "Entrez un nom d'entreprise."
     },
     "changeEmail": {
       "label": "Changer le courriel",

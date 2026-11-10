@@ -753,7 +753,8 @@
       "placeholder": "Maple Family Clinic",
       "save": "Save",
       "saving": "Saving...",
-      "saved": "Changes saved"
+      "saved": "Changes saved",
+      "required": "Enter a business name."
     },
     "changeEmail": {
       "label": "Change email",

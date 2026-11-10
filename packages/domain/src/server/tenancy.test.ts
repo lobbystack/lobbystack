@@ -48,6 +48,12 @@ describe("business timezone", () => {
     await expect(createBusiness({ db: undefined as never }, { userId: "unused", name: "Test", timezone: "Eastern", businessType: "test" })).rejects.toMatchObject({ status: 400, code: "invalid_timezone" });
   });
 
+  it.each(["", "   ", "x".repeat(201)])("refuses to rename a business to %j", async (name) => {
+    const { tx, updates } = useTransaction();
+    await expect(updateBusinessInTransaction(tx, { businessId: "biz-1", name })).rejects.toMatchObject({ status: 400, code: "invalid_name" });
+    expect(updates).toEqual([]);
+  });
+
   it("saves the canonical zone for the business and its default staff member, and refreshes the snapshot", async () => {
     const { tx, updates } = useTransaction();
     await updateBusinessInTransaction(tx, { businessId: "biz-1", timezone: " europe/belgrade " });

@@ -352,6 +352,8 @@ export async function updateBusinessInTransaction(
 ): Promise<void> {
   const timezone = input.timezone === undefined ? undefined : requireIanaTimeZone(input.timezone);
   if (input.currency !== undefined && !isCurrencyCode(input.currency)) throw Object.assign(new Error("currency is invalid."), { status: 400 });
+  // The public API holds the name to 1-200 characters; the dashboard and the domain hold it to the same.
+  if (input.name !== undefined && (input.name.trim().length === 0 || input.name.trim().length > 200)) throw Object.assign(new Error("name must be between 1 and 200 characters."), { status: 400, code: "invalid_name" });
   const values = { ...(input.name !== undefined ? { name: input.name.trim() } : {}), ...(timezone !== undefined ? { timezone } : {}), ...(input.businessType !== undefined ? { businessType: input.businessType.trim() } : {}), ...(input.defaultLocale !== undefined ? { defaultLocale: input.defaultLocale.trim(), ...(input.defaultLocaleDetected ? {} : { defaultLocaleChosen: true }) } : {}), ...(input.teamLocale !== undefined ? { teamLocale: input.teamLocale } : {}), ...(input.websiteUrl !== undefined ? { websiteUrl: input.websiteUrl } : {}), ...(input.currency !== undefined ? { currency: input.currency } : {}), updatedAt: new Date() };
   if (Object.keys(values).length === 1) throw Object.assign(new Error("At least one business field is required."), { status: 400 });
   // Locks the row, so a concurrent change can't alter the zone the closures were entered in, or the language the greeting is in.

@@ -760,7 +760,8 @@
       "placeholder": "Porodična klinika Maple",
       "save": "Sačuvaj",
       "saving": "Čuvanje...",
-      "saved": "Izmene su sačuvane"
+      "saved": "Izmene su sačuvane",
+      "required": "Unesite naziv preduzeća."
     },
     "changeEmail": {
       "label": "Promeni imejl",

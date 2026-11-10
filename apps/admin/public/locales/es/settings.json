@@ -760,7 +760,8 @@
       "placeholder": "Clínica Familiar Maple",
       "save": "Guardar",
       "saving": "Guardando...",
-      "saved": "Cambios guardados"
+      "saved": "Cambios guardados",
+      "required": "Introduzca el nombre de la empresa."
     },
     "changeEmail": {
       "label": "Cambiar correo electrónico",
