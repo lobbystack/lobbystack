@@ -232,9 +232,26 @@
       "keep": "Keep current time",
       "done": "Appointment moved.",
       "failed": "We couldn't move the appointment. Try again.",
-      "unavailable": "That time isn't available any more. Agree another time with the customer and move it from the calendar.",
+      "unavailable": "That time isn't available any more. Pick another time.",
       "notReschedulable": "This appointment can't be moved. It may have been cancelled.",
       "passed": "The requested time has passed."
+    },
+    "move": {
+      "action": "Reschedule",
+      "otherTime": "Other time",
+      "actionLabel": "Reschedule appointment: {{time}}",
+      "title": "Reschedule appointment",
+      "description": "{{appointment}}",
+      "requested": "Requested: {{time}}",
+      "date": "Day",
+      "times": "Open times",
+      "noTimes": "No open times on this day.",
+      "timesFailed": "We couldn't load open times. Try again.",
+      "confirm": "Move appointment",
+      "keep": "Keep current time",
+      "done": "Appointment moved",
+      "failed": "We couldn't move the appointment. Try again.",
+      "taken": "That time is no longer open. Pick another."
     }
   },
   "abandonIntent": {

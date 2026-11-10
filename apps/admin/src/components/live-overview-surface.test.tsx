@@ -225,6 +225,17 @@ describe("appointment reschedules on Home", () => {
     await setup("en", null, { role: "viewer", actionRequired: [{ ...request, appointment: linked }] });
     expect(screen.queryByRole("button", { name: enCommon.appointments.reschedule.approve })).toBeNull();
   });
+
+  it("offers another time next to the requested one, and a picker when the caller gave none", async () => {
+    await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, appointment: linked }] });
+    expect(screen.getByRole("button", { name: enCommon.appointments.move.otherTime })).toBeTruthy();
+    cleanup();
+    await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, requested: { service: "Consultation" }, appointment: linked }] });
+    expect(screen.getByRole("button", { name: /Reschedule appointment:/ })).toBeTruthy();
+    cleanup();
+    await setup("en", null, { role: "viewer", actionRequired: [{ ...request, appointment: linked }] });
+    expect(screen.queryByRole("button", { name: enCommon.appointments.move.otherTime })).toBeNull();
+  });
 });
 
 describe("Home while it loads", () => {

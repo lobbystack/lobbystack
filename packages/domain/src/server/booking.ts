@@ -277,7 +277,7 @@ export async function findAvailability(
  */
 export async function findOpeningsInTransaction(
   tx: DatabaseTransaction,
-  input: { businessId: string; serviceId: string; dates: string[]; staffId?: string; preferredMinutes?: number; limit?: number; spread?: boolean },
+  input: { businessId: string; serviceId: string; dates: string[]; staffId?: string; preferredMinutes?: number; limit?: number; spread?: boolean; ignoreAppointmentId?: string },
 ): Promise<{ timezone: string; durationMinutes: number; openings: string[]; moreOpenings: number; reason?: NoOpeningsReason }> {
   const now = new Date();
   const schedule = await loadSchedule(tx, { businessId: input.businessId, serviceId: input.serviceId, from: now });
@@ -296,6 +296,7 @@ export async function findOpeningsInTransaction(
     staffIds: eligibleStaffIds(schedule, requested),
     from: new Date(Math.min(...starts.map(Number))),
     to: new Date(Math.max(...starts.map(Number)) + schedule.serviceDurationMinutes * 60_000),
+    ignoreAppointmentId: input.ignoreAppointmentId,
   });
   const limit = input.limit ?? Infinity;
   const openings: string[] = [];
@@ -634,6 +635,23 @@ export async function rescheduleAppointment(
   if (!moved) return null;
   await recordAppointmentChange(context, { name: "appointment.rescheduled", businessId: input.businessId, appointmentId: input.appointmentId, source: "operator" });
   return { startsAt: moved.startsAt };
+}
+
+/**
+ * The times an appointment can move to on one local day (YYYY-MM-DD in the
+ * business's timezone), for an operator. Its own time doesn't count as taken.
+ */
+export async function findRescheduleOpenings(
+  context: DomainContext,
+  input: { userId: string; businessId: string; appointmentId: string; date: string },
+): Promise<{ timezone: string; openings: string[]; reason?: NoOpeningsReason }> {
+  return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
+    await requireBusinessMembership(tx, { userId: input.userId, businessId: input.businessId, minimumRole: "scheduler" });
+    const [existing] = await tx.select({ serviceId: appointments.serviceId }).from(appointments).where(and(eq(appointments.businessId, input.businessId), eq(appointments.id, input.appointmentId), ne(appointments.status, "canceled"))).limit(1);
+    if (!existing) throw Object.assign(new Error("Appointment not found."), { status: 404, code: "not_found" });
+    const found = await findOpeningsInTransaction(tx, { businessId: input.businessId, serviceId: existing.serviceId, dates: [input.date], ignoreAppointmentId: input.appointmentId });
+    return { timezone: found.timezone, openings: found.openings, ...(found.reason ? { reason: found.reason } : {}) };
+  });
 }
 
 /**
