@@ -28,19 +28,6 @@ export default {
         "Idete li kod klijenata? Navedite oblasti i eventualnu naknadu za put.",
       ],
     },
-    services: {
-      title: "Usluge u detalje",
-      hint: "Vaša lista usluga je u kontrolnoj tabli. Ovde opišite svaku uslugu. Svaki odgovor počnite nazivom usluge da bi bio jasan i sam za sebe. Kopirajte blok za svaku dodatnu uslugu.",
-      prompts: [
-        "Naziv usluge",
-        "Šta uključuje",
-        "Koliko traje",
-        "Cena ili raspon cena",
-        "Kome odgovara, a kome ne",
-        "Šta pripremiti ili poneti",
-        "Šta sledi posle",
-      ],
-    },
     pricing: {
       title: "Cene i plaćanje",
       prompts: [

@@ -28,19 +28,6 @@ export default {
         "Komt u bij klanten aan huis? Noem de gebieden en eventuele voorrijkosten.",
       ],
     },
-    services: {
-      title: "Diensten in detail",
-      hint: "Uw dienstenlijst staat in uw dashboard. Beschrijf hier elke dienst. Begin elk antwoord met de naam van de dienst, zodat het ook los begrijpelijk blijft. Kopieer het blok voor elke extra dienst.",
-      prompts: [
-        "Naam van de dienst",
-        "Wat erbij hoort",
-        "Hoe lang het duurt",
-        "Prijs of prijsklasse",
-        "Voor wie het geschikt is en voor wie niet",
-        "Wat voor te bereiden of mee te nemen",
-        "Wat er daarna gebeurt",
-      ],
-    },
     pricing: {
       title: "Prijzen en betaling",
       prompts: [

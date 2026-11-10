@@ -30,19 +30,6 @@ export default {
         "Do you travel to customers? Name the areas and any travel fee.",
       ],
     },
-    services: {
-      title: "Services in detail",
-      hint: "Your service list lives in your dashboard. Describe each service here. Start every answer with the service name so it still makes sense on its own. Copy the block for each extra service.",
-      prompts: [
-        "Service name",
-        "What it includes",
-        "How long it takes",
-        "Price, or price range",
-        "Who it suits, and who it does not",
-        "What to prepare or bring",
-        "What happens afterward",
-      ],
-    },
     pricing: {
       title: "Pricing and payment",
       prompts: [

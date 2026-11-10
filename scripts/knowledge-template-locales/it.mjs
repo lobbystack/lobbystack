@@ -28,19 +28,6 @@ export default {
         "Vi recate dai clienti? Indichi le zone e l'eventuale costo di trasferta.",
       ],
     },
-    services: {
-      title: "Servizi nel dettaglio",
-      hint: "L'elenco dei servizi è nella sua dashboard. Descriva qui ogni servizio. Inizi ogni risposta con il nome del servizio, così resta chiara anche da sola. Copi il blocco per ogni servizio in più.",
-      prompts: [
-        "Nome del servizio",
-        "Cosa include",
-        "Quanto dura",
-        "Prezzo o fascia di prezzo",
-        "A chi è adatto e a chi no",
-        "Cosa preparare o portare",
-        "Cosa succede dopo",
-      ],
-    },
     pricing: {
       title: "Prezzi e pagamento",
       prompts: [

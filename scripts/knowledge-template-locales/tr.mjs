@@ -28,19 +28,6 @@ export default {
         "Müşterilerin ayağına gidiyor musunuz? Bölgeleri ve varsa yol ücretini yazın.",
       ],
     },
-    services: {
-      title: "Hizmetler ayrıntılı",
-      hint: "Hizmet listeniz panonuzda. Her hizmeti burada anlatın. Her yanıta hizmetin adıyla başlayın ki tek başına da anlaşılsın. Her ek hizmet için bloğu kopyalayın.",
-      prompts: [
-        "Hizmet adı",
-        "Neleri kapsar",
-        "Ne kadar sürer",
-        "Fiyat veya fiyat aralığı",
-        "Kime uygun, kime uygun değil",
-        "Neler hazırlanmalı veya getirilmeli",
-        "Sonrasında ne olur",
-      ],
-    },
     pricing: {
       title: "Fiyatlar ve ödeme",
       prompts: [

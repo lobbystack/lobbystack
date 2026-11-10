@@ -28,19 +28,6 @@ export default {
         "Bạn có đến tận nơi khách hàng không? Hãy nêu các khu vực và phí di chuyển nếu có.",
       ],
     },
-    services: {
-      title: "Chi tiết dịch vụ",
-      hint: "Danh sách dịch vụ của bạn nằm trong bảng điều khiển. Hãy mô tả từng dịch vụ tại đây. Bắt đầu mỗi câu trả lời bằng tên dịch vụ để tự nó vẫn dễ hiểu. Sao chép khối này cho mỗi dịch vụ bổ sung.",
-      prompts: [
-        "Tên dịch vụ",
-        "Dịch vụ bao gồm những gì",
-        "Mất bao lâu",
-        "Giá hoặc khoảng giá",
-        "Phù hợp với ai và không phù hợp với ai",
-        "Cần chuẩn bị hoặc mang theo gì",
-        "Điều gì xảy ra sau đó",
-      ],
-    },
     pricing: {
       title: "Giá và thanh toán",
       prompts: [

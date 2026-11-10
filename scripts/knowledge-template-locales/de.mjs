@@ -28,19 +28,6 @@ export default {
         "Kommen Sie zu den Kunden? Nennen Sie die Gebiete und eine eventuelle Anfahrtsgebühr.",
       ],
     },
-    services: {
-      title: "Leistungen im Detail",
-      hint: "Ihre Leistungsliste steht in Ihrem Dashboard. Beschreiben Sie hier jede Leistung. Beginnen Sie jede Antwort mit dem Namen der Leistung, damit sie auch allein verständlich bleibt. Kopieren Sie den Block für jede weitere Leistung.",
-      prompts: [
-        "Name der Leistung",
-        "Was sie umfasst",
-        "Wie lange sie dauert",
-        "Preis oder Preisspanne",
-        "Für wen sie geeignet ist und für wen nicht",
-        "Was vorzubereiten oder mitzubringen ist",
-        "Was danach geschieht",
-      ],
-    },
     pricing: {
       title: "Preise und Zahlung",
       prompts: [

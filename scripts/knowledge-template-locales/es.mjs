@@ -28,19 +28,6 @@ export default {
         "¿Se desplaza a casa de los clientes? Indique las zonas y la tarifa de desplazamiento, si la hay.",
       ],
     },
-    services: {
-      title: "Servicios en detalle",
-      hint: "Su lista de servicios está en su panel. Describa cada servicio aquí. Empiece cada respuesta con el nombre del servicio para que se entienda por sí sola. Copie el bloque para cada servicio adicional.",
-      prompts: [
-        "Nombre del servicio",
-        "Qué incluye",
-        "Cuánto dura",
-        "Precio o rango de precios",
-        "A quién le conviene y a quién no",
-        "Qué preparar o traer",
-        "Qué ocurre después",
-      ],
-    },
     pricing: {
       title: "Precios y pago",
       prompts: [

@@ -28,19 +28,6 @@ export default {
         "Vous déplacez-vous chez les clients ? Indiquez les zones et les frais de déplacement éventuels.",
       ],
     },
-    services: {
-      title: "Services en détail",
-      hint: "Votre liste de services se trouve dans votre tableau de bord. Décrivez chaque service ici. Commencez chaque réponse par le nom du service pour qu'elle reste claire seule. Copiez le bloc pour chaque service supplémentaire.",
-      prompts: [
-        "Nom du service",
-        "Ce qu'il comprend",
-        "Sa durée",
-        "Le prix, ou la fourchette de prix",
-        "À qui il convient, et à qui il ne convient pas",
-        "Ce qu'il faut préparer ou apporter",
-        "Ce qui se passe ensuite",
-      ],
-    },
     pricing: {
       title: "Tarifs et paiement",
       prompts: [

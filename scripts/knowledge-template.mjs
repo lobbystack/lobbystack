@@ -35,7 +35,6 @@ export const LOCALES = Object.keys(COPY);
 const LAYOUT = [
   { key: "about" },
   { key: "location" },
-  { key: "services", blocks: 3 },
   { key: "pricing" },
   { key: "booking" },
   { key: "policies" },
@@ -65,9 +64,7 @@ function section(entry, texts, answers) {
   const copy = texts.sections[entry.key];
   const out = [new Paragraph({ heading: HeadingLevel.HEADING_1, children: [text(copy.title)] })];
   if (copy.hint) out.push(hint(copy.hint));
-  for (let block = 0; block < (entry.blocks ?? 1); block += 1) {
-    for (const value of copy.prompts ?? []) out.push(prompt(value), answer(block === 0 ? answers[value] : undefined));
-  }
+  for (const value of copy.prompts ?? []) out.push(prompt(value), answer(answers[value]));
   for (let item = 0; item < (entry.pairs ?? 0); item += 1) out.push(answer("Q: "), answer("A: "));
   return out;
 }

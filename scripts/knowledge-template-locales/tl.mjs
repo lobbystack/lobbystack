@@ -28,19 +28,6 @@ export default {
         "Pumupunta ka ba sa mga customer? Ibigay ang mga lugar at anumang bayad sa pagbiyahe.",
       ],
     },
-    services: {
-      title: "Mga serbisyo nang detalyado",
-      hint: "Nasa iyong dashboard ang listahan ng mga serbisyo. Ilarawan dito ang bawat serbisyo. Simulan ang bawat sagot sa pangalan ng serbisyo para maintindihan ito kahit mag-isa. Kopyahin ang block para sa bawat dagdag na serbisyo.",
-      prompts: [
-        "Pangalan ng serbisyo",
-        "Ano ang kasama",
-        "Gaano katagal",
-        "Presyo, o saklaw ng presyo",
-        "Para kanino ito, at para kanino hindi",
-        "Ano ang ihahanda o dadalhin",
-        "Ano ang susunod na mangyayari",
-      ],
-    },
     pricing: {
       title: "Presyo at bayad",
       prompts: [

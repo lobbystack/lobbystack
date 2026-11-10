@@ -28,19 +28,6 @@ export default {
         "Åker ni till kunder? Ange områdena och eventuell resavgift.",
       ],
     },
-    services: {
-      title: "Tjänster i detalj",
-      hint: "Din tjänstelista finns i din översikt. Beskriv varje tjänst här. Börja varje svar med tjänstens namn så att det går att förstå på egen hand. Kopiera blocket för varje extra tjänst.",
-      prompts: [
-        "Tjänstens namn",
-        "Vad den innehåller",
-        "Hur lång tid den tar",
-        "Pris eller prisintervall",
-        "Vem den passar och vem den inte passar",
-        "Vad man ska förbereda eller ta med",
-        "Vad som händer efteråt",
-      ],
-    },
     pricing: {
       title: "Priser och betalning",
       prompts: [

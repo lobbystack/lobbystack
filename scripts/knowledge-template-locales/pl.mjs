@@ -28,19 +28,6 @@ export default {
         "Czy dojeżdżasz do klientów? Podaj obszary i ewentualną opłatę za dojazd.",
       ],
     },
-    services: {
-      title: "Usługi szczegółowo",
-      hint: "Lista usług jest w Twoim panelu. Opisz tu każdą usługę. Zacznij każdą odpowiedź od nazwy usługi, aby była zrozumiała sama. Skopiuj blok dla każdej dodatkowej usługi.",
-      prompts: [
-        "Nazwa usługi",
-        "Co obejmuje",
-        "Ile trwa",
-        "Cena lub przedział cen",
-        "Dla kogo jest, a dla kogo nie",
-        "Co przygotować lub zabrać",
-        "Co dzieje się potem",
-      ],
-    },
     pricing: {
       title: "Ceny i płatności",
       prompts: [

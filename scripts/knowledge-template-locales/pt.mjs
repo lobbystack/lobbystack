@@ -28,19 +28,6 @@ export default {
         "Você atende na casa dos clientes? Informe as regiões e a taxa de deslocamento, se houver.",
       ],
     },
-    services: {
-      title: "Serviços em detalhe",
-      hint: "Sua lista de serviços fica no seu painel. Descreva cada serviço aqui. Comece cada resposta com o nome do serviço para que ela faça sentido sozinha. Copie o bloco para cada serviço adicional.",
-      prompts: [
-        "Nome do serviço",
-        "O que inclui",
-        "Quanto tempo leva",
-        "Preço ou faixa de preço",
-        "Para quem serve e para quem não serve",
-        "O que preparar ou levar",
-        "O que acontece depois",
-      ],
-    },
     pricing: {
       title: "Preços e pagamento",
       prompts: [
