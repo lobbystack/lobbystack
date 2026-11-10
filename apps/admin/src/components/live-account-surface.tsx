@@ -19,5 +19,5 @@ async function getAccount(): Promise<Account> {
 export function LiveAccountSurface() {
   const { t } = useTranslation("settings");
   const account = useQuery({ queryKey: ["account"], queryFn: getAccount });
-  return <PageSurface title={t("account.title")}><div className="w-full">{account.isLoading ? <AccountSkeleton label={t("account.loading")} /> : account.isError || !account.data ? <p className="text-sm text-destructive">Account data is unavailable.</p> : <div className="flex flex-col gap-8"><AccountSecurityForms currentEmail={account.data.user.email} /><AccountPasskeys businessName={(account.data.businesses.find((business) => business.active) ?? account.data.businesses[0])?.name} /></div>}</div></PageSurface>;
+  return <PageSurface title={t("account.title")}><div className="w-full">{account.isLoading ? <AccountSkeleton label={t("account.loading")} /> : account.isError || !account.data ? <p className="text-sm text-destructive">Account data is unavailable.</p> : <div className="flex flex-col gap-8"><AccountSecurityForms currentEmail={account.data.user.email} /><AccountPasskeys /></div>}</div></PageSurface>;
 }
