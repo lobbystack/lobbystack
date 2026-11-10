@@ -40,7 +40,11 @@ export type AnalyticsViewModel = {
   timeSavedSeconds: AnalyticsMetricViewModel;
   /** Null when no calls count yet. */
   callsWithoutTransferPercent: { current: number | null; previous: number | null };
+  /** Calls and chats per agent in the period: every active agent, then a removed one that had any. */
+  agents?: AnalyticsAgentViewModel[];
 };
+
+export type AnalyticsAgentViewModel = { id: string; name: string; archived: boolean; calls: number; chats: number };
 
 export type CalendarOptionViewModel = {
   id: string;
@@ -112,6 +116,8 @@ export type TeamInvitationViewModel = {
 export type PhoneNumberViewModel = {
   id: string;
   e164: string;
+  /** The agent calls and texts to the number reach. */
+  agentId: string | null;
   voiceEnabled: boolean;
   smsEnabled: boolean;
   status: string;

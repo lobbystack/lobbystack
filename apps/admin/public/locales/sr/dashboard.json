@@ -92,6 +92,12 @@
         "bookedValue": "Vrednost termina",
         "timeSaved": "Ušteđeno vreme",
         "withoutTransfer": "Pozivi bez preusmeravanja"
+      },
+      "agents": {
+        "title": "Po agentu",
+        "calls": "Pozivi",
+        "chats": "Četovi",
+        "removed": "Uklonjen"
       }
     },
     "metrics": {
@@ -150,7 +156,8 @@
       "requested": "Traženo: {{details}}",
       "notes": "Napomene: {{notes}}",
       "rescheduleRequest": "Zahtev za pomeranje",
-      "newTime": "Novo vreme: {{time}}"
+      "newTime": "Novo vreme: {{time}}",
+      "viewAll": "Prikaži sve"
     },
     "upcoming": {
       "title": "Predstojeće",

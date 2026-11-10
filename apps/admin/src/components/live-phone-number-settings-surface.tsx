@@ -76,7 +76,8 @@ function formatReclaimDate(value: number, locale: string): string {
   return formatDateTime(value, locale, { year: "numeric", month: "long", day: "numeric" });
 }
 
-export function LivePhoneNumberSettingsSurface() {
+/** The number calls to an agent come in on. Without `agentId`, the business's first number. */
+export function LivePhoneNumberSettingsSurface({ agentId }: { agentId?: string } = {}) {
   const { i18n, t } = useTranslation("settings");
   const queryClient = useQueryClient();
   const openUpgradePlanDialog = useOpenUpgradePlanDialog();
@@ -88,7 +89,8 @@ export function LivePhoneNumberSettingsSurface() {
   const numbers = useQuery({ queryKey: ["phone-numbers", businessId], refetchInterval: query => query.state.data?.activeClaim || query.state.data?.replacement.activeClaim ? 1000 : false, enabled: Boolean(businessId), queryFn: () => requestJson<NumbersResponse>(`/api/phone-numbers?businessId=${encodeURIComponent(businessId)}`) });
   const can = useBusinessCan();
   const billing = useQuery({ queryKey: ["billing", businessId], enabled: Boolean(businessId) && can("billing"), queryFn: () => requestJson<BillingUsageViewModel>(`/api/billing?businessId=${encodeURIComponent(businessId)}`) });
-  const primaryPhoneNumber = numbers.data ? numbers.data.phoneNumbers.find(number => number.status === "active" && !number.reclaimScheduledAt) ?? numbers.data.phoneNumbers[0] ?? null : undefined;
+  const agentNumbers = numbers.data ? numbers.data.phoneNumbers.filter(number => !agentId || number.agentId === agentId) : undefined;
+  const primaryPhoneNumber = agentNumbers ? agentNumbers.find(number => number.status === "active" && !number.reclaimScheduledAt) ?? agentNumbers[0] ?? null : undefined;
   const phoneNumberReplacementUsedAt = numbers.data?.replacement.usedAt;
   const billingStatus = billing.data ? { includedBusinessNumbers: billing.data.entitlement.includedNumbers, phoneNumberReclaimScheduledAt: null } : null;
   // A partner's business has no plan of its own: its partner's tier decides whether it gets a new number, and a replacement adds none.

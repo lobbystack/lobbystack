@@ -1,56 +1,60 @@
 ---
 title: "Gérer les réglages de l'espace de travail"
-description: "Gérez l'utilisation, la facturation, les membres de l'équipe, les notifications, votre numéro de téléphone, le widget de site Web, les identifiants de votre compte et l'apparence du tableau de bord dans les Réglages de LobbyStack."
-sidebarTitle: "Réglages"
+description: "Trouvez les réglages de votre espace de travail, comme les détails de l'entreprise, les connaissances, l'équipe, l'utilisation et la facturation, ainsi que les réglages de votre propre compte dans LobbyStack."
+sidebarTitle: "Vue d'ensemble des réglages"
 contentType: "Conceptual"
 ---
 
-La section **Réglages** regroupe les contrôles de l'espace de travail, les identifiants du compte, les notifications, les réglages du numéro de téléphone, l'utilisation, la facturation et les préférences d'apparence.
+Cliquez sur **Réglages** dans la barre latérale du tableau de bord. La barre latérale passe au menu des réglages, en deux groupes : **Espace** pour les réglages que partagent chaque agent et chaque membre de l'équipe, et **Votre compte** pour les vôtres. La ligne du haut vous ramène au menu principal.
+
+Les réglages propres à chaque agent, comme son message d'accueil, ses règles et ses canaux, se trouvent plutôt sur l'agent. Consultez [Configurer votre agent IA](/fr/agent/overview).
 
 <CardGroup cols={2}>
-  <Card title="Utilisation" icon="chart-line" href="/fr/billing/usage">
-    Suivez les minutes vocales hébergées, les segments SMS, les tentatives de transfert, la base de connaissances et les limites du forfait.
+  <Card title="Détails de l'entreprise" icon="building" href="/fr/settings/business-details">
+    Définissez le résumé de l'entreprise, les heures d'ouverture, les langues, le fuseau horaire et la devise.
   </Card>
-  <Card title="Facturation" icon="credit-card" href="/fr/billing/plans">
-    Consultez les forfaits, les mises à niveau, les actions sur l'abonnement et les plafonds de dépenses.
+  <Card title="Connaissances" icon="book-open" href="/fr/settings/knowledge">
+    Ajoutez les réponses qu'utilise chaque agent.
   </Card>
   <Card title="Équipe" icon="users" href="/fr/settings/team">
     Invitez des membres et contrôlez l'accès à l'espace de travail.
   </Card>
-  <Card title="Notifications" icon="bell" href="/fr/settings/notifications">
-    Choisissez les événements qui envoient des alertes par courriel ou par SMS.
+  <Card title="Utilisation" icon="chart-line" href="/fr/billing/usage">
+    Suivez les minutes vocales, les segments SMS, les tentatives de transfert et les limites du forfait.
   </Card>
-  <Card title="Numéro de téléphone" icon="phone" href="/fr/settings/phone-number">
-    Consultez ou remplacez le numéro de téléphone de l'entreprise.
+  <Card title="Forfait et facturation" icon="credit-card" href="/fr/billing/plans">
+    Consultez les forfaits, les mises à niveau, les actions sur l'abonnement et les plafonds de dépenses.
   </Card>
-  <Card title="Sécurité du compte" icon="shield" href="/fr/settings/account">
+  <Card title="Profil et sécurité" icon="shield" href="/fr/settings/account">
     Changez votre adresse courriel ou votre mot de passe.
   </Card>
 </CardGroup>
 
-## Pages des réglages
+## Espace
 
 | Page | À quoi elle sert |
 | --- | --- |
-| **Utilisation** | Utilisation de la période de facturation en cours, utilisation incluse restante, date de remise à zéro et utilisation facturée à l'usage. |
-| **Forfait** | Forfait actuel, mises à niveau, gestion de l'abonnement et plafonds de dépenses. |
-| **Équipe** | Invitations des membres, rôles et accès à l'espace de travail. |
-| **Notifications** | Alertes par courriel et par SMS pour les événements qui demandent votre attention. |
-| **Numéro de téléphone** | Le numéro d'entreprise actif et le remplacement du numéro, si vous y avez droit. |
-| **Widget de site web** | Clés du widget, clavardage sur le site Web, collecte de prospects, appels depuis le navigateur et installation. |
-| **Compte** | Modification du courriel et du mot de passe du compte. |
-| **Préférences** | Langue du tableau de bord, format de l'heure et thème. |
+| **Détails de l'entreprise** | [Le résumé de l'entreprise, les heures d'ouverture, les langues des clients et de l'équipe, le fuseau horaire et la devise](/fr/settings/business-details) |
+| **Connaissances** | [Les entrées de texte, les documents, les importations de site Web et les questions sans réponse](/fr/settings/knowledge) |
+| **Services** | [Ce que les appelants peuvent réserver, avec la durée et le prix](/fr/settings/services) |
+| **Employés** | [Les personnes que les appelants peuvent réserver ou demander](/fr/settings/employees) |
+| **Équipe** | [Le nom de l'entreprise, les invitations des membres, les rôles et l'accès](/fr/settings/team) |
+| **Utilisation** | [L'utilisation de la période de facturation, ce qui reste et la date de remise à zéro](/fr/billing/usage) |
+| **Forfait et facturation** | [Votre forfait, les mises à niveau, l'abonnement et le plafond de dépenses](/fr/billing/plans) |
+| **Connexions** | [Google Calendar, Cal.com et Calendly](/fr/integrations/overview) |
+| **Webhooks** | [Les événements envoyés à vos propres outils](/fr/integrations/webhooks) |
+| **Clés API** | [Les clés pour l'API et les assistants IA connectés](/fr/api/authentication) |
 
-## Mettre à jour les informations du compte
+Une entreprise gérée par un partenaire affiche **Facturation** au lieu de **Forfait et facturation**, ainsi que **Accès du partenaire**, qui indique quand l'équipe du partenaire a ouvert l'entreprise.
 
-<Steps>
-  <Step title="Ouvrir les Réglages">
-    Dans la barre latérale du tableau de bord, allez dans **Gestion** > **Réglages**.
-  </Step>
-  <Step title="Choisir une page de réglages">
-    Sélectionnez la page qui contient le réglage de l'espace de travail ou du compte à modifier.
-  </Step>
-  <Step title="Faire votre modification">
-    Modifiez le champ ou lancez l'action voulue. Certaines modifications, comme le changement de courriel, demandent une confirmation.
-  </Step>
-</Steps>
+## Votre compte
+
+| Page | À quoi elle sert |
+| --- | --- |
+| **Profil et sécurité** | [Votre adresse courriel et votre mot de passe](/fr/settings/account) |
+| **Langue et thème** | La langue du tableau de bord, le format de l'heure et le partage des données de télémétrie du tableau de bord |
+| **Notifications** | [Les alertes par courriel et par SMS que vous recevez](/fr/settings/notifications) |
+
+## Ce que vous voyez
+
+Les Réglages affichent seulement les pages que votre rôle et le niveau d'accès de votre entreprise vous permettent d'ouvrir. Par exemple, seuls les propriétaires et les administrateurs voient **Clés API**. Les liens vers les anciennes pages de réglages, comme `/settings/account`, ouvrent toujours la page qui les a remplacées.

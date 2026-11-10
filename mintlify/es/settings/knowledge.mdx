@@ -1,0 +1,130 @@
+---
+title: "Añada el conocimiento de su negocio"
+description: "Añada texto, documentos y contenido de su sitio web para que su agente responda a las preguntas habituales sobre su negocio, y responda las que no supo contestar."
+sidebarTitle: "Conocimiento"
+contentType: "How-to"
+---
+
+En la página **Conocimiento** añade la información que el agente puede usar para responder a quienes llaman. Úsela para datos que deben ser fáciles de encontrar: horarios, ubicación, estacionamiento, notas sobre precios, descripciones de servicios, políticas, requisitos de admisión y preguntas frecuentes.
+
+LobbyStack admite tres fuentes de conocimiento: entradas de texto, documentos subidos e importaciones de sitios web públicos.
+
+<Note>
+  Los planes alojados incluyen 1 MB de texto de conocimiento en Free, 5 MB en Starter y 20 MB en Pro, o unas 400, 2000 y 8000 páginas. El límite cuenta el texto que LobbyStack extrae de tus documentos y sitios web, no el tamaño de los archivos. Cada documento que subas puede ocupar hasta 10 MB.
+</Note>
+
+## Entradas de texto
+
+Las entradas de texto son ideales para datos breves y oficiales.
+
+| Título de la entrada | Contenido adecuado |
+| --- | --- |
+| Horario en días festivos | Cerramos los días festivos oficiales. Si alguien pregunta por un festivo concreto, tome un mensaje para que el equipo lo confirme. |
+| Estacionamiento | Los clientes pueden usar el estacionamiento detrás del edificio. También pueden estacionar en Pine Street después de las 6 p. m. |
+| Política de cancelación | Llame al menos 24 horas antes de la cita para cancelarla o reprogramarla. |
+| Admisión de nuevos clientes | Los nuevos clientes deben traer una identificación, los datos de su seguro si corresponde y cualquier remisión o nota sobre el servicio que tengan. |
+
+<Steps>
+  <Step title="Abra Conocimiento">
+    Vaya a **Configuración** > **Conocimiento**.
+  </Step>
+  <Step title="Elija texto">
+    Haga clic en **Añadir conocimiento** y elija **Texto**.
+  </Step>
+  <Step title="Añada el título y el contenido">
+    Use un título corto y escriba la respuesta completa en el campo de contenido.
+  </Step>
+  <Step title="Añada">
+    Haga clic en **Añadir**. La entrada aparece en la tabla.
+  </Step>
+</Steps>
+
+## Documentos subidos
+
+Suba documentos PDF, documentos de Word, archivos de texto y archivos Markdown que contengan información útil para quienes llaman.
+
+| Límite | Valor |
+| --- | --- |
+| Tipos admitidos | PDF, DOCX, TXT, Markdown |
+| Tamaño máximo | 10 MB por archivo |
+
+Los documentos subidos pasan por un proceso de preparación antes de estar listos. La tabla muestra estados como en cola, indexando, listo o error.
+
+<Note>
+  Suba solo documentos listos para quienes llaman. Use material actualizado y aprobado para que el agente dé la misma información que daría su equipo.
+</Note>
+
+## Importación del sitio web
+
+La importación del sitio web recorre una URL pública y añade las páginas útiles a la base de conocimiento. Está pensada para páginas públicas como servicios, quiénes somos, preguntas frecuentes, horarios, ubicaciones, menús, precios y contacto.
+
+La importación del sitio web se centra en las páginas públicas útiles para quienes llaman y omite:
+
+- URL de localhost, de redes locales o de direcciones IP directas.
+- Páginas que requieren inicio de sesión.
+- Páginas con poca información útil, como pago, carrito, cuenta, búsqueda, privacidad y condiciones.
+- Archivos estáticos como imágenes, PDF, hojas de cálculo, archivos ZIP, scripts y hojas de estilo.
+
+<Steps>
+  <Step title="Abra el cuadro de importación del sitio web">
+    Vaya a **Configuración** > **Conocimiento**, haga clic en **Añadir conocimiento** y elija **Sitio web**.
+  </Step>
+  <Step title="Introduzca una URL pública">
+    Pegue la URL de la página de inicio o de la sección que quiere que LobbyStack recorra.
+  </Step>
+  <Step title="Inicie la importación">
+    Haga clic en **Importar**. Las páginas importadas aparecen a medida que terminan de procesarse.
+  </Step>
+</Steps>
+
+## Responder preguntas sin respuesta
+
+Cuando su agente busca una pregunta en su conocimiento y no encuentra nada, LobbyStack guarda la pregunta en **Preguntas sin respuesta** en la página Conocimiento. Esto incluye las llamadas telefónicas, las llamadas desde el navegador, los chats del sitio web y los mensajes de Instagram. Sus propias llamadas de prueba también cuentan.
+
+La lista muestra hasta 50 preguntas, de la más preguntada a la menos, con cuántas veces la hicieron y cuándo fue la última vez. Cada pregunta aparece tal como su agente la buscó, hasta 300 caracteres, así que la redacción puede diferir de lo que dijo quien llamó.
+
+Una pregunta hecha de nuevo con otras mayúsculas u otra puntuación cuenta en la misma fila. Una pregunta redactada de otra forma tiene su propia fila.
+
+<Steps>
+  <Step title="Abra las preguntas sin respuesta">
+    Vaya a **Configuración** > **Conocimiento** y desplácese hasta **Preguntas sin respuesta**. Cuando hay preguntas pendientes, los propietarios y los administradores también tienen un enlace en **Acción requerida** en [Inicio](/es/dashboard/home).
+  </Step>
+  <Step title="Escriba la respuesta">
+    Haga clic en **Responder**, escriba lo que debe decir el agente en un máximo de 5000 caracteres y haga clic en **Guardar respuesta**. LobbyStack añade a la tabla de Conocimiento una entrada de texto con la pregunta como título. Las llamadas y conversaciones nuevas la usan poco después de guardarla, y puede editarla como cualquier otra entrada.
+  </Step>
+  <Step title="Descarte las que no va a responder">
+    Haga clic en **Descartar** para quitar una pregunta de la lista.
+  </Step>
+</Steps>
+
+### Qué pasa si alguien la hace de nuevo
+
+| Pregunta | Si alguien la hace de nuevo |
+| --- | --- |
+| Respondida | Su agente usa su respuesta. Si su búsqueda sigue sin encontrar nada, la pregunta vuelve a la lista como una pregunta nueva, con el contador de nuevo en 1. |
+| Descartada | La pregunta sigue fuera de la lista, aunque otras personas la hagan. Solo vuelve como una pregunta nueva si alguien la hace después de que LobbyStack la haya eliminado. |
+
+No puede recuperar una pregunta descartada desde el panel. Para responderla más tarde, añada usted mismo una [entrada de texto](#entradas-de-texto).
+
+### Quién puede responder preguntas
+
+Los propietarios y los administradores pueden responder y descartar preguntas. Los lectores pueden ver la lista, pero no tienen los botones **Responder** y **Descartar** ni el enlace en Inicio. Si su negocio tiene acceso **Solo actividad** a través de un socio, su equipo no ve la página Conocimiento.
+
+### Cuánto tiempo conserva LobbyStack las preguntas
+
+LobbyStack elimina una pregunta 30 días después de la última vez que alguien la hizo en Free, o 365 días en Starter y Pro. Cada nueva consulta reinicia ese período, también en una pregunta descartada. Una entrada de texto guardada como respuesta permanece en su conocimiento hasta que usted la elimine.
+
+## Gestionar las entradas
+
+Desde la tabla de Conocimiento puede:
+
+- Buscar entradas.
+- Abrir una fila para ver el texto extraído del documento.
+- Desactivar una entrada sin eliminarla.
+- Volver a activar una entrada desactivada.
+- Eliminar una entrada de forma permanente.
+- Eliminar todas las páginas importadas de un mismo sitio web. Abra **Más opciones** en cualquier página de ese sitio y elija **Eliminar todo**. LobbyStack también detiene una importación que todavía esté trayendo páginas de ese sitio.
+
+<Tip>
+  Es mejor tener pocas entradas precisas que una gran biblioteca de contenido desactualizado. Para quienes llaman, la precisión importa más que el volumen.
+</Tip>

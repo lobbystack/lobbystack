@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { appointments, businessMemberships, businesses, calls, contacts, conversations, createDatabaseClient, messages, services, staff, transcripts, users, widgetVisitors, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, appointments, businessMemberships, businesses, calls, contacts, conversations, createDatabaseClient, messages, services, staff, transcripts, users, widgetVisitors, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { getAnalytics } from "./analytics";
 import { deleteContact, getContactDetail, listContacts } from "./contacts";
@@ -130,6 +130,34 @@ describe.skipIf(!client)("operator contact and channel data under operator RLS",
       // The staff reply in the website chat counts as website chat, not Other.
       expect(result.channels).toEqual({ phone_call: 2, web_call: 1, sms: 2, web_chat: 4, other: 0 });
       expect(Object.values(result.channels).reduce((sum, count) => sum + count, 0)).toBe(result.calls.current + result.messages.current);
+    });
+  });
+
+  it("counts each agent's calls and chats in the period, an archived agent's included", async () => {
+    await rollbackTest(async (tx) => {
+      const { db, businessId, userId, ids } = await seed(tx);
+      await tx.execute(sql`reset role`);
+      const [frontDesk] = await tx.select().from(agents).where(and(eq(agents.businessId, businessId), eq(agents.isDefault, true)));
+      const { id: _id, isDefault: _isDefault, createdAt: _createdAt, updatedAt: _updatedAt, ...settings } = frontDesk!;
+      const [evening] = await tx.insert(agents).values({ ...settings, name: "Evening", isDefault: false }).returning({ id: agents.id });
+      const [weekend] = await tx.insert(agents).values({ ...settings, name: "Weekend", isDefault: false }).returning({ id: agents.id });
+      // The web call goes to Evening, and the phone-only caller's call to Weekend, which is archived since.
+      await tx.update(calls).set({ agentId: evening!.id }).where(and(eq(calls.businessId, businessId), eq(calls.contactId, ids.webCaller)));
+      await tx.update(calls).set({ agentId: weekend!.id }).where(and(eq(calls.businessId, businessId), eq(calls.contactId, ids.phoneOnly)));
+      await tx.update(conversations).set({ agentId: evening!.id }).where(and(eq(conversations.businessId, businessId), eq(conversations.channel, "sms")));
+      await tx.update(agents).set({ archivedAt: new Date() }).where(eq(agents.id, weekend!.id));
+      await tx.execute(sql`set local role lobbystack_app`);
+      const to = new Date(Date.now() + 60_000);
+      const from = new Date(to.getTime() - 86_400_000);
+      const result = await getAnalytics({ db }, { userId, businessId, from, to, previousFrom: new Date(from.getTime() - 86_400_000), granularity: "day" });
+      expect(result.agents).toEqual([
+        { id: frontDesk!.id, name: frontDesk!.name, archived: false, calls: 1, chats: 2 },
+        { id: evening!.id, name: "Evening", archived: false, calls: 1, chats: 1 },
+        { id: weekend!.id, name: "Weekend", archived: true, calls: 1, chats: 0 },
+      ]);
+      // Outside the period, every agent counts nothing and archived ones drop out.
+      const earlier = await getAnalytics({ db }, { userId, businessId, from: new Date(from.getTime() - 2 * 86_400_000), to: new Date(from.getTime() - 86_400_000), previousFrom: new Date(from.getTime() - 3 * 86_400_000), granularity: "day" });
+      expect(earlier.agents.map((agent) => [agent.name, agent.calls, agent.chats])).toEqual([[frontDesk!.name, 0, 0], ["Evening", 0, 0]]);
     });
   });
 

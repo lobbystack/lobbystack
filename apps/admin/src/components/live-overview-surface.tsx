@@ -21,13 +21,14 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
 import { CallForwardingFromLink } from "@/components/call-forwarding-dialog";
+import { TestCallButton } from "@/components/navigation/test-call-button";
 import { DashboardActivationCard } from "@/components/dashboard-activation-card";
 import { LiveSetupGuideSurface, useSetupGuide } from "@/components/live-setup-guide-surface";
 import { needsHoursForBooking, useBusinessHours } from "@/components/business-hours-section";
 import { appointmentSummary, CancelAppointmentButton } from "@/components/cancel-appointment-button";
 import { MoveAppointmentButton } from "@/components/move-appointment-dialog";
 import { RescheduleAppointmentButton } from "@/components/reschedule-appointment-button";
-import { MetricCardGridSkeleton, SetupGuideSkeleton } from "@/components/loading-skeletons";
+import { HiddenTextSkeleton, MetricCardGridSkeleton, SetupGuideSkeleton } from "@/components/loading-skeletons";
 import { Item, ItemActions, ItemHeader, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item";
 import { Separator } from "@/components/ui/separator";
 import { Surface } from "@/components/ui/surface";
@@ -55,6 +56,8 @@ type DashboardSummary = {
   };
   monthlyCalls: Array<{ monthStart: string; total: number }>;
   recentCalls: Array<{ id: string; startedAt: string; status: string; transport?: string | null; durationSeconds: number; contactName: string | null; contactPhone: string | null; contactEmail?: string | null }>;
+  /** How many requests are open in all; Home lists the newest few. */
+  actionRequiredCount?: number;
   actionRequired: Array<{ id: string; kind: string; title: string; body: string; createdAt: string; conversationId?: string; callId?: string | null; request?: string | null; requested?: RequestedCancellation | null; appointment?: { id: string; startsAt: string; timezone: string; status: string; serviceName: string | null; contactName: string | null } | null }>;
   upcoming: Array<{ id: string; startsAt: string; timezone: string; status: string; sourceChannel: string; contactName: string | null; contactPhone?: string | null; contactEmail?: string | null; serviceName: string | null; staffName: string | null; employeeName?: string | null }>;
   /** Null until the business's first real conversation. */
@@ -109,6 +112,7 @@ export function LiveOverviewSurface() {
     return subscribeRealtimeQuery(queryClient, businessId, ["dashboard"], ["call.started", "call.updated", "call.completed", "message.upserted", "appointment.updated"]);
   }, [businessId, queryClient]);
 
+  const openRequests = summary.data?.actionRequiredCount ?? summary.data?.actionRequired.length ?? 0;
   const today = summary.data ? todaysAppointments(appointments.data?.appointments, summary.data.upcoming[0]?.timezone) : null;
   const metrics = summary.data ? [
     { key: "calls", value: summary.data.kpis.calls.total.toLocaleString(intlLocale(i18n.language)), description: formatDelta(summary.data.kpis.calls.deltaPercent, t) },
@@ -125,7 +129,7 @@ export function LiveOverviewSurface() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title={t("home.title")} />
+      <PageHeader actions={<TestCallButton />} title={t("home.title")} />
       {/* The extra margin makes the visible gap match the one between the page title and Getting started. */}
       {showGuide ? (
         <div className="mb-4"><LiveSetupGuideSurface businessId={businessId!} goal={business?.onboardingGoal ?? null} /></div>
@@ -138,8 +142,8 @@ export function LiveOverviewSurface() {
         {showGuide || guidePending || !businessId ? null : <CallForwardingFromLink businessId={businessId} />}
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
           <section className="animate-in fade-in slide-in-from-bottom-2 duration-200 flex flex-col gap-3 xl:h-full">
-            <div className="flex items-center justify-between gap-4 px-1"><h2 className="type-section-title">{t("home.actionRequired.title")}</h2>{summary.isLoading ? <Skeleton className="h-6 w-12 rounded-full" /> : <Badge variant="outline">{((summary.data?.actionRequired.length ?? 0) + (unansweredCount > 0 ? 1 : 0)).toLocaleString(intlLocale(i18n.language))}</Badge>}</div>
-            {unansweredCount > 0 ? <Item render={<Link href={`/agent/knowledge#${UNANSWERED_QUESTIONS_ANCHOR}`} />} variant="outline">
+            <div className="flex items-center justify-between gap-4 px-1"><div className="flex items-center gap-3"><h2 className="type-section-title">{t("home.actionRequired.title")}</h2>{summary.isLoading ? <HiddenTextSkeleton className="text-sm">{t("home.actionRequired.viewAll")}</HiddenTextSkeleton> : openRequests > (summary.data?.actionRequired.length ?? 0) ? <Link className="text-sm text-muted-foreground transition-colors hover:text-foreground" href="/inbox?status=open">{t("home.actionRequired.viewAll")}</Link> : null}</div>{summary.isLoading ? <Skeleton className="h-6 w-12 rounded-full" /> : <Badge variant="outline">{(openRequests + (unansweredCount > 0 ? 1 : 0)).toLocaleString(intlLocale(i18n.language))}</Badge>}</div>
+            {unansweredCount > 0 ? <Item render={<Link href={`/workspace/knowledge#${UNANSWERED_QUESTIONS_ANCHOR}`} />} variant="outline">
               <ItemMedia variant="icon"><MessageCircleQuestionMark className="text-muted-foreground" /></ItemMedia>
               <ItemContent><ItemTitle>{tKnowledge("unansweredQuestions.home.count", { count: unansweredCount })}</ItemTitle><ItemDescription>{tKnowledge("unansweredQuestions.home.description")}</ItemDescription></ItemContent>
               <ItemActions><ChevronRight className="size-4 text-muted-foreground" /></ItemActions>
@@ -160,12 +164,13 @@ export function LiveOverviewSurface() {
                             // A request can outlive its appointment, cancelled before the request was saved.
                             const cancelled = item.appointment?.status === "canceled";
                             const appointment = item.appointment && !cancelled ? { ...item.appointment, contactName: getContactDisplayName({ name: item.appointment.contactName }, i18n.language, t) } : null;
+                            // Each opens in the Inbox: a message on its call, a handoff on its conversation.
                             const destination =
                               item.kind === "voice_message" && item.callId
-                                ? {
-                                    pathname: `/calls/${encodeURIComponent(String(item.callId))}`,
-                                  }
-                                : null;
+                                ? `/inbox?call=${encodeURIComponent(String(item.callId))}`
+                                : item.kind === "human_handoff" && item.conversationId
+                                  ? `/inbox?conversation=${encodeURIComponent(item.conversationId)}`
+                                  : null;
 
                             return (
                               <Item className="p-0" size="sm" variant="default">

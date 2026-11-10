@@ -92,6 +92,12 @@
         "bookedValue": "Valeur réservée",
         "timeSaved": "Temps gagné",
         "withoutTransfer": "Appels sans transfert"
+      },
+      "agents": {
+        "title": "Par agent",
+        "calls": "Appels",
+        "chats": "Clavardages",
+        "removed": "Retiré"
       }
     },
     "metrics": {
@@ -150,7 +156,8 @@
       "requested": "Demandé : {{details}}",
       "notes": "Notes : {{notes}}",
       "rescheduleRequest": "Demande de report",
-      "newTime": "Nouvel horaire : {{time}}"
+      "newTime": "Nouvel horaire : {{time}}",
+      "viewAll": "Tout voir"
     },
     "upcoming": {
       "title": "À venir",

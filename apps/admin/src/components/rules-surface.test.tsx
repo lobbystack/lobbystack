@@ -98,3 +98,25 @@ describe("rules loading states", () => {
     expect(skeletons("tbody")).toBe(0);
   });
 });
+
+describe("one agent's rules", () => {
+  it("reads and reorders the rules of the agent it's given", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
+    const fetchMock = vi.fn(async () => Response.json(rules));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<QueryClientProvider client={client}><RulesSurface agentId="agent-2" /></QueryClientProvider>);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/rules?businessId=business&agentId=agent-2", expect.anything()));
+    const first = (await screen.findByText("First")).closest("tr")!;
+    const third = row("Third");
+    third.getBoundingClientRect = () => ({ top: 0, height: 40, bottom: 40, left: 0, right: 0, width: 0, x: 0, y: 0, toJSON: () => ({}) });
+    const dataTransfer = { setData: vi.fn(), effectAllowed: "", dropEffect: "" };
+    fireEvent.pointerDown(first.querySelector("[title='actions.dragToReorder']")!);
+    fireEvent.dragStart(first, { dataTransfer });
+    const dragOver = createEvent.dragOver(third, { dataTransfer });
+    Object.defineProperty(dragOver, "clientY", { value: 30 });
+    fireEvent(third, dragOver);
+    fireEvent.drop(third, { dataTransfer });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/rules?businessId=business&agentId=agent-2", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ agentId: "agent-2", ruleIds: ["second", "third", "first"] }) })));
+  });
+});

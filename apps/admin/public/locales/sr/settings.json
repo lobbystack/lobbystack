@@ -653,10 +653,6 @@
       "zapier": {
         "title": "Zapier",
         "description": "Povežite pozive, zakazivanja i kontakte sa hiljadama aplikacija."
-      },
-      "instagram": {
-        "title": "Instagram",
-        "description": "Odgovarajte na direktne poruke na Instagramu sa istim znanjem kao vaš agent."
       }
     },
     "status": {
@@ -677,13 +673,7 @@
       "connectFailed": "Povezivanje Instagrama nije uspelo. Pokušajte ponovo.",
       "accountInUse": "Ovaj Instagram nalog je već povezan sa drugim radnim prostorom.",
       "permissionMissing": "Vašem agentu je potreban pristup porukama na Instagramu. Ponovo povežite Instagram i dozvolite pristup.",
-      "disconnectedSuccess": "Instagram je isključen.",
-      "disconnect": "Isključi",
-      "reconnect": "Ponovo poveži",
-      "connectedAs": "Odgovara na direktne poruke kao @{{username}}.",
-      "dialogDescription": "Vaš agent odgovara na direktne poruke poslate ovom nalogu.",
-      "accountLabel": "Instagram nalog",
-      "reconnectDescription": "Instagram više ne prihvata pristup vašeg agenta. Ponovo povežite nalog da biste nastavili da odgovarate na poruke."
+      "reconnect": "Ponovo poveži"
     }
   },
   "profile": {

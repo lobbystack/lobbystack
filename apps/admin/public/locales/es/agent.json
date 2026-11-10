@@ -313,6 +313,10 @@
     "smsInstructions": {
       "label": "Instrucciones de SMS"
     },
+    "name": {
+      "label": "Nombre",
+      "hint": "Solo tu equipo lo ve."
+    },
     "greeting": {
       "label": "Saludo",
       "placeholder": "Hola, gracias por llamar…",
@@ -389,6 +393,14 @@
         "countryUnsupported": "Su agente aún no puede transferir llamadas a este país."
       }
     }
+  },
+  "identity": { "title": "Nombre, saludo y voz" },
+  "transfers": { "title": "Transferencias" },
+  "businessDetails": { "title": "Datos del negocio" },
+  "instructions": {
+    "voice": { "label": "Llamadas", "placeholder": "Responde en pocas palabras y ofrece agendar una cita." },
+    "chat": { "label": "Chats", "hint": "Chat del sitio web e Instagram.", "placeholder": "Responde en dos o tres frases." },
+    "text": { "label": "Mensajes de texto", "placeholder": "Mantén las respuestas por debajo de 300 caracteres." }
   },
   "staffFirst": {
     "title": "El personal responde primero",

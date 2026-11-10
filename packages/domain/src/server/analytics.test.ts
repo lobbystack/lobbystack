@@ -6,11 +6,22 @@ import { calls } from "@lobbystack/db";
 
 import {
   analyticsBookedValueMinor, analyticsBucketExpression, analyticsBucketStarts, analyticsCallChannel, analyticsMessageChannel, analyticsPercent,
-  isAnalyticsHandledCall, summarizeAnalyticsBookedValue, summarizeAnalyticsHandledCalls,
+  isAnalyticsHandledCall, summarizeAnalyticsAgents, summarizeAnalyticsBookedValue, summarizeAnalyticsHandledCalls,
   type AnalyticsBookingGroup, type AnalyticsCallGroup,
 } from "./analytics";
 
 const dialect = new PgDialect();
+
+describe("analytics per agent", () => {
+  it("lists every active agent, adds archived ones with activity, and reads counts PostgreSQL returns as text", () => {
+    const active = [{ id: "front", name: "Front desk" }, { id: "evening", name: "Evening" }];
+    expect(summarizeAnalyticsAgents(active, [{ agentId: "front", name: "Front desk", archived: false, total: "3" }, { agentId: "old", name: "Weekend", archived: true, total: 2 }], [{ agentId: "evening", name: "Evening", archived: false, total: "4" }])).toEqual([
+      { id: "front", name: "Front desk", archived: false, calls: 3, chats: 0 },
+      { id: "evening", name: "Evening", archived: false, calls: 0, chats: 4 },
+      { id: "old", name: "Weekend", archived: true, calls: 2, chats: 0 },
+    ]);
+  });
+});
 
 describe("analytics SQL", () => {
   it("uses the same allowlisted date_trunc expression for select, grouping, and ordering", () => {

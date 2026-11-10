@@ -184,7 +184,7 @@ describe("steps", () => {
   it("opens the upload page from the sources step", async () => {
     await setup({ complete: ["fullScan"] });
     await userEvent.click(await screen.findByRole("button", { name: copy.stepActions.sources }));
-    expect(router.push).toHaveBeenCalledWith("/agent/knowledge?setup=upload");
+    expect(router.push).toHaveBeenCalledWith("/workspace/knowledge?setup=upload");
   });
 
   it("asks for the deeper read", async () => {
@@ -219,7 +219,7 @@ describe("the test call step", () => {
     await list();
     await userEvent.click(await screen.findByRole("button", { name: new RegExp(copy.steps.testCall) }));
     const link = await screen.findByRole("link", { name: new RegExp(copy.lastCall) });
-    expect(link.getAttribute("href")).toBe("/calls/call-1");
+    expect(link.getAttribute("href")).toBe("/inbox?call=call-1");
   });
 
   it("rechecks the step once the call ends, since nothing navigates", async () => {

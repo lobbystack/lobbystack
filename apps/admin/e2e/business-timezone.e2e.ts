@@ -28,7 +28,7 @@ async function removeFixtures(database: ReturnType<typeof migrator>, email: stri
 
 test.use({ timezoneId: "Europe/Belgrade" });
 
-test("the owner's browser zone becomes the business timezone, and AI settings changes it", async ({ page, baseURL }, testInfo) => {
+test("the owner's browser zone becomes the business timezone, and Business details changes it", async ({ page, baseURL }, testInfo) => {
   test.setTimeout(120_000);
   const database = migrator();
   const email = `${prefix}-${randomUUID()}@example.invalid`;
@@ -56,17 +56,20 @@ test("the owner's browser zone becomes the business timezone, and AI settings ch
     await page.getByRole("button", { name: onboarding.businessName.continue }).click();
     businessId = (await (await created).json() as { businessId: string }).businessId;
     expect(await zones(businessId)).toEqual({ business: "Europe/Belgrade", staff: ["Europe/Belgrade"] });
+    // Let onboarding finish moving to its next step, which would cut short the navigation below.
+    await page.waitForURL((url) => !url.pathname.endsWith("/onboarding/business"));
+    await page.waitForLoadState("networkidle");
 
     // The rest of onboarding has its own journeys; the dashboard opens once it's complete.
     await database.db.update(businesses).set({ onboardingStage: "complete" }).where(eq(businesses.id, businessId));
-    await page.goto("/agent");
+    // The old agent page lands on the default agent; the zone lives in the workspace's business details.
+    await page.goto("/agent/basic-settings");
+    await expect(page).toHaveURL(/\/agents\/[0-9a-f-]{36}$/);
+    await page.goto("/workspace/business");
     const select = page.getByLabel(agent.fields.timezone.label, { exact: true });
     await expect(select).toBeEnabled();
     await expect(select).toHaveText(/^Belgrade \(/);
 
-    // An unsaved transfer number survives the timezone save.
-    const transferNumber = page.locator("#agent-transfer-number");
-    await transferNumber.pressSequentially("+14165550100");
     const savedZone = page.waitForResponse((response) => response.url().includes("/api/agent?") && response.request().method() === "PATCH");
     await select.click();
     await page.getByPlaceholder(agent.fields.timezone.search).fill("Vancouver");
@@ -76,8 +79,16 @@ test("the owner's browser zone becomes the business timezone, and AI settings ch
     expect(await zones(businessId)).toEqual({ business: "America/Vancouver", staff: ["America/Vancouver"] });
     const refreshes = await database.db.select({ payload: outboxMessages.payload }).from(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), eq(outboxMessages.topic, "snapshot.refresh")));
     expect(refreshes.map((row) => row.payload)).toContainEqual({ businessId, reason: "business_updated" });
+    await page.reload();
+    await expect(select).toHaveText(/^Vancouver \(/);
 
-    const savedTransfer = page.waitForResponse((response) => response.url().includes("/api/agent?") && response.request().method() === "PATCH");
+    // The transfer number belongs to the agent, on its Calls and booking page.
+    await page.goto("/agents/primary/handling");
+    await expect(page).toHaveURL(/\/agents\/[0-9a-f-]{36}\/handling$/);
+    const transferNumber = page.locator("#agent-transfer-number");
+    await expect(transferNumber).toBeEnabled();
+    await transferNumber.pressSequentially("+14165550100");
+    const savedTransfer = page.waitForResponse((response) => /\/api\/agents\/[0-9a-f-]{36}\?/.test(response.url()) && response.request().method() === "PATCH");
     await page.getByRole("button", { name: agent.actions.save, exact: true }).click();
     expect((await savedTransfer).ok()).toBe(true);
     const savedTransferNumber = async () => (await database.db.select({ transferNumber: agents.transferNumber }).from(agents).where(eq(agents.businessId, businessId!)))[0]?.transferNumber;
@@ -88,13 +99,10 @@ test("the owner's browser zone becomes the business timezone, and AI settings ch
     await page.keyboard.press("ControlOrMeta+a");
     await page.keyboard.press("Backspace");
     await transferNumber.pressSequentially("+14165550199", { delay: 30 });
-    const savedRetyped = page.waitForResponse((response) => response.url().includes("/api/agent?") && response.request().method() === "PATCH");
+    const savedRetyped = page.waitForResponse((response) => /\/api\/agents\/[0-9a-f-]{36}\?/.test(response.url()) && response.request().method() === "PATCH");
     await page.getByRole("button", { name: agent.actions.save, exact: true }).click();
     expect((await savedRetyped).ok()).toBe(true);
     expect(await savedTransferNumber()).toBe("+14165550199");
-
-    await page.reload();
-    await expect(select).toHaveText(/^Vancouver \(/);
 
     // The API refuses offsets and names that aren't IANA zones, and keeps the saved zone.
     for (const timezone of ["+05:00", "Eastern"]) {

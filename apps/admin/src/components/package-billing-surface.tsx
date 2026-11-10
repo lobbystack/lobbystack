@@ -62,7 +62,7 @@ export function PackageBillingSurface() {
     if (searchParams?.get("checkout") !== "complete" || announced.current) return;
     announced.current = true;
     toast.success(t("subscription.paid"));
-    router.replace("/settings/subscription");
+    router.replace("/workspace/subscription");
     const again = window.setTimeout(() => void refetch(), 3_000);
     return () => window.clearTimeout(again);
   }, [refetch, router, searchParams, t]);

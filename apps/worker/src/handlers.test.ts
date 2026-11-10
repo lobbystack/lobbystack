@@ -308,7 +308,7 @@ describe("worker handlers", () => {
     await handleJob({ jobId: randomUUID(), businessId, type: "phoneNumber.releaseEmail", queue: "default", payload: { phoneNumberId, kind: "release_soon", releaseAt: "2026-11-08T00:00:00.000Z" }, trace: {}, idempotencyKey: randomUUID(), scheduled: false }, { domain: { db: savedBranding("Saved Desk") }, email });
     const sent = sendMail.mock.lastCall?.[0];
     expect(sent).toMatchObject({ from: "LobbyStack <no-reply@example.test>", subject: "We release +14165550199 on November 8" });
-    expect(sent.text).toContain("Keep my number: https://app.example.test/settings/plan\n\nLobbyStack");
+    expect(sent.text).toContain("Keep my number: https://app.example.test/workspace/billing\n\nLobbyStack");
     expect(sent.text).not.toContain("Raphael");
     expect(sent.html).not.toContain("Raphael");
   });

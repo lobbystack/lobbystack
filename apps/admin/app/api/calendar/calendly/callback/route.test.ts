@@ -45,7 +45,7 @@ it("checks the user before consuming the state or exchanging the code", async ()
 it("connects the Calendly account with encrypted tokens and lands on the integrations page", async () => {
   const state = calendlyState();
   const response = await GET(callback(state));
-  expect(response.headers.get("location")).toBe("https://app.example.test/integrations?calendar=calendly&status=success");
+  expect(response.headers.get("location")).toBe("https://app.example.test/workspace/connections?calendar=calendly&status=success");
   expect(mocks.consume).toHaveBeenCalledWith(state, "user-1", "business", "calendly");
   expect(mocks.exchange).toHaveBeenCalledWith("code", calendarPkceVerifier(state));
   expect(mocks.connect).toHaveBeenCalledWith({}, expect.objectContaining({ userId: "user-1", businessId: "business", provider: "calendly", externalAccountId: "1234", encryptedAccessToken: "encrypted:token", encryptedRefreshToken: "encrypted:refresh" }));

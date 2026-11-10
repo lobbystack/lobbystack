@@ -33,7 +33,8 @@ function summarize(value: string, length: number): string {
   return normalized.length > length ? `${normalized.slice(0, length - 3).trimEnd()}...` : normalized;
 }
 
-export function RulesSurface() {
+/** One agent's rules, or without `agentId` the default agent's. */
+export function RulesSurface({ agentId }: { agentId?: string } = {}) {
   const { i18n, t } = useTranslation("agent");
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -48,16 +49,19 @@ export function RulesSurface() {
   const { businesses, business } = useActiveBusiness();
   const canManage = business ? ["business_owner", "business_admin"].includes(business.role) : false;
   useSetupAction(canManage, useCallback((action: string) => { if (action !== "rule") return false; setEditingRule(null); setDialogOpen(true); return true; }, []));
-  const rules = useQuery({ queryKey: ["rules", business?.businessId], enabled: Boolean(business), queryFn: () => requestJson<Rule[]>(`/api/rules?businessId=${encodeURIComponent(business!.businessId)}`) });
-  const invalidate = async () => { await queryClient.invalidateQueries({ queryKey: ["rules", business?.businessId] }); };
-  const createRule = useMutation({ mutationFn: (input: { title: string; content: string }) => requestJson<string>(`/api/rules?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify(input) }), onSuccess: invalidate });
-  const updateRule = useMutation({ mutationFn: (input: { ruleId: string; title?: string; content?: string; active?: boolean }) => requestJson<{ ok: boolean }>(`/api/rules?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PATCH", body: JSON.stringify(input) }), onSuccess: invalidate });
-  const deleteRule = useMutation({ mutationFn: (ruleId: string) => requestJson<{ ok: boolean }>(`/api/rules?businessId=${encodeURIComponent(business!.businessId)}`, { method: "DELETE", body: JSON.stringify({ ruleId }) }), onSuccess: invalidate });
+  const rulesKey = agentId ? ["rules", business?.businessId, agentId] : ["rules", business?.businessId];
+  const rulesUrl = () => `/api/rules?businessId=${encodeURIComponent(business!.businessId)}${agentId ? `&agentId=${encodeURIComponent(agentId)}` : ""}`;
+  const scoped = agentId ? { agentId } : {};
+  const rules = useQuery({ queryKey: rulesKey, enabled: Boolean(business), queryFn: () => requestJson<Rule[]>(rulesUrl()) });
+  const invalidate = async () => { await queryClient.invalidateQueries({ queryKey: rulesKey }); };
+  const createRule = useMutation({ mutationFn: (input: { title: string; content: string }) => requestJson<string>(rulesUrl(), { method: "POST", body: JSON.stringify({ ...scoped, ...input }) }), onSuccess: invalidate });
+  const updateRule = useMutation({ mutationFn: (input: { ruleId: string; title?: string; content?: string; active?: boolean }) => requestJson<{ ok: boolean }>(rulesUrl(), { method: "PATCH", body: JSON.stringify({ ...scoped, ...input }) }), onSuccess: invalidate });
+  const deleteRule = useMutation({ mutationFn: (ruleId: string) => requestJson<{ ok: boolean }>(rulesUrl(), { method: "DELETE", body: JSON.stringify({ ...scoped, ruleId }) }), onSuccess: invalidate });
   const reorderRules = useMutation({
-    mutationFn: (ruleIds: string[]) => requestJson<{ ok: boolean }>(`/api/rules?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PATCH", body: JSON.stringify({ ruleIds }) }),
+    mutationFn: (ruleIds: string[]) => requestJson<{ ok: boolean }>(rulesUrl(), { method: "PATCH", body: JSON.stringify({ ...scoped, ruleIds }) }),
     onMutate: async (ruleIds) => {
-      await queryClient.cancelQueries({ queryKey: ["rules", business?.businessId] });
-      queryClient.setQueryData<Rule[]>(["rules", business?.businessId], (current) => current?.map((rule) => ({ ...rule, sortOrder: ruleIds.indexOf(rule.id) })));
+      await queryClient.cancelQueries({ queryKey: rulesKey });
+      queryClient.setQueryData<Rule[]>(rulesKey, (current) => current?.map((rule) => ({ ...rule, sortOrder: ruleIds.indexOf(rule.id) })));
     },
     onSettled: invalidate,
   });

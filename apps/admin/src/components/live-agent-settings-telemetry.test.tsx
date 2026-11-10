@@ -3,13 +3,22 @@ import { cleanup, render, screen, waitFor, within } from "@testing-library/react
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AgentBasicSettingsPage } from "./live-agent-basic-settings-surface";
+import { AgentHandlingSection } from "./agent-handling-section";
+import { AgentIdentitySection } from "./agent-identity-section";
+import { AgentInstructionsSection } from "./agent-instructions-section";
+import { WorkspaceBusinessSection } from "./workspace-business-section";
+
+/** The agent's sections and the workspace's business details, together, as the agent and workspace pages show them. */
+function AgentSettingsSections({ businessId, canManageTenant }: { businessId: string; canManageTenant: boolean }) {
+  const props = { agentId: "agent-1", businessId, canManage: canManageTenant };
+  return <><AgentIdentitySection {...props} /><AgentInstructionsSection {...props} /><AgentHandlingSection {...props} /><WorkspaceBusinessSection businessId={businessId} canManage={canManageTenant} /></>;
+}
 import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 import { toast } from "sonner";
 
 const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
 vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
-vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string) => key }) }));
+vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string, options?: { field?: string }) => options?.field ? `${key}:${options.field}` : key }) }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
 const clients: QueryClient[] = [];
@@ -24,19 +33,70 @@ function setup(profile: Record<string, unknown> | null = {}) {
   clients.push(client);
   const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
     if (init?.method === "PATCH") return Response.json({ ok: true });
-    return Response.json({ business: { defaultLocale: "en", timezone: "America/Toronto" }, profile: profile && { greeting: "Hi there", summary: "Clinic uses LobbyStack to answer calls.", summarySource: "placeholder", transferNumber: null, transferMode: "none", appointmentChangePolicy: null, ...profile } });
+    return Response.json({ business: { defaultLocale: "en", timezone: "America/Toronto" }, profile: profile && { id: "agent-1", greeting: "Hi there", summary: "Clinic uses LobbyStack to answer calls.", summarySource: "placeholder", transferNumber: null, transferMode: "none", appointmentChangePolicy: null, ...profile } });
   });
   vi.stubGlobal("fetch", fetchMock);
-  render(<QueryClientProvider client={client}><AgentBasicSettingsPage businessId="business" canManageTenant /></QueryClientProvider>);
+  render(<QueryClientProvider client={client}><AgentSettingsSections businessId="business" canManageTenant /></QueryClientProvider>);
   return fetchMock;
+}
+
+// An agent's rows turn on once the workspace read brings the default agent's ID.
+async function enabled(name: string) {
+  const button = await screen.findByRole("button", { name });
+  await waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(false));
+  return button;
+}
+
+function lastPatch(fetchMock: ReturnType<typeof setup>) {
+  const patch = fetchMock.mock.calls.filter(([, init]) => init?.method === "PATCH").at(-1);
+  return { url: String(patch?.[0]), body: JSON.parse(String(patch?.[1]?.body)) as Record<string, unknown> };
 }
 
 describe("agent settings telemetry", () => {
   it("records settings_saved for the greeting once the profile persists", async () => {
-    setup();
-    await userEvent.click((await screen.findAllByRole("button", { name: "agent:actions.editField" }))[0]!);
+    const fetchMock = setup();
+    await userEvent.click(await enabled("agent:actions.editField:agent:fields.greeting.label"));
     await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "agent:actions.save" }));
     await waitFor(() => telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "greeting" }));
+    expect(lastPatch(fetchMock)).toEqual({ url: "/api/agents/agent-1?businessId=business", body: { businessId: "business", greeting: "Hi there" } });
+  });
+
+  it("saves the agent's name to the agent", async () => {
+    const fetchMock = setup({ name: "Agent" });
+    await userEvent.click(await enabled("agent:actions.editField:agent:fields.name.label"));
+    const field = within(await screen.findByRole("dialog")).getByRole("textbox", { name: "agent:fields.name.label" });
+    await userEvent.clear(field);
+    await userEvent.type(field, "Evenings");
+    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "agent:actions.save" }));
+    await waitFor(() => telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "name" }));
+    expect(lastPatch(fetchMock)).toEqual({ url: "/api/agents/agent-1?businessId=business", body: { businessId: "business", name: "Evenings" } });
+  });
+
+  it("saves each channel's instructions, and clears one left empty", async () => {
+    const fetchMock = setup({ chatInstructions: "Answer briefly." });
+    await userEvent.click(await enabled("agent:actions.editField:agent:instructions.voice.label"));
+    await userEvent.type(within(await screen.findByRole("dialog")).getByRole("textbox"), "Offer a visit.");
+    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "agent:actions.save" }));
+    await waitFor(() => telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "voice_instructions" }));
+    expect(lastPatch(fetchMock).body).toEqual({ businessId: "business", voiceInstructions: "Offer a visit." });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    await userEvent.click(await enabled("agent:actions.editField:agent:instructions.chat.label"));
+    const chat = within(await screen.findByRole("dialog")).getByRole("textbox");
+    expect((chat as HTMLTextAreaElement).value).toBe("Answer briefly.");
+    await userEvent.clear(chat);
+    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "agent:actions.save" }));
+    await waitFor(() => telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "chat_instructions" }));
+    expect(lastPatch(fetchMock)).toEqual({ url: "/api/agents/agent-1?businessId=business", body: { businessId: "business", chatInstructions: null } });
+  });
+
+  it("saves the workspace's language through the workspace, not the agent", async () => {
+    const fetchMock = setup();
+    const select = await screen.findByRole("combobox", { name: "agent:fields.defaultLocale.label" });
+    await userEvent.click(select);
+    await userEvent.click(await screen.findByRole("option", { name: "common:callerLanguage.fr" }));
+    await waitFor(() => telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "default_locale" }));
+    expect(lastPatch(fetchMock)).toEqual({ url: "/api/agent?businessId=business", body: { businessId: "business", locale: "fr" } });
   });
 
   it("saves staff answers first and records settings_saved for it", async () => {
@@ -74,7 +134,7 @@ describe("agent settings telemetry", () => {
 
   it("starts the summary empty while it's the sign-up placeholder, and saves one a person writes", async () => {
     const fetchMock = setup();
-    await userEvent.click((await screen.findAllByRole("button", { name: "agent:actions.editField" }))[1]!);
+    await userEvent.click(await enabled("agent:actions.editField:agent:fields.summary.label"));
     const dialog = await screen.findByRole("dialog");
     const field = within(dialog).getByPlaceholderText("agent:fields.summary.placeholder");
     expect((field as HTMLTextAreaElement).value).toBe("");
@@ -87,7 +147,7 @@ describe("agent settings telemetry", () => {
 
   it("lets a person hand their summary back to AI", async () => {
     const fetchMock = setup({ summary: "Written by hand.", summarySource: "operator" });
-    await userEvent.click((await screen.findAllByRole("button", { name: "agent:actions.editField" }))[1]!);
+    await userEvent.click(await enabled("agent:actions.editField:agent:fields.summary.label"));
     await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "agent:fields.summary.regenerate" }));
     await waitFor(() => telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "summary_regenerated" }));
     const patch = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");

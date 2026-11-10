@@ -132,7 +132,9 @@ test("the affiliate program works from referral link to payout", async ({ browse
 
     // Client navigation keeps the dashboard layout, so the namespace loads in the browser.
     await page.goto("/");
-    await page.getByRole("link", { name: enNav.items.affiliate }).first().click();
+    // The help menu beside the account menu links the program.
+    await page.getByRole("button", { name: enNav.help, exact: true }).first().click();
+    await page.getByRole("menuitem", { name: enNav.items.affiliate, exact: true }).click();
     await expect(page).toHaveURL(/\/affiliate$/);
     await expectFullyTranslated(page, enAffiliate, enCommon.loading.retry);
     await page.screenshot({ path: testInfo.outputPath("affiliate-en.png"), fullPage: true });

@@ -52,7 +52,7 @@ describe("change email dialog", () => {
     const input = await openEmailDialog();
     await userEvent.type(input, "  new@example.com ");
     await send();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/auth/change-email", expect.objectContaining({ body: JSON.stringify({ newEmail: "new@example.com", callbackURL: "/settings/account?emailChanged=true" }) })));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/auth/change-email", expect.objectContaining({ body: JSON.stringify({ newEmail: "new@example.com", callbackURL: "/account?emailChanged=true" }) })));
     await waitFor(() => expect(screen.queryByLabelText("account.changeEmail.newEmailLabel")).toBeNull());
     // A toast confirms it; nothing is left on the page.
     expect(toast.success).toHaveBeenCalledWith("account.changeEmail.confirmationSent:new@example.com");

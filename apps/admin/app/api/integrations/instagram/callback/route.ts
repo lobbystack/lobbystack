@@ -13,9 +13,12 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  // A connection started on a partner's host finishes there, and lands on that host's integrations page.
+  // A connection started on a partner's host finishes there, on the channels
+  // page of the agent it started from. Without one, /agents/primary resolves
+  // to the default agent.
   const origin = partnerRequestOrigin(request.headers) ?? process.env.APP_BASE_URL ?? request.url;
-  const destination = (status: "success" | "error" | "in_use" | "missing_permission") => NextResponse.redirect(new URL(`/integrations?instagram=${status}`, origin));
+  let agentId: string | undefined;
+  const destination = (status: "success" | "error" | "in_use" | "missing_permission") => NextResponse.redirect(new URL(`/agents/${encodeURIComponent(agentId ?? "primary")}/channels?instagram=${status}`, origin));
   try {
     const url = new URL(request.url);
     const code = url.searchParams.get("code");
@@ -25,6 +28,7 @@ export async function GET(request: Request) {
     if (!state) return jsonError("Instagram OAuth state is required.", 400);
     const verified = verifyInstagramOAuthState(state);
     if (!verified) return jsonError("Instagram OAuth state is invalid or expired.", 400);
+    agentId = verified.agentId;
     // Instagram returns to the host's domain. A connection started on a
     // partner's host goes back there before anything is used up, since the
     // person's session lives on that host.
@@ -46,14 +50,17 @@ export async function GET(request: Request) {
     if (token.permissions.length && !token.permissions.includes("instagram_business_manage_messages")) return destination("missing_permission");
     const account = await provider.getAccount(token.accessToken);
     await provider.subscribeToMessages({ accessToken: token.accessToken, instagramUserId: account.instagramUserId });
-    await connectInstagramAccount(createDomainContext(), {
+    const connected = await connectInstagramAccount(createDomainContext(), {
       userId: verified.userId,
       businessId: verified.businessId,
+      ...(verified.agentId ? { agentId: verified.agentId } : {}),
       instagramUserId: account.instagramUserId,
       ...(account.username ? { username: account.username } : {}),
       encryptedAccessToken: new SecretBox(encryptionKey).encrypt(token.accessToken),
       tokenExpiresAt: new Date(Date.now() + token.expiresIn * 1000),
     });
+    // An agent archived since the start leaves the account on its own agent, so the page follows it.
+    agentId = connected?.agentId ?? agentId;
     return destination("success");
   } catch (error) {
     if ((error as { code?: string }).code === "instagram_account_in_use") return destination("in_use");

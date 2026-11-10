@@ -43,7 +43,7 @@ const WIDGET_LOCALE_OPTIONS: Array<{ value: InterfaceLocale; labelKey: string }>
 type WidgetPosition = "bottom-right" | "bottom-left";
 type WidgetKeyConfig = { color?: string; position?: WidgetPosition; title?: string; subtitle?: string; greeting?: string; localeOverride?: InterfaceLocale; leadForm?: { enabled?: boolean; requirePhone?: boolean; requireEmail?: boolean; showBeforeChat?: boolean }; liveChat?: { enabled: boolean } };
 // `key` is null for revoked keys and for keys created before keys were kept.
-type WidgetKeyRecord = { id: string; key: string | null; label: string | null; status: "active" | "disabled" | "revoked"; allowedOrigins: string[]; config: WidgetKeyConfig; lastUsedAt: string | null; createdAt: string };
+type WidgetKeyRecord = { id: string; agentId?: string | null; key: string | null; label: string | null; status: "active" | "disabled" | "revoked"; allowedOrigins: string[]; config: WidgetKeyConfig; lastUsedAt: string | null; createdAt: string };
 type KeysResponse = { keys: WidgetKeyRecord[]; issuanceEnabled?: boolean };
 type CreatedKey = { id: string; key: string } | null;
 /** What the form edits. Text fields stay untrimmed while the operator types. */
@@ -105,7 +105,13 @@ function useCopy(): [boolean, (text: string) => void] {
   return [copied, (text) => { void navigator.clipboard?.writeText(text); setCopied(true); }];
 }
 
-export function LiveWidgetSettingsSurface() {
+/**
+ * An agent's website widgets. Without `agentId`, every widget of the business,
+ * and new ones answer as the default agent. `startAdding` opens the new
+ * widget form once the page knows it can make one, as the agent's Channels
+ * page asks.
+ */
+export function LiveWidgetSettingsSurface({ agentId, startAdding = false }: { agentId?: string; startAdding?: boolean } = {}) {
   const { i18n, t } = useTranslation("settings");
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<Editing | null>(null);
@@ -119,7 +125,7 @@ export function LiveWidgetSettingsSurface() {
   const create = useMutation({
     mutationFn: async (draft: WidgetDraft) => await requestJson<{ key: { id: string; key: string } }>(`/api/widget-keys?businessId=${encodeURIComponent(business!.businessId)}`, {
       method: "POST",
-      body: JSON.stringify({ ...(draft.label.trim() ? { label: draft.label.trim() } : {}), allowedOrigins: originsFromText(draft.origins), config: configFrom(draft) }),
+      body: JSON.stringify({ ...(agentId ? { agentId } : {}), ...(draft.label.trim() ? { label: draft.label.trim() } : {}), allowedOrigins: originsFromText(draft.origins), config: configFrom(draft) }),
     }),
     onSuccess: async (result) => {
       setCreatedKey(result.key);
@@ -144,13 +150,26 @@ export function LiveWidgetSettingsSurface() {
   });
 
   // Revoked keys go last: they only stay listed as a record.
-  const rows = (keys.data?.keys ?? []).toSorted((a, b) => Number(a.status === "revoked") - Number(b.status === "revoked"));
+  const rows = (keys.data?.keys ?? []).filter((row) => !agentId || row.agentId === agentId).toSorted((a, b) => Number(a.status === "revoked") - Number(b.status === "revoked"));
   const embedOrigin = typeof window !== "undefined" ? window.location.origin : "";
   const issuanceEnabled = keys.data?.issuanceEnabled === true;
   const locale = i18n.resolvedLanguage ?? i18n.language;
   const keyName = (row: WidgetKeyRecord) => row.label || t("widget.keys.untitled");
   const openCreate = () => { create.reset(); setCreatedKey(null); setEditing({ mode: "create" }); };
   const closeDialog = () => { setEditing(null); setCreatedKey(null); };
+  const [startedAdding, setStartedAdding] = useState(false);
+  if (startAdding && !startedAdding && issuanceEnabled) {
+    setStartedAdding(true);
+    setEditing({ mode: "create" });
+  }
+  // The form opens once, so a reload or a link to this page doesn't open it again.
+  useEffect(() => {
+    if (!startedAdding) return;
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("add")) return;
+    url.searchParams.delete("add");
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  }, [startedAdding]);
   const newKeyButton = issuanceEnabled ? <Button onClick={openCreate}><Plus data-icon="inline-start" />{t("widget:manage.newKey")}</Button> : null;
 
   return (

@@ -11,6 +11,12 @@ describe("plan cards", () => {
     expect(pro!.lines[0]).toEqual({ label: "500 voice minutes included", sublabel: "Then $0.18/min" });
   });
 
+  it("show each plan's agent limit", () => {
+    expect(billingPlanCatalog.free_cloud.includedAgents).toBe(1);
+    expect(planCards("en").map((card) => card.lines.some((line) => line.label === (card.slug === "free_cloud" ? "1 agent" : "Unlimited agents")))).toEqual([true, true, true, true]);
+    expect(planCards("fr")[2]!.lines.map((line) => line.label)).toContain("Agents illimités");
+  });
+
   it("gives every language the same cards and lines", () => {
     const shape = (locale: string) => planCards(locale).map((card) => [card.slug, card.lines.length, card.featured]);
     for (const locale of ["fr", "es", "sr"]) expect(shape(locale)).toEqual(shape("en"));

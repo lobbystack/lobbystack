@@ -39,7 +39,7 @@ test("an owner on a paid plan sets up staff answers first, it persists, and a ca
     const number = await holdNumber(database, owner.businessId, { carrier: "twilio", providerPhoneId });
     thirdParties.carrier.addNumber({ sid: providerPhoneId, e164: number.e164 });
 
-    await page.goto("/agent");
+    await page.goto("/agents/primary/handling");
     const mode = page.getByRole("combobox", { name: agent.staffFirst.mode.label, exact: true });
     await expect(mode).toBeEnabled();
     await expect(page.getByText(agent.staffFirst.mode.hint, { exact: true })).toBeVisible();
@@ -53,7 +53,7 @@ test("an owner on a paid plan sets up staff answers first, it persists, and a ca
 
     await page.getByLabel(agent.staffFirst.number.label, { exact: true }).pressSequentially(staffPhone);
     await page.getByLabel(agent.staffFirst.message.label, { exact: true }).fill("Thanks for calling. One moment.");
-    const saved = page.waitForResponse((response) => response.url().includes("/api/agent?") && response.request().method() === "PATCH");
+    const saved = page.waitForResponse((response) => /\/api\/agents\/[0-9a-f-]{36}\?/.test(response.url()) && response.request().method() === "PATCH");
     await save.click();
     expect((await saved).ok()).toBe(true);
 
@@ -78,7 +78,7 @@ test("an owner on a paid plan sets up staff answers first, it persists, and a ca
     const row = async () => (await database.db.select({ status: calls.status, disposition: calls.disposition, seconds: calls.providerDurationSeconds, reportedAt: calls.providerUpdatedAt }).from(calls).where(and(eq(calls.businessId, owner.businessId), eq(calls.providerCallId, callSid))))[0];
     expect(await row()).toMatchObject({ status: "completed", disposition: "answered_by_team", seconds: 42, reportedAt: expect.any(Date) });
 
-    await page.goto("/calls");
+    await page.goto("/inbox?channel=phone_call");
     await expect(page.getByText(callsCopy.outcome.answeredByTeam, { exact: true }).first()).toBeVisible();
   } finally {
     await removeFixtures(database, { emails, businessIds });
@@ -97,7 +97,7 @@ test("a Free business and a Telnyx number see staff answers first as unavailable
     const save = page.getByRole("button", { name: agent.staffFirst.save, exact: true });
 
     await setPlan(database, owner.businessId, "free_cloud");
-    await page.goto("/agent");
+    await page.goto("/agents/primary/handling");
     await expect(page.getByText(agent.staffFirst.unavailable.plan, { exact: true })).toBeVisible();
     await expect(mode).toBeDisabled();
     await expect(save).toHaveCount(0);

@@ -14,7 +14,7 @@ import { BrandingProvider } from "./branding-provider";
 import { consolePartnerId, isPartnerPage, isSensitiveAnalyticsRoute, ProductAnalytics, useTelemetry } from "./product-analytics";
 
 const mocks = vi.hoisted(() => ({
-  pathname: "/calls",
+  pathname: "/inbox",
   recorderLoaded: vi.fn(),
   posthog: {
     __loaded: true,
@@ -43,7 +43,7 @@ vi.mock("@/lib/client-analytics", () => ({ initializeClientAnalytics: vi.fn() })
 const clients: QueryClient[] = [];
 beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN", "fixture-key");
-  mocks.pathname = "/calls";
+  mocks.pathname = "/inbox";
 });
 afterEach(() => {
   cleanup();
@@ -157,10 +157,41 @@ describe("deployment mode on browser events", () => {
     let telemetry: BrowserTelemetry | undefined;
     render(<QueryClientProvider client={client}><ProductAnalytics><TelemetryProbe onReady={value => { telemetry = value; }} /></ProductAnalytics></QueryClientProvider>);
 
-    await waitFor(() => expect(mocks.posthog.capture).toHaveBeenCalledWith("web.page.calls_viewed", { businessId: "business", pathname: "/calls", deploymentMode: "cloud" }));
+    await waitFor(() => expect(mocks.posthog.capture).toHaveBeenCalledWith("web.page.inbox_viewed", { businessId: "business", pathname: "/inbox", deploymentMode: "cloud" }));
     // The dashboard test-call widget reports through the same context.
     telemetry!.track("web.voice.test_call_started", { businessId: "business" });
     expect(mocks.posthog.capture).toHaveBeenLastCalledWith("web.voice.test_call_started", { businessId: "business", deploymentMode: "cloud" });
+  });
+});
+
+describe("page events", () => {
+  it.each([
+    ["/", "web.page.home_viewed"],
+    ["/inbox", "web.page.inbox_viewed"],
+    ["/contacts/contact-1", "web.page.contacts_viewed"],
+    ["/analytics", "web.page.analytics_viewed"],
+    ["/agents", "web.page.agents_viewed"],
+    ["/agents/agent-1", "web.page.agent_viewed"],
+    ["/agents/agent-1/channels/phone", "web.page.agent_viewed"],
+    ["/workspace/business", "web.page.workspace_viewed"],
+    ["/workspace/team", "web.page.workspace_viewed"],
+    ["/account", "web.page.account_viewed"],
+    ["/account/notifications", "web.page.account_viewed"],
+  ] as const)("records %s as %s once the business allows telemetry", async (pathname, event) => {
+    mocks.pathname = pathname;
+    setup(true);
+    await waitFor(() => expect(mocks.posthog.capture).toHaveBeenCalledWith(event, expect.objectContaining({ businessId: "business", pathname })));
+  });
+
+  it("records nothing for the calls and messages pages, which the Inbox replaces", async () => {
+    for (const pathname of ["/calls", "/calls/call-1", "/messages", "/settings"]) {
+      mocks.pathname = pathname;
+      setup(true);
+      await waitFor(() => expect(mocks.posthog.opt_in_capturing).toHaveBeenCalled());
+      expect(mocks.posthog.capture.mock.calls.filter(([name]) => String(name).startsWith("web.page."))).toEqual([]);
+      cleanup();
+      vi.clearAllMocks();
+    }
   });
 });
 
@@ -204,7 +235,7 @@ describe("queued authentication analytics", () => {
     await waitFor(() => expect(mocks.posthog.capture).toHaveBeenCalledWith(event, {
       businessId: "business",
       deploymentMode: "development",
-      pathname: "/calls",
+      pathname: "/inbox",
       method: "email",
       $groups: { business: "business:business" },
     }));
@@ -224,7 +255,7 @@ describe("queued authentication analytics", () => {
     await waitFor(() => expect(mocks.posthog.capture).toHaveBeenCalledWith("web.auth.signup_succeeded", {
       businessId: "business",
       deploymentMode: "development",
-      pathname: "/calls",
+      pathname: "/inbox",
       method: "google",
       source: "calculator",
       $groups: { business: "business:business" },
@@ -370,7 +401,7 @@ describe("a partner's pages", () => {
 
   it("never start PostHog or ask who is signed in, so visitors never reach the host's analytics domain", async () => {
     const { fetchMock, telemetry } = renderUnder(partnerPage);
-    telemetry().track("web.page.calls_viewed", { businessId: "business", pathname: "/calls" });
+    telemetry().track("web.page.inbox_viewed", { businessId: "business", pathname: "/inbox" });
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
     expect(initializeClientAnalytics).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();

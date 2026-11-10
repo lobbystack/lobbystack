@@ -99,7 +99,7 @@ export function NavUser({
                         }
                       : {
                           onClick: closeMobileSidebar,
-                          render: <Link href="/settings/plan" />,
+                          render: <Link href="/workspace/billing" />,
                         })}
                   >
                     <Crown />
@@ -112,7 +112,7 @@ export function NavUser({
             <DropdownMenuGroup>
               <DropdownMenuItem
                 onClick={closeMobileSidebar}
-                render={<Link href="/settings/account" />}
+                render={<Link href="/account" />}
               >
                 <UserIcon />
                 {t("sidebar.account")}

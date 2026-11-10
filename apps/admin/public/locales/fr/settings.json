@@ -653,10 +653,6 @@
       "zapier": {
         "title": "Zapier",
         "description": "Reliez les appels, les réservations et les contacts à des milliers d'applications."
-      },
-      "instagram": {
-        "title": "Instagram",
-        "description": "Répondez aux messages privés Instagram avec les mêmes connaissances que votre agent."
       }
     },
     "status": {
@@ -677,13 +673,7 @@
       "connectFailed": "Impossible de connecter Instagram. Veuillez réessayer.",
       "accountInUse": "Ce compte Instagram est déjà connecté à un autre espace de travail.",
       "permissionMissing": "Votre agent a besoin d'accéder à vos messages Instagram. Reconnectez Instagram et autorisez cet accès.",
-      "disconnectedSuccess": "Instagram est déconnecté.",
-      "disconnect": "Déconnecter",
-      "reconnect": "Reconnecter",
-      "connectedAs": "Répond aux messages privés en tant que @{{username}}.",
-      "dialogDescription": "Votre agent répond aux messages privés envoyés à ce compte.",
-      "accountLabel": "Compte Instagram",
-      "reconnectDescription": "Instagram n'accepte plus l'accès de votre agent. Reconnectez le compte pour continuer à répondre aux messages."
+      "reconnect": "Reconnecter"
     }
   },
   "profile": {

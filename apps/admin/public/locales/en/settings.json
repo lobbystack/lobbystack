@@ -646,10 +646,6 @@
       "zapier": {
         "title": "Zapier",
         "description": "Connect calls, bookings and contacts to thousands of apps."
-      },
-      "instagram": {
-        "title": "Instagram",
-        "description": "Reply to Instagram direct messages with the same knowledge as your agent."
       }
     },
     "status": {
@@ -670,13 +666,7 @@
       "connectFailed": "Instagram couldn't be connected. Please try again.",
       "accountInUse": "This Instagram account is already connected to another workspace.",
       "permissionMissing": "Your agent needs access to your Instagram messages. Connect again and allow it.",
-      "disconnectedSuccess": "Instagram disconnected.",
-      "disconnect": "Disconnect",
-      "reconnect": "Reconnect",
-      "connectedAs": "Replying to direct messages as @{{username}}.",
-      "dialogDescription": "Your agent answers direct messages sent to this account.",
-      "accountLabel": "Instagram account",
-      "reconnectDescription": "Instagram stopped accepting your agent's access. Reconnect the account to keep answering messages."
+      "reconnect": "Reconnect"
     }
   },
   "profile": {

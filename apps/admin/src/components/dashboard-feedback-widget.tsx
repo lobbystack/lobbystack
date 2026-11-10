@@ -3,41 +3,29 @@
 import { type FormEvent, useState } from "react";
 
 import { brandLinks, contactEmailFor } from "@lobbystack/shared";
-import { CircleQuestionMarkIcon, MessageSquare } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Field,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
-import {
-  Popover,
-  PopoverContent,
-  PopoverDescription,
-  PopoverHeader,
-  PopoverTitle,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { useBranding } from "@/components/branding-provider";
-import { cn } from "@/lib/utils";
 
 const MAX_FEEDBACK_MESSAGE_LENGTH = 2_000;
 
-type FeedbackWidgetProps = {
-  businessId?: string;
-  className?: string;
+type FeedbackDialogProps = {
+  businessId?: string | undefined;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 };
 
-export function DashboardFeedbackWidget({ businessId, className }: FeedbackWidgetProps) {
+/** Feedback to the team that runs the dashboard, which the help menu opens. It sends in the background and closes at once. */
+export function DashboardFeedbackDialog({ businessId, onOpenChange, open }: FeedbackDialogProps) {
   const { t } = useTranslation("common");
   const links = brandLinks();
   // On a partner's pages, the partner's support link. A partner that set none
@@ -54,7 +42,6 @@ export function DashboardFeedbackWidget({ businessId, className }: FeedbackWidge
     });
     if (!response.ok) throw new Error("Feedback submission failed.");
   }
-  const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
 
   const trimmedMessage = message.trim();
@@ -75,7 +62,7 @@ export function DashboardFeedbackWidget({ businessId, className }: FeedbackWidge
     };
 
     setMessage("");
-    setOpen(false);
+    onOpenChange(false);
     toast.success(t("feedback.toast.sent"));
 
     void submitFeedback(payload).catch(() => {
@@ -84,104 +71,55 @@ export function DashboardFeedbackWidget({ businessId, className }: FeedbackWidge
   }
 
   return (
-    <div className={cn("-mr-1 hidden items-center gap-1 md:flex", className)}>
-      <Tooltip>
-        <Popover onOpenChange={setOpen} open={open}>
-          <TooltipTrigger render={<span className="inline-flex" />}>
-            <PopoverTrigger
-              render={
-                <Button
-                  aria-label={t("feedback.trigger")}
-                  className="text-sidebar-foreground hover:bg-transparent hover:text-sidebar-accent-foreground aria-expanded:bg-transparent"
-                  size="icon-xs"
-                  type="button"
-                  variant="ghost"
-                />
-              }
-            >
-              <MessageSquare className="size-[18px]" strokeWidth={1.75} />
-            </PopoverTrigger>
-          </TooltipTrigger>
-          <TooltipContent>{t("feedback.trigger")}</TooltipContent>
-          <PopoverContent
-            align="end"
-            className="w-96 max-w-[calc(100vw-2rem)] rounded-2xl border-border/80 bg-background p-4 shadow-xl"
-            sideOffset={8}
-          >
-            <PopoverHeader className="sr-only">
-              <PopoverTitle>{t("feedback.title")}</PopoverTitle>
-              <PopoverDescription>{t("feedback.description")}</PopoverDescription>
-            </PopoverHeader>
-            <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-              <FieldGroup className="gap-0">
-                <Field data-invalid={message.length > MAX_FEEDBACK_MESSAGE_LENGTH}>
-                  <FieldLabel className="sr-only" htmlFor="dashboard-feedback-message">
-                    {t("feedback.label")}
-                  </FieldLabel>
-                  <Textarea
-                    aria-invalid={message.length > MAX_FEEDBACK_MESSAGE_LENGTH}
-                    autoFocus
-                    id="dashboard-feedback-message"
-                    maxLength={MAX_FEEDBACK_MESSAGE_LENGTH + 1}
-                    onChange={(event) => setMessage(event.target.value)}
-                    placeholder={t("feedback.placeholder")}
-                    rows={4}
-                    value={message}
-                    className="min-h-28 rounded-xl border-border/80 bg-muted/30 px-3 py-3 text-sm placeholder:text-muted-foreground/70 focus-visible:ring-ring/40"
-                  />
-                </Field>
-              </FieldGroup>
-              <div className="flex items-center justify-between gap-3">
-                {supportHref ? <p className="min-w-0 text-sm text-muted-foreground">
-                  {t("feedback.helpText")}{" "}
-                  <a className="text-primary underline underline-offset-4" href={supportHref} {...(supportHref.startsWith("mailto:") ? {} : { rel: "noreferrer", target: "_blank" })}>
-                    {t("feedback.contactLink")}
-                  </a>
-                  {docsHref ? <>
-                    {" "}{t("feedback.helpTextSeparator")}{" "}
-                    <a
-                      className="text-primary underline underline-offset-4"
-                      href={docsHref}
-                      rel="noreferrer"
-                      target="_blank"
-                    >
-                      {t("feedback.docsLink")}
-                    </a>
-                  </> : null}
-                </p> : <span />}
-                <Button disabled={!canSubmit} size="sm" type="submit">
-                  {t("feedback.submit")}
-                </Button>
-              </div>
-            </form>
-          </PopoverContent>
-        </Popover>
-      </Tooltip>
-      {docsHref ? <Tooltip>
-        <TooltipTrigger
-          render={
-            <Button
-              aria-label={t("feedback.helpCenter")}
-              role="link"
-              className="text-sidebar-foreground hover:bg-transparent hover:text-sidebar-accent-foreground"
-              nativeButton={false}
-              render={
+    <Dialog onOpenChange={onOpenChange} open={open}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t("feedback.title")}</DialogTitle>
+          <DialogDescription>{t("feedback.description")}</DialogDescription>
+        </DialogHeader>
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+          <FieldGroup className="gap-0">
+            <Field data-invalid={message.length > MAX_FEEDBACK_MESSAGE_LENGTH}>
+              <FieldLabel className="sr-only" htmlFor="dashboard-feedback-message">
+                {t("feedback.label")}
+              </FieldLabel>
+              <Textarea
+                aria-invalid={message.length > MAX_FEEDBACK_MESSAGE_LENGTH}
+                autoFocus
+                id="dashboard-feedback-message"
+                maxLength={MAX_FEEDBACK_MESSAGE_LENGTH + 1}
+                onChange={(event) => setMessage(event.target.value)}
+                placeholder={t("feedback.placeholder")}
+                rows={4}
+                value={message}
+                className="min-h-28 rounded-xl border-border/80 bg-muted/30 px-3 py-3 text-sm placeholder:text-muted-foreground/70 focus-visible:ring-ring/40"
+              />
+            </Field>
+          </FieldGroup>
+          <div className="flex items-center justify-between gap-3">
+            {supportHref ? <p className="min-w-0 text-sm text-muted-foreground">
+              {t("feedback.helpText")}{" "}
+              <a className="text-primary underline underline-offset-4" href={supportHref} {...(supportHref.startsWith("mailto:") ? {} : { rel: "noreferrer", target: "_blank" })}>
+                {t("feedback.contactLink")}
+              </a>
+              {docsHref ? <>
+                {" "}{t("feedback.helpTextSeparator")}{" "}
                 <a
-                  aria-label={t("feedback.helpCenter")}
+                  className="text-primary underline underline-offset-4"
                   href={docsHref}
                   rel="noreferrer"
                   target="_blank"
-                />
-              }
-              size="icon-xs"
-              variant="ghost"
-            />
-          }
-        >
-          <CircleQuestionMarkIcon className="size-[18px]" strokeWidth={1.75} />
-        </TooltipTrigger>
-        <TooltipContent>{t("feedback.helpCenter")}</TooltipContent>
-      </Tooltip> : null}
-    </div>
+                >
+                  {t("feedback.docsLink")}
+                </a>
+              </> : null}
+            </p> : <span />}
+            <Button disabled={!canSubmit} size="sm" type="submit">
+              {t("feedback.submit")}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

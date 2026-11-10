@@ -313,6 +313,10 @@
     "smsInstructions": {
       "label": "Instructions SMS"
     },
+    "name": {
+      "label": "Nom",
+      "hint": "Seule votre équipe le voit."
+    },
     "greeting": {
       "label": "Message d'accueil",
       "placeholder": "Bonjour, merci d'avoir appelé…",
@@ -389,6 +393,14 @@
         "countryUnsupported": "Votre agent ne peut pas encore transférer d'appels vers ce pays."
       }
     }
+  },
+  "identity": { "title": "Nom, accueil et voix" },
+  "transfers": { "title": "Transferts" },
+  "businessDetails": { "title": "Détails de l'entreprise" },
+  "instructions": {
+    "voice": { "label": "Appels", "placeholder": "Répondez brièvement et proposez de prendre rendez-vous." },
+    "chat": { "label": "Clavardage", "hint": "Clavardage du site web et Instagram.", "placeholder": "Répondez en deux ou trois phrases." },
+    "text": { "label": "Textos", "placeholder": "Gardez les réponses sous 300 caractères." }
   },
   "staffFirst": {
     "title": "Le personnel répond d'abord",

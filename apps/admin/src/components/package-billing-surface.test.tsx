@@ -14,7 +14,7 @@ import { PackageBillingSurface } from "./package-billing-surface";
 
 const frontDesk = { packageName: "Front desk", allowance: { voiceMinutes: 300, chats: 1000 } };
 
-beforeEach(() => { fixture.search = new URLSearchParams(); window.history.replaceState({}, "", "/settings/subscription"); });
+beforeEach(() => { fixture.search = new URLSearchParams(); window.history.replaceState({}, "", "/workspace/subscription"); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
 function renderWith(respond: (url: string, init?: RequestInit) => Response) {
@@ -62,5 +62,5 @@ it("thanks the owner when Stripe sends them back paid", async () => {
   renderWith(() => Response.json({ billing: "package", offer: { ...frontDesk, status: "awaiting_payment" }, currentPeriodEnd: null, canOpenPortal: false, canSubscribe: true }));
   await screen.findByText("Front desk");
   expect(fixture.toast.success).toHaveBeenCalledWith("subscription.paid");
-  expect(fixture.router.replace).toHaveBeenCalledWith("/settings/subscription");
+  expect(fixture.router.replace).toHaveBeenCalledWith("/workspace/subscription");
 });

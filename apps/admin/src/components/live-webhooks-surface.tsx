@@ -11,7 +11,7 @@ import { webhookEventTypes, type WebhookEventType } from "@lobbystack/shared";
 
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
-import { PageHeader } from "@/components/page-header";
+import { HeaderActions } from "@/components/header-actions";
 import { SecretReveal } from "@/components/secret-reveal";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -188,8 +188,8 @@ export function LiveWebhooksSurface() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <Link className="type-body-muted inline-flex items-center gap-1 hover:text-foreground" href="/integrations"><ArrowLeft className="size-4" />{t("sections.integrations")}</Link>
-        <PageHeader actions={canManage ? <Button onClick={() => setDialog({ mode: "create" })} size="sm"><Plus data-icon="inline-start" />{t("webhooks.create.action")}</Button> : undefined} title={t("webhooks.title")} />
+        <Link className="type-body-muted inline-flex items-center gap-1 hover:text-foreground" href="/workspace/connections"><ArrowLeft className="size-4" />{t("nav:settingsPages.connections")}</Link>
+        {canManage ? <HeaderActions><Button onClick={() => setDialog({ mode: "create" })} size="sm"><Plus data-icon="inline-start" />{t("webhooks.create.action")}</Button></HeaderActions> : null}
         <p className="type-body-muted max-w-2xl">{t("webhooks.description")}</p>
       </div>
 

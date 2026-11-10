@@ -5,7 +5,8 @@ import { and, eq, sql } from "drizzle-orm";
 
 import { businesses, conversations, createDatabaseClient, widgetKeys } from "@lobbystack/db";
 
-import messagesCopy from "../public/locales/en/messages.json" with { type: "json" };
+import commonCopy from "../public/locales/en/common.json" with { type: "json" };
+import navCopy from "../public/locales/en/nav.json" with { type: "json" };
 import onboarding from "../public/locales/en/onboarding.json" with { type: "json" };
 import settings from "../public/locales/en/settings.json" with { type: "json" };
 import widgetCopy from "../public/locales/en/widget.json" with { type: "json" };
@@ -53,7 +54,7 @@ async function sessionStatus(request: APIRequestContext, widgetKey: string, orig
 // Widget copy names a key in some labels.
 const named = (label: string, name: string) => label.replace("{{name}}", name);
 
-test("the sidebar opens the website widget page, where an owner creates, edits, pauses and revokes a widget that works on their site", async ({ page, request }, testInfo) => {
+test("the agent's Channels open the website widget page, where an owner creates, edits, pauses and revokes a widget that works on their site", async ({ page, request }, testInfo) => {
   test.setTimeout(180_000);
   const database = migrator();
   const email = `${prefix}-${randomUUID()}@example.invalid`;
@@ -80,17 +81,23 @@ test("the sidebar opens the website widget page, where an owner creates, edits, 
     // The rest of onboarding has its own journeys; the dashboard opens once it's complete.
     await database.db.update(businesses).set({ onboardingStage: "complete" }).where(eq(businesses.id, businessId));
 
-    // The sidebar links the widget settings from any page, and only that item is active there.
+    // Agents opens the one agent's menu. Its Channels page has no widget yet, and adding one opens the widget page's form, with Channels still lit.
     await page.goto("/");
     const sidebar = page.locator('[data-slot="sidebar"]');
-    await sidebar.getByRole("link", { name: settings.sections.widget, exact: true }).click();
-    await expect(page).toHaveURL(/\/widget$/);
-    await expect(sidebar.getByRole("link", { name: settings.sections.widget, exact: true })).toHaveAttribute("data-active", "");
-    await expect(page.getByText(settings.widget.keys.empty, { exact: true })).toBeVisible();
+    const channels = sidebar.getByRole("link", { name: new RegExp(`^${navCopy.agentPages.channels}`) });
+    await sidebar.getByRole("link", { name: navCopy.items.agents, exact: true }).click();
+    await channels.click();
+    const main = page.locator("#dashboard-main-content");
+    await expect(main.getByText(navCopy.channels.noWidget, { exact: true })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("widget-settings-empty.png"), fullPage: true });
+    await expect(channels).toHaveAttribute("data-active", "");
+    await main.getByRole("button", { name: navCopy.channels.addToWebsite, exact: true }).click();
+    // The form opens once: the page drops ?add=1, so a reload shows the list.
+    await expect(page).toHaveURL(/\/channels\/widget$/);
+    // The form opens as a dialog, which hides the sidebar from the accessibility tree, so the lit row is found by its link.
+    await expect(sidebar.locator('a[href$="/channels"][data-active]')).toHaveCount(1);
 
     // Create a widget key for the host site. The dialog previews the widget as the owner fills it in.
-    await page.getByRole("button", { name: widgetCopy.manage.newKey, exact: true }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel(settings.widget.fields.label, { exact: true }).fill("Main website");
     await dialog.getByLabel(settings.widget.fields.origins, { exact: true }).fill(hostOrigin);
@@ -192,9 +199,10 @@ test("the sidebar opens the website widget page, where an owner creates, edits, 
       await host.close();
       await expect.poll(async () => (await database.db.select().from(conversations).where(and(eq(conversations.businessId, businessId!), eq(conversations.channel, "web_chat")))).length).toBe(1);
 
-      await sidebar.getByRole("link", { name: messagesCopy.page.title, exact: true }).click();
-      await expect(page).toHaveURL(/\/messages$/);
-      await page.getByRole("button", { name: messagesCopy.page.filterWeb, exact: true }).click();
+      await sidebar.getByRole("link", { name: navCopy.back.replace("{{place}}", navCopy.items.home), exact: true }).click();
+      await sidebar.getByRole("link", { name: navCopy.items.inbox, exact: true }).click();
+      await expect(page).toHaveURL(/\/inbox$/);
+      await page.getByRole("button", { name: commonCopy.channels.webChat, exact: true }).click();
       await expect(page.getByText("We are open weekdays.").first()).toBeVisible();
       await page.goto("/widget");
     }

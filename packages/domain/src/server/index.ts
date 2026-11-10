@@ -1,6 +1,7 @@
 export * from "./affiliates";
 export * from "./agents";
 export * from "./appointmentChanges";
+export * from "./appointmentRequests";
 export * from "./activation";
 export * from "./billing";
 export * from "./billingAccess";
@@ -24,6 +25,7 @@ export * from "./context";
 export * from "./checkIn";
 export * from "./conversations";
 export * from "./firstRealConversation";
+export * from "./inbox";
 export * from "./instagram";
 export * from "./textReplies";
 export * from "./demos";

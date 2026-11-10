@@ -28,7 +28,7 @@ test("a reloaded phone claim finishes without another purchase and remains tenan
     expect((await initial.json()).activeClaim.id).toBe(claimId);
     expect((await context.request.get(`${baseURL}/api/phone-numbers?businessId=${randomUUID()}`)).status()).toBe(403);
     const page = await context.newPage();
-    await page.goto(`${baseURL}/settings/phone-number`);
+    await page.goto(`${baseURL}/agents/primary/channels/phone`);
     await expect(page.getByRole("button", { name: settings.phoneNumber.actions.getNumber, exact: true })).toBeDisabled();
     await page.reload();
     await expect(page.getByRole("button", { name: settings.phoneNumber.actions.getNumber, exact: true })).toBeDisabled();

@@ -14,6 +14,6 @@ export const POST = operatorRoute(async ({ request, session, userId, businessId,
   // A partner's business opens only on its partner's domain, so Stripe sends the owner back there.
   const origin = partnerRequestOrigin(request.headers);
   if (!origin) return jsonError("Business not found.", 404, "business_not_found");
-  const page = `${origin}/settings/subscription`;
+  const page = `${origin}/workspace/subscription`;
   return NextResponse.json(await startPackageCheckout(withStripeConnect(domain), { userId, businessId, email: session.user.email ?? null, successUrl: `${page}?checkout=complete`, cancelUrl: page }));
 });

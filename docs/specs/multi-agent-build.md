@@ -150,6 +150,16 @@ Build on a stacked branch, and release it in one step. Starting from `proto/a-dr
 
 Test search with a limited operator, activity-only operators and partner access.
 
+Raphael decided:
+
+- A phone number in an agent's channels can move to another agent and has no Disconnect. Releasing a number stays on the number's page.
+- Transfers, staff-first calling, booking and appointment changes get their own agent menu row, Calls and booking, between Rules and Channels.
+- The Inbox, agents, workspace and account page events replace the calls, messages, call detail and settings ones.
+- Search knows synonyms in each interface language.
+- Old routes redirect temporarily, and the redirects stay, because emails link to them.
+- A request to cancel or move an appointment closes once the appointment's time has passed, since nothing is left to change.
+- Home's Action required shows the count of open items and a View all link to the Inbox, so the card stays short.
+
 ### 8. Finish the rename
 
 Remove the assign-default triggers, `businesses_assign_agent_before_delete`, `backfillAgentLinks` and the onboarding alias, and rename the remaining `receptionist` code, about 1,500 lines in 250 files. Leave what slice 6 keeps stable.

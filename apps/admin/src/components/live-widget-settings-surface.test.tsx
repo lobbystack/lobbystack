@@ -14,7 +14,7 @@ import { LiveWidgetSettingsSurface } from "./live-widget-settings-surface";
 const clients: QueryClient[] = [];
 const savedKey = { id: "widget", key: "wk_live_saved", label: "Website", status: "active", allowedOrigins: ["https://a.com"], config: {}, lastUsedAt: null, createdAt: "2026-09-23T12:00:00.000Z" };
 
-function setup(issuanceEnabled: boolean, keys: Array<Record<string, unknown>> = []) {
+function setup(issuanceEnabled: boolean, keys: Array<Record<string, unknown>> = [], agentId?: string, startAdding = false) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Acme", active: true }] });
@@ -27,7 +27,7 @@ function setup(issuanceEnabled: boolean, keys: Array<Record<string, unknown>> = 
     return Response.json({ businesses: [{ businessId: "business", name: "Acme", active: true }] });
   });
   vi.stubGlobal("fetch", fetchMock);
-  render(<QueryClientProvider client={client}><LiveWidgetSettingsSurface /></QueryClientProvider>);
+  render(<QueryClientProvider client={client}><LiveWidgetSettingsSurface {...(agentId ? { agentId } : {})} startAdding={startAdding} /></QueryClientProvider>);
   const sent = (method: string) => {
     const call = fetchMock.mock.calls.find(([, init]) => init?.method === method);
     return call ? JSON.parse(String(call[1]!.body)) as Record<string, unknown> & { config: Record<string, unknown> } : undefined;
@@ -98,6 +98,31 @@ describe("creating a widget key", () => {
     await user.type(screen.getByLabelText("widget.fields.origins"), "https://shop.example");
     await user.click(screen.getByRole("button", { name: "widget.create.action" }));
     await waitFor(() => expect(sent("POST")?.config.leadForm).toEqual({ enabled: true, requireEmail: true, requirePhone: false, showBeforeChat: false }));
+  });
+});
+
+describe("one agent's widgets", () => {
+  it("lists only the agent's keys, and a new key answers as that agent", async () => {
+    const { user, sent } = setup(true, [{ ...savedKey, agentId: "agent-2" }, { ...savedKey, id: "other", label: "Other site", agentId: "agent-1" }], "agent-2");
+    expect(await screen.findByText("Website")).toBeTruthy();
+    expect(screen.queryByText("Other site")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "widget:manage.newKey" }));
+    await user.type(screen.getByLabelText("widget.fields.origins"), "https://shop.example");
+    await user.click(screen.getByRole("button", { name: "widget.create.action" }));
+    await waitFor(() => expect(sent("POST")?.agentId).toBe("agent-2"));
+  });
+
+  it("opens the new widget form when the agent's Channels page asks, once it can make one", async () => {
+    window.history.replaceState(null, "", "/agents/agent-2/channels/widget?add=1");
+    setup(true, [], "agent-2", true);
+    expect(await screen.findByLabelText("widget.fields.origins")).toBeTruthy();
+    // It opens once, so a reload shows the list.
+    await waitFor(() => expect(window.location.search).toBe(""));
+    expect(window.location.pathname).toBe("/agents/agent-2/channels/widget");
+    cleanup();
+    setup(false, [], "agent-2", true);
+    await screen.findByText("widget.restricted.title");
+    expect(screen.queryByLabelText("widget.fields.origins")).toBeNull();
   });
 });
 

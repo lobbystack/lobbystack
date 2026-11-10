@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 
 /**
- * The dashboard mounts one test window, in the utility bar, and it owns the
+ * The dashboard's shell mounts one test window, and it owns the
  * voice session. Other surfaces open it through this registry so they never
  * mount a second voice client.
  */

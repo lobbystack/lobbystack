@@ -300,7 +300,7 @@ describe.skipIf(!client)("a business's overage on its partner's Stripe", () => {
       expect(eighty.map((email) => email.to).sort()).toEqual([`${acme.team.adminId}@example.invalid`, `${acme.team.ownerId}@example.invalid`].sort());
       const toOwner = eighty.find((email) => email.to === `${acme.team.ownerId}@example.invalid`)!;
       expect(toOwner).toMatchObject({ brand: { kind: "business", businessId: acme.cedar }, replyTo: null });
-      expect(toOwner.variables).toEqual({ locale: "en", firstName: "Mia", businessName: "Cedar Clinic", kind: "minutes", threshold: "80", used: "8", included: "10", overage: "off", capped: "", month: expect.any(String), url: "https://app.example.test/settings/usage" });
+      expect(toOwner.variables).toEqual({ locale: "en", firstName: "Mia", businessName: "Cedar Clinic", kind: "minutes", threshold: "80", used: "8", included: "10", overage: "off", capped: "", month: expect.any(String), url: "https://app.example.test/workspace/usage" });
       expect(eighty.find((email) => email.to === `${acme.team.adminId}@example.invalid`)!.variables).toMatchObject({ locale: "fr", threshold: "80" });
       // The partner's admin gets its own copy, under the host's brand, with a link to the console's Businesses page.
       const toPartner = await partnerAlertEmails(tx, acme.cedar);

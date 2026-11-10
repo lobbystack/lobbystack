@@ -21,7 +21,7 @@ vi.mock("./dashboard-activation-card", () => ({ DashboardActivationCard: () => n
 vi.mock("./call-forwarding-dialog", () => ({ CallForwardingFromLink: () => null }));
 const clients: QueryClient[] = [];
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); });
-type Overrides = { upcoming?: Array<Record<string, unknown>>; recentCalls?: Array<Record<string, unknown>>; actionRequired?: Array<Record<string, unknown>>; role?: string; capabilities?: Capability[]; unansweredCount?: number };
+type Overrides = { upcoming?: Array<Record<string, unknown>>; recentCalls?: Array<Record<string, unknown>>; actionRequired?: Array<Record<string, unknown>>; role?: string; capabilities?: Capability[]; unansweredCount?: number; actionRequiredCount?: number; loading?: boolean };
 async function setup(locale: "en" | "fr", callId: string | null, overrides: Overrides = {}) {
   vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn(), removeItem: vi.fn() });
   vi.stubGlobal("EventSource", class { addEventListener() {} removeEventListener() {} close() {} });
@@ -30,8 +30,9 @@ async function setup(locale: "en" | "fr", callId: string | null, overrides: Over
   const i18n = createInstance();
   await i18n.init({ lng: locale, defaultNS: "dashboard", resources: { en: { dashboard: en, common: enCommon, knowledge: enKnowledge }, fr: { dashboard: fr, common: frCommon, knowledge: frKnowledge } } });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
-  client.setQueryData(["dashboard"], {
+  if (!overrides.loading) client.setQueryData(["dashboard"], {
     businessId: "business", kpis: { calls: { total: 1, deltaPercent: 0 }, appointments: { total: 1, deltaPercent: 0 }, averageDuration: { totalSeconds: 20, deltaSeconds: 0 } }, monthlyCalls: [], recentCalls: overrides.recentCalls ?? [],
+    ...(overrides.actionRequiredCount === undefined ? {} : { actionRequiredCount: overrides.actionRequiredCount }),
     actionRequired: overrides.actionRequired ?? [{ id: "follow-up", kind: "voice_message", title: "Voice message from Alex", body: "Please call back.\nCallback: +14165550199\nUrgency: high", callId, createdAt: "2026-09-04T14:30:00Z" }],
     upcoming: overrides.upcoming ?? [{ id: "appointment", startsAt: "2026-09-07T14:30:00Z", timezone: "UTC", status: "confirmed", sourceChannel: "voice", contactName: "Alex", serviceName: "Consultation" }],
   });
@@ -44,7 +45,7 @@ describe("dashboard voice follow-up parity", () => {
   it.each(["en", "fr"] as const)("links the follow-up to its call and shows localized metadata in %s", async locale => {
     const i18n = await setup(locale, "call-123");
     const title = i18n.t("home.actionRequired.titleWithContact", { message: "Please call back", name: "Alex" });
-    expect(screen.getByRole("link", { name: title }).getAttribute("href")).toBe("/calls/call-123");
+    expect(screen.getByRole("link", { name: title }).getAttribute("href")).toBe("/inbox?call=call-123");
     expect(screen.getByText("+14165550199")).toBeTruthy();
     expect(screen.getAllByText(i18n.t("home.actionRequired.urgent"))).toHaveLength(2);
     expect(screen.getByText(i18n.t("home.upcoming.status.confirmed"))).toBeTruthy();
@@ -57,17 +58,43 @@ describe("dashboard voice follow-up parity", () => {
     expect(screen.getByText(/Please call back.*Alex/)).toBeTruthy();
   });
 });
+describe("how many requests are open", () => {
+  it("counts every open request and links to the rest in the Inbox when Home lists only some", async () => {
+    const i18n = await setup("en", "call-123", { actionRequiredCount: 9 });
+    expect(screen.getByText("9")).toBeTruthy();
+    expect(screen.getAllByRole("link", { name: i18n.t("home.actionRequired.viewAll") }).map((link) => link.getAttribute("href"))).toEqual(["/inbox?status=open", "/appointments?view=list"]);
+  });
+
+  it("offers no link when Home lists them all", async () => {
+    const i18n = await setup("en", "call-123", { actionRequiredCount: 1 });
+    expect(screen.getAllByRole("link", { name: i18n.t("home.actionRequired.viewAll") }).map((link) => link.getAttribute("href"))).toEqual(["/appointments?view=list"]);
+  });
+
+  it("opens a handoff on its conversation in the Inbox", async () => {
+    await setup("en", null, { actionRequired: [{ id: "conversation-1", kind: "human_handoff", title: "Marie", body: "Wants a person", conversationId: "conversation-1", createdAt: "2026-09-04T14:30:00Z" }] });
+    expect(screen.getByRole("link", { name: /Marie/ }).getAttribute("href")).toBe("/inbox?conversation=conversation-1");
+  });
+
+  it("holds the link's place while Home loads", async () => {
+    const i18n = await setup("en", null, { loading: true });
+    const heading = screen.getByRole("heading", { name: i18n.t("home.actionRequired.title") });
+    const placeholder = heading.parentElement!.querySelector("span.invisible");
+    expect(placeholder?.textContent).toBe(i18n.t("home.actionRequired.viewAll"));
+    expect(placeholder?.closest("[aria-hidden='true']")).toBeTruthy();
+  });
+});
+
 describe("dashboard unanswered questions", () => {
   it.each(["en", "fr"] as const)("links open questions to the knowledge page in %s", async locale => {
     const i18n = await setup(locale, null, { role: "business_admin", unansweredCount: 3 });
     const link = screen.getByRole("link", { name: new RegExp(i18n.t("knowledge:unansweredQuestions.home.count", { count: 3 })) });
-    expect(link.getAttribute("href")).toBe("/agent/knowledge#unanswered-questions");
+    expect(link.getAttribute("href")).toBe("/workspace/knowledge#unanswered-questions");
   });
   it("counts the open questions as an action and drops the empty state", async () => {
     const i18n = await setup("en", null, { role: "business_owner", unansweredCount: 2, actionRequired: [] });
     expect(screen.queryByText(i18n.t("dashboard:home.actionRequired.emptyTitle"))).toBeNull();
     const heading = screen.getByRole("heading", { name: i18n.t("dashboard:home.actionRequired.title") });
-    expect(heading.parentElement?.textContent).toBe(`${i18n.t("dashboard:home.actionRequired.title")}1`);
+    expect(heading.parentElement?.parentElement?.textContent).toBe(`${i18n.t("dashboard:home.actionRequired.title")}1`);
   });
   it("shows nothing when every question is handled", async () => {
     await setup("en", null, { role: "business_owner", unansweredCount: 0 });
@@ -91,7 +118,7 @@ describe("dashboard unanswered questions by access", () => {
     const i18n = await setup("en", null, { ...access, unansweredCount: 2, actionRequired: [] });
     expect(screen.queryByText(i18n.t("knowledge:unansweredQuestions.home.count", { count: 2 }))).toBeNull();
     const heading = screen.getByRole("heading", { name: i18n.t("dashboard:home.actionRequired.title") });
-    expect(heading.parentElement?.textContent).toBe(`${i18n.t("dashboard:home.actionRequired.title")}0`);
+    expect(heading.parentElement?.parentElement?.textContent).toBe(`${i18n.t("dashboard:home.actionRequired.title")}0`);
     expect(screen.getByText(i18n.t("dashboard:home.actionRequired.emptyTitle"))).toBeTruthy();
     await new Promise(resolve => setTimeout(resolve, 20));
     expect(questionRequests(i18n.fetchMock)).toHaveLength(0);

@@ -108,7 +108,11 @@ function CallEventTimeline({ events, locale }: { events: Detail["timeline"]; loc
   );
 }
 
-export function LiveCallDetailSurface({ callId }: { callId: string }) {
+/** The Inbox with its phone calls, which the back link returns to. */
+const CALLS_HREF = "/inbox?channel=phone_call";
+
+/** One call. `embedded` puts it inside the Inbox, which has its own way back and its own page title. */
+export function LiveCallDetailSurface({ callId, embedded = false }: { callId: string; embedded?: boolean }) {
   const { i18n, t } = useTranslation("calls");
   const telemetry = useTelemetry();
   const queryClient = useQueryClient();
@@ -126,13 +130,13 @@ export function LiveCallDetailSurface({ callId }: { callId: string }) {
     queryFn: () => requestJson<{ url: string }>(`/api/calls/${encodeURIComponent(callId)}/recording`),
     enabled: detail.data?.recording.state === "available",
   });
-  const completeFollowUp = useMutation({ mutationFn: (inboxItemId: string) => requestJson<{ completed: number }>(`/api/calls/${encodeURIComponent(callId)}?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PATCH", body: JSON.stringify({ action: "complete_follow_up", inboxItemId }) }), onSuccess: async (_, inboxItemId) => { if (business) telemetry.track("web.voice.follow_up_completed", { businessId: business.businessId, callId, inboxItemId }); await Promise.all([queryClient.invalidateQueries({ queryKey: ["call", business?.businessId, callId] }), queryClient.invalidateQueries({ queryKey: ["dashboard"] })]); } });
+  const completeFollowUp = useMutation({ mutationFn: (inboxItemId: string) => requestJson<{ completed: number }>(`/api/calls/${encodeURIComponent(callId)}?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PATCH", body: JSON.stringify({ action: "complete_follow_up", inboxItemId }) }), onSuccess: async (_, inboxItemId) => { if (business) telemetry.track("web.voice.follow_up_completed", { businessId: business.businessId, callId, inboxItemId }); await Promise.all([queryClient.invalidateQueries({ queryKey: ["call", business?.businessId, callId] }), queryClient.invalidateQueries({ queryKey: ["dashboard"] }), queryClient.invalidateQueries({ queryKey: ["inbox", business?.businessId] })]); } });
 
-  if (businesses.isLoading || detail.isLoading) return <DetailPageSkeleton t={t} />;
+  if (businesses.isLoading || detail.isLoading) return <DetailPageSkeleton embedded={embedded} t={t} />;
   if (businesses.isError || detail.isError || !detail.data) {
     return (
       <div className="flex flex-1 flex-col gap-6">
-        <BackLink href="/calls" label={t("detail.backToList")} />
+        {embedded ? null : <BackLink href={CALLS_HREF} label={t("detail.backToList")} />}
         <div className="flex flex-col items-center gap-2 py-16 text-center">
           <Phone className="size-8 text-muted-foreground/40" />
           <p className="type-empty-title">{t("detail.notFound")}</p>
@@ -150,11 +154,11 @@ export function LiveCallDetailSurface({ callId }: { callId: string }) {
 
   return (
     <div className="flex flex-1 flex-col gap-6">
-      <BackLink href="/calls" label={t("detail.backToList")} />
+      {embedded ? null : <BackLink href={CALLS_HREF} label={t("detail.backToList")} />}
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-2">
-          <h1 className="type-page-title ph-mask">{callerName}</h1>
+          {embedded ? <h2 className="type-page-title ph-mask">{callerName}</h2> : <h1 className="type-page-title ph-mask">{callerName}</h1>}
           {blocked ? (
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="destructive">{t("detail.blocking.badge")}</Badge>
@@ -294,14 +298,14 @@ function DetailsTab({ detail, marking, onCompleteFollowUp }: { detail: Detail; m
  * The call page while it loads: the back link stays real, since it needs no data, and the rest takes the real
  * page's shape. Fixed text is a placeholder holding its real text, hidden, so each is as wide as the text.
  */
-function DetailPageSkeleton({ t }: { t: (key: string) => string }) {
+function DetailPageSkeleton({ embedded, t }: { embedded: boolean; t: (key: string) => string }) {
   const metadata = ["from", "duration", "started", "id"] as const;
   const events = ["received", "connected", "completed"] as const;
   const tabs = [["transcript", FileText], ["recording", Headphones], ["details", Info]] as const;
   const bubbles = [["justify-start", "w-2/5"], ["justify-end", "w-3/5"], ["justify-start", "w-1/3"], ["justify-end", "w-1/2"]] as const;
   return (
     <div aria-busy="true" className="flex flex-1 flex-col gap-6">
-      <BackLink href="/calls" label={t("detail.backToList")} />
+      {embedded ? null : <BackLink href={CALLS_HREF} label={t("detail.backToList")} />}
 
       <div className="flex h-[37.5px] items-center"><Skeleton className="h-8 w-64 max-w-full" /></div>
 

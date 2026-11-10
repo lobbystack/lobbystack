@@ -92,6 +92,12 @@
         "bookedValue": "Booked value",
         "timeSaved": "Time saved",
         "withoutTransfer": "Calls without transfer"
+      },
+      "agents": {
+        "title": "By agent",
+        "calls": "Calls",
+        "chats": "Chats",
+        "removed": "Removed"
       }
     },
     "metrics": {
@@ -150,7 +156,8 @@
       "requested": "Requested: {{details}}",
       "notes": "Notes: {{notes}}",
       "rescheduleRequest": "Reschedule request",
-      "newTime": "New time: {{time}}"
+      "newTime": "New time: {{time}}",
+      "viewAll": "View all"
     },
     "upcoming": {
       "title": "Upcoming",

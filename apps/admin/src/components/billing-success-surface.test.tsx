@@ -108,7 +108,7 @@ describe("billing success page", () => {
     expect(await screen.findByText("billing.success.number.keep")).toBeTruthy();
     const call = await screen.findByRole("link", { name: "(416) 555-0123" });
     expect(call.getAttribute("href")).toBe("tel:+14165550123");
-    expect(screen.getByRole("link", { name: "billing.success.steps.transfer.action" }).getAttribute("href")).toBe("/agent#agent-transfer-number");
+    expect(screen.getByRole("link", { name: "billing.success.steps.transfer.action" }).getAttribute("href")).toBe("/agents/primary/handling#agent-transfer-number");
     expect(screen.getByRole("button", { name: "billing.success.dashboard" }).getAttribute("href")).toBe("/");
     expect(screen.queryByRole("button", { name: "billing.success.number.choose" })).toBeNull();
     expect(stageRequests(fetchMock)).toHaveLength(0);
@@ -118,7 +118,7 @@ describe("billing success page", () => {
   it("sends a settings checkout without a number to the settings number page", async () => {
     setup({ stage: "complete" });
     await userEvent.click(await screen.findByRole("button", { name: "billing.success.number.choose" }));
-    expect(route.router.push).toHaveBeenCalledWith("/settings/phone-number");
+    expect(route.router.push).toHaveBeenCalledWith("/agents/primary/channels/phone");
   });
 
   it("links French readers to the French forwarding guide", async () => {
@@ -131,6 +131,6 @@ describe("billing success page", () => {
     route.search = new URLSearchParams();
     setup();
     expect(screen.getByRole("heading", { name: "billing.success.missing.title" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "billing.success.missing.action" }).getAttribute("href")).toBe("/settings/plan");
+    expect(screen.getByRole("button", { name: "billing.success.missing.action" }).getAttribute("href")).toBe("/workspace/billing");
   });
 });

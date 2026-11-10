@@ -64,7 +64,7 @@ describe("original account menu interactions", () => {
   });
   it("links to account settings and invokes sign-out", async () => {
     const { onSignOut } = await setup();
-    expect(screen.getByRole("menuitem", { name: "sidebar.account" }).getAttribute("href")).toBe("/settings/account");
+    expect(screen.getByRole("menuitem", { name: "sidebar.account" }).getAttribute("href")).toBe("/account");
     await userEvent.click(screen.getByRole("menuitem", { name: "sidebar.signOut" })); expect(onSignOut).toHaveBeenCalledOnce();
   });
 });

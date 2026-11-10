@@ -338,12 +338,12 @@ describe("SMTP delivery", () => {
         "View call: https://app.example.test/calls/call-1",
         "",
         "You get this email for each call your agent answers.",
-        "Change alerts: https://app.example.test/settings/notifications",
+        "Change alerts: https://app.example.test/account/notifications",
       ].join("\n"));
       expect(email.html).toContain(">New call for Metroprint</h1>");
       expect(email.html).toContain("500 &lt;business&gt; cards.");
       expect(email.html).toContain('href="https://app.example.test/calls/call-1"');
-      expect(email.html).toContain('href="https://app.example.test/settings/notifications"');
+      expect(email.html).toContain('href="https://app.example.test/account/notifications"');
       expect(email.html).not.toMatch(/text-transform:\s*uppercase/);
     });
 

@@ -135,7 +135,7 @@ it("emails the owner, in their language, before a new passkey is saved", async (
   await afterVerification({ ctx: { request: new Request("https://app.example.test/api/auth/passkey/verify-registration") }, user: { id: "user-1" } });
   expect(mocks.enqueue).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ aggregateId: "user-1", payload: expect.objectContaining({
     template: "passkey_added", to: "owner@example.invalid",
-    variables: { locale: "fr", settingsUrl: "https://app.example.test/settings/account", resetUrl: "https://app.example.test/fr/forgot-password" },
+    variables: { locale: "fr", settingsUrl: "https://app.example.test/account", resetUrl: "https://app.example.test/fr/forgot-password" },
   }) }));
   // The plugin saves the passkey after this returns, so a failed email stops the passkey.
   mocks.enqueue.mockRejectedValueOnce(new Error("outbox down"));

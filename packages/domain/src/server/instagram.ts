@@ -1,9 +1,10 @@
-import { and, desc, eq, inArray, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
-import { auditLogs, contacts, conversations, conversationSessions, defaultAgentIdOf, enqueueOutbox, instagramAccounts, messages, providerEvents, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, auditLogs, contacts, conversations, conversationSessions, defaultAgentIdOf, enqueueOutbox, instagramAccounts, messages, providerEvents, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
+import { moveChannelInTransaction } from "./agents";
 import type { DomainContext } from "./context";
 import { insertMessageInTransaction } from "./conversations";
 import { queueOperatorAlertInTransaction } from "./notifications";
@@ -25,13 +26,13 @@ const INSTAGRAM_DELIVERY_LEASE_MS = 10 * 60_000;
 export const INSTAGRAM_AI_REPLY_LIMIT = 15;
 export const INSTAGRAM_AI_REPLY_WINDOW_MS = 5 * 60_000;
 
-export type InstagramAccountStatus = { username: string | null; instagramUserId: string; status: string; lastError: string | null; tokenExpiresAt: Date; connectedAt: Date };
+export type InstagramAccountStatus = { id: string; username: string | null; instagramUserId: string; status: string; lastError: string | null; tokenExpiresAt: Date; connectedAt: Date; agentId: string | null };
 
 /** The business's connected Instagram account, without its token. Any member can see it; only owners and admins change it. */
 export async function getInstagramAccount(context: DomainContext, input: { userId: string; businessId: string }): Promise<InstagramAccountStatus | null> {
   return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
     await requireBusinessMembership(tx, input);
-    const [row] = await tx.select({ username: instagramAccounts.username, instagramUserId: instagramAccounts.instagramUserId, status: instagramAccounts.status, lastError: instagramAccounts.lastError, tokenExpiresAt: instagramAccounts.tokenExpiresAt, connectedAt: instagramAccounts.createdAt })
+    const [row] = await tx.select({ id: instagramAccounts.id, username: instagramAccounts.username, instagramUserId: instagramAccounts.instagramUserId, status: instagramAccounts.status, lastError: instagramAccounts.lastError, tokenExpiresAt: instagramAccounts.tokenExpiresAt, connectedAt: instagramAccounts.createdAt, agentId: instagramAccounts.agentId })
       .from(instagramAccounts).where(eq(instagramAccounts.businessId, input.businessId)).limit(1);
     return row ?? null;
   });
@@ -41,23 +42,32 @@ export async function getInstagramAccount(context: DomainContext, input: { userI
  * Saves the business's Instagram account after login. Connecting again, with
  * the same or another account, replaces the earlier one: a business answers
  * one Instagram account. An account another workspace already connected is
- * refused, since Meta sends its messages to one place.
+ * refused, since Meta sends its messages to one place. With `agentId`, the
+ * account answers as that agent, and its open conversations follow; without
+ * one, or for an agent archived since, it keeps its agent, or the default
+ * agent when new. Returns the agent it answers as.
  */
 export async function connectInstagramAccount(
   context: DomainContext,
-  input: { userId: string; businessId: string; instagramUserId: string; username?: string; encryptedAccessToken: string; tokenExpiresAt: Date },
-): Promise<void> {
+  input: { userId: string; businessId: string; agentId?: string | undefined; instagramUserId: string; username?: string; encryptedAccessToken: string; tokenExpiresAt: Date },
+): Promise<{ agentId: string | null }> {
   const owner = await withBusinessTransaction(context.db, { actorType: "worker" }, async (tx) => (await tx.execute<{ business_id: string | null }>(sql`select app.resolve_business_by_instagram_account(${input.instagramUserId}) as business_id`)).rows[0]?.business_id ?? null);
   if (owner && owner !== input.businessId) throw Object.assign(new Error("This Instagram account is already connected to another workspace."), { status: 409, code: "instagram_account_in_use" });
-  await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
+  const connected = await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
     const now = new Date();
     const [previous] = await tx.select({ instagramUserId: instagramAccounts.instagramUserId }).from(instagramAccounts).where(eq(instagramAccounts.businessId, input.businessId)).limit(1).for("update");
     if (previous && previous.instagramUserId !== input.instagramUserId) await closeInstagramConversationsInTransaction(tx, input.businessId, now);
     const values = { connectedByUserId: input.userId, instagramUserId: input.instagramUserId, username: input.username ?? null, encryptedAccessToken: input.encryptedAccessToken, tokenExpiresAt: input.tokenExpiresAt, status: "connected", lastError: null, updatedAt: now };
-    await tx.insert(instagramAccounts).values({ businessId: input.businessId, ...values })
-      .onConflictDoUpdate({ target: instagramAccounts.businessId, set: values });
+    const [account] = await tx.insert(instagramAccounts).values({ businessId: input.businessId, ...values })
+      .onConflictDoUpdate({ target: instagramAccounts.businessId, set: values })
+      .returning({ id: instagramAccounts.id, agentId: instagramAccounts.agentId });
     await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.userId, eventType: "instagram_account.connected", entityType: "instagram_account", entityId: null, payload: { instagramUserId: input.instagramUserId, ...(input.username ? { username: input.username } : {}) } });
+    if (!account) return null;
+    const [wanted] = input.agentId ? await tx.select({ id: agents.id }).from(agents).where(and(eq(agents.id, input.agentId), eq(agents.businessId, input.businessId), isNull(agents.archivedAt))).limit(1) : [];
+    if (!wanted || wanted.id === account.agentId) return account.agentId;
+    await moveChannelInTransaction(tx, { businessId: input.businessId, kind: "instagram_account", channelId: account.id, agentId: wanted.id });
+    return wanted.id;
   }).catch((error: unknown) => {
     // A disconnected account another workspace still holds: the unique index, not the resolver, catches it.
     if ((error as { code?: string }).code === "23505") throw Object.assign(new Error("This Instagram account is already connected to another workspace."), { status: 409, code: "instagram_account_in_use" });
@@ -69,6 +79,7 @@ export async function connectInstagramAccount(
     distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
     properties: {},
   });
+  return { agentId: connected ?? null };
 }
 
 /** Removes the account and its token. Messages already received stay in the inbox. */

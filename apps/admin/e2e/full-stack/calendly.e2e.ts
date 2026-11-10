@@ -28,9 +28,9 @@ test.afterAll(async () => { await thirdParties.close(); await database.pool.end(
 const card = (page: Page): Locator => page.locator("li").filter({ has: page.getByRole("heading", { name: settings.integrations.cards.calendly.title, exact: true }) });
 
 async function connect(page: Page): Promise<void> {
-  await page.goto("/integrations");
+  await page.goto("/workspace/connections");
   await card(page).getByRole("button", { name: settings.integrations.actions.connect, exact: true }).click();
-  await expect(page).toHaveURL(/\/integrations\?calendar=calendly&status=success/, { timeout: 30_000 });
+  await expect(page).toHaveURL(/\/workspace\/connections\?calendar=calendly&status=success/, { timeout: 30_000 });
 }
 
 /** A Tuesday at least a week out, so the opening is in the future. */

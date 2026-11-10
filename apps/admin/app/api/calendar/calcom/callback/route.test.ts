@@ -45,7 +45,7 @@ it("checks the user before consuming the state or exchanging the code", async ()
 it("connects the Cal.com account with encrypted tokens and lands on the integrations page", async () => {
   const state = calcomState();
   const response = await GET(callback(state));
-  expect(response.headers.get("location")).toBe("https://app.example.test/integrations?calendar=calcom&status=success");
+  expect(response.headers.get("location")).toBe("https://app.example.test/workspace/connections?calendar=calcom&status=success");
   expect(mocks.consume).toHaveBeenCalledWith(state, "user-1", "business", "calcom");
   expect(mocks.connect).toHaveBeenCalledWith({}, expect.objectContaining({ userId: "user-1", businessId: "business", provider: "calcom", externalAccountId: "1234", encryptedAccessToken: "encrypted:token", encryptedRefreshToken: "encrypted:refresh" }));
   expect(mocks.switchWorkspace).toHaveBeenCalledWith({}, { userId: "user-1", businessId: "business", brand: { kind: "host" } });

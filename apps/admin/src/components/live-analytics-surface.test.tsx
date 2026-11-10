@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { AgentListItem } from "@/hooks/use-agents";
 import type { AnalyticsViewModel } from "@/lib/page-view-models";
 import { LiveAnalyticsSurface } from "./live-analytics-surface";
 
@@ -14,7 +15,7 @@ const clients: QueryClient[] = [];
 beforeEach(() => { vi.stubGlobal("EventSource", class { addEventListener() {} close() {} }); });
 afterEach(() => { cleanup(); clients.forEach((client) => client.clear()); clients.length = 0; vi.unstubAllGlobals(); });
 
-function renderAnalytics(channels: AnalyticsViewModel["channels"], overrides: Partial<AnalyticsViewModel> = {}) {
+function renderAnalytics(channels: AnalyticsViewModel["channels"], overrides: Partial<AnalyticsViewModel> = {}, { agents = [] as AgentListItem[], pending = false } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Test", active: true, role: "business_owner" }] });
@@ -23,7 +24,8 @@ function renderAnalytics(channels: AnalyticsViewModel["channels"], overrides: Pa
     periodDays: 30, from: "2026-09-01T00:00:00Z", to: "2026-10-01T00:00:00Z", granularity: "week", calls: metric, appointments: metric, messages: metric, averageCallDurationSeconds: 0, agentResponseSeconds: metric, series: [], channels, outcomes: [],
     bookedValue: { currency: "USD", ...metric }, timeSavedSeconds: metric, callsWithoutTransferPercent: { current: null, previous: null }, ...overrides,
   };
-  vi.stubGlobal("fetch", vi.fn(async () => Response.json(analytics)));
+  client.setQueryData(["agents", "business"], agents);
+  vi.stubGlobal("fetch", vi.fn(async (url: string) => url.startsWith("/api/agents") ? Response.json(agents) : pending ? await new Promise<Response>(() => undefined) : Response.json(analytics)));
   render(<QueryClientProvider client={client}><LiveAnalyticsSurface /></QueryClientProvider>);
 }
 
@@ -194,5 +196,33 @@ describe("analytics view in the URL", () => {
     expect(parameters().get("interval")).toBe("week");
     expect(parameters().get("from")).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(parameters().get("to")).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
+describe("analytics by agent", () => {
+  const listed = (id: string, name: string, isDefault = false): AgentListItem => ({ id, name, isDefault, paused: false, phoneNumbers: 0, widgetKeys: 0, instagramAccounts: 0, createdAt: "", updatedAt: "" });
+  const two = [listed("front", "Front desk", true), listed("night", "Night")];
+  const none = { phone_call: 0, web_call: 0, sms: 0, web_chat: 0, other: 0 };
+
+  it("splits calls and chats by agent once there are two, a removed agent included", async () => {
+    renderAnalytics(none, { agents: [{ id: "front", name: "Front desk", archived: false, calls: 12, chats: 3 }, { id: "night", name: "Night", archived: false, calls: 1, chats: 0 }, { id: "old", name: "Old line", archived: true, calls: 2, chats: 1 }] }, { agents: two });
+    const card = (await screen.findByText("Old line")).closest("[data-slot='card']")!;
+    expect([...card.querySelectorAll("li")].map((row) => row.textContent)).toEqual(["FFront desk123", "NNight10", "OOld linehome.analytics.agents.removed21"]);
+  });
+
+  it("leaves the split out with one agent", async () => {
+    renderAnalytics(none, { agents: [{ id: "front", name: "Front desk", archived: false, calls: 12, chats: 3 }] }, { agents: [two[0]!] });
+    await screen.findByText("home.analytics.channels.title");
+    expect(screen.queryByText("home.analytics.agents.title")).toBeNull();
+  });
+
+  it("holds the split's place, a row per agent, while the period loads", async () => {
+    renderAnalytics(none, {}, { agents: two, pending: true });
+    const skeleton = await screen.findByTestId("agent-breakdown-loading");
+    expect(skeleton.getAttribute("aria-busy")).toBe("true");
+    expect(skeleton.querySelectorAll(".size-6")).toHaveLength(2);
+    cleanup();
+    renderAnalytics(none, {}, { agents: [two[0]!], pending: true });
+    expect(screen.queryByTestId("agent-breakdown-loading")).toBeNull();
   });
 });

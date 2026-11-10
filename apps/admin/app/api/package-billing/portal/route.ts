@@ -13,5 +13,5 @@ export const dynamic = "force-dynamic";
 export const POST = operatorRoute(async ({ request, userId, businessId, domain }) => {
   const origin = partnerRequestOrigin(request.headers);
   if (!origin) return jsonError("Business not found.", 404, "business_not_found");
-  return NextResponse.json(await openPackagePortal(withStripeConnect(domain), { userId, businessId, returnUrl: `${origin}/settings/subscription` }));
+  return NextResponse.json(await openPackagePortal(withStripeConnect(domain), { userId, businessId, returnUrl: `${origin}/workspace/subscription` }));
 });

@@ -170,7 +170,7 @@ describe("dashboard activation card", () => {
   it("sends a paying operator without a number to claiming instead of checkout", async () => {
     setup({ plan: "starter", paidPlanLive: true, completedWebCalls: 1 });
     expect(await screen.findByText("activation.claimNumber.title")).toBeTruthy();
-    expect(screen.getByText("activation.claimNumber.cta").closest("a")?.getAttribute("href")).toBe("/settings/phone-number");
+    expect(screen.getByText("activation.claimNumber.cta").closest("a")?.getAttribute("href")).toBe("/agents/primary/channels/phone");
     expect(screen.queryByText("activation.upgrade.title")).toBeNull();
     expect(telemetryRef.current!.events.filter(event => event.name === "web.activation.upgrade_prompt_shown")).toHaveLength(0);
     telemetryRef.current!.expectEvent("web.activation.first_call_completed", { businessId: "business", transport: "web_voice" });

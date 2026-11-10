@@ -9,13 +9,14 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // Every member sees whether Instagram is offered, so the card stays hidden
-// until it is, and which account the receptionist answers.
+// until it is, which account the receptionist answers, and as which agent.
+// The account's id lets an agent's channels move it to another agent.
 export const GET = operatorRoute(async ({ userId, businessId }) => {
   const configured = instagramConfigured();
   const account = configured ? await getInstagramAccount(createDomainContext(), { userId, businessId }) : null;
   return NextResponse.json({
     configured,
-    account: account ? { username: account.username, status: account.status, connectedAt: account.connectedAt.toISOString() } : null,
+    account: account ? { id: account.id, username: account.username, status: account.status, connectedAt: account.connectedAt.toISOString(), agentId: account.agentId } : null,
   });
 });
 

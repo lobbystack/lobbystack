@@ -168,7 +168,7 @@ describe.skipIf(!setup.testUrl)("auth on a partner's subdomain", () => {
     const { email, current } = await userWithPassword();
     const cookie = await signIn(email, current);
     const next = newEmail();
-    expect((await auth("/change-email", { method: "POST", cookie, body: { newEmail: next, callbackURL: "/settings/account?emailChanged=true" } })).status).toBe(200);
+    expect((await auth("/change-email", { method: "POST", cookie, body: { newEmail: next, callbackURL: "/account?emailChanged=true" } })).status).toBe(200);
 
     // The current address confirms the change first.
     const [confirm] = await queuedFor(email);

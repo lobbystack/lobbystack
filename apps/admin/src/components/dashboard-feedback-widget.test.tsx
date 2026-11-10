@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { i18n as I18nextInstance } from "i18next";
 
 import type { BrandingSnapshot } from "@/lib/branding-snapshot";
 import { BrandingProvider } from "./branding-provider";
-import { DashboardFeedbackWidget } from "./dashboard-feedback-widget";
+import { DashboardFeedbackDialog } from "./dashboard-feedback-widget";
 
 const submitFeedbackMock = vi.fn();
 const toastErrorMock = vi.fn();
@@ -49,13 +50,17 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-function renderDashboardFeedbackWidget() {
-  return render(
-    <DashboardFeedbackWidget businessId="business-1" />,
-  );
+/** The help menu's Feedback item, which opens the dialog. */
+function Opener() {
+  const [open, setOpen] = useState(false);
+  return <><button onClick={() => setOpen(true)} type="button">Feedback</button><DashboardFeedbackDialog businessId="business-1" onOpenChange={setOpen} open={open} /></>;
 }
 
-describe("DashboardFeedbackWidget", () => {
+function renderDashboardFeedbackWidget() {
+  return render(<Opener />);
+}
+
+describe("DashboardFeedbackDialog", () => {
   beforeEach(() => {
     window.history.replaceState({}, "", "/contacts?status=open#new");
     submitFeedbackMock.mockReset();
@@ -64,7 +69,7 @@ describe("DashboardFeedbackWidget", () => {
     toastSuccessMock.mockReset();
   });
 
-  it("opens the feedback popover", async () => {
+  it("opens the feedback dialog", async () => {
     submitFeedbackMock.mockReturnValue(new Promise(() => {}));
 
     renderDashboardFeedbackWidget();
@@ -72,10 +77,11 @@ describe("DashboardFeedbackWidget", () => {
     fireEvent.click(screen.getByRole("button", { name: "Feedback" }));
 
     expect(screen.getByLabelText("Feedback message")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Send feedback" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Contact us" }).getAttribute("href")).toBe("mailto:support@lobbystack.com");
-    const helpCenterLink = screen.getByRole("link", { name: "Help Center" });
-    expect(helpCenterLink.getAttribute("href")).toBe("https://docs.lobbystack.com");
-    expect(helpCenterLink.getAttribute("target")).toBe("_blank");
+    const docsLink = screen.getByRole("link", { name: "see docs." });
+    expect(docsLink.getAttribute("href")).toBe("https://docs.lobbystack.com");
+    expect(docsLink.getAttribute("target")).toBe("_blank");
   });
 
   it("links to the deployment's own address and docs", () => {
@@ -88,13 +94,12 @@ describe("DashboardFeedbackWidget", () => {
 
     expect(screen.getByRole("link", { name: "Contact us" }).getAttribute("href")).toBe("mailto:support@acme.example");
     expect(screen.getByRole("link", { name: "see docs." }).getAttribute("href")).toBe("https://acme.example");
-    expect(screen.getByRole("link", { name: "Help Center" }).getAttribute("href")).toBe("https://acme.example");
   });
 
   it("links to a partner's own support page on its pages, and to no support it didn't set", () => {
     const onPartnerPage = (support: string | null) => {
       const branding: BrandingSnapshot = { appName: "Bright Desk", logoUrl: null, final: true, partner: { faviconUrl: null, color: null, links: { terms: null, privacy: null, support } } };
-      render(<BrandingProvider i18n={{ options: {} } as unknown as I18nextInstance} initial={branding}><DashboardFeedbackWidget businessId="business-1" /></BrandingProvider>);
+      render(<BrandingProvider i18n={{ options: {} } as unknown as I18nextInstance} initial={branding}><Opener /></BrandingProvider>);
       fireEvent.click(screen.getByRole("button", { name: "Feedback" }));
     };
     onPartnerPage("https://bright.example.test/help");
@@ -103,12 +108,10 @@ describe("DashboardFeedbackWidget", () => {
     expect(contact.getAttribute("target")).toBe("_blank");
     // The host's docs never show on a partner's pages.
     expect(screen.queryByRole("link", { name: "see docs." })).toBeNull();
-    expect(screen.queryByRole("link", { name: "Help Center" })).toBeNull();
     expect(contact.parentElement?.textContent).toBe("Need help? Contact us");
     cleanup();
     onPartnerPage(null);
     expect(screen.queryByRole("link", { name: "Contact us" })).toBeNull();
-    expect(screen.queryByRole("link", { name: "Help Center" })).toBeNull();
   });
 
   it("keeps send disabled for an empty message", async () => {

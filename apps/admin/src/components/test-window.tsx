@@ -193,10 +193,12 @@ type TestWindowProps = {
   businessId?: string;
   businessSlug?: string;
   className?: string;
+  /** Without it the window has no button of its own, and Home, the agent's header and the phone header open it. */
+  trigger?: boolean;
 };
 
-/** The window for testing an agent, and its button in the utility bar. Anything else opens it with openTestWindow. */
-export function TestWindow({ businessId, businessSlug, className }: TestWindowProps) {
+/** The window for testing an agent, which the dashboard mounts once. Anything else opens it with openTestWindow. */
+export function TestWindow({ businessId, businessSlug, className, trigger = true }: TestWindowProps) {
   const { t } = useTranslation("common");
   const [opened, setOpened] = useState<TestWindowOptions | null>(null);
   const voiceControlsRef = useRef<WebVoiceControls | null>(null);
@@ -220,9 +222,11 @@ export function TestWindow({ businessId, businessSlug, className }: TestWindowPr
 
   return (
     <div className={cn("hidden items-center md:flex", className)}>
-      <Button aria-label={t("testCall.trigger")} onClick={() => setOpened({})} size="sm" type="button" variant="outline">
-        <span className="text-sidebar-foreground">{t("testCall.trigger")}</span>
-      </Button>
+      {trigger ? (
+        <Button aria-label={t("testCall.trigger")} onClick={() => setOpened({})} size="sm" type="button" variant="outline">
+          <span className="text-sidebar-foreground">{t("testCall.trigger")}</span>
+        </Button>
+      ) : null}
 
       {/* A stray click beside the window must not hang up a call. */}
       <Dialog disablePointerDismissal onOpenChange={(open) => { if (!open) close(); }} open={opened !== null}>

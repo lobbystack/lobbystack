@@ -1,21 +1,22 @@
-import type { ReactElement } from "react";
-import { expect, it, vi } from "vitest";
+import { beforeEach, expect, it, vi } from "vitest";
 
-const fixture = vi.hoisted(() => ({ headers: new Headers() }));
-vi.mock("next/headers", () => ({ headers: async () => fixture.headers }));
+const fixture = vi.hoisted(() => ({ capabilities: [] as string[] }));
 // Next's redirect throws, so nothing after it runs.
 vi.mock("next/navigation", () => ({ redirect: vi.fn((to: string) => { throw Object.assign(new Error("NEXT_REDIRECT"), { to }); }) }));
-vi.mock("@/components/first-settings-tab", () => ({ FirstSettingsTab: () => null }));
+vi.mock("@/lib/dashboard-request", () => ({ readDashboardRequest: async () => ({ can: (capability: string) => fixture.capabilities.includes(capability), opensPartnerBilling: false }) }));
 
-import { FirstSettingsTab } from "@/components/first-settings-tab";
 import SettingsPage from "./page";
+import WorkspacePage from "../workspace/page";
 
-it("opens Usage on the host's domain, whose direct businesses give every tab", async () => {
-  fixture.headers = new Headers({ "x-lobbystack-brand": "host" });
-  await expect(SettingsPage()).rejects.toMatchObject({ to: "/settings/usage" });
+beforeEach(() => { fixture.capabilities = ["activity", "setup", "team", "billing", "api_keys", "mcp"]; });
+
+it("opens Business details for a business that gives every capability", async () => {
+  await expect(SettingsPage()).rejects.toMatchObject({ to: "/workspace/business" });
+  await expect(WorkspacePage()).rejects.toMatchObject({ to: "/workspace/business" });
 });
 
-it("on a partner's host, opens the first tab the business allows", async () => {
-  fixture.headers = new Headers({ "x-lobbystack-brand": "partner:5b1f6c43-34a5-4a8e-9a43-6c1f8d5f1c11", "x-lobbystack-brand-origin": "https://bright.portal.example.test" });
-  expect(((await SettingsPage()) as ReactElement).type).toBe(FirstSettingsTab);
+it("opens Usage on an activity-only partner business", async () => {
+  fixture.capabilities = ["activity"];
+  await expect(SettingsPage()).rejects.toMatchObject({ to: "/workspace/usage" });
+  await expect(WorkspacePage()).rejects.toMatchObject({ to: "/workspace/usage" });
 });

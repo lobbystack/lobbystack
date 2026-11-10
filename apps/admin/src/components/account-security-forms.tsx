@@ -56,7 +56,7 @@ export function AccountSecurityForms({ currentEmail }: { currentEmail: string | 
     if (emailProblem) return;
     setPending(true);
     try {
-      await postAuth("change-email", { newEmail: nextEmail, callbackURL: "/settings/account?emailChanged=true" });
+      await postAuth("change-email", { newEmail: nextEmail, callbackURL: "/account?emailChanged=true" });
       toast.success(t("account.changeEmail.confirmationSent", { email: nextEmail })); changeEmailOpen(false);
     } catch (error) { setEmailError(error instanceof Error ? error.message : t("account.changeEmail.errors.failed")); }
     finally { setPending(false); }

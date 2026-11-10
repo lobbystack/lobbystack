@@ -35,15 +35,15 @@ it("opens the package's checkout in the payer's name, with Stripe sending them b
     userId: "user",
     businessId: "business",
     email: "user@example.com",
-    successUrl: "https://acme.portal.example.test/settings/subscription?checkout=complete",
-    cancelUrl: "https://acme.portal.example.test/settings/subscription",
+    successUrl: "https://acme.portal.example.test/workspace/subscription?checkout=complete",
+    cancelUrl: "https://acme.portal.example.test/workspace/subscription",
   });
 });
 
 it("opens the partner's customer portal, which returns to the billing page", async () => {
   const response = await call(portal, "/api/package-billing/portal", "POST");
   expect(await response.json()).toEqual({ url: "https://billing.stripe.test/p/session/cus_1" });
-  expect(fixture.portal).toHaveBeenCalledWith(expect.objectContaining({ stripeConnect: "stripe" }), { userId: "user", businessId: "business", returnUrl: "https://acme.portal.example.test/settings/subscription" });
+  expect(fixture.portal).toHaveBeenCalledWith(expect.objectContaining({ stripeConnect: "stripe" }), { userId: "user", businessId: "business", returnUrl: "https://acme.portal.example.test/workspace/subscription" });
 });
 
 it("opens neither on the host's own domain, where no partner's business shows", async () => {

@@ -44,7 +44,7 @@ const prompts: Record<SetupPromptId, string[]> = {
     "",
     "Read these first:",
     "",
-    ...docs("quickstart", "agent/ai-settings/overview", "ai/mcp", "billing/plans"),
+    ...docs("quickstart", "agent/greeting-and-voice", "ai/mcp", "billing/plans"),
     openApiSpec,
     "",
     sourceOfTruth,
@@ -69,7 +69,7 @@ const prompts: Record<SetupPromptId, string[]> = {
     "Tell me about these limits before I count on them:",
     "",
     "* The receptionist doesn't reply to text messages.",
-    "* It can't copy someone's voice. I pick one of the voices in AI settings.",
+    "* It can't copy someone's voice. I pick one of the voices on the agent's Name, greeting and voice page.",
     "* Website chat isn't part of the hosted plans.",
   ],
   saas: [

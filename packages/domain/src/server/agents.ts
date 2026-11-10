@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, inArray, isNull, ne, notInArray, sql } from "drizzle-orm";
 
-import { agentRules, agents, conversations, instagramAccounts, phoneNumbers, widgetKeys, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { agentRules, agents, conversations, inOrder, instagramAccounts, phoneNumbers, widgetKeys, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { billingErrorCodes, defaultAppointmentChangePolicy, type Entitlement } from "@lobbystack/shared";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
@@ -75,11 +75,12 @@ export async function listAgents(context: DomainContext, input: { userId: string
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessMembership(tx, input);
     const active = await listActiveAgentsInTransaction(tx, input.businessId);
-    const [numbers, widgets, instagram, entitlement] = await Promise.all([
-      tx.select({ agentId: phoneNumbers.agentId, total: count() }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), notInArray(phoneNumbers.status, ["reclaimed", "released"]))).groupBy(phoneNumbers.agentId),
-      tx.select({ agentId: widgetKeys.agentId, total: count() }).from(widgetKeys).where(and(eq(widgetKeys.businessId, input.businessId), ne(widgetKeys.status, "revoked"))).groupBy(widgetKeys.agentId),
-      tx.select({ agentId: instagramAccounts.agentId, total: count() }).from(instagramAccounts).where(eq(instagramAccounts.businessId, input.businessId)).groupBy(instagramAccounts.agentId),
-      loadEntitlement(tx, input.businessId),
+    // One transaction runs one query at a time.
+    const [numbers, widgets, instagram, entitlement] = await inOrder([
+      () => tx.select({ agentId: phoneNumbers.agentId, total: count() }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), notInArray(phoneNumbers.status, ["reclaimed", "released"]))).groupBy(phoneNumbers.agentId),
+      () => tx.select({ agentId: widgetKeys.agentId, total: count() }).from(widgetKeys).where(and(eq(widgetKeys.businessId, input.businessId), ne(widgetKeys.status, "revoked"))).groupBy(widgetKeys.agentId),
+      () => tx.select({ agentId: instagramAccounts.agentId, total: count() }).from(instagramAccounts).where(eq(instagramAccounts.businessId, input.businessId)).groupBy(instagramAccounts.agentId),
+      () => loadEntitlement(tx, input.businessId),
     ]);
     const counted = (rows: Array<{ agentId: string | null; total: number }>, agentId: string) => Number(rows.find((row) => row.agentId === agentId)?.total ?? 0);
     const paused = pausedAgentIds(entitlement, active);
@@ -181,10 +182,10 @@ export async function archiveAgentInTransaction(tx: DatabaseTransaction, input: 
   if (agent.isDefault) throw agentError("Choose another default agent first.", 409, "agent_is_default");
   if (input.reassignToAgentId === agent.id) throw agentError("Choose another agent to take over.", 400, "agent_reassign_invalid");
   const successor = input.reassignToAgentId ? await requireActiveAgentInTransaction(tx, input.businessId, input.reassignToAgentId) : await defaultAgentInTransaction(tx, input.businessId);
-  const [numbers, widgets, instagram] = await Promise.all([
-    tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.agentId, agent.id), notInArray(phoneNumbers.status, ["reclaimed", "released"]))),
-    tx.select({ id: widgetKeys.id }).from(widgetKeys).where(and(eq(widgetKeys.businessId, input.businessId), eq(widgetKeys.agentId, agent.id), ne(widgetKeys.status, "revoked"))),
-    tx.select({ id: instagramAccounts.id }).from(instagramAccounts).where(and(eq(instagramAccounts.businessId, input.businessId), eq(instagramAccounts.agentId, agent.id))),
+  const [numbers, widgets, instagram] = await inOrder([
+    () => tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.agentId, agent.id), notInArray(phoneNumbers.status, ["reclaimed", "released"]))),
+    () => tx.select({ id: widgetKeys.id }).from(widgetKeys).where(and(eq(widgetKeys.businessId, input.businessId), eq(widgetKeys.agentId, agent.id), ne(widgetKeys.status, "revoked"))),
+    () => tx.select({ id: instagramAccounts.id }).from(instagramAccounts).where(and(eq(instagramAccounts.businessId, input.businessId), eq(instagramAccounts.agentId, agent.id))),
   ]);
   const moves = [
     ...numbers.map(({ id }) => ({ kind: "phone_number" as const, channelId: id })),

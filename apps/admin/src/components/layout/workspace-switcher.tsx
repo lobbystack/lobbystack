@@ -8,6 +8,7 @@ import { Check, ChevronsUpDown, Plus } from "lucide-react";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useBranding } from "@/components/branding-provider";
 import { SidebarTeamSkeleton } from "@/components/loading-skeletons";
+import { agentPathAfterBusinessSwitch } from "@/lib/agent-pages";
 import { recordPendingWorkspaceSwitch } from "@/lib/workspace-analytics";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -37,6 +38,9 @@ export function WorkspaceSwitcher() {
       recordPendingWorkspaceSwitch(businessId, active?.businessId ?? businessId);
       queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== "businesses" });
       await queryClient.invalidateQueries({ queryKey: ["businesses"] });
+      // The old business's agent isn't in the new one, so an agent's page moves to the new default agent's.
+      const agentPath = agentPathAfterBusinessSwitch(window.location.pathname, window.location.search);
+      if (agentPath) router.replace(agentPath);
       router.refresh();
     } finally {
       setSwitching(false);

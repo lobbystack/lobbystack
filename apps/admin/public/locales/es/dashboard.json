@@ -92,6 +92,12 @@
         "bookedValue": "Valor reservado",
         "timeSaved": "Tiempo ahorrado",
         "withoutTransfer": "Llamadas sin transferir"
+      },
+      "agents": {
+        "title": "Por agente",
+        "calls": "Llamadas",
+        "chats": "Chats",
+        "removed": "Eliminado"
       }
     },
     "metrics": {
@@ -150,7 +156,8 @@
       "requested": "Solicitado: {{details}}",
       "notes": "Notas: {{notes}}",
       "rescheduleRequest": "Solicitud de cambio de hora",
-      "newTime": "Nueva hora: {{time}}"
+      "newTime": "Nueva hora: {{time}}",
+      "viewAll": "Ver todo"
     },
     "upcoming": {
       "title": "Próximas",

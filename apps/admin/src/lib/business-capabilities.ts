@@ -25,6 +25,8 @@ const routeCapabilities: ReadonlyArray<readonly [prefix: string, capability: Cap
   ["/api/dashboard", "activity"],
   ["/api/employees", "setup"],
   ["/api/hours", "setup"],
+  // Calls, texts, website chats and Instagram threads in one list.
+  ["/api/inbox", "activity"],
   ["/api/integrations", "setup"],
   ["/api/knowledge", "setup"],
   ["/api/messages", "activity"],

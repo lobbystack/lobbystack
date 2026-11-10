@@ -1,0 +1,129 @@
+---
+title: "Configure los cambios de citas"
+description: "Permita que su agente con IA cancele y reprograme citas durante las llamadas, con un nivel de verificación configurable."
+sidebarTitle: "Cambios de citas"
+contentType: "How-to"
+---
+
+Cuando un cliente necesita cancelar o mover una cita, LobbyStack puede gestionar la solicitud durante la llamada.
+
+Su equipo no tiene que leer un mensaje, revisar el calendario y responder a mano: el agente con IA identifica la cita, confirma la solicitud y actualiza la reserva por usted.
+
+## Qué puede gestionar la IA
+
+LobbyStack puede ayudar a sus clientes a:
+
+- Encontrar su próxima cita.
+- Cancelar una cita que ya no necesitan.
+- Reprogramar la cita a otro horario disponible.
+- Confirmar el cambio antes de aplicarlo.
+- Completar la solicitud durante la llamada.
+
+Esta función está pensada para los cambios de citas del día a día, que suelen apartar a su equipo de tareas más importantes.
+
+## Confirmación integrada antes de los cambios
+
+Una simple petición informal no basta para cambiar una cita. LobbyStack pide datos suficientes para asegurarse de que el cliente modifica la cita correcta.
+
+De forma predeterminada, el agente usa:
+
+- El número de teléfono de la llamada.
+- El nombre del cliente.
+- Un dato de la cita, como la hora o el servicio.
+- Una confirmación final clara antes de cancelar o reprogramar.
+
+Si el agente no puede confirmar la cita con seguridad, no hace el cambio automáticamente. En su lugar, puede pasar la conversación a su equipo.
+
+<Note>
+  LobbyStack le ayuda a aplicar pasos de confirmación coherentes, pero no sustituye su propia revisión legal o de privacidad. Configure el nivel de verificación que corresponda a su negocio, su región y su tipo de cita.
+</Note>
+
+## Elegir cómo se verifica a quien llama
+
+Si su negocio quiere más garantías, **Verificación de quien llama** añade un paso antes de que la IA modifique una cita:
+
+| Opción | Qué hace quien llama |
+| --- | --- |
+| **Número de teléfono y datos de la cita** | Llama desde el número con el que se reservó la cita y dice su hora o servicio. Es la opción predeterminada. |
+| **Código de un solo uso por SMS** | Además, lee un código que el agente envía por SMS a ese número. |
+| **PIN en el teclado** | Además, marca un PIN en el teclado del teléfono. Su equipo configura el PIN de cada cliente, sin enviar SMS. |
+
+Una verificación más estricta resulta útil cuando las citas son delicadas, de alto valor o están sujetas a políticas internas más estrictas.
+
+### Configurar los PIN
+
+Con **PIN en el teclado**, el agente pide a quien llama que marque su PIN en el teclado del teléfono y pulse la tecla almohadilla (#). El PIN nunca llega a la IA ni a la transcripción de la llamada, y el agente no acepta un PIN dicho en voz alta.
+
+<Steps>
+  <Step title="Abra el contacto">
+    En la barra lateral del panel, vaya a **Contactos** y abra el cliente.
+  </Step>
+  <Step title="Configure el PIN">
+    En la pestaña **Detalles**, en **PIN del teclado**, seleccione **Configurar PIN**. Escriba de 4 a 8 dígitos, o seleccione **Generar**, y guarde.
+  </Step>
+  <Step title="Comparta el PIN con el cliente">
+    LobbyStack guarda el PIN de forma segura y no puede volver a mostrarlo. Si el cliente lo olvida, configure uno nuevo.
+  </Step>
+</Steps>
+
+Para dar un PIN a muchos clientes a la vez, use la [línea de comandos](/es/api/cli) o la [API](/es/api/overview). `lobbystack contacts generate-pins --all` crea un PIN para cada contacto que tiene número de teléfono y no tiene PIN, y muestra cada PIN solo esta vez. `lobbystack contacts set-pins` configura los PIN que usted elija. En la API, son `POST /contacts/passcodes/generate` y `POST /contacts/passcodes`.
+
+Quien llama puede intentar su PIN 3 veces en cada cambio. Tras 5 PIN incorrectos seguidos, incluso en llamadas distintas, el PIN se bloquea y el contacto lo muestra como bloqueado. Configurar un PIN nuevo lo desbloquea.
+
+Si quien llama no tiene PIN, o lo tiene bloqueado, no puede cambiar citas por teléfono. En su lugar, el agente pasa su solicitud de cancelación o de cambio de hora a su equipo. Cada solicitud aparece en **Acción requerida** en **Inicio** y en la página de la llamada. Haz clic en **Aprobar la cancelación** para cancelar la cita, o en **Aprobar cambio de hora** para moverla a la hora que pidió quien llamó. Si esa hora ya no está libre, la cita no cambia y la solicitud sigue abierta.
+
+<Warning>
+  En una instalación autoalojada de LobbyStack, los PIN se comprueban con el `OTP_HASH_SECRET` del servidor (o `ENCRYPTION_KEY` si no está configurado). Si ese secreto cambia, todos los PIN guardados dejan de funcionar y hay que configurarlos de nuevo.
+</Warning>
+
+## Actualizaciones automáticas del calendario
+
+Cuando se aprueba un cambio, LobbyStack actualiza el registro de la cita y sincroniza el cambio con su calendario conectado.
+
+En las cancelaciones, la cita se marca como cancelada y el evento del calendario se actualiza o se elimina según la conexión del calendario.
+
+En las reprogramaciones, LobbyStack comprueba la disponibilidad antes de ofrecer un nuevo horario. Si el horario está libre, la cita se mueve y se actualiza la sincronización con el calendario.
+
+<Tip>
+  Conecte Google Calendar antes de confiar en la reprogramación automática. Así LobbyStack evita ofrecer horarios que ya están ocupados.
+</Tip>
+
+## Activar o desactivar los cambios de citas
+
+Usted decide si el agente puede cancelar o reprogramar citas, y cómo verifica a quien llama.
+
+<Steps>
+  <Step title="Abra Llamadas y citas">
+    Haga clic en **Agentes** en la barra lateral, abra el agente y haga clic en **Llamadas y citas** en su menú. Cada agente tiene sus propios ajustes de cambios de citas.
+  </Step>
+  <Step title="Busque los cambios de citas">
+    Desplácese hasta **Cambios de citas**.
+  </Step>
+  <Step title="Elija qué puede hacer la IA">
+    Active o desactive la cancelación y la reprogramación.
+  </Step>
+  <Step title="Elija el nivel de verificación">
+    Elija una opción en **Verificación de quien llama** si quiere una verificación más estricta.
+  </Step>
+  <Step title="Guarde">
+    Guarde sus cambios.
+  </Step>
+</Steps>
+
+## Configuración recomendada
+
+Para ofrecer la mejor experiencia a sus clientes:
+
+- Añada entradas de servicios claras para que sus clientes puedan describir lo que reservaron.
+- Conecte Google Calendar para que LobbyStack pueda comprobar la disponibilidad y sincronizar los cambios.
+- Mantenga actualizado su número de transferencia para los casos que necesitan revisión de una persona.
+- Use un código de un solo uso por SMS o un PIN en el teclado para citas delicadas o de alto valor.
+
+<CardGroup cols={2}>
+  <Card title="Configure los servicios" icon="calendar-check" href="/es/settings/services">
+    Añada tipos de cita y detalles de servicios que ayuden a sus clientes a identificar su reserva.
+  </Card>
+  <Card title="Conecte Google Calendar" icon="calendar" href="/es/integrations/google-calendar">
+    Permita que LobbyStack compruebe la disponibilidad y sincronice automáticamente los cambios de reservas.
+  </Card>
+</CardGroup>

@@ -6,7 +6,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { openTestWindow, useTestWindowReady } from "@/lib/test-window";
 import { cn } from "@/lib/utils";
 
-/** Where the dashboard's utility bar renders on phones. */
+/** Where the help menu renders on phones, in the header. */
 export const MOBILE_UTILITY_SLOT_ID = "mobile-utility-slot";
 
 /** The test window's button on phones. */

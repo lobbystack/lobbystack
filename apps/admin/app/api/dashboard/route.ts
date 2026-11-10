@@ -8,12 +8,14 @@ import {
   contacts,
   conversations,
 } from "@lobbystack/db";
-import { listOpenVoiceFollowUps, listRecentCalls, listUpcomingAppointments, readFirstRealConversationAt } from "@lobbystack/domain";
+import { countOpenVoiceFollowUps, listOpenVoiceFollowUps, listRecentCalls, listUpcomingAppointments, readFirstRealConversationAt } from "@lobbystack/domain";
 import { operatorRoute } from "@/lib/operator-request";
 
 export const dynamic = "force-dynamic";
 
 const DAY_MS = 24 * 60 * 60 * 1_000;
+/** How many open requests Home lists. */
+const ACTION_REQUIRED_SHOWN = 6;
 
 /** Percent change between two reporting periods, matching the previous dashboard math. */
 function percentageDelta(current: number, previous: number): number {
@@ -47,6 +49,9 @@ export const GET = operatorRoute(async ({ businessId, transaction }) => NextResp
   const liveCallCount = await tx.select({ count: count() }).from(calls).where(and(eq(calls.businessId, businessId), eq(calls.status, "started")));
   const handoffConversations = await tx.select({ id: conversations.id, contactName: contacts.name, summary: conversations.summary, currentIntent: conversations.currentIntent, updatedAt: conversations.updatedAt }).from(conversations).leftJoin(contacts, eq(conversations.contactId, contacts.id)).where(and(eq(conversations.businessId, businessId), eq(conversations.automationState, "human_handoff"))).orderBy(desc(conversations.updatedAt)).limit(6);
   const voiceFollowUps = await listOpenVoiceFollowUps(tx, businessId);
+  // Home lists a few of these; the count says how many are open in all.
+  const openFollowUps = await countOpenVoiceFollowUps(tx, businessId);
+  const [openHandoffs] = await tx.select({ count: count() }).from(conversations).where(and(eq(conversations.businessId, businessId), eq(conversations.automationState, "human_handoff")));
   const firstRealConversationAt = await readFirstRealConversationAt(tx, businessId);
 
   const monthlyTotals = new Map((aggregates?.monthlyCalls ?? []).map((bucket) => [bucket.month, bucket.total]));
@@ -101,7 +106,8 @@ export const GET = operatorRoute(async ({ businessId, transaction }) => NextResp
       body: conversation.summary ?? conversation.currentIntent ?? "A customer conversation needs an operator response.",
       createdAt: conversation.updatedAt.toISOString(),
       conversationId: conversation.id,
-    }))].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()).slice(0, 6),
+    }))].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()).slice(0, ACTION_REQUIRED_SHOWN),
+    actionRequiredCount: openFollowUps + Number(openHandoffs?.count ?? 0),
     upcoming: upcoming.map((appointment) => ({
       ...appointment,
       startsAt: appointment.startsAt.toISOString(),

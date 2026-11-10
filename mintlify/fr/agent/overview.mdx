@@ -1,44 +1,60 @@
 ---
 title: "Configurer votre agent IA"
-description: "Utilisez la section Agent pour configurer les paramètres IA, les connaissances, les services, les employés et les règles de votre agent."
+description: "Trouvez les réglages de chaque agent dans le tableau de bord : son message d'accueil et sa voix, ses instructions, ses règles, la gestion des appels et ses canaux."
 sidebarTitle: "Vue d'ensemble de l'agent"
 contentType: "Conceptual"
 ---
 
-La section **Agent** détermine le comportement de votre agent IA. Elle se divise en Paramètres IA, Connaissances, Services, Employés et Règles.
+Un agent est l'IA qui répond à vos appels, à vos clavardages et à vos messages. Chaque espace de travail commence avec un agent. Avec un forfait payant, vous pouvez [en ajouter d'autres](/fr/agent/manage-agents), par exemple un pour les heures de fermeture ou un par emplacement.
 
 Les modifications s'appliquent aux nouveaux appels et aux nouvelles réponses du clavardage du site Web. Elles ne modifient pas les appels ni les messages passés.
 
+## Ouvrir un agent
+
+Cliquez sur **Agents** dans la barre latérale. Avec un seul agent, la barre latérale passe au menu de cet agent. Avec plusieurs, la page **Agents** les liste, et chaque nom sous **Agents** ouvre son menu.
+
+La ligne en haut du menu de l'agent vous ramène en arrière. Avec plusieurs agents, cliquez sur le nom de l'agent en haut pour passer à un autre sur la même page.
+
+## Ce que chaque agent possède
+
 <CardGroup cols={2}>
-  <Card title="Paramètres IA" icon="comment-dots" href="/fr/agent/ai-settings/overview">
-    Définissez la phrase d'ouverture, la langue des appels, la voix, la devise, les modifications de rendez-vous et le numéro de transfert par défaut.
+  <Card title="Nom, accueil et voix" icon="comment-dots" href="/fr/agent/greeting-and-voice">
+    Nommez l'agent, rédigez sa phrase d'ouverture et choisissez sa voix.
   </Card>
-  <Card title="Connaissances" icon="book-open" href="/fr/agent/knowledge">
-    Ajoutez des informations sur votre entreprise à partir d'entrées de texte, de documents ou d'une importation de site Web, et répondez aux questions que votre agent n'a pas su traiter.
-  </Card>
-  <Card title="Services" icon="calendar-check" href="/fr/agent/services">
-    Ajoutez vos types de rendez-vous avec leur durée, leur prix et les informations dont les appelants ont besoin.
-  </Card>
-  <Card title="Employés" icon="id-card" href="/fr/agent/employees">
-    Ajoutez les personnes que les appelants peuvent réserver ou demander, avec leurs services, leurs horaires et leurs congés.
+  <Card title="Instructions" icon="scroll" href="/fr/agent/instructions">
+    Indiquez à l'agent comment se comporter au téléphone, dans le clavardage et dans les textos.
   </Card>
   <Card title="Règles" icon="list-check" href="/fr/agent/rules">
-    Ajoutez des consignes pour les transferts, les demandes de rappel, le comportement de repli et les cas particuliers.
+    Ajoutez des règles en texte simple pour les transferts, les demandes de rappel et les cas particuliers.
+  </Card>
+  <Card title="Appels et rendez-vous" icon="phone-volume" href="/fr/agent/calls-and-booking">
+    Réglez le numéro de transfert, Le personnel répond d'abord, la prise de rendez-vous et les modifications de rendez-vous.
+  </Card>
+  <Card title="Canaux" icon="tower-broadcast" href="/fr/agent/channels">
+    Consultez les numéros de téléphone, les widgets de site Web et le compte Instagram auxquels l'agent répond.
   </Card>
 </CardGroup>
 
-## Comment la configuration est utilisée
+## Ce que tous les agents partagent
 
-LobbyStack prépare les réglages enregistrés de l'agent pour chaque appel en direct. Le comportement reste ainsi stable pendant toute la conversation.
+Vos agents partagent les détails de l'entreprise, les connaissances, les services, les employés et les connexions de calendrier de l'espace de travail. Vous les modifiez une fois dans **Réglages**, et chaque agent les utilise. La page **Commun à tous les agents** de l'agent mène à chacun :
 
-Pour le clavardage du site Web, LobbyStack s'appuie sur le contexte actuel de l'entreprise et sur l'état enregistré de la conversation pour générer les réponses.
+- [Détails de l'entreprise](/fr/settings/business-details) : le résumé de l'entreprise, les heures d'ouverture, les langues, le fuseau horaire et la devise
+- [Connaissances](/fr/settings/knowledge) : les entrées de texte, les documents et les importations de site Web
+- [Services](/fr/settings/services) : ce que les appelants peuvent réserver
+- [Employés](/fr/settings/employees) : les personnes que les appelants peuvent réserver ou demander
+- [Connexions](/fr/integrations/overview) : Google Calendar, Cal.com et Calendly
+
+## Comment LobbyStack utilise les réglages
+
+LobbyStack prépare les réglages enregistrés de l'agent pour chaque appel en direct. Le comportement reste ainsi le même pendant tout l'appel. Pour le clavardage du site Web, LobbyStack lit les détails actuels de l'entreprise et la conversation jusque-là pour rédiger chaque réponse.
 
 ## Configuration minimale avant les vrais appelants
 
 Avant de renvoyer de vrais appels, vérifiez que :
 
-- Votre message d'accueil nomme votre entreprise et indique clairement à quoi l'appelant peut s'attendre.
-- La langue client par défaut est celle que parlent la plupart de vos appelants, car les appels commencent dans cette langue.
-- Un numéro de transfert est enregistré si vous voulez qu'un humain puisse prendre le relais en direct. Il doit se trouver dans un [pays que LobbyStack peut appeler](/fr/agent/ai-settings/overview#numéro-de-transfert-par-défaut).
-- Vos entrées de connaissances couvrent les heures d'ouverture, l'adresse, les services, les prix, les politiques et les questions fréquentes des appelants.
-- Vos services, vos employés et votre connexion Google Calendar sont prêts avant de compter sur la prise de rendez-vous ou les modifications de rendez-vous.
+- Votre message d'accueil nomme votre entreprise et indique clairement à quoi l'appelant peut s'attendre
+- La [langue client par défaut](/fr/settings/business-details#langue-client-par-défaut) est celle que parlent la plupart de vos appelants, car les appels commencent dans cette langue
+- Un numéro de transfert est enregistré si vous voulez qu'une personne puisse prendre le relais en direct. Il doit se trouver dans un [pays que LobbyStack peut appeler](/fr/agent/calls-and-booking#numéro-de-transfert-par-défaut).
+- Vos connaissances couvrent les heures d'ouverture, l'adresse, les services, les prix, les politiques et les questions fréquentes des appelants
+- Vos services, vos employés et votre connexion de calendrier sont prêts avant de compter sur la prise de rendez-vous ou les modifications de rendez-vous

@@ -1,0 +1,65 @@
+---
+title: "Add the website widget"
+description: "Configure LobbyStack's embeddable chat and web-call widget, then add the loader script to your website."
+sidebarTitle: "Website widget"
+contentType: "How-to"
+---
+
+A website widget is one of an agent's channels. Visitors can chat, leave contact details, and start a browser call from it, and the agent that owns the widget answers them. Each agent can have its own widgets, such as one per website.
+
+<Note>
+  Website chat is restricted and isn't part of the hosted plans. New widget keys are off by default. On a self-hosted deployment, set `WIDGET_KEY_ISSUANCE_ENABLED=true` to create them. Existing keys keep working.
+</Note>
+
+## Configure the widget
+
+<Steps>
+  <Step title="Open the widget page">
+    Click **Agents** in the sidebar, open the agent, and click **Channels** in its menu. Under **Website widget**, click **Add to my website** for a first widget, or **Manage** to open the agent's widgets. On that page, click **Add a widget**, or **Edit** on a widget's card.
+  </Step>
+  <Step title="Configure its appearance">
+    Choose the color, position, title, subtitle, greeting, and language behavior.
+  </Step>
+  <Step title="Configure lead capture">
+    Enable the lead form, choose required contact fields, and decide whether it appears before chat.
+  </Step>
+  <Step title="List your websites">
+    In **Websites**, enter each address where the chat should appear, such as `https://www.example.com`. Separate addresses with commas.
+  </Step>
+  <Step title="Add the code to your website">
+    Select **Copy code** and paste it before the closing `</body>` tag on your website.
+  </Step>
+</Steps>
+
+## Protect web calls
+
+LobbyStack signs widget sessions and checks the visitor's parent origin against the widget key's allowed origins before it starts a call.
+
+Use an HTTPS website in production. Keep `WIDGET_SESSION_SECRET` and other signing credentials on the server.
+
+## Live chat with your team
+
+You can let someone from your team join a website chat. Turn on **Let visitors chat with your team** on a widget. It's off until you turn it on.
+
+During your opening hours, or at any time if you haven't set any, a visitor who asks for a person in the chat waits for your team:
+
+1. The agent tells the visitor it let the team know, and stops answering.
+2. Your team gets a **Visitor asking for a person** alert, and the chat shows **Visitor waiting** in the [Inbox](/dashboard/inbox).
+3. The first person who replies or clicks **Join chat** has the chat. The visitor sees the first name on their profile.
+4. If nobody joins within 3 minutes, the agent takes the chat back and asks the visitor for their name and number, so someone can call them back.
+
+Turn the alert on or off for email and SMS on the agent's **Website widget** page.
+
+Outside opening hours, on browser calls, and when live chat is off, the agent offers to take a message so your team can call the visitor back. Callback requests appear in the dashboard like other messages.
+
+Website chats and browser calls can't be transferred to a phone line, so the agent never says it's connecting the visitor. On browser calls, and in chats with live chat off, it also gives the visitor your business phone number when you've set a **Default transfer number**. The visitor can call that number and ask for a person. The agent follows your transfer rule: if transfers are only for urgent issues, it gives the number for urgent matters, and if transfers are off, it gives no number.
+
+## Manage your widgets
+
+Each widget has its own websites and settings. From a widget's card, you can edit it, pause it, or remove it. On the agent's **Channels**, **Disconnect** removes a widget too. Removing a widget stops the chat on every website that uses it, and you can't undo it.
+
+To have another agent answer a widget, [move it](/agent/channels#move-a-channel-to-another-agent). The widget keeps its code, so you don't change your website.
+
+## Verify the installation
+
+Open the public website in a private browser window. Confirm that the widget loads, starts a chat, and displays the contact form. If web calls are enabled, grant microphone access and place a test call.

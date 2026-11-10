@@ -1,44 +1,60 @@
 ---
 title: "Configure su agente con IA"
-description: "Use la sección Agente para configurar los ajustes de IA, el conocimiento, los servicios, los empleados y las reglas de su agente."
+description: "Encuentre en el panel los ajustes de cada agente: su saludo y su voz, sus instrucciones, sus reglas, la gestión de las llamadas y sus canales."
 sidebarTitle: "Resumen del agente"
 contentType: "Conceptual"
 ---
 
-La sección **Agente** controla el comportamiento de su agente con IA. Se divide en Ajustes de IA, Conocimiento, Servicios, Empleados y Reglas.
+Un agente es la IA que contesta sus llamadas, chats y mensajes. Cada espacio de trabajo empieza con un agente. En un plan de pago, puede [agregar más](/es/agent/manage-agents), como uno para fuera de horario o uno por sede.
 
 Los cambios se aplican a las nuevas llamadas y a las nuevas respuestas del chat del sitio web. No modifican las llamadas ni los mensajes anteriores.
 
+## Abrir un agente
+
+Haga clic en **Agentes** en la barra lateral. Con un solo agente, la barra lateral pasa al menú de ese agente. Con varios, la página **Agentes** los enumera, y cada nombre bajo **Agentes** abre su menú.
+
+La fila de la parte superior del menú del agente le lleva de vuelta. Con varios agentes, haga clic en el nombre del agente en la parte superior para pasar a otro en la misma página.
+
+## Lo que tiene cada agente
+
 <CardGroup cols={2}>
-  <Card title="Ajustes de IA" icon="comment-dots" href="/es/agent/ai-settings/overview">
-    Defina la frase de bienvenida, el idioma de las llamadas, la voz, la moneda, los cambios de citas y el número de transferencia predeterminado.
+  <Card title="Nombre, saludo y voz" icon="comment-dots" href="/es/agent/greeting-and-voice">
+    Ponga nombre al agente, escriba su frase de bienvenida y elija cómo suena.
   </Card>
-  <Card title="Conocimiento" icon="book-open" href="/es/agent/knowledge">
-    Añada información del negocio a partir de entradas de texto, documentos o la importación de un sitio web, y responda las preguntas que su agente no supo contestar.
-  </Card>
-  <Card title="Servicios" icon="calendar-check" href="/es/agent/services">
-    Añada los tipos de cita con su duración, su precio y la información que necesitan quienes llaman.
-  </Card>
-  <Card title="Empleados" icon="id-card" href="/es/agent/employees">
-    Añada a las personas que quienes llaman pueden reservar o pedir, con sus servicios, horarios y permisos.
+  <Card title="Instrucciones" icon="scroll" href="/es/agent/instructions">
+    Indique al agente cómo comportarse en las llamadas, los chats y los mensajes de texto.
   </Card>
   <Card title="Reglas" icon="list-check" href="/es/agent/rules">
-    Añada instrucciones de funcionamiento para transferencias, solicitudes de devolución de llamada, comportamiento de respaldo y casos especiales.
+    Añada reglas en texto simple para transferencias, solicitudes de devolución de llamada y casos especiales.
+  </Card>
+  <Card title="Llamadas y citas" icon="phone-volume" href="/es/agent/calls-and-booking">
+    Defina el número de transferencia, El personal responde primero, las reservas y los cambios de citas.
+  </Card>
+  <Card title="Canales" icon="tower-broadcast" href="/es/agent/channels">
+    Vea los números de teléfono, los widgets del sitio web y la cuenta de Instagram que contesta el agente.
   </Card>
 </CardGroup>
 
-## Cómo se usa la configuración
+## Lo que comparten todos los agentes
 
-LobbyStack prepara la configuración guardada del agente para cada llamada en curso, de modo que quien llama recibe un comportamiento estable durante toda la conversación.
+Sus agentes comparten los datos del negocio, el conocimiento, los servicios, los empleados y las conexiones de calendario del espacio de trabajo. Los edita una vez en **Configuración**, y todos los agentes los usan. La página **Compartido con todos los agentes** del agente enlaza a cada uno:
 
-En el chat del sitio web, LobbyStack usa el contexto actual del negocio y el estado guardado de la conversación para generar las respuestas.
+- [Datos del negocio](/es/settings/business-details): resumen del negocio, horario de atención, idiomas, zona horaria y moneda
+- [Conocimiento](/es/settings/knowledge): entradas de texto, documentos e importaciones de sitios web
+- [Servicios](/es/settings/services): lo que pueden reservar quienes llaman
+- [Empleados](/es/settings/employees): las personas que quienes llaman pueden reservar o pedir
+- [Conexiones](/es/integrations/overview): Google Calendar, Cal.com y Calendly
+
+## Cómo usa LobbyStack los ajustes
+
+LobbyStack prepara los ajustes guardados del agente para cada llamada en curso, de modo que quien llama recibe el mismo comportamiento durante toda la llamada. En el chat del sitio web, LobbyStack lee los datos actuales del negocio y la conversación hasta ese momento cuando escribe cada respuesta.
 
 ## Configuración mínima para llamadas reales
 
 Antes de desviar llamadas reales, compruebe que:
 
-- Su saludo menciona el nombre de su negocio y deja claro qué puede esperar quien llama.
-- El idioma predeterminado del cliente es el que habla la mayoría de quienes llaman, porque las llamadas empiezan en ese idioma.
-- Hay un número de transferencia guardado, si quiere traspasar llamadas en vivo a una persona. Debe estar en un [país al que LobbyStack puede llamar](/es/agent/ai-settings/overview#número-de-transferencia-predeterminado).
-- Sus entradas de conocimiento incluyen horarios, ubicación, servicios, precios, políticas y las preguntas habituales de quienes llaman.
-- Sus servicios, sus empleados y la conexión con Google Calendar están listos antes de confiar en la reserva o los cambios de citas.
+- Su saludo menciona el nombre de su negocio y deja claro qué puede esperar quien llama
+- El [idioma predeterminado del cliente](/es/settings/business-details#idioma-predeterminado-del-cliente) es el que habla la mayoría de quienes llaman, porque las llamadas empiezan en ese idioma
+- Hay un número de transferencia guardado, si quiere traspasar llamadas en vivo a una persona. Debe estar en un [país al que LobbyStack puede llamar](/es/agent/calls-and-booking#número-de-transferencia-predeterminado).
+- Su conocimiento cubre horarios, ubicación, servicios, precios, políticas y las preguntas habituales de quienes llaman
+- Sus servicios, sus empleados y la conexión con su calendario están listos antes de confiar en las reservas o los cambios de citas

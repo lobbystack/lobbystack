@@ -23,7 +23,7 @@ it("preserves main's success toast and navigates to team settings after acceptin
   await waitFor(() => expect(submit.hasAttribute("disabled")).toBe(false));
   await userEvent.click(submit);
   await waitFor(() => expect(spies.success).toHaveBeenCalledWith("acceptInvite.success"));
-  expect(spies.replace).toHaveBeenCalledWith("/settings/team");
+  expect(spies.replace).toHaveBeenCalledWith("/workspace/team");
   expect(screen.queryByText("acceptInvite.success")).toBeNull();
 });
 

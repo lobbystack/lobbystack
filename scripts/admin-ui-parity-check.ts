@@ -14,7 +14,7 @@ type VisualRoute = {
   comparison: "frozen-main" | "port-baseline" | "excluded";
   referencePath?: string;
   snapshotId?: string;
-  dynamicKey?: "callId" | "contactId" | "demoToken" | "resetToken";
+  dynamicKey?: "callId" | "contactId" | "demoToken" | "resetToken" | "agentId";
   reason?: string;
 };
 

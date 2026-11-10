@@ -49,7 +49,7 @@ export async function queueCallSummaryAlertInTransaction(tx: DatabaseTransaction
     bookedAt: booked?.startsAt ?? "",
     bookedService: booked?.serviceName ?? "",
     summary,
-    url: `${appBaseUrl()}/calls/${input.callId}`,
+    url: `${appBaseUrl()}/inbox?call=${input.callId}`,
   };
   return await queueOperatorAlertInTransaction(tx, {
     businessId: input.businessId,

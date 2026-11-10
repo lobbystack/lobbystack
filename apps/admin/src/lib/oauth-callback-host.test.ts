@@ -16,6 +16,7 @@ const fixture = vi.hoisted(() => ({
   states: new Set<string>(),
   connectCalendar: vi.fn(),
   connectInstagram: vi.fn(),
+  requireAgent: vi.fn(),
   switchWorkspace: vi.fn(),
   exchanged: [] as string[],
   report: vi.fn(),
@@ -49,6 +50,7 @@ vi.mock("@lobbystack/domain", async (importOriginal) => ({
   ...await importOriginal<typeof import("@lobbystack/domain")>(),
   connectCalendar: fixture.connectCalendar,
   connectInstagramAccount: fixture.connectInstagram,
+  requireActiveAgentInTransaction: fixture.requireAgent,
   switchWorkspace: fixture.switchWorkspace,
 }));
 vi.mock("@lobbystack/providers", async (importOriginal) => ({
@@ -102,8 +104,8 @@ const acme: FakeBrandPartner = { partnerId, name: "Acme Agency", subdomain: "acm
 const beta: FakeBrandPartner = { partnerId: otherPartnerId, name: "Beta Agency", subdomain: "beta.partners.localhost" };
 
 const flows = {
-  calendar: { start: calendarStart, callback: calendarCallback, startPath: "/api/calendar/google/start", callbackPath: "/api/calendar/google/callback", landing: "/integrations?calendar=google&status=success", connect: fixture.connectCalendar },
-  instagram: { start: instagramStart, callback: instagramCallback, startPath: "/api/integrations/instagram/start", callbackPath: "/api/integrations/instagram/callback", landing: "/integrations?instagram=success", connect: fixture.connectInstagram },
+  calendar: { start: calendarStart, callback: calendarCallback, startPath: "/api/calendar/google/start", callbackPath: "/api/calendar/google/callback", landing: "/workspace/connections?calendar=google&status=success", connect: fixture.connectCalendar },
+  instagram: { start: instagramStart, callback: instagramCallback, startPath: "/api/integrations/instagram/start", callbackPath: "/api/integrations/instagram/callback", landing: "/agents/primary/channels?instagram=success", connect: fixture.connectInstagram },
 };
 type Flow = (typeof flows)[keyof typeof flows];
 
@@ -217,6 +219,43 @@ describe.each([
     expect(fixture.states.has(state)).toBe(true);
     expect(flow.connect).not.toHaveBeenCalled();
     expect(fixture.exchanged).toEqual([]);
+  });
+});
+
+describe("an Instagram connection started from one agent", () => {
+  const agentId = "5d1f7a2c-3b4e-4f60-8a71-9b2c3d4e5f60";
+  const startFor = async (agent: string, cookie: string) => await instagramStart(new Request(`${base}/api/integrations/instagram/start?businessId=${businessId}&agentId=${agent}`, { headers: { ...hostBrand, cookie } }));
+  const finish = async (state: string, cookie: string) => await instagramCallback(new Request(`${base}/api/integrations/instagram/callback?code=provider-code&state=${encodeURIComponent(state)}`, { headers: { ...hostBrand, cookie } }));
+
+  it("checks the agent, connects the account to it and lands on its channels", async () => {
+    const { userId, cookie } = await signIn(base, hostBrand);
+    Object.assign(fakeOperator, { userId, businessId });
+    fixture.connectInstagram.mockResolvedValue({ agentId });
+    const started = await startFor(agentId, cookie);
+    expect(started.status).toBe(200);
+    expect(fixture.requireAgent).toHaveBeenCalledWith(expect.anything(), businessId, agentId);
+    const state = new URL((await started.json() as { url: string }).url).searchParams.get("state")!;
+    const finished = await finish(state, cookie);
+    expect(fixture.connectInstagram).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ userId, businessId, agentId }));
+    expect(finished.headers.get("location")).toBe(`${base}/agents/${agentId}/channels?instagram=success`);
+  });
+
+  it("follows the account to the agent it stayed on when the one it started from was archived", async () => {
+    const { userId, cookie } = await signIn(base, hostBrand);
+    Object.assign(fakeOperator, { userId, businessId });
+    const kept = "6e2a8b3d-4c5f-4071-9b82-0c3d4e5f6a71";
+    fixture.connectInstagram.mockResolvedValue({ agentId: kept });
+    const state = new URL((await (await startFor(agentId, cookie)).json() as { url: string }).url).searchParams.get("state")!;
+    expect((await finish(state, cookie)).headers.get("location")).toBe(`${base}/agents/${kept}/channels?instagram=success`);
+  });
+
+  it("refuses an agentId that isn't a UUID and passes an unknown agent's 404 on, before Instagram", async () => {
+    const { userId, cookie } = await signIn(base, hostBrand);
+    Object.assign(fakeOperator, { userId, businessId });
+    expect((await startFor("evening", cookie)).status).toBe(400);
+    fixture.requireAgent.mockRejectedValue(Object.assign(new Error("Agent not found."), { status: 404, code: "agent_not_found" }));
+    expect((await startFor(agentId, cookie)).status).toBe(404);
+    expect(fixture.states.size).toBe(0);
   });
 });
 

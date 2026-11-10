@@ -8,7 +8,16 @@ import { planEntitlement } from "@lobbystack/shared";
 
 import { BusinessHoursSection, closuresForSave, windowsForSave } from "./business-hours-section";
 import { LiveSetupGuideSurface } from "./live-setup-guide-surface";
-import { AgentBasicSettingsPage } from "./live-agent-basic-settings-surface";
+import { AgentHandlingSection } from "./agent-handling-section";
+import { AgentIdentitySection } from "./agent-identity-section";
+import { AgentInstructionsSection } from "./agent-instructions-section";
+import { WorkspaceBusinessSection } from "./workspace-business-section";
+
+/** The agent's sections and the workspace's business details, together, as the agent and workspace pages show them. */
+function AgentSettingsSections({ businessId, canManageTenant }: { businessId: string; canManageTenant: boolean }) {
+  const props = { agentId: "agent-1", businessId, canManage: canManageTenant };
+  return <><AgentIdentitySection {...props} /><AgentInstructionsSection {...props} /><AgentHandlingSection {...props} /><WorkspaceBusinessSection businessId={businessId} canManage={canManageTenant} /></>;
+}
 import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 
 const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
@@ -191,7 +200,7 @@ describe("opening hours editor", () => {
 describe("instant booking without opening hours", () => {
   it("asks for hours in the hours row itself, with no second banner", async () => {
     stubFetch({ hoursSource: "none", hours: [] });
-    render(<QueryClientProvider client={client()}><AgentBasicSettingsPage businessId="business" canManageTenant /></QueryClientProvider>);
+    render(<QueryClientProvider client={client()}><AgentSettingsSections businessId="business" canManageTenant /></QueryClientProvider>);
     expect(await screen.findByText("hours.neededForBooking")).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
     expect(document.getElementById("opening-hours")).toBeTruthy();
@@ -201,13 +210,13 @@ describe("instant booking without opening hours", () => {
 
   it("doesn't ask for hours once the business has them, or when it doesn't book directly", async () => {
     stubFetch({ hoursSource: "generated", hours: weekdays });
-    render(<QueryClientProvider client={client()}><AgentBasicSettingsPage businessId="business" canManageTenant /></QueryClientProvider>);
+    render(<QueryClientProvider client={client()}><AgentSettingsSections businessId="business" canManageTenant /></QueryClientProvider>);
     await screen.findByText("hours.generated");
     expect(screen.queryByText("hours.neededForBooking")).toBeNull();
     cleanup();
 
     stubFetch({ hoursSource: "none", bookingMode: "request", hours: [] });
-    render(<QueryClientProvider client={client()}><AgentBasicSettingsPage businessId="business" canManageTenant /></QueryClientProvider>);
+    render(<QueryClientProvider client={client()}><AgentSettingsSections businessId="business" canManageTenant /></QueryClientProvider>);
     await screen.findByText("hours.notSet");
     expect(screen.queryByText("hours.neededForBooking")).toBeNull();
   });
@@ -230,7 +239,7 @@ describe("instant booking without opening hours", () => {
     expect(await screen.findByText("setupGuide.steps.hours")).toBeTruthy();
     const titles = screen.getAllByText(/^setupGuide\.steps\./).map((element) => element.textContent);
     expect(titles).toEqual(["setupGuide.steps.fullScan", "setupGuide.steps.sources", "setupGuide.steps.hours", "setupGuide.steps.testCall"]);
-    expect(screen.getByText("setupGuide.stepActions.hours").closest("a")?.getAttribute("href")).toBe("/agent/basic-settings#opening-hours");
+    expect(screen.getByText("setupGuide.stepActions.hours").closest("a")?.getAttribute("href")).toBe("/workspace/business#opening-hours");
   });
 
   it("lists finished steps first, then the rest in order", async () => {

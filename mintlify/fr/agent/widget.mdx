@@ -1,0 +1,65 @@
+---
+title: "Ajouter le widget de site Web"
+description: "Configurez le widget intégrable de clavardage et d'appel Web de LobbyStack, puis ajoutez le script de chargement à votre site Web."
+sidebarTitle: "Widget de site Web"
+contentType: "How-to"
+---
+
+Un widget de site Web est l'un des canaux d'un agent. Les visiteurs peuvent y clavarder, laisser leurs coordonnées et lancer un appel depuis leur navigateur, et l'agent à qui appartient le widget leur répond. Chaque agent peut avoir ses propres widgets, par exemple un par site Web.
+
+<Note>
+  Le clavardage sur le site Web est restreint et ne fait pas partie des forfaits hébergés. La création de nouvelles clés de widget est désactivée par défaut. Sur un déploiement auto-hébergé, définissez `WIDGET_KEY_ISSUANCE_ENABLED=true` pour en créer. Les clés existantes continuent de fonctionner.
+</Note>
+
+## Configurer le widget
+
+<Steps>
+  <Step title="Ouvrir la page du widget">
+    Cliquez sur **Agents** dans la barre latérale, ouvrez l'agent et cliquez sur **Canaux** dans son menu. Sous **Widget de site web**, cliquez sur **Ajouter à mon site** pour un premier widget, ou sur **Gérer** pour ouvrir les widgets de l'agent. Sur cette page, cliquez sur **Ajouter un widget**, ou sur **Modifier** sur la carte d'un widget.
+  </Step>
+  <Step title="Configurer son apparence">
+    Choisissez la couleur, la position, le titre, le sous-titre, le message d'accueil et le comportement de langue.
+  </Step>
+  <Step title="Configurer la collecte de prospects">
+    Activez le formulaire de contact, choisissez les champs obligatoires et décidez s'il s'affiche avant le clavardage.
+  </Step>
+  <Step title="Indiquer vos sites Web">
+    Dans **Sites Web**, entrez chaque adresse où le clavardage doit apparaître, par exemple `https://www.example.com`. Séparez les adresses par des virgules.
+  </Step>
+  <Step title="Ajouter le code à votre site">
+    Sélectionnez **Copier le code** et collez-le avant la balise de fermeture `</body>` de votre site Web.
+  </Step>
+</Steps>
+
+## Protéger les appels Web
+
+LobbyStack signe les sessions du widget et compare l'origine de la page parente du visiteur aux origines autorisées pour la clé du widget avant de lancer un appel.
+
+Utilisez un site Web en HTTPS en production. Gardez `WIDGET_SESSION_SECRET` et les autres identifiants de signature sur le serveur.
+
+## Clavardage en direct avec votre équipe
+
+Vous pouvez permettre à quelqu'un de votre équipe de rejoindre un clavardage du site Web. Activez **Permettre aux visiteurs de clavarder avec votre équipe** sur un widget. L'option reste désactivée tant que vous ne l'activez pas.
+
+Pendant vos heures d'ouverture, ou en tout temps si vous n'en avez pas défini, un visiteur qui demande à parler à quelqu'un dans le clavardage attend votre équipe :
+
+1. L'agent dit au visiteur qu'il a prévenu l'équipe, puis cesse de répondre.
+2. Votre équipe reçoit une alerte **Visiteur qui demande une personne**, et le clavardage affiche **Visiteur en attente** dans la [Boîte de réception](/fr/dashboard/inbox).
+3. La première personne qui répond ou clique sur **Rejoindre le clavardage** prend le clavardage. Le visiteur voit le prénom inscrit à son profil.
+4. Si personne ne se joint dans les 3 minutes, l'agent reprend le clavardage et demande au visiteur son nom et son numéro, pour que quelqu'un le rappelle.
+
+Activez ou désactivez cette alerte par courriel et par SMS sur la page **Widget de site web** de l'agent.
+
+En dehors des heures d'ouverture, pendant les appels depuis le navigateur et quand le clavardage en direct est désactivé, l'agent propose de prendre un message pour que votre équipe rappelle le visiteur. Les demandes de rappel apparaissent dans le tableau de bord comme les autres messages.
+
+Les clavardages du site Web et les appels depuis le navigateur ne peuvent pas être transférés vers une ligne téléphonique, donc l'agent ne dit jamais qu'il met le visiteur en relation. Pendant les appels depuis le navigateur, et dans les clavardages où le clavardage en direct est désactivé, il donne aussi au visiteur le numéro de téléphone de votre entreprise si vous avez défini un **Numéro de transfert par défaut**. Le visiteur peut appeler ce numéro et demander à parler à quelqu'un. L'agent suit votre règle de transfert : si les transferts sont réservés aux urgences, il donne le numéro pour les urgences, et si les transferts sont désactivés, il ne donne aucun numéro.
+
+## Gérer vos widgets
+
+Chaque widget a ses propres sites Web et ses propres réglages. Depuis la carte d'un widget, vous pouvez le modifier, le mettre en pause ou le retirer. Dans les **Canaux** de l'agent, **Déconnecter** retire aussi un widget. Retirer un widget arrête le clavardage sur tous les sites qui l'utilisent, et cette action est irréversible.
+
+Pour qu'un autre agent réponde à un widget, [transférez-le](/fr/agent/channels#transférer-un-canal-à-un-autre-agent). Le widget garde son code : vous n'avez rien à changer sur votre site Web.
+
+## Vérifier l'installation
+
+Ouvrez le site Web public dans une fenêtre de navigation privée. Vérifiez que le widget se charge, qu'il démarre un clavardage et qu'il affiche le formulaire de contact. Si les appels Web sont activés, autorisez l'accès au microphone et passez un appel test.

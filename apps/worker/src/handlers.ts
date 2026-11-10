@@ -13,7 +13,7 @@ import { deliverOutbound, markFeedbackEmailFailed, markFeedbackEmailSent, queueD
 import { NUMBER_ORDER_MAX_WAIT_MS, claimNumberProvisioning, completeNumberProvisioning, deferNumberProvisioning, desiredNumberRouting, refreshStaleRefusedCallForwards, enqueueNumberRouting, resolveRefusedCallForward, failNumberProvisioning, isSharedSmsSender, loadNumberReleaseEmail, loadNumberTrialEmail, numberProvisioningLeaseEndsAt, sharedSmsSender, sweepNumberReleases, sweepNumberTrial } from "@lobbystack/domain";
 import { createWebhookSender, processWebhookDelivery, pruneApiHistory, prunePartnerApiIdempotencyKeys, type WebhookSender } from "@lobbystack/domain";
 import { LIVE_RECORDING_ATTEMPTS, listBusinessesWithOpenLiveCalls, listOpenLiveCalls, liveCallHasRecording, persistCallRecording, retryLiveCallRecording, type OpenLiveCall } from "@lobbystack/domain";
-import { applySiteLanguageInTransaction, expireTeamRequest } from "@lobbystack/domain";
+import { applySiteLanguageInTransaction, closePassedAppointmentRequests, expireTeamRequest } from "@lobbystack/domain";
 import { syncBusinessOverage, PROVIDER_RETRY_WINDOW_MS, providerRetryDelayMs } from "@lobbystack/domain";
 import { advancePartnerLifecycles, claimPartnerCheckoutRequest, deferPartnerCheckoutRequest, keepPartnerTrialNumber, loadPartnerCheckoutRequest, loadPoolUsageEvent, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerBillingKey, partnerCheckoutLeaseEndsAt, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
 import { checkPartnerCustomDomains, provisionPartnerCustomDomain, removePartnerCustomHostname, type CustomDomainProviders } from "@lobbystack/domain";
@@ -604,9 +604,13 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
     }
     case "calendar.syncAppointment":
       return await syncAppointmentCalendar(dependencies, { businessId: businessIdOrThrow(job), appointmentId: String(job.payload.appointmentId ?? "") });
-    case "calendar.reconcileBusiness":
+    case "calendar.reconcileBusiness": {
+      const businessId = businessIdOrThrow(job);
+      // Every 15 minutes, with or without a calendar: requests about an appointment whose time has passed are done.
+      await closePassedAppointmentRequests(dependencies.domain, { businessId });
       // A webhook delivery names the one connection whose bookings changed; every other trigger syncs the whole business.
-      return await reconcileBusinessCalendar(dependencies, businessIdOrThrow(job), job.payload.scope === "connection" && typeof job.payload.connectionId === "string" ? job.payload.connectionId : undefined);
+      return await reconcileBusinessCalendar(dependencies, businessId, job.payload.scope === "connection" && typeof job.payload.connectionId === "string" ? job.payload.connectionId : undefined);
+    }
     case "calendar.sweepRetired":
       // One sweep covers every business, including ones the scheduler no longer lists.
       return { status: "completed", entityId: `calendar-retired:${await forgetStaleRetiredCalendarTokens(dependencies.domain)}` };
@@ -1250,7 +1254,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         number: content.number,
         periodEnd: date(job.payload.periodEnd),
         releaseDate: date(job.payload.releaseAt),
-        url: `${brand.origin}/settings/plan`,
+        url: `${brand.origin}/workspace/billing`,
       };
       await dependencies.email.sendTemplate({ template: "number_release", to: content.to, subject: numberReleaseEmailSubject(variables), variables, brand, idempotencyKey: job.idempotencyKey, ...emailSender(brand, {}) });
       return { status: "completed", entityId: `${phoneNumberId}:${kind}` };
@@ -1279,7 +1283,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         forwardTo: content.forwardTo ?? "",
         endDate,
         calls: String(content.callsAnswered),
-        url: `${brand.origin}/settings/plan`,
+        url: `${brand.origin}/workspace/billing`,
       };
       await dependencies.email.sendTemplate({ template: "number_trial", to: content.to, subject: numberTrialEmailSubject(variables), variables, brand, idempotencyKey: job.idempotencyKey, ...emailSender(brand, {}) });
       return { status: "completed", entityId: `${trialId}:${kind}` };

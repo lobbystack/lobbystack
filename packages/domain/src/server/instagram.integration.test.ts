@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto";
 
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { businesses, conversations, createDatabaseClient, messages, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, businesses, conversations, createDatabaseClient, instagramAccounts, messages, outboxMessages, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
-import { INSTAGRAM_AI_REPLY_LIMIT, INSTAGRAM_AI_REPLY_WINDOW_MS, loadInstagramReplyContext, receiveInstagramMessage, saveInstagramReply } from "./instagram";
+import { connectInstagramAccount, getInstagramAccount, INSTAGRAM_AI_REPLY_LIMIT, INSTAGRAM_AI_REPLY_WINDOW_MS, loadInstagramReplyContext, receiveInstagramMessage, saveInstagramReply } from "./instagram";
+import { createBusiness } from "./tenancy";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -115,6 +116,56 @@ describe.skipIf(!testUrl)("Instagram reply limit against PostgreSQL under produc
 
       expect(await exchange.load()).not.toBeNull();
       expect(await exchange.state()).toBe("ai_active");
+    });
+  });
+});
+
+describe.skipIf(!testUrl)("connecting Instagram for one agent against PostgreSQL", () => {
+  /** An owner's business with its default agent and a second one, "Evening", as the app role. */
+  async function seedAgents(tx: DatabaseTransaction) {
+    const userId = randomUUID();
+    await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid`, name: "Owner", emailVerified: true });
+    await tx.execute(sql`set local role lobbystack_app`);
+    const context = { db: tx as unknown as Database };
+    const { businessId } = await createBusiness(context, { userId, name: "Javor", timezone: "UTC", businessType: "test" });
+    await tx.execute(sql`reset role`);
+    const [frontDesk] = await tx.select().from(agents).where(and(eq(agents.businessId, businessId), eq(agents.isDefault, true)));
+    const { id: _id, isDefault: _isDefault, createdAt: _createdAt, updatedAt: _updatedAt, ...settings } = frontDesk!;
+    const [evening] = await tx.insert(agents).values({ ...settings, name: "Evening", isDefault: false }).returning({ id: agents.id });
+    await tx.execute(sql`set local role lobbystack_app`);
+    const connect = async (agentId?: string) => await connectInstagramAccount(context, { userId, businessId, ...(agentId ? { agentId } : {}), instagramUserId: `ig_${businessId}`, username: "javor", encryptedAccessToken: "sealed", tokenExpiresAt: new Date(Date.now() + 86_400_000) });
+    const accountAgent = async () => (await getInstagramAccount(context, { userId, businessId }))?.agentId;
+    return { businessId, frontDesk: frontDesk!.id, evening: evening!.id, connect, accountAgent };
+  }
+
+  it("puts a new account on the agent it started from, and a state without one on the default agent", async () => {
+    await rollbackTest(async (tx) => {
+      const world = await seedAgents(tx);
+      expect(await world.connect(world.evening)).toEqual({ agentId: world.evening });
+      expect(await world.accountAgent()).toBe(world.evening);
+      // Reconnecting without an agent keeps the one it answers as.
+      expect(await world.connect()).toEqual({ agentId: world.evening });
+      await tx.execute(sql`reset role`);
+      expect((await tx.select({ topic: outboxMessages.topic }).from(outboxMessages).where(and(eq(outboxMessages.businessId, world.businessId), eq(outboxMessages.aggregateId, world.evening)))).map((row) => row.topic)).toContain("snapshot.refresh");
+      await tx.delete(instagramAccounts).where(eq(instagramAccounts.businessId, world.businessId));
+      await tx.execute(sql`set local role lobbystack_app`);
+      expect(await world.connect()).toEqual({ agentId: world.frontDesk });
+    });
+  });
+
+  it("moves the account and its open conversations to another agent, and leaves it where it is for an archived one", async () => {
+    await rollbackTest(async (tx) => {
+      const world = await seedAgents(tx);
+      await world.connect();
+      await tx.execute(sql`reset role`);
+      const [open] = await tx.insert(conversations).values({ businessId: world.businessId, agentId: world.frontDesk, channel: "instagram", status: "open" }).returning({ id: conversations.id });
+      await tx.execute(sql`set local role lobbystack_app`);
+      expect(await world.connect(world.evening)).toEqual({ agentId: world.evening });
+      await tx.execute(sql`reset role`);
+      expect((await tx.select({ agentId: conversations.agentId }).from(conversations).where(eq(conversations.id, open!.id)))[0]?.agentId).toBe(world.evening);
+      const [weekend] = await tx.insert(agents).values({ businessId: world.businessId, name: "Weekend", greeting: "Hi", tone: "warm", summary: "A shop", bookingPolicy: "Book", transferMode: "never", archivedAt: new Date() }).returning({ id: agents.id });
+      await tx.execute(sql`set local role lobbystack_app`);
+      expect(await world.connect(weekend!.id)).toEqual({ agentId: world.evening });
     });
   });
 });

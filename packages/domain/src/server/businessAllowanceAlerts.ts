@@ -81,7 +81,7 @@ type Delivery = { recipient: Recipient; template: "business_allowance_alert" | "
 
 /** The business's Usage page. The worker moves the link onto the business's brand's domain when it sends the email. */
 function usageUrl(): string {
-  return `${appBaseUrl()}/settings/usage`;
+  return `${appBaseUrl()}/workspace/usage`;
 }
 
 /** The console's Businesses page, on the host's own domain, where the partner's owners and admins change a business's overage. */

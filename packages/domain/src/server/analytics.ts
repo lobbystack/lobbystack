@@ -1,9 +1,10 @@
-import { eq, sql, type SQL, type SQLWrapper } from "drizzle-orm";
+import { and, countDistinct, eq, gte, inArray, lt, not, sql, type SQL, type SQLWrapper } from "drizzle-orm";
 
-import { appointments, businesses, calls, conversations, messages, services, withBusinessTransaction } from "@lobbystack/db";
+import { agentOfRow, agents, appointments, businesses, calls, conversations, messages, services, withBusinessTransaction } from "@lobbystack/db";
 import { discountedAmount, isNonBillableCallDisposition, MAX_PHONE_CALL_MS, MIN_BILLABLE_VOICE_DURATION_SECONDS, nonBillableCallDispositions, servicePriceFromColumns, type ServicePriceType } from "@lobbystack/shared";
 
 import { requireBusinessMembership } from "../authz";
+import { listActiveAgentsInTransaction } from "./agents";
 import type { DomainContext } from "./context";
 import type { ReceptionistChannel } from "./receptionistActions";
 
@@ -140,6 +141,30 @@ export function summarizeAnalyticsHandledCalls(groups: AnalyticsCallGroup[]): { 
 /** A share from 0 to 100 with one decimal, or null with nothing to share. */
 export function analyticsPercent(part: number, whole: number): number | null {
   return whole > 0 ? Math.round((part / whole) * 1000) / 10 : null;
+}
+
+/** One agent's calls and chats in the current period. */
+export type AnalyticsAgentCounts = { id: string; name: string; archived: boolean; calls: number; chats: number };
+
+/** The conversation channels an agent chats on: texts, website chats and Instagram. */
+export const analyticsAgentChatChannels = ["sms", "web_chat", "instagram"] as const;
+
+type AgentCountRow = { agentId: string; name: string; archived: boolean; total: number | string };
+
+/**
+ * Every active agent in the business's order, then any archived agent that
+ * still had calls or chats in the period, each with both counts.
+ */
+export function summarizeAnalyticsAgents(active: ReadonlyArray<{ id: string; name: string }>, callRows: AgentCountRow[], chatRows: AgentCountRow[]): AnalyticsAgentCounts[] {
+  const byId = new Map<string, AnalyticsAgentCounts>(active.map((agent) => [agent.id, { id: agent.id, name: agent.name, archived: false, calls: 0, chats: 0 }]));
+  for (const [rows, field] of [[callRows, "calls"], [chatRows, "chats"]] as const) {
+    for (const row of rows) {
+      const entry = byId.get(row.agentId) ?? { id: row.agentId, name: row.name, archived: row.archived, calls: 0, chats: 0 };
+      entry[field] += Number(row.total);
+      byId.set(row.agentId, entry);
+    }
+  }
+  return [...byId.values()];
 }
 
 export type AnalyticsInput = {
@@ -305,6 +330,19 @@ export async function getAnalytics(context: DomainContext, input: AnalyticsInput
         coalesce(sum(duration), 0) as seconds, count(*) as calls
       from ended group by 1, 2, 3, 4, 5
     `)).rows;
+    // Per agent over the current period only. A row the agent backfill hasn't reached counts for the default agent.
+    const agentCallRows = await tx.select({ agentId: agents.id, name: agents.name, archived: sql<boolean>`${agents.archivedAt} is not null`, total: sql<number>`count(*)` })
+      .from(calls).innerJoin(agents, agentOfRow(calls.businessId, calls.agentId))
+      .where(and(eq(calls.businessId, input.businessId), not(calls.billingExcluded), gte(calls.startedAt, input.from), lt(calls.startedAt, input.to)))
+      .groupBy(agents.id, agents.name, agents.archivedAt);
+    // A chat counts once in the period however many messages it had.
+    const agentChatRows = await tx.select({ agentId: agents.id, name: agents.name, archived: sql<boolean>`${agents.archivedAt} is not null`, total: countDistinct(conversations.id) })
+      .from(messages)
+      .innerJoin(conversations, and(eq(conversations.id, messages.conversationId), eq(conversations.businessId, messages.businessId)))
+      .innerJoin(agents, agentOfRow(conversations.businessId, conversations.agentId))
+      .where(and(eq(messages.businessId, input.businessId), gte(messages.createdAt, input.from), lt(messages.createdAt, input.to), inArray(conversations.channel, [...analyticsAgentChatChannels])))
+      .groupBy(agents.id, agents.name, agents.archivedAt);
+    const agentCounts = summarizeAnalyticsAgents(await listActiveAgentsInTransaction(tx, input.businessId), agentCallRows, agentChatRows);
     const handledCalls = summarizeAnalyticsHandledCalls(callGroups.map((row) => ({ ...row, shortestSeconds: Number(row.shortestSeconds), seconds: Number(row.seconds), calls: Number(row.calls) })));
     const [business] = await tx.select({ currency: businesses.currency }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
 
@@ -363,6 +401,8 @@ export async function getAnalytics(context: DomainContext, input: AnalyticsInput
       series: [...buckets.values()].map((point) => ({ ...point, agentResponseSeconds: (responseBuckets.get(point.bucket) ?? 0) })).sort((left, right) => left.bucket.localeCompare(right.bucket)),
       outcomes: ["completed", "transferred", "live", "missed"].map((outcome) => ({ outcome, count: Number(outcomes.find((row) => row.outcome === outcome)?.count ?? 0) })),
       channels,
+      /** Calls and chats per agent in the current period. */
+      agents: agentCounts,
       /** In the business currency's smallest unit. */
       bookedValue: { currency: business?.currency ?? "USD", ...bookedValue },
       timeSavedSeconds: { current: handledCalls.current.seconds, previous: handledCalls.previous.seconds },

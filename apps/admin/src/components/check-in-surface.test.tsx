@@ -23,7 +23,7 @@ it("saves nothing until the owner confirms", async () => {
 it.each([
   ["still_testing", "/"],
   ["connect_number", "https://docs.lobbystack.com/fr/getting-started/forward-calls"],
-  ["test_call_mistakes", "/agent/knowledge"],
+  ["test_call_mistakes", "/workspace/knowledge"],
   ["not_a_fit", "https://docs.lobbystack.com/fr/agent/overview"],
 ] as const)("offers the next step for %s", async (answer, href) => {
   vi.stubGlobal("fetch", vi.fn(async () => Response.json({ answer })));

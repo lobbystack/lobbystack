@@ -38,12 +38,14 @@ KEEP=0
 SKIP_BUILD=0
 TESTS=(
   e2e/affiliate-program.e2e.ts
+  e2e/agents.e2e.ts
   e2e/appointment-reschedule.e2e.ts
   e2e/auth-pages.e2e.ts
   e2e/auth-return-to.e2e.ts
   e2e/billing-return-cap.e2e.ts
   e2e/business-timezone.e2e.ts
   e2e/getting-started.e2e.ts
+  e2e/navigation.e2e.ts
   e2e/onboarding-flow.e2e.ts
   e2e/onboarding-path.e2e.ts
   e2e/onboarding-pending.e2e.ts

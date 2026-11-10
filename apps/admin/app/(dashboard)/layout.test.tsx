@@ -2,12 +2,13 @@ import type { ReactElement } from "react";
 import { beforeEach, expect, it, vi } from "vitest";
 
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined }), headers: async () => fixture.headers }));
-const fixture = vi.hoisted(() => ({ onboarding: { stage: "complete", businessId: "business" as string | null }, partners: [] as Array<{ partnerId: string }>, businesses: [] as Array<{ businessId: string; capabilities: string[] }>, opened: null as string[] | null, headers: new Headers() }));
+const fixture = vi.hoisted(() => ({ onboarding: { stage: "complete", businessId: "business" as string | null }, partners: [] as Array<{ partnerId: string }>, businesses: [] as Array<{ businessId: string; capabilities: string[] }>, opened: null as string[] | null, headers: new Headers(), agents: [{ id: "agent-1", name: "Front desk", isDefault: true, createdAt: new Date("2026-01-01T00:00:00Z") }] as unknown[] | Error }));
 // Next's redirect throws, so nothing after it runs.
 vi.mock("next/navigation", () => ({ redirect: vi.fn((to: string) => { throw Object.assign(new Error("NEXT_REDIRECT"), { to }); }) }));
-vi.mock("@lobbystack/domain", () => ({ capabilityNames: ["activity", "setup", "team", "billing", "api_keys", "mcp"], getActiveOnboardingState: async () => fixture.onboarding, listUserPartners: async () => fixture.partners, listUserBusinesses: async () => fixture.businesses, readBusinessCapabilities: async () => fixture.opened, resolveOnboardingRoute: (stage: string) => stage === "website" ? "/onboarding/website" : "/onboarding/business" }));
+vi.mock("@lobbystack/domain", () => ({ capabilityNames: ["activity", "setup", "team", "billing", "api_keys", "mcp"], getActiveOnboardingState: async () => fixture.onboarding, listUserPartners: async () => fixture.partners, listUserBusinesses: async () => fixture.businesses, readBusinessCapabilities: async () => fixture.opened, listAgents: async () => { if (fixture.agents instanceof Error) throw fixture.agents; return fixture.agents; }, resolveOnboardingRoute: (stage: string) => stage === "website" ? "/onboarding/website" : "/onboarding/business" }));
 vi.mock("@/lib/auth", () => ({ getSession: async () => ({ user: { id: "user", email: "owner@example.com", name: "Owner" } }) }));
 vi.mock("@/lib/api-helpers", () => ({ getAppDatabase: () => ({ db: {} }) }));
+vi.mock("@/lib/domain-context", () => ({ createDomainContext: () => ({ db: {} }) }));
 vi.mock("@/app/root-document", () => ({ RootDocument: () => null, generateBrandingMetadata: async () => ({}) }));
 vi.mock("@/components/dashboard-shell", () => ({ DashboardShell: () => null }));
 vi.mock("../globals.css", () => ({}));
@@ -21,7 +22,7 @@ it("ships every section's translations, so client navigation never requests one"
   const document = await DashboardLayout({ children: null }) as ReactElement<{ namespaces: readonly string[] }>;
   const i18n = createI18nInstance({ locale: "en", resources: resourcesForRoute("en", document.props.namespaces) });
 
-  for (const path of ["/", "/calls/id", "/agent/knowledge", "/affiliate", "/settings/team", "/demos"]) {
+  for (const path of ["/", "/inbox", "/workspace/knowledge", "/agents/agent-1", "/affiliate", "/workspace/team", "/account", "/demos"]) {
     expect(missingNamespaces(i18n, "en", routeNamespaces(path))).toEqual([]);
   }
 });
@@ -32,6 +33,19 @@ beforeEach(() => {
   fixture.businesses = [{ businessId: "business", capabilities: ["activity", "setup", "team", "billing", "api_keys", "mcp"] }];
   fixture.opened = null;
   fixture.headers = new Headers({ "x-lobbystack-brand": "host" });
+  fixture.agents = [{ id: "agent-1", name: "Front desk", isDefault: true, createdAt: new Date("2026-01-01T00:00:00Z") }];
+});
+
+it("loads the agents for the menu's first render, as the API sends them, for someone who can set them up", async () => {
+  const agents = async () => ((await DashboardLayout({ children: null })) as ReactElement<{ children: ReactElement<{ agents: unknown }> }>).props.children.props.agents;
+  expect(await agents()).toEqual({ businessId: "business", agents: [{ id: "agent-1", name: "Front desk", isDefault: true, createdAt: "2026-01-01T00:00:00.000Z" }] });
+  // A failed list leaves the menu to load them itself.
+  fixture.agents = new Error("database down");
+  expect(await agents()).toBeNull();
+  // Activity alone can't list agents.
+  fixture.businesses = [{ businessId: "business", capabilities: ["activity"] }];
+  fixture.agents = [];
+  expect(await agents()).toBeNull();
 });
 
 it("sends someone on a partner's team with no business of their own to the partner console", async () => {

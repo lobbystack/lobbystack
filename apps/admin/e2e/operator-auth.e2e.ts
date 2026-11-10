@@ -157,8 +157,11 @@ test("operator authentication, workspace access, isolation, and revocation", asy
   await page.goto("/");
   await expect(page.getByRole("button", { name: /Replacement E2E owner-a/ })).toBeVisible();
 
+  // Old agent links open the default agent's pages, and Settings opens the first workspace page.
   await page.goto("/agent/integrations");
-  await expect(page).toHaveURL("/agent");
+  await expect(page).toHaveURL(/^[^?]*\/agents\/[0-9a-f-]{36}\/channels$/);
+  await page.goto("/settings");
+  await expect(page).toHaveURL(/\/workspace\/business$/);
   await page.goto("/appointments?view=list");
   await expect(page.getByRole("heading", { name: "Appointments", exact: true })).toBeVisible();
   await expect(page.getByText("No upcoming appointments.")).toBeVisible();

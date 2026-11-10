@@ -17,7 +17,7 @@ test("website imports expose queued progress, cancel, reimport and retry with te
       await tx.insert(businessMemberships).values({ businessId, userId: userId!, role: "business_owner", status: "active" });
     });
     await auth.db.update(users).set({ activeBusinessId: businessId }).where(eq(users.id, userId!));
-    const page = await context.newPage(); await page.goto(`${baseURL}/agent/knowledge`);
+    const page = await context.newPage(); await page.goto(`${baseURL}/workspace/knowledge`);
     const importWebsite = async () => {
       await page.getByRole("button", { name: agent.sections.knowledge.addKnowledge, exact: true }).click();
       await page.getByRole("menuitem", { name: agent.sections.knowledge.addKnowledgeOptions.website, exact: true }).click();

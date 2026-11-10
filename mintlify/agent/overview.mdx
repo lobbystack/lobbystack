@@ -1,44 +1,60 @@
 ---
 title: "Configure your AI agent"
-description: "Use the Agent section to configure AI settings, knowledge, services, employees, and rules for your agent."
+description: "Find each agent's settings in the dashboard: its greeting and voice, instructions, rules, call handling, and channels."
 sidebarTitle: "Agent overview"
 contentType: "Conceptual"
 ---
 
-The **Agent** section controls how your AI agent behaves. It is split into AI settings, Knowledge, Services, Employees, and Rules.
+An agent is the AI that answers your calls, chats and messages. Every workspace starts with one agent. On a paid plan, you can [add more](/agent/manage-agents), such as one for after hours or one per location.
 
-Changes apply to new calls and website chat responses. They do not rewrite calls or messages that already happened.
+Changes apply to new calls and website chat replies. They don't rewrite calls or messages that already happened.
+
+## Open an agent
+
+Click **Agents** in the sidebar. With one agent, the sidebar switches to that agent's menu. With several, the **Agents** page lists them, and each name under **Agents** opens its menu.
+
+The row at the top of the agent's menu takes you back. With several agents, click the agent's name at the top to switch to another one on the same page.
+
+## What each agent has
 
 <CardGroup cols={2}>
-  <Card title="AI settings" icon="comment-dots" href="/agent/ai-settings/overview">
-    Set the opening line, caller language, voice, currency, appointment changes, and default transfer number.
+  <Card title="Name, greeting and voice" icon="comment-dots" href="/agent/greeting-and-voice">
+    Name the agent, write its opening line, and pick how it sounds.
   </Card>
-  <Card title="Knowledge" icon="book-open" href="/agent/knowledge">
-    Add business information from text entries, documents, or a website import, and answer the questions your agent couldn't.
-  </Card>
-  <Card title="Services" icon="calendar-check" href="/agent/services">
-    Add appointment types with their duration, price, and the details callers need.
-  </Card>
-  <Card title="Employees" icon="id-card" href="/agent/employees">
-    Add the people callers can book or ask for, with their services, hours, and time off.
+  <Card title="Instructions" icon="scroll" href="/agent/instructions">
+    Tell the agent how to behave on calls, in chats and in text messages.
   </Card>
   <Card title="Rules" icon="list-check" href="/agent/rules">
-    Add operating instructions for transfers, callback requests, fallback behavior, and special cases.
+    Add plain-text rules for transfers, callback requests and special cases.
+  </Card>
+  <Card title="Calls and booking" icon="phone-volume" href="/agent/calls-and-booking">
+    Set the transfer number, Staff answers first, booking and appointment changes.
+  </Card>
+  <Card title="Channels" icon="tower-broadcast" href="/agent/channels">
+    See the phone numbers, website widgets and Instagram account the agent answers.
   </Card>
 </CardGroup>
 
-## How configuration is used
+## What every agent shares
 
-LobbyStack prepares the saved Agent settings for each live call, so callers get stable behavior for the duration of the conversation.
+Your agents share the workspace's business details, knowledge, services, employees and calendar connections. You edit them once in **Settings**, and every agent uses them. The agent's **Shared with every agent** page links to each one:
 
-For website chat, LobbyStack uses the current business context and saved conversation state when generating replies.
+- [Business details](/settings/business-details): business summary, opening hours, languages, time zone and currency
+- [Knowledge](/settings/knowledge): text entries, documents and website imports
+- [Services](/settings/services): what callers can book
+- [Employees](/settings/employees): the people callers can book or ask for
+- [Connections](/integrations/overview): Google Calendar, Cal.com and Calendly
+
+## How LobbyStack uses the settings
+
+LobbyStack prepares the agent's saved settings for each live call, so callers get the same behavior for the whole call. For website chat, LobbyStack reads the current business details and the conversation so far when it writes each reply.
 
 ## Minimum setup for real callers
 
-Before forwarding production calls, check that:
+Before you forward real calls, check that:
 
-- Your greeting names your business and sets the right expectation.
-- The default customer language is the one most of your callers speak, because calls open in it.
-- A transfer number is saved if you want live human handoff. It must be in a [country LobbyStack can call](/agent/ai-settings/overview#default-transfer-number).
-- Your knowledge entries include hours, location, services, pricing, policies, and common caller questions.
-- Your services, employees, and Google Calendar connection are ready before you rely on appointment booking or appointment changes.
+- Your greeting names your business and sets the right expectation
+- The [default customer language](/settings/business-details#default-customer-language) is the one most of your callers speak, because calls open in it
+- A transfer number is saved if you want live handoff to a person. It must be in a [country LobbyStack can call](/agent/calls-and-booking#default-transfer-number).
+- Your knowledge covers hours, location, services, pricing, policies and common caller questions
+- Your services, employees and calendar connection are ready before you rely on booking or appointment changes

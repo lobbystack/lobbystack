@@ -313,6 +313,10 @@
     "smsInstructions": {
       "label": "Uputstva za SMS"
     },
+    "name": {
+      "label": "Ime",
+      "hint": "Vidi ga samo vaš tim."
+    },
     "greeting": {
       "label": "Pozdrav",
       "placeholder": "Dobar dan, hvala što ste nas pozvali…",
@@ -389,6 +393,14 @@
         "countryUnsupported": "Agent još ne može da preusmerava pozive na brojeve u ovoj zemlji."
       }
     }
+  },
+  "identity": { "title": "Ime, pozdrav i glas" },
+  "transfers": { "title": "Prebacivanja" },
+  "businessDetails": { "title": "Podaci o poslovanju" },
+  "instructions": {
+    "voice": { "label": "Pozivi", "placeholder": "Odgovarajte kratko i ponudite zakazivanje termina." },
+    "chat": { "label": "Četovi", "hint": "Čet na sajtu i Instagram.", "placeholder": "Odgovarajte u dve ili tri rečenice." },
+    "text": { "label": "SMS poruke", "placeholder": "Odgovori neka budu kraći od 300 znakova." }
   },
   "staffFirst": {
     "title": "Osoblje se javlja prvo",

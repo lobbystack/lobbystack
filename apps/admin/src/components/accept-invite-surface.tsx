@@ -40,7 +40,7 @@ export function AcceptInviteSurface() {
   const signOut = useSignOut();
   // A partner's domain opens only the partner's businesses, whose team page an activity-only operator can't open.
   const { partner } = useBranding();
-  const signedInHome = partner ? "/" : "/settings/team";
+  const signedInHome = partner ? "/" : "/workspace/team";
 
   useEffect(() => {
     const search = new URLSearchParams(window.location.search);
@@ -96,7 +96,7 @@ export function AcceptInviteSurface() {
       const joined = await response.json().catch(() => null) as { partnerId?: string | null } | null;
       toast.success(t("acceptInvite.success", { businessName: invitation?.businessName ?? t("acceptInvite.workspaceFallback") }));
       // Someone joining a partner's business, such as its owner, lands in it, and onboarding starts there if it hasn't finished.
-      router.replace(joined?.partnerId ? "/" : "/settings/team");
+      router.replace(joined?.partnerId ? "/" : "/workspace/team");
       router.refresh();
     } catch {
       setErrorMessage(t("acceptInvite.failed"));

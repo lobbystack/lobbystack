@@ -379,7 +379,7 @@ function callSummaryCopy(variables: Record<string, string>) {
 
 /** The notification settings page, on the same origin as the call link. */
 function notificationSettingsLink(callUrl: string | undefined): string | undefined {
-  return callUrl ? new URL("/settings/notifications", callUrl).href : undefined;
+  return callUrl ? new URL("/account/notifications", callUrl).href : undefined;
 }
 
 /** The grey box an email sets its facts or steps in, around rows of a table. */
