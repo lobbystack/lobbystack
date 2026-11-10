@@ -185,7 +185,6 @@
   },
   "edit": {
     "title": "Editar contacto",
-    "description": "Corrige un nombre mal entendido o actualiza el correo.",
     "name": "Nombre",
     "email": "Correo electrónico",
     "cancel": "Cancelar",

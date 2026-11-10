@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { requestJson } from "@/lib/request-json";
@@ -53,7 +53,6 @@ export function EditContactDialog({ businessId, contact, onOpenChange }: { busin
         <form className="grid gap-6" noValidate onSubmit={submit}>
           <DialogHeader>
             <DialogTitle>{t("edit.title")}</DialogTitle>
-            <DialogDescription>{t("edit.description")}</DialogDescription>
           </DialogHeader>
           <FieldGroup className="gap-4">
             <Field><FieldLabel htmlFor="edit-contact-name">{t("edit.name")}</FieldLabel><Input autoComplete="off" className="ph-mask" id="edit-contact-name" maxLength={200} onChange={(event) => setName(event.target.value)} value={name} /></Field>

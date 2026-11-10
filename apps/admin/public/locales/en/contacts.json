@@ -185,7 +185,6 @@
   },
   "edit": {
     "title": "Edit contact",
-    "description": "Fix a misheard name or update the email.",
     "name": "Name",
     "email": "Email",
     "cancel": "Cancel",

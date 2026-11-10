@@ -185,7 +185,6 @@
   },
   "edit": {
     "title": "Izmeni kontakt",
-    "description": "Ispravite pogrešno čuto ime ili ažurirajte e-poštu.",
     "name": "Ime",
     "email": "E-pošta",
     "cancel": "Otkaži",
