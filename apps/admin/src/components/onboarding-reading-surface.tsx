@@ -59,7 +59,7 @@ export function OnboardingReadingSurface({ documentId }: { documentId?: string |
     <div className="flex flex-col gap-4">
       {documentId && documents.isPending ? <WebsiteImportProgressSkeleton /> : websiteImport && (!documentId || submitted?.websiteImport) ? <div aria-live="polite"><WebsiteImportProgress job={websiteImport} /></div> : null}
       <ImportWaitSlides />
-      <Button className="h-11 w-full" onClick={stopWaiting} type="button" variant="ghost">{t("reading.skip")}</Button>
+      <Button className="w-full" onClick={stopWaiting} type="button" variant="ghost">{t("reading.skip")}</Button>
     </div>
   );
 }

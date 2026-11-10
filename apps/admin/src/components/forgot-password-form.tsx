@@ -170,7 +170,7 @@ export function ForgotPasswordForm({
 
           <div className="mt-2 flex flex-col gap-3">
             <Button
-              className="h-11 w-full"
+              className="w-full"
               loading={isSubmitting}
               loadingLabel={
                 isVerifyStep
@@ -184,7 +184,7 @@ export function ForgotPasswordForm({
 
             {isVerifyStep ? (
               <Button
-                className="h-11 w-full"
+                className="w-full"
                 disabled={isSubmitting}
                 onClick={onBackToRequest}
                 type="button"

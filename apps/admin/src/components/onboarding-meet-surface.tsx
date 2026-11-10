@@ -166,7 +166,7 @@ function MeetAgent() {
           </FieldGroup>
         ) : <MeetFormSkeleton labels={{ name: t("meet.name"), voice: tAgent("fields.voice.label"), greeting: t("meet.greeting"), language: t("meet.language") }} />}
         {error ? <FieldError>{error}</FieldError> : null}
-        <Button className="mt-2 h-11 w-full" disabled={!business || !profile || !greeting.trim() || !name.trim() || finish.isPending} onClick={() => { setError(null); finish.mutate(); }} type="button">
+        <Button className="mt-2 w-full" disabled={!business || !profile || !greeting.trim() || !name.trim() || finish.isPending} onClick={() => { setError(null); finish.mutate(); }} type="button">
           {finish.isPending ? <><LoaderCircle className="size-4 animate-spin" />{t("meet.finishing")}</> : t("meet.finish")}
         </Button>
       </div>

@@ -353,9 +353,9 @@ export function AuthCard({ mode, google = false, passkey = false, partner }: { m
             </Field>
             {verificationError ? <FieldError>{verificationError}</FieldError> : null}
             {resendStatus ? <p className="text-sm text-muted-foreground" role="status">{resendStatus}</p> : null}
-            <Button className="mt-2 h-11 w-full" disabled={verificationCode.length !== 6 || resendLoading} loading={verificationLoading} loadingLabel={t("verifyEmail.verifying")} type="submit">{t("verifyEmail.verify")}</Button>
+            <Button className="mt-2 w-full" disabled={verificationCode.length !== 6 || resendLoading} loading={verificationLoading} loadingLabel={t("verifyEmail.verifying")} type="submit">{t("verifyEmail.verify")}</Button>
             {resendChallengeRequired && turnstileSiteKey ? <Turnstile key={resendTurnstileResetKey} onError={() => { setResendTurnstileToken(null); setVerificationError(t("errors.turnstileFailed")); }} onTokenChange={setResendTurnstileToken} siteKey={turnstileSiteKey} /> : null}
-            <Button className="h-11 w-full" disabled={verificationLoading || Boolean(resendChallengeRequired && turnstileSiteKey && !resendTurnstileToken)} loading={resendLoading} loadingLabel={t("verifyEmail.resending")} onClick={() => void resendVerificationCode()} type="button" variant="outline">{t("verifyEmail.resend")}</Button>
+            <Button className="w-full" disabled={verificationLoading || Boolean(resendChallengeRequired && turnstileSiteKey && !resendTurnstileToken)} loading={resendLoading} loadingLabel={t("verifyEmail.resending")} onClick={() => void resendVerificationCode()} type="button" variant="outline">{t("verifyEmail.resend")}</Button>
           </FieldGroup>
         </form>
         {!login ? <p className="text-center text-sm text-muted-foreground">{t("verifyEmail.existingAccountHelp")} <Link className="font-medium text-foreground underline-offset-4 hover:underline" href={authPath("/login")}>{t("signup.signIn")}</Link> {t("verifyEmail.or")} <Link className="font-medium text-foreground underline-offset-4 hover:underline" href={forgotPasswordPath}>{t("verifyEmail.resetPassword")}</Link>.</p> : null}
@@ -379,8 +379,8 @@ export function AuthCard({ mode, google = false, passkey = false, partner }: { m
       <div className="flex w-full flex-col gap-6">
         {google || offerPasskey ? <>
           <div className="flex flex-col gap-2">
-            {google ? <Button className="h-11 w-full" loading={googleLoading} loadingLabel={t("google.redirecting")} onClick={() => void continueWithGoogle()} type="button" variant="outline"><GoogleLogo />{t("google.continue")}</Button> : null}
-            {offerPasskey ? <Button className="h-11 w-full" loading={passkeyLoading} loadingLabel={t("passkey.waiting")} onClick={() => void signInWithPasskey()} type="button" variant="outline"><KeyRound />{t("passkey.signIn")}</Button> : null}
+            {google ? <Button className="w-full" loading={googleLoading} loadingLabel={t("google.redirecting")} onClick={() => void continueWithGoogle()} type="button" variant="outline"><GoogleLogo />{t("google.continue")}</Button> : null}
+            {offerPasskey ? <Button className="w-full" loading={passkeyLoading} loadingLabel={t("passkey.waiting")} onClick={() => void signInWithPasskey()} type="button" variant="outline"><KeyRound />{t("passkey.signIn")}</Button> : null}
             {googleError ? <FieldError>{t(googleError)}</FieldError> : null}
             {passkeyError ? <FieldError>{t(passkeyError)}</FieldError> : null}
           </div>
@@ -396,7 +396,7 @@ export function AuthCard({ mode, google = false, passkey = false, partner }: { m
               {!login && hasFocusedPassword ? <ul aria-live="polite" className="flex flex-col gap-1 pt-0.5 text-sm font-medium" id="auth-password-criteria">{passwordCriteria.map((criterion) => <li className={cn("flex items-center gap-2", criterion.isMet ? "text-emerald-700 dark:text-emerald-400" : passwordInvalid ? "text-destructive" : "text-muted-foreground")} key={criterion.label}>{criterion.isMet ? <Check className="size-4 shrink-0" aria-hidden="true" /> : <X className="size-4 shrink-0" aria-hidden="true" />}<span>{criterion.label}</span></li>)}</ul> : null}
             </Field>
             {error ? <div className="flex flex-col gap-2 -mt-1"><FieldError>{error}</FieldError></div> : null}
-            <Button className="mt-2 h-11 w-full" loading={loading} loadingLabel={login ? t("login.submitting") : t("signup.submitting")} type="submit">{login ? t("login.submit") : t("signup.submit")}</Button>
+            <Button className="mt-2 w-full" loading={loading} loadingLabel={login ? t("login.submitting") : t("signup.submitting")} type="submit">{login ? t("login.submit") : t("signup.submit")}</Button>
           </FieldGroup>
         </form>
         {!login && turnstileSiteKey ? <Turnstile key={turnstileResetKey} onError={() => { pendingChallengeSubmit.current = false; setTurnstileToken(null); setLoading(false); setError(t("errors.turnstileFailed")); }} onTokenChange={(token) => {

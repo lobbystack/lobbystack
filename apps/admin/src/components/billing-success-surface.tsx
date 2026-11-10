@@ -111,7 +111,7 @@ export function BillingSuccessSurface() {
   if (!requestId || businesses.isError || (checkout.isError && !checkout.data)) {
     return (
       <ReplacementOnboardingShell description={t("billing.success.missing.description")} title={t("billing.success.missing.title")} width="md">
-        <Button className="h-11 w-full" nativeButton={false} render={<Link href="/workspace/billing" />}>{t("billing.success.missing.action")}</Button>
+        <Button className="w-full" nativeButton={false} render={<Link href="/workspace/billing" />}>{t("billing.success.missing.action")}</Button>
       </ReplacementOnboardingShell>
     );
   }
@@ -160,7 +160,7 @@ export function BillingSuccessSurface() {
             <p className="text-sm text-muted-foreground">{t("billing.success.number.keep")}</p>
           </Surface>
         ) : (
-          <Button className="h-11 w-full" onClick={goToNumberStep} type="button">{t("billing.success.number.choose")}</Button>
+          <Button className="w-full" onClick={goToNumberStep} type="button">{t("billing.success.number.choose")}</Button>
         )}
         <section className="flex flex-col gap-4">
           <h2 className="text-base font-medium text-foreground">{t("billing.success.steps.title")}</h2>
@@ -178,9 +178,9 @@ export function BillingSuccessSurface() {
           </ol>
         </section>
         {onboarding ? (
-          number ? <Button className="h-11 w-full" onClick={goToNumberStep} type="button" variant="outline">{t("billing.success.continue")}</Button> : null
+          number ? <Button className="w-full" onClick={goToNumberStep} type="button" variant="outline">{t("billing.success.continue")}</Button> : null
         ) : (
-          <Button className="h-11 w-full" nativeButton={false} render={<Link href="/" />} variant="outline">{t("billing.success.dashboard")}</Button>
+          <Button className="w-full" nativeButton={false} render={<Link href="/" />} variant="outline">{t("billing.success.dashboard")}</Button>
         )}
       </div>
     </ReplacementOnboardingShell>

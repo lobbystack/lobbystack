@@ -411,7 +411,6 @@ export function CallRecordingPlayer({
       <div className="flex min-w-0 items-center gap-2">
         <Button
           aria-label={isPlaying ? pauseLabel : playLabel}
-          className="size-8 rounded-md"
           onClick={() => void togglePlayback()}
           size="icon-sm"
           title={isPlaying ? pauseLabel : playLabel}

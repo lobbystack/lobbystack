@@ -47,13 +47,13 @@ export function CheckInSurface({ answer, token }: { answer: CheckInAnswer | null
   if (state === "done") {
     const step = nextStep(answer, language);
     return <div className="ph-no-capture"><ReplacementOnboardingShell description={t(`checkIn.next.${answer}.description`)} progress={null} title={t(`checkIn.next.${answer}.title`)} width="sm"><div className="flex flex-col gap-6">
-      <Button className="h-11 w-full" nativeButton={false} render={<Link href={step.href} {...(step.external ? { rel: "noreferrer", target: "_blank" } : {})} />}>{t(`checkIn.next.${answer}.action`)}</Button>
+      <Button className="w-full" nativeButton={false} render={<Link href={step.href} {...(step.external ? { rel: "noreferrer", target: "_blank" } : {})} />}>{t(`checkIn.next.${answer}.action`)}</Button>
       <p className="text-center text-sm text-muted-foreground">{t("checkIn.next.reply")}</p>
     </div></ReplacementOnboardingShell></div>;
   }
 
   return <div className="ph-no-capture"><ReplacementOnboardingShell description={t(`checkIn.answers.${answer}`)} progress={null} title={t("checkIn.confirm.title")} width="sm"><div className="flex flex-col gap-4">
     {state === "failed" ? <p className="text-center text-sm text-destructive" role="alert">{t("checkIn.confirm.failed")}</p> : null}
-    <Button className="h-11 w-full" disabled={state === "saving"} onClick={() => void confirm()} type="button">{state === "saving" ? t("checkIn.confirm.saving") : t("checkIn.confirm.action")}</Button>
+    <Button className="w-full" disabled={state === "saving"} onClick={() => void confirm()} type="button">{state === "saving" ? t("checkIn.confirm.saving") : t("checkIn.confirm.action")}</Button>
   </div></ReplacementOnboardingShell></div>;
 }

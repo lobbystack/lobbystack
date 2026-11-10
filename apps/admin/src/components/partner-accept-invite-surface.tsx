@@ -47,7 +47,7 @@ export function PartnerAcceptInviteSurface({ invitation, state, token, returnTo 
     <ReplacementOnboardingShell description={t("acceptInvite.description", { email: invitation.email, role: t(`roles.${invitation.role}`) })} progress={null} title={t("acceptInvite.title", { partnerName: invitation.partnerName })} width="sm">
       <div className="flex flex-col gap-6">
         {error ? <p className="text-center text-sm text-destructive" role="alert">{error}</p> : null}
-        {wrongAccount ? <SwitchAccountButton returnTo={returnTo} /> : <Button className="h-11 w-full" loading={accept.isPending} loadingLabel={t("acceptInvite.submitting")} onClick={() => { setError(null); accept.mutate(); }}>{t("acceptInvite.submit")}</Button>}
+        {wrongAccount ? <SwitchAccountButton returnTo={returnTo} /> : <Button className="w-full" loading={accept.isPending} loadingLabel={t("acceptInvite.submitting")} onClick={() => { setError(null); accept.mutate(); }}>{t("acceptInvite.submit")}</Button>}
       </div>
     </ReplacementOnboardingShell>
   );

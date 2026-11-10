@@ -58,7 +58,7 @@ export function OnboardingLanguageSurface() {
           )}
         </Field>
         {error ? <FieldError>{error}</FieldError> : null}
-        <Button className="mt-2 h-11 w-full" disabled={!business || save.isPending || navigating} type="submit">{save.isPending || navigating ? <><LoaderCircle className="size-4 animate-spin" />{t("language.saving")}</> : t("language.continue")}</Button>
+        <Button className="mt-2 w-full" disabled={!business || save.isPending || navigating} type="submit">{save.isPending || navigating ? <><LoaderCircle className="size-4 animate-spin" />{t("language.saving")}</> : t("language.continue")}</Button>
       </FieldGroup>
     </form>
   );

@@ -77,7 +77,7 @@ export function OnboardingWebsiteSurface() {
           )}
         </Field>
         {error ? <FieldError>{error}</FieldError> : null}
-        <Button className="mt-2 h-11 w-full" disabled={!business || websiteUrl.trim().length === 0 || working} type="submit">{working ? <><LoaderCircle className="size-4 animate-spin" />{t(action === "skip" ? "website.skippingImport" : "website.submitting")}</> : t("website.continue")}</Button>
+        <Button className="mt-2 w-full" disabled={!business || websiteUrl.trim().length === 0 || working} type="submit">{working ? <><LoaderCircle className="size-4 animate-spin" />{t(action === "skip" ? "website.skippingImport" : "website.submitting")}</> : t("website.continue")}</Button>
       </FieldGroup>
       </form>
       <div className="mt-6 flex flex-col items-center gap-3">

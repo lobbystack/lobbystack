@@ -433,7 +433,7 @@ export function PhoneNumberChooser({
                       ) : null}
                     </div>
                     <Button
-                      className="h-9 rounded-full"
+                      className="rounded-full"
                       disabled={isThisLoading}
                       onClick={() => void handleSelect(number)}
                       size="sm"

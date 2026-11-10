@@ -118,7 +118,7 @@ export function TrialPhoneVerification({ businessId, onVerified }: { businessId:
           <FieldDescription>{t("phoneNumber.trialPhone.hint")}</FieldDescription>
         </Field>
         {error ? <FieldError>{error}</FieldError> : null}
-        <Button className="mt-2 h-11 w-full" disabled={phone.trim().length === 0} loading={send.isPending} loadingLabel={t("phoneNumber.trialPhone.sending")} type="submit">{t("phoneNumber.trialPhone.sendCode")}</Button>
+        <Button className="mt-2 w-full" disabled={phone.trim().length === 0} loading={send.isPending} loadingLabel={t("phoneNumber.trialPhone.sending")} type="submit">{t("phoneNumber.trialPhone.sendCode")}</Button>
       </FieldGroup>
     </form>
   );

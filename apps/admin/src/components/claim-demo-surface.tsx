@@ -146,7 +146,7 @@ export function ClaimDemoSurface() {
         title={t("claim.errorTitle")}
       >
         <Button
-          className="h-11 w-full"
+          className="w-full"
           onClick={() => {
             if (previewQuery.isError) void previewQuery.refetch();
             claimAttemptRef.current = null;

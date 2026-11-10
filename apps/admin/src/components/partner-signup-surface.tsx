@@ -37,8 +37,8 @@ export function PartnerSignedOutSurface({ page, returnTo, values = {} }: { page:
   return (
     <ReplacementOnboardingShell description={t(`signedOut.${page}`, values)} progress={null} title={t(`${page}.title`, values)} width="sm">
       <div className="flex flex-col gap-3">
-        <Button className="h-11 w-full" nativeButton={false} onClick={() => rememberInvitedEmail(values.email)} render={<Link href={signIn} />} role="link">{t("signedOut.signIn")}</Button>
-        <Button className="h-11 w-full" nativeButton={false} onClick={() => rememberInvitedEmail(values.email)} render={<Link href={signUp} />} role="link" variant="outline">{t("signedOut.createAccount")}</Button>
+        <Button className="w-full" nativeButton={false} onClick={() => rememberInvitedEmail(values.email)} render={<Link href={signIn} />} role="link">{t("signedOut.signIn")}</Button>
+        <Button className="w-full" nativeButton={false} onClick={() => rememberInvitedEmail(values.email)} render={<Link href={signUp} />} role="link" variant="outline">{t("signedOut.createAccount")}</Button>
       </div>
     </ReplacementOnboardingShell>
   );
@@ -50,7 +50,7 @@ export function SwitchAccountButton({ returnTo }: { returnTo: string }) {
   const signOut = useSignOut();
   const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
   const onPartnerHost = useBranding().partner !== null;
-  return <Button className="h-11 w-full" onClick={() => void signOut(buildPartnerConsoleLoginPath(onPartnerHost, returnTo, locale))}>{t("signedOut.switchAccount")}</Button>;
+  return <Button className="w-full" onClick={() => void signOut(buildPartnerConsoleLoginPath(onPartnerHost, returnTo, locale))}>{t("signedOut.switchAccount")}</Button>;
 }
 
 const SIGNUP_ERRORS: Record<string, string> = {
@@ -98,7 +98,7 @@ export function PartnerSignupSurface({ baseDomain, blocked, invitation, invitedE
     return (
       <ReplacementOnboardingShell description={t(`signup.${blocked}`, { email: invitedEmail ?? "" })} progress={null} title={t("signup.title")} width="sm">
         {/* Someone signed out who can't sign up here may already be a partner, so sign-in stays one click away. */}
-        {blocked === "wrongAccount" ? <SwitchAccountButton returnTo={returnTo} /> : !signedIn ? <Button className="h-11 w-full" nativeButton={false} render={<Link href={buildPartnerLoginPath("/partner")} />} role="link" variant="outline">{t("signedOut.signIn")}</Button> : <span />}
+        {blocked === "wrongAccount" ? <SwitchAccountButton returnTo={returnTo} /> : !signedIn ? <Button className="w-full" nativeButton={false} render={<Link href={buildPartnerLoginPath("/partner")} />} role="link" variant="outline">{t("signedOut.signIn")}</Button> : <span />}
       </ReplacementOnboardingShell>
     );
   }
@@ -124,7 +124,7 @@ export function PartnerSignupSurface({ baseDomain, blocked, invitation, invitedE
         </FieldGroup>
         {error ? <p className="text-center text-sm text-destructive" role="alert">{error}</p> : null}
         <div className="flex flex-col gap-3">
-          <Button className="h-11 w-full" disabled={!name.trim() || (baseDomain !== null && !shownSubdomain)} loading={signup.isPending} loadingLabel={t("signup.submitting")} type="submit">{t("signup.submit")}</Button>
+          <Button className="w-full" disabled={!name.trim() || (baseDomain !== null && !shownSubdomain)} loading={signup.isPending} loadingLabel={t("signup.submitting")} type="submit">{t("signup.submit")}</Button>
         </div>
       </form>
     </ReplacementOnboardingShell>

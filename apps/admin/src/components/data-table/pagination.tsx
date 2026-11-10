@@ -94,7 +94,8 @@ export function DataTablePagination<TData extends RowData>({
         </div>
         <div className="flex items-center space-x-2">
           <Button
-            className="size-8 rounded-md p-0 @max-md/content:hidden"
+            className="@max-md/content:hidden"
+            size="icon-sm"
             disabled={!table.getCanPreviousPage()}
             onClick={() => table.setPageIndex(0)}
             type="button"
@@ -104,7 +105,7 @@ export function DataTablePagination<TData extends RowData>({
             <ChevronsLeft className="h-4 w-4" />
           </Button>
           <Button
-            className="size-8 rounded-md p-0"
+            size="icon-sm"
             disabled={!table.getCanPreviousPage()}
             onClick={() => table.previousPage()}
             type="button"
@@ -120,7 +121,7 @@ export function DataTablePagination<TData extends RowData>({
                 <span className="type-body-muted px-1">...</span>
               ) : (
                 <Button
-                  className="h-8 min-w-8 rounded-md px-2"
+                  size="icon-sm"
                   onClick={() => table.setPageIndex(pageNumber - 1)}
                   type="button"
                   variant={currentPage === pageNumber ? "default" : "outline"}
@@ -133,7 +134,7 @@ export function DataTablePagination<TData extends RowData>({
           ))}
 
           <Button
-            className="size-8 rounded-md p-0"
+            size="icon-sm"
             disabled={!table.getCanNextPage()}
             onClick={() => table.nextPage()}
             type="button"
@@ -143,7 +144,8 @@ export function DataTablePagination<TData extends RowData>({
             <ChevronRight className="h-4 w-4" />
           </Button>
           <Button
-            className="size-8 rounded-md p-0 @max-md/content:hidden"
+            className="@max-md/content:hidden"
+            size="icon-sm"
             disabled={!table.getCanNextPage()}
             onClick={() => table.setPageIndex(table.getPageCount() - 1)}
             type="button"

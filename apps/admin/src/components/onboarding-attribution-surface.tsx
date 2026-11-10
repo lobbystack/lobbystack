@@ -117,7 +117,7 @@ export function OnboardingAttributionSurface() {
         </div>
       )}
       {error ? <FieldError>{error}</FieldError> : null}
-      <Button className="h-11 w-full" disabled={!business || selected === null || finish.isPending} onClick={() => void submit(selected)} type="button">{finish.isPending ? <><LoaderCircle className="size-4 animate-spin" />{t("attribution.saving")}</> : t("attribution.continue")}</Button>
+      <Button className="w-full" disabled={!business || selected === null || finish.isPending} onClick={() => void submit(selected)} type="button">{finish.isPending ? <><LoaderCircle className="size-4 animate-spin" />{t("attribution.saving")}</> : t("attribution.continue")}</Button>
       <button className="mx-auto text-sm text-muted-foreground hover:text-foreground disabled:opacity-50" disabled={!business || finish.isPending} onClick={() => void submit(null)} type="button">{t("attribution.skip")}</button>
     </div>
   );

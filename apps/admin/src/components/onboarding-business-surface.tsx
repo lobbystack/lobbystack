@@ -103,7 +103,7 @@ export function OnboardingBusinessSurface({ createNew = false }: { createNew?: b
           </div>
         </Field>
         {error || businesses.isError ? <FieldError>{error ?? t("businessName.unavailable")}</FieldError> : null}
-        <Button className="mt-2 h-11 w-full" disabled={businesses.isLoading || create.isPending || update.isPending || navigating || name.trim().length === 0} type="submit">{create.isPending || update.isPending || navigating ? <><LoaderCircle className="size-4 animate-spin" />{t("businessName.submitting")}</> : t("businessName.continue")}</Button>
+        <Button className="mt-2 w-full" disabled={businesses.isLoading || create.isPending || update.isPending || navigating || name.trim().length === 0} type="submit">{create.isPending || update.isPending || navigating ? <><LoaderCircle className="size-4 animate-spin" />{t("businessName.submitting")}</> : t("businessName.continue")}</Button>
       </FieldGroup>
     </form>
   );

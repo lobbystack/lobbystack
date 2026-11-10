@@ -248,11 +248,11 @@ export function DataTablePaginationSkeleton() {
           <Skeleton className="h-5 w-16" />
         </div>
         <div className="flex items-center space-x-2">
-          <Skeleton className="size-8 @max-md/content:hidden" />
-          <Skeleton className="size-8" />
-          <Skeleton className="size-8" />
-          <Skeleton className="size-8" />
-          <Skeleton className="size-8 @max-md/content:hidden" />
+          <Skeleton className="size-8 rounded-full @max-md/content:hidden" />
+          <Skeleton className="size-8 rounded-full" />
+          <Skeleton className="size-8 rounded-full" />
+          <Skeleton className="size-8 rounded-full" />
+          <Skeleton className="size-8 rounded-full @max-md/content:hidden" />
         </div>
       </div>
     </div>
@@ -398,7 +398,7 @@ export function HeaderButtonSkeleton({ label, trailingIcon = false }: { label: s
   return (
     <Skeleton
       aria-hidden="true"
-      className={`inline-flex h-9 shrink-0 items-center gap-1.5 pl-2.5 text-sm font-medium whitespace-nowrap ${trailingIcon ? "pr-2.5" : "pr-3"}`}
+      className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full px-5 text-sm font-[550] tracking-[0.01em] whitespace-nowrap"
     >
       <span className="invisible size-4 shrink-0" />
       <span className="invisible">{label}</span>
@@ -552,13 +552,13 @@ export function RulesPageSkeleton({ headings }: { headings: [title: string, prev
 export function AnalyticsControlsSkeleton({ granularityLabel, rangeLabel }: { granularityLabel: string; rangeLabel: string }) {
   return (
     <>
-      <Skeleton aria-hidden="true" className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-transparent pl-3 pr-2.5 text-sm font-medium whitespace-nowrap">
+      <Skeleton aria-hidden="true" className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full border border-transparent px-5 text-sm font-[550] tracking-[0.01em] whitespace-nowrap">
         <span className="invisible">{granularityLabel}</span>
         <span className="invisible size-4 shrink-0" />
       </Skeleton>
       <div aria-hidden="true" className="flex w-fit items-stretch">
-        <Skeleton className="size-9 rounded-full rounded-r-none" />
-        <Skeleton className="inline-flex h-9 max-w-56 items-center rounded-full rounded-l-none border border-transparent border-l-0 px-3 text-sm font-medium whitespace-nowrap">
+        <Skeleton className="size-10 rounded-full rounded-r-none" />
+        <Skeleton className="inline-flex h-10 max-w-56 items-center rounded-full rounded-l-none border border-transparent border-l-0 px-5 text-sm font-[550] tracking-[0.01em] whitespace-nowrap">
           <span className="invisible truncate">{rangeLabel}</span>
         </Skeleton>
       </div>
@@ -653,7 +653,7 @@ export function SetupGuideSkeleton({ labels }: { labels: { title: string; skip: 
           <Skeleton aria-hidden="true" className="size-5 shrink-0 rounded-full" />
           <Skeleton aria-hidden="true" className="h-5 w-56 max-w-full" />
         </div>
-        <Skeleton aria-hidden="true" className="inline-flex h-9 shrink-0 items-center rounded-full border border-transparent px-3 text-sm font-medium whitespace-nowrap"><span className="invisible">{labels.skip}</span></Skeleton>
+        <Skeleton aria-hidden="true" className="inline-flex h-10 shrink-0 items-center rounded-full border border-transparent px-5 text-sm font-[550] tracking-[0.01em] whitespace-nowrap"><span className="invisible">{labels.skip}</span></Skeleton>
       </div>
       <Surface>
         <div className="divide-y divide-border">
@@ -715,7 +715,7 @@ export function PhoneNumberChooserSkeleton({ labels, rows = 4 }: { labels: { cou
           <span className="text-sm font-medium">{labels.areaCode}</span>
           <Skeleton aria-hidden="true" className="h-9 w-full" />
         </div>
-        <HiddenTextSkeleton skeletonClassName="inline-flex h-9 w-full items-center justify-center rounded-full px-3 text-sm font-medium whitespace-nowrap sm:w-fit">{labels.search}</HiddenTextSkeleton>
+        <HiddenTextSkeleton skeletonClassName="inline-flex h-10 w-full items-center justify-center rounded-full px-5 text-sm font-[550] tracking-[0.01em] whitespace-nowrap sm:w-fit">{labels.search}</HiddenTextSkeleton>
       </div>
       <Surface className="flex h-96 flex-col">
         <div className="flex h-14 shrink-0 items-center border-b border-border px-4 text-sm font-medium text-muted-foreground">
@@ -786,7 +786,7 @@ export function TestPanelSkeleton() {
     <div aria-busy="true" className="flex min-h-0 flex-1 flex-col gap-4">
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4">
         <Skeleton aria-hidden="true" className="size-40 rounded-full" />
-        <Skeleton aria-hidden="true" className="h-9 w-28 rounded-full" />
+        <Skeleton aria-hidden="true" className="h-10 w-28 rounded-full" />
       </div>
       <Skeleton aria-hidden="true" className="h-11 w-full shrink-0 rounded-xl" />
     </div>

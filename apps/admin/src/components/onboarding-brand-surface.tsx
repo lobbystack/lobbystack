@@ -122,7 +122,7 @@ export function OnboardingBrandSurface({ askAppName, askLogo }: { askAppName: bo
     return (
       <div className="flex flex-col gap-4">
         <p className="text-center text-sm text-muted-foreground" role="status">{t("brand.errors.closed")}</p>
-        <Button className="h-11 w-full" disabled={navigating} onClick={() => navigate(NEXT_STEP)} type="button">
+        <Button className="w-full" disabled={navigating} onClick={() => navigate(NEXT_STEP)} type="button">
           {navigating ? <LoaderCircle className="size-4 animate-spin" /> : null}
           {t("brand.continue")}
         </Button>
@@ -182,7 +182,7 @@ export function OnboardingBrandSurface({ askAppName, askLogo }: { askAppName: bo
           </Surface>
         </div>
         {error ? <FieldError>{error}</FieldError> : null}
-        <Button className="mt-2 h-11 w-full" disabled={working || !chosen} type="submit">
+        <Button className="mt-2 w-full" disabled={working || !chosen} type="submit">
           {working ? <><LoaderCircle className="size-4 animate-spin" />{t("brand.saving")}</> : t("brand.continue")}
         </Button>
         <button className="text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50" disabled={working} onClick={() => { setError(null); save.mutate({}); }} type="button">
