@@ -31,14 +31,14 @@ describe("the receptionist's grammatical gender", () => {
   it.each(prompts)("uses feminine forms for a woman's voice in the %s instructions", (_label, instructions) => {
     const prompt = instructions({ ...demoSnapshot, voice: "marin" });
     expect(prompt).toContain("Speak of yourself as a woman, to match your voice on calls.");
-    for (const form of ["\"ravie\" in French", "\"encantada\" in Spanish", "\"spremna sam\" in Serbian", "\"obrigada\" in Portuguese", "\"lieta\" in Italian", "\"Rezeptionistin\" in German", "you're she, not he"]) expect(prompt).toContain(form);
+    for (const form of ["\"ravie\" in French", "\"encantada\" in Spanish", "\"spremna sam\" in Serbian", "\"obrigada\" in Portuguese", "\"lieta\" in Italian", "\"Rezeptionistin\" in German", "\"gotowa\" in Polish", "\"рада\" in Russian and Ukrainian", "you're she, not he"]) expect(prompt).toContain(form);
     expect(prompt).not.toContain("as a man");
   });
 
   it.each(prompts)("uses masculine forms for a man's voice in the %s instructions", (_label, instructions) => {
     const prompt = instructions({ ...demoSnapshot, voice: "cedar" });
     expect(prompt).toContain("Speak of yourself as a man, to match your voice on calls.");
-    for (const form of ["\"ravi\" in French", "\"encantado\" in Spanish", "\"spreman sam\" in Serbian", "\"obrigado\" in Portuguese", "\"lieto\" in Italian", "\"Rezeptionist\" in German", "you're he, not she"]) expect(prompt).toContain(form);
+    for (const form of ["\"ravi\" in French", "\"encantado\" in Spanish", "\"spreman sam\" in Serbian", "\"obrigado\" in Portuguese", "\"lieto\" in Italian", "\"Rezeptionist\" in German", "\"gotowy\" in Polish", "\"рад\" in Russian", "\"радий\" in Ukrainian", "you're he, not she"]) expect(prompt).toContain(form);
     expect(prompt).not.toContain("as a woman");
   });
 

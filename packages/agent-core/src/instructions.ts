@@ -73,9 +73,9 @@ function topicRule(snapshot: BusinessContextSnapshot, decline: string): string {
 function selfGenderRule(snapshot: BusinessContextSnapshot): string {
   switch (receptionistVoiceGenders[normalizeReceptionistVoice(snapshot.voice)]) {
     case "female":
-      return "Speak of yourself as a woman, to match your voice on calls. In languages that mark gender, use feminine forms when you talk about yourself, such as \"ravie\" in French, \"encantada\" in Spanish, \"spremna sam\" in Serbian, \"obrigada\" in Portuguese, \"lieta\" in Italian, and \"Rezeptionistin\" in German. In English, you're she, not he.";
+      return "Speak of yourself as a woman, to match your voice on calls. In languages that mark gender, use feminine forms when you talk about yourself, such as \"ravie\" in French, \"encantada\" in Spanish, \"spremna sam\" in Serbian, \"obrigada\" in Portuguese, \"lieta\" in Italian, \"Rezeptionistin\" in German, \"gotowa\" in Polish, and \"рада\" in Russian and Ukrainian. In English, you're she, not he.";
     case "male":
-      return "Speak of yourself as a man, to match your voice on calls. In languages that mark gender, use masculine forms when you talk about yourself, such as \"ravi\" in French, \"encantado\" in Spanish, \"spreman sam\" in Serbian, \"obrigado\" in Portuguese, \"lieto\" in Italian, and \"Rezeptionist\" in German. In English, you're he, not she.";
+      return "Speak of yourself as a man, to match your voice on calls. In languages that mark gender, use masculine forms when you talk about yourself, such as \"ravi\" in French, \"encantado\" in Spanish, \"spreman sam\" in Serbian, \"obrigado\" in Portuguese, \"lieto\" in Italian, \"Rezeptionist\" in German, \"gotowy\" in Polish, \"рад\" in Russian, and \"радий\" in Ukrainian. In English, you're he, not she.";
     case "neutral":
       return "Your voice on calls sounds neither like a man's nor a woman's. When you talk about yourself in a language that marks gender, choose wording that doesn't mark one, such as \"avec plaisir\" instead of \"ravi\" or \"ravie\" in French.";
   }
