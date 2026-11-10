@@ -15,6 +15,7 @@ import { loadPartnerNumberStanding } from "./partnerNumbers";
 import { sharedSmsSender } from "./smsSender";
 import { isDisposableTrialEmail, trialNeedsPhoneVerification } from "./trialEligibility";
 import { getVoiceSecondsLeftInTransaction, readEndedVoiceSecondsLeftInTransaction } from "./usage";
+import { greetingName } from "./emailGreeting";
 
 export type NumberCountry = "US" | "CA" | "PR" | "GB" | "AU" | "NZ";
 
@@ -227,7 +228,7 @@ export async function loadNumberReleaseEmail(context: DomainContext, input: { bu
     if (!number) return null;
     const owner = (await tx.execute<{ email: string; name: string | null; preferred_locale: string; business_name: string }>(sql`select email, name, preferred_locale, business_name from app.resolve_business_owner_contact(${input.businessId}::uuid)`)).rows[0];
     if (!owner) return null;
-    return { to: owner.email, locale: normalizeInterfaceLocale(owner.preferred_locale) ?? "en", firstName: owner.name?.trim().split(/\s+/)[0] ?? "", businessName: owner.business_name, number: number.e164, timezone: number.timezone };
+    return { to: owner.email, locale: normalizeInterfaceLocale(owner.preferred_locale) ?? "en", firstName: greetingName(owner.name, owner.email), businessName: owner.business_name, number: number.e164, timezone: number.timezone };
   });
 }
 
@@ -652,7 +653,7 @@ export async function loadNumberTrialEmail(context: DomainContext, input: { busi
       email: input.email,
       to: owner.email,
       locale: normalizeInterfaceLocale(owner.preferred_locale) ?? "en",
-      firstName: owner.name?.trim().split(/\s+/)[0] ?? "",
+      firstName: greetingName(owner.name, owner.email),
       businessName: owner.business_name,
       trialNumber: trial.e164,
       forwardTo: input.email === "minutes_out" ? trial.transferNumber?.trim() || trial.verifiedPhone : null,

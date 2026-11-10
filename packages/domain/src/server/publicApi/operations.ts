@@ -110,7 +110,7 @@ import type { DomainContext } from "../context";
 import { loadEntitlement } from "../entitlement";
 import { cancelKnowledgeDocumentInTransaction, createKnowledgeDocumentInTransaction, createKnowledgeSnippetInTransaction, deleteKnowledgeDocumentInTransaction, deleteKnowledgeSnippetInTransaction, expandWebsiteCrawlInTransaction, KnowledgeStorageLimitError, ONBOARDING_CRAWL_PAGE_LIMIT, retryKnowledgeDocumentInTransaction, setKnowledgeDocumentActiveInTransaction, updateKnowledgeSnippetInTransaction } from "../knowledge";
 import { normalizeWebsiteSourceUrl } from "../knowledgeUrl";
-import { normalizeOnboardingStage, scheduleOnboardingFollowupInTransaction } from "../onboarding";
+import { normalizeOnboardingStage, scheduleWelcomeEmailInTransaction } from "../onboarding";
 import { createPartnerBusiness } from "../partners";
 import { loadNotificationPreferencesInTransaction, loadSavedNotificationPreferencesInTransaction, saveNotificationPreferencesInTransaction } from "../notifications";
 import { completeUploadInTransaction, insertPendingUploadInTransaction, planUpload, type StorageProvider } from "../storage";
@@ -782,9 +782,9 @@ export async function completeOnboardingForApi(context: DomainContext, caller: A
     const source = input.source?.trim() || null;
     const completedAt = new Date();
     await tx.update(businesses).set({ onboardingAttribution: source, onboardingStage: "complete", updatedAt: completedAt }).where(eq(businesses.id, caller.businessId));
-    // The founder's check-in is for people who set up their own business. It
-    // goes to the first owner, which for a business a platform key onboarded is the key's account.
-    if (caller.platformKeyId === undefined && !platformKeyOnboarded) await scheduleOnboardingFollowupInTransaction(tx, caller.businessId, completedAt);
+    // The welcome email is for people who set up their own business. It goes
+    // to the first owner, which for a business a platform key onboarded is the key's account.
+    if (caller.platformKeyId === undefined && !platformKeyOnboarded) await scheduleWelcomeEmailInTransaction(tx, caller.businessId, completedAt);
     await audit(tx, caller, { eventType: "api.onboarding.completed", entityType: "business", entityId: caller.businessId, payload: { skipNumber: Boolean(input.skip_number), ...(source ? { source } : {}) } });
     return await loadOnboarding(tx, caller.businessId);
   });

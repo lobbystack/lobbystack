@@ -1024,6 +1024,10 @@
       "eventColumn": "Događaj"
     },
     "events": {
+      "callCompleted": {
+        "title": "Odgovoren poziv",
+        "description": "Kada vaš agent završi poziv, uz rezime."
+      },
       "voiceMessage": {
         "title": "Primljena glasovna poruka",
         "description": "Kada pozivalac ostavi poruku tokom poziva."

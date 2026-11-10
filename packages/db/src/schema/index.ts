@@ -1428,6 +1428,8 @@ export const operatorNotificationDeliveries = pgTable(
     status: varchar("status", { length: 32 }).default("pending").notNull(),
     destination: text("destination").notNull(),
     sender: text("sender"), subject: text("subject").notNull(), body: text("body").notNull(), providerMessageId: text("provider_message_id"),
+    // What an email lays out beyond the subject and body, such as a call summary's caller and length (migration 0199).
+    details: jsonb("details").$type<Record<string, string>>(),
     scheduledFor: timestamp("scheduled_for", { withTimezone: true }).defaultNow().notNull(), sentAt: timestamp("sent_at", { withTimezone: true }),
     contentExpiresAt: timestamp("content_expires_at", { withTimezone: true }).notNull(), lastError: text("last_error"), providerPrice: doublePrecision("provider_price"), providerPriceUnit: varchar("provider_price_unit", { length: 16 }), providerCostUsd: doublePrecision("provider_cost_usd"), providerNumSegments: integer("provider_num_segments"), ...legacyId, ...timestamps,
   },

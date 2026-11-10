@@ -7,6 +7,7 @@ import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 import { requireBusinessMembership } from "../authz";
 import { contentExpiryForPlan, isContentRetentionEnabled, resolveBusinessBillingPlan } from "./contentRetentionPolicy";
 import { resolveCallOutcome } from "./callOutcome";
+import { queueCallSummaryAlertInTransaction } from "./callSummaryAlert";
 import { findOrCreateContactByPhone } from "./contacts";
 import { buildConversationSessionSummary, extractCallerContext, normalizeCallSummaryLocale, sanitizeGeneratedCallerName, type CallSummaryLocale, type ConversationTranscriptTurn, type GeneratedCallSummary } from "./conversationSummary";
 import type { DomainContext } from "./context";
@@ -100,6 +101,7 @@ export async function finalizeConversationSession(
     await tx.update(conversations).set({ status: "closed", ...(summaryText ? { summary: summaryText } : {}), revision: sql`${conversations.revision} + 1`, updatedAt: new Date() }).where(and(eq(conversations.id, call.conversationId), eq(conversations.businessId, input.businessId)));
     await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "conversation", aggregateId: call.conversationId, dedupeKey: `conversation:${call.conversationId}:finalized:${session.id}`, payload: { type: "conversation.updated", entityId: call.conversationId } });
     await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "call.completed", resourceId: input.callId });
+    await queueCallSummaryAlertInTransaction(tx, { businessId: input.businessId, callId: input.callId, outcome: summary, callerName });
     return { sessionId: session.id, finalized: true };
   });
 }

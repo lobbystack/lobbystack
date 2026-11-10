@@ -376,6 +376,7 @@ export const apiCalendarConnectLinkSchema = z.object({
 
 // The alerts the dashboard's notification settings show, by their API names.
 const notificationEventDescriptions = {
+  call_completed: "The agent answered a call. The email shows the caller, the time, the length and the summary.",
   voice_message: "A caller left a message during a call.",
   text_message: "A customer texted the business number.",
   customer_sms_failed: "A confirmation or reminder text to a customer failed or wasn't delivered.",

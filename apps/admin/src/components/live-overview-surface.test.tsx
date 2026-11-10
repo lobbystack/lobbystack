@@ -18,6 +18,7 @@ import { SETUP_STEP_ORDER } from "@/lib/setup-guide";
 vi.mock("next/dynamic", () => ({ default: () => () => null }));
 // The activation card has its own suite; this one covers follow-up parity.
 vi.mock("./dashboard-activation-card", () => ({ DashboardActivationCard: () => null }));
+vi.mock("./call-forwarding-dialog", () => ({ CallForwardingFromLink: () => null }));
 const clients: QueryClient[] = [];
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); });
 type Overrides = { upcoming?: Array<Record<string, unknown>>; recentCalls?: Array<Record<string, unknown>>; actionRequired?: Array<Record<string, unknown>>; role?: string; capabilities?: Capability[]; unansweredCount?: number };

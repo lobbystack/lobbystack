@@ -15,7 +15,7 @@ const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof crea
 vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string, options?: { day?: string; list?: string; number?: number }) => (options?.day ? `${key}:${options.day}` : options?.list ? `${key}:${options.list}` : options?.number ? `${key}:${options.number}` : key) }) }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }), usePathname: () => "/", useSearchParams: () => new URLSearchParams() }));
 vi.mock("@/lib/test-window", () => ({ openTestWindow: vi.fn(), subscribeTestCallEnded: () => () => undefined, subscribeTestChatReplied: () => () => undefined, useTestWindowReady: () => false }));
 vi.mock("./upgrade-plan-dialog-context", () => ({ useOpenUpgradePlanDialog: () => vi.fn() }));
 

@@ -1,24 +1,18 @@
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import { canVisitOnboardingStage, HOST_EMAIL_BRAND, normalizeInterfaceLocale, normalizeOnboardingStage, onboardingSteps, type InterfaceLocale, type OnboardingBusiness, type OnboardingStage, type PartnerAccessLevel } from "@lobbystack/shared";
 
-import { businesses, enqueueOutbox, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { businesses, enqueueOutbox, onboardingNumberClaimEvents, phoneNumbers, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { requireBusinessAdmin } from "../authz";
+import { appBaseUrl } from "./appBaseUrl";
 import type { DomainContext } from "./context";
 import { attributeBusiness } from "./affiliates";
 import { businessShowsOnBrand, readBusinessAccess, type BrandScope } from "./businessAccess";
-import { checkInTokenVariables } from "./checkIn";
 import { businessGetsHostEmails } from "./hostEmails";
 import { readActiveBusinessIdInTransaction } from "./tenancy";
+import { greetingName } from "./emailGreeting";
 
 export { canVisitOnboardingStage, isOnboardingStage, normalizeOnboardingStage, onboardingSteps, resolveOnboardingRoute, type OnboardingBusiness, type OnboardingStage } from "@lobbystack/shared";
-
-const ONBOARDING_FOLLOWUP_SUBJECTS: Record<InterfaceLocale, (business: string) => string> = {
-  en: (business) => `${business}'s agent hasn't had a real conversation yet`,
-  fr: (business) => `Votre agent pour ${business} n'a pas encore eu de vraie conversation`,
-  es: (business) => `El agente de ${business} aún no ha tenido una conversación real`,
-  sr: (business) => `Agent za ${business} još nije imao pravi razgovor`,
-};
 
 /**
  * What the owner wants their agent to do first, as they answered at the goal
@@ -195,8 +189,8 @@ export async function advanceOnboardingStage(
     // Revisiting an earlier form must never move durable onboarding progress backwards.
     if (canVisitOnboardingStage(currentStage, input.to)) return;
     await advanceOnboardingStageInTransaction(tx, { ...input, from: currentStage, partnerId: current.partnerId, accessLevel: current.accessLevel });
-    // Meet your agent is the last screen, so leaving it schedules the founder's check-in.
-    if (input.to === "complete") await scheduleOnboardingFollowupInTransaction(tx, input.businessId, new Date());
+    // Meet your agent is the last screen, so leaving it sends the welcome email.
+    if (input.to === "complete") await scheduleWelcomeEmailInTransaction(tx, input.businessId, new Date());
   });
 }
 
@@ -269,73 +263,80 @@ export async function readOnboardingAttribution(context: DomainContext, input: {
   });
 }
 
-/** Schedules the founder's check-in a day after onboarding finished. A partner's business never gets it. */
-export async function scheduleOnboardingFollowupInTransaction(tx: DatabaseTransaction, businessId: string, completedAt: Date): Promise<void> {
+/** Schedules the welcome email for when onboarding finishes. A partner's business never gets it. */
+export async function scheduleWelcomeEmailInTransaction(tx: DatabaseTransaction, businessId: string, completedAt: Date): Promise<void> {
   if (!await businessGetsHostEmails(tx, businessId)) return;
-  // The dedupe key keeps a revisited attribution form from scheduling a second check-in.
+  // The dedupe key keeps a revisited last step from sending a second welcome.
   await enqueueOutbox(tx, {
-    topic: "onboarding.sendFollowup",
+    topic: "onboarding.sendWelcome",
     businessId,
     aggregateType: "business",
     aggregateId: businessId,
-    dedupeKey: `onboarding-followup:${businessId}`,
-    availableAt: new Date(completedAt.getTime() + ONBOARDING_FOLLOWUP_DELAY_MS),
+    dedupeKey: `onboarding-welcome:${businessId}`,
+    availableAt: completedAt,
     payload: {},
   });
 }
 
-export const ONBOARDING_FOLLOWUP_DELAY_MS = 24 * 60 * 60_000;
+/** How long the welcome waits for a number still being set up before it goes out without one. */
+const WELCOME_NUMBER_WAIT_MS = 15 * 60_000;
+/** How soon the worker looks again while it waits. */
+const WELCOME_RETRY_MS = 30_000;
 
-export type OnboardingFollowupSender = {
-  /** RFC 5322 sender, e.g. `Raphael from LobbyStack <raphael@lobbystack.com>`. Replies go here. */
-  from: string;
-  /** First name used in the greeting and signature. */
-  name: string;
+export type WelcomeEmailResult = { status: "queued" | "skipped" } | { status: "waiting"; retryAt: Date };
+
+const WELCOME_SUBJECTS: Record<InterfaceLocale, (firstName: string) => string> = {
+  en: (name) => (name ? `Welcome to LobbyStack, ${name}` : "Welcome to LobbyStack"),
+  fr: (name) => (name ? `Bienvenue chez LobbyStack, ${name}` : "Bienvenue chez LobbyStack"),
+  es: (name) => (name ? `Le damos la bienvenida a LobbyStack, ${name}` : "Le damos la bienvenida a LobbyStack"),
+  sr: (name) => (name ? `Dobro došli u LobbyStack, ${name}` : "Dobro došli u LobbyStack"),
 };
 
+/** Where the welcome email's button lands: Home, with the phone step open on its forwarding steps or its number picker. */
+function welcomeUrl(): string {
+  return `${appBaseUrl()}/?setup=phoneNumber`;
+}
+
 /**
- * Queues the founder check-in email for a business that finished onboarding
- * and has had no real conversation, unless its owner shares the sender's email
- * domain or it's a partner's business. Returns whether an email was queued.
+ * Queues the welcome email to the owner of a business that just finished
+ * onboarding, in their dashboard language. Its steps follow what they told
+ * onboarding: the goal they picked, and the number they took, if any. While a
+ * number they claimed is still being set up, it waits for it, so the email
+ * names it, for up to 15 minutes after the claim.
  */
-export async function queueOnboardingFollowupEmail(
-  context: DomainContext,
-  input: { businessId: string; sender: OnboardingFollowupSender },
-): Promise<boolean> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    if (!await businessGetsHostEmails(tx, input.businessId)) return false;
+export async function queueWelcomeEmail(context: DomainContext, input: { businessId: string; now?: Date }): Promise<WelcomeEmailResult> {
+  const now = input.now ?? new Date();
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx): Promise<WelcomeEmailResult> => {
+    if (!await businessGetsHostEmails(tx, input.businessId)) return { status: "skipped" };
     const result = await tx.execute<{ user_id: string; email: string; name: string | null; preferred_locale: string; business_name: string }>(
-      sql`select user_id, email, name, preferred_locale, business_name from app.resolve_onboarding_followup_recipient(${input.businessId}::uuid)`,
+      sql`select user_id, email, name, preferred_locale, business_name from app.resolve_onboarding_welcome_recipient(${input.businessId}::uuid)`,
     );
     const recipient = result.rows[0];
-    if (!recipient) return false;
-    const senderDomain = emailDomain(input.sender.from);
-    if (senderDomain && emailDomain(recipient.email) === senderDomain) return false;
+    if (!recipient) return { status: "skipped" };
+    const [business] = await tx.select({ goal: businesses.onboardingGoal }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
+    const [number] = await tx.select({ e164: phoneNumbers.e164 }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"))).orderBy(phoneNumbers.createdAt).limit(1);
+    if (!number) {
+      const [claim] = await tx.select({ id: onboardingNumberClaimEvents.id }).from(onboardingNumberClaimEvents)
+        .where(and(eq(onboardingNumberClaimEvents.businessId, input.businessId), inArray(onboardingNumberClaimEvents.status, ["reserved", "provisioning"]), gt(onboardingNumberClaimEvents.reservedAt, new Date(now.getTime() - WELCOME_NUMBER_WAIT_MS)))).limit(1);
+      if (claim) return { status: "waiting", retryAt: new Date(now.getTime() + WELCOME_RETRY_MS) };
+    }
     const locale = normalizeInterfaceLocale(recipient.preferred_locale) ?? "en";
-    const firstName = recipient.name?.trim().split(/\s+/)[0] ?? "";
+    const firstName = greetingName(recipient.name, recipient.email);
     await enqueueOutbox(tx, {
       topic: "email.send",
       businessId: input.businessId,
       aggregateType: "business",
       aggregateId: input.businessId,
-      dedupeKey: `onboarding-followup:${input.businessId}:email`,
+      dedupeKey: `onboarding-welcome:${input.businessId}:email`,
       payload: {
-        template: "onboarding_followup",
+        template: "welcome",
         to: recipient.email,
-        from: input.sender.from,
-        subject: ONBOARDING_FOLLOWUP_SUBJECTS[locale](recipient.business_name),
-        variables: { locale, firstName, businessName: recipient.business_name, senderName: input.sender.name, ...checkInTokenVariables(input.businessId) },
-        // The founder writes as the host. With a sender of its own, the email
-        // takes replies at that sender, so it sets no Reply-To.
+        subject: WELCOME_SUBJECTS[locale](firstName),
+        variables: { locale, firstName, businessName: recipient.business_name, goal: isOnboardingGoal(business?.goal) ? business.goal : "", number: number?.e164 ?? "", url: welcomeUrl() },
         brand: HOST_EMAIL_BRAND,
         replyTo: null,
       },
     });
-    return true;
+    return { status: "queued" };
   });
-}
-
-function emailDomain(address: string): string | undefined {
-  const match = /@([^\s>@]+)>?\s*$/.exec(address.trim());
-  return match?.[1]?.toLowerCase();
 }

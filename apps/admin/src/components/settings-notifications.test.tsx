@@ -17,7 +17,7 @@ afterEach(async () => {
 function setup(reason: "phone_unverified" | "sender_missing" | null = null, widgetOnly = false, smsConsent = false) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business-1", active: true }] });
-  let preferences = { emailEnabled: true, smsEnabled: false, smsConsent, canUseSms: reason === null, smsUnavailableReason: reason, eventPreferences: Object.fromEntries(["voiceMessage", "pausedSms", "widgetChat", "liveChatRequest", "smsFailed", "calendarSync", "transferFailed", "aiReplyFailed", "webhookDisabled"].map(key => [key, { email: true, sms: false }])), dailySummaryEnabled: false, dailySummarySendTime: null };
+  let preferences = { emailEnabled: true, smsEnabled: false, smsConsent, canUseSms: reason === null, smsUnavailableReason: reason, eventPreferences: Object.fromEntries(["callCompleted", "voiceMessage", "pausedSms", "widgetChat", "liveChatRequest", "smsFailed", "calendarSync", "transferFailed", "aiReplyFailed", "webhookDisabled"].map(key => [key, { email: true, sms: false }])), dailySummaryEnabled: false, dailySummarySendTime: null };
   client.setQueryData(["notification-preferences", "business-1"], preferences);
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     // The server records consent and turns SMS on when it approves the code.
@@ -39,6 +39,13 @@ describe("original notification controls", () => {
     expect(screen.queryByText("notifications.events.widgetChat.title")).toBeNull();
     expect(screen.queryByText("notifications.events.liveChatRequest.title")).toBeNull();
     expect(screen.queryByText(/browser/i)).toBeNull();
+  });
+  it("lists answered calls first among the communication alerts", async () => {
+    setup();
+    expect(await screen.findByText("notifications.events.callCompleted.title")).toBeTruthy();
+    const rows = [...document.querySelectorAll("tbody")[0]!.querySelectorAll("tr")].map((row) => row.textContent ?? "");
+    expect(rows[0]).toContain("notifications.events.callCompleted.title");
+    expect(rows[1]).toContain("notifications.events.voiceMessage.title");
   });
   it("exposes widget notification controls in the excluded widget view", async () => {
     setup(null, true);
@@ -119,9 +126,9 @@ describe("notification loading state", () => {
     // The sources, the communication events and the system issues.
     expect(document.querySelectorAll("section").length).toBe(3);
     for (const title of ["notifications.sources.title", "notifications.communication.title", "notifications.systemIssues.title"]) expect(screen.getByText(title).className).toContain("invisible");
-    expect(document.querySelectorAll("tbody tr").length).toBe(2 + 4);
+    expect(document.querySelectorAll("tbody tr").length).toBe(3 + 4);
     expect(document.querySelectorAll("tbody")[0]?.getAttribute("aria-busy")).toBe("true");
-    expect(skeletons()).toBe(37);
+    expect(skeletons()).toBe(41);
     expect(screen.queryByRole("switch")).toBeNull();
     expect(screen.queryByRole("checkbox")).toBeNull();
   });

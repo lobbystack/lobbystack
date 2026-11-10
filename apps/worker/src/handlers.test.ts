@@ -5,11 +5,11 @@ import { vi } from "vitest";
 
 import type { JobEnvelope } from "@lobbystack/contracts";
 import { billingCheckoutLeaseEndsAt, claimBillingCheckoutRequest, countPublishableOutboxMessages, deferBillingCheckoutRequest, deleteCallRecordingForRetention, deleteSentProductEventsBefore, deliverOutbound, expireProspectDemos, generateAffiliatePayoutRun, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, loadLiveCallForPricing, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, reconcileBillingProviderEvent, runPrivacyRetentionSweep } from "@lobbystack/domain";
-import { queueDailyOperatorSummaries, queueOnboardingFollowupEmail } from "@lobbystack/domain";
+import { queueDailyOperatorSummaries, queueWelcomeEmail } from "@lobbystack/domain";
 import { NUMBER_ORDER_MAX_WAIT_MS, claimNumberProvisioning, completeNumberProvisioning, deferNumberProvisioning, failNumberProvisioning, numberProvisioningLeaseEndsAt } from "@lobbystack/domain";
 import { PolarRequestError } from "@lobbystack/providers/polar/polarBilling";
 import { NumberOrderPendingError } from "@lobbystack/providers/telephony/types";
-import { brandForEmail, businessExists, businessGetsHostEmails, forgetCachedBrands, loadNumberReleaseEmail, type Brand } from "@lobbystack/domain";
+import { brandForEmail, businessExists, businessGetsHostEmails, forgetCachedBrands, loadNumberReleaseEmail, loadNumberTrialEmail, type Brand } from "@lobbystack/domain";
 import { advancePartnerLifecycles, claimPartnerCheckoutRequest, deferPartnerCheckoutRequest, keepPartnerTrialNumber, loadPartnerCheckoutRequest, loadPoolUsageEvent, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerCheckoutLeaseEndsAt, PartnerLifecycleError, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
 import { checkPartnerCustomDomains, provisionPartnerCustomDomain, removePartnerCustomHostname, syncBusinessOverage } from "@lobbystack/domain";
 import { FakeCustomHostnames, FakeTxtRecords } from "@lobbystack/providers/customHostnames/fakeCustomHostnames";
@@ -51,7 +51,7 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     markBillingUsageSynced: vi.fn(),
     markBillingCheckoutCreated: vi.fn(),
     markBillingCheckoutFailed: vi.fn(),
-    queueOnboardingFollowupEmail: vi.fn(),
+    queueWelcomeEmail: vi.fn(),
     claimNumberProvisioning: vi.fn(),
     numberProvisioningLeaseEndsAt: vi.fn(),
     countPublishableOutboxMessages: vi.fn(),
@@ -69,6 +69,7 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     runPrivacyRetentionSweep: vi.fn(),
     brandForEmail: vi.fn(actual.brandForEmail),
     loadNumberReleaseEmail: vi.fn(),
+    loadNumberTrialEmail: vi.fn(),
     // Every business here is direct unless a test says otherwise.
     businessGetsHostEmails: vi.fn(async () => true),
     // And still exists.
@@ -139,20 +140,27 @@ describe("worker handlers", () => {
   it.each(["verify_email", "password_reset", "passkey_added", "existing_account"])("fails %s delivery when SMTP is missing", async template => {
     await expect(handleJob({ jobId: randomUUID(), businessId: null, type: "email.send", queue: "default", payload: { template }, trace: {}, idempotencyKey: randomUUID(), scheduled: false }, { domain: { db: undefined as never } })).rejects.toThrow("SMTP configuration");
   });
-  it("skips the onboarding follow-up when no founder sender is configured", async () => {
+  it("drops a founder's check-in scheduled before it was removed, and the email one queued", async () => {
     const businessId = randomUUID();
+    const sendTemplate = vi.fn();
     const job = { jobId: randomUUID(), type: "onboarding.sendFollowup" as const, queue: "default" as const, businessId, payload: {}, trace: {}, idempotencyKey: `onboarding-followup:${businessId}`, scheduled: false };
-    await expect(handleJob(job, { domain: { db: undefined as never }, email: { sendTemplate: vi.fn() } })).resolves.toEqual({ status: "skipped" });
-    expect(queueOnboardingFollowupEmail).not.toHaveBeenCalled();
+    await expect(handleJob(job, { domain: { db: undefined as never }, email: { sendTemplate } })).resolves.toEqual({ status: "skipped" });
+    const queued = { template: "onboarding_followup", to: "owner@example.test", from: "Raphael <raphael@lobbystack.com>", subject: "Acme's agent hasn't had a real conversation yet", variables: { businessName: "Acme" }, brand: { kind: "host" }, replyTo: null };
+    await expect(handleJob({ jobId: randomUUID(), businessId, type: "email.send", queue: "default", payload: queued, trace: {}, idempotencyKey: `onboarding-followup:${businessId}:email`, scheduled: false }, { domain: { db: undefined as never }, email: { sendTemplate } })).resolves.toMatchObject({ status: "skipped" });
+    expect(sendTemplate).not.toHaveBeenCalled();
+    expect(queueWelcomeEmail).not.toHaveBeenCalled();
   });
-  it("queues the onboarding follow-up through the domain with the configured sender", async () => {
+  it("queues the welcome email through the domain, waits on a number being set up, and skips it without SMTP", async () => {
     const businessId = randomUUID(); const domain = { db: undefined as never };
-    const sender = { from: "Raphael from LobbyStack <raphael@lobbystack.com>", name: "Raphael" };
-    vi.mocked(queueOnboardingFollowupEmail).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
-    const job = { jobId: randomUUID(), type: "onboarding.sendFollowup" as const, queue: "default" as const, businessId, payload: { completedAt: "2026-09-24T10:00:00.000Z" }, trace: {}, idempotencyKey: `onboarding-followup:${businessId}`, scheduled: false };
-    await expect(handleJob(job, { domain, email: { sendTemplate: vi.fn() }, onboardingFollowupSender: sender })).resolves.toEqual({ status: "completed", entityId: businessId });
-    expect(queueOnboardingFollowupEmail).toHaveBeenCalledWith(domain, { businessId, sender });
-    await expect(handleJob(job, { domain, email: { sendTemplate: vi.fn() }, onboardingFollowupSender: sender })).resolves.toEqual({ status: "skipped", entityId: businessId });
+    const retryAt = new Date("2026-11-10T12:00:30Z");
+    vi.mocked(queueWelcomeEmail).mockResolvedValueOnce({ status: "queued" }).mockResolvedValueOnce({ status: "skipped" }).mockResolvedValueOnce({ status: "waiting", retryAt });
+    const job = { jobId: randomUUID(), type: "onboarding.sendWelcome" as const, queue: "default" as const, businessId, payload: {}, trace: {}, idempotencyKey: `onboarding-welcome:${businessId}`, scheduled: false };
+    await expect(handleJob(job, { domain })).resolves.toEqual({ status: "skipped" });
+    expect(queueWelcomeEmail).not.toHaveBeenCalled();
+    await expect(handleJob(job, { domain, email: { sendTemplate: vi.fn() } })).resolves.toEqual({ status: "completed", entityId: businessId });
+    expect(queueWelcomeEmail).toHaveBeenCalledWith(domain, { businessId });
+    await expect(handleJob(job, { domain, email: { sendTemplate: vi.fn() } })).resolves.toEqual({ status: "skipped", entityId: businessId });
+    await expect(handleJob(job, { domain, email: { sendTemplate: vi.fn() } })).resolves.toEqual({ status: "deferred", entityId: businessId, retryAt });
   });
   it("sends an email queued before payloads carried a brand exactly as one queued under a brand, LobbyStack included", async () => {
     vi.stubEnv("APP_BASE_URL", "https://app.example.test");
@@ -166,7 +174,6 @@ describe("worker handlers", () => {
       [{ template: "verify_email", to: "owner@example.test", subject: "Your LobbyStack verification code", variables: { code: "123456" } }, { template: "verify_email", to: "owner@example.test", variables: { code: "123456" }, brand: { kind: "host" }, replyTo: null }],
       [{ invitationId: "i-1", email: "teammate@example.test", token: "t", template: "invitation", url: "https://app.example.test/accept-invite?token=t" }, { invitationId: "i-1", email: "teammate@example.test", token: "t", template: "invitation", url: "https://app.example.test/accept-invite?token=t", brand: { kind: "business", businessId: randomUUID() }, replyTo: null }],
       [{ template: "verify_email", to: "owner@example.test", subject: "Confirm your LobbyStack email change", variables: { url: "https://app.example.test/api/auth/verify-email?token=t" } }, { template: "verify_email", to: "owner@example.test", variables: { url: "https://app.example.test/api/auth/verify-email?token=t", purpose: "email_change" }, brand: { kind: "host" }, replyTo: null }],
-      [{ template: "onboarding_followup", to: "owner@example.test", from: "Raphael <raphael@lobbystack.com>", subject: "How'd you like LobbyStack?", variables: { locale: "fr", firstName: "", businessName: "Clinique", senderName: "Raphael" } }, { template: "onboarding_followup", to: "owner@example.test", from: "Raphael <raphael@lobbystack.com>", subject: "How'd you like LobbyStack?", variables: { locale: "fr", firstName: "", businessName: "Clinique", senderName: "Raphael" }, brand: { kind: "host" }, replyTo: null }],
     ] as const;
     for (const [legacy, branded] of pairs) {
       await send(legacy);
@@ -174,14 +181,11 @@ describe("worker handlers", () => {
     }
     const sent = sendMail.mock.calls.map((call) => call[0]);
     for (let index = 0; index < sent.length; index += 2) expect(sent[index + 1]).toEqual(sent[index]);
-    const [code, , invitation, , change, , followup] = sent;
+    const [code, , invitation, , change] = sent;
     expect(code).toMatchObject({ from: "LobbyStack <no-reply@example.test>", replyTo: "support@example.test", subject: "Your LobbyStack verification code", text: "Your LobbyStack email verification code is: 123456. It expires in 10 minutes." });
     expect(code.html).toContain('aria-label="LobbyStack"');
     expect(invitation).toMatchObject({ to: "teammate@example.test", subject: "Join the LobbyStack team", text: expect.stringContaining("Accept the invitation: https://app.example.test/accept-invite?token=t") });
     expect(change.subject).toBe("Confirm your LobbyStack email change");
-    // Replies to the founder check-in reach the founder, not the shared inbox.
-    expect(followup.from).toBe("Raphael <raphael@lobbystack.com>");
-    expect(followup.replyTo).toBeUndefined();
     // The saved branding was read, and the deployment's own name stays out of the host's emails.
     for (const message of sent) expect(JSON.stringify(message)).not.toContain("Saved Desk");
     expect(warn).not.toHaveBeenCalled();
@@ -295,35 +299,48 @@ describe("worker handlers", () => {
     warn.mockRestore();
   });
 
-  it("links a number release email to the plan page on the host brand's origin, from the founder", async () => {
+  it("links a number release email to the plan page on the host brand's origin, from LobbyStack and not the founder", async () => {
     vi.stubEnv("APP_BASE_URL", "https://app.example.test/");
     const businessId = randomUUID(); const phoneNumberId = randomUUID();
     vi.mocked(loadNumberReleaseEmail).mockResolvedValue({ to: "owner@example.test", locale: "en", firstName: "Sam", number: "+14165550199", timezone: "UTC" } as never);
     const sendMail = vi.fn().mockResolvedValue({ messageId: "provider-id" });
     const email = new SmtpEmailProvider({ host: "localhost", port: 1025, secure: false, username: "", password: "", from: "LobbyStack <no-reply@example.test>" }, { sendMail } as never);
-    const sender = { from: "Raphael from LobbyStack <raphael@lobbystack.com>", name: "Raphael" };
-    await handleJob({ jobId: randomUUID(), businessId, type: "phoneNumber.releaseEmail", queue: "default", payload: { phoneNumberId, kind: "release_soon", releaseAt: "2026-11-08T00:00:00.000Z" }, trace: {}, idempotencyKey: randomUUID(), scheduled: false }, { domain: { db: savedBranding("Saved Desk") }, email, onboardingFollowupSender: sender });
+    await handleJob({ jobId: randomUUID(), businessId, type: "phoneNumber.releaseEmail", queue: "default", payload: { phoneNumberId, kind: "release_soon", releaseAt: "2026-11-08T00:00:00.000Z" }, trace: {}, idempotencyKey: randomUUID(), scheduled: false }, { domain: { db: savedBranding("Saved Desk") }, email });
     const sent = sendMail.mock.lastCall?.[0];
-    expect(sent).toMatchObject({ from: sender.from, subject: "We release +14165550199 on November 8" });
-    expect(sent.text).toContain("Keep my number: https://app.example.test/settings/plan\n\nRaphael");
-    expect(sent).not.toHaveProperty("replyTo");
+    expect(sent).toMatchObject({ from: "LobbyStack <no-reply@example.test>", subject: "We release +14165550199 on November 8" });
+    expect(sent.text).toContain("Keep my number: https://app.example.test/settings/plan\n\nLobbyStack");
+    expect(sent.text).not.toContain("Raphael");
+    expect(sent.html).not.toContain("Raphael");
   });
 
-  it("sends onboarding follow-up email from the founder sender", async () => {
-    const sendTemplate = vi.fn().mockResolvedValue({ messageId: "provider-id" });
-    const payload = { template: "onboarding_followup", to: "owner@example.test", from: "Raphael <raphael@lobbystack.com>", subject: "How'd you like LobbyStack?", variables: { businessName: "Acme" } };
-    await handleJob({ jobId: randomUUID(), businessId: randomUUID(), type: "email.send", queue: "default", payload, trace: {}, idempotencyKey: "onboarding-followup:x:email", scheduled: false }, { domain: { db: undefined as never }, email: { sendTemplate } });
-    expect(sendTemplate).toHaveBeenCalledWith(expect.objectContaining({ template: "onboarding_followup", to: "owner@example.test", from: "Raphael <raphael@lobbystack.com>" }));
+  it("sends a trial email from LobbyStack", async () => {
+    const businessId = randomUUID(); const trialId = randomUUID();
+    vi.mocked(loadNumberTrialEmail).mockResolvedValue({ to: "owner@example.test", locale: "en", firstName: "Sam", businessName: "Acme", trialNumber: "+14165550123", forwardTo: null, endsAt: new Date("2026-11-10T05:00:00Z"), callsAnswered: 3, timezone: "UTC" } as never);
+    const sendMail = vi.fn().mockResolvedValue({ messageId: "provider-id" });
+    const email = new SmtpEmailProvider({ host: "localhost", port: 1025, secure: false, username: "", password: "", from: "LobbyStack <no-reply@example.test>" }, { sendMail } as never);
+    await expect(handleJob({ jobId: randomUUID(), businessId, type: "numberTrial.sendEmail", queue: "default", payload: { trialId, email: "day13" }, trace: {}, idempotencyKey: randomUUID(), scheduled: false }, { domain: { db: savedBranding("Saved Desk") }, email })).resolves.toMatchObject({ status: "completed" });
+    const sent = sendMail.mock.lastCall?.[0];
+    expect(sent).toMatchObject({ from: "LobbyStack <no-reply@example.test>", to: "owner@example.test" });
+    expect(sent.text.trimEnd().endsWith("LobbyStack")).toBe(true);
   });
 
-  it("never sends the founder's check-in to a partner's business, even one queued already, while its own emails still go", async () => {
+  it("sends the welcome email from LobbyStack, with replies going to the shared inbox", async () => {
+    vi.stubEnv("EMAIL_REPLY_TO", "support@example.test");
+    const sendMail = vi.fn().mockResolvedValue({ messageId: "provider-id" });
+    const email = new SmtpEmailProvider({ host: "localhost", port: 1025, secure: false, username: "", password: "", from: "LobbyStack <no-reply@example.test>" }, { sendMail } as never);
+    const payload = { template: "welcome", to: "owner@example.test", subject: "Welcome to LobbyStack, Ryan", variables: { locale: "en", firstName: "Ryan", businessName: "Metroprint", goal: "", number: "", url: "https://app.example.test/?setup=phoneNumber" }, brand: { kind: "host" }, replyTo: null };
+    await handleJob({ jobId: randomUUID(), businessId: randomUUID(), type: "email.send", queue: "default", payload, trace: {}, idempotencyKey: "onboarding-welcome:x:email", scheduled: false }, { domain: { db: savedBranding("Saved Desk") }, email });
+    expect(sendMail.mock.lastCall?.[0]).toMatchObject({ from: "LobbyStack <no-reply@example.test>", replyTo: "support@example.test", subject: "Welcome to LobbyStack, Ryan", text: expect.stringContaining("Answer my missed calls: https://app.example.test/?setup=phoneNumber") });
+  });
+
+  it("never sends the welcome email to a partner's business, even one queued already, while its own emails still go", async () => {
     const sendTemplate = vi.fn().mockResolvedValue({ messageId: "provider-id" });
     const businessId = randomUUID();
     const db = "worker-db" as never;
     vi.mocked(businessGetsHostEmails).mockResolvedValueOnce(false);
     vi.mocked(brandForEmail).mockResolvedValue({ kind: "partner", partnerId: randomUUID(), name: "Acme Reception", logoUrl: null, faviconUrl: null, color: null, origin: "https://acme.portal.example.test", links: { website: null, terms: null, privacy: null, support: null }, email: { fromName: "Acme Reception", fromAddress: "no-reply@portal.example.test", replyTo: null } });
     const send = (payload: Record<string, unknown>) => handleJob({ jobId: randomUUID(), businessId, type: "email.send", queue: "default", payload, trace: {}, idempotencyKey: randomUUID(), scheduled: false }, { domain: { db }, email: { sendTemplate } });
-    await expect(send({ template: "onboarding_followup", to: "owner@example.test", from: "Raphael <raphael@lobbystack.com>", subject: "How'd you like LobbyStack?", variables: { businessName: "Harbor Dental" }, brand: { kind: "host" }, replyTo: null })).resolves.toMatchObject({ status: "skipped" });
+    await expect(send({ template: "welcome", to: "owner@example.test", subject: "Welcome to LobbyStack", variables: { businessName: "Harbor Dental" }, brand: { kind: "host" }, replyTo: null })).resolves.toMatchObject({ status: "skipped" });
     expect(businessGetsHostEmails).toHaveBeenCalledWith(db, businessId);
     expect(sendTemplate).not.toHaveBeenCalled();
     await send({ template: "operator_alert", to: "owner@example.test", subject: "Missed call", variables: { message: "Call back +14165550100." }, brand: { kind: "business", businessId }, replyTo: null });

@@ -1,7 +1,7 @@
 import { assertDatabaseRole, businesses, createDatabaseClient, databaseHealthCheck, enqueueOutbox, listReembedBusinesses, listSchedulerBusinesses, listSummaryBackfillBusinesses, withBusinessTransaction, withDispatcherTransaction } from "@lobbystack/db";
 import { createBusinessHoursExtractor, createBusinessSummarizer, createCallSummarizer } from "@lobbystack/agent-core";
 import { DEFAULT_EMAIL_FROM, assertProductionSecrets, isMaintenanceMode, partnerFeatureWarnings, partnerFeatures } from "@lobbystack/shared";
-import { brandChangesChannel, encodeBrandChange, listenForBrandChanges, recordPartnerTierBilling, type BrandChangePublisher, type OnboardingFollowupSender } from "@lobbystack/domain";
+import { brandChangesChannel, encodeBrandChange, listenForBrandChanges, recordPartnerTierBilling, type BrandChangePublisher } from "@lobbystack/domain";
 import { createQueue, createRedisConnection, createWorkerOptions, enqueueJob, isKnownJobType, jobQueues, type JobEnvelope, type JobQueue } from "@lobbystack/jobs";
 import { createEmbeddingProvider } from "@lobbystack/providers/ai/embeddingProvider";
 import { FirecrawlProvider } from "@lobbystack/providers/crawling/firecrawl";
@@ -48,12 +48,6 @@ function createEmailProvider(): SmtpEmailProvider | undefined {
     from: process.env.EMAIL_FROM || DEFAULT_EMAIL_FROM,
     // EMAIL_REPLY_TO is the host brand's Reply-To, which the handlers pass per email.
   });
-}
-
-function createOnboardingFollowupSender(): OnboardingFollowupSender | undefined {
-  const from = process.env.ONBOARDING_FOLLOWUP_FROM?.trim();
-  const name = process.env.ONBOARDING_FOLLOWUP_SENDER_NAME?.trim();
-  return from && name ? { from, name } : undefined;
 }
 
 function createPolarProvider(): PolarBillingProvider | undefined {
@@ -161,7 +155,6 @@ async function main(): Promise<void> {
   const liveCalls = createLiveCallHandler({ domain, attachLock: realtime });
   const health = startHealthServer(workerPort, state, liveCalls.handle);
   const email = createEmailProvider();
-  const onboardingFollowupSender = createOnboardingFollowupSender();
   // Every carrier with credentials, routed by TELEPHONY_* (docs/voice/runtime.md). Malformed routing fails the boot.
   const telephony = createTelephony(process.env);
   const storage = createStorageProvider();
@@ -188,7 +181,6 @@ async function main(): Promise<void> {
     ...(businessSummarizer ? { businessSummarizer } : {}),
     ...(businessHoursExtractor ? { businessHoursExtractor } : {}),
     ...(email ? { email } : {}),
-    ...(onboardingFollowupSender ? { onboardingFollowupSender } : {}),
     ...(embeddings ? { embeddings } : {}),
     telephony,
     storage,

@@ -32,6 +32,7 @@ import {
 } from "@lobbystack/shared";
 
 import { AuthorizationError } from "../authz";
+import { appBaseUrl } from "./appBaseUrl";
 import { announceBrandChange } from "./brands";
 import { actorUserId, keyAuditFields, partnerActorRole, partnerRls } from "./partnerActors";
 import { applyStoredBusinessTemplate, loadBusinessTemplateInTransaction, type BusinessSetupDependencies } from "./businessTemplates";
@@ -91,18 +92,14 @@ function newToken(): { token: string; tokenHash: string } {
   return { token, tokenHash: hashPartnerToken(token) };
 }
 
-function appOrigin(): string {
-  return (process.env.APP_BASE_URL?.trim() || "http://localhost").replace(/\/$/, "");
-}
-
 /** Where a team invitation sends its recipient: the console's accept page on the host's domain. */
 export function partnerInvitationUrl(token: string): string {
-  return `${appOrigin()}/partner/accept-invite?token=${encodeURIComponent(token)}`;
+  return `${appBaseUrl()}/partner/accept-invite?token=${encodeURIComponent(token)}`;
 }
 
 /** Where the host's signup invitation sends a company it lets in while signup is invite-only. */
 export function partnerSignupInvitationUrl(token: string): string {
-  return `${appOrigin()}/partner/signup?invitation=${encodeURIComponent(token)}`;
+  return `${appBaseUrl()}/partner/signup?invitation=${encodeURIComponent(token)}`;
 }
 
 /**
@@ -1006,7 +1003,7 @@ export async function releaseBusiness(context: DomainContext, actor: PartnerActo
         aggregateType: "business",
         aggregateId: input.businessId,
         dedupeKey: `partner-business-released:${input.businessId}:${email}`,
-        payload: { email, template: "business_released", variables: { url: `${appOrigin()}/login`, businessName: about?.businessName ?? "", partnerName: about?.partnerName ?? "" }, brand: HOST_EMAIL_BRAND, replyTo: null },
+        payload: { email, template: "business_released", variables: { url: `${appBaseUrl()}/login`, businessName: about?.businessName ?? "", partnerName: about?.partnerName ?? "" }, brand: HOST_EMAIL_BRAND, replyTo: null },
       });
     }
     return { ownerUserId: owner.userId, closes };
