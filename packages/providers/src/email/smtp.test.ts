@@ -281,6 +281,79 @@ describe("SMTP delivery", () => {
     });
   });
 
+  it("puts the logo on the left over left-aligned emails, and keeps the account emails centered", async () => {
+    const { provider, sent } = capture();
+    await send(provider, { template: "number_trial", to: "owner@example.test", variables: { locale: "en", kind: "day10", url: "https://app.example.test/trial" } });
+    await send(provider, { template: "operator_alert", to: "owner@example.test", subject: "Alert", variables: { message: "Hi" } });
+    await send(provider, { template: "verify_email", to: "owner@example.test", variables: { code: "123456" } });
+    await send(provider, { template: "invitation", to: "owner@example.test", variables: { url: "https://app.example.test/accept-invite?token=t" } });
+    const header = (index: number) => /<td align="(\w+)" style="padding-bottom:32px;">/.exec(sent(index).html)?.[1];
+    expect([header(0), header(1), header(2), header(3)]).toEqual(["left", "left", "center", "center"]);
+  });
+
+  it("signs the trial and number release emails as LobbyStack, whatever sender name the job carries", async () => {
+    const { provider, sent } = capture();
+    await send(provider, { template: "number_trial", to: "owner@example.test", variables: { locale: "fr", kind: "day13", url: "https://app.example.test/settings/plan", senderName: "Raphael" } });
+    await send(provider, { template: "number_release", to: "owner@example.test", variables: { locale: "en", kind: "release_soon", number: "+1555", releaseDate: "May 31", url: "https://app.example.test/settings/plan", senderName: "Raphael" } });
+    for (const index of [0, 1]) {
+      expect(sent(index).text.trimEnd().endsWith("\n\nLobbyStack")).toBe(true);
+      expect(sent(index).text).not.toContain("Raphael");
+      expect(sent(index).html).not.toContain("Raphael");
+    }
+  });
+
+  describe("call summary", () => {
+    const call = { template: "call_summary" as const, to: "owner@example.test", variables: { locale: "en", businessName: "Metroprint", callerName: "Sarah Chen", callerPhone: "+14165550133", startedAt: "2026-11-09T20:32:00.000Z", timezone: "America/Toronto", durationSeconds: "134", summary: "Sarah asked for a quote on 500 <business> cards.", url: "https://app.example.test/calls/call-1" } };
+
+    it("lays out the caller, time, length and summary, with a link to the call and to the alert settings", async () => {
+      const { provider, sent } = capture();
+      await send(provider, call);
+      const email = sent();
+      expect(email.subject).toBe("New call from Sarah Chen");
+      expect(email.text).toBe([
+        "New call for Metroprint",
+        "",
+        "Caller: Sarah Chen",
+        "Phone: +14165550133",
+        "When: Monday, November 9 at 3:32 PM",
+        "Duration: 2 min 14 sec",
+        "",
+        "Summary:",
+        "Sarah asked for a quote on 500 <business> cards.",
+        "",
+        "View call: https://app.example.test/calls/call-1",
+        "",
+        "You get this email for each call your agent answers.",
+        "Change alerts: https://app.example.test/settings/notifications",
+      ].join("\n"));
+      expect(email.html).toContain(">New call for Metroprint</h1>");
+      expect(email.html).toContain("500 &lt;business&gt; cards.");
+      expect(email.html).toContain('href="https://app.example.test/calls/call-1"');
+      expect(email.html).toContain('href="https://app.example.test/settings/notifications"');
+      expect(email.html).not.toMatch(/text-transform:\s*uppercase/);
+    });
+
+    it("writes the email in the reader's language and shows what was booked", async () => {
+      const { provider, sent } = capture();
+      await send(provider, { ...call, variables: { ...call.variables, locale: "fr", summary: "", bookedAt: "2026-11-12T15:00:00.000Z", bookedService: "Consultation" } });
+      const email = sent();
+      expect(email.subject).toBe("Nouvel appel de Sarah Chen");
+      expect(email.text).toContain("Nouvel appel pour Metroprint");
+      expect(email.text).toContain("Durée : 2 min 14 s");
+      expect(email.text).toContain("Résultat : Rendez-vous réservé : Consultation, 12 novembre à 10:00");
+      expect(email.text).not.toContain("Résumé");
+      expect(email.html).toContain(">Voir l’appel</a>");
+    });
+
+    it("names an unknown caller and leaves out the phone a website call doesn't have", async () => {
+      const { provider, sent } = capture();
+      await send(provider, { ...call, variables: { ...call.variables, callerName: "", callerPhone: "", durationSeconds: "32" } });
+      expect(sent().subject).toBe("New call for Metroprint");
+      expect(sent().text).toContain("Caller: Unknown caller\nWhen:");
+      expect(sent().text).toContain("Duration: 32 sec");
+    });
+  });
+
   it("localizes the onboarding follow-up and existing-account emails in Spanish and Serbian", async () => {
     const { provider, sendMail } = capture();
     await send(provider, { template: "onboarding_followup", to: "owner@example.test", subject: "El agente de Clínica Sol aún no ha tenido una conversación real", variables: { locale: "es", firstName: "Ana", businessName: "Clínica Sol", senderName: "Raphael", checkInToken_still_testing: "v1.es.sig" } });

@@ -15,9 +15,9 @@ import { Switch } from "@/components/ui/switch";
 import { SmsPhoneVerificationDialog } from "@/components/sms-phone-verification-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-type EventKey = "voiceMessage" | "pausedSms" | "widgetChat" | "liveChatRequest" | "smsFailed" | "calendarSync" | "transferFailed" | "aiReplyFailed" | "webhookDisabled";
+type EventKey = "callCompleted" | "voiceMessage" | "pausedSms" | "widgetChat" | "liveChatRequest" | "smsFailed" | "calendarSync" | "transferFailed" | "aiReplyFailed" | "webhookDisabled";
 type Preferences = { emailEnabled: boolean; smsEnabled: boolean; smsConsent: boolean; eventPreferences: Record<EventKey, { email: boolean; sms: boolean }>; dailySummaryEnabled: boolean; dailySummarySendTime: string | null; canUseSms: boolean; smsUnavailableReason: "phone_unverified" | "sender_missing" | null };
-const communicationEvents: EventKey[] = ["voiceMessage", "pausedSms"];
+const communicationEvents: EventKey[] = ["callCompleted", "voiceMessage", "pausedSms"];
 const issueEvents: EventKey[] = ["smsFailed", "calendarSync", "transferFailed", "webhookDisabled"];
 const widgetEvents: EventKey[] = ["widgetChat", "liveChatRequest"];
 

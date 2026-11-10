@@ -575,7 +575,7 @@ export async function saveNotificationPreferencesInTransaction(tx: DatabaseTrans
   if (consentChanged && consentNow && currentUser?.phone) await tx.insert(smsConsentEvents).values({ businessId: input.businessId, phone: currentUser.phone, recipientType: "operator", action: input.smsConsent ? "operator_alert_consent_granted" : "operator_alert_consent_revoked", source: "operator_settings" });
 }
 
-export const operatorNotificationEventKeys = ["voiceMessage", "pausedSms", "smsFailed", "calendarSync", "transferFailed", "aiReplyFailed", "widgetChat", "liveChatRequest", "webhookDisabled"] as const;
+export const operatorNotificationEventKeys = ["callCompleted", "voiceMessage", "pausedSms", "smsFailed", "calendarSync", "transferFailed", "aiReplyFailed", "widgetChat", "liveChatRequest", "webhookDisabled"] as const;
 export type OperatorNotificationEventKey = (typeof operatorNotificationEventKeys)[number];
 export type OperatorNotificationEventPreferences = Record<OperatorNotificationEventKey, { email: boolean; sms: boolean }>;
 
@@ -595,6 +595,7 @@ export function normalizeOperatorNotificationEventPreferences(value: unknown): O
 
 const dailySummaryTimePattern = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 const dailySummaryLabels: Record<OperatorNotificationEventKey, string> = {
+  callCompleted: "Calls answered",
   voiceMessage: "Voice messages",
   pausedSms: "Paused SMS",
   smsFailed: "Failed SMS",
@@ -726,7 +727,7 @@ export async function queueDailyOperatorSummaries(context: DomainContext, input:
   });
 }
 
-export async function queueOperatorAlert(context: DomainContext, input: { businessId: string; eventKind: OperatorNotificationEventKey; eventKey: string; subject: string; body: string }): Promise<string[]> {
+export async function queueOperatorAlert(context: DomainContext, input: OperatorAlertInput): Promise<string[]> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => await queueOperatorAlertInTransaction(tx, input));
 }
 
@@ -751,9 +752,23 @@ async function partnerFallbackRecipients(tx: DatabaseTransaction, businessId: st
   return (await tx.execute<{ userId: string; email: string }>(sql`select user_id as "userId", email from app.partner_pool_alert_recipients(${business.partnerId}::uuid, ${periodKey})`)).rows;
 }
 
-export async function queueOperatorAlertInTransaction(tx: DatabaseTransaction, input: { businessId: string; eventKind: OperatorNotificationEventKey; eventKey: string; subject: string; body: string }): Promise<string[]> {
-  type Recipient = { userId: string; email: string; phone: string | null; preferences: OperatorNotificationEventPreferences | null; emailEnabled: boolean; smsEnabled: boolean; smsConsentGrantedAt: Date | null; smsConsentRevokedAt: Date | null; smsConsentDisclosureVersion: string | null; smsConsentPhone: string | null };
-  const result = await tx.execute(sql`SELECT user_id AS "userId", email, phone, event_preferences AS preferences, email_enabled AS "emailEnabled", sms_enabled AS "smsEnabled", sms_consent_granted_at AS "smsConsentGrantedAt", sms_consent_revoked_at AS "smsConsentRevokedAt", sms_consent_disclosure_version AS "smsConsentDisclosureVersion", sms_consent_phone AS "smsConsentPhone" FROM app.resolve_operator_notification_recipients(${input.businessId}::uuid)`);
+export type OperatorAlertInput = {
+  businessId: string;
+  eventKind: OperatorNotificationEventKey;
+  eventKey: string;
+  subject: string;
+  body: string;
+  /**
+   * What the email lays out beyond the subject and body. Each recipient's
+   * copy gets their dashboard language as `locale`, so the email can be
+   * written in it; texts keep the subject and body.
+   */
+  details?: Record<string, string>;
+};
+
+export async function queueOperatorAlertInTransaction(tx: DatabaseTransaction, input: OperatorAlertInput): Promise<string[]> {
+  type Recipient = { userId: string; email: string; phone: string | null; preferences: OperatorNotificationEventPreferences | null; emailEnabled: boolean; smsEnabled: boolean; smsConsentGrantedAt: Date | null; smsConsentRevokedAt: Date | null; smsConsentDisclosureVersion: string | null; smsConsentPhone: string | null; locale: string | null };
+  const result = await tx.execute(sql`SELECT user_id AS "userId", email, phone, event_preferences AS preferences, email_enabled AS "emailEnabled", sms_enabled AS "smsEnabled", sms_consent_granted_at AS "smsConsentGrantedAt", sms_consent_revoked_at AS "smsConsentRevokedAt", sms_consent_disclosure_version AS "smsConsentDisclosureVersion", sms_consent_phone AS "smsConsentPhone", preferred_locale AS locale FROM app.resolve_operator_notification_recipients(${input.businessId}::uuid)`);
   const recipients = result.rows as Recipient[];
   const sender = await resolveSmsSender(tx, input.businessId);
   const deliveryIds: string[] = [];
@@ -762,7 +777,8 @@ export async function queueOperatorAlertInTransaction(tx: DatabaseTransaction, i
       const smsConsent = hasOperatorSmsConsent(recipient, recipient.phone);
       const channels = [recipient.emailEnabled !== false && event.email ? { channel: "email", destination: recipient.email } : null, recipient.smsEnabled === true && smsConsent && event.sms && recipient.phone && sender ? { channel: "sms", destination: recipient.phone, sender } : null].filter((value): value is { channel: string; destination: string; sender?: string } => Boolean(value));
     for (const channel of channels) {
-      const [delivery] = await tx.insert(operatorNotificationDeliveries).values({ businessId: input.businessId, userId: recipient.userId, eventKind: input.eventKind, eventKey: input.eventKey, channel: channel.channel, destination: channel.destination, ...(channel.sender ? { sender: channel.sender } : {}), subject: input.subject, body: input.body, contentExpiresAt: new Date(Date.now() + 30 * 86_400_000) }).onConflictDoNothing().returning({ id: operatorNotificationDeliveries.id });
+      const details = input.details && channel.channel === "email" ? { ...input.details, locale: localeFor(recipient.locale) } : undefined;
+      const [delivery] = await tx.insert(operatorNotificationDeliveries).values({ businessId: input.businessId, userId: recipient.userId, eventKind: input.eventKind, eventKey: input.eventKey, channel: channel.channel, destination: channel.destination, ...(channel.sender ? { sender: channel.sender } : {}), subject: input.subject, body: input.body, ...(details ? { details } : {}), contentExpiresAt: new Date(Date.now() + 30 * 86_400_000) }).onConflictDoNothing().returning({ id: operatorNotificationDeliveries.id });
       if (!delivery) continue;
       deliveryIds.push(delivery.id);
       await enqueueOutbox(tx, { topic: "notification.dispatch", businessId: input.businessId, aggregateType: "operator_notification_delivery", aggregateId: delivery.id, dedupeKey: `operator-notification:${delivery.id}:dispatch`, payload: { operatorDeliveryId: delivery.id } });
@@ -793,7 +809,7 @@ export async function operatorNotificationLeaseEndsAt(context: DomainContext, in
 
 export async function loadOperatorNotificationDelivery(context: DomainContext, input: { businessId: string; deliveryId: string }) {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const delivery = (await tx.select({ id: operatorNotificationDeliveries.id, businessId: operatorNotificationDeliveries.businessId, userId: operatorNotificationDeliveries.userId, eventKind: operatorNotificationDeliveries.eventKind, eventKey: operatorNotificationDeliveries.eventKey, channel: operatorNotificationDeliveries.channel, status: operatorNotificationDeliveries.status, destination: operatorNotificationDeliveries.destination, sender: operatorNotificationDeliveries.sender, subject: operatorNotificationDeliveries.subject, body: operatorNotificationDeliveries.body, providerMessageId: operatorNotificationDeliveries.providerMessageId, scheduledFor: operatorNotificationDeliveries.scheduledFor, sentAt: operatorNotificationDeliveries.sentAt, contentExpiresAt: operatorNotificationDeliveries.contentExpiresAt, lastError: operatorNotificationDeliveries.lastError, createdAt: operatorNotificationDeliveries.createdAt, updatedAt: operatorNotificationDeliveries.updatedAt })
+    const delivery = (await tx.select({ id: operatorNotificationDeliveries.id, businessId: operatorNotificationDeliveries.businessId, userId: operatorNotificationDeliveries.userId, eventKind: operatorNotificationDeliveries.eventKind, eventKey: operatorNotificationDeliveries.eventKey, channel: operatorNotificationDeliveries.channel, status: operatorNotificationDeliveries.status, destination: operatorNotificationDeliveries.destination, sender: operatorNotificationDeliveries.sender, subject: operatorNotificationDeliveries.subject, body: operatorNotificationDeliveries.body, details: operatorNotificationDeliveries.details, providerMessageId: operatorNotificationDeliveries.providerMessageId, scheduledFor: operatorNotificationDeliveries.scheduledFor, sentAt: operatorNotificationDeliveries.sentAt, contentExpiresAt: operatorNotificationDeliveries.contentExpiresAt, lastError: operatorNotificationDeliveries.lastError, createdAt: operatorNotificationDeliveries.createdAt, updatedAt: operatorNotificationDeliveries.updatedAt })
       .from(operatorNotificationDeliveries).where(and(eq(operatorNotificationDeliveries.id, input.deliveryId), eq(operatorNotificationDeliveries.businessId, input.businessId), eq(operatorNotificationDeliveries.status, "processing"))).limit(1))[0];
     if (!delivery) return null;
     if (delivery.channel === "sms") {

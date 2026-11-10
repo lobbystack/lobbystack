@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 import nodemailer, { type Transporter } from "nodemailer";
-import { CHECK_IN_ANSWERS, DEFAULT_APP_NAME, assertCertificationRecipient, checkInTokenVariable, type CheckInAnswer, type EmailBrand } from "@lobbystack/shared";
+import { CHECK_IN_ANSWERS, DEFAULT_APP_NAME, assertCertificationRecipient, checkInTokenVariable, intlLocale, type CheckInAnswer, type EmailBrand } from "@lobbystack/shared";
 
 export type SmtpConfig = {
   host: string;
@@ -12,7 +12,7 @@ export type SmtpConfig = {
   from: string;
 };
 
-type TemplateName = "existing_account" | "account_setup" | "verify_email" | "password_reset" | "passkey_added" | "invitation" | "operator_alert" | "feedback_submission" | "onboarding_followup" | "number_trial" | "number_release" | "partner_pool_alert" | "business_allowance_alert" | "partner_business_allowance_alert" | "business_released" | "business_deleted";
+type TemplateName = "existing_account" | "account_setup" | "verify_email" | "password_reset" | "passkey_added" | "invitation" | "operator_alert" | "feedback_submission" | "onboarding_followup" | "number_trial" | "number_release" | "partner_pool_alert" | "business_allowance_alert" | "partner_business_allowance_alert" | "business_released" | "business_deleted" | "call_summary";
 
 /**
  * Whether the mail provider refused the message for good. An SMTP 5xx
@@ -154,6 +154,8 @@ function templateSubject(template: TemplateName, variables: Record<string, strin
       return `${variables.businessName ?? "Your business"} is yours to run on ${name}`;
     case "business_deleted":
       return `${name} deleted ${variables.businessName ?? "your business"}`;
+    case "call_summary":
+      return callSummaryCopy(variables).subject;
     default:
       return `${name} notification`;
   }
@@ -189,6 +191,8 @@ function templateHtml(template: TemplateName, subject: string, variables: Record
         : renderNoticeHtml(brand, subject, { heading: "Reset your password", lines: [`Use the link below to choose a new ${brand.name} password.`, "If you did not ask for a reset, you can safely ignore this email."], action: "Reset password" }, url);
     case "operator_alert":
       return renderMessageHtml(brand, subject, variables.message ?? `${brand.name} operator notification`);
+    case "call_summary":
+      return renderCallSummaryHtml(brand, subject, variables);
     case "feedback_submission":
       return renderMessageHtml(brand, subject, variables.body ?? "LobbyStack dashboard feedback");
     case "number_trial": {
@@ -258,6 +262,154 @@ function renderMessageHtml(brand: EmailBrand, subject: string, message: string):
       .split(/\n{2,}/)
       .map((paragraph) => `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(paragraph).replaceAll("\n", "<br />")}</p>`)
       .join(""),
+  });
+}
+
+type CallSummaryCopy = {
+  subject: string;
+  heading: string;
+  unknownCaller: string;
+  labels: { caller: string; phone: string; when: string; duration: string; outcome: string; summary: string };
+  /** What follows a label in the plain-text email: French puts a space before the colon. */
+  colon: string;
+  duration: (minutes: number, seconds: number) => string;
+  booked: (service: string, when: string) => string;
+  action: string;
+  footnote: string;
+  settings: string;
+};
+
+const CALL_SUMMARY_COPY: Record<"en" | "fr" | "es" | "sr", (business: string, caller: string) => CallSummaryCopy> = {
+  en: (business, caller) => ({
+    subject: caller ? `New call from ${caller}` : `New call for ${business}`,
+    heading: `New call for ${business}`,
+    unknownCaller: "Unknown caller",
+    labels: { caller: "Caller", phone: "Phone", when: "When", duration: "Duration", outcome: "Outcome", summary: "Summary" },
+    colon: ": ",
+    duration: (m, s) => (m ? `${m} min ${s} sec` : `${s} sec`),
+    booked: (service, when) => (service ? `Booked ${service} for ${when}` : `Booked an appointment for ${when}`),
+    action: "View call",
+    footnote: "You get this email for each call your agent answers.",
+    settings: "Change alerts",
+  }),
+  fr: (business, caller) => ({
+    subject: caller ? `Nouvel appel de ${caller}` : `Nouvel appel pour ${business}`,
+    heading: `Nouvel appel pour ${business}`,
+    unknownCaller: "Appelant inconnu",
+    labels: { caller: "Appelant", phone: "Téléphone", when: "Date", duration: "Durée", outcome: "Résultat", summary: "Résumé" },
+    colon: " : ",
+    duration: (m, s) => (m ? `${m} min ${s} s` : `${s} s`),
+    booked: (service, when) => (service ? `Rendez-vous réservé : ${service}, ${when}` : `Rendez-vous réservé : ${when}`),
+    action: "Voir l’appel",
+    footnote: "Vous recevez cet e-mail pour chaque appel auquel votre agent répond.",
+    settings: "Modifier les alertes",
+  }),
+  es: (business, caller) => ({
+    subject: caller ? `Nueva llamada de ${caller}` : `Nueva llamada para ${business}`,
+    heading: `Nueva llamada para ${business}`,
+    unknownCaller: "Desconocido",
+    labels: { caller: "Quién llamó", phone: "Teléfono", when: "Fecha", duration: "Duración", outcome: "Resultado", summary: "Resumen" },
+    colon: ": ",
+    duration: (m, s) => (m ? `${m} min ${s} s` : `${s} s`),
+    booked: (service, when) => (service ? `Cita reservada: ${service}, ${when}` : `Cita reservada: ${when}`),
+    action: "Ver la llamada",
+    footnote: "Recibe este correo por cada llamada que contesta su agente.",
+    settings: "Cambiar alertas",
+  }),
+  sr: (business, caller) => ({
+    subject: caller ? `Novi poziv: ${caller}` : `Novi poziv za ${business}`,
+    heading: `Novi poziv za ${business}`,
+    unknownCaller: "Nepoznat pozivalac",
+    labels: { caller: "Pozivalac", phone: "Telefon", when: "Vreme", duration: "Trajanje", outcome: "Ishod", summary: "Rezime" },
+    colon: ": ",
+    duration: (m, s) => (m ? `${m} min ${s} s` : `${s} s`),
+    booked: (service, when) => (service ? `Zakazan termin: ${service}, ${when}` : `Zakazan termin: ${when}`),
+    action: "Pogledaj poziv",
+    footnote: "Ovaj imejl dobijate za svaki poziv na koji vaš agent odgovori.",
+    settings: "Promeni obaveštenja",
+  }),
+};
+
+/** A time in the business's time zone, written in the reader's language. */
+function callSummaryTime(value: string | undefined, locale: string, timeZone: string | undefined, withWeekday: boolean): string {
+  const date = value ? new Date(value) : undefined;
+  if (!date || !Number.isFinite(date.getTime())) return "";
+  const options: Intl.DateTimeFormatOptions = { ...(withWeekday ? { weekday: "long" } : {}), month: "long", day: "numeric", hour: "numeric", minute: "2-digit" };
+  try {
+    return new Intl.DateTimeFormat(intlLocale(locale), { ...options, ...(timeZone ? { timeZone } : {}) }).format(date);
+  } catch {
+    return new Intl.DateTimeFormat(intlLocale(locale), options).format(date);
+  }
+}
+
+/**
+ * The alert for a call the agent answered, in the reader's language: who
+ * called, when, for how long, what was booked, and the call's summary.
+ * Rows without a value stay out.
+ */
+function callSummaryCopy(v: Record<string, string>) {
+  const locale = v.locale === "fr" || v.locale === "es" || v.locale === "sr" ? v.locale : "en";
+  const business = v.businessName ?? "";
+  const copy = CALL_SUMMARY_COPY[locale](business, v.callerName || v.callerPhone || "");
+  const seconds = Math.max(0, Math.round(Number(v.durationSeconds ?? "0")) || 0);
+  const booked = v.bookedAt ? copy.booked(v.bookedService ?? "", callSummaryTime(v.bookedAt, locale, v.timezone, false)) : "";
+  const rows = [
+    [copy.labels.caller, v.callerName || copy.unknownCaller],
+    [copy.labels.phone, v.callerPhone ?? ""],
+    [copy.labels.when, callSummaryTime(v.startedAt, locale, v.timezone, true)],
+    [copy.labels.duration, copy.duration(Math.floor(seconds / 60), seconds % 60)],
+    [copy.labels.outcome, booked],
+  ].filter((row): row is [string, string] => Boolean(row[1]));
+  return { ...copy, rows, summary: v.summary?.trim() ?? "" };
+}
+
+/** The notification settings page, on the same origin as the call link. */
+function notificationSettingsLink(callUrl: string | undefined): string | undefined {
+  if (!callUrl) return undefined;
+  try {
+    return new URL("/settings/notifications", callUrl).href;
+  } catch {
+    return undefined;
+  }
+}
+
+function callSummaryBody(variables: Record<string, string>, brand: EmailBrand): string {
+  const copy = callSummaryCopy(variables);
+  const url = dashboardLink(variables.url, brand);
+  const settings = notificationSettingsLink(url);
+  return [
+    copy.heading,
+    "",
+    ...copy.rows.map(([label, value]) => `${label}${copy.colon}${value}`),
+    ...(copy.summary ? ["", `${copy.labels.summary}${copy.colon.trimEnd()}`, copy.summary] : []),
+    ...(url ? ["", `${copy.action}${copy.colon}${url}`] : []),
+    "",
+    copy.footnote,
+    ...(settings ? [`${copy.settings}${copy.colon}${settings}`] : []),
+  ].join("\n");
+}
+
+function renderCallSummaryHtml(brand: EmailBrand, subject: string, variables: Record<string, string>): string {
+  const copy = callSummaryCopy(variables);
+  const url = dashboardLink(variables.url, brand);
+  const settings = notificationSettingsLink(url);
+  const rows = copy.rows
+    .map(([label, value]) => `<tr><td style="width:112px;padding:6px 16px 6px 0;font-size:14px;line-height:1.5;color:#6B7280;vertical-align:top;">${escapeHtml(label)}</td><td style="padding:6px 0;font-size:15px;line-height:1.5;color:#0B0B0D;vertical-align:top;">${escapeHtml(value)}</td></tr>`)
+    .join("");
+  return renderEmailLayout({
+    brand,
+    previewText: subject,
+    align: "left",
+    content: [
+      `<h1 style="margin:0 0 24px;font-size:24px;font-weight:600;line-height:1.25;color:#0B0B0D;">${escapeHtml(copy.heading)}</h1>`,
+      `<table role="presentation" border="0" cellspacing="0" cellpadding="0" width="100%" style="margin:0 0 24px;background-color:#F9FAFB;border:1px solid #E5E7EB;border-radius:16px;"><tr><td style="padding:14px 20px;"><table role="presentation" border="0" cellspacing="0" cellpadding="0" width="100%">${rows}</table></td></tr></table>`,
+      ...(copy.summary ? [
+        `<p style="margin:0 0 6px;font-size:14px;line-height:1.5;color:#6B7280;">${escapeHtml(copy.labels.summary)}</p>`,
+        `<p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(copy.summary).replaceAll("\n", "<br />")}</p>`,
+      ] : []),
+      ...(url ? [`<p style="margin:8px 0 0;"><a href="${escapeHtml(url)}" style="${ACTION_BUTTON_STYLE}">${escapeHtml(copy.action)}</a></p>`] : []),
+      `<p style="margin:32px 0 0;padding-top:24px;border-top:1px solid #E5E7EB;font-size:14px;line-height:1.5;color:#6B7280;">${escapeHtml(copy.footnote)}${settings ? ` <a href="${escapeHtml(settings)}" style="color:#6B7280;text-decoration:underline;">${escapeHtml(copy.settings)}</a>` : ""}</p>`,
+    ].join(""),
   });
 }
 
@@ -350,6 +502,8 @@ function templateBody(template: TemplateName, variables: Record<string, string>,
     }
     case "operator_alert":
       return variables.message ?? `${name} operator notification`;
+    case "call_summary":
+      return callSummaryBody(variables, brand);
     case "feedback_submission":
       return variables.body ?? "LobbyStack dashboard feedback";
     case "onboarding_followup":

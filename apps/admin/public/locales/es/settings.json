@@ -1024,6 +1024,10 @@
       "eventColumn": "Evento"
     },
     "events": {
+      "callCompleted": {
+        "title": "Llamada contestada",
+        "description": "Cuando su agente termina una llamada, con su resumen."
+      },
       "voiceMessage": {
         "title": "Mensaje de voz recibido",
         "description": "Cuando una persona deja un mensaje durante una llamada."

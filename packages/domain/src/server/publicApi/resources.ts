@@ -628,6 +628,7 @@ export function serializeWidgetKey(row: { id: string; label: string | null; stat
 
 /** The API's names for the alerts the dashboard's notification settings show. */
 export const notificationEventKeys = {
+  call_completed: "callCompleted",
   voice_message: "voiceMessage",
   text_message: "pausedSms",
   customer_sms_failed: "smsFailed",

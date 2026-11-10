@@ -17,7 +17,7 @@ import { businessNumberCarrier } from "./smsSender";
 import { estimateSmsSegments } from "./usage";
 import { verificationCodeSmsBody } from "./verificationCode";
 
-type EmailProvider = { sendTemplate(input: { template: "operator_alert"; to: string; subject: string; variables: { message: string }; brand: EmailBrand; idempotencyKey: string; from?: string; replyTo?: string }): Promise<{ messageId: string }> };
+type EmailProvider = { sendTemplate(input: { template: "operator_alert" | "call_summary"; to: string; subject?: string; variables: Record<string, string>; brand: EmailBrand; idempotencyKey: string; from?: string; replyTo?: string }): Promise<{ messageId: string }> };
 
 /** The adapters a delivery goes out through: the telephony carriers and SMTP in production, fakes in tests. */
 export type OutboundProviders = {
@@ -48,7 +48,8 @@ type FailureEvent = { kind: string; appointmentId?: string };
 type Outgoing = { body: string; failureEvent?: FailureEvent } & (
   // optIn: the opt-in confirmation to send first, when this is the contact's first text since they said yes.
   | { channel: "sms"; to: string; from: string; callback?: StatusCallbackIds; usageSourceKey?: string; optIn?: { contactId: string; body: string } }
-  | { channel: "email"; to: string; subject: string; idempotencyKey: string }
+  // details: what an alert email lays out beyond the body, such as a call summary's caller and length.
+  | { channel: "email"; to: string; subject: string; idempotencyKey: string; details?: Record<string, string> | null }
 );
 
 /** The row behind one delivery. Each method is one write or read on it. */
@@ -215,7 +216,11 @@ function providerSend(context: DomainContext, providers: OutboundProviders, outg
     // goes out, with that brand's Reply-To.
     return email && (async () => {
       const brand = await brandForBusiness(context, businessId);
-      return (await email.sendTemplate({ template: "operator_alert", to: outgoing.to, subject: outgoing.subject, variables: { message: outgoing.body }, brand, idempotencyKey: outgoing.idempotencyKey, ...emailSender(brand, {}) })).messageId;
+      // A call summary lays out its details and writes its subject in the reader's language.
+      const message = outgoing.details?.template === "call_summary"
+        ? { template: "call_summary" as const, variables: outgoing.details }
+        : { template: "operator_alert" as const, subject: outgoing.subject, variables: { message: outgoing.body } };
+      return (await email.sendTemplate({ ...message, to: outgoing.to, brand, idempotencyKey: outgoing.idempotencyKey, ...emailSender(brand, {}) })).messageId;
     });
   }
   return sms && (async (body, statusCallback) => (await sms.sendSms({ to: outgoing.to, from: outgoing.from, body, ...(statusCallback ? { statusCallback } : {}) })).providerMessageId);
@@ -356,7 +361,7 @@ function operatorNotificationLease(context: DomainContext, input: { businessId: 
         return null;
       }
       const failureEvent = { kind: delivery.eventKind };
-      if (delivery.channel !== "sms") return { channel: "email", to: delivery.destination, subject: delivery.subject, body: delivery.body, idempotencyKey: `operator-notification:${delivery.id}`, failureEvent };
+      if (delivery.channel !== "sms") return { channel: "email", to: delivery.destination, subject: delivery.subject, body: delivery.body, idempotencyKey: `operator-notification:${delivery.id}`, details: delivery.details, failureEvent };
       return { channel: "sms", to: delivery.destination, from: delivery.sender ?? "", body: delivery.body, callback: { operatorDeliveryId: delivery.id }, usageSourceKey: `alert_sms:operator_notification:${delivery.id}`, failureEvent };
     },
     markSent: (providerMessageId) => markOperatorNotificationSent(context, { ...ids, providerMessageId }),

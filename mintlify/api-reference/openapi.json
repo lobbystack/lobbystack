@@ -18070,6 +18070,23 @@
           "events": {
             "type": "object",
             "properties": {
+              "call_completed": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "boolean"
+                  },
+                  "sms": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "email",
+                  "sms"
+                ],
+                "additionalProperties": false,
+                "description": "The agent answered a call. The email shows the caller, the time, the length and the summary."
+              },
               "voice_message": {
                 "type": "object",
                 "properties": {
@@ -18191,6 +18208,7 @@
               }
             },
             "required": [
+              "call_completed",
               "voice_message",
               "text_message",
               "customer_sms_failed",
@@ -18284,6 +18302,19 @@
             "description": "Only the events and switches sent change.",
             "type": "object",
             "properties": {
+              "call_completed": {
+                "description": "The agent answered a call. The email shows the caller, the time, the length and the summary.",
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "boolean"
+                  },
+                  "sms": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              },
               "voice_message": {
                 "description": "A caller left a message during a call.",
                 "type": "object",

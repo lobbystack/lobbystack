@@ -354,7 +354,7 @@ function buildCases(): CaseDefinition[] {
       id: "sweep.operator_deliveries",
       role: "worker",
       source: "packages/domain/src/server/privacy.ts:36",
-      sql: "update public.operator_notification_deliveries set subject = '[content expired]', body = '[content expired]', destination = '[expired]', sender = null, content_expires_at = '9999-12-31T00:00:00.000Z', updated_at = now() where business_id = $1::uuid and content_expires_at < now() returning id",
+      sql: "update public.operator_notification_deliveries set subject = '[content expired]', body = '[content expired]', destination = '[expired]', sender = null, details = null, content_expires_at = '9999-12-31T00:00:00.000Z', updated_at = now() where business_id = $1::uuid and content_expires_at < now() returning id",
       params: [BUSINESS_A],
       table: "operator_notification_deliveries",
     },

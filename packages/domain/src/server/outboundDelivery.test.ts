@@ -290,6 +290,17 @@ describe("notifications", () => {
     expect(usage.reserveAlertSmsUsage).not.toHaveBeenCalled();
   });
 
+  it("emails a call summary with its own template, which writes the subject in the reader's language", async () => {
+    const brand = { kind: "host", partnerId: null, name: "Acme Desk", logoUrl: null, faviconUrl: null, color: null, origin: "https://desk.example.test", links: { website: null, terms: null, privacy: null, support: null }, email: { fromName: "Acme Desk", fromAddress: "no-reply@desk.example.test", replyTo: "help@desk.example.test" } };
+    rows.brands.brandForBusiness.mockResolvedValue(brand);
+    notifications.claimOperatorNotificationDelivery.mockResolvedValue(true);
+    const details = { template: "call_summary", locale: "fr", businessName: "Metroprint", callerName: "Sarah Chen", callerPhone: "+14165550133", startedAt: "2026-11-09T15:32:00.000Z", timezone: "America/Toronto", durationSeconds: "134", summary: "A quote for business cards.", url: "https://desk.example.test/calls/call-1" };
+    notifications.loadOperatorNotificationDelivery.mockResolvedValue({ id: "delivery-1", eventKind: "callCompleted", channel: "email", destination: "operator@example.test", sender: null, subject: "New call from Sarah Chen", body: "Metroprint: new call from Sarah Chen.", details });
+    const sender = providers();
+    await expect(deliverOutbound(context, sender, kinds.operatorNotification.delivery)).resolves.toEqual({ status: "completed", entityId: "delivery-1" });
+    expect(sender.email.sendTemplate).toHaveBeenCalledWith({ template: "call_summary", to: "operator@example.test", variables: details, brand, replyTo: "help@desk.example.test", idempotencyKey: "operator-notification:delivery-1" });
+  });
+
   it.each([
     ["notification", { kind: "appointment_reminder", appointmentId: "appointment-1" }],
     ["operatorNotification", { kind: "voiceMessage" }],

@@ -47,7 +47,7 @@ export async function runPrivacyRetentionSweep(
         .where(and(eq(conversations.id, session.conversationId), eq(conversations.businessId, input.businessId), eq(conversations.summary, text)));
     }
     const scrubbedOperatorDeliveries = await tx.update(operatorNotificationDeliveries)
-      .set({ subject: "[content expired]", body: "[content expired]", destination: "[expired]", sender: null, contentExpiresAt: new Date("9999-12-31T00:00:00.000Z"), updatedAt: now })
+      .set({ subject: "[content expired]", body: "[content expired]", destination: "[expired]", sender: null, details: null, contentExpiresAt: new Date("9999-12-31T00:00:00.000Z"), updatedAt: now })
       .where(and(eq(operatorNotificationDeliveries.businessId, input.businessId), lt(operatorNotificationDeliveries.contentExpiresAt, now)))
       .returning({ id: operatorNotificationDeliveries.id });
     const expiredRecordings = !contentRetentionEnabled ? [] : await tx.select({ callId: calls.id, objectId: storageObjects.id })

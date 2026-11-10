@@ -226,7 +226,7 @@ describe("notification preferences", () => {
     expect(serializeNotificationPreferences({ ...preferences, smsConsent: true, canUseSms: false, smsUnavailableReason: "sender_missing" }).sms).toEqual({ available: false, unavailable_reason: "sender_missing" });
     // Each API name is one of the dashboard's events, and every event it shows has one.
     expect(Object.values(notificationEventKeys).every((key) => (operatorNotificationEventKeys as readonly string[]).includes(key))).toBe(true);
-    expect(new Set(Object.values(notificationEventKeys))).toEqual(new Set(["voiceMessage", "pausedSms", "smsFailed", "calendarSync", "transferFailed", "widgetChat", "webhookDisabled"]));
+    expect(new Set(Object.values(notificationEventKeys))).toEqual(new Set(["callCompleted", "voiceMessage", "pausedSms", "smsFailed", "calendarSync", "transferFailed", "widgetChat", "webhookDisabled"]));
   });
 });
 

@@ -1017,6 +1017,10 @@
       "eventColumn": "Event"
     },
     "events": {
+      "callCompleted": {
+        "title": "Call answered",
+        "description": "When your agent finishes a call, with its summary."
+      },
       "voiceMessage": {
         "title": "Voice message captured",
         "description": "When a caller leaves a message during a call."
