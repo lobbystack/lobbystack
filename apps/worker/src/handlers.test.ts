@@ -150,15 +150,17 @@ describe("worker handlers", () => {
     expect(sendTemplate).not.toHaveBeenCalled();
     expect(queueWelcomeEmail).not.toHaveBeenCalled();
   });
-  it("queues the welcome email through the domain, and skips it without SMTP", async () => {
+  it("queues the welcome email through the domain, waits on a number being set up, and skips it without SMTP", async () => {
     const businessId = randomUUID(); const domain = { db: undefined as never };
-    vi.mocked(queueWelcomeEmail).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    const retryAt = new Date("2026-11-10T12:00:30Z");
+    vi.mocked(queueWelcomeEmail).mockResolvedValueOnce({ status: "queued" }).mockResolvedValueOnce({ status: "skipped" }).mockResolvedValueOnce({ status: "waiting", retryAt });
     const job = { jobId: randomUUID(), type: "onboarding.sendWelcome" as const, queue: "default" as const, businessId, payload: {}, trace: {}, idempotencyKey: `onboarding-welcome:${businessId}`, scheduled: false };
     await expect(handleJob(job, { domain })).resolves.toEqual({ status: "skipped" });
     expect(queueWelcomeEmail).not.toHaveBeenCalled();
     await expect(handleJob(job, { domain, email: { sendTemplate: vi.fn() } })).resolves.toEqual({ status: "completed", entityId: businessId });
     expect(queueWelcomeEmail).toHaveBeenCalledWith(domain, { businessId });
     await expect(handleJob(job, { domain, email: { sendTemplate: vi.fn() } })).resolves.toEqual({ status: "skipped", entityId: businessId });
+    await expect(handleJob(job, { domain, email: { sendTemplate: vi.fn() } })).resolves.toEqual({ status: "deferred", entityId: businessId, retryAt });
   });
   it("sends an email queued before payloads carried a brand exactly as one queued under a brand, LobbyStack included", async () => {
     vi.stubEnv("APP_BASE_URL", "https://app.example.test");

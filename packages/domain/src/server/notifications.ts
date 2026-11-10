@@ -768,7 +768,7 @@ export type OperatorAlertInput = {
 
 export async function queueOperatorAlertInTransaction(tx: DatabaseTransaction, input: OperatorAlertInput): Promise<string[]> {
   type Recipient = { userId: string; email: string; phone: string | null; preferences: OperatorNotificationEventPreferences | null; emailEnabled: boolean; smsEnabled: boolean; smsConsentGrantedAt: Date | null; smsConsentRevokedAt: Date | null; smsConsentDisclosureVersion: string | null; smsConsentPhone: string | null; locale: string | null };
-  const result = await tx.execute(sql`SELECT user_id AS "userId", email, phone, event_preferences AS preferences, email_enabled AS "emailEnabled", sms_enabled AS "smsEnabled", sms_consent_granted_at AS "smsConsentGrantedAt", sms_consent_revoked_at AS "smsConsentRevokedAt", sms_consent_disclosure_version AS "smsConsentDisclosureVersion", sms_consent_phone AS "smsConsentPhone", preferred_locale AS locale FROM app.resolve_operator_notification_recipients(${input.businessId}::uuid)`);
+  const result = await tx.execute(sql`SELECT user_id AS "userId", email, phone, event_preferences AS preferences, email_enabled AS "emailEnabled", sms_enabled AS "smsEnabled", sms_consent_granted_at AS "smsConsentGrantedAt", sms_consent_revoked_at AS "smsConsentRevokedAt", sms_consent_disclosure_version AS "smsConsentDisclosureVersion", sms_consent_phone AS "smsConsentPhone", preferred_locale AS locale FROM app.resolve_operator_alert_recipients(${input.businessId}::uuid)`);
   const recipients = result.rows as Recipient[];
   const sender = await resolveSmsSender(tx, input.businessId);
   const deliveryIds: string[] = [];

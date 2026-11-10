@@ -278,7 +278,7 @@ The worker reads the brand when it sends, so a brand change reaches emails still
 Two kinds of email carry no `brand`:
 
 - **Number trial and release emails**: they hold the host's prices and are signed LobbyStack. A partner's businesses never get them, so the worker sends them under the host brand.
-- **Operator alerts**: they come from delivery rows, which hold the business. The worker sends each one under its business's brand.
+- **Operator alerts**: they come from delivery rows, which hold the business. The worker sends each one under its business's brand. A call summary alert also stores its caller, time, length and outcome in the row's `details`, and goes out with the `call_summary` template in the recipient's dashboard language. The privacy sweep clears `details` with the rest of the content.
 
 ### Prerendered pages
 

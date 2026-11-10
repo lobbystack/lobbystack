@@ -349,7 +349,7 @@ describe("SMTP delivery", () => {
 
     it("writes the email in the reader's language and shows what was booked", async () => {
       const { provider, sent } = capture();
-      await send(provider, { ...call, variables: { ...call.variables, locale: "fr", summary: "", bookedAt: "2026-11-12T15:00:00.000Z", bookedService: "Consultation" } });
+      await send(provider, { ...call, variables: { ...call.variables, locale: "fr", summary: "", outcome: "booked", bookedAt: "2026-11-12T15:00:00.000Z", bookedService: "Consultation" } });
       const email = sent();
       expect(email.subject).toBe("Nouvel appel de Sarah Chen");
       expect(email.text).toContain("Nouvel appel pour Metroprint");
@@ -357,6 +357,14 @@ describe("SMTP delivery", () => {
       expect(email.text).toContain("Résultat : Rendez-vous réservé : Consultation, 12 novembre à 10:00");
       expect(email.text).not.toContain("Résumé");
       expect(email.html).toContain(">Voir l’appel</a>");
+    });
+
+    it("says a call went to the team, and leaves out a length nobody measured", async () => {
+      const { provider, sent } = capture();
+      await send(provider, { ...call, variables: { ...call.variables, outcome: "transferred", durationSeconds: "" } });
+      expect(sent().text).toContain("Outcome: Transferred to your team");
+      expect(sent().text).not.toContain("Duration");
+      expect(sent().text).not.toContain("0 sec");
     });
 
     it("names an unknown caller and leaves out the phone a website call doesn't have", async () => {

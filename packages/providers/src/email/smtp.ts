@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 import nodemailer, { type Transporter } from "nodemailer";
-import { DEFAULT_APP_NAME, assertCertificationRecipient, intlLocale, type EmailBrand } from "@lobbystack/shared";
+import { DEFAULT_APP_NAME, assertCertificationRecipient, intlLocale, type CallSummaryEmailDetails, type EmailBrand } from "@lobbystack/shared";
 
 export type SmtpConfig = {
   host: string;
@@ -274,6 +274,7 @@ type CallSummaryCopy = {
   colon: string;
   duration: (minutes: number, seconds: number) => string;
   booked: (service: string, when: string) => string;
+  transferred: string;
   action: string;
   footnote: string;
   settings: string;
@@ -288,6 +289,7 @@ const CALL_SUMMARY_COPY: Record<"en" | "fr" | "es" | "sr", (business: string, ca
     colon: ": ",
     duration: (m, s) => (m ? `${m} min ${s} sec` : `${s} sec`),
     booked: (service, when) => (service ? `Booked ${service} for ${when}` : `Booked an appointment for ${when}`),
+    transferred: "Transferred to your team",
     action: "View call",
     footnote: "You get this email for each call your agent answers.",
     settings: "Change alerts",
@@ -300,6 +302,7 @@ const CALL_SUMMARY_COPY: Record<"en" | "fr" | "es" | "sr", (business: string, ca
     colon: " : ",
     duration: (m, s) => (m ? `${m} min ${s} s` : `${s} s`),
     booked: (service, when) => (service ? `Rendez-vous réservé : ${service}, ${when}` : `Rendez-vous réservé : ${when}`),
+    transferred: "Transféré à votre équipe",
     action: "Voir l’appel",
     footnote: "Vous recevez ce courriel pour chaque appel auquel votre agent répond.",
     settings: "Modifier les alertes",
@@ -312,6 +315,7 @@ const CALL_SUMMARY_COPY: Record<"en" | "fr" | "es" | "sr", (business: string, ca
     colon: ": ",
     duration: (m, s) => (m ? `${m} min ${s} s` : `${s} s`),
     booked: (service, when) => (service ? `Cita reservada: ${service}, ${when}` : `Cita reservada: ${when}`),
+    transferred: "Transferida a su equipo",
     action: "Ver la llamada",
     footnote: "Recibe este correo por cada llamada que contesta su agente.",
     settings: "Cambiar alertas",
@@ -324,53 +328,63 @@ const CALL_SUMMARY_COPY: Record<"en" | "fr" | "es" | "sr", (business: string, ca
     colon: ": ",
     duration: (m, s) => (m ? `${m} min ${s} s` : `${s} s`),
     booked: (service, when) => (service ? `Zakazan termin: ${service}, ${when}` : `Zakazan termin: ${when}`),
+    transferred: "Prebačen Vašem timu",
     action: "Pogledaj poziv",
-    footnote: "Ovaj imejl dobijate za svaki poziv na koji vaš agent odgovori.",
+    footnote: "Ovaj imejl dobijate za svaki poziv na koji Vaš agent odgovori.",
     settings: "Promeni obaveštenja",
   }),
 };
 
+/** The interface language an email is written in: English unless the recipient reads French, Spanish or Serbian. */
+function emailCopyLocale(value: string | undefined): "en" | "fr" | "es" | "sr" {
+  return value === "fr" || value === "es" || value === "sr" ? value : "en";
+}
+
 /** A time in the business's time zone, written in the reader's language. */
-function callSummaryTime(value: string | undefined, locale: string, timeZone: string | undefined, withWeekday: boolean): string {
-  const date = value ? new Date(value) : undefined;
-  if (!date || !Number.isFinite(date.getTime())) return "";
-  const options: Intl.DateTimeFormatOptions = { ...(withWeekday ? { weekday: "long" } : {}), month: "long", day: "numeric", hour: "numeric", minute: "2-digit" };
-  try {
-    return new Intl.DateTimeFormat(intlLocale(locale), { ...options, ...(timeZone ? { timeZone } : {}) }).format(date);
-  } catch {
-    return new Intl.DateTimeFormat(intlLocale(locale), options).format(date);
-  }
+function callSummaryTime(value: string, locale: string, timeZone: string, withWeekday: boolean): string {
+  const date = new Date(value);
+  if (!value || !Number.isFinite(date.getTime())) return "";
+  return new Intl.DateTimeFormat(intlLocale(locale), { ...(withWeekday ? { weekday: "long" } : {}), month: "long", day: "numeric", hour: "numeric", minute: "2-digit", ...(timeZone ? { timeZone } : {}) }).format(date);
+}
+
+/** A call's length as the email shows it, or "" when it isn't known. */
+function callSummaryDuration(copy: CallSummaryCopy, value: string): string {
+  if (!value.trim()) return "";
+  const seconds = Math.max(0, Math.round(Number(value)) || 0);
+  return copy.duration(Math.floor(seconds / 60), seconds % 60);
 }
 
 /**
  * The alert for a call the agent answered, in the reader's language: who
- * called, when, for how long, what was booked, and the call's summary.
+ * called, when, for how long, what came of it, and the call's summary.
  * Rows without a value stay out.
  */
-function callSummaryCopy(v: Record<string, string>) {
-  const locale = v.locale === "fr" || v.locale === "es" || v.locale === "sr" ? v.locale : "en";
-  const business = v.businessName ?? "";
-  const copy = CALL_SUMMARY_COPY[locale](business, v.callerName || v.callerPhone || "");
-  const seconds = Math.max(0, Math.round(Number(v.durationSeconds ?? "0")) || 0);
-  const booked = v.bookedAt ? copy.booked(v.bookedService ?? "", callSummaryTime(v.bookedAt, locale, v.timezone, false)) : "";
+function callSummaryCopy(variables: Record<string, string>) {
+  const details: Partial<CallSummaryEmailDetails> = variables;
+  const locale = emailCopyLocale(details.locale);
+  const timezone = details.timezone ?? "";
+  const copy = CALL_SUMMARY_COPY[locale](details.businessName ?? "", details.callerName || details.callerPhone || "");
+  const outcome = details.outcome === "booked" && details.bookedAt
+    ? copy.booked(details.bookedService ?? "", callSummaryTime(details.bookedAt, locale, timezone, false))
+    : details.outcome === "transferred" ? copy.transferred : "";
   const rows = [
-    [copy.labels.caller, v.callerName || copy.unknownCaller],
-    [copy.labels.phone, v.callerPhone ?? ""],
-    [copy.labels.when, callSummaryTime(v.startedAt, locale, v.timezone, true)],
-    [copy.labels.duration, copy.duration(Math.floor(seconds / 60), seconds % 60)],
-    [copy.labels.outcome, booked],
+    [copy.labels.caller, details.callerName || copy.unknownCaller],
+    [copy.labels.phone, details.callerPhone ?? ""],
+    [copy.labels.when, callSummaryTime(details.startedAt ?? "", locale, timezone, true)],
+    [copy.labels.duration, callSummaryDuration(copy, details.durationSeconds ?? "")],
+    [copy.labels.outcome, outcome],
   ].filter((row): row is [string, string] => Boolean(row[1]));
-  return { ...copy, rows, summary: v.summary?.trim() ?? "" };
+  return { ...copy, rows, summary: details.summary?.trim() ?? "" };
 }
 
 /** The notification settings page, on the same origin as the call link. */
 function notificationSettingsLink(callUrl: string | undefined): string | undefined {
-  if (!callUrl) return undefined;
-  try {
-    return new URL("/settings/notifications", callUrl).href;
-  } catch {
-    return undefined;
-  }
+  return callUrl ? new URL("/settings/notifications", callUrl).href : undefined;
+}
+
+/** The grey box an email sets its facts or steps in, around rows of a table. */
+function renderPanel(rows: string, margin: string, padding: string): string {
+  return `<table role="presentation" border="0" cellspacing="0" cellpadding="0" width="100%" style="margin:${margin};background-color:#F9FAFB;border:1px solid #E5E7EB;border-radius:16px;"><tr><td style="padding:${padding};"><table role="presentation" border="0" cellspacing="0" cellpadding="0" width="100%">${rows}</table></td></tr></table>`;
 }
 
 function callSummaryBody(variables: Record<string, string>, brand: EmailBrand): string {
@@ -402,7 +416,7 @@ function renderCallSummaryHtml(brand: EmailBrand, subject: string, variables: Re
     align: "left",
     content: [
       `<h1 style="margin:0 0 24px;font-size:24px;font-weight:600;line-height:1.25;color:#0B0B0D;">${escapeHtml(copy.heading)}</h1>`,
-      `<table role="presentation" border="0" cellspacing="0" cellpadding="0" width="100%" style="margin:0 0 24px;background-color:#F9FAFB;border:1px solid #E5E7EB;border-radius:16px;"><tr><td style="padding:14px 20px;"><table role="presentation" border="0" cellspacing="0" cellpadding="0" width="100%">${rows}</table></td></tr></table>`,
+      renderPanel(rows, "0 0 24px", "14px 20px"),
       ...(copy.summary ? [
         `<p style="margin:0 0 6px;font-size:14px;line-height:1.5;color:#6B7280;">${escapeHtml(copy.labels.summary)}</p>`,
         `<p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(copy.summary).replaceAll("\n", "<br />")}</p>`,
@@ -507,7 +521,7 @@ function templateBody(template: TemplateName, variables: Record<string, string>,
     case "feedback_submission":
       return variables.body ?? "LobbyStack dashboard feedback";
     case "welcome":
-      return welcomeBody(variables);
+      return welcomeBody(variables, brand);
     case "number_trial":
       return numberTrialBody(variables, brand);
     case "number_release":
@@ -1051,15 +1065,15 @@ const WELCOME_COPY: Record<"en" | "fr" | "es" | "sr", WelcomeCopy> = {
  * Its three steps match Getting started on Home, and its button leads to the
  * third: forwarding calls to the number the owner took, or getting one.
  */
-function welcomeCopy(v: Record<string, string>) {
-  const locale = v.locale === "fr" || v.locale === "es" || v.locale === "sr" ? v.locale : "en";
+function welcomeCopy(variables: Record<string, string>) {
+  const locale = emailCopyLocale(variables.locale);
   const copy = WELCOME_COPY[locale];
-  const goal: WelcomeGoal = v.goal === "answer_calls" || v.goal === "book_appointments" || v.goal === "answer_website_visitors" || v.goal === "answer_instagram_messages" ? v.goal : "none";
-  const number = v.number?.trim() ?? "";
+  const goal: WelcomeGoal = variables.goal === "answer_calls" || variables.goal === "book_appointments" || variables.goal === "answer_website_visitors" || variables.goal === "answer_instagram_messages" ? variables.goal : "none";
+  const number = variables.number?.trim() ?? "";
   const phone = number ? { title: copy.forward.title(number), text: copy.forward.text, action: copy.forward.action } : copy.claim;
   return {
-    heading: copy.heading(v.firstName?.trim() ?? ""),
-    lines: [copy.intro(v.businessName ?? ""), copy.lead],
+    heading: copy.heading(variables.firstName?.trim() ?? ""),
+    lines: [copy.intro(variables.businessName ?? ""), copy.lead],
     steps: [
       { title: copy.hear.title, text: copy.hear.text[goal] },
       { title: copy.teach.title, text: goal === "book_appointments" ? copy.teach.booking : copy.teach.text },
@@ -1073,14 +1087,15 @@ function welcomeCopy(v: Record<string, string>) {
   };
 }
 
-function welcomeBody(variables: Record<string, string>): string {
+function welcomeBody(variables: Record<string, string>, brand: EmailBrand): string {
   const copy = welcomeCopy(variables);
+  const url = dashboardLink(variables.url, brand) ?? "";
   return [
     copy.heading,
     "",
     ...copy.lines.flatMap((line) => [line, ""]),
     ...copy.steps.flatMap((step, index) => [`${index + 1}. ${step.title}`, step.text, ""]),
-    `${copy.action}${copy.colon}${variables.url ?? ""}`,
+    `${copy.action}${copy.colon}${url}`,
     "",
     copy.close,
     "",
@@ -1090,7 +1105,7 @@ function welcomeBody(variables: Record<string, string>): string {
 
 function renderWelcomeHtml(brand: EmailBrand, subject: string, variables: Record<string, string>): string {
   const copy = welcomeCopy(variables);
-  const url = variables.url;
+  const url = dashboardLink(variables.url, brand);
   const steps = copy.steps
     .map((step, index) => `<tr><td style="width:40px;padding:4px 0;vertical-align:top;"><div style="width:28px;height:28px;border-radius:9999px;background-color:#0B0B0D;color:#FFFFFF;font-size:14px;font-weight:600;line-height:28px;text-align:center;">${index + 1}</div></td><td style="padding:4px 0 ${index === copy.steps.length - 1 ? 4 : 14}px;vertical-align:top;"><p style="margin:0;font-size:15px;font-weight:600;line-height:1.5;color:#0B0B0D;">${escapeHtml(step.title)}</p><p style="margin:0;font-size:15px;line-height:1.5;color:#3D3D3D;">${escapeHtml(step.text)}</p></td></tr>`)
     .join("");
@@ -1102,7 +1117,7 @@ function renderWelcomeHtml(brand: EmailBrand, subject: string, variables: Record
       `<h1 style="margin:0 0 20px;font-size:28px;font-weight:600;line-height:1.2;color:#0B0B0D;">${escapeHtml(copy.heading)}</h1>`,
       `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(copy.lines[0]!)}</p>`,
       `<p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(copy.lines[1]!)}</p>`,
-      `<table role="presentation" border="0" cellspacing="0" cellpadding="0" width="100%" style="margin:0 0 28px;background-color:#F9FAFB;border:1px solid #E5E7EB;border-radius:16px;"><tr><td style="padding:18px 20px;"><table role="presentation" border="0" cellspacing="0" cellpadding="0" width="100%">${steps}</table></td></tr></table>`,
+      renderPanel(steps, "0 0 28px", "18px 20px"),
       ...(url ? [`<p style="margin:0;"><a href="${escapeHtml(url)}" style="${ACTION_BUTTON_STYLE}">${escapeHtml(copy.action)}</a></p>`] : []),
       `<p style="margin:28px 0 0;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(copy.close)}</p>`,
       `<p style="margin:16px 0 0;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(copy.signature)}</p>`,

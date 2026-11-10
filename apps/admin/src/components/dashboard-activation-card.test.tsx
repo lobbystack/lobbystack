@@ -11,9 +11,8 @@ import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 
 const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
 vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
-const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
-const search = vi.hoisted(() => ({ value: "" }));
-vi.mock("next/navigation", () => ({ useRouter: () => router, usePathname: () => "/", useSearchParams: () => new URLSearchParams(search.value) }));
+const router = vi.hoisted(() => ({ push: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string, values?: { number?: string }) => values?.number ? `${key}:${values.number}` : key, i18n: { language: "en" } }) }));
 
 const clients: QueryClient[] = [];
@@ -29,7 +28,7 @@ beforeEach(() => {
   });
 });
 
-afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); search.value = ""; });
+afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
 type Activation = {
   deploymentMode: string;
@@ -96,13 +95,6 @@ describe("dashboard activation card", () => {
     expect(await screen.findByText("forwarding.title:(581) 892-7672")).toBeTruthy();
     expect(screen.queryByText("activation.upgrade.title")).toBeNull();
     expect(telemetryRef.current!.events.filter(event => event.name === "web.activation.upgrade_prompt_shown")).toHaveLength(0);
-  });
-
-  it("opens the forwarding steps from the welcome email's link", async () => {
-    search.value = "setup=phoneNumber";
-    setup({ completedWebCalls: 1 }, { status: "active", e164: "+15818927672", daysLeft: 12, minutesExhausted: false, forwardTo: null });
-    expect(await screen.findByText("forwarding.title:(581) 892-7672")).toBeTruthy();
-    expect(router.replace).toHaveBeenCalledWith("/", { scroll: false });
   });
 
   it("shows crawl progress while the website import is still running", async () => {

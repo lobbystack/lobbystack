@@ -278,6 +278,7 @@ export const queueForJobType = {
   "phoneNumber.releaseEmail": "default",
   "prospectDemo.expire": "maintenance",
   // No longer queued: the founder's check-in it sent is gone, and the worker skips any left over.
+  // Remove it with the worker's case once no job from before can be left.
   "onboarding.sendFollowup": "default",
   "onboarding.sendWelcome": "default",
   "affiliate.generatePayoutRun": "maintenance",

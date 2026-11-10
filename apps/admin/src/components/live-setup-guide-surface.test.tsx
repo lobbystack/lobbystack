@@ -302,6 +302,15 @@ describe("the number step", () => {
     expect(await screen.findByLabelText(en.forwarding.carrier.label)).toBeTruthy();
   });
 
+  it("opens the forwarding steps from the welcome email's link once Getting started is gone, for any number", async () => {
+    search.value = "setup=phoneNumber";
+    await setup({ complete: [...order], skipped: ["phoneNumber"], numbers: [number] });
+    expect(await screen.findByRole("dialog")).toBeTruthy();
+    expect(await screen.findByLabelText(en.forwarding.carrier.label)).toBeTruthy();
+    expect(screen.queryByText(copy.title)).toBeNull();
+    expect(router.replace).toHaveBeenCalledWith("/", { scroll: false });
+  });
+
   it("can be skipped once a number exists", async () => {
     const { fetchMock } = await setup({ complete: [...order], numbers: [number] });
     const guide = await screen.findByLabelText(en.forwarding.carrier.label);

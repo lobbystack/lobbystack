@@ -44,8 +44,8 @@ test("an owner who finishes onboarding gets a welcome email whose button opens t
     await page.getByRole("button", { name: onboarding.meet.finish, exact: true }).click();
     expect((await finished).ok()).toBe(true);
 
-    // The welcome waits two minutes, for a number claimed on the way out.
-    await expect.poll(async () => (await emailsTo(owner.email)).map((email) => email.Subject), { timeout: 200_000, intervals: [5_000] }).toContain("Welcome to LobbyStack");
+    // The worker sends the welcome as soon as onboarding finishes.
+    await expect.poll(async () => (await emailsTo(owner.email)).map((email) => email.Subject), { timeout: 60_000 }).toContain("Welcome to LobbyStack");
     const [email] = await emailsTo(owner.email);
     const message = await (await fetch(`${mailpit}/api/v1/message/${email!.ID}`)).json() as { HTML: string; Text: string };
     expect(message.Text).toContain("1. Hear your agent");

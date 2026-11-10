@@ -601,6 +601,7 @@ async function main(): Promise<void> {
             ('lobbystack_worker', 'app.resolve_onboarding_followup_recipient(uuid)'),
             ('lobbystack_worker', 'app.resolve_onboarding_followup_recipient(uuid, timestamptz)'),
             ('lobbystack_worker', 'app.resolve_onboarding_welcome_recipient(uuid)'),
+            ('lobbystack_worker', 'app.resolve_operator_alert_recipients(uuid)'),
             ('lobbystack_worker', 'app.list_businesses_by_contact_phone(text)')
           ) as expected(role_name, function_name)
           where not has_function_privilege(expected.role_name, expected.function_name, 'EXECUTE')

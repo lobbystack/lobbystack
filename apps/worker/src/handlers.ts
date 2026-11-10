@@ -375,6 +375,17 @@ async function recordOutboxBacklogSample(
   }
 }
 
+// The templates an email job may name. A worker before the notices doesn't
+// route email.sendNotice, so only that job sends them. Anything else goes out
+// as a plain alert.
+const EMAIL_SEND_TEMPLATES = ["existing_account", "account_setup", "verify_email", "password_reset", "passkey_added", "invitation", "operator_alert", "feedback_submission", "welcome", "partner_pool_alert", "business_allowance_alert", "partner_business_allowance_alert"] as const;
+const EMAIL_NOTICE_TEMPLATES = ["business_released", "business_deleted"] as const;
+type QueuedEmailTemplate = (typeof EMAIL_SEND_TEMPLATES)[number] | (typeof EMAIL_NOTICE_TEMPLATES)[number];
+
+function isQueuedEmailTemplate(template: unknown, jobType: string): template is QueuedEmailTemplate {
+  return (EMAIL_SEND_TEMPLATES as readonly unknown[]).includes(template) || (jobType === "email.sendNotice" && (EMAIL_NOTICE_TEMPLATES as readonly unknown[]).includes(template));
+}
+
 export async function handleJob(job: JobEnvelope, dependencies: WorkerDependencies, execution: JobExecution = {}): Promise<JobResult> {
   const scope = jobWorkflowScope(job);
   await recordWorkflowEvent(dependencies, job, "workflow.started", scope);
@@ -617,9 +628,8 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         return { status: "skipped" };
       }
       {
-        const template = job.payload.template === "existing_account" || job.payload.template === "account_setup" || job.payload.template === "verify_email" || job.payload.template === "password_reset" || job.payload.template === "passkey_added" || job.payload.template === "invitation" || job.payload.template === "operator_alert" || job.payload.template === "feedback_submission" || job.payload.template === "welcome" || job.payload.template === "partner_pool_alert" || job.payload.template === "business_allowance_alert" || job.payload.template === "partner_business_allowance_alert" || (job.type === "email.sendNotice" && (job.payload.template === "business_released" || job.payload.template === "business_deleted"))
-          ? job.payload.template
-          : "operator_alert";
+        const queued = job.payload.template;
+        const template = isQueuedEmailTemplate(queued, job.type) ? queued : "operator_alert";
         const variables = typeof job.payload.variables === "object" && job.payload.variables !== null
           ? Object.fromEntries(Object.entries(job.payload.variables).map(([key, value]) => [key, String(value)]))
           : { message: String(job.payload.message ?? ""), url: String(job.payload.url ?? "") };
@@ -1280,12 +1290,14 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
     }
     case "onboarding.sendFollowup":
       // The founder's check-in is gone. One scheduled before it went sends nothing.
+      // The last were due a day after onboarding, so this case can go once a release has run for a few days.
       return { status: "skipped" };
     case "onboarding.sendWelcome": {
       const businessId = businessIdOrThrow(job);
       if (!dependencies.email) return { status: "skipped" };
-      const queued = await queueWelcomeEmail(dependencies.domain, { businessId });
-      return { status: queued ? "completed" : "skipped", entityId: businessId };
+      const welcome = await queueWelcomeEmail(dependencies.domain, { businessId });
+      if (welcome.status === "waiting") return { status: "deferred", entityId: businessId, retryAt: welcome.retryAt };
+      return { status: welcome.status === "queued" ? "completed" : "skipped", entityId: businessId };
     }
     case "affiliate.generatePayoutRun": {
       const periodKey = typeof job.payload.periodKey === "string" && job.payload.periodKey.trim() ? job.payload.periodKey.trim() : undefined;

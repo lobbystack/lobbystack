@@ -1,9 +1,10 @@
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import { canVisitOnboardingStage, HOST_EMAIL_BRAND, normalizeInterfaceLocale, normalizeOnboardingStage, onboardingSteps, type InterfaceLocale, type OnboardingBusiness, type OnboardingStage, type PartnerAccessLevel } from "@lobbystack/shared";
 
-import { businesses, enqueueOutbox, phoneNumbers, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { businesses, enqueueOutbox, onboardingNumberClaimEvents, phoneNumbers, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { requireBusinessAdmin } from "../authz";
+import { appBaseUrl } from "./appBaseUrl";
 import type { DomainContext } from "./context";
 import { attributeBusiness } from "./affiliates";
 import { businessShowsOnBrand, readBusinessAccess, type BrandScope } from "./businessAccess";
@@ -262,11 +263,7 @@ export async function readOnboardingAttribution(context: DomainContext, input: {
   });
 }
 
-/**
- * Schedules the welcome email for when onboarding finishes. It waits a couple
- * of minutes so a number claimed on the way out has time to arrive. A
- * partner's business never gets it.
- */
+/** Schedules the welcome email for when onboarding finishes. A partner's business never gets it. */
 export async function scheduleWelcomeEmailInTransaction(tx: DatabaseTransaction, businessId: string, completedAt: Date): Promise<void> {
   if (!await businessGetsHostEmails(tx, businessId)) return;
   // The dedupe key keeps a revisited last step from sending a second welcome.
@@ -276,12 +273,17 @@ export async function scheduleWelcomeEmailInTransaction(tx: DatabaseTransaction,
     aggregateType: "business",
     aggregateId: businessId,
     dedupeKey: `onboarding-welcome:${businessId}`,
-    availableAt: new Date(completedAt.getTime() + WELCOME_EMAIL_DELAY_MS),
+    availableAt: completedAt,
     payload: {},
   });
 }
 
-export const WELCOME_EMAIL_DELAY_MS = 2 * 60_000;
+/** How long the welcome waits for a number still being set up before it goes out without one. */
+const WELCOME_NUMBER_WAIT_MS = 15 * 60_000;
+/** How soon the worker looks again while it waits. */
+const WELCOME_RETRY_MS = 30_000;
+
+export type WelcomeEmailResult = { status: "queued" | "skipped" } | { status: "waiting"; retryAt: Date };
 
 const WELCOME_SUBJECTS: Record<InterfaceLocale, (firstName: string) => string> = {
   en: (name) => (name ? `Welcome to LobbyStack, ${name}` : "Welcome to LobbyStack"),
@@ -292,25 +294,32 @@ const WELCOME_SUBJECTS: Record<InterfaceLocale, (firstName: string) => string> =
 
 /** Where the welcome email's button lands: Home, with the phone step open on its forwarding steps or its number picker. */
 function welcomeUrl(): string {
-  return `${(process.env.APP_BASE_URL?.trim() || "http://localhost").replace(/\/$/, "")}/?setup=phoneNumber`;
+  return `${appBaseUrl()}/?setup=phoneNumber`;
 }
 
 /**
  * Queues the welcome email to the owner of a business that just finished
  * onboarding, in their dashboard language. Its steps follow what they told
- * onboarding: the goal they picked, and the number they took, if any. Returns
- * whether an email was queued.
+ * onboarding: the goal they picked, and the number they took, if any. While a
+ * number they claimed is still being set up, it waits for it, so the email
+ * names it, for up to 15 minutes after the claim.
  */
-export async function queueWelcomeEmail(context: DomainContext, input: { businessId: string }): Promise<boolean> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    if (!await businessGetsHostEmails(tx, input.businessId)) return false;
+export async function queueWelcomeEmail(context: DomainContext, input: { businessId: string; now?: Date }): Promise<WelcomeEmailResult> {
+  const now = input.now ?? new Date();
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx): Promise<WelcomeEmailResult> => {
+    if (!await businessGetsHostEmails(tx, input.businessId)) return { status: "skipped" };
     const result = await tx.execute<{ user_id: string; email: string; name: string | null; preferred_locale: string; business_name: string }>(
       sql`select user_id, email, name, preferred_locale, business_name from app.resolve_onboarding_welcome_recipient(${input.businessId}::uuid)`,
     );
     const recipient = result.rows[0];
-    if (!recipient) return false;
+    if (!recipient) return { status: "skipped" };
     const [business] = await tx.select({ goal: businesses.onboardingGoal }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
     const [number] = await tx.select({ e164: phoneNumbers.e164 }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"))).orderBy(phoneNumbers.createdAt).limit(1);
+    if (!number) {
+      const [claim] = await tx.select({ id: onboardingNumberClaimEvents.id }).from(onboardingNumberClaimEvents)
+        .where(and(eq(onboardingNumberClaimEvents.businessId, input.businessId), inArray(onboardingNumberClaimEvents.status, ["reserved", "provisioning"]), gt(onboardingNumberClaimEvents.reservedAt, new Date(now.getTime() - WELCOME_NUMBER_WAIT_MS)))).limit(1);
+      if (claim) return { status: "waiting", retryAt: new Date(now.getTime() + WELCOME_RETRY_MS) };
+    }
     const locale = normalizeInterfaceLocale(recipient.preferred_locale) ?? "en";
     const firstName = greetingName(recipient.name, recipient.email);
     await enqueueOutbox(tx, {
@@ -328,6 +337,6 @@ export async function queueWelcomeEmail(context: DomainContext, input: { busines
         replyTo: null,
       },
     });
-    return true;
+    return { status: "queued" };
   });
 }

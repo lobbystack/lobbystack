@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { enqueueOutbox, type DatabaseTransaction } from "@lobbystack/db";
 import { HOST_EMAIL_BRAND, intlLocale, normalizeInterfaceLocale, partnerTierCatalog } from "@lobbystack/shared";
 
+import { appBaseUrl } from "./appBaseUrl";
 import type { PoolChange, PoolMonth, PoolState } from "./partnerPool";
 import { greetingName } from "./emailGreeting";
 
@@ -94,7 +95,7 @@ type Recipient = { user_id: string; email: string; name: string | null; preferre
 
 /** The console's Billing page, on the host's own domain, where an owner changes the tier or the overage. */
 function billingUrl(partnerId: string): string {
-  return `${(process.env.APP_BASE_URL?.trim() || "http://localhost").replace(/\/$/, "")}/partner/${partnerId}/billing`;
+  return `${appBaseUrl()}/partner/${partnerId}/billing`;
 }
 
 /** What one alert says to one person, in their language: the email template writes the rest. */

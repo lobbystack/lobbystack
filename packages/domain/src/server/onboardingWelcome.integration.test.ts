@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { businesses, createDatabaseClient, firstRealConversations, outboxMessages, phoneNumbers, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { businesses, createDatabaseClient, firstRealConversations, onboardingNumberClaimEvents, outboxMessages, phoneNumbers, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { createBusiness } from "./tenancy";
-import { advanceOnboardingStage, queueWelcomeEmail, WELCOME_EMAIL_DELAY_MS } from "./onboarding";
+import { advanceOnboardingStage, queueWelcomeEmail } from "./onboarding";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -40,11 +40,11 @@ async function completedWorkspace(tx: DatabaseTransaction, options: { goal?: str
 }
 
 // The resolver trusts only the worker's login identity, so switch session_user rather than the current role.
-async function queueAsWorker(tx: DatabaseTransaction, businessId: string) {
+async function queueAsWorker(tx: DatabaseTransaction, businessId: string, now?: Date) {
   await tx.execute(sql`set local session authorization lobbystack_worker`);
-  const queued = await queueWelcomeEmail({ db: tx as unknown as Database }, { businessId });
+  const result = await queueWelcomeEmail({ db: tx as unknown as Database }, { businessId, ...(now ? { now } : {}) });
   await tx.execute(sql`reset session authorization`);
-  return queued;
+  return result.status;
 }
 
 async function welcomeEmails(tx: DatabaseTransaction, businessId: string) {
@@ -63,16 +63,15 @@ describe.skipIf(!testUrl)("welcome email against dedicated PostgreSQL roles", ()
       await tx.execute(sql`reset role`);
       const topics = await tx.select({ topic: outboxMessages.topic, availableAt: outboxMessages.availableAt }).from(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), sql`${outboxMessages.topic} like 'onboarding.%'`));
       expect(topics.map((row) => row.topic)).toEqual(["onboarding.sendWelcome"]);
-      expect(topics[0]!.availableAt.getTime()).toBeGreaterThanOrEqual(before + WELCOME_EMAIL_DELAY_MS - 1_000);
-      expect(topics[0]!.availableAt.getTime()).toBeLessThan(before + WELCOME_EMAIL_DELAY_MS + 60_000);
+      expect(Math.abs(topics[0]!.availableAt.getTime() - before)).toBeLessThan(60_000);
     });
   });
 
   it("queues one welcome in the owner's language, from LobbyStack, with a button to get a number", async () => {
     await rollbackTest(async tx => {
       const { businessId, email } = await completedWorkspace(tx, { goal: "book_appointments" });
-      expect(await queueAsWorker(tx, businessId)).toBe(true);
-      expect(await queueAsWorker(tx, businessId)).toBe(true);
+      expect(await queueAsWorker(tx, businessId)).toBe("queued");
+      expect(await queueAsWorker(tx, businessId)).toBe("queued");
       const emails = await welcomeEmails(tx, businessId);
       expect(emails).toHaveLength(1);
       expect(emails[0]!.payload).toMatchObject({
@@ -91,8 +90,20 @@ describe.skipIf(!testUrl)("welcome email against dedicated PostgreSQL roles", ()
     await rollbackTest(async tx => {
       const { businessId } = await completedWorkspace(tx);
       await tx.insert(phoneNumbers).values({ businessId, e164: "+14388070285", carrier: "twilio", status: "active", voiceEnabled: true, smsEnabled: true });
-      expect(await queueAsWorker(tx, businessId)).toBe(true);
+      expect(await queueAsWorker(tx, businessId)).toBe("queued");
       expect((await welcomeEmails(tx, businessId))[0]!.payload).toMatchObject({ variables: { number: "+14388070285", goal: "" } });
+    });
+  });
+
+  it("waits for a number still being set up, then names it, and stops waiting after 15 minutes", async () => {
+    await rollbackTest(async tx => {
+      const { businessId, userId } = await completedWorkspace(tx);
+      const reservedAt = new Date();
+      await tx.insert(onboardingNumberClaimEvents).values({ businessId, userId, requestedE164: "+14388070285", selectionContext: {}, claimTokenHash: randomUUID(), idempotencyKey: randomUUID(), status: "provisioning", reservedAt });
+      expect(await queueAsWorker(tx, businessId)).toBe("waiting");
+      expect(await welcomeEmails(tx, businessId)).toHaveLength(0);
+      expect(await queueAsWorker(tx, businessId, new Date(reservedAt.getTime() + 16 * 60_000))).toBe("queued");
+      expect((await welcomeEmails(tx, businessId))[0]!.payload).toMatchObject({ variables: { number: "" } });
     });
   });
 
@@ -100,7 +111,7 @@ describe.skipIf(!testUrl)("welcome email against dedicated PostgreSQL roles", ()
     await rollbackTest(async tx => {
       const { businessId } = await completedWorkspace(tx);
       await tx.insert(firstRealConversations).values({ businessId, channel: "voice" });
-      expect(await queueAsWorker(tx, businessId)).toBe(true);
+      expect(await queueAsWorker(tx, businessId)).toBe("queued");
     });
   });
 
@@ -124,7 +135,7 @@ describe.skipIf(!testUrl)("welcome email against dedicated PostgreSQL roles", ()
     await rollbackTest(async tx => {
       const { businessId } = await completedWorkspace(tx);
       await tx.update(businesses).set({ onboardingStage: "meet" }).where(eq(businesses.id, businessId));
-      expect(await queueAsWorker(tx, businessId)).toBe(false);
+      expect(await queueAsWorker(tx, businessId)).toBe("skipped");
       expect(await welcomeEmails(tx, businessId)).toHaveLength(0);
     });
   });

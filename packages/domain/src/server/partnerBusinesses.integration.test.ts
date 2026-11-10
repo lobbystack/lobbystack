@@ -470,7 +470,7 @@ describe.skipIf(!client)("the host's own emails", () => {
       const trials = await asMigrator(tx, async () => await tx.insert(numberTrials).values([direct, businessId].map((id) => ({ businessId: id, userId: owner!.userId, phoneNumberId: numberOf(id), verifiedPhone: "+14165550100", status: "active", startedAt: new Date(now.getTime() - 13 * 86_400_000), endsAt: new Date(now.getTime() + 86_400_000) }))).returning({ id: numberTrials.id, businessId: numberTrials.businessId }));
       const trialOf = (id: string) => trials.find((trial) => trial.businessId === id)!.id;
       await asWorker(tx, async () => {
-        expect(await queueWelcomeEmail(context, { businessId })).toBe(false);
+        expect(await queueWelcomeEmail(context, { businessId })).toEqual({ status: "skipped" });
         expect(await loadNumberReleaseEmail(context, { businessId, phoneNumberId: numberOf(businessId) })).toBeNull();
         expect(await loadNumberReleaseEmail(context, { businessId: direct, phoneNumberId: numberOf(direct) })).toMatchObject({ to: owner!.email });
         expect(await loadNumberTrialEmail(context, { businessId, trialId: trialOf(businessId), email: "day13" })).toBeNull();

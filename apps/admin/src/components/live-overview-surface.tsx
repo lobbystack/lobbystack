@@ -20,6 +20,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
+import { CallForwardingFromLink } from "@/components/call-forwarding-dialog";
 import { DashboardActivationCard } from "@/components/dashboard-activation-card";
 import { LiveSetupGuideSurface, useSetupGuide } from "@/components/live-setup-guide-surface";
 import { needsHoursForBooking, useBusinessHours } from "@/components/business-hours-section";
@@ -133,6 +134,7 @@ export function LiveOverviewSurface() {
       <div className="flex flex-col gap-6">
         {/* Getting started covers what the activation card would offer. */}
         {showGuide || guidePending ? null : <DashboardActivationCard businessId={businessId} />}
+        {showGuide || guidePending || !businessId ? null : <CallForwardingFromLink businessId={businessId} />}
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
           <section className="animate-in fade-in slide-in-from-bottom-2 duration-200 flex flex-col gap-3 xl:h-full">
             <div className="flex items-center justify-between gap-4 px-1"><h2 className="type-section-title">{t("home.actionRequired.title")}</h2>{summary.isLoading ? <Skeleton className="h-6 w-12 rounded-full" /> : <Badge variant="outline">{((summary.data?.actionRequired.length ?? 0) + (unansweredCount > 0 ? 1 : 0)).toLocaleString(intlLocale(i18n.language))}</Badge>}</div>

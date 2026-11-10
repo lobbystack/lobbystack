@@ -36,3 +36,7 @@ For local development, start Mailpit with `docker compose --env-file .env --prof
 ## Send the welcome email
 
 The worker emails each new owner a welcome two minutes after they finish onboarding. It goes out from `EMAIL_FROM` in the owner's dashboard language, and replies go to `EMAIL_REPLY_TO`. Its button opens Home on the phone step: the forwarding steps for the number the owner took, or the number picker. A partner's businesses and businesses a platform key onboarded never get it. It needs no settings of its own beyond SMTP.
+
+## Send call summaries
+
+The worker emails a business's team after each call the agent answers, unless a team member turned **Call answered** off in their notification settings. It goes out under the business's brand, with the caller, time, length, outcome and summary, and a link to the call. It needs no settings of its own beyond SMTP.

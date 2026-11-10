@@ -48,8 +48,8 @@ type FailureEvent = { kind: string; appointmentId?: string };
 type Outgoing = { body: string; failureEvent?: FailureEvent } & (
   // optIn: the opt-in confirmation to send first, when this is the contact's first text since they said yes.
   | { channel: "sms"; to: string; from: string; callback?: StatusCallbackIds; usageSourceKey?: string; optIn?: { contactId: string; body: string } }
-  // details: what an alert email lays out beyond the body, such as a call summary's caller and length.
-  | { channel: "email"; to: string; subject: string; idempotencyKey: string; details?: Record<string, string> | null }
+  // callSummary: a call summary alert's details, which it lays out in its own template.
+  | { channel: "email"; to: string; subject: string; idempotencyKey: string; callSummary?: Record<string, string> }
 );
 
 /** The row behind one delivery. Each method is one write or read on it. */
@@ -217,8 +217,8 @@ function providerSend(context: DomainContext, providers: OutboundProviders, outg
     return email && (async () => {
       const brand = await brandForBusiness(context, businessId);
       // A call summary lays out its details and writes its subject in the reader's language.
-      const message = outgoing.details?.template === "call_summary"
-        ? { template: "call_summary" as const, variables: outgoing.details }
+      const message = outgoing.callSummary
+        ? { template: "call_summary" as const, variables: outgoing.callSummary }
         : { template: "operator_alert" as const, subject: outgoing.subject, variables: { message: outgoing.body } };
       return (await email.sendTemplate({ ...message, to: outgoing.to, brand, idempotencyKey: outgoing.idempotencyKey, ...emailSender(brand, {}) })).messageId;
     });
@@ -361,7 +361,7 @@ function operatorNotificationLease(context: DomainContext, input: { businessId: 
         return null;
       }
       const failureEvent = { kind: delivery.eventKind };
-      if (delivery.channel !== "sms") return { channel: "email", to: delivery.destination, subject: delivery.subject, body: delivery.body, idempotencyKey: `operator-notification:${delivery.id}`, details: delivery.details, failureEvent };
+      if (delivery.channel !== "sms") return { channel: "email", to: delivery.destination, subject: delivery.subject, body: delivery.body, idempotencyKey: `operator-notification:${delivery.id}`, ...(delivery.eventKind === "callCompleted" && delivery.details ? { callSummary: delivery.details } : {}), failureEvent };
       return { channel: "sms", to: delivery.destination, from: delivery.sender ?? "", body: delivery.body, callback: { operatorDeliveryId: delivery.id }, usageSourceKey: `alert_sms:operator_notification:${delivery.id}`, failureEvent };
     },
     markSent: (providerMessageId) => markOperatorNotificationSent(context, { ...ids, providerMessageId }),

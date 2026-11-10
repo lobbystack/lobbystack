@@ -19,7 +19,11 @@ function signingSecret(environment: Readonly<Record<string, string | undefined>>
   return secret || "development-only-check-in-key";
 }
 
-/** The email variables holding one signed token per answer. */
+/**
+ * The email variables holding one signed token per answer, as the founder's
+ * check-in carried them. LobbyStack no longer sends that email; its tests mint
+ * links with this to check the answer page, which stays while sent links last.
+ */
 export function checkInTokenVariables(businessId: string, now = Date.now()): Record<string, string> {
   const secret = signingSecret();
   const expiresAt = now + CHECK_IN_LINK_LIFETIME_MS;

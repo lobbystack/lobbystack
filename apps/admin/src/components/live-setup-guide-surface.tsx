@@ -79,7 +79,7 @@ export function LiveSetupGuideSurface({ businessId, goal }: { businessId: string
     return [...listed.filter(done), ...listed.filter((step) => !done(step))];
   }, [done, hours.data, setup.data?.steps]);
   // A finished step stays shut, except that the test call keeps its transcript in reach.
-  const opens = (step: GuideStep) => !done(step) || (step.id === "testCall" && Boolean(activation?.lastTestCall));
+  const opens = useCallback((step: GuideStep) => !done(step) || (step.id === "testCall" && Boolean(activation?.lastTestCall)), [activation?.lastTestCall, done]);
   const completed = steps.filter(done).length;
   const active = steps.find((step) => !done(step))?.id ?? SETUP_STEP_ORDER[0]!;
   // The operator's own pick holds until the current step changes.
@@ -92,8 +92,7 @@ export function LiveSetupGuideSurface({ businessId, goal }: { businessId: string
     if (!step || !opens(step)) return false;
     setPicked({ step: step.id, during: active });
     return true;
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- opens reads only done and the test call, which steps and active already follow.
-  }, [steps, active]));
+  }, [active, opens, steps]));
   const expand = useMutation({
     mutationFn: (documentId: string) => requestJson(`/api/knowledge/${encodeURIComponent(documentId)}?businessId=${encodeURIComponent(businessId)}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "expand" }) }),
     onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["setup", businessId] }); router.push("/agent/knowledge"); },
