@@ -1,6 +1,6 @@
 // What the full-stack e2e run gives the admin server and the worker, and what
-// its specs need to match. Every value is a throwaway: the carriers and Calendly
-// are fakes, and scripts/e2e-local.sh runs these specs after the others.
+// its specs need to match. Every value is a throwaway: the carriers, Calendly,
+// Firecrawl and the embedding provider are fakes, and scripts/e2e-local.sh runs these specs after the others.
 
 export const THIRD_PARTY_PORT = 18092;
 export const THIRD_PARTY_ORIGIN = `http://127.0.0.1:${THIRD_PARTY_PORT}`;
@@ -34,6 +34,10 @@ export function fullStackEnvironment(baseURL: string, carrierRedirect: string): 
     CALENDLY_PLACEHOLDER_EMAIL_DOMAIN: "example.invalid",
     CALENDLY_API_URL: `${THIRD_PARTY_ORIGIN}/calendly-api`,
     CALENDLY_AUTH_URL: `${THIRD_PARTY_ORIGIN}/calendly-auth`,
+    FIRECRAWL_API_KEY: "full-stack-e2e-firecrawl-key",
+    FIRECRAWL_BASE_URL: `${THIRD_PARTY_ORIGIN}/firecrawl`,
+    AI_EMBEDDING_API_KEY: "full-stack-e2e-embedding-key",
+    AI_EMBEDDING_BASE_URL: `${THIRD_PARTY_ORIGIN}/openai/v1`,
     // The fixture in widget-provider.ts accepts only this key, never a live one.
     AI_CHAT_API_KEY: "local-widget-certification",
     AI_CHAT_BASE_URL: "http://127.0.0.1:18090/v1",

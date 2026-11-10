@@ -45,11 +45,11 @@ export async function requireOnboardingStage(pathname: string, options: { allowC
   if (!expected) redirect(current);
   // A fresh self-hosted deployment's first owner names it before naming their business.
   if (expected === "create_business" && state.businessId === null && await initialBrandingFields(session.user.id, requestHeaders)) redirect(BRAND_ROUTE);
-  // "Create workspace" in the switcher opens this step for someone whose current workspace is done, not for one still mid-onboarding.
-  const addsWorkspace = state.businessId !== null && state.stage === "complete" && state.steps.includes("create_business");
-  if (options.allowCreate && expected === "create_business" && (state.businessId === null || addsWorkspace)) return;
   // A partner's business skips some steps, such as creating it, the number, the goal and attribution.
   if (!state.steps.includes(expected)) redirect(current);
+  // The workspace switcher opens the first step to make another workspace,
+  // whatever step the active one has reached.
+  if (options.allowCreate && expected === "create_business") return;
   // Onboarding goes forward only: a browser back or an old link to an earlier
   // step lands on the step the workspace is on. The number picker stays open
   // from later steps, since the dashboard uses it to add a number.

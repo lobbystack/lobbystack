@@ -149,6 +149,9 @@ function logCheckout(event: string, attributes: Record<string, string | number |
 
 const MESSAGE_PRICE_WAIT_MS = 60 * 60_000;
 const MESSAGE_PRICE_RETRY_MS = 2 * 60_000;
+// Twilio can list a call before it sets the call's price, sometimes minutes after it ends.
+const CALL_PRICE_WAIT_MS = 60 * 60_000;
+const CALL_PRICE_RETRY_MS = 2 * 60_000;
 
 const BRAND_FAILURE_LOG_INTERVAL_MS = 60_000;
 let lastBrandFailureLogAt = 0;
@@ -461,6 +464,14 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       try {
         pages = await dependencies.crawler.crawl({ url, ...(typeof job.payload.limit === "number" ? { limit: job.payload.limit } : {}) });
       } catch (error) {
+        // A rate limit or an outage at the crawling provider: try the crawl
+        // again later without spending an attempt, the way checkouts wait out Polar.
+        const { transient, retryAfterMs } = error as { transient?: unknown; retryAfterMs?: unknown };
+        const elapsed = Date.now() - (execution.queuedAtMs ?? Date.now());
+        if (transient === true && elapsed < PROVIDER_RETRY_WINDOW_MS) {
+          const wait = Math.max(providerRetryDelayMs(elapsed), typeof retryAfterMs === "number" ? retryAfterMs : 0);
+          return { status: "deferred", entityId: documentId ?? websiteIngestionJobId ?? url, retryAt: new Date(Date.now() + wait) };
+        }
         if (execution.isFinalAttempt !== false) {
           if (documentId) await markKnowledgeDocumentFailed(dependencies.domain, { businessId: businessIdOrThrow(job), documentId, ...(source ? { expectedRevision: source.revision } : {}), error: "Website crawling failed." });
           if (websiteIngestionJobId && !documentId) await updateWebsiteIngestion(dependencies.domain.db, { businessId: businessIdOrThrow(job), websiteIngestionJobId, status: "failed", error: "Website crawling failed." });
@@ -684,6 +695,8 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       return { status: recorded ? "completed" : "skipped", entityId: providerMessageId };
     }
     case "call.syncPrice": {
+      // Check again without spending an attempt until the carrier has priced the call.
+      const callPriceMayStillCome = Date.now() - (execution.queuedAtMs ?? 0) < CALL_PRICE_WAIT_MS;
       const liveCallId = String(job.payload.callId ?? "").trim();
       if (liveCallId && !job.payload.providerCallId) {
         // A GPT-Live phone call: find the carrier's leg of it first.
@@ -693,6 +706,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         const callCost = call ? dependencies.telephony.forNumber(call.carrier)?.callCost : undefined;
         if (!call || !callCost?.findLiveCallCost) return { status: "skipped", entityId: liveCallId };
         const found = await callCost.findLiveCallCost({ near: call.startedAt, from: call.callerPhone, dialled: call.dialled });
+        if (found?.providerCostUsd === undefined && callPriceMayStillCome) return { status: "deferred", entityId: liveCallId, retryAt: new Date(Date.now() + CALL_PRICE_RETRY_MS) };
         if (!found) throw new Error(`No ${callCost.carrier} call found yet for live call ${liveCallId}.`);
         const { providerCallId, ...pricing } = found;
         if (pricing.providerCostUsd === undefined) throw new Error(`${callCost.carrier} call pricing is incomplete for ${providerCallId}.`);
@@ -705,6 +719,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const getCallPricing = dependencies.telephony?.forNumber("twilio")?.callCost?.getCallPricing;
       if (!getCallPricing || !providerCallId || !isTerminalCallStatus(providerCallStatus)) return { status: "skipped", entityId: providerCallId };
       const pricing = await getCallPricing({ providerCallId });
+      if (pricing.providerCostUsd === undefined && callPriceMayStillCome) return { status: "deferred", entityId: providerCallId, retryAt: new Date(Date.now() + CALL_PRICE_RETRY_MS) };
       if (pricing.providerCostUsd === undefined) throw new Error(`Twilio call pricing is incomplete for ${providerCallId}.`);
       const recorded = await recordCallProviderPricing(dependencies.domain, { businessId: businessIdOrThrow(job), providerCallId, ...pricing });
       return { status: recorded ? "completed" : "skipped", entityId: providerCallId };

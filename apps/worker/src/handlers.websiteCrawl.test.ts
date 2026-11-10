@@ -93,6 +93,25 @@ describe("knowledge.crawlWebsite", () => {
     expect(markKnowledgeDocumentFailed).toHaveBeenCalledWith(dependencies.domain, expect.objectContaining({ documentId, error: "We couldn't index any page of this website." }));
   });
 
+  it("tries the crawl again later when the crawling provider rate-limits it", async () => {
+    const { job, dependencies } = crawl();
+    dependencies.crawler.crawl.mockRejectedValue(Object.assign(new Error("Website crawl failed with status 429."), { transient: true, retryAfterMs: 90_000 }));
+
+    const result = await handleJob(job, dependencies, { isFinalAttempt: true, queuedAtMs: Date.now() });
+    expect(result).toMatchObject({ status: "deferred" });
+    expect((result as { retryAt: Date }).retryAt.getTime()).toBeGreaterThanOrEqual(Date.now() + 89_000);
+    expect(markKnowledgeDocumentFailed).not.toHaveBeenCalled();
+  });
+
+  it("fails the import once a rate limit outlasts the retry window", async () => {
+    const { job, documentId, dependencies } = crawl();
+    const error = Object.assign(new Error("Website crawl failed with status 429."), { transient: true });
+    dependencies.crawler.crawl.mockRejectedValue(error);
+
+    await expect(handleJob(job, dependencies, { isFinalAttempt: true, queuedAtMs: Date.now() - 30 * 60_000 })).rejects.toThrow(error);
+    expect(markKnowledgeDocumentFailed).toHaveBeenCalledWith(dependencies.domain, expect.objectContaining({ documentId, error: "Website crawling failed." }));
+  });
+
   it("marks a demo's crawl unavailable when this deployment has no crawler, so the demo can publish without it", async () => {
     const { job, dependencies } = crawl();
     const { documentId: _documentId, revision: _revision, ...payload } = job.payload;
