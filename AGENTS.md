@@ -67,7 +67,7 @@
 - Treat `shadcn/ui` as the default operator UI system in `apps/admin`.
 - Use Geist Sans and Lucide icons; do not mix icon families.
 - Use the existing 4px spacing grid and established semantic color/radius tokens.
-- Prefer `rounded-xl` for standard surfaces and controls, and `rounded-full` for pills, badges, avatars, and circular controls.
+- Build operator UI from the shared design system: the theme tokens in `apps/admin/app/theme.css` and the components in `apps/admin/src/components/ui/` and the shared components built on them. Take radius, color, spacing and typography from them, and don't add one-off `rounded-*`, color or spacing classes that override them.
 - Preserve colors, copy, logic, responsiveness, and route architecture during consistency cleanup.
 - Whenever you add or change operator UI that waits on data, add or update its skeleton loading state in the same change: a new page, section, card, row, or tab, or a change to what one shows. Build it from `apps/admin/src/components/loading-skeletons.tsx`, and make every placeholder shape with the shadcn `Skeleton` from `@/components/ui/skeleton` ([docs](https://ui.shadcn.com/docs/components/base/skeleton)). Never hand-roll one with `animate-pulse` and a background color. Placeholders hold their real text, hidden (`HiddenTextSkeleton`), so they match the real layout in every language, and the loading block gets `aria-busy`. Keep a placeholder for each element that can appear, such as an optional card, and update the loading test with it.
 
