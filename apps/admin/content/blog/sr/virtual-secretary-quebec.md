@@ -49,7 +49,7 @@ Malo frilensera objavljuje svoje cene. Dve agencije za posredovanje za Kvebek ko
 | Agencija | Objavljena cena po satu | Ostale objavljene naknade |
 |---|---|---|
 | [Adjointe Virtuelle Propulsion](https://www.adjointevirtuellepropulsion.net/plans-tarifs) (grad Kvebek) | Od CAD 15.35 do CAD 19.95 po satu, zavisno od paketa | Regrutovanje CAD 588, uvođenje u posao od CAD 688 |
-| [AV du Nord](https://avdunord.ca/adjointe-virtuelle-tarif-comparatif-au-quebec/) | Od CAD 9.99 po satu | Nisu navedene na stranici |
+| [AV du Nord](https://web.archive.org/web/20251113110512/https://avdunord.ca/adjointe-virtuelle-tarif-comparatif-au-quebec/) | Od CAD 9.99 po satu | Nisu navedene na stranici |
 
 Ove agencije Vam dodeljuju asistentkinju koja radi za Vas sa skraćenim radnim vremenom. Frilenserka sama određuje cenu i ponekad naplaćuje minimalan broj sati mesečno. Uvek tražite pismenu cenu, sa porezima.
 

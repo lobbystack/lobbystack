@@ -49,7 +49,7 @@ Peu de pigistes publient leur taux. Les deux agences de placement pour le Québe
 | Agence | Tarif horaire publié | Autres frais publiés |
 |---|---|---|
 | [Adjointe Virtuelle Propulsion](https://www.adjointevirtuellepropulsion.net/plans-tarifs) (Québec) | De 15,35 $ à 19,95 $ de l'heure selon le forfait | Recrutement 588 $, intégration à partir de 688 $ |
-| [AV du Nord](https://avdunord.ca/adjointe-virtuelle-tarif-comparatif-au-quebec/) | À partir de 9,99 $ de l'heure | Non précisés sur la page |
+| [AV du Nord](https://web.archive.org/web/20251113110512/https://avdunord.ca/adjointe-virtuelle-tarif-comparatif-au-quebec/) | À partir de 9,99 $ de l'heure | Non précisés sur la page |
 
 Ces agences vous placent une adjointe qui travaille pour vous à temps partiel. Une pigiste à son compte fixe son propre taux et facture parfois un minimum d'heures par mois. Demandez toujours un prix écrit, avec les taxes.
 
