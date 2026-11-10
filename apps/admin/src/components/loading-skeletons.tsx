@@ -749,6 +749,35 @@ export function TestPanelSkeleton() {
   );
 }
 
+/** The goal and attribution choices while their answers load: each button's shape, holding its real label so the grid keeps its size. */
+export function OnboardingOptionsSkeleton({ gridClassName, itemClassName, labels }: { gridClassName: string; itemClassName: string; labels: ReadonlyArray<string> }) {
+  return (
+    <div aria-busy="true" className={gridClassName}>
+      {labels.map((label) => (
+        <Skeleton aria-hidden="true" className={`flex items-center rounded-xl px-4 text-sm font-medium ${itemClassName}`} key={label}>
+          <span className="invisible">{label}</span>
+        </Skeleton>
+      ))}
+    </div>
+  );
+}
+
+/** The crawl card while the knowledge list answers, so the wait's slides keep their place. */
+export function WebsiteImportProgressSkeleton() {
+  return (
+    <Surface aria-busy="true" className="flex flex-col gap-3 p-4">
+      <div className="flex items-start gap-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <Skeleton aria-hidden="true" className="h-4 w-56" />
+          <Skeleton aria-hidden="true" className="h-3 w-40" />
+        </div>
+        <Skeleton aria-hidden="true" className="mt-1 size-4 shrink-0 rounded-full" />
+      </div>
+      <Skeleton aria-hidden="true" className="h-1 w-full rounded-full" />
+    </Surface>
+  );
+}
+
 /** Stands in for the agent's name, voice, greeting and language on Meet your agent. */
 export function MeetFormSkeleton({ labels }: { labels: { name: string; voice: string; greeting: string; language: string } }) {
   return (

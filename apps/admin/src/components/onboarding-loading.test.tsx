@@ -2,8 +2,11 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { OnboardingAttributionSurface } from "./onboarding-attribution-surface";
 import { OnboardingBusinessSurface } from "./onboarding-business-surface";
+import { OnboardingGoalSurface } from "./onboarding-goal-surface";
 import { OnboardingLanguageSurface } from "./onboarding-language-surface";
+import { OnboardingReadingSurface } from "./onboarding-reading-surface";
 import { OnboardingMeetSurface } from "./onboarding-meet-surface";
 import { OnboardingNumberSurface } from "./onboarding-number-surface";
 import { OnboardingVerifyPhoneSurface } from "./onboarding-verify-phone-surface";
@@ -19,9 +22,10 @@ vi.mock("./onboarding-plan-surface", () => ({ OnboardingPlanSurface: () => <div>
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 /** Every request stays pending, so each step shows what it renders before its data arrives. */
-function renderLoading(surface: React.ReactElement) {
+function renderLoading(surface: React.ReactElement, withBusiness = false) {
   vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => undefined)));
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  if (withBusiness) client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Test", role: "business_owner", active: true, onboardingStage: "goal", onboardingGoal: null }] });
   return render(<QueryClientProvider client={client}>{surface}</QueryClientProvider>);
 }
 
@@ -67,6 +71,29 @@ describe("onboarding steps while they load", () => {
     expect(busy.textContent).toContain("verifyPhone.fields.mobileNumber");
     for (const text of ["verifyPhone.hint", "verifyPhone.sendCode"]) expect(screen.getByText(text).closest("[data-slot='skeleton']")).toBeTruthy();
     expect(busy.querySelectorAll("[data-slot='skeleton']").length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("keeps the goal choices' place until the Instagram question is answered", () => {
+    renderLoading(<OnboardingGoalSurface />, true);
+    const busy = document.querySelector("[aria-busy='true']")!;
+    for (const key of ["answer_calls", "book_appointments", "answer_website_visitors", "answer_instagram_messages"]) expect(busy.textContent).toContain(`goal.options.${key}`);
+    expect(screen.queryByRole("button", { name: "goal.options.answer_calls" })).toBeNull();
+    expect(busy.querySelectorAll("[data-slot='skeleton']")).toHaveLength(4);
+  });
+
+  it("keeps the attribution choices' place until the saved answer arrives", () => {
+    renderLoading(<OnboardingAttributionSurface />, true);
+    const busy = document.querySelector("[aria-busy='true']")!;
+    expect(busy.textContent).toContain("attribution.options.google");
+    expect(busy.textContent).toContain("attribution.options.other");
+    expect(screen.queryByRole("button", { name: "attribution.options.google" })).toBeNull();
+    expect(busy.querySelectorAll("[data-slot='skeleton']")).toHaveLength(15);
+  });
+
+  it("holds a place for the crawl card while the knowledge list answers", () => {
+    renderLoading(<OnboardingReadingSurface documentId="document" />, true);
+    const busy = document.querySelector("[aria-busy='true']")!;
+    expect(busy.querySelectorAll("[data-slot='skeleton']").length).toBeGreaterThanOrEqual(4);
   });
 
   it("shows the test call, and each agent field, as placeholders", () => {
