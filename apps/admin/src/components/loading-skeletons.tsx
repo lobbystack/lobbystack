@@ -33,6 +33,21 @@ export function MetricCardGridSkeleton({ count = 4, titles }: { count?: number; 
   );
 }
 
+/** Stands in for a row of three large figures, such as the results on Home, with each title held hidden. */
+export function ResultsRowSkeleton({ titles }: { titles: ReadonlyArray<string> }) {
+  return (
+    <Surface aria-busy="true" className="grid sm:grid-cols-3">
+      {titles.map((title) => (
+        <div className="flex min-w-0 flex-col gap-2 border-b p-6 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0" key={title}>
+          <HiddenTextSkeleton className="type-card-title">{title}</HiddenTextSkeleton>
+          <Skeleton className="h-10 w-24" />
+          <Skeleton className="h-4 w-32" />
+        </div>
+      ))}
+    </Surface>
+  );
+}
+
 export function TableCardSkeleton({ columns = 5 }: { columns?: number }) {
   return (
     <div className="flex flex-col gap-4">

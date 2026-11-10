@@ -1,11 +1,11 @@
 ---
 title: "Review agent analytics"
-description: "See what your agent booked and saved you, and review trends across calls, messages, appointments, call outcomes, and channels."
+description: "Review calls, call length, today's appointments, and trends across messages, appointments, call outcomes, and channels."
 sidebarTitle: "Analytics"
 contentType: "How-to"
 ---
 
-The **Analytics** page helps you understand how customers are using your agent. It summarizes weekly activity and shows whether calls, messages, appointments, and average call duration are moving up or down.
+The **Analytics** page helps you understand how customers are using your agent. It summarizes activity for the dates you pick and shows whether calls, messages, appointments, and average call duration are moving up or down.
 
 ![LobbyStack Analytics page](/images/screenshots/analytics.png)
 
@@ -15,7 +15,7 @@ _Analytics helps you spot workload changes and decide where to tune your agent o
 
 | Section | What it is for |
 | --- | --- |
-| **Booked value**, **Time saved**, **Calls without transfer** | What your agent booked, the talk time it took off your team, and how many calls it finished without a transfer. |
+| **Calls**, **Today**, **Average duration** | Calls and average call length for the dates you pick, and the appointments still ahead today. |
 | **Engagement overview** | Weekly calls and messages in one chart. |
 | **Calls this week** | Call count and change compared with the previous week. |
 | **Messages this week** | SMS conversation activity and weekly change. |
@@ -24,25 +24,17 @@ _Analytics helps you spot workload changes and decide where to tune your agent o
 | **Call outcomes** | Completed, transferred, live, and missed call outcomes. |
 | **Channels** | The share of activity coming from voice, SMS, and other channels. |
 
-## See what your agent booked and saved
+## Check calls, today, and call length
 
-The three figures at the top of the page cover the dates you pick, and each one is compared with the period of the same length just before.
+The three figures at the top of the page show:
 
-| Figure | How LobbyStack counts it |
+| Figure | What it shows |
 | --- | --- |
-| **Booked value** | The price of each appointment your agent booked by call, text, or chat in those dates, after any service discount. A fixed price counts in full, a starting price at its minimum, and a price range at its low end. |
-| **Time saved** | The talk time on calls your agent handled, shown in hours and minutes. |
-| **Calls without transfer** | The share of those calls that ended without your agent transferring the caller to your team. |
+| **Calls** | Your agent's calls in the dates you pick, and the change from the period of the same length just before. |
+| **Today** | The appointments still ahead today, and the time of the next one. It covers today whatever dates you pick. |
+| **Average duration** | The average call length in the dates you pick, and the change from the period before. A call still in progress counts as 0 seconds. |
 
-Booked value leaves out:
-
-- Cancelled appointments
-- Appointments your team booked in the dashboard or through the API
-- Services priced in person or without a price
-
-LobbyStack uses each service's current price, so changing a price also changes the estimate for earlier dates. The figure appears in the currency set for your business.
-
-Time saved and the transfer share leave out spam calls and calls shorter than 10 seconds, the same calls your plan doesn't bill. Website chats don't add to time saved, since they have no talk time.
+[Home](/dashboard/home#see-what-your-agent-booked-and-saved) shows what your agent booked and saved you.
 
 Analytics counts your agent's calls. Calls your team takes with [Staff answers first](/agent/calls-and-booking#staff-answers-first) stay out of every number on this page, and you'll find them in the **Inbox**.
 

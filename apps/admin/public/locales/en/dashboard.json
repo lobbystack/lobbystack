@@ -12,7 +12,10 @@
     "up": "+{{value}}% from last month",
     "down": "-{{value}}% from last month",
     "durationUp": "+{{value}} from last month",
-    "durationDown": "-{{value}} from last month"
+    "durationDown": "-{{value}} from last month",
+    "pointsUp": "+{{value}} pts from last month",
+    "pointsDown": "-{{value}} pts from last month",
+    "noPreviousCalls": "No calls the month before"
   },
   "home": {
     "title": "Home",
@@ -88,36 +91,41 @@
           "other": "Other"
         }
       },
-      "results": {
-        "bookedValue": "Booked value",
-        "timeSaved": "Time saved",
-        "withoutTransfer": "Calls without transfer"
-      },
       "agents": {
         "title": "By agent",
         "calls": "Calls",
         "chats": "Chats",
         "removed": "Removed"
+      },
+      "overview": {
+        "calls": {
+          "title": "Calls"
+        },
+        "today": {
+          "title": "Today",
+          "next": "Next at {{time}}",
+          "none": "Nothing else today"
+        },
+        "appointments": {
+          "title": "Appointments"
+        },
+        "averageDuration": {
+          "title": "Average duration"
+        }
       }
+    },
+    "results": {
+      "bookedValue": "Booked value",
+      "timeSaved": "Time saved",
+      "withoutTransfer": "Calls without transfer"
     },
     "metrics": {
       "loading": "Loading monthly comparison...",
-      "today": {
-        "title": "Today",
-        "next": "Next at {{time}}",
-        "none": "Nothing else today"
-      },
       "calls": {
         "title": "Calls"
       },
       "messages": {
         "title": "Messages"
-      },
-      "appointments": {
-        "title": "Appointments"
-      },
-      "averageDuration": {
-        "title": "Average duration"
       },
       "contacts": {
         "title": "Contacts"

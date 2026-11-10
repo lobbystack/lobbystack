@@ -4,7 +4,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 import { agents, appointments, businessMemberships, businesses, calls, contacts, conversations, createDatabaseClient, messages, services, staff, transcripts, users, widgetVisitors, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
-import { getAnalytics } from "./analytics";
+import { getAnalytics, readAnalyticsResults } from "./analytics";
 import { deleteContact, getContactDetail, listContacts } from "./contacts";
 import { appendMessage, getOrCreateWidgetConversation, registerWidgetVisitor } from "./conversations";
 import { listCurrentAppointments, listRecentCalls, listUpcomingAppointments } from "./operatorActivity";
@@ -229,6 +229,33 @@ describe.skipIf(!client)("operator contact and channel data under operator RLS",
       expect(result.bookedValue).toEqual({ currency: "EUR", current: 5_000 + 6_000, previous: 0 });
       expect(result.timeSavedSeconds).toEqual({ current: 120 + 95 + 60, previous: 0 });
       expect(result.callsWithoutTransferPercent).toEqual({ current: 66.7, previous: null });
+      // Home reads the same figures for its own period.
+      expect(await readAnalyticsResults(tx, { businessId, from, to, previousFrom: new Date(from.getTime() - 86_400_000) })).toEqual({ bookedValue: result.bookedValue, timeSavedSeconds: result.timeSavedSeconds, callsWithoutTransferPercent: result.callsWithoutTransferPercent });
+    });
+  });
+
+  it("averages call length for the period and the one before, an open call counting as none", async () => {
+    await rollbackTest(async (tx) => {
+      const { db, businessId, userId } = await seed(tx);
+      await tx.execute(sql`reset role`);
+      // The seeded calls are open, so they count as 0 seconds.
+      await tx.delete(calls).where(eq(calls.businessId, businessId));
+      const call = (hoursAgo: number, seconds: number | null, values: Partial<typeof calls.$inferInsert> = {}) => {
+        const startedAt = new Date(Date.now() - hoursAgo * 3_600_000);
+        return { businessId, provider: "openai_live", providerCallId: `rtc_${randomUUID()}`, transport: "voice", status: "completed", startedAt, endedAt: new Date(startedAt.getTime() + 90_000), providerDurationSeconds: seconds, ...values };
+      };
+      await tx.insert(calls).values([
+        // This period: 120 s from the provider, 90 s measured, and a live call at 0 s.
+        call(1, 120), call(2, null), call(3, null, { endedAt: null, status: "started" }),
+        // The period before: 60 s, and a billing-excluded call Analytics leaves out.
+        call(30, 60), call(31, 600, { billingExcluded: true }),
+      ]);
+      await tx.execute(sql`set local role lobbystack_app`);
+      const to = new Date(Date.now() + 60_000);
+      const from = new Date(to.getTime() - 86_400_000);
+      const result = await getAnalytics({ db }, { userId, businessId, from, to, previousFrom: new Date(from.getTime() - 86_400_000), granularity: "day" });
+      expect(result.calls).toEqual({ current: 3, previous: 1 });
+      expect(result.averageCallDurationSeconds).toEqual({ current: 70, previous: 60 });
     });
   });
 

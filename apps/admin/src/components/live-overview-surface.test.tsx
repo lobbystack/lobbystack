@@ -21,7 +21,7 @@ vi.mock("./dashboard-activation-card", () => ({ DashboardActivationCard: () => n
 vi.mock("./call-forwarding-dialog", () => ({ CallForwardingFromLink: () => null }));
 const clients: QueryClient[] = [];
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); });
-type Overrides = { upcoming?: Array<Record<string, unknown>>; recentCalls?: Array<Record<string, unknown>>; actionRequired?: Array<Record<string, unknown>>; role?: string; capabilities?: Capability[]; unansweredCount?: number; actionRequiredCount?: number; loading?: boolean };
+type Overrides = { upcoming?: Array<Record<string, unknown>>; recentCalls?: Array<Record<string, unknown>>; actionRequired?: Array<Record<string, unknown>>; role?: string; capabilities?: Capability[]; unansweredCount?: number; actionRequiredCount?: number; loading?: boolean; results?: Record<string, unknown> };
 async function setup(locale: "en" | "fr", callId: string | null, overrides: Overrides = {}) {
   vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn(), removeItem: vi.fn() });
   vi.stubGlobal("EventSource", class { addEventListener() {} removeEventListener() {} close() {} });
@@ -33,7 +33,7 @@ async function setup(locale: "en" | "fr", callId: string | null, overrides: Over
   await i18n.init({ lng: locale, defaultNS: "dashboard", resources: { en: { dashboard: en, common: enCommon, knowledge: enKnowledge }, fr: { dashboard: fr, common: frCommon, knowledge: frKnowledge } } });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   if (!overrides.loading) client.setQueryData(["dashboard"], {
-    businessId: "business", kpis: { calls: { total: 1, deltaPercent: 0 }, appointments: { total: 1, deltaPercent: 0 }, averageDuration: { totalSeconds: 20, deltaSeconds: 0 } }, monthlyCalls: [], recentCalls: overrides.recentCalls ?? [],
+    businessId: "business", results: overrides.results ?? { bookedValue: { currency: "USD", current: 0, previous: 0 }, timeSavedSeconds: { current: 0, previous: 0 }, callsWithoutTransferPercent: { current: null, previous: null } }, monthlyCalls: [], recentCalls: overrides.recentCalls ?? [],
     ...(overrides.actionRequiredCount === undefined ? {} : { actionRequiredCount: overrides.actionRequiredCount }),
     actionRequired: overrides.actionRequired ?? [{ id: "follow-up", kind: "voice_message", title: "Voice message from Alex", body: "Please call back.\nCallback: +14165550199\nUrgency: high", callId, createdAt: "2026-09-04T14:30:00Z" }],
     upcoming: overrides.upcoming ?? [{ id: "appointment", startsAt: "2099-09-07T14:30:00Z", endsAt: "2099-09-07T15:00:00Z", timezone: "UTC", status: "confirmed", sourceChannel: "voice", calendarSyncState: "synced", contactName: "Alex", serviceName: "Consultation", staffName: "Front desk" }],
@@ -226,7 +226,7 @@ describe("Home while it loads", () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); clients.push(client);
     const { container } = render(<I18nextProvider i18n={i18n}><QueryClientProvider client={client}><BusinessCapabilitiesProvider initial={ALL_CAPABILITIES}><LiveOverviewSurface /></BusinessCapabilitiesProvider></QueryClientProvider></I18nextProvider>);
     // The metric titles are placeholders holding their hidden text, so each card turns real together.
-    for (const title of ["calls", "appointments", "averageDuration"]) expect(screen.getByText(i18n.t(`home.metrics.${title}.title`)).closest("[data-slot='skeleton']")).toBeTruthy();
+    for (const title of ["bookedValue", "timeSaved", "withoutTransfer"]) expect(screen.getByText(i18n.t(`home.results.${title}`)).closest("[data-slot='skeleton']")).toBeTruthy();
     expect(screen.getByText(i18n.t("home.chart.title"))).toBeTruthy();
     expect(screen.getByText(i18n.t("home.recentCalls.title"))).toBeTruthy();
     expect(container.querySelectorAll("[aria-busy='true']")).toHaveLength(4);
@@ -241,12 +241,37 @@ describe("Home while it loads", () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); clients.push(client);
     client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Clinic", role: "business_owner", active: true }] });
     // The dashboard answers, while the guide, the hours and the appointments are still loading.
-    client.setQueryData(["dashboard"], { businessId: "business", kpis: { calls: { total: 0, deltaPercent: 0 }, appointments: { total: 0, deltaPercent: 0 }, averageDuration: { totalSeconds: 0, deltaSeconds: 0 } }, monthlyCalls: [], recentCalls: [], actionRequired: [], upcoming: [] });
+    client.setQueryData(["dashboard"], { businessId: "business", results: { bookedValue: { currency: "USD", current: 0, previous: 0 }, timeSavedSeconds: { current: 0, previous: 0 }, callsWithoutTransferPercent: { current: null, previous: null } }, monthlyCalls: [], recentCalls: [], actionRequired: [], upcoming: [] });
     const { container } = render(<I18nextProvider i18n={i18n}><QueryClientProvider client={client}><BusinessCapabilitiesProvider initial={ALL_CAPABILITIES}><LiveOverviewSurface /></BusinessCapabilitiesProvider></QueryClientProvider></I18nextProvider>);
 
     expect(screen.getByText(i18n.t("setupGuide.title")).closest("[data-slot='skeleton']")).toBeTruthy();
     for (const step of SETUP_STEP_ORDER) expect(screen.getByText(i18n.t(`setupGuide.steps.${step}`)).closest("[data-slot='skeleton']")).toBeTruthy();
     expect(screen.getByText(i18n.t("setupGuide.skip")).closest("[data-slot='skeleton']")).toBeTruthy();
     expect(container.querySelector("[aria-busy='true']")).toBeTruthy();
+  });
+});
+
+describe("results row on Home", () => {
+  const row = (i18n: Awaited<ReturnType<typeof setup>>) => {
+    const section = screen.getByRole("heading", { name: i18n.t("home.results.bookedValue") }).closest("section")!.parentElement!;
+    return [...section.querySelectorAll("section")].map((card) => [...card.querySelectorAll("h2, p")].map((element) => element.textContent));
+  };
+
+  it("shows booked value, time saved and the share without a transfer for the last 30 days, compared with the month before", async () => {
+    const i18n = await setup("en", null, { results: { bookedValue: { currency: "USD", current: 125_000, previous: 100_000 }, timeSavedSeconds: { current: 12 * 3_600 + 5 * 60, previous: 0 }, callsWithoutTransferPercent: { current: 82.5, previous: 80 } } });
+    expect(row(i18n)).toEqual([
+      ["Booked value", "$1,250", "+25.0% from last month"],
+      ["Time saved", "12 hr 5 min", "+100.0% from last month"],
+      ["Calls without transfer", "82.5%", "+2.5 pts from last month"],
+    ]);
+  });
+
+  it("says the month before had no calls, and shows a dash with no comparison while no calls count", async () => {
+    let i18n = await setup("en", null, { results: { bookedValue: { currency: "EUR", current: 0, previous: 0 }, timeSavedSeconds: { current: 0, previous: 0 }, callsWithoutTransferPercent: { current: 100, previous: null } } });
+    expect(row(i18n)[2]).toEqual(["Calls without transfer", "100%", en.delta.noPreviousCalls]);
+    expect(row(i18n)[0]).toEqual(["Booked value", "€0", en.delta.flat]);
+    cleanup();
+    i18n = await setup("fr", null);
+    expect(row(i18n)[2]).toEqual([fr.home.results.withoutTransfer, "—"]);
   });
 });

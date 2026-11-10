@@ -12,7 +12,10 @@
     "up": "+{{value}} % depuis le mois dernier",
     "down": "-{{value}} % depuis le mois dernier",
     "durationUp": "+{{value}} depuis le mois dernier",
-    "durationDown": "-{{value}} depuis le mois dernier"
+    "durationDown": "-{{value}} depuis le mois dernier",
+    "pointsUp": "+{{value}} pts depuis le mois dernier",
+    "pointsDown": "-{{value}} pts depuis le mois dernier",
+    "noPreviousCalls": "Aucun appel le mois précédent"
   },
   "home": {
     "title": "Accueil",
@@ -88,36 +91,41 @@
           "other": "Autre"
         }
       },
-      "results": {
-        "bookedValue": "Valeur réservée",
-        "timeSaved": "Temps gagné",
-        "withoutTransfer": "Appels sans transfert"
-      },
       "agents": {
         "title": "Par agent",
         "calls": "Appels",
         "chats": "Clavardages",
         "removed": "Retiré"
+      },
+      "overview": {
+        "calls": {
+          "title": "Appels"
+        },
+        "today": {
+          "title": "Aujourd'hui",
+          "next": "Prochain à {{time}}",
+          "none": "Plus rien aujourd'hui"
+        },
+        "appointments": {
+          "title": "Rendez-vous"
+        },
+        "averageDuration": {
+          "title": "Durée moyenne"
+        }
       }
+    },
+    "results": {
+      "bookedValue": "Valeur réservée",
+      "timeSaved": "Temps gagné",
+      "withoutTransfer": "Appels sans transfert"
     },
     "metrics": {
       "loading": "Chargement de la comparaison mensuelle...",
-      "today": {
-        "title": "Aujourd'hui",
-        "next": "Prochain à {{time}}",
-        "none": "Plus rien aujourd'hui"
-      },
       "calls": {
         "title": "Appels"
       },
       "messages": {
         "title": "Messages"
-      },
-      "appointments": {
-        "title": "Rendez-vous"
-      },
-      "averageDuration": {
-        "title": "Duree moyenne"
       },
       "contacts": {
         "title": "Contacts"

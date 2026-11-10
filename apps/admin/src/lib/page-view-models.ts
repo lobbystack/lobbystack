@@ -16,7 +16,16 @@ export type AnalyticsMetricViewModel = {
   previous: number;
 };
 
-export type AnalyticsViewModel = {
+/** What the agent booked and saved in a period, each with the period before. Analytics and Home both show it. */
+export type AnalyticsResultsViewModel = {
+  /** In the business currency's smallest unit. */
+  bookedValue: AnalyticsMetricViewModel & { currency: string };
+  timeSavedSeconds: AnalyticsMetricViewModel;
+  /** Null when no calls count yet. */
+  callsWithoutTransferPercent: { current: number | null; previous: number | null };
+};
+
+export type AnalyticsViewModel = AnalyticsResultsViewModel & {
   periodDays: number;
   from: string;
   to: string;
@@ -24,7 +33,7 @@ export type AnalyticsViewModel = {
   calls: AnalyticsMetricViewModel;
   appointments: AnalyticsMetricViewModel;
   messages: AnalyticsMetricViewModel;
-  averageCallDurationSeconds: number;
+  averageCallDurationSeconds: AnalyticsMetricViewModel;
   agentResponseSeconds: AnalyticsMetricViewModel;
   series: Array<{
     bucket: string;
@@ -35,11 +44,6 @@ export type AnalyticsViewModel = {
   }>;
   channels: AnalyticsChannelCounts;
   outcomes: Array<{ outcome: string; count: number }>;
-  /** In the business currency's smallest unit. */
-  bookedValue: AnalyticsMetricViewModel & { currency: string };
-  timeSavedSeconds: AnalyticsMetricViewModel;
-  /** Null when no calls count yet. */
-  callsWithoutTransferPercent: { current: number | null; previous: number | null };
   /** Calls and chats per agent in the period: every active agent, then a removed one that had any. */
   agents?: AnalyticsAgentViewModel[];
 };

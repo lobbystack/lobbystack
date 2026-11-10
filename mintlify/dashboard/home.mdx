@@ -1,6 +1,6 @@
 ---
 title: "Review your workspace from Home"
-description: "See this month's calls, messages, and appointments, the follow-ups that still need a person, and your next bookings from the LobbyStack Home page."
+description: "See what your agent booked and saved you in the last 30 days, the follow-ups that still need a person, and your next bookings from the LobbyStack Home page."
 sidebarTitle: "Home"
 contentType: "How-to"
 ---
@@ -27,9 +27,9 @@ Home starts with **Getting started**, a list of setup steps. It changes to the d
 | Section | What it is for |
 | --- | --- |
 | **Setup card** | Your next setup step while you get started, such as a browser test call, a free trial number, or call forwarding. |
-| **KPIs** | Monthly counts for calls, messages, appointments, and contacts. |
 | **Action required** | Follow-up tasks that still need a human response, such as callbacks, handoff requests, cancellations and reschedules, each with its type, and a link to questions your agent couldn't answer. Click a row to open it. |
 | **Upcoming** | The next booked appointments on the calendar. Click one to open its details, with **Cancel** and **Reschedule**. |
+| **Booked value**, **Time saved**, **Calls without transfer** | What your agent booked, the talk time it took off your team, and how many calls it finished without a transfer in the last 30 days. |
 | **Calls per month** | A monthly call-volume chart based on saved call records. |
 | **Recent calls** | The latest inbound call activity with caller, timing, and outcome details. |
 
@@ -49,6 +49,26 @@ Home starts with **Getting started**, a list of setup steps. It changes to the d
     On the call's **Details** tab, click **Mark done** after your team follows up. Approve a cancellation or reschedule request there too.
   </Step>
 </Steps>
+
+## See what your agent booked and saved
+
+The three figures under **Upcoming** and **Action required** cover the last 30 days. Each one shows how it changed from the 30 days before.
+
+| Figure | How LobbyStack counts it |
+| --- | --- |
+| **Booked value** | The price of each appointment your agent booked by call, text, or chat in those 30 days, after any service discount. A fixed price counts in full, a starting price at its minimum, and a price range at its low end. |
+| **Time saved** | The talk time on calls your agent handled, shown in hours and minutes. |
+| **Calls without transfer** | The share of those calls that ended without your agent transferring the caller to your team. |
+
+Booked value leaves out:
+
+- Cancelled appointments
+- Appointments your team booked in the dashboard or through the API
+- Services priced in person or without a price
+
+LobbyStack uses each service's current price, so changing a price also changes the estimate for earlier dates. The figure appears in the currency set for your business.
+
+Time saved and the transfer share leave out spam calls and calls shorter than 10 seconds, the same calls your plan doesn't bill. Website chats don't add to time saved, since they have no talk time.
 
 ## Answer questions your agent couldn't
 
