@@ -52,7 +52,7 @@ We also tried to include CallFluent. Its site didn't load for us on October 27, 
 
 Frontdesk's [pricing FAQ](https://www.myaifrontdesk.com/pricing) says its white label partner plans "are custom and start at $500 per month." Partners buy at a wholesale rate, resell under their own brand and control tiering, minute packages and usage billing "through the built-in Stripe integration," with no price floor or ceiling. The same FAQ lists direct API access as part of Partner and Enterprise.
 
-Its [custom domain tutorial](https://www.myaifrontdesk.com/reseller-tutorials/add-your-custom-domain-to-ai-front-desk-full-tutorial) says "We only support subdomains." The [partner page](https://www.myaifrontdesk.com/white-label) now opens with an application form, and the partnerships team reviews each one before an onboarding call.
+Its [custom domain tutorial](https://web.archive.org/web/20260214072459/https://www.myaifrontdesk.com/reseller-tutorials/add-your-custom-domain-to-ai-front-desk-full-tutorial) said "We only support subdomains." In September 2026, its [partner page](https://web.archive.org/web/20260925022219/https://www.myaifrontdesk.com/white-label) opened with an application form, and the partnerships team reviewed each one before an onboarding call.
 
 Frontdesk suits an agency that wants a mature hosted receptionist with SMS, chat and CRM tools, and can commit to $500 a month. Our [Frontdesk alternative post](/blog/my-ai-front-desk-alternative/) compares the direct products.
 

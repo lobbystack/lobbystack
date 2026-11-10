@@ -240,15 +240,24 @@ describe.skipIf(!client)("businesses with no owner", () => {
       const [row] = await tx.select({ slug: businesses.slug }).from(businesses).where(eq(businesses.id, businessId));
       return row!.slug;
     };
-    const firstMade: Array<() => void> = [];
-    const bothMade = Promise.all([0, 1].map((index) => new Promise<void>((resolve) => { firstMade[index] = resolve; })));
+    const barrier = () => {
+      const arrived: Array<() => void> = [];
+      const all = Promise.all([0, 1].map((index) => new Promise<void>((resolve) => { arrived[index] = resolve; })));
+      return { arrive: (index: 0 | 1) => arrived[index]!(), all };
+    };
+    const firstMade = barrier();
+    // Neither transaction rolls back until both made the other's business, or the
+    // later one would find the slug free and get no suffix.
+    const secondMade = barrier();
     const make = async (index: 0 | 1) => {
       let slugs: string[] = [];
       await rollbackTest(async (tx) => {
         const own = await insert(tx, names[index]);
-        firstMade[index]!();
-        await bothMade;
+        firstMade.arrive(index);
+        await firstMade.all;
         slugs = [own, await insert(tx, names[1 - index]!)];
+        secondMade.arrive(index);
+        await secondMade.all;
       });
       return slugs;
     };
