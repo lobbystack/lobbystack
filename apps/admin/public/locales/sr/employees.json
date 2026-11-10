@@ -1,7 +1,5 @@
 {
-  "page": {
-    "searchPlaceholder": "Pretraži zaposlene..."
-  },
+  "page": {},
   "table": {
     "name": "Ime",
     "phone": "Broj telefona",
@@ -23,7 +21,6 @@
       "noServices": "Izmenite zaposlenog i izaberite njegove usluge kako bi klijenti mogli da zakažu kod njega."
     },
     "added": "Dodato",
-    "empty": "Nijedan zaposleni ne odgovara pretrazi.",
     "emptyState": "Još nema zaposlenih.",
     "actions": {
       "moreOptions": "Više opcija",

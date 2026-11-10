@@ -10,10 +10,10 @@ import { useTranslation } from "react-i18next";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useSetupAction } from "@/lib/use-setup-action";
 import { requestJson } from "@/lib/request-json";
-import { HeaderActions, HeaderSearch } from "@/components/header-actions";
+import { HeaderActions } from "@/components/header-actions";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { DataTablePagination, paginationFeatures } from "./data-table/pagination";
-import { DataTablePaginationSkeleton, HeaderButtonSkeleton, HeaderSearchSkeleton, RuleRowsSkeleton, RulesPageSkeleton } from "./loading-skeletons";
+import { DataTablePaginationSkeleton, HeaderButtonSkeleton, RuleRowsSkeleton, RulesPageSkeleton } from "./loading-skeletons";
 import { PageSurface } from "./page-surface";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -37,7 +37,6 @@ function summarize(value: string, length: number): string {
 export function RulesSurface({ agentId }: { agentId?: string } = {}) {
   const { i18n, t } = useTranslation("agent");
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState("");
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [editingRule, setEditingRule] = useState<Rule | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -67,18 +66,14 @@ export function RulesSurface({ agentId }: { agentId?: string } = {}) {
   });
 
   const orderedRules = useMemo(() => [...(rules.data ?? [])].sort((left, right) => left.sortOrder - right.sortOrder), [rules.data]);
-  const filteredRules = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return query ? orderedRules.filter((rule) => `${rule.title} ${rule.content}`.toLowerCase().includes(query)) : orderedRules;
-  }, [orderedRules, search]);
-  const table = useTable({ features: paginationFeatures, data: filteredRules, columns: [], onPaginationChange: setPagination, state: { pagination } });
+  const table = useTable({ features: paginationFeatures, data: orderedRules, columns: [], onPaginationChange: setPagination, state: { pagination } });
   const pageRows = table.getRowModel().rows.map((row) => row.original);
   const loading = rules.isLoading;
 
   useEffect(() => {
-    const pageCount = Math.max(1, Math.ceil(filteredRules.length / pagination.pageSize));
+    const pageCount = Math.max(1, Math.ceil(orderedRules.length / pagination.pageSize));
     if (pagination.pageIndex >= pageCount) setPagination((current) => ({ ...current, pageIndex: pageCount - 1 }));
-  }, [filteredRules.length, pagination.pageIndex, pagination.pageSize]);
+  }, [orderedRules.length, pagination.pageIndex, pagination.pageSize]);
 
   function moveRule(rule: Rule, direction: -1 | 1) {
     const index = orderedRules.findIndex((candidate) => candidate.id === rule.id);
@@ -106,7 +101,7 @@ export function RulesSurface({ agentId }: { agentId?: string } = {}) {
   }
 
   if (businesses.isLoading) return <PageSurface title={t("sections.rules.title")}><div className="flex w-full flex-col gap-6">
-    <HeaderActions><HeaderSearchSkeleton /><HeaderButtonSkeleton label={t("sections.rules.addKnowledge")} /></HeaderActions>
+    <HeaderActions><HeaderButtonSkeleton label={t("sections.rules.addKnowledge")} /></HeaderActions>
     <RulesPageSkeleton headings={[t("table.title"), t("table.preview"), t("table.status"), t("table.added")]} />
   </div></PageSurface>;
   if (!business) return <PageSurface title={t("sections.rules.title")}><p className="text-sm text-muted-foreground">{t("empty.description")}</p></PageSurface>;
@@ -115,13 +110,12 @@ export function RulesSurface({ agentId }: { agentId?: string } = {}) {
     <PageSurface title={t("sections.rules.title")}>
       <div className="flex w-full flex-col gap-6">
         <HeaderActions>
-          {loading ? <HeaderSearchSkeleton /> : <HeaderSearch onChange={setSearch} placeholder={t("table.searchPlaceholder")} value={search} />}
           {canManage ? loading ? <HeaderButtonSkeleton label={t("sections.rules.addKnowledge")} /> : <Button onClick={() => { setEditingRule(null); setDialogOpen(true); }}><Plus data-icon="inline-start" />{t("sections.rules.addKnowledge")}</Button> : null}
         </HeaderActions>
         <TableCard>
-          <Table className="min-w-[60rem] w-full table-fixed">
+          <Table className={cn("w-full table-fixed", (loading || pageRows.length > 0) && "min-w-[60rem]")}>
             <colgroup>{canManage ? <col className="w-10" /> : null}<col className="w-[18%]" /><col className="w-[42%]" /><col className="w-[14%]" /><col className="w-[18%]" /><col className="w-12" /></colgroup>
-            <TableHeader><TableRow>{canManage ? <TableHead /> : null}<TableHead>{t("table.title")}</TableHead><TableHead>{t("table.preview")}</TableHead><TableHead>{t("table.status")}</TableHead><TableHead className="text-right">{t("table.added")}</TableHead><TableHead /></TableRow></TableHeader>
+            <TableHeader className={(loading || pageRows.length > 0) ? undefined : "max-sm:hidden"}><TableRow>{canManage ? <TableHead /> : null}<TableHead>{t("table.title")}</TableHead><TableHead>{t("table.preview")}</TableHead><TableHead>{t("table.status")}</TableHead><TableHead className="text-right">{t("table.added")}</TableHead><TableHead /></TableRow></TableHeader>
             <TableBody aria-busy={loading || undefined}>
               {loading ? <RuleRowsSkeleton handle={canManage} rows={Math.min(pagination.pageSize, 10)} /> : pageRows.length ? pageRows.map((rule) => {
                 const orderedIndex = orderedRules.findIndex((candidate) => candidate.id === rule.id);
@@ -150,7 +144,7 @@ export function RulesSurface({ agentId }: { agentId?: string } = {}) {
                   <TableCell className="text-right text-sm text-muted-foreground">{new Intl.DateTimeFormat(intlLocale(i18n.resolvedLanguage), { dateStyle: "medium", timeStyle: "short" }).format(new Date(rule.createdAt))}</TableCell>
                   <TableCell onClick={(event) => event.stopPropagation()}>{canManage ? <DropdownMenu><DropdownMenuTrigger render={<Button aria-label={t("actions.moreOptions")} size="icon-sm" type="button" variant="ghost"><MoreHorizontal /></Button>} /><DropdownMenuContent align="end" className="min-w-0 w-fit p-1"><DropdownMenuItem onClick={() => { setEditingRule(rule); setDialogOpen(true); }}><Pencil />{t("actions.edit")}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem disabled={orderedIndex === 0 || reorderRules.isPending} onClick={() => moveRule(rule, -1)}><ArrowUp />{t("actions.moveUp")}</DropdownMenuItem><DropdownMenuItem disabled={orderedIndex === orderedRules.length - 1 || reorderRules.isPending} onClick={() => moveRule(rule, 1)}><ArrowDown />{t("actions.moveDown")}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem disabled={updateRule.isPending} onClick={() => updateRule.mutate({ ruleId: rule.id, active: !rule.active })}>{rule.active ? <Pause /> : <Play />}{rule.active ? t("actions.disable") : t("actions.enable")}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setDeleteCandidate(rule)} variant="destructive"><Trash2 />{t("actions.delete")}</DropdownMenuItem></DropdownMenuContent></DropdownMenu> : null}</TableCell>
                 </TableRow>;
-              }) : <TableRow><TableCell className="h-24 text-center text-muted-foreground" colSpan={canManage ? 6 : 5}>{search ? t("table.empty") : t("sections.rules.emptyState")}</TableCell></TableRow>}
+              }) : <TableRow><TableCell className="h-24 text-center whitespace-normal text-muted-foreground" colSpan={canManage ? 6 : 5}>{t("sections.rules.emptyState")}</TableCell></TableRow>}
             </TableBody>
           </Table>
         </TableCard>

@@ -39,10 +39,10 @@ describe("agent page headings", () => {
 });
 
 describe("header actions before the page mounts", () => {
-  it("renders a Test call placeholder in the server markup on every agent page, and a search and an add rule placeholder for Rules", () => {
+  it("renders a Test call placeholder in the server markup on every agent page, and an add rule placeholder for Rules", () => {
     route.pathname = "/agents/agent-1/rules";
     const html = renderToString(withQueries(<AgentShell agent={agent}>content</AgentShell>));
-    expect(placeholders(html)).toBe(3);
+    expect(placeholders(html)).toBe(2);
     expect(html).toContain('<span class="invisible">testCall.trigger</span>');
     expect(html).toContain('<span class="invisible">agent:sections.rules.addKnowledge</span>');
     route.pathname = "/agents/agent-1/channels";
@@ -54,7 +54,7 @@ describe("header actions before the page mounts", () => {
     for (const [section, label] of Object.entries(labels)) {
       route.pathname = `/business/${section}`;
       const html = renderToString(<BusinessLevelShell>content</BusinessLevelShell>);
-      expect(placeholders(html)).toBe(2);
+      expect(placeholders(html)).toBe(1);
       expect(html).toContain(`<span class="invisible">${label}</span>`);
     }
   });

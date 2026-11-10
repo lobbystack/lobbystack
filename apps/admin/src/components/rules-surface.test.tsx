@@ -71,17 +71,15 @@ describe("rules loading states", () => {
     expect(screen.getByText("table.title")).toBeTruthy();
     expect(skeletons("tbody")).toBe(60);
     expect(screen.getByText("sections.rules.addKnowledge")).toBeTruthy();
-    expect(screen.queryByPlaceholderText("table.searchPlaceholder")).toBeNull();
   });
 
-  it("keeps the real header and shows placeholder rows, search, button and pagination while the rules load", () => {
+  it("keeps the real header and shows placeholder rows, button and pagination while the rules load", () => {
     renderPending({ workspace: true });
     expect(screen.getByText("table.title")).toBeTruthy();
     expect(document.querySelector("tbody")?.getAttribute("aria-busy")).toBe("true");
     expect(skeletons("tbody")).toBe(60);
     expect(skeletons('[aria-hidden="true"]')).toBe(9);
     expect(screen.queryByText("sections.rules.emptyState")).toBeNull();
-    expect(screen.queryByPlaceholderText("table.searchPlaceholder")).toBeNull();
     expect(screen.queryByRole("button", { name: /sections.rules.addKnowledge/ })).toBeNull();
   });
 
@@ -91,9 +89,9 @@ describe("rules loading states", () => {
     expect(screen.queryByText("sections.rules.addKnowledge")).toBeNull();
   });
 
-  it("shows the search box and the add button together once the rules have loaded", () => {
+  it("shows the add button and no search box once the rules have loaded", () => {
     setup();
-    expect(screen.getByPlaceholderText("table.searchPlaceholder")).toBeTruthy();
+    expect(screen.queryByRole("textbox")).toBeNull();
     expect(screen.getByRole("button", { name: /sections.rules.addKnowledge/ })).toBeTruthy();
     expect(skeletons("tbody")).toBe(0);
   });

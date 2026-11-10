@@ -1,7 +1,5 @@
 {
-  "page": {
-    "searchPlaceholder": "Buscar empleados..."
-  },
+  "page": {},
   "table": {
     "name": "Nombre",
     "phone": "Número de teléfono",
@@ -23,7 +21,6 @@
       "noServices": "Edita este empleado y elige sus servicios para que los clientes puedan reservarlo."
     },
     "added": "Añadido",
-    "empty": "Ningún empleado coincide con la búsqueda.",
     "emptyState": "Todavía no hay empleados.",
     "actions": {
       "moreOptions": "Más opciones",

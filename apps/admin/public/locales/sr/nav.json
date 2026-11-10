@@ -19,11 +19,15 @@
     "title": "Pretraga",
     "description": "Pronađite stranice, podešavanja, agente, kontakte i razgovore.",
     "empty": "Nema rezultata za „{{query}}”",
-    "loading": "Pretražujemo kontakte i razgovore",
+    "loading": "Pretraga u toku",
     "instagram": "Instagram",
     "groups": {
       "pages": "Stranice",
       "agents": "Agenti",
+      "knowledge": "Znanje",
+      "services": "Usluge",
+      "employees": "Zaposleni",
+      "rules": "Pravila",
       "contacts": "Kontakti",
       "conversations": "Razgovori"
     },

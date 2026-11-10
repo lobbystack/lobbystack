@@ -195,11 +195,6 @@ export function AppointmentsCalendarSkeleton({ label, tabs, weeks = 5 }: { label
   );
 }
 
-/** Stands in for HeaderSearch: the same 36px height and responsive width. */
-export function HeaderSearchSkeleton() {
-  return <Skeleton className="h-9 w-full sm:w-64" />;
-}
-
 /** Placeholder rows for the calls table, with the column widths of the real rows. */
 export function CallRowsSkeleton({ rows = 10 }: { rows?: number }) {
   return (

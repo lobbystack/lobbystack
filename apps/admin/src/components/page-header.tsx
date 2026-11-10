@@ -20,11 +20,12 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "flex flex-col gap-4 py-2 sm:flex-row sm:items-start sm:justify-between sm:gap-6",
+        // The actions wrap under the title when the content is too narrow for both, at any screen width.
+        "flex flex-wrap items-start justify-between gap-x-6 gap-y-4 py-2",
         className
       )}
     >
-      <div className={cn("flex min-w-0", titleAside ? "items-center gap-3" : "flex-col")}>
+      <div className={cn("flex min-w-0 max-w-full", titleAside ? "items-center gap-3" : "flex-col")}>
         <h1 className="type-page-title">{title}</h1>
         {titleAside}
       </div>

@@ -266,13 +266,11 @@
     }
   },
   "table": {
-    "searchPlaceholder": "Buscar entradas",
     "title": "Título",
     "preview": "Vista previa",
     "status": "Estado",
     "disabled": "Desactivada",
     "added": "Añadida",
-    "empty": "No se encontraron entradas.",
     "documentPreviewHint": "Haga clic para ver una vista previa de este documento.",
     "documentPreviewUnavailable": "La vista previa de documentos está disponible en la página Conocimiento."
   },

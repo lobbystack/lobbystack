@@ -266,13 +266,11 @@
     }
   },
   "table": {
-    "searchPlaceholder": "Pretraži unose",
     "title": "Naslov",
     "preview": "Pregled",
     "status": "Status",
     "disabled": "Isključeno",
     "added": "Dodato",
-    "empty": "Nema unosa koji odgovaraju.",
     "documentPreviewHint": "Kliknite da pregledate ovaj dokument.",
     "documentPreviewUnavailable": "Pregled dokumenata je dostupan na stranici Znanje."
   },

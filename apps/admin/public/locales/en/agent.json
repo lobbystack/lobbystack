@@ -266,13 +266,11 @@
     }
   },
   "table": {
-    "searchPlaceholder": "Search entries",
     "title": "Title",
     "preview": "Preview",
     "status": "Status",
     "disabled": "Disabled",
     "added": "Added",
-    "empty": "No matching entries found.",
     "documentPreviewHint": "Click to preview this document.",
     "documentPreviewUnavailable": "Document preview is available on the Knowledge page."
   },

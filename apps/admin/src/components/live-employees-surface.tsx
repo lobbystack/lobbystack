@@ -1,5 +1,7 @@
 "use client";
 
+import { cn } from "@/lib/utils";
+
 import { isTransferCountry, type HoursWindow } from "@lobbystack/shared";
 import { requestJson } from "@/lib/request-json";
 import { useActiveBusiness } from "@/hooks/use-active-business";
@@ -21,11 +23,11 @@ import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { keepPreviousForBusiness } from "@/lib/keep-previous-for-business";
 
-import { HeaderActions, HeaderSearch } from "@/components/header-actions";
+import { HeaderActions } from "@/components/header-actions";
 import { toDays, useBusinessHours, useDayNames, WeeklyHoursEditor, windowsForSave, type HoursWindowInput } from "@/components/business-hours-section";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { DataTablePagination, paginationFeatures } from "@/components/data-table/pagination";
-import { DataTablePaginationSkeleton, EmployeeRowsSkeleton, HeaderButtonSkeleton, HeaderSearchSkeleton } from "@/components/loading-skeletons";
+import { DataTablePaginationSkeleton, EmployeeRowsSkeleton, HeaderButtonSkeleton } from "@/components/loading-skeletons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -90,17 +92,16 @@ export function LiveEmployeesSurface() {
   const { i18n, t } = useTranslation("employees");
   const locale = i18n.resolvedLanguage ?? i18n.language;
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState("");
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [pendingDelete, setPendingDelete] = useState<Employee | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const { businesses, business } = useActiveBusiness();
   const employees = useQuery({
-    queryKey: ["employees", business?.businessId, search.trim(), pagination.pageIndex, pagination.pageSize],
-    queryFn: () => requestJson<{ employees: Employee[]; services: ServiceOption[]; today: string; pagination: { total: number } }>(`/api/employees?businessId=${encodeURIComponent(business!.businessId)}&limit=${pagination.pageSize}&offset=${pagination.pageIndex * pagination.pageSize}&search=${encodeURIComponent(search.trim())}`),
+    queryKey: ["employees", business?.businessId, pagination.pageIndex, pagination.pageSize],
+    queryFn: () => requestJson<{ employees: Employee[]; services: ServiceOption[]; today: string; pagination: { total: number } }>(`/api/employees?businessId=${encodeURIComponent(business!.businessId)}&limit=${pagination.pageSize}&offset=${pagination.pageIndex * pagination.pageSize}`),
     enabled: Boolean(business),
-    // Keep the current rows on screen while the next page or search loads.
+    // Keep the current rows on screen while the next page loads.
     placeholderData: keepPreviousForBusiness(business?.businessId),
   });
   const remove = useMutation({
@@ -199,17 +200,16 @@ export function LiveEmployeesSurface() {
   return (
     <div className="flex flex-1 flex-col gap-6">
       <HeaderActions>
-        {loading ? <HeaderSearchSkeleton /> : <HeaderSearch onChange={(value) => { setSearch(value); setPagination((current) => ({ ...current, pageIndex: 0 })); }} placeholder={t("page.searchPlaceholder")} value={search} />}
         {loading && (businesses.isLoading || canMutate) ? <HeaderButtonSkeleton label={t("add.button")} /> : canMutate ? <Button onClick={() => openEditor(null)}><Plus data-icon="inline-start" />{t("add.button")}</Button> : null}
       </HeaderActions>
       <TableCard>
-        <Table className="min-w-[60rem] w-full table-fixed">
+        <Table className={cn("w-full table-fixed", (loading || table.getRowModel().rows.length > 0) && "min-w-[60rem]")}>
           <colgroup><col className="w-[16%]" /><col className="w-[15%]" /><col className="w-[22%]" /><col className="w-[25%]" /><col className="w-[22%]" /><col className="w-12" /></colgroup>
-          <TableHeader>{table.getHeaderGroups().map((group) => <TableRow key={group.id}>{group.headers.map((header) => <TableHead className={header.column.id === "added" || header.column.id === "actions" ? "text-right" : undefined} key={header.id}>{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
+          <TableHeader className={(loading || table.getRowModel().rows.length > 0) ? undefined : "max-sm:hidden"}>{table.getHeaderGroups().map((group) => <TableRow key={group.id}>{group.headers.map((header) => <TableHead className={header.column.id === "added" || header.column.id === "actions" ? "text-right" : undefined} key={header.id}>{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
           <TableBody aria-busy={loading || undefined}>
             {loading ? <EmployeeRowsSkeleton rows={Math.min(pagination.pageSize, 10)} /> : null}
             {loading ? null : table.getRowModel().rows.map((row) => <TableRow className={canMutate ? "h-12 cursor-pointer transition-colors hover:bg-muted/40" : "h-12 transition-colors hover:bg-muted/40"} key={row.id} onClick={() => { if (canMutate) openEditor(row.original); }}>{row.getAllCells().map((cell) => <TableCell className={cell.column.id === "added" ? "text-right text-sm text-muted-foreground" : cell.column.id === "actions" ? undefined : "max-w-0"} key={cell.id} onClick={cell.column.id === "actions" ? (event) => event.stopPropagation() : undefined}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>)}
-            {!loading && table.getRowModel().rows.length === 0 ? <TableRow><TableCell className="h-24 text-center text-muted-foreground" colSpan={6}>{search.trim() ? t("table.empty") : t("table.emptyState")}</TableCell></TableRow> : null}
+            {!loading && table.getRowModel().rows.length === 0 ? <TableRow><TableCell className="h-24 text-center whitespace-normal text-muted-foreground" colSpan={6}>{t("table.emptyState")}</TableCell></TableRow> : null}
           </TableBody>
         </Table>
       </TableCard>

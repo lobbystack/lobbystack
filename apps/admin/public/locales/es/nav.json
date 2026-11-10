@@ -19,11 +19,15 @@
     "title": "Búsqueda",
     "description": "Encuentre páginas, ajustes, agentes, contactos y conversaciones.",
     "empty": "No hay resultados para “{{query}}”",
-    "loading": "Buscando en contactos y conversaciones",
+    "loading": "Buscando",
     "instagram": "Instagram",
     "groups": {
       "pages": "Páginas",
       "agents": "Agentes",
+      "knowledge": "Conocimiento",
+      "services": "Servicios",
+      "employees": "Empleados",
+      "rules": "Reglas",
       "contacts": "Contactos",
       "conversations": "Conversaciones"
     },

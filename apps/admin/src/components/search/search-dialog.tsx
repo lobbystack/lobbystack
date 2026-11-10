@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
 import { CornerDownLeft, SearchIcon, type LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -17,10 +17,10 @@ import { formatDateTime } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
 import { cn } from "@/lib/utils";
 import { searchCatalog, searchSynonyms, type SearchEntry, type Translate } from "./catalog";
-import { allowed, searchEntries } from "./search";
+import { allowed, foldText, searchEntries } from "./search";
 import { ContactIcon, ConversationIcon, entryIcon } from "./search-icons";
 
-type Group = "pages" | "agents" | "contacts" | "conversations";
+type Group = "pages" | "agents" | "knowledge" | "services" | "employees" | "rules" | "contacts" | "conversations";
 /** One row: its icon, where it lives (muted, before the title), and what it's called. */
 type Result = { id: string; title: string; section: string | null; href: string; group: Group; icon: LucideIcon; detail?: string };
 
@@ -33,6 +33,42 @@ type ContactRow = { id: string; name: string | null; phone: string | null; email
 /** Live results need two letters, so one keystroke doesn't search every contact. */
 const LIVE_MIN_LENGTH = 2;
 const LIVE_LIMIT = 4;
+
+/** Whether every word of the query is in the text, without accents or case, as page search matches. */
+function matches(query: string, text: string): boolean {
+  const folded = foldText(text);
+  return foldText(query).split(/\s+/u).filter(Boolean).every((word) => folded.includes(word));
+}
+
+/**
+ * Knowledge entries, services and employees, and each agent's rules, whose
+ * names match the query. The lists come from the APIs and cache keys their
+ * pages use, so opening search after a page costs nothing. Setup only, as
+ * those pages need.
+ */
+function useSetupResults(businessId: string | undefined, query: string, enabled: boolean) {
+  const { t } = useTranslation("nav");
+  const { agents } = useAgents();
+  const on = enabled && Boolean(businessId);
+  const id = encodeURIComponent(businessId ?? "");
+  const documents = useQuery({ queryKey: ["knowledge", businessId], enabled: on, queryFn: () => requestJson<{ documents: Array<{ id: string; title: string }> }>(`/api/knowledge?businessId=${id}`) });
+  const snippets = useQuery({ queryKey: ["knowledge-snippets", businessId], enabled: on, queryFn: () => requestJson<{ snippets: Array<{ id: string; title: string }> }>(`/api/knowledge/snippets?businessId=${id}`) });
+  const catalog = useQuery({ queryKey: ["catalog", businessId], enabled: on, queryFn: () => requestJson<{ services: Array<{ id: string; name: string }> }>(`/api/catalog?businessId=${id}&limit=100`) });
+  const employees = useQuery({ queryKey: ["search", businessId, "employees", query], enabled: on, placeholderData: keepPreviousData, queryFn: () => requestJson<{ employees: Array<{ id: string; name: string }> }>(`/api/employees?businessId=${id}&limit=${LIVE_LIMIT}&offset=0&search=${encodeURIComponent(query)}`) });
+  const rules = useQueries({ queries: agents.map((agent) => ({ queryKey: ["rules", businessId, agent.id], enabled: on, queryFn: () => requestJson<Array<{ id: string; title: string }>>(`/api/rules?businessId=${id}&agentId=${encodeURIComponent(agent.id)}`) })) });
+  if (!on) return { results: [] as Result[], loading: false };
+  const business = t("items.business");
+  const found = <T,>(rows: T[] | undefined, name: (row: T) => string) => (Array.isArray(rows) ? rows : []).filter((row) => matches(query, name(row))).slice(0, LIVE_LIMIT);
+  const knowledge = [...(documents.data?.documents ?? []), ...(snippets.data?.snippets ?? [])];
+  const results: Result[] = [
+    ...found(knowledge, (row) => row.title).map((row): Result => ({ id: `knowledge:${row.id}`, title: row.title, section: `${business} › ${t("settingsPages.knowledge")}`, href: "/business/knowledge", group: "knowledge", icon: entryIcon("", "/business/knowledge") })),
+    ...found(catalog.data?.services, (row) => row.name).map((row): Result => ({ id: `service:${row.id}`, title: row.name, section: `${business} › ${t("settingsPages.services")}`, href: "/business/services", group: "services", icon: entryIcon("", "/business/services") })),
+    ...(employees.data?.employees ?? []).slice(0, LIVE_LIMIT).map((row): Result => ({ id: `employee:${row.id}`, title: row.name, section: `${business} › ${t("settingsPages.employees")}`, href: "/business/employees", group: "employees", icon: entryIcon("", "/business/employees") })),
+    ...agents.flatMap((agent, index) => found(rules[index]?.data, (row) => row.title).map((row): Result => ({ id: `rule:${agent.id}:${row.id}`, title: row.title, section: `${agent.name} › ${t("agentPages.rules")}`, href: `/agents/${agent.id}/rules`, group: "rules", icon: entryIcon(`agent:${agent.id}:rules`, "") }))),
+  ].slice(0, LIVE_LIMIT * 4);
+  const pending = documents.isPending || snippets.isPending || catalog.isPending || employees.isPending || rules.some((rule) => rule.isPending);
+  return { results, loading: pending && !results.length };
+}
 
 /** Contacts and conversations matching the query, through the same APIs their pages use. Activity only. */
 function useLiveResults(businessId: string | undefined, query: string, enabled: boolean) {
@@ -76,6 +112,8 @@ function SearchPanel({ businessId, onClose }: { businessId: string | undefined; 
     return { entries: searchCatalog(translate, agents), synonyms: searchSynonyms(translate), can, opensPartnerBilling };
   }, [agents, can, opensPartnerBilling, t]);
   const live = useLiveResults(businessId, query, query.length >= LIVE_MIN_LENGTH && can("activity"));
+  const setup = useSetupResults(businessId, query, query.length >= LIVE_MIN_LENGTH && can("setup"));
+  const loading = live.loading || setup.loading;
   const results = useMemo<Result[]>(() => {
     const main = t("search.where.main");
     // Settings and Business pages read "Settings › Team" and "Business › Knowledge"; the main pages need no place.
@@ -89,10 +127,10 @@ function SearchPanel({ businessId, onClose }: { businessId: string | undefined; 
     }
     // Grouped the way they show, so the arrow keys follow the list from top to bottom.
     const found = searchEntries(text, scope).map(row);
-    return [...found.filter((result) => result.group === "pages"), ...found.filter((result) => result.group === "agents"), ...live.results];
-  }, [live.results, scope, t, text]);
+    return [...found.filter((result) => result.group === "pages"), ...found.filter((result) => result.group === "agents"), ...setup.results, ...live.results];
+  }, [live.results, scope, setup.results, t, text]);
   const selected = Math.min(active, Math.max(results.length - 1, 0));
-  const groups = (["pages", "agents", "contacts", "conversations"] as const).filter((group) => results.some((result) => result.group === group));
+  const groups = (["pages", "agents", "knowledge", "services", "employees", "rules", "contacts", "conversations"] as const).filter((group) => results.some((result) => result.group === group));
 
   function go(result: Result | undefined) {
     if (!result) return;
@@ -129,7 +167,7 @@ function SearchPanel({ businessId, onClose }: { businessId: string | undefined; 
         <button aria-label={t("search.keys.close")} className="shrink-0 rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" onClick={onClose} type="button"><Key>Esc</Key></button>
       </div>
       <div aria-label={t("search.title")} className="min-h-0 flex-1 overflow-y-auto p-2" id="search-results" role="listbox">
-        {text.trim() && !results.length && !live.loading ? <p className="type-body-muted px-3 py-6 text-center">{t("search.empty", { query: text.trim() })}</p> : null}
+        {text.trim() && !results.length && !loading ? <p className="type-body-muted px-3 py-6 text-center">{t("search.empty", { query: text.trim() })}</p> : null}
         {groups.map((group) => (
           <div className="pb-1" key={group} role="group" aria-label={t(`search.groups.${group}`)}>
             <p aria-hidden="true" className="type-meta px-3 pt-2 pb-1">{t(`search.groups.${group}`)}</p>
@@ -161,7 +199,7 @@ function SearchPanel({ businessId, onClose }: { businessId: string | undefined; 
             })}
           </div>
         ))}
-        {live.loading ? (
+        {loading ? (
           <div aria-busy="true" aria-label={t("search.loading")} className="pb-1" data-testid="search-live-loading" role="status">
             <Skeleton className="mx-3 mt-2 mb-1 h-4 w-24" />
             {Array.from({ length: 2 }, (_, index) => <div className="flex items-center gap-3 px-3 py-2" key={index}><Skeleton className="size-4 rounded-md" /><Skeleton className="h-4 w-28" /><Skeleton className="h-4 w-40" /></div>)}

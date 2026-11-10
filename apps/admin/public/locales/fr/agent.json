@@ -266,13 +266,11 @@
     }
   },
   "table": {
-    "searchPlaceholder": "Rechercher des elements",
     "title": "Titre",
     "preview": "Apercu",
     "status": "Statut",
     "disabled": "Desactive",
     "added": "Ajoute",
-    "empty": "Aucun element correspondant.",
     "documentPreviewHint": "Cliquez pour previsualiser ce document.",
     "documentPreviewUnavailable": "La previsualisation des documents est disponible sur la page Connaissances."
   },

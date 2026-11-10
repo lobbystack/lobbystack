@@ -21,6 +21,11 @@ function setup({ pendingLive = false } = {}) {
     if (pendingLive && (url.startsWith("/api/contacts") || url.startsWith("/api/inbox"))) return await new Promise<Response>(() => undefined);
     if (url.startsWith("/api/contacts")) return Response.json({ contacts: [{ id: "c1", name: "Marie Tremblay", phone: null, email: null }] });
     if (url.startsWith("/api/inbox")) return Response.json({ items: [{ key: "call:k1", kind: "call", id: "k1", channel: "phone_call", agent: null, contactName: "Marie Tremblay", contactPhone: null, contactEmail: null, preview: null, outcome: null, status: "completed", automationState: null, occurredAt: "2026-11-02T15:00:00Z" }], nextCursor: null, agents: [] });
+    if (url.startsWith("/api/knowledge/snippets")) return Response.json({ snippets: [{ id: "s1", title: "Parking rules" }] });
+    if (url.startsWith("/api/knowledge")) return Response.json({ documents: [{ id: "d1", title: "Price list" }] });
+    if (url.startsWith("/api/catalog")) return Response.json({ currency: "CAD", services: [{ id: "v1", name: "Deep cleaning" }, { id: "v2", name: "Whitening" }] });
+    if (url.startsWith("/api/employees")) return Response.json({ employees: url.includes("search=marie") ? [{ id: "e1", name: "Marie Roy" }] : [], services: [], today: "", pagination: { total: 0 } });
+    if (url.startsWith("/api/rules")) return Response.json([{ id: "r1", title: "Never quote prices for cleaning" }]);
     if (url.startsWith("/api/agents")) return Response.json([{ id: "a1", name: "Front desk", isDefault: true, paused: false, phoneNumbers: 0, widgetKeys: 0, instagramAccounts: 0, createdAt: "", updatedAt: "" }]);
     return Response.json({});
   });
@@ -135,4 +140,32 @@ it("closes from the Esc key badge", async () => {
   await screen.findByRole("combobox");
   fireEvent.click(screen.getByRole("button", { name: "search.keys.close" }));
   await waitFor(() => expect(screen.queryByRole("combobox")).toBeNull());
+});
+
+it("finds knowledge, services, employees and each agent's rules by name, and opens their page", async () => {
+  setup();
+  await type("cleaning");
+  const services = await screen.findByRole("group", { name: "search.groups.services" });
+  expect(within(services).getAllByRole("option").map((option) => option.textContent)).toEqual(["items.business › settingsPages.services›Deep cleaning"]);
+  const rules = await screen.findByRole("group", { name: "search.groups.rules" });
+  fireEvent.click(within(rules).getByRole("option", { name: /Never quote prices/u }));
+  expect(fixture.push).toHaveBeenCalledWith("/agents/a1/rules");
+  cleanup();
+  setup();
+  await type("parking");
+  fireEvent.click(within(await screen.findByRole("group", { name: "search.groups.knowledge" })).getByRole("option", { name: /Parking rules/u }));
+  expect(fixture.push).toHaveBeenCalledWith("/business/knowledge");
+  cleanup();
+  setup();
+  await type("marie");
+  expect(within(await screen.findByRole("group", { name: "search.groups.employees" })).getByRole("option", { name: /Marie Roy/u })).toBeTruthy();
+  expect(urls("/api/employees")).toContain("/api/employees?businessId=business&limit=4&offset=0&search=marie");
+});
+
+it("leaves knowledge, services, employees and rules out for an activity-only business", async () => {
+  fixture.capabilities = ["activity"];
+  setup();
+  await type("cleaning");
+  await screen.findByText(/search.empty/u);
+  for (const prefix of ["/api/knowledge", "/api/catalog", "/api/employees", "/api/rules"]) expect(urls(prefix)).toEqual([]);
 });

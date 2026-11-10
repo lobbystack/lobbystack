@@ -124,7 +124,6 @@ describe("original knowledge row interactions", () => {
     await userEvent.click(screen.getByRole("button", { name: "actions.moreOptions" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: active ? "actions.disable" : "actions.enable" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/knowledge/document?businessId=business", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ active: !active }) })));
-    expect(screen.queryByRole("textbox", { name: "table.searchPlaceholder" })).toBeTruthy();
     expect(fetchMock.mock.calls.some(([url, init]) => url.includes("/document?") && !init?.method)).toBe(false);
   });
   it("keeps document content readable during reindexing", async () => {
@@ -203,21 +202,19 @@ describe("knowledge loading states", () => {
     expect(screen.getByText("table.title")).toBeTruthy();
     expect(skeletons("tbody")).toBe(60);
     expect(skeletons('[aria-hidden="true"]')).toBe(9);
-    expect(screen.queryByPlaceholderText("table.searchPlaceholder")).toBeNull();
   });
-  it("keeps the real header and shows placeholder rows, search and pagination while the entries load", () => {
+  it("keeps the real header and shows placeholder rows and pagination while the entries load", () => {
     renderPending(true);
     expect(screen.getByText("table.title")).toBeTruthy();
     expect(document.querySelector("tbody")?.getAttribute("aria-busy")).toBe("true");
     expect(skeletons("tbody")).toBe(60);
     expect(skeletons('[aria-hidden="true"]')).toBe(9);
     expect(screen.queryByText("sections.knowledge.emptyState")).toBeNull();
-    expect(screen.queryByPlaceholderText("table.searchPlaceholder")).toBeNull();
     expect(screen.queryByRole("button", { name: /sections.knowledge.addKnowledge/ })).toBeNull();
   });
-  it("shows the search box and the add button together once the entries have loaded", async () => {
+  it("shows the add button and no search box once the entries have loaded", async () => {
     setup();
-    expect(await screen.findByPlaceholderText("table.searchPlaceholder")).toBeTruthy();
-    expect(screen.getByRole("button", { name: /sections.knowledge.addKnowledge/ })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: /sections.knowledge.addKnowledge/ })).toBeTruthy();
+    expect(screen.queryByRole("textbox")).toBeNull();
   });
 });
