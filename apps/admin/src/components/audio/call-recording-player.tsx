@@ -354,7 +354,6 @@ export function CallRecordingPlayer({
     audio.pause();
   }
 
-  // Space plays and pauses while the waveform has focus; the rest of the page keeps its own scrolling.
   function seekTo(nextTime: number) {
     if (duration <= 0) {
       // The first seek on a recording that hasn't loaded yet starts the download, so the next one knows its length.
