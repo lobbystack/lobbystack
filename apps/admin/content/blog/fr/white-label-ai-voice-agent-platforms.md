@@ -52,7 +52,7 @@ Nous avons aussi voulu inclure CallFluent. Son site ne s'est pas chargé chez no
 
 La [FAQ des prix de Frontdesk](https://www.myaifrontdesk.com/pricing) indique que ses offres partenaires en marque blanche sont sur mesure et commencent à 500 $ par mois. Les partenaires achètent à un tarif de gros, revendent sous leur propre marque et gèrent les paliers, les lots de minutes et la facturation à l'usage par l'intégration Stripe intégrée, sans prix plancher ni plafond. La même FAQ place l'accès direct à l'API dans les offres Partner et Enterprise.
 
-Son [tutoriel sur les domaines personnalisés](https://www.myaifrontdesk.com/reseller-tutorials/add-your-custom-domain-to-ai-front-desk-full-tutorial) précise que seuls les sous-domaines sont pris en charge. La [page partenaires](https://www.myaifrontdesk.com/white-label) commence maintenant par un formulaire de candidature, et l'équipe partenariats étudie chaque demande avant un appel d'intégration.
+Son [tutoriel sur les domaines personnalisés](https://web.archive.org/web/20260214072459/https://www.myaifrontdesk.com/reseller-tutorials/add-your-custom-domain-to-ai-front-desk-full-tutorial) précisait que seuls les sous-domaines étaient pris en charge. En septembre 2026, sa [page partenaires](https://web.archive.org/web/20260925022219/https://www.myaifrontdesk.com/white-label) commençait par un formulaire de candidature, et l'équipe partenariats étudiait chaque demande avant un appel d'intégration.
 
 Frontdesk convient à une agence qui veut une réceptionniste hébergée éprouvée, avec SMS, clavardage et outils CRM, et qui peut s'engager à 500 $ par mois. Notre [article sur l'alternative à My AI Front Desk](/fr/blog/my-ai-front-desk-alternative/) compare les offres directes.
 

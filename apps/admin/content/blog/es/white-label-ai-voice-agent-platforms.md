@@ -52,7 +52,7 @@ También intentamos incluir CallFluent. Su sitio no nos cargó el 27 de octubre 
 
 Las [preguntas frecuentes de precios de Frontdesk](https://www.myaifrontdesk.com/pricing) indican que sus planes de socio de marca blanca son a medida y empiezan en $500 al mes. Los socios compran a precio mayorista, revenden con su propia marca y controlan los niveles, los paquetes de minutos y la facturación por uso mediante la integración con Stripe que incluye la plataforma, sin precio mínimo ni máximo. Las mismas preguntas frecuentes incluyen el acceso directo a la API en Partner y Enterprise.
 
-Su [tutorial de dominio propio](https://www.myaifrontdesk.com/reseller-tutorials/add-your-custom-domain-to-ai-front-desk-full-tutorial) dice que solo admite subdominios. La [página de socios](https://www.myaifrontdesk.com/white-label) ahora empieza con un formulario de solicitud, y el equipo de alianzas revisa cada una antes de una llamada de incorporación.
+Su [tutorial de dominio propio](https://web.archive.org/web/20260214072459/https://www.myaifrontdesk.com/reseller-tutorials/add-your-custom-domain-to-ai-front-desk-full-tutorial) decía que solo admitía subdominios. En septiembre de 2026, su [página de socios](https://web.archive.org/web/20260925022219/https://www.myaifrontdesk.com/white-label) empezaba con un formulario de solicitud, y el equipo de alianzas revisaba cada una antes de una llamada de incorporación.
 
 Frontdesk encaja con una agencia que quiere una recepcionista alojada y madura, con SMS, chat y herramientas de CRM, y puede comprometerse a $500 al mes. Nuestro [artículo sobre la alternativa a Frontdesk](/es/blog/my-ai-front-desk-alternative/) compara los productos directos.
 

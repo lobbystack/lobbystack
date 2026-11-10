@@ -49,7 +49,7 @@ Few freelancers publish their rates. The two placement agencies for Quebec we fo
 | Agency | Published hourly rate | Other published fees |
 |---|---|---|
 | [Adjointe Virtuelle Propulsion](https://www.adjointevirtuellepropulsion.net/plans-tarifs) (Quebec City) | $15.35 to $19.95 an hour, by plan | Recruiting $588, onboarding from $688 |
-| [AV du Nord](https://avdunord.ca/adjointe-virtuelle-tarif-comparatif-au-quebec/) | From $9.99 an hour | Not listed on the page |
+| [AV du Nord](https://web.archive.org/web/20251113110512/https://avdunord.ca/adjointe-virtuelle-tarif-comparatif-au-quebec/) | From $9.99 an hour | Not listed on the page |
 
 These agencies place an assistant who works for you part-time. A freelancer sets their own rate and sometimes bills a minimum number of hours a month. Always ask for a written price, with taxes.
 

@@ -49,7 +49,7 @@ Pocas profesionales independientes publican su tarifa. Las dos agencias de coloc
 | Agencia | Tarifa por hora publicada | Otros cargos publicados |
 |---|---|---|
 | [Adjointe Virtuelle Propulsion](https://www.adjointevirtuellepropulsion.net/plans-tarifs) (Ciudad de Quebec) | De CAD 15.35 a CAD 19.95 por hora según el plan | Reclutamiento CAD 588, integración desde CAD 688 |
-| [AV du Nord](https://avdunord.ca/adjointe-virtuelle-tarif-comparatif-au-quebec/) | Desde CAD 9.99 por hora | No se indican en la página |
+| [AV du Nord](https://web.archive.org/web/20251113110512/https://avdunord.ca/adjointe-virtuelle-tarif-comparatif-au-quebec/) | Desde CAD 9.99 por hora | No se indican en la página |
 
 Estas agencias le asignan una asistente que trabaja para usted a tiempo parcial. Una profesional independiente fija su propia tarifa y a veces cobra un mínimo de horas al mes. Pida siempre un precio por escrito, con impuestos.
 
