@@ -1,6 +1,6 @@
 ---
 title: "Suivre votre espace de travail depuis l'Accueil"
-description: "Consultez les appels, messages et rendez-vous du mois, les suivis qui attendent encore une personne et vos prochaines réservations depuis la page Accueil de LobbyStack."
+description: "Consultez ce que votre agent a réservé et fait gagner sur les 30 derniers jours, les suivis qui attendent encore une personne et vos prochaines réservations depuis la page Accueil de LobbyStack."
 sidebarTitle: "Accueil"
 contentType: "How-to"
 ---
@@ -27,9 +27,9 @@ L'Accueil commence par **Premiers pas**, une liste d'étapes de configuration. I
 | Section | À quoi elle sert |
 | --- | --- |
 | **Carte de configuration** | Votre prochaine étape de configuration pendant vos débuts, comme un appel test dans le navigateur, un numéro d'essai gratuit ou le renvoi d'appel. |
-| **Indicateurs clés** | Le nombre d'appels, de messages, de rendez-vous et de contacts du mois. |
 | **Action requise** | Les tâches de suivi qui attendent encore une réponse humaine, comme les rappels, les demandes de prise en charge par un humain, les annulations et les reports, chacune avec son type, et un lien vers les questions auxquelles votre agent n'a pas su répondre. Cliquez sur une ligne pour l'ouvrir. |
 | **À venir** | Les prochains rendez-vous réservés dans le calendrier. Cliquez sur un rendez-vous pour ouvrir ses détails, avec **Annuler** et **Déplacer**. |
+| **Valeur réservée**, **Temps gagné**, **Appels sans transfert** | Ce que votre agent a réservé, le temps de conversation qu'il a pris en charge et la part des appels qu'il a terminés sans transfert sur les 30 derniers jours. |
 | **Appels par mois** | Un graphique du volume d'appels mensuel, établi à partir des appels enregistrés. |
 | **Appels récents** | Les derniers appels entrants, avec l'appelant, l'heure et le résultat. |
 
@@ -49,6 +49,26 @@ L'Accueil commence par **Premiers pas**, une liste d'étapes de configuration. I
     Dans l'onglet **Détails** de l'appel, cliquez sur **Marquer comme fait** une fois que votre équipe a fait le suivi. Vous y approuvez aussi les demandes d'annulation ou de report.
   </Step>
 </Steps>
+
+## Voir ce que votre agent a réservé et fait gagner
+
+Les trois chiffres sous **À venir** et **Action requise** couvrent les 30 derniers jours. Chacun indique son évolution par rapport aux 30 jours précédents.
+
+| Chiffre | Comment LobbyStack le calcule |
+| --- | --- |
+| **Valeur réservée** | Le prix de chaque rendez-vous que votre agent a pris par appel, SMS ou chat pendant ces 30 jours, après la remise éventuelle du service. Un prix fixe compte en entier, un prix « à partir de » pour son minimum et une fourchette pour son bas. |
+| **Temps gagné** | Le temps de conversation des appels traités par votre agent, en heures et en minutes. |
+| **Appels sans transfert** | La part de ces appels qui se sont terminés sans que votre agent transfère l'appelant à votre équipe. |
+
+La valeur réservée exclut :
+
+- Les rendez-vous annulés
+- Les rendez-vous que votre équipe a pris dans le tableau de bord ou par l'API
+- Les services dont le prix est fixé sur place ou qui n'ont pas de prix
+
+LobbyStack utilise le prix actuel de chaque service : si vous changez un prix, l'estimation change aussi pour les dates passées. Le montant s'affiche dans la devise de votre entreprise.
+
+Le temps gagné et la part sans transfert excluent les appels indésirables et les appels de moins de 10 secondes, soit les appels que votre forfait ne facture pas. Les chats du site web ne comptent pas dans le temps gagné, car ils n'ont pas de temps de conversation.
 
 ## Répondre aux questions que votre agent n'a pas su traiter
 

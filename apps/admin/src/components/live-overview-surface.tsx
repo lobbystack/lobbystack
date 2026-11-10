@@ -27,18 +27,19 @@ import { LiveSetupGuideSurface, useSetupGuide } from "@/components/live-setup-gu
 import { needsHoursForBooking, useBusinessHours } from "@/components/business-hours-section";
 import { AppointmentDetailsSheet } from "@/components/appointment-details-sheet";
 import { appointmentSummary } from "@/components/cancel-appointment-button";
-import { HiddenTextSkeleton, MetricCardGridSkeleton, SetupGuideSkeleton } from "@/components/loading-skeletons";
+import { HiddenTextSkeleton, ResultsRowSkeleton, SetupGuideSkeleton } from "@/components/loading-skeletons";
+import { RowChevron } from "@/components/row-chevron";
+import { formatBookedValue, formatTimeSaved } from "@/lib/analytics-results";
+import type { AnalyticsResultsViewModel } from "@/lib/page-view-models";
 import { Item, ItemActions, ItemHeader, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Surface } from "@/components/ui/surface";
 import { intlLocale, formatDateTime } from "@/lib/locale";
-import { formatDuration } from "@/lib/duration";
-import { hasEnded, useAppointments, type Appointment } from "@/hooks/use-appointments";
+import { type Appointment } from "@/hooks/use-appointments";
 import { fetchUnansweredQuestions, UNANSWERED_QUESTIONS_ANCHOR, unansweredQuestionsQueryKey } from "@/components/unanswered-questions-section";
 import { useBusinessCan } from "@/components/business-capabilities-provider";
 import { useActiveBusiness } from "@/hooks/use-active-business";
-import { dayKey } from "@/lib/calendar-days";
 import { isSetupGuideFinished, SETUP_STEP_ORDER, showsSetupGuide } from "@/lib/setup-guide";
 
 const OverviewCallChart = dynamic(() => import("./overview-call-chart").then((module) => module.OverviewCallChart), {
@@ -48,12 +49,8 @@ const OverviewCallChart = dynamic(() => import("./overview-call-chart").then((mo
 
 type DashboardSummary = {
   businessId: string;
-  kpis: {
-    calls: { total: number; deltaPercent: number };
-    messages: { total: number; deltaPercent: number };
-    appointments: { total: number; deltaPercent: number };
-    averageDuration: { totalSeconds: number; deltaSeconds: number };
-  };
+  /** Booked value, time saved and calls without transfer over the last 30 days, each with the 30 days before. */
+  results: AnalyticsResultsViewModel;
   monthlyCalls: Array<{ monthStart: string; total: number }>;
   recentCalls: Array<{ id: string; startedAt: string; status: string; transport?: string | null; durationSeconds: number; contactName: string | null; contactPhone: string | null; contactEmail?: string | null }>;
   /** How many requests are open in all; Home lists the newest few. */
@@ -83,7 +80,6 @@ export function LiveOverviewSurface() {
   const businessId = summary.data?.businessId;
   // The Upcoming row whose details are open. Looked up by id, so the sheet closes by itself once its appointment is cancelled.
   const [detailsId, setDetailsId] = useState<string | null>(null);
-  const { appointments } = useAppointments();
   const { t: tKnowledge } = useTranslation("knowledge");
   // Only owners and admins answer questions, and their routes need setup, which an activity-only business leaves to its partner.
   const { business } = useActiveBusiness();
@@ -115,17 +111,7 @@ export function LiveOverviewSurface() {
   }, [businessId, queryClient]);
 
   const openRequests = summary.data?.actionRequiredCount ?? summary.data?.actionRequired.length ?? 0;
-  const today = summary.data ? todaysAppointments(appointments.data?.appointments, summary.data.upcoming[0]?.timezone) : null;
-  const metrics = summary.data ? [
-    { key: "calls", value: summary.data.kpis.calls.total.toLocaleString(intlLocale(i18n.language)), description: formatDelta(summary.data.kpis.calls.deltaPercent, t) },
-    today
-      ? { key: "today", value: today.count.toLocaleString(intlLocale(i18n.language)), description: today.next ? t("home.metrics.today.next", { time: formatDateTime(today.next.startsAt, i18n.language, { hour: "numeric", minute: "2-digit", timeZone: today.next.timezone }) }) : t("home.metrics.today.none") }
-      : { key: "appointments", value: summary.data.kpis.appointments.total.toLocaleString(intlLocale(i18n.language)), description: formatDelta(summary.data.kpis.appointments.deltaPercent, t) },
-    { key: "averageDuration", value: formatDuration(summary.data.kpis.averageDuration.totalSeconds), description: formatDurationDelta(summary.data.kpis.averageDuration.deltaSeconds, t) },
-  ] as const : [];
-
-  // Today's count replaces the appointments total once the list loads, so that card stays a placeholder until then.
-  const metricsLoading = summary.isLoading || (Boolean(summary.data) && appointments.isPending);
+  const results = summary.data?.results ? homeResults(summary.data.results, i18n.language, t) : [];
 
   if (summary.data?.firstRealConversationAt === null && !business) return <PageHeader title={t("home.title")} />;
 
@@ -185,7 +171,7 @@ export function LiveOverviewSurface() {
                                             <span className="min-w-0 overflow-hidden line-clamp-2">
                                               {displayTitle}
                                             </span>
-                                            <ChevronRight className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+                                            <RowChevron className="mt-0.5" />
                                           </Link>
                                         </ItemTitle>
                                       ) : (
@@ -256,7 +242,7 @@ export function LiveOverviewSurface() {
                   return <div key={appointment.id}>
                     {/* The whole row opens the appointment's details, as a row on the appointments page does. */}
                     <button className="-mx-2 grid w-[calc(100%+1rem)] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 rounded-lg px-2 py-2 text-left outline-none transition-colors hover:bg-muted/50 focus-visible:ring-[3px] focus-visible:ring-ring/50" onClick={() => setDetailsId(appointment.id)} type="button">
-                      <span className="flex min-w-0 flex-wrap items-center gap-2"><span className="type-item-title">{contactName}</span><Badge variant="outline">{getAppointmentStatusLabel(appointment.status, t)}</Badge><Badge variant="secondary">{getChannelLabel(appointment.sourceChannel, t)}</Badge></span>
+                      <span className="flex min-w-0 flex-wrap items-center gap-2"><span className="inline-flex min-w-0 items-center gap-1"><span className="type-item-title">{contactName}</span><RowChevron /></span><Badge variant="outline">{getAppointmentStatusLabel(appointment.status, t)}</Badge><Badge variant="secondary">{getChannelLabel(appointment.sourceChannel, t)}</Badge></span>
                       <span className="type-item-title text-right">{formatDateTime(appointment.startsAt, i18n.language, { weekday: "short", month: "short", day: "numeric", timeZone: appointment.timezone })}</span>
                       <span className="type-body-muted flex min-w-0 items-center gap-1.5">
                         <span className="truncate">{appointment.serviceName ?? t("home.upcoming.unknownService")}</span>
@@ -276,21 +262,17 @@ export function LiveOverviewSurface() {
             <UpcomingDetails appointments={summary.data?.upcoming ?? []} id={detailsId} onClose={() => setDetailsId(null)} />
           </section>
         </div>
-        {metricsLoading ? <MetricCardGridSkeleton count={3} titles={[t("home.metrics.calls.title"), t("home.metrics.appointments.title"), t("home.metrics.averageDuration.title")]} /> : (
-          <Surface className="grid sm:grid-cols-2 md:grid-cols-3">
-            {metrics.map((metric) => (
-              <section className="border-b p-5 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0 md:border-b-0 md:border-r md:last:border-r-0" key={metric.key}>
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-2">
-                    <h2 className="type-card-title text-foreground">{t(`home.metrics.${metric.key}.title`)}</h2>
-                    <p className="text-4xl font-normal tracking-normal text-foreground tabular-nums">{metric.value}</p>
-                  </div>
-                  <p className="type-meta">{metric.description}</p>
-                </div>
+        {summary.isLoading ? <ResultsRowSkeleton titles={RESULT_KEYS.map((key) => t(`home.results.${key}`))} /> : results.length ? (
+          <Surface className="grid sm:grid-cols-3">
+            {results.map((result) => (
+              <section className="flex min-w-0 flex-col gap-2 border-b p-6 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0" key={result.key}>
+                <h2 className="type-card-title text-foreground">{t(`home.results.${result.key}`)}</h2>
+                <p className="text-4xl font-normal tracking-normal break-words text-foreground tabular-nums">{result.value}</p>
+                {result.description ? <p className="type-meta">{result.description}</p> : null}
               </section>
             ))}
           </Surface>
-        )}
+        ) : null}
         {summary.isLoading ? <OverviewChartSkeleton chartTitle={t("home.chart.title")} recentCallsTitle={t("home.recentCalls.title")} /> : <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
           <Card className="col-span-1 lg:col-span-4"><CardHeader><CardTitle>{t("home.chart.title")}</CardTitle></CardHeader><CardContent className="ps-2"><OverviewCallChart data={(summary.data?.monthlyCalls ?? []).map((item) => ({ name: formatDateTime(item.monthStart, i18n.language, { month: "short", timeZone: "UTC" }), total: item.total }))} /></CardContent></Card>
           <Card className="ph-mask col-span-1 lg:col-span-3"><CardHeader><CardTitle>{t("home.recentCalls.title")}</CardTitle><CardDescription>{t("home.recentCalls.description", { count: summary.data?.recentCalls.length ?? 0 })}</CardDescription></CardHeader><CardContent><div className="flex flex-col gap-6">{(summary.data?.recentCalls ?? []).map((call) => <div className="flex items-center gap-4" key={call.id}><Avatar className="h-9 w-9"><AvatarFallback>{initials(call.contactName)}</AvatarFallback></Avatar><div className="flex flex-1 flex-wrap items-center justify-between"><div className="flex flex-col gap-1"><p className="type-item-title leading-none">{getContactDisplayName({ name: call.contactName, phone: call.contactPhone, email: call.contactEmail, channels: [call.transport] }, i18n.language, t)}</p><p className="type-body-muted">{call.contactName && hasDisplayablePhone(call.contactPhone) ? formatPhoneNumberDisplay(call.contactPhone, i18n.language) : formatDateTime(call.startedAt, i18n.language, { dateStyle: "medium", timeStyle: "short" })}</p></div><div className="type-item-title">{call.durationSeconds ? t("home.recentCalls.durationValue", { value: call.durationSeconds }) : call.status}</div></div></div>)}</div></CardContent></Card>
@@ -300,24 +282,33 @@ export function LiveOverviewSurface() {
   );
 }
 
-/** Appointments still to come today in the business's time zone, and the next one; null until the list loads. */
-function todaysAppointments(rows: Array<{ startsAt: string; endsAt: string; timezone: string; status: string }> | undefined, fallbackTimeZone: string | undefined): { count: number; next: { startsAt: string; timezone: string } | undefined } | null {
-  if (!rows) return null;
-  const now = Date.now();
-  const timeZone = rows[0]?.timezone ?? fallbackTimeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const today = dayKey(new Date(now), timeZone);
-  const todays = rows.filter((row) => row.status !== "canceled" && !hasEnded(row, now) && dayKey(row.startsAt, timeZone) === today);
-  return { count: todays.length, next: todays.find((row) => Date.parse(row.startsAt) > now) };
+const RESULT_KEYS = ["bookedValue", "timeSaved", "withoutTransfer"] as const;
+
+type DashboardT = ReturnType<typeof useTranslation<"dashboard">>["t"];
+
+/** Home's results row, each compared with the 30 days before. */
+function homeResults(results: AnalyticsResultsViewModel, language: string, t: DashboardT): Array<{ key: (typeof RESULT_KEYS)[number]; value: string; description: string | null }> {
+  const withoutTransfer = results.callsWithoutTransferPercent;
+  const points = new Intl.NumberFormat(intlLocale(language), { maximumFractionDigits: 1 });
+  return [
+    { key: "bookedValue", value: formatBookedValue(results.bookedValue.current, results.bookedValue.currency, language), description: formatPercentDelta(results.bookedValue.current, results.bookedValue.previous, t) },
+    { key: "timeSaved", value: formatTimeSaved(results.timeSavedSeconds.current, language), description: formatPercentDelta(results.timeSavedSeconds.current, results.timeSavedSeconds.previous, t) },
+    {
+      key: "withoutTransfer",
+      value: withoutTransfer.current == null ? "—" : new Intl.NumberFormat(intlLocale(language), { style: "percent", maximumFractionDigits: 1 }).format(withoutTransfer.current / 100),
+      // A share moves in percentage points, and there's nothing to compare while either period has no calls.
+      description: withoutTransfer.current == null ? null
+        : withoutTransfer.previous == null ? t("delta.noPreviousCalls")
+        : withoutTransfer.current === withoutTransfer.previous ? t("delta.flat")
+        : t(withoutTransfer.current > withoutTransfer.previous ? "delta.pointsUp" : "delta.pointsDown", { value: points.format(Math.abs(withoutTransfer.current - withoutTransfer.previous)) }),
+    },
+  ];
 }
 
-function formatDelta(value: number, t: ReturnType<typeof useTranslation<"dashboard">>["t"]): string {
-  if (value === 0) return t("delta.flat");
+function formatPercentDelta(current: number, previous: number, t: DashboardT): string {
+  if (current === previous) return t("delta.flat");
+  const value = previous === 0 ? 100 : ((current - previous) / previous) * 100;
   return value > 0 ? t("delta.up", { value: Math.abs(value).toFixed(1) }) : t("delta.down", { value: Math.abs(value).toFixed(1) });
-}
-
-function formatDurationDelta(value: number, t: ReturnType<typeof useTranslation<"dashboard">>["t"]): string {
-  if (value === 0) return t("delta.flat");
-  return value > 0 ? t("delta.durationUp", { value: formatDuration(Math.abs(value)) }) : t("delta.durationDown", { value: formatDuration(Math.abs(value)) });
 }
 
 /** The details sheet the appointments page uses, for the Upcoming row that was clicked. */

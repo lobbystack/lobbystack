@@ -3,8 +3,9 @@
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useUrlState } from "@/hooks/use-url-state";
 import { useAgents } from "@/hooks/use-agents";
+import { useAppointments } from "@/hooks/use-appointments";
+import { todaysAppointments } from "@/lib/todays-appointments";
 import { AgentBreakdown, AgentBreakdownSkeleton } from "@/components/analytics/agent-breakdown";
-import { formatBookedValue, formatTimeSaved } from "@/lib/analytics-results";
 import { formatDuration } from "@/lib/duration";
 import { subscribeRealtimeQuery } from "@/lib/realtime-query";
 
@@ -27,10 +28,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { AnalyticsControlsSkeleton } from "@/components/loading-skeletons";
+import { AnalyticsControlsSkeleton, MetricCardGridSkeleton } from "@/components/loading-skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
-import { intlLocale } from "@/lib/locale";
+import { formatDateTime, intlLocale } from "@/lib/locale";
 import type { AnalyticsChartPoint } from "./analytics-charts";
 
 const AnalyticsOverviewChart = dynamic(() => import("./analytics-charts").then((module) => module.AnalyticsOverviewChart), { ssr: false, loading: () => <Skeleton className="h-[300px] w-full" /> });
@@ -103,6 +104,10 @@ function percentDelta(current: number, previous: number, t: (...args: any[]) => 
   return String(value >= 0 ? t("home.analytics.metrics.percentUp", { value: Math.abs(value).toFixed(1) }) : t("home.analytics.metrics.percentDown", { value: Math.abs(value).toFixed(1) }));
 }
 
+function durationDelta(current: number, previous: number, t: ReturnType<typeof useTranslation<"dashboard">>["t"]): string {
+  if (current === previous) return t("home.analytics.metrics.flat");
+  return t(current > previous ? "home.analytics.metrics.durationUp" : "home.analytics.metrics.durationDown", { value: formatDuration(Math.abs(current - previous)) });
+}
 
 export function LiveAnalyticsSurface() {
   const { i18n, t } = useTranslation("dashboard");
@@ -161,24 +166,20 @@ export function LiveAnalyticsSurface() {
     { key: "calls" as const, title: t("home.analytics.cards.calls"), value: data.calls.current.toLocaleString(intlLocale(i18n.language)), description: percentDelta(data.calls.current, data.calls.previous, t) },
     { key: "messages" as const, title: t("home.analytics.cards.messages"), value: data.messages.current.toLocaleString(intlLocale(i18n.language)), description: percentDelta(data.messages.current, data.messages.previous, t) },
     { key: "appointments" as const, title: t("home.analytics.cards.appointments"), value: data.appointments.current.toLocaleString(intlLocale(i18n.language)), description: percentDelta(data.appointments.current, data.appointments.previous, t) },
-    { key: "agentResponseSeconds" as const, title: t("home.analytics.cards.agentResponseTime"), value: formatDuration(data.agentResponseSeconds.current), description: data.agentResponseSeconds.current === data.agentResponseSeconds.previous ? t("home.analytics.metrics.flat") : t(data.agentResponseSeconds.current > data.agentResponseSeconds.previous ? "home.analytics.metrics.durationUp" : "home.analytics.metrics.durationDown", { value: formatDuration(Math.abs(data.agentResponseSeconds.current - data.agentResponseSeconds.previous)) }) },
+    { key: "agentResponseSeconds" as const, title: t("home.analytics.cards.agentResponseTime"), value: formatDuration(data.agentResponseSeconds.current), description: durationDelta(data.agentResponseSeconds.current, data.agentResponseSeconds.previous, t) },
   ] : [];
-  const withoutTransfer = data?.callsWithoutTransferPercent;
-  const percentFormat = new Intl.NumberFormat(intlLocale(i18n.language), { style: "percent", maximumFractionDigits: 1 });
-  const pointsFormat = new Intl.NumberFormat(intlLocale(i18n.language), { maximumFractionDigits: 1 });
-  const results = data ? [
-    { key: "bookedValue", value: formatBookedValue(data.bookedValue.current, data.bookedValue.currency, i18n.language), description: percentDelta(data.bookedValue.current, data.bookedValue.previous, t) },
-    { key: "timeSaved", value: formatTimeSaved(data.timeSavedSeconds.current, i18n.language), description: percentDelta(data.timeSavedSeconds.current, data.timeSavedSeconds.previous, t) },
-    {
-      key: "withoutTransfer",
-      value: withoutTransfer?.current == null ? "—" : percentFormat.format(withoutTransfer.current / 100),
-      // A share moves in percentage points, and there's nothing to compare while either period has no calls.
-      description: withoutTransfer?.current == null ? null
-        : withoutTransfer.previous == null ? t("home.analytics.metrics.noPreviousCalls")
-        : withoutTransfer.current === withoutTransfer.previous ? t("home.analytics.metrics.flat")
-          : t(withoutTransfer.current > withoutTransfer.previous ? "home.analytics.metrics.pointsUp" : "home.analytics.metrics.pointsDown", { value: pointsFormat.format(Math.abs(withoutTransfer.current - withoutTransfer.previous)) }),
-    },
+  // Calls and average duration follow the picked dates; Today always covers today, from the appointments list.
+  const { appointments } = useAppointments();
+  const today = todaysAppointments(appointments.data?.appointments, business?.timezone);
+  const overview = data ? [
+    { key: "calls", value: data.calls.current.toLocaleString(intlLocale(i18n.language)), description: percentDelta(data.calls.current, data.calls.previous, t) },
+    today
+      ? { key: "today", value: today.count.toLocaleString(intlLocale(i18n.language)), description: today.next ? t("home.analytics.overview.today.next", { time: formatDateTime(today.next.startsAt, i18n.language, { hour: "numeric", minute: "2-digit", timeZone: today.next.timezone }) }) : t("home.analytics.overview.today.none") }
+      // Without the appointments list, the card counts the period's appointments instead.
+      : { key: "appointments", value: data.appointments.current.toLocaleString(intlLocale(i18n.language)), description: percentDelta(data.appointments.current, data.appointments.previous, t) },
+    { key: "averageDuration", value: formatDuration(data.averageCallDurationSeconds.current), description: durationDelta(data.averageCallDurationSeconds.current, data.averageCallDurationSeconds.previous, t) },
   ] as const : [];
+  const overviewSkeleton = <MetricCardGridSkeleton count={3} titles={[t("home.analytics.overview.calls.title"), t("home.analytics.overview.today.title"), t("home.analytics.overview.averageDuration.title")]} />;
   const channelShares = channelPercentages(data?.channels);
   // Other only holds channels the dashboard can't label, so it stays hidden while empty.
   const channelItems = ANALYTICS_CHANNELS.filter((channel) => channel !== "other" || (data?.channels.other ?? 0) > 0).map((channel) => ({
@@ -195,9 +196,9 @@ export function LiveAnalyticsSurface() {
       </>}
     </div></div>
     {businesses.isError || analytics.isError ? <Surface className="p-8 text-center text-sm text-destructive">Analytics are unavailable.</Surface> : null}
-    {loading ? <AnalyticsSkeleton /> : null}
+    {loading ? <>{overviewSkeleton}<AnalyticsSkeleton /></> : null}
     {loading && severalAgents ? <AgentBreakdownSkeleton rows={workspaceAgents.length} /> : null}
-    {data ? <div aria-busy={analytics.isPlaceholderData || undefined} className={`flex flex-col gap-4 transition-opacity ${analytics.isPlaceholderData ? "opacity-60" : ""}`}><Surface className="grid sm:grid-cols-3">{results.map((result) => <section className="flex min-w-0 flex-col gap-2 border-b p-6 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0" key={result.key}><h2 className="type-card-title text-foreground">{t(`home.analytics.results.${result.key}`)}</h2><p className="text-4xl font-normal tracking-normal break-words text-foreground tabular-nums">{result.value}</p>{result.description ? <p className="type-meta">{result.description}</p> : null}</section>)}</Surface>
+    {data ? <div aria-busy={analytics.isPlaceholderData || undefined} className={`flex flex-col gap-4 transition-opacity ${analytics.isPlaceholderData ? "opacity-60" : ""}`}>{appointments.isPending ? overviewSkeleton : <Surface className="grid sm:grid-cols-2 md:grid-cols-3">{overview.map((metric) => <section className="border-b p-5 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0 md:border-b-0 md:border-r md:last:border-r-0" key={metric.key}><div className="flex flex-col gap-4"><div className="flex flex-col gap-2"><h2 className="type-card-title text-foreground">{t(`home.analytics.overview.${metric.key}.title`)}</h2><p className="text-4xl font-normal tracking-normal text-foreground tabular-nums">{metric.value}</p></div><p className="type-meta">{metric.description}</p></div></section>)}</Surface>}
       <Card><CardHeader><CardTitle>{t("home.analytics.chart.title")}</CardTitle><CardDescription>{t("home.analytics.chart.description")}</CardDescription></CardHeader><CardContent className="px-6"><AnalyticsOverviewChart data={chartData} /></CardContent></Card>
       <Surface className="grid sm:grid-cols-2">{metrics.map((metric) => <section className="border-b p-6 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0" key={metric.key}><div className="flex min-h-32 flex-col gap-6"><div className="flex flex-col gap-5"><h2 className="type-card-title text-foreground">{metric.title}</h2><div className="flex flex-col gap-3"><p className="text-5xl font-normal tracking-normal text-foreground tabular-nums">{metric.value}</p><div className="flex items-center gap-2 text-base text-muted-foreground"><span className="size-3 rounded-full border-2 border-primary" /><span>{rangeLabel}</span></div></div></div><AnalyticsMetricChart data={chartData} dataKey={metric.key} label={metric.title} {...(metric.key === "agentResponseSeconds" ? { formatValue: formatDuration } : {})} /><p className="type-meta">{metric.description}</p></div></section>)}</Surface>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2"><Card><CardHeader><CardTitle>{t("home.analytics.outcomes.title")}</CardTitle><CardDescription>{t("home.analytics.outcomes.description")}</CardDescription></CardHeader><CardContent><BarList items={data.outcomes.map((item) => ({ name: t(`home.analytics.outcomes.labels.${item.outcome}`), value: item.count, ...(OUTCOME_ICONS[item.outcome] ? { icon: OUTCOME_ICONS[item.outcome] } : {}) }))} /></CardContent></Card><Card><CardHeader><CardTitle>{t("home.analytics.channels.title")}</CardTitle><CardDescription>{t("home.analytics.channels.description")}</CardDescription></CardHeader><CardContent><BarList muted items={channelItems} suffix="%" /></CardContent></Card></div>{severalAgents && data.agents?.length ? <AgentBreakdown agents={data.agents} /> : null}</div> : null}
@@ -221,15 +222,6 @@ function AnalyticsSkeleton() {
 
   return (
     <>
-      <Surface className="grid sm:grid-cols-3">
-        {Array.from({ length: 3 }).map((_, index) => (
-          <section className="flex min-w-0 flex-col gap-2 border-b p-6 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0" key={index}>
-            <Skeleton className="h-5 w-28" />
-            <Skeleton className="h-10 w-24" />
-            <Skeleton className="h-4 w-32" />
-          </section>
-        ))}
-      </Surface>
       <Card>
         <CardHeader>
           <Skeleton className="h-5 w-32" />

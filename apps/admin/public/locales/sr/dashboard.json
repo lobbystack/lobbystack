@@ -12,7 +12,10 @@
     "up": "+{{value}}% u odnosu na prošli mesec",
     "down": "-{{value}}% u odnosu na prošli mesec",
     "durationUp": "+{{value}} u odnosu na prošli mesec",
-    "durationDown": "-{{value}} u odnosu na prošli mesec"
+    "durationDown": "-{{value}} u odnosu na prošli mesec",
+    "pointsUp": "+{{value}} p. p. u odnosu na prošli mesec",
+    "pointsDown": "-{{value}} p. p. u odnosu na prošli mesec",
+    "noPreviousCalls": "Nema poziva prethodnog meseca"
   },
   "home": {
     "title": "Početna",
@@ -88,36 +91,41 @@
           "other": "Ostalo"
         }
       },
-      "results": {
-        "bookedValue": "Vrednost termina",
-        "timeSaved": "Ušteđeno vreme",
-        "withoutTransfer": "Pozivi bez preusmeravanja"
-      },
       "agents": {
         "title": "Po agentu",
         "calls": "Pozivi",
         "chats": "Četovi",
         "removed": "Uklonjen"
+      },
+      "overview": {
+        "calls": {
+          "title": "Pozivi"
+        },
+        "today": {
+          "title": "Danas",
+          "next": "Sledeći u {{time}}",
+          "none": "Ništa više danas"
+        },
+        "appointments": {
+          "title": "Termini"
+        },
+        "averageDuration": {
+          "title": "Prosečno trajanje"
+        }
       }
+    },
+    "results": {
+      "bookedValue": "Vrednost termina",
+      "timeSaved": "Ušteđeno vreme",
+      "withoutTransfer": "Pozivi bez preusmeravanja"
     },
     "metrics": {
       "loading": "Učitavanje mesečnog poređenja...",
-      "today": {
-        "title": "Danas",
-        "next": "Sledeći u {{time}}",
-        "none": "Ništa više danas"
-      },
       "calls": {
         "title": "Pozivi"
       },
       "messages": {
         "title": "Poruke"
-      },
-      "appointments": {
-        "title": "Termini"
-      },
-      "averageDuration": {
-        "title": "Prosečno trajanje"
       },
       "contacts": {
         "title": "Kontakti"

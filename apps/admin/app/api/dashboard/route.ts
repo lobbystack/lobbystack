@@ -8,7 +8,7 @@ import {
   contacts,
   conversations,
 } from "@lobbystack/db";
-import { countOpenVoiceFollowUps, listOpenVoiceFollowUps, listRecentCalls, listUpcomingAppointments, readFirstRealConversationAt } from "@lobbystack/domain";
+import { countOpenVoiceFollowUps, listOpenVoiceFollowUps, readAnalyticsResults, listRecentCalls, listUpcomingAppointments, readFirstRealConversationAt } from "@lobbystack/domain";
 import { operatorRoute } from "@/lib/operator-request";
 
 export const dynamic = "force-dynamic";
@@ -17,13 +17,7 @@ const DAY_MS = 24 * 60 * 60 * 1_000;
 /** How many open requests Home lists. */
 const ACTION_REQUIRED_SHOWN = 6;
 
-/** Percent change between two reporting periods, matching the previous dashboard math. */
-function percentageDelta(current: number, previous: number): number {
-  if (previous === 0) return current === 0 ? 0 : 100;
-  return ((current - previous) / previous) * 100;
-}
-
-/** Duration used by the recent-call list; mirrors the SQL duration expression below. */
+/** Duration used by the recent-call list; mirrors the average call duration on Analytics. */
 function durationSeconds(call: { providerDurationSeconds: number | null; startedAt: Date; endedAt: Date | null }): number {
   if (call.providerDurationSeconds !== null) return call.providerDurationSeconds;
   if (!call.endedAt) return 0;
@@ -42,8 +36,10 @@ export const GET = operatorRoute(async ({ businessId, transaction }) => NextResp
   const previousStart = new Date(now.getTime() - 60 * DAY_MS);
   const chartStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1));
 
-  const aggregateResult = await tx.execute(dashboardAggregatesQuery({ businessId, currentStart, previousStart, chartStart }));
+  const aggregateResult = await tx.execute(dashboardAggregatesQuery({ businessId, chartStart }));
   const [aggregates] = aggregateResult.rows as unknown as [DashboardAggregates];
+  // Home's results cover the last 30 days, compared with the 30 days before.
+  const results = await readAnalyticsResults(tx, { businessId, from: currentStart, to: now, previousFrom: previousStart });
   const recentCalls = await listRecentCalls(tx, businessId);
   const upcoming = await listUpcomingAppointments(tx, businessId, now);
   const liveCallCount = await tx.select({ count: count() }).from(calls).where(and(eq(calls.businessId, businessId), eq(calls.status, "started")));
@@ -63,20 +59,10 @@ export const GET = operatorRoute(async ({ businessId, transaction }) => NextResp
     };
   });
 
-  const currentCallsTotal = aggregates?.callsCurrent ?? 0;
-  const previousCallsTotal = aggregates?.callsPrevious ?? 0;
-  const currentDuration = aggregates?.averageDurationCurrent ?? 0;
-  const previousDuration = aggregates?.averageDurationPrevious ?? 0;
-
   return {
     businessId,
     firstRealConversationAt,
-    kpis: {
-      calls: { total: currentCallsTotal, deltaPercent: percentageDelta(currentCallsTotal, previousCallsTotal) },
-      messages: { total: aggregates?.messagesCurrent ?? 0, deltaPercent: percentageDelta(aggregates?.messagesCurrent ?? 0, aggregates?.messagesPrevious ?? 0) },
-      appointments: { total: aggregates?.appointmentsCurrent ?? 0, deltaPercent: percentageDelta(aggregates?.appointmentsCurrent ?? 0, aggregates?.appointmentsPrevious ?? 0) },
-      averageDuration: { totalSeconds: currentDuration, deltaSeconds: currentDuration - previousDuration },
-    },
+    results,
     liveCalls: Number(liveCallCount[0]?.count ?? 0),
     monthlyCalls,
     recentCalls: recentCalls.map((call) => ({

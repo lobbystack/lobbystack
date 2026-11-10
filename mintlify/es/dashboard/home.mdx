@@ -1,6 +1,6 @@
 ---
 title: "Revise su espacio de trabajo desde Inicio"
-description: "Consulte las llamadas, los mensajes y las citas de este mes, los seguimientos que aún requieren a una persona y sus próximas reservas desde la página Inicio de LobbyStack."
+description: "Consulte lo que su agente reservó y le ahorró en los últimos 30 días, los seguimientos que aún requieren a una persona y sus próximas reservas desde la página Inicio de LobbyStack."
 sidebarTitle: "Inicio"
 contentType: "How-to"
 ---
@@ -27,9 +27,9 @@ Inicio empieza con **Primeros pasos**, una lista de pasos de configuración. Pas
 | Sección | Para qué sirve |
 | --- | --- |
 | **Tarjeta de configuración** | Su siguiente paso de configuración mientras empieza, como una llamada de prueba en el navegador, un número de prueba gratuita o el desvío de llamadas. |
-| **KPI** | Totales mensuales de llamadas, mensajes, citas y contactos. |
 | **Acción requerida** | Tareas de seguimiento que aún necesitan la respuesta de una persona, como devoluciones de llamada, solicitudes de traspaso, cancelaciones y cambios de hora, cada una con su tipo, y un enlace a las preguntas que su agente no supo responder. Haga clic en una fila para abrirla. |
 | **Próximas** | Las próximas citas reservadas en el calendario. Haga clic en una para abrir sus detalles, con **Cancelar** y **Cambiar hora**. |
+| **Valor reservado**, **Tiempo ahorrado**, **Llamadas sin transferir** | Lo que su agente reservó, el tiempo de conversación que le quitó a su equipo y la parte de las llamadas que terminó sin transferir en los últimos 30 días. |
 | **Llamadas por mes** | Un gráfico del volumen mensual de llamadas basado en los registros de llamadas guardados. |
 | **Llamadas recientes** | La actividad más reciente de llamadas entrantes, con datos de quien llama, la hora y el resultado. |
 
@@ -49,6 +49,26 @@ Inicio empieza con **Primeros pasos**, una lista de pasos de configuración. Pas
     En la pestaña **Detalles** de la llamada, haga clic en **Marcar como hecha** cuando su equipo haya hecho el seguimiento. Ahí también aprueba las solicitudes de cancelación o de cambio de hora.
   </Step>
 </Steps>
+
+## Ver lo que su agente reservó y le ahorró
+
+Las tres cifras bajo **Próximas** y **Acción requerida** cubren los últimos 30 días. Cada una muestra cuánto cambió respecto a los 30 días anteriores.
+
+| Cifra | Cómo la calcula LobbyStack |
+| --- | --- |
+| **Valor reservado** | El precio de cada cita que su agente reservó por llamada, SMS o chat en esos 30 días, después del descuento del servicio, si lo hay. Un precio fijo cuenta completo, un precio «desde» por su mínimo y un rango de precios por su extremo inferior. |
+| **Tiempo ahorrado** | El tiempo de conversación de las llamadas que atendió su agente, en horas y minutos. |
+| **Llamadas sin transferir** | La parte de esas llamadas que terminó sin que su agente transfiriera a la persona que llamó a su equipo. |
+
+El valor reservado no incluye:
+
+- Las citas canceladas
+- Las citas que su equipo reservó en el panel o mediante la API
+- Los servicios con precio en persona o sin precio
+
+LobbyStack usa el precio actual de cada servicio, así que si cambia un precio, la estimación también cambia para fechas anteriores. La cifra aparece en la moneda configurada para su negocio.
+
+El tiempo ahorrado y la parte sin transferir no incluyen las llamadas de spam ni las de menos de 10 segundos, las mismas que su plan no factura. Los chats del sitio web no suman al tiempo ahorrado, porque no tienen tiempo de conversación.
 
 ## Responda las preguntas que su agente no supo contestar
 
