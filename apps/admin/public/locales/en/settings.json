@@ -850,10 +850,10 @@
     },
     "delete": {
       "title": "Delete workspace",
-      "description": "Permanently erase this workspace with its calls, chats, contacts, appointments, settings and team access. Its phone number is released and its paid plan ends. You can't undo this.",
+      "description": "Erases everything in it and releases its phone number.",
       "action": "Delete workspace",
       "dialogTitle": "Delete {{name}}?",
-      "dialogDescription": "Everything in this workspace is erased for good, its phone number goes back to the provider, and the agent stops answering. Its team loses access, and nobody can restore it.",
+      "dialogDescription": "Its calls, contacts and settings are erased, its number is released and its plan ends. You can't undo this.",
       "confirmLabel": "Type <name>{{name}}</name> to confirm",
       "submit": "Delete",
       "deleting": "Deleting...",

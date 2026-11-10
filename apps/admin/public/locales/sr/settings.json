@@ -857,10 +857,10 @@
     },
     "delete": {
       "title": "Obriši radni prostor",
-      "description": "Trajno briše ovaj radni prostor zajedno sa pozivima, razgovorima, kontaktima, terminima, podešavanjima i pristupom tima. Njegov broj telefona se oslobađa, a plaćeni plan se završava. Ovo se ne može poništiti.",
+      "description": "Briše sve u njemu i oslobađa njegov broj telefona.",
       "action": "Obriši radni prostor",
       "dialogTitle": "Obrisati {{name}}?",
-      "dialogDescription": "Sve u ovom radnom prostoru se trajno briše, njegov broj telefona se vraća provajderu, a agent prestaje da se javlja. Tim gubi pristup i niko ne može da ga vrati.",
+      "dialogDescription": "Pozivi, kontakti i podešavanja se brišu, broj se oslobađa, a plan se završava. Ovo se ne može poništiti.",
       "confirmLabel": "Upišite <name>{{name}}</name> za potvrdu",
       "submit": "Obriši",
       "deleting": "Brisanje...",

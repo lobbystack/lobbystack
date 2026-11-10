@@ -857,10 +857,10 @@
     },
     "delete": {
       "title": "Supprimer l'espace de travail",
-      "description": "Efface définitivement cet espace de travail avec ses appels, conversations, contacts, rendez-vous, paramètres et accès d'équipe. Son numéro de téléphone est libéré et son forfait payant prend fin. Cette action est irréversible.",
+      "description": "Efface tout son contenu et libère son numéro de téléphone.",
       "action": "Supprimer l'espace de travail",
       "dialogTitle": "Supprimer {{name}} ?",
-      "dialogDescription": "Tout ce que contient cet espace de travail est effacé définitivement, son numéro de téléphone est rendu à l'opérateur et l'agent cesse de répondre. Son équipe perd l'accès et personne ne peut le restaurer.",
+      "dialogDescription": "Ses appels, contacts et paramètres sont effacés, son numéro est libéré et son forfait prend fin. Cette action est irréversible.",
       "confirmLabel": "Saisissez <name>{{name}}</name> pour confirmer",
       "submit": "Supprimer",
       "deleting": "Suppression...",

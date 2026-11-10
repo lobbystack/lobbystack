@@ -857,10 +857,10 @@
     },
     "delete": {
       "title": "Eliminar espacio de trabajo",
-      "description": "Borra de forma permanente este espacio de trabajo con sus llamadas, chats, contactos, citas, ajustes y accesos del equipo. Su número de teléfono se libera y su plan de pago termina. No se puede deshacer.",
+      "description": "Borra todo su contenido y libera su número de teléfono.",
       "action": "Eliminar espacio de trabajo",
       "dialogTitle": "¿Eliminar {{name}}?",
-      "dialogDescription": "Todo lo que hay en este espacio de trabajo se borra para siempre, su número de teléfono vuelve al proveedor y el agente deja de responder. Su equipo pierde el acceso y nadie puede restaurarlo.",
+      "dialogDescription": "Se borran sus llamadas, contactos y ajustes, se libera su número y termina su plan. No se puede deshacer.",
       "confirmLabel": "Escribe <name>{{name}}</name> para confirmar",
       "submit": "Eliminar",
       "deleting": "Eliminando...",
