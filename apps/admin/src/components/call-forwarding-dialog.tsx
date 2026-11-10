@@ -99,7 +99,7 @@ export function ForwardingGuide({ country = null, e164 }: { country?: string | n
           onValueChange={(value: Carrier | null) => setCarrier(value)}
           value={carrier}
         >
-          <ComboboxInput id="forwarding-carrier" placeholder={t("forwarding.carrier.placeholder")} />
+          <ComboboxInput clearSearchLabel={t("common:accessibility.clearSearch")} id="forwarding-carrier" placeholder={t("forwarding.carrier.placeholder")} />
           <ComboboxContent>
             <ComboboxEmpty>{t("forwarding.carrier.empty")}</ComboboxEmpty>
             <ComboboxList>
