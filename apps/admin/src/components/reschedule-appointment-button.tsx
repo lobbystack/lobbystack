@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { formatDateTime } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
+import { cn } from "@/lib/utils";
 
 /**
  * Approves a caller's request to move an appointment: after a confirmation it moves it to the time they asked for,
@@ -40,7 +41,9 @@ export function RescheduleAppointmentButton({ appointment, className, newStartsA
     },
   });
 
-  if (!business || !APPOINTMENT_ROLES.includes(business.role) || !target.isValid || target.toMillis() <= Date.now()) return null;
+  if (!business || !APPOINTMENT_ROLES.includes(business.role) || !target.isValid) return null;
+  // A request whose time has gone can't be approved, so the button says why it's absent.
+  if (target.toMillis() <= Date.now()) return <p className={cn("type-meta text-muted-foreground", className)}>{t("appointments.reschedule.passed")}</p>;
   const time = formatDateTime(target.toUTC().toISO()!, i18n.language, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: appointment.timezone });
   return (
     <>

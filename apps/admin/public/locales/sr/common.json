@@ -242,7 +242,8 @@
       "done": "Termin je pomeren.",
       "failed": "Termin nije pomeren. Pokušajte ponovo.",
       "unavailable": "To vreme više nije dostupno. Dogovorite drugo vreme sa klijentom i pomerite termin iz kalendara.",
-      "notReschedulable": "Ovaj termin ne može da se pomeri. Možda je otkazan."
+      "notReschedulable": "Ovaj termin ne može da se pomeri. Možda je otkazan.",
+      "passed": "Traženo vreme je prošlo."
     }
   },
   "abandonIntent": {

@@ -242,7 +242,8 @@
       "done": "Rendez-vous déplacé.",
       "failed": "Impossible de déplacer le rendez-vous. Réessayez.",
       "unavailable": "Cet horaire n'est plus disponible. Convenez d'un autre horaire avec le client et déplacez le rendez-vous depuis le calendrier.",
-      "notReschedulable": "Ce rendez-vous ne peut pas être déplacé. Il a peut-être été annulé."
+      "notReschedulable": "Ce rendez-vous ne peut pas être déplacé. Il a peut-être été annulé.",
+      "passed": "L'heure demandée est passée."
     }
   },
   "abandonIntent": {

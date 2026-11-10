@@ -208,6 +208,12 @@ describe("appointment reschedules on Home", () => {
     expect(screen.getByRole("alertdialog")).toBeTruthy();
   });
 
+  it("says the requested time has passed when it has, rather than offering nothing", async () => {
+    await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, requested: { service: "Consultation", newStartsAt: "2020-09-09T10:00" }, appointment: linked }] });
+    expect(screen.getByText(enCommon.appointments.reschedule.passed)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: enCommon.appointments.reschedule.approve })).toBeNull();
+  });
+
   it("offers nothing to approve without a matched appointment or the new time, or to a viewer", async () => {
     await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, appointment: null }] });
     expect(screen.queryByRole("button", { name: enCommon.appointments.reschedule.approve })).toBeNull();

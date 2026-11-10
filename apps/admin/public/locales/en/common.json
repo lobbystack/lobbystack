@@ -233,7 +233,8 @@
       "done": "Appointment moved.",
       "failed": "We couldn't move the appointment. Try again.",
       "unavailable": "That time isn't available any more. Agree another time with the customer and move it from the calendar.",
-      "notReschedulable": "This appointment can't be moved. It may have been cancelled."
+      "notReschedulable": "This appointment can't be moved. It may have been cancelled.",
+      "passed": "The requested time has passed."
     }
   },
   "abandonIntent": {
