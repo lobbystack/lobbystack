@@ -69,7 +69,8 @@
           "label": "File",
           "hint": "Supports PDF, DOCX, TXT, and Markdown.",
           "dropzonePrefix": "Drag and drop a file here, or",
-          "chooseFile": "Choose File"
+          "chooseFile": "Choose File",
+          "downloadTemplate": "Download template"
         },
         "websiteUrl": {
           "label": "Website URL",

@@ -66,6 +66,12 @@ describe("restored knowledge dialogs", () => {
     await userEvent.click(submit);
     expect(await screen.findByText("Import unavailable")).toBeTruthy();
   });
+  it("offers the knowledge template as a download", () => {
+    render(<UploadKnowledgeDocumentSheet open upload={vi.fn()} onOpenChange={vi.fn()} />);
+    const link = screen.getByRole("link", { name: "sections.knowledge.fields.file.downloadTemplate" });
+    expect(link.getAttribute("href")).toBe("/templates/lobbystack-knowledge-template.docx");
+    expect(link.hasAttribute("download")).toBe(true);
+  });
   it("requires a file before uploading", async () => {
     const upload = vi.fn();
     render(<UploadKnowledgeDocumentSheet open upload={upload} onOpenChange={vi.fn()} />);

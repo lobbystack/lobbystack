@@ -13,7 +13,15 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("mammoth", () => {
   mocks.loads.mammoth += 1;
-  return { default: { extractRawText: mocks.extractRawText } };
+  return {
+    default: {
+      convertToHtml: async (_input: unknown, options: { transformDocument: (document: unknown) => unknown }) => {
+        options.transformDocument({ type: "document", children: [{ type: "paragraph", children: [{ type: "run", children: [{ type: "text", value: (await mocks.extractRawText()).value }] }] }] });
+        return { value: "" };
+      },
+      images: { imgElement: () => () => undefined },
+    },
+  };
 });
 
 vi.mock("pdf-parse", () => {
@@ -69,7 +77,7 @@ describe("knowledge document extraction", () => {
   it("loads mammoth only for DOCX extraction", async () => {
     mocks.extractRawText.mockResolvedValue({ value: "Document text" });
 
-    await expect(extractDocumentText({ body: new Uint8Array([1]), contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" })).resolves.toBe("Document text");
+    await expect(extractDocumentText({ body: new Uint8Array([1]), contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" })).resolves.toBe("Document text\n\n");
 
     expect(mocks.loads.mammoth).toBe(1);
   });

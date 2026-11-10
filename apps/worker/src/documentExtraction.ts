@@ -74,6 +74,48 @@ async function extractPdfText(body: Uint8Array, recordOcr: OcrRecorder): Promise
   }
 }
 
+type DocxElement = { type?: string; styleName?: string; value?: string; children?: DocxElement[] };
+
+const templateHintStyle = "LobbyStack Hint";
+const templatePromptStyle = "LobbyStack Prompt";
+
+function docxText(element: DocxElement): string {
+  return element.type === "text" ? element.value ?? "" : (element.children ?? []).map(docxText).join("");
+}
+
+// Same output as mammoth's extractRawText, which ignores the options that strip the template.
+function docxRawText(element: DocxElement): string {
+  if (element.type === "text") return element.value ?? "";
+  if (element.type === "tab") return "\t";
+  return (element.children ?? []).map(docxRawText).join("") + (element.type === "paragraph" ? "\n\n" : "");
+}
+
+/**
+ * The knowledge template (scripts/knowledge-template.mjs) ships grey guidance and prompts. Neither
+ * belongs in the knowledge base unless the customer answered the prompt, so this removes the guidance,
+ * every prompt with no answer text before the next prompt or heading, and bare "Q:" / "A:" labels.
+ * Documents without those styles pass through unchanged.
+ */
+export function stripKnowledgeTemplateScaffolding<T extends DocxElement>(document: T): T {
+  const children = document.children ?? [];
+  const isPrompt = (element: DocxElement) => element.styleName === templatePromptStyle;
+  const isHeading = (element: DocxElement) => /^heading/i.test(element.styleName ?? "");
+  const kept = children.filter((element, index) => {
+    if (element.type !== "paragraph") return true;
+    if (element.styleName === templateHintStyle) return false;
+    if (/^[QA]:\s*$/.test(docxText(element))) return false;
+    if (!isPrompt(element)) return true;
+    for (const next of children.slice(index + 1)) {
+      if (next.styleName === templateHintStyle) continue;
+      if (isPrompt(next) || isHeading(next)) return false;
+      const value = docxText(next).trim();
+      if (value && !/^[QA]:$/.test(value)) return true;
+    }
+    return false;
+  });
+  return { ...document, children: kept };
+}
+
 export async function extractDocumentText(input: DocumentInput, recordOcr: OcrRecorder = () => undefined): Promise<string> {
   const contentType = input.contentType.split(";", 1)[0]?.trim().toLowerCase() ?? "";
   if (textMimeTypes.has(contentType)) return new TextDecoder().decode(input.body);
@@ -81,7 +123,17 @@ export async function extractDocumentText(input: DocumentInput, recordOcr: OcrRe
   if (contentType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
     assertDocxInflatesWithin(input.body);
     const { default: mammoth } = await import("mammoth");
-    return (await mammoth.extractRawText({ buffer: Buffer.from(input.body) })).value ?? "";
+    let text = "";
+    await mammoth.convertToHtml({ buffer: Buffer.from(input.body) }, {
+      // Skip decoding images: only the text is kept.
+      convertImage: mammoth.images.imgElement(async () => ({ src: "" })),
+      transformDocument: (document) => {
+        const stripped = stripKnowledgeTemplateScaffolding(document as DocxElement);
+        text = docxRawText(stripped);
+        return document;
+      },
+    });
+    return text;
   }
   if (contentType.startsWith("image/")) {
     const ocrStartedAt = performance.now();

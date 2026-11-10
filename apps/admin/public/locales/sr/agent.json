@@ -69,7 +69,8 @@
           "label": "Fajl",
           "hint": "Podržani su PDF, DOCX, TXT i Markdown.",
           "dropzonePrefix": "Prevucite fajl ovde ili",
-          "chooseFile": "Izaberite fajl"
+          "chooseFile": "Izaberite fajl",
+          "downloadTemplate": "Preuzmite šablon"
         },
         "websiteUrl": {
           "label": "URL sajta",

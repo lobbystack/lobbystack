@@ -3,9 +3,9 @@
 import { type DragEvent, FormEvent, useMemo, useRef, useState } from "react";
 
 import { useTranslation } from "react-i18next";
-import { Upload } from "lucide-react";
+import { Download, Upload } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Field,
   FieldContent,
@@ -27,6 +27,8 @@ import {
 import { uploadErrorMessage } from "@/lib/storage-upload";
 const ACCEPTED_FILE_TYPES = ".pdf,.docx,.txt,.md,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const MAX_DOCUMENT_UPLOAD_BYTES = 10 * 1024 * 1024;
+// Built by `pnpm knowledge:template`; the worker reads it back with its guidance and unanswered prompts removed.
+const KNOWLEDGE_TEMPLATE_URL = "/templates/lobbystack-knowledge-template.docx";
 
 function parseTags(value: string): Array<string> {
   return value
@@ -242,6 +244,10 @@ export function UploadKnowledgeDocumentSheet({
                 </div>
               </label>
               {errorMessage ? <FieldError id="knowledge-document-file-error">{errorMessage}</FieldError> : null}
+              <a className={buttonVariants({ className: "self-start", size: "sm", variant: "outline" })} download href={KNOWLEDGE_TEMPLATE_URL}>
+                <Download data-icon="inline-start" />
+                {t("sections.knowledge.fields.file.downloadTemplate")}
+              </a>
             </Field>
 
             <Field>
