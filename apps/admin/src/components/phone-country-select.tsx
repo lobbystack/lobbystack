@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import type { PhoneCountryOption } from "@/lib/phone";
 
 /** Shows the calling code, like the field's "+1"; the list underneath is searchable by country name or code. */
-const TRIGGER_CLASS = "flex h-9 w-fit shrink-0 items-center justify-center gap-2.5 rounded-4xl border border-input bg-input/30 px-3 py-2 text-sm whitespace-nowrap [&_svg]:shrink-0 transition-colors outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 enabled:hover:bg-input/50";
+const TRIGGER_CLASS = "flex h-9 w-fit shrink-0 items-center justify-center gap-2.5 rounded-xl border border-input bg-input/30 px-3 py-2 text-sm whitespace-nowrap [&_svg]:shrink-0 transition-colors outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 enabled:hover:bg-input/50";
 
 export function PhoneCountrySelect({ ariaLabel, className, countries, disabled = false, onChange, value }: {
   ariaLabel: string;

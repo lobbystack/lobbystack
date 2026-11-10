@@ -161,13 +161,13 @@ export function LiveOverviewSurface() {
 
                             return (
                               // The whole row opens its item; the title's link stretches over it.
-                              <Item className={cn("relative rounded-lg p-0", destination && "-mx-2 px-2 py-2 transition-colors hover:bg-muted/50 has-[a:focus-visible]:ring-[3px] has-[a:focus-visible]:ring-ring/50")} size="sm" variant="default">
+                              <Item className={cn("relative rounded-md p-0", destination && "-mx-2 px-2 py-2 transition-colors hover:bg-muted/50 has-[a:focus-visible]:ring-[3px] has-[a:focus-visible]:ring-ring/50")} size="sm" variant="default">
                                 <ItemContent className="min-w-0">
                                   <ItemHeader className="flex-col items-start gap-2 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start sm:gap-x-3 sm:gap-y-2">
                                     <div className="min-w-0 flex-1">
                                       {destination ? (
                                         <ItemTitle className="w-full min-w-0 max-w-full items-start">
-                                          <Link className="inline-flex min-w-0 max-w-full items-start gap-1 outline-none after:absolute after:inset-0 after:rounded-lg" href={destination}>
+                                          <Link className="inline-flex min-w-0 max-w-full items-start gap-1 outline-none after:absolute after:inset-0 after:rounded-md" href={destination}>
                                             <span className="min-w-0 overflow-hidden line-clamp-2">
                                               {displayTitle}
                                             </span>
@@ -231,7 +231,7 @@ export function LiveOverviewSurface() {
                       ))}
                     </ItemGroup>
                 </CardContent>
-              </Card> : unansweredCount > 0 ? null : <div className="rounded-xl border border-dashed p-12 text-center xl:flex xl:flex-1 xl:flex-col xl:items-center xl:justify-center"><p className="type-empty-title">{t("home.actionRequired.emptyTitle")}</p><p className="type-empty-description mt-2">{t("home.actionRequired.emptyDescription")}</p></div>}
+              </Card> : unansweredCount > 0 ? null : <div className="rounded-xl border border-dashed lg:rounded-4xl p-12 text-center xl:flex xl:flex-1 xl:flex-col xl:items-center xl:justify-center"><p className="type-empty-title">{t("home.actionRequired.emptyTitle")}</p><p className="type-empty-description mt-2">{t("home.actionRequired.emptyDescription")}</p></div>}
           </section>
           <section className="animate-in fade-in slide-in-from-bottom-2 duration-200 order-first flex flex-col gap-3 xl:h-full">
             <div className="flex items-center justify-between gap-4 px-1"><div className="flex items-center gap-3"><h2 className="type-section-title">{t("home.upcoming.title")}</h2><Link className="text-sm text-muted-foreground transition-colors hover:text-foreground" href="/appointments?view=list">{t("home.upcoming.viewAll")}</Link></div>{summary.isLoading ? <Skeleton className="h-6 w-12 rounded-full" /> : <Badge variant="outline">{(summary.data?.upcoming.length ?? 0).toLocaleString(intlLocale(i18n.language))}</Badge>}</div>
@@ -241,7 +241,7 @@ export function LiveOverviewSurface() {
                   const contactName = getContactDisplayName({ name: appointment.contactName, phone: appointment.contactPhone, email: appointment.contactEmail, channels: [appointment.sourceChannel] }, i18n.language, t);
                   return <div key={appointment.id}>
                     {/* The whole row opens the appointment's details, as a row on the appointments page does. */}
-                    <button className="-mx-2 grid w-[calc(100%+1rem)] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 rounded-lg px-2 py-2 text-left outline-none transition-colors hover:bg-muted/50 focus-visible:ring-[3px] focus-visible:ring-ring/50" onClick={() => setDetailsId(appointment.id)} type="button">
+                    <button className="-mx-2 grid w-[calc(100%+1rem)] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 rounded-md px-2 py-2 text-left outline-none transition-colors hover:bg-muted/50 focus-visible:ring-[3px] focus-visible:ring-ring/50" onClick={() => setDetailsId(appointment.id)} type="button">
                       <span className="flex min-w-0 flex-wrap items-center gap-2"><span className="inline-flex min-w-0 items-center gap-1"><span className="type-item-title">{contactName}</span><RowChevron /></span><Badge variant="outline">{getAppointmentStatusLabel(appointment.status, t)}</Badge><Badge variant="secondary">{getChannelLabel(appointment.sourceChannel, t)}</Badge></span>
                       <span className="type-item-title text-right">{formatDateTime(appointment.startsAt, i18n.language, { weekday: "short", month: "short", day: "numeric", timeZone: appointment.timezone })}</span>
                       <span className="type-body-muted flex min-w-0 items-center gap-1.5">
@@ -258,7 +258,7 @@ export function LiveOverviewSurface() {
                   </div>;
                 })}
               </CardContent></Card>
-            ) : <div className="rounded-xl border border-dashed p-12 text-center xl:flex xl:flex-1 xl:flex-col xl:items-center xl:justify-center"><p className="type-empty-title">{t("home.upcoming.emptyTitle")}</p><p className="type-empty-description mt-2">{t("home.upcoming.emptyDescription")}</p></div>}
+            ) : <div className="rounded-xl border border-dashed lg:rounded-4xl p-12 text-center xl:flex xl:flex-1 xl:flex-col xl:items-center xl:justify-center"><p className="type-empty-title">{t("home.upcoming.emptyTitle")}</p><p className="type-empty-description mt-2">{t("home.upcoming.emptyDescription")}</p></div>}
             <UpcomingDetails appointments={summary.data?.upcoming ?? []} id={detailsId} onClose={() => setDetailsId(null)} />
           </section>
         </div>

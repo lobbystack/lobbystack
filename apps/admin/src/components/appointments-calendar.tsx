@@ -91,7 +91,7 @@ export function AppointmentsCalendar({ appointments, onSelectDay, onViewChange, 
               <button
                 aria-label={dayLabel(key)}
                 aria-selected={key === selectedDay}
-                className={cn("flex h-12 flex-col items-center justify-center gap-1 rounded-lg outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", key === selectedDay && "bg-muted", muted(key) && "text-muted-foreground")}
+                className={cn("flex h-12 flex-col items-center justify-center gap-1 rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", key === selectedDay && "bg-muted", muted(key) && "text-muted-foreground")}
                 key={key}
                 onClick={() => select(key)}
                 role="gridcell"

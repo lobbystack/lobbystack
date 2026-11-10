@@ -70,7 +70,7 @@ export function WorkspaceSwitcher() {
             </ItemContent>
             <ItemActions><ChevronsUpDown className="size-4 text-muted-foreground" /></ItemActions>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="min-w-56 rounded-xl" side={isMobile ? "bottom" : "right"} sideOffset={4}>
+          <DropdownMenuContent align="start" className="min-w-56" side={isMobile ? "bottom" : "right"} sideOffset={4}>
             <DropdownMenuGroup>
               {(businesses.data?.businesses ?? []).map((business) => (
                 <DropdownMenuItem className="gap-2.5 px-3 py-2" key={business.businessId} onClick={() => void selectBusiness(business.businessId)}>

@@ -552,13 +552,13 @@ export function RulesPageSkeleton({ headings }: { headings: [title: string, prev
 export function AnalyticsControlsSkeleton({ granularityLabel, rangeLabel }: { granularityLabel: string; rangeLabel: string }) {
   return (
     <>
-      <Skeleton aria-hidden="true" className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-4xl border border-transparent pl-3 pr-2.5 text-sm font-medium whitespace-nowrap">
+      <Skeleton aria-hidden="true" className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-transparent pl-3 pr-2.5 text-sm font-medium whitespace-nowrap">
         <span className="invisible">{granularityLabel}</span>
         <span className="invisible size-4 shrink-0" />
       </Skeleton>
       <div aria-hidden="true" className="flex w-fit items-stretch">
-        <Skeleton className="size-9 rounded-4xl rounded-r-none" />
-        <Skeleton className="inline-flex h-9 max-w-56 items-center rounded-4xl rounded-l-none border border-transparent border-l-0 px-3 text-sm font-medium whitespace-nowrap">
+        <Skeleton className="size-9 rounded-full rounded-r-none" />
+        <Skeleton className="inline-flex h-9 max-w-56 items-center rounded-full rounded-l-none border border-transparent border-l-0 px-3 text-sm font-medium whitespace-nowrap">
           <span className="invisible truncate">{rangeLabel}</span>
         </Skeleton>
       </div>
@@ -569,7 +569,7 @@ export function AnalyticsControlsSkeleton({ granularityLabel, rangeLabel }: { gr
 /** Stands in for a small outline button such as "Connect" or "Manage", sized from its hidden label. */
 export function SmallButtonSkeleton({ label }: { label: string }) {
   return (
-    <Skeleton aria-hidden="true" className="inline-flex h-8 shrink-0 items-center rounded-4xl border border-transparent px-3 text-sm font-medium whitespace-nowrap">
+    <Skeleton aria-hidden="true" className="inline-flex h-8 shrink-0 items-center rounded-full border border-transparent px-3 text-sm font-medium whitespace-nowrap">
       <span className="invisible">{label}</span>
     </Skeleton>
   );
@@ -653,7 +653,7 @@ export function SetupGuideSkeleton({ labels }: { labels: { title: string; skip: 
           <Skeleton aria-hidden="true" className="size-5 shrink-0 rounded-full" />
           <Skeleton aria-hidden="true" className="h-5 w-56 max-w-full" />
         </div>
-        <Skeleton aria-hidden="true" className="inline-flex h-9 shrink-0 items-center rounded-4xl border border-transparent px-3 text-sm font-medium whitespace-nowrap"><span className="invisible">{labels.skip}</span></Skeleton>
+        <Skeleton aria-hidden="true" className="inline-flex h-9 shrink-0 items-center rounded-full border border-transparent px-3 text-sm font-medium whitespace-nowrap"><span className="invisible">{labels.skip}</span></Skeleton>
       </div>
       <Surface>
         <div className="divide-y divide-border">
@@ -722,7 +722,7 @@ export function PhoneNumberChooserSkeleton({ labels, rows = 4 }: { labels: { cou
           <span>{labels.phoneNumber}</span>
         </div>
         <div className="flex flex-col gap-3 px-4 py-4">
-          {Array.from({ length: rows }).map((_, index) => <Skeleton aria-hidden="true" className="h-12 w-full rounded-lg" key={index} />)}
+          {Array.from({ length: rows }).map((_, index) => <Skeleton aria-hidden="true" className="h-12 w-full" key={index} />)}
         </div>
       </Surface>
     </div>
@@ -741,7 +741,7 @@ export function OnboardingBrandSkeleton({ labels }: { labels: { name: string; na
       <div className="flex flex-col gap-5">
         <div className="flex flex-col gap-3">
           <span className="text-sm leading-snug font-medium">{labels.name}</span>
-          <Skeleton aria-hidden="true" className="h-11 w-full rounded-4xl" />
+          <Skeleton aria-hidden="true" className="h-11 w-full rounded-xl" />
           <HiddenTextSkeleton className="text-sm">{labels.nameHint}</HiddenTextSkeleton>
         </div>
         <div className="flex flex-col gap-3">
@@ -788,7 +788,7 @@ export function TestPanelSkeleton() {
         <Skeleton aria-hidden="true" className="size-40 rounded-full" />
         <Skeleton aria-hidden="true" className="h-9 w-28 rounded-full" />
       </div>
-      <Skeleton aria-hidden="true" className="h-11 w-full shrink-0 rounded-4xl" />
+      <Skeleton aria-hidden="true" className="h-11 w-full shrink-0 rounded-xl" />
     </div>
   );
 }
@@ -826,7 +826,7 @@ export function WebsiteImportProgressSkeleton() {
 export function MeetFormSkeleton({ labels }: { labels: { name: string; voice: string; greeting: string; language: string } }) {
   return (
     <div aria-busy="true" className="flex flex-col gap-4">
-      {([["name", "h-11 rounded-4xl"], ["voice", "h-11 rounded-4xl"], ["greeting", "h-28 rounded-xl"], ["language", "h-11 rounded-4xl"]] as const).map(([key, size]) => (
+      {([["name", "h-11 rounded-xl"], ["voice", "h-11 rounded-xl"], ["greeting", "h-28 rounded-md"], ["language", "h-11 rounded-md"]] as const).map(([key, size]) => (
         <div className="flex flex-col gap-2" key={key}>
           <span className="text-sm leading-snug font-medium">{labels[key]}</span>
           <Skeleton aria-hidden="true" className={`w-full ${size}`} />

@@ -24,7 +24,7 @@ export function TestCallButton({ agentId, variant = "outline" }: { agentId?: str
   if (!ready) {
     if (!business && !businesses.isLoading) return null;
     return (
-      <Skeleton aria-hidden="true" className="hidden h-8 shrink-0 items-center gap-1.5 rounded-4xl px-3 text-sm font-medium whitespace-nowrap md:inline-flex">
+      <Skeleton aria-hidden="true" className="hidden h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm font-medium whitespace-nowrap md:inline-flex">
         <span className="invisible size-4 shrink-0" />
         <span className="invisible">{t("testCall.trigger")}</span>
       </Skeleton>

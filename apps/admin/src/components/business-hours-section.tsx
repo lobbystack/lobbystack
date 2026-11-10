@@ -209,7 +209,7 @@ export function BusinessHoursSection({ businessId, canManage, bookingMode }: { b
       <Item className="scroll-mt-6 rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0" id="opening-hours" variant="default">
         <ItemContent>
           <ItemTitle>{t("hours.title")}</ItemTitle>
-          {loading ? <Skeleton className="h-5 w-64 rounded-md" /> : <ItemDescription data-testid="hours-summary">{summarizeHours(savedDays, shortDayNames) || t(needsHours ? "hours.neededForBooking" : "hours.notSet")}</ItemDescription>}
+          {loading ? <Skeleton className="h-5 w-64" /> : <ItemDescription data-testid="hours-summary">{summarizeHours(savedDays, shortDayNames) || t(needsHours ? "hours.neededForBooking" : "hours.notSet")}</ItemDescription>}
           {state?.closures.length ? <ItemDescription data-testid="closures-summary">{t("hours.closures.summary", { list: state.closures.map(describeClosure).join("; ") })}</ItemDescription> : null}
           {note ? <ItemDescription data-testid="hours-note">{note}</ItemDescription> : null}
         </ItemContent>

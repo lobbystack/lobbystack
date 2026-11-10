@@ -136,7 +136,7 @@ export function OnboardingPlanSurface() {
           const price = tier.price[interval];
           const description = tier.description[interval];
           const cta = tier.cta;
-          return <section className={cn("relative flex flex-col rounded-2xl border bg-background p-8", tier.featured ? "border-foreground/30 shadow-sm" : "border-border/60")} key={tier.slug}>
+          return <section className={cn("relative flex flex-col rounded-xl border bg-background p-8 lg:rounded-4xl", tier.featured ? "border-foreground/30 shadow-sm" : "border-border/60")} key={tier.slug}>
             {tier.featured ? <div className="absolute -top-3 left-8 rounded-full bg-foreground px-3 py-0.5 text-xs font-medium text-background">{t("plan.popular")}</div> : null}
             <div className="mb-6"><h3 className="font-heading text-lg font-semibold tracking-tight">{tier.name}</h3><div className="mt-3 flex items-baseline gap-1"><span className="font-heading text-4xl font-semibold tracking-tighter">{price}</span><span className="text-sm text-muted-foreground">{tier.period}</span></div><p className="mt-3 text-sm leading-relaxed text-muted-foreground">{description}</p></div>
             <Button className="mb-6 w-full rounded-full" disabled={!business || Boolean(pendingPlan) || (paid && (!billing.data?.checkoutAvailable || (configuredIntervals && !configuredIntervals[tier.slug as "starter" | "pro"].includes(interval))))} onClick={() => act(tier.slug)} type="button" variant={tier.featured ? "default" : "outline"}>{busy ? <LoaderCircle className="size-4 animate-spin" /> : <>{cta}<ArrowRight className="ml-1 size-4" /></>}</Button>

@@ -177,7 +177,7 @@ function SearchPanel({ businessId, onClose }: { businessId: string | undefined; 
               return (
                 <div
                   aria-selected={current}
-                  className={cn("flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left text-sm", current && "bg-accent text-accent-foreground")}
+                  className={cn("flex w-full cursor-pointer items-center gap-3 rounded-xs px-3 py-2 text-left text-sm", current && "bg-accent text-accent-foreground")}
                   id={optionId(result)}
                   key={result.id}
                   onClick={() => go(result)}
@@ -202,7 +202,7 @@ function SearchPanel({ businessId, onClose }: { businessId: string | undefined; 
         {loading ? (
           <div aria-busy="true" aria-label={t("search.loading")} className="pb-1" data-testid="search-live-loading" role="status">
             <Skeleton className="mx-3 mt-2 mb-1 h-4 w-24" />
-            {Array.from({ length: 2 }, (_, index) => <div className="flex items-center gap-3 px-3 py-2" key={index}><Skeleton className="size-4 rounded-md" /><Skeleton className="h-4 w-28" /><Skeleton className="h-4 w-40" /></div>)}
+            {Array.from({ length: 2 }, (_, index) => <div className="flex items-center gap-3 px-3 py-2" key={index}><Skeleton className="size-4" /><Skeleton className="h-4 w-28" /><Skeleton className="h-4 w-40" /></div>)}
           </div>
         ) : null}
       </div>
@@ -238,7 +238,7 @@ export function SearchDialog({ businessId }: { businessId: string | undefined })
   const close = useCallback(() => setOpen(false), []);
   return (
     <Dialog onOpenChange={setOpen} open={open}>
-      <DialogContent className="top-[12%] translate-y-0 gap-0 overflow-hidden rounded-xl p-0 sm:max-w-xl" showCloseButton={false}>
+      <DialogContent className="top-[12%] translate-y-0 gap-0 overflow-hidden p-0 sm:max-w-xl" showCloseButton={false}>
         <DialogHeader className="sr-only"><DialogTitle>{t("search.title")}</DialogTitle><DialogDescription>{t("search.description")}</DialogDescription></DialogHeader>
         {open ? <SearchPanel businessId={businessId} onClose={close} /> : null}
       </DialogContent>

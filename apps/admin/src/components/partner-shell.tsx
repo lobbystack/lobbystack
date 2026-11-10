@@ -194,7 +194,7 @@ function PartnerSwitcher({ partner, partners }: { partner: ConsolePartner; partn
             </ItemContent>
             <ItemActions><ChevronsUpDown className="size-4 text-muted-foreground" /></ItemActions>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="min-w-56 rounded-xl" side={isMobile ? "bottom" : "right"} sideOffset={4}>
+          <DropdownMenuContent align="start" className="min-w-56" side={isMobile ? "bottom" : "right"} sideOffset={4}>
             <DropdownMenuGroup>
               {partners.map((option) => (
                 <DropdownMenuItem className="gap-2.5 px-3 py-2" key={option.partnerId} render={<Link href={`/partner/${option.partnerId}/businesses`} />}>
@@ -240,7 +240,7 @@ function PartnerUserMenu({ businessDashboard, email }: { businessDashboard: bool
             </div>
             <ChevronsUpDown className="ms-auto size-4" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-56 rounded-xl" side={isMobile ? "bottom" : "right"} sideOffset={4}>
+          <DropdownMenuContent align="end" className="min-w-56" side={isMobile ? "bottom" : "right"} sideOffset={4}>
             {/* The way back from the console, as the dashboard's Partner console item comes here. */}
             {businessDashboard ? (
               <DropdownMenuItem render={<Link href="/" />}>

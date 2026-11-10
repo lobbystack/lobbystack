@@ -63,7 +63,7 @@ type Employee = {
 
 type ServiceOption = { id: string; name: string };
 
-const PICKER_TRIGGER_CLASS = "flex h-9 w-full items-center justify-between gap-1.5 rounded-4xl border border-input bg-input/30 px-3 py-2 text-sm whitespace-nowrap transition-colors outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 data-invalid:border-destructive data-invalid:ring-[3px] data-invalid:ring-destructive/20 enabled:hover:bg-input/50";
+const PICKER_TRIGGER_CLASS = "flex h-9 w-full items-center justify-between gap-1.5 rounded-md border border-input bg-input/30 px-3 py-2 text-sm whitespace-nowrap transition-colors outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 data-invalid:border-destructive data-invalid:ring-[3px] data-invalid:ring-destructive/20 enabled:hover:bg-input/50";
 const DAY_PICKER_LOCALES = { en: enUS, fr, es, sr: srLatn } as const;
 
 // Time off days are calendar dates, YYYY-MM-DD, read and written in local time so they don't shift a day.
@@ -245,11 +245,11 @@ function ServicesPicker({ id, invalid, label, onChange, services, value }: { id:
         <SearchInput aria-label={t("add.fields.services.search")} onValueChange={setQuery} onKeyDown={(event) => { if (event.key === "Enter") event.preventDefault(); }} placeholder={t("add.fields.services.search")} ref={searchRef} value={query} />
       </div>
       {visible.length ? <div className="flex max-h-64 flex-col overflow-y-auto p-1">
-        <label className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 font-medium hover:bg-muted/60">
+        <label className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 font-medium hover:bg-muted/60">
           <Checkbox checked={allVisibleChosen} onCheckedChange={toggleVisible} />{t(allVisibleChosen ? "add.fields.services.unselectAll" : "add.fields.services.selectAll")}
         </label>
         <div className="mx-3 my-1 border-t" />
-        {visible.map((service) => <label className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 hover:bg-muted/60" key={service.id}>
+        {visible.map((service) => <label className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 hover:bg-muted/60" key={service.id}>
           <Checkbox checked={chosen.has(service.id)} onCheckedChange={(checked) => toggle(service.id, checked)} /><span className="min-w-0 truncate">{service.name}</span>
         </label>)}
       </div> : <p className="px-3 py-6 text-center text-muted-foreground">{t("add.fields.services.noMatches")}</p>}

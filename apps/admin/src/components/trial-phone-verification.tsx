@@ -112,7 +112,7 @@ export function TrialPhoneVerification({ businessId, onVerified }: { businessId:
         <Field data-invalid={error ? true : undefined}>
           <FieldLabel htmlFor="trial-phone">{t("phoneNumber.trialPhone.fields.mobileNumber")}</FieldLabel>
           <div className="flex min-w-0">
-            <PhoneCountrySelect ariaLabel={t("phoneNumber.trialPhone.fields.country")} className="h-11 rounded-l-4xl rounded-r-none px-4 font-medium text-muted-foreground" countries={options} onChange={(next) => { setCountry(next as Country); setPhone(""); setError(null); }} value={country} />
+            <PhoneCountrySelect ariaLabel={t("phoneNumber.trialPhone.fields.country")} className="h-11 rounded-l-xl rounded-r-none px-4 font-medium text-muted-foreground" countries={options} onChange={(next) => { setCountry(next as Country); setPhone(""); setError(null); }} value={country} />
             <PhoneInput autoFocus className="h-11 rounded-l-none border-l-0" containerClassName="min-w-0 flex-1" country={country} id="trial-phone" limitNationalDigits onChange={(value) => { setPhone(value ?? ""); setError(null); }} value={phone} />
           </div>
           <FieldDescription>{t("phoneNumber.trialPhone.hint")}</FieldDescription>

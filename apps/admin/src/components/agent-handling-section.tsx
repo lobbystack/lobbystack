@@ -205,7 +205,7 @@ export function AgentHandlingSection({ agentId, businessId, canManage }: AgentSe
               <ItemDescription>{t("agent:fields.transferNumber.hint")}</ItemDescription>
               <div className="pt-2">
                 {isLoadingConfiguration ? (
-                  <Skeleton className="h-10 w-full rounded-md sm:w-72" />
+                  <Skeleton className="h-10 w-full rounded-xl sm:w-72" />
                 ) : (
                   <div className="flex w-full min-w-0 sm:w-fit">
                     <PhoneCountrySelect ariaLabel={t("agent:fields.transferNumber.country")} className="rounded-r-none px-4 font-medium text-muted-foreground" countries={countries.filter((option) => isTransferCountry(option.code))} disabled={!canManage} onChange={(next) => { transferNumberEdited.current = true; setTransferCountry(next as Country); setTransferNumber(""); setTransferNumberInputValue(""); setTransferStatus(null); }} value={transferCountry} />
@@ -264,7 +264,7 @@ export function AgentHandlingSection({ agentId, businessId, canManage }: AgentSe
             </ItemContent>
             <ItemActions className="w-full sm:w-auto">
               {isLoadingConfiguration ? (
-                <Skeleton className="h-10 w-full rounded-md sm:w-48" />
+                <Skeleton className="h-10 w-full sm:w-48" />
               ) : (
                 <Select
                   disabled={isBookingModeSaving || !persistedProfile || !canManage}
@@ -345,7 +345,7 @@ export function AgentHandlingSection({ agentId, businessId, canManage }: AgentSe
             </ItemContent>
             <ItemActions className="w-full sm:w-auto">
               {isLoadingConfiguration ? (
-                <Skeleton className="h-10 w-full rounded-md sm:w-56" />
+                <Skeleton className="h-10 w-full sm:w-56" />
               ) : (
                 <Select
                   disabled={isAppointmentChangeSaving || !persistedProfile || !canManage}

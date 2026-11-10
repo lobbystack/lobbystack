@@ -59,7 +59,7 @@ function TimePicker({ value, onChange, hourCycle = "24h", locale, minuteStep = 5
     <Popover onOpenChange={setOpen} open={open}>
       <PopoverTrigger
         render={
-          <Button aria-label={ariaLabel} className={cn("justify-start rounded-xl font-normal tabular-nums", className)} disabled={disabled} type="button" variant="outline" />
+          <Button aria-label={ariaLabel} className={cn("justify-start rounded-md font-normal tabular-nums", className)} disabled={disabled} type="button" variant="outline" />
         }
       >
         <Clock className="text-muted-foreground" data-icon="inline-start" />
@@ -100,7 +100,7 @@ function TimeColumn({ label, onSelect, open, options, render, selected, title }:
         <button
           aria-selected={option === selected}
           className={cn(
-            "shrink-0 rounded-lg px-2 py-1.5 text-center text-sm tabular-nums outline-none transition-colors hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring/50",
+            "shrink-0 rounded-xs px-2 py-1.5 text-center text-sm tabular-nums outline-none transition-colors hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring/50",
             option === selected && "bg-primary text-primary-foreground hover:bg-primary/90",
           )}
           key={option}

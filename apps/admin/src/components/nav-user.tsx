@@ -91,7 +91,7 @@ export function NavUser({
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="end"
-            className="min-w-56 rounded-xl"
+            className="min-w-56"
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}
           >

@@ -9,7 +9,7 @@ function InputOTP({ className, containerClassName, ...props }: React.ComponentPr
 }
 
 function InputOTPGroup({ className, ...props }: React.ComponentProps<"div">) {
-  return <div data-slot="input-otp-group" className={cn("flex items-center rounded-4xl has-aria-invalid:border-destructive has-aria-invalid:ring-[3px] has-aria-invalid:ring-destructive/20 dark:has-aria-invalid:ring-destructive/40", className)} {...props} />
+  return <div data-slot="input-otp-group" className={cn("flex items-center rounded-xl has-aria-invalid:border-destructive has-aria-invalid:ring-[3px] has-aria-invalid:ring-destructive/20 dark:has-aria-invalid:ring-destructive/40", className)} {...props} />
 }
 
 function InputOTPSlot({ index, className, ...props }: React.ComponentProps<"div"> & { index: number }) {
