@@ -10,6 +10,7 @@ import {
   knowledgeQueryTerms,
   lookupCallerAppointments,
   requestCancellationForCaller,
+  requestRescheduleForCaller,
   recordTextConsentForCaller,
   recordUnansweredQuestion,
   requestTeamForWidgetChat,
@@ -569,6 +570,41 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
           ...(context.conversationId ? { conversationId: context.conversationId } : {}),
         });
         return { ...saved, cancelled: false, status: "The request is saved for the team. The appointment is still booked until the team cancels it." };
+      },
+    });
+  }
+
+  if (offered("requestAppointmentReschedule")) {
+    tools.requestAppointmentReschedule = tool({
+      description: "Pass the caller's request to move an appointment to a new time to the team, when you can't move it yourself. It doesn't move anything: the team does. Get the caller's name, what they know of the appointment (date, time, service) and the new date and time they want first.",
+      inputSchema: z.object({
+        callerName: z.string().describe("The name the appointment was booked under."),
+        newStartsAt: z.string().describe("The new date and time the caller wants as YYYY-MM-DDTHH:mm, in the business's timezone."),
+        appointmentStartsAt: z.string().optional().describe("The appointment's current date as YYYY-MM-DD, or date and time as YYYY-MM-DDTHH:mm, in the business's timezone."),
+        serviceName: z.string().optional(),
+        callbackPhone: phone.optional().describe("The number the appointment was booked with, if the caller gives it."),
+        notes: z.string().optional().describe(`Anything else the team should know. ${forTeam}`),
+      }),
+      execute: async (input) => {
+        if (!input.callerName.trim()) return { ok: false, reason: "Ask for the name the appointment was booked under." };
+        const newStart = startTime(input.newStartsAt);
+        if (!newStart.ok) return newStart;
+        const callbackPhone = input.callbackPhone?.trim() || context.callerPhone;
+        const saved = await requestRescheduleForCaller(domain, {
+          businessId,
+          ...agent,
+          channel,
+          timezone,
+          callerName: input.callerName,
+          newStartsAt: input.newStartsAt,
+          ...(input.appointmentStartsAt ? { appointmentStartsAt: input.appointmentStartsAt } : {}),
+          ...(input.serviceName ? { serviceName: input.serviceName } : {}),
+          ...(input.notes ? { notes: input.notes } : {}),
+          ...(callbackPhone ? { callbackPhone } : {}),
+          ...(context.callId ? { callId: context.callId } : {}),
+          ...(context.conversationId ? { conversationId: context.conversationId } : {}),
+        });
+        return { ...saved, rescheduled: false, status: "The request is saved for the team. The appointment keeps its current time until the team confirms the new one." };
       },
     });
   }

@@ -18,8 +18,8 @@
     },
     "actions": {
       "moreOptions": "More options",
-      "blockContact": "Block contact",
-      "unblockContact": "Unblock contact",
+      "blockContact": "Block",
+      "unblockContact": "Unblock",
       "blockTitle": "Block contact?",
       "blockDescription": "This will stop new SMS replies and immediately hang up new inbound calls from this contact.",
       "blockConfirm": "Block contact",
@@ -30,12 +30,13 @@
       "unblockConfirm": "Unblock contact",
       "unblockSuccess": "Contact unblocked.",
       "updateFailed": "Couldn't update the block state.",
-      "deleteContact": "Delete contact",
+      "deleteContact": "Delete",
       "deleteTitle": "Delete contact?",
       "deleteDescription": "This will permanently remove the contact from your dashboard.",
       "deleteConfirm": "Delete contact",
       "deleteCancel": "Cancel",
-      "deleteFailed": "Couldn't delete the contact."
+      "deleteFailed": "Couldn't delete the contact.",
+      "editContact": "Edit"
     }
   },
   "detail": {
@@ -181,5 +182,16 @@
     "nextPage": "Go to next page",
     "lastPage": "Go to last page",
     "goToPage": "Go to page {{page}}"
+  },
+  "edit": {
+    "title": "Edit contact",
+    "name": "Name",
+    "email": "Email",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving...",
+    "saved": "Contact updated.",
+    "failed": "Couldn't save the contact. Try again.",
+    "invalidEmail": "Enter a valid email address."
   }
 }

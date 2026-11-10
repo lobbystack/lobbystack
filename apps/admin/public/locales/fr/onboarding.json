@@ -3,8 +3,7 @@
     "signOut": "Déconnexion",
     "terms": "Conditions",
     "privacy": "Confidentialité",
-    "support": "Assistance",
-    "back": "Retour"
+    "support": "Assistance"
   },
   "errors": {
     "tooManyBusinesses": "Vous possédez déjà 10 espaces de travail, la limite pour un compte."
@@ -80,6 +79,7 @@
     "submitting": "Démarrage de l'import...",
     "skip": "Je n'ai pas de site web",
     "skipping": "Ignorer...",
+    "skippingImport": "Ignorer l'import...",
     "submitFailed": "Impossible de démarrer l'import maintenant. Réessayez.",
     "invalidUrl": "Entrez l'adresse de votre site web, par exemple votreentreprise.com.",
     "skipFailed": "Impossible d'ignorer cette étape maintenant. Réessayez."
@@ -168,11 +168,15 @@
     "continue": "Continuer"
   },
   "number": {
-    "ready": {
-      "label": "Votre numéro est prêt",
-      "call": "Appeler le {{number}}"
-    },
     "planRequired": "Pour obtenir un numéro, choisissez un forfait.",
+    "refusals": {
+      "paidPlan": "Obtenir un numéro ici exige un forfait payant.",
+      "trialUsed": "Cet espace de travail ou votre téléphone a déjà utilisé son essai gratuit.",
+      "network": "Un essai gratuit a déjà démarré depuis ce réseau au cours des 30 derniers jours.",
+      "unavailable": "Aucun numéro d'essai gratuit n'est disponible pour cet espace de travail.",
+      "verification": "Un numéro gratuit exige un téléphone vérifié.",
+      "emailVerification": "Vérifiez votre adresse courriel avant de choisir un numéro d'essai."
+    },
     "title": "Choisissez le numéro de votre IA",
     "countryLabel": "Pays",
     "kindLocal": "Local",
@@ -185,6 +189,7 @@
     "capabilities": "Fonctions",
     "voiceSms": "Voix · SMS",
     "search": "Rechercher",
+    "searching": "Recherche...",
     "tableHeaders": {
       "phoneNumber": "Numéro"
     },
@@ -206,7 +211,6 @@
     "unavailable": "Ce numéro vient d'être pris. Choisissez-en un autre.",
     "selectedTitle": "Le numéro de votre IA",
     "selectedNumberLabel": "Numéro sélectionné",
-    "continue": "Continuer",
     "numbersUnavailable": "Les numéros de téléphone ne sont pas encore configurés sur ce tableau de bord. Demandez à la personne qui le gère de connecter un fournisseur de téléphonie."
   },
   "goal": {
@@ -284,7 +288,8 @@
     },
     "continue": "Continuer",
     "continuing": "Continuer...",
-    "continueFailed": "Impossible de continuer maintenant. Réessayez."
+    "continueFailed": "Impossible de continuer maintenant. Réessayez.",
+    "backToPlans": "Retour aux forfaits"
   },
   "noBusinesses": {
     "title": "Aucun espace de travail ici pour l'instant",

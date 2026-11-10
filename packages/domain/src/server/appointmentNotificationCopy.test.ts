@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildAppointmentNotification, SMS_OPT_OUT_FOOTER } from "./notifications";
+import { buildAppointmentNotification, RESCHEDULE_CONFIRMATION, SMS_OPT_OUT_FOOTER, VIDEO_LINK_UPDATE } from "./notifications";
 import { estimateSmsSegments } from "./usage";
 
 const base = {
@@ -12,7 +12,7 @@ const base = {
 
 // The GSM-7 basic alphabet, without its Greek capitals: 160 characters a segment.
 const GSM7 = /^[A-Za-z0-9 @£$¥èéùìòÇØøÅåÆæßÉÄÖÑÜäöñüà§¿¡!"#¤%&'()*+,\-./:;<=>?\n]*$/;
-const kinds = ["booking_confirmation", "appointment_reminder", "cancellation_confirmation"];
+const kinds = ["booking_confirmation", "appointment_reminder", "cancellation_confirmation", `${RESCHEDULE_CONFIRMATION}:2`];
 
 describe("appointment notification copy", () => {
   it("writes Serbian reminders in Latin script with a Latin-script date", () => {
@@ -39,9 +39,51 @@ describe("appointment notification copy", () => {
     expect(message.body).toMatch(GSM7);
   });
 
+  it.each([
+    ["en", "Appointment moved", "Ordinacija Javor: your pregled appointment has moved to Sep 30, 2026, 2:00 PM."],
+    ["fr", "Rendez-vous déplacé", "Ordinacija Javor: votre rendez-vous pregled est déplacé au 30 sept. 2026, 14:00."],
+    ["es", "Cita reprogramada", "Ordinacija Javor: su cita de pregled queda para el 30 sept 2026, 14:00."],
+    ["sr", "Termin je pomeren", "Ordinacija Javor: vas termin za pregled je pomeren na 30. sep 2026. 14:00."],
+  ] as const)("writes the %s reschedule text with the new time, in GSM-7", (locale, subject, body) => {
+    const message = buildAppointmentNotification({ ...base, kind: `${RESCHEDULE_CONFIRMATION}:3`, channel: "sms", locale });
+    expect(message).toEqual({ subject, body: `${body} ${SMS_OPT_OUT_FOOTER[locale]}` });
+    expect(message.body).toMatch(GSM7);
+  });
+
   it("keeps English as the default copy", () => {
     const message = buildAppointmentNotification({ ...base, kind: "appointment_reminder", channel: "sms", locale: "en", timezone: "America/New_York" });
     expect(message.body).toBe("Reminder from Ordinacija Javor: your pregled appointment is scheduled for Sep 30, 2026, 8:00 AM. Msg & data rates may apply. Reply STOP to opt out or HELP for help.");
+  });
+});
+
+describe("the video link in appointment texts", () => {
+  const videoUrl = "https://app.cal.com/video/abc123";
+
+  it.each([
+    ["en", "Join"], ["fr", "Lien"], ["es", "Enlace"], ["sr", "Link"],
+  ] as const)("puts the %s link before the opt-out line of confirmations and reminders, in GSM-7", (locale, label) => {
+    for (const kind of ["booking_confirmation", "appointment_reminder"]) {
+      const { body } = buildAppointmentNotification({ ...base, kind, channel: "sms", locale, videoUrl });
+      expect(body.endsWith(` ${label}: ${videoUrl} ${SMS_OPT_OUT_FOOTER[locale]}`)).toBe(true);
+      expect(body).toMatch(GSM7);
+    }
+  });
+
+  it.each(["en", "fr", "es", "sr"] as const)("writes the %s video link text with the appointment's date, in GSM-7", (locale) => {
+    const { body } = buildAppointmentNotification({ ...base, kind: `${VIDEO_LINK_UPDATE}:id`, channel: "sms", locale, videoUrl });
+    expect(body).toContain(`2026`);
+    expect(body.endsWith(`: ${videoUrl} ${SMS_OPT_OUT_FOOTER[locale]}`)).toBe(true);
+    expect(body.match(/https:/g)).toHaveLength(1);
+    expect(body).toMatch(GSM7);
+  });
+
+  it("leaves the link out of cancellations, and every text of a booking without one as it was", () => {
+    const { body } = buildAppointmentNotification({ ...base, kind: "cancellation_confirmation", channel: "sms", locale: "en", videoUrl });
+    expect(body).not.toContain(videoUrl);
+    for (const kind of kinds) {
+      const plain = { ...base, kind, channel: "sms", locale: "en" } as const;
+      expect(buildAppointmentNotification({ ...plain, videoUrl: null })).toEqual(buildAppointmentNotification(plain));
+    }
   });
 });
 

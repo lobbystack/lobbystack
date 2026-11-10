@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 import nodemailer, { type Transporter } from "nodemailer";
-import { CHECK_IN_ANSWERS, DEFAULT_APP_NAME, assertCertificationRecipient, checkInTokenVariable, type CheckInAnswer, type EmailBrand } from "@lobbystack/shared";
+import { DEFAULT_APP_NAME, assertCertificationRecipient, intlLocale, type CallSummaryEmailDetails, type EmailBrand } from "@lobbystack/shared";
 
 export type SmtpConfig = {
   host: string;
@@ -12,7 +12,23 @@ export type SmtpConfig = {
   from: string;
 };
 
-type TemplateName = "existing_account" | "account_setup" | "verify_email" | "password_reset" | "passkey_added" | "invitation" | "operator_alert" | "feedback_submission" | "onboarding_followup" | "number_trial" | "number_release" | "partner_pool_alert" | "business_allowance_alert" | "partner_business_allowance_alert" | "business_released" | "business_deleted";
+type TemplateName = "existing_account" | "account_setup" | "verify_email" | "password_reset" | "passkey_added" | "invitation" | "operator_alert" | "feedback_submission" | "welcome" | "number_trial" | "number_release" | "partner_pool_alert" | "business_allowance_alert" | "partner_business_allowance_alert" | "business_released" | "business_deleted" | "call_summary";
+
+/**
+ * Whether the mail provider refused the message for good. An SMTP 5xx
+ * response names a permanent rejection, such as a sender domain the API key
+ * may not use, so retrying the same message cannot succeed.
+ */
+export function isPermanentSmtpRejection(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const { responseCode, response } = error as { responseCode?: unknown; response?: unknown };
+  if (typeof responseCode === "number") return responseCode >= 500 && responseCode <= 599;
+  if (typeof response === "string") {
+    const code = Number(/^\s*(\d{3})\b/.exec(response)?.[1]);
+    return code >= 500 && code <= 599;
+  }
+  return false;
+}
 
 export class SmtpEmailProvider {
   private readonly transporter: Transporter;
@@ -138,6 +154,8 @@ function templateSubject(template: TemplateName, variables: Record<string, strin
       return `${variables.businessName ?? "Your business"} is yours to run on ${name}`;
     case "business_deleted":
       return `${name} deleted ${variables.businessName ?? "your business"}`;
+    case "call_summary":
+      return callSummaryCopy(variables).subject;
     default:
       return `${name} notification`;
   }
@@ -149,7 +167,7 @@ function renderTemplate(template: TemplateName, subject: string, variables: Reco
   return html ? { text, html } : { text };
 }
 
-/** The HTML of an email, or undefined for the founder's follow-up, which goes out as a personal plain-text letter. */
+/** The HTML of an email, in the shared layout. */
 function templateHtml(template: TemplateName, subject: string, variables: Record<string, string>, brand: EmailBrand): string | undefined {
   const url = dashboardLink(variables.url, brand);
   switch (template) {
@@ -173,15 +191,17 @@ function templateHtml(template: TemplateName, subject: string, variables: Record
         : renderNoticeHtml(brand, subject, { heading: "Reset your password", lines: [`Use the link below to choose a new ${brand.name} password.`, "If you did not ask for a reset, you can safely ignore this email."], action: "Reset password" }, url);
     case "operator_alert":
       return renderMessageHtml(brand, subject, variables.message ?? `${brand.name} operator notification`);
+    case "call_summary":
+      return renderCallSummaryHtml(brand, subject, variables);
     case "feedback_submission":
       return renderMessageHtml(brand, subject, variables.body ?? "LobbyStack dashboard feedback");
     case "number_trial": {
       const copy = numberTrialCopy(trialKind(variables.kind), variables.locale, variables);
-      return renderLetterHtml(brand, subject, variables, copy.lines, copy.button, variables.url, variables.senderName ?? "LobbyStack");
+      return renderLetterHtml(brand, subject, variables, copy.lines, copy.button, variables.url, brand.name);
     }
     case "number_release": {
       const copy = numberReleaseCopy(variables);
-      return renderLetterHtml(brand, subject, variables, copy.lines, copy.button, variables.url, variables.senderName ?? "LobbyStack");
+      return renderLetterHtml(brand, subject, variables, copy.lines, copy.button, variables.url, brand.name);
     }
     case "partner_pool_alert": {
       const copy = partnerPoolAlertCopy(variables);
@@ -195,8 +215,8 @@ function templateHtml(template: TemplateName, subject: string, variables: Record
       const copy = partnerBusinessAllowanceAlertCopy(variables);
       return renderLetterHtml(brand, subject, variables, copy.lines, copy.action, variables.url, brand.name);
     }
-    case "onboarding_followup":
-      return undefined;
+    case "welcome":
+      return renderWelcomeHtml(brand, subject, variables);
   }
 }
 
@@ -222,6 +242,7 @@ function renderLetterHtml(brand: EmailBrand, subject: string, variables: Record<
   return renderEmailLayout({
     brand,
     previewText: subject,
+    align: "left",
     content: [
       `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(greet(variables.firstName ?? ""))}</p>`,
       ...lines.map((line) => `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(line)}</p>`),
@@ -236,10 +257,173 @@ function renderMessageHtml(brand: EmailBrand, subject: string, message: string):
   return renderEmailLayout({
     brand,
     previewText: subject,
+    align: "left",
     content: message
       .split(/\n{2,}/)
       .map((paragraph) => `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(paragraph).replaceAll("\n", "<br />")}</p>`)
       .join(""),
+  });
+}
+
+type CallSummaryCopy = {
+  subject: string;
+  heading: string;
+  unknownCaller: string;
+  labels: { caller: string; phone: string; when: string; duration: string; outcome: string; summary: string };
+  /** What follows a label in the plain-text email: French puts a space before the colon. */
+  colon: string;
+  duration: (minutes: number, seconds: number) => string;
+  booked: (service: string, when: string) => string;
+  transferred: string;
+  action: string;
+  footnote: string;
+  settings: string;
+};
+
+const CALL_SUMMARY_COPY: Record<"en" | "fr" | "es" | "sr", (business: string, caller: string) => CallSummaryCopy> = {
+  en: (business, caller) => ({
+    subject: caller ? `New call from ${caller}` : `New call for ${business}`,
+    heading: `New call for ${business}`,
+    unknownCaller: "Unknown caller",
+    labels: { caller: "Caller", phone: "Phone", when: "When", duration: "Duration", outcome: "Outcome", summary: "Summary" },
+    colon: ": ",
+    duration: (m, s) => (m ? `${m} min ${s} sec` : `${s} sec`),
+    booked: (service, when) => (service ? `Booked ${service} for ${when}` : `Booked an appointment for ${when}`),
+    transferred: "Transferred to your team",
+    action: "View call",
+    footnote: "You get this email for each call your agent answers.",
+    settings: "Change alerts",
+  }),
+  fr: (business, caller) => ({
+    subject: caller ? `Nouvel appel de ${caller}` : `Nouvel appel pour ${business}`,
+    heading: `Nouvel appel pour ${business}`,
+    unknownCaller: "Appelant inconnu",
+    labels: { caller: "Appelant", phone: "Téléphone", when: "Date", duration: "Durée", outcome: "Résultat", summary: "Résumé" },
+    colon: " : ",
+    duration: (m, s) => (m ? `${m} min ${s} s` : `${s} s`),
+    booked: (service, when) => (service ? `Rendez-vous réservé : ${service}, ${when}` : `Rendez-vous réservé : ${when}`),
+    transferred: "Transféré à votre équipe",
+    action: "Voir l’appel",
+    footnote: "Vous recevez ce courriel pour chaque appel auquel votre agent répond.",
+    settings: "Modifier les alertes",
+  }),
+  es: (business, caller) => ({
+    subject: caller ? `Nueva llamada de ${caller}` : `Nueva llamada para ${business}`,
+    heading: `Nueva llamada para ${business}`,
+    unknownCaller: "Desconocido",
+    labels: { caller: "Quién llamó", phone: "Teléfono", when: "Fecha", duration: "Duración", outcome: "Resultado", summary: "Resumen" },
+    colon: ": ",
+    duration: (m, s) => (m ? `${m} min ${s} s` : `${s} s`),
+    booked: (service, when) => (service ? `Cita reservada: ${service}, ${when}` : `Cita reservada: ${when}`),
+    transferred: "Transferida a su equipo",
+    action: "Ver la llamada",
+    footnote: "Recibe este correo por cada llamada que contesta su agente.",
+    settings: "Cambiar alertas",
+  }),
+  sr: (business, caller) => ({
+    subject: caller ? `Novi poziv: ${caller}` : `Novi poziv za ${business}`,
+    heading: `Novi poziv za ${business}`,
+    unknownCaller: "Nepoznat pozivalac",
+    labels: { caller: "Pozivalac", phone: "Telefon", when: "Vreme", duration: "Trajanje", outcome: "Ishod", summary: "Rezime" },
+    colon: ": ",
+    duration: (m, s) => (m ? `${m} min ${s} s` : `${s} s`),
+    booked: (service, when) => (service ? `Zakazan termin: ${service}, ${when}` : `Zakazan termin: ${when}`),
+    transferred: "Prebačen Vašem timu",
+    action: "Pogledaj poziv",
+    footnote: "Ovaj imejl dobijate za svaki poziv na koji Vaš agent odgovori.",
+    settings: "Promeni obaveštenja",
+  }),
+};
+
+/** The interface language an email is written in: English unless the recipient reads French, Spanish or Serbian. */
+function emailCopyLocale(value: string | undefined): "en" | "fr" | "es" | "sr" {
+  return value === "fr" || value === "es" || value === "sr" ? value : "en";
+}
+
+/** A time in the business's time zone, written in the reader's language. */
+function callSummaryTime(value: string, locale: string, timeZone: string, withWeekday: boolean): string {
+  const date = new Date(value);
+  if (!value || !Number.isFinite(date.getTime())) return "";
+  return new Intl.DateTimeFormat(intlLocale(locale), { ...(withWeekday ? { weekday: "long" } : {}), month: "long", day: "numeric", hour: "numeric", minute: "2-digit", ...(timeZone ? { timeZone } : {}) }).format(date);
+}
+
+/** A call's length as the email shows it, or "" when it isn't known. */
+function callSummaryDuration(copy: CallSummaryCopy, value: string): string {
+  if (!value.trim()) return "";
+  const seconds = Math.max(0, Math.round(Number(value)) || 0);
+  return copy.duration(Math.floor(seconds / 60), seconds % 60);
+}
+
+/**
+ * The alert for a call the agent answered, in the reader's language: who
+ * called, when, for how long, what came of it, and the call's summary.
+ * Rows without a value stay out.
+ */
+function callSummaryCopy(variables: Record<string, string>) {
+  const details: Partial<CallSummaryEmailDetails> = variables;
+  const locale = emailCopyLocale(details.locale);
+  const timezone = details.timezone ?? "";
+  const copy = CALL_SUMMARY_COPY[locale](details.businessName ?? "", details.callerName || details.callerPhone || "");
+  const outcome = details.outcome === "booked" && details.bookedAt
+    ? copy.booked(details.bookedService ?? "", callSummaryTime(details.bookedAt, locale, timezone, false))
+    : details.outcome === "transferred" ? copy.transferred : "";
+  const rows = [
+    [copy.labels.caller, details.callerName || copy.unknownCaller],
+    [copy.labels.phone, details.callerPhone ?? ""],
+    [copy.labels.when, callSummaryTime(details.startedAt ?? "", locale, timezone, true)],
+    [copy.labels.duration, callSummaryDuration(copy, details.durationSeconds ?? "")],
+    [copy.labels.outcome, outcome],
+  ].filter((row): row is [string, string] => Boolean(row[1]));
+  return { ...copy, rows, summary: details.summary?.trim() ?? "" };
+}
+
+/** The notification settings page, on the same origin as the call link. */
+function notificationSettingsLink(callUrl: string | undefined): string | undefined {
+  return callUrl ? new URL("/settings/notifications", callUrl).href : undefined;
+}
+
+/** The grey box an email sets its facts or steps in, around rows of a table. */
+function renderPanel(rows: string, margin: string, padding: string): string {
+  return `<table role="presentation" border="0" cellspacing="0" cellpadding="0" width="100%" style="margin:${margin};background-color:#F9FAFB;border:1px solid #E5E7EB;border-radius:16px;"><tr><td style="padding:${padding};"><table role="presentation" border="0" cellspacing="0" cellpadding="0" width="100%">${rows}</table></td></tr></table>`;
+}
+
+function callSummaryBody(variables: Record<string, string>, brand: EmailBrand): string {
+  const copy = callSummaryCopy(variables);
+  const url = dashboardLink(variables.url, brand);
+  const settings = notificationSettingsLink(url);
+  return [
+    copy.heading,
+    "",
+    ...copy.rows.map(([label, value]) => `${label}${copy.colon}${value}`),
+    ...(copy.summary ? ["", `${copy.labels.summary}${copy.colon.trimEnd()}`, copy.summary] : []),
+    ...(url ? ["", `${copy.action}${copy.colon}${url}`] : []),
+    "",
+    copy.footnote,
+    ...(settings ? [`${copy.settings}${copy.colon}${settings}`] : []),
+  ].join("\n");
+}
+
+function renderCallSummaryHtml(brand: EmailBrand, subject: string, variables: Record<string, string>): string {
+  const copy = callSummaryCopy(variables);
+  const url = dashboardLink(variables.url, brand);
+  const settings = notificationSettingsLink(url);
+  const rows = copy.rows
+    .map(([label, value]) => `<tr><td style="width:112px;padding:6px 16px 6px 0;font-size:14px;line-height:1.5;color:#6B7280;vertical-align:top;">${escapeHtml(label)}</td><td style="padding:6px 0;font-size:15px;line-height:1.5;color:#0B0B0D;vertical-align:top;">${escapeHtml(value)}</td></tr>`)
+    .join("");
+  return renderEmailLayout({
+    brand,
+    previewText: subject,
+    align: "left",
+    content: [
+      `<h1 style="margin:0 0 24px;font-size:24px;font-weight:600;line-height:1.25;color:#0B0B0D;">${escapeHtml(copy.heading)}</h1>`,
+      renderPanel(rows, "0 0 24px", "14px 20px"),
+      ...(copy.summary ? [
+        `<p style="margin:0 0 6px;font-size:14px;line-height:1.5;color:#6B7280;">${escapeHtml(copy.labels.summary)}</p>`,
+        `<p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(copy.summary).replaceAll("\n", "<br />")}</p>`,
+      ] : []),
+      ...(url ? [`<p style="margin:8px 0 0;"><a href="${escapeHtml(url)}" style="${ACTION_BUTTON_STYLE}">${escapeHtml(copy.action)}</a></p>`] : []),
+      `<p style="margin:32px 0 0;padding-top:24px;border-top:1px solid #E5E7EB;font-size:14px;line-height:1.5;color:#6B7280;">${escapeHtml(copy.footnote)}${settings ? ` <a href="${escapeHtml(settings)}" style="color:#6B7280;text-decoration:underline;">${escapeHtml(copy.settings)}</a>` : ""}</p>`,
+    ].join(""),
   });
 }
 
@@ -304,7 +488,7 @@ function renderAccountSetupHtml(variables: Record<string, string>, brand: EmailB
 }
 
 // The account, invitation and alert emails a partner's client may get name the
-// brand. Feedback, the founder check-in, and the trial and release emails with
+// brand. Feedback, the welcome email, and the trial and release emails with
 // the host's prices are the host's own, and keep LobbyStack.
 function templateBody(template: TemplateName, variables: Record<string, string>, brand: EmailBrand): string {
   const name = brand.name;
@@ -332,14 +516,16 @@ function templateBody(template: TemplateName, variables: Record<string, string>,
     }
     case "operator_alert":
       return variables.message ?? `${name} operator notification`;
+    case "call_summary":
+      return callSummaryBody(variables, brand);
     case "feedback_submission":
       return variables.body ?? "LobbyStack dashboard feedback";
-    case "onboarding_followup":
-      return onboardingFollowupBody(variables, brand);
+    case "welcome":
+      return welcomeBody(variables, brand);
     case "number_trial":
-      return numberTrialBody(variables);
+      return numberTrialBody(variables, brand);
     case "number_release":
-      return numberReleaseBody(variables);
+      return numberReleaseBody(variables, brand);
     case "partner_pool_alert":
       return partnerPoolAlertBody(variables, brand);
     case "business_allowance_alert":
@@ -612,10 +798,10 @@ export function numberReleaseEmailSubject(variables: Record<string, string>): st
   return numberReleaseCopy(variables).subject;
 }
 
-function numberReleaseBody(variables: Record<string, string>): string {
+function numberReleaseBody(variables: Record<string, string>, brand: EmailBrand): string {
   const copy = numberReleaseCopy(variables);
   const greet = TRIAL_GREETINGS[variables.locale ?? "en"] ?? TRIAL_GREETINGS.en!;
-  return [greet(variables.firstName ?? ""), "", ...copy.lines.flatMap((line) => [line, ""]), `${copy.button}: ${variables.url ?? ""}`, "", variables.senderName ?? "LobbyStack"].join("\n");
+  return [greet(variables.firstName ?? ""), "", ...copy.lines.flatMap((line) => [line, ""]), `${copy.button}: ${variables.url ?? ""}`, "", brand.name].join("\n");
 }
 
 type TrialEmailKind = "day10" | "day13" | "ended" | "minutes_out";
@@ -627,6 +813,8 @@ function numberTrialCopy(kind: TrialEmailKind, locale: string | undefined, v: Re
   const calls = Number(v.calls ?? "0");
   const num = v.trialNumber ?? "";
   const fwd = v.forwardTo ?? "";
+  // A trial started without a verified mobile has no forward to name when it runs out.
+  const hasFwd = Boolean(fwd);
   const business = v.businessName ?? "";
   if (locale === "fr") {
     const answered = calls > 0 ? [`Votre agent a déjà répondu à ${calls} appel${calls > 1 ? "s" : ""} pour ${business}.`] : [];
@@ -634,7 +822,9 @@ function numberTrialCopy(kind: TrialEmailKind, locale: string | undefined, v: Re
       case "day10": return { subject: `Plus que 4 jours pour garder le ${num}`, lines: [`Votre essai gratuit se termine le ${v.endDate}.`, ...answered, `À la fin de l'essai, votre agent cesse de répondre au ${num} et nous libérons le numéro. Choisissez un forfait pour le garder. Starter coûte 30 $ par mois pour 150 minutes.`], button: "Garder mon numéro" };
       case "day13": return { subject: `Demain, dernier jour avec le ${num}`, lines: ["Votre essai gratuit se termine demain à minuit.", ...answered, `Ensuite, les appels au ${num} restent sans réponse et nous libérons le numéro. Gardez-le pour 30 $ par mois avec Starter.`], button: "Garder mon numéro" };
       case "ended": return { subject: `Votre essai est terminé. Le ${num} ne répond plus`, lines: [`Votre essai de 14 jours s'est terminé hier, alors votre agent ne répond plus au ${num}. Nous libérons le numéro. Abonnez-vous dès maintenant si vous voulez le garder. Starter coûte 30 $ par mois pour 150 minutes.`], button: "Garder mon numéro" };
-      case "minutes_out": return { subject: `Vos minutes sont épuisées. Les appels vont maintenant au ${fwd}`, lines: [`${business} a utilisé ses 30 minutes gratuites, alors votre agent ne répond plus au ${num}. Les appels sonnent maintenant au ${fwd}. Passez à un forfait payant pour retrouver votre agent. Starter coûte 30 $ par mois pour 150 minutes, et vous gardez votre numéro.`], button: "Retrouver mon agent" };
+      case "minutes_out": return hasFwd
+        ? { subject: `Vos minutes sont épuisées. Les appels vont maintenant au ${fwd}`, lines: [`${business} a utilisé ses 30 minutes gratuites, alors votre agent ne répond plus au ${num}. Les appels sonnent maintenant au ${fwd}. Passez à un forfait payant pour retrouver votre agent. Starter coûte 30 $ par mois pour 150 minutes, et vous gardez votre numéro.`], button: "Retrouver mon agent" }
+        : { subject: "Vos minutes sont épuisées. Les appels restent sans réponse", lines: [`${business} a utilisé ses 30 minutes gratuites, alors votre agent ne répond plus au ${num}. Les appels restent maintenant sans réponse. Passez à un forfait payant pour retrouver votre agent. Starter coûte 30 $ par mois pour 150 minutes, et vous gardez votre numéro.`], button: "Retrouver mon agent" };
     }
   }
   if (locale === "es") {
@@ -643,7 +833,9 @@ function numberTrialCopy(kind: TrialEmailKind, locale: string | undefined, v: Re
       case "day10": return { subject: `Quedan 4 días para conservar el ${num}`, lines: [`Su prueba gratuita termina el ${v.endDate}.`, ...answered, `Cuando termine la prueba, su agente dejará de contestar el ${num} y liberaremos el número. Elija un plan para conservarlo. Starter cuesta 30 USD al mes por 150 minutos.`], button: "Conservar mi número" };
       case "day13": return { subject: `Mañana es su último día con el ${num}`, lines: ["Su prueba gratuita termina mañana a medianoche.", ...answered, `Después, las llamadas al ${num} quedarán sin respuesta y liberaremos el número. Consérvelo por 30 USD al mes con Starter.`], button: "Conservar mi número" };
       case "ended": return { subject: `Su prueba terminó. El ${num} dejó de contestar`, lines: [`Su prueba de 14 días terminó ayer, así que su agente dejó de contestar el ${num}. Estamos liberando el número. Suscríbase ahora si quiere conservarlo. Starter cuesta 30 USD al mes por 150 minutos.`], button: "Conservar mi número" };
-      case "minutes_out": return { subject: `Se acabaron sus minutos. Las llamadas ahora van al ${fwd}`, lines: [`${business} usó sus 30 minutos gratuitos, así que su agente dejó de contestar el ${num}. Las llamadas ahora suenan en el ${fwd}. Mejore su plan ahora para recuperar a su agente. Starter cuesta 30 USD al mes por 150 minutos, y conserva su número.`], button: "Recuperar a mi agente" };
+      case "minutes_out": return hasFwd
+        ? { subject: `Se acabaron sus minutos. Las llamadas ahora van al ${fwd}`, lines: [`${business} usó sus 30 minutos gratuitos, así que su agente dejó de contestar el ${num}. Las llamadas ahora suenan en el ${fwd}. Mejore su plan ahora para recuperar a su agente. Starter cuesta 30 USD al mes por 150 minutos, y conserva su número.`], button: "Recuperar a mi agente" }
+        : { subject: "Se acabaron sus minutos. Las llamadas quedan sin respuesta", lines: [`${business} usó sus 30 minutos gratuitos, así que su agente dejó de contestar el ${num}. Las llamadas ahora quedan sin respuesta. Mejore su plan para recuperar a su agente. Starter cuesta 30 USD al mes por 150 minutos, y conserva su número.`], button: "Recuperar a mi agente" };
     }
   }
   if (locale === "sr") {
@@ -652,7 +844,9 @@ function numberTrialCopy(kind: TrialEmailKind, locale: string | undefined, v: Re
       case "day10": return { subject: `Još 4 dana da zadržite broj ${num}`, lines: [`Vaša besplatna proba ističe ${v.endDate}.`, ...answered, `Kada proba istekne, agent prestaje da odgovara na ${num} i mi oslobađamo broj. Izaberite paket da biste ga zadržali. Starter košta 30 USD mesečno za 150 minuta.`], button: "Zadrži moj broj" };
       case "day13": return { subject: `Sutra je Vaš poslednji dan sa brojem ${num}`, lines: ["Vaša besplatna proba ističe sutra u ponoć.", ...answered, `Nakon toga, pozivi na ${num} ostaju bez odgovora i mi oslobađamo broj. Zadržite ga za 30 USD mesečno uz Starter.`], button: "Zadrži moj broj" };
       case "ended": return { subject: `Proba je istekla. ${num} više ne odgovara`, lines: [`Vaša proba od 14 dana istekla je juče, pa agent više ne odgovara na ${num}. Oslobađamo broj. Pretplatite se sada ako želite da ga zadržite. Starter košta 30 USD mesečno za 150 minuta.`], button: "Zadrži moj broj" };
-      case "minutes_out": return { subject: `Potrošili ste minute. Pozivi sada idu na ${fwd}`, lines: [`${business} je potrošio 30 besplatnih minuta, pa agent više ne odgovara na ${num}. Pozivi sada zvone na ${fwd}. Pređite na plaćeni paket da biste vratili agenta. Starter košta 30 USD mesečno za 150 minuta, a broj ostaje Vaš.`], button: "Vrati mog agenta" };
+      case "minutes_out": return hasFwd
+        ? { subject: `Potrošili ste minute. Pozivi sada idu na ${fwd}`, lines: [`${business} je potrošio 30 besplatnih minuta, pa agent više ne odgovara na ${num}. Pozivi sada zvone na ${fwd}. Pređite na plaćeni paket da biste vratili agenta. Starter košta 30 USD mesečno za 150 minuta, a broj ostaje Vaš.`], button: "Vrati mog agenta" }
+        : { subject: "Potrošili ste minute. Pozivi ostaju bez odgovora", lines: [`${business} je potrošio 30 besplatnih minuta, pa agent više ne odgovara na ${num}. Pozivi sada ostaju bez odgovora. Pređite na plaćeni paket da biste vratili agenta. Starter košta 30 USD mesečno za 150 minuta, a broj ostaje Vaš.`], button: "Vrati mog agenta" };
     }
   }
   const answered = calls > 0 ? [`So far your agent has answered ${calls} call${calls > 1 ? "s" : ""} for ${business}.`] : [];
@@ -660,7 +854,9 @@ function numberTrialCopy(kind: TrialEmailKind, locale: string | undefined, v: Re
     case "day10": return { subject: `4 days left to keep ${num}`, lines: [`Your free trial ends on ${v.endDate}.`, ...answered, `When it ends, your agent stops answering ${num} and we release the number. Choose a plan to keep it. Starter is $30 a month for 150 minutes.`], button: "Keep my number" };
     case "day13": return { subject: `Tomorrow is your last day with ${num}`, lines: ["Your free trial ends at midnight tomorrow.", ...answered, `After that, calls to ${num} go unanswered and we release the number. Keep it for $30 a month with Starter.`], button: "Keep my number" };
     case "ended": return { subject: `Your trial ended. ${num} stopped answering`, lines: [`Your 14-day trial ended yesterday, so your agent stopped answering ${num}. We're releasing the number. Subscribe now if you want to keep it. Starter is $30 a month for 150 minutes.`], button: "Keep my number" };
-    case "minutes_out": return { subject: `You're out of minutes. Calls now go to ${fwd}`, lines: [`${business} used its 30 free minutes, so your agent stopped answering ${num}. Calls now ring ${fwd}. Upgrade now to get your agent back. Starter is $30 a month for 150 minutes, and you keep your number.`], button: "Get my agent back" };
+    case "minutes_out": return hasFwd
+      ? { subject: `You're out of minutes. Calls now go to ${fwd}`, lines: [`${business} used its 30 free minutes, so your agent stopped answering ${num}. Calls now ring ${fwd}. Upgrade now to get your agent back. Starter is $30 a month for 150 minutes, and you keep your number.`], button: "Get my agent back" }
+      : { subject: "You're out of minutes. Calls are not being answered", lines: [`${business} used its 30 free minutes, so your agent stopped answering ${num}. Calls now go unanswered. Choose a paid plan to get your agent back. Starter is $30 a month for 150 minutes, and you keep your number.`], button: "Get my agent back" };
   }
 }
 
@@ -680,10 +876,10 @@ export function numberTrialEmailSubject(variables: Record<string, string>): stri
   return numberTrialCopy(trialKind(variables.kind), variables.locale, variables).subject;
 }
 
-function numberTrialBody(variables: Record<string, string>): string {
+function numberTrialBody(variables: Record<string, string>, brand: EmailBrand): string {
   const copy = numberTrialCopy(trialKind(variables.kind), variables.locale, variables);
   const greet = TRIAL_GREETINGS[variables.locale ?? "en"] ?? TRIAL_GREETINGS.en!;
-  return [greet(variables.firstName ?? ""), "", ...copy.lines.flatMap((line) => [line, ""]), `${copy.button}: ${variables.url ?? ""}`, "", variables.senderName ?? "LobbyStack"].join("\n");
+  return [greet(variables.firstName ?? ""), "", ...copy.lines.flatMap((line) => [line, ""]), `${copy.button}: ${variables.url ?? ""}`, "", brand.name].join("\n");
 }
 
 /** For an owner a platform key invited: the link opens sign-up, where they make their account with this address. */
@@ -767,64 +963,166 @@ function existingAccountBody(variables: Record<string, string>, brand: EmailBran
   }
 }
 
-type CheckInCopy = { greeting: (name: string) => string; intro: (sender: string, business: string) => string; question: string; answers: Record<CheckInAnswer, string>; close: string; title: string };
+type WelcomeGoal = "answer_calls" | "book_appointments" | "answer_website_visitors" | "answer_instagram_messages" | "none";
 
-const CHECK_IN_COPY: Record<"en" | "fr" | "es" | "sr", CheckInCopy> = {
+type WelcomeCopy = {
+  heading: (firstName: string) => string;
+  intro: (business: string) => string;
+  lead: string;
+  hear: { title: string; text: Record<WelcomeGoal, string> };
+  teach: { title: string; text: string; booking: string };
+  forward: { title: (number: string) => string; text: string; action: string };
+  claim: { title: string; text: string; action: string };
+  close: string;
+  signature: string;
+};
+
+const WELCOME_COPY: Record<"en" | "fr" | "es" | "sr", WelcomeCopy> = {
   en: {
-    greeting: (name) => (name ? `Hi ${name},` : "Hi,"),
-    intro: (sender, business) => `I'm ${sender}, the founder of LobbyStack. You set up an agent for ${business} yesterday, and it hasn't talked to a real customer yet.`,
-    question: "What's holding you back? Click one:",
-    answers: { still_testing: "I'm still testing it", connect_number: "I don't know how to connect my number", test_call_mistakes: "It made mistakes on my test call", not_a_fit: "It's not right for my business" },
-    close: "If it's something else, just reply. I read every answer.",
-    title: "Founder, LobbyStack",
+    heading: (name) => (name ? `Welcome to LobbyStack, ${name}` : "Welcome to LobbyStack"),
+    intro: (business) => `We're glad you're here. Your agent for ${business} is set up and ready to pick up the calls you can't.`,
+    lead: "Three steps and it's answering your customers:",
+    hear: {
+      title: "Hear your agent",
+      text: {
+        answer_calls: "Call it from your dashboard and ask what your callers ask most.",
+        book_appointments: "Call it from your dashboard and ask it to book an appointment.",
+        answer_website_visitors: "Call it from your dashboard and ask what people ask on your website.",
+        answer_instagram_messages: "Call it from your dashboard and ask what people ask on Instagram.",
+        none: "Call it from your dashboard and ask what your customers ask most.",
+      },
+    },
+    teach: { title: "Teach it your business", text: "Add your hours, prices and FAQs so it answers the way your team does.", booking: "Add your services, hours and booking rules so it books the way your team does." },
+    forward: { title: (number) => `Forward your calls to ${number}`, text: "Your phone rings first. When you miss a call, your agent picks up.", action: "Forward my missed calls" },
+    claim: { title: "Get a phone number", text: "Give your agent its own number, then forward the calls you miss to it.", action: "Answer my missed calls" },
+    close: "Questions or stuck on a step? Reply to this email and we'll help.",
+    signature: "The LobbyStack team",
   },
   fr: {
-    greeting: (name) => (name ? `Bonjour ${name},` : "Bonjour,"),
-    intro: (sender, business) => `Je suis ${sender}, le fondateur de LobbyStack. Vous avez configuré un agent pour ${business} hier, et il n'a pas encore parlé à un vrai client.`,
-    question: "Qu'est-ce qui vous retient ? Cliquez sur une réponse :",
-    answers: { still_testing: "Je suis encore en train de le tester", connect_number: "Je ne sais pas comment connecter mon numéro", test_call_mistakes: "Il a fait des erreurs pendant mon appel test", not_a_fit: "Il ne convient pas à mon entreprise" },
-    close: "Si c'est autre chose, répondez simplement à ce courriel. Je lis toutes les réponses.",
-    title: "Fondateur, LobbyStack",
+    heading: (name) => (name ? `Bienvenue chez LobbyStack, ${name}` : "Bienvenue chez LobbyStack"),
+    intro: (business) => `Nous sommes ravis de vous accueillir. Votre agent pour ${business} est prêt à répondre aux appels que vous ne pouvez pas prendre.`,
+    lead: "Trois étapes et il répond à vos clients :",
+    hear: {
+      title: "Écoutez votre agent",
+      text: {
+        answer_calls: "Appelez-le depuis votre tableau de bord et posez la question que vos appelants posent le plus.",
+        book_appointments: "Appelez-le depuis votre tableau de bord et demandez-lui de prendre un rendez-vous.",
+        answer_website_visitors: "Appelez-le depuis votre tableau de bord et posez les questions qu'on vous pose sur votre site.",
+        answer_instagram_messages: "Appelez-le depuis votre tableau de bord et posez les questions qu'on vous pose sur Instagram.",
+        none: "Appelez-le depuis votre tableau de bord et posez la question que vos clients posent le plus.",
+      },
+    },
+    teach: { title: "Présentez-lui votre entreprise", text: "Ajoutez vos heures, vos tarifs et vos FAQ pour qu'il réponde comme votre équipe.", booking: "Ajoutez vos services, vos heures et vos règles de réservation pour qu'il réserve comme votre équipe." },
+    forward: { title: (number) => `Transférez vos appels vers le ${number}`, text: "Votre téléphone sonne d'abord. Si vous ne répondez pas, votre agent prend l'appel.", action: "Transférer mes appels manqués" },
+    claim: { title: "Obtenez un numéro de téléphone", text: "Donnez un numéro à votre agent, puis transférez-y les appels que vous manquez.", action: "Répondre à mes appels manqués" },
+    close: "Une question ou bloqué à une étape ? Répondez à ce courriel et nous vous aiderons.",
+    signature: "L'équipe LobbyStack",
   },
   es: {
-    greeting: (name) => (name ? `Hola, ${name}:` : "Hola:"),
-    intro: (sender, business) => `Soy ${sender}, fundador de LobbyStack. Ayer configuró un agente para ${business}, y todavía no ha hablado con ningún cliente real.`,
-    question: "¿Qué le está frenando? Haga clic en una opción:",
-    answers: { still_testing: "Todavía lo estoy probando", connect_number: "No sé cómo conectar mi número", test_call_mistakes: "Cometió errores en mi llamada de prueba", not_a_fit: "No es adecuado para mi negocio" },
-    close: "Si es otra cosa, responda a este correo. Leo todas las respuestas.",
-    title: "Fundador, LobbyStack",
+    heading: (name) => (name ? `Le damos la bienvenida a LobbyStack, ${name}` : "Le damos la bienvenida a LobbyStack"),
+    intro: (business) => `Nos alegra tenerle aquí. Su agente para ${business} está listo para atender las llamadas que usted no puede contestar.`,
+    lead: "Tres pasos y estará atendiendo a sus clientes:",
+    hear: {
+      title: "Escuche a su agente",
+      text: {
+        answer_calls: "Llámelo desde su panel y pregúntele lo que más le preguntan quienes llaman.",
+        book_appointments: "Llámelo desde su panel y pídale que reserve una cita.",
+        answer_website_visitors: "Llámelo desde su panel y pregúntele lo que la gente pregunta en su sitio web.",
+        answer_instagram_messages: "Llámelo desde su panel y pregúntele lo que la gente pregunta en Instagram.",
+        none: "Llámelo desde su panel y pregúntele lo que más preguntan sus clientes.",
+      },
+    },
+    teach: { title: "Enséñele su negocio", text: "Agregue su horario, sus precios y sus preguntas frecuentes para que responda como su equipo.", booking: "Agregue sus servicios, su horario y sus reglas de reserva para que reserve como su equipo." },
+    forward: { title: (number) => `Desvíe sus llamadas al ${number}`, text: "Su teléfono suena primero. Si no contesta, su agente atiende la llamada.", action: "Desviar mis llamadas perdidas" },
+    claim: { title: "Consiga un número de teléfono", text: "Dé a su agente su propio número y desvíe a él las llamadas que no contesta.", action: "Atender mis llamadas perdidas" },
+    close: "¿Tiene preguntas o se atascó en un paso? Responda a este correo y le ayudaremos.",
+    signature: "El equipo de LobbyStack",
   },
   sr: {
-    greeting: (name) => (name ? `Zdravo, ${name},` : "Zdravo,"),
-    intro: (sender, business) => `Ja sam ${sender}, osnivač LobbyStacka. Juče ste podesili agenta za ${business}, a on još nije razgovarao ni sa jednim pravim klijentom.`,
-    question: "Šta Vas koči? Kliknite na jedan odgovor:",
-    answers: { still_testing: "Još ga testiram", connect_number: "Ne znam kako da povežem svoj broj", test_call_mistakes: "Pravio je greške u mom probnom pozivu", not_a_fit: "Ne odgovara mom poslovanju" },
-    close: "Ako je nešto drugo, samo odgovorite na ovaj imejl. Čitam svaki odgovor.",
-    title: "Osnivač, LobbyStack",
+    heading: (name) => (name ? `Dobro došli u LobbyStack, ${name}` : "Dobro došli u LobbyStack"),
+    intro: (business) => `Drago nam je što ste tu. Vaš agent za ${business} je spreman da preuzme pozive koje ne stignete da javite.`,
+    lead: "Tri koraka i odgovara Vašim klijentima:",
+    hear: {
+      title: "Poslušajte svog agenta",
+      text: {
+        answer_calls: "Pozovite ga iz kontrolne table i pitajte ono što Vas pozivaoci najčešće pitaju.",
+        book_appointments: "Pozovite ga iz kontrolne table i zamolite ga da zakaže termin.",
+        answer_website_visitors: "Pozovite ga iz kontrolne table i pitajte ono što ljudi pitaju na Vašem sajtu.",
+        answer_instagram_messages: "Pozovite ga iz kontrolne table i pitajte ono što ljudi pitaju na Instagramu.",
+        none: "Pozovite ga iz kontrolne table i pitajte ono što Vas klijenti najčešće pitaju.",
+      },
+    },
+    teach: { title: "Upoznajte ga sa svojim poslom", text: "Dodajte radno vreme, cene i česta pitanja da bi odgovarao kao Vaš tim.", booking: "Dodajte usluge, radno vreme i pravila zakazivanja da bi zakazivao kao Vaš tim." },
+    forward: { title: (number) => `Preusmerite pozive na ${number}`, text: "Vaš telefon zvoni prvi. Kada ne javite, javlja se agent.", action: "Preusmeri propuštene pozive" },
+    claim: { title: "Nabavite broj telefona", text: "Dodelite agentu sopstveni broj, pa na njega preusmerite pozive koje propustite.", action: "Odgovaraj na propuštene pozive" },
+    close: "Imate pitanje ili ste zapeli na nekom koraku? Odgovorite na ovaj imejl i pomoći ćemo Vam.",
+    signature: "Tim LobbyStacka",
   },
 };
 
 /**
- * The founder's check-in, as plain text. Each answer is a link to a page that
- * asks to confirm it, so a mail scanner opening the link answers nothing.
+ * The welcome email, sent when onboarding finishes, in the owner's language.
+ * Its three steps match Getting started on Home, and its button leads to the
+ * third: forwarding calls to the number the owner took, or getting one.
  */
-function onboardingFollowupBody(variables: Record<string, string>, brand: EmailBrand): string {
-  const locale = variables.locale === "fr" || variables.locale === "es" || variables.locale === "sr" ? variables.locale : "en";
-  const copy = CHECK_IN_COPY[locale];
-  const sender = variables.senderName ?? "";
+function welcomeCopy(variables: Record<string, string>) {
+  const locale = emailCopyLocale(variables.locale);
+  const copy = WELCOME_COPY[locale];
+  const goal: WelcomeGoal = variables.goal === "answer_calls" || variables.goal === "book_appointments" || variables.goal === "answer_website_visitors" || variables.goal === "answer_instagram_messages" ? variables.goal : "none";
+  const number = variables.number?.trim() ?? "";
+  const phone = number ? { title: copy.forward.title(number), text: copy.forward.text, action: copy.forward.action } : copy.claim;
+  return {
+    heading: copy.heading(variables.firstName?.trim() ?? ""),
+    lines: [copy.intro(variables.businessName ?? ""), copy.lead],
+    steps: [
+      { title: copy.hear.title, text: copy.hear.text[goal] },
+      { title: copy.teach.title, text: goal === "book_appointments" ? copy.teach.booking : copy.teach.text },
+      { title: phone.title, text: phone.text },
+    ],
+    action: phone.action,
+    // French puts a space before the colon that follows the button's words in the plain-text email.
+    colon: locale === "fr" ? " : " : ": ",
+    close: copy.close,
+    signature: copy.signature,
+  };
+}
+
+function welcomeBody(variables: Record<string, string>, brand: EmailBrand): string {
+  const copy = welcomeCopy(variables);
+  const url = dashboardLink(variables.url, brand) ?? "";
   return [
-    copy.greeting(variables.firstName ?? ""),
+    copy.heading,
     "",
-    copy.intro(sender, variables.businessName ?? ""),
+    ...copy.lines.flatMap((line) => [line, ""]),
+    ...copy.steps.flatMap((step, index) => [`${index + 1}. ${step.title}`, step.text, ""]),
+    `${copy.action}${copy.colon}${url}`,
     "",
-    copy.question,
-    "",
-    ...CHECK_IN_ANSWERS.flatMap((answer) => [copy.answers[answer], `${brand.origin}/${locale}/check-in/${variables[checkInTokenVariable(answer)] ?? ""}`, ""]),
     copy.close,
     "",
-    sender,
-    copy.title,
+    copy.signature,
   ].join("\n");
+}
+
+function renderWelcomeHtml(brand: EmailBrand, subject: string, variables: Record<string, string>): string {
+  const copy = welcomeCopy(variables);
+  const url = dashboardLink(variables.url, brand);
+  const steps = copy.steps
+    .map((step, index) => `<tr><td style="width:40px;padding:4px 0;vertical-align:top;"><div style="width:28px;height:28px;border-radius:9999px;background-color:#0B0B0D;color:#FFFFFF;font-size:14px;font-weight:600;line-height:28px;text-align:center;">${index + 1}</div></td><td style="padding:4px 0 ${index === copy.steps.length - 1 ? 4 : 14}px;vertical-align:top;"><p style="margin:0;font-size:15px;font-weight:600;line-height:1.5;color:#0B0B0D;">${escapeHtml(step.title)}</p><p style="margin:0;font-size:15px;line-height:1.5;color:#3D3D3D;">${escapeHtml(step.text)}</p></td></tr>`)
+    .join("");
+  return renderEmailLayout({
+    brand,
+    previewText: subject,
+    align: "left",
+    content: [
+      `<h1 style="margin:0 0 20px;font-size:28px;font-weight:600;line-height:1.2;color:#0B0B0D;">${escapeHtml(copy.heading)}</h1>`,
+      `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(copy.lines[0]!)}</p>`,
+      `<p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(copy.lines[1]!)}</p>`,
+      renderPanel(steps, "0 0 28px", "18px 20px"),
+      ...(url ? [`<p style="margin:0;"><a href="${escapeHtml(url)}" style="${ACTION_BUTTON_STYLE}">${escapeHtml(copy.action)}</a></p>`] : []),
+      `<p style="margin:28px 0 0;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(copy.close)}</p>`,
+      `<p style="margin:16px 0 0;font-size:16px;line-height:1.6;color:#3D3D3D;">${escapeHtml(copy.signature)}</p>`,
+    ].join(""),
+  });
 }
 
 type NoticeCopy = { heading: string; lines: string[]; action: string | null };
@@ -871,17 +1169,23 @@ const LOBBYSTACK_MARK = `<svg xmlns="http://www.w3.org/2000/svg" width="48" heig
  * LobbyStack's mark while the name is LobbyStack, or else the name on its own. A logo saved as a path on the
  * dashboard gets the brand's origin, since a mail client has no page to resolve it against.
  */
-function emailHeader(brand: EmailBrand): string {
+function emailHeader(brand: EmailBrand, align: EmailAlign): string {
   const logoUrl = brand.emailLogoUrl === undefined ? brand.logoUrl : brand.emailLogoUrl;
   if (logoUrl) {
     const src = logoUrl.startsWith("/") ? `${brand.origin}${logoUrl}` : logoUrl;
     return `<img src="${escapeHtml(src)}" alt="${escapeHtml(brand.name)}" height="48" style="height:48px;width:auto;max-width:240px;border:0;" />`;
   }
   if (brand.name === DEFAULT_APP_NAME) return LOBBYSTACK_MARK;
-  return `<p style="margin:0;font-size:20px;font-weight:600;line-height:1.25;color:#0B0B0D;text-align:center;">${escapeHtml(brand.name)}</p>`;
+  return `<p style="margin:0;font-size:20px;font-weight:600;line-height:1.25;color:#0B0B0D;text-align:${align};">${escapeHtml(brand.name)}</p>`;
 }
 
-function renderEmailLayout({ brand, previewText, content }: { brand: EmailBrand; previewText: string; content: string }): string {
+/**
+ * Where an email's logo sits: centered over the centered account emails, and
+ * on the left over the ones whose text reads left-aligned, like a letter.
+ */
+type EmailAlign = "center" | "left";
+
+function renderEmailLayout({ brand, previewText, content, align = "center" }: { brand: EmailBrand; previewText: string; content: string; align?: EmailAlign }): string {
   const escapedPreviewText = escapeHtml(previewText);
 
   return `<!doctype html>
@@ -905,8 +1209,8 @@ function renderEmailLayout({ brand, previewText, content }: { brand: EmailBrand;
         <td align="center" style="padding:48px 16px;">
           <table role="presentation" class="email-container" border="0" cellspacing="0" cellpadding="0" width="600" style="width:600px;max-width:600px;background-color:#FFFFFF;border-radius:24px;padding:48px;">
             <tr>
-              <td align="center" style="padding-bottom:32px;">
-                ${emailHeader(brand)}
+              <td align="${align}" style="padding-bottom:32px;">
+                ${emailHeader(brand, align)}
               </td>
             </tr>
             <tr>

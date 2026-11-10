@@ -4,7 +4,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { and, asc, count, desc, eq, inArray, isNotNull, isNull, ne, notExists, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 
-import { agentRules, agents, apiKeys, appointments, auditLogs, billingAccounts, billingCheckoutRequests, billingUsageMonths, businesses, businessInvitations, businessMemberships, calendarConnections, contactPasscodes, contacts, defaultAgentOf, knowledgeDocuments, knowledgeSnippets, phoneNumbers, platformKeyBusinesses, services, storageObjects, users, websiteIngestionJobs, widgetKeys, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { agentRules, agents, apiKeys, appointments, auditLogs, billingAccounts, billingCheckoutRequests, billingUsageMonths, businesses, businessInvitations, businessMemberships, calendarConnections, contactPasscodes, contacts, defaultAgentIdOf, defaultAgentOf, knowledgeDocuments, knowledgeSnippets, phoneNumbers, platformKeyBusinesses, services, storageObjects, users, websiteIngestionJobs, widgetKeys, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import {
   CONTACT_PASSCODE_DEFAULT_LENGTH,
   CONTACT_PASSCODE_HASHES_PER_CALLER,
@@ -27,6 +27,7 @@ import {
   normalizeBookingMode,
   weekdays,
   type ApiAccountCalendar,
+  type ApiAgent,
   type ApiAppointment,
   type ApiAppointmentCreate,
   type ApiAvailabilitySlot,
@@ -109,7 +110,7 @@ import type { DomainContext } from "../context";
 import { loadEntitlement } from "../entitlement";
 import { cancelKnowledgeDocumentInTransaction, createKnowledgeDocumentInTransaction, createKnowledgeSnippetInTransaction, deleteKnowledgeDocumentInTransaction, deleteKnowledgeSnippetInTransaction, expandWebsiteCrawlInTransaction, KnowledgeStorageLimitError, ONBOARDING_CRAWL_PAGE_LIMIT, retryKnowledgeDocumentInTransaction, setKnowledgeDocumentActiveInTransaction, updateKnowledgeSnippetInTransaction } from "../knowledge";
 import { normalizeWebsiteSourceUrl } from "../knowledgeUrl";
-import { normalizeOnboardingStage, scheduleOnboardingFollowupInTransaction } from "../onboarding";
+import { normalizeOnboardingStage, scheduleWelcomeEmailInTransaction } from "../onboarding";
 import { createPartnerBusiness } from "../partners";
 import { loadNotificationPreferencesInTransaction, loadSavedNotificationPreferencesInTransaction, saveNotificationPreferencesInTransaction } from "../notifications";
 import { completeUploadInTransaction, insertPendingUploadInTransaction, planUpload, type StorageProvider } from "../storage";
@@ -118,6 +119,7 @@ import { expireAbandonedNumberClaimsInTransaction, lockBusinessNumberClaims, num
 import { isSharedSmsSender, resolveSmsSender } from "../smsSender";
 import { loadBillingContext } from "../usage";
 import { defaultReceptionistProfile, saveReceptionistProfileInTransaction, type ReceptionistProfilePatch } from "../receptionistProfile";
+import { listActiveAgentsInTransaction, pausedAgentIds } from "../agents";
 import { deleteAgentRuleInTransaction, insertAgentRuleInTransaction, listAgentRulesInTransaction, lockAgentRulesInTransaction, reorderAgentRulesInTransaction, updateAgentRuleInTransaction } from "../rules";
 import { insertWidgetKeyInTransaction, updateWidgetKeyInTransaction, type WidgetKeyPatch } from "../widgetKeys";
 import { ianaTimeZone, insertBusinessInTransaction, insertInvitationInTransaction, invitationUrl, isSingleEmailAddress, lockBusinessTeam, partnerBusinessNotClaimable, removeMemberInTransaction, revokeInvitationInTransaction, updateBusinessInTransaction, updateMemberRoleInTransaction } from "../tenancy";
@@ -154,6 +156,7 @@ import {
   serializeContact,
   serializeKnowledgeEntry,
   serializeNotificationPreferences,
+  serializeAgent,
   serializeReceptionist,
   serializeRule,
   serializeWidgetKey,
@@ -505,7 +508,8 @@ const numberRefusalMessages: Record<string, string> = {
   replacement_already_used: "This business already used its one number replacement.",
   replacement_already_reserved: "A replacement for this business's number is already in progress.",
   active_number_required: "Only an active number that isn't scheduled for release can be replaced.",
-  phone_verification_required: `A free trial number needs the mobile number of the account this key acts as, verified for this business in the dashboard. Or: ${checkout}`,
+  phone_verification_required: `A free trial number claimed with an API key needs the mobile number of the account this key acts as, verified for this business in the dashboard. Or: ${checkout}`,
+  email_verification_required: `A free trial number needs the account this key acts as to have a verified email address. Or: ${checkout}`,
   trial_already_used: `This business, the account this key acts as, or its verified phone already had a free trial number. ${checkout}`,
   trial_ip_limited: `A free trial number already started from this network in the last 30 days. ${checkout}`,
   trial_not_needed: "This business has a paid plan now, so its number isn't a trial. Search again.",
@@ -778,9 +782,9 @@ export async function completeOnboardingForApi(context: DomainContext, caller: A
     const source = input.source?.trim() || null;
     const completedAt = new Date();
     await tx.update(businesses).set({ onboardingAttribution: source, onboardingStage: "complete", updatedAt: completedAt }).where(eq(businesses.id, caller.businessId));
-    // The founder's check-in is for people who set up their own business. It
-    // goes to the first owner, which for a business a platform key onboarded is the key's account.
-    if (caller.platformKeyId === undefined && !platformKeyOnboarded) await scheduleOnboardingFollowupInTransaction(tx, caller.businessId, completedAt);
+    // The welcome email is for people who set up their own business. It goes
+    // to the first owner, which for a business a platform key onboarded is the key's account.
+    if (caller.platformKeyId === undefined && !platformKeyOnboarded) await scheduleWelcomeEmailInTransaction(tx, caller.businessId, completedAt);
     await audit(tx, caller, { eventType: "api.onboarding.completed", entityType: "business", entityId: caller.businessId, payload: { skipNumber: Boolean(input.skip_number), ...(source ? { source } : {}) } });
     return await loadOnboarding(tx, caller.businessId);
   });
@@ -1177,12 +1181,16 @@ export async function listRulesForApi(context: DomainContext, caller: ApiCaller)
   return await inBusiness(context, caller, async (tx) => (await listAgentRulesInTransaction(tx, { businessId: caller.businessId })).map(serializeRule));
 }
 
-/** Adds a rule after the others. A business keeps up to RULES_MAX rules, so the API can always send them all in one reorder. */
+/**
+ * Adds a rule after the others. /v1/rules acts on the default agent's rules,
+ * and an agent keeps up to RULES_MAX, so the API can always send them all in
+ * one reorder.
+ */
 export async function createRuleForApi(context: DomainContext, caller: ApiCaller, input: ApiRuleCreate): Promise<ApiRule> {
   return await inBusiness(context, caller, async (tx) => {
-    await lockAgentRulesInTransaction(tx, caller.businessId);
-    const [count] = await tx.select({ rules: sql<number>`count(*)::int` }).from(agentRules).where(eq(agentRules.businessId, caller.businessId));
-    if ((count?.rules ?? 0) >= RULES_MAX) throw conflict(`A business can have up to ${RULES_MAX} rules. Delete one first.`);
+    await lockAgentRulesInTransaction(tx, { businessId: caller.businessId });
+    const count = (await listAgentRulesInTransaction(tx, { businessId: caller.businessId })).length;
+    if (count >= RULES_MAX) throw conflict(`A business can have up to ${RULES_MAX} rules. Delete one first.`);
     const rule = await insertAgentRuleInTransaction(tx, { businessId: caller.businessId, title: input.title, content: input.content, active: input.active });
     await audit(tx, caller, { eventType: "api.rule.created", entityType: "agent_rule", entityId: rule.id });
     return serializeRule(rule);
@@ -1193,7 +1201,7 @@ export async function createRuleForApi(context: DomainContext, caller: ApiCaller
 export async function updateRuleForApi(context: DomainContext, caller: ApiCaller, ruleId: string, input: ApiRuleUpdate): Promise<ApiRule> {
   if (Object.values(input).every((value) => value === undefined)) throw invalidRequest("Send at least one field to update.");
   return await inBusiness(context, caller, async (tx) => {
-    const [current] = await tx.select().from(agentRules).where(and(eq(agentRules.businessId, caller.businessId), eq(agentRules.id, ruleId))).limit(1).for("no key update");
+    const [current] = await tx.select().from(agentRules).where(and(eq(agentRules.businessId, caller.businessId), eq(agentRules.agentId, defaultAgentIdOf(caller.businessId)), eq(agentRules.id, ruleId))).limit(1).for("no key update");
     if (!current) throw notFound("Rule");
     const changes = {
       ...(input.title !== undefined && input.title !== current.title ? { title: input.title } : {}),
@@ -1223,7 +1231,7 @@ export async function deleteRuleForApi(context: DomainContext, caller: ApiCaller
 export async function reorderRulesForApi(context: DomainContext, caller: ApiCaller, input: ApiRuleReorder): Promise<ApiRule[]> {
   return await inBusiness(context, caller, async (tx) => {
     // Hold the order first, so a rule added meanwhile can't slip past the check below.
-    await lockAgentRulesInTransaction(tx, caller.businessId);
+    await lockAgentRulesInTransaction(tx, { businessId: caller.businessId });
     const current = await listAgentRulesInTransaction(tx, { businessId: caller.businessId });
     const ruleIds = input.rule_ids.map((ruleId) => ruleId.toLowerCase());
     const missing = current.filter((rule) => !ruleIds.includes(rule.id)).map((rule) => rule.id);
@@ -1274,6 +1282,28 @@ async function loadReceptionistState(tx: DatabaseTransaction, businessId: string
   const query = tx.select().from(agents).where(defaultAgentOf(businessId)).limit(1);
   const [profile] = lock ? await query.for("update") : await query;
   return { business, profile: profile ?? null, shown: profile ?? { ...defaultReceptionistProfile(business.name, business.locale), updatedAt: business.updatedAt } };
+}
+
+// Agents. Read-only for now: the dashboard creates, archives and edits them.
+
+async function loadAgentsForApi(tx: DatabaseTransaction, businessId: string): Promise<ApiAgent[]> {
+  const [active, entitlement] = await Promise.all([listActiveAgentsInTransaction(tx, businessId), loadEntitlement(tx, businessId)]);
+  const paused = pausedAgentIds(entitlement, active);
+  return active.map((agent) => serializeAgent(agent, paused.has(agent.id)));
+}
+
+/** Active agents, the default first and then the oldest. */
+export async function listAgentsForApi(context: DomainContext, caller: ApiCaller): Promise<ApiAgent[]> {
+  return await inBusiness(context, caller, async (tx) => await loadAgentsForApi(tx, caller.businessId));
+}
+
+/** One active agent. An archived agent, or another business's, is a 404. */
+export async function getAgentForApi(context: DomainContext, caller: ApiCaller, agentId: string): Promise<ApiAgent> {
+  return await inBusiness(context, caller, async (tx) => {
+    const agent = (await loadAgentsForApi(tx, caller.businessId)).find((candidate) => candidate.id === agentId);
+    if (!agent) throw notFound("Agent");
+    return agent;
+  });
 }
 
 export async function getReceptionistForApi(context: DomainContext, caller: ApiCaller): Promise<ApiReceptionist> {

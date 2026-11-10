@@ -64,6 +64,8 @@ function TestChat({ agentId, businessId, children }: { agentId: string | undefin
   const { error, messages, sendMessage, status } = useChat({ transport, onFinish: ({ message }) => { if (messageText(message).trim()) announceTestChatReplied(); } });
   const busy = status === "submitted" || status === "streaming";
   const lastMessage = messages.at(-1);
+  // From send until the first words of the reply arrive.
+  const typing = busy && !(lastMessage?.role === "assistant" && messageText(lastMessage).trim());
   // A reply can come back empty when the model runs out of room before it writes.
   const failed = Boolean(error) || (status === "ready" && lastMessage?.role === "assistant" && !messageText(lastMessage).trim());
 
@@ -94,6 +96,11 @@ function TestChat({ agentId, businessId, children }: { agentId: string | undefin
                 ? <p className="ml-auto max-w-[85%] rounded-xl bg-primary px-3 py-2 text-sm wrap-break-word whitespace-pre-wrap text-primary-foreground" key={message.id}>{text}</p>
                 : <div className="mr-auto max-w-[85%] rounded-xl bg-muted px-3 py-2 text-sm wrap-break-word [&_a]:underline [&_a]:underline-offset-2" dangerouslySetInnerHTML={{ __html: renderSafeMarkdown(text) }} key={message.id} />;
             })}
+          </div>
+        ) : null}
+        {typing ? (
+          <div aria-label={t("testWindow.typing")} className="mr-auto flex h-9 shrink-0 items-center gap-1 rounded-xl bg-muted px-3.5" role="status">
+            {[0, 150, 300].map((delay) => <span aria-hidden className="size-1.5 animate-bounce rounded-full bg-muted-foreground motion-reduce:animate-pulse" key={delay} style={{ animationDelay: `${delay}ms` }} />)}
           </div>
         ) : null}
         {failed ? <FieldError className="w-full">{t("testWindow.sendFailed")}</FieldError> : null}
@@ -146,7 +153,9 @@ export function TestPanel({ agentId, businessId, businessSlug, onCallEnded, onRe
       <AuraVoiceDemo
         auraTone={resolvedTheme === "dark" ? "dark" : "light"}
         businessSlug={businessSlug}
-        className="max-w-80 shrink-0"
+        // The orb's square leaves room above for the aura; pull it up so the
+        // aura, the button and the number sit centred as one group.
+        className="-mt-10 max-w-80 shrink-0"
         // The operator's login authorizes the call; the ID picks the workspace.
         endpoint={`${LIVE_WEB_CALL_ENDPOINT}?businessId=${encodeURIComponent(businessId)}`}
         {...(agentId ? { getStartPayload: async () => ({ agentId }) } : {})}
@@ -157,9 +166,9 @@ export function TestPanel({ agentId, businessId, businessSlug, onCallEnded, onRe
         widgetId={DASHBOARD_TEST_CALL_WIDGET_ID}
       />
       {phoneNumber ? (
-        <p className="flex shrink-0 items-center gap-2 text-sm">
-          <span className="text-muted-foreground">{t("testWindow.orCall")}</span>
-          <a className="font-medium text-foreground underline-offset-4 hover:underline" href={`tel:${phoneNumber}`}>{formatPhoneNumberDisplay(phoneNumber)}</a>
+        <p className="mt-4 flex shrink-0 flex-col items-center gap-1">
+          <span className="text-sm text-muted-foreground">{t("testWindow.orCall")}</span>
+          <a className="text-2xl font-semibold tabular-nums text-foreground underline-offset-4 hover:underline" href={`tel:${phoneNumber}`}>{formatPhoneNumberDisplay(phoneNumber)}</a>
         </p>
       ) : null}
     </TestChat>

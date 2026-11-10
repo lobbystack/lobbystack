@@ -52,6 +52,17 @@ describe("worker schedulers", () => {
     ]);
   });
 
+  it("keeps a busy business's housekeeping jobs off the minute", async () => {
+    const { queues, upsertJobScheduler } = fakeQueues();
+
+    await configureSchedulers(queues, [{ id: "a", active: true }]);
+
+    const every = (name: string) => upsertJobScheduler.mock.calls.find((call) => call[0] === name)?.[1]?.every;
+    expect(every("operator-daily-summary:a")).toBe(60 * 60_000);
+    expect(every("outbox-backlog-sample:a")).toBe(5 * 60_000);
+    expect(every("telemetry-flush:a")).toBe(5 * 60_000);
+  });
+
   it("drops the per-minute jobs of a dormant business, keeps its cleanup jobs and flushes its telemetry hourly", async () => {
     const { queues, upsertJobScheduler, removeJobScheduler } = fakeQueues();
 

@@ -88,7 +88,7 @@ describe.skipIf(!client)("links from channels and history to agents", () => {
       { id: otherBusinessId, slug: `links-${otherBusinessId}`, name: "Other", timezone: "UTC", businessType: "test" },
       { id: bareBusinessId, slug: `links-${bareBusinessId}`, name: "Clínica Sol", timezone: "UTC", businessType: "test", defaultLocale: "es" },
     ]);
-    const inserted = await client!.db.insert(agents).values([businessId, otherBusinessId].map((id) => ({ businessId: id, greeting: "Hi", tone: "warm", summary: "Test", bookingPolicy: "Book", transferMode: "never" }))).returning({ id: agents.id, businessId: agents.businessId });
+    const inserted = await client!.db.insert(agents).values([businessId, otherBusinessId].map((id) => ({ businessId: id, isDefault: true, greeting: "Hi", tone: "warm", summary: "Test", bookingPolicy: "Book", transferMode: "never" }))).returning({ id: agents.id, businessId: agents.businessId });
     agentId = inserted.find((row) => row.businessId === businessId)!.id;
     otherAgentId = inserted.find((row) => row.businessId === otherBusinessId)!.id;
     await client!.db.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid` });
@@ -152,18 +152,6 @@ describe.skipIf(!client)("links from channels and history to agents", () => {
       expect(await failure(() => as("lobbystack_app", operator(), async (tx) => await tx.execute(insert(bareBusinessId))))).toBe(INSUFFICIENT_PRIVILEGE);
       expect(await client!.db.select({ id: agents.id }).from(agents).where(eq(agents.businessId, bareBusinessId))).toEqual([]);
     });
-  });
-
-  it("lets old code's upsert reach an agent a channel created first, through the view", async () => {
-    await as("lobbystack_worker", { businessId: bareBusinessId, actorType: "worker" }, async (tx) => {
-      await tx.execute(link("phone_numbers").insert(bareBusinessId));
-      await tx.execute(sql`
-        insert into public.receptionist_profiles (business_id, greeting, tone, summary, booking_policy, transfer_mode)
-        values (${bareBusinessId}::uuid, 'Hola', 'warm', 'Summary', 'Book', 'never')
-        on conflict (business_id) do update set greeting = excluded.greeting
-      `);
-    });
-    expect(await client!.db.select({ greeting: agents.greeting }).from(agents).where(eq(agents.businessId, bareBusinessId))).toEqual([{ greeting: "Hola" }]);
   });
 
   it("shows the read-only role a channel's agent but still no Instagram token", async () => {

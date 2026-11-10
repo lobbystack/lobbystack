@@ -8,20 +8,21 @@ import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 
 import { LiveUpgradePlanProvider } from "@/components/live-upgrade-plan-provider";
-import { PlanOfferMoment } from "@/components/plan-offer-moment";
 import { useTelemetry } from "@/components/product-analytics";
 import { TestPanel } from "@/components/test-window";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
+import { MeetFormSkeleton, TestPanelSkeleton } from "@/components/loading-skeletons";
 import { Textarea } from "@/components/ui/textarea";
-import { useUpgradePlanDialogOpener } from "@/components/upgrade-plan-dialog-context";
+import { usePlanOfferOpener, useUpgradePlanDialogOpener } from "@/components/upgrade-plan-dialog-context";
 import { VoiceDialog, voiceName, useVoicePreview, useVoiceTraits } from "@/components/voice-dialog";
 import { isWebsiteImportRunning, type WebsiteImportSummary } from "@/components/website-import-progress";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
+import { Flag } from "@/components/flag";
+import { runtimeLocaleRegion } from "@/lib/country-flag";
 import { requestJson } from "@/lib/request-json";
 
 type Agent = { business: { defaultLocale: string } | null; profile: { name: string; greeting: string; voice: string } | null };
@@ -41,6 +42,7 @@ function MeetAgent() {
   const { business } = useActiveBusiness();
   const businessId = business?.businessId;
   const openPlans = useUpgradePlanDialogOpener();
+  const openOffer = usePlanOfferOpener();
   const agent = useQuery({ queryKey: ["onboarding-agent", businessId], queryFn: () => requestJson<Agent>("/api/agent"), enabled: Boolean(businessId) });
   // An import still running can set the language and with it the default greeting.
   const importing = useQuery({
@@ -97,7 +99,32 @@ function MeetAgent() {
       await requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(businessId!)}`, { method: "POST", body: JSON.stringify({ to: "complete" }) });
     },
     onSuccess: async () => {
-      if (businessId) telemetry.track("web.onboarding.meet_completed", { businessId });
+      if (businessId) {
+        telemetry.track("web.onboarding.meet_completed", { businessId });
+        // The plans come at the door to the dashboard, and only after a test.
+        // A failed check lets the person through rather than holding them here.
+        const due = business?.partnerAccessLevel
+          ? false
+          : await requestJson<{ due: boolean }>(`/api/plan-offer?businessId=${encodeURIComponent(businessId)}`).then((answer) => answer.due).catch(() => false);
+        if (due && openOffer) {
+          await requestJson(`/api/plan-offer?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({}) }).catch(() => undefined);
+          telemetry.track("web.onboarding.plan_offer_shown", { businessId, surface: "meet" });
+          openOffer({
+            onDismiss: () => {
+              void requestJson(`/api/plan-offer?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({ dismissed: true }) }).catch(() => undefined);
+              telemetry.track("web.onboarding.plan_offer_dismissed", { businessId, surface: "meet" });
+              router.push("/");
+              router.refresh();
+            },
+            onPlanClicked: (plan) => {
+              void requestJson(`/api/plan-offer?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({ chosen: true }) }).catch(() => undefined);
+              telemetry.track("web.onboarding.plan_offer_clicked", { businessId, surface: "meet", plan });
+            },
+          });
+          await queryClient.invalidateQueries({ queryKey: ["businesses"] });
+          return;
+        }
+      }
       await queryClient.invalidateQueries({ queryKey: ["businesses"] });
       router.push("/");
       router.refresh();
@@ -109,7 +136,7 @@ function MeetAgent() {
   return (
     <div className="grid w-full gap-6 lg:grid-cols-2">
       <div className="flex h-[32rem] flex-col rounded-xl border border-border p-4 lg:h-[36rem]">
-        {business ? <TestPanel businessId={business.businessId} businessSlug={business.slug} onUpgrade={openPlans && !business.partnerAccessLevel ? openPlans : undefined} /> : <Skeleton className="h-full rounded-xl" />}
+        {business ? <TestPanel businessId={business.businessId} businessSlug={business.slug} onUpgrade={openPlans && !business.partnerAccessLevel ? openPlans : undefined} /> : <TestPanelSkeleton />}
       </div>
       <div className="flex flex-col gap-4">
         {profile ? (
@@ -119,10 +146,10 @@ function MeetAgent() {
               <Input className="h-11" id="meet-name" maxLength={80} onBlur={saveTyped} onChange={(event) => setNameDraft(event.target.value)} value={name} />
             </Field>
             <Field>
-              <FieldLabel>{tAgent("fields.voice.label")}</FieldLabel>
-              <div className="flex items-center justify-between gap-3 rounded-xl border border-border px-4 py-2">
+              <FieldLabel htmlFor="meet-voice">{tAgent("fields.voice.label")}</FieldLabel>
+              <div className="flex h-11 items-center justify-between gap-3 rounded-4xl border border-border pr-1.5 pl-4">
                 <span className="min-w-0 truncate text-sm">{tAgent("fields.voice.summary", { voice: voiceName(voice), traits: voiceTraits(voice) })}</span>
-                <Button onClick={() => setVoiceOpen(true)} size="sm" type="button" variant="outline">{tAgent("fields.voice.change")}</Button>
+                <Button id="meet-voice" onClick={() => setVoiceOpen(true)} size="sm" type="button" variant="outline">{tAgent("fields.voice.change")}</Button>
               </div>
             </Field>
             <Field>
@@ -132,19 +159,18 @@ function MeetAgent() {
             <Field>
               <FieldLabel htmlFor="meet-language">{t("meet.language")}</FieldLabel>
               <Select items={runtimeLocales.map((code) => ({ value: code, label: t(`common:callerLanguage.${code}`) }))} onValueChange={(value) => { if (value && value !== savedLocale) save.mutate({ locale: value as RuntimeLocale }); }} value={savedLocale}>
-                <SelectTrigger className="w-full" id="meet-language"><SelectValue /></SelectTrigger>
-                <SelectContent><SelectGroup>{runtimeLocales.map((code) => <SelectItem key={code} value={code}>{t(`common:callerLanguage.${code}`)}</SelectItem>)}</SelectGroup></SelectContent>
+                <SelectTrigger className="data-[size=default]:h-11 w-full *:data-[slot=select-value]:gap-2" id="meet-language"><SelectValue>{(value: RuntimeLocale | null) => value ? <><Flag region={runtimeLocaleRegion(value)} /><span className="truncate">{t(`common:callerLanguage.${value}`)}</span></> : null}</SelectValue></SelectTrigger>
+                <SelectContent><SelectGroup>{runtimeLocales.map((code) => <SelectItem key={code} value={code}><Flag region={runtimeLocaleRegion(code)} />{t(`common:callerLanguage.${code}`)}</SelectItem>)}</SelectGroup></SelectContent>
               </Select>
             </Field>
           </FieldGroup>
-        ) : <Skeleton className="h-96 rounded-xl" />}
+        ) : <MeetFormSkeleton labels={{ name: t("meet.name"), voice: tAgent("fields.voice.label"), greeting: t("meet.greeting"), language: t("meet.language") }} />}
         {error ? <FieldError>{error}</FieldError> : null}
         <Button className="mt-2 h-11 w-full" disabled={!business || !profile || !greeting.trim() || !name.trim() || finish.isPending} onClick={() => { setError(null); finish.mutate(); }} type="button">
           {finish.isPending ? <><LoaderCircle className="size-4 animate-spin" />{t("meet.finishing")}</> : t("meet.finish")}
         </Button>
       </div>
       <VoiceDialog current={voice} onOpenChange={setVoiceOpen} onSave={async (next) => { try { await save.mutateAsync({ voice: next }); return true; } catch { return false; } }} open={voiceOpen} preview={voicePreview} saving={save.isPending} />
-      {businessId && !business.partnerAccessLevel ? <PlanOfferMoment businessId={businessId} surface="meet" /> : null}
     </div>
   );
 }

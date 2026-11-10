@@ -153,8 +153,11 @@ export function buildBusinessContextSnapshot(
  */
 export function snapshotForAgent(snapshot: BusinessContextSnapshot, agentId?: string | null): BusinessContextSnapshot | null {
   if (!agentId || !snapshot.agents) return snapshot;
-  const agent = snapshot.agents.find((candidate) => candidate.id === agentId);
-  if (!agent) return null;
+  const named = snapshot.agents.find((candidate) => candidate.id === agentId);
+  if (!named) return null;
+  // A paused agent's channels keep their number, and the default agent answers them.
+  const fallback = named.paused ? snapshot.agents.find((candidate) => candidate.isDefault) : undefined;
+  const agent = fallback ? { ...fallback, phoneNumber: named.phoneNumber } : named;
   // An optional field this agent lacks must not keep the default agent's value.
   const { staffFirstPolicy: _staffFirstPolicy, appointmentChangePolicy: _appointmentChangePolicy, ...shared } = snapshot;
   const { phoneNumber: _phoneNumber, ...channels } = snapshot.contactChannels ?? {};

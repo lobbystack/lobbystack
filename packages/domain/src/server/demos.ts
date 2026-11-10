@@ -292,6 +292,7 @@ async function insertDemoInTransaction(
   }
   await tx.insert(agents).values({
     businessId,
+    isDefault: true,
     name: defaultAgentName(locale),
     greeting: input.greeting?.trim() || defaultGreeting(name, locale),
     tone: "professional and friendly",

@@ -2,7 +2,8 @@
   "accessibility": {
     "close": "Zatvori",
     "toggleSidebar": "Prikaži/sakrij bočnu traku",
-    "skipToContent": "Pređi na glavni sadržaj"
+    "skipToContent": "Pređi na glavni sadržaj",
+    "clearSearch": "Obriši pretragu"
   },
   "errors": {
     "unexpected": "Nešto nije u redu. Pokušajte ponovo."
@@ -29,7 +30,14 @@
     "de": "Nemački",
     "pt": "Portugalski (Brazil)",
     "it": "Italijanski",
-    "nl": "Holandski"
+    "nl": "Holandski",
+    "pl": "Poljski",
+    "tr": "Turski",
+    "vi": "Vijetnamski",
+    "tl": "Tagalog",
+    "sv": "Švedski",
+    "ru": "Ruski",
+    "uk": "Ukrajinski"
   },
   "phoneCountry": {
     "search": "Pretraži zemlje ili pozivne brojeve",
@@ -105,7 +113,8 @@
     "orCall": "Ili pozovite",
     "message": "Poruka",
     "send": "Pošalji",
-    "sendFailed": "Poruka nije poslata. Pokušajte ponovo."
+    "sendFailed": "Poruka nije poslata. Pokušajte ponovo.",
+    "typing": "Agent piše"
   },
   "testCall": {
     "trigger": "Probni poziv",
@@ -223,6 +232,35 @@
       "failed": "Nismo uspeli da otkažemo termin. Pokušajte ponovo.",
       "summary": "{{service}} za {{name}}, {{time}}",
       "summaryNoService": "Termin za {{name}}, {{time}}"
+    },
+    "reschedule": {
+      "approve": "Odobri pomeranje",
+      "title": "Pomeriti ovaj termin na {{time}}?",
+      "description": "{{appointment}} biće pomeren na {{time}}. Ažuriraćemo vaš povezani kalendar i podsetnik, i zatvoriti zahtev.",
+      "confirm": "Pomeri termin",
+      "keep": "Zadrži trenutno vreme",
+      "done": "Termin je pomeren.",
+      "failed": "Termin nije pomeren. Pokušajte ponovo.",
+      "unavailable": "To vreme više nije slobodno. Izaberite drugo vreme.",
+      "notReschedulable": "Ovaj termin ne može da se pomeri. Možda je otkazan.",
+      "passed": "Traženo vreme je prošlo."
+    },
+    "move": {
+      "action": "Pomeri",
+      "otherTime": "Drugo vreme",
+      "actionLabel": "Pomeri termin: {{time}}",
+      "title": "Pomeri termin",
+      "description": "{{appointment}}",
+      "requested": "Traženo: {{time}}",
+      "date": "Dan",
+      "times": "Slobodni termini",
+      "noTimes": "Nema slobodnih termina tog dana.",
+      "timesFailed": "Nismo uspeli da učitamo slobodne termine. Pokušajte ponovo.",
+      "confirm": "Pomeri termin",
+      "keep": "Zadrži trenutno vreme",
+      "done": "Termin je pomeren",
+      "failed": "Nismo uspeli da pomerimo termin. Pokušajte ponovo.",
+      "taken": "To vreme više nije slobodno. Izaberite drugo."
     }
   },
   "abandonIntent": {

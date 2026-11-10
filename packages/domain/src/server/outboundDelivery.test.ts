@@ -4,7 +4,7 @@ const rows = vi.hoisted(() => ({
   sms: { claimSmsDelivery: vi.fn(), smsDeliveryLeaseEndsAt: vi.fn(), loadSmsDeliveryTarget: vi.fn(), markSmsSent: vi.fn(), releaseSmsDelivery: vi.fn(), failSmsDelivery: vi.fn() },
   changeCode: { claimAppointmentChangeOtp: vi.fn(), appointmentChangeOtpLeaseEndsAt: vi.fn(), loadAppointmentChangeOtpTarget: vi.fn(), markAppointmentChangeOtpSent: vi.fn(), releaseAppointmentChangeOtp: vi.fn() },
   code: { issueOperatorPhoneVerificationCode: vi.fn(), markOperatorPhoneVerificationCodeSent: vi.fn(), releaseOperatorPhoneVerificationCodeSend: vi.fn() },
-  notifications: { claimNotificationDelivery: vi.fn(), notificationLeaseEndsAt: vi.fn(), resolveNotificationDelivery: vi.fn(), markNotificationSent: vi.fn(), transitionProcessingNotification: vi.fn(), claimOperatorNotificationDelivery: vi.fn(), operatorNotificationLeaseEndsAt: vi.fn(), loadOperatorNotificationDelivery: vi.fn(), markOperatorNotificationSent: vi.fn(), markOperatorNotificationSkipped: vi.fn(), releaseOperatorNotificationDelivery: vi.fn() },
+  notifications: { alertVideoLinkNotSent: vi.fn(), confirmationRetryAt: vi.fn(async (): Promise<Date | null> => null), claimNotificationDelivery: vi.fn(), notificationLeaseEndsAt: vi.fn(), resolveNotificationDelivery: vi.fn(), markNotificationSent: vi.fn(), transitionProcessingNotification: vi.fn(), claimOperatorNotificationDelivery: vi.fn(), operatorNotificationLeaseEndsAt: vi.fn(), loadOperatorNotificationDelivery: vi.fn(), markOperatorNotificationSent: vi.fn(), markOperatorNotificationSkipped: vi.fn(), releaseOperatorNotificationDelivery: vi.fn() },
   usage: { reserveAlertSmsUsage: vi.fn(), correctAlertSmsUsage: vi.fn(), enqueueBillingUsageSync: vi.fn() },
   events: { recordProductEventBestEffort: vi.fn() },
   optIn: { claimSmsOptInConfirmation: vi.fn(), releaseSmsOptInConfirmation: vi.fn() },
@@ -290,6 +290,17 @@ describe("notifications", () => {
     expect(usage.reserveAlertSmsUsage).not.toHaveBeenCalled();
   });
 
+  it("emails a call summary with its own template, which writes the subject in the reader's language", async () => {
+    const brand = { kind: "host", partnerId: null, name: "Acme Desk", logoUrl: null, faviconUrl: null, color: null, origin: "https://desk.example.test", links: { website: null, terms: null, privacy: null, support: null }, email: { fromName: "Acme Desk", fromAddress: "no-reply@desk.example.test", replyTo: "help@desk.example.test" } };
+    rows.brands.brandForBusiness.mockResolvedValue(brand);
+    notifications.claimOperatorNotificationDelivery.mockResolvedValue(true);
+    const details = { locale: "fr", businessName: "Metroprint", callerName: "Sarah Chen", callerPhone: "+14165550133", startedAt: "2026-11-09T15:32:00.000Z", timezone: "America/Toronto", durationSeconds: "134", summary: "A quote for business cards.", url: "https://desk.example.test/calls/call-1" };
+    notifications.loadOperatorNotificationDelivery.mockResolvedValue({ id: "delivery-1", eventKind: "callCompleted", channel: "email", destination: "operator@example.test", sender: null, subject: "New call from Sarah Chen", body: "Metroprint: new call from Sarah Chen.", details });
+    const sender = providers();
+    await expect(deliverOutbound(context, sender, kinds.operatorNotification.delivery)).resolves.toEqual({ status: "completed", entityId: "delivery-1" });
+    expect(sender.email.sendTemplate).toHaveBeenCalledWith({ template: "call_summary", to: "operator@example.test", variables: details, brand, replyTo: "help@desk.example.test", idempotencyKey: "operator-notification:delivery-1" });
+  });
+
   it.each([
     ["notification", { kind: "appointment_reminder", appointmentId: "appointment-1" }],
     ["operatorNotification", { kind: "voiceMessage" }],
@@ -366,5 +377,27 @@ describe("the opt-in confirmation", () => {
     await deliverOutbound(context, sender, kinds.changeCode.delivery);
     expect(sender.twilio.sendSms.mock.calls.map(([input]) => input.body)).toEqual([confirmation.body, "Axum Barbershop: your verification code is 123456. It expires in 10 minutes."]);
     expect(usage.reserveAlertSmsUsage).not.toHaveBeenCalled();
+  });
+});
+
+describe("a confirmation waiting for its calendar sync", () => {
+  const delivery = kinds.notification.delivery;
+
+  it("tries again without claiming the row, even when the sync finishes in between", async () => {
+    const retryAt = new Date("2030-01-01T00:00:10Z");
+    notifications.confirmationRetryAt.mockResolvedValueOnce(retryAt);
+    notifications.notificationLeaseEndsAt.mockResolvedValue(null);
+    await expect(deliverOutbound(context, providers(), delivery)).resolves.toEqual({ status: "deferred", entityId: "notification-1", retryAt });
+    expect(notifications.claimNotificationDelivery).not.toHaveBeenCalled();
+  });
+
+  it("reports only the notification's kind when a video link text fails", async () => {
+    kinds.notification.ready();
+    notifications.resolveNotificationDelivery.mockResolvedValue({ kind: "ready", delivery: { notificationId: "notification-1", businessId, channel: "sms", kind: "video_link_update:id", relatedId: "appointment-1", to: smsTarget.to, from: smsTarget.from, subject: "Video link", body: "Link" } });
+    const outbound = providers();
+    outbound.twilio.sendSms.mockRejectedValue(new Error("provider unavailable"));
+    await deliverOutbound(context, outbound, delivery).catch(() => undefined);
+    const failure = rows.events.recordProductEventBestEffort.mock.calls.find(([, event]) => event.name === "notification.delivery_failed");
+    expect(failure?.[1].properties.kind).toBe("video_link_update");
   });
 });

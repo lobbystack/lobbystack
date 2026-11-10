@@ -39,12 +39,15 @@ export function normalizeInterfaceLocale(value: string | null | undefined): Inte
  * Serbian is written in Latin script.
  * Interface languages (dashboard, widget UI, email) are {@link InterfaceLocale}.
  */
-export const runtimeLocales = ["en", "fr", "es", "sr", "de", "pt", "it", "nl"] as const;
+export const runtimeLocales = ["en", "fr", "es", "sr", "de", "pt", "it", "nl", "pl", "tr", "vi", "tl", "sv", "ru", "uk"] as const;
 
 export type RuntimeLocale = (typeof runtimeLocales)[number];
 
 // Language names for model prompts. Serbian is written in Latin script, never Cyrillic.
-const RUNTIME_LOCALE_NAMES: Record<RuntimeLocale, string> = { en: "English", fr: "French", es: "Spanish", sr: "Serbian (Latin script)", de: "German", pt: "Brazilian Portuguese", it: "Italian", nl: "Dutch" };
+const RUNTIME_LOCALE_NAMES: Record<RuntimeLocale, string> = { en: "English", fr: "French", es: "Spanish", sr: "Serbian (Latin script)", de: "German", pt: "Brazilian Portuguese", it: "Italian", nl: "Dutch", pl: "Polish", tr: "Turkish", vi: "Vietnamese", tl: "Tagalog (Filipino)", sv: "Swedish", ru: "Russian", uk: "Ukrainian" };
+
+// Browsers and websites tag Filipino, the standard form of Tagalog, as `fil`.
+const RUNTIME_LOCALE_ALIASES: Readonly<Record<string, RuntimeLocale>> = { fil: "tl" };
 
 /** A caller language named for a model prompt. */
 export function runtimeLocaleName(locale: RuntimeLocale): string {
@@ -55,10 +58,16 @@ export function isRuntimeLocale(value: unknown): value is RuntimeLocale {
   return typeof value === "string" && (runtimeLocales as ReadonlyArray<string>).includes(value);
 }
 
+/** Reduces a language tag such as `pt-BR` or `fil-PH` to a caller language, or null when it isn't one. */
+export function runtimeLocaleFromTag(value: string | null | undefined): RuntimeLocale | null {
+  const primary = value?.trim().toLowerCase().split(/[-_]/)[0] ?? "";
+  const language = RUNTIME_LOCALE_ALIASES[primary] ?? primary;
+  return isRuntimeLocale(language) ? language : null;
+}
+
 /** Reduces a language tag such as `pt-BR` to a caller language, or English when it isn't one. */
 export function normalizeRuntimeLocale(value: string | null | undefined): RuntimeLocale {
-  const primary = value?.trim().toLowerCase().split(/[-_]/)[0];
-  return isRuntimeLocale(primary) ? primary : "en";
+  return runtimeLocaleFromTag(value) ?? "en";
 }
 
 /**

@@ -71,12 +71,12 @@ it("leaves partner signup out on a partner's host, which answers it with a 404",
   expect(screen.queryByRole("menuitem", { name: "shell.signUpAnother" })).toBeNull();
 });
 
-it("shows Templates, Demos and Settings to the whole team, Packages to owners and admins, and Stripe and Billing to owners only, the pages the server lets each role open", async () => {
-  const pages = (role: "owner" | "admin" | "member", billingPage = false) => {
+it("shows Templates, Demos and Settings to the whole team, Packages to owners and admins, and Payments and Billing to owners of a deployment that has them", async () => {
+  const pages = (role: "owner" | "admin" | "member", options: { billingPage?: boolean; payments?: boolean } = {}) => {
     const partner = { ...bright, role };
     render(
       <BrandingProvider i18n={{ options: {} } as unknown as I18nextInstance} initial={{ appName: "LobbyStack", logoUrl: null, final: true }}>
-        <PartnerShell partner={partner} partners={[partner]} sidebarOpen billingPage={billingPage} user={{ email: "owner@example.test" }}><div /></PartnerShell>
+        <PartnerShell billingPage={options.billingPage ?? false} partner={partner} partners={[partner]} payments={options.payments ?? true} sidebarOpen user={{ email: "owner@example.test" }}><div /></PartnerShell>
       </BrandingProvider>,
     );
     const links = screen.getAllByRole("link").map((link) => link.getAttribute("href")).filter((href) => href?.startsWith("/partner/"));
@@ -84,9 +84,11 @@ it("shows Templates, Demos and Settings to the whole team, Packages to owners an
     return links;
   };
   expect(pages("owner")).toEqual(["/partner/bright/businesses", "/partner/bright/templates", "/partner/bright/demos", "/partner/bright/packages", "/partner/bright/branding", "/partner/bright/team", "/partner/bright/api-keys", "/partner/bright/payments", "/partner/bright/settings"]);
-  expect(pages("owner", true)).toEqual(["/partner/bright/businesses", "/partner/bright/templates", "/partner/bright/demos", "/partner/bright/packages", "/partner/bright/branding", "/partner/bright/team", "/partner/bright/api-keys", "/partner/bright/payments", "/partner/bright/billing", "/partner/bright/settings"]);
+  expect(pages("owner", { billingPage: true })).toEqual(["/partner/bright/businesses", "/partner/bright/templates", "/partner/bright/demos", "/partner/bright/packages", "/partner/bright/branding", "/partner/bright/team", "/partner/bright/api-keys", "/partner/bright/payments", "/partner/bright/billing", "/partner/bright/settings"]);
   expect(pages("admin")).toEqual(["/partner/bright/businesses", "/partner/bright/templates", "/partner/bright/demos", "/partner/bright/packages", "/partner/bright/branding", "/partner/bright/team", "/partner/bright/api-keys", "/partner/bright/settings"]);
   expect(pages("member")).toEqual(["/partner/bright/businesses", "/partner/bright/templates", "/partner/bright/demos", "/partner/bright/branding", "/partner/bright/team", "/partner/bright/api-keys", "/partner/bright/settings"]);
+  // A deployment without Stripe Connect has no Payments page: partners bill their businesses themselves.
+  expect(pages("owner", { payments: false })).toEqual(["/partner/bright/businesses", "/partner/bright/templates", "/partner/bright/demos", "/partner/bright/packages", "/partner/bright/branding", "/partner/bright/team", "/partner/bright/api-keys", "/partner/bright/settings"]);
 });
 
 it("gives owners a Billing page when the deployment sells tiers or the host set the partner's pool, and no one else", () => {

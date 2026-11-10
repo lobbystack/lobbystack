@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, lt } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, lt, sql } from "drizzle-orm";
 
 import { calls, conversations, conversationSessions, enqueueOutbox, inboxItems, messages, operatorNotificationDeliveries, storageObjects, transcripts, unansweredQuestions, withBusinessTransaction } from "@lobbystack/db";
 
@@ -14,7 +14,8 @@ export async function runPrivacyRetentionSweep(
   const contentRetentionEnabled = isContentRetentionEnabled();
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const scrubbedFollowUps = !contentRetentionEnabled ? [] : await tx.update(inboxItems)
-      .set({ title: EXPIRED_FOLLOW_UP_TITLE, body: EXPIRED_FOLLOW_UP_BODY, metadata: null, contentRetentionStatus: "scrubbed", updatedAt: now })
+      // The agent that took it isn't content, so the API keeps reporting it.
+      .set({ title: EXPIRED_FOLLOW_UP_TITLE, body: EXPIRED_FOLLOW_UP_BODY, metadata: sql`nullif(jsonb_strip_nulls(jsonb_build_object('agentId', ${inboxItems.metadata}->>'agentId')), '{}'::jsonb)`, contentRetentionStatus: "scrubbed", updatedAt: now })
       .where(and(eq(inboxItems.businessId, input.businessId), eq(inboxItems.contentRetentionStatus, "active"), isNotNull(inboxItems.contentExpiresAt), lt(inboxItems.contentExpiresAt, now)))
       .returning({ id: inboxItems.id });
     const scrubbedMessages = !contentRetentionEnabled ? [] : await tx.update(messages)
@@ -46,7 +47,7 @@ export async function runPrivacyRetentionSweep(
         .where(and(eq(conversations.id, session.conversationId), eq(conversations.businessId, input.businessId), eq(conversations.summary, text)));
     }
     const scrubbedOperatorDeliveries = await tx.update(operatorNotificationDeliveries)
-      .set({ subject: "[content expired]", body: "[content expired]", destination: "[expired]", sender: null, contentExpiresAt: new Date("9999-12-31T00:00:00.000Z"), updatedAt: now })
+      .set({ subject: "[content expired]", body: "[content expired]", destination: "[expired]", sender: null, details: null, contentExpiresAt: new Date("9999-12-31T00:00:00.000Z"), updatedAt: now })
       .where(and(eq(operatorNotificationDeliveries.businessId, input.businessId), lt(operatorNotificationDeliveries.contentExpiresAt, now)))
       .returning({ id: operatorNotificationDeliveries.id });
     const expiredRecordings = !contentRetentionEnabled ? [] : await tx.select({ callId: calls.id, objectId: storageObjects.id })

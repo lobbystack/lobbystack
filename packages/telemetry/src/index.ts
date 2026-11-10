@@ -42,6 +42,7 @@ export const WEB_EVENT_NAMES = [
   "web.onboarding.number_waitlist_joined",
   "web.onboarding.number_claim_started",
   "web.onboarding.number_claim_completed",
+  "web.onboarding.number_unavailable",
   "web.onboarding.plan_selected",
   "web.onboarding.plan_checkout_started",
   "web.onboarding.goal_submitted",
@@ -315,6 +316,8 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "selectionMode",
     "numberKind",
   ],
+  // code: why the number step offers the plans, such as trial_already_used.
+  "web.onboarding.number_unavailable": ["businessId", "deploymentMode", "code"],
   "web.onboarding.plan_selected": ["businessId", "deploymentMode", "plan"],
   "web.onboarding.plan_checkout_started": ["businessId", "deploymentMode", "plan"],
   "web.onboarding.plan_checkout_completed": ["businessId", "deploymentMode", "plan"],

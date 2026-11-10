@@ -33,6 +33,8 @@ import { BusinessHoursSection } from "@/components/business-hours-section";
 import { StaffFirstSection, type StaffFirstPatch, type StaffFirstProfile } from "@/components/staff-first-section";
 import { availableTimeZones, groupTimeZones, isTimeZoneRegion, type TimeZoneOption } from "@/lib/time-zones";
 import { errorCode } from "@/lib/checkout-errors";
+import { Flag } from "@/components/flag";
+import { currencyRegion, runtimeLocaleRegion } from "@/lib/country-flag";
 import { PhoneCountrySelect } from "@/components/phone-country-select";
 import { getDefaultTransferCountry, getPhoneCountryOptions, inferPhoneCountry } from "@/lib/phone";
 import { cn } from "@/lib/utils";
@@ -632,10 +634,10 @@ export function AgentBasicSettingsPage({
                     }}
                     value={defaultLocale}
                   >
-                    <SelectTrigger aria-label={t("agent:fields.defaultLocale.label")} className="w-full sm:w-52" id="agent-default-language" loading={isLocaleSaving}><SelectValue /></SelectTrigger>
+                    <SelectTrigger aria-label={t("agent:fields.defaultLocale.label")} className="w-full sm:w-52 *:data-[slot=select-value]:gap-2" id="agent-default-language" loading={isLocaleSaving}><SelectValue>{(value: RuntimeLocale | null) => value ? <><Flag region={runtimeLocaleRegion(value)} /><span className="truncate">{t(`common:callerLanguage.${value}`)}</span></> : null}</SelectValue></SelectTrigger>
                     <SelectContent>
                       <SelectGroup>
-                        {runtimeLocales.map((code) => <SelectItem key={code} value={code}>{t(`common:callerLanguage.${code}`)}</SelectItem>)}
+                        {runtimeLocales.map((code) => <SelectItem key={code} value={code}><Flag region={runtimeLocaleRegion(code)} />{t(`common:callerLanguage.${code}`)}</SelectItem>)}
                       </SelectGroup>
                     </SelectContent>
                   </Select>
@@ -680,11 +682,11 @@ export function AgentBasicSettingsPage({
                     }}
                     value={teamLocale}
                   >
-                    <SelectTrigger aria-label={t("agent:fields.teamLocale.label")} className="w-full sm:w-52" id="agent-team-language" loading={isTeamLocaleSaving}><SelectValue /></SelectTrigger>
+                    <SelectTrigger aria-label={t("agent:fields.teamLocale.label")} className="w-full sm:w-52 *:data-[slot=select-value]:gap-2" id="agent-team-language" loading={isTeamLocaleSaving}><SelectValue>{(value: RuntimeLocale | "default" | null) => !value ? null : value === "default" ? t("agent:fields.teamLocale.sameAsCaller") : <><Flag region={runtimeLocaleRegion(value)} /><span className="truncate">{t(`common:callerLanguage.${value}`)}</span></>}</SelectValue></SelectTrigger>
                     <SelectContent>
                       <SelectGroup>
                         <SelectItem value="default">{t("agent:fields.teamLocale.sameAsCaller")}</SelectItem>
-                        {runtimeLocales.map((code) => <SelectItem key={code} value={code}>{t(`common:callerLanguage.${code}`)}</SelectItem>)}
+                        {runtimeLocales.map((code) => <SelectItem key={code} value={code}><Flag region={runtimeLocaleRegion(code)} />{t(`common:callerLanguage.${code}`)}</SelectItem>)}
                       </SelectGroup>
                     </SelectContent>
                   </Select>
@@ -736,7 +738,7 @@ export function AgentBasicSettingsPage({
                     </ComboboxTrigger>
                     <ComboboxContent className="min-w-(--anchor-width)">
                       {/* Above the list, so the list doesn't paint over the input's focus ring. */}
-                      <ComboboxInput className="relative z-10" placeholder={t("agent:fields.timezone.search")} showTrigger={false} />
+                      <ComboboxInput className="relative z-10" clearSearchLabel={t("common:accessibility.clearSearch")} placeholder={t("agent:fields.timezone.search")} showTrigger={false} />
                       <ComboboxEmpty>{t("agent:fields.timezone.noResults")}</ComboboxEmpty>
                       <ComboboxList>
                         {(group: TimeZoneItemGroup) => (
@@ -773,12 +775,12 @@ export function AgentBasicSettingsPage({
                     value={currencyItems.find((option) => option.id === currency) ?? null}
                   >
                     <ComboboxTrigger aria-label={t("agent:fields.currency.label")} className={COMBOBOX_TRIGGER_CLASS} id="agent-currency" loading={isCurrencySaving}>
-                      <span className="min-w-0 flex-1 truncate text-left"><ComboboxValue /></span>
+                      <span className="flex min-w-0 flex-1 items-center gap-2.5 text-left"><ComboboxValue>{(option: CurrencyOption | null) => option ? <><Flag region={currencyRegion(option.id)} /><span className="truncate">{option.label}</span></> : null}</ComboboxValue></span>
                     </ComboboxTrigger>
                     <ComboboxContent className="min-w-(--anchor-width)">
-                      <ComboboxInput className="relative z-10" placeholder={t("agent:fields.currency.search")} showTrigger={false} />
+                      <ComboboxInput className="relative z-10" clearSearchLabel={t("common:accessibility.clearSearch")} placeholder={t("agent:fields.currency.search")} showTrigger={false} />
                       <ComboboxEmpty>{t("agent:fields.currency.noResults")}</ComboboxEmpty>
-                      <ComboboxList>{(option: CurrencyOption) => <ComboboxItem key={option.id} value={option}>{option.label}</ComboboxItem>}</ComboboxList>
+                      <ComboboxList>{(option: CurrencyOption) => <ComboboxItem key={option.id} value={option}><Flag region={currencyRegion(option.id)} />{option.label}</ComboboxItem>}</ComboboxList>
                     </ComboboxContent>
                   </Combobox>
                 )}
@@ -797,7 +799,7 @@ export function AgentBasicSettingsPage({
                     <Skeleton className="h-10 w-full rounded-md sm:w-72" />
                   ) : (
                     <div className="flex w-full min-w-0 sm:w-fit">
-                      <PhoneCountrySelect ariaLabel={t("agent:fields.transferNumber.country")} className="w-20 rounded-r-none px-4 font-medium text-muted-foreground" countries={countries.filter((option) => isTransferCountry(option.code))} disabled={!canManageTenant} onChange={(next) => { transferNumberEdited.current = true; setTransferCountry(next as Country); setTransferNumber(""); setTransferNumberInputValue(""); setTransferStatus(null); }} value={transferCountry} />
+                      <PhoneCountrySelect ariaLabel={t("agent:fields.transferNumber.country")} className="rounded-r-none px-4 font-medium text-muted-foreground" countries={countries.filter((option) => isTransferCountry(option.code))} disabled={!canManageTenant} onChange={(next) => { transferNumberEdited.current = true; setTransferCountry(next as Country); setTransferNumber(""); setTransferNumberInputValue(""); setTransferStatus(null); }} value={transferCountry} />
                       <PhoneInput
                         className="rounded-l-none border-l-0 sm:w-40"
                         containerClassName="min-w-0 flex-1"
@@ -807,6 +809,11 @@ export function AgentBasicSettingsPage({
                         limitNationalDigits
                         locale={i18n.language}
                         maxLength={18}
+                        onKeyDown={(event) => {
+                          if (event.key !== "Enter" || isLoadingConfiguration || isTransferSaving || !persistedProfile || !canManageTenant) return;
+                          event.preventDefault();
+                          void saveTransferNumber();
+                        }}
                         onChange={(nextValue) => {
                           setTransferNumber(nextValue ?? "");
                           setTransferStatus(null);

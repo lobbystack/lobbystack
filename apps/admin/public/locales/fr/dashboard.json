@@ -140,14 +140,17 @@
         "voice_message": "Rappel",
         "human_handoff": "Transfert",
         "other": "Ouvert",
-        "cancellation": "Annulation"
+        "cancellation": "Annulation",
+        "reschedule": "Report"
       },
       "appointment": "Rendez-vous : {{appointment}}",
       "noAppointment": "Aucun rendez-vous à venir ne correspond à cette demande. Consultez la page Rendez-vous.",
       "alreadyCancelled": "Ce rendez-vous est déjà annulé.",
       "cancellationRequest": "Demande d'annulation",
       "requested": "Demandé : {{details}}",
-      "notes": "Notes : {{notes}}"
+      "notes": "Notes : {{notes}}",
+      "rescheduleRequest": "Demande de report",
+      "newTime": "Nouvel horaire : {{time}}"
     },
     "upcoming": {
       "title": "À venir",

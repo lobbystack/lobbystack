@@ -197,6 +197,8 @@ export const businesses = pgTable(
     lastTestChatAt: timestamp("last_test_chat_at", { withTimezone: true }),
     // When the plans last opened by themselves after a test.
     planOfferShownAt: timestamp("plan_offer_shown_at", { withTimezone: true }),
+    // Dismissals in a row since the last plan choice. Three lengthen the pause between offers.
+    planOfferDismissals: integer("plan_offer_dismissals").default(0).notNull(),
     setupGuideSkippedSteps: jsonb("setup_guide_skipped_steps").$type<string[]>().default([]).notNull(),
     phoneNumberReplacementReservedAt: timestamp("phone_number_replacement_reserved_at", { withTimezone: true }),
     phoneNumberReplacementUsedAt: timestamp("phone_number_replacement_used_at", { withTimezone: true }),
@@ -686,7 +688,8 @@ export const numberTrials = pgTable("number_trials", {
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   claimId: uuid("claim_id").references(() => onboardingNumberClaimEvents.id, { onDelete: "set null" }),
   phoneNumberId: uuid("phone_number_id").references(() => phoneNumbers.id, { onDelete: "set null" }),
-  verifiedPhone: varchar("verified_phone", { length: 32 }).notNull(),
+  // Null for a trial the owner started without a mobile (migration 0196).
+  verifiedPhone: varchar("verified_phone", { length: 32 }),
   ipHash: text("ip_hash"),
   status: varchar("status", { length: 16 }).default("reserved").notNull(),
   startedAt: timestamp("started_at", { withTimezone: true }),
@@ -721,9 +724,9 @@ export const agents = pgTable(
     // Operators see this. Callers never hear it. Pass defaultAgentName(locale)
     // for a business's first agent; the default covers code that can't.
     name: text("name").default("Agent").notNull(),
-    // One per business. Until slice 5 the unique index below allows no other
-    // agent, so every row is its business's default.
-    isDefault: boolean("is_default").default(true).notNull(),
+    // One per business, which answers where no other agent does. An insert
+    // for a business's first agent sets it.
+    isDefault: boolean("is_default").default(false).notNull(),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     greeting: text("greeting").notNull(),
     tone: text("tone").notNull(),
@@ -756,7 +759,7 @@ export const agents = pgTable(
     ...timestamps,
   },
   (table) => [
-    uniqueIndex("agents_business_unique").on(table.businessId),
+    uniqueIndex("agents_one_default_per_business").on(table.businessId).where(sql`${table.isDefault}`),
     // What the composite foreign keys on channels and history point at, so a
     // row can't name another business's agent. Those keys are deferred in the
     // database, which Drizzle can't express, so a failure comes at commit.
@@ -1094,6 +1097,7 @@ export const appointments = pgTable(
     sourceChannel: varchar("source_channel", { length: 32 }).notNull(),
     calendarSyncState: varchar("calendar_sync_state", { length: 32 }).default("not_required").notNull(),
     calendarExternalId: text("calendar_external_id"),
+    videoUrl: text("video_url"),
     revision: integer("revision").default(0).notNull(),
     ...legacyId,
     ...timestamps,
@@ -1424,6 +1428,8 @@ export const operatorNotificationDeliveries = pgTable(
     status: varchar("status", { length: 32 }).default("pending").notNull(),
     destination: text("destination").notNull(),
     sender: text("sender"), subject: text("subject").notNull(), body: text("body").notNull(), providerMessageId: text("provider_message_id"),
+    // What an email lays out beyond the subject and body, such as a call summary's caller and length (migration 0199).
+    details: jsonb("details").$type<Record<string, string>>(),
     scheduledFor: timestamp("scheduled_for", { withTimezone: true }).defaultNow().notNull(), sentAt: timestamp("sent_at", { withTimezone: true }),
     contentExpiresAt: timestamp("content_expires_at", { withTimezone: true }).notNull(), lastError: text("last_error"), providerPrice: doublePrecision("provider_price"), providerPriceUnit: varchar("provider_price_unit", { length: 16 }), providerCostUsd: doublePrecision("provider_cost_usd"), providerNumSegments: integer("provider_num_segments"), ...legacyId, ...timestamps,
   },
@@ -1496,6 +1502,10 @@ export const billingCheckoutRequests = pgTable(
     checkoutId: text("checkout_id"),
     checkoutUrl: text("checkout_url"),
     error: text("error"),
+    // When a provider error first kept the request for a retry; the retry window runs from here (migration 0194).
+    firstFailedAt: timestamp("first_failed_at", { withTimezone: true }),
+    // When the worker tries the provider again, while the request stays processing.
+    retryAt: timestamp("retry_at", { withTimezone: true }),
     ...timestamps,
   },
   (table) => [uniqueIndex("billing_checkout_requests_id_unique").on(table.id), index("billing_checkout_requests_business_status_idx").on(table.businessId, table.status, table.createdAt)],
@@ -1585,6 +1595,10 @@ export const partnerCheckoutRequests = pgTable(
     checkoutId: text("checkout_id"),
     checkoutUrl: text("checkout_url"),
     error: text("error"),
+    // When a provider error first kept the request for a retry; the retry window runs from here (migration 0194).
+    firstFailedAt: timestamp("first_failed_at", { withTimezone: true }),
+    // When the worker tries the provider again, while the request stays processing.
+    retryAt: timestamp("retry_at", { withTimezone: true }),
     ...timestamps,
   },
   (table) => [index("partner_checkout_requests_partner_status_idx").on(table.partnerId, table.status, table.createdAt)],

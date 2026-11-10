@@ -140,14 +140,17 @@
         "voice_message": "Devolver llamada",
         "human_handoff": "Traspaso",
         "other": "Abierto",
-        "cancellation": "Cancelación"
+        "cancellation": "Cancelación",
+        "reschedule": "Cambio de hora"
       },
       "appointment": "Cita: {{appointment}}",
       "noAppointment": "Ninguna cita próxima coincide con esta solicitud. Revise la página Citas.",
       "alreadyCancelled": "Esta cita ya está cancelada.",
       "cancellationRequest": "Solicitud de cancelación",
       "requested": "Solicitado: {{details}}",
-      "notes": "Notas: {{notes}}"
+      "notes": "Notas: {{notes}}",
+      "rescheduleRequest": "Solicitud de cambio de hora",
+      "newTime": "Nueva hora: {{time}}"
     },
     "upcoming": {
       "title": "Próximas",

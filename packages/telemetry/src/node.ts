@@ -16,15 +16,28 @@ import { resourceFromAttributes } from "@opentelemetry/resources";
 import { BatchLogRecordProcessor, type LogRecordProcessor } from "@opentelemetry/sdk-logs";
 import { PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
 import { NodeSDK } from "@opentelemetry/sdk-node";
-import { BatchSpanProcessor, type ReadableSpan, type SpanProcessor } from "@opentelemetry/sdk-trace-base";
+import { BatchSpanProcessor, ParentBasedSampler, TraceIdRatioBasedSampler, type ReadableSpan, type SpanProcessor } from "@opentelemetry/sdk-trace-base";
 import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { UndiciInstrumentation } from "@opentelemetry/instrumentation-undici";
 import { monitorEventLoopDelay } from "node:perf_hooks";
 import { format } from "node:util";
+import { PostHog } from "posthog-node";
 
 import { maskString, redactOtelAttributes, redactSignedStorageUrls, shouldRedactKey } from "./redaction.js";
 
 export { redactOtelAttributes } from "./redaction.js";
+
+/**
+ * The share of traces to keep when the environment names no sampler. Every
+ * database transaction and outgoing call makes a span, so a busy worker writes
+ * gigabytes a day at 100%; errors reach error tracking on their own.
+ */
+export function traceSampleRatio(env: NodeJS.ProcessEnv = process.env): number {
+  const raw = env.OTEL_TRACES_SAMPLER_ARG?.trim();
+  if (!raw) return 0.1;
+  const ratio = Number(raw);
+  return Number.isFinite(ratio) && ratio >= 0 && ratio <= 1 ? ratio : 0.1;
+}
 
 export type TelemetryInitializationOptions = {
   serviceName?: string;
@@ -167,6 +180,8 @@ export async function initializeTelemetry(
   activeLogRecordProcessors = logRecordProcessors;
 
   sdk = new NodeSDK({
+    // OTEL_TRACES_SAMPLER wins when a deployment sets one.
+    ...(process.env.OTEL_TRACES_SAMPLER ? {} : { sampler: new ParentBasedSampler({ root: new TraceIdRatioBasedSampler(traceSampleRatio()) }) }),
     resource,
     spanProcessors: [new RedactingSpanProcessor(), new BatchSpanProcessor(new OTLPTraceExporter({ url: `${endpoint}/v1/traces` }))],
     logRecordProcessors,
@@ -252,6 +267,37 @@ export function getLogger(name = "lobbystack"): Logger {
   return logs.getLogger(name);
 }
 
+// Structured failure records reach PostHog Logs through the OTLP exporter.
+// Plain console output is not exported, so worker failures must call this.
+export function emitErrorLog(
+  loggerName: string,
+  body: string,
+  attributes: Record<string, string | number | boolean> = {},
+): void {
+  logs.getLogger(loggerName).emit({
+    severityNumber: SeverityNumber.ERROR,
+    severityText: "ERROR",
+    body,
+    attributes,
+  });
+}
+
+// Ordinary progress records reach PostHog Logs through the OTLP exporter.
+// Pair them with console.info in the caller, which stays in container logs and
+// is not exported, so a record is not duplicated.
+export function emitInfoLog(
+  loggerName: string,
+  body: string,
+  attributes: Record<string, string | number | boolean> = {},
+): void {
+  logs.getLogger(loggerName).emit({
+    severityNumber: SeverityNumber.INFO,
+    severityText: "INFO",
+    body,
+    attributes,
+  });
+}
+
 export function injectTraceContext(carrier: TraceContextCarrier): TraceContextCarrier {
   propagation.inject(context.active(), carrier, {
     set(target, key, value) {
@@ -295,6 +341,38 @@ export async function withSpan<T>(
       span.end();
     }
   });
+}
+
+let exceptionClient: PostHog | undefined;
+
+// The admin sets POSTHOG_KEY or its public project token, and the worker sets
+// POSTHOG_API_KEY for product analytics. All three name the same project.
+export function postHogProjectKey(): string | undefined {
+  return process.env.POSTHOG_KEY ?? process.env.POSTHOG_API_KEY ?? process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
+}
+
+export type ExceptionProperties = Record<string, string | number | boolean | null | undefined | Record<string, string>>;
+
+// Sends one exception to PostHog error tracking. Server runtimes use a shared
+// system identity, so issues group by fingerprint instead of by person.
+export async function captureExceptionToPostHog(
+  error: Error,
+  distinctId: string,
+  properties: ExceptionProperties = {},
+): Promise<void> {
+  const key = postHogProjectKey();
+  if (!key) return;
+  try {
+    exceptionClient ??= new PostHog(key, {
+      host: process.env.POSTHOG_HOST ?? process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://us.i.posthog.com",
+      flushAt: 1,
+      flushInterval: 0,
+    });
+    await exceptionClient.captureExceptionImmediate(error, distinctId, properties);
+  } catch {
+    // Error reporting must never replace the failure it describes.
+    console.warn("[telemetry] exception delivery failed");
+  }
 }
 
 export function recordException(

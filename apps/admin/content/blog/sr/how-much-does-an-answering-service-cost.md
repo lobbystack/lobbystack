@@ -318,6 +318,8 @@ Da. Svaki dobavljač uživo iz naše tabele imao je aktuelne pakete na sajtu kad
 
 Operater se javlja na Vaše pozive u ime Vaše firme, prima poruke, proverava i usmerava pozive i povezuje pozivaoce sa Vama ili Vašim timom. Na nekim paketima operateri zakazuju i termine u Vašem kalendaru ili softveru za zakazivanje.
 
+Ako Vaša firma posluje u Kvebeku, naše poređenje [usluga odgovaranja na pozive u Kvebeku](/sr/blog/phone-answering-service-quebec/) prikazuje dobavljače koji odgovaraju na francuskom, sa cenama objavljenim u novembru 2026.
+
 ## Pitanja o ceni usluge odgovaranja na pozive
 
 ### Koja je najjeftinija usluga odgovaranja na pozive?

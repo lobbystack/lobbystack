@@ -43,6 +43,7 @@ Do not duplicate ownership between runtimes unless there is a specific analytics
 - `web.agent.settings_saved`
 - `web.onboarding.number_claim_started`
 - `web.onboarding.number_claim_completed`
+- `web.onboarding.number_unavailable`: the number step showed the plans instead of the picker, with `code` set to the refusal, such as `trial_already_used` or `trial_ip_limited`
 - `web.onboarding.plan_checkout_completed`
 - `web.onboarding.language_submitted`: an owner with no website picked the language, with `locale`
 - `web.onboarding.meet_completed`: an owner left Meet your agent for the dashboard
@@ -100,7 +101,7 @@ The answer gap skips caller speech that ended while the receptionist was still t
 - `sms.delivery_accepted`
 - `sms.delivery_failed`
 - `conversation.first_real_recorded`: a business's first real conversation, once per business, with `channel`. `kpi-spec.md` says what counts.
-- `onboarding.check_in_answered`: an owner confirmed an answer from the founder's check-in email, with `answer` set to `still_testing`, `connect_number`, `test_call_mistakes`, or `not_a_fit`. The server records it once per business and answer.
+- `onboarding.check_in_answered`: an owner confirmed an answer from the founder's check-in email, which LobbyStack no longer sends; links in emails already sent work for 30 days, with `answer` set to `still_testing`, `connect_number`, `test_call_mistakes`, or `not_a_fit`. The server records it once per business and answer.
 - `conversation.automation_paused`
 - `conversation.team_requested`: a website visitor asked for a person and the team was alerted.
 - `conversation.team_joined`: a team member replied or pressed Join while the visitor waited. `waitSeconds` is how long the visitor waited.

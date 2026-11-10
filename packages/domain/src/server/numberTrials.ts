@@ -13,7 +13,9 @@ import { loadEntitlement } from "./entitlement";
 import { businessGetsHostEmails } from "./hostEmails";
 import { loadPartnerNumberStanding } from "./partnerNumbers";
 import { sharedSmsSender } from "./smsSender";
+import { isDisposableTrialEmail, trialNeedsPhoneVerification } from "./trialEligibility";
 import { getVoiceSecondsLeftInTransaction, readEndedVoiceSecondsLeftInTransaction } from "./usage";
+import { greetingName } from "./emailGreeting";
 
 export type NumberCountry = "US" | "CA" | "PR" | "GB" | "AU" | "NZ";
 
@@ -80,7 +82,8 @@ export async function activateNumberTrialInTransaction(
   await tx.update(phoneNumbers)
     .set({ reclaimScheduledAt: numberTrialReleaseAt(now), reclaimReason: "trial", updatedAt: now })
     .where(and(eq(phoneNumbers.id, input.phoneNumberId), eq(phoneNumbers.businessId, input.businessId)));
-  await tx.update(agents).set({ transferNumber: trial.verifiedPhone, updatedAt: now }).where(defaultAgentOf(input.businessId));
+  // A trial without a verified mobile leaves the agent's transfer number as it is.
+  await tx.update(agents).set({ ...(trial.verifiedPhone ? { transferNumber: trial.verifiedPhone } : {}), updatedAt: now }).where(defaultAgentOf(input.businessId));
   await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "business", aggregateId: input.businessId, dedupeKey: `business:${input.businessId}:snapshot:trial:${input.claimId}`, payload: { businessId: input.businessId, reason: "number_trial_started" } });
   return true;
 }
@@ -225,7 +228,7 @@ export async function loadNumberReleaseEmail(context: DomainContext, input: { bu
     if (!number) return null;
     const owner = (await tx.execute<{ email: string; name: string | null; preferred_locale: string; business_name: string }>(sql`select email, name, preferred_locale, business_name from app.resolve_business_owner_contact(${input.businessId}::uuid)`)).rows[0];
     if (!owner) return null;
-    return { to: owner.email, locale: normalizeInterfaceLocale(owner.preferred_locale) ?? "en", firstName: owner.name?.trim().split(/\s+/)[0] ?? "", businessName: owner.business_name, number: number.e164, timezone: number.timezone };
+    return { to: owner.email, locale: normalizeInterfaceLocale(owner.preferred_locale) ?? "en", firstName: greetingName(owner.name, owner.email), businessName: owner.business_name, number: number.e164, timezone: number.timezone };
   });
 }
 
@@ -329,8 +332,11 @@ export async function resolveNumberFallback(context: DomainContext, input: { bus
       .where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.e164, input.e164), eq(phoneNumbers.status, "active")))
       .limit(1))[0];
     if (!row || row.trialStatus === "ended") return { action: "reject" };
-    // A trial transfers only to the verified phone, so it never needs the owner lookup.
-    const ownerPhone = row.trialStatus === "active" ? row.trialPhone : (await tx.execute<{ phone: string | null }>(sql`select app.resolve_business_owner_verified_phone(${input.businessId}::uuid) as phone`)).rows[0]?.phone;
+    // A trial transfers only to the phone its claimer verified. A trial without
+    // one falls back to an owner who verified a mobile since claiming it.
+    const ownerPhone = row.trialStatus === "active" && row.trialPhone
+      ? row.trialPhone
+      : (await tx.execute<{ phone: string | null }>(sql`select app.resolve_business_owner_verified_phone(${input.businessId}::uuid) as phone`)).rows[0]?.phone;
     // Forwarding a call back to the number it came in on would loop.
     const to = [row.transferNumber?.trim(), ownerPhone].find((phone): phone is string => Boolean(phone && E164.test(phone) && isTransferPhone(phone) && phone !== input.e164));
     return to ? { action: "forward", to } : { action: "reject" };
@@ -358,8 +364,9 @@ export async function numberAgentIdInTransaction(tx: DatabaseTransaction, input:
  * forward themselves, so they learn a new transfer number or owner phone.
  * Other carriers ask our voice webhook on each call and need nothing.
  */
-export async function enqueueRefusedCallForwardRefresh(tx: DatabaseTransaction, businessId: string): Promise<void> {
-  const numbers = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), inArray(phoneNumbers.carrier, [...CARRIERS_FORWARDING_REFUSED_CALLS])));
+export async function enqueueRefusedCallForwardRefresh(tx: DatabaseTransaction, businessId: string, agentId?: string): Promise<void> {
+  // With an agent, only its numbers forward to its transfer number.
+  const numbers = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), inArray(phoneNumbers.carrier, [...CARRIERS_FORWARDING_REFUSED_CALLS]), ...(agentId ? [eq(phoneNumbers.agentId, agentId)] : [])));
   for (const number of numbers) await enqueueNumberRouting(tx, { businessId, phoneNumberId: number.id, mode: "receptionist" });
 }
 
@@ -446,18 +453,88 @@ async function trialAvailableInTransaction(tx: DatabaseTransaction, input: { use
   return !verified || (trialCountries() as string[]).includes(verified.countryCode);
 }
 
+export type NumberTrialRefusal = "dedicated_number_requires_paid_plan" | "trial_already_used" | "trial_ip_limited" | "trial_not_available" | "email_verification_required";
+
+export type OnboardingNumberTrialOutlook = {
+  /** Whether a mobile must be verified before the number step can offer a trial. */
+  verificationNeeded: boolean;
+  /** Why the number step can't offer a trial now, so it shows the plans instead. */
+  refusal: NumberTrialRefusal | null;
+};
+
+/** The signed-in person's email and whether they verified it. */
+export async function trialEmailInTransaction(tx: DatabaseTransaction, userId: string): Promise<{ email: string; emailVerified: boolean } | null> {
+  return (await tx.select({ email: users.email, emailVerified: users.emailVerified }).from(users).where(eq(users.id, userId)).limit(1))[0] ?? null;
+}
+
+/**
+ * Whether this request's network and country are enough to start a trial
+ * without a text: the same once-per-network rule the claim applies, read
+ * through the definer function that sees other workspaces' trials.
+ */
+export async function trialNetworkNeedsPhoneVerificationInTransaction(tx: DatabaseTransaction, input: { userId: string; businessId: string; ipHash?: string | null | undefined; ipCountry?: string | null | undefined }): Promise<boolean> {
+  if (trialNeedsPhoneVerification(input)) return true;
+  const limited = await tx.execute(sql`SELECT app.number_trial_ip_used(${input.businessId}::uuid, ${input.userId}::uuid, ${input.ipHash}) AS used`);
+  return Boolean((limited.rows[0] as { used?: boolean } | undefined)?.used);
+}
+
+/**
+ * What a direct business can expect from the number step: whether the phone
+ * step has to come first, and, when no trial is possible, the refusal the
+ * number search would raise. A trial needs a verified email and a clean
+ * network; it needs a mobile only when the network can't identify the caller,
+ * already started a trial this month, or the trial is claimed through the
+ * API. The claim keeps enforcing every rule itself.
+ */
+export async function onboardingNumberTrialOutlookInTransaction(tx: DatabaseTransaction, input: { userId: string; businessId: string; ipHash?: string | null | undefined; ipCountry?: string | null | undefined }): Promise<OnboardingNumberTrialOutlook> {
+  const business = (await tx.select({ deploymentMode: businesses.deploymentMode, timezone: businesses.timezone, partnerId: businesses.partnerId }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0];
+  if (!business) return { verificationNeeded: false, refusal: null };
+  // A self-hosted install has no host trial; it buys its numbers directly.
+  if (business.deploymentMode !== "cloud") return { verificationNeeded: false, refusal: null };
+  // A partner's business gets its numbers from its partner, and still verifies
+  // the mobile its calls forward to.
+  if (business.partnerId) return { verificationNeeded: true, refusal: null };
+  const entitlement = await loadEntitlement(tx, input.businessId);
+  // A live plan includes a number, so there is no trial to guard.
+  if (entitlement.live) return { verificationNeeded: false, refusal: null };
+  const number = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), inArray(phoneNumbers.status, ["active", "provisioning"]))).limit(1);
+  if (number.length) return { verificationNeeded: false, refusal: null };
+  const email = await trialEmailInTransaction(tx, input.userId);
+  if (!email?.emailVerified) return { verificationNeeded: false, refusal: "email_verification_required" };
+  if (isDisposableTrialEmail(email.email)) return { verificationNeeded: false, refusal: "trial_not_available" };
+  // An owner who already verified continues to the number itself.
+  if (await verifiedPhone(tx, input)) return { verificationNeeded: false, refusal: null };
+  // The same once-per-workspace, per-user and per-phone rule the claim applies.
+  const used = await tx.execute(sql`SELECT app.number_trial_used(${input.businessId}::uuid, ${input.userId}::uuid) AS used`);
+  if ((used.rows[0] as { used?: boolean } | undefined)?.used) return { verificationNeeded: false, refusal: "trial_already_used" };
+  const countries = trialCountries();
+  if (countries.length === 0) return { verificationNeeded: false, refusal: "trial_not_available" };
+  // The number's country comes from the search's selection, so the step only
+  // needs to know whether the network can start a trial without a text.
+  return { verificationNeeded: await trialNetworkNeedsPhoneVerificationInTransaction(tx, input), refusal: null };
+}
+
+export async function onboardingNumberTrialOutlook(context: DomainContext, input: { userId: string; businessId: string; ipHash?: string | null | undefined; ipCountry?: string | null | undefined }): Promise<OnboardingNumberTrialOutlook> {
+  return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+    await requireBusinessMembership(tx, input);
+    return await onboardingNumberTrialOutlookInTransaction(tx, input);
+  });
+}
+
 /**
  * Where the number step sends someone it can't help yet: Home, for a finished
  * workspace that already has a number, or the phone step, when a free trial
  * needs a mobile verified in this workspace first.
  */
-export async function numberStepRedirect(context: DomainContext, input: { userId: string; businessId: string; finished: boolean }): Promise<"/" | "/onboarding/verify-phone" | null> {
+export async function numberStepRedirect(context: DomainContext, input: { userId: string; businessId: string; finished: boolean; ipHash?: string | null | undefined; ipCountry?: string | null | undefined }): Promise<"/" | "/onboarding/verify-phone" | null> {
   return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
     await requireBusinessMembership(tx, input);
     const number = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), inArray(phoneNumbers.status, ["active", "provisioning"]))).limit(1);
     if (number.length) return input.finished ? "/" : null;
+    // A business the host's trial isn't for, such as a partner's business that
+    // hasn't paid its package yet, has no reason to verify a mobile here.
     if (!await offersHostTrialInTransaction(tx, input.businessId)) return null;
-    return await verifiedPhone(tx, input) ? null : "/onboarding/verify-phone";
+    return (await onboardingNumberTrialOutlookInTransaction(tx, input)).verificationNeeded ? "/onboarding/verify-phone" : null;
   });
 }
 
@@ -576,7 +653,7 @@ export async function loadNumberTrialEmail(context: DomainContext, input: { busi
       email: input.email,
       to: owner.email,
       locale: normalizeInterfaceLocale(owner.preferred_locale) ?? "en",
-      firstName: owner.name?.trim().split(/\s+/)[0] ?? "",
+      firstName: greetingName(owner.name, owner.email),
       businessName: owner.business_name,
       trialNumber: trial.e164,
       forwardTo: input.email === "minutes_out" ? trial.transferNumber?.trim() || trial.verifiedPhone : null,

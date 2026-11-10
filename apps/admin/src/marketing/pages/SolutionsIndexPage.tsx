@@ -95,6 +95,12 @@ const copyByLocale = {
           "Audit the call handling logic, customize prompts and routing, and deploy on your own infrastructure.",
       },
       {
+        title: "AI receptionist in Quebec",
+        href: "/solutions/ai-receptionist-quebec/",
+        description:
+          "Answer Quebec customers in French on your number, book into Google Calendar and switch to English when the caller does.",
+      },
+      {
         title: "White-label AI receptionist",
         href: "/white-label/",
         description:
@@ -128,6 +134,10 @@ const copyByLocale = {
       {
         title: "Property management",
         href: "/solutions/property-management-answering-service/",
+      },
+      {
+        title: "Renovation contractors",
+        href: "/solutions/ai-receptionist-for-renovation-contractors/",
       },
     ],
     comparisons: [
@@ -227,6 +237,12 @@ const copyByLocale = {
           "Auditez la logique d’appel, personnalisez les consignes et le routage, puis déployez sur votre infrastructure.",
       },
       {
+        title: "Réceptionniste IA au Québec",
+        href: "/solutions/ai-receptionist-quebec/",
+        description:
+          "Répondez en français à vos clients du Québec sur votre numéro, réservez dans Google Calendar et passez à l’anglais au besoin.",
+      },
+      {
         title: "Réceptionniste IA en marque blanche",
         href: "/white-label/",
         description:
@@ -260,6 +276,10 @@ const copyByLocale = {
       {
         title: "Gestion immobilière",
         href: "/solutions/property-management-answering-service/",
+      },
+      {
+        title: "Entrepreneurs en rénovation",
+        href: "/solutions/ai-receptionist-for-renovation-contractors/",
       },
     ],
     comparisons: [
@@ -359,6 +379,12 @@ const copyByLocale = {
           "Audite la lógica de atención de llamadas, personalice las instrucciones y el enrutamiento, e impleméntela en su propia infraestructura.",
       },
       {
+        title: "Recepcionista con IA en Quebec",
+        href: "/solutions/ai-receptionist-quebec/",
+        description:
+          "Atienda en francés a sus clientes de Quebec en su número, reserve en Google Calendar y cambie al inglés cuando el cliente lo hable.",
+      },
+      {
         title: "Recepcionista con IA de marca blanca",
         href: "/white-label/",
         description:
@@ -392,6 +418,10 @@ const copyByLocale = {
       {
         title: "Administración de propiedades",
         href: "/solutions/property-management-answering-service/",
+      },
+      {
+        title: "Contratistas de remodelación",
+        href: "/solutions/ai-receptionist-for-renovation-contractors/",
       },
     ],
     comparisons: [
@@ -491,6 +521,12 @@ const copyByLocale = {
           "Proverite logiku obrade poziva, prilagodite uputstva i preusmeravanje i pokrenite sve na sopstvenoj infrastrukturi.",
       },
       {
+        title: "AI recepcioner u Kvebeku",
+        href: "/solutions/ai-receptionist-quebec/",
+        description:
+          "Odgovarajte klijentima iz Kvebeka na francuskom na Vašem broju, zakazujte u Google Calendar i pređite na engleski kada klijent to zatraži.",
+      },
+      {
         title: "White-label AI recepcioner",
         href: "/white-label/",
         description:
@@ -533,6 +569,10 @@ const copyByLocale = {
       {
         title: "Upravljanje nekretninama",
         href: "/solutions/property-management-answering-service/",
+      },
+      {
+        title: "Izvođači renoviranja",
+        href: "/solutions/ai-receptionist-for-renovation-contractors/",
       },
     ],
     comparisons: [

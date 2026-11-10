@@ -39,7 +39,7 @@ vi.mock("@lobbystack/agent-core/live/session", () => ({ buildBrowserSessionConfi
 
 import { POST } from "./route";
 
-const snapshot = { businessId: "biz_1", greeting: "Hi", contactChannels: { phoneNumber: "+15815020392" } };
+const snapshot = { businessId: "biz_1", displayName: "Maple Clinic", defaultLocale: "en", greeting: "Hi", contactChannels: { phoneNumber: "+15815020392" } };
 
 function start(widgetId: string, extra: Record<string, string> = {}) {
   return POST(new Request("https://admin.lobbystack.test/api/voice/live/session", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sdp: "v=0\r\n", widgetId, ...extra }) }));
@@ -194,6 +194,21 @@ describe("POST /api/voice/live/session", () => {
     await expect((await start("lobbystack-dashboard-test-call")).json()).resolves.toMatchObject({ agentGreets: true });
     mocks.snapshot.mockResolvedValue({ ...snapshot, greeting: " " });
     await expect((await start("lobbystack-dashboard-test-call")).json()).resolves.toMatchObject({ agentGreets: false });
+  });
+
+  it("starts the landing demo in the language the visitor picked, and tells the worker", async () => {
+    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://www.lobbystack.test", widgetId: "lobbystack-landing", billable: false });
+    await start("lobbystack-landing", { language: "fr" });
+    expect(mocks.attach).toHaveBeenCalledWith(expect.objectContaining({ language: "fr" }));
+  });
+
+  it("ignores a language from anyone but the landing demo, or one that isn't offered", async () => {
+    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-dashboard-test-call", dashboardTestCall: true, billable: true });
+    await start("lobbystack-dashboard-test-call", { language: "fr" });
+    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://www.lobbystack.test", widgetId: "lobbystack-landing", billable: false });
+    await start("lobbystack-landing", { language: "tlh" });
+    for (const [input] of mocks.attach.mock.calls) expect(input).not.toHaveProperty("language");
+    expect(mocks.attach).toHaveBeenCalledTimes(2);
   });
 
   it("rejects unknown callers", async () => {

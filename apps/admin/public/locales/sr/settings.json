@@ -108,6 +108,7 @@
     "toast": {
       "checkoutSuccess": "Plaćanje je uspešno završeno.",
       "checkoutFailed": "Nije moguće otvoriti plaćanje.",
+      "paymentsUnavailable": "Plaćanje privremeno nije dostupno. Pokušajte ponovo za nekoliko minuta.",
       "portalFailed": "Nije moguće otvoriti portal za korisnike."
     },
     "pastDueBanner": {
@@ -187,6 +188,8 @@
     "upgradeDialog": {
       "title": "Nadogradite paket",
       "description": "Izaberite paket koji najviše odgovara Vašem timu.",
+      "providerSlow": "Provajder plaćanja je spor. I dalje otvaramo plaćanje...",
+      "close": "Zatvori",
       "enterpriseSubject": "Enterprise paket",
       "billingIntervalLabel": "Period naplate",
       "annualDiscount": "Uštedite 20%",
@@ -246,7 +249,7 @@
     "spendingCap": {
       "title": "Mesečni limit potrošnje",
       "placeholder": "25.00",
-      "amountLabel": "Limit prekoračenja (USD)",
+      "amountLabel": "Limit prekoračenja",
       "noCap": "Limit potrošnje nije podešen",
       "currentSpend": "Trenutni trošak prekoračenja",
       "spendOfCap": "{{spend}} od {{cap}}",
@@ -472,6 +475,7 @@
       "areaCodeLabel": "Pozivni broj",
       "areaCodePlaceholder": "Pozivni broj",
       "search": "Pretraži",
+      "searching": "Pretraga...",
       "phoneNumberHeader": "Broj telefona",
       "select": "Izaberi",
       "claiming": "Povezivanje novog broja...",
@@ -756,7 +760,8 @@
       "placeholder": "Porodična klinika Maple",
       "save": "Sačuvaj",
       "saving": "Čuvanje...",
-      "saved": "Izmene su sačuvane"
+      "saved": "Izmene su sačuvane",
+      "required": "Unesite naziv preduzeća."
     },
     "changeEmail": {
       "label": "Promeni imejl",
@@ -848,7 +853,9 @@
         "invalidEmail": "Unesite ispravnu imejl adresu.",
         "partnerMember": "{{email}} je u timu partnera ovog radnog prostora. Radi ovde iz partnerske konzole, pa ne može da se pridruži timu.",
         "failed": "Nismo uspeli da pošaljemo poziv. Pokušajte ponovo."
-      }
+      },
+      "emailRequired": "Unesite imejl adresu.",
+      "cancel": "Otkaži"
     },
     "pending": {
       "resend": "Pošalji ponovo",
@@ -1017,6 +1024,10 @@
       "eventColumn": "Događaj"
     },
     "events": {
+      "callCompleted": {
+        "title": "Odgovoren poziv",
+        "description": "Kada vaš agent završi poziv, uz rezime."
+      },
       "voiceMessage": {
         "title": "Primljena glasovna poruka",
         "description": "Kada pozivalac ostavi poruku tokom poziva."
@@ -1119,6 +1130,8 @@
       "nameLabel": "Naziv",
       "namePlaceholder": "CRM sinhronizacija",
       "scopesLabel": "Pristup",
+      "nameRequired": "Unesite naziv.",
+      "scopesRequired": "Izaberite bar jednu dozvolu.",
       "cancel": "Otkaži",
       "submit": "Kreiraj ključ",
       "creating": "Kreiranje…"

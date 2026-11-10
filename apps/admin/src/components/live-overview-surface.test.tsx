@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createInstance } from "i18next";
 import { I18nextProvider } from "react-i18next";
@@ -13,9 +14,11 @@ import fr from "../../public/locales/fr/dashboard.json";
 import type { Capability } from "@lobbystack/domain";
 import { ALL_CAPABILITIES, BusinessCapabilitiesProvider } from "./business-capabilities-provider";
 import { LiveOverviewSurface } from "./live-overview-surface";
+import { SETUP_STEP_ORDER } from "@/lib/setup-guide";
 vi.mock("next/dynamic", () => ({ default: () => () => null }));
 // The activation card has its own suite; this one covers follow-up parity.
 vi.mock("./dashboard-activation-card", () => ({ DashboardActivationCard: () => null }));
+vi.mock("./call-forwarding-dialog", () => ({ CallForwardingFromLink: () => null }));
 const clients: QueryClient[] = [];
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); });
 type Overrides = { upcoming?: Array<Record<string, unknown>>; recentCalls?: Array<Record<string, unknown>>; actionRequired?: Array<Record<string, unknown>>; role?: string; capabilities?: Capability[]; unansweredCount?: number };
@@ -173,5 +176,99 @@ describe("appointment cancellations on Home", () => {
     expect(screen.getByText("Appointment: Consultation for Milan on Mon, Sep 7, 2:30 PM")).toBeTruthy();
     expect(screen.queryByRole("button", { name: enCommon.appointments.cancel.approve })).toBeNull();
     expect(screen.queryByRole("button", { name: /Cancel appointment/ })).toBeNull();
+  });
+});
+
+describe("appointment reschedules on Home", () => {
+  const request = { id: "reschedule-1", kind: "voice_message", title: "Voice message from Milan", body: "Reschedule request: Consultation\nNew time: Wednesday, September 9 at 10:00 AM", callId: "call-1", createdAt: "2026-09-04T14:30:00Z", request: "appointment_reschedule", requested: { service: "Consultation", startsAt: "2099-09-07T10:30", newStartsAt: "2099-09-09T10:00" } };
+  const linked = { id: "appointment", startsAt: "2099-09-07T14:30:00Z", timezone: "America/Toronto", status: "confirmed", serviceName: "Consultation", contactName: "Milan" };
+
+  it("shows the requested time and lets a scheduler approve the move", async () => {
+    await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, appointment: linked }] });
+    expect(screen.getAllByText(en.home.actionRequired.kinds.reschedule)).toHaveLength(2);
+    expect(screen.getByText(/New time: .*September 9/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: enCommon.appointments.reschedule.approve })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: enCommon.appointments.cancel.approve })).toBeNull();
+  });
+
+  it("moves the appointment to the time the caller asked for", async () => {
+    const i18n = await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, appointment: linked }] });
+    i18n.fetchMock.mockImplementation(async (url: string, init?: RequestInit) => init?.method === "POST" ? Response.json({ appointmentId: "appointment" }) : Response.json({ error: "Not found." }, { status: 404 }));
+    await userEvent.click(screen.getByRole("button", { name: enCommon.appointments.reschedule.approve }));
+    await userEvent.click(await screen.findByRole("button", { name: enCommon.appointments.reschedule.confirm }));
+    // 10:00 in Toronto on September 9 is 14:00 UTC.
+    await waitFor(() => expect(i18n.fetchMock).toHaveBeenCalledWith("/api/appointments/appointment/reschedule?businessId=business", expect.objectContaining({ method: "POST", body: JSON.stringify({ startsAt: "2099-09-09T14:00:00.000Z" }) })));
+  });
+
+  it("keeps the confirmation open when the time is no longer free", async () => {
+    const i18n = await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, appointment: linked }] });
+    i18n.fetchMock.mockImplementation(async (url: string, init?: RequestInit) => init?.method === "POST" ? Response.json({ error: "That appointment time is no longer available.", code: "slot_unavailable" }, { status: 409 }) : Response.json({ error: "Not found." }, { status: 404 }));
+    await userEvent.click(screen.getByRole("button", { name: enCommon.appointments.reschedule.approve }));
+    await userEvent.click(await screen.findByRole("button", { name: enCommon.appointments.reschedule.confirm }));
+    await waitFor(() => expect(i18n.fetchMock).toHaveBeenCalledWith(expect.stringContaining("/reschedule"), expect.anything()));
+    expect(screen.getByRole("alertdialog")).toBeTruthy();
+  });
+
+  it("says the requested time has passed when it has, rather than offering nothing", async () => {
+    await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, requested: { service: "Consultation", newStartsAt: "2020-09-09T10:00" }, appointment: linked }] });
+    expect(screen.getByText(enCommon.appointments.reschedule.passed)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: enCommon.appointments.reschedule.approve })).toBeNull();
+  });
+
+  it("offers nothing to approve without a matched appointment or the new time, or to a viewer", async () => {
+    await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, appointment: null }] });
+    expect(screen.queryByRole("button", { name: enCommon.appointments.reschedule.approve })).toBeNull();
+    cleanup();
+    await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, requested: { service: "Consultation" }, appointment: linked }] });
+    expect(screen.queryByRole("button", { name: enCommon.appointments.reschedule.approve })).toBeNull();
+    cleanup();
+    await setup("en", null, { role: "viewer", actionRequired: [{ ...request, appointment: linked }] });
+    expect(screen.queryByRole("button", { name: enCommon.appointments.reschedule.approve })).toBeNull();
+  });
+
+  it("offers another time next to the requested one, and a picker when the caller gave none", async () => {
+    await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, appointment: linked }] });
+    expect(screen.getByRole("button", { name: enCommon.appointments.move.otherTime })).toBeTruthy();
+    cleanup();
+    await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, requested: { service: "Consultation" }, appointment: linked }] });
+    expect(screen.getByRole("button", { name: /Reschedule appointment:/ })).toBeTruthy();
+    cleanup();
+    await setup("en", null, { role: "viewer", actionRequired: [{ ...request, appointment: linked }] });
+    expect(screen.queryByRole("button", { name: enCommon.appointments.move.otherTime })).toBeNull();
+  });
+});
+
+describe("Home while it loads", () => {
+  it("keeps the chart titles, holds the metric titles hidden, and marks each loading block busy", async () => {
+    vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn(), removeItem: vi.fn() });
+    vi.stubGlobal("EventSource", class { addEventListener() {} removeEventListener() {} close() {} });
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => undefined)));
+    const i18n = createInstance();
+    await i18n.init({ lng: "en", defaultNS: "dashboard", resources: { en: { dashboard: en, common: enCommon, knowledge: enKnowledge } } });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); clients.push(client);
+    const { container } = render(<I18nextProvider i18n={i18n}><QueryClientProvider client={client}><BusinessCapabilitiesProvider initial={ALL_CAPABILITIES}><LiveOverviewSurface /></BusinessCapabilitiesProvider></QueryClientProvider></I18nextProvider>);
+    // The metric titles are placeholders holding their hidden text, so each card turns real together.
+    for (const title of ["calls", "appointments", "averageDuration"]) expect(screen.getByText(i18n.t(`home.metrics.${title}.title`)).closest("[data-slot='skeleton']")).toBeTruthy();
+    expect(screen.getByText(i18n.t("home.chart.title"))).toBeTruthy();
+    expect(screen.getByText(i18n.t("home.recentCalls.title"))).toBeTruthy();
+    expect(container.querySelectorAll("[aria-busy='true']")).toHaveLength(4);
+  });
+
+  it("holds the setup guide's place while it loads, so the page doesn't jump", async () => {
+    vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn(), removeItem: vi.fn() });
+    vi.stubGlobal("EventSource", class { addEventListener() {} removeEventListener() {} close() {} });
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => undefined)));
+    const i18n = createInstance();
+    await i18n.init({ lng: "en", defaultNS: "dashboard", resources: { en: { dashboard: en, common: enCommon, knowledge: enKnowledge } } });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); clients.push(client);
+    client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Clinic", role: "business_owner", active: true }] });
+    // The dashboard answers, while the guide, the hours and the appointments are still loading.
+    client.setQueryData(["dashboard"], { businessId: "business", kpis: { calls: { total: 0, deltaPercent: 0 }, appointments: { total: 0, deltaPercent: 0 }, averageDuration: { totalSeconds: 0, deltaSeconds: 0 } }, monthlyCalls: [], recentCalls: [], actionRequired: [], upcoming: [] });
+    const { container } = render(<I18nextProvider i18n={i18n}><QueryClientProvider client={client}><BusinessCapabilitiesProvider initial={ALL_CAPABILITIES}><LiveOverviewSurface /></BusinessCapabilitiesProvider></QueryClientProvider></I18nextProvider>);
+
+    expect(screen.getByText(i18n.t("setupGuide.title")).closest("[data-slot='skeleton']")).toBeTruthy();
+    for (const step of SETUP_STEP_ORDER) expect(screen.getByText(i18n.t(`setupGuide.steps.${step}`)).closest("[data-slot='skeleton']")).toBeTruthy();
+    expect(screen.getByText(i18n.t("setupGuide.skip")).closest("[data-slot='skeleton']")).toBeTruthy();
+    expect(container.querySelector("[aria-busy='true']")).toBeTruthy();
   });
 });

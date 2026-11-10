@@ -1,7 +1,5 @@
 "use client";
 
-import { ChevronLeft } from "lucide-react";
-import Link from "next/link";
 import { Fragment } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -17,10 +15,8 @@ type OnboardingShellProps = {
   eyebrow?: string;
   title: string;
   description?: React.ReactNode;
-  /** The step dots. `routes` names the page of each step, and a dot without one has no link. */
-  progress?: { current: number; navigableUntil?: number; total: number; routes?: readonly string[] } | null;
-  /** The previous step, for the Back button. */
-  backHref?: string | null | undefined;
+  /** The step dots. Onboarding only goes forward, so none of them is a link. */
+  progress?: { current: number; total: number } | null;
   width?: keyof typeof widths;
   children: React.ReactNode;
   legalFooter?: React.ReactNode;
@@ -37,7 +33,7 @@ export const onboardingRoutes = {
   "/onboarding/language": { key: "language", width: "md" },
   "/onboarding/reading": { key: "reading", width: "lg" },
   "/onboarding/verify-phone": { key: "verifyPhone", width: "md" },
-  "/onboarding/number": { key: "number", width: "lg" },
+  "/onboarding/number": { key: "number", width: "wide" },
   "/onboarding/goal": { key: "goal", width: "md" },
   "/onboarding/attribution": { key: "attribution", width: "xl" },
   "/onboarding/meet": { key: "meet", width: "5xl" },
@@ -47,7 +43,7 @@ const widths = { sm: "max-w-sm", md: "max-w-md", lg: "max-w-lg", xl: "max-w-xl",
 
 const legalPrefixKeys = { login: "login.legalPrefix", signup: "signup.legal.prefix", business: "signup.legal.businessPrefix", emailChange: "signup.legal.emailChangePrefix", passwordReset: "forgotPassword.legalPrefix", verifyEmail: "verifyEmail.legalPrefix" } as const;
 
-export function ReplacementOnboardingShell({ icon, eyebrow, title, description, progress, backHref, width = "md", children, legalFooter: customLegalFooter, legalAgreement, onSignOut }: OnboardingShellProps) {
+export function ReplacementOnboardingShell({ icon, eyebrow, title, description, progress, width = "md", children, legalFooter: customLegalFooter, legalAgreement, onSignOut }: OnboardingShellProps) {
   const { t, i18n } = useTranslation("onboarding");
   const { t: tAuth } = useTranslation("auth");
   const links = useBrandLinks(resolveLocale(i18n.resolvedLanguage, i18n.language));
@@ -69,17 +65,12 @@ export function ReplacementOnboardingShell({ icon, eyebrow, title, description, 
   ].filter((link): link is { key: string; href: string; label: string } => Boolean(link.href));
   return (
     <div className="relative flex min-h-svh w-full flex-col bg-background text-foreground">
-      {backHref ? (
-        <Link className="absolute left-6 top-6 inline-flex items-center gap-1 rounded-full py-3 pl-2 pr-4 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background" href={backHref}>
-          <ChevronLeft aria-hidden="true" className="size-4" />{t("shell.back")}
-        </Link>
-      ) : null}
       {onSignOut ? (
         <button className="absolute right-6 top-6 rounded-full px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background" onClick={onSignOut} type="button">
           {t("shell.signOut")}
         </button>
       ) : null}
-      <main className={cn("flex flex-1 flex-col items-center px-6 pb-12", onSignOut || backHref ? "pt-20 sm:pt-12" : "pt-12")}>
+      <main className={cn("flex flex-1 flex-col items-center px-6 pb-12", onSignOut ? "pt-20 sm:pt-12" : "pt-12")}>
         <div className={cn("my-auto flex w-full flex-col items-center", widths[width])}>
           <BrandMark />
           <div className="mt-10 flex w-full flex-col items-center gap-4 text-center">
@@ -99,14 +90,12 @@ export function ReplacementOnboardingShell({ icon, eyebrow, title, description, 
                 .map((step) => {
                   const active = step === progress.current;
                   const completed = step < progress.current;
-                  const canNavigate = step <= (progress.navigableUntil ?? progress.current);
-                  const href = !active && canNavigate ? progress.routes?.[step - 1] : undefined;
                   const className = cn(
                     "h-1.5 rounded-full transition-all",
                     active ? "w-6 bg-foreground" : "w-1.5",
                     completed ? "bg-foreground/40" : active ? "bg-foreground" : "bg-border",
                   );
-                  return <li className="flex" key={step}>{href ? <Link aria-label={`Go to onboarding step ${step}`} className={className} href={href} /> : <span role="img" aria-label={`Onboarding step ${step}${active ? ", current step" : ""}`} aria-current={active ? "step" : undefined} className={className} />}</li>;
+                  return <li className="flex" key={step}><span role="img" aria-label={`Onboarding step ${step}${active ? ", current step" : ""}`} aria-current={active ? "step" : undefined} className={className} /></li>;
                 })}
             </ol>
           </nav>

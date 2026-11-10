@@ -23,22 +23,24 @@ const SLIDES = ["answers", "booking", "transfer", "languages", "summaries", "wid
 /** checking: no answer yet. waiting: the screen shows. waited: the screen showed and ended. ready: it never showed. */
 export type ImportWaitPhase = "checking" | "waiting" | "waited" | "ready";
 
-function nextPhase(phase: ImportWaitPhase, settled: boolean, running: boolean): ImportWaitPhase {
+function nextPhase(phase: ImportWaitPhase, settled: boolean, running: boolean, justSubmitted: boolean): ImportWaitPhase {
   if (phase === "checking") return !settled ? phase : running ? "waiting" : "ready";
-  if (phase === "waiting") return running ? phase : "waited";
+  // A just-submitted website also holds while the import is still on its way.
+  if (phase === "waiting") return running || (justSubmitted && !settled) ? phase : "waited";
   return phase;
 }
 
 const stop = (phase: ImportWaitPhase): ImportWaitPhase => phase === "checking" ? "ready" : phase === "waiting" ? "waited" : phase;
 
 /**
- * Decides whether the operator waits for the import. The limit also covers the
- * check itself, so a request that hangs can't hold anyone here.
+ * Decides whether the operator waits for the import. A website just submitted
+ * shows the wait at once, even before its import appears. The limit also
+ * covers the check itself, so a request that hangs can't hold anyone here.
  */
-export function useImportWait(job: WebsiteImportSummary | null, settled: boolean) {
+export function useImportWait(job: WebsiteImportSummary | null, settled: boolean, justSubmitted = false) {
   const running = isWebsiteImportRunning(job);
-  const [phase, setPhase] = useState<ImportWaitPhase>(() => nextPhase("checking", settled, running));
-  useEffect(() => { setPhase((current) => nextPhase(current, settled, running)); }, [settled, running]);
+  const [phase, setPhase] = useState<ImportWaitPhase>(() => justSubmitted && !settled ? "waiting" : nextPhase("checking", settled, running, justSubmitted));
+  useEffect(() => { setPhase((current) => nextPhase(current, settled, running, justSubmitted)); }, [justSubmitted, settled, running]);
   const stopWaiting = useCallback(() => setPhase(stop), []);
   useEffect(() => {
     const limit = setTimeout(stopWaiting, IMPORT_WAIT_LIMIT_MS);

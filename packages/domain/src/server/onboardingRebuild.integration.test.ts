@@ -5,7 +5,7 @@ import { agents, billingAccounts, businesses, calls, createDatabaseClient, defau
 import { DASHBOARD_TEST_CALL_WIDGET_ID, defaultGreeting } from "@lobbystack/shared";
 import { advanceOnboardingStage, getActiveOnboardingState, submitOnboardingAttribution } from "./onboarding";
 import { HOST_BRAND_SCOPE } from "./businessAccess";
-import { latestCompletedTestAt, markPlanOfferShownInTransaction, readPlanOfferInTransaction, recordTestChatReply } from "./planOffer";
+import { latestCompletedTestAt, markPlanOfferChosenInTransaction, markPlanOfferDismissedInTransaction, markPlanOfferShownInTransaction, readPlanOfferInTransaction, recordTestChatReply } from "./planOffer";
 import { skipOnboardingNumber } from "./phoneNumbers";
 import { applySiteLanguageInTransaction, createBusiness, updateBusinessInTransaction } from "./tenancy";
 
@@ -53,7 +53,7 @@ async function workspace(tx: DatabaseTransaction, stage: string, input: { defaul
 }
 
 async function business(tx: DatabaseTransaction, businessId: string) {
-  return (await tx.select({ stage: businesses.onboardingStage, locale: businesses.defaultLocale, chosen: businesses.defaultLocaleChosen, attribution: businesses.onboardingAttribution, lastTestChatAt: businesses.lastTestChatAt, name: businesses.name }).from(businesses).where(eq(businesses.id, businessId)))[0]!;
+  return (await tx.select({ stage: businesses.onboardingStage, locale: businesses.defaultLocale, chosen: businesses.defaultLocaleChosen, attribution: businesses.onboardingAttribution, lastTestChatAt: businesses.lastTestChatAt, planOfferDismissals: businesses.planOfferDismissals, name: businesses.name }).from(businesses).where(eq(businesses.id, businessId)))[0]!;
 }
 
 async function testCall(tx: DatabaseTransaction, businessId: string, line: string | null) {
@@ -61,7 +61,7 @@ async function testCall(tx: DatabaseTransaction, businessId: string, line: strin
   if (line !== null) await tx.insert(transcripts).values({ businessId, callId: call!.id, sequence: 0, speaker: "receptionist", text: line, final: true });
 }
 
-const followups = async (tx: DatabaseTransaction, businessId: string) => await tx.select({ id: outboxMessages.id }).from(outboxMessages).where(sql`${outboxMessages.businessId} = ${businessId}::uuid and ${outboxMessages.topic} = 'onboarding.sendFollowup'`);
+const welcomes = async (tx: DatabaseTransaction, businessId: string) => await tx.select({ id: outboxMessages.id }).from(outboxMessages).where(sql`${outboxMessages.businessId} = ${businessId}::uuid and ${outboxMessages.topic} = 'onboarding.sendWelcome'`);
 
 describe.skipIf(!testUrl)("the onboarding rebuild against dedicated PostgreSQL roles", () => {
   it("resumes an owner parked on a removed step at the phone, and verifying moves them on", async () => {
@@ -85,17 +85,17 @@ describe.skipIf(!testUrl)("the onboarding rebuild against dedicated PostgreSQL r
     });
   });
 
-  it("goes from attribution to Meet your agent, and finishing schedules the check-in once", async () => {
+  it("goes from attribution to Meet your agent, and finishing schedules the welcome email once", async () => {
     await rollbackTest(async (tx) => {
       const { userId, businessId } = await workspace(tx, "attribution");
       await asApp(tx, (db) => submitOnboardingAttribution({ db }, { userId, businessId, source: "google" }));
       expect(await business(tx, businessId)).toMatchObject({ stage: "meet", attribution: "google" });
-      expect(await followups(tx, businessId)).toEqual([]);
+      expect(await welcomes(tx, businessId)).toEqual([]);
       await asApp(tx, (db) => advanceOnboardingStage({ db }, { userId, businessId, to: "complete" }));
       expect((await business(tx, businessId)).stage).toBe("complete");
-      expect(await followups(tx, businessId)).toHaveLength(1);
+      expect(await welcomes(tx, businessId)).toHaveLength(1);
       await asApp(tx, (db) => advanceOnboardingStage({ db }, { userId, businessId, to: "complete" }));
-      expect(await followups(tx, businessId)).toHaveLength(1);
+      expect(await welcomes(tx, businessId)).toHaveLength(1);
     });
   });
 
@@ -165,6 +165,27 @@ describe.skipIf(!testUrl)("the onboarding rebuild against dedicated PostgreSQL r
       expect(await latestCompletedTestAt(tx, businessId)).toBeNull();
       await testCall(tx, businessId, "Thanks for calling.");
       expect(await latestCompletedTestAt(tx, businessId)).toBeInstanceOf(Date);
+    });
+  });
+
+  it("counts a call to the business number as the operator's test", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId } = await workspace(tx, "meet");
+      expect(await latestCompletedTestAt(tx, businessId)).toBeNull();
+      const [call] = await tx.insert(calls).values({ businessId, provider: "twilio", providerCallId: `CA${randomUUID()}`, transport: "twilio", status: "completed", startedAt: new Date(), mediaStartedAt: new Date(), endedAt: new Date() }).returning({ id: calls.id });
+      await tx.insert(transcripts).values({ businessId, callId: call!.id, sequence: 0, speaker: "caller", text: "Bonjour.", final: true });
+      expect(await latestCompletedTestAt(tx, businessId)).toBeInstanceOf(Date);
+    });
+  });
+
+  it("counts a dismissed offer toward the longer pause", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId } = await workspace(tx, "meet");
+      await markPlanOfferDismissedInTransaction(tx, businessId);
+      await markPlanOfferDismissedInTransaction(tx, businessId);
+      expect((await business(tx, businessId)).planOfferDismissals).toBe(2);
+      await markPlanOfferChosenInTransaction(tx, businessId);
+      expect((await business(tx, businessId)).planOfferDismissals).toBe(0);
     });
   });
 

@@ -4,6 +4,7 @@ import { eq, sql } from "drizzle-orm";
 
 import { businesses, createDatabaseClient } from "@lobbystack/db";
 
+import nav from "../public/locales/en/nav.json" with { type: "json" };
 import onboarding from "../public/locales/en/onboarding.json" with { type: "json" };
 
 import { completeSignupEmailVerification, isolateAuthRateLimit } from "./fixtures/email-verification";
@@ -51,9 +52,7 @@ async function leavePhoneStep(page: Page, businessId: string): Promise<void> {
   await page.goto("/onboarding/goal");
 }
 
-const back = (page: Page) => page.getByRole("link", { name: onboarding.shell.back, exact: true });
-
-test("the website path waits for the import, keeps answers on Back, and ends on Meet your agent", async ({ page }, testInfo) => {
+test("the website path waits for the import and ends on Meet your agent", async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   const database = migrator();
   const email = `${prefix}-${randomUUID()}@example.invalid`;
@@ -64,40 +63,36 @@ test("the website path waits for the import, keeps answers on Back, and ends on 
     // This run has no worker, so the import stays running and the wait stays up.
     await page.getByLabel(onboarding.website.label).fill("example.com");
     await page.getByRole("button", { name: onboarding.website.continue }).click();
-    await expect(page).toHaveURL("/onboarding/reading");
+    await expect(page).toHaveURL(/\/onboarding\/reading\?documentId=/);
     await expect(page.getByText(onboarding.reading.slides.answers)).toBeVisible();
     await page.getByRole("button", { name: onboarding.reading.next }).click();
     await expect(page.getByText(onboarding.reading.slides.booking)).toBeVisible();
     await page.getByRole("button", { name: onboarding.reading.skip }).click();
 
     await expect(page).toHaveURL("/onboarding/verify-phone");
-    await back(page).click();
-    await expect(page).toHaveURL("/onboarding/website");
-    await expect(page.getByLabel(onboarding.website.label)).toHaveValue(/example\.com/);
-    await back(page).click();
-    await expect(page).toHaveURL("/onboarding/business");
-    await expect(back(page)).toHaveCount(0);
 
-    await page.goto("/onboarding/verify-phone");
+    // Onboarding goes forward only: an earlier page lands on the current step.
+    await page.goto("/onboarding/website");
+    await expect(page).toHaveURL("/onboarding/verify-phone");
+    await page.goto("/onboarding/business");
+    await expect(page).toHaveURL("/onboarding/verify-phone");
+
     await leavePhoneStep(page, businessId);
     await page.getByRole("button", { name: onboarding.goal.options.book_appointments }).click();
     await page.getByRole("button", { name: onboarding.goal.continue }).click();
     await expect(page).toHaveURL("/onboarding/attribution");
 
-    await back(page).click();
-    await expect(page).toHaveURL("/onboarding/goal");
-    await expect(page.getByRole("button", { name: onboarding.goal.options.book_appointments })).toHaveAttribute("aria-pressed", "true");
-    await page.getByRole("button", { name: onboarding.goal.continue }).click();
+    // Browser back from the goal question lands on the attribution step.
+    await page.goBack();
+    await expect(page).toHaveURL("/onboarding/attribution");
 
     await page.getByRole("button", { name: onboarding.attribution.options.google }).click();
     await page.getByRole("button", { name: onboarding.attribution.continue }).click();
     await expect(page).toHaveURL("/onboarding/meet");
     await expect(page.getByRole("heading", { name: onboarding.meet.title })).toBeVisible();
 
-    await back(page).click();
-    await expect(page).toHaveURL("/onboarding/attribution");
-    await expect(page.getByRole("button", { name: onboarding.attribution.options.google })).toHaveAttribute("aria-pressed", "true");
-    await page.getByRole("button", { name: onboarding.attribution.continue }).click();
+    // Browser back from Meet your agent doesn't reopen the attribution form.
+    await page.goBack();
     await expect(page).toHaveURL("/onboarding/meet");
 
     // Skipping the number leaves the browser test in place.
@@ -113,6 +108,12 @@ test("the website path waits for the import, keeps answers on Back, and ends on 
     await expect(page).toHaveURL("/");
     const [row] = await database.db.select({ stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, businessId));
     expect(row?.stage).toBe("complete");
+
+    // A finished workspace still opens the first step to create another one.
+    await page.getByRole("button", { name: /^Onboarding Path / }).click();
+    await page.getByRole("menuitem", { name: nav.sidebar.createBusiness }).click();
+    await expect(page).toHaveURL("/onboarding/business?create=true");
+    await expect(page.getByLabel(onboarding.businessName.label)).toHaveValue("");
   } finally {
     await removeFixtures(database, email, businessId);
     await database.pool.end();
@@ -128,12 +129,10 @@ test("the no-website path asks the language, and the X closes the plans", async 
     businessId = await newOwner(page, testInfo, email);
     await page.getByRole("button", { name: onboarding.website.skip }).click();
     await expect(page).toHaveURL("/onboarding/language");
-    await back(page).click();
-    await expect(page).toHaveURL("/onboarding/website");
-    await page.getByRole("button", { name: onboarding.website.skip }).click();
+    await page.goto("/onboarding/website");
+    await expect(page).toHaveURL("/onboarding/language");
     await page.getByRole("button", { name: onboarding.language.continue }).click();
     await expect(page).toHaveURL("/onboarding/verify-phone");
-    await expect(back(page)).toHaveAttribute("href", "/onboarding/language");
 
     await leavePhoneStep(page, businessId);
     await page.getByRole("button", { name: onboarding.goal.skip, exact: true }).click();
@@ -147,15 +146,45 @@ test("the no-website path asks the language, and the X closes the plans", async 
     await page.route("**/api/billing?**", (route) => route.fulfill({ json: { account: { plan: "free_cloud", billingInterval: null, subscriptionState: null }, availableCheckoutPlans: ["starter", "pro"], availableCheckoutIntervals: { starter: ["monthly"], pro: ["monthly"] } } }));
     await page.reload();
     const plans = page.getByRole("dialog");
-    await expect(plans).toBeVisible();
-    await plans.getByRole("button", { name: "Close" }).click();
-    await expect(plans).toHaveCount(0);
-
-    // The same session never shows it twice.
-    await page.reload();
-    await expect(page.getByRole("heading", { name: onboarding.meet.title })).toBeVisible();
+    // The plans wait for the door to the dashboard, and closing them goes through it.
     await expect(page.getByLabel(onboarding.meet.name)).toBeVisible();
     await expect(plans).toHaveCount(0);
+    await page.getByRole("button", { name: onboarding.meet.finish }).click();
+    await expect(plans).toBeVisible();
+    await expect(page).toHaveURL("/onboarding/meet");
+    // Shown once, the offer is no longer due, as the server would answer.
+    await page.unroute("**/api/plan-offer**");
+    await page.route("**/api/plan-offer**", (route) => route.request().method() === "GET" ? route.fulfill({ json: { due: false } }) : route.fulfill({ json: { ok: true } }));
+    await plans.getByRole("button", { name: "Close" }).click();
+    await expect(page).toHaveURL("/");
+    await expect(plans).toHaveCount(0);
+  } finally {
+    await removeFixtures(database, email, businessId);
+    await database.pool.end();
+  }
+});
+
+test("a used trial skips the phone step and offers the plans, with a way on", async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  const database = migrator();
+  const email = `${prefix}-${randomUUID()}@example.invalid`;
+  let businessId: string | undefined;
+  try {
+    businessId = await newOwner(page, testInfo, email);
+    const owner = (await database.db.execute<{ id: string }>(sql`select id from public.users where email = ${email}`)).rows[0];
+    expect(owner?.id).toBeTruthy();
+    await database.db.execute(sql`insert into public.number_trials (business_id, user_id, verified_phone, status) values (${businessId}, ${owner!.id}, '+14165550199', 'reserved')`);
+
+    await page.getByRole("button", { name: onboarding.website.skip }).click();
+    await expect(page).toHaveURL("/onboarding/language");
+    await page.getByRole("button", { name: onboarding.language.continue }).click();
+
+    // The phone step never shows: its only purpose was the trial.
+    await expect(page).toHaveURL("/onboarding/number");
+    await expect(page.getByText(onboarding.number.refusals.trialUsed)).toBeVisible();
+    await expect(page.getByText(onboarding.number.planRequired)).toHaveCount(0);
+    await page.getByRole("button", { name: onboarding.number.skipLater }).click();
+    await expect(page).toHaveURL("/onboarding/goal");
   } finally {
     await removeFixtures(database, email, businessId);
     await database.pool.end();

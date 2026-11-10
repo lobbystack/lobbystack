@@ -140,14 +140,17 @@
         "voice_message": "Povratni poziv",
         "human_handoff": "Predaja čoveku",
         "other": "Otvoreno",
-        "cancellation": "Otkazivanje"
+        "cancellation": "Otkazivanje",
+        "reschedule": "Pomeranje"
       },
       "appointment": "Termin: {{appointment}}",
       "noAppointment": "Nijedan predstojeći termin ne odgovara ovom zahtevu. Proverite stranicu Termini.",
       "alreadyCancelled": "Ovaj termin je već otkazan.",
       "cancellationRequest": "Zahtev za otkazivanje",
       "requested": "Traženo: {{details}}",
-      "notes": "Napomene: {{notes}}"
+      "notes": "Napomene: {{notes}}",
+      "rescheduleRequest": "Zahtev za pomeranje",
+      "newTime": "Novo vreme: {{time}}"
     },
     "upcoming": {
       "title": "Predstojeće",

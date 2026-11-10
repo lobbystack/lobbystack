@@ -449,6 +449,7 @@ describe.skipIf(!client)("the package's subscription", () => {
           overage: { enabled: false, currency: "CAD", rates: { voiceMinute: 0, chat: 0, alertSms: 0, outboundAttempt: 0 }, capMinor: null },
           poolPartnerId: seller.partnerId,
           includedNumbers: null,
+          includedAgents: null,
         },
         sqlLive: true,
       });

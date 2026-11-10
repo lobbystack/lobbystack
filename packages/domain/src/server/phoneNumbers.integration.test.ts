@@ -35,7 +35,7 @@ async function rollbackTest(run: (tx: DatabaseTransaction) => Promise<void>) {
 /** A self-hosted workspace on the number step with one earlier claim left in provisioning. */
 async function workspaceWithProvisioningClaim(tx: DatabaseTransaction, idleMinutes: number) {
   const userId = randomUUID();
-  await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid`, name: "Sam" });
+  await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid`, name: "Sam", emailVerified: true });
   await tx.execute(sql`set local role lobbystack_app`);
   const { businessId } = await createBusiness({ db: tx as unknown as Database }, { userId, name: "Claim workspace", timezone: "America/Toronto", businessType: "test" });
   await tx.execute(sql`reset role`);
@@ -45,10 +45,21 @@ async function workspaceWithProvisioningClaim(tx: DatabaseTransaction, idleMinut
   return { userId, businessId, stalledId: stalled!.id };
 }
 
+/** A cloud workspace on the number step whose owner verified no mobile: its trial gets its identity from the network. */
+async function noTextTrialWorkspace(tx: DatabaseTransaction) {
+  const userId = randomUUID();
+  await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid`, name: "Sam", emailVerified: true });
+  await tx.execute(sql`set local role lobbystack_app`);
+  const { businessId } = await createBusiness({ db: tx as unknown as Database }, { userId, name: "No-text workspace", timezone: "America/Toronto", businessType: "test" });
+  await tx.execute(sql`reset role`);
+  await tx.update(businesses).set({ onboardingStage: "phone_number", deploymentMode: "cloud" }).where(eq(businesses.id, businessId));
+  return { userId, businessId };
+}
+
 /** A cloud workspace on the number step whose owner verified a Canadian mobile, so its number is a free trial. */
 async function trialWorkspace(tx: DatabaseTransaction, input: { phone: string; userId?: string }) {
   const userId = input.userId ?? randomUUID();
-  if (!input.userId) await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid`, name: "Sam" });
+  if (!input.userId) await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid`, name: "Sam", emailVerified: true });
   await tx.update(users).set({ phone: input.phone, phoneVerifiedAt: new Date() }).where(eq(users.id, userId));
   await tx.execute(sql`set local role lobbystack_app`);
   const { businessId } = await createBusiness({ db: tx as unknown as Database }, { userId, name: "Trial workspace", timezone: "America/Toronto", businessType: "test" });
@@ -59,7 +70,7 @@ async function trialWorkspace(tx: DatabaseTransaction, input: { phone: string; u
 }
 
 // The reservation function trusts only the app's login identity, so switch session_user rather than the current role.
-async function reserveAsApp(tx: DatabaseTransaction, input: { userId: string; businessId: string; ipHash?: string }) {
+async function reserveAsApp(tx: DatabaseTransaction, input: { userId: string; businessId: string; ipHash?: string; ipCountry?: string }) {
   await tx.execute(sql`set local session authorization lobbystack_app`);
   try {
     const db = tx as unknown as Database;
@@ -87,19 +98,28 @@ describe.skipIf(!testUrl)("onboarding number claims against dedicated PostgreSQL
     });
   });
 
-  it("gives one free trial number per account, verified phone and network", async () => {
+  it("gives one free trial number per account and verified phone, and one per network without a phone", async () => {
     await rollbackTest(async (tx) => {
+      // A verified phone is the identity, so the network isn't recorded or limited.
       const first = await trialWorkspace(tx, { phone: "+14165550111" });
       expect(await reserveAsApp(tx, { ...first, ipHash: "network-1" })).toMatch(/^[0-9a-f-]{36}$/);
       const trials = await tx.select({ status: numberTrials.status, verifiedPhone: numberTrials.verifiedPhone, ipHash: numberTrials.ipHash }).from(numberTrials).where(eq(numberTrials.businessId, first.businessId));
-      expect(trials).toEqual([{ status: "reserved", verifiedPhone: "+14165550111", ipHash: "network-1" }]);
+      expect(trials).toEqual([{ status: "reserved", verifiedPhone: "+14165550111", ipHash: null }]);
 
       const sameAccount = await trialWorkspace(tx, { phone: "+14165550111", userId: first.userId });
       await expect(reserveAsApp(tx, { ...sameAccount, ipHash: "network-2" })).rejects.toMatchObject({ status: 409, code: "trial_already_used" });
       const samePhone = await trialWorkspace(tx, { phone: "+14165550111" });
       await expect(reserveAsApp(tx, { ...samePhone, ipHash: "network-2" })).rejects.toMatchObject({ status: 409, code: "trial_already_used" });
+      // Another phone verified on the same network is a different person.
       const sameNetwork = await trialWorkspace(tx, { phone: "+14165550122" });
-      await expect(reserveAsApp(tx, { ...sameNetwork, ipHash: "network-1" })).rejects.toMatchObject({ status: 429, code: "trial_ip_limited" });
+      expect(await reserveAsApp(tx, { ...sameNetwork, ipHash: "network-1" })).toMatch(/^[0-9a-f-]{36}$/);
+
+      // Without a phone, the network is the identity and gets one trial every 30 days.
+      const noText = await noTextTrialWorkspace(tx);
+      expect(await reserveAsApp(tx, { ...noText, ipHash: "network-3", ipCountry: "CA" })).toMatch(/^[0-9a-f-]{36}$/);
+      expect((await tx.select({ verifiedPhone: numberTrials.verifiedPhone, ipHash: numberTrials.ipHash }).from(numberTrials).where(eq(numberTrials.businessId, noText.businessId)))[0]).toEqual({ verifiedPhone: null, ipHash: "network-3" });
+      const secondNoText = await noTextTrialWorkspace(tx);
+      await expect(reserveAsApp(tx, { ...secondNoText, ipHash: "network-3", ipCountry: "CA" })).rejects.toMatchObject({ status: 409, code: "phone_verification_required" });
     });
   });
 });

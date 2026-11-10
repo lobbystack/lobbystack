@@ -31,7 +31,7 @@ These options change what runs:
 - **`--runs <n>`**: runs each scenario this many times. The default is 3.
 - **`--concurrency <n>`**: how many sessions run at once. The default is 4. With 22 sessions at once, many runs lost their transcripts.
 - **`--snapshot <file>`**: uses a real business's snapshot instead of the demo business.
-- **`--locale <code>`**: sets the business's caller language to `en`, `fr`, `es`, `sr`, `de`, `pt`, `it` or `nl` and gives it that language's default greeting. The scripted caller speaks the same language. Without it, the caller speaks English and the business keeps its own language and greeting.
+- **`--locale <code>`**: sets the business's caller language to `en`, `fr`, `es`, `sr`, `de`, `pt`, `it`, `nl`, `pl`, `tr`, `vi`, `tl`, `sv`, `ru` or `uk` and gives it that language's default greeting. The scripted caller speaks the same language. Without it, the caller speaks English and the business keeps its own language and greeting.
 - **`--browser`**: plays a browser call, like one from the website widget, instead of a phone call. GPT-Live gets the browser call's instructions, the agent runs on the `web_voice` channel, and the caller's audio skips the phone-line filter. Use it after you change what browser calls hear, such as how they answer a caller who asks for a person.
 
 Each run uses under a minute of GPT-Live audio, plus a delegation model call for each hand-over. The default 24 runs take about 7 minutes. The eval uses production's silence timing, so the `silent` scenario hears both check-ins and the goodbye.

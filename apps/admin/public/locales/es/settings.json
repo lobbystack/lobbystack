@@ -108,6 +108,7 @@
     "toast": {
       "checkoutSuccess": "El pago se completó correctamente.",
       "checkoutFailed": "No se pudo abrir el pago.",
+      "paymentsUnavailable": "El pago no está disponible temporalmente. Inténtelo de nuevo en unos minutos.",
       "portalFailed": "No se pudo abrir el portal del cliente."
     },
     "pastDueBanner": {
@@ -187,6 +188,8 @@
     "upgradeDialog": {
       "title": "Cambiar de plan",
       "description": "Elija el plan que mejor se adapte a su equipo.",
+      "providerSlow": "El proveedor de pagos está lento. Seguimos abriendo el pago...",
+      "close": "Cerrar",
       "enterpriseSubject": "Plan Enterprise",
       "billingIntervalLabel": "Periodicidad de facturación",
       "annualDiscount": "Ahorre un 20 %",
@@ -246,7 +249,7 @@
     "spendingCap": {
       "title": "Límite de gasto mensual",
       "placeholder": "25.00",
-      "amountLabel": "Límite de excedentes (USD)",
+      "amountLabel": "Límite de excedentes",
       "noCap": "No hay ningún límite de gasto definido",
       "currentSpend": "Gasto actual en excedentes",
       "spendOfCap": "{{spend}} de {{cap}}",
@@ -472,6 +475,7 @@
       "areaCodeLabel": "Código de área",
       "areaCodePlaceholder": "Código de área",
       "search": "Buscar",
+      "searching": "Buscando...",
       "phoneNumberHeader": "Número de teléfono",
       "select": "Seleccionar",
       "claiming": "Conectando su nuevo número...",
@@ -756,7 +760,8 @@
       "placeholder": "Clínica Familiar Maple",
       "save": "Guardar",
       "saving": "Guardando...",
-      "saved": "Cambios guardados"
+      "saved": "Cambios guardados",
+      "required": "Introduzca el nombre de la empresa."
     },
     "changeEmail": {
       "label": "Cambiar correo electrónico",
@@ -848,7 +853,9 @@
         "invalidEmail": "Introduzca un correo electrónico válido.",
         "partnerMember": "{{email}} forma parte del equipo del socio de este espacio de trabajo. Trabaja aquí desde la consola de socios, así que no puede unirse al equipo.",
         "failed": "No pudimos enviar esa invitación. Inténtelo de nuevo."
-      }
+      },
+      "emailRequired": "Introduzca una dirección de correo.",
+      "cancel": "Cancelar"
     },
     "pending": {
       "resend": "Reenviar",
@@ -1017,6 +1024,10 @@
       "eventColumn": "Evento"
     },
     "events": {
+      "callCompleted": {
+        "title": "Llamada contestada",
+        "description": "Cuando su agente termina una llamada, con su resumen."
+      },
       "voiceMessage": {
         "title": "Mensaje de voz recibido",
         "description": "Cuando una persona deja un mensaje durante una llamada."
@@ -1119,6 +1130,8 @@
       "nameLabel": "Nombre",
       "namePlaceholder": "Sincronización con el CRM",
       "scopesLabel": "Acceso",
+      "nameRequired": "Introduzca un nombre.",
+      "scopesRequired": "Elija al menos un permiso.",
       "cancel": "Cancelar",
       "submit": "Crear clave",
       "creating": "Creando…"

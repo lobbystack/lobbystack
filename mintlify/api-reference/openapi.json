@@ -23,6 +23,9 @@
       "name": "Receptionist"
     },
     {
+      "name": "Agents"
+    },
+    {
       "name": "Billing"
     },
     {
@@ -773,7 +776,7 @@
       "get": {
         "operationId": "getReceptionist",
         "summary": "Get the receptionist settings",
-        "description": "How the receptionist greets callers, what it says about the business, when it transfers calls and what it may book.",
+        "description": "How the receptionist greets callers, what it says about the business, when it transfers calls and what it may book. In a business with several agents, it reads and changes the default agent, and /rules holds that agent's rules.",
         "tags": [
           "Receptionist"
         ],
@@ -968,6 +971,241 @@
           },
           "409": {
             "description": "The request conflicts with the current state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests (rate_limited). Wait for the Retry-After header's number of seconds.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait."
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agents": {
+      "get": {
+        "operationId": "listAgents",
+        "summary": "List agents",
+        "description": "The business's agents, the default first and then the oldest, all in one page. Archived agents don't appear.",
+        "tags": [
+          "Agents"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scope": "business:read",
+        "parameters": [
+          {
+            "name": "LobbyStack-Business",
+            "in": "header",
+            "description": "The business a platform key acts on. Required with a platform key. A per-business key may leave it out; if it sends one, it must be the key's own business.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "next_cursor",
+                    "has_more"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Agent"
+                      }
+                    },
+                    "next_cursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Pass as cursor to get the next page. Null on the last page."
+                    },
+                    "has_more": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request is invalid (invalid_request), or a platform key sent no LobbyStack-Business header (business_required).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The API key is missing, invalid, or revoked (unauthorized).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refused. insufficient_scope: the key lacks the business:read scope. forbidden: a per-business key named another business in LobbyStack-Business. key_owner_inactive: the person the key acts for can't any more: a per-business key's creator is no longer an owner or admin, or a platform key's owner_email has no verified LobbyStack account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "A platform key named a business it cannot act on (not_found).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests (rate_limited). Wait for the Retry-After header's number of seconds.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait."
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agents/{agent_id}": {
+      "get": {
+        "operationId": "getAgent",
+        "summary": "Get an agent",
+        "description": "An archived agent is a 404, though calls and messages it took keep its agent_id.",
+        "tags": [
+          "Agents"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scope": "business:read",
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "description": "The agent id.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "LobbyStack-Business",
+            "in": "header",
+            "description": "The business a platform key acts on. Required with a platform key. A per-business key may leave it out; if it sends one, it must be the key's own business.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Agent"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request is invalid (invalid_request), or a platform key sent no LobbyStack-Business header (business_required).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The API key is missing, invalid, or revoked (unauthorized).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Refused. insufficient_scope: the key lacks the business:read scope. forbidden: a per-business key named another business in LobbyStack-Business. key_owner_inactive: the person the key acts for can't any more: a per-business key's creator is no longer an owner or admin, or a platform key's owner_email has no verified LobbyStack account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (not_found), including a business a platform key cannot act on.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2503,7 +2741,7 @@
       "post": {
         "operationId": "searchPhoneNumbers",
         "summary": "Find numbers to claim",
-        "description": "Searches the carrier for numbers that take calls; a self-hosted business gets only numbers that also take texts. Each offer expires after 5 minutes. On the cloud, a business on a paid plan gets numbers it buys. One without a paid plan gets free trial offers (trial: true) when the account the key acts as verified a mobile number for it in the dashboard, in a country with trials, and no trial was used; otherwise it gets a 409. On a deployment that bills partners for tiers, a partner's business gets numbers it buys while its partner pays for a tier, and a 409 otherwise. A partner's platform key also needs phone_numbers:purchase to search and claim for its partner's businesses, on a paid tier, and never gets a trial offer, which needs one person's verified mobile. The account a key acts as can search 20 times in 10 minutes, and a partner's platform keys share the same limit; searches refused before that don't count. Send replaces to find a replacement for an active number; a business can replace its number once.",
+        "description": "Searches the carrier for numbers that take calls; a self-hosted business gets only numbers that also take texts. Each offer expires after 5 minutes. On the cloud, a business on a paid plan gets numbers it buys. One without a paid plan gets free trial offers (trial: true) when the account the key acts as verified a mobile number for it in the dashboard, in a country with trials, and no trial was used; otherwise it gets a 409. The dashboard no longer needs that text by default, but a trial claimed with an API key still does: an API request has no network to check, so the mobile is the identity. On a deployment that bills partners for tiers, a partner's business gets numbers it buys while its partner pays for a tier, and a 409 otherwise. A partner's platform key also needs phone_numbers:purchase to search and claim for its partner's businesses, on a paid tier, and never gets a trial offer, which needs one person's verified mobile. The account a key acts as can search 20 times in 10 minutes, and a partner's platform keys share the same limit; searches refused before that don't count. Send replaces to find a replacement for an active number; a business can replace its number once.",
         "tags": [
           "Phone numbers"
         ],
@@ -15593,7 +15831,7 @@
           },
           "locale": {
             "type": "string",
-            "description": "Default language for callers: en, fr, es, sr (Serbian, Latin script), de, pt (Brazilian Portuguese), it or nl."
+            "description": "Default language for callers: en, fr, es, sr (Serbian, Latin script), de, pt (Brazilian Portuguese), it, nl, pl, tr, vi, tl (Tagalog), sv, ru or uk."
           },
           "website_url": {
             "type": [
@@ -15704,7 +15942,14 @@
               "de",
               "pt",
               "it",
-              "nl"
+              "nl",
+              "pl",
+              "tr",
+              "vi",
+              "tl",
+              "sv",
+              "ru",
+              "uk"
             ]
           },
           "website_url": {
@@ -15793,7 +16038,7 @@
             "maxLength": 120
           },
           "locale": {
-            "description": "Default language for callers: en, fr, es, sr (Serbian, Latin script), de, pt (Brazilian Portuguese), it or nl. Defaults to en.",
+            "description": "Default language for callers: en, fr, es, sr (Serbian, Latin script), de, pt (Brazilian Portuguese), it, nl, pl, tr, vi, tl (Tagalog), sv, ru or uk. Defaults to en.",
             "type": "string",
             "enum": [
               "en",
@@ -15803,7 +16048,14 @@
               "de",
               "pt",
               "it",
-              "nl"
+              "nl",
+              "pl",
+              "tr",
+              "vi",
+              "tl",
+              "sv",
+              "ru",
+              "uk"
             ]
           },
           "website_url": {
@@ -15859,7 +16111,7 @@
           },
           "locale": {
             "type": "string",
-            "description": "Default language for callers: en, fr, es, sr (Serbian, Latin script), de, pt (Brazilian Portuguese), it or nl."
+            "description": "Default language for callers: en, fr, es, sr (Serbian, Latin script), de, pt (Brazilian Portuguese), it, nl, pl, tr, vi, tl (Tagalog), sv, ru or uk."
           },
           "website_url": {
             "type": [
@@ -16192,6 +16444,19 @@
               "null"
             ]
           },
+          "agent_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "description": "Stable identifier (UUID)."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The agent that answered. It may be archived, so GET /agents no longer lists it. Null for a call saved before the business had agents."
+          },
           "contact_id": {
             "anyOf": [
               {
@@ -16261,6 +16526,7 @@
           "outcome",
           "summary",
           "end_reason",
+          "agent_id",
           "contact_id",
           "caller_name",
           "caller_phone",
@@ -16320,6 +16586,19 @@
               "string",
               "null"
             ]
+          },
+          "agent_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "description": "Stable identifier (UUID)."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The agent that answered. It may be archived, so GET /agents no longer lists it. Null for a call saved before the business had agents."
           },
           "contact_id": {
             "anyOf": [
@@ -16420,6 +16699,7 @@
           "outcome",
           "summary",
           "end_reason",
+          "agent_id",
           "contact_id",
           "caller_name",
           "caller_phone",
@@ -17072,6 +17352,19 @@
               }
             ]
           },
+          "agent_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "description": "Stable identifier (UUID)."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The agent that took the message. It may be archived, so GET /agents no longer lists it. Null when no agent is on record, as for a chat, text or Instagram message taken before the business had agents."
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -17094,6 +17387,7 @@
           "callback_window",
           "channel",
           "call_id",
+          "agent_id",
           "created_at",
           "updated_at"
         ],
@@ -17776,6 +18070,23 @@
           "events": {
             "type": "object",
             "properties": {
+              "call_completed": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "boolean"
+                  },
+                  "sms": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "email",
+                  "sms"
+                ],
+                "additionalProperties": false,
+                "description": "The agent answered a call. The email shows the caller, the time, the length and the summary."
+              },
               "voice_message": {
                 "type": "object",
                 "properties": {
@@ -17897,6 +18208,7 @@
               }
             },
             "required": [
+              "call_completed",
               "voice_message",
               "text_message",
               "customer_sms_failed",
@@ -17990,6 +18302,19 @@
             "description": "Only the events and switches sent change.",
             "type": "object",
             "properties": {
+              "call_completed": {
+                "description": "The agent answered a call. The email shows the caller, the time, the length and the summary.",
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "boolean"
+                  },
+                  "sms": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              },
               "voice_message": {
                 "description": "A caller left a message during a call.",
                 "type": "object",
@@ -19242,6 +19567,221 @@
         ],
         "additionalProperties": false,
         "description": "How the receptionist answers, what it says about the business, and what it may do."
+      },
+      "Agent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Stable identifier (UUID)."
+          },
+          "name": {
+            "type": "string",
+            "description": "The name the dashboard shows for the agent."
+          },
+          "is_default": {
+            "type": "boolean",
+            "description": "Whether this is the default agent, which answers on every channel no other agent has. GET /receptionist and /rules act on it."
+          },
+          "paused": {
+            "type": "boolean",
+            "description": "true when the plan includes fewer agents than the business has. The default agent then answers for this one, which keeps its settings and channels."
+          },
+          "greeting": {
+            "type": "string",
+            "description": "What the receptionist says when it answers."
+          },
+          "tone": {
+            "type": "string",
+            "description": "How it speaks, such as professional or warm."
+          },
+          "booking_policy": {
+            "type": "string",
+            "description": "Rules it follows when it books."
+          },
+          "voice_instructions": {
+            "description": "Extra instructions for calls.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sms_instructions": {
+            "description": "Extra instructions for text messages.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "chat_instructions": {
+            "description": "Extra instructions for website chat.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "transfer_mode": {
+            "type": "string",
+            "enum": [
+              "never",
+              "always",
+              "on_request",
+              "on_urgent",
+              "during_business_hours"
+            ],
+            "description": "When it puts a caller through to transfer_number: never, always, on_request, on_urgent or during_business_hours."
+          },
+          "transfer_number": {
+            "description": "Where it transfers calls, in E.164 format. A number saved before that was required may be in another format. With no number, it never transfers.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "booking_mode": {
+            "type": "string",
+            "enum": [
+              "off",
+              "request",
+              "instant"
+            ],
+            "description": "instant: appointments are booked directly. request: the receptionist takes a request and the team confirms it. off: no booking."
+          },
+          "voice": {
+            "type": "string",
+            "enum": [
+              "alloy",
+              "ash",
+              "ballad",
+              "beacon",
+              "bossa",
+              "cedar",
+              "cinder",
+              "coral",
+              "delta",
+              "echo",
+              "gleam",
+              "marin",
+              "meridian",
+              "quartz",
+              "ripple",
+              "sage",
+              "shimmer",
+              "stone",
+              "tempo",
+              "verse",
+              "vesper",
+              "willow"
+            ],
+            "description": "The voice the receptionist speaks in on phone and browser calls. New businesses start with marin."
+          },
+          "staff_first_mode": {
+            "type": "string",
+            "enum": [
+              "never",
+              "business_hours",
+              "always"
+            ],
+            "description": "When calls ring staff_first_number before the receptionist answers: never, business_hours or always."
+          },
+          "staff_first_number": {
+            "description": "The staff phone calls ring first, in E.164 format.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "staff_first_ring_seconds": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "How long the staff phone rings before the receptionist answers: 10, 15, 20, 30, 45 or 60."
+          },
+          "staff_first_message": {
+            "description": "What callers hear before the staff phone rings.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "staff_first_handover_message": {
+            "description": "What callers hear before the receptionist answers.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "appointment_change_policy": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "description": "Whether callers can change their own appointments with the receptionist."
+              },
+              "allow_cancel": {
+                "type": "boolean"
+              },
+              "allow_reschedule": {
+                "type": "boolean"
+              },
+              "verification_mode": {
+                "type": "string",
+                "enum": [
+                  "phone_match_and_facts",
+                  "otp_required",
+                  "passcode_required",
+                  "operator_only"
+                ],
+                "description": "How a caller proves an appointment is theirs. phone_match_and_facts: their phone number and details of the booking. otp_required: a code sent by text. passcode_required: a PIN they type on the phone keypad, set on their contact in the dashboard. operator_only: the team makes the change."
+              }
+            },
+            "required": [
+              "enabled",
+              "allow_cancel",
+              "allow_reschedule",
+              "verification_mode"
+            ],
+            "additionalProperties": false,
+            "description": "Whether callers can cancel or reschedule their own appointments, and how they prove it's theirs."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp in UTC."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp in UTC."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "is_default",
+          "paused",
+          "greeting",
+          "tone",
+          "booking_policy",
+          "voice_instructions",
+          "sms_instructions",
+          "chat_instructions",
+          "transfer_mode",
+          "transfer_number",
+          "booking_mode",
+          "voice",
+          "staff_first_mode",
+          "staff_first_number",
+          "staff_first_ring_seconds",
+          "staff_first_message",
+          "staff_first_handover_message",
+          "appointment_change_policy",
+          "created_at",
+          "updated_at"
+        ],
+        "additionalProperties": false,
+        "description": "An agent: one set of greeting, voice, instructions and rules. The agents of a business share its knowledge, services and staff."
       },
       "ReceptionistUpdate": {
         "type": "object",
@@ -20821,7 +21361,14 @@
               "de",
               "pt",
               "it",
-              "nl"
+              "nl",
+              "pl",
+              "tr",
+              "vi",
+              "tl",
+              "sv",
+              "ru",
+              "uk"
             ]
           },
           "greeting": {
@@ -22188,6 +22735,19 @@
                   "null"
                 ]
               },
+              "agent_id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Stable identifier (UUID)."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "The agent that answered. It may be archived, so GET /agents no longer lists it. Null for a call saved before the business had agents."
+              },
               "contact_id": {
                 "anyOf": [
                   {
@@ -22257,6 +22817,7 @@
               "outcome",
               "summary",
               "end_reason",
+              "agent_id",
               "contact_id",
               "caller_name",
               "caller_phone",
@@ -22815,6 +23376,19 @@
                   }
                 ]
               },
+              "agent_id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Stable identifier (UUID)."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "The agent that took the message. It may be archived, so GET /agents no longer lists it. Null when no agent is on record, as for a chat, text or Instagram message taken before the business had agents."
+              },
               "created_at": {
                 "type": "string",
                 "format": "date-time",
@@ -22837,6 +23411,7 @@
               "callback_window",
               "channel",
               "call_id",
+              "agent_id",
               "created_at",
               "updated_at"
             ],

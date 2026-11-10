@@ -13,7 +13,7 @@ import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useSetupAction } from "@/lib/use-setup-action";
 import { formatDateTime } from "@/lib/locale";
-import { formatPriceTyping, parsePriceInput, priceInputValue } from "@/lib/price-input";
+import { caretBefore, formatPriceTyping, parsePriceInput, priceInputMinor, priceInputValue } from "@/lib/price-input";
 import { requestJson } from "@/lib/request-json";
 import { DataTablePagination, paginationFeatures } from "./data-table/pagination";
 import { DataTablePaginationSkeleton, HeaderButtonSkeleton, HeaderSearchSkeleton, ServiceRowsSkeleton, ServicesPageSkeleton } from "./loading-skeletons";
@@ -47,9 +47,9 @@ export function readPrice(values: ServiceValues, currency: string, locale: strin
   const discountText = values.discountEnabled ? values.discount.trim() : "";
   const discountPercent = discountText ? Number(discountText) : 0;
   if (!/^(\d{1,3}(\.\d{0,2})?)?$/u.test(discountText) || !isDiscountPercent(discountPercent)) return { error: "discountInvalid" };
-  const amount = parsePriceInput(values.price, currency, locale);
+  const amount = priceInputMinor(parsePriceInput(values.price, currency, locale));
   if (values.priceType !== "range") return amount === undefined ? { error: "invalid" } : { priceType: values.priceType, priceMinor: amount, priceMaxMinor: null, discountPercent };
-  const max = parsePriceInput(values.priceMax, currency, locale);
+  const max = priceInputMinor(parsePriceInput(values.priceMax, currency, locale));
   if (amount === undefined || max === undefined) return { error: "invalid" };
   if ((amount === null) !== (max === null)) return { error: "rangeIncomplete" };
   if (amount !== null && max !== null && max <= amount) return { error: "rangeOrder" };
@@ -59,13 +59,6 @@ export function readPrice(values: ServiceValues, currency: string, locale: strin
 /** A discount as the locale writes it, "12,5" in Serbian; grouping off for the editor's input. */
 function formatPercent(value: number, locale: string, useGrouping = true): string {
   return new Intl.NumberFormat(locale, { maximumFractionDigits: 2, useGrouping }).format(value);
-}
-
-/** Where the caret goes after reformatting: before the same number of digits it had after it. */
-function caretBefore(text: string, digitsAfter: number): number {
-  let position = text.length;
-  for (let seen = 0; position > 0 && seen < digitsAfter; position -= 1) if (/\d/u.test(text[position - 1]!)) seen += 1;
-  return position;
 }
 
 function serviceSlug(name: string): string {

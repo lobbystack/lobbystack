@@ -221,6 +221,8 @@ Connaissez les limites avant de vous inscrire :
 
 Si vous voulez une personne à chaque appel, une permanence téléphonique est le meilleur achat. Pour le prix d'entrée IA le plus bas, les [14 $ pour 75 minutes](https://ai-receptionist.com/pricing) d'AI-Receptionist.com reviennent moins cher à la minute que notre forfait Starter, mais ses SMS commencent au forfait à 39 $.
 
+Si vous avez aussi besoin d'aide pour vos courriels, vos factures et votre agenda, une secrétaire virtuelle fait plus que répondre aux appels. Notre guide sur la [secrétaire virtuelle au Québec](/fr/blog/virtual-secretary-quebec/) donne ses tarifs horaires.
+
 ## FAQ sur la réceptionniste virtuelle
 
 ### Une réceptionniste virtuelle, est-ce la même chose qu'une assistante virtuelle ?

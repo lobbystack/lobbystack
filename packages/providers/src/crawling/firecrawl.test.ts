@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { FirecrawlProvider } from "./firecrawl";
+import { CrawlRequestError, FirecrawlProvider } from "./firecrawl";
 
 vi.mock("./urlSafety", () => ({ assertPublicHttpUrl: async (url: string) => new URL(url) }));
 
@@ -56,6 +56,37 @@ describe("FirecrawlProvider", () => {
   it("requires a job ID", async () => {
     responses({ success: true });
     await expect(provider().crawl({ url: "https://example.com" })).rejects.toThrow("job ID");
+  });
+
+  it("rides out a short rate limit without restarting the crawl", async () => {
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: "job" })))
+      .mockResolvedValueOnce(new Response("{}", { status: 429, headers: { "retry-after": "0" } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ status: "completed", data: [page("https://example.com/")] })));
+    vi.stubGlobal("fetch", fetcher);
+    expect(await provider().crawl({ url: "https://example.com" })).toHaveLength(1);
+    expect(fetcher).toHaveBeenCalledTimes(3);
+    expect(fetcher.mock.calls.filter((call) => call[1].method === "POST")).toHaveLength(1);
+  });
+
+  it("hands a long rate limit back to the caller with its Retry-After", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response("{}", { status: 429, headers: { "retry-after": "120" } }));
+    vi.stubGlobal("fetch", fetcher);
+    const error = await provider().crawl({ url: "https://example.com" }).catch((cause: unknown) => cause);
+    expect(error).toBeInstanceOf(CrawlRequestError);
+    expect(error).toMatchObject({ status: 429, transient: true, retryAfterMs: 120_000 });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it("gives up after a few server errors, and at once on a refusal", async () => {
+    const fetcher = vi.fn().mockImplementation(async () => new Response("{}", { status: 503 }));
+    vi.stubGlobal("fetch", fetcher);
+    await expect(new FirecrawlProvider({ apiKey: "test", retryDelayMs: 0 }).crawl({ url: "https://example.com" })).rejects.toMatchObject({ status: 503, transient: true });
+    expect(fetcher).toHaveBeenCalledTimes(3);
+
+    fetcher.mockClear().mockImplementation(async () => new Response("{}", { status: 401 }));
+    await expect(provider().crawl({ url: "https://example.com" })).rejects.toMatchObject({ status: 401, transient: false });
+    expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
   it("bounds the overall crawl duration", async () => {

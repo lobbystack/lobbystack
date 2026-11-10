@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SpendingCapSection } from "./billing-spending-cap";
-import { parseCapInputToCents } from "@/lib/billing-cap";
+import { parsePriceInput } from "@/lib/price-input";
 
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
@@ -30,12 +30,30 @@ describe("original billing cap behavior", () => {
     await userEvent.click(screen.getByRole("button", { name: "billing.spendingCap.remove" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/billing?businessId=business", expect.objectContaining({ body: JSON.stringify({ capCents: null }) })));
   });
-  it("rejects grouping without silently changing the amount", async () => {
+  it("groups digits as they are typed and the currency sits in the field", async () => {
     const fetchMock = setup();
-    await userEvent.type(screen.getByLabelText("billing.spendingCap.amountLabel"), "1,000");
+    const field = screen.getByLabelText("billing.spendingCap.amountLabel") as HTMLInputElement;
+    await userEvent.type(field, "1000.5");
+    expect(field.value).toBe("1,000.5");
+    expect(screen.getByText("USD")).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "billing.spendingCap.save" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/billing?businessId=business", expect.objectContaining({ body: JSON.stringify({ capCents: 100050 }) })));
+  });
+  it("refuses more than two decimals by not accepting the extra digits", async () => {
+    setup();
+    const field = screen.getByLabelText("billing.spendingCap.amountLabel") as HTMLInputElement;
+    await userEvent.type(field, "12.345");
+    expect(field.value).toBe("12.34");
+  });
+  it("saves when Enter is pressed in the field, as the Save button does", async () => {
+    const fetchMock = setup();
+    await userEvent.type(screen.getByLabelText("billing.spendingCap.amountLabel"), "25{Enter}");
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/billing?businessId=business", expect.objectContaining({ body: JSON.stringify({ capCents: 2500 }) })));
+  });
+  it("does nothing on Enter while the field is empty", async () => {
+    const fetchMock = setup();
+    await userEvent.type(screen.getByLabelText("billing.spendingCap.amountLabel"), "{Enter}");
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(toast.error).toHaveBeenCalledWith("billing.spendingCap.invalidAmount");
   });
   it("keeps member controls read-only and labels incomplete spend as a lower bound", () => {
     setup("en", 1000, false, false);
@@ -47,7 +65,11 @@ describe("original billing cap behavior", () => {
     setup("en", null, true, true, plan);
     expect(screen.queryByText("billing.spendingCap.title")).toBeNull();
   });
-  it.each(["1,000", "1 000", "-1", "1.234", "NaN", "Infinity", "1e3", "9007199254740991"])("rejects malformed or unsafe English amount %s", value => {
-    expect(parseCapInputToCents(value, "en")).toBeNull();
+  it.each(["-1", "1.234", "NaN", "Infinity", "1e3", "9007199254740991"])("rejects malformed or unsafe English amount %s", value => {
+    expect(parsePriceInput(value, "USD", "en")).toEqual({ kind: "invalid" });
+  });
+
+  it("reads a grouped amount the way the rest of the dashboard does", () => {
+    expect(parsePriceInput("1,000", "USD", "en")).toEqual({ kind: "amount", minor: 100000 });
   });
 });

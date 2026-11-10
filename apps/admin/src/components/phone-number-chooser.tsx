@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 
 import { LoaderCircle } from "lucide-react";
 
+import { Flag } from "@/components/flag";
+import { PhoneNumberChooserSkeleton } from "@/components/loading-skeletons";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -14,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import {
   formatPhoneNumberDisplay,
@@ -76,6 +77,7 @@ type PhoneNumberChooserLabels = {
   areaCodeLabel: string;
   areaCodePlaceholder: string;
   search: string;
+  searching: string;
   phoneNumberHeader: string;
   select: string;
   loadMore: string;
@@ -157,14 +159,13 @@ export function phoneNumberChooserApi(replacement: boolean): Pick<PhoneNumberCho
 const COUNTRY_OPTIONS: Array<{
   code: SupportedOnboardingPhoneCountry;
   label: string;
-  flag: string;
 }> = [
-  { code: "US", label: "US", flag: "🇺🇸" },
-  { code: "CA", label: "CA", flag: "🇨🇦" },
-  { code: "PR", label: "PR", flag: "🇵🇷" },
-  { code: "GB", label: "UK", flag: "🇬🇧" },
-  { code: "AU", label: "AU", flag: "🇦🇺" },
-  { code: "NZ", label: "NZ", flag: "🇳🇿" },
+  { code: "US", label: "US" },
+  { code: "CA", label: "CA" },
+  { code: "PR", label: "PR" },
+  { code: "GB", label: "UK" },
+  { code: "AU", label: "AU" },
+  { code: "NZ", label: "NZ" },
 ];
 
 function getNumberLocationLabel(number: AvailableNumberSummary): string | null {
@@ -332,6 +333,8 @@ export function PhoneNumberChooser({
     }
   }
 
+  if (isLoading) return <PhoneNumberChooserSkeleton labels={{ country: labels.countryLabel, areaCode: labels.areaCodeLabel, search: labels.search, phoneNumber: labels.phoneNumberHeader }} />;
+
   return (
     <div className="flex flex-col gap-6">
       <div
@@ -347,19 +350,17 @@ export function PhoneNumberChooser({
           </label>
           {countryFixed ? (
             <p className="flex h-9 items-center gap-2 text-sm" id="number-country">
-              <span aria-hidden="true">{COUNTRY_OPTIONS.find((option) => option.code === country)?.flag}</span>
+              <Flag region={country} />
               {COUNTRY_OPTIONS.find((option) => option.code === country)?.label ?? country}
             </p>
           ) : <Select onValueChange={handleCountryChange} value={country}>
-            <SelectTrigger id="number-country">
-              <SelectValue />
+            <SelectTrigger className="*:data-[slot=select-value]:gap-2" id="number-country">
+              <SelectValue>{(value: SupportedOnboardingPhoneCountry | null) => value ? <><Flag region={value} /><span className="truncate">{COUNTRY_OPTIONS.find((option) => option.code === value)?.label ?? value}</span></> : null}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {COUNTRY_OPTIONS.map((option) => (
                 <SelectItem key={option.code} value={option.code}>
-                  <span className="mr-2" aria-hidden="true">
-                    {option.flag}
-                  </span>
+                  <Flag region={option.code} />
                   {option.label}
                 </SelectItem>
               ))}
@@ -385,14 +386,16 @@ export function PhoneNumberChooser({
           </>
         ) : null}
         <Button
-          className="h-11 w-full sm:w-auto"
-          disabled={isSearching || isLoading}
+          className="w-full sm:w-auto"
+          disabled={isSearching}
           onClick={() => void handleSearch()}
           type="button"
-          variant="outline"
         >
           {searchSource === "search" ? (
-            <LoaderCircle className="size-4 animate-spin" />
+            <>
+              <LoaderCircle className="size-4 animate-spin" />
+              {labels.searching}
+            </>
           ) : (
             labels.search
           )}
@@ -405,13 +408,7 @@ export function PhoneNumberChooser({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {isLoading ? (
-            <div className="flex flex-col gap-3 px-4 py-4">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <Skeleton className="h-12 w-full rounded-lg" key={index} />
-              ))}
-            </div>
-          ) : numbers.length === 0 ? (
+          {numbers.length === 0 ? (
             <div className="px-4 py-8 text-center text-sm text-muted-foreground">
               {labels.empty}
             </div>
@@ -455,7 +452,7 @@ export function PhoneNumberChooser({
           )}
         </div>
 
-        {hasMore && !isLoading ? (
+        {hasMore ? (
           <div className="shrink-0 border-t border-border px-4 py-3">
             <button
               aria-label={labels.loadMore}

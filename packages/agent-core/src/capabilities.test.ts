@@ -21,7 +21,7 @@ function liveChanges(live: string[]): string[] {
 
 describe("receptionistCapabilities", () => {
   it("books directly and passes cancellations to the team by default", () => {
-    expect(capabilities().tools).toEqual(["getBusinessHours", "getBusinessServices", "searchKnowledge", "takeMessage", "findAvailability", "bookAppointment", "requestAppointmentCancellation"]);
+    expect(capabilities().tools).toEqual(["getBusinessHours", "getBusinessServices", "searchKnowledge", "takeMessage", "findAvailability", "bookAppointment", "requestAppointmentCancellation", "requestAppointmentReschedule"]);
   });
 
   it("takes requests instead of booking in request mode", () => {

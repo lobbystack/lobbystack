@@ -62,13 +62,15 @@ type PartnerShellProps = {
   sidebarOpen: boolean;
   /** Whether owners get the Billing page: while the deployment bills partners for tiers, or once the host set the partner's pool. */
   billingPage?: boolean;
+  /** Whether owners get the Payments page: the deployment has Stripe Connect. Without it partners bill their businesses themselves. */
+  payments?: boolean;
   /** Whether the account menu links to the business dashboard: the person is on a business's team on this domain. */
   businessDashboard?: boolean;
   user: { email: string };
 };
 
 /** The partner console's frame: the partner switcher, its pages for the person's role, and the account menu. */
-export function PartnerShell({ billingPage = false, businessDashboard = false, children, partner, partners, sidebarOpen, user }: PartnerShellProps) {
+export function PartnerShell({ billingPage = false, businessDashboard = false, children, partner, partners, payments = false, sidebarOpen, user }: PartnerShellProps) {
   const { t } = useTranslation(["partner", "common"]);
   const pathname = usePathname();
   const contentScrollRef = useRef<HTMLElement>(null);
@@ -93,7 +95,7 @@ export function PartnerShell({ billingPage = false, businessDashboard = false, c
               <PartnerSwitcher partner={partner} partners={partners} />
             </SidebarHeader>
             <SidebarContent>
-              <PartnerNavigation billingPage={billingPage} partnerId={partner.partnerId} role={partner.role} />
+              <PartnerNavigation billingPage={billingPage} partnerId={partner.partnerId} payments={payments} role={partner.role} />
             </SidebarContent>
             <SidebarFooter>
               <PartnerUserMenu businessDashboard={businessDashboard} email={user.email} />
@@ -115,13 +117,13 @@ export function PartnerShell({ billingPage = false, businessDashboard = false, c
   );
 }
 
-function PartnerNavigation({ billingPage, partnerId, role }: { billingPage: boolean; partnerId: string; role: PartnerRole }) {
+function PartnerNavigation({ billingPage, partnerId, payments, role }: { billingPage: boolean; partnerId: string; payments: boolean; role: PartnerRole }) {
   const { t } = useTranslation("partner");
   const pathname = usePathname();
   const router = useRouter();
   const { isMobile, setOpenMobile } = useSidebar();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-  // Members don't see prices or the Stripe connection, and only owners manage Stripe and see Billing: the partner's tier while the deployment bills tiers, or the pool the host set. The server refuses the same.
+  // Members don't see prices or the Stripe connection, and only owners manage Stripe and see Billing: the partner's tier while the deployment bills tiers, or the pool the host set. Payments needs Stripe Connect on the deployment. The server refuses the same.
   const items = [
     { href: `/partner/${partnerId}/businesses`, label: t("nav.businesses"), icon: BriefcaseBusinessIcon },
     { href: `/partner/${partnerId}/templates`, label: t("nav.templates"), icon: LayoutPanelTopIcon },
@@ -130,7 +132,7 @@ function PartnerNavigation({ billingPage, partnerId, role }: { billingPage: bool
     { href: `/partner/${partnerId}/branding`, label: t("nav.branding"), icon: PaletteIcon },
     { href: `/partner/${partnerId}/team`, label: t("nav.team"), icon: UsersIcon },
     { href: `/partner/${partnerId}/api-keys`, label: t("nav.apiKeys"), icon: KeyIcon },
-    ...(role === "owner" ? [{ href: `/partner/${partnerId}/payments`, label: t("nav.stripe"), icon: CreditCardIcon }] : []),
+    ...(payments && role === "owner" ? [{ href: `/partner/${partnerId}/payments`, label: t("nav.stripe"), icon: CreditCardIcon }] : []),
     ...(billingPage && role === "owner" ? [{ href: `/partner/${partnerId}/billing`, label: t("nav.billing"), icon: ReceiptIcon }] : []),
     { href: `/partner/${partnerId}/settings`, label: t("nav.settings"), icon: SettingsIcon },
   ];

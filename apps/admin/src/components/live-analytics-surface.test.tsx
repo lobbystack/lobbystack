@@ -118,3 +118,81 @@ describe("analytics loading states", () => {
     expect(skeletons()).toBe(0);
   });
 });
+
+describe("analytics view in the URL", () => {
+  const channels = { phone_call: 0, web_call: 0, sms: 0, web_chat: 0, other: 0 };
+  const parameters = () => new URLSearchParams(window.location.search);
+  const day = (value: Date) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+  afterEach(() => { window.history.replaceState(null, "", "/"); });
+
+  it("names the dates of the default range, so an unopened link can't drift", async () => {
+    window.history.replaceState(null, "", "/analytics");
+    renderAnalytics(channels);
+    await screen.findByText("home.analytics.results.bookedValue");
+    const today = new Date();
+    expect(parameters().get("range")).toBe("last30");
+    expect(parameters().get("interval")).toBe("week");
+    expect(parameters().get("from")).toBe(day(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 29)));
+    expect(parameters().get("to")).toBe(day(today));
+  });
+
+  it("writes the picked preset and interval along with its dates, and keeps dates when the defaults return", async () => {
+    window.history.replaceState(null, "", "/analytics");
+    renderAnalytics(channels);
+    await screen.findByText("home.analytics.results.bookedValue");
+    await userEvent.click(screen.getByRole("button", { name: "home.analytics.controls.granularity" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "home.analytics.controls.granularities.daily" }));
+    await userEvent.click(screen.getByRole("button", { name: "home.analytics.controls.presetRange" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "home.analytics.controls.presets.thisMonth" }));
+    const thisMonth = parameters();
+    expect(thisMonth.get("range")).toBe("thisMonth");
+    expect(thisMonth.get("interval")).toBe("day");
+    const today = new Date();
+    expect(thisMonth.get("from")).toBe(day(new Date(today.getFullYear(), today.getMonth(), 1)));
+    expect(thisMonth.get("to")).toBe(day(today));
+    await userEvent.click(screen.getByRole("button", { name: "home.analytics.controls.presetRange" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "home.analytics.controls.presets.last30" }));
+    const last30 = parameters();
+    expect(last30.get("range")).toBe("last30");
+    expect(last30.get("interval")).toBe("day");
+    expect(last30.get("from")).toBe(day(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 29)));
+    expect(last30.get("to")).toBe(day(today));
+  });
+
+  it("opens with the view the URL names", async () => {
+    window.history.replaceState(null, "", "/analytics?range=lastYear&interval=month");
+    renderAnalytics(channels);
+    await screen.findByText("home.analytics.results.bookedValue");
+    expect(screen.getByRole("button", { name: "home.analytics.controls.presetRange" }).textContent).toBe("home.analytics.controls.presets.lastYear");
+    expect(screen.getByRole("button", { name: "home.analytics.controls.granularity" }).textContent).toBe("home.analytics.controls.granularities.monthly");
+  });
+
+  it("shows the shared dates even when the preset name in the link would now mean another span", async () => {
+    window.history.replaceState(null, "", "/analytics?range=lastYear&from=2026-10-01&to=2026-10-15&interval=day");
+    renderAnalytics(channels);
+    await screen.findByText("home.analytics.results.bookedValue");
+    expect(screen.getAllByText("Oct 01 - Oct 15, 2026").length).toBeGreaterThan(0);
+    expect(parameters().get("from")).toBe("2026-10-01");
+    expect(parameters().get("to")).toBe("2026-10-15");
+  });
+
+  it("opens a custom range from the URL and ignores values it doesn't know", async () => {
+    window.history.replaceState(null, "", "/analytics?from=2026-10-01&to=2026-10-15&interval=day");
+    renderAnalytics(channels);
+    await screen.findByText("home.analytics.results.bookedValue");
+    expect(screen.getByRole("button", { name: "home.analytics.controls.presetRange" }).textContent).toBe("home.analytics.controls.presets.custom");
+    expect(parameters().get("from")).toBe("2026-10-01");
+    expect(parameters().get("to")).toBe("2026-10-15");
+    expect(parameters().get("interval")).toBe("day");
+    expect(parameters().has("range")).toBe(false);
+    cleanup();
+    window.history.replaceState(null, "", "/analytics?range=banana&interval=nope&from=2026-13-40&to=x");
+    renderAnalytics(channels);
+    await screen.findByText("home.analytics.results.bookedValue");
+    expect(screen.getByRole("button", { name: "home.analytics.controls.presetRange" }).textContent).toBe("home.analytics.controls.presets.last30");
+    expect(parameters().get("range")).toBe("last30");
+    expect(parameters().get("interval")).toBe("week");
+    expect(parameters().get("from")).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(parameters().get("to")).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});

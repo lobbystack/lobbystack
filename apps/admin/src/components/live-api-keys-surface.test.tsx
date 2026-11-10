@@ -59,6 +59,33 @@ describe("API keys settings", () => {
     expect(await screen.findByText("Zapier")).toBeTruthy();
   });
 
+  it("shows an error and creates nothing when the name is empty or no access is chosen", async () => {
+    const user = userEvent.setup();
+    const fetchMock = setup("business_owner");
+    await screen.findByText("apiKeys.empty");
+    await user.click(screen.getByRole("button", { name: /apiKeys.create.action/ }));
+    await user.click(screen.getByRole("button", { name: "apiKeys.create.submit" }));
+    expect(screen.getByText("apiKeys.create.nameRequired")).toBeTruthy();
+    expect(screen.getByLabelText("apiKeys.create.nameLabel").getAttribute("aria-invalid")).toBe("true");
+    expect(screen.queryByText("apiKeys.create.scopesRequired")).toBeNull();
+    await user.type(screen.getByLabelText("apiKeys.create.nameLabel"), "Zapier");
+    for (const box of screen.getAllByRole("checkbox")) if (box.getAttribute("aria-checked") === "true") await user.click(box);
+    await user.click(screen.getByRole("button", { name: "apiKeys.create.submit" }));
+    expect(screen.getByText("apiKeys.create.scopesRequired")).toBeTruthy();
+    expect(screen.queryByText("apiKeys.create.nameRequired")).toBeNull();
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+  });
+
+  it("creates the key with Enter in the name field", async () => {
+    const user = userEvent.setup();
+    const fetchMock = setup("business_owner");
+    await screen.findByText("apiKeys.empty");
+    await user.click(screen.getByRole("button", { name: /apiKeys.create.action/ }));
+    await user.type(screen.getByLabelText("apiKeys.create.nameLabel"), "Zapier{Enter}");
+    await screen.findByTestId("secret-value");
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(true);
+  });
+
   it("lists each key by name with one line about it, and neither its key nor its scopes", async () => {
     setup("business_owner", [
       { id: "k1", name: "Zapier", prefix: "lsk_1a2b3c4d", scopes: ["calls:read", "contacts:write"], createdAt: "2026-09-27T12:00:00.000Z", createdBy: { userId: "u1", name: "Ada", email: "ada@example.com" }, lastUsedAt: null, revokedAt: null },

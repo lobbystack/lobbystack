@@ -11,8 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Surface } from "@/components/ui/surface";
 import { Switch } from "@/components/ui/switch";
-import { formatCapInput, parseCapInputToCents } from "@/lib/billing-cap";
 import { intlLocale } from "@/lib/locale";
+import { parsePriceInput, priceInputValue } from "@/lib/price-input";
 import { requestJson } from "@/lib/request-json";
 
 export type PoolUsage = { periodKey: string; voiceSecondsUsed: number; chatsUsed: number; overageSpendCents: number };
@@ -70,8 +70,8 @@ export function PoolUsageSection({ usage, pool }: { usage: PoolUsage; pool: { vo
 export function PoolOverageSection({ partnerId, overage, spendCents }: { partnerId: string; overage: PoolOverage; spendCents: number }) {
   const { t, i18n } = useTranslation("partner");
   const queryClient = useQueryClient();
-  const [capInput, setCapInput] = useState(() => formatCapInput(overage.capCents, i18n.language));
-  useEffect(() => { setCapInput(formatCapInput(overage.capCents, i18n.language)); }, [i18n.language, overage.capCents]);
+  const [capInput, setCapInput] = useState(() => priceInputValue(overage.capCents, "usd", i18n.language));
+  useEffect(() => { setCapInput(priceInputValue(overage.capCents, "usd", i18n.language)); }, [i18n.language, overage.capCents]);
 
   const save = useMutation({
     mutationFn: (next: { enabled: boolean; capCents: number | null }) => requestJson<PoolOverage>(`/api/partner/billing/overage?partnerId=${encodeURIComponent(partnerId)}`, { method: "POST", body: JSON.stringify({ partnerId, ...next }) }),
@@ -83,29 +83,20 @@ export function PoolOverageSection({ partnerId, overage, spendCents }: { partner
   });
 
   function saveCap() {
-    const capCents = parseCapInputToCents(capInput, i18n.language);
-    if (capCents === null) {
+    const amount = parsePriceInput(capInput, "usd", i18n.language);
+    if (amount.kind !== "amount") {
       toast.error(t("billing.overage.invalidAmount"));
       return;
     }
-    save.mutate({ enabled: overage.enabled, capCents });
+    save.mutate({ enabled: overage.enabled, capCents: amount.minor });
   }
 
   // Free bills no overage, so it skips what overage does and says why instead.
   const header = (
-    <div className="flex flex-col gap-1">
-      <h2 className="text-sm font-medium text-muted-foreground" id="partner-billing-overage">{t("billing.overage.title")}</h2>
-      {overage.billed ? <p className="text-sm text-muted-foreground">{t("billing.overage.description")}</p> : null}
-    </div>
+    <h2 className="text-sm font-medium text-muted-foreground" id="partner-billing-overage">{t("billing.overage.title")}</h2>
   );
-  if (!overage.billed) {
-    return (
-      <section aria-labelledby="partner-billing-overage" className="flex flex-col gap-3">
-        {header}
-        <Surface className="px-6 py-5"><p className="text-sm text-muted-foreground">{t("billing.overage.free")}</p></Surface>
-      </section>
-    );
-  }
+  // Free has no overage, so there is nothing to show or change.
+  if (!overage.billed) return null;
 
   const capReached = overage.enabled && overage.capCents !== null && spendCents >= overage.capCents;
   const busy = save.isPending;
@@ -151,9 +142,7 @@ export function PoolOverageSection({ partnerId, overage, spendCents }: { partner
               </div>
             </div>
           </>
-        ) : (
-          <p className="text-sm text-muted-foreground">{t("billing.overage.off")}</p>
-        )}
+        ) : null}
       </Surface>
     </section>
   );

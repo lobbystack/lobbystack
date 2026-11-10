@@ -69,7 +69,7 @@ async function setPlan(tx: DatabaseTransaction, businessId: string, plan: PlanCa
 async function numberStepBusiness(tx: DatabaseTransaction, input: { withNumber?: boolean } = {}) {
   const userId = randomUUID();
   const phone = testNumber();
-  await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid`, name: "Sam Owner", phone, phoneVerifiedAt: new Date() });
+  await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid`, name: "Sam Owner", phone, phoneVerifiedAt: new Date(), emailVerified: true });
   await tx.execute(sql`set local role lobbystack_app`);
   const { businessId } = await createBusiness({ db: tx as unknown as Database }, { userId, name: `Entitlement ${randomUUID()}`, timezone: "America/Toronto", businessType: "test" });
   await tx.execute(sql`reset role`);
@@ -86,6 +86,7 @@ const free: Entitlement = {
   overage: { enabled: false, currency: "USD", rates: { voiceMinute: 0, chat: 0, alertSms: 0, outboundAttempt: 0 }, capMinor: null },
   poolPartnerId: null,
   includedNumbers: 0,
+  includedAgents: 1,
 };
 const starter = (capMinor: number | null): Entitlement => ({
   live: true,
@@ -94,6 +95,7 @@ const starter = (capMinor: number | null): Entitlement => ({
   overage: { enabled: true, currency: "USD", rates: { voiceMinute: 20, chat: 0, alertSms: 2, outboundAttempt: 2 }, capMinor },
   poolPartnerId: null,
   includedNumbers: 1,
+  includedAgents: null,
 });
 const pro = (capMinor: number | null): Entitlement => ({
   live: true,
@@ -102,11 +104,12 @@ const pro = (capMinor: number | null): Entitlement => ({
   overage: { enabled: true, currency: "USD", rates: { voiceMinute: 18, chat: 0, alertSms: 2, outboundAttempt: 2 }, capMinor },
   poolPartnerId: null,
   includedNumbers: 1,
+  includedAgents: null,
 });
 const unlimitedAllowance = { voiceSeconds: null, chats: null, alertSms: null, outboundAttempts: null };
 const noRates = { voiceMinute: 0, chat: 0, alertSms: 0, outboundAttempt: 0 };
-const enterprise: Entitlement = { live: true, source: "plan", allowance: unlimitedAllowance, overage: { enabled: true, currency: "USD", rates: noRates, capMinor: null }, poolPartnerId: null, includedNumbers: null };
-const selfHosted: Entitlement = { live: false, source: "unlimited", allowance: unlimitedAllowance, overage: { enabled: false, currency: "USD", rates: noRates, capMinor: null }, poolPartnerId: null, includedNumbers: null };
+const enterprise: Entitlement = { live: true, source: "plan", allowance: unlimitedAllowance, overage: { enabled: true, currency: "USD", rates: noRates, capMinor: null }, poolPartnerId: null, includedNumbers: null, includedAgents: null };
+const selfHosted: Entitlement = { live: false, source: "unlimited", allowance: unlimitedAllowance, overage: { enabled: false, currency: "USD", rates: noRates, capMinor: null }, poolPartnerId: null, includedNumbers: null, includedAgents: null };
 
 const cloud = (account: Account | null): PlanCase => ({ deploymentMode: "cloud", account });
 const directPlans: Array<[label: string, plan: PlanCase, expected: Entitlement]> = [

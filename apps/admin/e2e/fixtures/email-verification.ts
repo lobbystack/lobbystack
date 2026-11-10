@@ -12,7 +12,8 @@ export async function isolateAuthRateLimit(page: Page, email: string, testInfo: 
   return ip;
 }
 
-export async function completeSignupEmailVerification(page: Page, email: string, password: string): Promise<void> {
+/** Verifies the signup code and signs in, returning the person the page is now signed in as. */
+export async function completeSignupEmailVerification(page: Page, email: string, password: string): Promise<string> {
   const databaseUrl = process.env.REPLACEMENT_E2E_DATABASE_URL;
   if (!databaseUrl) throw new Error("The disposable E2E database is required for email verification.");
 
@@ -30,9 +31,11 @@ export async function completeSignupEmailVerification(page: Page, email: string,
 
   const database = createDatabaseClient("lobbystack_migrator", { DATABASE_URL: databaseUrl });
   let code: string | undefined;
+  let userId: string | undefined;
   try {
     await expect.poll(async () => {
       const user = (await database.db.select({ id: users.id }).from(users).where(eq(users.normalizedEmail, email)).limit(1))[0];
+      userId = user?.id;
       if (!user) return null;
       const message = (await database.db.select({ payload: outboxMessages.payload })
         .from(outboxMessages)
@@ -46,6 +49,7 @@ export async function completeSignupEmailVerification(page: Page, email: string,
     await database.pool.end();
   }
   if (!code) throw new Error("The signup verification email did not contain a code.");
+  if (!userId) throw new Error("The signup did not reach the disposable users table.");
 
   await page.locator("#verification-code").fill(code);
   const verificationResponsePromise = page.waitForResponse(response => response.url().endsWith("/api/auth/email-otp/verify-email") && response.request().method() === "POST");
@@ -55,4 +59,5 @@ export async function completeSignupEmailVerification(page: Page, email: string,
   expect(verificationResponse.ok()).toBe(true);
   const signInResponse = await signInResponsePromise;
   expect(signInResponse.ok()).toBe(true);
+  return userId;
 }

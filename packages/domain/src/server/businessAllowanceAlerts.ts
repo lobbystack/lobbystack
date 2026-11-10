@@ -3,6 +3,9 @@ import { and, eq, sql } from "drizzle-orm";
 import { billingUsageEvents, billingUsageMonths, businesses, enqueueOutbox, type DatabaseTransaction } from "@lobbystack/db";
 import { HOST_EMAIL_BRAND, intlLocale, normalizeInterfaceLocale, type EmailBrandReference, type Entitlement } from "@lobbystack/shared";
 
+import { appBaseUrl } from "./appBaseUrl";
+import { greetingName } from "./emailGreeting";
+
 // Alerts at 80% and 100% of a partner's business's allowance, its minutes and
 // its chats each. They go by email to the owners and admins of the business's
 // own team, under the business's brand, which is its partner's, and to the
@@ -76,10 +79,6 @@ type Recipient = { user_id: string; email: string; name: string | null; preferre
 /** One person's copy of each alert: the email, the link it carries, and the brand it goes out under. */
 type Delivery = { recipient: Recipient; template: "business_allowance_alert" | "partner_business_allowance_alert"; dedupe: string; url: string; brand: EmailBrandReference };
 
-function appBaseUrl(): string {
-  return (process.env.APP_BASE_URL?.trim() || "http://localhost").replace(/\/$/, "");
-}
-
 /** The business's Usage page. The worker moves the link onto the business's brand's domain when it sends the email. */
 function usageUrl(): string {
   return `${appBaseUrl()}/settings/usage`;
@@ -98,7 +97,7 @@ function alertVariables(input: { periodKey: string; entitlement: Entitlement; us
   const measured = measure(entitlement.allowance, input.used, alert.kind) ?? { used: 0, limit: 0 };
   return {
     locale,
-    firstName: recipient.name?.trim().split(/\s+/)[0] ?? "",
+    firstName: greetingName(recipient.name, recipient.email),
     businessName: input.businessName,
     kind: alert.kind,
     threshold: String(alert.threshold),

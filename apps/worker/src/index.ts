@@ -1,7 +1,7 @@
 import { assertDatabaseRole, businesses, createDatabaseClient, databaseHealthCheck, enqueueOutbox, listReembedBusinesses, listSchedulerBusinesses, listSummaryBackfillBusinesses, withBusinessTransaction, withDispatcherTransaction } from "@lobbystack/db";
 import { createBusinessHoursExtractor, createBusinessSummarizer, createCallSummarizer } from "@lobbystack/agent-core";
 import { DEFAULT_EMAIL_FROM, assertProductionSecrets, isMaintenanceMode, partnerFeatureWarnings, partnerFeatures } from "@lobbystack/shared";
-import { brandChangesChannel, encodeBrandChange, listenForBrandChanges, recordPartnerTierBilling, type BrandChangePublisher, type OnboardingFollowupSender } from "@lobbystack/domain";
+import { brandChangesChannel, encodeBrandChange, listenForBrandChanges, recordPartnerTierBilling, type BrandChangePublisher } from "@lobbystack/domain";
 import { createQueue, createRedisConnection, createWorkerOptions, enqueueJob, isKnownJobType, jobQueues, type JobEnvelope, type JobQueue } from "@lobbystack/jobs";
 import { createEmbeddingProvider } from "@lobbystack/providers/ai/embeddingProvider";
 import { FirecrawlProvider } from "@lobbystack/providers/crawling/firecrawl";
@@ -23,6 +23,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import OpenAI from "openai";
 
 import { createWorkerDomainContext } from "./domainContext";
+import { createFailureReporter } from "./failureReporting";
 import { handleJob, type WorkerDependencies } from "./handlers";
 import { startHealthServer } from "./health";
 import { createLiveCallHandler, liveDrainTimeoutMs } from "./liveCalls";
@@ -47,12 +48,6 @@ function createEmailProvider(): SmtpEmailProvider | undefined {
     from: process.env.EMAIL_FROM || DEFAULT_EMAIL_FROM,
     // EMAIL_REPLY_TO is the host brand's Reply-To, which the handlers pass per email.
   });
-}
-
-function createOnboardingFollowupSender(): OnboardingFollowupSender | undefined {
-  const from = process.env.ONBOARDING_FOLLOWUP_FROM?.trim();
-  const name = process.env.ONBOARDING_FOLLOWUP_SENDER_NAME?.trim();
-  return from && name ? { from, name } : undefined;
 }
 
 function createPolarProvider(): PolarBillingProvider | undefined {
@@ -160,7 +155,6 @@ async function main(): Promise<void> {
   const liveCalls = createLiveCallHandler({ domain, attachLock: realtime });
   const health = startHealthServer(workerPort, state, liveCalls.handle);
   const email = createEmailProvider();
-  const onboardingFollowupSender = createOnboardingFollowupSender();
   // Every carrier with credentials, routed by TELEPHONY_* (docs/voice/runtime.md). Malformed routing fails the boot.
   const telephony = createTelephony(process.env);
   const storage = createStorageProvider();
@@ -187,7 +181,6 @@ async function main(): Promise<void> {
     ...(businessSummarizer ? { businessSummarizer } : {}),
     ...(businessHoursExtractor ? { businessHoursExtractor } : {}),
     ...(email ? { email } : {}),
-    ...(onboardingFollowupSender ? { onboardingFollowupSender } : {}),
     ...(embeddings ? { embeddings } : {}),
     telephony,
     storage,
@@ -213,6 +206,7 @@ async function main(): Promise<void> {
       });
     },
   };
+  const failures = createFailureReporter();
   const workers = jobQueues.map((queueName) => {
     const meter = getMeter("lobbystack-worker");
     const duration = meter.createHistogram("lobbystack.worker.job_duration_ms", { unit: "ms" });
@@ -250,8 +244,9 @@ async function main(): Promise<void> {
       throw new DelayedError();
     }, createWorkerOptions(queueName));
     // BullMQ emits connection problems as "error" events; without a listener
-    // Node treats one as fatal.
-    worker.on("error", (error) => console.error(JSON.stringify({ event: "worker.error", queue: queueName, message: redactOtelExceptionText(error.message) })));
+    // Node treats one as fatal. The reporter sends them to PostHog error
+    // tracking and logs them, but only once per window.
+    failures.attach(worker, queueName);
     const failedJobs = getMeter("lobbystack-worker").createCounter("lobbystack.worker.jobs.failed");
     worker.on("failed", (job) => failedJobs.add(1, {
       "messaging.destination.name": queueName,
@@ -261,7 +256,7 @@ async function main(): Promise<void> {
   });
   const dispatcher = new OutboxDispatcher(dispatcherDatabase.db, new Map(queues));
   const abort = new AbortController();
-  const dispatchLoop = dispatcher.run(abort.signal).catch((error) => console.error("outbox dispatcher stopped", redactOtelExceptionText(error instanceof Error ? error.message : String(error))));
+  const dispatchLoop = dispatcher.run(abort.signal).catch((error) => failures.reportDispatcherStopped(error));
   // Workers already take jobs here, so a long pass over every business at boot
   // holds up neither jobs nor the health check.
   void (async () => {

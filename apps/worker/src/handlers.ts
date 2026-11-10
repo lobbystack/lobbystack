@@ -1,24 +1,26 @@
 import { createHash, randomUUID } from "node:crypto";
 import Redis from "ioredis";
-import { and, eq, inArray, isNull, lte, ne, or } from "drizzle-orm";
+import { and, eq, gte, gt, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
+import { UnrecoverableError } from "bullmq";
 
 import { hasSummarizableTranscript, type BusinessHoursExtractor, type BusinessSummarizer, type CallSummarizer } from "@lobbystack/agent-core";
 import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
 import { HOST_EMAIL_BRAND, billingMeterEventNames, detectSiteLanguage, emailSender, getPolarMeteredUsagePayload, intlLocale, isUuid, normalizeRuntimeLocale, parseEmailBrandReference, partnerFeatures, partnerTierProductId, type BillingUsageKind, type EmailBrandReference } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { enqueueKnowledgeDerivedRefresh, finishBusinessSummaryRegenerate, forgetStaleRetiredCalendarTokens, loadBusinessHoursInput, loadBusinessSummaryInput, markBusinessHoursChecked, resetGeneratedBusinessSummary, saveGeneratedBusinessHours, saveGeneratedBusinessSummary, type SummaryRegenerateOutcome } from "@lobbystack/domain";
-import { billingCheckoutLeaseEndsAt, checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteStoredObjects, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
+import { billingCheckoutLeaseEndsAt, checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deferBillingCheckoutRequest, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteStoredObjects, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, embeddingInputsForChunk, hashContent, upsertWebsiteDocument, queueWelcomeEmail, type DurableAiUsage, type GeneratedCallSummary } from "@lobbystack/domain";
 import { deliverOutbound, markFeedbackEmailFailed, markFeedbackEmailSent, queueDailyOperatorSummaries, refreshUnitEconomicsMonth } from "@lobbystack/domain";
 import { NUMBER_ORDER_MAX_WAIT_MS, claimNumberProvisioning, completeNumberProvisioning, deferNumberProvisioning, desiredNumberRouting, refreshStaleRefusedCallForwards, enqueueNumberRouting, resolveRefusedCallForward, failNumberProvisioning, isSharedSmsSender, loadNumberReleaseEmail, loadNumberTrialEmail, numberProvisioningLeaseEndsAt, sharedSmsSender, sweepNumberReleases, sweepNumberTrial } from "@lobbystack/domain";
 import { createWebhookSender, processWebhookDelivery, pruneApiHistory, prunePartnerApiIdempotencyKeys, type WebhookSender } from "@lobbystack/domain";
 import { LIVE_RECORDING_ATTEMPTS, listBusinessesWithOpenLiveCalls, listOpenLiveCalls, liveCallHasRecording, persistCallRecording, retryLiveCallRecording, type OpenLiveCall } from "@lobbystack/domain";
 import { applySiteLanguageInTransaction, expireTeamRequest } from "@lobbystack/domain";
-import { syncBusinessOverage } from "@lobbystack/domain";
-import { advancePartnerLifecycles, claimPartnerCheckoutRequest, keepPartnerTrialNumber, loadPartnerCheckoutRequest, loadPoolUsageEvent, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerBillingKey, partnerCheckoutLeaseEndsAt, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
+import { syncBusinessOverage, PROVIDER_RETRY_WINDOW_MS, providerRetryDelayMs } from "@lobbystack/domain";
+import { advancePartnerLifecycles, claimPartnerCheckoutRequest, deferPartnerCheckoutRequest, keepPartnerTrialNumber, loadPartnerCheckoutRequest, loadPoolUsageEvent, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerBillingKey, partnerCheckoutLeaseEndsAt, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
 import { checkPartnerCustomDomains, provisionPartnerCustomDomain, removePartnerCustomHostname, type CustomDomainProviders } from "@lobbystack/domain";
 import { brandForEmail, businessExists, businessGetsHostEmails, hostBrandFromEnvironment, isHostOnlyEmailTemplate } from "@lobbystack/domain";
 import type { DomainContext } from "@lobbystack/domain";
-import { numberReleaseEmailSubject, numberTrialEmailSubject, type SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
+import { numberReleaseEmailSubject, numberTrialEmailSubject, isPermanentSmtpRejection, type SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
+import { PolarRequestError } from "@lobbystack/providers/polar/polarBilling";
 import type { RuntimeStorageProvider } from "@lobbystack/providers/storage/provider";
 import { NumberOrderPendingError } from "@lobbystack/providers/telephony/types";
 import type { Telephony } from "@lobbystack/providers/telephony/registry";
@@ -28,7 +30,7 @@ import { isLivePrototypeEnabled, type LiveRecoveryOutcome } from "./liveCalls";
 import { deleteReleasedCalendarEvent, reconcileBusinessCalendar, retireCalendarWebhook, syncAppointmentCalendar, type CalendarProviders } from "./calendarJobs";
 import { refreshInstagramToken, replyToInstagramMessage, sendInstagramMessage, type InstagramOperations } from "./instagramJobs";
 import { replyToTextMessage } from "./textReplyJobs";
-import { getMeter } from "@lobbystack/telemetry/node";
+import { emitInfoLog, getMeter } from "@lobbystack/telemetry/node";
 import { bucketOutboxBacklog, getPostHogDistinctIdForBusinessSystem, redactTelemetryProperties, type TelemetryProperties } from "@lobbystack/telemetry";
 
 const ragMeter = getMeter("lobbystack-rag");
@@ -86,8 +88,6 @@ export type WorkerDependencies = {
   businessHoursExtractor?: BusinessHoursExtractor;
   /** Sends one signed webhook. Defaults to the SSRF-guarded HTTPS sender. */
   webhookSender?: WebhookSender;
-  /** Founder check-in sender. Without it, onboarding follow-up jobs are skipped. */
-  onboardingFollowupSender?: OnboardingFollowupSender;
   enqueueProductEventRetentionContinuation?: (input: {
     businessId: string;
     before: Date;
@@ -105,8 +105,51 @@ function retryAfterLease(leaseEndsAt: Date | null, entityId: string): JobResult 
   return leaseEndsAt ? { status: "deferred", entityId, retryAt: leaseEndsAt } : { status: "skipped", entityId };
 }
 
+type ProviderFailure = { transient: boolean; status: number | null; reason: string };
+type ProviderCheckout = { checkoutId: string; checkoutUrl: string };
+
+/**
+ * Reads what the provider said, with no customer data: an outage may be tried
+ * again, while a refusal waits for someone to change the request.
+ */
+function providerFailure(error: unknown): ProviderFailure {
+  if (error instanceof PolarRequestError) {
+    return {
+      transient: error.transient,
+      status: error.status,
+      reason: error.transient ? "provider_unavailable" : "provider_rejected",
+    };
+  }
+  // Not the provider refusing: a bookkeeping failure is retried by the queue,
+  // and the same request id keeps Polar's idempotency key.
+  throw error;
+}
+
+function providerFailureReason(failure: ProviderFailure): string {
+  return failure.status === null ? failure.reason : `${failure.reason}:${failure.status}`;
+}
+
+/** The wait before retrying a provider call that first failed this long ago. */
+function providerRetryAt(elapsedMs: number): Date {
+  return new Date(Date.now() + providerRetryDelayMs(elapsedMs));
+}
+
+
+/**
+ * A checkout's progress: when Polar defers it and when it opens. The log holds
+ * no customer data, and console.info keeps it in the container without a
+ * second OTel record.
+ */
+function logCheckout(event: string, attributes: Record<string, string | number | boolean>): void {
+  emitInfoLog("lobbystack-worker", event, attributes);
+  console.info(JSON.stringify({ event, ...attributes }));
+}
+
 const MESSAGE_PRICE_WAIT_MS = 60 * 60_000;
 const MESSAGE_PRICE_RETRY_MS = 2 * 60_000;
+// Twilio can list a call before it sets the call's price, sometimes minutes after it ends.
+const CALL_PRICE_WAIT_MS = 60 * 60_000;
+const CALL_PRICE_RETRY_MS = 2 * 60_000;
 
 const BRAND_FAILURE_LOG_INTERVAL_MS = 60_000;
 let lastBrandFailureLogAt = 0;
@@ -332,6 +375,17 @@ async function recordOutboxBacklogSample(
   }
 }
 
+// The templates an email job may name. A worker before the notices doesn't
+// route email.sendNotice, so only that job sends them. Anything else goes out
+// as a plain alert.
+const EMAIL_SEND_TEMPLATES = ["existing_account", "account_setup", "verify_email", "password_reset", "passkey_added", "invitation", "operator_alert", "feedback_submission", "welcome", "partner_pool_alert", "business_allowance_alert", "partner_business_allowance_alert"] as const;
+const EMAIL_NOTICE_TEMPLATES = ["business_released", "business_deleted"] as const;
+type QueuedEmailTemplate = (typeof EMAIL_SEND_TEMPLATES)[number] | (typeof EMAIL_NOTICE_TEMPLATES)[number];
+
+function isQueuedEmailTemplate(template: unknown, jobType: string): template is QueuedEmailTemplate {
+  return (EMAIL_SEND_TEMPLATES as readonly unknown[]).includes(template) || (jobType === "email.sendNotice" && (EMAIL_NOTICE_TEMPLATES as readonly unknown[]).includes(template));
+}
+
 export async function handleJob(job: JobEnvelope, dependencies: WorkerDependencies, execution: JobExecution = {}): Promise<JobResult> {
   const scope = jobWorkflowScope(job);
   await recordWorkflowEvent(dependencies, job, "workflow.started", scope);
@@ -419,6 +473,14 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       try {
         pages = await dependencies.crawler.crawl({ url, ...(typeof job.payload.limit === "number" ? { limit: job.payload.limit } : {}) });
       } catch (error) {
+        // A rate limit or an outage at the crawling provider: try the crawl
+        // again later without spending an attempt, the way checkouts wait out Polar.
+        const { transient, retryAfterMs } = error as { transient?: unknown; retryAfterMs?: unknown };
+        const elapsed = Date.now() - (execution.queuedAtMs ?? Date.now());
+        if (transient === true && elapsed < PROVIDER_RETRY_WINDOW_MS) {
+          const wait = Math.max(providerRetryDelayMs(elapsed), typeof retryAfterMs === "number" ? retryAfterMs : 0);
+          return { status: "deferred", entityId: documentId ?? websiteIngestionJobId ?? url, retryAt: new Date(Date.now() + wait) };
+        }
         if (execution.isFinalAttempt !== false) {
           if (documentId) await markKnowledgeDocumentFailed(dependencies.domain, { businessId: businessIdOrThrow(job), documentId, ...(source ? { expectedRevision: source.revision } : {}), error: "Website crawling failed." });
           if (websiteIngestionJobId && !documentId) await updateWebsiteIngestion(dependencies.domain.db, { businessId: businessIdOrThrow(job), websiteIngestionJobId, status: "failed", error: "Website crawling failed." });
@@ -476,20 +538,24 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       let reembedded = 0;
       while (true) {
         const rows = await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) =>
-          await tx.select({ id: knowledgeChunks.id, content: knowledgeChunks.content })
+          await tx.select({ id: knowledgeChunks.id, documentId: knowledgeChunks.documentId, sequence: knowledgeChunks.sequence, content: knowledgeChunks.content })
             .from(knowledgeChunks)
             .where(and(eq(knowledgeChunks.businessId, businessId), or(isNull(knowledgeChunks.embeddingFingerprint), ne(knowledgeChunks.embeddingFingerprint, fingerprint), isNull(knowledgeChunks.embedding), eq(knowledgeChunks.embeddingStatus, "pending"), eq(knowledgeChunks.embeddingStatus, "failed"))))
             .limit(batchSize),
         );
         if (rows.length === 0) break;
         const rowIds = rows.map((row) => row.id);
+        // A chunk stored by an older pipeline can exceed the provider's input
+        // limit. Embed each split part, then store the parts as their own rows.
+        const batches = rows.map((row) => ({ row, contents: embeddingInputsForChunk(row.content) }));
+        const inputs = batches.flatMap((batch) => batch.contents);
         let embeddings: number[][];
         try {
           await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
             await tx.update(knowledgeChunks).set({ embeddingStatus: "pending", embeddingError: null, updatedAt: new Date() }).where(and(eq(knowledgeChunks.businessId, businessId), inArray(knowledgeChunks.id, rowIds)));
           });
-          embeddings = await dependencies.embeddings.embed(rows.map((row) => row.content));
-          if (embeddings.length !== rows.length) throw new Error("Embedding provider returned an incomplete re-embedding batch.");
+          embeddings = await dependencies.embeddings.embed(inputs);
+          if (embeddings.length !== inputs.length) throw new Error("Embedding provider returned an incomplete re-embedding batch.");
           if (embeddings.some((embedding) => embedding.length !== 1536 || embedding.some((value) => !Number.isFinite(value)) || embedding.every((value) => value === 0))) {
             throw new Error("Embedding provider returned an incompatible re-embedding vector.");
           }
@@ -500,10 +566,36 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           throw error;
         }
         await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
-          for (const [index, row] of rows.entries()) {
-            const embedding = embeddings[index];
-            if (!embedding) throw new Error("Embedding provider returned an incompatible re-embedding vector.");
-            await tx.update(knowledgeChunks).set({ embedding, embeddingFingerprint: fingerprint, embeddingStatus: "completed", embeddingError: null, updatedAt: new Date() }).where(and(eq(knowledgeChunks.id, row.id), eq(knowledgeChunks.businessId, businessId)));
+          let index = 0;
+          // Highest sequence first, so a split's new pieces never shift the
+          // sequence of a chunk still waiting to be processed.
+          const ordered = [...batches].sort((a, b) => b.row.sequence - a.row.sequence);
+          for (const { row, contents } of ordered) {
+            const [first, ...rest] = contents;
+            const embedding = embeddings[index++];
+            if (first === undefined || !embedding) throw new Error("Embedding provider returned an incompatible re-embedding vector.");
+            if (rest.length > 0) {
+              // Make room beside the original chunk, not after the document.
+              // The temporary offset keeps the unique (document, sequence)
+              // index satisfied while later chunks move up.
+              await tx.update(knowledgeChunks).set({ sequence: sql`${knowledgeChunks.sequence} + 1000000` }).where(and(eq(knowledgeChunks.businessId, businessId), eq(knowledgeChunks.documentId, row.documentId), gt(knowledgeChunks.sequence, row.sequence)));
+              await tx.update(knowledgeChunks).set({ sequence: sql`${knowledgeChunks.sequence} - 1000000 + ${rest.length}` }).where(and(eq(knowledgeChunks.businessId, businessId), eq(knowledgeChunks.documentId, row.documentId), gte(knowledgeChunks.sequence, row.sequence + 1000000)));
+            }
+            await tx.update(knowledgeChunks).set({
+              ...(rest.length > 0 ? { content: first, contentHash: hashContent(first) } : {}),
+              embedding,
+              embeddingFingerprint: fingerprint,
+              embeddingStatus: "completed",
+              embeddingError: null,
+              updatedAt: new Date(),
+            }).where(and(eq(knowledgeChunks.id, row.id), eq(knowledgeChunks.businessId, businessId)));
+            let sequence = row.sequence + 1;
+            for (const content of rest) {
+              const piece = embeddings[index++];
+              if (!piece) throw new Error("Embedding provider returned an incompatible re-embedding vector.");
+              await tx.insert(knowledgeChunks).values({ businessId, documentId: row.documentId, sequence, content, contentHash: hashContent(content), embedding: piece, embeddingFingerprint: fingerprint, embeddingStatus: "completed", embeddingError: null });
+              sequence += 1;
+            }
           }
         });
         reembedded += rows.length;
@@ -536,14 +628,15 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         return { status: "skipped" };
       }
       {
-        const template = job.payload.template === "existing_account" || job.payload.template === "account_setup" || job.payload.template === "verify_email" || job.payload.template === "password_reset" || job.payload.template === "passkey_added" || job.payload.template === "invitation" || job.payload.template === "operator_alert" || job.payload.template === "feedback_submission" || job.payload.template === "onboarding_followup" || job.payload.template === "partner_pool_alert" || job.payload.template === "business_allowance_alert" || job.payload.template === "partner_business_allowance_alert" || (job.type === "email.sendNotice" && (job.payload.template === "business_released" || job.payload.template === "business_deleted"))
-          ? job.payload.template
-          : "operator_alert";
+        const queued = job.payload.template;
+        const template = isQueuedEmailTemplate(queued, job.type) ? queued : "operator_alert";
         const variables = typeof job.payload.variables === "object" && job.payload.variables !== null
           ? Object.fromEntries(Object.entries(job.payload.variables).map(([key, value]) => [key, String(value)]))
           : { message: String(job.payload.message ?? ""), url: String(job.payload.url ?? "") };
         const feedbackSubmissionId = typeof job.payload.feedbackSubmissionId === "string" ? job.payload.feedbackSubmissionId : undefined;
-        // The host's own emails, such as the founder's check-in, never reach a partner's business, whenever they were queued.
+        // A founder's check-in queued before it was removed sends nothing, rather than going out as an alert.
+        if (job.payload.template === "onboarding_followup") return { status: "skipped", ...(businessId ? { entityId: businessId } : {}) };
+        // The host's own emails, such as the welcome email, never reach a partner's business, whenever they were queued.
         if (businessId && isHostOnlyEmailTemplate(template) && !await businessGetsHostEmails(dependencies.domain.db, businessId)) return { status: "skipped", entityId: businessId };
         try {
           // An email queued before payloads carried a brand goes out under the host's.
@@ -569,6 +662,13 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           if (feedbackSubmissionId) await markFeedbackEmailSent(dependencies.domain, { feedbackSubmissionId, ...(businessId ? { businessId } : {}), providerMessageId: sent.messageId });
         } catch (error) {
           if (feedbackSubmissionId) await markFeedbackEmailFailed(dependencies.domain, { feedbackSubmissionId, ...(businessId ? { businessId } : {}), error: error instanceof Error ? error.message : String(error) }).catch(() => undefined);
+          // A 5xx SMTP response refuses this sender or message for good;
+          // retrying it only fills the failed set. Report it and give up.
+          if (isPermanentSmtpRejection(error)) {
+            const code = typeof (error as { responseCode?: unknown }).responseCode === "number" ? (error as { responseCode: number }).responseCode : null;
+            console.error(JSON.stringify({ event: "email.rejected", template, code }));
+            throw new UnrecoverableError(`Email delivery rejected permanently: ${error instanceof Error ? error.message : String(error)}`);
+          }
           throw error;
         }
       }
@@ -605,6 +705,8 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       return { status: recorded ? "completed" : "skipped", entityId: providerMessageId };
     }
     case "call.syncPrice": {
+      // Check again without spending an attempt until the carrier has priced the call.
+      const callPriceMayStillCome = Date.now() - (execution.queuedAtMs ?? 0) < CALL_PRICE_WAIT_MS;
       const liveCallId = String(job.payload.callId ?? "").trim();
       if (liveCallId && !job.payload.providerCallId) {
         // A GPT-Live phone call: find the carrier's leg of it first.
@@ -614,6 +716,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         const callCost = call ? dependencies.telephony.forNumber(call.carrier)?.callCost : undefined;
         if (!call || !callCost?.findLiveCallCost) return { status: "skipped", entityId: liveCallId };
         const found = await callCost.findLiveCallCost({ near: call.startedAt, from: call.callerPhone, dialled: call.dialled });
+        if (found?.providerCostUsd === undefined && callPriceMayStillCome) return { status: "deferred", entityId: liveCallId, retryAt: new Date(Date.now() + CALL_PRICE_RETRY_MS) };
         if (!found) throw new Error(`No ${callCost.carrier} call found yet for live call ${liveCallId}.`);
         const { providerCallId, ...pricing } = found;
         if (pricing.providerCostUsd === undefined) throw new Error(`${callCost.carrier} call pricing is incomplete for ${providerCallId}.`);
@@ -626,6 +729,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const getCallPricing = dependencies.telephony?.forNumber("twilio")?.callCost?.getCallPricing;
       if (!getCallPricing || !providerCallId || !isTerminalCallStatus(providerCallStatus)) return { status: "skipped", entityId: providerCallId };
       const pricing = await getCallPricing({ providerCallId });
+      if (pricing.providerCostUsd === undefined && callPriceMayStillCome) return { status: "deferred", entityId: providerCallId, retryAt: new Date(Date.now() + CALL_PRICE_RETRY_MS) };
       if (pricing.providerCostUsd === undefined) throw new Error(`Twilio call pricing is incomplete for ${providerCallId}.`);
       const recorded = await recordCallProviderPricing(dependencies.domain, { businessId: businessIdOrThrow(job), providerCallId, ...pricing });
       return { status: recorded ? "completed" : "skipped", entityId: providerCallId };
@@ -703,7 +807,17 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       };
       const stripe = businessId ? await attempt(async () => await syncStripeOverage(dependencies, { businessId, usageEventId })) : null;
       const polar = businessId && polarClient ? await attempt(async () => await syncPolarUsage(dependencies, polarClient, { businessId, usageEventId })) : null;
-      if (failures.length) throw failures[0];
+      if (failures.length) {
+        // Polar says to retry usage sent during maintenance, and its external id
+        // makes each event idempotent. Stay off the job's attempts while its
+        // outage window runs, then let the queue retry as before.
+        const transient = failures.find((error) => error instanceof PolarRequestError && error.transient);
+        if (transient && businessId && usageEventId) {
+          const elapsed = Date.now() - (execution.queuedAtMs ?? Date.now());
+          if (elapsed < PROVIDER_RETRY_WINDOW_MS) return { status: "deferred", entityId: usageEventId, retryAt: providerRetryAt(elapsed) };
+        }
+        throw failures[0];
+      }
       if (stripe?.status === "completed") return stripe;
       return polar ?? stripe ?? (polarClient ? { status: "skipped" } : { status: "skipped", entityId: usageEventId });
     }
@@ -717,7 +831,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const businessId = businessIdOrThrow(job);
       const monthKey = typeof job.payload.monthKey === "string" ? job.payload.monthKey : undefined;
       const rollupId = await refreshUnitEconomicsMonth(dependencies.domain, { businessId, ...(monthKey ? { monthKey } : {}) });
-      return { status: "completed", entityId: rollupId };
+      return rollupId ? { status: "completed", entityId: rollupId } : { status: "skipped", entityId: businessId };
     }
     case "billing.createCheckout": {
       const businessId = businessIdOrThrow(job);
@@ -730,10 +844,11 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       }
       const request = await loadBillingCheckoutRequest(dependencies.domain, { businessId, requestId });
       if (!request) return { status: "skipped", entityId: requestId };
+      let checkout!: ProviderCheckout;
       try {
         const appUrl = (process.env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
         const planUrl = `${appUrl}/${request.onboardingStage === "complete" ? "settings/plan" : "onboarding/plan"}`;
-        const checkout = await dependencies.polar.createCheckout({
+        checkout = await dependencies.polar.createCheckout({
           productId: polarCheckoutProductId(request.target, request.billingInterval),
           customerEmail: request.customerEmail,
           externalCustomerId: request.externalCustomerId,
@@ -743,12 +858,38 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           returnUrl: planUrl,
           idempotencyKey: `billing-checkout:${requestId}`,
         });
-        await markBillingCheckoutCreated(dependencies.domain, { businessId, requestId, ...checkout });
-        return { status: "completed", entityId: requestId };
       } catch (error) {
-        await markBillingCheckoutFailed(dependencies.domain, { businessId, requestId, error: "Polar checkout creation failed." });
-        throw error;
+        const failure = providerFailure(error);
+        if (failure.transient) {
+          // Polar is unreachable, not refusing. Keep the request processing and
+          // try again after a delay, within the outage window.
+          const retry = await deferBillingCheckoutRequest(dependencies.domain, { businessId, requestId });
+          if (retry.status === "deferred") {
+            logCheckout("billing.checkout_deferred", {
+              requestId,
+              target: request.target,
+              interval: request.billingInterval,
+              status: failure.status ?? 0,
+              elapsedMs: Date.now() - (execution.queuedAtMs ?? Date.now()),
+              retryInMs: retry.retryAt.getTime() - Date.now(),
+            });
+            return { status: "deferred", entityId: requestId, retryAt: retry.retryAt };
+          }
+          if (retry.status !== "failed") return { status: "skipped", entityId: requestId };
+        }
+        // A checkout someone waited on failed for good. Fail the job once, with
+        // no retry, so error tracking raises it.
+        await markBillingCheckoutFailed(dependencies.domain, { businessId, requestId, error: providerFailureReason(failure) });
+        throw new UnrecoverableError(`Checkout failed: ${providerFailureReason(failure)}`);
       }
+      await markBillingCheckoutCreated(dependencies.domain, { businessId, requestId, ...checkout });
+      logCheckout("billing.checkout_created", {
+        requestId,
+        target: request.target,
+        interval: request.billingInterval,
+        elapsedMs: Date.now() - (execution.queuedAtMs ?? Date.now()),
+      });
+      return { status: "completed", entityId: requestId };
     }
     case "billing.createPartnerCheckout": {
       // A partner's tier belongs to no business, so the job names the partner.
@@ -768,9 +909,10 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         await markPartnerCheckoutFailed(dependencies.domain, { ...request, error: "The tier's Polar product is not configured." });
         return { status: "skipped", entityId: requestId };
       }
+      let checkout!: ProviderCheckout;
       try {
         const billingUrl = `${checkoutRequest.returnOrigin}/partner/${partnerId}/billing`;
-        const checkout = await dependencies.polar.createCheckout({
+        checkout = await dependencies.polar.createCheckout({
           productId,
           customerEmail: checkoutRequest.customerEmail,
           externalCustomerId: checkoutRequest.externalCustomerId,
@@ -779,12 +921,38 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           returnUrl: billingUrl,
           idempotencyKey: `partner-checkout:${requestId}`,
         });
-        await markPartnerCheckoutCreated(dependencies.domain, { ...request, ...checkout });
-        return { status: "completed", entityId: requestId };
       } catch (error) {
-        await markPartnerCheckoutFailed(dependencies.domain, { ...request, error: "Polar checkout creation failed." });
-        throw error;
+        const failure = providerFailure(error);
+        if (failure.transient) {
+          // Polar is unreachable, not refusing. Keep the request processing and
+          // try again after a delay, within the outage window.
+          const retry = await deferPartnerCheckoutRequest(dependencies.domain, request);
+          if (retry.status === "deferred") {
+            logCheckout("billing.partner_checkout_deferred", {
+              requestId,
+              tier: checkoutRequest.tier,
+              interval: checkoutRequest.billingInterval,
+              status: failure.status ?? 0,
+              elapsedMs: Date.now() - (execution.queuedAtMs ?? Date.now()),
+              retryInMs: retry.retryAt.getTime() - Date.now(),
+            });
+            return { status: "deferred", entityId: requestId, retryAt: retry.retryAt };
+          }
+          if (retry.status !== "failed") return { status: "skipped", entityId: requestId };
+        }
+        // A checkout someone waited on failed for good. Fail the job once, with
+        // no retry, so error tracking raises it.
+        await markPartnerCheckoutFailed(dependencies.domain, { ...request, error: providerFailureReason(failure) });
+        throw new UnrecoverableError(`Checkout failed: ${providerFailureReason(failure)}`);
       }
+      await markPartnerCheckoutCreated(dependencies.domain, { ...request, ...checkout });
+      logCheckout("billing.partner_checkout_created", {
+        requestId,
+        tier: checkoutRequest.tier,
+        interval: checkoutRequest.billingInterval,
+        elapsedMs: Date.now() - (execution.queuedAtMs ?? Date.now()),
+      });
+      return { status: "completed", entityId: requestId };
     }
     case "billing.reconcilePartner": {
       const partnerId = String(job.payload.partnerId ?? "");
@@ -1068,10 +1236,10 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const businessId = businessIdOrThrow(job);
       const phoneNumberId = String(job.payload.phoneNumberId ?? "");
       const kind = job.payload.kind === "canceled" ? "canceled" : "release_soon";
-      if (!dependencies.email || !dependencies.onboardingFollowupSender) return { status: "skipped", entityId: phoneNumberId };
+      if (!dependencies.email) return { status: "skipped", entityId: phoneNumberId };
       const content = await loadNumberReleaseEmail(dependencies.domain, { businessId, phoneNumberId });
       if (!content) return { status: "skipped", entityId: phoneNumberId };
-      // The host's own email, with the host's prices, from the founder. A
+      // The host's own email, with the host's prices, from LobbyStack. A
       // partner's businesses never get it, so its job carries no brand.
       const brand = await emailBrand(dependencies.domain, HOST_EMAIL_BRAND);
       const date = (value: unknown) => (typeof value === "string" ? new Intl.DateTimeFormat(intlLocale(content.locale), { month: "long", day: "numeric", timeZone: content.timezone }).format(new Date(value)) : "");
@@ -1083,20 +1251,19 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         periodEnd: date(job.payload.periodEnd),
         releaseDate: date(job.payload.releaseAt),
         url: `${brand.origin}/settings/plan`,
-        senderName: dependencies.onboardingFollowupSender.name,
       };
-      await dependencies.email.sendTemplate({ template: "number_release", to: content.to, subject: numberReleaseEmailSubject(variables), variables, brand, idempotencyKey: job.idempotencyKey, ...emailSender(brand, { from: dependencies.onboardingFollowupSender.from }) });
+      await dependencies.email.sendTemplate({ template: "number_release", to: content.to, subject: numberReleaseEmailSubject(variables), variables, brand, idempotencyKey: job.idempotencyKey, ...emailSender(brand, {}) });
       return { status: "completed", entityId: `${phoneNumberId}:${kind}` };
     }
     case "numberTrial.sendEmail": {
       const businessId = businessIdOrThrow(job);
       const trialId = String(job.payload.trialId ?? "");
       const kind = job.payload.email;
-      if (!dependencies.email || !dependencies.onboardingFollowupSender) return { status: "skipped", entityId: trialId };
+      if (!dependencies.email) return { status: "skipped", entityId: trialId };
       if (!trialId || (kind !== "day10" && kind !== "day13" && kind !== "ended" && kind !== "minutes_out")) throw new Error("Invalid number trial email payload.");
       const content = await loadNumberTrialEmail(dependencies.domain, { businessId, trialId, email: kind });
       if (!content) return { status: "skipped", entityId: trialId };
-      // The host's own email, with the host's prices, from the founder. A
+      // The host's own email, with the host's prices, from LobbyStack. A
       // partner's businesses never get it, so its job carries no brand.
       const brand = await emailBrand(dependencies.domain, HOST_EMAIL_BRAND);
       const endDate = content.endsAt
@@ -1113,20 +1280,24 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         endDate,
         calls: String(content.callsAnswered),
         url: `${brand.origin}/settings/plan`,
-        senderName: dependencies.onboardingFollowupSender.name,
       };
-      await dependencies.email.sendTemplate({ template: "number_trial", to: content.to, subject: numberTrialEmailSubject(variables), variables, brand, idempotencyKey: job.idempotencyKey, ...emailSender(brand, { from: dependencies.onboardingFollowupSender.from }) });
+      await dependencies.email.sendTemplate({ template: "number_trial", to: content.to, subject: numberTrialEmailSubject(variables), variables, brand, idempotencyKey: job.idempotencyKey, ...emailSender(brand, {}) });
       return { status: "completed", entityId: `${trialId}:${kind}` };
     }
     case "prospectDemo.expire": {
       const expired = await expireProspectDemos(dependencies.domain);
       return { status: expired > 0 ? "completed" : "skipped", entityId: String(expired) };
     }
-    case "onboarding.sendFollowup": {
+    case "onboarding.sendFollowup":
+      // The founder's check-in is gone. One scheduled before it went sends nothing.
+      // The last were due a day after onboarding, so this case can go once a release has run for a few days.
+      return { status: "skipped" };
+    case "onboarding.sendWelcome": {
       const businessId = businessIdOrThrow(job);
-      if (!dependencies.email || !dependencies.onboardingFollowupSender) return { status: "skipped" };
-      const queued = await queueOnboardingFollowupEmail(dependencies.domain, { businessId, sender: dependencies.onboardingFollowupSender });
-      return { status: queued ? "completed" : "skipped", entityId: businessId };
+      if (!dependencies.email) return { status: "skipped" };
+      const welcome = await queueWelcomeEmail(dependencies.domain, { businessId });
+      if (welcome.status === "waiting") return { status: "deferred", entityId: businessId, retryAt: welcome.retryAt };
+      return { status: welcome.status === "queued" ? "completed" : "skipped", entityId: businessId };
     }
     case "affiliate.generatePayoutRun": {
       const periodKey = typeof job.payload.periodKey === "string" && job.payload.periodKey.trim() ? job.payload.periodKey.trim() : undefined;

@@ -1,7 +1,7 @@
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import { callerIsDone, callerIsLeaving, closeLiveSession, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, SILENCE_CHECK_IN_MS, SILENCE_TIMEOUT_MS, WRAP_UP_MAX_MS, type AgentChannel, type CallControl, type KeypadPasscodeCheck, type LiveCallSetup, type LiveCallSummary } from "@lobbystack/agent-core";
+import { callerIsDone, callerIsLeaving, closeLiveSession, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, SILENCE_CHECK_IN_MS, SILENCE_TIMEOUT_MS, WRAP_UP_MAX_MS, type AgentChannel, type CallControl, type KeypadPasscodeCheck, type LiveCallSetup, type LiveCallSummary, withCallLanguage } from "@lobbystack/agent-core";
 import {
   blockLiveCaller,
   checkNumberTrialMinutes,
@@ -18,7 +18,7 @@ import {
   type OpenLiveCall,
 } from "@lobbystack/domain";
 import { renewVoicePresenceGateway, updateVoicePresence } from "@lobbystack/jobs";
-import { MAX_PHONE_CALL_MS, normalizeAppointmentChangePolicy } from "@lobbystack/shared";
+import { MAX_PHONE_CALL_MS, normalizeAppointmentChangePolicy, runtimeLocales, type RuntimeLocale } from "@lobbystack/shared";
 import OpenAI from "openai";
 
 import { recordLiveCallLatency, recordLiveDelegation, recordLiveDelegationGeneration } from "./liveCallTelemetry";
@@ -49,6 +49,8 @@ type AttachRequest = {
   maxDurationMs?: number;
   /** Prospect demos only answer questions and take messages. */
   intakeOnly?: boolean;
+  /** The language the caller picked before the call, as on the landing site's demo. */
+  language?: RuntimeLocale;
   /**
    * A retried webhook delivery's re-attach: the call may be under way, so
    * turns are numbered after the saved ones and a call with a transcript gets
@@ -179,6 +181,7 @@ export function parseAttachRequest(raw: string): AttachRequest | undefined {
     ...(typeof body.callerPhone === "string" ? { callerPhone: body.callerPhone } : {}),
     ...(typeof body.maxDurationMs === "number" && body.maxDurationMs > 0 ? { maxDurationMs: body.maxDurationMs } : {}),
     ...(body.intakeOnly === true ? { intakeOnly: true } : {}),
+    ...(typeof body.language === "string" && (runtimeLocales as readonly string[]).includes(body.language) ? { language: body.language as RuntimeLocale } : {}),
     ...(body.resume === true ? { resume: true } : {}),
   };
 }
@@ -436,8 +439,10 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
     // In order, so a quick answer never lands before the referral it follows.
     let transferWrites = Promise.resolve();
 
-    const setup: Promise<LiveCallSetup> = Promise.all([snapshotLoad, savedTurns]).then(([snapshot, saved]) => {
-      if (!snapshot) throw new Error("The business has no published snapshot.");
+    const setup: Promise<LiveCallSetup> = Promise.all([snapshotLoad, savedTurns]).then(([loaded, saved]) => {
+      if (!loaded) throw new Error("The business has no published snapshot.");
+      // A caller who picked a language before the call hears the greeting in it.
+      const snapshot = withCallLanguage(loaded, request.language);
       const agent = createReceptionistAgent({
         model,
         context: {

@@ -34,6 +34,9 @@ const marker = process.env.TELEMETRY_CERTIFICATION_MARKER ?? `telemetry-${random
 const email = `${marker}@example.invalid`;
 const phone = "+14165550000";
 const bearer = `Bearer ${marker}`;
+// Runtimes keep a tenth of traces by default. The check sends one trace and
+// expects it, so keep every trace here and in the processes it starts.
+process.env.OTEL_TRACES_SAMPLER_ARG = "1";
 const secretKey = `sk-${marker}`;
 const storageMarker = `private-file-${randomUUID()}.pdf`;
 const storageCredential = `credential-${randomUUID()}`;

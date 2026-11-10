@@ -371,6 +371,8 @@ Use this before you buy.
 - Keep a rollback plan.
 - Recalculate ROI after 30, 60, and 90 days.
 
+Once you've picked a tool, our guide to [setting up an AI phone assistant in French](/blog/ai-phone-assistant/) walks through the six setup steps.
+
 ## So, how should you choose?
 
 Choose the AI receptionist that best matches your call mix, workflow, risk level, and budget.

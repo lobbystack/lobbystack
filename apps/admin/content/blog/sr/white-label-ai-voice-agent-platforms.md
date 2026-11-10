@@ -52,7 +52,7 @@ Pokušali smo da uključimo i CallFluent. Njegov sajt nam se nije učitao 27. ok
 
 [Odeljak čestih pitanja na Frontdesk stranici sa cenama](https://www.myaifrontdesk.com/pricing) kaže da su njihovi white-label partnerski paketi po dogovoru i da počinju od $500 mesečno. Partneri kupuju po veleprodajnoj ceni, preprodaju pod svojim brendom i kroz ugrađenu Stripe integraciju upravljaju nivoima, paketima minuta i naplatom po potrošnji, bez donje ili gornje granice cene. Isti odeljak navodi direktan pristup API-ju kao deo paketa Partner i Enterprise.
 
-Njihovo [uputstvo za sopstveni domen](https://www.myaifrontdesk.com/reseller-tutorials/add-your-custom-domain-to-ai-front-desk-full-tutorial) kaže da podržavaju samo poddomene. [Stranica za partnere](https://www.myaifrontdesk.com/white-label) sada počinje formularom za prijavu, a tim za partnerstva pregleda svaku prijavu pre poziva za uvođenje.
+Njihovo [uputstvo za sopstveni domen](https://web.archive.org/web/20260214072459/https://www.myaifrontdesk.com/reseller-tutorials/add-your-custom-domain-to-ai-front-desk-full-tutorial) navodilo je da podržavaju samo poddomene. U septembru 2026. njihova [stranica za partnere](https://web.archive.org/web/20260925022219/https://www.myaifrontdesk.com/white-label) počinjala je formularom za prijavu, a tim za partnerstva pregledao je svaku prijavu pre poziva za uvođenje.
 
 Frontdesk odgovara agenciji koja želi zreo hostovan recepcioner sa SMS-om, četom i CRM alatima, i može da se obaveže na $500 mesečno. Naš [tekst o alternativi za My AI Front Desk](/sr/blog/my-ai-front-desk-alternative/) upoređuje direktne proizvode.
 

@@ -108,6 +108,7 @@
     "toast": {
       "checkoutSuccess": "Checkout completed successfully.",
       "checkoutFailed": "Unable to open checkout.",
+      "paymentsUnavailable": "Payments are temporarily unavailable. Try again in a few minutes.",
       "portalFailed": "Unable to open the customer portal."
     },
     "pastDueBanner": {
@@ -187,6 +188,8 @@
     "upgradeDialog": {
       "title": "Upgrade plan",
       "description": "Choose the plan that works best for your team.",
+      "providerSlow": "The payment provider is slow. Still opening checkout...",
+      "close": "Close",
       "enterpriseSubject": "Enterprise plan",
       "billingIntervalLabel": "Billing interval",
       "annualDiscount": "Save 20%",
@@ -246,7 +249,7 @@
     "spendingCap": {
       "title": "Monthly spending cap",
       "placeholder": "25.00",
-      "amountLabel": "Overage cap (USD)",
+      "amountLabel": "Overage cap",
       "noCap": "No spending cap is set",
       "currentSpend": "Current overage spend",
       "spendOfCap": "{{spend}} of {{cap}}",
@@ -465,6 +468,7 @@
       "areaCodeLabel": "Area code",
       "areaCodePlaceholder": "Area code",
       "search": "Search",
+      "searching": "Searching...",
       "phoneNumberHeader": "Phone number",
       "select": "Select",
       "claiming": "Connecting your new number...",
@@ -749,7 +753,8 @@
       "placeholder": "Maple Family Clinic",
       "save": "Save",
       "saving": "Saving...",
-      "saved": "Changes saved"
+      "saved": "Changes saved",
+      "required": "Enter a business name."
     },
     "changeEmail": {
       "label": "Change email",
@@ -841,7 +846,9 @@
         "invalidEmail": "Enter a valid email address.",
         "partnerMember": "{{email}} is on this workspace's partner team. They work here from the partner console, so they can't join the team.",
         "failed": "We couldn't send that invitation. Please try again."
-      }
+      },
+      "emailRequired": "Enter an email address.",
+      "cancel": "Cancel"
     },
     "pending": {
       "resend": "Resend",
@@ -1010,6 +1017,10 @@
       "eventColumn": "Event"
     },
     "events": {
+      "callCompleted": {
+        "title": "Call answered",
+        "description": "When your agent finishes a call, with its summary."
+      },
       "voiceMessage": {
         "title": "Voice message captured",
         "description": "When a caller leaves a message during a call."
@@ -1112,6 +1123,8 @@
       "nameLabel": "Name",
       "namePlaceholder": "CRM sync",
       "scopesLabel": "Access",
+      "nameRequired": "Enter a name.",
+      "scopesRequired": "Choose at least one permission.",
       "cancel": "Cancel",
       "submit": "Create key",
       "creating": "Creating…"

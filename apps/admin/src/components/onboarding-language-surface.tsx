@@ -9,6 +9,9 @@ import { useTranslation } from "react-i18next";
 import { useTelemetry } from "@/components/product-analytics";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Flag } from "@/components/flag";
+import { runtimeLocaleRegion } from "@/lib/country-flag";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
@@ -45,12 +48,14 @@ export function OnboardingLanguageSurface() {
   return (
     <form className="flex flex-col gap-4" onSubmit={(event) => { event.preventDefault(); setError(null); save.mutate(); }}>
       <FieldGroup className="gap-4">
-        <Field>
+        <Field aria-busy={!business || undefined}>
           <FieldLabel htmlFor="onboarding-language">{t("language.label")}</FieldLabel>
-          <Select items={runtimeLocales.map((code) => ({ value: code, label: t(`common:callerLanguage.${code}`) }))} onValueChange={(value) => { if (value) setPicked(value as RuntimeLocale); }} value={locale}>
-            <SelectTrigger className="w-full" id="onboarding-language"><SelectValue /></SelectTrigger>
-            <SelectContent><SelectGroup>{runtimeLocales.map((code) => <SelectItem key={code} value={code}>{t(`common:callerLanguage.${code}`)}</SelectItem>)}</SelectGroup></SelectContent>
-          </Select>
+          {!business ? <Skeleton aria-hidden="true" className="h-11 w-full" /> : (
+            <Select items={runtimeLocales.map((code) => ({ value: code, label: t(`common:callerLanguage.${code}`) }))} onValueChange={(value) => { if (value) setPicked(value as RuntimeLocale); }} value={locale}>
+              <SelectTrigger className="data-[size=default]:h-11 w-full *:data-[slot=select-value]:gap-2" id="onboarding-language"><SelectValue>{(value: RuntimeLocale | null) => value ? <><Flag region={runtimeLocaleRegion(value)} /><span className="truncate">{t(`common:callerLanguage.${value}`)}</span></> : null}</SelectValue></SelectTrigger>
+              <SelectContent><SelectGroup>{runtimeLocales.map((code) => <SelectItem key={code} value={code}><Flag region={runtimeLocaleRegion(code)} />{t(`common:callerLanguage.${code}`)}</SelectItem>)}</SelectGroup></SelectContent>
+            </Select>
+          )}
         </Field>
         {error ? <FieldError>{error}</FieldError> : null}
         <Button className="mt-2 h-11 w-full" disabled={!business || save.isPending || navigating} type="submit">{save.isPending || navigating ? <><LoaderCircle className="size-4 animate-spin" />{t("language.saving")}</> : t("language.continue")}</Button>

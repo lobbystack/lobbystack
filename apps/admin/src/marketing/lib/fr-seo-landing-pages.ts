@@ -1493,6 +1493,10 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
           label: "Comparer les services de réponse pour entrepreneurs",
           href: "/blog/best-answering-services-for-contractors/",
         },
+        {
+          label: "Réceptionniste IA pour entrepreneurs en rénovation",
+          href: "/solutions/ai-receptionist-for-renovation-contractors/",
+        },
         { label: "Tarifs", href: "/pricing/" },
       ],
       ctaHeading: "Couvrez votre ligne du soir dès cette fin de semaine",
@@ -1823,6 +1827,217 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
       ctaPrimaryHref: "https://github.com/lobbystack/lobbystack",
       ctaSecondaryLabel: "Lire le guide d’auto-hébergement",
       ctaSecondaryHref: "https://docs.lobbystack.com/self-hosting/overview",
+    }
+  ),
+
+  "/solutions/ai-receptionist-quebec/": frenchPage(
+    "/solutions/ai-receptionist-quebec/",
+    {
+      title: "Réceptionniste IA au Québec, en français | LobbyStack",
+      description:
+        "Réceptionniste IA pour les PME du Québec : répond en français sur votre numéro, réserve dans Google Calendar et passe à l’anglais si l’appelant le parle.",
+      eyebrow: "Québec",
+      h1: "Un réceptionniste IA qui répond en français à vos clients du Québec",
+      intro:
+        "Vous êtes sur un chantier à Laval ou avec un client, et le téléphone sonne. LobbyStack décroche en français sur votre numéro d’entreprise, répond à partir de vos services et de vos prix, et réserve le rendez-vous dans Google Calendar. Si l’appelant parle anglais, il passe à l’anglais.",
+      imageAlt:
+        "LobbyStack répond en français à l’appel d’une entreprise du Québec et réserve le rendez-vous",
+      proofPoints: [
+        "Les appels commencent en français quand c’est votre langue par défaut",
+        "Numéros canadiens, avec recherche par indicatif régional",
+        "Réserve dans Google Calendar et texte la confirmation",
+        "Forfait gratuit, puis 30 $ US par mois pour 150 minutes",
+      ],
+      sections: [
+        {
+          title: "Vos appels commencent en français",
+          body: "Choisissez le français comme langue par défaut de votre entreprise : chaque appel commence en français, de l’accueil jusqu’à la réservation. Quand un appelant demande l’anglais ou parle clairement une autre langue, LobbyStack change de langue pour le reste de l’appel et garde vos règles.",
+          points: [
+            "Huit langues par défaut au choix, dont le français et l’anglais",
+            "Plus de 70 langues pendant l’appel avec GPT-Live d’OpenAI",
+            "Les mêmes règles de réservation et de transfert dans chaque langue",
+          ],
+        },
+        {
+          title: "Gardez votre numéro ou prenez un numéro canadien",
+          body: "Renvoyez votre ligne actuelle vers LobbyStack, pour tous les appels ou seulement pour ceux que vous manquez et ceux du soir. Vos clients composent le numéro qu’ils connaissent déjà. Starter et Pro incluent aussi un numéro à vous, et vous pouvez chercher un numéro canadien par indicatif régional, comme le 514, le 418 ou le 819, quand le fournisseur en a un de libre.",
+          points: [
+            "Renvoi quand la ligne est occupée, sans réponse, après la fermeture ou en tout temps",
+            "Le forfait gratuit inclut un numéro américain ou canadien pendant 14 jours",
+          ],
+        },
+        {
+          title: "Servir vos clients en français, appel après appel",
+          body: "Depuis la réforme de 2022, appelée loi 96, l’article 50.2 de la Charte de la langue française oblige l’entreprise qui offre des biens ou des services aux consommateurs à respecter leur droit d’être informés et servis en français. Un réceptionniste qui décroche en français et répond à partir de vos documents en français garde votre ligne téléphonique dans cet esprit. Votre site web, vos textos et vos factures comptent aussi : vérifiez votre situation auprès de l’OQLF ou d’un juriste.",
+          points: [
+            "Ajoutez votre site web et vos documents en français à sa base de connaissances",
+            "Relisez la transcription et l’enregistrement de chaque appel dans le tableau de bord",
+          ],
+        },
+        {
+          title: "Les appels urgents font sonner votre cellulaire",
+          body: "Écrivez en mots simples les appels qui ne peuvent pas attendre, comme un dégât d’eau ou un client qui demande le propriétaire. LobbyStack pose les questions dont votre règle a besoin, puis transfère l’appel à votre cellulaire ou à la personne que l’appelant demande. Le reste devient un message, avec une alerte par courriel, ou par texto si vous l’activez.",
+          points: [
+            "Si personne ne répond, il le dit à l’appelant et propose de prendre un message",
+            "Chaque appel arrive avec un résumé, la transcription et le résultat",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Que fait un réceptionniste IA pour une entreprise du Québec ?",
+          answer:
+            "Il répond aux appels que votre équipe ne peut pas prendre, en français ou dans la langue de l’appelant. LobbyStack répond aux questions à partir des services, des prix et des heures que vous ajoutez, réserve les rendez-vous dans Google Calendar, transfère les appels urgents à votre cellulaire et prend un message pour le reste.",
+        },
+        {
+          question: "Parle-t-il le français du Québec ?",
+          answer:
+            "Il parle français avec les voix GPT-Live d’OpenAI. Nous ne promettons pas un accent québécois. Appelez-le depuis votre navigateur avec le forfait gratuit, avec vos propres questions et vos propres expressions, avant de renvoyer votre ligne.",
+        },
+        {
+          question: "Peut-il aussi répondre en anglais ?",
+          answer:
+            "Oui. Les appels commencent dans votre langue par défaut, et LobbyStack passe à l’anglais, ou à une autre langue, quand l’appelant le demande ou la parle clairement. Vos règles de réservation, de transfert et de message restent les mêmes.",
+        },
+        {
+          question: "LobbyStack rend-il mon entreprise conforme à la loi 96 ?",
+          answer:
+            "Pas à lui seul. Il vous aide à servir vos appelants en français au téléphone, mais la Charte de la langue française couvre bien plus : l’affichage, les contrats, le site web et les factures. L’Office québécois de la langue française (OQLF) explique vos obligations, et un juriste peut examiner votre cas.",
+        },
+        {
+          question: "Où les données des appels sont-elles traitées ?",
+          answer:
+            "LobbyStack est une entreprise canadienne. Elle traite les données d’appel au Canada, aux États-Unis et dans les autres pays où ses fournisseurs, comme OpenAI et Twilio, exercent leurs activités, comme l’explique sa politique de confidentialité. Si les données doivent rester sur des serveurs que vous contrôlez, vous pouvez auto-héberger LobbyStack.",
+        },
+        {
+          question: "Fonctionne-t-il avec mon logiciel de prise de rendez-vous ?",
+          answer:
+            "Google Calendar est le seul calendrier auquel LobbyStack se connecte directement. Il envoie aussi des webhooks signés quand un appel se termine ou qu’un rendez-vous est réservé, et Zapier s’y branche pour transmettre les détails à un autre outil.",
+        },
+        {
+          question: "Combien coûte-t-il ?",
+          answer:
+            "LobbyStack facture en dollars américains. Le forfait gratuit inclut 30 minutes vocales. Starter coûte 30 $ US par mois pour 150 minutes et Pro 100 $ US par mois pour 500, puis 0,20 $ US et 0,18 $ US la minute supplémentaire. Aucun forfait n’a de frais de mise en service, et les appels de moins de 10 secondes ou terminés comme indésirables ne comptent pas.",
+        },
+      ],
+      faqHeading: "Questions sur les réceptionnistes IA au Québec",
+      relatedLinks: [
+        { label: "Service de réponse téléphonique IA", href: "/solutions/ai-phone-answering/" },
+        {
+          label: "Entrepreneurs en rénovation",
+          href: "/solutions/ai-receptionist-for-renovation-contractors/",
+        },
+        {
+          label: "Services de réponse téléphonique au Québec",
+          href: "/blog/phone-answering-service-quebec/",
+        },
+        { label: "Renvoyer les appels de votre entreprise", href: "/blog/how-to-forward-business-calls/" },
+        { label: "Tarifs", href: "/pricing/" },
+      ],
+      ctaHeading: "Écoutez-le répondre en français avant vos clients",
+      ctaBody:
+        "Commencez gratuitement avec 30 minutes vocales. Ajoutez vos services et vos heures en français, appelez-le depuis votre navigateur, puis renvoyez votre ligne.",
+      ctaPrimaryLabel: "Essayer gratuitement",
+      ctaSecondaryLabel: "Voir les tarifs",
+    }
+  ),
+
+  "/solutions/ai-receptionist-for-renovation-contractors/": tradeCopy(
+    "/solutions/ai-receptionist-for-renovation-contractors/",
+    {
+      title: "Réceptionniste IA pour entrepreneurs en rénovation | LobbyStack",
+      description:
+        "Réceptionniste IA pour entrepreneurs en rénovation : réserve les visites de soumission pendant que vous êtes sur le chantier et vérifie votre territoire.",
+      eyebrow: "Entrepreneurs en rénovation",
+      h1: "Un réceptionniste IA pour entrepreneurs en rénovation qui réserve les soumissions pendant que vous êtes sur le chantier",
+      intro:
+        "Un propriétaire qui magasine la rénovation de sa salle de bain appelle plusieurs entrepreneurs dans la même heure. LobbyStack répond à votre ligne pendant que vous avez les outils dans les mains, demande le type de travaux, l’adresse et l’échéancier, puis réserve la visite de soumission dans Google Calendar avant qu’il raccroche.",
+      imageAlt:
+        "Une visite de soumission pour une salle de bain réservée par LobbyStack dans le calendrier d’un entrepreneur en rénovation",
+      proofPoints: [
+        "Réserve les visites de soumission dans Google Calendar pendant l’appel",
+        "Vérifie le code postal de l’appelant selon votre territoire",
+        "Transfère les urgences de chantier à votre cellulaire",
+      ],
+      sections: [
+        {
+          title: "Réserve la visite de soumission pendant que l’appelant est en ligne",
+          body: "LobbyStack pose les questions que vous poseriez : le type de travaux, l’adresse, l’échéancier et, si vous le voulez, le budget. Il propose ensuite les plages libres de votre Google Calendar et réserve la visite. Si vous préférez approuver chaque visite, le mode demande note l’heure souhaitée et votre équipe la confirme.",
+          points: [
+            "Évite les plages déjà prises dans votre calendrier",
+            "Envoie par texto une confirmation et un rappel aux clients qui acceptent",
+          ],
+        },
+        {
+          title: "Vérifie votre territoire avant de réserver",
+          body: "Ajoutez les villes ou les codes postaux que vous desservez. Un appelant hors de votre territoire apprend que vous n’y allez pas, au lieu d’obtenir une visite que votre équipe devra annuler. Vous décidez si LobbyStack prend quand même un message pour ces appels.",
+          points: [
+            "Répond à partir du territoire, des heures et des services que vous entrez",
+            "Annonce seulement les prix que vous lui donnez, en prix de départ ou en fourchette",
+          ],
+        },
+        {
+          title: "Les clients en chantier joignent la bonne personne",
+          body: "Un client en pleine rénovation appelle pour de l’eau sous l’évier que vous venez d’installer. LobbyStack lui demande s’il a un projet avec vous, suit votre règle d’urgence et fait sonner votre cellulaire. Les questions d’horaire et de matériaux deviennent des messages que votre équipe lit en fin de journée.",
+          points: [
+            "Si vous ne répondez pas, il propose de prendre un message",
+            "Les appels des fournisseurs et des sous-traitants deviennent aussi des messages",
+          ],
+        },
+        {
+          title: "Répond aux questions que vous recevez chaque semaine",
+          body: "Ajoutez votre site web, vos garanties et les détails que vous répétez à chaque appel, comme votre numéro de licence RBQ, vos délais ou les travaux que vous ne faites pas. LobbyStack répond à partir de ces notes et prend un message quand une question n’y est pas.",
+          points: [
+            "Lit les PDF, le texte et les pages de votre site web",
+            "Enregistre le résumé, la transcription et l’enregistrement de chaque appel",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Que fait un réceptionniste IA pour un entrepreneur en rénovation ?",
+          answer:
+            "Il répond aux appels que vous manquez sur le chantier. LobbyStack demande le type de travaux et l’adresse, réserve les visites de soumission dans Google Calendar, transfère les urgences des clients en cours à votre cellulaire et prend un message pour le reste.",
+        },
+        {
+          question: "Peut-il donner un prix au téléphone ?",
+          answer:
+            "Seulement les prix que vous lui donnez. Vous pouvez entrer un prix fixe, un prix de départ ou une fourchette, comme le coût d’une visite de soumission. Pour une rénovation complète, il réserve une visite au lieu de deviner.",
+        },
+        {
+          question: "Fait-il la différence entre un client en cours et un nouveau client ?",
+          answer:
+            "Oui. LobbyStack peut demander à l’appelant s’il a un projet avec vous. Les clients en cours suivent vos règles de projet et d’urgence, et les nouveaux clients répondent à vos questions sur les travaux, l’adresse et l’échéancier.",
+        },
+        {
+          question: "Fonctionne-t-il avec Jobber ou Buildertrend ?",
+          answer:
+            "Pas directement. Google Calendar est le seul calendrier auquel LobbyStack se connecte. Il envoie des webhooks signés quand un appel se termine ou qu’un rendez-vous est réservé, et offre une API REST. Zapier se branche sur les deux.",
+        },
+        keepNumberFaq,
+        {
+          question: "Combien coûte-t-il ?",
+          answer:
+            "Le forfait gratuit inclut 30 minutes vocales et un numéro américain ou canadien pendant 14 jours. Starter coûte 30 $ US par mois pour 150 minutes et Pro 100 $ US par mois pour 500, puis 0,20 $ US et 0,18 $ US la minute supplémentaire. Les appels de moins de 10 secondes ou terminés comme indésirables ne comptent pas.",
+        },
+      ],
+      faqHeading: "Questions sur les réceptionnistes IA pour entrepreneurs en rénovation",
+      relatedLinks: [
+        {
+          label: "Réponse hors heures pour entrepreneurs",
+          href: "/solutions/after-hours-answering-service-for-contractors/",
+        },
+        {
+          label: "Comparer les services de réponse pour entrepreneurs",
+          href: "/blog/best-answering-services-for-contractors/",
+        },
+        { label: "Réceptionniste IA au Québec", href: "/solutions/ai-receptionist-quebec/" },
+        { label: "Calculateur de revenus d’appels manqués", href: "/missed-call-revenue-calculator/" },
+        { label: "Tarifs", href: "/pricing/" },
+      ],
+      ctaHeading: "Réservez la prochaine soumission sans quitter ce chantier",
+      ctaBody:
+        "Ajoutez vos services, votre territoire et votre règle d’urgence, puis appelez votre numéro pour le tester. Le forfait gratuit inclut 30 minutes vocales.",
     }
   ),
 }

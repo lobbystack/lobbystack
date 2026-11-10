@@ -26,6 +26,7 @@ describe.skipIf(!client)("agents in the business snapshot", () => {
     await client!.db.insert(businesses).values({ id: businessId, slug: `snapshot-${businessId}`, name: "Harbor Dental", timezone: "UTC", businessType: "test" });
     const [agent] = await client!.db.insert(agents).values({
       businessId,
+      isDefault: true,
       name: "Front desk",
       greeting: "Hi there",
       tone: "warm",

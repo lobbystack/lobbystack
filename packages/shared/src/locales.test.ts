@@ -66,6 +66,8 @@ describe("normalizeRuntimeLocale", () => {
     expect(normalizeRuntimeLocale("de_CH")).toBe("de");
     expect(normalizeRuntimeLocale(" NL ")).toBe("nl");
     expect(normalizeRuntimeLocale("sr-Latn-RS")).toBe("sr");
+    expect(normalizeRuntimeLocale("uk-UA")).toBe("uk");
+    expect(normalizeRuntimeLocale("fil-PH")).toBe("tl");
     expect(normalizeRuntimeLocale("ja-JP")).toBe("en");
     expect(normalizeRuntimeLocale(null)).toBe("en");
   });

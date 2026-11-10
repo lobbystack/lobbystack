@@ -18,9 +18,9 @@ import { useTelemetry } from "@/components/product-analytics";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Combobox, ComboboxCollection, ComboboxContent, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxLabel, ComboboxList, ComboboxTrigger, ComboboxValue } from "@/components/ui/combobox";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -29,7 +29,7 @@ import { Surface } from "@/components/ui/surface";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { intlLocale } from "@/lib/locale";
-import { parsePriceInput, priceInputValue } from "@/lib/price-input";
+import { parsePriceInput, priceInputMinor, priceInputValue } from "@/lib/price-input";
 import { requestJson } from "@/lib/request-json";
 import { availableTimeZones, groupTimeZones, isTimeZoneRegion, type TimeZoneOption } from "@/lib/time-zones";
 
@@ -144,7 +144,7 @@ function OverageDialog({ partnerId, business, billing, onClose }: { partnerId: s
   const save = useMutation({
     mutationFn: async () => {
       const terms = enabled
-        ? { voiceMinuteRateMinor: parsePriceInput(minuteRate, currency, i18n.language), chatRateMinor: parsePriceInput(chatRate, currency, i18n.language), capMinor: parsePriceInput(cap, currency, i18n.language) }
+        ? { voiceMinuteRateMinor: priceInputMinor(parsePriceInput(minuteRate, currency, i18n.language)), chatRateMinor: priceInputMinor(parsePriceInput(chatRate, currency, i18n.language)), capMinor: priceInputMinor(parsePriceInput(cap, currency, i18n.language)) }
         : { voiceMinuteRateMinor: overage.voiceMinuteRateMinor, chatRateMinor: overage.chatRateMinor, capMinor: overage.capMinor };
       if (terms.voiceMinuteRateMinor === null || terms.voiceMinuteRateMinor === undefined || terms.chatRateMinor === null || terms.chatRateMinor === undefined) throw Object.assign(new Error("invalid rate"), { code: "invalid_overage_rate" });
       if (terms.capMinor === undefined) throw Object.assign(new Error("invalid cap"), { code: "invalid_overage_cap" });
@@ -174,13 +174,12 @@ function OverageDialog({ partnerId, business, billing, onClose }: { partnerId: s
         <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); if (!save.isPending) { setError(null); save.mutate(); } }}>
           <DialogHeader>
             <DialogTitle>{t("businesses.overage.title", { name: business.name })}</DialogTitle>
-            <DialogDescription>{t("businesses.overage.description", { packageName: billing.packageName })}</DialogDescription>
           </DialogHeader>
           <FieldGroup>
             <Field orientation="horizontal">
               <FieldContent>
                 <FieldLabel htmlFor="partner-business-overage">{t("businesses.overage.toggle")}</FieldLabel>
-                <FieldDescription>{t(enabled ? "businesses.overage.onHint" : "businesses.overage.offHint")}</FieldDescription>
+                {enabled ? null : <FieldDescription>{t("businesses.overage.offHint")}</FieldDescription>}
               </FieldContent>
               <Switch checked={enabled} disabled={save.isPending} id="partner-business-overage" onCheckedChange={setEnabled} />
             </Field>
@@ -248,6 +247,9 @@ export function PartnerBusinessesSurface() {
   const [accessLevel, setAccessLevel] = useState<PartnerAccessLevel>("full");
   const [templateId, setTemplateId] = useState(NO_TEMPLATE);
   const [error, setError] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
+  const nameError = submitted && !name.trim() ? t("businesses.create.nameRequired") : null;
+  const ownerError = submitted && !ownerEmail.trim() ? t("businesses.create.ownerRequired") : null;
   const templates = useQuery({ queryKey: partnerTemplatesQueryKey(partner.partnerId), queryFn: () => fetchPartnerTemplates(partner.partnerId), enabled: open });
   const templateOptions = [{ value: NO_TEMPLATE, label: t("businesses.create.noTemplate") }, ...(templates.data ?? []).map((template) => ({ value: template.templateId, label: template.name }))];
   const locale = intlLocale(i18n.language);
@@ -260,7 +262,7 @@ export function PartnerBusinessesSurface() {
   const formatDate = (value: string) => new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(value));
   const formatMinutes = (seconds: number) => new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(Math.round((seconds / 60) * 10) / 10);
   const formatCount = (count: number) => new Intl.NumberFormat(locale).format(count);
-  const reset = () => { setName(""); setOwnerEmail(""); setTimezone(browserTimeZone()); setAccessLevel("full"); setBilling(BILLED_OUTSIDE); setTemplateId(NO_TEMPLATE); setError(null); };
+  const reset = () => { setName(""); setOwnerEmail(""); setTimezone(browserTimeZone()); setAccessLevel("full"); setBilling(BILLED_OUTSIDE); setTemplateId(NO_TEMPLATE); setError(null); setSubmitted(false); };
 
   // A partner's business shows only on the partner's domains, so its dashboard opens there; from the host's domain the person signs in again.
   const openBusiness = useMutation({
@@ -337,19 +339,20 @@ export function PartnerBusinessesSurface() {
       <DialogTrigger render={<Button disabled={businesses.isLoading} size="sm" />}>{t("businesses.create.action")}</DialogTrigger>
       {/* With templates and packages the form runs taller than a laptop screen, so it scrolls inside the window. */}
       <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
-        <form className="flex flex-col gap-6" onSubmit={(event) => { event.preventDefault(); if (!create.isPending && name.trim() && ownerEmail.trim()) { setError(null); create.mutate(); } }}>
+        <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); setSubmitted(true); if (!create.isPending && name.trim() && ownerEmail.trim()) { setError(null); create.mutate(); } }}>
           <DialogHeader>
             <DialogTitle>{t("businesses.create.title")}</DialogTitle>
-            <DialogDescription>{t("businesses.create.description", { partnerName: partner.name })}</DialogDescription>
           </DialogHeader>
           <FieldGroup>
-            <Field>
+            <Field data-invalid={nameError ? true : undefined}>
               <FieldLabel htmlFor="partner-business-name">{t("businesses.create.nameLabel")}</FieldLabel>
-              <Input autoComplete="off" id="partner-business-name" maxLength={120} onChange={(event) => setName(event.target.value)} placeholder={t("businesses.create.namePlaceholder")} value={name} />
+              <Input aria-describedby={nameError ? "partner-business-name-error" : undefined} aria-invalid={nameError ? true : undefined} autoComplete="off" id="partner-business-name" maxLength={120} onChange={(event) => setName(event.target.value)} placeholder={t("businesses.create.namePlaceholder")} value={name} />
+              {nameError ? <FieldError id="partner-business-name-error">{nameError}</FieldError> : null}
             </Field>
-            <Field>
+            <Field data-invalid={ownerError ? true : undefined}>
               <FieldLabel htmlFor="partner-business-owner">{t("businesses.create.ownerLabel")}</FieldLabel>
-              <Input autoComplete="off" id="partner-business-owner" onChange={(event) => setOwnerEmail(event.target.value)} placeholder={t("businesses.create.ownerPlaceholder")} type="email" value={ownerEmail} />
+              <Input aria-describedby={ownerError ? "partner-business-owner-error" : undefined} aria-invalid={ownerError ? true : undefined} autoComplete="off" id="partner-business-owner" onChange={(event) => setOwnerEmail(event.target.value)} placeholder={t("businesses.create.ownerPlaceholder")} type="email" value={ownerEmail} />
+              {ownerError ? <FieldError id="partner-business-owner-error">{ownerError}</FieldError> : null}
             </Field>
             <Field>
               <FieldLabel htmlFor="partner-business-timezone">{t("businesses.create.timezoneLabel")}</FieldLabel>
@@ -364,7 +367,7 @@ export function PartnerBusinessesSurface() {
                   <span className="min-w-0 flex-1 truncate text-left"><ComboboxValue /></span>
                 </ComboboxTrigger>
                 <ComboboxContent className="min-w-(--anchor-width)">
-                  <ComboboxInput className="relative z-10" placeholder={t("businesses.create.timezoneSearch")} showTrigger={false} />
+                  <ComboboxInput className="relative z-10" clearSearchLabel={t("common:accessibility.clearSearch")} placeholder={t("businesses.create.timezoneSearch")} showTrigger={false} />
                   <ComboboxEmpty>{t("businesses.create.timezoneNoResults")}</ComboboxEmpty>
                   <ComboboxList>
                     {(group: { value: string; label: string; items: TimeZoneOption[] }) => (
@@ -395,13 +398,13 @@ export function PartnerBusinessesSurface() {
                   <SelectTrigger aria-label={t("businesses.create.templateLabel")} className="w-full" id="partner-business-template"><SelectValue /></SelectTrigger>
                   <SelectContent><SelectGroup>{templateOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectGroup></SelectContent>
                 </Select>
-                {templateId === NO_TEMPLATE ? null : <FieldDescription>{t("businesses.create.templateHelp")}</FieldDescription>}
               </Field>
             ) : null}
           </FieldGroup>
           {error ? <p className="text-sm text-destructive" role="alert">{error}</p> : null}
           <DialogFooter>
-            <Button disabled={create.isPending || !name.trim() || !ownerEmail.trim()} loading={create.isPending} loadingLabel={t("businesses.create.submitting")} type="submit">{t("businesses.create.submit")}</Button>
+            <DialogClose render={<Button disabled={create.isPending} type="button" variant="outline" />}>{t("businesses.create.cancel")}</DialogClose>
+            <Button disabled={create.isPending} loading={create.isPending} loadingLabel={t("businesses.create.submitting")} type="submit">{t("businesses.create.submit")}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -420,7 +423,7 @@ export function PartnerBusinessesSurface() {
       ) : rows.length === 0 ? (
         <Surface className="flex flex-col items-center gap-3 px-6 py-16 text-center">
           <h2 className="text-base font-medium">{t("businesses.empty.title")}</h2>
-          <p className="max-w-sm text-sm leading-6 text-muted-foreground">{t(canCreate ? "businesses.empty.description" : "businesses.empty.memberDescription")}</p>
+          {canCreate ? null : <p className="max-w-sm text-sm leading-6 text-muted-foreground">{t("businesses.empty.memberDescription")}</p>}
         </Surface>
       ) : (
         <Surface className="overflow-hidden p-0">
@@ -533,12 +536,10 @@ export function PartnerBusinessesSurface() {
           <form className="flex flex-col gap-6" onSubmit={(event) => { event.preventDefault(); if (changing && !changeBilling.isPending) { setBillingError(null); changeBilling.mutate(changing); } }}>
             <DialogHeader>
               <DialogTitle>{t("businesses.billing.title", { name: changing?.name ?? "" })}</DialogTitle>
-              <DialogDescription>{t("businesses.billing.description")}</DialogDescription>
             </DialogHeader>
             <Field>
               <FieldLabel htmlFor="partner-business-change-billing">{t("businesses.create.billingLabel")}</FieldLabel>
               <BillingSelect current={changing?.billing ?? null} disabled={changeBilling.isPending} id="partner-business-change-billing" onChange={setNewBilling} packages={sellable} value={newBilling} />
-              <FieldDescription>{t(newBilling === BILLED_OUTSIDE ? "businesses.billing.outsideHint" : "businesses.billing.packageHint")}</FieldDescription>
             </Field>
             {billingError ? <p className="text-sm text-destructive" role="alert">{billingError}</p> : null}
             <DialogFooter>

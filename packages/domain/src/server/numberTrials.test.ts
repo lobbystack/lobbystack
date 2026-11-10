@@ -1,6 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { assertTransferNumberAllowed, numberCountries, numberTrialEmailDueAt, numberTrialEndsAt, numberTrialReleaseAt, trialCountries } from "./numberTrials";
+const mocks = vi.hoisted(() => ({ loadEntitlement: vi.fn(), requireBusinessMembership: vi.fn() }));
+
+vi.mock("../authz", () => ({ hasMinimumRole: vi.fn(), requireBusinessAdmin: vi.fn(), requireBusinessMembership: mocks.requireBusinessMembership }));
+vi.mock("./entitlement", () => ({ loadEntitlement: mocks.loadEntitlement }));
+
+import { assertTransferNumberAllowed, numberCountries, numberTrialEmailDueAt, numberTrialEndsAt, numberTrialReleaseAt, onboardingNumberTrialOutlookInTransaction, trialCountries } from "./numberTrials";
 
 describe("number trial clock", () => {
   it("ends at midnight after the 14th day in the business's time zone, counting the purchase day as day 1", () => {
@@ -45,5 +50,119 @@ describe("assertTransferNumberAllowed", () => {
 
   it("accepts a Canadian number", async () => {
     await expect(assertTransferNumberAllowed(tx, { businessId, phone: "+14165550199" })).resolves.toBeUndefined();
+  });
+});
+
+function chain(rows: unknown[]) {
+  const node: Record<string, unknown> = {};
+  for (const method of ["from", "where", "limit", "orderBy", "for"]) node[method] = () => node;
+  node.then = (onFulfilled: (value: unknown[]) => unknown) => Promise.resolve(rows).then(onFulfilled);
+  return node;
+}
+
+type Setup = {
+  deploymentMode?: string;
+  timezone?: string;
+  partnerId?: string | null;
+  live?: boolean;
+  number?: unknown[];
+  phone?: unknown[];
+  attempt?: unknown[];
+  email?: { email: string; emailVerified: boolean } | null;
+  used?: boolean;
+  ipLimited?: boolean;
+  ipHash?: string | null;
+  ipCountry?: string | null;
+};
+
+const ownerEmail = { email: "owner@example.invalid", emailVerified: true };
+
+/** The trial outlook for a business, with the reads it makes in the order it makes them. */
+function outlook({ deploymentMode = "cloud", timezone = "America/Toronto", partnerId = null, live = false, number = [], phone = [{ phone: null }], attempt = [], email = ownerEmail, used = false, ipLimited = false, ipHash = "network-hash", ipCountry = "CA" }: Setup = {}) {
+  mocks.loadEntitlement.mockResolvedValue({ live });
+  // verifiedPhone reads the phone's attempts only when the account has one.
+  const hasPhone = Boolean((phone[0] as { phone?: string | null } | undefined)?.phone);
+  // The outlook reads these in order: business, number, email, phone, attempts.
+  const rows = [[{ deploymentMode, timezone, partnerId }], number, email === null ? [] : [email], phone, ...(hasPhone ? [attempt] : [])];
+  let trialReads = 0;
+  const tx = {
+    select: () => chain(rows.shift() ?? []),
+    execute: vi.fn(async () => ({ rows: [{ used: trialReads++ === 0 ? used : ipLimited }] })),
+  };
+  return onboardingNumberTrialOutlookInTransaction(tx as never, { userId: "user-1", businessId: "business-1", ipHash, ipCountry }).then((result) => ({ result, tx }));
+}
+
+beforeEach(() => { vi.clearAllMocks(); });
+afterEach(() => { vi.unstubAllEnvs(); });
+
+describe("the number step's trial outlook", () => {
+  it("starts a trial without a text when the email is verified and the network is known", async () => {
+    const { result } = await outlook();
+    expect(result).toEqual({ verificationNeeded: false, refusal: null });
+  });
+
+  it("asks for a phone when the request has no trusted client address", async () => {
+    const { result } = await outlook({ ipHash: null });
+    expect(result).toEqual({ verificationNeeded: true, refusal: null });
+  });
+
+  it.each([null, "", "X", "XX", "T1"])("asks for a phone when cf-ipcountry is %s", async (ipCountry) => {
+    const { result } = await outlook({ ipCountry });
+    expect(result).toEqual({ verificationNeeded: true, refusal: null });
+  });
+
+  it("accepts any real country Cloudflare reports, not only the number's", async () => {
+    const { result } = await outlook({ ipCountry: "FR" });
+    expect(result).toEqual({ verificationNeeded: false, refusal: null });
+  });
+
+  it("asks for a phone when this network already started a trial in the last 30 days", async () => {
+    const { result } = await outlook({ ipLimited: true });
+    expect(result).toEqual({ verificationNeeded: true, refusal: null });
+  });
+
+  it("sends an unverified email to the plans until it verifies", async () => {
+    const { result } = await outlook({ email: { email: "owner@example.invalid", emailVerified: false } });
+    expect(result).toEqual({ verificationNeeded: false, refusal: "email_verification_required" });
+  });
+
+  it("sends a disposable email domain to the plans", async () => {
+    const { result } = await outlook({ email: { email: "sam@mailinator.com", emailVerified: true } });
+    expect(result).toEqual({ verificationNeeded: false, refusal: "trial_not_available" });
+  });
+
+  it("skips the phone on a live plan, which includes a number", async () => {
+    const { result } = await outlook({ live: true });
+    expect(result).toEqual({ verificationNeeded: false, refusal: null });
+  });
+
+  it("skips the phone on a self-hosted install, which buys its numbers", async () => {
+    const { result } = await outlook({ deploymentMode: "self_hosted_standard" });
+    expect(result).toEqual({ verificationNeeded: false, refusal: null });
+  });
+
+  it("keeps the phone for a partner's business, whose calls forward to it", async () => {
+    const { result } = await outlook({ partnerId: "partner-1" });
+    expect(result).toEqual({ verificationNeeded: true, refusal: null });
+  });
+
+  it("skips the phone when the workspace already has a number", async () => {
+    const { result } = await outlook({ number: [{ id: "number-1" }] });
+    expect(result).toEqual({ verificationNeeded: false, refusal: null });
+  });
+
+  it("skips the phone when the owner already verified one", async () => {
+    const { result } = await outlook({ phone: [{ phone: "+14165550123" }], attempt: [{ countryCode: "CA" }] });
+    expect(result).toEqual({ verificationNeeded: false, refusal: null });
+  });
+
+  it("sends a used trial straight to the plans", async () => {
+    const { result } = await outlook({ used: true });
+    expect(result).toEqual({ verificationNeeded: false, refusal: "trial_already_used" });
+  });
+
+  it("lets the number's own country decide, so an Australian market still reaches the picker", async () => {
+    const { result } = await outlook({ timezone: "Australia/Sydney" });
+    expect(result).toEqual({ verificationNeeded: false, refusal: null });
   });
 });

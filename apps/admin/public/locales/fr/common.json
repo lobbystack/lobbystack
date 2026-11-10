@@ -2,7 +2,8 @@
   "accessibility": {
     "close": "Fermer",
     "toggleSidebar": "Afficher ou masquer la barre latérale",
-    "skipToContent": "Aller au contenu principal"
+    "skipToContent": "Aller au contenu principal",
+    "clearSearch": "Effacer la recherche"
   },
   "errors": {
     "unexpected": "Une erreur est survenue. Veuillez réessayer."
@@ -29,7 +30,14 @@
     "de": "Allemand",
     "pt": "Portugais (Brésil)",
     "it": "Italien",
-    "nl": "Néerlandais"
+    "nl": "Néerlandais",
+    "pl": "Polonais",
+    "tr": "Turc",
+    "vi": "Vietnamien",
+    "tl": "Tagalog",
+    "sv": "Suédois",
+    "ru": "Russe",
+    "uk": "Ukrainien"
   },
   "phoneCountry": {
     "search": "Rechercher un pays ou un indicatif",
@@ -105,7 +113,8 @@
     "orCall": "Ou appelez le",
     "message": "Message",
     "send": "Envoyer",
-    "sendFailed": "Message non envoyé. Réessayez."
+    "sendFailed": "Message non envoyé. Réessayez.",
+    "typing": "L'agent écrit"
   },
   "testCall": {
     "trigger": "Appel test",
@@ -223,6 +232,35 @@
       "failed": "Nous n’avons pas pu annuler le rendez-vous. Réessayez.",
       "summary": "{{service}} pour {{name}} le {{time}}",
       "summaryNoService": "Rendez-vous pour {{name}} le {{time}}"
+    },
+    "reschedule": {
+      "approve": "Approuver le report",
+      "title": "Déplacer ce rendez-vous au {{time}} ?",
+      "description": "{{appointment}} sera déplacé au {{time}}. Nous mettrons à jour votre calendrier connecté et son rappel, et fermerons la demande.",
+      "confirm": "Déplacer le rendez-vous",
+      "keep": "Garder l'horaire actuel",
+      "done": "Rendez-vous déplacé.",
+      "failed": "Impossible de déplacer le rendez-vous. Réessayez.",
+      "unavailable": "Cet horaire n'est plus disponible. Choisissez une autre heure.",
+      "notReschedulable": "Ce rendez-vous ne peut pas être déplacé. Il a peut-être été annulé.",
+      "passed": "L'heure demandée est passée."
+    },
+    "move": {
+      "action": "Déplacer",
+      "otherTime": "Autre heure",
+      "actionLabel": "Déplacer le rendez-vous : {{time}}",
+      "title": "Déplacer le rendez-vous",
+      "description": "{{appointment}}",
+      "requested": "Demandé : {{time}}",
+      "date": "Jour",
+      "times": "Heures libres",
+      "noTimes": "Aucune heure libre ce jour-là.",
+      "timesFailed": "Nous n’avons pas pu charger les heures libres. Réessayez.",
+      "confirm": "Déplacer le rendez-vous",
+      "keep": "Garder l’heure actuelle",
+      "done": "Rendez-vous déplacé",
+      "failed": "Nous n’avons pas pu déplacer le rendez-vous. Réessayez.",
+      "taken": "Cette heure n’est plus libre. Choisissez-en une autre."
     }
   },
   "abandonIntent": {

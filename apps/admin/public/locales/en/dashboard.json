@@ -140,14 +140,17 @@
         "voice_message": "Callback",
         "human_handoff": "Handoff",
         "other": "Open",
-        "cancellation": "Cancellation"
+        "cancellation": "Cancellation",
+        "reschedule": "Reschedule"
       },
       "appointment": "Appointment: {{appointment}}",
       "noAppointment": "No upcoming appointment matches this request. Check the Appointments page.",
       "alreadyCancelled": "This appointment is already cancelled.",
       "cancellationRequest": "Cancellation request",
       "requested": "Requested: {{details}}",
-      "notes": "Notes: {{notes}}"
+      "notes": "Notes: {{notes}}",
+      "rescheduleRequest": "Reschedule request",
+      "newTime": "New time: {{time}}"
     },
     "upcoming": {
       "title": "Upcoming",

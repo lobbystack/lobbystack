@@ -21,18 +21,76 @@ function utf8Length(text: string): number {
   return bytes;
 }
 
+function pieceTokens(piece: string): number {
+  if (WORD.test(piece)) return PER_CHARACTER_SCRIPT.test(piece) ? [...piece].length : Math.ceil(utf8Length(piece) / 4);
+  if (SYMBOL.test(piece)) return Math.ceil(utf8Length(piece) / 2);
+  return 1;
+}
+
 export function countKnowledgeTokens(text: string): number {
   let tokens = 0;
-  for (const [piece] of text.matchAll(PIECE)) {
-    if (WORD.test(piece)) {
-      tokens += PER_CHARACTER_SCRIPT.test(piece) ? [...piece].length : Math.ceil(utf8Length(piece) / 4);
-    } else if (SYMBOL.test(piece)) {
-      tokens += Math.ceil(utf8Length(piece) / 2);
-    } else {
-      tokens += 1;
-    }
-  }
+  for (const [piece] of text.matchAll(PIECE)) tokens += pieceTokens(piece);
   return tokens;
+}
+
+/**
+ * The largest single input text-embedding-3-* accepts. The provider tokenizer
+ * differs from the estimate above, so chunks keep a margin below it.
+ */
+export const EMBEDDING_INPUT_MAX_TOKENS = 8192;
+export const EMBEDDING_INPUT_TOKEN_BUDGET = Math.floor(EMBEDDING_INPUT_MAX_TOKENS * 0.94);
+
+/**
+ * Splits text into pieces the embedding provider accepts as one input. It
+ * cuts between words where it can and inside a word longer than the budget.
+ * Every character lands in one piece, so nothing is truncated silently.
+ */
+export function splitToTokenBudget(text: string, maxTokens: number = EMBEDDING_INPUT_TOKEN_BUDGET): string[] {
+  if (!Number.isInteger(maxTokens) || maxTokens < 1) throw new Error("Invalid token budget.");
+  if (countKnowledgeTokens(text) <= maxTokens) return [text];
+  const atoms: Array<{ start: number; end: number; tokens: number }> = [];
+  for (const match of text.matchAll(PIECE)) {
+    const piece = match[0];
+    const start = match.index!;
+    const tokens = pieceTokens(piece);
+    if (tokens <= maxTokens) {
+      atoms.push({ start, end: start + piece.length, tokens });
+      continue;
+    }
+    // One word or symbol run over the budget: cut it by characters.
+    const word = WORD.test(piece);
+    let runStart = 0;
+    let runTokens = 0;
+    for (let index = 0; index < piece.length;) {
+      const character = String.fromCodePoint(piece.codePointAt(index)!);
+      const cost = word ? 1 : Math.max(1, Math.ceil(utf8Length(character) / 2));
+      if (runTokens > 0 && runTokens + cost > maxTokens) {
+        atoms.push({ start: start + runStart, end: start + index, tokens: runTokens });
+        runStart = index;
+        runTokens = 0;
+      }
+      runTokens += cost;
+      index += character.length;
+    }
+    atoms.push({ start: start + runStart, end: start + piece.length, tokens: runTokens });
+  }
+  const pieces: string[] = [];
+  let pieceStart = 0;
+  let pieceEnd = 0;
+  let used = 0;
+  for (const atom of atoms) {
+    if (used > 0 && used + atom.tokens > maxTokens) {
+      const piece = text.slice(pieceStart, pieceEnd).trim();
+      if (piece) pieces.push(piece);
+      pieceStart = pieceEnd;
+      used = 0;
+    }
+    used += atom.tokens;
+    pieceEnd = atom.end;
+  }
+  const tail = text.slice(pieceStart).trim();
+  if (tail) pieces.push(tail);
+  return pieces;
 }
 
 export function withinKnowledgeBudget<T>(items: T[], budget: number, render: (item: T) => string): T[] {

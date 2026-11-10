@@ -18,7 +18,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Surface } from "@/components/ui/surface";
 import { requestJson } from "@/lib/request-json";
@@ -91,6 +91,7 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
   const [name, setName] = useState("");
   const [scopes, setScopes] = useState<ApiKeyScope[]>(DEFAULT_SCOPES);
   const [created, setCreated] = useState<{ key: string; name: string } | null>(null);
+  const [submitted, setSubmitted] = useState(false);
   const [revoking, setRevoking] = useState<ApiKeyRecord | null>(null);
   const keys = useQuery({ queryKey: source.queryKey, queryFn: source.list, enabled: canManage && !loading });
   const formatDate = (value: string) => new Intl.DateTimeFormat(intlLocale(i18n.resolvedLanguage ?? i18n.language), { dateStyle: "medium" }).format(new Date(value));
@@ -120,12 +121,14 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
   });
 
   function openCreate() {
+    setSubmitted(false);
     setName("");
     setScopes(DEFAULT_SCOPES);
     setDialog({ mode: "create" });
   }
 
   function openUpdate(record: ApiKeyRecord) {
+    setSubmitted(false);
     setName(record.name);
     setScopes(record.scopes);
     setDialog({ mode: "update", record });
@@ -135,6 +138,18 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
     if (open) return;
     setDialog(null);
     setCreated(null);
+    setSubmitted(false);
+  }
+
+  const nameError = submitted && !name.trim() ? t("apiKeys.create.nameRequired") : null;
+  const scopesError = submitted && scopes.length === 0 ? t("apiKeys.create.scopesRequired") : null;
+
+  function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitted(true);
+    if (!name.trim() || scopes.length === 0) return;
+    if (dialog?.mode === "update") { if (!update.isPending) update.mutate(dialog.record); }
+    else if (!create.isPending) create.mutate();
   }
 
   /** When the key was made and by whom, then when it was last used, or when it was revoked. */
@@ -167,7 +182,6 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
             layout === "page" ? (
             <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
               <h2 className="text-base font-medium">{t("apiKeys.empty")}</h2>
-              <p className="max-w-sm text-sm leading-6 text-muted-foreground">{t("apiKeys.emptyDescription")}</p>
             </div>
           ) : <p className="type-body-muted p-6 text-center">{t("apiKeys.empty")}</p>
           ) : (
@@ -208,14 +222,16 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
             </>
           ) : (
             <>
+              <form className="flex flex-col gap-6" noValidate onSubmit={submit}>
               <DialogHeader>
                 <DialogTitle>{dialog?.mode === "update" ? t("apiKeys.update.title", { name: dialog.record.name }) : t("apiKeys.create.title")}</DialogTitle>
-                <DialogDescription>{dialog?.mode === "update" ? t("apiKeys.update.description") : t("apiKeys.create.description")}</DialogDescription>
+                {layout === "section" ? <DialogDescription>{dialog?.mode === "update" ? t("apiKeys.update.description") : t("apiKeys.create.description")}</DialogDescription> : null}
               </DialogHeader>
               <FieldGroup>
-                <Field>
+                <Field data-invalid={nameError ? true : undefined}>
                   <FieldLabel htmlFor="api-key-name">{t("apiKeys.create.nameLabel")}</FieldLabel>
-                  <Input id="api-key-name" maxLength={120} onChange={(event) => setName(event.target.value)} placeholder={t("apiKeys.create.namePlaceholder")} value={name} />
+                  <Input aria-describedby={nameError ? "api-key-name-error" : undefined} aria-invalid={nameError ? true : undefined} id="api-key-name" maxLength={120} onChange={(event) => setName(event.target.value)} placeholder={t("apiKeys.create.namePlaceholder")} value={name} />
+                  {nameError ? <FieldError id="api-key-name-error">{nameError}</FieldError> : null}
                 </Field>
                 <fieldset className="flex flex-col gap-3">
                   <legend className="mb-2 text-sm font-medium">{t("apiKeys.create.scopesLabel")}</legend>
@@ -233,16 +249,18 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
                       </label>
                     </div>
                   ))}
+                  {scopesError ? <FieldError>{scopesError}</FieldError> : null}
                 </fieldset>
               </FieldGroup>
               <DialogFooter>
-                <Button onClick={() => closeDialog(false)} variant="outline">{t("apiKeys.create.cancel")}</Button>
+                <Button onClick={() => closeDialog(false)} type="button" variant="outline">{t("apiKeys.create.cancel")}</Button>
                 {dialog?.mode === "update" ? (
-                  <Button disabled={!name.trim() || scopes.length === 0 || update.isPending} onClick={() => update.mutate(dialog.record)}>{update.isPending ? t("apiKeys.update.saving") : t("apiKeys.update.submit")}</Button>
+                  <Button disabled={update.isPending} type="submit">{update.isPending ? t("apiKeys.update.saving") : t("apiKeys.update.submit")}</Button>
                 ) : (
-                  <Button disabled={!name.trim() || scopes.length === 0 || create.isPending} onClick={() => create.mutate()}>{create.isPending ? t("apiKeys.create.creating") : t("apiKeys.create.submit")}</Button>
+                  <Button disabled={create.isPending} type="submit">{create.isPending ? t("apiKeys.create.creating") : t("apiKeys.create.submit")}</Button>
                 )}
               </DialogFooter>
+              </form>
             </>
           )}
         </DialogContent>

@@ -261,7 +261,7 @@ Each `email.send` payload names its brand in `brand` and its Reply-To in `replyT
 - `{ "kind": "business", "businessId": "…" }` for an email about a business, such as an invitation to its team.
 - `{ "kind": "partner", "partnerId": "…" }` for a partner's own emails, such as an invitation to its team.
 - The brand of the request that sends the email, such as a sign-up code: `{ "kind": "partner", "partnerId": "…" }` on a partner's domain, and `{ "kind": "host" }` on the host's.
-- `{ "kind": "host" }` for the host's own emails: dashboard feedback and the founder check-in.
+- `{ "kind": "host" }` for the host's own emails: dashboard feedback and the welcome email.
 
 A partner's brand carries the partner's name, logo, and origin, and sends as [A partner's origin and emails](#a-partners-origin-and-emails) describes. The worker reads the partner through `app.partner_brand`, and keeps the email queued when it can't find the partner.
 
@@ -273,12 +273,12 @@ The worker reads the brand when it sends, so a brand change reaches emails still
 - **Name and logo**: the host's emails keep LobbyStack and its mark whatever the deployment's branding, as [Still branded](#still-branded) lists.
 - **Dashboard links**: producers queue whole links, and the worker keeps each link's path and query on the brand's origin.
 
-`emailSender` in `packages/shared/src/brand.ts` picks the sender and Reply-To. The host sends from `EMAIL_FROM` exactly as written, with `EMAIL_REPLY_TO` as the Reply-To. A `replyTo` of `null` means the brand's own. The founder check-in and the number trial and release emails have a sender of their own, so replies go to that sender.
+`emailSender` in `packages/shared/src/brand.ts` picks the sender and Reply-To. The host sends from `EMAIL_FROM` exactly as written, with `EMAIL_REPLY_TO` as the Reply-To. A `replyTo` of `null` means the brand's own.
 
 Two kinds of email carry no `brand`:
 
-- **Number trial and release emails**: they hold the host's prices and come from the founder. A partner's businesses never get them, so the worker sends them under the host brand.
-- **Operator alerts**: they come from delivery rows, which hold the business. The worker sends each one under its business's brand.
+- **Number trial and release emails**: they hold the host's prices and are signed LobbyStack. A partner's businesses never get them, so the worker sends them under the host brand.
+- **Operator alerts**: they come from delivery rows, which hold the business. The worker sends each one under its business's brand. A call summary alert also stores its caller, time, length and outcome in the row's `details`, and goes out with the `call_summary` template in the recipient's dashboard language. The privacy sweep clears `details` with the rest of the content.
 
 ### Prerendered pages
 
@@ -305,7 +305,7 @@ These places still say LobbyStack or link to lobbystack.com. Variables marked "p
 
 | Area | Where | Proposed setting |
 | --- | --- | --- |
-| Email subjects and bodies | `packages/providers/src/email/smtp.ts`: `shownBrand` keeps LobbyStack's name and the inline 48×48 mark for the host brand, and the founder sign-offs, feedback, and trial and release emails say LobbyStack; `packages/domain/src/server/onboarding.ts` and `feedback.ts` write the founder check-in and feedback subjects; the default subject "LobbyStack notification", which invitations use | Let `shownBrand` pass the host brand through, as it does a partner's, and give the worker `BRAND_APP_NAME` and `BRAND_LOGO_URL`. The worker already reads the saved choice, and the email header then uses the logo at `APP_BASE_URL` + `/api/branding/logo`. |
+| Email subjects and bodies | `packages/providers/src/email/smtp.ts`: `shownBrand` keeps LobbyStack's name and the inline 48×48 mark for the host brand, and the welcome, feedback, and trial and release emails say LobbyStack; `packages/domain/src/server/onboarding.ts` and `feedback.ts` write the welcome and feedback subjects; the default subject "LobbyStack notification", which invitations use | Let `shownBrand` pass the host brand through, as it does a partner's, and give the worker `BRAND_APP_NAME` and `BRAND_LOGO_URL`. The worker already reads the saved choice, and the email header then uses the logo at `APP_BASE_URL` + `/api/branding/logo`. |
 | Email sender | `EMAIL_FROM` (an existing variable; defaults to `LobbyStack <no-reply@…>`) | Already configurable. Default the display name to the app name. |
 | Operator alert emails | `packages/domain/src/server/calendar.ts`, `publicApi/webhooks.ts` | The app name. |
 | SMS | The "LobbyStack:" opening of the START replies in `packages/domain/src/server/sms.ts`; the verification code text in `verificationCode.ts`, which is also sent to callers who change an appointment, in English only | The app name, as the HELP replies already use. The replies are part of the registered A2P 10DLC campaign, so update the campaign when they change. |

@@ -2,17 +2,18 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 import { and, eq, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 
-import { agents, businesses, defaultAgentOf, enqueueOutbox, numberTrials, onboardingNumberClaimEvents, phoneNumbers, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { agentOfRow, agents, businesses, enqueueOutbox, numberTrials, onboardingNumberClaimEvents, phoneNumbers, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { isCarrierId, type CarrierId } from "@lobbystack/providers/telephony/types";
 
 import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
 import { loadEntitlement } from "./entitlement";
-import { activateNumberTrialInTransaction, enqueueNumberRouting, failNumberTrialInTransaction, isNumberCountry, keepBusinessNumbersInTransaction, trialCountries, trialNumberPaidForInTransaction, verifiedPhone, type NumberCountry } from "./numberTrials";
+import { activateNumberTrialInTransaction, enqueueNumberRouting, failNumberTrialInTransaction, isNumberCountry, keepBusinessNumbersInTransaction, trialCountries, trialEmailInTransaction, trialNetworkNeedsPhoneVerificationInTransaction, trialNumberPaidForInTransaction, verifiedPhone, type NumberCountry } from "./numberTrials";
 import { LEGACY_ONBOARDING_STAGES } from "@lobbystack/shared";
 import { normalizeOnboardingStage, NUMBER_CLAIM_STAGES } from "./onboarding";
 import { loadPartnerNumberStanding, newPartnerNumberRefusal, numberCountsForPartnerInTransaction, partnerKeyNumberRefusal, partnerReplacementRefusal, partnerTrialOffered, recordPartnerNumberCostInTransaction, unclaimedPartnerDemoInTransaction } from "./partnerNumbers";
 import { resolveBusinessNumberMarket, type BusinessNumberMarket } from "./phoneNumberMarket";
+import { isDisposableTrialEmail } from "./trialEligibility";
 
 export type NumberSelection = {
   countryCode: NumberCountry;
@@ -25,6 +26,8 @@ export type NumberSelection = {
   sms?: boolean;
   trial?: boolean;
   verifiedPhone?: string;
+  /** A trial the dashboard checked for a verified email and a clean network, so it needs no text. */
+  withoutSms?: boolean;
   /** The carrier that sells the number, so the worker buys it there. */
   carrier?: CarrierId;
 };
@@ -70,6 +73,7 @@ const claimRefusals: Record<string, [status: number, message: string]> = {
   monthly_claim_quota_reached: [429, "You've reached the 30-day limit for new numbers. Try again later."],
   // app.reserve_trial_number_claim
   phone_verification_required: [409, "Verify your mobile number before you choose a trial number."],
+  email_verification_required: [409, "Verify your email address before you choose a trial number."],
   trial_already_used: [409, "This phone number or account has already had a free trial. Choose a plan to get a number."],
   trial_ip_limited: [429, "A free trial already started from this network in the last 30 days. Choose a plan to get a number."],
   trial_not_needed: [409, "Your plan already includes a number. Search again to pick one."],
@@ -102,17 +106,20 @@ async function apiVerifiedPhone(tx: DatabaseTransaction, input: { userId: string
 }
 
 /** What a business may pick a number for now, and where to search. */
-export type NumberEligibility = { market: BusinessNumberMarket; trial: { verifiedPhone: string } | undefined; countryFixed: boolean; smsRequired: boolean };
+export type NumberEligibility = { market: BusinessNumberMarket; trial: { verifiedPhone: string | null } | undefined; countryFixed: boolean; smsRequired: boolean };
 
 /**
  * Checks that the business may pick a number for this purpose now, as the
  * person picking: the onboarding stage, the one replacement, and the paid-plan
  * rule, under which a cloud business without a live entitlement gets a free
- * trial number during onboarding when this person verified a phone in a trial
- * country. Throws the claim refusals the dashboard shows. The API runs in a
- * worker transaction and skips the onboarding stage order.
+ * trial number during onboarding. A dashboard trial starts with a verified
+ * email and a clean network; it asks for a mobile only when the network can't
+ * identify the caller or already started a trial this month. The API has no
+ * human network, so its trials keep requiring a verified mobile. Throws the
+ * claim refusals the dashboard shows. The API runs in a worker transaction and
+ * skips the onboarding stage order.
  */
-export async function numberEligibilityInTransaction(tx: DatabaseTransaction, input: { businessId: string; purpose: NumberClaimPurpose; selection?: Partial<NumberSelection> | undefined } & ({ userId: string; via: "dashboard" | "api" } | { userId: null; via: "api" })): Promise<NumberEligibility> {
+export async function numberEligibilityInTransaction(tx: DatabaseTransaction, input: { businessId: string; purpose: NumberClaimPurpose; selection?: Partial<NumberSelection> | undefined; ipHash?: string | null | undefined; ipCountry?: string | null | undefined } & ({ userId: string; via: "dashboard" | "api" } | { userId: null; via: "api" })): Promise<NumberEligibility> {
   const { purpose } = input;
   const business = (await tx.select({ stage: businesses.onboardingStage, timezone: businesses.timezone, deploymentMode: businesses.deploymentMode, replacementUsedAt: businesses.phoneNumberReplacementUsedAt }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0];
   const entitlement = await loadEntitlement(tx, input.businessId);
@@ -148,16 +155,23 @@ export async function numberEligibilityInTransaction(tx: DatabaseTransaction, in
     if (refusal) throw refused(refusal);
   }
   const verified = input.userId === null ? null : input.via === "dashboard" ? await verifiedPhone(tx, { userId: input.userId, businessId: input.businessId }) : await apiVerifiedPhone(tx, { userId: input.userId, businessId: input.businessId });
-  // The verified phone's country decides the number's country.
+  // A verified phone's country decides the number's country. Without one, the
+  // search's own selection does, and the market's time zone only suggests it.
   const requested = (verified?.countryCode ?? input.selection?.countryCode)?.trim().toUpperCase();
   if (requested && !isNumberCountry(requested)) throw numberClaimError(400, "unsupported_country", "Phone numbers aren't available in this country yet.");
-  let trial: { verifiedPhone: string } | undefined;
+  const market = resolveBusinessNumberMarket({ selection: requested ? { ...input.selection, countryCode: requested } : input.selection, timezone: business.timezone });
+  let trial: { verifiedPhone: string | null } | undefined;
   if (partnerTrial) {
     // The partner's trial runs by the host's trial rules: a live business,
     // the verified mobile of the person claiming, in a trial country, once.
     // A business paused with its partner's other businesses isn't live, and
     // a demo nobody claimed would spend the partner's one trial and expire.
     if (!entitlement.live || await unclaimedPartnerDemoInTransaction(tx, input.businessId)) throw refused("partner_numbers_unavailable");
+    // A trial belongs to a person with a verified, non-disposable email.
+    if (input.userId === null) throw refused("phone_verification_required");
+    const trialEmail = await trialEmailInTransaction(tx, input.userId);
+    if (!trialEmail?.emailVerified) throw refused("email_verification_required");
+    if (isDisposableTrialEmail(trialEmail.email)) throw refused("trial_not_available");
     if (!verified) throw refused("phone_verification_required");
     if (!(trialCountries() as string[]).includes(verified.countryCode)) throw refused("partner_number_limit_reached");
     const used = await tx.select({ id: numberTrials.id }).from(numberTrials).where(and(eq(numberTrials.businessId, input.businessId), ne(numberTrials.status, "failed"))).limit(1);
@@ -167,17 +181,34 @@ export async function numberEligibilityInTransaction(tx: DatabaseTransaction, in
     // A partner's business that isn't live, such as one whose package isn't
     // paid, pays its partner, so the host's plans and free trial aren't for it.
     if (entitlement.poolPartnerId) throw refused("partner_numbers_unavailable");
-    // Without a paid plan, a number is a free trial: during onboarding, with a
-    // verified phone in a trial country, once per business.
+    // Without a paid plan, a number is a free trial during onboarding.
     if (purpose !== "onboarding") throw refused("dedicated_number_requires_paid_plan");
-    if (!verified) throw refused("phone_verification_required");
-    if (!(trialCountries() as string[]).includes(verified.countryCode)) throw refused("dedicated_number_requires_paid_plan");
+    // A trial belongs to a person with a verified, non-disposable email.
+    if (input.userId === null) throw refused("phone_verification_required");
+    const trialEmail = await trialEmailInTransaction(tx, input.userId);
+    if (!trialEmail?.emailVerified) throw refused("email_verification_required");
+    if (isDisposableTrialEmail(trialEmail.email)) throw refused("trial_not_available");
     const used = await tx.select({ id: numberTrials.id }).from(numberTrials).where(and(eq(numberTrials.businessId, input.businessId), ne(numberTrials.status, "failed"))).limit(1);
     if (used.length) throw refused("trial_already_used");
-    trial = { verifiedPhone: verified.phone };
+    // A verified mobile is proof enough, and the number follows its country.
+    if (verified) {
+      if (!(trialCountries() as string[]).includes(verified.countryCode)) throw refused("dedicated_number_requires_paid_plan");
+      trial = { verifiedPhone: verified.phone };
+    } else {
+      // A trial without a mobile belongs to a person, so a key with no account
+      // behind it never gets one.
+      if (input.userId === null) throw refused("phone_verification_required");
+      // The dashboard checks the request's own network and country; the API
+      // has neither, so it keeps asking for a mobile.
+      const needsMobile = input.via === "api" || await trialNetworkNeedsPhoneVerificationInTransaction(tx, { userId: input.userId, businessId: input.businessId, ipHash: input.ipHash, ipCountry: input.ipCountry });
+      if (needsMobile) throw refused("phone_verification_required");
+      // The selected country is the number's country, and only a trial country has one.
+      if (!(trialCountries() as string[]).includes(market.countryCode)) throw refused("dedicated_number_requires_paid_plan");
+      trial = { verifiedPhone: null };
+    }
   }
   // Hosted businesses text from the shared sender; a self-hosted one texts from this number.
-  return { market: resolveBusinessNumberMarket({ selection: requested ? { ...input.selection, countryCode: requested } : input.selection, timezone: business.timezone }), trial, countryFixed: Boolean(verified), smsRequired: business.deploymentMode !== "cloud" };
+  return { market, trial, countryFixed: Boolean(verified), smsRequired: business.deploymentMode !== "cloud" };
 }
 
 /** Searches the provider where the business may pick a number and signs an offer for each, for this person and business only. */
@@ -192,16 +223,16 @@ export async function offerBusinessNumbers(input: { userId: string; businessId: 
   const limit = Math.max(1, Math.min(20, Math.trunc(input.limit ?? 10)));
   const exp = Date.now() + offerLifetimeMs;
   return (await provider.listAvailablePhoneNumbers({ ...selection, limit, ...(smsRequired ? { sms: true } : {}) })).filter(number => number.capabilities.voice && (!smsRequired || number.capabilities.sms)).slice(0, limit).map(({ carrier, ...number }) => {
-    const offered: NumberSelection = { ...selection, sms: number.capabilities.sms, ...(trial ? { trial: true, verifiedPhone: trial.verifiedPhone } : {}), ...(carrier ? { carrier } : {}) };
+    const offered: NumberSelection = { ...selection, sms: number.capabilities.sms, ...(trial ? { trial: true, ...(trial.verifiedPhone ? { verifiedPhone: trial.verifiedPhone } : { withoutSms: true }) } : {}), ...(carrier ? { carrier } : {}) };
     return { ...number, kind, trial: Boolean(trial), claimToken: issueOffer({ v: 1, purpose: input.purpose, businessId: input.businessId, userId: input.userId, e164: number.phoneE164, countryCode: number.countryCode, kind, capabilities: { sms: number.capabilities.sms, voice: true }, selection: offered, exp }, input.claimTokenSecret), expiresAt: new Date(exp) };
   });
 }
 
-export async function searchBusinessNumberInventory(context: DomainContext, input: { userId: string; businessId: string; purpose?: NumberClaimPurpose; selection?: Partial<NumberSelection>; limit?: number; claimTokenSecret: string }, provider: NumberInventoryProvider) {
+export async function searchBusinessNumberInventory(context: DomainContext, input: { userId: string; businessId: string; purpose?: NumberClaimPurpose; selection?: Partial<NumberSelection>; limit?: number; claimTokenSecret: string; ipHash?: string | null | undefined; ipCountry?: string | null | undefined }, provider: NumberInventoryProvider) {
   const purpose = input.purpose ?? "onboarding";
   const eligibility = await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    return await numberEligibilityInTransaction(tx, { userId: input.userId, businessId: input.businessId, purpose, selection: input.selection, via: "dashboard" });
+    return await numberEligibilityInTransaction(tx, { userId: input.userId, businessId: input.businessId, purpose, selection: input.selection, via: "dashboard", ipHash: input.ipHash, ipCountry: input.ipCountry });
   });
   const numbers = (await offerBusinessNumbers({ userId: input.userId, businessId: input.businessId, purpose, eligibility, selection: input.selection, limit: input.limit, claimTokenSecret: input.claimTokenSecret }, provider))
     .map(({ kind: _kind, trial: _trial, expiresAt: _expiresAt, ...number }) => number);
@@ -209,7 +240,13 @@ export async function searchBusinessNumberInventory(context: DomainContext, inpu
   return { market: eligibility.market, numbers, trial: Boolean(eligibility.trial), countryFixed: eligibility.countryFixed };
 }
 
-/** The signed-in user's verified phone and the country they picked for it, or null. */
+/**
+ * Reserves an onboarding offer. A trial offer carries either the verified
+ * mobile it needs or the dashboard's SMS-free eligibility. Only an SMS-free
+ * trial records the network, so the mobile buys the identity instead when the
+ * claim has one; a signed offer that expects no text but arrives without a
+ * trusted address gets the phone step, not a refusal.
+ */
 export async function reserveOnboardingNumberClaim(context: DomainContext, input: { userId: string; businessId: string; claimToken: string; claimTokenSecret: string; idempotencyKey: string; ipHash?: string | null }): Promise<string> {
   const offer = readNumberOffer(input.claimToken, input.claimTokenSecret);
   if (offer.purpose !== "onboarding" || offer.businessId !== input.businessId || offer.userId !== input.userId) throw numberClaimError(400, "number_offer_invalid", "Number claim token does not belong to this onboarding flow.");
@@ -217,8 +254,18 @@ export async function reserveOnboardingNumberClaim(context: DomainContext, input
     await requireBusinessAdmin(tx, input);
     const tokenHash = createHash("sha256").update(input.claimToken).digest("hex");
     const selection = JSON.stringify(offer.selection);
+    const withoutSms = offer.selection.trial === true && !offer.selection.verifiedPhone;
+    let ipHash: string | null = null;
+    if (withoutSms) {
+      ipHash = input.ipHash ?? null;
+      if (!ipHash) throw refused("phone_verification_required");
+      // The number step asked for a mobile when this network already had a
+      // trial. An offer signed before that (or a second tab) asks too.
+      const used = await tx.execute(sql`SELECT app.number_trial_ip_used(${input.businessId}::uuid, ${input.userId}::uuid, ${ipHash}) AS used`);
+      if ((used.rows[0] as { used?: boolean } | undefined)?.used) throw refused("phone_verification_required");
+    }
     const result = offer.selection.trial
-      ? await tx.execute(sql`SELECT app.reserve_trial_number_claim(${input.businessId}::uuid, ${input.userId}::uuid, ${offer.e164}, ${selection}::jsonb, ${tokenHash}, ${input.idempotencyKey}, ${input.ipHash ?? null}) AS id`)
+      ? await tx.execute(sql`SELECT app.reserve_trial_number_claim(${input.businessId}::uuid, ${input.userId}::uuid, ${offer.e164}, ${selection}::jsonb, ${tokenHash}, ${input.idempotencyKey}, ${ipHash}) AS id`)
       : await tx.execute(sql`SELECT app.reserve_onboarding_number_claim(${input.businessId}::uuid, ${input.userId}::uuid, ${offer.e164}, ${selection}::jsonb, ${tokenHash}, ${input.idempotencyKey}) AS id`);
     const claimId = String((result.rows[0] as { id?: unknown } | undefined)?.id ?? ""); if (!claimId) throw new Error("Number claim could not be reserved.");
     await enqueueOutbox(tx, { topic: "phoneNumber.provision", businessId: input.businessId, aggregateType: "number_claim", aggregateId: claimId, dedupeKey: `phone-claim:${claimId}:provision`, payload: { claimId } });
@@ -398,8 +445,8 @@ export async function completeNumberProvisioning(context: DomainContext, input: 
       // The owner, or for a partner's trial the partner, may have paid while we bought the number: that payment found no trial to convert, so convert it now.
       if (activated && await trialNumberPaidForInTransaction(tx, input.businessId)) await keepBusinessNumbersInTransaction(tx, { businessId: input.businessId });
     }
-    // Every number starts on the receptionist. With staff answers first on, routing moves this one to the webhook.
-    const profile = (await tx.select({ staffFirstMode: agents.staffFirstMode }).from(agents).where(defaultAgentOf(input.businessId)).limit(1))[0];
+    // Every number starts on the receptionist. With staff answers first on for the agent it reaches, routing moves this one to the webhook.
+    const profile = (await tx.select({ staffFirstMode: agents.staffFirstMode }).from(phoneNumbers).innerJoin(agents, agentOfRow(phoneNumbers.businessId, phoneNumbers.agentId)).where(eq(phoneNumbers.id, number.id)).limit(1))[0];
     if (profile && profile.staffFirstMode !== "never") await enqueueNumberRouting(tx, { businessId: input.businessId, phoneNumberId: number.id, mode: "receptionist" });
     return number.id;
   });

@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 
-import { apiAppointmentSchema, apiCalendarConnectionSchema, apiCallSchema, apiNotificationEvents, apiNotificationPreferencesSchema, apiContactSchema, apiKnowledgeEntrySchema, apiKnowledgeSourceSchema, apiMessageSchema, apiPhoneNumberClaimSchema, apiPhoneNumberSchema, apiWidgetKeySchema, normalizeWidgetOrigin, WEBHOOK_MAX_ATTEMPTS, WEBHOOK_RETRY_DELAYS_SECONDS, widgetEmbedSnippet } from "@lobbystack/shared";
+import { apiAgentSchema, apiAppointmentSchema, apiCalendarConnectionSchema, apiCallSchema, apiNotificationEvents, apiNotificationPreferencesSchema, apiContactSchema, apiKnowledgeEntrySchema, apiKnowledgeSourceSchema, apiMessageSchema, apiPhoneNumberClaimSchema, apiPhoneNumberSchema, apiWidgetKeySchema, normalizeWidgetOrigin, WEBHOOK_MAX_ATTEMPTS, WEBHOOK_RETRY_DELAYS_SECONDS, widgetEmbedSnippet } from "@lobbystack/shared";
 import { describe, expect, it } from "vitest";
 
 import { KnowledgeStorageLimitError } from "../knowledge";
@@ -10,7 +10,7 @@ import { apiKeyPepper, bearerToken, generateApiKey, hashApiKey, isWellFormedApiK
 import { idempotencyRequestHash, validateIdempotencyKey } from "./idempotency";
 import { PublicApiError } from "./errors";
 import { apiErrorFromDomain, claimPhoneNumberForApi } from "./operations";
-import { decodeCursor, encodeCursor, notificationEventKeys, pageSize, serializeAppointment, serializeCalendarConnection, serializeCall, serializeNotificationPreferences, serializeContact, serializeKnowledgeEntry, serializeKnowledgeSource, serializeMessage, serializePhoneNumber, serializePhoneNumberClaim, serializeWidgetKey, toPage } from "./resources";
+import { decodeCursor, encodeCursor, notificationEventKeys, pageSize, serializeAgent, serializeAppointment,serializeCalendarConnection, serializeCall, serializeNotificationPreferences, serializeContact, serializeKnowledgeEntry, serializeKnowledgeSource, serializeMessage, serializePhoneNumber, serializePhoneNumberClaim, serializeWidgetKey, toPage } from "./resources";
 import { webhookRetryDelaySeconds } from "./webhooks";
 
 describe("API keys", () => {
@@ -122,10 +122,22 @@ describe("cursor pagination", () => {
 
 describe("v1 resource serializers match the published schemas", () => {
   const now = new Date("2026-09-27T15:00:00.000Z");
+  const agentId = "7c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f";
   it("serializes calls", () => {
-    const call = serializeCall({ id: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f", transport: "web_voice", disposition: "caller_hangup", startedAt: now, endedAt: new Date(now.getTime() + 95_000), createdAt: now, providerDurationSeconds: null, contactId: null, contactName: null, contactPhone: null, conversationSummary: null, currentIntent: null, persistedOutcome: { kind: "booked", serviceName: "Cut", startsAt: now.toISOString() }, recordingObjectId: null, recordingStatus: null, recordingRetentionUntil: null });
+    const row = { id: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f", transport: "web_voice", disposition: "caller_hangup", startedAt: now, endedAt: new Date(now.getTime() + 95_000), createdAt: now, providerDurationSeconds: null, agentId: agentId, contactId: null, contactName: null, contactPhone: null, conversationSummary: null, currentIntent: null, persistedOutcome: { kind: "booked", serviceName: "Cut", startsAt: now.toISOString() }, recordingObjectId: null, recordingStatus: null, recordingRetentionUntil: null };
+    const call = serializeCall(row);
     expect(apiCallSchema.parse(call)).toEqual(call);
-    expect(call).toMatchObject({ channel: "web", status: "completed", outcome: "appointment_booked", duration_seconds: 95, recording_available: false });
+    expect(call).toMatchObject({ channel: "web", status: "completed", outcome: "appointment_booked", duration_seconds: 95, recording_available: false, agent_id: agentId });
+    const unlinked = serializeCall({ ...row, agentId: null });
+    expect(apiCallSchema.parse(unlinked).agent_id).toBeNull();
+  });
+
+  it("serializes an agent with its own settings and none of the workspace's", () => {
+    const agent = serializeAgent({ id: agentId, name: "After hours", isDefault: false, greeting: "Hi", tone: "warm", summary: "Maple Salon cuts hair.", summarySource: "operator", bookingPolicy: "Book", voiceInstructions: null, smsInstructions: null, chatInstructions: "Be brief.", transferMode: "weird", transferNumber: null, appointmentChangePolicy: null, bookingMode: "request", voice: "nova", staffFirstMode: "never", staffFirstNumber: null, staffFirstRingSeconds: 20, staffFirstMessage: null, staffFirstHandoverMessage: null, createdAt: now, updatedAt: new Date(now.getTime() + 1_000) }, true);
+    expect(apiAgentSchema.parse(agent)).toEqual(agent);
+    expect(agent).toMatchObject({ id: agentId, name: "After hours", is_default: false, paused: true, chat_instructions: "Be brief.", booking_mode: "request", created_at: now.toISOString(), updated_at: "2026-09-27T15:00:01.000Z" });
+    expect(agent).not.toHaveProperty("summary");
+    expect(agent).not.toHaveProperty("summary_source");
   });
 
   it("serializes appointments with the public status names", () => {
@@ -146,12 +158,15 @@ describe("v1 resource serializers match the published schemas", () => {
   });
 
   it("withholds expired message content", () => {
-    const base = { id: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f", status: "open", title: "Voice message from Ada", body: "Call me", metadata: { callerName: "Ada", callbackPhone: "+14165550134", urgency: "urgent", channel: "voice" }, relatedCallId: null, createdAt: now, updatedAt: now };
+    const base = { id: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f", status: "open", title: "Voice message from Ada", body: "Call me", metadata: { callerName: "Ada", callbackPhone: "+14165550134", urgency: "urgent", channel: "voice" }, relatedCallId: null, agentId, createdAt: now, updatedAt: now };
     const message = serializeMessage({ ...base, expired: false });
     expect(apiMessageSchema.parse(message)).toEqual(message);
-    expect(message).toMatchObject({ caller_name: "Ada", urgency: "urgent", channel: "voice" });
+    expect(message).toMatchObject({ caller_name: "Ada", urgency: "urgent", channel: "voice", agent_id: agentId });
     const expired = serializeMessage({ ...base, expired: true });
-    expect(expired).toMatchObject({ caller_name: null, callback_phone: null, body: "[Expired by the retention policy]" });
+    // Which agent took it isn't content, so it stays.
+    expect(expired).toMatchObject({ caller_name: null, callback_phone: null, body: "[Expired by the retention policy]", agent_id: agentId });
+    expect(serializeMessage({ ...base, agentId: "not-a-uuid", expired: false }).agent_id).toBeNull();
+    expect(serializeMessage({ ...base, agentId: null, expired: false }).agent_id).toBeNull();
   });
 });
 
@@ -211,7 +226,7 @@ describe("notification preferences", () => {
     expect(serializeNotificationPreferences({ ...preferences, smsConsent: true, canUseSms: false, smsUnavailableReason: "sender_missing" }).sms).toEqual({ available: false, unavailable_reason: "sender_missing" });
     // Each API name is one of the dashboard's events, and every event it shows has one.
     expect(Object.values(notificationEventKeys).every((key) => (operatorNotificationEventKeys as readonly string[]).includes(key))).toBe(true);
-    expect(new Set(Object.values(notificationEventKeys))).toEqual(new Set(["voiceMessage", "pausedSms", "smsFailed", "calendarSync", "transferFailed", "widgetChat", "webhookDisabled"]));
+    expect(new Set(Object.values(notificationEventKeys))).toEqual(new Set(["callCompleted", "voiceMessage", "pausedSms", "smsFailed", "calendarSync", "transferFailed", "widgetChat", "webhookDisabled"]));
   });
 });
 

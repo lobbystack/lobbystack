@@ -14,9 +14,9 @@ import { consumeAppointmentChangeVerificationInTransaction } from "./appointment
 import { findOrCreateContactByPhone } from "./contacts";
 import { recordSmsConsentAnswerInTransaction, smsConsentOnFile, type SmsConsentAnswer, type SmsConsentOnFile } from "./contactSmsConsent";
 import { recordProductEventBestEffort } from "./productEvents";
-import { CANCELLATION_CONFIRMATION, heldForCall, queueOperatorAlertInTransaction, rescheduleAppointmentReminderInTransaction } from "./notifications";
+import { CANCELLATION_CONFIRMATION, heldForCall, queueOperatorAlertInTransaction, RESCHEDULE_CONFIRMATION, rescheduleAppointmentReminderInTransaction, saveAppointmentVideoUrlInTransaction } from "./notifications";
 import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
-import { CANCELLATION_REQUEST } from "./voice";
+import { APPOINTMENT_REQUESTS } from "./voice";
 
 type BookingInput = {
   callId?: string;
@@ -277,7 +277,7 @@ export async function findAvailability(
  */
 export async function findOpeningsInTransaction(
   tx: DatabaseTransaction,
-  input: { businessId: string; serviceId: string; dates: string[]; staffId?: string; preferredMinutes?: number; limit?: number; spread?: boolean },
+  input: { businessId: string; serviceId: string; dates: string[]; staffId?: string; preferredMinutes?: number; limit?: number; spread?: boolean; ignoreAppointmentId?: string },
 ): Promise<{ timezone: string; durationMinutes: number; openings: string[]; moreOpenings: number; reason?: NoOpeningsReason }> {
   const now = new Date();
   const schedule = await loadSchedule(tx, { businessId: input.businessId, serviceId: input.serviceId, from: now });
@@ -296,6 +296,7 @@ export async function findOpeningsInTransaction(
     staffIds: eligibleStaffIds(schedule, requested),
     from: new Date(Math.min(...starts.map(Number))),
     to: new Date(Math.max(...starts.map(Number)) + schedule.serviceDurationMinutes * 60_000),
+    ignoreAppointmentId: input.ignoreAppointmentId,
   });
   const limit = input.limit ?? Infinity;
   const openings: string[] = [];
@@ -472,7 +473,7 @@ export async function cancelAppointmentInTransaction(
     eq(inboxItems.businessId, input.businessId),
     eq(inboxItems.kind, "voice_message"),
     eq(inboxItems.status, "open"),
-    sql`${inboxItems.metadata}->>'request' = ${CANCELLATION_REQUEST}`,
+    inArray(sql`${inboxItems.metadata}->>'request'`, [...APPOINTMENT_REQUESTS]),
     sql`${inboxItems.metadata}->>'appointmentId' = ${input.appointmentId}`,
   ));
   const [appointment] = await tx.update(appointments).set({ status: "canceled", calendarSyncState: "pending", revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId), ne(appointments.status, "canceled"))).returning({ id: appointments.id, revision: appointments.revision, startsAt: appointments.startsAt });
@@ -584,6 +585,23 @@ export async function followCalendarBookingChanges(
 }
 
 /**
+ * Saves the video links a calendar sync read for upcoming appointments. A move
+ * can change one, and a conferencing app can add one after the booking.
+ */
+export async function followCalendarVideoLinks(context: DomainContext, input: { businessId: string; links: Array<{ eventId: string; videoUrl: string }> }): Promise<void> {
+  const links = new Map(input.links.map((link) => [link.eventId, link.videoUrl]));
+  if (!links.size) return;
+  await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const rows = await tx.select({ id: appointments.id, eventId: appointments.calendarExternalId, videoUrl: appointments.videoUrl }).from(appointments)
+      .where(and(eq(appointments.businessId, input.businessId), eq(appointments.status, "confirmed"), eq(appointments.calendarSyncState, "synced"), gt(appointments.startsAt, new Date()), inArray(appointments.calendarExternalId, [...links.keys()])));
+    for (const row of rows) {
+      const videoUrl = links.get(row.eventId!);
+      if (videoUrl && videoUrl !== row.videoUrl) await saveAppointmentVideoUrlInTransaction(tx, { businessId: input.businessId, appointmentId: row.id, videoUrl });
+    }
+  });
+}
+
+/**
  * An operator cancels an appointment, which also closes callers' requests to
  * cancel it. Returns "already" for an appointment cancelled before.
  */
@@ -599,6 +617,41 @@ export async function cancelAppointment(
   });
   if (result === "cancelled") await recordAppointmentChange(context, { name: "appointment.cancelled", businessId: input.businessId, appointmentId: input.appointmentId, source: "operator" });
   return result;
+}
+
+/**
+ * An operator moves an appointment to a new time, which closes callers' requests to move it.
+ * The domain requires the scheduler role or above. Returns null when the appointment
+ * doesn't exist or is cancelled; an unavailable time throws BookingUnavailableError.
+ */
+export async function rescheduleAppointment(
+  context: DomainContext,
+  input: { userId: string; businessId: string; appointmentId: string; startsAt: string },
+): Promise<{ startsAt: Date } | null> {
+  const moved = await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
+    await requireBusinessMembership(tx, { userId: input.userId, businessId: input.businessId, minimumRole: "scheduler" });
+    return await rescheduleAppointmentInTransaction(tx, { businessId: input.businessId, appointmentId: input.appointmentId, startsAt: input.startsAt, change: { source: "operator", userId: input.userId } });
+  });
+  if (!moved) return null;
+  await recordAppointmentChange(context, { name: "appointment.rescheduled", businessId: input.businessId, appointmentId: input.appointmentId, source: "operator" });
+  return { startsAt: moved.startsAt };
+}
+
+/**
+ * The times an appointment can move to on one local day (YYYY-MM-DD in the
+ * business's timezone), for an operator. Its own time doesn't count as taken.
+ */
+export async function findRescheduleOpenings(
+  context: DomainContext,
+  input: { userId: string; businessId: string; appointmentId: string; date: string },
+): Promise<{ timezone: string; openings: string[]; reason?: NoOpeningsReason }> {
+  return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
+    await requireBusinessMembership(tx, { userId: input.userId, businessId: input.businessId, minimumRole: "scheduler" });
+    const [existing] = await tx.select({ serviceId: appointments.serviceId }).from(appointments).where(and(eq(appointments.businessId, input.businessId), eq(appointments.id, input.appointmentId), ne(appointments.status, "canceled"))).limit(1);
+    if (!existing) throw Object.assign(new Error("Appointment not found."), { status: 404, code: "not_found" });
+    const found = await findOpeningsInTransaction(tx, { businessId: input.businessId, serviceId: existing.serviceId, dates: [input.date], ignoreAppointmentId: input.appointmentId });
+    return { timezone: found.timezone, openings: found.openings, ...(found.reason ? { reason: found.reason } : {}) };
+  });
 }
 
 /**
@@ -641,6 +694,19 @@ export async function rescheduleAppointmentInTransaction(
   const [updated] = await tx.update(appointments).set({ startsAt, endsAt, staffId, status: "confirmed", calendarSyncState: "pending", revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(and(eq(appointments.id, row.id), eq(appointments.businessId, input.businessId), ne(appointments.status, "canceled"))).returning({ revision: appointments.revision });
   if (!updated) return null;
   await rescheduleAppointmentReminderInTransaction(tx, { businessId: input.businessId, appointmentId: row.id, startsAt, revision: updated.revision });
+  // Callers' requests to move or cancel it are done, whoever moved it: the new time settles either question.
+  await tx.update(inboxItems).set({ status: "done", updatedAt: new Date() }).where(and(
+    eq(inboxItems.businessId, input.businessId),
+    eq(inboxItems.kind, "voice_message"),
+    eq(inboxItems.status, "open"),
+    inArray(sql`${inboxItems.metadata}->>'request'`, [...APPOINTMENT_REQUESTS]),
+    sql`${inboxItems.metadata}->>'appointmentId' = ${row.id}`,
+  ));
+  // The customer's text with the new time. Each move gets its own kind, since an appointment can move more than once.
+  if (startsAt > new Date()) {
+    const [confirmation] = await tx.insert(notifications).values({ businessId: input.businessId, channel: "sms", kind: `${RESCHEDULE_CONFIRMATION}:${updated.revision}`, relatedId: row.id, scheduledFor: new Date(), status: "pending" }).onConflictDoNothing().returning({ id: notifications.id });
+    if (confirmation) await enqueueOutbox(tx, { topic: "notification.dispatch", businessId: input.businessId, aggregateType: "appointment", aggregateId: row.id, dedupeKey: `notification:${confirmation.id}:dispatch`, ...heldForCall(input.change.source === "caller" ? input.change.callId : undefined, { notificationId: confirmation.id }) });
+  }
   const audit = changeAudit(input.change);
   await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: audit.actorUserId, eventType: "appointment_change.rescheduled", entityType: "appointment", entityId: row.id, payload: { ...audit.payload, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString(), ...(staffId !== row.staffId ? { staffId } : {}) } });
   await enqueueOutbox(tx, { topic: "calendar.syncAppointment", businessId: input.businessId, aggregateType: "appointment", aggregateId: row.id, dedupeKey: `appointment:${row.id}:calendar:reschedule:${updated.revision}`, payload: { appointmentId: row.id, action: "reschedule" } });

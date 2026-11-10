@@ -55,7 +55,7 @@ curl https://app.lobbystack.com/api/v1/businesses \
   -d '{"name":"Harbor Dental","timezone":"America/Toronto","locale":"en"}'
 ```
 
-`POST /businesses` requiere una `Idempotency-Key`, y un reintento con el mismo valor devuelve el negocio ya creado. La respuesta envuelve el nuevo negocio en `data`. Guarde `data.id` junto al registro de su cliente y envíelo como `LobbyStack-Business` en cada solicitud a partir de aquí. `locale` fija el idioma en que empiezan las llamadas: `en`, `fr`, `es`, `sr`, `de`, `pt`, `it` o `nl`. La recepcionista cambia de idioma cuando quien llama lo pide o habla otro.
+`POST /businesses` requiere una `Idempotency-Key`, y un reintento con el mismo valor devuelve el negocio ya creado. La respuesta envuelve el nuevo negocio en `data`. Guarde `data.id` junto al registro de su cliente y envíelo como `LobbyStack-Business` en cada solicitud a partir de aquí. `locale` fija el idioma en que empiezan las llamadas: `en`, `fr`, `es`, `sr`, `de`, `pt`, `it`, `nl`, `pl`, `tr`, `vi`, `tl`, `sv`, `ru` o `uk`. La recepcionista cambia de idioma cuando quien llama lo pide o habla otro.
 
 ## Paso 3: enseñe a la recepcionista cómo es el negocio
 

@@ -131,7 +131,7 @@ The `<Sip>` address is `sip:<project>@sip.api.openai.com;transport=tls;secure=tr
 
 A staff-answered call has a `calls` row with the provider `staff_answered`, keyed on Twilio's `CallSid`, and `billing_excluded` set. It has no session, minutes or conversation, and it stays out of analytics, the finance export and the trial's call count. `call.syncPrice` adds up the parent call and each connected child leg. For a call that went on to GPT-Live, it finds the inbound call by caller, the business's numbers and start time. Twilio bills these calls at Programmable Voice rates rather than trunking rates.
 
-Twilio has no Serbian `<Say>` voice. A business whose default language is Serbian skips the caller messages, and its staff hear the prompt in English.
+Twilio's `<Say>` uses Amazon Polly voices, and Polly has no Serbian, Vietnamese, Tagalog or Ukrainian voice. A business whose default language is one of those skips the caller messages, and its staff hear the prompt in English.
 
 ## Follow a browser call
 
@@ -143,6 +143,8 @@ Dashboard test calls, the website widget, prospect demos, and the landing site d
 4. returns OpenAI's answer so the browser connects its audio
 
 A dashboard test call can name an `agentId`. The admin checks it under the operator's own access and answers 404 `agent_not_found` for an archived agent or one outside their business. Widget calls answer as the widget key's agent, and every other caller gets the default agent, whatever the browser sends.
+
+The landing site demo can send a `language`, one of the `RuntimeLocale` values. It sends the page's language, except that the English page sends the visitor's browser language when the site has no pages in it, such as German (`callLanguage` in `LobbyStackAuraVoiceDemo.tsx`). The admin ignores it from every other caller and when it isn't one of them. A language that differs from the business's default replaces the snapshot's default locale and its greeting, which becomes the standard greeting in that language (`defaultGreeting`), so the receptionist speaks it from the first word. The admin passes the same `language` to the worker on attach, which applies it to the snapshot it loads, so the greeting command matches the session. A call the worker recovers after a restart loses the choice and falls back to the business's default language.
 
 The browser shows the call as connecting until the receptionist starts speaking, so the animation ends on the greeting. GPT-Live's audio track runs through silence and its data channel has no speech event, so `useWebVoiceCall` takes the first of these:
 

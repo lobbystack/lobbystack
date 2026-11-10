@@ -11,8 +11,8 @@ import { useActiveBusiness } from "@/hooks/use-active-business";
 import { formatDateTime } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
 
-// The domain lets schedulers and above cancel appointments.
-const CANCEL_ROLES = ["scheduler", "business_admin", "business_owner"];
+// The domain lets schedulers and above cancel or move appointments.
+export const APPOINTMENT_ROLES = ["scheduler", "business_admin", "business_owner"];
 
 export type CancellableAppointment = { id: string; startsAt: string; timezone: string; serviceName: string | null; contactName: string };
 
@@ -50,12 +50,13 @@ export function CancelAppointmentButton({ appointment, approve, className, size 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
         queryClient.invalidateQueries({ queryKey: ["appointments", business?.businessId] }),
+        queryClient.invalidateQueries({ queryKey: ["call"] }),
       ]);
     },
     onError: () => { toast.error(t("appointments.cancel.failed")); },
   });
 
-  if (!business || !CANCEL_ROLES.includes(business.role)) return null;
+  if (!business || !APPOINTMENT_ROLES.includes(business.role)) return null;
   const summary = appointmentSummary(appointment, i18n.language, t);
   return (
     <>

@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
 import { Combobox, ComboboxCollection, ComboboxContent, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxLabel, ComboboxList } from "@/components/ui/combobox";
@@ -9,6 +11,8 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { carrierGroupsFor, dialCode, type Carrier, type ForwardingMethod, type ForwardingMode, type NumberFormat } from "@/lib/call-forwarding";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
+import { requestJson } from "@/lib/request-json";
+import { useSetupAction } from "@/lib/use-setup-action";
 
 /** A code to dial. Lines that ask for the number after the code get it as a separate instruction. */
 function DialStep({ label, template, e164, format }: { label: string; template: string; e164: string; format: NumberFormat }) {
@@ -63,6 +67,25 @@ export function CallForwardingDialog({ e164, onOpenChange, open }: { e164: strin
   );
 }
 
+/**
+ * Opens the forwarding steps for the business's number when Home is reached
+ * through the welcome email's link (`/?setup=phoneNumber`) after Getting
+ * started is gone, so a trial number and a paid one both land there. It reads
+ * the numbers only for that link.
+ */
+export function CallForwardingFromLink({ businessId }: { businessId: string }) {
+  const linked = useSearchParams().get("setup") === "phoneNumber";
+  const [open, setOpen] = useState(false);
+  const numbers = useQuery({
+    queryKey: ["phone-numbers", businessId],
+    queryFn: () => requestJson<{ phoneNumbers: Array<{ e164: string }> }>(`/api/phone-numbers?businessId=${encodeURIComponent(businessId)}`),
+    enabled: linked,
+  });
+  const e164 = numbers.data?.phoneNumbers[0]?.e164;
+  useSetupAction(Boolean(e164), useCallback((action: string) => { if (action !== "phoneNumber") return false; setOpen(true); return true; }, []));
+  return e164 ? <CallForwardingDialog e164={e164} onOpenChange={setOpen} open={open} /> : null;
+}
+
 function ForwardingDialogHeader({ e164 }: { e164: string }) {
   const { t, i18n } = useTranslation("dashboard");
   return (
@@ -99,7 +122,7 @@ export function ForwardingGuide({ country = null, e164 }: { country?: string | n
           onValueChange={(value: Carrier | null) => setCarrier(value)}
           value={carrier}
         >
-          <ComboboxInput id="forwarding-carrier" placeholder={t("forwarding.carrier.placeholder")} />
+          <ComboboxInput clearSearchLabel={t("common:accessibility.clearSearch")} id="forwarding-carrier" placeholder={t("forwarding.carrier.placeholder")} />
           <ComboboxContent>
             <ComboboxEmpty>{t("forwarding.carrier.empty")}</ComboboxEmpty>
             <ComboboxList>

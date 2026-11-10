@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
+import { CHECKOUT_UNAVAILABLE_AFTER_MS, isProviderUnavailable } from "@/lib/checkout-errors";
 import { formatDateTime, intlLocale } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
 import { cn } from "@/lib/utils";
@@ -40,7 +41,7 @@ type Billing = {
   poolOverage: PoolOverage;
   trialNumber: "available" | "used" | null;
 };
-type Checkout = { requestId: string; tier: PaidPartnerTierSlug; billingInterval: BillingInterval; status: string; checkoutUrl: string | null; synced: boolean };
+type Checkout = { requestId: string; tier: PaidPartnerTierSlug; billingInterval: BillingInterval; status: string; checkoutUrl: string | null; error: string | null; synced: boolean };
 
 /** A rate of a fraction of a cent, such as $0.015, keeps its third decimal. */
 function formatRate(cents: number, locale: string): string {
@@ -140,6 +141,8 @@ export function PartnerBillingSurface() {
   const billing = useQuery({ queryKey, enabled: isOwner, queryFn: () => requestJson<Billing>(query("/api/partner/billing")) });
   const [interval, setInterval] = useState<BillingInterval>("annual");
   const [pending, setPending] = useState<{ requestId: string; tier: PaidPartnerTierSlug } | null>(null);
+  const [slowCheckout, setSlowCheckout] = useState(false);
+  const [checkoutUnavailable, setCheckoutUnavailable] = useState(false);
   const [portalPending, setPortalPending] = useState(false);
   // Leave for each checkout once: a page restored from the browser's cache can rerun the effect with the old one.
   const redirected = useRef<string | null>(null);
@@ -148,7 +151,7 @@ export function PartnerBillingSurface() {
 
   const start = useMutation({
     mutationFn: (tier: PaidPartnerTierSlug) => requestJson<{ requestId: string }>(query("/api/partner/billing/checkout"), { method: "POST", body: JSON.stringify({ partnerId: partner.partnerId, tier, billingInterval: interval }) }),
-    onSuccess: (result, tier) => setPending({ requestId: result.requestId, tier }),
+    onSuccess: (result, tier) => { setCheckoutUnavailable(false); setPending({ requestId: result.requestId, tier }); },
     onError: (error: Error & { code?: string }) => toast.error(t(CHECKOUT_ERRORS[error.code ?? ""] ?? "billing.errors.checkoutFailed")),
   });
   const opening = useQuery({
@@ -158,19 +161,36 @@ export function PartnerBillingSurface() {
     refetchInterval: (state) => ["ready", "error", "superseded"].includes(state.state.data?.status ?? "") ? false : 1_500,
   });
   useEffect(() => {
+    if (!pending) { setSlowCheckout(false); return; }
+    setSlowCheckout(false);
+    const slow = window.setTimeout(() => setSlowCheckout(true), 10_000);
+    const unavailable = window.setTimeout(() => {
+      setCheckoutUnavailable(true);
+      setPending(null);
+    }, CHECKOUT_UNAVAILABLE_AFTER_MS);
+    return () => {
+      window.clearTimeout(slow);
+      window.clearTimeout(unavailable);
+    };
+  }, [pending]);
+  useEffect(() => {
     if (!pending) return;
     if (opening.data?.status === "ready" && opening.data.checkoutUrl && redirected.current !== pending.requestId) {
       redirected.current = pending.requestId;
       window.location.assign(opening.data.checkoutUrl);
     }
     if (opening.isError || opening.data?.status === "error" || opening.data?.status === "superseded") {
-      toast.error(t("billing.errors.checkoutFailed"));
+      toast.error(t(isProviderUnavailable(opening.data?.error) ? "billing.errors.paymentsUnavailable" : "billing.errors.checkoutFailed"));
       setPending(null);
     }
   }, [opening.data, opening.isError, pending, t]);
   useEffect(() => {
     // The back button from checkout can restore this page from the cache, still waiting on a checkout that opened.
-    const onPageShow = (event: PageTransitionEvent) => { if (event.persisted) setPending(null); };
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      setPending(null);
+      setCheckoutUnavailable(false);
+    };
     window.addEventListener("pageshow", onPageShow);
     return () => window.removeEventListener("pageshow", onPageShow);
   }, []);
@@ -251,7 +271,7 @@ export function PartnerBillingSurface() {
             {current.tier === "free" ? <p className="text-sm text-muted-foreground">{t("billing.current.free")}</p> : <TierPrice interval={current.billingInterval ?? "monthly"} tier={current.tier} />}
             <TierTerms numbers={current.numbersCounted} tier={current.tier} trial={Boolean(current.trialNumber)} />
             {current.tier === "free" || !current.numbersCounted ? null : <NumbersInUse held={current.numbersHeld} included={current.includedNumbers} />}
-            {current.trialNumber ? <p className="text-sm text-muted-foreground">{t(current.trialNumber === "available" ? "billing.trial.available" : "billing.trial.used")}</p> : null}
+            {current.trialNumber === "available" ? <p className="text-sm text-muted-foreground">{t("billing.trial.available")}</p> : null}
             {current.endsAt ? <p className="text-sm text-muted-foreground">{t("billing.current.endsOn", { date: date(current.endsAt) })}</p> : current.currentPeriodEnd ? <p className="text-sm text-muted-foreground">{t("billing.current.renewsOn", { date: date(current.currentPeriodEnd) })}</p> : null}
           </div>
           {current.hasCustomerPortal ? (
@@ -285,7 +305,16 @@ export function PartnerBillingSurface() {
               ))}
             </div>
           </div>
-          <div className="grid gap-4 md:grid-cols-3">
+          {checkoutUnavailable ? (
+            <Surface className="flex flex-col items-start gap-4 p-6" role="alert">
+              <p className="text-sm text-muted-foreground">{t("billing.errors.paymentsUnavailable")}</p>
+              <Button onClick={() => setCheckoutUnavailable(false)} type="button" variant="outline">{t("billing.choose.backToPlans")}</Button>
+            </Surface>
+          ) : null}
+          {!checkoutUnavailable && slowCheckout ? (
+            <p className="text-sm text-muted-foreground" role="status">{t("billing.choose.slow")}</p>
+          ) : null}
+          {!checkoutUnavailable ? <div className="grid gap-4 md:grid-cols-3">
             {paidPartnerTierSlugs.map((tier) => (
               <Surface className="flex flex-col gap-5 p-5" key={tier}>
                 <h3 className="font-heading text-lg font-medium tracking-[-0.03em]">{t(`billing.tiers.${tier}`)}</h3>
@@ -303,7 +332,7 @@ export function PartnerBillingSurface() {
                 </Button>
               </Surface>
             ))}
-          </div>
+          </div> : null}
         </section>
       ) : null}
     </div>

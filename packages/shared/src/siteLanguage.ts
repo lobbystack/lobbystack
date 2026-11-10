@@ -1,4 +1,4 @@
-import { isRuntimeLocale, runtimeLocales, type RuntimeLocale } from "./locales";
+import { runtimeLocaleFromTag, runtimeLocales, type RuntimeLocale } from "./locales";
 
 // Short words that show up in any page of running text. Words two languages
 // share count for both, because only the gap between the top two decides.
@@ -6,11 +6,19 @@ const COMMON_WORDS: Record<RuntimeLocale, ReadonlySet<string>> = {
   en: new Set("the and for you your with our are this that from have will can about we".split(" ")),
   fr: new Set("le la les des et pour vous votre nos avec est une dans sur nous au aux du".split(" ")),
   es: new Set("el la los las y para usted su nuestros con es una en sobre nosotros del por que".split(" ")),
-  sr: new Set("i je u na za se da su od sa koji što naš vaš ili kao mi vi".split(" ")),
+  // Serbian in both scripts, so a Cyrillic site isn't taken for Russian or Ukrainian.
+  sr: new Set("i je u na za se da su od sa koji što naš vaš ili kao mi vi и је у на за се да су од са који што наш ваш или као ми ви".split(" ")),
   de: new Set("der die das und für sie ihre unsere mit ist eine auf wir von zu den nicht".split(" ")),
   pt: new Set("o a os as e para você seu nossos com é uma em sobre nós do da que".split(" ")),
   it: new Set("il la i gli e per voi vostro nostri con è una in su noi del della che".split(" ")),
   nl: new Set("de het een en voor u uw onze met is op wij van te niet ons bij".split(" ")),
+  pl: new Set("i w na z do się nie jest że to jak dla od po przez nasz nasze oraz są czy ale już tylko który".split(" ")),
+  tr: new Set("ve bir bu için ile da de en çok olan gibi daha size sizin bizim ne olarak mi var yok ama her kadar".split(" ")),
+  vi: new Set("và của các cho là có được với những một trong này chúng tôi bạn không đã sẽ thì nhưng để khi rất cũng".split(" ")),
+  tl: new Set("ang ng mga sa at ay para ito kami namin ninyo inyong po hindi si ni ko mo may kung".split(" ")),
+  sv: new Set("och att det som en på är för med till av den vi har inte ni du".split(" ")),
+  ru: new Set("и в на не что с по для это мы вы наш ваш как от к у то если или же вот так".split(" ")),
+  uk: new Set("і в на не що з до для це ми ви наш ваш як від та у й є але або також".split(" ")),
 };
 
 const MIN_WORDS = 8;
@@ -19,8 +27,7 @@ const TEXT_SAMPLE_LENGTH = 20_000;
 
 /** A page's `lang` attribute as a caller language, or null when it names none we speak. */
 export function runtimeLocaleFromLangAttribute(value: string | null | undefined): RuntimeLocale | null {
-  const primary = value?.trim().toLowerCase().split(/[-_]/)[0];
-  return isRuntimeLocale(primary) ? primary : null;
+  return runtimeLocaleFromTag(value);
 }
 
 /** The language of a text, or null when it's too short or too close to call. */

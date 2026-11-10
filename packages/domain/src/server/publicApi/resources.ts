@@ -17,6 +17,7 @@ import {
   normalizeStaffFirstMode,
   normalizeTransferMode,
   weekdays,
+  type ApiAgent,
   type ApiAppointment,
   type ApiBusiness,
   type ApiCalendarConnection,
@@ -199,6 +200,7 @@ const callColumns = {
   endedAt: calls.endedAt,
   createdAt: calls.createdAt,
   providerDurationSeconds: calls.providerDurationSeconds,
+  agentId: calls.agentId,
   contactId: calls.contactId,
   contactName: contacts.name,
   contactPhone: contacts.phone,
@@ -210,7 +212,7 @@ const callColumns = {
   recordingRetentionUntil: storageObjects.retentionUntil,
 };
 
-type CallRow = { id: string; transport: string; disposition: string | null; startedAt: Date; endedAt: Date | null; createdAt: Date; providerDurationSeconds: number | null; contactId: string | null; contactName: string | null; contactPhone: string | null; conversationSummary: string | null; currentIntent: string | null; persistedOutcome: Record<string, unknown> | null; recordingObjectId: string | null; recordingStatus: string | null; recordingRetentionUntil: Date | null };
+type CallRow = { id: string; transport: string; disposition: string | null; startedAt: Date; endedAt: Date | null; createdAt: Date; providerDurationSeconds: number | null; agentId: string | null; contactId: string | null; contactName: string | null; contactPhone: string | null; conversationSummary: string | null; currentIntent: string | null; persistedOutcome: Record<string, unknown> | null; recordingObjectId: string | null; recordingStatus: string | null; recordingRetentionUntil: Date | null };
 
 function callQuery(tx: DatabaseTransaction, where: SQL | undefined) {
   return tx.select(callColumns).from(calls)
@@ -233,6 +235,7 @@ export function serializeCall(row: CallRow): ApiCall {
     outcome: outcome.kind === "booked" ? "appointment_booked" : outcome.kind === "booking_in_progress" ? "booking_incomplete" : outcome.kind === "message_taking" ? "message_taken" : outcome.kind === "summary" ? "conversation" : outcome.kind === "disposition" && outcome.disposition === STAFF_ANSWERED_DISPOSITION ? "answered_by_team" : "none",
     summary: summaryText ?? fallbackSummary,
     end_reason: row.disposition,
+    agent_id: row.agentId,
     contact_id: row.contactId,
     caller_name: row.contactName,
     caller_phone: row.contactPhone,
@@ -404,6 +407,11 @@ export type MessageMetadata = { callerName?: string; callbackPhone?: string; urg
 
 const messageExpired = sql<boolean>`(${inboxItems.contentRetentionStatus} = 'scrubbed' or coalesce(${inboxItems.contentExpiresAt} <= current_timestamp, false))`;
 
+// The agent of the message's call, or the one saved with a message taken in a
+// chat, text or Instagram thread, which has no call. It isn't content, so it
+// stays when the content expires.
+const messageAgentId = sql<string | null>`coalesce((select ${calls.agentId}::text from ${calls} where ${calls.id} = ${inboxItems.relatedCallId} and ${calls.businessId} = ${inboxItems.businessId}), ${inboxItems.metadata}->>'agentId')`;
+
 const messageColumns = {
   id: inboxItems.id,
   status: inboxItems.status,
@@ -411,12 +419,13 @@ const messageColumns = {
   body: inboxItems.body,
   metadata: inboxItems.metadata,
   relatedCallId: inboxItems.relatedCallId,
+  agentId: messageAgentId,
   expired: messageExpired,
   createdAt: inboxItems.createdAt,
   updatedAt: inboxItems.updatedAt,
 };
 
-type MessageRow = { id: string; status: string; title: string; body: string; metadata: Record<string, unknown> | null; relatedCallId: string | null; expired: boolean; createdAt: Date; updatedAt: Date };
+type MessageRow = { id: string; status: string; title: string; body: string; metadata: Record<string, unknown> | null; relatedCallId: string | null; agentId: string | null; expired: boolean; createdAt: Date; updatedAt: Date };
 
 const urgencies = new Set(["low", "normal", "urgent"]);
 const messageChannels = new Set(["voice", "web_voice", "web_chat", "instagram", "sms"]);
@@ -441,6 +450,7 @@ export function serializeMessage(row: MessageRow): ApiMessage {
     callback_window: text(metadata.callbackWindow),
     channel: channel && messageChannels.has(channel) ? (channel as ApiMessage["channel"]) : null,
     call_id: row.relatedCallId,
+    agent_id: row.agentId && isUuid(row.agentId) ? row.agentId : null,
     created_at: iso(row.createdAt),
     updated_at: iso(row.updatedAt),
   };
@@ -618,6 +628,7 @@ export function serializeWidgetKey(row: { id: string; label: string | null; stat
 
 /** The API's names for the alerts the dashboard's notification settings show. */
 export const notificationEventKeys = {
+  call_completed: "callCompleted",
   voice_message: "voiceMessage",
   text_message: "pausedSms",
   customer_sms_failed: "smsFailed",
@@ -691,6 +702,14 @@ export function serializeReceptionist(row: ReceptionistRow): ApiReceptionist {
     appointment_change_policy: { enabled: policy.enabled, allow_cancel: policy.allowCancel, allow_reschedule: policy.allowReschedule, verification_mode: policy.verificationMode },
     updated_at: iso(row.updatedAt),
   };
+}
+
+// Agents
+
+/** An agent with the settings it has of its own, as calls use them. The summary is the business's, so it stays on /receptionist. */
+export function serializeAgent(row: ReceptionistRow & Pick<typeof agents.$inferSelect, "id" | "name" | "isDefault" | "createdAt">, paused: boolean): ApiAgent {
+  const { summary: _summary, summary_source: _summarySource, updated_at, ...settings } = serializeReceptionist(row);
+  return { id: row.id, name: row.name, is_default: row.isDefault, paused, ...settings, created_at: iso(row.createdAt), updated_at };
 }
 
 // Rules

@@ -8,20 +8,25 @@ import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 import { OnboardingMeetSurface } from "./onboarding-meet-surface";
 
 const router = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
+const offers = vi.hoisted(() => ({ open: vi.fn(), dismiss: null as null | (() => void) }));
 const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
 vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }) }));
 vi.mock("@/components/test-window", () => ({ TestPanel: ({ businessId }: { businessId: string }) => <p>test panel for {businessId}</p> }));
 vi.mock("@/components/live-upgrade-plan-provider", () => ({ LiveUpgradePlanProvider: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
+vi.mock("@/components/upgrade-plan-dialog-context", () => ({
+  useUpgradePlanDialogOpener: () => vi.fn(),
+  usePlanOfferOpener: () => offers.open,
+}));
 
-function setup(business: Record<string, unknown> = {}) {
+function setup(business: Record<string, unknown> = {}, due = false) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", slug: "acme", active: true, onboardingStage: "meet", partnerAccessLevel: null, ...business }] });
   const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
     if (url === "/api/agent") return Response.json({ business: { defaultLocale: "fr" }, profile: { name: "Agent", greeting: "Bonjour", voice: "marin" } });
     if (url.startsWith("/api/knowledge")) return Response.json({ documents: [] });
-    if (url.startsWith("/api/plan-offer")) return Response.json({ due: false });
+    if (url.startsWith("/api/plan-offer")) return Response.json({ due });
     return Response.json({ ok: true });
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -29,7 +34,13 @@ function setup(business: Record<string, unknown> = {}) {
   return fetchMock;
 }
 
-beforeEach(() => { router.push.mockReset(); telemetryRef.current = createRecordedBrowserTelemetry(); });
+beforeEach(() => {
+  router.push.mockReset();
+  offers.open.mockReset();
+  offers.open.mockImplementation((callbacks: { onDismiss: () => void }) => { offers.dismiss = callbacks.onDismiss; });
+  offers.dismiss = null;
+  telemetryRef.current = createRecordedBrowserTelemetry();
+});
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("Meet your agent", () => {
@@ -64,9 +75,33 @@ describe("Meet your agent", () => {
     telemetryRef.current!.expectEvent("web.onboarding.meet_completed", { businessId: "business" });
   });
 
-  it("never asks about plans at a partner's business", async () => {
-    const fetchMock = setup({ partnerAccessLevel: "full" });
+  it("opens the plans on the way to the dashboard after a test, and navigates when they close", async () => {
+    const fetchMock = setup({}, true);
     await screen.findByLabelText("meet.name");
+    await userEvent.click(screen.getByRole("button", { name: "meet.finish" }));
+    await waitFor(() => expect(offers.open).toHaveBeenCalled());
+    expect(router.push).not.toHaveBeenCalled();
+    telemetryRef.current!.expectEvent("web.onboarding.plan_offer_shown", { businessId: "business", surface: "meet" });
+
+    offers.dismiss!();
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/"));
+    expect(fetchMock.mock.calls.some(([url, init]) => url.startsWith("/api/plan-offer") && init?.method === "POST" && JSON.parse(String(init?.body))?.dismissed === true)).toBe(true);
+  });
+
+  it("goes straight to the dashboard when no test makes the plans due", async () => {
+    setup();
+    await screen.findByLabelText("meet.name");
+    await userEvent.click(screen.getByRole("button", { name: "meet.finish" }));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/"));
+    expect(offers.open).not.toHaveBeenCalled();
+  });
+
+  it("never asks about plans at a partner's business", async () => {
+    const fetchMock = setup({ partnerAccessLevel: "full" }, true);
+    await screen.findByLabelText("meet.name");
+    await userEvent.click(screen.getByRole("button", { name: "meet.finish" }));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/"));
     expect(fetchMock.mock.calls.some(([url]) => url.startsWith("/api/plan-offer"))).toBe(false);
+    expect(offers.open).not.toHaveBeenCalled();
   });
 });

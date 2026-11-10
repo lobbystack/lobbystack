@@ -13,6 +13,7 @@ import { getStoredAffiliateReferralCode } from "@/lib/affiliate-referral";
 import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { useTelemetry } from "@/components/product-analytics";
 import { recordPendingOnboardingBusiness } from "@/lib/onboarding-analytics";
@@ -92,11 +93,13 @@ export function OnboardingBusinessSurface({ createNew = false }: { createNew?: b
   return (
     <form className="flex flex-col gap-4" onSubmit={submit}>
       <FieldGroup className="gap-4">
-        <Field>
+        <Field aria-busy={businesses.isLoading || undefined}>
           <FieldLabel htmlFor="onboarding-business-name">{t("businessName.label")}</FieldLabel>
+          {/* The input stays mounted so a name typed before hydration survives; the skeleton covers it while the lookup runs. */}
           <div className="relative">
             <Building2 aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input autoComplete="organization" autoFocus className="h-11 pl-9" id="onboarding-business-name" onChange={(event) => setName(event.target.value)} placeholder={t("businessName.placeholder")} required type="text" value={name} />
+            {businesses.isLoading ? <Skeleton aria-hidden="true" className="absolute inset-0 h-11 w-full" /> : null}
           </div>
         </Field>
         {error || businesses.isError ? <FieldError>{error ?? t("businessName.unavailable")}</FieldError> : null}

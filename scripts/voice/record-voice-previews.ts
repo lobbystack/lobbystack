@@ -45,6 +45,13 @@ const LINES: Record<RuntimeLocale, string> = {
   pt: "Agradeço a ligação. Como posso ajudar hoje?",
   it: "Grazie per la chiamata. Come posso aiutarla oggi?",
   nl: "Bedankt voor uw telefoontje. Waarmee kan ik u vandaag helpen?",
+  pl: "Dziękujemy za telefon. W czym mogę dziś pomóc?",
+  tr: "Aradığınız için teşekkür ederiz. Bugün size nasıl yardımcı olabilirim?",
+  vi: "Cảm ơn quý khách đã gọi. Tôi có thể giúp gì cho quý khách hôm nay?",
+  tl: "Salamat po sa pagtawag. Paano ko po kayo matutulungan ngayon?",
+  sv: "Tack för att du ringer. Hur kan jag hjälpa dig i dag?",
+  ru: "Спасибо за звонок. Чем я могу вам помочь сегодня?",
+  uk: "Дякуємо за дзвінок. Чим я можу вам допомогти сьогодні?",
 };
 
 const { values } = parseArgs({

@@ -2,10 +2,12 @@ import { setTimeout as sleep } from "node:timers/promises";
 
 import OpenAI from "openai";
 
+import type { RuntimeLocale } from "@lobbystack/shared";
+
 import { jsonError } from "./api-helpers";
 
 /** `resume` marks a retried webhook delivery's attach to a call that may be under way. */
-type WorkerAttachInput = { sessionId: string; businessId: string; callId: string; channel: "voice" | "web_voice"; agentId?: string; conversationId?: string; callerPhone?: string; maxDurationMs?: number; intakeOnly?: boolean; resume?: boolean };
+type WorkerAttachInput = { sessionId: string; businessId: string; callId: string; channel: "voice" | "web_voice"; agentId?: string; conversationId?: string; callerPhone?: string; maxDurationMs?: number; intakeOnly?: boolean; language?: RuntimeLocale; resume?: boolean };
 
 // A draining worker answers a new attach with 503. The waits before each retry
 // give the deploy's new instance time to become ready.
