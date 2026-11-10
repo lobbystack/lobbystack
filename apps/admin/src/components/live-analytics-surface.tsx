@@ -104,9 +104,9 @@ function percentDelta(current: number, previous: number, t: (...args: any[]) => 
   return String(value >= 0 ? t("home.analytics.metrics.percentUp", { value: Math.abs(value).toFixed(1) }) : t("home.analytics.metrics.percentDown", { value: Math.abs(value).toFixed(1) }));
 }
 
-function durationDelta(current: number, previous: number, t: (...args: any[]) => unknown): string {
-  if (current === previous) return String(t("home.analytics.metrics.flat"));
-  return String(t(current > previous ? "home.analytics.metrics.durationUp" : "home.analytics.metrics.durationDown", { value: formatDuration(Math.abs(current - previous)) }));
+function durationDelta(current: number, previous: number, t: ReturnType<typeof useTranslation<"dashboard">>["t"]): string {
+  if (current === previous) return t("home.analytics.metrics.flat");
+  return t(current > previous ? "home.analytics.metrics.durationUp" : "home.analytics.metrics.durationDown", { value: formatDuration(Math.abs(current - previous)) });
 }
 
 export function LiveAnalyticsSurface() {
