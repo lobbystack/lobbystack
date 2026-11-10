@@ -628,9 +628,9 @@ export function CredentialRowsSkeleton({ actions, rows = 2 }: { actions: number;
   );
 }
 
-/** A placeholder for a piece of fixed text. It holds the real text, hidden, so it is as wide and tall as the text. */
-export function HiddenTextSkeleton({ children, className }: { children: string; className?: string }) {
-  return <div aria-hidden="true" className={className}><Skeleton className="w-fit max-w-full"><span className="invisible">{children}</span></Skeleton></div>;
+/** A placeholder for a piece of fixed text. It holds the real text, hidden, so it is as wide and tall as the text. `skeletonClassName` shapes the placeholder itself, such as a button or a full-width bar. */
+export function HiddenTextSkeleton({ children, className, skeletonClassName }: { children: string; className?: string; skeletonClassName?: string }) {
+  return <div aria-hidden="true" className={className}><Skeleton className={skeletonClassName ? `max-w-full ${skeletonClassName}` : "w-fit max-w-full"}><span className="invisible">{children}</span></Skeleton></div>;
 }
 
 /** Stands in for Getting started on Home: its heading row and the list of setup steps, so the guide doesn't push the page down when it loads. */
@@ -705,7 +705,7 @@ export function PhoneNumberChooserSkeleton({ labels, rows = 4 }: { labels: { cou
           <span className="text-sm font-medium">{labels.areaCode}</span>
           <Skeleton aria-hidden="true" className="h-9 w-full" />
         </div>
-        <Skeleton aria-hidden="true" className="h-9 w-full rounded-full sm:w-fit"><span className="invisible px-3 text-sm font-medium">{labels.search}</span></Skeleton>
+        <HiddenTextSkeleton skeletonClassName="inline-flex h-9 w-full items-center justify-center rounded-full px-3 text-sm font-medium whitespace-nowrap sm:w-fit">{labels.search}</HiddenTextSkeleton>
       </div>
       <Surface className="flex h-96 flex-col">
         <div className="flex h-14 shrink-0 items-center border-b border-border px-4 text-sm font-medium text-muted-foreground">
@@ -731,7 +731,7 @@ export function VerifyPhoneFormSkeleton({ labels }: { labels: { mobileNumber: st
         </div>
         <HiddenTextSkeleton className="text-sm">{labels.hint}</HiddenTextSkeleton>
       </div>
-      <Skeleton aria-hidden="true" className="mt-2 h-11 w-full rounded-full"><span className="invisible">{labels.submit}</span></Skeleton>
+      <HiddenTextSkeleton className="mt-2" skeletonClassName="flex h-11 w-full items-center justify-center rounded-full text-sm font-medium">{labels.submit}</HiddenTextSkeleton>
     </div>
   );
 }

@@ -95,7 +95,7 @@ export function OnboardingNumberSurface() {
     if (primary) router.replace(afterNumber);
   }, [afterNumber, primary, router]);
 
-  if (!phones.data || (!claiming && phones.data.activeClaim) || outlook.isLoading || primary) return <PhoneNumberChooserSkeleton labels={{ country: t("number.countryLabel"), areaCode: t("number.areaCodeLabel"), search: t("number.search"), phoneNumber: t("number.tableHeaders.phoneNumber") }} />;
+  if (!phones.data || (!claiming && phones.data.activeClaim) || outlook.isLoading || primary) return <div className="mx-auto w-full max-w-lg"><PhoneNumberChooserSkeleton labels={{ country: t("number.countryLabel"), areaCode: t("number.areaCodeLabel"), search: t("number.search"), phoneNumber: t("number.tableHeaders.phoneNumber") }} /></div>;
   if (refusalCode) {
     return (
       <div className="flex flex-col gap-6">

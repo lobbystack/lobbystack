@@ -51,7 +51,10 @@ describe("onboarding steps while they load", () => {
     renderLoading(<OnboardingNumberSurface />);
     const busy = document.querySelector("[aria-busy='true']")!;
     expect(busy).toBeTruthy();
+    // The real chooser sits in a max-w-lg column, so its placeholder does too.
+    expect(busy.closest(".max-w-lg")).not.toBeNull();
     for (const text of ["number.countryLabel", "number.areaCodeLabel", "number.tableHeaders.phoneNumber"]) expect(busy.textContent).toContain(text);
+    expect(screen.getByText("number.search").closest("[data-slot='skeleton']")).toBeTruthy();
     expect(busy.querySelectorAll("[data-slot='skeleton']").length).toBeGreaterThan(4);
     expect(document.querySelector(".animate-spin")).toBeNull();
   });
@@ -62,6 +65,7 @@ describe("onboarding steps while they load", () => {
     expect(document.querySelector(".animate-spin")).toBeNull();
     const busy = document.querySelector("[aria-busy='true']")!;
     expect(busy.textContent).toContain("verifyPhone.fields.mobileNumber");
+    for (const text of ["verifyPhone.hint", "verifyPhone.sendCode"]) expect(screen.getByText(text).closest("[data-slot='skeleton']")).toBeTruthy();
     expect(busy.querySelectorAll("[data-slot='skeleton']").length).toBeGreaterThanOrEqual(3);
   });
 
