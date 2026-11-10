@@ -1,6 +1,7 @@
 "use client";
 
 import { Search, X } from "lucide-react";
+import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
@@ -15,9 +16,11 @@ type SearchInputProps = Omit<React.ComponentProps<"input">, "onChange" | "type" 
 /** A search field with a clear button that appears once something is typed. */
 export function SearchInput({ groupClassName, onValueChange, value, ...props }: SearchInputProps) {
   const { t } = useTranslation("common");
+  const inputRef = useRef<HTMLInputElement>(null);
   const input = (
     <InputGroupInput
       onChange={(event) => onValueChange(event.target.value)}
+      ref={inputRef}
       value={value}
       {...props}
     />
@@ -32,9 +35,9 @@ export function SearchInput({ groupClassName, onValueChange, value, ...props }: 
         <InputGroupAddon align="inline-end">
           <InputGroupButton
             aria-label={t("accessibility.clearSearch")}
-            onClick={(event) => {
+            onClick={() => {
               onValueChange("");
-              event.currentTarget.closest<HTMLElement>("[data-slot=input-group]")?.querySelector("input")?.focus();
+              inputRef.current?.focus();
             }}
             size="icon-xs"
           >
