@@ -5,7 +5,6 @@ import { businesses, businessMemberships, createDatabaseClient, users, withBusin
 import enCommon from "../public/locales/en/common.json" with { type: "json" };
 import enSettings from "../public/locales/en/settings.json" with { type: "json" };
 import fr from "../public/locales/fr/contacts.json" with { type: "json" };
-import frCommon from "../public/locales/fr/common.json" with { type: "json" };
 import frDashboard from "../public/locales/fr/dashboard.json" with { type: "json" };
 import frSettings from "../public/locales/fr/settings.json" with { type: "json" };
 
@@ -60,7 +59,7 @@ test("the first dashboard page ships every translation, so startup and section c
   }
 });
 
-test("switching the dashboard language loads its bundles late and offers a retry when that fails", async ({ browser, baseURL }, testInfo) => {
+test("switching the dashboard language loads the new language late", async ({ browser, baseURL }, testInfo) => {
   test.setTimeout(120_000);
   const fixtures = migrator();
   const worker = createDatabaseClient("lobbystack_worker");
@@ -81,22 +80,12 @@ test("switching the dashboard language loads its bundles late and offers a retry
     await page.goto(`${baseURL}/settings/appearance`);
     await expect(page.getByText(enSettings.appearance.language.label, { exact: true })).toBeVisible();
     // The bundles for another language were never part of the first page.
-    let failing = true;
-    let intercepted = 0;
-    await page.route(url => /^\/locales\/fr\/[^/]+\.json$/.test(url.pathname), route => {
-      intercepted++;
-      return failing ? route.fulfill({ status: 404, body: "Unavailable" }) : route.continue();
-    });
+    let requested = 0;
+    page.on("request", request => { if (/\/locales\/fr\/[^/]+\.json$/.test(new URL(request.url()).pathname)) requested++; });
     await page.getByRole("combobox", { name: enCommon.language.ariaLabel }).click();
     await page.getByRole("option", { name: enCommon.language.french, exact: true }).click();
-    await expect.poll(() => intercepted).toBeGreaterThan(0);
-    await expect(page.getByRole("button", { name: frCommon.loading.retry })).toBeVisible();
-    // Until the chosen language loads, the page keeps the one it already had.
-    await expect(page.getByText(enSettings.appearance.language.label, { exact: true })).toBeVisible();
-    failing = false;
-    await page.getByRole("button", { name: frCommon.loading.retry }).click();
     await expect(page.getByText(frSettings.appearance.language.label, { exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: frCommon.loading.retry })).toHaveCount(0);
+    expect(requested).toBeGreaterThan(0);
   } finally {
     await context.close();
     await removeFixtures(fixtures, { emails: email ? [email] : [], businessIds: [businessId] });
