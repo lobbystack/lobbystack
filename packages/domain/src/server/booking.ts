@@ -14,9 +14,9 @@ import { consumeAppointmentChangeVerificationInTransaction } from "./appointment
 import { findOrCreateContactByPhone } from "./contacts";
 import { recordSmsConsentAnswerInTransaction, smsConsentOnFile, type SmsConsentAnswer, type SmsConsentOnFile } from "./contactSmsConsent";
 import { recordProductEventBestEffort } from "./productEvents";
-import { CANCELLATION_CONFIRMATION, heldForCall, queueOperatorAlertInTransaction, rescheduleAppointmentReminderInTransaction, saveAppointmentVideoUrlInTransaction } from "./notifications";
+import { CANCELLATION_CONFIRMATION, heldForCall, queueOperatorAlertInTransaction, RESCHEDULE_CONFIRMATION, rescheduleAppointmentReminderInTransaction, saveAppointmentVideoUrlInTransaction } from "./notifications";
 import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
-import { APPOINTMENT_REQUESTS, RESCHEDULE_REQUEST } from "./voice";
+import { APPOINTMENT_REQUESTS } from "./voice";
 
 type BookingInput = {
   callId?: string;
@@ -676,14 +676,19 @@ export async function rescheduleAppointmentInTransaction(
   const [updated] = await tx.update(appointments).set({ startsAt, endsAt, staffId, status: "confirmed", calendarSyncState: "pending", revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(and(eq(appointments.id, row.id), eq(appointments.businessId, input.businessId), ne(appointments.status, "canceled"))).returning({ revision: appointments.revision });
   if (!updated) return null;
   await rescheduleAppointmentReminderInTransaction(tx, { businessId: input.businessId, appointmentId: row.id, startsAt, revision: updated.revision });
-  // Callers' requests to move it are done, whoever moved it.
+  // Callers' requests to move or cancel it are done, whoever moved it: the new time settles either question.
   await tx.update(inboxItems).set({ status: "done", updatedAt: new Date() }).where(and(
     eq(inboxItems.businessId, input.businessId),
     eq(inboxItems.kind, "voice_message"),
     eq(inboxItems.status, "open"),
-    sql`${inboxItems.metadata}->>'request' = ${RESCHEDULE_REQUEST}`,
+    inArray(sql`${inboxItems.metadata}->>'request'`, [...APPOINTMENT_REQUESTS]),
     sql`${inboxItems.metadata}->>'appointmentId' = ${row.id}`,
   ));
+  // The customer's text with the new time. Each move gets its own kind, since an appointment can move more than once.
+  if (startsAt > new Date()) {
+    const [confirmation] = await tx.insert(notifications).values({ businessId: input.businessId, channel: "sms", kind: `${RESCHEDULE_CONFIRMATION}:${updated.revision}`, relatedId: row.id, scheduledFor: new Date(), status: "pending" }).onConflictDoNothing().returning({ id: notifications.id });
+    if (confirmation) await enqueueOutbox(tx, { topic: "notification.dispatch", businessId: input.businessId, aggregateType: "appointment", aggregateId: row.id, dedupeKey: `notification:${confirmation.id}:dispatch`, ...heldForCall(input.change.source === "caller" ? input.change.callId : undefined, { notificationId: confirmation.id }) });
+  }
   const audit = changeAudit(input.change);
   await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: audit.actorUserId, eventType: "appointment_change.rescheduled", entityType: "appointment", entityId: row.id, payload: { ...audit.payload, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString(), ...(staffId !== row.staffId ? { staffId } : {}) } });
   await enqueueOutbox(tx, { topic: "calendar.syncAppointment", businessId: input.businessId, aggregateType: "appointment", aggregateId: row.id, dedupeKey: `appointment:${row.id}:calendar:reschedule:${updated.revision}`, payload: { appointmentId: row.id, action: "reschedule" } });

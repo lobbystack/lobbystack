@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildAppointmentNotification, SMS_OPT_OUT_FOOTER, VIDEO_LINK_UPDATE } from "./notifications";
+import { buildAppointmentNotification, RESCHEDULE_CONFIRMATION, SMS_OPT_OUT_FOOTER, VIDEO_LINK_UPDATE } from "./notifications";
 import { estimateSmsSegments } from "./usage";
 
 const base = {
@@ -12,7 +12,7 @@ const base = {
 
 // The GSM-7 basic alphabet, without its Greek capitals: 160 characters a segment.
 const GSM7 = /^[A-Za-z0-9 @£$¥èéùìòÇØøÅåÆæßÉÄÖÑÜäöñüà§¿¡!"#¤%&'()*+,\-./:;<=>?\n]*$/;
-const kinds = ["booking_confirmation", "appointment_reminder", "cancellation_confirmation"];
+const kinds = ["booking_confirmation", "appointment_reminder", "cancellation_confirmation", `${RESCHEDULE_CONFIRMATION}:2`];
 
 describe("appointment notification copy", () => {
   it("writes Serbian reminders in Latin script with a Latin-script date", () => {
@@ -35,6 +35,17 @@ describe("appointment notification copy", () => {
     ["sr", "Termin je otkazan", "Ordinacija Javor: otkazali smo termin za pregled, 30. sep 2026. 14:00."],
   ] as const)("writes the %s cancellation text with the appointment's date, in GSM-7", (locale, subject, body) => {
     const message = buildAppointmentNotification({ ...base, kind: "cancellation_confirmation", channel: "sms", locale });
+    expect(message).toEqual({ subject, body: `${body} ${SMS_OPT_OUT_FOOTER[locale]}` });
+    expect(message.body).toMatch(GSM7);
+  });
+
+  it.each([
+    ["en", "Appointment moved", "Ordinacija Javor: your pregled appointment has moved to Sep 30, 2026, 2:00 PM."],
+    ["fr", "Rendez-vous déplacé", "Ordinacija Javor: votre rendez-vous pregled est déplacé au 30 sept. 2026, 14:00."],
+    ["es", "Cita reprogramada", "Ordinacija Javor: su cita de pregled queda para el 30 sept 2026, 14:00."],
+    ["sr", "Termin je pomeren", "Ordinacija Javor: vas termin za pregled je pomeren na 30. sep 2026. 14:00."],
+  ] as const)("writes the %s reschedule text with the new time, in GSM-7", (locale, subject, body) => {
+    const message = buildAppointmentNotification({ ...base, kind: `${RESCHEDULE_CONFIRMATION}:3`, channel: "sms", locale });
     expect(message).toEqual({ subject, body: `${body} ${SMS_OPT_OUT_FOOTER[locale]}` });
     expect(message.body).toMatch(GSM7);
   });
