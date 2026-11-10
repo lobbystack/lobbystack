@@ -45,6 +45,7 @@ TESTS=(
   e2e/billing-return-cap.e2e.ts
   e2e/business-timezone.e2e.ts
   e2e/getting-started.e2e.ts
+  e2e/manual-create.e2e.ts
   e2e/navigation.e2e.ts
   e2e/onboarding-flow.e2e.ts
   e2e/onboarding-path.e2e.ts
