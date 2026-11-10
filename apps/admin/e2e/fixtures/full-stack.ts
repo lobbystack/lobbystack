@@ -4,12 +4,16 @@ import { eq, sql } from "drizzle-orm";
 
 import { billingAccounts, businesses, createDatabaseClient, phoneNumbers } from "@lobbystack/db";
 
-import onboarding from "../../public/locales/en/onboarding.json" with { type: "json" };
+import onboardingEnglish from "../../public/locales/en/onboarding.json" with { type: "json" };
+import onboardingFrench from "../../public/locales/fr/onboarding.json" with { type: "json" };
 
 import { completeSignupEmailVerification, isolateAuthRateLimit } from "./email-verification";
 import { TWILIO_AUTH_TOKEN } from "./full-stack-environment";
 
 export const password = "Full-Stack-Journey-Password-123!";
+
+/** The dashboard languages a fixture starts in; the signup page saves it as the account preference. */
+export type SignUpLocale = "en" | "fr";
 
 export function migrator() {
   const databaseUrl = process.env.REPLACEMENT_E2E_DATABASE_URL;
@@ -19,28 +23,30 @@ export function migrator() {
 export type Migrator = ReturnType<typeof migrator>;
 
 /** A person signed up through the real pages, with a verified email, sitting at the business step. */
-export async function signUp(page: Page, testInfo: TestInfo, prefix: string): Promise<{ email: string }> {
+export async function signUp(page: Page, testInfo: TestInfo, prefix: string, options: { locale?: SignUpLocale } = {}): Promise<{ email: string; userId: string }> {
+  const locale = options.locale ?? "en";
   const email = `${prefix}-${randomUUID()}@example.invalid`;
-  await page.addInitScript(() => localStorage.setItem("lobbystack.locale", "en"));
+  await page.addInitScript((value) => localStorage.setItem("lobbystack.locale", value), locale);
   await isolateAuthRateLimit(page, email, testInfo);
-  await page.goto("/en/signup");
+  await page.goto(`/${locale}/signup`);
   await page.locator('input[type="email"]').fill(email);
   await page.locator('input[type="password"]').fill(password);
   const signedUp = page.waitForResponse((response) => response.url().endsWith("/api/auth/sign-up/email") && response.request().method() === "POST");
   await page.locator('button[type="submit"]').click();
   expect((await signedUp).ok()).toBe(true);
-  await completeSignupEmailVerification(page, email, password);
+  const userId = await completeSignupEmailVerification(page, email, password);
   await expect(page).toHaveURL(/\/onboarding\/business$/);
-  return { email };
+  return { email, userId };
 }
 
 /** Signs up an owner and names their business. The rest of onboarding has its own journeys, so the dashboard opens once it's marked complete. */
-export async function signUpOwner(database: Migrator, page: Page, testInfo: TestInfo, prefix: string): Promise<{ email: string; businessId: string; businessName: string }> {
-  const { email } = await signUp(page, testInfo, prefix);
+export async function signUpOwner(database: Migrator, page: Page, testInfo: TestInfo, prefix: string, options: { locale?: SignUpLocale } = {}): Promise<{ email: string; userId: string; businessId: string; businessName: string }> {
+  const { email, userId } = await signUp(page, testInfo, prefix, options);
+  const copy = options.locale === "fr" ? onboardingFrench : onboardingEnglish;
   const businessName = `${prefix} ${randomUUID().slice(0, 8)}`;
-  await page.getByLabel(onboarding.businessName.label).fill(businessName);
+  await page.getByLabel(copy.businessName.label).fill(businessName);
   const created = page.waitForResponse((response) => response.url().endsWith("/api/businesses") && response.request().method() === "POST");
-  await page.getByRole("button", { name: onboarding.businessName.continue }).click();
+  await page.getByRole("button", { name: copy.businessName.continue }).click();
   const { businessId } = await (await created).json() as { businessId: string };
   // Let the page land on the next step first. Its navigation still in flight
   // would abort the spec's next page.goto.
@@ -49,7 +55,7 @@ export async function signUpOwner(database: Migrator, page: Page, testInfo: Test
   // The business step moves on to the next one as soon as the business exists, and a business that is already complete is then sent on again.
   // A test that opens its own page before that ends interrupts it, and its first goto fails with net::ERR_ABORTED.
   await page.waitForURL((url) => !url.pathname.includes("/onboarding"), { waitUntil: "load" });
-  return { email, businessId, businessName };
+  return { email, userId, businessId, businessName };
 }
 
 /** Puts the business on a plan, as Polar's webhook would. */
