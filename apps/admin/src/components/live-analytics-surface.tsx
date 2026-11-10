@@ -7,7 +7,7 @@ import { formatDuration } from "@/lib/duration";
 import { subscribeRealtimeQuery } from "@/lib/realtime-query";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { CalendarIcon, Check, ChevronDown, CircleCheck, Ellipsis, PhoneCall, PhoneForwarded, PhoneMissed, type LucideIcon } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -61,24 +61,15 @@ type AnalyticsView = { customRange: { from: Date; to: Date } | null; granularity
 
 const DEFAULT_VIEW: AnalyticsView = { customRange: null, granularity: DEFAULT_GRANULARITY, preset: DEFAULT_PRESET };
 
-/** Reads the view from the query string; anything missing or invalid falls back to the defaults. */
+/** Reads the view from the query string; explicit dates win, and anything missing or invalid falls back to the defaults. */
 function viewFromUrl(): AnalyticsView {
   const parameters = typeof window === "undefined" ? new URLSearchParams() : new URLSearchParams(window.location.search);
   const granularity = granularities.find((option) => option === parameters.get("interval")) ?? DEFAULT_GRANULARITY;
+  const named = presets.find((option) => option === parameters.get("range"));
   const from = parseDay(parameters.get("from"));
   const to = parseDay(parameters.get("to"));
-  if (from && to && from <= to) return { customRange: { from, to }, granularity, preset: "custom" };
-  return { customRange: null, granularity, preset: presets.find((option) => option === parameters.get("range")) ?? DEFAULT_PRESET };
-}
-
-/** Writes the view to the query string, leaving out whatever matches the defaults. */
-function writeView({ customRange, granularity, preset }: AnalyticsView, url: URL): void {
-  for (const key of ["range", "interval", "from", "to"]) url.searchParams.delete(key);
-  if (preset === "custom" && customRange) {
-    url.searchParams.set("from", formatDay(customRange.from));
-    url.searchParams.set("to", formatDay(customRange.to));
-  } else if (preset !== DEFAULT_PRESET && preset !== "custom") url.searchParams.set("range", preset);
-  if (granularity !== DEFAULT_GRANULARITY) url.searchParams.set("interval", granularity);
+  if (from && to && from <= to) return { customRange: { from, to }, granularity, preset: named ?? "custom" };
+  return { customRange: null, granularity, preset: named ?? DEFAULT_PRESET };
 }
 
 function startOfDay(value: Date): Date { return new Date(value.getFullYear(), value.getMonth(), value.getDate()); }
@@ -115,10 +106,19 @@ export function LiveAnalyticsSurface() {
   const { i18n, t } = useTranslation("dashboard");
   const queryClient = useQueryClient();
   const { businesses, business } = useActiveBusiness();
+  // Every share of the page names the dates it shows, so a link opened later lands on the same span.
+  const writeView = useCallback((view: AnalyticsView, url: URL) => {
+    const span = view.customRange ?? presetRange(view.preset === "custom" ? "last30" : view.preset, business?.createdAt);
+    for (const key of ["range", "interval", "from", "to"]) url.searchParams.delete(key);
+    if (view.preset !== "custom") url.searchParams.set("range", view.preset);
+    url.searchParams.set("interval", view.granularity);
+    url.searchParams.set("from", formatDay(span.from));
+    url.searchParams.set("to", formatDay(span.to));
+  }, [business?.createdAt]);
   const { ready: viewRead, setValue: setView, value: { customRange, granularity, preset } } = useUrlState({ initial: DEFAULT_VIEW, read: viewFromUrl, write: writeView });
-  const setPreset = (next: Preset) => setView((current) => ({ ...current, preset: next }));
+  const setPreset = (next: Preset) => setView((current) => ({ ...current, customRange: null, preset: next }));
   const setGranularity = (next: Granularity) => setView((current) => ({ ...current, granularity: next }));
-  const range = useMemo(() => preset === "custom" && customRange ? customRange : presetRange(preset === "custom" ? "last30" : preset, business?.createdAt), [business?.createdAt, customRange, preset]);
+  const range = useMemo(() => customRange ?? presetRange(preset === "custom" ? "last30" : preset, business?.createdAt), [business?.createdAt, customRange, preset]);
   // The API caps hourly views at 20 days, daily at a year and weekly at 3493 days, so longer ranges fall back to a coarser view.
   // The request adds the last picked day to this span, and the extra half day absorbs a DST hour.
   const spanDays = (range.to.getTime() - range.from.getTime()) / 86_400_000;
