@@ -147,7 +147,7 @@ export function InboxPage() {
           {inbox.hasNextPage ? <Button className="w-full" loading={inbox.isFetchingNextPage} onClick={() => void inbox.fetchNextPage()} size="sm" variant="ghost">{t("inbox:loadMore")}</Button> : null}
         </div>
       </div>
-      <div className={cn("min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-background lg:rounded-4xl", open ? "flex" : "hidden sm:flex")}>
+      <div className={cn("min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-background", open ? "flex" : "hidden sm:flex")}>
         {open && openItem?.agent && hasChoice ? <HandledBy agent={openItem.agent} linked={canSetUp} /> : null}
         {callId ? <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"><div className="mb-4 sm:hidden">{back}</div><LiveCallDetailSurface callId={callId} embedded key={callId} /></div>
           : conversationId ? <ConversationThread back={back} conversationId={conversationId} key={conversationId} />

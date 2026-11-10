@@ -127,6 +127,6 @@ export function UnansweredQuestionsSection({ businessId, canManage, layoutSettle
           </Fragment>;
         })}
       </ItemGroup></CardContent></Card>
-      : <div className="rounded-xl border border-dashed lg:rounded-4xl p-8 text-center"><p className="type-empty-title">{t("unansweredQuestions.emptyTitle")}</p><p className="type-empty-description mt-2">{t("unansweredQuestions.emptyDescription")}</p></div>}
+      : <div className="rounded-xl border border-dashed p-8 text-center"><p className="type-empty-title">{t("unansweredQuestions.emptyTitle")}</p><p className="type-empty-description mt-2">{t("unansweredQuestions.emptyDescription")}</p></div>}
   </section>;
 }

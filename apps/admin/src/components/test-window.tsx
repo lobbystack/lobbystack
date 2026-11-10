@@ -230,7 +230,7 @@ export function TestWindow({ businessId, businessSlug, className, trigger = true
 
       {/* A stray click beside the window must not hang up a call. */}
       <Dialog disablePointerDismissal onOpenChange={(open) => { if (!open) close(); }} open={opened !== null}>
-        <DialogContent className="flex h-dvh max-h-dvh max-w-none flex-col gap-4 rounded-none p-4 sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:max-w-md sm:rounded-4xl sm:p-6">
+        <DialogContent className="flex h-dvh max-h-dvh max-w-none flex-col gap-4 rounded-none p-4 sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:max-w-md sm:rounded-3xl sm:p-6">
           {opened ? (
             <TestWindowBody
               agentId={opened.agentId}
