@@ -102,13 +102,14 @@ describe("the workspace menu", () => {
 });
 
 describe("drilling into an agent, Business and Settings", () => {
-  it("swaps in the agent's menu, headed by a row with the agent's name", () => {
+  it("swaps in the agent's menu, headed by an Agents row and the agent's switcher", () => {
     const view = setup();
     view.navigate("/inbox");
     view.navigate("/agents/agent-1");
     expect(menu().getAttribute("data-menu-level")).toBe("agent:agent-1");
     expect(menu().className).toContain("slide-in-from-right");
-    expect(within(menu() as HTMLElement).getByRole("button", { name: "Front desk" }).hasAttribute("data-back-row")).toBe(true);
+    expect(within(menu() as HTMLElement).getByRole("button", { name: "items.agents" }).hasAttribute("data-back-row")).toBe(true);
+    expect(within(menu() as HTMLElement).getByText("Front desk")).toBeTruthy();
     expect(within(menu() as HTMLElement).getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["/agents/agent-1", "/agents/agent-1/instructions", "/agents/agent-1/rules", "/agents/agent-1/channels", "/agents/agent-1/shared"]);
     // The phone number page keeps Channels lit.
     view.navigate("/agents/agent-1/channels/phone");
@@ -146,7 +147,7 @@ describe("drilling into an agent, Business and Settings", () => {
   it("lights the agent's row under Agents with the page it's on", async () => {
     const view = setup({ agents: [FRONT, EVENING] });
     view.navigate("/agents/agent-2/rules");
-    await userEvent.click(screen.getByRole("button", { name: "Evening" }));
+    await userEvent.click(screen.getByRole("button", { name: "items.agents" }));
     const row = screen.getByRole("link", { name: /^Evening/ });
     expect(row.hasAttribute("data-active")).toBe(true);
     expect(within(row).getByText("agentPages.rules")).toBeTruthy();

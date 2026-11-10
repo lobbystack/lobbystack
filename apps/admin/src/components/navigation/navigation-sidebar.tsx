@@ -89,10 +89,9 @@ function useMenuLevel() {
 /** What the back row names: the agent, Business or Settings. */
 function useSectionTitle() {
   const { t } = useTranslation("nav");
-  const { find } = useAgents();
+  // An agent's menu is under Agents; the switcher below the row names the agent.
   return (level: MenuLevel) => {
-    const agentId = agentIdOf(level);
-    if (agentId) return find(agentId)?.name ?? t("items.agents");
+    if (agentIdOf(level)) return t("items.agents");
     return t(level === "business" ? "items.business" : "items.settings");
   };
 }
