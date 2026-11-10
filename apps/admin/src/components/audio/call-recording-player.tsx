@@ -351,32 +351,6 @@ export function CallRecordingPlayer({
     audio.pause();
   }
 
-  // Space plays and pauses from anywhere on the page, the way a video player does, unless it belongs to something else: a field, a button, a menu or a dialog.
-  const togglePlaybackRef = useRef(togglePlayback);
-  togglePlaybackRef.current = togglePlayback;
-  useEffect(() => {
-    if (!waveform || variant === "hidden") {
-      return;
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key !== " " || event.defaultPrevented || event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) {
-        return;
-      }
-
-      const target = event.target instanceof Element ? event.target : null;
-      if (target?.closest("input, textarea, select, button, a[href], [contenteditable]:not([contenteditable='false']), [role='button'], [role='tab'], [role='combobox'], [role='menuitem'], [role='option'], [role='switch'], [role='checkbox'], [role='radio'], [role='dialog'], [role='alertdialog']")) {
-        return;
-      }
-
-      event.preventDefault();
-      void togglePlaybackRef.current();
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [variant, waveform]);
-
   function seekTo(nextTime: number) {
     const audio = audioRef.current;
     if (!audio || duration <= 0) {

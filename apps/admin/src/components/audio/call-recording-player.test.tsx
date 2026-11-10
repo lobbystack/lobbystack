@@ -87,16 +87,18 @@ describe("space bar on the waveform player", () => {
   }
   const press = (target: Element | Document) => target.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: " " }));
 
-  it("plays and pauses from anywhere on the page", async () => {
-    const { play } = await ready();
-    await act(async () => { press(document.body); });
-    expect(play).toHaveBeenCalledTimes(1);
-  });
-
-  it("does the same once when the waveform has focus", async () => {
+  it("plays and pauses while the waveform has focus", async () => {
     const { play, seek } = await ready();
     await act(async () => { seek.focus(); press(seek); });
     expect(play).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves the space bar to the page when focus is outside the player", async () => {
+    const { play } = await ready();
+    const event = new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: " " });
+    await act(async () => { document.body.dispatchEvent(event); });
+    expect(play).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
   });
 
   it("leaves the space bar to a text field and to buttons", async () => {
