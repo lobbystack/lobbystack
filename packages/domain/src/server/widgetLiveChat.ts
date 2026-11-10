@@ -46,13 +46,13 @@ const NOBODY_JOINED: Record<RuntimeLocale, string> = {
   pt: "Desculpe, ninguém da equipe está disponível para entrar na conversa agora. Se quiser, deixe seu nome e o melhor número para falarmos com você, e alguém vai retornar o contato.",
   it: "Ci dispiace, al momento nessuno del team è libero di unirsi alla chat. Se vuole, lasci il suo nome e il numero migliore per contattarla e qualcuno la richiamerà.",
   nl: "Sorry, er is nu niemand van het team vrij om mee te praten. Als u wilt, laat dan uw naam en het beste nummer achter waarop we u kunnen bereiken, dan neemt iemand contact met u op.",
-  pl: "Przepraszamy, nikt z zespołu nie może teraz dołączyć do rozmowy. Prosimy zostawić imię i numer telefonu, pod którym najłatwiej się skontaktować, a ktoś się odezwie.",
-  tr: "Üzgünüz, şu anda ekipten kimse sohbete katılamıyor. İsterseniz adınızı ve size en kolay ulaşabileceğimiz numarayı bırakın, biri size geri dönüş yapacak.",
-  vi: "Xin lỗi, hiện không có ai trong đội ngũ rảnh để tham gia. Nếu muốn, quý khách vui lòng để lại tên và số điện thoại tiện liên lạc nhất, chúng tôi sẽ liên hệ lại.",
-  tl: "Pasensya na po, walang available sa team ngayon para sumali. Kung gusto ninyo, iwan po ang inyong pangalan at ang pinakamagandang numero para makontak kayo, at may babalik sa inyo.",
-  sv: "Tyvärr har ingen i teamet möjlighet att ansluta just nu. Om du vill kan du lämna ditt namn och det nummer du lättast nås på, så hör någon av sig.",
-  ru: "Извините, сейчас никто из команды не может подключиться. Если хотите, оставьте своё имя и номер, по которому с вами удобнее связаться, и мы вам перезвоним.",
-  uk: "Вибачте, зараз ніхто з команди не може приєднатися. Якщо бажаєте, залиште своє ім'я та номер, за яким із вами зручно зв'язатися, і ми вам передзвонимо.",
+  pl: "Przepraszamy, nikt z zespołu nie może teraz dołączyć do rozmowy. Prosimy o pozostawienie imienia i numeru telefonu, pod którym najłatwiej się skontaktować, a ktoś z zespołu skontaktuje się z Państwem.",
+  tr: "Üzgünüz, şu anda ekipten kimse sohbete katılamıyor. İsterseniz adınızı ve size en kolay ulaşabileceğimiz numarayı bırakın, ekipten biri size geri dönüş yapacak.",
+  vi: "Xin lỗi, hiện không có ai trong đội ngũ rảnh để tham gia cuộc trò chuyện. Nếu quý khách muốn, quý khách vui lòng để lại tên và số điện thoại tiện liên lạc nhất, chúng tôi sẽ liên hệ lại.",
+  tl: "Pasensya na po, walang sinuman sa team ang available ngayon para sumali sa usapan. Kung gusto ninyo, iwan po ang inyong pangalan at ang numerong pinakamadaling tawagan, at may tatawag sa inyo mula sa team.",
+  sv: "Tyvärr har ingen i teamet möjlighet att ansluta till chatten just nu. Om du vill kan du lämna ditt namn och det nummer du lättast nås på, så hör någon av sig.",
+  ru: "Извините, сейчас никто из команды не может подключиться к чату. Если хотите, оставьте своё имя и номер, по которому с вами удобнее связаться, и мы вам перезвоним.",
+  uk: "Вибачте, зараз ніхто з команди не може приєднатися до чату. Якщо бажаєте, залиште своє ім'я та номер, за яким із вами зручно зв'язатися, і ми вам передзвонимо.",
 };
 
 export type TeamRequestOutcome =

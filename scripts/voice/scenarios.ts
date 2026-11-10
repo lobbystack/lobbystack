@@ -162,7 +162,7 @@ const TRANSLATED_LINES: Record<Exclude<RuntimeLocale, "en">, Record<string, stri
   },
   pl: {
     [OPENING]: "Dzień dobry, czy macie otwarte w sobotę?",
-    "Okay, perfect. That is all I needed. Thanks, bye!": "Dobrze, świetnie. To wszystko, czego potrzebowałem. Dziękuję, do widzenia!",
+    "Okay, perfect. That is all I needed. Thanks, bye!": "Dobrze, świetnie. To wszystko. Dziękuję, do widzenia!",
     "No, that's everything. Goodbye!": "Nie, to wszystko. Do widzenia!",
     "Great, thank you so much. Have a good day, bye bye.": "Super, bardzo dziękuję. Miłego dnia, pa pa.",
     "Nope, that's it. Thanks.": "Nie, to już wszystko. Dziękuję.",
@@ -170,7 +170,7 @@ const TRANSLATED_LINES: Record<Exclude<RuntimeLocale, "en">, Record<string, stri
     "Goodbye!": "Do widzenia!",
     "Oh wait, one more thing.": "A, chwileczkę, jeszcze jedno.",
     "Do you have parking?": "Czy macie parking?",
-    "Ah no, I actually have to go. Bye bye.": "A nie, właściwie muszę już iść. Pa pa.",
+    "Ah no, I actually have to go. Bye bye.": "Nie, właściwie muszę już iść. Pa pa.",
   },
   tr: {
     [OPENING]: "Merhaba, cumartesi günü açık mısınız?",
@@ -182,7 +182,7 @@ const TRANSLATED_LINES: Record<Exclude<RuntimeLocale, "en">, Record<string, stri
     "Goodbye!": "Hoşça kalın!",
     "Oh wait, one more thing.": "Ah, bir dakika, bir şey daha var.",
     "Do you have parking?": "Otoparkınız var mı?",
-    "Ah no, I actually have to go. Bye bye.": "Ah yok, aslında gitmem gerekiyor. Görüşürüz.",
+    "Ah no, I actually have to go. Bye bye.": "Ah, hayır, aslında gitmem gerekiyor. Görüşürüz.",
   },
   vi: {
     [OPENING]: "Xin chào, thứ Bảy bên mình có mở cửa không?",
@@ -199,11 +199,11 @@ const TRANSLATED_LINES: Record<Exclude<RuntimeLocale, "en">, Record<string, stri
   tl: {
     [OPENING]: "Hello po, bukas po ba kayo sa Sabado?",
     "Okay, perfect. That is all I needed. Thanks, bye!": "Sige, ayos. Iyon lang ang kailangan ko. Salamat, bye!",
-    "No, that's everything. Goodbye!": "Wala na po, iyon lang. Paalam!",
+    "No, that's everything. Goodbye!": "Wala na po, iyon lang. Sige po, bye!",
     "Great, thank you so much. Have a good day, bye bye.": "Ayos, maraming salamat po. Magandang araw, bye bye.",
     "Nope, that's it. Thanks.": "Wala na, iyon lang. Salamat.",
     "No, that's everything.": "Wala na po, iyon lang.",
-    "Goodbye!": "Paalam!",
+    "Goodbye!": "Bye po!",
     "Oh wait, one more thing.": "Ay teka, may isa pa pala.",
     "Do you have parking?": "May parking po ba kayo?",
     "Ah no, I actually have to go. Bye bye.": "Ay hindi, kailangan ko na palang umalis. Bye bye.",
@@ -224,13 +224,13 @@ const TRANSLATED_LINES: Record<Exclude<RuntimeLocale, "en">, Record<string, stri
     [OPENING]: "Здравствуйте, вы работаете в субботу?",
     "Okay, perfect. That is all I needed. Thanks, bye!": "Хорошо, отлично. Это всё, что мне было нужно. Спасибо, до свидания!",
     "No, that's everything. Goodbye!": "Нет, это всё. До свидания!",
-    "Great, thank you so much. Have a good day, bye bye.": "Отлично, большое спасибо. Хорошего дня, пока-пока.",
+    "Great, thank you so much. Have a good day, bye bye.": "Отлично, большое спасибо. Хорошего дня, до свидания!",
     "Nope, that's it. Thanks.": "Нет, это всё. Спасибо.",
     "No, that's everything.": "Нет, это всё.",
     "Goodbye!": "До свидания!",
     "Oh wait, one more thing.": "Ой, подождите, ещё один вопрос.",
     "Do you have parking?": "У вас есть парковка?",
-    "Ah no, I actually have to go. Bye bye.": "Ах нет, мне на самом деле пора идти. Пока-пока.",
+    "Ah no, I actually have to go. Bye bye.": "Ой, нет, мне на самом деле пора идти. До свидания!",
   },
   uk: {
     [OPENING]: "Добрий день, ви працюєте в суботу?",
@@ -242,7 +242,7 @@ const TRANSLATED_LINES: Record<Exclude<RuntimeLocale, "en">, Record<string, stri
     "Goodbye!": "До побачення!",
     "Oh wait, one more thing.": "Ой, зачекайте, ще одне питання.",
     "Do you have parking?": "У вас є парковка?",
-    "Ah no, I actually have to go. Bye bye.": "Ах ні, мені насправді вже треба йти. Бувайте.",
+    "Ah no, I actually have to go. Bye bye.": "Ой, ні, мені вже треба йти. Бувайте.",
   },
 };
 

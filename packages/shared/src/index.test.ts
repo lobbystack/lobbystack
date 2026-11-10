@@ -16,7 +16,7 @@ describe("defaultAgentName", () => {
       ["pl", "Agent"],
       ["tr", "Asistan"],
       ["vi", "Trợ lý"],
-      ["tl", "Ahente"],
+      ["tl", "Assistant"],
       ["sv", "Agent"],
       ["ru", "Агент"],
       ["uk", "Агент"],

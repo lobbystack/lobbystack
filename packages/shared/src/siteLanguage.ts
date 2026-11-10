@@ -12,13 +12,13 @@ const COMMON_WORDS: Record<RuntimeLocale, ReadonlySet<string>> = {
   pt: new Set("o a os as e para você seu nossos com é uma em sobre nós do da que".split(" ")),
   it: new Set("il la i gli e per voi vostro nostri con è una in su noi del della che".split(" ")),
   nl: new Set("de het een en voor u uw onze met is op wij van te niet ons bij".split(" ")),
-  pl: new Set("i w na z do się nie jest że to jak dla od po przez nasz nasze oraz są".split(" ")),
-  tr: new Set("ve bir bu için ile da de en çok olan gibi daha size sizin bizim ne olarak".split(" ")),
-  vi: new Set("và của các cho là có được với những một trong này chúng tôi bạn không".split(" ")),
-  tl: new Set("ang ng mga sa na at ay para ito kami namin ninyo inyong po hindi".split(" ")),
-  sv: new Set("och att det som en på är för med till av den vi har inte ni".split(" ")),
-  ru: new Set("и в на не что с по для это мы вы наш ваш как от к".split(" ")),
-  uk: new Set("і в на не що з до для це ми ви наш ваш як від та у".split(" ")),
+  pl: new Set("i w na z do się nie jest że to jak dla od po przez nasz nasze oraz są czy ale już tylko który".split(" ")),
+  tr: new Set("ve bir bu için ile da de en çok olan gibi daha size sizin bizim ne olarak mi var yok ama her kadar".split(" ")),
+  vi: new Set("và của các cho là có được với những một trong này chúng tôi bạn không đã sẽ thì nhưng để khi rất cũng".split(" ")),
+  tl: new Set("ang ng mga sa at ay para ito kami namin ninyo inyong po hindi si ni ko mo may kung".split(" ")),
+  sv: new Set("och att det som en på är för med till av den vi har inte ni du".split(" ")),
+  ru: new Set("и в на не что с по для это мы вы наш ваш как от к у то если или же вот так".split(" ")),
+  uk: new Set("і в на не що з до для це ми ви наш ваш як від та у й є але або також".split(" ")),
 };
 
 const MIN_WORDS = 8;
