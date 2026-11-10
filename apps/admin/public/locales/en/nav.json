@@ -111,7 +111,7 @@
     "apiKeys": "API keys",
     "partnerAccess": "Partner access"
   },
-  "help": "Help",
+  "accountMenu": "Account menu",
   "agentMenu": {
     "conversations": "Conversations",
     "noChannels": "No channels yet"

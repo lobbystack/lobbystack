@@ -79,7 +79,7 @@ export function searchCatalog(t: Translate, agents: ReadonlyArray<{ id: string; 
     page("contacts", "/contacts", "items.contacts", ["contacts"]),
     page("analytics", "/analytics", "items.analytics", ["analytics"]),
     page("agents", "/agents", "items.agents", ["agents"]),
-    page("affiliate", "/affiliate", "items.affiliate", ["affiliate"], text(t, "help")),
+    page("affiliate", "/affiliate", "items.affiliate", ["affiliate"], text(t, "accountMenu")),
   ];
   const settingsPages: SearchEntry[] = [
     ...BUSINESS_PAGES.map((item) => page(item.href, item.href, item.titleKey, PAGE_TAGS[item.href] ?? [], businessLabel)),

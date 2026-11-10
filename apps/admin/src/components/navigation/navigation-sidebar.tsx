@@ -12,7 +12,6 @@ import { agentIdOf, directionBetween, levelFor, type Direction, type MenuLevel }
 import { ACCOUNT_PAGES, BUSINESS_PAGES, currentSettingsPage, WORKSPACE_PAGES } from "@/lib/settings-pages";
 import { AccountMenu, type NavigationUser } from "./account-menu";
 import { AgentMenu } from "./agent-menu";
-import { HelpMenu } from "./help-menu";
 import { BackRow, MenuRow, SectionTrailing } from "./menu-parts";
 import { NavGroup, useNavLinks, type NavLink } from "./nav-group";
 import { SearchButton } from "./search-button";
@@ -98,8 +97,8 @@ function useSectionTitle() {
 
 /**
  * The dashboard's sidebar. One workspace menu; opening an agent, Business or
- * Settings swaps the middle for that one's menu, with a row back. The switcher, search,
- * help and the account menu never move.
+ * Settings swaps the middle for that one's menu, with a row back. The switcher, search
+ * and the account menu never move.
  */
 export function NavigationSidebar({ partnerConsole = false, user }: { partnerConsole?: boolean; user: NavigationUser }) {
   const menu = useMenuLevel();
@@ -121,11 +120,7 @@ export function NavigationSidebar({ partnerConsole = false, user }: { partnerCon
         </div>
       </SidebarContent>
       <SidebarFooter>
-        {/* Help sits beside the account menu, so it's on every menu and costs no row. */}
-        <div className="flex items-center gap-1 group-data-[collapsible=icon]:flex-col-reverse">
-          <div className="min-w-0 flex-1 group-data-[collapsible=icon]:flex-none"><AccountMenu partnerConsole={partnerConsole} user={user} /></div>
-          <span className="hidden md:contents"><HelpMenu side="top" /></span>
-        </div>
+        <AccountMenu partnerConsole={partnerConsole} user={user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

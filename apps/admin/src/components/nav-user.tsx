@@ -1,10 +1,11 @@
 "use client";
 
-import { ChevronsUpDown, Contrast, Crown, FileText, Handshake, LifeBuoy, LogOut, ShieldCheck, User as UserIcon } from "lucide-react";
+import { BookOpen, ChevronsUpDown, Contrast, Crown, ExternalLink, FileText, Gift, Handshake, LifeBuoy, LogOut, MessageSquare, ShieldCheck, User as UserIcon } from "lucide-react";
 import { useTheme } from "./theme-provider";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import Link from "next/link";
+import { brandLinks } from "@lobbystack/shared";
 
 import { useBranding } from "@/components/branding-provider";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -25,6 +26,8 @@ import {
 type User = { email: string; name: string };
 
 type NavUserProps = {
+  /** Opens the feedback dialog, which the caller keeps mounted outside the menu. */
+  onFeedback?: (() => void) | undefined;
   /** Ends the person's open of the business they work in as the partner's staff, as they go back to the console. */
   onLeaveBusiness?: (() => void) | undefined;
   onSignOut: () => void;
@@ -36,6 +39,7 @@ type NavUserProps = {
 };
 
 export function NavUser({
+  onFeedback,
   onLeaveBusiness,
   onSignOut,
   onUpgradeToPro,
@@ -43,7 +47,7 @@ export function NavUser({
   showUpgradeToPro = false,
   user,
 }: NavUserProps) {
-  const { t } = useTranslation("nav");
+  const { t } = useTranslation(["nav", "common"]);
   const [open, setOpen] = useState(false);
   const { isMobile, setOpenMobile } = useSidebar();
   const { resolvedTheme, setTheme } = useTheme();
@@ -53,6 +57,8 @@ export function NavUser({
   const toggleTheme = () => setTheme(resolvedTheme === "dark" ? "light" : "dark");
   // On a partner's dashboard, the partner's own support, terms and privacy links, each only when it set one.
   const { partner } = useBranding();
+  // A partner's businesses never get the host's docs or marketing.
+  const docsHref = partner ? null : brandLinks().docsUrl;
   const partnerLinks = partner
     ? [
         { key: "support", href: partner.links.support, label: t("sidebar.support"), icon: LifeBuoy },
@@ -89,6 +95,7 @@ export function NavUser({
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}
           >
+            <div className="truncate px-3 py-2 text-sm text-muted-foreground" title={user.email}>{user.email}</div>
             {showUpgradeToPro ? (
               <>
                 <DropdownMenuGroup>
@@ -123,6 +130,25 @@ export function NavUser({
                   {t("sidebar.partnerConsole")}
                 </DropdownMenuItem>
               ) : null}
+              {onFeedback ? (
+                <DropdownMenuItem onClick={() => { closeMobileSidebar(); onFeedback(); }}>
+                  <MessageSquare />
+                  {t("common:feedback.trigger")}
+                </DropdownMenuItem>
+              ) : null}
+              {docsHref ? (
+                <DropdownMenuItem render={<a aria-label={t("common:feedback.helpCenter")} href={docsHref} rel="noreferrer" target="_blank" />}>
+                  <BookOpen />
+                  {t("common:feedback.helpCenter")}
+                  <ExternalLink className="ms-auto text-muted-foreground" />
+                </DropdownMenuItem>
+              ) : null}
+              {partner ? null : (
+                <DropdownMenuItem onClick={closeMobileSidebar} render={<Link href="/affiliate" />}>
+                  <Gift />
+                  {t("items.affiliate")}
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 closeOnClick={false}
                 onClick={toggleTheme}
@@ -145,10 +171,7 @@ export function NavUser({
               </>
             ) : null}
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={onSignOut}
-              variant="destructive"
-            >
+            <DropdownMenuItem onClick={onSignOut}>
               <LogOut />
               {t("sidebar.signOut")}
             </DropdownMenuItem>

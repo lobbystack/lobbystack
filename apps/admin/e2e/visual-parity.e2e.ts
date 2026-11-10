@@ -485,9 +485,9 @@ for (const routeCase of routes) for (const viewport of viewports) for (const loc
       const common = JSON.parse(readFileSync(fileURLToPath(new URL(`../public/locales/${locale}/common.json`, import.meta.url)), "utf8"));
       if (paritySide === "reference") await page.getByRole("button", { name: common.feedback.trigger, exact: true }).click();
       else {
-        // The port's feedback opens from the help menu beside the account menu.
-        const nav = JSON.parse(readFileSync(fileURLToPath(new URL(`../public/locales/${locale}/nav.json`, import.meta.url)), "utf8"));
-        await page.getByRole("button", { name: nav.help, exact: true }).first().click();
+        // The port's feedback opens from the account menu.
+        if (viewport.name === "mobile") await page.getByRole("button", { name: "Toggle sidebar", exact: true }).click();
+        await page.locator('[data-slot="sidebar-footer"]').getByRole("button", { name: /@/ }).click();
         await page.getByRole("menuitem", { name: common.feedback.trigger, exact: true }).click();
       }
       const message = page.getByRole("textbox", { name: common.feedback.label, exact: true });

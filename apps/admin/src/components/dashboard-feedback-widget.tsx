@@ -24,7 +24,7 @@ type FeedbackDialogProps = {
   onOpenChange: (open: boolean) => void;
 };
 
-/** Feedback to the team that runs the dashboard, which the help menu opens. It sends in the background and closes at once. */
+/** Feedback to the team that runs the dashboard, which the account menu opens. It sends in the background and closes at once. */
 export function DashboardFeedbackDialog({ businessId, onOpenChange, open }: FeedbackDialogProps) {
   const { t } = useTranslation("common");
   const links = brandLinks();

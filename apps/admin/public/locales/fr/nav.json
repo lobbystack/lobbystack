@@ -112,7 +112,7 @@
     "apiKeys": "Clés API",
     "partnerAccess": "Accès du partenaire"
   },
-  "help": "Aide",
+  "accountMenu": "Menu du compte",
   "agentMenu": {
     "conversations": "Conversations",
     "noChannels": "Aucun canal pour l'instant"

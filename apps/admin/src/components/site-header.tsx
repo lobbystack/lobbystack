@@ -6,9 +6,6 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { openTestWindow, useTestWindowReady } from "@/lib/test-window";
 import { cn } from "@/lib/utils";
 
-/** Where the help menu renders on phones, in the header. */
-export const MOBILE_UTILITY_SLOT_ID = "mobile-utility-slot";
-
 /** The test window's button on phones. */
 function MobileTestCallButton() {
   const { t } = useTranslation("common");
@@ -76,7 +73,6 @@ export function SiteHeader({
         <SidebarTrigger className="md:hidden" size="icon" type="button" variant="outline" />
         <div className="ml-auto flex items-center gap-2">
           <MobileTestCallButton />
-          <div className="flex items-center gap-0.5" id={MOBILE_UTILITY_SLOT_ID} />
         </div>
       </div>
     </header>
