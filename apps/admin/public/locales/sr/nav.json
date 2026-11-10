@@ -116,7 +116,7 @@
     "apiKeys": "API ključevi",
     "partnerAccess": "Pristup partnera"
   },
-  "help": "Pomoć",
+  "accountMenu": "Meni naloga",
   "agentMenu": {
     "conversations": "Razgovori",
     "noChannels": "Još nema kanala"

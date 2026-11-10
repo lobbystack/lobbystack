@@ -13,7 +13,6 @@ vi.mock("next/navigation", () => ({ usePathname: () => route.pathname, useRouter
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string, values?: { place?: string }) => values?.place ? `${key}:${values.place}` : key }) }));
 vi.mock("./live-upgrade-plan-provider", () => ({ LiveUpgradePlanProvider: ({ children }: { children: ReactNode }) => <UpgradePlanDialogProvider onOpen={vi.fn()}>{children}</UpgradePlanDialogProvider> }));
 vi.mock("@/components/navigation/shell-runtime", () => ({ ShellRuntime: () => null }));
-vi.mock("@/components/navigation/help-menu", () => ({ HelpMenu: () => <button type="button">help</button> }));
 vi.mock("./nav-user", () => ({ NavUser: () => null }));
 
 const agent = (id: string, name: string, overrides: Partial<AgentListItem> = {}): AgentListItem => ({ id, name, isDefault: false, paused: false, phoneNumbers: 0, widgetKeys: 0, instagramAccounts: 0, createdAt: "2026-01-01T00:00:00Z", updatedAt: "2026-01-01T00:00:00Z", ...overrides });
@@ -48,7 +47,6 @@ describe("the workspace menu", () => {
     setup();
     expect(links()).toEqual(["#dashboard-main-content", "/", "/inbox", "/appointments", "/contacts", "/analytics", "/agents/agent-1", "/business", "/workspace/team"]);
     expect(document.getElementById("dashboard-main-content")?.tabIndex).toBe(-1);
-    expect(screen.getByRole("button", { name: "help" })).toBeTruthy();
   });
 
   it("lists each agent under Agents once there are several", () => {

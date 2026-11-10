@@ -116,7 +116,7 @@
     "apiKeys": "Claves de API",
     "partnerAccess": "Acceso del socio"
   },
-  "help": "Ayuda",
+  "accountMenu": "Menú de la cuenta",
   "agentMenu": {
     "conversations": "Conversaciones",
     "noChannels": "Aún no hay canales"
