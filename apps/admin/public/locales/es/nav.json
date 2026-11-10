@@ -14,7 +14,7 @@
     "business": "Negocio"
   },
   "search": {
-    "placeholder": "Buscar en el espacio de trabajo...",
+    "placeholder": "Buscar páginas, ajustes, agentes y contactos",
     "button": "Buscar",
     "title": "Búsqueda",
     "description": "Encuentre páginas, ajustes, agentes, contactos y conversaciones.",
@@ -22,13 +22,21 @@
     "loading": "Buscando en contactos y conversaciones",
     "instagram": "Instagram",
     "groups": {
-      "pages": "Páginas y ajustes",
+      "pages": "Páginas",
+      "agents": "Agentes",
       "contacts": "Contactos",
       "conversations": "Conversaciones"
     },
+    "keys": {
+      "select": "Elegir",
+      "open": "Abrir",
+      "close": "Cerrar"
+    },
     "where": {
-      "main": "Menú principal",
-      "conversation": "Bandeja de entrada › {{channel}}, {{date}}"
+      "main": "Menú principal"
+    },
+    "detail": {
+      "conversation": "{{channel}}, {{date}}"
     },
     "synonyms": {
       "billing": "factura, facturas, recibo, pago, pagar, tarjeta, suscripción, plan, precio, cancelar",

@@ -3,13 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { SearchIcon } from "lucide-react";
+import { CornerDownLeft, SearchIcon, type LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { useBusinessCan, useOpensPartnerBilling } from "@/components/business-capabilities-provider";
 import { registerSearch } from "@/components/navigation/search-button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAgents } from "@/hooks/use-agents";
 import type { InboxPage } from "@/components/inbox/inbox-data";
@@ -17,10 +16,18 @@ import { getChannelLabel, getContactDisplayName } from "@/lib/contact-display";
 import { formatDateTime } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
 import { cn } from "@/lib/utils";
-import { searchCatalog, searchSynonyms, type Translate } from "./catalog";
-import { searchEntries } from "./search";
+import { searchCatalog, searchSynonyms, type SearchEntry, type Translate } from "./catalog";
+import { allowed, searchEntries } from "./search";
+import { ContactIcon, ConversationIcon, entryIcon } from "./search-icons";
 
-type Result = { id: string; title: string; where: string; href: string; group: "pages" | "contacts" | "conversations" };
+type Group = "pages" | "agents" | "contacts" | "conversations";
+/** One row: its icon, where it lives (muted, before the title), and what it's called. */
+type Result = { id: string; title: string; section: string | null; href: string; group: Group; icon: LucideIcon; detail?: string };
+
+/** The pages an empty search suggests, in the sidebar's order: the main pages, then Business and Settings. */
+const SUGGESTED_PAGES = ["home", "inbox", "appointments", "contacts", "analytics", "agents"];
+const isAgent = (entry: SearchEntry) => /^agent:[^:]+$/u.test(entry.id);
+const isSettingsPage = (entry: SearchEntry) => /^\/(business|workspace|account)(\/|$)/u.test(entry.id);
 type ContactRow = { id: string; name: string | null; phone: string | null; email: string | null; channels?: string[] };
 
 /** Live results need two letters, so one keystroke doesn't search every contact. */
@@ -37,13 +44,15 @@ function useLiveResults(businessId: string | undefined, query: string, enabled: 
   if (!on) return { results: [] as Result[], loading: false };
   const day = (value: string) => formatDateTime(value, i18n.language, { month: "short", day: "numeric" });
   const results: Result[] = [
-    ...(contacts.data?.contacts ?? []).map((contact): Result => ({ id: `contact:${contact.id}`, title: getContactDisplayName(contact, i18n.language, t), where: t("nav:items.contacts"), href: `/contacts/${contact.id}`, group: "contacts" })),
+    ...(contacts.data?.contacts ?? []).map((contact): Result => ({ id: `contact:${contact.id}`, title: getContactDisplayName(contact, i18n.language, t), section: t("nav:items.contacts"), href: `/contacts/${contact.id}`, group: "contacts", icon: ContactIcon })),
     ...(inbox.data?.items ?? []).map((item): Result => ({
       id: item.key,
       title: getContactDisplayName({ name: item.contactName, phone: item.contactPhone, email: item.contactEmail, channels: [item.channel] }, i18n.language, t),
-      where: t("nav:search.where.conversation", { channel: getChannelLabel(item.channel, t), date: day(item.occurredAt) }),
+      section: t("nav:items.inbox"),
+      detail: t("nav:search.detail.conversation", { channel: getChannelLabel(item.channel, t), date: day(item.occurredAt) }),
       href: item.kind === "call" ? `/inbox?call=${encodeURIComponent(item.id)}` : `/inbox?conversation=${encodeURIComponent(item.id)}`,
       group: "conversations",
+      icon: ConversationIcon,
     })),
   ];
   return { results, loading: (contacts.isPending || inbox.isPending) && !results.length };
@@ -67,12 +76,23 @@ function SearchPanel({ businessId, onClose }: { businessId: string | undefined; 
     return { entries: searchCatalog(translate, agents), synonyms: searchSynonyms(translate), can, opensPartnerBilling };
   }, [agents, can, opensPartnerBilling, t]);
   const live = useLiveResults(businessId, query, query.length >= LIVE_MIN_LENGTH && can("activity"));
-  const results = useMemo<Result[]>(() => [
-    ...searchEntries(text, scope).map((entry): Result => ({ id: entry.id, title: entry.title, where: entry.where, href: entry.href, group: "pages" })),
-    ...live.results,
-  ], [live.results, scope, text]);
+  const results = useMemo<Result[]>(() => {
+    const main = t("search.where.main");
+    // Settings and Business pages read "Settings › Team" and "Business › Knowledge"; the main pages need no place.
+    const section = (entry: SearchEntry) => entry.where === main ? null : entry.href.startsWith("/business") ? t("items.business") : /^\/(workspace|account)(\/|$)/u.test(entry.href) ? t("items.settings") : entry.where;
+    const row = (entry: SearchEntry): Result => ({ id: entry.id, title: entry.title, section: section(entry), href: entry.href, group: entry.id.startsWith("agent:") ? "agents" : "pages", icon: entryIcon(entry.id, entry.href) });
+    // With nothing typed, it suggests the pages and agents the person may open.
+    if (!text.trim()) {
+      const open = scope.entries.filter((entry) => allowed(entry, scope));
+      const pages = SUGGESTED_PAGES.flatMap((id) => open.filter((entry) => entry.id === id));
+      return [...pages, ...open.filter(isSettingsPage), ...open.filter(isAgent)].map(row);
+    }
+    // Grouped the way they show, so the arrow keys follow the list from top to bottom.
+    const found = searchEntries(text, scope).map(row);
+    return [...found.filter((result) => result.group === "pages"), ...found.filter((result) => result.group === "agents"), ...live.results];
+  }, [live.results, scope, t, text]);
   const selected = Math.min(active, Math.max(results.length - 1, 0));
-  const groups = (["pages", "contacts", "conversations"] as const).filter((group) => results.some((result) => result.group === group));
+  const groups = (["pages", "agents", "contacts", "conversations"] as const).filter((group) => results.some((result) => result.group === group));
 
   function go(result: Result | undefined) {
     if (!result) return;
@@ -88,55 +108,77 @@ function SearchPanel({ businessId, onClose }: { businessId: string | undefined; 
 
   const optionId = (result: Result) => `search-option-${result.id.replace(/[^a-zA-Z0-9_-]/gu, "-")}`;
   return (
-    <div className="flex flex-col gap-2">
-      <div className="relative">
-        <SearchIcon aria-hidden="true" className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
+    <div className="flex max-h-[min(32rem,calc(100dvh-8rem))] min-h-0 flex-col">
+      <div className="flex items-center gap-3 border-b px-4">
+        <SearchIcon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+        <input
           aria-activedescendant={results[selected] ? optionId(results[selected]) : undefined}
+          aria-autocomplete="list"
           aria-controls="search-results"
+          aria-expanded={results.length > 0}
           aria-label={t("search.title")}
-          className="pl-10"
+          autoComplete="off"
+          className="h-12 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           onChange={(event) => { setText(event.target.value); setActive(0); }}
           onKeyDown={onKeyDown}
           placeholder={t("search.placeholder")}
           role="combobox"
-          aria-expanded={results.length > 0}
+          spellCheck={false}
           value={text}
         />
+        <button aria-label={t("search.keys.close")} className="shrink-0 rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" onClick={onClose} type="button"><Key>Esc</Key></button>
       </div>
-      <div className="max-h-96 min-h-16 overflow-y-auto" id="search-results" role="listbox" aria-label={t("search.title")}>
-        {text.trim() && !results.length && !live.loading ? <p className="type-body-muted px-3 py-4">{t("search.empty", { query: text.trim() })}</p> : null}
+      <div aria-label={t("search.title")} className="min-h-0 flex-1 overflow-y-auto p-2" id="search-results" role="listbox">
+        {text.trim() && !results.length && !live.loading ? <p className="type-body-muted px-3 py-6 text-center">{t("search.empty", { query: text.trim() })}</p> : null}
         {groups.map((group) => (
-          <div className="py-1" key={group} role="group" aria-label={t(`search.groups.${group}`)}>
-            <p aria-hidden="true" className="type-meta px-3 py-1">{t(`search.groups.${group}`)}</p>
-            {results.filter((result) => result.group === group).map((result) => (
-              <div
-                aria-selected={results[selected]?.id === result.id}
-                className={cn("flex w-full cursor-pointer items-center justify-between gap-4 rounded-lg px-3 py-2 text-left text-sm", results[selected]?.id === result.id && "bg-muted")}
-                id={optionId(result)}
-                key={result.id}
-                onClick={() => go(result)}
-                // The input keeps focus and moves through the options; a click or Enter on one opens it too.
-                onKeyDown={(event) => { if (event.key === "Enter") go(result); }}
-                onMouseEnter={() => setActive(results.indexOf(result))}
-                role="option"
-                tabIndex={-1}
-              >
-                <span className={cn("truncate font-medium", result.group !== "pages" && "ph-mask")}>{result.title}</span>
-                <span className="type-meta shrink-0">{result.where}</span>
-              </div>
-            ))}
+          <div className="pb-1" key={group} role="group" aria-label={t(`search.groups.${group}`)}>
+            <p aria-hidden="true" className="type-meta px-3 pt-2 pb-1">{t(`search.groups.${group}`)}</p>
+            {results.filter((result) => result.group === group).map((result) => {
+              const current = results[selected]?.id === result.id;
+              const Icon = result.icon;
+              return (
+                <div
+                  aria-selected={current}
+                  className={cn("flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left text-sm", current && "bg-accent text-accent-foreground")}
+                  id={optionId(result)}
+                  key={result.id}
+                  onClick={() => go(result)}
+                  // The input keeps focus and moves through the options; a click or Enter on one opens it too.
+                  onKeyDown={(event) => { if (event.key === "Enter") go(result); }}
+                  onMouseEnter={() => setActive(results.indexOf(result))}
+                  role="option"
+                  tabIndex={-1}
+                >
+                  <Icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="flex min-w-0 flex-1 items-baseline gap-1.5 truncate">
+                    {result.section ? <><span className="shrink-0 text-muted-foreground">{result.section}</span><span aria-hidden="true" className="text-muted-foreground">›</span></> : null}
+                    <span className={cn("truncate font-medium", (result.group === "contacts" || result.group === "conversations") && "ph-mask")}>{result.title}</span>
+                    {result.detail ? <span className="shrink-0 text-xs text-muted-foreground">{result.detail}</span> : null}
+                  </span>
+                  {current ? <CornerDownLeft aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" /> : null}
+                </div>
+              );
+            })}
           </div>
         ))}
         {live.loading ? (
-          <div aria-busy="true" aria-label={t("search.loading")} className="py-1" data-testid="search-live-loading" role="status">
-            <Skeleton className="mx-3 my-1 h-4 w-24" />
-            {Array.from({ length: 2 }, (_, index) => <div className="flex items-center justify-between gap-4 px-3 py-2" key={index}><Skeleton className="h-5 w-40" /><Skeleton className="h-4 w-28" /></div>)}
+          <div aria-busy="true" aria-label={t("search.loading")} className="pb-1" data-testid="search-live-loading" role="status">
+            <Skeleton className="mx-3 mt-2 mb-1 h-4 w-24" />
+            {Array.from({ length: 2 }, (_, index) => <div className="flex items-center gap-3 px-3 py-2" key={index}><Skeleton className="size-4 rounded-md" /><Skeleton className="h-4 w-28" /><Skeleton className="h-4 w-40" /></div>)}
           </div>
         ) : null}
       </div>
+      <div aria-hidden="true" className="flex items-center gap-4 border-t px-4 py-2 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1.5"><Key>↑</Key><Key>↓</Key>{t("search.keys.select")}</span>
+        <span className="flex items-center gap-1.5"><Key>↵</Key>{t("search.keys.open")}</span>
+      </div>
     </div>
   );
+}
+
+/** A keyboard key, as the footer and the Esc button show it. */
+function Key({ children }: { children: string }) {
+  return <kbd className="inline-flex h-5 min-w-5 items-center justify-center rounded-md border border-border bg-muted px-1.5 font-sans text-[11px] font-medium text-muted-foreground">{children}</kbd>;
 }
 
 /**
@@ -158,7 +200,7 @@ export function SearchDialog({ businessId }: { businessId: string | undefined })
   const close = useCallback(() => setOpen(false), []);
   return (
     <Dialog onOpenChange={setOpen} open={open}>
-      <DialogContent className="top-[15%] translate-y-0 sm:max-w-xl" showCloseButton={false}>
+      <DialogContent className="top-[12%] translate-y-0 gap-0 overflow-hidden rounded-xl p-0 sm:max-w-xl" showCloseButton={false}>
         <DialogHeader className="sr-only"><DialogTitle>{t("search.title")}</DialogTitle><DialogDescription>{t("search.description")}</DialogDescription></DialogHeader>
         {open ? <SearchPanel businessId={businessId} onClose={close} /> : null}
       </DialogContent>

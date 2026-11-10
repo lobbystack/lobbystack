@@ -99,3 +99,40 @@ it("says when nothing matches", async () => {
   expect(await screen.findByText("search.empty:zzzz")).toBeTruthy();
   expect(urls("/api/contacts")).toEqual([]);
 });
+
+it("suggests the pages and agents the person may open before anything is typed, each with where it lives", async () => {
+  setup();
+  fireEvent.click(screen.getByRole("button", { name: /search.button/u }));
+  const pages = await screen.findByRole("group", { name: "search.groups.pages" });
+  const names = within(pages).getAllByRole("option").map((option) => option.textContent);
+  expect(names.slice(0, 6)).toEqual(["items.home", "items.inbox", "items.appointments", "items.contacts", "items.analytics", "items.agents"]);
+  expect(names).toContain("items.business›settingsPages.knowledge");
+  expect(names).toContain("items.settings›settingsPages.team");
+  const agents = await screen.findByRole("group", { name: "search.groups.agents" });
+  await waitFor(() => expect(within(agents).getByRole("option", { name: /Front desk/u })).toBeTruthy());
+  // The first row is highlighted and opens with Enter.
+  expect(within(pages).getAllByRole("option")[0]!.getAttribute("aria-selected")).toBe("true");
+  fireEvent.keyDown(screen.getByRole("combobox"), { key: "ArrowDown" });
+  fireEvent.keyDown(screen.getByRole("combobox"), { key: "Enter" });
+  expect(fixture.push).toHaveBeenCalledWith("/inbox");
+  expect(urls("/api/contacts")).toEqual([]);
+});
+
+it("suggests only what an activity-only business may open", async () => {
+  fixture.capabilities = ["activity"];
+  setup();
+  fireEvent.click(screen.getByRole("button", { name: /search.button/u }));
+  const pages = await screen.findByRole("group", { name: "search.groups.pages" });
+  const names = within(pages).getAllByRole("option").map((option) => option.textContent);
+  expect(names).toContain("items.inbox");
+  for (const hidden of ["items.analytics", "items.agents", "items.business›settingsPages.knowledge"]) expect(names).not.toContain(hidden);
+  expect(screen.queryByRole("group", { name: "search.groups.agents" })).toBeNull();
+});
+
+it("closes from the Esc key badge", async () => {
+  setup();
+  fireEvent.click(screen.getByRole("button", { name: /search.button/u }));
+  await screen.findByRole("combobox");
+  fireEvent.click(screen.getByRole("button", { name: "search.keys.close" }));
+  await waitFor(() => expect(screen.queryByRole("combobox")).toBeNull());
+});

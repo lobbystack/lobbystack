@@ -14,7 +14,7 @@
     "business": "Poslovanje"
   },
   "search": {
-    "placeholder": "Pretražite radni prostor...",
+    "placeholder": "Pretražite stranice, podešavanja, agente i kontakte",
     "button": "Pretraga",
     "title": "Pretraga",
     "description": "Pronađite stranice, podešavanja, agente, kontakte i razgovore.",
@@ -22,13 +22,21 @@
     "loading": "Pretražujemo kontakte i razgovore",
     "instagram": "Instagram",
     "groups": {
-      "pages": "Stranice i podešavanja",
+      "pages": "Stranice",
+      "agents": "Agenti",
       "contacts": "Kontakti",
       "conversations": "Razgovori"
     },
+    "keys": {
+      "select": "Izaberi",
+      "open": "Otvori",
+      "close": "Zatvori"
+    },
     "where": {
-      "main": "Glavni meni",
-      "conversation": "Prijemno sanduče › {{channel}}, {{date}}"
+      "main": "Glavni meni"
+    },
+    "detail": {
+      "conversation": "{{channel}}, {{date}}"
     },
     "synonyms": {
       "billing": "faktura, fakture, račun, plaćanje, platiti, kartica, pretplata, paket, cena, otkazati",

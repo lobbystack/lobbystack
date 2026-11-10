@@ -12,7 +12,7 @@ export type SearchScope = {
 };
 
 /** What this person may open. Search never lists a page the menus would hide. */
-function allowed(entry: SearchEntry, scope: SearchScope): boolean {
+export function allowed(entry: SearchEntry, scope: SearchScope): boolean {
   if (entry.partnerBusinessOnly && !scope.opensPartnerBilling) return false;
   return scope.can(pageCapability(entry.href));
 }

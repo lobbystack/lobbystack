@@ -69,7 +69,8 @@ test("an activity-only partner business finds no agents, analytics or setup page
       await operator.waitForTimeout(400);
     };
     await search(navCopy.settingsPages.usage);
-    await expect(results.getByRole("option", { name: new RegExp(`^${navCopy.settingsPages.usage}`) })).toBeVisible();
+    // Settings pages read "Settings › Usage", so the page name ends the option's name.
+    await expect(results.getByRole("option", { name: new RegExp(`${navCopy.settingsPages.usage}$`) })).toBeVisible();
     await search(navCopy.items.inbox);
     await expect(results.getByRole("option", { name: new RegExp(`^${navCopy.items.inbox}`) }).first()).toBeVisible();
     for (const text of [navCopy.items.agents, navCopy.items.analytics, navCopy.settingsPages.knowledge, navCopy.settingsPages.business, navCopy.settingsPages.connections, navCopy.agentPages.rules, navCopy.agentPages.instructions]) {
@@ -78,7 +79,7 @@ test("an activity-only partner business finds no agents, analytics or setup page
     }
     // Team needs the team capability. The word still finds Partner access, which they may open.
     await search(navCopy.settingsPages.team);
-    await expect(results.getByRole("option", { name: new RegExp(`^${navCopy.settingsPages.team}`) })).toHaveCount(0);
+    await expect(results.getByRole("option", { name: new RegExp(`${navCopy.settingsPages.team}$`) })).toHaveCount(0);
     await operator.keyboard.press("Escape");
 
     // Typing a setup address sends them home, and primary never opens an agent for them.

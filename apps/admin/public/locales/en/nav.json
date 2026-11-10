@@ -13,7 +13,7 @@
     "business": "Business"
   },
   "search": {
-    "placeholder": "Search workspace...",
+    "placeholder": "Search pages, settings, agents and contacts",
     "button": "Search",
     "title": "Search",
     "description": "Find pages, settings, agents, contacts and conversations.",
@@ -21,13 +21,21 @@
     "loading": "Searching contacts and conversations",
     "instagram": "Instagram",
     "groups": {
-      "pages": "Pages and settings",
+      "pages": "Pages",
+      "agents": "Agents",
       "contacts": "Contacts",
       "conversations": "Conversations"
     },
+    "keys": {
+      "select": "Select",
+      "open": "Open",
+      "close": "Close"
+    },
     "where": {
-      "main": "Main menu",
-      "conversation": "Inbox › {{channel}}, {{date}}"
+      "main": "Main menu"
+    },
+    "detail": {
+      "conversation": "{{channel}}, {{date}}"
     },
     "synonyms": {
       "billing": "invoice, invoices, receipt, payment, pay, card, subscription, upgrade, pricing, plan, cancel",
