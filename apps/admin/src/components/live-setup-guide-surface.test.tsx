@@ -184,7 +184,7 @@ describe("steps", () => {
   it("opens the upload page from the sources step", async () => {
     await setup({ complete: ["fullScan"] });
     await userEvent.click(await screen.findByRole("button", { name: copy.stepActions.sources }));
-    expect(router.push).toHaveBeenCalledWith("/workspace/knowledge?setup=upload");
+    expect(router.push).toHaveBeenCalledWith("/business/knowledge?setup=upload");
   });
 
   it("asks for the deeper read", async () => {

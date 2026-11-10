@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   // A connection started on a partner's host finishes there, and lands on that host's integrations page.
   const origin = partnerRequestOrigin(request.headers) ?? process.env.APP_BASE_URL ?? request.url;
-  const destination = (status: "success" | "error") => NextResponse.redirect(new URL(`/workspace/connections?calendar=google&status=${status}`, origin));
+  const destination = (status: "success" | "error") => NextResponse.redirect(new URL(`/business/connections?calendar=google&status=${status}`, origin));
   try {
     const url = new URL(request.url);
     const code = url.searchParams.get("code");

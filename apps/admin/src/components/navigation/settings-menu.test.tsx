@@ -17,7 +17,7 @@ vi.mock("@/components/ui/sidebar", () => ({
   SidebarMenuButton: ({ children, isActive, render: element }: { children: ReactNode; isActive?: boolean; render?: React.ReactElement<{ href: string }> }) => <a data-active={isActive ? "" : undefined} href={element?.props.href}>{children}</a>,
 }));
 
-import { SettingsMenu } from "./settings-menu";
+import { BusinessMenu, SettingsMenu } from "./settings-menu";
 
 afterEach(() => { cleanup(); access.capabilities = ["activity", "setup", "team", "billing", "api_keys", "mcp"]; access.partnerBilling = false; route.pathname = "/workspace/team"; });
 
@@ -26,8 +26,8 @@ const hrefs = () => screen.getAllByRole("link").map((link) => link.getAttribute(
 describe("the Settings menu", () => {
   it("lists the workspace's pages, then the person's own, and marks the open one", () => {
     render(<SettingsMenu />);
-    expect(screen.getAllByRole("heading").map((heading) => heading.textContent)).toEqual(["items.settings", "sidebar.workspace", "sidebar.yourAccount"]);
-    expect(hrefs()).toEqual(["/workspace/business", "/workspace/knowledge", "/workspace/services", "/workspace/employees", "/workspace/team", "/workspace/usage", "/workspace/billing", "/workspace/connections", "/workspace/webhooks", "/workspace/api-keys", "/account", "/account/appearance", "/account/notifications"]);
+    expect(screen.getAllByRole("heading").map((heading) => heading.textContent)).toEqual(["sidebar.workspace", "sidebar.yourAccount"]);
+    expect(hrefs()).toEqual(["/workspace/team", "/workspace/usage", "/workspace/billing", "/workspace/webhooks", "/workspace/api-keys", "/account", "/account/appearance", "/account/notifications"]);
     expect(screen.getByRole("link", { name: "settingsPages.team" }).hasAttribute("data-active")).toBe(true);
     expect(screen.getByRole("link", { name: "settingsPages.usage" }).hasAttribute("data-active")).toBe(false);
   });
@@ -36,12 +36,28 @@ describe("the Settings menu", () => {
     access.capabilities = ["activity", "setup", "team"];
     access.partnerBilling = true;
     render(<SettingsMenu />);
-    expect(hrefs()).toEqual(["/workspace/business", "/workspace/knowledge", "/workspace/services", "/workspace/employees", "/workspace/team", "/workspace/usage", "/workspace/subscription", "/workspace/connections", "/workspace/partner-access", "/account", "/account/appearance", "/account/notifications"]);
+    expect(hrefs()).toEqual(["/workspace/team", "/workspace/usage", "/workspace/subscription", "/workspace/partner-access", "/account", "/account/appearance", "/account/notifications"]);
   });
 
   it("leaves an activity-only operator their usage and their own pages", () => {
     access.capabilities = ["activity"];
     render(<SettingsMenu />);
     expect(hrefs()).toEqual(["/workspace/usage", "/account", "/account/appearance", "/account/notifications"]);
+  });
+});
+
+describe("the Business menu", () => {
+  it("lists what every agent works from, with Details first, and marks the open one", () => {
+    route.pathname = "/business/services";
+    render(<BusinessMenu />);
+    expect(hrefs()).toEqual(["/business", "/business/knowledge", "/business/services", "/business/employees", "/business/connections"]);
+    expect(screen.getByRole("link", { name: "businessPages.details" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "settingsPages.services" }).hasAttribute("data-active")).toBe(true);
+  });
+
+  it("lists nothing for someone who can't set the business up", () => {
+    access.capabilities = ["activity"];
+    render(<BusinessMenu />);
+    expect(screen.queryAllByRole("link")).toEqual([]);
   });
 });

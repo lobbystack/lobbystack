@@ -5,7 +5,7 @@ import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { registerTestWindow } from "@/lib/test-window";
 import { AgentShell } from "./agent-shell";
-import { AccountLevelShell, WorkspaceLevelShell } from "./settings-level-shell";
+import { AccountLevelShell, BusinessLevelShell, WorkspaceLevelShell } from "./settings-level-shell";
 
 const route = vi.hoisted(() => ({ pathname: "/agents/agent-1/rules" }));
 vi.mock("next/navigation", () => ({ usePathname: () => route.pathname }));
@@ -49,26 +49,28 @@ describe("header actions before the page mounts", () => {
     expect(placeholders(renderToString(withQueries(<AgentShell agent={agent}>content</AgentShell>)))).toBe(1);
   });
 
-  it("sizes each workspace page's button placeholder from its own button label", () => {
+  it("sizes each Business page's button placeholder from its own button label", () => {
     const labels = { knowledge: "agent:sections.knowledge.addKnowledge", services: "agent:sections.services.addKnowledge", employees: "employees:add.button" };
     for (const [section, label] of Object.entries(labels)) {
-      route.pathname = `/workspace/${section}`;
-      const html = renderToString(<WorkspaceLevelShell>content</WorkspaceLevelShell>);
+      route.pathname = `/business/${section}`;
+      const html = renderToString(<BusinessLevelShell>content</BusinessLevelShell>);
       expect(placeholders(html)).toBe(2);
       expect(html).toContain(`<span class="invisible">${label}</span>`);
     }
   });
 
   it("leaves the header empty on settings pages without header actions", () => {
-    route.pathname = "/workspace/business";
+    route.pathname = "/business";
+    expect(placeholders(renderToString(<BusinessLevelShell>content</BusinessLevelShell>))).toBe(0);
+    route.pathname = "/workspace/team";
     expect(placeholders(renderToString(<WorkspaceLevelShell>content</WorkspaceLevelShell>))).toBe(0);
     route.pathname = "/account";
     expect(placeholders(renderToString(<AccountLevelShell>content</AccountLevelShell>))).toBe(0);
   });
 
   it("drops the placeholders once the header slot is mounted", () => {
-    route.pathname = "/workspace/knowledge";
-    const { container } = render(<WorkspaceLevelShell>content</WorkspaceLevelShell>);
+    route.pathname = "/business/knowledge";
+    const { container } = render(<BusinessLevelShell>content</BusinessLevelShell>);
     expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBe(0);
     cleanup();
     route.pathname = "/agents/agent-1/rules";
@@ -83,7 +85,7 @@ describe("header actions before the page mounts", () => {
 
 describe("settings level headings", () => {
   it("titles each page with its name in the settings menu", () => {
-    for (const [pathname, title, Shell] of [["/workspace/business", "nav:settingsPages.business", WorkspaceLevelShell], ["/workspace/webhooks", "nav:settingsPages.webhooks", WorkspaceLevelShell], ["/account/appearance", "nav:settingsPages.appearance", AccountLevelShell], ["/account", "nav:settingsPages.profile", AccountLevelShell]] as const) {
+    for (const [pathname, title, Shell] of [["/business", "nav:settingsPages.business", BusinessLevelShell], ["/business/connections", "nav:settingsPages.connections", BusinessLevelShell], ["/workspace/webhooks", "nav:settingsPages.webhooks", WorkspaceLevelShell], ["/account/appearance", "nav:settingsPages.appearance", AccountLevelShell], ["/account", "nav:settingsPages.profile", AccountLevelShell]] as const) {
       route.pathname = pathname;
       render(<Shell>content</Shell>);
       expect(screen.getByRole("heading").textContent).toBe(title);

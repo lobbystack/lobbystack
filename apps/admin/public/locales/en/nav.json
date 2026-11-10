@@ -9,7 +9,8 @@
     "affiliate": "Affiliate Program",
     "settings": "Settings",
     "inbox": "Inbox",
-    "agents": "Agents"
+    "agents": "Agents",
+    "business": "Business"
   },
   "search": {
     "placeholder": "Search workspace...",
@@ -82,6 +83,9 @@
     "widget": "Website widget",
     "shared": "Shared with every agent"
   },
+  "businessPages": {
+    "details": "Details"
+  },
   "settingsPages": {
     "profile": "Profile and security",
     "appearance": "Language and theme",
@@ -99,7 +103,6 @@
     "apiKeys": "API keys",
     "partnerAccess": "Partner access"
   },
-  "back": "Back to {{place}}",
   "help": "Help",
   "agentMenu": {
     "conversations": "Conversations",

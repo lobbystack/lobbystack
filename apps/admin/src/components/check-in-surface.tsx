@@ -21,7 +21,7 @@ function agentDocsUrl(language: string): string {
 function nextStep(answer: CheckInAnswer, language: string): { href: string; external: boolean } {
   if (answer === "still_testing") return { href: "/", external: false };
   if (answer === "connect_number") return { href: forwardingHelpUrl(language), external: true };
-  if (answer === "test_call_mistakes") return { href: "/workspace/knowledge", external: false };
+  if (answer === "test_call_mistakes") return { href: "/business/knowledge", external: false };
   return { href: agentDocsUrl(language), external: true };
 }
 

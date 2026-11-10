@@ -10,7 +10,8 @@
     "affiliate": "Programa de afiliados",
     "settings": "Configuración",
     "inbox": "Bandeja de entrada",
-    "agents": "Agentes"
+    "agents": "Agentes",
+    "business": "Negocio"
   },
   "search": {
     "placeholder": "Buscar en el espacio de trabajo...",
@@ -83,6 +84,9 @@
     "widget": "Widget del sitio web",
     "shared": "Compartido con todos los agentes"
   },
+  "businessPages": {
+    "details": "Datos"
+  },
   "settingsPages": {
     "profile": "Perfil y seguridad",
     "appearance": "Idioma y tema",
@@ -100,7 +104,6 @@
     "apiKeys": "Claves de API",
     "partnerAccess": "Acceso del socio"
   },
-  "back": "Volver a {{place}}",
   "help": "Ayuda",
   "agentMenu": {
     "conversations": "Conversaciones",

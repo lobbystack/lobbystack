@@ -44,9 +44,9 @@ const links = () => screen.getAllByRole("link").map(link => link.getAttribute("h
 const menu = () => document.querySelector("[data-menu-level]")!;
 
 describe("the workspace menu", () => {
-  it("lists the workspace's pages, with Agents opening the one agent and Settings its first page", () => {
+  it("lists the workspace's pages, with Agents opening the one agent, Business its details and Settings its first page", () => {
     setup();
-    expect(links()).toEqual(["#dashboard-main-content", "/", "/inbox", "/appointments", "/contacts", "/analytics", "/agents/agent-1", "/workspace/business"]);
+    expect(links()).toEqual(["#dashboard-main-content", "/", "/inbox", "/appointments", "/contacts", "/analytics", "/agents/agent-1", "/business", "/workspace/team"]);
     expect(document.getElementById("dashboard-main-content")?.tabIndex).toBe(-1);
     expect(screen.getByRole("button", { name: "help" })).toBeTruthy();
   });
@@ -62,7 +62,7 @@ describe("the workspace menu", () => {
   it("switches agents from the agent's menu, on the same page", async () => {
     const view = setup({ agents: [FRONT, EVENING] });
     view.navigate("/agents/agent-1/rules");
-    await userEvent.click(screen.getByRole("button", { name: /Front desk/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Front desk.*agentPages\.phone/ }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "Evening" }));
     expect(route.router.push).toHaveBeenLastCalledWith("/agents/agent-2/rules");
   });
@@ -74,7 +74,7 @@ describe("the workspace menu", () => {
 
   it("shows a viewer the same pages, since the business, not the role, decides them", () => {
     setup({ role: "viewer" });
-    expect(links()).toEqual(["#dashboard-main-content", "/", "/inbox", "/appointments", "/contacts", "/analytics", "/agents/agent-1", "/workspace/business"]);
+    expect(links()).toEqual(["#dashboard-main-content", "/", "/inbox", "/appointments", "/contacts", "/analytics", "/agents/agent-1", "/business", "/workspace/team"]);
   });
 
   it("badges Appointments with bookings made since the owner last looked", () => {
@@ -101,33 +101,58 @@ describe("the workspace menu", () => {
   });
 });
 
-describe("drilling into an agent and Settings", () => {
-  it("swaps in the agent's menu with a row back to where the person came from", () => {
+describe("drilling into an agent, Business and Settings", () => {
+  it("swaps in the agent's menu, headed by a row with the agent's name", () => {
     const view = setup();
     view.navigate("/inbox");
     view.navigate("/agents/agent-1");
     expect(menu().getAttribute("data-menu-level")).toBe("agent:agent-1");
     expect(menu().className).toContain("slide-in-from-right");
-    expect(screen.getByRole("link", { name: "back:items.inbox" }).getAttribute("href")).toBe("/inbox");
-    expect(within(menu() as HTMLElement).getAllByRole("link").slice(1).map(link => link.getAttribute("href"))).toEqual(["/agents/agent-1", "/agents/agent-1/instructions", "/agents/agent-1/rules", "/agents/agent-1/channels", "/agents/agent-1/shared"]);
+    expect(within(menu() as HTMLElement).getByRole("button", { name: "Front desk" }).hasAttribute("data-back-row")).toBe(true);
+    expect(within(menu() as HTMLElement).getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["/agents/agent-1", "/agents/agent-1/instructions", "/agents/agent-1/rules", "/agents/agent-1/channels", "/agents/agent-1/shared"]);
     // The phone number page keeps Channels lit.
     view.navigate("/agents/agent-1/channels/phone");
     expect(screen.getByRole("link", { name: /agentPages\.channels/ }).hasAttribute("data-active")).toBe(true);
     expect(screen.getByRole("link", { name: /agentPages\.general/ }).hasAttribute("data-active")).toBe(false);
   });
 
-  it("returns from Settings to the agent it opened from, then Home", () => {
+  it("goes back to the workspace menu without leaving the page, and drills in again from the section's row", async () => {
     const view = setup();
-    view.navigate("/agents/agent-1/rules");
     view.navigate("/workspace/team");
     expect(menu().getAttribute("data-menu-level")).toBe("settings");
-    expect(screen.getByRole("link", { name: "back:Front desk" }).getAttribute("href")).toBe("/agents/agent-1/rules");
     expect(screen.getByRole("link", { name: "settingsPages.team" }).hasAttribute("data-active")).toBe(true);
-    view.navigate("/agents/agent-1/rules");
+    await userEvent.click(screen.getByRole("button", { name: "items.settings" }));
+    expect(menu().getAttribute("data-menu-level")).toBe("root");
     expect(menu().className).toContain("slide-in-from-left");
-    expect(screen.getByRole("link", { name: "back:items.home" }).getAttribute("href")).toBe("/");
+    expect(route.router.push).not.toHaveBeenCalled();
+    expect(screen.getByText("Page content")).toBeTruthy();
+    // Settings stays lit and names the page the person is on.
+    const settings = screen.getByRole("link", { name: /items\.settings/ });
+    expect(settings.hasAttribute("data-active")).toBe(true);
+    expect(within(settings).getByText("settingsPages.team")).toBeTruthy();
+    await userEvent.click(settings);
+    expect(menu().getAttribute("data-menu-level")).toBe("settings");
+    expect(route.router.push).not.toHaveBeenCalled();
+    // Opening another page of a section opens its menu again, wherever the link was.
+    await userEvent.click(screen.getByRole("button", { name: "items.settings" }));
+    view.navigate("/business/knowledge");
+    expect(menu().getAttribute("data-menu-level")).toBe("business");
+    expect(within(menu() as HTMLElement).getByRole("button", { name: "items.business" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "settingsPages.knowledge" }).hasAttribute("data-active")).toBe(true);
     view.navigate("/");
     expect(menu().getAttribute("data-menu-level")).toBe("root");
+  });
+
+  it("lights the agent's row under Agents with the page it's on", async () => {
+    const view = setup({ agents: [FRONT, EVENING] });
+    view.navigate("/agents/agent-2/rules");
+    await userEvent.click(screen.getByRole("button", { name: "Evening" }));
+    const row = screen.getByRole("link", { name: /^Evening/ });
+    expect(row.hasAttribute("data-active")).toBe(true);
+    expect(within(row).getByText("agentPages.rules")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /^Front desk/ }).hasAttribute("data-active")).toBe(false);
+    await userEvent.click(row);
+    expect(menu().getAttribute("data-menu-level")).toBe("agent:agent-2");
   });
 
   it("links an agent's conversations once there are several agents", () => {
@@ -175,8 +200,8 @@ describe("on a phone", () => {
 describe("a partner's business", () => {
   it("at full access, leaves billing, API keys and MCP out of the Settings menu", () => {
     const view = setup({ capabilities: ["activity", "setup", "team"] });
-    expect(links()).toEqual(["#dashboard-main-content", "/", "/inbox", "/appointments", "/contacts", "/analytics", "/agents/agent-1", "/workspace/business"]);
-    view.navigate("/workspace/business");
+    expect(links()).toEqual(["#dashboard-main-content", "/", "/inbox", "/appointments", "/contacts", "/analytics", "/agents/agent-1", "/business", "/workspace/team"]);
+    view.navigate("/workspace/team");
     const settings = within(menu() as HTMLElement).getAllByRole("link").map(link => link.getAttribute("href"));
     expect(settings).toContain("/workspace/team");
     for (const page of ["/workspace/billing", "/workspace/api-keys", "/workspace/webhooks"]) expect(settings).not.toContain(page);
@@ -197,7 +222,7 @@ describe("a partner's business", () => {
     expect(screen.queryByText("Page content")).toBeNull();
     await waitFor(() => expect(route.router.replace).toHaveBeenCalledWith("/"));
     route.router.replace.mockClear();
-    view.navigate("/workspace/knowledge");
+    view.navigate("/business/knowledge");
     expect(screen.getByText("Page content")).toBeTruthy();
     expect(route.router.replace).not.toHaveBeenCalled();
   });

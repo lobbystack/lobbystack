@@ -9,7 +9,7 @@ it("sends an agent's page to the same page of the new business's default agent",
 });
 
 it("leaves the pages outside an agent alone", () => {
-  for (const path of ["/agents", "/inbox", "/workspace/business", "/"]) expect(agentPathAfterBusinessSwitch(path)).toBeNull();
+  for (const path of ["/agents", "/inbox", "/business", "/"]) expect(agentPathAfterBusinessSwitch(path)).toBeNull();
 });
 
 it("knows the agents list isn't an agent's page", () => {

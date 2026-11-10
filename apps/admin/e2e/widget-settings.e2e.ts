@@ -199,7 +199,7 @@ test("the agent's Channels open the website widget page, where an owner creates,
       await host.close();
       await expect.poll(async () => (await database.db.select().from(conversations).where(and(eq(conversations.businessId, businessId!), eq(conversations.channel, "web_chat")))).length).toBe(1);
 
-      await sidebar.getByRole("link", { name: navCopy.back.replace("{{place}}", navCopy.items.home), exact: true }).click();
+      await sidebar.locator("[data-back-row]").click();
       await sidebar.getByRole("link", { name: navCopy.items.inbox, exact: true }).click();
       await expect(page).toHaveURL(/\/inbox$/);
       await page.getByRole("button", { name: commonCopy.channels.webChat, exact: true }).click();

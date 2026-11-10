@@ -239,7 +239,7 @@ describe("instant booking without opening hours", () => {
     expect(await screen.findByText("setupGuide.steps.hours")).toBeTruthy();
     const titles = screen.getAllByText(/^setupGuide\.steps\./).map((element) => element.textContent);
     expect(titles).toEqual(["setupGuide.steps.fullScan", "setupGuide.steps.sources", "setupGuide.steps.hours", "setupGuide.steps.testCall"]);
-    expect(screen.getByText("setupGuide.stepActions.hours").closest("a")?.getAttribute("href")).toBe("/workspace/business#opening-hours");
+    expect(screen.getByText("setupGuide.stepActions.hours").closest("a")?.getAttribute("href")).toBe("/business#opening-hours");
   });
 
   it("lists finished steps first, then the rest in order", async () => {

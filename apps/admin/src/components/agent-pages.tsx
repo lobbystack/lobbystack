@@ -14,6 +14,7 @@ import { Item, ItemActions, ItemContent, ItemTitle } from "@/components/ui/item"
 import { Surface } from "@/components/ui/surface";
 import { useManagedBusiness } from "@/hooks/use-agent-settings";
 import { pageCapability } from "@/lib/dashboard-pages";
+import { BUSINESS_PAGES } from "@/lib/settings-pages";
 
 // The pages under /agents/[agentId]. Each takes the agent's ID from its route.
 
@@ -47,22 +48,14 @@ export function AgentChannelsPage({ agentId, widgetsEnabled }: { agentId: string
   return <ChannelsSection agentId={agentId} widgetsEnabled={widgetsEnabled} />;
 }
 
-const SHARED_PAGES = ["/workspace/business", "/workspace/knowledge", "/workspace/services", "/workspace/employees", "/workspace/connections"] as const;
-const SHARED_TITLES: Record<(typeof SHARED_PAGES)[number], string> = {
-  "/workspace/business": "settingsPages.business",
-  "/workspace/knowledge": "settingsPages.knowledge",
-  "/workspace/services": "settingsPages.services",
-  "/workspace/employees": "settingsPages.employees",
-  "/workspace/connections": "settingsPages.connections",
-};
 
-/** The workspace pages every agent uses, as far as the business lets the person open them. */
+/** The Business pages every agent uses, as far as the business lets the person open them. */
 export function AgentSharedPage() {
   const { t } = useTranslation("nav");
   const can = useBusinessCan();
   return (
     <Surface className="flex flex-col">
-      {SHARED_PAGES.filter((href) => can(pageCapability(href))).map((href) => <LinkRow href={href} key={href} title={t(SHARED_TITLES[href])} />)}
+      {BUSINESS_PAGES.filter((page) => can(pageCapability(page.href))).map((page) => <LinkRow href={page.href} key={page.href} title={t(page.titleKey)} />)}
     </Surface>
   );
 }

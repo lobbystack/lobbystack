@@ -24,7 +24,7 @@ test("service, rule and knowledge editors persist changes and enforce read-only 
     });
     await auth.db.update(users).set({ activeBusinessId: businessId }).where(eq(users.id, userId!));
     const page = await context.newPage();
-    await page.goto(`${baseURL}/workspace/services`);
+    await page.goto(`${baseURL}/business/services`);
     await page.getByRole("button", { name: translations.sections.services.addKnowledge, exact: true }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByRole("button", { name: translations.actions.save, exact: true }).click();
@@ -66,7 +66,7 @@ test("service, rule and knowledge editors persist changes and enforce read-only 
     await page.getByRole("alertdialog").getByRole("button", { name: translations.actions.delete, exact: true }).click();
     await expect(page.getByText("Callback rule", { exact: true })).toBeHidden();
 
-    await page.goto(`${baseURL}/workspace/knowledge`);
+    await page.goto(`${baseURL}/business/knowledge`);
     await page.getByRole("button", { name: translations.sections.knowledge.addKnowledge, exact: true }).click();
     await page.getByRole("menuitem", { name: translations.sections.knowledge.addKnowledgeOptions.text, exact: true }).click();
     await dialog.getByLabel(translations.sections.knowledge.fields.title.label, { exact: true }).fill("Clinic hours");
@@ -119,13 +119,13 @@ test("service, rule and knowledge editors persist changes and enforce read-only 
     await expect.poll(async () => (await (await context.request.get(notificationUrl)).json()).smsEnabled).toBe(false);
 
     await withBusinessTransaction(database.db, { businessId, actorType: "worker" }, async (tx) => tx.update(businessMemberships).set({ role: "viewer" }).where(eq(businessMemberships.businessId, businessId)));
-    await page.goto(`${baseURL}/workspace/services`);
+    await page.goto(`${baseURL}/business/services`);
     await expect(page.getByText("Updated consultation", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: translations.sections.services.addKnowledge, exact: true })).toBeHidden();
     expect((await context.request.patch(`${baseURL}/api/catalog/${saved.id}?businessId=${businessId}`, { headers, data: { active: false } })).status()).toBe(403);
     expect((await context.request.post(`${baseURL}/api/rules?businessId=${businessId}`, { headers, data: { title: "Denied", content: "Denied" } })).status()).toBe(403);
     expect((await context.request.patch(`${baseURL}/api/knowledge/snippets/${snippet.id}?businessId=${businessId}`, { headers, data: { tags: ["denied"] } })).status()).toBe(403);
-    await page.goto(`${baseURL}/workspace/knowledge?setup=website`);
+    await page.goto(`${baseURL}/business/knowledge?setup=website`);
     await expect(page.getByRole("button", { name: translations.sections.knowledge.addKnowledge, exact: true })).toBeHidden();
     await expect(page.getByRole("dialog")).toBeHidden();
   } finally {

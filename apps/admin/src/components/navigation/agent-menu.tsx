@@ -46,8 +46,8 @@ function AgentIdentity({ agent }: { agent: AgentListItem }) {
 }
 
 /**
- * Names the agent this menu belongs to. With several it also switches
- * between them on the same page, so comparing two agents stays one click away.
+ * With several agents, switches between them on the same page, so comparing
+ * two agents stays one click away.
  */
 function AgentHeading({ agent }: { agent: AgentListItem | undefined }) {
   const { t } = useTranslation("nav");
@@ -61,7 +61,8 @@ function AgentHeading({ agent }: { agent: AgentListItem | undefined }) {
       <span className="grid flex-1 gap-1"><Skeleton className="h-4 w-24" /><Skeleton className="h-3 w-32" /></span>
     </div>
   );
-  if (!hasChoice) return <div className="flex items-center gap-2 px-4 pt-3 pb-1 group-data-[collapsible=icon]:hidden"><AgentIdentity agent={agent} /></div>;
+  // With one agent the back row above already names it.
+  if (!hasChoice) return null;
   const section = agentPageOf(pathname)?.section ?? "";
   const menu = (openAdd?: () => void) => (
     <SidebarMenu className="px-2 pt-2 group-data-[collapsible=icon]:hidden">

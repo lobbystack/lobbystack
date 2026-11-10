@@ -10,7 +10,8 @@
     "affiliate": "Program preporuka",
     "settings": "Podešavanja",
     "inbox": "Prijemno sanduče",
-    "agents": "Agenti"
+    "agents": "Agenti",
+    "business": "Poslovanje"
   },
   "search": {
     "placeholder": "Pretražite radni prostor...",
@@ -83,6 +84,9 @@
     "widget": "Vidžet za sajt",
     "shared": "Zajedničko za sve agente"
   },
+  "businessPages": {
+    "details": "Podaci"
+  },
   "settingsPages": {
     "profile": "Profil i bezbednost",
     "appearance": "Jezik i tema",
@@ -100,7 +104,6 @@
     "apiKeys": "API ključevi",
     "partnerAccess": "Pristup partnera"
   },
-  "back": "Nazad: {{place}}",
   "help": "Pomoć",
   "agentMenu": {
     "conversations": "Razgovori",

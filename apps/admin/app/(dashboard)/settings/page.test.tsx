@@ -10,9 +10,9 @@ import WorkspacePage from "../workspace/page";
 
 beforeEach(() => { fixture.capabilities = ["activity", "setup", "team", "billing", "api_keys", "mcp"]; });
 
-it("opens Business details for a business that gives every capability", async () => {
-  await expect(SettingsPage()).rejects.toMatchObject({ to: "/workspace/business" });
-  await expect(WorkspacePage()).rejects.toMatchObject({ to: "/workspace/business" });
+it("opens Team for a business that gives every capability, now that Business has its own menu", async () => {
+  await expect(SettingsPage()).rejects.toMatchObject({ to: "/workspace/team" });
+  await expect(WorkspacePage()).rejects.toMatchObject({ to: "/workspace/team" });
 });
 
 it("opens Usage on an activity-only partner business", async () => {

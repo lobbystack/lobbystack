@@ -173,7 +173,7 @@ describe("page events", () => {
     ["/agents", "web.page.agents_viewed"],
     ["/agents/agent-1", "web.page.agent_viewed"],
     ["/agents/agent-1/channels/phone", "web.page.agent_viewed"],
-    ["/workspace/business", "web.page.workspace_viewed"],
+    ["/business", "web.page.workspace_viewed"],
     ["/workspace/team", "web.page.workspace_viewed"],
     ["/account", "web.page.account_viewed"],
     ["/account/notifications", "web.page.account_viewed"],

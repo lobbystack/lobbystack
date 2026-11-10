@@ -25,7 +25,7 @@ vi.mock("@/lib/trusted-client-ip", () => ({ trustedClientIp: mocks.ip }));
 import { GET } from "./route";
 
 const businessId = "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f";
-const failed = "https://app.example.test/workspace/connections?calendar=google&status=error";
+const failed = "https://app.example.test/business/connections?calendar=google&status=error";
 const open = (query = `businessId=${businessId}&token=signed-link`) => GET(new Request(`https://app.example.test/api/calendar/google/connect?${query}`));
 
 beforeEach(() => {
@@ -86,7 +86,7 @@ it("keeps a link opened on a partner's domain there, for sign-in, errors and Goo
   expect(`${login.origin}${login.pathname}`).toBe(`${partnerOrigin}/login`);
   expect(login.searchParams.get("returnTo")).toBe(`/api/calendar/google/connect?businessId=${businessId}&token=signed-link`);
   mocks.verifyLink.mockReturnValueOnce(null);
-  expect((await openOnPartner()).headers.get("location")).toBe(`${partnerOrigin}/workspace/connections?calendar=google&status=error`);
+  expect((await openOnPartner()).headers.get("location")).toBe(`${partnerOrigin}/business/connections?calendar=google&status=error`);
   // Signed in there, the state names the partner's domain, where Google's callback then finishes.
   expect((await openOnPartner()).headers.get("location")).toBe("https://accounts.google.test/o/oauth2/v2/auth?state=signed-state");
   expect(mocks.state).toHaveBeenCalledWith({ userId: "user-1", businessId, origin: partnerOrigin });

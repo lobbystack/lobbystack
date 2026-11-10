@@ -36,11 +36,11 @@ it("sends an owner or admin of the link's business to Calendly", async () => {
 
 it("tells someone who isn't an owner or admin why the link didn't work", async () => {
   mocks.operator.mockRejectedValueOnce(Object.assign(new Error("You don't have access to this business."), { status: 403 }));
-  expect((await open()).headers.get("location")).toBe("https://app.example.test/workspace/connections?calendar=calendly&status=not_admin");
+  expect((await open()).headers.get("location")).toBe("https://app.example.test/business/connections?calendar=calendly&status=not_admin");
   expect(mocks.state).not.toHaveBeenCalled();
 });
 
 it("keeps the general error for anything else", async () => {
   mocks.operator.mockRejectedValueOnce(new Error("database down"));
-  expect((await open()).headers.get("location")).toBe("https://app.example.test/workspace/connections?calendar=calendly&status=error");
+  expect((await open()).headers.get("location")).toBe("https://app.example.test/business/connections?calendar=calendly&status=error");
 });

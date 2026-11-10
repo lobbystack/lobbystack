@@ -95,7 +95,7 @@ export function LiveSetupGuideSurface({ businessId, goal }: { businessId: string
   }, [active, opens, steps]));
   const expand = useMutation({
     mutationFn: (documentId: string) => requestJson(`/api/knowledge/${encodeURIComponent(documentId)}?businessId=${encodeURIComponent(businessId)}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "expand" }) }),
-    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["setup", businessId] }); router.push("/workspace/knowledge"); },
+    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["setup", businessId] }); router.push("/business/knowledge"); },
   });
   const skip = useMutation({ mutationFn: (stepId: GuideStepId) => requestJson<{ skippedSteps: string[] }>(`/api/setup?businessId=${encodeURIComponent(businessId)}`, { method: "PATCH", body: JSON.stringify({ stepId, skipped: true }) }), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["setup", businessId] }); } });
 
@@ -123,7 +123,7 @@ export function LiveSetupGuideSurface({ businessId, goal }: { businessId: string
                 ) : step.id === "sources" ? (
                   <>
                     <StepDescription>{t(`setupGuide.stepDescriptions.sources.${goal ?? "none"}`)}</StepDescription>
-                    <StepActions primary={<Button onClick={() => router.push("/workspace/knowledge?setup=upload")}>{t("setupGuide.stepActions.sources")}</Button>} skip={skipLink} />
+                    <StepActions primary={<Button onClick={() => router.push("/business/knowledge?setup=upload")}>{t("setupGuide.stepActions.sources")}</Button>} skip={skipLink} />
                   </>
                 ) : step.id === "hours" ? (
                   <>

@@ -1,9 +1,9 @@
 import englishNav from "../../../public/locales/en/nav.json";
 import { AGENT_PAGES, agentHref, type AgentPage } from "@/lib/agent-pages";
-import { ACCOUNT_PAGES, WORKSPACE_PAGES } from "@/lib/settings-pages";
+import { ACCOUNT_PAGES, BUSINESS_PAGES, WORKSPACE_PAGES } from "@/lib/settings-pages";
 
-// What search can find without asking the server: the dashboard's pages, the
-// two settings levels and each agent's pages. Titles and places come from
+// What search can find without asking the server: the dashboard's pages,
+// Business, the two settings levels and each agent's pages. Titles and places come from
 // the nav translations, so results read in the person's language. Each entry
 // has tags, and the locale's synonyms in nav.json map the words people type
 // onto them.
@@ -30,15 +30,15 @@ const PAGE_TAGS: Record<string, SearchTag[]> = {
   "/account": ["security"],
   "/account/appearance": ["appearance"],
   "/account/notifications": ["notifications"],
-  "/workspace/business": ["business"],
-  "/workspace/knowledge": ["knowledge"],
-  "/workspace/services": ["services"],
-  "/workspace/employees": ["employees"],
+  "/business": ["business"],
+  "/business/knowledge": ["knowledge"],
+  "/business/services": ["services"],
+  "/business/employees": ["employees"],
+  "/business/connections": ["connections"],
   "/workspace/team": ["team"],
   "/workspace/usage": ["usage"],
   "/workspace/billing": ["billing"],
   "/workspace/subscription": ["billing"],
-  "/workspace/connections": ["connections"],
   "/workspace/webhooks": ["connections"],
   "/workspace/api-keys": ["keys"],
   "/workspace/partner-access": ["team"],
@@ -70,6 +70,7 @@ export function searchCatalog(t: Translate, agents: ReadonlyArray<{ id: string; 
   const main = text(t, "search.where.main");
   const settings = text(t, "items.settings");
   const agentsLabel = text(t, "items.agents");
+  const businessLabel = text(t, "items.business");
   const page = (id: string, href: string, titleKey: string, tags: SearchTag[] | string[], where = main): SearchEntry => ({ id, href, title: text(t, titleKey), where, tags });
   const pages: SearchEntry[] = [
     page("home", "/", "items.home", ["home"]),
@@ -81,6 +82,7 @@ export function searchCatalog(t: Translate, agents: ReadonlyArray<{ id: string; 
     page("affiliate", "/affiliate", "items.affiliate", ["affiliate"], text(t, "help")),
   ];
   const settingsPages: SearchEntry[] = [
+    ...BUSINESS_PAGES.map((item) => page(item.href, item.href, item.titleKey, PAGE_TAGS[item.href] ?? [], businessLabel)),
     ...ACCOUNT_PAGES.map((item) => ({ ...page(item.href, item.href, item.titleKey, PAGE_TAGS[item.href] ?? [], wherePath(settings, text(t, "sidebar.yourAccount"))) })),
     ...WORKSPACE_PAGES.map((item) => ({ ...page(item.href, item.href, item.titleKey, PAGE_TAGS[item.href] ?? [], wherePath(settings, text(t, "sidebar.workspace"))), ...(item.partnerBusinessOnly ? { partnerBusinessOnly: true } : {}) })),
   ];

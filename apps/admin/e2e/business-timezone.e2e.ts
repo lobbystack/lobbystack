@@ -65,7 +65,7 @@ test("the owner's browser zone becomes the business timezone, and Business detai
     // The old agent page lands on the default agent; the zone lives in the workspace's business details.
     await page.goto("/agent/basic-settings");
     await expect(page).toHaveURL(/\/agents\/[0-9a-f-]{36}$/);
-    await page.goto("/workspace/business");
+    await page.goto("/business");
     const select = page.getByLabel(agent.fields.timezone.label, { exact: true });
     await expect(select).toBeEnabled();
     await expect(select).toHaveText(/^Belgrade \(/);

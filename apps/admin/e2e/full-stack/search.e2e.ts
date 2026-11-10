@@ -57,7 +57,7 @@ test("an activity-only partner business finds no agents, analytics or setup page
     const sidebar = operator.locator('[data-slot="sidebar"]');
     await expect(sidebar.getByRole("link", { name: navCopy.items.inbox, exact: true })).toBeVisible();
     await expect(sidebar.getByRole("link", { name: navCopy.items.contacts, exact: true })).toBeVisible();
-    for (const hidden of [navCopy.items.agents, navCopy.items.analytics]) await expect(sidebar.getByRole("link", { name: hidden })).toHaveCount(0);
+    for (const hidden of [navCopy.items.agents, navCopy.items.business, navCopy.items.analytics]) await expect(sidebar.getByRole("link", { name: hidden })).toHaveCount(0);
 
     // Search finds pages they may open and nothing behind setup.
     await sidebar.getByRole("button", { name: new RegExp(`^${navCopy.search.button}`) }).click();
@@ -84,7 +84,7 @@ test("an activity-only partner business finds no agents, analytics or setup page
     // Typing a setup address sends them home, and primary never opens an agent for them.
     await operator.goto(`${partnerOrigin}/agents/primary`);
     await expect(operator).toHaveURL(`${partnerOrigin}/`);
-    for (const path of ["/agents", "/analytics", "/workspace/knowledge"]) {
+    for (const path of ["/agents", "/analytics", "/business/knowledge"]) {
       await operator.goto(`${partnerOrigin}${path}`);
       await expect(operator, path).toHaveURL(`${partnerOrigin}/`);
     }

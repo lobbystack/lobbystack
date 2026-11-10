@@ -188,7 +188,7 @@ export function LiveWebhooksSurface() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <Link className="type-body-muted inline-flex items-center gap-1 hover:text-foreground" href="/workspace/connections"><ArrowLeft className="size-4" />{t("nav:settingsPages.connections")}</Link>
+        <Link className="type-body-muted inline-flex items-center gap-1 hover:text-foreground" href="/business/connections"><ArrowLeft className="size-4" />{t("nav:settingsPages.connections")}</Link>
         {canManage ? <HeaderActions><Button onClick={() => setDialog({ mode: "create" })} size="sm"><Plus data-icon="inline-start" />{t("webhooks.create.action")}</Button></HeaderActions> : null}
         <p className="type-body-muted max-w-2xl">{t("webhooks.description")}</p>
       </div>

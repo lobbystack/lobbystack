@@ -9,6 +9,7 @@ import { AnimatedNavigationIcon } from "@/components/animated-navigation-icon";
 import { useBusinessCan, useOpensPartnerBilling } from "@/components/business-capabilities-provider";
 import { CalendarDaysIcon } from "@/components/ui/calendar-days";
 import { ChartColumnIncreasingIcon } from "@/components/ui/chart-column-increasing";
+import { BriefcaseBusinessIcon } from "@/components/ui/briefcase-business";
 import { ClipboardCheckIcon } from "@/components/ui/clipboard-check";
 import { HomeIcon } from "@/components/ui/home";
 import { MessageSquareMoreIcon } from "@/components/ui/message-square-more";
@@ -20,7 +21,7 @@ import { useAppointments } from "@/hooks/use-appointments";
 import { agentHref } from "@/lib/agent-pages";
 import { useNewAppointmentCount } from "@/lib/appointments-seen";
 import { pageCapability } from "@/lib/dashboard-pages";
-import { settingsLandingPage } from "@/lib/settings-pages";
+import { businessLandingPage, settingsLandingPage } from "@/lib/settings-pages";
 
 export type NavLink = {
   href: string;
@@ -36,9 +37,11 @@ export type NavLink = {
   keepOpen?: boolean;
   /** Rows listed under this one, in the same menu. */
   children?: ReactNode;
+  /** Takes the click in place of opening `href`, as the row of the section the person is in does to drill back in. */
+  onSelect?: () => void;
 };
 
-export type NavLinkId = "home" | "inbox" | "appointments" | "contacts" | "analytics" | "agents" | "settings";
+export type NavLinkId = "home" | "inbox" | "appointments" | "contacts" | "analytics" | "agents" | "business" | "settings";
 
 /**
  * The workspace menu's pages, and a filter that keeps the ones the business
@@ -60,11 +63,13 @@ export function useNavLinks() {
     // With several agents, Agents lists them. With one it opens that agent:
     // /agents/primary opens the default agent on the server, before the list loads.
     agents: { label: t("items.agents"), href: hasChoice ? "/agents" : primary ? agentHref(primary.id) : "/agents/primary", icon: ClipboardCheckIcon, isActive: (pathname) => pathname === "/agents" || pathname.startsWith("/agents/") },
+    // No business page the person may open means no href, and allowed() leaves the row out.
+    business: { label: t("items.business"), href: businessLandingPage(can) ?? "", icon: BriefcaseBusinessIcon, isActive: (pathname) => pathname === "/business" || pathname.startsWith("/business/") },
     settings: { label: t("items.settings"), href: settingsLandingPage(can, opensPartnerBilling), icon: SettingsIcon, isActive: () => false },
   };
   return {
     links,
-    allowed: (items: NavLink[]) => items.filter((item) => can(pageCapability(item.href))),
+    allowed: (items: NavLink[]) => items.filter((item) => item.href && can(pageCapability(item.href))),
   };
 }
 
@@ -85,7 +90,10 @@ export function NavGroup({ items }: { items: NavLink[] }) {
                 className="relative"
                 isActive={item.isActive ? item.isActive(pathname) : pathname === item.href || pathname.startsWith(`${item.href}/`)}
                 onBlur={() => setHoveredItem(null)}
-                onClick={() => { if (isMobile) { router.push(item.href); if (!item.keepOpen) setOpenMobile(false); } }}
+                onClick={(event: React.MouseEvent) => {
+                  if (item.onSelect) { event.preventDefault(); item.onSelect(); return; }
+                  if (isMobile) { router.push(item.href); if (!item.keepOpen) setOpenMobile(false); }
+                }}
                 onFocus={() => setHoveredItem(item.href)}
                 onMouseEnter={() => setHoveredItem(item.href)}
                 onMouseLeave={() => setHoveredItem(null)}

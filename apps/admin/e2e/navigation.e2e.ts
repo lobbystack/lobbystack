@@ -13,7 +13,6 @@ import { migrator, removeFixtures, signUpOwner } from "./fixtures/full-stack";
 // land on the page that replaced them, since emails link to them.
 
 const prefix = "navigation";
-const back = (place: string) => navCopy.back.replace("{{place}}", place);
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 
 // Each old address and where it goes now. `primary` resolves on the server, so the redirect keeps it.
@@ -27,15 +26,20 @@ const MOVED: ReadonlyArray<[from: string, to: string]> = [
   ["/agent/integrations", "/agents/primary/channels"],
   ["/agents/primary/handling", "/agents/primary"],
   [`/agents/${"1".repeat(8)}-1111-4111-8111-${"1".repeat(12)}/handling`, `/agents/${"1".repeat(8)}-1111-4111-8111-${"1".repeat(12)}`],
-  ["/agent/knowledge", "/workspace/knowledge"],
-  ["/agent/services", "/workspace/services"],
-  ["/agent/employees", "/workspace/employees"],
-  ["/integrations", "/workspace/connections"],
+  ["/agent/knowledge", "/business/knowledge"],
+  ["/agent/services", "/business/services"],
+  ["/agent/employees", "/business/employees"],
+  ["/integrations", "/business/connections"],
   ["/integrations/webhooks", "/workspace/webhooks"],
   ["/widget", "/agents/primary/channels/widget"],
   ["/settings/widget", "/agents/primary/channels/widget"],
   ["/settings/phone-number", "/agents/primary/channels/phone"],
   ["/settings/account", "/account"],
+  ["/workspace/business", "/business"],
+  ["/workspace/knowledge", "/business/knowledge"],
+  ["/workspace/services", "/business/services"],
+  ["/workspace/employees", "/business/employees"],
+  ["/workspace/connections", "/business/connections"],
   ["/settings/plan", "/workspace/billing"],
   ["/settings/connected-apps", "/workspace/api-keys"],
   ["/settings/appearance", "/account/appearance"],
@@ -58,7 +62,7 @@ test("every moved dashboard address redirects, for a while, to the page that rep
   }
 });
 
-test("Settings and an agent open their own menus, and the back row returns to where the owner came from", async ({ page }, testInfo) => {
+test("Settings, Business and an agent open their own menus, and the back row shows the workspace menu without leaving the page", async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   const database = migrator();
   const emails: string[] = [];
@@ -82,49 +86,61 @@ test("Settings and an agent open their own menus, and the back row returns to wh
     await page.goto("/settings/phone-number");
     await expect(page).toHaveURL(new RegExp(`/agents/${agent!.id}/channels/phone$`));
 
-    // Settings swaps in its own menu, opening on the first workspace page.
+    const backRow = (name: string) => level.getByRole("button", { name, exact: true });
+
+    // Settings swaps in its own menu, opening on its first workspace page.
     await page.goto("/");
     await expect(level).toHaveAttribute("data-menu-level", "root");
     await link(navCopy.items.settings).click();
-    await expect(page).toHaveURL(/\/workspace\/business$/);
-    await expect(level).toHaveAttribute("data-menu-level", "settings");
-    await expect(link(back(navCopy.items.home))).toBeVisible();
-    await link(navCopy.settingsPages.team).click();
     await expect(page).toHaveURL(/\/workspace\/team$/);
+    await expect(level).toHaveAttribute("data-menu-level", "settings");
     await link(navCopy.settingsPages.profile).click();
     await expect(page).toHaveURL(/\/account$/);
     await expect(level).toHaveAttribute("data-menu-level", "settings");
-    await link(back(navCopy.items.home)).click();
-    await expect(page).toHaveURL(/\/$/);
-    await expect(level).toHaveAttribute("data-menu-level", "root");
 
-    // From the Inbox, the one agent's menu opens straight from Agents, and the back row says where it returns.
+    // The back row only shows the workspace menu; the page stays. Settings stays lit, names the page, and drills back in.
+    await backRow(navCopy.items.settings).click();
+    await expect(level).toHaveAttribute("data-menu-level", "root");
+    await expect(page).toHaveURL(/\/account$/);
+    const settingsRow = link(new RegExp(`^${navCopy.items.settings}`));
+    await expect(settingsRow).toContainText(navCopy.settingsPages.profile);
+    await settingsRow.click();
+    await expect(level).toHaveAttribute("data-menu-level", "settings");
+    await expect(page).toHaveURL(/\/account$/);
+
+    // Business sits under Agents and opens on Details.
+    await backRow(navCopy.items.settings).click();
+    await link(new RegExp(`^${navCopy.items.business}`)).click();
+    await expect(page).toHaveURL(/\/business$/);
+    await expect(level).toHaveAttribute("data-menu-level", "business");
+    await link(navCopy.settingsPages.services).click();
+    await expect(page).toHaveURL(/\/business\/services$/);
+
+    // The one agent's menu opens straight from Agents, headed by its name.
+    await backRow(navCopy.items.business).click();
     await link(navCopy.items.inbox).click();
     await expect(page).toHaveURL(/\/inbox$/);
-    await link(navCopy.items.agents).click();
+    await link(new RegExp(`^${navCopy.items.agents}`)).click();
     await expect(page).toHaveURL(new RegExp(`/agents/${UUID}$`));
     await expect(level).toHaveAttribute("data-menu-level", `agent:${agent!.id}`);
+    await expect(backRow(agent!.name)).toBeVisible();
     await link(navCopy.agentPages.rules).click();
     await expect(page).toHaveURL(new RegExp(`/agents/${agent!.id}/rules$`));
     await link(new RegExp(`^${navCopy.agentPages.channels}`)).click();
     await expect(page).toHaveURL(new RegExp(`/agents/${agent!.id}/channels$`));
 
-    // Shared pages live in Settings. Opening one from the agent puts the agent behind the back row.
+    // Shared pages live in Business. Opening one from the agent swaps in Business's menu.
     await link(new RegExp(`^${navCopy.agentPages.shared}`)).click();
     await page.locator("#dashboard-main-content").getByRole("link", { name: navCopy.settingsPages.knowledge }).click();
-    await expect(page).toHaveURL(/\/workspace\/knowledge$/);
-    await expect(level).toHaveAttribute("data-menu-level", "settings");
-    await link(back(agent!.name)).click();
-    await expect(page).toHaveURL(new RegExp(`/agents/${agent!.id}/shared$`));
-    await expect(level).toHaveAttribute("data-menu-level", `agent:${agent!.id}`);
-    await link(back(navCopy.items.inbox)).click();
-    await expect(page).toHaveURL(/\/inbox$/);
-    await expect(level).toHaveAttribute("data-menu-level", "root");
+    await expect(page).toHaveURL(/\/business\/knowledge$/);
+    await expect(level).toHaveAttribute("data-menu-level", "business");
 
-    // A fresh load has no trail, so the back row goes Home.
+    // A page opened from the address bar opens its section's menu too.
     await page.goto(`/agents/${agent!.id}/instructions`);
-    await link(back(navCopy.items.home)).click();
-    await expect(page).toHaveURL(/\/$/);
+    await expect(level).toHaveAttribute("data-menu-level", `agent:${agent!.id}`);
+    await backRow(agent!.name).click();
+    await expect(level).toHaveAttribute("data-menu-level", "root");
+    await expect(page).toHaveURL(new RegExp(`/agents/${agent!.id}/instructions$`));
 
     // An agent that isn't the business's is a missing page.
     const missing = await page.goto(`/agents/${randomUUID()}`);

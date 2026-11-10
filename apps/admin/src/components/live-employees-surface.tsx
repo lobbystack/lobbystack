@@ -382,7 +382,7 @@ function EmployeeDialog({ businessId, employee, open, onOpenChange, services, to
               {services.length ? (
                 <ServicesPicker id={servicesId} invalid={Boolean(servicesError)} label={servicesLabel} onChange={(value) => { setServiceIds(value); setServiceInvalid(false); }} services={services} value={knownServiceIds} />
               ) : (
-                <Button className="w-fit" nativeButton={false} render={<Link href="/workspace/services" />} variant="outline">{t("add.fields.services.goToServices")}</Button>
+                <Button className="w-fit" nativeButton={false} render={<Link href="/business/services" />} variant="outline">{t("add.fields.services.goToServices")}</Button>
               )}
               {servicesError ? <FieldError id={`${servicesId}-error`}>{servicesError}</FieldError> : null}
             </Field>

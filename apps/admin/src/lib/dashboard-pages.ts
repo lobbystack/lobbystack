@@ -20,7 +20,9 @@ const pageCapabilities: ReadonlyArray<readonly [prefix: string, capability: Capa
   // The person's own profile, appearance and notifications.
   ["/account", "activity"],
   ["/agents", "setup"],
-  // Business details, knowledge, services, employees and connections.
+  // Business details, knowledge, services, employees and connections, which every agent works from.
+  ["/business", "setup"],
+  // Settings' workspace pages that need more than activity say so below.
   ["/workspace", "setup"],
   ["/workspace/team", "team"],
   // Every operator sees the minutes and chats used against the allowance. A business with billing also sees its plan's meters there.

@@ -10,7 +10,8 @@
     "affiliate": "Programme d'affiliation",
     "settings": "Réglages",
     "inbox": "Boîte de réception",
-    "agents": "Agents"
+    "agents": "Agents",
+    "business": "Entreprise"
   },
   "search": {
     "placeholder": "Rechercher dans l'espace...",
@@ -83,6 +84,9 @@
     "widget": "Widget de site web",
     "shared": "Commun à tous les agents"
   },
+  "businessPages": {
+    "details": "Détails"
+  },
   "settingsPages": {
     "profile": "Profil et sécurité",
     "appearance": "Langue et thème",
@@ -100,7 +104,6 @@
     "apiKeys": "Clés API",
     "partnerAccess": "Accès du partenaire"
   },
-  "back": "Retour à {{place}}",
   "help": "Aide",
   "agentMenu": {
     "conversations": "Conversations",

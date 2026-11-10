@@ -25,7 +25,7 @@ export type Closure = { startsAt: string; endsAt: string; reason: string };
 export type BusinessHoursState = { timezone: string; hoursSource: HoursSource; bookingMode: BookingMode; hours: HoursWindow[]; closures: Closure[] };
 
 /** Where the dashboard edits opening hours. */
-export const HOURS_EDITOR_HREF = "/workspace/business#opening-hours";
+export const HOURS_EDITOR_HREF = "/business#opening-hours";
 const MAX_WINDOWS_PER_DAY = 4;
 const MAX_CLOSURES = 50;
 const MAX_CLOSURE_REASON_LENGTH = 100;

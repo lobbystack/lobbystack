@@ -34,6 +34,8 @@ const PAGE_EVENTS: ReadonlyArray<readonly [RegExp, TelemetryEventName]> = [
   // Each of an agent's pages, under /agents/[agentId].
   [/^\/agents\/[^/]+/, "web.page.agent_viewed"],
   [/^\/workspace(?:\/|$)/, "web.page.workspace_viewed"],
+  // Business's pages lived under /workspace, so they keep its event.
+  [/^\/business(?:\/|$)/, "web.page.workspace_viewed"],
   [/^\/account(?:\/|$)/, "web.page.account_viewed"],
 ];
 

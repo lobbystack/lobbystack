@@ -16,13 +16,16 @@ export const MOVED_DASHBOARD_ROUTES = [
   { source: "/agent/integrations", destination: "/agents/primary/channels", permanent: false },
   // Calls and booking joined the agent's own page.
   { source: "/agents/:agentId/handling", destination: "/agents/:agentId", permanent: false },
-  { source: "/agent/:section(knowledge|services|employees)", destination: "/workspace/:section", permanent: false },
-  { source: "/integrations", destination: "/workspace/connections", permanent: false },
+  { source: "/agent/:section(knowledge|services|employees)", destination: "/business/:section", permanent: false },
+  { source: "/integrations", destination: "/business/connections", permanent: false },
   { source: "/integrations/webhooks", destination: "/workspace/webhooks", permanent: false },
   { source: "/widget", destination: "/agents/primary/channels/widget", permanent: false },
   { source: "/settings/widget", destination: "/agents/primary/channels/widget", permanent: false },
   { source: "/settings/phone-number", destination: "/agents/primary/channels/phone", permanent: false },
   { source: "/settings/account", destination: "/account", permanent: false },
+  // What every agent works from left Settings for Business.
+  { source: "/workspace/business", destination: "/business", permanent: false },
+  { source: "/workspace/:page(knowledge|services|employees|connections)", destination: "/business/:page", permanent: false },
   { source: "/settings/plan", destination: "/workspace/billing", permanent: false },
   // Connected apps moved to the bottom of API keys as MCP connections.
   { source: "/settings/connected-apps", destination: "/workspace/api-keys", permanent: false },

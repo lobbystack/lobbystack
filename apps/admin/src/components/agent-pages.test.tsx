@@ -34,7 +34,7 @@ it("shows the agent's channels, with widgets when the server makes them", () => 
 
 it("lists the workspace pages every agent shares", () => {
   renderWith(<AgentSharedPage />);
-  expect(hrefs()).toEqual(["/workspace/business", "/workspace/knowledge", "/workspace/services", "/workspace/employees", "/workspace/connections"]);
+  expect(hrefs()).toEqual(["/business", "/business/knowledge", "/business/services", "/business/employees", "/business/connections"]);
 });
 
 it("holds the name, greeting and voice, then calls and booking, on the agent's own page, each section waiting with placeholders", () => {

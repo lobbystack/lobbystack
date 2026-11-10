@@ -132,7 +132,7 @@ describe("search respects what the person can open", () => {
   });
 
   it("gives full partner access its setup, and no billing, API keys or MCP", () => {
-    expect(hrefs("knowledge", fullPartnerAccess)).toContain("/workspace/knowledge");
+    expect(hrefs("knowledge", fullPartnerAccess)).toContain("/business/knowledge");
     expect(titles("front desk", fullPartnerAccess)).toContain("Front desk");
     expect(hrefs("invoice", fullPartnerAccess)).not.toContain("/workspace/billing");
     for (const query of ["api", "mcp", "webhook", "token"]) {
