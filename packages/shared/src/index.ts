@@ -430,6 +430,13 @@ export type AppointmentRequest = {
   preferredStaffId?: string;
 };
 
+/** Marks a follow-up as a caller's request to cancel, linked to the appointment when one matched. */
+export const CANCELLATION_REQUEST = "appointment_cancellation";
+/** Marks a follow-up as a caller's request to move an appointment to a new time. */
+export const RESCHEDULE_REQUEST = "appointment_reschedule";
+/** The requests an operator can approve against an appointment. */
+export const APPOINTMENT_REQUESTS = [CANCELLATION_REQUEST, RESCHEDULE_REQUEST] as const;
+
 export type SmsConversationInput = {
   businessId: string;
   conversationId: string;

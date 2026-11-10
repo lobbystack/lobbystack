@@ -1,4 +1,8 @@
+import { CANCELLATION_REQUEST, RESCHEDULE_REQUEST } from "@lobbystack/shared";
+
 import { intlLocale } from "@/lib/locale";
+
+export { CANCELLATION_REQUEST, RESCHEDULE_REQUEST };
 
 export function parseFollowUpTaskBody(body: string): {
   callbackPhone?: string;
@@ -59,8 +63,6 @@ export function parseCancellationBody(body: string): { requested?: string; newTi
 }
 
 /** The follow-up kinds an operator can approve against an appointment, as the domain marks them. */
-export const CANCELLATION_REQUEST = "appointment_cancellation";
-export const RESCHEDULE_REQUEST = "appointment_reschedule";
 export function isAppointmentRequest(request: string | null | undefined): boolean {
   return request === CANCELLATION_REQUEST || request === RESCHEDULE_REQUEST;
 }

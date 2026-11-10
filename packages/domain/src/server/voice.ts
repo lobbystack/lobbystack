@@ -1,7 +1,7 @@
 import { and, count, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 
 import { appointments, billingUsageEvents, calls, contacts, conversations, conversationSessions, defaultAgentIdOf, enqueueOutbox, inboxItems, inOrder, phoneNumbers, services, staff, storageObjects, transcripts, withBusinessTransaction, type DatabaseTransaction, type NewOutboxMessage } from "@lobbystack/db";
-import { billableVoiceSeconds, isNonBillableCallDisposition } from "@lobbystack/shared";
+import { APPOINTMENT_REQUESTS, billableVoiceSeconds, CANCELLATION_REQUEST, isNonBillableCallDisposition, RESCHEDULE_REQUEST } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem, type TelemetryEventName, type TelemetryProperties } from "@lobbystack/telemetry";
 
 import { requireBusinessMembership } from "../authz";
@@ -624,12 +624,7 @@ export async function getCallDetail(
   });
 }
 
-/** Marks a follow-up as a caller's request to cancel, linked to the appointment when one matched. */
-export const CANCELLATION_REQUEST = "appointment_cancellation";
-/** Marks a follow-up as a caller's request to move an appointment to a new time. */
-export const RESCHEDULE_REQUEST = "appointment_reschedule";
-/** The requests an operator can approve against an appointment. */
-export const APPOINTMENT_REQUESTS = [CANCELLATION_REQUEST, RESCHEDULE_REQUEST] as const;
+export { APPOINTMENT_REQUESTS, CANCELLATION_REQUEST, RESCHEDULE_REQUEST };
 /**
  * `requestedService`, `requestedStartsAt` (a date, or a date and time, in the business's timezone) and `notes`
  * are what the caller said, kept apart from the English body so the dashboard can show them in its own language.
