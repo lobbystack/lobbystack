@@ -10,7 +10,7 @@ import {
   Phone,
   XCircle,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { CallRecordingPlayer } from "@/components/audio/call-recording-player";
@@ -106,14 +106,22 @@ export function LiveCallDetailSurface({ callId }: { callId: string }) {
   const telemetry = useTelemetry();
   const queryClient = useQueryClient();
   const { copiedField, copy } = useCopiedField();
-  const [tab, setTab] = useState<CallTab>(tabFromUrl);
-  const selectTab = (value: unknown) => {
-    const next = CALL_TABS.find((candidate) => candidate === value) ?? "transcript";
-    setTab(next);
+  const [tab, setTab] = useState<CallTab>("transcript");
+  // The server can't see the query string, so the tab is read after mount to keep hydration matching.
+  const [tabRead, setTabRead] = useState(false);
+  useEffect(() => {
+    setTab(tabFromUrl());
+    setTabRead(true);
+  }, [callId]);
+  // Keeps the URL in step with the tab, leaving the query out for the default tab.
+  useEffect(() => {
+    if (!tabRead) return;
     const url = new URL(window.location.href);
-    url.searchParams.set("tab", next);
-    window.history.replaceState(window.history.state, "", url);
-  };
+    if (tab === "transcript") url.searchParams.delete("tab");
+    else url.searchParams.set("tab", tab);
+    if (url.href !== window.location.href) window.history.replaceState(window.history.state, "", url);
+  }, [tab, tabRead]);
+  const selectTab = (value: unknown) => setTab(CALL_TABS.find((candidate) => candidate === value) ?? "transcript");
   const { businesses, business } = useActiveBusiness();
   const detail = useQuery({
     queryKey: ["call", business?.businessId, callId],
