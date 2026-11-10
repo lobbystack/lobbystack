@@ -46,6 +46,7 @@ test("checkout return waits for billing confirmation and localized spending caps
     const cap = page.getByLabel(settings.billing.spendingCap.amountLabel, { exact: true });
     await cap.fill("12,50");
     await page.getByRole("button", { name: settings.billing.spendingCap.save, exact: true }).click();
+    await expect(page.getByText(settings.billing.spendingCap.saved, { exact: true })).toBeVisible();
     await expect.poll(() => transaction(async tx => (await tx.select().from(billingAccounts).where(eq(billingAccounts.businessId, businessId)))[0]?.overageSpendingCapCents)).toBe(1250);
     await page.reload();
     await expect(cap).toHaveValue("12,50");
