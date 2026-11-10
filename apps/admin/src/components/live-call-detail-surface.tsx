@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { CancelAppointmentButton } from "@/components/cancel-appointment-button";
 import { RescheduleAppointmentButton } from "@/components/reschedule-appointment-button";
-import { cancellationRequestDetails, isAppointmentRequest, parseFollowUpTaskBody, RESCHEDULE_REQUEST, type RequestedCancellation } from "@/lib/follow-up-task";
+import { appointmentRequestKind, cancellationRequestDetails, isAppointmentRequest, parseFollowUpTaskBody, type RequestedCancellation } from "@/lib/follow-up-task";
 import { formatDuration } from "@/lib/duration";
 import { requestJson } from "@/lib/request-json";
 import { getChannelLabel, getContactDisplayName, hasDisplayablePhone, normalizeChannel } from "@/lib/contact-display";
@@ -238,7 +238,7 @@ function FollowUpDetails({ followUp }: { followUp: Detail["followUpTasks"][numbe
   const callbackWindow = details.callbackWindow?.toLowerCase() === "not specified" ? t("followUp.notSpecified") : details.callbackWindow;
   if (isAppointmentRequest(followUp.request)) {
     const request = cancellationRequestDetails(followUp, i18n.language);
-    const reschedule = followUp.request === RESCHEDULE_REQUEST;
+    const reschedule = appointmentRequestKind(followUp.request) === "reschedule";
     const name = caller && caller.toLowerCase() === "unknown caller" ? t("followUp.unknownCaller") : caller;
     return <>
       <p className="type-item-title">{name ? t(reschedule ? "followUp.rescheduleFromCaller" : "followUp.cancellationFromCaller", { name }) : t(reschedule ? "followUp.rescheduleRequest" : "followUp.cancellationRequest")}</p>
@@ -260,7 +260,7 @@ function ApproveFollowUpRequest({ followUp }: { followUp: Detail["followUpTasks"
   const { appointment } = followUp;
   if (!appointment || appointment.status === "canceled" || !isAppointmentRequest(followUp.request)) return null;
   const linked = { ...appointment, contactName: appointment.contactName ?? "" };
-  if (followUp.request === RESCHEDULE_REQUEST) return followUp.requested?.newStartsAt ? <RescheduleAppointmentButton appointment={linked} newStartsAt={followUp.requested.newStartsAt} size="default" /> : null;
+  if (appointmentRequestKind(followUp.request) === "reschedule") return followUp.requested?.newStartsAt ? <RescheduleAppointmentButton appointment={linked} newStartsAt={followUp.requested.newStartsAt} size="default" /> : null;
   return <CancelAppointmentButton appointment={linked} approve size="default" variant="destructive" />;
 }
 

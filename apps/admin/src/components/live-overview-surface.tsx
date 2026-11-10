@@ -8,7 +8,7 @@ import { getChannelLabel, getContactDisplayName, hasDisplayablePhone } from "@/l
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 
 import Link from "next/link";
-import { CANCELLATION_REQUEST, extractFollowUpContactName, getFollowUpDisplayTitle, isAppointmentRequest, isUrgentFollowUpValue, cancellationRequestDetails, parseFollowUpTaskBody, RESCHEDULE_REQUEST, type RequestedCancellation } from "@/lib/follow-up-task";
+import { appointmentRequestKind, extractFollowUpContactName, getFollowUpDisplayTitle, isAppointmentRequest, isUrgentFollowUpValue, cancellationRequestDetails, parseFollowUpTaskBody, type RequestedCancellation } from "@/lib/follow-up-task";
 import { useEffect, useRef, type ReactNode } from "react";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
@@ -149,9 +149,11 @@ export function LiveOverviewSurface() {
                           {(() => {
                             const details = parseFollowUpTaskBody(item.body);
                             const displayTitle = getActionDisplayTitle(item, t);
-                            const cancellation = item.request === CANCELLATION_REQUEST;
-                            const reschedule = item.request === RESCHEDULE_REQUEST;
-                            const appointmentRequest = isAppointmentRequest(item.request);
+                            const requestKind = appointmentRequestKind(item.request);
+                            const cancellation = requestKind === "cancellation";
+                            const reschedule = requestKind === "reschedule";
+                            const appointmentRequest = requestKind !== null;
+                            const requestKindLabel = requestKind ? t(`home.actionRequired.kinds.${requestKind}`) : getActionKindLabel(item.kind, t);
                             // A request can outlive its appointment, cancelled before the request was saved.
                             const cancelled = item.appointment?.status === "canceled";
                             const appointment = item.appointment && !cancelled ? { ...item.appointment, contactName: getContactDisplayName({ name: item.appointment.contactName }, i18n.language, t) } : null;
@@ -190,7 +192,7 @@ export function LiveOverviewSurface() {
                                     </div>
                                     <ItemActions className="hidden w-auto shrink-0 justify-end self-start sm:flex">
                                       <Badge variant="secondary">
-                                        {cancellation ? t("home.actionRequired.kinds.cancellation") : reschedule ? t("home.actionRequired.kinds.reschedule") : getActionKindLabel(item.kind, t)}
+                                        {requestKindLabel}
                                       </Badge>
                                       {isUrgentFollowUpValue(details.urgency) ? (
                                         <Badge variant="destructive">
@@ -222,7 +224,7 @@ export function LiveOverviewSurface() {
                                     </span>
                                     <span className="flex items-center gap-2 sm:hidden">
                                       <Badge variant="secondary">
-                                        {cancellation ? t("home.actionRequired.kinds.cancellation") : reschedule ? t("home.actionRequired.kinds.reschedule") : getActionKindLabel(item.kind, t)}
+                                        {requestKindLabel}
                                       </Badge>
                                       {isUrgentFollowUpValue(details.urgency) ? (
                                         <Badge variant="destructive">
@@ -456,7 +458,7 @@ function getActionDisplayTitle(
   if (isAppointmentRequest(item.request)) {
     // The stored body is English, so the title is rebuilt from the contact name.
     const name = extractFollowUpContactName(item.title, item.kind);
-    const message = t(item.request === RESCHEDULE_REQUEST ? "home.actionRequired.rescheduleRequest" : "home.actionRequired.cancellationRequest");
+    const message = t(appointmentRequestKind(item.request) === "reschedule" ? "home.actionRequired.rescheduleRequest" : "home.actionRequired.cancellationRequest");
     return name ? t("home.actionRequired.titleWithContact", { message, name }) : message;
   }
   return getFollowUpDisplayTitle({

@@ -67,6 +67,11 @@ export function isAppointmentRequest(request: string | null | undefined): boolea
   return request === CANCELLATION_REQUEST || request === RESCHEDULE_REQUEST;
 }
 
+/** Which appointment request a follow-up holds, or null when it isn't one. */
+export function appointmentRequestKind(request: string | null | undefined): "cancellation" | "reschedule" | null {
+  return request === CANCELLATION_REQUEST ? "cancellation" : request === RESCHEDULE_REQUEST ? "reschedule" : null;
+}
+
 /** What the caller asked to cancel, as the domain saves it. */
 export type RequestedCancellation = { service?: string; startsAt?: string; newStartsAt?: string; notes?: string };
 
