@@ -37,6 +37,8 @@ type Setup = { firstRealConversationAt?: string | null; role?: string; capabilit
 async function setup({ activation = {}, capabilities, complete = [], firstRealConversationAt = null, goal = null, includedNumbers = 0, numbers = [], partnerNumbers = null, role = "business_owner", setupDown = false, skipped = [], trial = { status: "none" } }: Setup = {}) {
   vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn(), removeItem: vi.fn() });
   vi.stubGlobal("EventSource", class { addEventListener() {} removeEventListener() {} close() {} });
+  // Home's appointment details sheet picks its side from the screen width.
+  vi.stubGlobal("matchMedia", vi.fn((query: string) => ({ matches: false, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
   const skips = new Set(skipped);
   const steps = () => order.map((id) => ({ id, documentId: id === "fullScan" ? "doc_1" : null, status: complete.includes(id) ? "complete" : skips.has(id) ? "skipped" : "needs setup" }));
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {

@@ -28,6 +28,10 @@ export async function listUpcomingAppointments(tx: DatabaseTransaction, business
   return await tx.select({
     id: appointments.id,
     startsAt: appointments.startsAt,
+    // The rest of what the appointment details sheet shows, so Home opens it without another request.
+    endsAt: appointments.endsAt,
+    calendarSyncState: appointments.calendarSyncState,
+    staffId: appointments.staffId,
     timezone: appointments.timezone,
     status: appointments.status,
     sourceChannel: appointments.sourceChannel,

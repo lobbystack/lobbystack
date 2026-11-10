@@ -25,6 +25,8 @@ type Overrides = { upcoming?: Array<Record<string, unknown>>; recentCalls?: Arra
 async function setup(locale: "en" | "fr", callId: string | null, overrides: Overrides = {}) {
   vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn(), removeItem: vi.fn() });
   vi.stubGlobal("EventSource", class { addEventListener() {} removeEventListener() {} close() {} });
+  // The appointment details sheet picks its side from the screen width.
+  vi.stubGlobal("matchMedia", vi.fn((query: string) => ({ matches: false, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
   const fetchMock = vi.fn(async (_url: string) => Response.json({ error: "Not found." }, { status: 404 }));
   vi.stubGlobal("fetch", fetchMock);
   const i18n = createInstance();
@@ -34,7 +36,7 @@ async function setup(locale: "en" | "fr", callId: string | null, overrides: Over
     businessId: "business", kpis: { calls: { total: 1, deltaPercent: 0 }, appointments: { total: 1, deltaPercent: 0 }, averageDuration: { totalSeconds: 20, deltaSeconds: 0 } }, monthlyCalls: [], recentCalls: overrides.recentCalls ?? [],
     ...(overrides.actionRequiredCount === undefined ? {} : { actionRequiredCount: overrides.actionRequiredCount }),
     actionRequired: overrides.actionRequired ?? [{ id: "follow-up", kind: "voice_message", title: "Voice message from Alex", body: "Please call back.\nCallback: +14165550199\nUrgency: high", callId, createdAt: "2026-09-04T14:30:00Z" }],
-    upcoming: overrides.upcoming ?? [{ id: "appointment", startsAt: "2026-09-07T14:30:00Z", timezone: "UTC", status: "confirmed", sourceChannel: "voice", contactName: "Alex", serviceName: "Consultation" }],
+    upcoming: overrides.upcoming ?? [{ id: "appointment", startsAt: "2099-09-07T14:30:00Z", endsAt: "2099-09-07T15:00:00Z", timezone: "UTC", status: "confirmed", sourceChannel: "voice", calendarSyncState: "synced", contactName: "Alex", serviceName: "Consultation", staffName: "Front desk" }],
   });
   if (overrides.unansweredCount !== undefined) client.setQueryData(["unanswered-questions", "business"], { questions: [], openCount: overrides.unansweredCount });
   if (overrides.role) client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Clinic", role: overrides.role, active: true, ...(overrides.capabilities ? { capabilities: overrides.capabilities } : {}) }] });
@@ -172,96 +174,45 @@ describe("session replay masking on Home", () => {
     }
   });
 });
-describe("appointment cancellations on Home", () => {
-  const request = { id: "request-1", kind: "voice_message", title: "Voice message from Milan", body: "Cancellation request: Consultation, Monday, September 7 at 2:30 PM", callId: "call-1", createdAt: "2026-09-04T14:30:00Z", request: "appointment_cancellation" };
+describe("appointment requests on Home", () => {
+  const cancellation = { id: "request-1", kind: "voice_message", title: "Voice message from Milan", body: "Cancellation request: Consultation, Monday, September 7 at 2:30 PM", callId: "call-1", createdAt: "2026-09-04T14:30:00Z", request: "appointment_cancellation" };
+  const reschedule = { id: "reschedule-1", kind: "voice_message", title: "Voice message from Milan", body: "Reschedule request: Consultation\nNew time: Wednesday, September 9 at 10:00 AM", callId: "call-2", createdAt: "2026-09-04T14:30:00Z", request: "appointment_reschedule", requested: { service: "Consultation", startsAt: "2099-09-07T10:30", newStartsAt: "2099-09-09T10:00" } };
   const linked = { id: "appointment", startsAt: "2026-09-07T14:30:00Z", timezone: "UTC", status: "confirmed", serviceName: "Consultation", contactName: "Milan" };
 
-  it("names the matched appointment and lets a scheduler approve the cancellation", async () => {
-    await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, appointment: linked }] });
+  it("names the matched appointment, and leaves approving to the call the row opens", async () => {
+    await setup("en", null, { role: "scheduler", actionRequired: [{ ...cancellation, appointment: linked }, { ...reschedule, appointment: linked }] });
     expect(screen.getAllByText(en.home.actionRequired.kinds.cancellation)).toHaveLength(2);
-    expect(screen.getByText("Appointment: Consultation for Milan on Mon, Sep 7, 2:30 PM")).toBeTruthy();
-    expect(screen.getByRole("button", { name: enCommon.appointments.cancel.approve })).toBeTruthy();
-    // The Upcoming appointment has its own cancel action.
-    expect(screen.getByRole("button", { name: "Cancel appointment: Sep 7, 2026, 2:30 PM" })).toBeTruthy();
+    expect(screen.getAllByText(en.home.actionRequired.kinds.reschedule)).toHaveLength(2);
+    expect(screen.getAllByText("Appointment: Consultation for Milan on Mon, Sep 7, 2:30 PM")).toHaveLength(2);
+    expect(screen.getByText(/New time: .*September 9/)).toBeTruthy();
+    expect(screen.getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual(expect.arrayContaining(["/inbox?call=call-1", "/inbox?call=call-2"]));
+    for (const name of [enCommon.appointments.cancel.approve, enCommon.appointments.reschedule.approve, enCommon.appointments.move.otherTime, /Reschedule appointment:/, /Cancel appointment/]) {
+      expect(screen.queryByRole("button", { name })).toBeNull();
+    }
   });
 
-  it("says when no appointment matched, and offers nothing to approve", async () => {
-    await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, appointment: null }] });
+  it("says when no appointment matched, or when it was already cancelled", async () => {
+    await setup("en", null, { role: "scheduler", actionRequired: [{ ...cancellation, appointment: null }] });
     expect(screen.getByText(en.home.actionRequired.noAppointment)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: enCommon.appointments.cancel.approve })).toBeNull();
-  });
-
-  it("says the appointment is already cancelled when it was, and offers nothing to approve", async () => {
-    await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, appointment: { ...linked, status: "canceled" } }] });
+    cleanup();
+    await setup("en", null, { role: "scheduler", actionRequired: [{ ...cancellation, appointment: { ...linked, status: "canceled" } }] });
     expect(screen.getByText(en.home.actionRequired.alreadyCancelled)).toBeTruthy();
     expect(screen.queryByText(en.home.actionRequired.noAppointment)).toBeNull();
-    expect(screen.queryByRole("button", { name: enCommon.appointments.cancel.approve })).toBeNull();
-  });
-
-  it("hides cancel and approve from viewers", async () => {
-    await setup("en", null, { role: "viewer", actionRequired: [{ ...request, appointment: linked }] });
-    expect(screen.getByText("Appointment: Consultation for Milan on Mon, Sep 7, 2:30 PM")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: enCommon.appointments.cancel.approve })).toBeNull();
-    expect(screen.queryByRole("button", { name: /Cancel appointment/ })).toBeNull();
   });
 });
 
-describe("appointment reschedules on Home", () => {
-  const request = { id: "reschedule-1", kind: "voice_message", title: "Voice message from Milan", body: "Reschedule request: Consultation\nNew time: Wednesday, September 9 at 10:00 AM", callId: "call-1", createdAt: "2026-09-04T14:30:00Z", request: "appointment_reschedule", requested: { service: "Consultation", startsAt: "2099-09-07T10:30", newStartsAt: "2099-09-09T10:00" } };
-  const linked = { id: "appointment", startsAt: "2099-09-07T14:30:00Z", timezone: "America/Toronto", status: "confirmed", serviceName: "Consultation", contactName: "Milan" };
-
-  it("shows the requested time and lets a scheduler approve the move", async () => {
-    await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, appointment: linked }] });
-    expect(screen.getAllByText(en.home.actionRequired.kinds.reschedule)).toHaveLength(2);
-    expect(screen.getByText(/New time: .*September 9/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: enCommon.appointments.reschedule.approve })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: enCommon.appointments.cancel.approve })).toBeNull();
-  });
-
-  it("moves the appointment to the time the caller asked for", async () => {
-    const i18n = await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, appointment: linked }] });
-    i18n.fetchMock.mockImplementation(async (url: string, init?: RequestInit) => init?.method === "POST" ? Response.json({ appointmentId: "appointment" }) : Response.json({ error: "Not found." }, { status: 404 }));
-    await userEvent.click(screen.getByRole("button", { name: enCommon.appointments.reschedule.approve }));
-    await userEvent.click(await screen.findByRole("button", { name: enCommon.appointments.reschedule.confirm }));
-    // 10:00 in Toronto on September 9 is 14:00 UTC.
-    await waitFor(() => expect(i18n.fetchMock).toHaveBeenCalledWith("/api/appointments/appointment/reschedule?businessId=business", expect.objectContaining({ method: "POST", body: JSON.stringify({ startsAt: "2099-09-09T14:00:00.000Z" }) })));
-  });
-
-  it("keeps the confirmation open when the time is no longer free", async () => {
-    const i18n = await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, appointment: linked }] });
-    i18n.fetchMock.mockImplementation(async (url: string, init?: RequestInit) => init?.method === "POST" ? Response.json({ error: "That appointment time is no longer available.", code: "slot_unavailable" }, { status: 409 }) : Response.json({ error: "Not found." }, { status: 404 }));
-    await userEvent.click(screen.getByRole("button", { name: enCommon.appointments.reschedule.approve }));
-    await userEvent.click(await screen.findByRole("button", { name: enCommon.appointments.reschedule.confirm }));
-    await waitFor(() => expect(i18n.fetchMock).toHaveBeenCalledWith(expect.stringContaining("/reschedule"), expect.anything()));
-    expect(screen.getByRole("alertdialog")).toBeTruthy();
-  });
-
-  it("says the requested time has passed when it has, rather than offering nothing", async () => {
-    await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, requested: { service: "Consultation", newStartsAt: "2020-09-09T10:00" }, appointment: linked }] });
-    expect(screen.getByText(enCommon.appointments.reschedule.passed)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: enCommon.appointments.reschedule.approve })).toBeNull();
-  });
-
-  it("offers nothing to approve without a matched appointment or the new time, or to a viewer", async () => {
-    await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, appointment: null }] });
-    expect(screen.queryByRole("button", { name: enCommon.appointments.reschedule.approve })).toBeNull();
-    cleanup();
-    await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, requested: { service: "Consultation" }, appointment: linked }] });
-    expect(screen.queryByRole("button", { name: enCommon.appointments.reschedule.approve })).toBeNull();
-    cleanup();
-    await setup("en", null, { role: "viewer", actionRequired: [{ ...request, appointment: linked }] });
-    expect(screen.queryByRole("button", { name: enCommon.appointments.reschedule.approve })).toBeNull();
-  });
-
-  it("offers another time next to the requested one, and a picker when the caller gave none", async () => {
-    await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, appointment: linked }] });
-    expect(screen.getByRole("button", { name: enCommon.appointments.move.otherTime })).toBeTruthy();
-    cleanup();
-    await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, requested: { service: "Consultation" }, appointment: linked }] });
-    expect(screen.getByRole("button", { name: /Reschedule appointment:/ })).toBeTruthy();
-    cleanup();
-    await setup("en", null, { role: "viewer", actionRequired: [{ ...request, appointment: linked }] });
-    expect(screen.queryByRole("button", { name: enCommon.appointments.move.otherTime })).toBeNull();
+describe("Upcoming rows on Home", () => {
+  it("open the appointment's details on Home, where Cancel and Reschedule live", async () => {
+    await setup("en", null, { role: "scheduler" });
+    const row = screen.getByRole("button", { name: /^Alex/ });
+    // The row itself has no Cancel; only the sheet does.
+    expect(screen.queryByRole("button", { name: /Cancel appointment/ })).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    await userEvent.click(row);
+    const sheet = await screen.findByRole("dialog");
+    expect(sheet.textContent).toContain("Alex");
+    expect(sheet.textContent).toContain("Consultation");
+    expect(screen.getByRole("button", { name: /Cancel appointment/ })).toBeTruthy();
   });
 });
 

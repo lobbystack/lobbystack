@@ -111,6 +111,7 @@ export const GET = operatorRoute(async ({ businessId, transaction }) => NextResp
     upcoming: upcoming.map((appointment) => ({
       ...appointment,
       startsAt: appointment.startsAt.toISOString(),
+      endsAt: appointment.endsAt.toISOString(),
     })),
   };
 })));

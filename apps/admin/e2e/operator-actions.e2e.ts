@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { and, eq, like, sql } from "drizzle-orm";
 
-import { appointments, auditLogs, businessHours, businesses, contacts, createDatabaseClient, inboxItems, notifications, services, staff } from "@lobbystack/db";
+import { appointments, auditLogs, businessHours, businesses, calls, contacts, conversations, createDatabaseClient, inboxItems, notifications, services, staff } from "@lobbystack/db";
 
 import common from "../public/locales/en/common.json" with { type: "json" };
 import contactsCopy from "../public/locales/en/contacts.json" with { type: "json" };
@@ -69,8 +69,13 @@ test("an operator approves a caller's reschedule request, which moves the appoin
     const [employee] = await database.db.select({ id: staff.id }).from(staff).where(eq(staff.businessId, businessId!)).limit(1);
     const [contact] = await database.db.insert(contacts).values({ id: contactId, businessId: businessId!, name: "Milan Obrenovic", phone: "+14165550123" }).returning();
     const [appointment] = await database.db.insert(appointments).values({ id: randomUUID(), businessId: businessId!, contactId: contact!.id, staffId: employee!.id, serviceId, startsAt: current, endsAt: new Date(current.getTime() + 30 * 60_000), timezone: "UTC", status: "confirmed", sourceChannel: "voice" }).returning();
+    // The request came in on a call; Home's row opens it, and the call's Details approve it.
+    const [conversation] = await database.db.insert(conversations).values({ businessId: businessId!, contactId: contact!.id, channel: "voice" }).returning();
+    const callId = randomUUID();
+    await database.db.insert(calls).values({ id: callId, businessId: businessId!, contactId: contact!.id, conversationId: conversation!.id, providerCallId: callId, transport: "voice", status: "completed", startedAt: new Date() });
     await database.db.insert(inboxItems).values({
       businessId: businessId!,
+      relatedCallId: callId,
       kind: "voice_message",
       title: "Reschedule request from Milan Obrenovic",
       body: "Reschedule request: Consultation",
@@ -78,6 +83,9 @@ test("an operator approves a caller's reschedule request, which moves the appoin
     });
 
     await page.goto("/");
+    await expect(page.getByRole("button", { name: common.appointments.reschedule.approve, exact: true })).toHaveCount(0);
+    await page.getByRole("link", { name: /Milan Obrenovic/ }).first().click();
+    await expect(page).toHaveURL(new RegExp(`/inbox\\?call=${callId}$`));
     await page.getByRole("button", { name: common.appointments.reschedule.approve, exact: true }).click();
     const confirmation = page.getByRole("alertdialog");
     await expect(confirmation).toBeVisible();
