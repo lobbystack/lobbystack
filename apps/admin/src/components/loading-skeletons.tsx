@@ -719,6 +719,40 @@ export function PhoneNumberChooserSkeleton({ labels, rows = 4 }: { labels: { cou
   );
 }
 
+/**
+ * The brand step's form while the server decides whether the step applies and
+ * which fields it asks. Both fields hold a place, since either can appear, and
+ * each line holds its real text, hidden, so the form keeps its size in every
+ * language.
+ */
+export function OnboardingBrandSkeleton({ labels }: { labels: { name: string; nameHint: string; logo: string; logoChoose: string; logoHint: string; preview: string; continue: string; skip: string } }) {
+  return (
+    <div aria-busy="true" className="flex flex-col gap-4">
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-3">
+          <span className="text-sm leading-snug font-medium">{labels.name}</span>
+          <Skeleton aria-hidden="true" className="h-11 w-full rounded-4xl" />
+          <HiddenTextSkeleton className="text-sm">{labels.nameHint}</HiddenTextSkeleton>
+        </div>
+        <div className="flex flex-col gap-3">
+          <span className="text-sm leading-snug font-medium">{labels.logo}</span>
+          <Skeleton aria-hidden="true" className="flex w-full items-center gap-3 rounded-xl px-4 py-3">
+            <span className="invisible size-10 shrink-0 rounded-full" />
+            <span className="invisible text-sm font-medium">{labels.logoChoose}</span>
+          </Skeleton>
+          <HiddenTextSkeleton className="text-sm">{labels.logoHint}</HiddenTextSkeleton>
+        </div>
+        <div className="flex flex-col gap-2">
+          <span className="text-xs font-medium text-muted-foreground">{labels.preview}</span>
+          <Surface className="px-4 py-5"><Skeleton aria-hidden="true" className="mx-auto h-6 w-40" /></Surface>
+        </div>
+      </div>
+      <HiddenTextSkeleton className="mt-2" skeletonClassName="flex h-11 w-full items-center justify-center rounded-full text-sm font-medium">{labels.continue}</HiddenTextSkeleton>
+      <HiddenTextSkeleton className="text-center" skeletonClassName="mx-auto h-5">{labels.skip}</HiddenTextSkeleton>
+    </div>
+  );
+}
+
 /** Stands in for the mobile number form on the Verify phone step. */
 export function VerifyPhoneFormSkeleton({ labels }: { labels: { mobileNumber: string; hint: string; submit: string } }) {
   return (

@@ -11,6 +11,7 @@ import { OnboardingMeetSurface } from "./onboarding-meet-surface";
 import { OnboardingNumberSurface } from "./onboarding-number-surface";
 import { OnboardingVerifyPhoneSurface } from "./onboarding-verify-phone-surface";
 import { OnboardingWebsiteSurface } from "./onboarding-website-surface";
+import OnboardingBrandLoading from "../../app/(onboarding)/onboarding/brand/loading";
 
 vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => ({ track: vi.fn() }) }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), prefetch: vi.fn(), replace: vi.fn() }), useSearchParams: () => new URLSearchParams() }));
@@ -30,6 +31,17 @@ function renderLoading(surface: React.ReactElement, withBusiness = false) {
 }
 
 describe("onboarding steps while they load", () => {
+  it("holds the brand form's fields, preview and actions until the server says what the step asks", () => {
+    const { container } = render(<OnboardingBrandLoading />);
+    const busy = container.querySelector("[aria-busy='true']")!;
+    expect(busy).toBeTruthy();
+    for (const key of ["brand.nameLabel", "brand.nameHint", "brand.logoLabel", "brand.logoChoose", "brand.logoHint", "brand.preview"]) expect(busy.textContent).toContain(key);
+    expect(screen.getByText("brand.continue").closest("[data-slot='skeleton']")).toBeTruthy();
+    expect(screen.getByText("brand.skip").closest("[data-slot='skeleton']")).toBeTruthy();
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(busy.querySelectorAll("[data-slot='skeleton']").length).toBeGreaterThanOrEqual(6);
+  });
+
   it("replaces the business name input with a placeholder under its label", () => {
     renderLoading(<OnboardingBusinessSurface />);
     expect(screen.getByText("businessName.label")).toBeTruthy();
