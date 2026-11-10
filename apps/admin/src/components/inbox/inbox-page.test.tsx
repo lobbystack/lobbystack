@@ -66,6 +66,9 @@ describe("the Inbox", () => {
     expect(fetchMock).toHaveBeenCalledWith(`/api/inbox?limit=50&channel=phone_call&agentId=${FRONT}`, expect.anything());
     expect(screen.queryByRole("button", { name: "inbox:filters.open" })).toBeNull();
     expect(screen.queryByRole("textbox")).toBeNull();
+    // The filter uses short channel names; the rows keep the long ones.
+    expect(screen.getByRole("button", { name: "inbox:filters.channels.phone_call" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "inbox:filters.channels.web_chat" })).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "inbox:filters.all" }));
     expect(route.router.replace).toHaveBeenLastCalledWith(`/inbox?agent=${FRONT}`, { scroll: false });
   });
@@ -73,10 +76,10 @@ describe("the Inbox", () => {
   it("shows Instagram as a channel only when this server offers it", async () => {
     setup();
     await screen.findByRole("link", { name: /Marie/ });
-    expect(screen.queryByRole("button", { name: "common:channels.instagram" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "inbox:filters.channels.instagram" })).toBeNull();
     cleanup();
     setup({ respond: () => ({ items, nextCursor: null, agents: twoAgents, instagramOffered: true }) });
-    expect(await screen.findByRole("button", { name: "common:channels.instagram" })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "inbox:filters.channels.instagram" })).toBeTruthy();
   });
 
   it("records opening a conversation", async () => {
