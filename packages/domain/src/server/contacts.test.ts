@@ -10,13 +10,15 @@ import { updateContactDetails } from "./contacts";
 
 beforeEach(() => { vi.clearAllMocks(); });
 
-function useTransaction(result: Array<{ id: string; name: string | null; email: string | null }>) {
+function useTransaction(result: Array<{ id: string; name: string | null; email: string | null }>, current: Array<{ id: string; name: string | null; email: string | null }> = [{ id: "contact-1", name: null, email: null }]) {
   const inserted: Array<{ table: unknown; values: Record<string, unknown> }> = [];
+  const updates: Array<Record<string, unknown>> = [];
   mocks.tx = {
-    update: () => ({ set: () => ({ where: () => ({ returning: async () => result }) }) }),
+    select: () => ({ from: () => ({ where: () => ({ limit: () => ({ for: async () => current }) }) }) }),
+    update: () => ({ set: (values: Record<string, unknown>) => { updates.push(values); return { where: () => ({ returning: async () => result }) }; } }),
     insert: (table: unknown) => ({ values: async (values: Record<string, unknown>) => { inserted.push({ table, values }); } }),
   };
-  return { inserted };
+  return { inserted, updates };
 }
 
 const context = { db: undefined as never };
@@ -31,9 +33,18 @@ describe("a dashboard contact edit", () => {
   });
 
   it("records nothing when the contact isn't the business's", async () => {
-    const { inserted } = useTransaction([]);
+    const { inserted } = useTransaction([], []);
 
     await expect(updateContactDetails(context, { ...input, name: "Milan" })).resolves.toBeNull();
+    expect(inserted).toEqual([]);
+    expect(mocks.enqueueOutbox).not.toHaveBeenCalled();
+  });
+
+  it("writes nothing, and records nothing, when every field already holds the sent value", async () => {
+    const { inserted, updates } = useTransaction([{ id: "contact-1", name: "Milan", email: "milan@example.com" }], [{ id: "contact-1", name: "Milan", email: "milan@example.com" }]);
+
+    await expect(updateContactDetails(context, { ...input, name: "Milan", email: "milan@example.com" })).resolves.toEqual({ contactId: "contact-1", name: "Milan", email: "milan@example.com" });
+    expect(updates).toEqual([]);
     expect(inserted).toEqual([]);
     expect(mocks.enqueueOutbox).not.toHaveBeenCalled();
   });

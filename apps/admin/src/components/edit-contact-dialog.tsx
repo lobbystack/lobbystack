@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { requestJson } from "@/lib/request-json";
 
 type EditableContact = { id: string; name: string | null; email: string | null };
+type ContactDetails = { id: string; name?: string | null; email?: string | null };
 
 /** Corrects a contact's name or email, for example a name the agent misheard. A cleared field is removed. */
 export function EditContactDialog({ businessId, contact, onOpenChange }: { businessId: string; contact: EditableContact | null; onOpenChange: (open: boolean) => void }) {
@@ -31,7 +32,7 @@ export function EditContactDialog({ businessId, contact, onOpenChange }: { busin
   }, [contact]);
 
   const save = useMutation({
-    mutationFn: (current: EditableContact) => requestJson(`/api/contacts/${encodeURIComponent(current.id)}?businessId=${encodeURIComponent(businessId)}`, { method: "PATCH", body: JSON.stringify({ name: name.trim() || null, email: email.trim() || null }) }),
+    mutationFn: ({ id, ...details }: ContactDetails) => requestJson(`/api/contacts/${encodeURIComponent(id)}?businessId=${encodeURIComponent(businessId)}`, { method: "PATCH", body: JSON.stringify(details) }),
     onError: () => setError(t("edit.failed")),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["contacts", businessId] });
@@ -41,12 +42,21 @@ export function EditContactDialog({ businessId, contact, onOpenChange }: { busin
     },
   });
 
+  // Only a field that differs from the saved contact is sent, so an unchanged save writes nothing.
+  const nextName = name.trim() || null;
+  const nextEmail = email.trim() || null;
+  const changes = contact ? {
+    ...(nextName !== (contact.name ?? null) ? { name: nextName } : {}),
+    ...(nextEmail !== (contact.email ?? null) ? { email: nextEmail } : {}),
+  } : {};
+  const changed = Object.keys(changes).length > 0;
+
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!contact) return;
+    if (!contact || !changed) return;
     if (email.trim() && !apiContactUpdateSchema.shape.email.safeParse(email.trim()).success) { setError(t("edit.invalidEmail")); return; }
     setError(null);
-    save.mutate(contact);
+    save.mutate({ id: contact.id, ...changes });
   };
 
   return (
@@ -63,7 +73,7 @@ export function EditContactDialog({ businessId, contact, onOpenChange }: { busin
           </FieldGroup>
           <DialogFooter>
             <Button disabled={save.isPending} onClick={() => onOpenChange(false)} type="button" variant="outline">{t("edit.cancel")}</Button>
-            <Button loading={save.isPending} loadingLabel={t("edit.saving")} type="submit">{t("edit.save")}</Button>
+            <Button disabled={!changed} loading={save.isPending} loadingLabel={t("edit.saving")} type="submit">{t("edit.save")}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

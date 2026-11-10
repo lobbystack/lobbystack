@@ -126,10 +126,14 @@ export async function updateContactDetails(
   context: DomainContext,
   input: { userId: string; businessId: string; contactId: string; name?: string | null | undefined; email?: string | null | undefined },
 ): Promise<{ contactId: string; name: string | null; email: string | null } | null> {
-  const patch = { ...(input.name !== undefined ? { name: input.name } : {}), ...(input.email !== undefined ? { email: input.email } : {}) };
   return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async tx => {
     await requireBusinessAdmin(tx, input);
-    if (!Object.keys(patch).length) throw Object.assign(new Error("Send a name or an email to update."), { status: 400 });
+    if (input.name === undefined && input.email === undefined) throw Object.assign(new Error("Send a name or an email to update."), { status: 400 });
+    const [current] = await tx.select({ id: contacts.id, name: contacts.name, email: contacts.email }).from(contacts).where(and(eq(contacts.id, input.contactId), eq(contacts.businessId, input.businessId))).limit(1).for("update");
+    if (!current) return null;
+    // Only a field that actually differs is written, so saving without changes leaves no audit entry.
+    const patch = { ...(input.name !== undefined && input.name !== current.name ? { name: input.name } : {}), ...(input.email !== undefined && input.email !== current.email ? { email: input.email } : {}) };
+    if (!Object.keys(patch).length) return { contactId: current.id, name: current.name, email: current.email };
     const [contact] = await tx.update(contacts).set({ ...patch, updatedAt: new Date() }).where(and(eq(contacts.id, input.contactId), eq(contacts.businessId, input.businessId))).returning({ id: contacts.id, name: contacts.name, email: contacts.email });
     if (!contact) return null;
     await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.userId, eventType: "contact.updated", entityType: "contact", entityId: contact.id, payload: { fields: Object.keys(patch) } });
