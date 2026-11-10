@@ -18,9 +18,9 @@ import { useTelemetry } from "@/components/product-analytics";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Combobox, ComboboxCollection, ComboboxContent, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxLabel, ComboboxList, ComboboxTrigger, ComboboxValue } from "@/components/ui/combobox";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -247,6 +247,9 @@ export function PartnerBusinessesSurface() {
   const [accessLevel, setAccessLevel] = useState<PartnerAccessLevel>("full");
   const [templateId, setTemplateId] = useState(NO_TEMPLATE);
   const [error, setError] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
+  const nameError = submitted && !name.trim() ? t("businesses.create.nameRequired") : null;
+  const ownerError = submitted && !ownerEmail.trim() ? t("businesses.create.ownerRequired") : null;
   const templates = useQuery({ queryKey: partnerTemplatesQueryKey(partner.partnerId), queryFn: () => fetchPartnerTemplates(partner.partnerId), enabled: open });
   const templateOptions = [{ value: NO_TEMPLATE, label: t("businesses.create.noTemplate") }, ...(templates.data ?? []).map((template) => ({ value: template.templateId, label: template.name }))];
   const locale = intlLocale(i18n.language);
@@ -259,7 +262,7 @@ export function PartnerBusinessesSurface() {
   const formatDate = (value: string) => new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(value));
   const formatMinutes = (seconds: number) => new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(Math.round((seconds / 60) * 10) / 10);
   const formatCount = (count: number) => new Intl.NumberFormat(locale).format(count);
-  const reset = () => { setName(""); setOwnerEmail(""); setTimezone(browserTimeZone()); setAccessLevel("full"); setBilling(BILLED_OUTSIDE); setTemplateId(NO_TEMPLATE); setError(null); };
+  const reset = () => { setName(""); setOwnerEmail(""); setTimezone(browserTimeZone()); setAccessLevel("full"); setBilling(BILLED_OUTSIDE); setTemplateId(NO_TEMPLATE); setError(null); setSubmitted(false); };
 
   // A partner's business shows only on the partner's domains, so its dashboard opens there; from the host's domain the person signs in again.
   const openBusiness = useMutation({
@@ -336,18 +339,20 @@ export function PartnerBusinessesSurface() {
       <DialogTrigger render={<Button disabled={businesses.isLoading} size="sm" />}>{t("businesses.create.action")}</DialogTrigger>
       {/* With templates and packages the form runs taller than a laptop screen, so it scrolls inside the window. */}
       <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
-        <form className="flex flex-col gap-6" onSubmit={(event) => { event.preventDefault(); if (!create.isPending && name.trim() && ownerEmail.trim()) { setError(null); create.mutate(); } }}>
+        <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); setSubmitted(true); if (!create.isPending && name.trim() && ownerEmail.trim()) { setError(null); create.mutate(); } }}>
           <DialogHeader>
             <DialogTitle>{t("businesses.create.title")}</DialogTitle>
           </DialogHeader>
           <FieldGroup>
-            <Field>
+            <Field data-invalid={nameError ? true : undefined}>
               <FieldLabel htmlFor="partner-business-name">{t("businesses.create.nameLabel")}</FieldLabel>
-              <Input autoComplete="off" id="partner-business-name" maxLength={120} onChange={(event) => setName(event.target.value)} placeholder={t("businesses.create.namePlaceholder")} value={name} />
+              <Input aria-describedby={nameError ? "partner-business-name-error" : undefined} aria-invalid={nameError ? true : undefined} autoComplete="off" id="partner-business-name" maxLength={120} onChange={(event) => setName(event.target.value)} placeholder={t("businesses.create.namePlaceholder")} value={name} />
+              {nameError ? <FieldError id="partner-business-name-error">{nameError}</FieldError> : null}
             </Field>
-            <Field>
+            <Field data-invalid={ownerError ? true : undefined}>
               <FieldLabel htmlFor="partner-business-owner">{t("businesses.create.ownerLabel")}</FieldLabel>
-              <Input autoComplete="off" id="partner-business-owner" onChange={(event) => setOwnerEmail(event.target.value)} placeholder={t("businesses.create.ownerPlaceholder")} type="email" value={ownerEmail} />
+              <Input aria-describedby={ownerError ? "partner-business-owner-error" : undefined} aria-invalid={ownerError ? true : undefined} autoComplete="off" id="partner-business-owner" onChange={(event) => setOwnerEmail(event.target.value)} placeholder={t("businesses.create.ownerPlaceholder")} type="email" value={ownerEmail} />
+              {ownerError ? <FieldError id="partner-business-owner-error">{ownerError}</FieldError> : null}
             </Field>
             <Field>
               <FieldLabel htmlFor="partner-business-timezone">{t("businesses.create.timezoneLabel")}</FieldLabel>
@@ -398,7 +403,8 @@ export function PartnerBusinessesSurface() {
           </FieldGroup>
           {error ? <p className="text-sm text-destructive" role="alert">{error}</p> : null}
           <DialogFooter>
-            <Button disabled={create.isPending || !name.trim() || !ownerEmail.trim()} loading={create.isPending} loadingLabel={t("businesses.create.submitting")} type="submit">{t("businesses.create.submit")}</Button>
+            <DialogClose render={<Button disabled={create.isPending} type="button" variant="outline" />}>{t("businesses.create.cancel")}</DialogClose>
+            <Button disabled={create.isPending} loading={create.isPending} loadingLabel={t("businesses.create.submitting")} type="submit">{t("businesses.create.submit")}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -59,6 +59,20 @@ describe("team loading states", () => {
   });
 });
 
+describe("inviting a team member", () => {
+  it("shows an error and sends nothing when the email is empty, and has a Cancel button", async () => {
+    render_("business_owner", { team: true });
+    const fetchMock = vi.fn(async () => Response.json({ ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+    await userEvent.click(screen.getByRole("button", { name: "workspaceTeam.invite.action" }));
+    await userEvent.click(screen.getByRole("button", { name: "workspaceTeam.invite.submit" }));
+    expect(screen.getByText("workspaceTeam.invite.emailRequired")).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "workspaceTeam.invite.cancel" }));
+    await waitFor(() => expect(screen.queryByText("workspaceTeam.invite.emailRequired")).toBeNull());
+  });
+});
+
 describe("renaming the business", () => {
   async function openDialog() {
     render_("business_owner", { team: true });

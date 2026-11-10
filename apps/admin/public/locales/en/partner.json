@@ -130,7 +130,10 @@
         "failed": "We couldn't create the business. Try again.",
         "templateFailed": "We couldn't create the business from that template. Try again or pick another one.",
         "templateNotFound": "Someone deleted that template. Pick another one."
-      }
+      },
+      "nameRequired": "Enter a business name.",
+      "ownerRequired": "Enter the owner's email.",
+      "cancel": "Cancel"
     },
     "billing": {
       "outside": "You bill it yourself",
@@ -237,7 +240,10 @@
         "invalidAllowance": "Enter whole numbers from 0 to 1,000,000.",
         "notConnected": "Connect payments before you create packages.",
         "failed": "We couldn't create the package. Try again."
-      }
+      },
+      "nameRequired": "Enter a package name.",
+      "priceRequired": "Enter a monthly price.",
+      "cancel": "Cancel"
     },
     "rename": {
       "action": "Rename",
@@ -246,7 +252,9 @@
       "saving": "Saving…",
       "saved": "Package renamed.",
       "notConnected": "You can only rename packages on your connected payment account.",
-      "failed": "We couldn't rename the package. Try again."
+      "failed": "We couldn't rename the package. Try again.",
+      "nameRequired": "Enter a package name.",
+      "cancel": "Cancel"
     },
     "archive": {
       "action": "Stop selling",
@@ -349,7 +357,9 @@
         "failed": "We couldn't send the invitation. Try again.",
         "invalidEmail": "Enter one valid email address.",
         "rateLimited": "You sent too many invitations. Try again in an hour."
-      }
+      },
+      "emailRequired": "Enter an email address.",
+      "cancel": "Cancel"
     },
     "actions": {
       "moreOptions": "More options for {{email}}",
@@ -550,6 +560,8 @@
       "nameLabel": "Name",
       "namePlaceholder": "Client onboarding",
       "scopesLabel": "Access",
+      "nameRequired": "Enter a name.",
+      "scopesRequired": "Choose at least one permission.",
       "cancel": "Cancel",
       "submit": "Create key",
       "creating": "Creating…"

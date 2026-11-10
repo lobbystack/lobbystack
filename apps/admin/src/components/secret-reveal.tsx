@@ -1,11 +1,13 @@
 "use client";
 
 import { Check, Copy } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+
+const COPIED_MS = 2000;
 
 /**
  * Shows a secret that the server returns only once, with a copy button. Its
@@ -15,6 +17,14 @@ import { Button } from "@/components/ui/button";
 export function SecretReveal({ value, warning, namespace = "settings" }: { value: string; warning: string; namespace?: "settings" | "partner" }) {
   const { t } = useTranslation(namespace);
   const [copied, setCopied] = useState(false);
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(resetTimer.current), []);
+  // The check shows for two seconds, and the button stays disabled until it goes.
+  function copy() {
+    void navigator.clipboard?.writeText(value);
+    setCopied(true);
+    resetTimer.current = setTimeout(() => setCopied(false), COPIED_MS);
+  }
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2 rounded-xl border bg-muted/40 p-2">
@@ -22,7 +32,8 @@ export function SecretReveal({ value, warning, namespace = "settings" }: { value
         <code className="ph-no-capture min-w-0 flex-1 break-all px-2 font-mono text-sm" data-testid="secret-value">{value}</code>
         <Button
           aria-label={t("secretReveal.copy")}
-          onClick={() => { void navigator.clipboard?.writeText(value); setCopied(true); }}
+          disabled={copied}
+          onClick={copy}
           size="sm"
           type="button"
           variant="outline"

@@ -853,7 +853,9 @@
         "invalidEmail": "Unesite ispravnu imejl adresu.",
         "partnerMember": "{{email}} je u timu partnera ovog radnog prostora. Radi ovde iz partnerske konzole, pa ne može da se pridruži timu.",
         "failed": "Nismo uspeli da pošaljemo poziv. Pokušajte ponovo."
-      }
+      },
+      "emailRequired": "Unesite imejl adresu.",
+      "cancel": "Otkaži"
     },
     "pending": {
       "resend": "Pošalji ponovo",
@@ -1124,6 +1126,8 @@
       "nameLabel": "Naziv",
       "namePlaceholder": "CRM sinhronizacija",
       "scopesLabel": "Pristup",
+      "nameRequired": "Unesite naziv.",
+      "scopesRequired": "Izaberite bar jednu dozvolu.",
       "cancel": "Otkaži",
       "submit": "Kreiraj ključ",
       "creating": "Kreiranje…"

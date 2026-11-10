@@ -846,7 +846,9 @@
         "invalidEmail": "Enter a valid email address.",
         "partnerMember": "{{email}} is on this workspace's partner team. They work here from the partner console, so they can't join the team.",
         "failed": "We couldn't send that invitation. Please try again."
-      }
+      },
+      "emailRequired": "Enter an email address.",
+      "cancel": "Cancel"
     },
     "pending": {
       "resend": "Resend",
@@ -1117,6 +1119,8 @@
       "nameLabel": "Name",
       "namePlaceholder": "CRM sync",
       "scopesLabel": "Access",
+      "nameRequired": "Enter a name.",
+      "scopesRequired": "Choose at least one permission.",
       "cancel": "Cancel",
       "submit": "Create key",
       "creating": "Creating…"

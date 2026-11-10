@@ -12,9 +12,9 @@ import { PageHeader } from "@/components/page-header";
 import { useConsolePartner } from "@/components/partner-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
@@ -73,6 +73,8 @@ export function PartnerTeamSurface() {
   const [email, setEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<PartnerRole>("member");
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteSubmitted, setInviteSubmitted] = useState(false);
+  const inviteEmailError = inviteSubmitted && !email.trim() ? t("team.invite.emailRequired") : null;
 
   const rows = useMemo<Row[]>(() => [
     ...(team.data?.members ?? []).map((member) => ({ kind: "member" as const, ...member })),
@@ -111,17 +113,18 @@ export function PartnerTeamSurface() {
   const confirm = (next: { kind: "owner" | "remove"; memberId: string; email: string }) => { setShown(next); setConfirmOpen(true); };
 
   const inviteDialog = canManage ? (
-    <Dialog onOpenChange={(open) => { setInviteOpen(open); setInviteError(null); }} open={inviteOpen}>
+    <Dialog onOpenChange={(open) => { setInviteOpen(open); setInviteError(null); setInviteSubmitted(false); }} open={inviteOpen}>
       <DialogTrigger render={<Button disabled={team.isLoading} size="sm" />}>{t("team.invite.action")}</DialogTrigger>
       <DialogContent>
-        <form className="flex flex-col gap-6" onSubmit={(event) => { event.preventDefault(); if (!invite.isPending && email.trim()) { setInviteError(null); invite.mutate(); } }}>
+        <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); setInviteSubmitted(true); if (!invite.isPending && email.trim()) { setInviteError(null); invite.mutate(); } }}>
           <DialogHeader>
             <DialogTitle>{t("team.invite.title")}</DialogTitle>
           </DialogHeader>
           <FieldGroup>
-            <Field>
+            <Field data-invalid={inviteEmailError ? true : undefined}>
               <FieldLabel htmlFor="partner-invite-email">{t("team.invite.emailLabel")}</FieldLabel>
-              <Input autoComplete="off" id="partner-invite-email" onChange={(event) => setEmail(event.target.value)} placeholder={t("team.invite.emailPlaceholder")} type="email" value={email} />
+              <Input aria-describedby={inviteEmailError ? "partner-invite-email-error" : undefined} aria-invalid={inviteEmailError ? true : undefined} autoComplete="off" id="partner-invite-email" onChange={(event) => setEmail(event.target.value)} placeholder={t("team.invite.emailPlaceholder")} type="email" value={email} />
+              {inviteEmailError ? <FieldError id="partner-invite-email-error">{inviteEmailError}</FieldError> : null}
             </Field>
             <Field>
               <FieldLabel>{t("team.invite.roleLabel")}</FieldLabel>
@@ -130,7 +133,8 @@ export function PartnerTeamSurface() {
           </FieldGroup>
           {inviteError ? <p className="text-sm text-destructive" role="alert">{inviteError}</p> : null}
           <DialogFooter>
-            <Button disabled={invite.isPending || !email.trim()} loading={invite.isPending} loadingLabel={t("team.invite.sending")} type="submit">{t("team.invite.submit")}</Button>
+            <DialogClose render={<Button disabled={invite.isPending} type="button" variant="outline" />}>{t("team.invite.cancel")}</DialogClose>
+            <Button disabled={invite.isPending} loading={invite.isPending} loadingLabel={t("team.invite.sending")} type="submit">{t("team.invite.submit")}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

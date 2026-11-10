@@ -130,7 +130,10 @@
         "failed": "Impossible de créer l'entreprise. Réessayez.",
         "templateFailed": "Impossible de créer l'entreprise à partir de ce modèle. Réessayez ou choisissez-en un autre.",
         "templateNotFound": "Quelqu'un a supprimé ce modèle. Choisissez-en un autre."
-      }
+      },
+      "nameRequired": "Entrez un nom d'entreprise.",
+      "ownerRequired": "Entrez le courriel du propriétaire.",
+      "cancel": "Annuler"
     },
     "billing": {
       "outside": "Vous la facturez vous-même",
@@ -239,7 +242,10 @@
         "invalidAllowance": "Entrez des nombres entiers de 0 à 1 000 000.",
         "notConnected": "Connectez un compte de paiement avant de créer des formules.",
         "failed": "Impossible de créer la formule. Réessayez."
-      }
+      },
+      "nameRequired": "Entrez un nom de formule.",
+      "priceRequired": "Entrez un prix mensuel.",
+      "cancel": "Annuler"
     },
     "rename": {
       "action": "Renommer",
@@ -248,7 +254,9 @@
       "saving": "Enregistrement…",
       "saved": "Formule renommée.",
       "notConnected": "Vous ne pouvez renommer que les formules de votre compte de paiement connecté.",
-      "failed": "Impossible de renommer la formule. Réessayez."
+      "failed": "Impossible de renommer la formule. Réessayez.",
+      "nameRequired": "Entrez un nom de formule.",
+      "cancel": "Annuler"
     },
     "archive": {
       "action": "Arrêter la vente",
@@ -357,7 +365,9 @@
         "failed": "Impossible d'envoyer l'invitation. Réessayez.",
         "invalidEmail": "Entrez une seule adresse courriel valide.",
         "rateLimited": "Vous avez envoyé trop d'invitations. Réessayez dans une heure."
-      }
+      },
+      "emailRequired": "Entrez une adresse courriel.",
+      "cancel": "Annuler"
     },
     "actions": {
       "moreOptions": "Plus d'options pour {{email}}",
@@ -558,6 +568,8 @@
       "nameLabel": "Nom",
       "namePlaceholder": "Intégration des clients",
       "scopesLabel": "Accès",
+      "nameRequired": "Entrez un nom.",
+      "scopesRequired": "Choisissez au moins une autorisation.",
       "cancel": "Annuler",
       "submit": "Créer la clé",
       "creating": "Création…"

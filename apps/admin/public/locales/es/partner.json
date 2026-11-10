@@ -130,7 +130,10 @@
         "failed": "No pudimos crear el negocio. Inténtelo de nuevo.",
         "templateFailed": "No pudimos crear el negocio con esa plantilla. Inténtelo de nuevo o elija otra.",
         "templateNotFound": "Alguien eliminó esa plantilla. Elija otra."
-      }
+      },
+      "nameRequired": "Introduzca el nombre del negocio.",
+      "ownerRequired": "Introduzca el correo del propietario.",
+      "cancel": "Cancelar"
     },
     "billing": {
       "outside": "Lo factura usted",
@@ -239,7 +242,10 @@
         "invalidAllowance": "Escriba números enteros de 0 a 1.000.000.",
         "notConnected": "Conecte su cuenta de pagos antes de crear paquetes.",
         "failed": "No pudimos crear el paquete. Inténtelo de nuevo."
-      }
+      },
+      "nameRequired": "Introduzca un nombre para el paquete.",
+      "priceRequired": "Introduzca un precio mensual.",
+      "cancel": "Cancelar"
     },
     "rename": {
       "action": "Cambiar nombre",
@@ -248,7 +254,9 @@
       "saving": "Guardando…",
       "saved": "Nombre del paquete cambiado.",
       "notConnected": "Solo puede cambiar el nombre de los paquetes de su cuenta de pagos conectada.",
-      "failed": "No pudimos cambiar el nombre del paquete. Inténtelo de nuevo."
+      "failed": "No pudimos cambiar el nombre del paquete. Inténtelo de nuevo.",
+      "nameRequired": "Introduzca un nombre para el paquete.",
+      "cancel": "Cancelar"
     },
     "archive": {
       "action": "Dejar de vender",
@@ -357,7 +365,9 @@
         "failed": "No pudimos enviar la invitación. Inténtelo de nuevo.",
         "invalidEmail": "Escriba una sola dirección de correo válida.",
         "rateLimited": "Envió demasiadas invitaciones. Inténtelo de nuevo en una hora."
-      }
+      },
+      "emailRequired": "Introduzca una dirección de correo.",
+      "cancel": "Cancelar"
     },
     "actions": {
       "moreOptions": "Más opciones para {{email}}",
@@ -558,6 +568,8 @@
       "nameLabel": "Nombre",
       "namePlaceholder": "Alta de clientes",
       "scopesLabel": "Acceso",
+      "nameRequired": "Introduzca un nombre.",
+      "scopesRequired": "Elija al menos un permiso.",
       "cancel": "Cancelar",
       "submit": "Crear clave",
       "creating": "Creando…"
