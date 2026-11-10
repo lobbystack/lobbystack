@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 // A list shows the same flags again as it filters, so each one is kept once its chunk has loaded.
 const loadedFlags = new Map<string, FlagComponent>();
-const FLAG_SHAPE = "inline-block h-[1em] w-[1.5em] shrink-0 self-center overflow-hidden bg-muted align-middle rounded-[3px] ring-1 ring-inset ring-foreground/15";
+const FLAG_SHAPE = "inline-block h-3 w-4.5 shrink-0 self-center overflow-hidden rounded-xs bg-muted align-middle ring-1 ring-inset ring-foreground/15";
 
 /**
  * A country's flag as an SVG, so it looks the same on every operating system.
@@ -21,9 +21,11 @@ export function Flag({ className, region }: { className?: string; region: string
     const component = code ? loadedFlags.get(code) : null;
     return code && component ? { code, component } : null;
   });
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     if (!code) return;
+    setFailed(false);
     const cached = loadedFlags.get(code);
     if (cached) {
       setLoaded({ code, component: cached });
@@ -31,14 +33,15 @@ export function Flag({ className, region }: { className?: string; region: string
     }
 
     let active = true;
+    // A chunk that fails to load leaves the globe in the flag's place, never an empty box.
     void loadFlagComponent(code)?.then((component) => {
       loadedFlags.set(code, component);
       if (active) setLoaded({ code, component });
-    });
+    }, () => { if (active) setFailed(true); });
     return () => { active = false; };
   }, [code]);
 
-  if (!code || !hasFlagComponent(code)) return <GlobeIcon aria-hidden="true" className={cn("size-3.5 shrink-0 self-center text-muted-foreground", className)} />;
+  if (!code || failed || !hasFlagComponent(code)) return <GlobeIcon aria-hidden="true" className={cn("size-3.5 shrink-0 self-center text-muted-foreground", className)} />;
   const FlagSvg = loaded?.code === code ? loaded.component : null;
   return (
     <span aria-hidden="true" className={cn(FLAG_SHAPE, className)} data-flag={code}>
