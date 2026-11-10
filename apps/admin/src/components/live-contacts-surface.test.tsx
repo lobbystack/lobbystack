@@ -40,7 +40,7 @@ describe("contact list parity and pagination", () => {
     expect(screen.getByRole("alertdialog")).toBeTruthy();
     expect(screen.getByText("Contact 1")).toBeTruthy();
   });
-  it("edits a contact's name and email and clears a field that is left empty", async () => {
+  it("edits a contact's name and sends only the field that changed", async () => {
     const { fetchMock } = setup();
     await userEvent.click(await screen.findByRole("button", { name: "table.actions.moreOptions" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "table.actions.editContact" }));
@@ -50,7 +50,7 @@ describe("contact list parity and pagination", () => {
     await userEvent.clear(name);
     await userEvent.type(name, "  Milan Obrenovic  ");
     await userEvent.click(within(dialog).getByRole("button", { name: "edit.save" }));
-    await waitFor(() => expect(fetchMock.mock.calls.some(([url, init]) => init?.method === "PATCH" && String(url).startsWith("/api/contacts/contact-0?businessId=business") && init.body === JSON.stringify({ name: "Milan Obrenovic", email: null }))).toBe(true));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url, init]) => init?.method === "PATCH" && String(url).startsWith("/api/contacts/contact-0?businessId=business") && init.body === JSON.stringify({ name: "Milan Obrenovic" }))).toBe(true));
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith("edit.saved"));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
