@@ -25,7 +25,7 @@ import { LiveSetupGuideSurface, useSetupGuide } from "@/components/live-setup-gu
 import { needsHoursForBooking, useBusinessHours } from "@/components/business-hours-section";
 import { appointmentSummary, CancelAppointmentButton } from "@/components/cancel-appointment-button";
 import { RescheduleAppointmentButton } from "@/components/reschedule-appointment-button";
-import { MetricCardGridSkeleton } from "@/components/loading-skeletons";
+import { MetricCardGridSkeleton, SetupGuideSkeleton } from "@/components/loading-skeletons";
 import { Item, ItemActions, ItemHeader, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item";
 import { Separator } from "@/components/ui/separator";
 import { Surface } from "@/components/ui/surface";
@@ -36,7 +36,7 @@ import { fetchUnansweredQuestions, UNANSWERED_QUESTIONS_ANCHOR, unansweredQuesti
 import { useBusinessCan } from "@/components/business-capabilities-provider";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { dayKey } from "@/lib/calendar-days";
-import { isSetupGuideFinished, showsSetupGuide } from "@/lib/setup-guide";
+import { isSetupGuideFinished, SETUP_STEP_ORDER, showsSetupGuide } from "@/lib/setup-guide";
 
 const OverviewCallChart = dynamic(() => import("./overview-call-chart").then((module) => module.OverviewCallChart), {
   loading: () => <Skeleton className="h-[350px] w-full" />,
@@ -88,7 +88,7 @@ export function LiveOverviewSurface() {
   const guide = useSetupGuide(mayShowGuide ? businessId : undefined);
   // Missing opening hours keep the guide open too: they're its one step the server doesn't track.
   const hours = useBusinessHours(mayShowGuide ? businessId ?? "" : "");
-  // A failed request leaves the guide out, and the dashboard works without setup. Nothing shows in its place while it loads.
+  // A failed request leaves the guide out, and the dashboard works without setup. Its placeholder holds the space while it loads.
   const showGuide = mayShowGuide && Boolean(guide.data) && (!isSetupGuideFinished(guide.data!) || (needsHoursForBooking(hours.data) && !guide.data!.skippedSteps.includes("hours")));
   // The activation card waits too, so it doesn't appear and then give way to the guide.
   const guidePending = mayShowGuide && guide.isPending;
@@ -125,7 +125,11 @@ export function LiveOverviewSurface() {
     <div className="flex flex-col gap-6">
       <PageHeader title={t("home.title")} />
       {/* The extra margin makes the visible gap match the one between the page title and Getting started. */}
-      {showGuide ? <div className="mb-4"><LiveSetupGuideSurface businessId={businessId!} goal={business?.onboardingGoal ?? null} /></div> : null}
+      {showGuide ? (
+        <div className="mb-4"><LiveSetupGuideSurface businessId={businessId!} goal={business?.onboardingGoal ?? null} /></div>
+      ) : guidePending ? (
+        <div className="mb-4"><SetupGuideSkeleton labels={{ title: t("setupGuide.title"), skip: t("setupGuide.skip"), steps: SETUP_STEP_ORDER.map((id) => t(`setupGuide.steps.${id}`)) }} /></div>
+      ) : null}
       <div className="flex flex-col gap-6">
         {/* Getting started covers what the activation card would offer. */}
         {showGuide || guidePending ? null : <DashboardActivationCard businessId={businessId} />}

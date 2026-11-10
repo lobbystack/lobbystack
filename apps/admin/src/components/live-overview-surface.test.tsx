@@ -14,6 +14,7 @@ import fr from "../../public/locales/fr/dashboard.json";
 import type { Capability } from "@lobbystack/domain";
 import { ALL_CAPABILITIES, BusinessCapabilitiesProvider } from "./business-capabilities-provider";
 import { LiveOverviewSurface } from "./live-overview-surface";
+import { SETUP_STEP_ORDER } from "@/lib/setup-guide";
 vi.mock("next/dynamic", () => ({ default: () => () => null }));
 // The activation card has its own suite; this one covers follow-up parity.
 vi.mock("./dashboard-activation-card", () => ({ DashboardActivationCard: () => null }));
@@ -233,5 +234,23 @@ describe("Home while it loads", () => {
     expect(screen.getByText(i18n.t("home.chart.title"))).toBeTruthy();
     expect(screen.getByText(i18n.t("home.recentCalls.title"))).toBeTruthy();
     expect(container.querySelectorAll("[aria-busy='true']")).toHaveLength(4);
+  });
+
+  it("holds the setup guide's place while it loads, so the page doesn't jump", async () => {
+    vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn(), removeItem: vi.fn() });
+    vi.stubGlobal("EventSource", class { addEventListener() {} removeEventListener() {} close() {} });
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => undefined)));
+    const i18n = createInstance();
+    await i18n.init({ lng: "en", defaultNS: "dashboard", resources: { en: { dashboard: en, common: enCommon, knowledge: enKnowledge } } });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); clients.push(client);
+    client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Clinic", role: "business_owner", active: true }] });
+    // The dashboard answers, while the guide, the hours and the appointments are still loading.
+    client.setQueryData(["dashboard"], { businessId: "business", kpis: { calls: { total: 0, deltaPercent: 0 }, appointments: { total: 0, deltaPercent: 0 }, averageDuration: { totalSeconds: 0, deltaSeconds: 0 } }, monthlyCalls: [], recentCalls: [], actionRequired: [], upcoming: [] });
+    const { container } = render(<I18nextProvider i18n={i18n}><QueryClientProvider client={client}><BusinessCapabilitiesProvider initial={ALL_CAPABILITIES}><LiveOverviewSurface /></BusinessCapabilitiesProvider></QueryClientProvider></I18nextProvider>);
+
+    expect(screen.getByText(i18n.t("setupGuide.title")).closest("[data-slot='skeleton']")).toBeTruthy();
+    for (const step of SETUP_STEP_ORDER) expect(screen.getByText(i18n.t(`setupGuide.steps.${step}`)).closest("[data-slot='skeleton']")).toBeTruthy();
+    expect(screen.getByText(i18n.t("setupGuide.skip")).closest("[data-slot='skeleton']")).toBeTruthy();
+    expect(container.querySelector("[aria-busy='true']")).toBeTruthy();
   });
 });

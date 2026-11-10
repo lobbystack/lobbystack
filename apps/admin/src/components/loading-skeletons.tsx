@@ -633,6 +633,32 @@ export function HiddenTextSkeleton({ children, className }: { children: string; 
   return <div aria-hidden="true" className={className}><Skeleton className="w-fit max-w-full"><span className="invisible">{children}</span></Skeleton></div>;
 }
 
+/** Stands in for Getting started on Home: its heading row and the list of setup steps, so the guide doesn't push the page down when it loads. */
+export function SetupGuideSkeleton({ labels }: { labels: { title: string; skip: string; steps: string[] } }) {
+  return (
+    <section aria-busy="true" className="flex w-full flex-col gap-4">
+      <HiddenTextSkeleton className="type-section-title">{labels.title}</HiddenTextSkeleton>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <Skeleton aria-hidden="true" className="size-5 shrink-0 rounded-full" />
+          <Skeleton aria-hidden="true" className="h-5 w-56 max-w-full" />
+        </div>
+        <Skeleton aria-hidden="true" className="inline-flex h-9 shrink-0 items-center rounded-4xl border border-transparent px-3 text-sm font-medium whitespace-nowrap"><span className="invisible">{labels.skip}</span></Skeleton>
+      </div>
+      <Surface>
+        <div className="divide-y divide-border">
+          {labels.steps.map((step) => (
+            <div className="flex min-h-16 items-center gap-4 px-6" key={step}>
+              <Skeleton aria-hidden="true" className="size-6 shrink-0 rounded-full" />
+              <HiddenTextSkeleton className="text-base">{step}</HiddenTextSkeleton>
+            </div>
+          ))}
+        </div>
+      </Surface>
+    </section>
+  );
+}
+
 /** The Passkeys card before its list, or whether passkeys are on at all, is known. */
 export function PasskeysCardSkeleton() {
   return (
