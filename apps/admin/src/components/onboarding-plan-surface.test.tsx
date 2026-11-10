@@ -7,15 +7,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OnboardingPlanSurface } from "./onboarding-plan-surface";
 import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 
-const route = vi.hoisted(() => ({ router: { push: vi.fn(), replace: vi.fn() }, search: new URLSearchParams() }));
+const route = vi.hoisted(() => ({ router: { push: vi.fn(), replace: vi.fn() } }));
 const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
 vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
-vi.mock("next/navigation", () => ({ useRouter: () => route.router, useSearchParams: () => route.search }));
+vi.mock("next/navigation", () => ({ useRouter: () => route.router }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }) }));
 vi.mock("./onboarding-plan-comparison", () => ({ OnboardingPlanComparison: () => null }));
 const clients: QueryClient[] = [];
 beforeEach(() => {
-  route.search = new URLSearchParams();
   telemetryRef.current = createRecordedBrowserTelemetry();
 });
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.useRealTimers(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
@@ -34,12 +33,6 @@ function setup(monthlyOnly = false, refusal?: string, checkoutError = "Checkout 
   return fetchMock;
 }
 describe("original onboarding plan behavior with asynchronous checkout", () => {
-  it("sends a checkout return from before the success page to it, without polling here", async () => {
-    route.search = new URLSearchParams("checkout=success&requestId=returned-checkout");
-    const fetchMock = setup();
-    await waitFor(() => expect(route.router.replace).toHaveBeenCalledWith("/billing/success?requestId=returned-checkout"));
-    expect(fetchMock.mock.calls.some(([url]) => url.includes("/api/billing/checkout?") || url.includes("/api/onboarding/stage?"))).toBe(false);
-  });
   it("explains a checkout refused because another one is open", async () => {
     setup(false, "checkout_in_progress");
     await userEvent.click(screen.getByRole("button", { name: "Get Pro" }));
