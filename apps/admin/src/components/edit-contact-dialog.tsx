@@ -5,6 +5,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { apiContactUpdateSchema } from "@lobbystack/shared";
+
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -42,7 +44,7 @@ export function EditContactDialog({ businessId, contact, onOpenChange }: { busin
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!contact) return;
-    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError(t("edit.invalidEmail")); return; }
+    if (email.trim() && !apiContactUpdateSchema.shape.email.safeParse(email.trim()).success) { setError(t("edit.invalidEmail")); return; }
     setError(null);
     save.mutate(contact);
   };
