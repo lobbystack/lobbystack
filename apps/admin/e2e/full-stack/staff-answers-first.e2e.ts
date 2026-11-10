@@ -39,7 +39,7 @@ test("an owner on a paid plan sets up staff answers first, it persists, and a ca
     const number = await holdNumber(database, owner.businessId, { carrier: "twilio", providerPhoneId });
     thirdParties.carrier.addNumber({ sid: providerPhoneId, e164: number.e164 });
 
-    await page.goto("/agents/primary/handling");
+    await page.goto("/agents/primary");
     const mode = page.getByRole("combobox", { name: agent.staffFirst.mode.label, exact: true });
     await expect(mode).toBeEnabled();
     await expect(page.getByText(agent.staffFirst.mode.hint, { exact: true })).toBeVisible();
@@ -97,7 +97,7 @@ test("a Free business and a Telnyx number see staff answers first as unavailable
     const save = page.getByRole("button", { name: agent.staffFirst.save, exact: true });
 
     await setPlan(database, owner.businessId, "free_cloud");
-    await page.goto("/agents/primary/handling");
+    await page.goto("/agents/primary");
     await expect(page.getByText(agent.staffFirst.unavailable.plan, { exact: true })).toBeVisible();
     await expect(mode).toBeDisabled();
     await expect(save).toHaveCount(0);

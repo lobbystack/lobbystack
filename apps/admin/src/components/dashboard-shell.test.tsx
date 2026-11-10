@@ -109,11 +109,11 @@ describe("drilling into an agent and Settings", () => {
     expect(menu().getAttribute("data-menu-level")).toBe("agent:agent-1");
     expect(menu().className).toContain("slide-in-from-right");
     expect(screen.getByRole("link", { name: "back:items.inbox" }).getAttribute("href")).toBe("/inbox");
-    expect(within(menu() as HTMLElement).getAllByRole("link").slice(1).map(link => link.getAttribute("href"))).toEqual(["/agents/agent-1", "/agents/agent-1/instructions", "/agents/agent-1/rules", "/agents/agent-1/handling", "/agents/agent-1/channels", "/agents/agent-1/shared"]);
+    expect(within(menu() as HTMLElement).getAllByRole("link").slice(1).map(link => link.getAttribute("href"))).toEqual(["/agents/agent-1", "/agents/agent-1/instructions", "/agents/agent-1/rules", "/agents/agent-1/channels", "/agents/agent-1/shared"]);
     // The phone number page keeps Channels lit.
     view.navigate("/agents/agent-1/channels/phone");
     expect(screen.getByRole("link", { name: /agentPages\.channels/ }).hasAttribute("data-active")).toBe(true);
-    expect(screen.getByRole("link", { name: /agentPages\.identity/ }).hasAttribute("data-active")).toBe(false);
+    expect(screen.getByRole("link", { name: /agentPages\.general/ }).hasAttribute("data-active")).toBe(false);
   });
 
   it("returns from Settings to the agent it opened from, then Home", () => {

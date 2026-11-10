@@ -45,10 +45,10 @@ const PAGE_TAGS: Record<string, SearchTag[]> = {
 };
 
 const AGENT_TAGS: Partial<Record<AgentPage["section"], SearchTag[]>> = {
-  "": ["voice"],
+  // The agent's own page holds its voice and greeting, and how it handles calls and bookings.
+  "": ["voice", "handling"],
   instructions: ["instructions"],
   rules: ["rules"],
-  handling: ["handling"],
   channels: [],
   "channels/phone": ["phone"],
   "channels/widget": ["widget"],

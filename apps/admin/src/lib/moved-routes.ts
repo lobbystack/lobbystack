@@ -14,6 +14,8 @@ export const MOVED_DASHBOARD_ROUTES = [
   { source: "/agent/basic-settings", destination: "/agents/primary", permanent: false },
   { source: "/agent/rules", destination: "/agents/primary/rules", permanent: false },
   { source: "/agent/integrations", destination: "/agents/primary/channels", permanent: false },
+  // Calls and booking joined the agent's own page.
+  { source: "/agents/:agentId/handling", destination: "/agents/:agentId", permanent: false },
   { source: "/agent/:section(knowledge|services|employees)", destination: "/workspace/:section", permanent: false },
   { source: "/integrations", destination: "/workspace/connections", permanent: false },
   { source: "/integrations/webhooks", destination: "/workspace/webhooks", permanent: false },

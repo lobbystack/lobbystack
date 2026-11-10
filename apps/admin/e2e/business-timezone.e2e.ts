@@ -82,9 +82,9 @@ test("the owner's browser zone becomes the business timezone, and Business detai
     await page.reload();
     await expect(select).toHaveText(/^Vancouver \(/);
 
-    // The transfer number belongs to the agent, on its Calls and booking page.
-    await page.goto("/agents/primary/handling");
-    await expect(page).toHaveURL(/\/agents\/[0-9a-f-]{36}\/handling$/);
+    // The transfer number belongs to the agent, on its own page.
+    await page.goto("/agents/primary");
+    await expect(page).toHaveURL(/\/agents\/[0-9a-f-]{36}$/);
     const transferNumber = page.locator("#agent-transfer-number");
     await expect(transferNumber).toBeEnabled();
     await transferNumber.pressSequentially("+14165550100");

@@ -43,16 +43,22 @@ describe("search matches related words", () => {
   it.each([
     ["invoice", "Plan and billing"],
     ["password", "Profile and security"],
-    ["voice", "Name, greeting and voice"],
+    ["voice", "General"],
     ["forwarding", "Phone number"],
     ["teammate", "Team"],
     ["dm", "Instagram"],
     ["hours", "Business details"],
     ["zapier", "Connections"],
     ["transcript", "Inbox"],
-    ["transfer", "Calls and booking"],
+    ["transfer", "General"],
   ])("%s finds %s", (query, title) => {
     expect(titles(query)).toContain(title);
+  });
+
+  it.each(["transfer", "transfer number", "booking", "staff answers first", "appointment changes", "reschedule"])("%s opens the agent's own page, where calls and booking live", (query) => {
+    const found = searchEntries(query, owner, 100).filter((entry) => entry.href.startsWith("/agents/a1"));
+    expect(found.map((entry) => entry.href)).toContain("/agents/a1");
+    expect(found.every((entry) => !entry.href.endsWith("/handling"))).toBe(true);
   });
 
   it("matches a word as it's typed", () => {

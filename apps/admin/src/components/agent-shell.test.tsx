@@ -29,7 +29,7 @@ describe("agent page headings", () => {
   });
 
   it("titles each section page with the section", () => {
-    for (const [pathname, title] of [["/agents/agent-1/handling", "nav:agentPages.handling"], ["/agents/agent-1/channels/phone", "nav:agentPages.phone"], ["/agents/agent-1/instructions", "nav:agentPages.instructions"]]) {
+    for (const [pathname, title] of [["/agents/agent-1/shared", "nav:agentPages.shared"], ["/agents/agent-1/channels/phone", "nav:agentPages.phone"], ["/agents/agent-1/instructions", "nav:agentPages.instructions"]]) {
       route.pathname = pathname!;
       render(withQueries(<AgentShell agent={agent}>content</AgentShell>));
       expect(screen.getByRole("heading").textContent).toBe(title);
@@ -45,7 +45,7 @@ describe("header actions before the page mounts", () => {
     expect(placeholders(html)).toBe(3);
     expect(html).toContain('<span class="invisible">testCall.trigger</span>');
     expect(html).toContain('<span class="invisible">agent:sections.rules.addKnowledge</span>');
-    route.pathname = "/agents/agent-1/handling";
+    route.pathname = "/agents/agent-1/channels";
     expect(placeholders(renderToString(withQueries(<AgentShell agent={agent}>content</AgentShell>)))).toBe(1);
   });
 

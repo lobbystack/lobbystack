@@ -36,7 +36,7 @@
       "voice": "accent, sound, tone, greeting, hello, intro, welcome, name",
       "instructions": "instruction, prompt, script, behaviour, behavior",
       "rules": "rule, escalate, handoff",
-      "handling": "transfer, transfers, staff first, booking, appointment changes, cancel, reschedule",
+      "handling": "transfer, transfers, staff first, booking, appointment changes, cancel, reschedule, transfer number, staff answers first",
       "business": "hours, opening, closed, holiday, timezone, language, currency",
       "knowledge": "faq, answer, answers, website, document, pdf, teach",
       "services": "price, prices, treatment, menu",
@@ -74,10 +74,9 @@
     "yourAccount": "Your account"
   },
   "agentPages": {
-    "identity": "Name, greeting and voice",
+    "general": "General",
     "instructions": "Instructions",
     "rules": "Rules",
-    "handling": "Calls and booking",
     "channels": "Channels",
     "phone": "Phone number",
     "widget": "Website widget",

@@ -141,7 +141,7 @@ export function BillingSuccessSurface() {
       ? <><button className="self-start font-medium text-foreground underline underline-offset-4" onClick={() => setForwardingOpen(true)} type="button">{t("billing.success.steps.forward.action")}</button><CallForwardingDialog e164={number.e164} onOpenChange={setForwardingOpen} open={forwardingOpen} /></>
       : <a className="font-medium text-foreground underline underline-offset-4" href={forwardingHelpUrl(i18n.language)} rel="noreferrer" target="_blank">{t("billing.success.steps.forward.action")}</a> },
     // The dashboard sends anyone still in onboarding back to it, so the link waits until setup is done.
-    { key: "transfer", action: onboarding ? null : <Link className="font-medium text-foreground underline underline-offset-4" href="/agents/primary/handling#agent-transfer-number">{t("billing.success.steps.transfer.action")}</Link> },
+    { key: "transfer", action: onboarding ? null : <Link className="font-medium text-foreground underline underline-offset-4" href="/agents/primary#agent-transfer-number">{t("billing.success.steps.transfer.action")}</Link> },
   ] as const;
 
   return (

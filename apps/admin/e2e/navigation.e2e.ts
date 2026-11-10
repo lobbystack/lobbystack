@@ -25,6 +25,8 @@ const MOVED: ReadonlyArray<[from: string, to: string]> = [
   ["/agent/basic-settings", "/agents/primary"],
   ["/agent/rules", "/agents/primary/rules"],
   ["/agent/integrations", "/agents/primary/channels"],
+  ["/agents/primary/handling", "/agents/primary"],
+  [`/agents/${"1".repeat(8)}-1111-4111-8111-${"1".repeat(12)}/handling`, `/agents/${"1".repeat(8)}-1111-4111-8111-${"1".repeat(12)}`],
   ["/agent/knowledge", "/workspace/knowledge"],
   ["/agent/services", "/workspace/services"],
   ["/agent/employees", "/workspace/employees"],

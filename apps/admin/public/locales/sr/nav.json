@@ -37,7 +37,7 @@
       "voice": "akcenat, zvuk, ton, pozdrav, dobrodošlica, zdravo, ime",
       "instructions": "uputstvo, uputstva, skripta, ponašanje",
       "rules": "pravilo, eskalacija, predaja",
-      "handling": "preusmeravanje, osoblje prvo, zakazivanje, izmene termina, otkazivanje, pomeranje",
+      "handling": "preusmeravanje, osoblje prvo, zakazivanje, izmene termina, otkazivanje, pomeranje, broj za preusmeravanje, osoblje se javlja prvo",
       "business": "radno vreme, sati, otvoreno, zatvoreno, praznik, vremenska zona, jezik, valuta",
       "knowledge": "česta pitanja, odgovor, odgovori, sajt, dokument, pdf, naučiti",
       "services": "cena, cene, tretman, meni",
@@ -75,10 +75,9 @@
     "yourAccount": "Vaš nalog"
   },
   "agentPages": {
-    "identity": "Ime, pozdrav i glas",
+    "general": "Opšte",
     "instructions": "Uputstva",
     "rules": "Pravila",
-    "handling": "Pozivi i zakazivanje",
     "channels": "Kanali",
     "phone": "Broj telefona",
     "widget": "Vidžet za sajt",

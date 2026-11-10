@@ -3,15 +3,18 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, expect, it, vi } from "vitest";
 
+
 const fixture = vi.hoisted(() => ({ capabilities: ["activity", "setup"] as string[] }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string) => key }) }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams() }));
 vi.mock("@/components/business-capabilities-provider", () => ({ useBusinessCan: () => (capability: string) => fixture.capabilities.includes(capability) }));
+vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => ({ track: vi.fn() }) }));
+vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock("@/components/agents/channels-section", () => ({ ChannelsSection: ({ agentId, widgetsEnabled }: { agentId: string; widgetsEnabled: boolean }) => <p>channels for {agentId}{widgetsEnabled ? " with widgets" : ""}</p> }));
 
-import { AgentChannelsPage, AgentSharedPage } from "./agent-pages";
+import { AgentChannelsPage, AgentSettingsPage, AgentSharedPage } from "./agent-pages";
 
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 function renderWith(node: React.ReactNode) {
   const client = new QueryClient();
@@ -32,4 +35,17 @@ it("shows the agent's channels, with widgets when the server makes them", () => 
 it("lists the workspace pages every agent shares", () => {
   renderWith(<AgentSharedPage />);
   expect(hrefs()).toEqual(["/workspace/business", "/workspace/knowledge", "/workspace/services", "/workspace/employees", "/workspace/connections"]);
+});
+
+it("holds the name, greeting and voice, then calls and booking, on the agent's own page, each section waiting with placeholders", () => {
+  vi.stubGlobal("matchMedia", vi.fn((query: string) => ({ matches: false, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
+  vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => undefined)));
+  renderWith(<AgentSettingsPage agentId="agent-1" />);
+  const titles = ["agent:identity.title", "agent:transfers.title", "agent:staffFirst.title", "agent:booking.title", "agent:appointmentChanges.title"];
+  expect(screen.getAllByRole("heading").map((heading) => heading.textContent)).toEqual(titles);
+  for (const title of titles) {
+    const section = screen.getByRole("heading", { name: title }).closest("section")!;
+    expect(section.closest("[aria-busy]")?.getAttribute("aria-busy"), title).toBe("true");
+    expect(section.querySelectorAll("[data-slot='skeleton']").length, title).toBeGreaterThan(0);
+  }
 });

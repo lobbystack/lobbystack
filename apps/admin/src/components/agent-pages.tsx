@@ -17,19 +17,20 @@ import { pageCapability } from "@/lib/dashboard-pages";
 
 // The pages under /agents/[agentId]. Each takes the agent's ID from its route.
 
-export function AgentIdentityPage({ agentId }: { agentId: string }) {
+/** The agent's own page: its name, greeting and voice, then transfers, staff answers first, booking and appointment changes. */
+export function AgentSettingsPage({ agentId }: { agentId: string }) {
   const { businessId, canManage } = useManagedBusiness();
-  return <AgentIdentitySection agentId={agentId} businessId={businessId} canManage={canManage} />;
+  return (
+    <div className="flex w-full flex-col gap-8">
+      <AgentIdentitySection agentId={agentId} businessId={businessId} canManage={canManage} />
+      <AgentHandlingSection agentId={agentId} businessId={businessId} canManage={canManage} />
+    </div>
+  );
 }
 
 export function AgentInstructionsPage({ agentId }: { agentId: string }) {
   const { businessId, canManage } = useManagedBusiness();
   return <AgentInstructionsSection agentId={agentId} businessId={businessId} canManage={canManage} />;
-}
-
-export function AgentHandlingPage({ agentId }: { agentId: string }) {
-  const { businessId, canManage } = useManagedBusiness();
-  return <AgentHandlingSection agentId={agentId} businessId={businessId} canManage={canManage} />;
 }
 
 function LinkRow({ href, title }: { href: string; title: string }) {

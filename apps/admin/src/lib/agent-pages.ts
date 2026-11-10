@@ -1,18 +1,18 @@
-// The fixed pages of each agent, under /agents/[agentId]. The phone number
-// and website widget pages open from Channels.
+// The fixed pages of each agent, under /agents/[agentId]. The agent's own
+// page holds its name, greeting and voice, then how it handles calls and
+// bookings. The phone number and website widget pages open from Channels.
 
 export type AgentPage = {
   /** The path under /agents/[agentId], empty for the agent's own page. */
-  section: "" | "instructions" | "rules" | "handling" | "channels" | "channels/phone" | "channels/widget" | "shared";
+  section: "" | "instructions" | "rules" | "channels" | "channels/phone" | "channels/widget" | "shared";
   /** A key in the nav namespace. */
   titleKey: `agentPages.${string}`;
 };
 
 export const AGENT_PAGES: readonly AgentPage[] = [
-  { section: "", titleKey: "agentPages.identity" },
+  { section: "", titleKey: "agentPages.general" },
   { section: "instructions", titleKey: "agentPages.instructions" },
   { section: "rules", titleKey: "agentPages.rules" },
-  { section: "handling", titleKey: "agentPages.handling" },
   { section: "channels", titleKey: "agentPages.channels" },
   { section: "channels/phone", titleKey: "agentPages.phone" },
   { section: "channels/widget", titleKey: "agentPages.widget" },

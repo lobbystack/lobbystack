@@ -17,11 +17,15 @@ function allowed(entry: SearchEntry, scope: SearchScope): boolean {
   return scope.can(pageCapability(entry.href));
 }
 
-/** The synonym's tags, for the word itself or, once it's three letters, any word it starts. */
+/**
+ * The synonym's tags, for the word itself or, once it's three letters, any
+ * synonym with a word it starts, so each word of "staff answers first" finds
+ * that phrase.
+ */
 function synonymTags(word: string, synonyms: Synonyms): string[] {
-  if (synonyms[word]) return synonyms[word];
-  if (word.length < 3) return [];
-  return Object.entries(synonyms).filter(([key]) => key.startsWith(word)).flatMap(([, tags]) => tags);
+  const exact = synonyms[word] ?? [];
+  if (word.length < 3) return exact;
+  return [...exact, ...Object.entries(synonyms).filter(([key]) => key.split(/[\s']+/u).some((part) => part.startsWith(word))).flatMap(([, tags]) => tags)];
 }
 
 /** Folds accents away, so "general" finds "Général" and "pagina" finds "Página". */

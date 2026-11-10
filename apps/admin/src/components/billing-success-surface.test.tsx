@@ -108,7 +108,7 @@ describe("billing success page", () => {
     expect(await screen.findByText("billing.success.number.keep")).toBeTruthy();
     const call = await screen.findByRole("link", { name: "(416) 555-0123" });
     expect(call.getAttribute("href")).toBe("tel:+14165550123");
-    expect(screen.getByRole("link", { name: "billing.success.steps.transfer.action" }).getAttribute("href")).toBe("/agents/primary/handling#agent-transfer-number");
+    expect(screen.getByRole("link", { name: "billing.success.steps.transfer.action" }).getAttribute("href")).toBe("/agents/primary#agent-transfer-number");
     expect(screen.getByRole("button", { name: "billing.success.dashboard" }).getAttribute("href")).toBe("/");
     expect(screen.queryByRole("button", { name: "billing.success.number.choose" })).toBeNull();
     expect(stageRequests(fetchMock)).toHaveLength(0);
