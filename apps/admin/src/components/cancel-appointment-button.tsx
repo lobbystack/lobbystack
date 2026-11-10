@@ -50,6 +50,7 @@ export function CancelAppointmentButton({ appointment, approve, className, size 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
         queryClient.invalidateQueries({ queryKey: ["appointments", business?.businessId] }),
+        queryClient.invalidateQueries({ queryKey: ["call"] }),
       ]);
     },
     onError: () => { toast.error(t("appointments.cancel.failed")); },
