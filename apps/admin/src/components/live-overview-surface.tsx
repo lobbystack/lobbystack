@@ -141,7 +141,7 @@ export function LiveOverviewSurface() {
               <ItemContent><ItemTitle>{tKnowledge("unansweredQuestions.home.count", { count: unansweredCount })}</ItemTitle><ItemDescription>{tKnowledge("unansweredQuestions.home.description")}</ItemDescription></ItemContent>
               <ItemActions><ChevronRight className="size-4 text-muted-foreground" /></ItemActions>
             </Item> : null}
-            {summary.isLoading ? <ActionRequiredSkeleton /> : summary.data?.actionRequired.length ? <Card className="ph-mask border-border/70">
+            {summary.isLoading ? <ActionRequiredSkeleton /> : summary.data?.actionRequired.length ? <Card className="ph-mask border-border/70 xl:flex-1">
                   <CardContent>
                     <ItemGroup className="has-data-[size=sm]:gap-0">
                       {summary.data!.actionRequired.map((item) => (
@@ -245,7 +245,7 @@ export function LiveOverviewSurface() {
           <section className="animate-in fade-in slide-in-from-bottom-2 duration-200 order-first flex flex-col gap-3 xl:h-full">
             <div className="flex items-center justify-between gap-4 px-1"><div className="flex items-center gap-3"><h2 className="type-section-title">{t("home.upcoming.title")}</h2><Link className="text-sm text-muted-foreground transition-colors hover:text-foreground" href="/appointments?view=list">{t("home.upcoming.viewAll")}</Link></div>{summary.isLoading ? <Skeleton className="h-6 w-12 rounded-full" /> : <Badge variant="outline">{(summary.data?.upcoming.length ?? 0).toLocaleString(intlLocale(i18n.language))}</Badge>}</div>
             {summary.isLoading ? <UpcomingSkeleton /> : summary.data?.upcoming.length ? (
-              <Card className="ph-mask border-border/70"><CardContent className="flex flex-col gap-4">
+              <Card className="ph-mask border-border/70 xl:flex-1"><CardContent className="flex flex-col gap-4">
                 {summary.data.upcoming.map((appointment, index) => {
                   const contactName = getContactDisplayName({ name: appointment.contactName, phone: appointment.contactPhone, email: appointment.contactEmail, channels: [appointment.sourceChannel] }, i18n.language, t);
                   return <div key={appointment.id}>
