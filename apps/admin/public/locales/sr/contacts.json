@@ -11,7 +11,7 @@
     "lastInteraction": "Poslednja interakcija",
     "messages": "Poruke: {{count}}",
     "calls": "Pozivi: {{count}}",
-    "empty": "Nijedan kontakt ne odgovara trenutnoj pretrazi.",
+    "empty": "Još nema kontakata.",
     "status": {
       "blocked": "Blokiran"
     },
@@ -192,5 +192,24 @@
     "saved": "Kontakt je ažuriran.",
     "failed": "Kontakt nije sačuvan. Pokušajte ponovo.",
     "invalidEmail": "Unesite ispravnu adresu e-pošte."
+  },
+  "create": {
+    "action": "Novi kontakt",
+    "title": "Novi kontakt",
+    "name": "Ime",
+    "phone": "Telefon",
+    "phoneCountry": "Država broja",
+    "email": "E-pošta",
+    "nameRequired": "Unesite ime.",
+    "reachRequired": "Unesite broj telefona ili e-poštu.",
+    "phoneInvalid": "Unesite ceo broj telefona.",
+    "invalidEmail": "Unesite ispravnu adresu e-pošte.",
+    "exists": "Kontakt sa ovim brojem već postoji.",
+    "openExisting": "Otvori kontakt",
+    "cancel": "Otkaži",
+    "save": "Napravi kontakt",
+    "saving": "Pravljenje...",
+    "saved": "Kontakt je napravljen.",
+    "failed": "Kontakt nije napravljen. Pokušajte ponovo."
   }
 }

@@ -105,6 +105,7 @@ import { assignCalendarStaffInTransaction, disconnectCalendarInTransaction, list
 import { deleteServiceInTransaction, insertServiceInTransaction, replaceBusinessHoursInTransaction, replaceServiceStaffInTransaction, updateServiceInTransaction } from "../catalog";
 import { NUMBER_BEING_REPLACED_MESSAGE, schedulePhoneNumberReleaseInTransaction } from "../compliance";
 import { ContactPasscodeHashesBusyError, hashContactPasscodes, removeContactPasscodesInTransaction, saveContactPasscodesInTransaction } from "../contactPasscodes";
+import { ContactPhoneTakenError, insertContactInTransaction } from "../contacts";
 import type { BusinessSetupDependencies } from "../businessTemplates";
 import type { DomainContext } from "../context";
 import { loadEntitlement } from "../entitlement";
@@ -1665,24 +1666,12 @@ export async function createContactForApi(context: DomainContext, caller: ApiCal
   if (input.timezone !== undefined) assertTimeZone(input.timezone, "timezone");
   try {
     return await inBusiness(context, caller, async (tx) => {
-      if (input.phone) {
-        const [existing] = await tx.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.businessId, caller.businessId), eq(contacts.phone, input.phone))).limit(1);
-        if (existing) throw conflict(`A contact with this phone number already exists: ${existing.id}.`);
-      }
-      const [row] = await tx.insert(contacts).values({
-        businessId: caller.businessId,
-        name: input.name,
-        phone: input.phone,
-        email: input.email,
-        preferredLocale: input.locale,
-        timezone: input.timezone,
-      }).returning();
-      if (!row) throw new Error("The contact could not be created.");
+      const row = await insertContactInTransaction(tx, { businessId: caller.businessId, name: input.name, phone: input.phone, email: input.email, preferredLocale: input.locale, timezone: input.timezone });
       await audit(tx, caller, { eventType: "api.contact.created", entityType: "contact", entityId: row.id });
-      await emitWebhookEventInTransaction(tx, { businessId: caller.businessId, type: "contact.created", resourceId: row.id });
       return serializeContact(row, null);
     });
   } catch (error) {
+    if (error instanceof ContactPhoneTakenError) throw conflict(error.message);
     if (isUniqueViolation(error)) throw conflict("A contact with this phone number already exists.");
     throw error;
   }

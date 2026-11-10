@@ -115,7 +115,7 @@ export function RulesSurface({ agentId }: { agentId?: string } = {}) {
         <TableCard>
           <Table className={cn("w-full table-fixed", (loading || pageRows.length > 0) && "min-w-[60rem]")}>
             <colgroup>{canManage ? <col className="w-10" /> : null}<col className="w-[18%]" /><col className="w-[42%]" /><col className="w-[14%]" /><col className="w-[18%]" /><col className="w-12" /></colgroup>
-            <TableHeader className={(loading || pageRows.length > 0) ? undefined : "max-sm:hidden"}><TableRow>{canManage ? <TableHead /> : null}<TableHead>{t("table.title")}</TableHead><TableHead>{t("table.preview")}</TableHead><TableHead>{t("table.status")}</TableHead><TableHead className="text-right">{t("table.added")}</TableHead><TableHead /></TableRow></TableHeader>
+            <TableHeader empty={!(loading || pageRows.length > 0)}><TableRow>{canManage ? <TableHead /> : null}<TableHead>{t("table.title")}</TableHead><TableHead>{t("table.preview")}</TableHead><TableHead>{t("table.status")}</TableHead><TableHead className="text-right">{t("table.added")}</TableHead><TableHead /></TableRow></TableHeader>
             <TableBody aria-busy={loading || undefined}>
               {loading ? <RuleRowsSkeleton handle={canManage} rows={Math.min(pagination.pageSize, 10)} /> : pageRows.length ? pageRows.map((rule) => {
                 const orderedIndex = orderedRules.findIndex((candidate) => candidate.id === rule.id);

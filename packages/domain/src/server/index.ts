@@ -13,6 +13,7 @@ export * from "./businessDeletion";
 export * from "./businessTemplates";
 export * from "./analytics";
 export * from "./booking";
+export * from "./operatorBookings";
 export * from "./businessHours";
 export * from "./businessSummary";
 export * from "./calendar";

@@ -38,11 +38,16 @@ function TableCard({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
+/**
+ * `empty` hides the column titles below lg, for a table showing only its
+ * empty message: with the sidebar open, the titles of a wide table crowd that
+ * message on anything narrower.
+ */
+function TableHeader({ className, empty = false, ...props }: React.ComponentProps<"thead"> & { empty?: boolean }) {
   return (
     <thead
       data-slot="table-header"
-      className={cn("bg-table-header [&_tr]:border-b", className)}
+      className={cn("bg-table-header [&_tr]:border-b", empty && "max-lg:hidden", className)}
       {...props}
     />
   )

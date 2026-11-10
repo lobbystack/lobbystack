@@ -835,3 +835,18 @@ export function MeetFormSkeleton({ labels }: { labels: { name: string; voice: st
     </div>
   );
 }
+
+/** The open times grid while a day's times load: buttons the size of a time. */
+export function OpeningTimesSkeleton({ count = 6 }: { count?: number }) {
+  return <div aria-busy="true" className="grid grid-cols-3 gap-2 sm:grid-cols-2">{Array.from({ length: count }, (_, index) => <Skeleton className="h-9 rounded-xl" key={index} />)}</div>;
+}
+
+/** A combobox's options while they load: a few one-line rows the height of an option. */
+export function ComboboxOptionsSkeleton({ rows = 3 }: { rows?: number }) {
+  return <div aria-busy="true" className="flex flex-col gap-1 p-1">{Array.from({ length: rows }, (_, index) => <div className="flex h-9 items-center px-3" key={index}><Skeleton className="h-4 w-2/3" /></div>)}</div>;
+}
+
+/** A select or input while its options load: the control's own height and full width. */
+export function FieldControlSkeleton() {
+  return <Skeleton aria-busy="true" className="h-9 w-full rounded-4xl" />;
+}
