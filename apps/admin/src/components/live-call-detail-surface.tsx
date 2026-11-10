@@ -10,7 +10,7 @@ import {
   Phone,
   XCircle,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useUrlState } from "@/hooks/use-url-state";
 import { useTranslation } from "react-i18next";
 
 import { CallRecordingPlayer } from "@/components/audio/call-recording-player";
@@ -69,6 +69,12 @@ function tabFromUrl(): CallTab {
   return CALL_TABS.find((candidate) => candidate === tab) ?? "transcript";
 }
 
+/** Keeps the query out for the default tab. */
+function writeTab(tab: CallTab, url: URL): void {
+  if (tab === "transcript") url.searchParams.delete("tab");
+  else url.searchParams.set("tab", tab);
+}
+
 function formatDate(value: string, locale: string): string {
   return formatDateTime(value, locale, { dateStyle: "medium", timeStyle: "short" });
 }
@@ -106,21 +112,7 @@ export function LiveCallDetailSurface({ callId }: { callId: string }) {
   const telemetry = useTelemetry();
   const queryClient = useQueryClient();
   const { copiedField, copy } = useCopiedField();
-  const [tab, setTab] = useState<CallTab>("transcript");
-  // The server can't see the query string, so the tab is read after mount to keep hydration matching.
-  const [tabRead, setTabRead] = useState(false);
-  useEffect(() => {
-    setTab(tabFromUrl());
-    setTabRead(true);
-  }, [callId]);
-  // Keeps the URL in step with the tab, leaving the query out for the default tab.
-  useEffect(() => {
-    if (!tabRead) return;
-    const url = new URL(window.location.href);
-    if (tab === "transcript") url.searchParams.delete("tab");
-    else url.searchParams.set("tab", tab);
-    if (url.href !== window.location.href) window.history.replaceState(window.history.state, "", url);
-  }, [tab, tabRead]);
+  const { setValue: setTab, value: tab } = useUrlState({ initial: "transcript", read: tabFromUrl, resetKey: callId, write: writeTab });
   const selectTab = (value: unknown) => setTab(CALL_TABS.find((candidate) => candidate === value) ?? "transcript");
   const { businesses, business } = useActiveBusiness();
   const detail = useQuery({
