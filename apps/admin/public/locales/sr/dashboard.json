@@ -20,11 +20,10 @@
   "home": {
     "title": "Početna",
     "phone": {
-      "title": "Telefonska linija",
-      "titleMany": "Telefonske linije",
       "status": {
-        "waiting": "Čeka se prvi poziv",
-        "answering": "Prima pozive"
+        "ready": "Spremno za Vaš prvi poziv",
+        "live": "Vaš agent prima pozive",
+        "liveMany": "Vaši agenti primaju pozive"
       },
       "answersFirst": {
         "agent": "Vaš agent se javlja prvi",

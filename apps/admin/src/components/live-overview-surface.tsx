@@ -27,14 +27,13 @@ import { LiveSetupGuideSurface, useSetupGuide } from "@/components/live-setup-gu
 import { needsHoursForBooking, useBusinessHours } from "@/components/business-hours-section";
 import { AppointmentDetailsSheet } from "@/components/appointment-details-sheet";
 import { appointmentSummary } from "@/components/cancel-appointment-button";
-import { PhoneLinesSkeleton, ResultsRowSkeleton, SetupGuideSkeleton, StatusSkeleton } from "@/components/loading-skeletons";
+import { PhoneResultsSkeleton, SetupGuideSkeleton, StatusSkeleton } from "@/components/loading-skeletons";
 import { RowChevron } from "@/components/row-chevron";
 import { formatBookedValue, formatTimeSaved } from "@/lib/analytics-results";
 import type { AnalyticsResultsViewModel } from "@/lib/page-view-models";
 import { Item, ItemActions, ItemHeader, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { Surface } from "@/components/ui/surface";
 import { intlLocale, formatDateTime } from "@/lib/locale";
 import { type Appointment } from "@/hooks/use-appointments";
 import { fetchUnansweredQuestions, UNANSWERED_QUESTIONS_ANCHOR, unansweredQuestionsQueryKey } from "@/components/unanswered-questions-section";
@@ -124,8 +123,6 @@ export function LiveOverviewSurface() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title={t("home.title")} />
-      {/* The card holds Home's Test call, one per number. */}
-      {summary.isLoading ? <PhoneLinesSkeleton labels={{ title: t("home.phone.title"), status: t("home.phone.status.waiting"), answersFirst: t(ANSWERS_FIRST_KEYS.never), ...(canSetUp ? { testCall: t("common:testCall.trigger") } : {}) }} /> : <HomePhoneCard called={summary.data?.phoneCalled ?? false} canSetUp={canSetUp} lines={summary.data?.phoneLines ?? []} />}
       {/* The extra margin makes the visible gap match the one between the page title and Getting started. */}
       {showGuide ? (
         <div className="mb-4"><LiveSetupGuideSurface businessId={businessId!} /></div>
@@ -136,6 +133,22 @@ export function LiveOverviewSurface() {
         {/* Getting started covers what the activation card would offer. */}
         {showGuide || guidePending ? null : <DashboardActivationCard businessId={businessId} />}
         {showGuide || guidePending || !businessId ? null : <CallForwardingFromLink businessId={businessId} />}
+        {/* The phone line over the last 30 days' results, in one card. It holds Home's Test call, one per number. */}
+        {summary.isLoading ? (
+          <PhoneResultsSkeleton labels={{ status: t("home.phone.status.ready"), answersFirst: t(ANSWERS_FIRST_KEYS.never), results: RESULT_KEYS.map((key) => t(`home.results.${key}`)), ...(canSetUp ? { testCall: t("common:testCall.trigger") } : {}) }} />
+        ) : (
+          <HomePhoneCard called={summary.data?.phoneCalled ?? false} canSetUp={canSetUp} lines={summary.data?.phoneLines ?? []} results={results.length ? (
+            <div className="grid sm:grid-cols-3">
+              {results.map((result) => (
+                <section className="flex min-w-0 flex-col gap-2 border-b p-6 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0" key={result.key}>
+                  <h2 className="type-card-title text-foreground">{t(`home.results.${result.key}`)}</h2>
+                  <p className="type-metric-sm break-words">{result.value}</p>
+                  {result.description ? <p className="type-meta">{result.description}</p> : null}
+                </section>
+              ))}
+            </div>
+          ) : null} />
+        )}
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
           <section className="animate-in fade-in slide-in-from-bottom-2 duration-200 flex flex-col gap-3 xl:h-full">
             <div className="flex items-center justify-between gap-4 px-1"><Link aria-label={t("home.actionRequired.inboxLink")} className="-mx-2 inline-flex items-center gap-1 rounded-md px-2 py-1 outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background" href="/inbox"><h2 className="type-section-title">{t("home.actionRequired.title")}</h2><RowChevron /></Link>{summary.isLoading ? <Skeleton className="h-6 w-12 rounded-full" /> : <Badge variant="outline">{(openRequests + (unansweredCount > 0 ? 1 : 0)).toLocaleString(intlLocale(i18n.language))}</Badge>}</div>
@@ -270,17 +283,6 @@ export function LiveOverviewSurface() {
             <UpcomingDetails appointments={summary.data?.upcoming ?? []} id={detailsId} onClose={() => setDetailsId(null)} />
           </section>
         </div>
-        {summary.isLoading ? <ResultsRowSkeleton titles={RESULT_KEYS.map((key) => t(`home.results.${key}`))} /> : results.length ? (
-          <Surface className="grid sm:grid-cols-3">
-            {results.map((result) => (
-              <section className="flex min-w-0 flex-col gap-2 border-b p-6 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0" key={result.key}>
-                <h2 className="type-card-title text-foreground">{t(`home.results.${result.key}`)}</h2>
-                <p className="type-metric-sm break-words">{result.value}</p>
-                {result.description ? <p className="type-meta">{result.description}</p> : null}
-              </section>
-            ))}
-          </Surface>
-        ) : null}
         {summary.isLoading ? <OverviewChartSkeleton chartTitle={t("home.chart.title")} recentCallsTitle={t("home.recentCalls.title")} /> : <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
           <Card className="col-span-1 lg:col-span-4"><CardHeader><CardTitle>{t("home.chart.title")}</CardTitle></CardHeader><CardContent className="ps-2"><OverviewCallChart data={(summary.data?.monthlyCalls ?? []).map((item) => ({ name: formatDateTime(item.monthStart, i18n.language, { month: "short", timeZone: "UTC" }), total: item.total }))} /></CardContent></Card>
           <Card className="ph-mask col-span-1 lg:col-span-3"><CardHeader><CardTitle>{t("home.recentCalls.title")}</CardTitle><CardDescription>{t("home.recentCalls.description", { count: summary.data?.recentCalls.length ?? 0 })}</CardDescription></CardHeader><CardContent><div className="flex flex-col gap-6">{(summary.data?.recentCalls ?? []).map((call) => <div className="flex items-center gap-4" key={call.id}><Avatar className="h-9 w-9"><AvatarFallback>{initials(call.contactName)}</AvatarFallback></Avatar><div className="flex flex-1 flex-wrap items-center justify-between"><div className="flex flex-col gap-1"><p className="type-item-title">{getContactDisplayName({ name: call.contactName, phone: call.contactPhone, email: call.contactEmail, channels: [call.transport] }, i18n.language, t)}</p><p className="type-body-muted">{call.contactName && hasDisplayablePhone(call.contactPhone) ? formatPhoneNumberDisplay(call.contactPhone, i18n.language) : formatDateTime(call.startedAt, i18n.language, { dateStyle: "medium", timeStyle: "short" })}</p></div><div className="type-item-title">{call.durationSeconds ? t("home.recentCalls.durationValue", { value: call.durationSeconds }) : call.status}</div></div></div>)}</div></CardContent></Card>

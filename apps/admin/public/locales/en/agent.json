@@ -410,9 +410,12 @@
   "staffFirst": {
     "title": "Staff answers first",
     "save": "Save staff answers first",
+    "setUp": "Set up",
+    "state": "{{mode}} · {{number}}",
     "mode": {
       "label": "Ring your team first",
       "hint": "Your phone rings first. Press 1 to take the call. If you don't, the agent answers.",
+      "when": "When",
       "options": {
         "never": "Off",
         "business_hours": "During business hours",

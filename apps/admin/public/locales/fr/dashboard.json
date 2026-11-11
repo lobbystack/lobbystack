@@ -20,11 +20,10 @@
   "home": {
     "title": "Accueil",
     "phone": {
-      "title": "Ligne téléphonique",
-      "titleMany": "Lignes téléphoniques",
       "status": {
-        "waiting": "En attente du premier appel",
-        "answering": "Répond aux appels"
+        "ready": "Prêt pour votre premier appel",
+        "live": "Votre agent prend les appels",
+        "liveMany": "Vos agents prennent les appels"
       },
       "answersFirst": {
         "agent": "Votre agent répond en premier",

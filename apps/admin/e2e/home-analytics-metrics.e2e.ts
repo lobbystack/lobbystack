@@ -70,17 +70,22 @@ test("Home's phone card shows the number, waits for the first call, says who ans
     fixtures.businessIds.push(owner.businessId);
     const { businessId } = owner;
 
-    // Without a number Home has no phone card.
+    // Without a number the card holds only the results.
     await page.goto("/");
     await expect(page.getByRole("heading", { name: dashboardCopy.home.title, exact: true })).toBeVisible();
-    await expect(page.getByRole("heading", { name: dashboardCopy.home.actionRequired.title, exact: true })).toBeVisible();
-    await expect(page.getByRole("heading", { name: dashboardCopy.home.phone.title, exact: true })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: dashboardCopy.home.results.bookedValue, exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: dashboardCopy.home.phone.status.ready, exact: true })).toHaveCount(0);
 
-    const { e164 } = await holdNumber(database, businessId, { carrier: "twilio" });
+    // A 555 exchange, so the number always formats; a random exchange can start with 0 and stay unformatted.
+    const { e164 } = await holdNumber(database, businessId, { carrier: "twilio", e164: `+1416555${String(Math.floor(Math.random() * 10_000)).padStart(4, "0")}` });
     await page.goto("/");
-    const card = page.getByRole("region", { name: dashboardCopy.home.phone.title, exact: true });
-    await expect(card).toContainText(`(${e164.slice(2, 5)}) ${e164.slice(5, 8)}-${e164.slice(8)}`);
-    await expect(card).toContainText(dashboardCopy.home.phone.status.waiting);
+    const phone = page.getByRole("region", { name: dashboardCopy.home.phone.status.ready, exact: true });
+    await expect(phone).toContainText(`(${e164.slice(2, 5)}) ${e164.slice(5, 8)}-${e164.slice(8)}`);
+    // The phone part and the results share one card, above Action required.
+    const card = page.locator("[data-slot='surface']", { has: page.locator("#home-phone-title") });
+    await expect(card.getByRole("heading", { name: dashboardCopy.home.results.bookedValue, exact: true })).toBeVisible();
+    const [cardBox, actionBox] = [await card.boundingBox(), await page.getByRole("heading", { name: dashboardCopy.home.actionRequired.title, exact: true }).boundingBox()];
+    expect(cardBox!.y).toBeLessThan(actionBox!.y);
     // Home has one Test call, in the card.
     await expect(page.getByRole("button", { name: commonCopy.testCall.trigger, exact: true })).toHaveCount(1);
     await card.getByRole("button", { name: commonCopy.testCall.trigger, exact: true }).click();
@@ -91,7 +96,7 @@ test("Home's phone card shows the number, waits for the first call, says who ans
     // A first call to the number turns the status live.
     await database.db.insert(calls).values({ businessId, providerCallId: randomUUID(), transport: "voice", status: "completed", startedAt: new Date(Date.now() - 60_000), endedAt: new Date() });
     await page.reload();
-    await expect(card).toContainText(dashboardCopy.home.phone.status.answering);
+    await expect(card.getByRole("heading", { name: dashboardCopy.home.phone.status.live, exact: true })).toBeVisible();
 
     // The chip opens the agent's Staff answers first setting.
     await card.getByRole("link", { name: dashboardCopy.home.phone.answersFirst.agent, exact: true }).click();
