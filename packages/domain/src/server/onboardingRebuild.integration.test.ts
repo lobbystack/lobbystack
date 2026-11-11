@@ -115,6 +115,16 @@ describe.skipIf(!testUrl)("the onboarding rebuild against dedicated PostgreSQL r
     });
   });
 
+  it("refuses to move past attribution without an answer", async () => {
+    await rollbackTest(async (tx) => {
+      const { userId, businessId } = await workspace(tx, "attribution");
+      await expect(asApp(tx, (db) => submitOnboardingAttribution({ db }, { userId, businessId, source: null }))).rejects.toMatchObject({ status: 400, code: "attribution_required" });
+      await expect(asApp(tx, (db) => submitOnboardingAttribution({ db }, { userId, businessId, source: "  " }))).rejects.toMatchObject({ status: 400, code: "attribution_required" });
+      await expect(asApp(tx, (db) => advanceOnboardingStage({ db }, { userId, businessId, to: "meet" }))).rejects.toMatchObject({ status: 400, code: "attribution_required" });
+      expect((await business(tx, businessId)).stage).toBe("attribution");
+    });
+  });
+
   it("claims a number from Meet your agent without moving the stage", async () => {
     await rollbackTest(async (tx) => {
       const { userId, businessId } = await workspace(tx, "meet");

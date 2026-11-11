@@ -131,7 +131,8 @@ async function completeOnboardingBySkippingOptionalInputs(page: Page): Promise<v
   await page.getByRole("button", { name: "My country isn't listed" }).click();
   await page.getByRole("button", { name: "Continue without a number" }).click();
   await expect(page).toHaveURL("/onboarding/attribution");
-  await page.getByRole("button", { name: "Skip", exact: true }).click();
+  await page.getByRole("button", { name: "Other", exact: true }).click();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
   await expect(page).toHaveURL("/onboarding/meet");
   await page.getByRole("button", { name: "Go to dashboard" }).click();
   await expect(page).toHaveURL("/");

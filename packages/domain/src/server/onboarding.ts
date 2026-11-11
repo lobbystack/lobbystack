@@ -1,4 +1,4 @@
-import { and, eq, gt, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, isNotNull, ne, or, sql } from "drizzle-orm";
 import { canVisitOnboardingStage, HOST_EMAIL_BRAND, normalizeInterfaceLocale, normalizeOnboardingStage, onboardingSteps, type InterfaceLocale, type OnboardingBusiness, type OnboardingStage, type PartnerAccessLevel } from "@lobbystack/shared";
 
 import { businesses, enqueueOutbox, onboardingNumberClaimEvents, phoneNumbers, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
@@ -181,7 +181,7 @@ export async function advanceOnboardingStage(
 ): Promise<void> {
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    const current = (await tx.select({ onboardingStage: businesses.onboardingStage, partnerId: businesses.partnerId, accessLevel: businesses.partnerAccessLevel }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1).for("update"))[0];
+    const current = (await tx.select({ onboardingStage: businesses.onboardingStage, partnerId: businesses.partnerId, accessLevel: businesses.partnerAccessLevel, attribution: businesses.onboardingAttribution }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1).for("update"))[0];
     if (!current) throw new Error("Business onboarding state was not found.");
     const currentStage = normalizeOnboardingStage(current.onboardingStage, current);
     // Repair a legacy verification stage before reading or advancing it so the
@@ -194,12 +194,22 @@ export async function advanceOnboardingStage(
     // Revisiting an earlier form must never move durable onboarding progress backwards.
     const to = input.to === "verify_phone" && !current.partnerId ? "phone_number" : input.to;
     if (canVisitOnboardingStage(currentStage, to)) return;
+    // The attribution question has no skip: only an answer moves past it.
+    if (currentStage === "attribution" && !current.attribution?.trim()) throw attributionRequired();
     await advanceOnboardingStageInTransaction(tx, { ...input, to, from: currentStage, partnerId: current.partnerId, accessLevel: current.accessLevel });
     // Meet your agent is the last screen, so leaving it sends the welcome email.
     if (input.to === "complete") await scheduleWelcomeEmailInTransaction(tx, input.businessId, new Date());
   });
 }
 
+function attributionRequired(): Error {
+  return Object.assign(new Error("Pick how you heard about us to continue."), { status: 400, code: "attribution_required" });
+}
+
+/**
+ * Saves how the owner heard about the host and moves on to Meet your agent.
+ * The step has no skip: on it, a request without a source is refused.
+ */
 export async function submitOnboardingAttribution(
   context: DomainContext,
   input: { userId: string; businessId: string; source?: string | null; referralCode?: string | null },
@@ -222,12 +232,17 @@ export async function submitOnboardingAttribution(
   }
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    // Skipping sends no source and keeps a saved one, and coming back from Meet your agent leaves the stage alone.
+    // The step needs an answer to move on. Coming back from Meet your agent
+    // keeps the saved one and leaves the stage alone.
     const source = input.source?.trim().slice(0, 120) || null;
     const changed = await tx.update(businesses)
       .set({ ...(source ? { onboardingAttribution: source } : {}), onboardingStage: sql`CASE WHEN ${businesses.onboardingStage} = 'attribution' THEN 'meet' ELSE ${businesses.onboardingStage} END`, updatedAt: new Date() })
-      .where(and(eq(businesses.id, input.businessId), inArray(businesses.onboardingStage, ["attribution", "meet", "complete"])))
+      .where(and(eq(businesses.id, input.businessId), inArray(businesses.onboardingStage, ["attribution", "meet", "complete"]), ...(source ? [] : [or(ne(businesses.onboardingStage, "attribution"), isNotNull(businesses.onboardingAttribution))])))
       .returning({ id: businesses.id });
+    if (!changed.length && !source) {
+      const [business] = await tx.select({ stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
+      if (business?.stage === "attribution") throw attributionRequired();
+    }
     if (!changed.length) {
       const error = new Error("Attribution cannot be submitted at this onboarding stage.") as Error & { status: number; code: string };
       error.status = 409;

@@ -133,7 +133,10 @@ test("the no-website path asks the language, and the X closes the plans", async 
     await page.getByRole("button", { name: onboarding.language.continue }).click();
     await leaveNumberStep(page);
     await expect(page).toHaveURL("/onboarding/attribution");
-    await page.getByRole("button", { name: onboarding.attribution.skip, exact: true }).click();
+    // The question has no skip: Continue waits for an answer.
+    await expect(page.getByRole("button", { name: onboarding.attribution.continue })).toBeDisabled();
+    await page.getByRole("button", { name: onboarding.attribution.options.other }).click();
+    await page.getByRole("button", { name: onboarding.attribution.continue }).click();
     await expect(page).toHaveURL("/onboarding/meet");
 
     // This run has no billing provider, so the server's answer and the plans come from here.

@@ -84,9 +84,9 @@ export function OnboardingAttributionSurface() {
   const saved = useQuery({ queryKey: ["onboarding-attribution", business?.businessId], enabled: Boolean(business), queryFn: () => requestJson<{ source: AttributionSource | null }>(`/api/onboarding/attribution?businessId=${encodeURIComponent(business!.businessId)}`) });
   const selected = picked ?? saved.data?.source ?? null;
   const finish = useMutation({
-    mutationFn: (source: AttributionSource | null) => requestJson(`/api/onboarding/attribution?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ source, referralCode: getStoredAffiliateReferralCode() }) }),
+    mutationFn: (source: AttributionSource) => requestJson(`/api/onboarding/attribution?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ source, referralCode: getStoredAffiliateReferralCode() }) }),
     onSuccess: async (_result, source) => {
-      if (business && source) telemetry.track("web.onboarding.attribution_submitted", { businessId: business.businessId, source });
+      if (business) telemetry.track("web.onboarding.attribution_submitted", { businessId: business.businessId, source });
       clearAffiliateReferralCode();
       await queryClient.invalidateQueries({ queryKey: ["businesses"] });
       await queryClient.invalidateQueries({ queryKey: ["onboarding-attribution", business?.businessId] });
@@ -95,7 +95,7 @@ export function OnboardingAttributionSurface() {
     meta: { inlineError: true },
   });
 
-  async function submit(source: AttributionSource | null) {
+  async function submit(source: AttributionSource) {
     setError(null);
     try {
       await finish.mutateAsync(source);
@@ -117,8 +117,7 @@ export function OnboardingAttributionSurface() {
         </div>
       )}
       {error ? <FieldError>{error}</FieldError> : null}
-      <Button className="w-full" disabled={!business || selected === null || finish.isPending} onClick={() => void submit(selected)} type="button">{finish.isPending ? <><LoaderCircle className="size-4 animate-spin" />{t("attribution.saving")}</> : t("attribution.continue")}</Button>
-      <button className="mx-auto text-sm text-muted-foreground hover:text-foreground disabled:opacity-50" disabled={!business || finish.isPending} onClick={() => void submit(null)} type="button">{t("attribution.skip")}</button>
+      <Button className="w-full" disabled={!business || selected === null || finish.isPending} onClick={() => { if (selected) void submit(selected); }} type="button">{finish.isPending ? <><LoaderCircle className="size-4 animate-spin" />{t("attribution.saving")}</> : t("attribution.continue")}</Button>
     </div>
   );
 }
