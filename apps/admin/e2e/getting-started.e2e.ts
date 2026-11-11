@@ -60,7 +60,7 @@ test("Getting started opens the test window on the agent, and Escape closes it",
     await page.getByRole("button", { name: dashboard.setupGuide.steps.testCall }).click();
     await page.getByRole("button", { name: dashboard.setupGuide.stepActions.testCall, exact: true }).click();
     const window = page.getByRole("dialog");
-    await expect(window.getByRole("heading", { name: "Agent", exact: true })).toBeVisible();
+    await expect(window.getByRole("heading", { name: "Default agent", exact: true })).toBeVisible();
     await expect(window.getByText(/^Getting Started /)).toBeVisible();
     await expect(window.getByRole("button", { name: common.testCall.start, exact: true })).toBeVisible();
     await expect(window.getByRole("textbox", { name: common.testWindow.message })).toBeVisible();

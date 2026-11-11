@@ -205,6 +205,7 @@ export const SCHEMA_MIGRATIONS = [
   "0199_operator_notification_details.sql",
   "0200_onboarding_welcome_recipient.sql",
   "0201_portuguese_default_greeting.sql",
+  "0202_default_agent_name.sql",
 ] as const;
 
 const CONCURRENT_INDEX_DIRECTIVE = /^-- lobbystack:concurrent-index ([a-z][a-z0-9_]*)$/m;

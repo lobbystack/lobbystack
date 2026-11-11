@@ -48,7 +48,7 @@ const afterHours: SnapshotAgent = {
 
 const defaultAgent: SnapshotAgent = {
   id: "agent-default",
-  name: "Agent",
+  name: "Default agent",
   isDefault: true,
   greeting: "Hello",
   tone: "warm",
@@ -138,7 +138,7 @@ describe("snapshotForAgent", () => {
 });
 
 describe("buildBusinessContextSnapshot with agents", () => {
-  const agentInput = { id: "agent-default", name: "Agent", isDefault: true, greeting: base.greeting, tone: base.tone, voice: "marin" as const, bookingPolicy: base.bookingPolicy, bookingMode: "instant" as const, transferPolicy: base.transferPolicy };
+  const agentInput = { id: "agent-default", name: "Default agent", isDefault: true, greeting: base.greeting, tone: base.tone, voice: "marin" as const, bookingPolicy: base.bookingPolicy, bookingMode: "instant" as const, transferPolicy: base.transferPolicy };
 
   it("gives an agent without instructions the same default text as the flat fields", () => {
     const built = buildBusinessContextSnapshot({ ...base, agents: [agentInput] });

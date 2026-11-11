@@ -268,23 +268,23 @@ export function isDefaultGreeting(greeting: string, businessName: string, locale
     || (locale === "pt" && greeting === `Obrigado por ligar para ${name}. Como posso ajudar você hoje?`);
 }
 
-// Migration 0198's app.default_agent_name is the same list.
+// Migration 0202's app.default_agent_name is the same list.
 const agentNames: Record<RuntimeLocale, string> = {
-  en: "Agent",
-  fr: "Agent",
-  es: "Agente",
-  sr: "Agent",
-  de: "Agent",
-  pt: "Agente",
-  it: "Agente",
-  nl: "Agent",
-  pl: "Agent",
-  tr: "Asistan",
-  vi: "Trợ lý",
-  tl: "Assistant",
-  sv: "Agent",
-  ru: "Агент",
-  uk: "Агент",
+  en: "Default agent",
+  fr: "Agent par défaut",
+  es: "Agente predeterminado",
+  sr: "Podrazumevani agent",
+  de: "Standard-Agent",
+  pt: "Agente padrão",
+  it: "Agente predefinito",
+  nl: "Standaardagent",
+  pl: "Domyślny agent",
+  tr: "Varsayılan asistan",
+  vi: "Trợ lý mặc định",
+  tl: "Default na assistant",
+  sv: "Standardagent",
+  ru: "Агент по умолчанию",
+  uk: "Агент за замовчуванням",
 };
 
 /** A business's default agent's name, in its caller language. Operators see it, and callers never hear it. */

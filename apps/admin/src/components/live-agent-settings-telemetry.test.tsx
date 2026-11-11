@@ -62,7 +62,7 @@ describe("agent settings telemetry", () => {
   });
 
   it("saves the agent's name to the agent", async () => {
-    const fetchMock = setup({ name: "Agent" });
+    const fetchMock = setup({ name: "Default agent" });
     await userEvent.click(await enabled("agent:actions.editField:agent:fields.name.label"));
     const field = within(await screen.findByRole("dialog")).getByRole("textbox", { name: "agent:fields.name.label" });
     await userEvent.clear(field);

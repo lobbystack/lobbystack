@@ -24,7 +24,7 @@ function setup(business: Record<string, unknown> = {}, due = false) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", slug: "acme", active: true, onboardingStage: "meet", partnerAccessLevel: null, ...business }] });
   const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
-    if (url === "/api/agent") return Response.json({ business: { defaultLocale: "fr" }, profile: { name: "Agent", greeting: "Bonjour", voice: "marin" } });
+    if (url === "/api/agent") return Response.json({ business: { defaultLocale: "fr" }, profile: { name: "Agent par défaut", greeting: "Bonjour", voice: "marin" } });
     if (url.startsWith("/api/knowledge")) return Response.json({ documents: [] });
     if (url.startsWith("/api/plan-offer")) return Response.json({ due });
     return Response.json({ ok: true });
@@ -47,7 +47,7 @@ describe("Meet your agent", () => {
   it("shows the panel beside the agent's settings", async () => {
     setup();
     expect(screen.getByText("test panel for business")).toBeTruthy();
-    expect(((await screen.findByLabelText("meet.name")) as HTMLInputElement).value).toBe("Agent");
+    expect(((await screen.findByLabelText("meet.name")) as HTMLInputElement).value).toBe("Agent par défaut");
     expect((screen.getByLabelText("meet.greeting") as HTMLTextAreaElement).value).toBe("Bonjour");
   });
 
