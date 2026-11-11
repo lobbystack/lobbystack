@@ -1,7 +1,7 @@
 // The dashboard pages that open with an intro card the first time a person
 // visits them. Migration 0206 keeps the cards each person has closed.
 
-export const PAGE_INTRO_IDS = ["inbox", "appointments", "agents", "rules", "channels", "knowledge", "services", "employees"] as const;
+export const PAGE_INTRO_IDS = ["inbox", "appointments", "agents", "rules", "channels", "knowledge", "services", "employees", "analytics"] as const;
 
 export type PageIntroId = (typeof PAGE_INTRO_IDS)[number];
 

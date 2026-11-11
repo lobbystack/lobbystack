@@ -2,10 +2,10 @@ import type { ReactElement } from "react";
 import { beforeEach, expect, it, vi } from "vitest";
 
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined }), headers: async () => fixture.headers }));
-const fixture = vi.hoisted(() => ({ onboarding: { stage: "complete", businessId: "business" as string | null }, partners: [] as Array<{ partnerId: string }>, businesses: [] as Array<{ businessId: string; capabilities: string[] }>, opened: null as string[] | null, headers: new Headers(), agents: [{ id: "agent-1", name: "Front desk", isDefault: true, createdAt: new Date("2026-01-01T00:00:00Z") }] as unknown[] | Error }));
+const fixture = vi.hoisted(() => ({ onboarding: { stage: "complete", businessId: "business" as string | null }, partners: [] as Array<{ partnerId: string }>, businesses: [] as Array<{ businessId: string; capabilities: string[] }>, opened: null as string[] | null, headers: new Headers(), seen: ["dashboard", "inbox"] as string[], agents: [{ id: "agent-1", name: "Front desk", isDefault: true, createdAt: new Date("2026-01-01T00:00:00Z") }] as unknown[] | Error }));
 // Next's redirect throws, so nothing after it runs.
 vi.mock("next/navigation", () => ({ redirect: vi.fn((to: string) => { throw Object.assign(new Error("NEXT_REDIRECT"), { to }); }) }));
-vi.mock("@lobbystack/domain", () => ({ capabilityNames: ["activity", "setup", "team", "billing", "api_keys", "mcp"], getActiveOnboardingState: async () => fixture.onboarding, listUserPartners: async () => fixture.partners, listUserBusinesses: async () => fixture.businesses, readBusinessCapabilities: async () => fixture.opened, listAgents: async () => { if (fixture.agents instanceof Error) throw fixture.agents; return fixture.agents; }, resolveOnboardingRoute: (stage: string) => stage === "website" ? "/onboarding/website" : "/onboarding/business" }));
+vi.mock("@lobbystack/domain", () => ({ capabilityNames: ["activity", "setup", "team", "billing", "api_keys", "mcp"], getActiveOnboardingState: async () => fixture.onboarding, listUserPartners: async () => fixture.partners, listUserBusinesses: async () => fixture.businesses, readBusinessCapabilities: async () => fixture.opened, listSeenPageIntros: async () => fixture.seen, listAgents: async () => { if (fixture.agents instanceof Error) throw fixture.agents; return fixture.agents; }, resolveOnboardingRoute: (stage: string) => stage === "website" ? "/onboarding/website" : "/onboarding/business" }));
 vi.mock("@/lib/auth", () => ({ getSession: async () => ({ user: { id: "user", email: "owner@example.com", name: "Owner" } }) }));
 vi.mock("@/lib/api-helpers", () => ({ getAppDatabase: () => ({ db: {} }) }));
 vi.mock("@/lib/domain-context", () => ({ createDomainContext: () => ({ db: {} }) }));
@@ -46,6 +46,11 @@ it("loads the agents for the menu's first render, as the API sends them, for som
   fixture.businesses = [{ businessId: "business", capabilities: ["activity"] }];
   fixture.agents = [];
   expect(await agents()).toBeNull();
+});
+
+it("hands the shell the intro cards the person has closed, so no page asks for them", async () => {
+  const shell = ((await DashboardLayout({ children: null })) as ReactElement<{ children: ReactElement<{ pageIntros: unknown }> }>).props.children;
+  expect(shell.props.pageIntros).toEqual({ seen: ["dashboard", "inbox"], businessId: "business" });
 });
 
 it("sends someone on a partner's team with no business of their own to the partner console", async () => {
