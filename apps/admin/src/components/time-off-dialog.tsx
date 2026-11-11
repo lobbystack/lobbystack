@@ -86,6 +86,8 @@ export function TimeOffDialog({ businessId, timeZone, entry, day, onOpenChange }
       queryClient.invalidateQueries({ queryKey: ["time-off", businessId] }),
       queryClient.invalidateQueries({ queryKey: ["business-hours", businessId] }),
       queryClient.invalidateQueries({ queryKey: ["employees", businessId] }),
+      // Open times change with time off.
+      queryClient.invalidateQueries({ queryKey: ["booking-openings", businessId] }),
     ]);
   };
   const save = useMutation({

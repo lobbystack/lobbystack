@@ -161,9 +161,10 @@ export function LiveAppointmentsSurface() {
     </TabsList>
   </Tabs> : null;
 
-  // The calendar needs the browser's clock, so the server render and the first client render show this too.
+  // The calendar needs the browser's clock, so the server render and the first client render show this too, with a
+  // stand-in title: the server's clock and time zone could name another day.
   const viewLabels = [t("appointments.views.list"), t("appointments.views.calendar")];
-  const calendarSkeleton = <AppointmentsCalendarSkeleton days={range === "day" ? 1 : 7} label={t("appointments.loading")} labels={{ today: t("appointments.calendarView.today"), title: calendarTitle(range, day, days, i18n.language) }} tabs={{ range: [t("appointments.calendarView.day"), t("appointments.calendarView.week"), t("appointments.calendarView.month")], view: viewLabels }} view={range} />;
+  const calendarSkeleton = <AppointmentsCalendarSkeleton days={range === "day" ? 1 : 7} label={t("appointments.loading")} labels={{ today: t("appointments.calendarView.today"), title: isClient ? calendarTitle(range, day, days, i18n.language) : t("appointments.views.calendar") }} tabs={{ range: [t("appointments.calendarView.day"), t("appointments.calendarView.week"), t("appointments.calendarView.month")], view: viewLabels }} view={range} />;
   const actions = <div className="flex flex-wrap items-center gap-2">
     {canManageTimeOff ? <Button onClick={() => setTimeOffDialog({})} variant="outline"><CalendarOff data-icon="inline-start" />{t("appointments.timeOff.action")}</Button> : null}
     {canBook ? <Button onClick={() => { setCreating(null); setDraft(null); startBooking(nextOpenSlot({ today, timeZone, now, hours, closures })); }}><Plus data-icon="inline-start" />{t("appointments.create.action")}</Button> : null}

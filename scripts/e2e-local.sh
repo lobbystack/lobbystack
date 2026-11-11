@@ -40,6 +40,7 @@ TESTS=(
   e2e/affiliate-program.e2e.ts
   e2e/agents.e2e.ts
   e2e/appointment-reschedule.e2e.ts
+  e2e/appointments-calendar.e2e.ts
   e2e/auth-pages.e2e.ts
   e2e/auth-return-to.e2e.ts
   e2e/billing-return-cap.e2e.ts

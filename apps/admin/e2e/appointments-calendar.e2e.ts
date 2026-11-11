@@ -115,7 +115,7 @@ test("an owner books from the calendar's week, sees the booking as a block, and 
     const [closure] = await database.db.select({ staffId: closures.staffId, startsAt: closures.startsAt }).from(closures).where(eq(closures.businessId, businessId));
     expect(closure).toEqual({ staffId: null, startsAt: tomorrow.toJSDate() });
 
-    await page.locator(`[data-starts-at="${tomorrow.set({ hour: 17 }).toUTC().toISO()}"]`).click({ force: true });
+    await page.locator(`[data-starts-at="${tomorrow.set({ hour: 17 }).toUTC().toISO()}"]`).click();
     await expect(panel).toBeVisible();
     await expect(panel.getByText("This time is unavailable: Staff training.", { exact: true })).toBeVisible();
     await panel.getByRole("combobox", { name: copy.create.service }).click();

@@ -173,6 +173,7 @@ export function AppointmentForm({ businessId, timeZone: fallbackTimeZone, initia
         queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
         queryClient.invalidateQueries({ queryKey: ["appointments", businessId] }),
         queryClient.invalidateQueries({ queryKey: ["contacts", businessId] }),
+        queryClient.invalidateQueries({ queryKey: ["booking-openings", businessId] }),
       ]);
       onDone();
     },
@@ -192,7 +193,7 @@ export function AppointmentForm({ businessId, timeZone: fallbackTimeZone, initia
   const phoneProblem = !submitted || !newContact ? null : phone.incomplete ? "phoneInvalid" : !phone.phone ? "phoneRequired" : null;
   const serviceMissing = submitted && !service;
   const timeMissing = submitted && Boolean(service) && !selected && !notOpen;
-  const ready = (newContact ? name.trim() && phone.phone && !phone.incomplete : contact) && service && selected && !durationInvalid;
+  const ready = (newContact ? name.trim() && phone.phone && !phone.incomplete : contact) && service && selected && !durationInvalid && !timeOff;
   const contactLabel = (option: ContactOption) => getContactDisplayName(option, i18n.language, t);
   const timeError = timeOff ? t("appointments.create.timeOff", { name: timeOff }) : notOpen ? t("appointments.create.notOpen") : null;
 

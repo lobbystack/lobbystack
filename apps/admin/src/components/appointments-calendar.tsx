@@ -227,10 +227,14 @@ function TimeGrid(props: CalendarProps & { onOpenDay: (day: string) => void }) {
                   {column.closures.map((segment) => {
                     const entry = timeOffById.get(segment.id)!;
                     const { top, height: areaHeight } = blockPosition(inRange(segment), range.start);
-                    const className = "calendar-hatch-time-off absolute inset-x-0 z-10 flex items-start overflow-hidden px-2 py-1 text-left text-xs font-medium text-muted-foreground";
-                    return props.onOpenTimeOff
-                      ? <button aria-label={labels.timeOff(entry)} className={cn(className, "outline-none hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset")} key={segment.id} onClick={() => props.onOpenTimeOff!(entry.id)} style={{ top, height: areaHeight }} type="button"><span className="truncate">{entry.name}</span></button>
-                      : <div aria-label={labels.timeOff(entry)} className={className} key={segment.id} role="note" style={{ top, height: areaHeight }}><span className="truncate">{entry.name}</span></div>;
+                    // The hatching lets clicks through to the slots, so a booking there says the time is unavailable; the name opens the closure.
+                    return (
+                      <div className="calendar-hatch-time-off pointer-events-none absolute inset-x-0 z-10 flex items-start overflow-hidden px-1 py-1" key={segment.id} style={{ top, height: areaHeight }}>
+                        {props.onOpenTimeOff
+                          ? <button aria-label={labels.timeOff(entry)} className="pointer-events-auto max-w-full truncate rounded-md bg-background/80 px-1.5 py-0.5 text-left text-xs font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring" onClick={() => props.onOpenTimeOff!(entry.id)} type="button">{entry.name}</button>
+                          : <span aria-label={labels.timeOff(entry)} className="max-w-full truncate rounded-md bg-background/80 px-1.5 py-0.5 text-xs font-medium text-muted-foreground" role="note">{entry.name}</span>}
+                      </div>
+                    );
                   })}
                   {[...column.timed, ...column.employeeOff].map((segment) => {
                     const { column: slot, columns: share } = placed.get(segment.id)!;
