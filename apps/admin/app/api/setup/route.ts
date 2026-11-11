@@ -21,7 +21,7 @@ export const GET = operatorRoute(async ({ businessId, transaction }) => NextResp
       ? [
         fullScan,
         { id: "callNumber", name: "Call your number", description: "Ask what your callers ask most", status: numberSteps.callNumber },
-        { id: "forwardCalls", name: "Forward calls from your current number", description: "Calls you miss, or all of them", status: numberSteps.forwardCalls },
+        { id: "forwardCalls", name: "Keep your existing number", description: "Calls you miss, or all of them", status: numberSteps.forwardCalls },
         sources,
       ]
       : [

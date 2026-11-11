@@ -306,7 +306,7 @@
       "phoneNumber": "Conectar un número de teléfono",
       "forwardCalls": "Desvíe sus llamadas",
       "callNumber": "Llame a su número",
-      "forwardFromCurrent": "Desvíe las llamadas de su número actual"
+      "forwardFromCurrent": "Conserve su número existente"
     },
     "stepDescriptions": {
       "fullScan": "Su agente ha leído una parte de su sitio.",
@@ -315,7 +315,7 @@
       "testCall": "Pregúntele lo que más le preguntan quienes llaman.",
       "phoneNumber": "Dé a su agente su propio número para atender a personas reales.",
       "phoneNumberTrial": "Conteste sus llamadas perdidas gratis durante 14 días, sin tarjeta.",
-      "forwardCalls": "Envíe al {{number}} las llamadas del número que conocen sus clientes.",
+      "forwardCalls": "¿Conserva el número al que ya llaman sus clientes? Su agente también puede contestar en ese número.",
       "numberLost": "Su prueba gratuita terminó. Elija un plan para recuperar su número."
     },
     "stepActions": {
@@ -379,7 +379,7 @@
       "voicemail": "Si tiene el buzón de voz de {{name}}, pida a {{name}} que lo quite. Las llamadas perdidas no se pueden desviar mientras esté activo.",
       "androidOnly": "Estos pasos son para teléfonos Android. En un iPhone, pida a {{name}} que lo active por usted.",
       "adminOnly": "Solo un administrador de su cuenta de {{name}} puede cambiar esto.",
-      "verifyNumber": "{{name}} envía un código al {{number}} antes de desviar. Elija recibir el código por llamada y léalo en la transcripción de esa llamada, en Llamadas."
+      "verifyNumber": "{{name}} envía un código al {{number}} antes de desviar. Elija recibir el código por llamada y léalo en la transcripción de esa llamada, en la Bandeja de entrada."
     },
     "unsupported": {
       "missed": "{{name}} no ofrece desvío solo para llamadas perdidas. Elija Todas las llamadas, o pida a {{name}} que desvíe las llamadas sin respuesta al {{number}}.",
