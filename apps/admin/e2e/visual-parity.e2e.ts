@@ -436,9 +436,15 @@ for (const routeCase of routes) for (const viewport of viewports) for (const loc
       await expect(page.getByRole("dialog").getByRole("heading", { level: 3 })).toHaveCount(4);
     }
     if (routeCase.interaction === "user-menu") {
-      if (viewport.name === "mobile") await page.getByRole("button", { name: "Toggle sidebar", exact: true }).click();
-      await page.locator('[data-slot="sidebar-footer"]').getByRole("button", { name: /@/ }).click();
-      await expect(page.getByRole("menu")).toBeVisible();
+      // On a phone the account menu's items sit at the bottom of the Menu tab's sheet.
+      if (viewport.name === "mobile") {
+        const nav = JSON.parse(readFileSync(fileURLToPath(new URL(`../public/locales/${locale}/nav.json`, import.meta.url)), "utf8"));
+        await page.getByRole("navigation", { name: nav.mobileNav.label, exact: true }).getByRole("button", { name: nav.mobileNav.menu, exact: true }).click();
+        await expect(page.getByRole("dialog", { name: nav.mobileNav.menu, exact: true })).toBeVisible();
+      } else {
+        await page.locator('[data-slot="sidebar-footer"]').getByRole("button", { name: /@/ }).click();
+        await expect(page.getByRole("menu")).toBeVisible();
+      }
     }
     if (routeCase.interaction === "recording-tab") {
       const calls = JSON.parse(readFileSync(fileURLToPath(new URL(`../public/locales/${locale}/calls.json`, import.meta.url)), "utf8"));
@@ -485,10 +491,15 @@ for (const routeCase of routes) for (const viewport of viewports) for (const loc
       const common = JSON.parse(readFileSync(fileURLToPath(new URL(`../public/locales/${locale}/common.json`, import.meta.url)), "utf8"));
       if (paritySide === "reference") await page.getByRole("button", { name: common.feedback.trigger, exact: true }).click();
       else {
-        // The port's feedback opens from the account menu.
-        if (viewport.name === "mobile") await page.getByRole("button", { name: "Toggle sidebar", exact: true }).click();
-        await page.locator('[data-slot="sidebar-footer"]').getByRole("button", { name: /@/ }).click();
-        await page.getByRole("menuitem", { name: common.feedback.trigger, exact: true }).click();
+        // The port's feedback opens from the account menu, which a phone shows in the Menu tab's sheet.
+        if (viewport.name === "mobile") {
+          const nav = JSON.parse(readFileSync(fileURLToPath(new URL(`../public/locales/${locale}/nav.json`, import.meta.url)), "utf8"));
+          await page.getByRole("navigation", { name: nav.mobileNav.label, exact: true }).getByRole("button", { name: nav.mobileNav.menu, exact: true }).click();
+          await page.getByRole("dialog", { name: nav.mobileNav.menu, exact: true }).getByRole("button", { name: common.feedback.trigger, exact: true }).click();
+        } else {
+          await page.locator('[data-slot="sidebar-footer"]').getByRole("button", { name: /@/ }).click();
+          await page.getByRole("menuitem", { name: common.feedback.trigger, exact: true }).click();
+        }
       }
       const message = page.getByRole("textbox", { name: common.feedback.label, exact: true });
       await expect(message).toBeVisible();

@@ -33,10 +33,20 @@ function subscribe(onChange: () => void): () => void {
   return () => { subscribers.delete(onChange); };
 }
 
+/** Whether a search dialog is mounted to open. */
+export function useSearchReady(): boolean {
+  return useSyncExternalStore(subscribe, () => opener !== null, () => false);
+}
+
+/** Opens the mounted search dialog, if there is one. */
+export function openSearch(): void {
+  opener?.();
+}
+
 /** Opens search. It sits under the workspace switcher, on every menu. */
 export function SearchButton() {
   const { t } = useTranslation("nav");
-  const ready = useSyncExternalStore(subscribe, () => opener !== null, () => false);
+  const ready = useSearchReady();
   if (!ready) return null;
   return (
     <SidebarMenu>

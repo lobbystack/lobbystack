@@ -96,7 +96,7 @@ export function BaseProviders({ branding = DEFAULT_BRANDING_SNAPSHOT, children, 
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem forcedTheme={forcedTheme} disableTransitionOnChange>
             <AppearanceProvider>
               {/* Mount before children so toasts fired from their mount effects reach a subscribed Toaster. */}
-              <Toaster richColors />
+              <Toaster mobileOffset={{ bottom: "calc(16px + var(--mobile-tab-bar-offset, 0px))" }} richColors />
               {loadingKey !== null ? (
                 <div aria-busy="true" className="fixed inset-x-0 top-0 z-50 h-1 overflow-hidden bg-primary/15" role="status">
                   <div className="h-full w-1/2 animate-pulse rounded-full bg-primary" />

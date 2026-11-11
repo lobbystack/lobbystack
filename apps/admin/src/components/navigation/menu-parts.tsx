@@ -1,22 +1,34 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import type { ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 import { ArrowLeft, ChevronRight } from "lucide-react";
 
-import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
+import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
+
+/**
+ * How a menu row opens its page. The phone menu sets it to close itself
+ * first; the sidebar leaves it unset and its links open the page directly.
+ */
+export const MenuNavigationContext = createContext<((href: string) => void) | null>(null);
+
+/** Opens a row's page through the phone menu, when the row sits in it. */
+export function useMenuLinkClick() {
+  const navigate = useContext(MenuNavigationContext);
+  return (event: React.MouseEvent, href: string) => {
+    if (!navigate || event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    navigate(href);
+  };
+}
 
 /**
  * One menu row. `leading` is an icon and `trailing` a chevron, count or
- * badge. On a phone, `keepOpen` leaves the drawer open, for a row that swaps
- * the menu rather than opening a page to read. `onSelect` takes the click in
- * place of opening `href`, for a row that drills back into the section the
- * person is on.
+ * badge. `onSelect` takes the click in place of opening `href`, for a row
+ * that drills back into the section the person is on.
  */
-export function MenuRow({ active = false, href, indented = false, keepOpen = false, label, leading, onSelect, title, trailing }: { active?: boolean; href: string; indented?: boolean; keepOpen?: boolean; label: ReactNode; leading?: ReactNode; onSelect?: () => void; title: string; trailing?: ReactNode }) {
-  const router = useRouter();
-  const { isMobile, setOpenMobile } = useSidebar();
+export function MenuRow({ active = false, href, indented = false, label, leading, onSelect, title, trailing }: { active?: boolean; href: string; indented?: boolean; label: ReactNode; leading?: ReactNode; onSelect?: () => void; title: string; trailing?: ReactNode }) {
+  const onLinkClick = useMenuLinkClick();
   return (
     // An indented row lines up with the label above it, and the collapsed rail has no room for it.
     <SidebarMenuItem className={indented ? "group-data-[collapsible=icon]:hidden" : undefined}>
@@ -25,10 +37,10 @@ export function MenuRow({ active = false, href, indented = false, keepOpen = fal
         isActive={active}
         onClick={(event: React.MouseEvent) => {
           if (onSelect) { event.preventDefault(); onSelect(); return; }
-          if (isMobile) { router.push(href); if (!keepOpen) setOpenMobile(false); }
+          onLinkClick(event, href);
         }}
+        render={<Link href={href} />}
         tooltip={title}
-        {...(!isMobile ? { render: <Link href={href} /> } : {})}
       >
         {leading}
         <span className="min-w-0 truncate">{label}</span>

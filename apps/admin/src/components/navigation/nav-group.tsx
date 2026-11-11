@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Fragment, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -14,7 +14,7 @@ import { ClipboardCheckIcon } from "@/components/ui/clipboard-check";
 import { HomeIcon } from "@/components/ui/home";
 import { MessageSquareMoreIcon } from "@/components/ui/message-square-more";
 import { SettingsIcon } from "@/components/ui/settings";
-import { SidebarGroup, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
+import { SidebarGroup, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { UsersIcon } from "@/components/ui/users";
 import { useAgents } from "@/hooks/use-agents";
 import { useAppointments } from "@/hooks/use-appointments";
@@ -33,8 +33,6 @@ export type NavLink = {
   isActive?: (pathname: string) => boolean;
   /** Sits at the end of the row, such as a chevron on a row that swaps the menu. */
   trailing?: ReactNode;
-  /** On a phone, the row swaps the menu, so the drawer stays open. */
-  keepOpen?: boolean;
   /** Rows listed under this one, in the same menu. */
   children?: ReactNode;
   /** Takes the click in place of opening `href`, as the row of the section the person is in does to drill back in. */
@@ -76,9 +74,7 @@ export function useNavLinks() {
 /** A sidebar group of links, with the icon animation, the collapsed rail's tooltips and the new-bookings badge. */
 export function NavGroup({ items }: { items: NavLink[] }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { t } = useTranslation("nav");
-  const { isMobile, setOpenMobile } = useSidebar();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   return (
     <SidebarGroup>
@@ -91,14 +87,13 @@ export function NavGroup({ items }: { items: NavLink[] }) {
                 isActive={item.isActive ? item.isActive(pathname) : pathname === item.href || pathname.startsWith(`${item.href}/`)}
                 onBlur={() => setHoveredItem(null)}
                 onClick={(event: React.MouseEvent) => {
-                  if (item.onSelect) { event.preventDefault(); item.onSelect(); return; }
-                  if (isMobile) { router.push(item.href); if (!item.keepOpen) setOpenMobile(false); }
+                  if (item.onSelect) { event.preventDefault(); item.onSelect(); }
                 }}
                 onFocus={() => setHoveredItem(item.href)}
                 onMouseEnter={() => setHoveredItem(item.href)}
                 onMouseLeave={() => setHoveredItem(null)}
+                render={<Link href={item.href} />}
                 tooltip={item.label}
-                {...(!isMobile ? { render: <Link href={item.href} /> } : {})}
               >
                 <AnimatedNavigationIcon hovered={hoveredItem === item.href} icon={item.icon} />
                 <span>{item.label}</span>

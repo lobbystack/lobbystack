@@ -183,5 +183,16 @@
     "moveDescription": "Ses conversations ouvertes suivent, et {{name}} répond désormais.",
     "moved": "{{channel}} transféré à {{name}}",
     "moveFailed": "Impossible de le transférer."
+  },
+  "mobileNav": {
+    "label": "Menu principal",
+    "menu": "Menu",
+    "allAgents": "Tous les agents",
+    "tabs": {
+      "home": "Accueil",
+      "inbox": "Messages",
+      "appointments": "Agenda",
+      "contacts": "Contacts"
+    }
   }
 }
