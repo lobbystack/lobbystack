@@ -165,7 +165,7 @@ function OverageDialog({ partnerId, business, billing, onClose }: { partnerId: s
 
   return (
     <Dialog onOpenChange={(next) => { if (!next) onClose(); }} open>
-      <DialogContent>
+      <DialogContent size="sm">
         <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); if (!save.isPending) { setError(null); save.mutate(); } }}>
           <DialogHeader>
             <DialogTitle>{t("businesses.overage.title", { name: business.name })}</DialogTitle>
@@ -333,7 +333,7 @@ export function PartnerBusinessesSurface() {
     <Dialog onOpenChange={(next) => { setOpen(next); if (!next) reset(); }} open={open}>
       <DialogTrigger render={<Button disabled={businesses.isLoading} size="sm" />}>{t("businesses.create.action")}</DialogTrigger>
       {/* With templates and packages the form runs taller than a laptop screen, so it scrolls inside the window. */}
-      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
+      <DialogContent size="sm" className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
         <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); setSubmitted(true); if (!create.isPending && name.trim() && ownerEmail.trim()) { setError(null); create.mutate(); } }}>
           <DialogHeader>
             <DialogTitle>{t("businesses.create.title")}</DialogTitle>
@@ -527,7 +527,7 @@ export function PartnerBusinessesSurface() {
       ) : null}
       {overageFor ? <OverageDialog billing={overageFor.billing} business={overageFor.business} onClose={() => setOverageFor(null)} partnerId={partner.partnerId} /> : null}
       <Dialog onOpenChange={(next) => { if (!next) setChanging(null); }} open={changing !== null}>
-        <DialogContent>
+        <DialogContent size="sm">
           <form className="flex flex-col gap-6" onSubmit={(event) => { event.preventDefault(); if (changing && !changeBilling.isPending) { setBillingError(null); changeBilling.mutate(changing); } }}>
             <DialogHeader>
               <DialogTitle>{t("businesses.billing.title", { name: changing?.name ?? "" })}</DialogTitle>

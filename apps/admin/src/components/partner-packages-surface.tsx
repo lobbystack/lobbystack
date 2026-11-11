@@ -171,7 +171,7 @@ export function PartnerPackagesSurface() {
   const createDialog = currency ? (
     <Dialog onOpenChange={(next) => { setCreateOpen(next); if (!next) { setDraft(EMPTY_DRAFT); setCreateError(null); setCreateSubmitted(false); } }} open={createOpen}>
       <DialogTrigger render={<Button size="sm" />}>{t("packages.create.action")}</DialogTrigger>
-      <DialogContent>
+      <DialogContent size="sm">
         <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); setCreateSubmitted(true); if (!create.isPending && draft.name.trim() && draft.price.trim()) { setCreateError(null); create.mutate(); } }}>
           <DialogHeader>
             <DialogTitle>{t("packages.create.title")}</DialogTitle>
@@ -289,7 +289,7 @@ export function PartnerPackagesSurface() {
         </Surface>
       )}
       <Dialog onOpenChange={(next) => { if (!next) { setRenaming(null); setRenameSubmitted(false); } }} open={renaming !== null}>
-        <DialogContent>
+        <DialogContent size="sm">
           <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); setRenameSubmitted(true); if (renaming && !rename.isPending && newName.trim()) { setRenameError(null); rename.mutate(renaming); } }}>
             <DialogHeader>
               <DialogTitle>{t("packages.rename.title")}</DialogTitle>

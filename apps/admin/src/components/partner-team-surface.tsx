@@ -117,7 +117,7 @@ export function PartnerTeamSurface() {
   const inviteDialog = canManage ? (
     <Dialog onOpenChange={(open) => { setInviteOpen(open); setInviteError(null); setInviteSubmitted(false); }} open={inviteOpen}>
       <DialogTrigger render={<Button disabled={team.isLoading} size="sm" />}>{t("team.invite.action")}</DialogTrigger>
-      <DialogContent>
+      <DialogContent size="sm">
         <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); setInviteSubmitted(true); if (!invite.isPending && email.trim()) { setInviteError(null); invite.mutate(); } }}>
           <DialogHeader>
             <DialogTitle>{t("team.invite.title")}</DialogTitle>

@@ -125,7 +125,7 @@ export function AccountPasskeys() {
         ))}</ul> : null}
       </div>
       <Dialog onOpenChange={closeRename} open={renaming !== null}>
-        <DialogContent>
+        <DialogContent size="sm">
           <DialogHeader><DialogTitle>{t("account.passkeys.rename.title")}</DialogTitle><DialogDescription>{t("account.passkeys.rename.description")}</DialogDescription></DialogHeader>
           <form className="flex flex-col gap-6" noValidate onSubmit={submitRename}>
             <Field data-invalid={renameError ? true : undefined}>

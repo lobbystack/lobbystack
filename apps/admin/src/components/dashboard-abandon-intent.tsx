@@ -132,7 +132,7 @@ export function DashboardAbandonIntent({ businessId }: { businessId: string | un
 
   return (
     <Dialog onOpenChange={close} open={open}>
-      <DialogContent >
+      <DialogContent size="sm" >
         {sent ? (
           <>
             <DialogHeader>

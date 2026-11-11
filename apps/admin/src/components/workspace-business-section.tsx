@@ -254,7 +254,7 @@ export function WorkspaceBusinessSection({ businessId, canManage, heading = true
                 toast.success(t("agent:fields.summary.rewriteCompleted"));
               }
             }} open={isSummaryOpen}>
-              <DialogContent className="flex flex-col gap-4">
+              <DialogContent size="sm" className="flex flex-col gap-4">
                 <DialogHeader><DialogTitle>{t("agent:fields.summary.label")}</DialogTitle></DialogHeader>
                 <div className="relative overflow-hidden rounded-xl">
                   <Textarea

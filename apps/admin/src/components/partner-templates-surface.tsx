@@ -116,7 +116,7 @@ export function SaveTemplateDialog({ open, onOpenChange, business }: SaveTemplat
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent>
+      <DialogContent size="sm">
         <form className="flex flex-col gap-6" onSubmit={(event) => { event.preventDefault(); if (ready) { setError(null); save.mutate(); } }}>
           <DialogHeader>
             <DialogTitle>{t("templates.save.title")}</DialogTitle>

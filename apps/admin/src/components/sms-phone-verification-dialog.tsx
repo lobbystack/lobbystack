@@ -116,7 +116,7 @@ export function SmsPhoneVerificationDialog({ businessId, open, onOpenChange, onV
   const shownError = error ?? (attemptError ? t(`notifications.phoneVerification.errors.${attemptError}`) : null);
 
   return <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent>
+    <DialogContent size="sm">
       {step.kind === "confirm" ? <div className="flex flex-col gap-6">
         <DialogHeader><DialogTitle>{t("notifications.phoneVerification.confirm.title")}</DialogTitle></DialogHeader>
         <div className="flex flex-col items-start gap-4">
