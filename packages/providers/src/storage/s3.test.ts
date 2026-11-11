@@ -1,7 +1,10 @@
-import { GetBucketCorsCommand, HeadObjectCommand, PutBucketCorsCommand, PutObjectCommand, S3Client, type CORSRule } from "@aws-sdk/client-s3";
+import { Readable } from "node:stream";
+
+import { GetBucketCorsCommand, GetObjectCommand, HeadObjectCommand, PutBucketCorsCommand, PutObjectCommand, S3Client, type CORSRule } from "@aws-sdk/client-s3";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createStorageProvider } from "./provider";
+import { InvalidByteRangeError } from "./range";
 import { S3StorageProvider } from "./s3";
 
 afterEach(() => { vi.restoreAllMocks(); });
@@ -112,5 +115,33 @@ describe("S3StorageProvider putObject", () => {
 
     const puts = send.mock.calls.map(([command]) => command).filter((command) => command instanceof PutObjectCommand).map((command) => (command as PutObjectCommand).input);
     expect(puts.map((input) => input.ChecksumSHA256)).toEqual(["abc=", undefined]);
+  });
+});
+
+describe("S3StorageProvider.openObject", () => {
+  function stubGet(answer: (command: GetObjectCommand) => unknown) {
+    return vi.spyOn(S3Client.prototype, "send").mockImplementation(async (command) => {
+      if (command instanceof GetObjectCommand) return answer(command) as never;
+      return {} as never;
+    });
+  }
+
+  it("streams the slice a Range header asks for, with its place in the object", async () => {
+    const send = stubGet(() => ({ Body: Readable.from([Buffer.from("abcd")]), ContentLength: 4, ContentRange: "bytes 10-13/100" }));
+    const opened = await storage().openObject({ key: "recording.wav", range: "bytes=10-13" });
+    expect(send.mock.calls.map(([command]) => command).find((command) => command instanceof GetObjectCommand)?.input).toEqual({ Bucket: "uploads", Key: "recording.wav", Range: "bytes=10-13" });
+    expect({ length: opened.length, totalLength: opened.totalLength, start: opened.start, end: opened.end }).toEqual({ length: 4, totalLength: 100, start: 10, end: 13 });
+    expect(Buffer.concat(await opened.body.toArray()).toString()).toBe("abcd");
+  });
+
+  it("streams the whole object without a range", async () => {
+    stubGet(() => ({ Body: Readable.from([Buffer.from("abcdef")]), ContentLength: 6 }));
+    const opened = await storage().openObject({ key: "recording.wav" });
+    expect({ length: opened.length, totalLength: opened.totalLength, start: opened.start }).toEqual({ length: 6, totalLength: 6, start: undefined });
+  });
+
+  it("turns S3's InvalidRange into the range error routes answer with 416", async () => {
+    stubGet(() => { throw Object.assign(new Error("The requested range is not satisfiable"), { name: "InvalidRange" }); });
+    await expect(storage().openObject({ key: "recording.wav", range: "bytes=500-" })).rejects.toBeInstanceOf(InvalidByteRangeError);
   });
 });

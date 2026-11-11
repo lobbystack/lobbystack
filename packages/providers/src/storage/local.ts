@@ -8,6 +8,8 @@ import { pipeline } from "node:stream/promises";
 
 import { withSpan } from "@lobbystack/telemetry/node";
 
+import { byteRange, type OpenedObject } from "./range";
+
 export type LocalStorageConfig = {
   rootPath: string;
   publicBaseUrl: string;
@@ -89,18 +91,6 @@ export function verifyLocalStorageToken(token: string, secret: string, expectedO
   if (claims.checksum !== undefined && typeof claims.checksum !== "string") throw new Error("Invalid storage token.");
   if (claims.range !== undefined && typeof claims.range !== "string") throw new Error("Invalid storage token.");
   return claims as LocalStorageToken;
-}
-
-function byteRange(range: string | undefined, length: number): { start: number; end: number } | undefined {
-  if (!range) return undefined;
-  const match = /^bytes=(\d*)-(\d*)$/.exec(range);
-  if (!match || (!match[1] && !match[2]) || length === 0) throw new Error("Invalid byte range.");
-  const startText = match[1] ?? "";
-  const endText = match[2] ?? "";
-  const start = startText ? Number(startText) : Math.max(0, length - Number(endText));
-  const end = endText && startText ? Math.min(length - 1, Number(endText)) : length - 1;
-  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || start > end || start >= length) throw new Error("Invalid byte range.");
-  return { start, end };
 }
 
 export class LocalStorageProvider {
@@ -237,7 +227,7 @@ export class LocalStorageProvider {
     });
   }
 
-  async openObject(input: { key: string; range?: string }): Promise<{ body: Readable; length: number; totalLength: number; start?: number; end?: number }> {
+  async openObject(input: { key: string; range?: string }): Promise<OpenedObject> {
     await this.ensureReady();
     return await this.run("get", async () => {
       const objectPath = this.objectPath(input.key);

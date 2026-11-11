@@ -25,7 +25,7 @@ type CallRecordingPlayerProps = {
   seekLabel?: string;
   src?: string | null;
   variant?: "default" | "hidden";
-  /** Draws the recording's loudness as bars the listener can click to seek. Loads and decodes the recording on the first play or seek. */
+  /** Draws the recording's loudness as bars the listener can click to seek. Loads and decodes the recording as soon as the player mounts. */
   waveform?: boolean;
 };
 
@@ -226,6 +226,17 @@ export function CallRecordingPlayer({
     preparingPlaybackSrcRef.current = promise;
     return await promise;
   }
+
+  // The waveform draws as soon as the player shows, not on the first play.
+  useEffect(() => {
+    if (!waveform || !src || playbackSrc) {
+      return;
+    }
+
+    void ensurePlaybackSource();
+    // ensurePlaybackSource is recreated each render; a src change already resets what it reads.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [waveform, playbackSrc, src]);
 
   useEffect(() => {
     if (!autoPlay || !src || playbackSrc) {
