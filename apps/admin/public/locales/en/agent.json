@@ -276,12 +276,13 @@
   },
   "pagination": {
     "rowsPerPage": "Rows per page",
-    "pageOf": "Page {{page}} of {{total}}",
+    "viewing": "Viewing {{start}}-{{end}} of {{total}}",
+    "viewingAll_one": "Viewing {{count}} row",
+    "viewingAll_other": "Viewing all {{count}} rows",
     "firstPage": "First page",
     "previousPage": "Previous page",
     "nextPage": "Next page",
-    "lastPage": "Last page",
-    "goToPage": "Go to page {{page}}"
+    "lastPage": "Last page"
   },
   "fields": {
     "defaults": {

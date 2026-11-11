@@ -145,6 +145,6 @@ describe("contact list loading state", () => {
     expect(document.querySelector("tbody")?.getAttribute("aria-busy")).toBe("true");
     expect(document.querySelectorAll('tbody [data-slot="skeleton"]').length).toBe(90);
     expect(screen.queryByText("table.empty")).toBeNull();
-    expect(document.querySelectorAll('[aria-hidden="true"] [data-slot="skeleton"]').length).toBe(9);
+    expect(document.querySelectorAll('[aria-hidden="true"] [data-slot="skeleton"]').length).toBe(7);
   });
 });

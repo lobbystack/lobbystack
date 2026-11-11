@@ -169,10 +169,10 @@ export function PartnerTeamSurface() {
         ) : (
           <Table>
             <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("team.table.person")}</TableHead>
-                <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("team.table.role")}</TableHead>
-                {canManage ? <TableHead className="w-12 px-6" /> : null}
+              <TableRow>
+                <TableHead>{t("team.table.person")}</TableHead>
+                <TableHead>{t("team.table.role")}</TableHead>
+                {canManage ? <TableHead className="w-12" /> : null}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -180,8 +180,8 @@ export function PartnerTeamSurface() {
                 const actions = rowActions(row);
                 const expired = row.kind === "invitation" && new Date(row.expiresAt) <= new Date();
                 return (
-                  <TableRow className="hover:bg-transparent" key={row.kind === "member" ? row.memberId : row.invitationId}>
-                    <TableCell className="px-6 py-5 whitespace-normal [overflow-wrap:anywhere]">
+                  <TableRow key={row.kind === "member" ? row.memberId : row.invitationId}>
+                    <TableCell className="whitespace-normal [overflow-wrap:anywhere]">
                       <div className="flex flex-col gap-1">
                         <p className="ph-mask text-sm">{row.kind === "member" && row.name ? `${row.name} · ${row.email}` : row.email}</p>
                         <div className="flex flex-wrap items-center gap-2">
@@ -190,9 +190,9 @@ export function PartnerTeamSurface() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="px-6 py-5"><Badge variant="secondary">{t(`roles.${row.role}`)}</Badge></TableCell>
+                    <TableCell><Badge variant="secondary">{t(`roles.${row.role}`)}</Badge></TableCell>
                     {canManage ? (
-                      <TableCell className="px-6 py-5">
+                      <TableCell>
                         {actions ? (
                           <DropdownMenu>
                             <DropdownMenuTrigger render={<Button aria-label={t("team.actions.moreOptions", { email: row.email })} disabled={busy} size="icon-sm" variant="ghost"><MoreHorizontal /></Button>} />

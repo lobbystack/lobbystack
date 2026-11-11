@@ -238,17 +238,17 @@ export function PartnerPackagesSurface() {
         <Surface className="overflow-hidden p-0">
           <Table>
             <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("packages.table.package")}</TableHead>
-                <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("packages.table.price")}</TableHead>
-                <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("packages.table.allowance")}</TableHead>
-                <TableHead className="w-12 px-6" />
+              <TableRow>
+                <TableHead>{t("packages.table.package")}</TableHead>
+                <TableHead>{t("packages.table.price")}</TableHead>
+                <TableHead>{t("packages.table.allowance")}</TableHead>
+                <TableHead className="w-12" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {data.packages.map((item) => (
-                <TableRow className="hover:bg-transparent" key={item.packageId}>
-                  <TableCell className="px-6 py-5 whitespace-normal [overflow-wrap:anywhere]">
+                <TableRow key={item.packageId}>
+                  <TableCell className="whitespace-normal [overflow-wrap:anywhere]">
                     <div className="flex flex-col gap-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-medium">{item.name}</p>
@@ -257,19 +257,19 @@ export function PartnerPackagesSurface() {
                       <p className="text-sm text-muted-foreground">{t("packages.createdOn", { date: formatDate(item.createdAt) })}</p>
                     </div>
                   </TableCell>
-                  <TableCell className="px-6 py-5 whitespace-normal">
+                  <TableCell className="whitespace-normal">
                     <div className="flex flex-col gap-1 tabular-nums">
                       <p className="text-sm">{t("packages.perMonth", { amount: formatAmount(item.monthlyPriceMinor, item.currency) })}</p>
                       <p className="text-sm text-muted-foreground">{item.setupFeeMinor === null ? t("packages.noSetupFee") : t("packages.setupFee", { amount: formatAmount(item.setupFeeMinor, item.currency) })}</p>
                     </div>
                   </TableCell>
-                  <TableCell className="px-6 py-5 whitespace-normal">
+                  <TableCell className="whitespace-normal">
                     <div className="flex flex-col gap-1 tabular-nums">
                       <p className="text-sm">{t("packages.minutes", { count: item.allowance.voiceMinutes, amount: formatCount(item.allowance.voiceMinutes) })}</p>
                       <p className="text-sm">{t("packages.chats", { count: item.allowance.chats, amount: formatCount(item.allowance.chats) })}</p>
                     </div>
                   </TableCell>
-                  <TableCell className="px-6 py-5">
+                  <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger render={<Button aria-label={t("packages.moreOptions", { name: item.name })} disabled={rename.isPending || archive.isPending} size="icon-sm" variant="ghost"><MoreHorizontal /></Button>} />
                       <DropdownMenuContent align="end">

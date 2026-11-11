@@ -78,7 +78,7 @@ describe("rules loading states", () => {
     expect(screen.getByText("table.title")).toBeTruthy();
     expect(document.querySelector("tbody")?.getAttribute("aria-busy")).toBe("true");
     expect(skeletons("tbody")).toBe(60);
-    expect(skeletons('[aria-hidden="true"]')).toBe(9);
+    expect(skeletons('[aria-hidden="true"]')).toBe(7);
     expect(screen.queryByText("sections.rules.emptyState")).toBeNull();
     expect(screen.queryByRole("button", { name: /sections.rules.addKnowledge/ })).toBeNull();
   });

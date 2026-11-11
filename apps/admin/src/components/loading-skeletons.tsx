@@ -52,9 +52,9 @@ export function TableCardSkeleton({ columns = 5 }: { columns?: number }) {
   return (
     <div className="flex flex-col gap-4">
       <TableCard>
-        <div className="border-b px-4 py-3">
+        <div className="flex h-12 items-center border-b bg-table-header px-4">
           <div
-            className="grid gap-4"
+            className="grid w-full gap-4"
             style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
           >
             {Array.from({ length: columns }).map((_, index) => (
@@ -65,7 +65,7 @@ export function TableCardSkeleton({ columns = 5 }: { columns?: number }) {
         <div className="flex flex-col">
           {Array.from({ length: 5 }).map((_, rowIndex) => (
             <div
-              className="grid gap-4 border-b px-4 py-4 last:border-b-0"
+              className="grid gap-4 border-b p-4 last:border-b-0"
               key={rowIndex}
               style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
             >
@@ -126,7 +126,7 @@ export function AppointmentRowsSkeleton({ label, rows = 5 }: { label: string; ro
   return (
     <>
       {Array.from({ length: rows }).map((_, rowIndex) => (
-        <TableRow className="h-12 hover:bg-transparent" key={rowIndex}>
+        <TableRow className="hover:bg-transparent" key={rowIndex}>
           {cells.map((width, cellIndex) => (
             <TableCell key={cellIndex}>
               <Skeleton className={`h-4 ${width}`} />
@@ -215,7 +215,7 @@ export function CallRowsSkeleton({ rows = 10 }: { rows?: number }) {
   return (
     <>
       {Array.from({ length: rows }).map((_, index) => (
-        <TableRow className="h-12 hover:bg-transparent" key={index}>
+        <TableRow className="hover:bg-transparent" key={index}>
           <TableCell><Skeleton className="h-4 w-28" /></TableCell>
           <TableCell><Skeleton className="h-4 w-32" /></TableCell>
           <TableCell className="max-w-0"><Skeleton className="h-4 w-3/4" /></TableCell>
@@ -227,33 +227,22 @@ export function CallRowsSkeleton({ rows = 10 }: { rows?: number }) {
   );
 }
 
-/** Stands in for DataTablePagination: the rows-per-page select, the page count and four page buttons, with its responsive layout. */
-export function DataTablePaginationSkeleton() {
+/** Stands in for DataTablePagination: the rows-per-page select, the row range and four page buttons, with its responsive layout. */
+export function DataTablePaginationSkeleton({ rowsPerPage }: { rowsPerPage: string }) {
   return (
-    <div
-      aria-hidden="true"
-      className="flex items-center justify-between overflow-clip px-2 @max-2xl/content:flex-col-reverse @max-2xl/content:gap-4"
-    >
-      <div className="flex w-full items-center justify-between">
-        <div className="flex w-[100px] items-center justify-center @2xl/content:hidden">
-          <Skeleton className="h-5 w-16" />
-        </div>
-        <div className="flex items-center gap-2 @max-2xl/content:flex-row-reverse">
-          <Skeleton className="h-8 w-[70px]" />
-          <Skeleton className="hidden h-5 w-24 sm:block" />
-        </div>
+    <div aria-hidden="true" className="flex flex-wrap items-center gap-x-6 gap-y-2 sm:flex-nowrap sm:justify-end sm:px-2 lg:gap-x-8">
+      <div className="order-3 flex w-full flex-none items-center justify-between gap-2 sm:order-0 sm:w-auto sm:justify-start">
+        <HiddenTextSkeleton className="type-body">{rowsPerPage}</HiddenTextSkeleton>
+        <Skeleton className="h-8 w-[75px]" />
       </div>
-      <div className="flex items-center sm:space-x-6 lg:space-x-8">
-        <div className="flex w-[100px] items-center justify-center @max-3xl/content:hidden">
-          <Skeleton className="h-5 w-16" />
-        </div>
-        <div className="flex items-center space-x-2">
-          <Skeleton className="size-8 rounded-full @max-md/content:hidden" />
-          <Skeleton className="size-8 rounded-full" />
-          <Skeleton className="size-8 rounded-full" />
-          <Skeleton className="size-8 rounded-full" />
-          <Skeleton className="size-8 rounded-full @max-md/content:hidden" />
-        </div>
+      <div className="flex flex-1 items-center justify-start sm:w-[160px] sm:flex-none sm:justify-center">
+        <Skeleton className="h-5 w-32" />
+      </div>
+      <div className="flex items-center justify-end gap-2">
+        <Skeleton className="hidden size-8 rounded-full lg:block" />
+        <Skeleton className="size-8 rounded-full" />
+        <Skeleton className="size-8 rounded-full" />
+        <Skeleton className="hidden size-8 rounded-full lg:block" />
       </div>
     </div>
   );
@@ -300,7 +289,7 @@ export function ContactRowsSkeleton({ rows = 10 }: { rows?: number }) {
   return (
     <>
       {Array.from({ length: rows }).map((_, index) => (
-        <TableRow className="h-12 hover:bg-transparent" key={index}>
+        <TableRow className="hover:bg-transparent" key={index}>
           <TableCell>
             <div className="flex flex-col gap-1">
               <Skeleton className="h-4 w-32" />
@@ -333,7 +322,7 @@ export function KnowledgeRowsSkeleton({ rows = 10 }: { rows?: number }) {
   return (
     <>
       {Array.from({ length: rows }).map((_, index) => (
-        <TableRow className="h-12 hover:bg-transparent" key={index}>
+        <TableRow className="hover:bg-transparent" key={index}>
           <TableCell>
             <div className="flex items-center gap-2">
               <Skeleton className="size-5 shrink-0" />
@@ -351,7 +340,7 @@ export function KnowledgeRowsSkeleton({ rows = 10 }: { rows?: number }) {
 }
 
 /** The whole knowledge page body, for the moment before the workspace is known and the real table can render. */
-export function KnowledgePageSkeleton({ headings }: { headings: [title: string, preview: string, status: string, added: string] }) {
+export function KnowledgePageSkeleton({ headings, rowsPerPage }: { headings: [title: string, preview: string, status: string, added: string]; rowsPerPage: string }) {
   return (
     <>
       <TableCard>
@@ -369,7 +358,7 @@ export function KnowledgePageSkeleton({ headings }: { headings: [title: string, 
           <TableBody aria-busy="true"><KnowledgeRowsSkeleton /></TableBody>
         </Table>
       </TableCard>
-      <DataTablePaginationSkeleton />
+      <DataTablePaginationSkeleton rowsPerPage={rowsPerPage} />
       <section className="flex flex-col gap-3">
         <div className="flex items-start justify-between gap-4 px-1">
           <Skeleton className="h-7 w-52" />
@@ -431,7 +420,7 @@ export function ServiceRowsSkeleton({ rows = 10 }: { rows?: number }) {
   return (
     <>
       {Array.from({ length: rows }).map((_, index) => (
-        <TableRow className="h-12 hover:bg-transparent" key={index}>
+        <TableRow className="hover:bg-transparent" key={index}>
           <TableCell>
             <div className="flex items-center gap-2">
               <Skeleton className="size-4 shrink-0" />
@@ -450,7 +439,7 @@ export function ServiceRowsSkeleton({ rows = 10 }: { rows?: number }) {
 }
 
 /** The services table and its pagination, for the moment before the workspace is known and the real table can render. */
-export function ServicesPageSkeleton({ headings }: { headings: [title: string, preview: string, price: string, status: string, added: string] }) {
+export function ServicesPageSkeleton({ headings, rowsPerPage }: { headings: [title: string, preview: string, price: string, status: string, added: string]; rowsPerPage: string }) {
   return (
     <>
       <TableCard>
@@ -469,7 +458,7 @@ export function ServicesPageSkeleton({ headings }: { headings: [title: string, p
           <TableBody aria-busy="true"><ServiceRowsSkeleton /></TableBody>
         </Table>
       </TableCard>
-      <DataTablePaginationSkeleton />
+      <DataTablePaginationSkeleton rowsPerPage={rowsPerPage} />
     </>
   );
 }
@@ -479,7 +468,7 @@ export function EmployeeRowsSkeleton({ rows = 10 }: { rows?: number }) {
   return (
     <>
       {Array.from({ length: rows }).map((_, index) => (
-        <TableRow className="h-12 hover:bg-transparent" key={index}>
+        <TableRow className="hover:bg-transparent" key={index}>
           <TableCell>
             <div className="flex items-center gap-2">
               <Skeleton className="size-4 shrink-0" />
@@ -507,7 +496,7 @@ export function RuleRowsSkeleton({ handle = true, rows = 10 }: { handle?: boolea
   return (
     <>
       {Array.from({ length: rows }).map((_, index) => (
-        <TableRow className="h-12 hover:bg-transparent" key={index}>
+        <TableRow className="hover:bg-transparent" key={index}>
           {handle ? <TableCell className="pr-0"><Skeleton className="size-7 rounded-md" /></TableCell> : null}
           <TableCell><Skeleton className="h-4 w-28" /></TableCell>
           <TableCell className="max-w-0"><Skeleton className="h-4 w-3/4" /></TableCell>
@@ -521,7 +510,7 @@ export function RuleRowsSkeleton({ handle = true, rows = 10 }: { handle?: boolea
 }
 
 /** The rules table and its pagination, for the moment before the workspace is known and the real table can render. */
-export function RulesPageSkeleton({ headings }: { headings: [title: string, preview: string, status: string, added: string] }) {
+export function RulesPageSkeleton({ headings, rowsPerPage }: { headings: [title: string, preview: string, status: string, added: string]; rowsPerPage: string }) {
   return (
     <>
       <TableCard>
@@ -540,7 +529,7 @@ export function RulesPageSkeleton({ headings }: { headings: [title: string, prev
           <TableBody aria-busy="true"><RuleRowsSkeleton /></TableBody>
         </Table>
       </TableCard>
-      <DataTablePaginationSkeleton />
+      <DataTablePaginationSkeleton rowsPerPage={rowsPerPage} />
     </>
   );
 }

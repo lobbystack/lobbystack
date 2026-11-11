@@ -175,12 +175,13 @@
   },
   "pagination": {
     "rowsPerPage": "Rows per page",
-    "pageOf": "Page {{page}} of {{total}}",
+    "viewing": "Viewing {{start}}-{{end}} of {{total}}",
+    "viewingAll_one": "Viewing {{count}} row",
+    "viewingAll_other": "Viewing all {{count}} rows",
     "firstPage": "Go to first page",
     "previousPage": "Go to previous page",
     "nextPage": "Go to next page",
-    "lastPage": "Go to last page",
-    "goToPage": "Go to page {{page}}"
+    "lastPage": "Go to last page"
   },
   "edit": {
     "title": "Edit contact",

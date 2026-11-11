@@ -276,12 +276,14 @@
   },
   "pagination": {
     "rowsPerPage": "Filas por página",
-    "pageOf": "Página {{page}} de {{total}}",
+    "viewing": "Filas {{start}} a {{end}} de {{total}}",
+    "viewingAll_one": "{{count}} fila",
+    "viewingAll_many": "Las {{count}} filas",
+    "viewingAll_other": "Las {{count}} filas",
     "firstPage": "Primera página",
     "previousPage": "Página anterior",
     "nextPage": "Página siguiente",
-    "lastPage": "Última página",
-    "goToPage": "Ir a la página {{page}}"
+    "lastPage": "Última página"
   },
   "fields": {
     "defaults": {

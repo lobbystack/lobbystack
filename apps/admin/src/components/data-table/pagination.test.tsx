@@ -88,12 +88,12 @@ function PaginationHarnessWithRowCount({ rowCount }: { rowCount: number }) {
       <DataTablePagination
         labels={{
           rowsPerPage: "Rows per page",
-          pageOf: (page, total) => `Page ${page} of ${total}`,
+          viewing: (start, end, total) => `Viewing ${start}-${end} of ${total}`,
+          viewingAll: (total) => `Viewing all ${total} rows`,
           firstPage: "First page",
           previousPage: "Previous page",
           nextPage: "Next page",
           lastPage: "Last page",
-          goToPage: (page) => `Go to page ${page}`,
         }}
         table={table}
       />
@@ -114,14 +114,14 @@ describe("DataTablePagination", () => {
 
     expect(screen.queryByText("Row 1")).toBeNull();
     expect(screen.getByText("Row 6")).toBeTruthy();
-    expect(screen.getAllByText("Page 2 of 3").length).toBeGreaterThan(0);
+    expect(screen.getByText("Viewing 6-10 of 12")).toBeTruthy();
   });
 
   it("hides pagination when there are 10 or fewer rows", () => {
     render(<PaginationHarnessWithRowCount rowCount={10} />);
 
     expect(screen.queryByText("Rows per page")).toBeNull();
-    expect(screen.queryByText("Page 1 of 2")).toBeNull();
+    expect(screen.queryByText(/^Viewing/)).toBeNull();
     expect(screen.queryByRole("button", { name: "Next page" })).toBeNull();
   });
 });

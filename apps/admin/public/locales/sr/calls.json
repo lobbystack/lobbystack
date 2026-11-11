@@ -75,12 +75,14 @@
   },
   "pagination": {
     "rowsPerPage": "Redova po stranici",
-    "pageOf": "Stranica {{page}} od {{total}}",
+    "viewing": "Redovi {{start}}-{{end}} od {{total}}",
+    "viewingAll_one": "Prikazan {{count}} red",
+    "viewingAll_few": "Prikazana sva {{count}} reda",
+    "viewingAll_other": "Prikazano svih {{count}} redova",
     "firstPage": "Idi na prvu stranicu",
     "previousPage": "Idi na prethodnu stranicu",
     "nextPage": "Idi na sledeću stranicu",
-    "lastPage": "Idi na poslednju stranicu",
-    "goToPage": "Idi na stranicu {{page}}"
+    "lastPage": "Idi na poslednju stranicu"
   },
   "panel": {
     "title": "Nedavni pozivi",

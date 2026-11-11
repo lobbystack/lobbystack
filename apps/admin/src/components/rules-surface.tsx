@@ -12,7 +12,7 @@ import { useSetupAction } from "@/lib/use-setup-action";
 import { requestJson } from "@/lib/request-json";
 import { HeaderActions } from "@/components/header-actions";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
-import { DataTablePagination, paginationFeatures } from "./data-table/pagination";
+import { DataTablePagination, paginationFeatures, useDataTablePaginationLabels } from "./data-table/pagination";
 import { DataTablePaginationSkeleton, HeaderButtonSkeleton, RuleRowsSkeleton, RulesPageSkeleton } from "./loading-skeletons";
 import { PageSurface } from "./page-surface";
 import { Badge } from "./ui/badge";
@@ -36,6 +36,7 @@ function summarize(value: string, length: number): string {
 /** One agent's rules, or without `agentId` the default agent's. */
 export function RulesSurface({ agentId }: { agentId?: string } = {}) {
   const { i18n, t } = useTranslation("agent");
+  const paginationLabels = useDataTablePaginationLabels("agent");
   const queryClient = useQueryClient();
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [editingRule, setEditingRule] = useState<Rule | null>(null);
@@ -102,7 +103,7 @@ export function RulesSurface({ agentId }: { agentId?: string } = {}) {
 
   if (businesses.isLoading) return <PageSurface title={t("sections.rules.title")}><div className="flex w-full flex-col gap-6">
     <HeaderActions><HeaderButtonSkeleton label={t("sections.rules.addKnowledge")} /></HeaderActions>
-    <RulesPageSkeleton headings={[t("table.title"), t("table.preview"), t("table.status"), t("table.added")]} />
+    <RulesPageSkeleton headings={[t("table.title"), t("table.preview"), t("table.status"), t("table.added")]} rowsPerPage={paginationLabels.rowsPerPage} />
   </div></PageSurface>;
   if (!business) return <PageSurface title={t("sections.rules.title")}><p className="text-sm text-muted-foreground">{t("empty.description")}</p></PageSurface>;
 
@@ -148,7 +149,7 @@ export function RulesSurface({ agentId }: { agentId?: string } = {}) {
             </TableBody>
           </Table>
         </TableCard>
-        {loading ? <DataTablePaginationSkeleton /> : <DataTablePagination labels={{ rowsPerPage: t("pagination.rowsPerPage"), pageOf: (page, total) => t("pagination.pageOf", { page, total }), firstPage: t("pagination.firstPage"), previousPage: t("pagination.previousPage"), nextPage: t("pagination.nextPage"), lastPage: t("pagination.lastPage"), goToPage: (page) => t("pagination.goToPage", { page }) }} table={table} />}
+        {loading ? <DataTablePaginationSkeleton rowsPerPage={paginationLabels.rowsPerPage} /> : <DataTablePagination labels={paginationLabels} table={table} />}
         <RuleDialog editingRule={editingRule} onOpenChange={(open) => { setDialogOpen(open); if (!open) setEditingRule(null); }} open={dialogOpen} pending={createRule.isPending || updateRule.isPending} save={async (input) => { if (editingRule) await updateRule.mutateAsync({ ruleId: editingRule.id, ...input }); else await createRule.mutateAsync(input); setDialogOpen(false); setEditingRule(null); }} />
         <ConfirmActionDialog confirmVariant="destructive" cancelLabel={t("actions.deleteCancel")} confirmLabel={t("actions.delete")} description={t("actions.deleteDescription")} onConfirm={async () => { if (!deleteCandidate) return; await deleteRule.mutateAsync(deleteCandidate.id); toast.success(t("actions.deleted")); }} onOpenChange={(open) => { if (!open) setDeleteCandidate(null); }} open={deleteCandidate !== null} pending={deleteRule.isPending} title={t("actions.deleteTitle")} />
       </div>

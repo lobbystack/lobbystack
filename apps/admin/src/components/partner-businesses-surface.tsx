@@ -429,14 +429,14 @@ export function PartnerBusinessesSurface() {
         <Surface className="overflow-hidden p-0">
           <Table>
             <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("businesses.table.business")}</TableHead>
-                <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("businesses.table.owner")}</TableHead>
-                <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("businesses.table.access")}</TableHead>
-                {canCreate ? <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("businesses.table.billing")}</TableHead> : null}
-                <TableHead className="h-12 px-6 text-right text-sm font-medium text-foreground">{t("businesses.table.minutes")}</TableHead>
-                <TableHead className="h-12 px-6 text-right text-sm font-medium text-foreground">{t("businesses.table.chats")}</TableHead>
-                <TableHead className="h-12 px-6"><span className="sr-only">{t("businesses.table.actions")}</span></TableHead>
+              <TableRow>
+                <TableHead>{t("businesses.table.business")}</TableHead>
+                <TableHead>{t("businesses.table.owner")}</TableHead>
+                <TableHead>{t("businesses.table.access")}</TableHead>
+                {canCreate ? <TableHead>{t("businesses.table.billing")}</TableHead> : null}
+                <TableHead className="text-right">{t("businesses.table.minutes")}</TableHead>
+                <TableHead className="text-right">{t("businesses.table.chats")}</TableHead>
+                <TableHead><span className="sr-only">{t("businesses.table.actions")}</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -444,14 +444,14 @@ export function PartnerBusinessesSurface() {
                 const owner = business.owner;
                 const expired = owner?.status === "invited" && new Date(owner.expiresAt) <= new Date();
                 return (
-                  <TableRow className="hover:bg-transparent" key={business.businessId}>
-                    <TableCell className="px-6 py-5 whitespace-normal [overflow-wrap:anywhere]">
+                  <TableRow key={business.businessId}>
+                    <TableCell className="whitespace-normal [overflow-wrap:anywhere]">
                       <div className="flex flex-col gap-1">
                         <p className="ph-mask text-sm font-medium">{business.name}</p>
                         <p className="text-sm text-muted-foreground">{t("businesses.createdOn", { date: formatDate(business.createdAt) })}</p>
                       </div>
                     </TableCell>
-                    <TableCell className="px-6 py-5 whitespace-normal [overflow-wrap:anywhere]">
+                    <TableCell className="whitespace-normal [overflow-wrap:anywhere]">
                       {owner ? (
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="ph-mask text-sm">{owner.email}</p>
@@ -459,10 +459,10 @@ export function PartnerBusinessesSurface() {
                         </div>
                       ) : <p className="text-sm text-muted-foreground">{t("businesses.owner.none")}</p>}
                     </TableCell>
-                    <TableCell className="px-6 py-5"><Badge variant="secondary">{t(`businesses.access.${business.accessLevel}`)}</Badge></TableCell>
+                    <TableCell><Badge variant="secondary">{t(`businesses.access.${business.accessLevel}`)}</Badge></TableCell>
                     {canCreate ? (
                       // Words wrap whole here: breaking anywhere split "yourself" across lines on a narrow table.
-                      <TableCell className="min-w-40 px-6 py-5 whitespace-normal break-words">
+                      <TableCell className="min-w-40 whitespace-normal break-words">
                         <div className="flex flex-col gap-1">
                           <div className="flex flex-wrap items-center gap-2">
                             {business.billing?.kind === "package" ? <>
@@ -480,9 +480,9 @@ export function PartnerBusinessesSurface() {
                         </div>
                       </TableCell>
                     ) : null}
-                    <TableCell className="px-6 py-5 text-right text-sm tabular-nums">{formatMinutes(business.usage.voiceSeconds)}</TableCell>
-                    <TableCell className="px-6 py-5 text-right text-sm tabular-nums">{formatCount(business.usage.chats)}</TableCell>
-                    <TableCell className="px-6 py-5">
+                    <TableCell className="text-right text-sm tabular-nums">{formatMinutes(business.usage.voiceSeconds)}</TableCell>
+                    <TableCell className="text-right text-sm tabular-nums">{formatCount(business.usage.chats)}</TableCell>
+                    <TableCell>
                       <div className="flex items-center justify-end gap-2">
                         <Button
                           aria-label={t("businesses.open.label", { name: business.name })}

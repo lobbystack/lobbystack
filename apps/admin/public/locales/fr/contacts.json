@@ -175,12 +175,14 @@
   },
   "pagination": {
     "rowsPerPage": "Lignes par page",
-    "pageOf": "Page {{page}} sur {{total}}",
+    "viewing": "Lignes {{start}} à {{end}} sur {{total}}",
+    "viewingAll_one": "{{count}} ligne affichée",
+    "viewingAll_many": "Les {{count}} lignes affichées",
+    "viewingAll_other": "Les {{count}} lignes affichées",
     "firstPage": "Aller a la premiere page",
     "previousPage": "Aller a la page precedente",
     "nextPage": "Aller a la page suivante",
-    "lastPage": "Aller a la derniere page",
-    "goToPage": "Aller a la page {{page}}"
+    "lastPage": "Aller a la derniere page"
   },
   "edit": {
     "title": "Modifier le contact",

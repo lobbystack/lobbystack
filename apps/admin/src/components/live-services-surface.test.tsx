@@ -25,7 +25,7 @@ describe("services loading states", () => {
     expect(screen.getByText("table.title")).toBeTruthy();
     expect(screen.getByText("sections.services.price.column")).toBeTruthy();
     expect(skeletons("tbody")).toBe(70);
-    expect(skeletons('[aria-hidden="true"]')).toBe(9);
+    expect(skeletons('[aria-hidden="true"]')).toBe(7);
     expect(screen.getByText("sections.services.addKnowledge")).toBeTruthy();
   });
 
@@ -34,7 +34,7 @@ describe("services loading states", () => {
     expect(screen.getByText("table.title")).toBeTruthy();
     expect(document.querySelector("tbody")?.getAttribute("aria-busy")).toBe("true");
     expect(skeletons("tbody")).toBe(70);
-    expect(skeletons('[aria-hidden="true"]')).toBe(9);
+    expect(skeletons('[aria-hidden="true"]')).toBe(7);
     expect(screen.queryByText("table.empty")).toBeNull();
     expect(screen.queryByText("sections.services.emptyState")).toBeNull();
     expect(screen.queryByRole("button", { name: /sections.services.addKnowledge/ })).toBeNull();
