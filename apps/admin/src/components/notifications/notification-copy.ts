@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import { AtSign, CalendarClock, CalendarX2, Clock, CreditCard, Gauge, Globe, Hourglass, Phone, PhoneOff, Sparkles, UserPlus, Webhook, type LucideIcon } from "lucide-react";
+import { AtSign, CalendarClock, CalendarX2, Clock, CreditCard, Gauge, Globe, Hourglass, Phone, PhoneForwarded, PhoneOff, Sparkles, UserPlus, Webhook, type LucideIcon } from "lucide-react";
 import { intlLocale, type BusinessNotificationItem, type BusinessNotificationKind, type ProductUpdateCopy } from "@lobbystack/shared";
 
 /** Each kind's icon. */
@@ -19,6 +19,7 @@ export const NOTIFICATION_ICONS: Record<BusinessNotificationKind, LucideIcon> = 
   webhook_failing: Webhook,
   website_import_failed: Globe,
   website_import_finished: Globe,
+  forwarding_detected: PhoneForwarded,
   invite_accepted: UserPlus,
   product_update: Sparkles,
 };
@@ -76,6 +77,8 @@ export function notificationCopy(item: Pick<BusinessNotificationItem, "kind" | "
       return { title: k("title", { site: text(p.site) ?? "" }), line: k("line") };
     case "website_import_finished":
       return { title: k("title"), line: k("line", { count: count(p.pages), site: text(p.site) ?? "" }) };
+    case "forwarding_detected":
+      return { title: k("title"), line: k("line", { from: text(p.from) ?? "" }) };
     case "invite_accepted":
       return { title: k("title", { email: text(p.email) ?? "" }), line: k("line") };
     case "product_update": {

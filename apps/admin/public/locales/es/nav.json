@@ -279,6 +279,10 @@
         "line_other": "Leímos {{count}} páginas de {{site}}.",
         "line_many": "Leímos {{count}} páginas de {{site}}."
       },
+      "forwarding_detected": {
+        "title": "El desvío de llamadas funciona",
+        "line": "Las llamadas al {{from}} ahora llegan a su agente."
+      },
       "invite_accepted": {
         "title": "{{email}} se unió a su equipo",
         "line": "Aceptó su invitación."

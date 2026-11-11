@@ -4,6 +4,7 @@ import { phoneNumbers, withBusinessTransaction, type DatabaseTransaction } from 
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import type { DomainContext } from "./context";
+import { postBusinessNotificationInTransaction } from "./businessNotifications";
 import { recordProductEventInTransaction } from "./productEvents";
 import { sharedSmsSender } from "./smsSender";
 
@@ -43,6 +44,8 @@ export async function recordForwardedCall(context: DomainContext, input: { busin
       .returning({ id: phoneNumbers.id });
     if (!number) return null;
     await recordProductEventInTransaction(tx, { name: "voice.forwarding_detected", distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId), businessId: input.businessId, actorType: "worker", properties: { phoneNumberId: number.id, source: input.source } });
+    // The bell tells the team forwarding works, once per number.
+    await postBusinessNotificationInTransaction(tx, { businessId: input.businessId, kind: "forwarding_detected", key: `forwarding_detected:${number.id}`, params: { from: line, number: input.dialled }, now });
     return line;
   });
 }

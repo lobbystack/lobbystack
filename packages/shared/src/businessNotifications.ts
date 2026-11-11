@@ -22,6 +22,7 @@ export const BUSINESS_NOTIFICATION_KINDS = [
   "website_import_failed",
   // Updates.
   "website_import_finished",
+  "forwarding_detected",
   "invite_accepted",
   "product_update",
 ] as const;
@@ -64,6 +65,7 @@ export const BUSINESS_NOTIFICATION_RULES: Record<BusinessNotificationKind, Busin
   webhook_failing: action("api_keys", "/workspace/webhooks"),
   website_import_failed: action("setup", "/business/knowledge"),
   website_import_finished: { category: "update", capability: "setup", minimumRole: "business_admin", href: "/business/knowledge" },
+  forwarding_detected: { category: "update", capability: "setup", minimumRole: "business_admin", href: "/agents/primary/channels/phone" },
   invite_accepted: { category: "update", capability: "team", minimumRole: "viewer", href: "/workspace/team" },
   product_update: { category: "update", capability: "activity", minimumRole: "viewer", href: null },
 };

@@ -47,7 +47,7 @@ vi.mock("@/lib/domain-context", async () => {
   return { createWorkerDomainContext: () => ({ db: getWorkerDatabase().db }) };
 });
 
-import { agents, businessContextSnapshots, businesses, calls, createDatabaseClient, partnerLifecycles, partners, phoneNumbers, productEvents } from "@lobbystack/db";
+import { agents, businessContextSnapshots, businesses, businessNotifications, calls, createDatabaseClient, partnerLifecycles, partners, phoneNumbers, productEvents } from "@lobbystack/db";
 
 import { POST as forwardCall } from "../../twilio/voice/route";
 import { POST as incomingCall } from "./route";
@@ -145,5 +145,8 @@ describe.skipIf(!admin)("a call forwarded from the owner's line", () => {
     await ring([{ name: "History-Info", value: "<sip:+14165550166@carrier.example>;index=1" }]);
     expect(await forwarding()).toEqual({ from: "+14165550177", detected: true });
     expect(await forwardingEvents()).toHaveLength(1);
+    // The bell gets one update that forwarding works, naming the owner's line.
+    const bell = await admin!.db.select({ kind: businessNotifications.kind, category: businessNotifications.category, params: businessNotifications.params }).from(businessNotifications).where(and(eq(businessNotifications.businessId, businessId), eq(businessNotifications.kind, "forwarding_detected")));
+    expect(bell).toEqual([{ kind: "forwarding_detected", category: "update", params: expect.objectContaining({ from: "+14165550177" }) }]);
   });
 });

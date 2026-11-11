@@ -180,6 +180,7 @@ describe("notification copy", () => {
     website_import_failed: { site: "example.com" },
     website_import_finished: { site: "example.com", pages: 48 },
     invite_accepted: { email: "sam@example.com" },
+    forwarding_detected: { from: "+15145550199", number: "+15145550100" },
     product_update: { copy: { en: { title: "T", description: "D", href: "https://lobbystack.com/changelog/" } } },
   };
 

@@ -279,6 +279,10 @@
         "line_few": "Pročitali smo {{count}} stranice sa {{site}}.",
         "line_other": "Pročitali smo {{count}} stranica sa {{site}}."
       },
+      "forwarding_detected": {
+        "title": "Preusmeravanje poziva radi",
+        "line": "Pozivi na {{from}} sada stižu do agenta."
+      },
       "invite_accepted": {
         "title": "{{email}} je sada u Vašem timu",
         "line": "Vaša pozivnica je prihvaćena."

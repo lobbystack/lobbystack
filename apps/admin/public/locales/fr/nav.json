@@ -279,6 +279,10 @@
         "line_other": "{{count}} pages de {{site}} lues.",
         "line_many": "{{count}} pages de {{site}} lues."
       },
+      "forwarding_detected": {
+        "title": "Le renvoi d'appels fonctionne",
+        "line": "Les appels au {{from}} arrivent maintenant à votre agent."
+      },
       "invite_accepted": {
         "title": "{{email}} a rejoint votre équipe",
         "line": "Cette personne a accepté votre invitation."

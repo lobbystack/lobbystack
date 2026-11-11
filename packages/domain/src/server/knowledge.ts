@@ -538,11 +538,11 @@ export async function markKnowledgeDocumentFailed(
   input: { businessId: string; documentId: string; error?: string; expectedRevision?: number; websiteImport?: { url: string } },
 ): Promise<boolean> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const document = (await tx.select({ revision: knowledgeDocuments.revision, status: knowledgeDocuments.status }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1).for("update"))[0];
+    const document = (await tx.select({ revision: knowledgeDocuments.revision, status: knowledgeDocuments.status, agentId: knowledgeDocuments.agentId }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1).for("update"))[0];
     if (!document || document.status === "cancelled" || (input.expectedRevision !== undefined && document.revision !== input.expectedRevision)) return false;
     await markKnowledgeDocumentFailedInTransaction(tx, input, document.revision, input.error ?? "Knowledge indexing failed.");
     // A website import the crawl gave up on: the bell keeps it until an import of the site works or the document goes.
-    if (input.websiteImport) await postBusinessNotificationInTransaction(tx, { businessId: input.businessId, kind: "website_import_failed", key: websiteImportFailedKey(input.documentId), params: { site: websiteImportSite(input.websiteImport.url) } });
+    if (input.websiteImport) await postBusinessNotificationInTransaction(tx, { businessId: input.businessId, kind: "website_import_failed", key: websiteImportFailedKey(input.documentId), params: { site: websiteImportSite(input.websiteImport.url) }, href: websiteImportHref(document.agentId) });
     return true;
   });
 }
@@ -883,6 +883,11 @@ export class KnowledgeStorageLimitError extends Error {
   }
 }
 
+/** Where a website import's bell item opens: the agent's Specific knowledge for a source one agent owns, or Knowledge, the kind's page, for a shared one. */
+function websiteImportHref(agentId: string | null): string | null {
+  return agentId ? `/agents/${agentId}/knowledge` : null;
+}
+
 function websiteImportFailedKey(documentId: string): string {
   return `website_import_failed:${documentId}`;
 }
@@ -903,5 +908,6 @@ export function websiteImportSite(url: string): string {
  */
 export async function postWebsiteImportFinishedInTransaction(tx: DatabaseTransaction, input: { businessId: string; documentId: string; websiteIngestionJobId: string; revision: number; url: string; pages: number }): Promise<void> {
   await resolveBusinessNotificationsInTransaction(tx, { businessId: input.businessId, keys: [websiteImportFailedKey(input.documentId)] });
-  await postBusinessNotificationInTransaction(tx, { businessId: input.businessId, kind: "website_import_finished", key: `website_import_finished:${input.websiteIngestionJobId}:${input.revision}`, params: { site: websiteImportSite(input.url), pages: input.pages } });
+  const [document] = await tx.select({ agentId: knowledgeDocuments.agentId }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1);
+  await postBusinessNotificationInTransaction(tx, { businessId: input.businessId, kind: "website_import_finished", key: `website_import_finished:${input.websiteIngestionJobId}:${input.revision}`, params: { site: websiteImportSite(input.url), pages: input.pages }, href: websiteImportHref(document?.agentId ?? null) });
 }

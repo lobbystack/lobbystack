@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { businessMemberships, businessNotifications, businesses, createDatabaseClient, withBusinessTransaction, knowledgeDocuments, users, websiteIngestionJobs, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, businessMemberships, businessNotifications, businesses, createDatabaseClient, withBusinessTransaction, knowledgeDocuments, users, websiteIngestionJobs, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { deleteKnowledgeDocumentInTransaction, deleteWebsiteKnowledge, markKnowledgeDocumentFailed, postWebsiteImportFinishedInTransaction } from "./knowledge";
 
@@ -100,6 +100,23 @@ describe.skipIf(!client)("website imports in the bell", () => {
       const rows = await bell();
       expect(rows[0]).toMatchObject({ kind: "website_import_failed", resolvedAt: expect.any(Date) });
       expect(rows[1]).toEqual({ kind: "website_import_finished", key: `website_import_finished:${jobId}:2`, params: { site: "example.com", pages: 48 }, resolvedAt: null });
+    });
+  });
+
+  it("opens an agent's Specific knowledge for a website only that agent uses, and Knowledge for a shared one", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, doc } = await seed(tx);
+      const [agent] = await tx.insert(agents).values({ businessId, name: "Weekend line", greeting: "Hello", tone: "warm", summary: "", bookingPolicy: "", transferMode: "never" }).returning({ id: agents.id });
+      const owned = await doc("website", "https://weekend.example.com/");
+      await tx.update(knowledgeDocuments).set({ agentId: agent!.id }).where(eq(knowledgeDocuments.id, owned));
+      const shared = await doc("website", "https://example.com/");
+      await asWorker(tx, (db) => markKnowledgeDocumentFailed({ db }, { businessId, documentId: owned, websiteImport: { url: "https://weekend.example.com/" } }));
+      await asWorker(tx, (db) => markKnowledgeDocumentFailed({ db }, { businessId, documentId: shared, websiteImport: { url: "https://example.com/" } }));
+      await asWorker(tx, (db) => withBusinessTransaction(db, { businessId, actorType: "worker" }, (inner) => postWebsiteImportFinishedInTransaction(inner, { businessId, documentId: owned, websiteIngestionJobId: randomUUID(), revision: 1, url: "https://weekend.example.com/", pages: 3 })));
+      const rows = await tx.select({ kind: businessNotifications.kind, key: businessNotifications.dedupeKey, href: businessNotifications.href }).from(businessNotifications).where(eq(businessNotifications.businessId, businessId));
+      expect(rows.find((row) => row.key === `website_import_failed:${owned}`)?.href).toBe(`/agents/${agent!.id}/knowledge`);
+      expect(rows.find((row) => row.key === `website_import_failed:${shared}`)?.href).toBeNull();
+      expect(rows.find((row) => row.kind === "website_import_finished")?.href).toBe(`/agents/${agent!.id}/knowledge`);
     });
   });
 

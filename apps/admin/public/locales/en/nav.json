@@ -273,6 +273,10 @@
         "line_one": "Read {{count}} page of {{site}}.",
         "line_other": "Read {{count}} pages of {{site}}."
       },
+      "forwarding_detected": {
+        "title": "Call forwarding works",
+        "line": "Calls to {{from}} now reach your agent."
+      },
       "invite_accepted": {
         "title": "{{email}} joined your team",
         "line": "They accepted your invite."
