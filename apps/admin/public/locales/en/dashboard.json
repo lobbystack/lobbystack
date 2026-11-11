@@ -165,11 +165,11 @@
       "notes": "Notes: {{notes}}",
       "rescheduleRequest": "Reschedule request",
       "newTime": "New time: {{time}}",
-      "viewAll": "View all"
+      "inboxLink": "View all in the Inbox"
     },
     "upcoming": {
       "title": "Upcoming",
-      "viewAll": "View all",
+      "appointmentsLink": "View all appointments",
       "description": "The next appointments on the calendar.",
       "unknownService": "Unknown service",
       "employee": "Employee: {{name}}",

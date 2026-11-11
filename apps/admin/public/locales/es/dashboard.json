@@ -165,11 +165,11 @@
       "notes": "Notas: {{notes}}",
       "rescheduleRequest": "Solicitud de cambio de hora",
       "newTime": "Nueva hora: {{time}}",
-      "viewAll": "Ver todo"
+      "inboxLink": "Ver todo en la bandeja de entrada"
     },
     "upcoming": {
       "title": "Próximas",
-      "viewAll": "Ver todas",
+      "appointmentsLink": "Ver todas las citas",
       "description": "Las próximas citas del calendario.",
       "unknownService": "Servicio desconocido",
       "employee": "Empleado: {{name}}",
