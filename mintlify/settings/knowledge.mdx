@@ -1,6 +1,6 @@
 ---
 title: "Add business knowledge"
-description: "Add text, documents, and website content so your agent can answer common business questions, and answer the questions it couldn't."
+description: "Add text, documents, and website content so your agents can answer common business questions, give one agent knowledge of its own, and answer the questions they couldn't."
 sidebarTitle: "Knowledge"
 contentType: "How-to"
 ---
@@ -73,7 +73,7 @@ Website import focuses on public, caller-facing pages and skips:
     Paste the homepage or section URL you want LobbyStack to crawl.
   </Step>
   <Step title="Start import">
-    Click **Import**. Imported pages appear as they finish processing.
+    Click **Import**. The website appears as one row, and its page count grows as pages finish processing.
   </Step>
 </Steps>
 
@@ -114,16 +114,45 @@ Owners and admins can answer and dismiss questions. Viewers can read the list, b
 
 LobbyStack deletes a question 30 days after someone last asked it on Free, or 365 days on Starter and Pro. Each new ask restarts that period, including on a dismissed question. A text entry you saved as an answer stays in your knowledge until you delete it.
 
-## Manage entries
+## Manage sources
 
-From the Knowledge table you can:
+The Knowledge table shows one row per source. A website is one row with its page count, and each file and text entry is a row of its own. From the table you can:
 
-- Search entries.
-- Open a row to view extracted document text.
-- Disable an entry without deleting it.
-- Re-enable a disabled entry.
-- Delete an entry permanently.
-- Delete every page imported from one website. Open **More options** on any page from that site and choose **Delete all pages**. LobbyStack also stops an import that is still bringing in pages from it.
+- Open a file's row to read the text LobbyStack extracted.
+- Open a text entry's row to edit it.
+- Turn a source off without deleting it, and turn it on again.
+- Delete a source permanently. Deleting a website deletes all its pages and stops an import still bringing them in.
+
+### Manage a website's pages
+
+Click a website's row to open its pages. Each page has its own switch, so you can turn off one page the agent shouldn't answer from and keep the rest. You can also remove pages, except the address you imported, and click **Re-import** to read the site again. Turning the whole website off and on again keeps the pages you turned off.
+
+### Act on several sources at once
+
+<Steps>
+  <Step title="Turn on selection">
+    Click **Select** above the table. A checkbox appears on each row.
+  </Step>
+  <Step title="Choose rows">
+    Check the rows you want, or the box in the header to choose them all.
+  </Step>
+  <Step title="Pick an action">
+    Click **Delete**, **Turn off**, **Turn on**, or **Re-import** for websites. Click **Cancel** or press Escape to leave without changing anything.
+  </Step>
+</Steps>
+
+## Give one agent its own knowledge
+
+Every agent answers from the sources on this page. When one agent needs different facts, such as an evening line with its own door code, open that agent's **Specific knowledge** page: go to **Agents**, pick the agent, and click **Specific knowledge**.
+
+The page has two tables:
+
+- **Only this agent**: sources you add here with **Add Knowledge**. Websites, files and text work as they do on the Knowledge page, and no other agent uses them.
+- **Shared with every agent**: the sources from the Knowledge page. Each has a switch that turns it off for this agent only. A shared website opens its pages, where you can turn single pages off for this agent.
+
+New shared sources start on for every agent. Turning a source off for one agent changes nothing for the others. A source turned off on the Knowledge page is off for every agent, and its switch on an agent's page stays off.
+
+Answers to [unanswered questions](#answer-unanswered-questions) always go to the shared knowledge. Your business summary and opening hours come from shared knowledge only.
 
 <Tip>
   Prefer a smaller set of accurate entries over a large library of stale content. Caller-facing accuracy matters more than volume.

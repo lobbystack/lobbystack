@@ -1,6 +1,6 @@
 # Spec: agent-specific knowledge
 
-Status: ready-for-agent.
+Status: built. Waiting on `voice:call` against staging.
 
 [ADR 0012](../adr/0012-agents-share-a-workspace.md) put knowledge on the workspace, so every agent answers from the same sources. An after-hours agent or a second location's front desk sometimes needs facts the others shouldn't give, or must skip a page the others use. This spec lets one agent add sources of its own and turn shared ones off for itself. Services and employees stay shared.
 
@@ -89,3 +89,5 @@ The dashboard adds operator routes under `/api/knowledge/sources` for the groupe
 - **Business summary and hours:** they ignore agent-only sources, so an agent's own opening hours don't change the business's.
 - **Deploy window:** pages crawled by the old worker while a release drains have no `website_document_id`. Retrieval doesn't see them as part of their website until the next re-import, so a website switched off in that window can still answer from those pages. The listing groups them by host.
 - **Same website in two scopes:** refused with `409`, as above.
+- **Copying an agent:** a new agent copies the settings and rules of the agent it's created from, but not its own sources or its opt-outs. It starts with every shared source on.
+- **Turning an agent's switch on for a source the business turned off:** the switch stays disabled. The business page's switch wins.
