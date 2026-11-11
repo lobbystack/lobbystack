@@ -1,6 +1,14 @@
-import type { ReactNode } from "react"
+"use client"
+
+import { createContext, useContext, type ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
+
+/**
+ * Takes the page title's heading, so the dashboard's phone top bar can show
+ * the title once the heading scrolls under it. Unset outside the dashboard.
+ */
+export const PageTitleTargetContext = createContext<((heading: HTMLHeadingElement | null) => void | (() => void)) | null>(null)
 
 type PageHeaderProps = {
   title: ReactNode
@@ -17,6 +25,7 @@ export function PageHeader({
   actions,
   className,
 }: PageHeaderProps) {
+  const titleTarget = useContext(PageTitleTargetContext)
   return (
     <div
       className={cn(
@@ -26,7 +35,7 @@ export function PageHeader({
       )}
     >
       <div className={cn("flex min-w-0 max-w-full", titleAside ? "items-center gap-3" : "flex-col")}>
-        <h1 className="type-page-title">{title}</h1>
+        <h1 className="type-page-title" ref={titleTarget ?? undefined}>{title}</h1>
         {titleAside}
       </div>
       {actions ? (

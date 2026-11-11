@@ -183,5 +183,16 @@
     "moveDescription": "Sus conversaciones abiertas también pasan, y desde ahora responde {{name}}.",
     "moved": "{{channel}} pasó a {{name}}",
     "moveFailed": "No pudimos pasarlo."
+  },
+  "mobileNav": {
+    "label": "Menú principal",
+    "menu": "Menú",
+    "allAgents": "Todos los agentes",
+    "tabs": {
+      "home": "Inicio",
+      "inbox": "Bandeja",
+      "appointments": "Citas",
+      "contacts": "Contactos"
+    }
   }
 }

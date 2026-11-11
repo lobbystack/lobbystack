@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { ArrowUpRight, AudioLines, Check, ChevronsUpDown, Layers, ListChecks, MessagesSquare, Plus, Radio, ScrollText, type LucideIcon } from "lucide-react";
+import { useContext } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AddAgentDialog } from "@/components/agents/add-agent-dialog";
@@ -12,7 +13,7 @@ import { useManagedBusiness } from "@/hooks/use-agent-settings";
 import type { AgentListItem } from "@/hooks/use-agents";
 import { useAgents } from "@/hooks/use-agents";
 import { agentHref, agentPageOf, AGENT_PAGES, type AgentPage } from "@/lib/agent-pages";
-import { MenuGroup, MenuRow } from "./menu-parts";
+import { MenuGroup, MenuNavigationContext, MenuRow } from "./menu-parts";
 
 const ICONS: Partial<Record<AgentPage["section"], LucideIcon>> = { "": AudioLines, instructions: ScrollText, rules: ListChecks, channels: Radio, shared: Layers };
 
@@ -30,6 +31,8 @@ function AgentIdentity({ agent }: { agent: AgentListItem }) {
 function AgentHeading({ agent }: { agent: AgentListItem | undefined }) {
   const { t } = useTranslation("nav");
   const router = useRouter();
+  // In the phone menu, switching agents closes the sheet as the page opens.
+  const navigate = useContext(MenuNavigationContext) ?? router.push;
   const pathname = usePathname();
   const { agents, hasChoice } = useAgents();
   const { canManage } = useManagedBusiness();
@@ -52,7 +55,7 @@ function AgentHeading({ agent }: { agent: AgentListItem | undefined }) {
           <DropdownMenuContent align="start" className="min-w-56">
             <DropdownMenuGroup>
               {agents.map((item) => (
-                <DropdownMenuItem key={item.id} onClick={() => router.push(agentHref(item.id, section))}>
+                <DropdownMenuItem key={item.id} onClick={() => navigate(agentHref(item.id, section))}>
                   {item.id === agent.id ? <Check /> : <span aria-hidden="true" className="size-4" />}
                   <span className="truncate">{item.name}</span>
                 </DropdownMenuItem>

@@ -1,3 +1,4 @@
+import type { Viewport } from "next";
 import { cookies } from "next/headers";
 
 import { listAgents } from "@lobbystack/domain";
@@ -11,6 +12,9 @@ import "../globals.css";
 
 export const dynamic = "force-dynamic";
 export { generateBrandingMetadata as generateMetadata } from "@/app/root-document";
+
+// The phone tab bar and top bar pad themselves by the safe area, so the page can run under the iPhone's home indicator.
+export const viewport: Viewport = { viewportFit: "cover" };
 
 /**
  * The business's agents for the menu's first render, for people who can set

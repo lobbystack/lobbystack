@@ -180,5 +180,16 @@
     "moveDescription": "Its open conversations move too, and {{name}} answers from now on.",
     "moved": "{{channel}} moved to {{name}}",
     "moveFailed": "We couldn't move it."
+  },
+  "mobileNav": {
+    "label": "Main menu",
+    "menu": "Menu",
+    "allAgents": "All agents",
+    "tabs": {
+      "home": "Home",
+      "inbox": "Inbox",
+      "appointments": "Bookings",
+      "contacts": "Contacts"
+    }
   }
 }
