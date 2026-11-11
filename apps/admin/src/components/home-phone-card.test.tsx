@@ -56,17 +56,19 @@ describe("phone card on Home", () => {
     expect(screen.getByText("(416) 555-0100").parentElement!.textContent).toBe("(416) 555-0100");
     expect(screen.queryByText("Front desk")).toBeNull();
     expect(screen.getByRole("button", { name: en.home.phone.answersFirst.agent }).getAttribute("aria-haspopup")).toBe("dialog");
-    // With one number, Test call sits in the heading row, not in the number's row.
+    // Test call sits in the number's own line, level with the number.
     const testCall = screen.getByRole("button", { name: enCommon.testCall.trigger });
-    expect(testCall.closest("[data-slot='phone-heading-row']")!.contains(heading)).toBe(true);
-    expect(testCall.closest("li")).toBeNull();
+    expect(testCall.closest("[data-slot='phone-number-row']")!.textContent).toContain("(416) 555-0100");
     testCall.click();
     expect(opened).toEqual([{ agentId: "agent-front" }]);
-    // The heading is in the card, with the number and, under the divider, the results.
+    // The heading sits over the card, as a section heading. The card starts with the number, then a divider and the results.
     const card = container.querySelector("[data-slot='surface']")!;
-    expect(card.contains(heading)).toBe(true);
+    expect(heading.className).toContain("type-section-title");
+    expect(card.contains(heading)).toBe(false);
+    expect(card.firstElementChild!.getAttribute("data-slot")).toBe("phone-lines");
+    expect(card.firstElementChild!.className).toContain("border-b");
     expect(within(card as HTMLElement).getByTestId("results")).toBeTruthy();
-    expect(screen.getByRole("region", { name: en.home.phone.status.ready }).className).toContain("border-b");
+    expect(screen.getByRole("region", { name: en.home.phone.status.ready }).contains(card)).toBe(true);
     unregister();
   });
 
@@ -101,10 +103,9 @@ describe("phone card on Home", () => {
     const opened: unknown[] = [];
     const unregister = registerTestWindow((options) => opened.push(options));
     await renderCard({ called: true, lines: [front, evenings] });
-    const heading = screen.getByRole("heading", { name: en.home.phone.status.liveMany });
-    // The heading row holds no Test call; each row has its own.
-    expect(within(heading.closest("[data-slot='phone-heading-row']") as HTMLElement).queryByRole("button")).toBeNull();
-    expect(screen.getAllByRole("button", { name: enCommon.testCall.trigger })).toHaveLength(2);
+    expect(screen.getByRole("heading", { name: en.home.phone.status.liveMany })).toBeTruthy();
+    // Each row has its own Test call, level with its number.
+    expect(screen.getAllByRole("button", { name: enCommon.testCall.trigger }).map((button) => button.closest("[data-slot='phone-number-row']") !== null)).toEqual([true, true]);
     const rows = screen.getAllByRole("listitem");
     expect(rows).toHaveLength(2);
     expect(within(rows[0]!).getByText("Front desk")).toBeTruthy();
