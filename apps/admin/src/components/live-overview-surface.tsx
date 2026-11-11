@@ -116,7 +116,7 @@ export function LiveOverviewSurface() {
   }, [businessId, queryClient]);
 
   const openRequests = summary.data?.actionRequiredCount ?? summary.data?.actionRequired.length ?? 0;
-  const results = summary.data?.results ? homeResults(summary.data.results, i18n.language, t) : [];
+  const results = summary.data?.results ? homeResults(summary.data.results, i18n.language) : [];
 
   if (summary.data?.firstRealConversationAt === null && !business) return <PageHeader title={t("home.title")} />;
 
@@ -135,15 +135,14 @@ export function LiveOverviewSurface() {
         {showGuide || guidePending || !businessId ? null : <CallForwardingFromLink businessId={businessId} />}
         {/* The phone line over the last 30 days' results, in one card. It holds Home's Test call, one per number. */}
         {summary.isLoading ? (
-          <PhoneResultsSkeleton labels={{ status: t("home.phone.status.ready"), answersFirst: t(ANSWERS_FIRST_KEYS.never), results: RESULT_KEYS.map((key) => t(`home.results.${key}`)), ...(canSetUp ? { testCall: t("common:testCall.trigger") } : {}) }} />
+          <PhoneResultsSkeleton labels={{ status: t("home.phone.status.ready"), numberLabel: t("home.phone.numberLabel"), answersFirst: t(ANSWERS_FIRST_KEYS.never), results: RESULT_KEYS.map((key) => t(`home.results.${key}`)), ...(canSetUp ? { testCall: t("common:testCall.trigger") } : {}) }} />
         ) : (
-          <HomePhoneCard called={summary.data?.phoneCalled ?? false} canSetUp={canSetUp} lines={summary.data?.phoneLines ?? []} results={results.length ? (
+          <HomePhoneCard businessId={businessId ?? ""} called={summary.data?.phoneCalled ?? false} canSetUp={canSetUp} lines={summary.data?.phoneLines ?? []} results={results.length ? (
             <div className="grid sm:grid-cols-3">
               {results.map((result) => (
                 <section className="flex min-w-0 flex-col gap-2 border-b p-6 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0" key={result.key}>
                   <h2 className="type-card-title text-foreground">{t(`home.results.${result.key}`)}</h2>
                   <p className="type-metric-sm break-words">{result.value}</p>
-                  {result.description ? <p className="type-meta">{result.description}</p> : null}
                 </section>
               ))}
             </div>
@@ -294,31 +293,15 @@ export function LiveOverviewSurface() {
 
 const RESULT_KEYS = ["bookedValue", "timeSaved", "withoutTransfer"] as const;
 
-type DashboardT = ReturnType<typeof useTranslation<"dashboard">>["t"];
-
-/** Home's results row, each compared with the 30 days before. */
-function homeResults(results: AnalyticsResultsViewModel, language: string, t: DashboardT): Array<{ key: (typeof RESULT_KEYS)[number]; value: string; description: string | null }> {
-  const withoutTransfer = results.callsWithoutTransferPercent;
-  const points = new Intl.NumberFormat(intlLocale(language), { maximumFractionDigits: 1 });
+/** Home's results for the last 30 days, values only. */
+function homeResults(results: AnalyticsResultsViewModel, language: string): Array<{ key: (typeof RESULT_KEYS)[number]; value: string }> {
+  const withoutTransfer = results.callsWithoutTransferPercent.current;
   return [
-    { key: "bookedValue", value: formatBookedValue(results.bookedValue.current, results.bookedValue.currency, language), description: formatPercentDelta(results.bookedValue.current, results.bookedValue.previous, t) },
-    { key: "timeSaved", value: formatTimeSaved(results.timeSavedSeconds.current, language), description: formatPercentDelta(results.timeSavedSeconds.current, results.timeSavedSeconds.previous, t) },
-    {
-      key: "withoutTransfer",
-      value: withoutTransfer.current == null ? "—" : new Intl.NumberFormat(intlLocale(language), { style: "percent", maximumFractionDigits: 1 }).format(withoutTransfer.current / 100),
-      // A share moves in percentage points, and there's nothing to compare while either period has no calls.
-      description: withoutTransfer.current == null ? null
-        : withoutTransfer.previous == null ? t("delta.noPreviousCalls")
-        : withoutTransfer.current === withoutTransfer.previous ? t("delta.flat")
-        : t(withoutTransfer.current > withoutTransfer.previous ? "delta.pointsUp" : "delta.pointsDown", { value: points.format(Math.abs(withoutTransfer.current - withoutTransfer.previous)) }),
-    },
+    { key: "bookedValue", value: formatBookedValue(results.bookedValue.current, results.bookedValue.currency, language) },
+    { key: "timeSaved", value: formatTimeSaved(results.timeSavedSeconds.current, language) },
+    // A dash while no calls count.
+    { key: "withoutTransfer", value: withoutTransfer == null ? "—" : new Intl.NumberFormat(intlLocale(language), { style: "percent", maximumFractionDigits: 1 }).format(withoutTransfer / 100) },
   ];
-}
-
-function formatPercentDelta(current: number, previous: number, t: DashboardT): string {
-  if (current === previous) return t("delta.flat");
-  const value = previous === 0 ? 100 : ((current - previous) / previous) * 100;
-  return value > 0 ? t("delta.up", { value: Math.abs(value).toFixed(1) }) : t("delta.down", { value: Math.abs(value).toFixed(1) });
 }
 
 /** The details sheet the appointments page uses, for the Upcoming row that was clicked. */

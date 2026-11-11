@@ -1,15 +1,16 @@
 "use client";
 
-import Link from "next/link";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { StaffFirstMode } from "@lobbystack/shared";
 
 import { Badge } from "@/components/ui/badge";
 import { Surface } from "@/components/ui/surface";
 import { TestCallButton } from "@/components/navigation/test-call-button";
-import { STAFF_FIRST_ANCHOR } from "@/components/staff-first-section";
+import { StaffFirstDialog } from "@/components/staff-first-dialog";
+import { useAgentSettingsQuery, useSaveAgent } from "@/hooks/use-agent-settings";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 
 export type HomePhoneLine = { e164: string; agentId: string; agentName: string; staffFirstMode: StaffFirstMode };
@@ -30,10 +31,11 @@ export function phoneStatusKey(called: boolean, lines: ReadonlyArray<Pick<HomePh
 /**
  * Home's card for the phone line and the last 30 days. The top holds whether
  * the line is ready or taking calls, then each number with who answers it
- * first and its Test call; with several numbers each row names its agent. The
- * bottom holds `results`. A business with no number gets the results alone.
+ * first and its Test call. One number reads "Your number"; with several, each
+ * row names its agent instead. The bottom holds `results`. A business with no
+ * number gets the results alone.
  */
-export function HomePhoneCard({ called, canSetUp, lines, results }: { called: boolean; canSetUp: boolean; lines: HomePhoneLine[]; results: ReactNode }) {
+export function HomePhoneCard({ businessId, called, canSetUp, lines, results }: { businessId: string; called: boolean; canSetUp: boolean; lines: HomePhoneLine[]; results: ReactNode }) {
   const { i18n, t } = useTranslation("dashboard");
   if (!lines.length && !results) return null;
   const several = lines.length > 1;
@@ -51,13 +53,11 @@ export function HomePhoneCard({ called, canSetUp, lines, results }: { called: bo
               return (
                 <li className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6" key={line.e164}>
                   <div className="flex min-w-0 flex-col gap-2">
-                    <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
-                      <p className="type-metric-sm whitespace-nowrap">{formatPhoneNumberDisplay(line.e164, i18n.language)}</p>
-                      {several ? <p className="type-body-muted min-w-0 truncate">{line.agentName}</p> : null}
-                    </div>
-                    {canSetUp ? (
-                      <Badge render={<Link href={`/agents/${encodeURIComponent(line.agentId)}#${STAFF_FIRST_ANCHOR}`} />} variant="secondary">{answersFirst}<ChevronRight data-icon="inline-end" /></Badge>
-                    ) : <Badge variant="secondary">{answersFirst}</Badge>}
+                    <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+                      <span className="type-body-muted min-w-0 truncate" data-slot="phone-number-label">{several ? line.agentName : t("home.phone.numberLabel")}</span>
+                      <span className="type-metric-sm whitespace-nowrap">{formatPhoneNumberDisplay(line.e164, i18n.language)}</span>
+                    </p>
+                    {canSetUp ? <AnswersFirstChip agentId={line.agentId} businessId={businessId} label={answersFirst} /> : <Badge variant="secondary">{answersFirst}</Badge>}
                   </div>
                   <div className="flex shrink-0"><TestCallButton agentId={line.agentId} /></div>
                 </li>
@@ -68,5 +68,38 @@ export function HomePhoneCard({ called, canSetUp, lines, results }: { called: bo
       ) : null}
       {results}
     </Surface>
+  );
+}
+
+/** Who answers first, as a chip that opens the agent's Staff answers first dialog right on Home. */
+function AnswersFirstChip({ agentId, businessId, label }: { agentId: string; businessId: string; label: string }) {
+  const [open, setOpen] = useState(false);
+  // The dialog loads the agent's settings on the first click, then stays mounted so it can animate out.
+  const [opened, setOpened] = useState(false);
+  return (
+    <>
+      <Badge className="cursor-pointer hover:bg-pill/80" onClick={() => { setOpened(true); setOpen(true); }} render={<button aria-haspopup="dialog" type="button" />} variant="secondary">{label}<ChevronRight data-icon="inline-end" /></Badge>
+      {opened ? <AgentStaffFirstDialog agentId={agentId} businessId={businessId} onOpenChange={setOpen} open={open} /> : null}
+    </>
+  );
+}
+
+/** The shared dialog on one agent's saved settings. A save refreshes Home, so the chip says the new setting. */
+function AgentStaffFirstDialog({ agentId, businessId, onOpenChange, open }: { agentId: string; businessId: string; onOpenChange: (open: boolean) => void; open: boolean }) {
+  const queryClient = useQueryClient();
+  const settings = useAgentSettingsQuery(businessId, agentId);
+  const save = useSaveAgent(businessId, agentId);
+  return (
+    <StaffFirstDialog
+      businessId={businessId}
+      defaultLocale={settings.data?.business?.defaultLocale ?? "en"}
+      onOpenChange={onOpenChange}
+      onSave={async (patch) => {
+        await save(patch);
+        await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      }}
+      open={open}
+      profile={settings.data?.profile}
+    />
   );
 }

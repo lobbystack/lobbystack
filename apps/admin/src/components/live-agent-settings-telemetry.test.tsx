@@ -84,8 +84,7 @@ describe("agent settings telemetry", () => {
     const fetchMock = setup({ transferNumber: "+14165550100" });
     await userEvent.click(await enabled("agent:staffFirst.setUp"));
     const dialog = within(await screen.findByRole("dialog"));
-    await userEvent.click(dialog.getByRole("combobox", { name: "agent:staffFirst.mode.when" }));
-    await userEvent.click(await screen.findByRole("option", { name: "agent:staffFirst.mode.options.always" }));
+    await userEvent.click(dialog.getByRole("radio", { name: "agent:staffFirst.mode.options.always" }));
     await userEvent.click(dialog.getByRole("button", { name: "agent:staffFirst.save" }));
     await waitFor(() => telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "staff_first" }));
     const patch = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");

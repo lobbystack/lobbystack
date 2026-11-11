@@ -417,6 +417,10 @@
       "label": "Llamar primero a su equipo",
       "hint": "Su teléfono suena primero. Pulse 1 para atender la llamada. Si no, responde el agente.",
       "when": "Cuándo",
+      "effect": {
+        "never": "Su agente contesta todas las llamadas.",
+        "business_hours": "En horario de atención, su teléfono suena primero. Si no atiende la llamada, o fuera de ese horario, contesta su agente."
+      },
       "options": {
         "never": "Desactivado",
         "business_hours": "En horario de atención",

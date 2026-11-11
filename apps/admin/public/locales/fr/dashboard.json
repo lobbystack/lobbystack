@@ -7,19 +7,10 @@
     "title": "Analytique",
     "description": "Consultez les tendances d'engagement pour les appels, les messages et l'activite de reservation."
   },
-  "delta": {
-    "flat": "Aucun changement depuis le mois dernier",
-    "up": "+{{value}} % depuis le mois dernier",
-    "down": "-{{value}} % depuis le mois dernier",
-    "durationUp": "+{{value}} depuis le mois dernier",
-    "durationDown": "-{{value}} depuis le mois dernier",
-    "pointsUp": "+{{value}} pts depuis le mois dernier",
-    "pointsDown": "-{{value}} pts depuis le mois dernier",
-    "noPreviousCalls": "Aucun appel le mois précédent"
-  },
   "home": {
     "title": "Accueil",
     "phone": {
+      "numberLabel": "Votre numéro :",
       "status": {
         "ready": "Prêt pour votre premier appel",
         "live": "Votre agent prend les appels",

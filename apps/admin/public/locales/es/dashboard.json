@@ -7,19 +7,10 @@
     "title": "Analíticas",
     "description": "Revise las tendencias de actividad en llamadas, mensajes y reservas."
   },
-  "delta": {
-    "flat": "Sin cambios respecto al mes pasado",
-    "up": "+{{value}} % respecto al mes pasado",
-    "down": "-{{value}} % respecto al mes pasado",
-    "durationUp": "+{{value}} respecto al mes pasado",
-    "durationDown": "-{{value}} respecto al mes pasado",
-    "pointsUp": "+{{value}} pts respecto al mes pasado",
-    "pointsDown": "-{{value}} pts respecto al mes pasado",
-    "noPreviousCalls": "Sin llamadas el mes anterior"
-  },
   "home": {
     "title": "Inicio",
     "phone": {
+      "numberLabel": "Su número:",
       "status": {
         "ready": "Listo para su primera llamada",
         "live": "Su agente está atendiendo llamadas",

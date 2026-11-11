@@ -233,11 +233,14 @@ describe("Upcoming rows on Home", () => {
 });
 
 describe("phone card on Home", () => {
-  it("keeps Test call in one card with the results, below Getting started and above Action required", async () => {
+  it("keeps the status, the number, Test call and the results in one card, above Action required", async () => {
     const i18n = await setup("en", null, { role: "business_owner", phoneLines: [{ e164: "+14165550100", agentId: "agent-1", agentName: "Front desk", staffFirstMode: "never" }] });
     const phone = screen.getByRole("region", { name: i18n.t("home.phone.status.ready") });
-    expect(within(phone).getByRole("link", { name: i18n.t("home.phone.answersFirst.agent") }).getAttribute("href")).toBe("/agents/agent-1#staff-first");
     const card = phone.closest("[data-slot='surface']")!;
+    expect(within(phone).getByText(i18n.t("home.phone.numberLabel"))).toBeTruthy();
+    // The chip opens the setting in a dialog on Home rather than leaving for the agent's page.
+    expect(within(phone).getByRole("button", { name: i18n.t("home.phone.answersFirst.agent") }).getAttribute("aria-haspopup")).toBe("dialog");
+    expect(within(phone).queryByRole("link")).toBeNull();
     expect(within(card as HTMLElement).getByRole("heading", { name: i18n.t("home.results.bookedValue") })).toBeTruthy();
     const actionRequired = screen.getByRole("heading", { name: i18n.t("home.actionRequired.title") });
     expect(card.compareDocumentPosition(actionRequired) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -266,8 +269,13 @@ describe("Home while it loads", () => {
     expect(screen.getByText(i18n.t("home.chart.title"))).toBeTruthy();
     expect(screen.getByText(i18n.t("home.recentCalls.title"))).toBeTruthy();
     // The phone part's place is held in the same card as the results, before Home knows whether the business has a number.
-    for (const label of [i18n.t("home.phone.status.ready"), i18n.t("home.phone.answersFirst.agent"), i18n.t("common:testCall.trigger")]) expect(screen.getByText(label).closest("[data-slot='skeleton']")).toBeTruthy();
-    expect(screen.getByText(i18n.t("home.phone.status.ready")).closest("[aria-busy='true']")).toBe(screen.getByText(i18n.t("home.results.bookedValue")).closest("[aria-busy='true']"));
+    for (const label of [i18n.t("home.phone.status.ready"), i18n.t("home.phone.numberLabel"), i18n.t("home.phone.answersFirst.agent"), i18n.t("common:testCall.trigger")]) expect(screen.getByText(label).closest("[data-slot='skeleton']")).toBeTruthy();
+    const card = screen.getByText(i18n.t("home.phone.answersFirst.agent")).closest("[data-slot='surface']")!;
+    expect(card.getAttribute("aria-busy")).toBe("true");
+    expect(card.contains(screen.getByText(i18n.t("home.phone.status.ready")))).toBe(true);
+    expect(card.contains(screen.getByText(i18n.t("home.results.bookedValue")))).toBe(true);
+    // Each result holds its title and value, with no comparison line.
+    expect(screen.getByText(i18n.t("home.results.bookedValue")).closest("[data-slot='skeleton']")!.parentElement!.parentElement!.querySelectorAll("[data-slot='skeleton']")).toHaveLength(2);
     expect(container.querySelectorAll("[aria-busy='true']")).toHaveLength(4);
   });
 
@@ -296,19 +304,20 @@ describe("results row on Home", () => {
     return [...section.querySelectorAll("section")].map((card) => [...card.querySelectorAll("h2, p")].map((element) => element.textContent));
   };
 
-  it("shows booked value, time saved and the share without a transfer for the last 30 days, compared with the month before", async () => {
+  it("shows booked value, time saved and the share without a transfer for the last 30 days, with no comparison line", async () => {
     const i18n = await setup("en", null, { results: { bookedValue: { currency: "USD", current: 125_000, previous: 100_000 }, timeSavedSeconds: { current: 12 * 3_600 + 5 * 60, previous: 0 }, callsWithoutTransferPercent: { current: 82.5, previous: 80 } } });
     expect(row(i18n)).toEqual([
-      ["Booked value", "$1,250", "+25.0% from last month"],
-      ["Time saved", "12 hr 5 min", "+100.0% from last month"],
-      ["Calls without transfer", "82.5%", "+2.5 pts from last month"],
+      ["Booked value", "$1,250"],
+      ["Time saved", "12 hr 5 min"],
+      ["Calls without transfer", "82.5%"],
     ]);
+    expect(screen.queryByText(/from last month/)).toBeNull();
   });
 
-  it("says the month before had no calls, and shows a dash with no comparison while no calls count", async () => {
+  it("shows each value alone whatever the month before had, and a dash while no calls count", async () => {
     let i18n = await setup("en", null, { results: { bookedValue: { currency: "EUR", current: 0, previous: 0 }, timeSavedSeconds: { current: 0, previous: 0 }, callsWithoutTransferPercent: { current: 100, previous: null } } });
-    expect(row(i18n)[2]).toEqual(["Calls without transfer", "100%", en.delta.noPreviousCalls]);
-    expect(row(i18n)[0]).toEqual(["Booked value", "€0", en.delta.flat]);
+    expect(row(i18n)[2]).toEqual(["Calls without transfer", "100%"]);
+    expect(row(i18n)[0]).toEqual(["Booked value", "€0"]);
     cleanup();
     i18n = await setup("fr", null);
     expect(row(i18n)[2]).toEqual([fr.home.results.withoutTransfer, "—"]);

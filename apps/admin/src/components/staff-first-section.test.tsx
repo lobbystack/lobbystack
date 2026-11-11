@@ -30,9 +30,40 @@ describe("StaffFirstSection", () => {
     expect(screen.getByText("agent:staffFirst.mode.options.never")).toBeTruthy();
     expect(screen.queryByText("agent:staffFirst.number.label")).toBeNull();
     const dialog = await openDialog("agent:staffFirst.setUp");
-    expect(dialog.getByText("agent:staffFirst.mode.hint")).toBeTruthy();
-    // Off shows only the mode, as the section did inline.
+    // Off says what happens to a call, and leaves the phone fields out.
+    expect(dialog.getByText("agent:staffFirst.mode.effect.never")).toBeTruthy();
     expect(dialog.queryByText("agent:staffFirst.number.label")).toBeNull();
+  });
+
+  it("offers the three options side by side as a radio group, each saying what happens to a call", async () => {
+    section({ profile: { staffFirstMode: "never" } });
+    const dialog = await openDialog("agent:staffFirst.setUp");
+    const group = dialog.getByRole("radiogroup", { name: "agent:staffFirst.mode.when" });
+    const radios = within(group).getAllByRole("radio");
+    expect(radios.map((radio) => radio.textContent)).toEqual(["agent:staffFirst.mode.options.never", "agent:staffFirst.mode.options.business_hours", "agent:staffFirst.mode.options.always"]);
+    expect(radios.map((radio) => radio.getAttribute("aria-checked"))).toEqual(["true", "false", "false"]);
+    // The panel under the options describes the group.
+    expect(document.getElementById(group.getAttribute("aria-describedby")!)!.textContent).toBe("agent:staffFirst.mode.effect.never");
+    await userEvent.click(radios[1]!);
+    expect(dialog.getByText("agent:staffFirst.mode.effect.business_hours")).toBeTruthy();
+    expect(dialog.getByText("agent:staffFirst.number.label")).toBeTruthy();
+    await userEvent.click(radios[2]!);
+    expect(dialog.getByText("agent:staffFirst.mode.hint")).toBeTruthy();
+  });
+
+  it("moves and selects with the arrow keys, as a radio group does", async () => {
+    section({ profile: { staffFirstMode: "never" } });
+    const dialog = await openDialog("agent:staffFirst.setUp");
+    const radios = dialog.getAllByRole("radio");
+    // Only the chosen option takes Tab focus.
+    expect(radios.map((radio) => radio.getAttribute("tabindex"))).toEqual(["0", "-1", "-1"]);
+    radios[0]!.focus();
+    await userEvent.keyboard("{ArrowRight}");
+    await waitFor(() => expect(radios[1]!.getAttribute("aria-checked")).toBe("true"));
+    expect(document.activeElement).toBe(radios[1]);
+    await userEvent.keyboard("{ArrowRight}");
+    await waitFor(() => expect(radios[2]!.getAttribute("aria-checked")).toBe("true"));
+    expect(dialog.getByText("agent:staffFirst.mode.hint")).toBeTruthy();
   });
 
   it("shows when the team's phone rings and which phone, with Edit", () => {
@@ -45,6 +76,8 @@ describe("StaffFirstSection", () => {
     const { container } = section({ isLoading: true, profile: undefined });
     expect(screen.queryByRole("button")).toBeNull();
     expect(container.querySelectorAll("[data-slot='skeleton']").length).toBe(2);
+    // A placeholder is a <div>, which can't sit inside a <p> without breaking hydration.
+    expect(container.querySelectorAll("p div, [data-slot='item-description'] div")).toHaveLength(0);
   });
 
   it("says when this deployment isn't set up for it", () => {
@@ -68,8 +101,7 @@ describe("StaffFirstSection", () => {
     section({ block: "plan" });
     expect(screen.getByText("agent:staffFirst.unavailable.plan")).toBeTruthy();
     const dialog = await openDialog("agent:actions.edit");
-    await userEvent.click(dialog.getByRole("combobox", { name: "agent:staffFirst.mode.when" }));
-    await userEvent.click(await screen.findByRole("option", { name: "agent:staffFirst.mode.options.never" }));
+    await userEvent.click(dialog.getByRole("radio", { name: "agent:staffFirst.mode.options.never" }));
     await userEvent.click(dialog.getByRole("button", { name: "agent:staffFirst.save" }));
     await waitFor(() => expect(onSave).toHaveBeenCalledWith({ staffFirstMode: "never", staffFirstNumber: "+14165550142", staffFirstRingSeconds: 20, staffFirstMessage: null, staffFirstHandoverMessage: null }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -79,8 +111,7 @@ describe("StaffFirstSection", () => {
   it("asks for the staff phone in the dialog before saving", async () => {
     section({ profile: { staffFirstMode: "never" } });
     const dialog = await openDialog("agent:staffFirst.setUp");
-    await userEvent.click(dialog.getByRole("combobox", { name: "agent:staffFirst.mode.when" }));
-    await userEvent.click(await screen.findByRole("option", { name: "agent:staffFirst.mode.options.always" }));
+    await userEvent.click(dialog.getByRole("radio", { name: "agent:staffFirst.mode.options.always" }));
     await userEvent.click(dialog.getByRole("button", { name: "agent:staffFirst.save" }));
     expect(dialog.getByText("agent:staffFirst.errors.numberRequired")).toBeTruthy();
     expect(onSave).not.toHaveBeenCalled();
@@ -89,8 +120,7 @@ describe("StaffFirstSection", () => {
   it("saves, closes the dialog and shows the new state in the row", async () => {
     section();
     const dialog = await openDialog("agent:actions.edit");
-    await userEvent.click(dialog.getByRole("combobox", { name: "agent:staffFirst.mode.when" }));
-    await userEvent.click(await screen.findByRole("option", { name: "agent:staffFirst.mode.options.business_hours" }));
+    await userEvent.click(dialog.getByRole("radio", { name: "agent:staffFirst.mode.options.business_hours" }));
     await userEvent.type(dialog.getByRole("textbox", { name: "agent:staffFirst.message.label" }), "One moment.");
     await userEvent.click(dialog.getByRole("button", { name: "agent:staffFirst.save" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
