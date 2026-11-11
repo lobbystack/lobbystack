@@ -3,7 +3,8 @@
     "signOut": "Odjavi se",
     "terms": "Uslovi",
     "privacy": "Privatnost",
-    "support": "Podrška"
+    "support": "Podrška",
+    "backToDashboard": "Nazad na kontrolnu tablu"
   },
   "errors": {
     "tooManyBusinesses": "Već posedujete 10 radnih prostora, što je ograničenje za jedan nalog."
@@ -172,7 +173,7 @@
       "verification": "Besplatan broj zahteva verifikovan telefon.",
       "emailVerification": "Verifikujte svoju imejl adresu pre nego što izaberete probni broj."
     },
-    "title": "Izaberite broj telefona za AI agenta",
+    "title": "Izaberite broj telefona za svog agenta",
     "countryLabel": "Zemlja",
     "kindLocal": "Lokalni",
     "kindTollFree": "Besplatni",
@@ -204,7 +205,7 @@
     "skipFailed": "Trenutno ne možemo da preskočimo ovaj korak. Pokušajte ponovo.",
     "tooManySearches": "Previše pretraga. Sačekajte malo i pokušajte ponovo.",
     "unavailable": "Neko je upravo uzeo taj broj. Izaberite drugi sa osvežene liste.",
-    "selectedTitle": "Broj telefona AI agenta",
+    "selectedTitle": "Broj telefona Vašeg agenta",
     "selectedNumberLabel": "Izabrani broj",
     "numbersUnavailable": "Brojevi telefona još nisu podešeni na ovoj kontrolnoj tabli. Zamolite osobu koja njome upravlja da poveže telefonskog provajdera.",
     "country": {

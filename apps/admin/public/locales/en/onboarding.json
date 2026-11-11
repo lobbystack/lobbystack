@@ -3,7 +3,8 @@
     "signOut": "Sign out",
     "terms": "Terms",
     "privacy": "Privacy",
-    "support": "Support"
+    "support": "Support",
+    "backToDashboard": "Back to dashboard"
   },
   "errors": {
     "tooManyBusinesses": "You already own 10 workspaces, the limit for one account."
@@ -171,7 +172,7 @@
       "verification": "A free number needs a verified phone.",
       "emailVerification": "Verify your email address before you choose a trial number."
     },
-    "title": "Pick your AI's phone number",
+    "title": "Pick your agent's phone number",
     "countryLabel": "Country",
     "kindLocal": "Local",
     "kindTollFree": "Toll-free",
@@ -203,7 +204,7 @@
     "skipFailed": "We couldn't skip this step right now. Please try again.",
     "tooManySearches": "Too many searches. Please wait a bit and try again.",
     "unavailable": "That number was just taken. Pick another one from the refreshed list.",
-    "selectedTitle": "Your AI's phone number",
+    "selectedTitle": "Your agent's phone number",
     "selectedNumberLabel": "Selected number",
     "numbersUnavailable": "Phone numbers aren't set up on this dashboard yet. Ask whoever runs it to connect a phone provider.",
     "country": {

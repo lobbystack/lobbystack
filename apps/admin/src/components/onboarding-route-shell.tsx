@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { normalizeOnboardingStage, onboardingProgress, onboardingStages, resolveOnboardingRoute, type OnboardingStage } from "@lobbystack/shared";
 
+import { onboardingReturnTarget } from "@/lib/onboarding-return";
 import { requestJson } from "@/lib/request-json";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useSignOut } from "@/hooks/use-sign-out";
@@ -27,7 +28,7 @@ export function OnboardingRouteShell({ children }: { children: React.ReactNode }
   const { t } = useTranslation("onboarding");
   const signOut = useSignOut();
   const route = routes[pathname as keyof typeof routes] ?? routes["/onboarding/business"];
-  const { business } = useActiveBusiness();
+  const { business, businesses } = useActiveBusiness();
   const stage = business?.onboardingStage;
   const partnerAccessLevel = business?.partnerAccessLevel;
   const phones = useQuery({ queryKey: ["onboarding-primary-number", business?.businessId], enabled: route.key === "number" && Boolean(business), queryFn: () => requestJson<Numbers>(`/api/phone-numbers?businessId=${encodeURIComponent(business!.businessId)}`) });
@@ -57,10 +58,23 @@ export function OnboardingRouteShell({ children }: { children: React.ReactNode }
     const numberPickerStaysOpen = route.key === "number" && ["phone_number", "phone_number_claiming", "choose_plan", "attribution", "meet", "complete"].includes(stageNow);
     if (!numberPickerStaysOpen && onboardingStages.indexOf(stageNow) > onboardingStages.indexOf(expected)) router.replace(resolveOnboardingRoute(stageNow));
   }, [partnerAccessLevel, pathname, route.key, router]);
+  // Someone setting up another workspace can go back to a finished one, as it was.
+  const returnTarget = onboardingReturnTarget(businesses.data?.businesses);
+  const queryClient = useQueryClient();
+  const backToDashboard = useCallback(async () => {
+    if (!returnTarget) return;
+    if (!returnTarget.active) {
+      await requestJson("/api/businesses/switch", { method: "POST", body: JSON.stringify({ businessId: returnTarget.businessId }) });
+      queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== "businesses" });
+      await queryClient.invalidateQueries({ queryKey: ["businesses"] });
+    }
+    router.push("/");
+  }, [queryClient, returnTarget, router]);
   return (
     <ReplacementOnboardingShell
       description={DESCRIBED.has(route.key) ? t(`${route.key}.description`) : ""}
       legalAgreement="business"
+      onBackToDashboard={returnTarget ? () => void backToDashboard() : undefined}
       onSignOut={() => void signOut()}
       progress={onboardingProgress(pathname, business?.partnerAccessLevel)}
       title={t(selectedNumber ? "number.selectedTitle" : `${route.key}.title`)}

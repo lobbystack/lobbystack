@@ -3,7 +3,8 @@
     "signOut": "Cerrar sesión",
     "terms": "Términos",
     "privacy": "Privacidad",
-    "support": "Soporte"
+    "support": "Soporte",
+    "backToDashboard": "Volver al panel"
   },
   "errors": {
     "tooManyBusinesses": "Ya es propietario de 10 espacios de trabajo, el límite para una cuenta."
@@ -172,7 +173,7 @@
       "verification": "Un número gratuito requiere un teléfono verificado.",
       "emailVerification": "Verifique su dirección de correo antes de elegir un número de prueba."
     },
-    "title": "Elija el número de teléfono de su IA",
+    "title": "Elija el número de teléfono de su agente",
     "countryLabel": "País",
     "kindLocal": "Local",
     "kindTollFree": "Gratuito",
@@ -204,7 +205,7 @@
     "skipFailed": "No pudimos omitir este paso en este momento. Inténtelo de nuevo.",
     "tooManySearches": "Demasiadas búsquedas. Espere un momento e inténtelo de nuevo.",
     "unavailable": "Ese número acaba de ser asignado. Elija otro de la lista actualizada.",
-    "selectedTitle": "El número de teléfono de su IA",
+    "selectedTitle": "El número de teléfono de su agente",
     "selectedNumberLabel": "Número seleccionado",
     "numbersUnavailable": "Los números de teléfono aún no están configurados en este panel. Pida a quien lo administra que conecte un proveedor de telefonía.",
     "country": {

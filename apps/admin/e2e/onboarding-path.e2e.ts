@@ -56,6 +56,7 @@ test("the website path waits for the import and ends on Meet your agent", async 
   const database = migrator();
   const email = `${prefix}-${randomUUID()}@example.invalid`;
   let businessId: string | undefined;
+  let secondBusinessId: string | undefined;
   try {
     businessId = await newOwner(page, testInfo, email);
 
@@ -113,7 +114,20 @@ test("the website path waits for the import and ends on Meet your agent", async 
     await page.getByRole("menuitem", { name: nav.sidebar.createBusiness }).click();
     await expect(page).toHaveURL("/onboarding/business?create=true");
     await expect(page.getByLabel(onboarding.businessName.label)).toHaveValue("");
+
+    // Setting up the second one, Back to dashboard returns to the first, as it was.
+    await page.getByLabel(onboarding.businessName.label).fill(`Second Path ${randomUUID().slice(0, 8)}`);
+    const second = page.waitForResponse((response) => response.url().endsWith("/api/businesses") && response.request().method() === "POST");
+    await page.getByRole("button", { name: onboarding.businessName.continue }).click();
+    secondBusinessId = (await (await second).json() as { businessId: string }).businessId;
+    await expect(page).toHaveURL("/onboarding/website");
+    await page.getByRole("button", { name: onboarding.shell.backToDashboard }).click();
+    await expect(page).toHaveURL("/");
+    await expect(page.getByRole("button", { name: /^Onboarding Path / })).toBeVisible();
+    const [secondRow] = await database.db.select({ stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, secondBusinessId));
+    expect(secondRow?.stage).toBe("website");
   } finally {
+    if (secondBusinessId) await database.db.execute(sql`delete from public.businesses where id = ${secondBusinessId}`);
     await removeFixtures(database, email, businessId);
     await database.pool.end();
   }

@@ -3,7 +3,8 @@
     "signOut": "Déconnexion",
     "terms": "Conditions",
     "privacy": "Confidentialité",
-    "support": "Assistance"
+    "support": "Assistance",
+    "backToDashboard": "Retour au tableau de bord"
   },
   "errors": {
     "tooManyBusinesses": "Vous possédez déjà 10 espaces de travail, la limite pour un compte."
@@ -172,7 +173,7 @@
       "verification": "Un numéro gratuit exige un téléphone vérifié.",
       "emailVerification": "Vérifiez votre adresse courriel avant de choisir un numéro d'essai."
     },
-    "title": "Choisissez le numéro de votre IA",
+    "title": "Choisissez le numéro de votre agent",
     "countryLabel": "Pays",
     "kindLocal": "Local",
     "kindTollFree": "Sans frais",
@@ -204,7 +205,7 @@
     "skipFailed": "Impossible d'ignorer cette étape maintenant. Réessayez.",
     "tooManySearches": "Trop de recherches. Attendez un peu, puis réessayez.",
     "unavailable": "Ce numéro vient d'être pris. Choisissez-en un autre.",
-    "selectedTitle": "Le numéro de votre IA",
+    "selectedTitle": "Le numéro de votre agent",
     "selectedNumberLabel": "Numéro sélectionné",
     "numbersUnavailable": "Les numéros de téléphone ne sont pas encore configurés sur ce tableau de bord. Demandez à la personne qui le gère de connecter un fournisseur de téléphonie.",
     "country": {
