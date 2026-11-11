@@ -1,0 +1,168 @@
+{
+  "actions": {
+    "getStarted": "Počni",
+    "readGuide": "Pročitaj vodič"
+  },
+  "pages": {
+    "inbox": {
+      "title": "Vaši pozivi, poruke i četovi na jednom mestu",
+      "what": "Razgovori vašeg agenta stižu ovde čim se dese.",
+      "does": "Rešite otkazivanja, pomeranja termina i povratne pozive iz samog razgovora.",
+      "how": "Filtrirajte po kanalu da vidite samo pozive, poruke ili četove."
+    },
+    "appointments": {
+      "title": "Vaše rezervacije u jednom kalendaru",
+      "what": "Svaki termin koji vaš agent zakaže pojavljuje se ovde.",
+      "does": "Kliknite na slobodno vreme da sami zakažete termin.",
+      "how": "Dodajte slobodne dane da blokirate sate koje agent ne sme da zakaže."
+    },
+    "agents": {
+      "title": "Podesite kako svaki agent odgovara",
+      "what": "Svaki agent ima svoj broj, pozdrav, glas, pravila, zakazivanje i prebacivanje poziva.",
+      "shared": "Svi vaši agenti dele podatke o poslovanju, usluge i znanje.",
+      "does": "Podrazumevani agent odgovara na sve što niste dodelili drugom agentu.",
+      "how": "Napravite izmenu, pa kliknite na Probni poziv da je čujete."
+    },
+    "rules": {
+      "title": "Recite agentu šta da radi i kada",
+      "what": "Pravilo govori agentu šta da uradi kada se nešto desi.",
+      "does": "Na primer, kada pozivalac pomene hitan slučaj, neka agent prebaci poziv vama.",
+      "how": "Ograničite pravilo na jedan kanal, na primer na pozive."
+    },
+    "channels": {
+      "title": "Gde vas klijenti dobijaju preko ovog agenta",
+      "what": "Kanal je broj telefona, vidžet za sajt ili Instagram.",
+      "does": "Ovaj agent odgovara na svakom kanalu koji ovde povežete.",
+      "how": "Prebacite kanal na drugog agenta da promenite ko na njemu odgovara."
+    },
+    "knowledge": {
+      "title": "Šta vaš agent zna o vašem poslovanju",
+      "what": "Vaš agent odgovara na osnovu vašeg sajta, fajlova i čestih pitanja.",
+      "does": "Pogledajte pitanja bez odgovora da vidite šta da dodate.",
+      "how": "Dodajte veb stranicu, fajl ili često pitanje da popunite prazninu."
+    },
+    "services": {
+      "title": "Usluge koje vaš agent zakazuje",
+      "what": "Navedite šta nudite, uz trajanje i cenu za svaku uslugu.",
+      "does": "Vaš agent navodi ove cene i zakazuje termine ovog trajanja.",
+      "how": "Dodajte uslugu ili izmenite postojeću da promenite cenu ili trajanje."
+    },
+    "employees": {
+      "title": "Ljudi kod kojih pozivaoci mogu da zakažu",
+      "what": "Navedite ko ovde radi i koje usluge svako od njih obavlja.",
+      "does": "Pozivalac može da traži nekoga po imenu i zakaže kod te osobe.",
+      "how": "Dodajte broj telefona da bi agent mogao da prebaci pozive toj osobi."
+    },
+    "analytics": {
+      "title": "Pogledajte koliko poziva i termina vaš agent obradi",
+      "what": "Gornji red prikazuje pozive, današnje termine i prosečno trajanje poziva.",
+      "does": "Grafikon prati pozive i poruke kroz vreme, po agentu ako ih imate više.",
+      "how": "Izaberite period i interval da uporedite dva perioda."
+    }
+  },
+  "sample": {
+    "inbox": {
+      "title": "Prijemno sanduče",
+      "all": "Sve",
+      "calls": "Pozivi",
+      "texts": "Poruke",
+      "chats": "Četovi",
+      "reschedule": "Pomeranje termina",
+      "callback": "Povratni poziv",
+      "cancellation": "Otkazivanje",
+      "first": "Želi da pomeri posetu s petka na ponedeljak.",
+      "second": "Traži da ga pozovete posle 17 h.",
+      "third": "Pita da li primate bez zakazivanja.",
+      "fourth": "Otkazao je termin za četvrtak."
+    },
+    "appointments": {
+      "title": "Termini",
+      "newAppointment": "Novi termin",
+      "timeOff": "Slobodni dani"
+    },
+    "agents": {
+      "title": "Agenti",
+      "add": "Dodaj agenta",
+      "defaultAgent": "Podrazumevani agent",
+      "default": "Podrazumevani",
+      "afterHours": "Agent van radnog vremena",
+      "bookings": "Agent za zakazivanje",
+      "everything": "Sve ostalo",
+      "evenings": "Večeri i vikendi",
+      "website": "Čet na sajtu"
+    },
+    "rules": {
+      "title": "Pravila",
+      "add": "Dodaj pravilo",
+      "emergency": "Pozivalac pomene hitan slučaj",
+      "emergencyAction": "Prebaci poziv vlasniku",
+      "prices": "Neko pita za cene",
+      "pricesAction": "Navedi cenu iz Usluga",
+      "afterHours": "Čet stigne van radnog vremena",
+      "afterHoursAction": "Primi poruku za tim",
+      "allChannels": "Svi kanali",
+      "calls": "Pozivi",
+      "chats": "Četovi"
+    },
+    "channels": {
+      "title": "Kanali",
+      "phone": "Broj telefona",
+      "widget": "Vidžet za sajt",
+      "instagram": "Instagram",
+      "connected": "Povezano",
+      "notConnected": "Nije povezano",
+      "move": "Prebaci",
+      "connect": "Poveži"
+    },
+    "knowledge": {
+      "title": "Znanje",
+      "add": "Dodaj znanje",
+      "website": "Sajt",
+      "files": "Fajlovi",
+      "faqs": "Česta pitanja",
+      "pages_one": "{{count}} stranica",
+      "pages_few": "{{count}} stranice",
+      "pages_other": "{{count}} stranica",
+      "priceList": "Cenovnik.pdf",
+      "questions_one": "{{count}} pitanje",
+      "questions_few": "{{count}} pitanja",
+      "questions_other": "{{count}} pitanja",
+      "unanswered": "Pitanja bez odgovora",
+      "giftCards": "Da li prodajete poklon-kartice?",
+      "parking": "Ima li parkinga u blizini?"
+    },
+    "services": {
+      "title": "Usluge",
+      "add": "Dodaj uslugu",
+      "name": "Naziv",
+      "duration": "Trajanje",
+      "price": "Cena",
+      "consultation": "Konsultacija",
+      "standardVisit": "Standardna poseta",
+      "followUp": "Kontrolna poseta",
+      "minutes": "{{value}} min",
+      "free": "Besplatno"
+    },
+    "employees": {
+      "title": "Zaposleni",
+      "add": "Dodaj zaposlenog",
+      "name": "Ime",
+      "services": "Usluge",
+      "status": "Status",
+      "allServices": "Sve usluge",
+      "working": "Radi",
+      "onLeave": "Na odsustvu"
+    },
+    "analytics": {
+      "title": "Analitika",
+      "calls": "Pozivi",
+      "today": "Danas",
+      "averageDuration": "Prosečno trajanje",
+      "next": "Sledeći u {{time}}",
+      "chart": "Pozivi i poruke",
+      "messages": "Poruke",
+      "range": "Poslednjih 30 dana",
+      "change": "+{{value}}% u odnosu na prethodni period"
+    }
+  }
+}

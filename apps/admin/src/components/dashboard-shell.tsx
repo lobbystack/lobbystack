@@ -5,6 +5,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import type { Capability } from "@lobbystack/domain";
+import type { PageIntroKey } from "@lobbystack/shared";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AgentsSeedProvider, type AgentsSeed } from "@/hooks/use-agents";
@@ -14,6 +15,7 @@ import { MobileNavigation } from "@/components/navigation/mobile-navigation";
 import { NavigationSidebar } from "@/components/navigation/navigation-sidebar";
 import { ShellRuntime } from "@/components/navigation/shell-runtime";
 import { PageTitleTargetContext } from "@/components/page-header";
+import { PageIntrosProvider } from "@/components/page-intros/page-intros-provider";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { ALL_CAPABILITIES, BusinessCapabilitiesProvider, useBusinessCan } from "./business-capabilities-provider";
@@ -28,6 +30,8 @@ type DashboardShellProps = {
   /** The business's agents, which the server loads for people who can set them up. */
   agents?: AgentsSeed | null;
   sidebarOpen?: boolean;
+  /** The intro cards the person has closed, from the layout, or null when no card may show. */
+  pageIntros?: { seen: readonly PageIntroKey[] | null; businessId: string | null };
   /** The person is on a partner's team, so the account menu links to the partner console. */
   partnerConsole?: boolean;
   user: {
@@ -42,7 +46,7 @@ function getSidebarDefaultOpen(): boolean {
   return value?.split("=")[1] !== "false";
 }
 
-export function DashboardShell({ agents = null, capabilities = ALL_CAPABILITIES, children, partnerConsole = false, sidebarOpen, user }: DashboardShellProps) {
+export function DashboardShell({ agents = null, capabilities = ALL_CAPABILITIES, children, pageIntros, partnerConsole = false, sidebarOpen, user }: DashboardShellProps) {
   const { t } = useTranslation("common");
   const pathname = usePathname();
   const contentScrollRef = useRef<HTMLElement>(null);
@@ -66,6 +70,7 @@ export function DashboardShell({ agents = null, capabilities = ALL_CAPABILITIES,
     <BusinessCapabilitiesProvider initial={capabilities}>
     <AgentsSeedProvider seed={agents}>
     <LiveUpgradePlanProvider>
+    <PageIntrosProvider businessId={pageIntros?.businessId ?? null} seen={pageIntros?.seen ?? null}>
     {/* On phones the bottom padding keeps the content above the tab bar. */}
     <div className="flex h-svh w-full flex-col overflow-hidden bg-background max-md:pb-[calc(3.5rem+env(safe-area-inset-bottom))]">
       <a href="#dashboard-main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:rounded-xl focus:bg-background focus:p-4">{t("accessibility.skipToContent")}</a>
@@ -94,6 +99,7 @@ export function DashboardShell({ agents = null, capabilities = ALL_CAPABILITIES,
         <MobileNavigation partnerConsole={partnerConsole} user={user} />
       </SidebarProvider>
     </div>
+    </PageIntrosProvider>
     </LiveUpgradePlanProvider>
     </AgentsSeedProvider>
     </BusinessCapabilitiesProvider>
