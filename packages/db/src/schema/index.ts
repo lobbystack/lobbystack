@@ -1223,6 +1223,42 @@ export const checkInAnswers = pgTable("check_in_answers", {
   answeredAt: timestamp("answered_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [primaryKey({ columns: [table.businessId, table.answer] })]);
 
+// The dashboard's notification bell (migration 0209): one row per condition a
+// business's team should know about, keyed by dedupe_key, and each person's
+// reads of them.
+export const businessNotifications = pgTable(
+  "business_notifications",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    kind: varchar("kind", { length: 48 }).notNull(),
+    category: varchar("category", { length: 16 }).notNull(),
+    dedupeKey: varchar("dedupe_key", { length: 255 }).notNull(),
+    recipientUserId: uuid("recipient_user_id").references(() => users.id, { onDelete: "cascade" }),
+    params: jsonb("params").$type<Record<string, unknown>>().default({}).notNull(),
+    href: text("href"),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).defaultNow().notNull(),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("business_notifications_business_key_unique").on(table.businessId, table.dedupeKey),
+    index("business_notifications_business_occurred_idx").on(table.businessId, table.occurredAt),
+  ],
+);
+
+export const businessNotificationReads = pgTable(
+  "business_notification_reads",
+  {
+    notificationId: uuid("notification_id").notNull().references(() => businessNotifications.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    readAt: timestamp("read_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.notificationId, table.userId] }), index("business_notification_reads_business_user_idx").on(table.businessId, table.userId)],
+);
+
 // Questions the receptionist found no knowledge for (migration 0168). The same
 // normalized question counts again on its open or dismissed row.
 export const unansweredQuestions = pgTable(
@@ -2485,6 +2521,8 @@ export const schema = {
   userActiveBusinesses,
   userPageIntros,
   partnerBusinessOpens,
+  businessNotifications,
+  businessNotificationReads,
   businessTemplates,
   businessTemplateFiles,
   businessMemberships,

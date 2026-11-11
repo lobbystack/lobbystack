@@ -30,6 +30,7 @@ export * from "./selfHostedSupport";
 export * from "./setupPrompts";
 export * from "./businessSetup";
 export * from "./pageIntros";
+export * from "./businessNotifications";
 export { isCertificationMode, assertCertificationRecipient, assertCertificationOperationAllowed, assertCertificationCalendar, assertCertificationBillingSandbox } from "./certification";
 
 export type DeploymentMode = "cloud" | "self_hosted_standard" | "development";

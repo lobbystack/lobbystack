@@ -34,6 +34,10 @@ const changelogSchema = z.object({
   locale: z.enum(SUPPORTED_LOCALES).default("en"),
   canonicalSlug: z.string().min(3).max(120),
   category: z.string().optional(),
+  /** Also post the entry to every direct business's notification bell once it's released. */
+  notify: z.boolean().default(false),
+  /** The dashboard page the bell's item opens, in place of the changelog entry. */
+  dashboardHref: z.string().regex(/^\/(?!\/)[^\s]*$/).optional(),
 })
 
 export type CollectionEntry<Data> = {

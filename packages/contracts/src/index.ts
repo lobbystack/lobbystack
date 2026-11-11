@@ -99,6 +99,8 @@ export const realtimeEventTypes = [
   "knowledge.progressed",
   "document.progressed",
   "billing.updated",
+  // The bell's list changed: a notification was posted or came back.
+  "notification.posted",
 ] as const;
 
 const realtimePayloadSchema = z.record(z.string(), z.unknown());
@@ -261,6 +263,8 @@ export const queueForJobType = {
   "snapshot.refresh": "default",
   "notification.dispatch": "default",
   "notification.dailySummary": "maintenance",
+  // Posts each released changelog entry marked notify: true to the business's bell, once.
+  "notification.productUpdates": "maintenance",
   "conversation.finalizeSession": "default",
   "conversation.expireTeamRequest": "default",
   "privacy.scrubMessage": "maintenance",
