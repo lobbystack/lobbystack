@@ -740,6 +740,8 @@ export const agents = pgTable(
     // The outcome of the last "Rewrite with AI"; null when none was asked for.
     summaryRegenerateStatus: varchar("summary_regenerate_status", { length: 16 }).$type<"pending" | "completed" | "empty" | "failed">(),
     bookingPolicy: text("booking_policy").notNull(),
+    // Deprecated: migration 0204 moved them into rules kept to their channel,
+    // and no code reads or writes them. A later release drops them.
     voiceInstructions: text("voice_instructions"),
     smsInstructions: text("sms_instructions"),
     chatInstructions: text("chat_instructions"),
@@ -1246,6 +1248,9 @@ export const agentRules = pgTable(
     sortOrder: integer("sort_order").default(0).notNull(),
     // The agent this rule shapes. Migration 0184's trigger fills it with the default agent.
     agentId: uuid("agent_id"),
+    // The one channel the rule applies on (voice covers browser calls too). Null: every channel.
+    // agent_rules_channel_check holds it to ruleChannels in @lobbystack/shared.
+    channel: varchar("channel", { length: 16 }).$type<"voice" | "sms" | "web_chat" | "instagram">(),
     ...legacyId,
     ...timestamps,
   },

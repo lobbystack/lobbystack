@@ -13,7 +13,7 @@ import type {
   BookingMode,
   ReceptionistVoice,
 } from "@lobbystack/shared";
-import { RULE_CONTENT_CALL_MAX_LENGTH, RULE_TITLE_MAX_LENGTH, RULES_CALL_MAX } from "@lobbystack/shared";
+import { CHANNEL_RULE_CONTENT_CALL_MAX_LENGTH, RULE_CONTENT_CALL_MAX_LENGTH, RULE_TITLE_MAX_LENGTH, RULES_CALL_MAX } from "@lobbystack/shared";
 
 type SnapshotAgentInput = Omit<SnapshotAgent, "voiceInstructions" | "smsInstructions" | "chatInstructions" | "rules"> & {
   voiceInstructions?: string;
@@ -64,19 +64,25 @@ export const MAX_AGENT_RULE_CONTENT_CHARS = RULE_CONTENT_CALL_MAX_LENGTH;
 // Knowledge search matches all of these; prompts list only the top few (agent-core's PROMPT_MAX_FAQS).
 export const MAX_KNOWLEDGE_SNIPPETS_PER_SNAPSHOT = 50;
 
+/** A rule kept to one channel holds what that channel's instructions did, so calls read as much of it as they read of those. */
 export function snapshotRules(rules: Array<AgentRuleSummary> | undefined): Array<AgentRuleSummary> {
   return (rules ?? [])
     .slice()
     .sort((left, right) => left.order - right.order)
     .slice(0, MAX_AGENT_RULES_PER_SNAPSHOT)
-    .map((rule) => ({
+    .map(({ channel, ...rule }) => ({
       ...rule,
       title: rule.title.slice(0, MAX_AGENT_RULE_TITLE_CHARS),
-      content: rule.content.slice(0, MAX_AGENT_RULE_CONTENT_CHARS),
+      content: rule.content.slice(0, channel ? CHANNEL_RULE_CONTENT_CALL_MAX_LENGTH : MAX_AGENT_RULE_CONTENT_CHARS),
+      ...(channel ? { channel } : {}),
     }));
 }
 
-/** An agent's instructions for each channel, with the default text for any it left empty. */
+/**
+ * An agent's default instructions for each channel, with its tone. Snapshots
+ * no longer pass an owner's own text: that lives in rules kept to the
+ * channel. Tests and the snapshot from before migration 0204 still can.
+ */
 export function agentInstructions(
   business: { displayName: string; timezone: string },
   agent: Pick<SnapshotAgentInput, "tone" | "voiceInstructions" | "smsInstructions" | "chatInstructions">,

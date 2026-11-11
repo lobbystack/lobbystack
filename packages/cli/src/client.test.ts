@@ -81,7 +81,7 @@ describe("the API client", () => {
 
   it("takes each operation's body, response, path values and Idempotency-Key from the registry", () => {
     expectTypeOf<ApiRequestBody<"createBusiness">>().toExtend<{ name: string; timezone: string }>();
-    expectTypeOf<ApiRequestBody<"updateRule">>().toEqualTypeOf<{ title?: string | undefined; content?: string | undefined; active?: boolean | undefined }>();
+    expectTypeOf<ApiRequestBody<"updateRule">>().toEqualTypeOf<{ title?: string | undefined; content?: string | undefined; active?: boolean | undefined; channel?: "voice" | "sms" | "web_chat" | "instagram" | null | undefined }>();
     expectTypeOf<ApiRequestBody<"getMe">>().toBeNever();
     expectTypeOf<ApiResponseBody<"listRules">>().toExtend<{ data: Array<{ id: string; title: string }>; next_cursor: string | null; has_more: boolean }>();
     expectTypeOf<ApiResponseBody<"getMe">["data"]["api_key"]["prefix"]>().toEqualTypeOf<string>();

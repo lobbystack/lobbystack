@@ -68,6 +68,7 @@ export * from "./receptionistProfile";
 export * from "./staffFirst";
 export * from "./productEvents";
 export * from "./rules";
+export * from "./channelRules";
 export * from "./sms";
 export * from "./smsSender";
 export * from "./snapshotCache";

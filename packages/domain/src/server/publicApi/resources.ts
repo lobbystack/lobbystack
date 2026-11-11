@@ -676,6 +676,7 @@ export function serializeCalendarConnection(row: { id: string; provider: string;
 
 const summarySources = ["placeholder", "generated", "operator"] as const;
 
+// The instruction fields come from the agent's channel rules (withLegacyInstructions), not its deprecated columns.
 type ReceptionistRow = Pick<typeof agents.$inferSelect, "greeting" | "tone" | "summary" | "summarySource" | "bookingPolicy" | "voiceInstructions" | "smsInstructions" | "chatInstructions" | "transferMode" | "transferNumber" | "appointmentChangePolicy" | "bookingMode" | "voice" | "staffFirstMode" | "staffFirstNumber" | "staffFirstRingSeconds" | "staffFirstMessage" | "staffFirstHandoverMessage" | "updatedAt">;
 
 /** Shows the settings as calls use them: a transfer mode, booking mode, voice or policy calls don't know reads as what they fall back to. */
@@ -714,8 +715,8 @@ export function serializeAgent(row: ReceptionistRow & Pick<typeof agents.$inferS
 
 // Rules
 
-export function serializeRule(row: Pick<typeof agentRules.$inferSelect, "id" | "title" | "content" | "active" | "createdAt" | "updatedAt">): ApiRule {
-  return { id: row.id, title: row.title, content: row.content, active: row.active, created_at: iso(row.createdAt), updated_at: iso(row.updatedAt) };
+export function serializeRule(row: Pick<typeof agentRules.$inferSelect, "id" | "title" | "content" | "active" | "channel" | "createdAt" | "updatedAt">): ApiRule {
+  return { id: row.id, title: row.title, content: row.content, active: row.active, channel: row.channel ?? null, created_at: iso(row.createdAt), updated_at: iso(row.updatedAt) };
 }
 
 // Webhook endpoints
