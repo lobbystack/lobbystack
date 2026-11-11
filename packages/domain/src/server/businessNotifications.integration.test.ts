@@ -195,7 +195,9 @@ describe.skipIf(!testUrl)("bell notifications against PostgreSQL roles", () => {
       expect(await run(businessId, "2026-11-11T01:00:00Z")).toEqual(["tomorrow"]);
       expect(await run(selfHosted, "2026-11-11T01:00:00Z")).toEqual([]);
       const items = await list(tx, sam, businessId, owner, at("2026-11-11T02:00:00Z"));
-      expect(items.map((item) => [item.kind, item.href, (item.params as { slug: string }).slug])).toEqual([["product_update", "/agents", "tomorrow"], ["product_update", "/agents", "released"], ["product_update", "/agents", "same-day"]]);
+      // Newest first; the two posted on the same run share a time.
+      expect(items.map((item) => [item.kind, item.href, (item.params as { slug: string }).slug])[0]).toEqual(["product_update", "/agents", "tomorrow"]);
+      expect(items.map((item) => (item.params as { slug: string }).slug).slice(1).sort()).toEqual(["released", "same-day"]);
       // 90 days on, an entry leaves the panel and isn't posted again.
       expect(await run(businessId, "2027-03-01T00:00:00Z")).toEqual([]);
       expect(await list(tx, sam, businessId, owner, at("2027-03-01T00:00:00Z"))).toEqual([]);

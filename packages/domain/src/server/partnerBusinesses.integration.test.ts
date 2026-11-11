@@ -464,7 +464,8 @@ describe.skipIf(!client)("the host's own emails", () => {
         expect(await sweepNumberReleases(context, { businessId: direct, now })).toBe(1);
       });
       expect((await queued(tx, businessId)).filter((topic) => !before.partner.includes(topic))).toEqual([]);
-      expect((await queued(tx, direct)).filter((topic) => !before.direct.includes(topic))).toEqual(["onboarding.sendWelcome", "phoneNumber.releaseEmail", "phoneNumber.releaseEmail"]);
+      // The release reminder also posts to the direct business's bell, which tells open dashboards.
+      expect((await queued(tx, direct)).filter((topic) => !before.direct.includes(topic))).toEqual(["onboarding.sendWelcome", "phoneNumber.releaseEmail", "phoneNumber.releaseEmail", "realtime.publish"]);
 
       // Sent: each email's job reads what to send, and gets nothing for a partner's business.
       const trials = await asMigrator(tx, async () => await tx.insert(numberTrials).values([direct, businessId].map((id) => ({ businessId: id, userId: owner!.userId, phoneNumberId: numberOf(id), verifiedPhone: "+14165550100", status: "active", startedAt: new Date(now.getTime() - 13 * 86_400_000), endsAt: new Date(now.getTime() + 86_400_000) }))).returning({ id: numberTrials.id, businessId: numberTrials.businessId }));
