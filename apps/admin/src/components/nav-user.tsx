@@ -145,9 +145,12 @@ export function NavUser({ user, ...props }: NavUserProps) {
                         {...(item.onSelect ? { onClick: item.onSelect } : {})}
                         {...(link ? { render: link } : {})}
                       >
-                        <item.icon />
-                        {item.label}
-                        {item.external && item.key === "help" ? <ExternalLink className="ms-auto text-muted-foreground" /> : null}
+                        {/* One child: as a link, the item would otherwise hand its children on as an unkeyed list. */}
+                        <>
+                          <item.icon />
+                          {item.label}
+                          {item.external && item.key === "help" ? <ExternalLink className="ms-auto text-muted-foreground" /> : null}
+                        </>
                       </DropdownMenuItem>
                     );
                   })}
