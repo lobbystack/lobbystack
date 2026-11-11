@@ -126,6 +126,7 @@ function MoveAppointmentDialog({ appointment, requested: requestedTime, onOpenCh
         <div className="grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)]">
           <section aria-label={t("appointments.move.date")} className="flex justify-center rounded-xl border">
             <Calendar
+              className="bg-transparent"
               defaultMonth={keyToLocalDate(date)}
               disabled={{ before: keyToLocalDate(today) }}
               locale={DAY_PICKER_LOCALES[i18n.language as keyof typeof DAY_PICKER_LOCALES] ?? enUS}
@@ -139,7 +140,7 @@ function MoveAppointmentDialog({ appointment, requested: requestedTime, onOpenCh
             <h3 className="type-item-title">{t("appointments.move.times")}</h3>
             {openings.isLoading ? <div className="grid grid-cols-3 gap-2 sm:grid-cols-2">{Array.from({ length: 6 }, (_, index) => <Skeleton className="h-9 rounded-xl" key={index} />)}</div>
               : openings.isError ? <p className="type-body-muted text-destructive">{t("appointments.move.timesFailed")}</p>
-              : times.length ? <div className="grid max-h-72 grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-2">
+              : times.length ? <div className="-m-1 grid max-h-72 grid-cols-3 gap-2 overflow-y-auto p-1 sm:grid-cols-2">
                 {times.map((value) => <Button aria-pressed={selected === value} className={cn("tabular-nums", selected === value && "ring-2 ring-ring")} key={value} onClick={() => setChosen(value)} type="button" variant={selected === value ? "default" : "outline"}>{time(value)}</Button>)}
               </div>
               : <p className="type-body-muted">{t("appointments.move.noTimes")}</p>}
