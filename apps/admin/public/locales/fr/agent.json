@@ -452,7 +452,7 @@
   "booking": {
     "title": "Rendez-vous",
     "mode": {
-      "label": "Prise de rendez-vous",
+      "label": "Réservation",
       "options": {
         "instant": "Réserve les rendez-vous",
         "request": "Prend les demandes",
@@ -466,13 +466,12 @@
     }
   },
   "appointmentChanges": {
-    "title": "Modifications de rendez-vous",
     "allowCancel": {
-      "label": "Autoriser les annulations IA",
+      "label": "Annulations",
       "hint": "Permettre à l'agent d'annuler un rendez-vous à venir vérifié."
     },
     "allowReschedule": {
-      "label": "Autoriser les deplacements IA",
+      "label": "Déplacements",
       "hint": "Permettre à l'agent de déplacer un rendez-vous vérifié après vérification des disponibilités."
     },
     "verification": {

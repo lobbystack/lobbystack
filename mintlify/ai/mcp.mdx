@@ -86,14 +86,14 @@ The `webhooks:manage` scope has no MCP tools. A key with only that scope can't c
 
 ## Booking mode
 
-`book_appointment` and `reschedule_appointment` work only when **Appointments** is set to **Books appointments** (`booking_mode` `instant`). In other modes they return an error instead of booking:
+`book_appointment` and `reschedule_appointment` work only when **Booking** is set to **Books appointments** (`booking_mode` `instant`). In other modes they return an error instead of booking:
 
 | Setting | `booking_mode` | Error code | What the assistant should do |
 | --- | --- | --- | --- |
 | **Takes requests** | `request` | `booking_requires_confirmation` | Tell you your team confirms requests from the inbox |
 | **Doesn't book** | `off` | `booking_disabled` | Tell you booking is turned off |
 
-You change this setting on each agent's **General** page, under **Booking**. `/receptionist` and the MCP tools change the default agent. Cancelling works in every mode.
+You change this setting on each agent's **General** page, under **Appointments**. `/receptionist` and the MCP tools change the default agent. Cancelling works in every mode.
 
 ## Errors
 

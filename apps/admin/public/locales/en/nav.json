@@ -48,7 +48,7 @@
       "phone": "forwarding, forward, carrier, number, line, sip, call, calls",
       "voice": "accent, sound, tone, greeting, hello, intro, welcome, name",
       "rules": "rule, rules, escalate, handoff, instruction, instructions, prompt, script, behaviour, behavior",
-      "handling": "transfer, transfers, staff first, booking, appointment changes, cancel, reschedule, transfer number, staff answers first",
+      "handling": "transfer, transfers, staff first, booking, appointments, appointment changes, cancellations, rescheduling, cancel, reschedule, transfer number, staff answers first",
       "business": "hours, opening, closed, holiday, timezone, language, currency",
       "knowledge": "faq, answer, answers, website, document, pdf, teach",
       "services": "price, prices, treatment, menu",

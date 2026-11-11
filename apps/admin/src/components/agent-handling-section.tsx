@@ -264,7 +264,7 @@ export function AgentHandlingSection({ agentId, businessId, canManage }: AgentSe
             </ItemContent>
             <ItemActions className="w-full sm:w-auto">
               {isLoadingConfiguration ? (
-                <Skeleton className="h-10 w-full rounded-xl sm:w-48" />
+                <Skeleton className="h-10 w-full rounded-xl sm:w-60" />
               ) : (
                 <Select
                   disabled={isBookingModeSaving || !persistedProfile || !canManage}
@@ -276,7 +276,7 @@ export function AgentHandlingSection({ agentId, businessId, canManage }: AgentSe
                   }}
                   value={bookingMode}
                 >
-                  <SelectTrigger aria-label={t("agent:booking.mode.label")} className="w-full sm:w-48" id="agent-booking-mode" loading={isBookingModeSaving}><SelectValue /></SelectTrigger>
+                  <SelectTrigger aria-label={t("agent:booking.mode.label")} className="w-full sm:w-auto sm:min-w-60" id="agent-booking-mode" loading={isBookingModeSaving}><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
                       <SelectItem value="instant">{t("agent:booking.mode.options.instant")}</SelectItem>
@@ -288,12 +288,7 @@ export function AgentHandlingSection({ agentId, businessId, canManage }: AgentSe
               )}
             </ItemActions>
           </Item>
-        </Surface>
-      </section>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="type-title">{t("agent:appointmentChanges.title")}</h2>
-        <Surface className="flex flex-col">
           <Item className={settingRowClassName} variant="default">
             <ItemContent>
               <ItemTitle>{t("agent:appointmentChanges.allowCancel.label")}</ItemTitle>
@@ -345,7 +340,7 @@ export function AgentHandlingSection({ agentId, businessId, canManage }: AgentSe
             </ItemContent>
             <ItemActions className="w-full sm:w-auto">
               {isLoadingConfiguration ? (
-                <Skeleton className="h-10 w-full rounded-xl sm:w-56" />
+                <Skeleton className="h-10 w-full rounded-xl sm:w-60" />
               ) : (
                 <Select
                   disabled={isAppointmentChangeSaving || !persistedProfile || !canManage}
@@ -357,7 +352,7 @@ export function AgentHandlingSection({ agentId, businessId, canManage }: AgentSe
                   }}
                   value={appointmentChangeVerification}
                 >
-                  <SelectTrigger aria-label={t("agent:appointmentChanges.verification.label")} className="w-full sm:w-56" id="agent-appointment-change-verification" loading={isAppointmentChangeSaving}><SelectValue /></SelectTrigger>
+                  <SelectTrigger aria-label={t("agent:appointmentChanges.verification.label")} className="w-full sm:w-auto sm:min-w-60" id="agent-appointment-change-verification" loading={isAppointmentChangeSaving}><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
                       {verificationChoices.map((mode) => <SelectItem key={mode} value={mode}>{t(`agent:appointmentChanges.verification.options.${mode}`)}</SelectItem>)}

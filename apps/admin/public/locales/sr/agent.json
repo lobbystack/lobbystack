@@ -450,9 +450,9 @@
     }
   },
   "booking": {
-    "title": "Zakazivanje",
+    "title": "Termini",
     "mode": {
-      "label": "Termini",
+      "label": "Zakazivanje",
       "options": {
         "instant": "Zakazuje termine",
         "request": "Prima zahteve",
@@ -466,13 +466,12 @@
     }
   },
   "appointmentChanges": {
-    "title": "Izmene termina",
     "allowCancel": {
-      "label": "Dozvoli AI otkazivanje",
+      "label": "Otkazivanje",
       "hint": "Agent može da otkaže potvrđen budući termin."
     },
     "allowReschedule": {
-      "label": "Dozvoli AI pomeranje",
+      "label": "Pomeranje",
       "hint": "Agent može da pomeri potvrđen budući termin nakon provere slobodnih termina."
     },
     "verification": {

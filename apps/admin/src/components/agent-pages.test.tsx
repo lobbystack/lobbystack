@@ -34,11 +34,15 @@ it("holds the name, greeting and voice, then calls and booking, on the agent's o
   vi.stubGlobal("matchMedia", vi.fn((query: string) => ({ matches: false, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
   vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => undefined)));
   renderWith(<AgentSettingsPage agentId="agent-1" />);
-  const titles = ["agent:identity.title", "agent:transfers.title", "agent:staffFirst.title", "agent:booking.title", "agent:appointmentChanges.title"];
+  const titles = ["agent:identity.title", "agent:transfers.title", "agent:staffFirst.title", "agent:booking.title"];
   expect(screen.getAllByRole("heading").map((heading) => heading.textContent)).toEqual(titles);
   for (const title of titles) {
     const section = screen.getByRole("heading", { name: title }).closest("section")!;
     expect(section.closest("[aria-busy]")?.getAttribute("aria-busy"), title).toBe("true");
     expect(section.querySelectorAll("[data-slot='skeleton']").length, title).toBeGreaterThan(0);
+  }
+  const appointments = screen.getByRole("heading", { name: "agent:booking.title" }).closest("section")!;
+  for (const row of ["agent:booking.mode.label", "agent:appointmentChanges.allowCancel.label", "agent:appointmentChanges.allowReschedule.label", "agent:appointmentChanges.verification.label"]) {
+    expect(appointments.textContent, row).toContain(row);
   }
 });

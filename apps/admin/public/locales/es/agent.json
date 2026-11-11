@@ -450,9 +450,9 @@
     }
   },
   "booking": {
-    "title": "Reservas",
+    "title": "Citas",
     "mode": {
-      "label": "Citas",
+      "label": "Reservas",
       "options": {
         "instant": "Reserva citas",
         "request": "Toma solicitudes",
@@ -466,13 +466,12 @@
     }
   },
   "appointmentChanges": {
-    "title": "Cambios de citas",
     "allowCancel": {
-      "label": "Permitir cancelaciones por IA",
+      "label": "Cancelaciones",
       "hint": "Permita que el agente cancele una cita futura verificada."
     },
     "allowReschedule": {
-      "label": "Permitir reprogramación por IA",
+      "label": "Reprogramación",
       "hint": "Permita que el agente cambie una cita futura verificada después de comprobar la disponibilidad."
     },
     "verification": {

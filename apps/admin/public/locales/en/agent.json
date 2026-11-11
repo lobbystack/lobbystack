@@ -449,9 +449,9 @@
     }
   },
   "booking": {
-    "title": "Booking",
+    "title": "Appointments",
     "mode": {
-      "label": "Appointments",
+      "label": "Booking",
       "options": {
         "instant": "Books appointments",
         "request": "Takes requests",
@@ -465,13 +465,12 @@
     }
   },
   "appointmentChanges": {
-    "title": "Appointment changes",
     "allowCancel": {
-      "label": "Allow AI cancellations",
+      "label": "Cancellations",
       "hint": "Let the agent cancel a verified future appointment."
     },
     "allowReschedule": {
-      "label": "Allow AI rescheduling",
+      "label": "Rescheduling",
       "hint": "Let the agent move a verified future appointment after availability is checked."
     },
     "verification": {
