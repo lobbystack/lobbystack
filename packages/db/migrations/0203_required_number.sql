@@ -1,3 +1,13 @@
+-- Getting started's forwarding step finishes on its own when we see the first
+-- call forwarded to a number: a Diversion or History-Info SIP header, or
+-- Twilio's ForwardedFrom, naming a line other than ours. The number keeps the
+-- line it learned and when. An owner whose carrier strips the header says it
+-- works instead. The table's row-level security policies cover the columns.
+ALTER TABLE public.phone_numbers
+  ADD COLUMN IF NOT EXISTS forwarded_from_e164 varchar(32),
+  ADD COLUMN IF NOT EXISTS forwarding_detected_at timestamptz,
+  ADD COLUMN IF NOT EXISTS forwarding_confirmed_at timestamptz;
+
 -- A direct owner no longer verifies a mobile in onboarding: the number comes
 -- right after the website. Direct businesses on the phone step, or on a
 -- legacy stage that reads as it, move on to the number step. Partners'

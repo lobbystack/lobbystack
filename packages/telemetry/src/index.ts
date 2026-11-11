@@ -64,6 +64,7 @@ export const WEB_EVENT_NAMES = [
   "web.voice.test_call_ended",
   "web.voice.test_call_error",
   "web.activation.first_call_completed",
+  "web.activation.forwarding_confirmed",
   "web.activation.upgrade_prompt_shown",
   "web.activation.upgrade_prompt_clicked",
   "web.activation.abandon_intent",
@@ -81,6 +82,7 @@ export const VOICE_EVENT_NAMES = [
   "voice.snapshot_loaded",
   "voice.delegation_completed",
   "voice.call_latency_recorded",
+  "voice.forwarding_detected",
 ] as const;
 
 export const SMS_EVENT_NAMES = [
@@ -377,6 +379,8 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.voice.test_call_ended": ["businessId", "deploymentMode", "endedBy"],
   "web.voice.test_call_error": ["businessId", "deploymentMode"],
   "web.activation.first_call_completed": ["businessId", "deploymentMode", "transport"],
+  // The owner pressed It works after the forwarding test call, for a carrier that strips the forwarding header.
+  "web.activation.forwarding_confirmed": ["businessId", "deploymentMode"],
   "web.activation.upgrade_prompt_shown": ["businessId", "deploymentMode", "trigger"],
   "web.activation.upgrade_prompt_clicked": ["businessId", "deploymentMode", "trigger"],
   "web.activation.abandon_intent": ["businessId", "deploymentMode", "trigger"],
@@ -435,6 +439,8 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "provider",
   ],
   "voice.snapshot_loaded": ["businessId", "deploymentMode", "provider"],
+  // The first call forwarded to a number. source: sip (Diversion or History-Info) or twilio (ForwardedFrom).
+  "voice.forwarding_detected": ["businessId", "deploymentMode", "phoneNumberId", "source"],
   "voice.delegation_completed": [
     "businessId",
     "deploymentMode",

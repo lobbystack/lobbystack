@@ -1,8 +1,9 @@
-import { and, count, desc, eq, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
 
-import { businesses, calls, knowledgeDocuments, phoneNumbers, websiteIngestionJobs, type DatabaseTransaction } from "@lobbystack/db";
+import { businesses, calls, knowledgeDocuments, numberTrials, phoneNumbers, websiteIngestionJobs, type DatabaseTransaction } from "@lobbystack/db";
 import { DASHBOARD_TEST_CALL_WIDGET_ID } from "@lobbystack/shared";
 
+import { callForwardingStatusInTransaction } from "./callForwarding";
 import { ONBOARDING_CRAWL_PAGE_LIMIT } from "./knowledge";
 
 /**
@@ -71,15 +72,39 @@ export async function hasAnsweredPhoneCall(tx: DatabaseTransaction, businessId: 
 
 // The setup guide: what's left after onboarding, which the dashboard and the API share.
 
+/** The classic list's steps. The v1 API reads these ids, so they never change. */
 export const setupGuideStepIds = ["fullScan", "sources", "testCall", "phoneNumber"] as const;
 export type SetupGuideStepId = (typeof setupGuideStepIds)[number];
-/** Steps the owner can skip: the guide's, plus the dashboard's opening hours step, which only shows while instant booking has no hours. */
-export const setupGuideSkippableStepIds = [...setupGuideStepIds, "hours"] as const;
+/** The steps only the list for a business with a number has. */
+export const numberGuideStepIds = ["callNumber", "forwardCalls"] as const;
+export type NumberGuideStepId = (typeof numberGuideStepIds)[number];
+/** Steps the owner can skip: both lists', plus the dashboard's opening hours step, which only shows while instant booking has no hours. */
+export const setupGuideSkippableStepIds = [...setupGuideStepIds, ...numberGuideStepIds, "hours"] as const;
 export type SetupGuideStatus = "complete" | "skipped" | "needs setup";
 
+/**
+ * Which Getting started a business gets. `number`: a direct business with
+ * an active number, or with a number trial past its reservation. `classic`:
+ * every other business, a partner's or a direct one that never had a
+ * number, which keeps the browser test call and the number offer.
+ */
+export type SetupGuideVariant = "classic" | "number";
+
+export type SetupGuide = {
+  variant: SetupGuideVariant;
+  steps: Record<SetupGuideStepId, SetupGuideStatus>;
+  numberSteps: Record<NumberGuideStepId, SetupGuideStatus>;
+  /** The line we saw forward to the business's number, and whether the owner said forwarding works. */
+  forwarding: { forwardedFrom: string | null; confirmed: boolean };
+  /** The trial ended without a plan, so the business has no number to call or forward to. */
+  numberLost: boolean;
+  skippedSteps: string[];
+  fullScanDocumentId: string | null;
+};
+
 /** Each setup guide step's status. A step that got done reads complete, even if it was skipped. */
-export async function loadSetupGuideInTransaction(tx: DatabaseTransaction, businessId: string): Promise<{ steps: Record<SetupGuideStepId, SetupGuideStatus>; skippedSteps: string[]; fullScanDocumentId: string | null }> {
-  const business = (await tx.select({ skippedSteps: businesses.setupGuideSkippedSteps }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
+export async function loadSetupGuideInTransaction(tx: DatabaseTransaction, businessId: string): Promise<SetupGuide> {
+  const business = (await tx.select({ skippedSteps: businesses.setupGuideSkippedSteps, partnerId: businesses.partnerId }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
   const knowledge = await tx.select({ count: count() }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, businessId), eq(knowledgeDocuments.sourceType, "upload"), ne(knowledgeDocuments.status, "error"), ne(knowledgeDocuments.status, "cancelled")));
   const sampled = await currentWebsiteIngestion(tx, businessId);
   // Onboarding samples a site, and an expansion reuses the same row, so the
@@ -92,14 +117,29 @@ export async function loadSetupGuideInTransaction(tx: DatabaseTransaction, busin
   const heardCalls = await countOperatorTestCallsHeard(tx, businessId);
   const businessNumber = await tx.select({ count: count() }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), isNull(phoneNumbers.reclaimScheduledAt)));
   const skipped = business?.skippedSteps ?? [];
-  const status = (done: boolean, step: SetupGuideStepId): SetupGuideStatus => done ? "complete" : skipped.includes(step) ? "skipped" : "needs setup";
+  const status = (done: boolean, step: SetupGuideStepId | NumberGuideStepId): SetupGuideStatus => done ? "complete" : skipped.includes(step) ? "skipped" : "needs setup";
+  // A partner's business keeps the classic list. A direct one gets the number
+  // list once it has had a number: an active one, or a trial that bought one.
+  const [activeNumber] = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"))).limit(1);
+  const [trial] = await tx.select({ status: numberTrials.status }).from(numberTrials).where(and(eq(numberTrials.businessId, businessId), inArray(numberTrials.status, ["active", "ended", "released", "converted"]))).limit(1);
+  const variant: SetupGuideVariant = !business?.partnerId && (activeNumber || trial) ? "number" : "classic";
+  // An ended trial's number goes unanswered until we release it, so both count as no number.
+  const numberLost = variant === "number" && (trial?.status === "ended" || (trial?.status === "released" && !activeNumber));
+  const forwarding = await callForwardingStatusInTransaction(tx, businessId);
   return {
+    variant,
     steps: {
       fullScan: status(fullyRead, "fullScan"),
       sources: status(Number(knowledge[0]?.count ?? 0) > 0, "sources"),
       testCall: status(heardCalls > 0, "testCall"),
       phoneNumber: status(Number(businessNumber[0]?.count ?? 0) > 0, "phoneNumber"),
     },
+    numberSteps: {
+      callNumber: status(await hasAnsweredPhoneCall(tx, businessId), "callNumber"),
+      forwardCalls: status(forwarding.detected || forwarding.confirmed, "forwardCalls"),
+    },
+    forwarding: { forwardedFrom: forwarding.forwardedFrom, confirmed: forwarding.confirmed },
+    numberLost,
     skippedSteps: skipped,
     fullScanDocumentId: sampled?.rootDocumentId ?? null,
   };

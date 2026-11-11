@@ -3,6 +3,7 @@ export * from "./agents";
 export * from "./appointmentChanges";
 export * from "./appointmentRequests";
 export * from "./activation";
+export * from "./callForwarding";
 export * from "./billing";
 export * from "./billingAccess";
 export * from "./branding";

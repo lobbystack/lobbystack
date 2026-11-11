@@ -106,7 +106,8 @@
     "getNumberBack": "Récupérer mon numéro",
     "chip_one": "Essai gratuit · {{count}} j restant",
     "chip_other": "Essai gratuit · {{count}} j restants",
-    "viewPlans": "Voir les forfaits"
+    "viewPlans": "Voir les forfaits",
+    "chip_many": "Essai gratuit · {{count}} j restants"
   },
   "testWindow": {
     "orCall": "Ou appelez le",

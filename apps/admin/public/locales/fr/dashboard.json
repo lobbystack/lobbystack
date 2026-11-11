@@ -291,7 +291,9 @@
       "hours": "Ajoutez vos heures d'ouverture",
       "testCall": "Écoutez votre agent",
       "phoneNumber": "Associez un numéro",
-      "forwardCalls": "Transférez vos appels"
+      "forwardCalls": "Transférez vos appels",
+      "callNumber": "Appelez votre numéro",
+      "forwardFromCurrent": "Transférez les appels de votre numéro actuel"
     },
     "stepDescriptions": {
       "fullScan": "Votre agent a lu un échantillon de votre site.",
@@ -299,15 +301,22 @@
       "hours": "Votre agent réserve des rendez-vous seulement pendant ces heures.",
       "testCall": "Posez la question que vos appelants posent le plus.",
       "phoneNumber": "Donnez à votre agent son propre numéro pour répondre à vos vrais clients.",
-      "phoneNumberTrial": "Répondez à vos appels manqués gratuitement pendant 14 jours, sans carte."
+      "phoneNumberTrial": "Répondez à vos appels manqués gratuitement pendant 14 jours, sans carte.",
+      "forwardCalls": "Envoyez au {{number}} les appels du numéro que vos clients connaissent.",
+      "numberLost": "Votre essai gratuit est terminé. Choisissez un forfait pour récupérer votre numéro."
     },
     "stepActions": {
       "fullScan": "Lire le reste",
       "sources": "Téléverser un document",
       "hours": "Ajouter les heures",
       "testCall": "Lancer un appel",
-      "phoneNumber": "Choisir un numéro"
-    }
+      "phoneNumber": "Choisir un numéro",
+      "callNumber": "Appeler le {{number}}",
+      "forwardCalls": "Configurer le transfert",
+      "choosePlan": "Choisir un forfait"
+    },
+    "forwardingFrom": "Transfert depuis le {{number}}",
+    "forwardingWorks": "Le transfert fonctionne"
   },
   "forwarding": {
     "title": "Renvoyez vos appels vers le {{number}}",
@@ -372,6 +381,7 @@
     "general": {
       "missed": "Sur un mobile, ouvrez les réglages d'appel de votre téléphone et renvoyez les appels sans réponse vers le {{number}}. Sur une ligne fixe ou un système téléphonique d'entreprise, demandez-le à votre fournisseur.",
       "all": "Sur un mobile, ouvrez les réglages d'appel de votre téléphone et renvoyez tous les appels vers le {{number}}. Sur une ligne fixe ou un système téléphonique d'entreprise, demandez-le à votre fournisseur."
-    }
+    },
+    "itWorks": "Ça fonctionne"
   }
 }

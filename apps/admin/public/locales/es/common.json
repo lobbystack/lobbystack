@@ -106,7 +106,8 @@
     "getNumberBack": "Recuperar mi número",
     "chip_one": "Prueba gratuita · queda {{count}} d",
     "chip_other": "Prueba gratuita · quedan {{count}} d",
-    "viewPlans": "Ver planes"
+    "viewPlans": "Ver planes",
+    "chip_many": "Prueba gratuita · quedan {{count}} d"
   },
   "testWindow": {
     "orCall": "O llame al",

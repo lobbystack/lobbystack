@@ -291,7 +291,9 @@
       "hours": "Dodajte radno vreme",
       "testCall": "Čujte svog agenta",
       "phoneNumber": "Povežite broj telefona",
-      "forwardCalls": "Preusmerite pozive"
+      "forwardCalls": "Preusmerite pozive",
+      "callNumber": "Pozovite svoj broj",
+      "forwardFromCurrent": "Preusmerite pozive sa svog sadašnjeg broja"
     },
     "stepDescriptions": {
       "fullScan": "Agent je pročitao deo Vašeg sajta.",
@@ -299,15 +301,22 @@
       "hours": "Agent zakazuje termine samo u ovom radnom vremenu.",
       "testCall": "Pitajte ono što Vas klijenti najčešće pitaju.",
       "phoneNumber": "Dodelite agentu sopstveni broj da bi odgovarao pravim pozivaocima.",
-      "phoneNumberTrial": "Odgovarajte na propuštene pozive besplatno 14 dana, bez kartice."
+      "phoneNumberTrial": "Odgovarajte na propuštene pozive besplatno 14 dana, bez kartice.",
+      "forwardCalls": "Pošaljite na {{number}} pozive sa broja koji Vaši klijenti znaju.",
+      "numberLost": "Besplatna proba je istekla. Izaberite paket da biste vratili svoj broj."
     },
     "stepActions": {
       "fullScan": "Pročitaj ostatak",
       "sources": "Otpremi dokument",
       "hours": "Dodaj radno vreme",
       "testCall": "Započni poziv",
-      "phoneNumber": "Izaberi broj"
-    }
+      "phoneNumber": "Izaberi broj",
+      "callNumber": "Pozovi {{number}}",
+      "forwardCalls": "Podesite preusmeravanje",
+      "choosePlan": "Izaberite paket"
+    },
+    "forwardingFrom": "Preusmeravanje sa broja {{number}}",
+    "forwardingWorks": "Preusmeravanje radi"
   },
   "forwarding": {
     "title": "Preusmerite pozive na {{number}}",
@@ -372,6 +381,7 @@
     "general": {
       "missed": "Na mobilnom otvorite podešavanja poziva i preusmerite neodgovorene pozive na {{number}}. Za fiksnu liniju ili poslovni telefonski sistem zamolite operatera da to uradi.",
       "all": "Na mobilnom otvorite podešavanja poziva i preusmerite sve pozive na {{number}}. Za fiksnu liniju ili poslovni telefonski sistem zamolite operatera da to uradi."
-    }
+    },
+    "itWorks": "Radi"
   }
 }
