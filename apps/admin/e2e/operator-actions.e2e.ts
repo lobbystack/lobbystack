@@ -137,3 +137,45 @@ test("an operator fixes a contact's name and email from the contacts page, which
     await database.pool.end();
   }
 });
+
+test("an operator corrects a misheard caller's name right in the Inbox, and it shows on the list and the contact", async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  const database = migrator();
+  const email = `${prefix}-inbox-name-${randomUUID()}@example.invalid`;
+  let businessId: string | undefined;
+  try {
+    businessId = await newOwner(page, testInfo, database, email);
+    const [contact] = await database.db.insert(contacts).values({ businessId, name: "Milana Brenović", phone: "+14165550125" }).returning();
+    const [conversation] = await database.db.insert(conversations).values({ businessId, contactId: contact!.id, channel: "voice" }).returning();
+    const callId = randomUUID();
+    await database.db.insert(calls).values({ id: callId, businessId, contactId: contact!.id, conversationId: conversation!.id, providerCallId: callId, transport: "voice", status: "completed", startedAt: new Date() });
+
+    await page.goto(`/inbox?call=${callId}`);
+    const detail = page.locator("[data-slot='inbox-detail']");
+    const name = detail.getByRole("textbox", { name: contactsCopy.edit.contactName });
+    await expect(name).toHaveText("Milana Brenović");
+    // Escape leaves the name as it was.
+    await name.click();
+    await page.keyboard.press("End");
+    await page.keyboard.type("x");
+    await page.keyboard.press("Escape");
+    await expect(name).toHaveText("Milana Brenović");
+
+    await name.click();
+    await page.keyboard.press(process.platform === "darwin" ? "Meta+A" : "Control+A");
+    await page.keyboard.type("Milan Obrenović");
+    const saved = page.waitForResponse((response) => response.url().includes(`/api/contacts/${contact!.id}`) && response.request().method() === "PATCH");
+    await page.keyboard.press("Enter");
+    expect((await saved).ok()).toBe(true);
+    await expect(name).toHaveText("Milan Obrenović");
+    await expect(page.locator("[data-slot='inbox-list']").getByText("Milan Obrenović", { exact: true })).toBeVisible();
+
+    const [row] = await database.db.select({ name: contacts.name }).from(contacts).where(eq(contacts.id, contact!.id));
+    expect(row?.name).toBe("Milan Obrenović");
+    await page.goto(`/contacts/${contact!.id}`);
+    await expect(page.getByText("Milan Obrenović").first()).toBeVisible();
+  } finally {
+    await removeFixtures(database, email, businessId);
+    await database.pool.end();
+  }
+});

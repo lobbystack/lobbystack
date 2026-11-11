@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 
 import { CallRecordingPlayer } from "@/components/audio/call-recording-player";
 import { BackLink, DetailSection, MetadataField, truncateId, useCopiedField } from "@/components/detail-fields";
+import { canEditContacts, EditableContactName } from "@/components/editable-contact-name";
 import { HiddenTextSkeleton, SectionSkeleton } from "@/components/loading-skeletons";
 import { SectionBlock } from "@/components/section-block";
 import { Button } from "@/components/ui/button";
@@ -152,6 +153,7 @@ export function LiveCallDetailSurface({ callId, embedded = false }: { callId: st
   const hasPhone = hasDisplayablePhone(contact?.phone);
   const callerPhone = hasPhone ? formatPhoneNumberDisplay(contact?.phone, i18n.language) : normalizeChannel(call.transport) === "web_call" ? getChannelLabel(call.transport, t) : t("detail.noNumber");
   const blocked = Boolean(contact?.blockedAt) || call.disposition?.includes("blocked");
+  const name = <EditableContactName businessId={business?.businessId} canEdit={canEditContacts(business?.role)} contactId={contact?.id} displayName={callerName} />;
 
   return (
     <div className="flex flex-1 flex-col gap-6">
@@ -159,7 +161,7 @@ export function LiveCallDetailSurface({ callId, embedded = false }: { callId: st
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-2">
-          {embedded ? <h2 className="type-page-title ph-mask">{callerName}</h2> : <h1 className="type-page-title ph-mask">{callerName}</h1>}
+          {embedded ? <h2 className="type-page-title ph-mask">{name}</h2> : <h1 className="type-page-title ph-mask">{name}</h1>}
           {blocked ? (
             <div className="flex flex-wrap items-center gap-2">
               <Status variant={CONTACT_STATUS_VARIANTS.blocked}>{t("detail.blocking.badge")}</Status>
