@@ -202,13 +202,14 @@
     },
     "calendarStates": {
       "not_required": "Not required",
-      "pending": "Pending",
+      "pending": "Syncing",
       "synced": "Synced",
-      "failed": "Failed",
-      "error": "Error",
+      "failed": "Sync failed",
+      "error": "Sync failed",
       "cancelled": "Cancelled"
     },
     "actions": "Actions",
+      "rowActions": "Actions for {{time}}",
     "cancel": {
       "action": "Cancel",
       "actionLabel": "Cancel appointment: {{time}}",

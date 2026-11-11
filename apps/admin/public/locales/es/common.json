@@ -204,13 +204,14 @@
     },
     "calendarStates": {
       "not_required": "No necesario",
-      "pending": "Pendiente",
+      "pending": "Sincronizando",
       "synced": "Sincronizado",
-      "failed": "Fallido",
-      "error": "Error",
+      "failed": "Error de sincronización",
+      "error": "Error de sincronización",
       "cancelled": "Cancelado"
     },
     "actions": "Acciones",
+      "rowActions": "Acciones para {{time}}",
     "cancel": {
       "action": "Cancelar",
       "actionLabel": "Cancelar la cita: {{time}}",

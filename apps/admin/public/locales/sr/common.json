@@ -211,13 +211,14 @@
     },
     "calendarStates": {
       "not_required": "Nije potrebno",
-      "pending": "Na čekanju",
+      "pending": "Sinhronizacija u toku",
       "synced": "Sinhronizovano",
-      "failed": "Neuspešno",
-      "error": "Greška",
+      "failed": "Sinhronizacija nije uspela",
+      "error": "Sinhronizacija nije uspela",
       "cancelled": "Otkazano"
     },
     "actions": "Radnje",
+      "rowActions": "Radnje za {{time}}",
     "cancel": {
       "action": "Otkaži",
       "actionLabel": "Otkaži termin: {{time}}",

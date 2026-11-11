@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -41,16 +41,16 @@ function wallClock(value: string, timeZone: string): string {
  * labels it as the alternative to approving that time. Hidden from roles that
  * can't move appointments.
  */
-export function MoveAppointmentButton({ appointment, requested, className, size = "sm", variant = "outline", otherTime = false }: { appointment: CancellableAppointment; requested?: RequestedTime; className?: string; size?: "sm" | "default"; variant?: "outline" | "default"; otherTime?: boolean }) {
+export function MoveAppointmentButton({ appointment, requested, className, renderTrigger, size = "sm", variant = "outline", otherTime = false }: { appointment: CancellableAppointment; requested?: RequestedTime; className?: string; size?: "sm" | "default"; variant?: "outline" | "default"; otherTime?: boolean; /** Replaces the button, as a row's menu item does; the dialog stays outside it. */ renderTrigger?: (open: () => void) => ReactNode }) {
   const { t, i18n } = useTranslation("common");
   const { business } = useActiveBusiness();
   const [open, setOpen] = useState(false);
   if (!business || !APPOINTMENT_ROLES.includes(business.role)) return null;
   return (
     <>
-      <Button aria-label={otherTime ? undefined : t("appointments.move.actionLabel", { time: formatDateTime(appointment.startsAt, i18n.language, { dateStyle: "medium", timeStyle: "short", timeZone: appointment.timezone }) })} className={className} onClick={() => setOpen(true)} size={size} variant={variant}>
+      {renderTrigger ? renderTrigger(() => setOpen(true)) : <Button aria-label={otherTime ? undefined : t("appointments.move.actionLabel", { time: formatDateTime(appointment.startsAt, i18n.language, { dateStyle: "medium", timeStyle: "short", timeZone: appointment.timezone }) })} className={className} onClick={() => setOpen(true)} size={size} variant={variant}>
         {t(otherTime ? "appointments.move.otherTime" : "appointments.move.action")}
-      </Button>
+      </Button>}
       {/* Mounted only while open, so it starts again from the appointment or the request each time. */}
       {open ? <MoveAppointmentDialog appointment={appointment} onOpenChange={setOpen} requested={requested} /> : null}
     </>

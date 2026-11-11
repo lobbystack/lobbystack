@@ -15,7 +15,7 @@ import { getChannelLabel, hasDisplayablePhone } from "@/lib/contact-display";
 import { formatDateTime, intlLocale } from "@/lib/locale";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { Status } from "@/components/ui/status";
-import { appointmentStatusVariant } from "@/lib/status-variants";
+import { appointmentStatusVariant, calendarSyncVariant } from "@/lib/status-variants";
 
 /**
  * Everything about one booking, including what its row truncates. A drawer
@@ -53,7 +53,8 @@ function AppointmentDetails({ appointment, contactName, showClose }: { appointme
     ...(appointment.contactEmail ? [[t("appointments.details.email"), <a className="break-all underline-offset-4 hover:underline" href={`mailto:${appointment.contactEmail}`} key="email">{appointment.contactEmail}</a>] as [string, React.ReactNode]] : []),
     [t("appointments.details.channel"), getChannelLabel(appointment.sourceChannel, t)],
     [t("appointments.status"), <Status key="status" variant={appointmentStatusVariant(appointment.status)}>{t(`appointments.statuses.${appointment.status}`, { defaultValue: appointment.status })}</Status>],
-    [t("appointments.calendar"), t(`appointments.calendarStates.${appointment.calendarSyncState}`, { defaultValue: appointment.calendarSyncState.replaceAll("_", " ") })],
+    // Shown only with a connected calendar; not_required means there's none.
+    ...(appointment.calendarSyncState && appointment.calendarSyncState !== "not_required" ? [[t("appointments.calendar"), <Status key="calendar" variant={calendarSyncVariant(appointment.calendarSyncState)}>{t(`appointments.calendarStates.${appointment.calendarSyncState}`, { defaultValue: appointment.calendarSyncState })}</Status>] as [string, React.ReactNode]] : []),
   ];
 
   return (

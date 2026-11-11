@@ -211,13 +211,14 @@
     },
     "calendarStates": {
       "not_required": "Non requis",
-      "pending": "En attente",
+      "pending": "Synchronisation",
       "synced": "Synchronisé",
-      "failed": "Échec",
-      "error": "Erreur",
+      "failed": "Échec de la synchronisation",
+      "error": "Échec de la synchronisation",
       "cancelled": "Annulé"
     },
     "actions": "Actions",
+      "rowActions": "Actions pour {{time}}",
     "cancel": {
       "action": "Annuler",
       "actionLabel": "Annuler le rendez-vous : {{time}}",

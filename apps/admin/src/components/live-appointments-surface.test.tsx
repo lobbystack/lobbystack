@@ -28,6 +28,8 @@ async function setup(locale: "en" | "fr", populated: boolean, role?: string, loa
   else client.setQueryData(["appointments", "business"], { appointments: populated ? [{ id: "appointment", startsAt: "2026-09-06T12:00:00Z", timezone: "UTC", status: "confirmed", calendarSyncState: "synced", contactName: null, serviceName: "Consultation", staffName: "Alex" }] : [] });
   render(<I18nextProvider i18n={i18n}><QueryClientProvider client={client}><LiveAppointmentsSurface /></QueryClientProvider></I18nextProvider>);
 }
+const rowActions = new RegExp(`^${en.appointments.rowActions.replace("{{time}}", "")}`);
+
 describe("new appointments locale baseline", () => {
   it("shows placeholders instead of an empty state while the calendar loads", async () => {
     await setup("en", false, undefined, true);
@@ -70,11 +72,14 @@ describe("new appointments locale baseline", () => {
   it("lets schedulers cancel each appointment, and hides the action from viewers", async () => {
     route.search = "view=list";
     await setup("en", true, "scheduler");
-    expect(screen.getByRole("button", { name: "Cancel appointment: Sep 6, 2026, 12:00 PM" })).toBeTruthy();
+    // Reschedule and Cancel sit in the row's menu, as other tables' row actions do.
+    await userEvent.click(screen.getByRole("button", { name: rowActions }));
+    expect(await screen.findByRole("menuitem", { name: en.appointments.move.action })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: en.appointments.cancel.action })).toBeTruthy();
     cleanup();
     route.search = "view=list";
     await setup("en", true, "viewer");
-    expect(screen.queryByRole("button", { name: /Cancel appointment/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: rowActions })).toBeNull();
   });
   it("opens on the calendar, by month", async () => {
     await setup("en", false);
@@ -150,7 +155,8 @@ describe("new appointments locale baseline", () => {
     await setup("en", false, "scheduler");
     clients[0]!.setQueryData(["appointments", "business"], { appointments: [{ id: "a", startsAt: "2026-09-06T12:00:00Z", endsAt: "2026-09-06T12:45:00Z", timezone: "UTC", status: "confirmed", sourceChannel: "voice", calendarSyncState: "synced", contactName: "Rosa", contactPhone: "+14155550100", contactEmail: "rosa@example.invalid", serviceName: "Feniranje na ravno + ampula - nadogradnja", staffName: "Marija", employeeName: "Marija" }] });
 
-    await userEvent.click(await screen.findByRole("button", { name: /Cancel appointment/ }));
+    await userEvent.click(await screen.findByRole("button", { name: rowActions }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: en.appointments.cancel.action }));
     expect(screen.queryByRole("dialog", { name: "Rosa" })).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: en.appointments.cancel.keep }));
 
@@ -173,7 +179,7 @@ describe("new appointments locale baseline", () => {
     await setup("en", false, "scheduler");
     clients[0]!.setQueryData(["appointments", "business"], { appointments: bookings });
 
-    expect(within(await screen.findByRole("row", { name: /3:00 PM/ })).getByRole("button", { name: /Cancel appointment/ })).toBeTruthy();
+    expect(within(await screen.findByRole("row", { name: /3:00 PM/ })).getByRole("button", { name: rowActions })).toBeTruthy();
     expect(screen.queryByRole("row", { name: /12:00 PM/ })).toBeNull();
     // The page names no business or count under its title.
     expect(screen.queryByText(/upcoming appointment/)).toBeNull();
@@ -185,7 +191,21 @@ describe("new appointments locale baseline", () => {
     await setup("en", false, "scheduler");
     clients.at(-1)!.setQueryData(["appointments", "business"], { appointments: bookings });
     const ended = await screen.findByRole("row", { name: /12:00 PM/ });
-    expect(within(ended).queryByRole("button", { name: /Cancel appointment/ })).toBeNull();
+    expect(within(ended).queryByRole("button", { name: rowActions })).toBeNull();
     expect(screen.queryByRole("row", { name: /3:00 PM/ })).toBeNull();
+  });
+
+  it("shows the Calendar column only once a calendar is connected, with each state as a chip", async () => {
+    route.search = "view=list";
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-09-01T00:00:00Z") });
+    const booking = { startsAt: "2026-09-06T12:00:00Z", endsAt: "2026-09-06T12:45:00Z", timezone: "UTC", status: "confirmed", sourceChannel: "voice", contactName: "Rosa", serviceName: "Haircut", staffName: "Ana" };
+    await setup("en", false, "scheduler");
+    clients[0]!.setQueryData(["appointments", "business"], { appointments: [{ ...booking, id: "a", calendarSyncState: "not_required" }] });
+    expect(await screen.findByRole("row", { name: /Rosa/ })).toBeTruthy();
+    expect(screen.queryByRole("columnheader", { name: en.appointments.calendar })).toBeNull();
+    expect(screen.queryByText(en.appointments.calendarStates.not_required)).toBeNull();
+    clients[0]!.setQueryData(["appointments", "business"], { appointments: [{ ...booking, id: "a", calendarSyncState: "failed" }, { ...booking, id: "b", startsAt: "2026-09-06T14:00:00Z", endsAt: "2026-09-06T14:45:00Z", calendarSyncState: "not_required" }] });
+    expect(await screen.findByRole("columnheader", { name: en.appointments.calendar })).toBeTruthy();
+    expect(screen.getByText(en.appointments.calendarStates.failed)).toBeTruthy();
   });
 });

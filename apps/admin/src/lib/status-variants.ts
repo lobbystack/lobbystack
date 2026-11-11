@@ -21,6 +21,16 @@ export const APPOINTMENT_STATUS_VARIANTS = {
 } satisfies Record<string, StatusVariant>;
 export const appointmentStatusVariant = lookup(APPOINTMENT_STATUS_VARIANTS);
 
+/** Whether a booking reached the connected calendar. not_required means no calendar is connected, so it shows nothing. */
+export const CALENDAR_SYNC_VARIANTS = {
+  synced: "success",
+  pending: "info",
+  failed: "danger",
+  error: "danger",
+  cancelled: "neutral",
+} satisfies Record<string, StatusVariant>;
+export const calendarSyncVariant = lookup(CALENDAR_SYNC_VARIANTS);
+
 /** What came of a call, as the contact's activity sums it up. */
 export const CALL_OUTCOME_VARIANTS = {
   in_progress: "info",
