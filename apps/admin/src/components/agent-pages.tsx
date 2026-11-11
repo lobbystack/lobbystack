@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 
 import { AgentHandlingSection } from "@/components/agent-handling-section";
 import { AgentIdentitySection } from "@/components/agent-identity-section";
-import { AgentInstructionsSection } from "@/components/agent-instructions-section";
+
 import { useBusinessCan } from "@/components/business-capabilities-provider";
 import { ChannelsSection } from "@/components/agents/channels-section";
 import { settingRowClassName } from "@/components/text-setting-row";
@@ -29,10 +29,6 @@ export function AgentSettingsPage({ agentId }: { agentId: string }) {
   );
 }
 
-export function AgentInstructionsPage({ agentId }: { agentId: string }) {
-  const { businessId, canManage } = useManagedBusiness();
-  return <AgentInstructionsSection agentId={agentId} businessId={businessId} canManage={canManage} />;
-}
 
 function LinkRow({ href, title }: { href: string; title: string }) {
   return (

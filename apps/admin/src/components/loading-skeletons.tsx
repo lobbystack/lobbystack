@@ -494,13 +494,15 @@ export function EmployeeRowsSkeleton({ rows = 10 }: { rows?: number }) {
 }
 
 /** Placeholder rows for the rules table. The drag handle column is there only for people who can manage rules. */
-export function RuleRowsSkeleton({ handle = true, rows = 10 }: { handle?: boolean; rows?: number }) {
+/** Rules' rows: the handle, title, channel (holding `channelLabel`, the label most rules show, hidden), preview, status, date and menu. */
+export function RuleRowsSkeleton({ channelLabel, handle = true, rows = 10 }: { channelLabel: string; handle?: boolean; rows?: number }) {
   return (
     <>
       {Array.from({ length: rows }).map((_, index) => (
         <TableRow className="hover:bg-transparent" key={index}>
           {handle ? <TableCell className="pr-0"><Skeleton className="size-7 rounded-md" /></TableCell> : null}
           <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+          <TableCell><HiddenTextSkeleton className="text-sm">{channelLabel}</HiddenTextSkeleton></TableCell>
           <TableCell className="max-w-0"><Skeleton className="h-4 w-3/4" /></TableCell>
           <TableCell><StatusSkeleton /></TableCell>
           <TableCell><Skeleton className="ms-auto h-4 w-32" /></TableCell>
@@ -512,23 +514,24 @@ export function RuleRowsSkeleton({ handle = true, rows = 10 }: { handle?: boolea
 }
 
 /** The rules table and its pagination, for the moment before the workspace is known and the real table can render. */
-export function RulesPageSkeleton({ headings, rowsPerPage }: { headings: [title: string, preview: string, status: string, added: string]; rowsPerPage: string }) {
+export function RulesPageSkeleton({ channelLabel, headings, rowsPerPage }: { channelLabel: string; headings: [title: string, channel: string, preview: string, status: string, added: string]; rowsPerPage: string }) {
   return (
     <>
       <TableCard>
         <Table className="min-w-[60rem] w-full table-fixed">
-          <colgroup><col className="w-10" /><col className="w-[18%]" /><col className="w-[42%]" /><col className="w-[14%]" /><col className="w-[18%]" /><col className="w-12" /></colgroup>
+          <colgroup><col className="w-10" /><col className="w-[18%]" /><col className="w-[16%]" /><col className="w-[28%]" /><col className="w-[12%]" /><col className="w-[16%]" /><col className="w-12" /></colgroup>
           <TableHeader>
             <TableRow>
               <TableHead />
               <TableHead>{headings[0]}</TableHead>
               <TableHead>{headings[1]}</TableHead>
               <TableHead>{headings[2]}</TableHead>
-              <TableHead className="text-right">{headings[3]}</TableHead>
+              <TableHead>{headings[3]}</TableHead>
+              <TableHead className="text-right">{headings[4]}</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
-          <TableBody aria-busy="true"><RuleRowsSkeleton /></TableBody>
+          <TableBody aria-busy="true"><RuleRowsSkeleton channelLabel={channelLabel} /></TableBody>
         </Table>
       </TableCard>
       <DataTablePaginationSkeleton rowsPerPage={rowsPerPage} />

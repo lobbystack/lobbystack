@@ -217,7 +217,7 @@
       "editKnowledge": "Izmeni pravilo",
       "uploadDocument": "Otpremi dokument",
       "addKnowledgeDescription": "Šta agent treba da radi, na primer da preusmerava pozive, postavlja pitanja i šalje SMS poruke.",
-      "editKnowledgeDescription": "Izmenite uputstvo koje agent treba da prati tokom poziva i naknadnih koraka.",
+      "editKnowledgeDescription": "Šta agent treba da radi, na svim kanalima ili na jednom.",
       "uploadDocumentDescription": "Otpremite fajl kako bi ga agent koristio.",
       "documentBadge": "Dokument",
       "textBadge": "Tekst",
@@ -261,12 +261,21 @@
           "label": "Oznake",
           "placeholder": "Preusmeravanja, eskalacija",
           "hint": "Opciono. Ključne reči odvojene zarezima koje pomažu da se ova pravila razvrstaju."
+        },
+        "channel": {
+          "label": "Kanal",
+          "all": "Svi kanali",
+          "voice": "Pozivi",
+          "sms": "SMS poruke",
+          "web_chat": "Čet na sajtu",
+          "instagram": "Instagram"
         }
       }
     }
   },
   "table": {
     "title": "Naslov",
+    "channel": "Kanal",
     "preview": "Pregled",
     "status": "Status",
     "disabled": "Isključeno",
@@ -288,9 +297,6 @@
   "fields": {
     "defaults": {
       "title": "Podrazumevano"
-    },
-    "instructions": {
-      "title": "Uputstva"
     },
     "summary": {
       "label": "Opis firme",
@@ -397,11 +403,6 @@
   "identity": { "title": "Ime, pozdrav i glas" },
   "transfers": { "title": "Prebacivanja" },
   "businessDetails": { "title": "Podaci o poslovanju" },
-  "instructions": {
-    "voice": { "label": "Pozivi", "placeholder": "Odgovarajte kratko i ponudite zakazivanje termina." },
-    "chat": { "label": "Četovi", "hint": "Čet na sajtu i Instagram.", "placeholder": "Odgovarajte u dve ili tri rečenice." },
-    "text": { "label": "SMS poruke", "placeholder": "Odgovori neka budu kraći od 300 znakova." }
-  },
   "staffFirst": {
     "title": "Osoblje se javlja prvo",
     "save": "Sačuvaj podešavanje za osoblje",

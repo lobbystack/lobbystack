@@ -16,7 +16,7 @@ beforeEach(() => {
   fixture.business = { name: "Clinic", defaultLocale: "en" };
   fixture.profile = undefined;
   fakeOperator.tx = {
-    select: () => ({ from: (table: unknown) => ({ where: () => ({ limit: async () => table === agents ? (fixture.profile ? [{ id: "profile", ...fixture.profile }] : []) : [fixture.business], for: async () => [{ timezone: "America/Toronto", ...fixture.business }] }) }) }),
+    select: () => ({ from: (table: unknown) => ({ where: () => ({ limit: async () => table === agents ? (fixture.profile ? [{ id: "profile", ...fixture.profile }] : []) : [fixture.business], for: async () => [{ timezone: "America/Toronto", ...fixture.business }], orderBy: async () => [] }) }) }),
     // A business without an agent gets one from the defaults; one with an agent has it updated, which `conflict` records.
     insert: () => ({ values: (value: unknown) => { fixture.insert(value); return { onConflictDoNothing: () => ({ returning: async () => [{ id: "profile", updatedAt: new Date(0) }] }) }; } }),
     update: (table: unknown) => ({ set: (value: unknown) => { fixture.update(value); if (table === agents) fixture.conflict(value); return { where: () => ({ returning: async () => [table === agents ? { id: "profile", updatedAt: new Date(0) } : { id: "business" }] }) }; } }),

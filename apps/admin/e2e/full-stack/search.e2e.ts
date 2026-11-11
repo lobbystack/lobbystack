@@ -73,7 +73,7 @@ test("an activity-only partner business finds no agents, analytics or setup page
     await expect(results.getByRole("option", { name: new RegExp(`${navCopy.settingsPages.usage}$`) })).toBeVisible();
     await search(navCopy.items.inbox);
     await expect(results.getByRole("option", { name: new RegExp(`^${navCopy.items.inbox}`) }).first()).toBeVisible();
-    for (const text of [navCopy.items.agents, navCopy.items.analytics, navCopy.settingsPages.knowledge, navCopy.settingsPages.business, navCopy.settingsPages.connections, navCopy.agentPages.rules, navCopy.agentPages.instructions]) {
+    for (const text of [navCopy.items.agents, navCopy.items.analytics, navCopy.settingsPages.knowledge, navCopy.settingsPages.business, navCopy.settingsPages.connections, navCopy.agentPages.rules]) {
       await search(text);
       await expect(results.getByRole("option"), text).toHaveCount(0);
     }

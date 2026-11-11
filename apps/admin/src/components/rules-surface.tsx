@@ -6,6 +6,7 @@ import { ArrowDown, ArrowUp, GripVertical, MoreHorizontal, Pause, Pencil, Play, 
 import { toast } from "sonner";
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ruleChannels, type RuleChannel } from "@lobbystack/shared";
 
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useSetupAction } from "@/lib/use-setup-action";
@@ -19,7 +20,9 @@ import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel } from "./ui/field";
+import { Badge } from "./ui/badge";
 import { Input } from "./ui/input";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Textarea } from "./ui/textarea";
 import { intlLocale } from "@/lib/locale";
@@ -27,7 +30,10 @@ import { cn } from "@/lib/utils";
 import { Status } from "@/components/ui/status";
 import { knowledgeStatusVariant } from "@/lib/status-variants";
 
-type Rule = { id: string; title: string; content: string; active: boolean; sortOrder: number; createdAt: string };
+type Rule = { id: string; title: string; content: string; active: boolean; sortOrder: number; createdAt: string; channel: RuleChannel | null };
+type RuleInput = { title: string; content: string; channel: RuleChannel | null };
+// The select's value for a rule on every channel.
+const ALL_CHANNELS = "all";
 
 function summarize(value: string, length: number): string {
   const normalized = value.replace(/\s+/gu, " ").trim();
@@ -55,8 +61,8 @@ export function RulesSurface({ agentId }: { agentId?: string } = {}) {
   const scoped = agentId ? { agentId } : {};
   const rules = useQuery({ queryKey: rulesKey, enabled: Boolean(business), queryFn: () => requestJson<Rule[]>(rulesUrl()) });
   const invalidate = async () => { await queryClient.invalidateQueries({ queryKey: rulesKey }); };
-  const createRule = useMutation({ mutationFn: (input: { title: string; content: string }) => requestJson<string>(rulesUrl(), { method: "POST", body: JSON.stringify({ ...scoped, ...input }) }), onSuccess: invalidate });
-  const updateRule = useMutation({ mutationFn: (input: { ruleId: string; title?: string; content?: string; active?: boolean }) => requestJson<{ ok: boolean }>(rulesUrl(), { method: "PATCH", body: JSON.stringify({ ...scoped, ...input }) }), onSuccess: invalidate });
+  const createRule = useMutation({ mutationFn: (input: RuleInput) => requestJson<string>(rulesUrl(), { method: "POST", body: JSON.stringify({ ...scoped, ...input }) }), onSuccess: invalidate });
+  const updateRule = useMutation({ mutationFn: (input: { ruleId: string; title?: string; content?: string; active?: boolean; channel?: RuleChannel | null }) => requestJson<{ ok: boolean }>(rulesUrl(), { method: "PATCH", body: JSON.stringify({ ...scoped, ...input }) }), onSuccess: invalidate });
   const deleteRule = useMutation({ mutationFn: (ruleId: string) => requestJson<{ ok: boolean }>(rulesUrl(), { method: "DELETE", body: JSON.stringify({ ...scoped, ruleId }) }), onSuccess: invalidate });
   const reorderRules = useMutation({
     mutationFn: (ruleIds: string[]) => requestJson<{ ok: boolean }>(rulesUrl(), { method: "PATCH", body: JSON.stringify({ ...scoped, ruleIds }) }),
@@ -104,7 +110,7 @@ export function RulesSurface({ agentId }: { agentId?: string } = {}) {
 
   if (businesses.isLoading) return <PageSurface title={t("sections.rules.title")}><div className="flex w-full flex-col gap-6">
     <HeaderActions><HeaderButtonSkeleton label={t("sections.rules.addKnowledge")} /></HeaderActions>
-    <RulesPageSkeleton headings={[t("table.title"), t("table.preview"), t("table.status"), t("table.added")]} rowsPerPage={paginationLabels.rowsPerPage} />
+    <RulesPageSkeleton channelLabel={t("sections.rules.fields.channel.all")} headings={[t("table.title"), t("table.channel"), t("table.preview"), t("table.status"), t("table.added")]} rowsPerPage={paginationLabels.rowsPerPage} />
   </div></PageSurface>;
   if (!business) return <PageSurface title={t("sections.rules.title")}><p className="text-sm text-muted-foreground">{t("empty.description")}</p></PageSurface>;
 
@@ -116,10 +122,10 @@ export function RulesSurface({ agentId }: { agentId?: string } = {}) {
         </HeaderActions>
         <TableCard>
           <Table className={cn("w-full table-fixed", (loading || pageRows.length > 0) && "min-w-[60rem]")}>
-            <colgroup>{canManage ? <col className="w-10" /> : null}<col className="w-[18%]" /><col className="w-[42%]" /><col className="w-[14%]" /><col className="w-[18%]" /><col className="w-12" /></colgroup>
-            <TableHeader empty={!(loading || pageRows.length > 0)}><TableRow>{canManage ? <TableHead /> : null}<TableHead>{t("table.title")}</TableHead><TableHead>{t("table.preview")}</TableHead><TableHead>{t("table.status")}</TableHead><TableHead className="text-right">{t("table.added")}</TableHead><TableHead /></TableRow></TableHeader>
+            <colgroup>{canManage ? <col className="w-10" /> : null}<col className="w-[18%]" /><col className="w-[16%]" /><col className="w-[28%]" /><col className="w-[12%]" /><col className="w-[16%]" /><col className="w-12" /></colgroup>
+            <TableHeader empty={!(loading || pageRows.length > 0)}><TableRow>{canManage ? <TableHead /> : null}<TableHead>{t("table.title")}</TableHead><TableHead>{t("table.channel")}</TableHead><TableHead>{t("table.preview")}</TableHead><TableHead>{t("table.status")}</TableHead><TableHead className="text-right">{t("table.added")}</TableHead><TableHead /></TableRow></TableHeader>
             <TableBody aria-busy={loading || undefined}>
-              {loading ? <RuleRowsSkeleton handle={canManage} rows={Math.min(pagination.pageSize, 10)} /> : pageRows.length ? pageRows.map((rule) => {
+              {loading ? <RuleRowsSkeleton channelLabel={t("sections.rules.fields.channel.all")} handle={canManage} rows={Math.min(pagination.pageSize, 10)} /> : pageRows.length ? pageRows.map((rule) => {
                 const orderedIndex = orderedRules.findIndex((candidate) => candidate.id === rule.id);
                 const dropLine = dropTarget?.id === rule.id && draggingId !== rule.id ? (dropTarget.after ? "shadow-[inset_0_-2px_0_var(--primary)]" : "shadow-[inset_0_2px_0_var(--primary)]") : "";
                 return <TableRow
@@ -141,12 +147,13 @@ export function RulesSurface({ agentId }: { agentId?: string } = {}) {
                 >
                   {canManage ? <TableCell className="pr-0" onClick={(event) => event.stopPropagation()}><span aria-hidden="true" className={cn("flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground", reorderRules.isPending ? "cursor-not-allowed opacity-50" : "cursor-grab active:cursor-grabbing")} onPointerDown={() => { if (!reorderRules.isPending) setDragArmed(rule.id); }} onPointerUp={() => setDragArmed(null)} title={t("actions.dragToReorder")}><GripVertical className="size-4" /></span></TableCell> : null}
                   <TableCell className="max-w-0 overflow-hidden"><span className="block truncate font-medium" title={rule.title}>{summarize(rule.title, 32)}</span></TableCell>
+                  <TableCell>{rule.channel ? <Badge variant="secondary">{t(`sections.rules.fields.channel.${rule.channel}`)}</Badge> : <span className="text-sm text-muted-foreground">{t("sections.rules.fields.channel.all")}</span>}</TableCell>
                   <TableCell className="max-w-0 overflow-hidden"><span className="block truncate text-sm text-muted-foreground" title={rule.content}>{summarize(rule.content, 72)}</span></TableCell>
                   <TableCell><Status variant={knowledgeStatusVariant(rule.active ? "indexed" : "disabled")}>{rule.active ? t("sections.rules.status.indexed") : t("table.disabled")}</Status></TableCell>
                   <TableCell className="text-right text-sm text-muted-foreground">{new Intl.DateTimeFormat(intlLocale(i18n.resolvedLanguage), { dateStyle: "medium", timeStyle: "short" }).format(new Date(rule.createdAt))}</TableCell>
                   <TableCell onClick={(event) => event.stopPropagation()}>{canManage ? <DropdownMenu><DropdownMenuTrigger render={<Button aria-label={t("actions.moreOptions")} size="icon-sm" type="button" variant="ghost"><MoreHorizontal /></Button>} /><DropdownMenuContent align="end" className="min-w-0 w-fit p-1"><DropdownMenuItem onClick={() => { setEditingRule(rule); setDialogOpen(true); }}><Pencil />{t("actions.edit")}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem disabled={orderedIndex === 0 || reorderRules.isPending} onClick={() => moveRule(rule, -1)}><ArrowUp />{t("actions.moveUp")}</DropdownMenuItem><DropdownMenuItem disabled={orderedIndex === orderedRules.length - 1 || reorderRules.isPending} onClick={() => moveRule(rule, 1)}><ArrowDown />{t("actions.moveDown")}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem disabled={updateRule.isPending} onClick={() => updateRule.mutate({ ruleId: rule.id, active: !rule.active })}>{rule.active ? <Pause /> : <Play />}{rule.active ? t("actions.disable") : t("actions.enable")}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setDeleteCandidate(rule)} variant="destructive"><Trash2 />{t("actions.delete")}</DropdownMenuItem></DropdownMenuContent></DropdownMenu> : null}</TableCell>
                 </TableRow>;
-              }) : <TableRow><TableCell className="h-24 text-center whitespace-normal text-muted-foreground" colSpan={canManage ? 6 : 5}>{t("sections.rules.emptyState")}</TableCell></TableRow>}
+              }) : <TableRow><TableCell className="h-24 text-center whitespace-normal text-muted-foreground" colSpan={canManage ? 7 : 6}>{t("sections.rules.emptyState")}</TableCell></TableRow>}
             </TableBody>
           </Table>
         </TableCard>
@@ -158,15 +165,18 @@ export function RulesSurface({ agentId }: { agentId?: string } = {}) {
   );
 }
 
-function RuleDialog({ editingRule, onOpenChange, open, pending, save }: { editingRule: Rule | null; onOpenChange: (open: boolean) => void; open: boolean; pending: boolean; save: (input: { title: string; content: string }) => Promise<void> }) {
+function RuleDialog({ editingRule, onOpenChange, open, pending, save }: { editingRule: Rule | null; onOpenChange: (open: boolean) => void; open: boolean; pending: boolean; save: (input: RuleInput) => Promise<void> }) {
   const { t } = useTranslation("agent");
   const titleId = useId();
   const contentId = useId();
+  const channelId = useId();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [channel, setChannel] = useState<RuleChannel | null>(null);
   const [submitted, setSubmitted] = useState(false);
-  useEffect(() => { if (open) { setTitle(editingRule?.title ?? ""); setContent(editingRule?.content ?? ""); setSubmitted(false); } }, [editingRule, open]);
+  useEffect(() => { if (open) { setTitle(editingRule?.title ?? ""); setContent(editingRule?.content ?? ""); setChannel(editingRule?.channel ?? null); setSubmitted(false); } }, [editingRule, open]);
+  const channelItems = [{ value: ALL_CHANNELS, label: t("sections.rules.fields.channel.all") }, ...ruleChannels.map((value) => ({ value, label: t(`sections.rules.fields.channel.${value}`) }))];
   const titleMissing = submitted && !title.trim();
   const contentMissing = submitted && !content.trim();
-  return <Dialog onOpenChange={onOpenChange} open={open}><DialogContent ><DialogHeader><DialogTitle>{t(editingRule ? "sections.rules.editKnowledge" : "sections.rules.addKnowledge")}</DialogTitle><DialogDescription>{t(editingRule ? "sections.rules.editKnowledgeDescription" : "sections.rules.addKnowledgeDescription")}</DialogDescription></DialogHeader><form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); setSubmitted(true); if (!pending && title.trim() && content.trim()) void save({ title: title.trim(), content: content.trim() }); }}><FieldGroup><Field data-invalid={titleMissing || undefined}><FieldContent><FieldLabel htmlFor={titleId}>{t("sections.rules.fields.title.label")}</FieldLabel><FieldDescription>{t("sections.rules.fields.title.hint")}</FieldDescription></FieldContent><Input aria-describedby={titleMissing ? `${titleId}-error` : undefined} aria-invalid={titleMissing || undefined} id={titleId} onChange={(event) => setTitle(event.target.value)} placeholder={t("sections.rules.fields.title.placeholder")} value={title} />{titleMissing ? <FieldError id={`${titleId}-error`}>{t("sections.rules.fields.title.required")}</FieldError> : null}</Field><Field data-invalid={contentMissing || undefined}><FieldContent><FieldLabel htmlFor={contentId}>{t("sections.rules.fields.content.label")}</FieldLabel><FieldDescription>{t("sections.rules.fields.content.hint")}</FieldDescription></FieldContent><Textarea aria-describedby={contentMissing ? `${contentId}-error` : undefined} aria-invalid={contentMissing || undefined} className="min-h-40" id={contentId} onChange={(event) => setContent(event.target.value)} placeholder={t("sections.rules.fields.content.placeholder")} value={content} />{contentMissing ? <FieldError id={`${contentId}-error`}>{t("sections.rules.fields.content.required")}</FieldError> : null}</Field></FieldGroup><DialogFooter><Button disabled={pending} onClick={() => onOpenChange(false)} type="button" variant="outline">{t("actions.cancel")}</Button><Button disabled={pending} type="submit">{pending ? t("actions.saving") : t(editingRule ? "actions.save" : "actions.add")}</Button></DialogFooter></form></DialogContent></Dialog>;
+  return <Dialog onOpenChange={onOpenChange} open={open}><DialogContent ><DialogHeader><DialogTitle>{t(editingRule ? "sections.rules.editKnowledge" : "sections.rules.addKnowledge")}</DialogTitle><DialogDescription>{t(editingRule ? "sections.rules.editKnowledgeDescription" : "sections.rules.addKnowledgeDescription")}</DialogDescription></DialogHeader><form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); setSubmitted(true); if (!pending && title.trim() && content.trim()) void save({ title: title.trim(), content: content.trim(), channel }); }}><FieldGroup><Field data-invalid={titleMissing || undefined}><FieldContent><FieldLabel htmlFor={titleId}>{t("sections.rules.fields.title.label")}</FieldLabel><FieldDescription>{t("sections.rules.fields.title.hint")}</FieldDescription></FieldContent><Input aria-describedby={titleMissing ? `${titleId}-error` : undefined} aria-invalid={titleMissing || undefined} id={titleId} onChange={(event) => setTitle(event.target.value)} placeholder={t("sections.rules.fields.title.placeholder")} value={title} />{titleMissing ? <FieldError id={`${titleId}-error`}>{t("sections.rules.fields.title.required")}</FieldError> : null}</Field><Field><FieldLabel htmlFor={channelId}>{t("sections.rules.fields.channel.label")}</FieldLabel><Select items={channelItems} onValueChange={(value) => setChannel(ruleChannels.find((candidate) => candidate === value) ?? null)} value={channel ?? ALL_CHANNELS}><SelectTrigger className="w-full" id={channelId}><SelectValue /></SelectTrigger><SelectContent><SelectGroup>{channelItems.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectGroup></SelectContent></Select></Field><Field data-invalid={contentMissing || undefined}><FieldContent><FieldLabel htmlFor={contentId}>{t("sections.rules.fields.content.label")}</FieldLabel><FieldDescription>{t("sections.rules.fields.content.hint")}</FieldDescription></FieldContent><Textarea aria-describedby={contentMissing ? `${contentId}-error` : undefined} aria-invalid={contentMissing || undefined} className="min-h-40" id={contentId} onChange={(event) => setContent(event.target.value)} placeholder={t("sections.rules.fields.content.placeholder")} value={content} />{contentMissing ? <FieldError id={`${contentId}-error`}>{t("sections.rules.fields.content.required")}</FieldError> : null}</Field></FieldGroup><DialogFooter><Button disabled={pending} onClick={() => onOpenChange(false)} type="button" variant="outline">{t("actions.cancel")}</Button><Button disabled={pending} type="submit">{pending ? t("actions.saving") : t(editingRule ? "actions.save" : "actions.add")}</Button></DialogFooter></form></DialogContent></Dialog>;
 }
