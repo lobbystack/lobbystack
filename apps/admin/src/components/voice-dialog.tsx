@@ -96,7 +96,7 @@ export function VoicePlayButton({ voice, preview, className }: { voice: Receptio
   return (
     <button
       aria-label={t(active ? "fields.voice.stop" : "fields.voice.play", { voice: voiceName(voice) })}
-      className={cn("relative flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-foreground transition-colors outline-none hover:bg-muted/70 focus-visible:ring-[3px] focus-visible:ring-ring/50", className)}
+      className={cn("relative flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-foreground transition-colors outline-none hover:bg-muted/70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background", className)}
       onClick={(event) => { event.stopPropagation(); if (active) preview.stop(); else preview.play(voice); }}
       type="button"
     >
@@ -114,7 +114,7 @@ function VoiceRow({ voice, picked, inUse, preview, onPick }: { voice: Receptioni
   const traits = useVoiceTraits();
   return (
     // The pick button stretches over the whole row; the play button sits above it and only plays.
-    <li className={cn("relative flex items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-muted/50 has-[button[aria-pressed]:focus-visible]:ring-[3px] has-[button[aria-pressed]:focus-visible]:ring-ring/50", picked && "bg-muted")}>
+    <li className={cn("relative flex items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-muted has-[button[aria-pressed]:focus-visible]:ring-2 has-[button[aria-pressed]:focus-visible]:ring-ring has-[button[aria-pressed]:focus-visible]:ring-offset-2 has-[button[aria-pressed]:focus-visible]:ring-offset-background", picked && "bg-muted")}>
       <VoicePlayButton className="z-10" preview={preview} voice={voice} />
       <button aria-pressed={picked} className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 py-1 text-left outline-none after:absolute after:inset-0 after:rounded-xl" onClick={onPick} type="button">
         <span className="flex min-w-0 flex-1 flex-col">

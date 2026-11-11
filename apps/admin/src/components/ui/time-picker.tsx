@@ -100,7 +100,7 @@ function TimeColumn({ label, onSelect, open, options, render, selected, title }:
         <button
           aria-selected={option === selected}
           className={cn(
-            "shrink-0 rounded-xs px-2 py-1.5 text-center text-sm tabular-nums outline-none transition-colors hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring/50",
+            "shrink-0 rounded-xs px-2 py-1.5 text-center text-sm tabular-nums outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
             option === selected && "bg-primary text-primary-foreground hover:bg-primary/90",
           )}
           key={option}

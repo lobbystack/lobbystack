@@ -378,7 +378,7 @@ function WidgetKeyForm({ editing, name, businessName, embedOrigin, pending, erro
                 <Field>
                   <FieldLabel htmlFor={`${id}-color`}>{t("widget.fields.color")}</FieldLabel>
                   <div className="flex items-center gap-2">
-                    <label className="relative size-9 shrink-0 cursor-pointer overflow-hidden rounded-full ring-1 ring-foreground/25 ring-inset focus-within:ring-[3px] focus-within:ring-ring/50" style={{ backgroundColor: draft.color }}>
+                    <label className="relative size-9 shrink-0 cursor-pointer overflow-hidden rounded-full ring-1 ring-foreground/25 ring-inset focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background" style={{ backgroundColor: draft.color }}>
                       <span className="sr-only">{t("widget:manage.pickColor")}</span>
                       <input className="absolute inset-0 cursor-pointer opacity-0" type="color" value={draft.color.length === 4 ? `#${[...draft.color.slice(1)].map((digit) => digit + digit).join("")}` : draft.color} onChange={(event) => { set({ color: event.target.value }); setColorText(event.target.value); }} />
                     </label>

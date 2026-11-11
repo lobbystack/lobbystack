@@ -491,7 +491,7 @@ function Waveform({ currentTime, duration, label, onSeek, onToggle, peaks }: {
       aria-valuemin={0}
       aria-valuenow={Math.round(currentTime)}
       aria-valuetext={`${formatDuration(currentTime)} / ${formatDuration(duration)}`}
-      className="flex h-10 min-w-0 flex-1 cursor-pointer touch-none items-center gap-px overflow-hidden rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+      className="flex h-10 min-w-0 flex-1 cursor-pointer touch-none items-center gap-px overflow-hidden rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       onKeyDown={(event) => {
         if (event.key === " " && !event.repeat && !event.ctrlKey && !event.metaKey && !event.altKey) {
           event.preventDefault();

@@ -61,7 +61,7 @@ function InboxRow({ href, item, onOpen, selected, showAgent }: { href: string; i
   // A call says what came of it, in the operator's language, as its own page does.
   const preview = item.outcome && item.outcome.kind !== "none" ? formatCallOutcomeSummary(item.outcome, i18n.language, t) : item.preview;
   return (
-    <Link aria-current={selected ? "true" : undefined} className={cn("flex w-full flex-col gap-1 rounded-md px-2 py-2 text-sm hover:bg-accent hover:text-accent-foreground", selected && "bg-muted")} href={href} onClick={onOpen} scroll={false}>
+    <Link aria-current={selected ? "true" : undefined} className={cn("flex w-full flex-col gap-1 rounded-md px-2 py-2 text-sm hover:bg-muted", selected && "bg-muted")} href={href} onClick={onOpen} scroll={false}>
       <span className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2">
         <span className="ph-mask truncate font-semibold">{title}</span>
         <span className="text-[11px] text-muted-foreground">{formatDateTime(item.occurredAt, i18n.language, { month: "short", day: "numeric" })}</span>

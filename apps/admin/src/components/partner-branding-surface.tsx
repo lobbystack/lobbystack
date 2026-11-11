@@ -111,7 +111,7 @@ function ImageField({ id, image, label, help, savedUrl, choice, disabled, onChan
     <Field>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <div className="flex items-center gap-2">
-        <label className={cn("flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-dashed border-border bg-card px-4 py-3 text-sm font-medium transition-colors focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background", disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:border-foreground/40 hover:bg-muted/20")}>
+        <label className={cn("flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-dashed border-border bg-card px-4 py-3 text-sm font-medium transition-colors focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background", disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:border-foreground/40 hover:bg-muted")}>
           <input accept={brandLogoContentTypes.join(",")} className="sr-only" disabled={disabled} id={id} onChange={(event) => { void pick(event.target.files?.[0]); event.target.value = ""; }} type="file" />
           <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
             {shown ? <img alt="" className="size-6 object-contain" src={shown} /> : <ImageUp aria-hidden="true" className="size-4 text-muted-foreground" />}
@@ -227,7 +227,7 @@ export function PartnerBrandingSurface() {
                   <Field className="sm:max-w-[calc(50%-10px)]">
                     <FieldLabel htmlFor={field("color")}>{t("branding.colorLabel")}</FieldLabel>
                     <div className="flex items-center gap-2">
-                      <label className={cn("relative size-9 shrink-0 overflow-hidden rounded-full ring-1 ring-foreground/25 ring-inset focus-within:ring-[3px] focus-within:ring-ring/50", working ? "cursor-not-allowed" : "cursor-pointer")} style={{ backgroundColor: pickedColor ?? "transparent" }}>
+                      <label className={cn("relative size-9 shrink-0 overflow-hidden rounded-full ring-1 ring-foreground/25 ring-inset focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background", working ? "cursor-not-allowed" : "cursor-pointer")} style={{ backgroundColor: pickedColor ?? "transparent" }}>
                         <span className="sr-only">{t("branding.colorPick")}</span>
                         <input className="absolute inset-0 cursor-pointer opacity-0" disabled={working} onChange={(event) => set({ color: event.target.value })} type="color" value={pickedColor ?? "#000000"} />
                       </label>

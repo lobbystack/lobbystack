@@ -50,7 +50,7 @@ export function AgentsPage() {
             <Item className="relative hover:bg-muted/50" key={agent.id} variant="outline">
               <ItemMedia><AgentAvatar name={agent.name} size="default" /></ItemMedia>
               <ItemContent>
-                <ItemTitle><Link className="truncate after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:ring-[3px] focus-visible:after:ring-ring/50" href={agentHref(agent.id)}>{agent.name}</Link><AgentStatusBadges agent={agent} /></ItemTitle>
+                <ItemTitle><Link className="truncate after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring focus-visible:after:ring-offset-2 focus-visible:after:ring-offset-background" href={agentHref(agent.id)}>{agent.name}</Link><AgentStatusBadges agent={agent} /></ItemTitle>
                 <ItemDescription>{channelCounts(agent)}</ItemDescription>
               </ItemContent>
               <ItemActions>

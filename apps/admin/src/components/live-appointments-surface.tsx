@@ -116,7 +116,7 @@ export function LiveAppointmentsSurface() {
               const ended = hasEnded(appointment);
               return <li className="p-1" key={appointment.id}>
                 {/* The button's ::after stretches over the row; Cancel sits above it. */}
-                <div className="relative flex items-center gap-4 rounded-md px-3 py-3 transition-colors hover:bg-muted/50 has-[>button:focus-visible]:ring-[3px] has-[>button:focus-visible]:ring-ring/50">
+                <div className="relative flex items-center gap-4 rounded-md px-3 py-3 transition-colors hover:bg-muted has-[>button:focus-visible]:ring-2 has-[>button:focus-visible]:ring-ring has-[>button:focus-visible]:ring-offset-2 has-[>button:focus-visible]:ring-offset-background">
                 <button className={cn("flex min-w-0 flex-1 items-start gap-4 text-left outline-none after:absolute after:inset-0 after:rounded-md", ended && "line-through opacity-50")} onClick={() => setDetailsId(appointment.id)} type="button">
                 {/* Wide enough for "11:30 AM" in 12-hour locales; times never wrap. */}
                 <div className="flex w-20 shrink-0 flex-col whitespace-nowrap tabular-nums">

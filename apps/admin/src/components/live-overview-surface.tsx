@@ -161,7 +161,7 @@ export function LiveOverviewSurface() {
 
                             return (
                               // The whole row opens its item; the title's link stretches over it.
-                              <Item className={cn("relative rounded-md p-0", destination && "-mx-2 px-2 py-2 transition-colors hover:bg-muted/50 has-[a:focus-visible]:ring-[3px] has-[a:focus-visible]:ring-ring/50")} size="sm" variant="default">
+                              <Item className={cn("relative rounded-md p-0", destination && "-mx-2 px-2 py-2 transition-colors hover:bg-muted has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-ring has-[a:focus-visible]:ring-offset-2 has-[a:focus-visible]:ring-offset-background")} size="sm" variant="default">
                                 <ItemContent className="min-w-0">
                                   <ItemHeader className="flex-col items-start gap-2 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start sm:gap-x-3 sm:gap-y-2">
                                     <div className="min-w-0 flex-1">
@@ -241,7 +241,7 @@ export function LiveOverviewSurface() {
                   const contactName = getContactDisplayName({ name: appointment.contactName, phone: appointment.contactPhone, email: appointment.contactEmail, channels: [appointment.sourceChannel] }, i18n.language, t);
                   return <div key={appointment.id}>
                     {/* The whole row opens the appointment's details, as a row on the appointments page does. */}
-                    <button className="-mx-2 grid w-[calc(100%+1rem)] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 rounded-md px-2 py-2 text-left outline-none transition-colors hover:bg-muted/50 focus-visible:ring-[3px] focus-visible:ring-ring/50" onClick={() => setDetailsId(appointment.id)} type="button">
+                    <button className="-mx-2 grid w-[calc(100%+1rem)] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 rounded-md px-2 py-2 text-left outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background" onClick={() => setDetailsId(appointment.id)} type="button">
                       <span className="flex min-w-0 flex-wrap items-center gap-2"><span className="inline-flex min-w-0 items-center gap-1"><span className="type-item-title">{contactName}</span><RowChevron /></span><Badge variant="outline">{getAppointmentStatusLabel(appointment.status, t)}</Badge><Badge variant="secondary">{getChannelLabel(appointment.sourceChannel, t)}</Badge></span>
                       <span className="type-item-title text-right">{formatDateTime(appointment.startsAt, i18n.language, { weekday: "short", month: "short", day: "numeric", timeZone: appointment.timezone })}</span>
                       <span className="type-body-muted flex min-w-0 items-center gap-1.5">

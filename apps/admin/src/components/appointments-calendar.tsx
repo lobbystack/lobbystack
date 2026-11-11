@@ -91,7 +91,7 @@ export function AppointmentsCalendar({ appointments, onSelectDay, onViewChange, 
               <button
                 aria-label={dayLabel(key)}
                 aria-selected={key === selectedDay}
-                className={cn("flex h-12 flex-col items-center justify-center gap-1 rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", key === selectedDay && "bg-muted", muted(key) && "text-muted-foreground")}
+                className={cn("flex h-12 flex-col items-center justify-center gap-1 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background", key === selectedDay && "bg-muted", muted(key) && "text-muted-foreground")}
                 key={key}
                 onClick={() => select(key)}
                 role="gridcell"
@@ -119,7 +119,7 @@ export function AppointmentsCalendar({ appointments, onSelectDay, onViewChange, 
                 aria-label={dayLabel(key)}
                 aria-selected={key === selectedDay}
                 className={cn(
-                  "flex min-w-0 flex-col gap-1.5 border-b p-2 text-left transition-colors outline-none hover:bg-muted/50 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:ring-inset",
+                  "flex min-w-0 flex-col gap-1.5 border-b p-2 text-left transition-colors outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:ring-inset",
                   index % 7 !== 6 && "border-r",
                   index >= days.length - 7 && "border-b-0",
                   view === "week" ? "min-h-48" : "min-h-24",
