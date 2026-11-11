@@ -304,7 +304,7 @@
       "testCall": "Pregúntele lo que más le preguntan quienes llaman.",
       "phoneNumber": "Dé a su agente su propio número para atender a personas reales.",
       "phoneNumberTrial": "Conteste sus llamadas perdidas gratis durante 14 días, sin tarjeta.",
-      "forwardCalls": "¿Conserva el número al que ya llaman sus clientes? Su agente también puede contestar en ese número.",
+      "forwardCalls": "¿Conserva el número al que ya llaman sus clientes? Su agente también puede contestar en ese número. Opcional.",
       "numberLost": "Su prueba gratuita terminó. Elija un plan para recuperar su número."
     },
     "stepActions": {

@@ -303,7 +303,7 @@
       "testCall": "Ask what your callers ask most.",
       "phoneNumber": "Give your agent its own number to answer real callers.",
       "phoneNumberTrial": "Answer your missed calls free for 14 days, no card needed.",
-      "forwardCalls": "Keeping the number your customers already call? Your agent can answer it too.",
+      "forwardCalls": "Keeping the number your customers already call? Your agent can answer it too. Optional.",
       "numberLost": "Your free trial ended. Choose a plan to get your number back."
     },
     "stepActions": {

@@ -304,7 +304,7 @@
       "testCall": "Pitajte ono što Vas klijenti najčešće pitaju.",
       "phoneNumber": "Dodelite agentu sopstveni broj da bi odgovarao pravim pozivaocima.",
       "phoneNumberTrial": "Odgovarajte na propuštene pozive besplatno 14 dana, bez kartice.",
-      "forwardCalls": "Zadržavate broj koji Vaši klijenti već zovu? Vaš agent može da odgovara i na pozive na tom broju.",
+      "forwardCalls": "Zadržavate broj koji Vaši klijenti već zovu? Vaš agent može da odgovara i na pozive na tom broju. Opciono.",
       "numberLost": "Besplatna proba je istekla. Izaberite paket da biste vratili svoj broj."
     },
     "stepActions": {

@@ -304,7 +304,7 @@
       "testCall": "Posez la question que vos appelants posent le plus.",
       "phoneNumber": "Donnez à votre agent son propre numéro pour répondre à vos vrais clients.",
       "phoneNumberTrial": "Répondez à vos appels manqués gratuitement pendant 14 jours, sans carte.",
-      "forwardCalls": "Vous gardez le numéro que vos clients appellent déjà ? Votre agent peut aussi y répondre.",
+      "forwardCalls": "Vous gardez le numéro que vos clients appellent déjà ? Votre agent peut aussi y répondre. Facultatif.",
       "numberLost": "Votre essai gratuit est terminé. Choisissez un forfait pour récupérer votre numéro."
     },
     "stepActions": {
