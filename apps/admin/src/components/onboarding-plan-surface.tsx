@@ -53,14 +53,14 @@ export function OnboardingPlanSurface({ variant }: { variant: "trial" | "paid" }
     enabled: Boolean(checkoutRequestId),
     refetchInterval: (query) => query.state.data?.status === "ready" || query.state.data?.status === "error" ? false : 1_500,
   });
-  // The trial clock started when the number was bought, so its card only moves onboarding on.
+  // The trial clock started when the number was bought, so its card only finishes onboarding.
   const selectFree = useMutation({
-    mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: "attribution" }) }),
-    onSuccess: () => navigate("/onboarding/attribution"),
+    mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: "complete" }) }),
+    onSuccess: () => navigate("/"),
     meta: { inlineError: true },
   });
-  // After the trial number the plans lead to attribution; without a number they lead back to the number step.
-  const afterPaying = variant === "trial" ? { stage: "attribution", route: "/onboarding/attribution" } : { stage: "phone_number", route: "/onboarding/number" };
+  // The trial plans are the last step; without a number the plans lead back to the number step.
+  const afterPaying = variant === "trial" ? { stage: "complete", route: "/" } : { stage: "phone_number", route: "/onboarding/number" };
   const startCheckout = useMutation({
     mutationFn: (target: "starter" | "pro") => requestJson<{ requestId: string }>("/api/billing/checkout", { method: "POST", body: JSON.stringify({ businessId: business!.businessId, target, billingInterval: interval }) }),
     onSuccess: ({ requestId }) => { setCheckoutUnavailable(false); setCheckoutRequestId(requestId); },

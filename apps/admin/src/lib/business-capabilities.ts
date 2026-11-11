@@ -43,7 +43,6 @@ const routeCapabilities: ReadonlyArray<readonly [prefix: string, capability: Cap
   // Who on the partner's team opened the business. Owners and admins read it at either access level; the route checks the role.
   ["/api/partner-access", "activity"],
   ["/api/phone-numbers", "setup"],
-  ["/api/plan-offer", "billing"],
   ["/api/preferences/appearance", "activity"],
   ["/api/realtime", "activity"],
   ["/api/rules", "setup"],

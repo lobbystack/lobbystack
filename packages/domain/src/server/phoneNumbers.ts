@@ -448,15 +448,12 @@ export async function completeNumberProvisioning(context: DomainContext, input: 
     } else {
       const activated = await activateNumberTrialInTransaction(tx, { businessId: input.businessId, claimId: input.claimId, phoneNumberId: number.id });
       // The owner, or for a partner's trial the partner, may have paid while we bought the number: that payment found no trial to convert, so convert it now.
-      const paid = activated && await trialNumberPaidForInTransaction(tx, input.businessId);
-      if (paid) await keepBusinessNumbersInTransaction(tx, { businessId: input.businessId });
-      // A direct business that just started a trial nobody pays for sees the
-      // plans next, and one that pays answers the attribution question. Only a
-      // cloud business has a trial. A partner's business has no attribution
+      if (activated && await trialNumberPaidForInTransaction(tx, input.businessId)) await keepBusinessNumbersInTransaction(tx, { businessId: input.businessId });
+      // A direct business answers the attribution question next; the plans
+      // come after Meet your agent. A partner's business has no attribution
       // step, and a key can buy its number while it waits for its owner, so it
       // stays on the step it's on. A business past the number stays put too.
-      const next = activated && !paid ? "choose_plan" : "attribution";
-      await tx.update(businesses).set({ onboardingStage: sql`CASE WHEN ${businesses.onboardingStage} IN ('choose_plan', 'attribution', 'meet', 'complete') OR (${businesses.partnerId} IS NOT NULL AND ${businesses.onboardingStage} NOT IN ('phone_number', 'phone_number_claiming')) THEN ${businesses.onboardingStage} WHEN ${businesses.partnerId} IS NULL THEN ${next}::varchar ELSE 'meet' END`, updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
+      await tx.update(businesses).set({ onboardingStage: sql`CASE WHEN ${businesses.onboardingStage} IN ('attribution', 'meet', 'choose_plan', 'complete') OR (${businesses.partnerId} IS NOT NULL AND ${businesses.onboardingStage} NOT IN ('phone_number', 'phone_number_claiming')) THEN ${businesses.onboardingStage} WHEN ${businesses.partnerId} IS NULL THEN 'attribution' ELSE 'meet' END`, updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
     }
     // Every number starts on the receptionist. With staff answers first on for the agent it reaches, routing moves this one to the webhook.
     const profile = (await tx.select({ staffFirstMode: agents.staffFirstMode }).from(phoneNumbers).innerJoin(agents, agentOfRow(phoneNumbers.businessId, phoneNumbers.agentId)).where(eq(phoneNumbers.id, number.id)).limit(1))[0];

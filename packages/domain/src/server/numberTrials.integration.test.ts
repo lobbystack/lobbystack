@@ -80,8 +80,8 @@ describe.skipIf(!testUrl)("free trial numbers against dedicated PostgreSQL roles
       });
       const [trial] = await tx.select({ id: numberTrials.id, status: numberTrials.status, endsAt: numberTrials.endsAt }).from(numberTrials).where(eq(numberTrials.businessId, businessId));
       expect(trial?.status).toBe("active");
-      // The trial number leads to the plans, which nobody can close.
-      expect((await tx.select({ stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, businessId)))[0]?.stage).toBe("choose_plan");
+      // The attribution question follows the number; the plans come after Meet your agent.
+      expect((await tx.select({ stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, businessId)))[0]?.stage).toBe("attribution");
       expect((await tx.select({ reason: phoneNumbers.reclaimReason }).from(phoneNumbers).where(eq(phoneNumbers.id, phoneNumberId)))[0]?.reason).toBe("trial");
       expect((await tx.select({ transferNumber: agents.transferNumber }).from(agents).where(eq(agents.businessId, businessId)))[0]?.transferNumber).toBe(ownerPhone);
       expect(await as(tx, "lobbystack_app", db => getNumberTrialState({ db }, owner))).toMatchObject({ status: "active", e164: trialNumber, minutesExhausted: false });

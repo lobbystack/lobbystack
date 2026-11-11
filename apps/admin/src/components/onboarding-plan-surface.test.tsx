@@ -42,11 +42,11 @@ describe("original onboarding plan behavior with asynchronous checkout", () => {
     expect(await screen.findByText("settings:billing.checkoutErrors.inProgress")).toBeTruthy();
     expect(route.router.push).not.toHaveBeenCalled();
   });
-  it("moves a workspace that already pays on from the trial plans to attribution instead of a second checkout", async () => {
+  it("moves a workspace that already pays on from the trial plans to Home instead of a second checkout", async () => {
     const fetchMock = setup(false, "subscription_active");
     await userEvent.click(pro());
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/onboarding/stage?businessId=business", expect.objectContaining({ body: JSON.stringify({ to: "attribution" }) })));
-    await waitFor(() => expect(route.router.push).toHaveBeenCalledWith("/onboarding/attribution"));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/onboarding/stage?businessId=business", expect.objectContaining({ body: JSON.stringify({ to: "complete" }) })));
+    await waitFor(() => expect(route.router.push).toHaveBeenCalledWith("/"));
   });
   it("moves a workspace that already pays on from the number step's plans to its number", async () => {
     const fetchMock = setup(false, "subscription_active", undefined, "paid");
@@ -129,8 +129,8 @@ describe("original onboarding plan behavior with asynchronous checkout", () => {
     await userEvent.click(screen.getByRole("button", { name: "plan.trial.start" }));
     telemetryRef.current!.expectEvent("web.onboarding.plan_selected", { businessId: "business", plan: "free_cloud" });
     telemetryRef.current!.expectEvent("web.onboarding.trial_started", { businessId: "business" });
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/onboarding/stage?businessId=business", expect.objectContaining({ body: JSON.stringify({ to: "attribution" }) })));
-    await waitFor(() => expect(route.router.push).toHaveBeenCalledWith("/onboarding/attribution"));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/onboarding/stage?businessId=business", expect.objectContaining({ body: JSON.stringify({ to: "complete" }) })));
+    await waitFor(() => expect(route.router.push).toHaveBeenCalledWith("/"));
     expect(fetchMock.mock.calls.some(([url]) => url === "/api/billing/checkout")).toBe(false);
   });
   it("shows the trial, Starter and Pro after a trial number, with no Enterprise and nothing to close", () => {

@@ -5,6 +5,7 @@ import { eq, sql } from "drizzle-orm";
 import { businesses, createDatabaseClient } from "@lobbystack/db";
 
 import nav from "../public/locales/en/nav.json" with { type: "json" };
+import common from "../public/locales/en/common.json" with { type: "json" };
 import onboarding from "../public/locales/en/onboarding.json" with { type: "json" };
 
 import { completeSignupEmailVerification, isolateAuthRateLimit } from "./fixtures/email-verification";
@@ -44,10 +45,17 @@ async function newOwner(page: Page, testInfo: TestInfo, email: string): Promise<
   return businessId;
 }
 
-/** This run sells no numbers, so leave the number step the way an owner in a country without numbers does. */
+/**
+ * This run can't check the network, so the number step offers the paid plans.
+ * Leave it the way an owner in a country without numbers does: the way on
+ * shows only once they pick that country.
+ */
 async function leaveNumberStep(page: Page): Promise<void> {
   await expect(page).toHaveURL("/onboarding/number");
-  await page.getByRole("button", { name: onboarding.number.country.notListed }).click();
+  await expect(page.getByRole("button", { name: onboarding.number.country.continue })).toHaveCount(0);
+  await page.getByRole("combobox", { name: onboarding.number.country.label }).click();
+  await page.getByPlaceholder(common.phoneCountry.search).fill("France");
+  await page.getByRole("option", { name: /France/ }).click();
   await page.getByRole("button", { name: onboarding.number.country.continue }).click();
 }
 
@@ -133,7 +141,7 @@ test("the website path waits for the import and ends on Meet your agent", async 
   }
 });
 
-test("the no-website path asks the language, and the X closes the plans", async ({ page }, testInfo) => {
+test("the no-website path asks the language, and with no trial Meet your agent opens Home", async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   const database = migrator();
   const email = `${prefix}-${randomUUID()}@example.invalid`;
@@ -153,23 +161,10 @@ test("the no-website path asks the language, and the X closes the plans", async 
     await page.getByRole("button", { name: onboarding.attribution.continue }).click();
     await expect(page).toHaveURL("/onboarding/meet");
 
-    // This run has no billing provider, so the server's answer and the plans come from here.
-    await page.route("**/api/plan-offer**", (route) => route.request().method() === "GET" ? route.fulfill({ json: { due: true } }) : route.fulfill({ json: { ok: true } }));
-    await page.route("**/api/billing?**", (route) => route.fulfill({ json: { account: { plan: "free_cloud", billingInterval: null, subscriptionState: null }, availableCheckoutPlans: ["starter", "pro"], availableCheckoutIntervals: { starter: ["monthly"], pro: ["monthly"] } } }));
-    await page.reload();
-    const plans = page.getByRole("dialog");
-    // The plans wait for the door to the dashboard, and closing them goes through it.
-    await expect(page.getByLabel(onboarding.meet.name)).toBeVisible();
-    await expect(plans).toHaveCount(0);
+    // Without a trial there are no plans after Meet your agent: it opens Home.
     await page.getByRole("button", { name: onboarding.meet.finish }).click();
-    await expect(plans).toBeVisible();
-    await expect(page).toHaveURL("/onboarding/meet");
-    // Shown once, the offer is no longer due, as the server would answer.
-    await page.unroute("**/api/plan-offer**");
-    await page.route("**/api/plan-offer**", (route) => route.request().method() === "GET" ? route.fulfill({ json: { due: false } }) : route.fulfill({ json: { ok: true } }));
-    await plans.getByRole("button", { name: "Close" }).click();
     await expect(page).toHaveURL("/");
-    await expect(plans).toHaveCount(0);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
   } finally {
     await removeFixtures(database, email, businessId);
     await database.pool.end();
@@ -199,8 +194,7 @@ test("a used trial offers only the paid plans, and a country without numbers is 
     await expect(page.getByRole("button", { name: onboarding.plan.trial.start })).toHaveCount(0);
     await expect(page.getByRole("button", { name: onboarding.plan.subscribe })).toHaveCount(2);
     await expect(page.getByRole("button", { name: onboarding.number.skipLater })).toHaveCount(0);
-    await page.getByRole("button", { name: onboarding.number.country.notListed }).click();
-    await page.getByRole("button", { name: onboarding.number.country.continue }).click();
+    await leaveNumberStep(page);
     await expect(page).toHaveURL("/onboarding/attribution");
   } finally {
     await removeFixtures(database, email, businessId);

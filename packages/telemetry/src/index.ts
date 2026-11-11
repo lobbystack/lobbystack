@@ -49,9 +49,6 @@ export const WEB_EVENT_NAMES = [
   "web.onboarding.plan_checkout_started",
   "web.onboarding.attribution_submitted",
   "web.onboarding.meet_completed",
-  "web.onboarding.plan_offer_shown",
-  "web.onboarding.plan_offer_dismissed",
-  "web.onboarding.plan_offer_clicked",
   "web.knowledge.upload_started",
   "web.knowledge.upload_completed",
   "web.integration.calendar_connect_started",
@@ -324,15 +321,12 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   // code: why the number step offers the plans, such as trial_already_used.
   "web.onboarding.number_unavailable": ["businessId", "deploymentMode", "code"],
   "web.onboarding.plan_selected": ["businessId", "deploymentMode", "plan"],
-  // The owner went on with the 14-day trial from the plans after their number.
+  // The owner went on with the 14-day trial from the plans after Meet your agent.
   "web.onboarding.trial_started": ["businessId", "deploymentMode"],
   "web.onboarding.plan_checkout_started": ["businessId", "deploymentMode", "plan"],
   "web.onboarding.plan_checkout_completed": ["businessId", "deploymentMode", "plan"],
   "web.onboarding.attribution_submitted": ["businessId", "deploymentMode", "source"],
   "web.onboarding.meet_completed": ["businessId", "deploymentMode"],
-  "web.onboarding.plan_offer_shown": ["businessId", "deploymentMode", "surface"],
-  "web.onboarding.plan_offer_dismissed": ["businessId", "deploymentMode", "surface"],
-  "web.onboarding.plan_offer_clicked": ["businessId", "deploymentMode", "surface", "plan"],
   "web.knowledge.upload_started": [
     "businessId",
     "deploymentMode",

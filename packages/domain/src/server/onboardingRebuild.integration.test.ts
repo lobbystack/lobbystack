@@ -1,11 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { agents, billingAccounts, businesses, calls, createDatabaseClient, defaultAgentOf, outboxMessages, transcripts, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, billingAccounts, businesses, calls, createDatabaseClient, defaultAgentOf, numberTrials, outboxMessages, transcripts, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { DASHBOARD_TEST_CALL_WIDGET_ID, defaultGreeting } from "@lobbystack/shared";
 import { advanceOnboardingStage, getActiveOnboardingState, submitOnboardingAttribution } from "./onboarding";
 import { HOST_BRAND_SCOPE } from "./businessAccess";
-import { latestCompletedTestAt, markPlanOfferChosenInTransaction, markPlanOfferDismissedInTransaction, markPlanOfferShownInTransaction, readPlanOfferInTransaction, recordTestChatReply } from "./planOffer";
 import { skipOnboardingNumber } from "./phoneNumbers";
 import { applySiteLanguageInTransaction, createBusiness, updateBusinessInTransaction } from "./tenancy";
 
@@ -89,6 +88,28 @@ describe.skipIf(!testUrl)("the onboarding rebuild against dedicated PostgreSQL r
     });
   });
 
+  it("shows the plans after Meet your agent to a trial nobody pays for yet, then finishes", async () => {
+    await rollbackTest(async (tx) => {
+      const { userId, businessId } = await workspace(tx, "meet");
+      await tx.update(businesses).set({ deploymentMode: "cloud" }).where(eq(businesses.id, businessId));
+      await tx.insert(numberTrials).values({ businessId, userId, status: "active", startedAt: new Date(), endsAt: new Date(Date.now() + 14 * 86_400_000) });
+      expect(await asApp(tx, (db) => advanceOnboardingStage({ db }, { userId, businessId, to: "complete" }))).toBe("choose_plan");
+      expect((await business(tx, businessId)).stage).toBe("choose_plan");
+      // Leaving Meet your agent sends the welcome, once.
+      expect(await welcomes(tx, businessId)).toHaveLength(1);
+      expect(await asApp(tx, (db) => advanceOnboardingStage({ db }, { userId, businessId, to: "complete" }))).toBe("complete");
+      expect(await welcomes(tx, businessId)).toHaveLength(1);
+    });
+  });
+
+  it("finishes a business with no trial at Meet your agent, with no plans after it", async () => {
+    await rollbackTest(async (tx) => {
+      const { userId, businessId } = await workspace(tx, "meet");
+      await tx.update(businesses).set({ deploymentMode: "cloud" }).where(eq(businesses.id, businessId));
+      expect(await asApp(tx, (db) => advanceOnboardingStage({ db }, { userId, businessId, to: "complete" }))).toBe("complete");
+    });
+  });
+
   it("goes from attribution to Meet your agent, and finishing schedules the welcome email once", async () => {
     await rollbackTest(async (tx) => {
       const { userId, businessId } = await workspace(tx, "attribution");
@@ -167,73 +188,6 @@ describe.skipIf(!testUrl)("the onboarding rebuild against dedicated PostgreSQL r
     await rollbackTest(async (tx) => {
       const { businessId } = await workspace(tx, "complete", { defaultLocale: "en", defaultLocaleGuessed: true });
       expect(await applySiteLanguageInTransaction(tx, { businessId, locale: "fr" })).toBe(false);
-    });
-  });
-
-  it("counts only a test that worked", async () => {
-    await rollbackTest(async (tx) => {
-      const { businessId } = await workspace(tx, "meet");
-      expect(await latestCompletedTestAt(tx, businessId)).toBeNull();
-      await testCall(tx, businessId, null);
-      await testCall(tx, businessId, "   ");
-      expect(await latestCompletedTestAt(tx, businessId)).toBeNull();
-      await testCall(tx, businessId, "Thanks for calling.");
-      expect(await latestCompletedTestAt(tx, businessId)).toBeInstanceOf(Date);
-    });
-  });
-
-  it("counts a call to the business number as the operator's test", async () => {
-    await rollbackTest(async (tx) => {
-      const { businessId } = await workspace(tx, "meet");
-      expect(await latestCompletedTestAt(tx, businessId)).toBeNull();
-      const [call] = await tx.insert(calls).values({ businessId, provider: "twilio", providerCallId: `CA${randomUUID()}`, transport: "twilio", status: "completed", startedAt: new Date(), mediaStartedAt: new Date(), endedAt: new Date() }).returning({ id: calls.id });
-      await tx.insert(transcripts).values({ businessId, callId: call!.id, sequence: 0, speaker: "caller", text: "Bonjour.", final: true });
-      expect(await latestCompletedTestAt(tx, businessId)).toBeInstanceOf(Date);
-    });
-  });
-
-  it("counts a dismissed offer toward the longer pause", async () => {
-    await rollbackTest(async (tx) => {
-      const { businessId } = await workspace(tx, "meet");
-      await markPlanOfferDismissedInTransaction(tx, businessId);
-      await markPlanOfferDismissedInTransaction(tx, businessId);
-      expect((await business(tx, businessId)).planOfferDismissals).toBe(2);
-      await markPlanOfferChosenInTransaction(tx, businessId);
-      expect((await business(tx, businessId)).planOfferDismissals).toBe(0);
-    });
-  });
-
-  it("records a test chat's reply as the worker", async () => {
-    await rollbackTest(async (tx) => {
-      const { businessId } = await workspace(tx, "meet");
-      await asRole(tx, "lobbystack_worker", (db) => recordTestChatReply({ db }, { businessId }));
-      expect((await business(tx, businessId)).lastTestChatAt).toBeInstanceOf(Date);
-    });
-  });
-
-  it("offers the plans once after a test, to someone who can buy", async () => {
-    await rollbackTest(async (tx) => {
-      const { businessId } = await workspace(tx, "meet");
-      const offer = (role: string, canCheckOut = true) => readPlanOfferInTransaction(tx, { businessId, role, canCheckOut });
-      expect(await offer("business_owner")).toBe(false);
-      await tx.update(businesses).set({ lastTestChatAt: new Date() }).where(eq(businesses.id, businessId));
-      expect(await offer("business_owner")).toBe(true);
-      expect(await offer("viewer")).toBe(false);
-      expect(await offer("business_owner", false)).toBe(false);
-      await markPlanOfferShownInTransaction(tx, businessId);
-      expect(await offer("business_owner")).toBe(false);
-    });
-  });
-
-  it("offers no plans to a self-hosted business or an account already paying", async () => {
-    await rollbackTest(async (tx) => {
-      const { businessId } = await workspace(tx, "meet");
-      await tx.update(businesses).set({ lastTestChatAt: new Date() }).where(eq(businesses.id, businessId));
-      await tx.insert(billingAccounts).values({ businessId, billingKey: `business:${businessId}`, plan: "pro", subscriptionState: "active" }).onConflictDoUpdate({ target: billingAccounts.businessId, set: { plan: "pro", subscriptionState: "active" } });
-      expect(await readPlanOfferInTransaction(tx, { businessId, role: "business_owner", canCheckOut: true })).toBe(false);
-      await tx.update(billingAccounts).set({ plan: "free_cloud", subscriptionState: null }).where(eq(billingAccounts.businessId, businessId));
-      await tx.update(businesses).set({ deploymentMode: "self_hosted_standard" }).where(eq(businesses.id, businessId));
-      expect(await readPlanOfferInTransaction(tx, { businessId, role: "business_owner", canCheckOut: true })).toBe(false);
     });
   });
 });

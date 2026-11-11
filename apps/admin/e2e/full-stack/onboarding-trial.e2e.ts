@@ -51,12 +51,8 @@ test("an owner picks the required number, goes on with the trial, and finds the 
     const firstNumber = page.getByRole("listitem").filter({ has: page.getByRole("button", { name: onboarding.number.select }) }).first();
     await expect(firstNumber).toBeVisible();
     await firstNumber.getByRole("button", { name: onboarding.number.select }).click();
-    // Once the number is live, the plans follow, with nothing to close them. The trial already runs.
-    await expect(page).toHaveURL("/onboarding/plan", { timeout: 120_000 });
-    await expect(page.getByRole("button", { name: onboarding.plan.subscribe })).toHaveCount(2);
-    await expect(page.getByRole("button", { name: "Close" })).toHaveCount(0);
-    await page.getByRole("button", { name: onboarding.plan.trial.start }).click();
-    await expect(page).toHaveURL("/onboarding/attribution");
+    // Once the number is live, the attribution question follows. The trial already runs.
+    await expect(page).toHaveURL("/onboarding/attribution", { timeout: 120_000 });
 
     const [trial] = await database.db.select({ verifiedPhone: numberTrials.verifiedPhone, ipHash: numberTrials.ipHash, status: numberTrials.status }).from(numberTrials).where(eq(numberTrials.businessId, businessId));
     expect(trial).toMatchObject({ verifiedPhone: null, status: "active" });
@@ -67,7 +63,12 @@ test("an owner picks the required number, goes on with the trial, and finds the 
     await page.getByRole("button", { name: onboarding.attribution.options.other }).click();
     await page.getByRole("button", { name: onboarding.attribution.continue }).click();
     await expect(page).toHaveURL("/onboarding/meet");
+    // After Meet your agent, the plans are the last step, with nothing to close them.
     await page.getByRole("button", { name: onboarding.meet.finish }).click();
+    await expect(page).toHaveURL("/onboarding/plan");
+    await expect(page.getByRole("button", { name: onboarding.plan.subscribe })).toHaveCount(2);
+    await expect(page.getByRole("button", { name: "Close" })).toHaveCount(0);
+    await page.getByRole("button", { name: onboarding.plan.trial.start }).click();
     await expect(page).toHaveURL("/");
 
     // Home's Getting started is the list for a business with a number, and the sidebar counts the trial down.

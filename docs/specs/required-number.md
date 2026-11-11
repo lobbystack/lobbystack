@@ -14,7 +14,7 @@ Onboarding also asks questions that don't move the owner closer to an answered c
 
 A direct customer signs up, gives their website, and picks a number. Onboarding no longer asks for their mobile or for a goal. The only way past the number step without a number is a country where LobbyStack sells none.
 
-Right after the number, onboarding shows the plans, with no way to close them. The first card, **Start 14-day free trial**, needs no card. **Starter** and **Pro** follow with **Subscribe**. While the trial runs, the sidebar shows **Free trial · Nd left** with **View plans**.
+After **Meet your agent**, the owner's first call, onboarding shows the plans as its last step, with no way to close them. The first card, **Start 14-day free trial**, needs no card. **Starter** and **Pro** follow with **Subscribe**. While the trial runs, the sidebar shows **Free trial · Nd left** with **View plans**.
 
 Home's Getting started changes for a business that has, or had, a number:
 
@@ -35,6 +35,11 @@ The product owner made these calls. Each one is settled.
 - **No skip for direct customers.** A direct customer can't skip the number step. The only fallback is a country where LobbyStack can't provide numbers. The server trusts the country the owner picks and logs it.
 - **Self-hosted keeps the skip.** A self-hosted direct business keeps "I'll add a number later".
 - **Partners don't change.** Partners' businesses and white-label businesses keep their flow and their trial-number rules exactly.
+- **Plans after Meet your agent.** Onboarding asks for no payment before the owner hears their agent. Direct onboarding runs: business name, website, language, Pick your agent's phone number, How did you hear about LobbyStack (required), Meet your agent, then the plans screen (`choose_plan`) as the last step before Home.
+- **One plans moment.** The plans offer that opened after the first test that worked, on Meet your agent and on Home, is gone, so nobody sees the plans twice.
+- **Meet your agent stays as it is.** Its UI, copy and behavior don't change. Only where its button leads changes: the plans screen for a trial nobody pays for yet, Home otherwise.
+- **Country fallback only for a country without numbers.** The way on without a number appears only after the owner picks a country where LobbyStack sells no numbers. It's no general skip, and the server refuses it for a country with numbers.
+- **Existing calls count.** A direct business that already has a number and answered a real phone call, at any time, sees **Call your number** done.
 - **Plans screen.** It has no close button. The first card reads **Start 14-day free trial** and needs no card. It only moves onboarding on, because the trial clock started when the worker bought the number. **Starter** and **Pro** follow with **Subscribe**. Plan names don't change.
 - **Refused trial.** When the trial was refused (already used, network limited, unsupported country), the number step shows Starter, Pro and Enterprise, and no Free card.
 - **Sidebar chip.** While the trial runs, the sidebar footer shows **Free trial · Nd left** with **View plans**, which opens the existing upgrade dialog. In the trial's last week the chip shows alone: the top banner no longer counts down.
@@ -67,12 +72,12 @@ So **Start 14-day free trial** doesn't start a clock. The clock started a few se
 
 `packages/shared/src/onboardingStages.ts` lists the stages in order:
 
-`create_business`, `website`, `language`, `verify_phone`, `phone_number`, `phone_number_claiming`, `choose_plan`, `attribution`, `meet`, `complete`
+`create_business`, `website`, `language`, `verify_phone`, `phone_number`, `phone_number_claiming`, `attribution`, `meet`, `choose_plan`, `complete`
 
-- A direct business goes through `create_business`, `website`, `language`, `phone_number`, `choose_plan`, `attribution` and `meet`.
+- A direct business goes through `create_business`, `website`, `language`, `phone_number`, `attribution`, `meet` and, with a trial nobody pays for yet, `choose_plan`.
 - A partner's business goes through `website`, `language`, `verify_phone` and `meet`, as today. At the activity level it has `verify_phone` only.
 
-`choose_plan` routes to `/onboarding/plan`. It shares the number step's dot, so a direct owner sees six dots: sign-up, business, website, number, attribution, meet.
+`choose_plan` routes to `/onboarding/plan`. It shares Meet your agent's dot, so a direct owner sees six dots with or without it: sign-up, business, website, number, attribution, meet.
 
 `goal` leaves the list. A stored `goal` reads as `attribution`, as the other legacy stages read as the step after them. A stored `verify_phone` reads as `phone_number` for a direct business, and so do the legacy stages that read as `verify_phone`.
 
@@ -86,10 +91,12 @@ Allowed moves for a direct business:
 | `language` | `phone_number` |
 | `verify_phone` (stored by old code) | `phone_number`, `attribution` |
 | `phone_number` | `attribution`, through the country fallback or a self-hosted skip only |
-| `phone_number_claiming` | `phone_number`, `choose_plan`, `attribution` |
-| `choose_plan` | `attribution` |
+| `phone_number_claiming` | `phone_number`, `attribution` |
 | `attribution` | `meet`, with an answer |
-| `meet` | `complete` |
+| `meet` | `complete`, or `choose_plan` for a trial nobody pays for yet |
+| `choose_plan` | `complete` |
+
+Meet your agent asks to move to `complete`. `advanceOnboardingStage` moves a direct cloud business with an active number trial and no live plan to `choose_plan` instead, and answers with the stage it moved to, so the page opens the plans or Home. Leaving Meet your agent sends the welcome email either way.
 
 A request to move a direct business to `verify_phone` moves it to `phone_number`, so an old tab still lands on the number step.
 
@@ -97,7 +104,7 @@ A request to move a direct business to `verify_phone` moves it to `phone_number`
 
 The number step loses "I'll add a number later" for direct cloud businesses. Its title reads "Pick your agent's phone number".
 
-**Country fallback:** below the picker, **My country isn't listed** opens a country select with every country. Picking one where LobbyStack sells no numbers shows the waitlist and **Continue without a number**. When the business's time zone points to such a country, or the deployment sells numbers nowhere, the step opens on the fallback. Continuing calls `POST /api/onboarding/phone-numbers/skip` with the country.
+**Country fallback:** the picker's **Country** list ends with **Other country**, which opens a list of the countries where LobbyStack sells no numbers. Beside the paid plans of a refused trial, a **Country** list holds every country, and picking one without numbers opens the same fallback. Only once the owner has picked such a country do the waitlist and **Continue without a number** show. The business's time zone doesn't open it; only a deployment that sells numbers nowhere opens it by itself. Continuing calls `POST /api/onboarding/phone-numbers/skip` with the country.
 
 `skipOnboardingNumber` enforces the rule on the server:
 
@@ -141,12 +148,16 @@ A mobile verified before this release keeps working. Each place that reads it fa
 
 `/onboarding/plan` shows `OnboardingPlanSurface` in its `trial` variant:
 
-- **First card:** the Free plan, described as "14 days, no card needed", with **Start 14-day free trial**. The button moves the stage from `choose_plan` to `attribution`.
-- **Starter and Pro:** **Subscribe**. Checkout returns to `/billing/success`, which moves the stage from `choose_plan` to `attribution` and continues to the attribution question.
+- **First card:** the Free plan, described as "14 days, no card needed", with **Start 14-day free trial**. The button moves the stage from `choose_plan` to `complete` and opens Home.
+- **Starter and Pro:** **Subscribe**. Checkout returns to `/billing/success`, which moves the stage from `choose_plan` to `complete` and continues to Home.
 - **Enterprise:** left out.
 - **Close:** none. The onboarding header offers only Sign out, or Back to dashboard.
 
-`completeNumberProvisioning` moves a direct cloud business to `choose_plan` when the claim started a trial that nobody pays for. A business whose plan is already live, a self-hosted business, and a business already past the number step move to `attribution`, or stay where they are. A partner's business never reaches `choose_plan`.
+`completeNumberProvisioning` moves a direct business to `attribution`. A partner's business never reaches `choose_plan`.
+
+### Old plans offer
+
+The offer that opened the plan picker once after the first test that worked is gone: `PlanOfferMoment` on Home, its branch on Meet your agent, `/api/plan-offer`, `planOffer.ts`, the test chat's reply record, and the `web.onboarding.plan_offer_shown`, `_dismissed` and `_clicked` events. The `businesses` columns it wrote (`plan_offer_shown_at`, `plan_offer_dismissals`, `last_test_chat_at`) stay; nothing writes them now, and a later release can drop them.
 
 ### Goal step
 
@@ -221,6 +232,7 @@ Migration `0207_required_number.sql`:
 - `web.activation.forwarding_confirmed` (browser): the owner pressed **It works**.
 - `voice.forwarding_detected` (durable): the first forwarded call reached a number.
 - `web.onboarding.goal_submitted` leaves the registry with the goal step. `web.onboarding.phone_verified` keeps firing from a partner's phone step.
+- `web.onboarding.plan_offer_shown`, `_dismissed` and `_clicked` leave the registry with the old plans offer.
 
 ## Help Center
 
@@ -237,8 +249,8 @@ Each one took the conservative option for now.
 - **Paid-only refusals:** an owner whose trial was refused must subscribe to finish onboarding, or pick a country without numbers.
 - **Untrusted networks:** a direct owner whose request carries no trusted address or country gets the paid plans, where they could verify a mobile before.
 - **Call step after the trial:** the decision names the forwarding step only. The call step shows the same "choose a plan" line, since there's no number to call.
-- **Existing businesses:** a direct business that finished onboarding with a number before this release gets the new list, with the two new steps not done.
+- **Existing businesses:** a direct business that finished onboarding with a number before this release gets the new list. **Call your number** reads done once it answered a real call at any time; the forwarding step stays open until a forwarded call or **It works**.
+- **No plans without a trial:** a direct owner who went on without a number, or whose trial was refused, sees no plans screen after Meet your agent, since the old offer is gone. They reach the plans from the dashboard.
 - **Workspace switcher:** an unfinished workspace shows in the switcher as it does today, with no "Finish setup" state.
 - **Back to dashboard target:** the workspace the person came from lives in the browser's session storage, so another tab or device falls back to the most recent finished workspace.
-- **Plans offer after Meet your agent:** the existing offer after the first test that works still shows to a workspace on Free, so an owner on a trial can see the plans a second time. It stays until the product owner decides.
 - **Sidebar chip loading:** the chip shows nothing while the trial state loads, like the trial banner, so most workspaces don't see a placeholder for a chip they never get.

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { createReceptionistAgent } from "@lobbystack/agent-core/agent";
 import { createAgentModel, describeAgentUsage } from "@lobbystack/agent-core/model";
-import { activeAgentExistsInTransaction, getBusinessSnapshotForAgent, recordAiGenerationEvent, recordTestChatReply } from "@lobbystack/domain";
+import { activeAgentExistsInTransaction, getBusinessSnapshotForAgent, recordAiGenerationEvent } from "@lobbystack/domain";
 import { normalizeRuntimeLocale, runtimeLocaleName, testChatRequestSchema } from "@lobbystack/shared";
 
 import { jsonError } from "@/lib/api-helpers";
@@ -44,9 +44,5 @@ export const POST = operatorRoute(async ({ request, userId, body, businessId, tr
   void Promise.resolve(generation.totalUsage)
     .then((usage) => recordAiGenerationEvent(domain, { businessId, operation: "agent.test_chat", traceId: randomUUID(), isStreaming: true, ...describeAgentUsage(usage, performance.now() - startedAt) }))
     .catch((cause: unknown) => console.error("Test chat generation failed", { errorType: cause instanceof Error ? cause.name : typeof cause }));
-  // An empty reply isn't a working test, so only text counts towards the plans offer.
-  void Promise.resolve(generation.text)
-    .then((text) => text.trim() ? recordTestChatReply(domain, { businessId }) : undefined)
-    .catch((cause: unknown) => console.error("Test chat reply was not recorded", { errorType: cause instanceof Error ? cause.name : typeof cause }));
   return generation.toUIMessageStreamResponse({ headers: { "cache-control": "no-cache, no-transform", "x-accel-buffering": "no" } });
 });

@@ -1,10 +1,11 @@
 import { and, eq, gt, inArray, isNotNull, ne, or, sql } from "drizzle-orm";
 import { canVisitOnboardingStage, HOST_EMAIL_BRAND, normalizeInterfaceLocale, normalizeOnboardingStage, onboardingSteps, type InterfaceLocale, type OnboardingBusiness, type OnboardingStage, type PartnerAccessLevel } from "@lobbystack/shared";
 
-import { businesses, enqueueOutbox, onboardingNumberClaimEvents, phoneNumbers, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { businesses, enqueueOutbox, numberTrials, onboardingNumberClaimEvents, phoneNumbers, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { requireBusinessAdmin } from "../authz";
 import { appBaseUrl } from "./appBaseUrl";
+import { loadEntitlement } from "./entitlement";
 import type { DomainContext } from "./context";
 import { attributeBusiness } from "./affiliates";
 import { businessShowsOnBrand, readBusinessAccess, type BrandScope } from "./businessAccess";
@@ -38,10 +39,11 @@ const transitions: Record<OnboardingStage, readonly OnboardingStage[]> = {
   language: ["phone_number"],
   verify_phone: ["phone_number", "attribution"],
   phone_number: ["attribution"],
-  phone_number_claiming: ["phone_number", "choose_plan", "attribution"],
-  choose_plan: ["attribution"],
+  phone_number_claiming: ["phone_number", "attribution"],
   attribution: ["meet"],
-  meet: ["complete"],
+  // A trial nobody pays for yet sees the plans last.
+  meet: ["complete", "choose_plan"],
+  choose_plan: ["complete"],
   complete: [],
 };
 
@@ -57,8 +59,8 @@ const partnerTransitions: Record<OnboardingStage, readonly OnboardingStage[]> = 
   verify_phone: ["meet"],
   phone_number: ["meet"],
   phone_number_claiming: ["meet"],
-  choose_plan: ["meet"],
   attribution: ["meet"],
+  meet: ["complete"],
 };
 const activityTransitions: Record<OnboardingStage, readonly OnboardingStage[]> = {
   ...partnerTransitions,
@@ -74,7 +76,7 @@ const activityTransitions: Record<OnboardingStage, readonly OnboardingStage[]> =
  * app.reserve_trial_number_claim does: from the number step on. A partner's
  * business has no number step, so its claims wait for its owner's onboarding.
  */
-export const NUMBER_CLAIM_STAGES: readonly OnboardingStage[] = ["phone_number", "choose_plan", "attribution", "meet", "complete"];
+export const NUMBER_CLAIM_STAGES: readonly OnboardingStage[] = ["phone_number", "attribution", "meet", "choose_plan", "complete"];
 
 /**
  * The stage a new business starts at, since creating it is done: its
@@ -178,11 +180,16 @@ export async function moveOnboardingStageInTransaction(
   }
 }
 
+/**
+ * Moves onboarding on and returns the stage it's on after. Leaving Meet your
+ * agent finishes onboarding, except that a direct cloud business on a trial
+ * nobody pays for yet sees the plans as its last step.
+ */
 export async function advanceOnboardingStage(
   context: DomainContext,
   input: { userId: string; businessId: string; to: OnboardingStage },
-): Promise<void> {
-  await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+): Promise<OnboardingStage> {
+  return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx): Promise<OnboardingStage> => {
     await requireBusinessAdmin(tx, input);
     const current = (await tx.select({ onboardingStage: businesses.onboardingStage, partnerId: businesses.partnerId, accessLevel: businesses.partnerAccessLevel, attribution: businesses.onboardingAttribution, deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1).for("update"))[0];
     if (!current) throw new Error("Business onboarding state was not found.");
@@ -195,8 +202,9 @@ export async function advanceOnboardingStage(
         .where(and(eq(businesses.id, input.businessId), eq(businesses.onboardingStage, current.onboardingStage)));
     }
     // Revisiting an earlier form must never move durable onboarding progress backwards.
-    const to = input.to === "verify_phone" && !current.partnerId ? "phone_number" : input.to;
-    if (canVisitOnboardingStage(currentStage, to)) return;
+    const requested = input.to === "verify_phone" && !current.partnerId ? "phone_number" : input.to;
+    if (canVisitOnboardingStage(currentStage, requested)) return currentStage;
+    const to = currentStage === "meet" && requested === "complete" && !current.partnerId && current.deploymentMode === "cloud" && await trialAwaitsPlanInTransaction(tx, input.businessId) ? "choose_plan" : requested;
     // The attribution question has no skip: only an answer moves past it.
     if (currentStage === "attribution" && to === "meet" && !current.attribution?.trim()) throw attributionRequired();
     // A direct cloud owner gets past the number with a number, or through the
@@ -204,9 +212,16 @@ export async function advanceOnboardingStage(
     // business keeps its skip.
     if (!current.partnerId && current.deploymentMode === "cloud" && to === "attribution" && (currentStage === "phone_number" || currentStage === "verify_phone")) throw numberRequired();
     await advanceOnboardingStageInTransaction(tx, { ...input, to, from: currentStage, partnerId: current.partnerId, accessLevel: current.accessLevel });
-    // Meet your agent is the last screen, so leaving it sends the welcome email.
-    if (input.to === "complete") await scheduleWelcomeEmailInTransaction(tx, input.businessId, new Date());
+    // Leaving Meet your agent sends the welcome email, with or without the plans after it.
+    if (currentStage === "meet" && (to === "complete" || to === "choose_plan")) await scheduleWelcomeEmailInTransaction(tx, input.businessId, new Date());
+    return to;
   });
+}
+
+/** Whether the business runs a number trial that nobody pays for yet, so the plans come before Home. */
+async function trialAwaitsPlanInTransaction(tx: DatabaseTransaction, businessId: string): Promise<boolean> {
+  const [trial] = await tx.select({ id: numberTrials.id }).from(numberTrials).where(and(eq(numberTrials.businessId, businessId), eq(numberTrials.status, "active"))).limit(1);
+  return Boolean(trial) && !(await loadEntitlement(tx, businessId)).live;
 }
 
 /** A direct cloud business can't move past the number step without one. */

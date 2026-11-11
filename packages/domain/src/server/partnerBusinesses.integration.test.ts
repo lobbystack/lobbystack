@@ -151,7 +151,7 @@ const hash = (token: string) => createHash("sha256").update(token).digest("hex")
 const testNumber = () => `+1416${String(Math.floor(Math.random() * 10_000_000)).padStart(7, "0")}`;
 
 // The onboarding stages each kind of business's owner goes through.
-const DIRECT_STEPS = ["create_business", "website", "language", "phone_number", "choose_plan", "attribution", "meet"];
+const DIRECT_STEPS = ["create_business", "website", "language", "phone_number", "attribution", "meet", "choose_plan"];
 const PARTNER_STEPS = ["website", "language", "verify_phone", "meet"];
 
 /** A business the partner created for this person, who accepted the invitation and owns it. */
