@@ -325,6 +325,8 @@
       "testCall": "Lancer un appel",
       "phoneNumber": "Choisir un numéro",
       "callNumber": "Appeler le {{number}}",
+      "copyNumber": "Copier le numéro",
+      "numberCopied": "Copié",
       "forwardCalls": "Configurer le transfert",
       "choosePlan": "Choisir un forfait"
     },
@@ -357,8 +359,8 @@
       "ukMobile": "Mobile au Royaume-Uni"
     },
     "code": {
-      "dial": "Composez ce code :",
-      "call": "Appuyez sur Appeler. Une tonalité ou un message confirme que le renvoi est activé.",
+      "dial": "Sur le téléphone que vos clients appellent, composez ce code :",
+      "call": "Appuyez sur Appeler.",
       "busy": "Pour renvoyer aussi les appels reçus pendant que vous êtes au téléphone, composez :",
       "off": "Pour le désactiver plus tard, composez {{code}}.",
       "unreachable": "Pour renvoyer aussi les appels quand votre téléphone est éteint ou sans réseau, composez :",
@@ -378,10 +380,6 @@
       "androidOnly": "Ces étapes sont pour les téléphones Android. Sur un iPhone, demandez à {{name}} de l'activer pour vous.",
       "adminOnly": "Seul un administrateur de votre compte {{name}} peut modifier ce réglage.",
       "verifyNumber": "{{name}} envoie un code au {{number}} avant d'activer le renvoi. Choisissez de recevoir le code par appel, puis lisez-le dans la transcription de cet appel, sous Appels."
-    },
-    "test": {
-      "missed": "Pour tester, appelez votre numéro d'entreprise depuis un autre téléphone et laissez sonner. Votre agent devrait répondre.",
-      "all": "Pour tester, appelez votre numéro d'entreprise depuis un autre téléphone. Votre agent devrait répondre."
     },
     "unsupported": {
       "missed": "{{name}} ne propose pas de renvoi pour les appels manqués seulement. Choisissez Tous les appels, ou demandez à {{name}} de renvoyer les appels sans réponse vers le {{number}}.",

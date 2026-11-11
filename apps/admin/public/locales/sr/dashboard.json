@@ -325,6 +325,8 @@
       "testCall": "Započni poziv",
       "phoneNumber": "Izaberi broj",
       "callNumber": "Pozovi {{number}}",
+      "copyNumber": "Kopiraj broj",
+      "numberCopied": "Kopirano",
       "forwardCalls": "Podesite preusmeravanje",
       "choosePlan": "Izaberite paket"
     },
@@ -357,8 +359,8 @@
       "ukMobile": "Mobilni u Velikoj Britaniji"
     },
     "code": {
-      "dial": "Ukucajte ovaj kod:",
-      "call": "Pritisnite Pozovi. Ton ili poruka potvrđuje da je preusmeravanje uključeno.",
+      "dial": "Na telefonu koji Vaši klijenti zovu, ukucajte ovaj kod:",
+      "call": "Pritisnite Pozovi.",
       "busy": "Da biste preusmerili i pozive koji stignu dok razgovarate, ukucajte:",
       "off": "Da biste ga kasnije isključili, ukucajte {{code}}.",
       "unreachable": "Da biste preusmerili i pozive kada je telefon isključen ili bez signala, ukucajte:",
@@ -378,10 +380,6 @@
       "androidOnly": "Ovi koraci su za Android telefone. Na iPhone-u zamolite operatera {{name}} da ga uključi za Vas.",
       "adminOnly": "Ovo može da promeni samo administrator Vašeg {{name}} naloga.",
       "verifyNumber": "{{name}} šalje kod na {{number}} pre nego što uključi preusmeravanje. Izaberite da kod dobijete pozivom, pa ga pročitajte u transkriptu tog poziva u odeljku Pozivi."
-    },
-    "test": {
-      "missed": "Da biste proverili, pozovite poslovni broj s drugog telefona i pustite da zvoni. Agent bi trebalo da se javi.",
-      "all": "Da biste proverili, pozovite poslovni broj s drugog telefona. Agent bi trebalo da se javi."
     },
     "unsupported": {
       "missed": "{{name}} ne nudi preusmeravanje samo propuštenih poziva. Izaberite Svi pozivi ili zamolite {{name}} da preusmeri neodgovorene pozive na {{number}}.",

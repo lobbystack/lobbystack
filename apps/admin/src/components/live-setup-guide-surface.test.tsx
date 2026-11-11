@@ -159,11 +159,31 @@ describe("the list for a business with a number", () => {
     expect(titles.some((text) => text.includes(copy.steps.testCall))).toBe(false);
   });
 
-  it("offers the number to call", async () => {
+  it("offers a phone the number to dial, and hides the link from a mouse pointer", async () => {
     await setup({ numberList: {}, numbers: [number], complete: ["fullScan"] });
     const call = (await screen.findByText(/^Call .*514/)).closest("a")!;
     expect(call.getAttribute("href")).toBe("tel:+15145550100");
+    expect(call.className).toContain("pointer-fine:hidden");
     expect(screen.getByText(copy.stepDescriptions.testCall)).toBeTruthy();
+  });
+
+  it("shows a mouse pointer the number to copy, and hides it on a phone", async () => {
+    await setup({ numberList: {}, numbers: [number], complete: ["fullScan"] });
+    const desktop = await screen.findByTestId("call-number-desktop");
+    expect(desktop.className).toMatch(/(^|\s)hidden(\s|$)/);
+    expect(desktop.className).toContain("pointer-fine:flex");
+    expect(within(desktop).getByText(/^\(514\) 555-0100$/)).toBeTruthy();
+    expect(within(desktop).queryByRole("link")).toBeNull();
+  });
+
+  it("copies the number and confirms it", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue();
+    await setup({ numberList: {}, numbers: [number], complete: ["fullScan"] });
+    await user.click(await screen.findByRole("button", { name: copy.stepActions.copyNumber }));
+    expect(writeText).toHaveBeenCalledWith("+15145550100");
+    expect(await screen.findByRole("button", { name: copy.stepActions.numberCopied })).toBeTruthy();
+    expect(within(screen.getByTestId("call-number-desktop")).getByRole("status").textContent).toBe(copy.stepActions.numberCopied);
   });
 
   it("opens the forwarding dialog, and It works finishes the step for a carrier that strips the header", async () => {
@@ -175,6 +195,18 @@ describe("the list for a business with a number", () => {
     telemetryRef.current!.expectEvent("web.activation.forwarding_confirmed", { businessId: "business" });
     await userEvent.click(await screen.findByRole("button", { name: new RegExp(copy.steps.forwardFromCurrent) }));
     expect(await screen.findByText(copy.forwardingWorks)).toBeTruthy();
+  });
+
+  it("tells the owner to dial the carrier's code on the phone customers call, then press Call", async () => {
+    await setup({ numberList: {}, numbers: [number], complete: ["fullScan", "callNumber"] });
+    await userEvent.click(await screen.findByRole("button", { name: copy.stepActions.forwardCalls }));
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.type(within(dialog).getByLabelText(en.forwarding.carrier.label), "Verizon");
+    await userEvent.click(await screen.findByRole("option", { name: "Verizon" }));
+    const steps = within(dialog).getAllByRole("listitem").map((item) => item.textContent ?? "");
+    expect(steps[0]).toContain(en.forwarding.code.dial);
+    expect(steps[1]).toBe(en.forwarding.code.call);
+    expect(within(dialog).queryByText(/To test it/)).toBeNull();
   });
 
   it("shows the line it learned from the first forwarded call", async () => {

@@ -325,6 +325,8 @@
       "testCall": "Iniciar una llamada",
       "phoneNumber": "Elegir un número",
       "callNumber": "Llamar al {{number}}",
+      "copyNumber": "Copiar número",
+      "numberCopied": "Copiado",
       "forwardCalls": "Configurar el desvío",
       "choosePlan": "Elegir un plan"
     },
@@ -357,8 +359,8 @@
       "ukMobile": "Móviles del Reino Unido"
     },
     "code": {
-      "dial": "Marque este código:",
-      "call": "Pulse Llamar. Un tono o un mensaje confirma que el desvío está activo.",
+      "dial": "En el teléfono al que llaman sus clientes, marque este código:",
+      "call": "Pulse Llamar.",
       "busy": "Para desviar también las llamadas que entran mientras habla, marque:",
       "off": "Para desactivarlo después, marque {{code}}.",
       "unreachable": "Para desviar también las llamadas cuando su teléfono está apagado o sin señal, marque:",
@@ -378,10 +380,6 @@
       "androidOnly": "Estos pasos son para teléfonos Android. En un iPhone, pida a {{name}} que lo active por usted.",
       "adminOnly": "Solo un administrador de su cuenta de {{name}} puede cambiar esto.",
       "verifyNumber": "{{name}} envía un código al {{number}} antes de desviar. Elija recibir el código por llamada y léalo en la transcripción de esa llamada, en Llamadas."
-    },
-    "test": {
-      "missed": "Para probarlo, llame a su número de negocio desde otro teléfono y déjelo sonar. Su agente debería contestar.",
-      "all": "Para probarlo, llame a su número de negocio desde otro teléfono. Su agente debería contestar."
     },
     "unsupported": {
       "missed": "{{name}} no ofrece desvío solo para llamadas perdidas. Elija Todas las llamadas, o pida a {{name}} que desvíe las llamadas sin respuesta al {{number}}.",
