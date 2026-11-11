@@ -338,6 +338,17 @@ export const partnerDomains = pgTable(
   ],
 );
 
+// The dashboard intro cards a person has closed, one row each (migration 0206). 'dashboard' marks their first visit.
+export const userPageIntros = pgTable(
+  "user_page_intros",
+  {
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    intro: text("intro").notNull(),
+    seenAt: timestamp("seen_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.intro] })],
+);
+
 // The business a person last worked in on each partner's domains. The host's own domain keeps users.activeBusinessId.
 export const userActiveBusinesses = pgTable(
   "user_active_businesses",
@@ -2462,6 +2473,7 @@ export const schema = {
   partnerPackages,
   businesses,
   userActiveBusinesses,
+  userPageIntros,
   partnerBusinessOpens,
   businessTemplates,
   businessTemplateFiles,
