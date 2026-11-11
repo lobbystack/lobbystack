@@ -36,6 +36,7 @@ describe.skipIf(!client)("agents in the business snapshot", () => {
       transferMode: "on_request",
       transferNumber: "+14165551234",
       voice: "cedar",
+      // A deprecated column the snapshot no longer reads.
       voiceInstructions: "Own voice text",
       staffFirstMode: "always",
       staffFirstNumber: "+14165550001",
@@ -53,7 +54,9 @@ describe.skipIf(!client)("agents in the business snapshot", () => {
     await refreshBusinessSnapshot({ db: client!.db }, { businessId });
     const snapshot = (await loadLatestBusinessSnapshot({ db: client!.db }, { businessId }))!;
     expect(snapshot.agents).toHaveLength(1);
-    expect(snapshot.agents?.[0]).toMatchObject({ id: agentId, name: "Front desk", isDefault: true, tone: "warm", voice: "cedar", voiceInstructions: "Own voice text", bookingMode: "request" });
+    expect(snapshot.agents?.[0]).toMatchObject({ id: agentId, name: "Front desk", isDefault: true, tone: "warm", voice: "cedar", bookingMode: "request" });
+    expect(snapshot.agents?.[0]?.voiceInstructions).toContain("Speak in a warm tone.");
+    expect(JSON.stringify(snapshot)).not.toContain("Own voice text");
     const { agentId: _agentId, agentName: _agentName, tone: _tone, ...projected } = snapshotForAgent(snapshot, agentId)!;
     expect(projected).toEqual(snapshot);
     expect(snapshot.rules?.map((rule) => rule.title)).toEqual(["Parking"]);

@@ -48,11 +48,15 @@ async function world(tx: DatabaseTransaction, input: { carrier?: string } = {}):
   await tx.insert(businesses).values({ id: businessId, slug: `agents-${businessId}`, name: "Harbor Dental", timezone: "UTC", businessType: "test", deploymentMode: "cloud", textRepliesEnabled: true });
   await tx.insert(billingAccounts).values({ businessId, billingKey: `business:${businessId}`, plan: "starter", subscriptionState: "active" }).onConflictDoUpdate({ target: billingAccounts.businessId, set: { plan: "starter", subscriptionState: "active" } });
   const common = { businessId, tone: "warm", summary: "A dental clinic", bookingPolicy: "Book" };
-  const [a] = await tx.insert(agents).values({ ...common, isDefault: true, name: "Front desk", greeting: "Front desk here", transferMode: "on_request", transferNumber: TRANSFER_A, voice: "cedar", voiceInstructions: "Day voice text", smsInstructions: "Day text", chatInstructions: "Day chat" }).returning({ id: agents.id });
-  const [b] = await tx.insert(agents).values({ ...common, name: "Evening", isDefault: false, greeting: "Evening desk here", transferMode: "always", transferNumber: TRANSFER_B, voice: "marin", voiceInstructions: "Night voice text", smsInstructions: "Night text", chatInstructions: "Night chat", appointmentChangePolicy: noChanges, staffFirstMode: "always", staffFirstNumber: STAFF_B, staffFirstHandoverMessage: "Evening handover" }).returning({ id: agents.id });
+  const [a] = await tx.insert(agents).values({ ...common, isDefault: true, name: "Front desk", greeting: "Front desk here", transferMode: "on_request", transferNumber: TRANSFER_A, voice: "cedar" }).returning({ id: agents.id });
+  const [b] = await tx.insert(agents).values({ ...common, name: "Evening", isDefault: false, greeting: "Evening desk here", transferMode: "always", transferNumber: TRANSFER_B, voice: "marin", appointmentChangePolicy: noChanges, staffFirstMode: "always", staffFirstNumber: STAFF_B, staffFirstHandoverMessage: "Evening handover" }).returning({ id: agents.id });
   const [lineA] = await tx.insert(phoneNumbers).values({ businessId, agentId: a!.id, e164: LINE_A, providerPhoneId: `PN${randomUUID()}`, status: "active", carrier: input.carrier ?? "twilio", voiceEnabled: true, smsEnabled: true }).returning({ id: phoneNumbers.id });
   const [lineB] = await tx.insert(phoneNumbers).values({ businessId, agentId: b!.id, e164: LINE_B, providerPhoneId: `PN${randomUUID()}`, status: "active", carrier: input.carrier ?? "twilio", voiceEnabled: true, smsEnabled: true }).returning({ id: phoneNumbers.id });
   await tx.execute(sql`insert into public.agent_rules (business_id, agent_id, title, content, sort_order) values (${businessId}::uuid, ${a!.id}::uuid, 'Day rule', 'Offer mornings', 0), (${businessId}::uuid, ${b!.id}::uuid, 'Night rule', 'Offer evenings', 0)`);
+  // Each agent's own words for each channel, as rules kept to it.
+  for (const [agentId, words] of [[a!.id, "Day"], [b!.id, "Night"]] as const) {
+    await tx.execute(sql`insert into public.agent_rules (business_id, agent_id, title, content, sort_order, channel) values (${businessId}::uuid, ${agentId}::uuid, 'On calls', ${`${words} voice text`}, 1, 'voice'), (${businessId}::uuid, ${agentId}::uuid, 'In texts', ${`${words} text`}, 2, 'sms'), (${businessId}::uuid, ${agentId}::uuid, 'In website chat', ${`${words} chat`}, 3, 'web_chat')`);
+  }
   return { tx, businessId, agentA: a!.id, agentB: b!.id, numberA: lineA!.id, numberB: lineB!.id };
 }
 
@@ -102,7 +106,9 @@ describe.skipIf(!testUrl)("each channel answers as its own agent", () => {
       expect(await conversationAgent(tx, callB.conversationId)).toBe(agentB);
 
       const snapshot = (await getBusinessSnapshotForAgent({ db }, { businessId, agentId: callB.agentId }))!;
-      expect(snapshot).toMatchObject({ agentId: agentB, greeting: "Evening desk here", voice: "marin", voiceInstructions: "Night voice text", transferPolicy: { mode: "always", transferNumber: TRANSFER_B } });
+      expect(snapshot).toMatchObject({ agentId: agentB, greeting: "Evening desk here", voice: "marin", transferPolicy: { mode: "always", transferNumber: TRANSFER_B } });
+      expect(snapshot.rules).toContainEqual(expect.objectContaining({ content: "Night voice text", channel: "voice" }));
+      expect(JSON.stringify(snapshot.rules)).not.toContain("Day voice text");
       expect(snapshot.contactChannels.phoneNumber).toBe(LINE_B);
     });
   });
@@ -210,7 +216,7 @@ describe.skipIf(!testUrl)("each channel answers as its own agent", () => {
       expect(await conversationAgent(tx, chat.conversationId)).toBe(agentB);
       expect(await getOrCreateWidgetConversation({ db }, { businessId, widgetVisitorId, agentId: agentA })).toMatchObject({ conversationId: chat.conversationId, agentId: agentB });
       const snapshot = await getBusinessSnapshotForAgent({ db }, { businessId, agentId: chat.agentId });
-      expect(snapshot).toMatchObject({ chatInstructions: "Night chat" });
+      expect(snapshot?.rules).toContainEqual(expect.objectContaining({ content: "Night chat", channel: "web_chat" }));
       expect((await getOrCreateWidgetConversation({ db }, { businessId, widgetVisitorId: randomUUID() })).agentId).toBe(agentA);
     });
   });
@@ -243,7 +249,7 @@ describe.skipIf(!testUrl)("each channel answers as its own agent", () => {
       await asMigrator(tx, async () => { await tx.update(messages).set({ createdAt: new Date(Date.now() + 60_000) }).where(eq(messages.id, third.messageId!)); });
       const reply = await loadTextReplyContext({ db }, { businessId, conversationId: conversationOf(third.messageId), messageId: third.messageId! });
       expect(reply).toMatchObject({ agentId: agentB, phone: CALLER });
-      expect(await getBusinessSnapshotForAgent({ db }, { businessId, agentId: reply!.agentId })).toMatchObject({ smsInstructions: "Night text" });
+      expect(await getBusinessSnapshotForAgent({ db }, { businessId, agentId: reply!.agentId })).toMatchObject({ rules: expect.arrayContaining([expect.objectContaining({ content: "Night text", channel: "sms" })]) });
       const from = (conversationId: string) => withBusinessTransaction(db, { businessId, actorType: "worker" }, async (inner) => (await loadTextReplyReachInTransaction(inner, { businessId, conversationId })).from);
       expect(await from(conversationOf(first.messageId))).toBe(LINE_A);
       expect(await from(conversationOf(third.messageId))).toBe(LINE_B);
@@ -267,7 +273,7 @@ describe.skipIf(!testUrl)("each channel answers as its own agent", () => {
       });
       await rebuildSnapshot(tx, db, businessId);
       const recovered = await getBusinessSnapshotForAgent({ db }, { businessId, agentId: agentB, underWay: true });
-      expect(recovered).toMatchObject({ agentId: agentB, greeting: "Evening desk here", voice: "marin", voiceInstructions: "Night voice text", smsInstructions: "Night text", rules: [expect.objectContaining({ title: "Night rule" })] });
+      expect(recovered).toMatchObject({ agentId: agentB, greeting: "Evening desk here", voice: "marin", rules: [expect.objectContaining({ title: "Night rule" }), expect.objectContaining({ content: "Night voice text", channel: "voice" }), expect.objectContaining({ content: "Night text", channel: "sms" }), expect.objectContaining({ content: "Night chat", channel: "web_chat" })] });
       expect(recovered?.contactChannels.phoneNumber).toBeUndefined();
 
       const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -304,10 +310,10 @@ describe.skipIf(!testUrl)("each channel answers as its own agent", () => {
 
   it("rules: each agent's prompt gets only its own rules", async () => {
     await withTwoAgents(async ({ businessId, agentA, agentB }, db) => {
-      const rulesOf = async (agentId?: string) => (await getBusinessSnapshotForAgent({ db }, { businessId, agentId }))!.rules?.map((rule) => rule.title);
-      expect(await rulesOf(agentB)).toEqual(["Night rule"]);
-      expect(await rulesOf(agentA)).toEqual(["Day rule"]);
-      expect(await rulesOf()).toEqual(["Day rule"]);
+      const rulesOf = async (agentId?: string) => (await getBusinessSnapshotForAgent({ db }, { businessId, agentId }))!.rules?.map((rule) => rule.content);
+      expect(await rulesOf(agentB)).toEqual(["Offer evenings", "Night voice text", "Night text", "Night chat"]);
+      expect(await rulesOf(agentA)).toEqual(["Offer mornings", "Day voice text", "Day text", "Day chat"]);
+      expect(await rulesOf()).toEqual(["Offer mornings", "Day voice text", "Day text", "Day chat"]);
     });
   });
 

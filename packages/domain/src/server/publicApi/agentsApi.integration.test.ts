@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { agents, billingAccounts, businesses, calls, contacts, conversations, createDatabaseClient, inboxItems } from "@lobbystack/db";
+import { agentRules, agents, billingAccounts, businesses, calls, contacts, conversations, createDatabaseClient, inboxItems } from "@lobbystack/db";
 import { apiAgentSchema, apiCallSchema, apiMessageSchema } from "@lobbystack/shared";
 
 import { runPrivacyRetentionSweep } from "../privacy";
@@ -58,7 +58,9 @@ describe.skipIf(!testUrl)("agents in the public API, with two agents", () => {
     await admin!.db.insert(billingAccounts).values({ businessId, billingKey: `business:${businessId}`, plan: "starter", subscriptionState: "active" });
     const old = new Date(Date.now() - 60_000);
     // The second agent is the older one, so the list must put the default first by more than age.
-    [{ id: evening }] = await admin!.db.insert(agents).values(agentRow(businessId, { name: "Evening", greeting: "Good evening", chatInstructions: "Keep it short.", voice: "cedar", createdAt: old })).returning({ id: agents.id }) as [{ id: string }];
+    [{ id: evening }] = await admin!.db.insert(agents).values(agentRow(businessId, { name: "Evening", greeting: "Good evening", chatInstructions: "Column text no one reads", voice: "cedar", createdAt: old })).returning({ id: agents.id }) as [{ id: string }];
+    // chat_instructions reads the agent's website chat rule, not the deprecated column.
+    await admin!.db.insert(agentRules).values({ businessId, agentId: evening, title: "In website chat", content: "Keep it short.", channel: "web_chat" });
     [{ id: frontDesk }] = await admin!.db.insert(agents).values(agentRow(businessId, { name: "Front desk", isDefault: true })).returning({ id: agents.id }) as [{ id: string }];
     [{ id: archived }] = await admin!.db.insert(agents).values(agentRow(businessId, { name: "Old", archivedAt: new Date() })).returning({ id: agents.id }) as [{ id: string }];
     [{ id: otherAgent }] = await admin!.db.insert(agents).values(agentRow(otherBusinessId, { isDefault: true })).returning({ id: agents.id }) as [{ id: string }];
