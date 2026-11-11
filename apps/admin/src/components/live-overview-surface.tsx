@@ -135,7 +135,7 @@ export function LiveOverviewSurface() {
         {showGuide || guidePending || !businessId ? null : <CallForwardingFromLink businessId={businessId} />}
         {/* The phone line over the last 30 days' results, in one card. It holds Home's Test call, one per number. */}
         {summary.isLoading ? (
-          <PhoneResultsSkeleton labels={{ status: t("home.phone.status.ready"), numberLabel: t("home.phone.numberLabel"), answersFirst: t(ANSWERS_FIRST_KEYS.never), results: RESULT_KEYS.map((key) => t(`home.results.${key}`)), ...(canSetUp ? { testCall: t("common:testCall.trigger") } : {}) }} />
+          <PhoneResultsSkeleton labels={{ status: t("home.phone.status.ready"), answersFirst: t(ANSWERS_FIRST_KEYS.never), results: RESULT_KEYS.map((key) => t(`home.results.${key}`)), ...(canSetUp ? { testCall: t("common:testCall.trigger") } : {}) }} />
         ) : (
           <HomePhoneCard businessId={businessId ?? ""} called={summary.data?.phoneCalled ?? false} canSetUp={canSetUp} lines={summary.data?.phoneLines ?? []} results={results.length ? (
             <div className="grid sm:grid-cols-3">

@@ -10,7 +10,6 @@
   "home": {
     "title": "Home",
     "phone": {
-      "numberLabel": "Your number:",
       "status": {
         "ready": "Ready for your first call",
         "live": "Your agent is taking calls",

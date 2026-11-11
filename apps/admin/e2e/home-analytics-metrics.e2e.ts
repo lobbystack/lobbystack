@@ -80,7 +80,7 @@ test("Home's phone card shows the number, waits for the first call, says who ans
     const { e164 } = await holdNumber(database, businessId, { carrier: "twilio", e164: `+1416555${String(Math.floor(Math.random() * 10_000)).padStart(4, "0")}` });
     await page.goto("/");
     const phone = page.getByRole("region", { name: dashboardCopy.home.phone.status.ready, exact: true });
-    await expect(phone).toContainText(`${dashboardCopy.home.phone.numberLabel}(${e164.slice(2, 5)}) ${e164.slice(5, 8)}-${e164.slice(8)}`);
+    await expect(phone).toContainText(`(${e164.slice(2, 5)}) ${e164.slice(5, 8)}-${e164.slice(8)}`);
     // The status, the number and the results share one card, above Action required.
     const card = page.locator("[data-slot='surface']", { has: page.locator("#home-phone-title") });
     await expect(card.getByRole("heading", { name: dashboardCopy.home.results.bookedValue, exact: true })).toBeVisible();
