@@ -45,10 +45,13 @@ describe("phone card on Home", () => {
     expect(screen.getByRole("link", { name: en.home.phone.answersFirst.agent }).getAttribute("href")).toBe("/agents/agent-front#staff-first");
     screen.getByRole("button", { name: enCommon.testCall.trigger }).click();
     expect(opened).toEqual([{ agentId: "agent-front" }]);
-    // The results sit in the same card, under the divider that closes the phone part.
+    // The heading sits over the card. The card starts with the number, then a divider and the results.
     const card = container.querySelector("[data-slot='surface']")!;
+    expect(card.contains(heading)).toBe(false);
+    expect(card.firstElementChild!.getAttribute("data-slot")).toBe("phone-lines");
+    expect(card.firstElementChild!.className).toContain("border-b");
     expect(within(card as HTMLElement).getByTestId("results")).toBeTruthy();
-    expect(screen.getByRole("region", { name: en.home.phone.status.ready }).className).toContain("border-b");
+    expect(screen.getByRole("region", { name: en.home.phone.status.ready }).contains(card)).toBe(true);
     unregister();
   });
 

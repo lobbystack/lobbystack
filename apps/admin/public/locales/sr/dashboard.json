@@ -7,16 +7,6 @@
     "title": "Analitika",
     "description": "Pratite trendove angažovanja kroz pozive, poruke i zakazivanja."
   },
-  "delta": {
-    "flat": "Bez promene u odnosu na prošli mesec",
-    "up": "+{{value}}% u odnosu na prošli mesec",
-    "down": "-{{value}}% u odnosu na prošli mesec",
-    "durationUp": "+{{value}} u odnosu na prošli mesec",
-    "durationDown": "-{{value}} u odnosu na prošli mesec",
-    "pointsUp": "+{{value}} p. p. u odnosu na prošli mesec",
-    "pointsDown": "-{{value}} p. p. u odnosu na prošli mesec",
-    "noPreviousCalls": "Nema poziva prethodnog meseca"
-  },
   "home": {
     "title": "Početna",
     "phone": {

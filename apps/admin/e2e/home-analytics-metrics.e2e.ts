@@ -81,9 +81,12 @@ test("Home's phone card shows the number, waits for the first call, says who ans
     await page.goto("/");
     const phone = page.getByRole("region", { name: dashboardCopy.home.phone.status.ready, exact: true });
     await expect(phone).toContainText(`(${e164.slice(2, 5)}) ${e164.slice(5, 8)}-${e164.slice(8)}`);
-    // The phone part and the results share one card, above Action required.
-    const card = page.locator("[data-slot='surface']", { has: page.locator("#home-phone-title") });
+    // The status heads the card from outside it; the number and the results share the card, above Action required.
+    const section = page.locator("section", { has: page.locator("#home-phone-title") });
+    const card = section.locator("[data-slot='surface']");
+    await expect(card.locator("#home-phone-title")).toHaveCount(0);
     await expect(card.getByRole("heading", { name: dashboardCopy.home.results.bookedValue, exact: true })).toBeVisible();
+    await expect(card).not.toContainText("from last month");
     const [cardBox, actionBox] = [await card.boundingBox(), await page.getByRole("heading", { name: dashboardCopy.home.actionRequired.title, exact: true }).boundingBox()];
     expect(cardBox!.y).toBeLessThan(actionBox!.y);
     // Home has one Test call, in the card.
@@ -96,7 +99,7 @@ test("Home's phone card shows the number, waits for the first call, says who ans
     // A first call to the number turns the status live.
     await database.db.insert(calls).values({ businessId, providerCallId: randomUUID(), transport: "voice", status: "completed", startedAt: new Date(Date.now() - 60_000), endedAt: new Date() });
     await page.reload();
-    await expect(card.getByRole("heading", { name: dashboardCopy.home.phone.status.live, exact: true })).toBeVisible();
+    await expect(section.getByRole("heading", { name: dashboardCopy.home.phone.status.live, exact: true })).toBeVisible();
 
     // The chip opens the agent's Staff answers first setting.
     await card.getByRole("link", { name: dashboardCopy.home.phone.answersFirst.agent, exact: true }).click();

@@ -7,16 +7,6 @@
     "title": "Analytics",
     "description": "Review engagement trends across calls, messages, and booking activity."
   },
-  "delta": {
-    "flat": "No change from last month",
-    "up": "+{{value}}% from last month",
-    "down": "-{{value}}% from last month",
-    "durationUp": "+{{value}} from last month",
-    "durationDown": "-{{value}} from last month",
-    "pointsUp": "+{{value}} pts from last month",
-    "pointsDown": "-{{value}} pts from last month",
-    "noPreviousCalls": "No calls the month before"
-  },
   "home": {
     "title": "Home",
     "phone": {

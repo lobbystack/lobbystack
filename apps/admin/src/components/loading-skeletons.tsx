@@ -36,28 +36,22 @@ export function MetricCardGridSkeleton({ count = 4, titles }: { count?: number; 
 }
 
 /**
- * Stands in for Home's card of the phone line over the last 30 days' results. The top holds the status heading
- * and its dot, then one number with who answers it first and its Test call; a divider; then the three results,
- * each with its title. The text pieces hold their real labels, hidden. Pass `status` and `answersFirst` for the
- * phone part, which Home keeps while it doesn't know whether the business has a number; without them the card is
- * the results alone, as for a business with no number. Without `testCall` the row leaves the button out.
+ * Stands in for Home's phone line and last 30 days: the status heading and its dot over the card, then in the card
+ * one number with who answers it first and its Test call, a divider, and the three results, each title with its
+ * value. The text pieces hold their real labels, hidden. Pass `status` and `answersFirst` for the phone part, which
+ * Home keeps while it doesn't know whether the business has a number; without them the card is the results alone,
+ * with no heading, as for a business with no number. Without `testCall` the row leaves the button out.
  */
 export function PhoneResultsSkeleton({ labels }: { labels: { results: ReadonlyArray<string>; status?: string; answersFirst?: string; testCall?: string } }) {
-  return (
-    <Surface aria-busy="true">
+  const card = (
+    <Surface>
       {labels.status ? (
-        <div className="border-b">
-          <div className="flex items-center gap-2 px-6 pt-5">
-            <HiddenTextSkeleton className="type-section-title">{labels.status}</HiddenTextSkeleton>
-            <Skeleton aria-hidden="true" className="size-2 shrink-0 rounded-full" />
+        <div className="flex flex-col gap-3 border-b px-6 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+          <div className="flex min-w-0 flex-col gap-2">
+            <div aria-hidden="true" className="type-metric-sm"><Skeleton className="h-[1lh] w-44 max-w-full" /></div>
+            {labels.answersFirst ? <Skeleton aria-hidden="true" className="inline-flex h-5 w-fit items-center gap-1 rounded-full px-1.5 type-label whitespace-nowrap"><span className="invisible">{labels.answersFirst}</span><span className="invisible size-3 shrink-0" /></Skeleton> : null}
           </div>
-          <div className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-            <div className="flex min-w-0 flex-col gap-2">
-              <div aria-hidden="true" className="type-metric-sm"><Skeleton className="h-[1lh] w-44 max-w-full" /></div>
-              {labels.answersFirst ? <Skeleton aria-hidden="true" className="inline-flex h-5 w-fit items-center gap-1 rounded-full px-1.5 type-label whitespace-nowrap"><span className="invisible">{labels.answersFirst}</span><span className="invisible size-3 shrink-0" /></Skeleton> : null}
-            </div>
-            {labels.testCall ? <div className="flex shrink-0"><HeaderButtonSkeleton label={labels.testCall} /></div> : null}
-          </div>
+          {labels.testCall ? <div className="flex shrink-0"><HeaderButtonSkeleton label={labels.testCall} /></div> : null}
         </div>
       ) : null}
       <div className="grid sm:grid-cols-3">
@@ -65,11 +59,20 @@ export function PhoneResultsSkeleton({ labels }: { labels: { results: ReadonlyAr
           <div className="flex min-w-0 flex-col gap-2 border-b p-6 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0" key={title}>
             <HiddenTextSkeleton className="type-card-title">{title}</HiddenTextSkeleton>
             <Skeleton className="h-10 w-24" />
-            <Skeleton className="h-4 w-32" />
           </div>
         ))}
       </div>
     </Surface>
+  );
+  if (!labels.status) return <div aria-busy="true">{card}</div>;
+  return (
+    <section aria-busy="true" className="flex flex-col gap-3">
+      <div className="flex items-center gap-2 px-1">
+        <HiddenTextSkeleton className="type-section-title">{labels.status}</HiddenTextSkeleton>
+        <Skeleton aria-hidden="true" className="size-2 shrink-0 rounded-full" />
+      </div>
+      {card}
+    </section>
   );
 }
 
