@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
-import { billingAccounts, businessMemberships, businesses, createDatabaseClient, feedbackSubmissions, onboardingNumberClaimEvents, outboxMessages, partners, phoneNumbers, productEvents, providerEvents, services, storageObjects, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { billingAccounts, businessMemberships, businesses, createDatabaseClient, feedbackSubmissions, onboardingNumberClaimEvents, outboxMessages, partners, phoneNumbers, productEvents, providerEvents, services, storageObjects, users, withBusinessTransaction, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 
 import { deleteBusiness } from "./businessDeletion";
 import { readActiveBusinessIdInTransaction } from "./tenancy";
@@ -44,7 +44,7 @@ async function seed(tx: DatabaseTransaction, options: { partnerId?: string } = {
   const adminId = await person("business_admin");
   await tx.insert(services).values({ businessId, name: "Colour", slug: "colour", durationMinutes: 30 });
   await tx.insert(billingAccounts).values({ businessId, billingKey: businessId, plan: "pro", subscriptionId: "sub_1", subscriptionState: "active" });
-  const [number] = await tx.insert(phoneNumbers).values({ businessId, e164: `+1555${Math.floor(1_000_000 + Math.random() * 8_999_999)}`, providerPhoneId: `PN${randomUUID()}` }).returning({ id: phoneNumbers.id, providerPhoneId: phoneNumbers.providerPhoneId });
+  const [number] = await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: `+1555${Math.floor(1_000_000 + Math.random() * 8_999_999)}`, providerPhoneId: `PN${randomUUID()}` }).returning({ id: phoneNumbers.id, providerPhoneId: phoneNumbers.providerPhoneId });
   const objectKey = `test/${randomUUID()}`;
   await tx.insert(storageObjects).values({ businessId, objectKey, purpose: "recording", fileName: "call.mp3", contentType: "audio/mpeg", status: "ready" });
   await tx.insert(providerEvents).values({ provider: "polar", providerEventId: randomUUID(), eventType: "subscription.active", businessId, payload: { phone: "+15550000000" } });

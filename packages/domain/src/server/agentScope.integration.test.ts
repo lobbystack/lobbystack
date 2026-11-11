@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { agents, businesses, createDatabaseClient, outboxMessages, phoneNumbers, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, businesses, createDatabaseClient, outboxMessages, phoneNumbers, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 
 import { saveReceptionistProfileInTransaction } from "./receptionistProfile";
 import { deleteAgentRuleInTransaction, insertAgentRuleInTransaction, listAgentRulesInTransaction, reorderAgentRulesInTransaction, updateAgentRuleInTransaction } from "./rules";
@@ -91,7 +91,7 @@ describe.skipIf(!testUrl)("one agent's settings, rules and routing", () => {
   it("gives a channel added before the agent a default agent", async () => {
     await rolledBack(async (tx) => {
       const businessId = await business(tx);
-      await tx.insert(phoneNumbers).values({ businessId, e164: "+15145550109", providerPhoneId: `PN${randomUUID()}`, status: "active" });
+      await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: "+15145550109", providerPhoneId: `PN${randomUUID()}`, status: "active" });
       expect(await tx.select({ isDefault: agents.isDefault }).from(agents).where(eq(agents.businessId, businessId))).toEqual([{ isDefault: true }]);
     });
   });

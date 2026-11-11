@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { agentRules, agents, billingUsageEvents, businesses, businessMemberships, createDatabaseClient, outboxMessages, partnerUsageMonths, phoneNumbers, platformKeyBusinesses, prospectDemos, storageObjects, users, websiteIngestionJobs, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agentRules, agents, billingUsageEvents, businesses, businessMemberships, createDatabaseClient, outboxMessages, partnerUsageMonths, phoneNumbers, platformKeyBusinesses, prospectDemos, storageObjects, users, websiteIngestionJobs, withBusinessTransaction, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 import { PROSPECT_DEMO_WIDGET_ID } from "@lobbystack/shared";
 
 import { forgetCachedBrands } from "./brands";
@@ -386,7 +386,7 @@ describe.skipIf(!client)("a partner's prospect demos against PostgreSQL", () => 
       const objectKey = `${closed.businessId}/knowledge/${randomUUID()}/menu.pdf`;
       const [number] = await asMigrator(tx, async () => {
         await tx.insert(storageObjects).values({ businessId: closed.businessId, objectKey, purpose: "knowledge", fileName: "menu.pdf", contentType: "application/pdf", status: "ready" });
-        return await tx.insert(phoneNumbers).values({ businessId: closed.businessId, ...line, status: "active" }).returning({ id: phoneNumbers.id });
+        return await tx.insert(phoneNumbers).values({ businessId: closed.businessId, agentId: defaultAgentIdOf(closed.businessId), ...line, status: "active" }).returning({ id: phoneNumbers.id });
       });
 
       await deletePartnerDemo(bright.context, bright.ownerActor, { demoId: closed.demoId });

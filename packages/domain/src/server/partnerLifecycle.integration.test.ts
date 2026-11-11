@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { agents, auditLogs, billingAccounts, businesses, businessTemplates, calls, createDatabaseClient, onboardingNumberClaimEvents, outboxMessages, partnerLifecycleEvents, partnerLifecycles, partnerPackages, partnerStripeAccounts, partnerUsageMonths, phoneNumbers, prospectDemos, storageObjects, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, auditLogs, billingAccounts, businesses, businessTemplates, calls, createDatabaseClient, onboardingNumberClaimEvents, outboxMessages, partnerLifecycleEvents, partnerLifecycles, partnerPackages, partnerStripeAccounts, partnerUsageMonths, phoneNumbers, prospectDemos, storageObjects, users, withBusinessTransaction, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 import { PROSPECT_DEMO_WIDGET_ID } from "@lobbystack/shared";
 import { FakeStripeConnect } from "@lobbystack/providers/stripe/fakeStripeConnect";
 
@@ -462,7 +462,7 @@ describe.skipIf(!client)("a paused partner's businesses", () => {
       const line = phoneNumber();
       const transfer = "+14165550188";
       await asMigrator(tx, async () => {
-        await tx.insert(phoneNumbers).values({ businessId: harbor.businessId, e164: line, providerPhoneId: providerPhoneId(), status: "active" });
+        await tx.insert(phoneNumbers).values({ businessId: harbor.businessId, agentId: defaultAgentIdOf(harbor.businessId), e164: line, providerPhoneId: providerPhoneId(), status: "active" });
         await tx.update(agents).set({ transferNumber: transfer }).where(eq(agents.businessId, harbor.businessId));
       });
       const worker = { db: tx as unknown as Database };
@@ -631,12 +631,12 @@ describe.skipIf(!client)("deleting a partner's businesses 90 days after its tier
       const sharedSender = phoneNumber();
       vi.stubEnv("TWILIO_ALERT_SMS_FROM", sharedSender);
       const numbers = await asMigrator(tx, async () => await tx.insert(phoneNumbers).values([
-        { businessId: harbor.businessId, e164: phoneNumber(), providerPhoneId: providerPhoneId(), status: "active" },
-        { businessId: harbor.businessId, e164: phoneNumber(), providerPhoneId: providerPhoneId(), status: "reclaiming" },
-        { businessId: harbor.businessId, e164: phoneNumber(), providerPhoneId: providerPhoneId(), status: "reclaimed" },
-        { businessId: harbor.businessId, e164: sharedSender, providerPhoneId: providerPhoneId(), status: "active" },
-        { businessId: maple.businessId, e164: phoneNumber(), providerPhoneId: providerPhoneId(), status: "active" },
-        { businessId: other.businessId, e164: phoneNumber(), providerPhoneId: providerPhoneId(), status: "active" },
+        { businessId: harbor.businessId, agentId: defaultAgentIdOf(harbor.businessId), e164: phoneNumber(), providerPhoneId: providerPhoneId(), status: "active" },
+        { businessId: harbor.businessId, agentId: defaultAgentIdOf(harbor.businessId), e164: phoneNumber(), providerPhoneId: providerPhoneId(), status: "reclaiming" },
+        { businessId: harbor.businessId, agentId: defaultAgentIdOf(harbor.businessId), e164: phoneNumber(), providerPhoneId: providerPhoneId(), status: "reclaimed" },
+        { businessId: harbor.businessId, agentId: defaultAgentIdOf(harbor.businessId), e164: sharedSender, providerPhoneId: providerPhoneId(), status: "active" },
+        { businessId: maple.businessId, agentId: defaultAgentIdOf(maple.businessId), e164: phoneNumber(), providerPhoneId: providerPhoneId(), status: "active" },
+        { businessId: other.businessId, agentId: defaultAgentIdOf(other.businessId), e164: phoneNumber(), providerPhoneId: providerPhoneId(), status: "active" },
       ]).returning({ id: phoneNumbers.id, e164: phoneNumbers.e164, providerPhoneId: phoneNumbers.providerPhoneId }));
       const objectKey = `${harbor.businessId}/knowledge/${randomUUID()}.pdf`;
       await asMigrator(tx, async () => await tx.insert(storageObjects).values({ businessId: harbor.businessId, objectKey, purpose: "knowledge", fileName: "menu.pdf", contentType: "application/pdf", status: "ready" }));
@@ -696,7 +696,7 @@ describe.skipIf(!client)("deleting a partner's businesses 90 days after its tier
       const number = await asMigrator(tx, async () => {
         await tx.insert(storageObjects).values({ businessId: demo.businessId, objectKey, purpose: "knowledge", fileName: "menu.pdf", contentType: "application/pdf", status: "ready" });
         await tx.insert(businessTemplates).values({ id: templateId, partnerId: acme.partnerId, name: "Dental", manifest: { business: { name: "Template", timezone: "America/Toronto", business_type: "dental" } } });
-        return (await tx.insert(phoneNumbers).values({ businessId: demo.businessId, e164: phoneNumber(), providerPhoneId: providerPhoneId(), status: "active" }).returning({ id: phoneNumbers.id, e164: phoneNumbers.e164, providerPhoneId: phoneNumbers.providerPhoneId }))[0]!;
+        return (await tx.insert(phoneNumbers).values({ businessId: demo.businessId, agentId: defaultAgentIdOf(demo.businessId), e164: phoneNumber(), providerPhoneId: providerPhoneId(), status: "active" }).returning({ id: phoneNumbers.id, e164: phoneNumbers.e164, providerPhoneId: phoneNumbers.providerPhoneId }))[0]!;
       });
       const ended = ago(1);
       await endTier(tx, acme.partnerId, ended);

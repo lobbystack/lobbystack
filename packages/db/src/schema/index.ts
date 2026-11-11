@@ -668,8 +668,8 @@ export const phoneNumbers = pgTable(
     refusedCallsForwardTo: varchar("refused_calls_forward_to", { length: 32 }),
     // The carrier connection that only this number uses, for carriers that route calls by it (migration 0172).
     carrierConnectionId: varchar("carrier_connection_id", { length: 64 }),
-    // The agent that answers this number. Migration 0184's trigger fills it with the default agent.
-    agentId: uuid("agent_id"),
+    // The agent that answers this number. Until the release after 0214, a trigger fills it for code that leaves it out.
+    agentId: uuid("agent_id").notNull(),
     // The owner's line that forwards to this number, from the first forwarded call we saw, and when (migration 0207).
     forwardedFromE164: varchar("forwarded_from_e164", { length: 32 }),
     forwardingDetectedAt: timestamp("forwarding_detected_at", { withTimezone: true }),
@@ -870,8 +870,8 @@ export const widgetKeys = pgTable(
     allowedOrigins: jsonb("allowed_origins").$type<string[]>().notNull().default([]),
     config: jsonb("config").$type<Record<string, unknown>>().notNull().default({}),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
-    // The agent that answers this widget. Migration 0184's trigger fills it with the default agent.
-    agentId: uuid("agent_id"),
+    // The agent that answers this widget. Until the release after 0214, a trigger fills it for code that leaves it out.
+    agentId: uuid("agent_id").notNull(),
     ...timestamps,
   },
   (table) => [
@@ -1334,8 +1334,8 @@ export const agentRules = pgTable(
     content: text("content").notNull(),
     active: boolean("active").default(true).notNull(),
     sortOrder: integer("sort_order").default(0).notNull(),
-    // The agent this rule shapes. Migration 0184's trigger fills it with the default agent.
-    agentId: uuid("agent_id"),
+    // The agent this rule shapes.
+    agentId: uuid("agent_id").notNull(),
     // The one channel the rule applies on (voice covers browser calls too). Null: every channel.
     // agent_rules_channel_check holds it to ruleChannels in @lobbystack/shared.
     channel: varchar("channel", { length: 16 }).$type<"voice" | "sms" | "web_chat" | "instagram">(),
@@ -1445,8 +1445,8 @@ export const instagramAccounts = pgTable(
     tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }).notNull(),
     status: varchar("status", { length: 32 }).default("connected").notNull(),
     lastError: text("last_error"),
-    // The agent that answers this account. Migration 0184's trigger fills it with the default agent.
-    agentId: uuid("agent_id"),
+    // The agent that answers this account. Until the release after 0214, a trigger fills it for code that leaves it out.
+    agentId: uuid("agent_id").notNull(),
     ...timestamps,
   },
   (table) => [foreignKey({ name: "instagram_accounts_agent_fk", columns: [table.businessId, table.agentId], foreignColumns: [agents.businessId, agents.id] }), uniqueIndex("instagram_accounts_instagram_user_unique").on(table.instagramUserId), uniqueIndex("instagram_accounts_business_unique").on(table.businessId)],

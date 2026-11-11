@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { asc, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { agents, billingAccounts, businesses, businessNotifications, createDatabaseClient, numberTrials, numberWaitlist, onboardingNumberClaimEvents, onboardingPhoneVerifications, outboxMessages, phoneNumbers, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, billingAccounts, businesses, businessNotifications, createDatabaseClient, numberTrials, numberWaitlist, onboardingNumberClaimEvents, onboardingPhoneVerifications, outboxMessages, phoneNumbers, users, withBusinessTransaction, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 
 import { convertNumberTrialInTransaction, enqueueRefusedCallForwardRefresh, getNumberTrialState, postNumberReleasedInTransaction, sweepNumberReleases, isNumberTrialEnded, joinNumberWaitlist, keepBusinessNumbersInTransaction, loadNumberTrialEmail, markNumberTrialMinutesExhausted, numberStepRedirect, refreshStaleRefusedCallForwards, resolveNumberFallback, resolveRefusedCallForward, sweepNumberTrial } from "./numberTrials";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning, reserveOnboardingNumberClaim, searchBusinessNumberInventory } from "./phoneNumbers";
@@ -204,7 +204,7 @@ describe.skipIf(!testUrl)("free trial numbers against dedicated PostgreSQL roles
       const { businessId } = await createBusiness({ db: tx as unknown as Database }, { userId, name: "Capped clinic", timezone: "America/Toronto", businessType: "test" });
       await tx.execute(sql`reset role`);
       const number = "+14165550124";
-      await tx.insert(phoneNumbers).values({ businessId, e164: number, providerPhoneId: `PN${randomUUID().replaceAll("-", "")}` });
+      await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: number, providerPhoneId: `PN${randomUUID().replaceAll("-", "")}` });
       const fallback = () => as(tx, "lobbystack_worker", db => resolveNumberFallback({ db }, { businessId, e164: number }));
       const setTransfer = (transferNumber: string | null) => tx.update(agents).set({ transferNumber }).where(eq(agents.businessId, businessId));
 
@@ -236,8 +236,8 @@ describe.skipIf(!testUrl)("free trial numbers against dedicated PostgreSQL roles
       const { businessId } = await createBusiness({ db: tx as unknown as Database }, { userId, name: "Two carrier clinic", timezone: "America/Toronto", businessType: "test" });
       await tx.execute(sql`reset role`);
       const telnyxNumber = "+14165550125";
-      const [telnyx] = await tx.insert(phoneNumbers).values({ businessId, e164: telnyxNumber, providerPhoneId: `tx-${randomUUID()}`, carrier: "telnyx" }).returning({ id: phoneNumbers.id });
-      await tx.insert(phoneNumbers).values({ businessId, e164: "+14165550126", providerPhoneId: `PN${randomUUID().replaceAll("-", "")}` });
+      const [telnyx] = await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: telnyxNumber, providerPhoneId: `tx-${randomUUID()}`, carrier: "telnyx" }).returning({ id: phoneNumbers.id });
+      await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: "+14165550126", providerPhoneId: `PN${randomUUID().replaceAll("-", "")}` });
       const routeJobs = async () => (await tx.select({ aggregateId: outboxMessages.aggregateId }).from(outboxMessages).where(sql`${outboxMessages.businessId} = ${businessId} and ${outboxMessages.topic} = 'phoneNumber.route'`)).map((row) => row.aggregateId);
       const refresh = () => as(tx, "lobbystack_worker", db => refreshStaleRefusedCallForwards({ db }, { businessId }));
 
@@ -356,7 +356,7 @@ async function activeTrial(tx: DatabaseTransaction, endsAt: Date) {
   const { businessId } = await createBusiness({ db: tx as unknown as Database }, { userId, name: "Bell clinic", timezone: "America/Toronto", businessType: "test" });
   await tx.execute(sql`reset role`);
   await tx.update(businesses).set({ deploymentMode: "cloud", onboardingStage: "complete" }).where(eq(businesses.id, businessId));
-  const [number] = await tx.insert(phoneNumbers).values({ businessId, e164: trialNumber, providerPhoneId: `PN${randomUUID().replaceAll("-", "")}`, status: "active", reclaimScheduledAt: new Date(endsAt.getTime() + 14 * 86_400_000), reclaimReason: "trial" }).returning({ id: phoneNumbers.id });
+  const [number] = await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: trialNumber, providerPhoneId: `PN${randomUUID().replaceAll("-", "")}`, status: "active", reclaimScheduledAt: new Date(endsAt.getTime() + 14 * 86_400_000), reclaimReason: "trial" }).returning({ id: phoneNumbers.id });
   const [trial] = await tx.insert(numberTrials).values({ businessId, userId, phoneNumberId: number!.id, verifiedPhone: ownerPhone, status: "active", startedAt: new Date(endsAt.getTime() - 14 * 86_400_000), endsAt }).returning({ id: numberTrials.id });
   return { userId, businessId, phoneNumberId: number!.id, trialId: trial!.id };
 }

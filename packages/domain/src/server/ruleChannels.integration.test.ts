@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
-import { agentRules, agents, businessContextSnapshots, businesses, createDatabaseClient, instagramAccounts, outboxMessages, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agentRules, agents, businessContextSnapshots, businesses, createDatabaseClient, instagramAccounts, outboxMessages, withBusinessTransaction, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 import { SNAPSHOT_SCHEMA_VERSION } from "@lobbystack/shared";
 
 import { isCurrentSnapshot } from "../snapshot";
@@ -61,7 +61,7 @@ describe.skipIf(!testUrl)("migration 0203 on sample rows", () => {
       const [tagalog] = await tx.insert(agents).values({ ...agentFields, businessId: filipino, isDefault: true, smsInstructions: "Text back soon." }).returning({ id: agents.id });
       const [fallback] = await tx.insert(agents).values({ ...agentFields, businessId: unknown, isDefault: true, voiceInstructions: "Speak slowly.", chatInstructions: "Be brief." }).returning({ id: agents.id });
       // Linked after its agents exist, so the account's trigger finds the default agent.
-      await tx.insert(instagramAccounts).values({ businessId: french, instagramUserId: `ig-${french}`, encryptedAccessToken: "sealed", tokenExpiresAt: new Date(Date.now() + 86_400_000), status: "reconnect_required" });
+      await tx.insert(instagramAccounts).values({ businessId: french, agentId: defaultAgentIdOf(french), instagramUserId: `ig-${french}`, encryptedAccessToken: "sealed", tokenExpiresAt: new Date(Date.now() + 86_400_000), status: "reconnect_required" });
       // An agent with a call rule already keeps it, and gets the others after its last rule.
       await tx.insert(agentRules).values([
         { businessId: unknown, agentId: fallback!.id, title: "Parking", content: "Rear lot", sortOrder: 4 },

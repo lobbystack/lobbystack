@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { apiCallSchema } from "@lobbystack/shared";
-import { agents, billingAccounts, billingUsageEvents, businessHours, businessMemberships, businesses, calls, contacts, createDatabaseClient, firstRealConversations, numberTrials, onboardingNumberClaimEvents, outboxMessages, partners, phoneNumbers, productEvents, users, webhookEndpoints, webhookEvents, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, billingAccounts, billingUsageEvents, businessHours, businessMemberships, businesses, calls, contacts, createDatabaseClient, firstRealConversations, numberTrials, onboardingNumberClaimEvents, outboxMessages, partners, phoneNumbers, productEvents, users, webhookEndpoints, webhookEvents, withBusinessTransaction, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 
 import { getAnalytics } from "./analytics";
 import { loadEntitlement } from "./entitlement";
@@ -58,7 +58,7 @@ async function business(tx: DatabaseTransaction, input: { plan?: "free_cloud" | 
   await tx.update(businesses).set({ deploymentMode: "cloud" }).where(eq(businesses.id, businessId));
   const plan = input.plan ?? "starter";
   await tx.insert(billingAccounts).values({ businessId, billingKey: `business:${businessId}`, plan, subscriptionState: plan === "starter" ? "active" : null }).onConflictDoUpdate({ target: billingAccounts.businessId, set: { plan, subscriptionState: plan === "starter" ? "active" : null } });
-  if (input.carrier) await tx.insert(phoneNumbers).values({ businessId, e164: lobbyNumber, status: "active", carrier: input.carrier, providerPhoneId: `PN${randomUUID()}` });
+  if (input.carrier) await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: lobbyNumber, status: "active", carrier: input.carrier, providerPhoneId: `PN${randomUUID()}` });
   return businessId;
 }
 
@@ -316,7 +316,7 @@ describe.skipIf(!testUrl)("staff answers first against PostgreSQL", () => {
           const [partner] = await tx.insert(partners).values({ name: "Acme", slug: `acme-${randomUUID().slice(0, 8)}` }).returning({ id: partners.id });
           const businessId = randomUUID();
           await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Harbor dental", timezone: "America/Toronto", businessType: "test", telemetryEnabled: true, deploymentMode: "cloud", partnerId: partner!.id });
-          await tx.insert(phoneNumbers).values({ businessId, e164: lobbyNumber, status: "active", carrier: "twilio", providerPhoneId: `PN${randomUUID()}` });
+          await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: lobbyNumber, status: "active", carrier: "twilio", providerPhoneId: `PN${randomUUID()}` });
           await saveFromApi(tx, businessId, { staffFirstMode: "always", staffFirstNumber: staffPhone });
           await refreshBusinessSnapshot(context(tx), { businessId });
           const { source } = await as(tx, "lobbystack_worker", (db) => withBusinessTransaction(db, { businessId, actorType: "worker" }, (inner) => loadEntitlement(inner, businessId)));

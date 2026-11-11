@@ -3,7 +3,7 @@ import { randomInt, randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
-import { agents, billingAccounts, businessContextSnapshots, businessHours, businessMemberships, businesses, contacts, createDatabaseClient, notifications, operatorNotificationDeliveries, operatorNotificationPreferences, outboxMessages, phoneNumbers, services, smsConsentEvents, staff, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, billingAccounts, businessContextSnapshots, businessHours, businessMemberships, businesses, contacts, createDatabaseClient, notifications, operatorNotificationDeliveries, operatorNotificationPreferences, outboxMessages, phoneNumbers, services, smsConsentEvents, staff, users, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 import { OPERATOR_SMS_DISCLOSURE_VERSION } from "@lobbystack/shared";
 
 import { createAppointmentChangeVerification, issueAppointmentChangeOtp } from "./appointmentChanges";
@@ -72,7 +72,7 @@ async function seed(tx: DatabaseTransaction, options: { selfHosted: boolean; own
   const [member] = await tx.insert(staff).values({ businessId, name: "Sam", timezone: "UTC" }).returning();
   const [service] = await tx.insert(services).values({ businessId, name: "Cut", slug: "cut", durationMinutes: 30 }).returning();
   await tx.insert(businessHours).values(Array.from({ length: 7 }, (_, dayOfWeek) => ({ businessId, dayOfWeek, openMinutes: 0, closeMinutes: 1439 })));
-  await tx.insert(phoneNumbers).values({ businessId, e164: ownNumber, providerPhoneId: `PN-${randomUUID()}` });
+  await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: ownNumber, providerPhoneId: `PN-${randomUUID()}` });
   const db = tx as unknown as Database;
   let slots = 0;
   const nextStart = () => DateTime.utc().plus({ days: 3 + slots++ }).set({ hour: 12, minute: 0, second: 0, millisecond: 0 }).toISO()!;

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { billingAccounts, billingUsageEvents, businesses, calls, createDatabaseClient, numberTrials, outboxMessages, partnerBillingAccounts, partnerDomains, partnerMembers, partnerPackages, partners, partnerStripeAccounts, partnerTierBilling, partnerUsageMonths, phoneNumbers, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { billingAccounts, billingUsageEvents, businesses, calls, createDatabaseClient, numberTrials, outboxMessages, partnerBillingAccounts, partnerDomains, partnerMembers, partnerPackages, partners, partnerStripeAccounts, partnerTierBilling, partnerUsageMonths, phoneNumbers, users, withBusinessTransaction, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 import { partnerTierCatalog, type PartnerTierSlug } from "@lobbystack/shared";
 
 import { getWebVoiceBillingAllowance, getWidgetChatAllowance, loadPoolUsageEvent, reserveWebVoiceUsageInTransaction, reserveWidgetChatUsageInTransaction } from "./billing";
@@ -756,7 +756,7 @@ describe.skipIf(!client)("a partner's trial number on the pool", () => {
       const acme = await seedPartner(tx, { tier: "free", businesses: 2 });
       const [harbor, cedar] = acme.businessIds as [string, string];
       // Harbor holds the partner's trial number.
-      const [number] = await tx.insert(phoneNumbers).values({ businessId: harbor, e164: `+1416${String(Math.floor(Math.random() * 10_000_000)).padStart(7, "0")}`, status: "active" }).returning({ id: phoneNumbers.id });
+      const [number] = await tx.insert(phoneNumbers).values({ businessId: harbor, agentId: defaultAgentIdOf(harbor), e164: `+1416${String(Math.floor(Math.random() * 10_000_000)).padStart(7, "0")}`, status: "active" }).returning({ id: phoneNumbers.id });
       await tx.insert(numberTrials).values({ businessId: harbor, userId: acme.ownerId, phoneNumberId: number!.id, verifiedPhone: "+14165550199", status: "active", startedAt: new Date(), endsAt: new Date(Date.now() + 14 * 86_400_000) });
       const exhaustedAt = async () => (await tx.select({ at: numberTrials.minutesExhaustedAt }).from(numberTrials).where(eq(numberTrials.businessId, harbor)))[0]?.at ?? null;
       const mark = () => asWorkerRole(tx, async (db) => await markNumberTrialMinutesExhausted({ db }, { businessId: harbor }));

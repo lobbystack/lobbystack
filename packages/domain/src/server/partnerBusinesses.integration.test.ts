@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { affiliateAttributions, affiliateProfiles, auditLogs, billingAccounts, businesses, businessInvitations, businessMemberships, createDatabaseClient, numberTrials, numberWaitlist, outboxMessages, phoneNumbers, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { affiliateAttributions, affiliateProfiles, auditLogs, billingAccounts, businesses, businessInvitations, businessMemberships, createDatabaseClient, numberTrials, numberWaitlist, outboxMessages, phoneNumbers, users, withBusinessTransaction, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 import { billedOutsideEntitlement, type PartnerAccessLevel } from "@lobbystack/shared";
 
 import { attributeBusiness } from "./affiliates";
@@ -449,7 +449,7 @@ describe.skipIf(!client)("the host's own emails", () => {
 
       // Scheduled: the welcome email, a plan's cancel notice and the release reminder.
       const now = new Date();
-      const numbers = await asMigrator(tx, async () => await tx.insert(phoneNumbers).values([direct, businessId].map((id) => ({ businessId: id, e164: `+1416${String(Math.floor(Math.random() * 10_000_000)).padStart(7, "0")}`, status: "active" }))).returning({ id: phoneNumbers.id, businessId: phoneNumbers.businessId }));
+      const numbers = await asMigrator(tx, async () => await tx.insert(phoneNumbers).values([direct, businessId].map((id) => ({ businessId: id, agentId: defaultAgentIdOf(id), e164: `+1416${String(Math.floor(Math.random() * 10_000_000)).padStart(7, "0")}`, status: "active" }))).returning({ id: phoneNumbers.id, businessId: phoneNumbers.businessId }));
       const numberOf = (id: string) => numbers.find((number) => number.businessId === id)!.id;
       for (const id of [direct, businessId]) {
         await withBusinessTransaction(context.db, { businessId: id, actorType: "system" }, async (inner) => await scheduleWelcomeEmailInTransaction(inner, id, now));

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
-import { agents, billingAccounts, businessContextSnapshots, businesses, calls, contacts, conversations, createDatabaseClient, instagramAccounts, messages, outboxMessages, phoneNumbers, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, billingAccounts, businessContextSnapshots, businesses, calls, contacts, conversations, createDatabaseClient, instagramAccounts, messages, outboxMessages, phoneNumbers, withBusinessTransaction, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 
 import { businessHasPhoneNumber } from "../snapshot";
 import { getOrCreateWidgetConversation } from "./conversations";
@@ -336,7 +336,7 @@ describe.skipIf(!testUrl)("a business with one agent", () => {
       await tx.insert(businesses).values({ id: businessId, slug: `one-agent-${businessId}`, name: "Harbor Dental", timezone: "UTC", businessType: "test", deploymentMode: "cloud" });
       await tx.insert(billingAccounts).values({ businessId, billingKey: `business:${businessId}`, plan: "starter", subscriptionState: "active" }).onConflictDoUpdate({ target: billingAccounts.businessId, set: { plan: "starter", subscriptionState: "active" } });
       const [agent] = await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hello", tone: "warm", summary: "Clinic", bookingPolicy: "Book", transferMode: "on_request", transferNumber: TRANSFER_A }).returning({ id: agents.id });
-      await tx.insert(phoneNumbers).values({ businessId, e164: LINE_A, providerPhoneId: `PN${randomUUID()}`, status: "active", voiceEnabled: true, smsEnabled: true });
+      await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: LINE_A, providerPhoneId: `PN${randomUUID()}`, status: "active", voiceEnabled: true, smsEnabled: true });
       await refreshBusinessSnapshot({ db: tx as unknown as Database }, { businessId });
       await tx.execute(sql`set local role lobbystack_worker`);
       const db = tx as unknown as Database;
@@ -359,7 +359,7 @@ describe.skipIf(!testUrl)("a business with one agent", () => {
       const businessId = randomUUID();
       await tx.insert(businesses).values({ id: businessId, slug: `old-shape-${businessId}`, name: "Harbor Dental", timezone: "UTC", businessType: "test" });
       const [agent] = await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hello", tone: "warm", summary: "Clinic", bookingPolicy: "Book", transferMode: "never" }).returning({ id: agents.id });
-      await tx.insert(phoneNumbers).values({ businessId, e164: LINE_A, providerPhoneId: `PN${randomUUID()}`, status: "active", voiceEnabled: true });
+      await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: LINE_A, providerPhoneId: `PN${randomUUID()}`, status: "active", voiceEnabled: true });
       await refreshBusinessSnapshot({ db: tx as unknown as Database }, { businessId });
       const db = tx as unknown as Database;
       const current = (await getBusinessSnapshotForAgent({ db }, { businessId }))!;
@@ -383,7 +383,7 @@ describe.skipIf(!testUrl)("a row from before agents were recorded", () => {
       const businessId = randomUUID();
       await tx.insert(businesses).values({ id: businessId, slug: `old-row-${businessId}`, name: "Harbor Dental", timezone: "UTC", businessType: "test", deploymentMode: "cloud", textRepliesEnabled: true });
       const [agent] = await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hello", tone: "warm", summary: "Clinic", bookingPolicy: "Book", transferMode: "never" }).returning({ id: agents.id });
-      await tx.insert(phoneNumbers).values({ businessId, e164: LINE_A, providerPhoneId: `PN${randomUUID()}`, status: "active", voiceEnabled: true, smsEnabled: true });
+      await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: LINE_A, providerPhoneId: `PN${randomUUID()}`, status: "active", voiceEnabled: true, smsEnabled: true });
       await run({ tx, db: tx as unknown as Database, businessId, agentId: agent!.id });
       throw rollback;
     }).catch((error: unknown) => { if (error !== rollback) throw error; });

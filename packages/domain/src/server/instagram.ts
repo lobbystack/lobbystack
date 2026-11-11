@@ -60,7 +60,7 @@ export async function connectInstagramAccount(
     const [previous] = await tx.select({ instagramUserId: instagramAccounts.instagramUserId }).from(instagramAccounts).where(eq(instagramAccounts.businessId, input.businessId)).limit(1).for("update");
     if (previous && previous.instagramUserId !== input.instagramUserId) await closeInstagramConversationsInTransaction(tx, input.businessId, now);
     const values = { connectedByUserId: input.userId, instagramUserId: input.instagramUserId, username: input.username ?? null, encryptedAccessToken: input.encryptedAccessToken, tokenExpiresAt: input.tokenExpiresAt, status: "connected", lastError: null, updatedAt: now };
-    const [account] = await tx.insert(instagramAccounts).values({ businessId: input.businessId, ...values })
+    const [account] = await tx.insert(instagramAccounts).values({ businessId: input.businessId, agentId: defaultAgentIdOf(input.businessId), ...values })
       .onConflictDoUpdate({ target: instagramAccounts.businessId, set: values })
       .returning({ id: instagramAccounts.id, agentId: instagramAccounts.agentId });
     await resolveBusinessNotificationsInTransaction(tx, { businessId: input.businessId, kinds: ["instagram_reconnect"], now });

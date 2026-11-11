@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { and, asc, eq, like, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 import { afterAll, describe, expect, it } from "vitest";
-import { agents, appointments, businessHours, businessMemberships, businesses, calls, contacts, createDatabaseClient, inboxItems, notifications, outboxMessages, phoneNumbers, services, smsConsentEvents, staff, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, appointments, businessHours, businessMemberships, businesses, calls, contacts, createDatabaseClient, inboxItems, notifications, outboxMessages, phoneNumbers, services, smsConsentEvents, staff, users, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 
 import { createAppointmentChangeVerification } from "./appointmentChanges";
 import { bookAppointment, cancelAppointment, cancelAppointmentForCaller, rescheduleAppointment } from "./booking";
@@ -54,7 +54,7 @@ async function seed(tx: DatabaseTransaction) {
   const [member] = await tx.insert(staff).values({ businessId, name: "Sam", timezone: "UTC" }).returning();
   const [service] = await tx.insert(services).values({ businessId, name: "Cut", slug: "cut", durationMinutes: 30 }).returning();
   await tx.insert(businessHours).values(Array.from({ length: 7 }, (_, dayOfWeek) => ({ businessId, dayOfWeek, openMinutes: 0, closeMinutes: 1439 })));
-  await tx.insert(phoneNumbers).values({ businessId, e164: sender, providerPhoneId: `PN-${randomUUID()}` });
+  await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: sender, providerPhoneId: `PN-${randomUUID()}` });
   const db = tx as unknown as Database;
   const as = async (role: "lobbystack_worker" | "lobbystack_app") => { await tx.execute(sql.raw(`set local role ${role}`)); };
   const asOwner = async () => { await tx.execute(sql`reset role`); };

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { businessMemberships, businesses, contacts, conversations, createDatabaseClient, messages, operatorNotificationDeliveries, outboxMessages, phoneNumbers, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { businessMemberships, businesses, contacts, conversations, createDatabaseClient, messages, operatorNotificationDeliveries, outboxMessages, phoneNumbers, users, type Database, type DatabaseTransaction, defaultAgentIdOf } from "@lobbystack/db";
 
 import { appendMessage } from "./conversations";
 import { loadSmsDeliveryTarget, markSmsSent, receiveInboundSms, recordSmsProviderPricing } from "./sms";
@@ -50,7 +50,7 @@ async function seedBusiness(tx: DatabaseTransaction, input: { enabled: boolean }
   const userId = randomUUID();
   await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid` });
   await tx.insert(businessMemberships).values({ businessId, userId, role: "business_owner" });
-  await tx.insert(phoneNumbers).values({ businessId, e164: `+1416${String(Math.floor(Math.random() * 1e7)).padStart(7, "0")}`, providerPhoneId: `PN-${businessId}` });
+  await tx.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: `+1416${String(Math.floor(Math.random() * 1e7)).padStart(7, "0")}`, providerPhoneId: `PN-${businessId}` });
   const receive = (body: string, from = canadian) => asWorker(tx, (db) => receiveInboundSms({ db }, { businessId, providerMessageId: `SM-${randomUUID()}`, from, to: "+14165550100", body, payload: {} }));
   const replyJobs = async () => await tx.select({ id: outboxMessages.id }).from(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), eq(outboxMessages.topic, "sms.aiReply")));
   const alerts = async () => await tx.selectDistinct({ kind: operatorNotificationDeliveries.eventKind }).from(operatorNotificationDeliveries).where(eq(operatorNotificationDeliveries.businessId, businessId));

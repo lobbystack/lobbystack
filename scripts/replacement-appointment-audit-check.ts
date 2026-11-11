@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { and, eq } from "drizzle-orm";
 
-import { agents, appointmentChangeVerifications, appointments, auditLogs, businesses, businessHours, contacts, createDatabaseClient, outboxMessages, phoneNumbers, services, smsConsentEvents, staff } from "@lobbystack/db";
+import { agents, appointmentChangeVerifications, appointments, auditLogs, businesses, businessHours, contacts, createDatabaseClient, outboxMessages, phoneNumbers, services, smsConsentEvents, staff, defaultAgentIdOf } from "@lobbystack/db";
 import { bookAppointment, cancelAppointmentForCaller, claimAppointmentChangeOtp, createAppointmentChangeVerification, issueAppointmentChangeOtp, markAppointmentChangeOtpSent, releaseAppointmentChangeOtp, rescheduleAppointmentForCaller, verifyAppointmentChangeOtp } from "@lobbystack/domain";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -44,7 +44,7 @@ async function main(): Promise<void> {
       transferMode: "on_request",
       appointmentChangePolicy: { enabled: true, verificationMode: "otp_required", allowCancel: true, allowReschedule: true },
     });
-    await db.db.insert(phoneNumbers).values({ businessId, e164: "+14165550992", providerPhoneId: `PN-${randomUUID()}` });
+    await db.db.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: "+14165550992", providerPhoneId: `PN-${randomUUID()}` });
     assert(contact && service && staffMember, "Appointment audit fixtures could not be created.");
     await bookAppointment({ db: db.db }, { businessId, serviceId: service.id, startsAt: bookingSlot(10).toISOString(), timezone: "UTC", contactPhone: callerPhone, sourceChannel: "voice", smsConsent: "agreed" });
     const reminderConsent = await db.db.select().from(smsConsentEvents).where(and(eq(smsConsentEvents.businessId, businessId), eq(smsConsentEvents.action, "reminder_consent_granted")));

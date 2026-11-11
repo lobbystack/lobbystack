@@ -269,11 +269,13 @@ async function main(): Promise<void> {
           throw new Error(`Database grant verification failed for: ${grantFailures.rows.map((row) => `${row.role_name}:${row.table_name}:${row.privilege_type}`).join(", ")}`);
         }
         // Row-level security can't stop a row pointing at another business's agent,
-        // so each link needs its composite foreign key, and old code needs the
-        // trigger that fills agent_id. The check holds until the NOT NULL release.
+        // so each link needs its composite foreign key. Channels and rules are NOT
+        // NULL since 0214. calls and conversations keep their NOT VALID check until
+        // the backfill finishes, and the previous release needs the trigger that
+        // fills agent_id on every table but agent_rules.
         const agentLinkFailures = await migrator.db.execute<{ table_name: string; missing: string }>(sql`
           select expected.table_name, missing.name as missing
-          from (values ('phone_numbers'), ('widget_keys'), ('instagram_accounts'), ('calls'), ('conversations'), ('agent_rules')) as expected(table_name)
+          from (values ('phone_numbers', true, true), ('widget_keys', true, true), ('instagram_accounts', true, true), ('calls', false, true), ('conversations', false, true), ('agent_rules', true, false)) as expected(table_name, not_null, has_trigger)
           cross join lateral (
             select 'foreign key' as name
             where not exists (
@@ -285,11 +287,14 @@ async function main(): Promise<void> {
                 and array_length(con.conkey, 1) = 2
             )
             union all
+            select 'not null'
+            where expected.not_null and not exists (select 1 from pg_attribute att where att.attrelid = to_regclass('public.' || expected.table_name) and att.attname = 'agent_id' and att.attnotnull)
+            union all
             select 'check'
-            where not exists (select 1 from pg_constraint con where con.conrelid = to_regclass('public.' || expected.table_name) and con.conname = expected.table_name || '_agent_id_present' and con.contype = 'c')
+            where not expected.not_null and not exists (select 1 from pg_constraint con where con.conrelid = to_regclass('public.' || expected.table_name) and con.conname = expected.table_name || '_agent_id_present' and con.contype = 'c')
             union all
             select 'trigger'
-            where not exists (select 1 from pg_trigger trg where trg.tgrelid = to_regclass('public.' || expected.table_name) and trg.tgname = expected.table_name || '_assign_agent' and trg.tgenabled = 'O')
+            where expected.has_trigger and not exists (select 1 from pg_trigger trg where trg.tgrelid = to_regclass('public.' || expected.table_name) and trg.tgname = expected.table_name || '_assign_agent' and trg.tgenabled = 'O')
           ) as missing
           union all
           select expected.table_name, 'archive guard'
@@ -613,7 +618,6 @@ async function main(): Promise<void> {
             ('lobbystack_worker', 'app.expire_prospect_demos()'),
             ('lobbystack_app', 'app.detach_prospect_demo_operator(uuid)'),
             ('lobbystack_worker', 'app.resolve_onboarding_followup_recipient(uuid)'),
-            ('lobbystack_worker', 'app.resolve_onboarding_followup_recipient(uuid, timestamptz)'),
             ('lobbystack_worker', 'app.resolve_onboarding_welcome_recipient(uuid)'),
             ('lobbystack_worker', 'app.resolve_operator_alert_recipients(uuid)'),
             ('lobbystack_worker', 'app.list_businesses_by_contact_phone(text)')

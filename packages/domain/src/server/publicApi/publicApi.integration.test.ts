@@ -4,7 +4,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { agentRules, agents, apiKeys, appointments, auditLogs, billingAccounts, billingCheckoutRequests, businesses, businessNotifications, businessHours, businessMemberships, calendarBusyBlocks, calendarConnections, calls, contacts, conversations, createDatabaseClient, idempotencyKeys, inboxItems, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, numberTrials, onboardingNumberClaimEvents, onboardingPhoneVerifications, operatorNotificationDeliveries, operatorNotificationPreferences, outboxMessages, phoneNumbers, platformKeyBusinesses, services, staff, staffServiceAssignments, storageObjects, users, webhookDeliveries, webhookDeliveryAttempts, webhookEndpoints, webhookEvents, websiteIngestionJobs, widgetKeys } from "@lobbystack/db";
+import { agentRules, agents, apiKeys, appointments, auditLogs, billingAccounts, billingCheckoutRequests, businesses, businessNotifications, businessHours, businessMemberships, calendarBusyBlocks, calendarConnections, calls, contacts, conversations, createDatabaseClient, idempotencyKeys, inboxItems, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, numberTrials, onboardingNumberClaimEvents, onboardingPhoneVerifications, operatorNotificationDeliveries, operatorNotificationPreferences, outboxMessages, phoneNumbers, platformKeyBusinesses, services, staff, staffServiceAssignments, storageObjects, users, webhookDeliveries, webhookDeliveryAttempts, webhookEndpoints, webhookEvents, websiteIngestionJobs, widgetKeys, defaultAgentIdOf } from "@lobbystack/db";
 import { apiAppointmentSchema, apiBillingSchema, apiBusinessSchema, apiCalendarConnectionSchema, apiCallSchema, apiCheckoutSchema, apiKnowledgeEntrySchema, apiKnowledgeSourceSchema, apiNotificationPreferencesSchema, apiOnboardingSchema, apiPhoneNumberClaimSchema, apiPhoneNumberOfferSchema, apiPhoneNumberSchema, apiReceptionistSchema, apiRuleSchema, apiServiceSchema, apiStaffSchema, apiTeamSchema, apiWidgetKeyCreatedSchema, defaultGreeting, OPERATOR_SMS_DISCLOSURE_VERSION, WEBHOOK_MAX_ATTEMPTS } from "@lobbystack/shared";
 
 import { finalizeConversationSession } from "../conversations";
@@ -637,7 +637,7 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
   it("keeps at most 100 rules, and settles rules that share a position when their order is sent", async () => {
     const context = { db: worker!.db };
     // Two rules saved at the same position, as a dashboard subset reorder or a race can leave them.
-    await admin!.db.insert(agentRules).values([0, 1].map((index) => ({ businessId: b.businessId, title: `Tied ${index}`, content: "Be kind.", sortOrder: 0 })));
+    await admin!.db.insert(agentRules).values([0, 1].map((index) => ({ businessId: b.businessId, agentId: defaultAgentIdOf(b.businessId), title: `Tied ${index}`, content: "Be kind.", sortOrder: 0 })));
     try {
       const listed = await listRulesForApi(context, b.caller);
       expect(listed).toHaveLength(2);
@@ -647,7 +647,7 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
       const positions = await admin!.db.select({ id: agentRules.id, sortOrder: agentRules.sortOrder }).from(agentRules).where(eq(agentRules.businessId, b.businessId));
       expect(order.map((id) => positions.find((row) => row.id === id)?.sortOrder)).toEqual([0, 1]);
 
-      await admin!.db.insert(agentRules).values(Array.from({ length: 98 }, (_, index) => ({ businessId: b.businessId, title: `Rule ${index}`, content: "Be kind.", sortOrder: index + 2 })));
+      await admin!.db.insert(agentRules).values(Array.from({ length: 98 }, (_, index) => ({ businessId: b.businessId, agentId: defaultAgentIdOf(b.businessId), title: `Rule ${index}`, content: "Be kind.", sortOrder: index + 2 })));
       await expectApiError(createRuleForApi(context, b.caller, { title: "One too many", content: "Be kind." }), 409, "conflict");
     } finally {
       await admin!.db.delete(agentRules).where(eq(agentRules.businessId, b.businessId));
@@ -859,7 +859,7 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
       expect(await payer(queued.id)).toBe(ownerId);
       // The lapsed plan left its number on the way out; a managed plan is a paid plan, so it keeps it.
       const e164 = `+1555${String(Date.now()).slice(-7)}`;
-      const [number] = await admin!.db.insert(phoneNumbers).values({ businessId, e164, status: "active", reclaimScheduledAt: new Date(Date.now() + 86_400_000), reclaimReason: "subscription_ended" }).returning({ id: phoneNumbers.id });
+      const [number] = await admin!.db.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164, status: "active", reclaimScheduledAt: new Date(Date.now() + 86_400_000), reclaimReason: "subscription_ended" }).returning({ id: phoneNumbers.id });
       const release = async () => (await admin!.db.select({ at: phoneNumbers.reclaimScheduledAt, reason: phoneNumbers.reclaimReason }).from(phoneNumbers).where(eq(phoneNumbers.id, number!.id)))[0];
       const managed = await setManagedPlanForApi(context, operator);
       expect(managed).toMatchObject({ plan: "enterprise", managed: true, subscription_state: "active", billing_interval: null, current_period_end: null, spending_cap_cents: null });
@@ -1188,7 +1188,7 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
     const replacementReservedAt = minutesAgo(16);
     await admin!.db.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid` });
     await admin!.db.insert(businesses).values({ id: businessId, slug: `api-stale-claims-${businessId}`, name: "Stale claims", timezone: "America/Toronto", businessType: "test", onboardingStage: "phone_number_claiming", phoneNumberReplacementReservedAt: replacementReservedAt });
-    const [number] = await admin!.db.insert(phoneNumbers).values({ businessId, e164: testNumber() }).returning({ id: phoneNumbers.id });
+    const [number] = await admin!.db.insert(phoneNumbers).values({ businessId, agentId: defaultAgentIdOf(businessId), e164: testNumber() }).returning({ id: phoneNumbers.id });
     const caller: ApiKeyCaller = { businessId, apiKeyId: randomUUID() };
     const insertClaim = async (values: { status: string; reservedAt?: Date; updatedAt?: Date; purpose?: string; replacingPhoneNumberId?: string }) => (await admin!.db.insert(onboardingNumberClaimEvents).values({ businessId, userId, requestedE164: testNumber(), selectionContext: {}, claimTokenHash: "test", idempotencyKey: randomUUID(), ...values }).returning({ id: onboardingNumberClaimEvents.id }))[0]!.id;
     const business = async () => (await admin!.db.select({ stage: businesses.onboardingStage, replacementReservedAt: businesses.phoneNumberReplacementReservedAt }).from(businesses).where(eq(businesses.id, businessId)))[0];
