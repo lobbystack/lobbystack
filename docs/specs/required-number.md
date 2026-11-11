@@ -220,7 +220,7 @@ Migration `0207_required_number.sql`:
 - `web.onboarding.number_skipped` (browser): the owner continued without a number, with the country.
 - `web.activation.forwarding_confirmed` (browser): the owner pressed **It works**.
 - `voice.forwarding_detected` (durable): the first forwarded call reached a number.
-- `web.onboarding.goal_submitted` and `web.onboarding.phone_verified` keep firing for partners' phone step and existing producers only where a producer remains. An event with no producer leaves the registry.
+- `web.onboarding.goal_submitted` leaves the registry with the goal step. `web.onboarding.phone_verified` keeps firing from a partner's phone step.
 
 ## Help Center
 
@@ -240,3 +240,5 @@ Each one took the conservative option for now.
 - **Existing businesses:** a direct business that finished onboarding with a number before this release gets the new list, with the two new steps not done.
 - **Workspace switcher:** an unfinished workspace shows in the switcher as it does today, with no "Finish setup" state.
 - **Back to dashboard target:** the workspace the person came from lives in the browser's session storage, so another tab or device falls back to the most recent finished workspace.
+- **Plans offer after Meet your agent:** the existing offer after the first test that works still shows to a workspace on Free, so an owner on a trial can see the plans a second time. It stays until the product owner decides.
+- **Sidebar chip loading:** the chip shows nothing while the trial state loads, like the trial banner, so most workspaces don't see a placeholder for a chip they never get.
