@@ -20,7 +20,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel } from "./ui/field";
 import { Input } from "./ui/input";
-import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { Table, TableActionsColumn, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Textarea } from "./ui/textarea";
 import { intlLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
@@ -116,7 +116,7 @@ export function RulesSurface({ agentId }: { agentId?: string } = {}) {
         </HeaderActions>
         <TableCard>
           <Table className={cn("w-full table-fixed", (loading || pageRows.length > 0) && "min-w-[60rem]")}>
-            <colgroup>{canManage ? <col className="w-10" /> : null}<col className="w-[18%]" /><col className="w-[42%]" /><col className="w-[14%]" /><col className="w-[18%]" /><col className="w-12" /></colgroup>
+            <colgroup>{canManage ? <col className="w-12" /> : null}<col className="w-[25%]" /><col className="w-[56%]" /><col className="w-[19%]" /><col className="w-48" /><TableActionsColumn /></colgroup>
             <TableHeader empty={!(loading || pageRows.length > 0)}><TableRow>{canManage ? <TableHead /> : null}<TableHead>{t("table.title")}</TableHead><TableHead>{t("table.preview")}</TableHead><TableHead>{t("table.status")}</TableHead><TableHead className="text-right">{t("table.added")}</TableHead><TableHead /></TableRow></TableHeader>
             <TableBody aria-busy={loading || undefined}>
               {loading ? <RuleRowsSkeleton handle={canManage} rows={Math.min(pagination.pageSize, 10)} /> : pageRows.length ? pageRows.map((rule) => {

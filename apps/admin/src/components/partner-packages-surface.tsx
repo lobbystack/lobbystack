@@ -243,7 +243,7 @@ export function PartnerPackagesSurface() {
                 <TableHead>{t("packages.table.package")}</TableHead>
                 <TableHead>{t("packages.table.price")}</TableHead>
                 <TableHead>{t("packages.table.allowance")}</TableHead>
-                <TableHead className="w-12" />
+                <TableHead className="w-16" />
               </TableRow>
             </TableHeader>
             <TableBody>

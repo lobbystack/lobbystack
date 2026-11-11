@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { statusShape } from "@/components/ui/status";
 import { Surface, surfaceClassName } from "@/components/ui/surface";
 import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableActionsColumn, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
 /** `titles` holds each card's real title, hidden so its placeholder is as wide as the text, or null for a default width. */
@@ -347,7 +347,7 @@ export function KnowledgePageSkeleton({ headings, rowsPerPage }: { headings: [ti
     <>
       <TableCard>
         <Table className="min-w-[60rem] w-full table-fixed">
-          <colgroup><col className="w-[20%]" /><col className="w-[46%]" /><col className="w-[12%]" /><col className="w-[22%]" /><col className="w-12" /></colgroup>
+          <colgroup><col className="w-[20%]" /><col className="w-[46%]" /><col className="w-[12%]" /><col className="w-[22%]" /><TableActionsColumn /></colgroup>
           <TableHeader>
             <TableRow>
               <TableHead>{headings[0]}</TableHead>
@@ -446,7 +446,7 @@ export function ServicesPageSkeleton({ headings, rowsPerPage }: { headings: [tit
     <>
       <TableCard>
         <Table className="min-w-[60rem] w-full table-fixed">
-          <colgroup><col className="w-[20%]" /><col className="w-[34%]" /><col className="w-[14%]" /><col className="w-[12%]" /><col className="w-[16%]" /><col className="w-12" /></colgroup>
+          <colgroup><col className="w-[25%]" /><col className="w-[42%]" /><col className="w-[18%]" /><col className="w-[15%]" /><col className="w-48" /><TableActionsColumn /></colgroup>
           <TableHeader>
             <TableRow>
               <TableHead>{headings[0]}</TableHead>
@@ -517,7 +517,7 @@ export function RulesPageSkeleton({ headings, rowsPerPage }: { headings: [title:
     <>
       <TableCard>
         <Table className="min-w-[60rem] w-full table-fixed">
-          <colgroup><col className="w-10" /><col className="w-[18%]" /><col className="w-[42%]" /><col className="w-[14%]" /><col className="w-[18%]" /><col className="w-12" /></colgroup>
+          <colgroup><col className="w-12" /><col className="w-[25%]" /><col className="w-[56%]" /><col className="w-[19%]" /><col className="w-48" /><TableActionsColumn /></colgroup>
           <TableHeader>
             <TableRow>
               <TableHead />

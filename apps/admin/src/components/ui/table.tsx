@@ -115,6 +115,15 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
   )
 }
 
+/**
+ * The row-actions column of a fixed-layout table: an icon-sm button (32px)
+ * plus the cell's 16px padding on each side. Give the columns without a fixed
+ * width percentages that add up to 100%, so this one keeps its width.
+ */
+function TableActionsColumn() {
+  return <col data-slot="table-actions-column" className="w-16" />
+}
+
 function TableCaption({
   className,
   ...props
@@ -138,4 +147,5 @@ export {
   TableRow,
   TableCell,
   TableCaption,
+  TableActionsColumn,
 }

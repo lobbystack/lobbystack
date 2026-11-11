@@ -39,7 +39,7 @@ import { SearchInput } from "@/components/ui/search-input";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
-import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableActionsColumn, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatDateTime, intlLocale } from "@/lib/locale";
 import { PhoneCountrySelect } from "@/components/phone-country-select";
@@ -206,7 +206,7 @@ export function LiveEmployeesSurface() {
       </HeaderActions>
       <TableCard>
         <Table className={cn("w-full table-fixed", (loading || table.getRowModel().rows.length > 0) && "min-w-[60rem]")}>
-          <colgroup><col className="w-[16%]" /><col className="w-[15%]" /><col className="w-[22%]" /><col className="w-[25%]" /><col className="w-[22%]" /><col className="w-12" /></colgroup>
+          <colgroup><col className="w-[16%]" /><col className="w-[15%]" /><col className="w-[22%]" /><col className="w-[25%]" /><col className="w-[22%]" /><TableActionsColumn /></colgroup>
           <TableHeader empty={!(loading || table.getRowModel().rows.length > 0)}>{table.getHeaderGroups().map((group) => <TableRow key={group.id}>{group.headers.map((header) => <TableHead className={header.column.id === "added" || header.column.id === "actions" ? "text-right" : undefined} key={header.id}>{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
           <TableBody aria-busy={loading || undefined}>
             {loading ? <EmployeeRowsSkeleton rows={Math.min(pagination.pageSize, 10)} /> : null}

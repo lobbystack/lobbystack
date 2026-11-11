@@ -174,7 +174,7 @@ export function PartnerTeamSurface() {
               <TableRow>
                 <TableHead>{t("team.table.person")}</TableHead>
                 <TableHead>{t("team.table.role")}</TableHead>
-                {canManage ? <TableHead className="w-12" /> : null}
+                {canManage ? <TableHead className="w-16" /> : null}
               </TableRow>
             </TableHeader>
             <TableBody>

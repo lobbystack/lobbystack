@@ -27,7 +27,7 @@ import { ContactRowsSkeleton, DataTablePaginationSkeleton } from "@/components/l
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableActionsColumn, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ContactChannelIcons } from "@/components/contact-channel-icons";
 import { getChannelLabel, getContactChannels, getContactDisplayName, getContactSecondaryDetails } from "@/lib/contact-display";
 import { formatDateTime } from "@/lib/locale";
@@ -129,14 +129,14 @@ export function LiveContactsSurface() {
     {
       id: "lastInteraction",
       accessorKey: "lastInteractionAt",
-      header: () => <span className="relative block translate-x-12 text-right">{t("table.lastInteraction")}</span>,
-      cell: ({ row }) => <span className="relative block translate-x-12 truncate text-right text-sm text-muted-foreground">{formatDateTime(row.original.lastInteractionAt ?? row.original.updatedAt, i18n.language, { dateStyle: "medium", timeStyle: "short" })}</span>,
+      header: () => <span className="block text-right">{t("table.lastInteraction")}</span>,
+      cell: ({ row }) => <span className="block truncate text-right text-sm text-muted-foreground">{formatDateTime(row.original.lastInteractionAt ?? row.original.updatedAt, i18n.language, { dateStyle: "medium", timeStyle: "short" })}</span>,
     },
     {
       id: "actions",
       header: () => null,
       cell: ({ row }) => (
-        <div className="flex w-16 justify-end pr-0" data-slot="data-table-row-actions"><DropdownMenu>
+        <div className="flex justify-end" data-slot="data-table-row-actions"><DropdownMenu>
           <DropdownMenuTrigger render={<Button aria-label={t("table.actions.moreOptions")} size="icon-sm" variant="ghost" />}><Ellipsis /></DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem disabled={!canMutate} onClick={() => setEditing(row.original)}><Pencil />{t("table.actions.editContact")}</DropdownMenuItem>
@@ -157,7 +157,7 @@ export function LiveContactsSurface() {
       <PageHeader actions={business ? <NewContactButton businessId={business.businessId} canCreate={canMutate} /> : null} title={t("page.title")} />
       <TableCard>
         <Table className={cn("w-full table-fixed", hasRows && "min-w-[52rem]")}>
-          <colgroup><col className="w-[30%]" /><col className="w-[14%]" /><col className="w-[20%]" /><col className="w-[12%]" /><col className="w-[16%]" /><col className="w-[8%]" /></colgroup>
+          <colgroup><col className="w-[45%]" /><col className="w-[20%]" /><col className="w-[35%]" /><col className="w-36" /><col className="w-48" /><TableActionsColumn /></colgroup>
           <TableHeader empty={!hasRows}>{table.getHeaderGroups().map((group) => <TableRow key={group.id}>{group.headers.map((header) => <TableHead className={cn(header.column.id === "lastInteraction" || header.column.id === "actions" ? "text-right" : header.column.id === "contact" ? "min-w-[12rem]" : header.column.id === "channels" ? "min-w-[8rem]" : header.column.id === "activity" ? "min-w-[10rem]" : header.column.id === "appointments" ? "min-w-[7rem] text-center" : undefined, !hasRows && "min-w-0")} key={header.id}>{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
           <TableBody aria-busy={loading || undefined}>
             {loading ? <ContactRowsSkeleton rows={Math.min(pagination.pageSize, 10)} /> : null}
