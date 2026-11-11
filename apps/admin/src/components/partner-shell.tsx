@@ -190,7 +190,7 @@ function PartnerSwitcher({ partner, partners }: { partner: ConsolePartner; partn
           >
             <ItemMedia><Initial value={partner.name} /></ItemMedia>
             <ItemContent className="min-w-0">
-              <ItemTitle className="ph-mask w-full truncate text-left">{partner.name}</ItemTitle>
+              <ItemTitle className="ph-mask block w-full truncate text-left">{partner.name}</ItemTitle>
             </ItemContent>
             <ItemActions><ChevronsUpDown className="size-4 text-muted-foreground" /></ItemActions>
           </DropdownMenuTrigger>

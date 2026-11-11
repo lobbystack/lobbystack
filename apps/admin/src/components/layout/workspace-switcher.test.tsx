@@ -49,6 +49,13 @@ describe("on a partner's domain", () => {
 });
 
 describe("original workspace switcher behavior", () => {
+  it("ends a long business name with an ellipsis instead of cutting it off", () => {
+    setup("Northside Plumbing and Heating Services");
+    // A flex title ignores text-overflow, so the name only ends in an ellipsis as a block.
+    const classes = screen.getByText("Northside Plumbing and Heating Services").className.split(/\s+/);
+    expect(classes).toEqual(expect.arrayContaining(["block", "truncate"]));
+    expect(classes).not.toContain("flex");
+  });
   it("masks business names in analytics replay", async () => {
     setup();
     expect(screen.getByText("Tim Hortons").className).toContain("ph-mask");
