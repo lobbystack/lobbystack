@@ -661,6 +661,7 @@ export const apiAppointmentSchema = z.object({
   contact_phone: z.string().nullable(),
   source: z.string().describe("Where the booking came from, for example voice, web_chat, dashboard or api."),
   calendar_sync_status: z.enum(["pending", "synced", "failed", "not_required"]),
+  notes: z.string().nullable().describe("Notes on the appointment. The receptionist can read them to a verified caller."),
   created_at: timestamp,
   updated_at: timestamp,
 });
@@ -672,6 +673,7 @@ export const apiAppointmentCreateSchema = z.strictObject({
   contact_phone: e164.optional(),
   contact_name: z.string().trim().min(1).max(200).optional(),
   staff_id: id.optional().describe("Book with this active staff member. Without it, LobbyStack picks one who is free."),
+  notes: z.string().trim().max(2000).optional().describe("Notes on the appointment. The receptionist can read them to a verified caller."),
   sms_consent: z.boolean().optional().describe("True only if the customer agreed to receive confirmation and reminder texts. Self-hosted instances only: on LobbyStack Cloud, texts come from LobbyStack's shared number, and only the receptionist can collect that consent, on a call."),
 }).refine((value) => Boolean(value.contact_id || value.contact_phone), { error: "Provide contact_id or contact_phone.", path: ["contact_phone"] });
 

@@ -17154,6 +17154,13 @@
               "not_required"
             ]
           },
+          "notes": {
+            "description": "Notes on the appointment. The receptionist can read them to a verified caller.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -17180,6 +17187,7 @@
           "contact_phone",
           "source",
           "calendar_sync_status",
+          "notes",
           "created_at",
           "updated_at"
         ],
@@ -17217,6 +17225,11 @@
             "description": "Book with this active staff member. Without it, LobbyStack picks one who is free.",
             "type": "string",
             "format": "uuid"
+          },
+          "notes": {
+            "description": "Notes on the appointment. The receptionist can read them to a verified caller.",
+            "type": "string",
+            "maxLength": 2000
           },
           "sms_consent": {
             "description": "True only if the customer agreed to receive confirmation and reminder texts. Self-hosted instances only: on LobbyStack Cloud, texts come from LobbyStack's shared number, and only the receptionist can collect that consent, on a call.",
@@ -22940,6 +22953,13 @@
                   "not_required"
                 ]
               },
+              "notes": {
+                "description": "Notes on the appointment. The receptionist can read them to a verified caller.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "created_at": {
                 "type": "string",
                 "format": "date-time",
@@ -22966,6 +22986,7 @@
               "contact_phone",
               "source",
               "calendar_sync_status",
+              "notes",
               "created_at",
               "updated_at"
             ],
@@ -23082,6 +23103,13 @@
                   "not_required"
                 ]
               },
+              "notes": {
+                "description": "Notes on the appointment. The receptionist can read them to a verified caller.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "created_at": {
                 "type": "string",
                 "format": "date-time",
@@ -23108,6 +23136,7 @@
               "contact_phone",
               "source",
               "calendar_sync_status",
+              "notes",
               "created_at",
               "updated_at"
             ],
@@ -23224,6 +23253,13 @@
                   "not_required"
                 ]
               },
+              "notes": {
+                "description": "Notes on the appointment. The receptionist can read them to a verified caller.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "created_at": {
                 "type": "string",
                 "format": "date-time",
@@ -23250,6 +23286,7 @@
               "contact_phone",
               "source",
               "calendar_sync_status",
+              "notes",
               "created_at",
               "updated_at"
             ],

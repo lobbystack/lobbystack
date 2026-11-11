@@ -141,7 +141,7 @@ describe("v1 resource serializers match the published schemas", () => {
   });
 
   it("serializes appointments with the public status names", () => {
-    const appointment = serializeAppointment({ id: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f", status: "canceled", startsAt: now, endsAt: now, timezone: "America/Toronto", serviceId: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5e", serviceName: "Cut", staffId: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5d", staffName: "Sam", contactId: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5c", contactName: null, contactPhone: "+14165550134", sourceChannel: "api", calendarSyncState: "weird", createdAt: now, updatedAt: now });
+    const appointment = serializeAppointment({ id: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f", status: "canceled", startsAt: now, endsAt: now, timezone: "America/Toronto", serviceId: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5e", serviceName: "Cut", staffId: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5d", staffName: "Sam", contactId: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5c", contactName: null, contactPhone: "+14165550134", sourceChannel: "api", calendarSyncState: "weird", notes: null, createdAt: now, updatedAt: now });
     expect(apiAppointmentSchema.parse(appointment)).toEqual(appointment);
     expect(appointment).toMatchObject({ status: "cancelled", calendar_sync_status: "pending" });
   });

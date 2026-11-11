@@ -1901,6 +1901,7 @@ export async function createAppointmentForApi(context: DomainContext, caller: Ap
     ...(input.contact_name ? { contactName: input.contact_name } : {}),
     ...(input.staff_id ? { preferredStaffId: input.staff_id } : {}),
     ...(input.sms_consent && prepared.consentCounts ? { smsConsent: "agreed" as const } : {}),
+    ...(input.notes ? { notes: input.notes } : {}),
   });
   if (!booked.ok) throw booked.reason === "unknown_service" ? inactiveService() : slotUnavailable(booked.reason);
   // Only a caller's own number or call finds an earlier booking, and the API sends neither.

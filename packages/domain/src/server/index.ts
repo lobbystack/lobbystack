@@ -34,6 +34,7 @@ export { effectiveBillingPlan, loadEntitlement } from "./entitlement";
 export * from "./feedback";
 export * from "./hostEmails";
 export * from "./employees";
+export * from "./timeOff";
 export * from "./knowledge";
 export * from "./unansweredQuestions";
 export * from "./liveCalls";

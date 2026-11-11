@@ -623,6 +623,8 @@ export const closures = pgTable(
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
     endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
     reason: text("reason").notNull(),
+    // Staff-only detail, such as why someone is off. Never sent to the agent.
+    note: text("note"),
     ...timestamps,
   },
   (table) => [index("closures_business_starts_idx").on(table.businessId, table.startsAt)],
@@ -1098,6 +1100,9 @@ export const appointments = pgTable(
     calendarSyncState: varchar("calendar_sync_state", { length: 32 }).default("not_required").notNull(),
     calendarExternalId: text("calendar_external_id"),
     videoUrl: text("video_url"),
+    // The agent can read notes once the caller is verified; internal notes stay in the dashboard (migration 0205).
+    notes: text("notes"),
+    internalNotes: text("internal_notes"),
     revision: integer("revision").default(0).notNull(),
     ...legacyId,
     ...timestamps,

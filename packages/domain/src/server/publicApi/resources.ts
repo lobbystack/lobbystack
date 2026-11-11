@@ -346,11 +346,13 @@ const appointmentColumns = {
   contactPhone: contacts.phone,
   sourceChannel: appointments.sourceChannel,
   calendarSyncState: appointments.calendarSyncState,
+  // Internal notes are staff-only and never leave the dashboard.
+  notes: appointments.notes,
   createdAt: appointments.createdAt,
   updatedAt: appointments.updatedAt,
 };
 
-type AppointmentRow = { id: string; status: string; startsAt: Date; endsAt: Date; timezone: string; serviceId: string; serviceName: string; staffId: string; staffName: string; contactId: string; contactName: string | null; contactPhone: string | null; sourceChannel: string; calendarSyncState: string; createdAt: Date; updatedAt: Date };
+type AppointmentRow = { id: string; status: string; startsAt: Date; endsAt: Date; timezone: string; serviceId: string; serviceName: string; staffId: string; staffName: string; contactId: string; contactName: string | null; contactPhone: string | null; sourceChannel: string; calendarSyncState: string; notes: string | null; createdAt: Date; updatedAt: Date };
 
 const calendarSyncStatuses = new Set(["pending", "synced", "failed", "not_required"]);
 
@@ -370,6 +372,7 @@ export function serializeAppointment(row: AppointmentRow): ApiAppointment {
     contact_phone: row.contactPhone,
     source: row.sourceChannel,
     calendar_sync_status: (calendarSyncStatuses.has(row.calendarSyncState) ? row.calendarSyncState : "pending") as ApiAppointment["calendar_sync_status"],
+    notes: row.notes,
     created_at: iso(row.createdAt),
     updated_at: iso(row.updatedAt),
   };
