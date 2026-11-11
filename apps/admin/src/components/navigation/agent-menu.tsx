@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowUpRight, AudioLines, BookOpen, Check, ChevronsUpDown, ListChecks, MessagesSquare, Plus, Radio, type LucideIcon } from "lucide-react";
+import { AudioLines, BookOpen, Check, ChevronsUpDown, ListChecks, Plus, Radio, type LucideIcon } from "lucide-react";
 import { useContext } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -78,7 +78,7 @@ function AgentHeading({ agent }: { agent: AgentListItem | undefined }) {
 export function AgentMenu({ agentId }: { agentId: string }) {
   const { t } = useTranslation("nav");
   const pathname = usePathname();
-  const { find, hasChoice } = useAgents();
+  const { find } = useAgents();
   const agent = find(agentId);
   // The phone menu can show an agent's menu from any page; only that agent's own pages light a row.
   const onAgent = levelFor(pathname) === `agent:${agentId}`;
@@ -101,7 +101,6 @@ export function AgentMenu({ agentId }: { agentId: string }) {
           return <MenuRow active={active} href={agentHref(agentId, page.section)} key={page.section} label={label} leading={<Icon />} title={label} trailing={trailing(page.section)} />;
         })}
       </MenuGroup>
-      {hasChoice ? <MenuGroup><MenuRow href={`/inbox?agent=${encodeURIComponent(agentId)}`} label={t("agentMenu.conversations")} leading={<MessagesSquare />} title={t("agentMenu.conversations")} trailing={<ArrowUpRight className="size-4 text-muted-foreground/60" />} /></MenuGroup> : null}
     </>
   );
 }

@@ -117,7 +117,6 @@
   },
   "accountMenu": "Meni naloga",
   "agentMenu": {
-    "conversations": "Razgovori",
     "noChannels": "Još nema kanala"
   },
   "agents": {

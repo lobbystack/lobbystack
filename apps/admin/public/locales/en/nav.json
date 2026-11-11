@@ -116,7 +116,6 @@
   },
   "accountMenu": "Account menu",
   "agentMenu": {
-    "conversations": "Conversations",
     "noChannels": "No channels yet"
   },
   "agents": {
