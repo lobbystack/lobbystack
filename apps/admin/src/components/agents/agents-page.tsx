@@ -39,7 +39,7 @@ export function AgentsPage() {
   const { canManage } = useManagedBusiness();
   const openUpgrade = useUpgradePlanDialogOpener();
   const channelCounts = useChannelCounts();
-  const addButton = canManage ? (loading ? <HeaderButtonSkeleton label={t("agents.add")} /> : <AddAgentDialog copyFromAgentId={primary?.id} trigger={(open) => <Button onClick={open} size="sm" type="button"><Plus data-icon="inline-start" />{t("agents.add")}</Button>} />) : null;
+  const addButton = canManage ? (loading ? <HeaderButtonSkeleton label={t("agents.add")} /> : <AddAgentDialog copyFromAgentId={primary?.id} trigger={(open) => <Button onClick={open} type="button"><Plus data-icon="inline-start" />{t("agents.add")}</Button>} />) : null;
   return (
     <div className="flex flex-col gap-6">
       <PageHeader actions={addButton} title={t("agents.title")} />

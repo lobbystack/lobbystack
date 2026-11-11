@@ -15,6 +15,8 @@ const HEADER_ACTIONS: Record<string, { label: string; trailingIcon?: boolean }> 
   "/business/knowledge": { label: "agent:sections.knowledge.addKnowledge", trailingIcon: true },
   "/business/services": { label: "agent:sections.services.addKnowledge" },
   "/business/employees": { label: "employees:add.button" },
+  "/workspace/api-keys": { label: "settings:apiKeys.create.action" },
+  "/workspace/webhooks": { label: "settings:webhooks.create.action" },
 };
 
 /**
@@ -25,7 +27,7 @@ const HEADER_ACTIONS: Record<string, { label: string; trailingIcon?: boolean }> 
  */
 function SettingsLevelShell({ children, level }: { children: React.ReactNode; level: "account" | "workspace" | "business" }) {
   const pathname = usePathname();
-  const { t } = useTranslation(["nav", "agent", "employees"]);
+  const { t } = useTranslation(["nav", "agent", "employees", "settings"]);
   const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null);
   const pages = level === "account" ? ACCOUNT_PAGES : level === "business" ? BUSINESS_PAGES : WORKSPACE_PAGES;
   const current = currentSettingsPage(pages, pathname);

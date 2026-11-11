@@ -81,9 +81,9 @@ export function AgentIdentitySection({ agentId, businessId, canManage }: AgentSe
           </ItemContent>
           <ItemActions className="w-full sm:w-auto">
             {loading ? (
-              <Skeleton aria-hidden="true" className="inline-flex h-10 items-center rounded-full px-5 text-sm font-[550] tracking-[0.01em]"><span className="invisible">{t("agent:fields.voice.change")}</span></Skeleton>
+              <Skeleton aria-hidden="true" className="inline-flex h-8 items-center rounded-full px-3 text-xs font-[550] tracking-[0.01em]"><span className="invisible">{t("agent:fields.voice.change")}</span></Skeleton>
             ) : (
-              <Button disabled={!profile || !canManage} onClick={() => setVoiceDialogOpen(true)} type="button" variant="outline">{t("agent:fields.voice.change")}</Button>
+              <Button disabled={!profile || !canManage} onClick={() => setVoiceDialogOpen(true)} size="sm" type="button" variant="outline">{t("agent:fields.voice.change")}</Button>
             )}
           </ItemActions>
         </Item>

@@ -10,10 +10,10 @@ import { offeredApiKeyScopes, type ApiKeyScope } from "@lobbystack/shared";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { CredentialList, CredentialRow } from "@/components/credential-list";
+import { HeaderActions } from "@/components/header-actions";
 import { PageHeader } from "@/components/page-header";
 import { SecretReveal } from "@/components/secret-reveal";
-import { CredentialRowsSkeleton, SectionSkeleton, SmallButtonSkeleton } from "@/components/loading-skeletons";
-import { SectionBlock } from "@/components/section-block";
+import { CredentialRowsSkeleton, HiddenTextSkeleton, SmallButtonSkeleton } from "@/components/loading-skeletons";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -65,9 +65,13 @@ type ApiKeysSurfaceProps = {
 
 type KeyDialog = { mode: "create" } | { mode: "update"; record: ApiKeyRecord };
 
-/** The page layout has a title only; Settings' section keeps its description. */
+/**
+ * The page layout has a title of its own. In Settings the page header already
+ * says API keys, so the section shows its description and puts its action in
+ * that header, like other pages.
+ */
 function ApiKeysFrame({ layout, title, description, action, children }: { layout: ApiKeysSurfaceProps["layout"]; title: string; description: ReactNode; action: ReactNode; children: ReactNode }) {
-  if (layout === "section") return <SectionBlock action={action} description={description} title={title}>{children}</SectionBlock>;
+  if (layout === "section") return <section className="flex flex-col gap-5"><HeaderActions>{action}</HeaderActions><p className="type-section-description">{description}</p>{children}</section>;
   return (
     <div className="flex flex-col gap-6">
       <PageHeader actions={action} title={title} />
@@ -163,7 +167,7 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
   // The workspace, then the keys: the page turns real once both are known.
   if (loading || keys.isLoading) {
     const action = <SmallButtonSkeleton label={t("apiKeys.create.action")} />;
-    if (layout === "section") return <SectionSkeleton action={action} description={t("apiKeys.description")} title={t("apiKeys.title")}><CredentialRowsSkeleton actions={2} /></SectionSkeleton>;
+    if (layout === "section") return <section aria-busy="true" className="flex flex-col gap-5"><HiddenTextSkeleton className="type-section-description">{t("apiKeys.description")}</HiddenTextSkeleton><CredentialRowsSkeleton actions={2} /></section>;
     return <div className="flex flex-col gap-6"><PageHeader actions={action} title={t("apiKeys.title")} /><CredentialRowsSkeleton actions={2} /></div>;
   }
   if (!canManage) return <Alert><AlertTitle>{t("apiKeys.restricted.title")}</AlertTitle><AlertDescription>{t("apiKeys.restricted.description")}</AlertDescription></Alert>;
@@ -172,7 +176,7 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
   return (
     <>
       <ApiKeysFrame
-        action={<Button onClick={openCreate} size="sm">{t("apiKeys.create.action")}</Button>}
+        action={<Button onClick={openCreate} size={layout === "section" ? "default" : "sm"}>{t("apiKeys.create.action")}</Button>}
         description={layout === "section" ? t("apiKeys.description") : null}
         layout={layout}
         title={t("apiKeys.title")}

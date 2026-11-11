@@ -24,11 +24,11 @@ export function TestCallButton({ agentId, variant = "outline" }: { agentId?: str
   if (!ready) {
     if (!business && !businesses.isLoading) return null;
     return (
-      <Skeleton aria-hidden="true" className="hidden h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-xs font-[550] tracking-[0.01em] whitespace-nowrap md:inline-flex">
+      <Skeleton aria-hidden="true" className="hidden h-10 shrink-0 items-center gap-2 rounded-full px-5 text-sm font-[550] tracking-[0.01em] whitespace-nowrap md:inline-flex">
         <span className="invisible size-4 shrink-0" />
         <span className="invisible">{t("testCall.trigger")}</span>
       </Skeleton>
     );
   }
-  return <Button className="hidden md:inline-flex" onClick={() => openTestWindow(agentId ? { agentId } : {})} size="sm" type="button" variant={variant}><Phone data-icon="inline-start" />{t("testCall.trigger")}</Button>;
+  return <Button className="hidden md:inline-flex" onClick={() => openTestWindow(agentId ? { agentId } : {})} type="button" variant={variant}><Phone data-icon="inline-start" />{t("testCall.trigger")}</Button>;
 }

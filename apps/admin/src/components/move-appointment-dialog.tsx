@@ -41,7 +41,7 @@ function wallClock(value: string, timeZone: string): string {
  * labels it as the alternative to approving that time. Hidden from roles that
  * can't move appointments.
  */
-export function MoveAppointmentButton({ appointment, requested, className, size = "xs", variant = "outline", otherTime = false }: { appointment: CancellableAppointment; requested?: RequestedTime; className?: string; size?: "xs" | "default"; variant?: "outline" | "default"; otherTime?: boolean }) {
+export function MoveAppointmentButton({ appointment, requested, className, size = "sm", variant = "outline", otherTime = false }: { appointment: CancellableAppointment; requested?: RequestedTime; className?: string; size?: "sm" | "default"; variant?: "outline" | "default"; otherTime?: boolean }) {
   const { t, i18n } = useTranslation("common");
   const { business } = useActiveBusiness();
   const [open, setOpen] = useState(false);

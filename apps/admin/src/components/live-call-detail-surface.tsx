@@ -268,9 +268,9 @@ function ApproveFollowUpRequest({ followUp }: { followUp: Detail["followUpTasks"
   const linked = { ...appointment, contactName: appointment.contactName ?? "" };
   if (appointmentRequestKind(followUp.request) === "reschedule") {
     const newStartsAt = followUp.requested?.newStartsAt;
-    return <span className="flex gap-2">{newStartsAt ? <RescheduleAppointmentButton appointment={linked} newStartsAt={newStartsAt} size="default" /> : null}<MoveAppointmentButton appointment={linked} otherTime={Boolean(newStartsAt)} requested={newStartsAt} size="default" /></span>;
+    return <span className="flex gap-2">{newStartsAt ? <RescheduleAppointmentButton appointment={linked} newStartsAt={newStartsAt} /> : null}<MoveAppointmentButton appointment={linked} otherTime={Boolean(newStartsAt)} requested={newStartsAt} /></span>;
   }
-  return <CancelAppointmentButton appointment={linked} approve size="default" variant="destructive" />;
+  return <CancelAppointmentButton appointment={linked} approve variant="destructive" />;
 }
 
 function DetailsTab({ detail, marking, onCompleteFollowUp }: { detail: Detail; marking: string | undefined; onCompleteFollowUp: (inboxItemId: string) => void }) {

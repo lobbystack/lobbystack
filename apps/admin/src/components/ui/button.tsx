@@ -1,3 +1,12 @@
+// Which size a button takes, everywhere in the dashboard:
+// - Page header actions, next to the page title (New appointment, Add agent,
+//   Create API key, Test call): default. The page's main one is solid, the rest outline.
+// - Section and card header actions, next to a section title (Skip setup, View all): sm.
+// - Row actions in settings rows, list rows and cards (Edit, Change voice,
+//   Save, Remove, Copy): sm, the same in every row of a group.
+// - Dialog and form footers (Cancel, Save, Book appointment, Delete): default.
+// - Full-page form submits (Sign in, Continue): default, full width.
+// - Inline link-style actions (Skip inside a step): ghost or link, as they are.
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
 import { LoaderCircle } from "lucide-react"

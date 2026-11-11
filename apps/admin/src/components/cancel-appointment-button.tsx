@@ -31,7 +31,7 @@ export function appointmentSummary(appointment: CancellableAppointment, locale: 
  * requests to cancel it. With `approve`, it reads as approving one of those
  * requests. Hidden from roles that can't cancel.
  */
-export function CancelAppointmentButton({ appointment, approve, className, size = "xs", variant = "outline" }: { appointment: CancellableAppointment; approve?: boolean; className?: string; size?: "xs" | "default"; variant?: "outline" | "destructive" }) {
+export function CancelAppointmentButton({ appointment, approve, className, size = "sm", variant = "outline" }: { appointment: CancellableAppointment; approve?: boolean; className?: string; size?: "sm" | "default"; variant?: "outline" | "destructive" }) {
   const { t, i18n } = useTranslation("common");
   const queryClient = useQueryClient();
   const { business } = useActiveBusiness();

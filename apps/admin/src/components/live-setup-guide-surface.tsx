@@ -104,7 +104,7 @@ export function LiveSetupGuideSurface({ businessId, goal }: { businessId: string
       <h2 className="type-section-title">{t("setupGuide.title")}</h2>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3 text-muted-foreground"><ProgressRing completed={completed} total={steps.length} /><p className="text-base">{t("setupGuide.description", { completed, total: steps.length })}</p></div>
-        <Button disabled={skip.isPending} onClick={async () => { for (const step of steps) if (!skippedSteps.includes(step.id)) await skip.mutateAsync(step.id); }} type="button" variant="outline">{t("setupGuide.skip")}</Button>
+        <Button size="sm" disabled={skip.isPending} onClick={async () => { for (const step of steps) if (!skippedSteps.includes(step.id)) await skip.mutateAsync(step.id); }} type="button" variant="outline">{t("setupGuide.skip")}</Button>
       </div>
       <Surface>
         <Accordion onValueChange={(value) => { const next = value[0] as GuideStepId | undefined; const step = steps.find((item) => item.id === next); if (step && opens(step)) setPicked({ step: step.id, during: active }); }} value={[openStep]}>

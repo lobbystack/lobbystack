@@ -118,8 +118,8 @@ export function AccountPasskeys() {
               {passkey.createdAt ? <span className="text-xs text-muted-foreground">{t("account.passkeys.addedOn", { date: new Intl.DateTimeFormat(intlLocale(i18n.language), { dateStyle: "medium" }).format(new Date(passkey.createdAt)) })}</span> : null}
             </div>
             <div className="flex items-center gap-2">
-              <Button onClick={() => openRename(passkey)} size="xs" type="button" variant="outline">{t("account.passkeys.rename.action")}</Button>
-              <Button onClick={() => setRemoving(passkey)} size="xs" type="button" variant="destructive">{t("account.passkeys.remove")}</Button>
+              <Button onClick={() => openRename(passkey)} size="sm" type="button" variant="outline">{t("account.passkeys.rename.action")}</Button>
+              <Button onClick={() => setRemoving(passkey)} size="sm" type="button" variant="destructive">{t("account.passkeys.remove")}</Button>
             </div>
           </li>
         ))}</ul> : null}
