@@ -64,12 +64,12 @@ async function testCall(tx: DatabaseTransaction, businessId: string, line: strin
 const welcomes = async (tx: DatabaseTransaction, businessId: string) => await tx.select({ id: outboxMessages.id }).from(outboxMessages).where(sql`${outboxMessages.businessId} = ${businessId}::uuid and ${outboxMessages.topic} = 'onboarding.sendWelcome'`);
 
 describe.skipIf(!testUrl)("the onboarding rebuild against dedicated PostgreSQL roles", () => {
-  it("resumes an owner parked on a removed step at the phone, and verifying moves them on", async () => {
+  it("resumes a direct owner parked on a removed step at the number, and moving on repairs the stored stage", async () => {
     await rollbackTest(async (tx) => {
-      for (const stage of ["knowledge", "greeting", "test_call", "plan"]) {
+      for (const stage of ["knowledge", "greeting", "test_call", "plan", "verify_phone"]) {
         const { userId, businessId } = await workspace(tx, stage);
         const state = await asApp(tx, (db) => getActiveOnboardingState(db, userId, HOST_BRAND_SCOPE));
-        expect(state).toMatchObject({ businessId, stage: "verify_phone" });
+        expect(state).toMatchObject({ businessId, stage: "phone_number" });
         // Moving from the repaired stage needs the stored value to change too.
         await asApp(tx, (db) => advanceOnboardingStage({ db }, { userId, businessId, to: "phone_number" }));
         expect((await business(tx, businessId)).stage).toBe("phone_number");
@@ -77,11 +77,15 @@ describe.skipIf(!testUrl)("the onboarding rebuild against dedicated PostgreSQL r
     });
   });
 
-  it("lets an owner parked on a removed step skip the number", async () => {
+  it("lets an owner parked on a removed step go on without a number only from a country without numbers", async () => {
     await rollbackTest(async (tx) => {
       const { userId, businessId } = await workspace(tx, "test_call");
-      await asApp(tx, (db) => skipOnboardingNumber({ db }, { userId, businessId }));
-      expect((await business(tx, businessId)).stage).toBe("goal");
+      await tx.update(businesses).set({ deploymentMode: "cloud" }).where(eq(businesses.id, businessId));
+      await expect(asApp(tx, (db) => skipOnboardingNumber({ db }, { userId, businessId }))).rejects.toMatchObject({ status: 409, code: "number_required" });
+      await expect(asApp(tx, (db) => skipOnboardingNumber({ db }, { userId, businessId, countryCode: "CA" }))).rejects.toMatchObject({ status: 409, code: "number_required" });
+      await expect(asApp(tx, (db) => advanceOnboardingStage({ db }, { userId, businessId, to: "attribution" }))).rejects.toMatchObject({ status: 409, code: "number_required" });
+      await asApp(tx, (db) => skipOnboardingNumber({ db }, { userId, businessId, countryCode: "FR" }));
+      expect((await business(tx, businessId)).stage).toBe("attribution");
     });
   });
 

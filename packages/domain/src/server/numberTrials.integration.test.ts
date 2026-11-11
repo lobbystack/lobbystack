@@ -58,10 +58,10 @@ describe.skipIf(!testUrl)("free trial numbers against dedicated PostgreSQL roles
       await tx.update(businesses).set({ onboardingStage: "verify_phone", deploymentMode: "cloud" }).where(eq(businesses.id, businessId));
       const owner = { userId, businessId };
 
-      // Without a trusted network, the number step sends the owner to verify a mobile first.
-      expect(await as(tx, "lobbystack_app", db => numberStepRedirect({ db }, { ...owner, finished: false }))).toBe("/onboarding/verify-phone");
+      // A direct owner has no phone step, so the number step never sends them to one.
+      expect(await as(tx, "lobbystack_app", db => numberStepRedirect({ db }, { ...owner, finished: false }))).toBeNull();
 
-      // The owner verifies a mobile, and onboarding moves on to the number step.
+      // An owner who verified a mobile before the phone step left still claims with it.
       const { attemptId } = await as(tx, "lobbystack_app", db => startOnboardingPhoneVerification({ db }, { ...owner, phoneE164: ownerPhone, countryCode: "CA" }, verify));
       expect(await as(tx, "lobbystack_app", db => checkOnboardingPhoneVerificationCode({ db }, { ...owner, attemptId, code: "123456" }, verify))).toMatchObject({ approved: true });
       expect((await tx.select({ stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, businessId)))[0]?.stage).toBe("phone_number");
@@ -80,6 +80,8 @@ describe.skipIf(!testUrl)("free trial numbers against dedicated PostgreSQL roles
       });
       const [trial] = await tx.select({ id: numberTrials.id, status: numberTrials.status, endsAt: numberTrials.endsAt }).from(numberTrials).where(eq(numberTrials.businessId, businessId));
       expect(trial?.status).toBe("active");
+      // The trial number leads to the plans, which nobody can close.
+      expect((await tx.select({ stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, businessId)))[0]?.stage).toBe("choose_plan");
       expect((await tx.select({ reason: phoneNumbers.reclaimReason }).from(phoneNumbers).where(eq(phoneNumbers.id, phoneNumberId)))[0]?.reason).toBe("trial");
       expect((await tx.select({ transferNumber: agents.transferNumber }).from(agents).where(eq(agents.businessId, businessId)))[0]?.transferNumber).toBe(ownerPhone);
       expect(await as(tx, "lobbystack_app", db => getNumberTrialState({ db }, owner))).toMatchObject({ status: "active", e164: trialNumber, minutesExhausted: false });
@@ -178,13 +180,12 @@ describe.skipIf(!testUrl)("free trial numbers against dedicated PostgreSQL roles
       await tx.update(businesses).set({ onboardingStage: "verify_phone", deploymentMode: "cloud" }).where(eq(businesses.id, secondBusiness));
       const secondOwner = { userId: second, businessId: secondBusiness };
 
-      // The same network asks for a mobile instead of refusing the plan.
-      expect(await as(tx, "lobbystack_app", db => numberStepRedirect({ db }, { ...secondOwner, finished: false, ipHash: network, ipCountry: "CA" }))).toBe("/onboarding/verify-phone");
-      // A search that reaches the number step anyway asks for the phone, not a plan.
+      // A direct owner has no phone step, so the same network gets the plans.
+      expect(await as(tx, "lobbystack_app", db => numberStepRedirect({ db }, { ...secondOwner, finished: false, ipHash: network, ipCountry: "CA" }))).toBeNull();
       await tx.update(businesses).set({ onboardingStage: "phone_number" }).where(eq(businesses.id, secondBusiness));
-      await expect(as(tx, "lobbystack_app", db => searchBusinessNumberInventory({ db }, { ...secondOwner, claimTokenSecret, ipHash: network, ipCountry: "CA" }, inventory))).rejects.toMatchObject({ status: 409, code: "phone_verification_required" });
+      await expect(as(tx, "lobbystack_app", db => searchBusinessNumberInventory({ db }, { ...secondOwner, claimTokenSecret, ipHash: network, ipCountry: "CA" }, inventory))).rejects.toMatchObject({ status: 429, code: "trial_ip_limited" });
 
-      // Verifying the mobile is the proof, and the trial records it.
+      // A mobile verified before the phone step left is still the proof, and the trial records it.
       const { attemptId } = await as(tx, "lobbystack_app", db => startOnboardingPhoneVerification({ db }, { ...secondOwner, phoneE164: ownerPhone, countryCode: "CA" }, verify));
       await as(tx, "lobbystack_app", db => checkOnboardingPhoneVerificationCode({ db }, { ...secondOwner, attemptId, code: "123456" }, verify));
       const verifiedSearch = await as(tx, "lobbystack_app", db => searchBusinessNumberInventory({ db }, { ...secondOwner, claimTokenSecret, ipHash: network, ipCountry: "CA" }, inventory));

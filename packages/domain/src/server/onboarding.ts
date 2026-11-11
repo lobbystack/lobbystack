@@ -198,11 +198,11 @@ export async function advanceOnboardingStage(
     const to = input.to === "verify_phone" && !current.partnerId ? "phone_number" : input.to;
     if (canVisitOnboardingStage(currentStage, to)) return;
     // The attribution question has no skip: only an answer moves past it.
-    if (currentStage === "attribution" && !current.attribution?.trim()) throw attributionRequired();
+    if (currentStage === "attribution" && to === "meet" && !current.attribution?.trim()) throw attributionRequired();
     // A direct cloud owner gets past the number with a number, or through the
     // country fallback, which skipOnboardingNumber checks. A self-hosted
     // business keeps its skip.
-    if (!current.partnerId && current.deploymentMode === "cloud" && (currentStage === "phone_number" || currentStage === "verify_phone")) throw numberRequired();
+    if (!current.partnerId && current.deploymentMode === "cloud" && to === "attribution" && (currentStage === "phone_number" || currentStage === "verify_phone")) throw numberRequired();
     await advanceOnboardingStageInTransaction(tx, { ...input, to, from: currentStage, partnerId: current.partnerId, accessLevel: current.accessLevel });
     // Meet your agent is the last screen, so leaving it sends the welcome email.
     if (input.to === "complete") await scheduleWelcomeEmailInTransaction(tx, input.businessId, new Date());
