@@ -51,7 +51,7 @@ export function OnboardingNumberSurface() {
   const primary = phones.data?.phoneNumbers[0];
   // Past the number already, as someone who bought a plan from a later step is, the owner returns to where they were.
   const stage = business?.onboardingStage;
-  const afterNumber = stage === "complete" ? "/" : stage === "goal" || stage === "attribution" || stage === "meet" ? resolveOnboardingRoute(stage) : "/onboarding/goal";
+  const afterNumber = stage === "complete" ? "/" : stage === "meet" ? resolveOnboardingRoute(stage) : "/onboarding/attribution";
   const refusalCode = refusal ?? outlook.data?.trialRefusal ?? null;
   // The refusal stays here with the plans.
   const refuse = useCallback((error: unknown) => {

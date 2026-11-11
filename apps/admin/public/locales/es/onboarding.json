@@ -219,19 +219,6 @@
       "back": "Volver a los números"
     }
   },
-  "goal": {
-    "title": "¿Qué quiere que haga primero su agente?",
-    "options": {
-      "answer_calls": "Contestar mis llamadas",
-      "book_appointments": "Reservar citas",
-      "answer_website_visitors": "Atender a quienes visitan mi sitio web",
-      "answer_instagram_messages": "Responder mensajes de Instagram"
-    },
-    "continue": "Continuar",
-    "saving": "Guardando...",
-    "skip": "Omitir",
-    "submitFailed": "No pudimos guardarlo en este momento. Inténtelo de nuevo."
-  },
   "attribution": {
     "title": "¿Cómo conoció {{appName}}?",
     "options": {

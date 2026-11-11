@@ -219,19 +219,6 @@
       "back": "Nazad na brojeve"
     }
   },
-  "goal": {
-    "title": "Šta želite da Vaš agent prvo radi?",
-    "options": {
-      "answer_calls": "Odgovaranje na moje pozive",
-      "book_appointments": "Zakazivanje termina",
-      "answer_website_visitors": "Odgovaranje posetiocima sajta",
-      "answer_instagram_messages": "Odgovaranje na Instagram poruke"
-    },
-    "continue": "Nastavi",
-    "saving": "Čuvanje...",
-    "skip": "Preskoči",
-    "submitFailed": "Trenutno ne možemo to da sačuvamo. Pokušajte ponovo."
-  },
   "attribution": {
     "title": "Kako ste čuli za {{appName}}?",
     "options": {

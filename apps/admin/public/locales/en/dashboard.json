@@ -294,21 +294,9 @@
     },
     "stepDescriptions": {
       "fullScan": "Your agent has read a sample of your site.",
-      "sources": {
-        "answer_calls": "Upload the policies, FAQs and prices your callers ask about.",
-        "book_appointments": "Upload your services, prices and booking rules.",
-        "answer_website_visitors": "Upload the FAQs and policies your website visitors ask about.",
-        "answer_instagram_messages": "Upload the FAQs and prices people ask about on Instagram.",
-        "none": "Upload your policies, FAQs or pricing."
-      },
+      "sources": "Upload your policies, FAQs or pricing.",
       "hours": "Your agent books appointments only during these hours.",
-      "testCall": {
-        "answer_calls": "Ask what your callers ask most.",
-        "book_appointments": "Ask it to book an appointment.",
-        "answer_website_visitors": "Ask what people ask on your website.",
-        "answer_instagram_messages": "Ask what people ask on Instagram.",
-        "none": "Ask what your customers ask most."
-      },
+      "testCall": "Ask what your callers ask most.",
       "phoneNumber": "Give your agent its own number to answer real callers.",
       "phoneNumberTrial": "Answer your missed calls free for 14 days, no card needed."
     },

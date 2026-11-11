@@ -295,21 +295,9 @@
     },
     "stepDescriptions": {
       "fullScan": "Su agente ha leído una parte de su sitio.",
-      "sources": {
-        "answer_calls": "Suba las políticas, preguntas frecuentes y precios que consultan quienes llaman.",
-        "book_appointments": "Suba sus servicios, precios y reglas de reserva.",
-        "answer_website_visitors": "Suba las preguntas frecuentes y políticas que consultan los visitantes de su sitio.",
-        "answer_instagram_messages": "Suba las preguntas frecuentes y precios que le consultan en Instagram.",
-        "none": "Suba sus políticas, preguntas frecuentes o precios."
-      },
+      "sources": "Suba sus políticas, preguntas frecuentes o precios.",
       "hours": "Su agente reserva citas solo dentro de este horario.",
-      "testCall": {
-        "answer_calls": "Pregúntele lo que más le preguntan quienes llaman.",
-        "book_appointments": "Pídale que reserve una cita.",
-        "answer_website_visitors": "Pregúntele lo que la gente pregunta en su sitio web.",
-        "answer_instagram_messages": "Pregúntele lo que la gente pregunta en Instagram.",
-        "none": "Pregúntele lo que más preguntan sus clientes."
-      },
+      "testCall": "Pregúntele lo que más le preguntan quienes llaman.",
       "phoneNumber": "Dé a su agente su propio número para atender a personas reales.",
       "phoneNumberTrial": "Conteste sus llamadas perdidas gratis durante 14 días, sin tarjeta."
     },

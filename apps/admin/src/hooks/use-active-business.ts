@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { Capability, OnboardingGoal } from "@lobbystack/domain";
+import type { Capability } from "@lobbystack/domain";
 import type { PartnerAccessLevel } from "@lobbystack/shared";
 import { selectActiveBusiness } from "@/lib/active-business";
 import { requestJson } from "@/lib/request-json";
@@ -18,8 +18,6 @@ export type Business = {
   defaultLocale?: string;
   websiteUrl?: string | null;
   onboardingStage?: string;
-  /** What the owner wants their agent to do first, or null when they skipped the question or never saw it. */
-  onboardingGoal?: OnboardingGoal | null;
   createdAt?: string;
   /** The access level a partner's business gives its operators, or null for a direct business. */
   partnerAccessLevel?: PartnerAccessLevel | null;

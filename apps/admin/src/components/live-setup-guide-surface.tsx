@@ -8,7 +8,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import type { OnboardingGoal } from "@lobbystack/domain";
 import { useBusinessCan } from "@/components/business-capabilities-provider";
 import { ForwardingGuide } from "@/components/call-forwarding-dialog";
 import { phoneNumberChooserText } from "@/components/live-phone-number-settings-surface";
@@ -56,7 +55,7 @@ export function useSetupGuide(businessId: string | undefined, importing = false)
 }
 
 /** Getting started, which Home shows in place of its daily view. */
-export function LiveSetupGuideSurface({ businessId, goal }: { businessId: string; goal: OnboardingGoal | null }) {
+export function LiveSetupGuideSurface({ businessId }: { businessId: string }) {
   const { t } = useTranslation("dashboard");
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -122,7 +121,7 @@ export function LiveSetupGuideSurface({ businessId, goal }: { businessId: string
                   </>
                 ) : step.id === "sources" ? (
                   <>
-                    <StepDescription>{t(`setupGuide.stepDescriptions.sources.${goal ?? "none"}`)}</StepDescription>
+                    <StepDescription>{t("setupGuide.stepDescriptions.sources")}</StepDescription>
                     <StepActions primary={<Button onClick={() => router.push("/business/knowledge?setup=upload")}>{t("setupGuide.stepActions.sources")}</Button>} skip={skipLink} />
                   </>
                 ) : step.id === "hours" ? (
@@ -131,7 +130,7 @@ export function LiveSetupGuideSurface({ businessId, goal }: { businessId: string
                     <StepActions primary={<Button nativeButton={false} render={<Link href={HOURS_EDITOR_HREF} />}>{t("setupGuide.stepActions.hours")}</Button>} skip={skipLink} />
                   </>
                 ) : step.id === "testCall" ? (
-                  <TestCallStep call={activation?.lastTestCall ?? null} goal={goal} skip={skipLink} />
+                  <TestCallStep call={activation?.lastTestCall ?? null} skip={skipLink} />
                 ) : step.id === "phoneNumber" ? (
                   <NumberStep activation={activation} businessId={businessId} needsNumberClaim={needsNumberClaim} skip={skipLink} trialAvailable={trialAvailable} upgrade={upgrade} />
                 ) : null}
@@ -152,12 +151,12 @@ function StepActions({ primary, skip }: { primary?: ReactNode; skip: ReactNode }
   return <div className="flex items-center justify-between gap-4">{primary ?? <span />}{skip}</div>;
 }
 
-function TestCallStep({ call, goal, skip }: { call: NonNullable<Activation["lastTestCall"]> | null; goal: OnboardingGoal | null; skip: ReactNode }) {
+function TestCallStep({ call, skip }: { call: NonNullable<Activation["lastTestCall"]> | null; skip: ReactNode }) {
   const { i18n, t } = useTranslation("dashboard");
   const testWindowReady = useTestWindowReady();
   return (
     <>
-      <StepDescription>{t(`setupGuide.stepDescriptions.testCall.${goal ?? "none"}`)}</StepDescription>
+      <StepDescription>{t("setupGuide.stepDescriptions.testCall")}</StepDescription>
       {call ? (
         <Item render={<Link href={`/inbox?call=${encodeURIComponent(call.id)}`} />} variant="outline">
           <ItemContent>

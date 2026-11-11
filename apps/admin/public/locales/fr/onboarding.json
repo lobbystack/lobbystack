@@ -219,19 +219,6 @@
       "back": "Retour aux numéros"
     }
   },
-  "goal": {
-    "title": "Que voulez-vous que votre agent fasse en premier ?",
-    "options": {
-      "answer_calls": "Répondre à mes appels",
-      "book_appointments": "Prendre des rendez-vous",
-      "answer_website_visitors": "Répondre aux visiteurs de mon site",
-      "answer_instagram_messages": "Répondre aux messages Instagram"
-    },
-    "continue": "Continuer",
-    "saving": "Enregistrement...",
-    "skip": "Ignorer",
-    "submitFailed": "Impossible d'enregistrer maintenant. Réessayez."
-  },
   "attribution": {
     "title": "Comment avez-vous connu {{appName}} ?",
     "options": {

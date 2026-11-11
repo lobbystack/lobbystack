@@ -235,7 +235,7 @@ describe("instant booking without opening hours", () => {
     const queryClient = client();
     queryClient.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
     queryClient.setQueryData(["setup", "business"], { steps: [{ id: "fullScan", status: "complete" }, { id: "sources", status: "complete" }, { id: "testCall", status: "needs setup" }] });
-    render(<QueryClientProvider client={queryClient}><LiveSetupGuideSurface businessId="business" goal={null} /></QueryClientProvider>);
+    render(<QueryClientProvider client={queryClient}><LiveSetupGuideSurface businessId="business" /></QueryClientProvider>);
     expect(await screen.findByText("setupGuide.steps.hours")).toBeTruthy();
     const titles = screen.getAllByText(/^setupGuide\.steps\./).map((element) => element.textContent);
     expect(titles).toEqual(["setupGuide.steps.fullScan", "setupGuide.steps.sources", "setupGuide.steps.hours", "setupGuide.steps.testCall"]);
@@ -247,7 +247,7 @@ describe("instant booking without opening hours", () => {
     const queryClient = client();
     queryClient.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
     queryClient.setQueryData(["setup", "business"], { steps: [{ id: "fullScan", status: "needs setup" }, { id: "sources", status: "needs setup" }, { id: "testCall", status: "complete" }, { id: "phoneNumber", status: "needs setup" }] });
-    render(<QueryClientProvider client={queryClient}><LiveSetupGuideSurface businessId="business" goal={null} /></QueryClientProvider>);
+    render(<QueryClientProvider client={queryClient}><LiveSetupGuideSurface businessId="business" /></QueryClientProvider>);
     await screen.findByText("setupGuide.steps.hours");
     const titles = screen.getAllByText(/^setupGuide\.steps\./).map((element) => element.textContent);
     expect(titles).toEqual(["setupGuide.steps.testCall", "setupGuide.steps.fullScan", "setupGuide.steps.sources", "setupGuide.steps.hours", "setupGuide.steps.phoneNumber"]);
@@ -259,7 +259,7 @@ describe("instant booking without opening hours", () => {
     const queryClient = client();
     queryClient.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
     queryClient.setQueryData(["setup", "business"], { steps: [{ id: "sources", status: "complete" }], skippedSteps: [] });
-    render(<QueryClientProvider client={queryClient}><LiveSetupGuideSurface businessId="business" goal={null} /></QueryClientProvider>);
+    render(<QueryClientProvider client={queryClient}><LiveSetupGuideSurface businessId="business" /></QueryClientProvider>);
     await screen.findByText("setupGuide.steps.hours");
     fireEvent.click(screen.getByRole("button", { name: "setupGuide.skipStep" }));
     await waitFor(() => expect(fetchMock.mock.calls.some(([url, init]) => String(url).startsWith("/api/setup") && init?.method === "PATCH" && JSON.parse(String(init.body)).stepId === "hours")).toBe(true));
@@ -270,7 +270,7 @@ describe("instant booking without opening hours", () => {
     const queryClient = client();
     queryClient.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
     queryClient.setQueryData(["setup", "business"], { steps: [{ id: "sources", status: "needs setup" }], skippedSteps: ["hours"] });
-    render(<QueryClientProvider client={queryClient}><LiveSetupGuideSurface businessId="business" goal={null} /></QueryClientProvider>);
+    render(<QueryClientProvider client={queryClient}><LiveSetupGuideSurface businessId="business" /></QueryClientProvider>);
     expect((await screen.findByText("setupGuide.steps.hours")).className).toContain("line-through");
     expect(screen.getByText("setupGuide.steps.sources").className).not.toContain("line-through");
   });
@@ -280,7 +280,7 @@ describe("instant booking without opening hours", () => {
     const queryClient = client();
     queryClient.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
     queryClient.setQueryData(["setup", "business"], { steps: [{ id: "sources", status: "needs setup" }] });
-    render(<QueryClientProvider client={queryClient}><LiveSetupGuideSurface businessId="business" goal={null} /></QueryClientProvider>);
+    render(<QueryClientProvider client={queryClient}><LiveSetupGuideSurface businessId="business" /></QueryClientProvider>);
     await screen.findByText("setupGuide.steps.sources");
     await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).startsWith("/api/hours"))).toBe(true));
     await new Promise((resolve) => setTimeout(resolve, 0));

@@ -19,7 +19,6 @@ const routeStages: Record<string, OnboardingStage> = {
   [ONBOARDING_READING_ROUTE]: "verify_phone",
   "/onboarding/verify-phone": "verify_phone",
   "/onboarding/number": "phone_number",
-  "/onboarding/goal": "goal",
   "/onboarding/attribution": "attribution",
   "/onboarding/meet": "meet",
 };
@@ -46,7 +45,7 @@ export async function requireOnboardingStage(pathname: string, options: { allowC
   if (!expected) redirect(current);
   // A fresh self-hosted deployment's first owner names it before naming their business.
   if (expected === "create_business" && state.businessId === null && await initialBrandingFields(session.user.id, requestHeaders)) redirect(BRAND_ROUTE);
-  // A partner's business skips some steps, such as creating it, the number, the goal and attribution.
+  // A partner's business skips some steps, such as creating it, the number and attribution.
   if (!state.steps.includes(expected)) redirect(current);
   // The workspace switcher opens the first step to make another workspace,
   // whatever step the active one has reached.
@@ -54,7 +53,7 @@ export async function requireOnboardingStage(pathname: string, options: { allowC
   // Onboarding goes forward only: a browser back or an old link to an earlier
   // step lands on the step the workspace is on. The number picker stays open
   // from later steps, since the dashboard uses it to add a number.
-  const revisitsNumber = expected === "phone_number" && ["phone_number_claiming", "goal", "attribution", "meet", "complete"].includes(state.stage);
+  const revisitsNumber = expected === "phone_number" && ["phone_number_claiming", "attribution", "meet", "complete"].includes(state.stage);
   if (state.stage !== expected && !revisitsNumber) redirect(current);
 }
 

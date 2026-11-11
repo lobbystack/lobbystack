@@ -218,19 +218,6 @@
       "back": "Back to the numbers"
     }
   },
-  "goal": {
-    "title": "What do you want your agent to do first?",
-    "options": {
-      "answer_calls": "Answer my calls",
-      "book_appointments": "Book appointments",
-      "answer_website_visitors": "Answer website visitors",
-      "answer_instagram_messages": "Answer Instagram messages"
-    },
-    "continue": "Continue",
-    "saving": "Saving...",
-    "skip": "Skip",
-    "submitFailed": "We couldn't save that right now. Please try again."
-  },
   "attribution": {
     "title": "How did you hear about {{appName}}?",
     "options": {

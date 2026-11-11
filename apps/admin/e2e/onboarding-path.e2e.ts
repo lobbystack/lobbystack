@@ -79,13 +79,10 @@ test("the website path waits for the import and ends on Meet your agent", async 
     await page.goto("/onboarding/verify-phone");
     await expect(page).toHaveURL("/onboarding/number");
 
+    // No goal question: the attribution question comes next.
     await leaveNumberStep(page);
-    await page.getByRole("button", { name: onboarding.goal.options.book_appointments }).click();
-    await page.getByRole("button", { name: onboarding.goal.continue }).click();
     await expect(page).toHaveURL("/onboarding/attribution");
-
-    // Browser back from the goal question lands on the attribution step.
-    await page.goBack();
+    await page.goto("/onboarding/goal");
     await expect(page).toHaveURL("/onboarding/attribution");
 
     await page.getByRole("button", { name: onboarding.attribution.options.google }).click();
@@ -135,8 +132,6 @@ test("the no-website path asks the language, and the X closes the plans", async 
     await expect(page).toHaveURL("/onboarding/language");
     await page.getByRole("button", { name: onboarding.language.continue }).click();
     await leaveNumberStep(page);
-    await page.getByRole("button", { name: onboarding.goal.skip, exact: true }).click();
-    // Both steps call it Skip, so wait for the page to change before clicking again.
     await expect(page).toHaveURL("/onboarding/attribution");
     await page.getByRole("button", { name: onboarding.attribution.skip, exact: true }).click();
     await expect(page).toHaveURL("/onboarding/meet");
@@ -184,7 +179,7 @@ test("a used trial skips the phone step and offers the plans, with a way on", as
     await expect(page.getByText(onboarding.number.refusals.trialUsed)).toBeVisible();
     await expect(page.getByText(onboarding.number.planRequired)).toHaveCount(0);
     await page.getByRole("button", { name: onboarding.number.skipLater }).click();
-    await expect(page).toHaveURL("/onboarding/goal");
+    await expect(page).toHaveURL("/onboarding/attribution");
   } finally {
     await removeFixtures(database, email, businessId);
     await database.pool.end();

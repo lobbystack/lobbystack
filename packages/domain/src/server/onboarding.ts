@@ -15,10 +15,11 @@ import { greetingName } from "./emailGreeting";
 export { canVisitOnboardingStage, isOnboardingStage, normalizeOnboardingStage, onboardingSteps, resolveOnboardingRoute, type OnboardingBusiness, type OnboardingStage } from "@lobbystack/shared";
 
 /**
- * What the owner wants their agent to do first, as they answered at the goal
- * step. Each is something the product does today. Stored on the business, sent
- * to telemetry, and read by the new-account Home, so keep the values stable.
- * The businesses_onboarding_goal_valid check constraint lists them too.
+ * What the owner wanted their agent to do first, as they answered at the goal
+ * step that onboarding no longer has. Nothing writes it now. The welcome email
+ * still reads an answer given before, so keep the values stable. The
+ * businesses_onboarding_goal_valid check constraint lists them too; a later
+ * release can drop both.
  */
 export const ONBOARDING_GOALS = ["answer_calls", "book_appointments", "answer_website_visitors", "answer_instagram_messages"] as const;
 export type OnboardingGoal = (typeof ONBOARDING_GOALS)[number];
@@ -35,16 +36,15 @@ const transitions: Record<OnboardingStage, readonly OnboardingStage[]> = {
   create_business: ["website"],
   website: ["language", "phone_number"],
   language: ["phone_number"],
-  verify_phone: ["phone_number", "goal"],
-  phone_number: ["goal"],
-  phone_number_claiming: ["phone_number", "goal"],
-  goal: ["attribution"],
+  verify_phone: ["phone_number", "attribution"],
+  phone_number: ["attribution"],
+  phone_number_claiming: ["phone_number", "attribution"],
   attribution: ["meet"],
   meet: ["complete"],
   complete: [],
 };
 
-// A partner's business has no number step, goal or attribution: the partner
+// A partner's business has no number step or attribution: the partner
 // gives it its numbers, and the host asks its owner neither question. The
 // owner still verifies their phone, because calls forward to it, then meets
 // their agent. At the activity level the partner sets the agent up, so the
@@ -56,7 +56,6 @@ const partnerTransitions: Record<OnboardingStage, readonly OnboardingStage[]> = 
   verify_phone: ["meet"],
   phone_number: ["meet"],
   phone_number_claiming: ["meet"],
-  goal: ["meet"],
   attribution: ["meet"],
 };
 const activityTransitions: Record<OnboardingStage, readonly OnboardingStage[]> = {
@@ -64,7 +63,6 @@ const activityTransitions: Record<OnboardingStage, readonly OnboardingStage[]> =
   verify_phone: ["complete"],
   phone_number: ["complete"],
   phone_number_claiming: ["complete"],
-  goal: ["complete"],
   attribution: ["complete"],
 };
 
@@ -73,7 +71,7 @@ const activityTransitions: Record<OnboardingStage, readonly OnboardingStage[]> =
  * app.reserve_trial_number_claim does: from the number step on. A partner's
  * business has no number step, so its claims wait for its owner's onboarding.
  */
-export const NUMBER_CLAIM_STAGES: readonly OnboardingStage[] = ["phone_number", "goal", "attribution", "meet", "complete"];
+export const NUMBER_CLAIM_STAGES: readonly OnboardingStage[] = ["phone_number", "attribution", "meet", "complete"];
 
 /**
  * The stage a new business starts at, since creating it is done: its
@@ -199,30 +197,6 @@ export async function advanceOnboardingStage(
     await advanceOnboardingStageInTransaction(tx, { ...input, to, from: currentStage, partnerId: current.partnerId, accessLevel: current.accessLevel });
     // Meet your agent is the last screen, so leaving it sends the welcome email.
     if (input.to === "complete") await scheduleWelcomeEmailInTransaction(tx, input.businessId, new Date());
-  });
-}
-
-/**
- * Saves the owner's goal and moves on to attribution. Skipping sends no goal
- * and keeps any saved one. A partner's business has no goal step, so this
- * refuses it. Revisiting the step from a later stage leaves the stage alone.
- */
-export async function submitOnboardingGoal(
-  context: DomainContext,
-  input: { userId: string; businessId: string; goal: OnboardingGoal | null },
-): Promise<void> {
-  await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
-    await requireBusinessAdmin(tx, input);
-    const changed = await tx.update(businesses)
-      .set({ ...(input.goal ? { onboardingGoal: input.goal } : {}), onboardingStage: sql`CASE WHEN ${businesses.onboardingStage} = 'goal' THEN 'attribution' ELSE ${businesses.onboardingStage} END`, updatedAt: new Date() })
-      .where(and(eq(businesses.id, input.businessId), isNull(businesses.partnerId), inArray(businesses.onboardingStage, ["goal", "attribution", "meet", "complete"])))
-      .returning({ id: businesses.id });
-    if (!changed.length) {
-      const error = new Error("The goal cannot be submitted at this onboarding stage.") as Error & { status: number; code: string };
-      error.status = 409;
-      error.code = "onboarding_stage_conflict";
-      throw error;
-    }
   });
 }
 

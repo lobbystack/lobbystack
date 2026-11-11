@@ -33,8 +33,8 @@ function progressAt(pathname: string, business: Record<string, unknown>) {
 }
 
 describe("onboarding progress", () => {
-  it("counts a direct owner's seven steps, sign-up first", () => {
-    expect(progressAt("/onboarding/website", { onboardingStage: "website", partnerAccessLevel: null })).toEqual({ current: 3, total: 7 });
+  it("counts a direct owner's six steps, sign-up first", () => {
+    expect(progressAt("/onboarding/website", { onboardingStage: "website", partnerAccessLevel: null })).toEqual({ current: 3, total: 6 });
   });
 
   it("counts only the steps a partner's business keeps for its owner", () => {
@@ -55,15 +55,15 @@ describe("onboarding width", () => {
 });
 
 describe("onboarding descriptions", () => {
-  it("leaves the goal question on its title alone", () => {
-    progressAt("/onboarding/goal", { onboardingStage: "goal", partnerAccessLevel: null });
+  it("leaves the attribution question on its title alone", () => {
+    progressAt("/onboarding/attribution", { onboardingStage: "attribution", partnerAccessLevel: null });
     expect(fixture.description).toBe("");
   });
 });
 
 describe("browser back", () => {
   it("leaves a normal navigation alone", () => {
-    renderAt("/onboarding/website", { onboardingStage: "goal", partnerAccessLevel: null });
+    renderAt("/onboarding/website", { onboardingStage: "attribution", partnerAccessLevel: null });
     expect(replace).not.toHaveBeenCalled();
   });
 
@@ -74,16 +74,16 @@ describe("browser back", () => {
   });
 
   it("sends a restored earlier page on to the current step", () => {
-    const { rerender } = renderAt("/onboarding/goal", { onboardingStage: "goal", partnerAccessLevel: null });
+    const { rerender } = renderAt("/onboarding/attribution", { onboardingStage: "attribution", partnerAccessLevel: null });
     window.history.pushState({}, "", "/onboarding/website");
     act(() => { window.dispatchEvent(new PopStateEvent("popstate")); });
     fixture.pathname = "/onboarding/website";
     rerender();
-    expect(replace).toHaveBeenCalledWith("/onboarding/goal");
+    expect(replace).toHaveBeenCalledWith("/onboarding/attribution");
   });
 
   it("leaves the number picker open from a later step", () => {
-    const { rerender } = renderAt("/onboarding/goal", { onboardingStage: "goal", partnerAccessLevel: null });
+    const { rerender } = renderAt("/onboarding/attribution", { onboardingStage: "attribution", partnerAccessLevel: null });
     window.history.pushState({}, "", "/onboarding/number");
     act(() => { window.dispatchEvent(new PopStateEvent("popstate")); });
     fixture.pathname = "/onboarding/number";

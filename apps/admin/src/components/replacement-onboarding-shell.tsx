@@ -34,7 +34,6 @@ export const onboardingRoutes = {
   "/onboarding/reading": { key: "reading", width: "lg" },
   "/onboarding/verify-phone": { key: "verifyPhone", width: "md" },
   "/onboarding/number": { key: "number", width: "wide" },
-  "/onboarding/goal": { key: "goal", width: "md" },
   "/onboarding/attribution": { key: "attribution", width: "xl" },
   "/onboarding/meet": { key: "meet", width: "5xl" },
 } as const;

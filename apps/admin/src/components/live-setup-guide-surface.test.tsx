@@ -26,15 +26,14 @@ vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetry
 
 const copy = en.setupGuide;
 const order = ["fullScan", "sources", "testCall", "phoneNumber"] as const;
-const goals = ["answer_calls", "book_appointments", "answer_website_visitors", "answer_instagram_messages", null] as const;
 const clients: QueryClient[] = [];
 beforeEach(() => { telemetryRef.current = createRecordedBrowserTelemetry(); });
 afterEach(() => { cleanup(); clients.forEach((client) => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); search.value = ""; });
 
 const summary = (firstRealConversationAt: string | null) => ({ businessId: "business", kpis: { calls: { total: 0, deltaPercent: 0 }, appointments: { total: 0, deltaPercent: 0 }, averageDuration: { totalSeconds: 0, deltaSeconds: 0 } }, monthlyCalls: [], recentCalls: [], actionRequired: [], upcoming: [], firstRealConversationAt });
-type Setup = { firstRealConversationAt?: string | null; role?: string; capabilities?: Capability[]; goal?: string | null; activation?: Record<string, unknown>; numbers?: unknown[]; trial?: Record<string, unknown>; includedNumbers?: number | null; partnerNumbers?: Record<string, unknown> | null; complete?: string[]; skipped?: string[]; setupDown?: boolean };
+type Setup = { firstRealConversationAt?: string | null; role?: string; capabilities?: Capability[]; activation?: Record<string, unknown>; numbers?: unknown[]; trial?: Record<string, unknown>; includedNumbers?: number | null; partnerNumbers?: Record<string, unknown> | null; complete?: string[]; skipped?: string[]; setupDown?: boolean };
 
-async function setup({ activation = {}, capabilities, complete = [], firstRealConversationAt = null, goal = null, includedNumbers = 0, numbers = [], partnerNumbers = null, role = "business_owner", setupDown = false, skipped = [], trial = { status: "none" } }: Setup = {}) {
+async function setup({ activation = {}, capabilities, complete = [], firstRealConversationAt = null, includedNumbers = 0, numbers = [], partnerNumbers = null, role = "business_owner", setupDown = false, skipped = [], trial = { status: "none" } }: Setup = {}) {
   vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn(), removeItem: vi.fn() });
   vi.stubGlobal("EventSource", class { addEventListener() {} removeEventListener() {} close() {} });
   // Home's appointment details sheet picks its side from the screen width.
@@ -58,7 +57,7 @@ async function setup({ activation = {}, capabilities, complete = [], firstRealCo
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   clients.push(client);
   client.setQueryData(["dashboard"], summary(firstRealConversationAt));
-  client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Clinic", slug: "clinic", role, active: true, onboardingGoal: goal, ...(capabilities ? { capabilities } : {}) }] });
+  client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Clinic", slug: "clinic", role, active: true, ...(capabilities ? { capabilities } : {}) }] });
   render(<I18nextProvider i18n={i18n}><QueryClientProvider client={client}><BusinessCapabilitiesProvider initial={ALL_CAPABILITIES}><UpgradePlanDialogProvider onOpen={vi.fn()}><LiveOverviewSurface /></UpgradePlanDialogProvider></BusinessCapabilitiesProvider></QueryClientProvider></I18nextProvider>);
   return { client, fetchMock };
 }
@@ -145,8 +144,8 @@ describe("people who can't act on the steps", () => {
 });
 
 describe("steps", () => {
-  it.each(goals)("keeps the test call after sources for the goal %s", async (goal) => {
-    await setup({ goal });
+  it("keeps the test call after sources", async () => {
+    await setup();
     await list();
     const titles = screen.getAllByRole("button").map((button) => button.textContent ?? "");
     const positions = order.map((id) => titles.findIndex((title) => title.includes(copy.steps[id])));
@@ -154,11 +153,11 @@ describe("steps", () => {
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
   });
 
-  it.each(goals)("words the steps for the goal %s", async (goal) => {
-    await setup({ goal, complete: ["fullScan"] });
-    expect(await screen.findByText(copy.stepDescriptions.sources[goal ?? "none"])).toBeTruthy();
+  it("words the steps the same for every owner", async () => {
+    await setup({ complete: ["fullScan"] });
+    expect(await screen.findByText(copy.stepDescriptions.sources)).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: new RegExp(copy.steps.testCall) }));
-    expect(await screen.findByText(copy.stepDescriptions.testCall[goal ?? "none"])).toBeTruthy();
+    expect(await screen.findByText(copy.stepDescriptions.testCall)).toBeTruthy();
   });
 
   it("opens the first step still needing setup", async () => {
@@ -172,7 +171,7 @@ describe("steps", () => {
     await screen.findByRole("button", { name: copy.stepActions.sources });
     await userEvent.click(screen.getByRole("button", { name: copy.skipStep }));
     await waitFor(() => expect(skipRequests(fetchMock)).toEqual(["sources"]));
-    expect(await screen.findByText(copy.stepDescriptions.testCall.none)).toBeTruthy();
+    expect(await screen.findByText(copy.stepDescriptions.testCall)).toBeTruthy();
   });
 
   it.each(["complete", "skipped"])("keeps a %s step shut", async (status) => {

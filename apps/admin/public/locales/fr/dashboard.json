@@ -295,21 +295,9 @@
     },
     "stepDescriptions": {
       "fullScan": "Votre agent a lu un échantillon de votre site.",
-      "sources": {
-        "answer_calls": "Téléversez les politiques, FAQ et tarifs utiles à vos appelants.",
-        "book_appointments": "Téléversez vos services, tarifs et règles de réservation.",
-        "answer_website_visitors": "Téléversez les FAQ et politiques utiles aux visiteurs de votre site.",
-        "answer_instagram_messages": "Téléversez les FAQ et tarifs qu'on vous demande sur Instagram.",
-        "none": "Téléversez vos politiques, FAQ ou tarifs."
-      },
+      "sources": "Téléversez vos politiques, FAQ ou tarifs.",
       "hours": "Votre agent réserve des rendez-vous seulement pendant ces heures.",
-      "testCall": {
-        "answer_calls": "Posez la question que vos appelants posent le plus.",
-        "book_appointments": "Demandez-lui de prendre un rendez-vous.",
-        "answer_website_visitors": "Posez les questions qu'on vous pose sur votre site.",
-        "answer_instagram_messages": "Posez les questions qu'on vous pose sur Instagram.",
-        "none": "Posez la question que vos clients posent le plus."
-      },
+      "testCall": "Posez la question que vos appelants posent le plus.",
       "phoneNumber": "Donnez à votre agent son propre numéro pour répondre à vos vrais clients.",
       "phoneNumberTrial": "Répondez à vos appels manqués gratuitement pendant 14 jours, sans carte."
     },

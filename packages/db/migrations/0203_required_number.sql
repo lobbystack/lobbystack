@@ -7,3 +7,10 @@ UPDATE public.businesses
   SET onboarding_stage = 'phone_number', updated_at = now()
   WHERE partner_id IS NULL
     AND onboarding_stage IN ('verify_phone', 'plan', 'verify_phone_code', 'knowledge', 'greeting', 'test_call');
+
+-- The goal question left onboarding too: a business on it goes on to the
+-- attribution question. onboarding_goal and its check constraint stay for the
+-- answers owners gave, which the welcome email reads; nothing writes them now.
+UPDATE public.businesses
+  SET onboarding_stage = 'attribution', updated_at = now()
+  WHERE onboarding_stage = 'goal';

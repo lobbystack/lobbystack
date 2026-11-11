@@ -42,8 +42,8 @@ export function OnboardingPlanSurface() {
     refetchInterval: (query) => query.state.data?.status === "ready" || query.state.data?.status === "error" ? false : 1_500,
   });
   const selectFree = useMutation({
-    mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: "goal" }) }),
-    onSuccess: () => navigate("/onboarding/goal"),
+    mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: "attribution" }) }),
+    onSuccess: () => navigate("/onboarding/attribution"),
     meta: { inlineError: true },
   });
   const startCheckout = useMutation({

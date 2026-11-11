@@ -130,8 +130,6 @@ async function completeOnboardingBySkippingOptionalInputs(page: Page): Promise<v
   // This run sells no numbers, so leave the step the way an owner in a country without numbers does.
   await page.getByRole("button", { name: "My country isn't listed" }).click();
   await page.getByRole("button", { name: "Continue without a number" }).click();
-  await expect(page).toHaveURL("/onboarding/goal");
-  await page.getByRole("button", { name: "Skip", exact: true }).click();
   await expect(page).toHaveURL("/onboarding/attribution");
   await page.getByRole("button", { name: "Skip", exact: true }).click();
   await expect(page).toHaveURL("/onboarding/meet");

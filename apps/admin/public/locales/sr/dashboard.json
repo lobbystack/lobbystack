@@ -295,21 +295,9 @@
     },
     "stepDescriptions": {
       "fullScan": "Agent je pročitao deo Vašeg sajta.",
-      "sources": {
-        "answer_calls": "Otpremite pravila, česta pitanja i cene o kojima pozivaoci pitaju.",
-        "book_appointments": "Otpremite usluge, cene i pravila zakazivanja.",
-        "answer_website_visitors": "Otpremite česta pitanja i pravila o kojima pitaju posetioci sajta.",
-        "answer_instagram_messages": "Otpremite česta pitanja i cene o kojima Vas pitaju na Instagramu.",
-        "none": "Otpremite pravila, česta pitanja ili cene."
-      },
+      "sources": "Otpremite pravila, česta pitanja ili cene.",
       "hours": "Agent zakazuje termine samo u ovom radnom vremenu.",
-      "testCall": {
-        "answer_calls": "Pitajte ono što Vas klijenti najčešće pitaju.",
-        "book_appointments": "Zamolite ga da zakaže termin.",
-        "answer_website_visitors": "Pitajte ono što ljudi pitaju na Vašem sajtu.",
-        "answer_instagram_messages": "Pitajte ono što ljudi pitaju na Instagramu.",
-        "none": "Pitajte ono što Vas klijenti najčešće pitaju."
-      },
+      "testCall": "Pitajte ono što Vas klijenti najčešće pitaju.",
       "phoneNumber": "Dodelite agentu sopstveni broj da bi odgovarao pravim pozivaocima.",
       "phoneNumberTrial": "Odgovarajte na propuštene pozive besplatno 14 dana, bez kartice."
     },

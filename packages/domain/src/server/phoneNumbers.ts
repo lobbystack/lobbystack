@@ -9,7 +9,7 @@ import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
 import { loadEntitlement } from "./entitlement";
 import { activateNumberTrialInTransaction, enqueueNumberRouting, failNumberTrialInTransaction, isNumberCountry, keepBusinessNumbersInTransaction, trialCountries, trialEmailInTransaction, directTrialNetworkRefusalInTransaction, trialNumberPaidForInTransaction, verifiedPhone, type NumberCountry } from "./numberTrials";
-import { LEGACY_ONBOARDING_STAGES } from "@lobbystack/shared";
+import { LEGACY_PHONE_STAGES } from "@lobbystack/shared";
 import { normalizeOnboardingStage, NUMBER_CLAIM_STAGES } from "./onboarding";
 import { loadPartnerNumberStanding, newPartnerNumberRefusal, numberCountsForPartnerInTransaction, partnerKeyNumberRefusal, partnerReplacementRefusal, partnerTrialOffered, recordPartnerNumberCostInTransaction, unclaimedPartnerDemoInTransaction } from "./partnerNumbers";
 import { resolveBusinessNumberMarket, type BusinessNumberMarket } from "./phoneNumberMarket";
@@ -270,7 +270,7 @@ export async function reserveOnboardingNumberClaim(context: DomainContext, input
     }
     // The claim function checks the stored stage. A direct business old code
     // left on the phone step goes on to the number first.
-    await tx.update(businesses).set({ onboardingStage: "phone_number", updatedAt: new Date() }).where(and(eq(businesses.id, input.businessId), isNull(businesses.partnerId), inArray(businesses.onboardingStage, ["verify_phone", ...LEGACY_ONBOARDING_STAGES])));
+    await tx.update(businesses).set({ onboardingStage: "phone_number", updatedAt: new Date() }).where(and(eq(businesses.id, input.businessId), isNull(businesses.partnerId), inArray(businesses.onboardingStage, ["verify_phone", ...LEGACY_PHONE_STAGES])));
     const result = offer.selection.trial
       ? await tx.execute(sql`SELECT app.reserve_trial_number_claim(${input.businessId}::uuid, ${input.userId}::uuid, ${offer.e164}, ${selection}::jsonb, ${tokenHash}, ${input.idempotencyKey}, ${ipHash}) AS id`)
       : await tx.execute(sql`SELECT app.reserve_onboarding_number_claim(${input.businessId}::uuid, ${input.userId}::uuid, ${offer.e164}, ${selection}::jsonb, ${tokenHash}, ${input.idempotencyKey}) AS id`);
@@ -446,8 +446,8 @@ export async function completeNumberProvisioning(context: DomainContext, input: 
       const business = await tx.update(businesses).set({ phoneNumberReplacementReservedAt: null, phoneNumberReplacementUsedAt: new Date(), updatedAt: new Date() }).where(and(eq(businesses.id, input.businessId), isNull(businesses.phoneNumberReplacementUsedAt), sql`${businesses.phoneNumberReplacementReservedAt} = (SELECT reserved_at FROM onboarding_number_claim_events WHERE id = ${input.claimId}::uuid)`)).returning({ id: businesses.id });
       if (!retired.length || !business.length) throw new Error("Number replacement entitlement is no longer valid.");
     } else {
-      // A direct business answers the goal question next. A partner's business has no attribution step, and a key can buy its number while it waits for its owner, so it stays on the step it's on.
-      await tx.update(businesses).set({ onboardingStage: sql`CASE WHEN ${businesses.onboardingStage} IN ('attribution', 'meet', 'complete') OR (${businesses.partnerId} IS NOT NULL AND ${businesses.onboardingStage} NOT IN ('phone_number', 'phone_number_claiming')) THEN ${businesses.onboardingStage} WHEN ${businesses.partnerId} IS NULL THEN 'goal' ELSE 'meet' END`, updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
+      // A direct business answers the attribution question next. A partner's business has no attribution step, and a key can buy its number while it waits for its owner, so it stays on the step it's on.
+      await tx.update(businesses).set({ onboardingStage: sql`CASE WHEN ${businesses.onboardingStage} IN ('attribution', 'meet', 'complete') OR (${businesses.partnerId} IS NOT NULL AND ${businesses.onboardingStage} NOT IN ('phone_number', 'phone_number_claiming')) THEN ${businesses.onboardingStage} WHEN ${businesses.partnerId} IS NULL THEN 'attribution' ELSE 'meet' END`, updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
       const activated = await activateNumberTrialInTransaction(tx, { businessId: input.businessId, claimId: input.claimId, phoneNumberId: number.id });
       // The owner, or for a partner's trial the partner, may have paid while we bought the number: that payment found no trial to convert, so convert it now.
       if (activated && await trialNumberPaidForInTransaction(tx, input.businessId)) await keepBusinessNumbersInTransaction(tx, { businessId: input.businessId });
@@ -479,6 +479,6 @@ export async function failNumberProvisioning(context: DomainContext, input: { bu
 export async function skipOnboardingNumber(context: DomainContext, input: { userId: string; businessId: string; countryCode?: string | null }): Promise<void> {
   const countryCode = input.countryCode?.trim().toUpperCase() || null;
   if (countryCode && !/^[A-Z]{2}$/.test(countryCode)) throw numberClaimError(400, "country_invalid", "Pick a country.");
-  await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => { await requireBusinessAdmin(tx, input); const changed = await tx.update(businesses).set({ onboardingStage: "goal", updatedAt: new Date() }).where(and(eq(businesses.id, input.businessId), isNull(businesses.partnerId), inArray(businesses.onboardingStage, ["verify_phone", "phone_number", ...LEGACY_ONBOARDING_STAGES]))).returning({ id: businesses.id }); if (!changed.length) { const [business] = await tx.select({ stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, input.businessId)); if (!["goal", "attribution", "meet", "complete"].includes(business?.stage ?? "")) throw numberClaimError(409, "invalid_onboarding_stage", "Number selection cannot be skipped at this onboarding stage."); } });
+  await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => { await requireBusinessAdmin(tx, input); const changed = await tx.update(businesses).set({ onboardingStage: "attribution", updatedAt: new Date() }).where(and(eq(businesses.id, input.businessId), isNull(businesses.partnerId), inArray(businesses.onboardingStage, ["verify_phone", "phone_number", ...LEGACY_PHONE_STAGES]))).returning({ id: businesses.id }); if (!changed.length) { const [business] = await tx.select({ stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, input.businessId)); if (!["goal", "attribution", "meet", "complete"].includes(business?.stage ?? "")) throw numberClaimError(409, "invalid_onboarding_stage", "Number selection cannot be skipped at this onboarding stage."); } });
   console.info(JSON.stringify({ event: "onboarding.number_skipped", businessId: input.businessId, countryCode }));
 }

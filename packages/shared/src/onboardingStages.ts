@@ -1,4 +1,4 @@
-export const onboardingStages = ["create_business", "website", "language", "verify_phone", "phone_number", "phone_number_claiming", "goal", "attribution", "meet", "complete"] as const;
+export const onboardingStages = ["create_business", "website", "language", "verify_phone", "phone_number", "phone_number_claiming", "attribution", "meet", "complete"] as const;
 
 export type OnboardingStage = (typeof onboardingStages)[number];
 
@@ -12,7 +12,6 @@ const stageRoutes: Record<OnboardingStage, string> = {
   verify_phone: "/onboarding/verify-phone",
   phone_number: "/onboarding/number",
   phone_number_claiming: "/onboarding/number",
-  goal: "/onboarding/goal",
   attribution: "/onboarding/attribution",
   meet: "/onboarding/meet",
   complete: "/",
@@ -23,7 +22,7 @@ export const ONBOARDING_READING_ROUTE = "/onboarding/reading";
 
 // A direct owner picks a number right after the website. Only a partner's
 // owner verifies a mobile, because the partner's calls forward to it.
-const directSteps: readonly OnboardingStage[] = ["create_business", "website", "language", "phone_number", "goal", "attribution", "meet"];
+const directSteps: readonly OnboardingStage[] = ["create_business", "website", "language", "phone_number", "attribution", "meet"];
 const partnerSteps: readonly OnboardingStage[] = ["website", "language", "verify_phone", "meet"];
 const activitySteps: readonly OnboardingStage[] = ["verify_phone"];
 
@@ -31,7 +30,7 @@ const activitySteps: readonly OnboardingStage[] = ["verify_phone"];
  * The stages a business's owner goes through, in order. Without a business
  * yet, they're a direct owner's, who starts by creating one. A partner's
  * business skips what the partner or host does: creating it, its number, the
- * goal and attribution. At the activity level the partner sets the agent up,
+ * and attribution. At the activity level the partner sets the agent up,
  * so the phone is the owner's only step.
  */
 export function onboardingSteps(business: OnboardingBusiness | null): readonly OnboardingStage[] {
@@ -43,10 +42,14 @@ export function onboardingSteps(business: OnboardingBusiness | null): readonly O
 // next step that still exists: the plan, Documents, the greeting and the test
 // call all came before verifying a phone. Old code keeps writing some of these
 // until the release finishes, so this stays until no old admin can run.
-const legacyStages: Record<string, OnboardingStage> = { plan: "verify_phone", verify_phone_code: "verify_phone", knowledge: "verify_phone", greeting: "verify_phone", test_call: "verify_phone" };
+// The goal question left later: a workspace parked on it goes on to attribution.
+const legacyStages: Record<string, OnboardingStage> = { plan: "verify_phone", verify_phone_code: "verify_phone", knowledge: "verify_phone", greeting: "verify_phone", test_call: "verify_phone", goal: "attribution" };
 
 /** The stored stages this mapping covers, for writes that match the stored value. */
 export const LEGACY_ONBOARDING_STAGES: readonly string[] = Object.keys(legacyStages);
+
+/** The legacy stages that read as the phone step, which a direct business reads as the number step. */
+export const LEGACY_PHONE_STAGES: readonly string[] = LEGACY_ONBOARDING_STAGES.filter((stage) => legacyStages[stage] === "verify_phone");
 
 export function isOnboardingStage(value: unknown): value is OnboardingStage {
   return typeof value === "string" && Object.hasOwn(stageRoutes, value);
@@ -85,7 +88,7 @@ export function canVisitOnboardingStage(current: OnboardingStage, target: Onboar
  * The language question and the wait screen answer the website step, so they
  * share its dot, and both paths show the same count.
  */
-const DIRECT_DOTS = ["/onboarding/business", "/onboarding/website", "/onboarding/number", "/onboarding/goal", "/onboarding/attribution", "/onboarding/meet"] as const;
+const DIRECT_DOTS = ["/onboarding/business", "/onboarding/website", "/onboarding/number", "/onboarding/attribution", "/onboarding/meet"] as const;
 const PARTNER_DOTS = ["/onboarding/website", "/onboarding/verify-phone", "/onboarding/meet"] as const;
 
 /** The dots sign-up and every later direct step show. */
