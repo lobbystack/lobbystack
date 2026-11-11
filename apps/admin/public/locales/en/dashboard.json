@@ -20,11 +20,10 @@
   "home": {
     "title": "Home",
     "phone": {
-      "title": "Phone line",
-      "titleMany": "Phone lines",
       "status": {
-        "waiting": "Waiting for the first call",
-        "answering": "Answering calls"
+        "ready": "Ready for your first call",
+        "live": "Your agent is taking calls",
+        "liveMany": "Your agents are taking calls"
       },
       "answersFirst": {
         "agent": "Your agent answers first",
