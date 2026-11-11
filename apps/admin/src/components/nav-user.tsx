@@ -52,8 +52,8 @@ export type AccountMenuItem = {
 
 /**
  * The account menu's items in their groups, which the sidebar's dropdown and
- * the phone menu both show: an upgrade, the person's pages and links, a
- * partner's own links, then signing out.
+ * the phone menu both show: an upgrade, the person's pages, feedback and
+ * help, the theme with a partner's own links, then signing out.
  */
 export function useAccountMenuGroups({ onFeedback, onLeaveBusiness, onSignOut, onUpgradeToPro, showPartnerConsole = false, showUpgradeToPro = false }: Omit<NavUserProps, "user">): AccountMenuItem[][] {
   const { t } = useTranslation(["nav", "common"]);
@@ -68,11 +68,13 @@ export function useAccountMenuGroups({ onFeedback, onLeaveBusiness, onSignOut, o
   const own: AccountMenuItem[] = [
     { key: "account", label: t("sidebar.accountSettings"), icon: UserIcon, href: "/account" },
     ...(showPartnerConsole ? [{ key: "partner", label: t("sidebar.partnerConsole"), icon: Handshake, href: "/partner", ...(onLeaveBusiness ? { onSelect: onLeaveBusiness } : {}) }] : []),
+  ];
+  const help: AccountMenuItem[] = [
     ...(onFeedback ? [{ key: "feedback", label: t("common:feedback.trigger"), icon: MessageSquare, onSelect: onFeedback }] : []),
     ...(docsHref ? [{ key: "help", label: t("common:feedback.helpCenter"), icon: BookOpen, href: docsHref, external: true }] : []),
     ...(partner ? [] : [{ key: "affiliate", label: t("items.affiliate"), icon: Gift, href: "/affiliate" }]),
-    { key: "theme", label: t("sidebar.toggleTheme"), icon: Contrast, keepOpen: true, onSelect: () => setTheme(resolvedTheme === "dark" ? "light" : "dark") },
   ];
+  const theme: AccountMenuItem = { key: "theme", label: t("sidebar.toggleTheme"), icon: Contrast, keepOpen: true, onSelect: () => setTheme(resolvedTheme === "dark" ? "light" : "dark") };
   const partnerLinks: AccountMenuItem[] = partner
     ? [
         { key: "support", href: partner.links.support, label: t("sidebar.support"), icon: LifeBuoy },
@@ -80,7 +82,8 @@ export function useAccountMenuGroups({ onFeedback, onLeaveBusiness, onSignOut, o
         { key: "privacy", href: partner.links.privacy, label: t("sidebar.privacy"), icon: ShieldCheck },
       ].filter((link): link is typeof link & { href: string } => Boolean(link.href)).map((link) => ({ ...link, external: !link.href.startsWith("mailto:") }))
     : [];
-  return [upgrade, own, partnerLinks, [{ key: "signOut", label: t("sidebar.signOut"), icon: LogOut, onSelect: onSignOut }]].filter((group) => group.length > 0);
+  // Empty groups drop out, so the menu never shows two lines in a row or a line at an edge.
+  return [upgrade, own, help, [theme, ...partnerLinks], [{ key: "signOut", label: t("sidebar.signOut"), icon: LogOut, onSelect: onSignOut }]].filter((group) => group.length > 0);
 }
 
 /** How an item's link opens: a new tab for an outside page, or the app's router. The row it renders fills the anchor. */
@@ -129,7 +132,8 @@ export function NavUser({ user, ...props }: NavUserProps) {
             <div className="truncate px-3 py-2 type-body-muted" title={user.email}>{user.email}</div>
             {groups.map((group, index) => (
               <Fragment key={group[0]!.key}>
-                {index > 0 ? <DropdownMenuSeparator /> : null}
+                {/* Drawn like the sidebar's group lines: its border color, inset to the items' text. */}
+                {index > 0 ? <DropdownMenuSeparator className="mx-3 bg-sidebar-border" data-account-separator="" /> : null}
                 <DropdownMenuGroup>
                   {group.map((item) => {
                     const link = accountItemLink(item);

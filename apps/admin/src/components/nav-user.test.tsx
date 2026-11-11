@@ -12,10 +12,14 @@ vi.mock("./theme-provider", () => ({ useTheme: () => theme }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 beforeEach(() => { window.innerWidth = 1440; theme.resolvedTheme = "light"; vi.stubGlobal("matchMedia", vi.fn(query => ({ matches: false, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() }))); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
-async function setup(upgrade = false, partnerConsole = false, partner?: PartnerBranding) {
+/** The menu's items in order, with "—" for each line between groups. */
+function menuOutline() {
+  return [...screen.getByRole("menu").querySelectorAll("[role=menuitem], [data-account-separator]")].map((element) => element.hasAttribute("data-account-separator") ? "—" : element.textContent);
+}
+async function setup(upgrade = false, partnerConsole = false, partner?: PartnerBranding, feedback = true) {
   const onUpgrade = vi.fn(); const onSignOut = vi.fn(); const onFeedback = vi.fn();
   // react-i18next is mocked above, so the provider gets an instance with no interpolation to set.
-  render(<BrandingProvider i18n={{ options: {} } as unknown as I18nextInstance} initial={{ appName: partner ? "Bright Desk" : "LobbyStack", logoUrl: null, final: true, ...(partner ? { partner } : {}) }}><SidebarProvider><NavUser user={{ email: "operator@example.invalid", name: "Operator" }} onFeedback={onFeedback} onSignOut={onSignOut} showPartnerConsole={partnerConsole} showUpgradeToPro={upgrade} onUpgradeToPro={onUpgrade} /></SidebarProvider></BrandingProvider>);
+  render(<BrandingProvider i18n={{ options: {} } as unknown as I18nextInstance} initial={{ appName: partner ? "Bright Desk" : "LobbyStack", logoUrl: null, final: true, ...(partner ? { partner } : {}) }}><SidebarProvider><NavUser user={{ email: "operator@example.invalid", name: "Operator" }} onFeedback={feedback ? onFeedback : undefined} onSignOut={onSignOut} showPartnerConsole={partnerConsole} showUpgradeToPro={upgrade} onUpgradeToPro={onUpgrade} /></SidebarProvider></BrandingProvider>);
   await userEvent.click(screen.getByRole("button", { name: /operator@example.invalid/ }));
   await screen.findByRole("menu");
   return { onFeedback, onUpgrade, onSignOut };
@@ -86,6 +90,18 @@ describe("help in the account menu", () => {
     expect(screen.getByRole("menuitem", { name: "items.affiliate" }).getAttribute("href")).toBe("/affiliate");
     await userEvent.click(screen.getByRole("menuitem", { name: "common:feedback.trigger" }));
     expect(onFeedback).toHaveBeenCalledOnce();
+  });
+  it("splits the menu into the account, help, theme and sign-out groups, with a line between each", async () => {
+    await setup();
+    expect(menuOutline()).toEqual(["sidebar.accountSettings", "—", "common:feedback.trigger", "common:feedback.helpCenter", "items.affiliate", "—", "sidebar.toggleTheme", "—", "sidebar.signOut"]);
+    for (const line of screen.getByRole("menu").querySelectorAll("[data-account-separator]")) expect(line.className).toContain("bg-sidebar-border");
+  });
+  it("keeps a partner's links with the theme, and never draws two lines in a row when a group is empty", async () => {
+    await setup(false, false, { faviconUrl: null, color: null, links: { support: "mailto:help@bright.example.test", terms: "https://bright.example.test/terms", privacy: null } });
+    expect(menuOutline()).toEqual(["sidebar.accountSettings", "—", "common:feedback.trigger", "—", "sidebar.toggleTheme", "sidebar.support", "sidebar.terms", "—", "sidebar.signOut"]);
+    cleanup();
+    await setup(false, false, { faviconUrl: null, color: null, links: { support: null, terms: null, privacy: null } }, false);
+    expect(menuOutline()).toEqual(["sidebar.accountSettings", "—", "sidebar.toggleTheme", "—", "sidebar.signOut"]);
   });
   it("offers a partner's businesses feedback without the host's docs or marketing", async () => {
     await setup(false, false, { faviconUrl: null, color: null, links: { support: null, terms: null, privacy: null } });

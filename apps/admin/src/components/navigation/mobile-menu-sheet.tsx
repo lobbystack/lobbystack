@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode, type RefObject } from "react";
+import { Fragment, useState, type ReactNode, type RefObject } from "react";
 import { ChevronRight, ExternalLink, LayoutList, SearchIcon, XIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -144,9 +144,13 @@ function AccountSection({ closeThen, onFeedback, partnerConsole, user }: { close
         <span className="min-w-0 truncate" title={user.email}>{user.email}</span>
       </SidebarGroupLabel>
       {groups.map((group, index) => (
-        <SidebarMenu className={index > 0 ? "mt-2 border-t border-sidebar-border pt-2" : undefined} key={group[0]!.key}>
-          {group.map((item) => <AccountRow closeThen={closeThen} item={item} key={item.key} />)}
-        </SidebarMenu>
+        <Fragment key={group[0]!.key}>
+          {/* The group's padding plus this inset lines it up with the sheet's other group lines. */}
+          {index > 0 ? <Separator className="mx-3 my-2 w-auto! bg-sidebar-border" data-account-separator="" /> : null}
+          <SidebarMenu>
+            {group.map((item) => <AccountRow closeThen={closeThen} item={item} key={item.key} />)}
+          </SidebarMenu>
+        </Fragment>
       ))}
     </SidebarGroup>
   );

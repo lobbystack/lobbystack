@@ -45,6 +45,9 @@ describe("the phone menu sheet", () => {
     expect(within(account).getByRole("link", { name: "sidebar.accountSettings" }).getAttribute("href")).toBe("/account");
     expect(within(account).getByRole("link", { name: "items.affiliate" }).getAttribute("href")).toBe("/affiliate");
     for (const name of ["feedback.trigger", "sidebar.toggleTheme", "sidebar.signOut"]) expect(within(account).getByRole("button", { name })).toBeTruthy();
+    // The same groups as the sidebar's account menu, with a line between each.
+    const outline = [...account.querySelectorAll("[data-sidebar=menu-button], [data-account-separator]")].map((element) => element.hasAttribute("data-account-separator") ? "—" : element.textContent);
+    expect(outline).toEqual(["sidebar.accountSettings", "—", "feedback.trigger", "feedback.helpCenter", "items.affiliate", "—", "sidebar.toggleTheme", "—", "sidebar.signOut"]);
   });
 
   it("drills into Settings and Business with a back row, as the sidebar does", async () => {
