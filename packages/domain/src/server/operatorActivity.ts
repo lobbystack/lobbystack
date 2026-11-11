@@ -23,7 +23,7 @@ export async function listPhoneLines(tx: DatabaseTransaction, businessId: string
   const rows = await tx.select({ e164: phoneNumbers.e164, agentId: agents.id, agentName: agents.name, staffFirstMode: agents.staffFirstMode })
     .from(phoneNumbers)
     .innerJoin(agents, agentOfRow(phoneNumbers.businessId, phoneNumbers.agentId))
-    .where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), eq(phoneNumbers.voiceEnabled, true), isNull(phoneNumbers.reclaimScheduledAt), isNull(agents.archivedAt)))
+    .where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), eq(phoneNumbers.voiceEnabled, true), isNull(phoneNumbers.reclaimScheduledAt)))
     .orderBy(asc(phoneNumbers.createdAt), asc(phoneNumbers.id));
   return rows.map((row) => ({ ...row, staffFirstMode: normalizeStaffFirstMode(row.staffFirstMode) }));
 }
