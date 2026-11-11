@@ -35,6 +35,18 @@ async function openSwitcher(branding: BrandingSnapshot) {
   await screen.findByRole("menu");
 }
 
+it("ends a long partner name in the switcher with an ellipsis instead of cutting it off", () => {
+  render(
+    <BrandingProvider i18n={{ options: {} } as unknown as I18nextInstance} initial={{ appName: "LobbyStack", logoUrl: null, final: true }}>
+      <PartnerShell partner={bright} partners={[bright]} sidebarOpen user={{ email: "owner@example.test" }}><div /></PartnerShell>
+    </BrandingProvider>,
+  );
+  // A flex title ignores text-overflow, so the name only ends in an ellipsis as a block.
+  const classes = screen.getByRole("button", { name: "shell.switchPartner" }).querySelector("[data-slot='item-title']")!.className.split(/\s+/);
+  expect(classes).toEqual(expect.arrayContaining(["block", "truncate"]));
+  expect(classes).not.toContain("flex");
+});
+
 it("masks partner names in the switcher for session replay", async () => {
   await openSwitcher({ appName: "LobbyStack", logoUrl: null, final: true });
   expect(screen.getByRole("menuitem", { name: /Bright Desk/ }).querySelector("span.truncate")?.className).toContain("ph-mask");
