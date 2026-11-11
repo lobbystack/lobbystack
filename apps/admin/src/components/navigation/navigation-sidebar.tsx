@@ -1,10 +1,11 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { WorkspaceSwitcher } from "@/components/layout/workspace-switcher";
+import { Separator } from "@/components/ui/separator";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail } from "@/components/ui/sidebar";
 import { useAgents } from "@/hooks/use-agents";
 import { agentHref, agentPageOf } from "@/lib/agent-pages";
@@ -64,7 +65,16 @@ function WorkspaceMenu({ onDrillIn, section }: { onDrillIn: () => void; section:
     }) }
     : { ...links.agents, keepOpen: true, trailing: trailing(sectionAgent ? section : "root"), ...(sectionAgent ? drill(section) : {}) };
   const sectionLink = (link: NavLink, level: MenuLevel): NavLink => ({ ...link, keepOpen: true, isActive: () => section === level, trailing: trailing(level), ...drill(level) });
-  return <NavGroup items={allowed([links.home, links.inbox, links.appointments, links.contacts, links.analytics, agentsLink, sectionLink(links.business, "business"), sectionLink(links.settings, "settings")])} />;
+  // Three groups with a line between them: the conversations, the records, then the sections that open their own menus.
+  const groups = [
+    allowed([links.home, links.inbox]),
+    allowed([links.appointments, links.contacts, links.analytics]),
+    allowed([agentsLink, sectionLink(links.business, "business"), sectionLink(links.settings, "settings")]),
+  ].filter((items) => items.length > 0);
+  return groups.map((items, index) => <Fragment key={items[0]!.href}>
+    {index > 0 ? <Separator className="mx-5 w-auto! bg-sidebar-border group-data-[collapsible=icon]:mx-3" data-sidebar="separator" /> : null}
+    <NavGroup items={items} />
+  </Fragment>);
 }
 
 /**

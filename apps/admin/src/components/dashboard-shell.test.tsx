@@ -49,6 +49,19 @@ describe("the workspace menu", () => {
     expect(document.getElementById("dashboard-main-content")?.tabIndex).toBe(-1);
   });
 
+  it("splits the menu into three groups with a line between each", () => {
+    setup();
+    const groups = [...menu().querySelectorAll('[data-sidebar="group"]')].map((group) => [...group.querySelectorAll("a")].map((link) => link.getAttribute("href")));
+    expect(groups).toEqual([["/", "/inbox"], ["/appointments", "/contacts", "/analytics"], ["/agents/agent-1", "/business", "/workspace/team"]]);
+    expect(menu().querySelectorAll('[data-sidebar="separator"]').length).toBe(2);
+  });
+
+  it("leaves out a group the business hides, without a second line", () => {
+    setup({ capabilities: ["activity"], agents: [] });
+    expect(menu().querySelectorAll('[data-sidebar="group"]').length).toBe(3);
+    expect(menu().querySelectorAll('[data-sidebar="separator"]').length).toBe(2);
+  });
+
   it("lists each agent under Agents once there are several", () => {
     setup({ agents: [FRONT, EVENING] });
     const agents = within(menu() as HTMLElement).getAllByRole("link").map(link => [link.textContent, link.getAttribute("href")]);
