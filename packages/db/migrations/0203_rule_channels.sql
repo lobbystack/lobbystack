@@ -1,3 +1,13 @@
+-- The copy below reads every business's agents and writes their rules. RLS forces on these tables, so a
+-- role that doesn't bypass it would see no rows and change nothing, silently.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = current_user AND (rolsuper OR rolbypassrls)) THEN
+    RAISE EXCEPTION 'Migration 0203 needs a role that bypasses row-level security, and % does not.', current_user;
+  END IF;
+END
+$$;
+
 -- A rule can be kept to one channel: voice (phone and browser calls), sms,
 -- web_chat or instagram. Null, as every rule has had, means every channel.
 ALTER TABLE public.agent_rules ADD COLUMN IF NOT EXISTS channel varchar(16);

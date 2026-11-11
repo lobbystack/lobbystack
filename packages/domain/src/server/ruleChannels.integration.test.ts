@@ -100,6 +100,21 @@ describe.skipIf(!testUrl)("migration 0203 on sample rows", () => {
   });
 });
 
+describe.skipIf(!testUrl)("migrations that change every business's rows", () => {
+  it("refuse to run as a role that row-level security would hide those rows from", async () => {
+    await rollbackTest(async (tx) => {
+      for (const file of ["0203_rule_channels.sql", "0207_required_number.sql"]) {
+        const contents = readFileSync(new URL(`../../../db/migrations/${file}`, import.meta.url), "utf8");
+        // A savepoint keeps the refusal from aborting the test's transaction.
+        await expect(tx.transaction(async (inner) => {
+          await inner.execute(sql`set local role lobbystack_app`);
+          await inner.execute(sql.raw(contents));
+        })).rejects.toThrow(/needs a role that bypasses row-level security/);
+      }
+    });
+  });
+});
+
 describe.skipIf(!testUrl)("instructions the previous admin saves after the migration", () => {
   it("land on the agent's channel rules, as the deprecated API fields write them", async () => {
     await rollbackTest(async (tx) => {

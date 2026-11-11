@@ -1,3 +1,13 @@
+-- The updates below move every business's onboarding stage. RLS forces on these tables, so a
+-- role that doesn't bypass it would see no rows and change nothing, silently.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = current_user AND (rolsuper OR rolbypassrls)) THEN
+    RAISE EXCEPTION 'Migration 0207 needs a role that bypasses row-level security, and % does not.', current_user;
+  END IF;
+END
+$$;
+
 -- Getting started's forwarding step finishes on its own when we see the first
 -- call forwarded to a number: a Diversion or History-Info SIP header, or
 -- Twilio's ForwardedFrom, naming a line other than ours. The number keeps the
