@@ -536,3 +536,56 @@
     oklch(1 0 0 / 0%) 40%
   );
 }
+
+/*
+ * The soft gradient behind a page intro card's picture: two pastel glows over the muted surface, one pair per tone.
+ * Dark mode keeps the hues and drops the lightness, so the picture's page stands out the same way on both.
+ */
+:root {
+  --page-intro-blue-a: oklch(0.9 0.06 255);
+  --page-intro-blue-b: oklch(0.93 0.06 195);
+  --page-intro-green-a: oklch(0.92 0.07 160);
+  --page-intro-green-b: oklch(0.94 0.06 115);
+  --page-intro-amber-a: oklch(0.93 0.07 80);
+  --page-intro-amber-b: oklch(0.91 0.06 35);
+  --page-intro-rose-a: oklch(0.91 0.06 350);
+  --page-intro-rose-b: oklch(0.9 0.06 290);
+}
+
+.dark {
+  --page-intro-blue-a: oklch(0.32 0.08 255);
+  --page-intro-blue-b: oklch(0.3 0.06 195);
+  --page-intro-green-a: oklch(0.31 0.07 160);
+  --page-intro-green-b: oklch(0.3 0.06 115);
+  --page-intro-amber-a: oklch(0.32 0.07 80);
+  --page-intro-amber-b: oklch(0.3 0.07 35);
+  --page-intro-rose-a: oklch(0.31 0.07 350);
+  --page-intro-rose-b: oklch(0.3 0.07 290);
+}
+
+.page-intro-scene {
+  background-color: var(--muted);
+  background-image:
+    radial-gradient(90% 140% at 0% 0%, var(--page-intro-a) 0%, transparent 70%),
+    radial-gradient(90% 140% at 100% 100%, var(--page-intro-b) 0%, transparent 70%);
+}
+
+.page-intro-scene[data-tone="blue"] {
+  --page-intro-a: var(--page-intro-blue-a);
+  --page-intro-b: var(--page-intro-blue-b);
+}
+
+.page-intro-scene[data-tone="green"] {
+  --page-intro-a: var(--page-intro-green-a);
+  --page-intro-b: var(--page-intro-green-b);
+}
+
+.page-intro-scene[data-tone="amber"] {
+  --page-intro-a: var(--page-intro-amber-a);
+  --page-intro-b: var(--page-intro-amber-b);
+}
+
+.page-intro-scene[data-tone="rose"] {
+  --page-intro-a: var(--page-intro-rose-a);
+  --page-intro-b: var(--page-intro-rose-b);
+}

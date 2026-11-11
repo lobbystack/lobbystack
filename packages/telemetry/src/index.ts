@@ -30,6 +30,8 @@ export const WEB_EVENT_NAMES = [
   "web.page.agent_viewed",
   "web.page.workspace_viewed",
   "web.page.account_viewed",
+  "web.page.intro_shown",
+  "web.page.intro_dismissed",
   "web.contacts.contact_opened",
   "web.messages.thread_opened",
   "web.messages.reply_sent",
@@ -281,6 +283,10 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.page.agent_viewed": ["businessId", "deploymentMode", "pathname"],
   "web.page.workspace_viewed": ["businessId", "deploymentMode", "pathname"],
   "web.page.account_viewed": ["businessId", "deploymentMode", "pathname"],
+  // pageId: the page whose first-visit intro card opened, such as inbox or knowledge.
+  "web.page.intro_shown": ["businessId", "deploymentMode", "pageId"],
+  // method: how the card closed: get_started, guide, close (the X), escape or outside.
+  "web.page.intro_dismissed": ["businessId", "deploymentMode", "pageId", "method"],
   "web.contacts.contact_opened": ["businessId", "deploymentMode", "contactId"],
   "web.messages.thread_opened": [
     "businessId",

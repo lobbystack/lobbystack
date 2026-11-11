@@ -1,0 +1,163 @@
+{
+  "actions": {
+    "getStarted": "Commencer",
+    "readGuide": "Lire le guide"
+  },
+  "pages": {
+    "inbox": {
+      "title": "Vos appels, SMS et chats au même endroit",
+      "what": "Les conversations de votre agent arrivent ici en temps réel.",
+      "does": "Traitez les annulations, reports et rappels depuis la conversation.",
+      "how": "Filtrez par canal pour ne voir que les appels, les SMS ou les chats."
+    },
+    "appointments": {
+      "title": "Vos rendez-vous dans un seul calendrier",
+      "what": "Chaque rendez-vous que prend votre agent s'affiche ici.",
+      "does": "Cliquez sur une plage libre pour réserver vous-même.",
+      "how": "Ajoutez un congé pour bloquer les heures que votre agent ne doit pas réserver."
+    },
+    "agents": {
+      "title": "Réglez la façon dont chaque agent répond",
+      "what": "Chaque agent a son numéro, son accueil, sa voix, ses règles, ses réservations et ses transferts.",
+      "shared": "Tous vos agents partagent les informations de votre entreprise, vos services et vos connaissances.",
+      "does": "L'agent par défaut répond à tout ce que vous n'avez pas confié à un autre agent.",
+      "how": "Faites un changement, puis cliquez sur Appel test pour l'entendre."
+    },
+    "rules": {
+      "title": "Dites à votre agent quoi faire, et quand",
+      "what": "Une règle indique à votre agent quoi faire dans une situation donnée.",
+      "does": "Par exemple, quand un appelant parle d'une urgence, transférez-le vers vous.",
+      "how": "Limitez une règle à un seul canal, comme les appels."
+    },
+    "channels": {
+      "title": "Là où vos clients joignent cet agent",
+      "what": "Un canal, c'est un numéro de téléphone, le widget du site web ou Instagram.",
+      "does": "Cet agent répond sur chaque canal que vous connectez ici.",
+      "how": "Déplacez un canal vers un autre agent pour changer qui y répond."
+    },
+    "knowledge": {
+      "title": "Ce que votre agent sait de votre entreprise",
+      "what": "Votre agent répond à partir de votre site web, de vos fichiers et de vos FAQ.",
+      "does": "Consultez les questions sans réponse pour savoir quoi ajouter.",
+      "how": "Ajoutez une page web, un fichier ou une FAQ pour combler un manque."
+    },
+    "services": {
+      "title": "Les services que réserve votre agent",
+      "what": "Listez ce que vous offrez, avec une durée et un prix pour chacun.",
+      "does": "Votre agent annonce ces prix et réserve ces durées.",
+      "how": "Ajoutez un service, ou modifiez-en un pour changer son prix ou sa durée."
+    },
+    "employees": {
+      "title": "Les personnes que vos clients peuvent réserver",
+      "what": "Listez qui travaille ici et les services que fait chaque personne.",
+      "does": "Un appelant peut demander quelqu'un par son nom pour réserver avec cette personne.",
+      "how": "Ajoutez un numéro de téléphone pour que votre agent puisse lui transférer des appels."
+    },
+    "analytics": {
+      "title": "Voyez combien d'appels et de rendez-vous gère votre agent",
+      "what": "La première rangée montre les appels, les rendez-vous du jour et la durée moyenne des appels.",
+      "does": "Le graphique suit les appels et les messages dans le temps, par agent si vous en avez plusieurs.",
+      "how": "Choisissez des dates et un intervalle pour comparer deux périodes."
+    }
+  },
+  "sample": {
+    "inbox": {
+      "title": "Boîte de réception",
+      "all": "Tout",
+      "reschedule": "Report",
+      "callback": "Rappel",
+      "cancellation": "Annulation",
+      "first": "Veut déplacer sa visite de vendredi à lundi.",
+      "second": "Demande un rappel après 17 h.",
+      "third": "Demande si vous acceptez les clients sans rendez-vous.",
+      "fourth": "A annulé son rendez-vous de jeudi."
+    },
+    "appointments": {
+      "title": "Rendez-vous",
+      "newAppointment": "Nouveau rendez-vous",
+      "timeOff": "Congé"
+    },
+    "agents": {
+      "title": "Agents",
+      "add": "Ajouter un agent",
+      "defaultAgent": "Agent par défaut",
+      "default": "Par défaut",
+      "afterHours": "Agent hors heures",
+      "bookings": "Agent de réservation",
+      "everything": "Tout le reste",
+      "evenings": "Soirs et fins de semaine",
+      "website": "Chat du site web"
+    },
+    "rules": {
+      "title": "Règles",
+      "add": "Ajouter une règle",
+      "emergency": "Un appelant parle d'une urgence",
+      "emergencyAction": "Transférer l'appel au propriétaire",
+      "prices": "Quelqu'un demande les prix",
+      "pricesAction": "Donner le prix inscrit dans Services",
+      "afterHours": "Un chat arrive hors des heures d’ouverture",
+      "afterHoursAction": "Prendre un message pour l'équipe",
+      "allChannels": "Tous les canaux",
+      "calls": "Appels",
+      "webChat": "Clavardage du site web"
+    },
+    "channels": {
+      "title": "Canaux",
+      "phone": "Numéro de téléphone",
+      "widget": "Widget de site web",
+      "instagram": "Instagram",
+      "connected": "Connecté",
+      "notConnected": "Non connecté",
+      "move": "Déplacer",
+      "connect": "Connecter"
+    },
+    "knowledge": {
+      "title": "Connaissances",
+      "add": "Ajouter des connaissances",
+      "website": "Site web",
+      "files": "Fichiers",
+      "faqs": "FAQ",
+      "pages_one": "{{count}} page",
+      "pages_many": "{{count}} pages",
+      "pages_other": "{{count}} pages",
+      "priceList": "Liste de prix.pdf",
+      "questions_one": "{{count}} question",
+      "questions_many": "{{count}} questions",
+      "questions_other": "{{count}} questions",
+      "unanswered": "Questions sans réponse",
+      "giftCards": "Vendez-vous des cartes-cadeaux?",
+      "parking": "Y a-t-il du stationnement à proximité?"
+    },
+    "services": {
+      "title": "Services",
+      "add": "Ajouter un service",
+      "name": "Nom",
+      "duration": "Durée",
+      "price": "Prix",
+      "consultation": "Consultation",
+      "standardVisit": "Visite standard",
+      "followUp": "Visite de suivi",
+      "minutes": "{{value}} min",
+      "free": "Gratuit"
+    },
+    "employees": {
+      "title": "Employés",
+      "add": "Ajouter un employé",
+      "name": "Nom",
+      "services": "Services",
+      "status": "Statut",
+      "allServices": "Tous les services",
+      "working": "Au travail",
+      "onLeave": "En congé"
+    },
+    "analytics": {
+      "title": "Analytique",
+      "calls": "Appels",
+      "today": "Aujourd'hui",
+      "averageDuration": "Durée moyenne",
+      "chart": "Appels et messages",
+      "messages": "Messages",
+      "range": "30 derniers jours"
+    }
+  }
+}

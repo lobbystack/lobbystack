@@ -11,6 +11,7 @@ import enDashboard from "../../public/locales/en/dashboard.json";
 import enDemos from "../../public/locales/en/demos.json";
 import enEmployees from "../../public/locales/en/employees.json";
 import enInbox from "../../public/locales/en/inbox.json";
+import enIntros from "../../public/locales/en/intros.json";
 import enKnowledge from "../../public/locales/en/knowledge.json";
 import enMessages from "../../public/locales/en/messages.json";
 import enNav from "../../public/locales/en/nav.json";
@@ -29,6 +30,7 @@ import frDashboard from "../../public/locales/fr/dashboard.json";
 import frDemos from "../../public/locales/fr/demos.json";
 import frEmployees from "../../public/locales/fr/employees.json";
 import frInbox from "../../public/locales/fr/inbox.json";
+import frIntros from "../../public/locales/fr/intros.json";
 import frKnowledge from "../../public/locales/fr/knowledge.json";
 import frMessages from "../../public/locales/fr/messages.json";
 import frNav from "../../public/locales/fr/nav.json";
@@ -47,6 +49,7 @@ import esDashboard from "../../public/locales/es/dashboard.json";
 import esDemos from "../../public/locales/es/demos.json";
 import esEmployees from "../../public/locales/es/employees.json";
 import esInbox from "../../public/locales/es/inbox.json";
+import esIntros from "../../public/locales/es/intros.json";
 import esKnowledge from "../../public/locales/es/knowledge.json";
 import esMessages from "../../public/locales/es/messages.json";
 import esNav from "../../public/locales/es/nav.json";
@@ -65,6 +68,7 @@ import srDashboard from "../../public/locales/sr/dashboard.json";
 import srDemos from "../../public/locales/sr/demos.json";
 import srEmployees from "../../public/locales/sr/employees.json";
 import srInbox from "../../public/locales/sr/inbox.json";
+import srIntros from "../../public/locales/sr/intros.json";
 import srKnowledge from "../../public/locales/sr/knowledge.json";
 import srMessages from "../../public/locales/sr/messages.json";
 import srNav from "../../public/locales/sr/nav.json";
@@ -90,6 +94,7 @@ export const localeResources: Record<SupportedLocale, Record<string, Record<stri
     demos: enDemos,
     employees: enEmployees,
     inbox: enInbox,
+    intros: enIntros,
     knowledge: enKnowledge,
     messages: enMessages,
     nav: enNav,
@@ -110,6 +115,7 @@ export const localeResources: Record<SupportedLocale, Record<string, Record<stri
     demos: frDemos,
     employees: frEmployees,
     inbox: frInbox,
+    intros: frIntros,
     knowledge: frKnowledge,
     messages: frMessages,
     nav: frNav,
@@ -130,6 +136,7 @@ export const localeResources: Record<SupportedLocale, Record<string, Record<stri
     demos: esDemos,
     employees: esEmployees,
     inbox: esInbox,
+    intros: esIntros,
     knowledge: esKnowledge,
     messages: esMessages,
     nav: esNav,
@@ -150,6 +157,7 @@ export const localeResources: Record<SupportedLocale, Record<string, Record<stri
     demos: srDemos,
     employees: srEmployees,
     inbox: srInbox,
+    intros: srIntros,
     knowledge: srKnowledge,
     messages: srMessages,
     nav: srNav,

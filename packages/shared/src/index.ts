@@ -29,6 +29,7 @@ export * from "./partnerStripe";
 export * from "./selfHostedSupport";
 export * from "./setupPrompts";
 export * from "./businessSetup";
+export * from "./pageIntros";
 export { isCertificationMode, assertCertificationRecipient, assertCertificationOperationAllowed, assertCertificationCalendar, assertCertificationBillingSandbox } from "./certification";
 
 export type DeploymentMode = "cloud" | "self_hosted_standard" | "development";

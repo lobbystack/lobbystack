@@ -52,6 +52,9 @@ const adminEnv = {
   MARKETING_HOSTS: "lobbystack.localhost",
   // The widget settings journey creates a widget key, which stays off unless an operator opts in.
   WIDGET_KEY_ISSUANCE_ENABLED: "true",
+  // The first-visit intro cards open only for a browser with the opt-in
+  // cookie (e2e/fixtures/page-intros.ts), so other specs never wait behind one.
+  PAGE_INTROS_E2E_OPT_IN: "true",
   DATABASE_URL: roleDatabaseUrl(baseDatabaseUrl, "lobbystack_app", process.env.LOBBYSTACK_APP_PASSWORD ?? replacement.LOBBYSTACK_APP_PASSWORD ?? "app", process.env.LOBBYSTACK_APP_DATABASE_URL),
   LOBBYSTACK_APP_DATABASE_URL: roleDatabaseUrl(baseDatabaseUrl, "lobbystack_app", process.env.LOBBYSTACK_APP_PASSWORD ?? replacement.LOBBYSTACK_APP_PASSWORD ?? "app", process.env.LOBBYSTACK_APP_DATABASE_URL),
   LOBBYSTACK_AUTH_DATABASE_URL: roleDatabaseUrl(baseDatabaseUrl, "lobbystack_auth", process.env.LOBBYSTACK_AUTH_PASSWORD ?? replacement.LOBBYSTACK_AUTH_PASSWORD ?? "auth", process.env.LOBBYSTACK_AUTH_DATABASE_URL),

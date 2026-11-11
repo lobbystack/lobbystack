@@ -55,6 +55,7 @@ TESTS=(
   e2e/onboarding-pending.e2e.ts
   e2e/operator-actions.e2e.ts
   e2e/operator-auth.e2e.ts
+  e2e/page-intros.e2e.ts
   e2e/performance-startup.e2e.ts
   e2e/rule-channels.e2e.ts
   e2e/setup-prompts.e2e.ts
