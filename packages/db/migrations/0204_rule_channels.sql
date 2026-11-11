@@ -8,8 +8,10 @@ ALTER TABLE public.agent_rules
 -- Each agent's instructions become rules kept to their channel, after its
 -- other rules, titled in its business's default language. channelRuleTitle in
 -- @lobbystack/shared is the same list. Chat instructions answered website chat
--- and Instagram, so they become one rule for each. An agent that already has a
--- rule for a channel gets none for it, so running this twice adds nothing.
+-- and Instagram, so they become a website chat rule, and an Instagram rule too
+-- when the business has an Instagram account linked (a row in
+-- instagram_accounts, even one waiting to reconnect). An agent that already
+-- has a rule for a channel gets none for it, so running this twice adds nothing.
 -- The columns stay until a later release drops them; no code reads them now.
 -- Calls read rules from the snapshot, so each changed agent's refreshes.
 WITH titles (locale, voice, sms, web_chat, instagram) AS (
@@ -57,6 +59,9 @@ wanted AS (
   LEFT JOIN titles AS title ON title.locale = source.locale
   JOIN titles AS english ON english.locale = 'en'
   WHERE btrim(coalesce(item.content, '')) <> ''
+    AND (item.channel <> 'instagram' OR EXISTS (
+      SELECT 1 FROM public.instagram_accounts AS account WHERE account.business_id = source.business_id
+    ))
     AND NOT EXISTS (
       SELECT 1 FROM public.agent_rules AS rule
       WHERE rule.business_id = source.business_id AND rule.agent_id = source.agent_id AND rule.channel = item.channel

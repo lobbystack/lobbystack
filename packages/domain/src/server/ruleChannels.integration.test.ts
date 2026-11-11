@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
-import { agentRules, agents, businesses, createDatabaseClient, outboxMessages, type DatabaseTransaction } from "@lobbystack/db";
+import { agentRules, agents, businesses, createDatabaseClient, instagramAccounts, outboxMessages, type DatabaseTransaction } from "@lobbystack/db";
 
 import { saveReceptionistProfileInTransaction } from "./receptionistProfile";
 
@@ -47,6 +47,7 @@ const rulesOf = async (tx: DatabaseTransaction, agentId: string) => await tx
 
 describe.skipIf(!testUrl)("migration 0204 on sample rows", () => {
   it("turns each agent's instructions into rules for their channel, titled in its business's language, and refreshes its snapshot", async () => {
+    // The French business has Instagram linked, so its chat instructions also become an Instagram rule. The others have none.
     await rollbackTest(async (tx) => {
       const french = await business(tx, "fr");
       const filipino = await business(tx, "fil-PH");
@@ -55,6 +56,8 @@ describe.skipIf(!testUrl)("migration 0204 on sample rows", () => {
       const [blank] = await tx.insert(agents).values({ ...agentFields, businessId: french, name: "Vide", voiceInstructions: "   ", smsInstructions: null, chatInstructions: "" }).returning({ id: agents.id });
       const [tagalog] = await tx.insert(agents).values({ ...agentFields, businessId: filipino, isDefault: true, smsInstructions: "Text back soon." }).returning({ id: agents.id });
       const [fallback] = await tx.insert(agents).values({ ...agentFields, businessId: unknown, isDefault: true, voiceInstructions: "Speak slowly.", chatInstructions: "Be brief." }).returning({ id: agents.id });
+      // Linked after its agents exist, so the account's trigger finds the default agent.
+      await tx.insert(instagramAccounts).values({ businessId: french, instagramUserId: `ig-${french}`, encryptedAccessToken: "sealed", tokenExpiresAt: new Date(Date.now() + 86_400_000), status: "reconnect_required" });
       // An agent with a call rule already keeps it, and gets the others after its last rule.
       await tx.insert(agentRules).values([
         { businessId: unknown, agentId: fallback!.id, title: "Parking", content: "Rear lot", sortOrder: 4 },
@@ -77,7 +80,6 @@ describe.skipIf(!testUrl)("migration 0204 on sample rows", () => {
         { title: "Parking", content: "Rear lot", channel: null, active: true, sortOrder: 4 },
         { title: "Mine", content: "My call rule", channel: "voice", active: true, sortOrder: 5 },
         { title: "In website chat", content: "Be brief.", channel: "web_chat", active: true, sortOrder: 6 },
-        { title: "On Instagram", content: "Be brief.", channel: "instagram", active: true, sortOrder: 7 },
       ]);
       const refreshes = await tx.select({ aggregateId: outboxMessages.aggregateId, payload: outboxMessages.payload }).from(outboxMessages)
         .where(and(eq(outboxMessages.topic, "snapshot.refresh"), inArray(outboxMessages.businessId, [french, filipino, unknown])));
@@ -87,7 +89,7 @@ describe.skipIf(!testUrl)("migration 0204 on sample rows", () => {
       // A second run adds nothing.
       await tx.execute(sql.raw(migration));
       expect(await rulesOf(tx, full!.id)).toHaveLength(4);
-      expect(await rulesOf(tx, fallback!.id)).toHaveLength(4);
+      expect(await rulesOf(tx, fallback!.id)).toHaveLength(3);
       // A savepoint keeps the refused insert from aborting the test's transaction.
       await expect(tx.transaction(async (inner) => { await inner.execute(sql`insert into public.agent_rules (business_id, agent_id, title, content, channel) values (${french}::uuid, ${full!.id}::uuid, 'Bad', 'Bad', 'email')`); })).rejects.toThrow();
     });
