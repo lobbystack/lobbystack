@@ -163,7 +163,7 @@ export function LiveOverviewSurface() {
 
                             return (
                               // The whole row opens its item; the title's link stretches over it.
-                              <Item className={cn("relative rounded-md p-0", destination && "-mx-2 px-2 py-2 transition-colors hover:bg-muted has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-ring has-[a:focus-visible]:ring-offset-2 has-[a:focus-visible]:ring-offset-background")} size="sm" variant="default">
+                              <Item className={cn("relative -mx-2 w-[calc(100%+1rem)] rounded-md px-2 py-2", destination && "transition-colors hover:bg-muted has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-ring has-[a:focus-visible]:ring-offset-2 has-[a:focus-visible]:ring-offset-background")} size="sm" variant="default">
                                 <ItemContent className="min-w-0">
                                   <ItemHeader className="flex-col items-start gap-2 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start sm:gap-x-3 sm:gap-y-2">
                                     <div className="min-w-0 flex-1">
@@ -329,7 +329,7 @@ function ActionRequiredSkeleton() {
         <ItemGroup className="has-data-[size=sm]:gap-0">
           {Array.from({ length: 3 }).map((_, index) => (
             <div className="border-b py-4 first:pt-0 last:border-b-0 last:pb-0" key={index}>
-              <Item className="p-0" size="sm" variant="default">
+              <Item className="-mx-2 w-[calc(100%+1rem)] px-2 py-2" size="sm" variant="default">
                 <ItemContent className="min-w-0">
                   <div className="flex items-start justify-between gap-3">
                     <Skeleton className="h-4 w-3/5" />
