@@ -209,8 +209,11 @@ export async function advanceOnboardingStage(
     if (currentStage === "attribution" && to === "meet" && !current.attribution?.trim()) throw attributionRequired();
     // A direct cloud owner gets past the number with a number, or through the
     // country fallback, which skipOnboardingNumber checks. A self-hosted
-    // business keeps its skip.
-    if (!current.partnerId && current.deploymentMode === "cloud" && to === "attribution" && (currentStage === "phone_number" || currentStage === "verify_phone")) throw numberRequired();
+    // business keeps its skip. While a number is being bought, only its
+    // purchase moves on (completeNumberProvisioning), or its failure goes back
+    // to picking one (failNumberProvisioning): moving on first would let the
+    // purchase fail and leave the business past the step with no number.
+    if (!current.partnerId && current.deploymentMode === "cloud" && to === "attribution" && (currentStage === "phone_number" || currentStage === "verify_phone" || currentStage === "phone_number_claiming")) throw numberRequired();
     await advanceOnboardingStageInTransaction(tx, { ...input, to, from: currentStage, partnerId: current.partnerId, accessLevel: current.accessLevel });
     // Leaving Meet your agent sends the welcome email, with or without the plans after it.
     if (currentStage === "meet" && (to === "complete" || to === "choose_plan")) await scheduleWelcomeEmailInTransaction(tx, input.businessId, new Date());

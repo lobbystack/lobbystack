@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { agents, billingAccounts, businesses, calls, createDatabaseClient, defaultAgentOf, numberTrials, outboxMessages, transcripts, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, billingAccounts, businesses, calls, createDatabaseClient, defaultAgentOf, numberTrials, onboardingNumberClaimEvents, outboxMessages, transcripts, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { DASHBOARD_TEST_CALL_WIDGET_ID, defaultGreeting } from "@lobbystack/shared";
 import { advanceOnboardingStage, getActiveOnboardingState, submitOnboardingAttribution } from "./onboarding";
 import { HOST_BRAND_SCOPE } from "./businessAccess";
-import { skipOnboardingNumber } from "./phoneNumbers";
+import { failNumberProvisioning, skipOnboardingNumber } from "./phoneNumbers";
 import { applySiteLanguageInTransaction, createBusiness, updateBusinessInTransaction } from "./tenancy";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
@@ -85,6 +85,34 @@ describe.skipIf(!testUrl)("the onboarding rebuild against dedicated PostgreSQL r
       await expect(asApp(tx, (db) => advanceOnboardingStage({ db }, { userId, businessId, to: "attribution" }))).rejects.toMatchObject({ status: 409, code: "number_required" });
       await asApp(tx, (db) => skipOnboardingNumber({ db }, { userId, businessId, countryCode: "FR" }));
       expect((await business(tx, businessId)).stage).toBe("attribution");
+    });
+  });
+
+  it("keeps a direct cloud owner on the number while it's being bought, until the purchase succeeds or fails", async () => {
+    await rollbackTest(async (tx) => {
+      const { userId, businessId } = await workspace(tx, "phone_number_claiming");
+      await tx.update(businesses).set({ deploymentMode: "cloud" }).where(eq(businesses.id, businessId));
+      await expect(asApp(tx, (db) => advanceOnboardingStage({ db }, { userId, businessId, to: "attribution" }))).rejects.toMatchObject({ status: 409, code: "number_required" });
+      // The country fallback works only from picking a number, not while one is being bought.
+      await expect(asApp(tx, (db) => skipOnboardingNumber({ db }, { userId, businessId, countryCode: "FR" }))).rejects.toMatchObject({ status: 409 });
+      expect((await business(tx, businessId)).stage).toBe("phone_number_claiming");
+      // Asking for the number step again leaves the purchase where it is.
+      expect(await asApp(tx, (db) => advanceOnboardingStage({ db }, { userId, businessId, to: "phone_number" }))).toBe("phone_number_claiming");
+
+      // A failed purchase goes back to picking one, where the country fallback still works.
+      const [claim] = await tx.insert(onboardingNumberClaimEvents).values({ businessId, userId, status: "provisioning", requestedE164: "+15145550100", selectionContext: {}, claimTokenHash: randomUUID(), idempotencyKey: randomUUID() }).returning({ id: onboardingNumberClaimEvents.id });
+      await asRole(tx, "lobbystack_worker", (db) => failNumberProvisioning({ db }, { businessId, claimId: claim!.id, unavailable: true }));
+      expect((await business(tx, businessId)).stage).toBe("phone_number");
+      await asApp(tx, (db) => skipOnboardingNumber({ db }, { userId, businessId, countryCode: "FR" }));
+      expect((await business(tx, businessId)).stage).toBe("attribution");
+    });
+  });
+
+  it("lets a self-hosted owner move on while a number is being bought", async () => {
+    await rollbackTest(async (tx) => {
+      const { userId, businessId } = await workspace(tx, "phone_number_claiming");
+      await tx.update(businesses).set({ deploymentMode: "self_hosted_standard" }).where(eq(businesses.id, businessId));
+      expect(await asApp(tx, (db) => advanceOnboardingStage({ db }, { userId, businessId, to: "attribution" }))).toBe("attribution");
     });
   });
 
