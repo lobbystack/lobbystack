@@ -79,7 +79,9 @@ Rules becomes the one place for what an agent should do. A rule gains an optiona
 ## Release notes
 
 - During a rolling deploy, a worker on the old code can read a snapshot built by the new code. It ignores `channel` and follows channel rules on every channel until it restarts. The window lasts minutes, and those rules hold text the owner wrote for the agent. The product owner accepted this.
-- A later release drops `voice_instructions`, `sms_instructions` and `chat_instructions` from `agents`, once no running code reads them.
+- Until the admin finishes deploying, the previous admin still saves instructions to the old columns. The trigger `agents_copy_instructions_to_rules` from 0203 copies each change onto the agent's channel rules, as the deprecated API fields write them, so no edit is lost. New code never writes the columns, so only old code fires it.
+- The previous admin can still copy an agent during the deploy. Its copy reads rules without `channel`, so the new agent's channel rules apply on every channel until someone edits them.
+- A later release drops `voice_instructions`, `sms_instructions` and `chat_instructions` from `agents`, once no running code reads them, along with the trigger and `app.copy_agent_instructions_to_rules()`.
 
 ## Decisions
 

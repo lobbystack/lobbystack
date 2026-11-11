@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
-import { agentRules, agents, businessContextSnapshots, businesses, createDatabaseClient, instagramAccounts, outboxMessages, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agentRules, agents, businessContextSnapshots, businesses, createDatabaseClient, instagramAccounts, outboxMessages, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { SNAPSHOT_SCHEMA_VERSION } from "@lobbystack/shared";
 
 import { isCurrentSnapshot } from "../snapshot";
@@ -96,6 +96,42 @@ describe.skipIf(!testUrl)("migration 0203 on sample rows", () => {
       expect(await rulesOf(tx, fallback!.id)).toHaveLength(3);
       // A savepoint keeps the refused insert from aborting the test's transaction.
       await expect(tx.transaction(async (inner) => { await inner.execute(sql`insert into public.agent_rules (business_id, agent_id, title, content, channel) values (${french}::uuid, ${full!.id}::uuid, 'Bad', 'Bad', 'email')`); })).rejects.toThrow();
+    });
+  });
+});
+
+describe.skipIf(!testUrl)("instructions the previous admin saves after the migration", () => {
+  it("land on the agent's channel rules, as the deprecated API fields write them", async () => {
+    await rollbackTest(async (tx) => {
+      const businessId = await business(tx, "fr");
+      const [agent] = await tx.insert(agents).values({ ...agentFields, businessId, isDefault: true, voiceInstructions: "Parlez lentement." }).returning({ id: agents.id });
+      await tx.insert(agentRules).values({ businessId, agentId: agent!.id, title: "Parking", content: "Rear lot", sortOrder: 0 });
+      await tx.execute(sql`set constraints all immediate`);
+      await tx.execute(sql.raw(migration));
+      // The old admin saves as the app role, inside the business's RLS context.
+      const oldAdminSaves = async (values: Partial<typeof agents.$inferInsert>) => await withBusinessTransaction(tx as unknown as Database, { businessId, actorType: "system" }, async (inner) => {
+        await inner.execute(sql`set local role lobbystack_app`);
+        await inner.update(agents).set(values).where(eq(agents.id, agent!.id));
+        await inner.execute(sql`reset role`);
+      });
+
+      // A changed text replaces the copy the migration made, and a new one adds a rule titled in the business's language.
+      await oldAdminSaves({ voiceInstructions: "  Parlez plus lentement.  ", smsInstructions: "Signez Harbor." });
+      expect(await rulesOf(tx, agent!.id)).toEqual([
+        { title: "Parking", content: "Rear lot", channel: null, active: true, sortOrder: 0 },
+        { title: "Pendant les appels", content: "Parlez plus lentement.", channel: "voice", active: true, sortOrder: 1 },
+        { title: "Par texto", content: "Signez Harbor.", channel: "sms", active: true, sortOrder: 2 },
+      ]);
+      // Chat goes to website chat only, since the business has no Instagram. A save that leaves a column alone doesn't touch its rule.
+      await tx.update(agentRules).set({ active: false }).where(and(eq(agentRules.agentId, agent!.id), eq(agentRules.channel, "sms")));
+      await oldAdminSaves({ chatInstructions: "Soyez bref.", tone: "calm" });
+      expect((await rulesOf(tx, agent!.id)).slice(2)).toEqual([
+        { title: "Par texto", content: "Signez Harbor.", channel: "sms", active: false, sortOrder: 2 },
+        { title: "Dans le chat du site", content: "Soyez bref.", channel: "web_chat", active: true, sortOrder: 3 },
+      ]);
+      // Clearing a text deletes its rule. Saving the same text again changes nothing.
+      await oldAdminSaves({ voiceInstructions: "", chatInstructions: "Soyez bref." });
+      expect((await rulesOf(tx, agent!.id)).map((rule) => rule.channel)).toEqual([null, "sms", "web_chat"]);
     });
   });
 });
