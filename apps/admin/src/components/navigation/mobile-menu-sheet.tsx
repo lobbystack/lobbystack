@@ -6,6 +6,7 @@ import { ChevronRight, ExternalLink, LayoutList, SearchIcon, XIcon } from "lucid
 import { useTranslation } from "react-i18next";
 
 import { WorkspaceSwitcher } from "@/components/layout/workspace-switcher";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { accountItemLink, useAccountMenuGroups, type AccountMenuItem } from "@/components/nav-user";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -226,6 +227,7 @@ export function MobileMenuSheet({ closeThen, finalFocus, navigate, onFeedback, o
         <SheetTitle className="sr-only">{t("nav:mobileNav.menu")}</SheetTitle>
         <div className="flex shrink-0 items-center gap-2 border-b border-sidebar-border px-2 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-2">
           <div className="min-w-0 flex-1"><WorkspaceSwitcher /></div>
+          <NotificationBell className="size-10" navigate={navigate} />
           <SheetClose render={<Button className="shrink-0" size="icon" variant="ghost" />}>
             <XIcon />
             <span className="sr-only">{t("common:accessibility.close")}</span>

@@ -836,3 +836,21 @@ export function ComboboxOptionsSkeleton({ rows = 3 }: { rows?: number }) {
 export function FieldControlSkeleton() {
   return <Skeleton aria-busy="true" className="h-10 w-full rounded-xl" />;
 }
+
+/** Stands in for the bell's list while it loads: rows with the icon, title, line and time of a notification. */
+export function NotificationListSkeleton({ label, rows = 3 }: { label: string; rows?: number }) {
+  return (
+    <div aria-busy="true" aria-label={label} className="flex flex-col" role="status">
+      {Array.from({ length: rows }).map((_, index) => (
+        <div className="flex items-start gap-3 px-4 py-3" key={index}>
+          <Skeleton className="size-8 shrink-0 rounded-full" />
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-3 w-16" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}

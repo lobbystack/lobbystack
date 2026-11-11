@@ -32,6 +32,8 @@ export const WEB_EVENT_NAMES = [
   "web.page.account_viewed",
   "web.page.intro_shown",
   "web.page.intro_dismissed",
+  "web.notifications.bell_opened",
+  "web.notifications.item_clicked",
   "web.contacts.contact_opened",
   "web.messages.thread_opened",
   "web.messages.reply_sent",
@@ -287,6 +289,10 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.page.intro_shown": ["businessId", "deploymentMode", "pageId"],
   // method: how the card closed: get_started, guide, close (the X), escape or outside.
   "web.page.intro_dismissed": ["businessId", "deploymentMode", "pageId", "method"],
+  // unreadCount: how many items were unread when the panel opened. actionCount: how many need action.
+  "web.notifications.bell_opened": ["businessId", "deploymentMode", "unreadCount", "actionCount"],
+  // kind: the notification kind, such as website_import_failed. category: action or update. unread: whether it was unread.
+  "web.notifications.item_clicked": ["businessId", "deploymentMode", "kind", "category", "unread"],
   "web.contacts.contact_opened": ["businessId", "deploymentMode", "contactId"],
   "web.messages.thread_opened": [
     "businessId",

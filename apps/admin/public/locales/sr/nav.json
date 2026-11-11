@@ -192,5 +192,96 @@
       "appointments": "Termini",
       "contacts": "Kontakti"
     }
+  },
+  "notifications": {
+    "bell": "Obaveštenja",
+    "bellUnread_one": "Obaveštenja, {{count}} nepročitano",
+    "bellUnread_few": "Obaveštenja, {{count}} nepročitana",
+    "bellUnread_other": "Obaveštenja, {{count}} nepročitanih",
+    "title": "Obaveštenja",
+    "markAllRead": "Označi sve kao pročitano",
+    "empty": "Nema obaveštenja",
+    "unread": "Nepročitano",
+    "loading": "Učitavanje obaveštenja",
+    "providers": {
+      "google": "Google Calendar",
+      "calcom": "Cal.com",
+      "calendly": "Calendly",
+      "other": "Vaš kalendar"
+    },
+    "kinds": {
+      "trial_ending": {
+        "title_one": "Besplatna proba ističe sutra",
+        "title_few": "Besplatna proba ističe za {{count}} dana",
+        "title_other": "Besplatna proba ističe za {{count}} dana",
+        "line": "Izaberite paket da zadržite broj."
+      },
+      "trial_ended": {
+        "title": "Besplatna proba je istekla",
+        "line": "Pozivi sada zvone na Vašem telefonu. Izaberite paket da zadržite broj."
+      },
+      "trial_minutes_used_up": {
+        "title": "Potrošili ste probne minute",
+        "line": "Pozivi sada zvone na Vašem telefonu. Izaberite paket da agent ponovo odgovara."
+      },
+      "number_released": {
+        "title": "Oslobodili smo broj {{number}}",
+        "line": "Izaberite paket da dobijete novi broj.",
+        "lineTrial": "Proba je istekla bez paketa. Izaberite paket da dobijete novi broj."
+      },
+      "payment_failed": {
+        "title": "Plaćanje nije uspelo",
+        "line": "Ažurirajte karticu da zadržite paket."
+      },
+      "plan_canceled": {
+        "title": "Paket ističe {{date}}",
+        "line": "Broj oslobađamo 30 dana kasnije ako ne izaberete paket."
+      },
+      "minutes_80": {
+        "title": "Potrošili ste 80% minuta",
+        "line": "{{used}} od {{included}} minuta ovog meseca."
+      },
+      "minutes_100": {
+        "title": "Potrošili ste sve minute",
+        "line": "{{used}} od {{included}} minuta ovog meseca."
+      },
+      "number_purchase_failed": {
+        "title": "Nismo uspeli da kupimo broj {{number}}",
+        "titleNoNumber": "Nismo uspeli da kupimo broj",
+        "line": "Izaberite broj i pokušajte ponovo.",
+        "lineUnavailable": "Neko drugi ga je uzeo. Izaberite drugi broj."
+      },
+      "number_release_soon": {
+        "title": "Broj {{number}} oslobađamo {{date}}",
+        "line": "Izaberite paket da ga zadržite."
+      },
+      "calendar_sync_failing": {
+        "title": "{{provider}} se ne sinhronizuje",
+        "line": "Ponovo ga povežite da agent nudi slobodne termine."
+      },
+      "instagram_reconnect": {
+        "title": "Ponovo povežite Instagram",
+        "line": "@{{username}} više ne prihvata odgovore agenta.",
+        "lineNoUsername": "Instagram više ne prihvata odgovore agenta."
+      },
+      "webhook_failing": {
+        "title": "Isključili smo webhook",
+        "line": "Svako slanje na {{host}} nije uspevalo jedan dan."
+      },
+      "website_import_failed": {
+        "title": "Nismo uspeli da uvezemo {{site}}",
+        "line": "Proverite adresu i uvezite ga ponovo."
+      },
+      "website_import_finished": {
+        "title": "Uvoz sajta je završen",
+        "line_one": "Pročitali smo {{count}} stranicu sa {{site}}.",
+        "line_few": "Pročitali smo {{count}} stranice sa {{site}}.",
+        "line_other": "Pročitali smo {{count}} stranica sa {{site}}."
+      },
+      "invite_accepted": {
+        "title": "{{email}} je sada u Vašem timu",
+        "line": "Vaša pozivnica je prihvaćena."
+      }
+    }
   }
 }

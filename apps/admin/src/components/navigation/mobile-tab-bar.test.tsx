@@ -62,6 +62,16 @@ describe("the phone tab bar", () => {
     expect(within(nav).getByRole("link", { name: "mobileNav.tabs.inbox" }).querySelector("[data-attention-dot]")).toBeNull();
   });
 
+  it("puts a dot on Menu while the bell in the menu sheet has unread notifications", async () => {
+    const { client, nav, rerender } = setup();
+    const menu = within(nav).getByRole("button", { name: /mobileNav\.menu/ });
+    expect(menu.querySelector("[data-notifications-dot]")).toBeNull();
+    client.setQueryData(["notifications", "business"], { notifications: [{ id: "n1", kind: "payment_failed", category: "action", params: {}, href: "/workspace/billing", occurredAt: "2026-10-16T11:00:00Z", read: false }] });
+    rerender();
+    expect(await within(nav).findByText("notifications.bellUnread:1")).toBeTruthy();
+    expect(within(nav).getByRole("button", { name: /mobileNav\.menu/ }).querySelector("[data-notifications-dot]")).toBeTruthy();
+  });
+
   it("leaves out the tabs the business doesn't let the person open, and keeps Menu", () => {
     const { nav } = setup({ capabilities: ["setup"] });
     expect(within(nav).queryAllByRole("link")).toEqual([]);

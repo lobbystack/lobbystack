@@ -189,5 +189,93 @@
       "appointments": "Bookings",
       "contacts": "Contacts"
     }
+  },
+  "notifications": {
+    "bell": "Notifications",
+    "bellUnread_one": "Notifications, {{count}} unread",
+    "bellUnread_other": "Notifications, {{count}} unread",
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "empty": "No notifications",
+    "unread": "Unread",
+    "loading": "Loading notifications",
+    "providers": {
+      "google": "Google Calendar",
+      "calcom": "Cal.com",
+      "calendly": "Calendly",
+      "other": "Your calendar"
+    },
+    "kinds": {
+      "trial_ending": {
+        "title_one": "Your free trial ends tomorrow",
+        "title_other": "Your free trial ends in {{count}} days",
+        "line": "Choose a plan to keep your number."
+      },
+      "trial_ended": {
+        "title": "Your free trial ended",
+        "line": "Calls now ring your phone. Choose a plan to keep your number."
+      },
+      "trial_minutes_used_up": {
+        "title": "Your trial minutes are used up",
+        "line": "Calls now ring your phone. Choose a plan so your agent answers again."
+      },
+      "number_released": {
+        "title": "We released {{number}}",
+        "line": "Choose a plan to get a new number.",
+        "lineTrial": "Your trial ended without a plan. Choose one to get a new number."
+      },
+      "payment_failed": {
+        "title": "Your payment failed",
+        "line": "Update your card to keep your plan."
+      },
+      "plan_canceled": {
+        "title": "Your plan ends on {{date}}",
+        "line": "We release your number 30 days later unless you choose a plan."
+      },
+      "minutes_80": {
+        "title": "You've used 80% of your minutes",
+        "line": "{{used}} of {{included}} minutes this month."
+      },
+      "minutes_100": {
+        "title": "You've used all your minutes",
+        "line": "{{used}} of {{included}} minutes this month."
+      },
+      "number_purchase_failed": {
+        "title": "We couldn't buy {{number}}",
+        "titleNoNumber": "We couldn't buy your number",
+        "line": "Pick a number to try again.",
+        "lineUnavailable": "Someone else took it. Pick another number."
+      },
+      "number_release_soon": {
+        "title": "We release {{number}} on {{date}}",
+        "line": "Choose a plan to keep it."
+      },
+      "calendar_sync_failing": {
+        "title": "{{provider}} isn't syncing",
+        "line": "Reconnect it so your agent offers open times."
+      },
+      "instagram_reconnect": {
+        "title": "Reconnect Instagram",
+        "line": "@{{username}} stopped accepting your agent's replies.",
+        "lineNoUsername": "Instagram stopped accepting your agent's replies."
+      },
+      "webhook_failing": {
+        "title": "We turned off a webhook",
+        "line": "Every delivery to {{host}} failed for a day."
+      },
+      "website_import_failed": {
+        "title": "We couldn't import {{site}}",
+        "line": "Check the address and import it again."
+      },
+      "website_import_finished": {
+        "title": "Website import finished",
+        "line_one": "Read {{count}} page of {{site}}.",
+        "line_other": "Read {{count}} pages of {{site}}."
+      },
+      "invite_accepted": {
+        "title": "{{email}} joined your team",
+        "line": "They accepted your invite."
+      }
+    }
   }
 }

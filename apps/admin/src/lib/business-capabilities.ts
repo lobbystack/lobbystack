@@ -32,6 +32,8 @@ const routeCapabilities: ReadonlyArray<readonly [prefix: string, capability: Cap
   ["/api/knowledge", "setup"],
   ["/api/messages", "activity"],
   ["/api/notification-preferences", "activity"],
+  // The bell. Each person sees only the kinds their role and the business let them open.
+  ["/api/notifications", "activity"],
   ["/api/number-trial", "setup"],
   ["/api/oauth-grants", "mcp"],
   ["/api/onboarding", "setup"],

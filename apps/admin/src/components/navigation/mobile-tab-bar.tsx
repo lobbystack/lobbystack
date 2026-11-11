@@ -6,6 +6,7 @@ import type { Ref } from "react";
 import { Menu } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { useNotifications } from "@/hooks/use-notifications";
 import { useNavLinks, type NavLink, type NavLinkId } from "./nav-group";
 
 /** The pages with a tab of their own. Everything else is under Menu. */
@@ -28,6 +29,8 @@ export function MobileTabBar({ menuButtonRef, menuOpen, onOpenMenu }: { menuButt
   const { allowed, links } = useNavLinks();
   const tabs = allowed(TAB_LINKS.map((id) => ({ ...links[id], label: t(`mobileNav.tabs.${id}`), id })));
   const onTab = tabs.some((tab) => isActive(tab, pathname));
+  // The bell lives in the menu sheet, so an unread notification puts a dot on Menu.
+  const { unreadCount } = useNotifications();
   return (
     <nav aria-label={t("mobileNav.label")} className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background pb-[env(safe-area-inset-bottom)] md:hidden" data-mobile-tab-bar="">
       <ul className="mx-auto flex h-14 max-w-lg items-stretch px-2">
@@ -49,8 +52,12 @@ export function MobileTabBar({ menuButtonRef, menuOpen, onOpenMenu }: { menuButt
         })}
         <li className="flex min-w-0 flex-1 p-1">
           <button aria-expanded={menuOpen} aria-haspopup="dialog" className={TAB_CLASS} data-active={menuOpen || !onTab ? "" : undefined} onClick={onOpenMenu} ref={menuButtonRef} type="button">
-            <Menu aria-hidden="true" />
+            <span className="relative">
+              <Menu aria-hidden="true" />
+              {unreadCount ? <span aria-hidden="true" className="absolute -top-0.5 -right-1 size-2 rounded-full bg-primary ring-2 ring-background" data-attention-dot="" data-notifications-dot="" /> : null}
+            </span>
             <span className="max-w-full truncate">{t("mobileNav.menu")}</span>
+            {unreadCount ? <span className="sr-only">{t("notifications.bellUnread", { count: unreadCount })}</span> : null}
           </button>
         </li>
       </ul>

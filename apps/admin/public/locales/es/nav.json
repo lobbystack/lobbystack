@@ -192,5 +192,93 @@
       "appointments": "Citas",
       "contacts": "Contactos"
     }
+  },
+  "notifications": {
+    "bell": "Notificaciones",
+    "bellUnread_one": "Notificaciones, {{count}} sin leer",
+    "bellUnread_other": "Notificaciones, {{count}} sin leer",
+    "title": "Notificaciones",
+    "markAllRead": "Marcar todo como leído",
+    "empty": "No hay notificaciones",
+    "unread": "Sin leer",
+    "loading": "Cargando notificaciones",
+    "providers": {
+      "google": "Google Calendar",
+      "calcom": "Cal.com",
+      "calendly": "Calendly",
+      "other": "Su calendario"
+    },
+    "kinds": {
+      "trial_ending": {
+        "title_one": "Su prueba gratuita termina mañana",
+        "title_other": "Su prueba gratuita termina en {{count}} días",
+        "line": "Elija un plan para conservar su número."
+      },
+      "trial_ended": {
+        "title": "Su prueba gratuita terminó",
+        "line": "Las llamadas ahora suenan en su teléfono. Elija un plan para conservar su número."
+      },
+      "trial_minutes_used_up": {
+        "title": "Se acabaron sus minutos de prueba",
+        "line": "Las llamadas ahora suenan en su teléfono. Elija un plan para que su agente vuelva a responder."
+      },
+      "number_released": {
+        "title": "Liberamos el {{number}}",
+        "line": "Elija un plan para obtener un número nuevo.",
+        "lineTrial": "Su prueba terminó sin un plan. Elija uno para obtener un número nuevo."
+      },
+      "payment_failed": {
+        "title": "Su pago no se procesó",
+        "line": "Actualice su tarjeta para conservar su plan."
+      },
+      "plan_canceled": {
+        "title": "Su plan termina el {{date}}",
+        "line": "Liberamos su número 30 días después, salvo que elija un plan."
+      },
+      "minutes_80": {
+        "title": "Usó el 80 % de sus minutos",
+        "line": "{{used}} de {{included}} minutos este mes."
+      },
+      "minutes_100": {
+        "title": "Usó todos sus minutos",
+        "line": "{{used}} de {{included}} minutos este mes."
+      },
+      "number_purchase_failed": {
+        "title": "No pudimos comprar el {{number}}",
+        "titleNoNumber": "No pudimos comprar su número",
+        "line": "Elija un número para intentarlo de nuevo.",
+        "lineUnavailable": "Otra persona lo tomó. Elija otro número."
+      },
+      "number_release_soon": {
+        "title": "Liberamos el {{number}} el {{date}}",
+        "line": "Elija un plan para conservarlo."
+      },
+      "calendar_sync_failing": {
+        "title": "{{provider}} no se sincroniza",
+        "line": "Vuelva a conectarlo para que su agente ofrezca los horarios libres."
+      },
+      "instagram_reconnect": {
+        "title": "Vuelva a conectar Instagram",
+        "line": "@{{username}} dejó de aceptar las respuestas de su agente.",
+        "lineNoUsername": "Instagram dejó de aceptar las respuestas de su agente."
+      },
+      "webhook_failing": {
+        "title": "Desactivamos un webhook",
+        "line": "Todas las entregas a {{host}} fallaron durante un día."
+      },
+      "website_import_failed": {
+        "title": "No pudimos importar {{site}}",
+        "line": "Revise la dirección e impórtelo de nuevo."
+      },
+      "website_import_finished": {
+        "title": "Importación del sitio terminada",
+        "line_one": "Leímos {{count}} página de {{site}}.",
+        "line_other": "Leímos {{count}} páginas de {{site}}."
+      },
+      "invite_accepted": {
+        "title": "{{email}} se unió a su equipo",
+        "line": "Aceptó su invitación."
+      }
+    }
   }
 }

@@ -192,5 +192,93 @@
       "appointments": "Agenda",
       "contacts": "Contacts"
     }
+  },
+  "notifications": {
+    "bell": "Notifications",
+    "bellUnread_one": "Notifications, {{count}} non lue",
+    "bellUnread_other": "Notifications, {{count}} non lues",
+    "title": "Notifications",
+    "markAllRead": "Tout marquer comme lu",
+    "empty": "Aucune notification",
+    "unread": "Non lue",
+    "loading": "Chargement des notifications",
+    "providers": {
+      "google": "Google Agenda",
+      "calcom": "Cal.com",
+      "calendly": "Calendly",
+      "other": "Votre agenda"
+    },
+    "kinds": {
+      "trial_ending": {
+        "title_one": "Votre essai gratuit se termine demain",
+        "title_other": "Votre essai gratuit se termine dans {{count}} jours",
+        "line": "Choisissez un forfait pour garder votre numéro."
+      },
+      "trial_ended": {
+        "title": "Votre essai gratuit est terminé",
+        "line": "Les appels sonnent maintenant sur votre téléphone. Choisissez un forfait pour garder votre numéro."
+      },
+      "trial_minutes_used_up": {
+        "title": "Vos minutes d'essai sont épuisées",
+        "line": "Les appels sonnent maintenant sur votre téléphone. Choisissez un forfait pour que votre agent réponde de nouveau."
+      },
+      "number_released": {
+        "title": "Nous avons libéré le {{number}}",
+        "line": "Choisissez un forfait pour obtenir un nouveau numéro.",
+        "lineTrial": "Votre essai s'est terminé sans forfait. Choisissez-en un pour obtenir un nouveau numéro."
+      },
+      "payment_failed": {
+        "title": "Votre paiement a échoué",
+        "line": "Mettez votre carte à jour pour garder votre forfait."
+      },
+      "plan_canceled": {
+        "title": "Votre forfait se termine le {{date}}",
+        "line": "Nous libérons votre numéro 30 jours plus tard, sauf si vous choisissez un forfait."
+      },
+      "minutes_80": {
+        "title": "Vous avez utilisé 80 % de vos minutes",
+        "line": "{{used}} minutes sur {{included}} ce mois-ci."
+      },
+      "minutes_100": {
+        "title": "Vous avez utilisé toutes vos minutes",
+        "line": "{{used}} minutes sur {{included}} ce mois-ci."
+      },
+      "number_purchase_failed": {
+        "title": "Nous n'avons pas pu acheter le {{number}}",
+        "titleNoNumber": "Nous n'avons pas pu acheter votre numéro",
+        "line": "Choisissez un numéro pour réessayer.",
+        "lineUnavailable": "Quelqu'un d'autre l'a pris. Choisissez un autre numéro."
+      },
+      "number_release_soon": {
+        "title": "Nous libérons le {{number}} le {{date}}",
+        "line": "Choisissez un forfait pour le garder."
+      },
+      "calendar_sync_failing": {
+        "title": "{{provider}} ne se synchronise plus",
+        "line": "Reconnectez-le pour que votre agent propose les heures libres."
+      },
+      "instagram_reconnect": {
+        "title": "Reconnectez Instagram",
+        "line": "@{{username}} n'accepte plus les réponses de votre agent.",
+        "lineNoUsername": "Instagram n'accepte plus les réponses de votre agent."
+      },
+      "webhook_failing": {
+        "title": "Nous avons désactivé un webhook",
+        "line": "Chaque envoi vers {{host}} a échoué pendant une journée."
+      },
+      "website_import_failed": {
+        "title": "Nous n'avons pas pu importer {{site}}",
+        "line": "Vérifiez l'adresse et importez-le de nouveau."
+      },
+      "website_import_finished": {
+        "title": "Importation du site terminée",
+        "line_one": "{{count}} page de {{site}} lue.",
+        "line_other": "{{count}} pages de {{site}} lues."
+      },
+      "invite_accepted": {
+        "title": "{{email}} a rejoint votre équipe",
+        "line": "Cette personne a accepté votre invitation."
+      }
+    }
   }
 }

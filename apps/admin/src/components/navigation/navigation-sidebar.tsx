@@ -5,6 +5,7 @@ import { Fragment, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { WorkspaceSwitcher } from "@/components/layout/workspace-switcher";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { Separator } from "@/components/ui/separator";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail } from "@/components/ui/sidebar";
 import { useAgents } from "@/hooks/use-agents";
@@ -117,7 +118,11 @@ export function NavigationSidebar({ partnerConsole = false, user }: { partnerCon
   return (
     <Sidebar className="absolute inset-y-0 h-full" collapsible="icon" variant="sidebar">
       <SidebarHeader>
-        <WorkspaceSwitcher />
+        {/* The bell sits beside the switcher, and stays when the sidebar folds to icons. */}
+        <div className="flex items-center gap-1 group-data-[collapsible=icon]:justify-center">
+          <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden"><WorkspaceSwitcher /></div>
+          <NotificationBell side="right" />
+        </div>
         <SearchButton />
       </SidebarHeader>
       <SidebarContent className="overflow-x-hidden">
