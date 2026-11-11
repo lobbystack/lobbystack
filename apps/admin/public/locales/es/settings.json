@@ -346,23 +346,6 @@
         "keep": "Este número es suyo.",
         "choose": "Elegir su número"
       },
-      "steps": {
-        "title": "Próximos pasos",
-        "call": {
-          "title": "Llámelo ahora",
-          "description": "Escuche a su agente atender una llamada real."
-        },
-        "forward": {
-          "title": "Desvíe la línea de su negocio a este número",
-          "description": "Sus clientes siguen marcando el número que conocen. Su operador desvía esas llamadas a su número de {{appName}}.",
-          "action": "Guía de desvío de llamadas"
-        },
-        "transfer": {
-          "title": "Elija adónde van las llamadas urgentes",
-          "description": "Agregue un número de transferencia en Ajustes de IA para que su agente pueda pasar las llamadas urgentes a una persona.",
-          "action": "Abrir Ajustes de IA"
-        }
-      },
       "continue": "Continuar la configuración",
       "dashboard": "Ir al panel"
     }

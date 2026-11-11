@@ -346,23 +346,6 @@
         "keep": "Ce numéro est à vous.",
         "choose": "Choisir votre numéro"
       },
-      "steps": {
-        "title": "Prochaines étapes",
-        "call": {
-          "title": "Appelez-le maintenant",
-          "description": "Écoutez votre agent répondre à un vrai appel."
-        },
-        "forward": {
-          "title": "Transférez votre ligne d'entreprise vers ce numéro",
-          "description": "Vos appelants composent toujours le numéro qu'ils connaissent. Votre opérateur transfère ces appels vers votre numéro {{appName}}.",
-          "action": "Guide du renvoi d'appel"
-        },
-        "transfer": {
-          "title": "Choisissez où vont les appels urgents",
-          "description": "Ajoutez un numéro de transfert dans les Paramètres IA pour que votre agent puisse passer les appels urgents à une personne.",
-          "action": "Ouvrir les Paramètres IA"
-        }
-      },
       "continue": "Continuer la configuration",
       "dashboard": "Aller au tableau de bord"
     }

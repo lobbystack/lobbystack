@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Check, LoaderCircle } from "lucide-react";
@@ -9,9 +9,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { billingPlanCatalog } from "@lobbystack/shared";
 
-import { CallForwardingDialog } from "@/components/call-forwarding-dialog";
 import { useActiveBusiness } from "@/hooks/use-active-business";
-import { forwardingHelpUrl } from "@/lib/forwarding-help";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { requestJson } from "@/lib/request-json";
 import { useTelemetry } from "./product-analytics";
@@ -56,10 +54,9 @@ function SuccessCheck() {
   );
 }
 
-/** Where Polar sends someone after they pay: confirmation while the plan syncs, then what to do next. */
+/** Where Polar sends someone after they pay: confirmation while the plan syncs, then the plan and the number. */
 export function BillingSuccessSurface() {
   const { t, i18n } = useTranslation("settings");
-  const [forwardingOpen, setForwardingOpen] = useState(false);
   const router = useRouter();
   const telemetry = useTelemetry();
   const requestId = useSearchParams().get("requestId");
@@ -139,17 +136,9 @@ export function BillingSuccessSurface() {
     t("billing.success.unlocks.transfers", { count: catalog.outboundCallAttemptsIncluded ?? 0 }),
   ];
   const displayNumber = number ? formatPhoneNumberDisplay(number.e164, i18n.language) : null;
-  const steps = [
-    { key: "call", action: number ? <a className="font-medium text-foreground underline underline-offset-4" href={`tel:${number.e164}`}>{displayNumber}</a> : null },
-    { key: "forward", action: number
-      ? <><button className="self-start font-medium text-foreground underline underline-offset-4" onClick={() => setForwardingOpen(true)} type="button">{t("billing.success.steps.forward.action")}</button><CallForwardingDialog e164={number.e164} onOpenChange={setForwardingOpen} open={forwardingOpen} /></>
-      : <a className="font-medium text-foreground underline underline-offset-4" href={forwardingHelpUrl(i18n.language)} rel="noreferrer" target="_blank">{t("billing.success.steps.forward.action")}</a> },
-    // The dashboard sends anyone still in onboarding back to it, so the link waits until setup is done.
-    { key: "transfer", action: onboarding ? null : <Link className="font-medium text-foreground underline underline-offset-4" href="/agents/primary#agent-transfer-number">{t("billing.success.steps.transfer.action")}</Link> },
-  ] as const;
 
   return (
-    <ReplacementOnboardingShell icon={<SuccessCheck />} title={t("billing.success.title", { plan: t(`billing.planLabels.${plan}`) })} width="lg">
+    <ReplacementOnboardingShell icon={<SuccessCheck />} title={t("billing.success.title", { plan: t(`billing.planLabels.${plan}`) })} width="md">
       <div className="flex flex-col gap-6 text-left">
         <Surface className="flex flex-col gap-4 p-6">
           <p className="type-title text-foreground">{t("billing.currentPlan.includedTitle")}</p>
@@ -166,21 +155,6 @@ export function BillingSuccessSurface() {
         ) : (
           <Button className="w-full" onClick={goToNumberStep} type="button">{t("billing.success.number.choose")}</Button>
         )}
-        <section className="flex flex-col gap-4">
-          <h2 className="type-card-title text-foreground">{t("billing.success.steps.title")}</h2>
-          <ol className="flex flex-col gap-4">
-            {steps.map((step, index) => (
-              <li className="flex gap-3" key={step.key}>
-                <span aria-hidden="true" className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted type-meta">{index + 1}</span>
-                <div className="flex min-w-0 flex-col gap-1 type-body">
-                  <p className="font-medium text-foreground">{t(`billing.success.steps.${step.key}.title`)}</p>
-                  <p className="text-muted-foreground">{t(`billing.success.steps.${step.key}.description`)}</p>
-                  {step.action}
-                </div>
-              </li>
-            ))}
-          </ol>
-        </section>
         {onboarding ? (
           number ? <Button className="w-full" onClick={goToNumberStep} type="button" variant="outline">{t("billing.success.continue")}</Button> : null
         ) : (

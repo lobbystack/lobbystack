@@ -346,23 +346,6 @@
         "keep": "Ovaj broj je Vaš.",
         "choose": "Izaberite broj"
       },
-      "steps": {
-        "title": "Sledeći koraci",
-        "call": {
-          "title": "Pozovite ga sada",
-          "description": "Čujte kako agent odgovara na pravi poziv."
-        },
-        "forward": {
-          "title": "Preusmerite poslovnu liniju na ovaj broj",
-          "description": "Pozivaoci i dalje biraju broj koji znaju. Vaš operater preusmerava te pozive na Vaš {{appName}} broj.",
-          "action": "Uputstvo za preusmeravanje poziva"
-        },
-        "transfer": {
-          "title": "Izaberite kuda idu hitni pozivi",
-          "description": "Dodajte broj za preusmeravanje u AI podešavanjima da bi agent mogao da prosledi hitne pozive osobi.",
-          "action": "Otvori AI podešavanja"
-        }
-      },
       "continue": "Nastavite podešavanje",
       "dashboard": "Idi na kontrolnu tablu"
     }

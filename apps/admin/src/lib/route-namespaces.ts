@@ -26,7 +26,8 @@ export function routeNamespaces(pathname: string): string[] {
   if (section === "embed") return ["common", "widget"];
   if (["demo", "claim-demo"].includes(section)) return ["common", "auth", "demos", "widget"];
   if (section === "onboarding") return ["common", "onboarding", "auth", "settings", "nav", "agent"];
-  if (section === "billing") return ["common", "onboarding", "settings"];
+  // Onboarding's shell asks for auth for its legal line.
+  if (section === "billing") return ["common", "auth", "onboarding", "settings"];
   // A partner's host shows this, in onboarding's shell, to someone with no business there.
   if (section === "no-businesses") return ["common", "onboarding"];
   if (section === "partner") return PARTNER_NAMESPACES;

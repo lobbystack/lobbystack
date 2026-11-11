@@ -6,7 +6,7 @@ it("keeps login and embed startup independent of dashboard translations", () => 
   expect(routeNamespaces("/embed/key")).toEqual(["common", "widget"]);
 });
 it("gives the checkout return page its shell and billing copy without the dashboard", () => {
-  expect(routeNamespaces("/billing/success")).toEqual(["common", "onboarding", "settings"]);
+  expect(routeNamespaces("/billing/success")).toEqual(["common", "auth", "onboarding", "settings"]);
 });
 it("gives the no-businesses page onboarding's shell without the dashboard", () => {
   expect(routeNamespaces("/no-businesses")).toEqual(["common", "onboarding"]);
