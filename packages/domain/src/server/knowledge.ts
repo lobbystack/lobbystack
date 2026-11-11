@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { and, asc, desc, eq, ilike, inArray, isNull, lt, ne, notInArray, sql } from "drizzle-orm";
 
 import { agentRules, agents, businessContextSnapshots, businesses, businessHours, closures, defaultAgentOf, enqueueOutbox, inOrder, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, phoneNumbers, services, staffServiceAssignments, storageObjects, websiteIngestionJobs, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { defaultGreeting, FULL_CRAWL_PAGE_LIMIT, getKnowledgeStorageLimitBytes, normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeReceptionistVoice, normalizeRuntimeLocale, normalizeStaffFirstMode, normalizeTransferMode, ONBOARDING_CRAWL_PAGE_LIMIT, runtimeLocales, servicePriceFromColumns, type AgentRuleSummary, type BusinessContextSnapshot, type SnapshotAgent } from "@lobbystack/shared";
+import { defaultGreeting, FULL_CRAWL_PAGE_LIMIT, getKnowledgeStorageLimitBytes, normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeReceptionistVoice, normalizeRuntimeLocale, normalizeStaffFirstMode, normalizeTransferMode, ONBOARDING_CRAWL_PAGE_LIMIT, runtimeLocales, servicePriceFromColumns, stageAfterWebsite, type AgentRuleSummary, type BusinessContextSnapshot, type SnapshotAgent } from "@lobbystack/shared";
 import { agentInstructions, buildBusinessContextSnapshot, MAX_KNOWLEDGE_SNIPPETS_PER_SNAPSHOT, snapshotRules } from "../snapshot";
 import { countKnowledgeTokens, fuseKnowledgeRanks, KNOWLEDGE_SEARCH_TOKEN_BUDGET, knowledgeLexicalQueries, knowledgeQueryTerms, splitToTokenBudget, withinKnowledgeBudget, type KnowledgePassage } from "../knowledgeRanking";
 
@@ -109,14 +109,14 @@ export async function createKnowledgeDocumentInTransaction(
   const sourceUrl = normalizeWebsiteSourceUrl(input.sourceUrl);
   const crawlLimit = input.onboarding || input.sample ? ONBOARDING_CRAWL_PAGE_LIMIT : FULL_CRAWL_PAGE_LIMIT;
   // Serialize website submissions so retries/revisited forms reuse the same import.
-  const business = (await tx.select({ onboardingStage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1).for("update"))[0];
+  const business = (await tx.select({ onboardingStage: businesses.onboardingStage, partnerId: businesses.partnerId, accessLevel: businesses.partnerAccessLevel }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1).for("update"))[0];
   if (input.onboarding || business?.onboardingStage === "website") {
     await tx.update(businesses).set({ websiteUrl: sourceUrl, updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
     // Submitting a website answers the language question too: the import reads
-    // it. From the language step, the wait then opens on verify_phone.
+    // it. The wait then opens on the step after the website.
     const from = business?.onboardingStage === "website" ? "website" : business?.onboardingStage === "language" ? "language" : null;
     if (from) {
-      await moveOnboardingStageInTransaction(tx, { businessId: input.businessId, from, to: "verify_phone" });
+      await moveOnboardingStageInTransaction(tx, { businessId: input.businessId, from, to: stageAfterWebsite(business), partnerId: business?.partnerId ?? null, accessLevel: business?.accessLevel });
     }
   }
   const existing = (await tx.select().from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.sourceUrl, sourceUrl))).limit(1).for("update"))[0];

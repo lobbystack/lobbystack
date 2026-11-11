@@ -35,7 +35,7 @@ function setup(execute: () => unknown = () => ({ rows: [{ id: "claim-1" }] }), b
   const row = { stage: "complete", timezone: "America/Toronto", deploymentMode: "self_hosted_standard", replacementUsedAt: null, ...business };
   entitled(planEntitlement(row.deploymentMode === "cloud" ? "free_cloud" : "self_host"));
   const selects = [[row], [{ id: "number-1" }]];
-  const tx = { select: () => chain(selects.shift() ?? []), execute: vi.fn(async () => await execute()) };
+  const tx = { select: () => chain(selects.shift() ?? []), update: () => ({ set: () => ({ where: async () => [] }) }), execute: vi.fn(async () => await execute()) };
   mocks.withBusinessTransaction.mockImplementation(async (_db: unknown, _scope: unknown, callback: (tx: unknown) => unknown) => await callback(tx));
   return tx;
 }
@@ -123,12 +123,12 @@ describe("searchBusinessNumberInventory", () => {
       expect(payload.selection).toMatchObject({ trial: true, verifiedPhone: "+14165550123" });
     });
 
-    it("asks for a mobile when no verified phone and no trusted network can identify the claimer", async () => {
+    it("offers the plans when no verified phone and no trusted network can identify the claimer", async () => {
       entitled(planEntitlement("free_cloud"));
       const selects = [[{ stage: "phone_number", timezone: "America/Toronto", deploymentMode: "cloud", replacementUsedAt: null }], [{ phone: null }], [{ email: "owner@example.invalid", emailVerified: true }]];
       const execute = vi.fn(async () => ({ rows: [{ used: false }] }));
       mocks.withBusinessTransaction.mockImplementation(async (_db: unknown, _scope: unknown, callback: (tx: unknown) => unknown) => await callback({ select: () => chain(selects.shift() ?? []), execute }));
-      await expect(searchBusinessNumberInventory(context, scope, { listAvailablePhoneNumbers: async () => [] })).rejects.toMatchObject({ status: 409, code: "phone_verification_required" });
+      await expect(searchBusinessNumberInventory(context, scope, { listAvailablePhoneNumbers: async () => [] })).rejects.toMatchObject({ status: 409, code: "trial_not_available" });
     });
 
     it("signs a trial without a phone when the email and network are clean", async () => {

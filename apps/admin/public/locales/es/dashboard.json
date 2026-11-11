@@ -291,35 +291,32 @@
       "hours": "Añadir su horario",
       "testCall": "Escuchar a su agente",
       "phoneNumber": "Conectar un número de teléfono",
-      "forwardCalls": "Desvíe sus llamadas"
+      "forwardCalls": "Desvíe sus llamadas",
+      "callNumber": "Llame a su número",
+      "forwardFromCurrent": "Desvíe las llamadas de su número actual"
     },
     "stepDescriptions": {
       "fullScan": "Su agente ha leído una parte de su sitio.",
-      "sources": {
-        "answer_calls": "Suba las políticas, preguntas frecuentes y precios que consultan quienes llaman.",
-        "book_appointments": "Suba sus servicios, precios y reglas de reserva.",
-        "answer_website_visitors": "Suba las preguntas frecuentes y políticas que consultan los visitantes de su sitio.",
-        "answer_instagram_messages": "Suba las preguntas frecuentes y precios que le consultan en Instagram.",
-        "none": "Suba sus políticas, preguntas frecuentes o precios."
-      },
+      "sources": "Suba sus políticas, preguntas frecuentes o precios.",
       "hours": "Su agente reserva citas solo dentro de este horario.",
-      "testCall": {
-        "answer_calls": "Pregúntele lo que más le preguntan quienes llaman.",
-        "book_appointments": "Pídale que reserve una cita.",
-        "answer_website_visitors": "Pregúntele lo que la gente pregunta en su sitio web.",
-        "answer_instagram_messages": "Pregúntele lo que la gente pregunta en Instagram.",
-        "none": "Pregúntele lo que más preguntan sus clientes."
-      },
+      "testCall": "Pregúntele lo que más le preguntan quienes llaman.",
       "phoneNumber": "Dé a su agente su propio número para atender a personas reales.",
-      "phoneNumberTrial": "Conteste sus llamadas perdidas gratis durante 14 días, sin tarjeta."
+      "phoneNumberTrial": "Conteste sus llamadas perdidas gratis durante 14 días, sin tarjeta.",
+      "forwardCalls": "Envíe al {{number}} las llamadas del número que conocen sus clientes.",
+      "numberLost": "Su prueba gratuita terminó. Elija un plan para recuperar su número."
     },
     "stepActions": {
       "fullScan": "Leer el resto",
       "sources": "Subir documento",
       "hours": "Añadir horario",
       "testCall": "Iniciar una llamada",
-      "phoneNumber": "Elegir un número"
-    }
+      "phoneNumber": "Elegir un número",
+      "callNumber": "Llamar al {{number}}",
+      "forwardCalls": "Configurar el desvío",
+      "choosePlan": "Elegir un plan"
+    },
+    "forwardingFrom": "Desvío desde el {{number}}",
+    "forwardingWorks": "El desvío funciona"
   },
   "forwarding": {
     "title": "Desvíe sus llamadas al {{number}}",
@@ -384,6 +381,7 @@
     "general": {
       "missed": "En un móvil, abra los ajustes de llamadas del teléfono y desvíe las llamadas sin respuesta al {{number}}. En una línea fija o un sistema telefónico de empresa, pídaselo a su operador.",
       "all": "En un móvil, abra los ajustes de llamadas del teléfono y desvíe todas las llamadas al {{number}}. En una línea fija o un sistema telefónico de empresa, pídaselo a su operador."
-    }
+    },
+    "itWorks": "Funciona"
   }
 }

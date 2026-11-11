@@ -1,7 +1,7 @@
 import { expect, it, vi } from "vitest";
 
 const fixture = vi.hoisted(() => ({
-  state: { businessId: "business-1" as string | null, stage: "goal", steps: ["create_business", "website", "goal"] },
+  state: { businessId: "business-1" as string | null, stage: "attribution", steps: ["create_business", "website", "attribution"] },
 }));
 
 vi.mock("next/headers", () => ({ headers: async () => new Headers({ "x-lobbystack-brand": "host" }) }));
@@ -27,5 +27,5 @@ it("sends a checkout success link from before the success page to it, with the r
 });
 
 it("keeps a plain visit on the step the business has reached", async () => {
-  await expect(OnboardingPlanPage({ searchParams: Promise.resolve({}) })).rejects.toThrow("redirect:/onboarding/goal");
+  await expect(OnboardingPlanPage({ searchParams: Promise.resolve({}) })).rejects.toThrow("redirect:/onboarding/attribution");
 });

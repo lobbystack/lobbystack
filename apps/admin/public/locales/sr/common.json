@@ -100,14 +100,14 @@
     }
   },
   "numberTrial": {
-    "daysLeft_one": "{{number}} je Vaš još {{count}} dan. Izaberite paket da biste ga zadržali.",
-    "daysLeft_few": "{{number}} je Vaš još {{count}} dana. Izaberite paket da biste ga zadržali.",
-    "daysLeft_other": "{{number}} je Vaš još {{count}} dana. Izaberite paket da biste ga zadržali.",
     "outOfMinutes": "Potrošili ste minute. Pozivi sada idu na {{forwardTo}}.",
     "stillAvailable": "{{number}} je i dalje dostupan. Pretplatite se sada da biste ga vratili.",
-    "keepNumber": "Zadrži moj broj",
     "getReceptionistBack": "Vrati mog agenta",
-    "getNumberBack": "Vrati moj broj"
+    "getNumberBack": "Vrati moj broj",
+    "chip_one": "Besplatna proba · još {{count}} d",
+    "chip_few": "Besplatna proba · još {{count}} d",
+    "chip_other": "Besplatna proba · još {{count}} d",
+    "viewPlans": "Pogledajte pakete"
   },
   "testWindow": {
     "orCall": "Ili pozovite",
@@ -275,7 +275,7 @@
       "cancelled": "Otkazano"
     },
     "actions": "Radnje",
-      "rowActions": "Radnje za {{time}}",
+    "rowActions": "Radnje za {{time}}",
     "cancel": {
       "action": "Otkaži",
       "actionLabel": "Otkaži termin: {{time}}",

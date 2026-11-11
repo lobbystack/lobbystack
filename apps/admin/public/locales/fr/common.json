@@ -100,14 +100,14 @@
     }
   },
   "numberTrial": {
-    "daysLeft_one": "Le {{number}} est à vous encore {{count}} jour. Choisissez un forfait pour le garder.",
-    "daysLeft_many": "Le {{number}} est à vous encore {{count}} jours. Choisissez un forfait pour le garder.",
-    "daysLeft_other": "Le {{number}} est à vous encore {{count}} jours. Choisissez un forfait pour le garder.",
     "outOfMinutes": "Vos minutes sont épuisées. Les appels vont maintenant au {{forwardTo}}.",
     "stillAvailable": "Le {{number}} est encore disponible. Abonnez-vous pour le récupérer.",
-    "keepNumber": "Garder mon numéro",
     "getReceptionistBack": "Retrouver mon agent",
-    "getNumberBack": "Récupérer mon numéro"
+    "getNumberBack": "Récupérer mon numéro",
+    "chip_one": "Essai gratuit · {{count}} j restant",
+    "chip_other": "Essai gratuit · {{count}} j restants",
+    "viewPlans": "Voir les forfaits",
+    "chip_many": "Essai gratuit · {{count}} j restants"
   },
   "testWindow": {
     "orCall": "Ou appelez le",
@@ -275,7 +275,7 @@
       "cancelled": "Annulé"
     },
     "actions": "Actions",
-      "rowActions": "Actions pour {{time}}",
+    "rowActions": "Actions pour {{time}}",
     "cancel": {
       "action": "Annuler",
       "actionLabel": "Annuler le rendez-vous : {{time}}",

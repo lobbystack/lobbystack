@@ -6,6 +6,7 @@ import { ChevronRight, ExternalLink, LayoutList, SearchIcon, XIcon } from "lucid
 import { useTranslation } from "react-i18next";
 
 import { WorkspaceSwitcher } from "@/components/layout/workspace-switcher";
+import { NumberTrialChip } from "@/components/number-trial-chip";
 import { accountItemLink, useAccountMenuGroups, type AccountMenuItem } from "@/components/nav-user";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -190,10 +191,12 @@ function SheetMenus({ closeThen, onFeedback, partnerConsole, user }: { closeThen
       <div className={`flex flex-col duration-200 ease-out motion-reduce:animate-none ${state.direction ? SLIDE[state.direction] : ""}`} data-menu-level={shown} key={shown}>
         {menu}
       </div>
-      {shown === "root" ? <>
+      {shown === "root" ? <div className="mt-auto flex flex-col">
+        {/* The plans open once the sheet has closed, so they don't open under it. */}
+        <NumberTrialChip className="mx-4 mb-2" openWith={(openPlans) => closeThen(openPlans)} />
         <Separator className="mx-5 w-auto! bg-sidebar-border" />
         <AccountSection closeThen={closeThen} onFeedback={onFeedback} partnerConsole={partnerConsole} user={user} />
-      </> : null}
+      </div> : null}
     </div>
   );
 }

@@ -1,6 +1,13 @@
 {
-  "accessibility": { "close": "Cerrar", "toggleSidebar": "Mostrar u ocultar la barra lateral", "skipToContent": "Ir al contenido principal", "clearSearch": "Borrar búsqueda" },
-  "errors": { "unexpected": "Algo salió mal. Inténtelo de nuevo." },
+  "accessibility": {
+    "close": "Cerrar",
+    "toggleSidebar": "Mostrar u ocultar la barra lateral",
+    "skipToContent": "Ir al contenido principal",
+    "clearSearch": "Borrar búsqueda"
+  },
+  "errors": {
+    "unexpected": "Algo salió mal. Inténtelo de nuevo."
+  },
   "loading": {
     "title": "Cargando...",
     "retry": "Reintentar la carga",
@@ -93,14 +100,14 @@
     }
   },
   "numberTrial": {
-    "daysLeft_one": "El {{number}} es suyo {{count}} día más. Elija un plan para conservarlo.",
-    "daysLeft_many": "El {{number}} es suyo {{count}} días más. Elija un plan para conservarlo.",
-    "daysLeft_other": "El {{number}} es suyo {{count}} días más. Elija un plan para conservarlo.",
     "outOfMinutes": "Se acabaron sus minutos. Las llamadas ahora van al {{forwardTo}}.",
     "stillAvailable": "El {{number}} sigue disponible. Suscríbase ahora para recuperarlo.",
-    "keepNumber": "Conservar mi número",
     "getReceptionistBack": "Recuperar a mi agente",
-    "getNumberBack": "Recuperar mi número"
+    "getNumberBack": "Recuperar mi número",
+    "chip_one": "Prueba gratuita · queda {{count}} d",
+    "chip_other": "Prueba gratuita · quedan {{count}} d",
+    "viewPlans": "Ver planes",
+    "chip_many": "Prueba gratuita · quedan {{count}} d"
   },
   "testWindow": {
     "orCall": "O llame al",
@@ -268,7 +275,7 @@
       "cancelled": "Cancelado"
     },
     "actions": "Acciones",
-      "rowActions": "Acciones para {{time}}",
+    "rowActions": "Acciones para {{time}}",
     "cancel": {
       "action": "Cancelar",
       "actionLabel": "Cancelar la cita: {{time}}",

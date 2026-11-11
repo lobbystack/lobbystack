@@ -12,7 +12,8 @@ import { requireBusinessAdmin } from "../authz";
 import { accessCapabilities, brandPartnerId, businessShowsOnBrand, capabilityNames, readBusinessAccess, requireBusinessAccess, type BrandScope, type BusinessAccessVia, type Capability } from "./businessAccess";
 import { enqueueBusinessSummaryRefresh } from "./businessSummary";
 import type { DomainContext } from "./context";
-import type { OnboardingGoal, OnboardingStage } from "./onboarding";
+import { normalizeOnboardingStage } from "@lobbystack/shared";
+import type { OnboardingStage } from "./onboarding";
 import { invitationOfferInTransaction, type InvitationPayment } from "./packageBilling";
 import { disableWebhookEndpointsInTransaction } from "./publicApi/webhooks";
 
@@ -305,9 +306,8 @@ export type UserBusiness = {
   businessType: string;
   defaultLocale: string;
   websiteUrl: string | null;
+  /** The step the owner is on, as normalizeOnboardingStage reads the stored value. */
   onboardingStage: string;
-  /** What the owner wants their agent to do first, or null when they skipped the question or never saw it. */
-  onboardingGoal: OnboardingGoal | null;
   createdAt: string;
   /** The access level a partner's business gives its own operators, or null for a direct business. */
   partnerAccessLevel: PartnerAccessLevel | null;
@@ -327,9 +327,10 @@ export type UserBusiness = {
 export async function listUserBusinesses(db: Database, userId: string, brand: BrandScope): Promise<UserBusiness[]> {
   return await withBusinessTransaction(db, { userId, actorType: "operator" }, async (tx) => {
     const active = await readActiveBusinessIdInTransaction(tx, { userId, brand });
-    const rows = await tx.execute<Omit<UserBusiness, "active" | "createdAt" | "partnerAccessLevel" | "via" | "capabilities"> & { createdAt: Date; partnerId: string | null; accessLevel: PartnerAccessLevel; via: BusinessAccessVia }>(sql`select business_id as "businessId", name, slug, role, timezone, business_type as "businessType", default_locale as "defaultLocale", website_url as "websiteUrl", onboarding_stage as "onboardingStage", onboarding_goal as "onboardingGoal", created_at as "createdAt", partner_id as "partnerId", partner_access_level as "accessLevel", access_via as "via" from app.list_user_businesses(${userId})`);
+    const rows = await tx.execute<Omit<UserBusiness, "active" | "createdAt" | "partnerAccessLevel" | "via" | "capabilities"> & { createdAt: Date; partnerId: string | null; accessLevel: PartnerAccessLevel; via: BusinessAccessVia }>(sql`select business_id as "businessId", name, slug, role, timezone, business_type as "businessType", default_locale as "defaultLocale", website_url as "websiteUrl", onboarding_stage as "onboardingStage", created_at as "createdAt", partner_id as "partnerId", partner_access_level as "accessLevel", access_via as "via" from app.list_user_businesses(${userId})`);
     return rows.rows.filter((row) => businessShowsOnBrand(row.partnerId, brand)).map(({ partnerId, accessLevel, via, ...row }) => ({
       ...row,
+      onboardingStage: normalizeOnboardingStage(row.onboardingStage, { partnerId }),
       active: row.businessId === active,
       createdAt: new Date(row.createdAt).toISOString(),
       partnerAccessLevel: partnerId ? accessLevel : null,

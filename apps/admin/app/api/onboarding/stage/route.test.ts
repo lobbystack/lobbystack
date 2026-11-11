@@ -12,7 +12,7 @@ const post = (to: unknown) => POST(new Request("http://localhost:3000/api/onboar
 beforeEach(() => {
   vi.clearAllMocks();
   resetFakeOperator();
-  fixture.advance.mockResolvedValue(undefined);
+  fixture.advance.mockImplementation(async (_context: unknown, input: { to: string }) => input.to);
 });
 
 it("moves onboarding to the stage the step names", async () => {
@@ -20,6 +20,11 @@ it("moves onboarding to the stage the step names", async () => {
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({ ok: true, stage: "phone_number" });
   expect(fixture.advance).toHaveBeenCalledWith(expect.anything(), { userId: "user", businessId: "business", to: "phone_number" });
+});
+
+it("answers with the stage the domain moved to, such as the plans after Meet your agent", async () => {
+  fixture.advance.mockResolvedValueOnce("choose_plan");
+  expect(await (await post("complete")).json()).toEqual({ ok: true, stage: "choose_plan" });
 });
 
 it("hands complete to the domain, which finishes only a partner's business there", async () => {

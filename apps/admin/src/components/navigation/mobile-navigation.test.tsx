@@ -131,6 +131,22 @@ describe("the phone menu sheet", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
+  it("shows the trial's countdown, and opens the plans once the sheet has closed", async () => {
+    const onUpgrade = vi.fn(() => expect(screen.queryByRole("dialog")).toBeNull());
+    setup({ trial: { status: "active", e164: "+15815550102", daysLeft: 9, minutesExhausted: false, forwardTo: null }, onUpgrade });
+    const sheet = await openMenu();
+    expect(within(sheet).getByText("numberTrial.chip")).toBeTruthy();
+    await userEvent.click(within(sheet).getByRole("button", { name: "numberTrial.viewPlans" }));
+    await waitFor(() => expect(onUpgrade).toHaveBeenCalledOnce());
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("shows no trial countdown without a running trial", async () => {
+    setup();
+    const sheet = await openMenu();
+    expect(within(sheet).queryByRole("button", { name: "numberTrial.viewPlans" })).toBeNull();
+  });
+
   it("opens search, and signs out, once the sheet has closed", async () => {
     const search = vi.fn();
     const unregister = registerSearch(search);

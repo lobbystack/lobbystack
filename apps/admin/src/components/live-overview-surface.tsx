@@ -122,7 +122,7 @@ export function LiveOverviewSurface() {
       <PageHeader actions={<TestCallButton />} title={t("home.title")} />
       {/* The extra margin makes the visible gap match the one between the page title and Getting started. */}
       {showGuide ? (
-        <div className="mb-4"><LiveSetupGuideSurface businessId={businessId!} goal={business?.onboardingGoal ?? null} /></div>
+        <div className="mb-4"><LiveSetupGuideSurface businessId={businessId!} /></div>
       ) : guidePending ? (
         <div className="mb-4"><SetupGuideSkeleton labels={{ title: t("setupGuide.title"), skip: t("setupGuide.skip"), steps: SETUP_STEP_ORDER.map((id) => t(`setupGuide.steps.${id}`)) }} /></div>
       ) : null}

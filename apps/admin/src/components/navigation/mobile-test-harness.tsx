@@ -19,18 +19,19 @@ export function stubPhone() {
   vi.stubGlobal("matchMedia", vi.fn((query: string) => ({ get matches() { return query === "(max-width: 767px)" && window.innerWidth < 768; }, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
 }
 
-type Options = { capabilities?: string[]; agents?: AgentListItem[]; appointments?: Array<Record<string, unknown>> };
+type Options = { capabilities?: string[]; agents?: AgentListItem[]; appointments?: Array<Record<string, unknown>>; trial?: Record<string, unknown>; onUpgrade?: () => void };
 
-export function renderWithShell(ui: () => ReactNode, { capabilities, agents = [agent("agent-1", "Front desk", { isDefault: true })], appointments = [] }: Options = {}) {
+export function renderWithShell(ui: () => ReactNode, { capabilities, agents = [agent("agent-1", "Front desk", { isDefault: true })], appointments = [], trial = { status: "none" }, onUpgrade = vi.fn() }: Options = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Tenant name", active: true, role: "business_owner", ...(capabilities ? { capabilities } : {}) }] });
   client.setQueryData(["billing", "business"], { account: null, permissions: { hasCheckoutAccess: false }, availableCheckoutPlans: [], availableCheckoutIntervals: { starter: [], pro: [] } });
   client.setQueryData(["appointments", "business"], { appointments });
+  client.setQueryData(["number-trial", "business"], { trial });
   const tree = () => (
     <QueryClientProvider client={client}>
       <BusinessCapabilitiesProvider initial={["activity", "setup", "team", "billing", "api_keys", "mcp"]}>
         <AgentsSeedProvider seed={{ businessId: "business", agents }}>
-          <UpgradePlanDialogProvider onOpen={vi.fn()}>
+          <UpgradePlanDialogProvider onOpen={onUpgrade}>
             <SidebarProvider>{ui()}</SidebarProvider>
           </UpgradePlanDialogProvider>
         </AgentsSeedProvider>

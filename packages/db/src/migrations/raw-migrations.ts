@@ -209,6 +209,7 @@ export const SCHEMA_MIGRATIONS = [
   "0203_rule_channels.sql",
   "0205_appointment_notes.sql",
   "0206_user_page_intros.sql",
+  "0207_required_number.sql",
 ] as const;
 
 const CONCURRENT_INDEX_DIRECTIVE = /^-- lobbystack:concurrent-index ([a-z][a-z0-9_]*)$/m;

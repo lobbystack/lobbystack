@@ -669,6 +669,11 @@ export const phoneNumbers = pgTable(
     carrierConnectionId: varchar("carrier_connection_id", { length: 64 }),
     // The agent that answers this number. Migration 0184's trigger fills it with the default agent.
     agentId: uuid("agent_id"),
+    // The owner's line that forwards to this number, from the first forwarded call we saw, and when (migration 0207).
+    forwardedFromE164: varchar("forwarded_from_e164", { length: 32 }),
+    forwardingDetectedAt: timestamp("forwarding_detected_at", { withTimezone: true }),
+    // When the owner said forwarding works, for carriers that strip the forwarding header.
+    forwardingConfirmedAt: timestamp("forwarding_confirmed_at", { withTimezone: true }),
     ...legacyId,
     ...timestamps,
   },

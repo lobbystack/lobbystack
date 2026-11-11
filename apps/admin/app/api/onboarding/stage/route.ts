@@ -14,6 +14,7 @@ export const POST = operatorRoute(async ({ userId, businessId, body, domain }) =
   if (!isOnboardingStage(target) || target === "create_business") {
     return jsonError("A valid next onboarding stage is required.", 400);
   }
-  await advanceOnboardingStage(domain, { userId, businessId, to: target });
-  return NextResponse.json({ ok: true, stage: target });
+  // The stage it's on after: leaving Meet your agent can open the plans instead of finishing.
+  const stage = await advanceOnboardingStage(domain, { userId, businessId, to: target });
+  return NextResponse.json({ ok: true, stage });
 });
