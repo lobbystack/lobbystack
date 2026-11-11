@@ -122,7 +122,7 @@ describe("drilling into an agent, Business and Settings", () => {
     expect(menu().className).toContain("slide-in-from-right");
     expect(within(menu() as HTMLElement).getByRole("button", { name: "items.agents" }).hasAttribute("data-back-row")).toBe(true);
     expect(within(menu() as HTMLElement).getByText("Front desk")).toBeTruthy();
-    expect(within(menu() as HTMLElement).getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["/agents/agent-1", "/agents/agent-1/instructions", "/agents/agent-1/rules", "/agents/agent-1/channels", "/agents/agent-1/shared"]);
+    expect(within(menu() as HTMLElement).getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["/agents/agent-1", "/agents/agent-1/rules", "/agents/agent-1/channels", "/agents/agent-1/shared"]);
     // The phone number page keeps Channels lit.
     view.navigate("/agents/agent-1/channels/phone");
     expect(screen.getByRole("link", { name: /agentPages\.channels/ }).hasAttribute("data-active")).toBe(true);

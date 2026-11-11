@@ -118,10 +118,11 @@ export async function createAgentInTransaction(tx: DatabaseTransaction, input: {
   const [active] = await tx.select({ total: count() }).from(agents).where(and(eq(agents.businessId, input.businessId), isNull(agents.archivedAt)));
   if (includedAgents !== null && Number(active?.total ?? 0) >= includedAgents) throw agentError("Your plan includes no more agents.", 402, billingErrorCodes.agentLimitReached);
   const source = input.copyFromAgentId ? await requireActiveAgentInTransaction(tx, input.businessId, input.copyFromAgentId) : await defaultAgentInTransaction(tx, input.businessId);
-  const { id: _id, isDefault: _isDefault, archivedAt: _archivedAt, createdAt: _createdAt, updatedAt: _updatedAt, ...settings } = source;
+  // The deprecated instruction columns stay behind: the rules copied below carry what they held.
+  const { id: _id, isDefault: _isDefault, archivedAt: _archivedAt, createdAt: _createdAt, updatedAt: _updatedAt, voiceInstructions: _voice, smsInstructions: _sms, chatInstructions: _chat, ...settings } = source;
   const [created] = await tx.insert(agents).values({ ...settings, name, isDefault: false, appointmentChangePolicy: source.appointmentChangePolicy ?? defaultAppointmentChangePolicy }).returning();
   if (!created) throw new Error("Agent could not be created.");
-  const rules = await tx.select({ title: agentRules.title, content: agentRules.content, active: agentRules.active, sortOrder: agentRules.sortOrder }).from(agentRules).where(and(eq(agentRules.businessId, input.businessId), eq(agentRules.agentId, source.id)));
+  const rules = await tx.select({ title: agentRules.title, content: agentRules.content, active: agentRules.active, sortOrder: agentRules.sortOrder, channel: agentRules.channel }).from(agentRules).where(and(eq(agentRules.businessId, input.businessId), eq(agentRules.agentId, source.id)));
   if (rules.length) await tx.insert(agentRules).values(rules.map((rule) => ({ ...rule, businessId: input.businessId, agentId: created.id })));
   await enqueueAgentSnapshotRefresh(tx, { businessId: input.businessId, agentId: created.id, change: "agent_created" });
   return created;

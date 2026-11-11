@@ -71,7 +71,9 @@ describe("the phone menu sheet", () => {
     expect(within(sheet).getByRole("link", { name: "mobileNav.allAgents" }).getAttribute("href")).toBe("/agents");
     await userEvent.click(within(sheet).getByRole("button", { name: "Evening" }));
     expect(level()).toBe("agent:agent-2");
-    expect(hrefs(sheet)).toEqual(expect.arrayContaining(["/agents/agent-2/instructions", "/agents/agent-2/rules", "/agents/agent-2/channels"]));
+    expect(hrefs(sheet)).toEqual(expect.arrayContaining(["/agents/agent-2/rules", "/agents/agent-2/channels"]));
+    // Instructions became rules kept to a channel, so the agent has no Instructions row.
+    expect(hrefs(sheet)).not.toContain("/agents/agent-2/instructions");
     await userEvent.click(within(sheet).getByRole("button", { name: "items.agents" }));
     expect(level()).toBe("agents");
     cleanup();

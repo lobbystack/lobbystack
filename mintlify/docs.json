@@ -41,6 +41,18 @@
   },
   "redirects": [
     {
+      "source": "/agent/instructions",
+      "destination": "/agent/rules"
+    },
+    {
+      "source": "/fr/agent/instructions",
+      "destination": "/fr/agent/rules"
+    },
+    {
+      "source": "/es/agent/instructions",
+      "destination": "/es/agent/rules"
+    },
+    {
       "source": "/dashboard/calls",
       "destination": "/dashboard/inbox"
     },
@@ -206,7 +218,6 @@
               "agent/overview",
               "agent/manage-agents",
               "agent/greeting-and-voice",
-              "agent/instructions",
               "agent/rules",
               {
                 "group": "Calls and booking",
@@ -376,7 +387,6 @@
               "fr/agent/overview",
               "fr/agent/manage-agents",
               "fr/agent/greeting-and-voice",
-              "fr/agent/instructions",
               "fr/agent/rules",
               {
                 "group": "Appels et rendez-vous",
@@ -549,7 +559,6 @@
               "es/agent/overview",
               "es/agent/manage-agents",
               "es/agent/greeting-and-voice",
-              "es/agent/instructions",
               "es/agent/rules",
               {
                 "group": "Llamadas y citas",

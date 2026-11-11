@@ -9,8 +9,10 @@ export { interfaceLocaleTags, interfaceLocales, intlLocale, isInterfaceLocale, i
 export type { InterfaceLocale, RuntimeLocale } from "./locales";
 import { interfaceLocales, runtimeLocales, type InterfaceLocale, type RuntimeLocale } from "./locales";
 import { appointmentChangeVerificationModes, bookingModes, transferModes, type ReceptionistVoice, type StaffFirstMode } from "./receptionist";
+import type { RuleChannel } from "./ruleChannels";
 import { WIDGET_COLOR_PATTERN, widgetPositionSchema, type WidgetPosition } from "./widget";
 export * from "./receptionist";
+export * from "./ruleChannels";
 export * from "./chatChannels";
 export * from "./checkIn";
 export * from "./callSummaryEmail";
@@ -320,6 +322,8 @@ export type AgentRuleSummary = {
   title: string;
   content: string;
   order: number;
+  /** The one channel the rule applies on. Absent: every channel, and every rule in snapshots built before rules had channels. */
+  channel?: RuleChannel;
 };
 
 /** How the agent handles appointment requests. */
@@ -331,9 +335,10 @@ export function normalizeBookingMode(value: string | null | undefined): BookingM
 }
 
 /**
- * What one agent changes about a business's snapshot. Instructions are already
- * resolved, so an agent without its own holds the same default text the flat
- * fields would.
+ * What one agent changes about a business's snapshot. Its instructions are the
+ * default text for each channel, with its tone. What its owner wrote for one
+ * channel is in its rules, kept to that channel; snapshots built before
+ * migration 0203 hold that text here instead.
  */
 export type SnapshotAgent = {
   id: string;

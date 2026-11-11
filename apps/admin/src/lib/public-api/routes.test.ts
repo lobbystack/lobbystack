@@ -1085,9 +1085,10 @@ describe("rules", () => {
     expect((await v1.reorderRules(call("/rules/reorder", { method: "POST", body: JSON.stringify({ rule_ids: [] }) }))).status).toBe(400);
     expect((await v1.reorderRules(call("/rules/reorder", { method: "POST", body: JSON.stringify({ rule_ids: ["x"] }) }))).status).toBe(400);
     expect((await v1.updateRule(call("/rules/x", { method: "PATCH", body: JSON.stringify({ active: true }) }), params("x"))).status).toBe(400);
-    // A rule takes only title, content and active, and calls read at most 4,000 characters of it.
+    // A rule takes only title, content, active and channel, and calls read at most 8,000 characters of it (4,000 without a channel, which the domain checks).
     expect((await v1.updateRule(call(`/rules/${ruleId}`, { method: "PATCH", body: JSON.stringify({ position: 2 }) }), params())).status).toBe(400);
-    expect((await v1.updateRule(call(`/rules/${ruleId}`, { method: "PATCH", body: JSON.stringify({ content: "x".repeat(4_001) }) }), params())).status).toBe(400);
+    expect((await v1.updateRule(call(`/rules/${ruleId}`, { method: "PATCH", body: JSON.stringify({ content: "x".repeat(8_001) }) }), params())).status).toBe(400);
+    expect((await v1.updateRule(call(`/rules/${ruleId}`, { method: "PATCH", body: JSON.stringify({ channel: "email" }) }), params())).status).toBe(400);
     expect(domain.updateRuleForApi).toHaveBeenCalledTimes(1);
     expect(domain.reorderRulesForApi).toHaveBeenCalledTimes(1);
   });

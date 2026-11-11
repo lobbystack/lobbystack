@@ -5,13 +5,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AgentHandlingSection } from "./agent-handling-section";
 import { AgentIdentitySection } from "./agent-identity-section";
-import { AgentInstructionsSection } from "./agent-instructions-section";
 import { WorkspaceBusinessSection } from "./workspace-business-section";
 
 /** The agent's sections and the workspace's business details, together, as the agent and workspace pages show them. */
 function AgentSettingsSections({ businessId, canManageTenant }: { businessId: string; canManageTenant: boolean }) {
   const props = { agentId: "agent-1", businessId, canManage: canManageTenant };
-  return <><AgentIdentitySection {...props} /><AgentInstructionsSection {...props} /><AgentHandlingSection {...props} /><WorkspaceBusinessSection businessId={businessId} canManage={canManageTenant} /></>;
+  return <><AgentIdentitySection {...props} /><AgentHandlingSection {...props} /><WorkspaceBusinessSection businessId={businessId} canManage={canManageTenant} /></>;
 }
 import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 import { toast } from "sonner";
@@ -70,24 +69,6 @@ describe("agent settings telemetry", () => {
     await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "agent:actions.save" }));
     await waitFor(() => telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "name" }));
     expect(lastPatch(fetchMock)).toEqual({ url: "/api/agents/agent-1?businessId=business", body: { businessId: "business", name: "Evenings" } });
-  });
-
-  it("saves each channel's instructions, and clears one left empty", async () => {
-    const fetchMock = setup({ chatInstructions: "Answer briefly." });
-    await userEvent.click(await enabled("agent:actions.editField:agent:instructions.voice.label"));
-    await userEvent.type(within(await screen.findByRole("dialog")).getByRole("textbox"), "Offer a visit.");
-    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "agent:actions.save" }));
-    await waitFor(() => telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "voice_instructions" }));
-    expect(lastPatch(fetchMock).body).toEqual({ businessId: "business", voiceInstructions: "Offer a visit." });
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-
-    await userEvent.click(await enabled("agent:actions.editField:agent:instructions.chat.label"));
-    const chat = within(await screen.findByRole("dialog")).getByRole("textbox");
-    expect((chat as HTMLTextAreaElement).value).toBe("Answer briefly.");
-    await userEvent.clear(chat);
-    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "agent:actions.save" }));
-    await waitFor(() => telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "chat_instructions" }));
-    expect(lastPatch(fetchMock)).toEqual({ url: "/api/agents/agent-1?businessId=business", body: { businessId: "business", chatInstructions: null } });
   });
 
   it("saves the workspace's language through the workspace, not the agent", async () => {

@@ -23,7 +23,7 @@ export type SearchEntry = {
 export type Translate = (key: string, options?: Record<string, unknown>) => unknown;
 
 /** The tags synonyms map onto, one list of words each in nav.json's search.synonyms. */
-export const SEARCH_TAGS = ["billing", "usage", "security", "phone", "voice", "instructions", "rules", "handling", "business", "knowledge", "services", "employees", "team", "appearance", "notifications", "widget", "instagram", "connections", "keys", "inbox", "contacts", "appointments", "analytics", "affiliate", "agents"] as const;
+export const SEARCH_TAGS = ["billing", "usage", "security", "phone", "voice", "rules", "handling", "business", "knowledge", "services", "employees", "team", "appearance", "notifications", "widget", "instagram", "connections", "keys", "inbox", "contacts", "appointments", "analytics", "affiliate", "agents"] as const;
 export type SearchTag = (typeof SEARCH_TAGS)[number];
 
 const PAGE_TAGS: Record<string, SearchTag[]> = {
@@ -47,7 +47,7 @@ const PAGE_TAGS: Record<string, SearchTag[]> = {
 const AGENT_TAGS: Partial<Record<AgentPage["section"], SearchTag[]>> = {
   // The agent's own page holds its voice and greeting, and how it handles calls and bookings.
   "": ["voice", "handling"],
-  instructions: ["instructions"],
+  // The Instructions page joined Rules, so its words find Rules (nav.json's search.synonyms.rules).
   rules: ["rules"],
   channels: [],
   "channels/phone": ["phone"],
