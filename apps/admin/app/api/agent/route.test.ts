@@ -3,10 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const fixture = vi.hoisted(() => ({ insert: vi.fn(), conflict: vi.fn(), update: vi.fn(), enqueue: vi.fn(), business: {} as Record<string, unknown>, profile: undefined as Record<string, unknown> | undefined }));
 vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
 vi.mock("@lobbystack/db", async (original) => ({ ...await original<typeof import("@lobbystack/db")>(), enqueueOutbox: fixture.enqueue }));
+const domain = vi.hoisted(() => ({ requireActiveAgentInTransaction: vi.fn(), staffFirstBlockInTransaction: vi.fn() }));
+vi.mock("@lobbystack/domain", async (original) => ({ ...await original<typeof import("@lobbystack/domain")>(), ...domain }));
 import { agents } from "@lobbystack/db";
 import { defaultGreeting, runtimeLocales } from "@lobbystack/shared";
 import { fakeOperator, resetFakeOperator } from "@/lib/operator-request.fake";
-import { PATCH } from "./route";
+import { GET, PATCH } from "./route";
 const patch = (body: unknown) => PATCH(new Request("http://localhost:3000/api/agent", { method: "PATCH", body: JSON.stringify(body) }));
 beforeEach(() => {
   vi.clearAllMocks();
@@ -14,11 +16,38 @@ beforeEach(() => {
   fixture.business = { name: "Clinic", defaultLocale: "en" };
   fixture.profile = undefined;
   fakeOperator.tx = {
-    select: () => ({ from: (table: unknown) => ({ where: () => ({ limit: async () => table === agents ? (fixture.profile ? [{ id: "profile", ...fixture.profile }] : []) : [fixture.business], for: async () => [{ timezone: "America/Toronto", ...fixture.business }] }) }) }),
+    select: () => ({ from: (table: unknown) => ({ where: () => ({ limit: async () => table === agents ? (fixture.profile ? [{ id: "profile", ...fixture.profile }] : []) : [fixture.business], for: async () => [{ timezone: "America/Toronto", ...fixture.business }], orderBy: async () => [] }) }) }),
     // A business without an agent gets one from the defaults; one with an agent has it updated, which `conflict` records.
     insert: () => ({ values: (value: unknown) => { fixture.insert(value); return { onConflictDoNothing: () => ({ returning: async () => [{ id: "profile", updatedAt: new Date(0) }] }) }; } }),
     update: (table: unknown) => ({ set: (value: unknown) => { fixture.update(value); if (table === agents) fixture.conflict(value); return { where: () => ({ returning: async () => [table === agents ? { id: "profile", updatedAt: new Date(0) } : { id: "business" }] }) }; } }),
   };
+});
+
+const AGENT = "00000000-0000-4000-8000-000000000001";
+const get = (query = "") => GET(new Request(`http://localhost:3000/api/agent${query}`));
+
+describe("reading one agent's settings", () => {
+  it("reads the default agent without an agentId, as before", async () => {
+    fixture.profile = { greeting: "Default here" };
+    domain.staffFirstBlockInTransaction.mockResolvedValue(null);
+    expect(await (await get()).json()).toMatchObject({ business: { name: "Clinic" }, profile: { id: "profile", greeting: "Default here" }, staffFirstBlock: null });
+    expect(domain.requireActiveAgentInTransaction).not.toHaveBeenCalled();
+    expect(domain.staffFirstBlockInTransaction).toHaveBeenCalledWith(expect.anything(), "business", undefined);
+  });
+
+  it("reads the agent named, with the staff-first block of its own numbers", async () => {
+    domain.requireActiveAgentInTransaction.mockResolvedValue({ id: AGENT, greeting: "Evening here" });
+    domain.staffFirstBlockInTransaction.mockResolvedValue("carrier");
+    expect(await (await get(`?agentId=${AGENT}`)).json()).toMatchObject({ profile: { id: AGENT, greeting: "Evening here" }, staffFirstBlock: "carrier" });
+    expect(domain.requireActiveAgentInTransaction).toHaveBeenCalledWith(expect.anything(), "business", AGENT);
+    expect(domain.staffFirstBlockInTransaction).toHaveBeenCalledWith(expect.anything(), "business", AGENT);
+  });
+
+  it("refuses an agentId that isn't a UUID and passes an unknown agent's 404 on", async () => {
+    expect((await get("?agentId=evening")).status).toBe(400);
+    domain.requireActiveAgentInTransaction.mockRejectedValue(Object.assign(new Error("Agent not found."), { status: 404, code: "agent_not_found" }));
+    expect((await get(`?agentId=${AGENT}`)).status).toBe(404);
+  });
 });
 
 describe("agent settings validation", () => {

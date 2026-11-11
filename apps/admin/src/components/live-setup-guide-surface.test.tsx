@@ -26,23 +26,29 @@ vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetry
 
 const copy = en.setupGuide;
 const order = ["fullScan", "sources", "testCall", "phoneNumber"] as const;
-const goals = ["answer_calls", "book_appointments", "answer_website_visitors", "answer_instagram_messages", null] as const;
 const clients: QueryClient[] = [];
 beforeEach(() => { telemetryRef.current = createRecordedBrowserTelemetry(); });
 afterEach(() => { cleanup(); clients.forEach((client) => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); search.value = ""; });
 
 const summary = (firstRealConversationAt: string | null) => ({ businessId: "business", kpis: { calls: { total: 0, deltaPercent: 0 }, appointments: { total: 0, deltaPercent: 0 }, averageDuration: { totalSeconds: 0, deltaSeconds: 0 } }, monthlyCalls: [], recentCalls: [], actionRequired: [], upcoming: [], firstRealConversationAt });
-type Setup = { firstRealConversationAt?: string | null; role?: string; capabilities?: Capability[]; goal?: string | null; activation?: Record<string, unknown>; numbers?: unknown[]; trial?: Record<string, unknown>; includedNumbers?: number | null; partnerNumbers?: Record<string, unknown> | null; complete?: string[]; skipped?: string[]; setupDown?: boolean };
+type Setup = { firstRealConversationAt?: string | null; role?: string; capabilities?: Capability[]; activation?: Record<string, unknown>; numbers?: unknown[]; trial?: Record<string, unknown>; includedNumbers?: number | null; partnerNumbers?: Record<string, unknown> | null; complete?: string[]; skipped?: string[]; setupDown?: boolean; numberList?: { forwardedFrom?: string | null; numberLost?: boolean } };
 
-async function setup({ activation = {}, capabilities, complete = [], firstRealConversationAt = null, goal = null, includedNumbers = 0, numbers = [], partnerNumbers = null, role = "business_owner", setupDown = false, skipped = [], trial = { status: "none" } }: Setup = {}) {
+const numberOrder = ["fullScan", "callNumber", "forwardCalls", "sources"] as const;
+
+async function setup({ activation = {}, capabilities, complete = [], firstRealConversationAt = null, includedNumbers = 0, numberList, numbers = [], partnerNumbers = null, role = "business_owner", setupDown = false, skipped = [], trial = { status: "none" } }: Setup = {}) {
   vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn(), removeItem: vi.fn() });
   vi.stubGlobal("EventSource", class { addEventListener() {} removeEventListener() {} close() {} });
+  // Home's appointment details sheet picks its side from the screen width.
+  vi.stubGlobal("matchMedia", vi.fn((query: string) => ({ matches: false, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
   const skips = new Set(skipped);
-  const steps = () => order.map((id) => ({ id, documentId: id === "fullScan" ? "doc_1" : null, status: complete.includes(id) ? "complete" : skips.has(id) ? "skipped" : "needs setup" }));
+  const done = new Set(complete);
+  let confirmed = false;
+  const steps = () => (numberList ? numberOrder : order).map((id) => ({ id, documentId: id === "fullScan" ? "doc_1" : null, status: done.has(id) ? "complete" : skips.has(id) ? "skipped" : "needs setup" }));
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+    if (url.startsWith("/api/setup/forwarding") && init?.method === "POST") { confirmed = true; done.add("forwardCalls"); return Response.json({ confirmed: true }); }
     if (url.startsWith("/api/setup") && init?.method === "PATCH") { skips.add(JSON.parse(String(init.body)).stepId); return Response.json({ skippedSteps: [...skips] }); }
     if (url.startsWith("/api/setup") && setupDown) return Response.json({ error: "Down." }, { status: 500 });
-    if (url.startsWith("/api/setup")) return Response.json({ steps: steps(), skippedSteps: [...skips] });
+    if (url.startsWith("/api/setup")) return Response.json({ steps: steps(), skippedSteps: [...skips], ...(numberList ? { variant: "number", forwarding: { forwardedFrom: numberList.forwardedFrom ?? null, confirmed }, numberLost: numberList.numberLost ?? false } : { variant: "classic" }) });
     if (url.startsWith("/api/activation")) return Response.json({ deploymentMode: "cloud", plan: "free_cloud", paidPlanLive: false, hasDedicatedNumber: numbers.length > 0, completedWebCalls: 0, lastTestCall: null, country: "CA", widgetsEnabled: true, websiteImport: null, ...activation });
     if (url.startsWith("/api/phone-numbers")) return Response.json({ phoneNumbers: numbers, activeClaim: null, replacement: { usedAt: null, activeClaim: null }, partnerNumbers });
     if (url.startsWith("/api/billing")) return Response.json({ entitlement: { includedNumbers } });
@@ -56,7 +62,7 @@ async function setup({ activation = {}, capabilities, complete = [], firstRealCo
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   clients.push(client);
   client.setQueryData(["dashboard"], summary(firstRealConversationAt));
-  client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Clinic", slug: "clinic", role, active: true, onboardingGoal: goal, ...(capabilities ? { capabilities } : {}) }] });
+  client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Clinic", slug: "clinic", role, active: true, ...(capabilities ? { capabilities } : {}) }] });
   render(<I18nextProvider i18n={i18n}><QueryClientProvider client={client}><BusinessCapabilitiesProvider initial={ALL_CAPABILITIES}><UpgradePlanDialogProvider onOpen={vi.fn()}><LiveOverviewSurface /></UpgradePlanDialogProvider></BusinessCapabilitiesProvider></QueryClientProvider></I18nextProvider>);
   return { client, fetchMock };
 }
@@ -142,9 +148,87 @@ describe("people who can't act on the steps", () => {
   });
 });
 
+describe("the list for a business with a number", () => {
+  it("reads the site, calls the number, forwards the line, then adds sources", async () => {
+    await setup({ numberList: {}, numbers: [number] });
+    await list();
+    const titles = screen.getAllByRole("button").map((button) => button.textContent ?? "");
+    const positions = [copy.steps.fullScan, copy.steps.callNumber, copy.steps.forwardFromCurrent, copy.steps.sources].map((title) => titles.findIndex((text) => text.includes(title)));
+    expect(positions.every((position) => position >= 0)).toBe(true);
+    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+    expect(titles.some((text) => text.includes(copy.steps.testCall))).toBe(false);
+  });
+
+  it("offers a phone the number to dial, and hides the link from a mouse pointer", async () => {
+    await setup({ numberList: {}, numbers: [number], complete: ["fullScan"] });
+    const call = (await screen.findByText(/^Call .*514/)).closest("a")!;
+    expect(call.getAttribute("href")).toBe("tel:+15145550100");
+    expect(call.className).toContain("pointer-fine:hidden");
+    expect(screen.getByText(copy.stepDescriptions.testCall)).toBeTruthy();
+  });
+
+  it("shows a mouse pointer the number to copy, and hides it on a phone", async () => {
+    await setup({ numberList: {}, numbers: [number], complete: ["fullScan"] });
+    const desktop = await screen.findByTestId("call-number-desktop");
+    expect(desktop.className).toMatch(/(^|\s)hidden(\s|$)/);
+    expect(desktop.className).toContain("pointer-fine:flex");
+    expect(within(desktop).getByText(/^\(514\) 555-0100$/)).toBeTruthy();
+    expect(within(desktop).queryByRole("link")).toBeNull();
+    const button = within(desktop).getByRole("button", { name: copy.stepActions.copyNumber });
+    expect(button.textContent).toBe("");
+  });
+
+  it("copies the number and announces it without a visible label", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue();
+    await setup({ numberList: {}, numbers: [number], complete: ["fullScan"] });
+    const desktop = await screen.findByTestId("call-number-desktop");
+    await user.click(within(desktop).getByRole("button", { name: copy.stepActions.copyNumber }));
+    expect(writeText).toHaveBeenCalledWith("+15145550100");
+    await waitFor(() => expect(within(desktop).getByRole("status").textContent).toBe(copy.stepActions.numberCopied));
+    expect(within(desktop).getByRole("button", { name: copy.stepActions.copyNumber }).textContent).toBe("");
+  });
+
+  it("opens the forwarding dialog, and It works finishes the step for a carrier that strips the header", async () => {
+    const { fetchMock } = await setup({ numberList: {}, numbers: [number], complete: ["fullScan", "callNumber"] });
+    expect(await screen.findByText(copy.stepDescriptions.forwardCalls)).toBeTruthy();
+    await userEvent.click(await screen.findByRole("button", { name: copy.stepActions.forwardCalls }));
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.click(within(dialog).getByRole("button", { name: en.forwarding.itWorks }));
+    await waitFor(() => expect(apiCalls(fetchMock)).toContain("/api/setup/forwarding?businessId=business"));
+    telemetryRef.current!.expectEvent("web.activation.forwarding_confirmed", { businessId: "business" });
+    await userEvent.click(await screen.findByRole("button", { name: new RegExp(copy.steps.forwardFromCurrent) }));
+    expect(await screen.findByText(copy.forwardingWorks)).toBeTruthy();
+  });
+
+  it("tells the owner to dial the carrier's code on the phone customers call, then press Call", async () => {
+    await setup({ numberList: {}, numbers: [number], complete: ["fullScan", "callNumber"] });
+    await userEvent.click(await screen.findByRole("button", { name: copy.stepActions.forwardCalls }));
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.type(within(dialog).getByLabelText(en.forwarding.carrier.label), "Verizon");
+    await userEvent.click(await screen.findByRole("option", { name: "Verizon" }));
+    const steps = within(dialog).getAllByRole("listitem").map((item) => item.textContent ?? "");
+    expect(steps[0]).toContain(en.forwarding.code.dial);
+    expect(steps[1]).toBe(en.forwarding.code.call);
+    expect(within(dialog).queryByText(/To test it/)).toBeNull();
+  });
+
+  it("shows the line it learned from the first forwarded call", async () => {
+    await setup({ numberList: { forwardedFrom: "+14165550177" }, numbers: [number], complete: ["fullScan", "callNumber", "forwardCalls"] });
+    await userEvent.click(await screen.findByRole("button", { name: new RegExp(copy.steps.forwardFromCurrent) }));
+    expect(await screen.findByText(/^Forwarding from .*416.*555.*0177/)).toBeTruthy();
+  });
+
+  it("offers the plans in place of the number once the trial ended without one", async () => {
+    await setup({ numberList: { numberLost: true }, numbers: [], complete: ["fullScan"] });
+    expect(await screen.findByText(copy.stepDescriptions.numberLost)).toBeTruthy();
+    expect(screen.getByRole("button", { name: copy.stepActions.choosePlan })).toBeTruthy();
+  });
+});
+
 describe("steps", () => {
-  it.each(goals)("keeps the test call after sources for the goal %s", async (goal) => {
-    await setup({ goal });
+  it("keeps the test call after sources", async () => {
+    await setup();
     await list();
     const titles = screen.getAllByRole("button").map((button) => button.textContent ?? "");
     const positions = order.map((id) => titles.findIndex((title) => title.includes(copy.steps[id])));
@@ -152,11 +236,11 @@ describe("steps", () => {
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
   });
 
-  it.each(goals)("words the steps for the goal %s", async (goal) => {
-    await setup({ goal, complete: ["fullScan"] });
-    expect(await screen.findByText(copy.stepDescriptions.sources[goal ?? "none"])).toBeTruthy();
+  it("words the steps the same for every owner", async () => {
+    await setup({ complete: ["fullScan"] });
+    expect(await screen.findByText(copy.stepDescriptions.sources)).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: new RegExp(copy.steps.testCall) }));
-    expect(await screen.findByText(copy.stepDescriptions.testCall[goal ?? "none"])).toBeTruthy();
+    expect(await screen.findByText(copy.stepDescriptions.testCall)).toBeTruthy();
   });
 
   it("opens the first step still needing setup", async () => {
@@ -170,7 +254,7 @@ describe("steps", () => {
     await screen.findByRole("button", { name: copy.stepActions.sources });
     await userEvent.click(screen.getByRole("button", { name: copy.skipStep }));
     await waitFor(() => expect(skipRequests(fetchMock)).toEqual(["sources"]));
-    expect(await screen.findByText(copy.stepDescriptions.testCall.none)).toBeTruthy();
+    expect(await screen.findByText(copy.stepDescriptions.testCall)).toBeTruthy();
   });
 
   it.each(["complete", "skipped"])("keeps a %s step shut", async (status) => {
@@ -184,7 +268,7 @@ describe("steps", () => {
   it("opens the upload page from the sources step", async () => {
     await setup({ complete: ["fullScan"] });
     await userEvent.click(await screen.findByRole("button", { name: copy.stepActions.sources }));
-    expect(router.push).toHaveBeenCalledWith("/agent/knowledge?setup=upload");
+    expect(router.push).toHaveBeenCalledWith("/business/knowledge?setup=upload");
   });
 
   it("asks for the deeper read", async () => {
@@ -219,7 +303,7 @@ describe("the test call step", () => {
     await list();
     await userEvent.click(await screen.findByRole("button", { name: new RegExp(copy.steps.testCall) }));
     const link = await screen.findByRole("link", { name: new RegExp(copy.lastCall) });
-    expect(link.getAttribute("href")).toBe("/calls/call-1");
+    expect(link.getAttribute("href")).toBe("/inbox?call=call-1");
   });
 
   it("rechecks the step once the call ends, since nothing navigates", async () => {

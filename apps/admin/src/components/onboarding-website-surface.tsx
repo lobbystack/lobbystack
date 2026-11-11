@@ -69,19 +69,19 @@ export function OnboardingWebsiteSurface() {
       <FieldGroup className="gap-4">
         <Field aria-busy={!business || undefined}>
           <FieldLabel htmlFor="onboarding-website-url">{t("website.label")}</FieldLabel>
-          {!business ? <Skeleton aria-hidden="true" className="h-11 w-full" /> : (
+          {!business ? <Skeleton aria-hidden="true" className="h-10 w-full rounded-xl" /> : (
             <div className="relative">
               <Globe aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input autoComplete="url" autoFocus className="h-11 pl-9" id="onboarding-website-url" onChange={(event) => { edited.current = true; setWebsiteUrl(event.target.value); }} placeholder={t("website.placeholder")} type="text" value={websiteUrl} />
+              <Input autoComplete="url" autoFocus className="pl-9" id="onboarding-website-url" onChange={(event) => { edited.current = true; setWebsiteUrl(event.target.value); }} placeholder={t("website.placeholder")} type="text" value={websiteUrl} />
             </div>
           )}
         </Field>
         {error ? <FieldError>{error}</FieldError> : null}
-        <Button className="mt-2 h-11 w-full" disabled={!business || websiteUrl.trim().length === 0 || working} type="submit">{working ? <><LoaderCircle className="size-4 animate-spin" />{t(action === "skip" ? "website.skippingImport" : "website.submitting")}</> : t("website.continue")}</Button>
+        <Button className="mt-2 w-full" disabled={!business || websiteUrl.trim().length === 0 || working} type="submit">{working ? <><LoaderCircle className="size-4 animate-spin" />{t(action === "skip" ? "website.skippingImport" : "website.submitting")}</> : t("website.continue")}</Button>
       </FieldGroup>
       </form>
       <div className="mt-6 flex flex-col items-center gap-3">
-        <button className="text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50" disabled={!business || working} onClick={() => { setError(null); setAction("skip"); skip.mutate(); }} type="button">{skip.isPending ? t("website.skipping") : t("website.skip")}</button>
+        <button className="type-title text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50" disabled={!business || working} onClick={() => { setError(null); setAction("skip"); skip.mutate(); }} type="button">{skip.isPending ? t("website.skipping") : t("website.skip")}</button>
       </div>
     </div>
   );

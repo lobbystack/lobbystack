@@ -7,6 +7,7 @@ import { appointments, auditLogs, calendarBusyBlocks, calendarConnections, enque
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import { isBookingCalendarProvider, pickCalendarWriter } from "../calendarWriter";
+import { postBusinessNotificationInTransaction, resolveBusinessNotificationsInTransaction } from "./businessNotifications";
 import type { DomainContext } from "./context";
 import { queueOperatorAlertInTransaction, saveAppointmentVideoUrlInTransaction } from "./notifications";
 import { recordProductEventBestEffort } from "./productEvents";
@@ -134,6 +135,7 @@ export async function upsertBusyBlocks(
     }));
     for (let index = 0; index < rows.length; index += BUSY_BLOCK_INSERT_CHUNK) await tx.insert(calendarBusyBlocks).values(rows.slice(index, index + BUSY_BLOCK_INSERT_CHUNK));
     await tx.update(calendarConnections).set({ status: "connected", lastSyncError: null, lastSyncedAt: input.syncStartedAt ?? new Date(), updatedAt: new Date() }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId)));
+    await resolveBusinessNotificationsInTransaction(tx, { businessId: input.businessId, keys: [calendarSyncKey(input.connectionId)] });
     await enqueueOutbox(tx, {
       topic: "realtime.publish",
       businessId: input.businessId,
@@ -220,7 +222,9 @@ export async function markCalendarConnectionSync(
   input: { businessId: string; connectionId: string; error: string },
 ): Promise<void> {
   await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const connection = await tx.update(calendarConnections).set({ status: "error", lastSyncError: input.error.slice(0, 2000), updatedAt: new Date() }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId), ne(calendarConnections.status, "disconnected"))).returning({ id: calendarConnections.id });
+    const connection = await tx.update(calendarConnections).set({ status: "error", lastSyncError: input.error.slice(0, 2000), updatedAt: new Date() }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId), ne(calendarConnections.status, "disconnected"))).returning({ id: calendarConnections.id, provider: calendarConnections.provider });
+    // Every failed sync posts it; while it's open that changes nothing, and a sync that works again clears it.
+    if (connection[0]) await postBusinessNotificationInTransaction(tx, { businessId: input.businessId, kind: "calendar_sync_failing", key: calendarSyncKey(input.connectionId), params: { provider: connection[0].provider } });
     if (connection.length) await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKind: "calendarSync", eventKey: `calendarSync:connection:${input.connectionId}`, subject: "Calendar connection needs attention", body: "LobbyStack could not sync the connected calendar. Open integrations to reconnect it." });
   });
 }
@@ -523,7 +527,15 @@ type RetiredRow = { id: string; provider: string; staffId: string | null; extern
 
 /** Disconnects the connections `where` matches in the business. finishRetirement then forgets or keeps their tokens. */
 async function retireConnections(tx: DatabaseTransaction, businessId: string, where: SQL | undefined): Promise<RetiredRow[]> {
-  return await tx.update(calendarConnections).set({ status: "disconnected", disconnectedAt: new Date(), encryptedWebhookSecret: null, webhookRegistrationUntil: null, updatedAt: new Date() }).where(and(eq(calendarConnections.businessId, businessId), ne(calendarConnections.status, "disconnected"), where)).returning({ id: calendarConnections.id, provider: calendarConnections.provider, staffId: calendarConnections.staffId, externalWebhookId: calendarConnections.externalWebhookId });
+  const retired = await tx.update(calendarConnections).set({ status: "disconnected", disconnectedAt: new Date(), encryptedWebhookSecret: null, webhookRegistrationUntil: null, updatedAt: new Date() }).where(and(eq(calendarConnections.businessId, businessId), ne(calendarConnections.status, "disconnected"), where)).returning({ id: calendarConnections.id, provider: calendarConnections.provider, staffId: calendarConnections.staffId, externalWebhookId: calendarConnections.externalWebhookId });
+  // A connection that's gone can't keep failing.
+  if (retired.length) await resolveBusinessNotificationsInTransaction(tx, { businessId, keys: retired.map((row) => calendarSyncKey(row.id)) });
+  return retired;
+}
+
+/** The bell's key for a connection whose sync fails. */
+function calendarSyncKey(connectionId: string): string {
+  return `calendar_sync:${connectionId}`;
 }
 
 /**

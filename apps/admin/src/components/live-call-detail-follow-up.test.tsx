@@ -46,7 +46,7 @@ function setup(followUpTasks: FollowUp[] = [followUp("inbox-1")], role?: string)
 describe("voice follow-up telemetry", () => {
   it("records follow_up_completed with the inbox item identifier", async () => {
     const fetchMock = setup();
-    await userEvent.click(await screen.findByRole("tab", { name: "detail.tabs.details" }));
+    await screen.findByRole("tab", { name: "detail.tabs.details", selected: true });
     await userEvent.click(await screen.findByRole("button", { name: "detail.details.markDone" }));
     await waitFor(() => telemetryRef.current!.expectEvent("web.voice.follow_up_completed", { businessId: "business", callId: "call-1", inboxItemId: "inbox-1" }));
     expect(fetchMock).toHaveBeenCalledWith("/api/calls/call-1?businessId=business", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ action: "complete_follow_up", inboxItemId: "inbox-1" }) }));
@@ -63,7 +63,7 @@ describe("several follow-ups on one call", () => {
       followUp("request-1", { body: "Cancellation request: Consultation", request: "appointment_cancellation" }),
       followUp("closed", { body: "Already handled", status: "done" }),
     ]);
-    await userEvent.click(await screen.findByRole("tab", { name: "detail.tabs.details" }));
+    await screen.findByRole("tab", { name: "detail.tabs.details", selected: true });
     // Each request shows its localized title and requested service; the message keeps the agent's text. The mocked translator returns keys.
     expect(screen.getAllByText("followUp.cancellationRequest")).toHaveLength(2);
     expect(screen.getAllByText("followUp.requested")).toHaveLength(2);
@@ -83,14 +83,14 @@ describe("approving a caller's request from the call page", () => {
 
   it("offers to approve a cancellation next to Mark done", async () => {
     setup([followUp("cancel", { body: "Cancellation request: Consultation", request: "appointment_cancellation", appointment })], "scheduler");
-    await userEvent.click(await screen.findByRole("tab", { name: "detail.tabs.details" }));
+    await screen.findByRole("tab", { name: "detail.tabs.details", selected: true });
     expect(await screen.findByRole("button", { name: "appointments.cancel.approve" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "detail.details.markDone" })).toBeTruthy();
   });
 
   it("shows the new time and offers to approve a reschedule", async () => {
     setup([reschedule()], "scheduler");
-    await userEvent.click(await screen.findByRole("tab", { name: "detail.tabs.details" }));
+    await screen.findByRole("tab", { name: "detail.tabs.details", selected: true });
     expect(screen.getByText("followUp.rescheduleRequest")).toBeTruthy();
     expect(screen.getByText("followUp.newTime")).toBeTruthy();
     expect(await screen.findByRole("button", { name: "appointments.reschedule.approve" })).toBeTruthy();
@@ -99,7 +99,7 @@ describe("approving a caller's request from the call page", () => {
 
   it("moves the appointment to the requested time once approved", async () => {
     const fetchMock = setup([reschedule()], "scheduler");
-    await userEvent.click(await screen.findByRole("tab", { name: "detail.tabs.details" }));
+    await screen.findByRole("tab", { name: "detail.tabs.details", selected: true });
     await userEvent.click(await screen.findByRole("button", { name: "appointments.reschedule.approve" }));
     await userEvent.click(await screen.findByRole("button", { name: "appointments.reschedule.confirm" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/appointments/appointment-1/reschedule?businessId=business", expect.objectContaining({ method: "POST", body: JSON.stringify({ startsAt: "2099-09-09T10:00:00.000Z" }) })));
@@ -114,7 +114,7 @@ describe("approving a caller's request from the call page", () => {
     ] as const) {
       cleanup();
       setup([...tasks], role);
-      await userEvent.click(await screen.findByRole("tab", { name: "detail.tabs.details" }));
+      await screen.findByRole("tab", { name: "detail.tabs.details", selected: true });
       expect(await screen.findByRole("button", { name: "detail.details.markDone" })).toBeTruthy();
       expect(screen.queryByRole("button", { name: "appointments.reschedule.approve" })).toBeNull();
     }

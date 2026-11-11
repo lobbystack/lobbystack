@@ -23,13 +23,17 @@ export const WEB_EVENT_NAMES = [
   "web.partner.demo_published",
   "web.partner.demo_revoked",
   "web.page.home_viewed",
-  "web.page.calls_viewed",
-  "web.page.call_detail_viewed",
-  "web.page.messages_viewed",
+  "web.page.inbox_viewed",
   "web.page.contacts_viewed",
   "web.page.analytics_viewed",
+  "web.page.agents_viewed",
   "web.page.agent_viewed",
-  "web.page.settings_viewed",
+  "web.page.workspace_viewed",
+  "web.page.account_viewed",
+  "web.page.intro_shown",
+  "web.page.intro_dismissed",
+  "web.notifications.bell_opened",
+  "web.notifications.item_clicked",
   "web.contacts.contact_opened",
   "web.messages.thread_opened",
   "web.messages.reply_sent",
@@ -40,17 +44,15 @@ export const WEB_EVENT_NAMES = [
   "web.onboarding.language_submitted",
   "web.onboarding.phone_verified",
   "web.onboarding.number_waitlist_joined",
+  "web.onboarding.number_skipped",
   "web.onboarding.number_claim_started",
   "web.onboarding.number_claim_completed",
   "web.onboarding.number_unavailable",
   "web.onboarding.plan_selected",
+  "web.onboarding.trial_started",
   "web.onboarding.plan_checkout_started",
-  "web.onboarding.goal_submitted",
   "web.onboarding.attribution_submitted",
   "web.onboarding.meet_completed",
-  "web.onboarding.plan_offer_shown",
-  "web.onboarding.plan_offer_dismissed",
-  "web.onboarding.plan_offer_clicked",
   "web.knowledge.upload_started",
   "web.knowledge.upload_completed",
   "web.integration.calendar_connect_started",
@@ -63,6 +65,7 @@ export const WEB_EVENT_NAMES = [
   "web.voice.test_call_ended",
   "web.voice.test_call_error",
   "web.activation.first_call_completed",
+  "web.activation.forwarding_confirmed",
   "web.activation.upgrade_prompt_shown",
   "web.activation.upgrade_prompt_clicked",
   "web.activation.abandon_intent",
@@ -80,6 +83,7 @@ export const VOICE_EVENT_NAMES = [
   "voice.snapshot_loaded",
   "voice.delegation_completed",
   "voice.call_latency_recorded",
+  "voice.forwarding_detected",
 ] as const;
 
 export const SMS_EVENT_NAMES = [
@@ -274,13 +278,21 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.partner.demo_published": ["deploymentMode", "partnerId", "prospectDemoId", "businessId", "pathname"],
   "web.partner.demo_revoked": ["deploymentMode", "partnerId", "prospectDemoId", "businessId", "pathname"],
   "web.page.home_viewed": ["businessId", "deploymentMode", "pathname"],
-  "web.page.calls_viewed": ["businessId", "deploymentMode", "pathname"],
-  "web.page.call_detail_viewed": ["businessId", "deploymentMode", "pathname"],
-  "web.page.messages_viewed": ["businessId", "deploymentMode", "pathname"],
+  "web.page.inbox_viewed": ["businessId", "deploymentMode", "pathname"],
   "web.page.contacts_viewed": ["businessId", "deploymentMode", "pathname"],
   "web.page.analytics_viewed": ["businessId", "deploymentMode", "pathname"],
+  "web.page.agents_viewed": ["businessId", "deploymentMode", "pathname"],
   "web.page.agent_viewed": ["businessId", "deploymentMode", "pathname"],
-  "web.page.settings_viewed": ["businessId", "deploymentMode", "pathname"],
+  "web.page.workspace_viewed": ["businessId", "deploymentMode", "pathname"],
+  "web.page.account_viewed": ["businessId", "deploymentMode", "pathname"],
+  // pageId: the page whose first-visit intro card opened, such as inbox or knowledge.
+  "web.page.intro_shown": ["businessId", "deploymentMode", "pageId"],
+  // method: how the card closed: get_started, guide, close (the X), escape or outside.
+  "web.page.intro_dismissed": ["businessId", "deploymentMode", "pageId", "method"],
+  // unreadCount: how many items were unread when the panel opened. actionCount: how many need action.
+  "web.notifications.bell_opened": ["businessId", "deploymentMode", "unreadCount", "actionCount"],
+  // kind: the notification kind, such as website_import_failed. category: action or update. unread: whether it was unread.
+  "web.notifications.item_clicked": ["businessId", "deploymentMode", "kind", "category", "unread"],
   "web.contacts.contact_opened": ["businessId", "deploymentMode", "contactId"],
   "web.messages.thread_opened": [
     "businessId",
@@ -302,6 +314,8 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   // heard: whether a test call ended on that screen before the owner moved on.
   "web.onboarding.phone_verified": ["businessId", "deploymentMode", "countryCode"],
   "web.onboarding.number_waitlist_joined": ["businessId", "deploymentMode", "countryCode"],
+  // countryCode: the country without numbers the owner picked before going on without one.
+  "web.onboarding.number_skipped": ["businessId", "deploymentMode", "countryCode"],
   "web.onboarding.number_claim_started": [
     "businessId",
     "deploymentMode",
@@ -319,14 +333,12 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   // code: why the number step offers the plans, such as trial_already_used.
   "web.onboarding.number_unavailable": ["businessId", "deploymentMode", "code"],
   "web.onboarding.plan_selected": ["businessId", "deploymentMode", "plan"],
+  // The owner went on with the 14-day trial from the plans after Meet your agent.
+  "web.onboarding.trial_started": ["businessId", "deploymentMode"],
   "web.onboarding.plan_checkout_started": ["businessId", "deploymentMode", "plan"],
   "web.onboarding.plan_checkout_completed": ["businessId", "deploymentMode", "plan"],
-  "web.onboarding.goal_submitted": ["businessId", "deploymentMode", "goal"],
   "web.onboarding.attribution_submitted": ["businessId", "deploymentMode", "source"],
   "web.onboarding.meet_completed": ["businessId", "deploymentMode"],
-  "web.onboarding.plan_offer_shown": ["businessId", "deploymentMode", "surface"],
-  "web.onboarding.plan_offer_dismissed": ["businessId", "deploymentMode", "surface"],
-  "web.onboarding.plan_offer_clicked": ["businessId", "deploymentMode", "surface", "plan"],
   "web.knowledge.upload_started": [
     "businessId",
     "deploymentMode",
@@ -373,6 +385,8 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.voice.test_call_ended": ["businessId", "deploymentMode", "endedBy"],
   "web.voice.test_call_error": ["businessId", "deploymentMode"],
   "web.activation.first_call_completed": ["businessId", "deploymentMode", "transport"],
+  // The owner pressed It works after the forwarding test call, for a carrier that strips the forwarding header.
+  "web.activation.forwarding_confirmed": ["businessId", "deploymentMode"],
   "web.activation.upgrade_prompt_shown": ["businessId", "deploymentMode", "trigger"],
   "web.activation.upgrade_prompt_clicked": ["businessId", "deploymentMode", "trigger"],
   "web.activation.abandon_intent": ["businessId", "deploymentMode", "trigger"],
@@ -431,6 +445,8 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "provider",
   ],
   "voice.snapshot_loaded": ["businessId", "deploymentMode", "provider"],
+  // The first call forwarded to a number. source: sip (Diversion or History-Info) or twilio (ForwardedFrom).
+  "voice.forwarding_detected": ["businessId", "deploymentMode", "phoneNumberId", "source"],
   "voice.delegation_completed": [
     "businessId",
     "deploymentMode",

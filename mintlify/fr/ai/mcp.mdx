@@ -86,14 +86,14 @@ La portée `webhooks:manage` n'a aucun outil MCP. Une clé qui n'a que cette por
 
 ## Mode de réservation
 
-`book_appointment` et `reschedule_appointment` ne fonctionnent que si **Prise de rendez-vous** est réglé sur **Réserve les rendez-vous** (`booking_mode` `instant`). Dans les autres modes, ils renvoient une erreur au lieu de réserver :
+`book_appointment` et `reschedule_appointment` ne fonctionnent que si **Réservation** est réglé sur **Réserve les rendez-vous** (`booking_mode` `instant`). Dans les autres modes, ils renvoient une erreur au lieu de réserver :
 
 | Réglage | `booking_mode` | Code d'erreur | Ce que l'assistant doit faire |
 | --- | --- | --- | --- |
 | **Prend les demandes** | `request` | `booking_requires_confirmation` | Vous indiquer que votre équipe confirme les demandes depuis la boîte de réception |
 | **Ne réserve pas** | `off` | `booking_disabled` | Vous indiquer que la réservation est désactivée |
 
-Vous modifiez ce réglage dans **Agent** > **Paramètres IA** > **Rendez-vous**. L'annulation fonctionne dans tous les modes.
+Vous modifiez ce réglage sur la page **Général** de chaque agent, sous **Rendez-vous**. `/receptionist` et les outils MCP modifient l'agent par défaut. L'annulation fonctionne dans tous les modes.
 
 ## Erreurs
 

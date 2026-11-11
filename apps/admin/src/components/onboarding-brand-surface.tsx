@@ -121,8 +121,8 @@ export function OnboardingBrandSurface({ askAppName, askLogo }: { askAppName: bo
   if (closed) {
     return (
       <div className="flex flex-col gap-4">
-        <p className="text-center text-sm text-muted-foreground" role="status">{t("brand.errors.closed")}</p>
-        <Button className="h-11 w-full" disabled={navigating} onClick={() => navigate(NEXT_STEP)} type="button">
+        <p className="text-center type-body-muted" role="status">{t("brand.errors.closed")}</p>
+        <Button className="w-full" disabled={navigating} onClick={() => navigate(NEXT_STEP)} type="button">
           {navigating ? <LoaderCircle className="size-4 animate-spin" /> : null}
           {t("brand.continue")}
         </Button>
@@ -136,7 +136,7 @@ export function OnboardingBrandSurface({ askAppName, askLogo }: { askAppName: bo
         {askAppName ? (
           <Field>
             <FieldLabel htmlFor="onboarding-brand-name">{t("brand.nameLabel")}</FieldLabel>
-            <Input autoComplete="off" autoFocus className="h-11" id="onboarding-brand-name" maxLength={MAX_APP_NAME_LENGTH} onChange={(event) => setName(event.target.value)} placeholder={branding.appName} type="text" value={name} />
+            <Input autoComplete="off" autoFocus id="onboarding-brand-name" maxLength={MAX_APP_NAME_LENGTH} onChange={(event) => setName(event.target.value)} placeholder={branding.appName} type="text" value={name} />
             <FieldDescription>{t("brand.nameHint")}</FieldDescription>
           </Field>
         ) : null}
@@ -146,8 +146,8 @@ export function OnboardingBrandSurface({ askAppName, askLogo }: { askAppName: bo
             <div className="flex items-center gap-2">
               <label
                 className={cn(
-                  "flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl border border-dashed bg-card px-4 py-3 text-sm font-medium transition-colors focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background",
-                  dragging ? "border-foreground/60 bg-muted/40" : "border-border hover:border-foreground/40 hover:bg-muted/20",
+                  "flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl border border-dashed bg-card px-4 py-3 type-title transition-colors focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background",
+                  dragging ? "border-foreground/60 bg-muted/40" : "border-border hover:border-foreground/40 hover:bg-muted",
                 )}
                 onDragLeave={(event) => { event.preventDefault(); setDragging(false); }}
                 onDragOver={(event) => { event.preventDefault(); setDragging(true); }}
@@ -176,16 +176,16 @@ export function OnboardingBrandSurface({ askAppName, askLogo }: { askAppName: bo
           </Field>
         ) : null}
         <div className="flex flex-col gap-2">
-          <span className="text-xs font-medium text-muted-foreground">{t("brand.preview")}</span>
+          <span className="type-meta">{t("brand.preview")}</span>
           <Surface className="px-4 py-5">
             <BrandLockup appName={typedName ?? branding.appName} logoUrl={logo?.previewUrl ?? branding.logoUrl} />
           </Surface>
         </div>
         {error ? <FieldError>{error}</FieldError> : null}
-        <Button className="mt-2 h-11 w-full" disabled={working || !chosen} type="submit">
+        <Button className="mt-2 w-full" disabled={working || !chosen} type="submit">
           {working ? <><LoaderCircle className="size-4 animate-spin" />{t("brand.saving")}</> : t("brand.continue")}
         </Button>
-        <button className="text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50" disabled={working} onClick={() => { setError(null); save.mutate({}); }} type="button">
+        <button className="type-title text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50" disabled={working} onClick={() => { setError(null); save.mutate({}); }} type="button">
           {t("brand.skip")}
         </button>
       </FieldGroup>

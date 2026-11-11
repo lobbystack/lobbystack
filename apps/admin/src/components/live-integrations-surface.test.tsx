@@ -135,20 +135,14 @@ describe("original integration permissions and setup navigation", () => {
   });
   it("does not request administrator calendar connections for viewers", async () => {
     const fetchMock = setup("viewer");
-    // Only the Instagram card asks, and only whether Instagram is set up.
-    expect((fetchMock.mock.calls as unknown as Array<[unknown]>).every(([url]) => String(url).startsWith("/api/integrations/instagram?"))).toBe(true);
-    // Their cards turn real once the Instagram status has answered.
     expect((await screen.findByRole("button", { name: "integrations.actions.connect" })).hasAttribute("disabled")).toBe(true);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
-  it("hides the Instagram card until the server has a Meta app", async () => {
-    const fetchMock = setup("business_admin", { configured: false, account: null } as Partial<IntegrationsViewModel>);
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/api/integrations/instagram?"), expect.anything()));
+  it("leaves Instagram to each agent's channels", async () => {
+    const fetchMock = setup("business_admin", { configured: true, account: null } as Partial<IntegrationsViewModel>);
+    expect(await screen.findByText("integrations.cards.google.title")).toBeTruthy();
     expect(screen.queryByText("integrations.cards.instagram.title")).toBeNull();
-  });
-  it("shows the Instagram card to every member once Instagram is set up", async () => {
-    setup("viewer", { configured: true, account: null } as Partial<IntegrationsViewModel>);
-    expect(await screen.findByText("integrations.cards.instagram.title")).toBeTruthy();
-    for (const button of screen.getAllByRole("button", { name: "integrations.actions.connect" })) expect(button.hasAttribute("disabled")).toBe(true);
+    expect((fetchMock.mock.calls as unknown as Array<[unknown]>).some(([url]) => String(url).startsWith("/api/integrations/instagram"))).toBe(false);
   });
   it("opens the calendar dialog and consumes only the setup parameter", async () => {
     route.search = new URLSearchParams("setup=calendar&keep=value");
@@ -169,31 +163,24 @@ describe("integration loading states", () => {
 
   it("shows a placeholder for every card, with no real card content or buttons, while the workspace loads", () => {
     renderPending(false);
-    expect(cards()).toBe(5);
-    expect(document.querySelectorAll("ul > li [data-slot=\"skeleton\"]").length).toBe(5 * 5);
+    expect(cards()).toBe(4);
+    expect(document.querySelectorAll("ul > li [data-slot=\"skeleton\"]").length).toBe(4 * 5);
     for (const title of titles) expect(screen.queryByText(title)).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();
   });
 
-  it("keeps every card a placeholder while the Google and Instagram statuses load", () => {
+  it("keeps every card a placeholder while the Google status loads", () => {
     renderPending(true);
-    expect(cards()).toBe(5);
+    expect(cards()).toBe(4);
     for (const title of titles) expect(screen.queryByText(title)).toBeNull();
     expect(screen.queryByRole("button", { name: "integrations.actions.connect" })).toBeNull();
   });
 
-  it("swaps all the cards to real content together once the statuses have loaded", async () => {
-    setup("business_admin", { configured: true, account: null } as Partial<IntegrationsViewModel>);
-    expect(await screen.findByText("integrations.cards.instagram.title")).toBeTruthy();
-    for (const title of titles) expect(screen.getByText(title)).toBeTruthy();
-    expect(cards()).toBe(4);
-    expect(document.querySelectorAll("ul > li [data-slot=\"skeleton\"]").length).toBe(0);
-  });
-
-  it("settles on three cards when the server has no Meta app", async () => {
-    setup("business_admin", { configured: false, account: null } as Partial<IntegrationsViewModel>);
+  it("swaps all the cards to real content together once the status has loaded", async () => {
+    setup("business_admin");
     expect(await screen.findByText("integrations.cards.google.title")).toBeTruthy();
+    for (const title of titles) expect(screen.getByText(title)).toBeTruthy();
     expect(cards()).toBe(3);
-    expect(screen.queryByText("integrations.cards.instagram.title")).toBeNull();
+    expect(document.querySelectorAll("ul > li [data-slot=\"skeleton\"]").length).toBe(0);
   });
 });

@@ -7,7 +7,7 @@ contentType: "How-to"
 
 Le renvoi d'appel envoie les appels de votre ligne d'entreprise actuelle vers votre numéro LobbyStack, et votre agent y répond. Vos clients continuent de composer le numéro qu'ils connaissent. Vous activez le renvoi auprès de votre fournisseur, depuis le téléphone que vos clients appellent.
 
-Le tableau de bord affiche ces étapes avec votre numéro déjà inscrit. Avant votre première vraie conversation, ouvrez **Associez un numéro** dans **Premiers pas**, sur l'**Accueil**. Ensuite, pendant l'essai gratuit, cliquez sur **Configurer le renvoi** dans **Accueil**. Après votre abonnement, cliquez sur **Guide du renvoi d'appel** dans la page qui confirme votre forfait.
+Le tableau de bord affiche ces étapes avec votre numéro déjà inscrit. Avant votre première vraie conversation, ouvrez **Gardez votre numéro existant** dans **Premiers pas**, sur l'**Accueil**, et cliquez sur **Configurer le transfert**. Ensuite, pendant l'essai gratuit, cliquez sur **Configurer le renvoi** dans **Accueil**.
 
 ## Choisir les appels à renvoyer
 
@@ -18,11 +18,11 @@ Le tableau de bord affiche ces étapes avec votre numéro déjà inscrit. Avant 
 
 Les appels manqués couvrent trois cas : vous ne répondez pas, vous êtes déjà au téléphone, ou votre téléphone est éteint ou sans réseau. Certains fournisseurs gèrent les trois avec un seul code, d'autres utilisent un code par cas.
 
-Pour faire sonner votre téléphone d'abord sans codes d'opérateur, donnez votre numéro LobbyStack et activez [Le personnel répond d'abord](/fr/agent/ai-settings/overview#le-personnel-répond-dabord). Vous réglez la durée de la sonnerie et les heures dans le tableau de bord, et vous appuyez sur 1 pour prendre chaque appel. Il faut un forfait payant et un numéro Twilio. Le renvoi par l'opérateur continue de fonctionner de son côté, alors choisissez l'un des deux pour les appels manqués.
+Pour faire sonner votre téléphone d'abord sans codes d'opérateur, donnez votre numéro LobbyStack et activez [Le personnel répond d'abord](/fr/agent/calls-and-booking#le-personnel-répond-dabord). Vous réglez la durée de la sonnerie et les heures dans le tableau de bord, et vous appuyez sur 1 pour prendre chaque appel. Il faut un forfait payant et un numéro Twilio. Le renvoi par l'opérateur continue de fonctionner de son côté, alors choisissez l'un des deux pour les appels manqués.
 
 ## Avant de commencer
 
-- Votre numéro LobbyStack se trouve dans **Réglages** > **Numéro de téléphone**.
+- Votre numéro LobbyStack se trouve sur la page **Canaux** de votre agent. Consultez [Gérer le numéro de téléphone de votre entreprise](/fr/agent/phone-number).
 - Les codes de cette page utilisent le numéro d'exemple (555) 123-4567. Remplacez `5551234567` par les 10 chiffres de votre numéro LobbyStack.
 - Certains fournisseurs veulent un 1 devant le numéro, et leurs codes affichent donc `15551234567`. Gardez le 1 et remplacez les 10 chiffres qui suivent.
 - Les menus sont indiqués en anglais, comme dans le tableau de bord. Votre téléphone ou votre fournisseur peut les afficher en français.
@@ -31,10 +31,10 @@ Pour faire sonner votre téléphone d'abord sans codes d'opérateur, donnez votr
 
 <Steps>
   <Step title="Composez le code">
-    Sur le téléphone que vos clients appellent, composez le code de votre fournisseur indiqué dans la colonne **Activer**. Certains codes se terminent sans numéro, comme `*72`. Pour ceux-là, la ligne vous demande le numéro après l'appel : entrez-le dans le format indiqué dans le tableau.
+    Sur le téléphone que vos clients appellent, composez le code de votre fournisseur indiqué dans la colonne **Activer**.
   </Step>
   <Step title="Appuyez sur Appeler">
-    Une tonalité ou un message confirme que le renvoi est activé.
+    Certains codes se terminent sans numéro, comme `*72`. Pour ceux-là, la ligne vous demande ensuite le numéro : entrez-le dans le format indiqué dans le tableau.
   </Step>
   <Step title="Composez les codes supplémentaires">
     Pour les appels manqués, certains fournisseurs séparent les cas en plusieurs codes. Composez le code **Occupé** pour renvoyer aussi les appels reçus pendant que vous êtes au téléphone. Composez le code **Injoignable** pour renvoyer aussi les appels quand votre téléphone est éteint ou sans réseau.
@@ -161,7 +161,7 @@ Si votre système téléphonique vous laisse choisir la durée de sonnerie, 15 �
 | US Mobile (Warp) | `*725551234567` | `*73` |  |
 | US Mobile (Light Speed) | `**21*5551234567#` | `##21#` |  |
 | US Mobile (Dark Star) | `*21*5551234567#` | `#21#` |  |
-| Google Fi | **Google Fi app** > **Phone settings** > **Call forwarding** > **Always forward** | Dans le même menu | Google Fi envoie un code à votre numéro LobbyStack avant d'activer le renvoi. Choisissez de recevoir le code par appel, puis lisez-le dans la transcription de cet appel, sous **Appels**. |
+| Google Fi | **Google Fi app** > **Phone settings** > **Call forwarding** > **Always forward** | Dans le même menu | Google Fi envoie un code à votre numéro LobbyStack avant d'activer le renvoi. Choisissez de recevoir le code par appel, puis lisez-le dans la transcription de cet appel, dans la **Boîte de réception** de LobbyStack. |
 
 ### Mobile (Canada)
 
@@ -195,7 +195,7 @@ Si votre système téléphonique vous laisse choisir la durée de sonnerie, 15 �
 | Système | Activer | Désactiver | Remarques |
 | --- | --- | --- | --- |
 | RingCentral | **Profile picture** > **Incoming call rules** > **Forward all calls** | Dans le même menu |  |
-| Google Voice | **voice.google.com** > **Settings** > **Calls** > **Call forwarding** | Dans le même menu | Google Voice envoie un code à votre numéro LobbyStack avant d'activer le renvoi. Choisissez de recevoir le code par appel, puis lisez-le dans la transcription de cet appel, sous **Appels**. |
+| Google Voice | **voice.google.com** > **Settings** > **Calls** > **Call forwarding** | Dans le même menu | Google Voice envoie un code à votre numéro LobbyStack avant d'activer le renvoi. Choisissez de recevoir le code par appel, puis lisez-le dans la transcription de cet appel, dans la **Boîte de réception** de LobbyStack. |
 | Vonage Business | **app.vonage.com** > **Settings** > **Call Forwarding** > **Forward All Calls** | Dans le même menu |  |
 | Dialpad | **Admin Settings** > **Office** > **Main Line** > **Call Routing** > **No operator** | Dans le même menu | Seul un administrateur de votre compte Dialpad peut modifier ce réglage. |
 | Quo (OpenPhone) | **Settings** > **Phone numbers** > **Edit call flow** > **Forward all calls** | Dans le même menu |  |
@@ -210,9 +210,11 @@ Si votre système téléphonique vous laisse choisir la durée de sonnerie, 15 �
 | Spectrum Business Voice | `*7215551234567#` | `*73` |  |
 | Comcast Business Voice | `*72`, puis entrez `5551234567` quand on vous le demande | `*73` |  |
 
-## Tester le renvoi
+## Confirmer que le renvoi fonctionne
 
-Appelez votre numéro d'entreprise depuis un autre téléphone. Si vous renvoyez les appels manqués, laissez sonner. Votre agent devrait répondre.
+Quand LobbyStack détecte le premier appel renvoyé, l'étape **Gardez votre numéro existant** de **Premiers pas** se termine et affiche la ligne d'où il vient, par exemple **Transfert depuis le (514) 555-0199**. Certains fournisseurs masquent la ligne d'origine d'un appel renvoyé. Si l'étape ne se termine pas une fois que des appels renvoyés joignent votre agent, ouvrez-la, cliquez sur **Configurer le transfert**, puis sur **Ça fonctionne**.
+
+LobbyStack détecte les appels renvoyés sur les numéros Twilio et sur les appels qui joignent votre agent par SIP. Il ne peut pas les détecter sur les numéros Telnyx qui utilisent TeXML : cliquez alors sur **Ça fonctionne**.
 
 ## Si votre fournisseur n'est pas dans la liste
 

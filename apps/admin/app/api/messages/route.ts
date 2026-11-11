@@ -26,7 +26,9 @@ export const GET = operatorRoute(async ({ request, businessId, transaction }) =>
     if (conversationId) {
       // shortcut: returns the newest 500 messages of a thread; add "load older" paging if threads grow past that.
       const thread = await tx.select({ id: messages.id, ...conversationFields, body: messages.body, direction: messages.direction, status: messages.status, createdAt: messages.createdAt }).from(messages).innerJoin(conversations, eq(messages.conversationId, conversations.id)).leftJoin(contacts, eq(conversations.contactId, contacts.id)).leftJoin(widgetVisitors, eq(conversations.widgetVisitorId, widgetVisitors.id)).where(and(eq(messages.businessId, businessId), eq(messages.conversationId, conversationId))).orderBy(desc(messages.createdAt)).limit(500);
-      return { messages: thread.reverse() };
+      const [business] = await tx.select({ textRepliesEnabled: businesses.textRepliesEnabled }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
+      // The Inbox opens a thread on its own, so the thread says whether a text one has Take over and Resume AI.
+      return { messages: thread.reverse(), textRepliesOn: business?.textRepliesEnabled === true };
     }
     const limit = Math.min(Math.max(Math.trunc(Number(url.searchParams.get("limit")) || 50), 1), 100);
     const offset = Math.max(Math.trunc(Number(url.searchParams.get("offset")) || 0), 0);

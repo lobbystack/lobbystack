@@ -315,7 +315,7 @@ async function enqueuePasskeyAddedEmail(userId: string, request?: Request): Prom
     userId,
     dedupeKey: `auth-passkey-added:${userId}:${randomUUID()}`,
     payload: { template: "passkey_added", to: user.email,
-      variables: { locale, settingsUrl: new URL("/settings/account", base).href, resetUrl: new URL(`/${locale}/forgot-password`, base).href } },
+      variables: { locale, settingsUrl: new URL("/account", base).href, resetUrl: new URL(`/${locale}/forgot-password`, base).href } },
   });
 }
 

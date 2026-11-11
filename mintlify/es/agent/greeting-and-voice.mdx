@@ -1,0 +1,67 @@
+---
+title: "Configure el nombre, el saludo y la voz de su agente"
+description: "Ponga nombre a su agente con IA, escriba la frase de bienvenida que usa en las llamadas y los chats, y elija la voz que oyen quienes llaman."
+sidebarTitle: "Nombre, saludo y voz"
+contentType: "How-to"
+---
+
+Abra un agente desde **Agentes** en la barra lateral. Su primera página, **General**, reúne en **Nombre, saludo y voz** lo primero que oyen quienes llaman.
+
+## Nombre
+
+El **Nombre** del agente le indica a su equipo qué agente atendió una llamada. Solo lo ve su equipo, en el panel y en la [Bandeja de entrada](/es/dashboard/inbox). Quienes llaman nunca lo oyen, así que elija un nombre útil para su equipo, como `Línea de fin de semana` o `Clínica del centro`.
+
+## Saludo
+
+El saludo es la primera frase que dice su agente al contestar una llamada o iniciar una conversación. Hágalo breve y concreto.
+
+Un buen saludo suele incluir el nombre del negocio, una breve aclaración de que quien llama habla con el agente con IA y un ofrecimiento de ayuda.
+
+| Tipo de negocio | Ejemplo de saludo |
+| --- | --- |
+| Clínica dental | Gracias por llamar a Bright Smile Dental. Soy el agente con IA. ¿En qué puedo ayudarle? |
+| Salón de belleza | Gracias por llamar a North Loop Salon. Puedo ayudarle con los servicios, la disponibilidad y los mensajes para el equipo. |
+| Servicios para el hogar | Gracias por llamar a Peak HVAC. Soy el agente con IA. ¿Llama por un servicio, por una cita o por una urgencia? |
+| Restaurante | Gracias por llamar a Maple Table. Puedo ayudarle con el horario, las reservas y los mensajes para el personal. |
+
+<Steps>
+  <Step title="Abra el agente">
+    Haga clic en **Agentes** en la barra lateral y abra el agente. Su menú se abre en **General**.
+  </Step>
+  <Step title="Edite el saludo">
+    Haga clic en **Editar** junto a **Saludo** y cambie el texto.
+  </Step>
+  <Step title="Guarde">
+    Haga clic en **Guardar**.
+  </Step>
+</Steps>
+
+Si no ha cambiado el saludo, este sigue su [idioma predeterminado del cliente](/es/settings/business-details#idioma-predeterminado-del-cliente) cuando usted lo cambia.
+
+## Voz
+
+**Voz** define cómo suena su agente en las llamadas telefónicas y en las llamadas desde su navegador, incluidas las llamadas de prueba. La fila muestra la voz actual y cómo suena, por ejemplo Marin · Aguda, rápida. Los agentes nuevos empiezan con Marin, o con la voz del agente desde el que los agregó.
+
+<Steps>
+  <Step title="Abra la lista de voces">
+    En **General**, haga clic en **Cambiar voz**. **Actual** muestra la voz en uso, y **Todas las voces** enumera las demás con su tono y su ritmo.
+  </Step>
+  <Step title="Escuche una voz">
+    Haga clic en el botón de reproducción junto a una voz para escucharla en su idioma predeterminado del cliente. Escuchar una voz no la selecciona.
+  </Step>
+  <Step title="Guarde su elección">
+    Seleccione la voz y haga clic en **Usar esta voz**.
+  </Step>
+</Steps>
+
+Las llamadas nuevas usan la voz poco después de guardarla. Una llamada en curso mantiene la voz con la que empezó. Para comprobar el resultado, haga clic en **Llamada de prueba** en la parte superior de la página.
+
+Los propietarios y los administradores pueden cambiar la voz. Los lectores ven la voz actual, pero **Cambiar voz** está desactivado para ellos. Si su negocio tiene acceso **Solo actividad** a través de un socio, su equipo no ve **Agentes**.
+
+Puede elegir entre Alloy, Ash, Ballad, Beacon, Bossa, Cedar, Cinder, Coral, Delta, Echo, Gleam, Marin, Meridian, Quartz, Ripple, Sage, Shimmer, Stone, Tempo, Verse, Vesper y Willow. En la [API](/es/api/overview), envíe `voice` en `PATCH /receptionist` con el nombre en minúsculas, por ejemplo `cedar`. `/receptionist` cambia el agente predeterminado.
+
+## Ajustes relacionados
+
+- [Reglas](/es/agent/rules): lo que hace el agente en todos los canales o en uno solo
+- [Llamadas y citas](/es/agent/calls-and-booking): transferencias, El personal responde primero, reservas y cambios de citas
+- [Datos del negocio](/es/settings/business-details): el resumen del negocio, el horario de atención, los idiomas y la moneda que comparten todos los agentes

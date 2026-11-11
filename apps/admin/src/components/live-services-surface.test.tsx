@@ -25,29 +25,27 @@ describe("services loading states", () => {
     expect(screen.getByText("table.title")).toBeTruthy();
     expect(screen.getByText("sections.services.price.column")).toBeTruthy();
     expect(skeletons("tbody")).toBe(70);
-    expect(skeletons('[aria-hidden="true"]')).toBe(9);
+    expect(skeletons('[aria-hidden="true"]')).toBe(7);
     expect(screen.getByText("sections.services.addKnowledge")).toBeTruthy();
-    expect(screen.queryByPlaceholderText("table.searchPlaceholder")).toBeNull();
   });
 
-  it("keeps the real header and shows placeholder rows, search, button and pagination while the services load", () => {
+  it("keeps the real header and shows placeholder rows, button and pagination while the services load", () => {
     renderPending({ workspace: true });
     expect(screen.getByText("table.title")).toBeTruthy();
     expect(document.querySelector("tbody")?.getAttribute("aria-busy")).toBe("true");
     expect(skeletons("tbody")).toBe(70);
-    expect(skeletons('[aria-hidden="true"]')).toBe(9);
+    expect(skeletons('[aria-hidden="true"]')).toBe(7);
     expect(screen.queryByText("table.empty")).toBeNull();
     expect(screen.queryByText("sections.services.emptyState")).toBeNull();
-    expect(screen.queryByPlaceholderText("table.searchPlaceholder")).toBeNull();
     expect(screen.queryByRole("button", { name: /sections.services.addKnowledge/ })).toBeNull();
   });
 
-  it("shows the search box and the add button together once the services have loaded", () => {
+  it("shows the add button and no search box once the services have loaded", () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
     client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
     client.setQueryData(["catalog", "business"], { services: [], currency: "USD" });
     render(<QueryClientProvider client={client}><LiveServicesSurface /></QueryClientProvider>);
-    expect(screen.getByPlaceholderText("table.searchPlaceholder")).toBeTruthy();
+    expect(screen.queryByRole("textbox")).toBeNull();
     expect(screen.getByRole("button", { name: /sections.services.addKnowledge/ })).toBeTruthy();
     expect(skeletons("tbody")).toBe(0);
   });

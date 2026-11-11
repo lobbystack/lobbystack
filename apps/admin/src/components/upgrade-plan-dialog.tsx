@@ -4,6 +4,7 @@ import { Check } from "lucide-react";
 import type { TFunction } from "i18next";
 
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -87,7 +88,7 @@ export function UpgradePlanDialog({
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="max-h-[calc(100svh-2rem)] overflow-y-auto sm:max-w-[72rem]">
         <DialogHeader>
-          <DialogTitle className="text-xl">
+          <DialogTitle>
             {t("billing.upgradeDialog.title")}
           </DialogTitle>
           {checkoutUnavailable ? null : (
@@ -99,7 +100,7 @@ export function UpgradePlanDialog({
 
         {checkoutUnavailable ? (
           <div className="flex flex-col items-start gap-4 rounded-xl border border-border/70 bg-muted/20 p-6" role="alert">
-            <p className="text-sm text-muted-foreground">
+            <p className="type-body-muted">
               {t("billing.toast.paymentsUnavailable")}
             </p>
             <Button className="rounded-full" onClick={onDismissCheckout} type="button" variant="outline">
@@ -109,42 +110,26 @@ export function UpgradePlanDialog({
         ) : null}
 
         {!checkoutUnavailable && slowCheckout ? (
-          <p className="text-sm text-muted-foreground" role="status">
+          <p className="type-body-muted" role="status">
             {t("billing.upgradeDialog.providerSlow")}
           </p>
         ) : null}
 
         {!checkoutUnavailable ? <div className="flex justify-center">
-          <div
-            aria-label={t("billing.upgradeDialog.billingIntervalLabel")}
-            className="inline-flex rounded-full border border-border bg-muted/40 p-1"
-            role="tablist"
-          >
-            {switcherIntervals.map((interval) => (
-              <Button
-                aria-selected={selectedBillingInterval === interval}
-                className={cn(
-                  "h-9 rounded-full px-4",
-                  selectedBillingInterval === interval
-                    ? "bg-background text-foreground shadow-sm hover:bg-background"
-                    : "border-transparent bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
-                )}
-                key={interval}
-                onClick={() => onBillingIntervalChange(interval)}
-                role="tab"
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                {t(`billing.upgradeDialog.billingIntervals.${interval}`)}
-                {interval === "annual" ? (
-                  <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                    {t("billing.upgradeDialog.annualDiscount")}
-                  </span>
-                ) : null}
-              </Button>
-            ))}
-          </div>
+          <Tabs onValueChange={(value) => onBillingIntervalChange(value as typeof selectedBillingInterval)} value={selectedBillingInterval}>
+            <TabsList aria-label={t("billing.upgradeDialog.billingIntervalLabel")}>
+              {switcherIntervals.map((interval) => (
+                <TabsTrigger key={interval} value={interval}>
+                  {t(`billing.upgradeDialog.billingIntervals.${interval}`)}
+                  {interval === "annual" ? (
+                    <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 type-label text-emerald-700">
+                      {t("billing.upgradeDialog.annualDiscount")}
+                    </span>
+                  ) : null}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         </div> : null}
 
         {!checkoutUnavailable ? <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -177,20 +162,20 @@ export function UpgradePlanDialog({
                 key={card.slug}
               >
                 <div className="mb-5">
-                  <h3 className="font-heading text-lg font-medium tracking-[-0.03em]">
+                  <h3 className="type-heading-xxs">
                     {card.name}
                   </h3>
                   <div className="mt-4 flex items-baseline gap-1">
-                    <span className="font-heading text-4xl font-medium tracking-[-0.05em] tabular-nums">
+                    <span className="type-metric">
                       {card.price[selectedBillingInterval]}
                     </span>
                     {card.period ? (
-                      <span className="text-sm text-muted-foreground">
+                      <span className="type-body-muted">
                         {card.period}
                       </span>
                     ) : null}
                   </div>
-                  <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                  <p className="mt-3 type-body-muted">
                     {card.description[selectedBillingInterval]}
                   </p>
                 </div>
@@ -198,7 +183,7 @@ export function UpgradePlanDialog({
                 <div className="flex-1 border-t border-border/60 pt-4">
                   <ul className="flex flex-col gap-3">
                     {card.lines.map((line) => (
-                      <li className="flex items-start gap-2.5 text-sm" key={line.label}>
+                      <li className="flex items-start gap-2.5 type-body" key={line.label}>
                         <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-500" />
                         <span className="whitespace-pre-line">
                           {line.sublabel ? `${line.label}\n${line.sublabel}` : line.label}

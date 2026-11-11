@@ -12,6 +12,7 @@ describe("plan comparison", () => {
     expect(find("Voice minutes").pro).toEqual({ included: `${billingPlanCatalog.pro.voiceSecondsIncluded / 60} included`, then: "then $0.18/min" });
     expect(find("Transfer attempts").starter).toEqual({ included: `${billingPlanCatalog.starter.outboundCallAttemptsIncluded} included`, then: "then $0.02/attempt" });
     expect(find("Knowledge base").free).toBe("1 MB");
+    expect(find("Agents")).toMatchObject({ free: String(billingPlanCatalog.free_cloud.includedAgents), starter: "Unlimited", pro: "Unlimited", enterprise: "Unlimited" });
     expect(find("Call history and recordings")).toMatchObject({ free: `${contentRetentionDaysByPlan.free_cloud.recordings} days`, starter: `${contentRetentionDaysByPlan.starter.recordings} days` });
   });
 

@@ -8,12 +8,13 @@ import { isCarrierId, type CarrierId } from "@lobbystack/providers/telephony/typ
 import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
 import { loadEntitlement } from "./entitlement";
-import { activateNumberTrialInTransaction, enqueueNumberRouting, failNumberTrialInTransaction, isNumberCountry, keepBusinessNumbersInTransaction, trialCountries, trialEmailInTransaction, trialNetworkNeedsPhoneVerificationInTransaction, trialNumberPaidForInTransaction, verifiedPhone, type NumberCountry } from "./numberTrials";
-import { LEGACY_ONBOARDING_STAGES } from "@lobbystack/shared";
-import { normalizeOnboardingStage, NUMBER_CLAIM_STAGES } from "./onboarding";
+import { activateNumberTrialInTransaction, enqueueNumberRouting, failNumberTrialInTransaction, isNumberCountry, keepBusinessNumbersInTransaction, trialCountries, trialEmailInTransaction, directTrialNetworkRefusalInTransaction, trialNumberPaidForInTransaction, verifiedPhone, type NumberCountry } from "./numberTrials";
+import { isPastNumberStage, LEGACY_PHONE_STAGES } from "@lobbystack/shared";
+import { normalizeOnboardingStage, NUMBER_CLAIM_STAGES, numberRequired } from "./onboarding";
 import { loadPartnerNumberStanding, newPartnerNumberRefusal, numberCountsForPartnerInTransaction, partnerKeyNumberRefusal, partnerReplacementRefusal, partnerTrialOffered, recordPartnerNumberCostInTransaction, unclaimedPartnerDemoInTransaction } from "./partnerNumbers";
 import { resolveBusinessNumberMarket, type BusinessNumberMarket } from "./phoneNumberMarket";
 import { isDisposableTrialEmail } from "./trialEligibility";
+import { postBusinessNotificationInTransaction, resolveBusinessNotificationsInTransaction } from "./businessNotifications";
 
 export type NumberSelection = {
   countryCode: NumberCountry;
@@ -198,10 +199,13 @@ export async function numberEligibilityInTransaction(tx: DatabaseTransaction, in
       // A trial without a mobile belongs to a person, so a key with no account
       // behind it never gets one.
       if (input.userId === null) throw refused("phone_verification_required");
-      // The dashboard checks the request's own network and country; the API
-      // has neither, so it keeps asking for a mobile.
-      const needsMobile = input.via === "api" || await trialNetworkNeedsPhoneVerificationInTransaction(tx, { userId: input.userId, businessId: input.businessId, ipHash: input.ipHash, ipCountry: input.ipCountry });
-      if (needsMobile) throw refused("phone_verification_required");
+      // The API has no network to check, so it keeps asking for a mobile. The
+      // dashboard checks the request's own network and country, and a direct
+      // owner has no phone step, so a network that can't start a trial gets
+      // the plans.
+      if (input.via === "api") throw refused("phone_verification_required");
+      const networkRefusal = await directTrialNetworkRefusalInTransaction(tx, { userId: input.userId, businessId: input.businessId, ipHash: input.ipHash, ipCountry: input.ipCountry });
+      if (networkRefusal) throw refused(networkRefusal);
       // The selected country is the number's country, and only a trial country has one.
       if (!(trialCountries() as string[]).includes(market.countryCode)) throw refused("dedicated_number_requires_paid_plan");
       trial = { verifiedPhone: null };
@@ -257,13 +261,17 @@ export async function reserveOnboardingNumberClaim(context: DomainContext, input
     const withoutSms = offer.selection.trial === true && !offer.selection.verifiedPhone;
     let ipHash: string | null = null;
     if (withoutSms) {
+      // Only the dashboard signs these offers, after checking the network. An
+      // offer that arrives without a trusted address, or from a network that
+      // started a trial since (a second tab), gets the plans.
       ipHash = input.ipHash ?? null;
-      if (!ipHash) throw refused("phone_verification_required");
-      // The number step asked for a mobile when this network already had a
-      // trial. An offer signed before that (or a second tab) asks too.
+      if (!ipHash) throw refused("trial_not_available");
       const used = await tx.execute(sql`SELECT app.number_trial_ip_used(${input.businessId}::uuid, ${input.userId}::uuid, ${ipHash}) AS used`);
-      if ((used.rows[0] as { used?: boolean } | undefined)?.used) throw refused("phone_verification_required");
+      if ((used.rows[0] as { used?: boolean } | undefined)?.used) throw refused("trial_ip_limited");
     }
+    // The claim function checks the stored stage. A direct business old code
+    // left on the phone step goes on to the number first.
+    await tx.update(businesses).set({ onboardingStage: "phone_number", updatedAt: new Date() }).where(and(eq(businesses.id, input.businessId), isNull(businesses.partnerId), inArray(businesses.onboardingStage, ["verify_phone", ...LEGACY_PHONE_STAGES])));
     const result = offer.selection.trial
       ? await tx.execute(sql`SELECT app.reserve_trial_number_claim(${input.businessId}::uuid, ${input.userId}::uuid, ${offer.e164}, ${selection}::jsonb, ${tokenHash}, ${input.idempotencyKey}, ${ipHash}) AS id`)
       : await tx.execute(sql`SELECT app.reserve_onboarding_number_claim(${input.businessId}::uuid, ${input.userId}::uuid, ${offer.e164}, ${selection}::jsonb, ${tokenHash}, ${input.idempotencyKey}) AS id`);
@@ -439,22 +447,28 @@ export async function completeNumberProvisioning(context: DomainContext, input: 
       const business = await tx.update(businesses).set({ phoneNumberReplacementReservedAt: null, phoneNumberReplacementUsedAt: new Date(), updatedAt: new Date() }).where(and(eq(businesses.id, input.businessId), isNull(businesses.phoneNumberReplacementUsedAt), sql`${businesses.phoneNumberReplacementReservedAt} = (SELECT reserved_at FROM onboarding_number_claim_events WHERE id = ${input.claimId}::uuid)`)).returning({ id: businesses.id });
       if (!retired.length || !business.length) throw new Error("Number replacement entitlement is no longer valid.");
     } else {
-      // A direct business answers the goal question next. A partner's business has no attribution step, and a key can buy its number while it waits for its owner, so it stays on the step it's on.
-      await tx.update(businesses).set({ onboardingStage: sql`CASE WHEN ${businesses.onboardingStage} IN ('attribution', 'meet', 'complete') OR (${businesses.partnerId} IS NOT NULL AND ${businesses.onboardingStage} NOT IN ('phone_number', 'phone_number_claiming')) THEN ${businesses.onboardingStage} WHEN ${businesses.partnerId} IS NULL THEN 'goal' ELSE 'meet' END`, updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
       const activated = await activateNumberTrialInTransaction(tx, { businessId: input.businessId, claimId: input.claimId, phoneNumberId: number.id });
       // The owner, or for a partner's trial the partner, may have paid while we bought the number: that payment found no trial to convert, so convert it now.
       if (activated && await trialNumberPaidForInTransaction(tx, input.businessId)) await keepBusinessNumbersInTransaction(tx, { businessId: input.businessId });
+      // A direct business answers the attribution question next; the plans
+      // come after Meet your agent. A partner's business has no attribution
+      // step, and a key can buy its number while it waits for its owner, so it
+      // stays on the step it's on. A business past the number stays put too.
+      await tx.update(businesses).set({ onboardingStage: sql`CASE WHEN ${businesses.onboardingStage} IN ('attribution', 'meet', 'choose_plan', 'complete') OR (${businesses.partnerId} IS NOT NULL AND ${businesses.onboardingStage} NOT IN ('phone_number', 'phone_number_claiming')) THEN ${businesses.onboardingStage} WHEN ${businesses.partnerId} IS NULL THEN 'attribution' ELSE 'meet' END`, updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
     }
     // Every number starts on the receptionist. With staff answers first on for the agent it reaches, routing moves this one to the webhook.
     const profile = (await tx.select({ staffFirstMode: agents.staffFirstMode }).from(phoneNumbers).innerJoin(agents, agentOfRow(phoneNumbers.businessId, phoneNumbers.agentId)).where(eq(phoneNumbers.id, number.id)).limit(1))[0];
     if (profile && profile.staffFirstMode !== "never") await enqueueNumberRouting(tx, { businessId: input.businessId, phoneNumberId: number.id, mode: "receptionist" });
+    // The business has a number again.
+    await resolveBusinessNotificationsInTransaction(tx, { businessId: input.businessId, kinds: ["number_purchase_failed", "number_released"] });
     return number.id;
   });
 }
 
 export async function failNumberProvisioning(context: DomainContext, input: { businessId: string; claimId: string; unavailable: boolean }): Promise<void> {
   await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const claim = (await tx.update(onboardingNumberClaimEvents).set({ status: input.unavailable ? "unavailable" : "failed", lastError: input.unavailable ? "The selected number is no longer available." : "Number provisioning failed.", completedAt: new Date(), updatedAt: new Date() }).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId))).returning({ purpose: onboardingNumberClaimEvents.purpose }))[0];
+    const claim = (await tx.update(onboardingNumberClaimEvents).set({ status: input.unavailable ? "unavailable" : "failed", lastError: input.unavailable ? "The selected number is no longer available." : "Number provisioning failed.", completedAt: new Date(), updatedAt: new Date() }).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId))).returning({ purpose: onboardingNumberClaimEvents.purpose, e164: onboardingNumberClaimEvents.requestedE164 }))[0];
+    if (claim) await postBusinessNotificationInTransaction(tx, { businessId: input.businessId, kind: "number_purchase_failed", key: `number_purchase_failed:${input.claimId}`, params: { number: claim.e164, unavailable: input.unavailable } });
     if (claim?.purpose === "replacement") await tx.update(businesses).set({ phoneNumberReplacementReservedAt: null, updatedAt: new Date() }).where(and(eq(businesses.id, input.businessId), sql`${businesses.phoneNumberReplacementReservedAt} = (SELECT reserved_at FROM onboarding_number_claim_events WHERE id = ${input.claimId}::uuid)`));
     else if (claim) {
       // Back to picking a number, from claiming one only: an API claim leaves a business on an earlier step where it is.
@@ -464,7 +478,26 @@ export async function failNumberProvisioning(context: DomainContext, input: { bu
   });
 }
 
-// A partner's business has no number step or goal question, so only a direct business skips to the goal.
-export async function skipOnboardingNumber(context: DomainContext, input: { userId: string; businessId: string }): Promise<void> {
-  await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => { await requireBusinessAdmin(tx, input); const changed = await tx.update(businesses).set({ onboardingStage: "goal", updatedAt: new Date() }).where(and(eq(businesses.id, input.businessId), isNull(businesses.partnerId), inArray(businesses.onboardingStage, ["verify_phone", "phone_number", ...LEGACY_ONBOARDING_STAGES]))).returning({ id: businesses.id }); if (!changed.length) { const [business] = await tx.select({ stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, input.businessId)); if (!["goal", "attribution", "meet", "complete"].includes(business?.stage ?? "")) throw numberClaimError(409, "invalid_onboarding_stage", "Number selection cannot be skipped at this onboarding stage."); } });
+/**
+ * Moves a direct business past the number step without a number. A partner's
+ * business has no number step, so only a direct business skips. The country
+ * the owner picked, where we sell no numbers, is logged.
+ */
+export async function skipOnboardingNumber(context: DomainContext, input: { userId: string; businessId: string; countryCode?: string | null }): Promise<void> {
+  const countryCode = input.countryCode?.trim().toUpperCase() || null;
+  if (countryCode && !/^[A-Z]{2}$/.test(countryCode)) throw numberClaimError(400, "country_invalid", "Pick a country.");
+  const moved = await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+    await requireBusinessAdmin(tx, input);
+    const [business] = await tx.select({ stage: businesses.onboardingStage, partnerId: businesses.partnerId, deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
+    const stage = normalizeOnboardingStage(business?.stage, business);
+    // From a later step, as from the dashboard, the skip only leaves the picker.
+    if (business && !business.partnerId && isPastNumberStage(stage)) return false;
+    if (!business || business.partnerId || stage !== "phone_number") throw numberClaimError(409, "invalid_onboarding_stage", "Number selection cannot be skipped at this onboarding stage.");
+    // A direct cloud owner needs a number, unless we sell none in their
+    // country. The server trusts the country they picked and logs it below.
+    if (business.deploymentMode === "cloud" && (!countryCode || isNumberCountry(countryCode))) throw numberRequired();
+    await tx.update(businesses).set({ onboardingStage: "attribution", updatedAt: new Date() }).where(and(eq(businesses.id, input.businessId), isNull(businesses.partnerId), inArray(businesses.onboardingStage, ["verify_phone", "phone_number", ...LEGACY_PHONE_STAGES])));
+    return true;
+  });
+  if (moved) console.info(JSON.stringify({ event: "onboarding.number_skipped", businessId: input.businessId, countryCode }));
 }

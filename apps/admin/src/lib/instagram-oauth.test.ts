@@ -24,6 +24,15 @@ describe("Instagram OAuth state", () => {
     expect(verifyInstagramOAuthState(state)).toBeNull();
   });
 
+  it("carries the agent a connection started from, and reads a state without one as before agents", () => {
+    vi.stubEnv("BETTER_AUTH_SECRET", "oauth-test-secret");
+    const agentId = "00000000-0000-4000-8000-0000000000aa";
+    expect(verifyInstagramOAuthState(createInstagramOAuthState({ userId: "user-1", businessId: "business-1", agentId }))).toMatchObject({ agentId });
+    expect(verifyInstagramOAuthState(createInstagramOAuthState({ userId: "user-1", businessId: "business-1" }))).not.toHaveProperty("agentId");
+    const state = signOAuthPayload("instagram:state", { userId: "user-1", businessId: "business-1", agentId: "evening", issuedAt: Date.now(), nonce: "2f0c1d2e-3f40-4a51-8b62-7c83d94ea5b6" }, "unconfigured");
+    expect(verifyInstagramOAuthState(state)).toBeNull();
+  });
+
   it("rejects a tampered state, or one signed with another secret", () => {
     vi.stubEnv("BETTER_AUTH_SECRET", "oauth-test-secret");
     const state = createInstagramOAuthState({ userId: "user-1", businessId: "business-1" });

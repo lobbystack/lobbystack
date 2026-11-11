@@ -346,23 +346,6 @@
         "keep": "Ovaj broj je Vaš.",
         "choose": "Izaberite broj"
       },
-      "steps": {
-        "title": "Sledeći koraci",
-        "call": {
-          "title": "Pozovite ga sada",
-          "description": "Čujte kako agent odgovara na pravi poziv."
-        },
-        "forward": {
-          "title": "Preusmerite poslovnu liniju na ovaj broj",
-          "description": "Pozivaoci i dalje biraju broj koji znaju. Vaš operater preusmerava te pozive na Vaš {{appName}} broj.",
-          "action": "Uputstvo za preusmeravanje poziva"
-        },
-        "transfer": {
-          "title": "Izaberite kuda idu hitni pozivi",
-          "description": "Dodajte broj za preusmeravanje u AI podešavanjima da bi agent mogao da prosledi hitne pozive osobi.",
-          "action": "Otvori AI podešavanja"
-        }
-      },
       "continue": "Nastavite podešavanje",
       "dashboard": "Idi na kontrolnu tablu"
     }
@@ -653,10 +636,6 @@
       "zapier": {
         "title": "Zapier",
         "description": "Povežite pozive, zakazivanja i kontakte sa hiljadama aplikacija."
-      },
-      "instagram": {
-        "title": "Instagram",
-        "description": "Odgovarajte na direktne poruke na Instagramu sa istim znanjem kao vaš agent."
       }
     },
     "status": {
@@ -677,13 +656,7 @@
       "connectFailed": "Povezivanje Instagrama nije uspelo. Pokušajte ponovo.",
       "accountInUse": "Ovaj Instagram nalog je već povezan sa drugim radnim prostorom.",
       "permissionMissing": "Vašem agentu je potreban pristup porukama na Instagramu. Ponovo povežite Instagram i dozvolite pristup.",
-      "disconnectedSuccess": "Instagram je isključen.",
-      "disconnect": "Isključi",
-      "reconnect": "Ponovo poveži",
-      "connectedAs": "Odgovara na direktne poruke kao @{{username}}.",
-      "dialogDescription": "Vaš agent odgovara na direktne poruke poslate ovom nalogu.",
-      "accountLabel": "Instagram nalog",
-      "reconnectDescription": "Instagram više ne prihvata pristup vašeg agenta. Ponovo povežite nalog da biste nastavili da odgovarate na poruke."
+      "reconnect": "Ponovo poveži"
     }
   },
   "profile": {
@@ -867,10 +840,10 @@
     },
     "delete": {
       "title": "Obriši radni prostor",
-      "description": "Trajno briše ovaj radni prostor zajedno sa pozivima, razgovorima, kontaktima, terminima, podešavanjima i pristupom tima. Njegov broj telefona se oslobađa, a plaćeni plan se završava. Ovo se ne može poništiti.",
+      "description": "Briše sve u njemu i oslobađa njegov broj telefona.",
       "action": "Obriši radni prostor",
       "dialogTitle": "Obrisati {{name}}?",
-      "dialogDescription": "Sve u ovom radnom prostoru se trajno briše, njegov broj telefona se vraća provajderu, a agent prestaje da se javlja. Tim gubi pristup i niko ne može da ga vrati.",
+      "dialogDescription": "Pozivi, kontakti i podešavanja se brišu, broj se oslobađa, a plan se završava. Ovo se ne može poništiti.",
       "confirmLabel": "Upišite <name>{{name}}</name> za potvrdu",
       "submit": "Obriši",
       "deleting": "Brisanje...",

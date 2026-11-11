@@ -3,8 +3,9 @@ import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 
-import { appointments, businessHours, businessMemberships, businesses, contacts, createDatabaseClient, inboxItems, services, staff, users } from "@lobbystack/db";
+import { appointments, businessHours, businessMemberships, businesses, calls, contacts, conversations, createDatabaseClient, inboxItems, services, staff, users } from "@lobbystack/db";
 
+import callCopy from "../public/locales/en/calls.json" with { type: "json" };
 import common from "../public/locales/en/common.json" with { type: "json" };
 
 import { completeSignupEmailVerification, isolateAuthRateLimit } from "./fixtures/email-verification";
@@ -27,7 +28,7 @@ async function removeFixtures(database: ReturnType<typeof migrator>, email: stri
   await database.db.execute(sql`delete from public.users where email = ${email}`);
 }
 
-test("an owner picks another open time for a caller's reschedule request on Home", async ({ page }, testInfo) => {
+test("an owner opens a caller's reschedule request from Home and picks another open time on the call", async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   const database = migrator();
   const email = `${prefix}-${randomUUID()}@example.invalid`;
@@ -59,12 +60,21 @@ test("an owner picks another open time for a caller's reschedule request on Home
     const [service] = await database.db.insert(services).values({ businessId, name: "Consultation", slug: "consultation", durationMinutes: 30 }).returning();
     const [milan] = await database.db.insert(contacts).values({ businessId, name: "Milan", phone: "+14165550100" }).returning();
     const [appointment] = await database.db.insert(appointments).values({ businessId, contactId: milan!.id, staffId: employee!.id, serviceId: service!.id, startsAt: current.toJSDate(), endsAt: current.plus({ minutes: 30 }).toJSDate(), timezone, status: "confirmed", sourceChannel: "voice" }).returning();
+    // The request came in on a call, which Home's row opens in the Inbox.
+    const [conversation] = await database.db.insert(conversations).values({ businessId, contactId: milan!.id, channel: "voice" }).returning();
+    const callId = randomUUID();
+    await database.db.insert(calls).values({ id: callId, businessId, contactId: milan!.id, conversationId: conversation!.id, providerCallId: callId, transport: "voice", status: "completed", startedAt: new Date() });
     const [request] = await database.db.insert(inboxItems).values({
-      businessId, kind: "voice_message", title: "Voice message from Milan", body: "Reschedule request: Consultation",
+      businessId, relatedCallId: callId, kind: "voice_message", title: "Voice message from Milan", body: "Reschedule request: Consultation",
       metadata: { request: "appointment_reschedule", appointmentId: appointment!.id, requestedService: "Consultation", requestedStartsAt: current.toFormat("yyyy-LL-dd'T'HH:mm"), requestedNewStartsAt: wanted.toFormat("yyyy-LL-dd'T'HH:mm"), callerName: "Milan" },
     }).returning();
 
+    // Home lists the request without buttons; the row opens its call, where Details shows Other time.
     await page.goto("/");
+    await expect(page.getByRole("button", { name: common.appointments.move.otherTime, exact: true })).toHaveCount(0);
+    await page.getByRole("link", { name: /Milan/ }).first().click();
+    await expect(page).toHaveURL(new RegExp(`/inbox\\?call=${callId}$`));
+    await expect(page.getByRole("tab", { name: callCopy.detail.tabs.details, exact: true })).toHaveAttribute("aria-selected", "true");
     await page.getByRole("button", { name: common.appointments.move.otherTime, exact: true }).click();
 
     // The dialog opens on the requested day with the requested time picked.

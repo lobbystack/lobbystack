@@ -30,14 +30,14 @@ export function PartnerAccessSurface() {
   });
   const header = (
     <div className="flex flex-col gap-1">
-      <h3 className="text-sm font-medium">{t("partnerAccess.title")}</h3>
-      <p className="text-sm text-muted-foreground">{t("partnerAccess.description", { appName })}</p>
+      <h3 className="type-title">{t("partnerAccess.title")}</h3>
+      <p className="type-body-muted">{t("partnerAccess.description", { appName })}</p>
     </div>
   );
   if (events.isLoading || !businessId) return <div className="flex flex-col gap-4">{header}<Skeleton className="h-40 w-full rounded-xl" /></div>;
   if (events.isError) {
     const code = (events.error as Error & { code?: string }).code;
-    return <div className="flex flex-col gap-4">{header}<Surface className="px-6 py-8"><p className="text-sm text-muted-foreground" role="alert">{t(code === "forbidden" ? "partnerAccess.adminsOnly" : "partnerAccess.loadFailed")}</p></Surface></div>;
+    return <div className="flex flex-col gap-4">{header}<Surface className="px-6 py-8"><p className="type-body-muted" role="alert">{t(code === "forbidden" ? "partnerAccess.adminsOnly" : "partnerAccess.loadFailed")}</p></Surface></div>;
   }
   const rows = events.data?.events ?? [];
   const when = (value: string) => formatDateTime(value, i18n.language, { dateStyle: "medium", timeStyle: "short" });
@@ -45,7 +45,7 @@ export function PartnerAccessSurface() {
     <div className="flex flex-col gap-4">
       {header}
       {rows.length === 0 ? (
-        <Surface className="px-6 py-8"><p className="text-sm text-muted-foreground">{t("partnerAccess.empty", { appName })}</p></Surface>
+        <Surface className="px-6 py-8"><p className="type-body-muted">{t("partnerAccess.empty", { appName })}</p></Surface>
       ) : (
         <Surface className="overflow-x-auto">
           <Table>
@@ -59,9 +59,9 @@ export function PartnerAccessSurface() {
             <TableBody>
               {rows.map((event) => (
                 <TableRow key={event.id}>
-                  <TableCell className="text-sm">{event.name ?? t("partnerAccess.someone", { partnerName: event.partnerName ?? appName })}</TableCell>
-                  <TableCell className="text-sm">{t(event.kind === "opened" ? "partnerAccess.opened" : "partnerAccess.left")}</TableCell>
-                  <TableCell className="text-sm whitespace-nowrap">{when(event.at)}</TableCell>
+                  <TableCell className="type-body">{event.name ?? t("partnerAccess.someone", { partnerName: event.partnerName ?? appName })}</TableCell>
+                  <TableCell className="type-body">{t(event.kind === "opened" ? "partnerAccess.opened" : "partnerAccess.left")}</TableCell>
+                  <TableCell className="type-body whitespace-nowrap">{when(event.at)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

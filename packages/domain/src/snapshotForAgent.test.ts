@@ -48,7 +48,7 @@ const afterHours: SnapshotAgent = {
 
 const defaultAgent: SnapshotAgent = {
   id: "agent-default",
-  name: "Agent",
+  name: "Default agent",
   isDefault: true,
   greeting: "Hello",
   tone: "warm",
@@ -138,7 +138,7 @@ describe("snapshotForAgent", () => {
 });
 
 describe("buildBusinessContextSnapshot with agents", () => {
-  const agentInput = { id: "agent-default", name: "Agent", isDefault: true, greeting: base.greeting, tone: base.tone, voice: "marin" as const, bookingPolicy: base.bookingPolicy, bookingMode: "instant" as const, transferPolicy: base.transferPolicy };
+  const agentInput = { id: "agent-default", name: "Default agent", isDefault: true, greeting: base.greeting, tone: base.tone, voice: "marin" as const, bookingPolicy: base.bookingPolicy, bookingMode: "instant" as const, transferPolicy: base.transferPolicy };
 
   it("gives an agent without instructions the same default text as the flat fields", () => {
     const built = buildBusinessContextSnapshot({ ...base, agents: [agentInput] });
@@ -204,5 +204,21 @@ describe("an agent's phone number", () => {
     expect(businessHasPhoneNumber({ ...snapshot, contactChannels: {}, agents: [{ ...defaultAgent, phoneNumber: null }, { ...afterHours, phoneNumber: own }] })).toBe(true);
     expect(businessHasPhoneNumber({ ...snapshot, contactChannels: {}, agents: [{ ...defaultAgent, phoneNumber: null }] })).toBe(false);
     expect(businessHasPhoneNumber({ ...snapshot, contactChannels: {} })).toBe(false);
+  });
+});
+
+describe("snapshotForAgent knowledge", () => {
+  const parking = { id: "faq-parking", title: "Parking", content: "Behind the clinic.", tags: [], priority: 0 };
+  const nightDoor = { id: "faq-door", title: "Night door", content: "Ring the side bell.", tags: [], priority: 0 };
+
+  it("answers from the agent's own FAQs and digest when it has them, and the flat ones otherwise", () => {
+    const snapshot = buildBusinessContextSnapshot({ ...base, snippets: [parking], knowledgeDigest: "shared digest", agents: [defaultAgent, { ...afterHours, knowledgeSnippets: [nightDoor], knowledgeDigest: "" }] });
+    expect(snapshotForAgent(snapshot, afterHours.id)).toMatchObject({ knowledgeSnippets: [nightDoor], knowledgeDigest: "" });
+    expect(snapshotForAgent(snapshot, defaultAgent.id)).toMatchObject({ knowledgeSnippets: [parking], knowledgeDigest: "shared digest" });
+  });
+
+  it("answers a paused agent's channels with the default agent's knowledge", () => {
+    const snapshot = buildBusinessContextSnapshot({ ...base, snippets: [parking], agents: [defaultAgent, { ...afterHours, paused: true, knowledgeSnippets: [nightDoor] }] });
+    expect(snapshotForAgent(snapshot, afterHours.id)?.knowledgeSnippets).toEqual([parking]);
   });
 });

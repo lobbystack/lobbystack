@@ -9,7 +9,7 @@ export const PUBLIC_ROUTE_NAMESPACES = ["common", "auth", "onboarding", "demos",
  * moving between sections never waits on a translation request. Some browsers
  * kept failing that request for /affiliate even after a retry.
  */
-export const DASHBOARD_NAMESPACES = ["common", "nav", "settings", "agent", "dashboard", "calls", "contacts", "employees", "messages", "inbox", "knowledge", "affiliate", "demos", "widget"];
+export const DASHBOARD_NAMESPACES = ["common", "nav", "settings", "agent", "dashboard", "calls", "contacts", "employees", "messages", "inbox", "intros", "knowledge", "affiliate", "demos", "widget"];
 
 /**
  * The partner console's namespaces: its own, the account menu's, the shell
@@ -26,7 +26,8 @@ export function routeNamespaces(pathname: string): string[] {
   if (section === "embed") return ["common", "widget"];
   if (["demo", "claim-demo"].includes(section)) return ["common", "auth", "demos", "widget"];
   if (section === "onboarding") return ["common", "onboarding", "auth", "settings", "nav", "agent"];
-  if (section === "billing") return ["common", "onboarding", "settings"];
+  // Onboarding's shell asks for auth for its legal line.
+  if (section === "billing") return ["common", "auth", "onboarding", "settings"];
   // A partner's host shows this, in onboarding's shell, to someone with no business there.
   if (section === "no-businesses") return ["common", "onboarding"];
   if (section === "partner") return PARTNER_NAMESPACES;

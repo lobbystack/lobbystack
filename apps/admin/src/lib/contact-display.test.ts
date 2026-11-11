@@ -14,11 +14,11 @@ async function translator(locale: "en" | "fr") {
 
 describe("channel labels", () => {
   it.each([
-    ["voice", "Phone call"],
-    ["pstn", "Phone call"],
+    ["voice", "Phone"],
+    ["pstn", "Phone"],
     ["web_voice", "Web call"],
     ["sms", "SMS"],
-    ["web_chat", "Website chat"],
+    ["web_chat", "Website"],
     ["dashboard", "Dashboard"],
     ["operator", "Dashboard"],
     ["api", "API"],

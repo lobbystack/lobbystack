@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, inArray, isNull, ne, notInArray, sql } from "drizzle-orm";
 
-import { agentRules, agents, conversations, instagramAccounts, phoneNumbers, widgetKeys, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { agentKnowledgeExclusions, agentRules, agents, conversations, inOrder, instagramAccounts, knowledgeDocuments, knowledgeSnippets, phoneNumbers, storageObjects, widgetKeys, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { billingErrorCodes, defaultAppointmentChangePolicy, type Entitlement } from "@lobbystack/shared";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
@@ -75,11 +75,12 @@ export async function listAgents(context: DomainContext, input: { userId: string
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessMembership(tx, input);
     const active = await listActiveAgentsInTransaction(tx, input.businessId);
-    const [numbers, widgets, instagram, entitlement] = await Promise.all([
-      tx.select({ agentId: phoneNumbers.agentId, total: count() }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), notInArray(phoneNumbers.status, ["reclaimed", "released"]))).groupBy(phoneNumbers.agentId),
-      tx.select({ agentId: widgetKeys.agentId, total: count() }).from(widgetKeys).where(and(eq(widgetKeys.businessId, input.businessId), ne(widgetKeys.status, "revoked"))).groupBy(widgetKeys.agentId),
-      tx.select({ agentId: instagramAccounts.agentId, total: count() }).from(instagramAccounts).where(eq(instagramAccounts.businessId, input.businessId)).groupBy(instagramAccounts.agentId),
-      loadEntitlement(tx, input.businessId),
+    // One transaction runs one query at a time.
+    const [numbers, widgets, instagram, entitlement] = await inOrder([
+      () => tx.select({ agentId: phoneNumbers.agentId, total: count() }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), notInArray(phoneNumbers.status, ["reclaimed", "released"]))).groupBy(phoneNumbers.agentId),
+      () => tx.select({ agentId: widgetKeys.agentId, total: count() }).from(widgetKeys).where(and(eq(widgetKeys.businessId, input.businessId), ne(widgetKeys.status, "revoked"))).groupBy(widgetKeys.agentId),
+      () => tx.select({ agentId: instagramAccounts.agentId, total: count() }).from(instagramAccounts).where(eq(instagramAccounts.businessId, input.businessId)).groupBy(instagramAccounts.agentId),
+      () => loadEntitlement(tx, input.businessId),
     ]);
     const counted = (rows: Array<{ agentId: string | null; total: number }>, agentId: string) => Number(rows.find((row) => row.agentId === agentId)?.total ?? 0);
     const paused = pausedAgentIds(entitlement, active);
@@ -117,10 +118,11 @@ export async function createAgentInTransaction(tx: DatabaseTransaction, input: {
   const [active] = await tx.select({ total: count() }).from(agents).where(and(eq(agents.businessId, input.businessId), isNull(agents.archivedAt)));
   if (includedAgents !== null && Number(active?.total ?? 0) >= includedAgents) throw agentError("Your plan includes no more agents.", 402, billingErrorCodes.agentLimitReached);
   const source = input.copyFromAgentId ? await requireActiveAgentInTransaction(tx, input.businessId, input.copyFromAgentId) : await defaultAgentInTransaction(tx, input.businessId);
-  const { id: _id, isDefault: _isDefault, archivedAt: _archivedAt, createdAt: _createdAt, updatedAt: _updatedAt, ...settings } = source;
+  // The deprecated instruction columns stay behind: the rules copied below carry what they held.
+  const { id: _id, isDefault: _isDefault, archivedAt: _archivedAt, createdAt: _createdAt, updatedAt: _updatedAt, voiceInstructions: _voice, smsInstructions: _sms, chatInstructions: _chat, ...settings } = source;
   const [created] = await tx.insert(agents).values({ ...settings, name, isDefault: false, appointmentChangePolicy: source.appointmentChangePolicy ?? defaultAppointmentChangePolicy }).returning();
   if (!created) throw new Error("Agent could not be created.");
-  const rules = await tx.select({ title: agentRules.title, content: agentRules.content, active: agentRules.active, sortOrder: agentRules.sortOrder }).from(agentRules).where(and(eq(agentRules.businessId, input.businessId), eq(agentRules.agentId, source.id)));
+  const rules = await tx.select({ title: agentRules.title, content: agentRules.content, active: agentRules.active, sortOrder: agentRules.sortOrder, channel: agentRules.channel }).from(agentRules).where(and(eq(agentRules.businessId, input.businessId), eq(agentRules.agentId, source.id)));
   if (rules.length) await tx.insert(agentRules).values(rules.map((rule) => ({ ...rule, businessId: input.businessId, agentId: created.id })));
   await enqueueAgentSnapshotRefresh(tx, { businessId: input.businessId, agentId: created.id, change: "agent_created" });
   return created;
@@ -181,10 +183,10 @@ export async function archiveAgentInTransaction(tx: DatabaseTransaction, input: 
   if (agent.isDefault) throw agentError("Choose another default agent first.", 409, "agent_is_default");
   if (input.reassignToAgentId === agent.id) throw agentError("Choose another agent to take over.", 400, "agent_reassign_invalid");
   const successor = input.reassignToAgentId ? await requireActiveAgentInTransaction(tx, input.businessId, input.reassignToAgentId) : await defaultAgentInTransaction(tx, input.businessId);
-  const [numbers, widgets, instagram] = await Promise.all([
-    tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.agentId, agent.id), notInArray(phoneNumbers.status, ["reclaimed", "released"]))),
-    tx.select({ id: widgetKeys.id }).from(widgetKeys).where(and(eq(widgetKeys.businessId, input.businessId), eq(widgetKeys.agentId, agent.id), ne(widgetKeys.status, "revoked"))),
-    tx.select({ id: instagramAccounts.id }).from(instagramAccounts).where(and(eq(instagramAccounts.businessId, input.businessId), eq(instagramAccounts.agentId, agent.id))),
+  const [numbers, widgets, instagram] = await inOrder([
+    () => tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.agentId, agent.id), notInArray(phoneNumbers.status, ["reclaimed", "released"]))),
+    () => tx.select({ id: widgetKeys.id }).from(widgetKeys).where(and(eq(widgetKeys.businessId, input.businessId), eq(widgetKeys.agentId, agent.id), ne(widgetKeys.status, "revoked"))),
+    () => tx.select({ id: instagramAccounts.id }).from(instagramAccounts).where(and(eq(instagramAccounts.businessId, input.businessId), eq(instagramAccounts.agentId, agent.id))),
   ]);
   const moves = [
     ...numbers.map(({ id }) => ({ kind: "phone_number" as const, channelId: id })),
@@ -194,9 +196,25 @@ export async function archiveAgentInTransaction(tx: DatabaseTransaction, input: 
   for (const move of moves) await moveChannelInTransaction(tx, { businessId: input.businessId, ...move, agentId: successor.id });
   // Open conversations on channels it no longer holds go to the agent taking over too.
   await tx.update(conversations).set({ agentId: successor.id, updatedAt: new Date() }).where(and(eq(conversations.businessId, input.businessId), eq(conversations.agentId, agent.id), eq(conversations.status, "open"), inArray(conversations.channel, ["sms", "web_chat", "instagram"])));
+  await deleteAgentKnowledgeInTransaction(tx, { businessId: input.businessId, agentId: agent.id });
   await tx.update(agents).set({ archivedAt: new Date(), updatedAt: new Date() }).where(and(eq(agents.id, agent.id), eq(agents.businessId, input.businessId)));
   await enqueueAgentSnapshotRefresh(tx, { businessId: input.businessId, agentId: agent.id, change: "agent_archived" });
   return { moved: moves.length };
+}
+
+/**
+ * Deletes the knowledge only this agent used: its documents with their text
+ * and crawls, its FAQ and text entries, and what it turned off of the shared
+ * knowledge. An archived agent can't come back, so nothing would use them.
+ */
+async function deleteAgentKnowledgeInTransaction(tx: DatabaseTransaction, input: { businessId: string; agentId: string }): Promise<void> {
+  // Chunks and website imports go with their documents.
+  const documents = await tx.delete(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.agentId, input.agentId))).returning({ storageObjectId: knowledgeDocuments.storageObjectId });
+  const files = documents.flatMap((document) => document.storageObjectId ? [document.storageObjectId] : []);
+  // Downloads stop now; the retained-object sweep deletes the files within 15 minutes.
+  if (files.length) await tx.update(storageObjects).set({ retentionUntil: new Date(), updatedAt: new Date() }).where(and(eq(storageObjects.businessId, input.businessId), inArray(storageObjects.id, files)));
+  await tx.delete(knowledgeSnippets).where(and(eq(knowledgeSnippets.businessId, input.businessId), eq(knowledgeSnippets.agentId, input.agentId)));
+  await tx.delete(agentKnowledgeExclusions).where(and(eq(agentKnowledgeExclusions.businessId, input.businessId), eq(agentKnowledgeExclusions.agentId, input.agentId)));
 }
 
 export async function archiveAgent(context: DomainContext, input: { userId: string; businessId: string; agentId: string; reassignToAgentId?: string | undefined }): Promise<{ moved: number }> {

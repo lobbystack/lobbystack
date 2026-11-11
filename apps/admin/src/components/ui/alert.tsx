@@ -2,7 +2,7 @@ import type { ComponentProps } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
-const alertVariants = cva("relative grid w-full gap-1 rounded-xl border px-4 py-3 text-sm", {
+const alertVariants = cva("relative grid w-full gap-1 rounded-xl border px-4 py-3 type-body", {
   variants: { variant: {
     default: "bg-card text-card-foreground",
     destructive: "bg-card text-destructive [&_[data-slot=alert-description]]:text-destructive/90",
@@ -19,5 +19,5 @@ export function AlertTitle({ className, ...props }: ComponentProps<"div">) {
 }
 
 export function AlertDescription({ className, ...props }: ComponentProps<"div">) {
-  return <div data-slot="alert-description" className={cn("text-sm text-muted-foreground", className)} {...props} />;
+  return <div data-slot="alert-description" className={cn("type-body-muted", className)} {...props} />;
 }

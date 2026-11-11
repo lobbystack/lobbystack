@@ -25,10 +25,15 @@ const routeCapabilities: ReadonlyArray<readonly [prefix: string, capability: Cap
   ["/api/dashboard", "activity"],
   ["/api/employees", "setup"],
   ["/api/hours", "setup"],
+  ["/api/time-off", "setup"],
+  // Calls, texts, website chats and Instagram threads in one list.
+  ["/api/inbox", "activity"],
   ["/api/integrations", "setup"],
   ["/api/knowledge", "setup"],
   ["/api/messages", "activity"],
   ["/api/notification-preferences", "activity"],
+  // The bell. Each person sees only the kinds their role and the business let them open.
+  ["/api/notifications", "activity"],
   ["/api/number-trial", "setup"],
   ["/api/oauth-grants", "mcp"],
   ["/api/onboarding", "setup"],
@@ -41,7 +46,6 @@ const routeCapabilities: ReadonlyArray<readonly [prefix: string, capability: Cap
   // Who on the partner's team opened the business. Owners and admins read it at either access level; the route checks the role.
   ["/api/partner-access", "activity"],
   ["/api/phone-numbers", "setup"],
-  ["/api/plan-offer", "billing"],
   ["/api/preferences/appearance", "activity"],
   ["/api/realtime", "activity"],
   ["/api/rules", "setup"],

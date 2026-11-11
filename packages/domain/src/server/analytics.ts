@@ -1,9 +1,11 @@
-import { eq, sql, type SQL, type SQLWrapper } from "drizzle-orm";
+import { and, countDistinct, eq, gte, inArray, lt, not, sql, type SQL, type SQLWrapper } from "drizzle-orm";
+import { DateTime, IANAZone } from "luxon";
 
-import { appointments, businesses, calls, conversations, messages, services, withBusinessTransaction } from "@lobbystack/db";
+import { agentOfRow, agents, appointments, businesses, calls, conversations, messages, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { discountedAmount, isNonBillableCallDisposition, MAX_PHONE_CALL_MS, MIN_BILLABLE_VOICE_DURATION_SECONDS, nonBillableCallDispositions, servicePriceFromColumns, type ServicePriceType } from "@lobbystack/shared";
 
 import { requireBusinessMembership } from "../authz";
+import { listActiveAgentsInTransaction } from "./agents";
 import type { DomainContext } from "./context";
 import type { ReceptionistChannel } from "./receptionistActions";
 
@@ -18,12 +20,22 @@ const analyticsGranularitySql = {
   year: sql`'year'`,
 } satisfies Record<AnalyticsGranularity, SQL>;
 
-/** @internal Exported for focused SQL regression coverage. */
-export function analyticsBucketExpression(column: SQLWrapper, granularity: AnalyticsGranularity): SQL<Date> {
+/** A business's time zone, or UTC when it holds no zone Luxon and PostgreSQL know. */
+export function analyticsTimeZone(value: string | null | undefined): string {
+  return value && IANAZone.isValidZone(value) ? value : "UTC";
+}
+
+/**
+ * The start of the bucket a timestamp falls in, counted on the business's
+ * wall clock: days, Sunday weeks, months and years begin at its midnight.
+ * @internal Exported for focused SQL regression coverage.
+ */
+export function analyticsBucketExpression(column: SQLWrapper, granularity: AnalyticsGranularity, timeZone = "UTC"): SQL<Date> {
+  const local = sql`(${column} at time zone ${timeZone})`;
   if (granularity === "week") {
-    return sql<Date>`date_trunc('week', ${column} + interval '1 day') - interval '1 day'`;
+    return sql<Date>`((date_trunc('week', ${local} + interval '1 day') - interval '1 day') at time zone ${timeZone})`;
   }
-  return sql<Date>`date_trunc(${analyticsGranularitySql[granularity]}, ${column})`;
+  return sql<Date>`(date_trunc(${analyticsGranularitySql[granularity]}, ${local}) at time zone ${timeZone})`;
 }
 
 /** Channel buckets for the Analytics channels card, in display order. */
@@ -142,6 +154,30 @@ export function analyticsPercent(part: number, whole: number): number | null {
   return whole > 0 ? Math.round((part / whole) * 1000) / 10 : null;
 }
 
+/** One agent's calls and chats in the current period. */
+export type AnalyticsAgentCounts = { id: string; name: string; archived: boolean; calls: number; chats: number };
+
+/** The conversation channels an agent chats on: texts, website chats and Instagram. */
+export const analyticsAgentChatChannels = ["sms", "web_chat", "instagram"] as const;
+
+type AgentCountRow = { agentId: string; name: string; archived: boolean; total: number | string };
+
+/**
+ * Every active agent in the business's order, then any archived agent that
+ * still had calls or chats in the period, each with both counts.
+ */
+export function summarizeAnalyticsAgents(active: ReadonlyArray<{ id: string; name: string }>, callRows: AgentCountRow[], chatRows: AgentCountRow[]): AnalyticsAgentCounts[] {
+  const byId = new Map<string, AnalyticsAgentCounts>(active.map((agent) => [agent.id, { id: agent.id, name: agent.name, archived: false, calls: 0, chats: 0 }]));
+  for (const [rows, field] of [[callRows, "calls"], [chatRows, "chats"]] as const) {
+    for (const row of rows) {
+      const entry = byId.get(row.agentId) ?? { id: row.agentId, name: row.name, archived: row.archived, calls: 0, chats: 0 };
+      entry[field] += Number(row.total);
+      byId.set(row.agentId, entry);
+    }
+  }
+  return [...byId.values()];
+}
+
 export type AnalyticsInput = {
   userId: string;
   businessId: string;
@@ -149,40 +185,33 @@ export type AnalyticsInput = {
   to: Date;
   previousFrom: Date;
   granularity: AnalyticsGranularity;
+  /** The business's time zone; getAnalytics reads it from the business. */
+  timeZone?: string;
 };
 
 function bucketKey(value: Date | string): string {
   return (value instanceof Date ? value : new Date(value)).toISOString();
 }
 
-function analyticsBucketStart(value: Date, granularity: AnalyticsGranularity): Date {
-  if (granularity === "hour") return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate(), value.getUTCHours()));
-  if (granularity === "week") return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate() - value.getUTCDay()));
-  if (granularity === "month") return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), 1));
-  if (granularity === "year") return new Date(Date.UTC(value.getUTCFullYear(), 0, 1));
-  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
-}
-
-function nextAnalyticsBucket(value: Date, granularity: AnalyticsGranularity): Date {
-  if (granularity === "hour") return new Date(value.getTime() + 3_600_000);
-  if (granularity === "week") return new Date(value.getTime() + 7 * 86_400_000);
-  if (granularity === "month") return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth() + 1, 1));
-  if (granularity === "year") return new Date(Date.UTC(value.getUTCFullYear() + 1, 0, 1));
-  return new Date(value.getTime() + 86_400_000);
+function analyticsBucketStart(value: Date, granularity: AnalyticsGranularity, timeZone: string): DateTime {
+  const local = DateTime.fromJSDate(value, { zone: timeZone });
+  if (granularity === "week") return local.startOf("day").minus({ days: local.weekday % 7 });
+  return local.startOf(granularity);
 }
 
 /** @internal Exported for deterministic empty-series regression coverage. */
-export function analyticsBucketStarts(from: Date, to: Date, granularity: AnalyticsGranularity): string[] {
+export function analyticsBucketStarts(from: Date, to: Date, granularity: AnalyticsGranularity, timeZone = "UTC"): string[] {
   const result: string[] = [];
-  for (let cursor = analyticsBucketStart(from, granularity), count = 0; cursor < to && count < 500; cursor = nextAnalyticsBucket(cursor, granularity), count += 1) {
-    result.push(bucketKey(cursor));
+  const step = { hour: { hours: 1 }, day: { days: 1 }, week: { weeks: 1 }, month: { months: 1 }, year: { years: 1 } }[granularity];
+  for (let cursor = analyticsBucketStart(from, granularity, timeZone), count = 0; cursor.toJSDate() < to && count < 500; cursor = cursor.plus(step), count += 1) {
+    result.push(bucketKey(cursor.toJSDate()));
   }
   return result;
 }
 
 /** Bounded aggregate output; message histories stay in PostgreSQL. */
 export function analyticsResponseQuery(input: AnalyticsInput): SQL {
-  const bucket = analyticsBucketExpression(sql`(created_at at time zone 'UTC')`, input.granularity);
+  const bucket = analyticsBucketExpression(sql`created_at`, input.granularity, analyticsTimeZone(input.timeZone));
   return sql`with period as materialized (
     select id, conversation_id, created_at, direction from messages
     where business_id = ${input.businessId}::uuid
@@ -205,7 +234,7 @@ export function analyticsResponseQuery(input: AnalyticsInput): SQL {
     window conversation as (partition by conversation_id order by created_at, id)
   ), responses as (
     select case when created_at >= ${input.from.toISOString()}::timestamptz
-      then (${bucket}) at time zone 'UTC' else null end as bucket,
+      then ${bucket} else null end as bucket,
       greatest(0, round(extract(epoch from created_at - previous_at))) as seconds
     from ordered where direction = 'outbound' and previous_direction = 'inbound'
       and created_at >= ${input.previousFrom.toISOString()}::timestamptz
@@ -214,7 +243,7 @@ export function analyticsResponseQuery(input: AnalyticsInput): SQL {
 
 type ActivityRow = {
   kind: string; bucket: Date | string | null; category: string | null;
-  current: string; previous: string; averageSeconds: string;
+  current: string; previous: string; averageSeconds: string; previousAverageSeconds: string;
 };
 
 /** One scan per activity table supplies totals, series, outcomes and channels. */
@@ -226,16 +255,89 @@ function activityQuery(source: SQL): SQL {
       bucket, coalesce(outcome, channel) as category,
       count(*) filter (where current) as current,
       count(*) filter (where not current) as previous,
-      coalesce(avg(duration) filter (where current), 0) as "averageSeconds"
+      coalesce(round(avg(duration) filter (where current)), 0) as "averageSeconds",
+      coalesce(round(avg(duration) filter (where not current)), 0) as "previousAverageSeconds"
     from activity group by grouping sets ((bucket), (outcome), (channel), ())`;
 }
 
-export async function getAnalytics(context: DomainContext, input: AnalyticsInput) {
-  return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
-    await requireBusinessMembership(tx, input);
-    const callBucket = analyticsBucketExpression(calls.startedAt, input.granularity);
-    const appointmentBucket = analyticsBucketExpression(appointments.startsAt, input.granularity);
-    const messageBucket = analyticsBucketExpression(messages.createdAt, input.granularity);
+export type AnalyticsResultsInput = { businessId: string; from: Date; to: Date; previousFrom: Date };
+
+/** What the receptionist booked and saved: booked value, time saved and the share of calls without a transfer, each with the previous period. */
+export type AnalyticsResults = {
+  /** In the business currency's smallest unit. */
+  bookedValue: { current: number; previous: number; currency: string };
+  timeSavedSeconds: { current: number; previous: number };
+  /** Null when no calls count yet. */
+  callsWithoutTransferPercent: { current: number | null; previous: number | null };
+};
+
+/**
+ * Booked value, time saved and calls without transfer for a period and the one
+ * before it. Analytics reads them for the dates picked, and Home for the last 30 days.
+ * Runs in the caller's business transaction.
+ */
+export async function readAnalyticsResults(tx: DatabaseTransaction, input: AnalyticsResultsInput): Promise<AnalyticsResults> {
+  // Grouped, so the rules in summarizeAnalyticsBookedValue and summarizeAnalyticsHandledCalls run over a few rows.
+  // Booked value counts bookings made in the period, by when the receptionist made them.
+  const bookingGroups = (await tx.execute<Omit<AnalyticsBookingGroup, "priceMinor" | "priceMaxMinor" | "discountPercent" | "count"> & { priceMinor: string | number | null; priceMaxMinor: string | number | null; discountPercent: string | number | null; count: string }>(sql`
+    select ${appointments.createdAt} >= ${input.from.toISOString()}::timestamptz as current,
+      ${appointments.sourceChannel} as "sourceChannel", ${appointments.status} as status,
+      ${services.priceType} as "priceType", ${services.priceMinor} as "priceMinor", ${services.priceMaxMinor} as "priceMaxMinor",
+      ${services.discountPercent} as "discountPercent", count(*) as count
+    from ${appointments} inner join ${services} on ${services.id} = ${appointments.serviceId} and ${services.businessId} = ${input.businessId}::uuid
+    where ${appointments.businessId} = ${input.businessId}::uuid
+      and ${appointments.createdAt} >= ${input.previousFrom.toISOString()}::timestamptz and ${appointments.createdAt} < ${input.to.toISOString()}::timestamptz
+    group by 1, 2, 3, 4, 5, 6, 7
+  `)).rows;
+  const nullableNumber = (value: string | number | null) => value === null ? null : Number(value);
+  const bookedValue = summarizeAnalyticsBookedValue(bookingGroups.map((row) => ({
+    ...row,
+    priceMinor: nullableNumber(row.priceMinor),
+    priceMaxMinor: nullableNumber(row.priceMaxMinor),
+    discountPercent: nullableNumber(row.discountPercent),
+    count: Number(row.count),
+  })));
+  // Like billing, a call lasts the provider's duration, or the measured media time when the provider reported none.
+  const measuredSeconds = sql`extract(epoch from ${calls.endedAt} - coalesce(${calls.mediaStartedAt}, ${calls.startedAt}))`;
+  const callGroups = (await tx.execute<{ current: boolean; disposition: string | null; billingExcluded: boolean; transferred: boolean; shortestSeconds: string; seconds: string; calls: string }>(sql`
+    with ended as (
+      select ${calls.startedAt} >= ${input.from.toISOString()}::timestamptz as current,
+        case when ${calls.disposition} in (${sql.join(nonBillableCallDispositions.map((value) => sql`${value}`), sql`, `)}) then ${calls.disposition} end as disposition,
+        ${calls.billingExcluded} as billing_excluded,
+        (${calls.status} = 'transferred' or ${calls.transferState} in ('referred', 'completed')) as transferred,
+        coalesce(${calls.providerDurationSeconds}, ${measuredSeconds}) as duration,
+        ${measuredSeconds} as measured
+      from ${calls}
+      where ${calls.businessId} = ${input.businessId}::uuid and ${calls.endedAt} is not null
+        and ${calls.startedAt} >= ${input.previousFrom.toISOString()}::timestamptz and ${calls.startedAt} < ${input.to.toISOString()}::timestamptz
+    )
+    select current, disposition, billing_excluded as "billingExcluded", transferred,
+      floor(least(duration, measured, ${sql.raw(String(MIN_BILLABLE_VOICE_DURATION_SECONDS))})) as "shortestSeconds",
+      coalesce(sum(duration), 0) as seconds, count(*) as calls
+    from ended group by 1, 2, 3, 4, 5
+  `)).rows;
+  const handledCalls = summarizeAnalyticsHandledCalls(callGroups.map((row) => ({ ...row, shortestSeconds: Number(row.shortestSeconds), seconds: Number(row.seconds), calls: Number(row.calls) })));
+  const [business] = await tx.select({ currency: businesses.currency }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
+  return {
+    bookedValue: { currency: business?.currency ?? "USD", ...bookedValue },
+    timeSavedSeconds: { current: handledCalls.current.seconds, previous: handledCalls.previous.seconds },
+    callsWithoutTransferPercent: {
+      current: analyticsPercent(handledCalls.current.withoutTransfer, handledCalls.current.calls),
+      previous: analyticsPercent(handledCalls.previous.withoutTransfer, handledCalls.previous.calls),
+    },
+  };
+}
+
+export async function getAnalytics(context: DomainContext, analyticsInput: AnalyticsInput) {
+  return await withBusinessTransaction(context.db, { ...analyticsInput, actorType: "operator" }, async (tx) => {
+    await requireBusinessMembership(tx, analyticsInput);
+    // Buckets follow the business's days, as the dates the dashboard shows do.
+    const [zone] = await tx.select({ timezone: businesses.timezone }).from(businesses).where(eq(businesses.id, analyticsInput.businessId)).limit(1);
+    const timeZone = analyticsTimeZone(zone?.timezone);
+    const input = { ...analyticsInput, timeZone };
+    const callBucket = analyticsBucketExpression(calls.startedAt, input.granularity, timeZone);
+    const appointmentBucket = analyticsBucketExpression(appointments.startsAt, input.granularity, timeZone);
+    const messageBucket = analyticsBucketExpression(messages.createdAt, input.granularity, timeZone);
     // A call still open a minute past its max duration lost its worker or gateway, so it counts as missed, not live.
     // A transfer counts once the call went out: one only requested, never started or failed stayed with the receptionist.
     const outcomeKey = sql<string>`case
@@ -244,11 +346,13 @@ export async function getAnalytics(context: DomainContext, input: AnalyticsInput
       when lower(coalesce(${calls.disposition}, '')) similar to '%(miss|voicemail|busy|no_answer)%' or lower(${calls.status}) like '%failed%' then 'missed'
       when ${calls.providerDurationSeconds} > 0 or ${calls.status} = 'completed' then 'completed'
       else 'missed' end`;
+    // Like Home's call list: the provider's duration, else the time from start to end, and none while the call is open.
+    const callDurationSeconds = sql`coalesce(${calls.providerDurationSeconds}, case when ${calls.endedAt} is null then 0 else greatest(0, round(extract(epoch from ${calls.endedAt} - ${calls.startedAt}))) end)`;
     const callRows = (await tx.execute<ActivityRow>(activityQuery(sql`
       select ${callBucket} as bucket, ${outcomeKey} as outcome,
         ${calls.transport} as channel,
         ${calls.startedAt} >= ${input.from.toISOString()}::timestamptz as current,
-        ${calls.providerDurationSeconds} as duration
+        ${callDurationSeconds} as duration
       from ${calls}
       where ${calls.businessId} = ${input.businessId}::uuid and not ${calls.billingExcluded}
         and ${calls.startedAt} >= ${input.previousFrom.toISOString()}::timestamptz and ${calls.startedAt} < ${input.to.toISOString()}::timestamptz
@@ -266,47 +370,20 @@ export async function getAnalytics(context: DomainContext, input: AnalyticsInput
       where ${messages.businessId} = ${input.businessId}::uuid
         and ${messages.createdAt} >= ${input.previousFrom.toISOString()}::timestamptz and ${messages.createdAt} < ${input.to.toISOString()}::timestamptz
     `))).rows;
-    // Grouped, so the rules in summarizeAnalyticsBookedValue and summarizeAnalyticsHandledCalls run over a few rows.
-    // Booked value counts bookings made in the period, by when the receptionist made them.
-    const bookingGroups = (await tx.execute<Omit<AnalyticsBookingGroup, "priceMinor" | "priceMaxMinor" | "discountPercent" | "count"> & { priceMinor: string | number | null; priceMaxMinor: string | number | null; discountPercent: string | number | null; count: string }>(sql`
-      select ${appointments.createdAt} >= ${input.from.toISOString()}::timestamptz as current,
-        ${appointments.sourceChannel} as "sourceChannel", ${appointments.status} as status,
-        ${services.priceType} as "priceType", ${services.priceMinor} as "priceMinor", ${services.priceMaxMinor} as "priceMaxMinor",
-        ${services.discountPercent} as "discountPercent", count(*) as count
-      from ${appointments} inner join ${services} on ${services.id} = ${appointments.serviceId} and ${services.businessId} = ${input.businessId}::uuid
-      where ${appointments.businessId} = ${input.businessId}::uuid
-        and ${appointments.createdAt} >= ${input.previousFrom.toISOString()}::timestamptz and ${appointments.createdAt} < ${input.to.toISOString()}::timestamptz
-      group by 1, 2, 3, 4, 5, 6, 7
-    `)).rows;
-    const nullableNumber = (value: string | number | null) => value === null ? null : Number(value);
-    const bookedValue = summarizeAnalyticsBookedValue(bookingGroups.map((row) => ({
-      ...row,
-      priceMinor: nullableNumber(row.priceMinor),
-      priceMaxMinor: nullableNumber(row.priceMaxMinor),
-      discountPercent: nullableNumber(row.discountPercent),
-      count: Number(row.count),
-    })));
-    // Like billing, a call lasts the provider's duration, or the measured media time when the provider reported none.
-    const measuredSeconds = sql`extract(epoch from ${calls.endedAt} - coalesce(${calls.mediaStartedAt}, ${calls.startedAt}))`;
-    const callGroups = (await tx.execute<{ current: boolean; disposition: string | null; billingExcluded: boolean; transferred: boolean; shortestSeconds: string; seconds: string; calls: string }>(sql`
-      with ended as (
-        select ${calls.startedAt} >= ${input.from.toISOString()}::timestamptz as current,
-          case when ${calls.disposition} in (${sql.join(nonBillableCallDispositions.map((value) => sql`${value}`), sql`, `)}) then ${calls.disposition} end as disposition,
-          ${calls.billingExcluded} as billing_excluded,
-          (${calls.status} = 'transferred' or ${calls.transferState} in ('referred', 'completed')) as transferred,
-          coalesce(${calls.providerDurationSeconds}, ${measuredSeconds}) as duration,
-          ${measuredSeconds} as measured
-        from ${calls}
-        where ${calls.businessId} = ${input.businessId}::uuid and ${calls.endedAt} is not null
-          and ${calls.startedAt} >= ${input.previousFrom.toISOString()}::timestamptz and ${calls.startedAt} < ${input.to.toISOString()}::timestamptz
-      )
-      select current, disposition, billing_excluded as "billingExcluded", transferred,
-        floor(least(duration, measured, ${sql.raw(String(MIN_BILLABLE_VOICE_DURATION_SECONDS))})) as "shortestSeconds",
-        coalesce(sum(duration), 0) as seconds, count(*) as calls
-      from ended group by 1, 2, 3, 4, 5
-    `)).rows;
-    const handledCalls = summarizeAnalyticsHandledCalls(callGroups.map((row) => ({ ...row, shortestSeconds: Number(row.shortestSeconds), seconds: Number(row.seconds), calls: Number(row.calls) })));
-    const [business] = await tx.select({ currency: businesses.currency }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
+    // Per agent over the current period only. A row the agent backfill hasn't reached counts for the default agent.
+    const agentCallRows = await tx.select({ agentId: agents.id, name: agents.name, archived: sql<boolean>`${agents.archivedAt} is not null`, total: sql<number>`count(*)` })
+      .from(calls).innerJoin(agents, agentOfRow(calls.businessId, calls.agentId))
+      .where(and(eq(calls.businessId, input.businessId), not(calls.billingExcluded), gte(calls.startedAt, input.from), lt(calls.startedAt, input.to)))
+      .groupBy(agents.id, agents.name, agents.archivedAt);
+    // A chat counts once in the period however many messages it had.
+    const agentChatRows = await tx.select({ agentId: agents.id, name: agents.name, archived: sql<boolean>`${agents.archivedAt} is not null`, total: countDistinct(conversations.id) })
+      .from(messages)
+      .innerJoin(conversations, and(eq(conversations.id, messages.conversationId), eq(conversations.businessId, messages.businessId)))
+      .innerJoin(agents, agentOfRow(conversations.businessId, conversations.agentId))
+      .where(and(eq(messages.businessId, input.businessId), gte(messages.createdAt, input.from), lt(messages.createdAt, input.to), inArray(conversations.channel, [...analyticsAgentChatChannels])))
+      .groupBy(agents.id, agents.name, agents.archivedAt);
+    const agentCounts = summarizeAnalyticsAgents(await listActiveAgentsInTransaction(tx, input.businessId), agentCallRows, agentChatRows);
+    const results = await readAnalyticsResults(tx, input);
 
     const callTotals = callRows.find(row => row.kind === "total");
     const appointmentTotals = appointmentRows.find(row => row.kind === "total");
@@ -333,7 +410,7 @@ export async function getAnalytics(context: DomainContext, input: AnalyticsInput
     }
 
     const buckets = new Map<string, { bucket: string; calls: number; appointments: number; messages: number }>();
-    for (const key of analyticsBucketStarts(input.from, input.to, input.granularity)) {
+    for (const key of analyticsBucketStarts(input.from, input.to, input.granularity, timeZone)) {
       buckets.set(key, { bucket: key, calls: 0, appointments: 0, messages: 0 });
     }
     for (const row of callSeries) buckets.set(bucketKey(row.bucket), { bucket: bucketKey(row.bucket), calls: Number(row.count), appointments: 0, messages: 0 });
@@ -355,21 +432,18 @@ export async function getAnalytics(context: DomainContext, input: AnalyticsInput
       from: input.from,
       to: input.to,
       granularity: input.granularity,
+      timeZone,
       calls: { current: Number(callTotals?.current ?? 0), previous: Number(callTotals?.previous ?? 0) },
       appointments: { current: Number(appointmentTotals?.current ?? 0), previous: Number(appointmentTotals?.previous ?? 0) },
       messages: { current: Number(messageTotals?.current ?? 0), previous: Number(messageTotals?.previous ?? 0) },
-      averageCallDurationSeconds: Number(callTotals?.averageSeconds ?? 0),
+      averageCallDurationSeconds: { current: Number(callTotals?.averageSeconds ?? 0), previous: Number(callTotals?.previousAverageSeconds ?? 0) },
       agentResponseSeconds: { current: currentCount ? Math.round(currentSeconds / currentCount) : 0, previous: previousCount ? Math.round(previousSeconds / previousCount) : 0 },
       series: [...buckets.values()].map((point) => ({ ...point, agentResponseSeconds: (responseBuckets.get(point.bucket) ?? 0) })).sort((left, right) => left.bucket.localeCompare(right.bucket)),
       outcomes: ["completed", "transferred", "live", "missed"].map((outcome) => ({ outcome, count: Number(outcomes.find((row) => row.outcome === outcome)?.count ?? 0) })),
       channels,
-      /** In the business currency's smallest unit. */
-      bookedValue: { currency: business?.currency ?? "USD", ...bookedValue },
-      timeSavedSeconds: { current: handledCalls.current.seconds, previous: handledCalls.previous.seconds },
-      callsWithoutTransferPercent: {
-        current: analyticsPercent(handledCalls.current.withoutTransfer, handledCalls.current.calls),
-        previous: analyticsPercent(handledCalls.previous.withoutTransfer, handledCalls.previous.calls),
-      },
+      /** Calls and chats per agent in the current period. */
+      agents: agentCounts,
+      ...results,
     };
   });
 }

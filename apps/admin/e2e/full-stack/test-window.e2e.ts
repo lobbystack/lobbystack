@@ -5,7 +5,7 @@ import { conversations, firstRealConversations, messages } from "@lobbystack/db"
 
 import common from "../../public/locales/en/common.json" with { type: "json" };
 
-import { migrator, removeFixtures, signUpOwner, type Migrator } from "../fixtures/full-stack";
+import { holdNumber, migrator, removeFixtures, signUpOwner, type Migrator } from "../fixtures/full-stack";
 import { startWidgetProvider } from "../fixtures/widget-provider";
 
 // A test chat end to end: the dashboard's window, the route and the fake model.
@@ -29,6 +29,8 @@ test("a test chat gets the agent's reply and leaves no conversation", async ({ p
     const owner = await signUpOwner(database, page, testInfo, prefix);
     emails.push(owner.email);
     businessIds.push(owner.businessId);
+    // Home's Test call sits on its phone card, which needs a number.
+    await holdNumber(database, owner.businessId, { carrier: "twilio" });
     await page.goto("/");
     await page.getByRole("button", { name: common.testCall.trigger, exact: true }).first().click();
     const window = page.getByRole("dialog");

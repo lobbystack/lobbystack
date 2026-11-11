@@ -10,7 +10,7 @@ import NoCodePrompt from "/snippets/es/setup-prompts/no-code.mdx";
 Este tutorial sigue la configuración inicial del panel de LobbyStack, desde la creación de la cuenta hasta la primera prueba de su agente.
 
 <Note>
-  No necesita tarjeta de crédito. Sin un plan de pago, su número de teléfono es gratis durante 14 días. Starter y Pro incluyen un número. Después de iniciar sesión, verá los límites de uso del servicio alojado en **Configuración**. [Compruebe dónde hay números disponibles](/es/getting-started/number-countries).
+  No necesita tarjeta de crédito. Sin un plan de pago, su número de teléfono es gratis durante 14 días. Starter y Pro incluyen un número. Después de iniciar sesión, verá los límites de uso del servicio alojado en **Configuración** > **Uso**. [Compruebe dónde hay números disponibles](/es/getting-started/number-countries).
 </Note>
 
 <NoCodePrompt />
@@ -20,7 +20,6 @@ Este tutorial sigue la configuración inicial del panel de LobbyStack, desde la 
 Necesita:
 
 - Una dirección de correo electrónico y una contraseña.
-- Un teléfono móvil que pueda recibir SMS, si LobbyStack le pide verificar uno antes de su número de prueba gratuita. LobbyStack no puede verificar números de internet (VoIP).
 - La URL de un sitio web público, si quiere que LobbyStack importe el conocimiento de su sitio web durante la configuración inicial.
 
 ## Pasos de la configuración inicial
@@ -44,48 +43,55 @@ Necesita:
     LobbyStack muestra el progreso de la importación mientras dura. Haga clic en **Omitir la espera** para continuar, y la importación sigue. También ajusta el idioma de las llamadas de su agente según su sitio. Sin sitio web, usted elige el idioma.
   </Step>
 
-  <Step title="Elija su número">
-    Elija el país de su número y luego un número de la lista. Sin un plan de pago, es gratis durante 14 días. Consulte [cómo funciona la prueba gratuita](/es/getting-started/claim-your-number#número-de-prueba-gratuita).
+  <Step title="Elija el número de teléfono de su agente">
+    Elija el país de su número y luego un número de la lista. Sin un plan de pago, el número inicia una prueba gratuita de 14 días. Consulte [cómo funciona la prueba gratuita](/es/getting-started/claim-your-number#número-de-prueba-gratuita).
 
-    LobbyStack le pide verificar un número de móvil primero cuando no puede confirmar la red desde la que se configura, o cuando una prueba gratuita ya se inició desde esa red en los últimos 30 días. Durante la prueba, las llamadas se transfieren solo a ese móvil.
+    Si LobbyStack no vende números en su país, elija **Otro país** en la lista **País** y luego su país en la lista que se abre. Haga clic en **Avísenme cuando estén disponibles** para recibir un correo electrónico y luego en **Continuar sin número**. Mientras tanto, puede probar a su agente desde el navegador.
 
-    Si LobbyStack todavía no vende números en su país, pida que le avisen por correo electrónico cuando los venda y siga probando a su agente desde el navegador.
+    Si LobbyStack no puede ofrecerle una prueba gratuita, por ejemplo porque ya usó una, el paso muestra Starter, Pro y Enterprise. Suscríbase, y LobbyStack lo devuelve a la elección del número. Si su país no tiene números, elíjalo en la lista **País** junto a los planes para continuar sin número.
   </Step>
 
-  <Step title="Indique su objetivo">
-    Elija qué debe hacer primero su agente y diga cómo conoció LobbyStack. Puede omitir ambas preguntas.
+  <Step title="Diga cómo conoció LobbyStack">
+    Elija una respuesta y haga clic en **Continuar**.
   </Step>
 
   <Step title="Conozca a su agente">
-    Pruebe a su agente en el navegador con una llamada o un chat, o llame a su número si eligió uno. Permita el acceso al micrófono cuando el navegador lo pida.
+    Llame a su número, o pruebe a su agente en el navegador con una llamada o un chat. Permita el acceso al micrófono cuando el navegador lo pida.
 
-    En la misma pantalla, cambie el nombre, la voz, el saludo y el idioma de las llamadas de su agente. Después de su primera prueba que funcione, LobbyStack muestra los planes una vez. Haga clic en **Ahora no** para seguir probando.
+    En la misma pantalla, cambie el nombre, la voz, el saludo y el idioma de las llamadas de su agente.
 
     Haga clic en **Ir al panel** cuando esté listo.
   </Step>
 
+  <Step title="Elija un plan">
+    Si su número inició una prueba gratuita, LobbyStack muestra los planes antes de **Inicio**. Haga clic en **Empezar la prueba gratuita de 14 días** para seguir con la prueba y abrir **Inicio**, sin tarjeta. Sus 14 días empezaron cuando obtuvo el número. Para pagar ahora, haga clic en **Suscribirse** en Starter o Pro.
+  </Step>
+
   <Step title="Desvíe la línea de su negocio">
-    Para conservar el número que sus clientes ya marcan, [desvíelo a su número de LobbyStack](/es/getting-started/forward-calls).
+    Para conservar el número que sus clientes ya marcan, [desvíelo a su número de LobbyStack](/es/getting-started/forward-calls). En **Inicio**, **Conserve su número existente**, en **Primeros pasos**, muestra los pasos para su operador.
   </Step>
 
   <Step title="Abra el panel">
-    Revise **Ajustes de IA**, **Conocimiento**, **Servicios**, **Empleados** y **Reglas** antes de que lleguen llamadas reales a su agente. Para añadir documentos, abra **Añadir más fuentes** en **Primeros pasos**, en **Inicio**.
+    Antes de que lleguen llamadas reales a su agente, ábralo desde **Agentes** y revise su página **General** y sus reglas. Luego revise **Datos**, **Conocimiento**, **Servicios** y **Empleados** en **Negocio**. Para añadir documentos, abra **Añadir más fuentes** en **Primeros pasos**, en **Inicio**.
   </Step>
 </Steps>
 
 ## Qué configurar antes de recibir llamadas reales
 
 <CardGroup cols={2}>
-  <Card title="Ajustes de IA" icon="comment-dots" href="/es/agent/ai-settings/overview">
-    Defina la frase de bienvenida, el idioma de las llamadas y el número de transferencia.
+  <Card title="Su agente" icon="comment-dots" href="/es/agent/overview">
+    Defina la frase de bienvenida, la voz, las reglas y el número de transferencia.
   </Card>
-  <Card title="Conocimiento" icon="book-open" href="/es/agent/knowledge">
+  <Card title="Datos del negocio" icon="building" href="/es/settings/business-details">
+    Defina su horario de atención y el idioma en que empiezan las llamadas.
+  </Card>
+  <Card title="Conocimiento" icon="book-open" href="/es/settings/knowledge">
     Añada respuestas precisas sobre su negocio a partir de texto, documentos o la importación del sitio web.
   </Card>
-  <Card title="Servicios" icon="calendar-check" href="/es/agent/services">
+  <Card title="Servicios" icon="calendar-check" href="/es/settings/services">
     Añada servicios y conecte Google Calendar para reservar citas en tiempo real.
   </Card>
-  <Card title="Uso y facturación" icon="credit-card" href="/es/billing/usage">
-    Consulte los límites de uso del servicio alojado, las fechas de reinicio y los límites de gasto.
+  <Card title="Bandeja de entrada" icon="inbox" href="/es/dashboard/inbox">
+    Lea sus llamadas y chats de prueba, y responda a sus clientes.
   </Card>
 </CardGroup>

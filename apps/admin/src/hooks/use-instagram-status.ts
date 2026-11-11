@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { requestJson } from "@/lib/request-json";
 
-export type InstagramStatus = { configured: boolean; account: { username: string | null; status: string; connectedAt: string } | null };
+export type InstagramStatus = { configured: boolean; account: { id: string; username: string | null; status: string; connectedAt: string; agentId?: string | null } | null };
 
 export const instagramStatusQueryKey = (businessId: string | undefined) => ["integrations", "instagram", businessId];
 

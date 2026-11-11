@@ -1,8 +1,7 @@
 {
   "page": {
     "title": "Kontakti",
-    "description": "Upravljajte ljudima koji stoje iza Vaših poziva, poruka i zakazivanja.",
-    "searchPlaceholder": "Pretražite kontakte..."
+    "description": "Upravljajte ljudima koji stoje iza Vaših poziva, poruka i zakazivanja."
   },
   "table": {
     "contact": "Kontakt",
@@ -12,7 +11,7 @@
     "lastInteraction": "Poslednja interakcija",
     "messages": "Poruke: {{count}}",
     "calls": "Pozivi: {{count}}",
-    "empty": "Nijedan kontakt ne odgovara trenutnoj pretrazi.",
+    "empty": "Još nema kontakata.",
     "status": {
       "blocked": "Blokiran"
     },
@@ -176,12 +175,14 @@
   },
   "pagination": {
     "rowsPerPage": "Redova po stranici",
-    "pageOf": "Stranica {{page}} od {{total}}",
+    "viewing": "Redovi {{start}}-{{end}} od {{total}}",
+    "viewingAll_one": "Prikazan {{count}} red",
+    "viewingAll_few": "Prikazana sva {{count}} reda",
+    "viewingAll_other": "Prikazano svih {{count}} redova",
     "firstPage": "Idi na prvu stranicu",
     "previousPage": "Idi na prethodnu stranicu",
     "nextPage": "Idi na sledeću stranicu",
-    "lastPage": "Idi na poslednju stranicu",
-    "goToPage": "Idi na stranicu {{page}}"
+    "lastPage": "Idi na poslednju stranicu"
   },
   "edit": {
     "title": "Izmeni kontakt",
@@ -193,5 +194,24 @@
     "saved": "Kontakt je ažuriran.",
     "failed": "Kontakt nije sačuvan. Pokušajte ponovo.",
     "invalidEmail": "Unesite ispravnu adresu e-pošte."
+  },
+  "create": {
+    "action": "Novi kontakt",
+    "title": "Novi kontakt",
+    "name": "Ime",
+    "phone": "Telefon",
+    "phoneCountry": "Država broja",
+    "email": "E-pošta",
+    "nameRequired": "Unesite ime.",
+    "reachRequired": "Unesite broj telefona ili e-poštu.",
+    "phoneInvalid": "Unesite ceo broj telefona.",
+    "invalidEmail": "Unesite ispravnu adresu e-pošte.",
+    "exists": "Kontakt sa ovim brojem već postoji.",
+    "openExisting": "Otvori kontakt",
+    "cancel": "Otkaži",
+    "save": "Napravi kontakt",
+    "saving": "Pravljenje...",
+    "saved": "Kontakt je napravljen.",
+    "failed": "Kontakt nije napravljen. Pokušajte ponovo."
   }
 }

@@ -50,10 +50,10 @@ export function BillingPastDueBanner({ businessId, plan, subscriptionState, perm
                 className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400"
               />
               <div className="min-w-0">
-                <p className="text-sm font-medium">
+                <p className="type-title">
                   {t("billing.pastDueBanner.title")}
                 </p>
-                <p className="text-sm text-amber-900/80 dark:text-amber-100/80">
+                <p className="type-body text-amber-900/80 dark:text-amber-100/80">
                   {t("billing.pastDueBanner.description")}
                 </p>
               </div>

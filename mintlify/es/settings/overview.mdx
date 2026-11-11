@@ -1,56 +1,51 @@
 ---
 title: "Gestione la configuración del espacio de trabajo"
-description: "Gestione el uso, la facturación, los miembros del equipo, las notificaciones, su número de teléfono, el widget del sitio web, las credenciales de la cuenta y la apariencia del panel en la Configuración de LobbyStack."
-sidebarTitle: "Configuración"
+description: "Encuentre los ajustes de su espacio de trabajo, como el equipo, el uso y la facturación, y los ajustes de su propia cuenta en LobbyStack."
+sidebarTitle: "Resumen de la configuración"
 contentType: "Conceptual"
 ---
 
-El área de **Configuración** reúne los controles del espacio de trabajo, las credenciales de la cuenta, las notificaciones, la configuración del número de teléfono, el uso, la facturación y las preferencias de apariencia.
+Haga clic en **Configuración** en la barra lateral del panel. La barra lateral pasa al menú de configuración, con dos grupos: **Espacio de trabajo**, para los ajustes que comparten todos los agentes y compañeros, y **Tu cuenta**, para los suyos. La fila superior, con una flecha hacia atrás, le devuelve al menú principal.
+
+Los ajustes propios de cada agente, como su saludo, sus reglas y sus canales, están en el agente. Consulte [Configure su agente con IA](/es/agent/overview).
+
+Los datos del negocio, el conocimiento, los servicios, los empleados y las conexiones de calendario que comparten todos los agentes están en **Negocio**, en la barra lateral. Consulte [Lo que comparten todos los agentes](/es/agent/overview#lo-que-comparten-todos-los-agentes).
 
 <CardGroup cols={2}>
-  <Card title="Uso" icon="chart-line" href="/es/billing/usage">
-    Siga los minutos de voz alojados, los segmentos de SMS, los intentos de transferencia, la base de conocimiento y los límites del plan.
-  </Card>
-  <Card title="Facturación" icon="credit-card" href="/es/billing/plans">
-    Revise las opciones de plan, los cambios a un plan superior, las acciones de la suscripción y los límites de gasto.
-  </Card>
   <Card title="Equipo" icon="users" href="/es/settings/team">
     Invite a miembros y controle el acceso al espacio de trabajo.
   </Card>
-  <Card title="Notificaciones" icon="bell" href="/es/settings/notifications">
-    Elija qué eventos envían alertas por correo electrónico o por SMS.
+  <Card title="Uso" icon="chart-line" href="/es/billing/usage">
+    Siga los minutos de voz, los segmentos de SMS, los intentos de transferencia y los límites del plan.
   </Card>
-  <Card title="Número de teléfono" icon="phone" href="/es/settings/phone-number">
-    Revise o reemplace el número de teléfono del negocio.
+  <Card title="Plan y facturación" icon="credit-card" href="/es/billing/plans">
+    Revise los planes, los cambios a un plan superior, las acciones de la suscripción y los límites de gasto.
   </Card>
-  <Card title="Seguridad de la cuenta" icon="shield" href="/es/settings/account">
+  <Card title="Perfil y seguridad" icon="shield" href="/es/settings/account">
     Cambie su correo electrónico o su contraseña.
   </Card>
 </CardGroup>
 
-## Páginas de configuración
+## Espacio de trabajo
 
 | Página | Para qué sirve |
 | --- | --- |
-| **Uso** | Uso del período de facturación actual, uso incluido restante, fecha de reinicio y uso medido. |
-| **Plan** | Plan actual, cambios a un plan superior, gestión de la suscripción y límites de gasto. |
-| **Equipo** | Invitaciones de miembros, roles y acceso al espacio de trabajo. |
-| **Notificaciones** | Alertas por correo electrónico y SMS para los eventos que requieren atención. |
-| **Número de teléfono** | El número activo del negocio y su reemplazo, si cumple los requisitos. |
-| **Widget del sitio web** | Claves del widget, chat del sitio web, captación de clientes potenciales, llamadas desde el navegador e instalación. |
-| **Cuenta** | Cambios del correo electrónico y la contraseña de la cuenta. |
-| **Preferencias** | Idioma del panel, formato de hora y tema. |
+| **Equipo** | [El nombre del negocio, las invitaciones de miembros, los roles y el acceso](/es/settings/team) |
+| **Uso** | [El uso de este período de facturación, lo que queda y cuándo se reinicia](/es/billing/usage) |
+| **Plan y facturación** | [Su plan, los cambios a un plan superior, la suscripción y el límite de gasto](/es/billing/plans) |
+| **Webhooks** | [Los eventos que se envían a sus propias herramientas](/es/integrations/webhooks) |
+| **Claves de API** | [Las claves para la API y los asistentes de IA conectados](/es/api/authentication) |
 
-## Actualice los datos de la cuenta
+Un negocio que gestiona un socio muestra **Facturación** en lugar de **Plan y facturación**, y **Acceso del socio**, que indica cuándo el equipo del socio abrió el negocio.
 
-<Steps>
-  <Step title="Abra Configuración">
-    En la barra lateral del panel, vaya a **Gestionar** > **Configuración**.
-  </Step>
-  <Step title="Elija una página de configuración">
-    Seleccione la página del ajuste del espacio de trabajo o de la cuenta que necesita.
-  </Step>
-  <Step title="Haga el cambio">
-    Actualice el campo o realice la acción que necesita. Algunos cambios, como el del correo electrónico, requieren confirmación.
-  </Step>
-</Steps>
+## Tu cuenta
+
+| Página | Para qué sirve |
+| --- | --- |
+| **Perfil y seguridad** | [Su correo electrónico y su contraseña](/es/settings/account) |
+| **Idioma y tema** | El idioma del panel, el formato de hora y si el panel comparte datos de telemetría |
+| **Notificaciones** | [Las alertas por correo electrónico y SMS que recibe](/es/settings/notifications) |
+
+## Lo que ve
+
+La configuración muestra solo las páginas que su rol y el nivel de acceso de su negocio le permiten abrir. Por ejemplo, solo los propietarios y los administradores ven **Claves de API**. Los enlaces a las páginas de configuración antiguas, como `/settings/account`, siguen abriendo la página que las reemplazó.

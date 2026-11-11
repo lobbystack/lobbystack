@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { resolvePortVisualPath } from "../../../scripts/admin-ui-parity-routes";
 
 const baseURL = process.env.PARITY_BASE_URL;
-const dynamic = { callId: process.env.PARITY_CALL_ID, contactId: process.env.PARITY_CONTACT_ID, demoToken: process.env.PARITY_DEMO_TOKEN, resetToken: process.env.PARITY_RESET_TOKEN };
+const dynamic = { callId: process.env.PARITY_CALL_ID, contactId: process.env.PARITY_CONTACT_ID, demoToken: process.env.PARITY_DEMO_TOKEN, resetToken: process.env.PARITY_RESET_TOKEN, agentId: process.env.PARITY_AGENT_ID };
 type FixtureState = "public" | "onboarding" | "operator";
 type DynamicKey = keyof typeof dynamic;
 type VisualRoute = {
@@ -31,7 +31,7 @@ const paritySide = process.env.PARITY_SIDE ?? "port";
 const includePortBaselines = process.env.PARITY_INCLUDE_PORT_BASELINES === "1";
 
 function resolveDynamicPath(path: string): string {
-  return path.replace(/\[(callId|contactId|demoToken|resetToken)\]/g, (_, key: DynamicKey) => dynamic[key] ?? `[${key}]`);
+  return path.replace(/\[(callId|contactId|demoToken|resetToken|agentId)\]/g, (_, key: DynamicKey) => dynamic[key] ?? `[${key}]`);
 }
 
 const routes = manifest.visualRoutes
@@ -436,9 +436,15 @@ for (const routeCase of routes) for (const viewport of viewports) for (const loc
       await expect(page.getByRole("dialog").getByRole("heading", { level: 3 })).toHaveCount(4);
     }
     if (routeCase.interaction === "user-menu") {
-      if (viewport.name === "mobile") await page.getByRole("button", { name: "Toggle sidebar", exact: true }).click();
-      await page.locator('[data-slot="sidebar-footer"]').getByRole("button", { name: /@/ }).click();
-      await expect(page.getByRole("menu")).toBeVisible();
+      // On a phone the account menu's items sit at the bottom of the Menu tab's sheet.
+      if (viewport.name === "mobile") {
+        const nav = JSON.parse(readFileSync(fileURLToPath(new URL(`../public/locales/${locale}/nav.json`, import.meta.url)), "utf8"));
+        await page.getByRole("navigation", { name: nav.mobileNav.label, exact: true }).getByRole("button", { name: nav.mobileNav.menu, exact: true }).click();
+        await expect(page.getByRole("dialog", { name: nav.mobileNav.menu, exact: true })).toBeVisible();
+      } else {
+        await page.locator('[data-slot="sidebar-footer"]').getByRole("button", { name: /@/ }).click();
+        await expect(page.getByRole("menu")).toBeVisible();
+      }
     }
     if (routeCase.interaction === "recording-tab") {
       const calls = JSON.parse(readFileSync(fileURLToPath(new URL(`../public/locales/${locale}/calls.json`, import.meta.url)), "utf8"));
@@ -483,7 +489,18 @@ for (const routeCase of routes) for (const viewport of viewports) for (const loc
     }
     if (routeCase.interaction?.startsWith("feedback-")) {
       const common = JSON.parse(readFileSync(fileURLToPath(new URL(`../public/locales/${locale}/common.json`, import.meta.url)), "utf8"));
-      await page.getByRole("button", { name: common.feedback.trigger, exact: true }).click();
+      if (paritySide === "reference") await page.getByRole("button", { name: common.feedback.trigger, exact: true }).click();
+      else {
+        // The port's feedback opens from the account menu, which a phone shows in the Menu tab's sheet.
+        if (viewport.name === "mobile") {
+          const nav = JSON.parse(readFileSync(fileURLToPath(new URL(`../public/locales/${locale}/nav.json`, import.meta.url)), "utf8"));
+          await page.getByRole("navigation", { name: nav.mobileNav.label, exact: true }).getByRole("button", { name: nav.mobileNav.menu, exact: true }).click();
+          await page.getByRole("dialog", { name: nav.mobileNav.menu, exact: true }).getByRole("button", { name: common.feedback.trigger, exact: true }).click();
+        } else {
+          await page.locator('[data-slot="sidebar-footer"]').getByRole("button", { name: /@/ }).click();
+          await page.getByRole("menuitem", { name: common.feedback.trigger, exact: true }).click();
+        }
+      }
       const message = page.getByRole("textbox", { name: common.feedback.label, exact: true });
       await expect(message).toBeVisible();
       if (routeCase.interaction === "feedback-invalid") {
@@ -499,7 +516,7 @@ for (const routeCase of routes) for (const viewport of viewports) for (const loc
       });
     }
     if (routeCase.interaction === "dashboard-follow-up") {
-      await expect(page.getByRole("link", { name: /Please call back.*Alex/ })).toHaveAttribute("href", "/calls/parity-call");
+      await expect(page.getByRole("link", { name: /Please call back.*Alex/ })).toHaveAttribute("href", paritySide === "reference" ? "/calls/parity-call" : "/inbox?call=parity-call");
       await expect(page.getByText("+14165550199", { exact: true })).toBeVisible();
     }
     await page.addStyleTag({ content: "*,*::before,*::after{animation-duration:0s!important;transition-duration:0s!important;caret-color:transparent!important}" });

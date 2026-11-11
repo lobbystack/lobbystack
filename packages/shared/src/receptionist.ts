@@ -117,8 +117,15 @@ export const RULE_TITLE_MAX_LENGTH = 160;
 /** Longest rule text the dashboard saves. */
 export const RULE_CONTENT_MAX_LENGTH = 10_000;
 
-/** Most rules the API lets a business keep, and so the most ids one reorder sends. */
+/** Most rules the API lets an agent keep. Adding one past it is refused; nothing else is. */
 export const RULES_MAX = 100;
+
+/**
+ * The most ids one reorder sends. Migration 0203 added up to one rule per
+ * channel (ruleChannels) to an agent's rules, which can take an agent at
+ * RULES_MAX past it, and that agent can still put them in order.
+ */
+export const RULES_REORDER_MAX = RULES_MAX + 4;
 
 /** Rule text calls read. The dashboard keeps longer text, but calls use only this much of it. */
 export const RULE_CONTENT_CALL_MAX_LENGTH = 4_000;

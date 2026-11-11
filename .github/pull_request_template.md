@@ -24,3 +24,5 @@ Steps to reproduce:
 
 - [ ] Docs updated if architecture or behavior changed.
 - [ ] Architecture Decision Record (ADR) updated or added if needed.
+
+Changelog: added / not needed

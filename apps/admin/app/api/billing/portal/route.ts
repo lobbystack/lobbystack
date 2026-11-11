@@ -18,5 +18,5 @@ export const POST = operatorRoute(async ({ request, businessId, transaction }) =
   // LobbyStack bills a managed plan directly, so Polar has nothing for its customer to manage.
   if (isManagedBillingAccount(account)) return jsonError("This business is on a managed plan, so LobbyStack bills it directly.", 409);
   const provider = new PolarBillingProvider({ accessToken: token, organizationId, ...(process.env.POLAR_API_BASE_URL ? { baseUrl: process.env.POLAR_API_BASE_URL } : {}) });
-  return NextResponse.json(await provider.createCustomerPortalSession({ customerId: account.customerId, returnUrl: `${process.env.APP_BASE_URL ?? new URL(request.url).origin}/settings/plan` }));
+  return NextResponse.json(await provider.createCustomerPortalSession({ customerId: account.customerId, returnUrl: `${process.env.APP_BASE_URL ?? new URL(request.url).origin}/workspace/billing` }));
 });

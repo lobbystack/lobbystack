@@ -11,6 +11,8 @@ The LobbyStack API lets your own tools work with a business's agent data. Zapier
 
 The API calls your agent `receptionist` and your workspace `business`, as in `GET /receptionist`. `GET /agents` lists the workspace's agents. `/receptionist` and `/rules` act on the default agent, and each call and message names the agent that took it in `agent_id`.
 
+A rule's `channel` keeps it to `voice`, `sms`, `web_chat` or `instagram`, and `null` applies it on every channel. `voice_instructions`, `sms_instructions` and `chat_instructions` on `/receptionist` and `/agents` are deprecated. They read the agent's first active rule for that channel, and writing one changes that rule or adds it. `chat_instructions` writes the website chat and Instagram rules. Sending `null` deletes the channel's rule.
+
 <SaasPrompt />
 
 ## Base URL

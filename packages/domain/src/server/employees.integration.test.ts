@@ -187,6 +187,66 @@ describe.skipIf(!client)("employees under operator RLS", () => {
     });
   });
 
+  it("keeps part-day time off the calendar added when the employee is saved", async () => {
+    await rollbackTest(async (tx) => {
+      const { db, owner } = await seed(tx);
+      const today = businessToday("Europe/Belgrade");
+      const day = (offset: number) => DateTime.fromISO(today).plus({ days: offset }).toISODate()!;
+      const at = (offset: number, time: string) => DateTime.fromISO(`${day(offset)}T${time}`, { zone: "Europe/Belgrade" }).toJSDate();
+      const ana = await createEmployee({ db }, { ...owner, name: "Ana", phone: null });
+      // Two part-day time offs on one day, an overnight one, and another on the day it ends.
+      const added = await tx.insert(closures).values([
+        { businessId: owner.businessId, staffId: ana.id, startsAt: at(3, "09:00"), endsAt: at(3, "11:00"), reason: "Dentist", note: "Back by noon" },
+        { businessId: owner.businessId, staffId: ana.id, startsAt: at(3, "15:00"), endsAt: at(3, "16:00"), reason: "School run" },
+        { businessId: owner.businessId, staffId: ana.id, startsAt: at(6, "22:00"), endsAt: at(7, "02:00"), reason: "Night shift" },
+        { businessId: owner.businessId, staffId: ana.id, startsAt: at(7, "13:00"), endsAt: at(7, "14:00"), reason: "Training" },
+      ]).returning({ id: closures.id, startsAt: closures.startsAt, endsAt: closures.endsAt, reason: closures.reason, note: closures.note });
+      const saved = async () => await tx.select({ id: closures.id, startsAt: closures.startsAt, endsAt: closures.endsAt, reason: closures.reason, note: closures.note }).from(closures).where(eq(closures.staffId, ana.id)).orderBy(closures.startsAt);
+
+      // The editor lists each set of days once, and sends back what it listed.
+      const listed = (await listEmployees({ db }, owner)).employees.find((employee) => employee.id === ana.id)!;
+      expect(listed.timeOff).toEqual([{ startsOn: day(3), endsOn: day(3) }, { startsOn: day(6), endsOn: day(7) }, { startsOn: day(7), endsOn: day(7) }]);
+      await updateEmployee({ db }, { ...owner, employeeId: ana.id, name: "Ana Petrović", phone: null, timeOff: listed.timeOff });
+      expect(await saved()).toEqual(added);
+      // An editor that sends a day twice reads as once.
+      await updateEmployee({ db }, { ...owner, employeeId: ana.id, name: "Ana", phone: null, timeOff: [...listed.timeOff, { startsOn: day(3), endsOn: day(3) }] });
+      expect(await saved()).toEqual(added);
+
+      // A new entry is checked against the time off kept, at its real hours.
+      await expect(updateEmployee({ db }, { ...owner, employeeId: ana.id, name: "Ana", phone: null, timeOff: [...listed.timeOff, { startsOn: day(2), endsOn: day(3) }] })).rejects.toMatchObject({ status: 400, code: "employee_time_off_invalid" });
+      await updateEmployee({ db }, { ...owner, employeeId: ana.id, name: "Ana", phone: null, timeOff: [...listed.timeOff, { startsOn: day(10), endsOn: day(10) }] });
+      expect(await saved()).toEqual([...added, expect.objectContaining({ startsAt: at(10, "00:00"), endsAt: at(11, "00:00"), reason: "" })]);
+      // Leaving a set of days out removes every row on those days.
+      await updateEmployee({ db }, { ...owner, employeeId: ana.id, name: "Ana", phone: null, timeOff: listed.timeOff.slice(1) });
+      expect((await saved()).map((row) => row.reason)).toEqual(["Night shift", "Training"]);
+    });
+  });
+
+  it("renames time off and changes its note when the save sends them, keeping its row and hours", async () => {
+    await rollbackTest(async (tx) => {
+      const { db, owner } = await seed(tx);
+      const today = businessToday("Europe/Belgrade");
+      const day = (offset: number) => DateTime.fromISO(today).plus({ days: offset }).toISODate()!;
+      const at = (offset: number, time: string) => DateTime.fromISO(`${day(offset)}T${time}`, { zone: "Europe/Belgrade" }).toJSDate();
+      const ana = await createEmployee({ db }, { ...owner, name: "Ana", phone: null, timeOff: [{ startsOn: day(8), endsOn: day(9), name: " Holiday ", note: "Seaside" }, { startsOn: day(2), endsOn: day(2) }] });
+      const [partDay] = await tx.insert(closures).values({ businessId: owner.businessId, staffId: ana.id, startsAt: at(4, "09:00"), endsAt: at(4, "11:00"), reason: "Dentist", note: "Back by noon" }).returning({ id: closures.id });
+      const saved = async () => await tx.select({ id: closures.id, startsAt: closures.startsAt, reason: closures.reason, note: closures.note }).from(closures).where(eq(closures.staffId, ana.id)).orderBy(closures.startsAt);
+      const before = await saved();
+      expect(before.map(({ reason, note }) => ({ reason, note }))).toEqual([{ reason: "", note: null }, { reason: "Dentist", note: "Back by noon" }, { reason: "Holiday", note: "Seaside" }]);
+
+      // A save that sends no name or note leaves them, and one that sends them changes them on the same rows.
+      await updateEmployee({ db }, { ...owner, employeeId: ana.id, name: "Ana", phone: null, timeOff: [{ startsOn: day(2), endsOn: day(2) }, { startsOn: day(4), endsOn: day(4) }, { startsOn: day(8), endsOn: day(9) }] });
+      expect(await saved()).toEqual(before);
+      await updateEmployee({ db }, { ...owner, employeeId: ana.id, name: "Ana", phone: null, timeOff: [{ startsOn: day(2), endsOn: day(2), name: "Moving day" }, { startsOn: day(4), endsOn: day(4), name: "Dentist", note: null }, { startsOn: day(8), endsOn: day(9), name: "Summer holiday", note: "Seaside" }] });
+      expect(await saved()).toEqual([
+        { ...before[0], reason: "Moving day" },
+        { id: partDay!.id, startsAt: at(4, "09:00"), reason: "Dentist", note: null },
+        { ...before[2], reason: "Summer holiday" },
+      ]);
+      await expect(updateEmployee({ db }, { ...owner, employeeId: ana.id, name: "Ana", phone: null, timeOff: [{ startsOn: day(2), endsOn: day(2), name: "x".repeat(101) }] })).rejects.toMatchObject({ status: 400, code: "employee_time_off_invalid" });
+    });
+  });
+
   it("works the business's hours by default, or the custom hours it's given", async () => {
     await rollbackTest(async (tx) => {
       const { db, owner } = await seed(tx);

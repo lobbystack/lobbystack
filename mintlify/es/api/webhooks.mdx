@@ -11,7 +11,7 @@ Los webhooks envían un `POST` HTTPS a su URL cuando ocurre algo en un negocio, 
 
 | Evento | Se envía cuando | `data` | Permiso |
 | --- | --- | --- | --- |
-| `call.completed` | Una llamada terminó y LobbyStack guardó su resumen y su resultado. Una llamada que su equipo tomó con [El personal responde primero](/es/agent/ai-settings/overview#el-personal-responde-primero) no tiene resumen, y sus campos `outcome` y `end_reason` son `answered_by_team`. | Llamada | `calls:read` |
+| `call.completed` | Una llamada terminó y LobbyStack guardó su resumen y su resultado. Una llamada que su equipo tomó con [El personal responde primero](/es/agent/calls-and-booking#el-personal-responde-primero) no tiene resumen, y sus campos `outcome` y `end_reason` son `answered_by_team`. | Llamada | `calls:read` |
 | `appointment.booked` | Alguien reserva una cita: la recepcionista, el panel o la API. | Cita | `appointments:read` |
 | `appointment.rescheduled` | Una cita se cambia a otra hora. | Cita | `appointments:read` |
 | `appointment.cancelled` | Se cancela una cita. | Cita | `appointments:read` |
@@ -28,7 +28,7 @@ Puede agregar endpoints en el panel o con la API.
   <Tab title="Panel">
     <Steps>
       <Step title="Abra Webhooks">
-        Vaya a **Integraciones** y haga clic en **Gestionar** en la tarjeta **Webhooks**. Solo los propietarios y administradores pueden gestionar los webhooks.
+        Vaya a **Configuración** > **Webhooks**. Solo los propietarios y administradores pueden gestionar los webhooks.
       </Step>
       <Step title="Agregue el endpoint">
         Haga clic en **Agregar endpoint**, introduzca la URL y elija los eventos.
@@ -79,6 +79,7 @@ Puede agregar endpoints en el panel o con la API.
     "contact_phone": "+14165550134",
     "source": "voice",
     "calendar_sync_status": "pending",
+    "notes": null,
     "created_at": "2026-09-27T16:58:19.590Z",
     "updated_at": "2026-09-27T16:58:19.590Z"
   }

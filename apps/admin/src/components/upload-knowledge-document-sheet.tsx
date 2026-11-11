@@ -172,7 +172,7 @@ export function UploadKnowledgeDocumentSheet({
       }}
       open={open}
     >
-      <DialogContent >
+      <DialogContent size="sm" >
         <DialogHeader>
           <DialogTitle>{t("sections.knowledge.uploadDocument")}</DialogTitle>
           <DialogDescription>
@@ -203,7 +203,7 @@ export function UploadKnowledgeDocumentSheet({
                 type="file"
               />
               <label
-                className={`flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border bg-input/30 px-6 py-8 text-center transition-colors outline-none peer-focus-visible:border-ring peer-focus-visible:ring-[3px] peer-focus-visible:ring-ring/50 ${
+                className={`flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border bg-input/30 px-6 py-8 text-center transition-colors outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background ${
                   isDraggingFile
                     ? "border-ring ring-[3px] ring-ring/50"
                     : errorMessage
@@ -230,7 +230,7 @@ export function UploadKnowledgeDocumentSheet({
               >
                 <div className="flex flex-col items-center gap-3">
                   <Upload className="size-5 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
+                  <p className="type-body-muted">
                     {t("sections.knowledge.fields.file.dropzonePrefix")}{" "}
                     <span className="underline underline-offset-2">
                       {t("sections.knowledge.fields.file.chooseFile")}

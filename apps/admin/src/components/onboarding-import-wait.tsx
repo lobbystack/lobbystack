@@ -76,7 +76,7 @@ export function ImportWaitSlides() {
       {/* The key restarts the fade for each slide. Without motion, slides swap in place. */}
       <div className="flex flex-col gap-4 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300" key={key}>
         <Scene />
-        <p className="text-center text-base font-medium">{t(`reading.slides.${key}`)}</p>
+        <p className="text-center type-card-title">{t(`reading.slides.${key}`)}</p>
       </div>
       <div className="flex items-center justify-between">
         <Button aria-label={t("reading.previous")} onClick={() => go(-1)} size="icon-sm" type="button" variant="ghost"><ChevronLeft /></Button>

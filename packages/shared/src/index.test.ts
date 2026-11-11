@@ -3,36 +3,41 @@ import { describe, expect, it } from "vitest";
 import { defaultAgentName, defaultGreeting, isDefaultAgentName, isDefaultGreeting, runtimeLocales } from "./index";
 
 describe("defaultAgentName", () => {
-  it("translates Agent into every caller language", () => {
+  it("names the first agent Default agent in every caller language", () => {
     expect(runtimeLocales.map((locale) => [locale, defaultAgentName(locale)])).toEqual([
-      ["en", "Agent"],
-      ["fr", "Agent"],
-      ["es", "Agente"],
-      ["sr", "Agent"],
-      ["de", "Agent"],
-      ["pt", "Agente"],
-      ["it", "Agente"],
-      ["nl", "Agent"],
-      ["pl", "Agent"],
-      ["tr", "Asistan"],
-      ["vi", "Trợ lý"],
-      ["tl", "Assistant"],
-      ["sv", "Agent"],
-      ["ru", "Агент"],
-      ["uk", "Агент"],
+      ["en", "Default agent"],
+      ["fr", "Agent par défaut"],
+      ["es", "Agente predeterminado"],
+      ["sr", "Podrazumevani agent"],
+      ["de", "Standard-Agent"],
+      ["pt", "Agente padrão"],
+      ["it", "Agente predefinito"],
+      ["nl", "Standaardagent"],
+      ["pl", "Domyślny agent"],
+      ["tr", "Varsayılan asistan"],
+      ["vi", "Trợ lý mặc định"],
+      ["tl", "Default na assistant"],
+      ["sv", "Standardagent"],
+      ["ru", "Агент по умолчанию"],
+      ["uk", "Агент за замовчуванням"],
     ]);
   });
 
   it("uses English when no language is given", () => {
-    expect(defaultAgentName()).toBe("Agent");
+    expect(defaultAgentName()).toBe("Default agent");
   });
 });
 
 describe("isDefaultAgentName", () => {
   it("knows the name in any language, and no name an operator chose", () => {
-    expect(isDefaultAgentName("Agente")).toBe(true);
-    expect(isDefaultAgentName("Agent")).toBe(true);
+    expect(isDefaultAgentName("Agente predeterminado")).toBe(true);
+    expect(isDefaultAgentName("Default agent")).toBe(true);
     expect(isDefaultAgentName("Front desk")).toBe(false);
+  });
+
+  it("no longer counts the names first agents had before Default agent", () => {
+    expect(isDefaultAgentName("Agent")).toBe(false);
+    expect(isDefaultAgentName("Agente")).toBe(false);
   });
 });
 

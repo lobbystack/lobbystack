@@ -18,9 +18,9 @@ describe("worker schedulers", () => {
 
     await configureSchedulers(queues, [{ id: "business-a", active: true }, { id: "business-b", active: true }]);
 
-    expect(upsertJobScheduler).toHaveBeenCalledTimes(30);
+    expect(upsertJobScheduler).toHaveBeenCalledTimes(32);
     const tenantCalls = upsertJobScheduler.mock.calls.filter((call) => call[2].data.businessId !== null);
-    expect(tenantCalls).toHaveLength(22);
+    expect(tenantCalls).toHaveLength(24);
     expect(tenantCalls.filter((call) => call[2].data.type === "api.retention")).toHaveLength(2);
     for (const call of tenantCalls) {
       expect(call[2].data.businessId).toMatch(/^business-[ab]$/);
@@ -74,7 +74,9 @@ describe("worker schedulers", () => {
       "outbox-backlog-sample:dormant",
     ]);
     const tenantTypes = upsertJobScheduler.mock.calls.filter((call) => call[2].data.businessId === "dormant").map((call) => call[2].data.type);
-    expect(tenantTypes).toHaveLength(9);
+    expect(tenantTypes).toHaveLength(10);
+    // Product updates reach a dormant business once a day, so they wait when the owner comes back.
+    expect(upsertJobScheduler).toHaveBeenCalledWith("product-updates:dormant", { every: 24 * 60 * 60_000 }, expect.anything());
     expect(tenantTypes).toContain("privacy.scrubMessage");
     // A trial must still end, and its emails go out, when the owner stops calling.
     expect(tenantTypes).toContain("numberTrial.sweep");
@@ -95,7 +97,7 @@ describe("worker schedulers", () => {
     // b goes dormant: only its three per-minute schedulers change.
     await configureSchedulers(queues, [{ id: "a", active: true }, { id: "b", active: false }], applied);
     expect(removeJobScheduler.mock.calls.map((call) => call[0]).sort()).toEqual(["operator-daily-summary:b", "outbox-backlog-sample:b"]);
-    expect(upsertJobScheduler.mock.calls.map((call) => [call[0], call[1]])).toEqual([["telemetry-flush:b", { every: 60 * 60_000 }]]);
+    expect(upsertJobScheduler.mock.calls.map((call) => [call[0], call[1]])).toEqual([["telemetry-flush:b", { every: 60 * 60_000 }], ["product-updates:b", { every: 24 * 60 * 60_000 }]]);
     upsertJobScheduler.mockClear();
     removeJobScheduler.mockClear();
 
@@ -110,6 +112,7 @@ describe("worker schedulers", () => {
       "pending-upload-cleanup:b",
       "phone-number-reclaim:b",
       "privacy-retention-sweep:b",
+      "product-updates:b",
       "telemetry-flush:b",
       "unit-economics-rollup:b",
     ]);

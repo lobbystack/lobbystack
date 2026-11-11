@@ -2,7 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { widgetKeys } from "@lobbystack/db";
-import { insertWidgetKeyInTransaction } from "@lobbystack/domain";
+import { insertWidgetKeyInTransaction, requireActiveAgentInTransaction } from "@lobbystack/domain";
 import { isUuid, isWidgetKeyIssuanceEnabled, widgetConfigSchema } from "@lobbystack/shared";
 
 import { jsonError } from "@/lib/api-helpers";
@@ -36,21 +36,26 @@ function parseConfig(value: unknown): Record<string, unknown> {
 }
 
 // The list also says whether this server makes new keys, so the widget page
-// needs no billing to know it: a partner's business has none.
+// needs no billing to know it: a partner's business has none. Each key names
+// the agent it answers as.
 export const GET = operatorRoute(async ({ businessId, transaction }) => NextResponse.json(await transaction(async (tx) => {
   const rows = await tx.select().from(widgetKeys).where(eq(widgetKeys.businessId, businessId)).orderBy(desc(widgetKeys.createdAt));
   // The key is public (it sits in the website's script tag), so the dashboard can show its snippet again. Older keys kept only a hash.
-  return { keys: rows.map((row) => ({ ...serializeWidgetKeyConfig(row), key: row.status === "revoked" ? null : row.keyValue })), issuanceEnabled: isWidgetKeyIssuanceEnabled(process.env) };
+  return { keys: rows.map((row) => ({ ...serializeWidgetKeyConfig(row), agentId: row.agentId, key: row.status === "revoked" ? null : row.keyValue })), issuanceEnabled: isWidgetKeyIssuanceEnabled(process.env) };
 })));
 
 export const POST = operatorRoute(async ({ businessId, body: input, transaction }) => NextResponse.json(await transaction(async (tx) => {
   if (!isWidgetKeyIssuanceEnabled(process.env)) throw jsonError("New website chat widgets are not available yet.", 403, "widget_issuance_disabled");
-  const body = input as { label?: string; allowedOrigins?: string[]; config?: Record<string, unknown> };
+  const body = input as { label?: string; allowedOrigins?: string[]; config?: Record<string, unknown>; agentId?: unknown };
+  const agentId = body.agentId;
+  if (agentId !== undefined && !isUuid(agentId)) throw jsonError("agentId must be a UUID.", 400, "invalid_request");
   const allowedOrigins = parseAllowedOrigins(body.allowedOrigins ?? []);
   const config = parseConfig(body.config);
   const label = typeof body.label === "string" && body.label.trim() ? body.label.trim().slice(0, 120) : undefined;
-  const { row, key } = await insertWidgetKeyInTransaction(tx, { businessId, label, allowedOrigins, config });
-  return { ok: true, key: { id: row.id, key }, record: serializeWidgetKeyConfig(row) };
+  // Without an agent, the key answers as the default agent.
+  const agent = isUuid(agentId) ? await requireActiveAgentInTransaction(tx, businessId, agentId) : undefined;
+  const { row, key } = await insertWidgetKeyInTransaction(tx, { businessId, agentId: agent?.id, label, allowedOrigins, config });
+  return { ok: true, key: { id: row.id, key }, record: { ...serializeWidgetKeyConfig(row), agentId: row.agentId } };
 }, { minimumRole: "business_admin" })));
 
 export const PATCH = operatorRoute(async ({ request, businessId, body: input, transaction }) => NextResponse.json(await transaction(async (tx) => {
@@ -73,5 +78,5 @@ export const PATCH = operatorRoute(async ({ request, businessId, body: input, tr
   if (Object.keys(patch).length === 1) throw jsonError("Send at least one field to update.", 400, "invalid_request");
   const [row] = await tx.update(widgetKeys).set(patch).where(and(eq(widgetKeys.id, id), eq(widgetKeys.businessId, businessId))).returning();
   if (!row) throw new Error("The widget key could not be updated.");
-  return { ok: true, record: serializeWidgetKeyConfig(row) };
+  return { ok: true, record: { ...serializeWidgetKeyConfig(row), agentId: row.agentId } };
 }, { minimumRole: "business_admin" })));

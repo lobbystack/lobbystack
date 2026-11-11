@@ -10,6 +10,11 @@
       "description": "Greeting and transfer settings for your agent."
     },
     "knowledge": {
+      "selection": {"select": "Select", "count_one": "{{count}} selected", "count_other": "{{count}} selected", "selectAll": "Select all", "selectRow": "Select {{title}}", "cancel": "Cancel"},
+      "batch": {"delete": "Delete", "disable": "Turn off", "enable": "Turn on", "reimport": "Re-import", "agentDisable": "Turn off for this agent", "agentEnable": "Turn on", "deleteTitle_one": "Delete this source?", "deleteTitle_other": "Delete {{count}} sources?", "deleteDescription": "You can't undo this.", "done": {"delete_one": "Source deleted.", "delete_other": "{{count}} sources deleted.", "disable_one": "Source turned off.", "disable_other": "{{count}} sources turned off.", "enable_one": "Source turned on.", "enable_other": "{{count}} sources turned on.", "reimport_one": "Re-import started.", "reimport_other": "Re-import started for {{count}} websites."}},
+      "website": {"pages_one": "{{count}} page", "pages_other": "{{count}} pages", "pagesOff_one": "{{count}} off", "pagesOff_other": "{{count}} off"},
+      "pagesDialog": {"title": "Website", "listLabel": "Pages", "usePage": "Use {{title}}", "remove": "Remove {{title}}", "removeAddress": "Delete the website to remove its address page.", "removeConfirm": "Remove", "removeTitle": "Remove {{title}}?", "removeDescription": "A re-import can bring it back.", "offForBusiness": "Off for every agent"},
+      "agent": {"ownTitle": "Only this agent", "sharedTitle": "Shared with every agent", "ownEmpty": "Nothing added for this agent yet.", "sharedEmpty": "No shared knowledge yet.", "manageShared": "Manage shared knowledge", "toggleHeading": "This agent", "useSource": "Use {{title}} for this agent"},
       "title": "Knowledge",
       "description": "Information and guidelines your agent uses to answer questions.",
       "listTitle": "Knowledge Base",
@@ -23,7 +28,7 @@
       "deleteWebsite": { "action": "Delete all pages", "title": "Delete all pages from this website?", "description": "This will permanently remove every page imported from {{host}}.", "deleted": "All pages from {{host}} deleted." },
       "toast": { "added": "Knowledge added.", "updated": "Knowledge updated.", "uploaded": "Document uploaded. It will be ready shortly.", "deleted": "Knowledge deleted.", "enabled": "Knowledge enabled.", "disabled": "Knowledge disabled." },
       "uploadDocument": "Upload Document",
-      "websiteImport": {
+      "websiteImport": { "inShared": "This website is already in your shared knowledge. Turn it off for the agents that shouldn't use it.", "inAgent": "This website is already in {{name}}'s knowledge.",
         "badge": "Website",
         "title": "Import Website",
         "description": "Crawl the public pages of your website so your agent can use them as knowledge.",
@@ -217,7 +222,7 @@
       "editKnowledge": "Edit Rule",
       "uploadDocument": "Upload Document",
       "addKnowledgeDescription": "What your agent should do, like transfer calls, ask questions and send texts.",
-      "editKnowledgeDescription": "Update the instruction your agent should follow during calls and follow-up flows.",
+      "editKnowledgeDescription": "What your agent should do, on every channel or on one.",
       "uploadDocumentDescription": "Upload a file so your agent can use it.",
       "documentBadge": "Document",
       "textBadge": "Text",
@@ -261,36 +266,41 @@
           "label": "Tags",
           "placeholder": "Transfers, escalation",
           "hint": "Optional. Comma-separated keywords to help categorize these rules."
+        },
+        "channel": {
+          "label": "Channel",
+          "all": "All channels",
+          "voice": "Calls",
+          "sms": "Text messages",
+          "web_chat": "Website chat",
+          "instagram": "Instagram"
         }
       }
     }
   },
   "table": {
-    "searchPlaceholder": "Search entries",
     "title": "Title",
+    "channel": "Channel",
     "preview": "Preview",
     "status": "Status",
     "disabled": "Disabled",
     "added": "Added",
-    "empty": "No matching entries found.",
     "documentPreviewHint": "Click to preview this document.",
     "documentPreviewUnavailable": "Document preview is available on the Knowledge page."
   },
   "pagination": {
     "rowsPerPage": "Rows per page",
-    "pageOf": "Page {{page}} of {{total}}",
+    "viewing": "Viewing {{start}}-{{end}} of {{total}}",
+    "viewingAll_one": "Viewing {{count}} row",
+    "viewingAll_other": "Viewing all {{count}} rows",
     "firstPage": "First page",
     "previousPage": "Previous page",
     "nextPage": "Next page",
-    "lastPage": "Last page",
-    "goToPage": "Go to page {{page}}"
+    "lastPage": "Last page"
   },
   "fields": {
     "defaults": {
       "title": "Defaults"
-    },
-    "instructions": {
-      "title": "Instructions"
     },
     "summary": {
       "label": "Business summary",
@@ -312,6 +322,10 @@
     },
     "smsInstructions": {
       "label": "SMS instructions"
+    },
+    "name": {
+      "label": "Name",
+      "hint": "Only your team sees it."
     },
     "greeting": {
       "label": "Greeting",
@@ -390,12 +404,22 @@
       }
     }
   },
+  "identity": { "title": "Name, greeting and voice" },
+  "transfers": { "title": "Transfers" },
+  "businessDetails": { "title": "Business details" },
   "staffFirst": {
     "title": "Staff answers first",
     "save": "Save staff answers first",
+    "setUp": "Set up",
+    "state": "{{mode}} · {{number}}",
     "mode": {
       "label": "Ring your team first",
       "hint": "Your phone rings first. Press 1 to take the call. If you don't, the agent answers.",
+      "when": "When",
+      "effect": {
+        "never": "Your agent answers every call.",
+        "business_hours": "During business hours, your phone rings first. If you don't take the call, or after hours, your agent answers."
+      },
       "options": {
         "never": "Off",
         "business_hours": "During business hours",
@@ -432,9 +456,9 @@
     }
   },
   "booking": {
-    "title": "Booking",
+    "title": "Appointments",
     "mode": {
-      "label": "Appointments",
+      "label": "Booking",
       "options": {
         "instant": "Books appointments",
         "request": "Takes requests",
@@ -448,13 +472,12 @@
     }
   },
   "appointmentChanges": {
-    "title": "Appointment changes",
     "allowCancel": {
-      "label": "Allow AI cancellations",
+      "label": "Cancellations",
       "hint": "Let the agent cancel a verified future appointment."
     },
     "allowReschedule": {
-      "label": "Allow AI rescheduling",
+      "label": "Rescheduling",
       "hint": "Let the agent move a verified future appointment after availability is checked."
     },
     "verification": {

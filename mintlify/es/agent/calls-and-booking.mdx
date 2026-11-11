@@ -1,0 +1,93 @@
+---
+title: "Configure cómo su agente transfiere llamadas y reserva citas"
+description: "Configure el número de transferencia predeterminado, El personal responde primero, el modo de reserva y los cambios de citas de un agente con IA."
+sidebarTitle: "Llamadas y citas"
+contentType: "How-to"
+---
+
+La página **General** de cada agente decide adónde envía a quienes necesitan hablar con una persona y cómo gestiona las citas. Haga clic en **Agentes** en la barra lateral y abra el agente. Se abre en **General**, y estos ajustes siguen a **Nombre, saludo y voz**.
+
+Cada agente tiene aquí sus propios ajustes, así que un agente fuera de horario puede reservar de otra forma que el de día.
+
+## Número de transferencia predeterminado
+
+En **Transferencias**, el **Número de transferencia predeterminado** es el número al que su agente llama cuando pasa a quien llama con una persona. Cuando quien llama pide hablar con un [empleado](/es/settings/employees) que tiene número de teléfono, su agente transfiere la llamada a ese empleado.
+
+Use un número que alguien conteste durante el horario de atención. Si distintos equipos atienden distintas solicitudes, deje como número predeterminado la opción de traspaso general más segura y añada [reglas](/es/agent/rules) que indiquen cuándo transferir a quien llama.
+
+<Note>
+  Los números de transferencia deben estar en un país del menú de países junto al campo: Estados Unidos, Canadá, Puerto Rico, Reino Unido, Francia, Alemania, España, Italia, Países Bajos, Portugal, México, Brasil, Israel, India, Japón, Australia, Nueva Zelanda y Serbia. Las transferencias a números de otros países no se conectan.
+</Note>
+
+Si su prueba gratuita empezó con un número de móvil verificado, su agente transfiere las llamadas solo a ese número durante la prueba, y no puede guardar otro número. Cambie a Starter o Pro para modificarlo.
+
+LobbyStack también desvía las llamadas a este número cuando se agotan sus minutos de voz o los excedentes llegan a su límite de gasto. Sin este número, esas llamadas van al móvil que usted verificó, si tiene uno. Consulte [Uso y límites](/es/billing/usage).
+
+<Steps>
+  <Step title="Introduzca un número">
+    Introduzca el número de teléfono completo en **Número de transferencia predeterminado**.
+  </Step>
+  <Step title="Guarde">
+    Haga clic en **Guardar** junto al campo.
+  </Step>
+  <Step title="Añada reglas si hace falta">
+    En las **Reglas** del agente, describa cuándo debe transferir la llamada, tomar un mensaje o pedir los datos para devolver la llamada.
+  </Step>
+</Steps>
+
+<Note>
+  Añada un número de transferencia si quiere traspasar llamadas en vivo a una persona. Si no lo añade, el agente toma los datos para devolver la llamada o hacer seguimiento, y su equipo puede responder desde el panel.
+</Note>
+
+## El personal responde primero
+
+**El personal responde primero** hace sonar un teléfono del personal antes de que su agente conteste. Pulse 1 para atender la llamada. Si nadie pulsa 1 antes de que termine el timbre, su agente contesta como siempre. Un buzón de voz no puede tomar la llamada, porque nunca pulsa 1.
+
+<Steps>
+  <Step title="Abra el ajuste">
+    En **El personal responde primero**, haga clic en **Configurar** junto a **Llamar primero a su equipo**. Una vez activado, el botón dice **Editar**, y la fila muestra cuándo suena el teléfono de su equipo y su número.
+  </Step>
+  <Step title="Elija cuándo sonar">
+    En **Cuándo**, haga clic en **En horario de atención** o **Siempre**. La línea bajo las opciones indica qué pasa con una llamada. **En horario de atención** sigue su [horario de atención](/es/settings/business-details#horario-de-atención) y omite los cierres.
+  </Step>
+  <Step title="Agregue el teléfono del personal">
+    Escriba el número en **Teléfono del personal**. El campo empieza con su número de transferencia predeterminado, y puede cambiarlo.
+  </Step>
+  <Step title="Fije el tiempo de timbre">
+    Elija 10, 15, 20, 30, 45 o 60 segundos en **Tiempo de timbre**. El valor predeterminado es 15.
+  </Step>
+  <Step title="Agregue mensajes si los quiere">
+    **Mensaje antes del timbre** suena antes de que timbre el teléfono del personal. **Mensaje antes de que responda el agente** suena cuando nadie toma la llamada. Cada uno admite 200 caracteres, y quien llama los oye en su idioma predeterminado del cliente. El serbio aún no tiene voz para estos mensajes, así que un negocio en serbio los omite.
+  </Step>
+  <Step title="Guarde">
+    Haga clic en **Guardar**.
+  </Step>
+</Steps>
+
+Para desactivarlo, haga clic en **Editar**, haga clic en **Desactivado** en **Cuándo** y haga clic en **Guardar**.
+
+Cada timbre usa un [intento de transferencia](/es/billing/usage). Las llamadas que usted atiende no usan minutos de voz y aparecen en la [Bandeja de entrada](/es/dashboard/inbox) como **Atendida por su equipo**.
+
+Las llamadas que usted atiende terminan a los 30 minutos. Después de 600 minutos de llamadas atendidas en 24 horas, las llamadas nuevas van directamente a su agente hasta que ese total baje. Este límite se aplica a todos los planes.
+
+<Warning>
+  No use un teléfono que desvíe las llamadas sin respuesta a su número de LobbyStack. La llamada vuelve directamente a su agente.
+</Warning>
+
+El personal responde primero requiere un plan de pago y funciona en números de Twilio. En otros números, el ajuste aparece como no disponible. Para compararlo con el desvío de llamadas, consulte [Desvíe la línea de su negocio a LobbyStack](/es/getting-started/forward-calls#elija-qué-llamadas-desviar).
+
+## Citas
+
+En **Citas**, **Reservas** define lo que hace el agente cuando quien llama quiere una cita:
+
+- **Reserva citas**: el agente consulta sus horas libres y reserva la cita
+- **Toma solicitudes**: el agente anota el servicio y la hora preferida, y su equipo la confirma desde la Bandeja de entrada
+- **No reserva**: el agente toma un mensaje
+
+Antes de contar con las reservas, agregue sus [servicios](/es/settings/services) y su [horario de atención](/es/settings/business-details#horario-de-atención). [Conecte su calendario](/es/integrations/overview) para que el agente evite las horas ya ocupadas en él.
+
+**Cancelaciones** y **Reprogramación** permiten que el agente cancele o cambie citas, y **Verificación de quien llama** define cómo comprueba quién llama. Puede exigir un código de un solo uso por SMS o un PIN en el teclado antes de que el agente modifique cualquier cita.
+
+<Card title="Configure los cambios de citas" icon="calendar-clock" href="/es/agent/appointment-changes">
+  Vea cómo LobbyStack confirma la identidad del cliente, actualiza el calendario y pasa a su equipo las solicitudes dudosas.
+</Card>

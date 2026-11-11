@@ -16,12 +16,12 @@ import { useTelemetry } from "@/components/product-analytics";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import { CHECKOUT_UNAVAILABLE_AFTER_MS, isProviderUnavailable } from "@/lib/checkout-errors";
 import { formatDateTime, intlLocale } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
-import { cn } from "@/lib/utils";
 
 type Billing = {
   billed: boolean;
@@ -73,7 +73,7 @@ function TierTerms({ tier, numbers, trial = false }: { tier: PartnerTierSlug; nu
   return (
     <ul className="flex flex-col gap-3">
       {lines.map((line) => (
-        <li className="flex items-start gap-2.5 text-sm" key={line}>
+        <li className="flex items-start gap-2.5 type-body" key={line}>
           <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-500" />
           <span>{line}</span>
         </li>
@@ -90,10 +90,10 @@ function TierPrice({ tier, interval }: { tier: PaidPartnerTierSlug; interval: Bi
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-baseline gap-1">
-        <span className="font-heading text-4xl font-medium tracking-[-0.05em] tabular-nums">{formatMoney(monthly, "usd", i18n.language)}</span>
-        <span className="text-sm text-muted-foreground">{t("billing.price.perMonth")}</span>
+        <span className="type-metric">{formatMoney(monthly, "usd", i18n.language)}</span>
+        <span className="type-body-muted">{t("billing.price.perMonth")}</span>
       </div>
-      <p className="text-sm text-muted-foreground">{interval === "annual" ? t("billing.price.billedYearly", { price: formatMoney(terms.annualChargeCents, "usd", i18n.language) }) : t("billing.price.billedMonthly")}</p>
+      <p className="type-body-muted">{interval === "annual" ? t("billing.price.billedYearly", { price: formatMoney(terms.annualChargeCents, "usd", i18n.language) }) : t("billing.price.billedMonthly")}</p>
     </div>
   );
 }
@@ -104,7 +104,7 @@ function NumbersInUse({ held, included }: { held: number; included: number }) {
   const count = (value: number) => new Intl.NumberFormat(intlLocale(i18n.language)).format(value);
   const extra = Math.max(0, held - included);
   return (
-    <p className="text-sm text-muted-foreground">
+    <p className="type-body-muted">
       {extra > 0 ? t("billing.numbers.extra", { count: extra, held: count(held) }) : t("billing.numbers.used", { held: count(held), included: count(included) })}
     </p>
   );
@@ -231,19 +231,19 @@ export function PartnerBillingSurface() {
   const header = (
     <PageHeader title={t("billing.title")} />
   );
-  if (!isOwner) return <div className="flex flex-col gap-6">{header}<Surface className="px-6 py-8"><p className="text-sm text-muted-foreground">{t("billing.ownersOnly")}</p></Surface></div>;
+  if (!isOwner) return <div className="flex flex-col gap-6">{header}<Surface className="px-6 py-8"><p className="type-body-muted">{t("billing.ownersOnly")}</p></Surface></div>;
   if (billing.isLoading) return <div className="flex flex-col gap-6">{header}<Surface className="flex flex-col gap-4 p-6"><Skeleton className="h-6 w-32" /><Skeleton className="h-10 w-48" /><Skeleton className="h-24 w-full" /></Surface></div>;
-  if (billing.isError || !billing.data) return <div className="flex flex-col gap-6">{header}<Surface className="px-6 py-8"><p className="text-sm text-muted-foreground" role="alert">{t("billing.loadFailed")}</p></Surface></div>;
+  if (billing.isError || !billing.data) return <div className="flex flex-col gap-6">{header}<Surface className="px-6 py-8"><p className="type-body-muted" role="alert">{t("billing.loadFailed")}</p></Surface></div>;
 
   const current = billing.data;
   if (!current.billed) {
     // Without tier billing, the host may set the pool. Nothing prices usage past it, so the page shows no tier, price or overage.
-    if (!current.pool || !current.poolUsage) return <div className="flex flex-col gap-6">{header}<Surface className="px-6 py-8"><p className="text-sm text-muted-foreground">{t("billing.unavailable")}</p></Surface></div>;
+    if (!current.pool || !current.poolUsage) return <div className="flex flex-col gap-6">{header}<Surface className="px-6 py-8"><p className="type-body-muted">{t("billing.unavailable")}</p></Surface></div>;
     return (
       <div className="flex flex-col gap-6">
         {header}
         <PoolUsageSection pool={current.pool} usage={current.poolUsage} />
-        <Surface className="px-6 py-5"><p className="text-sm text-muted-foreground">{t("billing.hostPool.limit")}</p></Surface>
+        <Surface className="px-6 py-5"><p className="type-body-muted">{t("billing.hostPool.limit")}</p></Surface>
       </div>
     );
   }
@@ -261,18 +261,18 @@ export function PartnerBillingSurface() {
       ) : null}
 
       <section aria-labelledby="partner-billing-current" className="flex flex-col gap-3">
-        <h2 className="text-sm font-medium text-muted-foreground" id="partner-billing-current">{t("billing.current.title")}</h2>
+        <h2 className="type-title text-muted-foreground" id="partner-billing-current">{t("billing.current.title")}</h2>
         <Surface className="flex flex-col gap-6 px-6 py-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xl font-medium leading-7">{t(`billing.tiers.${current.tier}`)}</span>
+              <span className="type-heading-xxs">{t(`billing.tiers.${current.tier}`)}</span>
               {current.billingInterval ? <Badge variant="secondary">{t(`billing.intervals.${current.billingInterval}`)}</Badge> : null}
             </div>
-            {current.tier === "free" ? <p className="text-sm text-muted-foreground">{t("billing.current.free")}</p> : <TierPrice interval={current.billingInterval ?? "monthly"} tier={current.tier} />}
+            {current.tier === "free" ? <p className="type-body-muted">{t("billing.current.free")}</p> : <TierPrice interval={current.billingInterval ?? "monthly"} tier={current.tier} />}
             <TierTerms numbers={current.numbersCounted} tier={current.tier} trial={Boolean(current.trialNumber)} />
             {current.tier === "free" || !current.numbersCounted ? null : <NumbersInUse held={current.numbersHeld} included={current.includedNumbers} />}
-            {current.trialNumber === "available" ? <p className="text-sm text-muted-foreground">{t("billing.trial.available")}</p> : null}
-            {current.endsAt ? <p className="text-sm text-muted-foreground">{t("billing.current.endsOn", { date: date(current.endsAt) })}</p> : current.currentPeriodEnd ? <p className="text-sm text-muted-foreground">{t("billing.current.renewsOn", { date: date(current.currentPeriodEnd) })}</p> : null}
+            {current.trialNumber === "available" ? <p className="type-body-muted">{t("billing.trial.available")}</p> : null}
+            {current.endsAt ? <p className="type-body-muted">{t("billing.current.endsOn", { date: date(current.endsAt) })}</p> : current.currentPeriodEnd ? <p className="type-body-muted">{t("billing.current.renewsOn", { date: date(current.currentPeriodEnd) })}</p> : null}
           </div>
           {current.hasCustomerPortal ? (
             <Button disabled={portalPending} loading={portalPending} loadingLabel={t("billing.portal.opening")} onClick={() => void openPortal()} variant="outline">{t("billing.portal.action")}</Button>
@@ -286,38 +286,31 @@ export function PartnerBillingSurface() {
       {current.tier === "free" ? (
         <section aria-labelledby="partner-billing-tiers" className="flex flex-col gap-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-sm font-medium text-muted-foreground" id="partner-billing-tiers">{t("billing.choose.title")}</h2>
-            <div aria-label={t("billing.choose.intervalLabel")} className="inline-flex self-start rounded-full border border-border bg-muted/40 p-1" role="tablist">
-              {(["monthly", "annual"] as const).map((option) => (
-                <Button
-                  aria-selected={interval === option}
-                  className={cn("h-9 rounded-full px-4", interval === option ? "bg-background text-foreground shadow-sm hover:bg-background" : "border-transparent bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground")}
-                  key={option}
-                  onClick={() => setInterval(option)}
-                  role="tab"
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  {t(`billing.intervals.${option}`)}
-                  {option === "annual" ? <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">{t("billing.choose.annualDiscount")}</span> : null}
-                </Button>
-              ))}
-            </div>
+            <h2 className="type-title text-muted-foreground" id="partner-billing-tiers">{t("billing.choose.title")}</h2>
+            <Tabs className="self-start" onValueChange={(value) => setInterval(value as typeof interval)} value={interval}>
+              <TabsList aria-label={t("billing.choose.intervalLabel")}>
+                {(["monthly", "annual"] as const).map((option) => (
+                  <TabsTrigger key={option} value={option}>
+                    {t(`billing.intervals.${option}`)}
+                    {option === "annual" ? <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 type-label text-emerald-700">{t("billing.choose.annualDiscount")}</span> : null}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
           </div>
           {checkoutUnavailable ? (
             <Surface className="flex flex-col items-start gap-4 p-6" role="alert">
-              <p className="text-sm text-muted-foreground">{t("billing.errors.paymentsUnavailable")}</p>
+              <p className="type-body-muted">{t("billing.errors.paymentsUnavailable")}</p>
               <Button onClick={() => setCheckoutUnavailable(false)} type="button" variant="outline">{t("billing.choose.backToPlans")}</Button>
             </Surface>
           ) : null}
           {!checkoutUnavailable && slowCheckout ? (
-            <p className="text-sm text-muted-foreground" role="status">{t("billing.choose.slow")}</p>
+            <p className="type-body-muted" role="status">{t("billing.choose.slow")}</p>
           ) : null}
           {!checkoutUnavailable ? <div className="grid gap-4 md:grid-cols-3">
             {paidPartnerTierSlugs.map((tier) => (
               <Surface className="flex flex-col gap-5 p-5" key={tier}>
-                <h3 className="font-heading text-lg font-medium tracking-[-0.03em]">{t(`billing.tiers.${tier}`)}</h3>
+                <h3 className="type-heading-xxs">{t(`billing.tiers.${tier}`)}</h3>
                 <TierPrice interval={interval} tier={tier} />
                 <div className="flex-1 border-t border-border/60 pt-4"><TierTerms numbers={current.numbersCounted} tier={tier} /></div>
                 <Button

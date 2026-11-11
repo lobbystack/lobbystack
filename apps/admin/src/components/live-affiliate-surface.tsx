@@ -11,7 +11,6 @@ import { formatDateTime, intlLocale, resolveLocale, type SupportedLocale } from 
 
 import { HiddenTextSkeleton } from "./loading-skeletons";
 import { PageSurface } from "./page-surface";
-import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
@@ -22,6 +21,8 @@ import { Separator } from "./ui/separator";
 import { Skeleton } from "./ui/skeleton";
 import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { Status } from "@/components/ui/status";
+import { affiliateStatusVariant } from "@/lib/status-variants";
 
 type AffiliateData = {
   profile: { id: string; referralCode: string; status: string; payoutEmail: string | null; referralLink: string } | null;
@@ -53,7 +54,7 @@ function formatDate(locale: SupportedLocale, value: string | null): string {
 }
 
 function StatCard({ description, label, value }: { description: string; label: string; value: string }) {
-  return <Card size="sm"><CardHeader><CardDescription>{label}</CardDescription><CardTitle className="text-2xl">{value}</CardTitle></CardHeader><CardContent><p className="text-sm text-muted-foreground">{description}</p></CardContent></Card>;
+  return <Card size="sm"><CardHeader><CardDescription>{label}</CardDescription><p className="type-metric-sm">{value}</p></CardHeader><CardContent><p className="type-body-muted">{description}</p></CardContent></Card>;
 }
 
 /** The page before its data arrives: the titles, labels and tabs are fixed text, so each placeholder holds the real text, hidden, and is as wide and tall as the text that replaces it. */
@@ -68,37 +69,37 @@ function LoadingAffiliatePage({ locale, t }: { locale: SupportedLocale; t: Trans
       <div aria-busy="true" className="flex flex-col gap-6">
         <Card><CardContent className="flex flex-col gap-8">
           <div className="flex flex-col gap-4">
-            <HiddenTextSkeleton className="font-medium leading-snug">{t("referral.title")}</HiddenTextSkeleton>
+            <HiddenTextSkeleton className="type-card-title">{t("referral.title")}</HiddenTextSkeleton>
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Skeleton className="h-9 w-full" />
-              <Skeleton className="h-9 shrink-0"><span className="invisible inline-flex items-center gap-2 px-3 text-sm font-medium"><CopyIcon className="size-4" />{t("referral.copy")}</span></Skeleton>
+              <Skeleton className="h-10 w-full rounded-xl" />
+              <Skeleton className="h-10 shrink-0 rounded-full"><span className="invisible inline-flex items-center gap-2 px-5 type-button"><CopyIcon className="size-4" />{t("referral.copy")}</span></Skeleton>
             </div>
           </div>
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between gap-4">
-              <HiddenTextSkeleton className="font-medium leading-snug">{t("terms.title")}</HiddenTextSkeleton>
-              <HiddenTextSkeleton className="text-sm font-medium">{t("terms.link")}</HiddenTextSkeleton>
+              <HiddenTextSkeleton className="type-card-title">{t("terms.title")}</HiddenTextSkeleton>
+              <HiddenTextSkeleton className="type-title">{t("terms.link")}</HiddenTextSkeleton>
             </div>
             <div className="flex flex-col gap-4">
-              <HiddenTextSkeleton className="text-base font-medium">{t("terms.reward", { rate: "20%", duration: t("terms.oneYear") })}</HiddenTextSkeleton>
+              <HiddenTextSkeleton className="type-card-title">{t("terms.reward", { rate: "20%", duration: t("terms.oneYear") })}</HiddenTextSkeleton>
               <Separator />
-              <HiddenTextSkeleton className="text-sm">{`${formatCurrency(locale, 10_000)} ${t("terms.minimum")} / ${t("terms.days", { count: 30 })} ${t("terms.hold")}`}</HiddenTextSkeleton>
+              <HiddenTextSkeleton className="type-body">{`${formatCurrency(locale, 10_000)} ${t("terms.minimum")} / ${t("terms.days", { count: 30 })} ${t("terms.hold")}`}</HiddenTextSkeleton>
             </div>
           </div>
         </CardContent></Card>
 
         <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
           {stats.map(([label, description]) => <Card key={label} size="sm"><CardHeader>
-            <HiddenTextSkeleton className="text-sm">{label}</HiddenTextSkeleton>
+            <HiddenTextSkeleton className="type-body">{label}</HiddenTextSkeleton>
             <Skeleton className="h-8 w-16" />
-          </CardHeader><CardContent><HiddenTextSkeleton className="text-sm">{description}</HiddenTextSkeleton></CardContent></Card>)}
+          </CardHeader><CardContent><HiddenTextSkeleton className="type-body">{description}</HiddenTextSkeleton></CardContent></Card>)}
         </div>
 
         <div className="flex flex-col gap-4">
-          <div className="flex gap-1 border-b pb-2">{tabs.map((label) => <HiddenTextSkeleton className="px-3 py-1 text-sm font-medium" key={label}>{label}</HiddenTextSkeleton>)}</div>
+          <div className="flex gap-1 border-b pb-2">{tabs.map((label) => <HiddenTextSkeleton className="px-3 py-1 type-title" key={label}>{label}</HiddenTextSkeleton>)}</div>
           <div className="grid gap-4 md:grid-cols-3">{["share", "resources", "receive"].map((key) => <Card key={key}><CardHeader>
-            <HiddenTextSkeleton className="font-medium leading-snug">{t(`quickstart.${key}.title`)}</HiddenTextSkeleton>
-            <HiddenTextSkeleton className="text-sm">{t(`quickstart.${key}.description`)}</HiddenTextSkeleton>
+            <HiddenTextSkeleton className="type-card-title">{t(`quickstart.${key}.title`)}</HiddenTextSkeleton>
+            <HiddenTextSkeleton className="type-body">{t(`quickstart.${key}.description`)}</HiddenTextSkeleton>
           </CardHeader></Card>)}</div>
         </div>
       </div>
@@ -130,7 +131,7 @@ export function LiveAffiliateSurface() {
   }, [affiliate.data]);
 
   if (affiliate.isLoading) return <LoadingAffiliatePage locale={locale} t={t} />;
-  if (affiliate.isError) return <PageSurface title={t("title")}><Card><CardContent className="py-12 text-center text-sm text-muted-foreground">{t("toast.profileFailed")}</CardContent></Card></PageSurface>;
+  if (affiliate.isError) return <PageSurface title={t("title")}><Card><CardContent className="py-12 text-center type-body-muted">{t("toast.profileFailed")}</CardContent></Card></PageSurface>;
 
   const data = affiliate.data;
   const profile = data?.profile ?? null;
@@ -146,8 +147,8 @@ export function LiveAffiliateSurface() {
   return (
     <PageSurface title={t("title")}>
       <Card><CardContent className="flex flex-col gap-8">
-        <div className="flex flex-col gap-4"><CardTitle>{t("referral.title")}</CardTitle>{profile ? <div className="flex flex-col gap-2 sm:flex-row"><Input disabled readOnly value={profile.referralLink} /><Button disabled={linkCopied} onClick={() => void handleCopy()} type="button">{linkCopied ? <CheckIcon data-icon="inline-start" /> : <CopyIcon data-icon="inline-start" />}{linkCopied ? t("referral.copied") : t("referral.copy")}</Button></div> : <p className="text-sm text-muted-foreground">{t("toast.profileFailed")}</p>}</div>
-        <div className="flex flex-col gap-4"><div className="flex items-center justify-between gap-4"><CardTitle>{t("terms.title")}</CardTitle><a className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline" href={affiliateTermsHref(locale)} rel="noreferrer" target="_blank">{t("terms.link")}<ExternalLinkIcon aria-hidden="true" className="size-4" /></a></div><div className="flex flex-col gap-4"><div className="flex items-center gap-3"><GiftIcon aria-hidden="true" className="size-4 shrink-0" /><p className="text-base font-medium text-foreground">{t("terms.reward", { rate: "20%", duration: t("terms.oneYear") })}</p></div><Separator /><div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"><span><span className="font-medium text-foreground">{formatCurrency(locale, 10_000, currency)}</span>{" "}<span className="lowercase">{t("terms.minimum")}</span></span><span aria-hidden="true">/</span><span><span className="font-medium text-foreground">{t("terms.days", { count: 30 })}</span>{" "}<span className="lowercase">{t("terms.hold")}</span></span></div></div></div>
+        <div className="flex flex-col gap-4"><CardTitle>{t("referral.title")}</CardTitle>{profile ? <div className="flex flex-col gap-2 sm:flex-row"><Input disabled readOnly value={profile.referralLink} /><Button disabled={linkCopied} onClick={() => void handleCopy()} type="button">{linkCopied ? <CheckIcon data-icon="inline-start" /> : <CopyIcon data-icon="inline-start" />}{linkCopied ? t("referral.copied") : t("referral.copy")}</Button></div> : <p className="type-body-muted">{t("toast.profileFailed")}</p>}</div>
+        <div className="flex flex-col gap-4"><div className="flex items-center justify-between gap-4"><CardTitle>{t("terms.title")}</CardTitle><a className="inline-flex items-center gap-1 type-title text-muted-foreground underline-offset-4 hover:text-foreground hover:underline" href={affiliateTermsHref(locale)} rel="noreferrer" target="_blank">{t("terms.link")}<ExternalLinkIcon aria-hidden="true" className="size-4" /></a></div><div className="flex flex-col gap-4"><div className="flex items-center gap-3"><GiftIcon aria-hidden="true" className="size-4 shrink-0" /><p className="type-card-title text-foreground">{t("terms.reward", { rate: "20%", duration: t("terms.oneYear") })}</p></div><Separator /><div className="flex flex-wrap items-center gap-2 type-body-muted"><span><span className="font-medium text-foreground">{formatCurrency(locale, 10_000, currency)}</span>{" "}<span className="lowercase">{t("terms.minimum")}</span></span><span aria-hidden="true">/</span><span><span className="font-medium text-foreground">{t("terms.days", { count: 30 })}</span>{" "}<span className="lowercase">{t("terms.hold")}</span></span></div></div></div>
       </CardContent></Card>
 
       <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
@@ -160,7 +161,7 @@ export function LiveAffiliateSurface() {
         <TabsContent className="pt-4" value="earnings"><CommissionsTable commissions={data?.commissions ?? []} locale={locale} t={t} /></TabsContent>
         <TabsContent className="pt-4" value="payouts"><PayoutsTable locale={locale} payoutEmail={profile?.payoutEmail ?? null} payouts={data?.payouts ?? []} t={t} /></TabsContent>
         <TabsContent className="pt-4" value="faq"><div className="grid gap-4 md:grid-cols-2">{["when", "minimum", "method", "refunds"].map((key) => <Card key={key}><CardHeader><CardTitle>{t(`faq.${key}.question`)}</CardTitle><CardDescription>{t(`faq.${key}.answer`)}</CardDescription></CardHeader></Card>)}</div></TabsContent>
-        <TabsContent className="pt-4" value="settings"><ItemGroup spacing="section"><Item variant="outline"><ItemContent><ItemTitle>{t("settings.title")}</ItemTitle><ItemDescription>{t("settings.description")}</ItemDescription><p className="text-[15px] leading-6 text-foreground">{profile?.payoutEmail ? t("settings.currentEmail", { email: profile.payoutEmail }) : t("settings.noEmail")}</p></ItemContent><ItemActions>{profile ? <Dialog onOpenChange={(open) => { setIsDialogOpen(open); if (open) { setPayoutEmail(profile.payoutEmail ?? ""); setPayoutError(null); } }} open={isDialogOpen}><DialogTrigger render={<Button size="sm" variant="outline" />}>{t("settings.change")}</DialogTrigger><DialogContent><DialogHeader><DialogTitle>{t("settings.dialogTitle")}</DialogTitle></DialogHeader><form className="flex flex-col gap-4" onSubmit={(event) => { event.preventDefault(); setPayoutError(null); saveEmail.mutate(payoutEmail); }}><FieldGroup><Field><FieldLabel htmlFor="payout-email">{t("settings.paypalEmail")}</FieldLabel><Input autoComplete="email" id="payout-email" onChange={(event) => setPayoutEmail(event.target.value)} placeholder={t("settings.paypalPlaceholder")} type="email" value={payoutEmail} /></Field></FieldGroup>{payoutError ? <FieldError>{payoutError}</FieldError> : null}<DialogFooter><Button disabled={saveEmail.isPending} type="submit">{saveEmail.isPending ? t("settings.saving") : t("settings.save")}</Button></DialogFooter></form></DialogContent></Dialog> : null}</ItemActions></Item></ItemGroup></TabsContent>
+        <TabsContent className="pt-4" value="settings"><ItemGroup spacing="section"><Item variant="outline"><ItemContent><ItemTitle>{t("settings.title")}</ItemTitle><ItemDescription>{t("settings.description")}</ItemDescription><p className="type-body text-foreground">{profile?.payoutEmail ? t("settings.currentEmail", { email: profile.payoutEmail }) : t("settings.noEmail")}</p></ItemContent><ItemActions>{profile ? <Dialog onOpenChange={(open) => { setIsDialogOpen(open); if (open) { setPayoutEmail(profile.payoutEmail ?? ""); setPayoutError(null); } }} open={isDialogOpen}><DialogTrigger render={<Button size="sm" variant="outline" />}>{t("settings.change")}</DialogTrigger><DialogContent><DialogHeader><DialogTitle>{t("settings.dialogTitle")}</DialogTitle></DialogHeader><form className="flex flex-col gap-4" onSubmit={(event) => { event.preventDefault(); setPayoutError(null); saveEmail.mutate(payoutEmail); }}><FieldGroup><Field><FieldLabel htmlFor="payout-email">{t("settings.paypalEmail")}</FieldLabel><Input autoComplete="email" id="payout-email" onChange={(event) => setPayoutEmail(event.target.value)} placeholder={t("settings.paypalPlaceholder")} type="email" value={payoutEmail} /></Field></FieldGroup>{payoutError ? <FieldError>{payoutError}</FieldError> : null}<DialogFooter><Button disabled={saveEmail.isPending} type="submit">{saveEmail.isPending ? t("settings.saving") : t("settings.save")}</Button></DialogFooter></form></DialogContent></Dialog> : null}</ItemActions></Item></ItemGroup></TabsContent>
       </Tabs>
     </PageSurface>
   );
@@ -169,9 +170,9 @@ export function LiveAffiliateSurface() {
 type Translate = ReturnType<typeof useTranslation>["t"];
 
 function CommissionsTable({ commissions, locale, t }: { commissions: AffiliateData["commissions"]; locale: SupportedLocale; t: Translate }) {
-  return <TableCard><Table><TableHeader><TableRow><TableHead>{t("earnings.date")}</TableHead><TableHead>{t("earnings.sale")}</TableHead><TableHead>{t("earnings.commission")}</TableHead><TableHead>{t("earnings.clears")}</TableHead><TableHead>{t("earnings.status")}</TableHead></TableRow></TableHeader><TableBody>{commissions.length === 0 ? <TableRow><TableCell className="text-muted-foreground" colSpan={5}>{t("earnings.empty")}</TableCell></TableRow> : commissions.map((commission) => <TableRow key={commission.sourceKey}><TableCell>{formatDate(locale, commission.occurredAt)}</TableCell><TableCell>{formatCurrency(locale, commission.amountCents, commission.currency)}</TableCell><TableCell>{formatCurrency(locale, commission.commissionCents, commission.currency)}</TableCell><TableCell>{formatDate(locale, commission.clearsAt)}</TableCell><TableCell><Badge variant="secondary">{t(`statuses.${commission.status}`, { defaultValue: commission.status })}</Badge></TableCell></TableRow>)}</TableBody></Table></TableCard>;
+  return <TableCard><Table><TableHeader><TableRow><TableHead>{t("earnings.date")}</TableHead><TableHead>{t("earnings.sale")}</TableHead><TableHead>{t("earnings.commission")}</TableHead><TableHead>{t("earnings.clears")}</TableHead><TableHead>{t("earnings.status")}</TableHead></TableRow></TableHeader><TableBody>{commissions.length === 0 ? <TableRow><TableCell className="text-muted-foreground" colSpan={5}>{t("earnings.empty")}</TableCell></TableRow> : commissions.map((commission) => <TableRow key={commission.sourceKey}><TableCell>{formatDate(locale, commission.occurredAt)}</TableCell><TableCell>{formatCurrency(locale, commission.amountCents, commission.currency)}</TableCell><TableCell>{formatCurrency(locale, commission.commissionCents, commission.currency)}</TableCell><TableCell>{formatDate(locale, commission.clearsAt)}</TableCell><TableCell><Status variant={affiliateStatusVariant(commission.status)}>{t(`statuses.${commission.status}`, { defaultValue: commission.status })}</Status></TableCell></TableRow>)}</TableBody></Table></TableCard>;
 }
 
 function PayoutsTable({ locale, payoutEmail, payouts, t }: { locale: SupportedLocale; payoutEmail: string | null; payouts: AffiliateData["payouts"]; t: Translate }) {
-  return <TableCard><Table><TableHeader><TableRow><TableHead>{t("payouts.date")}</TableHead><TableHead>{t("payouts.amount")}</TableHead><TableHead>{t("payouts.paypal")}</TableHead><TableHead>{t("payouts.status")}</TableHead><TableHead>{t("payouts.reference")}</TableHead></TableRow></TableHeader><TableBody>{payouts.length === 0 ? <TableRow><TableCell className="text-muted-foreground" colSpan={5}>{t("payouts.empty")}</TableCell></TableRow> : payouts.map((payout) => <TableRow key={`${payout.periodKey}-${payout.amountCents}`}><TableCell>{payout.paidAt ? formatDate(locale, payout.paidAt) : payout.periodKey}</TableCell><TableCell>{formatCurrency(locale, payout.amountCents, payout.currency)}</TableCell><TableCell>{payoutEmail ?? "—"}</TableCell><TableCell><Badge variant="secondary">{t(`statuses.${payout.status}`, { defaultValue: payout.status })}</Badge></TableCell><TableCell>{payout.externalReference ?? t("payouts.noReference")}</TableCell></TableRow>)}</TableBody></Table></TableCard>;
+  return <TableCard><Table><TableHeader><TableRow><TableHead>{t("payouts.date")}</TableHead><TableHead>{t("payouts.amount")}</TableHead><TableHead>{t("payouts.paypal")}</TableHead><TableHead>{t("payouts.status")}</TableHead><TableHead>{t("payouts.reference")}</TableHead></TableRow></TableHeader><TableBody>{payouts.length === 0 ? <TableRow><TableCell className="text-muted-foreground" colSpan={5}>{t("payouts.empty")}</TableCell></TableRow> : payouts.map((payout) => <TableRow key={`${payout.periodKey}-${payout.amountCents}`}><TableCell>{payout.paidAt ? formatDate(locale, payout.paidAt) : payout.periodKey}</TableCell><TableCell>{formatCurrency(locale, payout.amountCents, payout.currency)}</TableCell><TableCell>{payoutEmail ?? "—"}</TableCell><TableCell><Status variant={affiliateStatusVariant(payout.status)}>{t(`statuses.${payout.status}`, { defaultValue: payout.status })}</Status></TableCell><TableCell>{payout.externalReference ?? t("payouts.noReference")}</TableCell></TableRow>)}</TableBody></Table></TableCard>;
 }

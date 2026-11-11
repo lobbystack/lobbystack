@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { channelRuleTitles, type RuleChannel } from "./ruleChannels";
 
 import { ONBOARDING_CRAWL_PAGE_LIMIT, weekdays } from "./publicApi/constants";
 import {
@@ -203,6 +204,11 @@ export type SetupRun = {
 
 export const sameName = (left: unknown, right: string) => typeof left === "string" && nameKey(left) === nameKey(right);
 
+/** Whether a title is the one a channel's rules get in some language (channelRuleTitle). */
+function isChannelRuleTitle(title: unknown, channel: RuleChannel): boolean {
+  return Object.values(channelRuleTitles()).some((titles) => sameName(title, titles[channel]));
+}
+
 /** Whether every field of left has the same value in right, nested objects and lists included. */
 export function sameValue(left: unknown, right: unknown): boolean {
   if (Array.isArray(left) && Array.isArray(right)) return left.length === right.length && left.every((item, index) => sameValue(item, right[index]));
@@ -285,7 +291,10 @@ export async function applyRules(run: SetupRun, wanted: readonly ApiRuleCreate[]
   const current = await run.port.listRules() as unknown as Row[];
   for (const rule of wanted) {
     const step = `rule:${nameKey(rule.title)}`;
-    const existing = current.find((row) => sameName(row.title, rule.title));
+    // A rule for one channel can also be the business's own first rule for it, titled after
+    // the channel in any language: every new business starts with call and text rules.
+    const existing = current.find((row) => sameName(row.title, rule.title))
+      ?? (rule.channel ? current.find((row) => row.channel === rule.channel && isChannelRuleTitle(row.title, rule.channel!)) : undefined);
     if (!existing) {
       if (run.plan) { run.log({ step: "rules", action: "would add", detail: rule.title }); continue; }
       await createOnce(run, step, async (key) => await run.port.createRule(rule, key));

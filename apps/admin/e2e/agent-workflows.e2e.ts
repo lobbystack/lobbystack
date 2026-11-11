@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { test, expect } from "@playwright/test";
 import { eq } from "drizzle-orm";
-import { businesses, businessMemberships, createDatabaseClient, phoneNumbers, users, withBusinessTransaction } from "@lobbystack/db";
+import { agents, businesses, businessMemberships, createDatabaseClient, phoneNumbers, users, withBusinessTransaction } from "@lobbystack/db";
 import settings from "../public/locales/fr/settings.json" with { type: "json" };
 import translations from "../public/locales/fr/agent.json" with { type: "json" };
 
@@ -19,10 +19,12 @@ test("service, rule and knowledge editors persist changes and enforce read-only 
     await withBusinessTransaction(database.db, { businessId, actorType: "worker" }, async (tx) => {
       await tx.insert(businesses).values({ id: businessId, slug: `agent-workflows-${businessId}`, name: "Agent workflows", deploymentMode: "self_hosted_standard", timezone: "UTC", businessType: "clinic", onboardingStage: "complete" });
       await tx.insert(businessMemberships).values({ businessId, userId: userId!, role: "business_owner", status: "active" });
+      // Rules belong to an agent, whose pages /agents/primary opens.
+      await tx.insert(agents).values({ businessId, isDefault: true, greeting: "Hi", tone: "warm", summary: "Agent workflows", bookingPolicy: "Book", transferMode: "never", bookingMode: "instant" });
     });
     await auth.db.update(users).set({ activeBusinessId: businessId }).where(eq(users.id, userId!));
     const page = await context.newPage();
-    await page.goto(`${baseURL}/agent/services`);
+    await page.goto(`${baseURL}/business/services`);
     await page.getByRole("button", { name: translations.sections.services.addKnowledge, exact: true }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByRole("button", { name: translations.actions.save, exact: true }).click();
@@ -47,7 +49,7 @@ test("service, rule and knowledge editors persist changes and enforce read-only 
     await page.getByRole("menuitem", { name: translations.actions.enable, exact: true }).click();
     await expect.poll(async () => (await (await context.request.get(catalogUrl)).json()).services.find((service: { id: string }) => service.id === saved.id).active).toBe(true);
 
-    await page.goto(`${baseURL}/agent/rules`);
+    await page.goto(`${baseURL}/agents/primary/rules`);
     await page.getByRole("button", { name: translations.sections.rules.addKnowledge, exact: true }).click();
     await dialog.getByLabel(translations.sections.rules.fields.title.label, { exact: true }).fill("Callback rule");
     await dialog.getByLabel(translations.sections.rules.fields.content.label, { exact: true }).fill("Ask the caller for their preferred callback time.");
@@ -64,7 +66,7 @@ test("service, rule and knowledge editors persist changes and enforce read-only 
     await page.getByRole("alertdialog").getByRole("button", { name: translations.actions.delete, exact: true }).click();
     await expect(page.getByText("Callback rule", { exact: true })).toBeHidden();
 
-    await page.goto(`${baseURL}/agent/knowledge`);
+    await page.goto(`${baseURL}/business/knowledge`);
     await page.getByRole("button", { name: translations.sections.knowledge.addKnowledge, exact: true }).click();
     await page.getByRole("menuitem", { name: translations.sections.knowledge.addKnowledgeOptions.text, exact: true }).click();
     await dialog.getByLabel(translations.sections.knowledge.fields.title.label, { exact: true }).fill("Clinic hours");
@@ -91,7 +93,7 @@ test("service, rule and knowledge editors persist changes and enforce read-only 
     expect((await context.request.put(notificationUrl, { headers, data: { ...initialPreferences, smsEnabled: true, smsConsent: true } })).status()).toBe(400);
     await auth.db.update(users).set({ phone: "+14165550901", phoneVerifiedAt: new Date() }).where(eq(users.id, userId!));
     await withBusinessTransaction(database.db, { businessId, actorType: "worker" }, async tx => tx.insert(phoneNumbers).values({ businessId, e164: `+1416555${String(parseInt(businessId.slice(0, 4), 16) % 10000).padStart(4, "0")}`, status: "active", voiceEnabled: true, smsEnabled: true }));
-    await page.goto(`${baseURL}/settings/notifications`);
+    await page.goto(`${baseURL}/account/notifications`);
     const smsSwitch = page.getByRole("switch", { name: settings.notifications.sources.sms.title, exact: true });
     await expect(smsSwitch).toBeEnabled();
     // The phone is verified but no consent is on record, so the switch opens the
@@ -117,13 +119,13 @@ test("service, rule and knowledge editors persist changes and enforce read-only 
     await expect.poll(async () => (await (await context.request.get(notificationUrl)).json()).smsEnabled).toBe(false);
 
     await withBusinessTransaction(database.db, { businessId, actorType: "worker" }, async (tx) => tx.update(businessMemberships).set({ role: "viewer" }).where(eq(businessMemberships.businessId, businessId)));
-    await page.goto(`${baseURL}/agent/services`);
+    await page.goto(`${baseURL}/business/services`);
     await expect(page.getByText("Updated consultation", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: translations.sections.services.addKnowledge, exact: true })).toBeHidden();
     expect((await context.request.patch(`${baseURL}/api/catalog/${saved.id}?businessId=${businessId}`, { headers, data: { active: false } })).status()).toBe(403);
     expect((await context.request.post(`${baseURL}/api/rules?businessId=${businessId}`, { headers, data: { title: "Denied", content: "Denied" } })).status()).toBe(403);
     expect((await context.request.patch(`${baseURL}/api/knowledge/snippets/${snippet.id}?businessId=${businessId}`, { headers, data: { tags: ["denied"] } })).status()).toBe(403);
-    await page.goto(`${baseURL}/agent/knowledge?setup=website`);
+    await page.goto(`${baseURL}/business/knowledge?setup=website`);
     await expect(page.getByRole("button", { name: translations.sections.knowledge.addKnowledge, exact: true })).toBeHidden();
     await expect(page.getByRole("dialog")).toBeHidden();
   } finally {

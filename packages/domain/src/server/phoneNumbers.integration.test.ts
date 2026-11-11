@@ -119,7 +119,8 @@ describe.skipIf(!testUrl)("onboarding number claims against dedicated PostgreSQL
       expect(await reserveAsApp(tx, { ...noText, ipHash: "network-3", ipCountry: "CA" })).toMatch(/^[0-9a-f-]{36}$/);
       expect((await tx.select({ verifiedPhone: numberTrials.verifiedPhone, ipHash: numberTrials.ipHash }).from(numberTrials).where(eq(numberTrials.businessId, noText.businessId)))[0]).toEqual({ verifiedPhone: null, ipHash: "network-3" });
       const secondNoText = await noTextTrialWorkspace(tx);
-      await expect(reserveAsApp(tx, { ...secondNoText, ipHash: "network-3", ipCountry: "CA" })).rejects.toMatchObject({ status: 409, code: "phone_verification_required" });
+      // A direct owner has no phone step to prove themselves with, so the same network gets the plans.
+      await expect(reserveAsApp(tx, { ...secondNoText, ipHash: "network-3", ipCountry: "CA" })).rejects.toMatchObject({ status: 429, code: "trial_ip_limited" });
     });
   });
 });

@@ -5,6 +5,7 @@ import { appointments, auditLogs, calls, contacts, conversations, enqueueOutbox,
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import { contactPasscodeStatusInTransaction } from "./contactPasscodes";
 import type { DomainContext } from "./context";
+import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
 
 /**
  * The business's contact for this phone, created when missing. A text and a
@@ -22,6 +23,61 @@ export async function findOrCreateContactByPhone(tx: DatabaseTransaction, input:
   const raced = await find();
   if (!raced) throw new Error("Contact could not be created.");
   return { contact: raced, created: false };
+}
+
+/** Another contact already has this phone number. `contactId` is that contact, when known. */
+export class ContactPhoneTakenError extends Error {
+  readonly status = 409;
+  readonly code = "contact_exists";
+  constructor(readonly contactId: string | null) {
+    super(contactId ? `A contact with this phone number already exists: ${contactId}.` : "A contact with this phone number already exists.");
+  }
+}
+
+/**
+ * Adds a contact and emits contact.created. A phone another contact has
+ * throws ContactPhoneTakenError naming it. Two inserts racing on one number
+ * fail on the unique index instead, which callers report the same way.
+ */
+export async function insertContactInTransaction(
+  tx: DatabaseTransaction,
+  input: { businessId: string; name?: string | undefined; phone?: string | undefined; email?: string | undefined; preferredLocale?: string | undefined; timezone?: string | undefined },
+): Promise<typeof contacts.$inferSelect> {
+  if (input.phone) {
+    const [existing] = await tx.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.businessId, input.businessId), eq(contacts.phone, input.phone))).limit(1);
+    if (existing) throw new ContactPhoneTakenError(existing.id);
+  }
+  const [row] = await tx.insert(contacts).values({ businessId: input.businessId, name: input.name, phone: input.phone, email: input.email, preferredLocale: input.preferredLocale, timezone: input.timezone }).returning();
+  if (!row) throw new Error("The contact could not be created.");
+  await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "contact.created", resourceId: row.id });
+  return row;
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  const cause = typeof error === "object" && error !== null && "cause" in error ? (error as { cause: unknown }).cause : undefined;
+  return [error, cause].some((value) => typeof value === "object" && value !== null && "code" in value && (value as { code: unknown }).code === "23505");
+}
+
+/**
+ * An operator adds a contact by hand. Like editing one, it takes an owner or
+ * admin. A phone another contact has throws ContactPhoneTakenError.
+ */
+export async function createContact(
+  context: DomainContext,
+  input: { userId: string; businessId: string; name: string; phone?: string | undefined; email?: string | undefined },
+): Promise<{ contactId: string }> {
+  try {
+    return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
+      await requireBusinessAdmin(tx, input);
+      const row = await insertContactInTransaction(tx, { businessId: input.businessId, name: input.name, phone: input.phone, email: input.email });
+      await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.userId, eventType: "contact.created", entityType: "contact", entityId: row.id, payload: { source: "operator" } });
+      await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "contact", aggregateId: row.id, dedupeKey: `contact:${row.id}:created`, payload: { type: "conversation.updated", entityId: row.id } });
+      return { contactId: row.id };
+    });
+  } catch (error) {
+    if (isUniqueViolation(error)) throw new ContactPhoneTakenError(null);
+    throw error;
+  }
 }
 
 /**

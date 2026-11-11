@@ -49,9 +49,9 @@ export function ConfirmEmailChangeSurface() {
   }
 
   return <div className="ph-no-capture"><ReplacementOnboardingShell description={description} legalAgreement="emailChange" progress={null} title={t("confirmEmailChange.title")} width="sm"><div className="flex flex-col gap-6">
-    {statusMessage ? <p className="text-center text-sm text-muted-foreground">{statusMessage}</p> : null}
-    {errorMessage ? <p className="text-center text-sm text-destructive">{errorMessage}</p> : null}
-    <form className="flex flex-col" onSubmit={submit}><Button className="h-11 w-full" disabled={!valid || isSubmitting || statusMessage !== null} type="submit">{isSubmitting ? t("confirmEmailChange.submitting") : t("confirmEmailChange.submit")}</Button></form>
-    <p className="text-center text-sm"><Link className="font-medium text-foreground underline-offset-4 hover:underline" href={isAuthenticated ? "/settings" : loginPath}>{isAuthenticated ? t("confirmEmailChange.backToSettings") : t("confirmEmailChange.backToLogin")}</Link></p>
+    {statusMessage ? <p className="text-center type-body-muted">{statusMessage}</p> : null}
+    {errorMessage ? <p className="text-center type-body text-destructive">{errorMessage}</p> : null}
+    <form className="flex flex-col" onSubmit={submit}><Button className="w-full" disabled={!valid || isSubmitting || statusMessage !== null} type="submit">{isSubmitting ? t("confirmEmailChange.submitting") : t("confirmEmailChange.submit")}</Button></form>
+    <p className="text-center type-body"><Link className="font-medium text-foreground underline-offset-4 hover:underline" href={isAuthenticated ? "/account" : loginPath}>{isAuthenticated ? t("confirmEmailChange.backToSettings") : t("confirmEmailChange.backToLogin")}</Link></p>
   </div></ReplacementOnboardingShell></div>;
 }

@@ -21,6 +21,7 @@ import { getMeter, recordException } from "@lobbystack/telemetry/node";
 
 import { requireBusinessAdmin } from "../../authz";
 import { requireBusinessCapability } from "../businessAccess";
+import { postBusinessNotificationInTransaction, resolveBusinessNotificationsInTransaction } from "../businessNotifications";
 import type { DomainContext } from "../context";
 import { queueOperatorAlertInTransaction } from "../notifications";
 import { conflict, invalidRequest, notFound } from "./errors";
@@ -142,6 +143,8 @@ export async function updateWebhookEndpoint(
     if (input.status === "disabled") Object.assign(patch, { status: "disabled", disabledReason: "manual", disabledAt: new Date() });
     const [row] = await tx.update(webhookEndpoints).set(patch).where(and(eq(webhookEndpoints.businessId, input.businessId), eq(webhookEndpoints.id, input.endpointId))).returning();
     if (!row) throw notFound("Webhook endpoint");
+    // Turned back on, or turned off by hand: the bell's item about it failing is done either way.
+    if (input.status) await resolveBusinessNotificationsInTransaction(tx, { businessId: input.businessId, keys: [webhookFailingKey(row.id)] });
     const actor = auditActor(input.manager);
     await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: actor.actorUserId, eventType: "webhook_endpoint.updated", entityType: "webhook_endpoint", entityId: row.id, payload: { ...actor.payload, fields: Object.keys(patch).filter((key) => key !== "updatedAt") } });
     return detail(row);
@@ -384,6 +387,7 @@ export async function processWebhookDelivery(
     if (!sustained) return { outcome: "failed" as const, endpointDisabled: false };
     await tx.update(webhookEndpoints).set({ status: "disabled", disabledReason: "failing", disabledAt: at, updatedAt: at }).where(eq(webhookEndpoints.id, endpoint.id));
     await tx.insert(auditLogs).values({ businessId: input.businessId, eventType: "webhook_endpoint.auto_disabled", entityType: "webhook_endpoint", entityId: endpoint.id, payload: { consecutiveFailures: endpoint.consecutiveFailures } });
+    await postBusinessNotificationInTransaction(tx, { businessId: input.businessId, kind: "webhook_failing", key: webhookFailingKey(endpoint.id), params: { host: new URL(endpoint.url).host }, now: at });
     await queueOperatorAlertInTransaction(tx, {
       businessId: input.businessId,
       eventKind: "webhookDisabled",
@@ -421,4 +425,9 @@ export async function prunePartnerApiIdempotencyKeys(context: DomainContext, inp
     const [row] = (await tx.execute<{ deleted: number }>(sql`select app.prune_partner_api_idempotency_keys(${cutoff.toISOString()}::timestamptz) as deleted`)).rows;
     return { deleted: Number(row?.deleted ?? 0) };
   });
+}
+
+/** The bell's key for an endpoint we turned off because it kept failing. */
+function webhookFailingKey(endpointId: string): string {
+  return `webhook_failing:${endpointId}`;
 }

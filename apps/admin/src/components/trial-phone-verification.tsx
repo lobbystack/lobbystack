@@ -92,15 +92,15 @@ export function TrialPhoneVerification({ businessId, onVerified }: { businessId:
   if (attempt) {
     return (
       <div className="flex flex-col items-center gap-4">
-        <p className="text-center text-sm text-muted-foreground">{t("phoneNumber.trialPhone.code.sentTo", { phone: formatPhoneNumberDisplay(attempt.phoneE164, locale) })}</p>
+        <p className="text-center type-body-muted">{t("phoneNumber.trialPhone.code.sentTo", { phone: formatPhoneNumberDisplay(attempt.phoneE164, locale) })}</p>
         <InputOTP aria-label={t("phoneNumber.trialPhone.code.label")} autoComplete="one-time-code" autoFocus disabled={check.isPending} maxLength={6} onChange={(value) => setCode(value.replace(/\D/g, "").slice(0, 6))} value={code}>
-          <InputOTPGroup>{[0, 1, 2, 3, 4, 5].map((index) => <InputOTPSlot className="size-12 text-lg" index={index} key={index} />)}</InputOTPGroup>
+          <InputOTPGroup>{[0, 1, 2, 3, 4, 5].map((index) => <InputOTPSlot index={index} key={index} />)}</InputOTPGroup>
         </InputOTP>
-        {check.isPending ? <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status"><LoaderCircle className="size-4 animate-spin" />{t("phoneNumber.trialPhone.code.checking")}</div> : null}
+        {check.isPending ? <div className="flex items-center gap-2 type-body-muted" role="status"><LoaderCircle className="size-4 animate-spin" />{t("phoneNumber.trialPhone.code.checking")}</div> : null}
         {error ? <FieldError className="text-center">{error}</FieldError> : null}
         <div className="mt-2 flex flex-col items-center gap-4">
-          <button className="text-sm font-medium text-foreground underline-offset-4 hover:underline disabled:opacity-50" disabled={send.isPending || check.isPending} onClick={() => { setError(null); send.mutate(); }} type="button">{send.isPending ? t("phoneNumber.trialPhone.sending") : t("phoneNumber.trialPhone.code.resend")}</button>
-          <button className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground disabled:opacity-50" disabled={check.isPending} onClick={() => { setAttempt(null); setCode(""); setError(null); }} type="button"><ChevronLeft className="size-4" />{t("phoneNumber.trialPhone.code.changeNumber")}</button>
+          <button className="type-title text-foreground underline-offset-4 hover:underline disabled:opacity-50" disabled={send.isPending || check.isPending} onClick={() => { setError(null); send.mutate(); }} type="button">{send.isPending ? t("phoneNumber.trialPhone.sending") : t("phoneNumber.trialPhone.code.resend")}</button>
+          <button className="inline-flex items-center gap-1 type-body-muted hover:text-foreground disabled:opacity-50" disabled={check.isPending} onClick={() => { setAttempt(null); setCode(""); setError(null); }} type="button"><ChevronLeft className="size-4" />{t("phoneNumber.trialPhone.code.changeNumber")}</button>
         </div>
       </div>
     );
@@ -112,13 +112,13 @@ export function TrialPhoneVerification({ businessId, onVerified }: { businessId:
         <Field data-invalid={error ? true : undefined}>
           <FieldLabel htmlFor="trial-phone">{t("phoneNumber.trialPhone.fields.mobileNumber")}</FieldLabel>
           <div className="flex min-w-0">
-            <PhoneCountrySelect ariaLabel={t("phoneNumber.trialPhone.fields.country")} className="h-11 rounded-l-4xl rounded-r-none px-4 font-medium text-muted-foreground" countries={options} onChange={(next) => { setCountry(next as Country); setPhone(""); setError(null); }} value={country} />
-            <PhoneInput autoFocus className="h-11 rounded-l-none border-l-0" containerClassName="min-w-0 flex-1" country={country} id="trial-phone" limitNationalDigits onChange={(value) => { setPhone(value ?? ""); setError(null); }} value={phone} />
+            <PhoneCountrySelect ariaLabel={t("phoneNumber.trialPhone.fields.country")} className="rounded-l-xl rounded-r-none font-medium text-muted-foreground" countries={options} onChange={(next) => { setCountry(next as Country); setPhone(""); setError(null); }} value={country} />
+            <PhoneInput autoFocus className="rounded-l-none border-l-0" containerClassName="min-w-0 flex-1" country={country} id="trial-phone" limitNationalDigits onChange={(value) => { setPhone(value ?? ""); setError(null); }} value={phone} />
           </div>
           <FieldDescription>{t("phoneNumber.trialPhone.hint")}</FieldDescription>
         </Field>
         {error ? <FieldError>{error}</FieldError> : null}
-        <Button className="mt-2 h-11 w-full" disabled={phone.trim().length === 0} loading={send.isPending} loadingLabel={t("phoneNumber.trialPhone.sending")} type="submit">{t("phoneNumber.trialPhone.sendCode")}</Button>
+        <Button className="mt-2 w-full" disabled={phone.trim().length === 0} loading={send.isPending} loadingLabel={t("phoneNumber.trialPhone.sending")} type="submit">{t("phoneNumber.trialPhone.sendCode")}</Button>
       </FieldGroup>
     </form>
   );

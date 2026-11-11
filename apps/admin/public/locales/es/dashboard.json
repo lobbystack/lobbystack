@@ -7,15 +7,20 @@
     "title": "Analíticas",
     "description": "Revise las tendencias de actividad en llamadas, mensajes y reservas."
   },
-  "delta": {
-    "flat": "Sin cambios respecto al mes pasado",
-    "up": "+{{value}} % respecto al mes pasado",
-    "down": "-{{value}} % respecto al mes pasado",
-    "durationUp": "+{{value}} respecto al mes pasado",
-    "durationDown": "-{{value}} respecto al mes pasado"
-  },
   "home": {
     "title": "Inicio",
+    "phone": {
+      "status": {
+        "ready": "Listo para su primera llamada",
+        "live": "Su agente está atendiendo llamadas",
+        "liveMany": "Sus agentes están atendiendo llamadas"
+      },
+      "answersFirst": {
+        "agent": "Su agente responde primero",
+        "team": "Su equipo responde primero",
+        "teamDuringHours": "Su equipo responde primero en horario de atención"
+      }
+    },
     "download": "Descargar",
     "liveCalls": "En vivo",
     "tabs": {
@@ -88,30 +93,41 @@
           "other": "Otro"
         }
       },
-      "results": {
-        "bookedValue": "Valor reservado",
-        "timeSaved": "Tiempo ahorrado",
-        "withoutTransfer": "Llamadas sin transferir"
+      "agents": {
+        "title": "Por agente",
+        "calls": "Llamadas",
+        "chats": "Chats",
+        "removed": "Eliminado"
+      },
+      "overview": {
+        "calls": {
+          "title": "Llamadas"
+        },
+        "today": {
+          "title": "Hoy",
+          "next": "Próxima a las {{time}}",
+          "none": "Nada más por hoy"
+        },
+        "appointments": {
+          "title": "Citas"
+        },
+        "averageDuration": {
+          "title": "Duración media"
+        }
       }
+    },
+    "results": {
+      "bookedValue": "Valor reservado",
+      "timeSaved": "Tiempo ahorrado",
+      "withoutTransfer": "Llamadas sin transferir"
     },
     "metrics": {
       "loading": "Cargando la comparación mensual...",
-      "today": {
-        "title": "Hoy",
-        "next": "Próxima a las {{time}}",
-        "none": "Nada más por hoy"
-      },
       "calls": {
         "title": "Llamadas"
       },
       "messages": {
         "title": "Mensajes"
-      },
-      "appointments": {
-        "title": "Citas"
-      },
-      "averageDuration": {
-        "title": "Duración media"
       },
       "contacts": {
         "title": "Contactos"
@@ -150,11 +166,12 @@
       "requested": "Solicitado: {{details}}",
       "notes": "Notas: {{notes}}",
       "rescheduleRequest": "Solicitud de cambio de hora",
-      "newTime": "Nueva hora: {{time}}"
+      "newTime": "Nueva hora: {{time}}",
+      "inboxLink": "Ver todo en la bandeja de entrada"
     },
     "upcoming": {
       "title": "Próximas",
-      "viewAll": "Ver todas",
+      "appointmentsLink": "Ver todas las citas",
       "description": "Las próximas citas del calendario.",
       "unknownService": "Servicio desconocido",
       "employee": "Empleado: {{name}}",
@@ -276,35 +293,34 @@
       "hours": "Añadir su horario",
       "testCall": "Escuchar a su agente",
       "phoneNumber": "Conectar un número de teléfono",
-      "forwardCalls": "Desvíe sus llamadas"
+      "forwardCalls": "Desvíe sus llamadas",
+      "callNumber": "Llame a su número",
+      "forwardFromCurrent": "Conserve su número existente"
     },
     "stepDescriptions": {
       "fullScan": "Su agente ha leído una parte de su sitio.",
-      "sources": {
-        "answer_calls": "Suba las políticas, preguntas frecuentes y precios que consultan quienes llaman.",
-        "book_appointments": "Suba sus servicios, precios y reglas de reserva.",
-        "answer_website_visitors": "Suba las preguntas frecuentes y políticas que consultan los visitantes de su sitio.",
-        "answer_instagram_messages": "Suba las preguntas frecuentes y precios que le consultan en Instagram.",
-        "none": "Suba sus políticas, preguntas frecuentes o precios."
-      },
+      "sources": "Suba sus políticas, preguntas frecuentes o precios.",
       "hours": "Su agente reserva citas solo dentro de este horario.",
-      "testCall": {
-        "answer_calls": "Pregúntele lo que más le preguntan quienes llaman.",
-        "book_appointments": "Pídale que reserve una cita.",
-        "answer_website_visitors": "Pregúntele lo que la gente pregunta en su sitio web.",
-        "answer_instagram_messages": "Pregúntele lo que la gente pregunta en Instagram.",
-        "none": "Pregúntele lo que más preguntan sus clientes."
-      },
+      "testCall": "Pregúntele lo que más le preguntan quienes llaman.",
       "phoneNumber": "Dé a su agente su propio número para atender a personas reales.",
-      "phoneNumberTrial": "Conteste sus llamadas perdidas gratis durante 14 días, sin tarjeta."
+      "phoneNumberTrial": "Conteste sus llamadas perdidas gratis durante 14 días, sin tarjeta.",
+      "forwardCalls": "¿Conserva el número al que ya llaman sus clientes? Su agente también puede contestar en ese número.",
+      "numberLost": "Su prueba gratuita terminó. Elija un plan para recuperar su número."
     },
     "stepActions": {
       "fullScan": "Leer el resto",
       "sources": "Subir documento",
       "hours": "Añadir horario",
       "testCall": "Iniciar una llamada",
-      "phoneNumber": "Elegir un número"
-    }
+      "phoneNumber": "Elegir un número",
+      "callNumber": "Llamar al {{number}}",
+      "copyNumber": "Copiar número",
+      "numberCopied": "Copiado",
+      "forwardCalls": "Configurar el desvío",
+      "choosePlan": "Elegir un plan"
+    },
+    "forwardingFrom": "Desvío desde el {{number}}",
+    "forwardingWorks": "El desvío funciona"
   },
   "forwarding": {
     "title": "Desvíe sus llamadas al {{number}}",
@@ -332,8 +348,8 @@
       "ukMobile": "Móviles del Reino Unido"
     },
     "code": {
-      "dial": "Marque este código:",
-      "call": "Pulse Llamar. Un tono o un mensaje confirma que el desvío está activo.",
+      "dial": "En el teléfono al que llaman sus clientes, marque este código:",
+      "call": "Pulse Llamar.",
       "busy": "Para desviar también las llamadas que entran mientras habla, marque:",
       "off": "Para desactivarlo después, marque {{code}}.",
       "unreachable": "Para desviar también las llamadas cuando su teléfono está apagado o sin señal, marque:",
@@ -352,11 +368,7 @@
       "voicemail": "Si tiene el buzón de voz de {{name}}, pida a {{name}} que lo quite. Las llamadas perdidas no se pueden desviar mientras esté activo.",
       "androidOnly": "Estos pasos son para teléfonos Android. En un iPhone, pida a {{name}} que lo active por usted.",
       "adminOnly": "Solo un administrador de su cuenta de {{name}} puede cambiar esto.",
-      "verifyNumber": "{{name}} envía un código al {{number}} antes de desviar. Elija recibir el código por llamada y léalo en la transcripción de esa llamada, en Llamadas."
-    },
-    "test": {
-      "missed": "Para probarlo, llame a su número de negocio desde otro teléfono y déjelo sonar. Su agente debería contestar.",
-      "all": "Para probarlo, llame a su número de negocio desde otro teléfono. Su agente debería contestar."
+      "verifyNumber": "{{name}} envía un código al {{number}} antes de desviar. Elija recibir el código por llamada y léalo en la transcripción de esa llamada, en la Bandeja de entrada."
     },
     "unsupported": {
       "missed": "{{name}} no ofrece desvío solo para llamadas perdidas. Elija Todas las llamadas, o pida a {{name}} que desvíe las llamadas sin respuesta al {{number}}.",
@@ -369,6 +381,7 @@
     "general": {
       "missed": "En un móvil, abra los ajustes de llamadas del teléfono y desvíe las llamadas sin respuesta al {{number}}. En una línea fija o un sistema telefónico de empresa, pídaselo a su operador.",
       "all": "En un móvil, abra los ajustes de llamadas del teléfono y desvíe todas las llamadas al {{number}}. En una línea fija o un sistema telefónico de empresa, pídaselo a su operador."
-    }
+    },
+    "itWorks": "Funciona"
   }
 }

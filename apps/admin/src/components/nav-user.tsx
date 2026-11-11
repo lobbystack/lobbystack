@@ -1,10 +1,11 @@
 "use client";
 
-import { ChevronsUpDown, Contrast, Crown, FileText, Handshake, LifeBuoy, LogOut, ShieldCheck, User as UserIcon } from "lucide-react";
+import { BookOpen, ChevronsUpDown, Contrast, Crown, ExternalLink, FileText, Gift, Handshake, LifeBuoy, LogOut, MessageSquare, ShieldCheck, User as UserIcon, type LucideIcon } from "lucide-react";
 import { useTheme } from "./theme-provider";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Link from "next/link";
+import { brandLinks } from "@lobbystack/shared";
 
 import { useBranding } from "@/components/branding-provider";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -20,46 +21,85 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar,
 } from "@/components/ui/sidebar";
 type User = { email: string; name: string };
 
-type NavUserProps = {
+export type NavUserProps = {
+  /** Opens the feedback dialog, which the caller keeps mounted outside the menu. */
+  onFeedback?: (() => void) | undefined;
   /** Ends the person's open of the business they work in as the partner's staff, as they go back to the console. */
   onLeaveBusiness?: (() => void) | undefined;
   onSignOut: () => void;
-  onUpgradeToPro?: () => void;
+  onUpgradeToPro?: (() => void) | undefined;
   /** Links to the partner console, for someone on a partner's team. */
   showPartnerConsole?: boolean;
   showUpgradeToPro?: boolean;
   user: User;
 };
 
-export function NavUser({
-  onLeaveBusiness,
-  onSignOut,
-  onUpgradeToPro,
-  showPartnerConsole = false,
-  showUpgradeToPro = false,
-  user,
-}: NavUserProps) {
-  const { t } = useTranslation("nav");
-  const [open, setOpen] = useState(false);
-  const { isMobile, setOpenMobile } = useSidebar();
+/** One item of the account menu: a page, an outside link, or an action. */
+export type AccountMenuItem = {
+  key: string;
+  label: string;
+  icon: LucideIcon;
+  href?: string;
+  /** Opens in a new tab, or the mail app for a mailto link. */
+  external?: boolean;
+  onSelect?: () => void;
+  /** The menu stays open after it, as for the theme toggle. */
+  keepOpen?: boolean;
+};
+
+/**
+ * The account menu's items in their groups, which the sidebar's dropdown and
+ * the phone menu both show: an upgrade, the person's pages, feedback and
+ * help, the theme with a partner's own links, then signing out.
+ */
+export function useAccountMenuGroups({ onFeedback, onLeaveBusiness, onSignOut, onUpgradeToPro, showPartnerConsole = false, showUpgradeToPro = false }: Omit<NavUserProps, "user">): AccountMenuItem[][] {
+  const { t } = useTranslation(["nav", "common"]);
   const { resolvedTheme, setTheme } = useTheme();
-  const emailInitial = user.email.trim().charAt(0).toUpperCase() || "?";
-  // The links below open another page, which leaves the mobile sidebar sheet covering it.
-  const closeMobileSidebar = () => { if (isMobile) setOpenMobile(false); };
-  const toggleTheme = () => setTheme(resolvedTheme === "dark" ? "light" : "dark");
   // On a partner's dashboard, the partner's own support, terms and privacy links, each only when it set one.
   const { partner } = useBranding();
-  const partnerLinks = partner
+  // A partner's businesses never get the host's docs or marketing.
+  const docsHref = partner ? null : brandLinks().docsUrl;
+  const upgrade: AccountMenuItem[] = showUpgradeToPro
+    ? [{ key: "upgrade", label: t("sidebar.upgradeToPro"), icon: Crown, ...(onUpgradeToPro ? { onSelect: onUpgradeToPro } : { href: "/workspace/billing" }) }]
+    : [];
+  const own: AccountMenuItem[] = [
+    { key: "account", label: t("sidebar.accountSettings"), icon: UserIcon, href: "/account" },
+    ...(showPartnerConsole ? [{ key: "partner", label: t("sidebar.partnerConsole"), icon: Handshake, href: "/partner", ...(onLeaveBusiness ? { onSelect: onLeaveBusiness } : {}) }] : []),
+  ];
+  const help: AccountMenuItem[] = [
+    ...(onFeedback ? [{ key: "feedback", label: t("common:feedback.trigger"), icon: MessageSquare, onSelect: onFeedback }] : []),
+    ...(docsHref ? [{ key: "help", label: t("common:feedback.helpCenter"), icon: BookOpen, href: docsHref, external: true }] : []),
+    ...(partner ? [] : [{ key: "affiliate", label: t("items.affiliate"), icon: Gift, href: "/affiliate" }]),
+  ];
+  const theme: AccountMenuItem = { key: "theme", label: t("sidebar.toggleTheme"), icon: Contrast, keepOpen: true, onSelect: () => setTheme(resolvedTheme === "dark" ? "light" : "dark") };
+  const partnerLinks: AccountMenuItem[] = partner
     ? [
         { key: "support", href: partner.links.support, label: t("sidebar.support"), icon: LifeBuoy },
         { key: "terms", href: partner.links.terms, label: t("sidebar.terms"), icon: FileText },
         { key: "privacy", href: partner.links.privacy, label: t("sidebar.privacy"), icon: ShieldCheck },
-      ].filter((link): link is typeof link & { href: string } => Boolean(link.href))
+      ].filter((link): link is typeof link & { href: string } => Boolean(link.href)).map((link) => ({ ...link, external: !link.href.startsWith("mailto:") }))
     : [];
+  // Empty groups drop out, so the menu never shows two lines in a row or a line at an edge.
+  return [upgrade, own, help, [theme, ...partnerLinks], [{ key: "signOut", label: t("sidebar.signOut"), icon: LogOut, onSelect: onSignOut }]].filter((group) => group.length > 0);
+}
+
+/** How an item's link opens: a new tab for an outside page, or the app's router. The row it renders fills the anchor. */
+export function accountItemLink(item: AccountMenuItem) {
+  if (!item.href) return undefined;
+  // eslint-disable-next-line jsx-a11y/anchor-has-content -- the menu item renders its icon and label into it
+  if (item.href.startsWith("mailto:")) return <a href={item.href} />;
+  // eslint-disable-next-line jsx-a11y/anchor-has-content -- the menu item renders its icon and label into it
+  if (item.external) return <a href={item.href} rel="noreferrer" target="_blank" />;
+  return <Link href={item.href} />;
+}
+
+export function NavUser({ user, ...props }: NavUserProps) {
+  const [open, setOpen] = useState(false);
+  const groups = useAccountMenuGroups(props);
+  const emailInitial = user.email.trim().charAt(0).toUpperCase() || "?";
 
   return (
     <SidebarMenu>
@@ -75,83 +115,48 @@ export function NavUser({
               />
             }
           >
-            <Avatar className="shadow-xs" size="sm">
+            <Avatar size="sm">
               <AvatarFallback>{emailInitial}</AvatarFallback>
             </Avatar>
-            <div className="grid flex-1 text-start text-sm leading-tight group-data-[collapsible=icon]:hidden">
-              <span className="truncate text-sm">{user.email}</span>
+            <div className="grid flex-1 text-start group-data-[collapsible=icon]:hidden">
+              <span className="truncate type-body">{user.email}</span>
             </div>
             <ChevronsUpDown className="ms-auto size-4 group-data-[collapsible=icon]:hidden" />
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="end"
-            className="min-w-56 rounded-xl"
-            side={isMobile ? "bottom" : "right"}
+            className="min-w-56"
+            side="right"
             sideOffset={4}
           >
-            {showUpgradeToPro ? (
-              <>
+            <div className="truncate px-3 py-2 type-body-muted" title={user.email}>{user.email}</div>
+            {groups.map((group, index) => (
+              <Fragment key={group[0]!.key}>
+                {/* Drawn like the sidebar's group lines: its border color, inset to the items' text. */}
+                {index > 0 ? <DropdownMenuSeparator className="mx-3 bg-sidebar-border" data-account-separator="" /> : null}
                 <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    {...(onUpgradeToPro
-                      ? {
-                          onClick: onUpgradeToPro,
-                        }
-                      : {
-                          onClick: closeMobileSidebar,
-                          render: <Link href="/settings/plan" />,
-                        })}
-                  >
-                    <Crown />
-                    {t("sidebar.upgradeToPro")}
-                  </DropdownMenuItem>
+                  {group.map((item) => {
+                    const link = accountItemLink(item);
+                    return (
+                      <DropdownMenuItem
+                        {...(item.keepOpen ? { closeOnClick: false } : {})}
+                        {...(item.key === "help" ? { "aria-label": item.label } : {})}
+                        key={item.key}
+                        {...(item.onSelect ? { onClick: item.onSelect } : {})}
+                        {...(link ? { render: link } : {})}
+                      >
+                        {/* One child: as a link, the item would otherwise hand its children on as an unkeyed list. */}
+                        <>
+                          <item.icon />
+                          {item.label}
+                          {item.external && item.key === "help" ? <ExternalLink className="ms-auto text-muted-foreground" /> : null}
+                        </>
+                      </DropdownMenuItem>
+                    );
+                  })}
                 </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-              </>
-            ) : null}
-            <DropdownMenuGroup>
-              <DropdownMenuItem
-                onClick={closeMobileSidebar}
-                render={<Link href="/settings/account" />}
-              >
-                <UserIcon />
-                {t("sidebar.account")}
-              </DropdownMenuItem>
-              {showPartnerConsole ? (
-                <DropdownMenuItem onClick={onLeaveBusiness} render={<Link href="/partner" />}>
-                  <Handshake />
-                  {t("sidebar.partnerConsole")}
-                </DropdownMenuItem>
-              ) : null}
-              <DropdownMenuItem
-                closeOnClick={false}
-                onClick={toggleTheme}
-              >
-                <Contrast />
-                {t("sidebar.toggleTheme")}
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            {partnerLinks.length ? (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  {partnerLinks.map((link) => (
-                    <DropdownMenuItem key={link.key} render={<Link href={link.href} prefetch={false} {...(link.href.startsWith("mailto:") ? {} : { rel: "noreferrer", target: "_blank" })} />}>
-                      <link.icon />
-                      {link.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuGroup>
-              </>
-            ) : null}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={onSignOut}
-              variant="destructive"
-            >
-              <LogOut />
-              {t("sidebar.signOut")}
-            </DropdownMenuItem>
+              </Fragment>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

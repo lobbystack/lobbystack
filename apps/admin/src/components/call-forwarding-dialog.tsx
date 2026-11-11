@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
+import { Button } from "@/components/ui/button";
 import { Combobox, ComboboxCollection, ComboboxContent, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxLabel, ComboboxList } from "@/components/ui/combobox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldLabel } from "@/components/ui/field";
@@ -49,19 +50,23 @@ function Steps({ carrier, how, e164, mode }: { carrier: Carrier; how: Forwarding
       {how.method === "settings" && mode === "missed" && carrier.group === "voip" ? <p className="type-body-muted">{t("forwarding.notes.ringTime")}</p> : null}
       {how.notes?.map((note) => <p className="type-body-muted" key={note}>{t(`forwarding.notes.${note}`, { name: carrier.name, number })}</p>)}
       {mode === "missed" && mobile ? <p className="type-body-muted">{t("forwarding.notes.iphone")}</p> : null}
-      <p className="type-body-muted">{t(`forwarding.test.${mode}`)}</p>
     </div>
   );
 }
 
-/** How to forward the owner's line to their LobbyStack number, carrier by carrier. */
-export function CallForwardingDialog({ e164, onOpenChange, open }: { e164: string; onOpenChange: (open: boolean) => void; open: boolean }) {
+/**
+ * How to forward the owner's line to their LobbyStack number, carrier by
+ * carrier. With `onConfirm`, an It works button follows the steps, for
+ * carriers that strip the header that would tell us forwarding works.
+ */
+export function CallForwardingDialog({ confirming = false, e164, onConfirm, onOpenChange, open }: { confirming?: boolean; e164: string; onConfirm?: () => void; onOpenChange: (open: boolean) => void; open: boolean }) {
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="max-h-[calc(100svh-2rem)] overflow-y-auto">
         {/* The content unmounts when the dialog closes, so each opening starts with no carrier picked. */}
         <ForwardingDialogHeader e164={e164} />
         <ForwardingGuide e164={e164} />
+        {onConfirm ? <ForwardingConfirm confirming={confirming} onConfirm={onConfirm} /> : null}
       </DialogContent>
     </Dialog>
   );
@@ -84,6 +89,11 @@ export function CallForwardingFromLink({ businessId }: { businessId: string }) {
   const e164 = numbers.data?.phoneNumbers[0]?.e164;
   useSetupAction(Boolean(e164), useCallback((action: string) => { if (action !== "phoneNumber") return false; setOpen(true); return true; }, []));
   return e164 ? <CallForwardingDialog e164={e164} onOpenChange={setOpen} open={open} /> : null;
+}
+
+function ForwardingConfirm({ confirming, onConfirm }: { confirming: boolean; onConfirm: () => void }) {
+  const { t } = useTranslation("dashboard");
+  return <Button className="self-start" disabled={confirming} onClick={onConfirm} type="button" variant="outline">{t("forwarding.itWorks")}</Button>;
 }
 
 function ForwardingDialogHeader({ e164 }: { e164: string }) {

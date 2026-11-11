@@ -10,10 +10,12 @@ export const dynamic = "force-dynamic";
 // to complete here, since its owner finishes at their phone; the domain
 // refuses it for a direct business, which finishes through attribution.
 export const POST = operatorRoute(async ({ userId, businessId, body, domain }) => {
-  const target = body.to;
+  // A tab from before the goal question left onboarding moves on from the number with "goal". What followed it is attribution.
+  const target = body.to === "goal" ? "attribution" : body.to;
   if (!isOnboardingStage(target) || target === "create_business") {
     return jsonError("A valid next onboarding stage is required.", 400);
   }
-  await advanceOnboardingStage(domain, { userId, businessId, to: target });
-  return NextResponse.json({ ok: true, stage: target });
+  // The stage it's on after: leaving Meet your agent can open the plans instead of finishing.
+  const stage = await advanceOnboardingStage(domain, { userId, businessId, to: target });
+  return NextResponse.json({ ok: true, stage });
 });

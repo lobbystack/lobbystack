@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { planCards, billingErrorCodes } from "@lobbystack/shared";
 
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FieldError } from "@/components/ui/field";
 import { OnboardingPlanComparison } from "@/components/onboarding-plan-comparison";
 import { useTelemetry } from "@/components/product-analytics";
@@ -23,7 +24,19 @@ type Checkout = { id: string; status: string; checkoutUrl: string | null; error:
 type BillingStatus = { checkoutAvailable: boolean; availableCheckoutPlans?: Array<"starter" | "pro">; availableCheckoutIntervals?: { starter: BillingInterval[]; pro: BillingInterval[] } };
 
 
-export function OnboardingPlanSurface() {
+/** The cards each variant shows: the plans after a trial number, or the paid plans when no trial was possible. */
+const VARIANT_PLANS: Record<"trial" | "paid", readonly Plan[]> = {
+  trial: ["free_cloud", "starter", "pro"],
+  paid: ["starter", "pro", "enterprise"],
+};
+
+/**
+ * The plans in onboarding. `trial` follows a trial number: its first card
+ * goes on with the 14-day trial that started when the number was bought.
+ * `paid` is the number step's when no trial is possible, with no Free card.
+ * Neither has a way to close it.
+ */
+export function OnboardingPlanSurface({ variant }: { variant: "trial" | "paid" }) {
   const { i18n, t } = useTranslation("onboarding");
   const { navigate, navigating } = useStepNavigation();
   const telemetry = useTelemetry();
@@ -40,19 +53,22 @@ export function OnboardingPlanSurface() {
     enabled: Boolean(checkoutRequestId),
     refetchInterval: (query) => query.state.data?.status === "ready" || query.state.data?.status === "error" ? false : 1_500,
   });
+  // The trial clock started when the number was bought, so its card only finishes onboarding.
   const selectFree = useMutation({
-    mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: "goal" }) }),
-    onSuccess: () => navigate("/onboarding/goal"),
+    mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: "complete" }) }),
+    onSuccess: () => navigate("/"),
     meta: { inlineError: true },
   });
+  // The trial plans are the last step; without a number the plans lead back to the number step.
+  const afterPaying = variant === "trial" ? { stage: "complete", route: "/" } : { stage: "phone_number", route: "/onboarding/number" };
   const startCheckout = useMutation({
     mutationFn: (target: "starter" | "pro") => requestJson<{ requestId: string }>("/api/billing/checkout", { method: "POST", body: JSON.stringify({ businessId: business!.businessId, target, billingInterval: interval }) }),
     onSuccess: ({ requestId }) => { setCheckoutUnavailable(false); setCheckoutRequestId(requestId); },
-    // Already paying, from a checkout whose return page closed early: the number is next.
+    // Already paying, from a checkout whose return page closed early: onboarding goes on.
     onError: (error) => {
       if (errorCode(error) !== billingErrorCodes.subscriptionActive) return;
-      void requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: "phone_number" }) })
-        .then(() => navigate("/onboarding/number"), () => setCheckoutError(t("plan.continueFailed")));
+      void requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: afterPaying.stage }) })
+        .then(() => navigate(afterPaying.route), () => setCheckoutError(t("plan.continueFailed")));
     },
     meta: { inlineError: true },
   });
@@ -106,7 +122,10 @@ export function OnboardingPlanSurface() {
     if (!business || pendingPlan) return;
     setCheckoutError(null);
     telemetry.track("web.onboarding.plan_selected", { businessId: business.businessId, plan });
-    if (plan === "free_cloud") selectFree.mutate();
+    if (plan === "free_cloud") {
+      telemetry.track("web.onboarding.trial_started", { businessId: business.businessId });
+      selectFree.mutate();
+    }
     else if (plan === "starter" || plan === "pro") {
       telemetry.track("web.onboarding.plan_checkout_started", { businessId: business.businessId, plan });
       startCheckout.mutate(plan);
@@ -118,29 +137,32 @@ export function OnboardingPlanSurface() {
     <div className="flex flex-col gap-12">
 
       {!checkoutUnavailable ? <div className="flex justify-center">
-        <div aria-label={t("plan.billingInterval.label")} className="inline-flex rounded-full border border-border bg-input/30 p-1" role="tablist">
-          {(["monthly", "annual"] as const).map((value) => <Button aria-selected={interval === value} className={cn("h-9 rounded-full px-4", interval === value ? "bg-background text-foreground shadow-sm hover:bg-background" : "border-transparent bg-transparent text-muted-foreground hover:bg-muted")} disabled={Boolean(pendingPlan) || (availableIntervals.length > 0 && !availableIntervals.includes(value))} key={value} onClick={() => setInterval(value)} role="tab" size="sm" type="button" variant="outline">{t(`plan.billingInterval.${value}`)}{value === "annual" ? <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">{t("plan.billingInterval.save")}</span> : null}</Button>)}
-        </div>
+        <Tabs onValueChange={(value) => setInterval(value as typeof interval)} value={interval}>
+          <TabsList aria-label={t("plan.billingInterval.label")}>
+            {(["monthly", "annual"] as const).map((value) => <TabsTrigger disabled={Boolean(pendingPlan) || (availableIntervals.length > 0 && !availableIntervals.includes(value))} key={value} value={value}>{t(`plan.billingInterval.${value}`)}{value === "annual" ? <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 type-label text-emerald-700">{t("plan.billingInterval.save")}</span> : null}</TabsTrigger>)}
+          </TabsList>
+        </Tabs>
       </div> : null}
       {checkoutUnavailable ? (
         <div className="flex flex-col items-center gap-4 rounded-xl border border-border/70 bg-muted/20 p-6" role="alert">
-          <p className="text-sm text-muted-foreground">{t("settings:billing.toast.paymentsUnavailable")}</p>
+          <p className="type-body-muted">{t("settings:billing.toast.paymentsUnavailable")}</p>
           <Button onClick={() => setCheckoutUnavailable(false)} type="button" variant="outline">{t("plan.backToPlans")}</Button>
         </div>
       ) : null}
-      {!checkoutUnavailable && slowCheckout ? <p className="text-center text-sm text-muted-foreground" role="status">{t("settings:billing.upgradeDialog.providerSlow")}</p> : null}
-      {!checkoutUnavailable ? <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-        {planCards(i18n.language).map((tier) => {
+      {!checkoutUnavailable && slowCheckout ? <p className="text-center type-body-muted" role="status">{t("settings:billing.upgradeDialog.providerSlow")}</p> : null}
+      {!checkoutUnavailable ? <div className="grid gap-6 md:grid-cols-3">
+        {planCards(i18n.language).filter((tier) => VARIANT_PLANS[variant].includes(tier.slug)).map((tier) => {
           const paid = tier.slug === "starter" || tier.slug === "pro";
           const busy = tier.slug === "free_cloud" ? pendingPlan === "free_cloud" : paid && pendingPlan === "paid";
           const price = tier.price[interval];
-          const description = tier.description[interval];
-          const cta = tier.cta;
-          return <section className={cn("relative flex flex-col rounded-2xl border bg-background p-8", tier.featured ? "border-foreground/30 shadow-sm" : "border-border/60")} key={tier.slug}>
-            {tier.featured ? <div className="absolute -top-3 left-8 rounded-full bg-foreground px-3 py-0.5 text-xs font-medium text-background">{t("plan.popular")}</div> : null}
-            <div className="mb-6"><h3 className="font-heading text-lg font-semibold tracking-tight">{tier.name}</h3><div className="mt-3 flex items-baseline gap-1"><span className="font-heading text-4xl font-semibold tracking-tighter">{price}</span><span className="text-sm text-muted-foreground">{tier.period}</span></div><p className="mt-3 text-sm leading-relaxed text-muted-foreground">{description}</p></div>
+          const trial = tier.slug === "free_cloud";
+          const description = trial ? t("plan.trial.description") : tier.description[interval];
+          const cta = trial ? t("plan.trial.start") : paid ? t("plan.subscribe") : tier.cta;
+          return <section className={cn("relative flex flex-col rounded-xl border bg-background p-8", tier.featured ? "border-foreground/30" : "border-border/60")} key={tier.slug}>
+            {tier.featured ? <div className="absolute -top-3 left-8 rounded-full bg-foreground px-3 py-0.5 type-label text-background">{t("plan.popular")}</div> : null}
+            <div className="mb-6"><h3 className="type-section-title">{tier.name}</h3><div className="mt-3 flex items-baseline gap-1"><span className="type-metric">{price}</span><span className="type-body-muted">{tier.period}</span></div><p className="mt-3 type-body-muted">{description}</p></div>
             <Button className="mb-6 w-full rounded-full" disabled={!business || Boolean(pendingPlan) || (paid && (!billing.data?.checkoutAvailable || (configuredIntervals && !configuredIntervals[tier.slug as "starter" | "pro"].includes(interval))))} onClick={() => act(tier.slug)} type="button" variant={tier.featured ? "default" : "outline"}>{busy ? <LoaderCircle className="size-4 animate-spin" /> : <>{cta}<ArrowRight className="ml-1 size-4" /></>}</Button>
-            <div className="flex-1 border-t border-border/50 pt-5"><ul className="space-y-2.5">{tier.lines.map((line) => <li className="flex items-start gap-2.5 text-sm" key={line.label}><Check className="mt-0.5 size-3.5 shrink-0 text-foreground/60" /><span className="whitespace-pre-line">{line.sublabel ? `${line.label}\n${line.sublabel}` : line.label}</span></li>)}</ul></div>
+            <div className="flex-1 border-t border-border/50 pt-5"><ul className="space-y-2.5">{tier.lines.map((line) => <li className="flex items-start gap-2.5 type-body" key={line.label}><Check className="mt-0.5 size-3.5 shrink-0 text-foreground/60" /><span className="whitespace-pre-line">{line.sublabel ? `${line.label}\n${line.sublabel}` : line.label}</span></li>)}</ul></div>
           </section>;
         })}
       </div> : null}

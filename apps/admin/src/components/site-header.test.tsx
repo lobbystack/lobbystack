@@ -1,49 +1,80 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { createRef } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SiteHeader } from "./site-header";
 import { registerTestWindow } from "@/lib/test-window";
 
-vi.mock("@/components/ui/sidebar", () => ({
-  SidebarTrigger: () => null,
-}));
+const params = vi.hoisted(() => ({ value: {} as { agentId?: string } }));
+vi.mock("next/navigation", () => ({ useParams: () => params.value }));
+vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("@/hooks/use-active-business", () => ({ useActiveBusiness: () => ({ business: null, businesses: { isLoading: false } }) }));
+vi.mock("@/components/business-capabilities-provider", () => ({ useBusinessCan: () => () => true }));
+
+/** Stands in for the browser's IntersectionObserver, so a test can scroll the page title in and out of view. */
+class FakeIntersectionObserver {
+  static current: FakeIntersectionObserver | null = null;
+  constructor(private readonly callback: IntersectionObserverCallback) { FakeIntersectionObserver.current = this; }
+  observe() {}
+  disconnect() {}
+  setVisible(isIntersecting: boolean) {
+    act(() => this.callback([{ isIntersecting } as IntersectionObserverEntry], this as unknown as IntersectionObserver));
+  }
+}
+
+function renderPage() {
+  const heading = document.createElement("h1");
+  heading.textContent = "Appointments";
+  document.body.append(heading);
+  const scrollContainerRef = createRef<HTMLElement>();
+  render(<main ref={scrollContainerRef}><SiteHeader fixed scrollContainerRef={scrollContainerRef} titleHeading={heading} /></main>);
+  const observer = FakeIntersectionObserver.current;
+  if (!observer) throw new Error("Expected the header to watch the page title.");
+  return { bar: document.querySelector<HTMLElement>('[data-slot="site-header-bar"]')!, observer };
+}
+
+beforeEach(() => { vi.stubGlobal("IntersectionObserver", FakeIntersectionObserver); });
+afterEach(() => {
+  cleanup();
+  document.body.innerHTML = "";
+  vi.unstubAllGlobals();
+  FakeIntersectionObserver.current = null;
+  params.value = {};
+});
 
 describe("SiteHeader", () => {
-  it("opens the test window from its phone button, once a window is mounted", () => {
-    render(<SiteHeader />);
-    expect(screen.queryByRole("button", { name: "testCall.trigger" })).toBeNull();
-    const open = vi.fn();
+  it("keeps its bar hidden, from sight and screen readers, while the page title is in view", () => {
     let unregister = () => {};
-    act(() => { unregister = registerTestWindow(open); });
-    fireEvent.click(screen.getByRole("button", { name: "testCall.trigger" }));
-    expect(open).toHaveBeenCalledOnce();
+    act(() => { unregister = registerTestWindow(vi.fn()); });
+    const { bar, observer } = renderPage();
+    observer.setVisible(true);
+    expect(bar.getAttribute("aria-hidden")).toBe("true");
+    expect(bar.className).toContain("invisible");
+    expect(screen.queryByRole("button", { name: "testCall.trigger" })).toBeNull();
     act(() => unregister());
   });
 
-  it("updates its fixed styling from the dashboard scroll container", () => {
-    const scrollContainerRef = createRef<HTMLElement>();
+  it("names the page and opens the test window from its bar once the title scrolls away", () => {
+    params.value = { agentId: "agent-2" };
+    const open = vi.fn();
+    let unregister = () => {};
+    act(() => { unregister = registerTestWindow(open); });
+    const { bar, observer } = renderPage();
+    observer.setVisible(true);
+    observer.setVisible(false);
+    expect(bar.getAttribute("aria-hidden")).toBeNull();
+    expect(bar.className).not.toContain("invisible");
+    expect(bar.querySelector("[data-page-title]")?.textContent).toBe("Appointments");
+    fireEvent.click(screen.getByRole("button", { name: "testCall.trigger" }));
+    expect(open).toHaveBeenCalledExactlyOnceWith({ agentId: "agent-2" });
+    act(() => unregister());
+  });
 
-    render(
-      <main ref={scrollContainerRef}>
-        <SiteHeader fixed scrollContainerRef={scrollContainerRef} />
-      </main>,
-    );
-
-    const header = screen.getByRole("banner");
-    expect(header.className).toContain("shadow-none");
-
-    if (!scrollContainerRef.current) {
-      throw new Error("Expected the scroll container to be mounted.");
-    }
-    scrollContainerRef.current.scrollTop = 24;
-    fireEvent.scroll(scrollContainerRef.current);
-
-    expect(header.className).toContain("shadow");
-    expect(header.className).not.toContain("shadow-none");
-    expect(header.firstElementChild?.className).toContain("after:backdrop-blur-lg");
+  it("shows no Test call button when the page has no test window", () => {
+    const { bar, observer } = renderPage();
+    observer.setVisible(false);
+    expect(bar.getAttribute("aria-hidden")).toBeNull();
+    expect(screen.queryByRole("button", { name: "testCall.trigger" })).toBeNull();
   });
 });
-
-afterEach(cleanup);

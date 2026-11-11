@@ -686,3 +686,57 @@ describe("asking for a person on a browser call or a website chat", () => {
     expect(phone).not.toMatch(/web browser|website chat|Phone number:/);
   });
 });
+
+describe("rules kept to one channel", () => {
+  const rules = [
+    { id: "r-all", title: "Urgent", content: "Transfer urgent issues.", order: 1 },
+    { id: "r-voice", title: "On calls", content: "Spell back every phone number.", order: 2, channel: "voice" as const },
+    { id: "r-sms", title: "In texts", content: "Sign texts with the clinic's name.", order: 3, channel: "sms" as const },
+    { id: "r-chat", title: "In website chat", content: "Link to the booking page.", order: 4, channel: "web_chat" as const },
+    { id: "r-instagram", title: "On Instagram", content: "Answer in a casual voice.", order: 5, channel: "instagram" as const },
+  ];
+  const snapshot = { ...demoSnapshot, rules };
+  const channelRules = {
+    voice: "Spell back every phone number.",
+    web_voice: "Spell back every phone number.",
+    sms: "Sign texts with the clinic's name.",
+    web_chat: "Link to the booking page.",
+    instagram: "Answer in a casual voice.",
+  } as const;
+
+  it.each(Object.entries(channelRules))("give the %s agent only its own channel's rules, beside the rules for every channel", (channel, own) => {
+    const prompt = buildAgentInstructions(snapshot, { channel: channel as keyof typeof channelRules });
+    expect(prompt).toContain(own);
+    expect(prompt).toContain("1. Urgent: Transfer urgent issues.");
+    for (const other of new Set(Object.values(channelRules))) if (other !== own) expect(prompt).not.toContain(other);
+  });
+
+  it("go where the channel's default instructions go, ahead of the business facts", () => {
+    const prompt = buildAgentInstructions(snapshot, { channel: "sms" });
+    expect(prompt).toContain(`${demoSnapshot.smsInstructions}\n\nThe business's rules for text messages, in priority order:\n1. In texts: Sign texts with the clinic's name.`);
+    expect(prompt.indexOf("Sign texts with the clinic's name.")).toBeLessThan(prompt.indexOf("Customer rules, in priority order:"));
+    expect(prompt).not.toContain("Customer rules, in priority order:\n1. Urgent: Transfer urgent issues.\n2.");
+  });
+
+  it("give GPT-Live the call rules after the greeting, and none for other channels", () => {
+    for (const channel of ["voice", "web_voice"] as const) {
+      const prompt = buildLiveInstructions(snapshot, channel, callStart);
+      expect(prompt).toContain("The business's rules for calls, in priority order:\n- On calls: Spell back every phone number.");
+      expect(prompt.indexOf("Spell back every phone number.")).toBeGreaterThan(prompt.indexOf(demoSnapshot.greeting));
+      expect(prompt).toContain("Business rules, in priority order:\n- Urgent: Transfer urgent issues.");
+      for (const other of ["Sign texts", "Link to the booking page", "casual voice"]) expect(prompt).not.toContain(other);
+    }
+  });
+
+  it("keep a long call rule's line breaks, which call instructions had", () => {
+    const prompt = buildLiveInstructions({ ...demoSnapshot, rules: [{ id: "r", title: "On calls", content: "First, greet.\nThen, ask for the name.", order: 1, channel: "voice" }] }, "voice", callStart);
+    expect(prompt).toContain("- On calls: First, greet.\nThen, ask for the name.");
+    expect(prompt).not.toContain("Business rules, in priority order");
+  });
+
+  it("treat a rule without a channel, as in snapshots from before channels, as one for every channel", () => {
+    const prompt = buildAgentInstructions({ ...demoSnapshot, rules: [{ id: "r", title: "Old", content: "An old rule.", order: 1 }] }, { channel: "instagram" });
+    expect(prompt).toContain("Customer rules, in priority order:\n1. Old: An old rule.");
+    expect(prompt).not.toContain("The business's rules for");
+  });
+});

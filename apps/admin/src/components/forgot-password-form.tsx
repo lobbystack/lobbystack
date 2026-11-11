@@ -113,7 +113,7 @@ export function ForgotPasswordForm({
                   value={code}
                 >
                   <InputOTPGroup className="w-full">
-                    {Array.from({ length: RESET_CODE_LENGTH }, (_, index) => <InputOTPSlot aria-invalid={codeError ? true : undefined} className="size-auto h-12 flex-1 text-lg" index={index} key={index} />)}
+                    {Array.from({ length: RESET_CODE_LENGTH }, (_, index) => <InputOTPSlot aria-invalid={codeError ? true : undefined} className="w-auto flex-1" index={index} key={index} />)}
                   </InputOTPGroup>
                 </InputOTP>
                 {codeError ? <FieldError className="flex items-center gap-2 font-medium" id="reset-code-error"><TriangleAlert className="size-4 shrink-0" aria-hidden="true" /><span>{t(`forgotPassword.${codeError}`)}</span></FieldError> : null}
@@ -128,7 +128,7 @@ export function ForgotPasswordForm({
                   aria-describedby={passwordError ? "reset-password-error" : passwordInvalid ? "reset-password-criteria" : undefined}
                   aria-invalid={passwordInvalid ? true : undefined}
                   autoComplete="new-password"
-                  className={cn("h-11", passwordInvalid && invalidInputClassName)}
+                  className={cn(passwordInvalid && invalidInputClassName)}
                   minLength={8}
                   onChange={(event) => onNewPasswordChange(event.target.value)}
                   onFocus={() => setFocusedPasswordStep(step)}
@@ -138,7 +138,7 @@ export function ForgotPasswordForm({
                   value={newPassword}
                 />
                 {passwordError ? <FieldError className="flex items-center gap-2 font-medium" id="reset-password-error"><TriangleAlert className="size-4 shrink-0" aria-hidden="true" /><span>{t(`forgotPassword.${passwordError}`)}</span></FieldError> : null}
-                {hasFocusedPassword ? <ul aria-live="polite" className="flex flex-col gap-1 pt-0.5 text-sm font-medium" id="reset-password-criteria">{passwordCriteria.map((criterion) => <li className={cn("flex items-center gap-2", criterion.isMet ? "text-emerald-700 dark:text-emerald-400" : passwordInvalid ? "text-destructive" : "text-muted-foreground")} key={criterion.label}>{criterion.isMet ? <Check className="size-4 shrink-0" aria-hidden="true" /> : <X className="size-4 shrink-0" aria-hidden="true" />}<span>{criterion.label}</span></li>)}</ul> : null}
+                {hasFocusedPassword ? <ul aria-live="polite" className="flex flex-col gap-1 pt-0.5 type-title" id="reset-password-criteria">{passwordCriteria.map((criterion) => <li className={cn("flex items-center gap-2", criterion.isMet ? "text-emerald-700 dark:text-emerald-400" : passwordInvalid ? "text-destructive" : "text-muted-foreground")} key={criterion.label}>{criterion.isMet ? <Check className="size-4 shrink-0" aria-hidden="true" /> : <X className="size-4 shrink-0" aria-hidden="true" />}<span>{criterion.label}</span></li>)}</ul> : null}
               </Field>
             </>
           ) : (
@@ -149,7 +149,7 @@ export function ForgotPasswordForm({
                 aria-describedby={emailError ? "reset-email-error" : undefined}
                 aria-invalid={emailError ? true : undefined}
                 autoComplete="email"
-                className={cn("h-11", emailError && invalidInputClassName)}
+                className={cn(emailError && invalidInputClassName)}
                 onBlur={() => setBlurredEmailStep(step)}
                 onChange={(event) => { setBlurredEmailStep(null); onEmailChange(event.target.value); }}
                 placeholder={t("forgotPassword.emailPlaceholder")}
@@ -170,7 +170,7 @@ export function ForgotPasswordForm({
 
           <div className="mt-2 flex flex-col gap-3">
             <Button
-              className="h-11 w-full"
+              className="w-full"
               loading={isSubmitting}
               loadingLabel={
                 isVerifyStep
@@ -184,7 +184,7 @@ export function ForgotPasswordForm({
 
             {isVerifyStep ? (
               <Button
-                className="h-11 w-full"
+                className="w-full"
                 disabled={isSubmitting}
                 onClick={onBackToRequest}
                 type="button"
@@ -197,7 +197,7 @@ export function ForgotPasswordForm({
         </FieldGroup>
       </form>
 
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-center type-body-muted">
         <Link className="font-medium text-foreground underline-offset-4 hover:underline" href={loginPath}>
           {t("forgotPassword.backToLogin")}
         </Link>

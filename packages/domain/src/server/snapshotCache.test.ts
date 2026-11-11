@@ -213,6 +213,44 @@ describe("getCachedBusinessSnapshot", () => {
     expect(result?.displayName).toBe("Loaded");
     expect(loadMock).toHaveBeenCalledTimes(1);
   });
+
+  // The previous worker drains for up to 31 minutes after a deploy and keeps
+  // building snapshots without rule channels, in the database and the cache.
+  const { schemaVersion: _version, ...olderShape } = demoSnapshot;
+
+  it("rebuilds a snapshot older code left in the cache or the database before using it", async () => {
+    const cache = memoryCache();
+    await cache.set(businessId, { ...olderShape, displayName: "Old cache" });
+    loadMock.mockResolvedValueOnce({ ...olderShape, displayName: "Old row" }).mockResolvedValueOnce({ ...demoSnapshot, displayName: "Rebuilt" });
+    const result = await getCachedBusinessSnapshot(makeContext(cache), { businessId });
+    expect(result?.displayName).toBe("Rebuilt");
+    expect(refreshMock).toHaveBeenCalledOnce();
+  });
+
+  it("uses a current snapshot from the database without rebuilding it when the cache holds an old one", async () => {
+    const cache = memoryCache();
+    await cache.set(businessId, olderShape);
+    const result = await getCachedBusinessSnapshot(makeContext(cache), { businessId });
+    expect(result?.displayName).toBe("Loaded");
+    expect(refreshMock).not.toHaveBeenCalled();
+    await expect(cache.get(businessId)).resolves.toMatchObject({ displayName: "Loaded" });
+  });
+
+  it("keeps the old snapshot when the rebuild fails, so the call is still answered", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    loadMock.mockResolvedValue({ ...olderShape, displayName: "Old row" });
+    refreshMock.mockRejectedValue(new Error("database down"));
+    expect((await getCachedBusinessSnapshot(makeContext(null), { businessId }))?.displayName).toBe("Old row");
+    expect(error).toHaveBeenCalledOnce();
+    error.mockRestore();
+  });
+
+  it("doesn't project an old snapshot a caller hands in", async () => {
+    loadMock.mockResolvedValueOnce(olderShape).mockResolvedValueOnce({ ...demoSnapshot, greeting: "Rebuilt" });
+    const snapshot = await getBusinessSnapshotForAgent(makeContext(null), { businessId, loaded: { ...olderShape, greeting: "Old" } });
+    expect(snapshot?.greeting).toBe("Rebuilt");
+    expect(refreshMock).toHaveBeenCalledOnce();
+  });
 });
 
 describe("getBusinessSnapshotForAgent for a call already started", () => {

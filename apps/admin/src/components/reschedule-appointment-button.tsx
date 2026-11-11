@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
  * which also closes the request. `newStartsAt` is the business's wall-clock time as the agent saved it. A time that
  * is no longer bookable leaves the appointment and the request as they were. Hidden from roles that can't reschedule.
  */
-export function RescheduleAppointmentButton({ appointment, className, newStartsAt, size = "xs", variant = "default" }: { appointment: CancellableAppointment; className?: string; newStartsAt: string; size?: "xs" | "default"; variant?: "default" | "outline" }) {
+export function RescheduleAppointmentButton({ appointment, className, newStartsAt, size = "sm", variant = "default" }: { appointment: CancellableAppointment; className?: string; newStartsAt: string; size?: "sm" | "default"; variant?: "default" | "outline" }) {
   const { t, i18n } = useTranslation("common");
   const queryClient = useQueryClient();
   const { business } = useActiveBusiness();

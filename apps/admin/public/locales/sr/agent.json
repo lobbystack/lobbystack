@@ -10,6 +10,11 @@
       "description": "Pozdrav i podešavanja preusmeravanja za Vašeg agenta."
     },
     "knowledge": {
+      "selection": {"select": "Izaberi", "count_one": "Izabrano: {{count}}", "count_few": "Izabrano: {{count}}", "count_other": "Izabrano: {{count}}", "selectAll": "Izaberi sve", "selectRow": "Izaberi {{title}}", "cancel": "Otkaži"},
+      "batch": {"delete": "Obriši", "disable": "Isključi", "enable": "Uključi", "reimport": "Ponovo uvezi", "agentDisable": "Isključi za ovog agenta", "agentEnable": "Uključi", "deleteTitle_one": "Obrisati ovaj izvor?", "deleteTitle_few": "Obrisati {{count}} izvora?", "deleteTitle_other": "Obrisati {{count}} izvora?", "deleteDescription": "Ovo ne možete poništiti.", "done": {"delete_one": "Izvor je obrisan.", "delete_few": "Obrisano izvora: {{count}}.", "delete_other": "Obrisano izvora: {{count}}.", "disable_one": "Izvor je isključen.", "disable_few": "Isključeno izvora: {{count}}.", "disable_other": "Isključeno izvora: {{count}}.", "enable_one": "Izvor je uključen.", "enable_few": "Uključeno izvora: {{count}}.", "enable_other": "Uključeno izvora: {{count}}.", "reimport_one": "Ponovni uvoz je pokrenut.", "reimport_few": "Ponovni uvoz je pokrenut za sajtove: {{count}}.", "reimport_other": "Ponovni uvoz je pokrenut za sajtove: {{count}}."}},
+      "website": {"pages_one": "{{count}} stranica", "pages_few": "{{count}} stranice", "pages_other": "{{count}} stranica", "pagesOff_one": "{{count}} isključena", "pagesOff_few": "{{count}} isključene", "pagesOff_other": "{{count}} isključenih"},
+      "pagesDialog": {"title": "Sajt", "listLabel": "Stranice", "usePage": "Koristi {{title}}", "remove": "Ukloni {{title}}", "removeAddress": "Obrišite sajt da biste uklonili njegovu početnu adresu.", "removeConfirm": "Ukloni", "removeTitle": "Ukloniti {{title}}?", "removeDescription": "Ponovni uvoz može da je vrati.", "offForBusiness": "Isključena za sve agente"},
+      "agent": {"ownTitle": "Samo ovaj agent", "sharedTitle": "Deljeno sa svim agentima", "ownEmpty": "Za ovog agenta još ništa nije dodato.", "sharedEmpty": "Još nema deljenog znanja.", "manageShared": "Upravljaj deljenim znanjem", "toggleHeading": "Ovaj agent", "useSource": "Koristi {{title}} za ovog agenta"},
       "title": "Znanje",
       "description": "Informacije i smernice koje agent koristi da odgovara na pitanja.",
       "listTitle": "Baza znanja",
@@ -23,7 +28,7 @@
       "deleteWebsite": { "action": "Obriši sve", "title": "Obrisati sve stranice sa ovog sajta?", "description": "Ovo će trajno ukloniti sve stranice uvezene sa {{host}}.", "deleted": "Sve stranice sa {{host}} su obrisane." },
       "toast": { "added": "Znanje je dodato.", "updated": "Znanje je ažurirano.", "uploaded": "Dokument je otpremljen. Uskoro će biti spreman.", "deleted": "Znanje je obrisano.", "enabled": "Znanje je uključeno.", "disabled": "Znanje je isključeno." },
       "uploadDocument": "Otpremi dokument",
-      "websiteImport": {
+      "websiteImport": { "inShared": "Ovaj sajt je već u vašem deljenom znanju. Isključite ga za agente koji ne treba da ga koriste.", "inAgent": "Ovaj sajt je već u znanju agenta {{name}}.",
         "badge": "Sajt",
         "title": "Uvezi sajt",
         "description": "Učitajte javne stranice Vašeg sajta kako bi ih agent koristio kao znanje.",
@@ -217,7 +222,7 @@
       "editKnowledge": "Izmeni pravilo",
       "uploadDocument": "Otpremi dokument",
       "addKnowledgeDescription": "Šta agent treba da radi, na primer da preusmerava pozive, postavlja pitanja i šalje SMS poruke.",
-      "editKnowledgeDescription": "Izmenite uputstvo koje agent treba da prati tokom poziva i naknadnih koraka.",
+      "editKnowledgeDescription": "Šta agent treba da radi, na svim kanalima ili na jednom.",
       "uploadDocumentDescription": "Otpremite fajl kako bi ga agent koristio.",
       "documentBadge": "Dokument",
       "textBadge": "Tekst",
@@ -261,36 +266,42 @@
           "label": "Oznake",
           "placeholder": "Preusmeravanja, eskalacija",
           "hint": "Opciono. Ključne reči odvojene zarezima koje pomažu da se ova pravila razvrstaju."
+        },
+        "channel": {
+          "label": "Kanal",
+          "all": "Svi kanali",
+          "voice": "Pozivi",
+          "sms": "SMS poruke",
+          "web_chat": "Čet na sajtu",
+          "instagram": "Instagram"
         }
       }
     }
   },
   "table": {
-    "searchPlaceholder": "Pretraži unose",
     "title": "Naslov",
+    "channel": "Kanal",
     "preview": "Pregled",
     "status": "Status",
     "disabled": "Isključeno",
     "added": "Dodato",
-    "empty": "Nema unosa koji odgovaraju.",
     "documentPreviewHint": "Kliknite da pregledate ovaj dokument.",
     "documentPreviewUnavailable": "Pregled dokumenata je dostupan na stranici Znanje."
   },
   "pagination": {
     "rowsPerPage": "Redova po stranici",
-    "pageOf": "Stranica {{page}} od {{total}}",
+    "viewing": "Redovi {{start}}-{{end}} od {{total}}",
+    "viewingAll_one": "Prikazan {{count}} red",
+    "viewingAll_few": "Prikazana sva {{count}} reda",
+    "viewingAll_other": "Prikazano svih {{count}} redova",
     "firstPage": "Prva stranica",
     "previousPage": "Prethodna stranica",
     "nextPage": "Sledeća stranica",
-    "lastPage": "Poslednja stranica",
-    "goToPage": "Idi na stranicu {{page}}"
+    "lastPage": "Poslednja stranica"
   },
   "fields": {
     "defaults": {
       "title": "Podrazumevano"
-    },
-    "instructions": {
-      "title": "Uputstva"
     },
     "summary": {
       "label": "Opis firme",
@@ -312,6 +323,10 @@
     },
     "smsInstructions": {
       "label": "Uputstva za SMS"
+    },
+    "name": {
+      "label": "Ime",
+      "hint": "Vidi ga samo vaš tim."
     },
     "greeting": {
       "label": "Pozdrav",
@@ -390,12 +405,22 @@
       }
     }
   },
+  "identity": { "title": "Ime, pozdrav i glas" },
+  "transfers": { "title": "Prebacivanja" },
+  "businessDetails": { "title": "Podaci o poslovanju" },
   "staffFirst": {
     "title": "Osoblje se javlja prvo",
     "save": "Sačuvaj podešavanje za osoblje",
+    "setUp": "Podesi",
+    "state": "{{mode}} · {{number}}",
     "mode": {
       "label": "Prvo pozovi tim",
       "hint": "Vaš telefon zvoni prvi. Pritisnite 1 da preuzmete poziv. Ako to ne uradite, javlja se agent.",
+      "when": "Kada",
+      "effect": {
+        "never": "Vaš agent se javlja na sve pozive.",
+        "business_hours": "Tokom radnog vremena Vaš telefon zvoni prvi. Ako ne preuzmete poziv, ili van radnog vremena, javlja se agent."
+      },
       "options": {
         "never": "Isključeno",
         "business_hours": "Tokom radnog vremena",
@@ -432,9 +457,9 @@
     }
   },
   "booking": {
-    "title": "Zakazivanje",
+    "title": "Termini",
     "mode": {
-      "label": "Termini",
+      "label": "Zakazivanje",
       "options": {
         "instant": "Zakazuje termine",
         "request": "Prima zahteve",
@@ -448,13 +473,12 @@
     }
   },
   "appointmentChanges": {
-    "title": "Izmene termina",
     "allowCancel": {
-      "label": "Dozvoli AI otkazivanje",
+      "label": "Otkazivanje",
       "hint": "Agent može da otkaže potvrđen budući termin."
     },
     "allowReschedule": {
-      "label": "Dozvoli AI pomeranje",
+      "label": "Pomeranje",
       "hint": "Agent može da pomeri potvrđen budući termin nakon provere slobodnih termina."
     },
     "verification": {

@@ -5,6 +5,7 @@ import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, ne, notInArray, or, 
 import { businesses, calls, enqueueOutbox, knowledgeDocuments, storageObjects, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { getKnowledgeStorageLimitBytes, KNOWLEDGE_UPLOAD_MAX_BYTES } from "@lobbystack/shared";
 import { getKnowledgeStorageUsageBytes, KnowledgeStorageLimitError } from "./knowledge";
+import { requireActiveAgentInTransaction } from "./agents";
 import { isAllowedUploadContentType } from "@lobbystack/contracts";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
@@ -91,7 +92,7 @@ export async function pendingUploadTarget(
 
 export async function finalizeUpload(
   context: DomainContext,
-  input: { userId: string; businessId: string; objectId: string; length: number; contentType: string; title?: string | undefined; tags?: string[] | undefined; checksum?: string | undefined },
+  input: { userId: string; businessId: string; objectId: string; length: number; contentType: string; title?: string | undefined; tags?: string[] | undefined; checksum?: string | undefined; agentId?: string | undefined },
   storage: StorageProvider,
 ): Promise<void> {
   const object = await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
@@ -110,7 +111,8 @@ export async function finalizeUpload(
   }
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    await completeUploadInTransaction(tx, { businessId: input.businessId, objectId: input.objectId, purpose: object.purpose, fileName: object.fileName, metadata, title: input.title, tags: input.tags });
+    if (input.agentId && object.purpose === "knowledge") await requireActiveAgentInTransaction(tx, input.businessId, input.agentId);
+    await completeUploadInTransaction(tx, { businessId: input.businessId, objectId: input.objectId, purpose: object.purpose, fileName: object.fileName, metadata, title: input.title, tags: input.tags, ...(object.purpose === "knowledge" && input.agentId ? { agentId: input.agentId } : {}) });
   });
 }
 
@@ -123,7 +125,7 @@ export async function finalizeUpload(
  */
 export async function completeUploadInTransaction(
   tx: DatabaseTransaction,
-  input: { businessId: string; objectId: string; purpose: string; fileName: string; metadata: { length: number; contentType: string; checksum?: string | undefined }; title?: string | undefined; tags?: string[] | undefined },
+  input: { businessId: string; objectId: string; purpose: string; fileName: string; metadata: { length: number; contentType: string; checksum?: string | undefined }; title?: string | undefined; tags?: string[] | undefined; agentId?: string | undefined },
 ): Promise<string | null> {
   const { metadata } = input;
   if (input.purpose === "knowledge") {
@@ -146,6 +148,7 @@ export async function completeUploadInTransaction(
       mimeType: metadata.contentType,
       status: "pending",
       processingProgress: 0,
+      agentId: input.agentId ?? null,
     }).returning({ id: knowledgeDocuments.id });
     if (!document) {
       throw new Error("Knowledge document could not be created for the uploaded object.");

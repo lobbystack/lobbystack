@@ -1,6 +1,6 @@
 ---
 title: "Suivre votre espace de travail depuis l'Accueil"
-description: "Consultez les appels, messages et rendez-vous du mois, les suivis qui attendent encore une personne et vos prochaines réservations depuis la page Accueil de LobbyStack."
+description: "Consultez ce que votre agent a réservé et fait gagner sur les 30 derniers jours, les suivis qui attendent encore une personne et vos prochaines réservations depuis la page Accueil de LobbyStack."
 sidebarTitle: "Accueil"
 contentType: "How-to"
 ---
@@ -15,6 +15,20 @@ _Ouvrez l'Accueil en début de quart pour voir ce qui demande votre attention av
 
 L'Accueil commence par **Premiers pas**, une liste d'étapes de configuration. Il passe à la vue quotidienne ci-dessous après la première vraie conversation de votre agent avec un client, et il y reste. Les appels test et les appels des téléphones vérifiés de votre équipe ne comptent pas. Cliquez sur **Ignorer la configuration** pour passer plus tôt à la vue quotidienne. Les propriétaires et les administrateurs voient la liste, et les autres rôles voient la vue quotidienne dès le début.
 
+Si votre espace de travail a un numéro de téléphone, ou en a eu un pendant un essai gratuit, vous voyez ces étapes dans cet ordre :
+
+| Étape | Ce que vous faites |
+| --- | --- |
+| **Lire le reste de votre site** | Faites lire à votre agent les pages qu'il n'a pas lues pendant la configuration. |
+| **Appelez votre numéro** | Appelez votre numéro LobbyStack et posez la question que vos appelants posent le plus. L'étape se termine après le premier appel répondu sur ce numéro. |
+| **Gardez votre numéro existant** | Cliquez sur **Configurer le transfert** pour renvoyer les appels du numéro que vos clients connaissent. Consultez [Configurer le renvoi d'appel](#configurer-le-renvoi-dappel). |
+| **Ajoutez vos heures d'ouverture** | Indiquez les heures pendant lesquelles votre agent réserve. Cette étape apparaît seulement si votre agent réserve des rendez-vous et que vous n'avez pas enregistré d'heures. |
+| **Ajoutez d'autres sources** | Téléversez vos politiques, FAQ ou tarifs. |
+
+Si votre essai gratuit s'est terminé sans forfait, les étapes d'appel et de renvoi affichent **Votre essai gratuit est terminé. Choisissez un forfait pour récupérer votre numéro.** Cliquez sur **Choisir un forfait** pour vous abonner.
+
+Un espace de travail qui n'a jamais eu de numéro, par exemple dans un pays sans numéros, et un espace de travail géré par un partenaire voient ces étapes :
+
 | Étape | Ce que vous faites |
 | --- | --- |
 | **Lire le reste de votre site** | Faites lire à votre agent les pages qu'il n'a pas lues pendant la configuration. |
@@ -27,9 +41,9 @@ L'Accueil commence par **Premiers pas**, une liste d'étapes de configuration. I
 | Section | À quoi elle sert |
 | --- | --- |
 | **Carte de configuration** | Votre prochaine étape de configuration pendant vos débuts, comme un appel test dans le navigateur, un numéro d'essai gratuit ou le renvoi d'appel. |
-| **Indicateurs clés** | Le nombre d'appels, de messages, de rendez-vous et de contacts du mois. |
-| **Action requise** | Les tâches de suivi qui attendent encore une réponse humaine, comme les rappels ou les demandes de prise en charge par un humain, et un lien vers les questions auxquelles votre agent n'a pas su répondre. |
-| **À venir** | Les prochains rendez-vous réservés dans le calendrier. |
+| **Carte téléphone et résultats** | Votre numéro et vos 30 derniers jours, au-dessus d'**Action requise**. Le titre au-dessus de la carte indique **Prêt pour votre premier appel** jusqu'à ce que quelqu'un appelle votre numéro, puis **Votre agent prend les appels**. Une étiquette indique qui décroche en premier, comme **Votre agent répond en premier**. Cliquez dessus pour modifier [Le personnel répond d'abord](/fr/agent/calls-and-booking) sans quitter l'Accueil. Cliquez sur **Appel test** pour appeler votre agent depuis votre navigateur. Avec plusieurs numéros, chaque ligne nomme son agent et a son propre **Appel test**. Sous le numéro, **Valeur réservée**, **Temps gagné** et **Appels sans transfert** montrent ce que votre agent a réservé, le temps de conversation qu'il a pris en charge et la part des appels qu'il a terminés sans transfert. Sans numéro, la carte n'affiche que ces trois chiffres. |
+| **Action requise** | Les tâches de suivi qui attendent encore une réponse humaine, comme les rappels, les demandes de prise en charge par un humain, les annulations et les reports, chacune avec son type, et un lien vers les questions auxquelles votre agent n'a pas su répondre. Cliquez sur une ligne pour l'ouvrir. |
+| **À venir** | Les prochains rendez-vous réservés dans le calendrier. Cliquez sur un rendez-vous pour ouvrir ses détails, avec **Annuler** et **Déplacer**. |
 | **Appels par mois** | Un graphique du volume d'appels mensuel, établi à partir des appels enregistrés. |
 | **Appels récents** | Les derniers appels entrants, avec l'appelant, l'heure et le résultat. |
 
@@ -37,26 +51,48 @@ L'Accueil commence par **Premiers pas**, une liste d'étapes de configuration. I
 
 <Steps>
   <Step title="Ouvrez l'Accueil">
-    Dans la barre latérale du tableau de bord, allez dans **Général** > **Accueil**.
+    Cliquez sur **Accueil** dans la barre latérale du tableau de bord.
   </Step>
   <Step title="Consultez Action requise">
     Passez en revue les rappels, les demandes de prise en charge par un humain et les autres éléments de suivi.
   </Step>
-  <Step title="Ouvrez l'appel associé">
-    Sélectionnez l'élément ou ouvrez l'appel associé depuis **Appels** pour consulter la transcription, l'enregistrement et les détails.
+  <Step title="Ouvrez l'élément">
+    Cliquez sur la ligne. Le suivi d'un appel ouvre l'appel dans la **Boîte de réception**, et une prise en charge ouvre sa conversation.
   </Step>
   <Step title="Terminez la tâche">
-    Une fois que votre équipe a fait le suivi, marquez la tâche comme terminée depuis la page de détail de l'appel.
+    Dans l'onglet **Détails** de l'appel, cliquez sur **Marquer comme fait** une fois que votre équipe a fait le suivi. Vous y approuvez aussi les demandes d'annulation ou de report.
   </Step>
 </Steps>
 
+## Voir ce que votre agent a réservé et fait gagner
+
+Les trois chiffres en bas de la carte téléphone et résultats couvrent les 30 derniers jours.
+
+| Chiffre | Comment LobbyStack le calcule |
+| --- | --- |
+| **Valeur réservée** | Le prix de chaque rendez-vous que votre agent a pris par appel, SMS ou chat pendant ces 30 jours, après la remise éventuelle du service. Un prix fixe compte en entier, un prix « à partir de » pour son minimum et une fourchette pour son bas. |
+| **Temps gagné** | Le temps de conversation des appels traités par votre agent, en heures et en minutes. |
+| **Appels sans transfert** | La part de ces appels qui se sont terminés sans que votre agent transfère l'appelant à votre équipe. |
+
+La valeur réservée exclut :
+
+- Les rendez-vous annulés
+- Les rendez-vous que votre équipe a pris dans le tableau de bord ou par l'API
+- Les services dont le prix est fixé sur place ou qui n'ont pas de prix
+
+LobbyStack utilise le prix actuel de chaque service : si vous changez un prix, l'estimation change aussi pour les dates passées. Le montant s'affiche dans la devise de votre entreprise.
+
+Le temps gagné et la part sans transfert excluent les appels indésirables et les appels de moins de 10 secondes, soit les appels que votre forfait ne facture pas. Les chats du site web ne comptent pas dans le temps gagné, car ils n'ont pas de temps de conversation.
+
 ## Répondre aux questions que votre agent n'a pas su traiter
 
-Quand votre agent a des questions ouvertes, les propriétaires et les administrateurs voient un lien sous **Action requise**, par exemple **3 questions auxquelles votre agent n'a pas su répondre**. Cliquez dessus pour aller à [**Questions sans réponse**](/fr/agent/knowledge#répondre-aux-questions-sans-réponse) dans la page Connaissances. Le lien compte pour un élément dans le total d'**Action requise**.
+Quand votre agent a des questions ouvertes, les propriétaires et les administrateurs voient un lien sous **Action requise**, par exemple **3 questions auxquelles votre agent n'a pas su répondre**. Cliquez dessus pour aller à [**Questions sans réponse**](/fr/settings/knowledge#répondre-aux-questions-sans-réponse) dans la page Connaissances. Le lien compte pour un élément dans le total d'**Action requise**.
 
 ## Configurer le renvoi d'appel
 
-Avant votre première vraie conversation, ouvrez **Transférez vos appels** dans **Premiers pas**, sur l'**Accueil**. Ensuite, la carte de configuration de l'**Accueil** vous propose d'envoyer vos appels manqués vers votre numéro d'essai, et **Configurer le renvoi** ouvre les mêmes étapes. Choisissez **Appels manqués** ou **Tous les appels**, puis votre fournisseur. LobbyStack affiche les codes ou les réglages de ce fournisseur avec votre numéro déjà inscrit. Les mêmes étapes se trouvent dans le [guide du renvoi d'appel](/fr/getting-started/forward-calls).
+Avant votre première vraie conversation, cliquez sur **Configurer le transfert** sous **Gardez votre numéro existant**, dans **Premiers pas** sur l'**Accueil**. Ensuite, la carte de configuration de l'**Accueil** vous propose d'envoyer vos appels manqués vers votre numéro d'essai, et **Configurer le renvoi** ouvre les mêmes étapes. Choisissez **Appels manqués** ou **Tous les appels**, puis votre fournisseur. LobbyStack affiche les codes ou les réglages de ce fournisseur avec votre numéro déjà inscrit. Les mêmes étapes se trouvent dans le [guide du renvoi d'appel](/fr/getting-started/forward-calls).
+
+L'étape se termine quand LobbyStack détecte le premier appel renvoyé, et elle affiche la ligne d'où vient l'appel, par exemple **Transfert depuis le +1 …**. Si votre fournisseur masque cette ligne, cliquez sur **Ça fonctionne** après votre appel test.
 
 ## Utiliser l'Accueil en début de quart
 

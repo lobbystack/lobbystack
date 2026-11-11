@@ -4,34 +4,283 @@
     "appointments": "Appointments",
     "newCount_one": "{{count}} new booking",
     "newCount_other": "{{count}} new bookings",
-    "calls": "Calls",
-    "messages": "Messages",
-    "agent": "Agent",
     "contacts": "Contacts",
     "analytics": "Analytics",
     "affiliate": "Affiliate Program",
-    "settings": "Settings"
+    "settings": "Settings",
+    "inbox": "Inbox",
+    "agents": "Agents",
+    "business": "Business"
   },
   "search": {
-    "placeholder": "Search workspace..."
+    "placeholder": "Search pages, settings, agents and contacts",
+    "button": "Search",
+    "title": "Search",
+    "description": "Find pages, settings, agents, contacts and conversations.",
+    "empty": "No results for “{{query}}”",
+    "loading": "Searching",
+    "instagram": "Instagram",
+    "groups": {
+      "pages": "Pages",
+      "agents": "Agents",
+      "knowledge": "Knowledge",
+      "services": "Services",
+      "employees": "Employees",
+      "rules": "Rules",
+      "contacts": "Contacts",
+      "conversations": "Conversations"
+    },
+    "keys": {
+      "select": "Select",
+      "open": "Open",
+      "close": "Close"
+    },
+    "where": {
+      "main": "Main menu"
+    },
+    "detail": {
+      "conversation": "{{channel}}, {{date}}"
+    },
+    "synonyms": {
+      "billing": "invoice, invoices, receipt, payment, pay, card, subscription, upgrade, pricing, plan, cancel",
+      "usage": "minutes, allowance, limit, quota, chats",
+      "security": "password, 2fa, login, email, sign in, profile",
+      "phone": "forwarding, forward, carrier, number, line, sip, call, calls",
+      "voice": "accent, sound, tone, greeting, hello, intro, welcome, name",
+      "rules": "rule, rules, escalate, handoff, instruction, instructions, prompt, script, behaviour, behavior",
+      "handling": "transfer, transfers, staff first, booking, appointments, appointment changes, cancellations, rescheduling, cancel, reschedule, transfer number, staff answers first",
+      "business": "hours, opening, closed, holiday, timezone, language, currency",
+      "knowledge": "faq, answer, answers, website, document, pdf, teach",
+      "services": "price, prices, treatment, menu",
+      "employees": "staff, dentist, provider, people, transfer",
+      "team": "teammate, colleague, invite, member, members, user, role, permission, owner",
+      "appearance": "dark, light, theme, language, format",
+      "notifications": "alert, alerts, sms, digest, email",
+      "widget": "chat, chatbot, bubble, embed, snippet, website",
+      "instagram": "dm, dms, ig, meta, social",
+      "connections": "google, outlook, calendar, crm, zapier, webhook, integration, integrations, sync, connections, connections",
+      "keys": "token, key, mcp, api, developer",
+      "inbox": "message, messages, transcript, recording, conversation, voicemail, history, call, calls, chat",
+      "contacts": "customer, client, patient, caller, lead",
+      "appointments": "appointment, schedule, visit, booking, calendar",
+      "analytics": "report, stats, metrics, performance",
+      "affiliate": "referral, commission",
+      "agents": "agent, bot, ai, receptionist, assistant, new"
+    }
   },
   "sidebar": {
     "businessSlugFallback": "Workspace console",
-    "general": "General",
-    "agent": "Agent",
-    "other": "Manage",
     "workspace": "Workspace",
     "openSettings": "Open settings",
     "signedIn": "Signed in",
     "workspaceReady": "Workspace ready",
     "upgradeToPro": "Upgrade to Pro",
     "account": "Account",
+    "accountSettings": "Account settings",
     "partnerConsole": "Partner console",
     "toggleTheme": "Toggle theme",
     "support": "Support",
     "terms": "Terms of service",
     "privacy": "Privacy policy",
     "signOut": "Sign out",
-    "createBusiness": "Create workspace"
+    "createBusiness": "Create workspace",
+    "yourAccount": "Your account"
+  },
+  "agentPages": {
+    "general": "General",
+    "rules": "Rules",
+    "knowledge": "Specific knowledge",
+    "channels": "Channels",
+    "phone": "Phone number",
+    "widget": "Website widget"
+  },
+  "businessPages": {
+    "details": "Details"
+  },
+  "settingsPages": {
+    "profile": "Profile and security",
+    "appearance": "Language and theme",
+    "notifications": "Notifications",
+    "business": "Business details",
+    "knowledge": "Knowledge",
+    "services": "Services",
+    "employees": "Employees",
+    "team": "Team",
+    "usage": "Usage",
+    "billing": "Plan and billing",
+    "subscription": "Billing",
+    "connections": "Integrations",
+    "webhooks": "Webhooks",
+    "apiKeys": "API keys",
+    "partnerAccess": "Partner access"
+  },
+  "accountMenu": "Account menu",
+  "agentMenu": {
+    "conversations": "Conversations",
+    "noChannels": "No channels yet"
+  },
+  "agents": {
+    "title": "Agents",
+    "add": "Add agent",
+    "addTitle": "Add an agent",
+    "addDescription": "It starts with {{name}}'s settings and rules, without its channels.",
+    "nameLabel": "Name",
+    "namePlaceholder": "Weekend line",
+    "cancel": "Cancel",
+    "added": "{{name}} added",
+    "addFailed": "We couldn't add the agent.",
+    "default": "Default",
+    "paused": "Paused",
+    "pausedTitle": "This agent is paused",
+    "pausedDescription": "Your plan includes one agent, so {{name}} answers on this agent's channels.",
+    "upgrade": "Upgrade",
+    "channelCounts": {
+      "phone_one": "{{count}} number",
+      "phone_other": "{{count}} numbers",
+      "widget_one": "{{count}} widget",
+      "widget_other": "{{count}} widgets",
+      "instagram": "Instagram"
+    },
+    "moreActions": "More actions for {{name}}",
+    "makeDefault": "Make default",
+    "madeDefault": "{{name}} is now the default agent",
+    "makeDefaultFailed": "We couldn't change the default agent.",
+    "remove": "Remove agent",
+    "removeDefaultHint": "Make another agent the default first",
+    "removeTitle": "Remove {{name}}?",
+    "removeDescription": "Its channels and open conversations move to {{name}}.",
+    "removeDescriptionPick": "Its channels and open conversations move to the agent you pick.",
+    "removeKnowledge": "Its own knowledge will be deleted.",
+    "moveTo": "Move to",
+    "removed": "{{name}} removed",
+    "removeFailed": "We couldn't remove the agent."
+  },
+  "channels": {
+    "moveTo": "Move to",
+    "moveToLabel": "Move {{channel}} to",
+    "moveHere": "Move here",
+    "fromAgent": "On {{name}}",
+    "manage": "Manage",
+    "noNumber": "No number yet",
+    "getNumber": "Get a number",
+    "noWidget": "No widget yet",
+    "addToWebsite": "Add to my website",
+    "paused": "Paused",
+    "noInstagram": "No Instagram account yet",
+    "connectInstagram": "Connect Instagram",
+    "answersAs": "Answers as {{name}}",
+    "disconnect": "Disconnect",
+    "disconnectTitle": "Disconnect {{channel}}?",
+    "disconnectInstagramDescription": "{{name}} stops answering direct messages to {{channel}}.",
+    "disconnected": "{{channel}} disconnected",
+    "disconnectFailed": "We couldn't disconnect it.",
+    "move": "Move",
+    "moveTitle": "Move {{channel}} to {{name}}?",
+    "moveDescription": "Its open conversations move too, and {{name}} answers from now on.",
+    "moved": "{{channel}} moved to {{name}}",
+    "moveFailed": "We couldn't move it."
+  },
+  "mobileNav": {
+    "label": "Main menu",
+    "menu": "Menu",
+    "allAgents": "All agents",
+    "tabs": {
+      "home": "Home",
+      "inbox": "Inbox",
+      "appointments": "Bookings",
+      "contacts": "Contacts"
+    }
+  },
+  "notifications": {
+    "bell": "Notifications",
+    "bellUnread_one": "Notifications, {{count}} unread",
+    "bellUnread_other": "Notifications, {{count}} unread",
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "empty": "No notifications",
+    "unread": "Unread",
+    "loading": "Loading notifications",
+    "providers": {
+      "google": "Google Calendar",
+      "calcom": "Cal.com",
+      "calendly": "Calendly",
+      "other": "Your calendar"
+    },
+    "kinds": {
+      "trial_ending": {
+        "title_one": "Your free trial ends tomorrow",
+        "title_other": "Your free trial ends in {{count}} days",
+        "line": "Choose a plan to keep your number."
+      },
+      "trial_ended": {
+        "title": "Your free trial ended",
+        "line": "Calls now ring your phone. Choose a plan to keep your number."
+      },
+      "trial_minutes_used_up": {
+        "title": "Your trial minutes are used up",
+        "line": "Calls now ring your phone. Choose a plan so your agent answers again."
+      },
+      "number_released": {
+        "title": "We released {{number}}",
+        "line": "Choose a plan to get a new number.",
+        "lineTrial": "Your trial ended without a plan. Choose one to get a new number."
+      },
+      "payment_failed": {
+        "title": "Your payment failed",
+        "line": "Update your card to keep your plan."
+      },
+      "plan_canceled": {
+        "title": "Your plan ends on {{date}}",
+        "line": "We release your number 30 days later unless you choose a plan."
+      },
+      "minutes_80": {
+        "title": "You've used 80% of your minutes",
+        "line": "{{used}} of {{included}} minutes this month."
+      },
+      "minutes_100": {
+        "title": "You've used all your minutes",
+        "line": "{{used}} of {{included}} minutes this month."
+      },
+      "number_purchase_failed": {
+        "title": "We couldn't buy {{number}}",
+        "titleNoNumber": "We couldn't buy your number",
+        "line": "Pick a number to try again.",
+        "lineUnavailable": "Someone else took it. Pick another number."
+      },
+      "number_release_soon": {
+        "title": "We release {{number}} on {{date}}",
+        "line": "Choose a plan to keep it."
+      },
+      "calendar_sync_failing": {
+        "title": "{{provider}} isn't syncing",
+        "line": "Reconnect it so your agent offers open times."
+      },
+      "instagram_reconnect": {
+        "title": "Reconnect Instagram",
+        "line": "@{{username}} stopped accepting your agent's replies.",
+        "lineNoUsername": "Instagram stopped accepting your agent's replies."
+      },
+      "webhook_failing": {
+        "title": "We turned off a webhook",
+        "line": "Every delivery to {{host}} failed for a day."
+      },
+      "website_import_failed": {
+        "title": "We couldn't import {{site}}",
+        "line": "Check the address and import it again."
+      },
+      "website_import_finished": {
+        "title": "Website import finished",
+        "line_one": "Read {{count}} page of {{site}}.",
+        "line_other": "Read {{count}} pages of {{site}}."
+      },
+      "forwarding_detected": {
+        "title": "Call forwarding works",
+        "line": "Calls to {{from}} now reach your agent."
+      },
+      "invite_accepted": {
+        "title": "{{email}} joined your team",
+        "line": "They accepted your invite."
+      }
+    }
   }
 }

@@ -6,11 +6,22 @@ import { calls } from "@lobbystack/db";
 
 import {
   analyticsBookedValueMinor, analyticsBucketExpression, analyticsBucketStarts, analyticsCallChannel, analyticsMessageChannel, analyticsPercent,
-  isAnalyticsHandledCall, summarizeAnalyticsBookedValue, summarizeAnalyticsHandledCalls,
+  isAnalyticsHandledCall, summarizeAnalyticsAgents, summarizeAnalyticsBookedValue, summarizeAnalyticsHandledCalls,
   type AnalyticsBookingGroup, type AnalyticsCallGroup,
 } from "./analytics";
 
 const dialect = new PgDialect();
+
+describe("analytics per agent", () => {
+  it("lists every active agent, adds archived ones with activity, and reads counts PostgreSQL returns as text", () => {
+    const active = [{ id: "front", name: "Front desk" }, { id: "evening", name: "Evening" }];
+    expect(summarizeAnalyticsAgents(active, [{ agentId: "front", name: "Front desk", archived: false, total: "3" }, { agentId: "old", name: "Weekend", archived: true, total: 2 }], [{ agentId: "evening", name: "Evening", archived: false, total: "4" }])).toEqual([
+      { id: "front", name: "Front desk", archived: false, calls: 3, chats: 0 },
+      { id: "evening", name: "Evening", archived: false, calls: 0, chats: 4 },
+      { id: "old", name: "Weekend", archived: true, calls: 2, chats: 0 },
+    ]);
+  });
+});
 
 describe("analytics SQL", () => {
   it("uses the same allowlisted date_trunc expression for select, grouping, and ordering", () => {
@@ -18,8 +29,35 @@ describe("analytics SQL", () => {
     const query = dialect.sqlToQuery(sql`select ${bucket} from ${calls} group by ${bucket} order by ${bucket}`);
 
     expect(query.sql.match(/date_trunc\('week'/g)).toHaveLength(3);
-    expect(query.sql.match(/\+ interval '1 day'\) - interval '1 day'/g)).toHaveLength(3);
-    expect(query.params).toEqual([]);
+    expect(query.sql.match(/\+ interval '1 day'\) - interval '1 day'\) at time zone \$/g)).toHaveLength(3);
+    expect(query.params).toEqual(["UTC", "UTC", "UTC", "UTC", "UTC", "UTC"]);
+  });
+
+  it("truncates on the business's wall clock and passes its zone as a parameter", () => {
+    const query = dialect.sqlToQuery(sql`select ${analyticsBucketExpression(calls.startedAt, "day", "America/Toronto")}`);
+    expect(query.sql).toContain("date_trunc('day', (\"calls\".\"started_at\" at time zone $1)) at time zone $2");
+    expect(query.params).toEqual(["America/Toronto", "America/Toronto"]);
+  });
+
+  it("starts daily buckets at the business's midnight, through a clock change", () => {
+    // Toronto falls back on November 1, 2026: midnight moves from 04:00 to 05:00 UTC.
+    expect(analyticsBucketStarts(new Date("2026-10-31T04:00:00.000Z"), new Date("2026-11-03T05:00:00.000Z"), "day", "America/Toronto")).toEqual([
+      "2026-10-31T04:00:00.000Z",
+      "2026-11-01T04:00:00.000Z",
+      "2026-11-02T05:00:00.000Z",
+    ]);
+  });
+
+  it("puts this evening in Toronto in today's bucket, not tomorrow's", () => {
+    const buckets = analyticsBucketStarts(new Date("2026-11-10T05:00:00.000Z"), new Date("2026-11-11T05:00:00.000Z"), "day", "America/Toronto");
+    expect(buckets).toEqual(["2026-11-10T05:00:00.000Z"]);
+  });
+
+  it("starts weekly buckets on Sunday at the business's midnight", () => {
+    expect(analyticsBucketStarts(new Date("2026-11-11T01:30:00.000Z"), new Date("2026-11-20T05:00:00.000Z"), "week", "America/Toronto")).toEqual([
+      "2026-11-08T05:00:00.000Z",
+      "2026-11-15T05:00:00.000Z",
+    ]);
   });
 
   it("fills empty weekly series from Sunday through the selected range", () => {

@@ -1,6 +1,13 @@
 import { readFileSync } from "node:fs";
 import type { NextConfig } from "next";
+import { createRequire } from "node:module";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+// The matcher Next itself uses for redirects, which ships without types.
+const { compile, match } = createRequire(import.meta.url)("next/dist/compiled/path-to-regexp") as {
+  match: (pattern: string) => (path: string) => false | { params: Record<string, string> };
+  compile: (pattern: string) => (params: Record<string, string>) => string;
+};
 
 const withPostHogConfig = vi.hoisted(() => vi.fn((config: NextConfig, options: unknown) => ({ config, options })));
 vi.mock("@posthog/nextjs-config", () => ({ withPostHogConfig }));
@@ -110,18 +117,58 @@ describe("development hosts", () => {
 });
 
 describe("moved routes", () => {
-  it("sends the old widget settings address to the widget page", async () => {
-    const config = await loadConfig({}) as NextConfig;
-    expect(await config.redirects?.()).toContainEqual({ source: "/settings/widget", destination: "/widget", permanent: true });
+  // Where a request for `path` lands, matching the redirects in order as Next does, or null when none matches.
+  async function landing(path: string): Promise<{ destination: string; permanent: boolean } | null> {
+    const redirects = (await (await loadConfig({}) as NextConfig).redirects?.()) ?? [];
+    for (const redirect of redirects) {
+      const found = match(redirect.source)(path);
+      if (!found) continue;
+      // Next fills parameters in the destination's query too.
+      const [pathname, query] = redirect.destination.split("?") as [string, string | undefined];
+      const params = found.params as Record<string, string>;
+      const destination = compile(pathname)(params) + (query ? `?${query.replace(/:(\w+)/g, (_, name: string) => params[name] ?? "")}` : "");
+      return { destination, permanent: Boolean(redirect.permanent) };
+    }
+    return null;
+  }
+
+  it.each([
+    ["/calls", "/inbox?channel=phone_call"],
+    ["/calls/call-1", "/inbox?call=call-1"],
+    ["/messages", "/inbox"],
+    ["/agent", "/agents/primary"],
+    ["/agent/basic-settings", "/agents/primary"],
+    ["/agent/rules", "/agents/primary/rules"],
+    ["/agents/agent-1/instructions", "/agents/agent-1/rules"],
+    ["/agents/primary/instructions", "/agents/primary/rules"],
+    ["/agent/integrations", "/agents/primary/channels"],
+    ["/agent/knowledge", "/business/knowledge"],
+    ["/agent/services", "/business/services"],
+    ["/agent/employees", "/business/employees"],
+    ["/integrations", "/business/integrations"],
+    ["/integrations/webhooks", "/workspace/webhooks"],
+    ["/widget", "/agents/primary/channels/widget"],
+    ["/settings/widget", "/agents/primary/channels/widget"],
+    ["/settings/phone-number", "/agents/primary/channels/phone"],
+    ["/settings/account", "/account"],
+    ["/settings/appearance", "/account/appearance"],
+    ["/settings/notifications", "/account/notifications"],
+    ["/settings/plan", "/workspace/billing"],
+    ["/settings/team", "/workspace/team"],
+    ["/settings/usage", "/workspace/usage"],
+    ["/settings/subscription", "/workspace/subscription"],
+    ["/settings/partner-access", "/workspace/partner-access"],
+    ["/settings/api-keys", "/workspace/api-keys"],
+    ["/settings/connected-apps", "/workspace/api-keys"],
+  ])("sends %s to %s for now, since emails keep linking the old path", async (path, destination) => {
+    expect(await landing(path)).toEqual({ destination, permanent: false });
+  });
+
+  it("leaves Settings itself and the new pages alone", async () => {
+    for (const path of ["/settings", "/workspace", "/agents/primary", "/account", "/inbox", "/calls/call-1/extra", "/agent/unknown", "/settings/unknown"]) expect(await landing(path), path).toBeNull();
   });
 
   it("sends the partner console's old Stripe page to Payments", async () => {
-    const config = await loadConfig({}) as NextConfig;
-    expect(await config.redirects?.()).toContainEqual({ source: "/partner/:partnerId/stripe", destination: "/partner/:partnerId/payments", permanent: true });
-  });
-
-  it("sends the old Connected apps tab to API keys, where MCP connections are now", async () => {
-    const config = await loadConfig({}) as NextConfig;
-    expect(await config.redirects?.()).toContainEqual({ source: "/settings/connected-apps", destination: "/settings/api-keys", permanent: true });
+    expect(await landing("/partner/partner-1/stripe")).toEqual({ destination: "/partner/partner-1/payments", permanent: true });
   });
 });

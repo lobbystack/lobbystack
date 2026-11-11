@@ -23,12 +23,10 @@ type NumberCountries = { countries: string[]; trialCountries: string[]; suggeste
 type CheckResult = { approved: boolean; status: string; remainingAttempts?: number };
 
 /**
- * The "verify you're real" step. The owner's mobile and the country they pick
- * for it decide where their number comes from. In a country without numbers
- * they can join the waitlist and carry on without one. A partner's business
- * gets its numbers from its partner, so verifying leads to Meet your agent, or
- * finishes onboarding at the activity level, and the host offers no waitlist
- * there.
+ * The phone step, which only a partner's owner has: the partner's calls
+ * forward to this mobile. Verifying leads to Meet your agent, or finishes
+ * onboarding at the activity level. In a country where we can't verify
+ * phones, the owner finishes without one.
  */
 export function OnboardingVerifyPhoneSurface() {
   const { i18n, t } = useTranslation("onboarding");
@@ -36,12 +34,7 @@ export function OnboardingVerifyPhoneSurface() {
   const telemetry = useTelemetry();
   const queryClient = useQueryClient();
   const { business } = useActiveBusiness();
-  const partnerBusiness = Boolean(business?.partnerAccessLevel);
-  // Where the owner goes once the phone is done: the number step, or for a partner's business, its next step.
-  const partnerNext = business?.partnerAccessLevel === "activity" ? { stage: "complete", route: "/" } : { stage: "meet", route: "/onboarding/meet" };
-  const next = partnerBusiness ? partnerNext : { stage: "phone_number", route: "/onboarding/number" };
-  // Without a number to pick, a direct business moves on to the goal.
-  const withoutNumber = partnerBusiness ? partnerNext : { stage: "goal", route: "/onboarding/goal" };
+  const next = business?.partnerAccessLevel === "activity" ? { stage: "complete", route: "/" } : { stage: "meet", route: "/onboarding/meet" };
   const locale = i18n.resolvedLanguage ?? i18n.language;
   const options = useMemo(() => getPhoneCountryOptions(locale), [locale]);
   const numbers = useQuery({ queryKey: ["onboarding-number-countries", business?.businessId], enabled: Boolean(business), queryFn: () => requestJson<NumberCountries>(`/api/onboarding/numbers?businessId=${encodeURIComponent(business!.businessId)}`) });
@@ -50,7 +43,6 @@ export function OnboardingVerifyPhoneSurface() {
   const [attempt, setAttempt] = useState<{ id: string; phoneE164: string } | null>(null);
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [joined, setJoined] = useState(false);
   const [changing, setChanging] = useState(false);
   const submittedCode = useRef("");
   useEffect(() => { prefetch(next.route); }, [prefetch, next.route]);
@@ -83,19 +75,13 @@ export function OnboardingVerifyPhoneSurface() {
     onError: (cause) => setError(getSafeOnboardingErrorMessage(cause, t, "verifyPhone.code.failed")),
     meta: { inlineError: true },
   });
-  const waitlist = useMutation({
-    mutationFn: () => requestJson(`/api/onboarding/numbers?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ countryCode: country }) }),
-    onSuccess: () => { setJoined(true); if (business) telemetry.track("web.onboarding.number_waitlist_joined", { businessId: business.businessId, countryCode: country ?? "" }); },
-    onError: (cause) => setError(getSafeOnboardingErrorMessage(cause, t, "verifyPhone.unavailable.failed")),
-    meta: { inlineError: true },
-  });
   const skip = useMutation({
-    mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: withoutNumber.stage }) }),
-    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["businesses"] }); navigate(withoutNumber.route); },
+    mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: next.stage }) }),
+    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["businesses"] }); navigate(next.route); },
     onError: (cause) => setError(getSafeOnboardingErrorMessage(cause, t, "verifyPhone.unavailable.failed")),
     meta: { inlineError: true },
   });
-  // A self-hosted install has no free trial to guard, so it goes straight on. An owner who already verified moves on the same way.
+  // A business whose partner needs no mobile goes straight on. An owner who already verified moves on the same way.
   const passOn = useMutation({
     mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: next.stage }) }),
     onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["businesses"] }); navigate(next.route); },
@@ -124,9 +110,9 @@ export function OnboardingVerifyPhoneSurface() {
   if (verified && !changing && !attempt) {
     return (
       <div className="flex flex-col items-center gap-4">
-        <p className="text-lg font-medium">{formatPhoneNumberDisplay(verified)}</p>
-        <Button className="h-11 w-full" disabled={passOn.isPending || navigating} onClick={() => passOn.mutate()} type="button">{t("verifyPhone.continue")}</Button>
-        <button className="text-sm text-muted-foreground hover:text-foreground" onClick={() => setChanging(true)} type="button">{t("verifyPhone.code.changeNumber")}</button>
+        <p className="type-heading-xxs">{formatPhoneNumberDisplay(verified)}</p>
+        <Button className="w-full" disabled={passOn.isPending || navigating} onClick={() => passOn.mutate()} type="button">{t("verifyPhone.continue")}</Button>
+        <button className="type-body-muted hover:text-foreground" onClick={() => setChanging(true)} type="button">{t("verifyPhone.code.changeNumber")}</button>
       </div>
     );
   }
@@ -134,15 +120,15 @@ export function OnboardingVerifyPhoneSurface() {
   if (attempt) {
     return (
       <div className="flex flex-col items-center gap-4">
-        <p className="text-center text-sm text-muted-foreground">{t("verifyPhone.code.sentTo", { phone: formatPhoneNumberDisplay(attempt.phoneE164) })}</p>
+        <p className="text-center type-body-muted">{t("verifyPhone.code.sentTo", { phone: formatPhoneNumberDisplay(attempt.phoneE164) })}</p>
         <InputOTP autoFocus disabled={check.isPending || navigating} maxLength={6} onChange={setCode} value={code}>
-          <InputOTPGroup>{[0, 1, 2, 3, 4, 5].map((index) => <InputOTPSlot className="size-12 text-lg" index={index} key={index} />)}</InputOTPGroup>
+          <InputOTPGroup>{[0, 1, 2, 3, 4, 5].map((index) => <InputOTPSlot index={index} key={index} />)}</InputOTPGroup>
         </InputOTP>
-        {check.isPending ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><LoaderCircle className="size-4 animate-spin" />{t("verifyPhone.code.checking")}</div> : null}
+        {check.isPending ? <div className="flex items-center gap-2 type-body-muted"><LoaderCircle className="size-4 animate-spin" />{t("verifyPhone.code.checking")}</div> : null}
         {error ? <FieldError>{error}</FieldError> : null}
         <div className="mt-2 flex flex-col items-center gap-4">
-          <button className="text-sm font-medium text-foreground underline-offset-4 hover:underline disabled:opacity-50" disabled={send.isPending || check.isPending} onClick={() => { setError(null); send.mutate(); }} type="button">{send.isPending ? t("verifyPhone.sending") : t("verifyPhone.code.resend")}</button>
-          <button className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground" onClick={() => { setAttempt(null); setError(null); }} type="button"><ChevronLeft className="size-4" />{t("verifyPhone.code.changeNumber")}</button>
+          <button className="type-title text-foreground underline-offset-4 hover:underline disabled:opacity-50" disabled={send.isPending || check.isPending} onClick={() => { setError(null); send.mutate(); }} type="button">{send.isPending ? t("verifyPhone.sending") : t("verifyPhone.code.resend")}</button>
+          <button className="inline-flex items-center gap-1 type-body-muted hover:text-foreground" onClick={() => { setAttempt(null); setError(null); }} type="button"><ChevronLeft className="size-4" />{t("verifyPhone.code.changeNumber")}</button>
         </div>
       </div>
     );
@@ -154,30 +140,22 @@ export function OnboardingVerifyPhoneSurface() {
         <Field>
           <FieldLabel htmlFor="onboarding-phone">{t("verifyPhone.fields.mobileNumber")}</FieldLabel>
           <div className="flex min-w-0">
-            <PhoneCountrySelect ariaLabel={t("verifyPhone.fields.country")} className="h-11 rounded-l-4xl rounded-r-none px-4 font-medium text-muted-foreground" countries={options} onChange={(next) => { setCountry(next as Country); setPhone(""); setJoined(false); setError(null); }} value={country} />
-            <PhoneInput autoFocus className="h-11 rounded-l-none border-l-0" containerClassName="min-w-0 flex-1" country={country} disabled={!sellsNumbers} id="onboarding-phone" limitNationalDigits onChange={(value) => setPhone(value ?? "")} value={phone} />
+            <PhoneCountrySelect ariaLabel={t("verifyPhone.fields.country")} className="rounded-l-xl rounded-r-none font-medium text-muted-foreground" countries={options} onChange={(next) => { setCountry(next as Country); setPhone(""); setError(null); }} value={country} />
+            <PhoneInput autoFocus className="rounded-l-none border-l-0" containerClassName="min-w-0 flex-1" country={country} disabled={!sellsNumbers} id="onboarding-phone" limitNationalDigits onChange={(value) => setPhone(value ?? "")} value={phone} />
           </div>
           {sellsNumbers ? <FieldDescription>{t("verifyPhone.hint")}</FieldDescription> : null}
         </Field>
         {sellsNumbers ? null : (
-          partnerBusiness ? (
-            <div className="flex flex-col gap-3 rounded-xl border border-border p-4 text-left">
-              <p className="text-sm font-medium text-foreground">{t("verifyPhone.unavailable.partnerTitle", { country: countryName })}</p>
-              <p className="text-sm text-muted-foreground">{t("verifyPhone.unavailable.partnerBody")}</p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3 rounded-xl border border-border p-4 text-left">
-              <p className="text-sm font-medium text-foreground">{t("verifyPhone.unavailable.title", { country: countryName })}</p>
-              <p className="text-sm text-muted-foreground">{t("verifyPhone.unavailable.body", { country: countryName })}</p>
-              {joined ? <p className="text-sm text-foreground">{t("verifyPhone.unavailable.joined")}</p> : <Button disabled={waitlist.isPending || !business} onClick={() => waitlist.mutate()} type="button" variant="outline">{t("verifyPhone.unavailable.notify")}</Button>}
-            </div>
-          )
+          <div className="flex flex-col gap-3 rounded-xl border border-border p-4 text-left">
+            <p className="type-title text-foreground">{t("verifyPhone.unavailable.partnerTitle", { country: countryName })}</p>
+            <p className="type-body-muted">{t("verifyPhone.unavailable.partnerBody")}</p>
+          </div>
         )}
         {error ? <FieldError>{error}</FieldError> : null}
         {sellsNumbers ? (
-          <Button className="mt-2 h-11 w-full" disabled={!business || phone.trim().length === 0 || send.isPending || navigating} type="submit">{send.isPending ? <><LoaderCircle className="size-4 animate-spin" />{t("verifyPhone.sending")}</> : t("verifyPhone.sendCode")}</Button>
+          <Button className="mt-2 w-full" disabled={!business || phone.trim().length === 0 || send.isPending || navigating} type="submit">{send.isPending ? <><LoaderCircle className="size-4 animate-spin" />{t("verifyPhone.sending")}</> : t("verifyPhone.sendCode")}</Button>
         ) : (
-          <Button className="mt-2 h-11 w-full" disabled={!business || skip.isPending || navigating} onClick={() => skip.mutate()} type="button">{t(partnerBusiness ? "verifyPhone.unavailable.partnerContinue" : "verifyPhone.unavailable.continue")}</Button>
+          <Button className="mt-2 w-full" disabled={!business || skip.isPending || navigating} onClick={() => skip.mutate()} type="button">{t("verifyPhone.unavailable.partnerContinue")}</Button>
         )}
       </FieldGroup>
     </form>

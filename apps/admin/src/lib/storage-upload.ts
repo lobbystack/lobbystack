@@ -5,12 +5,12 @@ import { requestJson } from "./request-json";
  * Uploads a knowledge document: reserves the object, sends the file to
  * storage, then finalizes it so indexing starts.
  */
-export async function uploadKnowledgeDocument(input: { businessId: string; file: File; contentType: string; title?: string; tags?: string[] }, failedMessage: string): Promise<void> {
-  const { businessId, file, contentType, title, tags } = input;
+export async function uploadKnowledgeDocument(input: { businessId: string; file: File; contentType: string; title?: string; tags?: string[]; agentId?: string }, failedMessage: string): Promise<void> {
+  const { businessId, file, contentType, title, tags, agentId } = input;
   const digest = await checksum(file);
   const created = await requestJson<{ objectId: string; url: string; headers?: Record<string, string> }>("/api/uploads", { method: "POST", body: JSON.stringify({ businessId, purpose: "knowledge", fileName: file.name, contentType, length: file.size, checksum: digest }) });
   await uploadToStorage(created, file, failedMessage);
-  await requestJson("/api/uploads", { method: "PUT", body: JSON.stringify({ businessId, objectId: created.objectId, length: file.size, contentType, checksum: digest, title, tags }) });
+  await requestJson("/api/uploads", { method: "PUT", body: JSON.stringify({ businessId, objectId: created.objectId, length: file.size, contentType, checksum: digest, title, tags, ...(agentId ? { agentId } : {}) }) });
 }
 
 /** Shows the server's own upload limits as they are and anything else as `fallbackMessage`. */

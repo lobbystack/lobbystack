@@ -58,7 +58,7 @@ export function WebsiteImportProgress({ job, inline = false }: { job: WebsiteImp
   if (inline) {
     return (
       <div className="flex max-w-lg flex-col gap-3">
-        <p className="text-base leading-6 text-muted-foreground">
+        <p className="type-body-lg text-muted-foreground">
           {failed ? t("websiteImport.failedTitle", { host }) : done ? t("websiteImport.doneTitle", { host }) : t("websiteImport.inlineRunning", { host, count: job.importedCount })}
         </p>
         {failed || done ? null : (
@@ -79,14 +79,14 @@ export function WebsiteImportProgress({ job, inline = false }: { job: WebsiteImp
           </span>
         ) : null}
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <p className="truncate text-sm font-medium">
+          <p className="truncate type-title">
             {failed
               ? t("websiteImport.failedTitle", { host })
               : done
                 ? t("websiteImport.doneTitle", { host })
                 : t("websiteImport.runningTitle", { host })}
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="type-caption text-muted-foreground">
             {failed
               ? t("websiteImport.failedHint")
               : done

@@ -17,6 +17,7 @@ import { recordProductEventBestEffort } from "./productEvents";
 import { CANCELLATION_CONFIRMATION, heldForCall, queueOperatorAlertInTransaction, RESCHEDULE_CONFIRMATION, rescheduleAppointmentReminderInTransaction, saveAppointmentVideoUrlInTransaction } from "./notifications";
 import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
 import { APPOINTMENT_REQUESTS } from "./voice";
+import { bookingActor } from "./bookingActor";
 
 type BookingInput = {
   callId?: string;
@@ -32,7 +33,25 @@ type BookingInput = {
   smsConsent?: SmsConsentAnswer;
   /** Set when the public API or the MCP server made the booking; recorded in the audit log. */
   apiAudit?: ApiAudit;
+  /** Set when an operator booked from the dashboard; recorded in the audit log. */
+  operatorUserId?: string;
+  /** Overrides the service's length, for an operator booking a longer or shorter visit. */
+  durationMinutes?: number;
+  /** The agent can read these once the caller is verified; internal notes stay in the dashboard. */
+  notes?: string;
+  internalNotes?: string;
 };
+
+/** The shortest and longest visit an operator can book by hand, in minutes. */
+export const MIN_BOOKING_MINUTES = 5;
+export const MAX_BOOKING_MINUTES = 12 * 60;
+export const MAX_APPOINTMENT_NOTES_LENGTH = 2000;
+
+function bookingDuration(minutes: number | undefined): number | undefined {
+  if (minutes === undefined) return undefined;
+  if (!Number.isSafeInteger(minutes) || minutes < MIN_BOOKING_MINUTES || minutes > MAX_BOOKING_MINUTES) throw Object.assign(new Error(`An appointment lasts ${MIN_BOOKING_MINUTES} to ${MAX_BOOKING_MINUTES} minutes.`), { status: 400, code: "invalid_request" });
+  return minutes;
+}
 
 /** Who made an API change: the audit row's actor user (OAuth grants act for a user) and payload (actor and credential id). */
 export type ApiAudit = { actorUserId: string | null; payload: Record<string, unknown> };
@@ -110,9 +129,10 @@ function closureWindow(row: { startsAt: Date; endsAt: Date; reason: string }): C
 type AvailabilityReference = Schedule & { startsAt: Date; endsAt: Date };
 
 /** The schedule for one start time. */
-async function loadAvailabilityReference(tx: DatabaseTransaction, input: { businessId: string; serviceId: string; startsAt: string }): Promise<AvailabilityReference> {
+async function loadAvailabilityReference(tx: DatabaseTransaction, input: { businessId: string; serviceId: string; startsAt: string; durationMinutes?: number | undefined }): Promise<AvailabilityReference> {
   const startsAt = new Date(input.startsAt);
-  const schedule = await loadSchedule(tx, { businessId: input.businessId, serviceId: input.serviceId, from: startsAt });
+  const loaded = await loadSchedule(tx, { businessId: input.businessId, serviceId: input.serviceId, from: startsAt });
+  const schedule = input.durationMinutes ? { ...loaded, serviceDurationMinutes: input.durationMinutes } : loaded;
   return { ...schedule, startsAt, endsAt: new Date(startsAt.getTime() + schedule.serviceDurationMinutes * 60_000) };
 }
 
@@ -277,10 +297,12 @@ export async function findAvailability(
  */
 export async function findOpeningsInTransaction(
   tx: DatabaseTransaction,
-  input: { businessId: string; serviceId: string; dates: string[]; staffId?: string; preferredMinutes?: number; limit?: number; spread?: boolean; ignoreAppointmentId?: string },
+  input: { businessId: string; serviceId: string; dates: string[]; staffId?: string; preferredMinutes?: number; limit?: number; spread?: boolean; ignoreAppointmentId?: string; durationMinutes?: number },
 ): Promise<{ timezone: string; durationMinutes: number; openings: string[]; moreOpenings: number; reason?: NoOpeningsReason }> {
   const now = new Date();
-  const schedule = await loadSchedule(tx, { businessId: input.businessId, serviceId: input.serviceId, from: now });
+  const loaded = await loadSchedule(tx, { businessId: input.businessId, serviceId: input.serviceId, from: now });
+  const durationMinutes = bookingDuration(input.durationMinutes);
+  const schedule = durationMinutes ? { ...loaded, serviceDurationMinutes: durationMinutes } : loaded;
   const found = { timezone: schedule.timezone, durationMinutes: schedule.serviceDurationMinutes };
   const candidates = input.dates.flatMap((date) => candidateStartTimes({ date, timezone: schedule.timezone, hours: schedule.hours, durationMinutes: schedule.serviceDurationMinutes, now, ...(input.preferredMinutes !== undefined ? { preferredMinutes: input.preferredMinutes } : {}) }));
   if (!candidates.length) {
@@ -318,23 +340,33 @@ function spreadAcross(items: string[], limit: number): string[] {
   return Array.from({ length: limit }, (_, index) => items[Math.round((index * (items.length - 1)) / (limit - 1))]!);
 }
 
+/** Trimmed notes, or null when empty. */
+export function appointmentNotes(value: string | null | undefined): string | null {
+  const trimmed = value?.trim() ?? "";
+  if (trimmed.length > MAX_APPOINTMENT_NOTES_LENGTH) throw Object.assign(new Error(`Notes can be up to ${MAX_APPOINTMENT_NOTES_LENGTH} characters.`), { status: 400, code: "invalid_request" });
+  return trimmed || null;
+}
+
 export async function bookAppointment(
   context: DomainContext,
   input: BookingInput,
 ): Promise<{ appointmentId: string; contactId: string; staffId: string; employeeName?: string }> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+  return await withBusinessTransaction(context.db, bookingActor(input), async (tx) => {
     // The first read refuses a time the schedule rules out without taking any
     // lock, and otherwise gives a stable, sorted lock set: the staff who could
     // take the time. Reference data is reloaded after each candidate lock
     // because it may change while we wait.
-    const initialReference = await loadAvailabilityReference(tx, { businessId: input.businessId, serviceId: input.serviceId, startsAt: input.startsAt });
+    const durationMinutes = bookingDuration(input.durationMinutes);
+    const notes = appointmentNotes(input.notes);
+    const internalNotes = appointmentNotes(input.internalNotes);
+    const initialReference = await loadAvailabilityReference(tx, { businessId: input.businessId, serviceId: input.serviceId, startsAt: input.startsAt, durationMinutes });
     const candidates = staffForTime(initialReference, initialReference.startsAt, input.preferredStaffId ? [input.preferredStaffId] : undefined, Date.now());
     if (typeof candidates === "string") throw new BookingUnavailableError(candidates, "No staff member is available for this service.");
     let selectedStaff: { id: string } | undefined;
     let selectedReference: AvailabilityReference | undefined;
     for (const candidateId of candidates) {
       await lockStaff(tx, candidateId);
-      const reference = await loadAvailabilityReference(tx, { businessId: input.businessId, serviceId: input.serviceId, startsAt: input.startsAt });
+      const reference = await loadAvailabilityReference(tx, { businessId: input.businessId, serviceId: input.serviceId, startsAt: input.startsAt, durationMinutes });
       const staffIds = staffForTime(reference, reference.startsAt, [candidateId], Date.now());
       if (typeof staffIds === "string") continue;
       if (openSlots(reference, reference.startsAt, staffIds, await loadBusyTimes(tx, reference, { staffIds, from: reference.startsAt, to: reference.endsAt })).length) {
@@ -363,6 +395,8 @@ export async function bookAppointment(
       status: "confirmed",
       sourceChannel: input.sourceChannel,
       calendarSyncState: "pending",
+      notes,
+      internalNotes,
     }).returning({ id: appointments.id, revision: appointments.revision });
     if (!appointment) {
       throw new Error("Appointment could not be created.");
@@ -426,6 +460,7 @@ export async function bookAppointment(
     }
     if (input.callId) await recordCallOutcomeInTransaction(tx, { businessId: input.businessId, callId: input.callId, contactId, outcome: { kind: "booked", serviceName: reference.serviceName, startsAt: startsAt.toISOString() } });
     if (input.apiAudit) await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.apiAudit.actorUserId, eventType: "api.appointment.booked", entityType: "appointment", entityId: appointment.id, payload: input.apiAudit.payload });
+    if (input.operatorUserId) await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.operatorUserId, eventType: "appointment_change.booked", entityType: "appointment", entityId: appointment.id, payload: changeAudit({ source: "operator", userId: input.operatorUserId }).payload });
     if (contactCreated) await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "contact.created", resourceId: contactId });
     await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "appointment.booked", resourceId: appointment.id });
     const employeeName = reference.employees.get(selectedStaff.id);

@@ -82,9 +82,9 @@ const service = { id, name: "Cleaning", slug: "cleaning", description: null, dur
 const staffMember = { id, name: "Sam", active: true, timezone: "America/Toronto", service_ids: [id], created_at: at, updated_at: at };
 const call = { id, channel: "phone", status: "completed", outcome: "message_taken", summary: "Wants a callback.", end_reason: "completed", agent_id: id, contact_id: id, caller_name: "Ana", caller_phone: "+14165550134", duration_seconds: 42, recording_available: false, started_at: at, ended_at: later, created_at: at };
 const contact = { id, name: "Ana", phone: "+14165550134", email: null, locale: "en", timezone: null, passcode: null, created_at: at, updated_at: at };
-const appointment = { id, status: "confirmed", starts_at: at, ends_at: later, timezone: "America/Toronto", service_id: id, service_name: "Cleaning", staff_id: id, staff_name: "Sam", contact_id: id, contact_name: "Ana", contact_phone: "+14165550134", source: "api", calendar_sync_status: "pending", created_at: at, updated_at: at };
+const appointment = { id, status: "confirmed", starts_at: at, ends_at: later, timezone: "America/Toronto", service_id: id, service_name: "Cleaning", staff_id: id, staff_name: "Sam", contact_id: id, contact_name: "Ana", contact_phone: "+14165550134", source: "api", calendar_sync_status: "pending", notes: null, created_at: at, updated_at: at };
 const message = { id, status: "open", title: "Callback", body: "Please call back.", caller_name: "Ana", callback_phone: "+14165550134", urgency: "normal", callback_window: null, channel: "voice", call_id: id, agent_id: id, created_at: at, updated_at: at };
-const knowledge = { id, type: "faq", title: "Do you park?", content: "Yes, behind the building.", tags: [], priority: 0, active: true, created_at: at, updated_at: at };
+const knowledge = { id, type: "faq", title: "Do you park?", content: "Yes, behind the building.", tags: [], priority: 0, active: true, agent_id: null, created_at: at, updated_at: at };
 const page = <T>(data: T[]) => ({ data, next_cursor: null, has_more: false });
 
 function fakeOperations(): McpOperations {

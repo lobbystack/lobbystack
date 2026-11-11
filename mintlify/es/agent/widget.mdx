@@ -1,0 +1,65 @@
+---
+title: "Agregue el widget del sitio web"
+description: "Configure el widget integrable de chat y llamadas web de LobbyStack y luego agregue el script de carga a su sitio web."
+sidebarTitle: "Widget del sitio web"
+contentType: "How-to"
+---
+
+Un widget del sitio web es uno de los canales de un agente. Desde él, los visitantes pueden chatear, dejar sus datos de contacto e iniciar una llamada desde el navegador, y les contesta el agente al que pertenece el widget. Cada agente puede tener sus propios widgets, como uno por sitio web.
+
+<Note>
+  El chat del sitio web tiene acceso restringido y no forma parte de los planes alojados. Las nuevas claves del widget están desactivadas de forma predeterminada. En una implementación autoalojada, defina `WIDGET_KEY_ISSUANCE_ENABLED=true` para crearlas. Las claves existentes siguen funcionando.
+</Note>
+
+## Configure el widget
+
+<Steps>
+  <Step title="Abra la página del widget">
+    Haga clic en **Agentes** en la barra lateral, abra el agente y haga clic en **Canales** en su menú. En **Widget del sitio web**, haga clic en **Agregar a mi sitio** para un primer widget, o en **Administrar** para abrir los widgets del agente. En esa página, haga clic en **Agregar un widget**, o en **Editar** en la tarjeta de un widget.
+  </Step>
+  <Step title="Configure su apariencia">
+    Elija el color, la posición, el título, el subtítulo, el saludo y el comportamiento del idioma.
+  </Step>
+  <Step title="Configure la captación de clientes potenciales">
+    Active el formulario de contacto, elija los campos obligatorios y decida si aparece antes del chat.
+  </Step>
+  <Step title="Indique sus sitios web">
+    En **Sitios web**, introduzca cada dirección donde debe aparecer el chat, como `https://www.example.com`. Separe las direcciones con comas.
+  </Step>
+  <Step title="Agregue el código a su sitio web">
+    Seleccione **Copiar código** y péguelo antes de la etiqueta de cierre `</body>` de su sitio web.
+  </Step>
+</Steps>
+
+## Proteja las llamadas web
+
+LobbyStack firma las sesiones del widget y, antes de iniciar una llamada, comprueba que el origen de la página principal del visitante esté entre los orígenes permitidos de la clave del widget.
+
+Use un sitio web con HTTPS en producción. Mantenga `WIDGET_SESSION_SECRET` y las demás credenciales de firma en el servidor.
+
+## Chat en vivo con su equipo
+
+Puede permitir que alguien de su equipo se una a un chat del sitio web. Active **Permitir que los visitantes chateen con su equipo** en un widget. Está desactivado hasta que usted lo active.
+
+Durante su horario de atención, o en cualquier momento si no definió ninguno, un visitante que pide hablar con una persona en el chat espera a su equipo:
+
+1. El agente le dice al visitante que avisó al equipo y deja de responder.
+2. Su equipo recibe una alerta **Visitante que pide una persona**, y el chat muestra **Visitante esperando** en la [Bandeja de entrada](/es/dashboard/inbox).
+3. La primera persona que responde o hace clic en **Unirse al chat** se queda con el chat. El visitante ve el nombre de pila de su perfil.
+4. Si nadie se une en 3 minutos, el agente retoma el chat y le pide al visitante su nombre y su número, para que alguien le devuelva la llamada.
+
+Active o desactive esta alerta por correo electrónico y por SMS en la página **Widget del sitio web** del agente.
+
+Fuera del horario de atención, en las llamadas desde el navegador y cuando el chat en vivo está desactivado, el agente ofrece tomar un mensaje para que su equipo le devuelva la llamada al visitante. Las solicitudes de devolución de llamada aparecen en el panel como los demás mensajes.
+
+Los chats del sitio web y las llamadas desde el navegador no se pueden transferir a una línea telefónica, así que el agente nunca dice que está comunicando al visitante. En las llamadas desde el navegador, y en los chats con el chat en vivo desactivado, también le da al visitante el número de teléfono de su empresa si definió un **Número de transferencia predeterminado**. El visitante puede llamar a ese número y pedir hablar con una persona. El agente sigue su regla de transferencia: si las transferencias son solo para urgencias, da el número para asuntos urgentes, y si las transferencias están desactivadas, no da ningún número.
+
+## Gestione sus widgets
+
+Cada widget tiene sus propios sitios web y su propia configuración. Desde la tarjeta de un widget, puede editarlo, pausarlo o eliminarlo. En los **Canales** del agente, **Desconectar** también elimina un widget. Al eliminar un widget, el chat deja de funcionar en todos los sitios web que lo usan, y no se puede deshacer.
+
+Para que otro agente conteste un widget, [páselo](/es/agent/channels#pasar-un-canal-a-otro-agente). El widget conserva su código, así que no tiene que cambiar su sitio web.
+
+## Verifique la instalación
+
+Abra el sitio web público en una ventana privada del navegador. Confirme que el widget se carga, inicia un chat y muestra el formulario de contacto. Si las llamadas web están activadas, permita el acceso al micrófono y haga una llamada de prueba.

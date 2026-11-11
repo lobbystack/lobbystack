@@ -2,12 +2,12 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { appointments, businessMemberships, businesses, calls, contacts, conversations, createDatabaseClient, messages, services, staff, transcripts, users, widgetVisitors, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, appointments, businessMemberships, phoneNumbers, businesses, calls, contacts, conversations, createDatabaseClient, messages, services, staff, transcripts, users, widgetVisitors, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
-import { getAnalytics } from "./analytics";
+import { getAnalytics, readAnalyticsResults } from "./analytics";
 import { deleteContact, getContactDetail, listContacts } from "./contacts";
 import { appendMessage, getOrCreateWidgetConversation, registerWidgetVisitor } from "./conversations";
-import { listCurrentAppointments, listRecentCalls, listUpcomingAppointments } from "./operatorActivity";
+import { hasPhoneCall, listCurrentAppointments, listPhoneLines, listRecentCalls, listUpcomingAppointments } from "./operatorActivity";
 import { listCalls } from "./voice";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
@@ -133,6 +133,34 @@ describe.skipIf(!client)("operator contact and channel data under operator RLS",
     });
   });
 
+  it("counts each agent's calls and chats in the period, an archived agent's included", async () => {
+    await rollbackTest(async (tx) => {
+      const { db, businessId, userId, ids } = await seed(tx);
+      await tx.execute(sql`reset role`);
+      const [frontDesk] = await tx.select().from(agents).where(and(eq(agents.businessId, businessId), eq(agents.isDefault, true)));
+      const { id: _id, isDefault: _isDefault, createdAt: _createdAt, updatedAt: _updatedAt, ...settings } = frontDesk!;
+      const [evening] = await tx.insert(agents).values({ ...settings, name: "Evening", isDefault: false }).returning({ id: agents.id });
+      const [weekend] = await tx.insert(agents).values({ ...settings, name: "Weekend", isDefault: false }).returning({ id: agents.id });
+      // The web call goes to Evening, and the phone-only caller's call to Weekend, which is archived since.
+      await tx.update(calls).set({ agentId: evening!.id }).where(and(eq(calls.businessId, businessId), eq(calls.contactId, ids.webCaller)));
+      await tx.update(calls).set({ agentId: weekend!.id }).where(and(eq(calls.businessId, businessId), eq(calls.contactId, ids.phoneOnly)));
+      await tx.update(conversations).set({ agentId: evening!.id }).where(and(eq(conversations.businessId, businessId), eq(conversations.channel, "sms")));
+      await tx.update(agents).set({ archivedAt: new Date() }).where(eq(agents.id, weekend!.id));
+      await tx.execute(sql`set local role lobbystack_app`);
+      const to = new Date(Date.now() + 60_000);
+      const from = new Date(to.getTime() - 86_400_000);
+      const result = await getAnalytics({ db }, { userId, businessId, from, to, previousFrom: new Date(from.getTime() - 86_400_000), granularity: "day" });
+      expect(result.agents).toEqual([
+        { id: frontDesk!.id, name: frontDesk!.name, archived: false, calls: 1, chats: 2 },
+        { id: evening!.id, name: "Evening", archived: false, calls: 1, chats: 1 },
+        { id: weekend!.id, name: "Weekend", archived: true, calls: 1, chats: 0 },
+      ]);
+      // Outside the period, every agent counts nothing and archived ones drop out.
+      const earlier = await getAnalytics({ db }, { userId, businessId, from: new Date(from.getTime() - 2 * 86_400_000), to: new Date(from.getTime() - 86_400_000), previousFrom: new Date(from.getTime() - 3 * 86_400_000), granularity: "day" });
+      expect(earlier.agents.map((agent) => [agent.name, agent.calls, agent.chats])).toEqual([[frontDesk!.name, 0, 0], ["Evening", 0, 0]]);
+    });
+  });
+
   it("counts open calls as live and a call open past its max duration as missed", async () => {
     await rollbackTest(async (tx) => {
       const { db, businessId, userId } = await seed(tx);
@@ -201,6 +229,33 @@ describe.skipIf(!client)("operator contact and channel data under operator RLS",
       expect(result.bookedValue).toEqual({ currency: "EUR", current: 5_000 + 6_000, previous: 0 });
       expect(result.timeSavedSeconds).toEqual({ current: 120 + 95 + 60, previous: 0 });
       expect(result.callsWithoutTransferPercent).toEqual({ current: 66.7, previous: null });
+      // Home reads the same figures for its own period.
+      expect(await readAnalyticsResults(tx, { businessId, from, to, previousFrom: new Date(from.getTime() - 86_400_000) })).toEqual({ bookedValue: result.bookedValue, timeSavedSeconds: result.timeSavedSeconds, callsWithoutTransferPercent: result.callsWithoutTransferPercent });
+    });
+  });
+
+  it("averages call length for the period and the one before, an open call counting as none", async () => {
+    await rollbackTest(async (tx) => {
+      const { db, businessId, userId } = await seed(tx);
+      await tx.execute(sql`reset role`);
+      // The seeded calls are open, so they count as 0 seconds.
+      await tx.delete(calls).where(eq(calls.businessId, businessId));
+      const call = (hoursAgo: number, seconds: number | null, values: Partial<typeof calls.$inferInsert> = {}) => {
+        const startedAt = new Date(Date.now() - hoursAgo * 3_600_000);
+        return { businessId, provider: "openai_live", providerCallId: `rtc_${randomUUID()}`, transport: "voice", status: "completed", startedAt, endedAt: new Date(startedAt.getTime() + 90_000), providerDurationSeconds: seconds, ...values };
+      };
+      await tx.insert(calls).values([
+        // This period: 120 s from the provider, 90 s measured, and a live call at 0 s.
+        call(1, 120), call(2, null), call(3, null, { endedAt: null, status: "started" }),
+        // The period before: 60 s, and a billing-excluded call Analytics leaves out.
+        call(30, 60), call(31, 600, { billingExcluded: true }),
+      ]);
+      await tx.execute(sql`set local role lobbystack_app`);
+      const to = new Date(Date.now() + 60_000);
+      const from = new Date(to.getTime() - 86_400_000);
+      const result = await getAnalytics({ db }, { userId, businessId, from, to, previousFrom: new Date(from.getTime() - 86_400_000), granularity: "day" });
+      expect(result.calls).toEqual({ current: 3, previous: 1 });
+      expect(result.averageCallDurationSeconds).toEqual({ current: 70, previous: 60 });
     });
   });
 
@@ -417,6 +472,39 @@ describe.skipIf(!client)("website chat attribution under RLS", () => {
       expect(visitors.get(linked)).toBeInstanceOf(Date);
       expect(visitors.get(deletedContact)).toBeInstanceOf(Date);
       expect(visitors.get(anonymous)).toBeNull();
+    });
+  });
+});
+
+describe.skipIf(!client)("phone card on Home", () => {
+  it("lists each number callers can dial with its agent and who answers first, and waits for a call to one", async () => {
+    await rollbackTest(async (tx) => {
+      const businessId = randomUUID();
+      await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Phone lines test", timezone: "UTC", businessType: "test", telemetryEnabled: false });
+      const settings = { businessId, greeting: "Hello", tone: "warm", summary: "", bookingPolicy: "Book", transferMode: "on_request" };
+      const [frontDesk] = await tx.insert(agents).values({ ...settings, name: "Front desk", isDefault: true }).returning({ id: agents.id, name: agents.name });
+      const [evening] = await tx.insert(agents).values({ ...settings, name: "Evening", staffFirstMode: "business_hours" }).returning({ id: agents.id });
+      const number = (e164: string, minutesAgo: number, extra: Partial<typeof phoneNumbers.$inferInsert> = {}) => ({ businessId, e164, status: "active", voiceEnabled: true, smsEnabled: true, createdAt: new Date(Date.now() - minutesAgo * 60_000), ...extra });
+      const suffix = String(Math.floor(Math.random() * 1_000)).padStart(3, "0");
+      await tx.insert(phoneNumbers).values([
+        // The default agent answers a number with no agent of its own.
+        number(`+1416555${suffix}1`, 30),
+        number(`+1416555${suffix}2`, 20, { agentId: evening!.id }),
+        number(`+1416555${suffix}3`, 10, { status: "reclaimed" }),
+        number(`+1416555${suffix}4`, 9, { reclaimScheduledAt: new Date() }),
+        number(`+1416555${suffix}5`, 8, { voiceEnabled: false }),
+      ]);
+
+      expect(await listPhoneLines(tx, businessId)).toEqual([
+        { e164: `+1416555${suffix}1`, agentId: frontDesk!.id, agentName: frontDesk!.name, staffFirstMode: "never" },
+        { e164: `+1416555${suffix}2`, agentId: evening!.id, agentName: "Evening", staffFirstMode: "business_hours" },
+      ]);
+
+      // The operator's test call from the browser isn't a call to the number.
+      await tx.insert(calls).values({ businessId, provider: "openai_live", providerCallId: `rtc_${randomUUID()}`, transport: "web_voice", status: "completed", startedAt: new Date() });
+      expect(await hasPhoneCall(tx, businessId)).toBe(false);
+      await tx.insert(calls).values({ businessId, providerCallId: randomUUID(), transport: "voice", status: "completed", startedAt: new Date() });
+      expect(await hasPhoneCall(tx, businessId)).toBe(true);
     });
   });
 });

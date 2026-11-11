@@ -69,32 +69,90 @@ describe("rules loading states", () => {
     expect(screen.getByRole("heading", { name: "sections.rules.title" })).toBeTruthy();
     expect(screen.queryByText("loading.workspace")).toBeNull();
     expect(screen.getByText("table.title")).toBeTruthy();
-    expect(skeletons("tbody")).toBe(60);
+    expect(skeletons("tbody")).toBe(70);
     expect(screen.getByText("sections.rules.addKnowledge")).toBeTruthy();
-    expect(screen.queryByPlaceholderText("table.searchPlaceholder")).toBeNull();
   });
 
-  it("keeps the real header and shows placeholder rows, search, button and pagination while the rules load", () => {
+  it("keeps the real header and shows placeholder rows, button and pagination while the rules load", () => {
     renderPending({ workspace: true });
     expect(screen.getByText("table.title")).toBeTruthy();
+    expect(screen.getByText("table.channel")).toBeTruthy();
+    // The channel placeholder holds the label most rules show, hidden.
+    expect(document.querySelector("tbody")?.textContent).toContain("sections.rules.fields.channel.all");
     expect(document.querySelector("tbody")?.getAttribute("aria-busy")).toBe("true");
-    expect(skeletons("tbody")).toBe(60);
-    expect(skeletons('[aria-hidden="true"]')).toBe(9);
+    expect(skeletons("tbody")).toBe(70);
+    // The header's button and pagination, and each row's channel label.
+    expect(skeletons('[aria-hidden="true"]')).toBe(17);
     expect(screen.queryByText("sections.rules.emptyState")).toBeNull();
-    expect(screen.queryByPlaceholderText("table.searchPlaceholder")).toBeNull();
     expect(screen.queryByRole("button", { name: /sections.rules.addKnowledge/ })).toBeNull();
   });
 
   it("leaves out the drag handle column and the add button for read-only members while the rules load", () => {
     renderPending({ workspace: true, role: "viewer" });
-    expect(skeletons("tbody")).toBe(50);
+    expect(skeletons("tbody")).toBe(60);
     expect(screen.queryByText("sections.rules.addKnowledge")).toBeNull();
   });
 
-  it("shows the search box and the add button together once the rules have loaded", () => {
+  it("shows the add button and no search box once the rules have loaded", () => {
     setup();
-    expect(screen.getByPlaceholderText("table.searchPlaceholder")).toBeTruthy();
+    expect(screen.queryByRole("textbox")).toBeNull();
     expect(screen.getByRole("button", { name: /sections.rules.addKnowledge/ })).toBeTruthy();
     expect(skeletons("tbody")).toBe(0);
+  });
+});
+
+describe("one agent's rules", () => {
+  it("reads and reorders the rules of the agent it's given", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
+    const fetchMock = vi.fn(async () => Response.json(rules));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<QueryClientProvider client={client}><RulesSurface agentId="agent-2" /></QueryClientProvider>);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/rules?businessId=business&agentId=agent-2", expect.anything()));
+    const first = (await screen.findByText("First")).closest("tr")!;
+    const third = row("Third");
+    third.getBoundingClientRect = () => ({ top: 0, height: 40, bottom: 40, left: 0, right: 0, width: 0, x: 0, y: 0, toJSON: () => ({}) });
+    const dataTransfer = { setData: vi.fn(), effectAllowed: "", dropEffect: "" };
+    fireEvent.pointerDown(first.querySelector("[title='actions.dragToReorder']")!);
+    fireEvent.dragStart(first, { dataTransfer });
+    const dragOver = createEvent.dragOver(third, { dataTransfer });
+    Object.defineProperty(dragOver, "clientY", { value: 30 });
+    fireEvent(third, dragOver);
+    fireEvent.drop(third, { dataTransfer });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/rules?businessId=business&agentId=agent-2", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ agentId: "agent-2", ruleIds: ["second", "third", "first"] }) })));
+  });
+});
+
+describe("rule channels", () => {
+  const scoped = [...rules.slice(0, 2), { ...rules[2]!, channel: "sms" }];
+
+  function render2() {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
+    client.setQueryData(["rules", "business"], scoped);
+    const fetchMock = vi.fn(async () => Response.json(scoped));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<QueryClientProvider client={client}><RulesSurface /></QueryClientProvider>);
+    return fetchMock;
+  }
+
+  it("badges a rule kept to one channel, and says the others apply on every channel", () => {
+    render2();
+    expect(row("Third").textContent).toContain("sections.rules.fields.channel.sms");
+    expect(row("First").textContent).toContain("sections.rules.fields.channel.all");
+    expect(row("First").textContent).not.toContain("sections.rules.fields.channel.sms");
+  });
+
+  it("keeps a rule's channel when it's edited, and adds new rules for every channel", async () => {
+    const fetchMock = render2();
+    fireEvent.click(row("Third"));
+    fireEvent.click(await screen.findByRole("button", { name: "actions.save" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/rules?businessId=business", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ ruleId: "third", title: "Third", content: "Third rule", channel: "sms" }) })));
+
+    fireEvent.click(screen.getByRole("button", { name: /sections.rules.addKnowledge/ }));
+    fireEvent.change(await screen.findByPlaceholderText("sections.rules.fields.title.placeholder"), { target: { value: "Late" } });
+    fireEvent.change(screen.getByPlaceholderText("sections.rules.fields.content.placeholder"), { target: { value: "Say we close at six." } });
+    fireEvent.click(screen.getByRole("button", { name: "actions.add" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/rules?businessId=business", expect.objectContaining({ method: "POST", body: JSON.stringify({ title: "Late", content: "Say we close at six.", channel: null }) })));
   });
 });

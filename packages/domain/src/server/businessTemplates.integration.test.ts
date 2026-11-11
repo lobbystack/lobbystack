@@ -30,6 +30,7 @@ import {
   type PartnerMemberCaller,
 } from "./publicApi/operations";
 import { uploadObjectKey } from "./storage";
+import { NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS } from "./tenancy";
 import type { DomainContext } from "./context";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
@@ -209,7 +210,12 @@ const harborTemplate = {
     { name: "Cleaning", slug: "cleaning", description: "A checkup and a cleaning.", duration_minutes: 45, active: true },
     { name: "Whitening", slug: "whitening", duration_minutes: 60, active: false },
   ],
-  rules: [{ title: "Emergencies", content: "Send dental emergencies to the dentist on call.", active: true }],
+  // Every new business starts with call and text rules, and a template carries them as it carries the rest.
+  rules: [
+    { title: "On calls", content: NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS.voiceInstructions, active: true, channel: "voice" },
+    { title: "In texts", content: NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS.smsInstructions, active: true, channel: "sms" },
+    { title: "Emergencies", content: "Send dental emergencies to the dentist on call.", active: true },
+  ],
   knowledge: {
     websites: ["https://dental-guide.example.org/faq"],
     read_full_site: false,
@@ -252,7 +258,7 @@ describe.skipIf(!client)("business templates", () => {
       expect(await getBusinessForApi(worker, caller)).toMatchObject({ name: "Pier Dental", timezone: "America/Vancouver", locale: "fr", business_type: "dental", website_url: null, hours: [{ day: "monday", open: "08:00", close: "17:00" }] });
       expect(await getReceptionistForApi(worker, caller)).toMatchObject({ greeting: GREETING, tone: "warm", summary: "A family dental clinic by the harbor.", summary_source: "operator", booking_mode: "request", transfer_number: null });
       expect((await listServicesForApi(worker, caller, { includeInactive: true })).map((service) => [service.name, service.active, service.staff_ids])).toEqual([["Cleaning", true, []], ["Whitening", false, []]]);
-      expect((await listRulesForApi(worker, caller)).map((rule) => rule.title)).toEqual(["Emergencies"]);
+      expect((await listRulesForApi(worker, caller)).map((rule) => rule.title)).toEqual(["On calls", "In texts", "Emergencies"]);
       expect((await listKnowledgeEntriesForApi(worker, caller, {})).data.map((entry) => [entry.type, entry.title]).sort()).toEqual([["faq", "Do you take new patients?"], ["text", "Parking"]]);
       const sources = (await listKnowledgeSourcesForApi(worker, caller, {})).data;
       expect(sources.map((source) => [source.type, source.title]).sort()).toEqual([["file", "Price list"], ["website", "https://dental-guide.example.org/faq"]]);
@@ -283,7 +289,7 @@ describe.skipIf(!client)("business templates", () => {
       const stored = await withBusinessTransaction(acme.context.db, { userId: acme.admin.userId, actorType: "operator" }, async (inner) => await loadBusinessTemplateInTransaction(inner, { partnerId: acme.partnerId, templateId: saved.templateId }));
       const again = await applyStoredBusinessTemplate(setup, { partnerId: acme.partnerId, userId: acme.admin.userId, businessId: pier, template: stored, keep: { name: "Pier Dental", timezone: "America/Vancouver" } });
       expect(again.changes.filter((change) => change.action !== "unchanged")).toEqual([]);
-      expect(again.changes.map((change) => change.step)).toEqual(["details", "receptionist", "service Cleaning", "service Whitening", "rule Emergencies", "websites", "files", "FAQ Do you take new patients?", "text Parking"]);
+      expect(again.changes.map((change) => change.step)).toEqual(["details", "receptionist", "service Cleaning", "service Whitening", "rule On calls", "rule In texts", "rule Emergencies", "websites", "files", "FAQ Do you take new patients?", "text Parking"]);
     });
   });
 
@@ -304,7 +310,8 @@ describe.skipIf(!client)("business templates", () => {
       const at = { ...caller, businessId: pier };
       expect(await getReceptionistForApi(setup.worker, at)).toMatchObject({ greeting: "Thanks for calling Pier $& Dental. How can we help?", voice_instructions: "Say Pier $& Dental opens at 8, next to Harbor Dentalview." });
       expect((await listServicesForApi(setup.worker, at, { includeInactive: true })).map((service) => [service.name, service.description])).toEqual([["Pier $& Dental checkup", "A Pier $& Dental cleaning."]]);
-      expect((await listRulesForApi(setup.worker, at)).map((rule) => [rule.title, rule.content])).toEqual([["Pier $& Dental hours", "Pier $& Dental closes on Sundays."]]);
+      // The call instructions travel as the rule for calls they became.
+      expect((await listRulesForApi(setup.worker, at)).map((rule) => [rule.title, rule.content, rule.channel])).toEqual([["On calls", "Say Pier $& Dental opens at 8, next to Harbor Dentalview.", "voice"], ["In texts", NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS.smsInstructions, "sms"], ["Pier $& Dental hours", "Pier $& Dental closes on Sundays.", null]]);
       expect((await listKnowledgeEntriesForApi(setup.worker, at, {})).data.map((entry) => [entry.title, entry.content])).toEqual([["Where is Pier $& Dental?", "Pier $& Dental is on Main Street."]]);
     });
   });
@@ -368,7 +375,7 @@ describe.skipIf(!client)("business templates", () => {
       const cleanup = await asMigrator(tx, async () => await tx.select({ businessId: outboxMessages.businessId, payload: outboxMessages.payload }).from(outboxMessages).where(and(eq(outboxMessages.aggregateId, saved.templateId), eq(outboxMessages.topic, "privacy.deleteStoredObjects"))));
       expect(cleanup).toEqual([{ businessId: null, payload: { objectKeys: [copy!.objectKey] } }]);
       expect(objects.has(copy!.objectKey)).toBe(true);
-      expect((await listRulesForApi(setup.worker, { businessId: pier, partnerId: acme.partnerId, userId: acme.admin.userId, actor: "partner_member" })).map((rule) => rule.title)).toEqual(["Emergencies"]);
+      expect((await listRulesForApi(setup.worker, { businessId: pier, partnerId: acme.partnerId, userId: acme.admin.userId, actor: "partner_member" })).map((rule) => rule.title)).toEqual(["On calls", "In texts", "Emergencies"]);
     });
   });
 
@@ -467,7 +474,7 @@ describe.skipIf(!client)("business templates", () => {
 
       const { businessId: pier, invitationId } = await createPartnerBusiness(context, acme.adminActor, { ...pierInput, packageId: frontDesk.packageId, templateId: rulesOnly }, setup);
       const caller: PartnerMemberCaller = { businessId: pier, partnerId: acme.partnerId, userId: acme.admin.userId, actor: "partner_member" };
-      expect((await listRulesForApi(setup.worker, caller)).map((row) => row.title)).toEqual(["Emergencies"]);
+      expect((await listRulesForApi(setup.worker, caller)).map((row) => row.title)).toEqual(["On calls", "In texts", "Emergencies"]);
       const recorded = await asMigrator(tx, async () => ({
         account: await tx.select({ packageId: billingAccounts.packageId }).from(billingAccounts).where(eq(billingAccounts.businessId, pier)),
         created: await tx.select({ payload: auditLogs.payload }).from(auditLogs).where(and(eq(auditLogs.businessId, pier), eq(auditLogs.eventType, "partner.business_created"))),

@@ -25,7 +25,8 @@ export const GET = operatorRoute(async ({ request, userId, businessId, domain })
   if (!analyticsGranularities.includes(requestedGranularity as AnalyticsGranularity)) return jsonError("Analytics granularity is invalid.");
   // Each limit keeps the series within the 500 buckets analyticsBucketStarts fills, even when the range starts mid-hour or mid-week.
   const maxDays = requestedGranularity === "hour" ? 20 : requestedGranularity === "day" ? 366 : requestedGranularity === "week" ? 3493 : 3660;
-  if (span <= 0 || span > maxDays * 86_400_000) return jsonError(`Analytics range must be positive and no longer than ${maxDays} days for this granularity.`);
+  // An hour of slack covers a range that crosses the business's clock change and so lasts an hour more than its days.
+  if (span <= 0 || span > maxDays * 86_400_000 + 3_600_000) return jsonError(`Analytics range must be positive and no longer than ${maxDays} days for this granularity.`);
   const previousFrom = new Date(from.getTime() - span);
   return NextResponse.json(await getAnalytics(domain, { userId, businessId, from, to, previousFrom, granularity: requestedGranularity as AnalyticsGranularity }));
 });

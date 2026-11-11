@@ -1,0 +1,67 @@
+---
+title: "Set your agent's name, greeting and voice"
+description: "Name your AI agent, write the opening line it uses on calls and chats, and pick the voice callers hear."
+sidebarTitle: "Name, greeting and voice"
+contentType: "How-to"
+---
+
+Open an agent from **Agents** in the sidebar. Its first page, **General**, holds what callers hear first under **Name, greeting and voice**.
+
+## Name
+
+The agent's **Name** tells your team which agent handled a call. Only your team sees it, in the dashboard and in the [Inbox](/dashboard/inbox). Callers never hear it, so pick a name that helps your team, such as `Weekend line` or `Downtown clinic`.
+
+## Greeting
+
+The greeting is the opening line your agent uses when it answers a call or starts a conversation. Keep it short and specific.
+
+Good greetings usually include the business name, a short disclosure that the caller is speaking with the AI agent, and an offer to help.
+
+| Business type | Example greeting |
+| --- | --- |
+| Dental clinic | Thanks for calling Bright Smile Dental. I'm the AI agent. How can I help? |
+| Salon | Thanks for calling North Loop Salon. I can help with services, availability, and messages for the team. |
+| Home services | Thanks for calling Peak HVAC. I'm the AI agent. Are you calling about service, scheduling, or an urgent issue? |
+| Restaurant | Thanks for calling Maple Table. I can help with hours, reservations, and messages for the staff. |
+
+<Steps>
+  <Step title="Open the agent">
+    Click **Agents** in the sidebar and open the agent. Its menu opens on **General**.
+  </Step>
+  <Step title="Edit the greeting">
+    Click **Edit** beside **Greeting**, then change the text.
+  </Step>
+  <Step title="Save">
+    Click **Save**.
+  </Step>
+</Steps>
+
+If you haven't changed the greeting, it follows your [default customer language](/settings/business-details#default-customer-language) when you change it.
+
+## Voice
+
+**Voice** sets how your agent sounds on phone calls and on calls from your browser, including test calls. The row shows the current voice and how it sounds, such as Marin · Bright, quick. New agents start with Marin, or with the voice of the agent you added them from.
+
+<Steps>
+  <Step title="Open the voice list">
+    On **General**, click **Change voice**. **Current** shows the voice in use, and **All voices** lists the others with their pitch and pace.
+  </Step>
+  <Step title="Listen to a voice">
+    Click the play button next to a voice to hear it in your default customer language. Playing a voice doesn't select it.
+  </Step>
+  <Step title="Save your choice">
+    Select the voice and click **Use this voice**.
+  </Step>
+</Steps>
+
+New calls use the voice shortly after you save. A call already in progress keeps the voice it started with. To check the result, click **Test call** at the top of the page.
+
+Owners and admins can change the voice. Viewers can see the current voice, but **Change voice** is turned off for them. If your business has **Activity only** access through a partner, your team doesn't see **Agents**.
+
+You can choose from Alloy, Ash, Ballad, Beacon, Bossa, Cedar, Cinder, Coral, Delta, Echo, Gleam, Marin, Meridian, Quartz, Ripple, Sage, Shimmer, Stone, Tempo, Verse, Vesper, and Willow. In the [API](/api/overview), set `voice` on `PATCH /receptionist` to the name in lowercase, such as `cedar`. `/receptionist` changes the default agent.
+
+## Related settings
+
+- [Rules](/agent/rules): what the agent does on every channel, or on one
+- [Calls and booking](/agent/calls-and-booking): transfers, Staff answers first, booking and appointment changes
+- [Business details](/settings/business-details): the business summary, opening hours, languages and currency every agent shares

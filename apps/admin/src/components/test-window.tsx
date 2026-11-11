@@ -93,8 +93,8 @@ function TestChat({ agentId, businessId, children }: { agentId: string | undefin
               const text = messageText(message);
               if (!text) return null;
               return message.role === "user"
-                ? <p className="ml-auto max-w-[85%] rounded-xl bg-primary px-3 py-2 text-sm wrap-break-word whitespace-pre-wrap text-primary-foreground" key={message.id}>{text}</p>
-                : <div className="mr-auto max-w-[85%] rounded-xl bg-muted px-3 py-2 text-sm wrap-break-word [&_a]:underline [&_a]:underline-offset-2" dangerouslySetInnerHTML={{ __html: renderSafeMarkdown(text) }} key={message.id} />;
+                ? <p className="ml-auto max-w-[85%] rounded-xl bg-primary px-3 py-2 type-body wrap-break-word whitespace-pre-wrap text-primary-foreground" key={message.id}>{text}</p>
+                : <div className="mr-auto max-w-[85%] rounded-xl bg-muted px-3 py-2 type-body wrap-break-word [&_a]:underline [&_a]:underline-offset-2" dangerouslySetInnerHTML={{ __html: renderSafeMarkdown(text) }} key={message.id} />;
             })}
           </div>
         ) : null}
@@ -106,7 +106,7 @@ function TestChat({ agentId, businessId, children }: { agentId: string | undefin
         {failed ? <FieldError className="w-full">{t("testWindow.sendFailed")}</FieldError> : null}
       </div>
       <form className="shrink-0" onSubmit={send}>
-        <InputGroup className="h-11">
+        <InputGroup>
           <InputGroupInput aria-label={t("testWindow.message")} autoComplete="off" maxLength={4_000} onChange={(event) => setDraft(event.target.value)} placeholder={t("testWindow.message")} value={draft} />
           <InputGroupAddon align="inline-end">
             <InputGroupButton aria-label={t("testWindow.send")} disabled={busy || !draft.trim()} size="icon-sm" type="submit" variant="default"><ArrowUp /></InputGroupButton>
@@ -167,8 +167,8 @@ export function TestPanel({ agentId, businessId, businessSlug, onCallEnded, onRe
       />
       {phoneNumber ? (
         <p className="mt-4 flex shrink-0 flex-col items-center gap-1">
-          <span className="text-sm text-muted-foreground">{t("testWindow.orCall")}</span>
-          <a className="text-2xl font-semibold tabular-nums text-foreground underline-offset-4 hover:underline" href={`tel:${phoneNumber}`}>{formatPhoneNumberDisplay(phoneNumber)}</a>
+          <span className="type-body-muted">{t("testWindow.orCall")}</span>
+          <a className="type-heading-xs tabular-nums text-foreground underline-offset-4 hover:underline" href={`tel:${phoneNumber}`}>{formatPhoneNumberDisplay(phoneNumber)}</a>
         </p>
       ) : null}
     </TestChat>
@@ -181,7 +181,7 @@ function TestWindowBody({ agentId, businessId, ...panel }: TestPanelProps) {
   return (
     <>
       <DialogHeader className="gap-1 pr-8">
-        <DialogTitle className="truncate leading-5">{agent.isPending ? <Skeleton className="h-5 w-32" /> : agent.data?.agentName ?? t("testCall.trigger")}</DialogTitle>
+        <DialogTitle className="truncate">{agent.isPending ? <Skeleton className="h-5 w-32" /> : agent.data?.agentName ?? t("testCall.trigger")}</DialogTitle>
         <DialogDescription className="truncate" render={<div />}>{agent.isPending ? <Skeleton className="h-5 w-40" /> : agent.data?.businessName}</DialogDescription>
       </DialogHeader>
       <TestPanel agentId={agentId} businessId={businessId} {...panel} />
@@ -193,10 +193,12 @@ type TestWindowProps = {
   businessId?: string;
   businessSlug?: string;
   className?: string;
+  /** Without it the window has no button of its own, and Home, the agent's header and the phone header open it. */
+  trigger?: boolean;
 };
 
-/** The window for testing an agent, and its button in the utility bar. Anything else opens it with openTestWindow. */
-export function TestWindow({ businessId, businessSlug, className }: TestWindowProps) {
+/** The window for testing an agent, which the dashboard mounts once. Anything else opens it with openTestWindow. */
+export function TestWindow({ businessId, businessSlug, className, trigger = true }: TestWindowProps) {
   const { t } = useTranslation("common");
   const [opened, setOpened] = useState<TestWindowOptions | null>(null);
   const voiceControlsRef = useRef<WebVoiceControls | null>(null);
@@ -220,13 +222,15 @@ export function TestWindow({ businessId, businessSlug, className }: TestWindowPr
 
   return (
     <div className={cn("hidden items-center md:flex", className)}>
-      <Button aria-label={t("testCall.trigger")} onClick={() => setOpened({})} size="sm" type="button" variant="outline">
-        <span className="text-sidebar-foreground">{t("testCall.trigger")}</span>
-      </Button>
+      {trigger ? (
+        <Button aria-label={t("testCall.trigger")} onClick={() => setOpened({})} size="sm" type="button" variant="outline">
+          <span className="text-sidebar-foreground">{t("testCall.trigger")}</span>
+        </Button>
+      ) : null}
 
       {/* A stray click beside the window must not hang up a call. */}
       <Dialog disablePointerDismissal onOpenChange={(open) => { if (!open) close(); }} open={opened !== null}>
-        <DialogContent className="flex h-dvh max-h-dvh max-w-none flex-col gap-4 rounded-none p-4 sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:max-w-md sm:rounded-4xl sm:p-6">
+        <DialogContent className="flex h-dvh max-h-dvh max-w-none flex-col gap-4 rounded-none p-4 sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:max-w-md sm:rounded-3xl sm:p-6">
           {opened ? (
             <TestWindowBody
               agentId={opened.agentId}

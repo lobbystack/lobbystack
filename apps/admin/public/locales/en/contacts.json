@@ -1,8 +1,7 @@
 {
   "page": {
     "title": "Contacts",
-    "description": "Manage the people behind your calls, messages, and bookings.",
-    "searchPlaceholder": "Search contacts..."
+    "description": "Manage the people behind your calls, messages, and bookings."
   },
   "table": {
     "contact": "Contact",
@@ -12,7 +11,7 @@
     "lastInteraction": "Last interaction",
     "messages": "{{count}} messages",
     "calls": "{{count}} calls",
-    "empty": "No contacts match the current search.",
+    "empty": "No contacts yet.",
     "status": {
       "blocked": "Blocked"
     },
@@ -176,12 +175,13 @@
   },
   "pagination": {
     "rowsPerPage": "Rows per page",
-    "pageOf": "Page {{page}} of {{total}}",
+    "viewing": "Viewing {{start}}-{{end}} of {{total}}",
+    "viewingAll_one": "Viewing {{count}} row",
+    "viewingAll_other": "Viewing all {{count}} rows",
     "firstPage": "Go to first page",
     "previousPage": "Go to previous page",
     "nextPage": "Go to next page",
-    "lastPage": "Go to last page",
-    "goToPage": "Go to page {{page}}"
+    "lastPage": "Go to last page"
   },
   "edit": {
     "title": "Edit contact",
@@ -193,5 +193,24 @@
     "saved": "Contact updated.",
     "failed": "Couldn't save the contact. Try again.",
     "invalidEmail": "Enter a valid email address."
+  },
+  "create": {
+    "action": "New contact",
+    "title": "New contact",
+    "name": "Name",
+    "phone": "Phone",
+    "phoneCountry": "Phone country",
+    "email": "Email",
+    "nameRequired": "Enter a name.",
+    "reachRequired": "Enter a phone number or an email.",
+    "phoneInvalid": "Enter a full phone number.",
+    "invalidEmail": "Enter a valid email address.",
+    "exists": "A contact with this number already exists.",
+    "openExisting": "Open contact",
+    "cancel": "Cancel",
+    "save": "Create contact",
+    "saving": "Creating...",
+    "saved": "Contact created.",
+    "failed": "Couldn't create the contact. Try again."
   }
 }

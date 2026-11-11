@@ -11,7 +11,7 @@ Webhooks send an HTTPS `POST` to your URL when something happens in a business, 
 
 | Event | Sent when | `data` | Scope |
 | --- | --- | --- | --- |
-| `call.completed` | A call ended and LobbyStack saved its summary and outcome. A call your team took with [Staff answers first](/agent/ai-settings/overview#staff-answers-first) has no summary, and its `outcome` and `end_reason` are `answered_by_team`. | Call | `calls:read` |
+| `call.completed` | A call ended and LobbyStack saved its summary and outcome. A call your team took with [Staff answers first](/agent/calls-and-booking#staff-answers-first) has no summary, and its `outcome` and `end_reason` are `answered_by_team`. | Call | `calls:read` |
 | `appointment.booked` | Anyone books an appointment: the receptionist, the dashboard or the API. | Appointment | `appointments:read` |
 | `appointment.rescheduled` | An appointment moves to a new time. | Appointment | `appointments:read` |
 | `appointment.cancelled` | An appointment is cancelled. | Appointment | `appointments:read` |
@@ -28,7 +28,7 @@ You can add endpoints in the dashboard or with the API.
   <Tab title="Dashboard">
     <Steps>
       <Step title="Open Webhooks">
-        Go to **Integrations** and click **Manage** on the **Webhooks** card. Only owners and admins can manage webhooks.
+        Go to **Settings** > **Webhooks**. Only owners and admins can manage webhooks.
       </Step>
       <Step title="Add the endpoint">
         Click **Add endpoint**, enter the URL, and pick the events.
@@ -79,6 +79,7 @@ You can add endpoints in the dashboard or with the API.
     "contact_phone": "+14165550134",
     "source": "voice",
     "calendar_sync_status": "pending",
+    "notes": null,
     "created_at": "2026-09-27T16:58:19.590Z",
     "updated_at": "2026-09-27T16:58:19.590Z"
   }

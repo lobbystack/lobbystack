@@ -33,7 +33,7 @@ const EN_FAQS: FaqItem[] = [
   {
     question: "Can the assistant book appointments?",
     answer:
-      "Yes, when Appointments is set to Books appointments. If your receptionist takes requests instead, the booking tools return an error and the assistant tells you your team confirms requests from the inbox. If booking is off, it tells you that. Cancelling works in every mode.",
+      "Yes, when Booking is set to Books appointments. If your receptionist takes requests instead, the booking tools return an error and the assistant tells you your team confirms requests from the inbox. If booking is off, it tells you that. Cancelling works in every mode.",
   },
   {
     question: "How do I disconnect an assistant?",
@@ -90,7 +90,7 @@ const FR_FAQS: FaqItem[] = [
   {
     question: "L'assistant peut-il réserver des rendez-vous?",
     answer:
-      "Oui, quand Prise de rendez-vous est réglé sur Réserve les rendez-vous. Si votre réceptionniste prend plutôt des demandes, les outils de réservation renvoient une erreur et l'assistant vous dit que votre équipe confirme les demandes depuis la boîte de réception. Si la réservation est désactivée, il vous le dit. L'annulation fonctionne dans tous les modes.",
+      "Oui, quand Réservation est réglé sur Réserve les rendez-vous. Si votre réceptionniste prend plutôt des demandes, les outils de réservation renvoient une erreur et l'assistant vous dit que votre équipe confirme les demandes depuis la boîte de réception. Si la réservation est désactivée, il vous le dit. L'annulation fonctionne dans tous les modes.",
   },
   {
     question: "Comment déconnecter un assistant?",
@@ -147,7 +147,7 @@ const ES_FAQS: FaqItem[] = [
   {
     question: "¿Puede el asistente reservar citas?",
     answer:
-      "Sí, cuando Citas está configurado en Reserva citas. Si su recepcionista toma solicitudes, las herramientas de reserva devuelven un error y el asistente le dice que su equipo confirma las solicitudes desde la bandeja de entrada. Si la reserva está desactivada, se lo dice. Cancelar funciona en todos los modos.",
+      "Sí, cuando Reservas está configurado en Reserva citas. Si su recepcionista toma solicitudes, las herramientas de reserva devuelven un error y el asistente le dice que su equipo confirma las solicitudes desde la bandeja de entrada. Si la reserva está desactivada, se lo dice. Cancelar funciona en todos los modos.",
   },
   {
     question: "¿Cómo desconecto un asistente?",

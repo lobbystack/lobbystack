@@ -44,7 +44,7 @@ test("checkout return waits for billing confirmation and localized spending caps
       expect((await tx.select().from(businesses).where(eq(businesses.id, businessId)))[0]?.onboardingStage).toBe("phone_number");
       await tx.update(businesses).set({ onboardingStage: "complete" }).where(eq(businesses.id, businessId));
     });
-    await page.goto(`${baseURL}/settings/plan`);
+    await page.goto(`${baseURL}/workspace/billing`);
     const cap = page.getByLabel(settings.billing.spendingCap.amountLabel, { exact: true });
     await cap.fill("12,50");
     await page.getByRole("button", { name: settings.billing.spendingCap.save, exact: true }).click();

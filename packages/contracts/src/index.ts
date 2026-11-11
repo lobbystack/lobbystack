@@ -78,6 +78,8 @@ export const uploadFinalizeRequestSchema = z.object({
   length: z.number().int().positive(),
   checksum: z.string().max(255).optional(),
   contentType: z.string().min(1).max(255),
+  /** Makes an uploaded knowledge file this agent's alone. */
+  agentId: z.guid().optional(),
 });
 
 export const uploadDownloadRequestSchema = z.object({
@@ -99,6 +101,8 @@ export const realtimeEventTypes = [
   "knowledge.progressed",
   "document.progressed",
   "billing.updated",
+  // The bell's list changed: a notification was posted or came back.
+  "notification.posted",
 ] as const;
 
 const realtimePayloadSchema = z.record(z.string(), z.unknown());
@@ -119,6 +123,7 @@ export type RealtimeEvent = z.infer<typeof realtimeEventSchema>;
 export const snapshotSchema = z.object({
   businessId: z.guid(),
   version: z.string().min(1),
+  schemaVersion: z.number().int().optional(),
   generatedAt: z.iso.datetime(),
   displayName: z.string().min(1),
   legalName: z.string().optional(),
@@ -149,6 +154,8 @@ export const snapshotSchema = z.object({
     title: z.string(),
     content: z.string(),
     order: z.number(),
+    // ruleChannels from @lobbystack/shared. Absent: every channel.
+    channel: z.enum(["voice", "sms", "web_chat", "instagram"]).optional(),
   })).optional(),
   appointmentChangePolicy: z.object({
     enabled: z.boolean(),
@@ -259,6 +266,8 @@ export const queueForJobType = {
   "snapshot.refresh": "default",
   "notification.dispatch": "default",
   "notification.dailySummary": "maintenance",
+  // Posts each released changelog entry marked notify: true to the business's bell, once.
+  "notification.productUpdates": "maintenance",
   "conversation.finalizeSession": "default",
   "conversation.expireTeamRequest": "default",
   "privacy.scrubMessage": "maintenance",

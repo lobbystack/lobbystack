@@ -27,7 +27,7 @@ export function BackLink({ href, label }: { href: string; label: string }) {
 }
 
 export function DetailSection({ children, className, title }: { children: React.ReactNode; className?: string; title: string }) {
-  return <section className={cn("flex flex-col gap-4 px-4 py-4", className)}><h3 className="font-heading text-base font-medium">{title}</h3>{children}</section>;
+  return <section className={cn("flex flex-col gap-4 px-4 py-4", className)}><h3 className="type-card-title">{title}</h3>{children}</section>;
 }
 
 export function MetadataField({ copied, copyLabel, label, maskValue, onCopy, value }: { copied?: boolean; copyLabel?: string; label: string; maskValue?: boolean; onCopy?: () => void; value: string }) {

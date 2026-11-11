@@ -5,15 +5,16 @@ import { UnrecoverableError } from "bullmq";
 
 import { hasSummarizableTranscript, type BusinessHoursExtractor, type BusinessSummarizer, type CallSummarizer } from "@lobbystack/agent-core";
 import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
-import { HOST_EMAIL_BRAND, billingMeterEventNames, detectSiteLanguage, emailSender, getPolarMeteredUsagePayload, intlLocale, isUuid, normalizeRuntimeLocale, parseEmailBrandReference, partnerFeatures, partnerTierProductId, type BillingUsageKind, type EmailBrandReference } from "@lobbystack/shared";
+import { HOST_EMAIL_BRAND, billingMeterEventNames, detectSiteLanguage, emailSender, getPolarMeteredUsagePayload, intlLocale, isUuid, normalizeRuntimeLocale, parseEmailBrandReference, partnerFeatures, partnerTierProductId, type BillingUsageKind, type EmailBrandReference, type ProductUpdateEntry } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { enqueueKnowledgeDerivedRefresh, finishBusinessSummaryRegenerate, forgetStaleRetiredCalendarTokens, loadBusinessHoursInput, loadBusinessSummaryInput, markBusinessHoursChecked, resetGeneratedBusinessSummary, saveGeneratedBusinessHours, saveGeneratedBusinessSummary, type SummaryRegenerateOutcome } from "@lobbystack/domain";
 import { billingCheckoutLeaseEndsAt, checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deferBillingCheckoutRequest, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteStoredObjects, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, embeddingInputsForChunk, hashContent, upsertWebsiteDocument, queueWelcomeEmail, type DurableAiUsage, type GeneratedCallSummary } from "@lobbystack/domain";
+import { PRODUCT_UPDATE_ENTRIES, postNumberReleasedInTransaction, postProductUpdates } from "@lobbystack/domain";
 import { deliverOutbound, markFeedbackEmailFailed, markFeedbackEmailSent, queueDailyOperatorSummaries, refreshUnitEconomicsMonth } from "@lobbystack/domain";
 import { NUMBER_ORDER_MAX_WAIT_MS, claimNumberProvisioning, completeNumberProvisioning, deferNumberProvisioning, desiredNumberRouting, refreshStaleRefusedCallForwards, enqueueNumberRouting, resolveRefusedCallForward, failNumberProvisioning, isSharedSmsSender, loadNumberReleaseEmail, loadNumberTrialEmail, numberProvisioningLeaseEndsAt, sharedSmsSender, sweepNumberReleases, sweepNumberTrial } from "@lobbystack/domain";
 import { createWebhookSender, processWebhookDelivery, pruneApiHistory, prunePartnerApiIdempotencyKeys, type WebhookSender } from "@lobbystack/domain";
 import { LIVE_RECORDING_ATTEMPTS, listBusinessesWithOpenLiveCalls, listOpenLiveCalls, liveCallHasRecording, persistCallRecording, retryLiveCallRecording, type OpenLiveCall } from "@lobbystack/domain";
-import { applySiteLanguageInTransaction, expireTeamRequest } from "@lobbystack/domain";
+import { applySiteLanguageInTransaction, closePassedAppointmentRequests, expireTeamRequest, postWebsiteImportFinishedInTransaction } from "@lobbystack/domain";
 import { syncBusinessOverage, PROVIDER_RETRY_WINDOW_MS, providerRetryDelayMs } from "@lobbystack/domain";
 import { advancePartnerLifecycles, claimPartnerCheckoutRequest, deferPartnerCheckoutRequest, keepPartnerTrialNumber, loadPartnerCheckoutRequest, loadPoolUsageEvent, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerBillingKey, partnerCheckoutLeaseEndsAt, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
 import { checkPartnerCustomDomains, provisionPartnerCustomDomain, removePartnerCustomHostname, type CustomDomainProviders } from "@lobbystack/domain";
@@ -78,6 +79,8 @@ export type WorkerDependencies = {
   instagram?: InstagramOperations;
   productAnalytics?: { capture(events: Array<{ event: string; distinctId: string; properties: Record<string, unknown>; timestamp: string }>): Promise<void> };
   realtime?: Redis;
+  /** The changelog entries the bell posts. Defaults to the ones bundled from apps/admin/content/changelog. */
+  productUpdates?: readonly ProductUpdateEntry[];
   /** Downloads OpenAI's stored recording of a GPT-Live session. */
   liveSessions?: Pick<OpenAI["live"]["sessions"], "downloadRecording">;
   /** Takes over an open GPT-Live call in this worker process, when its own worker died. */
@@ -452,7 +455,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const importGuard = documentId && source ? { documentId, revision: source.revision } : undefined;
 
       if (!url || !dependencies.crawler) {
-        if (documentId) await markKnowledgeDocumentFailed(dependencies.domain, { businessId: businessIdOrThrow(job), documentId, ...(source ? { expectedRevision: source.revision } : {}), error: "Website crawling is not configured." });
+        if (documentId) await markKnowledgeDocumentFailed(dependencies.domain, { businessId: businessIdOrThrow(job), documentId, ...(source ? { expectedRevision: source.revision } : {}), error: "Website crawling is not configured.", websiteImport: { url } });
         // A demo's crawl that can't run here is unavailable rather than failed, so the demo can still publish without website knowledge.
         if (websiteIngestionJobId && !documentId) await updateWebsiteIngestion(dependencies.domain.db, { businessId: businessIdOrThrow(job), websiteIngestionJobId, status: url ? "unavailable" : "failed", error: url ? "Website crawling is not configured." : "The website address is missing." });
         return { status: "skipped", entityId: String(job.payload.jobId ?? "") };
@@ -482,7 +485,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           return { status: "deferred", entityId: documentId ?? websiteIngestionJobId ?? url, retryAt: new Date(Date.now() + wait) };
         }
         if (execution.isFinalAttempt !== false) {
-          if (documentId) await markKnowledgeDocumentFailed(dependencies.domain, { businessId: businessIdOrThrow(job), documentId, ...(source ? { expectedRevision: source.revision } : {}), error: "Website crawling failed." });
+          if (documentId) await markKnowledgeDocumentFailed(dependencies.domain, { businessId: businessIdOrThrow(job), documentId, ...(source ? { expectedRevision: source.revision } : {}), error: "Website crawling failed.", websiteImport: { url } });
           if (websiteIngestionJobId && !documentId) await updateWebsiteIngestion(dependencies.domain.db, { businessId: businessIdOrThrow(job), websiteIngestionJobId, status: "failed", error: "Website crawling failed." });
         }
         throw error;
@@ -508,7 +511,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       // Nothing indexed and pages failing points at an outage, such as the embedding provider's, so the job tries again.
       if (indexedChunks === 0 && failedPages && execution.isFinalAttempt === false) throw pageError;
       if (indexedChunks === 0 && documentId) {
-        await markKnowledgeDocumentFailed(dependencies.domain, { businessId: businessIdOrThrow(job), documentId, ...(source ? { expectedRevision: source.revision } : {}), error: failedPages ? "We couldn't index any page of this website." : "Website crawl returned no readable content." });
+        await markKnowledgeDocumentFailed(dependencies.domain, { businessId: businessIdOrThrow(job), documentId, ...(source ? { expectedRevision: source.revision } : {}), error: failedPages ? "We couldn't index any page of this website." : "Website crawl returned no readable content.", websiteImport: { url } });
       }
       if (indexedChunks > 0) {
         await withBusinessTransaction(dependencies.domain.db, { businessId: businessIdOrThrow(job), actorType: "worker" }, async tx => {
@@ -523,6 +526,8 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
             await tx.update(websiteIngestionJobs).set({ status: "completed", importedCount: pages.length, indexedCount: indexedPages, errorCount: failedPages, lastError: failedPages ? `We couldn't index ${failedPages} of ${pages.length} pages.` : null, updatedAt: new Date() }).where(and(eq(websiteIngestionJobs.id, websiteIngestionJobId), eq(websiteIngestionJobs.businessId, businessIdOrThrow(job)), ne(websiteIngestionJobs.status, "cancelled")));
             await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: businessIdOrThrow(job), aggregateType: "website_ingestion_job", aggregateId: websiteIngestionJobId, dedupeKey: `website-ingestion:${websiteIngestionJobId}:snapshot:${source?.revision ?? 0}`, payload: { businessId: businessIdOrThrow(job), reason: "website_ingestion_completed" } });
             await enqueueKnowledgeDerivedRefresh(tx, { businessId: businessIdOrThrow(job), reason: "website_ingestion_completed" });
+            // A dashboard import tells the bell how many pages it read. Onboarding's and a demo's have no document.
+            if (importGuard) await postWebsiteImportFinishedInTransaction(tx, { businessId: businessIdOrThrow(job), documentId: importGuard.documentId, websiteIngestionJobId, revision: importGuard.revision, url, pages: indexedPages });
           }
         });
       } else if (websiteIngestionJobId && !documentId) {
@@ -604,9 +609,13 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
     }
     case "calendar.syncAppointment":
       return await syncAppointmentCalendar(dependencies, { businessId: businessIdOrThrow(job), appointmentId: String(job.payload.appointmentId ?? "") });
-    case "calendar.reconcileBusiness":
+    case "calendar.reconcileBusiness": {
+      const businessId = businessIdOrThrow(job);
+      // Every 15 minutes, with or without a calendar: requests about an appointment whose time has passed are done.
+      await closePassedAppointmentRequests(dependencies.domain, { businessId });
       // A webhook delivery names the one connection whose bookings changed; every other trigger syncs the whole business.
-      return await reconcileBusinessCalendar(dependencies, businessIdOrThrow(job), job.payload.scope === "connection" && typeof job.payload.connectionId === "string" ? job.payload.connectionId : undefined);
+      return await reconcileBusinessCalendar(dependencies, businessId, job.payload.scope === "connection" && typeof job.payload.connectionId === "string" ? job.payload.connectionId : undefined);
+    }
     case "calendar.sweepRetired":
       // One sweep covers every business, including ones the scheduler no longer lists.
       return { status: "completed", entityId: `calendar-retired:${await forgetStaleRetiredCalendarTokens(dependencies.domain)}` };
@@ -1023,6 +1032,11 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const result = await queueDailyOperatorSummaries(dependencies.domain, { businessId });
       return { status: result.queued > 0 ? "completed" : "skipped", entityId: `${businessId}:${result.queued}` };
     }
+    case "notification.productUpdates": {
+      const businessId = businessIdOrThrow(job);
+      const posted = await postProductUpdates(dependencies.domain, { businessId, entries: dependencies.productUpdates ?? PRODUCT_UPDATE_ENTRIES });
+      return { status: posted.length ? "completed" : "skipped", entityId: `${businessId}:${posted.length}` };
+    }
     case "conversation.finalizeSession": {
       const callId = String(job.payload.callId ?? "");
       if (!callId) return { status: "skipped" };
@@ -1170,7 +1184,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         const rows = await tx.update(phoneNumbers)
           .set({ status: "reclaiming", updatedAt: new Date() })
           .where(and(eq(phoneNumbers.id, phoneNumberId), eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), lte(phoneNumbers.reclaimScheduledAt, new Date()), ...(sharedSender ? [ne(phoneNumbers.e164, sharedSender)] : [])))
-          .returning({ id: phoneNumbers.id, providerPhoneId: phoneNumbers.providerPhoneId, carrier: phoneNumbers.carrier });
+          .returning({ id: phoneNumbers.id, providerPhoneId: phoneNumbers.providerPhoneId, carrier: phoneNumbers.carrier, e164: phoneNumbers.e164, reclaimReason: phoneNumbers.reclaimReason });
         return rows[0] ?? null;
       });
       if (!claimed) return { status: "skipped", entityId: phoneNumberId };
@@ -1181,7 +1195,9 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           await inventory.releasePhoneNumber({ providerPhoneId: claimed.providerPhoneId });
         }
         await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
-          await tx.update(phoneNumbers).set({ status: "reclaimed", voiceEnabled: false, smsEnabled: false, reclaimScheduledAt: null, updatedAt: new Date() }).where(and(eq(phoneNumbers.id, claimed.id), eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "reclaiming")));
+          const released = await tx.update(phoneNumbers).set({ status: "reclaimed", voiceEnabled: false, smsEnabled: false, reclaimScheduledAt: null, updatedAt: new Date() }).where(and(eq(phoneNumbers.id, claimed.id), eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "reclaiming"))).returning({ id: phoneNumbers.id });
+          // A number replaced by a new one goes quietly. One a trial or an ended plan gave up tells the team it's gone.
+          if (released.length && (claimed.reclaimReason === "trial" || claimed.reclaimReason === "subscription_ended")) await postNumberReleasedInTransaction(tx, { businessId, phoneNumberId: claimed.id, e164: claimed.e164, trial: claimed.reclaimReason === "trial" });
         });
         return { status: "completed", entityId: phoneNumberId };
       } catch (error) {
@@ -1250,7 +1266,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         number: content.number,
         periodEnd: date(job.payload.periodEnd),
         releaseDate: date(job.payload.releaseAt),
-        url: `${brand.origin}/settings/plan`,
+        url: `${brand.origin}/workspace/billing`,
       };
       await dependencies.email.sendTemplate({ template: "number_release", to: content.to, subject: numberReleaseEmailSubject(variables), variables, brand, idempotencyKey: job.idempotencyKey, ...emailSender(brand, {}) });
       return { status: "completed", entityId: `${phoneNumberId}:${kind}` };
@@ -1279,7 +1295,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         forwardTo: content.forwardTo ?? "",
         endDate,
         calls: String(content.callsAnswered),
-        url: `${brand.origin}/settings/plan`,
+        url: `${brand.origin}/workspace/billing`,
       };
       await dependencies.email.sendTemplate({ template: "number_trial", to: content.to, subject: numberTrialEmailSubject(variables), variables, brand, idempotencyKey: job.idempotencyKey, ...emailSender(brand, {}) });
       return { status: "completed", entityId: `${trialId}:${kind}` };

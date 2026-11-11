@@ -1,0 +1,39 @@
+/**
+ * Where each dashboard page that moved lives now. Next checks these in order
+ * and keeps the query string. They stay temporary and stay for good: emails
+ * already sent link to the old paths. "primary" opens the workspace's default
+ * agent on the server. /settings itself is a page that opens the first one
+ * the person may use, so none of these match it.
+ */
+export const MOVED_DASHBOARD_ROUTES = [
+  // Calls and messages share the Inbox.
+  { source: "/calls", destination: "/inbox?channel=phone_call", permanent: false },
+  { source: "/calls/:callId", destination: "/inbox?call=:callId", permanent: false },
+  { source: "/messages", destination: "/inbox", permanent: false },
+  { source: "/agent", destination: "/agents/primary", permanent: false },
+  { source: "/agent/basic-settings", destination: "/agents/primary", permanent: false },
+  { source: "/agent/rules", destination: "/agents/primary/rules", permanent: false },
+  { source: "/agent/integrations", destination: "/agents/primary/channels", permanent: false },
+  // Calls and booking joined the agent's own page.
+  { source: "/agents/:agentId/handling", destination: "/agents/:agentId", permanent: false },
+  // Instructions joined Rules, as rules kept to one channel.
+  { source: "/agents/:agentId/instructions", destination: "/agents/:agentId/rules", permanent: false },
+  { source: "/agent/:section(knowledge|services|employees)", destination: "/business/:section", permanent: false },
+  { source: "/integrations", destination: "/business/integrations", permanent: false },
+  { source: "/integrations/webhooks", destination: "/workspace/webhooks", permanent: false },
+  { source: "/widget", destination: "/agents/primary/channels/widget", permanent: false },
+  { source: "/settings/widget", destination: "/agents/primary/channels/widget", permanent: false },
+  { source: "/settings/phone-number", destination: "/agents/primary/channels/phone", permanent: false },
+  { source: "/settings/account", destination: "/account", permanent: false },
+  // What every agent works from left Settings for Business.
+  { source: "/workspace/business", destination: "/business", permanent: false },
+  { source: "/workspace/:page(knowledge|services|employees)", destination: "/business/:page", permanent: false },
+  // Connections went back to its first name, Integrations.
+  { source: "/workspace/connections", destination: "/business/integrations", permanent: false },
+  { source: "/business/connections", destination: "/business/integrations", permanent: false },
+  { source: "/settings/plan", destination: "/workspace/billing", permanent: false },
+  // Connected apps moved to the bottom of API keys as MCP connections.
+  { source: "/settings/connected-apps", destination: "/workspace/api-keys", permanent: false },
+  { source: "/settings/:page(appearance|notifications)", destination: "/account/:page", permanent: false },
+  { source: "/settings/:page(team|usage|subscription|partner-access|api-keys)", destination: "/workspace/:page", permanent: false },
+] as const satisfies ReadonlyArray<{ source: string; destination: string; permanent: false }>;

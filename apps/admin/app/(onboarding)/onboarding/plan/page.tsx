@@ -4,7 +4,8 @@ import { OnboardingPlanSurface } from "@/components/onboarding-plan-surface";
 import { requireOnboardingStage } from "@/lib/onboarding-route";
 
 /**
- * Checkout success links opened before the success page existed still come
+ * The plans right after a trial number, which nothing closes. Checkout
+ * success links opened before the success page existed still come
  * here with `checkout=success` and the request to confirm. The result belongs
  * to the success page, so send the visit on with the request id it reads.
  */
@@ -19,5 +20,5 @@ export default async function OnboardingPlanPage({ searchParams }: { searchParam
     redirect(`/billing/success${query.size > 0 ? `?${query.toString()}` : ""}`);
   }
   await requireOnboardingStage("/onboarding/plan");
-  return <OnboardingPlanSurface />;
+  return <OnboardingPlanSurface variant="trial" />;
 }

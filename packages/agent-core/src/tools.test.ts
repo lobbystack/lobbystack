@@ -265,6 +265,17 @@ describe("getBusinessServices", () => {
 });
 
 describe("searchKnowledge", () => {
+  it("searches as the agent the snapshot was projected for, and as the default agent from a flat one", async () => {
+    vi.mocked(searchKnowledgeEvidence).mockClear();
+    vi.mocked(searchKnowledgeEvidence).mockResolvedValue({ matches: [], mode: "hybrid", outcome: "empty", durationMs: 1 } as never);
+    for (const [snapshot, agentId] of [[{ ...demoSnapshot, agentId: "agent-evening" }, "agent-evening"], [demoSnapshot, null]] as const) {
+      const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "sms", snapshot });
+      await (tools.searchKnowledge!.execute! as (input: object, options: object) => Promise<unknown>)({ query: "parking" }, { toolCallId: "1", messages: [] });
+      expect(vi.mocked(searchKnowledgeEvidence).mock.calls.at(-1)?.[1]).toMatchObject({ agentId });
+    }
+    vi.mocked(searchKnowledgeEvidence).mockReset();
+  });
+
   const snippet = (title: string, content: string, priority = 0): KnowledgeSnippet => ({ id: title, title, content, tags: [], priority });
   const passage = (title: string, content = `${title} details`) => ({ chunkId: title, documentId: title, title, content, sourceUrl: null, sourceRevision: 1, sequence: 0 });
   const evidence = (titles: string[], content?: string) => ({ matches: titles.map((title) => passage(title, content)), mode: "hybrid" as const, outcome: titles.length ? "found" as const : "empty" as const, durationMs: 1 });

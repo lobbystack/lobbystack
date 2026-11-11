@@ -1,6 +1,6 @@
 ---
 title: "Review your workspace from Home"
-description: "See this month's calls, messages, and appointments, the follow-ups that still need a person, and your next bookings from the LobbyStack Home page."
+description: "See what your agent booked and saved you in the last 30 days, the follow-ups that still need a person, and your next bookings from the LobbyStack Home page."
 sidebarTitle: "Home"
 contentType: "How-to"
 ---
@@ -15,6 +15,20 @@ _Use Home at the start of a shift to see what needs attention before opening ind
 
 Home starts with **Getting started**, a list of setup steps. It changes to the daily view below after your agent's first real conversation with a customer, and it stays there. Test calls and calls from your team's verified phones don't count. Click **Skip setup** to go to the daily view sooner. Owners and admins see the list, and other roles see the daily view from the start.
 
+If your workspace has a phone number, or had one during a free trial, you see these steps in order:
+
+| Step | What you do |
+| --- | --- |
+| **Read the rest of your site** | Have your agent read the pages it skipped during setup. |
+| **Call your number** | Call your LobbyStack number and ask what your callers ask most. The step finishes after the first answered call to it. |
+| **Keep your existing number** | Click **Set up forwarding** to send calls from the number your customers know. See [Set up call forwarding](#set-up-call-forwarding). |
+| **Add opening hours** | Set the hours your agent books in. You see this step only when your agent books appointments and you haven't saved hours. |
+| **Add more sources** | Upload your policies, FAQs or pricing. |
+
+If your free trial ended without a plan, the call and forwarding steps say **Your free trial ended. Choose a plan to get your number back.** Click **Choose a plan** to subscribe.
+
+A workspace that never had a number, such as one in a country without numbers, and a workspace a partner manages see these steps:
+
 | Step | What you do |
 | --- | --- |
 | **Read the rest of your site** | Have your agent read the pages it skipped during setup. |
@@ -27,9 +41,9 @@ Home starts with **Getting started**, a list of setup steps. It changes to the d
 | Section | What it is for |
 | --- | --- |
 | **Setup card** | Your next setup step while you get started, such as a browser test call, a free trial number, or call forwarding. |
-| **KPIs** | Monthly counts for calls, messages, appointments, and contacts. |
-| **Action required** | Follow-up tasks that still need a human response, such as callbacks or handoff requests, and a link to questions your agent couldn't answer. |
-| **Upcoming** | The next booked appointments on the calendar. |
+| **Phone and results card** | Your number and your last 30 days, above **Action required**. The heading above the card reads **Ready for your first call** until someone calls your number, then **Your agent is taking calls**. A tag says who picks up first, such as **Your agent answers first**. Click it to change [Staff answers first](/agent/calls-and-booking#staff-answers-first) without leaving Home. Click **Test Call** to call your agent from your browser. With several numbers, each row names its agent and has its own **Test Call**. Under the number, **Booked value**, **Time saved**, and **Calls without transfer** show what your agent booked, the talk time it took off your team, and how many calls it finished without a transfer. Without a number, the card shows only those three figures. |
+| **Action required** | Follow-up tasks that still need a human response, such as callbacks, handoff requests, cancellations and reschedules, each with its type, and a link to questions your agent couldn't answer. Click a row to open it. |
+| **Upcoming** | The next booked appointments on the calendar. Click one to open its details, with **Cancel** and **Reschedule**. |
 | **Calls per month** | A monthly call-volume chart based on saved call records. |
 | **Recent calls** | The latest inbound call activity with caller, timing, and outcome details. |
 
@@ -37,26 +51,48 @@ Home starts with **Getting started**, a list of setup steps. It changes to the d
 
 <Steps>
   <Step title="Open Home">
-    In the dashboard sidebar, go to **General** > **Home**.
+    Click **Home** in the dashboard sidebar.
   </Step>
   <Step title="Check Action required">
     Review callbacks, human handoff requests, and other follow-up items.
   </Step>
-  <Step title="Open the related call">
-    Select the item or open the related call from **Calls** to review the transcript, recording, and details.
+  <Step title="Open the item">
+    Click the row. A call's follow-up opens the call in the **Inbox**, and a handoff opens its conversation.
   </Step>
   <Step title="Complete the task">
-    After your team follows up, mark the task done from the call detail page.
+    On the call's **Details** tab, click **Mark done** after your team follows up. Approve a cancellation or reschedule request there too.
   </Step>
 </Steps>
 
+## See what your agent booked and saved
+
+The three figures at the bottom of the phone and results card cover the last 30 days.
+
+| Figure | How LobbyStack counts it |
+| --- | --- |
+| **Booked value** | The price of each appointment your agent booked by call, text, or chat in those 30 days, after any service discount. A fixed price counts in full, a starting price at its minimum, and a price range at its low end. |
+| **Time saved** | The talk time on calls your agent handled, shown in hours and minutes. |
+| **Calls without transfer** | The share of those calls that ended without your agent transferring the caller to your team. |
+
+Booked value leaves out:
+
+- Cancelled appointments
+- Appointments your team booked in the dashboard or through the API
+- Services priced in person or without a price
+
+LobbyStack uses each service's current price, so changing a price also changes the estimate for earlier dates. The figure appears in the currency set for your business.
+
+Time saved and the transfer share leave out spam calls and calls shorter than 10 seconds, the same calls your plan doesn't bill. Website chats don't add to time saved, since they have no talk time.
+
 ## Answer questions your agent couldn't
 
-When your agent has open questions, owners and admins see a link under **Action required**, such as **3 questions your agent couldn't answer**. Click it to jump to [**Unanswered Questions**](/agent/knowledge#answer-unanswered-questions) on the Knowledge page. The link counts as one item in the **Action required** total.
+When your agent has open questions, owners and admins see a link under **Action required**, such as **3 questions your agent couldn't answer**. Click it to jump to [**Unanswered Questions**](/settings/knowledge#answer-unanswered-questions) on the Knowledge page. The link counts as one item in the **Action required** total.
 
 ## Set up call forwarding
 
-Before your first real conversation, open **Forward your calls** in **Getting started** on **Home**. After it, the setup card on **Home** asks you to send your missed calls to your trial number, and **Set up forwarding** opens the same steps. Choose **Calls you miss** or **All calls**, and pick your carrier. LobbyStack shows the codes or settings for that carrier with your number filled in. The same steps are in the [call forwarding guide](/getting-started/forward-calls).
+Before your first real conversation, click **Set up forwarding** on **Keep your existing number** in **Getting started** on **Home**. After it, the setup card on **Home** asks you to send your missed calls to your trial number, and **Set up forwarding** opens the same steps. Choose **Calls you miss** or **All calls**, and pick your carrier. LobbyStack shows the codes or settings for that carrier with your number filled in. The same steps are in the [call forwarding guide](/getting-started/forward-calls).
+
+The step finishes when LobbyStack detects the first forwarded call, and it shows the line the call came from, such as **Forwarding from +1 …**. If your carrier hides that line, click **It works** after your test call.
 
 ## Use home at the start of a shift
 

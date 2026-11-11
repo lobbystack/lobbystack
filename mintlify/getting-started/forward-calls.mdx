@@ -7,7 +7,7 @@ contentType: "How-to"
 
 Call forwarding sends calls from your current business line to your LobbyStack number, and your agent answers them. Customers keep dialing the number they know. You turn forwarding on with your phone carrier, from the phone your customers call.
 
-The dashboard shows these steps with your number filled in. Before your first real conversation, open **Connect a phone number** in **Getting started** on **Home**. After it, click **Set up forwarding** on **Home** during the free trial. After you subscribe, click **Call forwarding guide** on the page that confirms your plan.
+The dashboard shows these steps with your number filled in. Before your first real conversation, open **Keep your existing number** in **Getting started** on **Home** and click **Set up forwarding**. After it, click **Set up forwarding** on **Home** during the free trial.
 
 ## Choose what to forward
 
@@ -18,11 +18,11 @@ The dashboard shows these steps with your number filled in. Before your first re
 
 Calls you miss covers three cases: you don't answer, you're on another call, or your phone is off or has no signal. Some carriers handle all three with one code, and others use one code for each case.
 
-To ring your phone first without carrier codes, give out your LobbyStack number and turn on [Staff answers first](/agent/ai-settings/overview#staff-answers-first). You set the ring time and the hours in the dashboard, and you press 1 to take each call. It needs a paid plan and a Twilio number. Carrier forwarding keeps working on its own, so pick one of the two for missed calls.
+To ring your phone first without carrier codes, give out your LobbyStack number and turn on [Staff answers first](/agent/calls-and-booking#staff-answers-first). You set the ring time and the hours in the dashboard, and you press 1 to take each call. It needs a paid plan and a Twilio number. Carrier forwarding keeps working on its own, so pick one of the two for missed calls.
 
 ## Before you start
 
-- Find your LobbyStack number in **Settings** > **Phone number**.
+- Find your LobbyStack number on your agent's **Channels** page. See [Manage your business phone number](/agent/phone-number).
 - The codes on this page use the example number (555) 123-4567. Replace `5551234567` with the 10 digits of your LobbyStack number.
 - Some carriers want a 1 in front of the number, so their codes show `15551234567`. Keep the 1 and replace the 10 digits after it.
 
@@ -30,10 +30,10 @@ To ring your phone first without carrier codes, give out your LobbyStack number 
 
 <Steps>
   <Step title="Dial the code">
-    On the phone your customers call, dial your carrier's code from the **Turn on** column. Some codes end without a number, such as `*72`. For those, the line asks for the number after you press Call: enter it in the format the table shows.
+    On the phone your customers call, dial your carrier's code from the **Turn on** column.
   </Step>
   <Step title="Press Call">
-    A tone or a message confirms that forwarding is on.
+    Some codes end without a number, such as `*72`. For those, the line then asks for the number: enter it in the format the table shows.
   </Step>
   <Step title="Dial the extra codes">
     For calls you miss, some carriers split the cases into separate codes. Dial the **Busy** code to also forward calls that come in while you're on the phone. Dial the **Unreachable** code to also forward calls when your phone is off or has no signal.
@@ -160,7 +160,7 @@ If your phone system lets you pick a ring time, 15 to 20 seconds gives you about
 | US Mobile (Warp) | `*725551234567` | `*73` |  |
 | US Mobile (Light Speed) | `**21*5551234567#` | `##21#` |  |
 | US Mobile (Dark Star) | `*21*5551234567#` | `#21#` |  |
-| Google Fi | **Google Fi app** > **Phone settings** > **Call forwarding** > **Always forward** | In the same menu | Google Fi sends a code to your LobbyStack number before it forwards. Choose to get the code by phone call, then read it in that call's transcript under **Calls**. |
+| Google Fi | **Google Fi app** > **Phone settings** > **Call forwarding** > **Always forward** | In the same menu | Google Fi sends a code to your LobbyStack number before it forwards. Choose to get the code by phone call, then read it in that call's transcript in the LobbyStack **Inbox**. |
 
 ### Canadian mobile
 
@@ -194,7 +194,7 @@ If your phone system lets you pick a ring time, 15 to 20 seconds gives you about
 | Phone system | Turn on | Turn off | Notes |
 | --- | --- | --- | --- |
 | RingCentral | **Profile picture** > **Incoming call rules** > **Forward all calls** | In the same menu |  |
-| Google Voice | **voice.google.com** > **Settings** > **Calls** > **Call forwarding** | In the same menu | Google Voice sends a code to your LobbyStack number before it forwards. Choose to get the code by phone call, then read it in that call's transcript under **Calls**. |
+| Google Voice | **voice.google.com** > **Settings** > **Calls** > **Call forwarding** | In the same menu | Google Voice sends a code to your LobbyStack number before it forwards. Choose to get the code by phone call, then read it in that call's transcript in the LobbyStack **Inbox**. |
 | Vonage Business | **app.vonage.com** > **Settings** > **Call Forwarding** > **Forward All Calls** | In the same menu |  |
 | Dialpad | **Admin Settings** > **Office** > **Main Line** > **Call Routing** > **No operator** | In the same menu | Only an admin of your Dialpad account can change this. |
 | Quo (OpenPhone) | **Settings** > **Phone numbers** > **Edit call flow** > **Forward all calls** | In the same menu |  |
@@ -209,9 +209,11 @@ If your phone system lets you pick a ring time, 15 to 20 seconds gives you about
 | Spectrum Business Voice | `*7215551234567#` | `*73` |  |
 | Comcast Business Voice | `*72`, then enter `5551234567` when asked | `*73` |  |
 
-## Test forwarding
+## Confirm that forwarding works
 
-Call your business number from another phone. If you forward calls you miss, let it ring. Your agent should answer.
+When LobbyStack detects the first forwarded call, **Keep your existing number** in **Getting started** finishes and shows the line it came from, such as **Forwarding from (514) 555-0199**. Some carriers hide the line a forwarded call came from. If the step doesn't finish once forwarded calls reach your agent, open it, click **Set up forwarding**, then click **It works**.
+
+LobbyStack detects forwarded calls on Twilio numbers and on calls that reach your agent over SIP. It can't detect them on Telnyx numbers that use TeXML, so click **It works** there.
 
 ## If your carrier isn't listed
 

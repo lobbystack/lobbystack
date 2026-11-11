@@ -145,7 +145,7 @@ describe.skipIf(!client)("links from channels and history to agents", () => {
       const [row] = (await as("lobbystack_worker", { businessId: bareBusinessId, actorType: "worker" }, async (tx) => await tx.execute<Row>(insert(bareBusinessId)))).rows;
       const [agent] = await client!.db.select({ id: agents.id, name: agents.name, isDefault: agents.isDefault, greeting: agents.greeting, transferMode: agents.transferMode }).from(agents).where(eq(agents.businessId, bareBusinessId));
       expect(row?.agent_id).toBe(agent?.id);
-      expect(agent).toMatchObject({ name: "Agente", isDefault: true, greeting: "Gracias por llamar a Clínica Sol. ¿En qué puedo ayudarle hoy?", transferMode: "on_request" });
+      expect(agent).toMatchObject({ name: "Agente predeterminado", isDefault: true, greeting: "Gracias por llamar a Clínica Sol. ¿En qué puedo ayudarle hoy?", transferMode: "on_request" });
     });
 
     it("creates nothing in a business the row's policy refuses", async () => {

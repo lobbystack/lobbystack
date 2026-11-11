@@ -1,6 +1,6 @@
 ---
 title: "Revise su espacio de trabajo desde Inicio"
-description: "Consulte las llamadas, los mensajes y las citas de este mes, los seguimientos que aún requieren a una persona y sus próximas reservas desde la página Inicio de LobbyStack."
+description: "Consulte lo que su agente reservó y le ahorró en los últimos 30 días, los seguimientos que aún requieren a una persona y sus próximas reservas desde la página Inicio de LobbyStack."
 sidebarTitle: "Inicio"
 contentType: "How-to"
 ---
@@ -15,6 +15,20 @@ _Use Inicio al comenzar un turno para ver qué requiere atención antes de abrir
 
 Inicio empieza con **Primeros pasos**, una lista de pasos de configuración. Pasa a la vista diaria de abajo después de la primera conversación real de su agente con un cliente, y se queda ahí. Las llamadas de prueba y las llamadas de los teléfonos verificados de su equipo no cuentan. Haga clic en **Omitir configuración** para pasar antes a la vista diaria. Los propietarios y administradores ven la lista, y los demás roles ven la vista diaria desde el principio.
 
+Si su espacio de trabajo tiene un número de teléfono, o tuvo uno durante una prueba gratuita, verá estos pasos en este orden:
+
+| Paso | Qué hace usted |
+| --- | --- |
+| **Leer el resto de su sitio** | Haga que su agente lea las páginas que no leyó durante la configuración. |
+| **Llame a su número** | Llame a su número de LobbyStack y pregúntele lo que más le preguntan quienes llaman. El paso se completa después de la primera llamada contestada a ese número. |
+| **Conserve su número existente** | Haga clic en **Configurar el desvío** para enviar las llamadas del número que conocen sus clientes. Consulte [Configurar el desvío de llamadas](#configurar-el-desvío-de-llamadas). |
+| **Añadir su horario** | Defina el horario en el que su agente reserva. Este paso aparece solo cuando su agente reserva citas y usted no ha guardado un horario. |
+| **Añadir más fuentes** | Suba sus políticas, preguntas frecuentes o precios. |
+
+Si su prueba gratuita terminó sin un plan, los pasos de la llamada y del desvío dicen **Su prueba gratuita terminó. Elija un plan para recuperar su número.** Haga clic en **Elegir un plan** para suscribirse.
+
+Un espacio de trabajo que nunca tuvo número, por ejemplo en un país sin números, y un espacio de trabajo que gestiona un socio ven estos pasos:
+
 | Paso | Qué hace usted |
 | --- | --- |
 | **Leer el resto de su sitio** | Haga que su agente lea las páginas que no leyó durante la configuración. |
@@ -27,9 +41,9 @@ Inicio empieza con **Primeros pasos**, una lista de pasos de configuración. Pas
 | Sección | Para qué sirve |
 | --- | --- |
 | **Tarjeta de configuración** | Su siguiente paso de configuración mientras empieza, como una llamada de prueba en el navegador, un número de prueba gratuita o el desvío de llamadas. |
-| **KPI** | Totales mensuales de llamadas, mensajes, citas y contactos. |
-| **Acción requerida** | Tareas de seguimiento que aún necesitan la respuesta de una persona, como devoluciones de llamada o solicitudes de traspaso, y un enlace a las preguntas que su agente no supo responder. |
-| **Próximas** | Las próximas citas reservadas en el calendario. |
+| **Tarjeta de teléfono y resultados** | Su número y sus últimos 30 días, encima de **Acción requerida**. El título sobre la tarjeta dice **Listo para su primera llamada** hasta que alguien llame a su número, y después **Su agente está atendiendo llamadas**. Una etiqueta indica quién contesta primero, como **Su agente responde primero**. Haga clic en ella para cambiar [El personal responde primero](/es/agent/calls-and-booking) sin salir de Inicio. Haga clic en **Llamada de prueba** para llamar a su agente desde el navegador. Con varios números, cada fila nombra a su agente y tiene su propia **Llamada de prueba**. Debajo del número, **Valor reservado**, **Tiempo ahorrado** y **Llamadas sin transferir** muestran lo que su agente reservó, el tiempo de conversación que le quitó a su equipo y la parte de las llamadas que terminó sin transferir. Sin número, la tarjeta solo muestra esas tres cifras. |
+| **Acción requerida** | Tareas de seguimiento que aún necesitan la respuesta de una persona, como devoluciones de llamada, solicitudes de traspaso, cancelaciones y cambios de hora, cada una con su tipo, y un enlace a las preguntas que su agente no supo responder. Haga clic en una fila para abrirla. |
+| **Próximas** | Las próximas citas reservadas en el calendario. Haga clic en una para abrir sus detalles, con **Cancelar** y **Cambiar hora**. |
 | **Llamadas por mes** | Un gráfico del volumen mensual de llamadas basado en los registros de llamadas guardados. |
 | **Llamadas recientes** | La actividad más reciente de llamadas entrantes, con datos de quien llama, la hora y el resultado. |
 
@@ -37,26 +51,48 @@ Inicio empieza con **Primeros pasos**, una lista de pasos de configuración. Pas
 
 <Steps>
   <Step title="Abra Inicio">
-    En la barra lateral del panel, vaya a **General** > **Inicio**.
+    Haga clic en **Inicio** en la barra lateral del panel.
   </Step>
   <Step title="Revise Acción requerida">
     Revise las devoluciones de llamada, las solicitudes de traspaso a una persona y otros elementos de seguimiento.
   </Step>
-  <Step title="Abra la llamada relacionada">
-    Seleccione el elemento o abra la llamada relacionada desde **Llamadas** para revisar la transcripción, la grabación y los detalles.
+  <Step title="Abra el elemento">
+    Haga clic en la fila. El seguimiento de una llamada abre la llamada en la **Bandeja de entrada**, y un traspaso abre su conversación.
   </Step>
   <Step title="Complete la tarea">
-    Cuando su equipo haya hecho el seguimiento, marque la tarea como hecha desde la página de detalle de la llamada.
+    En la pestaña **Detalles** de la llamada, haga clic en **Marcar como hecha** cuando su equipo haya hecho el seguimiento. Ahí también aprueba las solicitudes de cancelación o de cambio de hora.
   </Step>
 </Steps>
 
+## Ver lo que su agente reservó y le ahorró
+
+Las tres cifras al final de la tarjeta de teléfono y resultados cubren los últimos 30 días.
+
+| Cifra | Cómo la calcula LobbyStack |
+| --- | --- |
+| **Valor reservado** | El precio de cada cita que su agente reservó por llamada, SMS o chat en esos 30 días, después del descuento del servicio, si lo hay. Un precio fijo cuenta completo, un precio «desde» por su mínimo y un rango de precios por su extremo inferior. |
+| **Tiempo ahorrado** | El tiempo de conversación de las llamadas que atendió su agente, en horas y minutos. |
+| **Llamadas sin transferir** | La parte de esas llamadas que terminó sin que su agente transfiriera a la persona que llamó a su equipo. |
+
+El valor reservado no incluye:
+
+- Las citas canceladas
+- Las citas que su equipo reservó en el panel o mediante la API
+- Los servicios con precio en persona o sin precio
+
+LobbyStack usa el precio actual de cada servicio, así que si cambia un precio, la estimación también cambia para fechas anteriores. La cifra aparece en la moneda configurada para su negocio.
+
+El tiempo ahorrado y la parte sin transferir no incluyen las llamadas de spam ni las de menos de 10 segundos, las mismas que su plan no factura. Los chats del sitio web no suman al tiempo ahorrado, porque no tienen tiempo de conversación.
+
 ## Responda las preguntas que su agente no supo contestar
 
-Cuando su agente tiene preguntas abiertas, los propietarios y los administradores ven un enlace en **Acción requerida**, por ejemplo **3 preguntas que su agente no supo responder**. Haga clic en él para ir a [**Preguntas sin respuesta**](/es/agent/knowledge#responder-preguntas-sin-respuesta) en la página Conocimiento. El enlace cuenta como un elemento en el total de **Acción requerida**.
+Cuando su agente tiene preguntas abiertas, los propietarios y los administradores ven un enlace en **Acción requerida**, por ejemplo **3 preguntas que su agente no supo responder**. Haga clic en él para ir a [**Preguntas sin respuesta**](/es/settings/knowledge#responder-preguntas-sin-respuesta) en la página Conocimiento. El enlace cuenta como un elemento en el total de **Acción requerida**.
 
 ## Configurar el desvío de llamadas
 
-Antes de su primera conversación real, abra **Desvíe sus llamadas** en **Primeros pasos**, en **Inicio**. Después, la tarjeta de configuración de **Inicio** le propone enviar sus llamadas perdidas a su número de prueba, y **Configurar el desvío** abre los mismos pasos. Elija **Llamadas perdidas** o **Todas las llamadas** y luego su operador. LobbyStack muestra los códigos o los ajustes de ese operador con su número ya puesto. Los mismos pasos están en la [guía de desvío de llamadas](/es/getting-started/forward-calls).
+Antes de su primera conversación real, haga clic en **Configurar el desvío** en **Conserve su número existente**, en **Primeros pasos** de **Inicio**. Después, la tarjeta de configuración de **Inicio** le propone enviar sus llamadas perdidas a su número de prueba, y **Configurar el desvío** abre los mismos pasos. Elija **Llamadas perdidas** o **Todas las llamadas** y luego su operador. LobbyStack muestra los códigos o los ajustes de ese operador con su número ya puesto. Los mismos pasos están en la [guía de desvío de llamadas](/es/getting-started/forward-calls).
+
+El paso se completa cuando LobbyStack detecta la primera llamada desviada, y muestra la línea de la que llegó, por ejemplo **Desvío desde el +1 …**. Si su operador oculta esa línea, haga clic en **Funciona** después de su llamada de prueba.
 
 ## Usar Inicio al comenzar un turno
 

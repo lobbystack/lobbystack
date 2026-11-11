@@ -8,6 +8,7 @@ import { resolveTwilioWebhookUrl, validateTwilioSignature } from "@lobbystack/pr
 import { isTransferPhone, type RuntimeLocale } from "@lobbystack/shared";
 import { getAppDatabase } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
+import { noteForwardedCall } from "@/lib/forwarded-calls";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -89,6 +90,8 @@ export async function POST(request: Request, { params: route }: { params: Promis
       try {
         const routed = await businessForNumber([params.To, params.Called]);
         if (!routed) return twiml(rejectTwiml());
+        // Twilio names the line a forwarded call came through. The caller doesn't wait on it.
+        if (params.ForwardedFrom) void noteForwardedCall({ businessId: routed.businessId, dialled: routed.called, from: callerPhone(params.From), candidates: [params.ForwardedFrom], source: "twilio" });
         const decision = await decideStaffFirstCall(domain, { businessId: routed.businessId, e164: routed.called, providerCallId: params.CallSid ?? "", from: callerPhone(params.From), forwardedFrom: params.ForwardedFrom });
         if (decision.action === "reject") return twiml(rejectTwiml());
         if (decision.action === "ring") {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -31,7 +31,7 @@ export function appointmentSummary(appointment: CancellableAppointment, locale: 
  * requests to cancel it. With `approve`, it reads as approving one of those
  * requests. Hidden from roles that can't cancel.
  */
-export function CancelAppointmentButton({ appointment, approve, className, size = "xs", variant = "outline" }: { appointment: CancellableAppointment; approve?: boolean; className?: string; size?: "xs" | "default"; variant?: "outline" | "destructive" }) {
+export function CancelAppointmentButton({ appointment, approve, className, renderTrigger, size = "sm", variant = "outline" }: { appointment: CancellableAppointment; approve?: boolean; className?: string; size?: "sm" | "default"; variant?: "outline" | "destructive"; /** Replaces the button, as a row's menu item does; the confirmation stays outside it. */ renderTrigger?: (open: () => void) => ReactNode }) {
   const { t, i18n } = useTranslation("common");
   const queryClient = useQueryClient();
   const { business } = useActiveBusiness();
@@ -60,9 +60,9 @@ export function CancelAppointmentButton({ appointment, approve, className, size 
   const summary = appointmentSummary(appointment, i18n.language, t);
   return (
     <>
-      <Button aria-label={approve ? undefined : t("appointments.cancel.actionLabel", { time: formatDateTime(appointment.startsAt, i18n.language, { dateStyle: "medium", timeStyle: "short", timeZone: appointment.timezone }) })} className={className} onClick={() => setOpen(true)} size={size} variant={variant}>
+      {renderTrigger ? renderTrigger(() => setOpen(true)) : <Button aria-label={approve ? undefined : t("appointments.cancel.actionLabel", { time: formatDateTime(appointment.startsAt, i18n.language, { dateStyle: "medium", timeStyle: "short", timeZone: appointment.timezone }) })} className={className} onClick={() => setOpen(true)} size={size} variant={variant}>
         {approve ? t("appointments.cancel.approve") : t("appointments.cancel.action")}
-      </Button>
+      </Button>}
       <ConfirmActionDialog
         cancelLabel={t("appointments.cancel.keep")}
         confirmLabel={t("appointments.cancel.confirm")}

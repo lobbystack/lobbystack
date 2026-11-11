@@ -1,11 +1,11 @@
 ---
 title: "Revise las analíticas de su agente"
-description: "Vea lo que su agente reservó y el tiempo que le ahorró, y revise las tendencias de llamadas, mensajes, citas, resultados de llamadas y canales."
+description: "Revise las llamadas, su duración, las citas de hoy y las tendencias de mensajes, citas, resultados de llamadas y canales."
 sidebarTitle: "Analíticas"
 contentType: "How-to"
 ---
 
-La página **Analíticas** le ayuda a entender cómo usan sus clientes a su agente. Resume la actividad semanal y muestra si las llamadas, los mensajes, las citas y la duración media de las llamadas suben o bajan.
+La página **Analíticas** le ayuda a entender cómo usan sus clientes a su agente. Resume la actividad de las fechas que elija y muestra si las llamadas, los mensajes, las citas y la duración media de las llamadas suben o bajan.
 
 ![Página Analíticas de LobbyStack](/images/screenshots/analytics.png)
 
@@ -15,7 +15,7 @@ _Analíticas le ayuda a detectar cambios en la carga de trabajo y a decidir dón
 
 | Sección | Para qué sirve |
 | --- | --- |
-| **Valor reservado**, **Tiempo ahorrado**, **Llamadas sin transferir** | Lo que su agente reservó, el tiempo de conversación que le quitó a su equipo y la parte de las llamadas que terminó sin transferir. |
+| **Llamadas**, **Hoy**, **Duración media** | Las llamadas y su duración media en las fechas que elija, y las citas que quedan hoy. |
 | **Resumen de actividad** | Las llamadas y los mensajes semanales en un solo gráfico. |
 | **Llamadas esta semana** | El número de llamadas y su variación respecto a la semana anterior. |
 | **Mensajes esta semana** | La actividad de conversaciones por SMS y su variación semanal. |
@@ -24,33 +24,25 @@ _Analíticas le ayuda a detectar cambios en la carga de trabajo y a decidir dón
 | **Resultados de llamadas** | Llamadas completadas, transferidas, en curso y perdidas. |
 | **Canales** | La proporción de actividad que llega por voz, SMS y otros canales. |
 
-## Ver lo que su agente reservó y le ahorró
+## Revisar las llamadas, el día de hoy y la duración
 
-Las tres cifras de arriba en la página cubren las fechas que elija, y cada una se compara con el período de la misma duración justo anterior.
+Las tres cifras de arriba en la página muestran:
 
-| Cifra | Cómo la calcula LobbyStack |
+| Cifra | Qué muestra |
 | --- | --- |
-| **Valor reservado** | El precio de cada cita que su agente reservó por llamada, SMS o chat en esas fechas, después del descuento del servicio, si lo hay. Un precio fijo cuenta completo, un precio «desde» por su mínimo y un rango de precios por su extremo inferior. |
-| **Tiempo ahorrado** | El tiempo de conversación de las llamadas que atendió su agente, en horas y minutos. |
-| **Llamadas sin transferir** | La parte de esas llamadas que terminó sin que su agente transfiriera a la persona que llamó a su equipo. |
+| **Llamadas** | Las llamadas de su agente en las fechas que elija y su variación respecto al período de la misma duración justo anterior. |
+| **Hoy** | Las citas que quedan hoy y la hora de la siguiente. Siempre cubre el día de hoy, sean cuales sean las fechas elegidas. |
+| **Duración media** | La duración media de las llamadas en las fechas que elija y su variación respecto al período anterior. Una llamada en curso cuenta como 0 segundos. |
 
-El valor reservado no incluye:
+[Inicio](/es/dashboard/home#ver-lo-que-su-agente-reservó-y-le-ahorró) muestra lo que su agente reservó y le ahorró.
 
-- Las citas canceladas
-- Las citas que su equipo reservó en el panel o mediante la API
-- Los servicios con precio en persona o sin precio
-
-LobbyStack usa el precio actual de cada servicio, así que si cambia un precio, la estimación también cambia para fechas anteriores. La cifra aparece en la moneda configurada para su negocio.
-
-El tiempo ahorrado y la parte sin transferir no incluyen las llamadas de spam ni las de menos de 10 segundos, las mismas que su plan no factura. Los chats del sitio web no suman al tiempo ahorrado, porque no tienen tiempo de conversación.
-
-Las analíticas cuentan las llamadas de su agente. Las llamadas que toma su equipo con [El personal responde primero](/es/agent/ai-settings/overview#el-personal-responde-primero) quedan fuera de todas las cifras de esta página, y las encontrará en **Llamadas**.
+Las analíticas cuentan las llamadas de su agente. Las llamadas que toma su equipo con [El personal responde primero](/es/agent/calls-and-booking#el-personal-responde-primero) quedan fuera de todas las cifras de esta página, y las encontrará en la **Bandeja de entrada**.
 
 ## Revisar el rendimiento
 
 <Steps>
   <Step title="Abra Analíticas">
-    En la barra lateral del panel, vaya a **Gestionar** > **Analíticas**.
+    Haga clic en **Analíticas** en la barra lateral del panel.
   </Step>
   <Step title="Revise la variación semanal">
     Mire las tarjetas de métricas para ver si las tendencias de llamadas, mensajes, citas y duración cambiaron respecto a la semana anterior.
@@ -77,10 +69,10 @@ Las analíticas cuentan las llamadas de su agente. Las llamadas que toma su equi
 
 1. Empiece por las tarjetas de métricas para ver qué cambió.
 2. Revise **Resultados de llamadas** en busca de patrones de llamadas perdidas, fallidas o con muchas transferencias.
-3. Abra **Llamadas** para ver ejemplos concretos detrás de la tendencia.
+3. Abra la **Bandeja de entrada** para ver ejemplos concretos detrás de la tendencia.
 4. Actualice **Conocimiento** o **Reglas** cuando quienes llaman pregunten una y otra vez por el mismo tema.
 5. Vuelva a revisar Analíticas después del siguiente período de mucha actividad para ver si el cambio funcionó.
 
 ## Cuándo usarla
 
-Use Analíticas cuando quiera entender la carga de trabajo, detectar cambios en el comportamiento de quienes llaman o decidir si la configuración de su agente necesita ajustes. Para conversaciones concretas, use **Llamadas**, **Mensajes** y **Contactos**.
+Use Analíticas cuando quiera entender la carga de trabajo, detectar cambios en el comportamiento de quienes llaman o decidir si la configuración de su agente necesita ajustes. Para llamadas y conversaciones concretas, use la **Bandeja de entrada** y **Contactos**.

@@ -10,6 +10,7 @@ import { hasMinimumRole, requireBusinessAdmin, requireBusinessMembership } from 
 import { enqueueAgentSnapshotRefresh } from "./agentSnapshot";
 import type { DomainContext } from "./context";
 import { loadEntitlement } from "./entitlement";
+import { postBusinessNotificationInTransaction, resolveBusinessNotificationsInTransaction } from "./businessNotifications";
 import { businessGetsHostEmails } from "./hostEmails";
 import { loadPartnerNumberStanding } from "./partnerNumbers";
 import { sharedSmsSender } from "./smsSender";
@@ -129,6 +130,7 @@ export async function convertNumberTrialInTransaction(tx: DatabaseTransaction, i
     .set({ status: "converted", updatedAt: now })
     .where(and(eq(numberTrials.businessId, input.businessId), inArray(numberTrials.status, ["active", "ended"])))
     .returning({ phoneNumberId: numberTrials.phoneNumberId });
+  if (trial) await resolveBusinessNotificationsInTransaction(tx, { businessId: input.businessId, kinds: TRIAL_NOTIFICATION_KINDS, now });
   if (!trial?.phoneNumberId) return false;
   const restored = await tx.update(phoneNumbers)
     .set({ reclaimScheduledAt: null, reclaimReason: null, updatedAt: now })
@@ -174,7 +176,22 @@ export async function keepBusinessNumbersInTransaction(tx: DatabaseTransaction, 
   await tx.update(phoneNumbers)
     .set({ reclaimScheduledAt: null, reclaimReason: null, updatedAt: now })
     .where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"), eq(phoneNumbers.reclaimReason, "subscription_ended")));
+  await resolveBusinessNotificationsInTransaction(tx, { businessId: input.businessId, kinds: ["number_release_soon"], now });
 }
+
+/**
+ * We released a number a trial or an ended plan gave up. The bell says so
+ * until the business gets a number again, or for 30 days, and the trial's
+ * ended item or the release reminder gives way to it.
+ */
+export async function postNumberReleasedInTransaction(tx: DatabaseTransaction, input: { businessId: string; phoneNumberId: string; e164: string; trial: boolean; now?: Date }): Promise<void> {
+  const now = input.now ?? new Date();
+  await resolveBusinessNotificationsInTransaction(tx, { businessId: input.businessId, kinds: ["trial_ended", "trial_minutes_used_up", "number_release_soon"], now });
+  await postBusinessNotificationInTransaction(tx, { businessId: input.businessId, kind: "number_released", key: `number_released:${input.phoneNumberId}`, params: { number: input.e164, trial: input.trial }, expiresAt: new Date(now.getTime() + NUMBER_RELEASE_GRACE_DAYS * 86_400_000), now });
+}
+
+/** The trial's bell items, which a paid plan clears. */
+const TRIAL_NOTIFICATION_KINDS = ["trial_ending", "trial_ended", "trial_minutes_used_up"] as const;
 
 export const NUMBER_RELEASE_GRACE_DAYS = 30;
 
@@ -209,11 +226,12 @@ export async function sweepNumberReleases(context: DomainContext, input: { busin
   const now = input.now ?? new Date();
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     if (!await businessGetsHostEmails(tx, input.businessId)) return 0;
-    const due = await tx.select({ id: phoneNumbers.id, reclaimScheduledAt: phoneNumbers.reclaimScheduledAt }).from(phoneNumbers)
+    const due = await tx.select({ id: phoneNumbers.id, e164: phoneNumbers.e164, reclaimScheduledAt: phoneNumbers.reclaimScheduledAt }).from(phoneNumbers)
       .where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"), eq(phoneNumbers.reclaimReason, "subscription_ended"), lte(phoneNumbers.reclaimScheduledAt, new Date(now.getTime() + 3 * 86_400_000)), gt(phoneNumbers.reclaimScheduledAt, now)));
     for (const number of due) {
       // The release date in the key sends one reminder per scheduled release, however often this runs.
       await enqueueOutbox(tx, { topic: "phoneNumber.releaseEmail", businessId: input.businessId, aggregateType: "phone_number", aggregateId: number.id, dedupeKey: `phone-number:${number.id}:release-email:soon:${number.reclaimScheduledAt!.toISOString().slice(0, 10)}`, payload: { phoneNumberId: number.id, kind: "release_soon", releaseAt: number.reclaimScheduledAt!.toISOString() } });
+      await postBusinessNotificationInTransaction(tx, { businessId: input.businessId, kind: "number_release_soon", key: `number_release_soon:${number.id}:${number.reclaimScheduledAt!.toISOString().slice(0, 10)}`, params: { number: number.e164, releaseAt: number.reclaimScheduledAt!.toISOString() }, expiresAt: number.reclaimScheduledAt!, now });
     }
     return due.length;
   });
@@ -468,14 +486,18 @@ export async function trialEmailInTransaction(tx: DatabaseTransaction, userId: s
 }
 
 /**
- * Whether this request's network and country are enough to start a trial
- * without a text: the same once-per-network rule the claim applies, read
- * through the definer function that sees other workspaces' trials.
+ * Why a direct owner's network can't start a trial, or null when it can: the
+ * same once-per-network rule the claim applies, read through the definer
+ * function that sees other workspaces' trials. A direct owner has no phone
+ * step to prove themselves with instead, so the number step offers the
+ * plans: trial_ip_limited when the network started a trial in the last 30
+ * days, and trial_not_available when there's no trusted address or country
+ * to check.
  */
-export async function trialNetworkNeedsPhoneVerificationInTransaction(tx: DatabaseTransaction, input: { userId: string; businessId: string; ipHash?: string | null | undefined; ipCountry?: string | null | undefined }): Promise<boolean> {
-  if (trialNeedsPhoneVerification(input)) return true;
+export async function directTrialNetworkRefusalInTransaction(tx: DatabaseTransaction, input: { userId: string; businessId: string; ipHash?: string | null | undefined; ipCountry?: string | null | undefined }): Promise<"trial_ip_limited" | "trial_not_available" | null> {
+  if (trialNeedsPhoneVerification(input)) return "trial_not_available";
   const limited = await tx.execute(sql`SELECT app.number_trial_ip_used(${input.businessId}::uuid, ${input.userId}::uuid, ${input.ipHash}) AS used`);
-  return Boolean((limited.rows[0] as { used?: boolean } | undefined)?.used);
+  return (limited.rows[0] as { used?: boolean } | undefined)?.used ? "trial_ip_limited" : null;
 }
 
 /**
@@ -509,9 +531,9 @@ export async function onboardingNumberTrialOutlookInTransaction(tx: DatabaseTran
   if ((used.rows[0] as { used?: boolean } | undefined)?.used) return { verificationNeeded: false, refusal: "trial_already_used" };
   const countries = trialCountries();
   if (countries.length === 0) return { verificationNeeded: false, refusal: "trial_not_available" };
-  // The number's country comes from the search's selection, so the step only
-  // needs to know whether the network can start a trial without a text.
-  return { verificationNeeded: await trialNetworkNeedsPhoneVerificationInTransaction(tx, input), refusal: null };
+  // The number's country comes from the search's selection. A direct owner
+  // has no phone step, so a network that can't start a trial gets the plans.
+  return { verificationNeeded: false, refusal: await directTrialNetworkRefusalInTransaction(tx, input) };
 }
 
 export async function onboardingNumberTrialOutlook(context: DomainContext, input: { userId: string; businessId: string; ipHash?: string | null | undefined; ipCountry?: string | null | undefined }): Promise<OnboardingNumberTrialOutlook> {
@@ -614,7 +636,25 @@ async function queueTrialEmail(tx: DatabaseTransaction, input: { businessId: str
     dedupeKey: `number-trial:${input.trialId}:email:${input.email}`,
     payload: { trialId: input.trialId, email: input.email },
   });
+  await postTrialNotification(tx, input);
   return true;
+}
+
+/** The bell's item for a trial email: the same moment, once per trial, with the earlier reminder cleared. */
+async function postTrialNotification(tx: DatabaseTransaction, input: { businessId: string; trialId: string; email: TrialEmail; now: Date }): Promise<void> {
+  const { businessId, trialId, now } = input;
+  const ending = (days: number) => `trial_ending:${trialId}:${days}`;
+  if (input.email === "day10") {
+    await postBusinessNotificationInTransaction(tx, { businessId, kind: "trial_ending", key: ending(4), params: { days: 4 }, now });
+  } else if (input.email === "day13") {
+    await resolveBusinessNotificationsInTransaction(tx, { businessId, keys: [ending(4)], now });
+    await postBusinessNotificationInTransaction(tx, { businessId, kind: "trial_ending", key: ending(1), params: { days: 1 }, now });
+  } else if (input.email === "ended") {
+    await resolveBusinessNotificationsInTransaction(tx, { businessId, keys: [ending(4), ending(1)], now });
+    await postBusinessNotificationInTransaction(tx, { businessId, kind: "trial_ended", key: `trial_ended:${trialId}`, now });
+  } else {
+    await postBusinessNotificationInTransaction(tx, { businessId, kind: "trial_minutes_used_up", key: `trial_minutes_used_up:${trialId}`, now });
+  }
 }
 
 export type NumberTrialEmailContent = {

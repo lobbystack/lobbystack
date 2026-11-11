@@ -23,12 +23,16 @@ export function employeeHours(value: unknown): HoursWindow[] | null | undefined 
     : undefined;
 }
 
-/** An employee's time off from a request body: a list of first and last days, empty when missing, or undefined when it isn't one. */
-export function employeeTimeOff(value: unknown): Array<{ startsOn: string; endsOn: string }> | undefined {
+/**
+ * An employee's time off from a request body: a list of first and last days,
+ * each with an optional `name` and `note` (null clears it), empty when
+ * missing, or undefined when it isn't one.
+ */
+export function employeeTimeOff(value: unknown): Array<{ startsOn: string; endsOn: string; name?: string; note?: string | null }> | undefined {
   if (value === undefined || value === null) return [];
   if (!Array.isArray(value) || value.length > 50) return undefined;
-  const entries = value.map((entry) => (typeof entry === "object" && entry !== null ? entry : {}) as { startsOn?: unknown; endsOn?: unknown });
-  return entries.every((entry) => typeof entry.startsOn === "string" && typeof entry.endsOn === "string")
-    ? entries.map((entry) => ({ startsOn: entry.startsOn as string, endsOn: entry.endsOn as string }))
+  const entries = value.map((entry) => (typeof entry === "object" && entry !== null ? entry : {}) as { startsOn?: unknown; endsOn?: unknown; name?: unknown; note?: unknown });
+  return entries.every((entry) => typeof entry.startsOn === "string" && typeof entry.endsOn === "string" && (entry.name === undefined || typeof entry.name === "string") && (entry.note === undefined || entry.note === null || typeof entry.note === "string"))
+    ? entries.map((entry) => ({ startsOn: entry.startsOn as string, endsOn: entry.endsOn as string, ...(entry.name !== undefined ? { name: entry.name as string } : {}), ...(entry.note !== undefined ? { note: entry.note as string | null } : {}) }))
     : undefined;
 }

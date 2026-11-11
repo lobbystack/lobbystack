@@ -150,6 +150,16 @@ Build on a stacked branch, and release it in one step. Starting from `proto/a-dr
 
 Test search with a limited operator, activity-only operators and partner access.
 
+Raphael decided:
+
+- A phone number in an agent's channels can move to another agent and has no Disconnect. Releasing a number stays on the number's page.
+- Transfers, staff-first calling, booking and appointment changes get their own agent menu row, Calls and booking, between Rules and Channels.
+- The Inbox, agents, workspace and account page events replace the calls, messages, call detail and settings ones.
+- Search knows synonyms in each interface language.
+- Old routes redirect temporarily, and the redirects stay, because emails link to them.
+- A request to cancel or move an appointment closes once the appointment's time has passed, since nothing is left to change.
+- Home's Action required shows the count of open items and a View all link to the Inbox, so the card stays short.
+
 ### 8. Finish the rename
 
 Remove the assign-default triggers, `businesses_assign_agent_before_delete`, `backfillAgentLinks` and the onboarding alias, and rename the remaining `receptionist` code, about 1,500 lines in 250 files. Leave what slice 6 keeps stable.
@@ -164,7 +174,7 @@ Raphael settled these:
 
 | # | Decision | Answer | Slice |
 |---|---|---|---|
-| 1 | What's an existing business's default agent called, in all 8 caller languages? | "Agent", translated. Callers never hear it. | 1 |
+| 1 | What's an existing business's default agent called, in all 8 caller languages? | "Agent", translated. Callers never hear it. Migration 0202 renamed it "Default agent", because "Agent" read like a label in the agent switcher. | 1 |
 | 2 | Are booking mode, booking policy, transfers, staff-first calling and the appointment policy agent-level or workspace-level? | Agent-level, because an after-hours agent needs its own. The prototype's shared card changes to match. Staff-first calling arrived from main after this decision and follows transfers. | 1 |
 | 3 | What happens to extra agents after a downgrade to Free? | They stay paused. Only the default agent answers, and their channels fall back to it. Upgrading restores them. | 5 |
 | 4 | Does each agent have one instructions field or several? | Voice, chat and text. The decision was to hide text until two-way text existed, and main now has it. | 5 |
@@ -173,6 +183,14 @@ Raphael settled these:
 | 7 | How much of `/agents` ships in the public API first? | Read endpoints and `agent_id`, with writes later. | 6 |
 | 8 | How do we hold slice 7 for one release? | One integration branch. | 7 |
 | 9 | What does the number add-on cost? | The carrier's monthly cost for that country, with no markup. | 9 |
+
+## After slice 7: agent-specific knowledge
+
+[`agent-knowledge.md`](agent-knowledge.md) builds on slice 7, and the [ADR 0012 amendment](../adr/0012-agents-share-a-workspace.md#amendment-2026-11-10-knowledge-can-belong-to-one-agent) records the decision. It changes slice 7's agent menu:
+
+- The **Shared with every agent** row and page are gone. Each agent has a **Specific knowledge** row between Rules and Channels, at `/agents/[agentId]/knowledge`.
+- `/agents/[agentId]/shared` redirects there temporarily.
+- The snapshot's flat `knowledgeSnippets` and `knowledgeDigest` stay the default agent's. An entry in `agents[]` carries its own only when they differ, and `snapshotForAgent` projects them.
 
 ## Still open
 

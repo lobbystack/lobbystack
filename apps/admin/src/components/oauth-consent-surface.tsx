@@ -126,9 +126,9 @@ export function OAuthConsentSurface(props: OAuthConsentProps) {
             </NativeSelect>
           </Field>
           <fieldset className="flex flex-col gap-3">
-            <legend className="mb-2 text-sm font-medium">{t("oauthConsent.scopesLabel", { client })}</legend>
+            <legend className="mb-2 type-title">{t("oauthConsent.scopesLabel", { client })}</legend>
             {offered.map((scope) => (
-              <div className="flex items-start gap-3 text-sm" key={scope}>
+              <div className="flex items-start gap-3 type-body" key={scope}>
                 <Checkbox
                   checked={scopes.includes(scope)}
                   id={`oauth-scope-${scopeKey(scope)}`}
@@ -136,14 +136,14 @@ export function OAuthConsentSurface(props: OAuthConsentProps) {
                 />
                 <label className="flex flex-col gap-0.5" htmlFor={`oauth-scope-${scopeKey(scope)}`}>
                   <span>{t(`oauthConsent.scopes.${scopeKey(scope)}`)}</span>
-                  <code className="font-mono text-xs text-muted-foreground">{scope}</code>
+                  <code className="font-mono type-caption text-muted-foreground">{scope}</code>
                 </label>
               </div>
             ))}
           </fieldset>
         </FieldGroup>
 
-        <div className="flex items-start gap-3 rounded-xl bg-muted/60 p-4 text-sm text-muted-foreground">
+        <div className="flex items-start gap-3 rounded-xl bg-muted/60 p-4 type-body-muted">
           <ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
           <div className="flex flex-col gap-1">
             <p>{agency ? t("oauthConsent.agencyStaysConnected", { client }) : t("oauthConsent.staysConnected", { client })}</p>
@@ -151,7 +151,7 @@ export function OAuthConsentSurface(props: OAuthConsentProps) {
           </div>
         </div>
 
-        {error ? <p className="text-sm text-destructive" role="alert">{error}</p> : null}
+        {error ? <p className="type-body text-destructive" role="alert">{error}</p> : null}
 
         <div className="flex flex-col gap-3">
           <Button disabled={pending !== null || !target} onClick={() => void decide(true)}>{pending === "allow" ? t("oauthConsent.allowing") : t("oauthConsent.allow")}</Button>

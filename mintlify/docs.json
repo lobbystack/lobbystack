@@ -41,28 +41,148 @@
   },
   "redirects": [
     {
+      "source": "/agent/instructions",
+      "destination": "/agent/rules"
+    },
+    {
+      "source": "/fr/agent/instructions",
+      "destination": "/fr/agent/rules"
+    },
+    {
+      "source": "/es/agent/instructions",
+      "destination": "/es/agent/rules"
+    },
+    {
+      "source": "/dashboard/calls",
+      "destination": "/dashboard/inbox"
+    },
+    {
+      "source": "/dashboard/messages",
+      "destination": "/dashboard/inbox"
+    },
+    {
+      "source": "/settings/phone-number",
+      "destination": "/agent/phone-number"
+    },
+    {
+      "source": "/settings/widget",
+      "destination": "/agent/widget"
+    },
+    {
       "source": "/agent/ai-settings",
-      "destination": "/agent/ai-settings/overview"
+      "destination": "/agent/greeting-and-voice"
     },
     {
       "source": "/agent/ai-settings/",
-      "destination": "/agent/ai-settings/overview"
+      "destination": "/agent/greeting-and-voice"
+    },
+    {
+      "source": "/agent/ai-settings/overview",
+      "destination": "/agent/greeting-and-voice"
+    },
+    {
+      "source": "/agent/ai-settings/appointment-changes",
+      "destination": "/agent/appointment-changes"
+    },
+    {
+      "source": "/agent/knowledge",
+      "destination": "/settings/knowledge"
+    },
+    {
+      "source": "/agent/services",
+      "destination": "/settings/services"
+    },
+    {
+      "source": "/agent/employees",
+      "destination": "/settings/employees"
+    },
+    {
+      "source": "/fr/dashboard/calls",
+      "destination": "/fr/dashboard/inbox"
+    },
+    {
+      "source": "/fr/dashboard/messages",
+      "destination": "/fr/dashboard/inbox"
+    },
+    {
+      "source": "/fr/settings/phone-number",
+      "destination": "/fr/agent/phone-number"
+    },
+    {
+      "source": "/fr/settings/widget",
+      "destination": "/fr/agent/widget"
     },
     {
       "source": "/fr/agent/ai-settings",
-      "destination": "/fr/agent/ai-settings/overview"
+      "destination": "/fr/agent/greeting-and-voice"
     },
     {
       "source": "/fr/agent/ai-settings/",
-      "destination": "/fr/agent/ai-settings/overview"
+      "destination": "/fr/agent/greeting-and-voice"
+    },
+    {
+      "source": "/fr/agent/ai-settings/overview",
+      "destination": "/fr/agent/greeting-and-voice"
+    },
+    {
+      "source": "/fr/agent/ai-settings/appointment-changes",
+      "destination": "/fr/agent/appointment-changes"
+    },
+    {
+      "source": "/fr/agent/knowledge",
+      "destination": "/fr/settings/knowledge"
+    },
+    {
+      "source": "/fr/agent/services",
+      "destination": "/fr/settings/services"
+    },
+    {
+      "source": "/fr/agent/employees",
+      "destination": "/fr/settings/employees"
+    },
+    {
+      "source": "/es/dashboard/calls",
+      "destination": "/es/dashboard/inbox"
+    },
+    {
+      "source": "/es/dashboard/messages",
+      "destination": "/es/dashboard/inbox"
+    },
+    {
+      "source": "/es/settings/phone-number",
+      "destination": "/es/agent/phone-number"
+    },
+    {
+      "source": "/es/settings/widget",
+      "destination": "/es/agent/widget"
     },
     {
       "source": "/es/agent/ai-settings",
-      "destination": "/es/agent/ai-settings/overview"
+      "destination": "/es/agent/greeting-and-voice"
     },
     {
       "source": "/es/agent/ai-settings/",
-      "destination": "/es/agent/ai-settings/overview"
+      "destination": "/es/agent/greeting-and-voice"
+    },
+    {
+      "source": "/es/agent/ai-settings/overview",
+      "destination": "/es/agent/greeting-and-voice"
+    },
+    {
+      "source": "/es/agent/ai-settings/appointment-changes",
+      "destination": "/es/agent/appointment-changes"
+    },
+    {
+      "source": "/es/agent/knowledge",
+      "destination": "/es/settings/knowledge"
+    },
+    {
+      "source": "/es/agent/services",
+      "destination": "/es/settings/services"
+    },
+    {
+      "source": "/es/agent/employees",
+      "destination": "/es/settings/employees"
     }
   ],
   "navigation": {
@@ -86,49 +206,50 @@
             "group": "General",
             "pages": [
               "dashboard/home",
-              "dashboard/calls",
-              "dashboard/messages",
-              "settings/widget",
+              "dashboard/inbox",
+              "dashboard/appointments",
+              "dashboard/notifications",
               "dashboard/contacts",
-              "dashboard/appointments"
+              "dashboard/analytics"
             ]
           },
           {
-            "group": "Agent",
+            "group": "Agents",
             "pages": [
               "agent/overview",
+              "agent/manage-agents",
+              "agent/greeting-and-voice",
+              "agent/rules",
               {
-                "group": "AI settings",
+                "group": "Calls and booking",
                 "pages": [
-                  "agent/ai-settings/overview",
-                  "agent/ai-settings/appointment-changes"
+                  "agent/calls-and-booking",
+                  "agent/appointment-changes"
                 ]
               },
-              "agent/knowledge",
-              "agent/services",
-              "agent/employees",
-              "agent/rules"
+              {
+                "group": "Channels",
+                "pages": [
+                  "agent/channels",
+                  "agent/phone-number",
+                  "agent/widget",
+                  "integrations/instagram"
+                ]
+              }
             ]
           },
           {
-            "group": "Manage",
+            "group": "Settings",
             "pages": [
-              "dashboard/analytics",
-              "integrations/overview",
-              "integrations/google-calendar",
-              "integrations/calcom",
-              "integrations/calendly",
-              "integrations/instagram",
-              "integrations/sms",
-              "integrations/webhooks",
+              "settings/overview",
               {
-                "group": "Settings",
+                "group": "Workspace",
                 "pages": [
-                  "settings/overview",
-                  "settings/account",
-                  "settings/team",
-                  "settings/notifications",
-                  "settings/phone-number"
+                  "settings/business-details",
+                  "settings/knowledge",
+                  "settings/services",
+                  "settings/employees",
+                  "settings/team"
                 ]
               },
               {
@@ -137,6 +258,24 @@
                   "billing/plans",
                   "billing/usage",
                   "billing/affiliate-program"
+                ]
+              },
+              {
+                "group": "Connections",
+                "pages": [
+                  "integrations/overview",
+                  "integrations/google-calendar",
+                  "integrations/calcom",
+                  "integrations/calendly",
+                  "integrations/webhooks"
+                ]
+              },
+              {
+                "group": "Your account",
+                "pages": [
+                  "settings/account",
+                  "settings/notifications",
+                  "integrations/sms"
                 ]
               }
             ]
@@ -237,49 +376,50 @@
             "group": "Général",
             "pages": [
               "fr/dashboard/home",
-              "fr/dashboard/calls",
-              "fr/dashboard/messages",
-              "fr/settings/widget",
+              "fr/dashboard/inbox",
+              "fr/dashboard/appointments",
+              "fr/dashboard/notifications",
               "fr/dashboard/contacts",
-              "fr/dashboard/appointments"
+              "fr/dashboard/analytics"
             ]
           },
           {
-            "group": "Agent",
+            "group": "Agents",
             "pages": [
               "fr/agent/overview",
+              "fr/agent/manage-agents",
+              "fr/agent/greeting-and-voice",
+              "fr/agent/rules",
               {
-                "group": "Paramètres IA",
+                "group": "Appels et rendez-vous",
                 "pages": [
-                  "fr/agent/ai-settings/overview",
-                  "fr/agent/ai-settings/appointment-changes"
+                  "fr/agent/calls-and-booking",
+                  "fr/agent/appointment-changes"
                 ]
               },
-              "fr/agent/knowledge",
-              "fr/agent/services",
-              "fr/agent/employees",
-              "fr/agent/rules"
+              {
+                "group": "Canaux",
+                "pages": [
+                  "fr/agent/channels",
+                  "fr/agent/phone-number",
+                  "fr/agent/widget",
+                  "fr/integrations/instagram"
+                ]
+              }
             ]
           },
           {
-            "group": "Gestion",
+            "group": "Réglages",
             "pages": [
-              "fr/dashboard/analytics",
-              "fr/integrations/overview",
-              "fr/integrations/google-calendar",
-              "fr/integrations/calcom",
-              "fr/integrations/calendly",
-              "fr/integrations/instagram",
-              "fr/integrations/sms",
-              "fr/integrations/webhooks",
+              "fr/settings/overview",
               {
-                "group": "Réglages",
+                "group": "Espace de travail",
                 "pages": [
-                  "fr/settings/overview",
-                  "fr/settings/account",
-                  "fr/settings/team",
-                  "fr/settings/notifications",
-                  "fr/settings/phone-number"
+                  "fr/settings/business-details",
+                  "fr/settings/knowledge",
+                  "fr/settings/services",
+                  "fr/settings/employees",
+                  "fr/settings/team"
                 ]
               },
               {
@@ -288,6 +428,24 @@
                   "fr/billing/plans",
                   "fr/billing/usage",
                   "fr/billing/affiliate-program"
+                ]
+              },
+              {
+                "group": "Connexions",
+                "pages": [
+                  "fr/integrations/overview",
+                  "fr/integrations/google-calendar",
+                  "fr/integrations/calcom",
+                  "fr/integrations/calendly",
+                  "fr/integrations/webhooks"
+                ]
+              },
+              {
+                "group": "Votre compte",
+                "pages": [
+                  "fr/settings/account",
+                  "fr/settings/notifications",
+                  "fr/integrations/sms"
                 ]
               }
             ]
@@ -391,49 +549,50 @@
             "group": "General",
             "pages": [
               "es/dashboard/home",
-              "es/dashboard/calls",
-              "es/dashboard/messages",
-              "es/settings/widget",
+              "es/dashboard/inbox",
+              "es/dashboard/appointments",
+              "es/dashboard/notifications",
               "es/dashboard/contacts",
-              "es/dashboard/appointments"
+              "es/dashboard/analytics"
             ]
           },
           {
-            "group": "Agente",
+            "group": "Agentes",
             "pages": [
               "es/agent/overview",
+              "es/agent/manage-agents",
+              "es/agent/greeting-and-voice",
+              "es/agent/rules",
               {
-                "group": "Ajustes de IA",
+                "group": "Llamadas y citas",
                 "pages": [
-                  "es/agent/ai-settings/overview",
-                  "es/agent/ai-settings/appointment-changes"
+                  "es/agent/calls-and-booking",
+                  "es/agent/appointment-changes"
                 ]
               },
-              "es/agent/knowledge",
-              "es/agent/services",
-              "es/agent/employees",
-              "es/agent/rules"
+              {
+                "group": "Canales",
+                "pages": [
+                  "es/agent/channels",
+                  "es/agent/phone-number",
+                  "es/agent/widget",
+                  "es/integrations/instagram"
+                ]
+              }
             ]
           },
           {
-            "group": "Gestionar",
+            "group": "Configuración",
             "pages": [
-              "es/dashboard/analytics",
-              "es/integrations/overview",
-              "es/integrations/google-calendar",
-              "es/integrations/calcom",
-              "es/integrations/calendly",
-              "es/integrations/instagram",
-              "es/integrations/sms",
-              "es/integrations/webhooks",
+              "es/settings/overview",
               {
-                "group": "Configuración",
+                "group": "Espacio de trabajo",
                 "pages": [
-                  "es/settings/overview",
-                  "es/settings/account",
-                  "es/settings/team",
-                  "es/settings/notifications",
-                  "es/settings/phone-number"
+                  "es/settings/business-details",
+                  "es/settings/knowledge",
+                  "es/settings/services",
+                  "es/settings/employees",
+                  "es/settings/team"
                 ]
               },
               {
@@ -442,6 +601,24 @@
                   "es/billing/plans",
                   "es/billing/usage",
                   "es/billing/affiliate-program"
+                ]
+              },
+              {
+                "group": "Conexiones",
+                "pages": [
+                  "es/integrations/overview",
+                  "es/integrations/google-calendar",
+                  "es/integrations/calcom",
+                  "es/integrations/calendly",
+                  "es/integrations/webhooks"
+                ]
+              },
+              {
+                "group": "Tu cuenta",
+                "pages": [
+                  "es/settings/account",
+                  "es/settings/notifications",
+                  "es/integrations/sms"
                 ]
               }
             ]

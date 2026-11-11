@@ -16,5 +16,5 @@ export function DemoTokenCompatibilityRoute() {
     window.location.replace(secureDemoRedirect(token, locale));
   }, [locale, token]);
 
-  return <main className="grid min-h-svh place-items-center p-6 text-sm text-muted-foreground">Opening secure demo link...</main>;
+  return <main className="grid min-h-svh place-items-center p-6 type-body-muted">Opening secure demo link...</main>;
 }
