@@ -60,7 +60,7 @@
       "notifications": "upozorenje, upozorenja, sms, pregled, imejl",
       "widget": "čet, četbot, oblačić, ugradnja, kod, sajt",
       "instagram": "dm, direktne poruke, ig, meta, društvene mreže",
-      "connections": "google, outlook, kalendar, crm, zapier, webhook, integracija, integracije, sinhronizacija",
+      "connections": "google, outlook, kalendar, crm, zapier, webhook, integracija, integracije, sinhronizacija, konekcije, povezivanja",
       "keys": "token, ključ, mcp, api, programer",
       "inbox": "poruka, poruke, transkript, snimak, razgovor, govorna pošta, istorija, poziv, pozivi",
       "contacts": "klijent, mušterija, pacijent, pozivalac, potencijalni klijent",
@@ -111,7 +111,7 @@
     "usage": "Potrošnja",
     "billing": "Paket i naplata",
     "subscription": "Naplata",
-    "connections": "Povezivanja",
+    "connections": "Integracije",
     "webhooks": "Webhooks",
     "apiKeys": "API ključevi",
     "partnerAccess": "Pristup partnera"

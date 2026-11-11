@@ -85,7 +85,7 @@ describe("header actions before the page mounts", () => {
 
 describe("settings level headings", () => {
   it("titles each page with its name in the settings menu", () => {
-    for (const [pathname, title, Shell] of [["/business", "nav:settingsPages.business", BusinessLevelShell], ["/business/connections", "nav:settingsPages.connections", BusinessLevelShell], ["/workspace/webhooks", "nav:settingsPages.webhooks", WorkspaceLevelShell], ["/account/appearance", "nav:settingsPages.appearance", AccountLevelShell], ["/account", "nav:settingsPages.profile", AccountLevelShell]] as const) {
+    for (const [pathname, title, Shell] of [["/business", "nav:settingsPages.business", BusinessLevelShell], ["/business/integrations", "nav:settingsPages.connections", BusinessLevelShell], ["/workspace/webhooks", "nav:settingsPages.webhooks", WorkspaceLevelShell], ["/account/appearance", "nav:settingsPages.appearance", AccountLevelShell], ["/account", "nav:settingsPages.profile", AccountLevelShell]] as const) {
       route.pathname = pathname;
       render(<Shell>content</Shell>);
       expect(screen.getByRole("heading").textContent).toBe(title);

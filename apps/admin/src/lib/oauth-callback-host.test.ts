@@ -104,7 +104,7 @@ const acme: FakeBrandPartner = { partnerId, name: "Acme Agency", subdomain: "acm
 const beta: FakeBrandPartner = { partnerId: otherPartnerId, name: "Beta Agency", subdomain: "beta.partners.localhost" };
 
 const flows = {
-  calendar: { start: calendarStart, callback: calendarCallback, startPath: "/api/calendar/google/start", callbackPath: "/api/calendar/google/callback", landing: "/business/connections?calendar=google&status=success", connect: fixture.connectCalendar },
+  calendar: { start: calendarStart, callback: calendarCallback, startPath: "/api/calendar/google/start", callbackPath: "/api/calendar/google/callback", landing: "/business/integrations?calendar=google&status=success", connect: fixture.connectCalendar },
   instagram: { start: instagramStart, callback: instagramCallback, startPath: "/api/integrations/instagram/start", callbackPath: "/api/integrations/instagram/callback", landing: "/agents/primary/channels?instagram=success", connect: fixture.connectInstagram },
 };
 type Flow = (typeof flows)[keyof typeof flows];

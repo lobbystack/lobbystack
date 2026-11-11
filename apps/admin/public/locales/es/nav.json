@@ -60,7 +60,7 @@
       "notifications": "alerta, alertas, sms, resumen, correo",
       "widget": "chat, chatbot, burbuja, insertar, código, sitio web",
       "instagram": "dm, mensajes directos, ig, meta, redes sociales",
-      "connections": "google, outlook, calendario, crm, zapier, webhook, integración, integraciones, sincronizar",
+      "connections": "google, outlook, calendario, crm, zapier, webhook, integración, integraciones, sincronizar, conexiones, conexiones",
       "keys": "token, clave, mcp, api, desarrollador",
       "inbox": "mensaje, mensajes, transcripción, grabación, conversación, buzón de voz, historial, llamada, llamadas",
       "contacts": "cliente, paciente, persona que llama, prospecto",
@@ -111,7 +111,7 @@
     "usage": "Uso",
     "billing": "Plan y facturación",
     "subscription": "Facturación",
-    "connections": "Conexiones",
+    "connections": "Integraciones",
     "webhooks": "Webhooks",
     "apiKeys": "Claves de API",
     "partnerAccess": "Acceso del socio"

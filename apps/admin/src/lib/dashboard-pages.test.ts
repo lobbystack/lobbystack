@@ -14,7 +14,7 @@ describe("dashboard pages", () => {
     expect(pageCapability("/workspace/api-keys")).toBe("api_keys");
     expect(pageCapability("/workspace/webhooks")).toBe("api_keys");
     expect(pageCapability("/workspace/team")).toBe("team");
-    for (const path of ["/agents", "/agents/x", "/agents/x/channels/phone", "/agents/x/channels/widget", "/analytics", "/business", "/business/knowledge", "/business/services", "/business/employees", "/business/connections", "/workspace/something-new"]) {
+    for (const path of ["/agents", "/agents/x", "/agents/x/channels/phone", "/agents/x/channels/widget", "/analytics", "/business", "/business/knowledge", "/business/services", "/business/employees", "/business/integrations", "/workspace/something-new"]) {
       expect(pageCapability(path), path).toBe("setup");
     }
   });

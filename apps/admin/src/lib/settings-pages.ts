@@ -30,7 +30,7 @@ export const BUSINESS_PAGES: readonly SettingsPage[] = [
   { href: "/business/knowledge", titleKey: "settingsPages.knowledge" },
   { href: "/business/services", titleKey: "settingsPages.services" },
   { href: "/business/employees", titleKey: "settingsPages.employees" },
-  { href: "/business/connections", titleKey: "settingsPages.connections" },
+  { href: "/business/integrations", titleKey: "settingsPages.connections" },
 ];
 
 export const WORKSPACE_PAGES: readonly SettingsPage[] = [

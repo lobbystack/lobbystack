@@ -48,7 +48,7 @@ describe("search matches related words", () => {
     ["teammate", "Team"],
     ["dm", "Instagram"],
     ["hours", "Details"],
-    ["zapier", "Connections"],
+    ["zapier", "Integrations"],
     ["transcript", "Inbox"],
     ["transfer", "General"],
   ])("%s finds %s", (query, title) => {

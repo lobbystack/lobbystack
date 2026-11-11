@@ -1,8 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, RefreshCw, Send, Trash2 } from "lucide-react";
-import Link from "next/link";
+import { Plus, RefreshCw, Send, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -190,7 +189,6 @@ export function LiveWebhooksSurface() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <Link className="type-body-muted inline-flex items-center gap-1 hover:text-foreground" href="/business/connections"><ArrowLeft className="size-4" />{t("nav:settingsPages.connections")}</Link>
         {canManage ? <HeaderActions><Button onClick={() => setDialog({ mode: "create" })}><Plus data-icon="inline-start" />{t("webhooks.create.action")}</Button></HeaderActions> : null}
         <p className="type-body-muted max-w-2xl">{t("webhooks.description")}</p>
       </div>

@@ -31,7 +31,7 @@ describe("settings pages", () => {
   });
 
   it("lists Business's pages for anyone who sets the business up, and lands on Details", () => {
-    expect(visibleSettingsPages(BUSINESS_PAGES, can("full"), true).map((page) => page.href)).toEqual(["/business", "/business/knowledge", "/business/services", "/business/employees", "/business/connections"]);
+    expect(visibleSettingsPages(BUSINESS_PAGES, can("full"), true).map((page) => page.href)).toEqual(["/business", "/business/knowledge", "/business/services", "/business/employees", "/business/integrations"]);
     expect(businessLandingPage(can("direct"))).toBe("/business");
     expect(visibleSettingsPages(BUSINESS_PAGES, can("activity"), true)).toEqual([]);
     expect(businessLandingPage(can("activity"))).toBeNull();

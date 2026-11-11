@@ -15,7 +15,7 @@ const PAGE_ICONS: Record<string, LucideIcon> = {
   "/business/knowledge": BookOpen,
   "/business/services": Tags,
   "/business/employees": Contact,
-  "/business/connections": Plug,
+  "/business/integrations": Plug,
   "/workspace/team": UsersRound,
   "/workspace/usage": Gauge,
   "/workspace/billing": CreditCard,

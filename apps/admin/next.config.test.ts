@@ -143,7 +143,7 @@ describe("moved routes", () => {
     ["/agent/knowledge", "/business/knowledge"],
     ["/agent/services", "/business/services"],
     ["/agent/employees", "/business/employees"],
-    ["/integrations", "/business/connections"],
+    ["/integrations", "/business/integrations"],
     ["/integrations/webhooks", "/workspace/webhooks"],
     ["/widget", "/agents/primary/channels/widget"],
     ["/settings/widget", "/agents/primary/channels/widget"],

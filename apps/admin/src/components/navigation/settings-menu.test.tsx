@@ -50,7 +50,7 @@ describe("the Business menu", () => {
   it("lists what every agent works from, with Details first, and marks the open one", () => {
     route.pathname = "/business/services";
     render(<BusinessMenu />);
-    expect(hrefs()).toEqual(["/business", "/business/knowledge", "/business/services", "/business/employees", "/business/connections"]);
+    expect(hrefs()).toEqual(["/business", "/business/knowledge", "/business/services", "/business/employees", "/business/integrations"]);
     expect(screen.getByRole("link", { name: "businessPages.details" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "settingsPages.services" }).hasAttribute("data-active")).toBe(true);
   });

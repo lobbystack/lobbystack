@@ -34,7 +34,7 @@ const PAGE_TAGS: Record<string, SearchTag[]> = {
   "/business/knowledge": ["knowledge"],
   "/business/services": ["services"],
   "/business/employees": ["employees"],
-  "/business/connections": ["connections"],
+  "/business/integrations": ["connections"],
   "/workspace/team": ["team"],
   "/workspace/usage": ["usage"],
   "/workspace/billing": ["billing"],
