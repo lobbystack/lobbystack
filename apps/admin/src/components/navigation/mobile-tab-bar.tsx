@@ -57,7 +57,6 @@ export function MobileTabBar({ menuButtonRef, menuOpen, onOpenMenu }: { menuButt
               {unreadCount ? <span aria-hidden="true" className="absolute -top-0.5 -right-1 size-2 rounded-full bg-primary ring-2 ring-background" data-attention-dot="" data-notifications-dot="" /> : null}
             </span>
             <span className="max-w-full truncate">{t("mobileNav.menu")}</span>
-            {unreadCount ? <span className="sr-only">{t("notifications.bellUnread", { count: unreadCount })}</span> : null}
           </button>
         </li>
       </ul>

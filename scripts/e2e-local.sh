@@ -50,6 +50,7 @@ TESTS=(
   e2e/manual-create.e2e.ts
   e2e/mobile-navigation.e2e.ts
   e2e/navigation.e2e.ts
+  e2e/notifications.e2e.ts
   e2e/onboarding-flow.e2e.ts
   e2e/onboarding-path.e2e.ts
   e2e/onboarding-pending.e2e.ts

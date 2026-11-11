@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -68,8 +68,8 @@ describe("the phone tab bar", () => {
     expect(menu.querySelector("[data-notifications-dot]")).toBeNull();
     client.setQueryData(["notifications", "business"], { notifications: [{ id: "n1", kind: "payment_failed", category: "action", params: {}, href: "/workspace/billing", occurredAt: "2026-10-16T11:00:00Z", read: false }] });
     rerender();
-    expect(await within(nav).findByText("notifications.bellUnread:1")).toBeTruthy();
-    expect(within(nav).getByRole("button", { name: /mobileNav\.menu/ }).querySelector("[data-notifications-dot]")).toBeTruthy();
+    // The bell in the sheet tells screen readers the count, so Menu keeps its name.
+    await waitFor(() => expect(within(nav).getByRole("button", { name: "mobileNav.menu" }).querySelector("[data-notifications-dot]")).toBeTruthy());
   });
 
   it("leaves out the tabs the business doesn't let the person open, and keeps Menu", () => {
