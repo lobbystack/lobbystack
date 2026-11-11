@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
-import { agents, businesses, businessHours, businessInvitations, businessMemberships, createDatabaseClient, outboxMessages, partners, services, staff, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, businesses, businessHours, businessInvitations, businessMemberships, businessNotifications, createDatabaseClient, outboxMessages, partners, services, staff, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { defaultGreeting } from "@lobbystack/shared";
 import { findAvailability } from "./booking";
 import { HOST_BRAND_SCOPE } from "./businessAccess";
@@ -356,6 +356,23 @@ describe.skipIf(!client)("team membership", () => {
       await expect(accept(stranger!, token)).rejects.toMatchObject({ status: 403 });
       await expect(acceptInvitation(context, { userId: invitee!.id, tokenHash: hash(token), email: invitee!.email, emailVerified: false })).rejects.toMatchObject({ status: 403 });
       await expect(accept(invitee!, token)).resolves.toMatchObject({ role: "business_admin" });
+    });
+  });
+
+  it("tells whoever sent an invitation that it was accepted, and nobody for a platform key's or a member rejoining", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, people: [owner, admin, viewer], invite, accept } = await seedTeam(tx, ["Ana", "Ben", "Vic"]);
+      await accept(admin!, await invite(owner!.id, admin!.email, "business_admin"));
+      const keyToken = await invite(owner!.id, viewer!.email, "viewer");
+      // The owner was already on the team: accepting changes nothing, so nothing is posted.
+      await accept(owner!, await invite(admin!.id, owner!.email, "viewer"));
+      await tx.execute(sql`reset role`);
+      await tx.update(businessInvitations).set({ invitedByUserId: null, invitedByPlatformKeyId: randomUUID() }).where(eq(businessInvitations.tokenHash, hash(keyToken)));
+      await tx.execute(sql`set local role lobbystack_app`);
+      await accept(viewer!, keyToken);
+      await tx.execute(sql`reset role`);
+      const rows = await tx.select({ kind: businessNotifications.kind, recipientUserId: businessNotifications.recipientUserId, params: businessNotifications.params }).from(businessNotifications).where(eq(businessNotifications.businessId, businessId));
+      expect(rows).toEqual([{ kind: "invite_accepted", recipientUserId: owner!.id, params: { email: admin!.email } }]);
     });
   });
 

@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { businessMemberships, businesses, createDatabaseClient, knowledgeDocuments, users, websiteIngestionJobs, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { businessMemberships, businessNotifications, businesses, createDatabaseClient, withBusinessTransaction, knowledgeDocuments, users, websiteIngestionJobs, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
-import { deleteWebsiteKnowledge } from "./knowledge";
+import { deleteKnowledgeDocumentInTransaction, deleteWebsiteKnowledge, markKnowledgeDocumentFailed, postWebsiteImportFinishedInTransaction } from "./knowledge";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -58,6 +58,62 @@ describe.skipIf(!client)("deleteWebsiteKnowledge", () => {
       expect(ownCrawl).toBeDefined();
 
       await expect(deleteWebsiteKnowledge({ db }, { userId, businessId, documentId: pricing.id })).rejects.toMatchObject({ status: 404 });
+    });
+  });
+});
+
+describe.skipIf(!client)("website imports in the bell", () => {
+  async function seed(tx: DatabaseTransaction) {
+    const businessId = randomUUID();
+    const userId = randomUUID();
+    await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Studio", timezone: "UTC", businessType: "test", telemetryEnabled: false });
+    await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid` });
+    await tx.insert(businessMemberships).values({ businessId, userId, role: "business_owner" });
+    const doc = async (sourceType: string, sourceUrl: string | null) => (await tx.insert(knowledgeDocuments).values({ businessId, sourceType, title: sourceUrl ?? "notes.pdf", sourceUrl, status: "processing" }).returning({ id: knowledgeDocuments.id }))[0]!.id;
+    const bell = async () => await tx.select({ kind: businessNotifications.kind, key: businessNotifications.dedupeKey, params: businessNotifications.params, resolvedAt: businessNotifications.resolvedAt }).from(businessNotifications).where(eq(businessNotifications.businessId, businessId)).orderBy(businessNotifications.createdAt);
+    return { businessId, userId, doc, bell };
+  }
+  async function asWorker<T>(tx: DatabaseTransaction, run: (db: Database) => Promise<T>): Promise<T> {
+    await tx.execute(sql`set local session authorization lobbystack_worker`);
+    try { return await run(tx as unknown as Database); } finally { await tx.execute(sql`reset session authorization`); }
+  }
+
+  it("posts a failed import with its site, and nothing for a failed file", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, doc, bell } = await seed(tx);
+      const site = await doc("website", "https://www.example.com/help/");
+      const file = await doc("upload", null);
+      await asWorker(tx, (db) => markKnowledgeDocumentFailed({ db }, { businessId, documentId: file, error: "Unreadable" }));
+      expect(await bell()).toEqual([]);
+      await asWorker(tx, (db) => markKnowledgeDocumentFailed({ db }, { businessId, documentId: site, error: "Website crawling failed.", websiteImport: { url: "https://www.example.com/help/" } }));
+      expect(await bell()).toEqual([{ kind: "website_import_failed", key: `website_import_failed:${site}`, params: { site: "example.com" }, resolvedAt: null }]);
+    });
+  });
+
+  it("posts a finished import with its page count, clearing the document's earlier failure", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, doc, bell } = await seed(tx);
+      const site = await doc("website", "https://example.com/");
+      await asWorker(tx, (db) => markKnowledgeDocumentFailed({ db }, { businessId, documentId: site, websiteImport: { url: "https://example.com/" } }));
+      const jobId = randomUUID();
+      await asWorker(tx, (db) => withBusinessTransaction(db, { businessId, actorType: "worker" }, (inner) => postWebsiteImportFinishedInTransaction(inner, { businessId, documentId: site, websiteIngestionJobId: jobId, revision: 2, url: "https://example.com/", pages: 48 })));
+      const rows = await bell();
+      expect(rows[0]).toMatchObject({ kind: "website_import_failed", resolvedAt: expect.any(Date) });
+      expect(rows[1]).toEqual({ kind: "website_import_finished", key: `website_import_finished:${jobId}:2`, params: { site: "example.com", pages: 48 }, resolvedAt: null });
+    });
+  });
+
+  it("clears a failed import when its document is deleted, alone or with its website", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, userId, doc, bell } = await seed(tx);
+      const one = await doc("website", "https://example.com/");
+      const two = await doc("website", "https://shop.example.net/");
+      for (const [id, url] of [[one, "https://example.com/"], [two, "https://shop.example.net/"]] as const) await asWorker(tx, (db) => markKnowledgeDocumentFailed({ db }, { businessId, documentId: id, websiteImport: { url } }));
+      await asWorker(tx, (db) => withBusinessTransaction(db, { businessId, actorType: "worker" }, (inner) => deleteKnowledgeDocumentInTransaction(inner, { businessId, documentId: one })));
+      await tx.execute(sql`set local role lobbystack_app`);
+      await deleteWebsiteKnowledge({ db: tx as unknown as Database }, { userId, businessId, documentId: two });
+      await tx.execute(sql`reset role`);
+      expect((await bell()).map((row) => row.resolvedAt)).toEqual([expect.any(Date), expect.any(Date)]);
     });
   });
 });

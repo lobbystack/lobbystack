@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { billingAccounts, billingCheckoutRequests, createDatabaseClient, providerEvents, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { billingAccounts, billingCheckoutRequests, businessNotifications, createDatabaseClient, providerEvents, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { createBusiness } from "./tenancy";
-import { claimBillingCheckoutRequest, createBillingCheckoutRequest, deferBillingCheckoutRequest, markBillingCheckoutFailed, scheduledSubscriptionEndInTransaction } from "./billing";
+import { claimBillingCheckoutRequest, createBillingCheckoutRequest, deferBillingCheckoutRequest, markBillingCheckoutFailed, reconcileBillingProviderEvent, scheduledSubscriptionEndInTransaction } from "./billing";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -166,6 +166,41 @@ describe.skipIf(!testUrl)("scheduled plan end against PostgreSQL", () => {
       expect(await scheduledEnd()).toBe("2026-11-12T00:00:00Z");
       await tx.insert(providerEvents).values(snapshot("subscription.uncanceled", "2026-10-03T00:00:00.000Z", { cancel_at_period_end: false }));
       expect(await scheduledEnd()).toBeNull();
+    });
+  });
+});
+
+describe.skipIf(!testUrl)("the bell's billing notifications", () => {
+  it("posts a failed payment once while it's past due and a plan canceled at the period's end, and clears each when it's resolved", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId } = await workspace(tx);
+      await tx.insert(billingAccounts).values({ businessId, billingKey: `business:${businessId}`, plan: "starter", subscriptionState: "active", subscriptionId: "sub_bell" })
+        .onConflictDoUpdate({ target: billingAccounts.businessId, set: { plan: "starter", subscriptionState: "active", subscriptionId: "sub_bell" } });
+      const periodEnd = "2030-03-01T00:00:00.000Z";
+      let minute = 0;
+      const reconcile = async (eventType: string, subscriptionState: string) => {
+        minute += 1;
+        const [event] = await tx.insert(providerEvents).values({ provider: "polar", providerEventId: `evt-${randomUUID()}`, eventType, businessId, payload: { billingKey: `business:${businessId}`, plan: "starter", billingInterval: "monthly", subscriptionId: "sub_bell", subscriptionState, currentPeriodEnd: periodEnd, subscriptionModifiedAt: `2026-10-01T00:${String(minute).padStart(2, "0")}:00.000Z` } }).returning({ id: providerEvents.id });
+        await asWorker(tx, async () => await reconcileBillingProviderEvent({ db: tx as unknown as Database }, { businessId, providerEventId: event!.id }));
+      };
+      const bell = async () => await tx.select({ kind: businessNotifications.kind, key: businessNotifications.dedupeKey, params: businessNotifications.params, occurredAt: businessNotifications.occurredAt, resolvedAt: businessNotifications.resolvedAt }).from(businessNotifications).where(eq(businessNotifications.businessId, businessId)).orderBy(businessNotifications.dedupeKey);
+
+      await reconcile("subscription.updated", "past_due");
+      const [failed] = await bell();
+      expect(failed).toMatchObject({ kind: "payment_failed", key: "payment_failed", resolvedAt: null });
+      // Polar retries the charge and sends past_due again: the item stays as it was.
+      await reconcile("subscription.updated", "past_due");
+      expect(await bell()).toEqual([failed]);
+      await reconcile("subscription.updated", "active");
+      expect((await bell())[0]?.resolvedAt).toBeInstanceOf(Date);
+
+      await reconcile("subscription.canceled", "active");
+      const canceled = (await bell()).find((row) => row.kind === "plan_canceled");
+      expect(canceled).toMatchObject({ key: "plan_canceled:2030-03-01", params: { endsAt: periodEnd }, resolvedAt: null });
+      const [expires] = await tx.select({ expiresAt: businessNotifications.expiresAt }).from(businessNotifications).where(and(eq(businessNotifications.businessId, businessId), eq(businessNotifications.kind, "plan_canceled")));
+      expect(expires?.expiresAt?.toISOString()).toBe(periodEnd);
+      await reconcile("subscription.uncanceled", "active");
+      expect((await bell()).find((row) => row.kind === "plan_canceled")?.resolvedAt).toBeInstanceOf(Date);
     });
   });
 });

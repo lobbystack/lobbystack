@@ -291,6 +291,7 @@ export async function deleteWebsiteKnowledge(context: DomainContext, input: { us
     }
     await tx.delete(knowledgeChunks).where(and(eq(knowledgeChunks.businessId, input.businessId), inArray(knowledgeChunks.documentId, ids)));
     await tx.delete(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), inArray(knowledgeDocuments.id, ids)));
+    if (ids.length) await resolveBusinessNotificationsInTransaction(tx, { businessId: input.businessId, keys: ids.map(websiteImportFailedKey) });
     await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_document", aggregateId: input.documentId, dedupeKey: `knowledge:website:${input.documentId}:deleted:${Date.now()}`, payload: { businessId: input.businessId, reason: "document_deleted" } });
     await enqueueKnowledgeDerivedRefresh(tx, { businessId: input.businessId, reason: "document_deleted" });
     return ids.length;

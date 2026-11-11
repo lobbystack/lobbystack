@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { billingAccounts, billingUsageEvents, businesses, businessMemberships, createDatabaseClient, outboxMessages, partnerMembers, partnerPackages, partners, partnerStripeAccounts, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { billingAccounts, billingUsageEvents, businesses, businessMemberships, businessNotifications, createDatabaseClient, outboxMessages, partnerMembers, partnerPackages, partners, partnerStripeAccounts, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { FakeStripeConnect } from "@lobbystack/providers/stripe/fakeStripeConnect";
 
 import { reserveWidgetChatUsageInTransaction } from "./billing";
@@ -304,6 +304,11 @@ describe.skipIf(!client)("a business's overage on its partner's Stripe", () => {
       expect(eighty.find((email) => email.to === `${acme.team.adminId}@example.invalid`)!.variables).toMatchObject({ locale: "fr", threshold: "80" });
       // The partner's admin gets its own copy, under the host's brand, with a link to the console's Businesses page.
       const toPartner = await partnerAlertEmails(tx, acme.cedar);
+      // The business's bell carries it too, until the month ends.
+      const bell = async () => await tx.select({ kind: businessNotifications.kind, key: businessNotifications.dedupeKey, params: businessNotifications.params, resolvedAt: businessNotifications.resolvedAt, expiresAt: businessNotifications.expiresAt }).from(businessNotifications).where(eq(businessNotifications.businessId, acme.cedar)).orderBy(businessNotifications.kind);
+      const [eightyItem] = await bell();
+      expect(eightyItem).toMatchObject({ kind: "minutes_80", key: expect.stringMatching(/^minutes_80:\d{4}-\d{2}:minutes:80:600$/), params: { used: 8, included: 10, overage: false }, resolvedAt: null });
+      expect(eightyItem!.expiresAt!.getUTCDate()).toBe(1);
       expect(toPartner).toEqual([{ to: `${acme.admin.userId}@example.invalid`, brand: { kind: "host" }, replyTo: null, template: "partner_business_allowance_alert", variables: { locale: "en", firstName: "Cedar", businessName: "Cedar Clinic", kind: "minutes", threshold: "80", used: "8", included: "10", overage: "off", capped: "", month: expect.any(String), url: `https://app.example.test/partner/${acme.partnerId}/businesses` } }]);
 
       // Another call at 80% sends nothing new; the call that reaches 10 minutes sends the 100% alert.
@@ -316,6 +321,10 @@ describe.skipIf(!client)("a business's overage on its partner's Stripe", () => {
       expect(full).toHaveLength(2);
       // With overage on, the email says the receptionist keeps answering, up to the partner's monthly limit.
       expect(full.find((email) => email.to === `${acme.team.ownerId}@example.invalid`)!.variables).toMatchObject({ used: "11", included: "10", overage: "on", capped: "yes" });
+      // On the bell, the 100% item takes the 80% one's place.
+      const afterFull = await bell();
+      expect(afterFull.map((row) => [row.kind, Boolean(row.resolvedAt)])).toEqual([["minutes_100", false], ["minutes_80", true]]);
+      expect(afterFull[0]!.params).toEqual({ used: 11, included: 10, overage: true });
       await endCall(tx, acme.cedar, `voice:${randomUUID()}`, 60);
       expect(await alertEmails(tx, acme.cedar)).toHaveLength(4);
 
@@ -329,6 +338,8 @@ describe.skipIf(!client)("a business's overage on its partner's Stripe", () => {
       const partnerCopies = await partnerAlertEmails(tx, acme.cedar);
       expect(partnerCopies.map((email) => [email.to, email.variables.kind, email.variables.threshold])).toEqual(expect.arrayContaining([[`${acme.admin.userId}@example.invalid`, "minutes", "80"], [`${acme.admin.userId}@example.invalid`, "minutes", "100"], [`${acme.admin.userId}@example.invalid`, "chats", "100"]]));
       expect(partnerCopies).toHaveLength(3);
+      // Chats send emails only: the bell keeps to minutes.
+      expect((await bell()).map((row) => row.kind)).toEqual(["minutes_100", "minutes_80"]);
     });
   });
 

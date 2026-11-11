@@ -2,9 +2,9 @@ import { randomUUID } from "node:crypto";
 
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { agents, businesses, conversations, createDatabaseClient, instagramAccounts, messages, outboxMessages, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, businesses, businessNotifications, conversations, createDatabaseClient, instagramAccounts, messages, outboxMessages, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
-import { connectInstagramAccount, getInstagramAccount, INSTAGRAM_AI_REPLY_LIMIT, INSTAGRAM_AI_REPLY_WINDOW_MS, loadInstagramReplyContext, receiveInstagramMessage, saveInstagramReply } from "./instagram";
+import { connectInstagramAccount, disconnectInstagramAccount, finishInstagramDelivery, getInstagramAccount, refreshInstagramTokenIfDue, INSTAGRAM_AI_REPLY_LIMIT, INSTAGRAM_AI_REPLY_WINDOW_MS, loadInstagramReplyContext, receiveInstagramMessage, saveInstagramReply } from "./instagram";
 import { createBusiness } from "./tenancy";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
@@ -135,7 +135,7 @@ describe.skipIf(!testUrl)("connecting Instagram for one agent against PostgreSQL
     await tx.execute(sql`set local role lobbystack_app`);
     const connect = async (agentId?: string) => await connectInstagramAccount(context, { userId, businessId, ...(agentId ? { agentId } : {}), instagramUserId: `ig_${businessId}`, username: "javor", encryptedAccessToken: "sealed", tokenExpiresAt: new Date(Date.now() + 86_400_000) });
     const accountAgent = async () => (await getInstagramAccount(context, { userId, businessId }))?.agentId;
-    return { businessId, frontDesk: frontDesk!.id, evening: evening!.id, connect, accountAgent };
+    return { businessId, userId, frontDesk: frontDesk!.id, evening: evening!.id, connect, accountAgent };
   }
 
   it("puts a new account on the agent it started from, and a state without one on the default agent", async () => {
@@ -166,6 +166,31 @@ describe.skipIf(!testUrl)("connecting Instagram for one agent against PostgreSQL
       const [weekend] = await tx.insert(agents).values({ businessId: world.businessId, name: "Weekend", greeting: "Hi", tone: "warm", summary: "A shop", bookingPolicy: "Book", transferMode: "never", archivedAt: new Date() }).returning({ id: agents.id });
       await tx.execute(sql`set local role lobbystack_app`);
       expect(await world.connect(weekend!.id)).toEqual({ agentId: world.evening });
+    });
+  });
+  it("posts Instagram needing a reconnect to the bell, from a refused refresh or send, until someone connects or removes it", async () => {
+    await rollbackTest(async (tx) => {
+      const world = await seedAgents(tx);
+      await world.connect();
+      await tx.execute(sql`reset role`);
+      const bell = async () => await tx.select({ kind: businessNotifications.kind, params: businessNotifications.params, resolvedAt: businessNotifications.resolvedAt }).from(businessNotifications).where(eq(businessNotifications.businessId, world.businessId));
+      await tx.update(instagramAccounts).set({ tokenExpiresAt: new Date(Date.now() - 60_000) }).where(eq(instagramAccounts.businessId, world.businessId));
+      const refused = Object.assign(new Error("expired"), { reconnectRequired: true });
+      expect(await asWorker(tx, (db) => refreshInstagramTokenIfDue({ db }, { businessId: world.businessId, decryptToken: (value) => value, encryptToken: (value) => value, refreshAccessToken: async () => { throw refused; } }))).toBe("reconnect_required");
+      expect(await bell()).toEqual([{ kind: "instagram_reconnect", params: { username: "javor" }, resolvedAt: null }]);
+
+      await tx.execute(sql`set local role lobbystack_app`);
+      await world.connect();
+      await tx.execute(sql`reset role`);
+      expect((await bell())[0]?.resolvedAt).toBeInstanceOf(Date);
+
+      // A send Instagram refuses for the token opens it again.
+      await asWorker(tx, (db) => finishInstagramDelivery({ db }, { businessId: world.businessId, messageId: randomUUID(), status: "failed", reason: "token", reconnectRequired: true }));
+      expect((await bell())[0]?.resolvedAt).toBeNull();
+      await tx.execute(sql`set local role lobbystack_app`);
+      expect(await disconnectInstagramAccount({ db: tx as unknown as Database }, { userId: world.userId, businessId: world.businessId })).toBe(true);
+      await tx.execute(sql`reset role`);
+      expect((await bell())[0]?.resolvedAt).toBeInstanceOf(Date);
     });
   });
 });

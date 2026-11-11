@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { eq, sql } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { agents, billingAccounts, businesses, createDatabaseClient, numberTrials, numberWaitlist, onboardingPhoneVerifications, outboxMessages, phoneNumbers, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { agents, billingAccounts, businesses, businessNotifications, createDatabaseClient, numberTrials, numberWaitlist, onboardingNumberClaimEvents, onboardingPhoneVerifications, outboxMessages, phoneNumbers, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
-import { enqueueRefusedCallForwardRefresh, getNumberTrialState, isNumberTrialEnded, joinNumberWaitlist, keepBusinessNumbersInTransaction, loadNumberTrialEmail, markNumberTrialMinutesExhausted, numberStepRedirect, refreshStaleRefusedCallForwards, resolveNumberFallback, resolveRefusedCallForward, sweepNumberTrial } from "./numberTrials";
-import { claimNumberProvisioning, completeNumberProvisioning, reserveOnboardingNumberClaim, searchBusinessNumberInventory } from "./phoneNumbers";
+import { convertNumberTrialInTransaction, enqueueRefusedCallForwardRefresh, getNumberTrialState, postNumberReleasedInTransaction, sweepNumberReleases, isNumberTrialEnded, joinNumberWaitlist, keepBusinessNumbersInTransaction, loadNumberTrialEmail, markNumberTrialMinutesExhausted, numberStepRedirect, refreshStaleRefusedCallForwards, resolveNumberFallback, resolveRefusedCallForward, sweepNumberTrial } from "./numberTrials";
+import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning, reserveOnboardingNumberClaim, searchBusinessNumberInventory } from "./phoneNumbers";
 import { checkOnboardingPhoneVerificationCode, startOnboardingPhoneVerification } from "./phoneVerification";
 import { createBusiness } from "./tenancy";
 
@@ -337,6 +337,102 @@ describe.skipIf(!testUrl)("free trial numbers against dedicated PostgreSQL roles
         await joinNumberWaitlist({ db }, { userId, businessId, countryCode: "PT" });
       });
       expect(await tx.select({ countryCode: numberWaitlist.countryCode }).from(numberWaitlist).where(eq(numberWaitlist.businessId, businessId))).toEqual([{ countryCode: "PT" }]);
+    });
+  });
+});
+
+/** The bell's rows for a business, oldest first. */
+async function bell(tx: DatabaseTransaction, businessId: string) {
+  return await tx.select({ kind: businessNotifications.kind, key: businessNotifications.dedupeKey, params: businessNotifications.params, resolved: businessNotifications.resolvedAt }).from(businessNotifications).where(eq(businessNotifications.businessId, businessId)).orderBy(asc(businessNotifications.createdAt), asc(businessNotifications.dedupeKey));
+}
+const open = (rows: Awaited<ReturnType<typeof bell>>) => rows.filter((row) => !row.resolved).map((row) => row.key);
+
+/** A direct cloud business with an active trial number that ends at `endsAt`. */
+async function activeTrial(tx: DatabaseTransaction, endsAt: Date) {
+  const userId = randomUUID();
+  await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid`, name: "Sam Lee", emailVerified: true });
+  await tx.execute(sql`set local role lobbystack_app`);
+  const { businessId } = await createBusiness({ db: tx as unknown as Database }, { userId, name: "Bell clinic", timezone: "America/Toronto", businessType: "test" });
+  await tx.execute(sql`reset role`);
+  await tx.update(businesses).set({ deploymentMode: "cloud", onboardingStage: "complete" }).where(eq(businesses.id, businessId));
+  const [number] = await tx.insert(phoneNumbers).values({ businessId, e164: trialNumber, providerPhoneId: `PN${randomUUID().replaceAll("-", "")}`, status: "active", reclaimScheduledAt: new Date(endsAt.getTime() + 14 * 86_400_000), reclaimReason: "trial" }).returning({ id: phoneNumbers.id });
+  const [trial] = await tx.insert(numberTrials).values({ businessId, userId, phoneNumberId: number!.id, verifiedPhone: ownerPhone, status: "active", startedAt: new Date(endsAt.getTime() - 14 * 86_400_000), endsAt }).returning({ id: numberTrials.id });
+  return { userId, businessId, phoneNumberId: number!.id, trialId: trial!.id };
+}
+
+describe.skipIf(!testUrl)("the bell's trial and number notifications", () => {
+  it("posts the 4-day and 1-day reminders, then the ended trial, and a paid plan clears them", async () => {
+    await rollbackTest(async (tx) => {
+      const endsAt = new Date("2030-01-15T05:00:00.000Z");
+      const { businessId, trialId } = await activeTrial(tx, endsAt);
+      const sweep = (now: Date) => as(tx, "lobbystack_worker", (db) => sweepNumberTrial({ db }, { businessId, now }));
+
+      expect((await sweep(new Date(endsAt.getTime() - 4 * 86_400_000))).emails).toEqual(["day10"]);
+      expect(await bell(tx, businessId)).toEqual([{ kind: "trial_ending", key: `trial_ending:${trialId}:4`, params: { days: 4 }, resolved: null }]);
+      // Running again the same hour posts nothing new.
+      expect((await sweep(new Date(endsAt.getTime() - 4 * 86_400_000 + 3_600_000))).emails).toEqual([]);
+
+      expect((await sweep(new Date(endsAt.getTime() - 86_400_000))).emails).toEqual(["day13"]);
+      let rows = await bell(tx, businessId);
+      expect(open(rows)).toEqual([`trial_ending:${trialId}:1`]);
+      expect(rows.find((row) => row.key === `trial_ending:${trialId}:1`)?.params).toEqual({ days: 1 });
+
+      expect(await sweep(new Date(endsAt.getTime() + 26 * 3_600_000))).toEqual({ ended: true, emails: ["ended"] });
+      rows = await bell(tx, businessId);
+      expect(open(rows)).toEqual([`trial_ended:${trialId}`]);
+      expect(rows.filter((row) => row.kind === "trial_ending").every((row) => row.resolved)).toBe(true);
+
+      await as(tx, "lobbystack_worker", (db) => withBusinessTransaction(db, { businessId, actorType: "worker" }, (inner) => keepBusinessNumbersInTransaction(inner, { businessId })));
+      expect(open(await bell(tx, businessId))).toEqual([]);
+    });
+  });
+
+  it("posts used-up trial minutes once, and converting the trial clears it", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, trialId } = await activeTrial(tx, new Date(Date.now() + 5 * 86_400_000));
+      expect(await as(tx, "lobbystack_worker", (db) => markNumberTrialMinutesExhausted({ db }, { businessId }))).toBe(true);
+      expect(await as(tx, "lobbystack_worker", (db) => markNumberTrialMinutesExhausted({ db }, { businessId }))).toBe(false);
+      expect(open(await bell(tx, businessId))).toEqual([`trial_minutes_used_up:${trialId}`]);
+      await as(tx, "lobbystack_worker", (db) => withBusinessTransaction(db, { businessId, actorType: "worker" }, (inner) => convertNumberTrialInTransaction(inner, { businessId })));
+      expect(open(await bell(tx, businessId))).toEqual([]);
+    });
+  });
+
+  it("warns before releasing a number whose plan ended, and a paid plan clears the warning", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, phoneNumberId } = await activeTrial(tx, new Date(Date.now() + 5 * 86_400_000));
+      const releaseAt = new Date("2030-02-01T12:00:00.000Z");
+      await tx.update(numberTrials).set({ status: "converted" }).where(eq(numberTrials.businessId, businessId));
+      await tx.update(phoneNumbers).set({ reclaimScheduledAt: releaseAt, reclaimReason: "subscription_ended" }).where(eq(phoneNumbers.id, phoneNumberId));
+      const sweep = () => as(tx, "lobbystack_worker", (db) => sweepNumberReleases({ db }, { businessId, now: new Date(releaseAt.getTime() - 2 * 86_400_000) }));
+      expect(await sweep()).toBe(1);
+      expect(await sweep()).toBe(1);
+      expect(await bell(tx, businessId)).toEqual([{ kind: "number_release_soon", key: `number_release_soon:${phoneNumberId}:2030-02-01`, params: { number: trialNumber, releaseAt: releaseAt.toISOString() }, resolved: null }]);
+      await as(tx, "lobbystack_worker", (db) => withBusinessTransaction(db, { businessId, actorType: "worker" }, (inner) => keepBusinessNumbersInTransaction(inner, { businessId })));
+      expect(open(await bell(tx, businessId))).toEqual([]);
+    });
+  });
+
+  it("posts a released number in place of the trial's items, a failed purchase, and clears both once a number is bought", async () => {
+    await rollbackTest(async (tx) => {
+      const { userId, businessId, phoneNumberId, trialId } = await activeTrial(tx, new Date(Date.now() - 86_400_000));
+      await as(tx, "lobbystack_worker", (db) => sweepNumberTrial({ db }, { businessId }));
+      expect(open(await bell(tx, businessId))).toEqual([`trial_ended:${trialId}`]);
+
+      await as(tx, "lobbystack_worker", (db) => withBusinessTransaction(db, { businessId, actorType: "worker" }, (inner) => postNumberReleasedInTransaction(inner, { businessId, phoneNumberId, e164: trialNumber, trial: true })));
+      let rows = await bell(tx, businessId);
+      expect(open(rows)).toEqual([`number_released:${phoneNumberId}`]);
+      expect(rows.find((row) => row.kind === "number_released")?.params).toEqual({ number: trialNumber, trial: true });
+
+      const claim = async (requestedE164: string) => (await tx.insert(onboardingNumberClaimEvents).values({ businessId, userId, requestedE164, selectionContext: {}, claimTokenHash: randomUUID(), idempotencyKey: randomUUID(), status: "provisioning" }).returning({ id: onboardingNumberClaimEvents.id }))[0]!.id;
+      const failed = await claim("+14165550177");
+      await as(tx, "lobbystack_worker", (db) => failNumberProvisioning({ db }, { businessId, claimId: failed, unavailable: true }));
+      rows = await bell(tx, businessId);
+      expect(rows.find((row) => row.kind === "number_purchase_failed")).toEqual({ kind: "number_purchase_failed", key: `number_purchase_failed:${failed}`, params: { number: "+14165550177", unavailable: true }, resolved: null });
+
+      const bought = await claim("+14165550188");
+      await as(tx, "lobbystack_worker", (db) => completeNumberProvisioning({ db }, { businessId, claimId: bought, e164: "+14165550188", providerPhoneId: `PN${randomUUID().replaceAll("-", "")}`, voiceUrl: "sip-trunk:TK-test" }));
+      expect(open(await bell(tx, businessId))).toEqual([]);
     });
   });
 });

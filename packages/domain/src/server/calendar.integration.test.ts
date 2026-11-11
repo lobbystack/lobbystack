@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
-import { appointments, auditLogs, businessHours, businessMemberships, businesses, calendarBusyBlocks, calendarConnections, contacts, createDatabaseClient, outboxMessages, services, staff, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { appointments, auditLogs, businessHours, businessMemberships, businessNotifications, businesses, calendarBusyBlocks, calendarConnections, contacts, createDatabaseClient, outboxMessages, services, staff, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { checkAvailability, followCalendarBookingChanges, rescheduleAppointmentInTransaction } from "./booking";
-import { WEBHOOK_REGISTRATION_LEASE_MS, assignCalendarStaff, connectCalendar, disconnectCalendar, disconnectCalendarInTransaction, forgetStaleRetiredCalendarTokens, getCalendarWebhook, getRetiredCalendarConnection, queueUnsyncedAppointmentSyncs, registerCalendarWebhookOnce, resolveBusinessByCalendarWebhook, selectCalendar } from "./calendar";
+import { WEBHOOK_REGISTRATION_LEASE_MS, assignCalendarStaff, connectCalendar, disconnectCalendar, disconnectCalendarInTransaction, forgetStaleRetiredCalendarTokens, getCalendarWebhook, getRetiredCalendarConnection, markCalendarConnectionSync, queueUnsyncedAppointmentSyncs, registerCalendarWebhookOnce, resolveBusinessByCalendarWebhook, selectCalendar, upsertBusyBlocks } from "./calendar";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -448,6 +448,26 @@ describe.skipIf(!testUrl)("calendar backfill against dedicated PostgreSQL roles"
 
       const entries = await tx.select().from(auditLogs).where(and(eq(auditLogs.businessId, businessId), eq(auditLogs.eventType, "calendar_connection.disconnected")));
       expect(entries).toEqual([expect.objectContaining({ actorUserId: userId, entityId: connection!.id, payload: { provider: "google" } })]);
+    });
+  });
+  it("posts a failing sync to the bell once, and clears it when a sync works or the calendar is disconnected", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, userId } = await workspace(tx);
+      const [connection] = await tx.insert(calendarConnections).values({ businessId, ownerUserId: userId, provider: "google", externalAccountId: "owner@example.invalid", selectedCalendarId: "primary", status: "connected" }).returning();
+      const bell = async () => (await tx.select({ kind: businessNotifications.kind, key: businessNotifications.dedupeKey, params: businessNotifications.params, resolvedAt: businessNotifications.resolvedAt, occurredAt: businessNotifications.occurredAt }).from(businessNotifications).where(eq(businessNotifications.businessId, businessId)));
+      await asWorker(tx, (db) => markCalendarConnectionSync({ db }, { businessId, connectionId: connection!.id, error: "401" }));
+      const [first] = await bell();
+      expect(first).toMatchObject({ kind: "calendar_sync_failing", key: `calendar_sync:${connection!.id}`, params: { provider: "google" }, resolvedAt: null });
+      // The reconcile fails every 15 minutes: the open item stays as it was.
+      await asWorker(tx, (db) => markCalendarConnectionSync({ db }, { businessId, connectionId: connection!.id, error: "401" }));
+      expect(await bell()).toEqual([first]);
+      await asWorker(tx, (db) => upsertBusyBlocks({ db }, { businessId, connectionId: connection!.id, calendarId: "primary", blocks: [] }));
+      expect((await bell())[0]?.resolvedAt).toBeInstanceOf(Date);
+
+      await asWorker(tx, (db) => markCalendarConnectionSync({ db }, { businessId, connectionId: connection!.id, error: "401" }));
+      expect((await bell())[0]?.resolvedAt).toBeNull();
+      await asWorker(tx, (db) => withBusinessTransaction(db, { businessId, actorType: "worker" }, (inner) => disconnectCalendarInTransaction(inner, { businessId, connectionId: connection!.id })));
+      expect((await bell())[0]?.resolvedAt).toBeInstanceOf(Date);
     });
   });
 });
