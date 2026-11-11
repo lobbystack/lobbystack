@@ -163,11 +163,16 @@
       "duration": "Durée",
       "phone": "Téléphone",
       "email": "E-mail",
-      "channel": "Réservé via"
+      "channel": "Réservé via",
+      "saveNotes": "Enregistrer les notes",
+      "savingNotes": "Enregistrement…",
+      "notesSaved": "Notes enregistrées.",
+      "notesFailed": "Impossible d’enregistrer les notes."
     },
     "views": {
       "list": "Liste",
-      "calendar": "Calendrier"
+      "calendar": "Calendrier",
+      "label": "Affichage"
     },
     "when": {
       "label": "Afficher",
@@ -183,14 +188,65 @@
       "previous": "Précédent",
       "next": "Suivant",
       "today": "Aujourd'hui",
+      "label": "Période",
+      "day": "Jour",
       "week": "Semaine",
       "month": "Mois",
       "count_one": "{{count}} rendez-vous",
       "count_many": "{{count}} rendez-vous",
       "count_other": "{{count}} rendez-vous",
       "more": "+{{count}} de plus",
-      "dayEmpty": "Aucun rendez-vous ce jour-là.",
-      "with": "avec {{name}}"
+      "allDay": "Toute la journée",
+      "newAt": "Nouveau rendez-vous à {{time}}",
+      "block": "{{name}}, {{service}}, {{time}}",
+      "blockCancelled": "{{name}}, {{service}}, {{time}}, annulé"
+    },
+    "timeOff": {
+      "action": "Congés",
+      "title": "Ajouter un congé",
+      "editTitle": "Modifier le congé",
+      "type": "Type",
+      "business": "Toute l’entreprise",
+      "employee": "Un employé",
+      "employeeLabelField": "Employé",
+      "employeePlaceholder": "Choisissez un employé",
+      "noEmployees": "Aucun employé pour l’instant.",
+      "employeeRequired": "Choisissez un employé.",
+      "name": "Nom",
+      "namePlaceholder": "ex. Noël, Vendredi après-midi",
+      "nameRequired": "Entrez un nom.",
+      "hours": "Heures",
+      "allDay": "Fermé toute la journée",
+      "partDay": "Une partie de la journée",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "startTime": "Heure de début",
+      "endTime": "Heure de fin",
+      "endBeforeStart": "Choisissez une fin après le début.",
+      "datesRequired": "Choisissez une date de début et de fin.",
+      "reason": "Motif (facultatif)",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "cancel": "Annuler",
+      "delete": "Supprimer",
+      "keep": "Garder",
+      "deleteTitle": "Supprimer ce congé ?",
+      "deleteDescription": "{{name}} disparaît du calendrier et ces heures redeviennent réservables.",
+      "saved": "Congé enregistré.",
+      "deleted": "Congé supprimé.",
+      "failed": "Impossible d’enregistrer le congé.",
+      "overlap": "Ce congé chevauche un autre congé.",
+      "invalid": "Vérifiez les dates. Un congé ne peut pas être déjà passé ni finir dans plus de deux ans.",
+      "label": "Fermé : {{name}}, {{time}}",
+      "employeeLabel": "{{employee}} en congé : {{name}}, {{time}}",
+      "employeeTitle": "{{employee}} : {{name}}",
+      "picker": {
+        "hours": "Heures",
+        "minutes": "Minutes",
+        "period": "AM ou PM",
+        "hoursTitle": "HH",
+        "minutesTitle": "MM"
+      }
     },
     "chooseWorkspace": "Choisissez un espace pour consulter les rendez-vous.",
     "time": "Heure",
@@ -207,7 +263,8 @@
       "cancelled": "Annulé",
       "completed": "Terminé",
       "no_show": "Absent",
-      "pending": "En attente"
+      "pending": "En attente",
+      "canceled": "Annulé"
     },
     "calendarStates": {
       "not_required": "Non requis",
@@ -294,7 +351,15 @@
       "booking": "Réservation...",
       "done": "Rendez-vous réservé",
       "failed": "Nous n’avons pas pu réserver le rendez-vous. Réessayez.",
-      "taken": "Cette heure n’est plus libre. Choisissez-en une autre."
+      "taken": "Cette heure n’est plus libre. Choisissez-en une autre.",
+      "duration": "Durée (minutes)",
+      "durationInvalid": "Entrez de {{min}} à {{max}} minutes.",
+      "notes": "Notes",
+      "notesHint": "Visibles par votre agent",
+      "internalNotes": "Notes internes",
+      "internalNotesHint": "Équipe seulement",
+      "notOpen": "Ce créneau n’est pas ouvert. Choisissez-en un autre.",
+      "timeOff": "Ce créneau n’est pas disponible : {{name}}."
     }
   },
   "abandonIntent": {

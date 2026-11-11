@@ -31,6 +31,12 @@ describe("operator booking openings API", () => {
     expect(fixture.openings).toHaveBeenCalledWith({ db: "app" }, { userId: "user_1", businessId: "business_1", serviceId, staffId, date: "2026-10-14" });
   });
 
+  it("asks for openings of a custom length, and rejects one that isn't whole minutes", async () => {
+    await openings(`serviceId=${serviceId}&date=2026-10-14&durationMinutes=45`);
+    expect(fixture.openings).toHaveBeenCalledWith({ db: "app" }, { userId: "user_1", businessId: "business_1", serviceId, date: "2026-10-14", durationMinutes: 45 });
+    expect((await openings(`serviceId=${serviceId}&date=2026-10-14&durationMinutes=4.5`)).status).toBe(400);
+  });
+
   it("rejects a malformed service, staff member or day", async () => {
     expect((await openings("serviceId=nope&date=2026-10-14")).status).toBe(400);
     expect((await openings(`serviceId=${serviceId}&staffId=nope&date=2026-10-14`)).status).toBe(400);
