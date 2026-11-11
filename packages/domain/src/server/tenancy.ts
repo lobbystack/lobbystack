@@ -11,6 +11,7 @@ import type { RuntimeLocale } from "@lobbystack/shared";
 import { requireBusinessAdmin } from "../authz";
 import { accessCapabilities, brandPartnerId, businessShowsOnBrand, capabilityNames, readBusinessAccess, requireBusinessAccess, type BrandScope, type BusinessAccessVia, type Capability } from "./businessAccess";
 import { enqueueBusinessSummaryRefresh } from "./businessSummary";
+import { postBusinessNotificationInTransaction } from "./businessNotifications";
 import type { DomainContext } from "./context";
 import type { OnboardingGoal, OnboardingStage } from "./onboarding";
 import { invitationOfferInTransaction, type InvitationPayment } from "./packageBilling";
@@ -639,6 +640,10 @@ export async function acceptInvitation(
       setWhere: ne(businessMemberships.status, "active"),
     }).returning({ role: businessMemberships.role });
     const role = joined?.role ?? (await tx.select({ role: businessMemberships.role }).from(businessMemberships).where(and(eq(businessMemberships.businessId, invitation.businessId), eq(businessMemberships.userId, input.userId))).limit(1))[0]!.role;
+    // Whoever sent the invitation hears that it was accepted. A platform key's invitation has no one to tell.
+    if (joined && senderUserId !== null && senderUserId !== input.userId) {
+      await postBusinessNotificationInTransaction(tx, { businessId: invitation.businessId, kind: "invite_accepted", key: `invite_accepted:${invitation.id}`, recipientUserId: senderUserId, params: { email: invitation.email } });
+    }
     // Someone joining a partner's business, such as the owner the partner invited, lands in it on the partner's domain.
     if (partnerId) await rememberActiveBusinessInTransaction(tx, { userId: input.userId, businessId: invitation.businessId, partnerId });
     return { businessId: invitation.businessId, role, partnerId };

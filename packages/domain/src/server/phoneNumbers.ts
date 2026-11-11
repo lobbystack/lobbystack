@@ -14,6 +14,7 @@ import { normalizeOnboardingStage, NUMBER_CLAIM_STAGES } from "./onboarding";
 import { loadPartnerNumberStanding, newPartnerNumberRefusal, numberCountsForPartnerInTransaction, partnerKeyNumberRefusal, partnerReplacementRefusal, partnerTrialOffered, recordPartnerNumberCostInTransaction, unclaimedPartnerDemoInTransaction } from "./partnerNumbers";
 import { resolveBusinessNumberMarket, type BusinessNumberMarket } from "./phoneNumberMarket";
 import { isDisposableTrialEmail } from "./trialEligibility";
+import { postBusinessNotificationInTransaction, resolveBusinessNotificationsInTransaction } from "./businessNotifications";
 
 export type NumberSelection = {
   countryCode: NumberCountry;
@@ -448,13 +449,16 @@ export async function completeNumberProvisioning(context: DomainContext, input: 
     // Every number starts on the receptionist. With staff answers first on for the agent it reaches, routing moves this one to the webhook.
     const profile = (await tx.select({ staffFirstMode: agents.staffFirstMode }).from(phoneNumbers).innerJoin(agents, agentOfRow(phoneNumbers.businessId, phoneNumbers.agentId)).where(eq(phoneNumbers.id, number.id)).limit(1))[0];
     if (profile && profile.staffFirstMode !== "never") await enqueueNumberRouting(tx, { businessId: input.businessId, phoneNumberId: number.id, mode: "receptionist" });
+    // The business has a number again.
+    await resolveBusinessNotificationsInTransaction(tx, { businessId: input.businessId, kinds: ["number_purchase_failed", "number_released"] });
     return number.id;
   });
 }
 
 export async function failNumberProvisioning(context: DomainContext, input: { businessId: string; claimId: string; unavailable: boolean }): Promise<void> {
   await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const claim = (await tx.update(onboardingNumberClaimEvents).set({ status: input.unavailable ? "unavailable" : "failed", lastError: input.unavailable ? "The selected number is no longer available." : "Number provisioning failed.", completedAt: new Date(), updatedAt: new Date() }).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId))).returning({ purpose: onboardingNumberClaimEvents.purpose }))[0];
+    const claim = (await tx.update(onboardingNumberClaimEvents).set({ status: input.unavailable ? "unavailable" : "failed", lastError: input.unavailable ? "The selected number is no longer available." : "Number provisioning failed.", completedAt: new Date(), updatedAt: new Date() }).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId))).returning({ purpose: onboardingNumberClaimEvents.purpose, e164: onboardingNumberClaimEvents.requestedE164 }))[0];
+    if (claim) await postBusinessNotificationInTransaction(tx, { businessId: input.businessId, kind: "number_purchase_failed", key: `number_purchase_failed:${input.claimId}`, params: { number: claim.e164, unavailable: input.unavailable } });
     if (claim?.purpose === "replacement") await tx.update(businesses).set({ phoneNumberReplacementReservedAt: null, updatedAt: new Date() }).where(and(eq(businesses.id, input.businessId), sql`${businesses.phoneNumberReplacementReservedAt} = (SELECT reserved_at FROM onboarding_number_claim_events WHERE id = ${input.claimId}::uuid)`));
     else if (claim) {
       // Back to picking a number, from claiming one only: an API claim leaves a business on an earlier step where it is.

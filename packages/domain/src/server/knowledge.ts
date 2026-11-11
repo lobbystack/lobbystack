@@ -8,6 +8,7 @@ import { agentInstructions, buildBusinessContextSnapshot, MAX_KNOWLEDGE_SNIPPETS
 import { countKnowledgeTokens, fuseKnowledgeRanks, KNOWLEDGE_SEARCH_TOKEN_BUDGET, knowledgeLexicalQueries, knowledgeQueryTerms, splitToTokenBudget, withinKnowledgeBudget, type KnowledgePassage } from "../knowledgeRanking";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
+import { postBusinessNotificationInTransaction, resolveBusinessNotificationsInTransaction } from "./businessNotifications";
 import type { DomainContext } from "./context";
 import { normalizeWebsiteSourceUrl } from "./knowledgeUrl";
 import { getMeter } from "@lobbystack/telemetry/node";
@@ -248,6 +249,7 @@ export async function deleteKnowledgeDocument(context: DomainContext, input: { u
 export async function deleteKnowledgeDocumentInTransaction(tx: DatabaseTransaction, input: { businessId: string; documentId: string }): Promise<boolean> {
   await tx.delete(knowledgeChunks).where(and(eq(knowledgeChunks.documentId, input.documentId), eq(knowledgeChunks.businessId, input.businessId)));
   const [document] = await tx.delete(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).returning({ id: knowledgeDocuments.id, storageObjectId: knowledgeDocuments.storageObjectId });
+  if (document) await resolveBusinessNotificationsInTransaction(tx, { businessId: input.businessId, keys: [websiteImportFailedKey(document.id)] });
   if (!document) return false;
   // Downloads stop now; the retained-object sweep deletes the file within 15 minutes.
   if (document.storageObjectId) await tx.update(storageObjects).set({ retentionUntil: new Date(), updatedAt: new Date() }).where(and(eq(storageObjects.id, document.storageObjectId), eq(storageObjects.businessId, input.businessId)));
@@ -490,12 +492,14 @@ async function markKnowledgeDocumentFailedInTransaction(
 
 export async function markKnowledgeDocumentFailed(
   context: DomainContext,
-  input: { businessId: string; documentId: string; error?: string; expectedRevision?: number },
+  input: { businessId: string; documentId: string; error?: string; expectedRevision?: number; websiteImport?: { url: string } },
 ): Promise<boolean> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const document = (await tx.select({ revision: knowledgeDocuments.revision, status: knowledgeDocuments.status }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1).for("update"))[0];
     if (!document || document.status === "cancelled" || (input.expectedRevision !== undefined && document.revision !== input.expectedRevision)) return false;
     await markKnowledgeDocumentFailedInTransaction(tx, input, document.revision, input.error ?? "Knowledge indexing failed.");
+    // A website import the crawl gave up on: the bell keeps it until an import of the site works or the document goes.
+    if (input.websiteImport) await postBusinessNotificationInTransaction(tx, { businessId: input.businessId, kind: "website_import_failed", key: websiteImportFailedKey(input.documentId), params: { site: websiteImportSite(input.websiteImport.url) } });
     return true;
   });
 }
@@ -802,4 +806,27 @@ export class KnowledgeStorageLimitError extends Error {
     super(knowledgeStorageLimitMessage(limitBytes));
     this.name = "KnowledgeStorageLimitError";
   }
+}
+
+function websiteImportFailedKey(documentId: string): string {
+  return `website_import_failed:${documentId}`;
+}
+
+/** The site a website import read, as the bell names it: its host without www. */
+export function websiteImportSite(url: string): string {
+  try {
+    return new URL(url).host.replace(/^www\./, "");
+  } catch {
+    return url.slice(0, 120);
+  }
+}
+
+/**
+ * A dashboard website import finished: the bell says how many pages it read,
+ * and an earlier failure of the same document clears. Runs in the
+ * transaction that marks the import completed.
+ */
+export async function postWebsiteImportFinishedInTransaction(tx: DatabaseTransaction, input: { businessId: string; documentId: string; websiteIngestionJobId: string; revision: number; url: string; pages: number }): Promise<void> {
+  await resolveBusinessNotificationsInTransaction(tx, { businessId: input.businessId, keys: [websiteImportFailedKey(input.documentId)] });
+  await postBusinessNotificationInTransaction(tx, { businessId: input.businessId, kind: "website_import_finished", key: `website_import_finished:${input.websiteIngestionJobId}:${input.revision}`, params: { site: websiteImportSite(input.url), pages: input.pages } });
 }

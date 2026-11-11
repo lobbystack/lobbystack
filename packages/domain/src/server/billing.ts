@@ -6,6 +6,7 @@ import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import type { DomainContext } from "./context";
 import { recordAffiliateCommissionInTransaction } from "./affiliates";
+import { postBusinessNotificationInTransaction, resolveBusinessNotificationsInTransaction } from "./businessNotifications";
 import { requireBusinessCapability } from "./businessAccess";
 import { loadEntitlement } from "./entitlement";
 import { keepBusinessNumbersInTransaction, queuePlanCancelNoticeInTransaction, scheduleNumberReleaseInTransaction } from "./numberTrials";
@@ -664,6 +665,25 @@ export function detectSubscriptionStart(
   return { plan: next.plan!, billingInterval: next.billingInterval, previousPlan: previous?.plan ?? null };
 }
 
+/**
+ * The bell's billing items after a Polar event changed the plan. A charge
+ * that failed (past_due) stays listed until the subscription leaves that
+ * state. A plan canceled at the end of its period stays until then, or until
+ * the owner takes the cancellation back or starts a plan again.
+ */
+async function syncBillingNotificationsInTransaction(tx: DatabaseTransaction, input: { businessId: string; eventType: string; previousState: string | null; state: string | null; isPaid: boolean; started: boolean; periodEnd: Date | null }): Promise<void> {
+  if (input.state === "past_due") {
+    if (input.previousState !== "past_due") await postBusinessNotificationInTransaction(tx, { businessId: input.businessId, kind: "payment_failed", key: "payment_failed" });
+  } else {
+    await resolveBusinessNotificationsInTransaction(tx, { businessId: input.businessId, kinds: ["payment_failed"] });
+  }
+  if (input.isPaid && input.eventType === "subscription.canceled" && input.periodEnd && input.periodEnd > new Date()) {
+    await postBusinessNotificationInTransaction(tx, { businessId: input.businessId, kind: "plan_canceled", key: `plan_canceled:${input.periodEnd.toISOString().slice(0, 10)}`, params: { endsAt: input.periodEnd.toISOString() }, expiresAt: input.periodEnd });
+  } else if (input.started || (input.isPaid && input.eventType === "subscription.uncanceled")) {
+    await resolveBusinessNotificationsInTransaction(tx, { businessId: input.businessId, kinds: ["plan_canceled"] });
+  }
+}
+
 export async function reconcileBillingProviderEvent(
   context: DomainContext,
   input: { businessId: string; providerEventId: string },
@@ -794,6 +814,15 @@ export async function reconcileBillingProviderEvent(
         if (isPaid !== wasPaid) await enqueuePlanSnapshotRefresh(tx, input.businessId);
         // Polar sends subscription.canceled when the owner cancels at the end of the period, while the plan is still live.
         if (isPaid && event.eventType === "subscription.canceled" && appliedPeriodEnd) await queuePlanCancelNoticeInTransaction(tx, { businessId: input.businessId, periodEnd: appliedPeriodEnd });
+        await syncBillingNotificationsInTransaction(tx, {
+          businessId: input.businessId,
+          eventType: event.eventType,
+          previousState: existing?.subscriptionState ?? null,
+          state: appliedState ?? existing?.subscriptionState ?? null,
+          isPaid,
+          started: Boolean(startedSubscription),
+          periodEnd: appliedPeriodEnd ?? null,
+        });
       }
     }
 

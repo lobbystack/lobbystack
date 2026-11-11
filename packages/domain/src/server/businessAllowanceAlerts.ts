@@ -1,9 +1,11 @@
+import { DateTime } from "luxon";
 import { and, eq, sql } from "drizzle-orm";
 
 import { billingUsageEvents, billingUsageMonths, businesses, enqueueOutbox, type DatabaseTransaction } from "@lobbystack/db";
 import { HOST_EMAIL_BRAND, intlLocale, normalizeInterfaceLocale, type EmailBrandReference, type Entitlement } from "@lobbystack/shared";
 
 import { appBaseUrl } from "./appBaseUrl";
+import { postBusinessNotificationInTransaction, resolveBusinessNotificationsInTransaction } from "./businessNotifications";
 import { greetingName } from "./emailGreeting";
 
 // Alerts at 80% and 100% of a partner's business's allowance, its minutes and
@@ -151,6 +153,13 @@ export async function queueBusinessAllowanceAlertsInTransaction(tx: DatabaseTran
   if (partnerId) {
     const partnerPeople = (await tx.execute<Recipient>(sql`select user_id, email, name, preferred_locale from app.partner_pool_alert_recipients(${partnerId}::uuid, ${input.periodKey})`)).rows;
     deliveries.push(...partnerPeople.map((recipient): Delivery => ({ recipient, template: "partner_business_allowance_alert", dedupe: "partner-business-allowance", url: partnerBusinessesUrl(partnerId), brand: HOST_EMAIL_BRAND })));
+  }
+  // The bell carries the minutes alerts for the business's team, until the month ends.
+  const monthEnd = DateTime.fromISO(`${input.periodKey}-01`, { zone: "utc" }).plus({ months: 1 }).toJSDate();
+  for (const alert of due.filter((due) => due.kind === "minutes")) {
+    const measured = measure(entitlement.allowance, used, "minutes");
+    if (alert.threshold === 100) await resolveBusinessNotificationsInTransaction(tx, { businessId: input.businessId, kinds: ["minutes_80"], keyPrefix: `minutes_80:${input.periodKey}:` });
+    await postBusinessNotificationInTransaction(tx, { businessId: input.businessId, kind: alert.threshold === 100 ? "minutes_100" : "minutes_80", key: `minutes_${alert.threshold}:${input.periodKey}:${alert.key}`, params: { used: measured?.used ?? 0, included: measured?.limit ?? 0, overage: entitlement.overage.enabled }, expiresAt: monthEnd });
   }
   for (const alert of due) {
     for (const delivery of deliveries) {

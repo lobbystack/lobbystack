@@ -5,6 +5,7 @@ import { agents, auditLogs, contacts, conversations, conversationSessions, defau
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import { moveChannelInTransaction } from "./agents";
+import { postBusinessNotificationInTransaction, resolveBusinessNotificationsInTransaction } from "./businessNotifications";
 import type { DomainContext } from "./context";
 import { insertMessageInTransaction } from "./conversations";
 import { queueOperatorAlertInTransaction } from "./notifications";
@@ -62,6 +63,7 @@ export async function connectInstagramAccount(
     const [account] = await tx.insert(instagramAccounts).values({ businessId: input.businessId, ...values })
       .onConflictDoUpdate({ target: instagramAccounts.businessId, set: values })
       .returning({ id: instagramAccounts.id, agentId: instagramAccounts.agentId });
+    await resolveBusinessNotificationsInTransaction(tx, { businessId: input.businessId, kinds: ["instagram_reconnect"], now });
     await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.userId, eventType: "instagram_account.connected", entityType: "instagram_account", entityId: null, payload: { instagramUserId: input.instagramUserId, ...(input.username ? { username: input.username } : {}) } });
     if (!account) return null;
     const [wanted] = input.agentId ? await tx.select({ id: agents.id }).from(agents).where(and(eq(agents.id, input.agentId), eq(agents.businessId, input.businessId), isNull(agents.archivedAt))).limit(1) : [];
@@ -87,6 +89,7 @@ export async function disconnectInstagramAccount(context: DomainContext, input: 
   return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
     const removed = await tx.delete(instagramAccounts).where(eq(instagramAccounts.businessId, input.businessId)).returning({ instagramUserId: instagramAccounts.instagramUserId });
+    await resolveBusinessNotificationsInTransaction(tx, { businessId: input.businessId, kinds: ["instagram_reconnect"] });
     if (removed[0]) {
       await closeInstagramConversationsInTransaction(tx, input.businessId, new Date());
       await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.userId, eventType: "instagram_account.disconnected", entityType: "instagram_account", entityId: null, payload: { instagramUserId: removed[0].instagramUserId } });
@@ -293,7 +296,8 @@ export async function finishInstagramDelivery(
       : { status: "failed", providerStatus: input.reason.slice(0, 64), providerUpdatedAt: now, revision: sql`${messages.revision} + 1`, updatedAt: now })
       .where(and(eq(messages.id, input.messageId), eq(messages.businessId, input.businessId))).returning({ conversationId: messages.conversationId });
     if (input.status === "failed" && input.reconnectRequired) {
-      await tx.update(instagramAccounts).set({ status: "reconnect_required", lastError: input.reason.slice(0, 500), updatedAt: now }).where(eq(instagramAccounts.businessId, input.businessId));
+      const [account] = await tx.update(instagramAccounts).set({ status: "reconnect_required", lastError: input.reason.slice(0, 500), updatedAt: now }).where(eq(instagramAccounts.businessId, input.businessId)).returning({ id: instagramAccounts.id, username: instagramAccounts.username });
+      if (account) await postInstagramReconnect(tx, { businessId: input.businessId, accountId: account.id, username: account.username, now });
     }
     if (message) await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "message", aggregateId: input.messageId, dedupeKey: `message:${input.messageId}:instagram:${input.status}`, payload: { type: "message.deliveryUpdated", entityId: input.messageId, conversationId: message.conversationId } });
   });
@@ -325,10 +329,16 @@ export async function refreshInstagramTokenIfDue(
     return await withBusinessTransaction(context.db, scope, async (tx) => {
       const [marked] = await tx.update(instagramAccounts).set({ status: "reconnect_required", lastError: "Instagram authorization expired. Connect the account again.", updatedAt: now }).where(unchanged).returning({ id: instagramAccounts.id });
       if (!marked) return "current";
+      await postInstagramReconnect(tx, { businessId: input.businessId, accountId: account.id, username: account.username, now });
       await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKind: "aiReplyFailed", eventKey: `instagram-reconnect:${account.id}:${now.toISOString().slice(0, 10)}`, subject: "Reconnect Instagram", body: "Instagram stopped accepting the agent's access. Open Integrations and connect Instagram again." });
       return "reconnect_required";
     });
   }
   const saved = await withBusinessTransaction(context.db, scope, async (tx) => await tx.update(instagramAccounts).set({ encryptedAccessToken: input.encryptToken(refreshed.accessToken), tokenExpiresAt: new Date(now.getTime() + refreshed.expiresIn * 1000), lastError: null, updatedAt: now }).where(unchanged).returning({ id: instagramAccounts.id }));
   return saved.length ? "refreshed" : "current";
+}
+
+/** The bell's item for an account Instagram stopped accepting, until someone connects it again. */
+async function postInstagramReconnect(tx: DatabaseTransaction, input: { businessId: string; accountId: string; username: string | null; now: Date }): Promise<void> {
+  await postBusinessNotificationInTransaction(tx, { businessId: input.businessId, kind: "instagram_reconnect", key: `instagram_reconnect:${input.accountId}`, params: { username: input.username }, now: input.now });
 }
