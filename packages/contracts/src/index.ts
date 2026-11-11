@@ -123,6 +123,7 @@ export type RealtimeEvent = z.infer<typeof realtimeEventSchema>;
 export const snapshotSchema = z.object({
   businessId: z.guid(),
   version: z.string().min(1),
+  schemaVersion: z.number().int().optional(),
   generatedAt: z.iso.datetime(),
   displayName: z.string().min(1),
   legalName: z.string().optional(),

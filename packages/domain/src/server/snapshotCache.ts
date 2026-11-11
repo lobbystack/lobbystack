@@ -2,7 +2,7 @@ import { snapshotSchema } from "@lobbystack/contracts";
 import type { BusinessContextSnapshot } from "@lobbystack/shared";
 
 import type { DomainContext } from "./context";
-import { snapshotForAgent } from "../snapshot";
+import { isCurrentSnapshot, snapshotForAgent } from "../snapshot";
 import { loadLatestBusinessSnapshot, loadSnapshotAgent, refreshBusinessSnapshot } from "./knowledge";
 
 export const SNAPSHOT_CACHE_TTL_SECONDS = 300;
@@ -47,18 +47,31 @@ export function redisSnapshotCache(redis: () => SnapshotRedis | undefined): Snap
   };
 }
 
+/**
+ * The business's newest snapshot, from the cache when it holds a current one.
+ * A snapshot older code built (see isCurrentSnapshot) is rebuilt first, so a
+ * rule kept to one channel never reaches the others. When the rebuild fails,
+ * the old snapshot is better than none and comes back.
+ */
 export async function getCachedBusinessSnapshot(
   context: DomainContext,
   input: { businessId: string },
 ): Promise<BusinessContextSnapshot | null> {
   const cache = context.snapshotCache;
-  if (!cache) {
-    return await loadLatestBusinessSnapshot(context, { businessId: input.businessId });
-  }
-  const cached = await cache.get(input.businessId).catch(() => null);
-  if (cached) return cached;
+  const cached = cache ? await cache.get(input.businessId).catch(() => null) : null;
+  if (cached && isCurrentSnapshot(cached)) return cached;
   const snapshot = await loadLatestBusinessSnapshot(context, { businessId: input.businessId });
-  if (snapshot) {
+  if (snapshot && !isCurrentSnapshot(snapshot)) {
+    try {
+      // The refresh writes the cache through.
+      await refreshBusinessSnapshot(context, { businessId: input.businessId });
+      return await loadLatestBusinessSnapshot(context, { businessId: input.businessId }) ?? snapshot;
+    } catch (error) {
+      console.error("[snapshot] rebuilding a snapshot older code built failed", input.businessId, error instanceof Error ? error.message : error);
+      return snapshot;
+    }
+  }
+  if (snapshot && cache) {
     await cache.set(input.businessId, snapshot).catch(() => undefined);
   }
   return snapshot;
@@ -80,7 +93,7 @@ export async function getBusinessSnapshotForAgent(
   context: DomainContext,
   input: { businessId: string; agentId?: string | null | undefined; loaded?: BusinessContextSnapshot; underWay?: boolean },
 ): Promise<BusinessContextSnapshot | null> {
-  const cached = input.loaded ?? await getCachedBusinessSnapshot(context, { businessId: input.businessId });
+  const cached = input.loaded && isCurrentSnapshot(input.loaded) ? input.loaded : await getCachedBusinessSnapshot(context, { businessId: input.businessId });
   if (cached && !input.agentId) return cached;
   if (cached?.agents?.some((agent) => agent.id === input.agentId)) return snapshotForAgent(cached, input.agentId);
 

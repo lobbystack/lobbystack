@@ -31,7 +31,7 @@ Rules becomes the one place for what an agent should do. A rule gains an optiona
   - `sms_instructions` becomes an `sms` rule titled "In texts".
   - `chat_instructions` becomes a `web_chat` rule, "In website chat". It also becomes an `instagram` rule, "On Instagram", when the business has a row in `instagram_accounts`, including one waiting to reconnect, since Instagram followed the chat text. A business without Instagram gets no Instagram rule.
 - Titles come in the business's default caller language, for all 15 `RuntimeLocale` values. `channelRuleTitle()` in `packages/shared` holds the same titles for code, and a test checks the migration against it.
-- The migration queues one `snapshot.refresh` outbox row per agent it changed, as `0201_portuguese_default_greeting.sql` does.
+- The migration queues no `snapshot.refresh`. The previous worker drains for up to 31 minutes after the migrator runs, and it would build a snapshot without channels from such a job, where each channel rule reads as a rule for every channel. Snapshots carry `schemaVersion` instead, and `getCachedBusinessSnapshot` rebuilds any snapshot older than `SNAPSHOT_SCHEMA_VERSION` (2) before it returns it, from the cache or the database. A snapshot the old worker builds during the drain gets rebuilt the same way on its first read.
 - The migration can take an agent past the 100-rule limit. That only blocks adding more rules, and no agent is known to be near it.
 - The old columns stay. This release stops reading and writing them; a later release drops them once no running code reads them, as slice 5 did. The migration is safe to run twice: it skips an agent that already has a rule for that channel.
 

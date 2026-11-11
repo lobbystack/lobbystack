@@ -13,7 +13,12 @@ ALTER TABLE public.agent_rules
 -- instagram_accounts, even one waiting to reconnect). An agent that already
 -- has a rule for a channel gets none for it, so running this twice adds nothing.
 -- The columns stay until a later release drops them; no code reads them now.
--- Calls read rules from the snapshot, so each changed agent's refreshes.
+--
+-- Calls read rules from the snapshot, but this file queues no refresh: the
+-- previous worker, still draining, could take the job and build a snapshot
+-- without channels, where a channel rule reads as one for every channel. New
+-- code instead rebuilds any snapshot whose schemaVersion is older than
+-- SNAPSHOT_SCHEMA_VERSION before it reads it (getCachedBusinessSnapshot).
 WITH titles (locale, voice, sms, web_chat, instagram) AS (
   VALUES
     ('en', 'On calls', 'In texts', 'In website chat', 'On Instagram'),
@@ -66,23 +71,10 @@ wanted AS (
       SELECT 1 FROM public.agent_rules AS rule
       WHERE rule.business_id = source.business_id AND rule.agent_id = source.agent_id AND rule.channel = item.channel
     )
-),
-inserted AS (
-  INSERT INTO public.agent_rules (business_id, agent_id, title, content, active, sort_order, channel)
-  SELECT wanted.business_id, wanted.agent_id, wanted.title, wanted.content, true,
-    coalesce((SELECT max(rule.sort_order) FROM public.agent_rules AS rule WHERE rule.business_id = wanted.business_id AND rule.agent_id = wanted.agent_id), -1)
-      + row_number() OVER (PARTITION BY wanted.agent_id ORDER BY wanted.position),
-    wanted.channel
-  FROM wanted
-  RETURNING agent_id, business_id
 )
-INSERT INTO public.outbox_messages (topic, payload, business_id, aggregate_type, aggregate_id, dedupe_key)
-SELECT DISTINCT
-  'snapshot.refresh',
-  jsonb_build_object('businessId', inserted.business_id, 'reason', 'agent_updated'),
-  inserted.business_id,
-  'agent',
-  inserted.agent_id,
-  'migration:0203:snapshot:' || inserted.agent_id
-FROM inserted
-ON CONFLICT (dedupe_key) DO NOTHING;
+INSERT INTO public.agent_rules (business_id, agent_id, title, content, active, sort_order, channel)
+SELECT wanted.business_id, wanted.agent_id, wanted.title, wanted.content, true,
+  coalesce((SELECT max(rule.sort_order) FROM public.agent_rules AS rule WHERE rule.business_id = wanted.business_id AND rule.agent_id = wanted.agent_id), -1)
+    + row_number() OVER (PARTITION BY wanted.agent_id ORDER BY wanted.position),
+  wanted.channel
+FROM wanted;

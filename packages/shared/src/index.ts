@@ -369,9 +369,19 @@ export type SnapshotAgent = {
   knowledgeDigest?: string;
 };
 
+/**
+ * The shape of snapshot the code builds. A snapshot with an older one, or none,
+ * came from code that predates a change in what it holds, and readers rebuild
+ * it before using it (getCachedBusinessSnapshot). 2: rules carry their channel
+ * (migration 0203) and agents their own knowledge (0208).
+ */
+export const SNAPSHOT_SCHEMA_VERSION = 2;
+
 export type BusinessContextSnapshot = {
   businessId: string;
   version: string;
+  /** SNAPSHOT_SCHEMA_VERSION when it was built. Absent on snapshots built before it existed. */
+  schemaVersion?: number;
   generatedAt: string;
   displayName: string;
   legalName?: string;
@@ -466,6 +476,7 @@ export const demoBusinessId = "demo-clinic";
 export const demoSnapshot: BusinessContextSnapshot = {
   businessId: demoBusinessId,
   version: "seed-v1",
+  schemaVersion: SNAPSHOT_SCHEMA_VERSION,
   generatedAt: new Date("2026-03-08T00:00:00.000Z").toISOString(),
   displayName: "Maple Family Clinic",
   timezone: "America/Toronto",

@@ -3,9 +3,13 @@ import { readFileSync } from "node:fs";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
-import { agentRules, agents, businesses, createDatabaseClient, instagramAccounts, outboxMessages, type DatabaseTransaction } from "@lobbystack/db";
+import { agentRules, agents, businessContextSnapshots, businesses, createDatabaseClient, instagramAccounts, outboxMessages, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { SNAPSHOT_SCHEMA_VERSION } from "@lobbystack/shared";
 
+import { isCurrentSnapshot } from "../snapshot";
+import { loadLatestBusinessSnapshot, refreshBusinessSnapshot } from "./knowledge";
 import { saveReceptionistProfileInTransaction } from "./receptionistProfile";
+import { getBusinessSnapshotForAgent } from "./snapshotCache";
 
 // Migration 0203 and the old instruction fields, against a dedicated test database. Every test rolls back.
 
@@ -46,7 +50,7 @@ const rulesOf = async (tx: DatabaseTransaction, agentId: string) => await tx
   .from(agentRules).where(eq(agentRules.agentId, agentId)).orderBy(asc(agentRules.sortOrder));
 
 describe.skipIf(!testUrl)("migration 0203 on sample rows", () => {
-  it("turns each agent's instructions into rules for their channel, titled in its business's language, and refreshes its snapshot", async () => {
+  it("turns each agent's instructions into rules for their channel, titled in its business's language", async () => {
     // The French business has Instagram linked, so its chat instructions also become an Instagram rule. The others have none.
     await rollbackTest(async (tx) => {
       const french = await business(tx, "fr");
@@ -81,10 +85,10 @@ describe.skipIf(!testUrl)("migration 0203 on sample rows", () => {
         { title: "Mine", content: "My call rule", channel: "voice", active: true, sortOrder: 5 },
         { title: "In website chat", content: "Be brief.", channel: "web_chat", active: true, sortOrder: 6 },
       ]);
-      const refreshes = await tx.select({ aggregateId: outboxMessages.aggregateId, payload: outboxMessages.payload }).from(outboxMessages)
+      // It queues no refresh the previous worker could take: new code rebuilds older snapshots when it reads them.
+      const refreshes = await tx.select({ id: outboxMessages.id }).from(outboxMessages)
         .where(and(eq(outboxMessages.topic, "snapshot.refresh"), inArray(outboxMessages.businessId, [french, filipino, unknown])));
-      expect(refreshes.map((row) => row.aggregateId).sort()).toEqual([full!.id, tagalog!.id, fallback!.id].sort());
-      expect(refreshes.find((row) => row.aggregateId === full!.id)?.payload).toEqual({ businessId: french, reason: "agent_updated" });
+      expect(refreshes).toEqual([]);
 
       // A second run adds nothing.
       await tx.execute(sql.raw(migration));
@@ -92,6 +96,39 @@ describe.skipIf(!testUrl)("migration 0203 on sample rows", () => {
       expect(await rulesOf(tx, fallback!.id)).toHaveLength(3);
       // A savepoint keeps the refused insert from aborting the test's transaction.
       await expect(tx.transaction(async (inner) => { await inner.execute(sql`insert into public.agent_rules (business_id, agent_id, title, content, channel) values (${french}::uuid, ${full!.id}::uuid, 'Bad', 'Bad', 'email')`); })).rejects.toThrow();
+    });
+  });
+});
+
+describe.skipIf(!testUrl)("a snapshot the previous worker built", () => {
+  it("is rebuilt with each rule's channel before anything reads it", async () => {
+    await rollbackTest(async (tx) => {
+      const businessId = await business(tx, "en");
+      const [agent] = await tx.insert(agents).values({ ...agentFields, businessId, isDefault: true }).returning({ id: agents.id });
+      await tx.insert(agentRules).values([
+        { businessId, agentId: agent!.id, title: "Parking", content: "Rear lot", sortOrder: 0 },
+        { businessId, agentId: agent!.id, title: "On calls", content: "Spell names back.", sortOrder: 1, channel: "voice" },
+      ]);
+      await tx.execute(sql`set local role lobbystack_worker`);
+      const context = { db: tx as unknown as Database };
+      await refreshBusinessSnapshot(context, { businessId });
+      // What the old worker writes: no schemaVersion, and rules without their channel.
+      const built = (await loadLatestBusinessSnapshot(context, { businessId }))!;
+      const { schemaVersion: _version, ...older } = { ...built, rules: (built.rules ?? []).map(({ channel: _channel, ...rule }) => rule) };
+      await tx.execute(sql`reset role`);
+      // Built a minute ago, since this test runs in one transaction and now() stays put.
+      await tx.update(businessContextSnapshots).set({ snapshot: older as unknown as Record<string, unknown>, generatedAt: sql`now() - interval '1 minute'` }).where(eq(businessContextSnapshots.businessId, businessId));
+      await tx.execute(sql`set local role lobbystack_worker`);
+
+      const snapshot = await getBusinessSnapshotForAgent(context, { businessId, agentId: agent!.id });
+      expect(snapshot?.schemaVersion).toBe(SNAPSHOT_SCHEMA_VERSION);
+      expect(snapshot?.rules).toEqual([
+        expect.not.objectContaining({ channel: expect.anything() }),
+        expect.objectContaining({ title: "On calls", channel: "voice" }),
+      ]);
+      // The rebuilt one is stored, so the next read doesn't rebuild again.
+      expect(isCurrentSnapshot((await loadLatestBusinessSnapshot(context, { businessId }))!)).toBe(true);
+      await tx.execute(sql`reset role`);
     });
   });
 });

@@ -13,7 +13,7 @@ import type {
   BookingMode,
   ReceptionistVoice,
 } from "@lobbystack/shared";
-import { CHANNEL_RULE_CONTENT_CALL_MAX_LENGTH, RULE_CONTENT_CALL_MAX_LENGTH, RULE_TITLE_MAX_LENGTH, RULES_CALL_MAX } from "@lobbystack/shared";
+import { CHANNEL_RULE_CONTENT_CALL_MAX_LENGTH, RULE_CONTENT_CALL_MAX_LENGTH, RULE_TITLE_MAX_LENGTH, RULES_CALL_MAX, SNAPSHOT_SCHEMA_VERSION } from "@lobbystack/shared";
 
 type SnapshotAgentInput = Omit<SnapshotAgent, "voiceInstructions" | "smsInstructions" | "chatInstructions" | "rules"> & {
   voiceInstructions?: string;
@@ -119,6 +119,7 @@ export function buildBusinessContextSnapshot(
   return {
     businessId: input.businessId,
     version: input.version,
+    schemaVersion: SNAPSHOT_SCHEMA_VERSION,
     generatedAt: input.generatedAt,
     displayName: input.displayName,
     ...(input.legalName ? { legalName: input.legalName } : {}),
@@ -192,6 +193,16 @@ export function snapshotForAgent(snapshot: BusinessContextSnapshot, agentId?: st
     ...(agent.knowledgeSnippets ? { knowledgeSnippets: agent.knowledgeSnippets } : {}),
     ...(agent.knowledgeDigest !== undefined ? { knowledgeDigest: agent.knowledgeDigest } : {}),
   };
+}
+
+/**
+ * Whether code that knows this snapshot's shape built it. During a deploy the
+ * previous worker keeps building snapshots for up to 31 minutes, without rule
+ * channels or agent knowledge, so channel rules would read as rules for every
+ * channel.
+ */
+export function isCurrentSnapshot(snapshot: Pick<BusinessContextSnapshot, "schemaVersion">): boolean {
+  return (snapshot.schemaVersion ?? 0) >= SNAPSHOT_SCHEMA_VERSION;
 }
 
 /** Whether any of the business's agents has a phone number. Works on a projected snapshot too, because it keeps agents[]. */
