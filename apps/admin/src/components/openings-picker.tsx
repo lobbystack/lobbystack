@@ -22,8 +22,10 @@ const localDateToKey = (date: Date) => `${date.getFullYear()}-${String(date.getM
  * A day on a calendar and the open times that day, as the business's clock
  * shows them. Days are "YYYY-MM-DD" keys in `timeZone`; days before `today`
  * can't be picked. The caller loads the times for `date` and keeps the pick.
+ * `waiting` takes the times' place with a note while something the times
+ * depend on, such as the service, is still missing.
  */
-export function OpeningsPicker({ date, today, timeZone, times, loading, failed, selected, onDateChange, onSelect }: {
+export function OpeningsPicker({ date, today, timeZone, times, loading, failed, selected, onDateChange, onSelect, waiting }: {
   date: string;
   today: string;
   timeZone: string;
@@ -33,6 +35,7 @@ export function OpeningsPicker({ date, today, timeZone, times, loading, failed, 
   selected: string | null;
   onDateChange: (date: string) => void;
   onSelect: (time: string) => void;
+  waiting?: string;
 }) {
   const { t, i18n } = useTranslation("common");
   const time = (value: string) => formatDateTime(value, i18n.language, { hour: "numeric", minute: "2-digit", timeZone });
@@ -49,9 +52,10 @@ export function OpeningsPicker({ date, today, timeZone, times, loading, failed, 
           selected={keyToLocalDate(date)}
         />
       </section>
-      <section aria-busy={loading} aria-label={t("appointments.openings.times")} className="flex min-w-0 flex-col gap-2">
+      <section aria-busy={loading} aria-label={t("appointments.openings.times")} className="flex min-h-40 min-w-0 flex-col gap-2">
         <h3 className="type-item-title">{t("appointments.openings.times")}</h3>
-        {loading ? <OpeningTimesSkeleton />
+        {waiting ? <p className="type-body-muted">{waiting}</p>
+          : loading ? <OpeningTimesSkeleton />
           : failed ? <p className="type-body-muted text-destructive">{t("appointments.openings.timesFailed")}</p>
           : times.length ? <div className="grid max-h-72 grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-2">
             {times.map((value) => <Button aria-pressed={selected === value} className={cn("tabular-nums", selected === value && "ring-2 ring-ring")} key={value} onClick={() => onSelect(value)} type="button" variant={selected === value ? "default" : "outline"}>{time(value)}</Button>)}

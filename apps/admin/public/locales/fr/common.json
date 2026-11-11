@@ -261,7 +261,8 @@
       "date": "Jour",
       "times": "Heures libres",
       "noTimes": "Aucune heure libre ce jour-là.",
-      "timesFailed": "Nous n’avons pas pu charger les heures libres. Réessayez."
+      "timesFailed": "Nous n’avons pas pu charger les heures libres. Réessayez.",
+      "chooseService": "Choisissez d'abord un service."
     },
     "create": {
       "action": "Nouveau rendez-vous",

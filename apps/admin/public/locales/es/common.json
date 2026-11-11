@@ -254,7 +254,8 @@
       "date": "Día",
       "times": "Horas libres",
       "noTimes": "No hay horas libres este día.",
-      "timesFailed": "No pudimos cargar las horas libres. Inténtelo de nuevo."
+      "timesFailed": "No pudimos cargar las horas libres. Inténtelo de nuevo.",
+      "chooseService": "Elija primero un servicio."
     },
     "create": {
       "action": "Nueva cita",

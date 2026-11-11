@@ -261,7 +261,8 @@
       "date": "Dan",
       "times": "Slobodni termini",
       "noTimes": "Nema slobodnih termina tog dana.",
-      "timesFailed": "Nismo uspeli da učitamo slobodne termine. Pokušajte ponovo."
+      "timesFailed": "Nismo uspeli da učitamo slobodne termine. Pokušajte ponovo.",
+      "chooseService": "Prvo izaberite uslugu."
     },
     "create": {
       "action": "Novi termin",

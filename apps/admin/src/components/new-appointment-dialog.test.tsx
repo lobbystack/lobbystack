@@ -110,7 +110,12 @@ describe("NewAppointmentButton", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: copy.confirm }));
     expect(within(dialog).getByText(copy.contactRequired)).toBeTruthy();
     expect(within(dialog).getByText(copy.serviceRequired)).toBeTruthy();
+    // The day and its times are there from the start; the times wait for a service, without asking the server.
+    expect(within(dialog).getByRole("region", { name: en.appointments.openings.date })).toBeTruthy();
+    expect(within(dialog).getByText(en.appointments.openings.chooseService)).toBeTruthy();
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/openings"))).toBe(false);
     await chooseService(dialog);
+    expect(within(dialog).queryByText(en.appointments.openings.chooseService)).toBeNull();
     expect(within(dialog).getByLabelText(en.appointments.openings.times).getAttribute("aria-busy")).toBe("true");
     release?.();
     expect(await within(dialog).findByText(en.appointments.openings.noTimes)).toBeTruthy();

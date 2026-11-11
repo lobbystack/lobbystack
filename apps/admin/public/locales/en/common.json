@@ -252,7 +252,8 @@
       "date": "Day",
       "times": "Open times",
       "noTimes": "No open times on this day.",
-      "timesFailed": "We couldn't load open times. Try again."
+      "timesFailed": "We couldn't load open times. Try again.",
+      "chooseService": "Choose a service first."
     },
     "create": {
       "action": "New appointment",

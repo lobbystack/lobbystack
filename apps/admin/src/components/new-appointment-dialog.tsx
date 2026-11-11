@@ -208,10 +208,11 @@ function NewAppointmentDialog({ businessId, timeZone: fallbackTimeZone, onOpenCh
                   </Select>
                 </Field> : null}
               </div>
-              {service ? <Field data-invalid={timeMissing || undefined}>
-                <OpeningsPicker date={date} failed={openings.isError} loading={openings.isLoading} onDateChange={(day) => { setDate(day); setChosen(null); }} onSelect={setChosen} selected={selected} timeZone={timeZone} times={times} today={today} />
+              {/* Always shown, so the dialog asks for a time from the start and keeps its height once a service is picked. */}
+              <Field data-invalid={timeMissing || undefined}>
+                <OpeningsPicker date={date} failed={Boolean(service) && openings.isError} loading={Boolean(service) && openings.isLoading} onDateChange={(day) => { setDate(day); setChosen(null); }} onSelect={setChosen} selected={selected} timeZone={timeZone} times={service ? times : []} today={today} {...(service ? {} : { waiting: t("appointments.openings.chooseService") })} />
                 {timeMissing ? <FieldError>{t("appointments.create.timeRequired")}</FieldError> : null}
-              </Field> : null}
+              </Field>
             </FieldGroup>
           </div>
           <DialogFooter>
