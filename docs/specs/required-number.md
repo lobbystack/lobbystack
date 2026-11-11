@@ -242,6 +242,15 @@ Update the onboarding, trial, Getting started and forwarding pages in `mintlify/
 
 - **Losing the per-phone guard.** Without a verified mobile, a person can start a second trial from a new account, a new email and a new network. The per-user, per-workspace, per-network and email guards remain. No new check replaces the phone.
 
+## Release notes
+
+The admin deploys last, so for a few minutes some requests reach the previous admin and some browser tabs still run its pages:
+
+- The previous admin doesn't know `choose_plan`. It reads that stage as `create_business`, so an owner on the plans screen whose request reaches it can land on the business step. Reloading on the new admin puts them back on the plans.
+- A tab from the previous release moves on from the number step with `{ "to": "goal" }`. `POST /api/onboarding/stage` takes `goal` as `attribution`, the step after it, and the domain still refuses it with `number_required` when a direct cloud business has no number.
+- That tab's goal page posts to `/api/onboarding/goal`, which no longer exists and answers `404`. Migration 0207 already moved every business on the goal step to attribution, so reloading shows the right step.
+- The previous admin doesn't require a number, so a direct owner whose request reaches it can still move on without one, from `phone_number` or `phone_number_claiming`.
+
 ## Open questions
 
 Each one took the conservative option for now.

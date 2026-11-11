@@ -36,6 +36,13 @@ it("hands complete to the domain, which finishes only a partner's business there
   expect(await refused.json()).toMatchObject({ code: "invalid_onboarding_stage" });
 });
 
+it("takes goal from a tab opened before the goal question left onboarding as the step after it", async () => {
+  const response = await post("goal");
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ ok: true, stage: "attribution" });
+  expect(fixture.advance).toHaveBeenCalledWith(expect.anything(), { userId: "user", businessId: "business", to: "attribution" });
+});
+
 it.each(["create_business", "plan", undefined])("refuses %s before reaching the domain", async (to) => {
   expect((await post(to)).status).toBe(400);
   expect(fixture.advance).not.toHaveBeenCalled();
