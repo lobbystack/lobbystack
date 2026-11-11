@@ -93,7 +93,7 @@ owner:
 | Section | What it sets |
 | --- | --- |
 | `business` | `name` and `timezone` are required. `locale` (`en` or `fr`), `website_url`, `business_type` and `slug` are optional. `hours` lists the week's open windows by `day`, `open` and `close`, and replaces the hours the business had. `id` sets up a business that already exists instead of creating one. With a partner's key, `access_level` sets what the business's own team can use when the key creates it: `full`, the default, or `activity`. |
-| `receptionist` | The fields of `PATCH /receptionist`, such as `greeting`, `tone`, `transfer_mode`, `transfer_number` and `booking_mode`. `voice_instructions`, `sms_instructions` and `chat_instructions` still work and write the rules for those channels, but they're deprecated: use `rules` with `channel`. |
+| `receptionist` | The fields of `PATCH /receptionist`, such as `greeting`, `tone`, `transfer_mode`, `transfer_number` and `booking_mode`. `voice_instructions`, `sms_instructions` and `chat_instructions` still work and write the rules for those channels, but they're deprecated: use `rules` with `channel`. Sending `null` for one deletes that channel's rule. |
 | `services` | The fields of `POST /services`. A service with the same name is updated instead of added again. |
 | `rules` | The fields of `POST /rules`. `channel` keeps a rule to `voice` (phone and browser calls), `sms`, `web_chat` or `instagram`; leave it out for every channel. A rule with the same title is updated. |
 | `knowledge.websites` | Sites the agent reads. The first read takes a sample of each site. |

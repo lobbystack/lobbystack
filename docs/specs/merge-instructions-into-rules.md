@@ -29,14 +29,15 @@ Rules becomes the one place for what an agent should do. A rule gains an optiona
 - The same migration turns each agent's non-empty instruction text into rules, appended after the agent's other rules, with the text as the body:
   - `voice_instructions` becomes a `voice` rule titled "On calls".
   - `sms_instructions` becomes an `sms` rule titled "In texts".
-  - `chat_instructions` becomes two rules: `web_chat`, "In website chat", and `instagram`, "On Instagram". Instagram followed the chat text, and two rules keep it that way.
+  - `chat_instructions` becomes a `web_chat` rule, "In website chat". It also becomes an `instagram` rule, "On Instagram", when the business has a row in `instagram_accounts`, including one waiting to reconnect, since Instagram followed the chat text. A business without Instagram gets no Instagram rule.
 - Titles come in the business's default caller language, for all 15 `RuntimeLocale` values. `channelRuleTitle()` in `packages/shared` holds the same titles for code, and a test checks the migration against it.
 - The migration queues one `snapshot.refresh` outbox row per agent it changed, as `0201_portuguese_default_greeting.sql` does.
+- The migration can take an agent past the 100-rule limit. That only blocks adding more rules, and no agent is known to be near it.
 - The old columns stay. This release stops reading and writing them; a later release drops them once no running code reads them, as slice 5 did. The migration is safe to run twice: it skips an agent that already has a rule for that channel.
 
 ### Prompts
 
-- The snapshot's `voiceInstructions`, `smsInstructions` and `chatInstructions` keep the default text, with the agent's tone. They no longer hold an owner's text.
+- The snapshot's `voiceInstructions`, `smsInstructions` and `chatInstructions` keep the default text, with the agent's tone. They no longer hold an owner's text. The default text used to disappear when an owner wrote their own; it now stays beside their channel rules, so every agent's prompt names its tone.
 - Each snapshot rule carries its `channel`. Channel rules keep up to 8,000 characters in the snapshot, the old instruction limit; other rules keep 4,000.
 - The text agent lists the rules for the conversation's channel where the instruction text went. Every-channel rules stay in "Customer rules". Rules for other channels stay out.
 - GPT-Live lists voice rules right after the greeting line, within their own 3,000-token budget, and every-channel rules where they were.
@@ -54,7 +55,8 @@ Rules becomes the one place for what an agent should do. A rule gains an optiona
 - A rule gains `channel`: `voice`, `sms`, `web_chat`, `instagram` or `null` for every channel. `POST /v1/rules` and `PATCH /v1/rules/{rule_id}` take it. A rule with a channel holds up to 8,000 characters through the API, as the old instruction fields did; a rule for every channel keeps 4,000.
 - `voice_instructions`, `sms_instructions` and `chat_instructions` stay on the receptionist and agent resources, marked deprecated, so clients keep working in this release:
   - A read returns the body of the agent's first rule for that channel when it's active, or `null`. `chat_instructions` reads the website chat rule.
-  - A write changes that rule's body and turns it on, or adds a rule titled after the channel when there's none. `null` deletes it. `chat_instructions` writes the website chat rule and the Instagram rule.
+  - A write changes that rule's body and turns it on, or adds a rule titled after the channel when there's none. `chat_instructions` writes the website chat rule and the Instagram rule.
+  - `null` deletes that channel's rule, even one an owner wrote in the dashboard. `mintlify/api/overview.mdx` and `cli.mdx` say so.
 - The CLI's `rules list` shows the channel, and `rules add` and `rules update` take `--channel`. Both come from the operation registry.
 - The onboard manifest and templates take `channel` on rules. A template now carries channel rules in `rules` instead of `*_instructions`, and still leaves out a prospect demo's own text.
 - Prospect demos write their demo text as channel rules, and claiming a demo resets those rules as it reset the columns.
@@ -62,7 +64,7 @@ Rules becomes the one place for what an agent should do. A rule gains an optiona
 ### Help Center
 
 - `agent/instructions.mdx` goes, in `en`, `fr` and `es`, with a redirect to `agent/rules`. `agent/rules.mdx` explains channels.
-- `mintlify/api/cli.mdx` and the generated OpenAPI file describe `channel` and the deprecated fields.
+- `mintlify/api/overview.mdx`, `mintlify/api/cli.mdx` and the generated OpenAPI file describe `channel` and the deprecated fields.
 
 ## Testing
 
@@ -70,16 +72,25 @@ Rules becomes the one place for what an agent should do. A rule gains an optiona
 - Unit tests for the snapshot, the API schemas and the migration titles.
 - Integration tests for the legacy API fields, the copy of rules to a new agent, demos and templates, and a rolled-back run of the migration on sample rows.
 - An e2e spec: an owner adds an SMS-only rule and sees its badge, and the old Instructions URL lands on Rules.
-- `pnpm voice:eval`, since GPT-Live's instructions change.
+- `pnpm voice:eval`, since GPT-Live's instructions change, on the demo snapshot and on the demo snapshot as the migration leaves it. The `silent` scenario takes any natural check-in (`SILENCE_CHECK_IN` in `scripts/voice/scenarios.ts`): "still there", "still with me", "still on the line", "can you hear me", "are you there", or a line opening with "Hello?". A call with no check-in still fails.
 
-## Rollout
+## Release notes
 
-During a rolling deploy, a worker on the old code can read a snapshot built by the new code. It ignores `channel` and lists channel rules on every channel until it restarts. The window lasts minutes, and those rules hold text the owner wrote for the agent.
+- During a rolling deploy, a worker on the old code can read a snapshot built by the new code. It ignores `channel` and follows channel rules on every channel until it restarts. The window lasts minutes, and those rules hold text the owner wrote for the agent. The product owner accepted this.
+- A later release drops `voice_instructions`, `sms_instructions` and `chat_instructions` from `agents`, once no running code reads them.
+
+## Decisions
+
+The product owner settled these during the build:
+
+1. The migration adds an Instagram rule only for a business with Instagram linked.
+2. Every agent's prompt now names its tone, even with channel rules.
+3. `null` on a deprecated instruction field deletes that channel's rule.
+4. Through the API, a channel rule holds 8,000 characters and a rule for every channel 4,000.
+5. The migration may take an agent past the 100-rule limit.
+6. Old workers may follow channel rules on every channel during a rolling deploy.
+7. The voice eval's `silent` scenario accepts any natural check-in phrasing.
 
 ## Open questions
 
-- **Tone.** The default instruction text, which names the agent's tone, used to disappear when an owner wrote their own. It now stays beside their channel rules, so every agent's prompt names its tone. Keep it, or drop the default text once owners have rules?
-- **Instagram.** Chat text becomes two rules so Instagram keeps following it, even for an agent with no Instagram account. Should the migration skip the Instagram rule when the business has no Instagram account?
-- **Legacy `null`.** Sending `null` for an instruction field deletes the matching channel rule, even one an owner wrote in the dashboard. Disabling it instead would be safer but makes the field read back as `null` with a rule still listed.
-- **Silence check-in wording.** With the demo snapshot moved to channel rules, `pnpm voice:eval` passed 22 of 24 runs. Both failures, and 3 of 6 reruns, were the `silent` scenario: the receptionist checked in with "Are you still with me?", which the scenario's `still there|are you there` pattern misses, then said goodbye on time. Widen the pattern, or steer the wording in the check-in command?
-- **Rule limit.** The migration can take an agent past the 100-rule limit, which only blocks adding more. No agent is known to be near it.
+None.

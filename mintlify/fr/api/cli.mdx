@@ -93,7 +93,7 @@ owner:
 | Section | Ce qu'elle définit |
 | --- | --- |
 | `business` | `name` et `timezone` sont obligatoires. `locale` (`en` ou `fr`), `website_url`, `business_type` et `slug` sont facultatifs. `hours` liste les plages d'ouverture de la semaine par `day`, `open` et `close`, et remplace les heures que l'entreprise avait. `id` configure une entreprise qui existe déjà au lieu d'en créer une. Avec la clé de plateforme d'un partenaire, `access_level` définit ce que l'équipe de l'entreprise peut utiliser quand la clé la crée : `full`, la valeur par défaut, ou `activity`. |
-| `receptionist` | Les champs de `PATCH /receptionist`, comme `greeting`, `tone`, `transfer_mode`, `transfer_number` et `booking_mode`. `voice_instructions`, `sms_instructions` et `chat_instructions` fonctionnent encore et écrivent les règles de ces canaux, mais ils sont dépréciés : utilisez `rules` avec `channel`. |
+| `receptionist` | Les champs de `PATCH /receptionist`, comme `greeting`, `tone`, `transfer_mode`, `transfer_number` et `booking_mode`. `voice_instructions`, `sms_instructions` et `chat_instructions` fonctionnent encore et écrivent les règles de ces canaux, mais ils sont dépréciés : utilisez `rules` avec `channel`. Envoyer `null` pour l'un d'eux supprime la règle de ce canal. |
 | `services` | Les champs de `POST /services`. Un service du même nom est mis à jour au lieu d'être ajouté de nouveau. |
 | `rules` | Les champs de `POST /rules`. `channel` limite une règle à `voice` (appels téléphoniques et depuis le navigateur), `sms`, `web_chat` ou `instagram` ; sans lui, elle vaut pour tous les canaux. Une règle du même titre est mise à jour. |
 | `knowledge.websites` | Les sites que l'agent lit. La première lecture prend un échantillon de chaque site. |
