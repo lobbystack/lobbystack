@@ -128,8 +128,7 @@ async function completeOnboardingBySkippingOptionalInputs(page: Page): Promise<v
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page).toHaveURL("/onboarding/number");
   // This run sells no numbers, so leave the step the way an owner in a country without numbers does.
-  await page.getByRole("combobox", { name: "Country" }).click();
-  await page.getByPlaceholder("Search countries or codes").fill("France");
+  await page.getByRole("combobox", { name: "Country" }).fill("France");
   await page.getByRole("option", { name: /France/ }).click();
   await page.getByRole("button", { name: "Continue without a number" }).click();
   await expect(page).toHaveURL("/onboarding/attribution");

@@ -219,6 +219,7 @@
       "continue": "Continuer sans numéro",
       "failed": "Une erreur est survenue. Réessayez.",
       "label": "Pays",
+      "placeholder": "Choisissez un pays",
       "back": "Retour aux numéros",
       "other": "Autre pays"
     }

@@ -219,6 +219,7 @@
       "continue": "Nastavi bez broja",
       "failed": "Nešto nije u redu. Pokušajte ponovo.",
       "label": "Zemlja",
+      "placeholder": "Izaberite zemlju",
       "back": "Nazad na brojeve",
       "other": "Druga zemlja"
     }

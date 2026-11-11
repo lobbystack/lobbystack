@@ -5,7 +5,6 @@ import { eq, sql } from "drizzle-orm";
 import { businesses, createDatabaseClient } from "@lobbystack/db";
 
 import nav from "../public/locales/en/nav.json" with { type: "json" };
-import common from "../public/locales/en/common.json" with { type: "json" };
 import onboarding from "../public/locales/en/onboarding.json" with { type: "json" };
 
 import { completeSignupEmailVerification, isolateAuthRateLimit } from "./fixtures/email-verification";
@@ -53,8 +52,8 @@ async function newOwner(page: Page, testInfo: TestInfo, email: string): Promise<
 async function leaveNumberStep(page: Page): Promise<void> {
   await expect(page).toHaveURL("/onboarding/number");
   await expect(page.getByRole("button", { name: onboarding.number.country.continue })).toHaveCount(0);
-  await page.getByRole("combobox", { name: onboarding.number.country.label }).click();
-  await page.getByPlaceholder(common.phoneCountry.search).fill("France");
+  // The field is the search box: typing in it filters the countries.
+  await page.getByRole("combobox", { name: onboarding.number.country.label }).fill("France");
   await page.getByRole("option", { name: /France/ }).click();
   await page.getByRole("button", { name: onboarding.number.country.continue }).click();
 }
@@ -200,4 +199,29 @@ test("a used trial offers only the paid plans, and a country without numbers is 
     await removeFixtures(database, email, businessId);
     await database.pool.end();
   }
+});
+
+test.describe("a business in a country without numbers", () => {
+  test.use({ timezoneId: "Europe/Belgrade" });
+
+  test("lands on the way on without a number, with its country chosen", async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+    const database = migrator();
+    const email = `${prefix}-${randomUUID()}@example.invalid`;
+    let businessId: string | undefined;
+    try {
+      businessId = await newOwner(page, testInfo, email);
+      await page.getByRole("button", { name: onboarding.website.skip }).click();
+      await expect(page).toHaveURL("/onboarding/language");
+      await page.getByRole("button", { name: onboarding.language.continue }).click();
+      await expect(page).toHaveURL("/onboarding/number");
+      // The time zone points to Serbia, where we sell no numbers.
+      await expect(page.getByRole("combobox", { name: onboarding.number.country.label })).toHaveValue("Serbia");
+      await page.getByRole("button", { name: onboarding.number.country.continue }).click();
+      await expect(page).toHaveURL("/onboarding/attribution");
+    } finally {
+      await removeFixtures(database, email, businessId);
+      await database.pool.end();
+    }
+  });
 });

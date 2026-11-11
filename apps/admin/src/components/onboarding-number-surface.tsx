@@ -9,7 +9,7 @@ import { useActiveBusiness } from "@/hooks/use-active-business";
 import { PhoneNumberChooser, phoneNumberChooserApi } from "./phone-number-chooser";
 import { OnboardingPlanSurface } from "./onboarding-plan-surface";
 import { OnboardingNumberCountryFallback } from "./onboarding-number-country-fallback";
-import { PhoneCountrySelect } from "./phone-country-select";
+import { CountryCombobox } from "./country-combobox";
 import { getPhoneCountryOptions } from "@/lib/phone";
 import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
 import { requestJson } from "@/lib/request-json";
@@ -38,16 +38,19 @@ function errorCode(error: unknown): string | undefined {
 
 /**
  * The country the owner is in, beside the paid plans a refused trial shows.
+ * It starts on the country the business's time zone points to, or on none.
  * Picking one where we sell no numbers opens the way on without one.
  */
 function RefusedCountryPicker({ countries, initial, onUnsold }: { countries: readonly string[]; initial: string | null; onUnsold: (country: string) => void }) {
   const { i18n, t } = useTranslation("onboarding");
   const options = useMemo(() => getPhoneCountryOptions(i18n.resolvedLanguage ?? i18n.language), [i18n.language, i18n.resolvedLanguage]);
-  const value = options.find((option) => option.code === initial)?.code ?? options.find((option) => countries.includes(option.code))?.code ?? null;
+  const value = options.find((option) => option.code === initial)?.code ?? null;
   return (
     <div className="flex items-center gap-3">
-      <span className="type-body-muted">{t("number.country.label")}</span>
-      <PhoneCountrySelect ariaLabel={t("number.country.label")} countries={options} onChange={(next) => { if (!countries.includes(next)) onUnsold(next); }} value={value} />
+      <label className="type-body-muted" htmlFor="number-refused-country">{t("number.country.label")}</label>
+      <div className="w-64">
+        <CountryCombobox countries={options} id="number-refused-country" onChange={(next) => { if (!countries.includes(next)) onUnsold(next); }} placeholder={t("number.country.placeholder")} value={value} />
+      </div>
     </div>
   );
 }
@@ -58,8 +61,9 @@ export function OnboardingNumberSurface() {
   const telemetry = useTelemetry();
   const [claiming, setClaiming] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
-  // The fallback opens only once the owner picks a country we sell no numbers in.
-  const [countryFallback, setCountryFallback] = useState<{ country: string | null } | null>(null);
+  // The way on without a number: undefined until the owner picks or goes back,
+  // so a time zone in a country without numbers opens it at the start.
+  const [countryFallback, setCountryFallback] = useState<{ country: string | null } | null | undefined>(undefined);
   const trackedRefusal = useRef<string | null>(null);
   const { business } = useActiveBusiness();
   const phones = useQuery({ queryKey: ["onboarding-primary-number", business?.businessId], refetchInterval: query => query.state.data?.activeClaim ? 1000 : false, enabled: Boolean(business), queryFn: () => requestJson<{ activeClaim?: { id: string; status: string } | null; phoneNumbers: Array<{ id: string; e164: string; reclaimScheduledAt: string | null }> }>(`/api/phone-numbers?businessId=${encodeURIComponent(business!.businessId)}`) });
@@ -110,12 +114,15 @@ export function OnboardingNumberSurface() {
     if (primary) router.replace(afterNumber);
   }, [afterNumber, primary, router]);
 
-  // The fallback opens on its own only when no country has numbers here.
+  // The fallback opens on its own when no country has numbers here, or when
+  // the business's time zone points to a country without them.
   const countries = outlook.data?.countries ?? [];
   const suggested = outlook.data?.suggestedCountry ?? null;
-  const showsCountryFallback = Boolean(outlook.data) && (countries.length === 0 || countryFallback !== null);
+  const suggestedWithoutNumbers = suggested && !countries.includes(suggested) ? suggested : null;
+  const openFallback = countryFallback === undefined ? (suggestedWithoutNumbers ? { country: suggestedWithoutNumbers } : null) : countryFallback;
+  const showsCountryFallback = Boolean(outlook.data) && (countries.length === 0 || openFallback !== null);
   if (!phones.data || (!claiming && phones.data.activeClaim) || outlook.isLoading || primary) return <div className="mx-auto w-full max-w-lg"><PhoneNumberChooserSkeleton labels={{ country: t("number.countryLabel"), areaCode: t("number.areaCodeLabel"), search: t("number.search"), phoneNumber: t("number.tableHeaders.phoneNumber") }} /></div>;
-  if (business && showsCountryFallback) return <OnboardingNumberCountryFallback businessId={business.businessId} initialCountry={countryFallback?.country ?? null} numberCountries={countries} onBack={countries.length ? () => setCountryFallback(null) : null} onSkipped={() => router.push(withoutNumber)} />;
+  if (business && showsCountryFallback) return <OnboardingNumberCountryFallback businessId={business.businessId} initialCountry={openFallback?.country ?? suggested} numberCountries={countries} onBack={countries.length ? () => setCountryFallback(null) : null} onSkipped={() => router.push(withoutNumber)} />;
   if (refusalCode) {
     return (
       <div className="flex flex-col gap-6">

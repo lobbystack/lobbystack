@@ -217,6 +217,7 @@
       "continue": "Continue without a number",
       "failed": "Something went wrong. Try again.",
       "label": "Country",
+      "placeholder": "Choose a country",
       "back": "Back to the numbers",
       "other": "Other country"
     }

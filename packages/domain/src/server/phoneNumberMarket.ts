@@ -1,3 +1,5 @@
+import { LEGACY_TIME_ZONE_COUNTRIES, TIME_ZONES_BY_COUNTRY } from "./timezoneCountryData";
+
 export type SupportedNumberMarketCountry = "US" | "CA" | "PR" | "GB" | "AU" | "NZ";
 
 export type BusinessNumberMarket = {
@@ -10,51 +12,28 @@ export type BusinessNumberMarket = {
 
 const supportedNumberMarketCountries = new Set<string>(["US", "CA", "PR", "GB", "AU", "NZ"]);
 
-// America/ spans multiple countries. Only infer a country from known zones;
-// unknown zones use the default rather than claiming a business location.
-const canadianTimezones = new Set<string>([
-  "America/St_Johns",
-  "America/Halifax",
-  "America/Glace_Bay",
-  "America/Moncton",
-  "America/Toronto",
-  "America/Iqaluit",
-  "America/Winnipeg",
-  "America/Regina",
-  "America/Edmonton",
-  "America/Vancouver",
-  "America/Whitehorse",
-  "America/Yellowknife",
-  "America/Dawson",
-  "America/Dawson_Creek",
-  "America/Fort_Nelson",
-  "America/Creston",
-  "America/Swift_Current",
-  "America/Resolute",
-  "America/Rankin_Inlet",
-  "America/Cambridge_Bay",
-  "America/Inuvik",
-  "America/Blanc-Sablon",
-  "America/Atikokan",
-  "America/Thunder_Bay",
-  "America/Nipigon",
-  "America/Rainy_River",
-  "America/Pangnirtung",
-  "America/Montreal",
+const zoneCountries = new Map<string, string>([
+  ...Object.entries(TIME_ZONES_BY_COUNTRY).flatMap(([country, zones]) => zones.map((zone) => [zone, country] as const)),
+  ...Object.entries(LEGACY_TIME_ZONE_COUNTRIES),
 ]);
 
+/**
+ * The ISO country an IANA time zone belongs to, such as RS for
+ * Europe/Belgrade, whether or not LobbyStack sells numbers there. Zones with
+ * no country, such as UTC, give undefined.
+ */
+export function countryCodeForTimezone(timezone: string | null | undefined): string | undefined {
+  const normalized = timezone?.trim();
+  if (!normalized) return undefined;
+  return zoneCountries.get(normalized);
+}
+
+/** The time zone's country when LobbyStack sells numbers there. */
 export function countryCodeForBusinessTimezone(
   timezone: string | null | undefined,
 ): SupportedNumberMarketCountry | undefined {
-  const normalized = timezone?.trim();
-  if (!normalized) return undefined;
-  if (normalized === "Europe/London") return "GB";
-  if (normalized === "America/Puerto_Rico") return "PR";
-  if (normalized.startsWith("Australia/")) return "AU";
-  if (normalized === "Pacific/Auckland" || normalized === "Pacific/Chatham") return "NZ";
-  if (canadianTimezones.has(normalized)) return "CA";
-  if (["America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "America/Phoenix", "America/Detroit", "America/Anchorage", "America/Juneau", "America/Sitka", "America/Metlakatla", "America/Yakutat", "America/Nome", "America/Adak", "America/Boise", "Pacific/Honolulu"].includes(normalized) || normalized.startsWith("America/Indiana/") || normalized.startsWith("America/Kentucky/") || normalized.startsWith("America/North_Dakota/")) return "US";
-  return undefined;
+  const country = countryCodeForTimezone(timezone);
+  return country && supportedNumberMarketCountries.has(country) ? country as SupportedNumberMarketCountry : undefined;
 }
 
 // Number inventory no longer depends on a personal verified phone. An explicit

@@ -219,6 +219,7 @@
       "continue": "Continuar sin número",
       "failed": "Algo salió mal. Inténtelo de nuevo.",
       "label": "País",
+      "placeholder": "Elija un país",
       "back": "Volver a los números",
       "other": "Otro país"
     }
