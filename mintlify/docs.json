@@ -208,6 +208,7 @@
               "dashboard/home",
               "dashboard/inbox",
               "dashboard/appointments",
+              "dashboard/notifications",
               "dashboard/contacts",
               "dashboard/analytics"
             ]
@@ -377,6 +378,7 @@
               "fr/dashboard/home",
               "fr/dashboard/inbox",
               "fr/dashboard/appointments",
+              "fr/dashboard/notifications",
               "fr/dashboard/contacts",
               "fr/dashboard/analytics"
             ]
@@ -549,6 +551,7 @@
               "es/dashboard/home",
               "es/dashboard/inbox",
               "es/dashboard/appointments",
+              "es/dashboard/notifications",
               "es/dashboard/contacts",
               "es/dashboard/analytics"
             ]
