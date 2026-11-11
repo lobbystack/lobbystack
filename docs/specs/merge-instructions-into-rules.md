@@ -51,7 +51,7 @@ Rules becomes the one place for what an agent should do. A rule gains an optiona
 
 ### Public API, CLI and manifest
 
-- A rule gains `channel`: `voice`, `sms`, `web_chat`, `instagram` or `null` for every channel. `POST /v1/rules` and `PATCH /v1/rules/{rule_id}` take it.
+- A rule gains `channel`: `voice`, `sms`, `web_chat`, `instagram` or `null` for every channel. `POST /v1/rules` and `PATCH /v1/rules/{rule_id}` take it. A rule with a channel holds up to 8,000 characters through the API, as the old instruction fields did; a rule for every channel keeps 4,000.
 - `voice_instructions`, `sms_instructions` and `chat_instructions` stay on the receptionist and agent resources, marked deprecated, so clients keep working in this release:
   - A read returns the body of the agent's first rule for that channel when it's active, or `null`. `chat_instructions` reads the website chat rule.
   - A write changes that rule's body and turns it on, or adds a rule titled after the channel when there's none. `null` deletes it. `chat_instructions` writes the website chat rule and the Instagram rule.
@@ -81,4 +81,5 @@ During a rolling deploy, a worker on the old code can read a snapshot built by t
 - **Tone.** The default instruction text, which names the agent's tone, used to disappear when an owner wrote their own. It now stays beside their channel rules, so every agent's prompt names its tone. Keep it, or drop the default text once owners have rules?
 - **Instagram.** Chat text becomes two rules so Instagram keeps following it, even for an agent with no Instagram account. Should the migration skip the Instagram rule when the business has no Instagram account?
 - **Legacy `null`.** Sending `null` for an instruction field deletes the matching channel rule, even one an owner wrote in the dashboard. Disabling it instead would be safer but makes the field read back as `null` with a rule still listed.
+- **Silence check-in wording.** With the demo snapshot moved to channel rules, `pnpm voice:eval` passed 22 of 24 runs. Both failures, and 3 of 6 reruns, were the `silent` scenario: the receptionist checked in with "Are you still with me?", which the scenario's `still there|are you there` pattern misses, then said goodbye on time. Widen the pattern, or steer the wording in the check-in command?
 - **Rule limit.** The migration can take an agent past the 100-rule limit, which only blocks adding more. No agent is known to be near it.
