@@ -5,7 +5,7 @@ import { businesses, businessHours, closures, enqueueOutbox, inOrder, services, 
 import type { HoursWindow } from "@lobbystack/shared";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
-import { normalizeClosures, normalizeHoursWindows } from "../hours";
+import { MAX_CLOSURES, normalizeClosures, normalizeHoursWindows } from "../hours";
 import type { DomainContext } from "./context";
 import { assertTransferNumberAllowed, trialTransferNumberInTransaction } from "./numberTrials";
 
@@ -38,39 +38,51 @@ export function employeeStatus(input: { timeOff: EmployeeTimeOff[]; serviceCount
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
- * Checks an employee's hours (null: the business's) and time off, and returns
- * the rows to save. Time off follows the rules of the business's closures: no
- * overlaps, none already over, none ending more than two years ahead.
+ * Checks an employee's hours (null: the business's) and the days of each time
+ * off, and returns them to save. Entries for the same days are one entry,
+ * since the editor lists part-day time off the calendar added as the days it
+ * covers. replaceSchedule checks the rest against what's saved already.
  */
-function requireSchedule(input: { hours: HoursWindow[] | null; timeOff: EmployeeTimeOff[] }, timezone: string) {
+function requireSchedule(input: { hours: HoursWindow[] | null; timeOff: EmployeeTimeOff[] }) {
   if (input.hours && !input.hours.length) throw Object.assign(new Error("Add at least one working day, or use the business's hours."), { status: 400, code: "employee_hours_required" });
   const hours = input.hours ? normalizeHoursWindows(input.hours) : null;
   for (const entry of input.timeOff) {
-    if (![entry.startsOn, entry.endsOn].every((day) => ISO_DAY.test(day) && DateTime.fromISO(day).isValid) || entry.endsOn < entry.startsOn) throw Object.assign(new Error("Choose the first and last day of each time off."), { status: 400, code: "employee_time_off_invalid" });
+    if (![entry.startsOn, entry.endsOn].every((day) => ISO_DAY.test(day) && DateTime.fromISO(day).isValid) || entry.endsOn < entry.startsOn) throw invalidTimeOff("Choose the first and last day of each time off.");
   }
-  try {
-    const timeOff = normalizeClosures(input.timeOff.map((entry) => ({ startsAt: `${entry.startsOn}T00:00`, endsAt: `${DateTime.fromISO(entry.endsOn).plus({ days: 1 }).toISODate()}T00:00` })), timezone, new Date());
-    return { hours, timeOff };
-  } catch (error) {
-    throw Object.assign(error as Error, { code: "employee_time_off_invalid" });
-  }
+  const timeOff = input.timeOff.filter((entry, index) => input.timeOff.findIndex((other) => sameDays(other, entry)) === index);
+  return { hours, timeOff };
 }
 
+const invalidTimeOff = (message: string) => Object.assign(new Error(message), { status: 400, code: "employee_time_off_invalid" });
+
+/**
+ * Saves the employee's hours and time off. The editor works in whole days,
+ * and the calendar can add part of a day, so every saved row whose days match
+ * an entry stays as it is, with its hours and note, and isn't checked again:
+ * two part-day time offs on one day, or one overnight and another the next
+ * day, survive a save untouched. Only entries for new days follow the rules
+ * of the business's closures: no overlap with each other or with time off
+ * kept, none already over, none ending more than two years ahead. Time off
+ * that already ended isn't listed, so a save drops it, as with the business's
+ * closures.
+ */
 async function replaceSchedule(tx: DatabaseTransaction, businessId: string, staffId: string, schedule: ReturnType<typeof requireSchedule>, timezone: string) {
   await tx.delete(businessHours).where(and(eq(businessHours.businessId, businessId), eq(businessHours.staffId, staffId)));
   if (schedule.hours) await tx.insert(businessHours).values(schedule.hours.map((window) => ({ businessId, staffId, ...window })));
-  // This editor works in whole days, and the calendar can add part of a day. Time off whose days didn't change
-  // keeps its row, so its hours and note survive a save. Time off that already ended isn't listed, so a save
-  // drops it, as with the business's closures.
+  const now = new Date();
   const current = await tx.select({ id: closures.id, startsAt: closures.startsAt, endsAt: closures.endsAt }).from(closures).where(and(eq(closures.businessId, businessId), eq(closures.staffId, staffId)));
-  const kept = new Set<string>();
-  const added = schedule.timeOff.filter((entry) => {
-    const days = timeOffDays(entry, timezone);
-    const same = current.find((row) => !kept.has(row.id) && row.endsAt > new Date() && sameDays(timeOffDays(row, timezone), days));
-    if (same) kept.add(same.id);
-    return !same;
-  });
-  const removed = current.filter((row) => !kept.has(row.id)).map((row) => row.id);
+  const upcoming = current.filter((row) => row.endsAt > now);
+  const kept = upcoming.filter((row) => schedule.timeOff.some((entry) => sameDays(timeOffDays(row, timezone), entry)));
+  const wanted = schedule.timeOff.filter((entry) => !kept.some((row) => sameDays(timeOffDays(row, timezone), entry)));
+  let added: ReturnType<typeof normalizeClosures>;
+  try {
+    added = normalizeClosures(wanted.map((entry) => ({ startsAt: `${entry.startsOn}T00:00`, endsAt: `${DateTime.fromISO(entry.endsOn).plus({ days: 1 }).toISODate()}T00:00` })), timezone, now);
+  } catch (error) {
+    throw Object.assign(error as Error, { code: "employee_time_off_invalid" });
+  }
+  if (kept.length + added.length > MAX_CLOSURES) throw invalidTimeOff(`An employee can have up to ${MAX_CLOSURES} time off entries.`);
+  if (added.some((entry) => kept.some((row) => entry.startsAt < row.endsAt && row.startsAt < entry.endsAt))) throw invalidTimeOff("Closures can't overlap.");
+  const removed = current.filter((row) => !kept.includes(row)).map((row) => row.id);
   if (removed.length) await tx.delete(closures).where(and(eq(closures.businessId, businessId), inArray(closures.id, removed)));
   if (added.length) await tx.insert(closures).values(added.map((entry) => ({ businessId, staffId, ...entry })));
 }
@@ -123,7 +135,7 @@ async function businessTimezone(tx: DatabaseTransaction, businessId: string): Pr
   return business.timezone;
 }
 
-/** Each staff member's own hours, when they have them, and the time off that hasn't ended, in day order. */
+/** Each staff member's own hours, when they have them, and the days of the time off that hasn't ended, in day order. */
 export async function loadStaffSchedules(tx: DatabaseTransaction, input: { businessId: string; staffIds: string[]; timezone: string; now?: Date }) {
   const [hourRows, timeOffRows] = input.staffIds.length ? await inOrder([
     () => tx.select().from(businessHours).where(and(eq(businessHours.businessId, input.businessId), inArray(businessHours.staffId, input.staffIds))).orderBy(asc(businessHours.dayOfWeek), asc(businessHours.openMinutes)),
@@ -131,7 +143,9 @@ export async function loadStaffSchedules(tx: DatabaseTransaction, input: { busin
   ]) : [[], []];
   return new Map(input.staffIds.map((staffId) => {
     const hours = hourRows.filter((row) => row.staffId === staffId).map((row) => ({ dayOfWeek: row.dayOfWeek, openMinutes: row.openMinutes, closeMinutes: row.closeMinutes }));
-    return [staffId, { hours: hours.length ? hours : null, timeOff: timeOffRows.filter((row) => row.staffId === staffId).map((row) => timeOffDays(row, input.timezone)) }];
+    // Part-day time off covering the same days lists once, as the editor shows it.
+    const timeOff = timeOffRows.filter((row) => row.staffId === staffId).map((row) => timeOffDays(row, input.timezone));
+    return [staffId, { hours: hours.length ? hours : null, timeOff: timeOff.filter((entry, index) => timeOff.findIndex((other) => sameDays(other, entry)) === index) }];
   }));
 }
 
@@ -180,7 +194,7 @@ export async function createEmployee(
     await requireBusinessAdmin(tx, input);
     const name = requireName(input.name);
     const timezone = await businessTimezone(tx, input.businessId);
-    const schedule = requireSchedule(input, timezone);
+    const schedule = requireSchedule(input);
     const serviceIds = await requireServiceIds(tx, input.businessId, input.serviceIds);
     await assertPhoneAvailable(tx, input);
     const [employee] = await tx.insert(staff).values({ businessId: input.businessId, name, timezone, transferNumber: input.phone, isEmployee: true }).returning(employeeColumns);
@@ -200,7 +214,7 @@ export async function updateEmployee(
     await requireBusinessAdmin(tx, input);
     const name = requireName(input.name);
     const timezone = await businessTimezone(tx, input.businessId);
-    const schedule = requireSchedule(input, timezone);
+    const schedule = requireSchedule(input);
     const serviceIds = await requireServiceIds(tx, input.businessId, input.serviceIds);
     await assertPhoneAvailable(tx, input);
     const [employee] = await tx.update(staff).set({ name, transferNumber: input.phone, updatedAt: new Date() })
