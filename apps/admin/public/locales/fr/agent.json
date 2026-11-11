@@ -10,6 +10,11 @@
       "description": "Message d'accueil et paramètres de transfert de votre agent."
     },
     "knowledge": {
+      "selection": {"select": "Sélectionner", "count_one": "{{count}} sélectionnée", "count_other": "{{count}} sélectionnées", "selectAll": "Tout sélectionner", "selectRow": "Sélectionner {{title}}", "cancel": "Annuler", "count_many": "{{count}} sélectionnées"},
+      "batch": {"delete": "Supprimer", "disable": "Désactiver", "enable": "Activer", "reimport": "Réimporter", "agentDisable": "Désactiver pour cet agent", "agentEnable": "Activer", "deleteTitle_one": "Supprimer cette source ?", "deleteTitle_other": "Supprimer {{count}} sources ?", "deleteDescription": "Vous ne pourrez pas annuler.", "done": {"delete_one": "Source supprimée.", "delete_other": "{{count}} sources supprimées.", "disable_one": "Source désactivée.", "disable_other": "{{count}} sources désactivées.", "enable_one": "Source activée.", "enable_other": "{{count}} sources activées.", "reimport_one": "Réimportation lancée.", "reimport_other": "Réimportation lancée pour {{count}} sites.", "delete_many": "{{count}} sources supprimées.", "disable_many": "{{count}} sources désactivées.", "enable_many": "{{count}} sources activées.", "reimport_many": "Réimportation lancée pour {{count}} sites."}, "deleteTitle_many": "Supprimer {{count}} sources ?"},
+      "website": {"pages_one": "{{count}} page", "pages_other": "{{count}} pages", "pagesOff_one": "{{count}} désactivée", "pagesOff_other": "{{count}} désactivées", "pages_many": "{{count}} pages", "pagesOff_many": "{{count}} désactivées"},
+      "pagesDialog": {"title": "Site web", "listLabel": "Pages", "usePage": "Utiliser {{title}}", "remove": "Retirer {{title}}", "removeAddress": "Supprimez le site pour retirer sa page d'adresse.", "removeConfirm": "Retirer", "removeTitle": "Retirer {{title}} ?", "removeDescription": "Une réimportation peut la ramener.", "offForBusiness": "Désactivée pour tous les agents"},
+      "agent": {"ownTitle": "Cet agent seulement", "sharedTitle": "Partagées avec tous les agents", "ownEmpty": "Rien d'ajouté pour cet agent.", "sharedEmpty": "Aucune connaissance partagée.", "manageShared": "Gérer les connaissances partagées", "toggleHeading": "Cet agent", "useSource": "Utiliser {{title}} pour cet agent"},
       "title": "Connaissances",
       "description": "Informations et directives que votre agent utilise pour répondre aux questions.",
       "listTitle": "Base de connaissances",
@@ -23,7 +28,7 @@
       "deleteWebsite": { "action": "Tout supprimer", "title": "Supprimer toutes les pages de ce site ?", "description": "Toutes les pages importées depuis {{host}} seront définitivement supprimées.", "deleted": "Toutes les pages de {{host}} ont été supprimées." },
       "toast": { "added": "Connaissance ajoutée.", "updated": "Connaissance mise à jour.", "uploaded": "Document importé. Il sera bientôt prêt.", "deleted": "Connaissance supprimée.", "enabled": "Connaissance activée.", "disabled": "Connaissance désactivée." },
       "uploadDocument": "Téléverser un document",
-      "websiteImport": {
+      "websiteImport": { "inShared": "Ce site web est déjà dans vos connaissances partagées. Désactivez-le pour les agents qui ne doivent pas s'en servir.", "inAgent": "Ce site web est déjà dans les connaissances de {{name}}.",
         "badge": "Site web",
         "title": "Importer un site web",
         "description": "Explorez les pages publiques de votre site web pour que votre agent puisse les utiliser comme connaissances.",
@@ -217,7 +222,7 @@
       "editKnowledge": "Modifier la regle",
       "uploadDocument": "Téléverser un document",
       "addKnowledgeDescription": "Ce que votre agent doit faire, comme transférer des appels, poser des questions et envoyer des textos.",
-      "editKnowledgeDescription": "Mettez à jour l'instruction que votre agent doit suivre pendant les appels et les suivis.",
+      "editKnowledgeDescription": "Ce que votre agent doit faire, sur tous les canaux ou sur un seul.",
       "uploadDocumentDescription": "Téléversez un fichier que votre agent pourra utiliser.",
       "documentBadge": "Document",
       "textBadge": "Texte",
@@ -261,36 +266,42 @@
           "label": "Mots-clés",
           "placeholder": "Transferts, escalade",
           "hint": "Facultatif. Mots-clés séparés par des virgules pour catégoriser ces règles."
+        },
+        "channel": {
+          "label": "Canal",
+          "all": "Tous les canaux",
+          "voice": "Appels",
+          "sms": "Textos",
+          "web_chat": "Clavardage du site web",
+          "instagram": "Instagram"
         }
       }
     }
   },
   "table": {
-    "searchPlaceholder": "Rechercher des elements",
     "title": "Titre",
+    "channel": "Canal",
     "preview": "Apercu",
     "status": "Statut",
     "disabled": "Desactive",
     "added": "Ajoute",
-    "empty": "Aucun element correspondant.",
     "documentPreviewHint": "Cliquez pour previsualiser ce document.",
     "documentPreviewUnavailable": "La previsualisation des documents est disponible sur la page Connaissances."
   },
   "pagination": {
     "rowsPerPage": "Lignes par page",
-    "pageOf": "Page {{page}} sur {{total}}",
+    "viewing": "Lignes {{start}} à {{end}} sur {{total}}",
+    "viewingAll_one": "{{count}} ligne affichée",
+    "viewingAll_many": "Les {{count}} lignes affichées",
+    "viewingAll_other": "Les {{count}} lignes affichées",
     "firstPage": "Premiere page",
     "previousPage": "Page precedente",
     "nextPage": "Page suivante",
-    "lastPage": "Derniere page",
-    "goToPage": "Aller a la page {{page}}"
+    "lastPage": "Derniere page"
   },
   "fields": {
     "defaults": {
       "title": "Valeurs par défaut"
-    },
-    "instructions": {
-      "title": "Instructions"
     },
     "summary": {
       "label": "Résumé de l'entreprise",
@@ -312,6 +323,10 @@
     },
     "smsInstructions": {
       "label": "Instructions SMS"
+    },
+    "name": {
+      "label": "Nom",
+      "hint": "Seule votre équipe le voit."
     },
     "greeting": {
       "label": "Message d'accueil",
@@ -390,12 +405,22 @@
       }
     }
   },
+  "identity": { "title": "Nom, accueil et voix" },
+  "transfers": { "title": "Transferts" },
+  "businessDetails": { "title": "Détails de l'entreprise" },
   "staffFirst": {
     "title": "Le personnel répond d'abord",
     "save": "Enregistrer le personnel répond d'abord",
+    "setUp": "Configurer",
+    "state": "{{mode}} · {{number}}",
     "mode": {
       "label": "Faire sonner votre équipe d'abord",
       "hint": "Votre téléphone sonne d'abord. Appuyez sur 1 pour prendre l'appel. Sinon, l'agent répond.",
+      "when": "Quand",
+      "effect": {
+        "never": "Votre agent répond à tous les appels.",
+        "business_hours": "Pendant les heures d'ouverture, votre téléphone sonne d'abord. Si vous ne prenez pas l'appel, ou en dehors de ces heures, votre agent répond."
+      },
       "options": {
         "never": "Désactivé",
         "business_hours": "Pendant les heures d'ouverture",
@@ -434,7 +459,7 @@
   "booking": {
     "title": "Rendez-vous",
     "mode": {
-      "label": "Prise de rendez-vous",
+      "label": "Réservation",
       "options": {
         "instant": "Réserve les rendez-vous",
         "request": "Prend les demandes",
@@ -448,13 +473,12 @@
     }
   },
   "appointmentChanges": {
-    "title": "Modifications de rendez-vous",
     "allowCancel": {
-      "label": "Autoriser les annulations IA",
+      "label": "Annulations",
       "hint": "Permettre à l'agent d'annuler un rendez-vous à venir vérifié."
     },
     "allowReschedule": {
-      "label": "Autoriser les deplacements IA",
+      "label": "Déplacements",
       "hint": "Permettre à l'agent de déplacer un rendez-vous vérifié après vérification des disponibilités."
     },
     "verification": {

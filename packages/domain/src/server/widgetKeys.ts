@@ -16,13 +16,14 @@ export function hashWidgetKey(key: string): string {
   return createHash("sha256").update(key.trim()).digest("hex");
 }
 
-/** Creates a widget key and returns it with the key itself. */
-export async function insertWidgetKeyInTransaction(tx: DatabaseTransaction, input: { businessId: string; label?: string | undefined; allowedOrigins: string[]; config: Record<string, unknown> }): Promise<{ row: WidgetKeyRow; key: string }> {
+/** Creates a widget key and returns it with the key itself. It answers as `agentId`, or as the default agent without one. */
+export async function insertWidgetKeyInTransaction(tx: DatabaseTransaction, input: { businessId: string; agentId?: string | undefined; label?: string | undefined; allowedOrigins: string[]; config: Record<string, unknown> }): Promise<{ row: WidgetKeyRow; key: string }> {
   const key = `wk_live_${randomBytes(24).toString("base64url")}`;
   const [row] = await tx.insert(widgetKeys).values({
     businessId: input.businessId,
     keyHash: hashWidgetKey(key),
     keyValue: key,
+    ...(input.agentId ? { agentId: input.agentId } : {}),
     ...(input.label ? { label: input.label } : {}),
     allowedOrigins: input.allowedOrigins,
     config: input.config,

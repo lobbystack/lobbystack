@@ -3,7 +3,7 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import AppearancePage from "../../app/(dashboard)/settings/appearance/page";
+import AppearancePage from "../../app/(dashboard)/account/(level)/appearance/page";
 const mocks = vi.hoisted(() => ({ toast: vi.fn(), success: vi.fn(), timeFormatReady: true }));
 vi.mock("sonner", () => ({ toast: { error: mocks.toast, success: mocks.success } }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));

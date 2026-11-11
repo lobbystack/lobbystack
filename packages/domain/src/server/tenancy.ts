@@ -3,16 +3,18 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { and, eq, gt, isNull, ne, or, sql } from "drizzle-orm";
 
 import { enqueueOutbox, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
-import { agents, apiKeys, businesses, businessInvitations, businessMemberships, closures, defaultAgentOf, partnerMembers, services, staff, userActiveBusinesses, users } from "@lobbystack/db";
-import { currencyFractionDigits, defaultAgentName, defaultAppointmentChangePolicy, defaultCurrencyForTimezone, defaultGreeting, isCurrencyCode, isDefaultAgentName, isDefaultGreeting, normalizeAuthEmail, normalizeRuntimeLocale, parseDeploymentMode, type EmailBrandReference, type PartnerAccessLevel } from "@lobbystack/shared";
+import { agentRules, agents, apiKeys, businesses, businessInvitations, businessMemberships, closures, defaultAgentOf, partnerMembers, services, staff, userActiveBusinesses, users } from "@lobbystack/db";
+import { channelRuleTitle, currencyFractionDigits, defaultAgentName, defaultAppointmentChangePolicy, defaultCurrencyForTimezone, defaultGreeting, isCurrencyCode, isDefaultAgentName, isDefaultGreeting, normalizeAuthEmail, normalizeRuntimeLocale, parseDeploymentMode, type EmailBrandReference, type PartnerAccessLevel } from "@lobbystack/shared";
 
 import type { RuntimeLocale } from "@lobbystack/shared";
 
 import { requireBusinessAdmin } from "../authz";
 import { accessCapabilities, brandPartnerId, businessShowsOnBrand, capabilityNames, readBusinessAccess, requireBusinessAccess, type BrandScope, type BusinessAccessVia, type Capability } from "./businessAccess";
 import { enqueueBusinessSummaryRefresh } from "./businessSummary";
+import { postBusinessNotificationInTransaction } from "./businessNotifications";
 import type { DomainContext } from "./context";
-import type { OnboardingGoal, OnboardingStage } from "./onboarding";
+import { normalizeOnboardingStage } from "@lobbystack/shared";
+import type { OnboardingStage } from "./onboarding";
 import { invitationOfferInTransaction, type InvitationPayment } from "./packageBilling";
 import { disableWebhookEndpointsInTransaction } from "./publicApi/webhooks";
 
@@ -145,7 +147,7 @@ export async function insertOwnerlessBusinessInTransaction(tx: DatabaseTransacti
   return { businessId: input.businessId };
 }
 
-/** How a new business's receptionist books and answers calls and texts until someone changes it. */
+/** How a new business's receptionist books, and answers calls and texts until someone changes them: the booking policy, and its first call and text rules. */
 export const NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS = {
   bookingPolicy: "Only confirm a booking after availability is checked.",
   voiceInstructions: "Sound calm, confident, and concise. Escalate urgent requests to a human when policy requires it.",
@@ -231,17 +233,28 @@ async function insertBusinessRowsInTransaction(tx: DatabaseTransaction, input: N
   // Booking assigns every appointment to a staff member. Businesses that don't
   // manage a team get one hidden member that stands for the business itself.
   await tx.insert(staff).values({ businessId, name, timezone });
-  await tx.insert(agents).values({
+  const locale = normalizeRuntimeLocale(input.defaultLocale);
+  const { voiceInstructions, smsInstructions, bookingPolicy } = NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS;
+  const [agent] = await tx.insert(agents).values({
     businessId,
     isDefault: true,
-    name: defaultAgentName(normalizeRuntimeLocale(input.defaultLocale)),
-    greeting: defaultGreeting(name, normalizeRuntimeLocale(input.defaultLocale)),
+    name: defaultAgentName(locale),
+    greeting: defaultGreeting(name, locale),
     tone: "warm and direct",
     summary: `${name} uses LobbyStack to answer calls.`,
-    ...NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS,
+    bookingPolicy,
     transferMode: "on_request",
     appointmentChangePolicy: defaultAppointmentChangePolicy,
-  });
+  }).returning({ id: agents.id });
+  if (!agent) throw new Error("Default agent could not be created.");
+  // What a new receptionist is told on calls and in texts, as rules kept to
+  // those channels and titled in the business's language, as migration 0203
+  // turned the old instruction columns into. Nothing reads those columns now.
+  // The snapshot refresh below picks them up.
+  await tx.insert(agentRules).values([
+    { businessId, agentId: agent.id, title: channelRuleTitle("voice", locale), content: voiceInstructions, channel: "voice", sortOrder: 0 },
+    { businessId, agentId: agent.id, title: channelRuleTitle("sms", locale), content: smsInstructions, channel: "sms", sortOrder: 1 },
+  ]);
   await enqueueOutbox(tx, {
     topic: "snapshot.refresh",
     businessId,
@@ -305,9 +318,8 @@ export type UserBusiness = {
   businessType: string;
   defaultLocale: string;
   websiteUrl: string | null;
+  /** The step the owner is on, as normalizeOnboardingStage reads the stored value. */
   onboardingStage: string;
-  /** What the owner wants their agent to do first, or null when they skipped the question or never saw it. */
-  onboardingGoal: OnboardingGoal | null;
   createdAt: string;
   /** The access level a partner's business gives its own operators, or null for a direct business. */
   partnerAccessLevel: PartnerAccessLevel | null;
@@ -327,9 +339,10 @@ export type UserBusiness = {
 export async function listUserBusinesses(db: Database, userId: string, brand: BrandScope): Promise<UserBusiness[]> {
   return await withBusinessTransaction(db, { userId, actorType: "operator" }, async (tx) => {
     const active = await readActiveBusinessIdInTransaction(tx, { userId, brand });
-    const rows = await tx.execute<Omit<UserBusiness, "active" | "createdAt" | "partnerAccessLevel" | "via" | "capabilities"> & { createdAt: Date; partnerId: string | null; accessLevel: PartnerAccessLevel; via: BusinessAccessVia }>(sql`select business_id as "businessId", name, slug, role, timezone, business_type as "businessType", default_locale as "defaultLocale", website_url as "websiteUrl", onboarding_stage as "onboardingStage", onboarding_goal as "onboardingGoal", created_at as "createdAt", partner_id as "partnerId", partner_access_level as "accessLevel", access_via as "via" from app.list_user_businesses(${userId})`);
+    const rows = await tx.execute<Omit<UserBusiness, "active" | "createdAt" | "partnerAccessLevel" | "via" | "capabilities"> & { createdAt: Date; partnerId: string | null; accessLevel: PartnerAccessLevel; via: BusinessAccessVia }>(sql`select business_id as "businessId", name, slug, role, timezone, business_type as "businessType", default_locale as "defaultLocale", website_url as "websiteUrl", onboarding_stage as "onboardingStage", created_at as "createdAt", partner_id as "partnerId", partner_access_level as "accessLevel", access_via as "via" from app.list_user_businesses(${userId})`);
     return rows.rows.filter((row) => businessShowsOnBrand(row.partnerId, brand)).map(({ partnerId, accessLevel, via, ...row }) => ({
       ...row,
+      onboardingStage: normalizeOnboardingStage(row.onboardingStage, { partnerId }),
       active: row.businessId === active,
       createdAt: new Date(row.createdAt).toISOString(),
       partnerAccessLevel: partnerId ? accessLevel : null,
@@ -639,6 +652,10 @@ export async function acceptInvitation(
       setWhere: ne(businessMemberships.status, "active"),
     }).returning({ role: businessMemberships.role });
     const role = joined?.role ?? (await tx.select({ role: businessMemberships.role }).from(businessMemberships).where(and(eq(businessMemberships.businessId, invitation.businessId), eq(businessMemberships.userId, input.userId))).limit(1))[0]!.role;
+    // Whoever sent the invitation hears that it was accepted. A platform key's invitation has no one to tell.
+    if (joined && senderUserId !== null && senderUserId !== input.userId) {
+      await postBusinessNotificationInTransaction(tx, { businessId: invitation.businessId, kind: "invite_accepted", key: `invite_accepted:${invitation.id}`, recipientUserId: senderUserId, params: { email: invitation.email } });
+    }
     // Someone joining a partner's business, such as the owner the partner invited, lands in it on the partner's domain.
     if (partnerId) await rememberActiveBusinessInTransaction(tx, { userId: input.userId, businessId: invitation.businessId, partnerId });
     return { businessId: invitation.businessId, role, partnerId };

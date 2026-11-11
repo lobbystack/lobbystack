@@ -1,65 +1,37 @@
 "use client";
 
-import Link from "next/link";
-import { requestJson } from "@/lib/request-json";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { AnimatedNavigationIcon } from "@/components/animated-navigation-icon";
-import { AppWindowIcon } from "@/components/ui/app-window";
-import { BookTextIcon } from "@/components/ui/book-text";
-import { BlocksIcon } from "@/components/ui/blocks";
-import { CalendarDaysIcon } from "@/components/ui/calendar-days";
-import { ChartColumnIncreasingIcon } from "@/components/ui/chart-column-increasing";
-import { ClipboardCheckIcon } from "@/components/ui/clipboard-check";
-import { HomeIcon } from "@/components/ui/home";
-import { HandHelpingIcon } from "@/components/ui/hand-helping";
-import { IdCardIcon } from "@/components/ui/id-card";
-import { MessageSquareMoreIcon } from "@/components/ui/message-square-more";
-import { PhoneAnimatedIcon } from "@/components/ui/phone-animated";
-import { SettingsIcon } from "@/components/ui/settings";
-import { UsersIcon } from "@/components/ui/users";
-import { WorkflowIcon } from "@/components/ui/workflow";
 import type { Capability } from "@lobbystack/domain";
+import type { PageIntroKey } from "@lobbystack/shared";
 import { useActiveBusiness } from "@/hooks/use-active-business";
-import { useAppointments } from "@/hooks/use-appointments";
-import { firstSettingsPage, pageCapability } from "@/lib/dashboard-pages";
-import { useNewAppointmentCount } from "@/lib/appointments-seen";
-import { useSignOut } from "@/hooks/use-sign-out";
-import { WorkspaceSwitcher } from "@/components/layout/workspace-switcher";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { AgentsSeedProvider, type AgentsSeed } from "@/hooks/use-agents";
+import { pageCapability } from "@/lib/dashboard-pages";
 import { Main } from "@/components/layout/main";
+import { MobileNavigation } from "@/components/navigation/mobile-navigation";
+import { NavigationSidebar } from "@/components/navigation/navigation-sidebar";
+import { ShellRuntime } from "@/components/navigation/shell-runtime";
+import { PageTitleTargetContext } from "@/components/page-header";
+import { PageIntrosProvider } from "@/components/page-intros/page-intros-provider";
 import { SiteHeader } from "@/components/site-header";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarRail,
-  useSidebar,
-} from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { ALL_CAPABILITIES, BusinessCapabilitiesProvider, useBusinessCan } from "./business-capabilities-provider";
 import { LiveUpgradePlanProvider } from "./live-upgrade-plan-provider";
 import { BillingPastDueBanner, type BillingPermissions } from "./billing-past-due-banner";
 import { NumberTrialBanner } from "./number-trial-banner";
-import { DashboardUtilityBar } from "./dashboard-utility-bar";
-import { NavUser } from "./nav-user";
-import { useOpenUpgradePlanDialog } from "./upgrade-plan-dialog-context";
 
 type DashboardShellProps = {
   children: React.ReactNode;
   /** What the business the server opened lets the person do, until the workspace list loads. A direct business gives everything. */
   capabilities?: readonly Capability[];
+  /** The business's agents, which the server loads for people who can set them up. */
+  agents?: AgentsSeed | null;
   sidebarOpen?: boolean;
-  /** Shows Messages and the website widget in the menu on every page (`WIDGET_KEY_ISSUANCE_ENABLED`). */
-  widgetsEnabled?: boolean;
+  /** The intro cards the person has closed, from the layout, or null when no card may show. */
+  pageIntros?: { seen: readonly PageIntroKey[] | null; businessId: string | null };
   /** The person is on a partner's team, so the account menu links to the partner console. */
   partnerConsole?: boolean;
   user: {
@@ -68,24 +40,24 @@ type DashboardShellProps = {
   };
 };
 
-type NavigationItem = {
-  href: string;
-  label: string;
-  icon: typeof HomeIcon;
-  /** A count of new things behind the link, such as new bookings. */
-  badge?: number;
-};
-
 function getSidebarDefaultOpen(): boolean {
   if (typeof document === "undefined") return true;
   const value = document.cookie.split("; ").find((entry) => entry.startsWith("sidebar_state="));
   return value?.split("=")[1] !== "false";
 }
 
-export function DashboardShell({ capabilities = ALL_CAPABILITIES, children, partnerConsole = false, sidebarOpen, user, widgetsEnabled = false }: DashboardShellProps) {
+export function DashboardShell({ agents = null, capabilities = ALL_CAPABILITIES, children, pageIntros, partnerConsole = false, sidebarOpen, user }: DashboardShellProps) {
   const { t } = useTranslation("common");
   const pathname = usePathname();
   const contentScrollRef = useRef<HTMLElement>(null);
+  const isMobile = useIsMobile();
+  // The page's title heading, which the phone top bar names once it scrolls away.
+  const [titleHeading, setTitleHeading] = useState<HTMLHeadingElement | null>(null);
+  const registerTitle = useCallback((heading: HTMLHeadingElement | null) => {
+    if (!heading) return;
+    setTitleHeading(heading);
+    return () => setTitleHeading((current) => (current === heading ? null : current));
+  }, []);
 
   useLayoutEffect(() => {
     const contentScroll = contentScrollRef.current;
@@ -96,8 +68,11 @@ export function DashboardShell({ capabilities = ALL_CAPABILITIES, children, part
 
   return (
     <BusinessCapabilitiesProvider initial={capabilities}>
+    <AgentsSeedProvider seed={agents}>
     <LiveUpgradePlanProvider>
-    <div className="flex h-svh w-full flex-col overflow-hidden bg-background">
+    <PageIntrosProvider businessId={pageIntros?.businessId ?? null} seen={pageIntros?.seen ?? null}>
+    {/* On phones the bottom padding keeps the content above the tab bar. */}
+    <div className="flex h-svh w-full flex-col overflow-hidden bg-background max-md:pb-[calc(3.5rem+env(safe-area-inset-bottom))]">
       <a href="#dashboard-main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:rounded-xl focus:bg-background focus:p-4">{t("accessibility.skipToContent")}</a>
       <BillingBanner />
       <NumberTrialBanner />
@@ -107,21 +82,26 @@ export function DashboardShell({ capabilities = ALL_CAPABILITIES, children, part
         defaultOpen={sidebarOpen ?? getSidebarDefaultOpen()}
         style={{ "--sidebar-width": "16rem" } as React.CSSProperties}
       >
-        <ReplacementSidebar partnerConsole={partnerConsole} user={user} widgetsEnabled={widgetsEnabled} />
+        {/* Phones get the tab bar and its menu sheet in place of the sidebar. */}
+        {isMobile ? null : <NavigationSidebar partnerConsole={partnerConsole} user={user} />}
         <SidebarInset
           ref={contentScrollRef}
           className="@container/content min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain has-data-[layout=fixed]:h-full peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100%-(var(--spacing)*4))]"
         >
-          <SiteHeader fixed scrollContainerRef={contentScrollRef} />
-          <div className="hidden h-16 shrink-0 border-b md:block" />
-          <DashboardUtilityBar />
-          <Main id="dashboard-main-content" tabIndex={-1} className="flex flex-1 flex-col" fixed={pathname === "/messages"}>
-            <PageAccess>{children}</PageAccess>
+          <SiteHeader fixed scrollContainerRef={contentScrollRef} titleHeading={titleHeading} />
+          <Main id="dashboard-main-content" tabIndex={-1} className="flex flex-1 flex-col" fixed={pathname === "/inbox"}>
+            <PageTitleTargetContext.Provider value={registerTitle}>
+              <PageAccess>{children}</PageAccess>
+            </PageTitleTargetContext.Provider>
           </Main>
         </SidebarInset>
+        <ShellRuntime />
+        <MobileNavigation partnerConsole={partnerConsole} user={user} />
       </SidebarProvider>
     </div>
+    </PageIntrosProvider>
     </LiveUpgradePlanProvider>
+    </AgentsSeedProvider>
     </BusinessCapabilitiesProvider>
   );
 }
@@ -150,120 +130,4 @@ function BillingBanner() {
   }, enabled: Boolean(business?.businessId) && can("billing") });
   if (!business || !can("billing") || !billing.data?.account || !billing.data.permissions) return null;
   return <BillingPastDueBanner businessId={business.businessId} plan={billing.data.account.plan} subscriptionState={billing.data.account.subscriptionState} permissions={billing.data.permissions} />;
-}
-
-function ReplacementSidebar({ partnerConsole = false, user, widgetsEnabled }: Pick<DashboardShellProps, "partnerConsole" | "user" | "widgetsEnabled">) {
-  const pathname = usePathname();
-  const showWidgets = widgetsEnabled || ["/messages", "/widget"].some(route => pathname === route || pathname.startsWith(`${route}/`));
-  const { t } = useTranslation(["nav", "settings", "agent"]);
-  const can = useBusinessCan();
-  const { business, appointments } = useAppointments();
-  const newAppointments = useNewAppointmentCount(business?.businessId, appointments.data?.appointments ?? []);
-  // Only what the business lets the person use: a partner's business may leave out its setup, billing, API keys and MCP.
-  const allowed = (items: NavigationItem[]) => items.filter((item) => can(pageCapability(item.href)));
-  const general: NavigationItem[] = [
-    { label: t("nav:items.home"), href: "/", icon: HomeIcon },
-    { label: t("nav:items.appointments"), href: "/appointments", icon: CalendarDaysIcon as typeof HomeIcon, badge: newAppointments },
-    { label: t("nav:items.calls"), href: "/calls", icon: PhoneAnimatedIcon },
-    ...(showWidgets ? [{ label: t("nav:items.messages"), href: "/messages", icon: MessageSquareMoreIcon }] : []),
-    { label: t("nav:items.contacts"), href: "/contacts", icon: UsersIcon },
-  ];
-  const receptionist: NavigationItem[] = [
-    { label: t("agent:sections.basicSettings.title"), href: "/agent", icon: ClipboardCheckIcon },
-    { label: t("agent:sections.knowledge.title"), href: "/agent/knowledge", icon: BookTextIcon },
-    { label: t("agent:sections.services.title"), href: "/agent/services", icon: HandHelpingIcon },
-    { label: t("agent:sections.employees.title"), href: "/agent/employees", icon: IdCardIcon },
-    { label: t("agent:sections.rules.title"), href: "/agent/rules", icon: WorkflowIcon },
-  ];
-  const other: NavigationItem[] = [
-    { label: t("nav:items.analytics"), href: "/analytics", icon: ChartColumnIncreasingIcon },
-    { label: t("settings:sections.integrations"), href: "/integrations", icon: BlocksIcon },
-    ...(showWidgets ? [{ label: t("settings:sections.widget"), href: "/widget", icon: AppWindowIcon }] : []),
-    { label: t("nav:items.settings"), href: firstSettingsPage(can), icon: SettingsIcon },
-  ];
-  const groups = [
-    { title: t("nav:sidebar.general"), items: allowed(general) },
-    { title: t("nav:sidebar.agent"), items: allowed(receptionist) },
-    { title: t("nav:sidebar.other"), items: allowed(other) },
-  ].filter((group) => group.items.length > 0);
-
-  return (
-    <Sidebar className="absolute inset-y-0 h-full" collapsible="icon" variant="sidebar">
-      <SidebarHeader>
-        <WorkspaceSwitcher />
-      </SidebarHeader>
-      <SidebarContent>
-        {groups.map((group) => <NavigationGroup items={group.items} key={group.title} pathname={pathname} title={group.title} />)}
-      </SidebarContent>
-      <SidebarFooter>
-        <UserMenu partnerConsole={partnerConsole} user={user} />
-      </SidebarFooter>
-      <SidebarRail />
-    </Sidebar>
-  );
-}
-
-function NavigationGroup({ items, pathname, title }: { items: NavigationItem[]; pathname: string; title: string }) {
-  const router = useRouter();
-  const { t } = useTranslation("nav");
-  const { isMobile, setOpenMobile } = useSidebar();
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-  return (
-    <SidebarGroup>
-      <SidebarGroupLabel>{title}</SidebarGroupLabel>
-      <SidebarMenu>
-        {items.map((item) => {
-          const active = item.href === "/"
-            ? pathname === "/"
-            : item.href.startsWith("/settings/")
-              ? pathname.startsWith("/settings")
-              : pathname === item.href;
-          return (
-            <SidebarMenuItem key={item.href}>
-              <SidebarMenuButton
-                className="relative"
-                onMouseEnter={() => setHoveredItem(item.href)}
-                onMouseLeave={() => setHoveredItem(null)}
-                onFocus={() => setHoveredItem(item.href)}
-                onBlur={() => setHoveredItem(null)}
-                isActive={active}
-                {...(!isMobile ? { render: <Link href={item.href} /> } : {})}
-                tooltip={item.label}
-                onClick={() => { if (isMobile) { router.push(item.href); setOpenMobile(false); } }}
-              >
-                <AnimatedNavigationIcon icon={item.icon} hovered={hoveredItem === item.href} />
-                <span>{item.label}</span>
-                {item.badge ? <>
-                  <span aria-hidden="true" className="ml-auto min-w-5 rounded-full bg-primary px-1.5 py-0.5 text-center text-[11px] leading-none font-medium text-primary-foreground tabular-nums group-data-[collapsible=icon]:hidden">{item.badge > 99 ? "99+" : item.badge}</span>
-                  {/* With the sidebar collapsed to icons, a dot stands in for the number. */}
-                  <span aria-hidden="true" className="absolute top-1 right-1 hidden size-2 rounded-full bg-primary group-data-[collapsible=icon]:block" />
-                  <span className="sr-only">{t("items.newCount", { count: item.badge })}</span>
-                </> : null}
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          );
-        })}
-      </SidebarMenu>
-    </SidebarGroup>
-  );
-}
-
-
-function UserMenu({ partnerConsole = false, user }: Pick<DashboardShellProps, "partnerConsole" | "user">) {
-  const openUpgradePlanDialog = useOpenUpgradePlanDialog();
-  const signOut = useSignOut();
-  const { business } = useActiveBusiness();
-  const can = useBusinessCan();
-  const billing = useQuery({ queryKey: ["billing", business?.businessId], enabled: Boolean(business?.businessId) && can("billing"), queryFn: () => requestJson<{ account: { plan: string | null } | null; permissions: BillingPermissions; availableCheckoutPlans: Array<"starter" | "pro">; availableCheckoutIntervals: Record<"starter" | "pro", string[]> }>(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`) });
-  const showUpgradeToPro = can("billing") && billing.data?.permissions.hasCheckoutAccess === true && (billing.data.account?.plan ?? "free_cloud") === "free_cloud" && (billing.data.availableCheckoutPlans ?? []).some(plan => billing.data?.availableCheckoutIntervals[plan].length);
-  // Someone working in a partner's business through an open ends it as they go back to the console or sign out,
-  // and the business's audit log records it. The tab reads when its open began once, as it loads, so leaving here
-  // doesn't end a newer open another tab started. A tab closed without either leaves the open to expire.
-  const visiting = business?.via === "partner" ? business.businessId : null;
-  const visit = useQuery({ queryKey: ["partner-visit", visiting], enabled: Boolean(visiting), staleTime: Infinity, gcTime: Infinity, refetchOnWindowFocus: false, refetchOnReconnect: false, queryFn: () => requestJson<{ openedAt: string | null }>(`/api/partner/businesses/leave?businessId=${encodeURIComponent(visiting!)}`) });
-  const leave = async () => {
-    if (!visiting || !visit.data?.openedAt) return;
-    await fetch("/api/partner/businesses/leave", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ businessId: visiting, openedAt: visit.data.openedAt }), keepalive: true }).catch(() => undefined);
-  };
-  return <NavUser user={user} onLeaveBusiness={visiting ? () => void leave() : undefined} onSignOut={() => void leave().then(() => signOut())} onUpgradeToPro={openUpgradePlanDialog} showPartnerConsole={partnerConsole} showUpgradeToPro={showUpgradeToPro} />;
 }

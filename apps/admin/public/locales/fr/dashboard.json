@@ -7,15 +7,20 @@
     "title": "Analytique",
     "description": "Consultez les tendances d'engagement pour les appels, les messages et l'activite de reservation."
   },
-  "delta": {
-    "flat": "Aucun changement depuis le mois dernier",
-    "up": "+{{value}} % depuis le mois dernier",
-    "down": "-{{value}} % depuis le mois dernier",
-    "durationUp": "+{{value}} depuis le mois dernier",
-    "durationDown": "-{{value}} depuis le mois dernier"
-  },
   "home": {
     "title": "Accueil",
+    "phone": {
+      "status": {
+        "ready": "Prêt pour votre premier appel",
+        "live": "Votre agent prend les appels",
+        "liveMany": "Vos agents prennent les appels"
+      },
+      "answersFirst": {
+        "agent": "Votre agent répond en premier",
+        "team": "Votre équipe répond en premier",
+        "teamDuringHours": "Votre équipe répond en premier pendant les heures d'ouverture"
+      }
+    },
     "download": "Télécharger",
     "liveCalls": "En direct",
     "tabs": {
@@ -88,30 +93,41 @@
           "other": "Autre"
         }
       },
-      "results": {
-        "bookedValue": "Valeur réservée",
-        "timeSaved": "Temps gagné",
-        "withoutTransfer": "Appels sans transfert"
+      "agents": {
+        "title": "Par agent",
+        "calls": "Appels",
+        "chats": "Clavardages",
+        "removed": "Retiré"
+      },
+      "overview": {
+        "calls": {
+          "title": "Appels"
+        },
+        "today": {
+          "title": "Aujourd'hui",
+          "next": "Prochain à {{time}}",
+          "none": "Plus rien aujourd'hui"
+        },
+        "appointments": {
+          "title": "Rendez-vous"
+        },
+        "averageDuration": {
+          "title": "Durée moyenne"
+        }
       }
+    },
+    "results": {
+      "bookedValue": "Valeur réservée",
+      "timeSaved": "Temps gagné",
+      "withoutTransfer": "Appels sans transfert"
     },
     "metrics": {
       "loading": "Chargement de la comparaison mensuelle...",
-      "today": {
-        "title": "Aujourd'hui",
-        "next": "Prochain à {{time}}",
-        "none": "Plus rien aujourd'hui"
-      },
       "calls": {
         "title": "Appels"
       },
       "messages": {
         "title": "Messages"
-      },
-      "appointments": {
-        "title": "Rendez-vous"
-      },
-      "averageDuration": {
-        "title": "Duree moyenne"
       },
       "contacts": {
         "title": "Contacts"
@@ -150,11 +166,12 @@
       "requested": "Demandé : {{details}}",
       "notes": "Notes : {{notes}}",
       "rescheduleRequest": "Demande de report",
-      "newTime": "Nouvel horaire : {{time}}"
+      "newTime": "Nouvel horaire : {{time}}",
+      "inboxLink": "Tout voir dans la boîte de réception"
     },
     "upcoming": {
       "title": "À venir",
-      "viewAll": "Tout voir",
+      "appointmentsLink": "Voir tous les rendez-vous",
       "description": "Les prochains rendez-vous au calendrier.",
       "unknownService": "Service inconnu",
       "employee": "Employé : {{name}}",
@@ -276,35 +293,34 @@
       "hours": "Ajoutez vos heures d'ouverture",
       "testCall": "Écoutez votre agent",
       "phoneNumber": "Associez un numéro",
-      "forwardCalls": "Transférez vos appels"
+      "forwardCalls": "Transférez vos appels",
+      "callNumber": "Appelez votre numéro",
+      "forwardFromCurrent": "Gardez votre numéro existant"
     },
     "stepDescriptions": {
       "fullScan": "Votre agent a lu un échantillon de votre site.",
-      "sources": {
-        "answer_calls": "Téléversez les politiques, FAQ et tarifs utiles à vos appelants.",
-        "book_appointments": "Téléversez vos services, tarifs et règles de réservation.",
-        "answer_website_visitors": "Téléversez les FAQ et politiques utiles aux visiteurs de votre site.",
-        "answer_instagram_messages": "Téléversez les FAQ et tarifs qu'on vous demande sur Instagram.",
-        "none": "Téléversez vos politiques, FAQ ou tarifs."
-      },
+      "sources": "Téléversez vos politiques, FAQ ou tarifs.",
       "hours": "Votre agent réserve des rendez-vous seulement pendant ces heures.",
-      "testCall": {
-        "answer_calls": "Posez la question que vos appelants posent le plus.",
-        "book_appointments": "Demandez-lui de prendre un rendez-vous.",
-        "answer_website_visitors": "Posez les questions qu'on vous pose sur votre site.",
-        "answer_instagram_messages": "Posez les questions qu'on vous pose sur Instagram.",
-        "none": "Posez la question que vos clients posent le plus."
-      },
+      "testCall": "Posez la question que vos appelants posent le plus.",
       "phoneNumber": "Donnez à votre agent son propre numéro pour répondre à vos vrais clients.",
-      "phoneNumberTrial": "Répondez à vos appels manqués gratuitement pendant 14 jours, sans carte."
+      "phoneNumberTrial": "Répondez à vos appels manqués gratuitement pendant 14 jours, sans carte.",
+      "forwardCalls": "Vous gardez le numéro que vos clients appellent déjà ? Votre agent peut aussi y répondre.",
+      "numberLost": "Votre essai gratuit est terminé. Choisissez un forfait pour récupérer votre numéro."
     },
     "stepActions": {
       "fullScan": "Lire le reste",
       "sources": "Téléverser un document",
       "hours": "Ajouter les heures",
       "testCall": "Lancer un appel",
-      "phoneNumber": "Choisir un numéro"
-    }
+      "phoneNumber": "Choisir un numéro",
+      "callNumber": "Appeler le {{number}}",
+      "copyNumber": "Copier le numéro",
+      "numberCopied": "Copié",
+      "forwardCalls": "Configurer le transfert",
+      "choosePlan": "Choisir un forfait"
+    },
+    "forwardingFrom": "Transfert depuis le {{number}}",
+    "forwardingWorks": "Le transfert fonctionne"
   },
   "forwarding": {
     "title": "Renvoyez vos appels vers le {{number}}",
@@ -332,8 +348,8 @@
       "ukMobile": "Mobile au Royaume-Uni"
     },
     "code": {
-      "dial": "Composez ce code :",
-      "call": "Appuyez sur Appeler. Une tonalité ou un message confirme que le renvoi est activé.",
+      "dial": "Sur le téléphone que vos clients appellent, composez ce code :",
+      "call": "Appuyez sur Appeler.",
       "busy": "Pour renvoyer aussi les appels reçus pendant que vous êtes au téléphone, composez :",
       "off": "Pour le désactiver plus tard, composez {{code}}.",
       "unreachable": "Pour renvoyer aussi les appels quand votre téléphone est éteint ou sans réseau, composez :",
@@ -352,11 +368,7 @@
       "voicemail": "Si vous avez la messagerie vocale de {{name}}, demandez à {{name}} de la retirer. Les appels manqués ne peuvent pas être renvoyés tant qu'elle est active.",
       "androidOnly": "Ces étapes sont pour les téléphones Android. Sur un iPhone, demandez à {{name}} de l'activer pour vous.",
       "adminOnly": "Seul un administrateur de votre compte {{name}} peut modifier ce réglage.",
-      "verifyNumber": "{{name}} envoie un code au {{number}} avant d'activer le renvoi. Choisissez de recevoir le code par appel, puis lisez-le dans la transcription de cet appel, sous Appels."
-    },
-    "test": {
-      "missed": "Pour tester, appelez votre numéro d'entreprise depuis un autre téléphone et laissez sonner. Votre agent devrait répondre.",
-      "all": "Pour tester, appelez votre numéro d'entreprise depuis un autre téléphone. Votre agent devrait répondre."
+      "verifyNumber": "{{name}} envoie un code au {{number}} avant d'activer le renvoi. Choisissez de recevoir le code par appel, puis lisez-le dans la transcription de cet appel, dans la Boîte de réception."
     },
     "unsupported": {
       "missed": "{{name}} ne propose pas de renvoi pour les appels manqués seulement. Choisissez Tous les appels, ou demandez à {{name}} de renvoyer les appels sans réponse vers le {{number}}.",
@@ -369,6 +381,7 @@
     "general": {
       "missed": "Sur un mobile, ouvrez les réglages d'appel de votre téléphone et renvoyez les appels sans réponse vers le {{number}}. Sur une ligne fixe ou un système téléphonique d'entreprise, demandez-le à votre fournisseur.",
       "all": "Sur un mobile, ouvrez les réglages d'appel de votre téléphone et renvoyez tous les appels vers le {{number}}. Sur une ligne fixe ou un système téléphonique d'entreprise, demandez-le à votre fournisseur."
-    }
+    },
+    "itWorks": "Ça fonctionne"
   }
 }

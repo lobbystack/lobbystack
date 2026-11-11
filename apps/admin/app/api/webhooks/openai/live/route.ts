@@ -5,6 +5,7 @@ import { buildPhoneSessionConfig } from "@lobbystack/agent-core/live/session";
 import { finishLiveCall, getBusinessSnapshotForAgent, getCachedBusinessSnapshot, isNumberTrialEnded, markNumberTrialMinutesExhausted, startLivePhoneCall } from "@lobbystack/domain";
 import { getAppDatabase } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
+import { noteForwardedCall } from "@/lib/forwarded-calls";
 import { attachWorkerToLiveSession, getLiveClient } from "@/lib/live-prototype";
 
 export const runtime = "nodejs";
@@ -94,8 +95,13 @@ export async function POST(request: Request) {
   }
   timing.routedBy = routed.header;
 
+  // A call forwarded from the owner's line names that line in Diversion or
+  // History-Info, beside our own number. Noted once the call is answered.
+  const forwardedFrom = ["diversion", "history-info"].flatMap((name) => event.data.sip_headers.filter((item) => item.name.toLowerCase() === name).flatMap((item) => phonesFromSipHeader(item.value)));
   try {
-    return await answerCall(client, { sessionId, businessId, from, to: routed.phone, timing });
+    const answered = await answerCall(client, { sessionId, businessId, from, to: routed.phone, timing });
+    if (forwardedFrom.length) await noteForwardedCall({ businessId, dialled: routed.phone, from, candidates: forwardedFrom, source: "sip" });
+    return answered;
   } catch (error) {
     console.error("[live] incoming call failed", error instanceof Error ? error.message : error);
     await client.live.sessions.reject(sessionId, { status_code: 503 }).catch(() => undefined);

@@ -29,3 +29,14 @@ We don't charge for agents because an agent costs almost nothing by itself. Allo
 - A workspace can't send one number to two agents by time of day. It writes a rule inside one agent, or buys a second number.
 - Unlimited agents would let someone run unrelated companies in one workspace. The shared allowance, shared knowledge and the number limit make that a poor fit, but nothing blocks it.
 - Reversing this means moving knowledge rows to agents and repricing plans, so a change needs a migration and a pricing decision.
+
+## Amendment, 2026-11-10: knowledge can belong to one agent
+
+Knowledge stays shared by default, and an agent can now differ from it in two ways. See [the spec](../specs/agent-knowledge.md).
+
+- An agent can have sources of its own: websites, files, FAQs and text that no other agent answers from.
+- An agent can turn a shared source off for itself, or one page of a shared website. Every shared source starts on for every agent, so a fix on the business Knowledge page still reaches each agent that hasn't opted out.
+
+Services, employees, hours and the business summary stay shared. The summary and the hours read only shared sources, so one agent's facts never change what the business says about itself.
+
+This replaces the first consequence above: two agents that need different facts can have them now. The opt-outs live in `agent_knowledge_exclusions`, and migration 0208 adds them with `agent_id` on knowledge documents and entries.

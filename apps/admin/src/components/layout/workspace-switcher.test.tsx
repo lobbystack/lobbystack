@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WorkspaceSwitcher } from "./workspace-switcher";
 import { SidebarProvider } from "@/components/ui/sidebar";
-const router = vi.hoisted(() => ({ refresh: vi.fn() }));
+const router = vi.hoisted(() => ({ refresh: vi.fn(), replace: vi.fn() }));
 const pendingAnalytics = vi.hoisted(() => ({ record: vi.fn() }));
 const branding = vi.hoisted(() => ({ partner: null as null | object }));
 vi.mock("@/components/branding-provider", () => ({ useBranding: () => ({ partner: branding.partner }) }));
@@ -97,5 +97,16 @@ describe("original workspace switcher behavior", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/businesses/switch", expect.objectContaining({ method: "POST", body: JSON.stringify({ businessId: "business-2" }) }));
     expect(client.getQueryData(["contacts", "business-1"])).toBeUndefined();
     expect(pendingAnalytics.record).toHaveBeenCalledWith("business-2", "business-1");
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+  it("moves an agent's page to the new business's default agent", async () => {
+    window.history.replaceState(null, "", "/agents/agent-1/channels?instagram=success");
+    try {
+      setup();
+      await userEvent.click(screen.getByRole("button", { name: /Tim Hortons/ }));
+      await userEvent.click(await screen.findByRole("menuitem", { name: /Acme Clinic/ }));
+      await waitFor(() => expect(router.refresh).toHaveBeenCalled());
+      expect(router.replace).toHaveBeenCalledWith("/agents/primary/channels?instagram=success");
+    } finally { window.history.replaceState(null, "", "/"); }
   });
 });

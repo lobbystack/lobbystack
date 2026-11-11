@@ -98,12 +98,12 @@ export function OnboardingBusinessSurface({ createNew = false }: { createNew?: b
           {/* The input stays mounted so a name typed before hydration survives; the skeleton covers it while the lookup runs. */}
           <div className="relative">
             <Building2 aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input autoComplete="organization" autoFocus className="h-11 pl-9" id="onboarding-business-name" onChange={(event) => setName(event.target.value)} placeholder={t("businessName.placeholder")} required type="text" value={name} />
-            {businesses.isLoading ? <Skeleton aria-hidden="true" className="absolute inset-0 h-11 w-full" /> : null}
+            <Input autoComplete="organization" autoFocus className="pl-9" id="onboarding-business-name" onChange={(event) => setName(event.target.value)} placeholder={t("businessName.placeholder")} required type="text" value={name} />
+            {businesses.isLoading ? <Skeleton aria-hidden="true" className="absolute inset-0 h-10 w-full rounded-xl" /> : null}
           </div>
         </Field>
         {error || businesses.isError ? <FieldError>{error ?? t("businessName.unavailable")}</FieldError> : null}
-        <Button className="mt-2 h-11 w-full" disabled={businesses.isLoading || create.isPending || update.isPending || navigating || name.trim().length === 0} type="submit">{create.isPending || update.isPending || navigating ? <><LoaderCircle className="size-4 animate-spin" />{t("businessName.submitting")}</> : t("businessName.continue")}</Button>
+        <Button className="mt-2 w-full" disabled={businesses.isLoading || create.isPending || update.isPending || navigating || name.trim().length === 0} type="submit">{create.isPending || update.isPending || navigating ? <><LoaderCircle className="size-4 animate-spin" />{t("businessName.submitting")}</> : t("businessName.continue")}</Button>
       </FieldGroup>
     </form>
   );

@@ -5,34 +5,288 @@
     "newCount_one": "{{count}} nouvelle réservation",
     "newCount_many": "{{count}} nouvelles réservations",
     "newCount_other": "{{count}} nouvelles réservations",
-    "calls": "Appels",
-    "messages": "Messages",
-    "agent": "Agent",
     "contacts": "Contacts",
     "analytics": "Analytique",
     "affiliate": "Programme d'affiliation",
-    "settings": "Réglages"
+    "settings": "Réglages",
+    "inbox": "Boîte de réception",
+    "agents": "Agents",
+    "business": "Entreprise"
   },
   "search": {
-    "placeholder": "Rechercher dans l'espace..."
+    "placeholder": "Rechercher pages, réglages, agents et contacts",
+    "button": "Rechercher",
+    "title": "Recherche",
+    "description": "Trouvez des pages, des réglages, des agents, des contacts et des conversations.",
+    "empty": "Aucun résultat pour « {{query}} »",
+    "loading": "Recherche en cours",
+    "instagram": "Instagram",
+    "groups": {
+      "pages": "Pages",
+      "agents": "Agents",
+      "knowledge": "Connaissances",
+      "services": "Services",
+      "employees": "Employés",
+      "rules": "Règles",
+      "contacts": "Contacts",
+      "conversations": "Conversations"
+    },
+    "keys": {
+      "select": "Choisir",
+      "open": "Ouvrir",
+      "close": "Fermer"
+    },
+    "where": {
+      "main": "Menu principal"
+    },
+    "detail": {
+      "conversation": "{{channel}}, {{date}}"
+    },
+    "synonyms": {
+      "billing": "facture, factures, reçu, paiement, payer, carte, abonnement, forfait, prix, tarif, annuler",
+      "usage": "minutes, limite, quota, consommation, clavardages",
+      "security": "mot de passe, connexion, courriel, profil, sécurité",
+      "phone": "renvoi, transfert d'appel, opérateur, numéro, ligne, appel, appels",
+      "voice": "accent, son, ton, salutation, accueil, bonjour, nom",
+      "rules": "règle, règles, escalade, transfert, instruction, instructions, consigne, consignes, script, comportement",
+      "handling": "transfert, transferts, personnel d'abord, réservation, rendez-vous, modification de rendez-vous, annulations, déplacements, annulation, report, numéro de transfert, le personnel répond d'abord",
+      "business": "heures, horaires, ouverture, fermé, congé, fuseau horaire, langue, devise",
+      "knowledge": "faq, réponse, réponses, site web, document, pdf, apprendre",
+      "services": "prix, tarifs, soin, traitement, menu",
+      "employees": "personnel, employé, dentiste, praticien, transfert",
+      "team": "collègue, inviter, membre, membres, utilisateur, rôle, permission, propriétaire",
+      "appearance": "sombre, clair, thème, langue, format",
+      "notifications": "alerte, alertes, sms, résumé, courriel",
+      "widget": "clavardage, chat, bulle, intégrer, code, site web",
+      "instagram": "dm, messages privés, ig, meta, réseaux sociaux",
+      "connections": "google, outlook, calendrier, crm, zapier, webhook, intégration, intégrations, synchronisation, connexions, connexions",
+      "keys": "jeton, clé, mcp, api, développeur",
+      "inbox": "message, messages, transcription, enregistrement, conversation, messagerie vocale, historique, appel, appels",
+      "contacts": "client, cliente, patient, appelant, prospect",
+      "appointments": "rendez-vous, horaire, visite, réservation, calendrier",
+      "analytics": "rapport, statistiques, mesures, performance",
+      "affiliate": "parrainage, commission, affiliation",
+      "agents": "agent, robot, ia, réceptionniste, assistant, nouveau"
+    }
   },
   "sidebar": {
     "businessSlugFallback": "Tableau de bord",
-    "general": "Général",
-    "agent": "Agent",
-    "other": "Gestion",
     "workspace": "Espace",
     "openSettings": "Ouvrir les réglages",
     "signedIn": "Connecté",
     "workspaceReady": "Espace prêt",
     "upgradeToPro": "Passer à Pro",
     "account": "Compte",
+    "accountSettings": "Paramètres du compte",
     "partnerConsole": "Console partenaire",
     "toggleTheme": "Changer le thème",
     "support": "Assistance",
     "terms": "Conditions d'utilisation",
     "privacy": "Politique de confidentialité",
     "signOut": "Se déconnecter",
-    "createBusiness": "Créer un espace de travail"
+    "createBusiness": "Créer un espace de travail",
+    "yourAccount": "Votre compte"
+  },
+  "agentPages": {
+    "general": "Général",
+    "rules": "Règles",
+    "knowledge": "Connaissances spécifiques",
+    "channels": "Canaux",
+    "phone": "Numéro de téléphone",
+    "widget": "Widget de site web"
+  },
+  "businessPages": {
+    "details": "Détails"
+  },
+  "settingsPages": {
+    "profile": "Profil et sécurité",
+    "appearance": "Langue et thème",
+    "notifications": "Notifications",
+    "business": "Détails de l'entreprise",
+    "knowledge": "Connaissances",
+    "services": "Services",
+    "employees": "Employés",
+    "team": "Équipe",
+    "usage": "Utilisation",
+    "billing": "Forfait et facturation",
+    "subscription": "Facturation",
+    "connections": "Intégrations",
+    "webhooks": "Webhooks",
+    "apiKeys": "Clés API",
+    "partnerAccess": "Accès du partenaire"
+  },
+  "accountMenu": "Menu du compte",
+  "agentMenu": {
+    "conversations": "Conversations",
+    "noChannels": "Aucun canal pour l'instant"
+  },
+  "agents": {
+    "title": "Agents",
+    "add": "Ajouter un agent",
+    "addTitle": "Ajouter un agent",
+    "addDescription": "Il reprend les réglages et les règles de {{name}}, sans ses canaux.",
+    "nameLabel": "Nom",
+    "namePlaceholder": "Ligne de fin de semaine",
+    "cancel": "Annuler",
+    "added": "{{name}} ajouté",
+    "addFailed": "Impossible d'ajouter l'agent.",
+    "default": "Par défaut",
+    "paused": "En pause",
+    "pausedTitle": "Cet agent est en pause",
+    "pausedDescription": "Votre forfait inclut un agent : {{name}} répond donc sur les canaux de cet agent.",
+    "upgrade": "Changer de forfait",
+    "channelCounts": {
+      "phone_one": "{{count}} numéro",
+      "phone_many": "{{count}} numéros",
+      "phone_other": "{{count}} numéros",
+      "widget_one": "{{count}} widget",
+      "widget_many": "{{count}} widgets",
+      "widget_other": "{{count}} widgets",
+      "instagram": "Instagram"
+    },
+    "moreActions": "Plus d'actions pour {{name}}",
+    "makeDefault": "Définir par défaut",
+    "madeDefault": "{{name}} est maintenant l'agent par défaut",
+    "makeDefaultFailed": "Impossible de changer l'agent par défaut.",
+    "remove": "Retirer l'agent",
+    "removeDefaultHint": "Choisissez d'abord un autre agent par défaut",
+    "removeTitle": "Retirer {{name}}?",
+    "removeDescription": "Ses canaux et ses conversations ouvertes passent à {{name}}.",
+    "removeDescriptionPick": "Ses canaux et ses conversations ouvertes passent à l'agent choisi.",
+    "removeKnowledge": "Ses propres connaissances seront supprimées.",
+    "moveTo": "Transférer à",
+    "removed": "{{name}} retiré",
+    "removeFailed": "Impossible de retirer l'agent."
+  },
+  "channels": {
+    "moveTo": "Transférer à",
+    "moveToLabel": "Transférer {{channel}} à",
+    "moveHere": "Transférer ici",
+    "fromAgent": "Sur {{name}}",
+    "manage": "Gérer",
+    "noNumber": "Aucun numéro pour l'instant",
+    "getNumber": "Obtenir un numéro",
+    "noWidget": "Aucun widget pour l'instant",
+    "addToWebsite": "Ajouter à mon site",
+    "paused": "En pause",
+    "noInstagram": "Aucun compte Instagram pour l'instant",
+    "connectInstagram": "Connecter Instagram",
+    "answersAs": "Répond comme {{name}}",
+    "disconnect": "Déconnecter",
+    "disconnectTitle": "Déconnecter {{channel}}?",
+    "disconnectInstagramDescription": "{{name}} cesse de répondre aux messages privés envoyés à {{channel}}.",
+    "disconnected": "{{channel}} déconnecté",
+    "disconnectFailed": "Impossible de le déconnecter.",
+    "move": "Transférer",
+    "moveTitle": "Transférer {{channel}} à {{name}}?",
+    "moveDescription": "Ses conversations ouvertes suivent, et {{name}} répond désormais.",
+    "moved": "{{channel}} transféré à {{name}}",
+    "moveFailed": "Impossible de le transférer."
+  },
+  "mobileNav": {
+    "label": "Menu principal",
+    "menu": "Menu",
+    "allAgents": "Tous les agents",
+    "tabs": {
+      "home": "Accueil",
+      "inbox": "Messages",
+      "appointments": "Agenda",
+      "contacts": "Contacts"
+    }
+  },
+  "notifications": {
+    "bell": "Notifications",
+    "bellUnread_one": "Notifications, {{count}} non lue",
+    "bellUnread_other": "Notifications, {{count}} non lues",
+    "bellUnread_many": "Notifications, {{count}} non lues",
+    "title": "Notifications",
+    "markAllRead": "Tout marquer comme lu",
+    "empty": "Aucune notification",
+    "unread": "Non lue",
+    "loading": "Chargement des notifications",
+    "providers": {
+      "google": "Google Agenda",
+      "calcom": "Cal.com",
+      "calendly": "Calendly",
+      "other": "Votre agenda"
+    },
+    "kinds": {
+      "trial_ending": {
+        "title_one": "Votre essai gratuit se termine demain",
+        "title_other": "Votre essai gratuit se termine dans {{count}} jours",
+        "title_many": "Votre essai gratuit se termine dans {{count}} jours",
+        "line": "Choisissez un forfait pour garder votre numéro."
+      },
+      "trial_ended": {
+        "title": "Votre essai gratuit est terminé",
+        "line": "Les appels sonnent maintenant sur votre téléphone. Choisissez un forfait pour garder votre numéro."
+      },
+      "trial_minutes_used_up": {
+        "title": "Vos minutes d'essai sont épuisées",
+        "line": "Les appels sonnent maintenant sur votre téléphone. Choisissez un forfait pour que votre agent réponde de nouveau."
+      },
+      "number_released": {
+        "title": "Nous avons libéré le {{number}}",
+        "line": "Choisissez un forfait pour obtenir un nouveau numéro.",
+        "lineTrial": "Votre essai s'est terminé sans forfait. Choisissez-en un pour obtenir un nouveau numéro."
+      },
+      "payment_failed": {
+        "title": "Votre paiement a échoué",
+        "line": "Mettez votre carte à jour pour garder votre forfait."
+      },
+      "plan_canceled": {
+        "title": "Votre forfait se termine le {{date}}",
+        "line": "Nous libérons votre numéro 30 jours plus tard, sauf si vous choisissez un forfait."
+      },
+      "minutes_80": {
+        "title": "Vous avez utilisé 80 % de vos minutes",
+        "line": "{{used}} minutes sur {{included}} ce mois-ci."
+      },
+      "minutes_100": {
+        "title": "Vous avez utilisé toutes vos minutes",
+        "line": "{{used}} minutes sur {{included}} ce mois-ci."
+      },
+      "number_purchase_failed": {
+        "title": "Nous n'avons pas pu acheter le {{number}}",
+        "titleNoNumber": "Nous n'avons pas pu acheter votre numéro",
+        "line": "Choisissez un numéro pour réessayer.",
+        "lineUnavailable": "Quelqu'un d'autre l'a pris. Choisissez un autre numéro."
+      },
+      "number_release_soon": {
+        "title": "Nous libérons le {{number}} le {{date}}",
+        "line": "Choisissez un forfait pour le garder."
+      },
+      "calendar_sync_failing": {
+        "title": "{{provider}} ne se synchronise plus",
+        "line": "Reconnectez-le pour que votre agent propose les heures libres."
+      },
+      "instagram_reconnect": {
+        "title": "Reconnectez Instagram",
+        "line": "@{{username}} n'accepte plus les réponses de votre agent.",
+        "lineNoUsername": "Instagram n'accepte plus les réponses de votre agent."
+      },
+      "webhook_failing": {
+        "title": "Nous avons désactivé un webhook",
+        "line": "Chaque envoi vers {{host}} a échoué pendant une journée."
+      },
+      "website_import_failed": {
+        "title": "Nous n'avons pas pu importer {{site}}",
+        "line": "Vérifiez l'adresse et importez-le de nouveau."
+      },
+      "website_import_finished": {
+        "title": "Importation du site terminée",
+        "line_one": "{{count}} page de {{site}} lue.",
+        "line_other": "{{count}} pages de {{site}} lues.",
+        "line_many": "{{count}} pages de {{site}} lues."
+      },
+      "forwarding_detected": {
+        "title": "Le renvoi d'appels fonctionne",
+        "line": "Les appels au {{from}} arrivent maintenant à votre agent."
+      },
+      "invite_accepted": {
+        "title": "{{email}} a rejoint votre équipe",
+        "line": "Cette personne a accepté votre invitation."
+      }
+    }
   }
 }

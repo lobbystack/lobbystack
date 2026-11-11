@@ -9,8 +9,10 @@ export { interfaceLocaleTags, interfaceLocales, intlLocale, isInterfaceLocale, i
 export type { InterfaceLocale, RuntimeLocale } from "./locales";
 import { interfaceLocales, runtimeLocales, type InterfaceLocale, type RuntimeLocale } from "./locales";
 import { appointmentChangeVerificationModes, bookingModes, transferModes, type ReceptionistVoice, type StaffFirstMode } from "./receptionist";
+import type { RuleChannel } from "./ruleChannels";
 import { WIDGET_COLOR_PATTERN, widgetPositionSchema, type WidgetPosition } from "./widget";
 export * from "./receptionist";
+export * from "./ruleChannels";
 export * from "./chatChannels";
 export * from "./checkIn";
 export * from "./callSummaryEmail";
@@ -27,6 +29,8 @@ export * from "./partnerStripe";
 export * from "./selfHostedSupport";
 export * from "./setupPrompts";
 export * from "./businessSetup";
+export * from "./pageIntros";
+export * from "./businessNotifications";
 export { isCertificationMode, assertCertificationRecipient, assertCertificationOperationAllowed, assertCertificationCalendar, assertCertificationBillingSandbox } from "./certification";
 
 export type DeploymentMode = "cloud" | "self_hosted_standard" | "development";
@@ -268,23 +272,23 @@ export function isDefaultGreeting(greeting: string, businessName: string, locale
     || (locale === "pt" && greeting === `Obrigado por ligar para ${name}. Como posso ajudar você hoje?`);
 }
 
-// Migration 0198's app.default_agent_name is the same list.
+// Migration 0202's app.default_agent_name is the same list.
 const agentNames: Record<RuntimeLocale, string> = {
-  en: "Agent",
-  fr: "Agent",
-  es: "Agente",
-  sr: "Agent",
-  de: "Agent",
-  pt: "Agente",
-  it: "Agente",
-  nl: "Agent",
-  pl: "Agent",
-  tr: "Asistan",
-  vi: "Trợ lý",
-  tl: "Assistant",
-  sv: "Agent",
-  ru: "Агент",
-  uk: "Агент",
+  en: "Default agent",
+  fr: "Agent par défaut",
+  es: "Agente predeterminado",
+  sr: "Podrazumevani agent",
+  de: "Standard-Agent",
+  pt: "Agente padrão",
+  it: "Agente predefinito",
+  nl: "Standaardagent",
+  pl: "Domyślny agent",
+  tr: "Varsayılan asistan",
+  vi: "Trợ lý mặc định",
+  tl: "Default na assistant",
+  sv: "Standardagent",
+  ru: "Агент по умолчанию",
+  uk: "Агент за замовчуванням",
 };
 
 /** A business's default agent's name, in its caller language. Operators see it, and callers never hear it. */
@@ -320,6 +324,8 @@ export type AgentRuleSummary = {
   title: string;
   content: string;
   order: number;
+  /** The one channel the rule applies on. Absent: every channel, and every rule in snapshots built before rules had channels. */
+  channel?: RuleChannel;
 };
 
 /** How the agent handles appointment requests. */
@@ -331,9 +337,10 @@ export function normalizeBookingMode(value: string | null | undefined): BookingM
 }
 
 /**
- * What one agent changes about a business's snapshot. Instructions are already
- * resolved, so an agent without its own holds the same default text the flat
- * fields would.
+ * What one agent changes about a business's snapshot. Its instructions are the
+ * default text for each channel, with its tone. What its owner wrote for one
+ * channel is in its rules, kept to that channel; snapshots built before
+ * migration 0203 hold that text here instead.
  */
 export type SnapshotAgent = {
   id: string;
@@ -356,11 +363,25 @@ export type SnapshotAgent = {
   phoneNumber?: string | null;
   /** The plan keeps fewer agents than the business has, so the default agent answers this one's channels. */
   paused?: boolean;
+  /** This agent's FAQs and text, when they differ from the default agent's flat ones. Absent means the flat ones. */
+  knowledgeSnippets?: Array<KnowledgeSnippet>;
+  /** This agent's document digest, when it differs from the default agent's flat one. Absent means the flat one. */
+  knowledgeDigest?: string;
 };
+
+/**
+ * The shape of snapshot the code builds. A snapshot with an older one, or none,
+ * came from code that predates a change in what it holds, and readers rebuild
+ * it before using it (getCachedBusinessSnapshot). 2: rules carry their channel
+ * (migration 0203) and agents their own knowledge (0208).
+ */
+export const SNAPSHOT_SCHEMA_VERSION = 2;
 
 export type BusinessContextSnapshot = {
   businessId: string;
   version: string;
+  /** SNAPSHOT_SCHEMA_VERSION when it was built. Absent on snapshots built before it existed. */
+  schemaVersion?: number;
   generatedAt: string;
   displayName: string;
   legalName?: string;
@@ -455,6 +476,7 @@ export const demoBusinessId = "demo-clinic";
 export const demoSnapshot: BusinessContextSnapshot = {
   businessId: demoBusinessId,
   version: "seed-v1",
+  schemaVersion: SNAPSHOT_SCHEMA_VERSION,
   generatedAt: new Date("2026-03-08T00:00:00.000Z").toISOString(),
   displayName: "Maple Family Clinic",
   timezone: "America/Toronto",

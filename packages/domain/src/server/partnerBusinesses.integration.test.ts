@@ -151,7 +151,7 @@ const hash = (token: string) => createHash("sha256").update(token).digest("hex")
 const testNumber = () => `+1416${String(Math.floor(Math.random() * 10_000_000)).padStart(7, "0")}`;
 
 // The onboarding stages each kind of business's owner goes through.
-const DIRECT_STEPS = ["create_business", "website", "language", "verify_phone", "phone_number", "goal", "attribution", "meet"];
+const DIRECT_STEPS = ["create_business", "website", "language", "phone_number", "attribution", "meet", "choose_plan"];
 const PARTNER_STEPS = ["website", "language", "verify_phone", "meet"];
 
 /** A business the partner created for this person, who accepted the invitation and owns it. */
@@ -464,7 +464,8 @@ describe.skipIf(!client)("the host's own emails", () => {
         expect(await sweepNumberReleases(context, { businessId: direct, now })).toBe(1);
       });
       expect((await queued(tx, businessId)).filter((topic) => !before.partner.includes(topic))).toEqual([]);
-      expect((await queued(tx, direct)).filter((topic) => !before.direct.includes(topic))).toEqual(["onboarding.sendWelcome", "phoneNumber.releaseEmail", "phoneNumber.releaseEmail"]);
+      // The release reminder also posts to the direct business's bell, which tells open dashboards.
+      expect((await queued(tx, direct)).filter((topic) => !before.direct.includes(topic))).toEqual(["onboarding.sendWelcome", "phoneNumber.releaseEmail", "phoneNumber.releaseEmail", "realtime.publish"]);
 
       // Sent: each email's job reads what to send, and gets nothing for a partner's business.
       const trials = await asMigrator(tx, async () => await tx.insert(numberTrials).values([direct, businessId].map((id) => ({ businessId: id, userId: owner!.userId, phoneNumberId: numberOf(id), verifiedPhone: "+14165550100", status: "active", startedAt: new Date(now.getTime() - 13 * 86_400_000), endsAt: new Date(now.getTime() + 86_400_000) }))).returning({ id: numberTrials.id, businessId: numberTrials.businessId }));
@@ -568,13 +569,15 @@ describe.skipIf(!client)("the owner's onboarding", () => {
     });
   });
 
-  it("keeps a direct business's own path: the phone leads to the number, and only Meet your agent finishes it", async () => {
+  it("keeps a direct business's own path: the website leads to the number, and only Meet your agent finishes it", async () => {
     await rollbackTest(async (tx) => {
       const [owner] = await people(tx, 1);
       const context = { db: tx as unknown as Database };
       const { businessId } = await createBusiness(context, { userId: owner!.userId, name: "Corner Shop", timezone: "UTC", businessType: "test" });
+      // An old tab asking for the phone step gets the number step.
       await advanceOnboardingStage(context, { userId: owner!.userId, businessId, to: "verify_phone" });
-      await expect(advanceOnboardingStage(context, { userId: owner!.userId, businessId, to: "complete" })).rejects.toThrow("Invalid onboarding transition from verify_phone to complete.");
+      expect((await getActiveOnboardingState(context.db, owner!.userId, HOST_BRAND_SCOPE)).stage).toBe("phone_number");
+      await expect(advanceOnboardingStage(context, { userId: owner!.userId, businessId, to: "complete" })).rejects.toThrow("Invalid onboarding transition from phone_number to complete.");
       expect(await verifyPhone(tx, { userId: owner!.userId, businessId })).toMatchObject({ approved: true });
       expect(await getActiveOnboardingState(context.db, owner!.userId, HOST_BRAND_SCOPE)).toEqual({ businessId, stage: "phone_number", steps: DIRECT_STEPS });
     });

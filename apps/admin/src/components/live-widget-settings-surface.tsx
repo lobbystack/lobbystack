@@ -16,7 +16,6 @@ import { LiveNotificationSettingsSurface } from "./live-notification-settings-su
 import { PageSurface } from "./page-surface";
 import { SectionBlock } from "./section-block";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
-import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
@@ -31,6 +30,8 @@ import { Textarea } from "./ui/textarea";
 import { readableOn } from "./widget/widget-parts";
 import { WidgetPreview } from "./widget/widget-preview";
 import { intlLocale } from "@/lib/locale";
+import { Status } from "@/components/ui/status";
+import { WIDGET_KEY_STATUS_VARIANTS } from "@/lib/status-variants";
 
 
 /** Languages the widget interface can be forced to, with their settings label keys. */
@@ -43,7 +44,7 @@ const WIDGET_LOCALE_OPTIONS: Array<{ value: InterfaceLocale; labelKey: string }>
 type WidgetPosition = "bottom-right" | "bottom-left";
 type WidgetKeyConfig = { color?: string; position?: WidgetPosition; title?: string; subtitle?: string; greeting?: string; localeOverride?: InterfaceLocale; leadForm?: { enabled?: boolean; requirePhone?: boolean; requireEmail?: boolean; showBeforeChat?: boolean }; liveChat?: { enabled: boolean } };
 // `key` is null for revoked keys and for keys created before keys were kept.
-type WidgetKeyRecord = { id: string; key: string | null; label: string | null; status: "active" | "disabled" | "revoked"; allowedOrigins: string[]; config: WidgetKeyConfig; lastUsedAt: string | null; createdAt: string };
+type WidgetKeyRecord = { id: string; agentId?: string | null; key: string | null; label: string | null; status: "active" | "disabled" | "revoked"; allowedOrigins: string[]; config: WidgetKeyConfig; lastUsedAt: string | null; createdAt: string };
 type KeysResponse = { keys: WidgetKeyRecord[]; issuanceEnabled?: boolean };
 type CreatedKey = { id: string; key: string } | null;
 /** What the form edits. Text fields stay untrimmed while the operator types. */
@@ -105,7 +106,13 @@ function useCopy(): [boolean, (text: string) => void] {
   return [copied, (text) => { void navigator.clipboard?.writeText(text); setCopied(true); }];
 }
 
-export function LiveWidgetSettingsSurface() {
+/**
+ * An agent's website widgets. Without `agentId`, every widget of the business,
+ * and new ones answer as the default agent. `startAdding` opens the new
+ * widget form once the page knows it can make one, as the agent's Channels
+ * page asks.
+ */
+export function LiveWidgetSettingsSurface({ agentId, startAdding = false }: { agentId?: string; startAdding?: boolean } = {}) {
   const { i18n, t } = useTranslation("settings");
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<Editing | null>(null);
@@ -119,7 +126,7 @@ export function LiveWidgetSettingsSurface() {
   const create = useMutation({
     mutationFn: async (draft: WidgetDraft) => await requestJson<{ key: { id: string; key: string } }>(`/api/widget-keys?businessId=${encodeURIComponent(business!.businessId)}`, {
       method: "POST",
-      body: JSON.stringify({ ...(draft.label.trim() ? { label: draft.label.trim() } : {}), allowedOrigins: originsFromText(draft.origins), config: configFrom(draft) }),
+      body: JSON.stringify({ ...(agentId ? { agentId } : {}), ...(draft.label.trim() ? { label: draft.label.trim() } : {}), allowedOrigins: originsFromText(draft.origins), config: configFrom(draft) }),
     }),
     onSuccess: async (result) => {
       setCreatedKey(result.key);
@@ -144,13 +151,26 @@ export function LiveWidgetSettingsSurface() {
   });
 
   // Revoked keys go last: they only stay listed as a record.
-  const rows = (keys.data?.keys ?? []).toSorted((a, b) => Number(a.status === "revoked") - Number(b.status === "revoked"));
+  const rows = (keys.data?.keys ?? []).filter((row) => !agentId || row.agentId === agentId).toSorted((a, b) => Number(a.status === "revoked") - Number(b.status === "revoked"));
   const embedOrigin = typeof window !== "undefined" ? window.location.origin : "";
   const issuanceEnabled = keys.data?.issuanceEnabled === true;
   const locale = i18n.resolvedLanguage ?? i18n.language;
   const keyName = (row: WidgetKeyRecord) => row.label || t("widget.keys.untitled");
   const openCreate = () => { create.reset(); setCreatedKey(null); setEditing({ mode: "create" }); };
   const closeDialog = () => { setEditing(null); setCreatedKey(null); };
+  const [startedAdding, setStartedAdding] = useState(false);
+  if (startAdding && !startedAdding && issuanceEnabled) {
+    setStartedAdding(true);
+    setEditing({ mode: "create" });
+  }
+  // The form opens once, so a reload or a link to this page doesn't open it again.
+  useEffect(() => {
+    if (!startedAdding) return;
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("add")) return;
+    url.searchParams.delete("add");
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  }, [startedAdding]);
   const newKeyButton = issuanceEnabled ? <Button onClick={openCreate}><Plus data-icon="inline-start" />{t("widget:manage.newKey")}</Button> : null;
 
   return (
@@ -169,7 +189,7 @@ export function LiveWidgetSettingsSurface() {
             <Skeleton className="h-[88px] w-full rounded-xl" />
           </div>
         ) : businesses.isError || keys.isError ? (
-          <p className="rounded-xl border border-dashed p-8 text-center text-sm text-destructive">{t("widget.keys.unavailable")}</p>
+          <p className="rounded-xl border border-dashed p-8 text-center type-body text-destructive">{t("widget.keys.unavailable")}</p>
         ) : rows.length ? (
           <div className="flex flex-col gap-3">
             {rows.map((row) => (
@@ -186,7 +206,7 @@ export function LiveWidgetSettingsSurface() {
                 t={t}
               />
             ))}
-            {setStatus.isError ? <p className="text-sm text-destructive">{setStatus.error.message}</p> : null}
+            {setStatus.isError ? <p className="type-body text-destructive">{setStatus.error.message}</p> : null}
           </div>
         ) : (
           <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed px-6 py-12 text-center">
@@ -238,7 +258,6 @@ export function LiveWidgetSettingsSurface() {
   );
 }
 
-const STATUS_DOT: Record<WidgetKeyRecord["status"], string> = { active: "bg-emerald-500", disabled: "bg-amber-500", revoked: "bg-muted-foreground/50" };
 
 function WidgetKeyCard({ row, name, busy, embedOrigin, locale, onEdit, onStatus, onRevoke, t }: { row: WidgetKeyRecord; name: string; busy: boolean; embedOrigin: string; locale: string; onEdit: () => void; onStatus: (status: "active" | "disabled") => void; onRevoke: () => void; t: TFunction<"settings"> }) {
   const [copied, copy] = useCopy();
@@ -252,10 +271,10 @@ function WidgetKeyCard({ row, name, busy, embedOrigin, locale, onEdit, onStatus,
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <h3 className="type-item-title truncate">{name}</h3>
-            <Badge variant="outline"><span className={cn("size-1.5 rounded-full", STATUS_DOT[row.status])} aria-hidden="true" />{t(`widget.status.${row.status}`)}</Badge>
+            <Status variant={WIDGET_KEY_STATUS_VARIANTS[row.status]}>{t(`widget.status.${row.status}`)}</Status>
           </div>
-          <p className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground"><Globe className="size-3.5 shrink-0" aria-hidden="true" /><span className="truncate">{row.allowedOrigins.join(", ")}</span></p>
-          <p className="text-xs text-muted-foreground">{row.lastUsedAt ? t("widget.keys.lastUsed", { date: new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "medium" }).format(new Date(row.lastUsedAt)) }) : t("widget:manage.neverUsed")}</p>
+          <p className="flex min-w-0 items-center gap-1.5 type-body-muted"><Globe className="size-3.5 shrink-0" aria-hidden="true" /><span className="truncate">{row.allowedOrigins.join(", ")}</span></p>
+          <p className="type-caption text-muted-foreground">{row.lastUsedAt ? t("widget.keys.lastUsed", { date: new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "medium" }).format(new Date(row.lastUsedAt)) }) : t("widget:manage.neverUsed")}</p>
         </div>
       </div>
       {!revoked ? (
@@ -293,11 +312,11 @@ function CreatedKeyView({ createdKey, embedOrigin, onDone, t }: { createdKey: No
         <DialogDescription>{t("widget:manage.createdDescription")}</DialogDescription>
       </DialogHeader>
       <div className="flex min-w-0 items-center gap-2">
-        <code className="min-w-0 flex-1 truncate rounded-xl bg-muted px-3 py-2 font-mono text-sm">{createdKey.key}</code>
+        <code className="min-w-0 flex-1 truncate rounded-xl bg-muted px-3 py-2 font-mono type-body">{createdKey.key}</code>
         <Button size="sm" variant="outline" onClick={() => copyKey(createdKey.key)}>{keyCopied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}{keyCopied ? t("widget.created.copied") : t("widget.created.copy")}</Button>
       </div>
       <SnippetBlock snippet={snippet} copied={snippetCopied} onCopy={() => copySnippet(snippet)} t={t} />
-      <p className="text-sm text-muted-foreground">{t("widget.created.hint")}</p>
+      <p className="type-body-muted">{t("widget.created.hint")}</p>
       <DialogFooter><Button onClick={onDone}>{t("widget.created.done")}</Button></DialogFooter>
     </div>
   );
@@ -307,10 +326,10 @@ function SnippetBlock({ snippet, copied, onCopy, t }: { snippet: string; copied:
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium">{t("widget.keys.snippet")}</p>
+        <p className="type-title">{t("widget.keys.snippet")}</p>
         <Button size="sm" variant="outline" onClick={onCopy}>{copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}{copied ? t("widget.keys.snippetCopied") : t("widget.created.copySnippet")}</Button>
       </div>
-      <pre className="overflow-x-auto rounded-xl bg-muted p-3 font-mono text-xs leading-5" dir="ltr">{snippet}</pre>
+      <pre className="overflow-x-auto rounded-xl bg-muted p-3 font-mono type-caption" dir="ltr">{snippet}</pre>
     </div>
   );
 }
@@ -359,7 +378,7 @@ function WidgetKeyForm({ editing, name, businessName, embedOrigin, pending, erro
                 <Field>
                   <FieldLabel htmlFor={`${id}-color`}>{t("widget.fields.color")}</FieldLabel>
                   <div className="flex items-center gap-2">
-                    <label className="relative size-9 shrink-0 cursor-pointer overflow-hidden rounded-full ring-1 ring-foreground/25 ring-inset focus-within:ring-[3px] focus-within:ring-ring/50" style={{ backgroundColor: draft.color }}>
+                    <label className="relative size-9 shrink-0 cursor-pointer overflow-hidden rounded-full ring-1 ring-foreground/25 ring-inset focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background" style={{ backgroundColor: draft.color }}>
                       <span className="sr-only">{t("widget:manage.pickColor")}</span>
                       <input className="absolute inset-0 cursor-pointer opacity-0" type="color" value={draft.color.length === 4 ? `#${[...draft.color.slice(1)].map((digit) => digit + digit).join("")}` : draft.color} onChange={(event) => { set({ color: event.target.value }); setColorText(event.target.value); }} />
                     </label>
@@ -429,7 +448,7 @@ function WidgetKeyForm({ editing, name, businessName, embedOrigin, pending, erro
           {row && row.status !== "revoked" ? (
             row.key
               ? <SnippetBlock snippet={widgetEmbedSnippet(embedOrigin, row.key)} copied={snippetCopied} onCopy={() => copySnippet(widgetEmbedSnippet(embedOrigin, row.key!))} t={t} />
-              : <p className="text-sm text-muted-foreground">{t("widget.keys.noSnippet")}</p>
+              : <p className="type-body-muted">{t("widget.keys.noSnippet")}</p>
           ) : null}
         </FieldGroup>
         <div className="hidden min-h-0 overflow-y-auto border-l bg-muted/40 p-6 lg:block">
@@ -437,7 +456,7 @@ function WidgetKeyForm({ editing, name, businessName, embedOrigin, pending, erro
         </div>
       </div>
       <DialogFooter className="items-center border-t px-6 py-4">
-        {error ? <p className="mr-auto text-sm text-destructive" role="alert">{error}</p> : null}
+        {error ? <p className="mr-auto type-body text-destructive" role="alert">{error}</p> : null}
         <Button type="button" variant="outline" onClick={onCancel}>{t("widget:manage.cancel")}</Button>
         <Button type="submit" loading={pending} disabled={!draft.origins.trim()}>{row ? t("widget.keys.save") : t("widget.create.action")}</Button>
       </DialogFooter>

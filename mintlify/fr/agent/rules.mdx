@@ -1,6 +1,6 @@
 ---
 title: "Rédiger les règles de l'agent"
-description: "Utilisez des règles en texte simple pour définir comment votre agent doit agir pendant les appels et les conversations."
+description: "Utilisez des règles en texte simple pour définir comment votre agent agit sur tous les canaux, ou seulement au téléphone, par texto, dans le clavardage du site web ou sur Instagram."
 sidebarTitle: "Règles"
 contentType: "How-to"
 ---
@@ -36,18 +36,36 @@ Une bonne règle est précise et orientée vers l'action :
 
 <Steps>
   <Step title="Ouvrez Règles">
-    Dans la barre latérale du tableau de bord, allez dans **Agent** > **Règles**.
+    Cliquez sur **Agents** dans la barre latérale, ouvrez l'agent et cliquez sur **Règles** dans son menu. Chaque agent a ses propres règles.
   </Step>
   <Step title="Ajoutez une règle">
     Cliquez sur **Ajouter une règle**.
   </Step>
   <Step title="Rédigez la consigne">
-    Ajoutez un titre court et la consigne complète dans le champ de contenu.
+    Ajoutez un titre court et la consigne complète dans le champ de contenu. Pour limiter la règle à un canal, choisissez-le sous **Canal**.
   </Step>
   <Step title="Ajoutez">
     Cliquez sur **Ajouter**. La règle apparaît au bas du tableau.
   </Step>
 </Steps>
+
+## Limiter une règle à un canal
+
+Une règle s'applique à tous les canaux tant que vous n'en choisissez pas un. Choisissez-le sous **Canal** quand vous ajoutez ou modifiez la règle :
+
+| Canal | Où l'agent suit la règle |
+| --- | --- |
+| **Tous les canaux** | Appels, textos, clavardage du site web et Instagram |
+| **Appels** | Appels téléphoniques et appels depuis votre navigateur |
+| **Textos** | Réponses aux textos |
+| **Clavardage du site web** | Le widget de clavardage de votre site web |
+| **Instagram** | Messages directs Instagram |
+
+La colonne **Canal** montre où s'applique chaque règle. Utilisez une règle de canal pour la façon dont l'agent parle sur ce canal, par exemple « Gardez les réponses sous 300 caractères » pour les textos.
+
+<Note>
+  Les règles remplacent la page **Instructions**. Les instructions de chaque agent sont devenues une règle pour leur canal, nommée dans la langue de votre entreprise, par exemple **Pendant les appels** ou **Par texto**. Les instructions de clavardage sont devenues une règle **Clavardage du site web**, et aussi une règle **Instagram** si votre entreprise avait connecté Instagram.
+</Note>
 
 ## Classer vos règles
 
@@ -57,10 +75,10 @@ Pour déplacer une règle, faites-la glisser par sa poignée. Vous pouvez aussi 
 
 ## Transferts et rappels
 
-Les transferts utilisent le numéro de transfert par défaut défini dans **Agent** > **Paramètres IA**, ou le numéro d'un [employé](/fr/agent/employees) que l'appelant demande. Les numéros de transfert doivent se trouver dans un [pays que LobbyStack peut appeler](/fr/agent/ai-settings/overview#numéro-de-transfert-par-défaut), et pendant un essai gratuit, les appels sont transférés uniquement vers le numéro de mobile que vous avez vérifié, si vous en avez vérifié un. Quand un transfert en direct n'est pas la bonne solution, l'agent peut créer une tâche de suivi avec les coordonnées pour le rappel. Ces tâches apparaissent dans le tableau de bord et sur les pages de détail des appels.
+Les transferts utilisent le [numéro de transfert par défaut](/fr/agent/calls-and-booking#numéro-de-transfert-par-défaut) défini sur la page **Général** de l'agent, ou le numéro d'un [employé](/fr/settings/employees) que l'appelant demande. Les numéros de transfert doivent se trouver dans un [pays que LobbyStack peut appeler](/fr/agent/calls-and-booking#numéro-de-transfert-par-défaut), et pendant un essai gratuit qui a commencé avec un numéro de mobile vérifié, les appels sont transférés uniquement vers ce mobile. Quand un transfert en direct n'est pas la bonne solution, l'agent peut créer une tâche de suivi avec les coordonnées pour le rappel. Ces tâches apparaissent dans le tableau de bord et sur les pages de détail des appels.
 
 ## Enregistrements et transcriptions
 
-LobbyStack conserve les transcriptions des appels et peut conserver les enregistrements. Vous pouvez écouter les enregistrements depuis la page **Appels** quand ils sont disponibles.
+LobbyStack conserve les transcriptions des appels et peut conserver les enregistrements. Vous pouvez écouter les enregistrements dans la [Boîte de réception](/fr/dashboard/inbox) quand ils sont disponibles.
 
 Utilisez les règles pour le traitement des appels. Gérez la politique d'enregistrement et de conservation avec les réglages de votre espace de travail et de conformité.

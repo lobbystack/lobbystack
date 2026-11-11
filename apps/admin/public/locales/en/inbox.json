@@ -1,6 +1,15 @@
 {
-  "header": {
-    "title": "Inbox",
-    "description": "Review captured calls, transcripts, and audio downloads."
-  }
+  "title": "Inbox",
+  "filters": {
+    "label": "Channel",
+    "all": "All",
+    "agent": "Agent",
+    "allAgents": "All agents"
+  },
+  "empty": "No calls or messages yet.",
+  "noMatch": "Nothing matches these filters.",
+  "pick": "Pick a conversation to read it.",
+  "loadMore": "Load more",
+  "back": "Inbox",
+  "handledBy": "Handled by <agent>{{name}}</agent>"
 }

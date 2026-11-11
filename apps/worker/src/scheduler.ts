@@ -21,6 +21,8 @@ const tenantSchedules: Array<{ queue: JobQueue; name: string; type: JobType; eve
   { queue: "maintenance", name: "outbox-backlog-sample", type: "outbox.backlogSample", every: 5 * 60_000, idleEvery: 0 },
   { queue: "maintenance", name: "unit-economics-rollup", type: "billing.refreshUnitEconomics", every: 60 * 60_000 },
   { queue: "maintenance", name: "api-retention", type: "api.retention", every: 60 * 60_000 },
+  // Posts each released changelog entry marked notify: true to the business's bell, within the hour of its release.
+  { queue: "maintenance", name: "product-updates", type: "notification.productUpdates", every: 60 * 60_000, idleEvery: 24 * 60 * 60_000 },
   // Instagram tokens lapse after 60 days unless refreshed, even for a workspace nobody opens.
   { queue: "maintenance", name: "instagram-token-refresh", type: "instagram.refreshToken", every: 24 * 60 * 60_000 },
 ];

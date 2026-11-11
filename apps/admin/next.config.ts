@@ -5,6 +5,7 @@ import { partnerFeatures } from "@lobbystack/shared";
 import { resolve } from "node:path";
 
 import { publicAssetVersion } from "./asset-version";
+import { MOVED_DASHBOARD_ROUTES } from "./src/lib/moved-routes";
 import { releaseVersion } from "./src/lib/release-version";
 import { brandLogoSecurityHeaders, embeddableSecurityHeaders, securityHeaders, toNextHeaderList } from "./security-headers";
 
@@ -123,12 +124,8 @@ const nextConfig: NextConfig = {
     ];
   },
   async redirects() {
-    // The widget page moved out of Settings; keep old bookmarks and alert links working.
-    // The partner console's Stripe page is Payments now; Stripe's onboarding links may still return to the old address.
-    // Connected apps moved to the bottom of API keys as MCP connections; the consent page and docs used to link the old tab.
-    return [
-      { source: "/settings/widget", destination: "/widget", permanent: true },
-      { source: "/settings/connected-apps", destination: "/settings/api-keys", permanent: true },
+    return [...MOVED_DASHBOARD_ROUTES,
+      // The partner console's Stripe page is Payments now; Stripe's onboarding links may still return to the old address.
       { source: "/partner/:partnerId/stripe", destination: "/partner/:partnerId/payments", permanent: true },
     ];
   },

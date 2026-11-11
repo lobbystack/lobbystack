@@ -20,7 +20,7 @@ export async function WidgetDocument({
 }) {
   return (
     <html lang={localeTag(locale)} suppressHydrationWarning>
-      <body>
+      <body data-widget="">
         {/* The chat is drawn in light colors only; a dark system theme would turn its white panel near-black under dark text. */}
         <BaseProviders branding={brandingSnapshot(await requireRequestBrand())} forcedTheme="light" initialLocale={locale} initialResources={resourcesForRoute(locale, namespaces)}>
           {children}

@@ -38,7 +38,7 @@ async function auditAppointmentChange(tx: DatabaseTransaction, input: { business
 export async function createAppointmentChangeVerification(
   context: DomainContext,
   input: { businessId: string; agentId?: string; appointmentId?: string; callerPhone: string; callId?: string; action: "cancel" | "reschedule"; appointmentStartsAt?: string; serviceName?: string },
-): Promise<{ verificationId: string; appointmentId: string; contactId: string; status: string; expiresAt: string; smsConsent: SmsConsentOnFile } | null> {
+): Promise<{ verificationId: string; appointmentId: string; contactId: string; status: string; expiresAt: string; smsConsent: SmsConsentOnFile; notes: string | null } | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const profile = (await tx.select({ policy: agents.appointmentChangePolicy }).from(agents).where(agentOrDefaultOf(input.businessId, input.agentId)).orderBy(asc(agents.isDefault)).limit(1))[0];
     const policy = normalizeAppointmentChangePolicy(profile?.policy);
@@ -48,7 +48,7 @@ export async function createAppointmentChangeVerification(
     // appointment. The name doesn't: speech recognition spells the same name
     // differently from call to call, so it can't block a change.
     const now = new Date();
-    const candidates = await tx.select({ id: appointments.id, contactId: appointments.contactId, startsAt: appointments.startsAt, timezone: appointments.timezone, serviceName: services.name, serviceSlug: services.slug, localizedNames: services.localizedNames, smsConsentStatus: contacts.smsConsentStatus, operatorBlockedAt: contacts.operatorBlockedAt }).from(appointments)
+    const candidates = await tx.select({ id: appointments.id, contactId: appointments.contactId, startsAt: appointments.startsAt, timezone: appointments.timezone, serviceName: services.name, serviceSlug: services.slug, localizedNames: services.localizedNames, smsConsentStatus: contacts.smsConsentStatus, operatorBlockedAt: contacts.operatorBlockedAt, notes: appointments.notes }).from(appointments)
       .innerJoin(contacts, and(eq(contacts.id, appointments.contactId), eq(contacts.businessId, input.businessId)))
       .innerJoin(services, and(eq(services.id, appointments.serviceId), eq(services.businessId, input.businessId)))
       // A past appointment can't be cancelled or moved, and would make a repeat customer's service ambiguous.
@@ -68,7 +68,7 @@ export async function createAppointmentChangeVerification(
       // doesn't ask for it twice. A later call from the same number, which a
       // spoofed caller ID can make, types it again.
       const accepted = input.callId ? (await tx.select({ id: appointmentChangeVerifications.id, action: appointmentChangeVerifications.action, expiresAt: appointmentChangeVerifications.expiresAt }).from(appointmentChangeVerifications).where(and(eq(appointmentChangeVerifications.businessId, input.businessId), eq(appointmentChangeVerifications.appointmentId, appointment.id), eq(appointmentChangeVerifications.callerPhone, input.callerPhone), eq(appointmentChangeVerifications.callId, input.callId), eq(appointmentChangeVerifications.status, "passcode_verified"), gt(appointmentChangeVerifications.expiresAt, now))).orderBy(desc(appointmentChangeVerifications.createdAt)).limit(1))[0] : undefined;
-      if (accepted?.action === input.action) return { verificationId: accepted.id, appointmentId: appointment.id, contactId: appointment.contactId, status: "passcode_verified", expiresAt: accepted.expiresAt.toISOString(), smsConsent: smsConsentOnFile(appointment) };
+      if (accepted?.action === input.action) return { verificationId: accepted.id, appointmentId: appointment.id, contactId: appointment.contactId, status: "passcode_verified", expiresAt: accepted.expiresAt.toISOString(), smsConsent: smsConsentOnFile(appointment), notes: appointment.notes };
       if (accepted) {
         status = "passcode_verified";
         expiresAt = accepted.expiresAt;
@@ -82,7 +82,7 @@ export async function createAppointmentChangeVerification(
     const [verification] = await tx.insert(appointmentChangeVerifications).values({ businessId: input.businessId, appointmentId: appointment.id, contactId: appointment.contactId, callerPhone: input.callerPhone, callId: input.callId ?? null, action: input.action, status, expiresAt, attemptCount: 0 }).returning({ id: appointmentChangeVerifications.id });
     if (!verification) throw new Error("Appointment change verification could not be created.");
     await auditAppointmentChange(tx, { businessId: input.businessId, appointmentId: appointment.id, verificationId: verification.id, eventType: "appointment_change.verification_created", payload: { action: input.action, ...(status.startsWith("passcode_") ? { status } : {}) } });
-    return { verificationId: verification.id, appointmentId: appointment.id, contactId: appointment.contactId, status, expiresAt: expiresAt.toISOString(), smsConsent: smsConsentOnFile(appointment) };
+    return { verificationId: verification.id, appointmentId: appointment.id, contactId: appointment.contactId, status, expiresAt: expiresAt.toISOString(), smsConsent: smsConsentOnFile(appointment), notes: appointment.notes };
   });
 }
 

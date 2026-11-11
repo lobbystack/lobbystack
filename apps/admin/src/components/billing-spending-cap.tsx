@@ -93,7 +93,7 @@ export function SpendingCapSection({
       <Surface className="px-6 py-5 ">
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center justify-between gap-2 text-[15px]">
+            <div className="flex flex-wrap items-center justify-between gap-2 type-body">
               <span className="font-medium text-foreground">
                 {capCents === null
                   ? t("billing.spendingCap.noCap")
@@ -126,7 +126,7 @@ export function SpendingCapSection({
                   />
                 </div>
                 {status.overageSpendingCapReached && (
-                  <span className="text-sm leading-6 text-destructive">
+                  <span className="type-body text-destructive">
                     {t("billing.spendingCap.reached")}
                   </span>
                 )}
@@ -191,7 +191,7 @@ export function SpendingCapSection({
               </div>
             </div>
           ) : (
-            <p className="text-sm leading-6 text-muted-foreground">
+            <p className="type-body-muted">
               {t("billing.spendingCap.adminOnly")}
             </p>
           )}

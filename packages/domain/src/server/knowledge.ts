@@ -3,11 +3,12 @@ import { createHash } from "node:crypto";
 import { and, asc, desc, eq, ilike, inArray, isNull, lt, ne, notInArray, sql } from "drizzle-orm";
 
 import { agentRules, agents, businessContextSnapshots, businesses, businessHours, closures, defaultAgentOf, enqueueOutbox, inOrder, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, phoneNumbers, services, staffServiceAssignments, storageObjects, websiteIngestionJobs, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { defaultGreeting, FULL_CRAWL_PAGE_LIMIT, getKnowledgeStorageLimitBytes, normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeReceptionistVoice, normalizeRuntimeLocale, normalizeStaffFirstMode, normalizeTransferMode, ONBOARDING_CRAWL_PAGE_LIMIT, runtimeLocales, servicePriceFromColumns, type BusinessContextSnapshot, type SnapshotAgent } from "@lobbystack/shared";
+import { defaultGreeting, FULL_CRAWL_PAGE_LIMIT, getKnowledgeStorageLimitBytes, normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeReceptionistVoice, normalizeRuntimeLocale, normalizeStaffFirstMode, normalizeTransferMode, ONBOARDING_CRAWL_PAGE_LIMIT, runtimeLocales, servicePriceFromColumns, stageAfterWebsite, type AgentRuleSummary, type BusinessContextSnapshot, type KnowledgeSnippet, type SnapshotAgent } from "@lobbystack/shared";
 import { agentInstructions, buildBusinessContextSnapshot, MAX_KNOWLEDGE_SNIPPETS_PER_SNAPSHOT, snapshotRules } from "../snapshot";
 import { countKnowledgeTokens, fuseKnowledgeRanks, KNOWLEDGE_SEARCH_TOKEN_BUDGET, knowledgeLexicalQueries, knowledgeQueryTerms, splitToTokenBudget, withinKnowledgeBudget, type KnowledgePassage } from "../knowledgeRanking";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
+import { postBusinessNotificationInTransaction, resolveBusinessNotificationsInTransaction } from "./businessNotifications";
 import type { DomainContext } from "./context";
 import { normalizeWebsiteSourceUrl } from "./knowledgeUrl";
 import { getMeter } from "@lobbystack/telemetry/node";
@@ -15,11 +16,12 @@ import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 import { moveOnboardingStageInTransaction } from "./onboarding";
 import { recordProductEventBestEffort } from "./productEvents";
 import { enqueueKnowledgeDerivedRefresh } from "./businessHours";
-import { pausedAgentIds } from "./agents";
+import { pausedAgentIds, requireActiveAgentInTransaction } from "./agents";
 import { listBookableEmployees, loadStaffSchedules } from "./employees";
 import { loadEntitlement } from "./entitlement";
 import { resolveBusinessBillingPlan } from "./contentRetentionPolicy";
 import { resolveSmsSender } from "./smsSender";
+import { documentInScope, knowledgeScopeFor, snippetInScope, type KnowledgeScope } from "./knowledgeScope";
 
 const ragMeter = getMeter("lobbystack-rag");
 const searchDuration = ragMeter.createHistogram("rag.search.duration_ms", { unit: "ms" });
@@ -84,10 +86,11 @@ export { FULL_CRAWL_PAGE_LIMIT, ONBOARDING_CRAWL_PAGE_LIMIT };
 
 export async function createKnowledgeDocument(
   context: DomainContext,
-  input: { userId: string; businessId: string; title: string; sourceType: string; sourceUrl?: string; onboarding?: boolean },
+  input: { userId: string; businessId: string; title: string; sourceType: string; sourceUrl?: string; onboarding?: boolean; agentId?: string | undefined },
 ): Promise<string> {
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
+    if (input.agentId) await requireActiveAgentInTransaction(tx, input.businessId, input.agentId);
     // finalizeUpload creates the document for an uploaded file.
     if (input.sourceType !== "website") throw Object.assign(new Error('sourceType must be "website". Upload files with /api/uploads.'), { status: 400 });
     return await createKnowledgeDocumentInTransaction(tx, input);
@@ -99,27 +102,31 @@ export async function createKnowledgeDocument(
  * who may do that. onboarding (or a business still on its website step) also
  * saves the URL as the business's website; onboarding or sample limit the
  * crawl to a sample of the site. Submitting a website that is already a
- * source returns that source.
+ * source returns that source. agentId makes the website that agent's alone;
+ * a host that's already a source for another scope is refused with 409.
  */
 export async function createKnowledgeDocumentInTransaction(
   tx: DatabaseTransaction,
-  input: { businessId: string; title: string; sourceUrl?: string | undefined; onboarding?: boolean | undefined; sample?: boolean | undefined },
+  input: { businessId: string; title: string; sourceUrl?: string | undefined; onboarding?: boolean | undefined; sample?: boolean | undefined; agentId?: string | undefined },
 ): Promise<string> {
   if (!input.sourceUrl) throw Object.assign(new Error("A website source URL is required."), { status: 400 });
   const sourceUrl = normalizeWebsiteSourceUrl(input.sourceUrl);
   const crawlLimit = input.onboarding || input.sample ? ONBOARDING_CRAWL_PAGE_LIMIT : FULL_CRAWL_PAGE_LIMIT;
   // Serialize website submissions so retries/revisited forms reuse the same import.
-  const business = (await tx.select({ onboardingStage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1).for("update"))[0];
-  if (input.onboarding || business?.onboardingStage === "website") {
+  const business = (await tx.select({ onboardingStage: businesses.onboardingStage, partnerId: businesses.partnerId, accessLevel: businesses.partnerAccessLevel }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1).for("update"))[0];
+  const agentId = input.agentId ?? null;
+  // An agent's own website isn't the business's website.
+  if (!agentId && (input.onboarding || business?.onboardingStage === "website")) {
     await tx.update(businesses).set({ websiteUrl: sourceUrl, updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
     // Submitting a website answers the language question too: the import reads
-    // it. From the language step, the wait then opens on verify_phone.
+    // it. The wait then opens on the step after the website.
     const from = business?.onboardingStage === "website" ? "website" : business?.onboardingStage === "language" ? "language" : null;
     if (from) {
-      await moveOnboardingStageInTransaction(tx, { businessId: input.businessId, from, to: "verify_phone" });
+      await moveOnboardingStageInTransaction(tx, { businessId: input.businessId, from, to: stageAfterWebsite(business), partnerId: business?.partnerId ?? null, accessLevel: business?.accessLevel });
     }
   }
   const existing = (await tx.select().from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.sourceUrl, sourceUrl))).limit(1).for("update"))[0];
+  await assertWebsiteScopeFree(tx, { businessId: input.businessId, sourceUrl, agentId, existing: existing ? { agentId: existing.agentId ?? null } : undefined });
   if (existing) {
     // A retry of an onboarding submission is still onboarding: without the
     // limit it would fall back to the full crawl this sampling exists to defer.
@@ -132,6 +139,7 @@ export async function createKnowledgeDocumentInTransaction(
     sourceType: "website",
     sourceUrl,
     status: "processing",
+    agentId,
   }).returning({ id: knowledgeDocuments.id });
   if (!document) {
     throw new Error("Knowledge document could not be created.");
@@ -146,6 +154,27 @@ export async function createKnowledgeDocumentInTransaction(
     payload: { url: sourceUrl, documentId: document.id, revision: 0, websiteIngestionJobId: ingestion!.id, limit: crawlLimit },
   });
   return document.id;
+}
+
+export const WEBSITE_IN_SHARED_KNOWLEDGE = "This website is already in your shared knowledge. Turn it off for the agents that shouldn't use it.";
+
+/**
+ * Refuses a website whose host is already a source in another scope: the
+ * shared knowledge, or another agent's. One URL can be one row per business,
+ * so the two can't each hold a copy. existing is the row with this exact URL,
+ * when the caller already read it.
+ */
+export async function assertWebsiteScopeFree(tx: DatabaseTransaction, input: { businessId: string; sourceUrl: string; agentId: string | null; existing?: { agentId: string | null } | undefined }): Promise<void> {
+  const host = websiteHost(input.sourceUrl);
+  const other = input.existing
+    ? input.existing
+    : host === null ? undefined : (await tx.select({ sourceUrl: knowledgeDocuments.sourceUrl, agentId: knowledgeDocuments.agentId }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.sourceType, "website"))))
+      .find((row) => (row.agentId ?? null) !== input.agentId && websiteHost(row.sourceUrl) === host);
+  const owner = other ? other.agentId ?? null : input.agentId;
+  if (owner === input.agentId) return;
+  if (!owner) throw Object.assign(new Error(WEBSITE_IN_SHARED_KNOWLEDGE), { status: 409, code: "knowledge_website_in_shared" });
+  const [agent] = await tx.select({ name: agents.name }).from(agents).where(and(eq(agents.businessId, input.businessId), eq(agents.id, owner))).limit(1);
+  throw Object.assign(new Error(`This website is already in ${agent?.name ?? "another agent"}'s knowledge.`), { status: 409, code: "knowledge_website_in_agent", agentId: owner, agentName: agent?.name ?? null });
 }
 
 export async function listKnowledgeSnippets(context: DomainContext, input: { userId: string; businessId: string }) {
@@ -248,6 +277,7 @@ export async function deleteKnowledgeDocument(context: DomainContext, input: { u
 export async function deleteKnowledgeDocumentInTransaction(tx: DatabaseTransaction, input: { businessId: string; documentId: string }): Promise<boolean> {
   await tx.delete(knowledgeChunks).where(and(eq(knowledgeChunks.documentId, input.documentId), eq(knowledgeChunks.businessId, input.businessId)));
   const [document] = await tx.delete(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).returning({ id: knowledgeDocuments.id, storageObjectId: knowledgeDocuments.storageObjectId });
+  if (document) await resolveBusinessNotificationsInTransaction(tx, { businessId: input.businessId, keys: [websiteImportFailedKey(document.id)] });
   if (!document) return false;
   // Downloads stop now; the retained-object sweep deletes the file within 15 minutes.
   if (document.storageObjectId) await tx.update(storageObjects).set({ retentionUntil: new Date(), updatedAt: new Date() }).where(and(eq(storageObjects.id, document.storageObjectId), eq(storageObjects.businessId, input.businessId)));
@@ -256,7 +286,8 @@ export async function deleteKnowledgeDocumentInTransaction(tx: DatabaseTransacti
   return true;
 }
 
-function websiteHost(sourceUrl: string | null): string | null {
+/** A website URL's host, lowercased and without www, which groups its pages. */
+export function websiteHost(sourceUrl: string | null): string | null {
   if (!sourceUrl) return null;
   try {
     return new URL(sourceUrl).host.toLowerCase().replace(/^www\./u, "");
@@ -269,14 +300,20 @@ function websiteHost(sourceUrl: string | null): string | null {
 export async function deleteWebsiteKnowledge(context: DomainContext, input: { userId: string; businessId: string; documentId: string }): Promise<number> {
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    const [page] = await tx.select({ sourceType: knowledgeDocuments.sourceType, sourceUrl: knowledgeDocuments.sourceUrl }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1);
+    return await deleteWebsiteKnowledgeInTransaction(tx, input);
+  });
+}
+
+/** Deletes a website's pages, those of the same host and the same agent or shared scope, and returns how many went. Callers authorize first. */
+export async function deleteWebsiteKnowledgeInTransaction(tx: DatabaseTransaction, input: { businessId: string; documentId: string }): Promise<number> {
+    const [page] = await tx.select({ sourceType: knowledgeDocuments.sourceType, sourceUrl: knowledgeDocuments.sourceUrl, agentId: knowledgeDocuments.agentId }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1);
     if (!page) throw Object.assign(new Error("Knowledge document not found."), { status: 404, code: "not_found" });
     const host = page.sourceType === "website" ? websiteHost(page.sourceUrl) : null;
     if (!host) throw Object.assign(new Error("Only imported website pages can be deleted by website."), { status: 400 });
     // A crawled page being saved finishes first, and later ones wait until this commits.
     await lockKnowledgeStorage(tx, input.businessId);
-    const pages = await tx.select({ id: knowledgeDocuments.id, sourceUrl: knowledgeDocuments.sourceUrl }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.sourceType, "website")));
-    const ids = pages.filter((candidate) => websiteHost(candidate.sourceUrl) === host).map((candidate) => candidate.id);
+    const pages = await tx.select({ id: knowledgeDocuments.id, sourceUrl: knowledgeDocuments.sourceUrl, agentId: knowledgeDocuments.agentId }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.sourceType, "website")));
+    const ids = pages.filter((candidate) => candidate.agentId === page.agentId && websiteHost(candidate.sourceUrl) === host).map((candidate) => candidate.id);
     // A crawl of this website still running would bring the pages back. Cancelling its import, like
     // cancelKnowledgeDocument does, stops it at the next page; a deleted import stops it too.
     const crawls = (await tx.select({ id: websiteIngestionJobs.id, websiteUrl: websiteIngestionJobs.websiteUrl, rootDocumentId: websiteIngestionJobs.rootDocumentId }).from(websiteIngestionJobs)
@@ -289,28 +326,29 @@ export async function deleteWebsiteKnowledge(context: DomainContext, input: { us
     }
     await tx.delete(knowledgeChunks).where(and(eq(knowledgeChunks.businessId, input.businessId), inArray(knowledgeChunks.documentId, ids)));
     await tx.delete(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), inArray(knowledgeDocuments.id, ids)));
+    if (ids.length) await resolveBusinessNotificationsInTransaction(tx, { businessId: input.businessId, keys: ids.map(websiteImportFailedKey) });
     await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_document", aggregateId: input.documentId, dedupeKey: `knowledge:website:${input.documentId}:deleted:${Date.now()}`, payload: { businessId: input.businessId, reason: "document_deleted" } });
     await enqueueKnowledgeDerivedRefresh(tx, { businessId: input.businessId, reason: "document_deleted" });
     return ids.length;
-  });
 }
 
 export async function createKnowledgeSnippet(
   context: DomainContext,
-  input: { userId: string; businessId: string; title: string; content: string; tags?: string[]; priority?: number; active?: boolean },
+  input: { userId: string; businessId: string; title: string; content: string; tags?: string[]; priority?: number; active?: boolean; agentId?: string | undefined },
 ): Promise<string> {
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
+    if (input.agentId) await requireActiveAgentInTransaction(tx, input.businessId, input.agentId);
     return (await createKnowledgeSnippetInTransaction(tx, input)).id;
   });
 }
 
-/** Inserts a snippet and refreshes the receptionist snapshot. Callers authorize first. */
+/** Inserts a snippet, shared unless agentId names the one agent that uses it, and refreshes the receptionist snapshot. Callers authorize first. */
 export async function createKnowledgeSnippetInTransaction(
   tx: DatabaseTransaction,
-  input: { businessId: string; title: string; content: string; tags?: string[]; priority?: number; active?: boolean },
+  input: { businessId: string; title: string; content: string; tags?: string[]; priority?: number; active?: boolean; agentId?: string | undefined },
 ): Promise<typeof knowledgeSnippets.$inferSelect> {
-  const [snippet] = await tx.insert(knowledgeSnippets).values({ businessId: input.businessId, title: input.title.trim(), content: input.content.trim(), tags: input.tags ?? [], priority: input.priority ?? 0, active: input.active ?? true }).returning();
+  const [snippet] = await tx.insert(knowledgeSnippets).values({ businessId: input.businessId, title: input.title.trim(), content: input.content.trim(), tags: input.tags ?? [], priority: input.priority ?? 0, active: input.active ?? true, agentId: input.agentId ?? null }).returning();
   if (!snippet) throw new Error("Knowledge snippet could not be created.");
   await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_snippet", aggregateId: snippet.id, dedupeKey: `knowledge-snippet:${snippet.id}:snapshot:${Date.now()}`, payload: { businessId: input.businessId, reason: "snippet_created" } });
   await enqueueKnowledgeDerivedRefresh(tx, { businessId: input.businessId, reason: "snippet_created" });
@@ -462,8 +500,15 @@ export async function indexCrawledWebsitePage(context: DomainContext, input: Ind
     const [source] = await tx.select().from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1).for("update");
     if (!source || source.status !== "processing" || source.revision !== input.sourceRevision) return { chunkCount: 0, indexed: false, documentId: input.documentId };
     const sourceUrl = normalizeWebsiteSourceUrl(input.sourceUrl, { keepQuery: true });
-    const [page] = await tx.insert(knowledgeDocuments).values({ businessId: input.businessId, sourceType: "website", title: input.title, sourceUrl, status: "processing" }).onConflictDoUpdate({ target: [knowledgeDocuments.businessId, knowledgeDocuments.sourceUrl], set: { title: input.title, status: "processing", error: null, updatedAt: new Date() } }).returning({ id: knowledgeDocuments.id });
+    // A page belongs to the website its crawl started from, and to that website's agent.
+    const websiteDocumentId = source.websiteDocumentId ?? source.id;
+    const [existingPage] = await tx.select({ id: knowledgeDocuments.id, agentId: knowledgeDocuments.agentId }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.sourceUrl, sourceUrl))).limit(1);
+    // A page another scope already holds stays theirs.
+    if (existingPage && existingPage.agentId !== source.agentId) return { chunkCount: 0, indexed: false, documentId: input.documentId };
+    const [page] = await tx.insert(knowledgeDocuments).values({ businessId: input.businessId, sourceType: "website", title: input.title, sourceUrl, status: "processing", agentId: source.agentId, websiteDocumentId }).onConflictDoUpdate({ target: [knowledgeDocuments.businessId, knowledgeDocuments.sourceUrl], set: { title: input.title, status: "processing", error: null, updatedAt: new Date() } }).returning({ id: knowledgeDocuments.id, websiteDocumentId: knowledgeDocuments.websiteDocumentId });
     if (!page) throw new Error("Website page could not be saved.");
+    // A page saved before its website was linked joins it now.
+    if (page.id !== source.id && page.id !== websiteDocumentId && !page.websiteDocumentId) await tx.update(knowledgeDocuments).set({ websiteDocumentId }).where(and(eq(knowledgeDocuments.id, page.id), eq(knowledgeDocuments.businessId, input.businessId)));
     return await indexDocumentTextInTransaction(tx, { ...input, documentId: page.id }, page.id === source.id);
   });
   if (result.indexed) await recordKnowledgeDocumentIndexed(context, { businessId: input.businessId, documentId: result.documentId });
@@ -490,12 +535,14 @@ async function markKnowledgeDocumentFailedInTransaction(
 
 export async function markKnowledgeDocumentFailed(
   context: DomainContext,
-  input: { businessId: string; documentId: string; error?: string; expectedRevision?: number },
+  input: { businessId: string; documentId: string; error?: string; expectedRevision?: number; websiteImport?: { url: string } },
 ): Promise<boolean> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const document = (await tx.select({ revision: knowledgeDocuments.revision, status: knowledgeDocuments.status }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1).for("update"))[0];
+    const document = (await tx.select({ revision: knowledgeDocuments.revision, status: knowledgeDocuments.status, agentId: knowledgeDocuments.agentId }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1).for("update"))[0];
     if (!document || document.status === "cancelled" || (input.expectedRevision !== undefined && document.revision !== input.expectedRevision)) return false;
     await markKnowledgeDocumentFailedInTransaction(tx, input, document.revision, input.error ?? "Knowledge indexing failed.");
+    // A website import the crawl gave up on: the bell keeps it until an import of the site works or the document goes.
+    if (input.websiteImport) await postBusinessNotificationInTransaction(tx, { businessId: input.businessId, kind: "website_import_failed", key: websiteImportFailedKey(input.documentId), params: { site: websiteImportSite(input.websiteImport.url) }, href: websiteImportHref(document.agentId) });
     return true;
   });
 }
@@ -524,14 +571,14 @@ export async function upsertWebsiteDocument(
 
 export async function searchKnowledge(
   context: DomainContext,
-  input: { userId?: string; businessId: string; query: string; limit?: number },
+  input: { userId?: string; businessId: string; query: string; limit?: number; agentId?: string | null },
 ): Promise<Array<{ chunkId: string; title: string; content: string }>> {
   return (await searchKnowledgeEvidence(context, input)).matches;
 }
 
 export async function searchKnowledgeEvidence(
   context: DomainContext,
-  input: { userId?: string; businessId: string; query: string; limit?: number; callId?: string; turnId?: string },
+  input: { userId?: string; businessId: string; query: string; limit?: number; callId?: string; turnId?: string; agentId?: string | null },
 ): Promise<{ matches: KnowledgePassage[]; mode: "hybrid" | "keyword"; outcome: "found" | "empty" | "unavailable"; failure?: "embedding_unavailable" | "search_unavailable"; durationMs: number }> {
   const startedAt = performance.now();
   const actor = { userId: input.userId, businessId: input.businessId, actorType: input.userId ? "operator" as const : "worker" as const };
@@ -542,8 +589,9 @@ export async function searchKnowledgeEvidence(
     d.source_url AS "sourceUrl", d.revision AS "sourceRevision", c.sequence`;
   const from = sql`FROM knowledge_chunks c JOIN knowledge_documents d ON d.id = c.document_id`;
   const select = sql`SELECT ${fields} ${from}`;
+  // The agent's own sources and the shared ones still on for it. Without an agent, the default agent's.
   const filters = sql`c.business_id = ${input.businessId} AND d.business_id = ${input.businessId}
-    AND d.active = true AND d.status = 'indexed'`;
+    AND d.status = 'indexed' AND ${documentInScope("d", input.businessId, knowledgeScopeFor(input.agentId))}`;
   const execute = (statement: ReturnType<typeof sql>) => withBusinessTransaction(context.db, actor, async tx => {
     await tx.execute(sql`SET LOCAL statement_timeout = '2000ms'`);
     return (await tx.execute<KnowledgePassage>(statement)).rows;
@@ -623,10 +671,16 @@ export async function loadLatestBusinessSnapshot(
   });
 }
 
+/** A rule as the snapshot lists it, with its channel when it's kept to one. */
+function ruleSummary(row: typeof agentRules.$inferSelect): AgentRuleSummary {
+  return { id: row.id, title: row.title, content: row.content, order: row.sortOrder, ...(row.channel ? { channel: row.channel } : {}) };
+}
+
 /**
  * The fields each agent sets for itself. A missing row gives today's defaults
- * for a business with no agent. Instructions stay undefined when the agent has
- * none, so the snapshot builder fills in the default text.
+ * for a business with no agent. The deprecated instruction columns stay
+ * unread: what an owner wrote for one channel is a rule kept to it, so the
+ * snapshot builder fills in the default text.
  */
 function snapshotAgentFields(agent: typeof agents.$inferSelect | undefined) {
   const staffFirstMode = normalizeStaffFirstMode(agent?.staffFirstMode);
@@ -634,9 +688,6 @@ function snapshotAgentFields(agent: typeof agents.$inferSelect | undefined) {
     voice: normalizeReceptionistVoice(agent?.voice),
     tone: agent?.tone ?? "professional",
     bookingPolicy: agent?.bookingPolicy ?? "Confirm availability before booking.",
-    ...(agent?.voiceInstructions ? { voiceInstructions: agent.voiceInstructions } : {}),
-    ...(agent?.smsInstructions ? { smsInstructions: agent.smsInstructions } : {}),
-    ...(agent?.chatInstructions ? { chatInstructions: agent.chatInstructions } : {}),
     appointmentChangePolicy: normalizeAppointmentChangePolicy(agent?.appointmentChangePolicy),
     bookingMode: normalizeBookingMode(agent?.bookingMode),
     transferPolicy: { mode: normalizeTransferMode(agent?.transferMode), ...(agent?.transferNumber ? { transferNumber: agent.transferNumber } : {}) },
@@ -653,7 +704,8 @@ function snapshotAgentFields(agent: typeof agents.$inferSelect | undefined) {
 }
 
 /**
- * One agent as the snapshot lists it, read from its row, for a call already
+ * One agent as the snapshot lists it, read from its rows with its own scoped
+ * knowledge (shared minus what it turned off, plus its own), for a call already
  * under way on an agent the snapshot no longer lists because it was archived.
  * Null when the business has no such agent.
  */
@@ -665,10 +717,32 @@ export async function loadSnapshotAgent(
     const [row] = await tx.select().from(agents).where(and(eq(agents.businessId, input.businessId), eq(agents.id, input.agentId))).limit(1);
     if (!row) return null;
     const rules = await tx.select().from(agentRules).where(and(eq(agentRules.businessId, input.businessId), eq(agentRules.agentId, input.agentId), eq(agentRules.active, true))).orderBy(asc(agentRules.sortOrder), asc(agentRules.createdAt), asc(agentRules.id));
-    const { voiceInstructions, smsInstructions, chatInstructions, ...fields } = snapshotAgentFields(row);
-    const instructions = agentInstructions(input.business, { tone: fields.tone, ...(voiceInstructions ? { voiceInstructions } : {}), ...(smsInstructions ? { smsInstructions } : {}), ...(chatInstructions ? { chatInstructions } : {}) });
-    return { id: row.id, name: row.name, isDefault: row.isDefault, greeting: row.greeting, ...fields, ...instructions, rules: snapshotRules(rules.map((rule) => ({ id: rule.id, title: rule.title, content: rule.content, order: rule.sortOrder }))), phoneNumber: null };
+    const fields = snapshotAgentFields(row);
+    const instructions = agentInstructions(input.business, { tone: fields.tone });
+    // Always its own knowledge: without it, snapshotForAgent would fall back to the default agent's, own FAQs included.
+    const knowledge = await snapshotKnowledge(tx, input.businessId, { agentId: row.id });
+    return { id: row.id, name: row.name, isDefault: row.isDefault, greeting: row.greeting, ...fields, ...instructions, rules: snapshotRules(rules.map(ruleSummary)), phoneNumber: null, ...knowledge };
   });
+}
+
+type SnapshotKnowledge = { knowledgeSnippets: KnowledgeSnippet[]; knowledgeDigest: string };
+
+/** The FAQs, text and document digest one scope answers from, as the snapshot stores them. */
+async function snapshotKnowledge(tx: DatabaseTransaction, businessId: string, scope: KnowledgeScope): Promise<SnapshotKnowledge> {
+  const snippets = await tx.select().from(knowledgeSnippets).where(and(eq(knowledgeSnippets.businessId, businessId), snippetInScope("knowledge_snippets", businessId, scope))).orderBy(desc(knowledgeSnippets.priority), desc(knowledgeSnippets.updatedAt), asc(knowledgeSnippets.id)).limit(MAX_KNOWLEDGE_SNIPPETS_PER_SNAPSHOT);
+  const documents = await tx.select({ title: knowledgeDocuments.title, sourceUrl: knowledgeDocuments.sourceUrl, tags: knowledgeDocuments.tags, revision: knowledgeDocuments.revision }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, businessId), eq(knowledgeDocuments.status, "indexed"), documentInScope("knowledge_documents", businessId, scope))).orderBy(desc(knowledgeDocuments.updatedAt), asc(knowledgeDocuments.id)).limit(40);
+  return {
+    knowledgeSnippets: snippets.map((row) => ({ id: row.id, title: row.title, content: row.content, tags: row.tags, priority: row.priority })),
+    knowledgeDigest: withinKnowledgeBudget(documents, 1600, row => JSON.stringify(row)).map(row => JSON.stringify(row)).join("\n"),
+  };
+}
+
+/** Whether any agent of the business has knowledge of its own or turned shared knowledge off. Without, every agent reads the same. */
+async function hasAgentKnowledge(tx: DatabaseTransaction, businessId: string): Promise<boolean> {
+  const result = await tx.execute<{ found: boolean }>(sql`SELECT EXISTS (SELECT 1 FROM knowledge_documents WHERE business_id = ${businessId} AND agent_id IS NOT NULL)
+    OR EXISTS (SELECT 1 FROM knowledge_snippets WHERE business_id = ${businessId} AND agent_id IS NOT NULL)
+    OR EXISTS (SELECT 1 FROM agent_knowledge_exclusions WHERE business_id = ${businessId}) AS found`);
+  return Boolean(result.rows[0]?.found);
 }
 
 export async function refreshBusinessSnapshot(
@@ -686,21 +760,30 @@ export async function refreshBusinessSnapshot(
     if (!business[0]) {
       throw new Error("Business not found.");
     }
-    const [hours, closureRows, serviceRows, ruleRows, snippets, documents, numbers, employeeRows, assignments] = await inOrder([
+    const [hours, closureRows, serviceRows, ruleRows, numbers, employeeRows, assignments, customized] = await inOrder([
       () => tx.select().from(businessHours).where(and(eq(businessHours.businessId, input.businessId), isNull(businessHours.staffId))).orderBy(asc(businessHours.dayOfWeek), asc(businessHours.openMinutes)),
       () => tx.select().from(closures).where(and(eq(closures.businessId, input.businessId), isNull(closures.staffId))).orderBy(asc(closures.startsAt)),
       () => tx.select().from(services).where(and(eq(services.businessId, input.businessId), eq(services.active, true))).orderBy(asc(services.name)),
       () => tx.select().from(agentRules).where(and(eq(agentRules.businessId, input.businessId), eq(agentRules.active, true))).orderBy(asc(agentRules.sortOrder), asc(agentRules.createdAt), asc(agentRules.id)),
-      () => tx.select().from(knowledgeSnippets).where(and(eq(knowledgeSnippets.businessId, input.businessId), eq(knowledgeSnippets.active, true))).orderBy(desc(knowledgeSnippets.priority), desc(knowledgeSnippets.updatedAt), asc(knowledgeSnippets.id)).limit(MAX_KNOWLEDGE_SNIPPETS_PER_SNAPSHOT),
-      () => tx.select({ title: knowledgeDocuments.title, sourceUrl: knowledgeDocuments.sourceUrl, tags: knowledgeDocuments.tags, revision: knowledgeDocuments.revision }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.active, true), eq(knowledgeDocuments.status, "indexed"))).orderBy(desc(knowledgeDocuments.updatedAt), asc(knowledgeDocuments.id)).limit(40),
       () => tx.select().from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"))).orderBy(desc(phoneNumbers.createdAt), asc(phoneNumbers.id)),
       () => listBookableEmployees(tx, input.businessId),
       () => tx.select({ staffId: staffServiceAssignments.staffId, serviceId: staffServiceAssignments.serviceId }).from(staffServiceAssignments).where(eq(staffServiceAssignments.businessId, input.businessId)),
+      () => hasAgentKnowledge(tx, input.businessId),
     ]);
     const schedules = await loadStaffSchedules(tx, { businessId: input.businessId, staffIds: employeeRows.map((row) => row.staffId), timezone: business[0].timezone });
     // After a downgrade, agents past the plan's limit keep their channels and the default agent answers them.
     const paused = pausedAgentIds(await loadEntitlement(tx, input.businessId), agentRows);
     const currentProfile = profile[0];
+    // The flat knowledge is the default agent's. Another agent carries its own only when it differs.
+    const defaultKnowledge = await snapshotKnowledge(tx, input.businessId, knowledgeScopeFor(currentProfile?.id));
+    const agentKnowledge = new Map<string, SnapshotKnowledge>();
+    if (customized) {
+      for (const row of agentRows) {
+        if (row.id === currentProfile?.id || paused.has(row.id)) continue;
+        const own = await snapshotKnowledge(tx, input.businessId, { agentId: row.id });
+        if (JSON.stringify(own) !== JSON.stringify(defaultKnowledge)) agentKnowledge.set(row.id, own);
+      }
+    }
     // The number an agent gives out and answers on, never another agent's. A number with no agent yet belongs to the default agent.
     const phoneNumberOf = (agentId: string | undefined) => numbers.find((number) => number.status === "active" && number.voiceEnabled && (number.agentId ?? currentProfile?.id) === agentId)?.e164;
     const phoneNumber = phoneNumberOf(currentProfile?.id);
@@ -710,7 +793,7 @@ export async function refreshBusinessSnapshot(
     const smsNumber = await resolveSmsSender(tx, input.businessId);
     const version = `${Date.now()}`;
     const defaultLocale = normalizeRuntimeLocale(business[0].defaultLocale);
-    const ruleSummary = (row: typeof ruleRows[number]) => ({ id: row.id, title: row.title, content: row.content, order: row.sortOrder });
+
     // A rule with no agent yet belongs to the default agent.
     const rulesOf = (agentId: string) => ruleRows.filter((row) => (row.agentId ?? currentProfile?.id) === agentId);
     const defaultRules = currentProfile ? rulesOf(currentProfile.id) : ruleRows;
@@ -731,7 +814,7 @@ export async function refreshBusinessSnapshot(
       ...snapshotAgentFields(currentProfile),
       // A sign-up placeholder says nothing about the business, so prompts get no summary until AI or a person writes one.
       summary: currentProfile && currentProfile.summarySource !== "placeholder" ? currentProfile.summary : "",
-      knowledgeDigest: withinKnowledgeBudget(documents, 1600, row => JSON.stringify(row)).map(row => JSON.stringify(row)).join("\n"),
+      knowledgeDigest: defaultKnowledge.knowledgeDigest,
       hours: hours.map((row) => ({ dayOfWeek: row.dayOfWeek, openMinutes: row.openMinutes, closeMinutes: row.closeMinutes })),
       closures: closureRows.map((row) => ({ startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString(), reason: row.reason })),
       services: serviceRows.map((row) => ({
@@ -741,14 +824,14 @@ export async function refreshBusinessSnapshot(
         ...(row.localizedNames ? { localizedNames: Object.fromEntries(runtimeLocales.flatMap((locale) => typeof row.localizedNames?.[locale] === "string" ? [[locale, row.localizedNames[locale]]] : [])) } : {}),
       })),
       rules: defaultRules.map(ruleSummary),
-      agents: agentRows.map((row) => ({ id: row.id, name: row.name, isDefault: row.isDefault, greeting: row.greeting, ...snapshotAgentFields(row), rules: rulesOf(row.id).map(ruleSummary), phoneNumber: phoneNumberOf(row.id) ?? null, ...(paused.has(row.id) ? { paused: true } : {}) })),
+      agents: agentRows.map((row) => ({ id: row.id, name: row.name, isDefault: row.isDefault, greeting: row.greeting, ...snapshotAgentFields(row), rules: rulesOf(row.id).map(ruleSummary), phoneNumber: phoneNumberOf(row.id) ?? null, ...(paused.has(row.id) ? { paused: true } : {}), ...agentKnowledge.get(row.id) })),
       employees: employeeRows.map((row) => {
         const assigned = new Set(assignments.filter((assignment) => assignment.staffId === row.staffId).map((assignment) => assignment.serviceId));
         const names = serviceRows.filter((service) => assigned.has(service.id)).map((service) => service.name);
         const { hours: ownHours, timeOff } = schedules.get(row.staffId)!;
         return { name: row.name, ...(names.length ? { services: names } : {}), ...(ownHours ? { hours: ownHours } : {}), ...(timeOff.length ? { timeOff } : {}) };
       }),
-      snippets: snippets.map((row) => ({ id: row.id, title: row.title, content: row.content, tags: row.tags, priority: row.priority })),
+      snippets: defaultKnowledge.knowledgeSnippets,
     });
     await tx.insert(businessContextSnapshots).values({ businessId: input.businessId, version, snapshot: builtSnapshot as unknown as Record<string, unknown> });
     // Readers only use the newest row. now() is this transaction's start, the
@@ -799,4 +882,33 @@ export class KnowledgeStorageLimitError extends Error {
     super(knowledgeStorageLimitMessage(limitBytes));
     this.name = "KnowledgeStorageLimitError";
   }
+}
+
+/** Where a website import's bell item opens: the agent's Specific knowledge for a source one agent owns, or Knowledge, the kind's page, for a shared one. */
+function websiteImportHref(agentId: string | null): string | null {
+  return agentId ? `/agents/${agentId}/knowledge` : null;
+}
+
+function websiteImportFailedKey(documentId: string): string {
+  return `website_import_failed:${documentId}`;
+}
+
+/** The site a website import read, as the bell names it: its host without www. */
+export function websiteImportSite(url: string): string {
+  try {
+    return new URL(url).host.replace(/^www\./, "");
+  } catch {
+    return url.slice(0, 120);
+  }
+}
+
+/**
+ * A dashboard website import finished: the bell says how many pages it read,
+ * and an earlier failure of the same document clears. Runs in the
+ * transaction that marks the import completed.
+ */
+export async function postWebsiteImportFinishedInTransaction(tx: DatabaseTransaction, input: { businessId: string; documentId: string; websiteIngestionJobId: string; revision: number; url: string; pages: number }): Promise<void> {
+  await resolveBusinessNotificationsInTransaction(tx, { businessId: input.businessId, keys: [websiteImportFailedKey(input.documentId)] });
+  const [document] = await tx.select({ agentId: knowledgeDocuments.agentId }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1);
+  await postBusinessNotificationInTransaction(tx, { businessId: input.businessId, kind: "website_import_finished", key: `website_import_finished:${input.websiteIngestionJobId}:${input.revision}`, params: { site: websiteImportSite(input.url), pages: input.pages }, href: websiteImportHref(document?.agentId ?? null) });
 }

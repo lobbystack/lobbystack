@@ -65,6 +65,8 @@ function makeTx(selectRows: Record<string, unknown>) {
   const tx = {
     select: vi.fn(() => fromChain(rowsFor)),
     insert: vi.fn(() => ({ values: () => Promise.resolve([{ id: "saved" }]) })),
+    // No agent has knowledge of its own, so every agent reads the flat knowledge.
+    execute: vi.fn(async () => ({ rows: [{ found: false }] })),
     delete: vi.fn((table: unknown) => ({ where: (condition: SQL) => { deleted.push({ table: tableName(table), where: new PgDialect().sqlToQuery(condition) }); return Promise.resolve(); } })),
   };
   return tx;
@@ -144,6 +146,7 @@ describe("refreshBusinessSnapshot write-through", () => {
       { id: "rule-default", title: "Default", content: "For the default agent", sortOrder: 0, agentId: defaultRow.id },
       { id: "rule-unassigned", title: "Unassigned", content: "No agent yet", sortOrder: 1, agentId: null },
       { id: "rule-second", title: "Second", content: "For the second agent", sortOrder: 2, agentId: secondRow.id },
+      { id: "rule-second-texts", title: "In texts", content: "Sign texts with the team's name", sortOrder: 3, agentId: secondRow.id, channel: "sms" },
     ];
 
     async function refreshed() {
@@ -156,13 +159,29 @@ describe("refreshBusinessSnapshot write-through", () => {
     it("lists each agent with what it sets for itself", async () => {
       const snapshot = await refreshed();
       expect(snapshot.agents?.map((agent) => agent.name)).toEqual(["Front desk", "After hours"]);
-      expect(snapshot.agents?.[1]).toMatchObject({ isDefault: false, greeting: "Closed", tone: "calm", voice: "marin", voiceInstructions: "After-hours voice", smsInstructions: "After-hours text", chatInstructions: "After-hours chat", transferPolicy: { mode: "never" }, staffFirstPolicy: { mode: "always", number: "+14165550001", ringSeconds: 20 } });
+      expect(snapshot.agents?.[1]).toMatchObject({ isDefault: false, greeting: "Closed", tone: "calm", voice: "marin", transferPolicy: { mode: "never" }, staffFirstPolicy: { mode: "always", number: "+14165550001", ringSeconds: 20 } });
+    });
+
+    it("leaves the deprecated instruction columns out: an agent's instructions are the default text with its tone", async () => {
+      const second = (await refreshed()).agents?.[1];
+      expect(second?.voiceInstructions).toContain("Speak in a calm tone.");
+      expect(JSON.stringify(second)).not.toContain("After-hours voice");
+      expect(JSON.stringify(second)).not.toContain("After-hours text");
+      expect(JSON.stringify(second)).not.toContain("After-hours chat");
+    });
+
+    it("keeps each rule's channel, and none on a rule for every channel", async () => {
+      const rules = (await refreshed()).agents?.[1]?.rules;
+      expect(rules).toEqual([
+        { id: "rule-second", title: "Second", content: "For the second agent", order: 2 },
+        { id: "rule-second-texts", title: "In texts", content: "Sign texts with the team's name", order: 3, channel: "sms" },
+      ]);
     });
 
     it("gives each agent its own rules, and the default agent any rule with no agent", async () => {
       const snapshot = await refreshed();
       expect(snapshot.agents?.[0]?.rules.map((rule) => rule.id)).toEqual(["rule-default", "rule-unassigned"]);
-      expect(snapshot.agents?.[1]?.rules.map((rule) => rule.id)).toEqual(["rule-second"]);
+      expect(snapshot.agents?.[1]?.rules.map((rule) => rule.id)).toEqual(["rule-second", "rule-second-texts"]);
     });
 
     it("keeps the default agent in the flat fields", async () => {
@@ -173,7 +192,7 @@ describe("refreshBusinessSnapshot write-through", () => {
       mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => callback(makeTx({ businesses: [businessRow], agent_rules: rules })));
       const cache = memoryCache();
       await refreshBusinessSnapshot({ db: {} as never, snapshotCache: cache }, { businessId });
-      expect((await cache.get(businessId))?.rules).toHaveLength(3);
+      expect((await cache.get(businessId))?.rules).toHaveLength(4);
       expect((await cache.get(businessId))?.agents).toEqual([]);
     });
   });

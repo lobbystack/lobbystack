@@ -13,10 +13,11 @@ import { requestJson } from "@/lib/request-json";
 
 import { PageSurface } from "./page-surface";
 import { SectionBlock } from "./section-block";
-import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
 import { Surface } from "./ui/surface";
+import { Status } from "@/components/ui/status";
+import { PACKAGE_SUBSCRIPTION_STATUS_VARIANTS } from "@/lib/status-variants";
 
 /** GET /api/package-billing. It names no price: only Stripe shows the business what it pays. */
 type PackageBillingPage =
@@ -28,13 +29,6 @@ type PackageBillingPage =
     canOpenPortal: boolean;
     canSubscribe: boolean;
   };
-
-const STATUS_BADGE: Record<PackageSubscriptionStatus, string | undefined> = {
-  awaiting_payment: "border-amber-200 bg-amber-100 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/20 dark:text-amber-200",
-  active: undefined,
-  past_due: "border-destructive/30 bg-destructive/10 text-destructive",
-  inactive: undefined,
-};
 
 /**
  * A partner's business's billing page, for its owners and admins. The
@@ -62,7 +56,7 @@ export function PackageBillingSurface() {
     if (searchParams?.get("checkout") !== "complete" || announced.current) return;
     announced.current = true;
     toast.success(t("subscription.paid"));
-    router.replace("/settings/subscription");
+    router.replace("/workspace/subscription");
     const again = window.setTimeout(() => void refetch(), 3_000);
     return () => window.clearTimeout(again);
   }, [refetch, router, searchParams, t]);
@@ -84,7 +78,7 @@ export function PackageBillingSurface() {
   if (billing.isLoading || !businessId) return <PageSurface title={title}><Surface className="flex flex-col gap-4 p-6"><Skeleton className="h-5 w-40" /><Skeleton className="h-10 w-full" /></Surface></PageSurface>;
   if (billing.isError || !billing.data) return <PageSurface title={title}><Surface className="flex flex-col items-start gap-4 p-6"><p role="alert">{t("subscription.loadFailed")}</p><Button onClick={() => void billing.refetch()} variant="outline">{t("billing.actions.retry")}</Button></Surface></PageSurface>;
   const data = billing.data;
-  if (data.billing === "outside") return <PageSurface title={title}><Surface className="px-6 py-5"><p className="text-sm leading-6 text-muted-foreground">{t("subscription.outside")}</p></Surface></PageSurface>;
+  if (data.billing === "outside") return <PageSurface title={title}><Surface className="px-6 py-5"><p className="type-body-muted">{t("subscription.outside")}</p></Surface></PageSurface>;
 
   const { offer } = data;
   const count = (value: number) => new Intl.NumberFormat(locale).format(value);
@@ -97,19 +91,19 @@ export function PackageBillingSurface() {
         <div className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xl font-medium leading-7 text-foreground">{offer.packageName}</span>
-              <Badge className={STATUS_BADGE[offer.status]} variant={offer.status === "active" ? "secondary" : "outline"}>{t(`subscription.badge.${offer.status}`)}</Badge>
+              <span className="type-section-title">{offer.packageName}</span>
+              <Status variant={PACKAGE_SUBSCRIPTION_STATUS_VARIANTS[offer.status]}>{t(`subscription.badge.${offer.status}`)}</Status>
             </div>
-            <p className="text-sm text-muted-foreground">{t("subscription.allowance", { minutes: t("subscription.minutes", { count: offer.allowance.voiceMinutes, amount: count(offer.allowance.voiceMinutes) }), chats: t("subscription.chats", { count: offer.allowance.chats, amount: count(offer.allowance.chats) }) })}</p>
+            <p className="type-body-muted">{t("subscription.allowance", { minutes: t("subscription.minutes", { count: offer.allowance.voiceMinutes, amount: count(offer.allowance.voiceMinutes) }), chats: t("subscription.chats", { count: offer.allowance.chats, amount: count(offer.allowance.chats) }) })}</p>
           </div>
-          <p className="text-sm leading-6">{status}</p>
+          <p className="type-body">{status}</p>
           {data.canOpenPortal || data.canSubscribe ? (
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               {data.canSubscribe ? <Button className="w-full sm:w-auto" disabled={pending !== null} loading={pending === "checkout"} loadingLabel={t("subscription.opening")} onClick={() => void open("checkout")} size="sm">{t("subscription.subscribe")}</Button> : null}
               {data.canOpenPortal ? <Button className="w-full sm:w-auto" disabled={pending !== null} loading={pending === "portal"} loadingLabel={t("subscription.opening")} onClick={() => void open("portal")} size="sm" variant="outline">{t("subscription.manage")}</Button> : null}
             </div>
           ) : null}
-          {data.canOpenPortal ? <p className="text-sm text-muted-foreground">{t("subscription.manageHint")}</p> : null}
+          {data.canOpenPortal ? <p className="type-body-muted">{t("subscription.manageHint")}</p> : null}
         </div>
       </Surface>
     </SectionBlock>

@@ -32,6 +32,8 @@ import { intlLocale } from "@/lib/locale";
 import { parsePriceInput, priceInputMinor, priceInputValue } from "@/lib/price-input";
 import { requestJson } from "@/lib/request-json";
 import { availableTimeZones, groupTimeZones, isTimeZoneRegion, type TimeZoneOption } from "@/lib/time-zones";
+import { Status } from "@/components/ui/status";
+import { INVITATION_STATUS_VARIANTS, PACKAGE_SUBSCRIPTION_STATUS_VARIANTS } from "@/lib/status-variants";
 
 /** What a business is sold, with its overage in the package's currency, which only owners and admins see. */
 type PackageBilling = { kind: "package"; packageId: string; packageName: string; status: PackageSubscriptionStatus; overage: PackageOverage };
@@ -66,15 +68,8 @@ const BILLING_ERRORS: Record<string, string> = {
   stripe_not_configured: "businesses.billing.errors.notConfigured",
 };
 
-const STATUS_BADGE: Record<PackageSubscriptionStatus, string | undefined> = {
-  awaiting_payment: "border-amber-200 bg-amber-100 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/20 dark:text-amber-200",
-  active: undefined,
-  past_due: "border-destructive/30 bg-destructive/10 text-destructive",
-  inactive: undefined,
-};
-
 // Matches SelectTrigger, as the time zone picker in the receptionist's settings does.
-const COMBOBOX_TRIGGER_CLASS = "flex h-9 w-full min-w-0 items-center justify-between gap-1.5 rounded-4xl border border-input bg-input/30 px-3 py-2 text-sm whitespace-nowrap transition-colors outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 enabled:hover:bg-input/50";
+const COMBOBOX_TRIGGER_CLASS = "flex h-9 w-full min-w-0 items-center justify-between gap-1.5 rounded-xl border border-input bg-input/30 px-3 py-2 type-body whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
 
 /** The time zone of the browser creating the business, which the partner changes when its client is elsewhere. */
 function browserTimeZone(): string {
@@ -118,7 +113,7 @@ function OverageSummary({ overage }: { overage: PackageOverage }) {
     : overage.capMinor === null
       ? t("businesses.overage.summary.noCap")
       : t("businesses.overage.summary.cap", { cap: formatPriceAmount(overage.capMinor, overage.currency, intlLocale(i18n.language)) });
-  return <p className="text-sm text-muted-foreground">{text}</p>;
+  return <p className="type-body-muted">{text}</p>;
 }
 
 /**
@@ -170,7 +165,7 @@ function OverageDialog({ partnerId, business, billing, onClose }: { partnerId: s
 
   return (
     <Dialog onOpenChange={(next) => { if (!next) onClose(); }} open>
-      <DialogContent>
+      <DialogContent size="sm">
         <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); if (!save.isPending) { setError(null); save.mutate(); } }}>
           <DialogHeader>
             <DialogTitle>{t("businesses.overage.title", { name: business.name })}</DialogTitle>
@@ -196,7 +191,7 @@ function OverageDialog({ partnerId, business, billing, onClose }: { partnerId: s
               </>
             ) : null}
           </FieldGroup>
-          {error ? <p className="text-sm text-destructive" role="alert">{error}</p> : null}
+          {error ? <p className="type-body text-destructive" role="alert">{error}</p> : null}
           <DialogFooter>
             <Button disabled={save.isPending} loading={save.isPending} loadingLabel={t("businesses.overage.saving")} type="submit">{t("businesses.overage.submit")}</Button>
           </DialogFooter>
@@ -338,7 +333,7 @@ export function PartnerBusinessesSurface() {
     <Dialog onOpenChange={(next) => { setOpen(next); if (!next) reset(); }} open={open}>
       <DialogTrigger render={<Button disabled={businesses.isLoading} size="sm" />}>{t("businesses.create.action")}</DialogTrigger>
       {/* With templates and packages the form runs taller than a laptop screen, so it scrolls inside the window. */}
-      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
+      <DialogContent size="sm" className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
         <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); setSubmitted(true); if (!create.isPending && name.trim() && ownerEmail.trim()) { setError(null); create.mutate(); } }}>
           <DialogHeader>
             <DialogTitle>{t("businesses.create.title")}</DialogTitle>
@@ -401,7 +396,7 @@ export function PartnerBusinessesSurface() {
               </Field>
             ) : null}
           </FieldGroup>
-          {error ? <p className="text-sm text-destructive" role="alert">{error}</p> : null}
+          {error ? <p className="type-body text-destructive" role="alert">{error}</p> : null}
           <DialogFooter>
             <DialogClose render={<Button disabled={create.isPending} type="button" variant="outline" />}>{t("businesses.create.cancel")}</DialogClose>
             <Button disabled={create.isPending} loading={create.isPending} loadingLabel={t("businesses.create.submitting")} type="submit">{t("businesses.create.submit")}</Button>
@@ -419,24 +414,24 @@ export function PartnerBusinessesSurface() {
       {businesses.isLoading ? (
         <Surface className="flex flex-col gap-4 p-6"><Skeleton className="h-5 w-40" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></Surface>
       ) : businesses.isError ? (
-        <Surface className="px-6 py-8"><p className="text-sm text-muted-foreground" role="alert">{t("businesses.loadFailed")}</p></Surface>
+        <Surface className="px-6 py-8"><p className="type-body-muted" role="alert">{t("businesses.loadFailed")}</p></Surface>
       ) : rows.length === 0 ? (
         <Surface className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-          <h2 className="text-base font-medium">{t("businesses.empty.title")}</h2>
-          {canCreate ? null : <p className="max-w-sm text-sm leading-6 text-muted-foreground">{t("businesses.empty.memberDescription")}</p>}
+          <h2 className="type-card-title">{t("businesses.empty.title")}</h2>
+          {canCreate ? null : <p className="max-w-sm type-body-muted">{t("businesses.empty.memberDescription")}</p>}
         </Surface>
       ) : (
         <Surface className="overflow-hidden p-0">
           <Table>
             <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("businesses.table.business")}</TableHead>
-                <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("businesses.table.owner")}</TableHead>
-                <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("businesses.table.access")}</TableHead>
-                {canCreate ? <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("businesses.table.billing")}</TableHead> : null}
-                <TableHead className="h-12 px-6 text-right text-sm font-medium text-foreground">{t("businesses.table.minutes")}</TableHead>
-                <TableHead className="h-12 px-6 text-right text-sm font-medium text-foreground">{t("businesses.table.chats")}</TableHead>
-                <TableHead className="h-12 px-6"><span className="sr-only">{t("businesses.table.actions")}</span></TableHead>
+              <TableRow>
+                <TableHead>{t("businesses.table.business")}</TableHead>
+                <TableHead>{t("businesses.table.owner")}</TableHead>
+                <TableHead>{t("businesses.table.access")}</TableHead>
+                {canCreate ? <TableHead>{t("businesses.table.billing")}</TableHead> : null}
+                <TableHead className="text-right">{t("businesses.table.minutes")}</TableHead>
+                <TableHead className="text-right">{t("businesses.table.chats")}</TableHead>
+                <TableHead><span className="sr-only">{t("businesses.table.actions")}</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -444,31 +439,31 @@ export function PartnerBusinessesSurface() {
                 const owner = business.owner;
                 const expired = owner?.status === "invited" && new Date(owner.expiresAt) <= new Date();
                 return (
-                  <TableRow className="hover:bg-transparent" key={business.businessId}>
-                    <TableCell className="px-6 py-5 whitespace-normal [overflow-wrap:anywhere]">
+                  <TableRow key={business.businessId}>
+                    <TableCell className="whitespace-normal [overflow-wrap:anywhere]">
                       <div className="flex flex-col gap-1">
-                        <p className="ph-mask text-sm font-medium">{business.name}</p>
-                        <p className="text-sm text-muted-foreground">{t("businesses.createdOn", { date: formatDate(business.createdAt) })}</p>
+                        <p className="ph-mask type-title">{business.name}</p>
+                        <p className="type-body-muted">{t("businesses.createdOn", { date: formatDate(business.createdAt) })}</p>
                       </div>
                     </TableCell>
-                    <TableCell className="px-6 py-5 whitespace-normal [overflow-wrap:anywhere]">
+                    <TableCell className="whitespace-normal [overflow-wrap:anywhere]">
                       {owner ? (
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="ph-mask text-sm">{owner.email}</p>
-                          {owner.status === "invited" ? <Badge className={expired ? undefined : "border-amber-200 bg-amber-100 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/20 dark:text-amber-200"} variant="outline">{t(expired ? "businesses.owner.expired" : "businesses.owner.invited")}</Badge> : null}
+                          <p className="ph-mask type-body">{owner.email}</p>
+                          {owner.status === "invited" ? <Status variant={INVITATION_STATUS_VARIANTS[expired ? "expired" : "invited"]}>{t(expired ? "businesses.owner.expired" : "businesses.owner.invited")}</Status> : null}
                         </div>
-                      ) : <p className="text-sm text-muted-foreground">{t("businesses.owner.none")}</p>}
+                      ) : <p className="type-body-muted">{t("businesses.owner.none")}</p>}
                     </TableCell>
-                    <TableCell className="px-6 py-5"><Badge variant="secondary">{t(`businesses.access.${business.accessLevel}`)}</Badge></TableCell>
+                    <TableCell><Badge variant="secondary">{t(`businesses.access.${business.accessLevel}`)}</Badge></TableCell>
                     {canCreate ? (
                       // Words wrap whole here: breaking anywhere split "yourself" across lines on a narrow table.
-                      <TableCell className="min-w-40 px-6 py-5 whitespace-normal break-words">
+                      <TableCell className="min-w-40 whitespace-normal break-words">
                         <div className="flex flex-col gap-1">
                           <div className="flex flex-wrap items-center gap-2">
                             {business.billing?.kind === "package" ? <>
-                              <p className="text-sm">{business.billing.packageName}</p>
-                              <Badge className={STATUS_BADGE[business.billing.status]} variant={business.billing.status === "active" ? "secondary" : "outline"}>{t(`businesses.billing.status.${business.billing.status}`)}</Badge>
-                            </> : <p className="text-sm text-muted-foreground">{t("businesses.billing.outside")}</p>}
+                              <p className="type-body">{business.billing.packageName}</p>
+                              <Status variant={PACKAGE_SUBSCRIPTION_STATUS_VARIANTS[business.billing.status]}>{t(`businesses.billing.status.${business.billing.status}`)}</Status>
+                            </> : <p className="type-body-muted">{t("businesses.billing.outside")}</p>}
                             {sellsPackages ? <Button aria-label={t("businesses.billing.changeFor", { name: business.name })} onClick={() => { setChanging(business); setNewBilling(billingValue(business)); setBillingError(null); }} size="sm" variant="ghost">{t("businesses.billing.change")}</Button> : null}
                           </div>
                           {business.billing?.kind === "package" ? (
@@ -480,9 +475,9 @@ export function PartnerBusinessesSurface() {
                         </div>
                       </TableCell>
                     ) : null}
-                    <TableCell className="px-6 py-5 text-right text-sm tabular-nums">{formatMinutes(business.usage.voiceSeconds)}</TableCell>
-                    <TableCell className="px-6 py-5 text-right text-sm tabular-nums">{formatCount(business.usage.chats)}</TableCell>
-                    <TableCell className="px-6 py-5">
+                    <TableCell className="text-right type-body tabular-nums">{formatMinutes(business.usage.voiceSeconds)}</TableCell>
+                    <TableCell className="text-right type-body tabular-nums">{formatCount(business.usage.chats)}</TableCell>
+                    <TableCell>
                       <div className="flex items-center justify-end gap-2">
                         <Button
                           aria-label={t("businesses.open.label", { name: business.name })}
@@ -532,7 +527,7 @@ export function PartnerBusinessesSurface() {
       ) : null}
       {overageFor ? <OverageDialog billing={overageFor.billing} business={overageFor.business} onClose={() => setOverageFor(null)} partnerId={partner.partnerId} /> : null}
       <Dialog onOpenChange={(next) => { if (!next) setChanging(null); }} open={changing !== null}>
-        <DialogContent>
+        <DialogContent size="sm">
           <form className="flex flex-col gap-6" onSubmit={(event) => { event.preventDefault(); if (changing && !changeBilling.isPending) { setBillingError(null); changeBilling.mutate(changing); } }}>
             <DialogHeader>
               <DialogTitle>{t("businesses.billing.title", { name: changing?.name ?? "" })}</DialogTitle>
@@ -541,7 +536,7 @@ export function PartnerBusinessesSurface() {
               <FieldLabel htmlFor="partner-business-change-billing">{t("businesses.create.billingLabel")}</FieldLabel>
               <BillingSelect current={changing?.billing ?? null} disabled={changeBilling.isPending} id="partner-business-change-billing" onChange={setNewBilling} packages={sellable} value={newBilling} />
             </Field>
-            {billingError ? <p className="text-sm text-destructive" role="alert">{billingError}</p> : null}
+            {billingError ? <p className="type-body text-destructive" role="alert">{billingError}</p> : null}
             <DialogFooter>
               <Button disabled={changeBilling.isPending || (changing !== null && newBilling === billingValue(changing))} loading={changeBilling.isPending} loadingLabel={t("businesses.billing.saving")} type="submit">{t("businesses.billing.submit")}</Button>
             </DialogFooter>

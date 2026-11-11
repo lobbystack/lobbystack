@@ -39,8 +39,11 @@ const Toaster = ({ ...props }: ToasterProps) => {
         } as React.CSSProperties
       }
       toastOptions={{
+        // Important, so the text styles win over Sonner's own [data-sonner-toast] rules.
         classNames: {
-          toast: "cn-toast",
+          toast: "cn-toast type-body!",
+          title: "type-title!",
+          description: "type-body-muted!",
         },
       }}
       {...props}

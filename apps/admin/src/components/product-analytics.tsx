@@ -27,13 +27,16 @@ export function isSensitiveAnalyticsRoute(pathname: string): boolean {
 
 const PAGE_EVENTS: ReadonlyArray<readonly [RegExp, TelemetryEventName]> = [
   [/^\/$/, "web.page.home_viewed"],
-  [/^\/calls$/, "web.page.calls_viewed"],
-  [/^\/calls\/[^/]+$/, "web.page.call_detail_viewed"],
-  [/^\/messages(?:\/|$)/, "web.page.messages_viewed"],
+  [/^\/inbox(?:\/|$)/, "web.page.inbox_viewed"],
   [/^\/contacts(?:\/|$)/, "web.page.contacts_viewed"],
   [/^\/analytics(?:\/|$)/, "web.page.analytics_viewed"],
-  [/^\/agent(?:\/|$)/, "web.page.agent_viewed"],
-  [/^\/settings(?:\/|$)/, "web.page.settings_viewed"],
+  [/^\/agents$/, "web.page.agents_viewed"],
+  // Each of an agent's pages, under /agents/[agentId].
+  [/^\/agents\/[^/]+/, "web.page.agent_viewed"],
+  [/^\/workspace(?:\/|$)/, "web.page.workspace_viewed"],
+  // Business's pages lived under /workspace, so they keep its event.
+  [/^\/business(?:\/|$)/, "web.page.workspace_viewed"],
+  [/^\/account(?:\/|$)/, "web.page.account_viewed"],
 ];
 
 export function resolvePageEvent(pathname: string): TelemetryEventName | undefined {

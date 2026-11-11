@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ insert: vi.fn(), values: vi.fn(), select: vi.fn(), update: vi.fn() }));
 
+const domain = vi.hoisted(() => ({ requireActiveAgentInTransaction: vi.fn() }));
 vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
+vi.mock("@lobbystack/domain", async (original) => ({ ...await original<typeof import("@lobbystack/domain")>(), ...domain }));
 
 import { fakeOperator, resetFakeOperator } from "@/lib/operator-request.fake";
 import { GET, PATCH, POST } from "./route";
@@ -53,6 +55,27 @@ describe("widget key issuance gate", () => {
     expect(mocks.values).toHaveBeenCalledWith(expect.objectContaining({ keyValue: body.key.key }));
   });
 
+  it("issues a key for the agent named, after checking the business has it", async () => {
+    vi.stubEnv("WIDGET_KEY_ISSUANCE_ENABLED", "true");
+    const agentId = "00000000-0000-4000-8000-0000000000aa";
+    domain.requireActiveAgentInTransaction.mockResolvedValue({ id: agentId });
+    mocks.values.mockReturnValue({ returning: async () => [{ id: "00000000-0000-4000-8000-000000000001", agentId, status: "active", label: null, allowedOrigins: [], config: {}, lastUsedAt: null, createdAt: new Date("2026-01-01T00:00:00.000Z") }] });
+    const response = await POST(request({ allowedOrigins: [], agentId }));
+    expect(response.status).toBe(200);
+    expect(domain.requireActiveAgentInTransaction).toHaveBeenCalledWith(expect.anything(), "business", agentId);
+    expect(mocks.values).toHaveBeenCalledWith(expect.objectContaining({ agentId }));
+    expect(await response.json()).toMatchObject({ record: { agentId } });
+  });
+
+  it("leaves the agent to the default without one, and refuses one that isn't a UUID", async () => {
+    vi.stubEnv("WIDGET_KEY_ISSUANCE_ENABLED", "true");
+    expect((await POST(request({ allowedOrigins: [] }))).status).toBe(200);
+    expect(mocks.values).toHaveBeenCalledWith(expect.not.objectContaining({ agentId: expect.anything() }));
+    expect(domain.requireActiveAgentInTransaction).not.toHaveBeenCalled();
+    expect((await POST(request({ allowedOrigins: [], agentId: "evening" }))).status).toBe(400);
+    expect(mocks.insert).toHaveBeenCalledTimes(1);
+  });
+
   it("refuses an origin without https:// instead of saving one no browser sends", async () => {
     vi.stubEnv("WIDGET_KEY_ISSUANCE_ENABLED", "true");
     const response = await POST(request({ allowedOrigins: ["https://business.test", "business.test"] }));
@@ -67,13 +90,15 @@ describe("widget key listing", () => {
     vi.stubEnv("WIDGET_KEY_ISSUANCE_ENABLED", "true");
     const row = { status: "active", label: null, allowedOrigins: [], config: {}, lastUsedAt: null, createdAt: new Date("2026-01-01T00:00:00.000Z") };
     mocks.select.mockReturnValue({ from: () => ({ where: () => ({ orderBy: async () => [
-      { ...row, id: "00000000-0000-4000-8000-000000000001", keyValue: "wk_live_one" },
+      { ...row, id: "00000000-0000-4000-8000-000000000001", keyValue: "wk_live_one", agentId: "00000000-0000-4000-8000-0000000000aa" },
       { ...row, id: "00000000-0000-4000-8000-000000000002", keyValue: "wk_live_two", status: "revoked" },
       { ...row, id: "00000000-0000-4000-8000-000000000003", keyValue: null },
     ] }) }) });
     const response = await GET(new Request("https://admin.test/api/widget-keys"));
     const { keys, issuanceEnabled } = await response.json() as { keys: Array<{ key: string | null }>; issuanceEnabled: boolean };
     expect(keys.map((key) => key.key)).toEqual(["wk_live_one", null, null]);
+    // Each key names the agent it answers as.
+    expect(keys[0]).toMatchObject({ agentId: "00000000-0000-4000-8000-0000000000aa" });
     // The widget page reads this instead of billing, which a partner's business doesn't have.
     expect(issuanceEnabled).toBe(true);
     vi.unstubAllEnvs();

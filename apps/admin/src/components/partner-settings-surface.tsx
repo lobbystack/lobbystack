@@ -55,7 +55,7 @@ export function PartnerSettingsSurface() {
     <div className="flex flex-col gap-6">
       <PageHeader title={t("settings.title")} />
       {settings.isError ? (
-        <p className="text-sm text-muted-foreground" role="alert">{t("settings.loadFailed")}</p>
+        <p className="type-body-muted" role="alert">{t("settings.loadFailed")}</p>
       ) : (
         <Surface className="flex flex-col">
           <Item className="rounded-none border-0" variant="default">
@@ -73,7 +73,7 @@ export function PartnerSettingsSurface() {
           </Item>
         </Surface>
       )}
-      {canEdit ? null : <p className="text-sm text-muted-foreground">{t("settings.membersCantEdit")}</p>}
+      {canEdit ? null : <p className="type-body-muted">{t("settings.membersCantEdit")}</p>}
     </div>
   );
 }

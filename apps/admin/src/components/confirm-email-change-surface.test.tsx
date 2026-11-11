@@ -17,7 +17,7 @@ it.each([true, false])("renders original inline confirmation state for success=%
   await screen.findByText(success ? "confirmEmailChange.success" : "confirmEmailChange.invalidLink");
   expect(button.hasAttribute("disabled")).toBe(success);
   // Settings opens on the first tab the business allows, since a partner's business has no Usage tab.
-  expect(screen.getByRole("link", { name: "confirmEmailChange.backToSettings" }).getAttribute("href")).toBe("/settings");
+  expect(screen.getByRole("link", { name: "confirmEmailChange.backToSettings" }).getAttribute("href")).toBe("/account");
   expect(fetcher.mock.calls.some(([url]) => url === "/api/auth/verify-email?token=fixture")).toBe(true);
 });
 

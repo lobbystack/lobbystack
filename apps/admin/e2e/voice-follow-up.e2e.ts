@@ -6,7 +6,7 @@ import callCopy from "../public/locales/fr/calls.json" with { type: "json" };
 import navCopy from "../public/locales/fr/nav.json" with { type: "json" };
 import dashboardCopy from "../public/locales/fr/dashboard.json" with { type: "json" };
 
-test("voice follow-up opens its call and completing it removes every duplicate from the dashboard", async ({ browser, baseURL }) => {
+test("voice follow-up opens its call in the Inbox and completing it removes every duplicate from the dashboard", async ({ browser, baseURL }) => {
   const state = process.env.PARITY_PORT_OPERATOR_STORAGE_STATE_FR; const userId = process.env.PARITY_OPERATOR_USER_ID;
   test.skip(!state || !userId, "Requires a disposable authenticated operator fixture.");
   const worker = createDatabaseClient("lobbystack_worker"), auth = createDatabaseClient("lobbystack_auth");
@@ -26,10 +26,10 @@ test("voice follow-up opens its call and completing it removes every duplicate f
     const page = await context.newPage(); await page.goto(`${baseURL}/`);
     const followUp = page.getByRole("link", { name: /Please call back.*Alex/ });
     await expect(followUp).toHaveCount(1);
-    await expect(followUp).toHaveAttribute("href", `/calls/${callId}`);
+    await expect(followUp).toHaveAttribute("href", `/inbox?call=${callId}`);
     await followUp.click();
-    await expect(page).toHaveURL(new RegExp(`/calls/${callId}$`));
-    await page.getByRole("tab", { name: callCopy.detail.tabs.details, exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/inbox\\?call=${callId}$`));
+    await expect(page.getByRole("tab", { name: callCopy.detail.tabs.details, exact: true })).toHaveAttribute("aria-selected", "true");
     await page.getByRole("button", { name: callCopy.detail.details.markDone, exact: true }).click();
     await expect(page.getByText(callCopy.detail.details.noFollowUp, { exact: true })).toBeVisible();
     const rows = await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, tx => tx.select({ status: inboxItems.status }).from(inboxItems).where(eq(inboxItems.relatedCallId, callId)));

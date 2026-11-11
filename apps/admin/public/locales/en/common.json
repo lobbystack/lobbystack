@@ -1,6 +1,13 @@
 {
-  "accessibility": { "close": "Close", "toggleSidebar": "Toggle sidebar", "skipToContent": "Skip to main content", "clearSearch": "Clear search" },
-  "errors": { "unexpected": "Something went wrong. Please try again." },
+  "accessibility": {
+    "close": "Close",
+    "toggleSidebar": "Toggle sidebar",
+    "skipToContent": "Skip to main content",
+    "clearSearch": "Clear search"
+  },
+  "errors": {
+    "unexpected": "Something went wrong. Please try again."
+  },
   "loading": {
     "title": "Loading...",
     "retry": "Retry loading",
@@ -45,10 +52,10 @@
     "sms": "SMS"
   },
   "channels": {
-    "phoneCall": "Phone call",
+    "phoneCall": "Phone",
     "webCall": "Web call",
     "sms": "SMS",
-    "webChat": "Website chat",
+    "webChat": "Website",
     "dashboard": "Dashboard",
     "api": "API",
     "instagram": "Instagram"
@@ -93,13 +100,13 @@
     }
   },
   "numberTrial": {
-    "daysLeft_one": "{{number}} is yours for {{count}} more day. Choose a plan to keep it.",
-    "daysLeft_other": "{{number}} is yours for {{count}} more days. Choose a plan to keep it.",
     "outOfMinutes": "You're out of minutes. Calls now go to {{forwardTo}}.",
     "stillAvailable": "{{number}} is still available. Subscribe now to get it back.",
-    "keepNumber": "Keep my number",
     "getReceptionistBack": "Get my agent back",
-    "getNumberBack": "Get my number back"
+    "getNumberBack": "Get my number back",
+    "chip_one": "Free trial · {{count}}d left",
+    "chip_other": "Free trial · {{count}}d left",
+    "viewPlans": "View plans"
   },
   "testWindow": {
     "orCall": "Or call",
@@ -150,17 +157,21 @@
   },
   "appointments": {
     "title": "Appointments",
-    "searchPlaceholder": "Search appointments...",
     "details": {
       "employee": "Employee",
       "duration": "Duration",
       "phone": "Phone",
       "email": "Email",
-      "channel": "Booked via"
+      "channel": "Booked via",
+      "saveNotes": "Save notes",
+      "savingNotes": "Saving…",
+      "notesSaved": "Notes saved.",
+      "notesFailed": "Couldn't save the notes."
     },
     "views": {
       "list": "List",
-      "calendar": "Calendar"
+      "calendar": "Calendar",
+      "label": "View"
     },
     "when": {
       "label": "Show",
@@ -176,13 +187,64 @@
       "previous": "Previous",
       "next": "Next",
       "today": "Today",
+      "label": "Range",
+      "day": "Day",
       "week": "Week",
       "month": "Month",
       "count_one": "{{count}} appointment",
       "count_other": "{{count}} appointments",
       "more": "+{{count}} more",
-      "dayEmpty": "No appointments on this day.",
-      "with": "with {{name}}"
+      "allDay": "All day",
+      "newAt": "New appointment at {{time}}",
+      "block": "{{name}}, {{service}}, {{time}}",
+      "blockCancelled": "{{name}}, {{service}}, {{time}}, cancelled"
+    },
+    "timeOff": {
+      "action": "Time off",
+      "title": "Add time off",
+      "editTitle": "Edit time off",
+      "type": "Type",
+      "business": "Whole business",
+      "employee": "One employee",
+      "employeeLabelField": "Employee",
+      "employeePlaceholder": "Choose an employee",
+      "noEmployees": "No employees yet.",
+      "employeeRequired": "Choose an employee.",
+      "name": "Name",
+      "namePlaceholder": "e.g. Christmas Day, Half day Friday",
+      "nameRequired": "Enter a name.",
+      "hours": "Hours",
+      "allDay": "Closed all day",
+      "partDay": "Part of the day",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "startTime": "Start time",
+      "endTime": "End time",
+      "endBeforeStart": "Pick an end after the start.",
+      "datesRequired": "Pick a start and end date.",
+      "reason": "Reason (optional)",
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "keep": "Keep",
+      "deleteTitle": "Delete time off?",
+      "deleteDescription": "{{name}} comes off the calendar, and those times open for booking.",
+      "saved": "Time off saved.",
+      "deleted": "Time off deleted.",
+      "failed": "Couldn't save the time off.",
+      "overlap": "This overlaps other time off.",
+      "invalid": "Check the dates. Time off can't be over already or end more than two years out.",
+      "label": "Closed: {{name}}, {{time}}",
+      "employeeLabel": "{{employee}} off: {{name}}, {{time}}",
+      "employeeTitle": "{{employee}}: {{name}}",
+      "picker": {
+        "hours": "Hours",
+        "minutes": "Minutes",
+        "period": "AM or PM",
+        "hoursTitle": "HH",
+        "minutesTitle": "MM"
+      }
     },
     "chooseWorkspace": "Choose a workspace to view appointments.",
     "time": "Time",
@@ -199,17 +261,19 @@
       "cancelled": "Cancelled",
       "completed": "Completed",
       "no_show": "No-show",
-      "pending": "Pending"
+      "pending": "Pending",
+      "canceled": "Cancelled"
     },
     "calendarStates": {
       "not_required": "Not required",
-      "pending": "Pending",
+      "pending": "Syncing",
       "synced": "Synced",
-      "failed": "Failed",
-      "error": "Error",
+      "failed": "Sync failed",
+      "error": "Sync failed",
       "cancelled": "Cancelled"
     },
     "actions": "Actions",
+    "rowActions": "Actions for {{time}}",
     "cancel": {
       "action": "Cancel",
       "actionLabel": "Cancel appointment: {{time}}",
@@ -243,15 +307,57 @@
       "title": "Reschedule appointment",
       "description": "{{appointment}}",
       "requested": "Requested: {{time}}",
-      "date": "Day",
-      "times": "Open times",
-      "noTimes": "No open times on this day.",
-      "timesFailed": "We couldn't load open times. Try again.",
       "confirm": "Move appointment",
       "keep": "Keep current time",
       "done": "Appointment moved",
       "failed": "We couldn't move the appointment. Try again.",
       "taken": "That time is no longer open. Pick another."
+    },
+    "openings": {
+      "date": "Day",
+      "times": "Open times",
+      "noTimes": "No open times on this day.",
+      "timesFailed": "We couldn't load open times. Try again.",
+      "chooseService": "Choose a service first."
+    },
+    "create": {
+      "action": "New appointment",
+      "title": "New appointment",
+      "contact": "Contact",
+      "contactSearch": "Search by name or phone",
+      "noContacts": "No contacts with a phone number found.",
+      "contactsFailed": "We couldn't load contacts. Try again.",
+      "contactRequired": "Choose a contact.",
+      "newContact": "New contact",
+      "chooseContact": "Choose a contact",
+      "name": "Name",
+      "nameRequired": "Enter a name.",
+      "phone": "Phone",
+      "phoneCountry": "Phone country",
+      "phoneRequired": "Enter a phone number.",
+      "phoneInvalid": "Enter a full phone number.",
+      "service": "Service",
+      "servicePlaceholder": "Choose a service",
+      "serviceRequired": "Choose a service.",
+      "noServices": "Add a service first.",
+      "servicesFailed": "We couldn't load services. Try again.",
+      "staff": "Employee",
+      "anyone": "Anyone available",
+      "timeRequired": "Pick a time.",
+      "cancel": "Cancel",
+      "confirm": "Book appointment",
+      "booking": "Booking...",
+      "done": "Appointment booked",
+      "failed": "We couldn't book the appointment. Try again.",
+      "taken": "That time is no longer open. Pick another.",
+      "duration": "Duration (minutes)",
+      "durationInvalid": "Enter {{min}} to {{max}} minutes.",
+      "notes": "Notes",
+      "notesHint": "Visible to your agent",
+      "internalNotes": "Internal notes",
+      "internalNotesHint": "Staff only",
+      "notOpen": "This time isn't open. Pick another.",
+      "timeOff": "This time is unavailable: {{name}}."
     }
   },
   "abandonIntent": {
@@ -279,6 +385,6 @@
     "doneHint_other": "{{count}} pages are ready for questions.",
     "failedTitle": "We couldn't read {{host}}",
     "failedHint": "Add your business details by hand, or try the import again from your dashboard.",
-    "inlineRunning": "Reading {{host}}. Pages read so far: {{count}}."
+    "inlineRunning": "Reading {{host}}. Pages read so far: {{count}}"
   }
 }

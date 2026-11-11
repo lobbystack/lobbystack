@@ -18,7 +18,7 @@ beforeEach(() => {
   telemetryRef.current = createRecordedBrowserTelemetry();
 });
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.useRealTimers(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
-function setup(monthlyOnly = false, refusal?: string, checkoutError = "Checkout failed") {
+function setup(monthlyOnly = false, refusal?: string, checkoutError = "Checkout failed", variant: "trial" | "paid" = "trial") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true }] });
   client.setQueryData(["billing", "business"], { checkoutAvailable: true, availableCheckoutPlans: ["pro"], availableCheckoutIntervals: { starter: [], pro: monthlyOnly ? ["monthly"] : ["monthly", "annual"] } });
@@ -29,19 +29,28 @@ function setup(monthlyOnly = false, refusal?: string, checkoutError = "Checkout 
     throw new Error(`Unexpected request ${url}`);
   });
   vi.stubGlobal("fetch", fetchMock);
-  render(<StrictMode><QueryClientProvider client={client}><OnboardingPlanSurface /></QueryClientProvider></StrictMode>);
+  render(<StrictMode><QueryClientProvider client={client}><OnboardingPlanSurface variant={variant} /></QueryClientProvider></StrictMode>);
   return fetchMock;
 }
+// Starter, then Pro: both subscribe.
+const starter = () => screen.getAllByRole("button", { name: "plan.subscribe" })[0]!;
+const pro = () => screen.getAllByRole("button", { name: "plan.subscribe" })[1]!;
 describe("original onboarding plan behavior with asynchronous checkout", () => {
   it("explains a checkout refused because another one is open", async () => {
     setup(false, "checkout_in_progress");
-    await userEvent.click(screen.getByRole("button", { name: "Get Pro" }));
+    await userEvent.click(pro());
     expect(await screen.findByText("settings:billing.checkoutErrors.inProgress")).toBeTruthy();
     expect(route.router.push).not.toHaveBeenCalled();
   });
-  it("moves a workspace that already pays on to its number instead of a second checkout", async () => {
+  it("moves a workspace that already pays on from the trial plans to Home instead of a second checkout", async () => {
     const fetchMock = setup(false, "subscription_active");
-    await userEvent.click(screen.getByRole("button", { name: "Get Pro" }));
+    await userEvent.click(pro());
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/onboarding/stage?businessId=business", expect.objectContaining({ body: JSON.stringify({ to: "complete" }) })));
+    await waitFor(() => expect(route.router.push).toHaveBeenCalledWith("/"));
+  });
+  it("moves a workspace that already pays on from the number step's plans to its number", async () => {
+    const fetchMock = setup(false, "subscription_active", undefined, "paid");
+    await userEvent.click(pro());
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/onboarding/stage?businessId=business", expect.objectContaining({ body: JSON.stringify({ to: "phone_number" }) })));
     await waitFor(() => expect(route.router.push).toHaveBeenCalledWith("/onboarding/number"));
     expect(screen.queryByText("settings:billing.checkoutErrors.subscriptionActive")).toBeNull();
@@ -49,7 +58,7 @@ describe("original onboarding plan behavior with asynchronous checkout", () => {
   it.each(["annual", "monthly"])("starts Pro checkout with the selected %s interval and allows retry after provider failure", async interval => {
     const fetchMock = setup();
     if (interval === "monthly") await userEvent.click(screen.getByRole("tab", { name: "plan.billingInterval.monthly" }));
-    const button = screen.getByRole("button", { name: "Get Pro" });
+    const button = pro();
     await userEvent.click(button);
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/billing/checkout", expect.objectContaining({ body: JSON.stringify({ businessId: "business", target: "pro", billingInterval: interval }) })));
     telemetryRef.current!.expectEvent("web.onboarding.plan_selected", { businessId: "business", plan: "pro" });
@@ -59,12 +68,12 @@ describe("original onboarding plan behavior with asynchronous checkout", () => {
   });
   it("says payments are unavailable when a checkout waited out the provider outage", async () => {
     setup(false, undefined, "provider_unavailable:503");
-    await userEvent.click(screen.getByRole("button", { name: "Get Pro" }));
+    await userEvent.click(pro());
     expect(await screen.findByText("settings:billing.toast.paymentsUnavailable")).toBeTruthy();
   });
   it("hides a provider's machine reason behind the generic message", async () => {
     setup(false, undefined, "provider_rejected:422");
-    await userEvent.click(screen.getByRole("button", { name: "Get Pro" }));
+    await userEvent.click(pro());
     expect(await screen.findByText("plan.continueFailed")).toBeTruthy();
   });
   it("lets them pick again when the back button restores the page from cache", async () => {
@@ -74,7 +83,7 @@ describe("original onboarding plan behavior with asynchronous checkout", () => {
     vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => init?.method === "POST"
       ? Response.json({ requestId: "new-checkout" })
       : Response.json({ status: "ready", checkoutUrl: "https://checkout.example/session", error: null })));
-    const button = screen.getByRole("button", { name: "Get Pro" });
+    const button = pro();
     await userEvent.click(button);
     await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.example/session"));
     expect(button.hasAttribute("disabled")).toBe(true);
@@ -82,7 +91,7 @@ describe("original onboarding plan behavior with asynchronous checkout", () => {
     Object.defineProperty(restored, "persisted", { value: true });
     act(() => { window.dispatchEvent(restored); });
     await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
-    expect(screen.getByRole("button", { name: "Start free" }).hasAttribute("disabled")).toBe(false);
+    expect(screen.getByRole("button", { name: "plan.trial.start" }).hasAttribute("disabled")).toBe(false);
     expect(assign).toHaveBeenCalledTimes(1);
   });
   it("stops polling after a minute, says payments are unavailable, and returns to the plans", async () => {
@@ -93,7 +102,7 @@ describe("original onboarding plan behavior with asynchronous checkout", () => {
       : Response.json({ status: "pending", checkoutUrl: null, error: null }));
     vi.stubGlobal("fetch", fetchMock);
 
-    fireEvent.click(screen.getByRole("button", { name: "Get Pro" }));
+    fireEvent.click(pro());
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(fetchMock.mock.calls.filter(([, init]) => init?.method === "POST")).toHaveLength(1);
 
@@ -102,27 +111,45 @@ describe("original onboarding plan behavior with asynchronous checkout", () => {
 
     await act(async () => { await vi.advanceTimersByTimeAsync(50_000); });
     expect(screen.getByRole("alert").textContent).toContain("settings:billing.toast.paymentsUnavailable");
-    expect(screen.queryByRole("button", { name: "Get Pro" })).toBeNull();
+    expect(screen.queryAllByRole("button", { name: "plan.subscribe" })[1] ?? null).toBeNull();
     const polled = fetchMock.mock.calls.length;
 
     await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
     expect(fetchMock.mock.calls.length).toBe(polled);
 
     fireEvent.click(screen.getByRole("button", { name: "plan.backToPlans" }));
-    expect(screen.getByRole("button", { name: "Get Pro" })).toBeTruthy();
+    expect(pro()).toBeTruthy();
     expect(fetchMock.mock.calls.length).toBe(polled);
     const post = fetchMock.mock.calls.find(([, init]) => init?.method === "POST")!;
     expect((post[1] as RequestInit).signal).toBeUndefined();
   });
-  it("records plan_selected when the free plan is chosen", async () => {
-    setup();
-    await userEvent.click(screen.getByRole("button", { name: "Start free" }));
+  it("goes on with the trial from its card, which needs no checkout", async () => {
+    const fetchMock = setup();
+    expect(screen.getByText("plan.trial.description")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "plan.trial.start" }));
     telemetryRef.current!.expectEvent("web.onboarding.plan_selected", { businessId: "business", plan: "free_cloud" });
+    telemetryRef.current!.expectEvent("web.onboarding.trial_started", { businessId: "business" });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/onboarding/stage?businessId=business", expect.objectContaining({ body: JSON.stringify({ to: "complete" }) })));
+    await waitFor(() => expect(route.router.push).toHaveBeenCalledWith("/"));
+    expect(fetchMock.mock.calls.some(([url]) => url === "/api/billing/checkout")).toBe(false);
+  });
+  it("shows the trial, Starter and Pro after a trial number, with no Enterprise and nothing to close", () => {
+    setup();
+    expect(screen.getByRole("button", { name: "plan.trial.start" })).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: "plan.subscribe" })).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: "Contact us" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /close/i })).toBeNull();
+  });
+  it("shows Starter, Pro and Enterprise when no trial is possible, with no Free card", () => {
+    setup(false, undefined, undefined, "paid");
+    expect(screen.queryByRole("button", { name: "plan.trial.start" })).toBeNull();
+    expect(screen.getAllByRole("button", { name: "plan.subscribe" })).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Contact us" })).toBeTruthy();
   });
   it("selects the only configured interval and disables unavailable plans", async () => {
     setup(true);
     await waitFor(() => expect(screen.getByRole("tab", { name: "plan.billingInterval.monthly" }).getAttribute("aria-selected")).toBe("true"));
-    expect(screen.getByRole("button", { name: "Get Starter" }).hasAttribute("disabled")).toBe(true);
-    expect(screen.getByRole("button", { name: "Get Pro" }).hasAttribute("disabled")).toBe(false);
+    expect(starter().hasAttribute("disabled")).toBe(true);
+    expect(pro().hasAttribute("disabled")).toBe(false);
   });
 });

@@ -12,7 +12,7 @@ const post = (to: unknown) => POST(new Request("http://localhost:3000/api/onboar
 beforeEach(() => {
   vi.clearAllMocks();
   resetFakeOperator();
-  fixture.advance.mockResolvedValue(undefined);
+  fixture.advance.mockImplementation(async (_context: unknown, input: { to: string }) => input.to);
 });
 
 it("moves onboarding to the stage the step names", async () => {
@@ -22,6 +22,11 @@ it("moves onboarding to the stage the step names", async () => {
   expect(fixture.advance).toHaveBeenCalledWith(expect.anything(), { userId: "user", businessId: "business", to: "phone_number" });
 });
 
+it("answers with the stage the domain moved to, such as the plans after Meet your agent", async () => {
+  fixture.advance.mockResolvedValueOnce("choose_plan");
+  expect(await (await post("complete")).json()).toEqual({ ok: true, stage: "choose_plan" });
+});
+
 it("hands complete to the domain, which finishes only a partner's business there", async () => {
   expect((await post("complete")).status).toBe(200);
   expect(fixture.advance).toHaveBeenCalledWith(expect.anything(), { userId: "user", businessId: "business", to: "complete" });
@@ -29,6 +34,13 @@ it("hands complete to the domain, which finishes only a partner's business there
   const refused = await post("complete");
   expect(refused.status).toBe(400);
   expect(await refused.json()).toMatchObject({ code: "invalid_onboarding_stage" });
+});
+
+it("takes goal from a tab opened before the goal question left onboarding as the step after it", async () => {
+  const response = await post("goal");
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ ok: true, stage: "attribution" });
+  expect(fixture.advance).toHaveBeenCalledWith(expect.anything(), { userId: "user", businessId: "business", to: "attribution" });
 });
 
 it.each(["create_business", "plan", undefined])("refuses %s before reaching the domain", async (to) => {

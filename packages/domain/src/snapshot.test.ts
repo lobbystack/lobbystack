@@ -5,6 +5,7 @@ import {
   MAX_AGENT_RULE_CONTENT_CHARS,
   MAX_AGENT_RULE_TITLE_CHARS,
   MAX_AGENT_RULES_PER_SNAPSHOT,
+  snapshotRules,
 } from "./snapshot";
 
 describe("buildBusinessContextSnapshot", () => {
@@ -86,5 +87,18 @@ describe("buildBusinessContextSnapshot", () => {
     expect(
       snapshot.rules?.every((rule) => rule.content.length <= MAX_AGENT_RULE_CONTENT_CHARS),
     ).toBe(true);
+  });
+
+  it("keeps an agent's channel rules, its old instructions among them, past the rules for every channel", () => {
+    // 0203 appended converted instructions after an agent's other rules.
+    const everyChannel = Array.from({ length: MAX_AGENT_RULES_PER_SNAPSHOT + 5 }, (_, index) => ({ id: `rule-${index}`, title: `Rule ${index}`, content: "Be kind.", order: index }));
+    const channelRules = (["voice", "sms", "web_chat"] as const).map((channel, index) => ({ id: channel, title: channel, content: "Converted.", order: everyChannel.length + index, channel }));
+    const extraCalls = Array.from({ length: MAX_AGENT_RULES_PER_SNAPSHOT }, (_, index) => ({ id: `call-${index}`, title: `Call ${index}`, content: "On calls.", order: 1000 + index, channel: "voice" as const }));
+    const rules = snapshotRules([...extraCalls, ...channelRules, ...everyChannel].reverse());
+    expect(rules.filter((rule) => !rule.channel)).toHaveLength(MAX_AGENT_RULES_PER_SNAPSHOT);
+    expect(rules.filter((rule) => rule.channel === "voice").map((rule) => rule.id)).toEqual(["voice", ...extraCalls.slice(0, MAX_AGENT_RULES_PER_SNAPSHOT - 1).map((rule) => rule.id)]);
+    expect(rules.filter((rule) => rule.channel && rule.channel !== "voice").map((rule) => rule.id)).toEqual(["sms", "web_chat"]);
+    // Still in the order the agent reads them.
+    expect(rules.map((rule) => rule.order)).toEqual(rules.map((rule) => rule.order).sort((left, right) => left - right));
   });
 });

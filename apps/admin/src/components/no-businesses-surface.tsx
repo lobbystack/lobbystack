@@ -28,7 +28,7 @@ export function NoBusinessesSurface({ email, hostUrl = null }: { email: string; 
     >
       <div className="flex flex-col gap-3">
         {hostUrl ? <a className={cn(buttonVariants(), "h-11 w-full")} href={hostUrl}>{t("noBusinesses.openDashboard")}</a> : null}
-        <Button className="h-11 w-full" onClick={() => void signOut()} type="button" variant="outline">{t("noBusinesses.switchAccount")}</Button>
+        <Button className="w-full" onClick={() => void signOut()} type="button" variant="outline">{t("noBusinesses.switchAccount")}</Button>
       </div>
     </ReplacementOnboardingShell>
   );

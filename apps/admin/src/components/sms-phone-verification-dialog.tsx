@@ -116,12 +116,12 @@ export function SmsPhoneVerificationDialog({ businessId, open, onOpenChange, onV
   const shownError = error ?? (attemptError ? t(`notifications.phoneVerification.errors.${attemptError}`) : null);
 
   return <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent>
+    <DialogContent size="sm">
       {step.kind === "confirm" ? <div className="flex flex-col gap-6">
         <DialogHeader><DialogTitle>{t("notifications.phoneVerification.confirm.title")}</DialogTitle></DialogHeader>
         <div className="flex flex-col items-start gap-4">
-          <p className="text-xs text-muted-foreground">{t("notifications.phoneVerification.confirm.consent")}</p>
-          <button className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground" onClick={() => setStep({ kind: "phone" })} type="button">{t("notifications.phoneVerification.code.changeNumber")}</button>
+          <p className="type-caption text-muted-foreground">{t("notifications.phoneVerification.confirm.consent")}</p>
+          <button className="inline-flex items-center gap-1 type-body-muted hover:text-foreground" onClick={() => setStep({ kind: "phone" })} type="button">{t("notifications.phoneVerification.code.changeNumber")}</button>
         </div>
         <DialogFooter>
           <Button onClick={() => onOpenChange(false)} type="button" variant="outline">{t("notifications.phoneVerification.cancel")}</Button>
@@ -133,12 +133,12 @@ export function SmsPhoneVerificationDialog({ businessId, open, onOpenChange, onV
           <Field data-invalid={error ? true : undefined}>
             <FieldLabel className="sr-only" htmlFor="sms-alert-phone">{t("notifications.phoneVerification.fields.mobileNumber")}</FieldLabel>
             <div className="flex min-w-0">
-              <PhoneCountrySelect ariaLabel={t("notifications.phoneVerification.fields.country")} className="h-11 rounded-l-4xl rounded-r-none px-4 font-medium text-muted-foreground" countries={countries} onChange={(next) => { setCountry(next as Country); setPhone(""); }} value={country} />
-              <PhoneInput autoFocus className="h-11 rounded-l-none border-l-0" containerClassName="min-w-0 flex-1" country={country} id="sms-alert-phone" limitNationalDigits onChange={(value) => { setPhone(value ?? ""); setError(null); }} onRawValueChange={(raw) => { if (raw.trim().startsWith("+")) { const inferred = inferPhoneCountry(raw, country); if (inferred && inferred !== country) setCountry(inferred as Country); } }} value={phone} />
+              <PhoneCountrySelect ariaLabel={t("notifications.phoneVerification.fields.country")} className="rounded-l-xl rounded-r-none font-medium text-muted-foreground" countries={countries} onChange={(next) => { setCountry(next as Country); setPhone(""); }} value={country} />
+              <PhoneInput autoFocus className="rounded-l-none border-l-0" containerClassName="min-w-0 flex-1" country={country} id="sms-alert-phone" limitNationalDigits onChange={(value) => { setPhone(value ?? ""); setError(null); }} onRawValueChange={(raw) => { if (raw.trim().startsWith("+")) { const inferred = inferPhoneCountry(raw, country); if (inferred && inferred !== country) setCountry(inferred as Country); } }} value={phone} />
             </div>
           </Field>
           {error ? <FieldError>{error}</FieldError> : null}
-          <p className="text-xs text-muted-foreground">{t("notifications.phoneVerification.phone.consent")}</p>
+          <p className="type-caption text-muted-foreground">{t("notifications.phoneVerification.phone.consent")}</p>
         </FieldGroup>
         <DialogFooter>
           <Button onClick={() => onOpenChange(false)} type="button" variant="outline">{t("notifications.phoneVerification.cancel")}</Button>
@@ -148,13 +148,13 @@ export function SmsPhoneVerificationDialog({ businessId, open, onOpenChange, onV
         <DialogHeader><DialogTitle>{t("notifications.phoneVerification.code.title")}</DialogTitle><DialogDescription>{t("notifications.phoneVerification.code.description", { phone: formatPhoneNumberDisplay(step.phoneE164, locale) })}</DialogDescription></DialogHeader>
         <div className="flex flex-col items-center gap-4">
           <InputOTP aria-label={t("notifications.phoneVerification.code.title")} autoComplete="one-time-code" autoFocus containerClassName="justify-center" disabled={codeDisabled} maxLength={6} onChange={(value) => { const next = value.replace(/\D/g, "").slice(0, 6); if (next.length < 6) submittedCodeRef.current = ""; setCode(next); if (!locked) setError(null); }} value={code}>
-            <InputOTPGroup>{[0, 1, 2, 3, 4, 5].map((index) => <InputOTPSlot aria-invalid={shownError ? true : undefined} className="size-12 text-lg" index={index} key={index} />)}</InputOTPGroup>
+            <InputOTPGroup>{[0, 1, 2, 3, 4, 5].map((index) => <InputOTPSlot aria-invalid={shownError ? true : undefined} index={index} key={index} />)}</InputOTPGroup>
           </InputOTP>
-          {check.isPending ? <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status"><LoaderCircle className="size-4 animate-spin" />{t("notifications.phoneVerification.code.verifying")}</div> : null}
+          {check.isPending ? <div className="flex items-center gap-2 type-body-muted" role="status"><LoaderCircle className="size-4 animate-spin" />{t("notifications.phoneVerification.code.verifying")}</div> : null}
           {shownError ? <FieldError className="text-center">{shownError}</FieldError> : null}
           <div className="mt-2 flex flex-col items-center gap-4">
-            <p className="text-sm text-muted-foreground">{t("notifications.phoneVerification.code.didntGet")}{" "}<button className="font-medium text-foreground underline-offset-4 hover:underline disabled:opacity-50" disabled={start.isPending || check.isPending} onClick={resend} type="button">{start.isPending ? t("notifications.phoneVerification.code.resending") : t("notifications.phoneVerification.code.resend")}</button></p>
-            <button className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground disabled:opacity-50" disabled={check.isPending} onClick={changeNumber} type="button"><ChevronLeft className="size-4" />{t("notifications.phoneVerification.code.changeNumber")}</button>
+            <p className="type-body-muted">{t("notifications.phoneVerification.code.didntGet")}{" "}<button className="font-medium text-foreground underline-offset-4 hover:underline disabled:opacity-50" disabled={start.isPending || check.isPending} onClick={resend} type="button">{start.isPending ? t("notifications.phoneVerification.code.resending") : t("notifications.phoneVerification.code.resend")}</button></p>
+            <button className="inline-flex items-center gap-1 type-body-muted hover:text-foreground disabled:opacity-50" disabled={check.isPending} onClick={changeNumber} type="button"><ChevronLeft className="size-4" />{t("notifications.phoneVerification.code.changeNumber")}</button>
           </div>
         </div>
       </div>}

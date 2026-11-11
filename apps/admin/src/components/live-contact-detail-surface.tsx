@@ -24,7 +24,6 @@ import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { ContactPasscodeSection, type ContactPasscodeStatus } from "@/components/contact-passcode-section";
 import { CONTACT_CHANNEL_ICONS, ContactChannelIcons } from "@/components/contact-channel-icons";
 import { BackLink, DetailSection, MetadataField, truncateId, useCopiedField } from "@/components/detail-fields";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
@@ -39,6 +38,8 @@ import { formatDateTime, intlLocale, formatRelativeTime } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
 import { getChannelLabel, getContactChannels, getContactDisplayName, hasDisplayablePhone, normalizeChannel } from "@/lib/contact-display";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
+import { Status } from "@/components/ui/status";
+import { appointmentStatusVariant, callOutcomeVariant, CONTACT_STATUS_VARIANTS } from "@/lib/status-variants";
 
 type Detail = {
   contact: {
@@ -75,12 +76,6 @@ function resolveCallStatus(status: string, disposition: string | null): "blocked
   if (value.includes("blocked")) return "blocked";
   if (["failed", "busy", "canceled", "cancelled", "no_answer", "missed"].some((part) => value.includes(part))) return "failed";
   return "completed";
-}
-
-function appointmentStatusVariant(status: string): "default" | "secondary" | "destructive" {
-  if (["cancelled", "canceled"].includes(status.toLowerCase())) return "destructive";
-  if (["confirmed", "completed"].includes(status.toLowerCase())) return "default";
-  return "secondary";
 }
 
 function humanize(value: string): string {
@@ -163,7 +158,7 @@ export function LiveContactDetailSurface({ contactId }: { contactId: string }) {
         <div className="flex flex-col gap-2">
           <h1 className="type-page-title ph-mask">{displayName}</h1>
           {getContactChannels(channels).length ? <ContactChannelIcons channels={channels} /> : null}
-          {contact.operatorBlockedAt ? <div className="flex flex-wrap items-center gap-2"><Badge variant="destructive">{t("detail.blocking.badge")}</Badge><span className="type-body-muted">{t("detail.blocking.blockedAtInline", { time: dateTime(contact.operatorBlockedAt, i18n.language) })}</span></div> : null}
+          {contact.operatorBlockedAt ? <div className="flex flex-wrap items-center gap-2"><Status variant={CONTACT_STATUS_VARIANTS.blocked}>{t("detail.blocking.badge")}</Status><span className="type-body-muted">{t("detail.blocking.blockedAtInline", { time: dateTime(contact.operatorBlockedAt, i18n.language) })}</span></div> : null}
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger render={<Button aria-label={t("table.actions.moreOptions")} size="icon-sm" variant="ghost" />}><Ellipsis /></DropdownMenuTrigger>
@@ -205,7 +200,7 @@ export function LiveContactDetailSurface({ contactId }: { contactId: string }) {
 }
 
 function StatCard({ className, label, value }: { className?: string; label: string; value: number }) {
-  return <div className={cn("flex items-center px-4 py-3", className)}><div className="flex flex-col"><span className="font-heading text-lg leading-none font-semibold tracking-tight text-foreground">{value}</span><span className="type-meta">{label}</span></div></div>;
+  return <div className={cn("flex items-center px-4 py-3", className)}><div className="flex flex-col"><span className="type-metric-sm">{value}</span><span className="type-meta">{label}</span></div></div>;
 }
 
 function ActivityTab({ data, locale }: { data: Detail; locale: string }) {
@@ -225,16 +220,16 @@ function ActivityTab({ data, locale }: { data: Detail; locale: string }) {
       if (row.kind === "call") {
         const duration = formatDuration(row.call.providerDurationSeconds);
         const callStatus = resolveCallStatus(row.call.status, row.call.disposition);
-        summary = <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5"><span className="type-body border-b border-dashed border-muted-foreground/40 pb-0.5 transition-colors hover:border-current">{channel === "web_call" ? getChannelLabel(row.call.transport, t) : t("detail.activity.callInbound")}</span><span className="type-body-muted">{duration}</span><span className={cn("type-meta", callStatus === "completed" && "text-emerald-600 dark:text-emerald-400", callStatus === "failed" && "text-destructive")}>{t(callStatus === "completed" ? "detail.activity.callCompleted" : callStatus === "failed" ? "detail.activity.callFailed" : callStatus === "blocked" ? "detail.activity.callBlocked" : "detail.activity.callInProgress")}</span></div>;
+        summary = <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5"><span className="type-body border-b border-dashed border-muted-foreground/40 pb-0.5 transition-colors hover:border-current">{channel === "web_call" ? getChannelLabel(row.call.transport, t) : t("detail.activity.callInbound")}</span><span className="type-body-muted">{duration}</span><Status variant={callOutcomeVariant(callStatus)}>{t(callStatus === "completed" ? "detail.activity.callCompleted" : callStatus === "failed" ? "detail.activity.callFailed" : callStatus === "blocked" ? "detail.activity.callBlocked" : "detail.activity.callInProgress")}</Status></div>;
       } else if (row.kind === "message") {
         summary = channel === "sms" || !channel
           ? <span className="type-body">{t(row.message.direction === "outbound" ? "detail.activity.smsOutbound" : "detail.activity.smsInbound")}</span>
           : <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5"><span className="type-body">{getChannelLabel(row.message.channel, t)}</span><span className="type-body-muted">{t(row.message.direction === "outbound" ? "detail.activity.messageSent" : "detail.activity.messageReceived")}</span></div>;
       } else {
-        summary = <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5"><span className="type-body">{t("detail.activity.appointmentScheduled")}</span>{row.appointment.serviceName ? <span className="type-body-muted">{row.appointment.serviceName}</span> : null}{row.appointment.staffName ? <span className="type-body-muted">{t("detail.activity.withStaff", { staff: row.appointment.staffName })}</span> : null}<Badge variant={appointmentStatusVariant(row.appointment.status)}>{appointmentStatusLabel(row.appointment.status, t)}</Badge></div>;
+        summary = <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5"><span className="type-body">{t("detail.activity.appointmentScheduled")}</span>{row.appointment.serviceName ? <span className="type-body-muted">{row.appointment.serviceName}</span> : null}{row.appointment.staffName ? <span className="type-body-muted">{t("detail.activity.withStaff", { staff: row.appointment.staffName })}</span> : null}<Status variant={appointmentStatusVariant(row.appointment.status)}>{appointmentStatusLabel(row.appointment.status, t)}</Status></div>;
       }
-      const content = <div className={cn("relative flex items-start gap-3 rounded-xl py-2.5 pl-2 pr-2 transition-colors", row.kind === "call" && "cursor-pointer")}><div className="relative z-10 flex w-[23px] shrink-0 justify-center"><div className="mt-1 flex size-[23px] shrink-0 items-center justify-center bg-background"><Icon className="size-3.5 text-muted-foreground" /></div></div><div className="flex min-w-0 flex-1 items-start justify-between gap-3 pt-0.5"><div className="min-w-0 flex-1">{summary}</div><span className="type-meta shrink-0">{formatRelativeTime(row.timestamp, locale)}</span></div></div>;
-      return row.kind === "call" ? <Link className="block no-underline" href={`/calls/${row.call.id}`} key={`${row.kind}-${row.id}`}>{content}</Link> : <div key={`${row.kind}-${row.id}`}>{content}</div>;
+      const content = <div className={cn("relative flex items-start gap-3 rounded-md py-2.5 pl-2 pr-2 transition-colors", row.kind === "call" && "cursor-pointer")}><div className="relative z-10 flex w-[23px] shrink-0 justify-center"><div className="mt-1 flex size-[23px] shrink-0 items-center justify-center bg-background"><Icon className="size-3.5 text-muted-foreground" /></div></div><div className="flex min-w-0 flex-1 items-start justify-between gap-3 pt-0.5"><div className="min-w-0 flex-1">{summary}</div><span className="type-meta shrink-0">{formatRelativeTime(row.timestamp, locale)}</span></div></div>;
+      return row.kind === "call" ? <Link className="block no-underline" href={`/inbox?call=${encodeURIComponent(row.call.id)}`} key={`${row.kind}-${row.id}`}>{content}</Link> : <div key={`${row.kind}-${row.id}`}>{content}</div>;
     })}
   </div>;
 }
@@ -242,7 +237,7 @@ function ActivityTab({ data, locale }: { data: Detail; locale: string }) {
 function AppointmentsTab({ appointments, locale }: { appointments: Detail["appointments"]; locale: string }) {
   const { t } = useTranslation("contacts");
   if (!appointments.length) return <Empty icon={Calendar} label={t("detail.appointments.empty")} />;
-  return <div className="flex flex-col gap-3 py-4">{appointments.map((appointment) => <Surface className="flex flex-col gap-3 px-4 py-3" key={appointment.id}><div className="flex items-start justify-between gap-3"><div className="flex flex-col gap-0.5"><span className="type-item-title">{appointment.serviceName ?? "—"}</span>{appointment.staffName ? <span className="type-body-muted">{t("detail.activity.withStaff", { staff: appointment.staffName })}</span> : null}</div><Badge variant={appointmentStatusVariant(appointment.status)}>{appointmentStatusLabel(appointment.status, t)}</Badge></div><Separator /><div className="grid grid-cols-2 gap-4 sm:grid-cols-3"><div className="flex flex-col gap-0.5"><span className="type-meta">{t("detail.appointments.dateTime")}</span><span className="type-body">{dateTime(appointment.startsAt, locale)}</span></div><div className="flex flex-col gap-0.5"><span className="type-meta">{t("detail.appointments.syncState")}</span><span className="type-body">{calendarSyncStateLabel(appointment.calendarSyncState, t)}</span></div><div className="flex flex-col gap-0.5"><span className="type-meta">{t("detail.appointments.channel")}</span><span className="type-body">{getChannelLabel(appointment.sourceChannel, t)}</span></div></div></Surface>)}</div>;
+  return <div className="flex flex-col gap-3 py-4">{appointments.map((appointment) => <Surface className="flex flex-col gap-3 px-4 py-3" key={appointment.id}><div className="flex items-start justify-between gap-3"><div className="flex flex-col gap-0.5"><span className="type-item-title">{appointment.serviceName ?? "—"}</span>{appointment.staffName ? <span className="type-body-muted">{t("detail.activity.withStaff", { staff: appointment.staffName })}</span> : null}</div><Status variant={appointmentStatusVariant(appointment.status)}>{appointmentStatusLabel(appointment.status, t)}</Status></div><Separator /><div className="grid grid-cols-2 gap-4 sm:grid-cols-3"><div className="flex flex-col gap-0.5"><span className="type-meta">{t("detail.appointments.dateTime")}</span><span className="type-body">{dateTime(appointment.startsAt, locale)}</span></div><div className="flex flex-col gap-0.5"><span className="type-meta">{t("detail.appointments.syncState")}</span><span className="type-body">{calendarSyncStateLabel(appointment.calendarSyncState, t)}</span></div><div className="flex flex-col gap-0.5"><span className="type-meta">{t("detail.appointments.channel")}</span><span className="type-body">{getChannelLabel(appointment.sourceChannel, t)}</span></div></div></Surface>)}</div>;
 }
 
 function DetailsTab({ businessId, canMutate, contact, copiedField, locale, onCopy, passcode }: { businessId: string; canMutate: boolean; contact: NonNullable<Detail["contact"]>; copiedField: string | null; locale: string; onCopy: (text: string, field: string) => void; passcode: Detail["passcode"] }) {
@@ -298,8 +293,8 @@ function DetailSkeleton({ t }: { t: (key: string) => string }) {
       <Surface className="grid grid-cols-2 sm:grid-cols-4">
         {stats.map(([stat, border]) => (
           <div className={cn("flex items-center px-4 py-3", border)} key={stat}>
-            <div className="flex flex-col gap-1">
-              <div className="flex h-[18px] items-center"><Skeleton className="h-[18px] w-8" /></div>
+            <div className="flex flex-col">
+              <HiddenTextSkeleton className="type-metric-sm">0</HiddenTextSkeleton>
               <HiddenTextSkeleton className="type-meta">{t(`detail.stats.${stat}`)}</HiddenTextSkeleton>
             </div>
           </div>
@@ -309,7 +304,7 @@ function DetailSkeleton({ t }: { t: (key: string) => string }) {
       <div>
         <div className="inline-flex items-center gap-2">
           {tabs.map(([tab, Icon]) => (
-            <Skeleton aria-hidden="true" className="inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-medium whitespace-nowrap" key={tab}>
+            <Skeleton aria-hidden="true" className="inline-flex h-9 items-center gap-1.5 rounded-full px-4 type-title whitespace-nowrap" key={tab}>
               <Icon className="invisible size-4" />
               <span className="invisible">{t(`detail.tabs.${tab}`)}</span>
             </Skeleton>

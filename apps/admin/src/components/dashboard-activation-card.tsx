@@ -76,7 +76,7 @@ export function DashboardActivationCard({ businessId }: { businessId: string | u
           ? <Button className="shrink-0" onClick={() => openTestWindow()} type="button" variant="outline"><Phone />{t("activation.hearIt.cta")}</Button>
           : null
         : needsNumberClaim
-          ? <Button className="shrink-0" nativeButton={false} render={<Link href="/settings/phone-number" />}>{t("activation.claimNumber.cta")}</Button>
+          ? <Button className="shrink-0" nativeButton={false} render={<Link href="/agents/primary/channels/phone" />}>{t("activation.claimNumber.cta")}</Button>
           : <Button className="shrink-0" onClick={upgrade} type="button">{t("activation.upgrade.cta")}</Button>}
     </Surface>
   );

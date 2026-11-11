@@ -10,7 +10,7 @@ export type ComparisonRow = { feature: string; free: ComparisonValue; starter: C
 export type ComparisonGroup = { category: string; rows: ComparisonRow[] };
 
 type Feature =
-  | "voiceMinutes" | "outboundCalls" | "alertSms" | "knowledgeStorage" | "phoneNumbers"
+  | "voiceMinutes" | "outboundCalls" | "alertSms" | "knowledgeStorage" | "phoneNumbers" | "agents"
   | "callAnswering" | "callerDetails" | "knowledgeAnswers" | "workflows" | "spamFiltering" | "shortCalls" | "concurrentCalls" | "multilingual"
   | "appointmentBooking" | "confirmationTexts" | "googleCalendar"
   | "urgentHandoff" | "callTransfers" | "afterHours"
@@ -44,7 +44,7 @@ const copy: Record<PlanCardLocale, Copy> = {
   en: {
     groups: ["Usage & limits", "Core receptionist", "Booking", "Routing & transfers", "Notifications & messaging", "Data & dashboard", "Deployment & support"],
     features: {
-      voiceMinutes: "Voice minutes", outboundCalls: "Transfer attempts", alertSms: "Alert SMS segments", knowledgeStorage: "Knowledge base", phoneNumbers: "Phone numbers",
+      voiceMinutes: "Voice minutes", outboundCalls: "Transfer attempts", alertSms: "Alert SMS segments", knowledgeStorage: "Knowledge base", phoneNumbers: "Phone numbers", agents: "Agents",
       callAnswering: "24/7 call answering", callerDetails: "Caller details and message capture", knowledgeAnswers: "Knowledge base answers", workflows: "Plain-language workflows", spamFiltering: "Spam filtering", shortCalls: "Calls under 10s excluded from billing", concurrentCalls: "Unlimited concurrent calls", multilingual: "Answers in the caller's language",
       appointmentBooking: "Appointment booking", confirmationTexts: "Appointment confirmation texts", googleCalendar: "Google Calendar integration",
       urgentHandoff: "Urgent call handoff", callTransfers: "Call transfers", afterHours: "After-hours answering",
@@ -65,7 +65,7 @@ const copy: Record<PlanCardLocale, Copy> = {
   fr: {
     groups: ["Usage et limites", "Réceptionniste IA", "Rendez-vous", "Routage et transferts", "Notifications et messagerie", "Données et tableau de bord", "Hébergement et support"],
     features: {
-      voiceMinutes: "Minutes vocales", outboundCalls: "Tentatives de transfert", alertSms: "Segments SMS d'alerte", knowledgeStorage: "Base de connaissances", phoneNumbers: "Numéros de téléphone",
+      voiceMinutes: "Minutes vocales", outboundCalls: "Tentatives de transfert", alertSms: "Segments SMS d'alerte", knowledgeStorage: "Base de connaissances", phoneNumbers: "Numéros de téléphone", agents: "Agents",
       callAnswering: "Réponse aux appels 24/7", callerDetails: "Collecte des détails et messages", knowledgeAnswers: "Réponses depuis la base de connaissances", workflows: "Consignes en langage naturel", spamFiltering: "Filtrage du spam", shortCalls: "Appels de moins de 10 s exclus de la facturation", concurrentCalls: "Appels simultanés illimités", multilingual: "Répond dans la langue de l'appelant",
       appointmentBooking: "Prise de rendez‑vous", confirmationTexts: "SMS de confirmation de rendez‑vous", googleCalendar: "Intégration Google Calendar",
       urgentHandoff: "Transfert des appels urgents", callTransfers: "Transferts d'appel", afterHours: "Réponse hors horaires",
@@ -86,7 +86,7 @@ const copy: Record<PlanCardLocale, Copy> = {
   es: {
     groups: ["Uso y límites", "Funciones de recepción", "Reservas", "Enrutamiento y transferencias", "Notificaciones y mensajes", "Datos y panel", "Implementación y soporte"],
     features: {
-      voiceMinutes: "Minutos de voz", outboundCalls: "Intentos de transferencia", alertSms: "Segmentos de SMS de alerta", knowledgeStorage: "Base de conocimiento", phoneNumbers: "Números de teléfono",
+      voiceMinutes: "Minutos de voz", outboundCalls: "Intentos de transferencia", alertSms: "Segmentos de SMS de alerta", knowledgeStorage: "Base de conocimiento", phoneNumbers: "Números de teléfono", agents: "Agentes",
       callAnswering: "Atención de llamadas 24/7", callerDetails: "Datos y mensajes de quien llama", knowledgeAnswers: "Respuestas desde la base de conocimiento", workflows: "Flujos de trabajo en lenguaje sencillo", spamFiltering: "Filtro de spam", shortCalls: "Llamadas de menos de 10 s excluidas de la facturación", concurrentCalls: "Llamadas simultáneas ilimitadas", multilingual: "Responde en el idioma de quien llama",
       appointmentBooking: "Reserva de citas", confirmationTexts: "SMS de confirmación de citas", googleCalendar: "Integración con Google Calendar",
       urgentHandoff: "Derivación de llamadas urgentes", callTransfers: "Transferencias de llamadas", afterHours: "Atención fuera de horario",
@@ -107,7 +107,7 @@ const copy: Record<PlanCardLocale, Copy> = {
   sr: {
     groups: ["Potrošnja i limiti", "Osnovne funkcije recepcionera", "Zakazivanje", "Rutiranje i preusmeravanje", "Obaveštenja i poruke", "Podaci i kontrolna tabla", "Hosting i podrška"],
     features: {
-      voiceMinutes: "Minuti razgovora", outboundCalls: "Pokušaji preusmeravanja", alertSms: "Segmenti SMS upozorenja", knowledgeStorage: "Baza znanja", phoneNumbers: "Brojevi telefona",
+      voiceMinutes: "Minuti razgovora", outboundCalls: "Pokušaji preusmeravanja", alertSms: "Segmenti SMS upozorenja", knowledgeStorage: "Baza znanja", phoneNumbers: "Brojevi telefona", agents: "Agenti",
       callAnswering: "Odgovaranje na pozive 24/7", callerDetails: "Beleženje podataka i poruka pozivalaca", knowledgeAnswers: "Odgovori iz baze znanja", workflows: "Tokovi rada opisani običnim jezikom", spamFiltering: "Filtriranje spama", shortCalls: "Pozivi kraći od 10 s se ne naplaćuju", concurrentCalls: "Neograničen broj istovremenih poziva", multilingual: "Odgovara na jeziku pozivaoca",
       appointmentBooking: "Zakazivanje termina", confirmationTexts: "SMS potvrde termina", googleCalendar: "Google Calendar integracija",
       urgentHandoff: "Prosleđivanje hitnih poziva", callTransfers: "Preusmeravanje poziva", afterHours: "Odgovaranje van radnog vremena",
@@ -128,6 +128,7 @@ const copy: Record<PlanCardLocale, Copy> = {
 };
 
 const { free_cloud: free, starter, pro } = billingPlanCatalog;
+const enterprise = billingPlanCatalog.enterprise;
 
 export function planComparison(locale: string): ComparisonGroup[] {
   const c = copy[(locale.slice(0, 2) as PlanCardLocale)] ?? copy.en;
@@ -137,6 +138,7 @@ export function planComparison(locale: string): ComparisonGroup[] {
   };
   const allowance = (count: number, rateCents: number, unit: "min" | "attempt" | "segment", gender: "f" | "m") => ({ included: c.included(count, gender), then: c.then(c.rate(rateCents), unit) });
   const mb = (bytes: number) => c.megabytes(bytes / (1024 * 1024));
+  const agentLimit = (limit: number | null) => limit === null ? c.unlimited.m : String(limit);
   return [
     { category: c.groups[0], rows: [
       row("voiceMinutes", { included: c.included(free.voiceSecondsIncluded / 60, "f") }, { starter: allowance(starter.voiceSecondsIncluded / 60, starter.voiceOverageRatePerMinuteCents, "min", "f"), pro: allowance(pro.voiceSecondsIncluded / 60, pro.voiceOverageRatePerMinuteCents, "min", "f") }, c.custom),
@@ -144,6 +146,8 @@ export function planComparison(locale: string): ComparisonGroup[] {
       row("alertSms", { included: c.included(free.alertSmsSegmentsIncluded, "m") }, { starter: allowance(starter.alertSmsSegmentsIncluded, starter.alertSmsOverageRatePerSegmentCents, "segment", "m"), pro: allowance(pro.alertSmsSegmentsIncluded, pro.alertSmsOverageRatePerSegmentCents, "segment", "m") }, c.custom),
       row("knowledgeStorage", mb(free.knowledgeStorageBytes), { starter: mb(starter.knowledgeStorageBytes), pro: mb(pro.knowledgeStorageBytes) }, c.custom),
       row("phoneNumbers", c.freeForDays, c.dedicated, c.multiple),
+      // A plan with no agent limit says Unlimited. "Agents" is masculine in French and Spanish.
+      row("agents", agentLimit(free.includedAgents), { starter: agentLimit(starter.includedAgents), pro: agentLimit(pro.includedAgents) }, agentLimit(enterprise.includedAgents)),
     ] },
     { category: c.groups[1], rows: [
       row("callAnswering", c.trialDays, true),

@@ -47,7 +47,7 @@ vi.mock("@/lib/domain-context", async () => {
   return { createWorkerDomainContext: () => ({ db: getWorkerDatabase().db }) };
 });
 
-import { agents, businessContextSnapshots, businesses, calls, createDatabaseClient, partnerLifecycles, partners, phoneNumbers } from "@lobbystack/db";
+import { agents, businessContextSnapshots, businesses, businessNotifications, calls, createDatabaseClient, partnerLifecycles, partners, phoneNumbers, productEvents } from "@lobbystack/db";
 
 import { POST as forwardCall } from "../../twilio/voice/route";
 import { POST as incomingCall } from "./route";
@@ -59,10 +59,14 @@ const line = `+1416${String(Math.floor(Math.random() * 10_000_000)).padStart(7, 
 const transfer = "+14165550188";
 const DAY = 24 * 60 * 60_000;
 
-/** OpenAI telling the deployment a call to the business's number is ringing. */
-async function ring(): Promise<string> {
+/**
+ * OpenAI telling the deployment a call to the business's number is ringing.
+ * A call the owner forwarded from their own line names it in a Diversion
+ * before the trunk's, or in History-Info.
+ */
+async function ring(forwarded: Array<{ name: string; value: string }> = []): Promise<string> {
   const sessionId = `rtc_${randomUUID()}`;
-  setup.unwrap.mockResolvedValueOnce({ type: "live.transport.incoming", created_at: Math.floor(Date.now() / 1000), data: { session_id: sessionId, sip_headers: [{ name: "Diversion", value: `<sip:${line}@twilio.example>` }, { name: "From", value: "<sip:+14165550134@example.com>" }] } });
+  setup.unwrap.mockResolvedValueOnce({ type: "live.transport.incoming", created_at: Math.floor(Date.now() / 1000), data: { session_id: sessionId, sip_headers: [...forwarded, { name: "Diversion", value: `<sip:${line}@twilio.example>` }, { name: "From", value: "<sip:+14165550134@example.com>" }] } });
   const response = await incomingCall(new Request("https://desk.example.test/api/webhooks/openai/live", { method: "POST", body: "{}" }));
   expect(response.status).toBe(200);
   return sessionId;
@@ -117,5 +121,32 @@ describe.skipIf(!admin)("a call to a paused partner's business", () => {
     expect(setup.accept).toHaveBeenCalledWith(sessionId, expect.anything());
     expect(setup.attach).toHaveBeenCalledWith(expect.objectContaining({ sessionId, businessId, channel: "voice" }));
     expect(await admin!.db.select({ id: calls.id }).from(calls).where(eq(calls.businessId, businessId))).toHaveLength(1);
+    // A call nobody forwarded names only our number, so nothing is learned.
+    expect(await forwarding()).toEqual({ from: null, detected: false });
+  });
+});
+
+/** What the business's number learned about forwarding, and the events that reported it. */
+async function forwarding() {
+  const [number] = await admin!.db.select({ from: phoneNumbers.forwardedFromE164, detectedAt: phoneNumbers.forwardingDetectedAt }).from(phoneNumbers).where(eq(phoneNumbers.businessId, businessId));
+  return { from: number?.from ?? null, detected: Boolean(number?.detectedAt) };
+}
+async function forwardingEvents() {
+  return await admin!.db.select({ properties: productEvents.properties }).from(productEvents).where(and(eq(productEvents.businessId, businessId), eq(productEvents.name, "voice.forwarding_detected")));
+}
+
+describe.skipIf(!admin)("a call forwarded from the owner's line", () => {
+  it("notes the line from the first forwarded call's Diversion, once, and reports it", async () => {
+    await ring([{ name: "Diversion", value: "<sip:+14165550177@carrier.example>;reason=no-answer" }]);
+    expect(await forwarding()).toEqual({ from: "+14165550177", detected: true });
+    const [event] = await forwardingEvents();
+    expect(event?.properties).toMatchObject({ businessId, source: "sip" });
+    // Later forwarded calls, here through History-Info from another line, change nothing.
+    await ring([{ name: "History-Info", value: "<sip:+14165550166@carrier.example>;index=1" }]);
+    expect(await forwarding()).toEqual({ from: "+14165550177", detected: true });
+    expect(await forwardingEvents()).toHaveLength(1);
+    // The bell gets one update that forwarding works, naming the owner's line.
+    const bell = await admin!.db.select({ kind: businessNotifications.kind, category: businessNotifications.category, params: businessNotifications.params }).from(businessNotifications).where(and(eq(businessNotifications.businessId, businessId), eq(businessNotifications.kind, "forwarding_detected")));
+    expect(bell).toEqual([{ kind: "forwarding_detected", category: "update", params: expect.objectContaining({ from: "+14165550177" }) }]);
   });
 });

@@ -1,6 +1,7 @@
 import { customType } from "drizzle-orm/pg-core";
 import { sql, type AnyColumn, type SQL } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   bigint,
   boolean,
   doublePrecision,
@@ -338,6 +339,17 @@ export const partnerDomains = pgTable(
   ],
 );
 
+// The dashboard intro cards a person has closed, one row each (migration 0206). 'dashboard' marks their first visit.
+export const userPageIntros = pgTable(
+  "user_page_intros",
+  {
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    intro: text("intro").notNull(),
+    seenAt: timestamp("seen_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.intro] })],
+);
+
 // The business a person last worked in on each partner's domains. The host's own domain keeps users.activeBusinessId.
 export const userActiveBusinesses = pgTable(
   "user_active_businesses",
@@ -623,6 +635,8 @@ export const closures = pgTable(
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
     endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
     reason: text("reason").notNull(),
+    // Staff-only detail, such as why someone is off. Never sent to the agent.
+    note: text("note"),
     ...timestamps,
   },
   (table) => [index("closures_business_starts_idx").on(table.businessId, table.startsAt)],
@@ -656,6 +670,11 @@ export const phoneNumbers = pgTable(
     carrierConnectionId: varchar("carrier_connection_id", { length: 64 }),
     // The agent that answers this number. Migration 0184's trigger fills it with the default agent.
     agentId: uuid("agent_id"),
+    // The owner's line that forwards to this number, from the first forwarded call we saw, and when (migration 0207).
+    forwardedFromE164: varchar("forwarded_from_e164", { length: 32 }),
+    forwardingDetectedAt: timestamp("forwarding_detected_at", { withTimezone: true }),
+    // When the owner said forwarding works, for carriers that strip the forwarding header.
+    forwardingConfirmedAt: timestamp("forwarding_confirmed_at", { withTimezone: true }),
     ...legacyId,
     ...timestamps,
   },
@@ -723,7 +742,7 @@ export const agents = pgTable(
     businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
     // Operators see this. Callers never hear it. Pass defaultAgentName(locale)
     // for a business's first agent; the default covers code that can't.
-    name: text("name").default("Agent").notNull(),
+    name: text("name").default("Default agent").notNull(),
     // One per business, which answers where no other agent does. An insert
     // for a business's first agent sets it.
     isDefault: boolean("is_default").default(false).notNull(),
@@ -740,6 +759,8 @@ export const agents = pgTable(
     // The outcome of the last "Rewrite with AI"; null when none was asked for.
     summaryRegenerateStatus: varchar("summary_regenerate_status", { length: 16 }).$type<"pending" | "completed" | "empty" | "failed">(),
     bookingPolicy: text("booking_policy").notNull(),
+    // Deprecated: migration 0203 moved them into rules kept to their channel,
+    // and no code reads or writes them. A later release drops them.
     voiceInstructions: text("voice_instructions"),
     smsInstructions: text("sms_instructions"),
     chatInstructions: text("chat_instructions"),
@@ -1098,6 +1119,9 @@ export const appointments = pgTable(
     calendarSyncState: varchar("calendar_sync_state", { length: 32 }).default("not_required").notNull(),
     calendarExternalId: text("calendar_external_id"),
     videoUrl: text("video_url"),
+    // The agent can read notes once the caller is verified; internal notes stay in the dashboard (migration 0205).
+    notes: text("notes"),
+    internalNotes: text("internal_notes"),
     revision: integer("revision").default(0).notNull(),
     ...legacyId,
     ...timestamps,
@@ -1147,10 +1171,16 @@ export const knowledgeDocuments = pgTable(
     contentHash: varchar("content_hash", { length: 128 }),
     error: text("error"),
     revision: integer("revision").default(0).notNull(),
+    // The one agent that uses this source, or null when every agent does (migration 0208).
+    agentId: uuid("agent_id"),
+    // For a crawled page, the website import document that brought it in.
+    websiteDocumentId: uuid("website_document_id").references((): AnyPgColumn => knowledgeDocuments.id, { onDelete: "set null" }),
+    // The whole source's switch. A website keeps it on its import document; active stays each page's own.
+    sourceActive: boolean("source_active").default(true).notNull(),
     ...legacyId,
     ...timestamps,
   },
-  (table) => [index("knowledge_documents_business_status_idx").on(table.businessId, table.status), index("knowledge_documents_hash_idx").on(table.businessId, table.contentHash), uniqueIndex("knowledge_documents_business_url_unique").on(table.businessId, table.sourceUrl), index("knowledge_documents_title_keyword_idx").using("gin", sql`to_tsvector('simple', ${table.title})`)],
+  (table) => [foreignKey({ name: "knowledge_documents_agent_fk", columns: [table.businessId, table.agentId], foreignColumns: [agents.businessId, agents.id] }), index("knowledge_documents_business_agent_idx").on(table.businessId, table.agentId), index("knowledge_documents_business_status_idx").on(table.businessId, table.status), index("knowledge_documents_hash_idx").on(table.businessId, table.contentHash), uniqueIndex("knowledge_documents_business_url_unique").on(table.businessId, table.sourceUrl), index("knowledge_documents_title_keyword_idx").using("gin", sql`to_tsvector('simple', ${table.title})`)],
 );
 
 export const knowledgeChunks = pgTable(
@@ -1182,10 +1212,34 @@ export const knowledgeSnippets = pgTable(
     tags: jsonb("tags").$type<string[]>().default([]).notNull(),
     priority: integer("priority").default(0).notNull(),
     active: boolean("active").default(true).notNull(),
+    // The one agent that uses this entry, or null when every agent does (migration 0208).
+    agentId: uuid("agent_id"),
     ...legacyId,
     ...timestamps,
   },
-  (table) => [index("knowledge_snippets_business_active_idx").on(table.businessId, table.active)],
+  (table) => [foreignKey({ name: "knowledge_snippets_agent_fk", columns: [table.businessId, table.agentId], foreignColumns: [agents.businessId, agents.id] }), index("knowledge_snippets_business_agent_idx").on(table.businessId, table.agentId), index("knowledge_snippets_business_active_idx").on(table.businessId, table.active)],
+);
+
+// What one agent turned off of the shared knowledge (migration 0208). A row
+// names a document or a snippet. Scope "source" is a whole website, file or
+// entry, and "page" is one page of a website.
+export const agentKnowledgeExclusions = pgTable(
+  "agent_knowledge_exclusions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    agentId: uuid("agent_id").notNull(),
+    documentId: uuid("document_id").references(() => knowledgeDocuments.id, { onDelete: "cascade" }),
+    snippetId: uuid("snippet_id").references(() => knowledgeSnippets.id, { onDelete: "cascade" }),
+    scope: varchar("scope", { length: 8 }).$type<"source" | "page">().default("source").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    foreignKey({ name: "agent_knowledge_exclusions_agent_fk", columns: [table.businessId, table.agentId], foreignColumns: [agents.businessId, agents.id] }),
+    uniqueIndex("agent_knowledge_exclusions_document_unique").on(table.agentId, table.documentId, table.scope).where(sql`${table.documentId} is not null`),
+    uniqueIndex("agent_knowledge_exclusions_snippet_unique").on(table.agentId, table.snippetId).where(sql`${table.snippetId} is not null`),
+    index("agent_knowledge_exclusions_business_agent_idx").on(table.businessId, table.agentId),
+  ],
 );
 
 // The first real conversation of each business. One row per business makes its
@@ -1204,6 +1258,42 @@ export const checkInAnswers = pgTable("check_in_answers", {
   answer: varchar("answer", { length: 32 }).notNull(),
   answeredAt: timestamp("answered_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [primaryKey({ columns: [table.businessId, table.answer] })]);
+
+// The dashboard's notification bell (migration 0209): one row per condition a
+// business's team should know about, keyed by dedupe_key, and each person's
+// reads of them.
+export const businessNotifications = pgTable(
+  "business_notifications",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    kind: varchar("kind", { length: 48 }).notNull(),
+    category: varchar("category", { length: 16 }).notNull(),
+    dedupeKey: varchar("dedupe_key", { length: 255 }).notNull(),
+    recipientUserId: uuid("recipient_user_id").references(() => users.id, { onDelete: "cascade" }),
+    params: jsonb("params").$type<Record<string, unknown>>().default({}).notNull(),
+    href: text("href"),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).defaultNow().notNull(),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("business_notifications_business_key_unique").on(table.businessId, table.dedupeKey),
+    index("business_notifications_business_occurred_idx").on(table.businessId, table.occurredAt),
+  ],
+);
+
+export const businessNotificationReads = pgTable(
+  "business_notification_reads",
+  {
+    notificationId: uuid("notification_id").notNull().references(() => businessNotifications.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    readAt: timestamp("read_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.notificationId, table.userId] }), index("business_notification_reads_business_user_idx").on(table.businessId, table.userId)],
+);
 
 // Questions the receptionist found no knowledge for (migration 0168). The same
 // normalized question counts again on its open or dismissed row.
@@ -1246,6 +1336,9 @@ export const agentRules = pgTable(
     sortOrder: integer("sort_order").default(0).notNull(),
     // The agent this rule shapes. Migration 0184's trigger fills it with the default agent.
     agentId: uuid("agent_id"),
+    // The one channel the rule applies on (voice covers browser calls too). Null: every channel.
+    // agent_rules_channel_check holds it to ruleChannels in @lobbystack/shared.
+    channel: varchar("channel", { length: 16 }).$type<"voice" | "sms" | "web_chat" | "instagram">(),
     ...legacyId,
     ...timestamps,
   },
@@ -2412,6 +2505,7 @@ export const allTenantTables = [
   knowledgeDocuments,
   knowledgeChunks,
   knowledgeSnippets,
+  agentKnowledgeExclusions,
   unansweredQuestions,
   agentRules,
   websiteIngestionJobs,
@@ -2462,7 +2556,10 @@ export const schema = {
   partnerPackages,
   businesses,
   userActiveBusinesses,
+  userPageIntros,
   partnerBusinessOpens,
+  businessNotifications,
+  businessNotificationReads,
   businessTemplates,
   businessTemplateFiles,
   businessMemberships,
@@ -2491,6 +2588,7 @@ export const schema = {
   knowledgeDocuments,
   knowledgeChunks,
   knowledgeSnippets,
+  agentKnowledgeExclusions,
   unansweredQuestions,
   agentRules,
   websiteIngestionJobs,

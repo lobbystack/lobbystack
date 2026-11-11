@@ -1,0 +1,67 @@
+---
+title: "Définir le nom, le message d'accueil et la voix de votre agent"
+description: "Nommez votre agent IA, rédigez la phrase d'ouverture qu'il utilise au téléphone et dans le clavardage, et choisissez la voix que les appelants entendent."
+sidebarTitle: "Nom, accueil et voix"
+contentType: "How-to"
+---
+
+Ouvrez un agent depuis **Agents** dans la barre latérale. Sa première page, **Général**, contient sous **Nom, accueil et voix** ce que les appelants entendent en premier.
+
+## Nom
+
+Le **Nom** de l'agent indique à votre équipe quel agent a traité un appel. Seule votre équipe le voit, dans le tableau de bord et dans la [Boîte de réception](/fr/dashboard/inbox). Les appelants ne l'entendent jamais : choisissez donc un nom utile à votre équipe, par exemple `Ligne de fin de semaine` ou `Clinique du centre-ville`.
+
+## Message d'accueil
+
+Le message d'accueil est la phrase d'ouverture que votre agent prononce quand il répond à un appel ou commence une conversation. Gardez-le court et précis.
+
+Un bon message d'accueil comprend en général le nom de l'entreprise, une courte mention indiquant que l'appelant parle à l'agent IA et une offre d'aide.
+
+| Type d'entreprise | Exemple de message d'accueil |
+| --- | --- |
+| Clinique dentaire | Merci d'avoir appelé Bright Smile Dental. Je suis l'agent IA. Comment puis-je vous aider ? |
+| Salon de coiffure | Merci d'avoir appelé North Loop Salon. Je peux vous renseigner sur nos services et nos disponibilités, ou prendre un message pour l'équipe. |
+| Services à domicile | Merci d'avoir appelé Peak HVAC. Je suis l'agent IA. Vous appelez pour un service, un rendez-vous ou un problème urgent ? |
+| Restaurant | Merci d'avoir appelé Maple Table. Je peux vous renseigner sur nos heures d'ouverture et les réservations, ou prendre un message pour le personnel. |
+
+<Steps>
+  <Step title="Ouvrez l'agent">
+    Cliquez sur **Agents** dans la barre latérale et ouvrez l'agent. Son menu s'ouvre sur **Général**.
+  </Step>
+  <Step title="Modifiez le message d'accueil">
+    Cliquez sur **Modifier** à côté de **Message d'accueil**, puis changez le texte.
+  </Step>
+  <Step title="Enregistrez">
+    Cliquez sur **Enregistrer**.
+  </Step>
+</Steps>
+
+Si vous n'avez pas modifié le message d'accueil, il suit votre [langue client par défaut](/fr/settings/business-details#langue-client-par-défaut) quand vous la changez.
+
+## Voix
+
+**Voix** définit le son de votre agent au téléphone et pendant les appels depuis votre navigateur, appels test compris. La ligne indique la voix actuelle et sa sonorité, par exemple Marin · Claire, rapide. Les nouveaux agents commencent avec Marin, ou avec la voix de l'agent à partir duquel vous les avez ajoutés.
+
+<Steps>
+  <Step title="Ouvrez la liste des voix">
+    Sur **Général**, cliquez sur **Changer de voix**. **Actuelle** indique la voix utilisée, et **Toutes les voix** liste les autres avec leur tonalité et leur rythme.
+  </Step>
+  <Step title="Écoutez une voix">
+    Cliquez sur le bouton de lecture à côté d'une voix pour l'écouter dans votre langue client par défaut. Écouter une voix ne la sélectionne pas.
+  </Step>
+  <Step title="Enregistrez votre choix">
+    Sélectionnez la voix et cliquez sur **Utiliser cette voix**.
+  </Step>
+</Steps>
+
+Les nouveaux appels utilisent la voix peu après l'enregistrement. Un appel déjà en cours garde la voix avec laquelle il a commencé. Pour vérifier le résultat, cliquez sur **Appel test** en haut de la page.
+
+Les propriétaires et les administrateurs peuvent changer la voix. Les lecteurs voient la voix actuelle, mais **Changer de voix** est désactivé pour eux. Si votre entreprise a l'accès **Activité seulement** par l'intermédiaire d'un partenaire, votre équipe ne voit pas **Agents**.
+
+Vous pouvez choisir parmi Alloy, Ash, Ballad, Beacon, Bossa, Cedar, Cinder, Coral, Delta, Echo, Gleam, Marin, Meridian, Quartz, Ripple, Sage, Shimmer, Stone, Tempo, Verse, Vesper et Willow. Dans l'[API](/fr/api/overview), indiquez `voice` dans `PATCH /receptionist` avec le nom en minuscules, par exemple `cedar`. `/receptionist` modifie l'agent par défaut.
+
+## Réglages liés
+
+- [Règles](/fr/agent/rules) : ce que l'agent fait sur tous les canaux, ou sur un seul
+- [Appels et rendez-vous](/fr/agent/calls-and-booking) : les transferts, Le personnel répond d'abord, la prise de rendez-vous et les modifications de rendez-vous
+- [Détails de l'entreprise](/fr/settings/business-details) : le résumé de l'entreprise, les heures d'ouverture, les langues et la devise que partagent tous les agents

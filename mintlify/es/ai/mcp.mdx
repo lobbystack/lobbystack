@@ -86,14 +86,14 @@ El permiso `webhooks:manage` no tiene herramientas MCP. Una clave que solo tiene
 
 ## Modo de reserva
 
-`book_appointment` y `reschedule_appointment` solo funcionan cuando **Citas** está en **Reserva citas** (`booking_mode` `instant`). En los demás modos, devuelven un error en lugar de reservar:
+`book_appointment` y `reschedule_appointment` solo funcionan cuando **Reservas** está en **Reserva citas** (`booking_mode` `instant`). En los demás modos, devuelven un error en lugar de reservar:
 
 | Ajuste | `booking_mode` | Código de error | Qué debe hacer el asistente |
 | --- | --- | --- | --- |
 | **Toma solicitudes** | `request` | `booking_requires_confirmation` | Indicarle que su equipo confirma las solicitudes desde la bandeja de entrada |
 | **No reserva** | `off` | `booking_disabled` | Indicarle que las reservas están desactivadas |
 
-Este ajuste se cambia en **Agente** > **Ajustes de IA** > **Reservas**. La cancelación funciona en todos los modos.
+Este ajuste se cambia en la página **General** de cada agente, en **Citas**. `/receptionist` y las herramientas MCP cambian el agente predeterminado. La cancelación funciona en todos los modos.
 
 ## Errores
 

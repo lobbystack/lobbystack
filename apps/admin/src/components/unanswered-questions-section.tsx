@@ -97,7 +97,7 @@ export function UnansweredQuestionsSection({ businessId, canManage, layoutSettle
       {questions.isLoading ? <Skeleton className="h-6 w-12 rounded-full" /> : <Badge variant="outline">{(questions.data?.openCount ?? 0).toLocaleString(locale)}</Badge>}
     </div>
     {questions.isLoading ? <Card className="border-border/70"><CardContent className="flex flex-col gap-4">{Array.from({ length: 3 }, (_, index) => <div className="flex flex-col gap-2" key={index}><Skeleton className="h-4 w-2/3" /><Skeleton className="h-3 w-1/3" /></div>)}</CardContent></Card>
-      : questions.isError ? <p className="px-1 text-sm text-destructive">{t("unansweredQuestions.loadFailed")}</p>
+      : questions.isError ? <p className="px-1 type-body text-destructive">{t("unansweredQuestions.loadFailed")}</p>
       : open.length ? <Card className="ph-mask border-border/70"><CardContent><ItemGroup>
         {open.map((question, index) => {
           const editing = answering === question.id;

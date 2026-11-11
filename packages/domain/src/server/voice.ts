@@ -715,6 +715,13 @@ export async function completeVoiceFollowUpTasks(
   });
 }
 
+/** How many follow-ups listOpenVoiceFollowUps counts as open, past the few it lists. */
+export async function countOpenVoiceFollowUps(tx: DatabaseTransaction, businessId: string): Promise<number> {
+  const [row] = await tx.select({ count: sql<number>`count(distinct ${followUpGroup})::int` }).from(inboxItems)
+    .where(and(eq(inboxItems.businessId, businessId), eq(inboxItems.kind, "voice_message"), eq(inboxItems.status, "open")));
+  return row?.count ?? 0;
+}
+
 /**
  * Every open follow-up, newest first. Imported duplicate messages represent
  * one action per call, so only the newest shows. A cancellation request comes

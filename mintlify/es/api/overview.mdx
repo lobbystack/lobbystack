@@ -11,6 +11,8 @@ La API de LobbyStack permite que sus propias herramientas trabajen con los datos
 
 La API llama a su agente `receptionist` y a su espacio de trabajo `business`, como en `GET /receptionist`. `GET /agents` enumera los agentes del espacio de trabajo. `/receptionist` y `/rules` actúan sobre el agente predeterminado, y cada llamada y mensaje indica en `agent_id` el agente que lo atendió.
 
+El `channel` de una regla la limita a `voice`, `sms`, `web_chat` o `instagram`, y `null` la aplica en todos los canales. `voice_instructions`, `sms_instructions` y `chat_instructions` en `/receptionist` y `/agents` están obsoletos. Leen la primera regla activa del agente para ese canal, y escribir uno cambia esa regla o la añade. `chat_instructions` escribe las reglas del chat del sitio web y de Instagram. Enviar `null` elimina la regla del canal.
+
 <SaasPrompt />
 
 ## URL base

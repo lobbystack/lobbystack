@@ -9,13 +9,13 @@ function InputOTP({ className, containerClassName, ...props }: React.ComponentPr
 }
 
 function InputOTPGroup({ className, ...props }: React.ComponentProps<"div">) {
-  return <div data-slot="input-otp-group" className={cn("flex items-center rounded-4xl has-aria-invalid:border-destructive has-aria-invalid:ring-[3px] has-aria-invalid:ring-destructive/20 dark:has-aria-invalid:ring-destructive/40", className)} {...props} />
+  return <div data-slot="input-otp-group" className={cn("flex items-center rounded-xl has-aria-invalid:border-destructive has-aria-invalid:ring-[3px] has-aria-invalid:ring-destructive/20 dark:has-aria-invalid:ring-destructive/40", className)} {...props} />
 }
 
 function InputOTPSlot({ index, className, ...props }: React.ComponentProps<"div"> & { index: number }) {
   const inputOTPContext = React.useContext(OTPInputContext)
   const { char, hasFakeCaret, isActive } = inputOTPContext?.slots?.[index] ?? {}
-  return <div data-slot="input-otp-slot" data-active={isActive} className={cn("relative flex size-9 items-center justify-center border-y border-r border-input bg-input/30 text-sm transition-all outline-none hover:bg-input/50 group-hover/otp:bg-input/50 group-has-[input:hover]/otp:bg-input/50 first:rounded-l-4xl first:border-l last:rounded-r-4xl aria-invalid:border-destructive data-[active=true]:z-10 data-[active=true]:border-ring data-[active=true]:ring-[3px] data-[active=true]:ring-ring/50", className)} {...props}>{char}{hasFakeCaret ? <div className="pointer-events-none absolute inset-0 flex items-center justify-center"><div className="h-4 w-px animate-caret-blink bg-foreground duration-1000" /></div> : null}</div>
+  return <div data-slot="input-otp-slot" data-active={isActive} className={cn("relative flex size-10 items-center justify-center border-y border-r border-input bg-input/30 text-sm transition-all outline-none hover:bg-input/50 group-hover/otp:bg-input/50 group-has-[input:hover]/otp:bg-input/50 first:rounded-l-xl first:border-l last:rounded-r-xl aria-invalid:border-destructive data-[active=true]:z-10 data-[active=true]:ring-2 data-[active=true]:ring-ring data-[active=true]:ring-offset-2 data-[active=true]:ring-offset-background", className)} {...props}>{char}{hasFakeCaret ? <div className="pointer-events-none absolute inset-0 flex items-center justify-center"><div className="h-4 w-px animate-caret-blink bg-foreground duration-1000" /></div> : null}</div>
 }
 
 function InputOTPSeparator({ ...props }: React.ComponentProps<"div">) {

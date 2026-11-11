@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { StrictMode } from "react";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -68,13 +68,12 @@ describe("billing success page", () => {
     expect(stageRequests(fetchMock)).toHaveLength(1);
   });
 
-  it("lists the steps, holding back the AI settings link until onboarding is done", async () => {
-    setup();
-    await screen.findByRole("heading", { name: "billing.success.title" });
-    const steps = within(screen.getAllByRole("list").at(-1)!);
-    expect(steps.getAllByRole("listitem")).toHaveLength(3);
-    // No number to call yet, and the dashboard would send them back to onboarding.
-    expect(steps.getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["https://docs.lobbystack.com/getting-started/forward-calls"]);
+  it("finishes onboarding from the plans after Meet your agent, and goes on to Home", async () => {
+    const fetchMock = setup({ stage: "choose_plan", number: "+15815550102" });
+    await waitFor(() => expect(stageRequests(fetchMock)).toHaveLength(1));
+    expect(stageRequests(fetchMock)[0]![1]).toEqual(expect.objectContaining({ body: JSON.stringify({ to: "complete" }) }));
+    await userEvent.click(await screen.findByRole("button", { name: "billing.success.continue" }));
+    await waitFor(() => expect(route.router.push).toHaveBeenCalledWith("/"));
   });
 
   it("does not report the same checkout again when the page is reloaded", async () => {
@@ -99,16 +98,16 @@ describe("billing success page", () => {
       throw new Error(`Unexpected request ${url}`);
     }));
     render(<StrictMode><QueryClientProvider client={client}><BillingSuccessSurface /></QueryClientProvider></StrictMode>);
-    expect(await screen.findByRole("link", { name: "(416) 555-0123" }, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText("(416) 555-0123", undefined, { timeout: 4000 })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "billing.success.number.choose" })).toBeNull();
   });
 
-  it("gives a settings checkout with a number the number and every next step", async () => {
+  it("gives a settings checkout with a number the number and the way to the dashboard, with no next steps", async () => {
     const fetchMock = setup({ stage: "complete", number: "+14165550123" });
     expect(await screen.findByText("billing.success.number.keep")).toBeTruthy();
-    const call = await screen.findByRole("link", { name: "(416) 555-0123" });
-    expect(call.getAttribute("href")).toBe("tel:+14165550123");
-    expect(screen.getByRole("link", { name: "billing.success.steps.transfer.action" }).getAttribute("href")).toBe("/agent#agent-transfer-number");
+    expect(screen.getByText("(416) 555-0123")).toBeTruthy();
+    expect(document.querySelector("a[href^=\"tel:\"], a[href*=\"forward-calls\"], a[href*=\"agent-transfer-number\"]")).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
     expect(screen.getByRole("button", { name: "billing.success.dashboard" }).getAttribute("href")).toBe("/");
     expect(screen.queryByRole("button", { name: "billing.success.number.choose" })).toBeNull();
     expect(stageRequests(fetchMock)).toHaveLength(0);
@@ -118,19 +117,13 @@ describe("billing success page", () => {
   it("sends a settings checkout without a number to the settings number page", async () => {
     setup({ stage: "complete" });
     await userEvent.click(await screen.findByRole("button", { name: "billing.success.number.choose" }));
-    expect(route.router.push).toHaveBeenCalledWith("/settings/phone-number");
-  });
-
-  it("links French readers to the French forwarding guide", async () => {
-    locale.language = "fr";
-    setup({ stage: "complete" });
-    expect((await screen.findByRole("link", { name: "billing.success.steps.forward.action" })).getAttribute("href")).toBe("https://docs.lobbystack.com/fr/getting-started/forward-calls");
+    expect(route.router.push).toHaveBeenCalledWith("/agents/primary/channels/phone");
   });
 
   it("points a visit without a checkout to the plan page", () => {
     route.search = new URLSearchParams();
     setup();
     expect(screen.getByRole("heading", { name: "billing.success.missing.title" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "billing.success.missing.action" }).getAttribute("href")).toBe("/settings/plan");
+    expect(screen.getByRole("button", { name: "billing.success.missing.action" }).getAttribute("href")).toBe("/workspace/billing");
   });
 });

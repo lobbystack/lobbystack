@@ -97,7 +97,7 @@ describe.skipIf(!testUrl)("call summary alerts against PostgreSQL under producti
           outcome: "",
           bookedAt: "",
           summary: "Sarah asked for a quote on 500 business cards for Thursday.",
-          url: expect.stringMatching(new RegExp(`/calls/${call.callId}$`)),
+          url: expect.stringMatching(new RegExp(`/inbox\\?call=${call.callId}$`)),
         }),
       }]);
       const dispatch = await tx.select({ id: outboxMessages.id }).from(outboxMessages).where(and(eq(outboxMessages.topic, "notification.dispatch"), eq(outboxMessages.aggregateId, alerts[0]!.id)));

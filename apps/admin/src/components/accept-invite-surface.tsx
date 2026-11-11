@@ -40,7 +40,7 @@ export function AcceptInviteSurface() {
   const signOut = useSignOut();
   // A partner's domain opens only the partner's businesses, whose team page an activity-only operator can't open.
   const { partner } = useBranding();
-  const signedInHome = partner ? "/" : "/settings/team";
+  const signedInHome = partner ? "/" : "/workspace/team";
 
   useEffect(() => {
     const search = new URLSearchParams(window.location.search);
@@ -96,7 +96,7 @@ export function AcceptInviteSurface() {
       const joined = await response.json().catch(() => null) as { partnerId?: string | null } | null;
       toast.success(t("acceptInvite.success", { businessName: invitation?.businessName ?? t("acceptInvite.workspaceFallback") }));
       // Someone joining a partner's business, such as its owner, lands in it, and onboarding starts there if it hasn't finished.
-      router.replace(joined?.partnerId ? "/" : "/settings/team");
+      router.replace(joined?.partnerId ? "/" : "/workspace/team");
       router.refresh();
     } catch {
       setErrorMessage(t("acceptInvite.failed"));
@@ -121,7 +121,7 @@ export function AcceptInviteSurface() {
 
   const count = (value: number) => new Intl.NumberFormat(intlLocale(locale)).format(value);
   const offer = payment ? (
-    <div className="flex flex-col gap-2 rounded-xl border px-4 py-4 text-sm">
+    <div className="flex flex-col gap-2 rounded-xl border px-4 py-4 type-body">
       <p className="font-medium">{payment.packageName}</p>
       <p className="text-muted-foreground">{t("acceptInvite.payment.allowance", { minutes: t("acceptInvite.payment.minutes", { count: payment.allowance.voiceMinutes, amount: count(payment.allowance.voiceMinutes) }), chats: t("acceptInvite.payment.chats", { count: payment.allowance.chats, amount: count(payment.allowance.chats) }) })}</p>
     </div>
@@ -138,15 +138,15 @@ export function AcceptInviteSurface() {
   const closed = !isPreviewLoading && !isInvitationValid && !needsPayment && !(payment && paid);
 
   return <div className="ph-no-capture"><ReplacementOnboardingShell description={description} progress={null} title={t("acceptInvite.title")} width="sm"><div className="flex flex-col gap-6">
-    {errorMessage ? <p className="text-center text-sm text-destructive">{errorMessage}</p> : null}
+    {errorMessage ? <p className="text-center type-body text-destructive">{errorMessage}</p> : null}
     {needsPayment ? <div className="flex flex-col gap-4">
       {offer}
-      <Button className="h-11 w-full" disabled={isOpeningCheckout} loading={isOpeningCheckout} loadingLabel={t("acceptInvite.payment.opening")} onClick={() => void openCheckout()}>{t("acceptInvite.payment.pay")}</Button>
-      <p className="text-center text-sm text-muted-foreground">{t("acceptInvite.payment.then")}</p>
-    </div> : closed ? null : isAuthenticated && wrongAccount ? <Button className="h-11 w-full" onClick={() => void signOut(loginHref)}>{t("acceptInvite.switchAccount")}</Button> : isAuthenticated ? <form className="flex flex-col" onSubmit={submit}><Button className="h-11 w-full" disabled={!isInvitationValid || isSubmitting || isPreviewLoading} loading={isSubmitting} loadingLabel={t("acceptInvite.submitting")} type="submit">{t("acceptInvite.submit")}</Button></form> : <div className="flex flex-col gap-3">
-      <Button className="h-11 w-full" onClick={() => rememberInvitedEmail(invitation?.email)} role="link" nativeButton={false} render={<Link href={loginHref} />}>{t("acceptInvite.signIn")}</Button>
-      <Button className="h-11 w-full" onClick={() => rememberInvitedEmail(invitation?.email)} role="link" nativeButton={false} render={<Link href={signupHref} />} variant="outline">{t("acceptInvite.createAccount")}</Button>
+      <Button className="w-full" disabled={isOpeningCheckout} loading={isOpeningCheckout} loadingLabel={t("acceptInvite.payment.opening")} onClick={() => void openCheckout()}>{t("acceptInvite.payment.pay")}</Button>
+      <p className="text-center type-body-muted">{t("acceptInvite.payment.then")}</p>
+    </div> : closed ? null : isAuthenticated && wrongAccount ? <Button className="w-full" onClick={() => void signOut(loginHref)}>{t("acceptInvite.switchAccount")}</Button> : isAuthenticated ? <form className="flex flex-col" onSubmit={submit}><Button className="w-full" disabled={!isInvitationValid || isSubmitting || isPreviewLoading} loading={isSubmitting} loadingLabel={t("acceptInvite.submitting")} type="submit">{t("acceptInvite.submit")}</Button></form> : <div className="flex flex-col gap-3">
+      <Button className="w-full" onClick={() => rememberInvitedEmail(invitation?.email)} role="link" nativeButton={false} render={<Link href={loginHref} />}>{t("acceptInvite.signIn")}</Button>
+      <Button className="w-full" onClick={() => rememberInvitedEmail(invitation?.email)} role="link" nativeButton={false} render={<Link href={signupHref} />} variant="outline">{t("acceptInvite.createAccount")}</Button>
     </div>}
-    <p className="text-center text-sm"><Link className="font-medium text-foreground underline-offset-4 hover:underline" href={isAuthenticated ? signedInHome : localizePublicPath("/login", locale)}>{isAuthenticated ? t(partner ? "acceptInvite.backToDashboard" : "acceptInvite.backToSettings") : t("acceptInvite.backToLogin")}</Link></p>
+    <p className="text-center type-body"><Link className="font-medium text-foreground underline-offset-4 hover:underline" href={isAuthenticated ? signedInHome : localizePublicPath("/login", locale)}>{isAuthenticated ? t(partner ? "acceptInvite.backToDashboard" : "acceptInvite.backToSettings") : t("acceptInvite.backToLogin")}</Link></p>
   </div></ReplacementOnboardingShell></div>;
 }

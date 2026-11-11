@@ -342,23 +342,6 @@
         "keep": "It's yours to keep.",
         "choose": "Choose your number"
       },
-      "steps": {
-        "title": "Next steps",
-        "call": {
-          "title": "Call it now",
-          "description": "Hear your agent answer a real call."
-        },
-        "forward": {
-          "title": "Forward your business line to it",
-          "description": "Callers keep dialing the number they know. Your phone carrier forwards those calls to your {{appName}} number.",
-          "action": "Call forwarding guide"
-        },
-        "transfer": {
-          "title": "Choose where urgent calls go",
-          "description": "Add a transfer number in AI settings so your agent can pass urgent callers to a person.",
-          "action": "Open AI settings"
-        }
-      },
       "continue": "Continue setup",
       "dashboard": "Go to your dashboard"
     }
@@ -646,10 +629,6 @@
       "zapier": {
         "title": "Zapier",
         "description": "Connect calls, bookings and contacts to thousands of apps."
-      },
-      "instagram": {
-        "title": "Instagram",
-        "description": "Reply to Instagram direct messages with the same knowledge as your agent."
       }
     },
     "status": {
@@ -670,13 +649,7 @@
       "connectFailed": "Instagram couldn't be connected. Please try again.",
       "accountInUse": "This Instagram account is already connected to another workspace.",
       "permissionMissing": "Your agent needs access to your Instagram messages. Connect again and allow it.",
-      "disconnectedSuccess": "Instagram disconnected.",
-      "disconnect": "Disconnect",
-      "reconnect": "Reconnect",
-      "connectedAs": "Replying to direct messages as @{{username}}.",
-      "dialogDescription": "Your agent answers direct messages sent to this account.",
-      "accountLabel": "Instagram account",
-      "reconnectDescription": "Instagram stopped accepting your agent's access. Reconnect the account to keep answering messages."
+      "reconnect": "Reconnect"
     }
   },
   "profile": {
@@ -860,10 +833,10 @@
     },
     "delete": {
       "title": "Delete workspace",
-      "description": "Permanently erase this workspace with its calls, chats, contacts, appointments, settings and team access. Its phone number is released and its paid plan ends. You can't undo this.",
+      "description": "Erases everything in it and releases its phone number.",
       "action": "Delete workspace",
       "dialogTitle": "Delete {{name}}?",
-      "dialogDescription": "Everything in this workspace is erased for good, its phone number goes back to the provider, and the agent stops answering. Its team loses access, and nobody can restore it.",
+      "dialogDescription": "Its calls, contacts and settings are erased, its number is released and its plan ends. You can't undo this.",
       "confirmLabel": "Type <name>{{name}}</name> to confirm",
       "submit": "Delete",
       "deleting": "Deleting...",

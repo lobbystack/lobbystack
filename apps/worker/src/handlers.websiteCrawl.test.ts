@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { JobEnvelope } from "@lobbystack/contracts";
 import { websiteIngestionJobs } from "@lobbystack/db";
-import { applySiteLanguageInTransaction, indexCrawledWebsitePage, markKnowledgeDocumentFailed } from "@lobbystack/domain";
+import { applySiteLanguageInTransaction, indexCrawledWebsitePage, markKnowledgeDocumentFailed, postWebsiteImportFinishedInTransaction } from "@lobbystack/domain";
 
 const mocks = vi.hoisted(() => ({ updates: [] as Array<{ table: unknown; set: Record<string, unknown> }> }));
 
@@ -31,6 +31,7 @@ vi.mock("@lobbystack/domain", async (importOriginal) => ({
   indexCrawledWebsitePage: vi.fn(),
   applySiteLanguageInTransaction: vi.fn(async () => true),
   markKnowledgeDocumentFailed: vi.fn(async () => true),
+  postWebsiteImportFinishedInTransaction: vi.fn(async () => undefined),
   recordAiGenerationEvent: vi.fn(async () => undefined),
 }));
 
@@ -57,6 +58,23 @@ describe("knowledge.crawlWebsite", () => {
 
     await expect(handleJob(job, dependencies)).resolves.toMatchObject({ status: "completed" });
     expect(applySiteLanguageInTransaction).toHaveBeenCalledWith(expect.anything(), { businessId: job.businessId, locale: "fr" });
+  });
+
+  it("tells the bell how many pages a dashboard import read", async () => {
+    const { job, documentId, dependencies } = crawl();
+    vi.mocked(indexCrawledWebsitePage).mockResolvedValue({ chunkCount: 1 });
+
+    await expect(handleJob(job, dependencies)).resolves.toMatchObject({ status: "completed" });
+    expect(postWebsiteImportFinishedInTransaction).toHaveBeenCalledWith(expect.anything(), { businessId: job.businessId, documentId, websiteIngestionJobId: job.payload.websiteIngestionJobId, revision: 0, url: "https://example.com/", pages: 2 });
+  });
+
+  it("posts nothing for an onboarding or demo import, which has no document", async () => {
+    const { job, dependencies } = crawl();
+    const { documentId: _documentId, revision: _revision, ...payload } = job.payload;
+    vi.mocked(indexCrawledWebsitePage).mockResolvedValue({ chunkCount: 1 });
+
+    await expect(handleJob({ ...job, payload }, dependencies)).resolves.toMatchObject({ status: "completed" });
+    expect(postWebsiteImportFinishedInTransaction).not.toHaveBeenCalled();
   });
 
   it("leaves the language alone when the pages don't settle it", async () => {
@@ -90,7 +108,8 @@ describe("knowledge.crawlWebsite", () => {
     vi.mocked(indexCrawledWebsitePage).mockRejectedValue(new Error("Embedding provider timed out."));
 
     await expect(handleJob(job, dependencies, { isFinalAttempt: true })).resolves.toMatchObject({ status: "completed" });
-    expect(markKnowledgeDocumentFailed).toHaveBeenCalledWith(dependencies.domain, expect.objectContaining({ documentId, error: "We couldn't index any page of this website." }));
+    expect(markKnowledgeDocumentFailed).toHaveBeenCalledWith(dependencies.domain, expect.objectContaining({ documentId, error: "We couldn't index any page of this website.", websiteImport: { url: "https://example.com/" } }));
+    expect(postWebsiteImportFinishedInTransaction).not.toHaveBeenCalled();
   });
 
   it("tries the crawl again later when the crawling provider rate-limits it", async () => {
@@ -109,7 +128,7 @@ describe("knowledge.crawlWebsite", () => {
     dependencies.crawler.crawl.mockRejectedValue(error);
 
     await expect(handleJob(job, dependencies, { isFinalAttempt: true, queuedAtMs: Date.now() - 30 * 60_000 })).rejects.toThrow(error);
-    expect(markKnowledgeDocumentFailed).toHaveBeenCalledWith(dependencies.domain, expect.objectContaining({ documentId, error: "Website crawling failed." }));
+    expect(markKnowledgeDocumentFailed).toHaveBeenCalledWith(dependencies.domain, expect.objectContaining({ documentId, error: "Website crawling failed.", websiteImport: { url: "https://example.com/" } }));
   });
 
   it("marks a demo's crawl unavailable when this deployment has no crawler, so the demo can publish without it", async () => {

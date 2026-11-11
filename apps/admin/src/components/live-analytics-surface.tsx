@@ -2,7 +2,11 @@
 
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useUrlState } from "@/hooks/use-url-state";
-import { formatBookedValue, formatTimeSaved } from "@/lib/analytics-results";
+import { useAgents } from "@/hooks/use-agents";
+import { useAppointments } from "@/hooks/use-appointments";
+import { todaysAppointments } from "@/lib/todays-appointments";
+import { analyticsPresetRange, analyticsRangeBounds, type AnalyticsPreset } from "@/lib/analytics-range";
+import { AgentBreakdown, AgentBreakdownSkeleton } from "@/components/analytics/agent-breakdown";
 import { formatDuration } from "@/lib/duration";
 import { subscribeRealtimeQuery } from "@/lib/realtime-query";
 
@@ -25,17 +29,17 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { AnalyticsControlsSkeleton } from "@/components/loading-skeletons";
+import { AnalyticsControlsSkeleton, MetricCardGridSkeleton } from "@/components/loading-skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
-import { intlLocale } from "@/lib/locale";
+import { formatDateTime, intlLocale } from "@/lib/locale";
 import type { AnalyticsChartPoint } from "./analytics-charts";
 
 const AnalyticsOverviewChart = dynamic(() => import("./analytics-charts").then((module) => module.AnalyticsOverviewChart), { ssr: false, loading: () => <Skeleton className="h-[300px] w-full" /> });
 const AnalyticsMetricChart = dynamic(() => import("./analytics-charts").then((module) => module.AnalyticsMetricChart), { ssr: false, loading: () => <Skeleton className="h-40 w-full" /> });
 
 type Granularity = AnalyticsViewModel["granularity"];
-type Preset = "allTime" | "custom" | "today" | "yesterday" | "thisWeek" | "thisMonth" | "lastMonth" | "last30" | "last3Months" | "thisYear" | "lastYear";
+type Preset = AnalyticsPreset | "custom";
 
 const granularities: Granularity[] = ["year", "month", "week", "day", "hour"];
 const presets: Array<Exclude<Preset, "custom">> = ["today", "yesterday", "thisWeek", "thisMonth", "lastMonth", "last30", "last3Months", "thisYear", "lastYear", "allTime"];
@@ -72,35 +76,16 @@ function viewFromUrl(): AnalyticsView {
   return { customRange: null, granularity, preset: named ?? DEFAULT_PRESET };
 }
 
-function startOfDay(value: Date): Date { return new Date(value.getFullYear(), value.getMonth(), value.getDate()); }
-
-function presetRange(preset: Exclude<Preset, "custom">, businessCreatedAt?: string): { from: Date; to: Date } {
-  const today = startOfDay(new Date());
-  const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
-  const weekStart = new Date(today); weekStart.setDate(today.getDate() - today.getDay());
-  if (preset === "today") return { from: today, to: today };
-  if (preset === "yesterday") return { from: yesterday, to: yesterday };
-  if (preset === "thisWeek") return { from: weekStart, to: today };
-  if (preset === "thisMonth") return { from: new Date(today.getFullYear(), today.getMonth(), 1), to: today };
-  if (preset === "lastMonth") return { from: new Date(today.getFullYear(), today.getMonth() - 1, 1), to: new Date(today.getFullYear(), today.getMonth(), 0) };
-  if (preset === "last3Months") return { from: new Date(today.getFullYear(), today.getMonth() - 3, today.getDate()), to: today };
-  if (preset === "thisYear") return { from: new Date(today.getFullYear(), 0, 1), to: today };
-  if (preset === "lastYear") return { from: new Date(today.getFullYear() - 1, 0, 1), to: new Date(today.getFullYear() - 1, 11, 31) };
-  if (preset === "allTime") {
-    // The API serves at most ten years, so very old businesses start there.
-    const tenYearsAgo = new Date(today.getFullYear() - 10, today.getMonth(), today.getDate() + 1);
-    const created = businessCreatedAt ? startOfDay(new Date(businessCreatedAt)) : new Date(2020, 0, 1);
-    return { from: created > tenYearsAgo ? created : tenYearsAgo, to: today };
-  }
-  return { from: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 29), to: today };
-}
-
 function percentDelta(current: number, previous: number, t: (...args: any[]) => unknown): string {
   if (previous === 0) return String(current === 0 ? t("home.analytics.metrics.flat") : t("home.analytics.metrics.percentUp", { value: "100.0" }));
   const value = ((current - previous) / previous) * 100;
   return String(value >= 0 ? t("home.analytics.metrics.percentUp", { value: Math.abs(value).toFixed(1) }) : t("home.analytics.metrics.percentDown", { value: Math.abs(value).toFixed(1) }));
 }
 
+function durationDelta(current: number, previous: number, t: ReturnType<typeof useTranslation<"dashboard">>["t"]): string {
+  if (current === previous) return t("home.analytics.metrics.flat");
+  return t(current > previous ? "home.analytics.metrics.durationUp" : "home.analytics.metrics.durationDown", { value: formatDuration(Math.abs(current - previous)) });
+}
 
 export function LiveAnalyticsSurface() {
   const { i18n, t } = useTranslation("dashboard");
@@ -108,17 +93,19 @@ export function LiveAnalyticsSurface() {
   const { businesses, business } = useActiveBusiness();
   // Every share of the page names the dates it shows, so a link opened later lands on the same span.
   const writeView = useCallback((view: AnalyticsView, url: URL) => {
-    const span = view.customRange ?? presetRange(view.preset === "custom" ? "last30" : view.preset, business?.createdAt);
+    const span = view.customRange ?? analyticsPresetRange(view.preset === "custom" ? "last30" : view.preset, { timeZone: business?.timezone, businessCreatedAt: business?.createdAt });
     for (const key of ["range", "interval", "from", "to"]) url.searchParams.delete(key);
     if (view.preset !== "custom") url.searchParams.set("range", view.preset);
     url.searchParams.set("interval", view.granularity);
     url.searchParams.set("from", formatDay(span.from));
     url.searchParams.set("to", formatDay(span.to));
-  }, [business?.createdAt]);
+  }, [business?.createdAt, business?.timezone]);
   const { ready: viewRead, setValue: setView, value: { customRange, granularity, preset } } = useUrlState({ initial: DEFAULT_VIEW, read: viewFromUrl, write: writeView });
   const setPreset = (next: Preset) => setView((current) => ({ ...current, customRange: null, preset: next }));
   const setGranularity = (next: Granularity) => setView((current) => ({ ...current, granularity: next }));
-  const range = useMemo(() => customRange ?? presetRange(preset === "custom" ? "last30" : preset, business?.createdAt), [business?.createdAt, customRange, preset]);
+  // The days are the business's: today ends at midnight where the business is, wherever the viewer is.
+  const timeZone = business?.timezone;
+  const range = useMemo(() => customRange ?? analyticsPresetRange(preset === "custom" ? "last30" : preset, { timeZone, businessCreatedAt: business?.createdAt }), [business?.createdAt, customRange, preset, timeZone]);
   // The API caps hourly views at 20 days, daily at a year and weekly at 3493 days, so longer ranges fall back to a coarser view.
   // The request adds the last picked day to this span, and the extra half day absorbs a DST hour.
   const spanDays = (range.to.getTime() - range.from.getTime()) / 86_400_000;
@@ -126,11 +113,10 @@ export function LiveAnalyticsSurface() {
   const tooLongFor = (option: Granularity) => (option === "hour" && spanDays > 19.5) || (longRange && option === "day") || (spanDays > 3492 && option === "week");
   const effectiveGranularity: Granularity = !tooLongFor(granularity) ? granularity : granularity === "hour" && !longRange ? "day" : "month";
   const analytics = useQuery({
-    queryKey: ["analytics", business?.businessId, preset, effectiveGranularity, range.from.toISOString(), range.to.toISOString()],
+    queryKey: ["analytics", business?.businessId, preset, effectiveGranularity, range.from.toISOString(), range.to.toISOString(), timeZone],
     queryFn: () => {
-      // The API buckets and labels in UTC, so send the picked calendar days as UTC days.
-      const from = new Date(Date.UTC(range.from.getFullYear(), range.from.getMonth(), range.from.getDate()));
-      const to = new Date(Date.UTC(range.to.getFullYear(), range.to.getMonth(), range.to.getDate(), 23, 59, 59, 999));
+      // The API buckets in the business's time zone too, so the picked days and the buckets line up.
+      const { from, to } = analyticsRangeBounds(range, timeZone);
       const parameters = new URLSearchParams({ businessId: business!.businessId, from: from.toISOString(), to: to.toISOString(), granularity: effectiveGranularity });
       return requestJson<AnalyticsViewModel>(`/api/analytics?${parameters.toString()}`);
     },
@@ -146,7 +132,9 @@ export function LiveAnalyticsSurface() {
 
   const data = analytics.data;
   const loading = businesses.isLoading || !viewRead || analytics.isLoading;
-  const pointFormat = new Intl.DateTimeFormat(intlLocale(i18n.language), effectiveGranularity === "year" ? { year: "numeric", timeZone: "UTC" } : effectiveGranularity === "month" ? { month: "short", ...(longRange ? { year: "2-digit" as const } : {}), timeZone: "UTC" } : effectiveGranularity === "hour" ? { hour: "numeric", timeZone: "UTC" } : { day: "2-digit", month: "short", ...(longRange ? { year: "2-digit" as const } : {}), timeZone: "UTC" });
+  // The split by agent only says something once there are two to compare.
+  const { agents: workspaceAgents, hasChoice: severalAgents } = useAgents();
+  const pointFormat = new Intl.DateTimeFormat(intlLocale(i18n.language), effectiveGranularity === "year" ? { year: "numeric", timeZone: data?.timeZone ?? "UTC" } : effectiveGranularity === "month" ? { month: "short", ...(longRange ? { year: "2-digit" as const } : {}), timeZone: data?.timeZone ?? "UTC" } : effectiveGranularity === "hour" ? { hour: "numeric", timeZone: data?.timeZone ?? "UTC" } : { day: "2-digit", month: "short", ...(longRange ? { year: "2-digit" as const } : {}), timeZone: data?.timeZone ?? "UTC" });
   const series = data?.series ?? [];
   const chartData: AnalyticsChartPoint[] = series.map((point) => ({
     label: pointFormat.format(new Date(point.bucket)),
@@ -157,24 +145,20 @@ export function LiveAnalyticsSurface() {
     { key: "calls" as const, title: t("home.analytics.cards.calls"), value: data.calls.current.toLocaleString(intlLocale(i18n.language)), description: percentDelta(data.calls.current, data.calls.previous, t) },
     { key: "messages" as const, title: t("home.analytics.cards.messages"), value: data.messages.current.toLocaleString(intlLocale(i18n.language)), description: percentDelta(data.messages.current, data.messages.previous, t) },
     { key: "appointments" as const, title: t("home.analytics.cards.appointments"), value: data.appointments.current.toLocaleString(intlLocale(i18n.language)), description: percentDelta(data.appointments.current, data.appointments.previous, t) },
-    { key: "agentResponseSeconds" as const, title: t("home.analytics.cards.agentResponseTime"), value: formatDuration(data.agentResponseSeconds.current), description: data.agentResponseSeconds.current === data.agentResponseSeconds.previous ? t("home.analytics.metrics.flat") : t(data.agentResponseSeconds.current > data.agentResponseSeconds.previous ? "home.analytics.metrics.durationUp" : "home.analytics.metrics.durationDown", { value: formatDuration(Math.abs(data.agentResponseSeconds.current - data.agentResponseSeconds.previous)) }) },
+    { key: "agentResponseSeconds" as const, title: t("home.analytics.cards.agentResponseTime"), value: formatDuration(data.agentResponseSeconds.current), description: durationDelta(data.agentResponseSeconds.current, data.agentResponseSeconds.previous, t) },
   ] : [];
-  const withoutTransfer = data?.callsWithoutTransferPercent;
-  const percentFormat = new Intl.NumberFormat(intlLocale(i18n.language), { style: "percent", maximumFractionDigits: 1 });
-  const pointsFormat = new Intl.NumberFormat(intlLocale(i18n.language), { maximumFractionDigits: 1 });
-  const results = data ? [
-    { key: "bookedValue", value: formatBookedValue(data.bookedValue.current, data.bookedValue.currency, i18n.language), description: percentDelta(data.bookedValue.current, data.bookedValue.previous, t) },
-    { key: "timeSaved", value: formatTimeSaved(data.timeSavedSeconds.current, i18n.language), description: percentDelta(data.timeSavedSeconds.current, data.timeSavedSeconds.previous, t) },
-    {
-      key: "withoutTransfer",
-      value: withoutTransfer?.current == null ? "—" : percentFormat.format(withoutTransfer.current / 100),
-      // A share moves in percentage points, and there's nothing to compare while either period has no calls.
-      description: withoutTransfer?.current == null ? null
-        : withoutTransfer.previous == null ? t("home.analytics.metrics.noPreviousCalls")
-        : withoutTransfer.current === withoutTransfer.previous ? t("home.analytics.metrics.flat")
-          : t(withoutTransfer.current > withoutTransfer.previous ? "home.analytics.metrics.pointsUp" : "home.analytics.metrics.pointsDown", { value: pointsFormat.format(Math.abs(withoutTransfer.current - withoutTransfer.previous)) }),
-    },
+  // Calls and average duration follow the picked dates; Today always covers today, from the appointments list.
+  const { appointments } = useAppointments();
+  const today = todaysAppointments(appointments.data?.appointments, business?.timezone);
+  const overview = data ? [
+    { key: "calls", value: data.calls.current.toLocaleString(intlLocale(i18n.language)), description: percentDelta(data.calls.current, data.calls.previous, t) },
+    today
+      ? { key: "today", value: today.count.toLocaleString(intlLocale(i18n.language)), description: today.next ? t("home.analytics.overview.today.next", { time: formatDateTime(today.next.startsAt, i18n.language, { hour: "numeric", minute: "2-digit", timeZone: today.next.timezone }) }) : t("home.analytics.overview.today.none") }
+      // Without the appointments list, the card counts the period's appointments instead.
+      : { key: "appointments", value: data.appointments.current.toLocaleString(intlLocale(i18n.language)), description: percentDelta(data.appointments.current, data.appointments.previous, t) },
+    { key: "averageDuration", value: formatDuration(data.averageCallDurationSeconds.current), description: durationDelta(data.averageCallDurationSeconds.current, data.averageCallDurationSeconds.previous, t) },
   ] as const : [];
+  const overviewSkeleton = <MetricCardGridSkeleton count={3} titles={[t("home.analytics.overview.calls.title"), t("home.analytics.overview.today.title"), t("home.analytics.overview.averageDuration.title")]} />;
   const channelShares = channelPercentages(data?.channels);
   // Other only holds channels the dashboard can't label, so it stays hidden while empty.
   const channelItems = ANALYTICS_CHANNELS.filter((channel) => channel !== "other" || (data?.channels.other ?? 0) > 0).map((channel) => ({
@@ -190,12 +174,13 @@ export function LiveAnalyticsSurface() {
       <ButtonGroup><Popover><PopoverTrigger render={<Button aria-label={t("home.analytics.controls.dateRange")} size="icon" variant="outline" />}><CalendarIcon /></PopoverTrigger><PopoverContent align="start" className="w-auto p-0" sideOffset={8}><Calendar captionLayout="label" mode="range" onSelect={(selection: DateRange | undefined) => { const from = selection?.from; if (!from) return; setView((current) => ({ ...current, customRange: { from, to: selection?.to ?? from }, preset: "custom" })); }} selected={{ from: range.from, to: range.to }} /></PopoverContent></Popover><DropdownMenu><DropdownMenuTrigger render={<Button aria-label={t("home.analytics.controls.presetRange")} className="max-w-56" variant="outline" />}><span className="truncate">{t(`home.analytics.controls.presets.${preset}`)}</span></DropdownMenuTrigger><DropdownMenuContent align="end" className="min-w-56"><DropdownMenuGroup>{presets.map((option) => <DropdownMenuItem className="justify-between" key={option} onClick={() => setPreset(option)}>{t(`home.analytics.controls.presets.${option}`)}{option === preset ? <Check /> : null}</DropdownMenuItem>)}</DropdownMenuGroup></DropdownMenuContent></DropdownMenu></ButtonGroup>
       </>}
     </div></div>
-    {businesses.isError || analytics.isError ? <Surface className="p-8 text-center text-sm text-destructive">Analytics are unavailable.</Surface> : null}
-    {loading ? <AnalyticsSkeleton /> : null}
-    {data ? <div aria-busy={analytics.isPlaceholderData || undefined} className={`flex flex-col gap-4 transition-opacity ${analytics.isPlaceholderData ? "opacity-60" : ""}`}><Surface className="grid sm:grid-cols-3">{results.map((result) => <section className="flex min-w-0 flex-col gap-2 border-b p-6 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0" key={result.key}><h2 className="type-card-title text-foreground">{t(`home.analytics.results.${result.key}`)}</h2><p className="text-4xl font-normal tracking-normal break-words text-foreground tabular-nums">{result.value}</p>{result.description ? <p className="type-meta">{result.description}</p> : null}</section>)}</Surface>
+    {businesses.isError || analytics.isError ? <Surface className="p-8 text-center type-body text-destructive">Analytics are unavailable.</Surface> : null}
+    {loading ? <>{overviewSkeleton}<AnalyticsSkeleton /></> : null}
+    {loading && severalAgents ? <AgentBreakdownSkeleton rows={workspaceAgents.length} /> : null}
+    {data ? <div aria-busy={analytics.isPlaceholderData || undefined} className={`flex flex-col gap-4 transition-opacity ${analytics.isPlaceholderData ? "opacity-60" : ""}`}>{appointments.isPending ? overviewSkeleton : <Surface className="grid sm:grid-cols-2 md:grid-cols-3">{overview.map((metric) => <section className="border-b p-5 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0 md:border-b-0 md:border-r md:last:border-r-0" key={metric.key}><div className="flex flex-col gap-4"><div className="flex flex-col gap-2"><h2 className="type-card-title text-foreground">{t(`home.analytics.overview.${metric.key}.title`)}</h2><p className="type-metric-sm">{metric.value}</p></div><p className="type-meta">{metric.description}</p></div></section>)}</Surface>}
       <Card><CardHeader><CardTitle>{t("home.analytics.chart.title")}</CardTitle><CardDescription>{t("home.analytics.chart.description")}</CardDescription></CardHeader><CardContent className="px-6"><AnalyticsOverviewChart data={chartData} /></CardContent></Card>
-      <Surface className="grid sm:grid-cols-2">{metrics.map((metric) => <section className="border-b p-6 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0" key={metric.key}><div className="flex min-h-32 flex-col gap-6"><div className="flex flex-col gap-5"><h2 className="type-card-title text-foreground">{metric.title}</h2><div className="flex flex-col gap-3"><p className="text-5xl font-normal tracking-normal text-foreground tabular-nums">{metric.value}</p><div className="flex items-center gap-2 text-base text-muted-foreground"><span className="size-3 rounded-full border-2 border-primary" /><span>{rangeLabel}</span></div></div></div><AnalyticsMetricChart data={chartData} dataKey={metric.key} label={metric.title} {...(metric.key === "agentResponseSeconds" ? { formatValue: formatDuration } : {})} /><p className="type-meta">{metric.description}</p></div></section>)}</Surface>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2"><Card><CardHeader><CardTitle>{t("home.analytics.outcomes.title")}</CardTitle><CardDescription>{t("home.analytics.outcomes.description")}</CardDescription></CardHeader><CardContent><BarList items={data.outcomes.map((item) => ({ name: t(`home.analytics.outcomes.labels.${item.outcome}`), value: item.count, ...(OUTCOME_ICONS[item.outcome] ? { icon: OUTCOME_ICONS[item.outcome] } : {}) }))} /></CardContent></Card><Card><CardHeader><CardTitle>{t("home.analytics.channels.title")}</CardTitle><CardDescription>{t("home.analytics.channels.description")}</CardDescription></CardHeader><CardContent><BarList muted items={channelItems} suffix="%" /></CardContent></Card></div></div> : null}
+      <Surface className="grid sm:grid-cols-2">{metrics.map((metric) => <section className="border-b p-6 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0" key={metric.key}><div className="flex min-h-32 flex-col gap-6"><div className="flex flex-col gap-5"><h2 className="type-card-title text-foreground">{metric.title}</h2><div className="flex flex-col gap-3"><p className="type-metric">{metric.value}</p><div className="flex items-center gap-2 type-body-lg text-muted-foreground"><span className="size-3 rounded-full border-2 border-primary" /><span>{rangeLabel}</span></div></div></div><AnalyticsMetricChart data={chartData} dataKey={metric.key} label={metric.title} {...(metric.key === "agentResponseSeconds" ? { formatValue: formatDuration } : {})} /><p className="type-meta">{metric.description}</p></div></section>)}</Surface>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2"><Card><CardHeader><CardTitle>{t("home.analytics.outcomes.title")}</CardTitle><CardDescription>{t("home.analytics.outcomes.description")}</CardDescription></CardHeader><CardContent><BarList items={data.outcomes.map((item) => ({ name: t(`home.analytics.outcomes.labels.${item.outcome}`), value: item.count, ...(OUTCOME_ICONS[item.outcome] ? { icon: OUTCOME_ICONS[item.outcome] } : {}) }))} /></CardContent></Card><Card><CardHeader><CardTitle>{t("home.analytics.channels.title")}</CardTitle><CardDescription>{t("home.analytics.channels.description")}</CardDescription></CardHeader><CardContent><BarList muted items={channelItems} suffix="%" /></CardContent></Card></div>{severalAgents && data.agents?.length ? <AgentBreakdown agents={data.agents} /> : null}</div> : null}
   </div>;
 }
 
@@ -216,15 +201,6 @@ function AnalyticsSkeleton() {
 
   return (
     <>
-      <Surface className="grid sm:grid-cols-3">
-        {Array.from({ length: 3 }).map((_, index) => (
-          <section className="flex min-w-0 flex-col gap-2 border-b p-6 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0" key={index}>
-            <Skeleton className="h-5 w-28" />
-            <Skeleton className="h-10 w-24" />
-            <Skeleton className="h-4 w-32" />
-          </section>
-        ))}
-      </Surface>
       <Card>
         <CardHeader>
           <Skeleton className="h-5 w-32" />

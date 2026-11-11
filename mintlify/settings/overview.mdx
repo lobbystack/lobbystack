@@ -1,56 +1,51 @@
 ---
 title: "Manage workspace settings"
-description: "Manage usage, billing, team members, notifications, your phone number, the website widget, account credentials, and dashboard appearance in LobbyStack Settings."
-sidebarTitle: "Settings"
+description: "Find your workspace settings, such as team, usage and billing, and your own account settings in LobbyStack."
+sidebarTitle: "Settings overview"
 contentType: "Conceptual"
 ---
 
-The **Settings** area contains workspace controls, account credentials, notifications, phone-number settings, usage, billing, and appearance preferences.
+Click **Settings** in the dashboard sidebar. The sidebar switches to the settings menu, with two groups: **Workspace** for settings every agent and teammate shares, and **Your account** for your own. The row at the top, with a back arrow, brings back the main menu.
+
+Each agent's own settings, such as its greeting, rules and channels, live on the agent instead. See [Configure your AI agent](/agent/overview).
+
+The business details, knowledge, services, employees and calendar connections every agent shares are under **Business** in the sidebar. See [What every agent shares](/agent/overview#what-every-agent-shares).
 
 <CardGroup cols={2}>
-  <Card title="Usage" icon="chart-line" href="/billing/usage">
-    Track hosted voice minutes, SMS segments, transfer attempts, knowledge base, and plan limits.
-  </Card>
-  <Card title="Billing" icon="credit-card" href="/billing/plans">
-    Review plan options, upgrades, subscription actions, and spending caps.
-  </Card>
   <Card title="Team" icon="users" href="/settings/team">
     Invite members and control workspace access.
   </Card>
-  <Card title="Notifications" icon="bell" href="/settings/notifications">
-    Choose which events send email or SMS alerts.
+  <Card title="Usage" icon="chart-line" href="/billing/usage">
+    Track voice minutes, SMS segments, transfer attempts and plan limits.
   </Card>
-  <Card title="Phone number" icon="phone" href="/settings/phone-number">
-    Review or replace the business phone number.
+  <Card title="Plan and billing" icon="credit-card" href="/billing/plans">
+    Review plans, upgrades, subscription actions and spending caps.
   </Card>
-  <Card title="Account security" icon="shield" href="/settings/account">
+  <Card title="Profile and security" icon="shield" href="/settings/account">
     Change your email address or password.
   </Card>
 </CardGroup>
 
-## Settings pages
+## Workspace
 
 | Page | What it is for |
 | --- | --- |
-| **Usage** | Current billing-period usage, remaining included usage, reset timing, and metered usage. |
-| **Billing** | Current plan, upgrades, subscription management, and spending caps. |
-| **Team** | Member invitations, roles, and workspace access. |
-| **Notifications** | Email and SMS alerts for events that need attention. |
-| **Phone number** | The active business number and eligible number replacement. |
-| **Widget** | Widget keys, website chat, lead capture, browser calls, and installation. |
-| **Account** | Account email and password changes. |
-| **Appearance** | Dashboard language, time format, and theme. |
+| **Team** | [The business name, member invitations, roles and access](/settings/team) |
+| **Usage** | [Usage this billing period, what's left and when it resets](/billing/usage) |
+| **Plan and billing** | [Your plan, upgrades, subscription and spending cap](/billing/plans) |
+| **Webhooks** | [Events sent to your own tools](/integrations/webhooks) |
+| **API keys** | [Keys for the API and connected AI assistants](/api/authentication) |
 
-## Update account details
+A business that a partner runs shows **Billing** instead of **Plan and billing**, and **Partner access**, which lists when the partner's team opened the business.
 
-<Steps>
-  <Step title="Open Settings">
-    In the dashboard sidebar, go to **Manage** > **Settings**.
-  </Step>
-  <Step title="Choose a settings page">
-    Select the page for the workspace or account setting you need.
-  </Step>
-  <Step title="Make your change">
-    Update the field or action you need. Some changes, such as email updates, require confirmation.
-  </Step>
-</Steps>
+## Your account
+
+| Page | What it is for |
+| --- | --- |
+| **Profile and security** | [Your email address and password](/settings/account) |
+| **Language and theme** | Dashboard language, time format and whether the dashboard shares telemetry data |
+| **Notifications** | [The email and SMS alerts you get](/settings/notifications) |
+
+## What you see
+
+Settings shows only the pages your role and your business's access level let you open. For example, only owners and admins see **API keys**. Links to old settings pages, such as `/settings/account`, still open the page that replaced them.

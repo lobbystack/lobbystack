@@ -84,7 +84,7 @@ export function ImportWebsiteKnowledgeSheet({
       }}
       open={open}
     >
-      <DialogContent >
+      <DialogContent size="sm" >
         <DialogHeader>
           <DialogTitle>{t("sections.knowledge.websiteImport.title")}</DialogTitle>
           <DialogDescription>

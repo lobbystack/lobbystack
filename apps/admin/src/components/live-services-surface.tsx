@@ -1,5 +1,7 @@
 "use client";
 
+import { cn } from "@/lib/utils";
+
 import { useTable, type PaginationState } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, HandHelping, MoreHorizontal, Pause, Pencil, Play, Plus, Trash2 } from "lucide-react";
@@ -8,17 +10,16 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next";
 
 import { formatServicePrice, intlLocale, isDiscountPercent, servicePriceFromColumns, servicePriceTypes, type ServicePriceType } from "@lobbystack/shared";
-import { HeaderActions, HeaderSearch } from "@/components/header-actions";
+import { HeaderActions } from "@/components/header-actions";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useSetupAction } from "@/lib/use-setup-action";
 import { formatDateTime } from "@/lib/locale";
 import { caretBefore, formatPriceTyping, parsePriceInput, priceInputMinor, priceInputValue } from "@/lib/price-input";
 import { requestJson } from "@/lib/request-json";
-import { DataTablePagination, paginationFeatures } from "./data-table/pagination";
-import { DataTablePaginationSkeleton, HeaderButtonSkeleton, HeaderSearchSkeleton, ServiceRowsSkeleton, ServicesPageSkeleton } from "./loading-skeletons";
+import { DataTablePagination, paginationFeatures, useDataTablePaginationLabels } from "./data-table/pagination";
+import { DataTablePaginationSkeleton, HeaderButtonSkeleton, ServiceRowsSkeleton, ServicesPageSkeleton } from "./loading-skeletons";
 import { PageSurface } from "./page-surface";
-import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { DurationPicker, formatDuration } from "./ui/duration-picker";
@@ -28,8 +29,10 @@ import { Input } from "./ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "./ui/input-group";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Switch } from "./ui/switch";
-import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { Table, TableActionsColumn, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Textarea } from "./ui/textarea";
+import { Status } from "@/components/ui/status";
+import { knowledgeStatusVariant } from "@/lib/status-variants";
 
 export { formatPriceTyping, parsePriceInput, priceInputValue };
 
@@ -72,8 +75,8 @@ function summarize(value: string, length = 72): string {
 
 export function LiveServicesSurface() {
   const { i18n, t } = useTranslation("agent");
+  const paginationLabels = useDataTablePaginationLabels("agent");
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState("");
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -113,33 +116,31 @@ export function LiveServicesSurface() {
     onError: () => { toast.error(t("sections.services.duplicateFailed")); },
   });
   const services = useMemo(() => {
-    const query = search.trim().toLowerCase();
     const collator = new Intl.Collator(i18n.resolvedLanguage ?? i18n.language, { numeric: true, sensitivity: "base" });
     const rows = [...(catalog.data?.services ?? [])].sort((left, right) => collator.compare(left.name, right.name));
-    return query ? rows.filter((service) => `${service.name} ${service.description ?? ""} ${service.durationMinutes}`.toLowerCase().includes(query)) : rows;
-  }, [catalog.data, search, i18n.language, i18n.resolvedLanguage]);
+    return rows;
+  }, [catalog.data, i18n.language, i18n.resolvedLanguage]);
   // Refetches after a duplicate or edit change `data`; stay on the page instead of jumping to the first.
   const table = useTable({ features: paginationFeatures, data: services, columns: [], autoResetPageIndex: false, onPaginationChange: setPagination, state: { pagination } });
   const pageRows = table.getRowModel().rows.map((row) => row.original);
   const loading = catalog.isLoading;
 
-  useEffect(() => { setPagination((current) => ({ ...current, pageIndex: 0 })); }, [search]);
   useEffect(() => {
     const lastPage = Math.max(0, Math.ceil(services.length / pagination.pageSize) - 1);
     if (pagination.pageIndex > lastPage) setPagination((current) => ({ ...current, pageIndex: lastPage }));
   }, [services.length, pagination.pageIndex, pagination.pageSize]);
 
   if (businesses.isLoading) return <PageSurface title=""><div className="flex w-full flex-col gap-6">
-    <HeaderActions><HeaderSearchSkeleton /><HeaderButtonSkeleton label={t("sections.services.addKnowledge")} /></HeaderActions>
-    <ServicesPageSkeleton headings={[t("table.title"), t("table.preview"), t("sections.services.price.column"), t("table.status"), t("table.added")]} />
+    <HeaderActions><HeaderButtonSkeleton label={t("sections.services.addKnowledge")} /></HeaderActions>
+    <ServicesPageSkeleton headings={[t("table.title"), t("table.preview"), t("sections.services.price.column"), t("table.status"), t("table.added")]} rowsPerPage={paginationLabels.rowsPerPage} />
   </div></PageSurface>;
-  if (businesses.isError || catalog.isError) return <p className="text-sm text-destructive">{t("sections.services.unavailable")}</p>;
-  if (!business) return <PageSurface title=""><p className="text-sm text-muted-foreground">{t("empty.description")}</p></PageSurface>;
+  if (businesses.isError || catalog.isError) return <p className="type-body text-destructive">{t("sections.services.unavailable")}</p>;
+  if (!business) return <PageSurface title=""><p className="type-body-muted">{t("empty.description")}</p></PageSurface>;
 
   return <PageSurface title=""><div className="flex w-full flex-col gap-6">
-    <HeaderActions>{loading ? <HeaderSearchSkeleton /> : <HeaderSearch onChange={setSearch} placeholder={t("table.searchPlaceholder")} value={search} />}{canManage ? loading ? <HeaderButtonSkeleton label={t("sections.services.addKnowledge")} /> : <Button onClick={() => { setEditingService(null); setEditorOpen(true); }}><Plus data-icon="inline-start" />{t("sections.services.addKnowledge")}</Button> : null}</HeaderActions>
-    <TableCard><Table className="min-w-[60rem] w-full table-fixed"><colgroup><col className="w-[20%]" /><col className="w-[34%]" /><col className="w-[14%]" /><col className="w-[12%]" /><col className="w-[16%]" /><col className="w-12" /></colgroup><TableHeader><TableRow><TableHead>{t("table.title")}</TableHead><TableHead>{t("table.preview")}</TableHead><TableHead>{t("sections.services.price.column")}</TableHead><TableHead>{t("table.status")}</TableHead><TableHead className="text-right">{t("table.added")}</TableHead><TableHead /></TableRow></TableHeader><TableBody aria-busy={loading || undefined}>{loading ? <ServiceRowsSkeleton rows={Math.min(pagination.pageSize, 10)} /> : pageRows.length ? pageRows.map((service) => <TableRow className={canManage ? "h-12 cursor-pointer" : "h-12"} key={service.id} onClick={() => { if (canManage) { setEditingService(service); setEditorOpen(true); } }}><TableCell className="max-w-0 overflow-hidden"><div className="flex min-w-0 items-center gap-2"><HandHelping aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" /><span className="block truncate font-medium" title={service.name}>{summarize(service.name, 32)}</span></div></TableCell><TableCell className="max-w-0 overflow-hidden"><span className="block truncate text-sm text-muted-foreground" title={service.description ?? t("sections.services.durationValue", { duration: formatDuration(service.durationMinutes, intlLocale(i18n.language)) })}>{summarize(service.description ?? t("sections.services.durationValue", { duration: formatDuration(service.durationMinutes, intlLocale(i18n.language)) }))}</span></TableCell><TableCell className="truncate text-sm whitespace-nowrap tabular-nums">{servicePriceFromColumns(service, catalog.data!.currency) ? formatServicePrice(servicePriceFromColumns(service, catalog.data!.currency)!, intlLocale(i18n.language), { from: (amount) => t("sections.services.price.from", { amount }), range: (min, max) => t("sections.services.price.range", { min, max }), inPerson: t("sections.services.price.inPerson"), discounted: (_regular, percent, discounted) => t("sections.services.price.discounted", { price: discounted, percent: formatPercent(percent, intlLocale(i18n.language)) }) }) : <span className="text-muted-foreground">{t("sections.services.price.none")}</span>}</TableCell><TableCell>{service.active ? <Badge variant="secondary">{t("sections.services.status.indexed")}</Badge> : <Badge variant="outline">{t("table.disabled")}</Badge>}</TableCell><TableCell className="text-right text-sm text-muted-foreground">{formatDateTime(service.createdAt, i18n.resolvedLanguage ?? i18n.language, { dateStyle: "medium", timeStyle: "short" })}</TableCell><TableCell onClick={(event) => event.stopPropagation()}>{canManage ? <DropdownMenu><DropdownMenuTrigger render={<Button aria-label={t("actions.moreOptions")} size="icon-sm" variant="ghost"><MoreHorizontal /></Button>} /><DropdownMenuContent align="end" className="min-w-0 w-fit p-1"><DropdownMenuItem onClick={() => { setEditingService(service); setEditorOpen(true); }}><Pencil />{t("sections.services.edit")}</DropdownMenuItem><DropdownMenuItem disabled={duplicateService.isPending} onClick={() => duplicateService.mutate(service)}><Copy />{t("sections.services.duplicate")}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => toggleService.mutate(service)}>{service.active ? <Pause /> : <Play />}{service.active ? t("actions.disable") : t("actions.enable")}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setDeleteCandidate(service)} variant="destructive"><Trash2 />{t("actions.delete")}</DropdownMenuItem></DropdownMenuContent></DropdownMenu> : null}</TableCell></TableRow>) : <TableRow><TableCell className="h-24 text-center text-muted-foreground" colSpan={6}>{search ? t("table.empty") : t("sections.services.emptyState")}</TableCell></TableRow>}</TableBody></Table></TableCard>
-    {loading ? <DataTablePaginationSkeleton /> : <DataTablePagination labels={{ rowsPerPage: t("pagination.rowsPerPage"), pageOf: (page, total) => t("pagination.pageOf", { page, total }), firstPage: t("pagination.firstPage"), previousPage: t("pagination.previousPage"), nextPage: t("pagination.nextPage"), lastPage: t("pagination.lastPage"), goToPage: (page) => t("pagination.goToPage", { page }) }} table={table} />}
+    <HeaderActions>{canManage ? loading ? <HeaderButtonSkeleton label={t("sections.services.addKnowledge")} /> : <Button onClick={() => { setEditingService(null); setEditorOpen(true); }}><Plus data-icon="inline-start" />{t("sections.services.addKnowledge")}</Button> : null}</HeaderActions>
+    <TableCard><Table className={cn("w-full table-fixed", (loading || pageRows.length > 0) && "min-w-[60rem]")}><colgroup><col className="w-[25%]" /><col className="w-[42%]" /><col className="w-[18%]" /><col className="w-[15%]" /><col className="w-48" /><TableActionsColumn /></colgroup><TableHeader empty={!(loading || pageRows.length > 0)}><TableRow><TableHead>{t("table.title")}</TableHead><TableHead>{t("table.preview")}</TableHead><TableHead>{t("sections.services.price.column")}</TableHead><TableHead>{t("table.status")}</TableHead><TableHead className="text-right">{t("table.added")}</TableHead><TableHead /></TableRow></TableHeader><TableBody aria-busy={loading || undefined}>{loading ? <ServiceRowsSkeleton rows={Math.min(pagination.pageSize, 10)} /> : pageRows.length ? pageRows.map((service) => <TableRow className={canManage ? "cursor-pointer" : undefined} key={service.id} onClick={() => { if (canManage) { setEditingService(service); setEditorOpen(true); } }}><TableCell className="max-w-0 overflow-hidden"><div className="flex min-w-0 items-center gap-2"><HandHelping aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" /><span className="block truncate type-item-title" title={service.name}>{summarize(service.name, 32)}</span></div></TableCell><TableCell className="max-w-0 overflow-hidden"><span className="block truncate type-body-muted" title={service.description ?? t("sections.services.durationValue", { duration: formatDuration(service.durationMinutes, intlLocale(i18n.language)) })}>{summarize(service.description ?? t("sections.services.durationValue", { duration: formatDuration(service.durationMinutes, intlLocale(i18n.language)) }))}</span></TableCell><TableCell className="truncate type-body whitespace-nowrap tabular-nums">{servicePriceFromColumns(service, catalog.data!.currency) ? formatServicePrice(servicePriceFromColumns(service, catalog.data!.currency)!, intlLocale(i18n.language), { from: (amount) => t("sections.services.price.from", { amount }), range: (min, max) => t("sections.services.price.range", { min, max }), inPerson: t("sections.services.price.inPerson"), discounted: (_regular, percent, discounted) => t("sections.services.price.discounted", { price: discounted, percent: formatPercent(percent, intlLocale(i18n.language)) }) }) : <span className="text-muted-foreground">{t("sections.services.price.none")}</span>}</TableCell><TableCell><Status variant={knowledgeStatusVariant(service.active ? "indexed" : "disabled")}>{service.active ? t("sections.services.status.indexed") : t("table.disabled")}</Status></TableCell><TableCell className="text-right type-body-muted">{formatDateTime(service.createdAt, i18n.resolvedLanguage ?? i18n.language, { dateStyle: "medium", timeStyle: "short" })}</TableCell><TableCell onClick={(event) => event.stopPropagation()}>{canManage ? <DropdownMenu><DropdownMenuTrigger render={<Button aria-label={t("actions.moreOptions")} size="icon-sm" variant="ghost"><MoreHorizontal /></Button>} /><DropdownMenuContent align="end" className="min-w-0 w-fit"><DropdownMenuItem onClick={() => { setEditingService(service); setEditorOpen(true); }}><Pencil />{t("sections.services.edit")}</DropdownMenuItem><DropdownMenuItem disabled={duplicateService.isPending} onClick={() => duplicateService.mutate(service)}><Copy />{t("sections.services.duplicate")}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => toggleService.mutate(service)}>{service.active ? <Pause /> : <Play />}{service.active ? t("actions.disable") : t("actions.enable")}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setDeleteCandidate(service)} variant="destructive"><Trash2 />{t("actions.delete")}</DropdownMenuItem></DropdownMenuContent></DropdownMenu> : null}</TableCell></TableRow>) : <TableRow><TableCell className="h-24 text-center whitespace-normal text-muted-foreground" colSpan={6}>{t("sections.services.emptyState")}</TableCell></TableRow>}</TableBody></Table></TableCard>
+    {loading ? <DataTablePaginationSkeleton rowsPerPage={paginationLabels.rowsPerPage} /> : <DataTablePagination labels={paginationLabels} table={table} />}
     <ConfirmActionDialog cancelLabel={t("actions.deleteCancel")} confirmLabel={t("actions.delete")} confirmVariant="destructive" description={t("sections.services.deleteDescription")} onConfirm={async () => { if (!deleteCandidate) return; await deleteService.mutateAsync(deleteCandidate); setDeleteCandidate(null); toast.success(t("actions.deleted")); }} onOpenChange={(open) => { if (!open) setDeleteCandidate(null); }} open={deleteCandidate !== null} pending={deleteService.isPending} title={t("sections.services.deleteTitle")} />
     <ServiceEditor currency={catalog.data?.currency ?? "USD"} editing={editingService} onOpenChange={(open) => { setEditorOpen(open); if (!open) setEditingService(null); }} open={editorOpen} pending={saveService.isPending} save={async (values) => { await saveService.mutateAsync({ service: editingService, values }); setEditorOpen(false); setEditingService(null); }} />
   </div></PageSurface>;

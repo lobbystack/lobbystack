@@ -4,7 +4,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { agentRules, agents, apiKeys, appointments, auditLogs, billingAccounts, billingCheckoutRequests, businesses, businessHours, businessMemberships, calendarBusyBlocks, calendarConnections, calls, contacts, conversations, createDatabaseClient, idempotencyKeys, inboxItems, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, numberTrials, onboardingNumberClaimEvents, onboardingPhoneVerifications, operatorNotificationDeliveries, operatorNotificationPreferences, outboxMessages, phoneNumbers, platformKeyBusinesses, services, staff, staffServiceAssignments, storageObjects, users, webhookDeliveries, webhookDeliveryAttempts, webhookEndpoints, webhookEvents, websiteIngestionJobs, widgetKeys } from "@lobbystack/db";
+import { agentRules, agents, apiKeys, appointments, auditLogs, billingAccounts, billingCheckoutRequests, businesses, businessNotifications, businessHours, businessMemberships, calendarBusyBlocks, calendarConnections, calls, contacts, conversations, createDatabaseClient, idempotencyKeys, inboxItems, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, numberTrials, onboardingNumberClaimEvents, onboardingPhoneVerifications, operatorNotificationDeliveries, operatorNotificationPreferences, outboxMessages, phoneNumbers, platformKeyBusinesses, services, staff, staffServiceAssignments, storageObjects, users, webhookDeliveries, webhookDeliveryAttempts, webhookEndpoints, webhookEvents, websiteIngestionJobs, widgetKeys } from "@lobbystack/db";
 import { apiAppointmentSchema, apiBillingSchema, apiBusinessSchema, apiCalendarConnectionSchema, apiCallSchema, apiCheckoutSchema, apiKnowledgeEntrySchema, apiKnowledgeSourceSchema, apiNotificationPreferencesSchema, apiOnboardingSchema, apiPhoneNumberClaimSchema, apiPhoneNumberOfferSchema, apiPhoneNumberSchema, apiReceptionistSchema, apiRuleSchema, apiServiceSchema, apiStaffSchema, apiTeamSchema, apiWidgetKeyCreatedSchema, defaultGreeting, OPERATOR_SMS_DISCLOSURE_VERSION, WEBHOOK_MAX_ATTEMPTS } from "@lobbystack/shared";
 
 import { finalizeConversationSession } from "../conversations";
@@ -305,6 +305,11 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
     expect(after).toMatchObject({ status: "disabled", disabledReason: "failing", consecutiveFailures: WEBHOOK_MAX_ATTEMPTS });
     const [audit] = await admin!.db.select().from(auditLogs).where(and(eq(auditLogs.entityId, endpoint!.id), eq(auditLogs.eventType, "webhook_endpoint.auto_disabled")));
     expect(audit).toBeDefined();
+    // The bell tells the team which endpoint we turned off, until someone turns it back on.
+    const bell = async () => await admin!.db.select({ kind: businessNotifications.kind, params: businessNotifications.params, resolvedAt: businessNotifications.resolvedAt }).from(businessNotifications).where(and(eq(businessNotifications.businessId, b.businessId), eq(businessNotifications.dedupeKey, `webhook_failing:${endpoint!.id}`)));
+    expect(await bell()).toEqual([{ kind: "webhook_failing", params: { host: "failing.example.com" }, resolvedAt: null }]);
+    await updateWebhookEndpoint(context, { businessId: b.businessId, manager: { kind: "api_key", apiKeyId: randomUUID() }, endpointId: endpoint!.id, status: "enabled" });
+    expect((await bell())[0]?.resolvedAt).toBeInstanceOf(Date);
     // The owner alert goes through app.resolve_operator_notification_recipients, which only
     // answers a session that logged in as lobbystack_worker.
     if (workerLoginUrl) {
@@ -526,7 +531,8 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
     await admin!.db.update(businesses).set({ onboardingStage: "website" }).where(eq(businesses.id, b.businessId));
     await createKnowledgeSourceForApi({ db: worker!.db }, b.caller, { type: "website", url: "https://birch-api.example" });
     const [business] = await admin!.db.select({ websiteUrl: businesses.websiteUrl, stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, b.businessId));
-    expect(business).toEqual({ websiteUrl: "https://birch-api.example/", stage: "verify_phone" });
+    // A direct business goes on from its website to the number.
+    expect(business).toEqual({ websiteUrl: "https://birch-api.example/", stage: "phone_number" });
   });
 
   it("adds, changes and deletes services, and keeps slugs unique among live services", async () => {

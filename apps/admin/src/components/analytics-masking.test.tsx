@@ -91,6 +91,8 @@ describe("session replay masking", () => {
     }));
     renderWithClient(<LiveCallDetailSurface callId="call-1" />);
 
+    // Details opens first; the transcript is the next tab.
+    await userEvent.click(await screen.findByRole("tab", { name: "detail.tabs.transcript" }));
     const segment = await screen.findByText("My water heater is leaking");
     expect(segment.className).toContain("ph-mask");
 

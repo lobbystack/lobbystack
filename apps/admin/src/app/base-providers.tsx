@@ -96,7 +96,7 @@ export function BaseProviders({ branding = DEFAULT_BRANDING_SNAPSHOT, children, 
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem forcedTheme={forcedTheme} disableTransitionOnChange>
             <AppearanceProvider>
               {/* Mount before children so toasts fired from their mount effects reach a subscribed Toaster. */}
-              <Toaster richColors />
+              <Toaster mobileOffset={{ bottom: "calc(16px + var(--mobile-tab-bar-offset, 0px))" }} richColors />
               {loadingKey !== null ? (
                 <div aria-busy="true" className="fixed inset-x-0 top-0 z-50 h-1 overflow-hidden bg-primary/15" role="status">
                   <div className="h-full w-1/2 animate-pulse rounded-full bg-primary" />
@@ -104,7 +104,7 @@ export function BaseProviders({ branding = DEFAULT_BRANDING_SNAPSHOT, children, 
                 </div>
               ) : null}
               {failed ? (
-                <div className="fixed inset-x-0 top-0 z-50 flex flex-wrap items-center justify-center gap-3 border-b border-border bg-background/95 px-4 py-2 text-sm text-muted-foreground" role="alert">
+                <div className="fixed inset-x-0 top-0 z-50 flex flex-wrap items-center justify-center gap-3 border-b border-border bg-background/95 px-4 py-2 type-body-muted" role="alert">
                   <span>{i18n.t("common:loading.failed")}</span>
                   <Button onClick={() => setRetryToken(token => token + 1)} size="sm" variant="outline">
                     {i18n.t("common:loading.retry")}

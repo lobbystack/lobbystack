@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { OnboardingAttributionSurface } from "./onboarding-attribution-surface";
 import { OnboardingBusinessSurface } from "./onboarding-business-surface";
-import { OnboardingGoalSurface } from "./onboarding-goal-surface";
 import { OnboardingLanguageSurface } from "./onboarding-language-surface";
 import { OnboardingReadingSurface } from "./onboarding-reading-surface";
 import { OnboardingMeetSurface } from "./onboarding-meet-surface";
@@ -26,7 +25,7 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 function renderLoading(surface: React.ReactElement, withBusiness = false) {
   vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => undefined)));
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  if (withBusiness) client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Test", role: "business_owner", active: true, onboardingStage: "goal", onboardingGoal: null }] });
+  if (withBusiness) client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Test", role: "business_owner", active: true, onboardingStage: "attribution" }] });
   return render(<QueryClientProvider client={client}>{surface}</QueryClientProvider>);
 }
 
@@ -83,14 +82,6 @@ describe("onboarding steps while they load", () => {
     expect(busy.textContent).toContain("verifyPhone.fields.mobileNumber");
     for (const text of ["verifyPhone.hint", "verifyPhone.sendCode"]) expect(screen.getByText(text).closest("[data-slot='skeleton']")).toBeTruthy();
     expect(busy.querySelectorAll("[data-slot='skeleton']").length).toBeGreaterThanOrEqual(3);
-  });
-
-  it("keeps the goal choices' place until the Instagram question is answered", () => {
-    renderLoading(<OnboardingGoalSurface />, true);
-    const busy = document.querySelector("[aria-busy='true']")!;
-    for (const key of ["answer_calls", "book_appointments", "answer_website_visitors", "answer_instagram_messages"]) expect(busy.textContent).toContain(`goal.options.${key}`);
-    expect(screen.queryByRole("button", { name: "goal.options.answer_calls" })).toBeNull();
-    expect(busy.querySelectorAll("[data-slot='skeleton']")).toHaveLength(4);
   });
 
   it("keeps the attribution choices' place until the saved answer arrives", () => {

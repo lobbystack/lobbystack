@@ -3,7 +3,8 @@
     "signOut": "Odjavi se",
     "terms": "Uslovi",
     "privacy": "Privatnost",
-    "support": "Podrška"
+    "support": "Podrška",
+    "backToDashboard": "Nazad na kontrolnu tablu"
   },
   "errors": {
     "tooManyBusinesses": "Već posedujete 10 radnih prostora, što je ograničenje za jedan nalog."
@@ -155,11 +156,6 @@
       "changeNumber": "Koristi drugi broj"
     },
     "unavailable": {
-      "title": "Brojevi još nisu dostupni u ovoj zemlji ({{country}}).",
-      "body": "Agenta i dalje možete da koristite u pregledaču, a možemo i da Vam pišemo kada brojevi stignu tamo.",
-      "notify": "Javite mi kada budu dostupni",
-      "joined": "Važi. Pisaćemo Vam.",
-      "continue": "Nastavi bez broja",
       "failed": "Nešto nije u redu. Pokušajte ponovo.",
       "partnerTitle": "Još ne možemo da potvrdimo telefone u ovoj zemlji ({{country}}).",
       "partnerBody": "Podešavanje možete da završite bez potvrđenog telefona.",
@@ -177,7 +173,7 @@
       "verification": "Besplatan broj zahteva verifikovan telefon.",
       "emailVerification": "Verifikujte svoju imejl adresu pre nego što izaberete probni broj."
     },
-    "title": "Izaberite broj telefona za AI agenta",
+    "title": "Izaberite broj telefona za svog agenta",
     "countryLabel": "Zemlja",
     "kindLocal": "Lokalni",
     "kindTollFree": "Besplatni",
@@ -209,22 +205,20 @@
     "skipFailed": "Trenutno ne možemo da preskočimo ovaj korak. Pokušajte ponovo.",
     "tooManySearches": "Previše pretraga. Sačekajte malo i pokušajte ponovo.",
     "unavailable": "Neko je upravo uzeo taj broj. Izaberite drugi sa osvežene liste.",
-    "selectedTitle": "Broj telefona AI agenta",
+    "selectedTitle": "Broj telefona Vašeg agenta",
     "selectedNumberLabel": "Izabrani broj",
-    "numbersUnavailable": "Brojevi telefona još nisu podešeni na ovoj kontrolnoj tabli. Zamolite osobu koja njome upravlja da poveže telefonskog provajdera."
-  },
-  "goal": {
-    "title": "Šta želite da Vaš agent prvo radi?",
-    "options": {
-      "answer_calls": "Odgovaranje na moje pozive",
-      "book_appointments": "Zakazivanje termina",
-      "answer_website_visitors": "Odgovaranje posetiocima sajta",
-      "answer_instagram_messages": "Odgovaranje na Instagram poruke"
-    },
-    "continue": "Nastavi",
-    "saving": "Čuvanje...",
-    "skip": "Preskoči",
-    "submitFailed": "Trenutno ne možemo to da sačuvamo. Pokušajte ponovo."
+    "numbersUnavailable": "Brojevi telefona još nisu podešeni na ovoj kontrolnoj tabli. Zamolite osobu koja njome upravlja da poveže telefonskog provajdera.",
+    "country": {
+      "title": "Brojevi još nisu dostupni u ovoj zemlji ({{country}}).",
+      "body": "Agenta i dalje možete da koristite u pregledaču, a možemo i da Vam pišemo kada brojevi stignu tamo.",
+      "notify": "Javite mi kada budu dostupni",
+      "joined": "Važi. Pisaćemo Vam.",
+      "continue": "Nastavi bez broja",
+      "failed": "Nešto nije u redu. Pokušajte ponovo.",
+      "label": "Zemlja",
+      "back": "Nazad na brojeve",
+      "other": "Druga zemlja"
+    }
   },
   "attribution": {
     "title": "Kako ste čuli za {{appName}}?",
@@ -245,7 +239,6 @@
       "tiktok": "TikTok",
       "other": "Drugo"
     },
-    "skip": "Preskoči",
     "label": "Izvor",
     "preferNot": "Ne želim da kažem",
     "search": "Pretraživač",
@@ -289,7 +282,12 @@
     "continue": "Nastavi",
     "continuing": "Nastavljanje...",
     "continueFailed": "Trenutno ne možemo da nastavimo. Pokušajte ponovo.",
-    "backToPlans": "Nazad na pakete"
+    "backToPlans": "Nazad na pakete",
+    "subscribe": "Pretplatite se",
+    "trial": {
+      "description": "14 dana, bez kartice",
+      "start": "Započnite besplatnu probu od 14 dana"
+    }
   },
   "noBusinesses": {
     "title": "Ovde još nemate radni prostor",

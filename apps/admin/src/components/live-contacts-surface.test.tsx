@@ -20,8 +20,8 @@ function setup(deleteError?: string) {
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     if (init?.method === "DELETE") return Response.json(deleteError ? { error: deleteError } : { ok: true }, { status: deleteError ? 409 : 200 });
     const params = new URL(url, "https://example.invalid").searchParams;
-    const offset = Number(params.get("offset")); const search = params.get("search");
-    return Response.json({ contacts: [{ id: `contact-${offset}`, name: search ? "Matching contact beyond first 100" : `Contact ${offset + 1}`, phone: "+14155550100", email: null, operatorBlockedAt: null, createdAt: "2026-09-01T12:00:00Z", updatedAt: "2026-09-04T12:00:00Z", lastInteractionAt: "2026-09-02T12:00:00Z", callCount: 2, messageCount: 0, appointmentCount: 0 }], pagination: { total: search ? 1 : 101 } });
+    const offset = Number(params.get("offset"));
+    return Response.json({ contacts: [{ id: `contact-${offset}`, name: `Contact ${offset + 1}`, phone: "+14155550100", email: null, operatorBlockedAt: null, createdAt: "2026-09-01T12:00:00Z", updatedAt: "2026-09-04T12:00:00Z", lastInteractionAt: "2026-09-02T12:00:00Z", callCount: 2, messageCount: 0, appointmentCount: 0 }], pagination: { total: 101 } });
   });
   vi.stubGlobal("fetch", fetchMock);
   const view = render(<QueryClientProvider client={client}><LiveContactsSurface /></QueryClientProvider>);
@@ -76,15 +76,6 @@ describe("contact list parity and pagination", () => {
     expect(await screen.findByText("Contact 101")).toBeTruthy();
     expect(fetchMock.mock.calls.some(([url]) => url.includes("offset=100"))).toBe(true);
     expect(screen.getByRole("button", { name: "pagination.nextPage" }).hasAttribute("disabled")).toBe(true);
-  });
-  it("searches the tenant's complete contact set and resets pagination", async () => {
-    const { fetchMock } = setup();
-    await screen.findByText("Contact 1");
-    await userEvent.click(screen.getByRole("button", { name: "pagination.lastPage" }));
-    await screen.findByText("Contact 101");
-    await userEvent.type(screen.getByPlaceholderText("page.searchPlaceholder"), "beyond");
-    await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url.includes("offset=0&search=beyond"))).toBe(true));
-    expect(await screen.findByText("Matching contact beyond first 100")).toBeTruthy();
   });
   it("records contact_opened with the active business and contact identifiers", async () => {
     setup();
@@ -145,7 +136,7 @@ describe("contact names and channels", () => {
 });
 
 describe("contact list loading state", () => {
-  it("keeps the table header and shows placeholder rows, search and pagination while data loads", () => {
+  it("keeps the table header and shows placeholder rows and pagination while data loads", () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); clients.push(client);
     client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
     vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
@@ -154,15 +145,6 @@ describe("contact list loading state", () => {
     expect(document.querySelector("tbody")?.getAttribute("aria-busy")).toBe("true");
     expect(document.querySelectorAll('tbody [data-slot="skeleton"]').length).toBe(90);
     expect(screen.queryByText("table.empty")).toBeNull();
-    expect(screen.queryByPlaceholderText("page.searchPlaceholder")).toBeNull();
-    expect(document.querySelectorAll('[aria-hidden="true"] [data-slot="skeleton"]').length).toBe(9);
-  });
-  it("keeps the search box and the current rows while a new search loads", async () => {
-    setup();
-    await screen.findByText("Contact 1");
-    const input = screen.getByPlaceholderText("page.searchPlaceholder");
-    await userEvent.type(input, "ab");
-    expect(screen.getByPlaceholderText("page.searchPlaceholder")).toBe(input);
-    expect(await screen.findByText("Matching contact beyond first 100")).toBeTruthy();
+    expect(document.querySelectorAll('[aria-hidden="true"] [data-slot="skeleton"]').length).toBe(7);
   });
 });

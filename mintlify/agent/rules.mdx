@@ -1,6 +1,6 @@
 ---
 title: "Write agent rules"
-description: "Use plain text rules to define how your agent should act during calls and conversations."
+description: "Use plain text rules to define how your agent acts on every channel, or only on calls, texts, website chat or Instagram."
 sidebarTitle: "Rules"
 contentType: "How-to"
 ---
@@ -36,18 +36,36 @@ Good rules are specific and action-oriented:
 
 <Steps>
   <Step title="Open Rules">
-    In the dashboard sidebar, go to **Agent** > **Rules**.
+    Click **Agents** in the sidebar, open the agent, and click **Rules** in its menu. Each agent has its own rules.
   </Step>
   <Step title="Add a rule">
     Click **Add Rule**.
   </Step>
   <Step title="Write the instruction">
-    Add a short title and the full instruction in the content field.
+    Add a short title and the full instruction in the content field. To keep the rule to one channel, choose it under **Channel**.
   </Step>
   <Step title="Add">
     Click **Add**. The rule appears at the bottom of the table.
   </Step>
 </Steps>
+
+## Keep a rule to one channel
+
+A rule applies on every channel until you choose one. Pick it under **Channel** when you add or edit the rule:
+
+| Channel | Where the agent follows the rule |
+| --- | --- |
+| **All channels** | Calls, texts, website chat and Instagram |
+| **Calls** | Phone calls and calls from your browser |
+| **Text messages** | Replies to texts |
+| **Website chat** | The chat widget on your website |
+| **Instagram** | Instagram direct messages |
+
+The **Channel** column shows where each rule applies. Use a channel rule for how the agent talks there, such as "Keep replies under 300 characters" for texts.
+
+<Note>
+  Rules replaced the **Instructions** page. Each agent's instructions became a rule for their channel, titled in your business's language, such as **On calls** or **In texts**. Chat instructions became a **Website chat** rule, and an **Instagram** rule too if your business had Instagram connected.
+</Note>
 
 ## Order your rules
 
@@ -57,10 +75,10 @@ To move a rule, drag it by its handle. You can also open **More options** on the
 
 ## Transfers and callbacks
 
-Transfers use the default transfer number in **Agent** > **AI settings**, or the number of an [employee](/agent/employees) the caller asks for. Transfer numbers must be in a [country LobbyStack can call](/agent/ai-settings/overview#default-transfer-number), and during a free trial, calls transfer only to the mobile number you verified, if you verified one. When a live handoff is not the right next step, the agent can create a follow-up task with callback details. Those tasks appear in the dashboard and on call detail pages.
+Transfers use the [default transfer number](/agent/calls-and-booking#default-transfer-number) on the agent's **General** page, or the number of an [employee](/settings/employees) the caller asks for. Transfer numbers must be in a [country LobbyStack can call](/agent/calls-and-booking#default-transfer-number), and during a free trial that started with a verified mobile number, calls transfer only to that mobile. When a live handoff is not the right next step, the agent can create a follow-up task with callback details. Those tasks appear in the dashboard and on call detail pages.
 
 ## Recording and transcripts
 
-LobbyStack stores call transcripts and can store call recordings. Operators review recordings from the **Calls** page when a recording is available.
+LobbyStack stores call transcripts and can store call recordings. Operators review recordings in the [Inbox](/dashboard/inbox) when a recording is available.
 
 Use rules for call-handling behavior. Manage recording and retention policy in your workspace and compliance settings.

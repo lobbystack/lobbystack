@@ -8,6 +8,8 @@ import { Check, ChevronsUpDown, Plus } from "lucide-react";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useBranding } from "@/components/branding-provider";
 import { SidebarTeamSkeleton } from "@/components/loading-skeletons";
+import { agentPathAfterBusinessSwitch } from "@/lib/agent-pages";
+import { rememberOnboardingReturn } from "@/lib/onboarding-return";
 import { recordPendingWorkspaceSwitch } from "@/lib/workspace-analytics";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -37,6 +39,9 @@ export function WorkspaceSwitcher() {
       recordPendingWorkspaceSwitch(businessId, active?.businessId ?? businessId);
       queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== "businesses" });
       await queryClient.invalidateQueries({ queryKey: ["businesses"] });
+      // The old business's agent isn't in the new one, so an agent's page moves to the new default agent's.
+      const agentPath = agentPathAfterBusinessSwitch(window.location.pathname, window.location.search);
+      if (agentPath) router.replace(agentPath);
       router.refresh();
     } finally {
       setSwitching(false);
@@ -60,16 +65,16 @@ export function WorkspaceSwitcher() {
           >
             <ItemMedia><WorkspaceInitial name={active?.name} /></ItemMedia>
             <ItemContent className="min-w-0">
-              <ItemTitle className="ph-mask w-full truncate text-left font-medium">
+              <ItemTitle className="ph-mask w-full truncate text-left">
                 {active?.name ?? t("sidebar.businessSlugFallback")}
               </ItemTitle>
             </ItemContent>
             <ItemActions><ChevronsUpDown className="size-4 text-muted-foreground" /></ItemActions>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="min-w-56 rounded-xl" side={isMobile ? "bottom" : "right"} sideOffset={4}>
+          <DropdownMenuContent align="start" className="min-w-56" side={isMobile ? "bottom" : "right"} sideOffset={4}>
             <DropdownMenuGroup>
               {(businesses.data?.businesses ?? []).map((business) => (
-                <DropdownMenuItem className="gap-2.5 px-3 py-2" key={business.businessId} onClick={() => void selectBusiness(business.businessId)}>
+                <DropdownMenuItem key={business.businessId} onClick={() => void selectBusiness(business.businessId)}>
                   {business.businessId === active?.businessId ? <Check className="size-4" /> : <span className="size-4" />}
                   <span className="ph-mask truncate">{business.name}</span>
                 </DropdownMenuItem>
@@ -77,7 +82,7 @@ export function WorkspaceSwitcher() {
             </DropdownMenuGroup>
             {partner ? null : <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="gap-2.5 px-3 py-2" render={<Link href="/onboarding/business?create=true" />}>
+              <DropdownMenuItem onClick={() => rememberOnboardingReturn(active?.businessId)} render={<Link href="/onboarding/business?create=true" />}>
                 <Plus className="size-4" />
                 {t("sidebar.createBusiness")}
               </DropdownMenuItem>
@@ -95,7 +100,7 @@ export function WorkspaceSwitcher() {
  */
 function WorkspaceInitial({ name }: { name: string | undefined }) {
   return (
-    <Avatar aria-hidden="true" className="shadow-xs" size="sm">
+    <Avatar aria-hidden="true" size="sm">
       <AvatarFallback>{name?.trim().charAt(0).toUpperCase() || "?"}</AvatarFallback>
     </Avatar>
   );

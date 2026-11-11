@@ -76,6 +76,9 @@ services:
 rules:
   - title: Gas leaks
     content: If a caller smells gas, tell them to leave the building and call the gas company.
+  - title: In texts
+    content: Keep replies under 300 characters.
+    channel: sms
 plan:
   checkout: { plan: pro, interval: monthly }
 phone_number: { country: CA, area_code: "416" }
@@ -90,9 +93,9 @@ owner:
 | Section | Ce qu'elle définit |
 | --- | --- |
 | `business` | `name` et `timezone` sont obligatoires. `locale` (`en` ou `fr`), `website_url`, `business_type` et `slug` sont facultatifs. `hours` liste les plages d'ouverture de la semaine par `day`, `open` et `close`, et remplace les heures que l'entreprise avait. `id` configure une entreprise qui existe déjà au lieu d'en créer une. Avec la clé de plateforme d'un partenaire, `access_level` définit ce que l'équipe de l'entreprise peut utiliser quand la clé la crée : `full`, la valeur par défaut, ou `activity`. |
-| `receptionist` | Les champs de `PATCH /receptionist`, comme `greeting`, `tone`, `transfer_mode`, `transfer_number` et `booking_mode`. |
+| `receptionist` | Les champs de `PATCH /receptionist`, comme `greeting`, `tone`, `transfer_mode`, `transfer_number` et `booking_mode`. `voice_instructions`, `sms_instructions` et `chat_instructions` fonctionnent encore et écrivent les règles de ces canaux, mais ils sont dépréciés : utilisez `rules` avec `channel`. Envoyer `null` pour l'un d'eux supprime la règle de ce canal. |
 | `services` | Les champs de `POST /services`. Un service du même nom est mis à jour au lieu d'être ajouté de nouveau. |
-| `rules` | Les champs de `POST /rules`. Une règle du même titre est mise à jour. |
+| `rules` | Les champs de `POST /rules`. `channel` limite une règle à `voice` (appels téléphoniques et depuis le navigateur), `sms`, `web_chat` ou `instagram` ; sans lui, elle vaut pour tous les canaux. Une règle du même titre est mise à jour. |
 | `knowledge.websites` | Les sites que l'agent lit. La première lecture prend un échantillon de chaque site. |
 | `knowledge.read_full_site` | `true` attend cet échantillon, puis lit le reste de chaque site. |
 | `knowledge.files` | Des fichiers PDF, Word, texte, Markdown, JPEG, PNG, WebP ou TIFF jusqu'à 10 Mo, sous forme de chemins dans le dossier du manifeste. Donnez à une entrée `path`, `title` et `tags` pour la nommer. |
@@ -192,4 +195,4 @@ Sans fichier d'état, une clé de plateforme ne crée pas d'entreprise si vous e
 
 `lobbystack` a une commande pour chaque point de terminaison de l'API, regroupées comme l'API : `lobbystack services list`, `lobbystack knowledge upload`, `lobbystack numbers search`, etc. `lobbystack --help` liste les groupes, et `--help` après n'importe quelle commande liste ses options. Avec la clé d'un partenaire, huit autres groupes appellent les [points de terminaison partenaire](/fr/api/authentication#points-de-terminaison-partenaire) : `partner`, `demos`, `packages`, `brand`, `domain`, `templates`, `partner-team` et `payments`. Par exemple, `lobbystack demos list` liste vos démos pour prospects.
 
-`lobbystack agents list` liste les agents de l'entreprise. `lobbystack receptionist` et `lobbystack rules` modifient l'agent par défaut.
+`lobbystack agents list` liste les agents de l'entreprise. `lobbystack receptionist` et `lobbystack rules` modifient l'agent par défaut. `lobbystack rules add --channel sms` ajoute une règle pour les textos seulement, et `lobbystack rules list` montre le canal de chaque règle.

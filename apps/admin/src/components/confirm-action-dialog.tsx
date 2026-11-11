@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +15,8 @@ import {
 
 type ConfirmActionDialogProps = {
   cancelLabel: string;
+  /** A field the choice needs, such as where something moves, between the description and the buttons. */
+  children?: ReactNode;
   confirmLabel: string;
   confirmVariant?: "default" | "destructive";
   description: string;
@@ -29,6 +31,7 @@ type ConfirmActionDialogProps = {
 
 export function ConfirmActionDialog({
   cancelLabel,
+  children,
   confirmLabel,
   confirmVariant = "default",
   description,
@@ -56,6 +59,7 @@ export function ConfirmActionDialog({
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription className={descriptionClassName}>{description}</AlertDialogDescription>
         </AlertDialogHeader>
+        {children}
         <AlertDialogFooter>
           <AlertDialogClose
             render={<Button disabled={pending} type="button" variant="outline" />}

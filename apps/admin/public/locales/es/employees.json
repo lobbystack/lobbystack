@@ -1,7 +1,5 @@
 {
-  "page": {
-    "searchPlaceholder": "Buscar empleados..."
-  },
+  "page": {},
   "table": {
     "name": "Nombre",
     "phone": "Número de teléfono",
@@ -23,7 +21,6 @@
       "noServices": "Edita este empleado y elige sus servicios para que los clientes puedan reservarlo."
     },
     "added": "Añadido",
-    "empty": "Ningún empleado coincide con la búsqueda.",
     "emptyState": "Todavía no hay empleados.",
     "actions": {
       "moreOptions": "Más opciones",
@@ -100,11 +97,13 @@
   },
   "pagination": {
     "rowsPerPage": "Filas por página",
-    "pageOf": "Página {{page}} de {{total}}",
+    "viewing": "Filas {{start}} a {{end}} de {{total}}",
+    "viewingAll_one": "{{count}} fila",
+    "viewingAll_many": "Las {{count}} filas",
+    "viewingAll_other": "Las {{count}} filas",
     "firstPage": "Ir a la primera página",
     "previousPage": "Ir a la página anterior",
     "nextPage": "Ir a la página siguiente",
-    "lastPage": "Ir a la última página",
-    "goToPage": "Ir a la página {{page}}"
+    "lastPage": "Ir a la última página"
   }
 }

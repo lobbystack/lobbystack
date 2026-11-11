@@ -1,0 +1,161 @@
+---
+title: "Add business knowledge"
+description: "Add text, documents, and website content so your agents can answer common business questions, give one agent knowledge of its own, and answer the questions they couldn't."
+sidebarTitle: "Knowledge"
+contentType: "How-to"
+---
+
+The **Knowledge** page is where you add information the agent can use when answering callers. Use it for facts that should be straightforward to retrieve: hours, location, parking, pricing notes, service descriptions, policies, intake requirements, and FAQs.
+
+LobbyStack supports three knowledge sources: text entries, uploaded documents, and public website imports.
+
+<Note>
+  Hosted plans include 1 MB of knowledge text on Free, 5 MB on Starter, and 20 MB on Pro, or about 400, 2,000, and 8,000 pages. The limit counts the text LobbyStack extracts from your documents and websites, not the size of the files. Each document you upload can be up to 10 MB.
+</Note>
+
+## Text entries
+
+Text entries are best for short, authoritative facts.
+
+| Entry title | Good content |
+| --- | --- |
+| Holiday hours | We are closed on statutory holidays. If a caller asks about a specific holiday, take a message so the team can confirm. |
+| Parking | Customers can use the lot behind the building. Street parking is also available on Pine Street after 6 PM. |
+| Cancellation policy | Please call at least 24 hours before the appointment to cancel or reschedule. |
+| New customer intake | New customers should bring ID, insurance information if relevant, and any referral or service notes they have. |
+
+<Steps>
+  <Step title="Open Knowledge">
+    Go to **Business** > **Knowledge**.
+  </Step>
+  <Step title="Choose text">
+    Click **Add Knowledge** and choose **Text**.
+  </Step>
+  <Step title="Add title and content">
+    Use a short title and put the full answer in the content field.
+  </Step>
+  <Step title="Add">
+    Click **Add**. The entry appears in the table.
+  </Step>
+</Steps>
+
+## Document uploads
+
+Use document uploads for PDFs, Word documents, text files, and Markdown files that contain useful caller-facing information.
+
+| Limit | Value |
+| --- | --- |
+| Supported types | PDF, DOCX, TXT, Markdown |
+| Maximum size | 10 MB per file |
+
+Uploaded documents enter a processing flow before they are ready. The table shows status values such as queued, indexing, ready, or error.
+
+<Note>
+  Keep uploaded documents caller-ready. Use current, approved material so the agent answers with the same information your team would share.
+</Note>
+
+## Website imports
+
+Website import crawls a public URL and adds useful pages to the knowledge base. It is intended for public pages such as services, about, FAQ, hours, locations, menus, pricing, and contact pages.
+
+Website import focuses on public, caller-facing pages and skips:
+
+- Localhost, local network, or direct IP URLs.
+- Pages behind a login.
+- Low-signal pages such as checkout, cart, account, search, privacy, and terms pages.
+- Static assets such as images, PDFs, spreadsheets, ZIP files, scripts, and stylesheets.
+
+<Steps>
+  <Step title="Open the website import dialog">
+    Go to **Business** > **Knowledge**, click **Add Knowledge**, and choose **Website**.
+  </Step>
+  <Step title="Enter a public URL">
+    Paste the homepage or section URL you want LobbyStack to crawl.
+  </Step>
+  <Step title="Start import">
+    Click **Import**. The website appears as one row, and its page count grows as pages finish processing.
+  </Step>
+</Steps>
+
+## Answer unanswered questions
+
+When your agent looks up a question in your knowledge and finds nothing, LobbyStack saves the question under **Unanswered Questions** on the Knowledge page. This covers phone calls, browser calls, website chats, and Instagram messages. Your own test calls count too.
+
+The list shows up to 50 questions, most asked first, with how many times people asked and when they last asked. Each question appears as your agent searched for it, up to 300 characters, so the wording can differ from what the caller said.
+
+A question asked again with different capitalization or punctuation counts on the same row. A reworded question gets its own row.
+
+<Steps>
+  <Step title="Open unanswered questions">
+    Go to **Business** > **Knowledge** and scroll to **Unanswered Questions**. When questions are waiting, owners and admins also get a link under **Action required** on [Home](/dashboard/home).
+  </Step>
+  <Step title="Write the answer">
+    Click **Answer**, write what the agent should say in up to 5,000 characters, and click **Save Answer**. LobbyStack adds a text entry titled with the question to the Knowledge table. New calls and conversations use it shortly after you save, and you can edit it like any other entry.
+  </Step>
+  <Step title="Dismiss what you won't answer">
+    Click **Dismiss** to take a question off the list.
+  </Step>
+</Steps>
+
+### What happens when someone asks again
+
+| Question | If someone asks it again |
+| --- | --- |
+| Answered | Your agent uses your answer. If its lookup still finds nothing, the question returns to the list as a new question, with its count back at 1. |
+| Dismissed | The question stays off the list, even if people keep asking. It returns as a new question only if someone asks after LobbyStack has deleted it. |
+
+You can't bring a dismissed question back from the dashboard. To answer it later, add a [text entry](#text-entries) yourself.
+
+### Who can answer questions
+
+Owners and admins can answer and dismiss questions. Viewers can read the list, but they don't get the **Answer** and **Dismiss** buttons or the link on Home. If your business has **Activity only** access through a partner, your team doesn't see the Knowledge page.
+
+### How long LobbyStack keeps questions
+
+LobbyStack deletes a question 30 days after someone last asked it on Free, or 365 days on Starter and Pro. Each new ask restarts that period, including on a dismissed question. A text entry you saved as an answer stays in your knowledge until you delete it.
+
+## Manage sources
+
+The Knowledge table shows one row per source. A website is one row with its page count, and each file and text entry is a row of its own. From the table you can:
+
+- Open a file's row to read the text LobbyStack extracted.
+- Open a text entry's row to edit it.
+- Turn a source off without deleting it, and turn it on again.
+- Delete a source permanently. Deleting a website deletes all its pages and stops an import still bringing them in.
+
+### Manage a website's pages
+
+Click a website's row to open its pages. Each page has its own switch, so you can turn off one page the agent shouldn't answer from and keep the rest. You can also remove pages, except the address you imported, and click **Re-import** to read the site again. Turning the whole website off and on again keeps the pages you turned off.
+
+### Act on several sources at once
+
+<Steps>
+  <Step title="Turn on selection">
+    Click **Select** above the table. A checkbox appears on each row.
+  </Step>
+  <Step title="Choose rows">
+    Check the rows you want, or the box in the header to choose them all.
+  </Step>
+  <Step title="Pick an action">
+    Click **Delete**, **Turn off**, **Turn on**, or **Re-import** for websites. Click **Cancel** or press Escape to leave without changing anything.
+  </Step>
+</Steps>
+
+## Give one agent its own knowledge
+
+Every agent answers from the sources on this page. When one agent needs different facts, such as an evening line with its own door code, open that agent's **Specific knowledge** page: go to **Agents**, pick the agent, and click **Specific knowledge**.
+
+The page has two tables:
+
+- **Only this agent**: sources you add here with **Add Knowledge**. Websites, files and text work as they do on the Knowledge page, and no other agent uses them.
+- **Shared with every agent**: the sources from the Knowledge page. Each has a switch that turns it off for this agent only. A shared website opens its pages, where you can turn single pages off for this agent.
+
+New shared sources start on for every agent. Turning a source off for one agent changes nothing for the others. A source turned off on the Knowledge page is off for every agent, and its switch on an agent's page stays off.
+
+A website can be in the shared knowledge or in one agent's, not both. To keep one agent from using a shared website, turn it off on that agent's page.
+
+Answers to [unanswered questions](#answer-unanswered-questions) always go to the shared knowledge. Your business summary and opening hours come from shared knowledge only. When you remove an agent, LobbyStack deletes the knowledge only that agent used.
+
+<Tip>
+  Prefer a smaller set of accurate entries over a large library of stale content. Caller-facing accuracy matters more than volume.
+</Tip>

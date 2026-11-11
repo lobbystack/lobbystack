@@ -1,8 +1,7 @@
 {
   "page": {
     "title": "Contacts",
-    "description": "Gérez les personnes derrière vos appels, messages et rendez-vous.",
-    "searchPlaceholder": "Rechercher des contacts..."
+    "description": "Gérez les personnes derrière vos appels, messages et rendez-vous."
   },
   "table": {
     "contact": "Contact",
@@ -12,7 +11,7 @@
     "lastInteraction": "Dernière interaction",
     "messages": "{{count}} messages",
     "calls": "{{count}} appels",
-    "empty": "Aucun contact ne correspond à la recherche.",
+    "empty": "Aucun contact pour le moment.",
     "status": {
       "blocked": "Bloqué"
     },
@@ -176,12 +175,14 @@
   },
   "pagination": {
     "rowsPerPage": "Lignes par page",
-    "pageOf": "Page {{page}} sur {{total}}",
+    "viewing": "Lignes {{start}} à {{end}} sur {{total}}",
+    "viewingAll_one": "{{count}} ligne affichée",
+    "viewingAll_many": "Les {{count}} lignes affichées",
+    "viewingAll_other": "Les {{count}} lignes affichées",
     "firstPage": "Aller a la premiere page",
     "previousPage": "Aller a la page precedente",
     "nextPage": "Aller a la page suivante",
-    "lastPage": "Aller a la derniere page",
-    "goToPage": "Aller a la page {{page}}"
+    "lastPage": "Aller a la derniere page"
   },
   "edit": {
     "title": "Modifier le contact",
@@ -193,5 +194,24 @@
     "saved": "Contact mis à jour.",
     "failed": "Impossible d'enregistrer le contact. Réessayez.",
     "invalidEmail": "Saisissez une adresse e-mail valide."
+  },
+  "create": {
+    "action": "Nouveau contact",
+    "title": "Nouveau contact",
+    "name": "Nom",
+    "phone": "Téléphone",
+    "phoneCountry": "Pays du numéro",
+    "email": "E-mail",
+    "nameRequired": "Saisissez un nom.",
+    "reachRequired": "Saisissez un numéro de téléphone ou un e-mail.",
+    "phoneInvalid": "Saisissez un numéro de téléphone complet.",
+    "invalidEmail": "Saisissez une adresse e-mail valide.",
+    "exists": "Un contact a déjà ce numéro.",
+    "openExisting": "Ouvrir le contact",
+    "cancel": "Annuler",
+    "save": "Créer le contact",
+    "saving": "Création...",
+    "saved": "Contact créé.",
+    "failed": "Impossible de créer le contact. Réessayez."
   }
 }

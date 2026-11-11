@@ -1,0 +1,34 @@
+"use client";
+
+import { Phone } from "lucide-react";
+import { useTranslation } from "react-i18next";
+
+import { useBusinessCan } from "@/components/business-capabilities-provider";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useActiveBusiness } from "@/hooks/use-active-business";
+import { openTestWindow, useTestWindowReady } from "@/lib/test-window";
+
+/**
+ * Opens the one test window the shell keeps mounted, for an agent or, without
+ * one, the default agent. The shell mounts the window for people who can set
+ * agents up; until it's there, a placeholder holds the button's place. On
+ * phones too it sits in the page header, beside the title.
+ */
+export function TestCallButton({ agentId, variant = "outline" }: { agentId?: string; variant?: "default" | "outline" }) {
+  const { t } = useTranslation("common");
+  const ready = useTestWindowReady();
+  const can = useBusinessCan();
+  const { business, businesses } = useActiveBusiness();
+  if (!can("setup")) return null;
+  if (!ready) {
+    if (!business && !businesses.isLoading) return null;
+    return (
+      <Skeleton aria-hidden="true" className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full px-5 type-button whitespace-nowrap">
+        <span className="invisible size-4 shrink-0" />
+        <span className="invisible">{t("testCall.trigger")}</span>
+      </Skeleton>
+    );
+  }
+  return <Button onClick={() => openTestWindow(agentId ? { agentId } : {})} type="button" variant={variant}><Phone data-icon="inline-start" />{t("testCall.trigger")}</Button>;
+}

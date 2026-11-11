@@ -11,7 +11,7 @@ Les webhooks envoient une requête HTTPS `POST` à votre URL quand quelque chose
 
 | Événement | Envoyé quand | `data` | Portée |
 | --- | --- | --- | --- |
-| `call.completed` | Un appel s'est terminé et LobbyStack a enregistré son résumé et son résultat. Un appel pris par votre équipe avec [Le personnel répond d'abord](/fr/agent/ai-settings/overview#le-personnel-répond-dabord) n'a pas de résumé, et ses champs `outcome` et `end_reason` valent `answered_by_team`. | Appel | `calls:read` |
+| `call.completed` | Un appel s'est terminé et LobbyStack a enregistré son résumé et son résultat. Un appel pris par votre équipe avec [Le personnel répond d'abord](/fr/agent/calls-and-booking#le-personnel-répond-dabord) n'a pas de résumé, et ses champs `outcome` et `end_reason` valent `answered_by_team`. | Appel | `calls:read` |
 | `appointment.booked` | Quelqu'un réserve un rendez-vous : la réceptionniste, le tableau de bord ou l'API. | Rendez-vous | `appointments:read` |
 | `appointment.rescheduled` | Un rendez-vous est déplacé à une nouvelle heure. | Rendez-vous | `appointments:read` |
 | `appointment.cancelled` | Un rendez-vous est annulé. | Rendez-vous | `appointments:read` |
@@ -28,7 +28,7 @@ Vous pouvez ajouter des points de terminaison dans le tableau de bord ou avec l'
   <Tab title="Tableau de bord">
     <Steps>
       <Step title="Ouvrir Webhooks">
-        Allez dans **Intégrations** et cliquez sur **Gérer** sur la carte **Webhooks**. Seuls les propriétaires et les administrateurs peuvent gérer les webhooks.
+        Allez dans **Réglages** > **Webhooks**. Seuls les propriétaires et les administrateurs peuvent gérer les webhooks.
       </Step>
       <Step title="Ajouter le point de terminaison">
         Cliquez sur **Ajouter un point de terminaison**, saisissez l'URL et choisissez les événements.
@@ -79,6 +79,7 @@ Vous pouvez ajouter des points de terminaison dans le tableau de bord ou avec l'
     "contact_phone": "+14165550134",
     "source": "voice",
     "calendar_sync_status": "pending",
+    "notes": null,
     "created_at": "2026-09-27T16:58:19.590Z",
     "updated_at": "2026-09-27T16:58:19.590Z"
   }

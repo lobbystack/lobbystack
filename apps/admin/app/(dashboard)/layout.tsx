@@ -1,58 +1,48 @@
-import { cookies, headers } from "next/headers";
-import { redirect } from "next/navigation";
+import type { Viewport } from "next";
+import { cookies } from "next/headers";
 
-import { capabilityNames, getActiveOnboardingState, listUserBusinesses, listUserPartners, readBusinessCapabilities, resolveOnboardingRoute } from "@lobbystack/domain";
-import { isWidgetKeyIssuanceEnabled } from "@lobbystack/shared";
+import { listAgents } from "@lobbystack/domain";
 import { RootDocument } from "@/app/root-document";
 import { DashboardShell } from "@/components/dashboard-shell";
-import { getSession } from "@/lib/auth";
-import { getAppDatabase } from "@/lib/api-helpers";
-import { localizePublicPath } from "@/lib/locale-path";
-import { localeFromRequestHeaders } from "@/lib/locale-request";
-import { NO_BUSINESSES_PATH, opensPartnerConsole, readResolvedBrand, requestBrandScope } from "@/lib/request-brand";
+import type { AgentListItem, AgentsSeed } from "@/hooks/use-agents";
+import { readDashboardRequest } from "@/lib/dashboard-request";
+import { createDomainContext } from "@/lib/domain-context";
+import { loadSeenPageIntros } from "@/lib/page-intros";
 import { DASHBOARD_NAMESPACES } from "@/lib/route-namespaces";
 import "../globals.css";
 
 export const dynamic = "force-dynamic";
 export { generateBrandingMetadata as generateMetadata } from "@/app/root-document";
 
+// The phone tab bar and top bar pad themselves by the safe area, so the page can run under the iPhone's home indicator.
+export const viewport: Viewport = { viewportFit: "cover" };
+
+/**
+ * The business's agents for the menu's first render, for people who can set
+ * them up. Without them, or when the list fails, the menu loads them itself.
+ */
+async function loadAgents(request: { businessId: string | null; can: (capability: "setup") => boolean; user: { id: string } }): Promise<AgentsSeed | null> {
+  if (!request.businessId || !request.can("setup")) return null;
+  const agents = await listAgents(createDomainContext(), { userId: request.user.id, businessId: request.businessId }).catch(() => null);
+  // The same JSON the API sends, so the client's copy matches a refetch.
+  return agents ? { businessId: request.businessId, agents: JSON.parse(JSON.stringify(agents)) as AgentListItem[] } : null;
+}
+
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const requestHeaders = await headers();
-  const { locale, source } = localeFromRequestHeaders(requestHeaders);
-  const session = await getSession(new Headers(requestHeaders));
-  if (!session) redirect(localizePublicPath("/login", locale));
-  const brand = requestBrandScope(requestHeaders);
-  const [onboarding, memberships, businesses] = await Promise.all([
-    getActiveOnboardingState(getAppDatabase().db, session.user.id, brand),
-    listUserPartners({ db: getAppDatabase().db }, session.user.id),
-    listUserBusinesses(getAppDatabase().db, session.user.id, brand),
-  ]);
-  // The partners whose console opens here: on a partner's host, only that partner.
-  const resolved = readResolvedBrand(requestHeaders);
-  const partners = memberships.filter(({ partnerId }) => opensPartnerConsole(resolved, partnerId));
-  // Someone on a partner's team with no business of their own works in the partner console.
-  if (onboarding.stage === "create_business" && !onboarding.businessId && partners.length > 0) redirect("/partner");
-  // On a partner's host, anyone else with no business there waits for the partner's invitation.
-  if (!onboarding.businessId && resolved?.kind === "partner") redirect(NO_BUSINESSES_PATH);
-  if (onboarding.stage !== "complete") redirect(resolveOnboardingRoute(onboarding.stage));
-  // The first render hides what the business's access level leaves out, before the workspace list loads. The list
-  // leaves out a business that's no longer active, so that one's read from the business itself; the server enforces
-  // the same rules either way.
-  const capabilities = businesses.find((business) => business.businessId === onboarding.businessId)?.capabilities
-    ?? (onboarding.businessId ? await readBusinessCapabilities(getAppDatabase().db, { userId: session.user.id, businessId: onboarding.businessId }) : null)
-    ?? [...capabilityNames];
-  const sidebarOpen = (await cookies()).get("sidebar_state")?.value !== "false";
+  const request = await readDashboardRequest();
+  const { capabilities, locale, localeSource, partnerConsole, user } = request;
+  const cookieStore = await cookies();
+  const [agents, seenPageIntros] = await Promise.all([loadAgents(request), loadSeenPageIntros(createDomainContext(), user.id, cookieStore)]);
+  const sidebarOpen = cookieStore.get("sidebar_state")?.value !== "false";
   return (
-    <RootDocument locale={locale} localeSource={source} namespaces={DASHBOARD_NAMESPACES}>
+    <RootDocument locale={locale} localeSource={localeSource} namespaces={DASHBOARD_NAMESPACES}>
       <DashboardShell
+        agents={agents}
         capabilities={capabilities}
-        partnerConsole={partners.length > 0}
+        pageIntros={{ seen: seenPageIntros, businessId: request.businessId }}
+        partnerConsole={partnerConsole}
         sidebarOpen={sidebarOpen}
-        widgetsEnabled={isWidgetKeyIssuanceEnabled(process.env)}
-        user={{
-          email: session.user.email ?? "",
-          name: session.user.name ?? session.user.email ?? "",
-        }}
+        user={{ email: user.email, name: user.name }}
       >
         {children}
       </DashboardShell>

@@ -158,7 +158,8 @@ describe.skipIf(!setup.testUrl)("lobbystack onboard with a partner's platform ke
       expect(business).toEqual({ partnerId, accessLevel: "activity", timezone: "America/Halifax", locale: "fr" });
       expect((await migrator!.db.select({ greeting: agents.greeting }).from(agents).where(eq(agents.businessId, businessId)))[0]?.greeting).toBe("Merci d'appeler Harbor Dental.");
       expect((await migrator!.db.select({ name: services.name }).from(services).where(eq(services.businessId, businessId))).map((row) => row.name)).toContain("Cleaning");
-      expect((await migrator!.db.select({ title: agentRules.title }).from(agentRules).where(eq(agentRules.businessId, businessId))).map((row) => row.title)).toEqual(["Emergencies"]);
+      // Every new business starts with call and text rules, titled in its language, and the manifest's rule comes after them.
+      expect((await migrator!.db.select({ title: agentRules.title }).from(agentRules).where(eq(agentRules.businessId, businessId)).orderBy(agentRules.sortOrder)).map((row) => row.title)).toEqual(["Pendant les appels", "Par texto", "Emergencies"]);
       expect(await migrator!.db.select({ id: knowledgeSnippets.id }).from(knowledgeSnippets).where(eq(knowledgeSnippets.businessId, businessId))).toHaveLength(1);
       // The key invited the owner as the partner, and never sent a claim link.
       const invitations = await migrator!.db.select().from(businessInvitations).where(eq(businessInvitations.businessId, businessId));

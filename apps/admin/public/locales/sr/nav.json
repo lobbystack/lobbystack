@@ -5,34 +5,288 @@
     "newCount_one": "{{count}} nova rezervacija",
     "newCount_few": "{{count}} nove rezervacije",
     "newCount_other": "{{count}} novih rezervacija",
-    "calls": "Pozivi",
-    "messages": "Poruke",
-    "agent": "Agent",
     "contacts": "Kontakti",
     "analytics": "Analitika",
     "affiliate": "Program preporuka",
-    "settings": "Podešavanja"
+    "settings": "Podešavanja",
+    "inbox": "Prijemno sanduče",
+    "agents": "Agenti",
+    "business": "Poslovanje"
   },
   "search": {
-    "placeholder": "Pretražite radni prostor..."
+    "placeholder": "Pretražite stranice, podešavanja, agente i kontakte",
+    "button": "Pretraga",
+    "title": "Pretraga",
+    "description": "Pronađite stranice, podešavanja, agente, kontakte i razgovore.",
+    "empty": "Nema rezultata za „{{query}}”",
+    "loading": "Pretraga u toku",
+    "instagram": "Instagram",
+    "groups": {
+      "pages": "Stranice",
+      "agents": "Agenti",
+      "knowledge": "Znanje",
+      "services": "Usluge",
+      "employees": "Zaposleni",
+      "rules": "Pravila",
+      "contacts": "Kontakti",
+      "conversations": "Razgovori"
+    },
+    "keys": {
+      "select": "Izaberi",
+      "open": "Otvori",
+      "close": "Zatvori"
+    },
+    "where": {
+      "main": "Glavni meni"
+    },
+    "detail": {
+      "conversation": "{{channel}}, {{date}}"
+    },
+    "synonyms": {
+      "billing": "faktura, fakture, račun, plaćanje, platiti, kartica, pretplata, paket, cena, otkazati",
+      "usage": "minuti, limit, kvota, potrošnja, četovi",
+      "security": "lozinka, prijava, imejl, e-pošta, profil, bezbednost",
+      "phone": "prosleđivanje, operater, broj, linija, poziv, pozivi",
+      "voice": "akcenat, zvuk, ton, pozdrav, dobrodošlica, zdravo, ime",
+      "rules": "pravilo, pravila, eskalacija, predaja, uputstvo, uputstva, skripta, ponašanje",
+      "handling": "preusmeravanje, osoblje prvo, zakazivanje, termini, izmene termina, otkazivanje, pomeranje, broj za preusmeravanje, osoblje se javlja prvo",
+      "business": "radno vreme, sati, otvoreno, zatvoreno, praznik, vremenska zona, jezik, valuta",
+      "knowledge": "česta pitanja, odgovor, odgovori, sajt, dokument, pdf, naučiti",
+      "services": "cena, cene, tretman, meni",
+      "employees": "osoblje, zaposleni, stomatolog, lekar, preusmeravanje",
+      "team": "kolega, koleginica, pozvati, član, članovi, korisnik, uloga, dozvola, vlasnik",
+      "appearance": "tamno, svetlo, tema, jezik, format",
+      "notifications": "upozorenje, upozorenja, sms, pregled, imejl",
+      "widget": "čet, četbot, oblačić, ugradnja, kod, sajt",
+      "instagram": "dm, direktne poruke, ig, meta, društvene mreže",
+      "connections": "google, outlook, kalendar, crm, zapier, webhook, integracija, integracije, sinhronizacija, konekcije, povezivanja",
+      "keys": "token, ključ, mcp, api, programer",
+      "inbox": "poruka, poruke, transkript, snimak, razgovor, govorna pošta, istorija, poziv, pozivi",
+      "contacts": "klijent, mušterija, pacijent, pozivalac, potencijalni klijent",
+      "appointments": "termin, termini, raspored, poseta, rezervacija, kalendar",
+      "analytics": "izveštaj, statistika, metrike, učinak",
+      "affiliate": "preporuka, provizija, partnerski program",
+      "agents": "agent, bot, ai, recepcioner, asistent, novi"
+    }
   },
   "sidebar": {
     "businessSlugFallback": "Konzola radnog prostora",
-    "general": "Opšte",
-    "agent": "Agent",
-    "other": "Upravljanje",
     "workspace": "Radni prostor",
     "openSettings": "Otvori podešavanja",
     "signedIn": "Prijavljeni ste",
     "workspaceReady": "Radni prostor je spreman",
     "upgradeToPro": "Pređite na Pro",
     "account": "Nalog",
+    "accountSettings": "Podešavanja naloga",
     "partnerConsole": "Partnerska konzola",
     "toggleTheme": "Promeni temu",
     "support": "Podrška",
     "terms": "Uslovi korišćenja",
     "privacy": "Politika privatnosti",
     "signOut": "Odjavi se",
-    "createBusiness": "Kreiraj radni prostor"
+    "createBusiness": "Kreiraj radni prostor",
+    "yourAccount": "Vaš nalog"
+  },
+  "agentPages": {
+    "general": "Opšte",
+    "rules": "Pravila",
+    "knowledge": "Specifično znanje",
+    "channels": "Kanali",
+    "phone": "Broj telefona",
+    "widget": "Vidžet za sajt"
+  },
+  "businessPages": {
+    "details": "Podaci"
+  },
+  "settingsPages": {
+    "profile": "Profil i bezbednost",
+    "appearance": "Jezik i tema",
+    "notifications": "Obaveštenja",
+    "business": "Podaci o poslovanju",
+    "knowledge": "Znanje",
+    "services": "Usluge",
+    "employees": "Zaposleni",
+    "team": "Tim",
+    "usage": "Potrošnja",
+    "billing": "Paket i naplata",
+    "subscription": "Naplata",
+    "connections": "Integracije",
+    "webhooks": "Webhooks",
+    "apiKeys": "API ključevi",
+    "partnerAccess": "Pristup partnera"
+  },
+  "accountMenu": "Meni naloga",
+  "agentMenu": {
+    "conversations": "Razgovori",
+    "noChannels": "Još nema kanala"
+  },
+  "agents": {
+    "title": "Agenti",
+    "add": "Dodaj agenta",
+    "addTitle": "Dodajte agenta",
+    "addDescription": "Počinje sa podešavanjima i pravilima agenta {{name}}, bez njegovih kanala.",
+    "nameLabel": "Ime",
+    "namePlaceholder": "Vikend linija",
+    "cancel": "Otkaži",
+    "added": "Agent {{name}} je dodat",
+    "addFailed": "Nismo uspeli da dodamo agenta.",
+    "default": "Podrazumevani",
+    "paused": "Pauziran",
+    "pausedTitle": "Ovaj agent je pauziran",
+    "pausedDescription": "Vaš paket uključuje jednog agenta, pa na kanalima ovog agenta odgovara {{name}}.",
+    "upgrade": "Promenite paket",
+    "channelCounts": {
+      "phone_one": "{{count}} broj",
+      "phone_few": "{{count}} broja",
+      "phone_other": "{{count}} brojeva",
+      "widget_one": "{{count}} vidžet",
+      "widget_few": "{{count}} vidžeta",
+      "widget_other": "{{count}} vidžeta",
+      "instagram": "Instagram"
+    },
+    "moreActions": "Još radnji za agenta {{name}}",
+    "makeDefault": "Postavi kao podrazumevanog",
+    "madeDefault": "{{name}} je sada podrazumevani agent",
+    "makeDefaultFailed": "Nismo uspeli da promenimo podrazumevanog agenta.",
+    "remove": "Ukloni agenta",
+    "removeDefaultHint": "Prvo postavite drugog podrazumevanog agenta",
+    "removeTitle": "Ukloniti agenta {{name}}?",
+    "removeDescription": "Njegovi kanali i otvoreni razgovori prelaze na agenta {{name}}.",
+    "removeDescriptionPick": "Njegovi kanali i otvoreni razgovori prelaze na agenta kog izaberete.",
+    "removeKnowledge": "Njegovo sopstveno znanje biće obrisano.",
+    "moveTo": "Premesti na",
+    "removed": "Agent {{name}} je uklonjen",
+    "removeFailed": "Nismo uspeli da uklonimo agenta."
+  },
+  "channels": {
+    "moveTo": "Premesti na",
+    "moveToLabel": "Premesti {{channel}} na",
+    "moveHere": "Premesti ovde",
+    "fromAgent": "Kod agenta {{name}}",
+    "manage": "Upravljaj",
+    "noNumber": "Još nema broja",
+    "getNumber": "Nabavite broj",
+    "noWidget": "Još nema vidžeta",
+    "addToWebsite": "Dodaj na moj sajt",
+    "paused": "Pauziran",
+    "noInstagram": "Još nema Instagram naloga",
+    "connectInstagram": "Poveži Instagram",
+    "answersAs": "Odgovara kao {{name}}",
+    "disconnect": "Prekini vezu",
+    "disconnectTitle": "Prekinuti vezu sa {{channel}}?",
+    "disconnectInstagramDescription": "{{name}} prestaje da odgovara na direktne poruke za {{channel}}.",
+    "disconnected": "Veza sa {{channel}} je prekinuta",
+    "disconnectFailed": "Nismo uspeli da prekinemo vezu.",
+    "move": "Premesti",
+    "moveTitle": "Premestiti {{channel}} na agenta {{name}}?",
+    "moveDescription": "Otvoreni razgovori se takođe premeštaju, a od sada odgovara {{name}}.",
+    "moved": "{{channel}} je premešten na agenta {{name}}",
+    "moveFailed": "Nismo uspeli da premestimo."
+  },
+  "mobileNav": {
+    "label": "Glavni meni",
+    "menu": "Meni",
+    "allAgents": "Svi agenti",
+    "tabs": {
+      "home": "Početna",
+      "inbox": "Sanduče",
+      "appointments": "Termini",
+      "contacts": "Kontakti"
+    }
+  },
+  "notifications": {
+    "bell": "Obaveštenja",
+    "bellUnread_one": "Obaveštenja, {{count}} nepročitano",
+    "bellUnread_few": "Obaveštenja, {{count}} nepročitana",
+    "bellUnread_other": "Obaveštenja, {{count}} nepročitanih",
+    "title": "Obaveštenja",
+    "markAllRead": "Označi sve kao pročitano",
+    "empty": "Nema obaveštenja",
+    "unread": "Nepročitano",
+    "loading": "Učitavanje obaveštenja",
+    "providers": {
+      "google": "Google Calendar",
+      "calcom": "Cal.com",
+      "calendly": "Calendly",
+      "other": "Vaš kalendar"
+    },
+    "kinds": {
+      "trial_ending": {
+        "title_one": "Besplatna proba ističe sutra",
+        "title_few": "Besplatna proba ističe za {{count}} dana",
+        "title_other": "Besplatna proba ističe za {{count}} dana",
+        "line": "Izaberite paket da zadržite broj."
+      },
+      "trial_ended": {
+        "title": "Besplatna proba je istekla",
+        "line": "Pozivi sada zvone na Vašem telefonu. Izaberite paket da zadržite broj."
+      },
+      "trial_minutes_used_up": {
+        "title": "Potrošili ste probne minute",
+        "line": "Pozivi sada zvone na Vašem telefonu. Izaberite paket da agent ponovo odgovara."
+      },
+      "number_released": {
+        "title": "Oslobodili smo broj {{number}}",
+        "line": "Izaberite paket da dobijete novi broj.",
+        "lineTrial": "Proba je istekla bez paketa. Izaberite paket da dobijete novi broj."
+      },
+      "payment_failed": {
+        "title": "Plaćanje nije uspelo",
+        "line": "Ažurirajte karticu da zadržite paket."
+      },
+      "plan_canceled": {
+        "title": "Paket ističe {{date}}",
+        "line": "Broj oslobađamo 30 dana kasnije ako ne izaberete paket."
+      },
+      "minutes_80": {
+        "title": "Potrošili ste 80% minuta",
+        "line": "{{used}} od {{included}} minuta ovog meseca."
+      },
+      "minutes_100": {
+        "title": "Potrošili ste sve minute",
+        "line": "{{used}} od {{included}} minuta ovog meseca."
+      },
+      "number_purchase_failed": {
+        "title": "Nismo uspeli da kupimo broj {{number}}",
+        "titleNoNumber": "Nismo uspeli da kupimo broj",
+        "line": "Izaberite broj i pokušajte ponovo.",
+        "lineUnavailable": "Neko drugi ga je uzeo. Izaberite drugi broj."
+      },
+      "number_release_soon": {
+        "title": "Broj {{number}} oslobađamo {{date}}",
+        "line": "Izaberite paket da ga zadržite."
+      },
+      "calendar_sync_failing": {
+        "title": "{{provider}} se ne sinhronizuje",
+        "line": "Ponovo ga povežite da agent nudi slobodne termine."
+      },
+      "instagram_reconnect": {
+        "title": "Ponovo povežite Instagram",
+        "line": "@{{username}} više ne prihvata odgovore agenta.",
+        "lineNoUsername": "Instagram više ne prihvata odgovore agenta."
+      },
+      "webhook_failing": {
+        "title": "Isključili smo webhook",
+        "line": "Svako slanje na {{host}} nije uspevalo jedan dan."
+      },
+      "website_import_failed": {
+        "title": "Nismo uspeli da uvezemo {{site}}",
+        "line": "Proverite adresu i uvezite ga ponovo."
+      },
+      "website_import_finished": {
+        "title": "Uvoz sajta je završen",
+        "line_one": "Pročitali smo {{count}} stranicu sa {{site}}.",
+        "line_few": "Pročitali smo {{count}} stranice sa {{site}}.",
+        "line_other": "Pročitali smo {{count}} stranica sa {{site}}."
+      },
+      "forwarding_detected": {
+        "title": "Preusmeravanje poziva radi",
+        "line": "Pozivi na {{from}} sada stižu do agenta."
+      },
+      "invite_accepted": {
+        "title": "{{email}} je sada u Vašem timu",
+        "line": "Vaša pozivnica je prihvaćena."
+      }
+    }
   }
 }

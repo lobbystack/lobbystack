@@ -1,31 +1,50 @@
 ---
-title: "Revise las próximas citas"
-description: "Revise las próximas citas del espacio de trabajo activo y compruebe su estado de sincronización con el calendario."
+title: "Gestione las citas en el calendario"
+description: "Vea las citas del espacio de trabajo activo por día, semana o mes, reserve nuevas, añada ausencias y compruebe la sincronización con el calendario."
 sidebarTitle: "Citas"
 contentType: "How-to"
 ---
 
-La página **Citas** muestra las próximas reservas del espacio de trabajo activo. Úsela para revisar la agenda y comprobar si cada reserva llegó al calendario conectado.
+La página **Citas** muestra las reservas del espacio de trabajo activo en un calendario. Úsela para revisar la agenda, reservar citas, bloquear ausencias y comprobar si cada reserva llegó al calendario conectado.
 
-## Revisar la agenda
+## Leer el calendario
 
-Cada fila muestra:
+Haga clic en **Día**, **Semana** o **Mes** para cambiar el periodo, y use las flechas o **Hoy** para moverse. La semana se abre por defecto, y el día se abre en el teléfono.
 
-- Hora de la cita
-- Nombre del cliente
-- Servicio
-- Miembro del personal asignado
-- Estado de la cita
-- Estado de sincronización con el calendario
+- En **Día** y **Semana**, cada cita es un bloque en su hora, con el tamaño de su duración. Muestra el cliente, el servicio y la hora. Las citas a la misma hora aparecen una al lado de la otra, y una línea roja marca la hora actual.
+- En **Mes**, cada día lista sus citas por hora y cliente. Haga clic en **+N más** o en el número de un día para abrir ese día.
+- Cada servicio conserva su color. Las citas pasadas aparecen atenuadas, y las canceladas en gris y tachadas.
+- Las zonas rayadas muestran cuándo el negocio está cerrado: fuera del horario de atención, durante los cierres y cuando un empleado está ausente.
 
-LobbyStack muestra cada cita en la zona horaria con la que se guardó.
+Las horas siguen la zona horaria del negocio, esté donde esté. Haga clic en una cita para ver sus detalles, moverla, cancelarla y editar sus notas.
 
-## Actualizar los datos de las citas
+Para ver las citas de un solo empleado, elíjalo en el filtro de empleados. Para una tabla de citas próximas o pasadas, haga clic en **Lista**.
 
-Haga clic en **Actualizar** para solicitar la lista de citas más reciente. La página también se actualiza cuando LobbyStack recibe un evento de cita.
+## Reservar una cita
 
-## Investigar un problema con el calendario
+1. Haga clic en una hora libre del calendario, o en **Nueva cita**. Se abre un panel junto al calendario, y un borrador de la reserva aparece en esa hora.
+2. Elija un servicio. El borrador toma el color y la duración del servicio. Cuando varios empleados ofrecen el servicio, puede elegir uno o dejar **El primero disponible**.
+3. Elija un contacto, o haga clic en **Nuevo contacto** y escriba un nombre y un teléfono. La lista muestra los contactos que tienen teléfono.
+4. Cambie **Duración (minutos)** si esta visita dura más o menos que el servicio.
+5. Elija un día y una hora libre. Si la hora en la que hizo clic no está abierta, el panel se lo indica.
+6. Añada **Notas** y **Notas internas** si las necesita, y haga clic en **Reservar cita**.
 
-Si la columna **Calendario** muestra un problema de sincronización, revise la conexión con Google Calendar, Cal.com o Calendly en **Integraciones**. Corrija cualquier problema de cuenta o de permisos antes de confiar en la disponibilidad en tiempo real.
+Su agente puede leer las **Notas** a quien llama una vez que lo ha verificado, y aparecen en la API y los webhooks. Las **Notas internas** se quedan en su equipo: LobbyStack nunca las envía al agente, al cliente, a la API ni a los webhooks.
 
-Conecte [Google Calendar](/es/integrations/google-calendar), [Cal.com](/es/integrations/calcom) o [Calendly](/es/integrations/calendly) antes de permitir que el agente ofrezca horarios. Configure la cancelación y la reprogramación por parte de quien llama en [Cambios de citas](/es/agent/ai-settings/appointment-changes).
+LobbyStack reserva la cita igual que el agente: comprueba la disponibilidad, aplica las mismas reglas para los mensajes de confirmación y recordatorio, y añade la cita al calendario conectado. Los lectores no pueden reservar citas. Si alguien toma la hora antes que usted, elija otra de la lista actualizada. Pulse **Esc** o haga clic en **Cancelar** para descartar el borrador.
+
+## Añadir una ausencia
+
+1. Haga clic en **Ausencias**.
+2. Elija **Todo el negocio** para cerrar el negocio, o **Un empleado** y elija el empleado.
+3. Escriba un nombre, como `Navidad`.
+4. Elija **Cerrado todo el día**, o **Parte del día** con una hora de inicio y de fin.
+5. Elija las fechas de inicio y de fin, añada un motivo si quiere, y haga clic en **Guardar**.
+
+El calendario muestra la ausencia. Nadie puede reservar el negocio durante un cierre, ni a un empleado mientras está ausente, y eso incluye al agente. El agente puede mencionar el nombre de un cierre, nunca su motivo. Haga clic en una ausencia del calendario para cambiarla o eliminarla. Los propietarios y administradores pueden añadir ausencias; también puede editar los cierres en el [horario de atención](/es/settings/business-details) y los días libres de un empleado en la página **Empleados**.
+
+## Investigar un problema del calendario
+
+Si el estado **Calendario** de una cita muestra un problema de sincronización, revise la conexión de Google Calendar, Cal.com o Calendly en **Negocio** > **Integraciones**. Corrija cualquier problema de cuenta o de permisos antes de depender de la disponibilidad en tiempo real.
+
+Conecte [Google Calendar](/es/integrations/google-calendar), [Cal.com](/es/integrations/calcom) o [Calendly](/es/integrations/calendly) antes de permitir que el agente ofrezca horarios. Configure la cancelación y el cambio de citas por parte de quien llama en [Cambios de citas](/es/agent/appointment-changes).

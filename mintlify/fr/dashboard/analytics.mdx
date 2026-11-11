@@ -1,11 +1,11 @@
 ---
 title: "Consulter l'analytique de l'agent"
-description: "Voyez ce que votre agent a réservé et le temps qu'il vous a fait gagner, puis suivez les tendances des appels, des messages, des rendez-vous, des résultats des appels et des canaux."
+description: "Suivez les appels, leur durée, les rendez-vous du jour et les tendances des messages, des rendez-vous, des résultats des appels et des canaux."
 sidebarTitle: "Analytique"
 contentType: "How-to"
 ---
 
-La page **Analytique** vous aide à comprendre comment vos clients utilisent votre agent. Elle résume l'activité de la semaine et montre si les appels, les messages, les rendez-vous et la durée moyenne des appels augmentent ou diminuent.
+La page **Analytique** vous aide à comprendre comment vos clients utilisent votre agent. Elle résume l'activité sur les dates que vous choisissez et montre si les appels, les messages, les rendez-vous et la durée moyenne des appels augmentent ou diminuent.
 
 ![Page Analytique de LobbyStack](/images/screenshots/analytics.png)
 
@@ -15,7 +15,7 @@ _L'analytique vous aide à repérer les variations de charge de travail et à d�
 
 | Section | À quoi elle sert |
 | --- | --- |
-| **Valeur réservée**, **Temps gagné**, **Appels sans transfert** | Ce que votre agent a réservé, le temps de conversation qu'il a pris en charge et la part des appels qu'il a terminés sans transfert. |
+| **Appels**, **Aujourd'hui**, **Durée moyenne** | Les appels et leur durée moyenne sur les dates que vous choisissez, et les rendez-vous qui restent aujourd'hui. |
 | **Vue d'ensemble de l'activité** | Les appels et les messages de la semaine dans un seul graphique. |
 | **Nombre d'appels** | Le nombre d'appels et l'écart par rapport à la semaine précédente. |
 | **Nombre de messages** | L'activité des conversations SMS et l'écart d'une semaine à l'autre. |
@@ -24,33 +24,25 @@ _L'analytique vous aide à repérer les variations de charge de travail et à d�
 | **Résultats des appels** | Les appels terminés, transférés, en direct et manqués. |
 | **Canaux** | La part de l'activité qui provient de la voix, des SMS et des autres canaux. |
 
-## Voir ce que votre agent a réservé et fait gagner
+## Suivre les appels, la journée et la durée des appels
 
-Les trois chiffres en haut de la page couvrent les dates que vous choisissez, et chacun est comparé à la période de même durée qui précède.
+Les trois chiffres en haut de la page indiquent :
 
-| Chiffre | Comment LobbyStack le calcule |
+| Chiffre | Ce qu'il indique |
 | --- | --- |
-| **Valeur réservée** | Le prix de chaque rendez-vous que votre agent a pris par appel, SMS ou chat sur ces dates, après la remise éventuelle du service. Un prix fixe compte en entier, un prix « à partir de » pour son minimum et une fourchette pour son bas. |
-| **Temps gagné** | Le temps de conversation des appels traités par votre agent, en heures et en minutes. |
-| **Appels sans transfert** | La part de ces appels qui se sont terminés sans que votre agent transfère l'appelant à votre équipe. |
+| **Appels** | Les appels de votre agent sur les dates que vous choisissez, et l'écart avec la période de même durée qui précède. |
+| **Aujourd'hui** | Les rendez-vous qui restent aujourd'hui, et l'heure du prochain. Il couvre toujours la journée en cours, quelles que soient les dates choisies. |
+| **Durée moyenne** | La durée moyenne des appels sur les dates que vous choisissez, et l'écart avec la période précédente. Un appel en cours compte pour 0 seconde. |
 
-La valeur réservée exclut :
+L'[Accueil](/fr/dashboard/home#voir-ce-que-votre-agent-a-réservé-et-fait-gagner) affiche ce que votre agent a réservé et vous a fait gagner.
 
-- Les rendez-vous annulés
-- Les rendez-vous que votre équipe a pris dans le tableau de bord ou par l'API
-- Les services dont le prix est fixé sur place ou qui n'ont pas de prix
-
-LobbyStack utilise le prix actuel de chaque service : si vous changez un prix, l'estimation change aussi pour les dates passées. Le montant s'affiche dans la devise de votre entreprise.
-
-Le temps gagné et la part sans transfert excluent les appels indésirables et les appels de moins de 10 secondes, soit les appels que votre forfait ne facture pas. Les chats du site web ne comptent pas dans le temps gagné, car ils n'ont pas de temps de conversation.
-
-Les analyses comptent les appels de votre agent. Les appels pris par votre équipe avec [Le personnel répond d'abord](/fr/agent/ai-settings/overview#le-personnel-répond-dabord) restent hors de tous les chiffres de cette page, et vous les trouverez dans **Appels**.
+Les analyses comptent les appels de votre agent. Les appels pris par votre équipe avec [Le personnel répond d'abord](/fr/agent/calls-and-booking#le-personnel-répond-dabord) restent hors de tous les chiffres de cette page, et vous les trouverez dans la **Boîte de réception**.
 
 ## Analyser les performances
 
 <Steps>
   <Step title="Ouvrez Analytique">
-    Dans la barre latérale du tableau de bord, allez dans **Gestion** > **Analytique**.
+    Cliquez sur **Analytique** dans la barre latérale du tableau de bord.
   </Step>
   <Step title="Vérifiez l'évolution de la semaine">
     Regardez les cartes d'indicateurs pour voir si les tendances des appels, des messages, des rendez-vous et de la durée ont changé depuis la semaine précédente.
@@ -77,10 +69,10 @@ Les analyses comptent les appels de votre agent. Les appels pris par votre équi
 
 1. Commencez par les cartes d'indicateurs pour voir ce qui a changé.
 2. Consultez **Résultats des appels** pour repérer les appels manqués, les échecs ou une forte proportion de transferts.
-3. Ouvrez **Appels** pour trouver des exemples qui expliquent la tendance.
+3. Ouvrez la **Boîte de réception** pour trouver des exemples qui expliquent la tendance.
 4. Mettez à jour **Connaissances** ou **Règles** quand les appelants posent souvent des questions sur le même sujet.
 5. Revenez à l'analytique après la prochaine période chargée pour voir si le changement a aidé.
 
 ## Quand l'utiliser
 
-Utilisez l'analytique pour comprendre votre charge de travail, repérer les changements de comportement des appelants ou décider si la configuration de votre agent doit être ajustée. Pour les conversations individuelles, utilisez **Appels**, **Messages** et **Contacts**.
+Utilisez l'analytique pour comprendre votre charge de travail, repérer les changements de comportement des appelants ou décider si la configuration de votre agent doit être ajustée. Pour les appels et les conversations individuels, utilisez la **Boîte de réception** et **Contacts**.

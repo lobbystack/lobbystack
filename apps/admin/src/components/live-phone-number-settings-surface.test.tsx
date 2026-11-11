@@ -19,7 +19,7 @@ beforeEach(() => { Object.defineProperty(document, "elementFromPoint", { configu
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 /** Serves the business's numbers, then `afterVerifying` once the phone step approved a code, and records every path the page asks for. */
-function renderWith(numbers: Record<string, unknown>, afterVerifying?: Record<string, unknown>) {
+function renderWith(numbers: Record<string, unknown>, afterVerifying?: Record<string, unknown>, agentId?: string) {
   const paths: string[] = [];
   let verified = false;
   vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
@@ -31,9 +31,23 @@ function renderWith(numbers: Record<string, unknown>, afterVerifying?: Record<st
     if (path === "/api/onboarding/phone-verification/check") { verified = true; return Response.json({ approved: true, status: "approved" }); }
     return new Response(null, { status: 404 });
   }));
-  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><LivePhoneNumberSettingsSurface /></QueryClientProvider>);
+  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><LivePhoneNumberSettingsSurface {...(agentId ? { agentId } : {})} /></QueryClientProvider>);
   return paths;
 }
+
+describe("one agent's number", () => {
+  const number = (e164: string, agentId: string) => ({ id: e164, e164, agentId, voiceEnabled: true, smsEnabled: false, status: "active", reclaimScheduledAt: null });
+  it("shows the number calls to that agent come in on", async () => {
+    renderWith({ partnerNumbers: { available: true }, phoneNumbers: [number("+14165550100", "agent-1"), number("+14165550199", "agent-2")] }, undefined, "agent-2");
+    expect(await screen.findByText(/416.*555.*0199/)).toBeTruthy();
+    expect(screen.queryByText(/416.*555.*0100/)).toBeNull();
+  });
+
+  it("has no number for an agent none reaches", async () => {
+    renderWith({ partnerNumbers: { available: true }, phoneNumbers: [number("+14165550100", "agent-1")] }, undefined, "agent-3");
+    expect(await screen.findByText("phoneNumber.current.empty")).toBeTruthy();
+  });
+});
 
 describe("a partner's business on the phone number settings", () => {
   it("gets a number when its partner's tier allows one, without the billing it doesn't have", async () => {

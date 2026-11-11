@@ -3,7 +3,8 @@
     "signOut": "Déconnexion",
     "terms": "Conditions",
     "privacy": "Confidentialité",
-    "support": "Assistance"
+    "support": "Assistance",
+    "backToDashboard": "Retour au tableau de bord"
   },
   "errors": {
     "tooManyBusinesses": "Vous possédez déjà 10 espaces de travail, la limite pour un compte."
@@ -155,11 +156,6 @@
       "changeNumber": "Utiliser un autre numéro"
     },
     "unavailable": {
-      "title": "Nous n'offrons pas encore de numéros dans ce pays ({{country}}).",
-      "body": "Vous pouvez quand même utiliser votre agent dans le navigateur, et nous pouvons vous écrire quand les numéros y arriveront.",
-      "notify": "M'écrire quand ils seront disponibles",
-      "joined": "C'est noté. Nous vous écrirons.",
-      "continue": "Continuer sans numéro",
       "failed": "Une erreur est survenue. Réessayez.",
       "partnerTitle": "Nous ne pouvons pas encore vérifier les téléphones dans ce pays ({{country}}).",
       "partnerBody": "Vous pouvez terminer la configuration sans téléphone vérifié.",
@@ -177,7 +173,7 @@
       "verification": "Un numéro gratuit exige un téléphone vérifié.",
       "emailVerification": "Vérifiez votre adresse courriel avant de choisir un numéro d'essai."
     },
-    "title": "Choisissez le numéro de votre IA",
+    "title": "Choisissez le numéro de votre agent",
     "countryLabel": "Pays",
     "kindLocal": "Local",
     "kindTollFree": "Sans frais",
@@ -209,22 +205,20 @@
     "skipFailed": "Impossible d'ignorer cette étape maintenant. Réessayez.",
     "tooManySearches": "Trop de recherches. Attendez un peu, puis réessayez.",
     "unavailable": "Ce numéro vient d'être pris. Choisissez-en un autre.",
-    "selectedTitle": "Le numéro de votre IA",
+    "selectedTitle": "Le numéro de votre agent",
     "selectedNumberLabel": "Numéro sélectionné",
-    "numbersUnavailable": "Les numéros de téléphone ne sont pas encore configurés sur ce tableau de bord. Demandez à la personne qui le gère de connecter un fournisseur de téléphonie."
-  },
-  "goal": {
-    "title": "Que voulez-vous que votre agent fasse en premier ?",
-    "options": {
-      "answer_calls": "Répondre à mes appels",
-      "book_appointments": "Prendre des rendez-vous",
-      "answer_website_visitors": "Répondre aux visiteurs de mon site",
-      "answer_instagram_messages": "Répondre aux messages Instagram"
-    },
-    "continue": "Continuer",
-    "saving": "Enregistrement...",
-    "skip": "Ignorer",
-    "submitFailed": "Impossible d'enregistrer maintenant. Réessayez."
+    "numbersUnavailable": "Les numéros de téléphone ne sont pas encore configurés sur ce tableau de bord. Demandez à la personne qui le gère de connecter un fournisseur de téléphonie.",
+    "country": {
+      "title": "Nous n'offrons pas encore de numéros dans ce pays ({{country}}).",
+      "body": "Vous pouvez quand même utiliser votre agent dans le navigateur, et nous pouvons vous écrire quand les numéros y arriveront.",
+      "notify": "M'écrire quand ils seront disponibles",
+      "joined": "C'est noté. Nous vous écrirons.",
+      "continue": "Continuer sans numéro",
+      "failed": "Une erreur est survenue. Réessayez.",
+      "label": "Pays",
+      "back": "Retour aux numéros",
+      "other": "Autre pays"
+    }
   },
   "attribution": {
     "title": "Comment avez-vous connu {{appName}} ?",
@@ -245,7 +239,6 @@
       "tiktok": "TikTok",
       "other": "Autre"
     },
-    "skip": "Ignorer",
     "label": "Source",
     "preferNot": "Je préfère ne pas répondre",
     "search": "Moteur de recherche",
@@ -289,7 +282,12 @@
     "continue": "Continuer",
     "continuing": "Continuer...",
     "continueFailed": "Impossible de continuer maintenant. Réessayez.",
-    "backToPlans": "Retour aux forfaits"
+    "backToPlans": "Retour aux forfaits",
+    "subscribe": "S'abonner",
+    "trial": {
+      "description": "14 jours, sans carte",
+      "start": "Commencer l'essai gratuit de 14 jours"
+    }
   },
   "noBusinesses": {
     "title": "Aucun espace de travail ici pour l'instant",

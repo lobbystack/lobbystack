@@ -39,28 +39,48 @@ test("an owner on a paid plan sets up staff answers first, it persists, and a ca
     const number = await holdNumber(database, owner.businessId, { carrier: "twilio", providerPhoneId });
     thirdParties.carrier.addNumber({ sid: providerPhoneId, e164: number.e164 });
 
-    await page.goto("/agent");
-    const mode = page.getByRole("combobox", { name: agent.staffFirst.mode.label, exact: true });
-    await expect(mode).toBeEnabled();
-    await expect(page.getByText(agent.staffFirst.mode.hint, { exact: true })).toBeVisible();
-    await mode.click();
-    await page.getByRole("option", { name: agent.staffFirst.mode.options.always, exact: true }).click();
+    await page.goto("/agents/primary");
+    const section = page.locator(`#staff-first`);
+    await expect(section).toContainText(agent.staffFirst.mode.options.never);
+    const setUp = section.getByRole("button", { name: agent.staffFirst.setUp, exact: true });
+    await expect(setUp).toBeEnabled();
+    await setUp.click();
+    const dialog = page.getByRole("dialog");
+    // The three options sit side by side as a radio group, with what happens to a call under them.
+    const when = dialog.getByRole("radiogroup", { name: agent.staffFirst.mode.when, exact: true });
+    await expect(when.getByRole("radio")).toHaveCount(3);
+    await expect(when.getByRole("radio", { name: agent.staffFirst.mode.options.never, exact: true })).toBeChecked();
+    await expect(dialog.getByText(agent.staffFirst.mode.effect.never, { exact: true })).toBeVisible();
+    // The arrow keys move and select, as in any radio group.
+    await when.getByRole("radio", { name: agent.staffFirst.mode.options.never, exact: true }).focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(when.getByRole("radio", { name: agent.staffFirst.mode.options.business_hours, exact: true })).toBeChecked();
+    await expect(dialog.getByText(agent.staffFirst.mode.effect.business_hours, { exact: true })).toBeVisible();
+    await when.getByRole("radio", { name: agent.staffFirst.mode.options.always, exact: true }).click();
+    await expect(dialog.getByText(agent.staffFirst.mode.hint, { exact: true })).toBeVisible();
 
     // The phone is required once the mode is on.
-    const save = page.getByRole("button", { name: agent.staffFirst.save, exact: true });
+    const save = dialog.getByRole("button", { name: agent.staffFirst.save, exact: true });
     await save.click();
-    await expect(page.getByText(agent.staffFirst.errors.numberRequired, { exact: true })).toBeVisible();
+    await expect(dialog.getByText(agent.staffFirst.errors.numberRequired, { exact: true })).toBeVisible();
 
-    await page.getByLabel(agent.staffFirst.number.label, { exact: true }).pressSequentially(staffPhone);
-    await page.getByLabel(agent.staffFirst.message.label, { exact: true }).fill("Thanks for calling. One moment.");
-    const saved = page.waitForResponse((response) => response.url().includes("/api/agent?") && response.request().method() === "PATCH");
+    await dialog.getByLabel(agent.staffFirst.number.label, { exact: true }).pressSequentially(staffPhone);
+    await dialog.getByLabel(agent.staffFirst.message.label, { exact: true }).fill("Thanks for calling. One moment.");
+    const saved = page.waitForResponse((response) => /\/api\/agents\/[0-9a-f-]{36}\?/.test(response.url()) && response.request().method() === "PATCH");
     await save.click();
     expect((await saved).ok()).toBe(true);
+    await expect(dialog).toHaveCount(0);
+    const state = agent.staffFirst.state.replace("{{mode}}", agent.staffFirst.mode.options.always).replace("{{number}}", "(416) 555-0177");
+    await expect(section).toContainText(state);
 
     await page.reload();
-    await expect(mode).toContainText(agent.staffFirst.mode.options.always);
-    await expect(page.getByLabel(agent.staffFirst.number.label, { exact: true })).toHaveValue(/416.*555.*0177/);
-    await expect(page.getByLabel(agent.staffFirst.message.label, { exact: true })).toHaveValue("Thanks for calling. One moment.");
+    await expect(section).toContainText(state);
+    await section.getByRole("button", { name: agent.actions.edit, exact: true }).click();
+    await expect(dialog.getByRole("radio", { name: agent.staffFirst.mode.options.always, exact: true })).toBeChecked();
+    await expect(dialog.getByLabel(agent.staffFirst.number.label, { exact: true })).toHaveValue(/416.*555.*0177/);
+    await expect(dialog.getByLabel(agent.staffFirst.message.label, { exact: true })).toHaveValue("Thanks for calling. One moment.");
+    await dialog.getByRole("button", { name: agent.actions.cancel, exact: true }).click();
+    await expect(dialog).toHaveCount(0);
     const [profile] = await database.db.select({ mode: agents.staffFirstMode, number: agents.staffFirstNumber }).from(agents).where(eq(agents.businessId, owner.businessId));
     expect(profile).toEqual({ mode: "always", number: staffPhone });
 
@@ -78,7 +98,7 @@ test("an owner on a paid plan sets up staff answers first, it persists, and a ca
     const row = async () => (await database.db.select({ status: calls.status, disposition: calls.disposition, seconds: calls.providerDurationSeconds, reportedAt: calls.providerUpdatedAt }).from(calls).where(and(eq(calls.businessId, owner.businessId), eq(calls.providerCallId, callSid))))[0];
     expect(await row()).toMatchObject({ status: "completed", disposition: "answered_by_team", seconds: 42, reportedAt: expect.any(Date) });
 
-    await page.goto("/calls");
+    await page.goto("/inbox?channel=phone_call");
     await expect(page.getByText(callsCopy.outcome.answeredByTeam, { exact: true }).first()).toBeVisible();
   } finally {
     await removeFixtures(database, { emails, businessIds });
@@ -93,21 +113,18 @@ test("a Free business and a Telnyx number see staff answers first as unavailable
     const owner = await signUpOwner(database, page, testInfo, `${prefix}-blocked`);
     emails.push(owner.email);
     businessIds.push(owner.businessId);
-    const mode = page.getByRole("combobox", { name: agent.staffFirst.mode.label, exact: true });
-    const save = page.getByRole("button", { name: agent.staffFirst.save, exact: true });
+    const setUp = page.locator("#staff-first").getByRole("button", { name: agent.staffFirst.setUp, exact: true });
 
     await setPlan(database, owner.businessId, "free_cloud");
-    await page.goto("/agent");
+    await page.goto("/agents/primary");
     await expect(page.getByText(agent.staffFirst.unavailable.plan, { exact: true })).toBeVisible();
-    await expect(mode).toBeDisabled();
-    await expect(save).toHaveCount(0);
+    await expect(setUp).toBeDisabled();
 
     await setPlan(database, owner.businessId, "starter");
     await holdNumber(database, owner.businessId, { carrier: "telnyx", providerPhoneId: `telnyx-${randomBytes(8).toString("hex")}` });
     await page.reload();
     await expect(page.getByText(agent.staffFirst.unavailable.carrier, { exact: true })).toBeVisible();
-    await expect(mode).toBeDisabled();
-    await expect(save).toHaveCount(0);
+    await expect(setUp).toBeDisabled();
   } finally {
     await removeFixtures(database, { emails, businessIds });
   }

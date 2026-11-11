@@ -76,7 +76,8 @@ function formatReclaimDate(value: number, locale: string): string {
   return formatDateTime(value, locale, { year: "numeric", month: "long", day: "numeric" });
 }
 
-export function LivePhoneNumberSettingsSurface() {
+/** The number calls to an agent come in on. Without `agentId`, the business's first number. */
+export function LivePhoneNumberSettingsSurface({ agentId }: { agentId?: string } = {}) {
   const { i18n, t } = useTranslation("settings");
   const queryClient = useQueryClient();
   const openUpgradePlanDialog = useOpenUpgradePlanDialog();
@@ -88,7 +89,8 @@ export function LivePhoneNumberSettingsSurface() {
   const numbers = useQuery({ queryKey: ["phone-numbers", businessId], refetchInterval: query => query.state.data?.activeClaim || query.state.data?.replacement.activeClaim ? 1000 : false, enabled: Boolean(businessId), queryFn: () => requestJson<NumbersResponse>(`/api/phone-numbers?businessId=${encodeURIComponent(businessId)}`) });
   const can = useBusinessCan();
   const billing = useQuery({ queryKey: ["billing", businessId], enabled: Boolean(businessId) && can("billing"), queryFn: () => requestJson<BillingUsageViewModel>(`/api/billing?businessId=${encodeURIComponent(businessId)}`) });
-  const primaryPhoneNumber = numbers.data ? numbers.data.phoneNumbers.find(number => number.status === "active" && !number.reclaimScheduledAt) ?? numbers.data.phoneNumbers[0] ?? null : undefined;
+  const agentNumbers = numbers.data ? numbers.data.phoneNumbers.filter(number => !agentId || number.agentId === agentId) : undefined;
+  const primaryPhoneNumber = agentNumbers ? agentNumbers.find(number => number.status === "active" && !number.reclaimScheduledAt) ?? agentNumbers[0] ?? null : undefined;
   const phoneNumberReplacementUsedAt = numbers.data?.replacement.usedAt;
   const billingStatus = billing.data ? { includedBusinessNumbers: billing.data.entitlement.includedNumbers, phoneNumberReclaimScheduledAt: null } : null;
   // A partner's business has no plan of its own: its partner's tier decides whether it gets a new number, and a replacement adds none.
@@ -133,7 +135,7 @@ export function LivePhoneNumberSettingsSurface() {
           <Item variant="outline">
             <ItemContent>
               <ItemTitle aria-hidden="true"><Skeleton className="w-fit"><span className="invisible">{t("phoneNumber.current.label")}</span></Skeleton></ItemTitle>
-              <div aria-hidden="true" className="text-sm"><Skeleton className="w-fit max-w-full"><span className="invisible">{t("phoneNumber.current.description")}</span></Skeleton></div>
+              <div aria-hidden="true" className="type-body"><Skeleton className="w-fit max-w-full"><span className="invisible">{t("phoneNumber.current.description")}</span></Skeleton></div>
               <Skeleton className="h-6 w-48 max-w-full" />
             </ItemContent>
             {businesses.isLoading || canManageTenant ? (
@@ -160,12 +162,12 @@ export function LivePhoneNumberSettingsSurface() {
       <div className="w-full space-y-4">
         {showReclaimBanner && reclaimScheduledAt ? (
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-            <p className="text-sm font-medium text-foreground">
+            <p className="type-title text-foreground">
               {t("phoneNumber.reclaim.title", {
                 date: formatReclaimDate(reclaimScheduledAt, i18n.language),
               })}
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 type-body-muted">
               {t("phoneNumber.reclaim.description", {
                 number: displayPhoneNumber ?? primaryPhoneNumber?.e164,
               })}
@@ -191,9 +193,9 @@ export function LivePhoneNumberSettingsSurface() {
               {primaryPhoneNumber === undefined ? (
                 <Skeleton className="h-6 w-48 max-w-full" />
               ) : displayPhoneNumber ? (
-                <p className="text-[15px] leading-6 text-foreground">{displayPhoneNumber}</p>
+                <p className="type-body text-foreground">{displayPhoneNumber}</p>
               ) : (
-                <p className="text-[15px] leading-6 text-muted-foreground">
+                <p className="type-body-muted">
                   {offersFreeTrial || partnerNumbers?.trial
                     ? t("phoneNumber.freeTrial.description")
                     : partnerNumberMessage
@@ -236,7 +238,7 @@ export function LivePhoneNumberSettingsSurface() {
                           : "phoneNumber.actions.getNumber",
                       )}
                     </DialogTrigger>
-                    <DialogContent className="max-w-3xl">
+                    <DialogContent>
                       <DialogHeader>
                         <DialogTitle>
                           {t(

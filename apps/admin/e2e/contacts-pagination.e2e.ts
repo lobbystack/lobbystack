@@ -6,7 +6,7 @@ import translations from "../public/locales/fr/contacts.json" with { type: "json
 
 import { migrator, removeFixtures, signUp } from "./fixtures/full-stack";
 
-test("contacts paginate, search, edit and delete standalone tenant records", async ({ browser, baseURL }, testInfo) => {
+test("contacts paginate, edit and delete standalone tenant records", async ({ browser, baseURL }, testInfo) => {
   test.setTimeout(120_000);
   const fixtures = migrator(); const worker = createDatabaseClient("lobbystack_worker"); const auth = createDatabaseClient("lobbystack_auth"); const businessId = randomUUID();
   const context = await browser.newContext({ locale: "fr" });
@@ -30,10 +30,9 @@ test("contacts paginate, search, edit and delete standalone tenant records", asy
     await expect(page.getByRole("button", { name: translations.pagination.nextPage, exact: true })).toBeDisabled();
     await page.getByRole("button", { name: translations.pagination.firstPage, exact: true }).click();
     await expect(page.getByText("Unique oldest contact", { exact: true })).toHaveCount(0);
-    await page.getByPlaceholder(translations.page.searchPlaceholder).fill("Unique oldest");
+    await page.getByRole("button", { name: translations.pagination.lastPage, exact: true }).click();
     await expect(page.getByText("Unique oldest contact", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: translations.table.actions.moreOptions })).toHaveCount(1);
-    await expect(page.getByRole("button", { name: translations.pagination.nextPage, exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: translations.table.actions.moreOptions }).click();
     await page.getByRole("menuitem", { name: translations.table.actions.editContact }).click();
     const editor = page.getByRole("dialog");
@@ -42,7 +41,6 @@ test("contacts paginate, search, edit and delete standalone tenant records", asy
     await editor.getByLabel(translations.edit.email).fill("corrected@example.com");
     await editor.getByRole("button", { name: translations.edit.save, exact: true }).click();
     await expect(editor).toHaveCount(0);
-    await page.getByPlaceholder(translations.page.searchPlaceholder).fill("Corrected contact");
     await expect(page.getByText("Corrected contact name", { exact: true })).toBeVisible();
     await expect(page.getByText("corrected@example.com")).toBeVisible();
     await page.getByRole("button", { name: translations.table.actions.moreOptions }).click();

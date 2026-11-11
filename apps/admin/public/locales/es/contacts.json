@@ -1,8 +1,7 @@
 {
   "page": {
     "title": "Contactos",
-    "description": "Gestione las personas detrás de sus llamadas, mensajes y reservas.",
-    "searchPlaceholder": "Buscar contactos..."
+    "description": "Gestione las personas detrás de sus llamadas, mensajes y reservas."
   },
   "table": {
     "contact": "Contacto",
@@ -12,7 +11,7 @@
     "lastInteraction": "Última interacción",
     "messages": "{{count}} mensajes",
     "calls": "{{count}} llamadas",
-    "empty": "Ningún contacto coincide con la búsqueda.",
+    "empty": "Aún no hay contactos.",
     "status": {
       "blocked": "Bloqueado"
     },
@@ -176,12 +175,14 @@
   },
   "pagination": {
     "rowsPerPage": "Filas por página",
-    "pageOf": "Página {{page}} de {{total}}",
+    "viewing": "Filas {{start}} a {{end}} de {{total}}",
+    "viewingAll_one": "{{count}} fila",
+    "viewingAll_many": "Las {{count}} filas",
+    "viewingAll_other": "Las {{count}} filas",
     "firstPage": "Ir a la primera página",
     "previousPage": "Ir a la página anterior",
     "nextPage": "Ir a la página siguiente",
-    "lastPage": "Ir a la última página",
-    "goToPage": "Ir a la página {{page}}"
+    "lastPage": "Ir a la última página"
   },
   "edit": {
     "title": "Editar contacto",
@@ -193,5 +194,24 @@
     "saved": "Contacto actualizado.",
     "failed": "No se pudo guardar el contacto. Inténtalo de nuevo.",
     "invalidEmail": "Introduce un correo electrónico válido."
+  },
+  "create": {
+    "action": "Nuevo contacto",
+    "title": "Nuevo contacto",
+    "name": "Nombre",
+    "phone": "Teléfono",
+    "phoneCountry": "País del número",
+    "email": "Correo electrónico",
+    "nameRequired": "Introduce un nombre.",
+    "reachRequired": "Introduce un teléfono o un correo electrónico.",
+    "phoneInvalid": "Introduce un número de teléfono completo.",
+    "invalidEmail": "Introduce un correo electrónico válido.",
+    "exists": "Ya hay un contacto con este número.",
+    "openExisting": "Abrir contacto",
+    "cancel": "Cancelar",
+    "save": "Crear contacto",
+    "saving": "Creando...",
+    "saved": "Contacto creado.",
+    "failed": "No se pudo crear el contacto. Inténtalo de nuevo."
   }
 }

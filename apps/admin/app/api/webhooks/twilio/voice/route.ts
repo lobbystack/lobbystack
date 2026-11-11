@@ -5,6 +5,7 @@ import { resolveNumberFallback } from "@lobbystack/domain";
 import { resolveTwilioWebhookUrl, validateTwilioSignature } from "@lobbystack/providers/twilio/webhookSecurity";
 import { getAppDatabase } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
+import { noteForwardedCall } from "@/lib/forwarded-calls";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,6 +42,8 @@ export async function POST(request: Request) {
       if (businessId) { routed = { businessId, to }; break; }
     }
     if (!routed) return twiml('<Reject reason="busy"/>');
+    // Twilio names the line a forwarded call came through. The caller doesn't wait on it.
+    if (params.ForwardedFrom) void noteForwardedCall({ businessId: routed.businessId, dialled: routed.to, from: params.From, candidates: [params.ForwardedFrom], source: "twilio" });
     const fallback = await resolveNumberFallback(createWorkerDomainContext(), { businessId: routed.businessId, e164: routed.to });
     // A line that forwards its missed calls here would send this call straight back.
     if (fallback.action === "forward" && E164_PATTERN.test(fallback.to) && fallback.to !== params.ForwardedFrom) return twiml(`<Dial>${fallback.to}</Dial>`);

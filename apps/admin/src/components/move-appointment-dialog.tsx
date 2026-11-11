@@ -1,24 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { enUS, es, fr, srLatn } from "react-day-picker/locale";
 import { toast } from "sonner";
 
 import { APPOINTMENT_ROLES, appointmentSummary, type CancellableAppointment } from "@/components/cancel-appointment-button";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Skeleton } from "@/components/ui/skeleton";
+import { OpeningsPicker } from "@/components/openings-picker";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { dayKey } from "@/lib/calendar-days";
 import { formatRequestedStart } from "@/lib/follow-up-task";
 import { formatDateTime } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
-import { cn } from "@/lib/utils";
-
-const DAY_PICKER_LOCALES = { en: enUS, fr, es, sr: srLatn } as const;
 
 /**
  * The time a caller asked for, as the business's wall-clock "YYYY-MM-DD" or
@@ -40,29 +35,22 @@ function wallClock(value: string, timeZone: string): string {
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
 }
 
-// The day picker works in the browser's own days, so a key becomes that day's local midnight and back.
-const keyToLocalDate = (key: string) => {
-  const [year, month, day] = key.split("-").map(Number);
-  return new Date(year!, month! - 1, day!);
-};
-const localDateToKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-
 /**
  * A button that opens a picker of open times to move the appointment to. With
  * `requested`, the picker opens on the time a caller asked for. `otherTime`
  * labels it as the alternative to approving that time. Hidden from roles that
  * can't move appointments.
  */
-export function MoveAppointmentButton({ appointment, requested, className, size = "xs", variant = "outline", otherTime = false }: { appointment: CancellableAppointment; requested?: RequestedTime; className?: string; size?: "xs" | "default"; variant?: "outline" | "default"; otherTime?: boolean }) {
+export function MoveAppointmentButton({ appointment, requested, className, renderTrigger, size = "sm", variant = "outline", otherTime = false }: { appointment: CancellableAppointment; requested?: RequestedTime; className?: string; size?: "sm" | "default"; variant?: "outline" | "default"; otherTime?: boolean; /** Replaces the button, as a row's menu item does; the dialog stays outside it. */ renderTrigger?: (open: () => void) => ReactNode }) {
   const { t, i18n } = useTranslation("common");
   const { business } = useActiveBusiness();
   const [open, setOpen] = useState(false);
   if (!business || !APPOINTMENT_ROLES.includes(business.role)) return null;
   return (
     <>
-      <Button aria-label={otherTime ? undefined : t("appointments.move.actionLabel", { time: formatDateTime(appointment.startsAt, i18n.language, { dateStyle: "medium", timeStyle: "short", timeZone: appointment.timezone }) })} className={className} onClick={() => setOpen(true)} size={size} variant={variant}>
+      {renderTrigger ? renderTrigger(() => setOpen(true)) : <Button aria-label={otherTime ? undefined : t("appointments.move.actionLabel", { time: formatDateTime(appointment.startsAt, i18n.language, { dateStyle: "medium", timeStyle: "short", timeZone: appointment.timezone }) })} className={className} onClick={() => setOpen(true)} size={size} variant={variant}>
         {t(otherTime ? "appointments.move.otherTime" : "appointments.move.action")}
-      </Button>
+      </Button>}
       {/* Mounted only while open, so it starts again from the appointment or the request each time. */}
       {open ? <MoveAppointmentDialog appointment={appointment} onOpenChange={setOpen} requested={requested} /> : null}
     </>
@@ -113,37 +101,15 @@ function MoveAppointmentDialog({ appointment, requested: requestedTime, onOpenCh
     },
   });
 
-  const time = (value: string) => formatDateTime(value, i18n.language, { hour: "numeric", minute: "2-digit", timeZone });
   return (
     <Dialog onOpenChange={(next) => { if (!move.isPending) onOpenChange(next); }} open>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{t("appointments.move.title")}</DialogTitle>
           <DialogDescription className="ph-mask">{t("appointments.move.description", { appointment: appointmentSummary(appointment, i18n.language, t) })}</DialogDescription>
           {requested ? <p className="type-body-muted">{t("appointments.move.requested", { time: formatRequestedStart(requested, i18n.language) })}</p> : null}
         </DialogHeader>
-        <div className="grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)]">
-          <section aria-label={t("appointments.move.date")} className="flex justify-center rounded-xl border">
-            <Calendar
-              defaultMonth={keyToLocalDate(date)}
-              disabled={{ before: keyToLocalDate(today) }}
-              locale={DAY_PICKER_LOCALES[i18n.language as keyof typeof DAY_PICKER_LOCALES] ?? enUS}
-              mode="single"
-              onSelect={(day: Date | undefined) => { if (day) { setDate(localDateToKey(day)); setChosen(null); } }}
-              required
-              selected={keyToLocalDate(date)}
-            />
-          </section>
-          <section aria-busy={openings.isLoading} aria-label={t("appointments.move.times")} className="flex min-w-0 flex-col gap-2">
-            <h3 className="type-item-title">{t("appointments.move.times")}</h3>
-            {openings.isLoading ? <div className="grid grid-cols-3 gap-2 sm:grid-cols-2">{Array.from({ length: 6 }, (_, index) => <Skeleton className="h-9 rounded-xl" key={index} />)}</div>
-              : openings.isError ? <p className="type-body-muted text-destructive">{t("appointments.move.timesFailed")}</p>
-              : times.length ? <div className="grid max-h-72 grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-2">
-                {times.map((value) => <Button aria-pressed={selected === value} className={cn("tabular-nums", selected === value && "ring-2 ring-ring")} key={value} onClick={() => setChosen(value)} type="button" variant={selected === value ? "default" : "outline"}>{time(value)}</Button>)}
-              </div>
-              : <p className="type-body-muted">{t("appointments.move.noTimes")}</p>}
-          </section>
-        </div>
+        <OpeningsPicker date={date} failed={openings.isError} loading={openings.isLoading} onDateChange={(day) => { setDate(day); setChosen(null); }} onSelect={setChosen} selected={selected} timeZone={timeZone} times={times} today={today} />
         <DialogFooter>
           <DialogClose render={<Button disabled={move.isPending} type="button" variant="outline" />}>{t("appointments.move.keep")}</DialogClose>
           <Button disabled={!selected || move.isPending} onClick={() => { if (selected) move.mutate(selected); }} type="button">{t("appointments.move.confirm")}</Button>

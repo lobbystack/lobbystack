@@ -1,7 +1,5 @@
 {
-  "page": {
-    "searchPlaceholder": "Pretraži zaposlene..."
-  },
+  "page": {},
   "table": {
     "name": "Ime",
     "phone": "Broj telefona",
@@ -23,7 +21,6 @@
       "noServices": "Izmenite zaposlenog i izaberite njegove usluge kako bi klijenti mogli da zakažu kod njega."
     },
     "added": "Dodato",
-    "empty": "Nijedan zaposleni ne odgovara pretrazi.",
     "emptyState": "Još nema zaposlenih.",
     "actions": {
       "moreOptions": "Više opcija",
@@ -100,11 +97,13 @@
   },
   "pagination": {
     "rowsPerPage": "Redova po stranici",
-    "pageOf": "Stranica {{page}} od {{total}}",
+    "viewing": "Redovi {{start}}-{{end}} od {{total}}",
+    "viewingAll_one": "Prikazan {{count}} red",
+    "viewingAll_few": "Prikazana sva {{count}} reda",
+    "viewingAll_other": "Prikazano svih {{count}} redova",
     "firstPage": "Idi na prvu stranicu",
     "previousPage": "Idi na prethodnu stranicu",
     "nextPage": "Idi na sledeću stranicu",
-    "lastPage": "Idi na poslednju stranicu",
-    "goToPage": "Idi na stranicu {{page}}"
+    "lastPage": "Idi na poslednju stranicu"
   }
 }

@@ -74,7 +74,9 @@ describe("knowledge sources", () => {
   it("shows an FAQ's type instead of the tag that marks it", () => {
     const snippet = { id: row.id, title: "Do you park?", content: "Behind the building.", tags: ["faq", "parking"], priority: 2, active: false, createdAt: at, updatedAt: at };
     const faq = serializeKnowledgeEntry(snippet);
-    expect(faq).toEqual({ id: row.id, type: "faq", title: "Do you park?", content: "Behind the building.", tags: ["parking"], priority: 2, active: false, created_at: at.toISOString(), updated_at: at.toISOString() });
+    expect(faq).toEqual({ id: row.id, type: "faq", title: "Do you park?", content: "Behind the building.", tags: ["parking"], priority: 2, active: false, agent_id: null, created_at: at.toISOString(), updated_at: at.toISOString() });
+    // An entry one agent answers from names it.
+    expect(serializeKnowledgeEntry({ ...snippet, agentId: row.id }).agent_id).toBe(row.id);
     expect(apiKnowledgeEntrySchema.safeParse(faq).success).toBe(true);
     expect(serializeKnowledgeEntry({ ...snippet, tags: [] }).type).toBe("text");
   });
@@ -141,7 +143,7 @@ describe("v1 resource serializers match the published schemas", () => {
   });
 
   it("serializes appointments with the public status names", () => {
-    const appointment = serializeAppointment({ id: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f", status: "canceled", startsAt: now, endsAt: now, timezone: "America/Toronto", serviceId: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5e", serviceName: "Cut", staffId: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5d", staffName: "Sam", contactId: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5c", contactName: null, contactPhone: "+14165550134", sourceChannel: "api", calendarSyncState: "weird", createdAt: now, updatedAt: now });
+    const appointment = serializeAppointment({ id: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f", status: "canceled", startsAt: now, endsAt: now, timezone: "America/Toronto", serviceId: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5e", serviceName: "Cut", staffId: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5d", staffName: "Sam", contactId: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5c", contactName: null, contactPhone: "+14165550134", sourceChannel: "api", calendarSyncState: "weird", notes: null, createdAt: now, updatedAt: now });
     expect(apiAppointmentSchema.parse(appointment)).toEqual(appointment);
     expect(appointment).toMatchObject({ status: "cancelled", calendar_sync_status: "pending" });
   });

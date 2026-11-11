@@ -35,10 +35,11 @@ for (const route of loadingRoutes) for (const locale of ["en", "fr"] as const) f
         for (const pattern of route.requests) await context.route(pattern, () => { heldRequests += 1; });
       }
       const page = await context.newPage();
-      await page.goto(`${process.env.LOADING_PARITY_BASE_URL}${route.path}`, { waitUntil: "domcontentloaded" });
+      // An agent's page opens through /agents/primary, which the server sends to the default agent.
+      await page.goto(`${process.env.LOADING_PARITY_BASE_URL}${route.path.replace("[agentId]", "primary")}`, { waitUntil: "domcontentloaded" });
       await page.waitForTimeout(1500);
       await expect.poll(() => heldRequests, { message: "The page-specific service request must remain pending." }).toBeGreaterThan(0);
-      await expect.poll(() => new URL(page.url()).pathname).toBe(route.path);
+      await expect.poll(() => new URL(page.url()).pathname).toMatch(new RegExp(`^${route.path.replace("[agentId]", "[0-9a-f-]{36}")}$`));
       await expect.poll(() => page.evaluate(() => localStorage.getItem("lobbystack.locale"))).toBe(locale);
       await expect.poll(() => page.locator("html").evaluate(element => element.classList.contains("dark"))).toBe(theme === "dark");
       await page.evaluate(() => document.fonts.ready);

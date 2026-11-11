@@ -131,7 +131,7 @@ describe("operator hours", () => {
     const year = new Date().getUTCFullYear() + 1;
     await replaceBusinessHoursInTransaction(tx as never, { businessId, hours: weekdays, closures: [{ startsAt: `${year}-12-25T00:00`, endsAt: `${year}-12-26T00:00`, reason: "Christmas Day" }] });
     expect(recorded.deletes).toEqual([closures, businessHours]);
-    expect(recorded.inserts[0]).toEqual([{ businessId, startsAt: new Date(`${year}-12-24T23:00:00Z`), endsAt: new Date(`${year}-12-25T23:00:00Z`), reason: "Christmas Day" }]);
+    expect(recorded.inserts[0]).toEqual([{ businessId, startsAt: new Date(`${year}-12-24T23:00:00Z`), endsAt: new Date(`${year}-12-25T23:00:00Z`), reason: "Christmas Day", note: null }]);
     expect(recorded.inserts[1]).toHaveLength(5);
     expect(mocks.enqueueOutbox).toHaveBeenCalledOnce();
   });

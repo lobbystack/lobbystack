@@ -346,23 +346,6 @@
         "keep": "Ce numéro est à vous.",
         "choose": "Choisir votre numéro"
       },
-      "steps": {
-        "title": "Prochaines étapes",
-        "call": {
-          "title": "Appelez-le maintenant",
-          "description": "Écoutez votre agent répondre à un vrai appel."
-        },
-        "forward": {
-          "title": "Transférez votre ligne d'entreprise vers ce numéro",
-          "description": "Vos appelants composent toujours le numéro qu'ils connaissent. Votre opérateur transfère ces appels vers votre numéro {{appName}}.",
-          "action": "Guide du renvoi d'appel"
-        },
-        "transfer": {
-          "title": "Choisissez où vont les appels urgents",
-          "description": "Ajoutez un numéro de transfert dans les Paramètres IA pour que votre agent puisse passer les appels urgents à une personne.",
-          "action": "Ouvrir les Paramètres IA"
-        }
-      },
       "continue": "Continuer la configuration",
       "dashboard": "Aller au tableau de bord"
     }
@@ -653,10 +636,6 @@
       "zapier": {
         "title": "Zapier",
         "description": "Reliez les appels, les réservations et les contacts à des milliers d'applications."
-      },
-      "instagram": {
-        "title": "Instagram",
-        "description": "Répondez aux messages privés Instagram avec les mêmes connaissances que votre agent."
       }
     },
     "status": {
@@ -677,13 +656,7 @@
       "connectFailed": "Impossible de connecter Instagram. Veuillez réessayer.",
       "accountInUse": "Ce compte Instagram est déjà connecté à un autre espace de travail.",
       "permissionMissing": "Votre agent a besoin d'accéder à vos messages Instagram. Reconnectez Instagram et autorisez cet accès.",
-      "disconnectedSuccess": "Instagram est déconnecté.",
-      "disconnect": "Déconnecter",
-      "reconnect": "Reconnecter",
-      "connectedAs": "Répond aux messages privés en tant que @{{username}}.",
-      "dialogDescription": "Votre agent répond aux messages privés envoyés à ce compte.",
-      "accountLabel": "Compte Instagram",
-      "reconnectDescription": "Instagram n'accepte plus l'accès de votre agent. Reconnectez le compte pour continuer à répondre aux messages."
+      "reconnect": "Reconnecter"
     }
   },
   "profile": {
@@ -867,10 +840,10 @@
     },
     "delete": {
       "title": "Supprimer l'espace de travail",
-      "description": "Efface définitivement cet espace de travail avec ses appels, conversations, contacts, rendez-vous, paramètres et accès d'équipe. Son numéro de téléphone est libéré et son forfait payant prend fin. Cette action est irréversible.",
+      "description": "Efface tout son contenu et libère son numéro de téléphone.",
       "action": "Supprimer l'espace de travail",
       "dialogTitle": "Supprimer {{name}} ?",
-      "dialogDescription": "Tout ce que contient cet espace de travail est effacé définitivement, son numéro de téléphone est rendu à l'opérateur et l'agent cesse de répondre. Son équipe perd l'accès et personne ne peut le restaurer.",
+      "dialogDescription": "Ses appels, contacts et paramètres sont effacés, son numéro est libéré et son forfait prend fin. Cette action est irréversible.",
       "confirmLabel": "Saisissez <name>{{name}}</name> pour confirmer",
       "submit": "Supprimer",
       "deleting": "Suppression...",

@@ -18,6 +18,7 @@ import {
   keyHasScope,
   randomContactPasscode,
   RULES_MAX,
+  RULE_CONTENT_CALL_MAX_LENGTH,
   isApiKeyScope,
   normalizeAuthEmail,
   normalizeWidgetOrigin,
@@ -105,10 +106,11 @@ import { assignCalendarStaffInTransaction, disconnectCalendarInTransaction, list
 import { deleteServiceInTransaction, insertServiceInTransaction, replaceBusinessHoursInTransaction, replaceServiceStaffInTransaction, updateServiceInTransaction } from "../catalog";
 import { NUMBER_BEING_REPLACED_MESSAGE, schedulePhoneNumberReleaseInTransaction } from "../compliance";
 import { ContactPasscodeHashesBusyError, hashContactPasscodes, removeContactPasscodesInTransaction, saveContactPasscodesInTransaction } from "../contactPasscodes";
+import { ContactPhoneTakenError, insertContactInTransaction } from "../contacts";
 import type { BusinessSetupDependencies } from "../businessTemplates";
 import type { DomainContext } from "../context";
 import { loadEntitlement } from "../entitlement";
-import { cancelKnowledgeDocumentInTransaction, createKnowledgeDocumentInTransaction, createKnowledgeSnippetInTransaction, deleteKnowledgeDocumentInTransaction, deleteKnowledgeSnippetInTransaction, expandWebsiteCrawlInTransaction, KnowledgeStorageLimitError, ONBOARDING_CRAWL_PAGE_LIMIT, retryKnowledgeDocumentInTransaction, setKnowledgeDocumentActiveInTransaction, updateKnowledgeSnippetInTransaction } from "../knowledge";
+import { assertWebsiteScopeFree, cancelKnowledgeDocumentInTransaction, createKnowledgeDocumentInTransaction, createKnowledgeSnippetInTransaction, deleteKnowledgeDocumentInTransaction, deleteKnowledgeSnippetInTransaction, expandWebsiteCrawlInTransaction, KnowledgeStorageLimitError, ONBOARDING_CRAWL_PAGE_LIMIT, retryKnowledgeDocumentInTransaction, setKnowledgeDocumentActiveInTransaction, updateKnowledgeSnippetInTransaction } from "../knowledge";
 import { normalizeWebsiteSourceUrl } from "../knowledgeUrl";
 import { normalizeOnboardingStage, scheduleWelcomeEmailInTransaction } from "../onboarding";
 import { createPartnerBusiness } from "../partners";
@@ -119,6 +121,7 @@ import { expireAbandonedNumberClaimsInTransaction, lockBusinessNumberClaims, num
 import { isSharedSmsSender, resolveSmsSender } from "../smsSender";
 import { loadBillingContext } from "../usage";
 import { defaultReceptionistProfile, saveReceptionistProfileInTransaction, type ReceptionistProfilePatch } from "../receptionistProfile";
+import { loadLegacyInstructions, withLegacyInstructions } from "../channelRules";
 import { listActiveAgentsInTransaction, pausedAgentIds } from "../agents";
 import { deleteAgentRuleInTransaction, insertAgentRuleInTransaction, listAgentRulesInTransaction, lockAgentRulesInTransaction, reorderAgentRulesInTransaction, updateAgentRuleInTransaction } from "../rules";
 import { insertWidgetKeyInTransaction, updateWidgetKeyInTransaction, type WidgetKeyPatch } from "../widgetKeys";
@@ -1177,21 +1180,28 @@ export async function updateNotificationPreferencesForApi(context: DomainContext
 
 // Rules the receptionist follows
 
+/** Calls read 4,000 characters of a rule for every channel and 8,000 of one kept to a channel, so the API takes no more. */
+function assertRuleLength(content: string, channel: string | null): void {
+  if (!channel && content.length > RULE_CONTENT_CALL_MAX_LENGTH) throw invalidRequest(`A rule for every channel holds up to ${RULE_CONTENT_CALL_MAX_LENGTH.toLocaleString("en")} characters.`, [{ path: "content", message: "Shorten it, or give the rule a channel." }]);
+}
+
 export async function listRulesForApi(context: DomainContext, caller: ApiCaller): Promise<ApiRule[]> {
   return await inBusiness(context, caller, async (tx) => (await listAgentRulesInTransaction(tx, { businessId: caller.businessId })).map(serializeRule));
 }
 
 /**
  * Adds a rule after the others. /v1/rules acts on the default agent's rules,
- * and an agent keeps up to RULES_MAX, so the API can always send them all in
- * one reorder.
+ * and an agent keeps up to RULES_MAX. Migration 0203 can take one up to four
+ * past it, and a reorder takes RULES_REORDER_MAX ids, so the API can always
+ * send them all in one reorder.
  */
 export async function createRuleForApi(context: DomainContext, caller: ApiCaller, input: ApiRuleCreate): Promise<ApiRule> {
   return await inBusiness(context, caller, async (tx) => {
     await lockAgentRulesInTransaction(tx, { businessId: caller.businessId });
     const count = (await listAgentRulesInTransaction(tx, { businessId: caller.businessId })).length;
     if (count >= RULES_MAX) throw conflict(`A business can have up to ${RULES_MAX} rules. Delete one first.`);
-    const rule = await insertAgentRuleInTransaction(tx, { businessId: caller.businessId, title: input.title, content: input.content, active: input.active });
+    assertRuleLength(input.content, input.channel ?? null);
+    const rule = await insertAgentRuleInTransaction(tx, { businessId: caller.businessId, title: input.title, content: input.content, active: input.active, channel: input.channel });
     await audit(tx, caller, { eventType: "api.rule.created", entityType: "agent_rule", entityId: rule.id });
     return serializeRule(rule);
   });
@@ -1207,8 +1217,10 @@ export async function updateRuleForApi(context: DomainContext, caller: ApiCaller
       ...(input.title !== undefined && input.title !== current.title ? { title: input.title } : {}),
       ...(input.content !== undefined && input.content !== current.content ? { content: input.content } : {}),
       ...(input.active !== undefined && input.active !== current.active ? { active: input.active } : {}),
+      ...(input.channel !== undefined && input.channel !== current.channel ? { channel: input.channel } : {}),
     };
     if (!Object.keys(changes).length) return serializeRule(current);
+    assertRuleLength(input.content ?? current.content, input.channel !== undefined ? input.channel : current.channel);
     const rule = await updateAgentRuleInTransaction(tx, { businessId: caller.businessId, ruleId, ...changes });
     if (!rule) throw notFound("Rule");
     await audit(tx, caller, { eventType: "api.rule.updated", entityType: "agent_rule", entityId: ruleId, payload: { fields: Object.keys(changes) } });
@@ -1280,8 +1292,10 @@ async function loadReceptionistState(tx: DatabaseTransaction, businessId: string
   if (!row) throw notFound("Business");
   const business = { ...row, locale: normalizeRuntimeLocale(row.defaultLocale) };
   const query = tx.select().from(agents).where(defaultAgentOf(businessId)).limit(1);
-  const [profile] = lock ? await query.for("update") : await query;
-  return { business, profile: profile ?? null, shown: profile ?? { ...defaultReceptionistProfile(business.name, business.locale), updatedAt: business.updatedAt } };
+  const [agentRow] = lock ? await query.for("update") : await query;
+  // The instruction fields read the agent's channel rules, not the deprecated columns.
+  const profile = agentRow ? await withLegacyInstructions(tx, agentRow) : null;
+  return { business, profile, shown: profile ?? { ...defaultReceptionistProfile(business.name, business.locale), updatedAt: business.updatedAt } };
 }
 
 // Agents. Read-only for now: the dashboard creates, archives and edits them.
@@ -1289,7 +1303,8 @@ async function loadReceptionistState(tx: DatabaseTransaction, businessId: string
 async function loadAgentsForApi(tx: DatabaseTransaction, businessId: string): Promise<ApiAgent[]> {
   const [active, entitlement] = await Promise.all([listActiveAgentsInTransaction(tx, businessId), loadEntitlement(tx, businessId)]);
   const paused = pausedAgentIds(entitlement, active);
-  return active.map((agent) => serializeAgent(agent, paused.has(agent.id)));
+  const instructions = await loadLegacyInstructions(tx, businessId, active.map((agent) => agent.id));
+  return active.map((agent) => serializeAgent({ ...agent, ...instructions.get(agent.id)! }, paused.has(agent.id)));
 }
 
 /** Active agents, the default first and then the oldest. */
@@ -1665,24 +1680,12 @@ export async function createContactForApi(context: DomainContext, caller: ApiCal
   if (input.timezone !== undefined) assertTimeZone(input.timezone, "timezone");
   try {
     return await inBusiness(context, caller, async (tx) => {
-      if (input.phone) {
-        const [existing] = await tx.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.businessId, caller.businessId), eq(contacts.phone, input.phone))).limit(1);
-        if (existing) throw conflict(`A contact with this phone number already exists: ${existing.id}.`);
-      }
-      const [row] = await tx.insert(contacts).values({
-        businessId: caller.businessId,
-        name: input.name,
-        phone: input.phone,
-        email: input.email,
-        preferredLocale: input.locale,
-        timezone: input.timezone,
-      }).returning();
-      if (!row) throw new Error("The contact could not be created.");
+      const row = await insertContactInTransaction(tx, { businessId: caller.businessId, name: input.name, phone: input.phone, email: input.email, preferredLocale: input.locale, timezone: input.timezone });
       await audit(tx, caller, { eventType: "api.contact.created", entityType: "contact", entityId: row.id });
-      await emitWebhookEventInTransaction(tx, { businessId: caller.businessId, type: "contact.created", resourceId: row.id });
       return serializeContact(row, null);
     });
   } catch (error) {
+    if (error instanceof ContactPhoneTakenError) throw conflict(error.message);
     if (isUniqueViolation(error)) throw conflict("A contact with this phone number already exists.");
     throw error;
   }
@@ -1912,6 +1915,7 @@ export async function createAppointmentForApi(context: DomainContext, caller: Ap
     ...(input.contact_name ? { contactName: input.contact_name } : {}),
     ...(input.staff_id ? { preferredStaffId: input.staff_id } : {}),
     ...(input.sms_consent && prepared.consentCounts ? { smsConsent: "agreed" as const } : {}),
+    ...(input.notes ? { notes: input.notes } : {}),
   });
   if (!booked.ok) throw booked.reason === "unknown_service" ? inactiveService() : slotUnavailable(booked.reason);
   // Only a caller's own number or call finds an earlier booking, and the API sends neither.
@@ -2035,11 +2039,11 @@ export function apiErrorFromDomain(error: unknown, what: string): unknown {
   return error;
 }
 
-type KnowledgeSourceState = { id: string; sourceType: string; status: string; jobId: string | null; pageLimit: number | null };
+type KnowledgeSourceState = { id: string; sourceType: string; status: string; jobId: string | null; pageLimit: number | null; agentId: string | null };
 
 function selectKnowledgeSource(tx: DatabaseTransaction, businessId: string) {
   return tx
-    .select({ id: knowledgeDocuments.id, sourceType: knowledgeDocuments.sourceType, status: knowledgeDocuments.status, jobId: websiteIngestionJobs.id, pageLimit: websiteIngestionJobs.pageLimit })
+    .select({ id: knowledgeDocuments.id, sourceType: knowledgeDocuments.sourceType, status: knowledgeDocuments.status, agentId: knowledgeDocuments.agentId, jobId: websiteIngestionJobs.id, pageLimit: websiteIngestionJobs.pageLimit })
     .from(knowledgeDocuments)
     .leftJoin(websiteIngestionJobs, and(eq(websiteIngestionJobs.rootDocumentId, knowledgeDocuments.id), eq(websiteIngestionJobs.businessId, businessId)));
 }
@@ -2085,6 +2089,12 @@ export async function createKnowledgeSourceForApi(context: DomainContext, caller
       throw apiErrorFromDomain(error, "Knowledge source");
     }
     const [existing] = await selectKnowledgeSource(tx, caller.businessId).where(and(eq(knowledgeDocuments.businessId, caller.businessId), eq(knowledgeDocuments.sourceUrl, url))).limit(1);
+    // The API adds shared knowledge. A website one agent holds stays that agent's.
+    try {
+      await assertWebsiteScopeFree(tx, { businessId: caller.businessId, sourceUrl: url, agentId: null, existing: existing ? { agentId: existing.agentId } : undefined });
+    } catch (error) {
+      throw apiErrorFromDomain(error, "Knowledge source");
+    }
     if (existing && !existing.jobId) throw conflict(`This address is already source ${existing.id}, a page with no crawl of its own. Delete that source, then add the address again.`);
     let documentId: string;
     if (existing) {

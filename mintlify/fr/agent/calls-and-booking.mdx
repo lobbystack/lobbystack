@@ -1,0 +1,93 @@
+---
+title: "Choisir comment votre agent transfère les appels et prend les rendez-vous"
+description: "Configurez le numéro de transfert par défaut, Le personnel répond d'abord, la prise de rendez-vous et les modifications de rendez-vous d'un agent IA."
+sidebarTitle: "Appels et rendez-vous"
+contentType: "How-to"
+---
+
+La page **Général** de chaque agent décide où il envoie les appelants qui ont besoin d'une personne et comment il gère les rendez-vous. Cliquez sur **Agents** dans la barre latérale et ouvrez l'agent. Il s'ouvre sur **Général**, et ces réglages suivent **Nom, accueil et voix**.
+
+Chaque agent garde ici ses propres réglages : un agent de soirée peut donc prendre les rendez-vous autrement que votre agent de jour.
+
+## Numéro de transfert par défaut
+
+Sous **Transferts**, le **Numéro de transfert par défaut** est le numéro que votre agent appelle quand il transfère un appelant à une personne. Quand un appelant demande un [employé](/fr/settings/employees) qui a un numéro de téléphone, votre agent transfère plutôt l'appel à cet employé.
+
+Choisissez un numéro qui répond pendant les heures d'ouverture. Si différentes équipes traitent différentes demandes, gardez le numéro par défaut comme destination de transfert la plus sûre et ajoutez des [règles](/fr/agent/rules) qui précisent quand transférer un appelant.
+
+<Note>
+  Les numéros de transfert doivent se trouver dans un pays du menu des pays à côté du champ : États-Unis, Canada, Porto Rico, Royaume-Uni, France, Allemagne, Espagne, Italie, Pays-Bas, Portugal, Mexique, Brésil, Israël, Inde, Japon, Australie, Nouvelle-Zélande et Serbie. Les transferts vers des numéros d'autres pays n'aboutissent pas.
+</Note>
+
+Si votre essai gratuit a commencé avec un numéro de mobile vérifié, votre agent transfère les appels uniquement vers ce numéro pendant l'essai, et vous ne pouvez pas enregistrer un autre numéro. Passez à Starter ou à Pro pour le changer.
+
+LobbyStack renvoie aussi les appels vers ce numéro quand vos minutes vocales sont épuisées ou que les dépassements atteignent votre plafond de dépenses. Sans ce numéro, ces appels vont au numéro de mobile que vous avez vérifié, si vous en avez un. Consultez [Utilisation et limites](/fr/billing/usage).
+
+<Steps>
+  <Step title="Entrez un numéro">
+    Entrez le numéro de téléphone complet dans **Numéro de transfert par défaut**.
+  </Step>
+  <Step title="Enregistrez">
+    Cliquez sur **Enregistrer** à côté du champ.
+  </Step>
+  <Step title="Ajoutez des règles au besoin">
+    Dans les **Règles** de l'agent, décrivez quand il doit transférer l'appel, prendre un message ou demander les coordonnées pour un rappel.
+  </Step>
+</Steps>
+
+<Note>
+  Ajoutez un numéro de transfert si vous voulez qu'une personne puisse prendre le relais en direct. Sans numéro, l'agent note les coordonnées pour un rappel ou un suivi, et votre équipe peut répondre depuis le tableau de bord.
+</Note>
+
+## Le personnel répond d'abord
+
+**Le personnel répond d'abord** fait sonner un téléphone du personnel avant que votre agent réponde. Appuyez sur 1 pour prendre l'appel. Si personne n'appuie sur 1 avant la fin de la sonnerie, votre agent répond comme d'habitude. Une messagerie vocale ne peut pas prendre l'appel, car elle n'appuie jamais sur 1.
+
+<Steps>
+  <Step title="Ouvrir le réglage">
+    Sous **Le personnel répond d'abord**, cliquez sur **Configurer** à côté de **Faire sonner votre équipe d'abord**. Une fois le réglage activé, le bouton devient **Modifier**, et la ligne indique quand le téléphone de votre équipe sonne et son numéro.
+  </Step>
+  <Step title="Choisir quand faire sonner">
+    Sous **Quand**, cliquez sur **Pendant les heures d'ouverture** ou **Toujours**. La ligne sous les options indique ce qui se passe pour un appel. **Pendant les heures d'ouverture** suit vos [heures d'ouverture](/fr/settings/business-details#heures-douverture) et saute les fermetures.
+  </Step>
+  <Step title="Ajouter le téléphone du personnel">
+    Entrez le numéro dans **Téléphone du personnel**. Le champ reprend votre numéro de transfert par défaut, et vous pouvez le changer.
+  </Step>
+  <Step title="Régler la durée de la sonnerie">
+    Choisissez 10, 15, 20, 30, 45 ou 60 secondes dans **Durée de la sonnerie**. La valeur par défaut est 15.
+  </Step>
+  <Step title="Ajouter des messages au besoin">
+    **Message avant la sonnerie** joue avant que le téléphone du personnel sonne. **Message avant la réponse de l'agent** joue quand personne ne prend l'appel. Chacun contient 200 caractères, et les appelants les entendent dans votre langue client par défaut. Le serbe n'a pas encore de voix pour ces messages, donc une entreprise en serbe les saute.
+  </Step>
+  <Step title="Enregistrer">
+    Cliquez sur **Enregistrer**.
+  </Step>
+</Steps>
+
+Pour le désactiver, cliquez sur **Modifier**, cliquez sur **Désactivé** sous **Quand**, puis cliquez sur **Enregistrer**.
+
+Chaque sonnerie utilise une [tentative de transfert](/fr/billing/usage). Les appels auxquels vous répondez n'utilisent aucune minute vocale et apparaissent dans la [Boîte de réception](/fr/dashboard/inbox) avec **Répondu par votre équipe**.
+
+Les appels auxquels vous répondez se terminent après 30 minutes. Après 600 minutes d'appels répondus en 24 heures, les nouveaux appels vont directement à votre agent jusqu'à ce que ce total baisse. Cette limite s'applique à tous les forfaits.
+
+<Warning>
+  N'utilisez pas un téléphone qui renvoie les appels sans réponse vers votre numéro LobbyStack. L'appel revient directement à votre agent.
+</Warning>
+
+Le personnel répond d'abord exige un forfait payant et fonctionne sur les numéros Twilio. Sur les autres numéros, le réglage s'affiche comme non disponible. Pour le comparer au renvoi d'appels, consultez [Renvoyer votre ligne d'entreprise vers LobbyStack](/fr/getting-started/forward-calls#choisir-les-appels-à-renvoyer).
+
+## Rendez-vous
+
+Sous **Rendez-vous**, **Réservation** définit ce que fait l'agent quand un appelant veut un rendez-vous :
+
+- **Réserve les rendez-vous** : l'agent vérifie vos disponibilités et réserve le rendez-vous
+- **Prend les demandes** : l'agent note le service et l'heure souhaitée, et votre équipe confirme depuis la Boîte de réception
+- **Ne réserve pas** : l'agent prend plutôt un message
+
+Avant de compter sur la prise de rendez-vous, ajoutez vos [services](/fr/settings/services) et vos [heures d'ouverture](/fr/settings/business-details#heures-douverture). [Connectez votre calendrier](/fr/integrations/overview) pour que l'agent évite les créneaux déjà pris.
+
+**Annulations** et **Déplacements** permettent à l'agent d'annuler ou de déplacer des rendez-vous, et **Vérification de l'appelant** définit comment il vérifie l'identité de l'appelant. Vous pouvez exiger un code unique par SMS ou un code PIN sur le clavier avant toute modification d'un rendez-vous.
+
+<Card title="Configurer les modifications de rendez-vous" icon="calendar-clock" href="/fr/agent/appointment-changes">
+  Découvrez comment LobbyStack confirme l'identité du client, met à jour le calendrier et transmet les demandes incertaines à votre équipe.
+</Card>

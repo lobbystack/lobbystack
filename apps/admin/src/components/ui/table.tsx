@@ -21,7 +21,7 @@ function Table({
     >
       <table
         data-slot="table"
-        className={cn("w-full caption-bottom text-sm", className)}
+        className={cn("w-full caption-bottom type-body", className)}
         {...props}
       />
     </div>
@@ -38,11 +38,16 @@ function TableCard({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
+/**
+ * `empty` hides the column titles below lg, for a table showing only its
+ * empty message: with the sidebar open, the titles of a wide table crowd that
+ * message on anything narrower.
+ */
+function TableHeader({ className, empty = false, ...props }: React.ComponentProps<"thead"> & { empty?: boolean }) {
   return (
     <thead
       data-slot="table-header"
-      className={cn("bg-table-header [&_tr]:border-b", className)}
+      className={cn("bg-table-header [&_tr]:border-b", empty && "max-lg:hidden", className)}
       {...props}
     />
   )
@@ -63,7 +68,7 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
     <tfoot
       data-slot="table-footer"
       className={cn(
-        "border-t bg-muted/50 font-medium [&>tr]:last:border-b-0",
+        "border-t bg-muted/50 type-title [&>tr]:last:border-b-0",
         className
       )}
       {...props}
@@ -89,7 +94,7 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
     <th
       data-slot="table-head"
       className={cn(
-        "h-12 px-3 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0",
+        "h-12 px-4 text-left align-middle type-table-head whitespace-nowrap [&:has([role=checkbox])]:p-0",
         className
       )}
       {...props}
@@ -102,12 +107,21 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
     <td
       data-slot="table-cell"
       className={cn(
-        "p-3 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0",
+        "p-4 align-middle whitespace-nowrap [&:has([role=checkbox])]:p-0",
         className
       )}
       {...props}
     />
   )
+}
+
+/**
+ * The row-actions column of a fixed-layout table: an icon-sm button (32px)
+ * plus the cell's 16px padding on each side. Give the columns without a fixed
+ * width percentages that add up to 100%, so this one keeps its width.
+ */
+function TableActionsColumn() {
+  return <col data-slot="table-actions-column" className="w-16" />
 }
 
 function TableCaption({
@@ -117,7 +131,7 @@ function TableCaption({
   return (
     <caption
       data-slot="table-caption"
-      className={cn("mt-4 text-sm text-muted-foreground", className)}
+      className={cn("mt-4 type-body-muted", className)}
       {...props}
     />
   )
@@ -133,4 +147,5 @@ export {
   TableRow,
   TableCell,
   TableCaption,
+  TableActionsColumn,
 }

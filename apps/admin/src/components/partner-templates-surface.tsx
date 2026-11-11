@@ -116,7 +116,7 @@ export function SaveTemplateDialog({ open, onOpenChange, business }: SaveTemplat
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent>
+      <DialogContent size="sm">
         <form className="flex flex-col gap-6" onSubmit={(event) => { event.preventDefault(); if (ready) { setError(null); save.mutate(); } }}>
           <DialogHeader>
             <DialogTitle>{t("templates.save.title")}</DialogTitle>
@@ -125,7 +125,7 @@ export function SaveTemplateDialog({ open, onOpenChange, business }: SaveTemplat
             {business ? null : (
               <Field>
                 <FieldLabel htmlFor="partner-template-business">{t("templates.save.businessLabel")}</FieldLabel>
-                {businesses.isSuccess && !options.length ? <p className="text-sm text-muted-foreground">{t("templates.save.noBusinesses")}</p> : (
+                {businesses.isSuccess && !options.length ? <p className="type-body-muted">{t("templates.save.noBusinesses")}</p> : (
                   <Select disabled={!businesses.isSuccess} items={options} onValueChange={(value) => { if (typeof value === "string") { setBusinessId(value); if (!name.trim()) setName(options.find((option) => option.value === value)?.label ?? ""); } }} value={businessId}>
                     <SelectTrigger aria-label={t("templates.save.businessLabel")} className="w-full" id="partner-template-business" loading={businesses.isLoading}><SelectValue placeholder={t("templates.save.businessPlaceholder")} /></SelectTrigger>
                     <SelectContent><SelectGroup>{options.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectGroup></SelectContent>
@@ -138,7 +138,7 @@ export function SaveTemplateDialog({ open, onOpenChange, business }: SaveTemplat
               <Input autoComplete="off" id="partner-template-name" maxLength={TEMPLATE_NAME_MAX_LENGTH} onChange={(event) => setName(event.target.value)} placeholder={t("templates.save.namePlaceholder")} value={name} />
             </Field>
           </FieldGroup>
-          {error ? <p className="text-sm text-destructive" role="alert">{error}</p> : null}
+          {error ? <p className="type-body text-destructive" role="alert">{error}</p> : null}
           <DialogFooter>
             <Button disabled={!ready} loading={save.isPending} loadingLabel={t("templates.save.submitting")} type="submit">{t("templates.save.submit")}</Button>
           </DialogFooter>
@@ -185,34 +185,34 @@ export function PartnerTemplatesSurface() {
       {templates.isLoading ? (
         <Surface className="flex flex-col gap-4 p-6"><Skeleton className="h-5 w-40" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></Surface>
       ) : templates.isError ? (
-        <Surface className="px-6 py-8"><p className="text-sm text-muted-foreground" role="alert">{t("templates.loadFailed")}</p></Surface>
+        <Surface className="px-6 py-8"><p className="type-body-muted" role="alert">{t("templates.loadFailed")}</p></Surface>
       ) : rows.length === 0 ? (
         <Surface className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-          <h2 className="text-base font-medium">{t("templates.empty.title")}</h2>
-          {canManage ? null : <p className="max-w-sm text-sm leading-6 text-muted-foreground">{t("templates.empty.memberDescription")}</p>}
+          <h2 className="type-card-title">{t("templates.empty.title")}</h2>
+          {canManage ? null : <p className="max-w-sm type-body-muted">{t("templates.empty.memberDescription")}</p>}
         </Surface>
       ) : (
         <Surface className="overflow-hidden p-0">
           <Table>
             <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("templates.table.template")}</TableHead>
-                <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("templates.table.contents")}</TableHead>
-                {canManage ? <TableHead className="h-12 px-6"><span className="sr-only">{t("templates.table.actions")}</span></TableHead> : null}
+              <TableRow>
+                <TableHead>{t("templates.table.template")}</TableHead>
+                <TableHead>{t("templates.table.contents")}</TableHead>
+                {canManage ? <TableHead><span className="sr-only">{t("templates.table.actions")}</span></TableHead> : null}
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.map((template) => (
-                <TableRow className="hover:bg-transparent" key={template.templateId}>
-                  <TableCell className="px-6 py-5 whitespace-normal [overflow-wrap:anywhere]">
+                <TableRow key={template.templateId}>
+                  <TableCell className="whitespace-normal [overflow-wrap:anywhere]">
                     <div className="flex flex-col gap-1">
-                      <p className="text-sm font-medium">{template.name}</p>
-                      <p className="text-sm text-muted-foreground">{t("templates.savedOn", { date: formatDate(template.createdAt) })}</p>
+                      <p className="type-title">{template.name}</p>
+                      <p className="type-body-muted">{t("templates.savedOn", { date: formatDate(template.createdAt) })}</p>
                     </div>
                   </TableCell>
-                  <TableCell className="px-6 py-5 whitespace-normal"><TemplateContents template={template.template} /></TableCell>
+                  <TableCell className="whitespace-normal"><TemplateContents template={template.template} /></TableCell>
                   {canManage ? (
-                    <TableCell className="px-6 py-5">
+                    <TableCell>
                       <div className="flex items-center justify-end">
                         <DropdownMenu>
                           <DropdownMenuTrigger render={<Button aria-label={t("templates.actions.more", { name: template.name })} disabled={remove.isPending} size="icon-sm" variant="ghost"><MoreHorizontal /></Button>} />

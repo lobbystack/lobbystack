@@ -7,15 +7,20 @@
     "title": "Analitika",
     "description": "Pratite trendove angažovanja kroz pozive, poruke i zakazivanja."
   },
-  "delta": {
-    "flat": "Bez promene u odnosu na prošli mesec",
-    "up": "+{{value}}% u odnosu na prošli mesec",
-    "down": "-{{value}}% u odnosu na prošli mesec",
-    "durationUp": "+{{value}} u odnosu na prošli mesec",
-    "durationDown": "-{{value}} u odnosu na prošli mesec"
-  },
   "home": {
     "title": "Početna",
+    "phone": {
+      "status": {
+        "ready": "Spremno za Vaš prvi poziv",
+        "live": "Vaš agent prima pozive",
+        "liveMany": "Vaši agenti primaju pozive"
+      },
+      "answersFirst": {
+        "agent": "Vaš agent se javlja prvi",
+        "team": "Vaš tim se javlja prvi",
+        "teamDuringHours": "Vaš tim se javlja prvi tokom radnog vremena"
+      }
+    },
     "download": "Preuzmi",
     "liveCalls": "Uživo",
     "tabs": {
@@ -88,30 +93,41 @@
           "other": "Ostalo"
         }
       },
-      "results": {
-        "bookedValue": "Vrednost termina",
-        "timeSaved": "Ušteđeno vreme",
-        "withoutTransfer": "Pozivi bez preusmeravanja"
+      "agents": {
+        "title": "Po agentu",
+        "calls": "Pozivi",
+        "chats": "Četovi",
+        "removed": "Uklonjen"
+      },
+      "overview": {
+        "calls": {
+          "title": "Pozivi"
+        },
+        "today": {
+          "title": "Danas",
+          "next": "Sledeći u {{time}}",
+          "none": "Ništa više danas"
+        },
+        "appointments": {
+          "title": "Termini"
+        },
+        "averageDuration": {
+          "title": "Prosečno trajanje"
+        }
       }
+    },
+    "results": {
+      "bookedValue": "Vrednost termina",
+      "timeSaved": "Ušteđeno vreme",
+      "withoutTransfer": "Pozivi bez preusmeravanja"
     },
     "metrics": {
       "loading": "Učitavanje mesečnog poređenja...",
-      "today": {
-        "title": "Danas",
-        "next": "Sledeći u {{time}}",
-        "none": "Ništa više danas"
-      },
       "calls": {
         "title": "Pozivi"
       },
       "messages": {
         "title": "Poruke"
-      },
-      "appointments": {
-        "title": "Termini"
-      },
-      "averageDuration": {
-        "title": "Prosečno trajanje"
       },
       "contacts": {
         "title": "Kontakti"
@@ -150,11 +166,12 @@
       "requested": "Traženo: {{details}}",
       "notes": "Napomene: {{notes}}",
       "rescheduleRequest": "Zahtev za pomeranje",
-      "newTime": "Novo vreme: {{time}}"
+      "newTime": "Novo vreme: {{time}}",
+      "inboxLink": "Prikaži sve u prijemnom sandučetu"
     },
     "upcoming": {
       "title": "Predstojeće",
-      "viewAll": "Prikaži sve",
+      "appointmentsLink": "Prikaži sve termine",
       "description": "Sledeći termini u kalendaru.",
       "unknownService": "Nepoznata usluga",
       "employee": "Zaposleni: {{name}}",
@@ -276,35 +293,34 @@
       "hours": "Dodajte radno vreme",
       "testCall": "Čujte svog agenta",
       "phoneNumber": "Povežite broj telefona",
-      "forwardCalls": "Preusmerite pozive"
+      "forwardCalls": "Preusmerite pozive",
+      "callNumber": "Pozovite svoj broj",
+      "forwardFromCurrent": "Zadržite svoj postojeći broj"
     },
     "stepDescriptions": {
       "fullScan": "Agent je pročitao deo Vašeg sajta.",
-      "sources": {
-        "answer_calls": "Otpremite pravila, česta pitanja i cene o kojima pozivaoci pitaju.",
-        "book_appointments": "Otpremite usluge, cene i pravila zakazivanja.",
-        "answer_website_visitors": "Otpremite česta pitanja i pravila o kojima pitaju posetioci sajta.",
-        "answer_instagram_messages": "Otpremite česta pitanja i cene o kojima Vas pitaju na Instagramu.",
-        "none": "Otpremite pravila, česta pitanja ili cene."
-      },
+      "sources": "Otpremite pravila, česta pitanja ili cene.",
       "hours": "Agent zakazuje termine samo u ovom radnom vremenu.",
-      "testCall": {
-        "answer_calls": "Pitajte ono što Vas klijenti najčešće pitaju.",
-        "book_appointments": "Zamolite ga da zakaže termin.",
-        "answer_website_visitors": "Pitajte ono što ljudi pitaju na Vašem sajtu.",
-        "answer_instagram_messages": "Pitajte ono što ljudi pitaju na Instagramu.",
-        "none": "Pitajte ono što Vas klijenti najčešće pitaju."
-      },
+      "testCall": "Pitajte ono što Vas klijenti najčešće pitaju.",
       "phoneNumber": "Dodelite agentu sopstveni broj da bi odgovarao pravim pozivaocima.",
-      "phoneNumberTrial": "Odgovarajte na propuštene pozive besplatno 14 dana, bez kartice."
+      "phoneNumberTrial": "Odgovarajte na propuštene pozive besplatno 14 dana, bez kartice.",
+      "forwardCalls": "Zadržavate broj koji Vaši klijenti već zovu? Vaš agent može da odgovara i na pozive na tom broju.",
+      "numberLost": "Besplatna proba je istekla. Izaberite paket da biste vratili svoj broj."
     },
     "stepActions": {
       "fullScan": "Pročitaj ostatak",
       "sources": "Otpremi dokument",
       "hours": "Dodaj radno vreme",
       "testCall": "Započni poziv",
-      "phoneNumber": "Izaberi broj"
-    }
+      "phoneNumber": "Izaberi broj",
+      "callNumber": "Pozovi {{number}}",
+      "copyNumber": "Kopiraj broj",
+      "numberCopied": "Kopirano",
+      "forwardCalls": "Podesite preusmeravanje",
+      "choosePlan": "Izaberite paket"
+    },
+    "forwardingFrom": "Preusmeravanje sa broja {{number}}",
+    "forwardingWorks": "Preusmeravanje radi"
   },
   "forwarding": {
     "title": "Preusmerite pozive na {{number}}",
@@ -332,8 +348,8 @@
       "ukMobile": "Mobilni u Velikoj Britaniji"
     },
     "code": {
-      "dial": "Ukucajte ovaj kod:",
-      "call": "Pritisnite Pozovi. Ton ili poruka potvrđuje da je preusmeravanje uključeno.",
+      "dial": "Na telefonu koji Vaši klijenti zovu, ukucajte ovaj kod:",
+      "call": "Pritisnite Pozovi.",
       "busy": "Da biste preusmerili i pozive koji stignu dok razgovarate, ukucajte:",
       "off": "Da biste ga kasnije isključili, ukucajte {{code}}.",
       "unreachable": "Da biste preusmerili i pozive kada je telefon isključen ili bez signala, ukucajte:",
@@ -352,11 +368,7 @@
       "voicemail": "Ako koristite govornu poštu operatera {{name}}, zamolite {{name}} da je ukloni. Propušteni pozivi ne mogu da se preusmere dok je uključena.",
       "androidOnly": "Ovi koraci su za Android telefone. Na iPhone-u zamolite operatera {{name}} da ga uključi za Vas.",
       "adminOnly": "Ovo može da promeni samo administrator Vašeg {{name}} naloga.",
-      "verifyNumber": "{{name}} šalje kod na {{number}} pre nego što uključi preusmeravanje. Izaberite da kod dobijete pozivom, pa ga pročitajte u transkriptu tog poziva u odeljku Pozivi."
-    },
-    "test": {
-      "missed": "Da biste proverili, pozovite poslovni broj s drugog telefona i pustite da zvoni. Agent bi trebalo da se javi.",
-      "all": "Da biste proverili, pozovite poslovni broj s drugog telefona. Agent bi trebalo da se javi."
+      "verifyNumber": "{{name}} šalje kod na {{number}} pre nego što uključi preusmeravanje. Izaberite da kod dobijete pozivom, pa ga pročitajte u transkriptu tog poziva u odeljku Prijemno sanduče."
     },
     "unsupported": {
       "missed": "{{name}} ne nudi preusmeravanje samo propuštenih poziva. Izaberite Svi pozivi ili zamolite {{name}} da preusmeri neodgovorene pozive na {{number}}.",
@@ -369,6 +381,7 @@
     "general": {
       "missed": "Na mobilnom otvorite podešavanja poziva i preusmerite neodgovorene pozive na {{number}}. Za fiksnu liniju ili poslovni telefonski sistem zamolite operatera da to uradi.",
       "all": "Na mobilnom otvorite podešavanja poziva i preusmerite sve pozive na {{number}}. Za fiksnu liniju ili poslovni telefonski sistem zamolite operatera da to uradi."
-    }
+    },
+    "itWorks": "Radi"
   }
 }

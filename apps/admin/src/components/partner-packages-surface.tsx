@@ -13,7 +13,6 @@ import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { PageHeader } from "@/components/page-header";
 import { useConsolePartner } from "@/components/partner-shell";
 import { useTelemetry } from "@/components/product-analytics";
-import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -25,6 +24,8 @@ import { Surface } from "@/components/ui/surface";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { parsePriceInput } from "@/lib/price-input";
 import { requestJson } from "@/lib/request-json";
+import { Status } from "@/components/ui/status";
+import { PACKAGE_STATUS_VARIANTS } from "@/lib/status-variants";
 
 /** A package as GET /api/partner/packages lists it. Amounts are in the currency's smallest unit. */
 type PartnerPackage = {
@@ -143,7 +144,7 @@ export function PartnerPackagesSurface() {
   const header = (actions?: React.ReactNode) => (
     <PageHeader actions={actions} title={t("packages.title")} />
   );
-  const message = (text: string) => <Surface className="px-6 py-8"><p className="text-sm text-muted-foreground" role="alert">{text}</p></Surface>;
+  const message = (text: string) => <Surface className="px-6 py-8"><p className="type-body-muted" role="alert">{text}</p></Surface>;
   if (!canManage) return <div className="flex flex-col gap-6">{header()}{message(t("packages.managersOnly"))}</div>;
   const data = packages.data;
   if (!data) {
@@ -170,7 +171,7 @@ export function PartnerPackagesSurface() {
   const createDialog = currency ? (
     <Dialog onOpenChange={(next) => { setCreateOpen(next); if (!next) { setDraft(EMPTY_DRAFT); setCreateError(null); setCreateSubmitted(false); } }} open={createOpen}>
       <DialogTrigger render={<Button size="sm" />}>{t("packages.create.action")}</DialogTrigger>
-      <DialogContent>
+      <DialogContent size="sm">
         <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); setCreateSubmitted(true); if (!create.isPending && draft.name.trim() && draft.price.trim()) { setCreateError(null); create.mutate(); } }}>
           <DialogHeader>
             <DialogTitle>{t("packages.create.title")}</DialogTitle>
@@ -210,7 +211,7 @@ export function PartnerPackagesSurface() {
             </div>
             <FieldDescription>{t("packages.create.fixedTerms")}</FieldDescription>
           </FieldGroup>
-          {createError ? <p className="text-sm text-destructive" role="alert">{createError}</p> : null}
+          {createError ? <p className="type-body text-destructive" role="alert">{createError}</p> : null}
           <DialogFooter>
             <DialogClose render={<Button disabled={create.isPending} type="button" variant="outline" />}>{t("packages.create.cancel")}</DialogClose>
             <Button disabled={create.isPending} loading={create.isPending} loadingLabel={t("packages.create.submitting")} type="submit">{t("packages.create.submit")}</Button>
@@ -225,51 +226,51 @@ export function PartnerPackagesSurface() {
       {header(createDialog)}
       {notice ? (
         <Surface className="flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm leading-6 text-muted-foreground">{notice.text}</p>
+          <p className="type-body-muted">{notice.text}</p>
           {notice.link ? <Link className={buttonVariants({ size: "sm", variant: "outline" })} href={stripePage}>{t("packages.openStripe")}</Link> : null}
         </Surface>
       ) : null}
       {data.packages.length === 0 ? (
         <Surface className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-          <h2 className="text-base font-medium">{t("packages.empty.title")}</h2>
-          {data.stripe.configured ? null : <p className="max-w-sm text-sm leading-6 text-muted-foreground">{t("packages.empty.noStripe")}</p>}
+          <h2 className="type-card-title">{t("packages.empty.title")}</h2>
+          {data.stripe.configured ? null : <p className="max-w-sm type-body-muted">{t("packages.empty.noStripe")}</p>}
         </Surface>
       ) : (
         <Surface className="overflow-hidden p-0">
           <Table>
             <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("packages.table.package")}</TableHead>
-                <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("packages.table.price")}</TableHead>
-                <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("packages.table.allowance")}</TableHead>
-                <TableHead className="w-12 px-6" />
+              <TableRow>
+                <TableHead>{t("packages.table.package")}</TableHead>
+                <TableHead>{t("packages.table.price")}</TableHead>
+                <TableHead>{t("packages.table.allowance")}</TableHead>
+                <TableHead className="w-16" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {data.packages.map((item) => (
-                <TableRow className="hover:bg-transparent" key={item.packageId}>
-                  <TableCell className="px-6 py-5 whitespace-normal [overflow-wrap:anywhere]">
+                <TableRow key={item.packageId}>
+                  <TableCell className="whitespace-normal [overflow-wrap:anywhere]">
                     <div className="flex flex-col gap-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-medium">{item.name}</p>
-                        {item.onConnectedAccount ? null : <Badge variant="outline">{t("packages.oldAccount")}</Badge>}
+                        <p className="type-title">{item.name}</p>
+                        {item.onConnectedAccount ? null : <Status variant={PACKAGE_STATUS_VARIANTS.oldAccount}>{t("packages.oldAccount")}</Status>}
                       </div>
-                      <p className="text-sm text-muted-foreground">{t("packages.createdOn", { date: formatDate(item.createdAt) })}</p>
+                      <p className="type-body-muted">{t("packages.createdOn", { date: formatDate(item.createdAt) })}</p>
                     </div>
                   </TableCell>
-                  <TableCell className="px-6 py-5 whitespace-normal">
+                  <TableCell className="whitespace-normal">
                     <div className="flex flex-col gap-1 tabular-nums">
-                      <p className="text-sm">{t("packages.perMonth", { amount: formatAmount(item.monthlyPriceMinor, item.currency) })}</p>
-                      <p className="text-sm text-muted-foreground">{item.setupFeeMinor === null ? t("packages.noSetupFee") : t("packages.setupFee", { amount: formatAmount(item.setupFeeMinor, item.currency) })}</p>
+                      <p className="type-body">{t("packages.perMonth", { amount: formatAmount(item.monthlyPriceMinor, item.currency) })}</p>
+                      <p className="type-body-muted">{item.setupFeeMinor === null ? t("packages.noSetupFee") : t("packages.setupFee", { amount: formatAmount(item.setupFeeMinor, item.currency) })}</p>
                     </div>
                   </TableCell>
-                  <TableCell className="px-6 py-5 whitespace-normal">
+                  <TableCell className="whitespace-normal">
                     <div className="flex flex-col gap-1 tabular-nums">
-                      <p className="text-sm">{t("packages.minutes", { count: item.allowance.voiceMinutes, amount: formatCount(item.allowance.voiceMinutes) })}</p>
-                      <p className="text-sm">{t("packages.chats", { count: item.allowance.chats, amount: formatCount(item.allowance.chats) })}</p>
+                      <p className="type-body">{t("packages.minutes", { count: item.allowance.voiceMinutes, amount: formatCount(item.allowance.voiceMinutes) })}</p>
+                      <p className="type-body">{t("packages.chats", { count: item.allowance.chats, amount: formatCount(item.allowance.chats) })}</p>
                     </div>
                   </TableCell>
-                  <TableCell className="px-6 py-5">
+                  <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger render={<Button aria-label={t("packages.moreOptions", { name: item.name })} disabled={rename.isPending || archive.isPending} size="icon-sm" variant="ghost"><MoreHorizontal /></Button>} />
                       <DropdownMenuContent align="end">
@@ -288,7 +289,7 @@ export function PartnerPackagesSurface() {
         </Surface>
       )}
       <Dialog onOpenChange={(next) => { if (!next) { setRenaming(null); setRenameSubmitted(false); } }} open={renaming !== null}>
-        <DialogContent>
+        <DialogContent size="sm">
           <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); setRenameSubmitted(true); if (renaming && !rename.isPending && newName.trim()) { setRenameError(null); rename.mutate(renaming); } }}>
             <DialogHeader>
               <DialogTitle>{t("packages.rename.title")}</DialogTitle>
@@ -298,7 +299,7 @@ export function PartnerPackagesSurface() {
               <Input aria-describedby={renameNameError ? "partner-package-rename-error" : undefined} aria-invalid={renameNameError ? true : undefined} autoComplete="off" id="partner-package-rename" maxLength={PARTNER_PACKAGE_NAME_MAX_LENGTH} onChange={(event) => setNewName(event.target.value)} value={newName} />
               {renameNameError ? <FieldError id="partner-package-rename-error">{renameNameError}</FieldError> : null}
             </Field>
-            {renameError ? <p className="text-sm text-destructive" role="alert">{renameError}</p> : null}
+            {renameError ? <p className="type-body text-destructive" role="alert">{renameError}</p> : null}
             <DialogFooter>
               <DialogClose render={<Button disabled={rename.isPending} type="button" variant="outline" />}>{t("packages.rename.cancel")}</DialogClose>
               <Button disabled={rename.isPending} loading={rename.isPending} loadingLabel={t("packages.rename.saving")} type="submit">{t("packages.rename.submit")}</Button>

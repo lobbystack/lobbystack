@@ -68,7 +68,7 @@ test("an owner gets an email for each call the agent answers, opens the call fro
     const number = await holdNumber(database, owner.businessId, { carrier: "twilio" });
 
     // On by default.
-    await page.goto("/settings/notifications");
+    await page.goto("/account/notifications");
     const emailAlert = page.getByRole("checkbox", { name: `${settings.notifications.sources.email.title} - ${callAnswered}`, exact: true });
     await expect(emailAlert).toBeChecked();
 
@@ -78,15 +78,16 @@ test("an owner gets an email for each call the agent answers, opens the call fro
     const html = await emailHtml(email!.ID);
     expect(html).toContain(`New call for ${owner.businessName}`);
     expect(html).toContain("1 min 14 sec");
-    const link = /href="([^"]+\/calls\/[^"]+)"/.exec(html)?.[1];
-    expect(link).toMatch(new RegExp(`/calls/${callId}$`));
+    const link = /href="([^"]+\/inbox\?call=[^"]+)"/.exec(html)?.[1];
+    expect(link).toMatch(new RegExp(`/inbox\\?call=${callId}$`));
 
-    // The button opens the call.
-    await page.goto(new URL(link!).pathname);
-    await expect(page).toHaveURL(new RegExp(`/calls/${callId}$`));
+    // The button opens the call in the Inbox.
+    const opened = new URL(link!);
+    await page.goto(`${opened.pathname}${opened.search}`);
+    await expect(page).toHaveURL(new RegExp(`/inbox\\?call=${callId}$`));
 
     // Turned off, the next call sends nothing.
-    await page.goto("/settings/notifications");
+    await page.goto("/account/notifications");
     const saved = page.waitForResponse((response) => response.url().includes("/api/notification-preferences") && response.request().method() === "PUT");
     await emailAlert.click();
     expect((await saved).ok()).toBe(true);

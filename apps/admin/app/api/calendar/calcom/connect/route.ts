@@ -22,7 +22,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(request: Request) {
   const appUrl = (path: string) => new URL(path, partnerRequestOrigin(request.headers) ?? process.env.APP_BASE_URL ?? request.url);
-  const failed = () => NextResponse.redirect(appUrl("/integrations?calendar=calcom&status=error"));
+  const failed = () => NextResponse.redirect(appUrl("/business/integrations?calendar=calcom&status=error"));
   try {
     const url = new URL(request.url);
     const link = verifyCalendarConnectLinkToken(url.searchParams.get("token") ?? "", "calcom");
