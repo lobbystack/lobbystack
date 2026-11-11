@@ -198,7 +198,7 @@ export const apiRuleCreateSchema = z.strictObject({
   title: z.string().trim().min(1).max(RULE_TITLE_MAX_LENGTH),
   content: z.string().trim().min(1).max(CHANNEL_RULE_CONTENT_CALL_MAX_LENGTH).describe("Up to 4,000 characters, or 8,000 for a rule with a channel, all of which calls use."),
   active: z.boolean().optional().describe("Defaults to true."),
-  channel: ruleChannel.optional().describe("voice, sms, web_chat or instagram. Defaults to null, every channel."),
+  channel: ruleChannel.optional().describe("The one channel the rule applies on. Leave it out, or send null, for every channel."),
 });
 
 export const apiRuleUpdateSchema = z.strictObject({

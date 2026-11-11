@@ -76,6 +76,9 @@ services:
 rules:
   - title: Gas leaks
     content: If a caller smells gas, tell them to leave the building and call the gas company.
+  - title: In texts
+    content: Keep replies under 300 characters.
+    channel: sms
 plan:
   checkout: { plan: pro, interval: monthly }
 phone_number: { country: CA, area_code: "416" }
@@ -90,9 +93,9 @@ owner:
 | Section | What it sets |
 | --- | --- |
 | `business` | `name` and `timezone` are required. `locale` (`en` or `fr`), `website_url`, `business_type` and `slug` are optional. `hours` lists the week's open windows by `day`, `open` and `close`, and replaces the hours the business had. `id` sets up a business that already exists instead of creating one. With a partner's key, `access_level` sets what the business's own team can use when the key creates it: `full`, the default, or `activity`. |
-| `receptionist` | The fields of `PATCH /receptionist`, such as `greeting`, `tone`, `transfer_mode`, `transfer_number` and `booking_mode`. |
+| `receptionist` | The fields of `PATCH /receptionist`, such as `greeting`, `tone`, `transfer_mode`, `transfer_number` and `booking_mode`. `voice_instructions`, `sms_instructions` and `chat_instructions` still work and write the rules for those channels, but they're deprecated: use `rules` with `channel`. |
 | `services` | The fields of `POST /services`. A service with the same name is updated instead of added again. |
-| `rules` | The fields of `POST /rules`. A rule with the same title is updated. |
+| `rules` | The fields of `POST /rules`. `channel` keeps a rule to `voice` (phone and browser calls), `sms`, `web_chat` or `instagram`; leave it out for every channel. A rule with the same title is updated. |
 | `knowledge.websites` | Sites the agent reads. The first read takes a sample of each site. |
 | `knowledge.read_full_site` | `true` waits for that sample, then reads the rest of each site. |
 | `knowledge.files` | PDF, Word, text, Markdown, JPEG, PNG, WebP or TIFF files up to 10 MB, as paths inside the manifest's folder. Give an entry `path`, `title` and `tags` to name it. |
@@ -192,4 +195,4 @@ Without a state file, a platform key won't create a business when you already on
 
 `lobbystack` has a command for every API endpoint, grouped like the API: `lobbystack services list`, `lobbystack knowledge upload`, `lobbystack numbers search`, and so on. `lobbystack --help` lists the groups, and `--help` after any command lists its options. With a partner's key, eight more groups run the [Partner endpoints](/api/authentication#partner-endpoints): `partner`, `demos`, `packages`, `brand`, `domain`, `templates`, `partner-team` and `payments`. For example, `lobbystack demos list` lists your prospect demos.
 
-`lobbystack agents list` shows the business's agents. `lobbystack receptionist` and `lobbystack rules` change the default agent.
+`lobbystack agents list` shows the business's agents. `lobbystack receptionist` and `lobbystack rules` change the default agent. `lobbystack rules add --channel sms` adds a rule for texts only, and `lobbystack rules list` shows each rule's channel.

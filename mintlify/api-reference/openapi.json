@@ -20100,7 +20100,7 @@
             "type": "boolean"
           },
           "channel": {
-            "description": "voice, sms, web_chat or instagram. Defaults to null, every channel.",
+            "description": "The one channel the rule applies on. Leave it out, or send null, for every channel.",
             "anyOf": [
               {
                 "type": "string",
