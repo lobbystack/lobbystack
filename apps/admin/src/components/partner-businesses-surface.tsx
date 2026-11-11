@@ -17,7 +17,7 @@ import { fetchPartnerTemplates, partnerTemplatesQueryKey, SaveTemplateDialog } f
 import { useTelemetry } from "@/components/product-analytics";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Combobox, ComboboxCollection, ComboboxContent, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxLabel, ComboboxList, ComboboxTrigger, ComboboxValue } from "@/components/ui/combobox";
+import { Combobox, ComboboxCollection, ComboboxContent, ComboboxEmpty, ComboboxGroup, ComboboxSearch, ComboboxItem, ComboboxLabel, ComboboxList, ComboboxTrigger, ComboboxValue } from "@/components/ui/combobox";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -69,7 +69,7 @@ const BILLING_ERRORS: Record<string, string> = {
 };
 
 // Matches SelectTrigger, as the time zone picker in the receptionist's settings does.
-const COMBOBOX_TRIGGER_CLASS = "flex h-9 w-full min-w-0 items-center justify-between gap-1.5 rounded-xl border border-input bg-input/30 px-3 py-2 type-body whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
+const COMBOBOX_TRIGGER_CLASS = "flex h-9 w-full min-w-0 items-center justify-between gap-1.5 rounded-xl border border-input bg-input/30 px-3 py-2 type-body whitespace-nowrap transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50";
 
 /** The time zone of the browser creating the business, which the partner changes when its client is elsewhere. */
 function browserTimeZone(): string {
@@ -362,7 +362,7 @@ export function PartnerBusinessesSurface() {
                   <span className="min-w-0 flex-1 truncate text-left"><ComboboxValue /></span>
                 </ComboboxTrigger>
                 <ComboboxContent className="min-w-(--anchor-width)">
-                  <ComboboxInput className="relative z-10" clearSearchLabel={t("common:accessibility.clearSearch")} placeholder={t("businesses.create.timezoneSearch")} showTrigger={false} />
+                  <ComboboxSearch clearSearchLabel={t("common:accessibility.clearSearch")} placeholder={t("businesses.create.timezoneSearch")} />
                   <ComboboxEmpty>{t("businesses.create.timezoneNoResults")}</ComboboxEmpty>
                   <ComboboxList>
                     {(group: { value: string; label: string; items: TimeZoneOption[] }) => (

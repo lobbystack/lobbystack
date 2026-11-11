@@ -146,7 +146,7 @@ export function OnboardingBrandSurface({ askAppName, askLogo }: { askAppName: bo
             <div className="flex items-center gap-2">
               <label
                 className={cn(
-                  "flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl border border-dashed bg-card px-4 py-3 type-title transition-colors focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background",
+                  "flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl border border-dashed bg-card px-4 py-3 type-title transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50",
                   dragging ? "border-foreground/60 bg-muted/40" : "border-border hover:border-foreground/40 hover:bg-muted",
                 )}
                 onDragLeave={(event) => { event.preventDefault(); setDragging(false); }}

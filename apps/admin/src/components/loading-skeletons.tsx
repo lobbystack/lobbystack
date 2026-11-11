@@ -870,19 +870,13 @@ export function OnboardingOptionsSkeleton({ gridClassName, itemClassName, labels
   );
 }
 
-/** The crawl card while the knowledge list answers, so the wait's slides keep their place. */
-export function WebsiteImportProgressSkeleton() {
+/** The reading line and bar under the wait's slide while the knowledge list answers, so the controls keep their place. */
+export function ReadingStatusSkeleton({ label }: { label: string }) {
   return (
-    <Surface aria-busy="true" className="flex flex-col gap-3 p-4">
-      <div className="flex items-start gap-3">
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <Skeleton aria-hidden="true" className="h-4 w-56" />
-          <Skeleton aria-hidden="true" className="h-3 w-40" />
-        </div>
-        <Skeleton aria-hidden="true" className="mt-1 size-4 shrink-0 rounded-full" />
-      </div>
+    <div aria-busy="true" className="flex flex-col items-center gap-3">
+      <HiddenTextSkeleton className="max-w-full type-body" skeletonClassName="w-fit">{label}</HiddenTextSkeleton>
       <Skeleton aria-hidden="true" className="h-1 w-full rounded-full" />
-    </Surface>
+    </div>
   );
 }
 

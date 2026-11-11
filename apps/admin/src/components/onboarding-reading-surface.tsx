@@ -5,14 +5,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { resolveOnboardingRoute, stageAfterWebsite } from "@lobbystack/shared";
 
-import { WebsiteImportProgressSkeleton } from "@/components/loading-skeletons";
+import { ReadingStatusSkeleton } from "@/components/loading-skeletons";
 import { ImportWaitSlides, useImportWait } from "@/components/onboarding-import-wait";
 import { Button } from "@/components/ui/button";
-import { currentWebsiteImport, isWebsiteImportRunning, WebsiteImportProgress, type WebsiteImportSummary } from "@/components/website-import-progress";
+import { currentWebsiteImport, isWebsiteImportRunning, websiteImportHost, websiteImportPercent, type WebsiteImportSummary } from "@/components/website-import-progress";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { requestJson } from "@/lib/request-json";
 import { useStepNavigation } from "@/lib/use-step-navigation";
-
 
 type KnowledgeDocument = { id: string; createdAt?: string; websiteImport?: WebsiteImportSummary | null };
 
@@ -57,11 +56,26 @@ export function OnboardingReadingSurface({ documentId }: { documentId?: string |
   useEffect(() => { if (over) navigate(nextStep); }, [navigate, nextStep, over]);
 
   if (phase !== "waiting") return null;
+  const status = documentId && documents.isPending
+    ? <ReadingStatusSkeleton label={t("reading.status", { host: websiteImportHost(business?.websiteUrl ?? ""), count: 0 })} />
+    : websiteImport && (!documentId || submitted?.websiteImport) ? <ReadingStatus job={websiteImport} /> : null;
   return (
     <div className="flex flex-col gap-4">
-      {documentId && documents.isPending ? <WebsiteImportProgressSkeleton /> : websiteImport && (!documentId || submitted?.websiteImport) ? <div aria-live="polite"><WebsiteImportProgress job={websiteImport} /></div> : null}
-      <ImportWaitSlides />
+      <ImportWaitSlides status={status} />
       <Button className="w-full" onClick={stopWaiting} type="button" variant="ghost">{t("reading.skip")}</Button>
+    </div>
+  );
+}
+
+/** The site being read and how many pages are in, as a line and a bar under the slide. */
+function ReadingStatus({ job }: { job: WebsiteImportSummary }) {
+  const { t } = useTranslation("onboarding");
+  return (
+    <div aria-live="polite" className="flex flex-col gap-3">
+      <p className="truncate text-center type-body text-muted-foreground">{t("reading.status", { host: websiteImportHost(job.websiteUrl), count: job.importedCount })}</p>
+      <div aria-hidden="true" className="h-1 w-full overflow-hidden rounded-full bg-muted">
+        <div className="h-full rounded-full bg-foreground transition-[width] duration-500" style={{ width: `${websiteImportPercent(job)}%` }} />
+      </div>
     </div>
   );
 }

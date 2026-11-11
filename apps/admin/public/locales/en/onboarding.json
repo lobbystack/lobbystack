@@ -94,6 +94,8 @@
   },
   "reading": {
     "title": "Reading your website",
+    "status_one": "Reading {{host}}: {{count}} page so far",
+    "status_other": "Reading {{host}}: {{count}} pages so far",
     "skip": "Skip the wait",
     "previous": "Previous",
     "next": "Next",

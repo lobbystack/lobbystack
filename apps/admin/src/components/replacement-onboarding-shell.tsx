@@ -22,8 +22,8 @@ type OnboardingShellProps = {
   legalFooter?: React.ReactNode;
   /** The agreement line login and signup show, for the action the person is taking. Left out when the partner has no terms or privacy page. */
   legalAgreement?: "login" | "signup" | "business" | "emailChange" | "passwordReset" | "verifyEmail";
-  onSignOut?: () => void;
-  /** Shown before Sign out when the person has a finished workspace to go back to. */
+  onSignOut?: (() => void) | undefined;
+  /** Shown when the person has a finished workspace to go back to. The caller leaves out onSignOut then. */
   onBackToDashboard?: (() => void) | undefined;
 };
 
@@ -75,7 +75,7 @@ export function ReplacementOnboardingShell({ icon, eyebrow, title, description, 
           {onSignOut ? <button className={headerButton} onClick={onSignOut} type="button">{t("shell.signOut")}</button> : null}
         </div>
       ) : null}
-      <main className={cn("flex flex-1 flex-col items-center px-6 pb-12", onSignOut ? "pt-20 sm:pt-12" : "pt-12")}>
+      <main className={cn("flex flex-1 flex-col items-center px-6 pb-12", onSignOut || onBackToDashboard ? "pt-20 sm:pt-12" : "pt-12")}>
         <div className={cn("my-auto flex w-full flex-col items-center", widths[width])}>
           <BrandMark />
           <div className="mt-10 flex w-full flex-col items-center gap-4 text-center">

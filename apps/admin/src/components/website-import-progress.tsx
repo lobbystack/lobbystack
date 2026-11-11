@@ -41,6 +41,13 @@ export function currentWebsiteImport<T extends { createdAt?: string; websiteImpo
   return newest.websiteImport ?? null;
 }
 
+/** How far the bar fills: a step per stage, and through indexing by the share of pages indexed. */
+export function websiteImportPercent(job: WebsiteImportSummary): number {
+  if (!isWebsiteImportRunning(job)) return 100;
+  if (job.status === "indexing") return Math.min(95, 60 + Math.round((job.indexedCount / Math.max(job.importedCount, 1)) * 35));
+  return job.status === "crawling" ? 35 : 10;
+}
+
 /**
  * Crawl progress is written by the worker as it reads a site, so the operator
  * can watch their agent learn instead of waiting in front of a blank step.
@@ -52,7 +59,7 @@ export function WebsiteImportProgress({ job, inline = false }: { job: WebsiteImp
   const host = websiteImportHost(job.websiteUrl);
   const failed = job.status === "failed" || job.status === "cancelled";
   const done = job.status === "completed";
-  const percent = failed ? 100 : done ? 100 : job.status === "indexing" ? Math.min(95, 60 + Math.round((job.indexedCount / Math.max(job.importedCount, 1)) * 35)) : job.status === "crawling" ? 35 : 10;
+  const percent = websiteImportPercent(job);
 
   // Inside a Getting started step: the step's own text and a bar, no card.
   if (inline) {

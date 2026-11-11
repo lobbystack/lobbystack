@@ -1,12 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { IMPORT_WAIT_SCENES } from "./onboarding-import-wait-scenes";
 import { Button } from "./ui/button";
-import { Surface } from "./ui/surface";
 import { isWebsiteImportRunning, type WebsiteImportSummary } from "./website-import-progress";
 
 /**
@@ -53,8 +52,8 @@ function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-/** What the agent can do, one screen at a time, while it reads the operator's website. */
-export function ImportWaitSlides() {
+/** What the agent can do, one screen at a time, while it reads the operator's website. The status goes under the caption. */
+export function ImportWaitSlides({ status }: { status?: ReactNode }) {
   const { t } = useTranslation("onboarding");
   const [index, setIndex] = useState(0);
   // Slides stop moving on their own once someone picks one, and for anyone who asked for less motion.
@@ -72,12 +71,13 @@ export function ImportWaitSlides() {
   const Scene = IMPORT_WAIT_SCENES[key];
 
   return (
-    <Surface className="flex flex-col gap-4 overflow-hidden p-4">
+    <div className="flex flex-col gap-4">
       {/* The key restarts the fade for each slide. Without motion, slides swap in place. */}
       <div className="flex flex-col gap-4 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300" key={key}>
         <Scene />
         <p className="text-center type-card-title">{t(`reading.slides.${key}`)}</p>
       </div>
+      {status}
       <div className="flex items-center justify-between">
         <Button aria-label={t("reading.previous")} onClick={() => go(-1)} size="icon-sm" type="button" variant="ghost"><ChevronLeft /></Button>
         <div aria-hidden="true" className="flex gap-1.5">
@@ -85,6 +85,6 @@ export function ImportWaitSlides() {
         </div>
         <Button aria-label={t("reading.next")} onClick={() => go(1)} size="icon-sm" type="button" variant="ghost"><ChevronRight /></Button>
       </div>
-    </Surface>
+    </div>
   );
 }

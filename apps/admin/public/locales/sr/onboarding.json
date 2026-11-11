@@ -94,6 +94,9 @@
   },
   "reading": {
     "title": "Čitamo vaš sajt",
+    "status_one": "Čitanje sajta {{host}}: pročitana {{count}} stranica",
+    "status_few": "Čitanje sajta {{host}}: pročitane {{count}} stranice",
+    "status_other": "Čitanje sajta {{host}}: pročitano {{count}} stranica",
     "skip": "Preskoči čekanje",
     "previous": "Prethodno",
     "next": "Sledeće",

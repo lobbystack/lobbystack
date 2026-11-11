@@ -9,7 +9,7 @@ import { OnboardingReadingSurface } from "./onboarding-reading-surface";
 const { push, router } = vi.hoisted(() => { const push = vi.fn(); return { push, router: { push, prefetch: vi.fn() } }; });
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
-vi.mock("./onboarding-import-wait", async (importOriginal) => ({ ...await importOriginal<typeof import("./onboarding-import-wait")>(), ImportWaitSlides: () => <p>slides</p> }));
+vi.mock("./onboarding-import-wait", async (importOriginal) => ({ ...await importOriginal<typeof import("./onboarding-import-wait")>(), ImportWaitSlides: ({ status }: { status?: React.ReactNode }) => <div><p>slides</p>{status}</div> }));
 
 const websiteUrl = "https://example.com/";
 const running = { status: "crawling", websiteUrl, importedCount: 1, indexedCount: 0 };
@@ -35,6 +35,7 @@ describe("the wait after the website step", () => {
   it("shows only while the import runs, and always lets the operator continue", async () => {
     setup(() => [{ id: "document", websiteImport: running }]);
     await screen.findByText("slides");
+    expect(screen.getByText("reading.status")).toBeTruthy();
     expect(push).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "reading.skip" }));
     await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/number"));
