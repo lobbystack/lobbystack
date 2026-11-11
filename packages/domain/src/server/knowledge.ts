@@ -774,12 +774,10 @@ export async function refreshBusinessSnapshot(
     // The flat knowledge is the default agent's. Another agent carries its own only when it differs.
     const defaultKnowledge = await snapshotKnowledge(tx, input.businessId, knowledgeScopeFor(currentProfile?.id));
     const agentKnowledge = new Map<string, SnapshotKnowledge>();
-    console.log("DEBUGK", customized, JSON.stringify(defaultKnowledge.knowledgeSnippets.map((s) => s.title)));
     if (customized) {
       for (const row of agentRows) {
         if (row.id === currentProfile?.id || paused.has(row.id)) continue;
         const own = await snapshotKnowledge(tx, input.businessId, { agentId: row.id });
-        console.log("DEBUGO", row.name, JSON.stringify(own.knowledgeSnippets.map((s) => s.title)));
         if (JSON.stringify(own) !== JSON.stringify(defaultKnowledge)) agentKnowledge.set(row.id, own);
       }
     }
