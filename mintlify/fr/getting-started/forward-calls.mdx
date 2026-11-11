@@ -31,10 +31,10 @@ Pour faire sonner votre téléphone d'abord sans codes d'opérateur, donnez votr
 
 <Steps>
   <Step title="Composez le code">
-    Sur le téléphone que vos clients appellent, composez le code de votre fournisseur indiqué dans la colonne **Activer**. Certains codes se terminent sans numéro, comme `*72`. Pour ceux-là, la ligne vous demande le numéro après l'appel : entrez-le dans le format indiqué dans le tableau.
+    Sur le téléphone que vos clients appellent, composez le code de votre fournisseur indiqué dans la colonne **Activer**.
   </Step>
   <Step title="Appuyez sur Appeler">
-    Une tonalité ou un message confirme que le renvoi est activé.
+    Certains codes se terminent sans numéro, comme `*72`. Pour ceux-là, la ligne vous demande ensuite le numéro : entrez-le dans le format indiqué dans le tableau.
   </Step>
   <Step title="Composez les codes supplémentaires">
     Pour les appels manqués, certains fournisseurs séparent les cas en plusieurs codes. Composez le code **Occupé** pour renvoyer aussi les appels reçus pendant que vous êtes au téléphone. Composez le code **Injoignable** pour renvoyer aussi les appels quand votre téléphone est éteint ou sans réseau.
@@ -210,11 +210,9 @@ Si votre système téléphonique vous laisse choisir la durée de sonnerie, 15 �
 | Spectrum Business Voice | `*7215551234567#` | `*73` |  |
 | Comcast Business Voice | `*72`, puis entrez `5551234567` quand on vous le demande | `*73` |  |
 
-## Tester le renvoi
+## Confirmer que le renvoi fonctionne
 
-Appelez votre numéro d'entreprise depuis un autre téléphone. Si vous renvoyez les appels manqués, laissez sonner. Votre agent devrait répondre.
-
-Quand LobbyStack détecte le premier appel renvoyé, l'étape **Transférez les appels de votre numéro actuel** de **Premiers pas** se termine et affiche la ligne d'où il vient, par exemple **Transfert depuis le +1 …**. Certains fournisseurs masquent la ligne d'origine d'un appel renvoyé. Si l'étape ne se termine pas après votre appel test, cliquez sur **Ça fonctionne** dans les étapes de renvoi de l'**Accueil**.
+Quand LobbyStack détecte le premier appel renvoyé, l'étape **Transférez les appels de votre numéro actuel** de **Premiers pas** se termine et affiche la ligne d'où il vient, par exemple **Transfert depuis le (514) 555-0199**. Certains fournisseurs masquent la ligne d'origine d'un appel renvoyé. Si l'étape ne se termine pas une fois que des appels renvoyés joignent votre agent, ouvrez-la, cliquez sur **Configurer le transfert**, puis sur **Ça fonctionne**.
 
 LobbyStack détecte les appels renvoyés sur les numéros Twilio et sur les appels qui joignent votre agent par SIP. Il ne peut pas les détecter sur les numéros Telnyx qui utilisent TeXML : cliquez alors sur **Ça fonctionne**.
 
