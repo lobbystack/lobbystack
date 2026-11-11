@@ -176,7 +176,7 @@ test("the no-website path asks the language, and the X closes the plans", async 
   }
 });
 
-test("a used trial skips the phone step and offers the plans, with a way on", async ({ page }, testInfo) => {
+test("a used trial offers only the paid plans, and a country without numbers is the way on", async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   const database = migrator();
   const email = `${prefix}-${randomUUID()}@example.invalid`;
@@ -191,11 +191,16 @@ test("a used trial skips the phone step and offers the plans, with a way on", as
     await expect(page).toHaveURL("/onboarding/language");
     await page.getByRole("button", { name: onboarding.language.continue }).click();
 
-    // The phone step never shows: its only purpose was the trial.
+    // No phone step: the number comes right after the language.
     await expect(page).toHaveURL("/onboarding/number");
     await expect(page.getByText(onboarding.number.refusals.trialUsed)).toBeVisible();
     await expect(page.getByText(onboarding.number.planRequired)).toHaveCount(0);
-    await page.getByRole("button", { name: onboarding.number.skipLater }).click();
+    // Only the paid plans show, and the only way on without a number is a country without numbers.
+    await expect(page.getByRole("button", { name: onboarding.plan.trial.start })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: onboarding.plan.subscribe })).toHaveCount(2);
+    await expect(page.getByRole("button", { name: onboarding.number.skipLater })).toHaveCount(0);
+    await page.getByRole("button", { name: onboarding.number.country.notListed }).click();
+    await page.getByRole("button", { name: onboarding.number.country.continue }).click();
     await expect(page).toHaveURL("/onboarding/attribution");
   } finally {
     await removeFixtures(database, email, businessId);
