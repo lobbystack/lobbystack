@@ -4,6 +4,33 @@ import type { ProductUpdateEntry } from "@lobbystack/shared";
 
 export const PRODUCT_UPDATE_ENTRIES: readonly ProductUpdateEntry[] = [
   {
+    "slug": "agent-knowledge",
+    "pubDate": "2026-11-10T00:00:00.000Z",
+    "dashboardHref": null,
+    "copy": {
+      "en": {
+        "title": "Give each agent its own knowledge",
+        "description": "Add websites, files and FAQs that only one agent answers from, and turn shared knowledge off for one agent.",
+        "href": "https://lobbystack.com/changelog/#agent-knowledge"
+      },
+      "fr": {
+        "title": "Donnez à chaque agent ses propres connaissances",
+        "description": "Ajoutez des sites Web, des fichiers et des FAQ dont un seul agent se sert, et désactivez des connaissances partagées pour un agent.",
+        "href": "https://lobbystack.com/fr/changelog/#agent-knowledge"
+      },
+      "es": {
+        "title": "Dé a cada agente su propio conocimiento",
+        "description": "Añada sitios web, archivos y preguntas frecuentes que solo usa un agente, y desactive conocimiento compartido para un agente.",
+        "href": "https://lobbystack.com/es/changelog/#agent-knowledge"
+      },
+      "sr": {
+        "title": "Dajte svakom agentu sopstveno znanje",
+        "description": "Dodajte sajtove, fajlove i česta pitanja koje koristi samo jedan agent, i isključite deljeno znanje za jednog agenta.",
+        "href": "https://lobbystack.com/sr/changelog/#agent-knowledge"
+      }
+    }
+  },
+  {
     "slug": "calendar-booking-time-off",
     "pubDate": "2026-11-11T00:00:00.000Z",
     "dashboardHref": "/appointments",
