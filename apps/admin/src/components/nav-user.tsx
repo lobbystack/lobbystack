@@ -122,7 +122,7 @@ export function NavUser({
                 render={<Link href="/account" />}
               >
                 <UserIcon />
-                {t("sidebar.account")}
+                {t("sidebar.accountSettings")}
               </DropdownMenuItem>
               {showPartnerConsole ? (
                 <DropdownMenuItem onClick={onLeaveBusiness} render={<Link href="/partner" />}>

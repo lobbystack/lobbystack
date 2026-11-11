@@ -64,7 +64,7 @@ describe("original account menu interactions", () => {
   });
   it("links to account settings and invokes sign-out", async () => {
     const { onSignOut } = await setup();
-    expect(screen.getByRole("menuitem", { name: "sidebar.account" }).getAttribute("href")).toBe("/account");
+    expect(screen.getByRole("menuitem", { name: "sidebar.accountSettings" }).getAttribute("href")).toBe("/account");
     const signOut = screen.getByRole("menuitem", { name: "sidebar.signOut" });
     expect(signOut.getAttribute("data-variant")).not.toBe("destructive");
     await userEvent.click(signOut); expect(onSignOut).toHaveBeenCalledOnce();
@@ -79,7 +79,7 @@ describe("help in the account menu", () => {
   });
   it("lists feedback, the Help Center and the affiliate program between the account and the theme", async () => {
     const { onFeedback } = await setup();
-    expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["sidebar.account", "common:feedback.trigger", "common:feedback.helpCenter", "items.affiliate", "sidebar.toggleTheme", "sidebar.signOut"]);
+    expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["sidebar.accountSettings", "common:feedback.trigger", "common:feedback.helpCenter", "items.affiliate", "sidebar.toggleTheme", "sidebar.signOut"]);
     const helpCenter = screen.getByRole("menuitem", { name: "common:feedback.helpCenter" });
     expect(helpCenter.getAttribute("href")).toBe("https://docs.lobbystack.com");
     expect(helpCenter.getAttribute("target")).toBe("_blank");

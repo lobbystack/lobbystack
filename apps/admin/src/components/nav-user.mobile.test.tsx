@@ -20,7 +20,7 @@ async function setup(upgrade: boolean) {
   await screen.findByRole("menu");
 }
 describe("account menu on a phone", () => {
-  it.each([["sidebar.account", false], ["sidebar.upgradeToPro", true]])("closes the sidebar sheet after opening %s", async (name, upgrade) => {
+  it.each([["sidebar.accountSettings", false], ["sidebar.upgradeToPro", true]])("closes the sidebar sheet after opening %s", async (name, upgrade) => {
     await setup(upgrade);
     await userEvent.click(screen.getByRole("menuitem", { name }));
     expect(screen.getByRole("button", { name: "sheet:false" })).toBeTruthy();
