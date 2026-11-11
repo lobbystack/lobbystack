@@ -16,12 +16,12 @@ import { useTelemetry } from "@/components/product-analytics";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import { CHECKOUT_UNAVAILABLE_AFTER_MS, isProviderUnavailable } from "@/lib/checkout-errors";
 import { formatDateTime, intlLocale } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
-import { cn } from "@/lib/utils";
 
 type Billing = {
   billed: boolean;
@@ -287,23 +287,16 @@ export function PartnerBillingSurface() {
         <section aria-labelledby="partner-billing-tiers" className="flex flex-col gap-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-sm font-medium text-muted-foreground" id="partner-billing-tiers">{t("billing.choose.title")}</h2>
-            <div aria-label={t("billing.choose.intervalLabel")} className="inline-flex self-start rounded-full border border-border bg-muted/40 p-1" role="tablist">
-              {(["monthly", "annual"] as const).map((option) => (
-                <Button
-                  aria-selected={interval === option}
-                  className={cn(interval === option ? "bg-background text-foreground shadow-xs hover:bg-background" : "border-transparent bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground")}
-                  key={option}
-                  onClick={() => setInterval(option)}
-                  role="tab"
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  {t(`billing.intervals.${option}`)}
-                  {option === "annual" ? <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">{t("billing.choose.annualDiscount")}</span> : null}
-                </Button>
-              ))}
-            </div>
+            <Tabs className="self-start" onValueChange={(value) => setInterval(value as typeof interval)} value={interval}>
+              <TabsList aria-label={t("billing.choose.intervalLabel")}>
+                {(["monthly", "annual"] as const).map((option) => (
+                  <TabsTrigger key={option} value={option}>
+                    {t(`billing.intervals.${option}`)}
+                    {option === "annual" ? <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">{t("billing.choose.annualDiscount")}</span> : null}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
           </div>
           {checkoutUnavailable ? (
             <Surface className="flex flex-col items-start gap-4 p-6" role="alert">

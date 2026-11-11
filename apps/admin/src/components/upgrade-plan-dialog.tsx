@@ -4,6 +4,7 @@ import { Check } from "lucide-react";
 import type { TFunction } from "i18next";
 
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -115,35 +116,20 @@ export function UpgradePlanDialog({
         ) : null}
 
         {!checkoutUnavailable ? <div className="flex justify-center">
-          <div
-            aria-label={t("billing.upgradeDialog.billingIntervalLabel")}
-            className="inline-flex rounded-full border border-border bg-muted/40 p-1"
-            role="tablist"
-          >
-            {switcherIntervals.map((interval) => (
-              <Button
-                aria-selected={selectedBillingInterval === interval}
-                className={cn(
-                  selectedBillingInterval === interval
-                    ? "bg-background text-foreground shadow-xs hover:bg-background"
-                    : "border-transparent bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
-                )}
-                key={interval}
-                onClick={() => onBillingIntervalChange(interval)}
-                role="tab"
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                {t(`billing.upgradeDialog.billingIntervals.${interval}`)}
-                {interval === "annual" ? (
-                  <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                    {t("billing.upgradeDialog.annualDiscount")}
-                  </span>
-                ) : null}
-              </Button>
-            ))}
-          </div>
+          <Tabs onValueChange={(value) => onBillingIntervalChange(value as typeof selectedBillingInterval)} value={selectedBillingInterval}>
+            <TabsList aria-label={t("billing.upgradeDialog.billingIntervalLabel")}>
+              {switcherIntervals.map((interval) => (
+                <TabsTrigger key={interval} value={interval}>
+                  {t(`billing.upgradeDialog.billingIntervals.${interval}`)}
+                  {interval === "annual" ? (
+                    <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                      {t("billing.upgradeDialog.annualDiscount")}
+                    </span>
+                  ) : null}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         </div> : null}
 
         {!checkoutUnavailable ? <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { planCards, billingErrorCodes } from "@lobbystack/shared";
 
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FieldError } from "@/components/ui/field";
 import { OnboardingPlanComparison } from "@/components/onboarding-plan-comparison";
 import { useTelemetry } from "@/components/product-analytics";
@@ -118,9 +119,11 @@ export function OnboardingPlanSurface() {
     <div className="flex flex-col gap-12">
 
       {!checkoutUnavailable ? <div className="flex justify-center">
-        <div aria-label={t("plan.billingInterval.label")} className="inline-flex rounded-full border border-border bg-input/30 p-1" role="tablist">
-          {(["monthly", "annual"] as const).map((value) => <Button aria-selected={interval === value} className={cn(interval === value ? "bg-background text-foreground shadow-xs hover:bg-background" : "border-transparent bg-transparent text-muted-foreground hover:bg-muted")} disabled={Boolean(pendingPlan) || (availableIntervals.length > 0 && !availableIntervals.includes(value))} key={value} onClick={() => setInterval(value)} role="tab" size="sm" type="button" variant="outline">{t(`plan.billingInterval.${value}`)}{value === "annual" ? <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">{t("plan.billingInterval.save")}</span> : null}</Button>)}
-        </div>
+        <Tabs onValueChange={(value) => setInterval(value as typeof interval)} value={interval}>
+          <TabsList aria-label={t("plan.billingInterval.label")}>
+            {(["monthly", "annual"] as const).map((value) => <TabsTrigger disabled={Boolean(pendingPlan) || (availableIntervals.length > 0 && !availableIntervals.includes(value))} key={value} value={value}>{t(`plan.billingInterval.${value}`)}{value === "annual" ? <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">{t("plan.billingInterval.save")}</span> : null}</TabsTrigger>)}
+          </TabsList>
+        </Tabs>
       </div> : null}
       {checkoutUnavailable ? (
         <div className="flex flex-col items-center gap-4 rounded-xl border border-border/70 bg-muted/20 p-6" role="alert">
