@@ -155,11 +155,6 @@
       "changeNumber": "Koristi drugi broj"
     },
     "unavailable": {
-      "title": "Brojevi još nisu dostupni u ovoj zemlji ({{country}}).",
-      "body": "Agenta i dalje možete da koristite u pregledaču, a možemo i da Vam pišemo kada brojevi stignu tamo.",
-      "notify": "Javite mi kada budu dostupni",
-      "joined": "Važi. Pisaćemo Vam.",
-      "continue": "Nastavi bez broja",
       "failed": "Nešto nije u redu. Pokušajte ponovo.",
       "partnerTitle": "Još ne možemo da potvrdimo telefone u ovoj zemlji ({{country}}).",
       "partnerBody": "Podešavanje možete da završite bez potvrđenog telefona.",
@@ -211,7 +206,18 @@
     "unavailable": "Neko je upravo uzeo taj broj. Izaberite drugi sa osvežene liste.",
     "selectedTitle": "Broj telefona AI agenta",
     "selectedNumberLabel": "Izabrani broj",
-    "numbersUnavailable": "Brojevi telefona još nisu podešeni na ovoj kontrolnoj tabli. Zamolite osobu koja njome upravlja da poveže telefonskog provajdera."
+    "numbersUnavailable": "Brojevi telefona još nisu podešeni na ovoj kontrolnoj tabli. Zamolite osobu koja njome upravlja da poveže telefonskog provajdera.",
+    "country": {
+      "title": "Brojevi još nisu dostupni u ovoj zemlji ({{country}}).",
+      "body": "Agenta i dalje možete da koristite u pregledaču, a možemo i da Vam pišemo kada brojevi stignu tamo.",
+      "notify": "Javite mi kada budu dostupni",
+      "joined": "Važi. Pisaćemo Vam.",
+      "continue": "Nastavi bez broja",
+      "failed": "Nešto nije u redu. Pokušajte ponovo.",
+      "notListed": "Moje zemlje nema na listi",
+      "label": "Zemlja",
+      "back": "Nazad na brojeve"
+    }
   },
   "goal": {
     "title": "Šta želite da Vaš agent prvo radi?",

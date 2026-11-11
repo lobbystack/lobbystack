@@ -41,7 +41,8 @@ export async function requireOnboardingStage(pathname: string, options: { allowC
   const state = await getActiveOnboardingState(getAppDatabase().db, session.user.id, brand);
   const current = currentOnboardingRoute(state, brand);
   if (current === NO_BUSINESSES_PATH) redirect(current);
-  const expected = routeStages[pathname];
+  // The wait follows the website, so for a direct owner it opens on the number step.
+  const expected = pathname === ONBOARDING_READING_ROUTE && !state.steps.includes("verify_phone") ? "phone_number" : routeStages[pathname];
   if (!expected) redirect(current);
   // A fresh self-hosted deployment's first owner names it before naming their business.
   if (expected === "create_business" && state.businessId === null && await initialBrandingFields(session.user.id, requestHeaders)) redirect(BRAND_ROUTE);
@@ -54,10 +55,7 @@ export async function requireOnboardingStage(pathname: string, options: { allowC
   // step lands on the step the workspace is on. The number picker stays open
   // from later steps, since the dashboard uses it to add a number.
   const revisitsNumber = expected === "phone_number" && ["phone_number_claiming", "goal", "attribution", "meet", "complete"].includes(state.stage);
-  // The number search can still ask for a mobile when the pre-check missed a
-  // signal, and the phone step is the only place to verify it.
-  const returnsToVerifyPhone = expected === "verify_phone" && state.stage === "phone_number";
-  if (state.stage !== expected && !revisitsNumber && !returnsToVerifyPhone) redirect(current);
+  if (state.stage !== expected && !revisitsNumber) redirect(current);
 }
 
 /** The brand step's fields, or a redirect to the person's current step when the step doesn't apply to them. */

@@ -27,14 +27,14 @@ export function isOnboardingGoal(value: unknown): value is OnboardingGoal {
   return (ONBOARDING_GOALS as readonly unknown[]).includes(value);
 }
 
-// Owners give us their site first, set up their phone next and hear their agent
-// last. Verifying a phone leads to the number step, or straight to the goal
-// question when the business's country has no numbers yet or the owner skips
-// the number. Someone with no website answers the language question on the way.
+// Owners give us their site first, pick a number next and hear their agent
+// last. Someone with no website answers the language question on the way. A
+// direct business has no phone step: verify_phone stays only for businesses
+// old code left there, which go on to the number.
 const transitions: Record<OnboardingStage, readonly OnboardingStage[]> = {
   create_business: ["website"],
-  website: ["language", "verify_phone"],
-  language: ["verify_phone"],
+  website: ["language", "phone_number"],
+  language: ["phone_number"],
   verify_phone: ["phone_number", "goal"],
   phone_number: ["goal"],
   phone_number_claiming: ["phone_number", "goal"],
@@ -51,6 +51,8 @@ const transitions: Record<OnboardingStage, readonly OnboardingStage[]> = {
 // phone finishes onboarding.
 const partnerTransitions: Record<OnboardingStage, readonly OnboardingStage[]> = {
   ...transitions,
+  website: ["language", "verify_phone"],
+  language: ["verify_phone"],
   verify_phone: ["meet"],
   phone_number: ["meet"],
   phone_number_claiming: ["meet"],
@@ -106,7 +108,7 @@ async function onboardingStateForBusiness(
   if (!business || !businessShowsOnBrand(business.partnerId, brand)) return null;
   // Onboarding is the owner's. A partner member who opened the business goes straight to its dashboard.
   if ((await readBusinessAccess(tx, input))?.via === "partner") return { businessId, stage: "complete", steps: [] };
-  return { businessId, stage: normalizeOnboardingStage(business.onboardingStage), steps: onboardingSteps({ partnerId: business.partnerId, accessLevel: business.accessLevel }) };
+  return { businessId, stage: normalizeOnboardingStage(business.onboardingStage, business), steps: onboardingSteps({ partnerId: business.partnerId, accessLevel: business.accessLevel }) };
 }
 
 /**
@@ -150,16 +152,21 @@ export async function advanceOnboardingStageInTransaction(
   await moveOnboardingStageInTransaction(tx, input);
 }
 
-/** Moves a business to the next onboarding stage. The caller has already checked who may do that. */
+/**
+ * Moves a business to the next onboarding stage. The caller has already
+ * checked who may do that. A direct business has no phone step, so a move
+ * there, from an old tab, goes to the number step instead.
+ */
 export async function moveOnboardingStageInTransaction(
   tx: DatabaseTransaction,
   input: { businessId: string; from: OnboardingStage; to: OnboardingStage; partnerId?: string | null; accessLevel?: PartnerAccessLevel | undefined },
 ): Promise<void> {
-  if (!isValidOnboardingTransition(input.from, input.to, { partnerId: input.partnerId ?? null, accessLevel: input.accessLevel })) {
-    throw new Error(`Invalid onboarding transition from ${input.from} to ${input.to}.`);
+  const to = input.to === "verify_phone" && !input.partnerId ? "phone_number" : input.to;
+  if (!isValidOnboardingTransition(input.from, to, { partnerId: input.partnerId ?? null, accessLevel: input.accessLevel })) {
+    throw new Error(`Invalid onboarding transition from ${input.from} to ${to}.`);
   }
   const changed = await tx.update(businesses)
-    .set({ onboardingStage: input.to, updatedAt: new Date() })
+    .set({ onboardingStage: to, updatedAt: new Date() })
     .where(and(eq(businesses.id, input.businessId), eq(businesses.onboardingStage, input.from)))
     .returning({ id: businesses.id });
   if (!changed.length) {
@@ -178,7 +185,7 @@ export async function advanceOnboardingStage(
     await requireBusinessAdmin(tx, input);
     const current = (await tx.select({ onboardingStage: businesses.onboardingStage, partnerId: businesses.partnerId, accessLevel: businesses.partnerAccessLevel }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1).for("update"))[0];
     if (!current) throw new Error("Business onboarding state was not found.");
-    const currentStage = normalizeOnboardingStage(current.onboardingStage);
+    const currentStage = normalizeOnboardingStage(current.onboardingStage, current);
     // Repair a legacy verification stage before reading or advancing it so the
     // conditional stage write below still matches the persisted value.
     if (currentStage !== current.onboardingStage) {
@@ -187,8 +194,9 @@ export async function advanceOnboardingStage(
         .where(and(eq(businesses.id, input.businessId), eq(businesses.onboardingStage, current.onboardingStage)));
     }
     // Revisiting an earlier form must never move durable onboarding progress backwards.
-    if (canVisitOnboardingStage(currentStage, input.to)) return;
-    await advanceOnboardingStageInTransaction(tx, { ...input, from: currentStage, partnerId: current.partnerId, accessLevel: current.accessLevel });
+    const to = input.to === "verify_phone" && !current.partnerId ? "phone_number" : input.to;
+    if (canVisitOnboardingStage(currentStage, to)) return;
+    await advanceOnboardingStageInTransaction(tx, { ...input, to, from: currentStage, partnerId: current.partnerId, accessLevel: current.accessLevel });
     // Meet your agent is the last screen, so leaving it sends the welcome email.
     if (input.to === "complete") await scheduleWelcomeEmailInTransaction(tx, input.businessId, new Date());
   });

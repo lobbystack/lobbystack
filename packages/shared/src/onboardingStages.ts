@@ -21,7 +21,9 @@ const stageRoutes: Record<OnboardingStage, string> = {
 /** The wait screen has no stage: the website step has already moved on, and the import runs behind it. */
 export const ONBOARDING_READING_ROUTE = "/onboarding/reading";
 
-const directSteps: readonly OnboardingStage[] = ["create_business", "website", "language", "verify_phone", "phone_number", "goal", "attribution", "meet"];
+// A direct owner picks a number right after the website. Only a partner's
+// owner verifies a mobile, because the partner's calls forward to it.
+const directSteps: readonly OnboardingStage[] = ["create_business", "website", "language", "phone_number", "goal", "attribution", "meet"];
 const partnerSteps: readonly OnboardingStage[] = ["website", "language", "verify_phone", "meet"];
 const activitySteps: readonly OnboardingStage[] = ["verify_phone"];
 
@@ -50,10 +52,19 @@ export function isOnboardingStage(value: unknown): value is OnboardingStage {
   return typeof value === "string" && Object.hasOwn(stageRoutes, value);
 }
 
-export function normalizeOnboardingStage(value: unknown): OnboardingStage {
-  if (isOnboardingStage(value)) return value;
-  if (typeof value === "string" && Object.hasOwn(legacyStages, value)) return legacyStages[value]!;
-  return "create_business";
+/**
+ * The stage a stored value stands for. Pass the business when you know it:
+ * a direct business has no phone step, so a stored verify_phone, or a legacy
+ * stage before it, reads as the number step.
+ */
+export function normalizeOnboardingStage(value: unknown, business?: { partnerId: string | null } | null): OnboardingStage {
+  const stage = isOnboardingStage(value) ? value : typeof value === "string" && Object.hasOwn(legacyStages, value) ? legacyStages[value]! : "create_business";
+  return stage === "verify_phone" && business && !business.partnerId ? "phone_number" : stage;
+}
+
+/** The step after the website and the language question: the phone for a partner's owner, the number for a direct one. */
+export function stageAfterWebsite(business: { partnerId: string | null } | null | undefined): "verify_phone" | "phone_number" {
+  return business?.partnerId ? "verify_phone" : "phone_number";
 }
 
 export function resolveOnboardingRoute(stage: string | null | undefined): string {
@@ -74,7 +85,7 @@ export function canVisitOnboardingStage(current: OnboardingStage, target: Onboar
  * The language question and the wait screen answer the website step, so they
  * share its dot, and both paths show the same count.
  */
-const DIRECT_DOTS = ["/onboarding/business", "/onboarding/website", "/onboarding/verify-phone", "/onboarding/number", "/onboarding/goal", "/onboarding/attribution", "/onboarding/meet"] as const;
+const DIRECT_DOTS = ["/onboarding/business", "/onboarding/website", "/onboarding/number", "/onboarding/goal", "/onboarding/attribution", "/onboarding/meet"] as const;
 const PARTNER_DOTS = ["/onboarding/website", "/onboarding/verify-phone", "/onboarding/meet"] as const;
 
 /** The dots sign-up and every later direct step show. */

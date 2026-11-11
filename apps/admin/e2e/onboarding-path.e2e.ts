@@ -44,12 +44,11 @@ async function newOwner(page: Page, testInfo: TestInfo, email: string): Promise<
   return businessId;
 }
 
-/** Verifying a mobile needs a real phone, so leave the step the way an owner in a country without numbers does. */
-async function leavePhoneStep(page: Page, businessId: string): Promise<void> {
-  await expect(page).toHaveURL("/onboarding/verify-phone");
-  const moved = await page.evaluate(async (id) => (await fetch(`/api/onboarding/stage?businessId=${encodeURIComponent(id)}`, { method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify({ to: "goal" }) })).status, businessId);
-  expect(moved).toBe(200);
-  await page.goto("/onboarding/goal");
+/** This run sells no numbers, so leave the number step the way an owner in a country without numbers does. */
+async function leaveNumberStep(page: Page): Promise<void> {
+  await expect(page).toHaveURL("/onboarding/number");
+  await page.getByRole("button", { name: onboarding.number.country.notListed }).click();
+  await page.getByRole("button", { name: onboarding.number.country.continue }).click();
 }
 
 test("the website path waits for the import and ends on Meet your agent", async ({ page }, testInfo) => {
@@ -69,15 +68,18 @@ test("the website path waits for the import and ends on Meet your agent", async 
     await expect(page.getByText(onboarding.reading.slides.booking)).toBeVisible();
     await page.getByRole("button", { name: onboarding.reading.skip }).click();
 
-    await expect(page).toHaveURL("/onboarding/verify-phone");
+    // No phone step: the number comes right after the website.
+    await expect(page).toHaveURL("/onboarding/number");
 
     // Onboarding goes forward only: an earlier page lands on the current step.
     await page.goto("/onboarding/website");
-    await expect(page).toHaveURL("/onboarding/verify-phone");
+    await expect(page).toHaveURL("/onboarding/number");
     await page.goto("/onboarding/business");
-    await expect(page).toHaveURL("/onboarding/verify-phone");
+    await expect(page).toHaveURL("/onboarding/number");
+    await page.goto("/onboarding/verify-phone");
+    await expect(page).toHaveURL("/onboarding/number");
 
-    await leavePhoneStep(page, businessId);
+    await leaveNumberStep(page);
     await page.getByRole("button", { name: onboarding.goal.options.book_appointments }).click();
     await page.getByRole("button", { name: onboarding.goal.continue }).click();
     await expect(page).toHaveURL("/onboarding/attribution");
@@ -132,9 +134,7 @@ test("the no-website path asks the language, and the X closes the plans", async 
     await page.goto("/onboarding/website");
     await expect(page).toHaveURL("/onboarding/language");
     await page.getByRole("button", { name: onboarding.language.continue }).click();
-    await expect(page).toHaveURL("/onboarding/verify-phone");
-
-    await leavePhoneStep(page, businessId);
+    await leaveNumberStep(page);
     await page.getByRole("button", { name: onboarding.goal.skip, exact: true }).click();
     // Both steps call it Skip, so wait for the page to change before clicking again.
     await expect(page).toHaveURL("/onboarding/attribution");

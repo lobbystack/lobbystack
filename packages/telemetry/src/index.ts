@@ -40,6 +40,7 @@ export const WEB_EVENT_NAMES = [
   "web.onboarding.language_submitted",
   "web.onboarding.phone_verified",
   "web.onboarding.number_waitlist_joined",
+  "web.onboarding.number_skipped",
   "web.onboarding.number_claim_started",
   "web.onboarding.number_claim_completed",
   "web.onboarding.number_unavailable",
@@ -302,6 +303,8 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   // heard: whether a test call ended on that screen before the owner moved on.
   "web.onboarding.phone_verified": ["businessId", "deploymentMode", "countryCode"],
   "web.onboarding.number_waitlist_joined": ["businessId", "deploymentMode", "countryCode"],
+  // countryCode: the country without numbers the owner picked before going on without one.
+  "web.onboarding.number_skipped": ["businessId", "deploymentMode", "countryCode"],
   "web.onboarding.number_claim_started": [
     "businessId",
     "deploymentMode",

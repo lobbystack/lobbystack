@@ -154,11 +154,6 @@
       "changeNumber": "Use another number"
     },
     "unavailable": {
-      "title": "We don't offer numbers in this country yet ({{country}}).",
-      "body": "You can still use your agent in the browser, and we can email you when numbers arrive there.",
-      "notify": "Email me when they're available",
-      "joined": "Done. We'll email you.",
-      "continue": "Continue without a number",
       "failed": "Something went wrong. Try again.",
       "partnerTitle": "We can't verify phones in this country yet ({{country}}).",
       "partnerBody": "You can finish setup without a verified phone.",
@@ -210,7 +205,18 @@
     "unavailable": "That number was just taken. Pick another one from the refreshed list.",
     "selectedTitle": "Your AI's phone number",
     "selectedNumberLabel": "Selected number",
-    "numbersUnavailable": "Phone numbers aren't set up on this dashboard yet. Ask whoever runs it to connect a phone provider."
+    "numbersUnavailable": "Phone numbers aren't set up on this dashboard yet. Ask whoever runs it to connect a phone provider.",
+    "country": {
+      "title": "We don't offer numbers in this country yet ({{country}}).",
+      "body": "You can still use your agent in the browser, and we can email you when numbers arrive there.",
+      "notify": "Email me when they're available",
+      "joined": "Done. We'll email you.",
+      "continue": "Continue without a number",
+      "failed": "Something went wrong. Try again.",
+      "notListed": "My country isn't listed",
+      "label": "Country",
+      "back": "Back to the numbers"
+    }
   },
   "goal": {
     "title": "What do you want your agent to do first?",

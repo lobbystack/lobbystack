@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { normalizeRuntimeLocale, runtimeLocales, type RuntimeLocale } from "@lobbystack/shared";
+import { normalizeRuntimeLocale, resolveOnboardingRoute, runtimeLocales, stageAfterWebsite, type RuntimeLocale } from "@lobbystack/shared";
 import { LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -18,7 +18,6 @@ import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
 import { requestJson } from "@/lib/request-json";
 import { useStepNavigation } from "@/lib/use-step-navigation";
 
-const NEXT_STEP = "/onboarding/verify-phone";
 
 /** Without a website there's nothing to read the language from, so the owner picks it. */
 export function OnboardingLanguageSurface() {
@@ -29,17 +28,20 @@ export function OnboardingLanguageSurface() {
   const { business } = useActiveBusiness();
   const [picked, setPicked] = useState<RuntimeLocale | null>(null);
   const [error, setError] = useState<string | null>(null);
-  useEffect(() => { prefetch(NEXT_STEP); }, [prefetch]);
+  // The phone step for a partner's owner, the number for a direct one.
+  const nextStage = stageAfterWebsite(business ? { partnerId: business.partnerAccessLevel ? "partner" : null } : null);
+  const nextStep = resolveOnboardingRoute(nextStage);
+  useEffect(() => { prefetch(nextStep); }, [nextStep, prefetch]);
   const locale = picked ?? normalizeRuntimeLocale(business?.defaultLocale);
   const save = useMutation({
     mutationFn: async () => {
       await requestJson("/api/agent", { method: "PATCH", body: JSON.stringify({ locale }) });
-      await requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: "verify_phone" }) });
+      await requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: nextStage }) });
     },
     onSuccess: async () => {
       if (business) telemetry.track("web.onboarding.language_submitted", { businessId: business.businessId, locale });
       await queryClient.invalidateQueries({ queryKey: ["businesses"] });
-      navigate(NEXT_STEP);
+      navigate(nextStep);
     },
     onError: (cause) => setError(getSafeOnboardingErrorMessage(cause, t, "language.submitFailed")),
     meta: { inlineError: true },

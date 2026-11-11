@@ -17,7 +17,7 @@ beforeEach(() => { push.mockReset(); telemetryRef.current = createRecordedBrowse
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("the language question", () => {
-  it("saves the business's language and goes on to the phone", async () => {
+  it("saves the business's language and goes on to the number", async () => {
     const client = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } });
     client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, defaultLocale: "fr" }] });
     const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => Response.json({ ok: true }));
@@ -27,12 +27,12 @@ describe("the language question", () => {
     expect(screen.getByRole("combobox").textContent).toContain("common:callerLanguage.fr");
     expect(screen.getByRole("combobox").querySelector("[data-flag='FR']")).not.toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "language.continue" }));
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/verify-phone"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/number"));
 
     const save = fetchMock.mock.calls.find(([url]) => url === "/api/agent");
     expect(JSON.parse(String(save?.[1]?.body))).toEqual({ locale: "fr" });
     const stage = fetchMock.mock.calls.find(([url]) => url.startsWith("/api/onboarding/stage?"));
-    expect(JSON.parse(String(stage?.[1]?.body))).toEqual({ to: "verify_phone" });
+    expect(JSON.parse(String(stage?.[1]?.body))).toEqual({ to: "phone_number" });
     telemetryRef.current!.expectEvent("web.onboarding.language_submitted", { businessId: "business", locale: "fr" });
   });
 });

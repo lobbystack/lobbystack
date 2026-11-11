@@ -28,7 +28,7 @@ afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 describe("the wait after the website step", () => {
   it("goes straight on with no import running", async () => {
     setup(() => []);
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/verify-phone"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/number"));
     expect(screen.queryByText("slides")).toBeNull();
   });
 
@@ -37,7 +37,7 @@ describe("the wait after the website step", () => {
     await screen.findByText("slides");
     expect(push).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "reading.skip" }));
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/verify-phone"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/number"));
   });
 
   it("moves on by itself at the limit", async () => {
@@ -45,7 +45,7 @@ describe("the wait after the website step", () => {
     setup(() => [{ id: "document", websiteImport: running }]);
     await screen.findByText("slides");
     await act(() => vi.advanceTimersByTimeAsync(90_000));
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/verify-phone"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/number"));
   });
 
   it("waits at once for a just-submitted website, then follows its import", async () => {
@@ -63,12 +63,12 @@ describe("the wait after the website step", () => {
     // It finishes: move on.
     answer = [{ id: "document", websiteImport: done }];
     await act(() => vi.advanceTimersByTimeAsync(2_000));
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/verify-phone"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/number"));
   });
 
   it("moves on at once when the submitted import already finished", async () => {
     setup(() => [{ id: "document", websiteImport: done }], "document");
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/verify-phone"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/number"));
     expect(screen.queryByText("slides")).toBeNull();
   });
 
@@ -77,6 +77,6 @@ describe("the wait after the website step", () => {
     setup(() => [], "document");
     await screen.findByText("slides");
     await act(() => vi.advanceTimersByTimeAsync(90_000));
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/verify-phone"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/number"));
   });
 });

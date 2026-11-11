@@ -29,6 +29,7 @@ export function OnboardingRouteShell({ children }: { children: React.ReactNode }
   const route = routes[pathname as keyof typeof routes] ?? routes["/onboarding/business"];
   const { business } = useActiveBusiness();
   const stage = business?.onboardingStage;
+  const partnerAccessLevel = business?.partnerAccessLevel;
   const phones = useQuery({ queryKey: ["onboarding-primary-number", business?.businessId], enabled: route.key === "number" && Boolean(business), queryFn: () => requestJson<Numbers>(`/api/phone-numbers?businessId=${encodeURIComponent(business!.businessId)}`) });
   const hasPrimaryNumber = Boolean(phones.data?.phoneNumbers.some(number => !number.reclaimScheduledAt));
   const selectedNumber = route.key === "number" && hasPrimaryNumber && ["goal", "attribution", "meet", "complete"].includes(stage ?? "");
@@ -49,12 +50,13 @@ export function OnboardingRouteShell({ children }: { children: React.ReactNode }
     if (!restored) return;
     restoredPath.current = null;
     if (restored !== pathname || !currentStage.current) return;
-    const stageNow = normalizeOnboardingStage(currentStage.current);
-    const expected = ROUTE_STAGE[route.key];
+    const stageNow = normalizeOnboardingStage(currentStage.current, { partnerId: partnerAccessLevel ? "partner" : null });
+    // The wait follows the website, which leads a direct owner to the number.
+    const expected = route.key === "reading" && !partnerAccessLevel ? "phone_number" : ROUTE_STAGE[route.key];
     if (!expected) return;
     const numberPickerStaysOpen = route.key === "number" && ["phone_number", "phone_number_claiming", "goal", "attribution", "meet", "complete"].includes(stageNow);
     if (!numberPickerStaysOpen && onboardingStages.indexOf(stageNow) > onboardingStages.indexOf(expected)) router.replace(resolveOnboardingRoute(stageNow));
-  }, [pathname, route.key, router]);
+  }, [partnerAccessLevel, pathname, route.key, router]);
   return (
     <ReplacementOnboardingShell
       description={DESCRIBED.has(route.key) ? t(`${route.key}.description`) : ""}

@@ -9,22 +9,23 @@ const navigation = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
 const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
 vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
 vi.mock("next/navigation", () => ({ useRouter: () => navigation }));
-vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string) => key }) }));
 vi.mock("./onboarding-plan-surface", () => ({ OnboardingPlanSurface: () => <div>plans</div> }));
 const clients: QueryClient[] = [];
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); });
 beforeEach(() => { telemetryRef.current = createRecordedBrowserTelemetry(); navigation.push.mockReset(); navigation.replace.mockReset(); });
-function setup(stage: string, primary = false, pending = false, suggestion?: () => Response, trialRefusal: string | null = null) {
+function setup(stage: string, primary = false, pending = false, suggestion?: () => Response, trialRefusal: string | null = null, suggestedCountry = "CA") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business-1", active: true, onboardingStage: stage }] });
   client.setQueryData(["onboarding-primary-number", "business-1"], { activeClaim: pending ? { id: "claim-1", status: "provisioning" } : null, phoneNumbers: primary ? [{ id: "phone-1", e164: "+15815550102", reclaimScheduledAt: null }] : [] });
-  client.setQueryData(["onboarding-number-countries", "business-1"], { countries: ["US", "CA"], trialCountries: ["US", "CA"], suggestedCountry: "CA", verifyPhone: true, trialRefusal, verifiedPhone: null });
+  client.setQueryData(["onboarding-number-countries", "business-1"], { countries: ["US", "CA"], trialCountries: ["US", "CA"], suggestedCountry, verifyPhone: false, trialRefusal, verifiedPhone: null });
   const fetchMock = vi.fn(async (input: string) => {
     if (input.includes("/api/phone-numbers?")) return Response.json({ activeClaim: null, phoneNumbers: [{ id: "phone-1", e164: "+14165550100", reclaimScheduledAt: null }] });
     if (input.includes("/suggestion?")) return suggestion ? suggestion() : Response.json({ numbers: [{ phoneE164: "+14165550100", countryCode: "CA", claimToken: "signed-offer", capabilities: { sms: true, voice: true } }] });
     if (input.includes("/claim?")) return Response.json({ claimId: "claim-1" });
     if (input.includes("/claim/claim-1?")) return Response.json({ claim: { status: "claimed", requestedE164: "+14165550100", phoneNumberId: "phone-1" } });
     if (input.includes("/skip?")) return Response.json({ ok: true });
+    if (input.includes("/api/onboarding/numbers?")) return Response.json({ joined: true });
     throw new Error(`Unexpected request: ${input}`);
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -80,6 +81,27 @@ describe("onboarding number API adapter", () => {
     await userEvent.click(screen.getByRole("button", { name: "number.skipLater" }));
     await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url.includes("/skip?"))).toBe(true));
     expect(navigation.push).toHaveBeenCalledWith("/onboarding/goal");
+  });
+  it("opens on the country fallback where the time zone points to a country without numbers", async () => {
+    const fetchMock = setup("phone_number", false, false, undefined, null, "FR");
+    await userEvent.click(await screen.findByRole("button", { name: "number.country.notify" }));
+    await screen.findByText("number.country.joined");
+    const joined = fetchMock.mock.calls.find(([url]) => url.includes("/api/onboarding/numbers?"));
+    expect(JSON.parse(String((joined as unknown as [string, RequestInit])[1].body))).toEqual({ countryCode: "FR" });
+    telemetryRef.current!.expectEvent("web.onboarding.number_waitlist_joined", { businessId: "business-1", countryCode: "FR" });
+    await userEvent.click(screen.getByRole("button", { name: "number.country.continue" }));
+    await waitFor(() => expect(navigation.push).toHaveBeenCalledWith("/onboarding/goal"));
+    const skipped = fetchMock.mock.calls.find(([url]) => url.includes("/skip?"));
+    expect(JSON.parse(String((skipped as unknown as [string, RequestInit])[1].body))).toEqual({ countryCode: "FR" });
+    telemetryRef.current!.expectEvent("web.onboarding.number_skipped", { businessId: "business-1", countryCode: "FR" });
+    expect(fetchMock.mock.calls.some(([url]) => url.includes("/suggestion?"))).toBe(false);
+  });
+  it("opens the country fallback from the picker, and goes back to it", async () => {
+    setup("phone_number");
+    await userEvent.click(await screen.findByRole("button", { name: "number.country.notListed" }));
+    expect(await screen.findByRole("button", { name: "number.country.continue" })).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "number.country.back" }));
+    expect(await screen.findByRole("button", { name: "number.select" })).toBeTruthy();
   });
   it("names an unverified email the search refuses", async () => {
     setup("phone_number", false, false, () => Response.json({ error: "Verify your email.", code: "email_verification_required" }, { status: 409 }));

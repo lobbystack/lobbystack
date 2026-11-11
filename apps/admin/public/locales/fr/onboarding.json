@@ -155,11 +155,6 @@
       "changeNumber": "Utiliser un autre numéro"
     },
     "unavailable": {
-      "title": "Nous n'offrons pas encore de numéros dans ce pays ({{country}}).",
-      "body": "Vous pouvez quand même utiliser votre agent dans le navigateur, et nous pouvons vous écrire quand les numéros y arriveront.",
-      "notify": "M'écrire quand ils seront disponibles",
-      "joined": "C'est noté. Nous vous écrirons.",
-      "continue": "Continuer sans numéro",
       "failed": "Une erreur est survenue. Réessayez.",
       "partnerTitle": "Nous ne pouvons pas encore vérifier les téléphones dans ce pays ({{country}}).",
       "partnerBody": "Vous pouvez terminer la configuration sans téléphone vérifié.",
@@ -211,7 +206,18 @@
     "unavailable": "Ce numéro vient d'être pris. Choisissez-en un autre.",
     "selectedTitle": "Le numéro de votre IA",
     "selectedNumberLabel": "Numéro sélectionné",
-    "numbersUnavailable": "Les numéros de téléphone ne sont pas encore configurés sur ce tableau de bord. Demandez à la personne qui le gère de connecter un fournisseur de téléphonie."
+    "numbersUnavailable": "Les numéros de téléphone ne sont pas encore configurés sur ce tableau de bord. Demandez à la personne qui le gère de connecter un fournisseur de téléphonie.",
+    "country": {
+      "title": "Nous n'offrons pas encore de numéros dans ce pays ({{country}}).",
+      "body": "Vous pouvez quand même utiliser votre agent dans le navigateur, et nous pouvons vous écrire quand les numéros y arriveront.",
+      "notify": "M'écrire quand ils seront disponibles",
+      "joined": "C'est noté. Nous vous écrirons.",
+      "continue": "Continuer sans numéro",
+      "failed": "Une erreur est survenue. Réessayez.",
+      "notListed": "Mon pays n'est pas dans la liste",
+      "label": "Pays",
+      "back": "Retour aux numéros"
+    }
   },
   "goal": {
     "title": "Que voulez-vous que votre agent fasse en premier ?",
