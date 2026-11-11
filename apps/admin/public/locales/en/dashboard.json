@@ -345,8 +345,8 @@
       "ukMobile": "UK mobile"
     },
     "code": {
-      "dial": "Dial this code:",
-      "call": "Press Call. A tone or a message confirms that forwarding is on.",
+      "dial": "On the phone your customers call, dial this code:",
+      "call": "Press Call.",
       "busy": "To also forward calls that come in while you're on the phone, dial:",
       "off": "To turn it off later, dial {{code}}.",
       "unreachable": "To also forward calls when your phone is off or has no signal, dial:",
@@ -366,10 +366,6 @@
       "androidOnly": "These steps are for Android phones. On an iPhone, ask {{name}} to turn it on for you.",
       "adminOnly": "Only an admin of your {{name}} account can change this.",
       "verifyNumber": "{{name}} sends a code to {{number}} before it forwards. Choose to get the code by phone call, then read it in that call's transcript under Calls."
-    },
-    "test": {
-      "missed": "To test it, call your business number from another phone and let it ring. Your agent should answer.",
-      "all": "To test it, call your business number from another phone. Your agent should answer."
     },
     "unsupported": {
       "missed": "{{name}} doesn't offer forwarding for missed calls only. Choose All calls, or ask {{name}} to forward unanswered calls to {{number}}.",

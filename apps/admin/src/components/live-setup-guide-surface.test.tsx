@@ -197,6 +197,18 @@ describe("the list for a business with a number", () => {
     expect(await screen.findByText(copy.forwardingWorks)).toBeTruthy();
   });
 
+  it("tells the owner to dial the carrier's code on the phone customers call, then press Call", async () => {
+    await setup({ numberList: {}, numbers: [number], complete: ["fullScan", "callNumber"] });
+    await userEvent.click(await screen.findByRole("button", { name: copy.stepActions.forwardCalls }));
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.type(within(dialog).getByLabelText(en.forwarding.carrier.label), "Verizon");
+    await userEvent.click(await screen.findByRole("option", { name: "Verizon" }));
+    const steps = within(dialog).getAllByRole("listitem").map((item) => item.textContent ?? "");
+    expect(steps[0]).toContain(en.forwarding.code.dial);
+    expect(steps[1]).toBe(en.forwarding.code.call);
+    expect(within(dialog).queryByText(/To test it/)).toBeNull();
+  });
+
   it("shows the line it learned from the first forwarded call", async () => {
     await setup({ numberList: { forwardedFrom: "+14165550177" }, numbers: [number], complete: ["fullScan", "callNumber", "forwardCalls"] });
     await userEvent.click(await screen.findByRole("button", { name: new RegExp(copy.steps.forwardFromCurrent) }));

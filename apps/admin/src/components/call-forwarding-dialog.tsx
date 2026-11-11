@@ -50,14 +50,13 @@ function Steps({ carrier, how, e164, mode }: { carrier: Carrier; how: Forwarding
       {how.method === "settings" && mode === "missed" && carrier.group === "voip" ? <p className="type-body-muted">{t("forwarding.notes.ringTime")}</p> : null}
       {how.notes?.map((note) => <p className="type-body-muted" key={note}>{t(`forwarding.notes.${note}`, { name: carrier.name, number })}</p>)}
       {mode === "missed" && mobile ? <p className="type-body-muted">{t("forwarding.notes.iphone")}</p> : null}
-      <p className="type-body-muted">{t(`forwarding.test.${mode}`)}</p>
     </div>
   );
 }
 
 /**
  * How to forward the owner's line to their LobbyStack number, carrier by
- * carrier. With `onConfirm`, an It works button follows the test call, for
+ * carrier. With `onConfirm`, an It works button follows the steps, for
  * carriers that strip the header that would tell us forwarding works.
  */
 export function CallForwardingDialog({ confirming = false, e164, onConfirm, onOpenChange, open }: { confirming?: boolean; e164: string; onConfirm?: () => void; onOpenChange: (open: boolean) => void; open: boolean }) {
