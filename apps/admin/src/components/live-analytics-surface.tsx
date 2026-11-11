@@ -5,6 +5,7 @@ import { useUrlState } from "@/hooks/use-url-state";
 import { useAgents } from "@/hooks/use-agents";
 import { useAppointments } from "@/hooks/use-appointments";
 import { todaysAppointments } from "@/lib/todays-appointments";
+import { analyticsPresetRange, analyticsRangeBounds, type AnalyticsPreset } from "@/lib/analytics-range";
 import { AgentBreakdown, AgentBreakdownSkeleton } from "@/components/analytics/agent-breakdown";
 import { formatDuration } from "@/lib/duration";
 import { subscribeRealtimeQuery } from "@/lib/realtime-query";
@@ -38,7 +39,7 @@ const AnalyticsOverviewChart = dynamic(() => import("./analytics-charts").then((
 const AnalyticsMetricChart = dynamic(() => import("./analytics-charts").then((module) => module.AnalyticsMetricChart), { ssr: false, loading: () => <Skeleton className="h-40 w-full" /> });
 
 type Granularity = AnalyticsViewModel["granularity"];
-type Preset = "allTime" | "custom" | "today" | "yesterday" | "thisWeek" | "thisMonth" | "lastMonth" | "last30" | "last3Months" | "thisYear" | "lastYear";
+type Preset = AnalyticsPreset | "custom";
 
 const granularities: Granularity[] = ["year", "month", "week", "day", "hour"];
 const presets: Array<Exclude<Preset, "custom">> = ["today", "yesterday", "thisWeek", "thisMonth", "lastMonth", "last30", "last3Months", "thisYear", "lastYear", "allTime"];
@@ -75,29 +76,6 @@ function viewFromUrl(): AnalyticsView {
   return { customRange: null, granularity, preset: named ?? DEFAULT_PRESET };
 }
 
-function startOfDay(value: Date): Date { return new Date(value.getFullYear(), value.getMonth(), value.getDate()); }
-
-function presetRange(preset: Exclude<Preset, "custom">, businessCreatedAt?: string): { from: Date; to: Date } {
-  const today = startOfDay(new Date());
-  const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
-  const weekStart = new Date(today); weekStart.setDate(today.getDate() - today.getDay());
-  if (preset === "today") return { from: today, to: today };
-  if (preset === "yesterday") return { from: yesterday, to: yesterday };
-  if (preset === "thisWeek") return { from: weekStart, to: today };
-  if (preset === "thisMonth") return { from: new Date(today.getFullYear(), today.getMonth(), 1), to: today };
-  if (preset === "lastMonth") return { from: new Date(today.getFullYear(), today.getMonth() - 1, 1), to: new Date(today.getFullYear(), today.getMonth(), 0) };
-  if (preset === "last3Months") return { from: new Date(today.getFullYear(), today.getMonth() - 3, today.getDate()), to: today };
-  if (preset === "thisYear") return { from: new Date(today.getFullYear(), 0, 1), to: today };
-  if (preset === "lastYear") return { from: new Date(today.getFullYear() - 1, 0, 1), to: new Date(today.getFullYear() - 1, 11, 31) };
-  if (preset === "allTime") {
-    // The API serves at most ten years, so very old businesses start there.
-    const tenYearsAgo = new Date(today.getFullYear() - 10, today.getMonth(), today.getDate() + 1);
-    const created = businessCreatedAt ? startOfDay(new Date(businessCreatedAt)) : new Date(2020, 0, 1);
-    return { from: created > tenYearsAgo ? created : tenYearsAgo, to: today };
-  }
-  return { from: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 29), to: today };
-}
-
 function percentDelta(current: number, previous: number, t: (...args: any[]) => unknown): string {
   if (previous === 0) return String(current === 0 ? t("home.analytics.metrics.flat") : t("home.analytics.metrics.percentUp", { value: "100.0" }));
   const value = ((current - previous) / previous) * 100;
@@ -115,17 +93,19 @@ export function LiveAnalyticsSurface() {
   const { businesses, business } = useActiveBusiness();
   // Every share of the page names the dates it shows, so a link opened later lands on the same span.
   const writeView = useCallback((view: AnalyticsView, url: URL) => {
-    const span = view.customRange ?? presetRange(view.preset === "custom" ? "last30" : view.preset, business?.createdAt);
+    const span = view.customRange ?? analyticsPresetRange(view.preset === "custom" ? "last30" : view.preset, { timeZone: business?.timezone, businessCreatedAt: business?.createdAt });
     for (const key of ["range", "interval", "from", "to"]) url.searchParams.delete(key);
     if (view.preset !== "custom") url.searchParams.set("range", view.preset);
     url.searchParams.set("interval", view.granularity);
     url.searchParams.set("from", formatDay(span.from));
     url.searchParams.set("to", formatDay(span.to));
-  }, [business?.createdAt]);
+  }, [business?.createdAt, business?.timezone]);
   const { ready: viewRead, setValue: setView, value: { customRange, granularity, preset } } = useUrlState({ initial: DEFAULT_VIEW, read: viewFromUrl, write: writeView });
   const setPreset = (next: Preset) => setView((current) => ({ ...current, customRange: null, preset: next }));
   const setGranularity = (next: Granularity) => setView((current) => ({ ...current, granularity: next }));
-  const range = useMemo(() => customRange ?? presetRange(preset === "custom" ? "last30" : preset, business?.createdAt), [business?.createdAt, customRange, preset]);
+  // The days are the business's: today ends at midnight where the business is, wherever the viewer is.
+  const timeZone = business?.timezone;
+  const range = useMemo(() => customRange ?? analyticsPresetRange(preset === "custom" ? "last30" : preset, { timeZone, businessCreatedAt: business?.createdAt }), [business?.createdAt, customRange, preset, timeZone]);
   // The API caps hourly views at 20 days, daily at a year and weekly at 3493 days, so longer ranges fall back to a coarser view.
   // The request adds the last picked day to this span, and the extra half day absorbs a DST hour.
   const spanDays = (range.to.getTime() - range.from.getTime()) / 86_400_000;
@@ -133,11 +113,10 @@ export function LiveAnalyticsSurface() {
   const tooLongFor = (option: Granularity) => (option === "hour" && spanDays > 19.5) || (longRange && option === "day") || (spanDays > 3492 && option === "week");
   const effectiveGranularity: Granularity = !tooLongFor(granularity) ? granularity : granularity === "hour" && !longRange ? "day" : "month";
   const analytics = useQuery({
-    queryKey: ["analytics", business?.businessId, preset, effectiveGranularity, range.from.toISOString(), range.to.toISOString()],
+    queryKey: ["analytics", business?.businessId, preset, effectiveGranularity, range.from.toISOString(), range.to.toISOString(), timeZone],
     queryFn: () => {
-      // The API buckets and labels in UTC, so send the picked calendar days as UTC days.
-      const from = new Date(Date.UTC(range.from.getFullYear(), range.from.getMonth(), range.from.getDate()));
-      const to = new Date(Date.UTC(range.to.getFullYear(), range.to.getMonth(), range.to.getDate(), 23, 59, 59, 999));
+      // The API buckets in the business's time zone too, so the picked days and the buckets line up.
+      const { from, to } = analyticsRangeBounds(range, timeZone);
       const parameters = new URLSearchParams({ businessId: business!.businessId, from: from.toISOString(), to: to.toISOString(), granularity: effectiveGranularity });
       return requestJson<AnalyticsViewModel>(`/api/analytics?${parameters.toString()}`);
     },
@@ -155,7 +134,7 @@ export function LiveAnalyticsSurface() {
   const loading = businesses.isLoading || !viewRead || analytics.isLoading;
   // The split by agent only says something once there are two to compare.
   const { agents: workspaceAgents, hasChoice: severalAgents } = useAgents();
-  const pointFormat = new Intl.DateTimeFormat(intlLocale(i18n.language), effectiveGranularity === "year" ? { year: "numeric", timeZone: "UTC" } : effectiveGranularity === "month" ? { month: "short", ...(longRange ? { year: "2-digit" as const } : {}), timeZone: "UTC" } : effectiveGranularity === "hour" ? { hour: "numeric", timeZone: "UTC" } : { day: "2-digit", month: "short", ...(longRange ? { year: "2-digit" as const } : {}), timeZone: "UTC" });
+  const pointFormat = new Intl.DateTimeFormat(intlLocale(i18n.language), effectiveGranularity === "year" ? { year: "numeric", timeZone: data?.timeZone ?? "UTC" } : effectiveGranularity === "month" ? { month: "short", ...(longRange ? { year: "2-digit" as const } : {}), timeZone: data?.timeZone ?? "UTC" } : effectiveGranularity === "hour" ? { hour: "numeric", timeZone: data?.timeZone ?? "UTC" } : { day: "2-digit", month: "short", ...(longRange ? { year: "2-digit" as const } : {}), timeZone: data?.timeZone ?? "UTC" });
   const series = data?.series ?? [];
   const chartData: AnalyticsChartPoint[] = series.map((point) => ({
     label: pointFormat.format(new Date(point.bucket)),

@@ -1,4 +1,5 @@
 import { and, countDistinct, eq, gte, inArray, lt, not, sql, type SQL, type SQLWrapper } from "drizzle-orm";
+import { DateTime, IANAZone } from "luxon";
 
 import { agentOfRow, agents, appointments, businesses, calls, conversations, messages, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { discountedAmount, isNonBillableCallDisposition, MAX_PHONE_CALL_MS, MIN_BILLABLE_VOICE_DURATION_SECONDS, nonBillableCallDispositions, servicePriceFromColumns, type ServicePriceType } from "@lobbystack/shared";
@@ -19,12 +20,22 @@ const analyticsGranularitySql = {
   year: sql`'year'`,
 } satisfies Record<AnalyticsGranularity, SQL>;
 
-/** @internal Exported for focused SQL regression coverage. */
-export function analyticsBucketExpression(column: SQLWrapper, granularity: AnalyticsGranularity): SQL<Date> {
+/** A business's time zone, or UTC when it holds no zone Luxon and PostgreSQL know. */
+export function analyticsTimeZone(value: string | null | undefined): string {
+  return value && IANAZone.isValidZone(value) ? value : "UTC";
+}
+
+/**
+ * The start of the bucket a timestamp falls in, counted on the business's
+ * wall clock: days, Sunday weeks, months and years begin at its midnight.
+ * @internal Exported for focused SQL regression coverage.
+ */
+export function analyticsBucketExpression(column: SQLWrapper, granularity: AnalyticsGranularity, timeZone = "UTC"): SQL<Date> {
+  const local = sql`(${column} at time zone ${timeZone})`;
   if (granularity === "week") {
-    return sql<Date>`date_trunc('week', ${column} + interval '1 day') - interval '1 day'`;
+    return sql<Date>`((date_trunc('week', ${local} + interval '1 day') - interval '1 day') at time zone ${timeZone})`;
   }
-  return sql<Date>`date_trunc(${analyticsGranularitySql[granularity]}, ${column})`;
+  return sql<Date>`(date_trunc(${analyticsGranularitySql[granularity]}, ${local}) at time zone ${timeZone})`;
 }
 
 /** Channel buckets for the Analytics channels card, in display order. */
@@ -174,40 +185,33 @@ export type AnalyticsInput = {
   to: Date;
   previousFrom: Date;
   granularity: AnalyticsGranularity;
+  /** The business's time zone; getAnalytics reads it from the business. */
+  timeZone?: string;
 };
 
 function bucketKey(value: Date | string): string {
   return (value instanceof Date ? value : new Date(value)).toISOString();
 }
 
-function analyticsBucketStart(value: Date, granularity: AnalyticsGranularity): Date {
-  if (granularity === "hour") return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate(), value.getUTCHours()));
-  if (granularity === "week") return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate() - value.getUTCDay()));
-  if (granularity === "month") return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), 1));
-  if (granularity === "year") return new Date(Date.UTC(value.getUTCFullYear(), 0, 1));
-  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
-}
-
-function nextAnalyticsBucket(value: Date, granularity: AnalyticsGranularity): Date {
-  if (granularity === "hour") return new Date(value.getTime() + 3_600_000);
-  if (granularity === "week") return new Date(value.getTime() + 7 * 86_400_000);
-  if (granularity === "month") return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth() + 1, 1));
-  if (granularity === "year") return new Date(Date.UTC(value.getUTCFullYear() + 1, 0, 1));
-  return new Date(value.getTime() + 86_400_000);
+function analyticsBucketStart(value: Date, granularity: AnalyticsGranularity, timeZone: string): DateTime {
+  const local = DateTime.fromJSDate(value, { zone: timeZone });
+  if (granularity === "week") return local.startOf("day").minus({ days: local.weekday % 7 });
+  return local.startOf(granularity);
 }
 
 /** @internal Exported for deterministic empty-series regression coverage. */
-export function analyticsBucketStarts(from: Date, to: Date, granularity: AnalyticsGranularity): string[] {
+export function analyticsBucketStarts(from: Date, to: Date, granularity: AnalyticsGranularity, timeZone = "UTC"): string[] {
   const result: string[] = [];
-  for (let cursor = analyticsBucketStart(from, granularity), count = 0; cursor < to && count < 500; cursor = nextAnalyticsBucket(cursor, granularity), count += 1) {
-    result.push(bucketKey(cursor));
+  const step = { hour: { hours: 1 }, day: { days: 1 }, week: { weeks: 1 }, month: { months: 1 }, year: { years: 1 } }[granularity];
+  for (let cursor = analyticsBucketStart(from, granularity, timeZone), count = 0; cursor.toJSDate() < to && count < 500; cursor = cursor.plus(step), count += 1) {
+    result.push(bucketKey(cursor.toJSDate()));
   }
   return result;
 }
 
 /** Bounded aggregate output; message histories stay in PostgreSQL. */
 export function analyticsResponseQuery(input: AnalyticsInput): SQL {
-  const bucket = analyticsBucketExpression(sql`(created_at at time zone 'UTC')`, input.granularity);
+  const bucket = analyticsBucketExpression(sql`created_at`, input.granularity, analyticsTimeZone(input.timeZone));
   return sql`with period as materialized (
     select id, conversation_id, created_at, direction from messages
     where business_id = ${input.businessId}::uuid
@@ -230,7 +234,7 @@ export function analyticsResponseQuery(input: AnalyticsInput): SQL {
     window conversation as (partition by conversation_id order by created_at, id)
   ), responses as (
     select case when created_at >= ${input.from.toISOString()}::timestamptz
-      then (${bucket}) at time zone 'UTC' else null end as bucket,
+      then ${bucket} else null end as bucket,
       greatest(0, round(extract(epoch from created_at - previous_at))) as seconds
     from ordered where direction = 'outbound' and previous_direction = 'inbound'
       and created_at >= ${input.previousFrom.toISOString()}::timestamptz
@@ -324,12 +328,16 @@ export async function readAnalyticsResults(tx: DatabaseTransaction, input: Analy
   };
 }
 
-export async function getAnalytics(context: DomainContext, input: AnalyticsInput) {
-  return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
-    await requireBusinessMembership(tx, input);
-    const callBucket = analyticsBucketExpression(calls.startedAt, input.granularity);
-    const appointmentBucket = analyticsBucketExpression(appointments.startsAt, input.granularity);
-    const messageBucket = analyticsBucketExpression(messages.createdAt, input.granularity);
+export async function getAnalytics(context: DomainContext, analyticsInput: AnalyticsInput) {
+  return await withBusinessTransaction(context.db, { ...analyticsInput, actorType: "operator" }, async (tx) => {
+    await requireBusinessMembership(tx, analyticsInput);
+    // Buckets follow the business's days, as the dates the dashboard shows do.
+    const [zone] = await tx.select({ timezone: businesses.timezone }).from(businesses).where(eq(businesses.id, analyticsInput.businessId)).limit(1);
+    const timeZone = analyticsTimeZone(zone?.timezone);
+    const input = { ...analyticsInput, timeZone };
+    const callBucket = analyticsBucketExpression(calls.startedAt, input.granularity, timeZone);
+    const appointmentBucket = analyticsBucketExpression(appointments.startsAt, input.granularity, timeZone);
+    const messageBucket = analyticsBucketExpression(messages.createdAt, input.granularity, timeZone);
     // A call still open a minute past its max duration lost its worker or gateway, so it counts as missed, not live.
     // A transfer counts once the call went out: one only requested, never started or failed stayed with the receptionist.
     const outcomeKey = sql<string>`case
@@ -402,7 +410,7 @@ export async function getAnalytics(context: DomainContext, input: AnalyticsInput
     }
 
     const buckets = new Map<string, { bucket: string; calls: number; appointments: number; messages: number }>();
-    for (const key of analyticsBucketStarts(input.from, input.to, input.granularity)) {
+    for (const key of analyticsBucketStarts(input.from, input.to, input.granularity, timeZone)) {
       buckets.set(key, { bucket: key, calls: 0, appointments: 0, messages: 0 });
     }
     for (const row of callSeries) buckets.set(bucketKey(row.bucket), { bucket: bucketKey(row.bucket), calls: Number(row.count), appointments: 0, messages: 0 });
@@ -424,6 +432,7 @@ export async function getAnalytics(context: DomainContext, input: AnalyticsInput
       from: input.from,
       to: input.to,
       granularity: input.granularity,
+      timeZone,
       calls: { current: Number(callTotals?.current ?? 0), previous: Number(callTotals?.previous ?? 0) },
       appointments: { current: Number(appointmentTotals?.current ?? 0), previous: Number(appointmentTotals?.previous ?? 0) },
       messages: { current: Number(messageTotals?.current ?? 0), previous: Number(messageTotals?.previous ?? 0) },

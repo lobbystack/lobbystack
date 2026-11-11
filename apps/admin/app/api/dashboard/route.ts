@@ -4,16 +4,17 @@ import { NextResponse } from "next/server";
 import {
   dashboardAggregatesQuery,
   type DashboardAggregates,
+  businesses,
   calls,
   contacts,
   conversations,
 } from "@lobbystack/db";
 import { countOpenVoiceFollowUps, listOpenVoiceFollowUps, readAnalyticsResults, listRecentCalls, listUpcomingAppointments, readFirstRealConversationAt } from "@lobbystack/domain";
+import { lastDaysBounds } from "@/lib/analytics-range";
 import { operatorRoute } from "@/lib/operator-request";
 
 export const dynamic = "force-dynamic";
 
-const DAY_MS = 24 * 60 * 60 * 1_000;
 /** How many open requests Home lists. */
 const ACTION_REQUIRED_SHOWN = 6;
 
@@ -32,14 +33,16 @@ function utcMonthKey(value: Date): string {
 
 export const GET = operatorRoute(async ({ businessId, transaction }) => NextResponse.json(await transaction(async (tx) => {
   const now = new Date();
-  const currentStart = new Date(now.getTime() - 30 * DAY_MS);
-  const previousStart = new Date(now.getTime() - 60 * DAY_MS);
+  // The last 30 of the business's days, today included, as Analytics shows them by default.
+  const [zone] = await tx.select({ timezone: businesses.timezone }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
+  const current = lastDaysBounds(30, zone?.timezone, now);
+  const previousStart = new Date(current.from.getTime() - (current.to.getTime() - current.from.getTime()));
   const chartStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1));
 
   const aggregateResult = await tx.execute(dashboardAggregatesQuery({ businessId, chartStart }));
   const [aggregates] = aggregateResult.rows as unknown as [DashboardAggregates];
   // Home's results cover the last 30 days, compared with the 30 days before.
-  const results = await readAnalyticsResults(tx, { businessId, from: currentStart, to: now, previousFrom: previousStart });
+  const results = await readAnalyticsResults(tx, { businessId, from: current.from, to: current.to, previousFrom: previousStart });
   const recentCalls = await listRecentCalls(tx, businessId);
   const upcoming = await listUpcomingAppointments(tx, businessId, now);
   const liveCallCount = await tx.select({ count: count() }).from(calls).where(and(eq(calls.businessId, businessId), eq(calls.status, "started")));

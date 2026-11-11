@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AgentListItem } from "@/hooks/use-agents";
 import type { AnalyticsViewModel } from "@/lib/page-view-models";
+import { businessToday } from "@/lib/analytics-range";
 import { LiveAnalyticsSurface } from "./live-analytics-surface";
 
 vi.mock("next/dynamic", () => ({ default: () => () => null }));
@@ -18,10 +19,10 @@ afterEach(() => { cleanup(); clients.forEach((client) => client.clear()); client
 function renderAnalytics(channels: AnalyticsViewModel["channels"], overrides: Partial<AnalyticsViewModel> = {}, { agents = [] as AgentListItem[], pending = false, appointments = [] as Array<Record<string, unknown>> | null } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   clients.push(client);
-  client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Test", active: true, role: "business_owner" }] });
+  client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Test", active: true, role: "business_owner", timezone: "America/Toronto" }] });
   const metric = { current: 0, previous: 0 };
   const analytics: AnalyticsViewModel = {
-    periodDays: 30, from: "2026-09-01T00:00:00Z", to: "2026-10-01T00:00:00Z", granularity: "week", calls: metric, appointments: metric, messages: metric, averageCallDurationSeconds: metric, agentResponseSeconds: metric, series: [], channels, outcomes: [],
+    periodDays: 30, from: "2026-09-01T00:00:00Z", to: "2026-10-01T00:00:00Z", granularity: "week", timeZone: "UTC", calls: metric, appointments: metric, messages: metric, averageCallDurationSeconds: metric, agentResponseSeconds: metric, series: [], channels, outcomes: [],
     bookedValue: { currency: "USD", ...metric }, timeSavedSeconds: metric, callsWithoutTransferPercent: { current: null, previous: null }, ...overrides,
   };
   client.setQueryData(["agents", "business"], agents);
@@ -90,7 +91,7 @@ describe("analytics loading states", () => {
   it("keeps the title, shows placeholders for the controls and shapes the rest like the page while the data loads", () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     clients.push(client);
-    client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Test", active: true, role: "business_owner" }] });
+    client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Test", active: true, role: "business_owner", timezone: "America/Toronto" }] });
     vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
     render(<QueryClientProvider client={client}><LiveAnalyticsSurface /></QueryClientProvider>);
     expect(screen.getByRole("heading", { name: "analyticsPage.title" })).toBeTruthy();
@@ -139,7 +140,8 @@ describe("analytics view in the URL", () => {
     window.history.replaceState(null, "", "/analytics");
     renderAnalytics(channels);
     await screen.findByRole("heading", { name: "home.analytics.overview.calls.title" });
-    const today = new Date();
+    // The dates are the business's, in Toronto, whatever the time zone this test runs in.
+    const today = businessToday("America/Toronto");
     expect(parameters().get("range")).toBe("last30");
     expect(parameters().get("interval")).toBe("week");
     expect(parameters().get("from")).toBe(day(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 29)));
@@ -157,7 +159,8 @@ describe("analytics view in the URL", () => {
     const thisMonth = parameters();
     expect(thisMonth.get("range")).toBe("thisMonth");
     expect(thisMonth.get("interval")).toBe("day");
-    const today = new Date();
+    // The dates are the business's, in Toronto, whatever the time zone this test runs in.
+    const today = businessToday("America/Toronto");
     expect(thisMonth.get("from")).toBe(day(new Date(today.getFullYear(), today.getMonth(), 1)));
     expect(thisMonth.get("to")).toBe(day(today));
     await userEvent.click(screen.getByRole("button", { name: "home.analytics.controls.presetRange" }));
