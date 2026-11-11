@@ -10,6 +10,7 @@
   "home": {
     "title": "Početna",
     "phone": {
+      "numberLabel": "Vaš broj:",
       "status": {
         "ready": "Spremno za Vaš prvi poziv",
         "live": "Vaš agent prima pozive",

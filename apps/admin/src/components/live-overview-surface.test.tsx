@@ -233,13 +233,14 @@ describe("Upcoming rows on Home", () => {
 });
 
 describe("phone card on Home", () => {
-  it("heads the card with the status and keeps Test call in it with the results, above Action required", async () => {
+  it("keeps the status, the number, Test call and the results in one card, above Action required", async () => {
     const i18n = await setup("en", null, { role: "business_owner", phoneLines: [{ e164: "+14165550100", agentId: "agent-1", agentName: "Front desk", staffFirstMode: "never" }] });
     const phone = screen.getByRole("region", { name: i18n.t("home.phone.status.ready") });
-    const card = within(phone).getByRole("link", { name: i18n.t("home.phone.answersFirst.agent") }).closest("[data-slot='surface']")!;
-    expect(within(phone).getByRole("link", { name: i18n.t("home.phone.answersFirst.agent") }).getAttribute("href")).toBe("/agents/agent-1#staff-first");
-    // The status heading sits over the card, not in it.
-    expect(card.contains(screen.getByRole("heading", { name: i18n.t("home.phone.status.ready") }))).toBe(false);
+    const card = phone.closest("[data-slot='surface']")!;
+    expect(within(phone).getByText(i18n.t("home.phone.numberLabel"))).toBeTruthy();
+    // The chip opens the setting in a dialog on Home rather than leaving for the agent's page.
+    expect(within(phone).getByRole("button", { name: i18n.t("home.phone.answersFirst.agent") }).getAttribute("aria-haspopup")).toBe("dialog");
+    expect(within(phone).queryByRole("link")).toBeNull();
     expect(within(card as HTMLElement).getByRole("heading", { name: i18n.t("home.results.bookedValue") })).toBeTruthy();
     const actionRequired = screen.getByRole("heading", { name: i18n.t("home.actionRequired.title") });
     expect(card.compareDocumentPosition(actionRequired) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -267,12 +268,13 @@ describe("Home while it loads", () => {
     for (const title of ["bookedValue", "timeSaved", "withoutTransfer"]) expect(screen.getByText(i18n.t(`home.results.${title}`)).closest("[data-slot='skeleton']")).toBeTruthy();
     expect(screen.getByText(i18n.t("home.chart.title"))).toBeTruthy();
     expect(screen.getByText(i18n.t("home.recentCalls.title"))).toBeTruthy();
-    // The status heading and the phone part's place are held with the results, before Home knows whether the business has a number.
-    for (const label of [i18n.t("home.phone.status.ready"), i18n.t("home.phone.answersFirst.agent"), i18n.t("common:testCall.trigger")]) expect(screen.getByText(label).closest("[data-slot='skeleton']")).toBeTruthy();
-    expect(screen.getByText(i18n.t("home.phone.status.ready")).closest("[aria-busy='true']")).toBe(screen.getByText(i18n.t("home.results.bookedValue")).closest("[aria-busy='true']"));
-    // The heading's placeholder sits over the card's, and the results hold no comparison placeholder.
+    // The phone part's place is held in the same card as the results, before Home knows whether the business has a number.
+    for (const label of [i18n.t("home.phone.status.ready"), i18n.t("home.phone.numberLabel"), i18n.t("home.phone.answersFirst.agent"), i18n.t("common:testCall.trigger")]) expect(screen.getByText(label).closest("[data-slot='skeleton']")).toBeTruthy();
     const card = screen.getByText(i18n.t("home.phone.answersFirst.agent")).closest("[data-slot='surface']")!;
-    expect(card.contains(screen.getByText(i18n.t("home.phone.status.ready")))).toBe(false);
+    expect(card.getAttribute("aria-busy")).toBe("true");
+    expect(card.contains(screen.getByText(i18n.t("home.phone.status.ready")))).toBe(true);
+    expect(card.contains(screen.getByText(i18n.t("home.results.bookedValue")))).toBe(true);
+    // Each result holds its title and value, with no comparison line.
     expect(screen.getByText(i18n.t("home.results.bookedValue")).closest("[data-slot='skeleton']")!.parentElement!.parentElement!.querySelectorAll("[data-slot='skeleton']")).toHaveLength(2);
     expect(container.querySelectorAll("[aria-busy='true']")).toHaveLength(4);
   });

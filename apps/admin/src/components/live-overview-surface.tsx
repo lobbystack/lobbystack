@@ -133,11 +133,11 @@ export function LiveOverviewSurface() {
         {/* Getting started covers what the activation card would offer. */}
         {showGuide || guidePending ? null : <DashboardActivationCard businessId={businessId} />}
         {showGuide || guidePending || !businessId ? null : <CallForwardingFromLink businessId={businessId} />}
-        {/* The phone line, under its status, over the last 30 days' results in one card. It holds Home's Test call, one per number. */}
+        {/* The phone line over the last 30 days' results, in one card. It holds Home's Test call, one per number. */}
         {summary.isLoading ? (
-          <PhoneResultsSkeleton labels={{ status: t("home.phone.status.ready"), answersFirst: t(ANSWERS_FIRST_KEYS.never), results: RESULT_KEYS.map((key) => t(`home.results.${key}`)), ...(canSetUp ? { testCall: t("common:testCall.trigger") } : {}) }} />
+          <PhoneResultsSkeleton labels={{ status: t("home.phone.status.ready"), numberLabel: t("home.phone.numberLabel"), answersFirst: t(ANSWERS_FIRST_KEYS.never), results: RESULT_KEYS.map((key) => t(`home.results.${key}`)), ...(canSetUp ? { testCall: t("common:testCall.trigger") } : {}) }} />
         ) : (
-          <HomePhoneCard called={summary.data?.phoneCalled ?? false} canSetUp={canSetUp} lines={summary.data?.phoneLines ?? []} results={results.length ? (
+          <HomePhoneCard businessId={businessId ?? ""} called={summary.data?.phoneCalled ?? false} canSetUp={canSetUp} lines={summary.data?.phoneLines ?? []} results={results.length ? (
             <div className="grid sm:grid-cols-3">
               {results.map((result) => (
                 <section className="flex min-w-0 flex-col gap-2 border-b p-6 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0" key={result.key}>

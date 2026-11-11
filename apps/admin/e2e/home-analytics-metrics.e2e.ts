@@ -80,11 +80,9 @@ test("Home's phone card shows the number, waits for the first call, says who ans
     const { e164 } = await holdNumber(database, businessId, { carrier: "twilio", e164: `+1416555${String(Math.floor(Math.random() * 10_000)).padStart(4, "0")}` });
     await page.goto("/");
     const phone = page.getByRole("region", { name: dashboardCopy.home.phone.status.ready, exact: true });
-    await expect(phone).toContainText(`(${e164.slice(2, 5)}) ${e164.slice(5, 8)}-${e164.slice(8)}`);
-    // The status heads the card from outside it; the number and the results share the card, above Action required.
-    const section = page.locator("section", { has: page.locator("#home-phone-title") });
-    const card = section.locator("[data-slot='surface']");
-    await expect(card.locator("#home-phone-title")).toHaveCount(0);
+    await expect(phone).toContainText(`${dashboardCopy.home.phone.numberLabel}(${e164.slice(2, 5)}) ${e164.slice(5, 8)}-${e164.slice(8)}`);
+    // The status, the number and the results share one card, above Action required.
+    const card = page.locator("[data-slot='surface']", { has: page.locator("#home-phone-title") });
     await expect(card.getByRole("heading", { name: dashboardCopy.home.results.bookedValue, exact: true })).toBeVisible();
     await expect(card).not.toContainText("from last month");
     const [cardBox, actionBox] = [await card.boundingBox(), await page.getByRole("heading", { name: dashboardCopy.home.actionRequired.title, exact: true }).boundingBox()];
@@ -99,12 +97,19 @@ test("Home's phone card shows the number, waits for the first call, says who ans
     // A first call to the number turns the status live.
     await database.db.insert(calls).values({ businessId, providerCallId: randomUUID(), transport: "voice", status: "completed", startedAt: new Date(Date.now() - 60_000), endedAt: new Date() });
     await page.reload();
-    await expect(section.getByRole("heading", { name: dashboardCopy.home.phone.status.live, exact: true })).toBeVisible();
+    await expect(card.getByRole("heading", { name: dashboardCopy.home.phone.status.live, exact: true })).toBeVisible();
 
-    // The chip opens the agent's Staff answers first setting.
-    await card.getByRole("link", { name: dashboardCopy.home.phone.answersFirst.agent, exact: true }).click();
-    await expect(page).toHaveURL(/\/agents\/[0-9a-f-]+#staff-first$/);
-    await expect(page.getByRole("heading", { name: agentCopy.staffFirst.title, exact: true })).toBeInViewport();
+    // The chip opens Staff answers first right on Home, and a save goes through the agent's settings.
+    await card.getByRole("button", { name: dashboardCopy.home.phone.answersFirst.agent, exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByRole("heading", { name: agentCopy.staffFirst.mode.label, exact: true })).toBeVisible();
+    await expect(dialog.getByRole("radio", { name: agentCopy.staffFirst.mode.options.never, exact: true })).toBeChecked();
+    const saved = page.waitForResponse((response) => /\/api\/agents\/[0-9a-f-]{36}\?/.test(response.url()) && response.request().method() === "PATCH");
+    await dialog.getByRole("button", { name: agentCopy.staffFirst.save, exact: true }).click();
+    expect((await saved).ok()).toBe(true);
+    await expect(dialog).toHaveCount(0);
+    await expect(page).toHaveURL(/\/$/);
+    await expect(card.getByRole("button", { name: dashboardCopy.home.phone.answersFirst.agent, exact: true })).toBeVisible();
   } finally {
     await removeFixtures(database, fixtures);
     await database.pool.end();

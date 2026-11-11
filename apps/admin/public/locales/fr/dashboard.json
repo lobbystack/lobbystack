@@ -10,6 +10,7 @@
   "home": {
     "title": "Accueil",
     "phone": {
+      "numberLabel": "Votre numéro :",
       "status": {
         "ready": "Prêt pour votre premier appel",
         "live": "Votre agent prend les appels",
