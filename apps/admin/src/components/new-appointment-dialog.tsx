@@ -179,11 +179,11 @@ function NewAppointmentDialog({ businessId, timeZone: fallbackTimeZone, onOpenCh
                 >
                   <ComboboxInput aria-describedby={contactMissing ? `${contactId}-error` : undefined} aria-invalid={contactMissing || undefined} className="ph-mask" clearSearchLabel={t("accessibility.clearSearch")} id={contactId} placeholder={t("appointments.create.contactSearch")} />
                   <ComboboxContent>
-                    {contacts.isLoading || (contacts.isFetching && !contactOptions.length) ? <ComboboxOptionsSkeleton /> : contacts.isError ? <p className="px-3 py-2 text-sm text-destructive">{t("appointments.create.contactsFailed")}</p> : <>
+                    {contacts.isLoading || (contacts.isFetching && !contactOptions.length) ? <ComboboxOptionsSkeleton /> : contacts.isError ? <p className="px-3 py-2 type-body text-destructive">{t("appointments.create.contactsFailed")}</p> : <>
                       <ComboboxEmpty>{t("appointments.create.noContacts")}</ComboboxEmpty>
                       <ComboboxList>
                         {(option: ContactOption) => <ComboboxItem className="ph-mask" key={option.id} value={option}>
-                          <span className="flex min-w-0 flex-col"><span className="truncate">{contactLabel(option)}</span>{option.name ? <span className="truncate text-xs text-muted-foreground">{formatPhoneNumberDisplay(option.phone!, i18n.language)}</span> : null}</span>
+                          <span className="flex min-w-0 flex-col"><span className="truncate">{contactLabel(option)}</span>{option.name ? <span className="truncate type-caption text-muted-foreground">{formatPhoneNumberDisplay(option.phone!, i18n.language)}</span> : null}</span>
                         </ComboboxItem>}
                       </ComboboxList>
                     </>}

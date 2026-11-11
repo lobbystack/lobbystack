@@ -20,7 +20,7 @@ const ICONS: Partial<Record<AgentPage["section"], LucideIcon>> = { "": AudioLine
 const MENU_PAGES = AGENT_PAGES.filter((page) => page.section in ICONS);
 
 function AgentIdentity({ agent }: { agent: AgentListItem }) {
-  return <span className="min-w-0 flex-1 truncate text-start text-sm font-medium">{agent.name}</span>;
+  return <span className="min-w-0 flex-1 truncate text-start type-title">{agent.name}</span>;
 }
 
 /**
@@ -80,7 +80,7 @@ export function AgentMenu({ agentId }: { agentId: string }) {
   const channels = agent ? agent.phoneNumbers + agent.widgetKeys + agent.instagramAccounts : null;
   const trailing = (section: AgentPage["section"]) => {
     if (section !== "channels" || channels === null) return undefined;
-    if (channels) return <span className="text-xs text-muted-foreground tabular-nums">{channels}</span>;
+    if (channels) return <span className="type-caption text-muted-foreground tabular-nums">{channels}</span>;
     return <><span aria-hidden="true" className="size-2 rounded-full bg-primary" /><span className="sr-only">{t("agentMenu.noChannels")}</span></>;
   };
   return (

@@ -103,7 +103,7 @@ export function NavGroup({ items }: { items: NavLink[] }) {
                 <AnimatedNavigationIcon hovered={hoveredItem === item.href} icon={item.icon} />
                 <span>{item.label}</span>
                 {item.badge ? <>
-                  <span aria-hidden="true" className="ml-auto min-w-5 rounded-full bg-primary px-1.5 py-0.5 text-center text-[11px] leading-none font-medium text-primary-foreground tabular-nums group-data-[collapsible=icon]:hidden">{item.badge > 99 ? "99+" : item.badge}</span>
+                  <span aria-hidden="true" className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 type-label text-primary-foreground tabular-nums group-data-[collapsible=icon]:hidden">{item.badge > 99 ? "99+" : item.badge}</span>
                   {/* With the sidebar collapsed to icons, a dot stands in for the number. */}
                   <span aria-hidden="true" className="absolute top-1 right-1 hidden size-2 rounded-full bg-primary group-data-[collapsible=icon]:block" />
                   <span className="sr-only">{t("items.newCount", { count: item.badge })}</span>

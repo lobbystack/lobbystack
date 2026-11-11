@@ -75,12 +75,12 @@ function EndpointForm({ initial, onSubmit, pending, submitLabel, onCancel }: { i
           <Input id="webhook-description" maxLength={200} onChange={(event) => setDescription(event.target.value)} placeholder={t("webhooks.form.descriptionPlaceholder")} value={description} />
         </Field>
         <fieldset className="flex flex-col gap-3">
-          <legend className="mb-2 text-sm font-medium">{t("webhooks.form.eventsLabel")}</legend>
+          <legend className="mb-2 type-title">{t("webhooks.form.eventsLabel")}</legend>
           {webhookEventTypes.map((event) => (
-            <div className="flex items-start gap-3 text-sm" key={event}>
+            <div className="flex items-start gap-3 type-body" key={event}>
               <Checkbox checked={events.includes(event)} id={`webhook-event-${eventKey(event)}`} onCheckedChange={(checked) => setEvents((current) => checked ? [...new Set([...current, event])] : current.filter((value) => value !== event))} />
               <label className="flex flex-col gap-0.5" htmlFor={`webhook-event-${eventKey(event)}`}>
-                <code className="font-mono text-xs">{event}</code>
+                <code className="font-mono type-caption">{event}</code>
                 <span className="text-muted-foreground">{t(`webhooks.events.${eventKey(event)}`)}</span>
               </label>
             </div>
@@ -125,14 +125,14 @@ function DeliveryLog({ businessId, endpointId }: { businessId: string; endpointI
         <TableBody>
           {rows.map((row) => (
             <TableRow key={row.id}>
-              <TableCell><code className="font-mono text-xs">{row.eventType}</code></TableCell>
+              <TableCell><code className="font-mono type-caption">{row.eventType}</code></TableCell>
               <TableCell>
                 <Status variant={webhookDeliveryStatusVariant(row.status)}>{t(`webhooks.deliveries.status.${row.status}`)}</Status>
-                {row.status === "retrying" && row.nextAttemptAt ? <p className="mt-1 text-xs text-muted-foreground">{t("webhooks.deliveries.nextAttempt", { time: format(row.nextAttemptAt) })}</p> : null}
+                {row.status === "retrying" && row.nextAttemptAt ? <p className="mt-1 type-caption text-muted-foreground">{t("webhooks.deliveries.nextAttempt", { time: format(row.nextAttemptAt) })}</p> : null}
               </TableCell>
               <TableCell className="text-muted-foreground">
                 {row.lastResponseStatus ?? "–"}
-                {row.lastError && row.status !== "succeeded" ? <p className="max-w-64 truncate text-xs" title={row.lastError}>{row.lastError}</p> : null}
+                {row.lastError && row.status !== "succeeded" ? <p className="max-w-64 truncate type-caption" title={row.lastError}>{row.lastError}</p> : null}
               </TableCell>
               <TableCell>{row.attemptCount}</TableCell>
               <TableCell className="text-muted-foreground">{format(row.lastAttemptAt ?? row.createdAt)}</TableCell>
@@ -204,11 +204,11 @@ export function LiveWebhooksSurface() {
               <Surface className="flex flex-col gap-4 p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex min-w-0 flex-col gap-1">
-                    <p className="break-all font-mono text-sm">{endpoint.url}</p>
+                    <p className="break-all font-mono type-body">{endpoint.url}</p>
                     {endpoint.description ? <p className="type-body-muted">{endpoint.description}</p> : null}
                     <div className="flex flex-wrap gap-1 pt-1">{endpoint.events.map((event) => <Badge key={event} variant="secondary">{event}</Badge>)}</div>
                   </div>
-                  <div className="flex items-center gap-2 text-sm">
+                  <div className="flex items-center gap-2 type-body">
                     <Switch
                       aria-label={t("webhooks.enabledLabel")}
                       checked={endpoint.status === "enabled"}

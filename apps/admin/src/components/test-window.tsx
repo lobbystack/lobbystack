@@ -93,8 +93,8 @@ function TestChat({ agentId, businessId, children }: { agentId: string | undefin
               const text = messageText(message);
               if (!text) return null;
               return message.role === "user"
-                ? <p className="ml-auto max-w-[85%] rounded-xl bg-primary px-3 py-2 text-sm wrap-break-word whitespace-pre-wrap text-primary-foreground" key={message.id}>{text}</p>
-                : <div className="mr-auto max-w-[85%] rounded-xl bg-muted px-3 py-2 text-sm wrap-break-word [&_a]:underline [&_a]:underline-offset-2" dangerouslySetInnerHTML={{ __html: renderSafeMarkdown(text) }} key={message.id} />;
+                ? <p className="ml-auto max-w-[85%] rounded-xl bg-primary px-3 py-2 type-body wrap-break-word whitespace-pre-wrap text-primary-foreground" key={message.id}>{text}</p>
+                : <div className="mr-auto max-w-[85%] rounded-xl bg-muted px-3 py-2 type-body wrap-break-word [&_a]:underline [&_a]:underline-offset-2" dangerouslySetInnerHTML={{ __html: renderSafeMarkdown(text) }} key={message.id} />;
             })}
           </div>
         ) : null}
@@ -167,8 +167,8 @@ export function TestPanel({ agentId, businessId, businessSlug, onCallEnded, onRe
       />
       {phoneNumber ? (
         <p className="mt-4 flex shrink-0 flex-col items-center gap-1">
-          <span className="text-sm text-muted-foreground">{t("testWindow.orCall")}</span>
-          <a className="text-2xl font-semibold tabular-nums text-foreground underline-offset-4 hover:underline" href={`tel:${phoneNumber}`}>{formatPhoneNumberDisplay(phoneNumber)}</a>
+          <span className="type-body-muted">{t("testWindow.orCall")}</span>
+          <a className="type-heading-xs tabular-nums text-foreground underline-offset-4 hover:underline" href={`tel:${phoneNumber}`}>{formatPhoneNumberDisplay(phoneNumber)}</a>
         </p>
       ) : null}
     </TestChat>
@@ -181,7 +181,7 @@ function TestWindowBody({ agentId, businessId, ...panel }: TestPanelProps) {
   return (
     <>
       <DialogHeader className="gap-1 pr-8">
-        <DialogTitle className="truncate leading-5">{agent.isPending ? <Skeleton className="h-5 w-32" /> : agent.data?.agentName ?? t("testCall.trigger")}</DialogTitle>
+        <DialogTitle className="truncate">{agent.isPending ? <Skeleton className="h-5 w-32" /> : agent.data?.agentName ?? t("testCall.trigger")}</DialogTitle>
         <DialogDescription className="truncate" render={<div />}>{agent.isPending ? <Skeleton className="h-5 w-40" /> : agent.data?.businessName}</DialogDescription>
       </DialogHeader>
       <TestPanel agentId={agentId} businessId={businessId} {...panel} />

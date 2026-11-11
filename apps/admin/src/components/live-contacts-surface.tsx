@@ -105,7 +105,7 @@ export function LiveContactsSurface() {
       header: () => t("table.contact"),
       cell: ({ row }) => {
         const details = getContactSecondaryDetails(row.original, i18n.language);
-        return <div className="flex min-w-0 flex-col gap-1"><div className="flex min-w-0 items-center gap-2"><span className="ph-mask truncate font-semibold">{getContactDisplayName(row.original, i18n.language, t)}</span>{row.original.operatorBlockedAt ? <Status variant={CONTACT_STATUS_VARIANTS.blocked}>{t("table.status.blocked")}</Status> : null}</div>{details.length ? <div className="ph-no-capture flex min-w-0 flex-col">{details.map((detail) => <span className="truncate text-sm text-muted-foreground" key={detail} title={detail}>{detail}</span>)}</div> : null}</div>;
+        return <div className="flex min-w-0 flex-col gap-1"><div className="flex min-w-0 items-center gap-2"><span className="ph-mask truncate type-item-title">{getContactDisplayName(row.original, i18n.language, t)}</span>{row.original.operatorBlockedAt ? <Status variant={CONTACT_STATUS_VARIANTS.blocked}>{t("table.status.blocked")}</Status> : null}</div>{details.length ? <div className="ph-no-capture flex min-w-0 flex-col">{details.map((detail) => <span className="truncate type-body-muted" key={detail} title={detail}>{detail}</span>)}</div> : null}</div>;
       },
     },
     {
@@ -118,7 +118,7 @@ export function LiveContactsSurface() {
       id: "activity",
       accessorFn: (contact) => `${contact.messageCount} ${contact.callCount}`,
       header: () => t("table.activity"),
-      cell: ({ row }) => <div className="flex min-w-0 flex-wrap gap-2 text-sm"><Badge variant="secondary">{t("table.messages", { count: row.original.messageCount })}</Badge><Badge variant="secondary">{t("table.calls", { count: row.original.callCount })}</Badge></div>,
+      cell: ({ row }) => <div className="flex min-w-0 flex-wrap gap-2 type-body"><Badge variant="secondary">{t("table.messages", { count: row.original.messageCount })}</Badge><Badge variant="secondary">{t("table.calls", { count: row.original.callCount })}</Badge></div>,
     },
     {
       id: "appointments",
@@ -130,7 +130,7 @@ export function LiveContactsSurface() {
       id: "lastInteraction",
       accessorKey: "lastInteractionAt",
       header: () => <span className="block text-right">{t("table.lastInteraction")}</span>,
-      cell: ({ row }) => <span className="block truncate text-right text-sm text-muted-foreground">{formatDateTime(row.original.lastInteractionAt ?? row.original.updatedAt, i18n.language, { dateStyle: "medium", timeStyle: "short" })}</span>,
+      cell: ({ row }) => <span className="block truncate text-right type-body-muted">{formatDateTime(row.original.lastInteractionAt ?? row.original.updatedAt, i18n.language, { dateStyle: "medium", timeStyle: "short" })}</span>,
     },
     {
       id: "actions",

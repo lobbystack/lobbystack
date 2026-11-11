@@ -60,7 +60,7 @@ function MoveMenu({ channel, onPick, others }: { channel: Channel; onPick: (chan
       <DropdownMenuTrigger render={<Button size="sm" type="button" variant="ghost" />}>{t("channels.moveTo")}<ChevronDown data-icon="inline-end" /></DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-48">
         <DropdownMenuGroup>
-          <div className="px-2 py-1.5 text-xs text-muted-foreground">{t("channels.moveToLabel", { channel: channel.name })}</div>
+          <div className="px-2 py-1.5 type-caption text-muted-foreground">{t("channels.moveToLabel", { channel: channel.name })}</div>
           {others.map((agent) => <DropdownMenuItem key={agent.id} onClick={() => onPick(channel, agent)}>{agent.name}</DropdownMenuItem>)}
         </DropdownMenuGroup>
       </DropdownMenuContent>
@@ -184,7 +184,7 @@ export function ChannelsSection({ agentId, widgetsEnabled }: { agentId: string; 
                           const from = find(ownerOf(number.agentId) ?? "");
                           return (
                             <DropdownMenuItem key={number.id} onClick={() => agent && setMoving({ channel: { kind: "phone_number", id: number.id, name: numberName(number) }, to: agent })}>
-                              <span className="grid"><span className="tabular-nums">{numberName(number)}</span>{from ? <span className="text-xs text-muted-foreground">{t("nav:channels.fromAgent", { name: from.name })}</span> : null}</span>
+                              <span className="grid"><span className="tabular-nums">{numberName(number)}</span>{from ? <span className="type-caption text-muted-foreground">{t("nav:channels.fromAgent", { name: from.name })}</span> : null}</span>
                             </DropdownMenuItem>
                           );
                         })}

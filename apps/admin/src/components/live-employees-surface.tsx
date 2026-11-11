@@ -64,7 +64,7 @@ type Employee = {
 
 type ServiceOption = { id: string; name: string };
 
-const PICKER_TRIGGER_CLASS = "flex h-9 w-full items-center justify-between gap-1.5 rounded-xl border border-input bg-input/30 px-3 py-2 text-sm whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background data-invalid:border-destructive data-invalid:ring-[3px] data-invalid:ring-destructive/20";
+const PICKER_TRIGGER_CLASS = "flex h-9 w-full items-center justify-between gap-1.5 rounded-xl border border-input bg-input/30 px-3 py-2 type-body whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background data-invalid:border-destructive data-invalid:ring-[3px] data-invalid:ring-destructive/20";
 const DAY_PICKER_LOCALES = { en: enUS, fr, es, sr: srLatn } as const;
 
 // Time off days are calendar dates, YYYY-MM-DD, read and written in local time so they don't shift a day.
@@ -133,13 +133,13 @@ export function LiveEmployeesSurface() {
       id: "name",
       accessorKey: "name",
       header: () => t("table.name"),
-      cell: ({ row }) => <div className="flex min-w-0 items-center gap-2"><UserRound aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" /><span className="ph-mask block truncate font-semibold" title={row.original.name}>{row.original.name}</span></div>,
+      cell: ({ row }) => <div className="flex min-w-0 items-center gap-2"><UserRound aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" /><span className="ph-mask block truncate type-item-title" title={row.original.name}>{row.original.name}</span></div>,
     },
     {
       id: "phone",
       accessorKey: "phone",
       header: () => t("table.phone"),
-      cell: ({ row }) => <span className="ph-no-capture block truncate text-sm text-muted-foreground">{row.original.phone ? formatPhoneNumberDisplay(row.original.phone, locale) : "—"}</span>,
+      cell: ({ row }) => <span className="ph-no-capture block truncate type-body-muted">{row.original.phone ? formatPhoneNumberDisplay(row.original.phone, locale) : "—"}</span>,
     },
     {
       id: "services",
@@ -147,7 +147,7 @@ export function LiveEmployeesSurface() {
       header: () => t("table.services"),
       cell: ({ row }) => {
         const label = serviceSummary(row.original.serviceIds, services, t("table.allServices"));
-        return <span className="block truncate text-sm text-muted-foreground" title={label}>{label || "—"}</span>;
+        return <span className="block truncate type-body-muted" title={label}>{label || "—"}</span>;
       },
     },
     {
@@ -166,7 +166,7 @@ export function LiveEmployeesSurface() {
         const tooltip = timeOff.length ? t("table.statusTooltip.timeOff", { dates: timeOff.map((entry) => formatTimeOff(entry, locale)).join("; ") }) : status === "no_services" ? t("table.statusTooltip.noServices") : "";
         const content = <>
           <Status variant={EMPLOYEE_STATUS_VARIANTS[status]}>{t(`table.statuses.${status}`)}</Status>
-          {detail ? <span className="truncate text-sm text-muted-foreground">{detail}</span> : null}
+          {detail ? <span className="truncate type-body-muted">{detail}</span> : null}
         </>;
         return tooltip
           ? <Tooltip><TooltipTrigger render={<div className="flex w-fit max-w-full min-w-0 items-center gap-2" />}>{content}</TooltipTrigger><TooltipContent>{tooltip}</TooltipContent></Tooltip>
@@ -210,7 +210,7 @@ export function LiveEmployeesSurface() {
           <TableHeader empty={!(loading || table.getRowModel().rows.length > 0)}>{table.getHeaderGroups().map((group) => <TableRow key={group.id}>{group.headers.map((header) => <TableHead className={header.column.id === "added" || header.column.id === "actions" ? "text-right" : undefined} key={header.id}>{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
           <TableBody aria-busy={loading || undefined}>
             {loading ? <EmployeeRowsSkeleton rows={Math.min(pagination.pageSize, 10)} /> : null}
-            {loading ? null : table.getRowModel().rows.map((row) => <TableRow className={canMutate ? "cursor-pointer" : undefined} key={row.id} onClick={() => { if (canMutate) openEditor(row.original); }}>{row.getAllCells().map((cell) => <TableCell className={cell.column.id === "added" ? "text-right text-sm text-muted-foreground" : cell.column.id === "actions" ? undefined : "max-w-0"} key={cell.id} onClick={cell.column.id === "actions" ? (event) => event.stopPropagation() : undefined}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>)}
+            {loading ? null : table.getRowModel().rows.map((row) => <TableRow className={canMutate ? "cursor-pointer" : undefined} key={row.id} onClick={() => { if (canMutate) openEditor(row.original); }}>{row.getAllCells().map((cell) => <TableCell className={cell.column.id === "added" ? "text-right type-body-muted" : cell.column.id === "actions" ? undefined : "max-w-0"} key={cell.id} onClick={cell.column.id === "actions" ? (event) => event.stopPropagation() : undefined}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>)}
             {!loading && table.getRowModel().rows.length === 0 ? <TableRow><TableCell className="h-24 text-center whitespace-normal text-muted-foreground" colSpan={6}>{t("table.emptyState")}</TableCell></TableRow> : null}
           </TableBody>
         </Table>

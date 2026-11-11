@@ -95,7 +95,7 @@ export function CalcomIntegrationCard({ businessId, canManage, data }: { busines
       <div className="mb-8 flex items-center justify-between gap-3"><div className="flex size-10 shrink-0 items-center justify-center"><CalcomLogo /></div><div className="flex items-center gap-2">
         <Button disabled={!canManage} onClick={() => connection ? setDialogOpen(true) : void connect()} size="sm" type="button" variant="outline" className={connected ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-300" : undefined}>{connected ? t("integrations.actions.connected") : syncing ? t("integrations.status.syncing") : syncFailed ? t("integrations.calcom.syncNeedsAttention") : connection ? t("integrations.calcom.reconnect") : t("integrations.actions.connect")}</Button>
       </div></div>
-      <div className="flex flex-col gap-1"><h2 className="type-section-title text-lg">{t("integrations.cards.calcom.title")}</h2><p className="type-body-muted line-clamp-2">{t("integrations.cards.calcom.description")}</p></div>
+      <div className="flex flex-col gap-1"><h2 className="type-section-title">{t("integrations.cards.calcom.title")}</h2><p className="type-body-muted line-clamp-2">{t("integrations.cards.calcom.description")}</p></div>
     </li>
     <Dialog onOpenChange={setDialogOpen} open={dialogOpen}><DialogContent className="w-full gap-0 p-0">
       <DialogHeader className="flex-row items-center gap-3 p-6 pb-4"><CalcomLogo /><div className="flex flex-col gap-1"><DialogTitle>{t("integrations.calcom.sheetTitle")}</DialogTitle><DialogDescription>{t("integrations.calcom.sheetDescription")}</DialogDescription></div></DialogHeader>

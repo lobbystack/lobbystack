@@ -41,7 +41,7 @@ export function NumberTrialBanner() {
       <div className="flex w-full flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <Clock aria-hidden="true" className="size-5 shrink-0 text-amber-600 dark:text-amber-400" />
-          <p className="text-sm font-medium">{message}</p>
+          <p className="type-title">{message}</p>
         </div>
         <Button className="shrink-0" onClick={openUpgrade} size="sm" type="button">{action}</Button>
       </div>

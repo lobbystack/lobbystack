@@ -62,13 +62,13 @@ export function OnboardingGoalSurface() {
         <div className="grid gap-3 sm:grid-cols-2">
           {offered.map(({ key, Icon }) => {
             const active = selected === key;
-            return <button aria-pressed={active} className={cn("flex h-20 items-center gap-3 rounded-xl border px-4 text-left text-sm font-medium transition-colors", active ? "border-foreground bg-foreground text-background" : "border-border bg-card text-foreground hover:border-foreground/30")} key={key} onClick={() => setPicked(key)} type="button"><Icon aria-hidden="true" className={cn("size-4 shrink-0", active ? "text-background" : "text-muted-foreground")} /><span className="min-w-0 whitespace-normal break-words leading-snug">{t(`goal.options.${key}`)}</span></button>;
+            return <button aria-pressed={active} className={cn("flex h-20 items-center gap-3 rounded-xl border px-4 text-left type-title transition-colors", active ? "border-foreground bg-foreground text-background" : "border-border bg-card text-foreground hover:border-foreground/30")} key={key} onClick={() => setPicked(key)} type="button"><Icon aria-hidden="true" className={cn("size-4 shrink-0", active ? "text-background" : "text-muted-foreground")} /><span className="min-w-0 whitespace-normal break-words">{t(`goal.options.${key}`)}</span></button>;
           })}
         </div>
       )}
       {error ? <FieldError>{error}</FieldError> : null}
       <Button className="w-full" disabled={!business || selected === null || finish.isPending} onClick={() => void submit(selected)} type="button">{finish.isPending ? <><LoaderCircle className="size-4 animate-spin" />{t("goal.saving")}</> : t("goal.continue")}</Button>
-      <button className="mx-auto text-sm text-muted-foreground hover:text-foreground disabled:opacity-50" disabled={!business || finish.isPending} onClick={() => void submit(null)} type="button">{t("goal.skip")}</button>
+      <button className="mx-auto type-body-muted hover:text-foreground disabled:opacity-50" disabled={!business || finish.isPending} onClick={() => void submit(null)} type="button">{t("goal.skip")}</button>
     </div>
   );
 }

@@ -69,7 +69,7 @@ export function BackRow({ label, onBack }: { label: string; onBack: () => void }
 /** The trailing part of the row for the section the person is in: the page they're on, muted, then a chevron. */
 export function SectionTrailing({ page }: { page: string | null }) {
   return <>
-    {page ? <span className="me-1 max-w-28 truncate text-xs text-muted-foreground">{page}</span> : null}
+    {page ? <span className="me-1 max-w-28 truncate type-caption text-muted-foreground">{page}</span> : null}
     <ChevronRight className="size-4 text-muted-foreground/60" />
   </>;
 }

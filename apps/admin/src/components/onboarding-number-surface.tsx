@@ -99,10 +99,10 @@ export function OnboardingNumberSurface() {
   if (refusalCode) {
     return (
       <div className="flex flex-col gap-6">
-        <p className="text-center text-sm text-muted-foreground">{t(REFUSAL_KEYS[refusalCode] ?? "number.planRequired")}</p>
+        <p className="text-center type-body-muted">{t(REFUSAL_KEYS[refusalCode] ?? "number.planRequired")}</p>
         <OnboardingPlanSurface />
         {business ? <div className="flex flex-col items-center gap-3">
-          <button className="text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50" disabled={skip.isPending || claiming} onClick={() => skip.mutate()} type="button">{skip.isPending ? t("number.skipping") : t("number.skipLater")}</button>
+          <button className="type-title text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50" disabled={skip.isPending || claiming} onClick={() => skip.mutate()} type="button">{skip.isPending ? t("number.skipping") : t("number.skipLater")}</button>
           {skip.isError ? <FieldError>{t("number.skipFailed")}</FieldError> : null}
         </div> : null}
       </div>
@@ -110,7 +110,7 @@ export function OnboardingNumberSurface() {
   }
   return <div className="mx-auto flex w-full max-w-lg flex-col gap-6">
     {business ? <PhoneNumberChooser businessId={business.businessId} getInitialNumberSuggestion={chooser.getInitialNumberSuggestion} searchAvailableNumbers={chooser.searchAvailableNumbers} claimNumber={claimNumber} getErrorMessage={getErrorMessage} onClaimStarted={(number) => { telemetry.track("web.onboarding.number_claim_started", { businessId: business.businessId, countryCode: number.selectionContext.countryCode, selectionMode: number.selectionContext.mode, numberKind: number.kind }); }} onClaimCompleted={(number) => { telemetry.track("web.onboarding.number_claim_completed", { businessId: business.businessId, countryCode: number.selectionContext.countryCode, selectionMode: number.selectionContext.mode, numberKind: number.kind }); }} onClaimed={() => { setClaiming(false); void phones.refetch(); }} labels={{ countryLabel: t("number.countryLabel"), areaCodeLabel: t("number.areaCodeLabel"), areaCodePlaceholder: t("number.areaCodePlaceholder"), search: t("number.search"), searching: t("number.searching"), phoneNumberHeader: t("number.tableHeaders.phoneNumber"), select: t("number.select"), loadMore: t("number.loadMore"), empty: t("number.empty"), loadFailed: "number.loadFailed", searchFailed: "number.searchFailed", claimFailed: "number.claimFailed", unavailable: t("number.unavailable") }} /> : null}
-    {business ? <button className="mx-auto text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50" disabled={!business || skip.isPending || claiming} onClick={() => skip.mutate()} type="button">{skip.isPending ? t("number.skipping") : t("number.skipLater")}</button> : null}
+    {business ? <button className="mx-auto type-title text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50" disabled={!business || skip.isPending || claiming} onClick={() => skip.mutate()} type="button">{skip.isPending ? t("number.skipping") : t("number.skipLater")}</button> : null}
     {skip.isError ? <FieldError>{t("number.skipFailed")}</FieldError> : null}
   </div>;
 }

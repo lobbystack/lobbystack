@@ -104,7 +104,7 @@ export function BaseProviders({ branding = DEFAULT_BRANDING_SNAPSHOT, children, 
                 </div>
               ) : null}
               {failed ? (
-                <div className="fixed inset-x-0 top-0 z-50 flex flex-wrap items-center justify-center gap-3 border-b border-border bg-background/95 px-4 py-2 text-sm text-muted-foreground" role="alert">
+                <div className="fixed inset-x-0 top-0 z-50 flex flex-wrap items-center justify-center gap-3 border-b border-border bg-background/95 px-4 py-2 type-body-muted" role="alert">
                   <span>{i18n.t("common:loading.failed")}</span>
                   <Button onClick={() => setRetryToken(token => token + 1)} size="sm" variant="outline">
                     {i18n.t("common:loading.retry")}

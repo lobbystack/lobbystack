@@ -121,17 +121,17 @@ export function OnboardingPlanSurface() {
       {!checkoutUnavailable ? <div className="flex justify-center">
         <Tabs onValueChange={(value) => setInterval(value as typeof interval)} value={interval}>
           <TabsList aria-label={t("plan.billingInterval.label")}>
-            {(["monthly", "annual"] as const).map((value) => <TabsTrigger disabled={Boolean(pendingPlan) || (availableIntervals.length > 0 && !availableIntervals.includes(value))} key={value} value={value}>{t(`plan.billingInterval.${value}`)}{value === "annual" ? <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">{t("plan.billingInterval.save")}</span> : null}</TabsTrigger>)}
+            {(["monthly", "annual"] as const).map((value) => <TabsTrigger disabled={Boolean(pendingPlan) || (availableIntervals.length > 0 && !availableIntervals.includes(value))} key={value} value={value}>{t(`plan.billingInterval.${value}`)}{value === "annual" ? <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 type-label text-emerald-700">{t("plan.billingInterval.save")}</span> : null}</TabsTrigger>)}
           </TabsList>
         </Tabs>
       </div> : null}
       {checkoutUnavailable ? (
         <div className="flex flex-col items-center gap-4 rounded-xl border border-border/70 bg-muted/20 p-6" role="alert">
-          <p className="text-sm text-muted-foreground">{t("settings:billing.toast.paymentsUnavailable")}</p>
+          <p className="type-body-muted">{t("settings:billing.toast.paymentsUnavailable")}</p>
           <Button onClick={() => setCheckoutUnavailable(false)} type="button" variant="outline">{t("plan.backToPlans")}</Button>
         </div>
       ) : null}
-      {!checkoutUnavailable && slowCheckout ? <p className="text-center text-sm text-muted-foreground" role="status">{t("settings:billing.upgradeDialog.providerSlow")}</p> : null}
+      {!checkoutUnavailable && slowCheckout ? <p className="text-center type-body-muted" role="status">{t("settings:billing.upgradeDialog.providerSlow")}</p> : null}
       {!checkoutUnavailable ? <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
         {planCards(i18n.language).map((tier) => {
           const paid = tier.slug === "starter" || tier.slug === "pro";
@@ -140,10 +140,10 @@ export function OnboardingPlanSurface() {
           const description = tier.description[interval];
           const cta = tier.cta;
           return <section className={cn("relative flex flex-col rounded-xl border bg-background p-8", tier.featured ? "border-foreground/30" : "border-border/60")} key={tier.slug}>
-            {tier.featured ? <div className="absolute -top-3 left-8 rounded-full bg-foreground px-3 py-0.5 text-xs font-medium text-background">{t("plan.popular")}</div> : null}
-            <div className="mb-6"><h3 className="font-heading text-lg font-semibold tracking-tight">{tier.name}</h3><div className="mt-3 flex items-baseline gap-1"><span className="font-heading text-4xl font-semibold tracking-tighter">{price}</span><span className="text-sm text-muted-foreground">{tier.period}</span></div><p className="mt-3 text-sm leading-relaxed text-muted-foreground">{description}</p></div>
+            {tier.featured ? <div className="absolute -top-3 left-8 rounded-full bg-foreground px-3 py-0.5 type-label text-background">{t("plan.popular")}</div> : null}
+            <div className="mb-6"><h3 className="type-section-title">{tier.name}</h3><div className="mt-3 flex items-baseline gap-1"><span className="type-metric">{price}</span><span className="type-body-muted">{tier.period}</span></div><p className="mt-3 type-body-muted">{description}</p></div>
             <Button className="mb-6 w-full rounded-full" disabled={!business || Boolean(pendingPlan) || (paid && (!billing.data?.checkoutAvailable || (configuredIntervals && !configuredIntervals[tier.slug as "starter" | "pro"].includes(interval))))} onClick={() => act(tier.slug)} type="button" variant={tier.featured ? "default" : "outline"}>{busy ? <LoaderCircle className="size-4 animate-spin" /> : <>{cta}<ArrowRight className="ml-1 size-4" /></>}</Button>
-            <div className="flex-1 border-t border-border/50 pt-5"><ul className="space-y-2.5">{tier.lines.map((line) => <li className="flex items-start gap-2.5 text-sm" key={line.label}><Check className="mt-0.5 size-3.5 shrink-0 text-foreground/60" /><span className="whitespace-pre-line">{line.sublabel ? `${line.label}\n${line.sublabel}` : line.label}</span></li>)}</ul></div>
+            <div className="flex-1 border-t border-border/50 pt-5"><ul className="space-y-2.5">{tier.lines.map((line) => <li className="flex items-start gap-2.5 type-body" key={line.label}><Check className="mt-0.5 size-3.5 shrink-0 text-foreground/60" /><span className="whitespace-pre-line">{line.sublabel ? `${line.label}\n${line.sublabel}` : line.label}</span></li>)}</ul></div>
           </section>;
         })}
       </div> : null}

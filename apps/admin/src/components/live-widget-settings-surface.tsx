@@ -189,7 +189,7 @@ export function LiveWidgetSettingsSurface({ agentId, startAdding = false }: { ag
             <Skeleton className="h-[88px] w-full rounded-xl" />
           </div>
         ) : businesses.isError || keys.isError ? (
-          <p className="rounded-xl border border-dashed p-8 text-center text-sm text-destructive">{t("widget.keys.unavailable")}</p>
+          <p className="rounded-xl border border-dashed p-8 text-center type-body text-destructive">{t("widget.keys.unavailable")}</p>
         ) : rows.length ? (
           <div className="flex flex-col gap-3">
             {rows.map((row) => (
@@ -206,7 +206,7 @@ export function LiveWidgetSettingsSurface({ agentId, startAdding = false }: { ag
                 t={t}
               />
             ))}
-            {setStatus.isError ? <p className="text-sm text-destructive">{setStatus.error.message}</p> : null}
+            {setStatus.isError ? <p className="type-body text-destructive">{setStatus.error.message}</p> : null}
           </div>
         ) : (
           <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed px-6 py-12 text-center">
@@ -273,8 +273,8 @@ function WidgetKeyCard({ row, name, busy, embedOrigin, locale, onEdit, onStatus,
             <h3 className="type-item-title truncate">{name}</h3>
             <Status variant={WIDGET_KEY_STATUS_VARIANTS[row.status]}>{t(`widget.status.${row.status}`)}</Status>
           </div>
-          <p className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground"><Globe className="size-3.5 shrink-0" aria-hidden="true" /><span className="truncate">{row.allowedOrigins.join(", ")}</span></p>
-          <p className="text-xs text-muted-foreground">{row.lastUsedAt ? t("widget.keys.lastUsed", { date: new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "medium" }).format(new Date(row.lastUsedAt)) }) : t("widget:manage.neverUsed")}</p>
+          <p className="flex min-w-0 items-center gap-1.5 type-body-muted"><Globe className="size-3.5 shrink-0" aria-hidden="true" /><span className="truncate">{row.allowedOrigins.join(", ")}</span></p>
+          <p className="type-caption text-muted-foreground">{row.lastUsedAt ? t("widget.keys.lastUsed", { date: new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "medium" }).format(new Date(row.lastUsedAt)) }) : t("widget:manage.neverUsed")}</p>
         </div>
       </div>
       {!revoked ? (
@@ -312,11 +312,11 @@ function CreatedKeyView({ createdKey, embedOrigin, onDone, t }: { createdKey: No
         <DialogDescription>{t("widget:manage.createdDescription")}</DialogDescription>
       </DialogHeader>
       <div className="flex min-w-0 items-center gap-2">
-        <code className="min-w-0 flex-1 truncate rounded-xl bg-muted px-3 py-2 font-mono text-sm">{createdKey.key}</code>
+        <code className="min-w-0 flex-1 truncate rounded-xl bg-muted px-3 py-2 font-mono type-body">{createdKey.key}</code>
         <Button size="sm" variant="outline" onClick={() => copyKey(createdKey.key)}>{keyCopied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}{keyCopied ? t("widget.created.copied") : t("widget.created.copy")}</Button>
       </div>
       <SnippetBlock snippet={snippet} copied={snippetCopied} onCopy={() => copySnippet(snippet)} t={t} />
-      <p className="text-sm text-muted-foreground">{t("widget.created.hint")}</p>
+      <p className="type-body-muted">{t("widget.created.hint")}</p>
       <DialogFooter><Button onClick={onDone}>{t("widget.created.done")}</Button></DialogFooter>
     </div>
   );
@@ -326,10 +326,10 @@ function SnippetBlock({ snippet, copied, onCopy, t }: { snippet: string; copied:
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium">{t("widget.keys.snippet")}</p>
+        <p className="type-title">{t("widget.keys.snippet")}</p>
         <Button size="sm" variant="outline" onClick={onCopy}>{copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}{copied ? t("widget.keys.snippetCopied") : t("widget.created.copySnippet")}</Button>
       </div>
-      <pre className="overflow-x-auto rounded-xl bg-muted p-3 font-mono text-xs leading-5" dir="ltr">{snippet}</pre>
+      <pre className="overflow-x-auto rounded-xl bg-muted p-3 font-mono type-caption" dir="ltr">{snippet}</pre>
     </div>
   );
 }
@@ -448,7 +448,7 @@ function WidgetKeyForm({ editing, name, businessName, embedOrigin, pending, erro
           {row && row.status !== "revoked" ? (
             row.key
               ? <SnippetBlock snippet={widgetEmbedSnippet(embedOrigin, row.key)} copied={snippetCopied} onCopy={() => copySnippet(widgetEmbedSnippet(embedOrigin, row.key!))} t={t} />
-              : <p className="text-sm text-muted-foreground">{t("widget.keys.noSnippet")}</p>
+              : <p className="type-body-muted">{t("widget.keys.noSnippet")}</p>
           ) : null}
         </FieldGroup>
         <div className="hidden min-h-0 overflow-y-auto border-l bg-muted/40 p-6 lg:block">
@@ -456,7 +456,7 @@ function WidgetKeyForm({ editing, name, businessName, embedOrigin, pending, erro
         </div>
       </div>
       <DialogFooter className="items-center border-t px-6 py-4">
-        {error ? <p className="mr-auto text-sm text-destructive" role="alert">{error}</p> : null}
+        {error ? <p className="mr-auto type-body text-destructive" role="alert">{error}</p> : null}
         <Button type="button" variant="outline" onClick={onCancel}>{t("widget:manage.cancel")}</Button>
         <Button type="submit" loading={pending} disabled={!draft.origins.trim()}>{row ? t("widget.keys.save") : t("widget.create.action")}</Button>
       </DialogFooter>

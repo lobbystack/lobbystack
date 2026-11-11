@@ -144,7 +144,7 @@ export function PartnerPackagesSurface() {
   const header = (actions?: React.ReactNode) => (
     <PageHeader actions={actions} title={t("packages.title")} />
   );
-  const message = (text: string) => <Surface className="px-6 py-8"><p className="text-sm text-muted-foreground" role="alert">{text}</p></Surface>;
+  const message = (text: string) => <Surface className="px-6 py-8"><p className="type-body-muted" role="alert">{text}</p></Surface>;
   if (!canManage) return <div className="flex flex-col gap-6">{header()}{message(t("packages.managersOnly"))}</div>;
   const data = packages.data;
   if (!data) {
@@ -211,7 +211,7 @@ export function PartnerPackagesSurface() {
             </div>
             <FieldDescription>{t("packages.create.fixedTerms")}</FieldDescription>
           </FieldGroup>
-          {createError ? <p className="text-sm text-destructive" role="alert">{createError}</p> : null}
+          {createError ? <p className="type-body text-destructive" role="alert">{createError}</p> : null}
           <DialogFooter>
             <DialogClose render={<Button disabled={create.isPending} type="button" variant="outline" />}>{t("packages.create.cancel")}</DialogClose>
             <Button disabled={create.isPending} loading={create.isPending} loadingLabel={t("packages.create.submitting")} type="submit">{t("packages.create.submit")}</Button>
@@ -226,14 +226,14 @@ export function PartnerPackagesSurface() {
       {header(createDialog)}
       {notice ? (
         <Surface className="flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm leading-6 text-muted-foreground">{notice.text}</p>
+          <p className="type-body-muted">{notice.text}</p>
           {notice.link ? <Link className={buttonVariants({ size: "sm", variant: "outline" })} href={stripePage}>{t("packages.openStripe")}</Link> : null}
         </Surface>
       ) : null}
       {data.packages.length === 0 ? (
         <Surface className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-          <h2 className="text-base font-medium">{t("packages.empty.title")}</h2>
-          {data.stripe.configured ? null : <p className="max-w-sm text-sm leading-6 text-muted-foreground">{t("packages.empty.noStripe")}</p>}
+          <h2 className="type-card-title">{t("packages.empty.title")}</h2>
+          {data.stripe.configured ? null : <p className="max-w-sm type-body-muted">{t("packages.empty.noStripe")}</p>}
         </Surface>
       ) : (
         <Surface className="overflow-hidden p-0">
@@ -252,22 +252,22 @@ export function PartnerPackagesSurface() {
                   <TableCell className="whitespace-normal [overflow-wrap:anywhere]">
                     <div className="flex flex-col gap-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-medium">{item.name}</p>
+                        <p className="type-title">{item.name}</p>
                         {item.onConnectedAccount ? null : <Status variant={PACKAGE_STATUS_VARIANTS.oldAccount}>{t("packages.oldAccount")}</Status>}
                       </div>
-                      <p className="text-sm text-muted-foreground">{t("packages.createdOn", { date: formatDate(item.createdAt) })}</p>
+                      <p className="type-body-muted">{t("packages.createdOn", { date: formatDate(item.createdAt) })}</p>
                     </div>
                   </TableCell>
                   <TableCell className="whitespace-normal">
                     <div className="flex flex-col gap-1 tabular-nums">
-                      <p className="text-sm">{t("packages.perMonth", { amount: formatAmount(item.monthlyPriceMinor, item.currency) })}</p>
-                      <p className="text-sm text-muted-foreground">{item.setupFeeMinor === null ? t("packages.noSetupFee") : t("packages.setupFee", { amount: formatAmount(item.setupFeeMinor, item.currency) })}</p>
+                      <p className="type-body">{t("packages.perMonth", { amount: formatAmount(item.monthlyPriceMinor, item.currency) })}</p>
+                      <p className="type-body-muted">{item.setupFeeMinor === null ? t("packages.noSetupFee") : t("packages.setupFee", { amount: formatAmount(item.setupFeeMinor, item.currency) })}</p>
                     </div>
                   </TableCell>
                   <TableCell className="whitespace-normal">
                     <div className="flex flex-col gap-1 tabular-nums">
-                      <p className="text-sm">{t("packages.minutes", { count: item.allowance.voiceMinutes, amount: formatCount(item.allowance.voiceMinutes) })}</p>
-                      <p className="text-sm">{t("packages.chats", { count: item.allowance.chats, amount: formatCount(item.allowance.chats) })}</p>
+                      <p className="type-body">{t("packages.minutes", { count: item.allowance.voiceMinutes, amount: formatCount(item.allowance.voiceMinutes) })}</p>
+                      <p className="type-body">{t("packages.chats", { count: item.allowance.chats, amount: formatCount(item.allowance.chats) })}</p>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -299,7 +299,7 @@ export function PartnerPackagesSurface() {
               <Input aria-describedby={renameNameError ? "partner-package-rename-error" : undefined} aria-invalid={renameNameError ? true : undefined} autoComplete="off" id="partner-package-rename" maxLength={PARTNER_PACKAGE_NAME_MAX_LENGTH} onChange={(event) => setNewName(event.target.value)} value={newName} />
               {renameNameError ? <FieldError id="partner-package-rename-error">{renameNameError}</FieldError> : null}
             </Field>
-            {renameError ? <p className="text-sm text-destructive" role="alert">{renameError}</p> : null}
+            {renameError ? <p className="type-body text-destructive" role="alert">{renameError}</p> : null}
             <DialogFooter>
               <DialogClose render={<Button disabled={rename.isPending} type="button" variant="outline" />}>{t("packages.rename.cancel")}</DialogClose>
               <Button disabled={rename.isPending} loading={rename.isPending} loadingLabel={t("packages.rename.saving")} type="submit">{t("packages.rename.submit")}</Button>

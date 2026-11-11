@@ -112,7 +112,7 @@ export function StaffFirstSection({ businessId, block, canManage, defaultLocale,
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="font-heading text-sm leading-snug font-medium">{t("agent:staffFirst.title")}</h2>
+      <h2 className="type-title">{t("agent:staffFirst.title")}</h2>
       <Surface className="flex flex-col">
         <Item className={itemClassName} variant="default">
           <ItemContent>
@@ -190,7 +190,7 @@ export function StaffFirstSection({ businessId, block, canManage, defaultLocale,
         )}
         {block && disabled ? null : (
           <div className="flex items-center justify-end gap-3 p-4">
-            {status ? <p className="text-sm text-destructive">{status}</p> : null}
+            {status ? <p className="type-body text-destructive">{status}</p> : null}
             <Button aria-label={t("agent:staffFirst.save")} disabled={isLoading || isSaving || disabled || !profile} onClick={() => void save()} size="sm" type="button" variant="outline">
               {isSaving ? t("agent:actions.saving") : t("agent:actions.save")}
             </Button>

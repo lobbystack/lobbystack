@@ -64,7 +64,7 @@ export function WorkspaceSwitcher() {
           >
             <ItemMedia><WorkspaceInitial name={active?.name} /></ItemMedia>
             <ItemContent className="min-w-0">
-              <ItemTitle className="ph-mask w-full truncate text-left font-medium">
+              <ItemTitle className="ph-mask w-full truncate text-left">
                 {active?.name ?? t("sidebar.businessSlugFallback")}
               </ItemTitle>
             </ItemContent>

@@ -106,7 +106,7 @@ export function RulesSurface({ agentId }: { agentId?: string } = {}) {
     <HeaderActions><HeaderButtonSkeleton label={t("sections.rules.addKnowledge")} /></HeaderActions>
     <RulesPageSkeleton headings={[t("table.title"), t("table.preview"), t("table.status"), t("table.added")]} rowsPerPage={paginationLabels.rowsPerPage} />
   </div></PageSurface>;
-  if (!business) return <PageSurface title={t("sections.rules.title")}><p className="text-sm text-muted-foreground">{t("empty.description")}</p></PageSurface>;
+  if (!business) return <PageSurface title={t("sections.rules.title")}><p className="type-body-muted">{t("empty.description")}</p></PageSurface>;
 
   return (
     <PageSurface title={t("sections.rules.title")}>
@@ -140,10 +140,10 @@ export function RulesSurface({ agentId }: { agentId?: string } = {}) {
                   onDrop={(event) => { event.preventDefault(); dropRule(); }}
                 >
                   {canManage ? <TableCell className="pr-0" onClick={(event) => event.stopPropagation()}><span aria-hidden="true" className={cn("flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground", reorderRules.isPending ? "cursor-not-allowed opacity-50" : "cursor-grab active:cursor-grabbing")} onPointerDown={() => { if (!reorderRules.isPending) setDragArmed(rule.id); }} onPointerUp={() => setDragArmed(null)} title={t("actions.dragToReorder")}><GripVertical className="size-4" /></span></TableCell> : null}
-                  <TableCell className="max-w-0 overflow-hidden"><span className="block truncate font-medium" title={rule.title}>{summarize(rule.title, 32)}</span></TableCell>
-                  <TableCell className="max-w-0 overflow-hidden"><span className="block truncate text-sm text-muted-foreground" title={rule.content}>{summarize(rule.content, 72)}</span></TableCell>
+                  <TableCell className="max-w-0 overflow-hidden"><span className="block truncate type-item-title" title={rule.title}>{summarize(rule.title, 32)}</span></TableCell>
+                  <TableCell className="max-w-0 overflow-hidden"><span className="block truncate type-body-muted" title={rule.content}>{summarize(rule.content, 72)}</span></TableCell>
                   <TableCell><Status variant={knowledgeStatusVariant(rule.active ? "indexed" : "disabled")}>{rule.active ? t("sections.rules.status.indexed") : t("table.disabled")}</Status></TableCell>
-                  <TableCell className="text-right text-sm text-muted-foreground">{new Intl.DateTimeFormat(intlLocale(i18n.resolvedLanguage), { dateStyle: "medium", timeStyle: "short" }).format(new Date(rule.createdAt))}</TableCell>
+                  <TableCell className="text-right type-body-muted">{new Intl.DateTimeFormat(intlLocale(i18n.resolvedLanguage), { dateStyle: "medium", timeStyle: "short" }).format(new Date(rule.createdAt))}</TableCell>
                   <TableCell onClick={(event) => event.stopPropagation()}>{canManage ? <DropdownMenu><DropdownMenuTrigger render={<Button aria-label={t("actions.moreOptions")} size="icon-sm" type="button" variant="ghost"><MoreHorizontal /></Button>} /><DropdownMenuContent align="end" className="min-w-0 w-fit"><DropdownMenuItem onClick={() => { setEditingRule(rule); setDialogOpen(true); }}><Pencil />{t("actions.edit")}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem disabled={orderedIndex === 0 || reorderRules.isPending} onClick={() => moveRule(rule, -1)}><ArrowUp />{t("actions.moveUp")}</DropdownMenuItem><DropdownMenuItem disabled={orderedIndex === orderedRules.length - 1 || reorderRules.isPending} onClick={() => moveRule(rule, 1)}><ArrowDown />{t("actions.moveDown")}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem disabled={updateRule.isPending} onClick={() => updateRule.mutate({ ruleId: rule.id, active: !rule.active })}>{rule.active ? <Pause /> : <Play />}{rule.active ? t("actions.disable") : t("actions.enable")}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setDeleteCandidate(rule)} variant="destructive"><Trash2 />{t("actions.delete")}</DropdownMenuItem></DropdownMenuContent></DropdownMenu> : null}</TableCell>
                 </TableRow>;
               }) : <TableRow><TableCell className="h-24 text-center whitespace-normal text-muted-foreground" colSpan={canManage ? 6 : 5}>{t("sections.rules.emptyState")}</TableCell></TableRow>}

@@ -78,22 +78,22 @@ export function LivePlanSurface() {
         <div className="flex flex-col gap-6">
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
             <div className="flex flex-col gap-3">
-              <span className="text-xl font-medium leading-7 text-foreground">
+              <span className="type-section-title">
                 {t(`billing.planLabels.${plan === "free_cloud" ? "freeCloudCard" : plan === "self_host" ? "selfHost" : plan === "starter" ? "starterCard" : plan === "pro" ? "proCard" : "enterpriseCard"}`)}
               </span>
               <div className="flex flex-col items-start gap-0.5">
                 <div className="flex flex-wrap items-end gap-2">
                   {monthlyPrice !== null ? (
-                    <span className="text-4xl font-semibold tracking-tight text-foreground">
+                    <span className="type-metric">
                       {money(monthlyPrice!)}
                     </span>
                   ) : (
-                    <span className="text-base text-muted-foreground">
+                    <span className="type-body-lg text-muted-foreground">
                       {t("billing.currentPlan.customPricing")}
                     </span>
                   )}
                   {monthlyPrice !== null ? (
-                    <span className="pb-1 text-base text-muted-foreground">
+                    <span className="pb-1 type-body-lg text-muted-foreground">
                       {account?.billingInterval === "annual"
                         ? t("billing.currentPlan.annualEffectiveSuffix")
                         : t("billing.currentPlan.monthlySuffix")}
@@ -101,7 +101,7 @@ export function LivePlanSurface() {
                   ) : null}
                 </div>
                 {(plan === "starter" || plan === "pro") && (
-                  <span className="text-base text-muted-foreground">
+                  <span className="type-body-lg text-muted-foreground">
                     {t("billing.currentPlan.paygMonthlySuffix")}
                   </span>
                 )}
@@ -109,21 +109,21 @@ export function LivePlanSurface() {
             </div>
 
             <div className="flex flex-col gap-4">
-              <span className="text-base font-medium leading-6 text-foreground">
+              <span className="type-card-title text-foreground">
                 {t("billing.currentPlan.includedTitle")}
               </span>
               <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
                 {included.map((item) => (
                   <div key={item} className="flex items-start gap-2.5">
                     <Check className="mt-0.5 size-4 text-emerald-500" />
-                    <span className="text-[15px] leading-6 text-foreground">{item}</span>
+                    <span className="type-body text-foreground">{item}</span>
                   </div>
                 ))}
               </div>
             </div>
           </div>
           {endsAt && (plan === "starter" || plan === "pro") ? (
-            <p className="text-sm text-muted-foreground">{t("billing.cancel.endsOn", { plan: t(`billing.planLabels.${plan}`), date: formatDateTime(endsAt, i18n.language, { month: "long", day: "numeric", year: "numeric" }) })}</p>
+            <p className="type-body-muted">{t("billing.cancel.endsOn", { plan: t(`billing.planLabels.${plan}`), date: formatDateTime(endsAt, i18n.language, { month: "long", day: "numeric", year: "numeric" }) })}</p>
           ) : null}
           {(canUpgrade || canManage) && (
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
@@ -204,23 +204,23 @@ function Transactions({ transactions, t, locale }: { transactions: Billing["tran
               const isRefund = tx.kind === "refund";
               return (
                 <TableRow key={tx.sourceId}>
-                  <TableCell className="text-sm tabular-nums text-muted-foreground">
+                  <TableCell className="type-body-muted tabular-nums">
                     {formatBillingDate(tx.occurredAt, locale)}
                   </TableCell>
-                  <TableCell className="text-sm text-foreground">
+                  <TableCell className="type-body text-foreground">
                     {tx.description ?? "—"}
                   </TableCell>
-                  <TableCell className="text-right text-sm tabular-nums font-medium text-foreground">
+                  <TableCell className="text-right type-title tabular-nums text-foreground">
                     {isRefund ? "−" : ""}
                     {formatMoney(tx.amountCents, tx.currency, locale)}
                     {tx.refundedAmountCents > 0 ? (
-                      <div className="text-xs font-normal text-muted-foreground">
+                      <div className="type-caption text-muted-foreground">
                         {t("billing.transactions.refundedAmount", { amount: formatMoney(tx.refundedAmountCents, tx.currency, locale) })}
                       </div>
                     ) : null}
                   </TableCell>
                   <TableCell>
-                    <span className="text-sm text-muted-foreground capitalize">
+                    <span className="type-body-muted capitalize">
                       {tx.status}
                     </span>
                   </TableCell>
@@ -237,13 +237,13 @@ function Transactions({ transactions, t, locale }: { transactions: Billing["tran
                         }
                         variant="ghost"
                         size="sm"
-                        className="h-auto gap-1 px-1.5 py-0.5 text-xs text-muted-foreground hover:text-foreground"
+                        className="h-auto gap-1 px-1.5 py-0.5 type-caption text-muted-foreground hover:text-foreground"
                       >
                         {t("billing.transactions.invoice")}
                         <ArrowUpRight className="size-3" />
                       </Button>
                     ) : (
-                      <span className="text-sm text-muted-foreground">—</span>
+                      <span className="type-body-muted">—</span>
                     )}
                   </TableCell>
                 </TableRow>
@@ -274,7 +274,7 @@ function PlanSectionSkeleton({
               </div>
             </div>
             <div className="flex flex-col gap-4">
-              <div aria-hidden="true" className="text-base font-medium leading-6">
+              <div aria-hidden="true" className="type-card-title">
                 <Skeleton className="h-6 w-fit"><span className="invisible">{t("billing.currentPlan.includedTitle")}</span></Skeleton>
               </div>
               <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
@@ -312,7 +312,7 @@ function SpendingCapSectionSkeleton({
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="flex w-full max-w-xs flex-col gap-2">
-              <div aria-hidden="true" className="text-sm leading-none font-medium">
+              <div aria-hidden="true" className="type-title">
                 <Skeleton className="h-4 w-fit"><span className="invisible">{t("billing.spendingCap.amountLabel")}</span></Skeleton>
               </div>
               <Skeleton className="h-10 w-full rounded-xl" />

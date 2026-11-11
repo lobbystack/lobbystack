@@ -48,7 +48,7 @@ function PlanUsageSurface() {
 
   if (businesses.isLoading || billing.isLoading) return <UsageSkeleton title={t("billing.usage.title")} />;
   if (businesses.isError || billing.isError) return <Surface className="flex flex-col items-start gap-4 p-6"><p role="alert">{t("billing.usage.unavailable")}</p><Button variant="outline" onClick={() => { if (businesses.isError || !business) void businesses.refetch(); else void billing.refetch(); }}>{t("billing.actions.retry")}</Button></Surface>;
-  if (plan === "self_host") return <SectionBlock title={t("billing.usage.title")}><Surface className="p-6"><p className="text-[15px] leading-6 text-muted-foreground">{t("billing.currentPlan.selfHostNotice")}</p></Surface></SectionBlock>;
+  if (plan === "self_host") return <SectionBlock title={t("billing.usage.title")}><Surface className="p-6"><p className="type-body-muted">{t("billing.currentPlan.selfHostNotice")}</p></Surface></SectionBlock>;
 
   const description = resetAt ? t("billing.usage.description", { resetAt: new Intl.DateTimeFormat(intlLocale(i18n.language), { month: "long", day: "numeric" }).format(new Date(resetAt)) }) : undefined;
   return <div className="flex w-full flex-col gap-10"><SectionBlock description={description} title={t("billing.usage.title")}><Surface className="p-0"><>
@@ -82,13 +82,13 @@ function AllowanceUsageSurface() {
 /** What a business used past its allowance this month, with no price: only its partner's invoices show those. */
 function ExtraUsageRow({ label, used, unit }: { label: string; used: number; unit: string }) {
   const { i18n } = useTranslation("settings");
-  return <div className="border-b border-border px-6 py-5 last:border-b-0"><div className="flex items-center justify-between gap-4"><span className="text-[15px] font-medium leading-6">{label}</span><span className="text-[15px] leading-6 text-muted-foreground tabular-nums">{used.toLocaleString(intlLocale(i18n.language))} {unit}</span></div></div>;
+  return <div className="border-b border-border px-6 py-5 last:border-b-0"><div className="flex items-center justify-between gap-4"><span className="type-title">{label}</span><span className="type-body-muted tabular-nums">{used.toLocaleString(intlLocale(i18n.language))} {unit}</span></div></div>;
 }
 
 function UsageMeter({ label, used, included, unit, blocked, showUsedUnit = false, noLimit = false }: { label: string; used: number; included: number | null; unit: string; blocked: boolean; showUsedUnit?: boolean; noLimit?: boolean }) {
   const { i18n, t } = useTranslation("settings");
   const percentage = included && included > 0 ? Math.min(100, (used / included) * 100) : 0;
-  return <div className="border-b border-border px-6 py-5 last:border-b-0"><div className="flex flex-col gap-2"><div className="flex items-center justify-between gap-4"><span className="text-[15px] font-medium leading-6">{label}</span><span className="text-[15px] leading-6 text-muted-foreground tabular-nums">{included === null ? t(noLimit ? "billing.usage.noLimit" : "billing.usage.customAllowance", { used: used.toLocaleString(intlLocale(i18n.language)), unit }) : <>{used.toLocaleString(intlLocale(i18n.language))}{showUsedUnit ? ` ${unit}` : ""} / {included.toLocaleString(intlLocale(i18n.language))} {unit}</>}</span></div>{included !== null && included > 0 ? <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary"><div className={blocked ? "h-full rounded-full bg-destructive" : "h-full rounded-full bg-foreground transition-all duration-700"} style={{ width: `${percentage}%` }} /></div> : null}{blocked ? <span className="text-sm leading-6 text-destructive">{t("billing.usage.blockedDescription")}</span> : null}</div></div>;
+  return <div className="border-b border-border px-6 py-5 last:border-b-0"><div className="flex flex-col gap-2"><div className="flex items-center justify-between gap-4"><span className="type-title">{label}</span><span className="type-body-muted tabular-nums">{included === null ? t(noLimit ? "billing.usage.noLimit" : "billing.usage.customAllowance", { used: used.toLocaleString(intlLocale(i18n.language)), unit }) : <>{used.toLocaleString(intlLocale(i18n.language))}{showUsedUnit ? ` ${unit}` : ""} / {included.toLocaleString(intlLocale(i18n.language))} {unit}</>}</span></div>{included !== null && included > 0 ? <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary"><div className={blocked ? "h-full rounded-full bg-destructive" : "h-full rounded-full bg-foreground transition-all duration-700"} style={{ width: `${percentage}%` }} /></div> : null}{blocked ? <span className="type-body text-destructive">{t("billing.usage.blockedDescription")}</span> : null}</div></div>;
 }
 
 /** The title and description are placeholders too, so the whole section turns real together. The title holds its real text, hidden, so the placeholder is as wide as the title. */

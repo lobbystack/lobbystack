@@ -77,15 +77,15 @@ function RecordsTable({ records }: { records: CustomDomainDnsRecord[] }) {
         <TableBody>
           {records.map((record, index) => (
             <TableRow key={`${record.type}:${record.name}:${record.value}`}>
-              <TableCell className="font-mono text-xs">{record.type}</TableCell>
+              <TableCell className="font-mono type-caption">{record.type}</TableCell>
               <TableCell className="min-w-40 whitespace-normal">
-                <div className="flex items-center gap-1"><span className="min-w-0 font-mono text-xs [overflow-wrap:anywhere]" dir="ltr">{record.name}</span>{copyButton(record.name, `name-${index}`)}</div>
+                <div className="flex items-center gap-1"><span className="min-w-0 font-mono type-caption [overflow-wrap:anywhere]" dir="ltr">{record.name}</span>{copyButton(record.name, `name-${index}`)}</div>
               </TableCell>
               <TableCell className="min-w-40 whitespace-normal">
-                <div className="flex items-center gap-1"><span className="min-w-0 font-mono text-xs [overflow-wrap:anywhere]" dir="ltr">{record.value}</span>{copyButton(record.value, `value-${index}`)}</div>
+                <div className="flex items-center gap-1"><span className="min-w-0 font-mono type-caption [overflow-wrap:anywhere]" dir="ltr">{record.value}</span>{copyButton(record.value, `value-${index}`)}</div>
               </TableCell>
               <TableCell>
-                <span className="inline-flex items-center gap-1.5 text-xs whitespace-nowrap text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5 type-caption whitespace-nowrap text-muted-foreground">
                   {record.verified ? <Check aria-hidden="true" className="size-3.5 text-emerald-600 dark:text-emerald-400" /> : <CircleDashed aria-hidden="true" className="size-3.5" />}
                   {t(record.verified ? "branding.domain.own.records.verified" : "branding.domain.own.records.waiting")}
                 </span>
@@ -156,7 +156,7 @@ export function PartnerDomainSettings() {
   }
 
   if (domains.isError) {
-    return <Surface className="p-6"><p className="text-sm text-muted-foreground" role="alert">{t("branding.domain.own.errors.loadFailed")}</p></Surface>;
+    return <Surface className="p-6"><p className="type-body-muted" role="alert">{t("branding.domain.own.errors.loadFailed")}</p></Surface>;
   }
   const data = domains.data;
   if (!data) {
@@ -178,25 +178,25 @@ export function PartnerDomainSettings() {
           <div className="flex flex-col gap-2">
             {data.subdomain && data.subdomainUrl ? (
               <div className="flex flex-wrap items-center gap-3">
-                <span className="font-mono text-sm [overflow-wrap:anywhere]" dir="ltr">{data.subdomain}</span>
+                <span className="font-mono type-body [overflow-wrap:anywhere]" dir="ltr">{data.subdomain}</span>
                 <a className={buttonVariants({ size: "sm", variant: "outline" })} href={data.subdomainUrl} rel="noopener noreferrer" target="_blank">
                   <ExternalLink />
                   {t("branding.domain.open")}
                 </a>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">{t("branding.domain.none")}</p>
+              <p className="type-body-muted">{t("branding.domain.none")}</p>
             )}
           </div>
 
           {showsOwnDomain ? (
             <div className="flex flex-col gap-4 border-t border-border pt-6">
-              <h3 className="text-sm font-medium">{t("branding.domain.own.title")}</h3>
+              <h3 className="type-title">{t("branding.domain.own.title")}</h3>
 
               {custom ? (
                 <div className="flex flex-col gap-4">
                   <div className="flex flex-wrap items-center gap-3">
-                    <span className="font-mono text-sm [overflow-wrap:anywhere]" dir="ltr">{custom.hostname}</span>
+                    <span className="font-mono type-body [overflow-wrap:anywhere]" dir="ltr">{custom.hostname}</span>
                     <Status variant={CUSTOM_DOMAIN_STATUS_VARIANTS[custom.status]}>{t(`branding.domain.own.status.${custom.status}`)}</Status>
                     {custom.url ? (
                       <a className={buttonVariants({ size: "sm", variant: "outline" })} href={custom.url} rel="noopener noreferrer" target="_blank">
@@ -205,20 +205,20 @@ export function PartnerDomainSettings() {
                       </a>
                     ) : null}
                   </div>
-                  {custom.status === "failed" ? <p className="text-sm text-muted-foreground">{t(custom.taken ? "branding.domain.own.takenHelp" : "branding.domain.own.failedHelp")}</p> : null}
+                  {custom.status === "failed" ? <p className="type-body-muted">{t(custom.taken ? "branding.domain.own.takenHelp" : "branding.domain.own.failedHelp")}</p> : null}
                   {custom.status === "pending" ? (
-                    <p className="text-sm text-muted-foreground">{t(custom.records.length > 0 ? "branding.domain.own.pendingHelp" : "branding.domain.own.settingUp")}</p>
+                    <p className="type-body-muted">{t(custom.records.length > 0 ? "branding.domain.own.pendingHelp" : "branding.domain.own.settingUp")}</p>
                   ) : null}
                   {custom.records.length > 0 && custom.status !== "active" && !custom.taken ? <RecordsTable records={custom.records} /> : null}
                   {custom.errors.length > 0 && custom.status !== "active" ? (
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs font-medium text-muted-foreground">{t("branding.domain.own.providerSays")}</span>
-                      <ul className="flex list-disc flex-col gap-1 ps-5 text-sm text-muted-foreground">
+                      <span className="type-meta">{t("branding.domain.own.providerSays")}</span>
+                      <ul className="flex list-disc flex-col gap-1 ps-5 type-body-muted">
                         {custom.errors.map((message) => <li key={message}>{message}</li>)}
                       </ul>
                     </div>
                   ) : null}
-                  {custom.checkedAt && custom.status !== "active" ? <p className="text-xs text-muted-foreground">{t("branding.domain.own.checkedAt", { time: formatDateTime(custom.checkedAt, i18n.language, { dateStyle: "medium", timeStyle: "short" }) })}</p> : null}
+                  {custom.checkedAt && custom.status !== "active" ? <p className="type-caption text-muted-foreground">{t("branding.domain.own.checkedAt", { time: formatDateTime(custom.checkedAt, i18n.language, { dateStyle: "medium", timeStyle: "short" }) })}</p> : null}
                   {canEdit ? (
                     <div>
                       <Button disabled={remove.isPending} onClick={() => setConfirmingRemove(true)} size="sm" type="button" variant="outline">{t("branding.domain.own.remove")}</Button>
@@ -226,10 +226,10 @@ export function PartnerDomainSettings() {
                   ) : null}
                 </div>
               ) : data.customDomains === "unavailable" ? (
-                <p className="text-sm text-muted-foreground">{t(data.subdomain ? "branding.domain.own.unavailable" : "branding.domain.own.unavailableNoSubdomain")}</p>
+                <p className="type-body-muted">{t(data.subdomain ? "branding.domain.own.unavailable" : "branding.domain.own.unavailableNoSubdomain")}</p>
               ) : data.customDomains === "paid_tier_required" ? (
                 <div className="flex flex-wrap items-center gap-3">
-                  <p className="text-sm text-muted-foreground">{t(role === "owner" ? "branding.domain.own.paidTier" : "branding.domain.own.paidTierAskOwner")}</p>
+                  <p className="type-body-muted">{t(role === "owner" ? "branding.domain.own.paidTier" : "branding.domain.own.paidTierAskOwner")}</p>
                   {role === "owner" ? <Link className={buttonVariants({ size: "sm", variant: "outline" })} href={`/partner/${partner.partnerId}/billing`}>{t("branding.domain.own.chooseTier")}</Link> : null}
                 </div>
               ) : canEdit ? (
@@ -243,7 +243,7 @@ export function PartnerDomainSettings() {
                   </Field>
                 </form>
               ) : (
-                <p className="text-sm text-muted-foreground">{t("branding.domain.own.membersCantEdit")}</p>
+                <p className="type-body-muted">{t("branding.domain.own.membersCantEdit")}</p>
               )}
               {error ? <FieldError>{error}</FieldError> : null}
             </div>

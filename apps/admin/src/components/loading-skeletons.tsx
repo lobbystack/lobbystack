@@ -389,7 +389,7 @@ export function HeaderButtonSkeleton({ label, trailingIcon = false }: { label: s
   return (
     <Skeleton
       aria-hidden="true"
-      className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full px-5 text-sm font-[550] tracking-[0.01em] whitespace-nowrap"
+      className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full px-5 type-button whitespace-nowrap"
     >
       <span className="invisible size-4 shrink-0" />
       <span className="invisible">{label}</span>
@@ -407,7 +407,7 @@ export function TabsListSkeleton({ labels }: { labels: string[] }) {
     <Skeleton aria-hidden="true" className="inline-flex h-9 w-fit shrink-0 items-center justify-center gap-1 rounded-full p-1">
       {labels.map((label) => (
         <span
-          className="invisible inline-flex h-full flex-1 items-center justify-center border border-transparent px-3 py-1.5 text-xs font-medium whitespace-nowrap"
+          className="invisible inline-flex h-full flex-1 items-center justify-center border border-transparent px-3 py-1.5 type-label whitespace-nowrap"
           key={label}
         >
           {label}
@@ -543,13 +543,13 @@ export function RulesPageSkeleton({ headings, rowsPerPage }: { headings: [title:
 export function AnalyticsControlsSkeleton({ granularityLabel, rangeLabel }: { granularityLabel: string; rangeLabel: string }) {
   return (
     <>
-      <Skeleton aria-hidden="true" className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full border border-transparent px-5 text-sm font-[550] tracking-[0.01em] whitespace-nowrap">
+      <Skeleton aria-hidden="true" className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full border border-transparent px-5 type-button whitespace-nowrap">
         <span className="invisible">{granularityLabel}</span>
         <span className="invisible size-4 shrink-0" />
       </Skeleton>
       <div aria-hidden="true" className="flex w-fit items-stretch">
         <Skeleton className="size-10 rounded-full rounded-r-none" />
-        <Skeleton className="inline-flex h-10 max-w-56 items-center rounded-full rounded-l-none border border-transparent border-l-0 px-5 text-sm font-[550] tracking-[0.01em] whitespace-nowrap">
+        <Skeleton className="inline-flex h-10 max-w-56 items-center rounded-full rounded-l-none border border-transparent border-l-0 px-5 type-button whitespace-nowrap">
           <span className="invisible truncate">{rangeLabel}</span>
         </Skeleton>
       </div>
@@ -560,7 +560,7 @@ export function AnalyticsControlsSkeleton({ granularityLabel, rangeLabel }: { gr
 /** Stands in for a small outline button such as "Connect" or "Manage", sized from its hidden label. */
 export function SmallButtonSkeleton({ label }: { label: string }) {
   return (
-    <Skeleton aria-hidden="true" className="inline-flex h-8 shrink-0 items-center rounded-full border border-transparent px-3 text-sm font-medium whitespace-nowrap">
+    <Skeleton aria-hidden="true" className="inline-flex h-8 shrink-0 items-center rounded-full border border-transparent px-3 type-title whitespace-nowrap">
       <span className="invisible">{label}</span>
     </Skeleton>
   );
@@ -649,14 +649,14 @@ export function SetupGuideSkeleton({ labels }: { labels: { title: string; skip: 
           <Skeleton aria-hidden="true" className="size-5 shrink-0 rounded-full" />
           <Skeleton aria-hidden="true" className="h-5 w-56 max-w-full" />
         </div>
-        <Skeleton aria-hidden="true" className="inline-flex h-10 shrink-0 items-center rounded-full border border-transparent px-5 text-sm font-[550] tracking-[0.01em] whitespace-nowrap"><span className="invisible">{labels.skip}</span></Skeleton>
+        <Skeleton aria-hidden="true" className="inline-flex h-10 shrink-0 items-center rounded-full border border-transparent px-5 type-button whitespace-nowrap"><span className="invisible">{labels.skip}</span></Skeleton>
       </div>
       <Surface>
         <div className="divide-y divide-border">
           {labels.steps.map((step) => (
             <div className="flex min-h-16 items-center gap-4 px-6" key={step}>
               <Skeleton aria-hidden="true" className="size-6 shrink-0 rounded-full" />
-              <HiddenTextSkeleton className="text-base">{step}</HiddenTextSkeleton>
+              <HiddenTextSkeleton className="type-body-lg">{step}</HiddenTextSkeleton>
             </div>
           ))}
         </div>
@@ -703,18 +703,18 @@ export function PhoneNumberChooserSkeleton({ labels, rows = 4 }: { labels: { cou
     <div aria-busy="true" className="flex flex-col gap-6">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-[140px_1fr_160px_auto] sm:items-end">
         <div className="flex flex-col gap-2">
-          <span className="text-sm font-medium">{labels.country}</span>
+          <span className="type-title">{labels.country}</span>
           <Skeleton aria-hidden="true" className="h-10 w-20 rounded-xl" />
         </div>
         <div aria-hidden="true" className="hidden sm:block" />
         <div className="flex flex-col gap-2">
-          <span className="text-sm font-medium">{labels.areaCode}</span>
+          <span className="type-title">{labels.areaCode}</span>
           <Skeleton aria-hidden="true" className="h-10 w-full rounded-xl" />
         </div>
-        <HiddenTextSkeleton skeletonClassName="inline-flex h-10 w-full items-center justify-center rounded-full px-5 text-sm font-[550] tracking-[0.01em] whitespace-nowrap sm:w-fit">{labels.search}</HiddenTextSkeleton>
+        <HiddenTextSkeleton skeletonClassName="inline-flex h-10 w-full items-center justify-center rounded-full px-5 type-button whitespace-nowrap sm:w-fit">{labels.search}</HiddenTextSkeleton>
       </div>
       <Surface className="flex h-96 flex-col">
-        <div className="flex h-14 shrink-0 items-center border-b border-border px-4 text-sm font-medium text-muted-foreground">
+        <div className="flex h-14 shrink-0 items-center border-b border-border px-4 type-title text-muted-foreground">
           <span>{labels.phoneNumber}</span>
         </div>
         <div className="flex flex-col gap-3 px-4 py-4">
@@ -736,24 +736,24 @@ export function OnboardingBrandSkeleton({ labels }: { labels: { name: string; na
     <div aria-busy="true" className="flex flex-col gap-4">
       <div className="flex flex-col gap-5">
         <div className="flex flex-col gap-3">
-          <span className="text-sm leading-snug font-medium">{labels.name}</span>
+          <span className="type-title">{labels.name}</span>
           <Skeleton aria-hidden="true" className="h-10 w-full rounded-xl" />
-          <HiddenTextSkeleton className="text-sm">{labels.nameHint}</HiddenTextSkeleton>
+          <HiddenTextSkeleton className="type-body">{labels.nameHint}</HiddenTextSkeleton>
         </div>
         <div className="flex flex-col gap-3">
-          <span className="text-sm leading-snug font-medium">{labels.logo}</span>
+          <span className="type-title">{labels.logo}</span>
           <Skeleton aria-hidden="true" className="flex w-full items-center gap-3 rounded-xl px-4 py-3">
             <span className="invisible size-10 shrink-0 rounded-full" />
-            <span className="invisible text-sm font-medium">{labels.logoChoose}</span>
+            <span className="invisible type-title">{labels.logoChoose}</span>
           </Skeleton>
-          <HiddenTextSkeleton className="text-sm">{labels.logoHint}</HiddenTextSkeleton>
+          <HiddenTextSkeleton className="type-body">{labels.logoHint}</HiddenTextSkeleton>
         </div>
         <div className="flex flex-col gap-2">
-          <span className="text-xs font-medium text-muted-foreground">{labels.preview}</span>
+          <span className="type-meta">{labels.preview}</span>
           <Surface className="px-4 py-5"><Skeleton aria-hidden="true" className="mx-auto h-6 w-40" /></Surface>
         </div>
       </div>
-      <HiddenTextSkeleton className="mt-2" skeletonClassName="flex h-10 w-full items-center justify-center rounded-full text-sm font-[550] tracking-[0.01em]">{labels.continue}</HiddenTextSkeleton>
+      <HiddenTextSkeleton className="mt-2" skeletonClassName="flex h-10 w-full items-center justify-center rounded-full type-button">{labels.continue}</HiddenTextSkeleton>
       <HiddenTextSkeleton className="text-center" skeletonClassName="mx-auto h-5">{labels.skip}</HiddenTextSkeleton>
     </div>
   );
@@ -764,14 +764,14 @@ export function VerifyPhoneFormSkeleton({ labels }: { labels: { mobileNumber: st
   return (
     <div aria-busy="true" className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <span className="text-sm font-medium">{labels.mobileNumber}</span>
+        <span className="type-title">{labels.mobileNumber}</span>
         <div className="flex min-w-0">
           <Skeleton aria-hidden="true" className="h-10 w-24 rounded-l-xl rounded-r-none" />
           <Skeleton aria-hidden="true" className="h-10 min-w-0 flex-1 rounded-l-none rounded-r-xl" />
         </div>
-        <HiddenTextSkeleton className="text-sm">{labels.hint}</HiddenTextSkeleton>
+        <HiddenTextSkeleton className="type-body">{labels.hint}</HiddenTextSkeleton>
       </div>
-      <HiddenTextSkeleton className="mt-2" skeletonClassName="flex h-10 w-full items-center justify-center rounded-full text-sm font-[550] tracking-[0.01em]">{labels.submit}</HiddenTextSkeleton>
+      <HiddenTextSkeleton className="mt-2" skeletonClassName="flex h-10 w-full items-center justify-center rounded-full type-button">{labels.submit}</HiddenTextSkeleton>
     </div>
   );
 }
@@ -794,7 +794,7 @@ export function OnboardingOptionsSkeleton({ gridClassName, itemClassName, labels
   return (
     <div aria-busy="true" className={gridClassName}>
       {labels.map((label) => (
-        <Skeleton aria-hidden="true" className={`flex items-center rounded-xl px-4 text-sm font-medium ${itemClassName}`} key={label}>
+        <Skeleton aria-hidden="true" className={`flex items-center rounded-xl px-4 type-title ${itemClassName}`} key={label}>
           <span className="invisible">{label}</span>
         </Skeleton>
       ))}
@@ -824,7 +824,7 @@ export function MeetFormSkeleton({ labels }: { labels: { name: string; voice: st
     <div aria-busy="true" className="flex flex-col gap-4">
       {([["name", "h-10 rounded-xl"], ["voice", "h-10 rounded-xl"], ["greeting", "h-28 rounded-xl"], ["language", "h-10 rounded-xl"]] as const).map(([key, size]) => (
         <div className="flex flex-col gap-2" key={key}>
-          <span className="text-sm leading-snug font-medium">{labels[key]}</span>
+          <span className="type-title">{labels[key]}</span>
           <Skeleton aria-hidden="true" className={`w-full ${size}`} />
         </div>
       ))}

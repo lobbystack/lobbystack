@@ -185,7 +185,7 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
           {rows.length === 0 ? (
             layout === "page" ? (
             <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-              <h2 className="text-base font-medium">{t("apiKeys.empty")}</h2>
+              <h2 className="type-card-title">{t("apiKeys.empty")}</h2>
             </div>
           ) : <p className="type-body-muted p-6 text-center">{t("apiKeys.empty")}</p>
           ) : (
@@ -238,9 +238,9 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
                   {nameError ? <FieldError id="api-key-name-error">{nameError}</FieldError> : null}
                 </Field>
                 <fieldset className="flex flex-col gap-3">
-                  <legend className="mb-2 text-sm font-medium">{t("apiKeys.create.scopesLabel")}</legend>
+                  <legend className="mb-2 type-title">{t("apiKeys.create.scopesLabel")}</legend>
                   {offeredScopes.map((scope) => (
-                    <div className="flex items-start gap-3 text-sm" key={scope}>
+                    <div className="flex items-start gap-3 type-body" key={scope}>
                       <Checkbox
                         aria-labelledby={`api-key-scope-${scopeKey(scope)}-label`}
                         checked={scopes.includes(scope)}
@@ -248,7 +248,7 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
                         onCheckedChange={(checked) => setScopes((current) => checked ? [...new Set([...current, scope])] : current.filter((value) => value !== scope))}
                       />
                       <label className="flex flex-col gap-0.5" htmlFor={`api-key-scope-${scopeKey(scope)}`} id={`api-key-scope-${scopeKey(scope)}-label`}>
-                        <code className="font-mono text-xs">{scope}</code>
+                        <code className="font-mono type-caption">{scope}</code>
                         <span className="text-muted-foreground">{t(`apiKeys.scopes.${scopeKey(scope)}`)}</span>
                       </label>
                     </div>

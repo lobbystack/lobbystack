@@ -40,7 +40,7 @@ export function CancelPlanDialog({ businessId, plan, periodEnd, onCanceled }: { 
             {cancellationReasons.map((key) => (
               <button
                 aria-pressed={reason === key}
-                className={cn("rounded-xl border px-4 py-2.5 text-left text-sm transition-colors", reason === key ? "border-foreground bg-muted font-medium text-foreground" : "border-border text-foreground hover:border-foreground/30")}
+                className={cn("rounded-xl border px-4 py-2.5 text-left type-body transition-colors", reason === key ? "border-foreground bg-muted font-medium text-foreground" : "border-border text-foreground hover:border-foreground/30")}
                 disabled={cancel.isPending}
                 key={key}
                 onClick={() => setReason(reason === key ? null : key)}

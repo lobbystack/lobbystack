@@ -122,7 +122,7 @@ export function PartnerSignupSurface({ baseDomain, blocked, invitation, invitedE
             </Field>
           ) : null}
         </FieldGroup>
-        {error ? <p className="text-center text-sm text-destructive" role="alert">{error}</p> : null}
+        {error ? <p className="text-center type-body text-destructive" role="alert">{error}</p> : null}
         <div className="flex flex-col gap-3">
           <Button className="w-full" disabled={!name.trim() || (baseDomain !== null && !shownSubdomain)} loading={signup.isPending} loadingLabel={t("signup.submitting")} type="submit">{t("signup.submit")}</Button>
         </div>

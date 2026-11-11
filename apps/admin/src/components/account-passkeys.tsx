@@ -109,13 +109,13 @@ export function AccountPasskeys() {
       </ItemActions>
       <div className="flex w-full basis-full flex-col">
         {passkeys.isLoading ? <PasskeyRowsSkeleton /> : null}
-        {passkeys.isError ? <p className="text-sm text-destructive">{t("account.passkeys.errors.loadFailed")}</p> : null}
-        {passkeys.data?.length === 0 ? <p className="text-sm text-muted-foreground">{t("account.passkeys.empty")}</p> : null}
+        {passkeys.isError ? <p className="type-body text-destructive">{t("account.passkeys.errors.loadFailed")}</p> : null}
+        {passkeys.data?.length === 0 ? <p className="type-body-muted">{t("account.passkeys.empty")}</p> : null}
         {passkeys.data?.length ? <ul className="flex flex-col divide-y divide-border">{passkeys.data.map((passkey) => (
           <li className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0" key={passkey.id}>
             <div className="flex min-w-0 flex-col">
-              <span className="truncate text-sm font-medium text-foreground">{label(passkey)}</span>
-              {passkey.createdAt ? <span className="text-xs text-muted-foreground">{t("account.passkeys.addedOn", { date: new Intl.DateTimeFormat(intlLocale(i18n.language), { dateStyle: "medium" }).format(new Date(passkey.createdAt)) })}</span> : null}
+              <span className="truncate type-title text-foreground">{label(passkey)}</span>
+              {passkey.createdAt ? <span className="type-caption text-muted-foreground">{t("account.passkeys.addedOn", { date: new Intl.DateTimeFormat(intlLocale(i18n.language), { dateStyle: "medium" }).format(new Date(passkey.createdAt)) })}</span> : null}
             </div>
             <div className="flex items-center gap-2">
               <Button onClick={() => openRename(passkey)} size="sm" type="button" variant="outline">{t("account.passkeys.rename.action")}</Button>

@@ -42,7 +42,7 @@ export function AgentInstructionsSection({ agentId, businessId, canManage }: { b
 
   return (
     <section aria-busy={loading || undefined} className="flex flex-col gap-3">
-      <h2 className="font-heading text-sm leading-snug font-medium">{t("agent:fields.instructions.title")}</h2>
+      <h2 className="type-title">{t("agent:fields.instructions.title")}</h2>
       <Surface className="flex flex-col">
         {FIELDS.map(({ field, hint, key, setting }) => (
           <TextSettingRow

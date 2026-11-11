@@ -84,8 +84,8 @@ export function NavUser({
             <Avatar size="sm">
               <AvatarFallback>{emailInitial}</AvatarFallback>
             </Avatar>
-            <div className="grid flex-1 text-start text-sm leading-tight group-data-[collapsible=icon]:hidden">
-              <span className="truncate text-sm">{user.email}</span>
+            <div className="grid flex-1 text-start group-data-[collapsible=icon]:hidden">
+              <span className="truncate type-body">{user.email}</span>
             </div>
             <ChevronsUpDown className="ms-auto size-4 group-data-[collapsible=icon]:hidden" />
           </DropdownMenuTrigger>
@@ -95,7 +95,7 @@ export function NavUser({
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}
           >
-            <div className="truncate px-3 py-2 text-sm text-muted-foreground" title={user.email}>{user.email}</div>
+            <div className="truncate px-3 py-2 type-body-muted" title={user.email}>{user.email}</div>
             {showUpgradeToPro ? (
               <>
                 <DropdownMenuGroup>

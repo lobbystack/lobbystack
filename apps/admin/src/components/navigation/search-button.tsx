@@ -45,7 +45,7 @@ export function SearchButton() {
         <SidebarMenuButton className="border border-input bg-input/30 text-muted-foreground hover:text-muted-foreground group-data-[collapsible=icon]:border-transparent group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:hover:bg-sidebar-accent" onClick={() => opener?.()} tooltip={t("search.button")}>
           <SearchIcon />
           <span className="group-data-[collapsible=icon]:hidden">{t("search.button")}</span>
-          <kbd className="ml-auto inline-flex h-5 shrink-0 items-center rounded-md border border-border bg-muted px-1.5 font-sans text-[11px] font-medium text-muted-foreground group-data-[collapsible=icon]:hidden">⌘K</kbd>
+          <kbd className="ml-auto inline-flex h-5 shrink-0 items-center rounded-md border border-border bg-muted px-1.5 font-sans type-meta group-data-[collapsible=icon]:hidden">⌘K</kbd>
         </SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarMenu>

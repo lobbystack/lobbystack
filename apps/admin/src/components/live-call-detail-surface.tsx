@@ -340,7 +340,7 @@ function DetailPageSkeleton({ embedded, t }: { embedded: boolean; t: (key: strin
       <div>
         <div className="inline-flex items-center gap-2">
           {tabs.map(([tab, Icon]) => (
-            <Skeleton aria-hidden="true" className="inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-medium whitespace-nowrap" key={tab}>
+            <Skeleton aria-hidden="true" className="inline-flex h-9 items-center gap-1.5 rounded-full px-4 type-title whitespace-nowrap" key={tab}>
               <Icon className="invisible size-4" />
               <span className="invisible">{t(`detail.tabs.${tab}`)}</span>
             </Skeleton>
@@ -349,11 +349,11 @@ function DetailPageSkeleton({ embedded, t }: { embedded: boolean; t: (key: strin
         <div className="py-4">
           <Surface className="flex flex-col">
             <section className="flex flex-col gap-4 px-4 py-4">
-              <HiddenTextSkeleton className="font-heading text-base font-medium">{t("detail.details.followUpTitle_one")}</HiddenTextSkeleton>
+              <HiddenTextSkeleton className="type-card-title">{t("detail.details.followUpTitle_one")}</HiddenTextSkeleton>
               <Skeleton className="h-4 w-2/3" />
             </section>
             <section className="flex flex-col gap-4 border-t border-border px-4 py-4">
-              <HiddenTextSkeleton className="font-heading text-base font-medium">{t("detail.details.callInfoTitle")}</HiddenTextSkeleton>
+              <HiddenTextSkeleton className="type-card-title">{t("detail.details.callInfoTitle")}</HiddenTextSkeleton>
               <div className="grid grid-cols-[auto_1fr] items-baseline gap-x-6 gap-y-3">
                 <HiddenTextSkeleton className="type-meta">{t("detail.details.twilioCallSid")}</HiddenTextSkeleton>
                 <Skeleton className="h-4 w-48 max-w-full" />

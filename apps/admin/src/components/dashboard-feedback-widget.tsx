@@ -97,7 +97,7 @@ export function DashboardFeedbackDialog({ businessId, onOpenChange, open }: Feed
             </Field>
           </FieldGroup>
           <div className="flex items-center justify-between gap-3">
-            {supportHref ? <p className="min-w-0 text-sm text-muted-foreground">
+            {supportHref ? <p className="min-w-0 type-body-muted">
               {t("feedback.helpText")}{" "}
               <a className="text-primary underline underline-offset-4" href={supportHref} {...(supportHref.startsWith("mailto:") ? {} : { rel: "noreferrer", target: "_blank" })}>
                 {t("feedback.contactLink")}

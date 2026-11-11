@@ -156,7 +156,7 @@ function SearchPanel({ businessId, onClose }: { businessId: string | undefined; 
           aria-expanded={results.length > 0}
           aria-label={t("search.title")}
           autoComplete="off"
-          className="h-12 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          className="h-12 min-w-0 flex-1 bg-transparent type-body outline-none placeholder:text-muted-foreground"
           onChange={(event) => { setText(event.target.value); setActive(0); }}
           onKeyDown={onKeyDown}
           placeholder={t("search.placeholder")}
@@ -177,7 +177,7 @@ function SearchPanel({ businessId, onClose }: { businessId: string | undefined; 
               return (
                 <div
                   aria-selected={current}
-                  className={cn("flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-left text-sm", current && "bg-accent text-accent-foreground")}
+                  className={cn("flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-left type-body", current && "bg-accent text-accent-foreground")}
                   id={optionId(result)}
                   key={result.id}
                   onClick={() => go(result)}
@@ -191,7 +191,7 @@ function SearchPanel({ businessId, onClose }: { businessId: string | undefined; 
                   <span className="flex min-w-0 flex-1 items-baseline gap-1.5 truncate">
                     {result.section ? <><span className="shrink-0 text-muted-foreground">{result.section}</span><span aria-hidden="true" className="text-muted-foreground">›</span></> : null}
                     <span className={cn("truncate font-medium", (result.group === "contacts" || result.group === "conversations") && "ph-mask")}>{result.title}</span>
-                    {result.detail ? <span className="shrink-0 text-xs text-muted-foreground">{result.detail}</span> : null}
+                    {result.detail ? <span className="shrink-0 type-caption text-muted-foreground">{result.detail}</span> : null}
                   </span>
                   {current ? <CornerDownLeft aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" /> : null}
                 </div>
@@ -206,7 +206,7 @@ function SearchPanel({ businessId, onClose }: { businessId: string | undefined; 
           </div>
         ) : null}
       </div>
-      <div aria-hidden="true" className="flex items-center gap-4 border-t px-4 py-2 text-xs text-muted-foreground">
+      <div aria-hidden="true" className="flex items-center gap-4 border-t px-4 py-2 type-caption text-muted-foreground">
         <span className="flex items-center gap-1.5"><Key>↑</Key><Key>↓</Key>{t("search.keys.select")}</span>
         <span className="flex items-center gap-1.5"><Key>↵</Key>{t("search.keys.open")}</span>
       </div>
@@ -216,7 +216,7 @@ function SearchPanel({ businessId, onClose }: { businessId: string | undefined; 
 
 /** A keyboard key, as the footer and the Esc button show it. */
 function Key({ children }: { children: string }) {
-  return <kbd className="inline-flex h-5 min-w-5 items-center justify-center rounded-md border border-border bg-muted px-1.5 font-sans text-[11px] font-medium text-muted-foreground">{children}</kbd>;
+  return <kbd className="inline-flex h-5 min-w-5 items-center justify-center rounded-md border border-border bg-muted px-1.5 font-sans type-meta">{children}</kbd>;
 }
 
 /**

@@ -124,9 +124,9 @@ export function OnboardingVerifyPhoneSurface() {
   if (verified && !changing && !attempt) {
     return (
       <div className="flex flex-col items-center gap-4">
-        <p className="text-lg font-medium">{formatPhoneNumberDisplay(verified)}</p>
+        <p className="type-heading-xxs">{formatPhoneNumberDisplay(verified)}</p>
         <Button className="w-full" disabled={passOn.isPending || navigating} onClick={() => passOn.mutate()} type="button">{t("verifyPhone.continue")}</Button>
-        <button className="text-sm text-muted-foreground hover:text-foreground" onClick={() => setChanging(true)} type="button">{t("verifyPhone.code.changeNumber")}</button>
+        <button className="type-body-muted hover:text-foreground" onClick={() => setChanging(true)} type="button">{t("verifyPhone.code.changeNumber")}</button>
       </div>
     );
   }
@@ -134,15 +134,15 @@ export function OnboardingVerifyPhoneSurface() {
   if (attempt) {
     return (
       <div className="flex flex-col items-center gap-4">
-        <p className="text-center text-sm text-muted-foreground">{t("verifyPhone.code.sentTo", { phone: formatPhoneNumberDisplay(attempt.phoneE164) })}</p>
+        <p className="text-center type-body-muted">{t("verifyPhone.code.sentTo", { phone: formatPhoneNumberDisplay(attempt.phoneE164) })}</p>
         <InputOTP autoFocus disabled={check.isPending || navigating} maxLength={6} onChange={setCode} value={code}>
           <InputOTPGroup>{[0, 1, 2, 3, 4, 5].map((index) => <InputOTPSlot index={index} key={index} />)}</InputOTPGroup>
         </InputOTP>
-        {check.isPending ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><LoaderCircle className="size-4 animate-spin" />{t("verifyPhone.code.checking")}</div> : null}
+        {check.isPending ? <div className="flex items-center gap-2 type-body-muted"><LoaderCircle className="size-4 animate-spin" />{t("verifyPhone.code.checking")}</div> : null}
         {error ? <FieldError>{error}</FieldError> : null}
         <div className="mt-2 flex flex-col items-center gap-4">
-          <button className="text-sm font-medium text-foreground underline-offset-4 hover:underline disabled:opacity-50" disabled={send.isPending || check.isPending} onClick={() => { setError(null); send.mutate(); }} type="button">{send.isPending ? t("verifyPhone.sending") : t("verifyPhone.code.resend")}</button>
-          <button className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground" onClick={() => { setAttempt(null); setError(null); }} type="button"><ChevronLeft className="size-4" />{t("verifyPhone.code.changeNumber")}</button>
+          <button className="type-title text-foreground underline-offset-4 hover:underline disabled:opacity-50" disabled={send.isPending || check.isPending} onClick={() => { setError(null); send.mutate(); }} type="button">{send.isPending ? t("verifyPhone.sending") : t("verifyPhone.code.resend")}</button>
+          <button className="inline-flex items-center gap-1 type-body-muted hover:text-foreground" onClick={() => { setAttempt(null); setError(null); }} type="button"><ChevronLeft className="size-4" />{t("verifyPhone.code.changeNumber")}</button>
         </div>
       </div>
     );
@@ -162,14 +162,14 @@ export function OnboardingVerifyPhoneSurface() {
         {sellsNumbers ? null : (
           partnerBusiness ? (
             <div className="flex flex-col gap-3 rounded-xl border border-border p-4 text-left">
-              <p className="text-sm font-medium text-foreground">{t("verifyPhone.unavailable.partnerTitle", { country: countryName })}</p>
-              <p className="text-sm text-muted-foreground">{t("verifyPhone.unavailable.partnerBody")}</p>
+              <p className="type-title text-foreground">{t("verifyPhone.unavailable.partnerTitle", { country: countryName })}</p>
+              <p className="type-body-muted">{t("verifyPhone.unavailable.partnerBody")}</p>
             </div>
           ) : (
             <div className="flex flex-col gap-3 rounded-xl border border-border p-4 text-left">
-              <p className="text-sm font-medium text-foreground">{t("verifyPhone.unavailable.title", { country: countryName })}</p>
-              <p className="text-sm text-muted-foreground">{t("verifyPhone.unavailable.body", { country: countryName })}</p>
-              {joined ? <p className="text-sm text-foreground">{t("verifyPhone.unavailable.joined")}</p> : <Button disabled={waitlist.isPending || !business} onClick={() => waitlist.mutate()} type="button" variant="outline">{t("verifyPhone.unavailable.notify")}</Button>}
+              <p className="type-title text-foreground">{t("verifyPhone.unavailable.title", { country: countryName })}</p>
+              <p className="type-body-muted">{t("verifyPhone.unavailable.body", { country: countryName })}</p>
+              {joined ? <p className="type-body text-foreground">{t("verifyPhone.unavailable.joined")}</p> : <Button disabled={waitlist.isPending || !business} onClick={() => waitlist.mutate()} type="button" variant="outline">{t("verifyPhone.unavailable.notify")}</Button>}
             </div>
           )
         )}

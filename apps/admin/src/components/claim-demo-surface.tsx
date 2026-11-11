@@ -28,10 +28,10 @@ function ClaimShell({
   return (
     <div className="flex min-h-svh flex-col items-center justify-center bg-background px-6 py-16 text-foreground">
       <div className="w-full max-w-md rounded-xl border bg-muted/30 p-6 text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
+        <h1 className="type-section-title">
           {title}
         </h1>
-        <p className="mt-3 text-sm leading-6 text-muted-foreground">{description}</p>
+        <p className="mt-3 type-body-muted">{description}</p>
         {children ? <div className="mt-6">{children}</div> : null}
       </div>
     </div>
@@ -166,10 +166,10 @@ export function ClaimDemoSurface() {
       <div className="flex flex-col items-center gap-4 text-center">
         <LoaderCircle className="size-6 animate-spin text-muted-foreground" />
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">
+          <h1 className="type-section-title">
             {t("claim.loadingTitle")}
           </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-2 type-body-muted">
             {t("claim.loadingDescription")}
           </p>
         </div>

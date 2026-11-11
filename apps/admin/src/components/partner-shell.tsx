@@ -190,7 +190,7 @@ function PartnerSwitcher({ partner, partners }: { partner: ConsolePartner; partn
           >
             <ItemMedia><Initial value={partner.name} /></ItemMedia>
             <ItemContent className="min-w-0">
-              <ItemTitle className="ph-mask w-full truncate text-left font-medium">{partner.name}</ItemTitle>
+              <ItemTitle className="ph-mask w-full truncate text-left">{partner.name}</ItemTitle>
             </ItemContent>
             <ItemActions><ChevronsUpDown className="size-4 text-muted-foreground" /></ItemActions>
           </DropdownMenuTrigger>
@@ -235,8 +235,8 @@ function PartnerUserMenu({ businessDashboard, email }: { businessDashboard: bool
             render={<SidebarMenuButton className="data-[popup-open=true]:bg-sidebar-accent data-[popup-open=true]:text-sidebar-accent-foreground" size="lg" />}
           >
             <Initial value={email} />
-            <div className="grid flex-1 text-start text-sm leading-tight">
-              <span className="truncate text-sm">{email}</span>
+            <div className="grid flex-1 text-start">
+              <span className="truncate type-body">{email}</span>
             </div>
             <ChevronsUpDown className="ms-auto size-4" />
           </DropdownMenuTrigger>

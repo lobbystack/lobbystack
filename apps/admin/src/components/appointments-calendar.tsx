@@ -65,7 +65,7 @@ export function AppointmentsCalendar({ appointments, onSelectDay, onViewChange, 
       <div className="flex flex-wrap items-center gap-2">
         <Button aria-label={t("appointments.calendarView.previous")} onClick={() => step(-1)} size="icon-sm" variant="outline"><ChevronLeft /></Button>
         <Button aria-label={t("appointments.calendarView.next")} onClick={() => step(1)} size="icon-sm" variant="outline"><ChevronRight /></Button>
-        <h2 aria-live="polite" className="type-section-title min-w-0 flex-1 basis-24 truncate text-base capitalize sm:text-xl">{title}</h2>
+        <h2 aria-live="polite" className="type-section-title min-w-0 flex-1 basis-24 truncate capitalize">{title}</h2>
         <Button aria-label={t("appointments.calendarView.today")} className="sm:hidden" onClick={() => { setAnchor(today); onSelectDay(today); }} size="icon-sm" variant="outline"><CalendarCheck2 /></Button>
         <Button className="hidden sm:inline-flex" onClick={() => { setAnchor(today); onSelectDay(today); }} size="sm" variant="outline">{t("appointments.calendarView.today")}</Button>
         <Tabs className="shrink-0" onValueChange={(value) => { onViewChange(value as CalendarView); setAnchor(selectedDay); }} value={view}>
@@ -81,7 +81,7 @@ export function AppointmentsCalendar({ appointments, onSelectDay, onViewChange, 
       <div className="rounded-xl border p-2 md:hidden" role="grid">
         <div className="grid" style={SEVEN_COLUMNS}>
           {days.slice(0, 7).map((key) => (
-            <div className="py-1 text-center text-xs font-medium text-muted-foreground" key={`head-${key}`} role="columnheader">
+            <div className="py-1 text-center type-meta" key={`head-${key}`} role="columnheader">
               <abbr className="no-underline" title={label(key, { weekday: "long" })}>{label(key, { weekday: "narrow" })}</abbr>
             </div>
           ))}
@@ -97,7 +97,7 @@ export function AppointmentsCalendar({ appointments, onSelectDay, onViewChange, 
                 role="gridcell"
                 type="button"
               >
-                <span className={cn("inline-flex size-7 items-center justify-center rounded-full text-sm tabular-nums", key === today && "bg-primary font-medium text-primary-foreground")}>{label(key, { day: "numeric" })}</span>
+                <span className={cn("inline-flex size-7 items-center justify-center rounded-full type-body tabular-nums", key === today && "bg-primary font-medium text-primary-foreground")}>{label(key, { day: "numeric" })}</span>
                 <span aria-hidden="true" className={cn("block shrink-0 rounded-full", count ? "bg-foreground" : "bg-transparent")} style={DOT} />
               </button>
             );
@@ -108,7 +108,7 @@ export function AppointmentsCalendar({ appointments, onSelectDay, onViewChange, 
       <div className="hidden overflow-x-auto rounded-xl border md:block">
         <div className="grid min-w-[42rem]" role="grid" style={SEVEN_COLUMNS}>
           {days.slice(0, 7).map((key) => (
-            <div className="border-b px-3 py-2 text-xs font-medium text-muted-foreground capitalize" key={`head-${key}`} role="columnheader">
+            <div className="border-b px-3 py-2 type-meta capitalize" key={`head-${key}`} role="columnheader">
               {label(key, { weekday: "short" })}
             </div>
           ))}
@@ -132,22 +132,22 @@ export function AppointmentsCalendar({ appointments, onSelectDay, onViewChange, 
                 type="button"
               >
                 <span className="flex items-center justify-between gap-2">
-                  <span className={cn("inline-flex size-7 items-center justify-center rounded-full text-sm tabular-nums", key === today && "bg-primary font-medium text-primary-foreground")}>
+                  <span className={cn("inline-flex size-7 items-center justify-center rounded-full type-body tabular-nums", key === today && "bg-primary font-medium text-primary-foreground")}>
                     {label(key, { day: "numeric" })}
                   </span>
                   {view === "month" && dayAppointments.length ? (
-                    <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-foreground tabular-nums">{dayAppointments.length}</span>
+                    <span className="rounded-full bg-primary/15 px-2 py-0.5 type-label text-foreground tabular-nums">{dayAppointments.length}</span>
                   ) : null}
                 </span>
                 {view === "week" ? (
                   <span className="flex min-w-0 flex-col gap-1">
                     {dayAppointments.slice(0, WEEK_PREVIEW).map((appointment) => (
-                      <span className={cn("min-w-0 truncate rounded-md bg-muted px-1.5 py-1 text-xs", hasEnded(appointment) && "line-through opacity-50")} key={appointment.id}>
+                      <span className={cn("min-w-0 truncate rounded-md bg-muted px-1.5 py-1 type-caption", hasEnded(appointment) && "line-through opacity-50")} key={appointment.id}>
                         <span className="font-medium tabular-nums">{formatDateTime(appointment.startsAt, i18n.language, { hour: "numeric", minute: "2-digit", timeZone })}</span>{" "}
                         <span className="ph-mask text-muted-foreground">{contactName(appointment)}</span>
                       </span>
                     ))}
-                    {dayAppointments.length > WEEK_PREVIEW ? <span className="px-1.5 text-xs text-muted-foreground">{t("appointments.calendarView.more", { count: dayAppointments.length - WEEK_PREVIEW })}</span> : null}
+                    {dayAppointments.length > WEEK_PREVIEW ? <span className="px-1.5 type-caption text-muted-foreground">{t("appointments.calendarView.more", { count: dayAppointments.length - WEEK_PREVIEW })}</span> : null}
                   </span>
                 ) : null}
               </button>

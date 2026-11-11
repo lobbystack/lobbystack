@@ -61,7 +61,7 @@ function AppointmentDetails({ appointment, contactName, showClose }: { appointme
       <DrawerContent>
         {showClose ? <DrawerClose render={<Button className="absolute top-3 right-3" size="icon-sm" variant="ghost" />}><XIcon /><span className="sr-only">{t("accessibility.close")}</span></DrawerClose> : null}
         <DrawerHeader className={showClose ? "pr-12" : undefined}>
-          <DrawerTitle className="ph-mask text-lg">{contactName}</DrawerTitle>
+          <DrawerTitle className="ph-mask">{contactName}</DrawerTitle>
           <DrawerDescription className="first-letter:uppercase">
             {time(appointment.startsAt, { weekday: "long", month: "long", day: "numeric" })} · {time(appointment.startsAt, { hour: "numeric", minute: "2-digit" })}–{time(appointment.endsAt, { hour: "numeric", minute: "2-digit" })}
           </DrawerDescription>

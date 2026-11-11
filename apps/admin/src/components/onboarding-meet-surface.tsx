@@ -148,7 +148,7 @@ function MeetAgent() {
             <Field>
               <FieldLabel htmlFor="meet-voice">{tAgent("fields.voice.label")}</FieldLabel>
               <div className="flex h-10 items-center justify-between gap-3 rounded-xl border border-border pr-1 pl-3 shadow-xs">
-                <span className="min-w-0 truncate text-sm">{tAgent("fields.voice.summary", { voice: voiceName(voice), traits: voiceTraits(voice) })}</span>
+                <span className="min-w-0 truncate type-body">{tAgent("fields.voice.summary", { voice: voiceName(voice), traits: voiceTraits(voice) })}</span>
                 <Button id="meet-voice" onClick={() => setVoiceOpen(true)} size="sm" type="button" variant="outline">{tAgent("fields.voice.change")}</Button>
               </div>
             </Field>

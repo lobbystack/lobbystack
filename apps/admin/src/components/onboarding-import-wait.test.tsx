@@ -16,7 +16,7 @@ function renderSlides(locale: "en" | "fr" | "es" | "sr" = "en") {
   render(<I18nextProvider i18n={instance}><ImportWaitSlides /></I18nextProvider>);
 }
 
-const shownTitle = () => screen.getByText((_, element) => element?.tagName === "P" && element.className.includes("font-medium")).textContent ?? "";
+const shownTitle = () => screen.getByText((_, element) => element?.tagName === "P" && element.className.includes("type-card-title")).textContent ?? "";
 
 /** Built the way the server builds it, so a key the route doesn't ship would show as a raw key. */
 it.each(["en", "fr", "es", "sr"] as const)("shows every slide in %s", async (locale) => {

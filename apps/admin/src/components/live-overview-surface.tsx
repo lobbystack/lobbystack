@@ -207,7 +207,7 @@ export function LiveOverviewSurface() {
                                       {request.notes ? <ItemDescription>{t("home.actionRequired.notes", { notes: request.notes })}</ItemDescription> : null}
                                     </>;
                                   })() : null}
-                                  <ItemFooter className="flex-wrap gap-2 text-xs text-muted-foreground">
+                                  <ItemFooter className="flex-wrap gap-2 type-caption text-muted-foreground">
                                     <span>
                                       {formatDateTime(item.createdAt, i18n.language, {
                                         dateStyle: "medium",
@@ -269,7 +269,7 @@ export function LiveOverviewSurface() {
             {results.map((result) => (
               <section className="flex min-w-0 flex-col gap-2 border-b p-6 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0" key={result.key}>
                 <h2 className="type-card-title text-foreground">{t(`home.results.${result.key}`)}</h2>
-                <p className="text-4xl font-normal tracking-normal break-words text-foreground tabular-nums">{result.value}</p>
+                <p className="type-metric-sm break-words">{result.value}</p>
                 {result.description ? <p className="type-meta">{result.description}</p> : null}
               </section>
             ))}
@@ -277,7 +277,7 @@ export function LiveOverviewSurface() {
         ) : null}
         {summary.isLoading ? <OverviewChartSkeleton chartTitle={t("home.chart.title")} recentCallsTitle={t("home.recentCalls.title")} /> : <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
           <Card className="col-span-1 lg:col-span-4"><CardHeader><CardTitle>{t("home.chart.title")}</CardTitle></CardHeader><CardContent className="ps-2"><OverviewCallChart data={(summary.data?.monthlyCalls ?? []).map((item) => ({ name: formatDateTime(item.monthStart, i18n.language, { month: "short", timeZone: "UTC" }), total: item.total }))} /></CardContent></Card>
-          <Card className="ph-mask col-span-1 lg:col-span-3"><CardHeader><CardTitle>{t("home.recentCalls.title")}</CardTitle><CardDescription>{t("home.recentCalls.description", { count: summary.data?.recentCalls.length ?? 0 })}</CardDescription></CardHeader><CardContent><div className="flex flex-col gap-6">{(summary.data?.recentCalls ?? []).map((call) => <div className="flex items-center gap-4" key={call.id}><Avatar className="h-9 w-9"><AvatarFallback>{initials(call.contactName)}</AvatarFallback></Avatar><div className="flex flex-1 flex-wrap items-center justify-between"><div className="flex flex-col gap-1"><p className="type-item-title leading-none">{getContactDisplayName({ name: call.contactName, phone: call.contactPhone, email: call.contactEmail, channels: [call.transport] }, i18n.language, t)}</p><p className="type-body-muted">{call.contactName && hasDisplayablePhone(call.contactPhone) ? formatPhoneNumberDisplay(call.contactPhone, i18n.language) : formatDateTime(call.startedAt, i18n.language, { dateStyle: "medium", timeStyle: "short" })}</p></div><div className="type-item-title">{call.durationSeconds ? t("home.recentCalls.durationValue", { value: call.durationSeconds }) : call.status}</div></div></div>)}</div></CardContent></Card>
+          <Card className="ph-mask col-span-1 lg:col-span-3"><CardHeader><CardTitle>{t("home.recentCalls.title")}</CardTitle><CardDescription>{t("home.recentCalls.description", { count: summary.data?.recentCalls.length ?? 0 })}</CardDescription></CardHeader><CardContent><div className="flex flex-col gap-6">{(summary.data?.recentCalls ?? []).map((call) => <div className="flex items-center gap-4" key={call.id}><Avatar className="h-9 w-9"><AvatarFallback>{initials(call.contactName)}</AvatarFallback></Avatar><div className="flex flex-1 flex-wrap items-center justify-between"><div className="flex flex-col gap-1"><p className="type-item-title">{getContactDisplayName({ name: call.contactName, phone: call.contactPhone, email: call.contactEmail, channels: [call.transport] }, i18n.language, t)}</p><p className="type-body-muted">{call.contactName && hasDisplayablePhone(call.contactPhone) ? formatPhoneNumberDisplay(call.contactPhone, i18n.language) : formatDateTime(call.startedAt, i18n.language, { dateStyle: "medium", timeStyle: "short" })}</p></div><div className="type-item-title">{call.durationSeconds ? t("home.recentCalls.durationValue", { value: call.durationSeconds }) : call.status}</div></div></div>)}</div></CardContent></Card>
         </div>}
       </div>
     </div>

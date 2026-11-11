@@ -119,7 +119,7 @@ export function BillingSuccessSurface() {
   if (!plan) {
     return (
       <ReplacementOnboardingShell description={t("billing.success.received.description")} icon={<SuccessCheck />} title={t("billing.success.received.title")} width="md">
-        <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground" role="status">
+        <p className="flex items-center justify-center gap-2 type-body-muted" role="status">
           <LoaderCircle aria-hidden="true" className="size-4 animate-spin motion-reduce:animate-none" />
           {t("billing.success.received.status")}
         </p>
@@ -148,27 +148,27 @@ export function BillingSuccessSurface() {
     <ReplacementOnboardingShell icon={<SuccessCheck />} title={t("billing.success.title", { plan: t(`billing.planLabels.${plan}`) })} width="lg">
       <div className="flex flex-col gap-6 text-left">
         <Surface className="flex flex-col gap-4 p-6">
-          <p className="text-sm font-medium text-foreground">{t("billing.currentPlan.includedTitle")}</p>
+          <p className="type-title text-foreground">{t("billing.currentPlan.includedTitle")}</p>
           <ul className="flex flex-col gap-2.5">
-            {unlocks.map((unlock) => <li className="flex items-start gap-2.5 text-sm" key={unlock}><Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-emerald-500" />{unlock}</li>)}
+            {unlocks.map((unlock) => <li className="flex items-start gap-2.5 type-body" key={unlock}><Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-emerald-500" />{unlock}</li>)}
           </ul>
         </Surface>
         {number ? (
           <Surface className="flex flex-col items-center gap-1 p-6 text-center">
-            <p className="text-sm text-muted-foreground">{t("billing.success.number.label")}</p>
-            <p className="text-2xl font-semibold text-foreground">{displayNumber}</p>
-            <p className="text-sm text-muted-foreground">{t("billing.success.number.keep")}</p>
+            <p className="type-body-muted">{t("billing.success.number.label")}</p>
+            <p className="type-heading-xs text-foreground">{displayNumber}</p>
+            <p className="type-body-muted">{t("billing.success.number.keep")}</p>
           </Surface>
         ) : (
           <Button className="w-full" onClick={goToNumberStep} type="button">{t("billing.success.number.choose")}</Button>
         )}
         <section className="flex flex-col gap-4">
-          <h2 className="text-base font-medium text-foreground">{t("billing.success.steps.title")}</h2>
+          <h2 className="type-card-title text-foreground">{t("billing.success.steps.title")}</h2>
           <ol className="flex flex-col gap-4">
             {steps.map((step, index) => (
               <li className="flex gap-3" key={step.key}>
-                <span aria-hidden="true" className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">{index + 1}</span>
-                <div className="flex min-w-0 flex-col gap-1 text-sm">
+                <span aria-hidden="true" className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted type-meta">{index + 1}</span>
+                <div className="flex min-w-0 flex-col gap-1 type-body">
                   <p className="font-medium text-foreground">{t(`billing.success.steps.${step.key}.title`)}</p>
                   <p className="text-muted-foreground">{t(`billing.success.steps.${step.key}.description`)}</p>
                   {step.action}
