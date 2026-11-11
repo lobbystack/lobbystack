@@ -111,7 +111,11 @@ type PhoneNumberChooserProps = {
   onClaimed: (result: Extract<ClaimResult, { status: "claimed" }>, number: AvailableNumberSummary) => void;
   onClaimStarted?: (number: AvailableNumberSummary) => void;
   onClaimCompleted?: (number: AvailableNumberSummary) => void;
+  /** A last country option for owners in a country we sell no numbers in. Picking it calls onSelect and keeps the country. */
+  otherCountry?: { label: string; onSelect: () => void } | undefined;
 };
+
+const OTHER_COUNTRY = "other";
 
 type NumberOffer = { phoneE164: string; locality?: string; region?: string; countryCode: string; claimToken: string; capabilities: { sms: boolean; voice: boolean } };
 type OffersResponse = { numbers: NumberOffer[]; market?: { countryCode: string; areaCode?: string }; countryFixed?: boolean };
@@ -201,6 +205,7 @@ export function PhoneNumberChooser({
   onClaimed,
   onClaimStarted,
   onClaimCompleted,
+  otherCountry,
 }: PhoneNumberChooserProps) {
   const [country, setCountry] = useState<SupportedOnboardingPhoneCountry>("US");
   const [countryFixed, setCountryFixed] = useState(false);
@@ -216,6 +221,10 @@ export function PhoneNumberChooser({
   const supportsAreaCodeSearch = supportsOnboardingAreaCodeSearch(country);
 
   function handleCountryChange(value: string | null): void {
+    if (value === OTHER_COUNTRY) {
+      otherCountry?.onSelect();
+      return;
+    }
     const nextCountry = normalizeOnboardingPhoneCountry(value);
     setCountry(nextCountry);
     if (!supportsOnboardingAreaCodeSearch(nextCountry)) {
@@ -364,6 +373,7 @@ export function PhoneNumberChooser({
                   {option.label}
                 </SelectItem>
               ))}
+              {otherCountry ? <SelectItem value={OTHER_COUNTRY}>{otherCountry.label}</SelectItem> : null}
             </SelectContent>
           </Select>}
         </div>

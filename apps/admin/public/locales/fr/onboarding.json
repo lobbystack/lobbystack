@@ -215,9 +215,9 @@
       "joined": "C'est noté. Nous vous écrirons.",
       "continue": "Continuer sans numéro",
       "failed": "Une erreur est survenue. Réessayez.",
-      "notListed": "Mon pays n'est pas dans la liste",
       "label": "Pays",
-      "back": "Retour aux numéros"
+      "back": "Retour aux numéros",
+      "other": "Autre pays"
     }
   },
   "attribution": {

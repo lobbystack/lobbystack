@@ -37,12 +37,12 @@ describe("onboarding number API adapter", () => {
     const fetchMock = setup("phone_number", false, true);
     expect(screen.queryByRole("button", { name: "number.select" })).toBeNull();
     expect(screen.queryByRole("button", { name: "number.skipLater" })).toBeNull();
-    await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith("/onboarding/plan"), { timeout: 2500 });
+    await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith("/onboarding/attribution"), { timeout: 2500 });
     expect(fetchMock.mock.calls.every(([url]) => url.includes("/api/phone-numbers?"))).toBe(true);
   });
-  it("moves straight on to the plans once the business has a number", async () => {
+  it("moves straight on to attribution once the business has a number", async () => {
     const fetchMock = setup("phone_number", true);
-    await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith("/onboarding/plan"));
+    await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith("/onboarding/attribution"));
     expect(fetchMock).not.toHaveBeenCalled();
   });
   it("returns to attribution when revisiting with a number", async () => {
@@ -79,12 +79,14 @@ describe("onboarding number API adapter", () => {
     expect(fetchMock.mock.calls.some(([url]) => url.includes("/suggestion?"))).toBe(false);
     telemetryRef.current!.expectEvent("web.onboarding.number_unavailable", { businessId: "business-1", code: "trial_already_used" });
     expect(screen.queryByRole("button", { name: "number.skipLater" })).toBeNull();
-    expect(screen.getByRole("button", { name: "number.country.notListed" })).toBeTruthy();
+    // The way on without a number waits for a country we sell none in.
+    expect(screen.queryByRole("button", { name: "number.country.continue" })).toBeNull();
   });
   it("offers no skip to a cloud owner during onboarding", async () => {
     setup("phone_number");
-    expect(await screen.findByRole("button", { name: "number.country.notListed" })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "number.select" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "number.skipLater" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "number.country.continue" })).toBeNull();
   });
   it("keeps the skip at a self-hosted install, which has no trial to guard", async () => {
     const fetchMock = setup("phone_number", false, false, undefined, null, "CA", false);
@@ -92,8 +94,20 @@ describe("onboarding number API adapter", () => {
     await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url.includes("/skip?"))).toBe(true));
     expect(navigation.push).toHaveBeenCalledWith("/onboarding/attribution");
   });
-  it("opens on the country fallback where the time zone points to a country without numbers", async () => {
-    const fetchMock = setup("phone_number", false, false, undefined, null, "FR");
+  it("doesn't open the way on without a number by itself, even where the time zone points to a country without numbers", async () => {
+    setup("phone_number", false, false, undefined, null, "FR");
+    expect(await screen.findByRole("button", { name: "number.select" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "number.country.continue" })).toBeNull();
+  });
+  it("opens the way on without a number once the owner picks a country we sell none in, beside the paid plans", async () => {
+    const fetchMock = setup("phone_number", false, false, undefined, "trial_already_used");
+    const country = await screen.findByRole("combobox", { name: "number.country.label" });
+    // A country we sell numbers in keeps the owner on the plans.
+    await userEvent.click(country);
+    await userEvent.click(await screen.findByRole("option", { name: /Canada/ }));
+    expect(screen.queryByRole("button", { name: "number.country.continue" })).toBeNull();
+    await userEvent.click(country);
+    await userEvent.click(await screen.findByRole("option", { name: /France/ }));
     await userEvent.click(await screen.findByRole("button", { name: "number.country.notify" }));
     await screen.findByText("number.country.joined");
     const joined = fetchMock.mock.calls.find(([url]) => url.includes("/api/onboarding/numbers?"));
@@ -104,12 +118,17 @@ describe("onboarding number API adapter", () => {
     const skipped = fetchMock.mock.calls.find(([url]) => url.includes("/skip?"));
     expect(JSON.parse(String((skipped as unknown as [string, RequestInit])[1].body))).toEqual({ countryCode: "FR" });
     telemetryRef.current!.expectEvent("web.onboarding.number_skipped", { businessId: "business-1", countryCode: "FR" });
-    expect(fetchMock.mock.calls.some(([url]) => url.includes("/suggestion?"))).toBe(false);
   });
-  it("opens the country fallback from the picker, and goes back to it", async () => {
+  it("lists only countries we sell no numbers in once the owner picks Other country, and goes back to the picker", async () => {
     setup("phone_number");
-    await userEvent.click(await screen.findByRole("button", { name: "number.country.notListed" }));
-    expect(await screen.findByRole("button", { name: "number.country.continue" })).toBeTruthy();
+    await userEvent.click(await screen.findByRole("combobox", { name: "number.countryLabel" }));
+    await userEvent.click(await screen.findByRole("option", { name: "number.country.other" }));
+    const country = await screen.findByRole("combobox", { name: "number.country.label" });
+    expect(screen.queryByRole("button", { name: "number.country.continue" })).toBeNull();
+    await userEvent.click(country);
+    await screen.findByRole("option", { name: /France/ });
+    expect(screen.queryByRole("option", { name: /Canada/ })).toBeNull();
+    await userEvent.keyboard("{Escape}");
     await userEvent.click(screen.getByRole("button", { name: "number.country.back" }));
     expect(await screen.findByRole("button", { name: "number.select" })).toBeTruthy();
   });

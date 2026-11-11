@@ -9,17 +9,18 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { PhoneCountrySelect } from "@/components/phone-country-select";
 import { useTelemetry } from "@/components/product-analytics";
 import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
-import { getDefaultPhoneCountry, getPhoneCountryOptions, type PhoneCountryOption } from "@/lib/phone";
+import { getPhoneCountryOptions, type PhoneCountryOption } from "@/lib/phone";
 import { requestJson } from "@/lib/request-json";
 
 /**
  * The number step's way on in a country where LobbyStack sells no numbers.
- * The owner picks the country, which the server trusts and logs, can ask to
- * hear when numbers arrive there, and continues without a number.
+ * The list holds only such countries. Once the owner picks theirs, which the
+ * server trusts and logs, they can ask to hear when numbers arrive there and
+ * continue without a number.
  */
 export function OnboardingNumberCountryFallback({ businessId, initialCountry, numberCountries, onBack, onSkipped }: {
   businessId: string;
-  /** The country the business's time zone points to, when it has no numbers. */
+  /** The country the owner already picked, when we sell no numbers there. */
   initialCountry: string | null;
   /** Where LobbyStack sells numbers, which the list leaves out. */
   numberCountries: readonly string[];
@@ -31,8 +32,7 @@ export function OnboardingNumberCountryFallback({ businessId, initialCountry, nu
   const telemetry = useTelemetry();
   const locale = i18n.resolvedLanguage ?? i18n.language;
   const options = useMemo(() => getPhoneCountryOptions(locale).filter((option) => !numberCountries.includes(option.code)), [locale, numberCountries]);
-  const fallback = options.find((option) => option.code === initialCountry)?.code ?? options.find((option) => option.code === getDefaultPhoneCountry(locale))?.code ?? options[0]?.code ?? null;
-  const [country, setCountry] = useState<PhoneCountryOption["code"] | null>(fallback);
+  const [country, setCountry] = useState<PhoneCountryOption["code"] | null>(options.find((option) => option.code === initialCountry)?.code ?? null);
   const [joined, setJoined] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const countryName = options.find((option) => option.code === country)?.label ?? country ?? "";
@@ -48,20 +48,21 @@ export function OnboardingNumberCountryFallback({ businessId, initialCountry, nu
     onError: (cause) => setError(getSafeOnboardingErrorMessage(cause, t, "number.country.failed")),
     meta: { inlineError: true },
   });
-  if (!country) return null;
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-4">
       <Field>
         <FieldLabel>{t("number.country.label")}</FieldLabel>
         <PhoneCountrySelect ariaLabel={t("number.country.label")} className="w-full justify-start" countries={options} onChange={(next) => { setCountry(next); setJoined(false); setError(null); }} value={country} />
       </Field>
-      <div className="flex flex-col gap-3 rounded-xl border border-border p-4 text-left">
-        <p className="text-sm font-medium text-foreground">{t("number.country.title", { country: countryName })}</p>
-        <p className="text-sm text-muted-foreground">{t("number.country.body", { country: countryName })}</p>
-        {joined ? <p className="text-sm text-foreground">{t("number.country.joined")}</p> : <Button disabled={waitlist.isPending} onClick={() => waitlist.mutate()} type="button" variant="outline">{t("number.country.notify")}</Button>}
-      </div>
-      {error ? <FieldError>{error}</FieldError> : null}
-      <Button className="w-full" disabled={skip.isPending} onClick={() => { setError(null); skip.mutate(); }} type="button">{t("number.country.continue")}</Button>
+      {country ? <>
+        <div className="flex flex-col gap-3 rounded-xl border border-border p-4 text-left">
+          <p className="text-sm font-medium text-foreground">{t("number.country.title", { country: countryName })}</p>
+          <p className="text-sm text-muted-foreground">{t("number.country.body", { country: countryName })}</p>
+          {joined ? <p className="text-sm text-foreground">{t("number.country.joined")}</p> : <Button disabled={waitlist.isPending} onClick={() => waitlist.mutate()} type="button" variant="outline">{t("number.country.notify")}</Button>}
+        </div>
+        {error ? <FieldError>{error}</FieldError> : null}
+        <Button className="w-full" disabled={skip.isPending} onClick={() => { setError(null); skip.mutate(); }} type="button">{t("number.country.continue")}</Button>
+      </> : null}
       {onBack ? <button className="mx-auto text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground" onClick={onBack} type="button">{t("number.country.back")}</button> : null}
     </div>
   );

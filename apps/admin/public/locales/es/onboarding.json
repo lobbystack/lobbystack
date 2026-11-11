@@ -215,9 +215,9 @@
       "joined": "Listo. Le escribiremos.",
       "continue": "Continuar sin número",
       "failed": "Algo salió mal. Inténtelo de nuevo.",
-      "notListed": "Mi país no aparece",
       "label": "País",
-      "back": "Volver a los números"
+      "back": "Volver a los números",
+      "other": "Otro país"
     }
   },
   "attribution": {

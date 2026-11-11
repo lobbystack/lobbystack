@@ -214,9 +214,9 @@
       "joined": "Done. We'll email you.",
       "continue": "Continue without a number",
       "failed": "Something went wrong. Try again.",
-      "notListed": "My country isn't listed",
       "label": "Country",
-      "back": "Back to the numbers"
+      "back": "Back to the numbers",
+      "other": "Other country"
     }
   },
   "attribution": {

@@ -215,9 +215,9 @@
       "joined": "Važi. Pisaćemo Vam.",
       "continue": "Nastavi bez broja",
       "failed": "Nešto nije u redu. Pokušajte ponovo.",
-      "notListed": "Moje zemlje nema na listi",
       "label": "Zemlja",
-      "back": "Nazad na brojeve"
+      "back": "Nazad na brojeve",
+      "other": "Druga zemlja"
     }
   },
   "attribution": {
