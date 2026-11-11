@@ -13,6 +13,7 @@ import { useManagedBusiness } from "@/hooks/use-agent-settings";
 import type { AgentListItem } from "@/hooks/use-agents";
 import { useAgents } from "@/hooks/use-agents";
 import { agentHref, agentPageOf, AGENT_PAGES, type AgentPage } from "@/lib/agent-pages";
+import { levelFor } from "@/lib/navigation-levels";
 import { MenuGroup, MenuNavigationContext, MenuRow } from "./menu-parts";
 
 const ICONS: Partial<Record<AgentPage["section"], LucideIcon>> = { "": AudioLines, instructions: ScrollText, rules: ListChecks, channels: Radio, shared: Layers };
@@ -79,7 +80,9 @@ export function AgentMenu({ agentId }: { agentId: string }) {
   const pathname = usePathname();
   const { find, hasChoice } = useAgents();
   const agent = find(agentId);
-  const open = agentPageOf(pathname)?.section ?? "";
+  // The phone menu can show an agent's menu from any page; only that agent's own pages light a row.
+  const onAgent = levelFor(pathname) === `agent:${agentId}`;
+  const open = onAgent ? agentPageOf(pathname)?.section ?? "" : null;
   const channels = agent ? agent.phoneNumbers + agent.widgetKeys + agent.instagramAccounts : null;
   const trailing = (section: AgentPage["section"]) => {
     if (section !== "channels" || channels === null) return undefined;
@@ -94,7 +97,7 @@ export function AgentMenu({ agentId }: { agentId: string }) {
           const Icon = ICONS[page.section]!;
           const label = t(page.titleKey);
           // Channels stays lit on the phone number and widget pages it opens.
-          const active = page.section === "channels" ? open.startsWith("channels") : open === page.section;
+          const active = open !== null && (page.section === "channels" ? open.startsWith("channels") : open === page.section);
           return <MenuRow active={active} href={agentHref(agentId, page.section)} key={page.section} label={label} leading={<Icon />} title={label} trailing={trailing(page.section)} />;
         })}
       </MenuGroup>

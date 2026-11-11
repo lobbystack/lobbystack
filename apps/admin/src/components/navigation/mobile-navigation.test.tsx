@@ -79,6 +79,8 @@ describe("the phone menu sheet", () => {
     const single = await openMenu();
     await userEvent.click(within(single).getByRole("button", { name: "items.agents" }));
     expect(level()).toBe("agent:agent-1");
+    // Opened from the Inbox, none of the agent's pages is the one open.
+    expect(within(single).getAllByRole("link").filter((link) => link.hasAttribute("data-active"))).toEqual([]);
   });
 
   it("leaves out what the business doesn't let the person open", async () => {
