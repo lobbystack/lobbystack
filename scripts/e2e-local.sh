@@ -47,6 +47,7 @@ TESTS=(
   e2e/getting-started.e2e.ts
   e2e/home-analytics-metrics.e2e.ts
   e2e/manual-create.e2e.ts
+  e2e/mobile-navigation.e2e.ts
   e2e/navigation.e2e.ts
   e2e/onboarding-flow.e2e.ts
   e2e/onboarding-path.e2e.ts
