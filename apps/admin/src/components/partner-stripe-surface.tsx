@@ -10,13 +10,14 @@ import { STRIPE_ACCOUNT_COUNTRIES, intlLocale, isStripeAccountCountry, type Part
 import { PageHeader } from "@/components/page-header";
 import { useConsolePartner } from "@/components/partner-shell";
 import { useTelemetry } from "@/components/product-analytics";
-import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import { requestJson } from "@/lib/request-json";
+import { Status } from "@/components/ui/status";
+import { STRIPE_ACCOUNT_STATUS_VARIANTS } from "@/lib/status-variants";
 
 /** What GET /api/partner/stripe answers. */
 type Connection = {
@@ -155,7 +156,7 @@ export function PartnerStripeSurface() {
             <h2 className="text-base font-medium">{t(copy.title)}</h2>
             {copy.description ? <p className="text-sm leading-6 text-muted-foreground">{t(copy.description, { currency: data.currency ?? "", date: data.disconnectedAt ? formatDate(data.disconnectedAt) : "" })}</p> : null}
           </div>
-          <Badge className="shrink-0" variant={data.status === "active" ? "secondary" : "outline"}>{t(STATUS_KEYS[data.status])}</Badge>
+          <Status variant={STRIPE_ACCOUNT_STATUS_VARIANTS[data.status]}>{t(STATUS_KEYS[data.status])}</Status>
         </div>
         {data.accountId && data.status !== "disconnected" ? (
           <dl className="grid gap-4 text-sm sm:grid-cols-2">

@@ -33,6 +33,8 @@ import { getChannelLabel, getContactChannels, getContactDisplayName, getContactS
 import { formatDateTime } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 import { useTelemetry } from "@/components/product-analytics";
+import { Status } from "@/components/ui/status";
+import { CONTACT_STATUS_VARIANTS } from "@/lib/status-variants";
 
 type Contact = {
   id: string;
@@ -103,7 +105,7 @@ export function LiveContactsSurface() {
       header: () => t("table.contact"),
       cell: ({ row }) => {
         const details = getContactSecondaryDetails(row.original, i18n.language);
-        return <div className="flex min-w-0 flex-col gap-1"><div className="flex min-w-0 items-center gap-2"><span className="ph-mask truncate font-semibold">{getContactDisplayName(row.original, i18n.language, t)}</span>{row.original.operatorBlockedAt ? <Badge variant="destructive">{t("table.status.blocked")}</Badge> : null}</div>{details.length ? <div className="ph-no-capture flex min-w-0 flex-col">{details.map((detail) => <span className="truncate text-sm text-muted-foreground" key={detail} title={detail}>{detail}</span>)}</div> : null}</div>;
+        return <div className="flex min-w-0 flex-col gap-1"><div className="flex min-w-0 items-center gap-2"><span className="ph-mask truncate font-semibold">{getContactDisplayName(row.original, i18n.language, t)}</span>{row.original.operatorBlockedAt ? <Status variant={CONTACT_STATUS_VARIANTS.blocked}>{t("table.status.blocked")}</Status> : null}</div>{details.length ? <div className="ph-no-capture flex min-w-0 flex-col">{details.map((detail) => <span className="truncate text-sm text-muted-foreground" key={detail} title={detail}>{detail}</span>)}</div> : null}</div>;
       },
     },
     {

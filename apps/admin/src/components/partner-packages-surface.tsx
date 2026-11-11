@@ -13,7 +13,6 @@ import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { PageHeader } from "@/components/page-header";
 import { useConsolePartner } from "@/components/partner-shell";
 import { useTelemetry } from "@/components/product-analytics";
-import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -25,6 +24,8 @@ import { Surface } from "@/components/ui/surface";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { parsePriceInput } from "@/lib/price-input";
 import { requestJson } from "@/lib/request-json";
+import { Status } from "@/components/ui/status";
+import { PACKAGE_STATUS_VARIANTS } from "@/lib/status-variants";
 
 /** A package as GET /api/partner/packages lists it. Amounts are in the currency's smallest unit. */
 type PartnerPackage = {
@@ -252,7 +253,7 @@ export function PartnerPackagesSurface() {
                     <div className="flex flex-col gap-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-medium">{item.name}</p>
-                        {item.onConnectedAccount ? null : <Badge variant="outline">{t("packages.oldAccount")}</Badge>}
+                        {item.onConnectedAccount ? null : <Status variant={PACKAGE_STATUS_VARIANTS.oldAccount}>{t("packages.oldAccount")}</Status>}
                       </div>
                       <p className="text-sm text-muted-foreground">{t("packages.createdOn", { date: formatDate(item.createdAt) })}</p>
                     </div>

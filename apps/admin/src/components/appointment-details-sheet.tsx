@@ -6,7 +6,6 @@ import { XIcon } from "lucide-react";
 
 import { CancelAppointmentButton } from "@/components/cancel-appointment-button";
 import { MoveAppointmentButton } from "@/components/move-appointment-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDuration } from "@/components/ui/duration-picker";
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
@@ -15,6 +14,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { getChannelLabel, hasDisplayablePhone } from "@/lib/contact-display";
 import { formatDateTime, intlLocale } from "@/lib/locale";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
+import { Status } from "@/components/ui/status";
+import { appointmentStatusVariant } from "@/lib/status-variants";
 
 /**
  * Everything about one booking, including what its row truncates. A drawer
@@ -51,7 +52,7 @@ function AppointmentDetails({ appointment, contactName, showClose }: { appointme
     ...(hasDisplayablePhone(appointment.contactPhone) ? [[t("appointments.details.phone"), <a className="underline-offset-4 hover:underline" href={`tel:${appointment.contactPhone}`} key="phone">{formatPhoneNumberDisplay(appointment.contactPhone, i18n.language)}</a>] as [string, React.ReactNode]] : []),
     ...(appointment.contactEmail ? [[t("appointments.details.email"), <a className="break-all underline-offset-4 hover:underline" href={`mailto:${appointment.contactEmail}`} key="email">{appointment.contactEmail}</a>] as [string, React.ReactNode]] : []),
     [t("appointments.details.channel"), getChannelLabel(appointment.sourceChannel, t)],
-    [t("appointments.status"), <Badge key="status" variant="secondary">{t(`appointments.statuses.${appointment.status}`, { defaultValue: appointment.status })}</Badge>],
+    [t("appointments.status"), <Status key="status" variant={appointmentStatusVariant(appointment.status)}>{t(`appointments.statuses.${appointment.status}`, { defaultValue: appointment.status })}</Status>],
     [t("appointments.calendar"), t(`appointments.calendarStates.${appointment.calendarSyncState}`, { defaultValue: appointment.calendarSyncState.replaceAll("_", " ") })],
   ];
 

@@ -32,6 +32,8 @@ import { intlLocale } from "@/lib/locale";
 import { parsePriceInput, priceInputMinor, priceInputValue } from "@/lib/price-input";
 import { requestJson } from "@/lib/request-json";
 import { availableTimeZones, groupTimeZones, isTimeZoneRegion, type TimeZoneOption } from "@/lib/time-zones";
+import { Status } from "@/components/ui/status";
+import { INVITATION_STATUS_VARIANTS, PACKAGE_SUBSCRIPTION_STATUS_VARIANTS } from "@/lib/status-variants";
 
 /** What a business is sold, with its overage in the package's currency, which only owners and admins see. */
 type PackageBilling = { kind: "package"; packageId: string; packageName: string; status: PackageSubscriptionStatus; overage: PackageOverage };
@@ -64,13 +66,6 @@ const BILLING_ERRORS: Record<string, string> = {
   package_not_found: "businesses.billing.errors.packageGone",
   stripe_not_connected: "businesses.billing.errors.notConnected",
   stripe_not_configured: "businesses.billing.errors.notConfigured",
-};
-
-const STATUS_BADGE: Record<PackageSubscriptionStatus, string | undefined> = {
-  awaiting_payment: "border-amber-200 bg-amber-100 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/20 dark:text-amber-200",
-  active: undefined,
-  past_due: "border-destructive/30 bg-destructive/10 text-destructive",
-  inactive: undefined,
 };
 
 // Matches SelectTrigger, as the time zone picker in the receptionist's settings does.
@@ -455,7 +450,7 @@ export function PartnerBusinessesSurface() {
                       {owner ? (
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="ph-mask text-sm">{owner.email}</p>
-                          {owner.status === "invited" ? <Badge className={expired ? undefined : "border-amber-200 bg-amber-100 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/20 dark:text-amber-200"} variant="outline">{t(expired ? "businesses.owner.expired" : "businesses.owner.invited")}</Badge> : null}
+                          {owner.status === "invited" ? <Status variant={INVITATION_STATUS_VARIANTS[expired ? "expired" : "invited"]}>{t(expired ? "businesses.owner.expired" : "businesses.owner.invited")}</Status> : null}
                         </div>
                       ) : <p className="text-sm text-muted-foreground">{t("businesses.owner.none")}</p>}
                     </TableCell>
@@ -467,7 +462,7 @@ export function PartnerBusinessesSurface() {
                           <div className="flex flex-wrap items-center gap-2">
                             {business.billing?.kind === "package" ? <>
                               <p className="text-sm">{business.billing.packageName}</p>
-                              <Badge className={STATUS_BADGE[business.billing.status]} variant={business.billing.status === "active" ? "secondary" : "outline"}>{t(`businesses.billing.status.${business.billing.status}`)}</Badge>
+                              <Status variant={PACKAGE_SUBSCRIPTION_STATUS_VARIANTS[business.billing.status]}>{t(`businesses.billing.status.${business.billing.status}`)}</Status>
                             </> : <p className="text-sm text-muted-foreground">{t("businesses.billing.outside")}</p>}
                             {sellsPackages ? <Button aria-label={t("businesses.billing.changeFor", { name: business.name })} onClick={() => { setChanging(business); setNewBilling(billingValue(business)); setBillingError(null); }} size="sm" variant="ghost">{t("businesses.billing.change")}</Button> : null}
                           </div>

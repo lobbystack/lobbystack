@@ -5,9 +5,11 @@ import {
   ItemMedia,
 } from "@/components/ui/item";
 import { Skeleton } from "@/components/ui/skeleton";
+import { statusShape } from "@/components/ui/status";
 import { Surface, surfaceClassName } from "@/components/ui/surface";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 /** `titles` holds each card's real title, hidden so its placeholder is as wide as the text, or null for a default width. */
 export function MetricCardGridSkeleton({ count = 4, titles }: { count?: number; titles?: ReadonlyArray<string | null> }) {
@@ -121,7 +123,7 @@ export function ChartBlockSkeleton({ height = 320 }: { height?: number }) {
 
 /** Placeholder rows for the appointments list, matching its seven columns and 48px rows. */
 export function AppointmentRowsSkeleton({ label, rows = 5 }: { label: string; rows?: number }) {
-  const cells = ["w-36", "w-28", "w-24", "w-20", "w-16 h-5 rounded-full", "w-14", "w-16 h-8 ms-auto"];
+  const cells = ["w-36", "w-28", "w-24", "w-20", "status", "w-14", "w-16 h-8 ms-auto"];
 
   return (
     <>
@@ -129,7 +131,7 @@ export function AppointmentRowsSkeleton({ label, rows = 5 }: { label: string; ro
         <TableRow className="hover:bg-transparent" key={rowIndex}>
           {cells.map((width, cellIndex) => (
             <TableCell key={cellIndex}>
-              <Skeleton className={`h-4 ${width}`} />
+              {width === "status" ? <StatusSkeleton /> : <Skeleton className={`h-4 ${width}`} />}
               {rowIndex === 0 && cellIndex === 0 ? <span className="sr-only">{label}</span> : null}
             </TableCell>
           ))}
@@ -330,7 +332,7 @@ export function KnowledgeRowsSkeleton({ rows = 10 }: { rows?: number }) {
             </div>
           </TableCell>
           <TableCell className="max-w-0"><Skeleton className="h-4 w-3/4" /></TableCell>
-          <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
+          <TableCell><StatusSkeleton /></TableCell>
           <TableCell><Skeleton className="ms-auto h-4 w-32" /></TableCell>
           <TableCell><Skeleton className="size-8" /></TableCell>
         </TableRow>
@@ -429,7 +431,7 @@ export function ServiceRowsSkeleton({ rows = 10 }: { rows?: number }) {
           </TableCell>
           <TableCell className="max-w-0"><Skeleton className="h-4 w-3/4" /></TableCell>
           <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-          <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
+          <TableCell><StatusSkeleton /></TableCell>
           <TableCell><Skeleton className="ms-auto h-4 w-32" /></TableCell>
           <TableCell><Skeleton className="size-8" /></TableCell>
         </TableRow>
@@ -479,7 +481,7 @@ export function EmployeeRowsSkeleton({ rows = 10 }: { rows?: number }) {
           <TableCell><Skeleton className="h-4 w-32" /></TableCell>
           <TableCell>
             <div className="flex items-center gap-2">
-              <Skeleton className="h-5 w-16 rounded-full" />
+              <StatusSkeleton />
               <Skeleton className="h-4 w-20" />
             </div>
           </TableCell>
@@ -500,7 +502,7 @@ export function RuleRowsSkeleton({ handle = true, rows = 10 }: { handle?: boolea
           {handle ? <TableCell className="pr-0"><Skeleton className="size-7 rounded-md" /></TableCell> : null}
           <TableCell><Skeleton className="h-4 w-28" /></TableCell>
           <TableCell className="max-w-0"><Skeleton className="h-4 w-3/4" /></TableCell>
-          <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
+          <TableCell><StatusSkeleton /></TableCell>
           <TableCell><Skeleton className="ms-auto h-4 w-32" /></TableCell>
           <TableCell><Skeleton className="size-8" /></TableCell>
         </TableRow>
@@ -628,6 +630,11 @@ export function CredentialRowsSkeleton({ actions, rows = 2 }: { actions: number;
 }
 
 /** A placeholder for a piece of fixed text. It holds the real text, hidden, so it is as wide and tall as the text. `skeletonClassName` shapes the placeholder itself, such as a button or a full-width bar. */
+/** Stands in for a Status chip: its shape and size, holding the label hidden when it is known. */
+export function StatusSkeleton({ children, className }: { children?: string; className?: string }) {
+  return <Skeleton aria-hidden="true" className={cn(statusShape(), className)}><span className={children ? "invisible" : "invisible w-12"}>{children ?? "\u00a0"}</span></Skeleton>;
+}
+
 export function HiddenTextSkeleton({ children, className, skeletonClassName }: { children: string; className?: string; skeletonClassName?: string }) {
   return <div aria-hidden="true" className={className}><Skeleton className={skeletonClassName ? `max-w-full ${skeletonClassName}` : "w-fit max-w-full"}><span className="invisible">{children}</span></Skeleton></div>;
 }

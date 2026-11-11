@@ -28,7 +28,6 @@ import { toDays, useBusinessHours, useDayNames, WeeklyHoursEditor, windowsForSav
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { DataTablePagination, paginationFeatures, useDataTablePaginationLabels } from "@/components/data-table/pagination";
 import { DataTablePaginationSkeleton, EmployeeRowsSkeleton, HeaderButtonSkeleton } from "@/components/loading-skeletons";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -45,6 +44,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { formatDateTime, intlLocale } from "@/lib/locale";
 import { PhoneCountrySelect } from "@/components/phone-country-select";
 import { formatPhoneNumberDisplay, getDefaultTransferCountry, getPhoneCountryOptions, inferPhoneCountry } from "@/lib/phone";
+import { Status } from "@/components/ui/status";
+import { EMPLOYEE_STATUS_VARIANTS } from "@/lib/status-variants";
 
 type TimeOff = { startsOn: string; endsOn: string };
 
@@ -164,7 +165,7 @@ export function LiveEmployeesSurface() {
             : next ? t("table.statusDetail.offFrom", { date: formatDay(next.startsOn, locale) }) : "";
         const tooltip = timeOff.length ? t("table.statusTooltip.timeOff", { dates: timeOff.map((entry) => formatTimeOff(entry, locale)).join("; ") }) : status === "no_services" ? t("table.statusTooltip.noServices") : "";
         const content = <>
-          <Badge className="shrink-0" variant={status === "working" ? "secondary" : status === "off" ? "outline" : "destructive"}>{t(`table.statuses.${status}`)}</Badge>
+          <Status variant={EMPLOYEE_STATUS_VARIANTS[status]}>{t(`table.statuses.${status}`)}</Status>
           {detail ? <span className="truncate text-sm text-muted-foreground">{detail}</span> : null}
         </>;
         return tooltip

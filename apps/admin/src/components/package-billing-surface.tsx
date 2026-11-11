@@ -13,10 +13,11 @@ import { requestJson } from "@/lib/request-json";
 
 import { PageSurface } from "./page-surface";
 import { SectionBlock } from "./section-block";
-import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
 import { Surface } from "./ui/surface";
+import { Status } from "@/components/ui/status";
+import { PACKAGE_SUBSCRIPTION_STATUS_VARIANTS } from "@/lib/status-variants";
 
 /** GET /api/package-billing. It names no price: only Stripe shows the business what it pays. */
 type PackageBillingPage =
@@ -28,13 +29,6 @@ type PackageBillingPage =
     canOpenPortal: boolean;
     canSubscribe: boolean;
   };
-
-const STATUS_BADGE: Record<PackageSubscriptionStatus, string | undefined> = {
-  awaiting_payment: "border-amber-200 bg-amber-100 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/20 dark:text-amber-200",
-  active: undefined,
-  past_due: "border-destructive/30 bg-destructive/10 text-destructive",
-  inactive: undefined,
-};
 
 /**
  * A partner's business's billing page, for its owners and admins. The
@@ -98,7 +92,7 @@ export function PackageBillingSurface() {
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xl font-medium leading-7 text-foreground">{offer.packageName}</span>
-              <Badge className={STATUS_BADGE[offer.status]} variant={offer.status === "active" ? "secondary" : "outline"}>{t(`subscription.badge.${offer.status}`)}</Badge>
+              <Status variant={PACKAGE_SUBSCRIPTION_STATUS_VARIANTS[offer.status]}>{t(`subscription.badge.${offer.status}`)}</Status>
             </div>
             <p className="text-sm text-muted-foreground">{t("subscription.allowance", { minutes: t("subscription.minutes", { count: offer.allowance.voiceMinutes, amount: count(offer.allowance.voiceMinutes) }), chats: t("subscription.chats", { count: offer.allowance.chats, amount: count(offer.allowance.chats) }) })}</p>
           </div>

@@ -15,7 +15,6 @@ import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { DataTablePagination, paginationFeatures, useDataTablePaginationLabels } from "./data-table/pagination";
 import { DataTablePaginationSkeleton, HeaderButtonSkeleton, RuleRowsSkeleton, RulesPageSkeleton } from "./loading-skeletons";
 import { PageSurface } from "./page-surface";
-import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
@@ -25,6 +24,8 @@ import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRo
 import { Textarea } from "./ui/textarea";
 import { intlLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
+import { Status } from "@/components/ui/status";
+import { knowledgeStatusVariant } from "@/lib/status-variants";
 
 type Rule = { id: string; title: string; content: string; active: boolean; sortOrder: number; createdAt: string };
 
@@ -141,7 +142,7 @@ export function RulesSurface({ agentId }: { agentId?: string } = {}) {
                   {canManage ? <TableCell className="pr-0" onClick={(event) => event.stopPropagation()}><span aria-hidden="true" className={cn("flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground", reorderRules.isPending ? "cursor-not-allowed opacity-50" : "cursor-grab active:cursor-grabbing")} onPointerDown={() => { if (!reorderRules.isPending) setDragArmed(rule.id); }} onPointerUp={() => setDragArmed(null)} title={t("actions.dragToReorder")}><GripVertical className="size-4" /></span></TableCell> : null}
                   <TableCell className="max-w-0 overflow-hidden"><span className="block truncate font-medium" title={rule.title}>{summarize(rule.title, 32)}</span></TableCell>
                   <TableCell className="max-w-0 overflow-hidden"><span className="block truncate text-sm text-muted-foreground" title={rule.content}>{summarize(rule.content, 72)}</span></TableCell>
-                  <TableCell>{rule.active ? <Badge variant="secondary">{t("sections.rules.status.indexed")}</Badge> : <Badge variant="outline">{t("table.disabled")}</Badge>}</TableCell>
+                  <TableCell><Status variant={knowledgeStatusVariant(rule.active ? "indexed" : "disabled")}>{rule.active ? t("sections.rules.status.indexed") : t("table.disabled")}</Status></TableCell>
                   <TableCell className="text-right text-sm text-muted-foreground">{new Intl.DateTimeFormat(intlLocale(i18n.resolvedLanguage), { dateStyle: "medium", timeStyle: "short" }).format(new Date(rule.createdAt))}</TableCell>
                   <TableCell onClick={(event) => event.stopPropagation()}>{canManage ? <DropdownMenu><DropdownMenuTrigger render={<Button aria-label={t("actions.moreOptions")} size="icon-sm" type="button" variant="ghost"><MoreHorizontal /></Button>} /><DropdownMenuContent align="end" className="min-w-0 w-fit p-1"><DropdownMenuItem onClick={() => { setEditingRule(rule); setDialogOpen(true); }}><Pencil />{t("actions.edit")}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem disabled={orderedIndex === 0 || reorderRules.isPending} onClick={() => moveRule(rule, -1)}><ArrowUp />{t("actions.moveUp")}</DropdownMenuItem><DropdownMenuItem disabled={orderedIndex === orderedRules.length - 1 || reorderRules.isPending} onClick={() => moveRule(rule, 1)}><ArrowDown />{t("actions.moveDown")}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem disabled={updateRule.isPending} onClick={() => updateRule.mutate({ ruleId: rule.id, active: !rule.active })}>{rule.active ? <Pause /> : <Play />}{rule.active ? t("actions.disable") : t("actions.enable")}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setDeleteCandidate(rule)} variant="destructive"><Trash2 />{t("actions.delete")}</DropdownMenuItem></DropdownMenuContent></DropdownMenu> : null}</TableCell>
                 </TableRow>;

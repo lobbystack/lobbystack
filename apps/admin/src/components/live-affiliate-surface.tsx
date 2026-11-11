@@ -11,7 +11,6 @@ import { formatDateTime, intlLocale, resolveLocale, type SupportedLocale } from 
 
 import { HiddenTextSkeleton } from "./loading-skeletons";
 import { PageSurface } from "./page-surface";
-import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
@@ -22,6 +21,8 @@ import { Separator } from "./ui/separator";
 import { Skeleton } from "./ui/skeleton";
 import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { Status } from "@/components/ui/status";
+import { affiliateStatusVariant } from "@/lib/status-variants";
 
 type AffiliateData = {
   profile: { id: string; referralCode: string; status: string; payoutEmail: string | null; referralLink: string } | null;
@@ -169,9 +170,9 @@ export function LiveAffiliateSurface() {
 type Translate = ReturnType<typeof useTranslation>["t"];
 
 function CommissionsTable({ commissions, locale, t }: { commissions: AffiliateData["commissions"]; locale: SupportedLocale; t: Translate }) {
-  return <TableCard><Table><TableHeader><TableRow><TableHead>{t("earnings.date")}</TableHead><TableHead>{t("earnings.sale")}</TableHead><TableHead>{t("earnings.commission")}</TableHead><TableHead>{t("earnings.clears")}</TableHead><TableHead>{t("earnings.status")}</TableHead></TableRow></TableHeader><TableBody>{commissions.length === 0 ? <TableRow><TableCell className="text-muted-foreground" colSpan={5}>{t("earnings.empty")}</TableCell></TableRow> : commissions.map((commission) => <TableRow key={commission.sourceKey}><TableCell>{formatDate(locale, commission.occurredAt)}</TableCell><TableCell>{formatCurrency(locale, commission.amountCents, commission.currency)}</TableCell><TableCell>{formatCurrency(locale, commission.commissionCents, commission.currency)}</TableCell><TableCell>{formatDate(locale, commission.clearsAt)}</TableCell><TableCell><Badge variant="secondary">{t(`statuses.${commission.status}`, { defaultValue: commission.status })}</Badge></TableCell></TableRow>)}</TableBody></Table></TableCard>;
+  return <TableCard><Table><TableHeader><TableRow><TableHead>{t("earnings.date")}</TableHead><TableHead>{t("earnings.sale")}</TableHead><TableHead>{t("earnings.commission")}</TableHead><TableHead>{t("earnings.clears")}</TableHead><TableHead>{t("earnings.status")}</TableHead></TableRow></TableHeader><TableBody>{commissions.length === 0 ? <TableRow><TableCell className="text-muted-foreground" colSpan={5}>{t("earnings.empty")}</TableCell></TableRow> : commissions.map((commission) => <TableRow key={commission.sourceKey}><TableCell>{formatDate(locale, commission.occurredAt)}</TableCell><TableCell>{formatCurrency(locale, commission.amountCents, commission.currency)}</TableCell><TableCell>{formatCurrency(locale, commission.commissionCents, commission.currency)}</TableCell><TableCell>{formatDate(locale, commission.clearsAt)}</TableCell><TableCell><Status variant={affiliateStatusVariant(commission.status)}>{t(`statuses.${commission.status}`, { defaultValue: commission.status })}</Status></TableCell></TableRow>)}</TableBody></Table></TableCard>;
 }
 
 function PayoutsTable({ locale, payoutEmail, payouts, t }: { locale: SupportedLocale; payoutEmail: string | null; payouts: AffiliateData["payouts"]; t: Translate }) {
-  return <TableCard><Table><TableHeader><TableRow><TableHead>{t("payouts.date")}</TableHead><TableHead>{t("payouts.amount")}</TableHead><TableHead>{t("payouts.paypal")}</TableHead><TableHead>{t("payouts.status")}</TableHead><TableHead>{t("payouts.reference")}</TableHead></TableRow></TableHeader><TableBody>{payouts.length === 0 ? <TableRow><TableCell className="text-muted-foreground" colSpan={5}>{t("payouts.empty")}</TableCell></TableRow> : payouts.map((payout) => <TableRow key={`${payout.periodKey}-${payout.amountCents}`}><TableCell>{payout.paidAt ? formatDate(locale, payout.paidAt) : payout.periodKey}</TableCell><TableCell>{formatCurrency(locale, payout.amountCents, payout.currency)}</TableCell><TableCell>{payoutEmail ?? "—"}</TableCell><TableCell><Badge variant="secondary">{t(`statuses.${payout.status}`, { defaultValue: payout.status })}</Badge></TableCell><TableCell>{payout.externalReference ?? t("payouts.noReference")}</TableCell></TableRow>)}</TableBody></Table></TableCard>;
+  return <TableCard><Table><TableHeader><TableRow><TableHead>{t("payouts.date")}</TableHead><TableHead>{t("payouts.amount")}</TableHead><TableHead>{t("payouts.paypal")}</TableHead><TableHead>{t("payouts.status")}</TableHead><TableHead>{t("payouts.reference")}</TableHead></TableRow></TableHeader><TableBody>{payouts.length === 0 ? <TableRow><TableCell className="text-muted-foreground" colSpan={5}>{t("payouts.empty")}</TableCell></TableRow> : payouts.map((payout) => <TableRow key={`${payout.periodKey}-${payout.amountCents}`}><TableCell>{payout.paidAt ? formatDate(locale, payout.paidAt) : payout.periodKey}</TableCell><TableCell>{formatCurrency(locale, payout.amountCents, payout.currency)}</TableCell><TableCell>{payoutEmail ?? "—"}</TableCell><TableCell><Status variant={affiliateStatusVariant(payout.status)}>{t(`statuses.${payout.status}`, { defaultValue: payout.status })}</Status></TableCell><TableCell>{payout.externalReference ?? t("payouts.noReference")}</TableCell></TableRow>)}</TableBody></Table></TableCard>;
 }
