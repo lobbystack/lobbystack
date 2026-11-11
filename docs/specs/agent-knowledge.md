@@ -45,7 +45,7 @@ Migration `0208_agent_knowledge.sql` makes the smallest change that keeps today'
 - `knowledge_documents.source_active`: the whole source's switch. A website keeps it on its import document, and it covers every page that names that document. `active` stays each page's or file's own switch, so turning a website off and on again keeps the pages someone turned off.
 - `agent_knowledge_exclusions`: one row per thing an agent turned off. It names a document or a snippet, and a `scope` of `source` (a whole website, file or entry) or `page` (one page). The table has row-level security enabled and forced, with the usual tenant policy.
 
-A website is the import document plus the pages that name it. Pages saved before this migration with no import left are grouped by host within the same scope, as `deleteWebsiteKnowledge` does today. Adding an agent-only website on a host that's already a source in another scope returns `409`, because `knowledge_documents_business_url_unique` allows one row per URL.
+A website is the import document plus the pages that name it. Pages saved before this migration with no import left are grouped by host within the same scope, as `deleteWebsiteKnowledge` does today. Adding a website on a host that's already a source in another scope returns `409`, because `knowledge_documents_business_url_unique` allows one row per URL. The error names the scope that holds it (decision 1).
 
 ## Answering
 
@@ -81,13 +81,20 @@ The dashboard adds operator routes under `/api/knowledge/sources` for the groupe
 - E2E: the business page shows a website as one row and turns a page off in its dialog; an agent adds an FAQ of its own and turns a shared source off; selecting two rows and deleting them.
 - `voice:eval`, since call answers can change.
 
+## Decisions
+
+Raphael decided:
+
+| # | Decision | Answer |
+|---|---|---|
+| 1 | What happens when someone adds a website that's already a source in another scope? | It's still refused with `409`, and the error says where the website is: "This website is already in your shared knowledge. Turn it off for the agents that shouldn't use it." or "This website is already in [agent name]'s knowledge." The dashboard shows it in the person's language, and the public API returns the English message. |
+| 2 | What happens to an agent's own knowledge when the agent is removed? | Removing an agent deletes its documents, their text and crawls, its FAQ and text entries, and its opt-outs, in the transaction that archives it, because an archived agent can't come back. The remove dialog says "Its own knowledge will be deleted." Shared knowledge and other agents' opt-outs stay. |
+
 ## Open questions
 
 - **Agent-only sources on the business page:** they show only on their agent's page. A later version could list them on the business page with the agent's name.
-- **Archived agents:** their own sources stay, unused, and count toward knowledge storage. Archiving could offer to delete them.
 - **Moving a source between agents, or making one shared:** not built. An operator deletes it and adds it again where it belongs.
 - **Business summary and hours:** they ignore agent-only sources, so an agent's own opening hours don't change the business's.
 - **Deploy window:** pages crawled by the old worker while a release drains have no `website_document_id`. Retrieval doesn't see them as part of their website until the next re-import, so a website switched off in that window can still answer from those pages. The listing groups them by host.
-- **Same website in two scopes:** refused with `409`, as above.
 - **Copying an agent:** a new agent copies the settings and rules of the agent it's created from, but not its own sources or its opt-outs. It starts with every shared source on.
 - **Turning an agent's switch on for a source the business turned off:** the switch stays disabled. The business page's switch wins.

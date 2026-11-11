@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, inArray, isNull, ne, notInArray, sql } from "drizzle-orm";
 
-import { agentRules, agents, conversations, inOrder, instagramAccounts, phoneNumbers, widgetKeys, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { agentKnowledgeExclusions, agentRules, agents, conversations, inOrder, instagramAccounts, knowledgeDocuments, knowledgeSnippets, phoneNumbers, storageObjects, widgetKeys, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { billingErrorCodes, defaultAppointmentChangePolicy, type Entitlement } from "@lobbystack/shared";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
@@ -196,9 +196,25 @@ export async function archiveAgentInTransaction(tx: DatabaseTransaction, input: 
   for (const move of moves) await moveChannelInTransaction(tx, { businessId: input.businessId, ...move, agentId: successor.id });
   // Open conversations on channels it no longer holds go to the agent taking over too.
   await tx.update(conversations).set({ agentId: successor.id, updatedAt: new Date() }).where(and(eq(conversations.businessId, input.businessId), eq(conversations.agentId, agent.id), eq(conversations.status, "open"), inArray(conversations.channel, ["sms", "web_chat", "instagram"])));
+  await deleteAgentKnowledgeInTransaction(tx, { businessId: input.businessId, agentId: agent.id });
   await tx.update(agents).set({ archivedAt: new Date(), updatedAt: new Date() }).where(and(eq(agents.id, agent.id), eq(agents.businessId, input.businessId)));
   await enqueueAgentSnapshotRefresh(tx, { businessId: input.businessId, agentId: agent.id, change: "agent_archived" });
   return { moved: moves.length };
+}
+
+/**
+ * Deletes the knowledge only this agent used: its documents with their text
+ * and crawls, its FAQ and text entries, and what it turned off of the shared
+ * knowledge. An archived agent can't come back, so nothing would use them.
+ */
+async function deleteAgentKnowledgeInTransaction(tx: DatabaseTransaction, input: { businessId: string; agentId: string }): Promise<void> {
+  // Chunks and website imports go with their documents.
+  const documents = await tx.delete(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.agentId, input.agentId))).returning({ storageObjectId: knowledgeDocuments.storageObjectId });
+  const files = documents.flatMap((document) => document.storageObjectId ? [document.storageObjectId] : []);
+  // Downloads stop now; the retained-object sweep deletes the files within 15 minutes.
+  if (files.length) await tx.update(storageObjects).set({ retentionUntil: new Date(), updatedAt: new Date() }).where(and(eq(storageObjects.businessId, input.businessId), inArray(storageObjects.id, files)));
+  await tx.delete(knowledgeSnippets).where(and(eq(knowledgeSnippets.businessId, input.businessId), eq(knowledgeSnippets.agentId, input.agentId)));
+  await tx.delete(agentKnowledgeExclusions).where(and(eq(agentKnowledgeExclusions.businessId, input.businessId), eq(agentKnowledgeExclusions.agentId, input.agentId)));
 }
 
 export async function archiveAgent(context: DomainContext, input: { userId: string; businessId: string; agentId: string; reassignToAgentId?: string | undefined }): Promise<{ moved: number }> {

@@ -15,5 +15,12 @@ export const POST = operatorRoute(async ({ userId, businessId, body: input, doma
   const body = input as { title?: string; sourceType?: string; sourceUrl?: string; onboarding?: boolean; agentId?: string };
   if (!body.title || !body.sourceType) return jsonError("title and sourceType are required.", 400);
   if (body.agentId !== undefined && !isUuid(body.agentId)) return jsonError("agentId must be an agent's id.", 400);
-  return NextResponse.json({ documentId: await createKnowledgeDocument(domain, { userId, businessId, title: body.title, sourceType: body.sourceType, onboarding: body.onboarding === true, ...(body.sourceUrl ? { sourceUrl: body.sourceUrl } : {}), ...(body.agentId ? { agentId: body.agentId } : {}) }) }, { status: 201 });
+  try {
+    return NextResponse.json({ documentId: await createKnowledgeDocument(domain, { userId, businessId, title: body.title, sourceType: body.sourceType, onboarding: body.onboarding === true, ...(body.sourceUrl ? { sourceUrl: body.sourceUrl } : {}), ...(body.agentId ? { agentId: body.agentId } : {}) }) }, { status: 201 });
+  } catch (error) {
+    // The dashboard names the agent in its own language.
+    const conflict = error as { code?: string; agentName?: string | null };
+    if (conflict.code === "knowledge_website_in_agent") return NextResponse.json({ error: (error as Error).message, code: conflict.code, agentName: conflict.agentName ?? null }, { status: 409 });
+    throw error;
+  }
 });

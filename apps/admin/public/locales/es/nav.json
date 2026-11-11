@@ -153,6 +153,7 @@
     "removeTitle": "¿Eliminar a {{name}}?",
     "removeDescription": "Sus canales y conversaciones abiertas pasan a {{name}}.",
     "removeDescriptionPick": "Sus canales y conversaciones abiertas pasan al agente que elija.",
+    "removeKnowledge": "Su propio conocimiento se eliminará.",
     "moveTo": "Pasar a",
     "removed": "{{name}} eliminado",
     "removeFailed": "No pudimos eliminar el agente."

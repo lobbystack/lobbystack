@@ -45,7 +45,21 @@ export function KnowledgeForms({ businessId, agentId, form, editing, onClose, on
   const { t } = useTranslation("agent");
   const telemetry = useTelemetry();
   const owner = agentId ? { agentId } : {};
-  const addWebsite = useMutation({ mutationFn: (sourceUrl: string) => requestJson(`/api/knowledge?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({ businessId, sourceType: "website", title: sourceUrl, sourceUrl, ...owner }) }), onSuccess: onSaved, meta: { inlineError: true } });
+  const addWebsite = useMutation({
+    mutationFn: async (sourceUrl: string) => {
+      try {
+        return await requestJson(`/api/knowledge?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({ businessId, sourceType: "website", title: sourceUrl, sourceUrl, ...owner }) });
+      } catch (error) {
+        // A website already in another scope: say where, in the person's language.
+        const { code, payload } = error as { code?: string; payload?: { agentName?: string | null } };
+        if (code === "knowledge_website_in_shared") throw new Error(t("sections.knowledge.websiteImport.inShared"));
+        if (code === "knowledge_website_in_agent" && payload?.agentName) throw new Error(t("sections.knowledge.websiteImport.inAgent", { name: payload.agentName }));
+        throw error;
+      }
+    },
+    onSuccess: onSaved,
+    meta: { inlineError: true },
+  });
   const saveSnippet = useMutation({
     mutationFn: (input: { title: string; content: string; tags: string[]; priority: number; active: boolean }) => editing
       ? requestJson(`/api/knowledge/snippets/${encodeURIComponent(editing.id)}?businessId=${encodeURIComponent(businessId)}`, { method: "PATCH", body: JSON.stringify({ id: editing.id, ...input }) })

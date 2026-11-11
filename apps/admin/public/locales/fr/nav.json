@@ -153,6 +153,7 @@
     "removeTitle": "Retirer {{name}}?",
     "removeDescription": "Ses canaux et ses conversations ouvertes passent à {{name}}.",
     "removeDescriptionPick": "Ses canaux et ses conversations ouvertes passent à l'agent choisi.",
+    "removeKnowledge": "Ses propres connaissances seront supprimées.",
     "moveTo": "Transférer à",
     "removed": "{{name}} retiré",
     "removeFailed": "Impossible de retirer l'agent."

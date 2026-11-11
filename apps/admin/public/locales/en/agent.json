@@ -28,7 +28,7 @@
       "deleteWebsite": { "action": "Delete all pages", "title": "Delete all pages from this website?", "description": "This will permanently remove every page imported from {{host}}.", "deleted": "All pages from {{host}} deleted." },
       "toast": { "added": "Knowledge added.", "updated": "Knowledge updated.", "uploaded": "Document uploaded. It will be ready shortly.", "deleted": "Knowledge deleted.", "enabled": "Knowledge enabled.", "disabled": "Knowledge disabled." },
       "uploadDocument": "Upload Document",
-      "websiteImport": {
+      "websiteImport": { "inShared": "This website is already in your shared knowledge. Turn it off for the agents that shouldn't use it.", "inAgent": "This website is already in {{name}}'s knowledge.",
         "badge": "Website",
         "title": "Import Website",
         "description": "Crawl the public pages of your website so your agent can use them as knowledge.",

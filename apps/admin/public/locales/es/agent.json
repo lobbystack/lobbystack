@@ -28,7 +28,7 @@
       "deleteWebsite": { "action": "Eliminar todo", "title": "¿Eliminar todas las páginas de este sitio?", "description": "Se eliminarán de forma permanente todas las páginas importadas de {{host}}.", "deleted": "Se eliminaron todas las páginas de {{host}}." },
       "toast": { "added": "Conocimiento añadido.", "updated": "Conocimiento actualizado.", "uploaded": "Documento subido. Estará listo en breve.", "deleted": "Conocimiento eliminado.", "enabled": "Conocimiento activado.", "disabled": "Conocimiento desactivado." },
       "uploadDocument": "Subir documento",
-      "websiteImport": {
+      "websiteImport": { "inShared": "Este sitio web ya está en su conocimiento compartido. Desactívelo para los agentes que no deben usarlo.", "inAgent": "Este sitio web ya está en el conocimiento de {{name}}.",
         "badge": "Sitio web",
         "title": "Importar sitio web",
         "description": "Rastree las páginas públicas de su sitio web para que su agente pueda usarlas como conocimiento.",

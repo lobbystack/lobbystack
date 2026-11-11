@@ -153,6 +153,7 @@
     "removeTitle": "Ukloniti agenta {{name}}?",
     "removeDescription": "Njegovi kanali i otvoreni razgovori prelaze na agenta {{name}}.",
     "removeDescriptionPick": "Njegovi kanali i otvoreni razgovori prelaze na agenta kog izaberete.",
+    "removeKnowledge": "Njegovo sopstveno znanje biće obrisano.",
     "moveTo": "Premesti na",
     "removed": "Agent {{name}} je uklonjen",
     "removeFailed": "Nismo uspeli da uklonimo agenta."

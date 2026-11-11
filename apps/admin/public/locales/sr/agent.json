@@ -28,7 +28,7 @@
       "deleteWebsite": { "action": "Obriši sve", "title": "Obrisati sve stranice sa ovog sajta?", "description": "Ovo će trajno ukloniti sve stranice uvezene sa {{host}}.", "deleted": "Sve stranice sa {{host}} su obrisane." },
       "toast": { "added": "Znanje je dodato.", "updated": "Znanje je ažurirano.", "uploaded": "Dokument je otpremljen. Uskoro će biti spreman.", "deleted": "Znanje je obrisano.", "enabled": "Znanje je uključeno.", "disabled": "Znanje je isključeno." },
       "uploadDocument": "Otpremi dokument",
-      "websiteImport": {
+      "websiteImport": { "inShared": "Ovaj sajt je već u vašem deljenom znanju. Isključite ga za agente koji ne treba da ga koriste.", "inAgent": "Ovaj sajt je već u znanju agenta {{name}}.",
         "badge": "Sajt",
         "title": "Uvezi sajt",
         "description": "Učitajte javne stranice Vašeg sajta kako bi ih agent koristio kao znanje.",

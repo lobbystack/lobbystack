@@ -7,6 +7,7 @@ import { agentKnowledgeExclusions, agents, billingAccounts, businessContextSnaps
 import { snapshotForAgent } from "../snapshot";
 
 import { applyKnowledgeAction, listKnowledgeSources, listWebsitePages } from "./agentKnowledge";
+import { archiveAgent } from "./agents";
 import { createKnowledgeDocumentInTransaction, createKnowledgeSnippet, loadLatestBusinessSnapshot, refreshBusinessSnapshot, searchKnowledgeEvidence } from "./knowledge";
 import { createBusiness } from "./tenancy";
 
@@ -175,13 +176,43 @@ describe.skipIf(!testUrl)("knowledge scoped to agents", () => {
     });
   });
 
-  it("refuses an agent's own website on a host that's already shared", async () => {
+  it("refuses a website already in another scope, and says where it is", async () => {
     await rollbackTest(async (tx) => {
       const { businessId, evening } = await seed(tx);
       await createKnowledgeDocumentInTransaction(tx, { businessId, title: "Harbor", sourceUrl: "https://harbor.example/" });
-      await expect(createKnowledgeDocumentInTransaction(tx, { businessId, title: "Harbor", sourceUrl: "https://www.harbor.example/evening", agentId: evening })).rejects.toMatchObject({ status: 409 });
+      await expect(createKnowledgeDocumentInTransaction(tx, { businessId, title: "Harbor", sourceUrl: "https://www.harbor.example/evening", agentId: evening })).rejects.toMatchObject({ status: 409, code: "knowledge_website_in_shared", message: "This website is already in your shared knowledge. Turn it off for the agents that shouldn't use it." });
       const own = await createKnowledgeDocumentInTransaction(tx, { businessId, title: "Night", sourceUrl: "https://night.example/", agentId: evening });
       expect((await tx.select({ agentId: knowledgeDocuments.agentId }).from(knowledgeDocuments).where(eq(knowledgeDocuments.id, own)))[0]?.agentId).toBe(evening);
+      // The reverse: a shared add of the agent's website, by the same URL or another page of it.
+      for (const sourceUrl of ["https://night.example/", "https://night.example/menu"]) {
+        await expect(createKnowledgeDocumentInTransaction(tx, { businessId, title: "Night", sourceUrl })).rejects.toMatchObject({ status: 409, code: "knowledge_website_in_agent", agentId: evening, message: "This website is already in Evening's knowledge." });
+      }
+    });
+  });
+
+  it("deletes an agent's own knowledge when the agent is removed, and leaves shared knowledge and other agents alone", async () => {
+    await rollbackTest(async (tx) => {
+      const { context, userId, businessId, front, evening, document } = await seed(tx);
+      const shared = await document({ title: "Prices", text: "A cleaning costs 120 dollars." });
+      const night = await document({ title: "Night", text: "Night door code.", agentId: evening });
+      const frontOwn = await document({ title: "Desk", text: "Front desk notes.", agentId: front });
+      await tx.insert(websiteIngestionJobs).values({ businessId, rootDocumentId: night, websiteUrl: "https://night.example/", provider: "firecrawl", status: "completed" });
+      await as(tx, "lobbystack_app");
+      const nightFaq = await createKnowledgeSnippet(context, { userId, businessId, title: "Night door", content: "Ring the bell.", agentId: evening });
+      const sharedFaq = await createKnowledgeSnippet(context, { userId, businessId, title: "Parking", content: "Behind the clinic." });
+      await applyKnowledgeAction(context, { userId, businessId, action: "agent_disable", agentId: evening, items: [{ type: "file", id: shared }] });
+      await applyKnowledgeAction(context, { userId, businessId, action: "agent_disable", agentId: front, items: [{ type: "snippet", id: sharedFaq }] });
+
+      await archiveAgent(context, { userId, businessId, agentId: evening });
+      await as(tx, null);
+      const documents = (await tx.select({ id: knowledgeDocuments.id }).from(knowledgeDocuments).where(eq(knowledgeDocuments.businessId, businessId))).map((row) => row.id).sort();
+      expect(documents).toEqual([shared, frontOwn].sort());
+      expect(await tx.select({ id: knowledgeChunks.id }).from(knowledgeChunks).where(eq(knowledgeChunks.documentId, night))).toEqual([]);
+      expect(await tx.select({ id: websiteIngestionJobs.id }).from(websiteIngestionJobs).where(eq(websiteIngestionJobs.businessId, businessId))).toEqual([]);
+      expect((await tx.select({ id: knowledgeSnippets.id }).from(knowledgeSnippets).where(eq(knowledgeSnippets.businessId, businessId))).map((row) => row.id)).toEqual([sharedFaq]);
+      expect(nightFaq).toBeDefined();
+      // Only the other agent's opt-out stays.
+      expect(await tx.select({ agentId: agentKnowledgeExclusions.agentId, snippetId: agentKnowledgeExclusions.snippetId }).from(agentKnowledgeExclusions).where(eq(agentKnowledgeExclusions.businessId, businessId))).toEqual([{ agentId: front, snippetId: sharedFaq }]);
     });
   });
 

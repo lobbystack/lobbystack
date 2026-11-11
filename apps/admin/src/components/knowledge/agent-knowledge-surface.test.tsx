@@ -52,6 +52,21 @@ describe("an agent's Specific knowledge", () => {
     await waitFor(() => expect(bodies(fetchMock, "/api/knowledge/snippets")).toEqual([expect.objectContaining({ title: "Night door", content: "Ring the side bell.", agentId: "agent-1" })]));
   });
 
+  it.each([
+    [{ error: "In shared.", code: "knowledge_website_in_shared" }, "sections.knowledge.websiteImport.inShared"],
+    [{ error: "In Evening.", code: "knowledge_website_in_agent", agentName: "Evening" }, "sections.knowledge.websiteImport.inAgent"],
+  ])("explains a website that's already in another scope: %j", async (body, message) => {
+    const fetchMock = setup();
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => url.startsWith("/api/knowledge?") && init?.method === "POST" ? Response.json(body, { status: 409 }) : Response.json({ ok: true }));
+    await userEvent.click(screen.getByRole("button", { name: "sections.knowledge.addKnowledge" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "sections.knowledge.addKnowledgeOptions.website" }));
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.type(within(dialog).getByLabelText(/fields.websiteUrl.label/), "harbor.example");
+    await userEvent.click(within(dialog).getByRole("button", { name: /websiteImport.submit/ }));
+    expect(await within(dialog).findByText(message)).toBeTruthy();
+    expect(JSON.parse(String(fetchMock.mock.calls.find(([url, init]) => url.startsWith("/api/knowledge?") && init?.method === "POST")?.[1]?.body))).toMatchObject({ sourceUrl: "https://harbor.example", agentId: "agent-1" });
+  });
+
   it("turns a shared source off for this agent with its switch", async () => {
     const fetchMock = setup({ shared: [source({ kind: "file", id: "menu", title: "Menu", agentActive: true })] });
     await userEvent.click(screen.getByRole("switch", { name: "sections.knowledge.agent.useSource" }));

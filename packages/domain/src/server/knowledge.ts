@@ -125,9 +125,7 @@ export async function createKnowledgeDocumentInTransaction(
     }
   }
   const existing = (await tx.select().from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.sourceUrl, sourceUrl))).limit(1).for("update"))[0];
-  const host = websiteHost(sourceUrl);
-  const otherScope = existing ? (existing.agentId ?? null) !== agentId : host !== null && (await tx.select({ sourceUrl: knowledgeDocuments.sourceUrl, agentId: knowledgeDocuments.agentId }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.sourceType, "website")))).some((row) => (row.agentId ?? null) !== agentId && websiteHost(row.sourceUrl) === host);
-  if (otherScope) throw Object.assign(new Error(agentId ? "This website is already a shared source or another agent's." : "This website is already an agent's own source."), { status: 409, code: "knowledge_source_scope_conflict" });
+  await assertWebsiteScopeFree(tx, { businessId: input.businessId, sourceUrl, agentId, existing: existing ? { agentId: existing.agentId ?? null } : undefined });
   if (existing) {
     // A retry of an onboarding submission is still onboarding: without the
     // limit it would fall back to the full crawl this sampling exists to defer.
@@ -155,6 +153,27 @@ export async function createKnowledgeDocumentInTransaction(
     payload: { url: sourceUrl, documentId: document.id, revision: 0, websiteIngestionJobId: ingestion!.id, limit: crawlLimit },
   });
   return document.id;
+}
+
+export const WEBSITE_IN_SHARED_KNOWLEDGE = "This website is already in your shared knowledge. Turn it off for the agents that shouldn't use it.";
+
+/**
+ * Refuses a website whose host is already a source in another scope: the
+ * shared knowledge, or another agent's. One URL can be one row per business,
+ * so the two can't each hold a copy. existing is the row with this exact URL,
+ * when the caller already read it.
+ */
+export async function assertWebsiteScopeFree(tx: DatabaseTransaction, input: { businessId: string; sourceUrl: string; agentId: string | null; existing?: { agentId: string | null } | undefined }): Promise<void> {
+  const host = websiteHost(input.sourceUrl);
+  const other = input.existing
+    ? input.existing
+    : host === null ? undefined : (await tx.select({ sourceUrl: knowledgeDocuments.sourceUrl, agentId: knowledgeDocuments.agentId }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.sourceType, "website"))))
+      .find((row) => (row.agentId ?? null) !== input.agentId && websiteHost(row.sourceUrl) === host);
+  const owner = other ? other.agentId ?? null : input.agentId;
+  if (owner === input.agentId) return;
+  if (!owner) throw Object.assign(new Error(WEBSITE_IN_SHARED_KNOWLEDGE), { status: 409, code: "knowledge_website_in_shared" });
+  const [agent] = await tx.select({ name: agents.name }).from(agents).where(and(eq(agents.businessId, input.businessId), eq(agents.id, owner))).limit(1);
+  throw Object.assign(new Error(`This website is already in ${agent?.name ?? "another agent"}'s knowledge.`), { status: 409, code: "knowledge_website_in_agent", agentId: owner, agentName: agent?.name ?? null });
 }
 
 export async function listKnowledgeSnippets(context: DomainContext, input: { userId: string; businessId: string }) {
