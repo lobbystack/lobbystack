@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AddKnowledgeSheet } from "./add-knowledge-sheet";
 import { ImportWebsiteKnowledgeSheet } from "./import-website-knowledge-sheet";
-import { knowledgeTemplateUrl, UploadKnowledgeDocumentSheet } from "./upload-knowledge-document-sheet";
+import { UploadKnowledgeDocumentSheet } from "./upload-knowledge-document-sheet";
 
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn() } }));
@@ -65,23 +65,6 @@ describe("restored knowledge dialogs", () => {
     expect(screen.queryByText("sections.knowledge.websiteImport.validation.urlRequired")).toBeNull();
     await userEvent.click(submit);
     expect(await screen.findByText("Import unavailable")).toBeTruthy();
-  });
-  it("offers the knowledge template as a download", () => {
-    render(<UploadKnowledgeDocumentSheet open upload={vi.fn()} onOpenChange={vi.fn()} />);
-    const link = screen.getByRole("link", { name: "sections.knowledge.fields.file.downloadTemplate" });
-    expect(link.getAttribute("href")).toBe("/templates/lobbystack-knowledge-template-en.docx");
-    expect(link.hasAttribute("download")).toBe(true);
-  });
-  it("downloads the template in the team language, then the default language, then English", () => {
-    expect(knowledgeTemplateUrl({ teamLocale: "fr", defaultLocale: "de" })).toBe("/templates/lobbystack-knowledge-template-fr.docx");
-    expect(knowledgeTemplateUrl({ teamLocale: null, defaultLocale: "de" })).toBe("/templates/lobbystack-knowledge-template-de.docx");
-    expect(knowledgeTemplateUrl({ teamLocale: "xx", defaultLocale: "sr" })).toBe("/templates/lobbystack-knowledge-template-sr.docx");
-    expect(knowledgeTemplateUrl({ defaultLocale: "xx" })).toBe("/templates/lobbystack-knowledge-template-en.docx");
-    expect(knowledgeTemplateUrl(undefined)).toBe("/templates/lobbystack-knowledge-template-en.docx");
-  });
-  it("links the template it is given", () => {
-    render(<UploadKnowledgeDocumentSheet open templateUrl="/templates/x.docx" upload={vi.fn()} onOpenChange={vi.fn()} />);
-    expect(screen.getByRole("link", { name: "sections.knowledge.fields.file.downloadTemplate" }).getAttribute("href")).toBe("/templates/x.docx");
   });
   it("requires a file before uploading", async () => {
     const upload = vi.fn();

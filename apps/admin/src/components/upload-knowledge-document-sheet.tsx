@@ -3,9 +3,9 @@
 import { type DragEvent, FormEvent, useMemo, useRef, useState } from "react";
 
 import { useTranslation } from "react-i18next";
-import { Download, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
 
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Field,
   FieldContent,
@@ -24,19 +24,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { isRuntimeLocale } from "@lobbystack/shared";
 import { uploadErrorMessage } from "@/lib/storage-upload";
 const ACCEPTED_FILE_TYPES = ".pdf,.docx,.txt,.md,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const MAX_DOCUMENT_UPLOAD_BYTES = 10 * 1024 * 1024;
-
-/**
- * `pnpm knowledge:template` builds one file per runtime language; the worker reads it back with its guidance
- * and unanswered prompts removed. The team language wins, then the business's default language, then English.
- */
-export function knowledgeTemplateUrl(business: { teamLocale?: string | null; defaultLocale?: string | null } | null | undefined): string {
-  const locale = [business?.teamLocale, business?.defaultLocale].find(isRuntimeLocale) ?? "en";
-  return `/templates/lobbystack-knowledge-template-${locale}.docx`;
-}
 
 function parseTags(value: string): Array<string> {
   return value
@@ -88,9 +78,7 @@ export function UploadKnowledgeDocumentSheet({
   upload,
   open,
   onOpenChange,
-  templateUrl = knowledgeTemplateUrl(null),
 }: {
-  templateUrl?: string;
   upload: (input: { file: File; contentType: string; title: string; tags: string[] }) => Promise<void>;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -254,10 +242,6 @@ export function UploadKnowledgeDocumentSheet({
                 </div>
               </label>
               {errorMessage ? <FieldError id="knowledge-document-file-error">{errorMessage}</FieldError> : null}
-              <a className={buttonVariants({ className: "self-start", size: "sm", variant: "outline" })} download href={templateUrl}>
-                <Download data-icon="inline-start" />
-                {t("sections.knowledge.fields.file.downloadTemplate")}
-              </a>
             </Field>
 
             <Field>

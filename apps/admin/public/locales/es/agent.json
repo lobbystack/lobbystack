@@ -69,8 +69,7 @@
           "label": "Archivo",
           "hint": "Admite PDF, DOCX, TXT y Markdown.",
           "dropzonePrefix": "Arrastre y suelte un archivo aquí, o",
-          "chooseFile": "Elegir archivo",
-          "downloadTemplate": "Descargar plantilla"
+          "chooseFile": "Elegir archivo"
         },
         "websiteUrl": {
           "label": "URL del sitio web",

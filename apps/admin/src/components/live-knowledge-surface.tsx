@@ -13,7 +13,7 @@ import { HeaderActions, HeaderSearch } from "@/components/header-actions";
 import { useTelemetry } from "@/components/product-analytics";
 import { requestJson } from "@/lib/request-json";
 import { uploadKnowledgeDocument } from "@/lib/storage-upload";
-import { knowledgeTemplateUrl, UploadKnowledgeDocumentSheet } from "./upload-knowledge-document-sheet";
+import { UploadKnowledgeDocumentSheet } from "./upload-knowledge-document-sheet";
 import { AddKnowledgeSheet } from "./add-knowledge-sheet";
 import { UnansweredQuestionsSection } from "./unanswered-questions-section";
 import { ImportWebsiteKnowledgeSheet } from "./import-website-knowledge-sheet";
@@ -111,7 +111,6 @@ export function LiveKnowledgeSurface() {
     });
   }, [documents.data]);
   const snippets = useQuery({ queryKey: ["knowledge-snippets", business?.businessId], enabled: Boolean(business), queryFn: () => requestJson<{ snippets: Snippet[] }>(`/api/knowledge/snippets?businessId=${encodeURIComponent(business!.businessId)}`) });
-  const agentSettings = useQuery({ queryKey: ["agent-settings", business?.businessId], enabled: Boolean(business) && form === "upload", queryFn: () => requestJson<{ business: { defaultLocale?: string | null; teamLocale?: string | null } | null }>(`/api/agent?businessId=${encodeURIComponent(business!.businessId)}`) });
   const invalidate = async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ["knowledge", business?.businessId] }), queryClient.invalidateQueries({ queryKey: ["knowledge-snippets", business?.businessId] }), queryClient.invalidateQueries({ queryKey: ["knowledge-content", business?.businessId] })]); };
   const addWebsite = useMutation({ mutationFn: (input: { title: string; sourceUrl: string }) => requestJson(`/api/knowledge?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ businessId: business!.businessId, sourceType: "website", ...input }) }), onSuccess: invalidate, meta: { inlineError: true } });
   const addSnippet = useMutation({ mutationFn: (input: { title: string; content: string; tags: string[]; priority: number; active: boolean }) => requestJson(`/api/knowledge/snippets?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify(input) }), onSuccess: invalidate });
@@ -163,7 +162,7 @@ export function LiveKnowledgeSurface() {
     <UnansweredQuestionsSection businessId={business.businessId} canManage={canManage} layoutSettled={!loading} />
     <AddKnowledgeSheet mode={editingSnippet ? "edit" : "create"} snippet={editingSnippet} open={form === "text"} onOpenChange={(open) => { if (!open) { setForm(null); setEditingSnippet(null); } }} save={async (values) => { if (editingSnippet) { await updateSnippet.mutateAsync({ id: editingSnippet.id, ...values }); toast.success(t("sections.knowledge.toast.updated")); } else { await addSnippet.mutateAsync(values); toast.success(t("sections.knowledge.toast.added")); } }} />
     <ImportWebsiteKnowledgeSheet open={form === "website"} onOpenChange={(open) => { if (!open) setForm(null); }} save={async (sourceUrl) => { await addWebsite.mutateAsync({ title: sourceUrl, sourceUrl }); }} />
-    <UploadKnowledgeDocumentSheet templateUrl={knowledgeTemplateUrl(agentSettings.data?.business)} open={form === "upload"} onOpenChange={(open) => { if (!open) setForm(null); }} upload={async (values) => { await uploadDocument.mutateAsync(values); toast.success(t("sections.knowledge.toast.uploaded")); }} />
+    <UploadKnowledgeDocumentSheet open={form === "upload"} onOpenChange={(open) => { if (!open) setForm(null); }} upload={async (values) => { await uploadDocument.mutateAsync(values); toast.success(t("sections.knowledge.toast.uploaded")); }} />
     <ConfirmActionDialog confirmVariant="destructive" cancelLabel={t("actions.deleteCancel")} confirmLabel={t(cancellingImport ? "actions.cancelImport" : "actions.delete")} description={deletingHost ? t("sections.knowledge.deleteWebsite.description", { host: deletingHost }) : t(cancellingImport ? "actions.cancelImportDescription" : "actions.deleteDescription")} onConfirm={async () => { if (!deleteCandidate) return; if (deletingHost) { await deleteWebsitePages.mutateAsync(deleteCandidate.id); toast.success(t("sections.knowledge.deleteWebsite.deleted", { host: deletingHost })); return; } if (deleteCandidate.entryType === "snippet") await deleteSnippet.mutateAsync(deleteCandidate.id); else await documentAction.mutateAsync({ id: deleteCandidate.id, method: cancellingImport ? "PATCH" : "DELETE", ...(cancellingImport ? { action: "cancel" } : {}) }); toast.success(t(cancellingImport ? "actions.importCancelled" : "sections.knowledge.toast.deleted")); }} onOpenChange={(open) => { if (!open) setDeleteCandidate(null); }} open={deleteCandidate !== null} pending={deleteSnippet.isPending || documentAction.isPending || deleteWebsitePages.isPending} title={deletingHost ? t("sections.knowledge.deleteWebsite.title") : t(cancellingImport ? "actions.cancelImportTitle" : "actions.deleteTitle")} />
   </div></PageSurface>;
 }
