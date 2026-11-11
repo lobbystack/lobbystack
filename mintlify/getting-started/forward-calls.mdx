@@ -30,10 +30,10 @@ To ring your phone first without carrier codes, give out your LobbyStack number 
 
 <Steps>
   <Step title="Dial the code">
-    On the phone your customers call, dial your carrier's code from the **Turn on** column. Some codes end without a number, such as `*72`. For those, the line asks for the number after you press Call: enter it in the format the table shows.
+    On the phone your customers call, dial your carrier's code from the **Turn on** column.
   </Step>
   <Step title="Press Call">
-    A tone or a message confirms that forwarding is on.
+    Some codes end without a number, such as `*72`. For those, the line then asks for the number: enter it in the format the table shows.
   </Step>
   <Step title="Dial the extra codes">
     For calls you miss, some carriers split the cases into separate codes. Dial the **Busy** code to also forward calls that come in while you're on the phone. Dial the **Unreachable** code to also forward calls when your phone is off or has no signal.
@@ -209,11 +209,9 @@ If your phone system lets you pick a ring time, 15 to 20 seconds gives you about
 | Spectrum Business Voice | `*7215551234567#` | `*73` |  |
 | Comcast Business Voice | `*72`, then enter `5551234567` when asked | `*73` |  |
 
-## Test forwarding
+## Confirm that forwarding works
 
-Call your business number from another phone. If you forward calls you miss, let it ring. Your agent should answer.
-
-When LobbyStack detects the first forwarded call, **Forward calls from your current number** in **Getting started** finishes and shows the line it came from, such as **Forwarding from +1 …**. Some carriers hide the line a forwarded call came from. If the step doesn't finish after your test call, click **It works** in the forwarding steps on **Home**.
+When LobbyStack detects the first forwarded call, **Forward calls from your current number** in **Getting started** finishes and shows the line it came from, such as **Forwarding from (514) 555-0199**. Some carriers hide the line a forwarded call came from. If the step doesn't finish once forwarded calls reach your agent, open it, click **Set up forwarding**, then click **It works**.
 
 LobbyStack detects forwarded calls on Twilio numbers and on calls that reach your agent over SIP. It can't detect them on Telnyx numbers that use TeXML, so click **It works** there.
 

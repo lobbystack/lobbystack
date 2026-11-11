@@ -31,10 +31,10 @@ Para que su teléfono suene primero sin códigos del operador, dé a conocer su 
 
 <Steps>
   <Step title="Marque el código">
-    En el teléfono al que llaman sus clientes, marque el código de su operador que aparece en la columna **Activar**. Algunos códigos terminan sin número, como `*72`. En esos casos, la línea le pide el número después de pulsar Llamar: ingréselo en el formato que muestra la tabla.
+    En el teléfono al que llaman sus clientes, marque el código de su operador que aparece en la columna **Activar**.
   </Step>
   <Step title="Pulse Llamar">
-    Un tono o un mensaje confirma que el desvío está activo.
+    Algunos códigos terminan sin número, como `*72`. En esos casos, la línea le pide después el número: ingréselo en el formato que muestra la tabla.
   </Step>
   <Step title="Marque los códigos adicionales">
     Para las llamadas perdidas, algunos operadores separan los casos en varios códigos. Marque el código **Ocupado** para desviar también las llamadas que entran mientras habla. Marque el código **Sin señal** para desviar también las llamadas cuando su teléfono está apagado o sin señal.
@@ -210,11 +210,9 @@ Si su sistema telefónico le deja elegir el tiempo de timbre, de 15 a 20 segundo
 | Spectrum Business Voice | `*7215551234567#` | `*73` |  |
 | Comcast Business Voice | `*72` y, cuando se lo pida, ingrese `5551234567` | `*73` |  |
 
-## Pruebe el desvío
+## Confirme que el desvío funciona
 
-Llame a su número de negocio desde otro teléfono. Si desvía las llamadas perdidas, déjelo sonar. Su agente debería contestar.
-
-Cuando LobbyStack detecta la primera llamada desviada, el paso **Desvíe las llamadas de su número actual** de **Primeros pasos** se completa y muestra la línea de la que llegó, por ejemplo **Desvío desde el +1 …**. Algunos operadores ocultan la línea de origen de una llamada desviada. Si el paso no se completa después de su llamada de prueba, haga clic en **Funciona** en los pasos de desvío de **Inicio**.
+Cuando LobbyStack detecta la primera llamada desviada, el paso **Desvíe las llamadas de su número actual** de **Primeros pasos** se completa y muestra la línea de la que llegó, por ejemplo **Desvío desde el (514) 555-0199**. Algunos operadores ocultan la línea de origen de una llamada desviada. Si el paso no se completa cuando las llamadas desviadas llegan a su agente, ábralo, haga clic en **Configurar el desvío** y luego en **Funciona**.
 
 LobbyStack detecta las llamadas desviadas en los números de Twilio y en las llamadas que llegan a su agente por SIP. No puede detectarlas en los números de Telnyx que usan TeXML, así que en ese caso haga clic en **Funciona**.
 
