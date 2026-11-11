@@ -332,6 +332,6 @@ function ProgressRing({ completed, total }: { completed: number; total: number }
 }
 
 function StepMarker({ completed }: { completed: boolean }) {
-  if (completed) return <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted-foreground/70 text-background"><Check className="size-4" /></span>;
+  if (completed) return <span className="flex size-6 shrink-0 items-center justify-center text-muted-foreground"><Check aria-hidden="true" className="size-5" /></span>;
   return <span className="relative flex size-6 shrink-0 items-center justify-center bg-background"><svg aria-hidden="true" className="absolute inset-0 size-6" viewBox="0 0 24 24"><circle className="stroke-foreground" cx="12" cy="12" fill="none" r="10.5" strokeDasharray="6.8 4.2" strokeLinecap="round" strokeWidth="1.5" /></svg></span>;
 }

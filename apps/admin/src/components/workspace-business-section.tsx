@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Sparkles } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { intlLocale, runtimeLocales, type RuntimeLocale } from "@lobbystack/shared";
 import { currencyRegion, runtimeLocaleRegion } from "@/lib/country-flag";
@@ -19,6 +18,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { Surface } from "@/components/ui/surface";
 import { Textarea } from "@/components/ui/textarea";
 import { agentSettingsQueryKey, fetchAgentSettings, useAgentSettingsQuery, useSaveWorkspace, type AgentSettings, type WorkspacePatch } from "@/hooks/use-agent-settings";
@@ -283,7 +283,7 @@ export function WorkspaceBusinessSection({ businessId, canManage, heading = true
                 </div>
                 {rewritingInDialog ? (
                   <p className="flex items-center gap-2 type-body-muted" role="status">
-                    <Sparkles aria-hidden="true" className="size-4 animate-pulse" />
+                    <Spinner aria-hidden="true" />
                     {t("agent:fields.summary.regenerating")}
                   </p>
                 ) : null}

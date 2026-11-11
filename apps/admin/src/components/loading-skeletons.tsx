@@ -921,7 +921,6 @@ export function NotificationListSkeleton({ label, rows = 3 }: { label: string; r
     <div aria-busy="true" aria-label={label} className="flex flex-col" role="status">
       {Array.from({ length: rows }).map((_, index) => (
         <div className="flex items-start gap-3 px-4 py-3" key={index}>
-          <Skeleton className="size-8 shrink-0 rounded-full" />
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
             <Skeleton className="h-4 w-3/4" />
             <Skeleton className="h-4 w-full" />

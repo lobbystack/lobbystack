@@ -66,6 +66,10 @@
 
 - Treat `shadcn/ui` as the default operator UI system in `apps/admin`.
 - Use Geist Sans and Lucide icons; do not mix icon families.
+- Pick an icon that names the thing. Never use a sparkle icon; ESLint blocks the Lucide imports.
+- Show icons inline at text size, or leave them out. Circles are for avatars, status dots, and circular controls, never for an icon inside a badge.
+- Pick an icon that names the thing. Never use a sparkle icon; ESLint blocks the Lucide imports.
+- Show icons inline at text size, or leave them out. Circles are for avatars, status dots, and circular controls, never for an icon inside a badge.
 - Use the existing 4px spacing grid and established semantic color/radius tokens.
 - Build operator UI from the shared design system: the theme tokens in `apps/admin/app/theme.css` and the components in `apps/admin/src/components/ui/` and the shared components built on them. Take radius, color, spacing and typography from them, and don't add one-off `rounded-*`, color or spacing classes that override them.
 - Preserve colors, copy, logic, responsiveness, and route architecture during consistency cleanup.

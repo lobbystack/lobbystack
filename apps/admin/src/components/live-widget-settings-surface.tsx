@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
-import { Check, CircleCheck, Copy, Globe, MessageCircle, MoreHorizontal, Pause, Pencil, Play, Plus, Trash2 } from "lucide-react";
+import { Check, CircleCheck, Copy, Globe, MoreHorizontal, Pause, Pencil, Play, Plus, Trash2 } from "lucide-react";
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -27,7 +27,6 @@ import { Skeleton } from "./ui/skeleton";
 import { surfaceClassName } from "./ui/surface";
 import { Switch } from "./ui/switch";
 import { Textarea } from "./ui/textarea";
-import { readableOn } from "./widget/widget-parts";
 import { WidgetPreview } from "./widget/widget-preview";
 import { intlLocale } from "@/lib/locale";
 import { Status } from "@/components/ui/status";
@@ -210,7 +209,6 @@ export function LiveWidgetSettingsSurface({ agentId, startAdding = false }: { ag
           </div>
         ) : (
           <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed px-6 py-12 text-center">
-            <span className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground"><MessageCircle className="size-6" /></span>
             <div className="flex max-w-sm flex-col gap-1">
               <p className="type-item-title">{t("widget.keys.empty")}</p>
               {issuanceEnabled ? <p className="type-body-muted">{t("widget:manage.emptyDescription")}</p> : null}
@@ -266,8 +264,8 @@ function WidgetKeyCard({ row, name, busy, embedOrigin, locale, onEdit, onStatus,
   return (
     <article className={cn(surfaceClassName, "flex flex-col gap-4 p-4 sm:flex-row sm:items-center", revoked && "bg-muted/30")}>
       <div className="flex min-w-0 flex-1 items-start gap-3">
-        {/* The key's own bubble, so each widget is recognizable at a glance. */}
-        <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-full", revoked && "grayscale opacity-50")} style={{ backgroundColor: color, color: readableOn(color) }} aria-hidden="true"><MessageCircle className="size-5" /></span>
+        {/* The key's own color, so each widget is recognizable at a glance. */}
+        <span className={cn("mt-1.5 size-3 shrink-0 rounded-full", revoked && "grayscale opacity-50")} style={{ backgroundColor: color }} aria-hidden="true" />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <h3 className="type-item-title truncate">{name}</h3>

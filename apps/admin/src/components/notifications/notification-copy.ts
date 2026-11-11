@@ -1,28 +1,5 @@
 import type { TFunction } from "i18next";
-import { AtSign, CalendarClock, CalendarX2, Clock, CreditCard, Gauge, Globe, Hourglass, Phone, PhoneForwarded, PhoneOff, Sparkles, UserPlus, Webhook, type LucideIcon } from "lucide-react";
-import { intlLocale, type BusinessNotificationItem, type BusinessNotificationKind, type ProductUpdateCopy } from "@lobbystack/shared";
-
-/** Each kind's icon. */
-export const NOTIFICATION_ICONS: Record<BusinessNotificationKind, LucideIcon> = {
-  trial_ending: Clock,
-  trial_ended: Hourglass,
-  trial_minutes_used_up: Gauge,
-  number_released: PhoneOff,
-  payment_failed: CreditCard,
-  plan_canceled: CalendarX2,
-  minutes_80: Gauge,
-  minutes_100: Gauge,
-  number_purchase_failed: Phone,
-  number_release_soon: PhoneOff,
-  calendar_sync_failing: CalendarClock,
-  instagram_reconnect: AtSign,
-  webhook_failing: Webhook,
-  website_import_failed: Globe,
-  website_import_finished: Globe,
-  forwarding_detected: PhoneForwarded,
-  invite_accepted: UserPlus,
-  product_update: Sparkles,
-};
+import { intlLocale, type BusinessNotificationItem, type ProductUpdateCopy } from "@lobbystack/shared";
 
 const text = (value: unknown): string | null => (typeof value === "string" && value.trim() ? value : null);
 const count = (value: unknown): number => (typeof value === "number" && Number.isFinite(value) ? value : 0);

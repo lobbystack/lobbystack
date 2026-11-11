@@ -48,9 +48,7 @@ function markCheckoutReported(key: string): void {
 
 function SuccessCheck() {
   return (
-    <div aria-hidden="true" className="flex size-14 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 duration-300 ease-out animate-in fade-in zoom-in-90 motion-reduce:animate-none dark:text-emerald-400">
-      <Check className="billing-success-check size-7" strokeWidth={2.5} />
-    </div>
+    <Check aria-hidden="true" className="billing-success-check size-10 text-emerald-600 duration-300 ease-out animate-in fade-in zoom-in-90 motion-reduce:animate-none dark:text-emerald-400" strokeWidth={2.5} />
   );
 }
 

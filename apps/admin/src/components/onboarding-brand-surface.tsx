@@ -161,7 +161,7 @@ export function OnboardingBrandSurface({ askAppName, askLogo }: { askAppName: bo
                   onChange={(event) => { void pick(event.target.files?.[0]); event.target.value = ""; }}
                   type="file"
                 />
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
+                <span className={cn("flex size-10 shrink-0 items-center justify-center", logo && "rounded-xl bg-muted")}>
                   {logo ? <img alt="" className="size-6 object-contain" src={logo.previewUrl} /> : <ImageUp aria-hidden="true" className="size-4 text-muted-foreground" />}
                 </span>
                 <span>{t(logo ? "brand.logoChange" : "brand.logoChoose")}</span>

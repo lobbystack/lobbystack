@@ -1,6 +1,5 @@
 "use client";
 
-import { Building2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { ReplacementOnboardingShell } from "@/components/replacement-onboarding-shell";
@@ -21,7 +20,6 @@ export function NoBusinessesSurface({ email, hostUrl = null }: { email: string; 
   return (
     <ReplacementOnboardingShell
       description={t(hostUrl ? "noBusinesses.released" : "noBusinesses.description", { email })}
-      icon={<span className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground"><Building2 className="size-5" /></span>}
       progress={null}
       title={t("noBusinesses.title")}
       width="sm"

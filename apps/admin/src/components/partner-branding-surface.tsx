@@ -113,7 +113,7 @@ function ImageField({ id, image, label, help, savedUrl, choice, disabled, onChan
       <div className="flex items-center gap-2">
         <label className={cn("flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-dashed border-border bg-card px-4 py-3 type-title transition-colors focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background", disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:border-foreground/40 hover:bg-muted")}>
           <input accept={brandLogoContentTypes.join(",")} className="sr-only" disabled={disabled} id={id} onChange={(event) => { void pick(event.target.files?.[0]); event.target.value = ""; }} type="file" />
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
+          <span className={cn("flex size-10 shrink-0 items-center justify-center", shown && "rounded-xl bg-muted")}>
             {shown ? <img alt="" className="size-6 object-contain" src={shown} /> : <ImageUp aria-hidden="true" className="size-4 text-muted-foreground" />}
           </span>
           <span>{t(shown ? "branding.imageChange" : "branding.imageChoose")}</span>

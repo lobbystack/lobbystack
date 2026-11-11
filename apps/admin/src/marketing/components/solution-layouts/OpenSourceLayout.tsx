@@ -1,4 +1,4 @@
-import { GitPullRequest, KeyRound, Scale, Sparkles } from "lucide-react"
+import { Bot, GitPullRequest, KeyRound, Scale } from "lucide-react"
 
 import { FaqSection } from "@/marketing/components/FaqSection"
 import { ProductScene } from "@/marketing/components/scenes/ProductScenes"
@@ -54,7 +54,7 @@ export function OpenSourceLayout({ page, locale }: SeoLandingPageProps) {
   const secondaryHref = localizeHref(locale, page.ctaSecondaryHref ?? selfHostedPath)
   const [readCard, changeCard, selfHost, cloud] = page.sections
   const cardScenes = ["tools", "fork"] as const
-  const iconCards = [Scale, KeyRound, Sparkles, GitPullRequest].map((icon, index) => ({
+  const iconCards = [Scale, KeyRound, Bot, GitPullRequest].map((icon, index) => ({
     icon,
     title: t.repo.cards[index]?.title ?? "",
     body: t.repo.cards[index]?.body ?? "",
