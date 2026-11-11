@@ -86,10 +86,8 @@
         "apps/admin/src/components/onboarding-language-surface.tsx",
         "apps/admin/src/components/onboarding-reading-surface.tsx",
         "apps/admin/src/components/onboarding-meet-surface.tsx",
-        "apps/admin/src/components/onboarding-goal-surface.tsx",
         "apps/admin/src/components/onboarding-attribution-surface.tsx",
         "apps/admin/app/api/onboarding/stage/route.ts",
-        "apps/admin/app/api/onboarding/goal/route.ts",
         "apps/admin/app/api/onboarding/attribution/route.ts",
         "packages/domain/src/server/onboarding.ts"
       ],
@@ -274,7 +272,7 @@
       "implementation": [
         "apps/admin/src/components/dashboard-shell.tsx",
         "apps/admin/src/components/navigation/shell-runtime.tsx",
-        "apps/admin/src/components/navigation/help-menu.tsx",
+        "apps/admin/src/components/nav-user.tsx",
         "apps/admin/src/components/navigation/navigation-sidebar.tsx",
         "apps/admin/app/api/feedback/route.ts",
         "apps/admin/app/(dashboard)/agents/primary/[[...rest]]/page.tsx",
@@ -284,7 +282,7 @@
       "acceptanceTests": [
         "apps/admin/src/lib/feedback-rate-limit.test.ts",
         "apps/admin/src/components/dashboard-shell.test.tsx",
-        "apps/admin/src/components/navigation/help-menu.test.tsx",
+        "apps/admin/src/components/nav-user.test.tsx",
         "apps/admin/e2e/affiliate-program.e2e.ts"
       ]
     },
@@ -1682,6 +1680,49 @@
       "fixtureState": "operator",
       "state": "default",
       "comparison": "port-baseline"
+    },
+    {
+      "path": "/business",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "port-baseline",
+      "referencePath": "/agent/basic-settings"
+    },
+    {
+      "path": "/business/employees",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "port-baseline",
+      "referencePath": "/agent/employees"
+    },
+    {
+      "path": "/business/integrations",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "port-baseline",
+      "referencePath": "/integrations"
+    },
+    {
+      "path": "/business/knowledge",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "port-baseline",
+      "referencePath": "/agent/knowledge"
+    },
+    {
+      "path": "/business/services",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "port-baseline",
+      "referencePath": "/agent/services"
+    },
+    {
+      "path": "/agents/[agentId]/knowledge",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "port-baseline",
+      "dynamicKey": "agentId",
+      "referencePath": "/agent/knowledge"
     }
   ]
 }
