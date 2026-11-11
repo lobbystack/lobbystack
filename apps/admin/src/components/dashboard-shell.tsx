@@ -78,7 +78,7 @@ export function DashboardShell({ agents = null, capabilities = ALL_CAPABILITIES,
         {isMobile ? null : <NavigationSidebar partnerConsole={partnerConsole} user={user} />}
         <SidebarInset
           ref={contentScrollRef}
-          className="@container/content min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain has-data-[layout=fixed]:h-full peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100%-(var(--spacing)*4))]"
+          className="@container/content min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain md:has-data-[layout=fixed]:h-full peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100%-(var(--spacing)*4))]"
         >
           <SiteHeader fixed />
           <Main id="dashboard-main-content" tabIndex={-1} className="flex flex-1 flex-col" fixed={pathname === "/inbox"}>

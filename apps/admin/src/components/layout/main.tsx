@@ -10,7 +10,8 @@ export function Main({ className, fixed, ...props }: MainProps) {
       className={cn(
         "px-4 pt-4 pb-6 md:px-6 md:pt-6 md:pb-6",
         !fixed && "after:block after:h-10 after:shrink-0 after:content-[''] md:after:h-12",
-        fixed && "flex min-h-0 grow flex-col overflow-hidden",
+        // A fixed page fills the screen and scrolls its own panes from tablets up. On phones it scrolls with the page like any other.
+        fixed && "md:flex md:min-h-0 md:grow md:flex-col md:overflow-hidden",
         "mx-auto w-full max-w-7xl",
         className,
       )}

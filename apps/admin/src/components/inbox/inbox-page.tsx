@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { keepPreviousData, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, AtSign, Globe, MessageSquare, Monitor, Phone, type LucideIcon } from "lucide-react";
 import { Trans, useTranslation } from "react-i18next";
@@ -17,6 +17,7 @@ import { ScrollRow } from "@/components/ui/scroll-row";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useActiveBusiness } from "@/hooks/use-active-business";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { agentHref } from "@/lib/agent-pages";
 import { formatCallOutcomeSummary } from "@/lib/call-outcome";
 import { getChannelLabel, getContactDisplayName } from "@/lib/contact-display";
@@ -97,12 +98,43 @@ function RowsSkeleton() {
   );
 }
 
+/** The element that scrolls the page around the Inbox: on phones, the dashboard's content area. */
+function pageScroller(element: HTMLElement | null): HTMLElement | null {
+  for (let node = element?.parentElement ?? null; node; node = node.parentElement) {
+    if (/(auto|scroll)/.test(getComputedStyle(node).overflowY)) return node;
+  }
+  return null;
+}
+
+/**
+ * On phones the Inbox flows in the page's own scroll, so opening an item starts it at the top and
+ * going back returns the list to where it was. From tablets up each pane scrolls itself.
+ */
+function usePhoneScroll(open: string | null) {
+  const isMobile = useIsMobile();
+  const sectionRef = useRef<HTMLElement>(null);
+  const listScroll = useRef(0);
+  const lastOpen = useRef(open);
+  // Read before the list hides, since the shorter page clamps the scroll once it lays out.
+  const rememberListScroll = () => { if (!lastOpen.current) listScroll.current = pageScroller(sectionRef.current)?.scrollTop ?? 0; };
+  useLayoutEffect(() => {
+    const previous = lastOpen.current;
+    lastOpen.current = open;
+    if (previous === open || !isMobile) return;
+    const scroller = pageScroller(sectionRef.current);
+    if (scroller) scroller.scrollTop = open ? 0 : listScroll.current;
+  }, [isMobile, open]);
+  return { sectionRef, rememberListScroll };
+}
+
 /**
  * Every call, text, website chat and Instagram thread in one list. The URL
  * holds the filters and the open item, so any page can link into it. When the
  * page is too narrow for the list and a readable detail side by side (under
  * 50rem, which keeps the detail at least 30rem wide), it shows one at a time:
- * the open item fills the page, with a way back to the list.
+ * the open item fills the page, with a way back to the list. On phones the
+ * list and the open item scroll with the page; from tablets up each pane
+ * scrolls on its own.
  */
 export function InboxPage() {
   const params = useSearchParams();
@@ -120,17 +152,19 @@ export function InboxPage() {
   const callId = params.get("call");
   const conversationId = params.get("conversation");
   const openItem = items.find((item) => item.key === open);
+  const { sectionRef, rememberListScroll } = usePhoneScroll(open);
   const channels = INBOX_CHANNELS.filter((channel) => channel !== "instagram" || instagramOffered || filters.channel === "instagram");
   const href = (change: Record<string, string | null>) => inboxHref(pathname, params, change);
   const filterBy = (change: Record<string, string | null>) => router.replace(href(change), { scroll: false });
   const closeHref = href({ call: null, conversation: null });
   const back = <Button aria-label={t("inbox:back")} className="@min-[50rem]/inbox:hidden" nativeButton={false} role="link" render={<Link href={closeHref} scroll={false} />} size="icon-sm" variant="ghost"><ArrowLeft /></Button>;
-  const trackOpen = (item: InboxItem) => {
+  const openRow = (item: InboxItem) => {
+    rememberListScroll();
     if (business && item.kind === "conversation") telemetry.track("web.messages.thread_opened", { businessId: business.businessId, conversationId: item.id, channel: item.channel });
   };
 
   return (
-    <section className="@container/inbox flex h-full min-w-0 gap-6" data-slot="inbox">
+    <section className="@container/inbox flex min-w-0 gap-6 md:h-full" data-slot="inbox" ref={sectionRef}>
       <div className={cn("flex w-full min-w-0 flex-col gap-3 @min-[50rem]/inbox:w-72 2xl:w-80", open && "hidden @min-[50rem]/inbox:flex")} data-slot="inbox-list">
         <PageHeader className="py-0" title={t("inbox:title")} />
         <ScrollRow aria-label={t("inbox:filters.label")} className="scroll-row-bleed" role="group">
@@ -143,16 +177,16 @@ export function InboxPage() {
             <SelectContent><SelectGroup><SelectItem value="all">{t("inbox:filters.allAgents")}</SelectItem>{agents.map((agent) => <SelectItem key={agent.id} value={agent.id}>{agent.name}</SelectItem>)}</SelectGroup></SelectContent>
           </Select>
         ) : null}
-        <div aria-busy={loading || undefined} className="-mx-1 no-scrollbar min-h-0 flex-1 overflow-y-auto px-1">
+        <div aria-busy={loading || undefined} className="-mx-1 no-scrollbar px-1 md:min-h-0 md:flex-1 md:overflow-y-auto">
           {loading ? <RowsSkeleton /> : null}
           {!loading && !items.length ? <p className="type-body-muted p-2">{filters.channel || filters.agentId ? t("inbox:noMatch") : t("inbox:empty")}</p> : null}
-          {items.map((item) => <InboxRow href={href(openItemChange(item))} item={item} key={item.key} onOpen={() => trackOpen(item)} selected={item.key === open} showAgent={hasChoice} />)}
+          {items.map((item) => <InboxRow href={href(openItemChange(item))} item={item} key={item.key} onOpen={() => openRow(item)} selected={item.key === open} showAgent={hasChoice} />)}
           {inbox.hasNextPage ? <Button className="w-full" loading={inbox.isFetchingNextPage} onClick={() => void inbox.fetchNextPage()} size="sm" variant="ghost">{t("inbox:loadMore")}</Button> : null}
         </div>
       </div>
       <div className={cn("min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-background", open ? "flex" : "hidden @min-[50rem]/inbox:flex")} data-slot="inbox-detail">
         {open && openItem?.agent && hasChoice ? <HandledBy agent={openItem.agent} linked={canSetUp} /> : null}
-        {callId ? <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"><div className="mb-4 @min-[50rem]/inbox:hidden">{back}</div><LiveCallDetailSurface callId={callId} embedded key={callId} /></div>
+        {callId ? <div className="p-4 sm:p-6 md:min-h-0 md:flex-1 md:overflow-y-auto"><div className="mb-4 @min-[50rem]/inbox:hidden">{back}</div><LiveCallDetailSurface callId={callId} embedded key={callId} /></div>
           : conversationId ? <ConversationThread back={back} conversationId={conversationId} key={conversationId} />
           : loading ? <div className="m-auto p-8"><HiddenTextSkeleton className="type-body">{t("inbox:pick")}</HiddenTextSkeleton></div>
           : <div className="m-auto p-8 text-center type-body-muted">{t("inbox:pick")}</div>}

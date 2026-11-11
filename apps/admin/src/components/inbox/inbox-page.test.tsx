@@ -15,6 +15,8 @@ vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en
 vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
 vi.mock("@/lib/realtime-query", () => ({ subscribeRealtimeQuery: () => () => {} }));
 vi.mock("@/components/live-call-detail-surface", () => ({ LiveCallDetailSurface: ({ callId, embedded }: { callId: string; embedded?: boolean }) => <p>{`call ${callId}${embedded ? " embedded" : ""}`}</p> }));
+const phone = vi.hoisted(() => ({ value: false }));
+vi.mock("@/hooks/use-mobile", () => ({ useIsMobile: () => phone.value }));
 vi.mock("./conversation-thread", () => ({ ConversationThread: ({ conversationId }: { conversationId: string }) => <p>{`thread ${conversationId}`}</p> }));
 
 import { InboxPage } from "./inbox-page";
@@ -26,10 +28,10 @@ const items = [item({}), item({ key: "conversation:c1", kind: "conversation", id
 const twoAgents = [{ id: FRONT, name: "Front desk" }, { id: EVENING, name: "Evening" }];
 
 const clients: QueryClient[] = [];
-beforeEach(() => { telemetryRef.current = createRecordedBrowserTelemetry(); route.search = ""; });
+beforeEach(() => { telemetryRef.current = createRecordedBrowserTelemetry(); route.search = ""; phone.value = false; });
 afterEach(() => { cleanup(); clients.forEach((client) => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
-function setup(options: { agents?: typeof twoAgents; capabilities?: Array<"activity" | "setup">; respond?: (url: URL) => unknown } = {}) {
+function setup(options: { agents?: typeof twoAgents; capabilities?: Array<"activity" | "setup">; respond?: (url: URL) => unknown; scroller?: boolean } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true }] });
@@ -38,8 +40,9 @@ function setup(options: { agents?: typeof twoAgents; capabilities?: Array<"activ
     return body instanceof Promise ? await body as Response : Response.json(body);
   });
   vi.stubGlobal("fetch", fetchMock);
-  render(<QueryClientProvider client={client}><BusinessCapabilitiesProvider initial={options.capabilities ?? ["activity", "setup"]}><InboxPage /></BusinessCapabilitiesProvider></QueryClientProvider>);
-  return fetchMock;
+  const page = () => <QueryClientProvider client={client}><BusinessCapabilitiesProvider initial={options.capabilities ?? ["activity", "setup"]}>{options.scroller ? <div data-testid="scroller" style={{ overflowY: "auto" }}><InboxPage /></div> : <InboxPage />}</BusinessCapabilitiesProvider></QueryClientProvider>;
+  const { rerender } = render(page());
+  return Object.assign(fetchMock, { rerender: () => rerender(page()) });
 }
 
 describe("the Inbox", () => {
@@ -94,6 +97,52 @@ describe("the Inbox", () => {
     expect(await screen.findByText("call k1 embedded")).toBeTruthy();
     await waitFor(() => expect(screen.getByRole("link", { name: "Front desk" }).getAttribute("href")).toBe(`/agents/${FRONT}`));
     expect(screen.getByLabelText("inbox:back").getAttribute("href")).toBe("/inbox");
+  });
+
+  describe("scrolling", () => {
+    const classes = (slot: string) => document.querySelector(`[data-slot='${slot}']`)!.className.split(" ");
+
+    it("scrolls the panes on their own only from tablets up, so phones scroll the whole page", async () => {
+      route.search = "call=k1";
+      setup();
+      await screen.findByText("call k1 embedded");
+      expect(classes("inbox")).toContain("md:h-full");
+      expect(classes("inbox")).not.toContain("h-full");
+      const listScroll = document.querySelector("[data-slot='inbox-list'] > div:last-child")!.className.split(" ");
+      expect(listScroll).toContain("md:overflow-y-auto");
+      expect(listScroll).not.toContain("overflow-y-auto");
+      const callScroll = screen.getByText("call k1 embedded").parentElement!.className.split(" ");
+      expect(callScroll).toContain("md:overflow-y-auto");
+      expect(callScroll).not.toContain("overflow-y-auto");
+    });
+
+    it("on a phone, opens an item at the top of the page and returns to the list where it was", async () => {
+      phone.value = true;
+      const view = setup({ scroller: true });
+      const scroller = screen.getByTestId("scroller");
+      await screen.findByRole("link", { name: /Marie/ });
+      scroller.scrollTop = 480;
+      await userEvent.click(screen.getByRole("link", { name: /Marie/ }));
+      route.search = "call=k1";
+      view.rerender();
+      await screen.findByText("call k1 embedded");
+      expect(scroller.scrollTop).toBe(0);
+      scroller.scrollTop = 900;
+      route.search = "";
+      view.rerender();
+      expect(scroller.scrollTop).toBe(480);
+    });
+
+    it("leaves the page scroll alone from tablets up, where each pane scrolls itself", async () => {
+      const view = setup({ scroller: true });
+      const scroller = screen.getByTestId("scroller");
+      await screen.findByRole("link", { name: /Marie/ });
+      scroller.scrollTop = 480;
+      route.search = "call=k1";
+      view.rerender();
+      await screen.findByText("call k1 embedded");
+      expect(scroller.scrollTop).toBe(480);
+    });
   });
 
   describe("list and detail by the Inbox's own width", () => {
