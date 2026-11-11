@@ -46,9 +46,18 @@ test("an owner on a paid plan sets up staff answers first, it persists, and a ca
     await expect(setUp).toBeEnabled();
     await setUp.click();
     const dialog = page.getByRole("dialog");
+    // The three options sit side by side as a radio group, with what happens to a call under them.
+    const when = dialog.getByRole("radiogroup", { name: agent.staffFirst.mode.when, exact: true });
+    await expect(when.getByRole("radio")).toHaveCount(3);
+    await expect(when.getByRole("radio", { name: agent.staffFirst.mode.options.never, exact: true })).toBeChecked();
+    await expect(dialog.getByText(agent.staffFirst.mode.effect.never, { exact: true })).toBeVisible();
+    // The arrow keys move and select, as in any radio group.
+    await when.getByRole("radio", { name: agent.staffFirst.mode.options.never, exact: true }).focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(when.getByRole("radio", { name: agent.staffFirst.mode.options.business_hours, exact: true })).toBeChecked();
+    await expect(dialog.getByText(agent.staffFirst.mode.effect.business_hours, { exact: true })).toBeVisible();
+    await when.getByRole("radio", { name: agent.staffFirst.mode.options.always, exact: true }).click();
     await expect(dialog.getByText(agent.staffFirst.mode.hint, { exact: true })).toBeVisible();
-    await dialog.getByRole("combobox", { name: agent.staffFirst.mode.when, exact: true }).click();
-    await page.getByRole("option", { name: agent.staffFirst.mode.options.always, exact: true }).click();
 
     // The phone is required once the mode is on.
     const save = dialog.getByRole("button", { name: agent.staffFirst.save, exact: true });
@@ -67,7 +76,7 @@ test("an owner on a paid plan sets up staff answers first, it persists, and a ca
     await page.reload();
     await expect(section).toContainText(state);
     await section.getByRole("button", { name: agent.actions.edit, exact: true }).click();
-    await expect(dialog.getByRole("combobox", { name: agent.staffFirst.mode.when, exact: true })).toContainText(agent.staffFirst.mode.options.always);
+    await expect(dialog.getByRole("radio", { name: agent.staffFirst.mode.options.always, exact: true })).toBeChecked();
     await expect(dialog.getByLabel(agent.staffFirst.number.label, { exact: true })).toHaveValue(/416.*555.*0177/);
     await expect(dialog.getByLabel(agent.staffFirst.message.label, { exact: true })).toHaveValue("Thanks for calling. One moment.");
     await dialog.getByRole("button", { name: agent.actions.cancel, exact: true }).click();

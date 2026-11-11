@@ -7,13 +7,14 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
+import { SegmentedControl, SegmentedControlItem } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { SmallButtonSkeleton } from "@/components/loading-skeletons";
 import { useTelemetry } from "@/components/product-analytics";
@@ -42,6 +43,13 @@ const saveErrors: Record<string, string> = {
   transfer_number_invalid: "agent:fields.transferNumber.errors.invalid",
   trial_transfer_locked: "agent:staffFirst.errors.trialLocked",
 };
+
+/** What happens to a call with each option. Always reads as the setting's hint, which describes it. */
+const MODE_EFFECT_KEYS = {
+  never: "agent:staffFirst.mode.effect.never",
+  business_hours: "agent:staffFirst.mode.effect.business_hours",
+  always: "agent:staffFirst.mode.hint",
+} as const satisfies Record<StaffFirstMode, string>;
 
 /** Where an agent's page scrolls to Staff answers first, as Home's phone card links it. */
 export const STAFF_FIRST_ANCHOR = "staff-first";
@@ -170,17 +178,19 @@ export function StaffFirstSection({ businessId, block, canManage, defaultLocale,
         <DialogContent className="max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto]">
           <DialogHeader>
             <DialogTitle>{t("agent:staffFirst.mode.label")}</DialogTitle>
-            <DialogDescription>{t("agent:staffFirst.mode.hint")}</DialogDescription>
           </DialogHeader>
           {/* The padding keeps the focus rings clear of the scroll edge. */}
           <div className="-m-1 min-h-0 overflow-y-auto p-1">
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="agent-staff-first-mode">{t("agent:staffFirst.mode.when")}</FieldLabel>
-                <Select items={staffFirstModes.map((value) => ({ value, label: t(`agent:staffFirst.mode.options.${value}`) }))} onValueChange={(next) => { if (next) { setMode(next as StaffFirstMode); setStatus(null); } }} value={mode}>
-                  <SelectTrigger aria-label={t("agent:staffFirst.mode.when")} className="w-full" id="agent-staff-first-mode"><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectGroup>{staffFirstModes.map((value) => <SelectItem key={value} value={value}>{t(`agent:staffFirst.mode.options.${value}`)}</SelectItem>)}</SelectGroup></SelectContent>
-                </Select>
+                <FieldLabel id="agent-staff-first-mode-label">{t("agent:staffFirst.mode.when")}</FieldLabel>
+                <SegmentedControl aria-describedby="agent-staff-first-mode-effect" aria-labelledby="agent-staff-first-mode-label" onValueChange={(next: StaffFirstMode) => { setMode(next); setStatus(null); }} value={mode}>
+                  {staffFirstModes.map((value) => <SegmentedControlItem key={value} value={value}>{t(`agent:staffFirst.mode.options.${value}`)}</SegmentedControlItem>)}
+                </SegmentedControl>
+                {/* What happens to a call with the chosen option, so Off isn't an empty dialog. */}
+                <Item size="sm" variant="muted">
+                  <ItemContent><ItemDescription aria-live="polite" id="agent-staff-first-mode-effect">{t(MODE_EFFECT_KEYS[mode])}</ItemDescription></ItemContent>
+                </Item>
               </Field>
               {mode === "never" ? null : (
                 <>

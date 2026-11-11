@@ -416,6 +416,10 @@
       "label": "Ring your team first",
       "hint": "Your phone rings first. Press 1 to take the call. If you don't, the agent answers.",
       "when": "When",
+      "effect": {
+        "never": "Your agent answers every call.",
+        "business_hours": "During business hours, your phone rings first. If you don't take the call, or after hours, your agent answers."
+      },
       "options": {
         "never": "Off",
         "business_hours": "During business hours",

@@ -417,6 +417,10 @@
       "label": "Faire sonner votre équipe d'abord",
       "hint": "Votre téléphone sonne d'abord. Appuyez sur 1 pour prendre l'appel. Sinon, l'agent répond.",
       "when": "Quand",
+      "effect": {
+        "never": "Votre agent répond à tous les appels.",
+        "business_hours": "Pendant les heures d'ouverture, votre téléphone sonne d'abord. Si vous ne prenez pas l'appel, ou en dehors de ces heures, votre agent répond."
+      },
       "options": {
         "never": "Désactivé",
         "business_hours": "Pendant les heures d'ouverture",
