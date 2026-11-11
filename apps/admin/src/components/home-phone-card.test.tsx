@@ -52,14 +52,15 @@ describe("phone card on Home", () => {
     expect(dot.getAttribute("data-slot")).toBe("phone-status-dot");
     expect(dot.className).toContain("bg-status-success-foreground");
     expect(dot.className).not.toMatch(/animate-/);
-    // The label and the number are their own elements.
-    const label = screen.getByText(en.home.phone.numberLabel);
-    expect(label.nextElementSibling!.textContent).toBe("(416) 555-0100");
-    expect(label.parentElement!.textContent).toBe(`${en.home.phone.numberLabel}(416) 555-0100`);
-    // One number needs no agent name.
+    // The number shows alone, and one number needs no agent name.
+    expect(screen.getByText("(416) 555-0100").parentElement!.textContent).toBe("(416) 555-0100");
     expect(screen.queryByText("Front desk")).toBeNull();
     expect(screen.getByRole("button", { name: en.home.phone.answersFirst.agent }).getAttribute("aria-haspopup")).toBe("dialog");
-    screen.getByRole("button", { name: enCommon.testCall.trigger }).click();
+    // With one number, Test call sits in the heading row, not in the number's row.
+    const testCall = screen.getByRole("button", { name: enCommon.testCall.trigger });
+    expect(testCall.closest("[data-slot='phone-heading-row']")!.contains(heading)).toBe(true);
+    expect(testCall.closest("li")).toBeNull();
+    testCall.click();
     expect(opened).toEqual([{ agentId: "agent-front" }]);
     // The heading is in the card, with the number and, under the divider, the results.
     const card = container.querySelector("[data-slot='surface']")!;
@@ -96,12 +97,14 @@ describe("phone card on Home", () => {
     telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "staff_first" });
   });
 
-  it("names each number's agent in place of the label, with who answers first and a Test call for that agent", async () => {
+  it("gives each number its own row with its agent, who answers first and a Test call for that agent", async () => {
     const opened: unknown[] = [];
     const unregister = registerTestWindow((options) => opened.push(options));
     await renderCard({ called: true, lines: [front, evenings] });
-    expect(screen.getByRole("heading", { name: en.home.phone.status.liveMany })).toBeTruthy();
-    expect(screen.queryByText(en.home.phone.numberLabel)).toBeNull();
+    const heading = screen.getByRole("heading", { name: en.home.phone.status.liveMany });
+    // The heading row holds no Test call; each row has its own.
+    expect(within(heading.closest("[data-slot='phone-heading-row']") as HTMLElement).queryByRole("button")).toBeNull();
+    expect(screen.getAllByRole("button", { name: enCommon.testCall.trigger })).toHaveLength(2);
     const rows = screen.getAllByRole("listitem");
     expect(rows).toHaveLength(2);
     expect(within(rows[0]!).getByText("Front desk")).toBeTruthy();
@@ -135,11 +138,6 @@ describe("phone card on Home", () => {
     await renderCard({ canSetUp: false, lines: [front] });
     expect(screen.getByText(en.home.phone.answersFirst.agent)).toBeTruthy();
     expect(screen.queryByRole("button", { name: en.home.phone.answersFirst.agent })).toBeNull();
-  });
-
-  it("puts a space before the colon in French", async () => {
-    await renderCard({ lines: [front], results: null }, "fr");
-    expect(screen.getByText(fr.home.phone.numberLabel).textContent).toBe("Votre numéro :");
   });
 
   it("writes Serbian in Latin script", async () => {

@@ -237,7 +237,7 @@ describe("phone card on Home", () => {
     const i18n = await setup("en", null, { role: "business_owner", phoneLines: [{ e164: "+14165550100", agentId: "agent-1", agentName: "Front desk", staffFirstMode: "never" }] });
     const phone = screen.getByRole("region", { name: i18n.t("home.phone.status.ready") });
     const card = phone.closest("[data-slot='surface']")!;
-    expect(within(phone).getByText(i18n.t("home.phone.numberLabel"))).toBeTruthy();
+    expect(within(phone).getByText("(416) 555-0100")).toBeTruthy();
     // The chip opens the setting in a dialog on Home rather than leaving for the agent's page.
     expect(within(phone).getByRole("button", { name: i18n.t("home.phone.answersFirst.agent") }).getAttribute("aria-haspopup")).toBe("dialog");
     expect(within(phone).queryByRole("link")).toBeNull();
@@ -269,7 +269,7 @@ describe("Home while it loads", () => {
     expect(screen.getByText(i18n.t("home.chart.title"))).toBeTruthy();
     expect(screen.getByText(i18n.t("home.recentCalls.title"))).toBeTruthy();
     // The phone part's place is held in the same card as the results, before Home knows whether the business has a number.
-    for (const label of [i18n.t("home.phone.status.ready"), i18n.t("home.phone.numberLabel"), i18n.t("home.phone.answersFirst.agent"), i18n.t("common:testCall.trigger")]) expect(screen.getByText(label).closest("[data-slot='skeleton']")).toBeTruthy();
+    for (const label of [i18n.t("home.phone.status.ready"), i18n.t("home.phone.answersFirst.agent"), i18n.t("common:testCall.trigger")]) expect(screen.getByText(label).closest("[data-slot='skeleton']")).toBeTruthy();
     const card = screen.getByText(i18n.t("home.phone.answersFirst.agent")).closest("[data-slot='surface']")!;
     expect(card.getAttribute("aria-busy")).toBe("true");
     expect(card.contains(screen.getByText(i18n.t("home.phone.status.ready")))).toBe(true);
