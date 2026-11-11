@@ -179,6 +179,8 @@ export function BusinessHoursSection({ businessId, canManage, bookingMode }: { b
     try {
       const saved = await requestJson<BusinessHoursState>(`/api/hours?businessId=${encodeURIComponent(businessId)}`, { method: "PUT", body: JSON.stringify({ hours: result.hours, closures }) });
       queryClient.setQueryData(businessHoursQueryKey(businessId), saved);
+      // The appointments calendar shows the closures.
+      void queryClient.invalidateQueries({ queryKey: ["time-off", businessId] });
       telemetry.track("web.agent.settings_saved", { businessId, setting: "hours" });
       toast.success(t("actions.saved"));
       setEditing(false);

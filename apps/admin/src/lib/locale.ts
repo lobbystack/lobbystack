@@ -189,6 +189,19 @@ export function formatDateTime(
   ).format(date);
 }
 
+/** Two instants as one range, such as "9:30 – 10:30 AM", with the reader's 12- or 24-hour preference. */
+export function formatDateTimeRange(
+  start: string | number | Date,
+  end: string | number | Date,
+  locale: string,
+  options?: Intl.DateTimeFormatOptions,
+  timeFormatPreference?: TimeFormatPreference | null,
+): string {
+  const [from, to] = [start, end].map((value) => (value instanceof Date ? value : new Date(value))) as [Date, Date];
+  const resolvedPreference = timeFormatPreference ?? readStoredTimeFormatPreference();
+  return new Intl.DateTimeFormat(intlLocale(locale), applyTimeFormatPreference(options, resolvedPreference)).formatRange(from, to);
+}
+
 export function formatRelativeTime(
   value: string | number | Date,
   locale: string,

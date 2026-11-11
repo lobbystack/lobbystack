@@ -57,6 +57,34 @@
   /* Polar's gray Pill (clients/packages/orbit/src/components/Pill.tsx): gray-100 and gray-600. */
   --pill: oklch(0.967 0.003 264.542);
   --pill-foreground: oklch(0.446 0.03 256.802);
+  /* The appointments calendar's service colors: a soft fill, dark text on it (over 7:1) and a stronger edge, at eight hues. */
+  --calendar-1: oklch(0.94 0.045 250);
+  --calendar-1-foreground: oklch(0.33 0.09 250);
+  --calendar-1-accent: oklch(0.66 0.14 250);
+  --calendar-2: oklch(0.94 0.045 155);
+  --calendar-2-foreground: oklch(0.33 0.09 155);
+  --calendar-2-accent: oklch(0.66 0.14 155);
+  --calendar-3: oklch(0.94 0.045 80);
+  --calendar-3-foreground: oklch(0.33 0.09 80);
+  --calendar-3-accent: oklch(0.66 0.14 80);
+  --calendar-4: oklch(0.94 0.045 15);
+  --calendar-4-foreground: oklch(0.33 0.09 15);
+  --calendar-4-accent: oklch(0.66 0.14 15);
+  --calendar-5: oklch(0.94 0.045 295);
+  --calendar-5-foreground: oklch(0.33 0.09 295);
+  --calendar-5-accent: oklch(0.66 0.14 295);
+  --calendar-6: oklch(0.94 0.045 195);
+  --calendar-6-foreground: oklch(0.33 0.09 195);
+  --calendar-6-accent: oklch(0.66 0.14 195);
+  --calendar-7: oklch(0.94 0.045 50);
+  --calendar-7-foreground: oklch(0.33 0.09 50);
+  --calendar-7-accent: oklch(0.66 0.14 50);
+  --calendar-8: oklch(0.94 0.045 345);
+  --calendar-8-foreground: oklch(0.33 0.09 345);
+  --calendar-8-accent: oklch(0.66 0.14 345);
+  /* Hatching for closed hours and time off on the calendar. */
+  --calendar-closed: oklch(0.145 0 0 / 4%);
+  --calendar-time-off: oklch(0.145 0 0 / 9%);
 }
 
 .dark {
@@ -107,6 +135,33 @@
   /* Polar's dark gray Pill: polar-700 and polar-300. */
   --pill: hsl(0 0% 13%);
   --pill-foreground: hsl(0 0% 62%);
+  /* Dark service colors: a deep fill with light text (over 7:1) and a brighter edge. */
+  --calendar-1: oklch(0.31 0.06 250);
+  --calendar-1-foreground: oklch(0.93 0.04 250);
+  --calendar-1-accent: oklch(0.72 0.13 250);
+  --calendar-2: oklch(0.31 0.06 155);
+  --calendar-2-foreground: oklch(0.93 0.04 155);
+  --calendar-2-accent: oklch(0.72 0.13 155);
+  --calendar-3: oklch(0.31 0.06 80);
+  --calendar-3-foreground: oklch(0.93 0.04 80);
+  --calendar-3-accent: oklch(0.72 0.13 80);
+  --calendar-4: oklch(0.31 0.06 15);
+  --calendar-4-foreground: oklch(0.93 0.04 15);
+  --calendar-4-accent: oklch(0.72 0.13 15);
+  --calendar-5: oklch(0.31 0.06 295);
+  --calendar-5-foreground: oklch(0.93 0.04 295);
+  --calendar-5-accent: oklch(0.72 0.13 295);
+  --calendar-6: oklch(0.31 0.06 195);
+  --calendar-6-foreground: oklch(0.93 0.04 195);
+  --calendar-6-accent: oklch(0.72 0.13 195);
+  --calendar-7: oklch(0.31 0.06 50);
+  --calendar-7-foreground: oklch(0.93 0.04 50);
+  --calendar-7-accent: oklch(0.72 0.13 50);
+  --calendar-8: oklch(0.31 0.06 345);
+  --calendar-8-foreground: oklch(0.93 0.04 345);
+  --calendar-8-accent: oklch(0.72 0.13 345);
+  --calendar-closed: oklch(1 0 0 / 4%);
+  --calendar-time-off: oklch(1 0 0 / 10%);
 }
 
 @theme inline {
@@ -156,6 +211,32 @@
   --color-status-info-foreground: var(--status-info-foreground);
   --color-pill: var(--pill);
   --color-pill-foreground: var(--pill-foreground);
+  --color-calendar-1: var(--calendar-1);
+  --color-calendar-1-foreground: var(--calendar-1-foreground);
+  --color-calendar-1-accent: var(--calendar-1-accent);
+  --color-calendar-2: var(--calendar-2);
+  --color-calendar-2-foreground: var(--calendar-2-foreground);
+  --color-calendar-2-accent: var(--calendar-2-accent);
+  --color-calendar-3: var(--calendar-3);
+  --color-calendar-3-foreground: var(--calendar-3-foreground);
+  --color-calendar-3-accent: var(--calendar-3-accent);
+  --color-calendar-4: var(--calendar-4);
+  --color-calendar-4-foreground: var(--calendar-4-foreground);
+  --color-calendar-4-accent: var(--calendar-4-accent);
+  --color-calendar-5: var(--calendar-5);
+  --color-calendar-5-foreground: var(--calendar-5-foreground);
+  --color-calendar-5-accent: var(--calendar-5-accent);
+  --color-calendar-6: var(--calendar-6);
+  --color-calendar-6-foreground: var(--calendar-6-foreground);
+  --color-calendar-6-accent: var(--calendar-6-accent);
+  --color-calendar-7: var(--calendar-7);
+  --color-calendar-7-foreground: var(--calendar-7-foreground);
+  --color-calendar-7-accent: var(--calendar-7-accent);
+  --color-calendar-8: var(--calendar-8);
+  --color-calendar-8-foreground: var(--calendar-8-foreground);
+  --color-calendar-8-accent: var(--calendar-8-accent);
+  --color-calendar-closed: var(--calendar-closed);
+  --color-calendar-time-off: var(--calendar-time-off);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -209,6 +290,16 @@
       font-size: 16px !important;
     }
   }
+}
+
+/* Diagonal lines over closed hours and time off on the appointments calendar. */
+@utility calendar-hatch-closed {
+  background-image: repeating-linear-gradient(135deg, var(--calendar-closed) 0 1px, transparent 1px 8px);
+}
+
+@utility calendar-hatch-time-off {
+  background-color: var(--calendar-closed);
+  background-image: repeating-linear-gradient(135deg, var(--calendar-time-off) 0 2px, transparent 2px 8px);
 }
 
 @utility container {
