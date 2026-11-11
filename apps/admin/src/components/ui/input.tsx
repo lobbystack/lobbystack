@@ -9,14 +9,23 @@ export const inputClassName =
 /** What an empty password field shows: eight bullets, the character browsers mask typed passwords with, so no field needs its own wording. */
 export const PASSWORD_PLACEHOLDER = "\u2022".repeat(8);
 
+const DATE_TIME_TYPES = new Set(["date", "time", "datetime-local", "month", "week"]);
+
+/**
+ * iOS Safari draws date and time fields as native buttons with their own minimum width, wider than a phone's
+ * field, and centers the value. Dropping the native look lets them take the field's width and height, value on the left.
+ */
+const dateTimeClassName = "appearance-none text-left [&::-webkit-date-and-time-value]:min-h-[1lh] [&::-webkit-date-and-time-value]:text-left"
+
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   const password = type === "password";
+  const dateTime = type !== undefined && DATE_TIME_TYPES.has(type);
   return (
     <InputPrimitive
       type={type}
       data-slot="input"
       // Geist Sans draws small password bullets; monospace keeps them an even size, and the placeholder uses the same bullet.
-      className={cn(inputClassName, password && "font-mono", className)}
+      className={cn(inputClassName, password && "font-mono", dateTime && dateTimeClassName, className)}
       {...(password ? { placeholder: PASSWORD_PLACEHOLDER } : {})}
       {...props}
     />

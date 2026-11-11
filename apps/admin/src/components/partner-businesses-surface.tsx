@@ -333,7 +333,7 @@ export function PartnerBusinessesSurface() {
     <Dialog onOpenChange={(next) => { setOpen(next); if (!next) reset(); }} open={open}>
       <DialogTrigger render={<Button disabled={businesses.isLoading} size="sm" />}>{t("businesses.create.action")}</DialogTrigger>
       {/* With templates and packages the form runs taller than a laptop screen, so it scrolls inside the window. */}
-      <DialogContent size="sm" className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
+      <DialogContent size="sm" className="max-h-[calc(100dvh-2rem)] overflow-x-hidden overflow-y-auto">
         <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); setSubmitted(true); if (!create.isPending && name.trim() && ownerEmail.trim()) { setError(null); create.mutate(); } }}>
           <DialogHeader>
             <DialogTitle>{t("businesses.create.title")}</DialogTitle>

@@ -252,7 +252,7 @@ export function LiveDemosSurface({ partner }: { partner?: PartnerDemosOptions } 
             <Dialog onOpenChange={(next) => { setCreateOpen(next); if (!next) { setError(null); setAccessLevel("full"); } }} open={createOpen}>
               <DialogTrigger render={<Button />}>{t("operator.create")}</DialogTrigger>
               {/* The form runs taller than a laptop screen with the access levels, so it scrolls inside the window. */}
-              <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
+              <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-x-hidden overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>{t("operator.prepare")}</DialogTitle>
                   <DialogDescription>{t("operator.partner.prepareDescription")}</DialogDescription>

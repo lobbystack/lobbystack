@@ -246,7 +246,7 @@ function ServicesPicker({ id, invalid, label, onChange, services, value }: { id:
       <div className="border-b p-2">
         <SearchInput aria-label={t("add.fields.services.search")} onValueChange={setQuery} onKeyDown={(event) => { if (event.key === "Enter") event.preventDefault(); }} placeholder={t("add.fields.services.search")} ref={searchRef} value={query} />
       </div>
-      {visible.length ? <div className="flex max-h-64 flex-col overflow-y-auto p-1">
+      {visible.length ? <div className="flex max-h-64 flex-col overflow-x-hidden overflow-y-auto p-1">
         <label className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 font-medium hover:bg-muted">
           <Checkbox checked={allVisibleChosen} onCheckedChange={toggleVisible} />{t(allVisibleChosen ? "add.fields.services.unselectAll" : "add.fields.services.selectAll")}
         </label>

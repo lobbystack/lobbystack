@@ -151,7 +151,7 @@ export function VoiceDialog({ open, onOpenChange, current, preview, saving, onSa
           <DialogTitle>{t("fields.voice.dialog.title")}</DialogTitle>
           <DialogDescription>{t("fields.voice.dialog.description")}</DialogDescription>
         </DialogHeader>
-        <div className="-mx-2 flex min-h-0 flex-col gap-4 overflow-y-auto px-2">
+        <div className="-mx-2 flex min-h-0 flex-col gap-4 overflow-x-hidden overflow-y-auto px-2">
           <section aria-labelledby="voice-current" className="flex flex-col gap-1">
             <h3 className="px-2 type-meta" id="voice-current">{t("fields.voice.dialog.current")}</h3>
             <ul><VoiceRow inUse onPick={() => setPicked(current)} picked={picked === current} preview={preview} voice={current} /></ul>

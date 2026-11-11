@@ -138,7 +138,7 @@ export function StaffFirstDialog({ businessId, defaultLocale, onOpenChange, onSa
           <DialogTitle>{t("agent:staffFirst.mode.label")}</DialogTitle>
         </DialogHeader>
         {/* The padding keeps the focus rings clear of the scroll edge. */}
-        <div className="-m-1 min-h-0 overflow-y-auto p-1">
+        <div className="-m-1 min-h-0 overflow-x-hidden overflow-y-auto p-1">
           {!draft ? (
             <div aria-busy="true" className="flex flex-col gap-3" data-slot="staff-first-dialog-skeleton">
               <Skeleton className="h-4 w-16" />

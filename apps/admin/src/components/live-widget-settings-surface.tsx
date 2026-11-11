@@ -353,7 +353,7 @@ function WidgetKeyForm({ editing, name, businessName, embedOrigin, pending, erro
         <DialogDescription>{t("widget.create.description")}</DialogDescription>
       </DialogHeader>
       <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_368px]">
-        <FieldGroup className="min-h-0 gap-8 overflow-y-auto px-6 py-6">
+        <FieldGroup className="min-h-0 gap-8 overflow-x-hidden overflow-y-auto px-6 py-6">
           <FieldSet>
             <FieldLegend>{t("widget:manage.sections.website")}</FieldLegend>
             <FieldGroup className="gap-5">
@@ -449,7 +449,7 @@ function WidgetKeyForm({ editing, name, businessName, embedOrigin, pending, erro
               : <p className="type-body-muted">{t("widget.keys.noSnippet")}</p>
           ) : null}
         </FieldGroup>
-        <div className="hidden min-h-0 overflow-y-auto border-l bg-muted/40 p-6 lg:block">
+        <div className="hidden min-h-0 overflow-x-hidden overflow-y-auto border-l bg-muted/40 p-6 lg:block">
           <WidgetPreview color={draft.color} position={draft.position} title={draft.title.trim() || businessName || t("widget.fields.titlePlaceholder")} subtitle={draft.subtitle.trim()} greeting={draft.greeting.trim()} />
         </div>
       </div>
