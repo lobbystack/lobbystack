@@ -1,9 +1,12 @@
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
 import { runtimeLocales } from "./locales";
+import { apiRuleReorderSchema } from "./publicApi/schemas";
+import { RULES_MAX, RULES_REORDER_MAX } from "./receptionist";
 import { channelRuleTitle, channelRuleTitles, ruleChannelOf, ruleChannels } from "./ruleChannels";
 
 const migration = readFileSync(fileURLToPath(new URL("../../db/migrations/0203_rule_channels.sql", import.meta.url)), "utf8");
@@ -22,6 +25,15 @@ describe("channelRuleTitle", () => {
       const row = `('${locale}', ${ruleChannels.map((channel) => `'${titles[channel].replaceAll("'", "''")}'`).join(", ")})`;
       expect(migration).toContain(row);
     }
+  });
+});
+
+describe("RULES_REORDER_MAX", () => {
+  it("leaves room for the one rule per channel migration 0203 could add past RULES_MAX", () => {
+    expect(RULES_REORDER_MAX).toBe(RULES_MAX + ruleChannels.length);
+    const ids = (count: number) => Array.from({ length: count }, () => randomUUID());
+    expect(apiRuleReorderSchema.safeParse({ rule_ids: ids(RULES_REORDER_MAX) }).success).toBe(true);
+    expect(apiRuleReorderSchema.safeParse({ rule_ids: ids(RULES_REORDER_MAX + 1) }).success).toBe(false);
   });
 });
 

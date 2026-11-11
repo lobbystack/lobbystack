@@ -69,12 +69,25 @@ export function snapshotSnippets(snippets: Array<KnowledgeSnippet>): Array<Knowl
   return snippets.slice().sort((left, right) => right.priority - left.priority).slice(0, MAX_KNOWLEDGE_SNIPPETS_PER_SNAPSHOT);
 }
 
-/** A rule kept to one channel holds what that channel's instructions did, so calls read as much of it as they read of those. */
+/**
+ * The rules a snapshot keeps, in order: the first MAX_AGENT_RULES_PER_SNAPSHOT
+ * for every channel, and as many again for each channel, so rules for every
+ * channel never push out a channel's own. Migration 0203 put each agent's
+ * instructions after its other rules, as its only rule for that channel. A
+ * rule kept to one channel holds what that channel's instructions did, so
+ * calls read as much of it as they read of those.
+ */
 export function snapshotRules(rules: Array<AgentRuleSummary> | undefined): Array<AgentRuleSummary> {
+  const taken = new Map<string, number>();
   return (rules ?? [])
     .slice()
     .sort((left, right) => left.order - right.order)
-    .slice(0, MAX_AGENT_RULES_PER_SNAPSHOT)
+    .filter((rule) => {
+      const group = rule.channel ?? "";
+      const count = taken.get(group) ?? 0;
+      taken.set(group, count + 1);
+      return count < MAX_AGENT_RULES_PER_SNAPSHOT;
+    })
     .map(({ channel, ...rule }) => ({
       ...rule,
       title: rule.title.slice(0, MAX_AGENT_RULE_TITLE_CHARS),

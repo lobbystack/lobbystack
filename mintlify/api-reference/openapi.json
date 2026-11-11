@@ -20179,7 +20179,7 @@
         "properties": {
           "rule_ids": {
             "minItems": 1,
-            "maxItems": 100,
+            "maxItems": 104,
             "type": "array",
             "items": {
               "type": "string",

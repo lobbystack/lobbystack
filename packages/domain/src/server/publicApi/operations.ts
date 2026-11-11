@@ -1191,8 +1191,9 @@ export async function listRulesForApi(context: DomainContext, caller: ApiCaller)
 
 /**
  * Adds a rule after the others. /v1/rules acts on the default agent's rules,
- * and an agent keeps up to RULES_MAX, so the API can always send them all in
- * one reorder.
+ * and an agent keeps up to RULES_MAX. Migration 0203 can take one up to four
+ * past it, and a reorder takes RULES_REORDER_MAX ids, so the API can always
+ * send them all in one reorder.
  */
 export async function createRuleForApi(context: DomainContext, caller: ApiCaller, input: ApiRuleCreate): Promise<ApiRule> {
   return await inBusiness(context, caller, async (tx) => {

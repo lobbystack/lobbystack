@@ -4,7 +4,7 @@ import { billingPlanSlugs } from "../billing";
 import { interfaceLocales, runtimeLocales } from "../locales";
 import { partnerAccessLevels } from "../partners";
 import { CHANNEL_RULE_CONTENT_CALL_MAX_LENGTH, ruleChannels } from "../ruleChannels";
-import { appointmentChangeVerificationModes, bookingModes, STAFF_FIRST_MESSAGE_MAX_LENGTH, staffFirstModes, staffFirstRingSeconds, CONTACT_PASSCODE_DEFAULT_LENGTH, CONTACT_PASSCODE_LOCK_ATTEMPTS, CONTACT_PASSCODE_MAX_LENGTH, CONTACT_PASSCODE_MIN_LENGTH, isContactPasscode, isGuessableContactPasscode, RECEPTIONIST_INSTRUCTIONS_MAX_LENGTH, RECEPTIONIST_TEXT_MAX_LENGTH, RULE_TITLE_MAX_LENGTH, RULES_MAX, receptionistVoices, transferModes } from "../receptionist";
+import { appointmentChangeVerificationModes, bookingModes, STAFF_FIRST_MESSAGE_MAX_LENGTH, staffFirstModes, staffFirstRingSeconds, CONTACT_PASSCODE_DEFAULT_LENGTH, CONTACT_PASSCODE_LOCK_ATTEMPTS, CONTACT_PASSCODE_MAX_LENGTH, CONTACT_PASSCODE_MIN_LENGTH, isContactPasscode, isGuessableContactPasscode, RECEPTIONIST_INSTRUCTIONS_MAX_LENGTH, RECEPTIONIST_TEXT_MAX_LENGTH, RULE_TITLE_MAX_LENGTH, RULES_REORDER_MAX, receptionistVoices, transferModes } from "../receptionist";
 import { WIDGET_COLOR_PATTERN, widgetPositionSchema } from "../widget";
 import { CONTACT_PASSCODES_MAX_PER_REQUEST, KNOWLEDGE_UPLOAD_MAX_BYTES, PUBLIC_API_VERSION, WEBHOOK_TEST_EVENT_TYPE, apiKeyScopes, webhookEventTypes, weekdays } from "./constants";
 
@@ -209,7 +209,7 @@ export const apiRuleUpdateSchema = z.strictObject({
 });
 
 export const apiRuleReorderSchema = z.strictObject({
-  rule_ids: z.array(id).min(1).max(RULES_MAX).describe("Every rule id once, in the order the receptionist should read them."),
+  rule_ids: z.array(id).min(1).max(RULES_REORDER_MAX).describe("Every rule id once, in the order the receptionist should read them."),
 });
 
 const checkoutPlans = ["starter", "pro"] as const;
