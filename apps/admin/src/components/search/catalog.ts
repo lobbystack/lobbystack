@@ -49,6 +49,7 @@ const AGENT_TAGS: Partial<Record<AgentPage["section"], SearchTag[]>> = {
   "": ["voice", "handling"],
   instructions: ["instructions"],
   rules: ["rules"],
+  knowledge: ["knowledge"],
   channels: [],
   "channels/phone": ["phone"],
   "channels/widget": ["widget"],

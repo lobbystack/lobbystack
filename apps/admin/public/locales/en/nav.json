@@ -91,10 +91,10 @@
     "general": "General",
     "instructions": "Instructions",
     "rules": "Rules",
+    "knowledge": "Specific knowledge",
     "channels": "Channels",
     "phone": "Phone number",
-    "widget": "Website widget",
-    "shared": "Shared with every agent"
+    "widget": "Website widget"
   },
   "businessPages": {
     "details": "Details"

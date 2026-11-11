@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 
 import { agents } from "@lobbystack/db";
 
+import agentCopy from "../public/locales/en/agent.json" with { type: "json" };
 import navCopy from "../public/locales/en/nav.json" with { type: "json" };
 
 import { migrator, removeFixtures, signUpOwner } from "./fixtures/full-stack";
@@ -132,9 +133,11 @@ test("Settings, Business and an agent open their own menus, and the back row sho
     await link(new RegExp(`^${navCopy.agentPages.channels}`)).click();
     await expect(page).toHaveURL(new RegExp(`/agents/${agent!.id}/channels$`));
 
-    // Shared pages live in Business. Opening one from the agent swaps in Business's menu.
-    await link(new RegExp(`^${navCopy.agentPages.shared}`)).click();
-    await page.locator("#dashboard-main-content").getByRole("link", { name: navCopy.settingsPages.knowledge }).click();
+    // Specific knowledge sits between Rules and Channels. Its link to the shared
+    // knowledge opens Business, which swaps in Business's menu.
+    await link(navCopy.agentPages.knowledge).click();
+    await expect(page).toHaveURL(new RegExp(`/agents/${agent!.id}/knowledge$`));
+    await page.locator("#dashboard-main-content").getByRole("link", { name: agentCopy.sections.knowledge.agent.manageShared }).click();
     await expect(page).toHaveURL(/\/business\/knowledge$/);
     await expect(level).toHaveAttribute("data-menu-level", "business");
 

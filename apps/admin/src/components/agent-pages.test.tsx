@@ -12,7 +12,7 @@ vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => ({ track:
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock("@/components/agents/channels-section", () => ({ ChannelsSection: ({ agentId, widgetsEnabled }: { agentId: string; widgetsEnabled: boolean }) => <p>channels for {agentId}{widgetsEnabled ? " with widgets" : ""}</p> }));
 
-import { AgentChannelsPage, AgentSettingsPage, AgentSharedPage } from "./agent-pages";
+import { AgentChannelsPage, AgentSettingsPage } from "./agent-pages";
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
@@ -22,19 +22,12 @@ function renderWith(node: React.ReactNode) {
   render(<QueryClientProvider client={client}>{node}</QueryClientProvider>);
 }
 
-const hrefs = () => screen.getAllByRole("link").map((link) => link.getAttribute("href"));
-
 it("shows the agent's channels, with widgets when the server makes them", () => {
   renderWith(<AgentChannelsPage agentId="agent-2" widgetsEnabled />);
   expect(screen.getByText("channels for agent-2 with widgets")).toBeTruthy();
   cleanup();
   renderWith(<AgentChannelsPage agentId="agent-2" widgetsEnabled={false} />);
   expect(screen.getByText("channels for agent-2")).toBeTruthy();
-});
-
-it("lists the workspace pages every agent shares", () => {
-  renderWith(<AgentSharedPage />);
-  expect(hrefs()).toEqual(["/business", "/business/knowledge", "/business/services", "/business/employees", "/business/integrations"]);
 });
 
 it("holds the name, greeting and voice, then calls and booking, on the agent's own page, each section waiting with placeholders", () => {

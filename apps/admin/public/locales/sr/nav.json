@@ -92,10 +92,10 @@
     "general": "Opšte",
     "instructions": "Uputstva",
     "rules": "Pravila",
+    "knowledge": "Specifično znanje",
     "channels": "Kanali",
     "phone": "Broj telefona",
-    "widget": "Vidžet za sajt",
-    "shared": "Zajedničko za sve agente"
+    "widget": "Vidžet za sajt"
   },
   "businessPages": {
     "details": "Podaci"

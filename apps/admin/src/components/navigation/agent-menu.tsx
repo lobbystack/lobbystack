@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowUpRight, AudioLines, Check, ChevronsUpDown, Layers, ListChecks, MessagesSquare, Plus, Radio, ScrollText, type LucideIcon } from "lucide-react";
+import { ArrowUpRight, AudioLines, BookOpen, Check, ChevronsUpDown, ListChecks, MessagesSquare, Plus, Radio, ScrollText, type LucideIcon } from "lucide-react";
 import { useContext } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -16,7 +16,7 @@ import { agentHref, agentPageOf, AGENT_PAGES, type AgentPage } from "@/lib/agent
 import { levelFor } from "@/lib/navigation-levels";
 import { MenuGroup, MenuNavigationContext, MenuRow } from "./menu-parts";
 
-const ICONS: Partial<Record<AgentPage["section"], LucideIcon>> = { "": AudioLines, instructions: ScrollText, rules: ListChecks, channels: Radio, shared: Layers };
+const ICONS: Partial<Record<AgentPage["section"], LucideIcon>> = { "": AudioLines, instructions: ScrollText, rules: ListChecks, knowledge: BookOpen, channels: Radio };
 
 /** The rows of the agent's menu: its own pages, without the pages Channels opens. */
 const MENU_PAGES = AGENT_PAGES.filter((page) => page.section in ICONS);
@@ -74,7 +74,7 @@ function AgentHeading({ agent }: { agent: AgentListItem | undefined }) {
   return canManage ? <AddAgentDialog copyFromAgentId={agent.id} trigger={(openAdd) => menu(openAdd)} /> : menu();
 }
 
-/** One agent's pages, one row each. Its label says Shared belongs to every agent, so it needs no badge, which would cut it short. */
+/** One agent's pages, one row each. */
 export function AgentMenu({ agentId }: { agentId: string }) {
   const { t } = useTranslation("nav");
   const pathname = usePathname();

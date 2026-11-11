@@ -92,10 +92,10 @@
     "general": "Général",
     "instructions": "Instructions",
     "rules": "Règles",
+    "knowledge": "Connaissances spécifiques",
     "channels": "Canaux",
     "phone": "Numéro de téléphone",
-    "widget": "Widget de site web",
-    "shared": "Commun à tous les agents"
+    "widget": "Widget de site web"
   },
   "businessPages": {
     "details": "Détails"

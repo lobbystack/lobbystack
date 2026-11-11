@@ -1,170 +1,88 @@
 "use client";
 
-import { cn } from "@/lib/utils";
-
-import { useTable, type PaginationState } from "@tanstack/react-table";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, FileText, Globe, MoreHorizontal, Pause, Pencil, Play, Plus, Text, Trash2, Upload } from "lucide-react";
-import { toast } from "sonner";
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { useActiveBusiness } from "@/hooks/use-active-business";
-import { useSetupAction } from "@/lib/use-setup-action";
 import { HeaderActions } from "@/components/header-actions";
-import { useTelemetry } from "@/components/product-analytics";
-import { requestJson } from "@/lib/request-json";
-import { uploadKnowledgeDocument } from "@/lib/storage-upload";
-import { UploadKnowledgeDocumentSheet } from "./upload-knowledge-document-sheet";
-import { AddKnowledgeSheet } from "./add-knowledge-sheet";
-import { UnansweredQuestionsSection } from "./unanswered-questions-section";
-import { ImportWebsiteKnowledgeSheet } from "./import-website-knowledge-sheet";
-import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
-import { DataTablePagination, paginationFeatures, useDataTablePaginationLabels } from "./data-table/pagination";
-import { DataTablePaginationSkeleton, HeaderButtonSkeleton, KnowledgePageSkeleton, KnowledgeRowsSkeleton } from "./loading-skeletons";
+import { useActiveBusiness } from "@/hooks/use-active-business";
+import { useKnowledgeSources, type KnowledgeSource } from "@/hooks/use-knowledge-sources";
+import { useSetupAction } from "@/lib/use-setup-action";
+import { AddKnowledgeMenu, FileContent, KnowledgeForms, SourceMenu, useSourceActions, type KnowledgeForm } from "./knowledge/knowledge-parts";
+import { isImporting, KnowledgeSourcesTable } from "./knowledge/knowledge-sources-table";
+import { SelectionBar, useSelection } from "./knowledge/selection";
+import { WebsitePagesDialog } from "./knowledge/website-pages-dialog";
+import { useDataTablePaginationLabels } from "./data-table/pagination";
+import { HeaderButtonSkeleton, KnowledgePageSkeleton } from "./loading-skeletons";
 import { PageSurface } from "./page-surface";
-import { Button } from "./ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
-import { Table, TableActionsColumn, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
-import { Skeleton } from "./ui/skeleton";
-import { Progress } from "./ui/progress";
-import { Textarea } from "./ui/textarea";
-import { intlLocale } from "@/lib/locale";
-import { Status } from "@/components/ui/status";
-import { knowledgeStatusVariant } from "@/lib/status-variants";
+import { UnansweredQuestionsSection } from "./unanswered-questions-section";
 
-export type WebsiteImport = { crawlFinishedCount?: number | null; crawlTotalCount?: number | null; documentCount?: number; id: string; status: string; websiteUrl: string; importedCount: number; indexedCount: number };
-type Document = { websiteImport?: WebsiteImport | null; revision?: number; active?: boolean; textContent?: string; id: string; title: string; sourceType: string; sourceUrl: string | null; storageObjectId: string | null; status: string; error?: string | null; processingProgress: number | null; createdAt: string; updatedAt: string };
-type Snippet = { tags?: string[]; id: string; title: string; content: string; active: boolean; priority: number; createdAt: string };
-type Row = ({ entryType: "document" } & Document) | ({ entryType: "snippet" } & Snippet);
+export { websiteImportProgress, type WebsiteImport } from "./knowledge/knowledge-sources-table";
 
-// Matches the server, which deletes pages by this host.
-function websiteHost(sourceUrl: string | null): string | null {
-  if (!sourceUrl) return null;
-  try {
-    return new URL(sourceUrl).host.toLowerCase().replace(/^www\./u, "");
-  } catch {
-    return null;
-  }
-}
-
-function summarize(value: string, length: number): string {
-  const normalized = value.replace(/\s+/gu, " ").trim();
-  return normalized.length > length ? `${normalized.slice(0, length - 3).trimEnd()}...` : normalized;
-}
-
-function stripHtmlTags(value: string): string {
-  // Remove tags repeatedly until the text stops changing so nested or
-  // recombined tag markers cannot survive a single pass.
-  let previous: string;
-  let current = value;
-  do {
-    previous = current;
-    current = current.replace(/<[^>\s]+>/gu, "");
-  } while (current !== previous);
-  return current;
-}
-
-function previewText(value: string): string {
-  const withoutImages = value.replace(/!\[([^\]]*?)\]\((?:[^)\s]+(?:\s+["'][^"']*["'])?)\)/gu, "$1");
-  const withoutLinks = withoutImages.replace(/\[([^\]]+)\]\((?:[^)\n]+)\)/gu, "$1");
-  return stripHtmlTags(withoutLinks).replace(/\s+/gu, " ").trim();
-}
-
-function isImportRow(row: Row): row is Document & { entryType: "document"; websiteImport: WebsiteImport } {
-  return row.entryType === "document" && Boolean(row.websiteImport && row.websiteImport.status !== "completed");
-}
-
-function importTitle(url: string): string {
-  try { const parsed = new URL(url); return parsed.hostname.replace(/^www\./u, "") + (parsed.pathname === "/" ? "" : parsed.pathname.replace(/\/+$/u, "")); } catch { return url; }
-}
-
-export function websiteImportProgress(job: WebsiteImport): number {
-  if (job.status === "queued") return 8;
-  if (job.status === "failed") return 100;
-  const progress = job.crawlTotalCount && typeof job.crawlFinishedCount === "number" ? Math.round(job.crawlFinishedCount / job.crawlTotalCount * 100) : job.status === "indexing" ? 72 : 12;
-  return Math.max(job.status === "indexing" ? 72 : 8, Math.min(99, progress));
-}
-
+/**
+ * The business's Knowledge page: its shared sources, one row each. A website
+ * opens its pages; a file shows its text; an entry opens its editor. Select
+ * turns on checkboxes and a bar of actions for several rows at once.
+ * Unanswered questions stay below, and their answers are shared.
+ */
 export function LiveKnowledgeSurface() {
-  const { i18n, t } = useTranslation("agent");
+  const { t } = useTranslation("agent");
   const paginationLabels = useDataTablePaginationLabels("agent");
-  const telemetry = useTelemetry();
-  const queryClient = useQueryClient();
-  const [openActionId, setOpenActionId] = useState<string | null>(null);
-  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
-  const [form, setForm] = useState<"text" | "website" | "upload" | null>(null);
-  const [editingSnippet, setEditingSnippet] = useState<Snippet | null>(null);
-  const [deleteCandidate, setDeleteCandidate] = useState<Row | null>(null);
-  const [deleteWebsite, setDeleteWebsite] = useState(false);
-  const [viewingDocument, setViewingDocument] = useState<Document | null>(null);
   const { businesses, business } = useActiveBusiness();
+  const businessId = business?.businessId;
   const canManage = business ? ["business_owner", "business_admin"].includes(business.role) : false;
-  useSetupAction(canManage, useCallback((action: string) => { if (!["upload", "website", "text"].includes(action)) return false; setEditingSnippet(null); setForm(action as "upload" | "website" | "text"); return true; }, []));
-  const documents = useQuery({ queryKey: ["knowledge", business?.businessId], enabled: Boolean(business), queryFn: () => requestJson<{ documents: Document[] }>(`/api/knowledge?businessId=${encodeURIComponent(business!.businessId)}`), refetchInterval: query => query.state.data?.documents.some(document => ["pending", "processing"].includes(document.status)) ? 1500 : false });
-  const [importProgress, setImportProgress] = useState<Record<string, number>>({});
-  useEffect(() => {
-    setImportProgress(previous => {
-      const next: Record<string, number> = {};
-      for (const document of documents.data?.documents ?? []) if (document.websiteImport) {
-        const key = `${document.websiteImport.id}:${document.revision ?? 0}`;
-        next[key] = Math.max(previous[key] ?? 0, websiteImportProgress(document.websiteImport));
-      }
-      return next;
-    });
-  }, [documents.data]);
-  const snippets = useQuery({ queryKey: ["knowledge-snippets", business?.businessId], enabled: Boolean(business), queryFn: () => requestJson<{ snippets: Snippet[] }>(`/api/knowledge/snippets?businessId=${encodeURIComponent(business!.businessId)}`) });
-  const invalidate = async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ["knowledge", business?.businessId] }), queryClient.invalidateQueries({ queryKey: ["knowledge-snippets", business?.businessId] }), queryClient.invalidateQueries({ queryKey: ["knowledge-content", business?.businessId] })]); };
-  const addWebsite = useMutation({ mutationFn: (input: { title: string; sourceUrl: string }) => requestJson(`/api/knowledge?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ businessId: business!.businessId, sourceType: "website", ...input }) }), onSuccess: invalidate, meta: { inlineError: true } });
-  const addSnippet = useMutation({ mutationFn: (input: { title: string; content: string; tags: string[]; priority: number; active: boolean }) => requestJson(`/api/knowledge/snippets?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify(input) }), onSuccess: invalidate });
-  const updateSnippet = useMutation({ mutationFn: (input: { id: string; title?: string; content?: string; tags?: string[]; priority?: number; active?: boolean }) => requestJson(`/api/knowledge/snippets/${encodeURIComponent(input.id)}?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PATCH", body: JSON.stringify(input) }), onSuccess: invalidate });
-  const deleteSnippet = useMutation({ mutationFn: (id: string) => requestJson(`/api/knowledge/snippets/${encodeURIComponent(id)}?businessId=${encodeURIComponent(business!.businessId)}`, { method: "DELETE" }), onSuccess: invalidate });
-  const deleteWebsitePages = useMutation({ mutationFn: (id: string) => requestJson(`/api/knowledge/${encodeURIComponent(id)}?businessId=${encodeURIComponent(business!.businessId)}&scope=website`, { method: "DELETE" }), onSuccess: invalidate });
-  const documentAction = useMutation({ mutationFn: ({ id, method, action, active }: { id: string; method: "PATCH" | "DELETE"; action?: "retry" | "cancel"; active?: boolean }) => requestJson(`/api/knowledge/${encodeURIComponent(id)}?businessId=${encodeURIComponent(business!.businessId)}`, { method, ...(active !== undefined ? { body: JSON.stringify({ active }) } : action ? { body: JSON.stringify({ action }) } : {}) }), onSuccess: invalidate });
-  const currentDocument = documents.data?.documents.find(document => document.id === viewingDocument?.id) ?? viewingDocument;
-  const documentContent = useQuery({ queryKey: ["knowledge-content", business?.businessId, viewingDocument?.id, currentDocument?.updatedAt], enabled: Boolean(business && viewingDocument), queryFn: () => requestJson<{ document: Document & { fileName?: string | null; contentLength?: number | null }; content: string }>(`/api/knowledge/${encodeURIComponent(viewingDocument!.id)}?businessId=${encodeURIComponent(business!.businessId)}`) });
-  const uploadDocument = useMutation({ mutationFn: ({ file, contentType, title, tags }: { file: File; contentType: string; title: string; tags: string[] }) => uploadKnowledgeDocument({ businessId: business!.businessId, file, contentType, title, tags }, t("sections.knowledge.uploadValidation.uploadFailed")), onMutate: (variables) => { if (business) telemetry.track("web.knowledge.upload_started", { businessId: business.businessId, section: "knowledge", contentType: variables.contentType }); }, onSuccess: async (_data, variables) => { if (business) telemetry.track("web.knowledge.upload_completed", { businessId: business.businessId, section: "knowledge", contentType: variables.contentType }); await invalidate(); }, meta: { inlineError: true } });
-
-  const rows = useMemo<Row[]>(() => [
-    ...(documents.data?.documents ?? []).filter(document => !(document.websiteImport && ["completed", "cancelled"].includes(document.websiteImport.status) && !document.textContent?.trim())).map((document) => {
-      const importedPage = Boolean(document.websiteImport && ["completed", "cancelled"].includes(document.websiteImport.status) && document.textContent?.trim());
-      return { ...document, ...(importedPage ? { websiteImport: null, status: "indexed" } : {}), title: !importedPage && document.websiteImport && document.websiteImport.status !== "completed" ? importTitle(document.websiteImport.websiteUrl) : document.title, entryType: "document" as const };
-    }),
-    ...(snippets.data?.snippets ?? []).map((snippet) => ({ ...snippet, entryType: "snippet" as const })),
-  ].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()), [documents.data, snippets.data]);
-  const table = useTable({ features: paginationFeatures, data: rows, columns: [], onPaginationChange: setPagination, state: { pagination } });
-  const pageRows = table.getRowModel().rows.map((row) => row.original);
-  const loading = documents.isLoading || snippets.isLoading;
+  const [form, setForm] = useState<KnowledgeForm | null>(null);
+  const [editing, setEditing] = useState<KnowledgeSource | null>(null);
+  const [viewing, setViewing] = useState<string | null>(null);
+  const [website, setWebsite] = useState<string | null>(null);
+  useSetupAction(canManage, useCallback((action: string) => { if (!["upload", "website", "text"].includes(action)) return false; setEditing(null); setForm(action as KnowledgeForm); return true; }, []));
+  const { sources, act, cancelImport, invalidate } = useKnowledgeSources(businessId);
+  const rows = useMemo(() => sources.data?.shared ?? [], [sources.data]);
+  const ids = useMemo(() => rows.map((row) => row.id), [rows]);
+  const selection = useSelection(ids);
+  const actions = useSourceActions({ act: act.mutateAsync, cancelImport: cancelImport.mutateAsync });
+  const loading = sources.isLoading;
+  const headings: [string, string, string, string] = [t("table.title"), t("table.preview"), t("table.status"), t("table.added")];
 
   if (businesses.isLoading) return <PageSurface title={t("sections.knowledge.title")}><div className="flex w-full flex-col gap-6">
     <HeaderActions><HeaderButtonSkeleton label={t("sections.knowledge.addKnowledge")} trailingIcon /></HeaderActions>
-    <KnowledgePageSkeleton headings={[t("table.title"), t("table.preview"), t("table.status"), t("table.added")]} rowsPerPage={paginationLabels.rowsPerPage} />
+    <KnowledgePageSkeleton headings={headings} rowsPerPage={paginationLabels.rowsPerPage} />
   </div></PageSurface>;
-  if (!business) return <PageSurface title={t("sections.knowledge.title")}><p className="type-body-muted">{t("empty.description")}</p></PageSurface>;
-  const uploadProgress = (row: Row) => {
-    if (isImportRow(row)) {
-      if (row.websiteImport.status === "failed" || row.websiteImport.status === "cancelled") return <span className="block min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap type-body text-destructive/80">{t("sections.knowledge.websiteImport.previewFailed")}</span>;
-      const value = Math.max(importProgress[`${row.websiteImport.id}:${row.revision ?? 0}`] ?? 0, websiteImportProgress(row.websiteImport));
-      return <div className="flex min-w-0 flex-col gap-2"><div className="flex items-center gap-2"><Progress className="w-full [&_[data-slot=progress-track]]:h-1.5" value={value} /><span className="shrink-0 type-caption tabular-nums text-muted-foreground">{value}%</span></div></div>;
-    }
-    if (row.entryType !== "document" || row.active === false || row.sourceType === "website" || !["pending", "processing"].includes(row.status) || row.textContent?.trim()) return null;
-    const value = Math.min(100, Math.max(0, Math.round(row.processingProgress ?? (row.status === "processing" ? 92 : 0))));
-    return <div className="flex min-w-0 flex-col gap-2"><div className="flex items-center gap-2"><Progress className="w-full [&_[data-slot=progress-track]]:h-1.5" value={value} /><span className="shrink-0 type-caption tabular-nums text-muted-foreground">{value}%</span></div></div>;
+  if (!business || !businessId) return <PageSurface title={t("sections.knowledge.title")}><p className="type-body-muted">{t("empty.description")}</p></PageSurface>;
+
+  const selected = () => rows.filter((row) => selection.selected.has(row.id));
+  const isOff = (source: KnowledgeSource) => !source.active;
+  const open = (source: KnowledgeSource) => {
+    if (source.kind === "website") setWebsite(source.id);
+    else if (source.kind === "file") setViewing(viewing === source.id ? null : source.id);
+    else if (canManage) { setEditing(source); setForm("text"); }
   };
-  const cancellingImport = Boolean(deleteCandidate && isImportRow(deleteCandidate) && deleteCandidate.websiteImport.status !== "failed");
-  const deletingHost = deleteWebsite && deleteCandidate?.entryType === "document" ? websiteHost(deleteCandidate.sourceUrl) : null;
-  const documentPreview = (row: Document) => previewText(row.textContent ?? "") || (row.status === "error" ? row.error ?? t("sections.knowledge.previewError") : ["pending", "processing"].includes(row.status) ? t("sections.knowledge.previewPending") : t("table.documentPreviewHint"));
+  const viewed = rows.find((row) => row.id === viewing);
 
   return <PageSurface title={t("sections.knowledge.title")}><div className="flex w-full flex-col gap-6">
-    <HeaderActions>{canManage ? loading ? <HeaderButtonSkeleton label={t("sections.knowledge.addKnowledge")} trailingIcon /> : <DropdownMenu><DropdownMenuTrigger render={<Button type="button"><Plus data-icon="inline-start" />{t("sections.knowledge.addKnowledge")}<ChevronDown data-icon="inline-end" /></Button>} /><DropdownMenuContent align="end" className="min-w-44 w-auto"><DropdownMenuItem onClick={() => { setEditingSnippet(null); setForm("upload"); }}><Upload />{t("sections.knowledge.addKnowledgeOptions.upload")}</DropdownMenuItem><DropdownMenuItem onClick={() => { setEditingSnippet(null); setForm("website"); }}><Globe />{t("sections.knowledge.addKnowledgeOptions.website")}</DropdownMenuItem><DropdownMenuItem onClick={() => { setEditingSnippet(null); setForm("text"); }}><FileText />{t("sections.knowledge.addKnowledgeOptions.text")}</DropdownMenuItem></DropdownMenuContent></DropdownMenu> : null}</HeaderActions>
-    <TableCard><Table className={cn("w-full table-fixed", (loading || pageRows.length > 0) && "min-w-[60rem]")}><colgroup><col className="w-[20%]" /><col className="w-[46%]" /><col className="w-[12%]" /><col className="w-[22%]" /><TableActionsColumn /></colgroup><TableHeader empty={!(loading || pageRows.length > 0)}><TableRow><TableHead>{t("table.title")}</TableHead><TableHead>{t("table.preview")}</TableHead><TableHead>{t("table.status")}</TableHead><TableHead className="text-right">{t("table.added")}</TableHead><TableHead /></TableRow></TableHeader><TableBody aria-busy={loading || undefined}>
-      {loading ? <KnowledgeRowsSkeleton rows={Math.min(pagination.pageSize, 10)} /> : pageRows.length ? pageRows.map((row) => <Fragment key={`${row.entryType}-${row.id}`}><TableRow className={isImportRow(row) ? undefined : "cursor-pointer"} data-state={viewingDocument?.id === row.id ? "selected" : undefined} onClick={() => { if (isImportRow(row)) return; if (row.entryType === "document") setViewingDocument(viewingDocument?.id === row.id ? null : row); else if (canManage) { setEditingSnippet(row); setForm("text"); } }}><TableCell className="max-w-0 overflow-hidden"><div className="flex min-w-0 items-center gap-2"><span aria-label={t(row.entryType === "snippet" ? "sections.knowledge.textBadge" : row.sourceType === "website" ? "sections.knowledge.websiteImport.badge" : "sections.knowledge.documentBadge")} title={t(row.entryType === "snippet" ? "sections.knowledge.textBadge" : row.sourceType === "website" ? "sections.knowledge.websiteImport.badge" : "sections.knowledge.documentBadge")} className="inline-flex size-5 shrink-0 items-center justify-center text-muted-foreground">{row.entryType === "snippet" ? <Text className="size-4" /> : row.sourceType === "website" ? <Globe className="size-4" /> : <FileText className="size-4" />}</span><span className="truncate type-item-title" title={row.title}>{summarize(row.title, 32)}</span></div></TableCell><TableCell className="max-w-0 overflow-hidden">{uploadProgress(row) ?? <span className="block min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap type-body-muted" title={row.entryType === "snippet" ? previewText(row.content) : documentPreview(row)}>{summarize(row.entryType === "snippet" ? previewText(row.content) : documentPreview(row), 72)}</span>}</TableCell><TableCell>{isImportRow(row) ? <Status variant={knowledgeStatusVariant(row.websiteImport.status === "failed" || row.websiteImport.status === "cancelled" ? "failed" : "in_progress")}>{t(row.websiteImport.status === "failed" || row.websiteImport.status === "cancelled" ? "sections.knowledge.websiteImport.status.failed" : "sections.knowledge.websiteImport.status.inProgress")}</Status> : row.entryType === "snippet" ? <Status variant={knowledgeStatusVariant(row.active ? "indexed" : "disabled")}>{row.active ? t("sections.knowledge.status.indexed") : t("table.disabled")}</Status> : row.active === false ? <Status variant={knowledgeStatusVariant("disabled")}>{t("table.disabled")}</Status> : <Status variant={knowledgeStatusVariant(row.status)}>{t(`sections.knowledge.status.${row.status === "processing" ? "indexing" : row.status === "pending" ? "queued" : row.status}`, { defaultValue: row.status })}</Status>}</TableCell><TableCell className="text-right type-body-muted">{new Intl.DateTimeFormat(intlLocale(i18n.resolvedLanguage), { dateStyle: "medium", timeStyle: "short" }).format(new Date(row.createdAt))}</TableCell><TableCell onClick={(event) => event.stopPropagation()}>{canManage ? <DropdownMenu open={openActionId === row.id} onOpenChange={open => setOpenActionId(open ? row.id : null)}><DropdownMenuTrigger aria-expanded={openActionId === row.id} render={<Button aria-label={t("actions.moreOptions")} title={t("actions.moreOptions")} type="button" size="icon-sm" variant="ghost"><MoreHorizontal /></Button>} /><DropdownMenuContent align="end" side="bottom" sideOffset={8} className="min-w-0 w-fit">{isImportRow(row) ? <DropdownMenuItem onClick={() => setDeleteCandidate(row)} variant="destructive"><Trash2 />{row.websiteImport.status === "failed" ? t("actions.delete") : t("actions.cancelImport")}</DropdownMenuItem> : <>{row.entryType === "snippet" ? <><DropdownMenuItem onClick={() => { setEditingSnippet(row); setForm("text"); }}><Pencil />{t("actions.edit")}</DropdownMenuItem><DropdownMenuSeparator /></> : null}<DropdownMenuItem onClick={() => { const enabling = row.active === false; const toggled = { onSuccess: () => toast.success(t(enabling ? "sections.knowledge.toast.enabled" : "sections.knowledge.toast.disabled")) }; if (row.entryType === "snippet") updateSnippet.mutate({ id: row.id, active: enabling }, toggled); else documentAction.mutate({ id: row.id, method: "PATCH", active: enabling }, toggled); }}>{row.active === false ? <Play /> : <Pause />}{row.active === false ? t("actions.enable") : t("actions.disable")}</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => { setDeleteWebsite(false); setDeleteCandidate(row); }} variant="destructive"><Trash2 />{t("actions.delete")}</DropdownMenuItem>{row.entryType === "document" && row.sourceType === "website" && websiteHost(row.sourceUrl) ? <DropdownMenuItem onClick={() => { setDeleteWebsite(true); setDeleteCandidate(row); }} variant="destructive"><Globe />{t("sections.knowledge.deleteWebsite.action")}</DropdownMenuItem> : null}</>}</DropdownMenuContent></DropdownMenu> : null}</TableCell></TableRow>{row.entryType === "document" && viewingDocument?.id === row.id ? <TableRow className="bg-muted/20 hover:bg-muted/20"><TableCell colSpan={5}>{documentContent.isLoading ? <div className="space-y-3 rounded-md border border-border/70 p-4">{Array.from({ length: 6 }, (_, index) => <Skeleton className="h-4 w-full" key={index} />)}</div> : <Textarea className="max-h-80 resize-none overflow-y-auto leading-relaxed" rows={8} readOnly value={documentContent.isError ? t("sections.knowledge.previewError") : row.status === "error" ? row.error ?? t("sections.knowledge.previewError") : documentContent.data?.content.trim() || t("sections.knowledge.previewPending")} />}</TableCell></TableRow> : null}</Fragment>) : <TableRow><TableCell className="h-24 text-center whitespace-normal text-muted-foreground" colSpan={5}>{t("sections.knowledge.emptyState")}</TableCell></TableRow>}
-    </TableBody></Table></TableCard>
-    {loading ? <DataTablePaginationSkeleton rowsPerPage={paginationLabels.rowsPerPage} /> : <DataTablePagination labels={paginationLabels} table={table} />}
-    <UnansweredQuestionsSection businessId={business.businessId} canManage={canManage} layoutSettled={!loading} />
-    <AddKnowledgeSheet mode={editingSnippet ? "edit" : "create"} snippet={editingSnippet} open={form === "text"} onOpenChange={(open) => { if (!open) { setForm(null); setEditingSnippet(null); } }} save={async (values) => { if (editingSnippet) { await updateSnippet.mutateAsync({ id: editingSnippet.id, ...values }); toast.success(t("sections.knowledge.toast.updated")); } else { await addSnippet.mutateAsync(values); toast.success(t("sections.knowledge.toast.added")); } }} />
-    <ImportWebsiteKnowledgeSheet open={form === "website"} onOpenChange={(open) => { if (!open) setForm(null); }} save={async (sourceUrl) => { await addWebsite.mutateAsync({ title: sourceUrl, sourceUrl }); }} />
-    <UploadKnowledgeDocumentSheet open={form === "upload"} onOpenChange={(open) => { if (!open) setForm(null); }} upload={async (values) => { await uploadDocument.mutateAsync(values); toast.success(t("sections.knowledge.toast.uploaded")); }} />
-    <ConfirmActionDialog confirmVariant="destructive" cancelLabel={t("actions.deleteCancel")} confirmLabel={t(cancellingImport ? "actions.cancelImport" : "actions.delete")} description={deletingHost ? t("sections.knowledge.deleteWebsite.description", { host: deletingHost }) : t(cancellingImport ? "actions.cancelImportDescription" : "actions.deleteDescription")} onConfirm={async () => { if (!deleteCandidate) return; if (deletingHost) { await deleteWebsitePages.mutateAsync(deleteCandidate.id); toast.success(t("sections.knowledge.deleteWebsite.deleted", { host: deletingHost })); return; } if (deleteCandidate.entryType === "snippet") await deleteSnippet.mutateAsync(deleteCandidate.id); else await documentAction.mutateAsync({ id: deleteCandidate.id, method: cancellingImport ? "PATCH" : "DELETE", ...(cancellingImport ? { action: "cancel" } : {}) }); toast.success(t(cancellingImport ? "actions.importCancelled" : "sections.knowledge.toast.deleted")); }} onOpenChange={(open) => { if (!open) setDeleteCandidate(null); }} open={deleteCandidate !== null} pending={deleteSnippet.isPending || documentAction.isPending || deleteWebsitePages.isPending} title={deletingHost ? t("sections.knowledge.deleteWebsite.title") : t(cancellingImport ? "actions.cancelImportTitle" : "actions.deleteTitle")} />
+    <HeaderActions>{canManage ? loading ? <HeaderButtonSkeleton label={t("sections.knowledge.addKnowledge")} trailingIcon /> : <AddKnowledgeMenu onPick={(picked) => { setEditing(null); setForm(picked); }} /> : null}</HeaderActions>
+    {canManage ? <div className="flex min-h-8 flex-wrap items-center justify-end gap-2">
+      <SelectionBar actions={[
+        { id: "delete", label: t("sections.knowledge.batch.delete"), destructive: true, onClick: () => actions.confirmDelete(selected()) },
+        { id: "disable", label: t("sections.knowledge.batch.disable"), onClick: () => void actions.run("disable", selected()).then(selection.stop) },
+        { id: "enable", label: t("sections.knowledge.batch.enable"), onClick: () => void actions.run("enable", selected()).then(selection.stop) },
+        { id: "reimport", label: t("sections.knowledge.batch.reimport"), disabled: !selected().some((row) => row.kind === "website"), onClick: () => void actions.run("reimport", selected()).then(selection.stop) },
+      ]} disabled={loading || !rows.length || actions.pending} selection={selection} />
+    </div> : null}
+    <KnowledgeSourcesTable
+      emptyText={t("sections.knowledge.emptyState")}
+      expanded={viewed ? <FileContent businessId={businessId} source={viewed} /> : null}
+      expandedId={viewing}
+      isOff={isOff}
+      label={t("sections.knowledge.title")}
+      loading={loading}
+      menu={canManage ? (source) => <SourceMenu actions={actions} isOff={isOff(source)} onEdit={(entry) => { setEditing(entry); setForm("text"); }} source={source} /> : undefined}
+      onOpen={(source) => { if (!isImporting(source) || source.kind === "website") open(source); }}
+      rows={rows}
+      selection={canManage ? selection : undefined}
+    />
+    <UnansweredQuestionsSection businessId={businessId} canManage={canManage} layoutSettled={!loading} />
+    <KnowledgeForms businessId={businessId} editing={editing} form={form} onClose={() => { setForm(null); setEditing(null); }} onSaved={invalidate} />
+    <WebsitePagesDialog act={act.mutateAsync} businessId={businessId} canManage={canManage} documentId={website} onOpenChange={(next) => { if (!next) setWebsite(null); }} />
+    {actions.dialog}
   </div></PageSurface>;
 }
