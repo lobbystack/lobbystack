@@ -191,6 +191,7 @@ describe("the list for a business with a number", () => {
 
   it("opens the forwarding dialog, and It works finishes the step for a carrier that strips the header", async () => {
     const { fetchMock } = await setup({ numberList: {}, numbers: [number], complete: ["fullScan", "callNumber"] });
+    expect(await screen.findByText(copy.stepDescriptions.forwardCalls)).toBeTruthy();
     await userEvent.click(await screen.findByRole("button", { name: copy.stepActions.forwardCalls }));
     const dialog = await screen.findByRole("dialog");
     await userEvent.click(within(dialog).getByRole("button", { name: en.forwarding.itWorks }));

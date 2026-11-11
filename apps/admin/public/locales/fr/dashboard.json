@@ -293,7 +293,7 @@
       "phoneNumber": "Associez un numéro",
       "forwardCalls": "Transférez vos appels",
       "callNumber": "Appelez votre numéro",
-      "forwardFromCurrent": "Transférez les appels de votre numéro actuel"
+      "forwardFromCurrent": "Gardez votre numéro existant"
     },
     "stepDescriptions": {
       "fullScan": "Votre agent a lu un échantillon de votre site.",
@@ -302,7 +302,7 @@
       "testCall": "Posez la question que vos appelants posent le plus.",
       "phoneNumber": "Donnez à votre agent son propre numéro pour répondre à vos vrais clients.",
       "phoneNumberTrial": "Répondez à vos appels manqués gratuitement pendant 14 jours, sans carte.",
-      "forwardCalls": "Envoyez au {{number}} les appels du numéro que vos clients connaissent.",
+      "forwardCalls": "Vous gardez le numéro que vos clients appellent déjà ? Votre agent peut aussi y répondre.",
       "numberLost": "Votre essai gratuit est terminé. Choisissez un forfait pour récupérer votre numéro."
     },
     "stepActions": {
@@ -366,7 +366,7 @@
       "voicemail": "Si vous avez la messagerie vocale de {{name}}, demandez à {{name}} de la retirer. Les appels manqués ne peuvent pas être renvoyés tant qu'elle est active.",
       "androidOnly": "Ces étapes sont pour les téléphones Android. Sur un iPhone, demandez à {{name}} de l'activer pour vous.",
       "adminOnly": "Seul un administrateur de votre compte {{name}} peut modifier ce réglage.",
-      "verifyNumber": "{{name}} envoie un code au {{number}} avant d'activer le renvoi. Choisissez de recevoir le code par appel, puis lisez-le dans la transcription de cet appel, sous Appels."
+      "verifyNumber": "{{name}} envoie un code au {{number}} avant d'activer le renvoi. Choisissez de recevoir le code par appel, puis lisez-le dans la transcription de cet appel, dans la Boîte de réception."
     },
     "unsupported": {
       "missed": "{{name}} ne propose pas de renvoi pour les appels manqués seulement. Choisissez Tous les appels, ou demandez à {{name}} de renvoyer les appels sans réponse vers le {{number}}.",

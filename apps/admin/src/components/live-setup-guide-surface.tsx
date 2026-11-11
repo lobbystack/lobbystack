@@ -194,7 +194,7 @@ function NumberListStep({ businessId, guide, skip, step, upgrade }: { businessId
   }
   return (
     <>
-      <StepDescription>{t("setupGuide.stepDescriptions.forwardCalls", { number: display })}</StepDescription>
+      <StepDescription>{t("setupGuide.stepDescriptions.forwardCalls")}</StepDescription>
       <StepActions primary={<Button onClick={() => setForwardingOpen(true)} type="button">{t("setupGuide.stepActions.forwardCalls")}</Button>} skip={skip} />
       <CallForwardingDialog confirming={confirm.isPending} e164={number.e164} onConfirm={() => confirm.mutate()} onOpenChange={setForwardingOpen} open={forwardingOpen} />
     </>

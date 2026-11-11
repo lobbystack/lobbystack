@@ -292,7 +292,7 @@
       "phoneNumber": "Connect a phone number",
       "forwardCalls": "Forward your calls",
       "callNumber": "Call your number",
-      "forwardFromCurrent": "Forward calls from your current number"
+      "forwardFromCurrent": "Keep your existing number"
     },
     "stepDescriptions": {
       "fullScan": "Your agent has read a sample of your site.",
@@ -301,7 +301,7 @@
       "testCall": "Ask what your callers ask most.",
       "phoneNumber": "Give your agent its own number to answer real callers.",
       "phoneNumberTrial": "Answer your missed calls free for 14 days, no card needed.",
-      "forwardCalls": "Send calls from the number your customers know to {{number}}.",
+      "forwardCalls": "Keeping the number your customers already call? Your agent can answer it too.",
       "numberLost": "Your free trial ended. Choose a plan to get your number back."
     },
     "stepActions": {
@@ -365,7 +365,7 @@
       "voicemail": "If you have {{name}} voicemail, ask {{name}} to remove it. Missed calls can't forward while it's on.",
       "androidOnly": "These steps are for Android phones. On an iPhone, ask {{name}} to turn it on for you.",
       "adminOnly": "Only an admin of your {{name}} account can change this.",
-      "verifyNumber": "{{name}} sends a code to {{number}} before it forwards. Choose to get the code by phone call, then read it in that call's transcript under Calls."
+      "verifyNumber": "{{name}} sends a code to {{number}} before it forwards. Choose to get the code by phone call, then read it in that call's transcript in the Inbox."
     },
     "unsupported": {
       "missed": "{{name}} doesn't offer forwarding for missed calls only. Choose All calls, or ask {{name}} to forward unanswered calls to {{number}}.",

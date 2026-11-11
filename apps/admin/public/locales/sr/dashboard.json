@@ -293,7 +293,7 @@
       "phoneNumber": "Povežite broj telefona",
       "forwardCalls": "Preusmerite pozive",
       "callNumber": "Pozovite svoj broj",
-      "forwardFromCurrent": "Preusmerite pozive sa svog sadašnjeg broja"
+      "forwardFromCurrent": "Zadržite svoj postojeći broj"
     },
     "stepDescriptions": {
       "fullScan": "Agent je pročitao deo Vašeg sajta.",
@@ -302,7 +302,7 @@
       "testCall": "Pitajte ono što Vas klijenti najčešće pitaju.",
       "phoneNumber": "Dodelite agentu sopstveni broj da bi odgovarao pravim pozivaocima.",
       "phoneNumberTrial": "Odgovarajte na propuštene pozive besplatno 14 dana, bez kartice.",
-      "forwardCalls": "Pošaljite na {{number}} pozive sa broja koji Vaši klijenti znaju.",
+      "forwardCalls": "Zadržavate broj koji Vaši klijenti već zovu? Vaš agent može da odgovara i na pozive na tom broju.",
       "numberLost": "Besplatna proba je istekla. Izaberite paket da biste vratili svoj broj."
     },
     "stepActions": {
@@ -366,7 +366,7 @@
       "voicemail": "Ako koristite govornu poštu operatera {{name}}, zamolite {{name}} da je ukloni. Propušteni pozivi ne mogu da se preusmere dok je uključena.",
       "androidOnly": "Ovi koraci su za Android telefone. Na iPhone-u zamolite operatera {{name}} da ga uključi za Vas.",
       "adminOnly": "Ovo može da promeni samo administrator Vašeg {{name}} naloga.",
-      "verifyNumber": "{{name}} šalje kod na {{number}} pre nego što uključi preusmeravanje. Izaberite da kod dobijete pozivom, pa ga pročitajte u transkriptu tog poziva u odeljku Pozivi."
+      "verifyNumber": "{{name}} šalje kod na {{number}} pre nego što uključi preusmeravanje. Izaberite da kod dobijete pozivom, pa ga pročitajte u transkriptu tog poziva u odeljku Prijemno sanduče."
     },
     "unsupported": {
       "missed": "{{name}} ne nudi preusmeravanje samo propuštenih poziva. Izaberite Svi pozivi ili zamolite {{name}} da preusmeri neodgovorene pozive na {{number}}.",
