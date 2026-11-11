@@ -59,7 +59,7 @@ function TimePicker({ value, onChange, hourCycle = "24h", locale, minuteStep = 5
     <Popover onOpenChange={setOpen} open={open}>
       <PopoverTrigger
         render={
-          <Button aria-label={ariaLabel} className={cn("justify-start rounded-md font-normal tabular-nums", className)} disabled={disabled} type="button" variant="outline" />
+          <Button aria-label={ariaLabel} className={cn("justify-start rounded-xl font-normal tabular-nums", className)} disabled={disabled} type="button" variant="outline" />
         }
       >
         <Clock className="text-muted-foreground" data-icon="inline-start" />

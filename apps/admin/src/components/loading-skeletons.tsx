@@ -826,7 +826,7 @@ export function WebsiteImportProgressSkeleton() {
 export function MeetFormSkeleton({ labels }: { labels: { name: string; voice: string; greeting: string; language: string } }) {
   return (
     <div aria-busy="true" className="flex flex-col gap-4">
-      {([["name", "h-10 rounded-xl"], ["voice", "h-10 rounded-xl"], ["greeting", "h-28 rounded-md"], ["language", "h-10 rounded-md"]] as const).map(([key, size]) => (
+      {([["name", "h-10 rounded-xl"], ["voice", "h-10 rounded-xl"], ["greeting", "h-28 rounded-xl"], ["language", "h-10 rounded-xl"]] as const).map(([key, size]) => (
         <div className="flex flex-col gap-2" key={key}>
           <span className="text-sm leading-snug font-medium">{labels[key]}</span>
           <Skeleton aria-hidden="true" className={`w-full ${size}`} />
@@ -848,5 +848,5 @@ export function ComboboxOptionsSkeleton({ rows = 3 }: { rows?: number }) {
 
 /** A select or input while its options load: the control's own height and full width. */
 export function FieldControlSkeleton() {
-  return <Skeleton aria-busy="true" className="h-10 w-full rounded-md" />;
+  return <Skeleton aria-busy="true" className="h-10 w-full rounded-xl" />;
 }

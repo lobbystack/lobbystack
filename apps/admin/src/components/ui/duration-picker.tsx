@@ -54,7 +54,7 @@ function DurationPicker({ value, onChange, locale, maxHours = 12, minuteStep = 5
     <Popover onOpenChange={setOpen} open={open}>
       <PopoverTrigger
         render={
-          <Button aria-describedby={ariaDescribedBy} aria-invalid={invalid || undefined} aria-label={ariaLabel} className={cn("justify-start rounded-md font-normal tabular-nums", className)} disabled={disabled} id={id} type="button" variant="outline" />
+          <Button aria-describedby={ariaDescribedBy} aria-invalid={invalid || undefined} aria-label={ariaLabel} className={cn("justify-start rounded-xl font-normal tabular-nums", className)} disabled={disabled} id={id} type="button" variant="outline" />
         }
       >
         <Timer className="text-muted-foreground" data-icon="inline-start" />

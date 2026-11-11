@@ -154,7 +154,7 @@ function MeetAgent() {
             </Field>
             <Field>
               <FieldLabel htmlFor="meet-greeting">{t("meet.greeting")}</FieldLabel>
-              <Textarea className="min-h-28 rounded-xl" id="meet-greeting" onBlur={saveTyped} onChange={(event) => setGreetingDraft(event.target.value)} value={greeting} />
+              <Textarea className="min-h-28" id="meet-greeting" onBlur={saveTyped} onChange={(event) => setGreetingDraft(event.target.value)} value={greeting} />
             </Field>
             <Field>
               <FieldLabel htmlFor="meet-language">{t("meet.language")}</FieldLabel>

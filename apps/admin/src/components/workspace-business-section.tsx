@@ -30,7 +30,7 @@ type TimeZoneItemGroup = { value: string; label: string; items: TimeZoneOption[]
 type CurrencyOption = { id: string; label: string };
 
 // Matches SelectTrigger, so the searchable timezone picker looks like the selects beside it.
-const COMBOBOX_TRIGGER_CLASS = "flex h-9 w-full min-w-0 items-center justify-between gap-1.5 rounded-md border border-input bg-input/30 px-3 py-2 text-sm whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 sm:w-56";
+const COMBOBOX_TRIGGER_CLASS = "flex h-9 w-full min-w-0 items-center justify-between gap-1.5 rounded-xl border border-input bg-input/30 px-3 py-2 text-sm whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 sm:w-56";
 
 /** The workspace's business details, which every agent shares: summary, languages, time zone, currency and opening hours. */
 export function WorkspaceBusinessSection({ businessId, canManage, heading = true }: { businessId: string; canManage: boolean; /** Off on the page of the same name, whose header already says it. */ heading?: boolean }) {

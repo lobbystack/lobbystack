@@ -264,7 +264,7 @@ export function AgentHandlingSection({ agentId, businessId, canManage }: AgentSe
             </ItemContent>
             <ItemActions className="w-full sm:w-auto">
               {isLoadingConfiguration ? (
-                <Skeleton className="h-10 w-full sm:w-48" />
+                <Skeleton className="h-10 w-full rounded-xl sm:w-48" />
               ) : (
                 <Select
                   disabled={isBookingModeSaving || !persistedProfile || !canManage}
@@ -345,7 +345,7 @@ export function AgentHandlingSection({ agentId, businessId, canManage }: AgentSe
             </ItemContent>
             <ItemActions className="w-full sm:w-auto">
               {isLoadingConfiguration ? (
-                <Skeleton className="h-10 w-full sm:w-56" />
+                <Skeleton className="h-10 w-full rounded-xl sm:w-56" />
               ) : (
                 <Select
                   disabled={isAppointmentChangeSaving || !persistedProfile || !canManage}
