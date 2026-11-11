@@ -26,6 +26,7 @@ const MOVED: ReadonlyArray<[from: string, to: string]> = [
   ["/agent/rules", "/agents/primary/rules"],
   ["/agent/integrations", "/agents/primary/channels"],
   ["/agents/primary/handling", "/agents/primary"],
+  ["/agents/primary/instructions", "/agents/primary/rules"],
   [`/agents/${"1".repeat(8)}-1111-4111-8111-${"1".repeat(12)}/handling`, `/agents/${"1".repeat(8)}-1111-4111-8111-${"1".repeat(12)}`],
   ["/agent/knowledge", "/business/knowledge"],
   ["/agent/services", "/business/services"],
@@ -141,12 +142,13 @@ test("Settings, Business and an agent open their own menus, and the back row sho
     await expect(page).toHaveURL(/\/business\/knowledge$/);
     await expect(level).toHaveAttribute("data-menu-level", "business");
 
-    // A page opened from the address bar opens its section's menu too.
+    // A page opened from the address bar opens its section's menu too. Instructions joined Rules, so its old address lands there.
     await page.goto(`/agents/${agent!.id}/instructions`);
+    await expect(page).toHaveURL(new RegExp(`/agents/${agent!.id}/rules$`));
     await expect(level).toHaveAttribute("data-menu-level", `agent:${agent!.id}`);
     await backRow(navCopy.items.agents).click();
     await expect(level).toHaveAttribute("data-menu-level", "root");
-    await expect(page).toHaveURL(new RegExp(`/agents/${agent!.id}/instructions$`));
+    await expect(page).toHaveURL(new RegExp(`/agents/${agent!.id}/rules$`));
 
     // An agent that isn't the business's is a missing page.
     const missing = await page.goto(`/agents/${randomUUID()}`);

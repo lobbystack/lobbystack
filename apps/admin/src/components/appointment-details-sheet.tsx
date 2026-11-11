@@ -1,15 +1,21 @@
 "use client";
 
-import { useRef } from "react";
+import { useId, useRef, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { XIcon } from "lucide-react";
+import { toast } from "sonner";
 
-import { CancelAppointmentButton } from "@/components/cancel-appointment-button";
+import { APPOINTMENT_ROLES, CancelAppointmentButton } from "@/components/cancel-appointment-button";
 import { MoveAppointmentButton } from "@/components/move-appointment-dialog";
 import { Button } from "@/components/ui/button";
 import { formatDuration } from "@/components/ui/duration-picker";
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
-import { hasEnded, type Appointment } from "@/hooks/use-appointments";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Textarea } from "@/components/ui/textarea";
+import { useActiveBusiness } from "@/hooks/use-active-business";
+import { hasEnded, isCancelled, type Appointment } from "@/hooks/use-appointments";
+import { requestJson } from "@/lib/request-json";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getChannelLabel, hasDisplayablePhone } from "@/lib/contact-display";
 import { formatDateTime, intlLocale } from "@/lib/locale";
@@ -66,18 +72,61 @@ function AppointmentDetails({ appointment, contactName, showClose }: { appointme
             {time(appointment.startsAt, { weekday: "long", month: "long", day: "numeric" })} · {time(appointment.startsAt, { hour: "numeric", minute: "2-digit" })}–{time(appointment.endsAt, { hour: "numeric", minute: "2-digit" })}
           </DrawerDescription>
         </DrawerHeader>
-        <dl className="ph-mask m-4 flex flex-1 flex-col divide-y overflow-y-auto">
-          {details.map(([label, value]) => (
-            <div className="flex items-start justify-between gap-6 py-3" key={label}>
-              <dt className="shrink-0 text-muted-foreground">{label}</dt>
-              <dd className="min-w-0 text-right">{value}</dd>
-            </div>
-          ))}
-        </dl>
+        <div className="m-4 flex flex-1 flex-col gap-4 overflow-y-auto">
+          <dl className="ph-mask flex flex-col divide-y">
+            {details.map(([label, value]) => (
+              <div className="flex items-start justify-between gap-6 py-3" key={label}>
+                <dt className="shrink-0 text-muted-foreground">{label}</dt>
+                <dd className="min-w-0 text-right">{value}</dd>
+              </div>
+            ))}
+          </dl>
+          {/* Keyed by appointment, so another booking starts from its own notes. */}
+          <AppointmentNotes appointment={appointment} key={appointment.id} />
+        </div>
         <DrawerFooter className="flex-row">
-          {hasEnded(appointment) ? null : <><MoveAppointmentButton appointment={{ ...appointment, contactName }} className="flex-1" size="default" /><CancelAppointmentButton appointment={{ ...appointment, contactName }} className="flex-1" size="default" variant="destructive" /></>}
+          {hasEnded(appointment) || isCancelled(appointment) ? null : <><MoveAppointmentButton appointment={{ ...appointment, contactName }} className="flex-1" size="default" /><CancelAppointmentButton appointment={{ ...appointment, contactName }} className="flex-1" size="default" variant="destructive" /></>}
           <DrawerClose render={<Button className="flex-1" variant="outline" />}>{t("accessibility.close")}</DrawerClose>
         </DrawerFooter>
       </DrawerContent>
+  );
+}
+
+/** The appointment's notes, which the agent can read to a verified caller, and its internal notes, which stay with the team. Schedulers and above edit them here. */
+function AppointmentNotes({ appointment }: { appointment: Appointment }) {
+  const { t } = useTranslation("common");
+  const { business } = useActiveBusiness();
+  const queryClient = useQueryClient();
+  const notesId = useId();
+  const internalId = useId();
+  const [notes, setNotes] = useState(appointment.notes ?? "");
+  const [internalNotes, setInternalNotes] = useState(appointment.internalNotes ?? "");
+  const canEdit = Boolean(business && APPOINTMENT_ROLES.includes(business.role));
+  const changed = notes.trim() !== (appointment.notes ?? "") || internalNotes.trim() !== (appointment.internalNotes ?? "");
+  const save = useMutation({
+    mutationFn: async () => await requestJson(`/api/appointments/${appointment.id}/notes?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PUT", body: JSON.stringify({ notes: notes.trim() || null, internalNotes: internalNotes.trim() || null }) }),
+    onSuccess: async () => {
+      toast.success(t("appointments.details.notesSaved"));
+      await queryClient.invalidateQueries({ queryKey: ["appointments", business!.businessId] });
+    },
+    onError: () => { toast.error(t("appointments.details.notesFailed")); },
+  });
+  if (!canEdit && !appointment.notes && !appointment.internalNotes) return null;
+  return (
+    <form className="flex flex-col gap-3" onSubmit={(event) => { event.preventDefault(); if (changed && !save.isPending) save.mutate(); }}>
+      <FieldGroup className="gap-4">
+        <Field>
+          <FieldLabel htmlFor={notesId}>{t("appointments.create.notes")}</FieldLabel>
+          <Textarea aria-describedby={`${notesId}-hint`} className="ph-mask" id={notesId} maxLength={2000} onChange={(event) => setNotes(event.target.value)} readOnly={!canEdit} rows={2} value={notes} />
+          <FieldDescription id={`${notesId}-hint`}>{t("appointments.create.notesHint")}</FieldDescription>
+        </Field>
+        <Field>
+          <FieldLabel htmlFor={internalId}>{t("appointments.create.internalNotes")}</FieldLabel>
+          <Textarea aria-describedby={`${internalId}-hint`} className="ph-mask" id={internalId} maxLength={2000} onChange={(event) => setInternalNotes(event.target.value)} readOnly={!canEdit} rows={2} value={internalNotes} />
+          <FieldDescription id={`${internalId}-hint`}>{t("appointments.create.internalNotesHint")}</FieldDescription>
+        </Field>
+      </FieldGroup>
+      {canEdit && changed ? <Button className="self-end" loading={save.isPending} loadingLabel={t("appointments.details.savingNotes")} size="sm" type="submit">{t("appointments.details.saveNotes")}</Button> : null}
+    </form>
   );
 }

@@ -222,7 +222,7 @@
       "editKnowledge": "Modifier la regle",
       "uploadDocument": "Téléverser un document",
       "addKnowledgeDescription": "Ce que votre agent doit faire, comme transférer des appels, poser des questions et envoyer des textos.",
-      "editKnowledgeDescription": "Mettez à jour l'instruction que votre agent doit suivre pendant les appels et les suivis.",
+      "editKnowledgeDescription": "Ce que votre agent doit faire, sur tous les canaux ou sur un seul.",
       "uploadDocumentDescription": "Téléversez un fichier que votre agent pourra utiliser.",
       "documentBadge": "Document",
       "textBadge": "Texte",
@@ -266,12 +266,21 @@
           "label": "Mots-clés",
           "placeholder": "Transferts, escalade",
           "hint": "Facultatif. Mots-clés séparés par des virgules pour catégoriser ces règles."
+        },
+        "channel": {
+          "label": "Canal",
+          "all": "Tous les canaux",
+          "voice": "Appels",
+          "sms": "Textos",
+          "web_chat": "Clavardage du site web",
+          "instagram": "Instagram"
         }
       }
     }
   },
   "table": {
     "title": "Titre",
+    "channel": "Canal",
     "preview": "Apercu",
     "status": "Statut",
     "disabled": "Desactive",
@@ -293,9 +302,6 @@
   "fields": {
     "defaults": {
       "title": "Valeurs par défaut"
-    },
-    "instructions": {
-      "title": "Instructions"
     },
     "summary": {
       "label": "Résumé de l'entreprise",
@@ -402,11 +408,6 @@
   "identity": { "title": "Nom, accueil et voix" },
   "transfers": { "title": "Transferts" },
   "businessDetails": { "title": "Détails de l'entreprise" },
-  "instructions": {
-    "voice": { "label": "Appels", "placeholder": "Répondez brièvement et proposez de prendre rendez-vous." },
-    "chat": { "label": "Clavardage", "hint": "Clavardage du site web et Instagram.", "placeholder": "Répondez en deux ou trois phrases." },
-    "text": { "label": "Textos", "placeholder": "Gardez les réponses sous 300 caractères." }
-  },
   "staffFirst": {
     "title": "Le personnel répond d'abord",
     "save": "Enregistrer le personnel répond d'abord",

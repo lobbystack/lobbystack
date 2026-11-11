@@ -222,7 +222,7 @@
       "editKnowledge": "Edit Rule",
       "uploadDocument": "Upload Document",
       "addKnowledgeDescription": "What your agent should do, like transfer calls, ask questions and send texts.",
-      "editKnowledgeDescription": "Update the instruction your agent should follow during calls and follow-up flows.",
+      "editKnowledgeDescription": "What your agent should do, on every channel or on one.",
       "uploadDocumentDescription": "Upload a file so your agent can use it.",
       "documentBadge": "Document",
       "textBadge": "Text",
@@ -266,12 +266,21 @@
           "label": "Tags",
           "placeholder": "Transfers, escalation",
           "hint": "Optional. Comma-separated keywords to help categorize these rules."
+        },
+        "channel": {
+          "label": "Channel",
+          "all": "All channels",
+          "voice": "Calls",
+          "sms": "Text messages",
+          "web_chat": "Website chat",
+          "instagram": "Instagram"
         }
       }
     }
   },
   "table": {
     "title": "Title",
+    "channel": "Channel",
     "preview": "Preview",
     "status": "Status",
     "disabled": "Disabled",
@@ -292,9 +301,6 @@
   "fields": {
     "defaults": {
       "title": "Defaults"
-    },
-    "instructions": {
-      "title": "Instructions"
     },
     "summary": {
       "label": "Business summary",
@@ -401,11 +407,6 @@
   "identity": { "title": "Name, greeting and voice" },
   "transfers": { "title": "Transfers" },
   "businessDetails": { "title": "Business details" },
-  "instructions": {
-    "voice": { "label": "Calls", "placeholder": "Keep answers short, and offer to book a visit." },
-    "chat": { "label": "Chats", "hint": "Website chat and Instagram.", "placeholder": "Answer in two or three sentences." },
-    "text": { "label": "Text messages", "placeholder": "Keep replies under 300 characters." }
-  },
   "staffFirst": {
     "title": "Staff answers first",
     "save": "Save staff answers first",

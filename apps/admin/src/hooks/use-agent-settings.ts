@@ -22,9 +22,6 @@ export type AgentSettings = {
     appointmentChangePolicy: AppointmentChangePolicy | null;
     bookingMode: BookingMode;
     voice?: string;
-    voiceInstructions?: string | null;
-    chatInstructions?: string | null;
-    smsInstructions?: string | null;
   } & StaffFirstProfile) | null;
   hasKnowledgeSources?: boolean;
   staffFirstBlock?: "plan" | "carrier" | "setup" | null;
@@ -35,9 +32,6 @@ export type AgentPatch = {
   name?: string;
   greeting?: string;
   voice?: ReceptionistVoice;
-  voiceInstructions?: string | null;
-  chatInstructions?: string | null;
-  smsInstructions?: string | null;
   transferNumber?: string | null;
   transferMode?: string;
   appointmentChangePolicy?: AppointmentChangePolicy;

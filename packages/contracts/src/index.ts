@@ -151,6 +151,8 @@ export const snapshotSchema = z.object({
     title: z.string(),
     content: z.string(),
     order: z.number(),
+    // ruleChannels from @lobbystack/shared. Absent: every channel.
+    channel: z.enum(["voice", "sms", "web_chat", "instagram"]).optional(),
   })).optional(),
   appointmentChangePolicy: z.object({
     enabled: z.boolean(),

@@ -119,21 +119,22 @@ async function createWorkspace(page: Page, identity: string): Promise<string> {
   return workspace.businessId;
 }
 
-async function completeOnboardingBySkippingOptionalInputs(page: Page, businessId: string): Promise<void> {
+async function completeOnboardingBySkippingOptionalInputs(page: Page): Promise<void> {
   await page.getByRole("button", { name: "I don't have a website" }).click();
   await expect(page).toHaveURL("/onboarding/language");
   // Onboarding goes forward only: Back lands on the current step.
   await page.goBack();
   await expect(page).toHaveURL("/onboarding/language");
   await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page).toHaveURL("/onboarding/verify-phone");
-  // Verifying a mobile needs a real phone, so leave the step the way an owner in a country without numbers does.
-  const moved = await page.evaluate(async (id) => (await fetch(`/api/onboarding/stage?businessId=${encodeURIComponent(id)}`, { method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify({ to: "goal" }) })).status, businessId);
-  expect(moved).toBe(200);
-  await page.goto("/onboarding/goal");
-  await page.getByRole("button", { name: "Skip", exact: true }).click();
+  await expect(page).toHaveURL("/onboarding/number");
+  // This run sells no numbers, so leave the step the way an owner in a country without numbers does.
+  await page.getByRole("combobox", { name: "Country" }).click();
+  await page.getByPlaceholder("Search countries or codes").fill("France");
+  await page.getByRole("option", { name: /France/ }).click();
+  await page.getByRole("button", { name: "Continue without a number" }).click();
   await expect(page).toHaveURL("/onboarding/attribution");
-  await page.getByRole("button", { name: "Skip", exact: true }).click();
+  await page.getByRole("button", { name: "Other", exact: true }).click();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
   await expect(page).toHaveURL("/onboarding/meet");
   await page.getByRole("button", { name: "Go to dashboard" }).click();
   await expect(page).toHaveURL("/");
@@ -153,7 +154,7 @@ test("operator authentication, workspace access, isolation, and revocation", asy
 
   await signUp(page, "owner-a", testInfo);
   const ownBusinessId = await createWorkspace(page, "owner-a");
-  await completeOnboardingBySkippingOptionalInputs(page, ownBusinessId);
+  await completeOnboardingBySkippingOptionalInputs(page);
   await page.goto("/");
   await expect(page.getByRole("button", { name: /Replacement E2E owner-a/ })).toBeVisible();
 

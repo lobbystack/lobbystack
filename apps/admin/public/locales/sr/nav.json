@@ -48,8 +48,7 @@
       "security": "lozinka, prijava, imejl, e-pošta, profil, bezbednost",
       "phone": "prosleđivanje, operater, broj, linija, poziv, pozivi",
       "voice": "akcenat, zvuk, ton, pozdrav, dobrodošlica, zdravo, ime",
-      "instructions": "uputstvo, uputstva, skripta, ponašanje",
-      "rules": "pravilo, eskalacija, predaja",
+      "rules": "pravilo, pravila, eskalacija, predaja, uputstvo, uputstva, skripta, ponašanje",
       "handling": "preusmeravanje, osoblje prvo, zakazivanje, izmene termina, otkazivanje, pomeranje, broj za preusmeravanje, osoblje se javlja prvo",
       "business": "radno vreme, sati, otvoreno, zatvoreno, praznik, vremenska zona, jezik, valuta",
       "knowledge": "česta pitanja, odgovor, odgovori, sajt, dokument, pdf, naučiti",
@@ -90,7 +89,6 @@
   },
   "agentPages": {
     "general": "Opšte",
-    "instructions": "Uputstva",
     "rules": "Pravila",
     "knowledge": "Specifično znanje",
     "channels": "Kanali",

@@ -304,7 +304,8 @@ describe.skipIf(!client)("business templates", () => {
       const at = { ...caller, businessId: pier };
       expect(await getReceptionistForApi(setup.worker, at)).toMatchObject({ greeting: "Thanks for calling Pier $& Dental. How can we help?", voice_instructions: "Say Pier $& Dental opens at 8, next to Harbor Dentalview." });
       expect((await listServicesForApi(setup.worker, at, { includeInactive: true })).map((service) => [service.name, service.description])).toEqual([["Pier $& Dental checkup", "A Pier $& Dental cleaning."]]);
-      expect((await listRulesForApi(setup.worker, at)).map((rule) => [rule.title, rule.content])).toEqual([["Pier $& Dental hours", "Pier $& Dental closes on Sundays."]]);
+      // The call instructions travel as the rule for calls they became.
+      expect((await listRulesForApi(setup.worker, at)).map((rule) => [rule.title, rule.content, rule.channel])).toEqual([["On calls", "Say Pier $& Dental opens at 8, next to Harbor Dentalview.", "voice"], ["Pier $& Dental hours", "Pier $& Dental closes on Sundays.", null]]);
       expect((await listKnowledgeEntriesForApi(setup.worker, at, {})).data.map((entry) => [entry.title, entry.content])).toEqual([["Where is Pier $& Dental?", "Pier $& Dental is on Main Street."]]);
     });
   });

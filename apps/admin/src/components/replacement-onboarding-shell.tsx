@@ -23,6 +23,8 @@ type OnboardingShellProps = {
   /** The agreement line login and signup show, for the action the person is taking. Left out when the partner has no terms or privacy page. */
   legalAgreement?: "login" | "signup" | "business" | "emailChange" | "passwordReset" | "verifyEmail";
   onSignOut?: () => void;
+  /** Shown before Sign out when the person has a finished workspace to go back to. */
+  onBackToDashboard?: (() => void) | undefined;
 };
 
 /** Onboarding's pages after sign-up, keyed by path. */
@@ -34,7 +36,7 @@ export const onboardingRoutes = {
   "/onboarding/reading": { key: "reading", width: "lg" },
   "/onboarding/verify-phone": { key: "verifyPhone", width: "md" },
   "/onboarding/number": { key: "number", width: "wide" },
-  "/onboarding/goal": { key: "goal", width: "md" },
+  "/onboarding/plan": { key: "plan", width: "wide" },
   "/onboarding/attribution": { key: "attribution", width: "xl" },
   "/onboarding/meet": { key: "meet", width: "5xl" },
 } as const;
@@ -43,7 +45,9 @@ const widths = { sm: "max-w-sm", md: "max-w-md", lg: "max-w-lg", xl: "max-w-xl",
 
 const legalPrefixKeys = { login: "login.legalPrefix", signup: "signup.legal.prefix", business: "signup.legal.businessPrefix", emailChange: "signup.legal.emailChangePrefix", passwordReset: "forgotPassword.legalPrefix", verifyEmail: "verifyEmail.legalPrefix" } as const;
 
-export function ReplacementOnboardingShell({ icon, eyebrow, title, description, progress, width = "md", children, legalFooter: customLegalFooter, legalAgreement, onSignOut }: OnboardingShellProps) {
+const headerButton = "rounded-full px-4 py-3 type-title text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+
+export function ReplacementOnboardingShell({ icon, eyebrow, title, description, progress, width = "md", children, legalFooter: customLegalFooter, legalAgreement, onBackToDashboard, onSignOut }: OnboardingShellProps) {
   const { t, i18n } = useTranslation("onboarding");
   const { t: tAuth } = useTranslation("auth");
   const links = useBrandLinks(resolveLocale(i18n.resolvedLanguage, i18n.language));
@@ -65,10 +69,11 @@ export function ReplacementOnboardingShell({ icon, eyebrow, title, description, 
   ].filter((link): link is { key: string; href: string; label: string } => Boolean(link.href));
   return (
     <div className="relative flex min-h-svh w-full flex-col bg-background text-foreground">
-      {onSignOut ? (
-        <button className="absolute right-6 top-6 rounded-full px-4 py-3 type-title text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background" onClick={onSignOut} type="button">
-          {t("shell.signOut")}
-        </button>
+      {onSignOut || onBackToDashboard ? (
+        <div className="absolute right-6 top-6 flex items-center gap-1">
+          {onBackToDashboard ? <button className={headerButton} onClick={onBackToDashboard} type="button">{t("shell.backToDashboard")}</button> : null}
+          {onSignOut ? <button className={headerButton} onClick={onSignOut} type="button">{t("shell.signOut")}</button> : null}
+        </div>
       ) : null}
       <main className={cn("flex flex-1 flex-col items-center px-6 pb-12", onSignOut ? "pt-20 sm:pt-12" : "pt-12")}>
         <div className={cn("my-auto flex w-full flex-col items-center", widths[width])}>

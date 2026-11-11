@@ -1,40 +1,50 @@
 ---
-title: "Consulter les rendez-vous à venir"
-description: "Consultez les rendez-vous à venir de l'espace de travail actif et vérifiez leur état de synchronisation avec le calendrier."
+title: "Gérer les rendez-vous dans le calendrier"
+description: "Voyez les rendez-vous de l'espace de travail actif par jour, par semaine ou par mois, réservez-en de nouveaux, ajoutez des congés et vérifiez la synchronisation du calendrier."
 sidebarTitle: "Rendez-vous"
 contentType: "How-to"
 ---
 
-La page **Rendez-vous** liste les réservations à venir de l'espace de travail actif. Utilisez-la pour consulter l'horaire et vérifier que chaque réservation a bien été ajoutée au calendrier connecté.
+La page **Rendez-vous** affiche les réservations de l'espace de travail actif dans un calendrier. Utilisez-la pour consulter l'horaire, réserver des rendez-vous, bloquer des congés et vérifier que chaque réservation a bien été ajoutée au calendrier connecté.
 
-## Consulter l'horaire
+## Lire le calendrier
 
-Chaque ligne affiche :
+Cliquez sur **Jour**, **Semaine** ou **Mois** pour changer la période, et utilisez les flèches ou **Aujourd'hui** pour vous déplacer. La semaine s'ouvre par défaut, et le jour s'ouvre sur téléphone.
 
-- L'heure du rendez-vous
-- Le nom du client
-- Le service
-- Le membre de l'équipe assigné
-- Le statut du rendez-vous
-- L'état de synchronisation avec le calendrier
+- En **Jour** et en **Semaine**, chaque rendez-vous est un bloc placé à son heure et dimensionné selon sa durée. Il affiche le client, le service et l'heure. Les rendez-vous à la même heure s'affichent côte à côte, et une ligne rouge marque l'heure actuelle.
+- En **Mois**, chaque jour liste ses rendez-vous par heure et par client. Cliquez sur **+N de plus** ou sur le numéro d'un jour pour ouvrir ce jour.
+- Chaque service garde sa couleur. Les rendez-vous passés sont pâlis, et les rendez-vous annulés sont gris et barrés.
+- Les zones hachurées montrent quand l'entreprise est fermée : hors des heures d'ouverture, pendant les fermetures et quand un employé est en congé.
 
-LobbyStack affiche chaque rendez-vous dans le fuseau horaire enregistré avec celui-ci.
+Les heures suivent le fuseau horaire de l'entreprise, où que vous soyez. Cliquez sur un rendez-vous pour voir ses détails, le déplacer, l'annuler et modifier ses notes.
+
+Pour voir les rendez-vous d'un seul employé, choisissez-le dans le filtre des employés. Pour un tableau des rendez-vous à venir ou passés, cliquez sur **Liste**.
 
 ## Réserver un rendez-vous
 
-1. Cliquez sur **Nouveau rendez-vous**.
-2. Choisissez un contact, ou cliquez sur **Nouveau contact** et saisissez un nom et un numéro de téléphone. La liste montre les contacts qui ont un numéro de téléphone.
-3. Choisissez un service. Si plusieurs employés y sont assignés, vous pouvez en choisir un ou garder **Le premier disponible**.
-4. Choisissez un jour et une heure libre, puis cliquez sur **Réserver le rendez-vous**.
+1. Cliquez sur une heure libre du calendrier, ou sur **Nouveau rendez-vous**. Un panneau s'ouvre à côté du calendrier, et une ébauche de la réservation apparaît à cette heure.
+2. Choisissez un service. L'ébauche prend la couleur et la durée du service. Quand plusieurs employés offrent ce service, vous pouvez en choisir un ou garder **Le premier disponible**.
+3. Choisissez un contact, ou cliquez sur **Nouveau contact** et entrez un nom et un numéro de téléphone. La liste affiche les contacts qui ont un numéro de téléphone.
+4. Modifiez **Durée (minutes)** si cette visite est plus longue ou plus courte que le service.
+5. Choisissez un jour et une heure libre. Si l'heure cliquée n'est pas ouverte, le panneau vous le dit.
+6. Ajoutez des **Notes** et des **Notes internes** au besoin, puis cliquez sur **Réserver le rendez-vous**.
 
-LobbyStack le réserve comme l'agent : il vérifie les disponibilités, suit les mêmes règles pour les SMS de confirmation et de rappel, et ajoute le rendez-vous au calendrier connecté. Les lecteurs ne peuvent pas réserver de rendez-vous. Si quelqu'un prend l'heure avant vous, choisissez-en une autre dans la liste mise à jour.
+Votre agent peut lire les **Notes** à un appelant une fois qu'il l'a vérifié, et elles apparaissent dans l'API et les webhooks. Les **Notes internes** restent dans votre équipe : LobbyStack ne les envoie jamais à l'agent, au client, à l'API ni aux webhooks.
 
-## Actualiser les rendez-vous
+LobbyStack réserve le rendez-vous comme le fait l'agent : il vérifie la disponibilité, applique les mêmes règles pour les textos de confirmation et de rappel, et ajoute le rendez-vous au calendrier connecté. Les lecteurs ne peuvent pas réserver de rendez-vous. Si quelqu'un prend l'heure avant vous, choisissez-en une autre dans la liste actualisée. Appuyez sur **Échap** ou cliquez sur **Annuler** pour abandonner l'ébauche.
 
-Cliquez sur **Actualiser** pour récupérer la liste à jour des rendez-vous. La page se met aussi à jour quand LobbyStack reçoit un événement lié à un rendez-vous.
+## Ajouter un congé
 
-## Résoudre un problème de calendrier
+1. Cliquez sur **Congés**.
+2. Choisissez **Toute l'entreprise** pour fermer l'entreprise, ou **Un employé** et choisissez l'employé.
+3. Entrez un nom, par exemple `Noël`.
+4. Choisissez **Fermé toute la journée**, ou **Une partie de la journée** avec une heure de début et de fin.
+5. Choisissez les dates de début et de fin, ajoutez un motif si vous le voulez, puis cliquez sur **Enregistrer**.
 
-Si la colonne **Calendrier** signale un problème de synchronisation, vérifiez la connexion Google Calendar, Cal.com ou Calendly dans **Entreprise** > **Intégrations**. Corrigez tout problème de compte ou d'autorisation avant de vous fier aux disponibilités en direct.
+Le calendrier affiche le congé. Personne ne peut réserver l'entreprise pendant une fermeture, ni un employé pendant son congé, et cela inclut l'agent. L'agent peut mentionner le nom d'une fermeture, jamais son motif. Cliquez sur un congé dans le calendrier pour le modifier ou le supprimer. Les propriétaires et les administrateurs peuvent ajouter des congés; vous pouvez aussi modifier les fermetures dans les [heures d'ouverture](/fr/settings/business-details) et les jours de congé d'un employé dans la page **Employés**.
 
-Connectez [Google Calendar](/fr/integrations/google-calendar), [Cal.com](/fr/integrations/calcom) ou [Calendly](/fr/integrations/calendly) avant de laisser l'agent proposer des créneaux. Configurez l'annulation et le déplacement de rendez-vous par les appelants dans [Modifications de rendez-vous](/fr/agent/appointment-changes).
+## Examiner un problème de calendrier
+
+Si l'état **Calendrier** d'un rendez-vous signale un problème de synchronisation, vérifiez la connexion Google Calendar, Cal.com ou Calendly dans **Entreprise** > **Intégrations**. Corrigez tout problème de compte ou d'autorisation avant de vous fier à la disponibilité en direct.
+
+Connectez [Google Calendar](/fr/integrations/google-calendar), [Cal.com](/fr/integrations/calcom) ou [Calendly](/fr/integrations/calendly) avant de laisser l'agent proposer des heures. Configurez l'annulation et le changement de rendez-vous par les appelants dans [Modifications de rendez-vous](/fr/agent/appointment-changes).

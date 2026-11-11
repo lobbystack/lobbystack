@@ -2,7 +2,6 @@
 
 import { AgentHandlingSection } from "@/components/agent-handling-section";
 import { AgentIdentitySection } from "@/components/agent-identity-section";
-import { AgentInstructionsSection } from "@/components/agent-instructions-section";
 import { ChannelsSection } from "@/components/agents/channels-section";
 import { useManagedBusiness } from "@/hooks/use-agent-settings";
 
@@ -17,11 +16,6 @@ export function AgentSettingsPage({ agentId }: { agentId: string }) {
       <AgentHandlingSection agentId={agentId} businessId={businessId} canManage={canManage} />
     </div>
   );
-}
-
-export function AgentInstructionsPage({ agentId }: { agentId: string }) {
-  const { businessId, canManage } = useManagedBusiness();
-  return <AgentInstructionsSection agentId={agentId} businessId={businessId} canManage={canManage} />;
 }
 
 /** Where customers reach the agent: its numbers, widgets and Instagram account. */

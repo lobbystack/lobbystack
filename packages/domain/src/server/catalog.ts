@@ -250,8 +250,10 @@ export async function replaceBusinessHoursInTransaction(
   // Saving only closures leaves the hours to whoever set them, so AI can still fill an empty week.
   await tx.update(businesses).set({ ...(sameHours ? {} : { hoursSource: "operator" as const }), updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
   if (closureRows) {
+    // The hours editor doesn't show a closure's staff-only note, so a closure saved with the same times keeps it.
+    const notes = await tx.select({ startsAt: closures.startsAt, endsAt: closures.endsAt, note: closures.note }).from(closures).where(and(eq(closures.businessId, input.businessId), isNull(closures.staffId)));
     await tx.delete(closures).where(and(eq(closures.businessId, input.businessId), isNull(closures.staffId)));
-    if (closureRows.length) await tx.insert(closures).values(closureRows.map((closure) => ({ businessId: input.businessId, ...closure })));
+    if (closureRows.length) await tx.insert(closures).values(closureRows.map((closure) => ({ businessId: input.businessId, ...closure, note: notes.find((row) => row.startsAt.getTime() === closure.startsAt.getTime() && row.endsAt.getTime() === closure.endsAt.getTime())?.note ?? null })));
   }
   // Its snapshot refresh picks up the closures too.
   await writeBusinessHoursInTransaction(tx, { businessId: input.businessId, hours, reason: "hours_updated" });

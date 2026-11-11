@@ -47,8 +47,7 @@
       "security": "password, 2fa, login, email, sign in, profile",
       "phone": "forwarding, forward, carrier, number, line, sip, call, calls",
       "voice": "accent, sound, tone, greeting, hello, intro, welcome, name",
-      "instructions": "instruction, prompt, script, behaviour, behavior",
-      "rules": "rule, escalate, handoff",
+      "rules": "rule, rules, escalate, handoff, instruction, instructions, prompt, script, behaviour, behavior",
       "handling": "transfer, transfers, staff first, booking, appointment changes, cancel, reschedule, transfer number, staff answers first",
       "business": "hours, opening, closed, holiday, timezone, language, currency",
       "knowledge": "faq, answer, answers, website, document, pdf, teach",
@@ -89,7 +88,6 @@
   },
   "agentPages": {
     "general": "General",
-    "instructions": "Instructions",
     "rules": "Rules",
     "knowledge": "Specific knowledge",
     "channels": "Channels",

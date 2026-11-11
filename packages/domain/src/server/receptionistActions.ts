@@ -105,7 +105,7 @@ async function earlierBooking(tx: DatabaseTransaction, input: { businessId: stri
  */
 export async function bookForCaller(
   context: DomainContext,
-  input: { businessId: string; service: { id: string } | { name: string }; startsAt: string; timezone: string; contactPhone: string; contactName?: string; channel: ReceptionistChannel | "api" | "dashboard"; callerPhone?: string; callId?: string; preferredStaffId?: string; smsConsent?: SmsConsentAnswer; apiAudit?: ApiAudit; operatorUserId?: string },
+  input: { businessId: string; service: { id: string } | { name: string }; startsAt: string; timezone: string; contactPhone: string; contactName?: string; channel: ReceptionistChannel | "api" | "dashboard"; callerPhone?: string; callId?: string; preferredStaffId?: string; smsConsent?: SmsConsentAnswer; apiAudit?: ApiAudit; operatorUserId?: string; durationMinutes?: number; notes?: string; internalNotes?: string },
 ): Promise<{ ok: true; appointmentId?: string; serviceName: string; startsAt: string; alreadyBooked?: true; employeeName?: string } | { ok: false; reason: BookingRefusal }> {
   const distinctId = getPostHogDistinctIdForBusinessSystem(input.businessId);
   const failed = async (reason: BookingRefusal | "unknown", serviceId?: string) => {
@@ -141,6 +141,9 @@ export async function bookForCaller(
       ...(input.smsConsent ? { smsConsent: input.smsConsent } : {}),
       ...(input.apiAudit ? { apiAudit: input.apiAudit } : {}),
       ...(input.operatorUserId ? { operatorUserId: input.operatorUserId } : {}),
+      ...(input.durationMinutes ? { durationMinutes: input.durationMinutes } : {}),
+      ...(input.notes ? { notes: input.notes } : {}),
+      ...(input.internalNotes ? { internalNotes: input.internalNotes } : {}),
     });
     await recordProductEventBestEffort(context, { name: "appointment.booked", businessId: input.businessId, distinctId, properties: { appointmentId, channel: input.channel, serviceId: service.id, sourceChannel: input.channel } });
     return { ok: true, appointmentId, serviceName: service.name, startsAt: input.startsAt, ...(employeeName ? { employeeName } : {}) };
@@ -183,7 +186,7 @@ export async function verifyCallerForChange(
   if (verification.status === "passcode_locked") return { ok: false as const, verified: false, status: verification.status, reason: "The caller's keypad PIN is locked after too many wrong tries, so the change can't be verified on this call. Someone at the business can set a new PIN." };
   const verified = verification.status === "otp_verified" || verification.status === "facts_verified" || verification.status === "passcode_verified";
   const requiresPasscode = verification.status === "passcode_pending";
-  return { ok: true as const, verified, requiresOtp: !verified && !requiresPasscode, ...(requiresPasscode ? { requiresPasscode } : {}), verificationId: verification.verificationId, appointmentId: verification.appointmentId, status: verification.status, ...(verified && input.action === "cancel" ? { smsConsentOnFile: verification.smsConsent } : {}) };
+  return { ok: true as const, verified, requiresOtp: !verified && !requiresPasscode, ...(requiresPasscode ? { requiresPasscode } : {}), verificationId: verification.verificationId, appointmentId: verification.appointmentId, status: verification.status, ...(verified && input.action === "cancel" ? { smsConsentOnFile: verification.smsConsent } : {}), ...(verified && verification.notes ? { appointmentNotes: verification.notes } : {}) };
 }
 
 /** Checks the one-time code the caller reads back. Once it matches for a cancellation, it says whether the caller gets texts, as verifyCallerForChange does. */

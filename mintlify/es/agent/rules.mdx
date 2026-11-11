@@ -1,6 +1,6 @@
 ---
 title: "Escriba las reglas de su agente"
-description: "Use reglas en texto sencillo para definir cómo debe actuar su agente durante las llamadas y las conversaciones."
+description: "Use reglas en texto sencillo para definir cómo actúa su agente en todos los canales, o solo en las llamadas, los SMS, el chat del sitio web o Instagram."
 sidebarTitle: "Reglas"
 contentType: "How-to"
 ---
@@ -42,12 +42,30 @@ Las buenas reglas son concretas y orientadas a la acción:
     Haga clic en **Añadir regla**.
   </Step>
   <Step title="Escriba la instrucción">
-    Añada un título corto y la instrucción completa en el campo de contenido.
+    Añada un título corto y la instrucción completa en el campo de contenido. Para limitar la regla a un canal, elíjalo en **Canal**.
   </Step>
   <Step title="Añada">
     Haga clic en **Añadir**. La regla aparece al final de la tabla.
   </Step>
 </Steps>
+
+## Limitar una regla a un canal
+
+Una regla se aplica en todos los canales hasta que elija uno. Elíjalo en **Canal** al añadir o editar la regla:
+
+| Canal | Dónde sigue el agente la regla |
+| --- | --- |
+| **Todos los canales** | Llamadas, mensajes de texto, chat del sitio web e Instagram |
+| **Llamadas** | Llamadas telefónicas y llamadas desde su navegador |
+| **Mensajes de texto** | Respuestas a los SMS |
+| **Chat del sitio web** | El widget de chat de su sitio web |
+| **Instagram** | Mensajes directos de Instagram |
+
+La columna **Canal** muestra dónde se aplica cada regla. Use una regla de canal para cómo habla el agente en ese canal, por ejemplo "Mantenga las respuestas por debajo de 300 caracteres" para los SMS.
+
+<Note>
+  Las reglas reemplazan la página **Instrucciones**. Las instrucciones de cada agente se convirtieron en una regla para su canal, con un título en el idioma de su negocio, como **En las llamadas** o **Por SMS**. Las instrucciones de chat se convirtieron en una regla de **Chat del sitio web**, y también en una de **Instagram** si su negocio tenía Instagram conectado.
+</Note>
 
 ## Ordenar sus reglas
 
@@ -57,7 +75,7 @@ Para mover una regla, arrástrela por su controlador. También puede abrir **Má
 
 ## Transferencias y devoluciones de llamada
 
-Las transferencias usan el [número de transferencia predeterminado](/es/agent/calls-and-booking#número-de-transferencia-predeterminado) de la página **General** del agente, o el número de un [empleado](/es/settings/employees) por el que pregunta quien llama. Los números de transferencia deben estar en un [país al que LobbyStack puede llamar](/es/agent/calls-and-booking#número-de-transferencia-predeterminado), y durante una prueba gratuita las llamadas se transfieren solo al número de móvil que usted verificó, si verificó uno. Cuando pasar la llamada en vivo a una persona no es el paso adecuado, el agente puede crear una tarea de seguimiento con los datos para devolver la llamada. Esas tareas aparecen en el panel y en las páginas de detalle de las llamadas.
+Las transferencias usan el [número de transferencia predeterminado](/es/agent/calls-and-booking#número-de-transferencia-predeterminado) de la página **General** del agente, o el número de un [empleado](/es/settings/employees) por el que pregunta quien llama. Los números de transferencia deben estar en un [país al que LobbyStack puede llamar](/es/agent/calls-and-booking#número-de-transferencia-predeterminado), y durante una prueba gratuita que empezó con un número de móvil verificado, las llamadas se transfieren solo a ese móvil. Cuando pasar la llamada en vivo a una persona no es el paso adecuado, el agente puede crear una tarea de seguimiento con los datos para devolver la llamada. Esas tareas aparecen en el panel y en las páginas de detalle de las llamadas.
 
 ## Grabaciones y transcripciones
 

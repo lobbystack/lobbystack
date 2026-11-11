@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { DEFAULT_RECEPTIONIST_VOICE, normalizeReceptionistVoice, normalizeRuntimeLocale, runtimeLocales, type ReceptionistVoice, type RuntimeLocale } from "@lobbystack/shared";
+import { DEFAULT_RECEPTIONIST_VOICE, normalizeReceptionistVoice, normalizeRuntimeLocale, resolveOnboardingRoute, runtimeLocales, type ReceptionistVoice, type RuntimeLocale } from "@lobbystack/shared";
 import { LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MeetFormSkeleton, TestPanelSkeleton } from "@/components/loading-skeletons";
 import { Textarea } from "@/components/ui/textarea";
-import { usePlanOfferOpener, useUpgradePlanDialogOpener } from "@/components/upgrade-plan-dialog-context";
+import { useUpgradePlanDialogOpener } from "@/components/upgrade-plan-dialog-context";
 import { VoiceDialog, voiceName, useVoicePreview, useVoiceTraits } from "@/components/voice-dialog";
 import { isWebsiteImportRunning, type WebsiteImportSummary } from "@/components/website-import-progress";
 import { useActiveBusiness } from "@/hooks/use-active-business";
@@ -42,7 +42,6 @@ function MeetAgent() {
   const { business } = useActiveBusiness();
   const businessId = business?.businessId;
   const openPlans = useUpgradePlanDialogOpener();
-  const openOffer = usePlanOfferOpener();
   const agent = useQuery({ queryKey: ["onboarding-agent", businessId], queryFn: () => requestJson<Agent>("/api/agent"), enabled: Boolean(businessId) });
   // An import still running can set the language and with it the default greeting.
   const importing = useQuery({
@@ -92,41 +91,18 @@ function MeetAgent() {
     const change = typedChange();
     if (Object.keys(change).length) save.mutate(change);
   };
+  // Leaving Meet your agent finishes onboarding, or, for a trial nobody pays
+  // for yet, opens the plans as the last step. The server decides which.
   const finish = useMutation({
     mutationFn: async () => {
       const change = typedChange();
       if (Object.keys(change).length) await save.mutateAsync(change);
-      await requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(businessId!)}`, { method: "POST", body: JSON.stringify({ to: "complete" }) });
+      return await requestJson<{ stage?: string }>(`/api/onboarding/stage?businessId=${encodeURIComponent(businessId!)}`, { method: "POST", body: JSON.stringify({ to: "complete" }) });
     },
-    onSuccess: async () => {
-      if (businessId) {
-        telemetry.track("web.onboarding.meet_completed", { businessId });
-        // The plans come at the door to the dashboard, and only after a test.
-        // A failed check lets the person through rather than holding them here.
-        const due = business?.partnerAccessLevel
-          ? false
-          : await requestJson<{ due: boolean }>(`/api/plan-offer?businessId=${encodeURIComponent(businessId)}`).then((answer) => answer.due).catch(() => false);
-        if (due && openOffer) {
-          await requestJson(`/api/plan-offer?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({}) }).catch(() => undefined);
-          telemetry.track("web.onboarding.plan_offer_shown", { businessId, surface: "meet" });
-          openOffer({
-            onDismiss: () => {
-              void requestJson(`/api/plan-offer?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({ dismissed: true }) }).catch(() => undefined);
-              telemetry.track("web.onboarding.plan_offer_dismissed", { businessId, surface: "meet" });
-              router.push("/");
-              router.refresh();
-            },
-            onPlanClicked: (plan) => {
-              void requestJson(`/api/plan-offer?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({ chosen: true }) }).catch(() => undefined);
-              telemetry.track("web.onboarding.plan_offer_clicked", { businessId, surface: "meet", plan });
-            },
-          });
-          await queryClient.invalidateQueries({ queryKey: ["businesses"] });
-          return;
-        }
-      }
+    onSuccess: async (result) => {
+      if (businessId) telemetry.track("web.onboarding.meet_completed", { businessId });
       await queryClient.invalidateQueries({ queryKey: ["businesses"] });
-      router.push("/");
+      router.push(result.stage === "choose_plan" ? resolveOnboardingRoute("choose_plan") : "/");
       router.refresh();
     },
     onError: (cause) => setError(getSafeOnboardingErrorMessage(cause, t, "meet.finishFailed")),

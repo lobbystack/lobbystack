@@ -1,4 +1,4 @@
-import { isWrittenChannel, normalizeBookingMode, normalizeReceptionistVoice, normalizeRuntimeLocale, receptionistVoiceGenders, runtimeLocaleName, type BusinessContextSnapshot, type SnapshotEmployee } from "@lobbystack/shared";
+import { isWrittenChannel, normalizeBookingMode, normalizeReceptionistVoice, normalizeRuntimeLocale, receptionistVoiceGenders, ruleChannelOf, runtimeLocaleName, type AgentRuleSummary, type BusinessContextSnapshot, type RuleChannel, type SnapshotEmployee } from "@lobbystack/shared";
 import { countKnowledgeTokens } from "@lobbystack/domain";
 import { DateTime } from "luxon";
 
@@ -11,8 +11,24 @@ function promptFaqs(snapshot: BusinessContextSnapshot) {
   return (snapshot.knowledgeSnippets ?? []).slice().sort((left, right) => right.priority - left.priority).slice(0, PROMPT_MAX_FAQS);
 }
 
+// The snapshot's rules in priority order: those for every channel, or with a
+// channel, those kept to it. A conversation sees only its own channel's.
+function rulesFor(snapshot: BusinessContextSnapshot, channel: RuleChannel | null): AgentRuleSummary[] {
+  return (snapshot.rules ?? []).filter((rule) => (rule.channel ?? null) === channel).sort((left, right) => left.order - right.order);
+}
+
+const RULE_CHANNEL_NAMES: Record<RuleChannel, string> = { voice: "calls", sms: "text messages", web_chat: "website chat", instagram: "Instagram messages" };
+
+// The rules the business keeps to this conversation's channel, where the
+// channel's own instructions used to go.
+function channelRules(snapshot: BusinessContextSnapshot, channel: AgentChannel): string {
+  const ruleChannel = ruleChannelOf(channel);
+  const rules = ruleChannel ? rulesFor(snapshot, ruleChannel) : [];
+  return rules.length ? `The business's rules for ${RULE_CHANNEL_NAMES[ruleChannel!]}, in priority order:\n${rules.map((rule, index) => `${index + 1}. ${rule.title}: ${rule.content.trim()}`).join("\n")}` : "";
+}
+
 function businessFacts(snapshot: BusinessContextSnapshot, channel: AgentChannel): string[] {
-  const rules = (snapshot.rules ?? []).slice().sort((left, right) => left.order - right.order);
+  const rules = rulesFor(snapshot, null);
   return [
     `Business: ${snapshot.displayName}.`,
     businessSummary(snapshot) ? `Summary: ${businessSummary(snapshot)}` : "",
@@ -99,8 +115,9 @@ export function buildAgentInstructions(snapshot: BusinessContextSnapshot, conver
       : "",
     "Use your tools for hours, services, business facts, appointments and messages. Never state availability, prices or policies you haven't looked up.",
     "Answer questions about the business only from your tools and the business facts below, never from general knowledge or a guess. When they don't have the answer, say you don't have that information and offer to take a message so the team can follow up.",
-    // The operator's own instructions for this channel.
+    // The default instructions for this channel, then the operator's rules for it.
     (voice ? snapshot.voiceInstructions : conversation.channel === "sms" ? snapshot.smsInstructions : snapshot.chatInstructions)?.trim() ?? "",
+    channelRules(snapshot, conversation.channel),
     ...capabilities.guidance,
     "Work out relative dates yourself (\"tomorrow\", \"next Tuesday\") from the current date below; never ask the caller for a calendar date they already described. Treat \"morning\" as 09:00 and \"afternoon\" as 13:00.",
     conversation.callerPhone
@@ -123,6 +140,8 @@ const LIVE_FAQ_TOKENS = 3_000;
 // The snapshot carries more text entries for knowledge search; prompts list the top ones by priority.
 const PROMPT_MAX_FAQS = 8;
 const LIVE_RULES_TOKENS = 1_000;
+// Rules kept to calls hold what the call instructions did, up to 8,000 characters.
+const LIVE_CHANNEL_RULES_TOKENS = 3_000;
 const LIVE_TOPICS_TOKENS = 600;
 
 // The knowledge sources' titles, so GPT-Live knows what the backend can look
@@ -209,8 +228,8 @@ export function liveLanguage(snapshot: BusinessContextSnapshot): string {
 export function buildLiveInstructions(snapshot: BusinessContextSnapshot, channel: Extract<AgentChannel, "voice" | "web_voice">, now: DateTime = DateTime.now()): string {
   const phone = channel === "voice";
   const capabilities = receptionistCapabilities(snapshot, { channel });
-  const rules = (snapshot.rules ?? []).slice().sort((left, right) => left.order - right.order);
-  const ruleLines = withinTokens(rules, LIVE_RULES_TOKENS, (rule) => `- ${rule.title}: ${rule.content.trim().replace(/\s+/g, " ")}`);
+  const ruleLines = withinTokens(rulesFor(snapshot, null), LIVE_RULES_TOKENS, (rule) => `- ${rule.title}: ${rule.content.trim().replace(/\s+/g, " ")}`);
+  const callRuleLines = withinTokens(rulesFor(snapshot, "voice"), LIVE_CHANNEL_RULES_TOKENS, (rule) => `- ${rule.title}: ${rule.content.trim()}`);
   return [
     phone
       ? `You are the phone receptionist for ${snapshot.displayName}. You represent this business, not the software platform.`
@@ -220,6 +239,7 @@ export function buildLiveInstructions(snapshot: BusinessContextSnapshot, channel
     // greeted 8 times out of 8 with the line and 11 out of 12 without.
     `Open the call with this greeting as soon as you're told to start: "${snapshot.greeting}" Say it once, at the start of the call only.`,
     snapshot.voiceInstructions?.trim() ?? "",
+    callRuleLines.length ? `The business's rules for calls, in priority order:\n${callRuleLines.join("\n")}` : "",
     "Speak warmly and naturally, at an unhurried pace. Be clear and direct, not overly cheerful. Keep replies short and conversational.",
     "If the caller is frustrated, acknowledge it briefly and focus on the next helpful step. If the caller sounds unsure, ask one simple question to find out what they need.",
     `Speak ${liveLanguage(snapshot)} unless the caller asks to switch or clearly speaks another language.`,

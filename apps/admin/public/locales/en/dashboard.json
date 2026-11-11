@@ -290,35 +290,32 @@
       "hours": "Add opening hours",
       "testCall": "Hear your agent",
       "phoneNumber": "Connect a phone number",
-      "forwardCalls": "Forward your calls"
+      "forwardCalls": "Forward your calls",
+      "callNumber": "Call your number",
+      "forwardFromCurrent": "Forward calls from your current number"
     },
     "stepDescriptions": {
       "fullScan": "Your agent has read a sample of your site.",
-      "sources": {
-        "answer_calls": "Upload the policies, FAQs and prices your callers ask about.",
-        "book_appointments": "Upload your services, prices and booking rules.",
-        "answer_website_visitors": "Upload the FAQs and policies your website visitors ask about.",
-        "answer_instagram_messages": "Upload the FAQs and prices people ask about on Instagram.",
-        "none": "Upload your policies, FAQs or pricing."
-      },
+      "sources": "Upload your policies, FAQs or pricing.",
       "hours": "Your agent books appointments only during these hours.",
-      "testCall": {
-        "answer_calls": "Ask what your callers ask most.",
-        "book_appointments": "Ask it to book an appointment.",
-        "answer_website_visitors": "Ask what people ask on your website.",
-        "answer_instagram_messages": "Ask what people ask on Instagram.",
-        "none": "Ask what your customers ask most."
-      },
+      "testCall": "Ask what your callers ask most.",
       "phoneNumber": "Give your agent its own number to answer real callers.",
-      "phoneNumberTrial": "Answer your missed calls free for 14 days, no card needed."
+      "phoneNumberTrial": "Answer your missed calls free for 14 days, no card needed.",
+      "forwardCalls": "Send calls from the number your customers know to {{number}}.",
+      "numberLost": "Your free trial ended. Choose a plan to get your number back."
     },
     "stepActions": {
       "fullScan": "Read the rest",
       "sources": "Upload document",
       "hours": "Add hours",
       "testCall": "Start a call",
-      "phoneNumber": "Choose a number"
-    }
+      "phoneNumber": "Choose a number",
+      "callNumber": "Call {{number}}",
+      "forwardCalls": "Set up forwarding",
+      "choosePlan": "Choose a plan"
+    },
+    "forwardingFrom": "Forwarding from {{number}}",
+    "forwardingWorks": "Forwarding works"
   },
   "forwarding": {
     "title": "Forward your calls to {{number}}",
@@ -383,6 +380,7 @@
     "general": {
       "missed": "On a mobile, open your phone's call settings and forward unanswered calls to {{number}}. On a landline or business phone system, ask your carrier to do it.",
       "all": "On a mobile, open your phone's call settings and forward all calls to {{number}}. On a landline or business phone system, ask your carrier to do it."
-    }
+    },
+    "itWorks": "It works"
   }
 }

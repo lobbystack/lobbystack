@@ -3,14 +3,15 @@ import { act, cleanup, render } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const fixture = vi.hoisted(() => ({ description: undefined as unknown, pathname: "/onboarding/website", progress: [] as unknown[], width: undefined as unknown }));
+const fixture = vi.hoisted(() => ({ description: undefined as unknown, pathname: "/onboarding/website", progress: [] as unknown[], width: undefined as unknown, back: undefined as (() => void) | undefined }));
 const replace = vi.hoisted(() => vi.fn());
-vi.mock("next/navigation", () => ({ usePathname: () => fixture.pathname, useRouter: () => ({ replace }) }));
+const push = vi.hoisted(() => vi.fn());
+vi.mock("next/navigation", () => ({ usePathname: () => fixture.pathname, useRouter: () => ({ replace, push }) }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock("@/hooks/use-sign-out", () => ({ useSignOut: () => vi.fn() }));
 vi.mock("@/components/replacement-onboarding-shell", async (importOriginal) => ({
   ...await importOriginal<typeof import("./replacement-onboarding-shell")>(),
-  ReplacementOnboardingShell: ({ children, description, progress, width }: { children: React.ReactNode; description: unknown; progress: unknown; width: unknown }) => { fixture.description = description; fixture.progress.push(progress); fixture.width = width; return <main>{children}</main>; },
+  ReplacementOnboardingShell: ({ children, description, onBackToDashboard, progress, width }: { children: React.ReactNode; description: unknown; onBackToDashboard?: () => void; progress: unknown; width: unknown }) => { fixture.description = description; fixture.progress.push(progress); fixture.width = width; fixture.back = onBackToDashboard; return <main>{children}</main>; },
 }));
 
 import { OnboardingRouteShell } from "./onboarding-route-shell";
@@ -32,9 +33,35 @@ function progressAt(pathname: string, business: Record<string, unknown>) {
   return fixture.progress.at(-1);
 }
 
+describe("back to dashboard", () => {
+  it("shows only Sign out to someone with no finished workspace", () => {
+    renderAt("/onboarding/website", { onboardingStage: "website", partnerAccessLevel: null });
+    expect(fixture.back).toBeUndefined();
+  });
+
+  it("switches back to the finished workspace the person came from and opens Home", async () => {
+    const fetchMock = vi.fn(async () => Response.json({ ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+    window.sessionStorage.setItem("lobbystack.onboarding.returnTo", "first");
+    fixture.pathname = "/onboarding/website";
+    const client = new QueryClient({ defaultOptions: { queries: { enabled: false } } });
+    client.setQueryData(["businesses"], { businesses: [
+      { businessId: "first", active: false, onboardingStage: "complete", createdAt: "2026-01-01T00:00:00.000Z" },
+      { businessId: "new", active: true, onboardingStage: "website", createdAt: "2026-11-01T00:00:00.000Z" },
+    ] });
+    render(<QueryClientProvider client={client}><OnboardingRouteShell><p>Step</p></OnboardingRouteShell></QueryClientProvider>);
+    expect(fixture.back).toBeTypeOf("function");
+    await act(async () => { fixture.back!(); });
+    await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/"));
+    expect(fetchMock).toHaveBeenCalledWith("/api/businesses/switch", expect.objectContaining({ method: "POST", body: JSON.stringify({ businessId: "first" }) }));
+    window.sessionStorage.clear();
+    vi.unstubAllGlobals();
+  });
+});
+
 describe("onboarding progress", () => {
-  it("counts a direct owner's eight steps, sign-up first", () => {
-    expect(progressAt("/onboarding/website", { onboardingStage: "website", partnerAccessLevel: null })).toEqual({ current: 3, total: 8 });
+  it("counts a direct owner's six steps, sign-up first", () => {
+    expect(progressAt("/onboarding/website", { onboardingStage: "website", partnerAccessLevel: null })).toEqual({ current: 3, total: 6 });
   });
 
   it("counts only the steps a partner's business keeps for its owner", () => {
@@ -55,15 +82,15 @@ describe("onboarding width", () => {
 });
 
 describe("onboarding descriptions", () => {
-  it("leaves the goal question on its title alone", () => {
-    progressAt("/onboarding/goal", { onboardingStage: "goal", partnerAccessLevel: null });
+  it("leaves the attribution question on its title alone", () => {
+    progressAt("/onboarding/attribution", { onboardingStage: "attribution", partnerAccessLevel: null });
     expect(fixture.description).toBe("");
   });
 });
 
 describe("browser back", () => {
   it("leaves a normal navigation alone", () => {
-    renderAt("/onboarding/website", { onboardingStage: "goal", partnerAccessLevel: null });
+    renderAt("/onboarding/website", { onboardingStage: "attribution", partnerAccessLevel: null });
     expect(replace).not.toHaveBeenCalled();
   });
 
@@ -74,16 +101,16 @@ describe("browser back", () => {
   });
 
   it("sends a restored earlier page on to the current step", () => {
-    const { rerender } = renderAt("/onboarding/goal", { onboardingStage: "goal", partnerAccessLevel: null });
+    const { rerender } = renderAt("/onboarding/attribution", { onboardingStage: "attribution", partnerAccessLevel: null });
     window.history.pushState({}, "", "/onboarding/website");
     act(() => { window.dispatchEvent(new PopStateEvent("popstate")); });
     fixture.pathname = "/onboarding/website";
     rerender();
-    expect(replace).toHaveBeenCalledWith("/onboarding/goal");
+    expect(replace).toHaveBeenCalledWith("/onboarding/attribution");
   });
 
   it("leaves the number picker open from a later step", () => {
-    const { rerender } = renderAt("/onboarding/goal", { onboardingStage: "goal", partnerAccessLevel: null });
+    const { rerender } = renderAt("/onboarding/attribution", { onboardingStage: "attribution", partnerAccessLevel: null });
     window.history.pushState({}, "", "/onboarding/number");
     act(() => { window.dispatchEvent(new PopStateEvent("popstate")); });
     fixture.pathname = "/onboarding/number";

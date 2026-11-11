@@ -49,10 +49,12 @@ describe("onboarding attribution telemetry", () => {
     telemetryRef.current!.expectEvent("web.onboarding.attribution_submitted", { businessId: "business", source: "google" });
   });
 
-  it("does not emit attribution_submitted when the operator skips", async () => {
+  it("has no skip, and keeps Continue off until a source is picked", async () => {
     setup();
-    await userEvent.click(await screen.findByRole("button", { name: "attribution.skip" }));
-    await waitFor(() => expect(route.router.push).toHaveBeenCalledWith("/onboarding/meet"));
-    expect(telemetryRef.current!.events.some(event => event.name === "web.onboarding.attribution_submitted")).toBe(false);
+    const next = await screen.findByRole("button", { name: "attribution.continue" });
+    expect(next.hasAttribute("disabled")).toBe(true);
+    expect(screen.queryByRole("button", { name: "attribution.skip" })).toBeNull();
+    await userEvent.click(await screen.findByRole("button", { name: "attribution.options.other" }));
+    expect(next.hasAttribute("disabled")).toBe(false);
   });
 });

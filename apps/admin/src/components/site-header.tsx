@@ -1,31 +1,15 @@
+import { useParams } from "next/navigation";
 import { useEffect, useState, type RefObject } from "react";
-import { useTranslation } from "react-i18next";
 
-import { Button } from "@/components/ui/button";
-import { openTestWindow, useTestWindowReady } from "@/lib/test-window";
+import { TestCallButton } from "@/components/navigation/test-call-button";
 import { cn } from "@/lib/utils";
-
-/** The test window's button on phones. */
-function MobileTestCallButton() {
-  const { t } = useTranslation("common");
-  const ready = useTestWindowReady();
-  if (!ready) return null;
-  return (
-    <Button className="md:hidden" onClick={() => openTestWindow()} size="sm" type="button" variant="outline">
-      {t("testCall.trigger")}
-    </Button>
-  );
-}
-
-/** The header's height on phones, which the title must scroll past before the bar shows it. */
-const HEADER_HEIGHT = 48;
 
 /**
  * The page title's text, and whether its heading has scrolled under the
  * header. Before a page mounts a heading, or where the browser can't tell,
  * the title counts as hidden, so the header shows it.
  */
-function usePageTitle(heading: HTMLHeadingElement | null | undefined, scrollContainer: HTMLElement | null | undefined) {
+function usePageTitle(heading: HTMLHeadingElement | null | undefined, scrollContainer: HTMLElement | null | undefined, header: HTMLElement | null) {
   const [title, setTitle] = useState("");
   const [headingVisible, setHeadingVisible] = useState(false);
   useEffect(() => {
@@ -37,11 +21,14 @@ function usePageTitle(heading: HTMLHeadingElement | null | undefined, scrollCont
     mutations.observe(heading, { characterData: true, childList: true, subtree: true });
     let intersections: IntersectionObserver | undefined;
     if (typeof IntersectionObserver !== "undefined") {
-      intersections = new IntersectionObserver(([entry]) => setHeadingVisible(Boolean(entry?.isIntersecting)), { root: scrollContainer ?? null, rootMargin: `-${HEADER_HEIGHT}px 0px 0px 0px` });
+      // The heading counts as gone once it has scrolled entirely under the header, which is only the safe area's
+      // height. A heading that merely starts near the top, as the Inbox's does, keeps the bar hidden.
+      const topInset = header?.offsetHeight ?? 0;
+      intersections = new IntersectionObserver(([entry]) => setHeadingVisible(Boolean(entry?.isIntersecting)), { root: scrollContainer ?? null, rootMargin: `-${topInset}px 0px 0px 0px` });
       intersections.observe(heading);
     }
     return () => { mutations.disconnect(); intersections?.disconnect(); };
-  }, [heading, scrollContainer]);
+  }, [heading, scrollContainer, header]);
   return { title, showTitle: Boolean(title) && !headingVisible };
 }
 
@@ -54,9 +41,11 @@ type SiteHeaderProps = React.HTMLAttributes<HTMLElement> & {
 };
 
 /**
- * The phone top bar: the page's title once its heading scrolls under the bar,
- * as iOS does with large titles, and the Test call button. Tablets and
- * desktops have the sidebar instead.
+ * The phone top bar. It takes no room of its own: it slides in over the page
+ * once the page's title heading scrolls under it, as iOS does with large
+ * titles, and then names the page beside the Test call button. Until then the
+ * page header holds the title and its actions. Tablets and desktops have the
+ * sidebar instead.
  */
 export function SiteHeader({
   className,
@@ -65,54 +54,42 @@ export function SiteHeader({
   titleHeading,
   ...props
 }: SiteHeaderProps) {
-  const [offset, setOffset] = useState(0);
   const [scrollContainer, setScrollContainer] = useState<HTMLElement | null>(null);
-  const { title, showTitle } = usePageTitle(titleHeading, scrollContainer);
+  const [header, setHeader] = useState<HTMLElement | null>(null);
+  const { title, showTitle } = usePageTitle(titleHeading, scrollContainer, header);
+  // On an agent's pages the bar tests that agent, as the page header's button does.
+  const agentId = useParams<{ agentId?: string }>()?.agentId;
 
   useEffect(() => {
-    const container = scrollContainerRef?.current ?? null;
-    setScrollContainer(container);
-    const onScroll = () => {
-      setOffset(
-        container
-          ? container.scrollTop
-          : document.body.scrollTop || document.documentElement.scrollTop,
-      );
-    };
-
-    onScroll();
-    if (container) {
-      container.addEventListener("scroll", onScroll, { passive: true });
-      return () => container.removeEventListener("scroll", onScroll);
-    }
-
-    document.addEventListener("scroll", onScroll, { passive: true });
-    return () => document.removeEventListener("scroll", onScroll);
+    setScrollContainer(scrollContainerRef?.current ?? null);
   }, [scrollContainerRef]);
 
   return (
     <header
       className={cn(
-        "z-40 pt-[env(safe-area-inset-top)] md:hidden",
+        // Only the safe area's height, so an unscrolled page starts with its own header.
+        "z-40 h-[env(safe-area-inset-top)] bg-background md:hidden",
         fixed && "header-fixed peer/header sticky top-0 w-[inherit]",
-        offset > 10 && fixed ? "shadow" : "shadow-none",
         className,
       )}
       data-slot="site-header"
+      ref={setHeader}
+      data-title-shown={showTitle ? "" : undefined}
       {...props}
     >
       <div
+        // Hidden from everyone while the page's own title shows: the page header has the same title and actions.
+        aria-hidden={showTitle ? undefined : true}
         className={cn(
-          "relative flex h-12 items-center gap-3 px-4",
-          offset > 10 &&
-            fixed &&
-            "after:absolute after:inset-0 after:-z-10 after:bg-background/20 after:backdrop-blur-lg",
+          "absolute inset-x-0 top-full flex h-12 items-center gap-3 border-b bg-background/80 px-4 shadow-sm backdrop-blur-lg transition-opacity duration-150 motion-reduce:transition-none",
+          showTitle ? "opacity-100" : "pointer-events-none invisible opacity-0",
         )}
+        data-slot="site-header-bar"
       >
         {/* The page's heading stays the one the screen reader reads. */}
-        <span aria-hidden="true" className={cn("min-w-0 flex-1 truncate type-title transition-opacity duration-150 motion-reduce:transition-none", showTitle ? "opacity-100" : "opacity-0")} data-page-title="">{title}</span>
+        <span aria-hidden="true" className="min-w-0 flex-1 truncate type-title" data-page-title="">{title}</span>
         <div className="ml-auto flex shrink-0 items-center gap-2">
-          <MobileTestCallButton />
+          <TestCallButton {...(agentId ? { agentId } : {})} />
         </div>
       </div>
     </header>

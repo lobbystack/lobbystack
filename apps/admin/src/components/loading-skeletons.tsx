@@ -141,74 +141,62 @@ export function AppointmentRowsSkeleton({ label, rows = 5 }: { label: string; ro
   );
 }
 
-/** The appointments calendar and the selected day's list while bookings load. */
-export function AppointmentsCalendarSkeleton({ label, tabs, weeks = 5 }: { label: string; tabs: { range: string[]; view: string[] }; weeks?: number }) {
+/**
+ * Stands in for the appointments calendar while it loads: its header, then a
+ * time grid with a column per day (Day and Week) or a month of days, with a
+ * few booking placeholders. The header holds its real labels, hidden.
+ */
+export function AppointmentsCalendarSkeleton({ label, labels, tabs, view, days }: { label: string; labels: { today: string; title: string }; tabs: { range: string[]; view: string[] }; view: "day" | "week" | "month"; days: number }) {
+  const hours = 9;
   return (
-    <>
-      <div className="flex flex-col gap-4">
-        <span className="sr-only" role="status">{label}</span>
-        <div className="flex flex-wrap items-center gap-2">
-          <Skeleton className="size-8" />
-          <Skeleton className="size-8" />
-          <Skeleton className="h-7 min-w-0 flex-1 basis-24 sm:max-w-56" />
-          <div className="ms-auto flex items-center gap-2">
-            <Skeleton className="h-8 w-16" />
-            <TabsListSkeleton labels={tabs.range} />
-            <TabsListSkeleton labels={tabs.view} />
-          </div>
+    <div aria-busy="true" className="flex min-w-0 flex-col gap-4">
+      <span className="sr-only" role="status">{label}</span>
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2">
+          <Skeleton className="size-8 rounded-full" />
+          <HiddenTextSkeleton className="shrink-0" skeletonClassName="h-8 rounded-full px-3 type-body">{labels.today}</HiddenTextSkeleton>
+          <Skeleton className="size-8 rounded-full" />
         </div>
-        <div className="rounded-xl border p-2 md:hidden">
-          <div className="grid grid-cols-7">
-            {Array.from({ length: 7 + weeks * 7 }).map((_, index) => (
-              <div className="flex h-12 items-center justify-center" key={index}>
-                <Skeleton className={index < 7 ? "h-3 w-3" : "size-5 rounded-full"} />
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="hidden overflow-x-auto rounded-xl border md:block">
-          <div className="grid min-w-[42rem] grid-cols-7">
-            {Array.from({ length: 7 }).map((_, index) => (
-              <div className="border-b px-3 py-2" key={index}>
-                <Skeleton className="h-3 w-8" />
-              </div>
-            ))}
-            {Array.from({ length: weeks * 7 }).map((_, index) => (
-              <div
-                className={`flex min-h-24 flex-col gap-1.5 p-2 ${index % 7 !== 6 ? "border-r" : ""} ${index >= (weeks - 1) * 7 ? "" : "border-b"}`}
-                key={index}
-              >
-                <Skeleton className="h-4 w-5" />
-              </div>
-            ))}
-          </div>
-        </div>
+        <div className="min-w-0 flex-1 basis-40"><HiddenTextSkeleton className="type-section-title">{labels.title}</HiddenTextSkeleton></div>
+        <TabsListSkeleton labels={tabs.range} />
+        <TabsListSkeleton labels={tabs.view} />
       </div>
-      <section className="flex flex-col gap-3">
-        <div className="px-1">
-          <Skeleton className="h-7 w-48" />
-        </div>
-        <Surface className="p-0">
-          <ul className="divide-y">
-            {Array.from({ length: 2 }).map((_, index) => (
-              <li className="p-1" key={index}>
-                <div className="flex items-center gap-4 px-3 py-3">
-                  <div className="flex w-20 shrink-0 flex-col gap-1">
-                    <Skeleton className="h-5 w-16" />
-                    <Skeleton className="h-4 w-14" />
-                  </div>
-                  <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <Skeleton className="h-5 w-32" />
-                    <Skeleton className="h-4 w-40" />
-                  </div>
-                  <Skeleton className="h-8 w-20 shrink-0" />
-                </div>
-              </li>
+      {view === "month" ? (
+        <div className="overflow-hidden rounded-xl border">
+          <div className="grid grid-cols-7 border-b">
+            {Array.from({ length: 7 }, (_, index) => <div className="px-2 py-2" key={index}><Skeleton className="h-3 w-8" /></div>)}
+          </div>
+          <div className="grid grid-cols-7">
+            {Array.from({ length: 42 }, (_, index) => (
+              <div className={cn("flex flex-col gap-1 p-1 md:h-32", index % 7 !== 6 && "border-r", index < 35 && "border-b")} key={index}>
+                <Skeleton className="size-7 self-center rounded-full md:self-start" />
+                {index % 3 === 1 ? <Skeleton className="hidden h-5 w-full md:block" /> : <div className="h-3 md:hidden" />}
+              </div>
             ))}
-          </ul>
-        </Surface>
-      </section>
-    </>
+          </div>
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-xl border">
+          <div className={cn(days > 1 && "min-w-[30rem]")}>
+            <div className="grid border-b" style={{ gridTemplateColumns: `3.5rem repeat(${days}, minmax(0, 1fr))` }}>
+              <div />
+              {Array.from({ length: days }, (_, index) => <div className="flex items-center justify-center gap-1.5 border-l py-2" key={index}><Skeleton className="h-3 w-8" /><Skeleton className="size-7 rounded-full" /></div>)}
+            </div>
+            <div className="grid" style={{ gridTemplateColumns: `3.5rem repeat(${days}, minmax(0, 1fr))` }}>
+              <div className="relative" style={{ height: hours * 48 }}>
+                {Array.from({ length: hours - 1 }, (_, index) => <Skeleton className="absolute right-2 h-3 w-8" key={index} style={{ top: (index + 1) * 48 - 6 }} />)}
+              </div>
+              {Array.from({ length: days }, (_, index) => (
+                <div className="relative border-l" key={index} style={{ height: hours * 48, backgroundImage: "linear-gradient(to bottom, var(--color-border) 1px, transparent 1px)", backgroundSize: "100% 48px" }}>
+                  {index % 2 === 0 ? <Skeleton className="absolute inset-x-0.5" style={{ top: 48 + (index % 3) * 48, height: 48 }} /> : null}
+                  {index % 3 === 1 ? <Skeleton className="absolute inset-x-0.5" style={{ top: 4 * 48, height: 72 }} /> : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -544,14 +532,15 @@ export function EmployeeRowsSkeleton({ rows = 10 }: { rows?: number }) {
   );
 }
 
-/** Placeholder rows for the rules table. The drag handle column is there only for people who can manage rules. */
-export function RuleRowsSkeleton({ handle = true, rows = 10 }: { handle?: boolean; rows?: number }) {
+/** Rules' rows: the handle, title, channel (holding `channelLabel`, the label most rules show, hidden), preview, status, date and menu. */
+export function RuleRowsSkeleton({ channelLabel, handle = true, rows = 10 }: { channelLabel: string; handle?: boolean; rows?: number }) {
   return (
     <>
       {Array.from({ length: rows }).map((_, index) => (
         <TableRow className="hover:bg-transparent" key={index}>
           {handle ? <TableCell className="pr-0"><Skeleton className="size-7 rounded-md" /></TableCell> : null}
           <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+          <TableCell><HiddenTextSkeleton className="type-body">{channelLabel}</HiddenTextSkeleton></TableCell>
           <TableCell className="max-w-0"><Skeleton className="h-4 w-3/4" /></TableCell>
           <TableCell><StatusSkeleton /></TableCell>
           <TableCell><Skeleton className="ms-auto h-4 w-32" /></TableCell>
@@ -563,23 +552,24 @@ export function RuleRowsSkeleton({ handle = true, rows = 10 }: { handle?: boolea
 }
 
 /** The rules table and its pagination, for the moment before the workspace is known and the real table can render. */
-export function RulesPageSkeleton({ headings, rowsPerPage }: { headings: [title: string, preview: string, status: string, added: string]; rowsPerPage: string }) {
+export function RulesPageSkeleton({ channelLabel, headings, rowsPerPage }: { channelLabel: string; headings: [title: string, channel: string, preview: string, status: string, added: string]; rowsPerPage: string }) {
   return (
     <>
       <TableCard>
         <Table className="min-w-[60rem] w-full table-fixed">
-          <colgroup><col className="w-12" /><col className="w-[25%]" /><col className="w-[56%]" /><col className="w-[19%]" /><col className="w-48" /><TableActionsColumn /></colgroup>
+          <colgroup><col className="w-12" /><col className="w-[25%]" /><col className="w-[20%]" /><col className="w-[37%]" /><col className="w-[18%]" /><col className="w-48" /><TableActionsColumn /></colgroup>
           <TableHeader>
             <TableRow>
               <TableHead />
               <TableHead>{headings[0]}</TableHead>
               <TableHead>{headings[1]}</TableHead>
               <TableHead>{headings[2]}</TableHead>
-              <TableHead className="text-right">{headings[3]}</TableHead>
+              <TableHead>{headings[3]}</TableHead>
+              <TableHead className="text-right">{headings[4]}</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
-          <TableBody aria-busy="true"><RuleRowsSkeleton /></TableBody>
+          <TableBody aria-busy="true"><RuleRowsSkeleton channelLabel={channelLabel} /></TableBody>
         </Table>
       </TableCard>
       <DataTablePaginationSkeleton rowsPerPage={rowsPerPage} />

@@ -23,9 +23,10 @@ const localDateToKey = (date: Date) => `${date.getFullYear()}-${String(date.getM
  * shows them. Days are "YYYY-MM-DD" keys in `timeZone`; days before `today`
  * can't be picked. The caller loads the times for `date` and keeps the pick.
  * `waiting` takes the times' place with a note while something the times
- * depend on, such as the service, is still missing.
+ * depend on, such as the service, is still missing. `stacked` puts the times
+ * under the calendar at every width, for a narrow panel.
  */
-export function OpeningsPicker({ date, today, timeZone, times, loading, failed, selected, onDateChange, onSelect, waiting }: {
+export function OpeningsPicker({ date, today, timeZone, times, loading, failed, selected, onDateChange, onSelect, waiting, stacked = false }: {
   date: string;
   today: string;
   timeZone: string;
@@ -36,11 +37,12 @@ export function OpeningsPicker({ date, today, timeZone, times, loading, failed, 
   onDateChange: (date: string) => void;
   onSelect: (time: string) => void;
   waiting?: string;
+  stacked?: boolean;
 }) {
   const { t, i18n } = useTranslation("common");
   const time = (value: string) => formatDateTime(value, i18n.language, { hour: "numeric", minute: "2-digit", timeZone });
   return (
-    <div className="grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)]">
+    <div className={cn("grid gap-4", !stacked && "sm:grid-cols-[auto_minmax(0,1fr)]")}>
       <section aria-label={t("appointments.openings.date")} className="flex justify-center overflow-hidden rounded-xl border">
         <Calendar
           className="bg-transparent"
@@ -58,7 +60,7 @@ export function OpeningsPicker({ date, today, timeZone, times, loading, failed, 
         {waiting ? <p className="type-body-muted">{waiting}</p>
           : loading ? <OpeningTimesSkeleton />
           : failed ? <p className="type-body-muted text-destructive">{t("appointments.openings.timesFailed")}</p>
-          : times.length ? <div className="grid max-h-72 grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-2">
+          : times.length ? <div className={cn("grid max-h-72 grid-cols-3 gap-2 overflow-y-auto", !stacked && "sm:grid-cols-2")}>
             {times.map((value) => <Button aria-pressed={selected === value} className={cn("tabular-nums", selected === value && "ring-2 ring-ring")} key={value} onClick={() => onSelect(value)} type="button" variant={selected === value ? "default" : "outline"}>{time(value)}</Button>)}
           </div>
           : <p className="type-body-muted">{t("appointments.openings.noTimes")}</p>}

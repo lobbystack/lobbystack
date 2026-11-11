@@ -7,6 +7,7 @@ import { DashboardShell } from "@/components/dashboard-shell";
 import type { AgentListItem, AgentsSeed } from "@/hooks/use-agents";
 import { readDashboardRequest } from "@/lib/dashboard-request";
 import { createDomainContext } from "@/lib/domain-context";
+import { loadSeenPageIntros } from "@/lib/page-intros";
 import { DASHBOARD_NAMESPACES } from "@/lib/route-namespaces";
 import "../globals.css";
 
@@ -30,13 +31,15 @@ async function loadAgents(request: { businessId: string | null; can: (capability
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const request = await readDashboardRequest();
   const { capabilities, locale, localeSource, partnerConsole, user } = request;
-  const [cookieStore, agents] = await Promise.all([cookies(), loadAgents(request)]);
+  const cookieStore = await cookies();
+  const [agents, seenPageIntros] = await Promise.all([loadAgents(request), loadSeenPageIntros(createDomainContext(), user.id, cookieStore)]);
   const sidebarOpen = cookieStore.get("sidebar_state")?.value !== "false";
   return (
     <RootDocument locale={locale} localeSource={localeSource} namespaces={DASHBOARD_NAMESPACES}>
       <DashboardShell
         agents={agents}
         capabilities={capabilities}
+        pageIntros={{ seen: seenPageIntros, businessId: request.businessId }}
         partnerConsole={partnerConsole}
         sidebarOpen={sidebarOpen}
         user={{ email: user.email, name: user.name }}

@@ -17,7 +17,7 @@ export function PhoneCountrySelect({ ariaLabel, className, countries, disabled =
   countries: PhoneCountryOption[];
   disabled?: boolean;
   onChange: (country: PhoneCountryOption["code"]) => void;
-  value: PhoneCountryOption["code"];
+  value: PhoneCountryOption["code"] | null;
 }) {
   const { t } = useTranslation("common");
   const selected = countries.find((option) => option.code === value) ?? null;

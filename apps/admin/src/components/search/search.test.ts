@@ -61,6 +61,12 @@ describe("search matches related words", () => {
     expect(found.every((entry) => !entry.href.endsWith("/handling"))).toBe(true);
   });
 
+  it.each(["instructions", "prompt", "script", "rules"])("%s opens the agent's Rules, which took in its Instructions", (query) => {
+    const found = hrefs(query, owner);
+    expect(found).toContain("/agents/a1/rules");
+    expect(found.some((href) => href.endsWith("/instructions"))).toBe(false);
+  });
+
   it("matches a word as it's typed", () => {
     expect(titles("bill")).toContain("Plan and billing");
     expect(titles("invo")).toContain("Plan and billing");

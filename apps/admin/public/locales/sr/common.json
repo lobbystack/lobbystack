@@ -100,14 +100,14 @@
     }
   },
   "numberTrial": {
-    "daysLeft_one": "{{number}} je Vaš još {{count}} dan. Izaberite paket da biste ga zadržali.",
-    "daysLeft_few": "{{number}} je Vaš još {{count}} dana. Izaberite paket da biste ga zadržali.",
-    "daysLeft_other": "{{number}} je Vaš još {{count}} dana. Izaberite paket da biste ga zadržali.",
     "outOfMinutes": "Potrošili ste minute. Pozivi sada idu na {{forwardTo}}.",
     "stillAvailable": "{{number}} je i dalje dostupan. Pretplatite se sada da biste ga vratili.",
-    "keepNumber": "Zadrži moj broj",
     "getReceptionistBack": "Vrati mog agenta",
-    "getNumberBack": "Vrati moj broj"
+    "getNumberBack": "Vrati moj broj",
+    "chip_one": "Besplatna proba · još {{count}} d",
+    "chip_few": "Besplatna proba · još {{count}} d",
+    "chip_other": "Besplatna proba · još {{count}} d",
+    "viewPlans": "Pogledajte pakete"
   },
   "testWindow": {
     "orCall": "Ili pozovite",
@@ -163,11 +163,16 @@
       "duration": "Trajanje",
       "phone": "Telefon",
       "email": "E-pošta",
-      "channel": "Zakazano putem"
+      "channel": "Zakazano putem",
+      "saveNotes": "Sačuvaj napomene",
+      "savingNotes": "Čuvanje…",
+      "notesSaved": "Napomene su sačuvane.",
+      "notesFailed": "Napomene nisu sačuvane."
     },
     "views": {
       "list": "Lista",
-      "calendar": "Kalendar"
+      "calendar": "Kalendar",
+      "label": "Prikaz"
     },
     "when": {
       "label": "Prikaz",
@@ -183,14 +188,65 @@
       "previous": "Prethodno",
       "next": "Sledeće",
       "today": "Danas",
+      "label": "Period",
+      "day": "Dan",
       "week": "Nedelja",
       "month": "Mesec",
       "count_one": "{{count}} termin",
       "count_few": "{{count}} termina",
       "count_other": "{{count}} termina",
       "more": "+{{count}} još",
-      "dayEmpty": "Nema termina za ovaj dan.",
-      "with": "Zaposleni: {{name}}"
+      "allDay": "Ceo dan",
+      "newAt": "Novi termin u {{time}}",
+      "block": "{{name}}, {{service}}, {{time}}",
+      "blockCancelled": "{{name}}, {{service}}, {{time}}, otkazano"
+    },
+    "timeOff": {
+      "action": "Odsustvo",
+      "title": "Dodaj odsustvo",
+      "editTitle": "Izmeni odsustvo",
+      "type": "Vrsta",
+      "business": "Ceo posao",
+      "employee": "Jedan zaposleni",
+      "employeeLabelField": "Zaposleni",
+      "employeePlaceholder": "Izaberite zaposlenog",
+      "noEmployees": "Još nema zaposlenih.",
+      "employeeRequired": "Izaberite zaposlenog.",
+      "name": "Naziv",
+      "namePlaceholder": "npr. Božić, Petak popodne",
+      "nameRequired": "Unesite naziv.",
+      "hours": "Sati",
+      "allDay": "Zatvoreno ceo dan",
+      "partDay": "Deo dana",
+      "startDate": "Datum početka",
+      "endDate": "Datum završetka",
+      "startTime": "Vreme početka",
+      "endTime": "Vreme završetka",
+      "endBeforeStart": "Izaberite kraj posle početka.",
+      "datesRequired": "Izaberite datum početka i završetka.",
+      "reason": "Razlog (nije obavezno)",
+      "save": "Sačuvaj",
+      "saving": "Čuvanje…",
+      "cancel": "Otkaži",
+      "delete": "Obriši",
+      "keep": "Zadrži",
+      "deleteTitle": "Obrisati odsustvo?",
+      "deleteDescription": "{{name}} nestaje iz kalendara i ti termini se ponovo mogu zakazati.",
+      "saved": "Odsustvo je sačuvano.",
+      "deleted": "Odsustvo je obrisano.",
+      "failed": "Odsustvo nije sačuvano.",
+      "overlap": "Ovo se preklapa sa drugim odsustvom.",
+      "invalid": "Proverite datume. Odsustvo ne može već biti prošlo niti se završiti za više od dve godine.",
+      "label": "Zatvoreno: {{name}}, {{time}}",
+      "employeeLabel": "{{employee}} odsutan: {{name}}, {{time}}",
+      "employeeTitle": "{{employee}}: {{name}}",
+      "picker": {
+        "hours": "Sati",
+        "minutes": "Minuti",
+        "period": "AM ili PM",
+        "hoursTitle": "HH",
+        "minutesTitle": "MM"
+      }
     },
     "chooseWorkspace": "Izaberite radni prostor da biste videli termine.",
     "time": "Vreme",
@@ -207,7 +263,8 @@
       "cancelled": "Otkazano",
       "completed": "Završeno",
       "no_show": "Nije se pojavio",
-      "pending": "Na čekanju"
+      "pending": "Na čekanju",
+      "canceled": "Otkazano"
     },
     "calendarStates": {
       "not_required": "Nije potrebno",
@@ -218,7 +275,7 @@
       "cancelled": "Otkazano"
     },
     "actions": "Radnje",
-      "rowActions": "Radnje za {{time}}",
+    "rowActions": "Radnje za {{time}}",
     "cancel": {
       "action": "Otkaži",
       "actionLabel": "Otkaži termin: {{time}}",
@@ -294,7 +351,15 @@
       "booking": "Zakazivanje...",
       "done": "Termin je zakazan",
       "failed": "Nismo uspeli da zakažemo termin. Pokušajte ponovo.",
-      "taken": "To vreme više nije slobodno. Izaberite drugo."
+      "taken": "To vreme više nije slobodno. Izaberite drugo.",
+      "duration": "Trajanje (minuti)",
+      "durationInvalid": "Unesite od {{min}} do {{max}} minuta.",
+      "notes": "Napomene",
+      "notesHint": "Vidi ih vaš agent",
+      "internalNotes": "Interne napomene",
+      "internalNotesHint": "Samo za osoblje",
+      "notOpen": "Ovaj termin nije otvoren. Izaberite drugi.",
+      "timeOff": "Ovaj termin nije dostupan: {{name}}."
     }
   },
   "abandonIntent": {
@@ -323,6 +388,6 @@
     "doneHint_other": "{{count}} stranica je spremno za pitanja.",
     "failedTitle": "Nismo uspeli da pročitamo sajt {{host}}",
     "failedHint": "Unesite podatke o firmi ručno ili ponovo pokrenite uvoz sa kontrolne table.",
-    "inlineRunning": "Čitanje sajta {{host}}. Pročitano stranica: {{count}}."
+    "inlineRunning": "Čitanje sajta {{host}}. Pročitano stranica: {{count}}"
   }
 }

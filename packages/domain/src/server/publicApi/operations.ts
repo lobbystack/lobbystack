@@ -18,6 +18,7 @@ import {
   keyHasScope,
   randomContactPasscode,
   RULES_MAX,
+  RULE_CONTENT_CALL_MAX_LENGTH,
   isApiKeyScope,
   normalizeAuthEmail,
   normalizeWidgetOrigin,
@@ -120,6 +121,7 @@ import { expireAbandonedNumberClaimsInTransaction, lockBusinessNumberClaims, num
 import { isSharedSmsSender, resolveSmsSender } from "../smsSender";
 import { loadBillingContext } from "../usage";
 import { defaultReceptionistProfile, saveReceptionistProfileInTransaction, type ReceptionistProfilePatch } from "../receptionistProfile";
+import { loadLegacyInstructions, withLegacyInstructions } from "../channelRules";
 import { listActiveAgentsInTransaction, pausedAgentIds } from "../agents";
 import { deleteAgentRuleInTransaction, insertAgentRuleInTransaction, listAgentRulesInTransaction, lockAgentRulesInTransaction, reorderAgentRulesInTransaction, updateAgentRuleInTransaction } from "../rules";
 import { insertWidgetKeyInTransaction, updateWidgetKeyInTransaction, type WidgetKeyPatch } from "../widgetKeys";
@@ -1178,6 +1180,11 @@ export async function updateNotificationPreferencesForApi(context: DomainContext
 
 // Rules the receptionist follows
 
+/** Calls read 4,000 characters of a rule for every channel and 8,000 of one kept to a channel, so the API takes no more. */
+function assertRuleLength(content: string, channel: string | null): void {
+  if (!channel && content.length > RULE_CONTENT_CALL_MAX_LENGTH) throw invalidRequest(`A rule for every channel holds up to ${RULE_CONTENT_CALL_MAX_LENGTH.toLocaleString("en")} characters.`, [{ path: "content", message: "Shorten it, or give the rule a channel." }]);
+}
+
 export async function listRulesForApi(context: DomainContext, caller: ApiCaller): Promise<ApiRule[]> {
   return await inBusiness(context, caller, async (tx) => (await listAgentRulesInTransaction(tx, { businessId: caller.businessId })).map(serializeRule));
 }
@@ -1192,7 +1199,8 @@ export async function createRuleForApi(context: DomainContext, caller: ApiCaller
     await lockAgentRulesInTransaction(tx, { businessId: caller.businessId });
     const count = (await listAgentRulesInTransaction(tx, { businessId: caller.businessId })).length;
     if (count >= RULES_MAX) throw conflict(`A business can have up to ${RULES_MAX} rules. Delete one first.`);
-    const rule = await insertAgentRuleInTransaction(tx, { businessId: caller.businessId, title: input.title, content: input.content, active: input.active });
+    assertRuleLength(input.content, input.channel ?? null);
+    const rule = await insertAgentRuleInTransaction(tx, { businessId: caller.businessId, title: input.title, content: input.content, active: input.active, channel: input.channel });
     await audit(tx, caller, { eventType: "api.rule.created", entityType: "agent_rule", entityId: rule.id });
     return serializeRule(rule);
   });
@@ -1208,8 +1216,10 @@ export async function updateRuleForApi(context: DomainContext, caller: ApiCaller
       ...(input.title !== undefined && input.title !== current.title ? { title: input.title } : {}),
       ...(input.content !== undefined && input.content !== current.content ? { content: input.content } : {}),
       ...(input.active !== undefined && input.active !== current.active ? { active: input.active } : {}),
+      ...(input.channel !== undefined && input.channel !== current.channel ? { channel: input.channel } : {}),
     };
     if (!Object.keys(changes).length) return serializeRule(current);
+    assertRuleLength(input.content ?? current.content, input.channel !== undefined ? input.channel : current.channel);
     const rule = await updateAgentRuleInTransaction(tx, { businessId: caller.businessId, ruleId, ...changes });
     if (!rule) throw notFound("Rule");
     await audit(tx, caller, { eventType: "api.rule.updated", entityType: "agent_rule", entityId: ruleId, payload: { fields: Object.keys(changes) } });
@@ -1281,8 +1291,10 @@ async function loadReceptionistState(tx: DatabaseTransaction, businessId: string
   if (!row) throw notFound("Business");
   const business = { ...row, locale: normalizeRuntimeLocale(row.defaultLocale) };
   const query = tx.select().from(agents).where(defaultAgentOf(businessId)).limit(1);
-  const [profile] = lock ? await query.for("update") : await query;
-  return { business, profile: profile ?? null, shown: profile ?? { ...defaultReceptionistProfile(business.name, business.locale), updatedAt: business.updatedAt } };
+  const [agentRow] = lock ? await query.for("update") : await query;
+  // The instruction fields read the agent's channel rules, not the deprecated columns.
+  const profile = agentRow ? await withLegacyInstructions(tx, agentRow) : null;
+  return { business, profile, shown: profile ?? { ...defaultReceptionistProfile(business.name, business.locale), updatedAt: business.updatedAt } };
 }
 
 // Agents. Read-only for now: the dashboard creates, archives and edits them.
@@ -1290,7 +1302,8 @@ async function loadReceptionistState(tx: DatabaseTransaction, businessId: string
 async function loadAgentsForApi(tx: DatabaseTransaction, businessId: string): Promise<ApiAgent[]> {
   const [active, entitlement] = await Promise.all([listActiveAgentsInTransaction(tx, businessId), loadEntitlement(tx, businessId)]);
   const paused = pausedAgentIds(entitlement, active);
-  return active.map((agent) => serializeAgent(agent, paused.has(agent.id)));
+  const instructions = await loadLegacyInstructions(tx, businessId, active.map((agent) => agent.id));
+  return active.map((agent) => serializeAgent({ ...agent, ...instructions.get(agent.id)! }, paused.has(agent.id)));
 }
 
 /** Active agents, the default first and then the oldest. */
@@ -1901,6 +1914,7 @@ export async function createAppointmentForApi(context: DomainContext, caller: Ap
     ...(input.contact_name ? { contactName: input.contact_name } : {}),
     ...(input.staff_id ? { preferredStaffId: input.staff_id } : {}),
     ...(input.sms_consent && prepared.consentCounts ? { smsConsent: "agreed" as const } : {}),
+    ...(input.notes ? { notes: input.notes } : {}),
   });
   if (!booked.ok) throw booked.reason === "unknown_service" ? inactiveService() : slotUnavailable(booked.reason);
   // Only a caller's own number or call finds an earlier booking, and the API sends neither.

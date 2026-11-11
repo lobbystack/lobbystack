@@ -1,6 +1,13 @@
 {
-  "accessibility": { "close": "Cerrar", "toggleSidebar": "Mostrar u ocultar la barra lateral", "skipToContent": "Ir al contenido principal", "clearSearch": "Borrar búsqueda" },
-  "errors": { "unexpected": "Algo salió mal. Inténtelo de nuevo." },
+  "accessibility": {
+    "close": "Cerrar",
+    "toggleSidebar": "Mostrar u ocultar la barra lateral",
+    "skipToContent": "Ir al contenido principal",
+    "clearSearch": "Borrar búsqueda"
+  },
+  "errors": {
+    "unexpected": "Algo salió mal. Inténtelo de nuevo."
+  },
   "loading": {
     "title": "Cargando...",
     "retry": "Reintentar la carga",
@@ -93,14 +100,14 @@
     }
   },
   "numberTrial": {
-    "daysLeft_one": "El {{number}} es suyo {{count}} día más. Elija un plan para conservarlo.",
-    "daysLeft_many": "El {{number}} es suyo {{count}} días más. Elija un plan para conservarlo.",
-    "daysLeft_other": "El {{number}} es suyo {{count}} días más. Elija un plan para conservarlo.",
     "outOfMinutes": "Se acabaron sus minutos. Las llamadas ahora van al {{forwardTo}}.",
     "stillAvailable": "El {{number}} sigue disponible. Suscríbase ahora para recuperarlo.",
-    "keepNumber": "Conservar mi número",
     "getReceptionistBack": "Recuperar a mi agente",
-    "getNumberBack": "Recuperar mi número"
+    "getNumberBack": "Recuperar mi número",
+    "chip_one": "Prueba gratuita · queda {{count}} d",
+    "chip_other": "Prueba gratuita · quedan {{count}} d",
+    "viewPlans": "Ver planes",
+    "chip_many": "Prueba gratuita · quedan {{count}} d"
   },
   "testWindow": {
     "orCall": "O llame al",
@@ -156,11 +163,16 @@
       "duration": "Duración",
       "phone": "Teléfono",
       "email": "Correo electrónico",
-      "channel": "Reservado por"
+      "channel": "Reservado por",
+      "saveNotes": "Guardar notas",
+      "savingNotes": "Guardando…",
+      "notesSaved": "Notas guardadas.",
+      "notesFailed": "No se pudieron guardar las notas."
     },
     "views": {
       "list": "Lista",
-      "calendar": "Calendario"
+      "calendar": "Calendario",
+      "label": "Vista"
     },
     "when": {
       "label": "Mostrar",
@@ -176,14 +188,65 @@
       "previous": "Anterior",
       "next": "Siguiente",
       "today": "Hoy",
+      "label": "Periodo",
+      "day": "Día",
       "week": "Semana",
       "month": "Mes",
       "count_one": "{{count}} cita",
       "count_many": "{{count}} citas",
       "count_other": "{{count}} citas",
       "more": "+{{count}} más",
-      "dayEmpty": "No hay citas este día.",
-      "with": "con {{name}}"
+      "allDay": "Todo el día",
+      "newAt": "Nueva cita a las {{time}}",
+      "block": "{{name}}, {{service}}, {{time}}",
+      "blockCancelled": "{{name}}, {{service}}, {{time}}, cancelada"
+    },
+    "timeOff": {
+      "action": "Ausencias",
+      "title": "Añadir ausencia",
+      "editTitle": "Editar ausencia",
+      "type": "Tipo",
+      "business": "Todo el negocio",
+      "employee": "Un empleado",
+      "employeeLabelField": "Empleado",
+      "employeePlaceholder": "Elija un empleado",
+      "noEmployees": "Aún no hay empleados.",
+      "employeeRequired": "Elija un empleado.",
+      "name": "Nombre",
+      "namePlaceholder": "p. ej. Navidad, Viernes por la tarde",
+      "nameRequired": "Introduzca un nombre.",
+      "hours": "Horas",
+      "allDay": "Cerrado todo el día",
+      "partDay": "Parte del día",
+      "startDate": "Fecha de inicio",
+      "endDate": "Fecha de fin",
+      "startTime": "Hora de inicio",
+      "endTime": "Hora de fin",
+      "endBeforeStart": "Elija un fin posterior al inicio.",
+      "datesRequired": "Elija una fecha de inicio y de fin.",
+      "reason": "Motivo (opcional)",
+      "save": "Guardar",
+      "saving": "Guardando…",
+      "cancel": "Cancelar",
+      "delete": "Eliminar",
+      "keep": "Conservar",
+      "deleteTitle": "¿Eliminar la ausencia?",
+      "deleteDescription": "{{name}} sale del calendario y esas horas vuelven a estar disponibles.",
+      "saved": "Ausencia guardada.",
+      "deleted": "Ausencia eliminada.",
+      "failed": "No se pudo guardar la ausencia.",
+      "overlap": "Se superpone con otra ausencia.",
+      "invalid": "Revise las fechas. Una ausencia no puede haber terminado ya ni acabar en más de dos años.",
+      "label": "Cerrado: {{name}}, {{time}}",
+      "employeeLabel": "{{employee}} ausente: {{name}}, {{time}}",
+      "employeeTitle": "{{employee}}: {{name}}",
+      "picker": {
+        "hours": "Horas",
+        "minutes": "Minutos",
+        "period": "AM o PM",
+        "hoursTitle": "HH",
+        "minutesTitle": "MM"
+      }
     },
     "chooseWorkspace": "Elija un espacio de trabajo para ver las citas.",
     "time": "Hora",
@@ -200,7 +263,8 @@
       "cancelled": "Cancelada",
       "completed": "Completada",
       "no_show": "No se presentó",
-      "pending": "Pendiente"
+      "pending": "Pendiente",
+      "canceled": "Cancelada"
     },
     "calendarStates": {
       "not_required": "No necesario",
@@ -211,7 +275,7 @@
       "cancelled": "Cancelado"
     },
     "actions": "Acciones",
-      "rowActions": "Acciones para {{time}}",
+    "rowActions": "Acciones para {{time}}",
     "cancel": {
       "action": "Cancelar",
       "actionLabel": "Cancelar la cita: {{time}}",
@@ -287,7 +351,15 @@
       "booking": "Reservando...",
       "done": "Cita reservada",
       "failed": "No pudimos reservar la cita. Inténtelo de nuevo.",
-      "taken": "Esa hora ya no está libre. Elija otra."
+      "taken": "Esa hora ya no está libre. Elija otra.",
+      "duration": "Duración (minutos)",
+      "durationInvalid": "Introduzca de {{min}} a {{max}} minutos.",
+      "notes": "Notas",
+      "notesHint": "Visibles para su agente",
+      "internalNotes": "Notas internas",
+      "internalNotesHint": "Solo el equipo",
+      "notOpen": "Este horario no está abierto. Elija otro.",
+      "timeOff": "Este horario no está disponible: {{name}}."
     }
   },
   "abandonIntent": {
@@ -316,6 +388,6 @@
     "doneHint_other": "{{count}} páginas están listas para responder preguntas.",
     "failedTitle": "No pudimos leer {{host}}",
     "failedHint": "Añada los datos de su negocio a mano o vuelva a intentar la importación desde su panel.",
-    "inlineRunning": "Leyendo {{host}}. Páginas leídas hasta ahora: {{count}}."
+    "inlineRunning": "Leyendo {{host}}. Páginas leídas hasta ahora: {{count}}"
   }
 }

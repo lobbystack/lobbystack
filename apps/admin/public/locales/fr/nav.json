@@ -48,8 +48,7 @@
       "security": "mot de passe, connexion, courriel, profil, sécurité",
       "phone": "renvoi, transfert d'appel, opérateur, numéro, ligne, appel, appels",
       "voice": "accent, son, ton, salutation, accueil, bonjour, nom",
-      "instructions": "consigne, consignes, script, comportement",
-      "rules": "règle, escalade, transfert",
+      "rules": "règle, règles, escalade, transfert, instruction, instructions, consigne, consignes, script, comportement",
       "handling": "transfert, transferts, personnel d'abord, réservation, modification de rendez-vous, annulation, report, numéro de transfert, le personnel répond d'abord",
       "business": "heures, horaires, ouverture, fermé, congé, fuseau horaire, langue, devise",
       "knowledge": "faq, réponse, réponses, site web, document, pdf, apprendre",
@@ -90,7 +89,6 @@
   },
   "agentPages": {
     "general": "Général",
-    "instructions": "Instructions",
     "rules": "Règles",
     "knowledge": "Connaissances spécifiques",
     "channels": "Canaux",

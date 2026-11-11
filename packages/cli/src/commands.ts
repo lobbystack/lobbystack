@@ -208,11 +208,11 @@ export const groups: Record<string, Group> = Object.fromEntries([
   }),
   group("staff", "The people who take appointments.", { list: { operation: "listStaff", columns: columns("id", "name", "active", "timezone", "service_ids") } }),
   group("rules", "The instructions the receptionist follows.", {
-    list: { operation: "listRules", columns: columns("id", "title", "active", "updated_at") },
+    list: { operation: "listRules", columns: columns("id", "title", "channel", "active", "updated_at") },
     add: { operation: "createRule", files: ["content"] },
     update: { operation: "updateRule", files: ["content"] },
     remove: { operation: "deleteRule" },
-    reorder: { operation: "reorderRules", args: ["...rule_ids"], columns: columns("id", "title", "active") },
+    reorder: { operation: "reorderRules", args: ["...rule_ids"], columns: columns("id", "title", "channel", "active") },
   }),
   group("knowledge", "What the receptionist answers from: text, FAQs, websites and documents.", {
     list: { operation: "listKnowledgeEntries", columns: columns("id", "type", "title", "active", "updated_at") },

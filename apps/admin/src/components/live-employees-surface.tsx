@@ -333,6 +333,8 @@ function EmployeeDialog({ businessId, employee, open, onOpenChange, services, to
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["employees", businessId] });
+      // The appointments calendar shows employees' time off.
+      void queryClient.invalidateQueries({ queryKey: ["time-off", businessId] });
       toast.success(t(employee ? "edit.updated" : "add.created"));
       onOpenChange(false);
     },
