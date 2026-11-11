@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { Check, ExternalLink } from "lucide-react";
@@ -55,7 +56,7 @@ export function PageIntro({ page }: { page: PageIntroId }) {
   );
 }
 
-/** The card itself: the page's picture, its title, three lines and the two ways out. */
+/** The card itself: the page's picture, its title, three or four lines and the two ways out. */
 export function PageIntroCard({ page, onDismiss }: { page: PageIntroId; onDismiss: (method: PageIntroDismissal) => void }) {
   const { t, i18n } = useTranslation("intros");
   // A partner's businesses never get the host's Help Center.
@@ -81,9 +82,9 @@ export function PageIntroCard({ page, onDismiss }: { page: PageIntroId; onDismis
           ))}
         </ul>
         <div className="flex flex-col gap-2 pt-1">
-          <Button autoFocus className="w-full" onClick={() => onDismiss("get_started")}><Check data-icon="inline-start" />{t("actions.getStarted")}</Button>
+          <Button className="w-full" onClick={() => onDismiss("get_started")}><Check data-icon="inline-start" />{t("actions.getStarted")}</Button>
           {guideHref ? (
-            <Button className="w-full" variant="ghost" render={<a href={guideHref} target="_blank" rel="noreferrer" />} nativeButton={false} role="link" onClick={() => onDismiss("guide")}>
+            <Button className="w-full" variant="ghost" render={<Link href={guideHref} rel="noreferrer" target="_blank" />} nativeButton={false} role="link" onClick={() => onDismiss("guide")}>
               {t("actions.readGuide")}<ExternalLink data-icon="inline-end" />
             </Button>
           ) : null}

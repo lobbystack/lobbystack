@@ -64,9 +64,6 @@
     "inbox": {
       "title": "Inbox",
       "all": "All",
-      "calls": "Calls",
-      "texts": "Texts",
-      "chats": "Chats",
       "reschedule": "Reschedule",
       "callback": "Callback",
       "cancellation": "Cancellation",
@@ -156,11 +153,9 @@
       "calls": "Calls",
       "today": "Today",
       "averageDuration": "Average duration",
-      "next": "Next at {{time}}",
       "chart": "Calls and messages",
       "messages": "Messages",
-      "range": "Last 30 days",
-      "change": "+{{value}}% from last period"
+      "range": "Last 30 days"
     }
   }
 }

@@ -57,7 +57,8 @@ describe("a page's intro card", () => {
     await renderPages(["inbox"]);
     const dialog = await screen.findByRole("dialog", { name: intros.pages.inbox.title });
     for (const line of [intros.pages.inbox.what, intros.pages.inbox.does, intros.pages.inbox.how]) expect(within(dialog).getByText(line)).toBeTruthy();
-    expect(within(dialog).getByRole("button", { name: intros.actions.getStarted })).toBeTruthy();
+    // Focus lands on Get started, so Enter closes the card.
+    await waitFor(() => expect(document.activeElement).toBe(within(dialog).getByRole("button", { name: intros.actions.getStarted })));
     expect(within(dialog).getByRole("link", { name: intros.actions.readGuide }).getAttribute("href")).toBe("https://docs.lobbystack.com/dashboard/inbox");
     // The picture is decoration, out of reach of the keyboard and screen readers.
     const picture = dialog.querySelector(".page-intro-scene")!;
@@ -166,7 +167,7 @@ describe("a page's intro card", () => {
     await renderPages([page]);
     const dialog = await screen.findByRole("dialog");
     const copy = intros.pages[page] as Record<string, string>;
-    expect(within(dialog).getByRole("heading", { name: copy.title })).toBeTruthy();
+    expect(within(dialog).getByRole("heading", { name: copy.title! })).toBeTruthy();
     const lines = PAGE_INTROS[page].lines;
     expect(lines.length).toBeGreaterThanOrEqual(3);
     expect(lines.length).toBeLessThanOrEqual(4);

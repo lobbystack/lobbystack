@@ -4,7 +4,8 @@ const listSeenPageIntros = vi.hoisted(() => vi.fn(async (): Promise<string[]> =>
 vi.mock("@lobbystack/domain", () => ({ listSeenPageIntros }));
 
 import type { DomainContext } from "@lobbystack/domain";
-import { loadSeenPageIntros, PAGE_INTROS_E2E_COOKIE } from "./page-intros";
+import { PAGE_INTROS_E2E_COOKIE } from "@lobbystack/shared";
+import { loadSeenPageIntros } from "./page-intros";
 
 const domain = {} as DomainContext;
 const cookies = (value?: string) => ({ get: (name: string) => (name === PAGE_INTROS_E2E_COOKIE && value ? { value } : undefined) });

@@ -1,13 +1,5 @@
 import { listSeenPageIntros, type DomainContext } from "@lobbystack/domain";
-import type { PageIntroKey } from "@lobbystack/shared";
-
-/**
- * The browser end-to-end server sets PAGE_INTROS_E2E_OPT_IN, so the specs
- * that don't test the intro cards never wait behind one. A spec that does
- * sets this cookie. Deployments leave the variable unset and show the cards
- * to everyone.
- */
-export const PAGE_INTROS_E2E_COOKIE = "lobbystack_e2e_page_intros";
+import { PAGE_INTROS_E2E_COOKIE, type PageIntroKey } from "@lobbystack/shared";
 
 /**
  * The intro cards the signed-in person has closed, which the dashboard layout

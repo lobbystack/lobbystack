@@ -64,9 +64,6 @@
     "inbox": {
       "title": "Prijemno sanduče",
       "all": "Sve",
-      "calls": "Pozivi",
-      "texts": "Poruke",
-      "chats": "Četovi",
       "reschedule": "Pomeranje termina",
       "callback": "Povratni poziv",
       "cancellation": "Otkazivanje",
@@ -158,11 +155,9 @@
       "calls": "Pozivi",
       "today": "Danas",
       "averageDuration": "Prosečno trajanje",
-      "next": "Sledeći u {{time}}",
       "chart": "Pozivi i poruke",
       "messages": "Poruke",
-      "range": "Poslednjih 30 dana",
-      "change": "+{{value}}% u odnosu na prethodni period"
+      "range": "Poslednjih 30 dana"
     }
   }
 }

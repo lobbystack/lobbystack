@@ -22,10 +22,11 @@ import { cn } from "@/lib/utils";
 type Tone = "blue" | "green" | "amber" | "rose";
 
 /** The gradient backdrop and the scaled page on it. */
-function IntroScene({ tone, children }: { tone: Tone; children: ReactNode }) {
+function IntroScene({ tone, compact = false, children }: { tone: Tone; compact?: boolean; children: ReactNode }) {
   return (
     <div aria-hidden="true" inert className="page-intro-scene relative h-52 shrink-0 overflow-hidden border-b sm:h-56" data-tone={tone}>
-      <div className="pointer-events-none absolute top-7 left-1/2 w-[600px] origin-top -translate-x-1/2 scale-[0.56] select-none sm:top-8 sm:scale-[0.72]">{children}</div>
+      {/* A compact scene draws a taller page smaller, so what matters on it stays above the card's edge. */}
+      <div className={cn("pointer-events-none absolute top-7 left-1/2 w-[600px] origin-top -translate-x-1/2 select-none sm:top-8", compact ? "scale-[0.5] sm:scale-[0.62]" : "scale-[0.56] sm:scale-[0.72]")}>{children}</div>
     </div>
   );
 }
@@ -79,8 +80,9 @@ export function InboxIllustration() {
     <IntroScene tone="blue">
       <MiniPage title={t("sample.inbox.title")}>
         <div className="flex gap-2">
-          {(["all", "calls", "texts", "chats"] as const).map((filter, index) => (
-            <Badge className="h-7 px-3" key={filter} variant={index === 0 ? "default" : "outline"}>{t(`sample.inbox.${filter}`)}</Badge>
+          {/* The Inbox's own channel names, so the filters read as they do on the page. */}
+          {[t("sample.inbox.all"), t("common:channels.phoneCall"), t("common:channels.webChat"), t("common:channels.sms")].map((filter, index) => (
+            <Badge className="h-7 px-3" key={filter} variant={index === 0 ? "default" : "outline"}>{filter}</Badge>
           ))}
         </div>
         <div className="flex flex-col divide-y rounded-xl border">
@@ -244,7 +246,7 @@ export function KnowledgeIllustration() {
     { icon: CircleHelp, label: t("sample.knowledge.faqs"), detail: t("sample.knowledge.questions", { count: 12 }) },
   ];
   return (
-    <IntroScene tone="green">
+    <IntroScene compact tone="green">
       <MiniPage title={t("sample.knowledge.title")} action={t("sample.knowledge.add")}>
         <div className="grid grid-cols-3 gap-3">
           {sources.map((source) => (
@@ -283,24 +285,22 @@ function linePath(values: number[], width: number, height: number): string {
 
 export function AnalyticsIllustration() {
   const { t } = useTranslation("intros");
-  const { time, day } = useFormatters();
   // Thirty made-up days: calls climb through the month, messages follow lower down.
   const calls = [12, 14, 11, 16, 18, 15, 19, 21, 18, 22, 24, 20, 23, 26, 25, 28, 27, 24, 29, 31, 28, 32, 34, 30, 33, 36, 35, 38, 37, 40];
   const messages = calls.map((value, index) => Math.round(value * 0.55 + (index % 4) * 1.5));
   const tiles = [
-    { title: t("sample.analytics.calls"), value: "742", meta: t("sample.analytics.change", { value: 18 }) },
-    { title: t("sample.analytics.today"), value: "6", meta: t("sample.analytics.next", { time: time(day(0, 14, 30)) }) },
-    { title: t("sample.analytics.averageDuration"), value: "2:48", meta: t("sample.analytics.change", { value: 4 }) },
+    { title: t("sample.analytics.calls"), value: "742" },
+    { title: t("sample.analytics.today"), value: "6" },
+    { title: t("sample.analytics.averageDuration"), value: "2:48" },
   ];
   return (
-    <IntroScene tone="rose">
+    <IntroScene compact tone="rose">
       <MiniPage title={t("sample.analytics.title")}>
         <Surface className="grid grid-cols-3">
           {tiles.map((tile, index) => (
             <section className={cn("flex flex-col gap-2 p-4", index > 0 && "border-l")} key={tile.title}>
               <span className="type-card-title">{tile.title}</span>
               <span className="type-metric-sm">{tile.value}</span>
-              <span className="truncate type-meta">{tile.meta}</span>
             </section>
           ))}
         </Surface>

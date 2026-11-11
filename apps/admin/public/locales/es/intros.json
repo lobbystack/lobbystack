@@ -64,9 +64,6 @@
     "inbox": {
       "title": "Bandeja de entrada",
       "all": "Todo",
-      "calls": "Llamadas",
-      "texts": "Mensajes",
-      "chats": "Chats",
       "reschedule": "Cambio de cita",
       "callback": "Devolver llamada",
       "cancellation": "Cancelación",
@@ -158,11 +155,9 @@
       "calls": "Llamadas",
       "today": "Hoy",
       "averageDuration": "Duración media",
-      "next": "Próxima a las {{time}}",
       "chart": "Llamadas y mensajes",
       "messages": "Mensajes",
-      "range": "Últimos 30 días",
-      "change": "+{{value}} % respecto al periodo anterior"
+      "range": "Últimos 30 días"
     }
   }
 }

@@ -64,9 +64,6 @@
     "inbox": {
       "title": "Boîte de réception",
       "all": "Tout",
-      "calls": "Appels",
-      "texts": "SMS",
-      "chats": "Chats",
       "reschedule": "Report",
       "callback": "Rappel",
       "cancellation": "Annulation",
@@ -158,11 +155,9 @@
       "calls": "Appels",
       "today": "Aujourd'hui",
       "averageDuration": "Durée moyenne",
-      "next": "Prochain à {{time}}",
       "chart": "Appels et messages",
       "messages": "Messages",
-      "range": "30 derniers jours",
-      "change": "+{{value}} % par rapport à la période précédente"
+      "range": "30 derniers jours"
     }
   }
 }
