@@ -212,6 +212,10 @@ export const SCHEMA_MIGRATIONS = [
   "0207_required_number.sql",
   "0208_agent_knowledge.sql",
   "0209_business_notifications.sql",
+  "0210_knowledge_documents_agent_index.sql",
+  "0211_knowledge_documents_website_index.sql",
+  "0212_knowledge_snippets_agent_index.sql",
+  "0213_validate_agent_knowledge.sql",
 ] as const;
 
 const CONCURRENT_INDEX_DIRECTIVE = /^-- lobbystack:concurrent-index ([a-z][a-z0-9_]*)$/m;

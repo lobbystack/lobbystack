@@ -31,19 +31,19 @@ ALTER TABLE public.knowledge_documents
 ALTER TABLE public.knowledge_snippets
   ADD COLUMN IF NOT EXISTS agent_id uuid;
 
+-- The foreign keys go on NOT VALID, so adding them reads no existing row and
+-- holds its locks only for a moment; they still check every write from now
+-- on. 0213 validates them under a lock that lets writes through. The indexes
+-- on these tables, which can be large, build concurrently in 0210 to 0212.
 ALTER TABLE public.knowledge_documents
   DROP CONSTRAINT IF EXISTS knowledge_documents_agent_fk,
-  ADD CONSTRAINT knowledge_documents_agent_fk FOREIGN KEY (business_id, agent_id) REFERENCES public.agents (business_id, id) DEFERRABLE INITIALLY DEFERRED,
+  ADD CONSTRAINT knowledge_documents_agent_fk FOREIGN KEY (business_id, agent_id) REFERENCES public.agents (business_id, id) DEFERRABLE INITIALLY DEFERRED NOT VALID,
   DROP CONSTRAINT IF EXISTS knowledge_documents_website_document_fk,
-  ADD CONSTRAINT knowledge_documents_website_document_fk FOREIGN KEY (website_document_id) REFERENCES public.knowledge_documents (id) ON DELETE SET NULL;
+  ADD CONSTRAINT knowledge_documents_website_document_fk FOREIGN KEY (website_document_id) REFERENCES public.knowledge_documents (id) ON DELETE SET NULL NOT VALID;
 
 ALTER TABLE public.knowledge_snippets
   DROP CONSTRAINT IF EXISTS knowledge_snippets_agent_fk,
-  ADD CONSTRAINT knowledge_snippets_agent_fk FOREIGN KEY (business_id, agent_id) REFERENCES public.agents (business_id, id) DEFERRABLE INITIALLY DEFERRED;
-
-CREATE INDEX IF NOT EXISTS knowledge_documents_business_agent_idx ON public.knowledge_documents (business_id, agent_id);
-CREATE INDEX IF NOT EXISTS knowledge_documents_website_document_idx ON public.knowledge_documents (website_document_id) WHERE website_document_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS knowledge_snippets_business_agent_idx ON public.knowledge_snippets (business_id, agent_id);
+  ADD CONSTRAINT knowledge_snippets_agent_fk FOREIGN KEY (business_id, agent_id) REFERENCES public.agents (business_id, id) DEFERRABLE INITIALLY DEFERRED NOT VALID;
 
 -- Links each crawled page to the oldest website import on its host, the way
 -- deleteWebsiteKnowledge groups pages today. Every row is shared before this
