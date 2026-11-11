@@ -28,12 +28,17 @@ function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) 
   return <DialogPrimitive.Backdrop data-slot="dialog-overlay" className={cn("fixed inset-0 z-50 bg-black/80 duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0", className)} {...props} />
 }
 
-function DialogContent({ className, children, overlayClassName, showCloseButton = true, ...props }: DialogPrimitive.Popup.Props & { showCloseButton?: boolean; overlayClassName?: string }) {
+/**
+ * Polar's widths: the default is Orbit's Modal, the full width of a phone or
+ * tablet and 800px from lg; `sm` is its plain dialog's 512px, for a short
+ * question or a single field.
+ */
+function DialogContent({ className, children, overlayClassName, showCloseButton = true, size = "default", ...props }: DialogPrimitive.Popup.Props & { showCloseButton?: boolean; overlayClassName?: string; size?: "default" | "sm" }) {
   const { t } = useTranslation("common")
   return (
     <DialogPortal>
       <DialogOverlay className={overlayClassName} />
-      <DialogPrimitive.Popup data-slot="dialog-content" className={cn("fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 rounded-3xl bg-popover p-6 shadow-lg text-sm text-popover-foreground ring-1 ring-foreground/5 duration-100 outline-none sm:max-w-xl data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95", className)} {...props}>
+      <DialogPrimitive.Popup data-size={size} data-slot="dialog-content" className={cn("fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 rounded-3xl bg-popover p-6 shadow-lg text-sm text-popover-foreground ring-1 ring-foreground/5 duration-100 outline-none data-[size=default]:lg:max-w-[800px] data-[size=sm]:sm:max-w-lg data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95", className)} {...props}>
         {children}
         {showCloseButton ? <DialogPrimitive.Close data-slot="dialog-close" render={<Button className="absolute top-4 right-4" size="icon-sm" variant="ghost" />}><XIcon /><span className="sr-only">{t("accessibility.close")}</span></DialogPrimitive.Close> : null}
       </DialogPrimitive.Popup>

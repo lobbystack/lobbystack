@@ -41,8 +41,9 @@ export function OpeningsPicker({ date, today, timeZone, times, loading, failed, 
   const time = (value: string) => formatDateTime(value, i18n.language, { hour: "numeric", minute: "2-digit", timeZone });
   return (
     <div className="grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)]">
-      <section aria-label={t("appointments.openings.date")} className="flex justify-center rounded-xl border">
+      <section aria-label={t("appointments.openings.date")} className="flex justify-center overflow-hidden rounded-xl border">
         <Calendar
+          className="bg-transparent"
           defaultMonth={keyToLocalDate(date)}
           disabled={{ before: keyToLocalDate(today) }}
           locale={DAY_PICKER_LOCALES[i18n.language as keyof typeof DAY_PICKER_LOCALES] ?? enUS}

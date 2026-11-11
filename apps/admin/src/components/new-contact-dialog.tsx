@@ -84,7 +84,7 @@ export function NewContactDialog({ businessId, onOpenChange }: { businessId: str
   const emailError = problem === "invalidEmail";
   return (
     <Dialog onOpenChange={(next) => { if (!save.isPending) onOpenChange(next); }} open>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent>
         <form className="grid gap-6" noValidate onSubmit={submit}>
           <DialogHeader>
             <DialogTitle>{t("create.title")}</DialogTitle>

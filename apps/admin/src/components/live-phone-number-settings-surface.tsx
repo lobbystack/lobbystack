@@ -238,7 +238,7 @@ export function LivePhoneNumberSettingsSurface({ agentId }: { agentId?: string }
                           : "phoneNumber.actions.getNumber",
                       )}
                     </DialogTrigger>
-                    <DialogContent className="max-w-3xl">
+                    <DialogContent>
                       <DialogHeader>
                         <DialogTitle>
                           {t(

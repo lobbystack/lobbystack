@@ -142,7 +142,7 @@ function NewAppointmentDialog({ businessId, timeZone: fallbackTimeZone, onOpenCh
 
   return (
     <Dialog onOpenChange={(next) => { if (!book.isPending) onOpenChange(next); }} open>
-      <DialogContent className="max-h-[calc(100svh-2rem)] grid-rows-[auto_minmax(0,1fr)] sm:max-w-xl">
+      <DialogContent className="max-h-[calc(100svh-2rem)] grid-rows-[auto_minmax(0,1fr)]">
         <DialogHeader>
           <DialogTitle>{t("appointments.create.title")}</DialogTitle>
         </DialogHeader>
@@ -191,7 +191,7 @@ function NewAppointmentDialog({ businessId, timeZone: fallbackTimeZone, onOpenCh
                 </Combobox>
                 {contactMissing ? <FieldError id={`${contactId}-error`}>{t("appointments.create.contactRequired")}</FieldError> : null}
               </Field>}
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4">
                 <Field data-invalid={serviceMissing || undefined}>
                   <FieldLabel htmlFor={serviceId}>{t("appointments.create.service")}</FieldLabel>
                   {catalog.isLoading ? <FieldControlSkeleton /> : catalog.isError ? <p className="type-body-muted text-destructive">{t("appointments.create.servicesFailed")}</p> : services.length ? <Select items={services.map((option) => ({ value: option.id, label: option.name }))} onValueChange={(value) => { setService(value as string | null); setStaff(ANYONE); setChosen(null); }} value={service}>

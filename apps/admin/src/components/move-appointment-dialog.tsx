@@ -103,7 +103,7 @@ function MoveAppointmentDialog({ appointment, requested: requestedTime, onOpenCh
 
   return (
     <Dialog onOpenChange={(next) => { if (!move.isPending) onOpenChange(next); }} open>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{t("appointments.move.title")}</DialogTitle>
           <DialogDescription className="ph-mask">{t("appointments.move.description", { appointment: appointmentSummary(appointment, i18n.language, t) })}</DialogDescription>

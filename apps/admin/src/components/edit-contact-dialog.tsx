@@ -61,7 +61,7 @@ export function EditContactDialog({ businessId, contact, onOpenChange }: { busin
 
   return (
     <Dialog onOpenChange={(open) => { if (!save.isPending) onOpenChange(open); }} open={contact !== null}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent>
         <form className="grid gap-6" noValidate onSubmit={submit}>
           <DialogHeader>
             <DialogTitle>{t("edit.title")}</DialogTitle>

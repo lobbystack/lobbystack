@@ -72,7 +72,7 @@ export function DashboardFeedbackDialog({ businessId, onOpenChange, open }: Feed
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{t("feedback.title")}</DialogTitle>
           <DialogDescription>{t("feedback.description")}</DialogDescription>
