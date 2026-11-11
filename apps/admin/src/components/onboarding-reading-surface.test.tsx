@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -32,12 +31,29 @@ describe("the wait after the website step", () => {
     expect(screen.queryByText("slides")).toBeNull();
   });
 
-  it("shows only while the import runs, and always lets the operator continue", async () => {
+  it("shows while the import runs, with no way to skip it", async () => {
     setup(() => [{ id: "document", websiteImport: running }]);
     await screen.findByText("slides");
     expect(screen.getByText("reading.status")).toBeTruthy();
+    expect(screen.queryByRole("button")).toBeNull();
     expect(push).not.toHaveBeenCalled();
-    await userEvent.click(screen.getByRole("button", { name: "reading.skip" }));
+  });
+
+  it("moves on when the submitted import fails", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let answer: unknown[] = [{ id: "document", websiteImport: running }];
+    setup(() => answer, "document");
+    await screen.findByText("reading.status");
+    answer = [{ id: "document", websiteImport: { ...running, status: "failed" } }];
+    await act(() => vi.advanceTimersByTimeAsync(2_000));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/number"));
+  });
+
+  it("moves on when the knowledge check fails", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, websiteUrl }] });
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ error: "down" }, { status: 500 })));
+    render(<QueryClientProvider client={client}><OnboardingReadingSurface documentId="document" /></QueryClientProvider>);
     await waitFor(() => expect(push).toHaveBeenCalledWith("/onboarding/number"));
   });
 

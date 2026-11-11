@@ -7,7 +7,6 @@ import { resolveOnboardingRoute, stageAfterWebsite } from "@lobbystack/shared";
 
 import { ReadingStatusSkeleton } from "@/components/loading-skeletons";
 import { ImportWaitSlides, useImportWait } from "@/components/onboarding-import-wait";
-import { Button } from "@/components/ui/button";
 import { currentWebsiteImport, isWebsiteImportRunning, websiteImportHost, websiteImportPercent, type WebsiteImportSummary } from "@/components/website-import-progress";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { requestJson } from "@/lib/request-json";
@@ -51,7 +50,7 @@ export function OnboardingReadingSurface({ documentId }: { documentId?: string |
   // so the wait holds until the worker's first progress or the time limit.
   const submittedImport = documentId && documents.isSuccess ? submitted?.websiteImport ?? { status: "queued", websiteUrl: business?.websiteUrl ?? "", importedCount: 0, indexedCount: 0 } : null;
   const websiteImport = documentId ? submittedImport : currentWebsiteImport(documents.data?.documents, business?.websiteUrl);
-  const { phase, stopWaiting } = useImportWait(websiteImport, documents.isSuccess || documents.isError, Boolean(documentId));
+  const { phase } = useImportWait(websiteImport, documents.isSuccess || documents.isError, Boolean(documentId));
   const over = phase === "ready" || phase === "waited";
   useEffect(() => { if (over) navigate(nextStep); }, [navigate, nextStep, over]);
 
@@ -59,12 +58,7 @@ export function OnboardingReadingSurface({ documentId }: { documentId?: string |
   const status = documentId && documents.isPending
     ? <ReadingStatusSkeleton label={t("reading.status", { host: websiteImportHost(business?.websiteUrl ?? ""), count: 0 })} />
     : websiteImport && (!documentId || submitted?.websiteImport) ? <ReadingStatus job={websiteImport} /> : null;
-  return (
-    <div className="flex flex-col gap-4">
-      <ImportWaitSlides status={status} />
-      <Button className="w-full" onClick={stopWaiting} type="button" variant="ghost">{t("reading.skip")}</Button>
-    </div>
-  );
+  return <ImportWaitSlides status={status} />;
 }
 
 /** The site being read and how many pages are in, as a line and a bar under the slide. */

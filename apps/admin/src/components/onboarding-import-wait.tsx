@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -40,12 +40,11 @@ export function useImportWait(job: WebsiteImportSummary | null, settled: boolean
   const running = isWebsiteImportRunning(job);
   const [phase, setPhase] = useState<ImportWaitPhase>(() => justSubmitted && !settled ? "waiting" : nextPhase("checking", settled, running, justSubmitted));
   useEffect(() => { setPhase((current) => nextPhase(current, settled, running, justSubmitted)); }, [justSubmitted, settled, running]);
-  const stopWaiting = useCallback(() => setPhase(stop), []);
   useEffect(() => {
-    const limit = setTimeout(stopWaiting, IMPORT_WAIT_LIMIT_MS);
+    const limit = setTimeout(() => setPhase(stop), IMPORT_WAIT_LIMIT_MS);
     return () => clearTimeout(limit);
-  }, [stopWaiting]);
-  return { phase, stopWaiting };
+  }, []);
+  return { phase };
 }
 
 function prefersReducedMotion(): boolean {

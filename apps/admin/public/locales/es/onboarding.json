@@ -97,7 +97,6 @@
     "status_one": "Leyendo {{host}}: {{count}} página hasta ahora",
     "status_many": "Leyendo {{host}}: {{count}} páginas hasta ahora",
     "status_other": "Leyendo {{host}}: {{count}} páginas hasta ahora",
-    "skip": "Omitir la espera",
     "previous": "Anterior",
     "next": "Siguiente",
     "slides": {
