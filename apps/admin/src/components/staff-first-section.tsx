@@ -147,7 +147,8 @@ export function StaffFirstSection({ businessId, block, canManage, defaultLocale,
           <ItemContent>
             <ItemTitle id={titleId}>{t("agent:staffFirst.mode.label")}</ItemTitle>
             {isLoading || !profile ? (
-              <ItemDescription aria-hidden="true"><Skeleton className="inline-block h-4 w-40 max-w-full align-middle" /></ItemDescription>
+              // A div in the description's type, not the description itself: a placeholder is a div, which can't sit in a <p>.
+              <div aria-hidden="true" className="type-body-muted" data-slot="staff-first-state-skeleton"><Skeleton className="h-[1lh] w-40 max-w-full" /></div>
             ) : (
               <>
                 {/* Off while blocked says why instead; a business that lost access still sees what's on. */}

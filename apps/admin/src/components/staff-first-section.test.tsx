@@ -45,6 +45,8 @@ describe("StaffFirstSection", () => {
     const { container } = section({ isLoading: true, profile: undefined });
     expect(screen.queryByRole("button")).toBeNull();
     expect(container.querySelectorAll("[data-slot='skeleton']").length).toBe(2);
+    // A placeholder is a <div>, which can't sit inside a <p> without breaking hydration.
+    expect(container.querySelectorAll("p div, [data-slot='item-description'] div")).toHaveLength(0);
   });
 
   it("says when this deployment isn't set up for it", () => {
