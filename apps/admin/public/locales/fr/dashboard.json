@@ -312,6 +312,8 @@
       "testCall": "Lancer un appel",
       "phoneNumber": "Choisir un numéro",
       "callNumber": "Appeler le {{number}}",
+      "copyNumber": "Copier le numéro",
+      "numberCopied": "Copié",
       "forwardCalls": "Configurer le transfert",
       "choosePlan": "Choisir un forfait"
     },

@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ChevronRight } from "lucide-react";
+import { Check, ChevronRight, Copy } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { useBusinessCan } from "@/components/business-capabilities-provider";
 import { CallForwardingDialog, ForwardingGuide } from "@/components/call-forwarding-dialog";
+import { useCopiedField } from "@/components/detail-fields";
 import { phoneNumberChooserText } from "@/components/live-phone-number-settings-surface";
 import { PhoneNumberChooser, phoneNumberChooserApi } from "@/components/phone-number-chooser";
 import { useTelemetry } from "@/components/product-analytics";
@@ -27,6 +28,7 @@ import { formatDateTime } from "@/lib/locale";
 import type { BillingUsageViewModel, PhoneNumberViewModel } from "@/lib/page-view-models";
 import { formatPhoneNumberDisplay, inferPhoneCountry } from "@/lib/phone";
 import { requestJson } from "@/lib/request-json";
+import { cn } from "@/lib/utils";
 import { isSetupStepDone, numberPath, setupStepOrder, type NumberPath, type SetupGuide, type SetupStep, type SetupStepId } from "@/lib/setup-guide";
 import { openTestWindow, useTestWindowReady } from "@/lib/test-window";
 import { useCallSettleRefetch } from "@/lib/use-call-settle-refetch";
@@ -184,7 +186,7 @@ function NumberListStep({ businessId, guide, skip, step, upgrade }: { businessId
   if (!number) return <><StepDescription>{t("setupGuide.stepDescriptions.numberLost")}</StepDescription><StepActions primary={<Button onClick={upgrade} type="button">{t("setupGuide.stepActions.choosePlan")}</Button>} skip={skip} /></>;
   const display = formatPhoneNumberDisplay(number.e164, i18n.language);
   if (step.id === "callNumber") {
-    return <><StepDescription>{t("setupGuide.stepDescriptions.testCall")}</StepDescription><StepActions primary={<a className={buttonVariants()} href={`tel:${number.e164}`}>{t("setupGuide.stepActions.callNumber", { number: display })}</a>} skip={skip} /></>;
+    return <><StepDescription>{t("setupGuide.stepDescriptions.testCall")}</StepDescription><StepActions primary={<CallNumberAction display={display} e164={number.e164} />} skip={skip} /></>;
   }
   if (done) {
     const from = guide.forwarding?.forwardedFrom;
@@ -196,6 +198,30 @@ function NumberListStep({ businessId, guide, skip, step, upgrade }: { businessId
       <StepActions primary={<Button onClick={() => setForwardingOpen(true)} type="button">{t("setupGuide.stepActions.forwardCalls")}</Button>} skip={skip} />
       <CallForwardingDialog confirming={confirm.isPending} e164={number.e164} onConfirm={() => confirm.mutate()} onOpenChange={setForwardingOpen} open={forwardingOpen} />
     </>
+  );
+}
+
+/**
+ * A phone dials the number from the link. A desktop browser usually can't, so
+ * there the owner reads or copies the number and calls it from their phone.
+ * The pointer media query picks one in CSS, so server and client render alike.
+ */
+function CallNumberAction({ display, e164 }: { display: string; e164: string }) {
+  const { t } = useTranslation("dashboard");
+  const { copiedField, copy } = useCopiedField();
+  const copied = copiedField === "number";
+  return (
+    <div className="flex min-w-0 items-center">
+      <a className={cn(buttonVariants(), "pointer-fine:hidden")} href={`tel:${e164}`}>{t("setupGuide.stepActions.callNumber", { number: display })}</a>
+      <div className="hidden min-w-0 flex-wrap items-center gap-3 pointer-fine:flex" data-testid="call-number-desktop">
+        <span className="type-metric-sm">{display}</span>
+        <Button onClick={() => copy(e164, "number")} size="sm" type="button" variant="outline">
+          {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
+          {t(copied ? "setupGuide.stepActions.numberCopied" : "setupGuide.stepActions.copyNumber")}
+        </Button>
+        <span className="sr-only" role="status">{copied ? t("setupGuide.stepActions.numberCopied") : ""}</span>
+      </div>
+    </div>
   );
 }
 

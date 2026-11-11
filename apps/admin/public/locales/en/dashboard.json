@@ -311,6 +311,8 @@
       "testCall": "Start a call",
       "phoneNumber": "Choose a number",
       "callNumber": "Call {{number}}",
+      "copyNumber": "Copy number",
+      "numberCopied": "Copied",
       "forwardCalls": "Set up forwarding",
       "choosePlan": "Choose a plan"
     },

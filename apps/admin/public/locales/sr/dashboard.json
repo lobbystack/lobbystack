@@ -312,6 +312,8 @@
       "testCall": "Započni poziv",
       "phoneNumber": "Izaberi broj",
       "callNumber": "Pozovi {{number}}",
+      "copyNumber": "Kopiraj broj",
+      "numberCopied": "Kopirano",
       "forwardCalls": "Podesite preusmeravanje",
       "choosePlan": "Izaberite paket"
     },
