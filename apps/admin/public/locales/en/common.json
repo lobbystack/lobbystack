@@ -45,10 +45,10 @@
     "sms": "SMS"
   },
   "channels": {
-    "phoneCall": "Phone call",
+    "phoneCall": "Phone",
     "webCall": "Web call",
     "sms": "SMS",
-    "webChat": "Website chat",
+    "webChat": "Website",
     "dashboard": "Dashboard",
     "api": "API",
     "instagram": "Instagram"

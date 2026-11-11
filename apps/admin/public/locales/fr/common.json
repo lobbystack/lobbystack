@@ -52,10 +52,10 @@
     "sms": "SMS"
   },
   "channels": {
-    "phoneCall": "Appel téléphonique",
+    "phoneCall": "Téléphone",
     "webCall": "Appel web",
     "sms": "SMS",
-    "webChat": "Clavardage du site",
+    "webChat": "Site web",
     "dashboard": "Tableau de bord",
     "api": "API",
     "instagram": "Instagram"

@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 
 import { agents, calls, contacts, conversations, phoneNumbers } from "@lobbystack/db";
 
+import commonCopy from "../../public/locales/en/common.json" with { type: "json" };
 import inboxCopy from "../../public/locales/en/inbox.json" with { type: "json" };
 
 import { holdNumber, migrator, randomE164, removeFixtures, setPlan, signUpOwner, twilioPhoneSid, twilioSignature, type Migrator } from "../fixtures/full-stack";
@@ -73,7 +74,7 @@ test("the Inbox filters by agent and channel, and says which agent handled the o
     await expect(callRow).toHaveCount(0);
 
     // A channel on top of it leaves nothing, and All agents brings the call back.
-    await page.getByRole("button", { name: inboxCopy.filters.channels.phone_call, exact: true }).click();
+    await page.getByRole("button", { name: commonCopy.channels.phoneCall, exact: true }).click();
     await expect(page).toHaveURL(/[?&]channel=phone_call/);
     await expect(page.getByText(inboxCopy.noMatch, { exact: true })).toBeVisible();
     await page.getByRole("combobox", { name: inboxCopy.filters.agent, exact: true }).click();
@@ -91,7 +92,7 @@ test("the Inbox filters by agent and channel, and says which agent handled the o
 
     // The SMS filter shows the text, and opening it names Evening.
     await page.goto("/inbox");
-    await page.getByRole("button", { name: inboxCopy.filters.channels.sms, exact: true }).click();
+    await page.getByRole("button", { name: commonCopy.channels.sms, exact: true }).click();
     await expect(callRow).toHaveCount(0);
     await textRow.click();
     await expect(list.getByText(inboxCopy.handledBy.replace(/<agent>\{\{name\}\}<\/agent>/u, "Evening"), { exact: true })).toBeVisible();

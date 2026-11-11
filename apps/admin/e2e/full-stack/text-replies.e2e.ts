@@ -8,7 +8,7 @@ import { and, eq } from "drizzle-orm";
 
 import { businesses, outboxMessages } from "@lobbystack/db";
 
-import inboxCopy from "../../public/locales/en/inbox.json" with { type: "json" };
+import commonCopy from "../../public/locales/en/common.json" with { type: "json" };
 import messagesCopy from "../../public/locales/en/messages.json" with { type: "json" };
 
 import { holdNumber, migrator, randomE164, removeFixtures, setPlan, signUpOwner, twilioPhoneSid, twilioSignature, type Migrator } from "../fixtures/full-stack";
@@ -53,7 +53,7 @@ test("text replies stay off by default, and an enabled business's inbound text g
     // The list previews a conversation's newest message.
     const openThread = async (preview: string) => {
       await page.goto("/inbox");
-      await page.getByRole("button", { name: inboxCopy.filters.channels.sms, exact: true }).click();
+      await page.getByRole("button", { name: commonCopy.channels.sms, exact: true }).click();
       await page.getByText(preview).first().click();
     };
 

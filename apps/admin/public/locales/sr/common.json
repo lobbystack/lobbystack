@@ -52,10 +52,10 @@
     "sms": "SMS"
   },
   "channels": {
-    "phoneCall": "Telefonski poziv",
+    "phoneCall": "Telefon",
     "webCall": "Veb poziv",
     "sms": "SMS",
-    "webChat": "Čet na sajtu",
+    "webChat": "Sajt",
     "dashboard": "Kontrolna tabla",
     "api": "API",
     "instagram": "Instagram"

@@ -132,7 +132,7 @@ export function InboxPage() {
         <PageHeader className="py-0" title={t("inbox:title")} />
         <div aria-label={t("inbox:filters.label")} className="flex flex-wrap items-center gap-1" role="group">
           <Button aria-pressed={!filters.channel} onClick={() => filterBy({ channel: null })} size="sm" variant={!filters.channel ? "secondary" : "ghost"}>{t("inbox:filters.all")}</Button>
-          {channels.map((channel) => <Button aria-pressed={filters.channel === channel} key={channel} onClick={() => filterBy({ channel: filters.channel === channel ? null : channel })} size="sm" variant={filters.channel === channel ? "secondary" : "ghost"}>{t(`inbox:filters.channels.${channel}`)}</Button>)}
+          {channels.map((channel) => <Button aria-pressed={filters.channel === channel} key={channel} onClick={() => filterBy({ channel: filters.channel === channel ? null : channel })} size="sm" variant={filters.channel === channel ? "secondary" : "ghost"}>{getChannelLabel(channel, t)}</Button>)}
         </div>
         {hasChoice ? (
           <Select items={[{ value: "all", label: t("inbox:filters.allAgents") }, ...agents.map((agent) => ({ value: agent.id, label: agent.name }))]} onValueChange={(value) => filterBy({ agent: !value || value === "all" ? null : String(value) })} value={filters.agentId ?? "all"}>

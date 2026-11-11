@@ -5,7 +5,7 @@ import { and, eq, sql } from "drizzle-orm";
 
 import { businesses, conversations, createDatabaseClient, widgetKeys } from "@lobbystack/db";
 
-import inboxCopy from "../public/locales/en/inbox.json" with { type: "json" };
+import commonCopy from "../public/locales/en/common.json" with { type: "json" };
 import navCopy from "../public/locales/en/nav.json" with { type: "json" };
 import onboarding from "../public/locales/en/onboarding.json" with { type: "json" };
 import settings from "../public/locales/en/settings.json" with { type: "json" };
@@ -202,7 +202,7 @@ test("the agent's Channels open the website widget page, where an owner creates,
       await sidebar.locator("[data-back-row]").click();
       await sidebar.getByRole("link", { name: navCopy.items.inbox, exact: true }).click();
       await expect(page).toHaveURL(/\/inbox$/);
-      await page.getByRole("button", { name: inboxCopy.filters.channels.web_chat, exact: true }).click();
+      await page.getByRole("button", { name: commonCopy.channels.webChat, exact: true }).click();
       await expect(page.getByText("We are open weekdays.").first()).toBeVisible();
       await page.goto("/widget");
     }

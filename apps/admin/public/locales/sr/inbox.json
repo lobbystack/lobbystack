@@ -4,14 +4,7 @@
     "label": "Kanal",
     "all": "Sve",
     "agent": "Agent",
-    "allAgents": "Svi agenti",
-    "channels": {
-      "phone_call": "Telefon",
-      "web_chat": "Sajt",
-      "instagram": "Instagram",
-      "sms": "SMS",
-      "web_call": "Veb poziv"
-    }
+    "allAgents": "Svi agenti"
   },
   "empty": "Još nema poziva ni poruka.",
   "noMatch": "Ništa ne odgovara ovim filterima.",

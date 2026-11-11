@@ -145,7 +145,7 @@ describe("dashboard contact and channel labels", () => {
       { ...appointment, id: "api", sourceChannel: "api", contactName: null, contactPhone: "+14155550100", contactEmail: null },
     ] });
     expect(screen.getByText("Web call")).toBeTruthy();
-    expect(screen.getByText("Website chat")).toBeTruthy();
+    expect(screen.getByText("Website")).toBeTruthy();
     expect(screen.getByText("API")).toBeTruthy();
     expect(screen.queryByText("web_voice")).toBeNull();
     expect(screen.queryByText("web_chat")).toBeNull();

@@ -4,14 +4,7 @@
     "label": "Canal",
     "all": "Tout",
     "agent": "Agent",
-    "allAgents": "Tous les agents",
-    "channels": {
-      "phone_call": "Téléphone",
-      "web_chat": "Site web",
-      "instagram": "Instagram",
-      "sms": "SMS",
-      "web_call": "Appel web"
-    }
+    "allAgents": "Tous les agents"
   },
   "empty": "Aucun appel ni message pour l'instant.",
   "noMatch": "Rien ne correspond à ces filtres.",
