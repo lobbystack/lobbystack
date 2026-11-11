@@ -206,6 +206,7 @@ export function formatRelativeTime(
   value: string | number | Date,
   locale: string,
   nowValue: string | number | Date = new Date(),
+  numeric: Intl.RelativeTimeFormatNumeric = "always",
 ): string {
   const date = value instanceof Date ? value : new Date(value);
   const now = nowValue instanceof Date ? nowValue : new Date(nowValue);
@@ -219,7 +220,7 @@ export function formatRelativeTime(
   const monthMs = 30 * dayMs;
   const yearMs = 365 * dayMs;
 
-  const formatter = new Intl.RelativeTimeFormat(intlLocale(locale), { numeric: "always" });
+  const formatter = new Intl.RelativeTimeFormat(intlLocale(locale), { numeric });
 
   if (absMs < hourMs) {
     return formatter.format(Math.trunc(diffMs / minuteMs), "minute");

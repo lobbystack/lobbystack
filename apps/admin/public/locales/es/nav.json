@@ -197,6 +197,7 @@
     "bell": "Notificaciones",
     "bellUnread_one": "Notificaciones, {{count}} sin leer",
     "bellUnread_other": "Notificaciones, {{count}} sin leer",
+    "bellUnread_many": "Notificaciones, {{count}} sin leer",
     "title": "Notificaciones",
     "markAllRead": "Marcar todo como leído",
     "empty": "No hay notificaciones",
@@ -212,6 +213,7 @@
       "trial_ending": {
         "title_one": "Su prueba gratuita termina mañana",
         "title_other": "Su prueba gratuita termina en {{count}} días",
+        "title_many": "Su prueba gratuita termina en {{count}} días",
         "line": "Elija un plan para conservar su número."
       },
       "trial_ended": {
@@ -273,7 +275,8 @@
       "website_import_finished": {
         "title": "Importación del sitio terminada",
         "line_one": "Leímos {{count}} página de {{site}}.",
-        "line_other": "Leímos {{count}} páginas de {{site}}."
+        "line_other": "Leímos {{count}} páginas de {{site}}.",
+        "line_many": "Leímos {{count}} páginas de {{site}}."
       },
       "invite_accepted": {
         "title": "{{email}} se unió a su equipo",

@@ -110,7 +110,7 @@ function NotificationRow({ item, language, onOpen }: { item: BusinessNotificatio
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className={cn("type-body", !item.read && "font-medium")}>{title}</span>
           <span className="line-clamp-2 type-body-muted">{line}</span>
-          <time className="type-caption text-muted-foreground" dateTime={item.occurredAt}>{formatRelativeTime(item.occurredAt, language)}</time>
+          <time className="type-caption text-muted-foreground" dateTime={item.occurredAt}>{formatRelativeTime(item.occurredAt, language, new Date(), "auto")}</time>
         </span>
         {item.read ? null : <><UnreadDot className="mt-1.5" /><span className="sr-only">{t("notifications.unread")}</span></>}
       </button>
